@@ -11,7 +11,15 @@ import { uiErrorOf } from '../../../shared/api';
 import { useClientPager, useFocusFirstField, useLoadRest } from '../../../shared/hooks';
 import { PagedList } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
-import { Button, Checkbox, EmptyState, ErrorState, FilterBar, ListPage } from '../../../shared/ui';
+import {
+  Button,
+  Checkbox,
+  EmptyState,
+  ErrorState,
+  FilterBar,
+  FilterCard,
+  ListPage,
+} from '../../../shared/ui';
 import { activeColumn, useActiveChange } from '../active';
 import { columnsOf, configOfPath, type MasterConfig } from '../configs';
 import { useMasterFilter, useMasterList } from '../hooks';
@@ -143,6 +151,7 @@ function MasterList({ config }: { config: MasterConfig }) {
   return (
     <ListPage
       titleId={config.titleId}
+      icon={config.icon}
       help={
         <Localized id={config.helpId}>
           <p />
@@ -151,7 +160,7 @@ function MasterList({ config }: { config: MasterConfig }) {
       // An empty list has the same button in its empty state.
       actions={first === undefined || first.total_count === 0 ? undefined : newButton}
       filters={
-        <div ref={containerRef} {...formNavigationProps}>
+        <FilterCard ref={containerRef} {...formNavigationProps}>
           <FilterBar
             screen={`masters.${config.kind}`}
             search={{
@@ -168,7 +177,7 @@ function MasterList({ config }: { config: MasterConfig }) {
               />
             }
           />
-        </div>
+        </FilterCard>
       }
     >
       {body}

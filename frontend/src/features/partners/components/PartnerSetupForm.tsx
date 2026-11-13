@@ -13,7 +13,7 @@
 // - Four states: loading, error with a retry, empty with a button, and the list.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Users } from 'lucide-react';
+import { UserX, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
@@ -266,7 +266,7 @@ export function PartnerSetupForm({
           </Localized>
         </Card>
         {inactive.length === 0 ? null : (
-          <Card title={<Localized id="partners-inactive-title" />}>
+          <Card icon={UserX} title={<Localized id="partners-inactive-title" />}>
             <ul>
               {inactive.map((partner) => (
                 <ShareRow

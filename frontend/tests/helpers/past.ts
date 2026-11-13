@@ -1,7 +1,7 @@
-// A fake `bikri_list` for پچھلی بکری (plan 72): one command, two kinds of call. A call with `date` is
-// today's section; a call with `from` and `to` is the window of earlier days, which answers its rows
-// and one entry for each day of the range, empty days included, with the count and the خام بکری of
-// each day. A test double only: the real counts and totals are the backend's (the `*-real-*` tests
+// A fake `bikri_list` for پچھلی بکری (plan 72, plan 75): one command, two kinds of call. A call with `date`
+// is one day's rows: today's section, or one open day of the window (a day that is not today gets the rows
+// of the window that fall on it); a call with `from` and `to` is the window of earlier days, which answers
+// one entry for each day of the range, empty days included, with the count and the خام بکری of each day. A test double only: the real counts and totals are the backend's (the `*-real-*` tests
 // and the fixtures). A double adds no money (the frontend never does, F3): the خام بکری of a day is
 // given by the test, never summed from the rows.
 
@@ -58,9 +58,13 @@ export interface PastFake {
   window?: readonly BikriListRow[];
   /** The خام بکری of a day in whole rupees, by `YYYY-MM-DD`. */
   gross?: Readonly<Record<string, number>>;
+  /** The backend's today, `YYYY-MM-DD`: a call for another day gets the rows of the window on that day. */
+  todayDate?: string;
   /** The sums over the whole filter of each section, when a test or a photograph wants to see them. */
   todayTotals?: Partial<BikriList['totals']>;
   windowTotals?: Partial<BikriList['totals']>;
+  /** The sums the backend gives for one open day of the window, by `YYYY-MM-DD` (nothing is summed here). */
+  dayTotals?: Readonly<Record<string, Partial<BikriList['totals']>>>;
 }
 
 /** What `bikri_list` answers for a call. */
@@ -72,9 +76,21 @@ export function pastAnswer(
     gross = {},
     todayTotals = {},
     windowTotals = {},
+    dayTotals = {},
+    todayDate = '2026-10-10',
   }: PastFake = {},
 ): BikriList {
-  if (input.date !== null) return bikriListOf(today, input.offset, input.limit, todayTotals);
+  if (input.date !== null) {
+    const day = isoOf(input.date);
+    if (day === todayDate) return bikriListOf(today, input.offset, input.limit, todayTotals);
+    // One open day of the window: its own rows.
+    return bikriListOf(
+      window.filter((row) => row.entry_date === day),
+      input.offset,
+      input.limit,
+      dayTotals[day] ?? {},
+    );
+  }
   const from = isoOf(input.from ?? '');
   const to = isoOf(input.to ?? '');
   const inside = window.filter((row) => row.entry_date >= from && row.entry_date <= to);

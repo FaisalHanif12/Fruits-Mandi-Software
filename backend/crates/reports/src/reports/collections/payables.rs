@@ -36,7 +36,7 @@ use crate::reports::common::{
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, PartyRef, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, Column, ColumnKind, PartyRef, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
 };
 use crate::reports::workings::payable_totals_from;
 
@@ -259,6 +259,19 @@ fn heading(label: &str, sellers: &[&Seller]) -> Result<Row, ReportsError> {
     })
 }
 
+/// The columns of R24, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("section", ids::COL_SECTION, ColumnKind::Label),
+        col("seller", ids::COL_SELLER, ColumnKind::Party),
+        col("payable", ids::COL_PAYABLE, ColumnKind::Money),
+        col("advance_open", ids::COL_ADVANCE_OPEN, ColumnKind::Money),
+        col("owes_firm", ids::COL_OWES_FIRM, ColumnKind::Money),
+        col("balance", ids::COL_BALANCE, ColumnKind::Balance),
+        col("last_date", ids::COL_LAST_DATE, ColumnKind::Date),
+    ]
+}
+
 /// Builds R24.
 ///
 /// # Errors
@@ -317,15 +330,7 @@ pub(crate) fn run(
         id: ReportId::R24,
         title_id: ids::title_id("R24"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("section", ids::COL_SECTION, ColumnKind::Label),
-            col("seller", ids::COL_SELLER, ColumnKind::Party),
-            col("payable", ids::COL_PAYABLE, ColumnKind::Money),
-            col("advance_open", ids::COL_ADVANCE_OPEN, ColumnKind::Money),
-            col("owes_firm", ids::COL_OWES_FIRM, ColumnKind::Money),
-            col("balance", ids::COL_BALANCE, ColumnKind::Balance),
-            col("last_date", ids::COL_LAST_DATE, ColumnKind::Date),
-        ],
+        columns: columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),

@@ -5,6 +5,8 @@
 //! partner share rows that every posting wrote (PRD FR-6.5, FR-17.4). They write nothing
 //! (PRD FR-18.8).
 
+use super::model::{Column, GardenView, GroupBy, ReportId, TripView};
+
 pub(crate) mod day;
 mod dead;
 pub(crate) mod expenses;
@@ -32,3 +34,22 @@ pub use sheet::{
     party_statement_print_data,
 };
 pub(super) use trips::run as run_r33;
+
+/// The columns of a report of this group as its default view shows them: R33 by trip, R36 by
+/// garden, R28 by month, R35 as the table of all parties. Empty for a report of another group.
+/// Each comes from the same function the report's run uses (plan 75 T1).
+pub(super) fn default_columns(id: ReportId) -> Vec<Column> {
+    match id {
+        ReportId::R28 => income::columns(GroupBy::default()),
+        ReportId::R29 => expenses::columns(),
+        ReportId::R30 => profit::columns(),
+        ReportId::R32 => lent::columns(),
+        ReportId::R33 => trips::columns(TripView::default()),
+        ReportId::R34 => day::columns(),
+        ReportId::R35 => sheet::table_columns(),
+        ReportId::R36 => gardens::columns(GardenView::default()),
+        ReportId::R37 => fruit::columns(),
+        ReportId::R38 => dead::columns(),
+        _ => Vec::new(),
+    }
+}

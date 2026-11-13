@@ -219,7 +219,9 @@ fn the_catalogue_has_the_new_reports_with_their_filters() {
             // PRD v1.29: all the items of a group.
             FilterKind::ItemGroup,
             // R10 by lot or by item.
-            FilterKind::StockView
+            FilterKind::StockView,
+            // One lot, picked by the assistant's button (plan 71 L9, PRD FR-7.77, FR-12.45).
+            FilterKind::Lot
         ]
     );
     assert_eq!(

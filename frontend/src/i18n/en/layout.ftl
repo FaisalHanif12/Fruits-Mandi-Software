@@ -94,7 +94,7 @@ layout-user-change-password = Change password
 layout-user-lock = Lock the app
 
 # review: pending
-layout-user-signout = Sign out
+layout-user-signout = Log out
 
 # review: pending
 layout-loading-session = Opening the app…

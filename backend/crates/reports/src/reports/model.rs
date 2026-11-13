@@ -264,6 +264,13 @@ pub struct CatalogEntry {
     pub filters: Vec<FilterKind>,
     /// True when the party filter must be filled (R13, R14).
     pub party_required: bool,
+    /// The Fluent message IDs of the column headings, in the order the report shows them (plan 75,
+    /// PRD FR-19.14). They come from the same definition the report uses when it runs, so the
+    /// guide card can never list a column the report does not have. A report whose columns
+    /// depend on a view or a filter lists the columns of its default view (R10 by lot, R28 by
+    /// month, R33 by trip, R35 as the table of all parties, R36 by garden); the optional columns
+    /// the data calls for (R2 to R4: packing, quality, the seller's rate) are not in the list.
+    pub column_title_ids: Vec<String>,
 }
 
 /// The date shortcuts of FR-19.2. This week starts on Monday [A].

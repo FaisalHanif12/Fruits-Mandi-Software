@@ -52,7 +52,7 @@ export function OwnerSignCard() {
   const navigation = useFormNavigation(submit);
 
   return (
-    <Card compact title={<Localized id="settings-sign-title" />}>
+    <Card compact icon={PenLine} title={<Localized id="settings-sign-title" />}>
       <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
         <Localized id="settings-sign-hint">
           <p className="type-body text-ink-muted" />

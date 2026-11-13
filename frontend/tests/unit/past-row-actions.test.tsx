@@ -100,7 +100,12 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
   });
 
   const m = (id: string, vars: Record<string, string | number> = {}) => message(language, id, vars);
-  const windowGrid = () => gridOf(language, 'bikri-past-label');
+  /** The day of each row of the window: the rows are under the line of their day (plan 75 7.7). */
+  const DAY_OF: Record<number, string> = { 61: '2026-10-09', 62: '2026-10-08', 63: '2026-10-07' };
+  const dayBox = (rowId: number) =>
+    present(document.querySelector<HTMLElement>(`[data-day="${present(DAY_OF[rowId])}"]`));
+  const windowGrid = (rowId: number) =>
+    within(dayBox(rowId)).getByRole('group', { name: named(m('bikri-past-label')) });
   const todayGrid = () => gridOf(language, 'bikri-list-label');
   const open = async (path = '/bikri/today') => {
     const view = await renderApp(path);
@@ -118,9 +123,16 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     present(
       grid.querySelector<HTMLElement>(`.ag-row[row-id="${String(rowId)}"] [col-id="${field}"]`),
     );
+  // The day of the row is closed when the list opens (with the tick "show every بکری" it is open already), so
+  // the Owner opens it with its arrow first.
   const windowShown = async (rowId: number) => {
     await waitFor(() => {
-      expect(windowGrid().querySelector(`.ag-row[row-id="${String(rowId)}"]`)).not.toBeNull();
+      expect(dayBox(rowId).querySelector('[data-day-line]')).not.toBeNull();
+    });
+    const line = present(dayBox(rowId).querySelector<HTMLElement>('[data-day-line]'));
+    if (line.getAttribute('aria-expanded') === 'false') await userEvent.click(line);
+    await waitFor(() => {
+      expect(windowGrid(rowId).querySelector(`.ag-row[row-id="${String(rowId)}"]`)).not.toBeNull();
     });
   };
 
@@ -140,7 +152,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     fakeRows({ window: [WINDOW_ROW] });
     const { user } = await open();
     await windowShown(61);
-    await user.click(cell(windowGrid(), 61, 'number'));
+    await user.click(cell(windowGrid(61), 61, 'number'));
     await waitFor(() => {
       expect(visible(bar(1).textContent)).toContain(m('bikri-past-row-for', { number: 2 }));
     });
@@ -156,7 +168,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     fakeDetail(61);
     const { router, user } = await open();
     await windowShown(61);
-    await user.click(cell(windowGrid(), 61, 'number'));
+    await user.click(cell(windowGrid(61), 61, 'number'));
     await user.click(buttonIn(1, m('edit-action-edit')));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/book');
@@ -171,7 +183,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     fakeDetail(61);
     const { router, user } = await open('/bikri/today?all=true');
     await windowShown(61);
-    await user.click(cell(windowGrid(), 61, 'number'));
+    await user.click(cell(windowGrid(61), 61, 'number'));
     await user.click(buttonIn(1, m('edit-action-edit')));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/book');
@@ -206,7 +218,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     fakeDetail(61);
     const { router, user } = await open();
     await windowShown(61);
-    await user.click(cell(windowGrid(), 61, 'number'));
+    await user.click(cell(windowGrid(61), 61, 'number'));
     await waitFor(() => {
       expect(buttonIn(1, m('edit-action-edit'))).toBeEnabled();
     });
@@ -226,7 +238,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     fakeRows({ window: [WINDOW_ROW] });
     const { router, user } = await open();
     await windowShown(61);
-    await user.click(cell(windowGrid(), 61, 'number'));
+    await user.click(cell(windowGrid(61), 61, 'number'));
     await user.keyboard('{Enter}');
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/book');
@@ -242,7 +254,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     vi.mocked(editApi.dayFixOpen).mockResolvedValue(DAY_FIX_OPEN_E2E_45);
     const { router, user } = await open();
     await windowShown(62);
-    await user.click(cell(windowGrid(), 62, 'number'));
+    await user.click(cell(windowGrid(62), 62, 'number'));
     const fix = buttonIn(1, m('edit-action-fix-day'));
     expect(fix).toBeEnabled();
     await user.click(fix);
@@ -267,7 +279,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     fakeRows({ window: [LOCKED_ROW] });
     const { user } = await open();
     await windowShown(63);
-    await user.click(cell(windowGrid(), 63, 'number'));
+    await user.click(cell(windowGrid(63), 63, 'number'));
     await waitFor(() => {
       expect(visible(bar(1).textContent)).toContain(m('edit-locked-goods-moved'));
     });
@@ -280,7 +292,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     const plan = fakePlan16();
     const { router, user } = await open();
     await windowShown(61);
-    await user.click(cell(windowGrid(), 61, 'number'));
+    await user.click(cell(windowGrid(61), 61, 'number'));
     const before = vi.mocked(bikriApi.bikriList).mock.calls.length;
     await user.click(buttonIn(1, m('edit-action-cancel')));
     const dialog = await screen.findByRole('alertdialog');
@@ -313,8 +325,10 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     });
     const { user } = await open('/bikri/today?all=true');
     await windowShown(61);
-    expect(visible(cell(windowGrid(), 61, 'status').textContent)).toBe(m('bikri-status-cancelled'));
-    await user.click(cell(windowGrid(), 61, 'number'));
+    expect(visible(cell(windowGrid(61), 61, 'status').textContent)).toBe(
+      m('bikri-status-cancelled'),
+    );
+    await user.click(cell(windowGrid(61), 61, 'number'));
     // A cancelled بکری has no Edit or Cancel left to press.
     expect(buttonIn(1, m('edit-action-edit'))).toBeDisabled();
     expect(buttonIn(1, m('edit-action-cancel'))).toBeDisabled();
@@ -329,7 +343,7 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     });
     const { router, user } = await open();
     await windowShown(61);
-    await user.click(cell(windowGrid(), 61, 'number'));
+    await user.click(cell(windowGrid(61), 61, 'number'));
     await user.click(buttonIn(1, m('edit-action-edit')));
     await waitFor(() => {
       expect(within(bar(1)).queryByRole('alert')).not.toBeNull();

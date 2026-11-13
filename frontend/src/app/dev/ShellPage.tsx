@@ -73,12 +73,11 @@ function Content() {
   const [module, setModule] = useState<ModuleMenuId>('bikri-book');
   return (
     <AppShell
-      nav={<MainNav current={main} onSelect={setMain} />}
+      nav={<MainNav current={main} onSelect={setMain} onSignOut={() => undefined} />}
       moduleMenu={main === 'bikri' ? <ModuleMenu current={module} onSelect={setModule} /> : null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
-      onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

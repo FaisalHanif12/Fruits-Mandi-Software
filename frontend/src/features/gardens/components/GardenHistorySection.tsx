@@ -71,7 +71,7 @@ export function GardenHistorySection({ history, count, pager, onEdit }: GardenHi
     selected.version !== null;
 
   return (
-    <Card compact title={<Localized id="gardens-history-title" />}>
+    <Card compact icon={History} title={<Localized id="gardens-history-title" />}>
       {history.length === 0 ? (
         <EmptyState
           icon={History}

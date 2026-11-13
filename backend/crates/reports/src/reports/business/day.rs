@@ -51,7 +51,7 @@ use crate::reports::business::sheet::{DaySheet, load_days};
 use crate::reports::common::{LIVE, add, col, count_of, names_cell, paisa};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
-use crate::reports::model::{Cell, ColumnKind, ReportId, ReportPage, Row, RowKind};
+use crate::reports::model::{Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind};
 
 /// The shop's one cash account (PRD FR-10.4).
 const CASH_ACCOUNT_CODE: &str = "01010001";
@@ -539,6 +539,16 @@ fn label(id: &str) -> Cell {
     Cell::Label { id: id.to_owned() }
 }
 
+/// The columns of R34, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("item", ids::COL_LINE, ColumnKind::Label),
+        col("count", ids::COL_COUNT, ColumnKind::Number),
+        col("amount", ids::COL_AMOUNT, ColumnKind::Money),
+    ]
+}
+
 /// Builds R34.
 ///
 /// # Errors
@@ -939,12 +949,7 @@ pub(crate) fn run(
         id: ReportId::R34,
         title_id: ids::title_id("R34"),
         filters,
-        columns: vec![
-            col("date", ids::COL_DATE, ColumnKind::Date),
-            col("item", ids::COL_LINE, ColumnKind::Label),
-            col("count", ids::COL_COUNT, ColumnKind::Number),
-            col("amount", ids::COL_AMOUNT, ColumnKind::Money),
-        ],
+        columns: columns(),
         total_count: count_of(all_rows.len()),
         rows: page_rows,
         offset: spec.offset,

@@ -4,6 +4,7 @@
 // equally between the partners, not by the commission shares (C27). Every figure and every working
 // is the backend's (the same function as the save); the screen shows them and works nothing out.
 
+import { Calculator } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
@@ -34,7 +35,7 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
   const numbers = preview?.numbers ?? null;
   if (preview === undefined) {
     return (
-      <Card compact title={<Localized id="fruit-numbers-title" />}>
+      <Card compact icon={Calculator} title={<Localized id="fruit-numbers-title" />}>
         <Localized id="fruit-numbers-empty">
           <p className="type-body text-ink-muted" />
         </Localized>
@@ -43,7 +44,7 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
   }
   if (numbers === null) {
     return (
-      <Card compact title={<Localized id="fruit-numbers-title" />}>
+      <Card compact icon={Calculator} title={<Localized id="fruit-numbers-title" />}>
         <Localized id="fruit-numbers-incomplete">
           <p className="type-body text-ink-muted" />
         </Localized>
@@ -86,11 +87,13 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
     ? allColumns.filter((column) => column.id !== 'now' && column.id !== 'after')
     : allColumns;
   return (
-    <Card compact title={<Localized id="fruit-numbers-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="fruit-numbers-title" />}>
       <dl className="grid grid-cols-2 gap-3">
-        <Fact label={<Localized id="fruit-numbers-value" />}>
+        <Fact stat label={<Localized id="fruit-numbers-value" />}>
           <span className="flex items-center gap-1">
-            <Num paisa={numbers.value_paisa} />
+            <span>
+              <Num inherit paisa={numbers.value_paisa} />
+            </span>
             <CalcInfo working={numbers.value_working} />
           </span>
         </Fact>
@@ -103,11 +106,11 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
         </Fact>
         {numbers.lot === null ? null : (
           <>
-            <Fact label={<Localized id="fruit-numbers-lot-before" />}>
-              <Num>{String(numbers.lot.balance_before)}</Num>
+            <Fact stat label={<Localized id="fruit-numbers-lot-before" />}>
+              <Num inherit>{String(numbers.lot.balance_before)}</Num>
             </Fact>
-            <Fact label={<Localized id="fruit-numbers-lot-after" />}>
-              <Num>{String(numbers.lot.balance_after)}</Num>
+            <Fact stat label={<Localized id="fruit-numbers-lot-after" />}>
+              <Num inherit>{String(numbers.lot.balance_after)}</Num>
             </Fact>
           </>
         )}

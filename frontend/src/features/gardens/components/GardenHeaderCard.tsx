@@ -8,11 +8,21 @@
 // Everything is the backend's; nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { CircleCheck, CircleDot, Pencil } from 'lucide-react';
+import { Calculator, Pencil } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { formatBps, isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Button, CalcInfo, Card, Code, Fact, Num } from '../../../shared/ui';
+import {
+  Button,
+  CalcInfo,
+  Card,
+  Code,
+  Fact,
+  Num,
+  STATUS_CLOSED,
+  STATUS_OPEN,
+  StatusChip,
+} from '../../../shared/ui';
 import type { GardenRow } from '../types';
 
 interface GardenCardProps {
@@ -55,6 +65,25 @@ function BalanceLines({ garden }: GardenCardProps) {
   );
 }
 
+/** The running balance and the rent still due as two stat cards at the head of the header (plan 75). */
+function BalanceStats({ garden }: GardenCardProps) {
+  return (
+    <dl className="grid grid-cols-1 gap-3 @form2:grid-cols-2">
+      <Fact stat label={<Localized id="gardens-balance" />}>
+        <span className="inline-flex items-center gap-1">
+          <span>
+            <Num inherit paisa={garden.balance_paisa} />
+          </span>
+          <CalcInfo working={garden.balance_working} inCell />
+        </span>
+      </Fact>
+      <Fact stat label={<Localized id="gardens-rent-due" />}>
+        <Num inherit paisa={garden.rent_due_paisa} />
+      </Fact>
+    </dl>
+  );
+}
+
 interface GardenHeaderCardProps extends GardenCardProps {
   /** Edit was pressed: the page opens the header for edit (plan 44). Without it there is no button. */
   onEdit?: (() => void) | undefined;
@@ -63,7 +92,6 @@ interface GardenHeaderCardProps extends GardenCardProps {
 export function GardenHeaderCard({ garden, onEdit }: GardenHeaderCardProps) {
   const language = useLanguage();
   const open = garden.status === 'open';
-  const StatusIcon = open ? CircleDot : CircleCheck;
   return (
     <Card
       compact
@@ -73,16 +101,14 @@ export function GardenHeaderCard({ garden, onEdit }: GardenHeaderCardProps) {
             <span />
           </Localized>
           <span lang={language}>{displayName(garden, language)}</span>
-          <span
-            className={`inline-flex items-center gap-1 type-chip rounded-1 px-2 ${open ? 'bg-primary-soft text-primary' : 'bg-surface-sunken text-ink-muted'}`}
-          >
-            <StatusIcon aria-hidden="true" className="size-icon-sm shrink-0" />
+          <StatusChip {...(open ? STATUS_OPEN : STATUS_CLOSED)}>
             <Localized id={open ? 'gardens-status-open' : 'gardens-status-closed'} />
-          </span>
+          </StatusChip>
         </span>
       }
     >
-      <div className="@container min-w-0">
+      <div className="@container min-w-0 flex flex-col gap-3">
+        <BalanceStats garden={garden} />
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 @form3:grid-cols-4">
           <Fact label={<Localized id="gardens-field-date" />}>
             <Code>{isoToDisplayDate(garden.entry_date)}</Code>
@@ -119,7 +145,6 @@ export function GardenHeaderCard({ garden, onEdit }: GardenHeaderCardProps) {
           </Button>
         </div>
       )}
-      <BalanceLines garden={garden} />
     </Card>
   );
 }
@@ -139,7 +164,7 @@ export function GardenFiguresCard({ garden }: GardenCardProps) {
     { id: 'account', message: 'gardens-fact-account', paisa: garden.account_balance_paisa },
   ];
   return (
-    <Card compact title={<Localized id="gardens-figures-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="gardens-figures-title" />}>
       <div className="@container min-w-0">
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 @form3:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-1">

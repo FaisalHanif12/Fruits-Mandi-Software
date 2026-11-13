@@ -4,7 +4,7 @@ use super::activity::*;
 use super::*;
 
 /// The columns of the table of all parties.
-pub(super) fn table_columns() -> Vec<crate::reports::model::Column> {
+pub(crate) fn table_columns() -> Vec<crate::reports::model::Column> {
     vec![
         col("code", ids::COL_CODE, ColumnKind::Text),
         col("party", ids::COL_PARTY, ColumnKind::Party),

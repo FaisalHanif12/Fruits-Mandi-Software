@@ -27,6 +27,7 @@ import {
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
 import { fakeDashboard } from '../helpers/dashboard';
+import * as real from '../helpers/tag-real';
 import { LEDGER_BUYERS } from '../helpers/party-ledgers-real';
 import { at } from '../helpers/sample';
 
@@ -97,7 +98,8 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await renderApp();
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
-    expect(within(nav).getAllByRole('button')).toHaveLength(11);
+    // The eleven screens, and Log out at the bottom (plan 75 T3).
+    expect(within(nav).getAllByRole('button')).toHaveLength(12);
     expect(within(nav).getAllByRole('button')[0]).toHaveAttribute('aria-current', 'page');
     await waitFor(() => {
       expect(visible(screen.getByRole('contentinfo').textContent)).toContain('10-10-2026');
@@ -301,25 +303,40 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
-    expect(within(nav).getAllByRole('button')).toHaveLength(11);
+    // The eleven screens, and Log out at the bottom (plan 75 T3).
+    expect(within(nav).getAllByRole('button')).toHaveLength(12);
     expect(
       within(nav).getByRole('button', { name: message(language, 'layout-nav-settings') }),
     ).toBeInTheDocument();
   });
 
-  it('signs out from the user menu and shows the sign-in screen', async () => {
+  it('signs out from the bottom of the main menu and shows the sign-in screen', async () => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: message(language, 'layout-user-menu') }));
+    const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
     await user.click(
-      await screen.findByRole('menuitem', { name: message(language, 'layout-user-signout') }),
+      within(nav).getByRole('button', { name: message(language, 'layout-user-signout') }),
     );
     expect(authApi.authLogout).toHaveBeenCalledTimes(1);
     expect(
       await screen.findByRole('heading', { name: message(language, 'auth-login-title') }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps change password, the guide and lock in the user menu, and no Log out', async () => {
+    await renderApp();
+    await screen.findByRole('heading', { level: 1, name: /Adnan/ });
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: message(language, 'layout-user-menu') }));
+    const items = await screen.findAllByRole('menuitem');
+    expect(items.map((item) => visible(item.textContent))).toEqual([
+      message(language, 'layout-user-change-password'),
+      message(language, 'layout-user-guide'),
+      message(language, 'layout-user-lock'),
+    ]);
   });
 
   it('saves the language he switches to, and the text size, but not the values he arrived with', async () => {
@@ -338,6 +355,141 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await waitFor(() => {
       expect(settingsApi.prefsSet).toHaveBeenCalledWith({ key: 'text_size', value: '110' });
     });
+  });
+});
+
+describe.each(LANGUAGES)('Log out asks first about unsaved work (%s)', (language) => {
+  beforeEach(() => {
+    resetClientState(language);
+    signedIn(sessionUser({ language }));
+    vi.mocked(settingsApi.settingsSetFirm).mockResolvedValue(real.SETTINGS_SET_FIRM_CONTACTS);
+  });
+
+  /** The settings screen with his own change typed into the firm name, which the screen has not saved. */
+  async function openDirtySettings() {
+    await renderApp('/settings');
+    const user = userEvent.setup();
+    const firmName = await screen.findByLabelText<HTMLInputElement>(
+      (text) => visible(text) === message(language, 'settings-firm-name-en'),
+    );
+    await user.clear(firmName);
+    await user.type(firmName, 'Half typed firm');
+    return { user, firmName };
+  }
+
+  const logOutButton = () =>
+    within(
+      screen.getByRole('navigation', { name: message(language, 'layout-nav-label') }),
+    ).getByRole('button', { name: message(language, 'layout-user-signout') });
+
+  const boxButton = (id: string) =>
+    within(screen.getByRole('alertdialog')).getByRole('button', {
+      name: new RegExp(`^${message(language, id)}`),
+    });
+
+  it('a screen with unsaved work shows the same "Save changes?" box, and nothing is logged out yet', async () => {
+    const { user, firmName } = await openDirtySettings();
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await user.click(logOutButton());
+    const box = await screen.findByRole('alertdialog');
+    expect(visible(box.textContent)).toContain(message(language, 'layout-save-title'));
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+    expect(firmName).toBeInTheDocument();
+  });
+
+  it('"back" keeps him in the app with what he typed', async () => {
+    const { user, firmName } = await openDirtySettings();
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('common-back'));
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+    expect(firmName.value).toBe('Half typed firm');
+    // Esc says "back" too.
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+  });
+
+  it('"leave without saving" logs out and saves nothing', async () => {
+    const { user } = await openDirtySettings();
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('layout-save-leave'));
+    await waitFor(() => {
+      expect(authApi.authLogout).toHaveBeenCalledTimes(1);
+    });
+    expect(settingsApi.settingsSetFirm).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole('heading', { name: message(language, 'auth-login-title') }),
+    ).toBeInTheDocument();
+  });
+
+  it('"save" saves the screen first and then logs out', async () => {
+    const { user } = await openDirtySettings();
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('layout-save-save'));
+    await waitFor(() => {
+      expect(authApi.authLogout).toHaveBeenCalledTimes(1);
+    });
+    expect(settingsApi.settingsSetFirm).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(settingsApi.settingsSetFirm).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(authApi.authLogout).mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('"save" that is refused keeps him in the app and does not log out', async () => {
+    const { user } = await openDirtySettings();
+    vi.mocked(settingsApi.settingsSetFirm).mockRejectedValue(fail({ code: 'ERR_NOT_IMPLEMENTED' }));
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('layout-save-save'));
+    await waitFor(() => {
+      expect(settingsApi.settingsSetFirm).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+  });
+
+  it('a screen with nothing unsaved logs out at once, with no box', async () => {
+    await renderApp('/settings');
+    await screen.findByLabelText(
+      (text) => visible(text) === message(language, 'settings-firm-name-en'),
+    );
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await userEvent.setup().click(logOutButton());
+    await waitFor(() => {
+      expect(authApi.authLogout).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('the idle lock keeps unsaved work and never asks', async () => {
+    vi.mocked(settingsApi.settingsGet).mockResolvedValue(settings({ idle_lock_minutes: 1 }));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await renderApp('/settings');
+    const firmName = await screen.findByLabelText<HTMLInputElement>(
+      (text) => visible(text) === message(language, 'settings-firm-name-en'),
+    );
+    fireEvent.change(firmName, { target: { value: 'Half typed firm' } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(70_000);
+    });
+    expect(authApi.authLock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+    expect(firmName.value).toBe('Half typed firm');
   });
 });
 

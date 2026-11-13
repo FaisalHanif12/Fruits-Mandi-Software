@@ -153,11 +153,12 @@ fn terms(file: &str) -> Vec<(String, String)> {
 }
 
 /// Glossary terms of the Fluent files that the glossary line of `D6-system-prompt.md` does not hold
-/// and need not hold (lead's ruling of 06-11-2026: no prompt tokens for them; the model reaches the
-/// things they name through the tools, and the answer shows the app's own words). Each has its
+/// and need not hold (lead's ruling of 06-11-2026, and of 13-11-2026 for `-dastakhat`: no prompt
+/// tokens for them; the model reaches the things they name through the tools, and the answer
+/// shows the app's own words). Each has its
 /// reason. The test fails if a term leaves this list without being added to the prompt, or if
 /// another term goes missing.
-const GLOSSARY_GAPS: [(&str, &str); 12] = [
+const GLOSSARY_GAPS: [(&str, &str); 13] = [
     (
         "-khate-mein-baqi",
         "the prompt names the columns paid and left; no room in the prefix (11,599 of 11,600)",
@@ -205,6 +206,10 @@ const GLOSSARY_GAPS: [(&str, &str); 12] = [
     (
         "-darja-soyam",
         "a value of the quality column, shown as the app writes it",
+    ),
+    (
+        "-dastakhat",
+        "the Owner's sign is a security word for reopening a day (PRD FR-21.4, v1.36); the assistant never reads, names or asks for it, like the keys and codes of FR-7.83",
     ),
 ];
 

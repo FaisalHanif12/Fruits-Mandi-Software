@@ -1,10 +1,12 @@
-// پچھلی بکری / Past Sales (route /bikri/today; PRD 12.7, plan 72). Two parts under one set of
-// filters: today's بکری on top, and under a divider bar the window of 7 earlier days, grouped by day
-// with a heading for each (the date, the count and the خام بکری of the day, all the backend's). The
-// window starts on yesterday and moves 7 days at a time (the two buttons, Page Up and Page Down in
-// the window), or to the day typed in "تاریخ پر جائیں". "پوری بکری دکھائیں" sets the filters aside
-// (they keep their values). A click or Enter on a row opens the whole بکری on the sale book; the way
-// back from an edit lands on the same window and row, and every figure is read again (P10).
+// پچھلی بکری / Past Sales (route /bikri/today; PRD 12.7, FR-12.46 v1.39, plans 72 and 75). Two parts under
+// one set of filters: today's بکری on top, fully open, and under a divider bar the window of 7 earlier
+// days, each day one closed line (the date, the count and the خام بکری of the day, all the backend's) that
+// opens its بکری under it. The window starts on yesterday and moves 7 days at a time (the two buttons, Page
+// Up, Page Down and the arrow keys on a line), or to the day typed in "تاریخ پر جائیں", which opens that
+// day. A search or a filter opens every day with a match, and so does "پوری بکری دکھائیں" (it sets the filters
+// aside; they keep their values). A click or Enter on a row opens the whole بکری on the sale book; the way
+// back from an edit lands on the same window with that day open and the row selected, and every figure is
+// read again (P10).
 //
 // The window, the row and the tick are in the address, so a reload or a way back finds them. Four
 // states in each list: loading, an error with a retry, empty with words, and the rows. No figure is
@@ -31,6 +33,7 @@ import {
   ErrorState,
   Field,
   FilterBar,
+  FilterCard,
   ListPage,
   LoadingState,
   Picker,
@@ -43,13 +46,14 @@ import { PastRowActions } from '../components/PastRowActions';
 import { PastSectionHeader } from '../components/PastSectionHeader';
 import { PastWeekNav } from '../components/PastWeekNav';
 import { PastGoTo } from '../components/PastGoTo';
-import { PastList, rowsOf } from '../components/PastList';
-import { useBikriList, useBikriWindow } from '../hooks/useBikriReads';
-import { usePastGroups } from '../hooks/usePastGroups';
+import { PastList, rowOf, rowsOf } from '../components/PastList';
+import { PastDayRows, type PastFilter } from '../components/PastDayRows';
+import { PastDays } from '../components/PastDays';
+import { PastWindowTotals } from '../components/PastWindowTotals';
+import { NO_OVERRIDES, isDayOpen, toggleDay, withDayOpen, type DayOverrides } from '../past-days';
+import { useBikriDetail, useBikriList, useBikriWindow } from '../hooks/useBikriReads';
 import { usePastPrintScreen } from '../hooks/usePastPrintScreen';
 import { bikriListColumns } from '../list-columns';
-import type { BikriList } from '../../../bindings/BikriList';
-import type { BikriListInput } from '../../../bindings/BikriListInput';
 import {
   lastWindowEnd,
   parsePastSearch,
@@ -61,17 +65,15 @@ import {
 } from '../past-window';
 import { TODAY_SCREEN, todayChoicesFrom, todayChoicesText } from '../remember';
 
+/** What the window keeps about its days: the hand-made opens and closes, and the day that is lit. */
+interface HeldDays {
+  key: string;
+  overrides: DayOverrides;
+  highlight: string | null;
+}
+
 const ALL = 'all';
 type StatusChoice = BikriStatus | typeof ALL;
-
-/** The filters of the two lists: the Owner's own, or none while "show every بکری" is ticked. */
-type PastFilter = Omit<BikriListInput, 'offset' | 'limit' | 'sort' | 'date' | 'from' | 'to'>;
-
-/** The row of a page that has focus, or null. */
-function rowOf(page: BikriList | undefined, rowId: string | null): BikriListRow | null {
-  if (page === undefined || rowId === null) return null;
-  return page.rows.find((row) => String(row.id) === rowId) ?? null;
-}
 
 /** The filters start as the Owner left them (PRD FR-7.45); the window always starts on yesterday. */
 export function TodayBikriPage() {
@@ -96,6 +98,9 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
   const [showFinished, setShowFinished] = useState(false);
   const moreSet = [seller !== null, item !== null, status !== ALL].filter(Boolean).length;
   const filtersSet = moreSet > 0 || search.trim() !== '' || showFinished;
+  // A search or a filter that narrows opens every day with a match, so no result is hidden; so does
+  // "show every بکری". The tick for cancelled بکری widens the list, so it does not open days (FR-12.46).
+  const autoOpen = showAll || moreSet > 0 || search.trim() !== '';
   useEffect(() => {
     remember(todayChoicesText({ seller, item, status }));
   }, [seller, item, status, remember]);
@@ -156,9 +161,42 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
   const [focusToday, setFocusToday] = useState<string | null>(
     address.row === undefined ? null : String(address.row),
   );
-  const [focusWindow, setFocusWindow] = useState<string | null>(
-    address.row === undefined ? null : String(address.row),
-  );
+  // Which days are open is the screen's state, not the grid's, so a language switch keeps it (F39). A move
+  // of the window or a new filter closes them all; the one day a go-to-date or a way back from an edit
+  // asked for opens (FR-12.46 v1.39). The state is kept with the window and filter it belongs to, and is
+  // made again, in the same render, when either changes.
+  const resetKey = `${address.end ?? ''}|${JSON.stringify(filter)}`;
+  const [held, setHeld] = useState<HeldDays>({
+    key: resetKey,
+    overrides: NO_OVERRIDES,
+    highlight: null,
+  });
+  // The day a go-to-date to another window asked for, until that window has come.
+  const [wantedDay, setWantedDay] = useState<string | null>(null);
+  if (held.key !== resetKey) {
+    setHeld({
+      key: resetKey,
+      overrides: wantedDay === null ? NO_OVERRIDES : withDayOpen(wantedDay, NO_OVERRIDES),
+      highlight: wantedDay,
+    });
+    setWantedDay(null);
+  }
+  const overrides = held.overrides;
+  // The way back from an edit: the day of that بکری opens and its row has focus. The day is read from the
+  // saved بکری, which the edit screen has just read, so it is at hand.
+  const returned = useBikriDetail(address.row ?? null);
+  const returnedDay = returned.data?.entry_date;
+  const [returnDone, setReturnDone] = useState(false);
+  if (!returnDone && returnedDay !== undefined && range !== null) {
+    setReturnDone(true);
+    if (returnedDay >= range.from && returnedDay <= range.to) {
+      setHeld((now) => ({
+        ...now,
+        overrides: withDayOpen(returnedDay, now.overrides),
+        highlight: returnedDay,
+      }));
+    }
+  }
   const searchRef = useFocusFirstField<HTMLDivElement>();
 
   /** Goes to a window or a tick: the address says where the list is, so a way back finds it. */
@@ -167,12 +205,25 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
   };
   const goEnd = (wanted: string) => {
     if (today === null) return;
+    setWantedDay(null);
     const kept = windowEnd(wanted, today);
     // The window that ends yesterday is the one a new day moves on with: it is not written down.
     go({
       ...(kept === lastWindowEnd(today) ? {} : { end: kept }),
       ...(showAll ? { all: true as const } : {}),
     });
+  };
+  /** "تاریخ پر جائیں": the window that ends on that day opens, and that day opens and is lit (FR-12.46). */
+  const goToDate = (wanted: string) => {
+    if (today === null) return;
+    const lit = wanted <= lastWindowEnd(today) ? wanted : null;
+    if (lit !== null && end !== null && windowEnd(wanted, today) === end) {
+      // The day is in the window that is on screen already: no move, only the day opens.
+      setHeld((now) => ({ ...now, overrides: withDayOpen(lit, now.overrides), highlight: lit }));
+      return;
+    }
+    goEnd(wanted);
+    setWantedDay(lit);
   };
   const move = (direction: -1 | 1) => {
     if (end === null || today === null) return;
@@ -217,13 +268,7 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
 
   const todayRows = rowsOf(todayList.data, todayList.isError);
   const todayFirst = todayList.data?.pages[0];
-  const windowFirst = windowList.data?.pages[0];
-  const groups = usePastGroups(
-    windowFirst,
-    windowList.pager.page,
-    windowList.pager.pageCount,
-    windowList.sort !== null,
-  );
+  const windowFirst = windowList.data;
 
   // Today has no بکری: one line, because the window of earlier days is under it.
   const todayEmpty = (
@@ -257,10 +302,10 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
     );
 
   const filters = (
-    <div {...formNavigationProps} className="flex flex-col gap-3">
+    <FilterCard {...formNavigationProps} className="flex flex-col gap-3">
       {/* The date box is above the filters (PRD 12.7). It is not the first thing in focus: the search
           box is, since a number or a truck is what is looked for most (PRD FR-7.1). */}
-      <PastGoTo today={today} onGo={goEnd} />
+      <PastGoTo today={today} onGo={goToDate} />
       <div ref={address.row === undefined ? searchRef : undefined}>
         <FilterBar
           screen="bikri.today"
@@ -341,7 +386,7 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
         </p>
       ) : null}
       {print.notices}
-    </div>
+    </FilterCard>
   );
 
   /** The window and the switch the lists are on: where the Owner comes back to after an edit. */
@@ -349,6 +394,52 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
     past: end ?? '',
     ...(showAll ? { pastAll: true as const } : {}),
   };
+
+  // The days of the window, each one closed line; an open day lists its بکری under its line (FR-12.46).
+  let windowBody;
+  if (windowList.isError && windowFirst === undefined) {
+    windowBody = (
+      <ErrorState
+        title={<Localized id="bikri-past-failed" />}
+        error={uiErrorOf(windowList.error)}
+        onRetry={() => {
+          void windowList.refetch();
+        }}
+      />
+    );
+  } else if (windowFirst === undefined) {
+    windowBody = <LoadingState />;
+  } else if (windowFirst.total_count === 0) {
+    windowBody = windowEmpty;
+  } else {
+    windowBody = (
+      <PastDays
+        days={windowFirst.days}
+        isOpen={(one) => isDayOpen(one, autoOpen, overrides)}
+        onToggle={(one) => {
+          setHeld((now) => ({ ...now, overrides: toggleDay(one, autoOpen, now.overrides) }));
+        }}
+        highlight={held.highlight}
+        onMove={(direction) => {
+          move(direction === 'previous' ? -1 : 1);
+        }}
+        totals={<PastWindowTotals totals={windowFirst.totals} />}
+      >
+        {(one) => (
+          <PastDayRows
+            day={one.date}
+            filter={filter}
+            columns={columns}
+            onOpen={openRow}
+            focusRow={
+              one.date === returnedDay && address.row !== undefined ? String(address.row) : null
+            }
+            back={wayBack}
+          />
+        )}
+      </PastDays>
+    );
+  }
 
   let body;
   if (day.isError) {
@@ -390,31 +481,15 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
           />
         </section>
         <PastDivider from={range.from} to={range.to} />
-        <section className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <PastSectionHeader
-              part="window"
-              from={range.from}
-              to={range.to}
-              count={windowFirst?.total_count ?? null}
-              gross={windowFirst?.totals.gross ?? null}
-            />
-            <PastRowActions row={rowOf(windowFirst, focusWindow)} back={wayBack} />
-          </div>
-          <PastList
-            query={windowList}
-            columns={columns}
-            labelId="bikri-past-label"
-            failedId="bikri-past-failed"
-            empty={windowEmpty}
-            onOpen={openRow}
-            focusRowId={focusWindow}
-            onFocusRow={setFocusWindow}
-            groups={groups}
-            onPageKey={(direction) => {
-              move(direction === 'previous' ? -1 : 1);
-            }}
+        <section className="flex shrink-0 flex-col gap-2">
+          <PastSectionHeader
+            part="window"
+            from={range.from}
+            to={range.to}
+            count={windowFirst?.total_count ?? null}
+            gross={windowFirst?.totals.gross ?? null}
           />
+          {windowBody}
         </section>
         {/* The buttons that move the window are at the end, after the table and its page buttons. */}
         <PastWeekNav

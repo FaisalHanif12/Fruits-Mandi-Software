@@ -5,7 +5,7 @@
 // (NFR-USE-12). Everything is the backend's; nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert, Users } from 'lucide-react';
 import { formatBps, isNegativePaisa } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { CalcInfo, Card, FigureCell, Num, Table, type TableColumn } from '../../../shared/ui';
@@ -84,7 +84,7 @@ export function GardenPartnersCard({ results, closed }: GardenPartnersCardProps)
     },
   ];
   return (
-    <Card compact title={<Localized id="gardens-partner-results-title" />}>
+    <Card compact icon={Users} title={<Localized id="gardens-partner-results-title" />}>
       {results.length === 0 ? (
         <Localized id="gardens-partner-results-empty">
           <p className="type-body text-ink-muted" />

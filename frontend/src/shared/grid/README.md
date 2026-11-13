@@ -22,6 +22,17 @@ edge; a small column (a choice, a tick) is centred (`cell-center`, `header-cente
 has one width (`SHARED_COLUMN_WIDTHS`, the same numbers as the `--col-*-w` tokens). The proof is
 `tests/e2e/alignment/` (see its README).
 
+## Status chips and quiet zeros (plan 75, items 4 and 8)
+
+- `ListColumn.chip(row, context)` may return `{ tone, icon }` (`StatusChipLook`, `shared/ui/status-looks`
+  has the shared ones: `STATUS_SAVED`, `STATUS_CANCELLED`, `STATUS_OPEN`, `STATUS_CLOSED`): the word of
+  `value` is drawn as a `StatusChip`, centred under a centred heading (`cell-center cell-chip`,
+  `header-center`). The word is always in the chip and the icon goes with it, so a state is never told by
+  colour alone. A row with no word draws an empty cell. A column without `chip` is drawn as before.
+- A read-only list (`.list-grid`) has a lighter heading (`--color-surface-readonly`) than an entry grid
+  and tints the row under the pointer. A money column gives a body cell whose text is "0" the class
+  `cell-zero` (the quiet ink); the total row never gets it. Colour only: the 0 stays where it is.
+
 ## Dense column types (plan 20, step F3)
 
 `count` (100 px, a quantity or a count of days), `figure` (120 px, an amount in a table with many

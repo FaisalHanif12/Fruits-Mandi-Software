@@ -110,6 +110,15 @@ fn account_source(id: i64) -> Option<RowSource> {
     })
 }
 
+/// The columns of R18, the one definition: [`run_r18`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn trial_columns() -> Vec<Column> {
+    vec![
+        col("account", ids::COL_ACCOUNT, ColumnKind::Party),
+        col("debit", ids::COL_DEBIT, ColumnKind::Money),
+        col("credit", ids::COL_CREDIT, ColumnKind::Money),
+    ]
+}
+
 /// R18: every account with posted lines, with its balance on its side.
 ///
 /// # Errors
@@ -153,11 +162,7 @@ pub(crate) fn run_r18(
         id: ReportId::R18,
         title_id: ids::title_id("R18"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("account", ids::COL_ACCOUNT, ColumnKind::Party),
-            col("debit", ids::COL_DEBIT, ColumnKind::Money),
-            col("credit", ids::COL_CREDIT, ColumnKind::Money),
-        ],
+        columns: trial_columns(),
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),
@@ -180,6 +185,16 @@ fn party_ref(parties: &HashMap<i64, PartyRef>, id: i64) -> Result<PartyRef, Repo
         .get(&id)
         .cloned()
         .ok_or_else(|| ReportsError::Data(format!("account {id} is missing")))
+}
+
+/// The columns of R16, the one definition: [`run_r16`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn index_columns() -> Vec<Column> {
+    vec![
+        col("account", ids::COL_ACCOUNT, ColumnKind::Party),
+        col("city", ids::COL_CITY, ColumnKind::Names),
+        col("debit", ids::COL_DEBIT, ColumnKind::Money),
+        col("credit", ids::COL_CREDIT, ColumnKind::Money),
+    ]
 }
 
 /// R16: every account (of the city, if one is picked) with its code, city and balance.
@@ -227,12 +242,7 @@ pub(crate) fn run_r16(
         id: ReportId::R16,
         title_id: ids::title_id("R16"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("account", ids::COL_ACCOUNT, ColumnKind::Party),
-            col("city", ids::COL_CITY, ColumnKind::Names),
-            col("debit", ids::COL_DEBIT, ColumnKind::Money),
-            col("credit", ids::COL_CREDIT, ColumnKind::Money),
-        ],
+        columns: index_columns(),
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),
@@ -285,6 +295,16 @@ struct ControlRow {
     head_id: i64,
     head_code: String,
     head_names: Names,
+}
+
+/// The columns of R17, the one definition: [`run_r17`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn heads_columns() -> Vec<Column> {
+    vec![
+        col("code", ids::COL_ACCOUNT, ColumnKind::Text),
+        col("head", ids::COL_HEAD, ColumnKind::Names),
+        col("debit", ids::COL_DEBIT, ColumnKind::Money),
+        col("credit", ids::COL_CREDIT, ColumnKind::Money),
+    ]
 }
 
 /// R17: the balance of every head and of every control under it, as of the day.
@@ -409,12 +429,7 @@ pub(crate) fn run_r17(
         id: ReportId::R17,
         title_id: ids::title_id("R17"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("code", ids::COL_ACCOUNT, ColumnKind::Text),
-            col("head", ids::COL_HEAD, ColumnKind::Names),
-            col("debit", ids::COL_DEBIT, ColumnKind::Money),
-            col("credit", ids::COL_CREDIT, ColumnKind::Money),
-        ],
+        columns: heads_columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),
@@ -431,6 +446,16 @@ pub(crate) fn run_r17(
             cell: balance_cell(sides.difference()?),
         }],
     })
+}
+
+/// The columns of R19, the one definition: [`run_r19`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn opening_trial_columns() -> Vec<Column> {
+    vec![
+        col("account", ids::COL_ACCOUNT, ColumnKind::Party),
+        col("opening_date", ids::COL_OPENING_DATE, ColumnKind::Date),
+        col("debit", ids::COL_DEBIT, ColumnKind::Money),
+        col("credit", ids::COL_CREDIT, ColumnKind::Money),
+    ]
 }
 
 /// R19: the opening balances only (PRD FR-10.9). Each account with an opening shows it on its
@@ -534,12 +559,7 @@ pub(crate) fn run_r19(
         id: ReportId::R19,
         title_id: ids::title_id("R19"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("account", ids::COL_ACCOUNT, ColumnKind::Party),
-            col("opening_date", ids::COL_OPENING_DATE, ColumnKind::Date),
-            col("debit", ids::COL_DEBIT, ColumnKind::Money),
-            col("credit", ids::COL_CREDIT, ColumnKind::Money),
-        ],
+        columns: opening_trial_columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),

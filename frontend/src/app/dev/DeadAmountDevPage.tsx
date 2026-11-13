@@ -40,12 +40,11 @@ export function DeadAmountDevPage() {
   const card = devValue('card');
   return (
     <AppShell
-      nav={<MainNav current="reports" onSelect={() => undefined} />}
+      nav={<MainNav current="reports" onSelect={() => undefined} onSignOut={() => undefined} />}
       moduleMenu={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
-      onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

@@ -177,3 +177,14 @@ auth-change-wrong-current = The current password is wrong. Tries left: { $tries_
 
 # review: pending
 auth-change-saved = Password changed
+
+## The brand panel beside the sign-in form (plan 75 T2).
+
+# review: pending
+auth-brand-books = Your books always balance
+
+# review: pending
+auth-brand-offline = Works without internet
+
+# review: pending
+auth-brand-backup = Backed up every day

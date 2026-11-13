@@ -21,6 +21,11 @@
    some of its padding so more of the work is in view (plan 38). `short:` is used like `normal:`. */
 @custom-variant short (@media (max-height: 800px));
 
+/* The smallest window there is, 1024 x 600 (NFR-USE-15): a part that is only just too tall for it gives
+   back a little height, as the main menu does with its twelve items (plan 75 T3). `shortest:` is used
+   like `short:`. */
+@custom-variant shortest (@media (max-height: 640px));
+
 html {
   background-color: var(--color-bg);
   color: var(--color-ink);
@@ -173,6 +178,27 @@ body {
   &:not(:only-child) {
     margin-inline: var(--number-gap);
   }
+
+  /* A number at the start or the end of a cell's text has no words beside it on that side, so it keeps no
+     gap there: the cell starts and ends where the heading and the total of its column do (plan 75).
+     The run is a left-to-right isolate, so its own `inline` sides are always left (start) and right (end).
+     The cell's start is the run's left side in English and its right side in Urdu, so the Urdu rules swap the
+     two: the cell's start edge clears the run's `margin-inline-end`, the cell's end edge its `margin-inline-start`. */
+  &.number-run-start:not(:only-child) {
+    margin-inline-start: 0;
+  }
+
+  &.number-run-end:not(:only-child) {
+    margin-inline-end: 0;
+  }
+
+  :root[dir='rtl'] &.number-run-start:not(:only-child) {
+    margin-inline: var(--number-gap) 0;
+  }
+
+  :root[dir='rtl'] &.number-run-end:not(:only-child) {
+    margin-inline: 0 var(--number-gap);
+  }
 }
 
 /* Two thin lines, like the rule drawn under a total in a ledger. */
@@ -210,6 +236,18 @@ body {
 @utility type-chip {
   font-family: var(--font-text);
   font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/*
+ * The word inside a status chip of a list (plan 75, item 4): step 1 of the type scale, which is 14 px
+ * in Latin and 18 px in Urdu (NFR-USE-20: Latin in a grid is at least 14 px), so a chip with an icon and
+ * a word such as "Cancelled" fits the 120 px status column. Semibold in English, Gulzar's one weight in Urdu.
+ */
+@utility type-chip-small {
+  font-family: var(--font-text);
+  font-size: var(--text-1);
   font-weight: var(--weight-strong);
   line-height: var(--leading-text);
 }
@@ -306,6 +344,13 @@ body {
     grid-column: 3;
     justify-self: start;
   }
+}
+
+/* The arrow of a day of the past sales turns a quarter when the day opens (plan 75): a turn is the one thing
+   besides colour that moves, at most 150 ms, and not at all when the system asks for no motion. */
+@utility transition-turn {
+  transition-property: transform;
+  transition-duration: var(--motion-fast);
 }
 
 /* Only colour and opacity move, at most 150 ms (design system 7). */

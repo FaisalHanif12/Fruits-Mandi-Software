@@ -155,7 +155,7 @@ export function FruitListSection({
   );
 
   return (
-    <Card compact title={<Localized id="fruit-list-title" />}>
+    <Card compact icon={Apple} title={<Localized id="fruit-list-title" />}>
       <div {...formNavigationProps}>
         <FilterBar
           screen="fruit.list"

@@ -56,7 +56,7 @@ export function TripPurchasesSection({
   const selected = usePurchase(selectedId);
 
   return (
-    <Card compact title={<Localized id="trips-purchases-title" />}>
+    <Card compact icon={ShoppingBasket} title={<Localized id="trips-purchases-title" />}>
       {purchases.length === 0 ? (
         <EmptyState
           icon={ShoppingBasket}

@@ -28,7 +28,7 @@ use crate::reports::common::{
 use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
 };
 use mandi_core::money::Paisa;
 
@@ -61,6 +61,76 @@ impl Kind {
             Kind::Credit => ReportId::R4,
         }
     }
+}
+
+/// What the columns of a register depend on: the optional columns the filter's lines call for
+/// (see [`run`]). The catalogue lists the columns of the default shape (none of the optional
+/// columns), so the guide card and the register can never disagree (plan 75 T1).
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct Shape {
+    /// The packing after the item: the lines were sold in more than one packing.
+    pub(crate) packing: bool,
+    /// The quality after the item (PRD FR-12.42): some line has one.
+    pub(crate) grade: bool,
+    /// The seller's rate after the rate: some line was sold at a rate that is not the buyer's.
+    pub(crate) rate_diff: bool,
+    /// The two columns at the end for money paid on the spot (R3 and R4, PRD FR-12.44).
+    pub(crate) paid: bool,
+}
+
+impl Kind {
+    /// The shape of the columns of the kind when no optional column is called for.
+    pub(crate) fn default_shape(self) -> Shape {
+        Shape {
+            paid: self != Kind::All,
+            ..Shape::default()
+        }
+    }
+}
+
+/// The columns of R2, R3 or R4 for a shape. The one definition: [`run`] and the catalogue both
+/// use it.
+pub(crate) fn columns(shape: Shape) -> Vec<Column> {
+    let mut columns = vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("doc", ids::COL_DOC, ColumnKind::Doc),
+        col("buyer", ids::COL_BUYER, ColumnKind::Party),
+        col("city", ids::COL_CITY, ColumnKind::Names),
+        col("item", ids::COL_ITEM, ColumnKind::Names),
+    ];
+    if shape.packing {
+        columns.push(col("packing", ids::COL_PACKING, ColumnKind::Names));
+    }
+    if shape.grade {
+        columns.push(col("grade", ids::COL_GRADE, ColumnKind::Label));
+    }
+    columns.extend([
+        col("qty", ids::COL_QTY, ColumnKind::Number),
+        // With the seller's rate beside it, `rate` is told apart as the buyer's.
+        col(
+            "rate",
+            if shape.rate_diff {
+                ids::COL_BUYER_RATE
+            } else {
+                ids::COL_RATE
+            },
+            ColumnKind::Money,
+        ),
+    ]);
+    if shape.rate_diff {
+        columns.push(col("seller_rate", ids::COL_SELLER_RATE, ColumnKind::Money));
+    }
+    columns.extend([
+        col("value", ids::COL_VALUE, ColumnKind::Money),
+        col("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
+    ]);
+    if shape.paid {
+        columns.extend([
+            col("paid", ids::COL_PAID_ON_SPOT, ColumnKind::Money),
+            col("left", ids::COL_LEFT_ON_ACCOUNT, ColumnKind::Money),
+        ]);
+    }
+    columns
 }
 
 /// The conditions shared by the page and the totals, so the two queries can never differ. Only
@@ -342,42 +412,19 @@ pub(crate) fn run(
         });
     }
 
-    let mut columns = vec![
-        col("date", ids::COL_DATE, ColumnKind::Date),
-        col("doc", ids::COL_DOC, ColumnKind::Doc),
-        col("buyer", ids::COL_BUYER, ColumnKind::Party),
-        col("city", ids::COL_CITY, ColumnKind::Names),
-        col("item", ids::COL_ITEM, ColumnKind::Names),
-    ];
+    let columns = columns(Shape {
+        packing: with_packing,
+        grade: with_grade,
+        rate_diff: with_rate_diff,
+        paid: with_paid,
+    });
     let mut totals_cells = vec![Cell::Empty; 5];
     if with_packing {
-        columns.push(col("packing", ids::COL_PACKING, ColumnKind::Names));
         totals_cells.push(Cell::Empty);
     }
     if with_grade {
-        columns.push(col("grade", ids::COL_GRADE, ColumnKind::Label));
         totals_cells.push(Cell::Empty);
     }
-    columns.extend([
-        col("qty", ids::COL_QTY, ColumnKind::Number),
-        // With the seller's rate beside it, `rate` is told apart as the buyer's.
-        col(
-            "rate",
-            if with_rate_diff {
-                ids::COL_BUYER_RATE
-            } else {
-                ids::COL_RATE
-            },
-            ColumnKind::Money,
-        ),
-    ]);
-    if with_rate_diff {
-        columns.push(col("seller_rate", ids::COL_SELLER_RATE, ColumnKind::Money));
-    }
-    columns.extend([
-        col("value", ids::COL_VALUE, ColumnKind::Money),
-        col("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
-    ]);
     totals_cells.extend([Cell::Number { value: qty }, Cell::Empty]);
     if with_rate_diff {
         totals_cells.push(Cell::Empty);
@@ -391,10 +438,6 @@ pub(crate) fn run(
         },
     ]);
     if with_paid {
-        columns.extend([
-            col("paid", ids::COL_PAID_ON_SPOT, ColumnKind::Money),
-            col("left", ids::COL_LEFT_ON_ACCOUNT, ColumnKind::Money),
-        ]);
         // The sums of the whole filter: the stored columns added in SQL, the difference made once,
         // here, by a checked subtraction (Code Standards M7).
         let (paid_sum, left_sum) = paid_and_left(paid_total, total)?;

@@ -5,7 +5,7 @@
 // a retry, nothing yet, and the rows. Without a khata it says to choose one.
 
 import { Localized } from '@fluent/react';
-import { Wallet } from 'lucide-react';
+import { Notebook, Wallet } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
 import { Card, EmptyState, Fact } from '../../../shared/ui';
@@ -20,7 +20,7 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
   const first = statement.data?.pages[0];
   const rows = statement.data?.pages.flatMap((page) => page.rows);
   return (
-    <Card compact title={<Localized id="cashbook-khata-title" />}>
+    <Card compact icon={Notebook} title={<Localized id="cashbook-khata-title" />}>
       {khataId === null ? (
         <EmptyState
           icon={Wallet}
@@ -31,11 +31,11 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
         <>
           {first === undefined ? null : (
             <dl className="grid grid-cols-2 gap-3">
-              <Fact label={<Localized id="cashbook-khata-opening" />}>
-                <SignedNum paisa={first.opening_paisa} />
+              <Fact stat label={<Localized id="cashbook-khata-opening" />}>
+                <SignedNum inherit paisa={first.opening_paisa} />
               </Fact>
-              <Fact label={<Localized id="cashbook-khata-closing" />}>
-                <SignedNum paisa={first.closing_paisa} />
+              <Fact stat label={<Localized id="cashbook-khata-closing" />}>
+                <SignedNum inherit paisa={first.closing_paisa} />
               </Fact>
             </dl>
           )}

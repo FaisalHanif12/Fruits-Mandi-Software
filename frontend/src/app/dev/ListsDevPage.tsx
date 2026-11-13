@@ -64,11 +64,10 @@ export function ListsDevPage() {
   const own = SCREENS[kind ?? ''];
   return (
     <AppShell
-      nav={<MainNav current="index" onSelect={() => undefined} />}
+      nav={<MainNav current="index" onSelect={() => undefined} onSignOut={() => undefined} />}
       moduleMenu={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
-      onSignOut={() => undefined}
       onGuide={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}

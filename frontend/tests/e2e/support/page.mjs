@@ -233,17 +233,15 @@ export async function closeGuide(waitMs = SHORT_WAIT_MS * 2) {
 }
 
 /**
- * Signs out from the user menu.
+ * Signs out from the bottom of the main menu (plan 75 T3).
  * @param {Language} language
  */
 export async function signOut(language) {
-  const menu = await $(`button[aria-label=${quoted(t(language, 'layout-user-menu'))}]`);
-  await menu.click();
-  const item = await $(
-    `//*[@role="menuitem"][contains(${PLAIN}, ${quoted(t(language, 'layout-user-signout'))})]`,
+  const button = await $(
+    `nav button[data-nav-item][aria-label=${quoted(t(language, 'layout-user-signout'))}]`,
   );
-  await item.waitForDisplayed({ timeout: WAIT_MS });
-  await item.click();
+  await button.waitForDisplayed({ timeout: WAIT_MS });
+  await button.click();
   await waitForHeading(language, 'auth-login-title');
 }
 

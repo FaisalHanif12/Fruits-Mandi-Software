@@ -10,6 +10,7 @@ import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate, type Paisa } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
+import { STATUS_CANCELLED, STATUS_SAVED } from '../../shared/ui';
 import { voucherNumberText } from '../vouchers';
 import type { CashbookRow, KhataEntryRow, LentRow, TakeRow, VoucherRow } from './types';
 
@@ -127,6 +128,7 @@ export const EXPENSE_DAY_COLUMNS: readonly ListColumn<VoucherRow>[] = [
         row.edited,
         context,
       ),
+    chip: (row) => (row.status === 'cancelled' ? STATUS_CANCELLED : STATUS_SAVED),
     tip: (row, context) => editedTip(row.edited, context),
   },
   {
@@ -363,6 +365,7 @@ export const GENERAL_LIST_COLUMNS: readonly ListColumn<VoucherRow>[] = [
         row.edited,
         context,
       ),
+    chip: (row) => (row.status === 'cancelled' ? STATUS_CANCELLED : STATUS_SAVED),
     tip: (row, context) => editedTip(row.edited, context),
   },
 ];

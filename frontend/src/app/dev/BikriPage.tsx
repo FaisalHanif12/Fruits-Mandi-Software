@@ -52,7 +52,7 @@ export function BikriPage() {
   useEscapeDispatcher();
   return (
     <AppShell
-      nav={<MainNav current="bikri" onSelect={() => undefined} />}
+      nav={<MainNav current="bikri" onSelect={() => undefined} onSignOut={() => undefined} />}
       moduleMenu={
         <ModuleMenu
           current={
@@ -68,7 +68,6 @@ export function BikriPage() {
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
-      onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

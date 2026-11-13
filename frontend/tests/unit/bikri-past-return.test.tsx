@@ -23,7 +23,7 @@ import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { fakePlan16 } from '../helpers/bikri-plan16';
 import { listRow, savedEvent1 } from '../helpers/bikri-saved';
-import { cellOf, focusedIn, gridOf, lotsGrid, named, salesGrid } from '../helpers/bikri-screen';
+import { cellOf, focusedIn, lotsGrid, named, salesGrid } from '../helpers/bikri-screen';
 import { CLOSED_DAY_ENTRY, lockedEntry } from '../helpers/entry-flags';
 import { DAY_FIX_CLOSE_E2E_45, DAY_FIX_OPEN_E2E_45 } from '../helpers/edit-real';
 import {
@@ -84,16 +84,35 @@ const windowCalls = () =>
     .mock.calls.map(([input]) => input)
     .filter((input) => input.date === null);
 
+/** The day of بکری 41 in the window, whose line opens to show its row (plan 75 7.7). */
+const DAY_SELECTOR = `[data-day="${WINDOW_END}"]`;
+const dayLineOf = () => document.querySelector<HTMLElement>(`${DAY_SELECTOR} [data-day-line]`);
+const dayGridOf = (language: Language): HTMLElement => {
+  const day = document.querySelector<HTMLElement>(DAY_SELECTOR);
+  if (day === null) throw new Error('the day is not on screen');
+  return within(day).getByRole('group', { name: named(message(language, 'bikri-past-label')) });
+};
+
+/**
+ * The saved بکری 41 as the backend reads it: entered on the day of its row in the window, so the list knows
+ * which day to open on the way back from an edit (plan 75 7.7).
+ */
+const keepDayOf41 = () => {
+  vi.mocked(bikriApi.bikriGet).mockResolvedValue({ ...savedEvent1(), entry_date: WINDOW_END });
+};
+
 describe.each(LANGUAGES)('the way between پچھلی بکری and the sale book (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
     signedIn(sessionUser({ language }));
     fakeBikri();
+    keepDayOf41();
     // Today's section is empty: the row of بکری 1 is in the window, once.
     fakePast({ today: [], window: WINDOW_ROWS, gross: WINDOW_GROSS });
   });
 
-  const windowGrid = () => gridOf(language, 'bikri-past-label');
+  const windowGrid = () => dayGridOf(language);
+  // The way back from an edit opens the day of the بکری by itself; the day is not opened by hand here.
   const listShown = async () => {
     await screen.findByRole('heading', {
       level: 1,
@@ -426,9 +445,10 @@ describe.each(LANGUAGES)('the Edit and Cancel buttons of a row of پچھلی ب�
     resetClientState(language);
     signedIn(sessionUser({ language }));
     fakeBikri();
+    keepDayOf41();
   });
 
-  const windowGrid = () => gridOf(language, 'bikri-past-label');
+  const windowGrid = () => dayGridOf(language);
   const actionsOf = (part: number): HTMLElement => {
     const found = document.querySelectorAll<HTMLElement>('[data-past-row-actions]')[part];
     if (found === undefined) throw new Error(`no actions block ${String(part)}`);
@@ -443,8 +463,17 @@ describe.each(LANGUAGES)('the Edit and Cancel buttons of a row of پچھلی ب�
   const cancelButton = () => buttonIn(windowActions(), m('edit-action-cancel'));
   const blockText = (block: HTMLElement) => visible(block.textContent);
 
-  const listShown = async () => {
+  // The list is opened from the menu here, so the day of the row is closed until it is opened by hand (plan 75
+  // 7.7); with the tick "show every بکری" it opens by itself. After a way back from an edit it opens by itself.
+  const listShown = async (byHand = false) => {
     await screen.findByRole('heading', { level: 1, name: named(m('layout-module-today')) });
+    if (byHand) {
+      await waitFor(() => {
+        expect(dayLineOf()).not.toBeNull();
+      });
+      const line = dayLineOf();
+      if (line?.getAttribute('aria-expanded') === 'false') await userEvent.click(line);
+    }
     await waitFor(() => {
       expect(windowGrid().querySelector('.ag-row[row-id="41"]')).not.toBeNull();
     });
@@ -485,7 +514,7 @@ describe.each(LANGUAGES)('the Edit and Cancel buttons of a row of پچھلی ب�
 
   /** Tab into the window's grid and arrow down to the row of بکری 1: the row has focus, no mouse used. */
   const pickRow = async (user: ReturnType<typeof userEvent.setup>) => {
-    await listShown();
+    await listShown(true);
     await tabTo(user, (element) => windowGrid().contains(element));
     for (let steps = 0; steps < 20 && !onRow41(); steps += 1) await user.keyboard('{ArrowDown}');
     expect(onRow41()).toBe(true);
@@ -523,7 +552,7 @@ describe.each(LANGUAGES)('the Edit and Cancel buttons of a row of پچھلی ب�
     fakePlan16();
     fakeRows(() => [windowRow()]);
     await renderApp('/bikri/today');
-    await listShown();
+    await listShown(true);
     for (const part of [0, WINDOW_ACTIONS]) {
       expect(blockText(actionsOf(part))).toContain(m('bikri-past-row-none'));
     }

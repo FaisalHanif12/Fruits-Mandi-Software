@@ -91,7 +91,7 @@ export function AttentionBell() {
         aria-label={label}
         title={label}
         data-attention-count={count}
-        className="relative ms-auto flex size-control-compact items-center justify-center rounded-2 border border-border bg-surface text-ink"
+        className="relative ms-auto flex size-control-compact items-center justify-center rounded-2 border border-transparent text-ink transition-calm hover:border-border hover:bg-surface-sunken"
       >
         <Icon aria-hidden="true" className="size-icon-md" />
         {count > 0 ? (

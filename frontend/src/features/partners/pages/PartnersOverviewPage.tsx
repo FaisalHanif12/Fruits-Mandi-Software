@@ -64,6 +64,7 @@ function PartnersOverviewPageScreen() {
   return (
     <ListPage
       titleId="partners-title"
+      icon={Users}
       help={
         <Localized id="partners-overview-help">
           <p />

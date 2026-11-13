@@ -25,11 +25,16 @@ export function IndexPage() {
   const firm = devValue('screen') === 'firm';
   return (
     <AppShell
-      nav={<MainNav current={firm ? 'settings' : 'index'} onSelect={() => undefined} />}
+      nav={
+        <MainNav
+          current={firm ? 'settings' : 'index'}
+          onSelect={() => undefined}
+          onSignOut={() => undefined}
+        />
+      }
       moduleMenu={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
-      onSignOut={() => undefined}
       onGuide={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}

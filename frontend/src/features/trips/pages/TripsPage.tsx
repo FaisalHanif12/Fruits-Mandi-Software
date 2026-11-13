@@ -25,6 +25,7 @@ import {
   ListPage,
   PeriodBox,
   Select,
+  FilterCard,
 } from '../../../shared/ui';
 import { useTripsList } from '../hooks';
 import { TRIP_COLUMNS } from '../list-columns';
@@ -139,6 +140,7 @@ function TripsBody({ saved, remember }: MemoryProps) {
 
   return (
     <ListPage
+      icon={Route}
       titleId="trips-title"
       help={
         <Localized id="trips-help">
@@ -152,7 +154,7 @@ function TripsBody({ saved, remember }: MemoryProps) {
         </Button>
       }
       filters={
-        <div {...formNavigationProps}>
+        <FilterCard {...formNavigationProps}>
           <FilterBar
             screen="trips.list"
             search={{ value: search, onChange: setSearch, labelId: 'trips-list-search' }}
@@ -172,7 +174,7 @@ function TripsBody({ saved, remember }: MemoryProps) {
               )}
             </Field>
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       <PagedList<TripRow>

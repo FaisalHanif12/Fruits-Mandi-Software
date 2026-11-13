@@ -5,7 +5,7 @@
 // Esc closes the preview, then goes back to the statement.
 
 import { Localized } from '@fluent/react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, UsersRound } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import type { LedgerSide } from '../../../bindings/LedgerSide';
 import { isoToDisplayDate } from '../../../shared/format';
@@ -47,6 +47,7 @@ export function PartyDay({ accountId, date, onBack }: PartyDayProps) {
   return (
     <ListPage
       titleId="party-ledgers-title"
+      icon={UsersRound}
       help={
         <Localized id="party-ledgers-help">
           <p />

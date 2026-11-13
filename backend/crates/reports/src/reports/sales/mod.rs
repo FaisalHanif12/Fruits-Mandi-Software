@@ -6,6 +6,8 @@
 //! (`bikri_sales`), the lots (`bikri_lots`) and the facts (`analytics_facts`). Nothing is worked
 //! out again from a rule, so a report can never disagree with the bills that were printed.
 
+use super::model::{Column, ReportId, StockView};
+
 mod buyer_bills;
 mod items;
 mod lots;
@@ -20,3 +22,20 @@ pub(super) use register::{
     totals_query as register_totals_query,
 };
 pub(super) use stock::run as run_r10;
+
+/// The columns of a report of this group as its default view shows them: no optional column of
+/// the registers, the stock with one row for each lot. Empty for a report of another group.
+/// Each comes from the same function the report's run uses (plan 75 T1).
+pub(super) fn default_columns(id: ReportId) -> Vec<Column> {
+    match id {
+        ReportId::R1 | ReportId::R6 => lots::seller_bill_columns(),
+        ReportId::R2 => register::columns(RegisterKind::All.default_shape()),
+        ReportId::R3 => register::columns(RegisterKind::Cash.default_shape()),
+        ReportId::R4 => register::columns(RegisterKind::Credit.default_shape()),
+        ReportId::R5 => buyer_bills::columns(),
+        ReportId::R7 => items::columns(),
+        ReportId::R10 => stock::columns(StockView::default()),
+        ReportId::R27 => lots::bill_series_columns(),
+        _ => Vec::new(),
+    }
+}

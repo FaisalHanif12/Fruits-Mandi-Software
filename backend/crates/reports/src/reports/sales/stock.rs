@@ -34,7 +34,7 @@ use crate::reports::common::{col, count_of, load_parties, lot_names, names_cell}
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind, StockView,
+    Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind, StockView,
 };
 
 /// A row waiting to be sorted: the day, the kind (a lot before a purchase), the document number
@@ -72,6 +72,29 @@ fn items_of_group(
     group
         .map(|group| crate::reports::common::item_ids_of_group(conn, group))
         .transpose()
+}
+
+/// The columns of R10 in a stock view: one row for each lot or one row for each item. The one
+/// definition the run and the catalogue both use (plan 75 T1).
+pub(crate) fn columns(view: StockView) -> Vec<Column> {
+    match view {
+        StockView::Lot => by_lot_columns(),
+        StockView::Item => by_item_columns(),
+    }
+}
+
+/// The columns of R10 with one row for each item, the one definition of that view (plan 75 T1).
+fn by_item_columns() -> Vec<Column> {
+    vec![
+        col("item", ids::COL_ITEM, ColumnKind::Names),
+        col("received", ids::COL_RECEIVED, ColumnKind::Number),
+        col("sold", ids::COL_SOLD, ColumnKind::Number),
+        col("written_off", ids::COL_WRITTEN_OFF, ColumnKind::Number),
+        col("fruit_taken", ids::COL_FRUIT_TAKEN, ColumnKind::Number),
+        col("balance", ids::COL_BALANCE_QTY, ColumnKind::Number),
+        col("our_left", ids::COL_OUR_LEFT, ColumnKind::Number),
+        col("other_left", ids::COL_OTHER_LEFT, ColumnKind::Number),
+    ]
 }
 
 /// R10 by item (PRD v1.32): one row for each item with the quantities of all its lots, trip
@@ -121,16 +144,7 @@ fn by_item(
         id: ReportId::R10,
         title_id: ids::title_id("R10"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("item", ids::COL_ITEM, ColumnKind::Names),
-            col("received", ids::COL_RECEIVED, ColumnKind::Number),
-            col("sold", ids::COL_SOLD, ColumnKind::Number),
-            col("written_off", ids::COL_WRITTEN_OFF, ColumnKind::Number),
-            col("fruit_taken", ids::COL_FRUIT_TAKEN, ColumnKind::Number),
-            col("balance", ids::COL_BALANCE_QTY, ColumnKind::Number),
-            col("our_left", ids::COL_OUR_LEFT, ColumnKind::Number),
-            col("other_left", ids::COL_OTHER_LEFT, ColumnKind::Number),
-        ],
+        columns: by_item_columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),
@@ -139,6 +153,26 @@ fn by_item(
         totals: total_cells,
         summary: Vec::new(),
     })
+}
+
+/// The columns of R10 with one row for each lot, the one definition of that view (plan 75 T1).
+fn by_lot_columns() -> Vec<Column> {
+    vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("doc", ids::COL_DOC, ColumnKind::Doc),
+        col("seller", ids::COL_SELLER, ColumnKind::Party),
+        col("item", ids::COL_ITEM, ColumnKind::Names),
+        col("packing", ids::COL_PACKING, ColumnKind::Names),
+        col("received", ids::COL_RECEIVED, ColumnKind::Number),
+        col("sold", ids::COL_SOLD, ColumnKind::Number),
+        col("written_off", ids::COL_WRITTEN_OFF, ColumnKind::Number),
+        col("fruit_taken", ids::COL_FRUIT_TAKEN, ColumnKind::Number),
+        col("balance", ids::COL_BALANCE_QTY, ColumnKind::Number),
+        col("our_left", ids::COL_OUR_LEFT, ColumnKind::Number),
+        col("other_left", ids::COL_OTHER_LEFT, ColumnKind::Number),
+        col("shop_name", ids::COL_SHOP_NAME, ColumnKind::Text),
+        col("days", ids::COL_DAYS_WAITING, ColumnKind::Number),
+    ]
 }
 
 /// Builds R10.
@@ -525,22 +559,7 @@ pub(crate) fn run(
         id: ReportId::R10,
         title_id: ids::title_id("R10"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("date", ids::COL_DATE, ColumnKind::Date),
-            col("doc", ids::COL_DOC, ColumnKind::Doc),
-            col("seller", ids::COL_SELLER, ColumnKind::Party),
-            col("item", ids::COL_ITEM, ColumnKind::Names),
-            col("packing", ids::COL_PACKING, ColumnKind::Names),
-            col("received", ids::COL_RECEIVED, ColumnKind::Number),
-            col("sold", ids::COL_SOLD, ColumnKind::Number),
-            col("written_off", ids::COL_WRITTEN_OFF, ColumnKind::Number),
-            col("fruit_taken", ids::COL_FRUIT_TAKEN, ColumnKind::Number),
-            col("balance", ids::COL_BALANCE_QTY, ColumnKind::Number),
-            col("our_left", ids::COL_OUR_LEFT, ColumnKind::Number),
-            col("other_left", ids::COL_OTHER_LEFT, ColumnKind::Number),
-            col("shop_name", ids::COL_SHOP_NAME, ColumnKind::Text),
-            col("days", ids::COL_DAYS_WAITING, ColumnKind::Number),
-        ],
+        columns: by_lot_columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),

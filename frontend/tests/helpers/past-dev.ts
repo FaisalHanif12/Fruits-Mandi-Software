@@ -62,12 +62,44 @@ const WINDOW = [
   row(57, 2, '2026-10-03', RAHIM, BANANA, 1),
 ];
 
-/** The خام بکری of each day in whole rupees, as a stand-in for the backend's day totals. */
+/** The خام بکری of each day in whole rupees, as a stand-in for the backend's day totals (the rows above, cancelled left out). */
 const GROSS = {
-  '2026-10-09': 98_300,
-  '2026-10-07': 41_000,
-  '2026-10-06': 12_000,
-  '2026-10-03': 33_500,
+  '2026-10-09': 51_600,
+  '2026-10-07': 17_500,
+  '2026-10-06': 17_600,
+  '2026-10-03': 17_700,
+};
+
+/** The backend's sums for one open day: stored sums of its saved بکری, a cancelled one left out. */
+const DAY_TOTALS = {
+  '2026-10-09': {
+    qty_received: 150,
+    qty_sold: 150,
+    gross: paisaForTest(5_160_000),
+    net: paisaForTest(4_260_000),
+    buyer_total: paisaForTest(5_460_000),
+  },
+  '2026-10-07': {
+    qty_received: 50,
+    qty_sold: 50,
+    gross: paisaForTest(1_750_000),
+    net: paisaForTest(1_450_000),
+    buyer_total: paisaForTest(1_850_000),
+  },
+  '2026-10-06': {
+    qty_received: 50,
+    qty_sold: 50,
+    gross: paisaForTest(1_760_000),
+    net: paisaForTest(1_460_000),
+    buyer_total: paisaForTest(1_860_000),
+  },
+  '2026-10-03': {
+    qty_received: 50,
+    qty_sold: 50,
+    gross: paisaForTest(1_770_000),
+    net: paisaForTest(1_470_000),
+    buyer_total: paisaForTest(1_870_000),
+  },
 };
 
 /** `?many`: 60 بکری over six days (10 a day), to see a window that fills the screen and scrolls. */
@@ -126,9 +158,10 @@ export function devPastList(
       buyer_total: paisaForTest(3_156_400),
     },
     windowTotals: {
-      gross: paisaForTest(18_480_000),
-      net: paisaForTest(13_020_000),
-      buyer_total: paisaForTest(19_980_000),
+      gross: paisaForTest(10_440_000),
+      net: paisaForTest(8_640_000),
+      buyer_total: paisaForTest(11_040_000),
     },
+    dayTotals: many ? {} : DAY_TOTALS,
   });
 }

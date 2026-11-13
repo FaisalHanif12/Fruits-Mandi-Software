@@ -11,6 +11,7 @@
 // - Four states: loading while the defaults arrive, an error with a retry, the form, and a form
 //   with no partner yet (a helpful message with a link to the partner setup).
 
+import { Route } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -226,7 +227,7 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
           />
           {fieldError(error, 'partners')}
         </Card>
-        <Card compact title={<Localized id="trips-new-details-title" />}>
+        <Card compact icon={Route} title={<Localized id="trips-new-details-title" />}>
           <div className="grid grid-cols-2 gap-4">
             <Field label={<Localized id="trips-field-date" />} error={fieldError(error, 'date')}>
               {(props) => (

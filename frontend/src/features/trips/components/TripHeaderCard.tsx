@@ -6,10 +6,20 @@
 // Everything is the backend's; nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { CircleCheck, CircleDot, Pencil, TriangleAlert } from 'lucide-react';
+import { Calculator, Pencil, TriangleAlert } from 'lucide-react';
 import { formatBps, isNegativePaisa, isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Button, CalcInfo, Card, Code, Fact, Num } from '../../../shared/ui';
+import {
+  Button,
+  CalcInfo,
+  Card,
+  Code,
+  Fact,
+  Num,
+  STATUS_CLOSED,
+  STATUS_OPEN,
+  StatusChip,
+} from '../../../shared/ui';
 import type { TripRow } from '../types';
 
 interface TripCardProps {
@@ -34,6 +44,26 @@ function ResultLine({ trip }: TripCardProps) {
   );
 }
 
+/** The result of the trip as a stat card at the head of its header: the same figure and working as the line below. */
+function ResultStat({ trip }: TripCardProps) {
+  const loss = isNegativePaisa(trip.result_paisa);
+  return (
+    <dl className="grid grid-cols-1 @form2:grid-cols-2">
+      <Fact
+        stat
+        label={<Localized id={loss ? 'glossary-tijarati-nuqsan' : 'glossary-tijarati-munafa'} />}
+      >
+        <span className={`inline-flex items-center gap-1 ${loss ? 'text-due' : ''}`}>
+          <span>
+            <Num inherit paisa={trip.result_paisa} />
+          </span>
+          <CalcInfo working={trip.result_working} inCell />
+        </span>
+      </Fact>
+    </dl>
+  );
+}
+
 function LossNote({ trip }: TripCardProps) {
   if (!isNegativePaisa(trip.result_paisa)) return null;
   return (
@@ -53,7 +83,6 @@ interface TripHeaderCardProps extends TripCardProps {
 
 export function TripHeaderCard({ trip, onEdit }: TripHeaderCardProps) {
   const open = trip.status === 'open';
-  const StatusIcon = open ? CircleDot : CircleCheck;
   return (
     <Card
       compact
@@ -62,16 +91,14 @@ export function TripHeaderCard({ trip, onEdit }: TripHeaderCardProps) {
           <Localized id="trips-detail-title" vars={{ code: trip.code }}>
             <span />
           </Localized>
-          <span
-            className={`inline-flex items-center gap-1 type-chip rounded-1 px-2 ${open ? 'bg-primary-soft text-primary' : 'bg-surface-sunken text-ink-muted'}`}
-          >
-            <StatusIcon aria-hidden="true" className="size-icon-sm shrink-0" />
+          <StatusChip {...(open ? STATUS_OPEN : STATUS_CLOSED)}>
             <Localized id={open ? 'trips-status-open' : 'trips-status-closed'} />
-          </span>
+          </StatusChip>
         </span>
       }
     >
-      <div className="@container min-w-0">
+      <div className="@container min-w-0 flex flex-col gap-3">
+        <ResultStat trip={trip} />
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 @form3:grid-cols-4">
           <Fact label={<Localized id="trips-field-date" />}>
             <Code>{isoToDisplayDate(trip.entry_date)}</Code>
@@ -100,7 +127,6 @@ export function TripHeaderCard({ trip, onEdit }: TripHeaderCardProps) {
           </Button>
         </div>
       )}
-      <ResultLine trip={trip} />
       <LossNote trip={trip} />
     </Card>
   );
@@ -116,7 +142,7 @@ export function TripFiguresCard({ trip }: TripCardProps) {
     { id: 'off', message: 'purchases-detail-cost-written-off', paisa: trip.cost_written_off_paisa },
   ];
   return (
-    <Card compact title={<Localized id="trips-figures-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="trips-figures-title" />}>
       <div className="@container min-w-0">
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 @form3:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-1">

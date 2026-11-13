@@ -9,7 +9,7 @@
 // cancelled entry stays in the list, marked in words.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { History } from 'lucide-react';
+import { History, ListChecks } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { NO_ENTRY_FLAGS, useFixDayFlow } from '../../../shared/edit';
@@ -70,7 +70,7 @@ export function TripEntriesSection({
     (selected.kind !== 'purchase' || purchaseOfSelected !== null);
 
   return (
-    <Card compact title={<Localized id="trips-entries-title" />}>
+    <Card compact icon={ListChecks} title={<Localized id="trips-entries-title" />}>
       {entries.length === 0 ? (
         <EmptyState
           icon={History}

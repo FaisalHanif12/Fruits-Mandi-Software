@@ -171,7 +171,11 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
 export function ExpenseListSection({ type, day, partnerId }: ExpenseListSectionProps) {
   const shop = type === 'shop_expense';
   return (
-    <Card compact title={<Localized id={shop ? 'cashbook-day-title' : 'cashbook-takes-title'} />}>
+    <Card
+      compact
+      icon={ReceiptText}
+      title={<Localized id={shop ? 'cashbook-day-title' : 'cashbook-takes-title'} />}
+    >
       {shop ? (
         <ShopDay day={day} />
       ) : partnerId === null ? (

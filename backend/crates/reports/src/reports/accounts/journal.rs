@@ -20,7 +20,7 @@ use crate::reports::ids;
 use crate::reports::model::{Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind};
 
 /// The columns of R11.
-fn columns() -> Vec<Column> {
+pub(crate) fn columns() -> Vec<Column> {
     let col = |key: &str, title: &str, kind| Column {
         key: key.to_owned(),
         title_id: title.to_owned(),

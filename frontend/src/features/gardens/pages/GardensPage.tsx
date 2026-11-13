@@ -24,6 +24,7 @@ import {
   ListPage,
   PeriodBox,
   Select,
+  FilterCard,
 } from '../../../shared/ui';
 import { useGardensList } from '../hooks';
 import { GARDEN_COLUMNS } from '../list-columns';
@@ -131,6 +132,7 @@ export function GardensPage() {
 
   return (
     <ListPage
+      icon={Trees}
       titleId="gardens-title"
       help={
         <Localized id="gardens-help">
@@ -144,7 +146,7 @@ export function GardensPage() {
         </Button>
       }
       filters={
-        <div {...formNavigationProps}>
+        <FilterCard {...formNavigationProps}>
           <FilterBar
             screen="gardens.list"
             search={{ value: search, onChange: setSearch, labelId: 'gardens-list-search' }}
@@ -164,7 +166,7 @@ export function GardensPage() {
               )}
             </Field>
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       <PagedList<GardenRow>

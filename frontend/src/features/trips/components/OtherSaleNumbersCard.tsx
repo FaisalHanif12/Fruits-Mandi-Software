@@ -5,7 +5,7 @@
 // Nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { ArrowLeftRight, TriangleAlert } from 'lucide-react';
+import { ArrowLeftRight, Calculator, TriangleAlert } from 'lucide-react';
 import { isNegativePaisa } from '../../../shared/format';
 import { CalcInfo, Card, Num, ShareAmounts } from '../../../shared/ui';
 import type { OtherSaleNumbers } from '../types';
@@ -20,7 +20,7 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
   const { l10n } = useLocalization();
   const loss = numbers !== null && isNegativePaisa(numbers.result_paisa);
   return (
-    <Card compact title={<Localized id="trips-sale-numbers-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="trips-sale-numbers-title" />}>
       {numbers === null ? (
         <Localized id={empty ? 'trips-sale-numbers-empty' : 'trips-sale-numbers-incomplete'}>
           <p className="type-body text-ink-muted" />

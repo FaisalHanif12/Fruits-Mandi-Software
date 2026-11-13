@@ -1,9 +1,10 @@
 // The user in the top bar (PRD FR-5.6, design system 6): his name opens a small menu with "change
-// password", "show the guide" (the help of the first-run guide, PRD FR-7.12), "lock the app" and "sign out". Built on Radix DropdownMenu, so arrows, Enter and Esc work, and focus goes
-// back to the button when it closes.
+// password", "show the guide" (the help of the first-run guide, PRD FR-7.12) and "lock the app". Log
+// out is not here: it stands at the bottom of the main menu (PRD FR-5.6 v1.38, plan 75 T3). Built on
+// Radix DropdownMenu, so arrows, Enter and Esc work, and focus goes back to the button when it closes.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { CircleHelp, KeyRound, Lock, LogOut } from 'lucide-react';
+import { CircleHelp, KeyRound, Lock } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
 import type { Ref } from 'react';
 import { useUiLanguage } from '../../shared/i18n';
@@ -18,7 +19,6 @@ interface UserMenuProps {
   /** Shows the first-run guide again (PRD FR-7.12). */
   onGuide: () => void;
   onLock: () => void;
-  onSignOut: () => void;
 }
 
 const ITEM_CLASSES =
@@ -30,7 +30,6 @@ export function UserMenu({
   onChangePassword,
   onGuide,
   onLock,
-  onSignOut,
 }: UserMenuProps) {
   const { l10n } = useLocalization();
   const { language, direction } = useUiLanguage();
@@ -41,7 +40,7 @@ export function UserMenu({
         ref={buttonRef}
         aria-label={l10n.getString('layout-user-menu')}
         title={userName}
-        className="flex h-control-compact items-center gap-2 rounded-2 border border-border bg-surface ps-2 pe-3 text-ink"
+        className="flex h-control-compact items-center gap-2 rounded-2 border border-transparent ps-2 pe-3 text-ink transition-calm hover:border-border hover:bg-surface-sunken"
       >
         {/* The name and its first letter carry the script they are written in, so an Urdu name
             in the English app is drawn at the Urdu size and line height (NFR-USE-20, NFR-URD-11). The
@@ -74,10 +73,6 @@ export function UserMenu({
           <DropdownMenu.Item className={ITEM_CLASSES} onSelect={onLock}>
             <Lock aria-hidden="true" className="size-icon-md" />
             <Localized id="layout-user-lock" />
-          </DropdownMenu.Item>
-          <DropdownMenu.Item className={ITEM_CLASSES} onSelect={onSignOut}>
-            <LogOut aria-hidden="true" className="size-icon-md" />
-            <Localized id="layout-user-signout" />
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

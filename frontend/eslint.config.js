@@ -24,6 +24,8 @@ export default defineConfig(
       'node_modules/',
       'public/',
       'tests/e2e/output/',
+      // The logo files and the tool that renders them (plan 75): a developer tool, never shipped, in no tsconfig.
+      'brand/',
       // The alignment tool of plan 39: a developer tool that drives a headless Chrome through
       // Playwright's own page objects, and the snippet it sends to the page (measure.page.txt).
       // Neither has types here, like the shots-plan*.playwright.txt snippets. The Windows spec that

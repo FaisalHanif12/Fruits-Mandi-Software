@@ -127,6 +127,7 @@ pub use party_statement::{
     StatementPrintData, StatementPrintDataInput, StatementSide, entry_lines_sql,
     party_statement_print_data,
 };
+pub(crate) use table::table_columns;
 
 /// The rows of one of the day queries read in both forms, as text, entries first and lines first.
 /// Only for the test that holds the two forms to the same rows (plan 48 P48-S3).

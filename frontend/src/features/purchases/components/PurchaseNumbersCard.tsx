@@ -5,6 +5,7 @@
 // Four states: nothing typed yet, the numbers, and a purchase that cannot be worked out yet,
 // which says so in words.
 
+import { Calculator } from 'lucide-react';
 import { Localized } from '@fluent/react';
 import type { ReactNode } from 'react';
 import type { Working } from '../../../bindings/Working';
@@ -67,7 +68,7 @@ interface PurchaseNumbersCardProps {
 
 export function PurchaseNumbersCard({ numbers, empty }: PurchaseNumbersCardProps) {
   return (
-    <Card compact title={<Localized id="purchases-numbers-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="purchases-numbers-title" />}>
       {numbers === null ? (
         <Localized id={empty ? 'purchases-numbers-empty' : 'purchases-numbers-incomplete'}>
           <p className="type-body text-ink-muted" />

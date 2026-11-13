@@ -16,7 +16,7 @@
 
 import { Localized } from '@fluent/react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, FileX, Files, Printer } from 'lucide-react';
+import { ArrowLeft, FileText, FileX, Files, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import type { ReportPage as ReportPageData } from '../../../bindings/ReportPage';
@@ -323,6 +323,7 @@ function ReportBody({
   const tableView = view === 'table';
   return (
     <ListPage
+      icon={FileText}
       titleId={entry.title_id}
       help={
         <>

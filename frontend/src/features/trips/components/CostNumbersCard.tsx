@@ -3,6 +3,7 @@
 // backend's number with the working behind its ⓘ; its cost left goes up by that part. Nothing is
 // added up here (CLAUDE.md rule 1).
 
+import { Calculator } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { CalcInfo, Card, Num } from '../../../shared/ui';
@@ -20,7 +21,7 @@ export function CostNumbersCard({ numbers, empty }: CostNumbersCardProps) {
   const language = useLanguage();
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   return (
-    <Card compact title={<Localized id="trips-cost-numbers-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="trips-cost-numbers-title" />}>
       {numbers === null ? (
         <Localized id={empty ? 'trips-cost-numbers-empty' : 'trips-cost-numbers-incomplete'}>
           <p className="type-body text-ink-muted" />

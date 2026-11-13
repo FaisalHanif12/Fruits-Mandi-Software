@@ -350,6 +350,13 @@ describe('reviewer finding 3: values outside JSX literals', () => {
         code: 'const x = <div role="group" aria-hidden="true" aria-live="polite" data-testid="app-version" lang="ur" dir="rtl" id="common-app-name" />;',
       },
       { code: "const id = 'common-retry'; const x = <p id={id} />;" },
+      // The drawing attributes of an SVG hold colours, units and keywords, never words (plan 75).
+      {
+        code: 'const x = <svg focusable="false" viewBox="0 0 400 400" fill="none"><stop stopColor="currentColor" /><circle stroke="currentColor" vectorEffect="non-scaling-stroke" /><radialGradient gradientUnits="userSpaceOnUse" /></svg>;',
+      },
+      {
+        code: 'const x = <svg><path d="M548 306 C548 244 588 202 668 194 Z" /><g clipPath="url(#a)" /></svg>;',
+      },
       {
         code: "declare function Chip(p: { tone: 'on-primary' | 'on-light' }): null; declare const on: boolean; const x = <><Chip tone=\"on-light\" /><Chip tone={on ? 'on-primary' : 'on-light'} /></>;",
       },

@@ -7,6 +7,8 @@
 //! difference of two such sums, worked out in Rust (money agent Section 9). Nothing is worked out
 //! again from a rule.
 
+use super::model::{Column, ReportId};
+
 mod balances;
 mod cash;
 mod journal;
@@ -51,6 +53,21 @@ impl PageSpec {
             None => all.len(),
         };
         all.get(start..end).map(<[T]>::to_vec).unwrap_or_default()
+    }
+}
+
+/// The columns of a report of this group as its default view shows them. Empty for a report of
+/// another group. Each comes from the same function the report's run uses (plan 75 T1).
+pub(super) fn default_columns(id: ReportId) -> Vec<Column> {
+    match id {
+        ReportId::R11 => journal::columns(),
+        ReportId::R12 => cash::columns(),
+        ReportId::R13 | ReportId::R14 => ledger::columns(),
+        ReportId::R16 => balances::index_columns(),
+        ReportId::R17 => balances::heads_columns(),
+        ReportId::R18 => balances::trial_columns(),
+        ReportId::R19 => balances::opening_trial_columns(),
+        _ => Vec::new(),
     }
 }
 

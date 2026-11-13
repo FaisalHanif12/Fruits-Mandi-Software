@@ -19,7 +19,7 @@ import {
   FreeTextInput,
   showToast,
 } from '../../../shared/ui';
-import { Lock } from 'lucide-react';
+import { Lock, LockOpen } from 'lucide-react';
 import { useReopenDay } from '../hooks';
 
 const FIELD_PATHS = ['date', 'reason'];
@@ -43,7 +43,7 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
 
   if (closedUpTo === null) {
     return (
-      <Card title={<Localized id="day-reopen-title" />}>
+      <Card icon={LockOpen} title={<Localized id="day-reopen-title" />}>
         <EmptyState
           icon={Lock}
           title={<Localized id="day-reopen-none-title" />}

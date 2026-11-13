@@ -5,10 +5,16 @@
 import { isNegativePaisa, type Paisa } from '../../../shared/format';
 import { Num } from '../../../shared/ui';
 
-export function SignedNum({ paisa }: { paisa: Paisa }) {
+interface SignedNumProps {
+  paisa: Paisa;
+  /** Written at the size of the figure around it (a `Fact` card), not at the 16 px of a number. */
+  inherit?: boolean;
+}
+
+export function SignedNum({ paisa, inherit = false }: SignedNumProps) {
   return (
     <span className={isNegativePaisa(paisa) ? 'text-due' : undefined}>
-      <Num paisa={paisa} />
+      {inherit ? <Num inherit paisa={paisa} /> : <Num paisa={paisa} />}
     </span>
   );
 }

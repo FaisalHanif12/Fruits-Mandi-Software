@@ -6,7 +6,7 @@
 // The amounts are the stored sums and the total under them is the backend's figure.
 
 import { Localized } from '@fluent/react';
-import { FileText, Printer, SearchX } from 'lucide-react';
+import { FileText, Printer, ReceiptText, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { VouchersListInput } from '../../../bindings/VouchersListInput';
 import { pickedOf } from '../../../shared/accounts';
@@ -155,7 +155,7 @@ export function VoucherListSection({
   );
 
   return (
-    <Card compact title={<Localized id={`vouchers-list-title-${type}`} />}>
+    <Card compact icon={ReceiptText} title={<Localized id={`vouchers-list-title-${type}`} />}>
       <div {...formNavigationProps}>
         <FilterBar
           screen={`vouchers.list.${type}`}

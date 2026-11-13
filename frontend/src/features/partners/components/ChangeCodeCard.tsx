@@ -61,7 +61,7 @@ export function ChangeCodeCard() {
   };
 
   return (
-    <Card compact title={<Localized id="partners-code-change-title" />}>
+    <Card compact icon={KeyRound} title={<Localized id="partners-code-change-title" />}>
       <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
         <Field
           label={<Localized id="partners-code-change-old" />}

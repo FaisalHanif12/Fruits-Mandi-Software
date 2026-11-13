@@ -59,6 +59,15 @@ fn garden_names(garden: &Garden) -> Cell {
     )
 }
 
+/// The columns of R36 in a view: one row for each garden, or one row for each partner in a
+/// garden. The one definition the run and the catalogue both use (plan 75 T1).
+pub(crate) fn columns(view: GardenView) -> Vec<Column> {
+    match view {
+        GardenView::Garden => garden_columns(),
+        GardenView::Partner => partner_columns(),
+    }
+}
+
 fn garden_columns() -> Vec<Column> {
     vec![
         col("garden", ids::COL_GARDEN, ColumnKind::Names),

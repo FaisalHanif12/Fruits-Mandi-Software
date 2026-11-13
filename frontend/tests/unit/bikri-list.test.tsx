@@ -26,6 +26,7 @@ import { message, visible } from '../helpers/render';
 import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { money, ref } from '../helpers/accounts';
 import { EMPTY_PAIRS, bikriListOf } from '../helpers/paged';
+import { pastAnswer } from '../helpers/past';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -267,9 +268,15 @@ describe.each(LANGUAGES)('today’s section of پچھلی بکری (%s)', (langu
   });
 
   it('an error is told in words and has a retry', async () => {
-    vi.mocked(bikriApi.bikriList).mockRejectedValueOnce(
-      fail({ code: 'ERR_DB_BUSY', field: null, values: {} }),
-    );
+    // Today's section is refused once; the window of earlier days is read as usual.
+    let refused = false;
+    vi.mocked(bikriApi.bikriList).mockImplementation((input) => {
+      if (input.date !== null && !refused) {
+        refused = true;
+        return Promise.reject(fail({ code: 'ERR_DB_BUSY', field: null, values: {} }));
+      }
+      return Promise.resolve(pastAnswer(input));
+    });
     await open();
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'bikri-list-failed'));

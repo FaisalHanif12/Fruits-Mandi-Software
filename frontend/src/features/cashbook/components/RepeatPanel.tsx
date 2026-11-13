@@ -5,7 +5,7 @@
 // states: loading, an error with a retry, nothing to repeat (a helpful message), and the rows.
 
 import { Localized } from '@fluent/react';
-import { CalendarCheck } from 'lucide-react';
+import { CalendarCheck, Repeat } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
@@ -87,7 +87,7 @@ export function RepeatPanel({ month, onFill, onClose }: RepeatPanelProps) {
     );
   }
   return (
-    <Card compact title={<Localized id="cashbook-repeat-title" />}>
+    <Card compact icon={Repeat} title={<Localized id="cashbook-repeat-title" />}>
       <Localized id="cashbook-repeat-help">
         <p className="type-body text-ink-muted" />
       </Localized>

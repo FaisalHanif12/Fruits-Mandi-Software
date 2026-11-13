@@ -55,7 +55,7 @@ fn status_label(status: DeadStatus) -> &'static str {
     }
 }
 
-fn columns() -> Vec<Column> {
+pub(crate) fn columns() -> Vec<Column> {
     vec![
         col("party", ids::COL_DEAD_PARTY, ColumnKind::Party),
         col("type", ids::COL_DEAD_TYPE, ColumnKind::Label),

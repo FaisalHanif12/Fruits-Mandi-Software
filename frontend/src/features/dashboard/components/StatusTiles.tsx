@@ -5,6 +5,7 @@
 // the last run, with its time. Colour always has a word with it (NFR-USE-12).
 
 import { Localized } from '@fluent/react';
+import { CloudUpload, ShieldCheck } from 'lucide-react';
 import { statusBarWords, useBackupStatus } from '../../backup';
 import { utcToLocalDisplay } from '../../../shared/format';
 import { Code, Num, Tile, type TileTone } from '../../../shared/ui';
@@ -28,6 +29,7 @@ export function BackupTile() {
       words
       tone={tone}
       label={<Localized id="dashboard-tile-backup" />}
+      icon={CloudUpload}
       onOpen={() => {
         open({ kind: 'backup' });
       }}
@@ -55,6 +57,7 @@ export function HealthTile() {
       words
       tone={tone}
       label={<Localized id="dashboard-tile-health" />}
+      icon={ShieldCheck}
       note={
         result === null ? undefined : (
           <Localized

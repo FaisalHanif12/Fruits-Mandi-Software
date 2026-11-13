@@ -25,12 +25,11 @@ export function AnalyticsDevPage() {
   });
   return (
     <AppShell
-      nav={<MainNav current="analytics" onSelect={() => undefined} />}
+      nav={<MainNav current="analytics" onSelect={() => undefined} onSignOut={() => undefined} />}
       moduleMenu={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
-      onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

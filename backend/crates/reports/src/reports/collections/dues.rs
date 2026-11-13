@@ -263,6 +263,30 @@ fn age_columns() -> Vec<Column> {
     ]
 }
 
+/// The columns of R20, R21 or R22: the leading columns of the layout, then the phone, the balance
+/// and the age columns. The one definition: the run and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns(layout: Layout) -> Vec<Column> {
+    let mut columns = match layout {
+        Layout::Flat => vec![
+            col("buyer", ids::COL_BUYER, ColumnKind::Party),
+            col("city", ids::COL_CITY, ColumnKind::Names),
+        ],
+        Layout::ByCity => vec![
+            col("group", ids::COL_CITY, ColumnKind::Names),
+            col("buyer", ids::COL_BUYER, ColumnKind::Party),
+        ],
+        Layout::ByCollector => vec![
+            col("group", ids::COL_COLLECTOR, ColumnKind::Names),
+            col("buyer", ids::COL_BUYER, ColumnKind::Party),
+            col("city", ids::COL_CITY, ColumnKind::Names),
+        ],
+    };
+    columns.push(col("phone", ids::COL_PHONE, ColumnKind::Text));
+    columns.push(col("balance", ids::COL_BALANCE, ColumnKind::Money));
+    columns.extend(age_columns());
+    columns
+}
+
 /// A master row (city or staff): id, code and names, to order and name the groups.
 struct Group {
     code: String,
@@ -447,25 +471,7 @@ fn page_of(
         }
     };
 
-    let mut columns = match layout {
-        Layout::Flat => vec![
-            col("buyer", ids::COL_BUYER, ColumnKind::Party),
-            col("city", ids::COL_CITY, ColumnKind::Names),
-        ],
-        Layout::ByCity => vec![
-            col("group", ids::COL_CITY, ColumnKind::Names),
-            col("buyer", ids::COL_BUYER, ColumnKind::Party),
-        ],
-        Layout::ByCollector => vec![
-            col("group", ids::COL_COLLECTOR, ColumnKind::Names),
-            col("buyer", ids::COL_BUYER, ColumnKind::Party),
-            col("city", ids::COL_CITY, ColumnKind::Names),
-        ],
-    };
-    columns.push(col("phone", ids::COL_PHONE, ColumnKind::Text));
-    columns.push(col("balance", ids::COL_BALANCE, ColumnKind::Money));
-    columns.extend(age_columns());
-
+    let columns = columns(layout);
     let leading = columns.len().saturating_sub(7);
     let mut totals = vec![Cell::Empty; leading];
     totals.push(Cell::Money {

@@ -15,7 +15,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { ClipboardList, Printer } from 'lucide-react';
+import { ClipboardList, HandCoins, Printer } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LeaveGuard } from '../../../app/LeaveGuard';
@@ -57,6 +57,7 @@ import {
   Picker,
   showToast,
   type PickerValue,
+  FilterCard,
 } from '../../../shared/ui';
 import {
   RECEIVED_FIELD,
@@ -358,6 +359,7 @@ export function CollectionPage() {
 
   return (
     <ListPage
+      icon={HandCoins}
       titleId="vouchers-collection-title"
       help={
         <Localized id="vouchers-collection-help">
@@ -388,7 +390,7 @@ export function CollectionPage() {
         </>
       }
       filters={
-        <div {...formNavigationProps}>
+        <FilterCard {...formNavigationProps}>
           <FilterBar
             screen="vouchers.collection"
             search={{
@@ -448,7 +450,7 @@ export function CollectionPage() {
               </div>
             )}
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       {body}

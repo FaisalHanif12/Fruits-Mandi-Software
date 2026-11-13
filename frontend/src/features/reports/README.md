@@ -290,3 +290,20 @@ report engine once the backend adds `R38` to `ReportId`.
   print `print/daySheet.ts` cuts the lines after the sellers' lines of each day and puts the two tables
   there, before the cash lines; the two tables of a day get one zoom so they have one size on A5.
 - Nothing here adds up or works out a side: every figure, balance and side comes from the backend.
+
+## The guide card of a report (plan 75, PRD FR-19.14)
+
+- Pointing at a report on the reports page, or moving to it with ↑ ↓ or Tab, opens a card beside it that
+  says what the report holds: its name, ID and group; what it shows; what you can do (screen, print, PDF,
+  Excel, and the special print of R1, R5 and R35); when to use it; its columns; its filters (and that an
+  account must be chosen first, when the catalogue says so); and a button that opens it.
+- `components/ReportCard.tsx` is the small card (name, line of help, the ID as a quiet badge). It wraps its
+  link in the shared `HoverDetails` (`shared/ui/HoverDetails.tsx`), which does the opening, closing, side
+  and Esc. `components/ReportGuideCard.tsx` is what the card holds.
+- The columns are `column_title_ids` and the filters are `filters` of the catalogue entry, so the card
+  never names a column or a filter the report does not have, and opening it needs no call to the backend.
+  `catalog.ts` has the helpers: `detailIdOf` and `whenIdOf` (the words `report-rNN-detail` and
+  `report-rNN-when`, both languages, for every report), `filterLabelIdsOf` (one word for each filter kind;
+  a new kind stops the build until it has its words) and `specialPrintIdOf`.
+- The first report has the focus when the page opens, set with `focusQuietly`, so no card opens until the
+  user points at one or presses a key.

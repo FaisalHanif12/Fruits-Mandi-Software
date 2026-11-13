@@ -66,12 +66,11 @@ export function RokarPage() {
   const { main, id, page } = screenOf(devValue('screen'));
   return (
     <AppShell
-      nav={<MainNav current={main} onSelect={() => undefined} />}
+      nav={<MainNav current={main} onSelect={() => undefined} onSignOut={() => undefined} />}
       moduleMenu={id === null ? null : <RokarMenu current={id} onSelect={() => undefined} />}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
-      onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

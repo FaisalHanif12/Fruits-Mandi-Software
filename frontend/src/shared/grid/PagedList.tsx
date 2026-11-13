@@ -69,6 +69,12 @@ interface PagedListProps<T> {
    */
   onFocusRow?: ((rowId: string) => void) | undefined;
   focusRowId?: string | null | undefined;
+  /**
+   * The grid is as tall as its rows, whatever their number, and the page scrolls: for a list inside a
+   * screen that scrolls (the rows of one open day of the past sales, plan 75). Default: a list of more
+   * than ten rows fills the height the screen leaves.
+   */
+  autoHeight?: boolean | undefined;
   /** The backend's total row under the columns. */
   totals?:
     ((context: ListContext) => { labelField: string; values: Record<string, string> }) | undefined;
@@ -92,6 +98,7 @@ export function PagedList<T>({
   onOpen,
   onFocusRow,
   focusRowId,
+  autoHeight = false,
   totals,
 }: PagedListProps<T>) {
   // The row that has focus, kept here so a language switch (which rebuilds the grid) keeps it.
@@ -113,8 +120,8 @@ export function PagedList<T>({
   // under it, always in view. On a screen that is not given a fixed height (a list under a form)
   // the grid keeps a floor of a few rows and the page scrolls as before.
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <ListRegion rowCount={rows.length}>
+    <div className={autoHeight ? 'flex flex-col gap-2' : 'flex min-h-0 flex-1 flex-col gap-2'}>
+      <ListRegion rowCount={autoHeight ? 0 : rows.length}>
         <ListGrid<T>
           columns={columns}
           rows={rows}
@@ -126,7 +133,7 @@ export function PagedList<T>({
             onFocusRow?.(rowId);
           }}
           focusRowId={focusId}
-          heightMode={listHeightMode(rows.length)}
+          heightMode={autoHeight ? 'auto' : listHeightMode(rows.length)}
           isInactive={isInactive}
           totals={totals}
           paging={paging}

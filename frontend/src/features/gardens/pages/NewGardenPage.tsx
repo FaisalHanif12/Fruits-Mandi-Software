@@ -16,6 +16,7 @@
 // - Four states: loading while the defaults arrive, an error with a retry, the form, and a form
 //   with no partner yet (a helpful message with a link to the partner setup).
 
+import { Trees } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -308,7 +309,7 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
           />
           {fieldError(error, 'partners')}
         </Card>
-        <Card compact title={<Localized id="gardens-new-details-title" />}>
+        <Card compact icon={Trees} title={<Localized id="gardens-new-details-title" />}>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <NamePair

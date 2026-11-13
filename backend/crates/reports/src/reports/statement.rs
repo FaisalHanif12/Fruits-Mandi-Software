@@ -32,7 +32,7 @@ use mandi_db::Db;
 use super::common::{col, paisa};
 use super::filters::{Takes, resolve};
 use super::model::{
-    ArgValue, Cell, ColumnKind, MessageArg, Names, ReportFilters, ReportId, ReportPage,
+    ArgValue, Cell, Column, ColumnKind, MessageArg, Names, ReportFilters, ReportId, ReportPage,
     ResolvedFilters, Row, RowKind, RowSource, SourceKind, SummaryLine,
 };
 use super::{common, ids, page_spec, spec_of};
@@ -343,6 +343,31 @@ fn row_of(line: &StatementLine) -> Result<Row, ReportsError> {
     })
 }
 
+/// The columns of R31, the one definition: [`statement_page`] and the catalogue both use it
+/// (plan 75 T1). The three headings that belong to the partners screen are Fluent messages of
+/// `partners.ftl`.
+pub(crate) fn statement_columns() -> Vec<Column> {
+    vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col(
+            "heading",
+            "partners-statement-col-heading",
+            ColumnKind::Label,
+        ),
+        col(
+            "detail",
+            "partners-statement-col-detail",
+            ColumnKind::Message,
+        ),
+        col("amount", ids::COL_AMOUNT, ColumnKind::Money),
+        col(
+            "running",
+            "partners-statement-col-running",
+            ColumnKind::Money,
+        ),
+    ]
+}
+
 /// The report page of a statement. `statement.lines` is the page to show (the services slice it);
 /// `offset` and `limit` are echoed back. `limit` 0 means a page that holds every row (a print).
 ///
@@ -382,25 +407,7 @@ pub fn statement_page(
         id: ReportId::R31,
         title_id: ids::title_id("R31"),
         filters,
-        columns: vec![
-            col("date", ids::COL_DATE, ColumnKind::Date),
-            col(
-                "heading",
-                "partners-statement-col-heading",
-                ColumnKind::Label,
-            ),
-            col(
-                "detail",
-                "partners-statement-col-detail",
-                ColumnKind::Message,
-            ),
-            col("amount", ids::COL_AMOUNT, ColumnKind::Money),
-            col(
-                "running",
-                "partners-statement-col-running",
-                ColumnKind::Money,
-            ),
-        ],
+        columns: statement_columns(),
         rows,
         offset,
         limit,

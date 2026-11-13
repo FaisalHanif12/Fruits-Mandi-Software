@@ -43,6 +43,14 @@ interface PastListProps {
   groups?: ListGroups<BikriListRow> | undefined;
   /** Page Up and Page Down do this instead of turning the page (the window only). */
   onPageKey?: ((direction: 'previous' | 'next') => void) | undefined;
+  /** The grid is as tall as its rows: the rows of one open day inside the page that scrolls (plan 75). */
+  autoHeight?: boolean | undefined;
+}
+
+/** The row of a page that has focus, or null. */
+export function rowOf(page: PastListAnswer | undefined, rowId: string | null): BikriListRow | null {
+  if (page === undefined || rowId === null) return null;
+  return page.rows.find((row) => String(row.id) === rowId) ?? null;
 }
 
 /** The rows on screen, or undefined while the first page is on its way or could not be read. */
@@ -62,6 +70,7 @@ export function PastList({
   onFocusRow,
   groups,
   onPageKey,
+  autoHeight,
 }: PastListProps) {
   const first = query.data?.pages[0];
   // The rows are made once for the page on screen, so the grid keeps them between renders.
@@ -110,6 +119,7 @@ export function PastList({
       totals={totals}
       groups={groups}
       onPageKey={onPageKey}
+      autoHeight={autoHeight}
     />
   );
 }

@@ -1,7 +1,8 @@
 // The main menu on the start side (PRD FR-5.2, design system 6): 224 px with labels from 1366 px
 // wide, a 64 px icon rail below that, where each label is the item's name for screen readers and
 // a tooltip. ↑ ↓ move between items, Enter opens, and the arrow that points into the screen moves
-// focus to the screen (PRD FR-7.17).
+// focus to the screen (PRD FR-7.17). Log out stands at the bottom, apart from the items, under a thin
+// line (PRD FR-5.2, FR-5.6, plan 75 T3). It is one more item of the menu for the arrow keys.
 
 import { useLocalization } from '@fluent/react';
 import {
@@ -10,6 +11,7 @@ import {
   CloudUpload,
   FileText,
   LayoutDashboard,
+  LogOut,
   Route,
   Settings,
   Trees,
@@ -19,7 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useFocusRegion, useRovingKeys } from '../../shared/keyboard';
-import { useWorkAreaStore } from '../../shared/ui';
+import { BrandMark, useWorkAreaStore } from '../../shared/ui';
 
 export type MainNavId =
   | 'dashboard'
@@ -59,14 +61,21 @@ export const MAIN_NAV: readonly NavEntry[] = [
 interface MainNavProps {
   current: MainNavId;
   onSelect: (id: MainNavId) => void;
+  /** Log out, the same function the user menu used to call (PRD FR-5.6). */
+  onSignOut: () => void;
 }
 
-export function MainNav({ current: screenArea, onSelect }: MainNavProps) {
+/** The look of an item of the menu, shared by the screens and by Log out. */
+const ITEM_CLASSES =
+  'flex h-control shrink-0 items-center justify-center gap-3 rounded-2 transition-calm normal:justify-start normal:px-3 shortest:h-control-compact';
+
+export function MainNav({ current: screenArea, onSelect, onSignOut }: MainNavProps) {
   const { l10n } = useLocalization();
   // While the Index form of a picker's "add" button is open over the screen, the menu says انڈکس
   // (plan 32, decision D1); the screen under it is still there.
   const indexFormOpen = useWorkAreaStore((state) => state.indexFormOpen);
   const current: MainNavId = indexFormOpen ? 'index' : screenArea;
+  const logOutLabel = l10n.getString('layout-user-signout');
   const region = useFocusRegion<HTMLElement>('menu');
   const onKeyDown = useRovingKeys({ isMenu: true });
   return (
@@ -74,11 +83,16 @@ export function MainNav({ current: screenArea, onSelect }: MainNavProps) {
       ref={region}
       aria-label={l10n.getString('layout-nav-label')}
       onKeyDown={onKeyDown}
-      className="flex w-rail shrink-0 flex-col gap-1 bg-nav px-3 py-4 normal:w-nav"
+      className="flex w-rail shrink-0 flex-col gap-1 overflow-y-auto bg-nav px-3 py-4 normal:w-nav shortest:py-2"
     >
-      <p className="type-section hidden px-3 pb-3 text-on-primary normal:block">
-        {l10n.getString('common-app-name')}
-      </p>
+      {/* The mark of the app, with its name in the wide menu. In the narrow rail it stands alone, and it
+          gives way at the smallest window, where the twelve items need the room (NFR-USE-15). */}
+      <div className="flex items-center justify-center gap-3 pb-3 normal:justify-start normal:px-3 shortest:hidden">
+        <BrandMark size="sm" />
+        <p className="type-section hidden whitespace-nowrap text-on-primary normal:block">
+          {l10n.getString('common-app-name')}
+        </p>
+      </div>
       {MAIN_NAV.map(({ id, labelId, icon: Icon }) => {
         const label = l10n.getString(labelId);
         const isCurrent = id === current;
@@ -93,13 +107,28 @@ export function MainNav({ current: screenArea, onSelect }: MainNavProps) {
             onClick={() => {
               onSelect(id);
             }}
-            className={`flex h-control items-center justify-center gap-3 rounded-2 transition-calm normal:justify-start normal:px-3 ${isCurrent ? 'bg-nav-active text-on-primary' : 'text-nav-ink'}`}
+            className={`${ITEM_CLASSES} ${isCurrent ? 'bg-nav-active text-on-primary' : 'text-nav-ink'}`}
           >
             <Icon aria-hidden="true" className="size-icon-md shrink-0" />
             <span className="type-body hidden normal:inline">{label}</span>
           </button>
         );
       })}
+      {/* Log out: at the bottom of the menu, under a thin line, in the style of the items and not a bright
+          button. The arrow that points out of the screen is mirrored in the right-to-left menu (F26). */}
+      <div className="mt-auto flex flex-col border-t border-nav-active pt-2">
+        <button
+          type="button"
+          data-nav-item
+          aria-label={logOutLabel}
+          title={logOutLabel}
+          onClick={onSignOut}
+          className={`${ITEM_CLASSES} text-nav-ink`}
+        >
+          <LogOut aria-hidden="true" className="size-icon-md shrink-0 rtl:-scale-x-100" />
+          <span className="type-body hidden normal:inline">{logOutLabel}</span>
+        </button>
+      </div>
     </nav>
   );
 }

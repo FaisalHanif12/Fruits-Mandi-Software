@@ -29,7 +29,9 @@ use crate::reports::common::{
 };
 use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
-use crate::reports::model::{Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, SummaryLine};
+use crate::reports::model::{
+    Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind, SummaryLine,
+};
 
 /// The shop's one cash account (PRD FR-10.4: all money is روکڑ).
 pub(crate) const CASH_ACCOUNT_CODE: &str = "01010001";
@@ -57,6 +59,19 @@ fn counterpart_of(
         }
     }
     found
+}
+
+/// The columns of R12, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("doc", ids::COL_DOC, ColumnKind::Doc),
+        col("account", ids::COL_ACCOUNT, ColumnKind::Party),
+        col("narration", ids::COL_NARRATION, ColumnKind::Text),
+        col("cash_in", ids::COL_CASH_IN, ColumnKind::Money),
+        col("cash_out", ids::COL_CASH_OUT, ColumnKind::Money),
+        col("balance", ids::COL_BALANCE, ColumnKind::Balance),
+    ]
 }
 
 /// Builds R12.
@@ -165,15 +180,7 @@ pub(crate) fn run(
         id: ReportId::R12,
         title_id: ids::title_id("R12"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("date", ids::COL_DATE, ColumnKind::Date),
-            col("doc", ids::COL_DOC, ColumnKind::Doc),
-            col("account", ids::COL_ACCOUNT, ColumnKind::Party),
-            col("narration", ids::COL_NARRATION, ColumnKind::Text),
-            col("cash_in", ids::COL_CASH_IN, ColumnKind::Money),
-            col("cash_out", ids::COL_CASH_OUT, ColumnKind::Money),
-            col("balance", ids::COL_BALANCE, ColumnKind::Balance),
-        ],
+        columns: columns(),
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),

@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.37 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plans 73 and 74), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.39 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plans 73, 74 and 75, two changes in 75), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 12 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.37 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.39 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.18 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.10 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.23 |
@@ -422,6 +422,8 @@ FR-5.2 [C] Main navigation bar on the start side of the screen: on the right in 
 | 10 | بیک اپ | Backup | 20 |
 | 11 | ترتیبات | Settings | 21 |
 
+At the bottom of the bar, apart from the items: لاگ آؤٹ (Log out), FR-5.6 (v1.38).
+
 FR-5.3 [C] **The بکری area has its own side menu.** When the user opens بکری, a second menu appears next to the main bar:
 
 | # | Urdu | What it opens | Section |
@@ -442,7 +444,7 @@ FR-5.4 [A] Global search (`Ctrl+K`, or the search box at the top) finds any acco
 
 FR-5.5 [A] Bottom status bar: user, today's date, day status (کھلا / بند), last cloud backup time with a coloured dot, and the button "سوال پوچھیں F1" that opens the question panel (FR-7.73, v1.16).
 
-FR-5.6 [A] Top bar: global search box (FR-5.4), attention bell with its count (FR-7.44), language switch اردو | English (FR-7.30), and the user menu (text size, change password, logout).
+FR-5.6 [A] Top bar: global search box (FR-5.4), attention bell with its count (FR-7.44), language switch اردو | English (FR-7.30), and the user menu (text size, change password). [C] (Umar, 13-11-2026, v1.38) Log out is at the bottom of the main navigation bar (FR-5.2), below its last item, not in the user menu. It asks first when there is unsaved work (FR-7.9).
 
 ---
 
@@ -1496,6 +1498,7 @@ FR-12.46 [C] **Past Sales.** (Added in v1.35; it replaces the list of today's ب
 - **Two sections.** First آج کی بکری: every بکری of today. Then a divider bar with the range, for example "05-11-2026 تا 11-11-2026", and پچھلے 7 دن: the بکری of those days grouped by day, newest first. Each day heading shows its date, its بکری count and its خام بکری total. A day with no بکری shows its heading with "کوئی بکری نہیں".
 - **Moving.** The window ends yesterday, because today has its own section. The arrow keys move it by 7 days, in the reading direction, and it never goes past yesterday. `Page Up` goes back 7 days, `Page Down` comes 7 days nearer. Example: today 12-11-2026: the first window is 05-11-2026 to 11-11-2026; one step back is 29-10-2026 to 04-11-2026.
 - **Go to a date.** A "تاریخ پر جائیں" field above the filters, with the shortcuts of FR-7.19, shows the 7-day window that ends on that date. A date after today is refused. Today's date shows today's section and the window that ends yesterday.
+- **Days closed by default.** [C] (Umar, 13-11-2026, v1.39) A day can hold many بکری with many lines, so each day of the window shows as one line, closed: its date, its بکری count ("بکری 3") and its خام بکری, with a small arrow. The arrow (a click, or `Enter` or `Space` on the line) opens the day under its line with every بکری row, and closes it again; several days can be open. Today's section is always open. A day with no بکری is one line with no arrow. Moving the window shows the new days closed. "تاریخ پر جائیں" opens that day. A search or a filter opens every day that has a match, so no result is hidden. "پوری بکری دکھائیں" opens every day of the window. After an edit the edited day is open with its row selected. Print and Excel hold every بکری of the window, open or closed on screen. Example: 09-10-2026 shows "بکری 3، خام بکری 98,300"; one click lists بکری 6, 7 and 8.
 - **پوری بکری دکھائیں.** Unticked when the screen opens. Ticked, the filters are set aside (they keep their values) and every بکری of today and of the window shows, closed and cancelled ones too. Print and Excel follow the same choice.
 - **Row.** بکری number, date, time, truck, seller(s) with their lot names (FR-12.45), items, نگ, خام بکری, صافی بکری, buyer total, status, and the edited or cancelled mark (FR-7.71). The truck column and the truck search are back on this screen: an old بکری shows its truck, and a new one has none, so its cell is empty (12.2). Only stored values are shown; nothing is worked out again.
 - **Open and edit.** A click or `Enter` opens the whole بکری on بکری بک. Its Edit works as FR-7.70, and on a closed day through FR-21.4. After a save the user comes back to پچھلی بکری at the same window and row, and the row, its day heading and the window totals show the new values at once: the screen asks the backend again and keeps no figure of its own.
@@ -2106,6 +2109,9 @@ FR-19.13 [C] **Clear prints everywhere.** (Added in v1.7.) Umar (20-10-2026): R5
 - Footer: a totals row under its columns (FR-19.5), amounts in words where FR-19.7 asks for them, and "Page x of y".
 Example: R29 for October prints "Maher Adnan and Brothers", the three contacts and the trade mark, then "خرچہ رپورٹ، 01-10-26 تا 31-10-26", the heads with their totals, and the میزان.
 
+
+FR-19.14 [C] **A guide card on every report.** (Added in v1.38.) Umar (13-11-2026, plan 75): the reports page has many reports, so the Owner must see what each one holds before he opens it. When a report's card on the reports page is hovered, or reached with the keyboard, a larger card opens beside it with: the report's name, ID and group; what it shows, in two or three short lines; its columns; its filters, and whether a party must be chosen; what can be done with it (on screen, print, PDF, Excel, FR-19.3, and its special print where it has one, such as R5 Print All or one party's slip on R35); when to use it, in one line; and a button that opens it. The columns and filters come from the backend's report catalogue, so the card never names a column or filter the report does not have. It changes nothing and needs no backend call. `Esc` or moving away closes it.
+Example: hovering ادھاری تفصیل shows R5, its columns (party, تفصیل, رقم, رقم بعد لاگا, موقع پر جمع, باقی), its filters (dates, buyer, بکری), Print All for one slip per buyer, and "for the buyers' bills of the day".
 ### 19.2 Report catalogue
 
 **Sales** (filters as in the old sales report box [S]: از، تا، بیوپاری، زمیندار، قسم مال)
@@ -2761,3 +2767,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.35 | 12-11-2026 | Umar's decision of 12-11-2026 (plan 72), approved by Umar: the screen آج کی بکری becomes پچھلی بکری (Past Sales), with today's بکری, then a 7-day window of earlier days grouped by day, moved by the arrow keys and Page Up and Page Down, a date to jump to, and a switch that shows every بکری of the window (12.7 rewritten, new FR-12.46; FR-5.3, FR-7.70, FR-19.10). The truck column and the truck search come back on this screen for old بکری (12.2). آج کی بکری stays the name of its first section and of the dashboard tile. Also Umar's change of 12-11-2026: the wrong-try limit of the password and the partner code goes from 5 to 10 (FR-8.2, FR-17.11). No golden number changed. No money rule changed. |
 | 1.36 | 13-11-2026 | Umar's decision of 13-11-2026 (plan 73): reopening a closed day to fix an entry asks for the Owner's sign (دستخط) as well as the reason; only his sign, "adnan" by default, opens the day; the sign is kept in the audit log and shown in the edit stamp and history (FR-21.4, FR-7.71, Section 21). No golden number changed. No money rule changed. |
 | 1.37 | 13-11-2026 | Umar's decision of 13-11-2026 (plan 74): one party's statement on پارٹی کھاتے shows 30 days at a time with arrows, a go-to-date, a day opened in place under its row, and a compact statement print for any period (new FR-12.47). No golden number changed. No money rule changed. |
+| 1.39 | 13-11-2026 | Umar's request of 13-11-2026 (plan 75): on پچھلی بکری each earlier day shows as one closed line with its date, بکری count and خام بکری, opened by its arrow (FR-12.46). No golden number changed. No money rule changed. |
+| 1.38 | 13-11-2026 | Umar's request of 13-11-2026 (plan 75): log out moves from the user menu to the bottom of the main navigation bar (FR-5.2, FR-5.6); a guide card on every report shows its contents, columns, filters and prints on hover or keyboard focus (new FR-19.14). No golden number changed. No money rule changed. |

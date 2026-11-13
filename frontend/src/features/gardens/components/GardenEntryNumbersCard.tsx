@@ -4,7 +4,7 @@
 // is the backend's. Nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, Calculator } from 'lucide-react';
 import { CalcInfo, Card, Num } from '../../../shared/ui';
 import type { GardenEntryNumbers } from '../types';
 
@@ -18,7 +18,7 @@ interface GardenEntryNumbersCardProps {
 export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCardProps) {
   const { l10n } = useLocalization();
   return (
-    <Card compact title={<Localized id="gardens-numbers-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="gardens-numbers-title" />}>
       {numbers === null ? (
         <Localized id={empty ? 'gardens-numbers-empty' : 'gardens-numbers-incomplete'}>
           <p className="type-body text-ink-muted" />

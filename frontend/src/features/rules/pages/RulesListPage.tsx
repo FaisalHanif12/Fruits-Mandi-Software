@@ -20,6 +20,7 @@ import {
   EmptyState,
   Field,
   FilterBar,
+  FilterCard,
   ListPage,
   Picker,
   Select,
@@ -138,6 +139,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
   return (
     <ListPage
       titleId="rules-title"
+      icon={Scale}
       help={
         <Localized id="rules-help">
           <p />
@@ -157,7 +159,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
         </>
       }
       filters={
-        <div ref={containerRef} {...formNavigationProps}>
+        <FilterCard ref={containerRef} {...formNavigationProps}>
           <FilterBar
             screen="rules"
             search={{
@@ -239,7 +241,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
               )}
             </Field>
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       {body}

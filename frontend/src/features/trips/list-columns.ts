@@ -5,6 +5,7 @@
 // scrolls sideways (NFR-USE-15, Code Standards F22). A cancelled entry says so in words.
 
 import { editedTip, statusWithEdited } from '../../shared/edit';
+import { STATUS_CANCELLED, STATUS_CLOSED, STATUS_OPEN } from '../../shared/ui';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { purchaseNumberText } from '../purchases';
@@ -61,6 +62,7 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
     sortKey: 'status',
     value: (row, { text }) =>
       text(row.status === 'open' ? 'trips-status-open' : 'trips-status-closed'),
+    chip: (row) => (row.status === 'open' ? STATUS_OPEN : STATUS_CLOSED),
   },
   {
     field: 'qty_left',
@@ -139,6 +141,8 @@ export const ENTRY_COLUMNS: readonly ListColumn<TripEntryRow>[] = [
         row.edited,
         context,
       ),
+    // Only a cancelled entry is a chip; an entry that is saved (and perhaps edited) shows its words alone.
+    chip: (row) => (row.cancelled ? STATUS_CANCELLED : undefined),
     tip: (row, context) => editedTip(row.edited, context),
   },
   {

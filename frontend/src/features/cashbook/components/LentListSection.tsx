@@ -21,7 +21,7 @@ export function LentListSection({ personId }: { personId: number | null }) {
   const first = lent.data?.pages[0];
   const rows = lent.data?.pages.flatMap((page) => page.rows);
   return (
-    <Card compact title={<Localized id="cashbook-lent-title" />}>
+    <Card compact icon={HandCoins} title={<Localized id="cashbook-lent-title" />}>
       {personId === null ? (
         <EmptyState
           icon={HandCoins}

@@ -13,6 +13,7 @@ import { Button, Card, Fact, Num, ReasonDialog, showToast } from '../../../share
 import { useReverseMonth } from '../hooks';
 import { monthName } from '../text';
 import { MonthRefusal } from './MonthRefusal';
+import { CalendarCheck } from 'lucide-react';
 
 interface MonthClosedCardProps {
   row: MonthRow;
@@ -46,7 +47,7 @@ export function MonthClosedCard({ row, onReversed }: MonthClosedCardProps) {
   };
 
   return (
-    <Card title={<Localized id="month-closed-title" vars={{ month: name }} />}>
+    <Card icon={CalendarCheck} title={<Localized id="month-closed-title" vars={{ month: name }} />}>
       <Localized id="month-closed-help">
         <p className="type-body text-ink-muted" />
       </Localized>

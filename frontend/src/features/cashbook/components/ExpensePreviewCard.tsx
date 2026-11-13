@@ -3,6 +3,7 @@
 // after (C22) and a note that the other partners are not affected. Every figure and every working is
 // the backend's (the same function as the save); the screen shows them and works nothing out.
 
+import { Calculator, Users } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
 import {
   Card,
@@ -37,7 +38,7 @@ export function ExpensePreviewCard({ type, preview }: ExpensePreviewCardProps) {
   }
   if (shop) {
     return (
-      <Card compact title={<Localized id="cashbook-shares-title" />}>
+      <Card compact icon={Users} title={<Localized id="cashbook-shares-title" />}>
         {preview.shares.length === 0 ? (
           <Localized id="cashbook-shares-none">
             <p className="type-body text-ink-muted" />
@@ -50,7 +51,7 @@ export function ExpensePreviewCard({ type, preview }: ExpensePreviewCardProps) {
   }
   const effect = preview.partner_effect;
   return (
-    <Card compact title={<Localized id="cashbook-effect-title" />}>
+    <Card compact icon={Calculator} title={<Localized id="cashbook-effect-title" />}>
       {preview.partners_locked ? (
         <PartnerLockedBox />
       ) : effect === null ? (
@@ -59,20 +60,20 @@ export function ExpensePreviewCard({ type, preview }: ExpensePreviewCardProps) {
         </Localized>
       ) : (
         <dl className="grid grid-cols-2 gap-3">
-          <Fact label={<Localized id="cashbook-effect-total-now" />}>
-            <SignedNum paisa={effect.total_before_paisa} />
+          <Fact stat label={<Localized id="cashbook-effect-total-now" />}>
+            <SignedNum inherit paisa={effect.total_before_paisa} />
           </Fact>
-          <Fact label={<Localized id="cashbook-effect-total-after" />}>
+          <Fact stat label={<Localized id="cashbook-effect-total-after" />}>
             <span className="flex items-center gap-1">
-              <SignedNum paisa={effect.total_after_paisa} />
+              <SignedNum inherit paisa={effect.total_after_paisa} />
               <CalcInfo working={effect.working} />
             </span>
           </Fact>
-          <Fact label={<Localized id="cashbook-effect-open-now" />}>
-            <Num paisa={effect.open_before_paisa} />
+          <Fact stat label={<Localized id="cashbook-effect-open-now" />}>
+            <Num inherit paisa={effect.open_before_paisa} />
           </Fact>
-          <Fact label={<Localized id="cashbook-effect-open-after" />}>
-            <Num paisa={effect.open_after_paisa} />
+          <Fact stat label={<Localized id="cashbook-effect-open-after" />}>
+            <Num inherit paisa={effect.open_after_paisa} />
           </Fact>
         </dl>
       )}

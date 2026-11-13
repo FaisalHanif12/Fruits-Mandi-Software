@@ -1,6 +1,8 @@
 // The top bar on every screen (PRD FR-5.6, design system 6): the search box with its Ctrl+K chip
 // (it finds accounts, بکری and vouchers, GlobalSearch), the attention bell (AttentionBell), the
-// language switch and the user.
+// language switch and the user. The bell and the user are quiet buttons with no box until the pointer
+// is on them (plan 75, item 9), so the bar shows two boxes, the search and the language switch, and the
+// pressed language is the one strong colour in it.
 
 import { useRef, useState } from 'react';
 import { ChangePasswordDialog } from '../../features/auth/components/ChangePasswordDialog';
@@ -14,7 +16,6 @@ interface TopBarProps {
   /** The signed-in user's name, shown as typed (a name is not translated, PRD FR-7.25). */
   userName: string;
   onLock: () => void;
-  onSignOut: () => void;
   /** The user menu's "show the guide": opens the first-run guide again (PRD FR-7.12). */
   onGuide: () => void;
   /** A search result was chosen: open that account. */
@@ -28,7 +29,6 @@ interface TopBarProps {
 export function TopBar({
   userName,
   onLock,
-  onSignOut,
   onGuide,
   onOpenAccount,
   onOpenBikri,
@@ -55,7 +55,6 @@ export function TopBar({
         }}
         onGuide={onGuide}
         onLock={onLock}
-        onSignOut={onSignOut}
       />
       <ChangePasswordDialog
         open={changingPassword}

@@ -29,4 +29,22 @@ describe('number runs in a text cell', () => {
     expect(runs).toEqual(['1', '10-10-2026', '12-10-2026']);
     expect(container.textContent).toBe(TWO_DATES);
   });
+
+  it('a run that begins or ends the text takes no gap on that side; a run between words keeps both', () => {
+    const edges = (text: string) => {
+      const { container } = render(createElement(NumberRuns, { text }));
+      return Array.from(container.querySelectorAll('bdi')).map((run) => run.className);
+    };
+    // A code first, then a name, then a phone last: the first has no start gap and the last no end gap.
+    expect(edges('0030 شاہد 0300-1234567')).toEqual([
+      'number-run number-run-start',
+      'number-run number-run-end',
+    ]);
+    // Words first and a number last: only the end edge.
+    expect(edges('شاہد 0300')).toEqual(['number-run number-run-end']);
+    // A number between words: both gaps stay.
+    expect(edges('کیلا 30 . 580 پیٹی')).toEqual(['number-run', 'number-run']);
+    // The whole text is one number: it is the only child, so it never had a gap.
+    expect(edges('12,000')).toEqual(['number-run number-run-start number-run-end']);
+  });
 });

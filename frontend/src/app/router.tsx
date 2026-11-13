@@ -696,6 +696,18 @@ const restoreDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of plan 56 block ----
 
+// ---- Plan 75: the development page of the sign-in screen and its brand panel (dev only). ----
+const loginDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/login',
+        component: lazyRouteComponent(() => import('./dev/LoginDevPage'), 'LoginDevPage'),
+      }),
+    ]
+  : [];
+// ---- end of plan 75 block ----
+
 // ---- Run B, plan 20: the development pages of the report screens (dev only, like the others). ----
 const reportsDevRoutes = import.meta.env.DEV
   ? [
@@ -820,6 +832,7 @@ const routeTree = rootRoute.addChildren([
   ...devRoutes,
   ...backupDevRoutes,
   ...restoreDevRoutes,
+  ...loginDevRoutes,
   ...reportsDevRoutes,
   ...partyLedgersDevRoutes,
   ...analyticsDevRoutes,

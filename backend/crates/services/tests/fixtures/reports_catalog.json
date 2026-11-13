@@ -7,7 +7,24 @@
     "filters": [
       "bikri"
     ],
-    "party_required": true
+    "party_required": true,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-seller",
+      "report-col-item",
+      "report-col-qty",
+      "report-col-gross",
+      "report-col-freight",
+      "report-col-commission",
+      "report-col-labour",
+      "report-col-munshiana",
+      "report-col-cash-paid",
+      "report-col-store-rent",
+      "report-col-phone-charge",
+      "report-col-deductions",
+      "report-col-net"
+    ]
   },
   {
     "id": "R2",
@@ -26,7 +43,18 @@
       "grade",
       "lot"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-buyer",
+      "report-col-city",
+      "report-col-item",
+      "report-col-qty",
+      "report-col-rate",
+      "report-col-value",
+      "report-col-buyer-total"
+    ]
   },
   {
     "id": "R3",
@@ -45,7 +73,20 @@
       "grade",
       "lot"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-buyer",
+      "report-col-city",
+      "report-col-item",
+      "report-col-qty",
+      "report-col-rate",
+      "report-col-value",
+      "report-col-buyer-total",
+      "report-col-paid-on-spot",
+      "report-col-left-on-account"
+    ]
   },
   {
     "id": "R4",
@@ -64,7 +105,20 @@
       "grade",
       "lot"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-buyer",
+      "report-col-city",
+      "report-col-item",
+      "report-col-qty",
+      "report-col-rate",
+      "report-col-value",
+      "report-col-buyer-total",
+      "report-col-paid-on-spot",
+      "report-col-left-on-account"
+    ]
   },
   {
     "id": "R5",
@@ -82,7 +136,16 @@
       "bikri",
       "lot"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-serial",
+      "report-col-buyer",
+      "report-col-detail",
+      "report-col-value",
+      "report-col-buyer-total",
+      "report-col-paid-on-spot",
+      "report-col-left-on-account"
+    ]
   },
   {
     "id": "R6",
@@ -97,7 +160,24 @@
       "adda",
       "lot"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-seller",
+      "report-col-item",
+      "report-col-qty",
+      "report-col-gross",
+      "report-col-freight",
+      "report-col-commission",
+      "report-col-labour",
+      "report-col-munshiana",
+      "report-col-cash-paid",
+      "report-col-store-rent",
+      "report-col-phone-charge",
+      "report-col-deductions",
+      "report-col-net"
+    ]
   },
   {
     "id": "R7",
@@ -113,7 +193,17 @@
       "city",
       "adda"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-item",
+      "report-col-qty",
+      "report-col-gross",
+      "report-col-avg-rate",
+      "report-col-seller-comm",
+      "report-col-buyer-comm",
+      "report-col-laga",
+      "report-col-total-comm"
+    ]
   },
   {
     "id": "R10",
@@ -128,7 +218,23 @@
       "stock_view",
       "lot"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-seller",
+      "report-col-item",
+      "report-col-packing",
+      "report-col-received",
+      "report-col-sold",
+      "report-col-written-off",
+      "report-col-fruit-taken",
+      "report-col-balance-qty",
+      "report-col-our-left",
+      "report-col-other-left",
+      "report-col-shop-name",
+      "report-col-days-waiting"
+    ]
   },
   {
     "id": "R11",
@@ -139,7 +245,15 @@
       "date_range",
       "party"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-account",
+      "report-col-narration",
+      "report-col-debit",
+      "report-col-credit"
+    ]
   },
   {
     "id": "R12",
@@ -149,7 +263,16 @@
     "filters": [
       "date_range"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-account",
+      "report-col-narration",
+      "report-col-cash-in",
+      "report-col-cash-out",
+      "report-col-balance"
+    ]
   },
   {
     "id": "R13",
@@ -160,7 +283,16 @@
       "date_range",
       "party"
     ],
-    "party_required": true
+    "party_required": true,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-detail",
+      "report-col-narration",
+      "report-col-debit",
+      "report-col-credit",
+      "report-col-balance"
+    ]
   },
   {
     "id": "R14",
@@ -172,7 +304,16 @@
       "party",
       "detail"
     ],
-    "party_required": true
+    "party_required": true,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-detail",
+      "report-col-narration",
+      "report-col-debit",
+      "report-col-credit",
+      "report-col-balance"
+    ]
   },
   {
     "id": "R15",
@@ -184,7 +325,15 @@
       "party",
       "voucher_type"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-account",
+      "report-col-amount",
+      "report-col-narration",
+      "report-col-status"
+    ]
   },
   {
     "id": "R16",
@@ -195,7 +344,13 @@
       "as_of",
       "city"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-account",
+      "report-col-city",
+      "report-col-debit",
+      "report-col-credit"
+    ]
   },
   {
     "id": "R17",
@@ -205,7 +360,13 @@
     "filters": [
       "as_of"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-account",
+      "report-col-head",
+      "report-col-debit",
+      "report-col-credit"
+    ]
   },
   {
     "id": "R18",
@@ -215,7 +376,12 @@
     "filters": [
       "as_of"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-account",
+      "report-col-debit",
+      "report-col-credit"
+    ]
   },
   {
     "id": "R19",
@@ -223,7 +389,13 @@
     "group_title_id": "report-group-accounts",
     "title_id": "report-r19-title",
     "filters": [],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-account",
+      "report-col-opening-date",
+      "report-col-debit",
+      "report-col-credit"
+    ]
   },
   {
     "id": "R20",
@@ -235,7 +407,19 @@
       "party",
       "city"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-buyer",
+      "report-col-city",
+      "report-col-phone",
+      "report-col-balance",
+      "report-col-oldest-date",
+      "report-col-days",
+      "report-col-age-0-7",
+      "report-col-age-8-30",
+      "report-col-age-31-90",
+      "report-col-age-91"
+    ]
   },
   {
     "id": "R21",
@@ -247,7 +431,19 @@
       "party",
       "city"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-city",
+      "report-col-buyer",
+      "report-col-phone",
+      "report-col-balance",
+      "report-col-oldest-date",
+      "report-col-days",
+      "report-col-age-0-7",
+      "report-col-age-8-30",
+      "report-col-age-31-90",
+      "report-col-age-91"
+    ]
   },
   {
     "id": "R22",
@@ -260,7 +456,20 @@
       "city",
       "collector"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-collector",
+      "report-col-buyer",
+      "report-col-city",
+      "report-col-phone",
+      "report-col-balance",
+      "report-col-oldest-date",
+      "report-col-days",
+      "report-col-age-0-7",
+      "report-col-age-8-30",
+      "report-col-age-31-90",
+      "report-col-age-91"
+    ]
   },
   {
     "id": "R23",
@@ -272,7 +481,16 @@
       "party",
       "collector"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-account",
+      "report-col-amount",
+      "report-col-collector",
+      "report-col-narration",
+      "report-col-status"
+    ]
   },
   {
     "id": "R24",
@@ -283,7 +501,16 @@
       "as_of",
       "party"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-section",
+      "report-col-seller",
+      "report-col-payable",
+      "report-col-advance-open",
+      "report-col-owes-firm",
+      "report-col-balance",
+      "report-col-last-date"
+    ]
   },
   {
     "id": "R25",
@@ -294,7 +521,15 @@
       "date_range",
       "party"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "report-col-account",
+      "report-col-amount",
+      "report-col-narration",
+      "report-col-status"
+    ]
   },
   {
     "id": "R26",
@@ -305,7 +540,15 @@
       "as_of",
       "seller"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-seller",
+      "report-col-given",
+      "report-col-returned",
+      "report-col-adjusted",
+      "report-col-open",
+      "report-col-last-date"
+    ]
   },
   {
     "id": "R27",
@@ -321,7 +564,17 @@
       "adda",
       "lot"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-doc",
+      "report-col-date",
+      "report-col-bill-date",
+      "report-col-seller",
+      "report-col-lots",
+      "report-col-gross",
+      "report-col-deductions",
+      "report-col-net"
+    ]
   },
   {
     "id": "R28",
@@ -333,7 +586,12 @@
       "party",
       "group_by"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-period",
+      "report-col-account",
+      "report-col-amount"
+    ]
   },
   {
     "id": "R29",
@@ -344,7 +602,14 @@
       "date_range",
       "partner"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-section",
+      "report-col-name",
+      "report-col-expense",
+      "report-col-taken",
+      "report-col-returned"
+    ]
   },
   {
     "id": "R30",
@@ -354,7 +619,16 @@
     "filters": [
       "date_range"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-partner",
+      "report-col-income-share",
+      "report-col-expense-share",
+      "report-col-profit-share",
+      "report-col-taken",
+      "report-col-returned",
+      "report-col-partner-net"
+    ]
   },
   {
     "id": "R31",
@@ -365,7 +639,14 @@
       "date_range",
       "partner"
     ],
-    "party_required": true
+    "party_required": true,
+    "column_title_ids": [
+      "report-col-date",
+      "partners-statement-col-heading",
+      "partners-statement-col-detail",
+      "report-col-amount",
+      "partners-statement-col-running"
+    ]
   },
   {
     "id": "R32",
@@ -376,7 +657,18 @@
       "as_of",
       "party"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-person",
+      "report-col-staff",
+      "report-col-lent",
+      "report-col-returned-cash",
+      "report-col-returned-salary",
+      "report-col-open",
+      "report-col-oldest-date",
+      "report-col-return-by",
+      "report-col-days-past"
+    ]
   },
   {
     "id": "R33",
@@ -388,7 +680,25 @@
       "item",
       "trip_view"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-trip",
+      "report-col-purchase",
+      "report-col-date",
+      "report-col-item",
+      "report-col-bought-qty",
+      "report-col-bought-cost",
+      "report-col-sold",
+      "report-col-sales-money",
+      "report-col-seller-comm",
+      "report-col-total-comm",
+      "report-col-cost-sold",
+      "report-col-written-off",
+      "report-col-written-off-cost",
+      "report-col-left-qty",
+      "report-col-left-cost",
+      "report-col-result"
+    ]
   },
   {
     "id": "R34",
@@ -398,7 +708,13 @@
     "filters": [
       "date_range"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-line",
+      "report-col-count",
+      "report-col-amount"
+    ]
   },
   {
     "id": "R35",
@@ -410,7 +726,16 @@
       "party",
       "collector"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-code",
+      "report-col-party",
+      "report-col-previous",
+      "report-col-debit",
+      "report-col-credit",
+      "report-col-balance",
+      "report-col-collector"
+    ]
   },
   {
     "id": "R36",
@@ -424,7 +749,24 @@
       "garden",
       "garden_view"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-garden",
+      "report-col-date",
+      "report-col-status",
+      "report-col-rent",
+      "report-col-installments",
+      "report-col-garden-costs",
+      "report-col-money-in-shop",
+      "report-col-money-in-pocket",
+      "report-col-sales-our-shop",
+      "report-col-sales-other-shops",
+      "report-col-other-in",
+      "report-col-total-comm",
+      "report-col-money-in",
+      "report-col-running-balance",
+      "report-col-rent-due"
+    ]
   },
   {
     "id": "R37",
@@ -438,7 +780,20 @@
       "item",
       "garden"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "report-col-date",
+      "report-col-doc",
+      "fruit-filter-for",
+      "report-col-seller",
+      "report-col-item",
+      "report-col-packing",
+      "fruit-col-weight",
+      "report-col-qty",
+      "report-col-rate",
+      "report-col-value",
+      "fruit-col-source"
+    ]
   },
   {
     "id": "R38",
@@ -448,6 +803,19 @@
     "filters": [
       "status"
     ],
-    "party_required": false
+    "party_required": false,
+    "column_title_ids": [
+      "dead-col-party",
+      "dead-col-type",
+      "dead-col-reason",
+      "dead-col-note",
+      "dead-col-date",
+      "dead-col-owed-then",
+      "dead-col-recovered",
+      "dead-col-corrections",
+      "dead-col-still-owed",
+      "dead-col-last-recovery",
+      "dead-col-status"
+    ]
   }
 ]

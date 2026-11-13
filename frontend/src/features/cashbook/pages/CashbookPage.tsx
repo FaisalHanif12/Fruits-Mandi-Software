@@ -28,6 +28,7 @@ import {
   ListPage,
   LoadingState,
   PeriodBox,
+  FilterCard,
 } from '../../../shared/ui';
 import { useOpenRowSource } from '../../reports';
 import { SignedNum } from '../components/SignedNum';
@@ -79,6 +80,7 @@ function CashbookScreen({ today }: { today: string }) {
 
   return (
     <ListPage
+      icon={Landmark}
       titleId="cashbook-title"
       help={
         <Localized id="cashbook-help">
@@ -91,7 +93,7 @@ function CashbookScreen({ today }: { today: string }) {
         </Button>
       }
       filters={
-        <div {...formNavigationProps}>
+        <FilterCard {...formNavigationProps}>
           <FilterBar screen="cashbook.book">
             <PeriodBox period={period} />
             {/* The cash at the start and at the end of the range sit in the same row as the period
@@ -99,19 +101,19 @@ function CashbookScreen({ today }: { today: string }) {
             {first === undefined ? null : (
               <>
                 <dl>
-                  <Fact label={<Localized id="cashbook-opening" />}>
-                    <SignedNum paisa={first.opening_paisa} />
+                  <Fact stat label={<Localized id="cashbook-opening" />}>
+                    <SignedNum inherit paisa={first.opening_paisa} />
                   </Fact>
                 </dl>
                 <dl>
-                  <Fact label={<Localized id="cashbook-closing" />}>
-                    <SignedNum paisa={first.closing_paisa} />
+                  <Fact stat label={<Localized id="cashbook-closing" />}>
+                    <SignedNum inherit paisa={first.closing_paisa} />
                   </Fact>
                 </dl>
               </>
             )}
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       {/* A list sorted by anything but the day has no running cash: the backend sends none. */}

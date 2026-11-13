@@ -1227,9 +1227,22 @@ fn the_buyers_city_and_the_adda_narrow_the_facts() {
         [city, w.akram],
     )
     .unwrap();
-    let mut one = support::event1(&w);
-    one.header.adda_id = Some(adda);
-    save(&w, &one);
+    // A new بکری has no adda (PRD v1.34, plan 71 H1 to H3), so the adda is written as OLD data on
+    // بکری 1, as a بکری saved before the header field was retired has it: on the بکری and on its
+    // facts. The facts are append-only; the test database drops the trigger to write old data.
+    let saved = save(&w, &support::event1(&w));
+    conn.execute_batch("DROP TRIGGER analytics_facts_no_update")
+        .unwrap();
+    conn.execute(
+        "UPDATE bikri_entries SET adda_id = ?1 WHERE id = ?2",
+        [adda, saved.bikri_id],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE analytics_facts SET adda_id = ?1 WHERE bikri_id = ?2",
+        [adda, saved.bikri_id],
+    )
+    .unwrap();
     save(&w, &event2(&w));
     // Only اکرم lives in the city: 20 نگ of کیلا.
     let by_city = view(

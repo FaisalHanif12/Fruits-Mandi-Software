@@ -933,9 +933,11 @@ fn a_posting_with_a_negative_lot_and_a_good_lot_lists_both_items() {
         0,
     );
     assert_eq!(slip.rows.len(), 2);
-    assert_eq!(goods_names(&slip.rows[0]).0, "Apple");
+    // The seller's slip names each lot: the item and its counter (PRD FR-19.12, FR-12.45). The
+    // buyer's slip shows the item alone.
+    assert_eq!(goods_names(&slip.rows[0]).0, "Apple-1");
     assert_eq!(goods_figures(&slip.rows[0]), (10, 600, 6_000));
-    assert_eq!(goods_names(&slip.rows[1]).0, "Banana");
+    assert_eq!(goods_names(&slip.rows[1]).0, "Banana-1");
     assert_eq!(goods_figures(&slip.rows[1]), (10, 100, 1_000));
     assert_eq!(line_of(&slip, "report-r35-gross"), 7_000);
     // 340 جمع.

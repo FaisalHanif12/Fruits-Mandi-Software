@@ -10,7 +10,7 @@ import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalization } from '@fluent/react';
-import { Plus, X } from 'lucide-react';
+import { Contact, MapPin, Plus, Store, X } from 'lucide-react';
 import type { FirmContact } from '../../../bindings/FirmContact';
 import type { FirmRole } from '../../../bindings/FirmRole';
 import type { FirmSettings } from '../../../bindings/FirmSettings';
@@ -20,9 +20,11 @@ import { useFormState, useSpellingFlow, useSingleFlight } from '../../../shared/
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
+  Card,
   ErrorNotice,
   Field,
   fieldError,
+  FormGrid,
   FreeTextInput,
   LinkButton,
   NamePair,
@@ -216,60 +218,80 @@ export function FirmTab({ firm }: FirmTabProps) {
         onSubmit={(event) => {
           event.preventDefault();
         }}
-        className="flex max-w-reading flex-col gap-4"
+        className="flex max-w-form flex-col gap-4"
       >
         <LeaveGuard dirty={dirty} onSave={submit} />
         {error === null ? null : (
           <ErrorNotice error={error} fieldsShown={[...FIELDS, 'firm_contacts', ...CONTACT_PATHS]} />
         )}
-        <NamePair
-          value={firmNames}
-          onChange={(next) => {
-            setValues({ ...values, name_ur: next.urdu, name_en: next.english });
-            rememberMarks('firm')(next);
-          }}
-          urduLabel={<Localized id="settings-firm-name-ur" />}
-          englishLabel={<Localized id="settings-firm-name-en" />}
-          urduError={fieldError(error, 'name_ur')}
-          englishError={fieldError(error, 'name_en')}
-        />
-        <NamePair
-          value={mandiNames}
-          onChange={(next) => {
-            setValues({ ...values, mandi_ur: next.urdu, mandi_en: next.english });
-            rememberMarks('mandi')(next);
-          }}
-          urduLabel={<Localized id="settings-firm-mandi-ur" />}
-          englishLabel={<Localized id="settings-firm-mandi-en" />}
-          urduError={fieldError(error, 'mandi_ur')}
-          englishError={fieldError(error, 'mandi_en')}
-        />
-        <Field label={<Localized id="settings-firm-phone" />} error={fieldError(error, 'phone')}>
-          {(control) => (
-            <TextInput {...control} value={values.phone} onChange={setField('phone')} lang="en" />
-          )}
-        </Field>
-        <Field
-          label={<Localized id="settings-firm-address" />}
-          error={fieldError(error, 'address')}
-        >
-          {(control) => (
-            <FreeTextInput {...control} value={values.address} onChange={setField('address')} />
-          )}
-        </Field>
-        <Field
-          label={<Localized id="settings-firm-trade-mark" />}
-          hint={<Localized id="settings-firm-trade-mark-hint" />}
-          error={fieldError(error, 'trade_mark')}
-        >
-          {(control) => (
-            <TextInput {...control} value={values.trade_mark} onChange={setField('trade_mark')} />
-          )}
-        </Field>
-        <section className="flex flex-col gap-3 rounded-3 border border-border p-3">
-          <Localized id="settings-firm-contacts-title">
-            <h2 className="type-section" />
-          </Localized>
+        {/* The names in a card, the Urdu and the English name of each side by side from 480 px of free
+            width. The order of the fields is the reading order (row by row, from the start edge), so Enter
+            and the arrows go the way the eye does in both directions (PRD FR-7.13, FR-7.14). */}
+        <Card icon={Store} title={<Localized id="settings-firm-card-names" />}>
+          <FormGrid columns={2}>
+            <NamePair
+              value={firmNames}
+              onChange={(next) => {
+                setValues({ ...values, name_ur: next.urdu, name_en: next.english });
+                rememberMarks('firm')(next);
+              }}
+              urduLabel={<Localized id="settings-firm-name-ur" />}
+              englishLabel={<Localized id="settings-firm-name-en" />}
+              urduError={fieldError(error, 'name_ur')}
+              englishError={fieldError(error, 'name_en')}
+            />
+            <NamePair
+              value={mandiNames}
+              onChange={(next) => {
+                setValues({ ...values, mandi_ur: next.urdu, mandi_en: next.english });
+                rememberMarks('mandi')(next);
+              }}
+              urduLabel={<Localized id="settings-firm-mandi-ur" />}
+              englishLabel={<Localized id="settings-firm-mandi-en" />}
+              urduError={fieldError(error, 'mandi_ur')}
+              englishError={fieldError(error, 'mandi_en')}
+            />
+          </FormGrid>
+        </Card>
+        <Card icon={MapPin} title={<Localized id="settings-firm-card-details" />}>
+          <FormGrid columns={3}>
+            <Field
+              label={<Localized id="settings-firm-phone" />}
+              error={fieldError(error, 'phone')}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={values.phone}
+                  onChange={setField('phone')}
+                  lang="en"
+                />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="settings-firm-address" />}
+              error={fieldError(error, 'address')}
+            >
+              {(control) => (
+                <FreeTextInput {...control} value={values.address} onChange={setField('address')} />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="settings-firm-trade-mark" />}
+              hint={<Localized id="settings-firm-trade-mark-hint" />}
+              error={fieldError(error, 'trade_mark')}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={values.trade_mark}
+                  onChange={setField('trade_mark')}
+                />
+              )}
+            </Field>
+          </FormGrid>
+        </Card>
+        <Card icon={Contact} title={<Localized id="settings-firm-contacts-title" />}>
           <Localized id="settings-firm-contacts-help">
             <p className="type-body text-ink-muted" />
           </Localized>
@@ -386,7 +408,7 @@ export function FirmTab({ firm }: FirmTabProps) {
               </Localized>
             ) : null}
           </div>
-        </section>
+        </Card>
         <div>
           <Button
             variant="primary"

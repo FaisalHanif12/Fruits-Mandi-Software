@@ -81,6 +81,12 @@ function measureAlignment(options) {
         const r = icon.getBoundingClientRect();
         if (r.width > 0 && !icon.closest('button, [role="button"]')) rects.push(r);
       }
+      // A switch of words (the active / inactive control of a list row) starts at its own border, not at
+      // the word inside it, so it is read by its box like an icon.
+      for (const group of target.querySelectorAll('[role="group"]')) {
+        const r = group.getBoundingClientRect();
+        if (r.width > 0) rects.push(r);
+      }
     }
     if (rects.length === 0) return null;
     let left = Infinity;
@@ -330,7 +336,9 @@ function measureAlignment(options) {
     const headerInk = column.header
       ? checkHeader(tableId, column.id, column.header.holder, column.header.textEl)
       : null;
-    const withIcons = kind === 'text';
+    // A chip with an icon (a status chip, plan 75 item 4) is centred as a whole: its icon counts, so the
+    // text of the chip is not read as 10 px off the middle of its heading.
+    const withIcons = kind === 'text' || kind === 'centre';
     const cellInks = column.body
       .map((cell) => ({ cell, ink: ink(cell, withIcons) }))
       .filter((x) => x.ink);
@@ -828,6 +836,9 @@ function measureAlignment(options) {
     const entries = [];
     for (const row of rows) {
       if (row.querySelector('ul, ol, dl, table, .ag-root-wrapper')) continue;
+      // A line of fields to type in (the details of a sale line: three boxes side by side, each with its
+      // figure) is a form, not a card of labels and values; its figures stand under their own boxes.
+      if (row.querySelector('input, select, textarea, [role="combobox"]')) continue;
       const figures = Array.from(row.querySelectorAll(FIGURE_SEL)).filter(
         (f) => isNumeric(clean(f.textContent)) && !f.closest('.sr-only'),
       );

@@ -28,7 +28,8 @@ use crate::reports::common::{add, col, count_of, date_cell, load_parties, paisa}
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind, SummaryLine,
+    Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    SummaryLine,
 };
 use crate::reports::workings::{OpenAmount, days_past_return_by, open_amounts};
 
@@ -280,6 +281,25 @@ fn with_day(mut page: ReportPage, as_of: &str) -> ReportPage {
     page
 }
 
+/// The columns of R32, the one definition: the run and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("person", ids::COL_PERSON, ColumnKind::Party),
+        col("staff", ids::COL_STAFF, ColumnKind::Label),
+        col("lent", ids::COL_LENT, ColumnKind::Money),
+        col("returned_cash", ids::COL_RETURNED_CASH, ColumnKind::Money),
+        col(
+            "returned_salary",
+            ids::COL_RETURNED_SALARY,
+            ColumnKind::Money,
+        ),
+        col("open", ids::COL_OPEN, ColumnKind::Money),
+        col("oldest_open", ids::COL_OLDEST_DATE, ColumnKind::Date),
+        col("return_by", ids::COL_RETURN_BY, ColumnKind::Date),
+        col("days_past", ids::COL_DAYS_PAST, ColumnKind::Number),
+    ]
+}
+
 /// The report with its columns and no rows.
 fn empty(typed: &Typed, spec: PageSpec) -> ReportPage {
     ReportPage {
@@ -288,21 +308,7 @@ fn empty(typed: &Typed, spec: PageSpec) -> ReportPage {
         id: ReportId::R32,
         title_id: ids::title_id("R32"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("person", ids::COL_PERSON, ColumnKind::Party),
-            col("staff", ids::COL_STAFF, ColumnKind::Label),
-            col("lent", ids::COL_LENT, ColumnKind::Money),
-            col("returned_cash", ids::COL_RETURNED_CASH, ColumnKind::Money),
-            col(
-                "returned_salary",
-                ids::COL_RETURNED_SALARY,
-                ColumnKind::Money,
-            ),
-            col("open", ids::COL_OPEN, ColumnKind::Money),
-            col("oldest_open", ids::COL_OLDEST_DATE, ColumnKind::Date),
-            col("return_by", ids::COL_RETURN_BY, ColumnKind::Date),
-            col("days_past", ids::COL_DAYS_PAST, ColumnKind::Number),
-        ],
+        columns: columns(),
         rows: Vec::new(),
         offset: spec.offset,
         limit: spec.reported_limit(),

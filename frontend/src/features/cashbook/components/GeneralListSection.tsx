@@ -5,7 +5,7 @@
 // total under the amount column is the backend's.
 
 import { Localized } from '@fluent/react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ReceiptText } from 'lucide-react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
@@ -46,7 +46,7 @@ export function GeneralListSection({ today }: { today: string }) {
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
   const months = first === undefined || first.months.length === 0 ? undefined : first.months;
   return (
-    <Card compact title={<Localized id="cashbook-general-list-title" />}>
+    <Card compact icon={ReceiptText} title={<Localized id="cashbook-general-list-title" />}>
       <div {...formNavigationProps}>
         <FilterBar
           screen="cashbook.general.list"

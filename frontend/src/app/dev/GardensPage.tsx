@@ -28,11 +28,16 @@ export function GardensPage() {
   const overview = devFlag('overview');
   return (
     <AppShell
-      nav={<MainNav current={overview ? 'partners' : 'gardens'} onSelect={() => undefined} />}
+      nav={
+        <MainNav
+          current={overview ? 'partners' : 'gardens'}
+          onSelect={() => undefined}
+          onSignOut={() => undefined}
+        />
+      }
       moduleMenu={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
-      onSignOut={() => undefined}
       onGuide={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}

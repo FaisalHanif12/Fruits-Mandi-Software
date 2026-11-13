@@ -43,8 +43,8 @@ export function SavedVoucherView({ row }: { row: VoucherRow }) {
           <Fact label={<Localized id="vouchers-col-account" />}>
             {row.account === null ? null : displayName(row.account, language)}
           </Fact>
-          <Fact label={<Localized id="vouchers-field-amount" />}>
-            <Num paisa={row.amount_paisa} />
+          <Fact stat label={<Localized id="vouchers-field-amount" />}>
+            <Num inherit paisa={row.amount_paisa} />
           </Fact>
           {row.reason === '' ? null : (
             <Fact label={<Localized id="vouchers-field-reason-lent" />}>{row.reason}</Fact>

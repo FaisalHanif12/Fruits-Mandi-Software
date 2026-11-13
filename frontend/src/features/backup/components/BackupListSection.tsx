@@ -5,7 +5,7 @@
 // could not be reached is said in words, not hidden (the cloud copies are missing from the list).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { DatabaseBackup, HardDriveDownload } from 'lucide-react';
+import { DatabaseBackup, HardDriveDownload, History } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, ListRegion, Pager, listHeightMode, useListPaging } from '../../../shared/grid';
@@ -102,7 +102,7 @@ export function BackupListSection({ onRestore, onTest, onBackupNow }: BackupList
   }
 
   return (
-    <Card compact fill title={<Localized id="backup-list-title" />}>
+    <Card compact fill icon={History} title={<Localized id="backup-list-title" />}>
       {/* The place choice and the two actions on the copy that has focus are one row; how to
           restore with the keys is behind the ⓘ (plan 38). */}
       <div className="flex flex-wrap items-center justify-between gap-2">

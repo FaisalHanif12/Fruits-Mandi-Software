@@ -371,3 +371,11 @@ settings-support-path-refused = Choose a full file name ending in .txt, in a fol
 # The name of the file type in the save box.
 # review: pending
 settings-support-file-type = Text file
+
+## The cards of the Firm tab (plan 75, item 6).
+
+# review: pending
+settings-firm-card-names = Firm and mandi names
+
+# review: pending
+settings-firm-card-details = Phone, address and { -trade-mark }

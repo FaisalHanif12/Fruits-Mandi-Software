@@ -11,6 +11,22 @@
 // `StatusTiles` and come in as `children`, so one tile that cannot be read never hides the others.
 
 import { Localized } from '@fluent/react';
+import {
+  HandCoins,
+  Handshake,
+  Package,
+  PiggyBank,
+  Receipt,
+  Route,
+  Scale,
+  Trees,
+  TrendingUp,
+  UserRound,
+  UserX,
+  Users,
+  Wallet,
+  Percent,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { DashboardTiles as DashboardTilesData } from '../../../bindings/DashboardTiles';
 import { isNegativePaisa, isPositivePaisa } from '../../../shared/format';
@@ -39,6 +55,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
     >
       <Tile
         label={<Localized id="dashboard-tile-sales" />}
+        icon={TrendingUp}
         note={
           <Localized
             id="dashboard-tile-sales-count"
@@ -56,6 +73,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-commission" />}
+        icon={Percent}
         onOpen={() => {
           open({ kind: 'analytics' });
         }}
@@ -64,6 +82,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-cash" />}
+        icon={Wallet}
         tone={cashBelowZero ? 'bad' : 'neutral'}
         note={cashBelowZero ? <Localized id="dashboard-tile-cash-below" /> : undefined}
         onOpen={() => {
@@ -74,6 +93,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-dues" />}
+        icon={Users}
         onOpen={() => {
           open({ kind: 'report', id: 'R20' });
         }}
@@ -82,6 +102,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-dues-sellers" />}
+        icon={UserRound}
         onOpen={() => {
           open({ kind: 'report', id: 'R24' });
         }}
@@ -90,6 +111,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-dues-total" />}
+        icon={Scale}
         note={<Localized id="dashboard-tile-dues-total-note" />}
         onOpen={() => {
           open({ kind: 'report', id: 'R20' });
@@ -99,6 +121,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-dead" />}
+        icon={UserX}
         tone={deadAmount ? 'warn' : 'neutral'}
         note={
           deadAmount ? (
@@ -121,6 +144,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-payable" />}
+        icon={HandCoins}
         onOpen={() => {
           open({ kind: 'report', id: 'R24' });
         }}
@@ -129,6 +153,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-advances" />}
+        icon={PiggyBank}
         onOpen={() => {
           open({ kind: 'report', id: 'R26' });
         }}
@@ -137,6 +162,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-lent" />}
+        icon={Handshake}
         tone={lentOverdue ? 'warn' : 'neutral'}
         note={
           lentOverdue ? (
@@ -156,6 +182,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-expenses" />}
+        icon={Receipt}
         onOpen={() => {
           open({ kind: 'report', id: 'R29' });
         }}
@@ -164,6 +191,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-stock" />}
+        icon={Package}
         note={
           <Localized
             id="dashboard-tile-stock-note"
@@ -187,6 +215,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-trips" />}
+        icon={Route}
         note={
           <Localized
             id="dashboard-tile-trips-note"
@@ -210,6 +239,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-gardens" />}
+        icon={Trees}
         note={
           tiles.gardens_open === 0 ? (
             <Localized id="dashboard-tile-gardens-none" />

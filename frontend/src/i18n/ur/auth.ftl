@@ -177,3 +177,14 @@ auth-change-wrong-current = موجودہ پاس ورڈ غلط ہے۔ باقی ک
 
 # review: pending
 auth-change-saved = پاس ورڈ بدل دیا گیا۔
+
+## The brand panel beside the sign-in form (plan 75 T2).
+
+# review: pending
+auth-brand-books = حساب ہمیشہ برابر رہتا ہے
+
+# review: pending
+auth-brand-offline = انٹرنیٹ کے بغیر بھی چلتا ہے
+
+# review: pending
+auth-brand-backup = روزانہ خودکار بیک اپ

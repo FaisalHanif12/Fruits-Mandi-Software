@@ -23,12 +23,11 @@ export function BackupPage() {
   });
   return (
     <AppShell
-      nav={<MainNav current="backup" onSelect={() => undefined} />}
+      nav={<MainNav current="backup" onSelect={() => undefined} onSignOut={() => undefined} />}
       moduleMenu={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
-      onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

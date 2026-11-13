@@ -30,7 +30,9 @@ use crate::error::ReportsError;
 use crate::reports::common::{Conds, LIVE, add, col, count_of, names_cell, paisa};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
-use crate::reports::model::{Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, SummaryLine};
+use crate::reports::model::{
+    Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind, SummaryLine,
+};
 
 /// The income and expense shares of each partner, with only the dates that are set.
 fn shares_query(typed: &Typed) -> (String, Vec<Value>) {
@@ -88,6 +90,19 @@ fn heads_query(typed: &Typed) -> (String, Vec<Value>) {
 
 /// The partners. A partner who left but has rows still shows.
 const PARTNERS_SQL: &str = "SELECT id, name_ur, name_en, is_active FROM partners ORDER BY id";
+
+/// The columns of R30, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("partner", ids::COL_PARTNER, ColumnKind::Names),
+        col("income_share", ids::COL_INCOME_SHARE, ColumnKind::Money),
+        col("expense_share", ids::COL_EXPENSE_SHARE, ColumnKind::Money),
+        col("profit_share", ids::COL_PROFIT_SHARE, ColumnKind::Money),
+        col("taken", ids::COL_TAKEN, ColumnKind::Money),
+        col("returned", ids::COL_RETURNED, ColumnKind::Money),
+        col("net", ids::COL_PARTNER_NET, ColumnKind::Money),
+    ]
+}
 
 /// Builds R30.
 ///
@@ -203,15 +218,7 @@ pub(crate) fn run(
         id: ReportId::R30,
         title_id: ids::title_id("R30"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("partner", ids::COL_PARTNER, ColumnKind::Names),
-            col("income_share", ids::COL_INCOME_SHARE, ColumnKind::Money),
-            col("expense_share", ids::COL_EXPENSE_SHARE, ColumnKind::Money),
-            col("profit_share", ids::COL_PROFIT_SHARE, ColumnKind::Money),
-            col("taken", ids::COL_TAKEN, ColumnKind::Money),
-            col("returned", ids::COL_RETURNED, ColumnKind::Money),
-            col("net", ids::COL_PARTNER_NET, ColumnKind::Money),
-        ],
+        columns: columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),

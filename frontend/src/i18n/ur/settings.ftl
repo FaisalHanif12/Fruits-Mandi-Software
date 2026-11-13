@@ -368,3 +368,11 @@ settings-support-path-refused = پوری فائل کا نام چنیں جو .txt
 # The name of the file type in the save box.
 # review: pending
 settings-support-file-type = ٹیکسٹ فائل
+
+## The cards of the Firm tab (plan 75, item 6).
+
+# review: pending
+settings-firm-card-names = فرم اور منڈی کا نام
+
+# review: pending
+settings-firm-card-details = فون، پتہ اور { -trade-mark }

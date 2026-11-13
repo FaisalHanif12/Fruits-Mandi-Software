@@ -10,6 +10,7 @@ import type { VoucherRow } from '../../bindings/VoucherRow';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
+import { STATUS_CANCELLED, STATUS_SAVED } from '../../shared/ui';
 
 /**
  * The number of a voucher in its series: "R-12" or "و-12". Every kind has its own letters in
@@ -68,6 +69,7 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
         row.edited,
         context,
       ),
+    chip: (row) => (row.status === 'cancelled' ? STATUS_CANCELLED : STATUS_SAVED),
     tip: (row, context) => editedTip(row.edited, context),
   },
 ];

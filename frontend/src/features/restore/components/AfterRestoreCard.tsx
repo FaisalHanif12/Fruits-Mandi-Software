@@ -5,7 +5,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { DatabaseBackup, Settings } from 'lucide-react';
+import { CircleCheck, DatabaseBackup, Settings } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
@@ -48,7 +48,7 @@ export function AfterRestoreCard() {
   return (
     <div className="fixed inset-x-0 bottom-statusbar z-10 flex justify-center px-4 pb-4 pe-corner normal:pe-4 print:hidden">
       <div className="w-full max-w-form shadow-overlay">
-        <Card title={<Localized id="restore-after-title" />}>
+        <Card icon={CircleCheck} title={<Localized id="restore-after-title" />}>
           <div className="flex flex-col gap-3">
             <Localized id="restore-after-help">
               <p className="type-body text-ink-muted" />

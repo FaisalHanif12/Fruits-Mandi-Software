@@ -27,6 +27,7 @@ import {
   ErrorState,
   Field,
   FilterBar,
+  FilterCard,
   ListPage,
   LoadingState,
   Num,
@@ -203,6 +204,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
   return (
     <ListPage
       titleId="accounts-title"
+      icon={Landmark}
       help={
         <Localized id="accounts-help">
           <p />
@@ -223,7 +225,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
         )
       }
       filters={
-        <div ref={containerRef} {...formNavigationProps}>
+        <FilterCard ref={containerRef} {...formNavigationProps}>
           <FilterBar
             screen="accounts"
             search={{ value: text, onChange: setText, labelId: 'accounts-filter-label' }}
@@ -261,7 +263,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
               )}
             </Field>
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       {body}

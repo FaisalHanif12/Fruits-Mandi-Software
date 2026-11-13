@@ -4,7 +4,7 @@
 // a partner it says to choose one.
 
 import { Localized } from '@fluent/react';
-import { Landmark } from 'lucide-react';
+import { History, Landmark } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
 import { Card, EmptyState, Fact, Num } from '../../../shared/ui';
 import { SignedNum } from '../../cashbook';
@@ -17,7 +17,7 @@ export function CapitalHistorySection({ partnerId }: { partnerId: number | null 
   const first = history.data?.pages[0];
   const rows = history.data?.pages.flatMap((page) => page.rows);
   return (
-    <Card compact title={<Localized id="partners-capital-history-title" />}>
+    <Card compact icon={History} title={<Localized id="partners-capital-history-title" />}>
       {partnerId === null ? (
         <EmptyState
           icon={Landmark}

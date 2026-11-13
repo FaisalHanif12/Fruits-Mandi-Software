@@ -6,6 +6,7 @@
 // Four states: nothing typed yet, the rows (a line that cannot be worked out yet says so in
 // words), and the total.
 
+import { Boxes } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
 import type { Paisa } from '../../../shared/format';
 import { CalcInfo, Card, Num, Table, type TableColumn } from '../../../shared/ui';
@@ -64,7 +65,7 @@ export function PurchaseEntryNumbersCard({ lines, total, empty }: PurchaseEntryN
     },
   ];
   return (
-    <Card compact title={<Localized id="purchases-entry-title" />}>
+    <Card compact icon={Boxes} title={<Localized id="purchases-entry-title" />}>
       {lines.length === 0 ? (
         <Localized id={empty ? 'purchases-numbers-empty' : 'purchases-entry-no-lines'}>
           <p className="type-body text-ink-muted" />

@@ -20,7 +20,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CalendarX, Printer, SearchX } from 'lucide-react';
+import { ArrowLeft, CalendarX, Printer, SearchX, UsersRound } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { LedgerSide } from '../../../bindings/LedgerSide';
@@ -252,7 +252,7 @@ export function PartyStatement({
 
   if (printDay !== null) {
     return (
-      <ListPage titleId="party-ledgers-title" help={titleHelp}>
+      <ListPage titleId="party-ledgers-title" icon={UsersRound} help={titleHelp}>
         <div className="min-h-0 flex-1 overflow-auto">
           <PartyDayPreview
             accountId={accountId}

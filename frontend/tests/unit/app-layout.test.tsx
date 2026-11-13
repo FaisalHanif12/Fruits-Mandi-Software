@@ -48,9 +48,10 @@ function setLanguage(language: Language) {
 describe.each(LANGUAGES)('MainNav (%s)', (language) => {
   it('lists the eleven items of PRD FR-5.2 in order (باغات before مارکیٹ سفر), with the current one marked', () => {
     setLanguage(language);
-    renderIn(language, <MainNav current="bikri" onSelect={vi.fn()} />);
+    renderIn(language, <MainNav current="bikri" onSelect={vi.fn()} onSignOut={vi.fn()} />);
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
-    const items = within(nav).getAllByRole('button');
+    // Log out is the twelfth item, apart from the eleven screens (PRD FR-5.2, plan 75 T3).
+    const items = within(nav).getAllByRole('button').slice(0, MAIN_NAV.length);
     expect(items.map((item) => item.getAttribute('aria-label'))).toEqual(
       MAIN_NAV.map((entry) => message(language, entry.labelId)),
     );
@@ -72,7 +73,7 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
   });
 
   it('is a 64 px rail below 1366 px and 224 px from there, with labels only in the wide form', () => {
-    renderIn(language, <MainNav current="dashboard" onSelect={vi.fn()} />);
+    renderIn(language, <MainNav current="dashboard" onSelect={vi.fn()} onSignOut={vi.fn()} />);
     expect(screen.getByRole('navigation')).toHaveClass('w-rail', 'normal:w-nav');
     const label = within(at(screen.getAllByRole('button'), 0)).getByText(
       message(language, 'layout-nav-dashboard'),
@@ -82,7 +83,7 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
 
   it('opens an item with Enter or a click, and ↑ ↓ move between items', async () => {
     const onSelect = vi.fn();
-    renderIn(language, <MainNav current="dashboard" onSelect={onSelect} />);
+    renderIn(language, <MainNav current="dashboard" onSelect={onSelect} onSignOut={vi.fn()} />);
     const user = userEvent.setup();
     const items = screen.getAllByRole('button');
     items[0]?.focus();
@@ -96,6 +97,44 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
     expect(onSelect).toHaveBeenLastCalledWith('trips');
     await user.keyboard('{ArrowUp}');
     expect(items[4]).toHaveFocus();
+  });
+
+  // PRD FR-5.2 and FR-5.6 (v1.38), plan 75 T3: Log out stands at the bottom of the main menu.
+  it('has Log out as the last item, apart from the screens under a thin line, with the same word as the lock box', () => {
+    renderIn(language, <MainNav current="dashboard" onSelect={vi.fn()} onSignOut={vi.fn()} />);
+    const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
+    const items = within(nav).getAllByRole('button');
+    expect(items).toHaveLength(MAIN_NAV.length + 1);
+    const logOut = at(items, items.length - 1);
+    expect(logOut).toHaveAttribute('aria-label', message(language, 'layout-user-signout'));
+    expect(logOut).not.toHaveAttribute('aria-current');
+    // It sits in its own block that is pushed to the bottom and drawn under a thin line.
+    expect(logOut.parentElement).toHaveClass('mt-auto', 'border-t');
+    // The arrow of the icon points out of the screen, so it is mirrored in the right-to-left menu (F26).
+    expect(logOut.querySelector('svg')).toHaveClass('rtl:-scale-x-100');
+    // Like the other items, the label shows only in the wide menu.
+    expect(within(logOut).getByText(message(language, 'layout-user-signout'))).toHaveClass(
+      'hidden',
+      'normal:inline',
+    );
+  });
+
+  it('logs out with a click, or with ↓ from the last screen and Enter, and not by touching a screen item', async () => {
+    const onSelect = vi.fn();
+    const onSignOut = vi.fn();
+    renderIn(language, <MainNav current="dashboard" onSelect={onSelect} onSignOut={onSignOut} />);
+    const user = userEvent.setup();
+    const items = screen.getAllByRole('button');
+    await user.click(at(items, items.length - 1));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+    onSignOut.mockClear();
+    // The keyboard reaches it like any item of the menu (PRD FR-7.17).
+    at(items, MAIN_NAV.length - 1).focus();
+    await user.keyboard('{ArrowDown}');
+    expect(at(items, items.length - 1)).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });
 
@@ -120,7 +159,6 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
         <TopBar
           userName={USER_NAME}
           onLock={vi.fn()}
-          onSignOut={vi.fn()}
           onGuide={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
@@ -151,7 +189,6 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
         <TopBar
           userName={USER_NAME}
           onLock={vi.fn()}
-          onSignOut={vi.fn()}
           onGuide={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
@@ -350,11 +387,10 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
       language,
       <QueryClientProvider client={new QueryClient()}>
         <AppShell
-          nav={<MainNav current="bikri" onSelect={vi.fn()} />}
+          nav={<MainNav current="bikri" onSelect={vi.fn()} onSignOut={vi.fn()} />}
           moduleMenu={<ModuleMenu current="bikri-book" onSelect={vi.fn()} />}
           userName={USER_NAME}
           onLock={vi.fn()}
-          onSignOut={vi.fn()}
           onGuide={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}

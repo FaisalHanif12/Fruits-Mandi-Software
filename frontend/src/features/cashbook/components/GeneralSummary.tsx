@@ -3,6 +3,7 @@
 // `general_preview` (CLAUDE.md rule 1): the screen adds nothing up. The entry can be saved only
 // when the backend says so (`can_save`).
 
+import { Scale, Users } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
 import type { GeneralPreview } from '../types';
 import { Card, CashNote, Fact, Notice, Num, ShareAmounts } from '../../../shared/ui';
@@ -17,7 +18,7 @@ export function GeneralSummary({ preview }: GeneralSummaryProps) {
   const { l10n } = useLocalization();
   if (preview === undefined) {
     return (
-      <Card compact title={<Localized id="cashbook-general-totals-title" />}>
+      <Card compact icon={Scale} title={<Localized id="cashbook-general-totals-title" />}>
         <Localized id="cashbook-general-totals-hint">
           <p className="type-body text-ink-muted" />
         </Localized>
@@ -26,16 +27,16 @@ export function GeneralSummary({ preview }: GeneralSummaryProps) {
   }
   return (
     <div className="flex flex-col gap-3">
-      <Card compact title={<Localized id="cashbook-general-totals-title" />}>
+      <Card compact icon={Scale} title={<Localized id="cashbook-general-totals-title" />}>
         <dl className="grid grid-cols-3 gap-3">
-          <Fact label={<Localized id="cashbook-general-total-dr" />}>
-            <Num paisa={preview.total_dr_paisa} />
+          <Fact stat label={<Localized id="cashbook-general-total-dr" />}>
+            <Num inherit paisa={preview.total_dr_paisa} />
           </Fact>
-          <Fact label={<Localized id="cashbook-general-total-cr" />}>
-            <Num paisa={preview.total_cr_paisa} />
+          <Fact stat label={<Localized id="cashbook-general-total-cr" />}>
+            <Num inherit paisa={preview.total_cr_paisa} />
           </Fact>
-          <Fact label={<Localized id="cashbook-general-difference" />}>
-            <SignedNum paisa={preview.difference_paisa} />
+          <Fact stat label={<Localized id="cashbook-general-difference" />}>
+            <SignedNum inherit paisa={preview.difference_paisa} />
           </Fact>
         </dl>
         {preview.is_balanced ? (
@@ -49,7 +50,7 @@ export function GeneralSummary({ preview }: GeneralSummaryProps) {
         )}
       </Card>
       {preview.split.length === 0 ? null : (
-        <Card compact title={<Localized id="cashbook-general-split-title" />}>
+        <Card compact icon={Users} title={<Localized id="cashbook-general-split-title" />}>
           <Localized id="cashbook-general-split-help">
             <p className="type-body text-ink-muted" />
           </Localized>

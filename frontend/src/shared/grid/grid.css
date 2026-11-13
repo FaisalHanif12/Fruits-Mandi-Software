@@ -68,6 +68,12 @@
   text-align: center;
 }
 
+/* The cell of a status chip (plan 75, item 4) keeps less room at its edges, so a chip with an icon and a
+   word such as "Cancelled" fits the status column without being cut. */
+.entry-grid .cell-chip {
+  padding-inline: var(--space-1);
+}
+
 /* The heading of a number column and of a small column: centred over its figures, in both
    languages (plan 39 R1, R3). */
 .entry-grid .header-num .ag-header-cell-label,
@@ -255,6 +261,17 @@
    heading needs the room above its letters. */
 .entry-grid.list-grid.ag-theme-quartz {
   --ag-row-height: var(--list-row-h);
+
+  /* A read-only list (plan 75, item 8): a lighter heading than the sunken ground of an entry grid, so the
+     figures lead and the total row is the one band that is darker; and a row under the pointer is tinted,
+     because a click on it opens the row. Entry grids keep their own, with no hover (they are typed in). */
+  --ag-header-background-color: var(--color-surface-readonly);
+  --ag-row-hover-color: var(--color-row-current);
+}
+
+/* A zero amount in a money column: the quiet ink, never a different place or size (plan 75, item 8). */
+.entry-grid.list-grid .cell-zero {
+  color: var(--color-ink-muted);
 }
 
 /* A row that heads a group (a head above its controls in the list of head balances) reads stronger

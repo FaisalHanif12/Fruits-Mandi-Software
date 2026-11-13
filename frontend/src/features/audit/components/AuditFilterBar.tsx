@@ -12,6 +12,7 @@ import {
   DateInput,
   Field,
   FilterBar,
+  FilterCard,
   Notice,
   Select,
   fieldError,
@@ -70,7 +71,11 @@ export function AuditFilterBar({
           <Localized id="audit-options-failed" />
         </Notice>
       ) : null}
-      <div role="group" aria-label={l10n.getString('audit-filters-label')} {...formNavigationProps}>
+      <FilterCard
+        role="group"
+        aria-label={l10n.getString('audit-filters-label')}
+        {...formNavigationProps}
+      >
         <FilterBar
           screen="audit.log"
           search={{
@@ -196,7 +201,7 @@ export function AuditFilterBar({
             )}
           </Field>
         </FilterBar>
-      </div>
+      </FilterCard>
     </div>
   );
 }

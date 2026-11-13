@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Option 1: the mandi crate (peti) with a fruit and a leaf. Navy ground from the app's nav colours. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f3659"/>
+      <stop offset="1" stop-color="#14233b"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="126%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.34"/>
+    </filter>
+    <radialGradient id="orange" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#FFD684"/>
+      <stop offset="1" stop-color="#F08B1E"/>
+    </radialGradient>
+    <radialGradient id="apple" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#B6E58B"/>
+      <stop offset="1" stop-color="#46A64B"/>
+    </radialGradient>
+    <clipPath id="crate"><rect x="236" y="566" width="552" height="274" rx="34"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="104" y="104" width="816" height="816" rx="181" fill="none" stroke="#fff" stroke-opacity="0.08" stroke-width="8"/>
+  <!-- fruit behind the crate -->
+  <circle cx="352" cy="526" r="112" fill="url(#apple)"/>
+  <circle cx="540" cy="468" r="176" fill="url(#orange)"/>
+  <path d="M548 306 C548 244 588 202 668 194 C672 272 626 324 548 306 Z" fill="#5CC06A"/>
+  <path d="M550 304 C590 268 628 234 656 206" fill="none" stroke="#2E8F4E" stroke-width="12" stroke-linecap="round"/>
+  <!-- the crate: three equal slats, two gaps, a post at each end -->
+  <g clip-path="url(#crate)">
+    <rect x="236" y="566" width="552" height="274" fill="#EAB44B"/>
+    <rect x="236" y="566" width="552" height="22" fill="#F7D07A"/>
+    <rect x="236" y="566" width="60" height="274" fill="#C98F2A"/>
+    <rect x="728" y="566" width="60" height="274" fill="#C98F2A"/>
+    <rect x="236" y="651" width="552" height="26" fill="#14233b"/>
+    <rect x="236" y="742" width="552" height="26" fill="#14233b"/>
+  </g>
+</svg>

@@ -79,6 +79,7 @@ export function BackupPage() {
   return (
     <ListPage
       titleId="backup-title"
+      icon={DatabaseBackup}
       help={
         <Localized id="backup-help">
           <p />

@@ -33,14 +33,13 @@ export function DashboardDevPage() {
   return (
     <>
       <AppShell
-        nav={<MainNav current="dashboard" onSelect={() => undefined} />}
+        nav={<MainNav current="dashboard" onSelect={() => undefined} onSignOut={() => undefined} />}
         moduleMenu={null}
         userName={SAMPLE_USER}
         onLock={() => undefined}
         onGuide={() => {
           useGuideStore.getState().open(0);
         }}
-        onSignOut={() => undefined}
         onOpenAccount={() => undefined}
         onOpenBikri={() => undefined}
         onOpenVoucher={() => undefined}

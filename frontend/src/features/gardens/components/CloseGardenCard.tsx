@@ -13,7 +13,7 @@
 // example a day before the garden's last entry) shown at the day field.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { TriangleAlert } from 'lucide-react';
+import { Lock, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
@@ -115,7 +115,7 @@ export function CloseGardenCard({ garden, today, focusOnOpen = false }: CloseGar
   };
 
   return (
-    <Card compact title={<Localized id="gardens-close-title" />}>
+    <Card compact icon={Lock} title={<Localized id="gardens-close-title" />}>
       <Localized id="gardens-close-help">
         <p className="type-body text-ink-muted" />
       </Localized>

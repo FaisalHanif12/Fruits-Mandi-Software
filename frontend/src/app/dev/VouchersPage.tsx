@@ -26,12 +26,11 @@ export function VouchersPage() {
   const type = asScreenType(devValue('type')) ?? 'receipt';
   return (
     <AppShell
-      nav={<MainNav current="bikri" onSelect={() => undefined} />}
+      nav={<MainNav current="bikri" onSelect={() => undefined} onSignOut={() => undefined} />}
       moduleMenu={<ModuleMenu current={type} onSelect={() => undefined} />}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
-      onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

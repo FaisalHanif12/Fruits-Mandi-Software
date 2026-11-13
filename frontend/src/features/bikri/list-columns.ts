@@ -10,6 +10,7 @@
 import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate, utcToLocalTime } from '../../shared/format';
 import { columnsWithMore, type ListColumn, type MoreColumnsPlan } from '../../shared/grid';
+import { STATUS_CANCELLED, STATUS_SAVED } from '../../shared/ui';
 import type { LayoutStep } from '../../shared/hooks';
 import { displayName, lotItemWith, lotNameWith, type Say } from '../../shared/i18n';
 import type { BikriListRow } from '../../bindings/BikriListRow';
@@ -125,6 +126,7 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
         row.edited,
         context,
       ),
+    chip: (row) => (row.status === 'cancelled' ? STATUS_CANCELLED : STATUS_SAVED),
     tip: (row, context) => editedTip(row.edited, context),
   },
 ];

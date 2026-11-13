@@ -22,6 +22,7 @@ import {
   Button,
   DateInput,
   Field,
+  FilterCard,
   GradeSelect,
   ItemGroupSelect,
   Num,
@@ -516,7 +517,7 @@ export function AnalyticsFilterBar({
 
   if (primary.length + folded.length === 0) return null;
   return (
-    <div
+    <FilterCard
       ref={containerRef}
       role="group"
       aria-label={l10n.getString('analytics-filters-label')}
@@ -546,6 +547,6 @@ export function AnalyticsFilterBar({
         </div>
       ) : null}
       {open ? folded : null}
-    </div>
+    </FilterCard>
   );
 }

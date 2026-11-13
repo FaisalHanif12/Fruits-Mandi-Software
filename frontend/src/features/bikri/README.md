@@ -96,6 +96,16 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
   tick adds it (kept per computer, `bikri.list_more_columns`). Where the room is short one column
   steps aside: خام (compact), the day and time (normal and wide). Plan in `list-columns.ts`,
   helper `shared/grid/moreColumns.ts`.
+- **Past Sales, the days of the window** (PRD FR-12.46 v1.39, plan 75 7.7): today's section is always open;
+  each of the 7 earlier days is one closed line (`components/PastDays.tsx`: arrow, date, the count and the
+  خام بکری pills, all the backend's). The arrow, or Enter or Space on the line, opens the day's بکری under it
+  (`components/PastDayRows.tsx`, one `bikri_list` call for that day, made only when it opens); several days
+  can be open; a day with no بکری is one line with no arrow. Which days are open is the page's state
+  (`past-days.ts` has the rules), so a language switch keeps it. A move of the window or a new filter closes
+  every day; "تاریخ پر جائیں" and the way back from an edit open the one day they name; a search, a filter and
+  "show every بکری" open every day with a match. The window itself is asked for with a page of one row
+  (`useBikriWindow`): only its days and totals are read. The open rows have the whole width, because the
+  list columns fit the narrowest window exactly.
 
 ## Files
 

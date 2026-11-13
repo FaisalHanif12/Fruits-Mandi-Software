@@ -29,6 +29,7 @@ import { tokenPx } from '../hooks/tokenPx';
 import type { Language } from '../../i18n';
 import { formatPaisa, formatPaisaValue, groupDigits, useGrouping, type Paisa } from '../format';
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
+import { StatusChip, type StatusChipLook } from '../ui/StatusChip';
 import { directionOf, useLanguage } from '../i18n';
 import './agGridSetup';
 import { FillCell, FillNumberCell, NumberRuns, NumberRunsCell, hasNumberRun } from './NumberRuns';
@@ -131,6 +132,12 @@ export interface ListColumn<T> {
    * says "Loss". The total row asks for the tone under the key `<field>:tone`.
    */
   readonly tone?: ((row: T, context: ListContext) => 'due' | undefined) | undefined;
+  /**
+   * The state of the row drawn as a chip: the word of `value` with an icon and a soft tone, centred under
+   * its heading (plan 75, item 4). Nothing, or an empty word, draws plain text as before. The word is
+   * always in the chip, so colour is never the only signal (NFR-USE-12).
+   */
+  readonly chip?: ((row: T, context: ListContext) => StatusChipLook | undefined) | undefined;
   /**
    * A sentence shown when the pointer rests on the cell. The status column of an edited entry uses
    * it for "Edited: 31-10-2026 4:35 pm, Owner" (plan 44, PRD FR-7.71). The word is also in the cell,
@@ -382,6 +389,7 @@ function toColDef<T>(
       ...(column.type === 'name' ? ['cell-name'] : []),
       ...(column.wrap === true ? ['cell-wrap'] : []),
       ...(column.control === undefined ? [] : ['cell-control']),
+      ...(column.chip === undefined ? [] : ['cell-center', 'cell-chip']),
     ],
     ...(column.tip === undefined
       ? {}
@@ -389,19 +397,35 @@ function toColDef<T>(
           tooltipValueGetter: (params: ITooltipParams<T>) =>
             params.data === undefined ? undefined : column.tip?.(params.data, context),
         }),
-    ...(column.tone === undefined
+    ...(column.tone === undefined && column.type !== 'money'
       ? {}
       : {
           cellClassRules: {
-            'cell-tone-due': (params: CellClassParams<T>) =>
-              params.node.rowPinned === 'bottom'
-                ? total?.[`${column.field}:tone`] === 'due'
-                : params.data !== undefined && column.tone?.(params.data, context) === 'due',
+            // A zero amount is read in the quiet ink, so the figures that matter stand out (plan 75,
+            // item 8). Colour only: the 0 is there, in the same place, and so is its heading and total.
+            ...(column.type === 'money'
+              ? {
+                  'cell-zero': (params: CellClassParams<T>) =>
+                    params.node.rowPinned !== 'bottom' && params.value === '0',
+                }
+              : {}),
+            ...(column.tone === undefined
+              ? {}
+              : {
+                  'cell-tone-due': (params: CellClassParams<T>) =>
+                    params.node.rowPinned === 'bottom'
+                      ? total?.[`${column.field}:tone`] === 'due'
+                      : params.data !== undefined && column.tone?.(params.data, context) === 'due',
+                }),
           },
         }),
     ...(column.wrap === true ? { wrapText: true, autoHeight: true } : {}),
     // The heading of a number column is centred over its figures (NFR-USE-19, plan 39 R1).
-    headerClass: isListNumberLike(column.type) ? ['header-num'] : [],
+    headerClass: isListNumberLike(column.type)
+      ? ['header-num']
+      : column.chip === undefined
+        ? []
+        : ['header-center'],
     ...(column.script === undefined
       ? {}
       : {
@@ -412,6 +436,24 @@ function toColDef<T>(
               </span>
             );
             return growing ? <span className="cell-fill">{words}</span> : words;
+          },
+        }),
+    ...(column.chip === undefined
+      ? {}
+      : {
+          cellRenderer: (params: ICellRendererParams<T>) => {
+            const look =
+              params.data === undefined || params.node.rowPinned != null
+                ? undefined
+                : column.chip?.(params.data, context);
+            const words = typeof params.value === 'string' ? params.value : '';
+            return look === undefined || words === '' ? (
+              words
+            ) : (
+              <StatusChip tone={look.tone} icon={look.icon}>
+                {words}
+              </StatusChip>
+            );
           },
         }),
     // A text cell with a number inside keeps it in order and in Inter in Urdu (F25). Only a cell that
@@ -429,6 +471,7 @@ function toColDef<T>(
         }),
     ...(column.control === undefined &&
     column.script === undefined &&
+    column.chip === undefined &&
     unitOf === undefined &&
     !isListNumberLike(column.type)
       ? growing

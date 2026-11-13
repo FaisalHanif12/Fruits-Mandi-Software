@@ -10,12 +10,16 @@
 //   </ListPage>
 
 import { Localized } from '@fluent/react';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { IconChip } from './IconChip';
 import { InfoHint } from './InfoHint';
 
 interface ListPageProps {
   /** The Fluent message ID of the screen's name, drawn as the page heading. */
   titleId: string;
+  /** A small picture of the screen in a soft chip before its name (plan 75 §7.6). It decorates and says nothing. */
+  icon?: LucideIcon;
   /** What the screen is for, behind an ⓘ next to the name. One line, not a paragraph. */
   help?: ReactNode;
   /** The buttons of the screen, at the end of the name's row (the primary one last). */
@@ -26,11 +30,16 @@ interface ListPageProps {
   children: ReactNode;
 }
 
-export function ListPage({ titleId, help, actions, filters, children }: ListPageProps) {
+export function ListPage({ titleId, icon, help, actions, filters, children }: ListPageProps) {
   return (
     <div className="fill-to-corner flex min-h-0 flex-col gap-3 short:gap-2">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-center gap-1">
+          {icon === undefined ? null : (
+            <span className="me-2">
+              <IconChip icon={icon} />
+            </span>
+          )}
           <Localized id={titleId}>
             <h1 className="type-title" />
           </Localized>

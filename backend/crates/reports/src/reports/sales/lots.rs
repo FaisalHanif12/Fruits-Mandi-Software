@@ -26,7 +26,7 @@ use crate::reports::common::{
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, Names, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, Column, ColumnKind, Names, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
 };
 
 /// The conditions of R6 and R27, with only the filters that are set (Code Standards B18).
@@ -172,6 +172,27 @@ pub(crate) fn run_r1(
     run_lots(conn, typed, spec, ReportId::R1)
 }
 
+/// The columns of R1 and R6, the one definition: the run and the catalogue both use it (plan 75 T1).
+pub(crate) fn seller_bill_columns() -> Vec<Column> {
+    vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("doc", ids::COL_DOC, ColumnKind::Doc),
+        col("seller", ids::COL_SELLER, ColumnKind::Party),
+        col("item", ids::COL_ITEM, ColumnKind::Names),
+        col("qty", ids::COL_QTY, ColumnKind::Number),
+        col("gross", ids::COL_GROSS, ColumnKind::Money),
+        col("freight", ids::COL_FREIGHT, ColumnKind::Money),
+        col("commission", ids::COL_COMMISSION, ColumnKind::Money),
+        col("labour", ids::COL_LABOUR, ColumnKind::Money),
+        col("munshiana", ids::COL_MUNSHIANA, ColumnKind::Money),
+        col("cash_paid", ids::COL_CASH_PAID, ColumnKind::Money),
+        col("store_rent", ids::COL_STORE_RENT, ColumnKind::Money),
+        col("phone_charge", ids::COL_PHONE_CHARGE, ColumnKind::Money),
+        col("deductions", ids::COL_DEDUCTIONS, ColumnKind::Money),
+        col("net", ids::COL_NET, ColumnKind::Money),
+    ]
+}
+
 fn run_lots(
     conn: &Connection,
     typed: &Typed,
@@ -273,23 +294,7 @@ fn run_lots(
         id,
         title_id: ids::title_id(id.code()),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("date", ids::COL_DATE, ColumnKind::Date),
-            col("doc", ids::COL_DOC, ColumnKind::Doc),
-            col("seller", ids::COL_SELLER, ColumnKind::Party),
-            col("item", ids::COL_ITEM, ColumnKind::Names),
-            col("qty", ids::COL_QTY, ColumnKind::Number),
-            col("gross", ids::COL_GROSS, ColumnKind::Money),
-            col("freight", ids::COL_FREIGHT, ColumnKind::Money),
-            col("commission", ids::COL_COMMISSION, ColumnKind::Money),
-            col("labour", ids::COL_LABOUR, ColumnKind::Money),
-            col("munshiana", ids::COL_MUNSHIANA, ColumnKind::Money),
-            col("cash_paid", ids::COL_CASH_PAID, ColumnKind::Money),
-            col("store_rent", ids::COL_STORE_RENT, ColumnKind::Money),
-            col("phone_charge", ids::COL_PHONE_CHARGE, ColumnKind::Money),
-            col("deductions", ids::COL_DEDUCTIONS, ColumnKind::Money),
-            col("net", ids::COL_NET, ColumnKind::Money),
-        ],
+        columns: seller_bill_columns(),
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),
@@ -381,6 +386,20 @@ struct BillRow {
     gross: i64,
     deductions: i64,
     net: i64,
+}
+
+/// The columns of R27, the one definition: [`run_r27`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn bill_series_columns() -> Vec<Column> {
+    vec![
+        col("doc", ids::COL_DOC, ColumnKind::Doc),
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("bill_date", ids::COL_BILL_DATE, ColumnKind::Date),
+        col("seller", ids::COL_SELLER, ColumnKind::Party),
+        col("lots", ids::COL_LOTS, ColumnKind::Names),
+        col("gross", ids::COL_GROSS, ColumnKind::Money),
+        col("deductions", ids::COL_DEDUCTIONS, ColumnKind::Money),
+        col("net", ids::COL_NET, ColumnKind::Money),
+    ]
 }
 
 /// Builds R27, one row for each seller bill in number order.
@@ -477,16 +496,7 @@ pub(crate) fn run_r27(
         id: ReportId::R27,
         title_id: ids::title_id("R27"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("doc", ids::COL_DOC, ColumnKind::Doc),
-            col("date", ids::COL_DATE, ColumnKind::Date),
-            col("bill_date", ids::COL_BILL_DATE, ColumnKind::Date),
-            col("seller", ids::COL_SELLER, ColumnKind::Party),
-            col("lots", ids::COL_LOTS, ColumnKind::Names),
-            col("gross", ids::COL_GROSS, ColumnKind::Money),
-            col("deductions", ids::COL_DEDUCTIONS, ColumnKind::Money),
-            col("net", ids::COL_NET, ColumnKind::Money),
-        ],
+        columns: bill_series_columns(),
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),

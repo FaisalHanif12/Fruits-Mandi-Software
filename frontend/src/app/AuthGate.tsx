@@ -26,6 +26,7 @@ import { useLanguageStore } from '../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../shared/keyboard';
 import { ErrorState, LoadingState } from '../shared/ui';
 import { FirstRunGate } from './FirstRunGate';
+import { confirmLeaveAll } from './leave-guards';
 import { AppShell } from './layout/AppShell';
 import { MainNav } from './layout/MainNav';
 import { ModuleMenu, RokarMenu } from './layout/ModuleMenu';
@@ -76,6 +77,16 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   }, [lockApp]);
   useIdleLock(settings.data?.idle_lock_minutes, !locked, lockNow);
 
+  // Log out asks first when a screen has unsaved work (PRD FR-5.6, FR-7.9): the screen's own "Save
+  // changes?" box. The idle lock does not come through here and never asks (FR-8.4).
+  const { mutate: logoutNow, isPending: loggingOut } = logout;
+  const signOut = () => {
+    if (loggingOut) return;
+    void confirmLeaveAll().then((go) => {
+      if (go) logoutNow();
+    });
+  };
+
   const goTo = (to: string) => {
     void navigate({ to });
   };
@@ -124,6 +135,7 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
             onSelect={(id) => {
               goTo(MAIN_ROUTES[id]);
             }}
+            onSignOut={signOut}
           />
         }
         moduleMenu={
@@ -162,9 +174,6 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
           const type = screenTypeOf(hit.voucher_type);
           if (type !== null) void navigate({ to: '/bikri/voucher', search: { type, id: hit.id } });
           else goTo(rokarAddressOf(hit.voucher_type));
-        }}
-        onSignOut={() => {
-          logout.mutate();
         }}
         date={day.data === undefined ? '' : isoToDisplayDate(day.data.today)}
         day={day.data === undefined ? null : day.data.today_open ? 'open' : 'closed'}

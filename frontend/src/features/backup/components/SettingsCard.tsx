@@ -28,6 +28,7 @@ import type { UiError } from '../../../bindings/UiError';
 import { useBackupSettings, useSaveBackupSettings } from '../hooks';
 import { CloudAddressFix, cloudAddressPathOf } from './CloudAddressFix';
 import type { BackupSettings } from '../types';
+import { Settings2 } from 'lucide-react';
 
 /** The fields this form draws, so a problem on any of them shows next to its field. */
 const SETTINGS_FIELDS = [
@@ -261,7 +262,11 @@ export function SettingsCard() {
       </form>
     );
   }
-  return <Card title={<Localized id="backup-set-title" />}>{body}</Card>;
+  return (
+    <Card icon={Settings2} title={<Localized id="backup-set-title" />}>
+      {body}
+    </Card>
+  );
 }
 
 interface SecretFieldProps {

@@ -22,7 +22,9 @@ use crate::error::ReportsError;
 use crate::reports::common::{Conds, balance_cell, col, load_parties, paisa, party_of_line};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
-use crate::reports::model::{Cell, ColumnKind, GroupBy, ReportId, ReportPage, Row, RowKind};
+use crate::reports::model::{
+    Cell, Column, ColumnKind, GroupBy, ReportId, ReportPage, Row, RowKind,
+};
 
 /// The conditions of R28, with only the filters that are set (Code Standards B18). The entries of
 /// a month close are left out: they move income into capital, they are not income earned.
@@ -107,6 +109,20 @@ fn period_cell(text: &str) -> Result<Cell, ReportsError> {
     })
 }
 
+/// The columns of R28 for a grouping: the period is a day or a month. The one definition: the run
+/// and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns(group_by: GroupBy) -> Vec<Column> {
+    let period_kind = match group_by {
+        GroupBy::Day => ColumnKind::Date,
+        GroupBy::Month => ColumnKind::Month,
+    };
+    vec![
+        col("period", ids::COL_PERIOD, period_kind),
+        col("account", ids::COL_ACCOUNT, ColumnKind::Party),
+        col("amount", ids::COL_AMOUNT, ColumnKind::Balance),
+    ]
+}
+
 /// Builds R28.
 ///
 /// # Errors
@@ -117,10 +133,6 @@ pub(crate) fn run(
     typed: &Typed,
     spec: PageSpec,
 ) -> Result<ReportPage, ReportsError> {
-    let period_kind = match typed.group_by {
-        GroupBy::Day => ColumnKind::Date,
-        GroupBy::Month => ColumnKind::Month,
-    };
     let (count_sql, count_args) = count_query(typed);
     let count: i64 = conn.query_row(&count_sql, params_from_iter(count_args.iter()), |r| {
         r.get(0)
@@ -167,11 +179,7 @@ pub(crate) fn run(
         id: ReportId::R28,
         title_id: ids::title_id("R28"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("period", ids::COL_PERIOD, period_kind),
-            col("account", ids::COL_ACCOUNT, ColumnKind::Party),
-            col("amount", ids::COL_AMOUNT, ColumnKind::Balance),
-        ],
+        columns: columns(typed.group_by),
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),

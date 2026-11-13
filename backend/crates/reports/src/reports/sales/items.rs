@@ -23,7 +23,7 @@ use crate::error::ReportsError;
 use crate::reports::common::{Conds, add, col, count_of, names_cell, paisa};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
-use crate::reports::model::{Cell, ColumnKind, ReportId, ReportPage, Row, RowKind};
+use crate::reports::model::{Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind};
 
 /// The conditions of R7, with only the filters that are set (Code Standards B18): the date range
 /// is found through the date index of the facts.
@@ -76,6 +76,20 @@ struct Item {
     names: (String, String),
     qty: i64,
     amounts: [Paisa; 4],
+}
+
+/// The columns of R7, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("item", ids::COL_ITEM, ColumnKind::Names),
+        col("qty", ids::COL_QTY, ColumnKind::Number),
+        col("gross", ids::COL_GROSS, ColumnKind::Money),
+        col("avg_rate", ids::COL_AVG_RATE, ColumnKind::Money),
+        col("seller_comm", ids::COL_SELLER_COMM, ColumnKind::Money),
+        col("buyer_comm", ids::COL_BUYER_COMM, ColumnKind::Money),
+        col("laga", ids::COL_LAGA, ColumnKind::Money),
+        col("total_comm", ids::COL_TOTAL_COMM, ColumnKind::Money),
+    ]
 }
 
 /// Builds R7.
@@ -160,16 +174,7 @@ pub(crate) fn run(
         id: ReportId::R7,
         title_id: ids::title_id("R7"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("item", ids::COL_ITEM, ColumnKind::Names),
-            col("qty", ids::COL_QTY, ColumnKind::Number),
-            col("gross", ids::COL_GROSS, ColumnKind::Money),
-            col("avg_rate", ids::COL_AVG_RATE, ColumnKind::Money),
-            col("seller_comm", ids::COL_SELLER_COMM, ColumnKind::Money),
-            col("buyer_comm", ids::COL_BUYER_COMM, ColumnKind::Money),
-            col("laga", ids::COL_LAGA, ColumnKind::Money),
-            col("total_comm", ids::COL_TOTAL_COMM, ColumnKind::Money),
-        ],
+        columns: columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),

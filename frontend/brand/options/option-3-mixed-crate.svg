@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Option 3: a crate seen from above, full of mixed fruit and a leaf: fruit and vegetable together. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f3659"/>
+      <stop offset="1" stop-color="#14233b"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="126%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.34"/>
+    </filter>
+    <radialGradient id="orange" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#FFD684"/><stop offset="1" stop-color="#F08B1E"/>
+    </radialGradient>
+    <radialGradient id="apple" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#C4EB9A"/><stop offset="1" stop-color="#46A64B"/>
+    </radialGradient>
+    <radialGradient id="red" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#FF9A8C"/><stop offset="1" stop-color="#D2423F"/>
+    </radialGradient>
+    <radialGradient id="lemon" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#FFF0A0"/><stop offset="1" stop-color="#EFC93A"/>
+    </radialGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="104" y="104" width="816" height="816" rx="181" fill="none" stroke="#fff" stroke-opacity="0.08" stroke-width="8"/>
+  <!-- the crate rim, with the slats showing on its sides -->
+  <rect x="214" y="214" width="596" height="596" rx="84" fill="#EAB44B"/>
+  <rect x="214" y="214" width="596" height="596" rx="84" fill="none" stroke="#C98F2A" stroke-width="10"/>
+  <rect x="262" y="262" width="500" height="500" rx="48" fill="#0f1b31"/>
+  <!-- four things in the crate -->
+  <circle cx="390" cy="390" r="102" fill="url(#orange)"/>
+  <circle cx="634" cy="390" r="102" fill="url(#red)"/>
+  <circle cx="390" cy="634" r="102" fill="url(#lemon)"/>
+  <!-- the green leaf (the vegetable) -->
+  <path d="M552 706 C552 626 596 568 690 556 C706 650 650 716 552 706 Z" fill="#5CC06A"/>
+  <path d="M556 702 C598 658 646 612 684 566" fill="none" stroke="#2E8F4E" stroke-width="14" stroke-linecap="round"/>
+  <path d="M634 584 C648 576 664 572 678 572" fill="none" stroke="#2E8F4E" stroke-width="8" stroke-linecap="round" opacity="0"/>
+</svg>

@@ -19,7 +19,6 @@ interface AppShellProps {
   moduleMenu?: ReactNode;
   userName: string;
   onLock: () => void;
-  onSignOut: () => void;
   /** The user menu's "show the guide" (PRD FR-7.12). */
   onGuide: () => void;
   /** A result of the top bar's search was chosen: open that account. */
@@ -44,7 +43,6 @@ export function AppShell({
   moduleMenu,
   userName,
   onLock,
-  onSignOut,
   onGuide,
   onOpenAccount,
   onOpenBikri,
@@ -72,7 +70,6 @@ export function AppShell({
           <TopBar
             userName={userName}
             onLock={onLock}
-            onSignOut={onSignOut}
             onGuide={onGuide}
             onOpenAccount={onOpenAccount}
             onOpenBikri={onOpenBikri}

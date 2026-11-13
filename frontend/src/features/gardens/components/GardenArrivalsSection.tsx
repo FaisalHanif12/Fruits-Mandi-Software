@@ -10,7 +10,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useRouter } from '@tanstack/react-router';
-import { ArrowLeftRight, Ban, CalendarClock, RotateCcw, Sprout } from 'lucide-react';
+import { ArrowLeftRight, Ban, CalendarClock, Package, RotateCcw, Sprout } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
@@ -333,7 +333,7 @@ export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionP
   }
 
   return (
-    <Card compact title={<Localized id="gardens-arrival-title" />}>
+    <Card compact icon={Package} title={<Localized id="gardens-arrival-title" />}>
       <Localized id="gardens-arrival-help">
         <p className="type-body text-ink-muted" />
       </Localized>

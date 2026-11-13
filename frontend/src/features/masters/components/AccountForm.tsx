@@ -81,6 +81,7 @@ import {
   type AccountType,
 } from '../../../shared/accounts';
 import { OpeningDateOffer, closedOpeningDate } from './OpeningDateOffer';
+import { Landmark, Languages } from 'lucide-react';
 
 /**
  * The form opened above another screen by the "add" button of a picker (plan 32, R8): a new seller
@@ -411,7 +412,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
           {embedded === undefined ? <LeaveGuard dirty={dirty} onSave={persist} /> : null}
           {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
 
-          <Card title={<Localized id="accounts-section-account" />}>
+          <Card icon={Landmark} title={<Localized id="accounts-section-account" />}>
             <FormGrid columns={3}>
               <Field
                 label={<Localized id="accounts-field-type" />}
@@ -489,7 +490,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
             </FormGrid>
           </Card>
 
-          <Card title={<Localized id="accounts-section-names" />}>
+          <Card icon={Languages} title={<Localized id="accounts-section-names" />}>
             <FormGrid columns={3}>
               {pair(
                 { urdu: 'accounts-field-name-ur', english: 'accounts-field-name-en' },

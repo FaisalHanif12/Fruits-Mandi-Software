@@ -5,7 +5,8 @@
 // digits in its own Eastern shapes. Each number is put in its own left-to-right isolate in Inter with
 // equal-width digits (`number-run`), so it keeps its order and its shape (Code Standards F25,
 // NFR-URD-13, Umar 26-10-2026). The text itself is not changed: the same characters are drawn, only
-// inside `<bdi dir="ltr">`; the words around the numbers, and the spaces, stay as they are.
+// inside `<bdi dir="ltr">`; the words around the numbers, and the spaces, stay as they are. A number that
+// begins or ends the text takes no gap on that side (`number-run-start`, `number-run-end`).
 
 import type { ICellRendererParams } from 'ag-grid-community';
 import { Fragment, type ReactNode } from 'react';
@@ -32,8 +33,11 @@ export function NumberRuns({ text }: { text: string }): ReactNode {
   for (const match of text.matchAll(NUMBER_RUN)) {
     const at = match.index;
     if (at > last) parts.push(<Fragment key={`t${String(at)}`}>{text.slice(last, at)}</Fragment>);
+    // A run at an edge of the cell has no room to keep from words there, so it stands on the edge of the cell
+    // exactly where a cell of words starts or ends, and the column lines up (alignment R2, R6).
+    const edge = `${at === 0 ? ' number-run-start' : ''}${at + match[0].length === text.length ? ' number-run-end' : ''}`;
     parts.push(
-      <bdi key={`n${String(at)}`} dir="ltr" className="number-run">
+      <bdi key={`n${String(at)}`} dir="ltr" className={`number-run${edge}`}>
         {match[0]}
       </bdi>,
     );

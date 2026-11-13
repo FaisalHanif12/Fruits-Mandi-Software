@@ -50,6 +50,9 @@ beforeEach(() => {
 
 afterEach(() => {
   leaveAppWindow();
+  vi.unstubAllGlobals();
+  document.documentElement.style.removeProperty('--breakpoint-normal');
+  document.documentElement.style.removeProperty('--breakpoint-wide');
 });
 
 const pageText = () => visible(document.body.textContent);
@@ -134,6 +137,52 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
     expect(text).toContain(visible(message(language, 'bikri-header-bill-date')));
     expect(text).not.toContain(visible(message(language, 'bikri-header-note')));
   });
+
+  // Plan 75 (alignment R4): the lines of a saved lot at the normal step are nine columns in 852 px. They
+  // all stay (NFR-USE-27): the table is dense there (8 px at each side of a cell, narrower figure
+  // columns, balanced headings), so the English heading "Paid on the Spot" is two lines and not four. The
+  // wide step has the room and keeps the plain table.
+  it.each([
+    [1366, true, ['bikri-col-seller-amount', 'bikri-col-seller-comm', 'bikri-col-buyer-comm']],
+    [
+      1920,
+      false,
+      ['bikri-col-seller-amount', 'bikri-col-seller-comm', 'bikri-col-buyer-comm', 'glossary-laga'],
+    ],
+  ])(
+    'at %i px the lines of a saved lot show the whole line, dense %s',
+    async (width, dense, shown) => {
+      // The layout step is read from media queries; a window of this width matches the steps up to it.
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: width >= Number.parseInt(query.replace(/\D+/, ''), 10),
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }));
+      document.documentElement.style.setProperty('--breakpoint-normal', '1366px');
+      document.documentElement.style.setProperty('--breakpoint-wide', '1920px');
+      await open();
+      const table = await screen.findByRole('table', {
+        name: named(message(language, 'bikri-sales-label')),
+      });
+      const headers = within(table).getAllByRole('columnheader');
+      const heads = headers.map((head) => visible(head.textContent));
+      for (const id of [
+        'bikri-col-qty',
+        'bikri-col-rate',
+        'bikri-col-buyer-total',
+        'bikri-col-paid-on-spot',
+        'bikri-line-left',
+        ...shown,
+      ]) {
+        expect(heads, id).toContain(visible(message(language, id)));
+      }
+      for (const head of headers) {
+        if (dense) expect(head).toHaveClass('px-2', 'text-balance');
+        else expect(head).toHaveClass('px-3');
+      }
+    },
+  );
 
   it('shows the values stored when it was saved, and the preview is never asked', async () => {
     await open();

@@ -4,6 +4,7 @@
 // not send).
 
 import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
+import type { ReportFilterKind } from '../../bindings/ReportFilterKind';
 import type { ReportGroup } from '../../bindings/ReportGroup';
 import type { ReportId } from '../../bindings/ReportId';
 
@@ -62,4 +63,86 @@ export function partyBoxOf(id: ReportId): PartyBox {
   if (BUYER_REPORTS.has(id)) return 'buyer';
   if (SELLER_REPORTS.has(id)) return 'seller';
   return 'any';
+}
+
+/** The message that says what a report shows, in a few lines: `report-r5-title` has `report-r5-detail` (FR-19.14). */
+export function detailIdOf(entry: ReportCatalogEntry): string {
+  return `report-${entry.id.toLowerCase()}-detail`;
+}
+
+/** The message that says when to use a report, in one line: `report-r5-when` (FR-19.14). */
+export function whenIdOf(entry: ReportCatalogEntry): string {
+  return `report-${entry.id.toLowerCase()}-when`;
+}
+
+/**
+ * The Fluent message of each filter box a report can have, the same words as the box itself (the filter
+ * bar of the report). `null` is a kind that has no box of its own to name: the guests choice is part of
+ * the partner box, and a lot has no box (it is set only by an address). Every kind is listed, so a
+ * kind the backend adds later stops the build here until it is given its words.
+ */
+const FILTER_LABEL_IDS: Record<ReportFilterKind, string | null> = {
+  date_range: 'report-filter-period',
+  as_of: 'report-filter-as-of',
+  party: 'report-filter-party',
+  seller: 'report-filter-seller',
+  zamindar: 'report-filter-zamindar',
+  item: 'report-filter-item',
+  city: 'report-filter-city',
+  adda: 'report-filter-adda',
+  detail: 'report-filter-detail',
+  status: 'report-filter-status',
+  group_by: 'report-filter-group-by',
+  partner: 'report-filter-partner',
+  voucher_type: 'report-filter-voucher-type',
+  trip_view: 'report-filter-trip-view',
+  garden: 'report-filter-garden',
+  garden_view: 'report-filter-garden-view',
+  bikri: 'report-filter-bikri',
+  guests: null,
+  collector: 'report-filter-collector',
+  item_group: 'common-item-group',
+  stock_view: 'report-filter-stock-view',
+  grade: 'common-grade',
+  lot: null,
+};
+
+/**
+ * The words of the filter boxes a report shows, in the order the catalogue gives them. The day sheet
+ * (R35) asks for one day and the money lent report (R32) for a borrower, as their own boxes do.
+ */
+export function filterLabelIdsOf(entry: ReportCatalogEntry): string[] {
+  const ids: string[] = [];
+  for (const kind of entry.filters) {
+    let id = FILTER_LABEL_IDS[kind];
+    if (kind === 'as_of' && entry.id === 'R35') id = 'report-filter-day';
+    if (kind === 'party' && partyBoxOf(entry.id) === 'lent') id = 'report-filter-borrower';
+    if (id !== null) ids.push(id);
+  }
+  return ids;
+}
+
+/**
+ * The print only some reports have, besides the preview every report has (PRD FR-19.3, FR-12.12, R5, R35): the
+ * seller's bill from the sale book, one slip for each buyer from the credit details, and one party's slip
+ * or the table of every party from the day sheet. The message of the special print, or null.
+ */
+export function specialPrintIdOf(entry: ReportCatalogEntry): string | null {
+  switch (entry.id) {
+    case 'R1':
+    case 'R5':
+    case 'R35':
+      return `report-guide-special-${entry.id.toLowerCase()}`;
+    default:
+      return null;
+  }
+}
+
+/**
+ * The Fluent messages of a report's column headings, in the order the report shows them. They come from
+ * the same definition the report runs with (`column_title_ids` of the catalogue), so the guide card
+ * never lists a column the report does not have.
+ */
+export function columnTitleIdsOf(entry: ReportCatalogEntry): readonly string[] {
+  return entry.column_title_ids;
 }

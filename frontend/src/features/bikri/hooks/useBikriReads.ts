@@ -64,22 +64,20 @@ export function useBikriList(filter: ListFilter) {
 }
 
 /**
- * The window of earlier days of پچھلی بکری, page by page (PRD 12.7, plan 72 P4, P11): the rows of the
- * seven days, with the count and totals of the whole filter and a count and خام بکری for each day.
- * It has its own rows per page and its own page, apart from today's list. A save or an edit
- * invalidates the `['bikri']` queries, so a way back from an edit asks again (P10).
+ * The window of earlier days of پچھلی بکری (PRD 12.7, FR-12.46 v1.39, plan 75 7.7): one entry for each day with
+ * its count and خام بکری, and the totals of the whole filter. It asks for a page of one row: the rows of a
+ * day come from the day itself, only when the Owner opens it (`useBikriList` with that day). A save, an
+ * edit or a cancel invalidates the `['bikri']` queries, so a way back from an edit asks again (P10).
  */
 export function useBikriWindow(filter: ListFilter) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
   const { asked, enabled } = askedFilter(filter, settled, hasWindow);
-  return usePagedQuery({
-    screen: 'bikri.past',
+  return useQuery({
     queryKey: ['bikri', 'list', 'window', asked],
+    queryFn: () => bikriList({ ...asked, offset: 0, limit: 1, sort: null }),
     enabled,
-    fetchPage: (offset, limit, sort) => bikriList({ ...asked, offset, limit, sort }),
-    rowsIn: (page) => page.rows.length,
-    totalOf: (page) => page.total_count,
-    keepPrevious: true,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
   });
 }
 

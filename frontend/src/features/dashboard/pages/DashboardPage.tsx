@@ -11,13 +11,30 @@
 // nothing is worked out here (CLAUDE.md rule 1).
 
 import { Localized } from '@fluent/react';
-import { CircleCheck } from 'lucide-react';
+import {
+  BellRing,
+  ChartColumn,
+  CircleCheck,
+  HandCoins,
+  LayoutGrid,
+  Sprout,
+  Truck,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { formNavigationProps } from '../../../shared/keyboard';
-import { EmptyState, ErrorState, LoadingState, Num, ScriptText } from '../../../shared/ui';
+import {
+  EmptyState,
+  ErrorState,
+  IconChip,
+  LoadingState,
+  Num,
+  ScriptText,
+} from '../../../shared/ui';
 import { useAuthStatus } from '../../auth/hooks';
 import { AttentionLines } from '../components/AttentionLines';
 import { DashboardCharts } from '../components/DashboardCharts';
@@ -35,20 +52,32 @@ import { useDashboard } from '../hooks';
 function Section({
   id,
   title,
+  icon,
   quiet = false,
   children,
 }: {
   id: string;
   title: ReactNode;
+  /** A small picture in a soft chip before the name (plan 75 §7.6). It decorates and says nothing. */
+  icon?: LucideIcon;
   /** The name is read by a screen reader and not drawn (the quick actions are plain buttons). */
   quiet?: boolean;
   children: ReactNode;
 }) {
   return (
     <section aria-labelledby={id} className="flex min-w-0 flex-col gap-3">
-      <h2 id={id} className={quiet ? 'sr-only' : 'type-section text-ink'}>
-        {title}
-      </h2>
+      {icon === undefined || quiet ? (
+        <h2 id={id} className={quiet ? 'sr-only' : 'type-section text-ink'}>
+          {title}
+        </h2>
+      ) : (
+        <div className="flex items-center gap-2">
+          <IconChip icon={icon} />
+          <h2 id={id} className="type-section min-w-0 text-ink">
+            {title}
+          </h2>
+        </div>
+      )}
       {children}
     </section>
   );
@@ -91,25 +120,49 @@ export function DashboardPage() {
     const data = dashboard.data;
     body = (
       <>
-        <Section id="dashboard-tiles-title" title={<Localized id="dashboard-tiles-title" />}>
+        <Section
+          id="dashboard-tiles-title"
+          icon={LayoutGrid}
+          title={<Localized id="dashboard-tiles-title" />}
+        >
           <DashboardTiles tiles={data.tiles}>{statusTiles}</DashboardTiles>
         </Section>
-        <Section id="dashboard-partners-title" title={<Localized id="dashboard-partners-title" />}>
+        <Section
+          id="dashboard-partners-title"
+          icon={Users}
+          title={<Localized id="dashboard-partners-title" />}
+        >
           <PartnerStrip partners={data.partners} locked={data.partners_locked} />
         </Section>
         {data.gardens.length === 0 ? null : (
-          <Section id="dashboard-gardens-title" title={<Localized id="dashboard-gardens-title" />}>
+          <Section
+            id="dashboard-gardens-title"
+            icon={Sprout}
+            title={<Localized id="dashboard-gardens-title" />}
+          >
             <OpenGardens rows={data.gardens} />
           </Section>
         )}
-        <Section id="dashboard-bikri-title" title={<Localized id="dashboard-bikri-title" />}>
+        <Section
+          id="dashboard-bikri-title"
+          icon={Truck}
+          title={<Localized id="dashboard-bikri-title" />}
+        >
           <TodayBikriList rows={data.bikri_today} count={data.bikri_today_count} />
         </Section>
         <div className="grid grid-cols-1 gap-6 normal:grid-cols-2">
-          <Section id="dashboard-dues-title" title={<Localized id="dashboard-dues-title" />}>
+          <Section
+            id="dashboard-dues-title"
+            icon={HandCoins}
+            title={<Localized id="dashboard-dues-title" />}
+          >
             <OldestDues rows={data.oldest_dues} />
           </Section>
-          <Section id="dashboard-tasks-title" title={<Localized id="dashboard-tasks-title" />}>
+          <Section
+            id="dashboard-tasks-title"
+            icon={BellRing}
+            title={<Localized id="dashboard-tasks-title" />}
+          >
             {data.attention.items.length === 0 ? (
               <EmptyState
                 icon={CircleCheck}
@@ -121,7 +174,11 @@ export function DashboardPage() {
             )}
           </Section>
         </div>
-        <Section id="dashboard-charts-title" title={<Localized id="dashboard-charts-title" />}>
+        <Section
+          id="dashboard-charts-title"
+          icon={ChartColumn}
+          title={<Localized id="dashboard-charts-title" />}
+        >
           <DashboardCharts days={data.chart_days} items={data.chart_items} />
         </Section>
       </>

@@ -77,7 +77,6 @@ export function ShellFrame({ client, children }: { client: QueryClient; children
         nav={<nav />}
         userName={USER_NAME}
         onLock={vi.fn()}
-        onSignOut={vi.fn()}
         onGuide={vi.fn()}
         onOpenAccount={vi.fn()}
         onOpenBikri={vi.fn()}

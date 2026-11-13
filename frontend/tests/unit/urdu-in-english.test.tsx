@@ -88,7 +88,6 @@ describe.each(LANGUAGES)('an owner with an Urdu name in the %s app', (language) 
         onChangePassword={vi.fn()}
         onGuide={vi.fn()}
         onLock={vi.fn()}
-        onSignOut={vi.fn()}
       />,
     );
     const button = screen.getByRole('button', { name: message(language, 'layout-user-menu') });
@@ -106,7 +105,6 @@ describe.each(LANGUAGES)('an owner with an Urdu name in the %s app', (language) 
         onChangePassword={vi.fn()}
         onGuide={vi.fn()}
         onLock={vi.fn()}
-        onSignOut={vi.fn()}
       />,
     );
     const button = screen.getByRole('button', { name: message(language, 'layout-user-menu') });

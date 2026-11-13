@@ -15,7 +15,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { FileX, Printer, Rows3 } from 'lucide-react';
+import { BarChart3, FileX, Printer, Rows3 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AnalyticsCatalogEntry } from '../../../bindings/AnalyticsCatalogEntry';
 import type { AnalyticsPage as AnalyticsPageData } from '../../../bindings/AnalyticsPage';
@@ -231,6 +231,7 @@ function AnalyticsBody({
   const table = drill === null && mode === 'table';
   return (
     <ListPage
+      icon={BarChart3}
       titleId={entry.title_id}
       help={
         <>

@@ -20,8 +20,20 @@ use crate::reports::common::{add, col, count_of, date_cell, load_parties, paisa,
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
 };
+
+/// The columns of R26, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("seller", ids::COL_SELLER, ColumnKind::Party),
+        col("given", ids::COL_GIVEN, ColumnKind::Money),
+        col("returned", ids::COL_RETURNED, ColumnKind::Money),
+        col("adjusted", ids::COL_ADJUSTED, ColumnKind::Money),
+        col("open", ids::COL_OPEN, ColumnKind::Money),
+        col("last_date", ids::COL_LAST_DATE, ColumnKind::Date),
+    ]
+}
 
 /// Builds R26.
 ///
@@ -92,14 +104,7 @@ pub(crate) fn run(
         id: ReportId::R26,
         title_id: ids::title_id("R26"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("seller", ids::COL_SELLER, ColumnKind::Party),
-            col("given", ids::COL_GIVEN, ColumnKind::Money),
-            col("returned", ids::COL_RETURNED, ColumnKind::Money),
-            col("adjusted", ids::COL_ADJUSTED, ColumnKind::Money),
-            col("open", ids::COL_OPEN, ColumnKind::Money),
-            col("last_date", ids::COL_LAST_DATE, ColumnKind::Date),
-        ],
+        columns: columns(),
         rows: spec.slice(&all_rows),
         offset: spec.offset,
         limit: spec.reported_limit(),

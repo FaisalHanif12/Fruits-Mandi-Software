@@ -40,6 +40,11 @@
   --topbar-h: 60px;
   --statusbar-h: 32px;
 
+  /* The brand panel of the sign-in screen (plan 75 T2): wide enough for the app name on one line at the
+     title size in both languages, and wider again in a wide window, where the form has room to spare. */
+  --auth-panel-w: 340px;
+  --auth-panel-w-wide: 420px;
+
   /* Room inside an Urdu typing field for the mode badge, and for the badge plus the key-map
      button (plan 05). The badge sits at the start of the field, the text after it. */
   --field-badge-w: 80px;
@@ -81,6 +86,15 @@
   --col-date-w: 140px;
   --col-datetime-w: 170px;
   --col-status-w: 120px;
+
+  /* A dense table (plan 75): many figure columns in a narrow card, such as the lines of a saved lot with
+     nine columns in 852 px. Its cells keep 8 px at each side, the names keep 160 px instead of 180, a
+     quantity column is 56 px and a figure column 88 px: the widest heading of the English app,
+     "Paid on / the Spot", needs 79 px on two balanced lines, and the nine columns then fit with room
+     to spare, in English and in Urdu. */
+  --col-dense-count-w: 56px;
+  --col-dense-figure-w: 88px;
+  --col-dense-name-min-w: 160px;
 
   /* The least a column of names keeps in a plain table, so a name is not broken over three lines when
      the figure columns around it share a narrow card (plan 39 R5). */
@@ -247,6 +261,10 @@
   --color-nav: #16263f;
   --color-nav-ink: #d6dde8;
   --color-nav-active: #24406b;
+
+  /* A quieter line on the nav ground (plan 75 T2): the version and the short lines about the app.
+     6.9 : 1 on --color-nav, so it passes the 4.5 : 1 of NFR-USE-21. */
+  --color-nav-ink-muted: #9fb0c8;
   --color-focus: #2563c9;
   --color-money-in: #17703f;
   --color-money-in-soft: #e5f3ea;
@@ -299,6 +317,8 @@
   --spacing-nav: var(--nav-w);
   --spacing-rail: var(--rail-w);
   --spacing-module-menu: var(--module-menu-w);
+  --spacing-auth-panel: var(--auth-panel-w);
+  --spacing-auth-panel-wide: var(--auth-panel-w-wide);
   --spacing-topbar: var(--topbar-h);
   --spacing-statusbar: var(--statusbar-h);
   --spacing-field-badge: var(--field-badge-w);
@@ -319,6 +339,9 @@
   --spacing-col-date: var(--col-date-w);
   --spacing-col-datetime: var(--col-datetime-w);
   --spacing-col-status: var(--col-status-w);
+  --spacing-col-dense-count: var(--col-dense-count-w);
+  --spacing-col-dense-figure: var(--col-dense-figure-w);
+  --spacing-col-dense-name: var(--col-dense-name-min-w);
   --spacing-col-name: var(--col-name-min-w);
   --spacing-value-col: var(--value-col-w);
   --spacing-tree: var(--tree-min-h);
@@ -458,4 +481,21 @@
   --color-chart-4: #7a4b8f;
   --color-chart-5: #5d6b7a;
   --color-chart-6: #a0522d;
+}
+
+/* Plan 75 (the app mark): the colours of the logo, a gold mandi crate with an orange, a green apple and a
+   leaf on the deep navy of the menu (frontend/brand/app-icon.svg). Only `BrandMark` draws them. They are
+   `static` because the mark reads them with `var()` for its gradients, not through a class. */
+@theme static {
+  --color-brand-ground-top: #1f3659;
+  --color-brand-ground-bottom: #14233b;
+  --color-brand-gold: #eab44b;
+  --color-brand-gold-light: #f7d07a;
+  --color-brand-gold-dark: #c98f2a;
+  --color-brand-orange-light: #ffd684;
+  --color-brand-orange: #f08b1e;
+  --color-brand-apple-light: #b6e58b;
+  --color-brand-apple: #46a64b;
+  --color-brand-leaf: #5cc06a;
+  --color-brand-leaf-vein: #2e8f4e;
 }

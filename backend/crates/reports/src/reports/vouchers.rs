@@ -24,7 +24,8 @@ use crate::reports::common::{
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind, SummaryLine,
+    Cell, Column, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    SummaryLine,
 };
 use mandi_core::money::Paisa;
 
@@ -184,6 +185,23 @@ fn page_rows(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Vec<Stored>
     Ok(rows.collect::<Result<Vec<_>, _>>()?)
 }
 
+/// The columns of R15, R23 or R25: the receipts (R23) also name the collector. The one
+/// definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns(layout: Layout) -> Vec<Column> {
+    let mut columns = vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("doc", ids::COL_DOC, ColumnKind::Doc),
+        col("account", ids::COL_ACCOUNT, ColumnKind::Party),
+        col("amount", ids::COL_AMOUNT, ColumnKind::Money),
+    ];
+    if layout == Layout::Receipts {
+        columns.push(col("collector", ids::COL_COLLECTOR, ColumnKind::Names));
+    }
+    columns.push(col("narration", ids::COL_NARRATION, ColumnKind::Text));
+    columns.push(col("status", ids::COL_STATUS, ColumnKind::Label));
+    columns
+}
+
 /// Builds R15, R23 or R25.
 ///
 /// # Errors
@@ -276,12 +294,7 @@ pub(crate) fn run(
         });
     }
 
-    let mut columns = vec![
-        col("date", ids::COL_DATE, ColumnKind::Date),
-        col("doc", ids::COL_DOC, ColumnKind::Doc),
-        col("account", ids::COL_ACCOUNT, ColumnKind::Party),
-        col("amount", ids::COL_AMOUNT, ColumnKind::Money),
-    ];
+    let columns = columns(layout);
     let mut totals_row = vec![
         Cell::Empty,
         Cell::Empty,
@@ -295,11 +308,8 @@ pub(crate) fn run(
         },
     ];
     if layout == Layout::Receipts {
-        columns.push(col("collector", ids::COL_COLLECTOR, ColumnKind::Names));
         totals_row.push(Cell::Empty);
     }
-    columns.push(col("narration", ids::COL_NARRATION, ColumnKind::Text));
-    columns.push(col("status", ids::COL_STATUS, ColumnKind::Label));
     totals_row.push(Cell::Empty);
     totals_row.push(Cell::Empty);
 

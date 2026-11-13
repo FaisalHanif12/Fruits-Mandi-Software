@@ -18,6 +18,7 @@ import { useLanguage } from '../../../shared/i18n';
 import { Button, Card, ConfirmDialog, ErrorNotice, LoadingState, Notice } from '../../../shared/ui';
 import { useInstallUpdate, useUpdateCheck } from '../maintenance-hooks';
 import { ReleaseNotes } from './ReleaseNotes';
+import { Download } from 'lucide-react';
 
 /** The notes in the app language; the other language, then the plain notes, when it has none. */
 function notesFor(data: UpdateCheck, language: Language): { text: string; language: Language } {
@@ -90,7 +91,10 @@ export function UpdatesSection() {
             <p className="type-control" role="status" />
           </Localized>
         ) : (
-          <Card title={<Localized id="settings-update-available" vars={{ version }} />}>
+          <Card
+            icon={Download}
+            title={<Localized id="settings-update-available" vars={{ version }} />}
+          >
             {data.date === null ? null : (
               <Localized id="settings-update-date" vars={{ date: utcToLocalDisplay(data.date) }}>
                 <p className="type-body text-ink-muted" />

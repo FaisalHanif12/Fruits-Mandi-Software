@@ -260,6 +260,33 @@ fn figure_columns() -> Vec<Column> {
     ]
 }
 
+/// The columns that name a row of R33 in a view, before the twelve figures: the trip, the
+/// purchase, its day and its item; or only the item; or only the day or the month.
+fn lead_columns(view: TripView) -> Vec<Column> {
+    match view {
+        TripView::Trip | TripView::Partner => vec![
+            col("trip", ids::COL_TRIP, ColumnKind::Names),
+            col("purchase", ids::COL_PURCHASE, ColumnKind::Doc),
+            col("date", ids::COL_DATE, ColumnKind::Date),
+            col("item", ids::COL_ITEM, ColumnKind::Names),
+        ],
+        TripView::Item => vec![col("item", ids::COL_ITEM, ColumnKind::Names)],
+        TripView::Day => vec![col("period", ids::COL_PERIOD, ColumnKind::Date)],
+        TripView::Month => vec![col("period", ids::COL_PERIOD, ColumnKind::Month)],
+    }
+}
+
+/// The columns of R33 in a view. The one definition: the run and the catalogue both use it
+/// (plan 75 T1). By partner the report has its own columns.
+pub(crate) fn columns(view: TripView) -> Vec<Column> {
+    if view == TripView::Partner {
+        return partner_columns();
+    }
+    let mut columns = lead_columns(view);
+    columns.extend(figure_columns());
+    columns
+}
+
 /// A row: its identifying cells, then the twelve figures.
 fn figure_row(lead: Vec<Cell>, figures: &Figures, kind: RowKind, source: Option<RowSource>) -> Row {
     let mut cells = lead;
@@ -320,7 +347,7 @@ pub(crate) fn run(
         total.add(&line.figures)?;
     }
 
-    let (lead_columns, rows): (Vec<Column>, Vec<Row>) = match typed.trip_view {
+    let rows: Vec<Row> = match typed.trip_view {
         TripView::Trip | TripView::Partner => {
             let groups = group_by(
                 &lines,
@@ -359,15 +386,7 @@ pub(crate) fn run(
                     ));
                 }
             }
-            (
-                vec![
-                    col("trip", ids::COL_TRIP, ColumnKind::Names),
-                    col("purchase", ids::COL_PURCHASE, ColumnKind::Doc),
-                    col("date", ids::COL_DATE, ColumnKind::Date),
-                    col("item", ids::COL_ITEM, ColumnKind::Names),
-                ],
-                rows,
-            )
+            rows
         }
         TripView::Item => {
             let groups = group_by(
@@ -380,13 +399,10 @@ pub(crate) fn run(
                     )
                 },
             )?;
-            (
-                vec![col("item", ids::COL_ITEM, ColumnKind::Names)],
-                groups
-                    .into_iter()
-                    .map(|g| figure_row(vec![g.heading], &g.figures, RowKind::Normal, None))
-                    .collect(),
-            )
+            groups
+                .into_iter()
+                .map(|g| figure_row(vec![g.heading], &g.figures, RowKind::Normal, None))
+                .collect()
         }
         TripView::Day => {
             let groups = group_by(
@@ -396,13 +412,10 @@ pub(crate) fn run(
                     iso: l.purchase.entry_date.clone(),
                 },
             )?;
-            (
-                vec![col("period", ids::COL_PERIOD, ColumnKind::Date)],
-                groups
-                    .into_iter()
-                    .map(|g| figure_row(vec![g.heading], &g.figures, RowKind::Normal, None))
-                    .collect(),
-            )
+            groups
+                .into_iter()
+                .map(|g| figure_row(vec![g.heading], &g.figures, RowKind::Normal, None))
+                .collect()
         }
         TripView::Month => {
             let groups = group_by(
@@ -416,19 +429,15 @@ pub(crate) fn run(
                 },
                 |l| month_cell(&l.purchase.entry_date),
             )?;
-            (
-                vec![col("period", ids::COL_PERIOD, ColumnKind::Month)],
-                groups
-                    .into_iter()
-                    .map(|g| figure_row(vec![g.heading], &g.figures, RowKind::Normal, None))
-                    .collect(),
-            )
+            groups
+                .into_iter()
+                .map(|g| figure_row(vec![g.heading], &g.figures, RowKind::Normal, None))
+                .collect()
         }
     };
 
-    let mut columns = lead_columns;
-    let lead_len = columns.len();
-    columns.extend(figure_columns());
+    let columns = columns(typed.trip_view);
+    let lead_len = columns.len().saturating_sub(figure_columns().len());
     let mut totals = vec![Cell::Empty; lead_len];
     totals.extend(total.r33_cells());
     Ok(ReportPage {
@@ -456,6 +465,24 @@ fn month_cell(iso: &str) -> Cell {
         (Some(year), Some(month)) => Cell::Month { year, month },
         _ => Cell::Empty,
     }
+}
+
+/// The columns of R33 by partner, the one definition of that view (plan 75 T1).
+pub(crate) fn partner_columns() -> Vec<Column> {
+    vec![
+        col("trip", ids::COL_TRIP, ColumnKind::Names),
+        col("partner", ids::COL_PARTNER, ColumnKind::Names),
+        col("share", ids::COL_SHARE, ColumnKind::Percent),
+        col("money_in_shop", ids::COL_MONEY_IN_SHOP, ColumnKind::Money),
+        col(
+            "money_in_pocket",
+            ids::COL_MONEY_IN_POCKET,
+            ColumnKind::Money,
+        ),
+        col("money_back", ids::COL_MONEY_BACK, ColumnKind::Money),
+        col("net", ids::COL_PART_OF_RESULT, ColumnKind::Money),
+        col("cost_left", ids::COL_LEFT_COST, ColumnKind::Money),
+    ]
 }
 
 /// The partner layout: each partner of each trip with his money in, money back and part so far.
@@ -571,20 +598,7 @@ fn partners(
         id: ReportId::R33,
         title_id: ids::title_id("R33"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("trip", ids::COL_TRIP, ColumnKind::Names),
-            col("partner", ids::COL_PARTNER, ColumnKind::Names),
-            col("share", ids::COL_SHARE, ColumnKind::Percent),
-            col("money_in_shop", ids::COL_MONEY_IN_SHOP, ColumnKind::Money),
-            col(
-                "money_in_pocket",
-                ids::COL_MONEY_IN_POCKET,
-                ColumnKind::Money,
-            ),
-            col("money_back", ids::COL_MONEY_BACK, ColumnKind::Money),
-            col("net", ids::COL_PART_OF_RESULT, ColumnKind::Money),
-            col("cost_left", ids::COL_LEFT_COST, ColumnKind::Money),
-        ],
+        columns: partner_columns(),
         total_count: count_of(rows.len()),
         rows: spec.slice(&rows),
         offset: spec.offset,

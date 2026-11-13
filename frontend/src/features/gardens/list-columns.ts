@@ -9,6 +9,7 @@ import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
+import { STATUS_CANCELLED, STATUS_CLOSED, STATUS_OPEN } from '../../shared/ui';
 import type { GardenHistoryKind, GardenHistoryRow, GardenRow } from './types';
 
 type Say = (id: string, vars?: Record<string, string>) => string;
@@ -83,6 +84,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
         ? text('gardens-status-closed')
         : text('gardens-status-closed-on', { date: isoToDisplayDate(row.closed_date) });
     },
+    chip: (row) => (row.status === 'open' ? STATUS_OPEN : STATUS_CLOSED),
   },
   {
     field: 'balance',
@@ -174,6 +176,8 @@ export const HISTORY_COLUMNS: readonly ListColumn<GardenHistoryRow>[] = [
         row.edited,
         context,
       ),
+    // Only a cancelled entry is a chip; an entry that is saved (and perhaps edited) shows its words alone.
+    chip: (row) => (row.cancelled ? STATUS_CANCELLED : undefined),
     tip: (row, context) => editedTip(row.edited, context),
   },
 ];

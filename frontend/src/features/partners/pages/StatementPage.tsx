@@ -30,6 +30,7 @@ import {
   Fact,
   Field,
   FilterBar,
+  FilterCard,
   FormSpan,
   ListPage,
   Num,
@@ -127,6 +128,7 @@ function StatementBody({ saved, remember }: MemoryProps) {
   return (
     <ListPage
       titleId="partners-statement-title"
+      icon={ScrollText}
       help={
         <Localized id="partners-statement-help">
           <p />
@@ -143,7 +145,7 @@ function StatementBody({ saved, remember }: MemoryProps) {
         </Button>
       }
       filters={
-        <div {...formNavigationProps}>
+        <FilterCard {...formNavigationProps}>
           {/* The three filters are one row: the partner, and the period with "from the first date" among
               its choices (plan 38 R4). */}
           <FilterBar screen="partners.statement">
@@ -175,7 +177,7 @@ function StatementBody({ saved, remember }: MemoryProps) {
             )}
             {period.ready ? <PeriodBox period={period} /> : null}
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       {first === undefined ? null : (

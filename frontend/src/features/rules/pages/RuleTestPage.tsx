@@ -36,6 +36,7 @@ import { formatBps, formatPaisa, isoToDisplayDate, useGrouping } from '../../../
 import { levelMessageId } from '../../../shared/i18n';
 import { useTestRule } from '../hooks';
 import type { ChargeTest, WinnerView } from '../types';
+import { FlaskConical } from 'lucide-react';
 
 const FIELD_PATHS = ['seller_id', 'buyer_id', 'item_id', 'date', 'qty', 'rate'];
 
@@ -270,7 +271,7 @@ export function RuleTestPage() {
           </div>
         </Card>
       </form>
-      <Card title={<Localized id="rules-test-result" />}>
+      <Card icon={FlaskConical} title={<Localized id="rules-test-result" />}>
         {test.data === undefined ? (
           <Localized id={test.isPending ? 'common-loading' : 'rules-test-nothing'}>
             <p className="type-body text-ink-muted" />

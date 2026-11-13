@@ -6,7 +6,7 @@
 // voucher's preview. The list is shown only while it has a voucher in it.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Trash2 } from 'lucide-react';
+import { Clock, Trash2 } from 'lucide-react';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS } from '../../../shared/keyboard';
 import { Balance, Button, Card, Code, Num, Table, type TableColumn } from '../../../shared/ui';
@@ -111,7 +111,7 @@ export function WaitingList({ vouchers, previews, onRemove, disabled }: WaitingL
     },
   ];
   return (
-    <Card compact title={<Localized id="vouchers-waiting-title" />}>
+    <Card compact icon={Clock} title={<Localized id="vouchers-waiting-title" />}>
       <Localized id="vouchers-waiting-help" vars={{ key: SHORTCUTS.save.label }}>
         <p className="type-body text-ink-muted" />
       </Localized>

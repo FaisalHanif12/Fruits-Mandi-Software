@@ -1463,3 +1463,274 @@ report-grade-second = { -darja-doyam }
 
 # review: pending
 report-grade-third = { -darja-soyam }
+
+## The guide card of a report (plan 75, PRD FR-19.14): it opens beside a report's card on the reports page.
+## Each report has what it shows (`report-rNN-detail`) and when to use it (`report-rNN-when`); its columns
+## and filters come from the report's own definition, so the card never names one the report has not.
+
+# review: pending
+reports-hover-hint = Point at a report, or move to it with ↑ ↓, to see what it holds and where to print it.
+
+# review: pending
+report-guide-label = About { $title }
+
+# review: pending
+report-guide-shows = What it shows
+
+# review: pending
+report-guide-columns = Columns
+
+# review: pending
+report-guide-filters = Filters
+
+# review: pending
+report-guide-filters-none = No filters. It always shows everything.
+
+# review: pending
+report-guide-party-required = Choose an account first. The report cannot open without one.
+
+# review: pending
+report-guide-actions = What you can do
+
+# review: pending
+report-guide-action-screen = On screen
+
+# review: pending
+report-guide-action-print = Print, Urdu or English
+
+# review: pending
+report-guide-action-pdf = PDF file
+
+# review: pending
+report-guide-action-excel = Excel
+
+# review: pending
+report-guide-special-r1 = Print the seller's bill of the chosen { -bikri }
+
+# review: pending
+report-guide-special-r5 = { report-print-all }: one slip for each buyer
+
+# review: pending
+report-guide-special-r35 = Choose a party to print his slip, or print the table of every party
+
+# review: pending
+report-guide-when = When to use it
+
+# review: pending
+report-guide-open = Open report
+
+# review: pending
+report-r1-detail = The { -lot }s of one { -bikri } in full: what came, what was sold, the charges and the { -safi-bikri }. Choose the { -bikri } number first. The seller's bill is printed from here.
+
+# review: pending
+report-r1-when = To print the seller's bill of one { -bikri }.
+
+# review: pending
+report-r2-detail = Every sale of the days you choose, one row for each { -gahak } line, with the { -lot }, the item, the quantity, the rate and what the buyer pays.
+
+# review: pending
+report-r2-when = To see everything that was sold in a period in one list. Narrow it by buyer, seller or item.
+
+# review: pending
+report-r3-detail = The sale lines that had money { -mauqa-par-jama }, with what was { -khate-mein-baqi }. A line that was only part paid is in { -udhari } Sales too.
+
+# review: pending
+report-r3-when = To see how much was paid at the time of the sale.
+
+# review: pending
+report-r4-detail = The sale lines that still have something { -khate-mein-baqi }, with what was { -mauqa-par-jama }. A line that was only part paid is in { -naqdi } Sales too.
+
+# review: pending
+report-r4-when = To see what was sold on credit.
+
+# review: pending
+report-r5-detail = Every buyer of the day, also one who paid in full. Each row has his goods written as (item quantity . rate), their value, the value with { -commission } and { -laga }, what was { -mauqa-par-jama } and what is { -khate-mein-baqi }.
+
+# review: pending
+report-r5-when = For the buyers' bills of the day. { report-print-all } gives one slip for each buyer.
+
+# review: pending
+report-r6-detail = Every { -lot } of the days you choose: the seller, the { -kham-bikri }, each deduction, the total deductions and the { -safi-bikri }.
+
+# review: pending
+report-r6-when = To check what each seller gets for his goods.
+
+# review: pending
+report-r7-detail = Sales by item: the quantity, the { -kham-bikri }, the average rate, and the { -commission } of both sides with the { -laga }.
+
+# review: pending
+report-r7-when = To see which item sold the most and earned the most.
+
+# review: pending
+report-r10-detail = Goods that came and are not yet sold, by { -lot } or by item: what came, what was sold, written off or taken as fruit, what is left, and for how many days.
+
+# review: pending
+report-r10-when = To see which goods are waiting in the shop.
+
+# review: pending
+report-r11-detail = Every entry of the days you choose, one line for each account, with { -banaam } and { -jama }. The { -meezan } of both sides is the same.
+
+# review: pending
+report-r11-when = To check the entries of a day, or to print the day's book.
+
+# review: pending
+report-r12-detail = The opening cash, every rupee that came in or went out on the days you choose, and the closing cash, with the running balance.
+
+# review: pending
+report-r12-when = To check the cash in hand against the cash in the drawer.
+
+# review: pending
+report-r13-detail = Every entry of one account with its goods, and the running balance from the opening to the closing balance. Choose the account first.
+
+# review: pending
+report-r13-when = To see how the balance of a party came to be.
+
+# review: pending
+report-r14-detail = A summary of one account: the opening balance, what was bought or sold, what was paid, and the closing balance. Tick the With detail box to see every entry. Choose the account first.
+
+# review: pending
+report-r14-when = To give a party his { -fard-hisab }.
+
+# review: pending
+report-r15-detail = Every voucher of the days you choose, by kind. With no kind chosen, the money of each kind shows above the table. A cancelled voucher is listed but not counted.
+
+# review: pending
+report-r15-when = To find a voucher, or to see one kind of voucher over a period.
+
+# review: pending
+report-r16-detail = All accounts with their code, city and balance.
+
+# review: pending
+report-r16-when = To look up the code or the balance of an account.
+
+# review: pending
+report-r17-detail = The balance of every head and control, as of a day.
+
+# review: pending
+report-r17-when = For a quick look at the books, group by group.
+
+# review: pending
+report-r18-detail = The balance of every account as of a day. The { -meezan } of both sides must be the same.
+
+# review: pending
+report-r18-when = To check that the books balance.
+
+# review: pending
+report-r19-detail = Only the opening balances, with the { -meezan } of both sides.
+
+# review: pending
+report-r19-when = To check the opening balances you entered.
+
+# review: pending
+report-r20-detail = Each buyer's balance, with the age of his open bills in four steps. The { -meezan } is what all the buyers owe. People in the { -doobi-raqam } are not here.
+
+# review: pending
+report-r20-when = For the collection round: who owes how much, and for how long.
+
+# review: pending
+report-r21-detail = The same dues, grouped by city, with a total for each city.
+
+# review: pending
+report-r21-when = To plan the collection round city by city.
+
+# review: pending
+report-r22-detail = The same dues, grouped by collector, with a total for each collector.
+
+# review: pending
+report-r22-when = To see how much each collector has to collect.
+
+# review: pending
+report-r23-detail = Every { -wasooli } with the buyer, the amount and the collector. A seller returning his { -peshgi } is here too. A cancelled { -wasooli } is listed but not counted.
+
+# review: pending
+report-r23-when = To see what was collected on a day, or by one collector.
+
+# review: pending
+report-r24-detail = What the shop owes each seller, his open { -peshgi }, and what he owes the shop beyond it.
+
+# review: pending
+report-r24-when = To see whom the shop has to pay.
+
+# review: pending
+report-r25-detail = Every { -adaigi } with the account and the amount. A cancelled { -adaigi } is listed but not counted.
+
+# review: pending
+report-r25-when = To see what was paid out on a day.
+
+# review: pending
+report-r26-detail = For each seller: { -peshgi } given, returned, adjusted and still open.
+
+# review: pending
+report-r26-when = To see whose { -peshgi } is still to be adjusted.
+
+# review: pending
+report-r27-detail = The sellers' bills in number order: the { -kham-bikri }, the total deductions and the { -safi-bikri } of each.
+
+# review: pending
+report-r27-when = To find or print the sellers' bills in number order.
+
+# review: pending
+report-r28-detail = Every income account by month or by day. The { -meezan } is the net income.
+
+# review: pending
+report-r28-when = To see where the income of the shop came from.
+
+# review: pending
+report-r29-detail = { -dukan-kharcha } by head, and the { -zati-kharcha } each partner took and returned.
+
+# review: pending
+report-r29-when = To see what the shop spent, or how much one { -shirakat-dar } took.
+
+# review: pending
+report-r30-detail = Income less { -dukan-kharcha }, and the { -hissa } of each partner, the money he took and his { -khalis }. It opens with the partner code.
+
+# review: pending
+report-r30-when = To see the profit of a period and what each { -shirakat-dar } gets.
+
+# review: pending
+report-r31-detail = Every dated movement of one partner, with his running { -kul-raqam }. Choose the partner first. It opens with the partner code.
+
+# review: pending
+report-r31-when = To give a { -shirakat-dar } his statement.
+
+# review: pending
+report-r32-detail = Everyone who borrowed from the shop: what was lent, returned and is still open, and the days past the return-by date.
+
+# review: pending
+report-r32-when = To see who has not yet returned money.
+
+# review: pending
+report-r33-detail = What the market trips bought, sold, wrote off and still hold, and the { -tijarati-munafa } or { -tijarati-nuqsan } of each trip. By trip, item, day, month or partner.
+
+# review: pending
+report-r33-when = To see how a trip or a purchase did.
+
+# review: pending
+report-r34-detail = One block for each day: the sales and { -commission }, the cash in and out, receipts, payments, expenses, the partners' money, trips and what is still owed, with a short table of buyers and one of sellers.
+
+# review: pending
+report-r34-when = To see the whole day on one sheet when you close the day.
+
+# review: pending
+report-r35-detail = For one day, each party: what he owed at the start, what was bought or sold, what was paid, and what is left. Choose a party for his slip, or leave it empty for the table of every party.
+
+# review: pending
+report-r35-when = For the collector's round: print the slips of the day, for one party or for all.
+
+# review: pending
+report-r36-detail = Each garden: the rent, the installments, the costs, what the shop and the partners paid, the money that came in, the running balance and the rent still due. By garden or by partner.
+
+# review: pending
+report-r36-when = To see how a garden stands and who paid what.
+
+# review: pending
+report-r37-detail = The fruit partners took home and the fruit served to the shop's { -mehman }: the date, who it was for, the item, the quantity, the rate and the value.
+
+# review: pending
+report-r37-when = To see the fruit taken in a period, by partner or for guests.
+
+# review: pending
+report-r38-detail = Everyone moved to the { -doobi-raqam }: what he owed when he was moved, what has been recovered since and what he still owes.
+
+# review: pending
+report-r38-when = To follow up money that is hard to recover.

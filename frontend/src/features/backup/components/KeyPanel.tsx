@@ -29,7 +29,7 @@ export function KeyPanel({ status }: KeyPanelProps) {
   };
 
   return (
-    <Card title={<Localized id="backup-key-title" />}>
+    <Card icon={KeyRound} title={<Localized id="backup-key-title" />}>
       {making || showing ? (
         <BackupKeyCard onDone={done} />
       ) : needsKey ? (

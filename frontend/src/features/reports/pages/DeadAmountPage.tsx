@@ -15,7 +15,7 @@
 
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, Printer, SearchX, UserRoundX } from 'lucide-react';
+import { ArrowLeft, BookOpen, FileText, Printer, SearchX, UserRoundX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { DeadFilter } from '../../../bindings/DeadFilter';
 import type { DeadRow } from '../../../bindings/DeadRow';
@@ -175,6 +175,7 @@ export function DeadAmountPage() {
 
   return (
     <ListPage
+      icon={FileText}
       titleId="dead-report-title"
       help={
         <Localized id="dead-report-help">

@@ -223,6 +223,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
   it('ReportCatalogEntry', () => {
     for (const entry of CATALOG) {
       expect(keysOf(entry)).toEqual([
+        'column_title_ids',
         'filters',
         'group',
         'group_title_id',

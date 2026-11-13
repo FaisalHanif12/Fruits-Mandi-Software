@@ -134,8 +134,8 @@ function Saved({
         <Fact label={<Localized id="fruit-field-rate" />}>
           <Num paisa={row.rate_paisa} />
         </Fact>
-        <Fact label={<Localized id="fruit-numbers-value" />}>
-          <Num paisa={row.value_paisa} />
+        <Fact stat label={<Localized id="fruit-numbers-value" />}>
+          <Num inherit paisa={row.value_paisa} />
         </Fact>
         <Fact label={<Localized id="fruit-numbers-credit" />}>
           {displayName(credited, language)}

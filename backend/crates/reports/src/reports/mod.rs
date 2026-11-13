@@ -482,7 +482,29 @@ fn group_title_id(group: ReportGroup) -> &'static str {
     }
 }
 
-/// The catalogue: every report with its group, title and filters (PRD 19.2).
+/// The columns of a report as its default view shows them (plan 75 T1). Each is built by the very
+/// function the report's own run uses, so the catalogue and the report can never disagree. A
+/// report whose columns depend on a view takes the view's default.
+fn default_columns(spec: &Spec) -> Vec<Column> {
+    match spec.id {
+        ReportId::R15 => vouchers::columns(vouchers::Layout::All),
+        ReportId::R23 => vouchers::columns(vouchers::Layout::Receipts),
+        ReportId::R25 => vouchers::columns(vouchers::Layout::Payments),
+        // R31 is built from the statement of the services; its columns are fixed there.
+        ReportId::R31 => statement::statement_columns(),
+        // R27 is listed with the Collections but is built by the Sales code (the bill series).
+        ReportId::R27 => sales::default_columns(spec.id),
+        _ => match spec.group {
+            ReportGroup::Sales => sales::default_columns(spec.id),
+            ReportGroup::Accounts => accounts::default_columns(spec.id),
+            ReportGroup::Collections => collections::default_columns(spec.id),
+            ReportGroup::Business => business::default_columns(spec.id),
+        },
+    }
+}
+
+/// The catalogue: every report with its group, title, filters and column headings (PRD 19.2,
+/// FR-19.14).
 pub fn catalog() -> Vec<CatalogEntry> {
     SPECS
         .iter()
@@ -493,6 +515,10 @@ pub fn catalog() -> Vec<CatalogEntry> {
             title_id: ids::title_id(s.id.code()),
             filters: s.filters.to_vec(),
             party_required: s.party_required,
+            column_title_ids: default_columns(s)
+                .into_iter()
+                .map(|column| column.title_id)
+                .collect(),
         })
         .collect()
 }
@@ -995,4 +1021,71 @@ pub(crate) fn page_in(
             limit: None,
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::export::l10n::L10n;
+    use mandi_core::auth::Language;
+
+    /// Plan 75 T1: every report of the catalogue lists its columns, in the order the report shows
+    /// them (PRD FR-19.14).
+    #[test]
+    fn every_report_lists_its_columns() {
+        for entry in catalog() {
+            assert!(
+                !entry.column_title_ids.is_empty(),
+                "{} has no column headings in the catalogue",
+                entry.id.code()
+            );
+        }
+    }
+
+    /// Plan 75 T1: every heading ID of every report exists in both languages (the Fluent files are
+    /// embedded at build time, so the guide card can always write the heading).
+    #[test]
+    fn every_column_heading_exists_in_both_languages() {
+        let ur = L10n::new(Language::Ur).unwrap();
+        let en = L10n::new(Language::En).unwrap();
+        let mut missing = Vec::new();
+        for entry in catalog() {
+            for id in &entry.column_title_ids {
+                if !ur.has(id) {
+                    missing.push(format!("{} {id}: no Urdu message", entry.id.code()));
+                }
+                if !en.has(id) {
+                    missing.push(format!("{} {id}: no English message", entry.id.code()));
+                }
+            }
+        }
+        assert!(missing.is_empty(), "{missing:#?}");
+    }
+
+    /// R2, R3 and R4 list the same columns as the register with no optional column; R3 and R4 add
+    /// the two columns of money paid on the spot (PRD FR-12.44).
+    #[test]
+    fn the_registers_list_the_default_shape() {
+        let of = |id: ReportId| {
+            catalog()
+                .into_iter()
+                .find(|e| e.id == id)
+                .map(|e| e.column_title_ids)
+                .unwrap()
+        };
+        let r2 = of(ReportId::R2);
+        let r3 = of(ReportId::R3);
+        assert_eq!(r3.get(..r2.len()), Some(r2.as_slice()));
+        assert_eq!(
+            r3.get(r2.len()..),
+            Some(
+                [
+                    ids::COL_PAID_ON_SPOT.to_owned(),
+                    ids::COL_LEFT_ON_ACCOUNT.to_owned()
+                ]
+                .as_slice()
+            )
+        );
+        assert_eq!(r3, of(ReportId::R4));
+    }
 }

@@ -82,7 +82,7 @@ function ChargesLine({ day }: { day: StatementDay }) {
   return (
     <span className="print-statement-charges">
       {day.charges.map((charge) => (
-        <span key={charge.label_id} className="print-statement-charge">
+        <span key={charge.label_id}>
           {l10n.getString(charge.label_id)} <Num>{charge.amount}</Num>
         </span>
       ))}
@@ -230,7 +230,7 @@ function StatementBody({ data, frame }: { data: StatementPrintData; frame: Print
   const { l10n } = useLocalization();
   return (
     <div className="print-report">
-      <section className="print-sheet print-statement-sheet">
+      <section className="print-sheet">
         <PrintHeader header={frame.header} />
         <PrintPartyBlock party={data.party} />
         <table className="print-table print-table-dense print-statement">

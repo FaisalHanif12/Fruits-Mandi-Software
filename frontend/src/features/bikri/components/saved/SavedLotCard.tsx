@@ -303,6 +303,9 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
         )}
         rows={lines}
         rowKey={(sale) => String(sale.id)}
+        // The normal step shows the whole line, nine columns in 852 px; the dense table keeps every heading
+        // on two lines (plan 75, alignment R4). The other steps have the room, or fewer columns.
+        dense={step === 'normal'}
       />
     </Card>
   );

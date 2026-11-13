@@ -22,6 +22,7 @@ import {
   EmptyState,
   Field,
   FilterBar,
+  FilterCard,
   ListPage,
   SegmentedControl,
 } from '../../../shared/ui';
@@ -99,13 +100,14 @@ export function PartyList({ side, onSide, onOpen }: PartyListProps) {
   return (
     <ListPage
       titleId="party-ledgers-title"
+      icon={UsersRound}
       help={
         <Localized id="party-ledgers-help">
           <p />
         </Localized>
       }
       filters={
-        <div ref={containerRef} {...formNavigationProps}>
+        <FilterCard ref={containerRef} {...formNavigationProps}>
           <FilterBar
             screen="party_ledgers.list"
             search={{
@@ -127,7 +129,7 @@ export function PartyList({ side, onSide, onOpen }: PartyListProps) {
               )}
             </Field>
           </FilterBar>
-        </div>
+        </FilterCard>
       }
     >
       <PagedList<PartyLedgerRow>

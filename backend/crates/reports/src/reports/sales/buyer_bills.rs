@@ -34,7 +34,7 @@ use crate::reports::common::{
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, DetailPart, Names, PartyRef, ReportId, ReportPage, Row, RowKind,
+    Cell, Column, ColumnKind, DetailPart, Names, PartyRef, ReportId, ReportPage, Row, RowKind,
 };
 
 /// What is left on the account of a total (PRD FR-12.44): `total - paid`, a checked subtraction. A
@@ -255,6 +255,19 @@ fn accounts_of<'a>(buyers: impl Iterator<Item = &'a Buyer>) -> Vec<i64> {
     accounts
 }
 
+/// The columns of R5, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("serial", ids::COL_SERIAL, ColumnKind::Number),
+        col("buyer", ids::COL_BUYER, ColumnKind::Party),
+        col("detail", ids::COL_DETAIL, ColumnKind::Detail),
+        col("value", ids::COL_VALUE, ColumnKind::Money),
+        col("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
+        col("paid", ids::COL_PAID_ON_SPOT, ColumnKind::Money),
+        col("left", ids::COL_LEFT_ON_ACCOUNT, ColumnKind::Money),
+    ]
+}
+
 /// Builds R5.
 ///
 /// # Errors
@@ -318,15 +331,7 @@ pub(crate) fn run(
         id: ReportId::R5,
         title_id: ids::title_id("R5"),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("serial", ids::COL_SERIAL, ColumnKind::Number),
-            col("buyer", ids::COL_BUYER, ColumnKind::Party),
-            col("detail", ids::COL_DETAIL, ColumnKind::Detail),
-            col("value", ids::COL_VALUE, ColumnKind::Money),
-            col("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
-            col("paid", ids::COL_PAID_ON_SPOT, ColumnKind::Money),
-            col("left", ids::COL_LEFT_ON_ACCOUNT, ColumnKind::Money),
-        ],
+        columns: columns(),
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),

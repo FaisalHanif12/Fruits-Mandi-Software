@@ -38,7 +38,7 @@ const createRule = ESLintUtils.RuleCreator(
 
 /**
  * Attributes whose value is code, never text a user reads or hears. Each one is either a DOM
- * attribute with a fixed set of keyword values, an identifier, or a prop of our own components
+ * attribute with a fixed set of keyword values (the drawing attributes of an SVG among them), an identifier, or a prop of our own components
  * that takes a code value (`variant`, Fluent's message `id`, `labelId`, `addNoun` (the word of a picker's "add" row, the key of its Fluent messages), `titleId`, `helpId`, `finishId`,
  * `toastId`, `saveId`, `failedId` and `typeLabelId`: Fluent message IDs of a form, `path` and `leaveTo`: the address of a screen, `lotKey`: the row id of a lot, `screen`: the name a list's choices are kept under, `fieldsShown` and `extraFields`: field
  * paths such as `lots[0].sales[2].qty`, `hidden`: menu item IDs, `theme`: AG Grid's "legacy").
@@ -105,6 +105,17 @@ const CODE_ATTRIBUTES = new Set([
   'aria-disabled',
   'aria-readonly',
   'aria-required',
+  // The drawing attributes of an SVG picture (plan 75 T2): colours, units and keywords, never words.
+  'focusable',
+  'viewBox',
+  'fill',
+  'stroke',
+  'stopColor',
+  'gradientUnits',
+  'vectorEffect',
+  // The path of a drawing and the clip that points at one of its parts (plan 75, the app mark).
+  'd',
+  'clipPath',
 ]);
 
 const HAS_LETTER = /\p{L}/u;

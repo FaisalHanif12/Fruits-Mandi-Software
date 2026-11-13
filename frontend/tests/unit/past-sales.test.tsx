@@ -1,10 +1,11 @@
-// پچھلی بکری / Past Sales (plan 72, PRD 12.7, FR-12.46), in the Urdu and the English app, against a fake
-// backend: today's section and the window of 7 earlier days with a heading for each day (the date, the
-// count and the خام بکری, all the backend's), empty days, the divider, the buttons, Page Up and Page
-// Down and the arrow keys that move the window, "تاریخ پر جائیں", the tick "show every بکری", opening
-// a row, the way back from an edit, and the four states. Today in these tests is 10-10-2026, so the
-// first window is 03-10-2026 to 09-10-2026. The counts and totals are what the double is given; the
-// screen adds up nothing.
+// پچھلی بکری / Past Sales (plan 72, plan 75, PRD 12.7, FR-12.46 v1.39), in the Urdu and the English app,
+// against a fake backend: today's section and the window of 7 earlier days, each day one closed line (the
+// date, the count and the خام بکری, all the backend's) that opens its بکری, empty days, the divider, the
+// buttons, Page Up and Page Down and the arrow keys that move the window, "تاریخ پر جائیں", the tick "show
+// every بکری", opening a row, the way back from an edit, and the four states. The closing and opening of
+// the days has its own file (past-days-collapsible). Today in these tests is 10-10-2026, so the first
+// window is 03-10-2026 to 09-10-2026. The counts and totals are what the double is given; the screen adds
+// up nothing.
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,8 +16,8 @@ import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { fakePlan16 } from '../helpers/bikri-plan16';
-import { listRow } from '../helpers/bikri-saved';
-import { cellOf, gridOf, named, salesGrid } from '../helpers/bikri-screen';
+import { listRow, savedEvent1 } from '../helpers/bikri-saved';
+import { cellOf, named, salesGrid } from '../helpers/bikri-screen';
 import {
   DAY,
   fail,
@@ -111,13 +112,6 @@ function present<T>(value: T | null | undefined): T {
   return value;
 }
 
-/** The ids of the rows and headings of a grid, in the order they stand. */
-function rowIds(grid: HTMLElement): (string | null)[] {
-  return Array.from(grid.querySelectorAll('.ag-row[row-id]:not(.ag-row-pinned)'))
-    .sort((a, b) => Number(a.getAttribute('row-index')) - Number(b.getAttribute('row-index')))
-    .map((row) => row.getAttribute('row-id'));
-}
-
 describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
@@ -126,9 +120,24 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
   });
 
   const pageText = () => visible(document.body.textContent);
-  const windowGrid = () => gridOf(language, 'bikri-past-label');
+  /** The line of a day of the window: its button, or null for a day with no بکری. */
+  const dayLine = (day: string) =>
+    document.querySelector<HTMLElement>(`[data-day="${day}"] [data-day-line]`);
+  /** The grid of the بکری of an open day. */
+  const dayGrid = (day: string) =>
+    within(present(document.querySelector<HTMLElement>(`[data-day="${day}"]`))).getByRole('group', {
+      name: named(message(language, 'bikri-past-label')),
+    });
+  /** What a day of the window says about itself, closed or open. */
   const heading = (day: string) =>
-    visible(document.querySelector(`.ag-row[row-id="group:${day}"]`)?.textContent);
+    visible(document.querySelector(`[data-day="${day}"]`)?.textContent);
+  /** Opens a day with its arrow and waits for its rows. */
+  const openDay = async (user: ReturnType<typeof userEvent.setup>, day: string) => {
+    await user.click(present(dayLine(day)));
+    await waitFor(() => {
+      expect(dayLine(day)).toHaveAttribute('aria-expanded', 'true');
+    });
+  };
   /** The text of the heading of the window: its title and its chips. */
   const windowHeader = () =>
     visible(
@@ -156,10 +165,10 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
     const view = await renderApp(path);
     return { ...view, user: userEvent.setup() };
   };
-  /** The window is on screen with its day headings. */
+  /** The window is on screen with the lines of its days. */
   const windowShown = async () => {
     await waitFor(() => {
-      expect(windowGrid().querySelector('.ag-row[row-id^="group:"]')).not.toBeNull();
+      expect(document.querySelector('[data-day-line]')).not.toBeNull();
     });
   };
 
@@ -250,51 +259,54 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
       fakePast({ window: WINDOW_ROWS, gross: WINDOW_GROSS });
     });
 
-    it('every day has a heading, newest first, with its rows under it; empty days say so', async () => {
+    it('every day is one closed line, newest first; a day with no بکری has no arrow and says so', async () => {
       await open();
       await windowShown();
-      expect(rowIds(windowGrid())).toEqual([
-        'group:2026-10-09',
-        '62',
-        '61',
-        'group:2026-10-08',
-        'group:2026-10-07',
-        '71',
-        'group:2026-10-06',
-        'group:2026-10-05',
-        'group:2026-10-04',
-        'group:2026-10-03',
+      expect(
+        Array.from(document.querySelectorAll('[data-day]')).map((day) =>
+          day.getAttribute('data-day'),
+        ),
+      ).toEqual([
+        '2026-10-09',
+        '2026-10-08',
+        '2026-10-07',
+        '2026-10-06',
+        '2026-10-05',
+        '2026-10-04',
+        '2026-10-03',
       ]);
+      // The days with بکری are closed buttons; the rows are not drawn until a day opens.
+      for (const day of ['2026-10-09', '2026-10-07']) {
+        expect(dayLine(day)).toHaveAttribute('aria-expanded', 'false');
+      }
+      expect(document.querySelector('.ag-row[row-id="62"]')).toBeNull();
       for (const day of ['2026-10-08', '2026-10-06', '2026-10-05', '2026-10-04', '2026-10-03']) {
+        expect(dayLine(day)).toBeNull();
         expect(heading(day)).toContain(message(language, 'bikri-past-day-empty'));
       }
     });
 
-    it('a day with sales is a band with its date in bold and two chips; an empty day is one quiet line', async () => {
+    it('a day with بکری is a soft line with its date in bold and two pills; an empty day has no pill', async () => {
       await open();
       await windowShown();
-      const band = (day: string) =>
-        document.querySelector<HTMLElement>(`.ag-row[row-id="group:${day}"] .month-heading`);
-      expect(band('2026-10-09')?.classList.contains('month-heading-quiet')).toBe(false);
-      expect(band('2026-10-09')?.querySelectorAll('[data-heading-chip]')).toHaveLength(2);
-      expect(band('2026-10-09')?.querySelector('.month-heading-title')?.textContent).toBe(
+      const line = (day: string) =>
+        present(document.querySelector<HTMLElement>(`[data-day="${day}"]`));
+      expect(line('2026-10-09').querySelectorAll('[data-heading-chip]')).toHaveLength(2);
+      expect(line('2026-10-09').querySelector('.month-heading-title')?.textContent).toBe(
         '09-10-2026',
       );
-      expect(band('2026-10-08')?.classList.contains('month-heading-quiet')).toBe(true);
-      expect(band('2026-10-08')?.querySelectorAll('[data-heading-chip]')).toHaveLength(0);
-      // The figures of a chip are written left to right, as every number (F25).
-      expect(
-        band('2026-10-09')?.querySelector('[data-heading-chip] bdi[dir="ltr"]'),
-      ).not.toBeNull();
+      expect(line('2026-10-08').querySelectorAll('[data-heading-chip]')).toHaveLength(0);
+      // The figures of a pill are written left to right, as every number (F25).
+      expect(line('2026-10-09').querySelector('[data-heading-chip] bdi[dir="ltr"]')).not.toBeNull();
     });
 
-    it('a day heading has its date, its count and its خام بکری, as the backend said them', async () => {
+    it('a day line has its date, its count and its خام بکری, as the backend said them', async () => {
       await open();
       await windowShown();
       const figures = (day: string) =>
-        Array.from(
-          document.querySelectorAll(`.ag-row[row-id="group:${day}"] [data-heading-chip]`),
-        ).map((figure) => visible(figure.textContent));
+        Array.from(document.querySelectorAll(`[data-day="${day}"] [data-heading-chip]`)).map(
+          (figure) => visible(figure.textContent),
+        );
       expect(heading('2026-10-09')).toContain('09-10-2026');
       // The count and the خام بکری are the backend's: two بکری on that day, 41,400 together.
       expect(figures('2026-10-09')).toEqual([
@@ -309,22 +321,35 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
       expect(figures('2026-10-08')).toEqual([]);
     });
 
-    it('the rows of the window have the columns of the list, and the totals row is the backend’s', async () => {
-      await open();
+    it('the rows of an open day have the columns of the list, and the totals row is the backend’s', async () => {
+      const { user } = await open();
       await windowShown();
-      const row = windowGrid().querySelector('.ag-row[row-id="61"]');
+      await openDay(user, '2026-10-09');
+      await waitFor(() => {
+        expect(dayGrid('2026-10-09').querySelector('.ag-row[row-id="61"]')).not.toBeNull();
+      });
+      const row = dayGrid('2026-10-09').querySelector('.ag-row[row-id="61"]');
       expect(visible(row?.querySelector('[col-id="number"]')?.textContent)).toBe('2');
       expect(visible(row?.querySelector('[col-id="gross"]')?.textContent)).toBe('29,400');
-      expect(windowGrid().querySelector('.ag-row-pinned [col-id="sellers"]')).not.toBeNull();
+      expect(
+        dayGrid('2026-10-09').querySelector('.ag-row-pinned [col-id="sellers"]'),
+      ).not.toBeNull();
+      // Only that day's rows are in it.
+      expect(dayGrid('2026-10-09').querySelector('.ag-row[row-id="71"]')).toBeNull();
     });
 
     it('the truck of an old بکری is in its row at the wide step, and a new one has none', async () => {
       stubStep('wide');
-      await open();
+      const { user } = await open();
       await windowShown();
+      await openDay(user, '2026-10-09');
+      await waitFor(() => {
+        expect(dayGrid('2026-10-09').querySelector('.ag-row[row-id="61"]')).not.toBeNull();
+      });
       const truck = (id: string) =>
         visible(
-          windowGrid().querySelector(`.ag-row[row-id="${id}"] [col-id="truck"]`)?.textContent,
+          dayGrid('2026-10-09').querySelector(`.ag-row[row-id="${id}"] [col-id="truck"]`)
+            ?.textContent,
         );
       expect(truck('61')).toBe('LES-1234');
       expect(truck('62')).toBe('');
@@ -377,10 +402,11 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
       });
     });
 
-    it('Page Up in the window goes back 7 days and Page Down comes 7 days nearer', async () => {
+    it('Page Up on a day line goes back 7 days and Page Down comes 7 days nearer', async () => {
       const { user } = await open();
       await windowShown();
-      await user.click(cellOf(windowGrid(), 1, 'number'));
+      // Page Up on a day line goes back 7 days.
+      present(dayLine('2026-10-09')).focus();
       await user.keyboard('{PageUp}');
       await waitFor(() => {
         expect(lastWindow()).toMatchObject({ from: '26-09-2026', to: '02-10-2026' });
@@ -609,10 +635,12 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
       const { user } = await open();
       await windowShown();
       await user.click(await tick());
+      // Every day with a بکری opens with the tick (FR-12.46), so the cancelled one is on screen.
       await waitFor(() => {
         expect(
           visible(
-            windowGrid().querySelector('.ag-row[row-id="63"] [col-id="status"]')?.textContent,
+            dayGrid('2026-10-09').querySelector('.ag-row[row-id="63"] [col-id="status"]')
+              ?.textContent,
           ),
         ).toBe(message(language, 'bikri-status-cancelled'));
       });
@@ -647,10 +675,14 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
         expect(lastWindow()).toMatchObject({ to: '05-10-2026', all: true });
       });
       await waitFor(() => {
-        expect(windowGrid().querySelector('.ag-row[row-id="81"]')).not.toBeNull();
+        expect(dayGrid('2026-10-04').querySelector('.ag-row[row-id="81"]')).not.toBeNull();
       });
       await user.click(
-        present(windowGrid().querySelector<HTMLElement>('.ag-row[row-id="81"] [col-id="number"]')),
+        present(
+          dayGrid('2026-10-04').querySelector<HTMLElement>(
+            '.ag-row[row-id="81"] [col-id="number"]',
+          ),
+        ),
       );
       await user.keyboard('{Enter}');
       await waitFor(() => {
@@ -734,7 +766,13 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
       });
     });
 
-    it('the row and the day heading show the new values when the list is opened again', async () => {
+    it('the row and the day line show the new values when the list is opened again', async () => {
+      // The edit screen has read this بکری, so the list knows its day and opens it.
+      vi.mocked(bikriApi.bikriGet).mockResolvedValue({
+        ...savedEvent1(),
+        id: 61,
+        entry_date: '2026-10-09',
+      });
       const { router } = await open('/bikri/today?end=2026-10-09&row=61');
       await windowShown();
       expect(heading('2026-10-09')).toContain('41,400');
@@ -753,16 +791,31 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
       });
       await waitFor(() => {
         expect(
-          visible(windowGrid().querySelector('.ag-row[row-id="61"] [col-id="gross"]')?.textContent),
+          visible(
+            dayGrid('2026-10-09').querySelector('.ag-row[row-id="61"] [col-id="gross"]')
+              ?.textContent,
+          ),
         ).toBe('19,316');
       });
     });
 
-    it('the row the Owner came back to has focus', async () => {
+    it('the day of the بکری the Owner came back to is open, and its row has focus', async () => {
+      vi.mocked(bikriApi.bikriGet).mockResolvedValue({
+        ...savedEvent1(),
+        id: 61,
+        entry_date: '2026-10-09',
+      });
       await open('/bikri/today?end=2026-10-09&row=61');
       await windowShown();
       await waitFor(() => {
-        expect(windowGrid().querySelector('.ag-row[row-id="61"] .ag-cell-focus')).not.toBeNull();
+        expect(dayLine('2026-10-09')).toHaveAttribute('aria-expanded', 'true');
+      });
+      // The other day with بکری stays closed.
+      expect(dayLine('2026-10-07')).toHaveAttribute('aria-expanded', 'false');
+      await waitFor(() => {
+        expect(
+          dayGrid('2026-10-09').querySelector('.ag-row[row-id="61"] .ag-cell-focus'),
+        ).not.toBeNull();
       });
     });
   });

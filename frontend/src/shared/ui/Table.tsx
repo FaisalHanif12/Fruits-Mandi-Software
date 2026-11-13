@@ -16,6 +16,12 @@
 //   - one row height, the cells' content in the middle of the row (R7).
 // Every cell is a `td` or `th` with the same padding, so the same column type has the same look
 // on every screen (F12).
+//
+// `dense` (plan 75) is for a table with many figure columns in a narrow card (the lines of a saved
+// lot: nine columns in 852 px). Its cells keep 8 px instead of 12 at each side, a quantity and a figure
+// column take the dense widths (`--col-dense-*-w`), and a heading is balanced over its two lines, so
+// no heading takes more than two lines and no column is squeezed to a word (R4). Everything else is
+// as before: the same kinds, the same alignment, the same row height.
 
 import type { ReactNode } from 'react';
 
@@ -47,9 +53,12 @@ interface TableProps<Row> {
    * sideways inside the box instead of squeezing its columns (the answers in the chat window, plan 51).
    */
   scrolls?: boolean;
+  /** Many figure columns in a narrow card: the dense look described at the top of this file. */
+  dense?: boolean;
 }
 
 const CELL = 'px-3 py-2 align-middle';
+const CELL_DENSE = 'px-2 py-2 align-middle';
 const KIND_CLASS: Record<TableColumnKind, string> = {
   text: 'text-start',
   // direction: ltr + text-align: center is the middle of the column in both languages (F17).
@@ -70,6 +79,12 @@ const SIZE_CLASS: Record<TableColumnSize, string> = {
   date: 'w-col-date',
   datetime: 'w-col-datetime',
   status: 'w-col-status',
+};
+
+/** The sizes a dense table narrows (plan 75). The others keep their width. */
+const DENSE_SIZE_CLASS: Partial<Record<TableColumnSize, string>> = {
+  money: 'w-col-dense-figure',
+  qty: 'w-col-dense-count',
 };
 
 /** The same widths as least widths, for a table that scrolls instead of squeezing (`scrolls`). */
@@ -99,13 +114,25 @@ function classOf(
   column: { kind?: TableColumnKind; size?: TableColumnSize },
   nameColumn: boolean,
   holdSize: boolean,
+  dense: boolean,
 ): string {
   const kind = column.kind ?? 'text';
   const hold = holdSize && column.size !== undefined ? ` ${MIN_SIZE_CLASS[column.size]}` : '';
-  return `${CELL} ${KIND_CLASS[kind]}${column.size === undefined ? '' : ` ${SIZE_CLASS[column.size]}`}${hold}${nameColumn ? ' min-w-col-name' : ''}`;
+  const width =
+    column.size === undefined
+      ? ''
+      : ` ${(dense ? DENSE_SIZE_CLASS[column.size] : undefined) ?? SIZE_CLASS[column.size]}`;
+  return `${dense ? CELL_DENSE : CELL} ${KIND_CLASS[kind]}${width}${hold}${nameColumn ? (dense ? ' min-w-col-dense-name' : ' min-w-col-name') : ''}`;
 }
 
-export function Table<Row>({ label, columns, rows, rowKey, scrolls = false }: TableProps<Row>) {
+export function Table<Row>({
+  label,
+  columns,
+  rows,
+  rowKey,
+  scrolls = false,
+  dense = false,
+}: TableProps<Row>) {
   const hasTotal = columns.some((column) => column.total !== undefined);
   // The first column of words keeps room for a name; the figure columns give way (plan 39 R5).
   const nameAt = columns.findIndex((column) => (column.kind ?? 'text') === 'text');
@@ -115,7 +142,7 @@ export function Table<Row>({ label, columns, rows, rowKey, scrolls = false }: Ta
   return (
     <div className="min-w-0 overflow-x-auto">
       <table aria-label={label} className="w-full border-collapse type-body">
-        <thead className="bg-surface-sunken text-ink-muted">
+        <thead className="bg-surface-readonly text-ink-muted">
           <tr>
             {columns.map((column, position) => {
               const kind = column.kind ?? 'text';
@@ -125,7 +152,7 @@ export function Table<Row>({ label, columns, rows, rowKey, scrolls = false }: Ta
                   scope="col"
                   dir={directionOf(kind)}
                   data-align={ALIGN_OF[kind]}
-                  className={`${classOf(column, keepsRoom(column, position), scrolls)} font-normal`}
+                  className={`${classOf(column, keepsRoom(column, position), scrolls, dense)} font-normal${dense ? ' text-balance' : ''}`}
                 >
                   {kind === 'action' ? (
                     <span className="sr-only">{column.header}</span>
@@ -147,7 +174,7 @@ export function Table<Row>({ label, columns, rows, rowKey, scrolls = false }: Ta
                     key={column.id}
                     dir={directionOf(kind)}
                     data-align={ALIGN_OF[kind]}
-                    className={classOf(column, keepsRoom(column, position), scrolls)}
+                    className={classOf(column, keepsRoom(column, position), scrolls, dense)}
                   >
                     {column.cell(row)}
                   </td>
@@ -166,7 +193,7 @@ export function Table<Row>({ label, columns, rows, rowKey, scrolls = false }: Ta
                     key={column.id}
                     dir={directionOf(kind)}
                     data-align={ALIGN_OF[kind]}
-                    className={classOf(column, keepsRoom(column, position), scrolls)}
+                    className={classOf(column, keepsRoom(column, position), scrolls, dense)}
                   >
                     {column.total}
                   </td>

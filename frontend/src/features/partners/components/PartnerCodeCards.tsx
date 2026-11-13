@@ -5,7 +5,7 @@
 // masked while typed, and nothing here keeps it.
 
 import { Localized } from '@fluent/react';
-import { KeyRound, LockKeyhole } from 'lucide-react';
+import { KeyRound, Lock, LockKeyhole } from 'lucide-react';
 import { useState, type SyntheticEvent } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
@@ -68,7 +68,7 @@ export function UnlockCard({ waitSeconds, onForgot, onOpened }: UnlockCardProps)
   };
 
   return (
-    <Card compact title={<Localized id="partners-code-locked-title" />}>
+    <Card compact icon={Lock} title={<Localized id="partners-code-locked-title" />}>
       <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
         <Localized id="partners-code-locked-help">
           <p className="type-body text-ink-muted" />
@@ -145,7 +145,7 @@ export function SetCodeCard({ onDone }: SetCodeCardProps) {
   };
 
   return (
-    <Card compact title={<Localized id="partners-code-set-title" />}>
+    <Card compact icon={KeyRound} title={<Localized id="partners-code-set-title" />}>
       <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
         <Localized id="partners-code-set-help">
           <p className="type-body text-ink-muted" />
@@ -245,7 +245,7 @@ export function ResetCodeCard({ onBack, onDone }: ResetCodeCardProps) {
   };
 
   return (
-    <Card compact title={<Localized id="partners-code-reset-title" />}>
+    <Card compact icon={KeyRound} title={<Localized id="partners-code-reset-title" />}>
       <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
         <Localized id="partners-code-reset-help">
           <p className="type-body text-ink-muted" />

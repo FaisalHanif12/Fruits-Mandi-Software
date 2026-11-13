@@ -1,11 +1,12 @@
 // The رپورٹ area (route /reports; PRD FR-5.2, 19.1, 19.2): the catalogue of reports grouped as the
 // PRD lists them. A search box finds a report by its name, its line or its number (R20), and a row
-// of buttons jumps to a group (plan 38). ↑ ↓ move between the reports and Enter opens one. Four
-// states: loading, an error with a retry, nothing built yet (or nothing found), and the groups.
+// of buttons jumps to a group (plan 38). ↑ ↓ move between the reports and Enter opens one. Pointing at
+// a report, or moving to it, opens its guide card: what it shows, its columns and filters, what can be
+// printed and when to use it (plan 75, PRD FR-19.14). Four states: loading, an error with a retry,
+// nothing built yet (or nothing found), and the groups.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Link } from '@tanstack/react-router';
-import { FileText, FileX, SearchX } from 'lucide-react';
+import { FileText, FileX, MousePointer2, SearchX } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import { uiErrorOf } from '../../../shared/api';
@@ -19,8 +20,10 @@ import {
   ListPage,
   Select,
   LoadingState,
+  focusQuietly,
 } from '../../../shared/ui';
 import { groupCatalog, helpIdOf } from '../catalog';
+import { ReportCard } from '../components/ReportCard';
 import { useReportCatalog } from '../hooks';
 
 const ISOLATION_MARKS = /[\u2066-\u2069]/g;
@@ -35,8 +38,10 @@ export function ReportsHomePage() {
   const [text, setText] = useState('');
   const ready = catalog.data !== undefined;
   // The first report has focus when the area opens, so ↓ and Enter work at once.
+  // Quietly: the user has not asked for the guide card of the first report yet (plan 75).
   useEffect(() => {
-    if (ready) ref.current?.querySelector<HTMLElement>('[data-nav-item]')?.focus();
+    const first = ready ? ref.current?.querySelector<HTMLElement>('[data-nav-item]') : null;
+    if (first !== null && first !== undefined) focusQuietly(first);
   }, [ready]);
 
   const needle = text.trim().toLowerCase();
@@ -64,7 +69,7 @@ export function ReportsHomePage() {
       `[data-group="${group}"] [data-nav-item]`,
     );
     first?.scrollIntoView({ block: 'start' });
-    first?.focus();
+    if (first !== null && first !== undefined) focusQuietly(first);
   };
 
   let body;
@@ -107,52 +112,42 @@ export function ReportsHomePage() {
     );
   } else {
     body = (
-      <nav
-        ref={ref}
-        onKeyDown={onKeyDown}
-        className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto"
-      >
-        {shown.map((group) => (
-          <section
-            key={group.group}
-            data-group={group.group}
-            aria-label={l10n.getString('reports-group-label', {
-              group: l10n.getString(group.titleId),
-            })}
-            className="flex flex-col gap-3"
-          >
-            <h2 className="type-section text-ink">{l10n.getString(group.titleId)}</h2>
-            <div className="grid grid-cols-2 gap-3 normal:grid-cols-3">
-              {group.entries.map((entry) => (
-                <Link
-                  key={entry.id}
-                  to="/reports/$id"
-                  params={{ id: entry.id }}
-                  data-nav-item
-                  className="flex min-h-control items-center gap-3 rounded-3 border border-border bg-surface p-3"
-                >
-                  <span className="flex size-badge shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                    <FileText aria-hidden="true" className="size-icon-lg" />
-                  </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="type-section text-ink">{l10n.getString(entry.title_id)}</span>
-                    {l10n.getBundle(helpIdOf(entry)) === null ? null : (
-                      <span className="type-body text-ink-muted">
-                        {l10n.getString(helpIdOf(entry))}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
-      </nav>
+      <>
+        {/* What the cards do: one quiet line, so the Owner knows to point at a report before he opens it. */}
+        <p className="type-body flex shrink-0 items-center gap-2 text-ink-muted">
+          <MousePointer2 aria-hidden="true" className="size-icon-md shrink-0 rtl:-scale-x-100" />
+          <Localized id="reports-hover-hint" />
+        </p>
+        <nav
+          ref={ref}
+          onKeyDown={onKeyDown}
+          className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto"
+        >
+          {shown.map((group) => (
+            <section
+              key={group.group}
+              data-group={group.group}
+              aria-label={l10n.getString('reports-group-label', {
+                group: l10n.getString(group.titleId),
+              })}
+              className="flex flex-col gap-3"
+            >
+              <h2 className="type-section text-ink">{l10n.getString(group.titleId)}</h2>
+              <div className="grid grid-cols-2 gap-3 normal:grid-cols-3">
+                {group.entries.map((entry) => (
+                  <ReportCard key={entry.id} entry={entry} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </nav>
+      </>
     );
   }
 
   return (
     <ListPage
+      icon={FileText}
       titleId="reports-title"
       help={
         <Localized id="reports-help">
