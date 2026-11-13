@@ -156,6 +156,10 @@ err-out-of-range = { $reason ->
 }
 # review: pending
 err-not-logged-in = پہلے لاگ ان کریں۔
+# The Mac asked for the password to open the app's key in Mac Keychain and was refused or left unanswered.
+# Only on a Mac (plan 75 7.8). It says what to do, so it has no reference number.
+# review: pending
+err-keystore-denied = Mac Keychain نے ایپ کو اجازت نہیں دی۔ Keychain کے باکس میں اپنے Mac کا پاس ورڈ لکھیں اور Always Allow چنیں، پھر دوبارہ لاگ ان کریں۔
 # PRD FR-8.4.
 # review: pending
 err-session-locked = ایپ لاک ہے۔ پاس ورڈ لکھ کر کھولیں۔

@@ -108,6 +108,16 @@ impl fmt::Debug for AuditKey {
     }
 }
 
+impl Drop for AuditKey {
+    /// Clears the bytes when the key goes away. Best effort: there is no `zeroize` crate in this
+    /// workspace (no new dependency, plan 75 Section 7.8) and `unsafe` is forbidden, so the write is
+    /// kept from being optimised away with `black_box`.
+    fn drop(&mut self) {
+        self.0 = [0; KEY_LEN];
+        std::hint::black_box(&self.0);
+    }
+}
+
 /// Where the key lives. The real one is the system key store; tests use memory.
 pub trait KeyStore: Send + Sync {
     /// The key. Creates and stores a new one the first time.
@@ -169,9 +179,20 @@ impl KeyringKeyStore {
     }
 }
 
+/// A key store error as the app sees it. A refusal of the store itself (a platform failure, such
+/// as a dismissed or mistyped Keychain box, or no access to the store) is `KeyStoreDenied`, which
+/// the user can fix by allowing the app. Any other failure is `KeyStore` (plan 75 Section 7.8).
+fn store_error(error: keyring::Error) -> DbError {
+    match &error {
+        keyring::Error::PlatformFailure(_) | keyring::Error::NoStorageAccess(_) => {
+            DbError::KeyStoreDenied(error.to_string())
+        }
+        _ => DbError::KeyStore(error.to_string()),
+    }
+}
+
 impl KeyStore for KeyringKeyStore {
     fn audit_key(&self) -> Result<AuditKey, DbError> {
-        let store_error = |e: keyring::Error| DbError::KeyStore(e.to_string());
         let entry =
             keyring::Entry::new(&KeyringKeyStore::service(), KEYRING_ENTRY).map_err(store_error)?;
         match entry.get_secret() {
@@ -186,7 +207,6 @@ impl KeyStore for KeyringKeyStore {
     }
 
     fn set_audit_key(&self, key: &AuditKey) -> Result<(), DbError> {
-        let store_error = |e: keyring::Error| DbError::KeyStore(e.to_string());
         keyring::Entry::new(&KeyringKeyStore::service(), KEYRING_ENTRY)
             .map_err(store_error)?
             .set_secret(&key.0)
@@ -236,10 +256,13 @@ impl Auditor {
         }
     }
 
-    /// The key, read from the store once and kept in memory.
+    /// The key, read from the store once per app run and kept in memory (plan 75 Section 7.8: one
+    /// Keychain approval covers the whole run, not every sign-in). It is never written to disk or
+    /// to a log. A refusal is not kept, so the next call asks the store again and the user can
+    /// allow the app then.
     ///
     /// # Errors
-    /// `DbError::KeyStore`.
+    /// `DbError::KeyStore`, or `DbError::KeyStoreDenied` when the store refused the app.
     pub fn key(&self) -> Result<AuditKey, DbError> {
         let mut cached = self.key.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(key) = cached.as_ref() {
@@ -441,6 +464,99 @@ mod tests {
         }
         let text = format!("{:?}", AuditKey::from_bytes([1; 32]));
         assert!(!text.contains("01"), "Debug never shows the key");
+    }
+
+    /// A store that counts its reads and can refuse them.
+    struct CountingStore {
+        reads: std::sync::atomic::AtomicUsize,
+        refuse: std::sync::atomic::AtomicBool,
+    }
+
+    impl CountingStore {
+        fn new(refuse: bool) -> Arc<Self> {
+            Arc::new(Self {
+                reads: std::sync::atomic::AtomicUsize::new(0),
+                refuse: std::sync::atomic::AtomicBool::new(refuse),
+            })
+        }
+
+        fn reads(&self) -> usize {
+            self.reads.load(std::sync::atomic::Ordering::SeqCst)
+        }
+    }
+
+    impl KeyStore for CountingStore {
+        fn audit_key(&self) -> Result<AuditKey, DbError> {
+            self.reads.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            if self.refuse.load(std::sync::atomic::Ordering::SeqCst) {
+                return Err(DbError::KeyStoreDenied("refused".to_owned()));
+            }
+            Ok(AuditKey::from_bytes([5; 32]))
+        }
+    }
+
+    fn auditor_with(store: Arc<CountingStore>) -> Auditor {
+        Auditor::new(
+            store,
+            Arc::new(crate::clock::ManualClock::new(chrono::Utc::now())),
+        )
+    }
+
+    #[test]
+    fn the_key_is_read_from_the_store_once_per_run() {
+        let store = CountingStore::new(false);
+        let auditor = auditor_with(store.clone());
+        for _ in 0..5 {
+            assert!(
+                auditor
+                    .key()
+                    .unwrap()
+                    .same_as(&AuditKey::from_bytes([5; 32]))
+            );
+        }
+        assert_eq!(store.reads(), 1, "one read covers the whole run");
+    }
+
+    #[test]
+    fn a_refusal_gives_its_own_code_and_is_not_kept() {
+        use std::sync::atomic::Ordering;
+        let store = CountingStore::new(true);
+        let auditor = auditor_with(store.clone());
+        let error = auditor.key().unwrap_err();
+        assert_eq!(
+            error.code(),
+            mandi_core::error::ErrorCode::ErrKeystoreDenied,
+            "{error}"
+        );
+        // The refusal is not cached: once the user allows the app, the next call works.
+        store.refuse.store(false, Ordering::SeqCst);
+        assert!(auditor.key().is_ok());
+        assert_eq!(store.reads(), 2);
+        assert!(auditor.key().is_ok());
+        assert_eq!(store.reads(), 2, "and then it is kept");
+    }
+
+    #[test]
+    fn a_platform_failure_or_no_access_is_a_refusal_and_other_failures_are_not() {
+        let platform = |text: &str| {
+            keyring::Error::PlatformFailure(Box::new(std::io::Error::other(text.to_owned())))
+        };
+        let access = keyring::Error::NoStorageAccess(Box::new(std::io::Error::other("locked")));
+        for refused in [
+            store_error(platform(
+                "The user name or passphrase you entered is not correct.",
+            )),
+            store_error(access),
+        ] {
+            assert!(matches!(refused, DbError::KeyStoreDenied(_)), "{refused}");
+            assert_eq!(
+                refused.code(),
+                mandi_core::error::ErrorCode::ErrKeystoreDenied
+            );
+        }
+        let other = store_error(keyring::Error::BadStoreFormat("x".to_owned()));
+        assert!(matches!(other, DbError::KeyStore(_)), "{other}");
+        assert_eq!(other.code(), mandi_core::error::ErrorCode::ErrInternal);
     }
 
     #[test]

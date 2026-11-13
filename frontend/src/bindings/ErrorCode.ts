@@ -163,4 +163,5 @@ export type ErrorCode =
   | 'ERR_NO_BASE'
   | 'ERR_TOO_LITTLE_HISTORY'
   | 'ERR_SIGN_REQUIRED'
-  | 'ERR_SIGN_WRONG';
+  | 'ERR_SIGN_WRONG'
+  | 'ERR_KEYSTORE_DENIED';

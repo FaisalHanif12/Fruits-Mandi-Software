@@ -199,6 +199,16 @@ Confirmed with Umar before building. Owner: `frontend` (the Past Sales files).
 - Speed: opening a day draws rows already loaded for the window; no extra backend call unless the window's page did not hold them (then one indexed call, under 300 ms, NFR-SPD-24).
 - Tests: closed by default; arrow, Enter and Space open and close; empty day has no arrow; window move closes; go-to-date opens; search opens matching days; tick opens all; edit return keeps the day open; language switch keeps open days; screenshots ur and en at 1366 and 1024, closed and one day open.
 
+## 7.8 Fix: sign-in shows "کچھ غلط ہو گیا" with the right password (Umar, 14-11-2026)
+
+Cause, from the log (E-20261114-0001 to 0003, and 32 times since 26-10-2026): `audit key store: Platform failure: The user name or passphrase you entered is not correct.` Sign-in writes an audit entry (FR-8.6), which reads the audit chain key from the Mac Keychain (NFR-SEC-6). Every dev rebuild gives the app a new ad-hoc signature, so the Keychain asks again for the Mac password; a dismissed, hidden or mistyped Keychain box comes back as this error, and the screen shows the generic error. Windows Credential Manager does not ask like this, so it is a Mac phase problem, but it must not show again.
+
+Fix (owner `backend`, Fluent text by `frontend`):
+1. Read the audit chain key from the key store once per app run and keep it in process memory for the rest of the run (never on disk, never logged, cleared on exit). One Keychain approval then covers the whole run, not every sign-in.
+2. A Keychain refusal is its own error code `ERR_KEYSTORE_DENIED` (not `ERR_INTERNAL`), shown on the sign-in screen in both languages with what to do: "Mac Keychain did not allow the app. Enter your Mac password in the Keychain box and choose Always Allow, then sign in again." Nothing is saved and the typed user name stays.
+3. Dev builds keep one stable code signature, so "Always Allow" stays valid across rebuilds: a cargo runner signs the debug binary with a local "Mandi Dev" identity when it exists (plain run when it does not), and a one-time script `scripts/dev/make-dev-signing-identity.sh` makes that identity (Umar runs it once, with his Mac password).
+4. Test: a key store that refuses gives `ERR_KEYSTORE_DENIED`, and a second sign-in in the same run reads no key from the store.
+
 ## 8. Acceptance checklist
 
 - [ ] T1: `column_title_ids` on every catalogue entry; each ID found in both Fluent files (test); `cargo test -p mandi-reports` green; bindings regenerated, not hand-edited.

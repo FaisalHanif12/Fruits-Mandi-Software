@@ -452,11 +452,15 @@ pub enum ErrorCode {
     ErrSignRequired,
     /// The sign is not the Owner's: nothing was opened (PRD FR-21.4, plan 73). Field `sign`.
     ErrSignWrong,
+    /// The system key store (the Mac Keychain in development) did not let the app read the audit
+    /// chain key: the box was dismissed, closed or its password was wrong. Nothing was saved. Sign
+    /// in again and allow the app (plan 75 Section 7.8, NFR-SEC-6). No field.
+    ErrKeystoreDenied,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 159] = [
+    pub const ALL: [ErrorCode; 160] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -616,6 +620,7 @@ impl ErrorCode {
         ErrorCode::ErrTooLittleHistory,
         ErrorCode::ErrSignRequired,
         ErrorCode::ErrSignWrong,
+        ErrorCode::ErrKeystoreDenied,
     ];
 }
 

@@ -161,6 +161,10 @@ err-out-of-range = { $reason ->
 }
 # review: pending
 err-not-logged-in = Please sign in first.
+# The Mac asked for the password to open the app's key in Mac Keychain and was refused or left unanswered.
+# Only on a Mac (plan 75 7.8). It says what to do, so it has no reference number.
+# review: pending
+err-keystore-denied = Mac Keychain did not allow the app. Enter your Mac password in the Keychain box and choose Always Allow, then sign in again.
 # PRD FR-8.4.
 # review: pending
 err-session-locked = The app is locked. Type your password to unlock it.

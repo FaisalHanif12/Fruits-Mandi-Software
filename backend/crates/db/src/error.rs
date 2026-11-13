@@ -55,6 +55,11 @@ pub enum DbError {
     /// The audit chain key could not be read or created (Code Standards S3).
     #[error("audit key store: {0}")]
     KeyStore(String),
+    /// The system key store refused the app: a Keychain box was dismissed or its password was
+    /// wrong, or the store is locked (plan 75 Section 7.8). The user can fix it by allowing the
+    /// app, so it has its own code and is not `ERR_INTERNAL`.
+    #[error("audit key store refused the app: {0}")]
+    KeyStoreDenied(String),
     /// Any other SQLite error.
     #[error("sqlite: {0}")]
     Sqlite(#[source] rusqlite::Error),
@@ -77,6 +82,7 @@ impl DbError {
             DbError::MigrationFailed(_) => ErrorCode::ErrMigrationFailed,
             DbError::Busy => ErrorCode::ErrDbBusy,
             DbError::JournalUnbalanced => ErrorCode::ErrJournalUnbalanced,
+            DbError::KeyStoreDenied(_) => ErrorCode::ErrKeystoreDenied,
             DbError::JournalPosted
             | DbError::AppendOnly
             | DbError::JournalReversal

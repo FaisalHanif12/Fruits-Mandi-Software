@@ -256,6 +256,20 @@ mod tests {
     }
 
     #[test]
+    fn a_key_store_refusal_has_its_own_code_and_no_field() {
+        let value = serde_json::to_value(UiError::from(DbError::KeyStoreDenied(
+            "Platform failure: the passphrase is not correct".into(),
+        )))
+        .unwrap();
+        assert_eq!(value["errors"][0]["code"], "ERR_KEYSTORE_DENIED");
+        assert!(value["errors"][0]["field"].is_null());
+        assert!(
+            !value.to_string().contains("passphrase"),
+            "the cause stays in the log"
+        );
+    }
+
+    #[test]
     fn internal_detail_never_reaches_the_screen() {
         let value = serde_json::to_value(UiError::internal("secret path C:\\x")).unwrap();
         assert!(!value.to_string().contains("secret"));
