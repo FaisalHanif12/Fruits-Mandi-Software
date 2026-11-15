@@ -3,4 +3,5 @@
 /**
  * The views of PRD 18.2.
  */
-export type AnalyticsView = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K';
+export type AnalyticsView =
+  'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M';

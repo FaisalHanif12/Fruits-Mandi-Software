@@ -43,7 +43,7 @@ import { OpenGardens } from '../components/OpenGardens';
 import { OldestDues } from '../components/OldestDues';
 import { PartnerStrip } from '../components/PartnerStrip';
 import { DayBookButton, QuickActions } from '../components/QuickActions';
-import { BackupTile, HealthTile } from '../components/StatusTiles';
+import { HealthTile } from '../components/StatusTiles';
 import { TodayBikriList } from '../components/TodayBikriList';
 import { UpdateNote } from '../components/UpdateNote';
 import { useOpenDestination } from '../destinations';
@@ -91,12 +91,9 @@ export function DashboardPage() {
   const name = status.data?.session?.display_name ?? '';
   const today = day.data?.today ?? '';
   const dayOpen = day.data?.today_open ?? true;
-  const statusTiles = (
-    <>
-      <BackupTile />
-      <HealthTile />
-    </>
-  );
+  // The last backup is in the status bar and the attention list (NFR-BAK-10); its tile is the dues of garden
+  // owners and others now (plan 76 point 10).
+  const statusTiles = <HealthTile />;
 
   let body: ReactNode;
   if (dashboard.isPending) {

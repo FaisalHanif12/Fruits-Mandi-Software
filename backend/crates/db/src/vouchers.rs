@@ -1206,18 +1206,20 @@ pub fn credit_row(conn: &Connection, line_id: i64) -> rusqlite::Result<CreditRow
 /// and what is open on all of them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenBillRows {
-    /// The oldest open bills, oldest first, at most the `limit` that was asked.
+    /// One page of the open bills, oldest first, at most the `limit` that was asked.
     pub rows: Vec<BillRow>,
     /// All the open bills of the key.
     pub total_count: usize,
     /// Σ of what is open on all of them, paisa (not only on `rows`).
     pub open_paisa: i64,
+    /// The day of the oldest open bill of all of them, whatever page `rows` is.
+    pub oldest_entry_date: Option<String>,
 }
 
 /// The open bills of a buyer key, found by walking back from the newest entry (see
 /// [`crate::matching::open_bills_upto`]). The matching rows must be canonical, which every writer
 /// keeps true; if the walk does not end exactly on the open total it reads the whole key as
-/// [`open_bill_rows`] does. Only the oldest `limit` bills are read with their source (the bill
+/// [`open_bill_rows`] does. Only `limit` bills, from the `offset`-th oldest, are read with their source (the bill
 /// numbers cost a read each); the count and the open total are of all of them.
 ///
 /// # Errors
@@ -1226,6 +1228,7 @@ pub fn open_bill_rows_fast(
     conn: &Connection,
     account_id: i64,
     person_key: Option<&str>,
+    offset: usize,
     limit: usize,
 ) -> rusqlite::Result<OpenBillRows> {
     let expected = crate::matching::expected_open_bills(conn, account_id, person_key)?;
@@ -1234,6 +1237,7 @@ pub fn open_bill_rows_fast(
             rows: Vec::new(),
             total_count: 0,
             open_paisa: 0,
+            oldest_entry_date: None,
         });
     }
     let found = crate::matching::open_bills_upto(conn, account_id, person_key, expected)?;
@@ -1244,7 +1248,7 @@ pub fn open_bill_rows_fast(
             .checked_add(open)
             .ok_or(rusqlite::Error::IntegralValueOutOfRange(0, open_paisa))?;
     }
-    let kept: Vec<_> = found.iter().take(limit).collect();
+    let kept: Vec<_> = found.iter().skip(offset).take(limit).collect();
     let ids: Vec<i64> = kept.iter().map(|l| l.line_id).collect();
     let mut rows = bill_rows_by_ids(conn, &ids)?;
     for row in &mut rows {
@@ -1252,10 +1256,22 @@ pub fn open_bill_rows_fast(
             row.matched_paisa = line.matched_paisa;
         }
     }
+    // The oldest bill of all is the first of the walk, whatever page was read.
+    let oldest_entry_date = match found.first() {
+        Some(first) => match rows.iter().find(|r| r.line_id == first.line_id) {
+            Some(row) => Some(row.entry_date.clone()),
+            None => bill_rows_by_ids(conn, &[first.line_id])?
+                .into_iter()
+                .next()
+                .map(|r| r.entry_date),
+        },
+        None => None,
+    };
     Ok(OpenBillRows {
         rows,
         total_count: found.len(),
         open_paisa,
+        oldest_entry_date,
     })
 }
 

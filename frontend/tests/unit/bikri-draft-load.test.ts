@@ -140,7 +140,7 @@ describe('what the user changed against the loaded text', () => {
     salesOf(stores).getState().updatePicked('sale:101', SALE.buyer, other);
     const diff = diffEdit(stores, baseline);
     expect(diff.items[0]).toMatchObject({ field: SALE.buyer });
-    expect(diff.items[0]?.beforeRecord?.id).toBe(20);
+    expect(diff.items[0]?.beforeRecord?.id).toBe(21);
     expect(diff.items[0]?.afterRecord?.id).toBe(99);
   });
 

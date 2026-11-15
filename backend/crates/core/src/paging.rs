@@ -44,6 +44,21 @@ impl SortDirection {
     }
 }
 
+/// Where a page of a list starts and how many rows it holds (plan 76 point 8, PRD FR-19.11). A
+/// read that has no page of its own takes this beside its own input. `limit` 0 gives the read's
+/// default page.
+///
+/// Example: `{ offset: 200, limit: 0 }` on the open bills of a buyer is the second page of 200.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct PageInput {
+    /// How many rows to skip. 0 for the first page.
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives the default page of the read.
+    #[serde(default)]
+    pub limit: u32,
+}
+
 /// A sort chosen on a column title (plan 38 R4). `column` is the name of a field of the rows of the
 /// list, as the answer sends it (for example `entry_date` or `gross`). A column the list cannot
 /// sort by is `ERR_OUT_OF_RANGE` on `sort.column`, with the allowed names in the value `allowed`.

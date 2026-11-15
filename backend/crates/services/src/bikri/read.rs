@@ -479,11 +479,31 @@ pub fn list_whole_paged(
 
 /// Finds بکری by number, the start of the truck number, seller, buyer, a چکتا buyer's name, day or
 /// item (PRD FR-12.13, FR-7.50, plan 67). Every filter given must match. Newest first, at most 50
-/// rows.
+/// rows (the first page of [`find_page`]).
 ///
 /// # Errors
 /// The date codes on `date`.
 pub fn find(ctx: &Context, input: &BikriFindInput) -> Result<Vec<BikriListRow>, ServiceError> {
+    find_page(ctx, input, mandi_domain::core::paging::PageInput::default())
+}
+
+/// The most rows one page of the find holds (plan 76 point 8).
+const FIND_MAX_LIMIT: i64 = 100;
+
+/// One page of the find, newest first (PRD FR-12.13, plan 76 point 8): `limit` 0 gives 50 and
+/// more than 100 gives 100. A page that is full may have another after it.
+///
+/// # Errors
+/// As [`find`].
+pub fn find_page(
+    ctx: &Context,
+    input: &BikriFindInput,
+    page: mandi_domain::core::paging::PageInput,
+) -> Result<Vec<BikriListRow>, ServiceError> {
+    let limit = match page.limit {
+        0 => FIND_LIMIT,
+        n => i64::from(n).min(FIND_MAX_LIMIT),
+    };
     let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
     let date = optional_date(&mut errors, "date", input.date.as_ref(), today);
@@ -517,8 +537,8 @@ pub fn find(ctx: &Context, input: &BikriFindInput) -> Result<Vec<BikriListRow>, 
         truck_prefix,
         search: None,
         order_by: None,
-        limit: FIND_LIMIT,
-        offset: 0,
+        limit,
+        offset: i64::from(page.offset),
     };
     ctx.db.read(|conn| {
         let mut rows = repo::list(conn, &filter)?;

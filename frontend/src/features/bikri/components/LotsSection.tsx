@@ -11,7 +11,8 @@
 //   and are Enter stops like the rest (useDraftFills).
 
 import { Localized } from '@fluent/react';
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { PackagePlus } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { groupDigits, useGrouping } from '../../../shared/format';
 import {
   AddRowButton,
@@ -23,12 +24,15 @@ import {
   type RemoveQuestion,
 } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
+import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
-import { isGardenLot, isOwnLot } from '../draft';
+import { addCarriedLots, carriedLotIds } from '../carried-lots';
+import { isCarriedLot, isGardenLot, isOwnLot } from '../draft';
 import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
 import { MAX_LOTS } from '../limits';
 import { LOT, SALE } from '../types';
+import { CarriedLotPicker } from './CarriedLotPicker';
 import { LotMoreToggle } from './LotMore';
 import { focusOwnPurchaseSoon } from './OwnLotPanel';
 
@@ -53,6 +57,11 @@ interface LotsSectionProps {
   canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
   /** A note between the title and the grid, for example where some of the lots came from. */
   note?: ReactNode;
+  /**
+   * Offer "From باقی مال": carry a lot with goods left from an earlier بکری onto this screen (plan 76 point
+   * 1). Only the new بکری has it; an edit of a saved posting does not.
+   */
+  allowCarried?: boolean | undefined;
 }
 
 export function LotsSection({
@@ -63,6 +72,7 @@ export function LotsSection({
   cellMarks,
   canRemoveRow,
   note,
+  allowCarried = false,
 }: LotsSectionProps) {
   const stores = useBikriDraft();
   const step = useLayoutStep();
@@ -72,6 +82,9 @@ export function LotsSection({
   const rows = stores.lots((state) => state.rows);
   const focus = stores.lots((state) => state.focus);
   const selected = stores.view((state) => state.selectedLot);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  // A lot carried over has no "more" panel: its charges were taken with its first posting.
+  const selectedRow = rows.find((row) => row.rowId === selected);
 
   // The lot that has focus is the selected lot.
   useEffect(() => {
@@ -155,13 +168,15 @@ export function LotsSection({
           <h2 id="bikri-lots-heading" className="type-section text-ink" />
         </Localized>
         <div className="flex flex-wrap gap-2">
-          <LotMoreToggle
-            lotIndex={Math.max(
-              rows.findIndex((row) => row.rowId === selected),
-              0,
-            )}
-            forced={moreForced}
-          />
+          {selectedRow !== undefined && isCarriedLot(selectedRow) ? null : (
+            <LotMoreToggle
+              lotIndex={Math.max(
+                rows.findIndex((row) => row.rowId === selected),
+                0,
+              )}
+              forced={moreForced}
+            />
+          )}
         </div>
       </div>
       {note}
@@ -184,8 +199,31 @@ export function LotsSection({
           fit
           heightMode="auto"
         />
-        <AddRowButton labelId="bikri-lots-add-row" onAdd={addLot} limit={limit} link={addLink} />
+        <div className="flex flex-wrap items-center gap-2">
+          <AddRowButton labelId="bikri-lots-add-row" onAdd={addLot} limit={limit} link={addLink} />
+          {allowCarried ? (
+            <Button
+              onClick={() => {
+                setPickerOpen(true);
+              }}
+              disabled={lotsFull}
+            >
+              <PackagePlus aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-carried-add" />
+            </Button>
+          ) : null}
+        </div>
       </div>
+      {allowCarried ? (
+        <CarriedLotPicker
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          taken={carriedLotIds(stores)}
+          onPick={(stock) => {
+            addCarriedLots(stores, [stock]);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

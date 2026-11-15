@@ -37,6 +37,7 @@ import { AnalyticsFilterBar } from '../components/AnalyticsFilterBar';
 import { AnalyticsLines } from '../components/AnalyticsLines';
 import { AnalyticsPreview } from '../components/AnalyticsPreview';
 import { AnalyticsResults, WHOLE_FILTER_KEY } from '../components/AnalyticsResults';
+import { KharchBoard } from '../components/KharchBoard';
 import { SavedViews } from '../components/SavedViews';
 import {
   EMPTY_ANALYTICS_FILTERS,
@@ -101,8 +102,11 @@ function AnalyticsBody({
   const [drill, setDrill] = useState<Drill | null>(null);
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
-  const wire = useMemo(() => filtersToWire(settled, entry.filters), [settled, entry]);
-  const query = useAnalyticsPages(entry.id, wire);
+  const wire = useMemo(() => filtersToWire(settled, entry.filters, entry.id), [settled, entry]);
+  // View M is the two parts of the kharch board (PRD FR-9.5, plan 77): the board reads them itself and has its own
+  // entries, print preview (F9) and Excel for each part, so the screen's own read and buttons are off for it.
+  const kharch = entry.id === 'M';
+  const query = useAnalyticsPages(entry.id, kharch ? null : wire);
   const language = useLanguage();
   // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
   const exporter = useExcelExport({
@@ -111,7 +115,7 @@ function AnalyticsBody({
       analyticsExportExcel({
         job_id: jobId,
         view: entry.id,
-        filters: filtersToWire(filters, entry.filters),
+        filters: filtersToWire(filters, entry.filters, entry.id),
         language: sheet,
         path,
         // The sheet has the order that is on screen (plan 38 R4).
@@ -167,11 +171,15 @@ function AnalyticsBody({
     },
     mode === 'preview' || drill !== null,
   );
-  useShortcut(SHORTCUTS.print, () => {
-    if (drill === null) setMode('preview');
-  });
+  useShortcut(
+    SHORTCUTS.print,
+    () => {
+      if (drill === null) setMode('preview');
+    },
+    { enabled: !kharch },
+  );
 
-  const filtering = !isUnfiltered(filters, entry.filters);
+  const filtering = !isUnfiltered(filters, entry.filters, entry.id);
   const openDrill = (rowKey: AnalyticsKey, columnKey: AnalyticsKey | null, about: string) => {
     setDrill({ request: { view: entry.id, filters: wire, rowKey, columnKey }, about });
   };
@@ -185,7 +193,9 @@ function AnalyticsBody({
   };
 
   let body;
-  if (drill !== null) {
+  if (kharch) {
+    body = <KharchBoard filters={wire} />;
+  } else if (drill !== null) {
     body = (
       <AnalyticsLines
         request={drill.request}
@@ -246,33 +256,42 @@ function AnalyticsBody({
       actions={
         <>
           <SavedViews
-            current={{ view: entry.id, filters: filtersToWire(filters, entry.filters) }}
+            current={{ view: entry.id, filters: filtersToWire(filters, entry.filters, entry.id) }}
             savedName={savedName}
             onOpen={openSaved}
             onSaved={setSavedName}
           />
-          <Button
-            disabled={drill !== null || mode === 'preview'}
-            onClick={() => {
-              openDrill(WHOLE_FILTER_KEY, null, l10n.getString('analytics-drill-all'));
-            }}
-          >
-            <Rows3 aria-hidden="true" className="size-icon-md" />
-            <Localized id="analytics-all-lines" />
-          </Button>
-          <Button
-            shortcut={SHORTCUTS.print}
-            disabled={drill !== null || mode === 'preview'}
-            onClick={() => {
-              setMode('preview');
-            }}
-          >
-            <Printer aria-hidden="true" className="size-icon-md" />
-            <Localized id="report-preview" />
-          </Button>
-          {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
-          {mode === 'preview' ? null : (
-            <ExcelExportButton exporter={exporter} language={language} disabled={drill !== null} />
+          {/* View M: the two parts of the board each have their own entries, print and Excel. */}
+          {kharch ? null : (
+            <>
+              <Button
+                disabled={drill !== null || mode === 'preview'}
+                onClick={() => {
+                  openDrill(WHOLE_FILTER_KEY, null, l10n.getString('analytics-drill-all'));
+                }}
+              >
+                <Rows3 aria-hidden="true" className="size-icon-md" />
+                <Localized id="analytics-all-lines" />
+              </Button>
+              <Button
+                shortcut={SHORTCUTS.print}
+                disabled={drill !== null || mode === 'preview'}
+                onClick={() => {
+                  setMode('preview');
+                }}
+              >
+                <Printer aria-hidden="true" className="size-icon-md" />
+                <Localized id="report-preview" />
+              </Button>
+              {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
+              {mode === 'preview' ? null : (
+                <ExcelExportButton
+                  exporter={exporter}
+                  language={language}
+                  disabled={drill !== null}
+                />
+              )}
+            </>
           )}
         </>
       }

@@ -132,6 +132,18 @@
             "side": "zero"
           },
           "account_count": 0
+        },
+        {
+          "id": 15,
+          "code": "0307",
+          "name_ur": "الگ کھاتہ اور ادھار رقم کا عوض",
+          "name_en": "Linked Khata and Loans Offset",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 1
         }
       ]
     },
@@ -237,6 +249,18 @@
           "code": "0604",
           "name_ur": "باغ سفر اور پھل",
           "name_en": "Gardens Trips and Fruit",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 3
+        },
+        {
+          "id": 16,
+          "code": "0605",
+          "name_ur": "الگ کھاتہ اور ادھار رقم",
+          "name_en": "Linked Khata and Loans",
           "party_type": "other",
           "balance": {
             "amount_paisa": 0,

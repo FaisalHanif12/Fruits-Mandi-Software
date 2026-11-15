@@ -20,6 +20,7 @@ import {
   usePrintJob,
 } from '../../reports';
 import { useAnalyticsPrintData, useAnalyticsPrintView } from '../hooks';
+import { AnalyticsPrintCharts } from '../print/AnalyticsPrintCharts';
 import { printTableOf } from '../print/print-table';
 import type { AnalyticsFilters, AnalyticsView } from '../types';
 
@@ -69,7 +70,13 @@ export function AnalyticsPreview({ view, filters, sort, onBack, exporter }: Anal
       />
     );
   } else {
-    body = <ReportPrintDocument data={printTableOf(query.data)} frame={frame.data} />;
+    body = (
+      <ReportPrintDocument
+        data={printTableOf(query.data)}
+        frame={frame.data}
+        figures={<AnalyticsPrintCharts data={query.data} />}
+      />
+    );
   }
 
   return (

@@ -70,7 +70,7 @@ import {
   R32_E2E_30B_REQUEST,
 } from '../helpers/reports-business-real';
 
-const PARTY = { id: 20, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '0020' };
+const PARTY = { id: 21, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '0020' };
 const entryOf = (id: string) => {
   const found = CATALOG.find((entry) => entry.id === id);
   if (found === undefined) throw new Error(`no ${id}`);
@@ -227,17 +227,17 @@ describe('the address of a report', () => {
         from: ' 01-10-2026 ',
         to: '',
         as_of: '09-10-2026',
-        party: '20',
+        party: '21',
         junk: 'x',
       }),
-    ).toEqual({ period: 'last_month', from: '01-10-2026', as_of: '09-10-2026', party: 20 });
+    ).toEqual({ period: 'last_month', from: '01-10-2026', as_of: '09-10-2026', party: 21 });
     expect(parseReportSearch({ period: 'someday', party: '-3' })).toEqual({});
     expect(parseReportSearch({ party: 'abc' })).toEqual({});
   });
 
   it('starts the boxes: a party comes without names, to be filled by the answer', () => {
-    const state = stateFromSearch({ party: 20, from: '01-10-2026' });
-    expect(state.party).toEqual({ id: 20, name_ur: '', name_en: '', code: undefined });
+    const state = stateFromSearch({ party: 21, from: '01-10-2026' });
+    expect(state.party).toEqual({ id: 21, name_ur: '', name_en: '', code: undefined });
     expect(state.from).toBe('01-10-2026');
     expect(state.period).toBe('custom');
   });

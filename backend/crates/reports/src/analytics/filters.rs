@@ -9,8 +9,8 @@ use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::{Connection, OptionalExtension};
 
 use super::model::{
-    AnalyticsCompare, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsPeriod,
-    AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView, AnalyticsView,
+    AnalyticsCompare, AnalyticsExpensePart, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy,
+    AnalyticsPeriod, AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView, AnalyticsView,
 };
 use crate::error::ReportsError;
 use crate::reports::common::{MasterTable, load_party, names_of, parse_day};
@@ -24,6 +24,15 @@ pub(crate) struct Typed {
     pub(crate) to: Option<String>,
     /// The columns of view D.
     pub(crate) group_by: AnalyticsGroupBy,
+    /// The grouping of the rows of views F, I, J and K by day, month or year, when asked for
+    /// (plan 77 coverage audit).
+    pub(crate) rows_by: Option<AnalyticsGroupBy>,
+    /// Views E and L keep a column for every item, with no "other items" column. A grouped view
+    /// reads each bucket this way and folds the items the whole period put in "other items" itself,
+    /// so a bucket never loses an amount (plan 77).
+    pub(crate) every_item_column: bool,
+    /// Which part of view M is read (the shop's kharch by default).
+    pub(crate) expense_part: AnalyticsExpensePart,
     /// The picked item.
     pub(crate) item_id: Option<i64>,
     /// The picked quality of the sale lines (view A).
@@ -186,6 +195,15 @@ fn is_chukta_khata(conn: &Connection, account_id: i64) -> Result<bool, ReportsEr
     )? == 1)
 }
 
+/// True if the account is a buyer (a name in the buyers' list or the چکتا کھاتہ 0030).
+fn is_buyer(conn: &Connection, account_id: i64) -> Result<bool, ReportsError> {
+    Ok(conn.query_row(
+        "SELECT party_type FROM accounts WHERE id = ?1",
+        [account_id],
+        |r| r.get::<_, String>(0),
+    )? == "buyer")
+}
+
 /// Reads and checks the filters of one view.
 ///
 /// # Errors
@@ -201,6 +219,7 @@ pub(crate) fn takes_item_group(view: AnalyticsView) -> bool {
             | AnalyticsView::D
             | AnalyticsView::G
             | AnalyticsView::H
+            | AnalyticsView::L
     )
 }
 
@@ -216,6 +235,9 @@ pub(crate) fn resolve(
         from: None,
         to: None,
         group_by: AnalyticsGroupBy::Month,
+        rows_by: None,
+        every_item_column: false,
+        expense_part: AnalyticsExpensePart::Shop,
         item_id: None,
         item_group: None,
         grade: None,
@@ -241,10 +263,27 @@ pub(crate) fn resolve(
         },
     };
 
-    // The grouping belongs to views D and G.
-    if matches!(view, AnalyticsView::D | AnalyticsView::G) {
+    // The part of view M: the shop's kharch or the partners' (plan 77).
+    if view == AnalyticsView::M {
+        typed.expense_part = input.expense_part.unwrap_or_default();
+        typed.resolved.expense_part = Some(typed.expense_part);
+    } else if input.expense_part.is_some() {
+        problems.push(FieldError::new(
+            ErrorCode::ErrOutOfRange,
+            "filters.expense_part",
+        ));
+    }
+    // The grouping belongs to views D, G and M (their columns), and to F, I, J and K when asked for
+    // (their rows by period), and to the partner part of view M (rows by period).
+    if view == AnalyticsView::M && typed.expense_part == AnalyticsExpensePart::Partner {
+        typed.rows_by = input.group_by;
+        typed.resolved.group_by = input.group_by;
+    } else if matches!(view, AnalyticsView::D | AnalyticsView::G | AnalyticsView::M) {
         typed.group_by = input.group_by.unwrap_or(AnalyticsGroupBy::Month);
         typed.resolved.group_by = Some(typed.group_by);
+    } else if super::grouped::takes_row_grouping(view, typed.expense_part) {
+        typed.rows_by = input.group_by;
+        typed.resolved.group_by = input.group_by;
     } else if input.group_by.is_some() {
         problems.push(FieldError::new(
             ErrorCode::ErrOutOfRange,
@@ -270,11 +309,13 @@ pub(crate) fn resolve(
             | AnalyticsView::I
             | AnalyticsView::J
             | AnalyticsView::K
+            | AnalyticsView::M
     ) && input.compare != AnalyticsCompare::Off
     {
         problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "filters.compare"));
     }
-    if view == AnalyticsView::F {
+    // View M counts the shop's expenses from the journal: like F, no sale filter applies.
+    if matches!(view, AnalyticsView::F | AnalyticsView::M) {
         let sale_filters = [
             (input.item_id.is_some(), "filters.item_id"),
             (input.seller_id.is_some(), "filters.seller_id"),
@@ -294,7 +335,9 @@ pub(crate) fn resolve(
     // A garden filter belongs to every view that counts sales; F counts none and J counts the
     // purchases of trips. View I is the gardens themselves: it takes no sale filter but the side
     // and no trip, and only garden goods.
-    if matches!(view, AnalyticsView::F | AnalyticsView::J) && input.garden_id.is_some() {
+    if matches!(view, AnalyticsView::F | AnalyticsView::J | AnalyticsView::M)
+        && input.garden_id.is_some()
+    {
         problems.push(FieldError::new(
             ErrorCode::ErrOutOfRange,
             "filters.garden_id",
@@ -336,6 +379,10 @@ pub(crate) fn resolve(
             }
         }
     }
+    // View L is each buyer's own commission, so the commission side is not taken (plan 77).
+    if view == AnalyticsView::L && input.side != AnalyticsSide::Both {
+        problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "filters.side"));
+    }
     // View J counts purchases, which have no seller, buyer, city or اڈا.
     if view == AnalyticsView::J {
         let sale_filters = [
@@ -350,16 +397,17 @@ pub(crate) fn resolve(
             }
         }
     }
-    // The partner belongs to views F, G, I and J; the trip and goods to every view but F.
+    // The partner belongs to views F, G, I, J and K, and to the partner part of view M; the trip and
+    // goods to every view but F.
     if input.partner_id.is_some()
-        && !matches!(
+        && !(matches!(
             view,
             AnalyticsView::F
                 | AnalyticsView::G
                 | AnalyticsView::I
                 | AnalyticsView::J
                 | AnalyticsView::K
-        )
+        ) || (view == AnalyticsView::M && typed.expense_part == AnalyticsExpensePart::Partner))
     {
         problems.push(FieldError::new(
             ErrorCode::ErrOutOfRange,
@@ -464,6 +512,14 @@ pub(crate) fn resolve(
                     problems.push(FieldError::new(
                         ErrorCode::ErrOutOfRange,
                         "filters.buyer.person_key",
+                    ));
+                }
+                // View C is the view of buyers: the account asked for must be one (robustness
+                // finding 5); the commission page refuses a wrong side the same way.
+                if view == AnalyticsView::C && !is_buyer(conn, party.account_id)? {
+                    problems.push(FieldError::new(
+                        ErrorCode::ErrWrongPartyType,
+                        "filters.buyer.account_id",
                     ));
                 }
                 typed.buyer_id = Some(party.account_id);

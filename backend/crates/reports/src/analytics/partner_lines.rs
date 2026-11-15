@@ -232,6 +232,15 @@ fn venture_run(
         AnalyticsPartnerMoney::Trips => TRIP_POSTINGS,
         AnalyticsPartnerMoney::Gardens => GARDEN_POSTINGS,
         AnalyticsPartnerMoney::Fruit => FRUIT_POSTINGS,
+        // The own kharch is a column of view M, not of view F.
+        AnalyticsPartnerMoney::Taken => {
+            return Err(ReportsError::Rejected(vec![
+                mandi_core::error::FieldError::new(
+                    mandi_core::error::ErrorCode::ErrOutOfRange,
+                    "row_key.money",
+                ),
+            ]));
+        }
     };
     let partner = key.partner_id.or(typed.partner_id);
     // Every fragment is a constant of this crate; the values are bound (Code Standards B14).

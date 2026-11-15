@@ -19,7 +19,7 @@ import { isOwnGoods, pickedOf } from '../../../shared/accounts';
 import { findMaster, type SearchHit } from '../../../shared/search';
 import type { PickedRecord } from '../../../shared/grid';
 import { assistSellerMemory } from '../api';
-import { isArrivalLot, isGardenLot, isOwnLot } from '../draft';
+import { isArrivalLot, isCarriedLot, isGardenLot, isOwnLot } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, ON, SALE, type BikriPreview } from '../types';
 
@@ -70,7 +70,11 @@ export function useDraftFills(
   useEffect(() => {
     lotRows.forEach((row, index) => {
       if (row.picked?.[LOT.seller] !== undefined || row.typed[LOT.sellerFilled] === ON) return;
-      const candidate = index === 0 ? null : lotRows[index - 1]?.picked?.[LOT.seller];
+      // A lot carried over from an earlier بکری is not a lot typed on this screen: its seller is not carried
+      // to the new lot after it (plan 76 point 1).
+      const previous = index === 0 ? undefined : lotRows[index - 1];
+      const candidate =
+        previous === undefined || isCarriedLot(previous) ? null : previous.picked?.[LOT.seller];
       // The firm's own goods are sold lot by lot from a purchase, never carried to the next lot.
       if (candidate === null || candidate === undefined || isOwnGoods(candidate)) return;
       stores.lots.getState().patchRow(row.rowId, {

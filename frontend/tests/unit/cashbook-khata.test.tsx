@@ -165,6 +165,7 @@ describe.each(LANGUAGES)('the الگ کھاتہ screen (%s)', (language) => {
       expect(vouchersApi.vouchersPreview).toHaveBeenLastCalledWith(
         expect.objectContaining({ reason: 'family' }),
         null,
+        null,
       );
     });
     await act(async () => {

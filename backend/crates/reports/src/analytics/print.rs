@@ -15,9 +15,9 @@ use mandi_core::auth::Language;
 
 use super::ids;
 use super::model::{
-    AnalyticsCompare, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading, AnalyticsPage,
-    AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintRow,
-    AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView,
+    AnalyticsCompare, AnalyticsExpensePart, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading,
+    AnalyticsPage, AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading,
+    AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView,
 };
 use crate::error::ReportsError;
 use crate::print::{PrintFact, TextDir};
@@ -114,6 +114,16 @@ pub(crate) fn filter_facts(
         AnalyticsSide::Seller => facts.push(fact(ids::FILTER_SIDE_SELLER, String::new())),
         AnalyticsSide::Buyer => facts.push(fact(ids::FILTER_SIDE_BUYER, String::new())),
     }
+    // The part of view M says it all in its label.
+    match filters.expense_part {
+        Some(AnalyticsExpensePart::Shop) => {
+            facts.push(fact(ids::FILTER_EXPENSE_SHOP, String::new()));
+        }
+        Some(AnalyticsExpensePart::Partner) => {
+            facts.push(fact(ids::FILTER_EXPENSE_PARTNER, String::new()));
+        }
+        None => {}
+    }
     if let Some(group_by) = filters.group_by {
         let label = match group_by {
             AnalyticsGroupBy::Day => ids::FILTER_BY_DAY,
@@ -176,5 +186,6 @@ pub(crate) fn build(
         row_count: fmt.style.count(page.total_count),
         totals_label_id: page.totals_label_id.clone(),
         totals: fmt.cells(&page.totals)?,
+        charts: page.charts.clone(),
     })
 }

@@ -579,6 +579,8 @@ fn a_take_or_loan_cannot_be_cancelled_or_made_smaller_than_its_returns() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,
@@ -657,6 +659,8 @@ fn a_take_with_returns_cannot_be_edited_to_another_partner() {
         partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                from: None,
+                to: None,
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
@@ -740,6 +744,8 @@ fn a_loan_with_returns_cannot_be_edited_to_another_person() {
         lent::list(
             &w.env.ctx,
             &LentListInput {
+                from: None,
+                to: None,
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
@@ -824,6 +830,8 @@ fn a_return_dated_before_its_take_cannot_be_saved() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,
@@ -1005,6 +1013,8 @@ fn cancelling_a_salary_return_gives_the_loan_back_and_its_shares_net_to_zero() {
     let list = lent::list(
         &w.env.ctx,
         &LentListInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,
@@ -1024,6 +1034,8 @@ fn cancelling_a_salary_return_gives_the_loan_back_and_its_shares_net_to_zero() {
         lent::list(
             &w.env.ctx,
             &LentListInput {
+                from: None,
+                to: None,
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
@@ -1057,6 +1069,8 @@ fn open_amounts_equal_the_account_balance_and_pages_add_up() {
         let list = lent::list(
             &w.env.ctx,
             &LentListInput {
+                from: None,
+                to: None,
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
@@ -1075,6 +1089,8 @@ fn open_amounts_equal_the_account_balance_and_pages_add_up() {
     let whole = lent::list(
         &w.env.ctx,
         &LentListInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,
@@ -1094,6 +1110,8 @@ fn open_amounts_equal_the_account_balance_and_pages_add_up() {
         let page = lent::list(
             &w.env.ctx,
             &LentListInput {
+                from: None,
+                to: None,
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
@@ -1146,6 +1164,8 @@ fn a_staff_member_becomes_a_lent_person_once() {
     let list = lent::list(
         &w.env.ctx,
         &LentListInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,
@@ -1468,6 +1488,8 @@ fn a_drawings_opening_debit_is_money_taken_dated_its_opening_day() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,
@@ -1917,6 +1939,8 @@ fn an_opening_on_money_taken_is_a_debit_and_cannot_be_cleared_under_its_returns(
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,

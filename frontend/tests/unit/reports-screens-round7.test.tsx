@@ -197,7 +197,8 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       expect(totalsCell('balance')).toContain('58,484');
       expect(lastRun()).toMatchObject({ id: 'R12', offset: 0, limit: PAGE_ROWS });
       expect(lastRun()?.filters).toEqual(
-        sentLike(R12_DAY_REQUEST, { shortcut: null, from: '', to: '' }),
+        // The cash book shows 7 days at a time (PRD FR-19.11): the days that end today.
+        sentLike(R12_DAY_REQUEST, { shortcut: null, from: '04-10-2026', to: '10-10-2026' }),
       );
       // The opening and the closing cash are the two lines above the table.
       for (const id of ['report-opening-balance', 'report-closing-balance']) {
@@ -279,7 +280,8 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
         expect(box).toHaveTextContent(m('report-partner-all'));
       }, SLOW_MS);
       expect(lastRun()?.filters).toEqual(
-        sentLike(R29_DAY_REQUEST, { shortcut: null, from: '', to: '' }),
+        // The expense report shows one month at a time (PRD FR-19.11): this month.
+        sentLike(R29_DAY_REQUEST, { shortcut: null, from: '01-10-2026', to: '31-10-2026' }),
       );
       await user.click(box);
       for (const partner of PARTNERS) {
@@ -298,7 +300,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       await pickPartner(user, names('الف', 'Partner A'));
       await waitFor(() => {
         expect(lastRun()?.filters).toEqual(
-          sentLike(R29_ALIF_REQUEST, { shortcut: null, from: '', to: '' }),
+          sentLike(R29_ALIF_REQUEST, { shortcut: null, from: '01-10-2026', to: '31-10-2026' }),
         );
       }, SLOW_MS);
       await waitFor(() => {
@@ -346,7 +348,8 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       await pickPartner(user, names('ب', 'Partner B'));
       await waitFor(() => {
         expect(lastRun()?.filters).toEqual(
-          sentLike(R31_BAY_REQUEST, { shortcut: null, from: '', to: '' }),
+          // A partner's statement shows one month at a time (PRD FR-19.11): this month.
+          sentLike(R31_BAY_REQUEST, { shortcut: null, from: '01-10-2026', to: '31-10-2026' }),
         );
       }, SLOW_MS);
       await waitFor(() => {
@@ -555,7 +558,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R13');
       }, SLOW_MS);
-      expect(router.state.location.search).toMatchObject({ party: 32 });
+      expect(router.state.location.search).toMatchObject({ party: 36 });
     });
   });
 

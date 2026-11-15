@@ -1,0 +1,45 @@
+{
+  "column_key": {
+    "buyer_id": null,
+    "from": null,
+    "item_id": 1,
+    "not_item_ids": [],
+    "partner_id": null,
+    "person_key": null,
+    "purchase_ids": [],
+    "seller_id": null,
+    "to": null
+  },
+  "filters": {
+    "adda_id": null,
+    "buyer": null,
+    "city_id": null,
+    "compare": "off",
+    "from": "01-10-2026",
+    "garden_id": null,
+    "goods": "all",
+    "group_by": null,
+    "item_id": null,
+    "partner_id": null,
+    "period": null,
+    "seller_id": null,
+    "side": "both",
+    "to": "31-10-2026",
+    "trip_id": null,
+    "trip_view": null
+  },
+  "limit": 0,
+  "offset": 0,
+  "row_key": {
+    "buyer_id": 21,
+    "from": null,
+    "item_id": null,
+    "not_item_ids": [],
+    "partner_id": null,
+    "person_key": null,
+    "purchase_ids": [],
+    "seller_id": null,
+    "to": null
+  },
+  "view": "L"
+}

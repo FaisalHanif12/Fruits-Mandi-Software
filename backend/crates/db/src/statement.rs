@@ -9,11 +9,50 @@
 
 use std::collections::HashMap;
 
+use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 
 /// The `?` marks for a list of ids.
 fn marks(count: usize) -> String {
     vec!["?"; count].join(", ")
+}
+
+/// A range of days, `YYYY-MM-DD`, both ends included. `None` leaves an end open, so
+/// [`Days::ALL`] is the whole history. A month page asks for one month only, so it never reads ten
+/// years of rows to show thirty days (plan 76, NFR-SPD-24).
+///
+/// Example: `Days { from: Some("2026-10-01"), to: Some("2026-10-31") }` is October 2026.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Days<'a> {
+    /// The first day, included.
+    pub from: Option<&'a str>,
+    /// The last day, included.
+    pub to: Option<&'a str>,
+}
+
+impl Days<'static> {
+    /// The whole history.
+    pub const ALL: Days<'static> = Days {
+        from: None,
+        to: None,
+    };
+}
+
+impl Days<'_> {
+    /// ` AND column >= ?n AND column <= ?m` for the ends that are set, with their values pushed on
+    /// `args`. The SQL is built (not `? IS NULL OR`) so SQLite can use the date index.
+    fn clause(&self, column: &str, args: &mut Vec<Value>) -> String {
+        let mut sql = String::new();
+        if let Some(from) = self.from {
+            args.push(Value::Text(from.to_owned()));
+            sql.push_str(&format!(" AND {column} >= ?{}", args.len()));
+        }
+        if let Some(to) = self.to {
+            args.push(Value::Text(to.to_owned()));
+            sql.push_str(&format!(" AND {column} <= ?{}", args.len()));
+        }
+        sql
+    }
 }
 
 /// One share row of a partner: the day, the entry and the signed part.
@@ -31,16 +70,23 @@ pub struct ShareEvent {
     pub amount_paisa: i64,
 }
 
-/// All share rows of a partner, in the order they were written.
+/// The share rows of a partner dated inside `days`, in the order they were written. The index on
+/// (partner, day) finds them without touching the rows of other days.
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn share_events(conn: &Connection, partner_id: i64) -> rusqlite::Result<Vec<ShareEvent>> {
-    let mut statement = conn.prepare(
+pub fn share_events(
+    conn: &Connection,
+    partner_id: i64,
+    days: Days<'_>,
+) -> rusqlite::Result<Vec<ShareEvent>> {
+    let mut args = vec![Value::Integer(partner_id)];
+    let range = days.clause("entry_date", &mut args);
+    let mut statement = conn.prepare(&format!(
         "SELECT id, entry_date, journal_entry_id, kind, amount_paisa FROM partner_share_rows
-         WHERE partner_id = ?1 ORDER BY id",
-    )?;
-    let rows = statement.query_map([partner_id], |r| {
+         WHERE partner_id = ?1{range} ORDER BY id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
         Ok(ShareEvent {
             id: r.get(0)?,
             entry_date: r.get(1)?,
@@ -69,20 +115,26 @@ pub struct LineEvent {
     pub source_type: String,
 }
 
-/// The posted lines of an account, in the order they were written. The entries of month close
-/// are left out: month close only moves profit into capital, so it never changes کل رقم (PRD
-/// FR-17.6, FR-17.9).
+/// The posted lines of an account dated inside `days`, in the order they were written. The
+/// entries of month close are left out: month close only moves profit into capital, so it never
+/// changes کل رقم (PRD FR-17.6, FR-17.9).
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn line_events(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<LineEvent>> {
-    let mut statement = conn.prepare(
+pub fn line_events(
+    conn: &Connection,
+    account_id: i64,
+    days: Days<'_>,
+) -> rusqlite::Result<Vec<LineEvent>> {
+    let mut args = vec![Value::Integer(account_id)];
+    let range = days.clause("e.entry_date", &mut args);
+    let mut statement = conn.prepare(&format!(
         "SELECT l.id, e.entry_date, l.entry_id, l.dr_paisa, l.cr_paisa, e.source_type
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id = ?1 AND e.status = 'posted' AND e.source_type <> 'month_close'
-         ORDER BY l.id",
-    )?;
-    let rows = statement.query_map([account_id], |r| {
+         WHERE l.account_id = ?1 AND e.status = 'posted' AND e.source_type <> 'month_close'{range}
+         ORDER BY l.id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
         Ok(LineEvent {
             id: r.get(0)?,
             entry_date: r.get(1)?,
@@ -112,20 +164,23 @@ pub struct LotCreditEvent {
     pub amount_paisa: i64,
 }
 
-/// The stored credit parts of a partner, in the order they were written.
+/// The stored credit parts of a partner dated inside `days`, in the order they were written.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn lot_credit_events(
     conn: &Connection,
     partner_id: i64,
+    days: Days<'_>,
 ) -> rusqlite::Result<Vec<LotCreditEvent>> {
-    let mut statement = conn.prepare(
+    let mut args = vec![Value::Integer(partner_id)];
+    let range = days.clause("e.entry_date", &mut args);
+    let mut statement = conn.prepare(&format!(
         "SELECT c.id, e.entry_date, c.journal_entry_id, c.lot_id, c.share_bps, c.amount_paisa
          FROM lot_credit_parts c JOIN journal_entries e ON e.id = c.journal_entry_id
-         WHERE c.partner_id = ?1 AND e.status = 'posted' ORDER BY c.id",
-    )?;
-    let rows = statement.query_map([partner_id], |r| {
+         WHERE c.partner_id = ?1 AND e.status = 'posted'{range} ORDER BY c.id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
         Ok(LotCreditEvent {
             id: r.get(0)?,
             entry_date: r.get(1)?,
@@ -136,6 +191,48 @@ pub fn lot_credit_events(
         })
     })?;
     rows.collect()
+}
+
+/// The day of a partner's first share row, by the index on (partner, day).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn first_share_day(conn: &Connection, partner_id: i64) -> rusqlite::Result<Option<String>> {
+    conn.query_row(
+        "SELECT MIN(entry_date) FROM partner_share_rows WHERE partner_id = ?1",
+        [partner_id],
+        |r| r.get(0),
+    )
+}
+
+/// The day of the first posted line on an account (month close left out, as in [`line_events`]).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn first_line_day(conn: &Connection, account_id: i64) -> rusqlite::Result<Option<String>> {
+    conn.query_row(
+        "SELECT MIN(e.entry_date) FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id = ?1 AND e.status = 'posted' AND e.source_type <> 'month_close'",
+        [account_id],
+        |r| r.get(0),
+    )
+}
+
+/// The day of a partner's first stored credit part of a trip lot, as in [`lot_credit_events`].
+///
+/// # Errors
+/// Any SQLite error.
+pub fn first_lot_credit_day(
+    conn: &Connection,
+    partner_id: i64,
+) -> rusqlite::Result<Option<String>> {
+    conn.query_row(
+        "SELECT MIN(e.entry_date) FROM lot_credit_parts c
+         JOIN journal_entries e ON e.id = c.journal_entry_id
+         WHERE c.partner_id = ?1 AND e.status = 'posted'",
+        [partner_id],
+        |r| r.get(0),
+    )
 }
 
 /// A day and an id: the place of a note line.
@@ -154,17 +251,23 @@ pub struct NoteEvent {
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn month_close_notes(conn: &Connection, capital_id: i64) -> rusqlite::Result<Vec<NoteEvent>> {
-    let mut statement = conn.prepare(
+pub fn month_close_notes(
+    conn: &Connection,
+    capital_id: i64,
+    days: Days<'_>,
+) -> rusqlite::Result<Vec<NoteEvent>> {
+    let mut args = vec![Value::Integer(capital_id)];
+    let range = days.clause("e.entry_date", &mut args);
+    let mut statement = conn.prepare(&format!(
         "SELECT DISTINCT e.id, e.entry_date FROM journal_entries e
          JOIN journal_lines l ON l.entry_id = e.id
          WHERE l.account_id = ?1 AND e.status = 'posted' AND e.source_type = 'month_close'
            AND e.reverses_entry_id IS NULL
            AND NOT EXISTS (SELECT 1 FROM journal_entries r
-                           WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
-         ORDER BY e.entry_date, e.id",
-    )?;
-    let rows = statement.query_map([capital_id], |r| {
+                           WHERE r.reverses_entry_id = e.id AND r.status = 'posted'){range}
+         ORDER BY e.entry_date, e.id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
         Ok(NoteEvent {
             id: r.get(0)?,
             date: r.get(1)?,
@@ -178,17 +281,23 @@ pub fn month_close_notes(conn: &Connection, capital_id: i64) -> rusqlite::Result
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn write_off_notes(conn: &Connection, partner_id: i64) -> rusqlite::Result<Vec<NoteEvent>> {
-    let mut statement = conn.prepare(
+pub fn write_off_notes(
+    conn: &Connection,
+    partner_id: i64,
+    days: Days<'_>,
+) -> rusqlite::Result<Vec<NoteEvent>> {
+    let mut args = vec![Value::Integer(partner_id)];
+    let range = days.clause("m.move_date", &mut args);
+    let mut statement = conn.prepare(&format!(
         "SELECT m.id, m.move_date, pu.venture_id
          FROM stock_moves m
          JOIN purchases pu ON pu.id = m.purchase_id
          JOIN venture_partners vp ON vp.venture_id = pu.venture_id AND vp.partner_id = ?1
          WHERE m.kind = 'written_off' AND pu.status = 'saved'
-           AND NOT EXISTS (SELECT 1 FROM stock_moves r WHERE r.reverses_move_id = m.id)
-         ORDER BY m.move_date, m.id",
-    )?;
-    let rows = statement.query_map([partner_id], |r| {
+           AND NOT EXISTS (SELECT 1 FROM stock_moves r WHERE r.reverses_move_id = m.id){range}
+         ORDER BY m.move_date, m.id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
         Ok(NoteEvent {
             id: r.get(0)?,
             date: r.get(1)?,
@@ -202,14 +311,20 @@ pub fn write_off_notes(conn: &Connection, partner_id: i64) -> rusqlite::Result<V
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn closed_trip_notes(conn: &Connection, partner_id: i64) -> rusqlite::Result<Vec<NoteEvent>> {
-    let mut statement = conn.prepare(
+pub fn closed_trip_notes(
+    conn: &Connection,
+    partner_id: i64,
+    days: Days<'_>,
+) -> rusqlite::Result<Vec<NoteEvent>> {
+    let mut args = vec![Value::Integer(partner_id)];
+    let range = days.clause("v.closed_date", &mut args);
+    let mut statement = conn.prepare(&format!(
         "SELECT v.id, v.closed_date FROM ventures v
          JOIN venture_partners vp ON vp.venture_id = v.id AND vp.partner_id = ?1
-         WHERE v.kind = 'trip' AND v.status = 'closed' AND v.closed_date IS NOT NULL
-         ORDER BY v.closed_date, v.id",
-    )?;
-    let rows = statement.query_map([partner_id], |r| {
+         WHERE v.kind = 'trip' AND v.status = 'closed' AND v.closed_date IS NOT NULL{range}
+         ORDER BY v.closed_date, v.id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
         Ok(NoteEvent {
             id: r.get(0)?,
             date: r.get(1)?,
@@ -230,8 +345,11 @@ pub fn closed_trip_notes(conn: &Connection, partner_id: i64) -> rusqlite::Result
 pub fn unposted_garden_close_notes(
     conn: &Connection,
     partner_id: i64,
+    days: Days<'_>,
 ) -> rusqlite::Result<Vec<NoteEvent>> {
-    let mut statement = conn.prepare(
+    let mut args = vec![Value::Integer(partner_id)];
+    let range = days.clause("x.entry_date", &mut args);
+    let mut statement = conn.prepare(&format!(
         "SELECT x.id, x.entry_date, x.venture_id
          FROM venture_entries x
          JOIN venture_entry_parts p ON p.entry_id = x.id AND p.partner_id = ?1 AND p.is_active = 1
@@ -239,10 +357,10 @@ pub fn unposted_garden_close_notes(
          WHERE x.kind = 'close' AND x.status = 'saved'
            AND NOT EXISTS (SELECT 1 FROM journal_lines l
                            WHERE l.entry_id = x.journal_entry_id
-                             AND l.account_id = pa.venture_account_id)
-         ORDER BY x.entry_date, x.id",
-    )?;
-    let rows = statement.query_map([partner_id], |r| {
+                             AND l.account_id = pa.venture_account_id){range}
+         ORDER BY x.entry_date, x.id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
         Ok(NoteEvent {
             id: r.get(0)?,
             date: r.get(1)?,
@@ -250,6 +368,93 @@ pub fn unposted_garden_close_notes(
         })
     })?;
     rows.collect()
+}
+
+/// A loan to a person that is the shop's (plan 76 point 10, PRD FR-16.13): its entry has no mirror
+/// pair on a partner's 0605 account, so it changes no partner total. Each partner's statement shows
+/// his % of it as a note line.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ShopLoanNote {
+    /// The voucher.
+    pub voucher_id: i64,
+    /// Its number in its series.
+    pub number: i64,
+    /// The day, `YYYY-MM-DD`.
+    pub entry_date: String,
+    /// True for money given, false for a return.
+    pub given: bool,
+    /// The amount, paisa.
+    pub amount_paisa: i64,
+    /// The person: id, code, Urdu name, English name.
+    pub person: Named,
+}
+
+/// The saved loans and cash returns whose entry has no mirror pair (the contra account 03070001),
+/// oldest first. A salary deduction is left out: it is a shop expense, already split in the
+/// statements.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn shop_loan_notes(conn: &Connection, days: Days<'_>) -> rusqlite::Result<Vec<ShopLoanNote>> {
+    let mut args = Vec::new();
+    let range = days.clause("v.entry_date", &mut args);
+    let mut statement = conn.prepare(&format!(
+        "SELECT v.id, v.number, v.entry_date, v.type, v.amount_paisa, a.id, a.code, a.name_ur, a.name_en
+         FROM vouchers v JOIN accounts a ON a.id = v.account_id
+         WHERE v.type IN ('money_lent', 'money_lent_return') AND v.status = 'saved'
+           AND COALESCE(v.mode, 'cash') <> 'salary'
+           AND NOT EXISTS (SELECT 1 FROM journal_lines l JOIN accounts o ON o.id = l.account_id
+                           WHERE l.entry_id = v.current_entry_id AND o.code = '03070001'){range}
+         ORDER BY v.entry_date, v.id"
+    ))?;
+    let rows = statement.query_map(params_from_iter(args), |r| {
+        let kind: String = r.get(3)?;
+        Ok(ShopLoanNote {
+            voucher_id: r.get(0)?,
+            number: r.get(1)?,
+            entry_date: r.get(2)?,
+            given: kind == "money_lent",
+            amount_paisa: r.get(4)?,
+            person: (r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?),
+        })
+    })?;
+    rows.collect()
+}
+
+/// The khata or person on each of these entries, for the lines of a partner's 0605 account (plan
+/// 76 points 5 and 10): the account under control 0305 or 0103 that the entry touches, the first
+/// one if it touches several.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn linked_subjects(
+    conn: &Connection,
+    entry_ids: &[i64],
+) -> rusqlite::Result<HashMap<i64, Named>> {
+    let mut out = HashMap::new();
+    if entry_ids.is_empty() {
+        return Ok(out);
+    }
+    let mut statement = conn.prepare(&format!(
+        "SELECT l.entry_id, a.id, a.code, a.name_ur, a.name_en
+         FROM journal_lines l JOIN accounts a ON a.id = l.account_id
+              JOIN account_controls c ON c.id = a.control_id
+         WHERE l.entry_id IN ({}) AND c.code IN ('0305', '0103')
+         ORDER BY l.id DESC",
+        marks(entry_ids.len())
+    ))?;
+    let rows = statement.query_map(params_from_iter(entry_ids.iter()), |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?),
+        ))
+    })?;
+    // Newest line first, so the last write for an entry is its first line.
+    for row in rows {
+        let (entry, named) = row?;
+        out.insert(entry, named);
+    }
+    Ok(out)
 }
 
 // ---- The facts that word the lines of one page ----
@@ -834,4 +1039,38 @@ pub fn trip_totals(conn: &Connection, venture_id: i64) -> rusqlite::Result<TripT
         sales_paisa,
         other_shop_paisa,
     })
+}
+
+/// What a partner's share rows of some entries were worked from: the base amount of the posting
+/// and his share in basis points, by (entry, kind `income` or `expense`). A share row is one for
+/// each partner and kind in an entry (PRD FR-6.5), so the pair is unique. Used by the day detail of
+/// the statement ("his 30% of 3,948", plan 76 point 11).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn share_figures(
+    conn: &Connection,
+    partner_id: i64,
+    entry_ids: &[i64],
+) -> rusqlite::Result<std::collections::HashMap<(i64, String), (i64, i64)>> {
+    let mut out = std::collections::HashMap::new();
+    let mut statement = conn.prepare(
+        "SELECT journal_entry_id, kind, SUM(base_paisa), MIN(share_bps) FROM partner_share_rows
+         WHERE partner_id = ?1 AND journal_entry_id = ?2 GROUP BY journal_entry_id, kind",
+    )?;
+    for id in entry_ids {
+        let rows = statement.query_map(rusqlite::params![partner_id, id], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, i64>(2)?,
+                r.get::<_, i64>(3)?,
+            ))
+        })?;
+        for row in rows {
+            let (entry, kind, base, bps) = row?;
+            out.insert((entry, kind), (base, bps));
+        }
+    }
+    Ok(out)
 }

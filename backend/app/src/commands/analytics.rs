@@ -10,7 +10,8 @@ use mandi_reports::ReportsError;
 use mandi_reports::analytics::{
     AnalyticsCatalogEntry, AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsPage,
     AnalyticsPrintData, AnalyticsPrintInput, AnalyticsRunInput, AnalyticsSavedView,
-    AnalyticsViewsSaveInput, catalog, lines, print_data, run as run_view, views_get, views_save,
+    AnalyticsViewsSaveInput, lines, print_data, run as run_view, screen_catalog, views_get,
+    views_save,
 };
 use mandi_services::ServiceError;
 use mandi_services::auth;
@@ -35,16 +36,16 @@ fn analytics_error(error: ReportsError) -> ServiceError {
     }
 }
 
-/// The views of analytics: for each its letter, title ID and the filters it takes (`period`,
-/// `item`, `seller`, `buyer`, `city`, `adda`, `side`, `compare`, and `group_by` for view D).
-/// Read only.
+/// The views of analytics, A to M: for each its letter, title ID and the filters it takes (`period`,
+/// `item`, `seller`, `buyer`, `city`, `adda`, `side`, `compare`, and `group_by` for views D, G and
+/// M). Views L and M are those of PRD v1.42 (plan 77). Read only.
 #[tauri::command]
 pub async fn analytics_catalog<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<Vec<AnalyticsCatalogEntry>, UiError> {
     run(app, "analytics_catalog", |ctx| {
         auth::require(ctx)?;
-        Ok(catalog())
+        Ok(screen_catalog())
     })
     .await
 }

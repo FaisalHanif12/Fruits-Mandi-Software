@@ -1684,6 +1684,28 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
         ),
         (15, 8_460, 7_800, 660, 4_000)
     );
+    // PRD FR-17.12 (plan 76 point 11): his part of the result, 40% of 660 = 264, and the line keeps
+    // its entry so the day card can open it.
+    assert_eq!(number("part_paisa") / 100, 264);
+    assert!(credit.entry_id.is_some());
+    let day = partners::statement_day(
+        &w.env.ctx,
+        &mandi_services::core::statement::PartnersStatementDayInput {
+            partner_id: a,
+            date: "2026-10-10".into(),
+        },
+    )
+    .unwrap();
+    let card_credit = day
+        .lines
+        .iter()
+        .find(|l| l.detail == StatementDetail::TripCredit)
+        .expect("the day card has the trip credit");
+    assert_eq!(
+        card_credit.values.get("part_paisa"),
+        credit.values.get("part_paisa")
+    );
+    assert_eq!(day.after_total_paisa.rupees(), -296);
     assert_eq!(
         credit.subject.as_ref().map(|r| r.name_en.as_str()),
         Some("Orange")
@@ -1812,4 +1834,39 @@ fn the_statement_of_a_cancelled_trip_sale_nets_to_the_total_of_the_books() {
         // Only the purchase part is left: -4,160 / -3,120 / -3,120.
         assert_eq!(total, [-4_160, -3_120, -3_120][index]);
     }
+}
+
+/// Plan 76 point 11, the trip example of the plan: partner الف on 10-10-26 after E2E-34. His part of
+/// the purchase paid from the shop (-4,160) and the sales money credited to him (+3,384) are the
+/// column gardens and trips (-776); the commission of the بکری is +480; the day nets -296.
+#[test]
+fn partner_a_statement_month_shows_the_trip_columns_of_e2e_34() {
+    use mandi_services::core::statement::PartnersStatementMonthInput;
+    let w = worked_day();
+    sale_34(&w);
+    let a = w.partners[0];
+    let m = mandi_services::partners::statement_month(
+        &w.env.ctx,
+        &PartnersStatementMonthInput {
+            partner_id: a,
+            month: Some("2026-10".into()),
+        },
+    )
+    .unwrap();
+    assert_eq!(m.days.len(), 1);
+    let d = &m.days[0];
+    let r = |p: Paisa| p.as_paisa() / 100;
+    assert_eq!(
+        (
+            r(d.columns.gardens_trips_paisa),
+            r(d.columns.commission_paisa),
+            r(d.columns.net_paisa),
+            r(d.running_paisa),
+        ),
+        (-776, 480, -296, -296)
+    );
+    assert_eq!(r(m.closing_total_paisa), -296);
+    // Nothing of the trip is counted twice: the columns add up to the net and the closing is the
+    // total of his records (checked inside the service as well).
+    assert_eq!(r(m.totals.net_paisa), -296);
 }

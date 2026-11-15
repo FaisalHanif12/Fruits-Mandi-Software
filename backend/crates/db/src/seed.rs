@@ -422,6 +422,40 @@ const TRIP_ACCOUNTS: [Account; 1] = [Account {
     credit_allowed: true,
 }];
 
+/// The controls of migration 23 (plan 76): the contra account of every linked khata and loan (0307, head
+/// 03, so outside the equity of FR-17.9) and the 0605 account of each partner (head 06).
+/// provisional, needs Urdu reviewer (NFR-URD-4).
+const LINKED_CONTROLS: [Control; 2] = [
+    Control {
+        head_code: "03",
+        code: "0307",
+        name_ur: "الگ کھاتہ اور ادھار رقم کا عوض",
+        name_en: "Linked Khata and Loans Offset",
+        party_type: "other",
+    },
+    Control {
+        head_code: "06",
+        code: "0605",
+        name_ur: "الگ کھاتہ اور ادھار رقم",
+        name_en: "Linked Khata and Loans",
+        party_type: "other",
+    },
+];
+
+/// The contra account of migration 23 (03070001): every line a linked khata or a partner-linked loan
+/// takes has its mirror pair, partner parts against this account, so the books balance and FR-17.9
+/// holds. Its جمع less بنام equals the بنام balance of the linked khatas plus what partner-linked loans
+/// have still open. It is a system account and takes no opening.
+const LINKED_ACCOUNTS: [Account; 1] = [Account {
+    control_code: "0307",
+    serial: 1,
+    name_ur: "الگ کھاتہ اور ادھار رقم: شراکت داروں کا عوض",
+    name_en: "Linked Khata and Loans: Partner Offset",
+    party_type: "other",
+    is_shared_khata: false,
+    credit_allowed: true,
+}];
+
 /// The code of the seller of a trip's goods, اپنا مال (PRD FR-12.26).
 pub const OWN_GOODS_ACCOUNT_CODE: &str = "030119998";
 /// The code of the cash account, روکڑ (PRD FR-10.4).
@@ -520,6 +554,46 @@ pub fn trip_accounts(conn: &Connection) -> rusqlite::Result<usize> {
         ],
     )?;
     Ok(controls + accounts)
+}
+
+/// Inserts the controls and the system account of migration 23 that are not there yet. Returns how
+/// many rows it added (0 on a second run).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn linked_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    Ok(insert_controls(conn, &LINKED_CONTROLS)? + insert_accounts(conn, &LINKED_ACCOUNTS)?)
+}
+
+/// Makes the 0605 account of every partner that has none and names it in
+/// `partners.linked_account_id`. Migration 23 calls it for the partners that exist; the partner save
+/// makes the account of each new partner with [`mandi_core::partners::linked_account`].
+///
+/// # Errors
+/// Any SQLite error, or `StatementChangedRows` if the 0605 series is full.
+pub fn partner_linked_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let mut statement = conn.prepare(
+        "SELECT id, name_ur, name_en FROM partners WHERE linked_account_id IS NULL ORDER BY id",
+    )?;
+    let partners: Vec<(i64, String, String)> = statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let now: String = conn.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |r| {
+        r.get(0)
+    })?;
+    let owner: i64 = conn.query_row("SELECT COALESCE(MIN(id), 0) FROM users", [], |r| r.get(0))?;
+    let mut made = 0;
+    for (partner_id, name_ur, name_en) in partners {
+        let account = mandi_core::partners::linked_account(&name_ur, &name_en);
+        let (account_id, _) = crate::masters::create_account(conn, &account, owner, &now)?
+            .ok_or(rusqlite::Error::StatementChangedRows(0))?;
+        conn.execute(
+            "UPDATE partners SET linked_account_id = ?2 WHERE id = ?1",
+            params![partner_id, account_id],
+        )?;
+        made += 1;
+    }
+    Ok(made)
 }
 
 /// Makes the 0604 account (gardens, trips and fruit) of every partner that has none, and names it in

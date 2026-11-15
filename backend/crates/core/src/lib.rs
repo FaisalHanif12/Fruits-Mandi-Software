@@ -31,8 +31,10 @@ pub mod general;
 pub mod ids;
 pub mod khata;
 pub mod lent;
+pub mod links;
 pub mod masters;
 pub mod money;
+pub mod months;
 pub mod paging;
 pub mod partner_code;
 pub mod partners;
@@ -52,6 +54,7 @@ pub mod urdu_words;
 pub mod validate;
 pub mod ventures;
 pub mod vouchers;
+pub mod windows;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

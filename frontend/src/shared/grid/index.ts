@@ -14,6 +14,7 @@ export {
   type ListSort,
 } from './ListGrid';
 export { Pager } from './Pager';
+export { DayTable, type DayColumn } from './DayTable';
 export { useListPaging } from './useListPaging';
 export { PagedList } from './PagedList';
 export { ListRegion, SHORT_LIST_ROWS, isLongList, listHeightMode } from './ListRegion';

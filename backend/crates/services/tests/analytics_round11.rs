@@ -923,16 +923,14 @@ fn filters_a_view_does_not_take_are_refused_with_the_field() {
         )),
         vec!["filters.trip_view".to_owned()]
     );
-    assert_eq!(
-        only_fields(refused(
-            &w,
-            AnalyticsView::J,
-            AnalyticsFilters {
-                group_by: Some(AnalyticsGroupBy::Day),
-                ..filters()
-            }
-        )),
-        vec!["filters.group_by".to_owned()]
+    // The rows of view J can be grouped by day, month or year (plan 77 coverage audit).
+    view(
+        &w,
+        AnalyticsView::J,
+        AnalyticsFilters {
+            group_by: Some(AnalyticsGroupBy::Day),
+            ..filters()
+        },
     );
 }
 

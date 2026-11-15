@@ -50,6 +50,33 @@ pub fn venture_account(name_ur: &str, name_en: &str) -> AccountToMake {
     }
 }
 
+/// The control of the account that holds the money reaching a partner through a linked khata or
+/// loan (plan 76, PRD FR-17.9 v1.41).
+pub const LINKED_CONTROL: &str = "0605";
+/// The contra account of every linked line (plan 76).
+pub const LINKED_OFFSET_CODE: &str = "03070001";
+/// The Urdu word of the 0605 account's name.
+pub const LINKED_WORD_UR: &str = "الگ کھاتہ اور ادھار رقم";
+/// The English word of the 0605 account's name.
+pub const LINKED_WORD_EN: &str = "Linked Khata and Loans";
+
+/// The 0605 account that a partner's names make, with its search keys. The partner save and
+/// migration 23 (for the partners that exist) both use it.
+///
+/// Example: partner "Alif" gets "Linked Khata and Loans - Alif".
+pub fn linked_account(name_ur: &str, name_en: &str) -> AccountToMake {
+    let ur = format!("{LINKED_WORD_UR} - {name_ur}");
+    let en = format!("{LINKED_WORD_EN} - {name_en}");
+    AccountToMake {
+        control_code: LINKED_CONTROL,
+        search_ur: text::search_ur(&ur),
+        search_en: text::search_en(&en),
+        search_phonetic: text::search_phonetic(&en),
+        name_ur: ur,
+        name_en: en,
+    }
+}
+
 /// One partner as the lists show him (PRD 17.1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PartnerRow {
@@ -120,6 +147,14 @@ pub struct PartnersGetInput {
     /// Row id.
     #[ts(type = "number")]
     pub id: i64,
+}
+
+/// Input of `partners_open_ventures` (plan 76 point 11).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PartnersOpenVenturesInput {
+    /// The partner.
+    #[ts(type = "number")]
+    pub partner_id: i64,
 }
 
 /// A new partner (PRD 17.1). He has no share until shares are set.
@@ -289,6 +324,13 @@ pub struct PartnerOverviewRow {
     /// The open gardens and trips he is in, with his %, his money in and back and the running
     /// balance or result of each (plan 17c). Gardens first, then trips, by number. Empty if none.
     pub open_ventures: Vec<PartnerVentureCard>,
+    /// How many open gardens he is in. The page shows "کھلے: 1 سفر، 0 باغ" from the two counts and
+    /// opens the list with `partners_open_ventures` on demand (plan 76 point 11).
+    #[ts(type = "number")]
+    pub open_gardens_count: i64,
+    /// How many open trips he is in.
+    #[ts(type = "number")]
+    pub open_trips_count: i64,
 }
 
 /// The shares as typed, read one by one (PRD FR-17.1). Rows that cannot be read are left out of

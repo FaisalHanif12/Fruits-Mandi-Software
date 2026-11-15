@@ -1387,6 +1387,8 @@ fn capital_node(env: &Env<'_>, partner_id: i64, overview: Paisa) -> Result<Node,
     let history = partners::capital_history(
         env.ctx,
         &CapitalHistoryInput {
+            from: None,
+            to: None,
             partner_id,
             offset: 0,
             limit: CAPITAL_LINES,

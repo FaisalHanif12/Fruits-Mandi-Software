@@ -1237,7 +1237,7 @@ report-r1-help = ایک { -bikri } کے لاٹ: کیا آیا، کیا بکا، 
 report-r5-title = { -udhari } تفصیل
 
 # review: pending
-report-r5-help = دن کے ہر گاہک کا مال، اس کی رقم اور { -commission } اور { -laga } کے ساتھ اس کے ذمے رقم، { -mauqa-par-jama } اور { -khate-mein-baqi }۔
+report-r5-help = دن کی اگراہی کی فہرست: ہر وہ { -gahak } جس کے ذمے دکان کی رقم ہے یا جس نے اس دن خریداری کی، اس کا مال، دن کے شروع میں اس کے ذمے رقم، دن کا بل، { -mauqa-par-jama } اور اب اس کے ذمے رقم۔
 
 # review: pending
 report-col-serial = نمبر شمار
@@ -1258,9 +1258,6 @@ report-bikri-hit = { -bikri } <num>{ $number }</num> · <num>{ $date }</num>
 report-detail-sale-short = ({ $item } { $qty } . { $rate })
 
 ## Print all the credit buyers' slips (R5, PRD 19.2 R5 "Print All"): one slip for each buyer.
-
-# review: pending
-report-print-all = تمام پرچیاں پرنٹ کریں
 
 # review: pending
 report-buyer-bills-slips = پرچیاں
@@ -1509,7 +1506,7 @@ report-guide-action-excel = ایکسل
 report-guide-special-r1 = چنی ہوئی { -bikri } کے { -beopari } کا بل پرنٹ کریں
 
 # review: pending
-report-guide-special-r5 = { report-print-all }: ہر گاہک کی ایک پرچی
+report-guide-special-r5 = گاہک کی پرچی: دن کے ہر گاہک کی ایک پرچی، ایک A4 صفحے پر کئی
 
 # review: pending
 report-guide-special-r35 = پارٹی چن کر اس کی پرچی پرنٹ کریں، یا ہر پارٹی کی جدول پرنٹ کریں
@@ -1545,10 +1542,10 @@ report-r4-detail = { -bikri } کی وہ لائنیں جن میں کچھ رقم {
 report-r4-when = یہ دیکھنے کے لیے کہ کتنا مال ادھار بکا۔
 
 # review: pending
-report-r5-detail = دن کا ہر { -gahak }، پورا ادا کرنے والا بھی۔ ہر قطار میں اس کا مال (قسم مال تعداد . ریٹ) کی شکل میں، اس کی رقم، { -commission } اور { -laga } کے ساتھ رقم، { -mauqa-par-jama } اور { -khate-mein-baqi }۔
+report-r5-detail = ہر وہ { -gahak } جس کے ذمے رقم ہے یا جس نے اس دن خریداری کی، پورا ادا کرنے والا بھی، ہر ایک کی ایک قطار، نام کے حساب سے۔ ہر قطار میں اس کا مال (قسم مال تعداد . ریٹ) کی شکل میں، سابقہ رقم، دن کا بل، { -mauqa-par-jama } اور اب اس کے ذمے رقم۔ دن کی { -wasooli } اگلے دن کی سابقہ رقم میں نظر آتی ہے۔
 
 # review: pending
-report-r5-when = دن کے گاہکوں کے بل کے لیے۔ { report-print-all } سے ہر گاہک کی ایک پرچی نکلتی ہے۔
+report-r5-when = اگراہی کے چکر کے لیے اور دن کی بکری کے بعد باقی رقم کی فہرست کے لیے۔
 
 # review: pending
 report-r6-detail = چنے ہوئے دنوں کا ہر { -lot }: { -beopari }، { -kham-bikri }، ہر کٹوتی، کل اخراجات اور { -safi-bikri }۔
@@ -1735,3 +1732,78 @@ report-r38-detail = { -doobi-raqam } میں ڈالا گیا ہر شخص: جب ڈ
 
 # review: pending
 report-r38-when = ایسی رقم کا پیچھا کرنے کے لیے جو وصول ہونا مشکل ہے۔
+
+## The collection sheet: R5 as the day's اگراہی list (plan 76 point 2, PRD R5, FR-19.11).
+
+# review: pending
+collection-title = { -udhari } تفصیل
+
+# review: pending
+collection-help = ہر وہ { -gahak } جس کے ذمے دکان کی رقم ہے یا جس نے چنے ہوئے دن خریداری کی، پورا ادا کرنے والا بھی: اس کا مال، دن کے شروع میں اس کے ذمے رقم، دن کا بل، { -mauqa-par-jama } اور اب اس کے ذمے رقم۔ دن کی { -wasooli } اگلے دن کی سابقہ رقم میں نظر آتی ہے۔ میزان سب گاہکوں کا ہے، صرف سامنے کی قطاروں کا نہیں۔
+
+# review: pending
+collection-back = رپورٹوں پر واپس
+
+# review: pending
+collection-search = کوڈ یا نام سے تلاش کریں
+
+# review: pending
+collection-label = دن کے گاہک
+
+# review: pending
+collection-failed = شیٹ نہیں پڑھی جا سکی
+
+# review: pending
+collection-empty = اس دن کسی گاہک کے ذمے کچھ نہیں اور کسی نے خریداری نہیں کی
+
+# review: pending
+collection-empty-help = دوسرا دن چنیں، یا پہلے { -bikri } لکھیں۔
+
+# review: pending
+collection-no-match = کوئی گاہک نہیں ملا
+
+# review: pending
+collection-no-match-help = الفاظ بدلیں، یا تلاش صاف کر دیں۔
+
+# review: pending
+collection-clear = تلاش صاف کریں
+
+# review: pending
+collection-parchi = گاہک کی پرچی
+
+# review: pending
+collection-goto = دن پر جائیں
+
+# review: pending
+collection-goto-hint = دن لکھیں، مثلاً 10-10-2026۔ مختصر شکل بھی چلتی ہے: 10 اس مہینے کی 10 تاریخ ہے۔
+
+# review: pending
+collection-goto-placeholder = دن-مہینہ-سال
+
+# review: pending
+collection-today = آج
+
+# review: pending
+collection-col-party = { -gahak }
+
+# review: pending
+collection-col-detail = مال
+
+# review: pending
+collection-col-previous = { -sabiqa-raqam }
+
+# review: pending
+collection-col-bill = { -taza-banam }
+
+# review: pending
+collection-col-paid = { -mauqa-par-jama }
+
+# review: pending
+collection-col-total-due = { -total-raqam }
+
+# review: pending
+collection-dead-line = { -doobi-raqam } (الگ شمار، اوپر کے میزان میں نہیں): { -sabiqa-raqam } <prev></prev>، { -taza-banam } <bill></bill>، { -total-raqam } <due></due>
+
+# The buyers whose total due ends in جمع (the shop owes them): listed apart so the total above stays what the buyers owe.
+# review: pending
+collection-credit-line = { -jama } والے { -gahak } (الگ شمار، اوپر کے میزان میں نہیں): { -sabiqa-raqam } <prev></prev>، { -taza-banam } <bill></bill>، { -total-raqam } <due></due>

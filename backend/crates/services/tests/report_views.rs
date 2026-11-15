@@ -741,12 +741,12 @@ fn the_chart_of_a_trend_view_has_a_point_for_every_period() {
     let d = view(&w, AnalyticsView::D, None, 0, 0).unwrap();
     assert_eq!(d.charts.len(), 1);
     assert_eq!(d.charts[0].kind, AnalyticsChartKind::Trend);
-    // A view with no chart says so: partners (F) and fruit taken (K).
+    // Partners (F) and fruit taken (K) draw a ranked chart of their rows (plan 76 point 4), not a trend.
+    let f = view(&w, AnalyticsView::F, None, 0, 0).unwrap();
     assert!(
-        view(&w, AnalyticsView::F, None, 0, 0)
-            .unwrap()
-            .charts
-            .is_empty()
+        f.charts
+            .iter()
+            .all(|c| c.kind == AnalyticsChartKind::Ranked)
     );
 }
 

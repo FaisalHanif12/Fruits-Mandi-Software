@@ -1,5 +1,15 @@
 ## نیا کیا ہے
 
+- بکری میں "+ باقی مال سے" کا بٹن: پچھلا بچا ہوا مال اور نیا ٹرک ایک ہی بکری میں بیچیں۔ پرانا مال اپنی پرانی بکری میں جاتا ہے، اس پر خرچہ دوبارہ نہیں لگتا۔
+- ادھاری تفصیل اب دن کی اگراہی شیٹ ہے: ہر گاہک کا سابقہ، آج کا بل، موقع پر جمع اور کل بقایا، ایک صفحے پر کئی گاہک۔
+- گاہک کی پرچیاں ایک A4 پر کئی، کاٹنے کی لکیر کے ساتھ۔ بکری کا پرنٹ بیوپاری اور گاہک دونوں حصوں کے ساتھ۔ ہر پرنٹ کے اوپر پھل کی تصویر۔
+- ڈیش بورڈ: آج کا کمیشن کھولیں تو کمیشن کا صفحہ، جس میں تاریخ، مہینہ، سال یا مدت، اور کسی ایک گاہک یا بیوپاری کا کمیشن۔ گاہکوں کے ذمے کھولیں تو سادہ فہرست۔ آج کا خرچہ کھولیں تو دکان کا خرچہ اور ہر شراکت دار کا اپنا خرچہ۔
+- بیک اپ کے کارڈ کی جگہ "باغوں کے مالکوں / دوسروں کے ذمے"۔ ادھار رقم میں شخص کی قسم (عملہ، باغ کا مالک، سفر والا، دیگر) اور دکان یا شراکت دار سے جوڑ۔
+- الگ کھاتہ دکان یا کسی شراکت دار سے جوڑیں، تو اس کی رقم اسی کی کل رقم میں آتی جاتی ہے۔
+- شراکت دار کا کھاتہ مہینہ وار، ہر دن کھول کر تفصیل۔ کھلے سفر اور باغ ایک چھوٹی لائن میں۔
+- تجزیات: گراف پر کلک کریں تو اس کے پیچھے کی لائنیں، گاہک کا فلٹر بیوپاری کے ساتھ، گاہک × قسم مال، خرچہ، اور ہر جگہ دن، مہینہ یا سال۔
+- لمبی فہرستیں اب ہفتے یا مہینے کی کھڑکی میں، تیر سے آگے پیچھے۔
+- سوال پوچھیں: "رحیم سے اس مہینے کتنا کمیشن اور بکری" کا ایک ہی جواب، اور بٹن سے کمیشن کا صفحہ اسی کے ساتھ کھلتا ہے۔
 - پختہ کھاتہ ختم کر دیا گیا۔ اس کی جگہ چکتا کھاتہ ہے: جو گاہک پورا بل موقع پر دے کر چلا جاتا ہے، اس کا نام بکری کی لائن سے ہی شامل کریں۔ اس پر کمیشن اور لاگا عام گاہک جیسا لگتا ہے، اور اس کا کوئی کھاتہ یا بقایا نہیں بنتا۔
 - ادھاری / نقدی کی جگہ اب ہر گاہک کی لائن کے آخر میں موقع پر جمع کا خانہ ہے۔ گاہک نے جتنی رقم ابھی دی وہ لکھیں، باقی اس کے کھاتے میں رہتی ہے۔ مثال: بل 10,000، جمع 3,000، تو 7,000 اس کے کھاتے میں۔
 - بکری کے مینو میں نیا پارٹی کھاتے: ہر گاہک اور بیوپاری کا بقایا، تاریخ وار حساب، اور کسی بھی دن کی پوری تفصیل، پرنٹ کے ساتھ۔
@@ -31,6 +41,16 @@
 
 ## What's new
 
+- A "+ From Unsold Stock" button on the Sale screen: sell leftover stock and a new truck in one sale. The old goods go to their old sale with no charges again.
+- Credit Details is now the day's collection sheet: each buyer's previous due, today's bill, paid on the spot and total due, many buyers to a page.
+- Buyer slips, several to an A4 page with cut lines. The sale print has a seller part and a buyer part. A fruit picture on every print header.
+- Dashboard: Today's Commission opens the commission page (by date, month, year or range, and for one buyer or seller). Buyers' Dues opens a simple list. Today's Expenses opens the shop's expenses and each partner's own expenses.
+- The backup card is replaced by "Garden Owners' and Others' Dues". Money Lent has a person type (staff, garden owner, trip person, other) and a link to the shop or a partner.
+- Link a Separate Khata to the shop or a partner, and its money moves that partner's total.
+- The partner statement one month at a time, each day opened for detail. Open trips and gardens in one short line.
+- Analytics: click a chart to see the lines behind it, the buyer filter beside the seller, buyer × item, expenses, and day, month or year everywhere.
+- Long lists now open in a week or month window, moved with the arrows.
+- Ask: "how much commission and sale from Rahim this month" in one answer, with a button to his commission page.
 - Pukhta Khata is gone. Chukta Khata takes its place: for a walk-in buyer who pays the whole bill on the spot and leaves. Add his name from the sale line. He is charged Commission and Laga like any buyer, and he has no ledger or balance.
 - The Credit / Cash toggle is replaced by a Paid on the Spot box at the end of each buyer's line. Type what the buyer paid now; the rest stays on his account. Example: bill 10,000, paid 3,000, so 7,000 stays on his account.
 - A new Party Ledgers item in the Sale menu: each buyer's and seller's balance, day by day, and the full detail of any day, with a print.

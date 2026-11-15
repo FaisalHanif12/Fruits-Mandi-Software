@@ -79,6 +79,10 @@ pub(crate) struct Typed {
     pub(crate) garden_view: GardenView,
     /// The picked بکری (R1, R5).
     pub(crate) bikri_id: Option<i64>,
+    /// The بکری a party's day slip (R35) is narrowed to: the sale print of one بکری or of a whole
+    /// mixed save (plan 76 point 3, C1). Set inside the crate by the day slips, never by a filter.
+    /// Empty is the whole day.
+    pub(crate) slip_bikri_ids: Vec<i64>,
     /// How R28 groups its lines. Month when the screen sent nothing.
     pub(crate) group_by: GroupBy,
     /// The still-owed or all filter of R38 (`due` keeps the people who still owe).

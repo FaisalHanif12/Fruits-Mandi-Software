@@ -85,6 +85,8 @@ pub(super) struct SellerDay {
     pub(super) left: Paisa,
     pub(super) new: Paisa,
     pub(super) has_entry: bool,
+    /// The charges of the lots of the day, kept so a slip of one بکری can add up its own lots.
+    pub(super) charges: Vec<LotCharges>,
 }
 
 /// The days asked for, with the figures of every party that has a day in them.
@@ -481,6 +483,117 @@ fn seller_day(
         left,
         new,
         has_entry,
+        charges: charges.to_vec(),
+    })
+}
+
+/// A buyer's day narrowed to the sale lines of some بکری (one بکری, or every بکری a mixed save sold:
+/// the new one and the old one of each carried lot), for the slip of "this بکری" (plan 76 point
+/// 3, FR-19.15). The lines, the goods, commission, لاگا, today's total, the quantity and what was
+/// paid on the spot are those of that بکری only. His previous balance and new balance stay the
+/// day's, and everything else of the day (the other بکری, his receipts, other entries) is the
+/// "other entries" line, so the slip still adds up: previous + left = new, with left the day's.
+///
+/// Example: اکرم bought 20 on بکری 1 (12,880) and 5 on بکری 2 (3,000) and paid 10,000: the slip of
+/// بکری 1 shows 12,880, other entries −7,000 (3,000 − 10,000), left 5,880.
+///
+/// # Errors
+/// `ReportsError::Money` if a sum does not fit.
+pub(super) fn narrow_buyer(d: &BuyerDay, bikri_ids: &[i64]) -> Result<BuyerDay, ReportsError> {
+    let lines: Vec<BuyerLine> = d
+        .lines
+        .iter()
+        .filter(|l| bikri_ids.contains(&l.bikri_id))
+        .cloned()
+        .collect();
+    let (mut goods, mut commission, mut laga, mut total, mut on_spot) = (
+        Paisa::ZERO,
+        Paisa::ZERO,
+        Paisa::ZERO,
+        Paisa::ZERO,
+        Paisa::ZERO,
+    );
+    let mut qty = 0_i64;
+    for line in &lines {
+        add(&mut goods, line.value)?;
+        add(&mut commission, line.commission)?;
+        add(&mut laga, line.laga)?;
+        add(&mut total, line.total)?;
+        add(&mut on_spot, line.paid)?;
+        qty = count_add(qty, line.qty)?;
+    }
+    // left = total + other - paid, so the rest of the day is what makes the day's left.
+    let other = d.left.checked_sub(total.checked_sub(on_spot)?)?;
+    Ok(BuyerDay {
+        lines,
+        goods,
+        commission,
+        laga,
+        total,
+        qty,
+        paid: on_spot,
+        other,
+        has_other: other != Paisa::ZERO,
+        ..d.clone()
+    })
+}
+
+/// A seller's day narrowed to one بکری: its lines and the charges of its own lots. His previous and
+/// new balance stay the day's; the rest of the day is "other entries" (as [`narrow_buyer`]).
+///
+/// # Errors
+/// `ReportsError::Money` if a sum does not fit.
+pub(super) fn narrow_seller(d: &SellerDay, bikri_ids: &[i64]) -> Result<SellerDay, ReportsError> {
+    let lines: Vec<SellerLine> = d
+        .lines
+        .iter()
+        .filter(|l| bikri_ids.contains(&l.bikri_id))
+        .cloned()
+        .collect();
+    let charges: Vec<LotCharges> = d
+        .charges
+        .iter()
+        .filter(|c| bikri_ids.contains(&c.bikri_id))
+        .cloned()
+        .collect();
+    let (mut gross, mut commission) = (Paisa::ZERO, Paisa::ZERO);
+    for line in &lines {
+        add(&mut gross, line.amount)?;
+        add(&mut commission, line.commission)?;
+    }
+    let (mut freight, mut labour, mut munshiana, mut phone) =
+        (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+    let (mut store_rent, mut cash_given) = (Paisa::ZERO, Paisa::ZERO);
+    for c in &charges {
+        add(&mut freight, c.freight)?;
+        add(&mut labour, c.labour)?;
+        add(&mut munshiana, c.munshiana)?;
+        add(&mut phone, c.phone)?;
+        add(&mut store_rent, c.store_rent)?;
+        add(&mut cash_given, c.cash)?;
+    }
+    let mut deductions = commission;
+    for part in [freight, labour, munshiana, phone, store_rent] {
+        add(&mut deductions, part)?;
+    }
+    let sale = deductions.checked_sub(gross)?;
+    // left = sale + other + paid, so the rest of the day is what makes the day's left.
+    let other = d.left.checked_sub(sale.checked_add(cash_given)?)?;
+    Ok(SellerDay {
+        lines,
+        gross,
+        commission,
+        freight,
+        labour,
+        munshiana,
+        phone,
+        store_rent,
+        sale,
+        paid: cash_given,
+        other,
+        has_other: other != Paisa::ZERO,
+        charges,
+        ..d.clone()
     })
 }
 
@@ -630,6 +743,7 @@ mod tests {
                     day: "2026-10-10".to_owned(),
                     account_id: 2,
                     person: String::new(),
+                    bikri_id: 1,
                     freight: rupees(freight),
                     labour: rupees(labour),
                     munshiana: rupees(munshiana),

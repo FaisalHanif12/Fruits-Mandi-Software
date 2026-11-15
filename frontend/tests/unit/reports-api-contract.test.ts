@@ -616,7 +616,7 @@ describe('round 11: the party day sheet (R35)', () => {
     ]);
     // The table is for no party; a slip is for one account, with no person for an ordinary one.
     expect(R35_TABLE_REQUEST.filters.party).toBeNull();
-    expect(R35_SLIP_AKRAM_REQUEST.filters.party).toEqual({ account_id: 20, person_key: null });
+    expect(R35_SLIP_AKRAM_REQUEST.filters.party).toEqual({ account_id: 21, person_key: null });
   });
 
   it('the table: a group row for the buyers and one for the sellers, with a blank collector column', () => {

@@ -1773,7 +1773,7 @@ describe.each(LANGUAGES)(
       const route = routeNow();
       expect(route.path).toBe('/reports/$id');
       expect(route.params).toEqual({ id: 'R35' });
-      expect(route.search).toMatchObject({ party: 20, as_of: '10-10-2026' });
+      expect(route.search).toMatchObject({ party: 21, as_of: '10-10-2026' });
     });
 
     it('the report button opens R5 with the party and the dates already set, so the Owner only presses F9', async () => {
@@ -1792,7 +1792,7 @@ describe.each(LANGUAGES)(
       );
       const route = routeNow();
       expect(route.params).toEqual({ id: 'R5' });
-      expect(route.search).toMatchObject({ party: 20, from: '01-09-2026', to: '30-09-2026' });
+      expect(route.search).toMatchObject({ party: 21, from: '01-09-2026', to: '30-09-2026' });
     });
 
     it('the print button of the second report prints with the same party and dates', async () => {
@@ -1816,7 +1816,7 @@ describe.each(LANGUAGES)(
       const sent = vi.mocked(reportsApi.reportsPrintReport).mock.calls[0]?.[0];
       expect(sent?.report.id).toBe('R13');
       expect(sent?.report.language).toBe(language);
-      expect(sent?.report.filters.party).toEqual({ account_id: 20, person_key: null });
+      expect(sent?.report.filters.party).toEqual({ account_id: 21, person_key: null });
       expect(sent?.report.filters.from).toBe('01-09-2026');
       expect(sent?.report.filters.to).toBe('30-09-2026');
     });

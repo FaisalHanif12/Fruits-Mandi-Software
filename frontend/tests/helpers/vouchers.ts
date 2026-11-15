@@ -138,7 +138,12 @@ export const WORKED_DAY_SUMMARY: DayCloseSummary = {
 /** Sets the answers of the day commands. A close and a reopen change the day status the app reads. */
 export function fakeDay(options: Partial<FakeDay> = {}): FakeDay {
   const store: FakeDay = {
-    status: { today: '2026-10-10', closed_up_to: '2026-09-30', today_open: true },
+    status: {
+      today: '2026-10-10',
+      closed_up_to: '2026-09-30',
+      today_open: true,
+      first_entry_date: null,
+    },
     days: 10,
     trial: ZERO,
     summary: WORKED_DAY_SUMMARY,

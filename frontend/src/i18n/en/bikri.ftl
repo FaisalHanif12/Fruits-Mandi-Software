@@ -1113,6 +1113,10 @@ bikri-past-failed = The list of earlier days could not be opened
 # review: pending
 bikri-past-label = Sales of the earlier days
 
+# The name of the grid of one open day of the window, read by screen readers: its date.
+# review: pending
+bikri-past-day-label = Sales of { $date }
+
 ## Past Sales: the divider, the headings of the two parts and the buttons that move the window (plan 72, Umar 12-11-2026).
 
 # The heading of the table of the window: the earlier { $days } days.
@@ -1154,3 +1158,49 @@ bikri-past-row-for = { -bikri } <num>{ $number }</num>:
 # The button on the sale book that goes back to the list the { -bikri } was opened from, at the same window and row.
 # review: pending
 bikri-past-back-to-list = Back to Past Sales
+
+## Lots carried over from earlier { -bikri } and new lots on one screen (plan 76 point 1, PRD FR-12.17, FR-12.48).
+
+# The button under the lots grid that adds a lot of goods left from an earlier { -bikri }.
+# review: pending
+bikri-carried-add = From { -baqi-maal }
+
+# review: pending
+bikri-carried-title = Choose a lot from the { -baqi-maal }
+
+# review: pending
+bikri-carried-help = Goods of an earlier { -bikri } that are not sold yet. They are sold here, in this { -bikri }, and their freight, labour and the other lot charges are not taken again.
+
+# review: pending
+bikri-carried-search = Search by seller, item or number
+
+# review: pending
+bikri-carried-empty = No goods left to sell
+
+# review: pending
+bikri-carried-empty-help = Every lot is sold, or is on this screen already.
+
+# review: pending
+bikri-carried-failed = The goods left could not be read
+
+# The note above the lots when some of them are carried over. $count: how many.
+# review: pending
+bikri-carried-note = { $count ->
+    [one] <num>1</num> { -lot } is carried over from an earlier { -bikri }. Its lot charges are not taken again.
+   *[other] <num>{ $count }</num> { -lot }s are carried over from earlier { -bikri }. Their lot charges are not taken again.
+}
+
+# review: pending
+bikri-carried-note-hint = Add the buyers and rates. To leave one out, remove its { -lot } with <key>{ $key }</key>.
+
+# The words of a carried lot's row: where it came from. $number: the { -bikri } it was received in.
+# review: pending
+bikri-carried-from = From { -bikri } <num>{ $number }</num>
+
+# The message after a save that held lots carried over from an earlier { -bikri }. $number: the { -bikri } it was written on.
+# review: pending
+bikri-mixed-saved-toast = { -bikri } <num>{ $number }</num> saved, with the goods carried over.
+
+# The lot asked for on the address is not there any more: sold out, written off or taken back.
+# review: pending
+bikri-carried-gone = That lot has nothing left to sell, so it was not added.

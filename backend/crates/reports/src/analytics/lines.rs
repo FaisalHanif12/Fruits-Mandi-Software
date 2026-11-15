@@ -129,6 +129,12 @@ pub(crate) fn merge(
         "column_key.partner_id",
         &mut conflicts,
     );
+    let head_id = merge_id(
+        row_key.head_id,
+        other.head_id,
+        "column_key.head_id",
+        &mut conflicts,
+    );
     for field in conflicts {
         problems.push(FieldError::new(ErrorCode::ErrOutOfRange, field));
     }
@@ -185,6 +191,7 @@ pub(crate) fn merge(
         to,
         not_item_ids,
         partner_id,
+        head_id,
         purchase_ids,
         guests: row_key.guests.or(other.guests),
         money: row_key.money.or(other.money),
@@ -238,7 +245,12 @@ pub(crate) fn run(
         (input.column_key.as_ref(), "column_key"),
     ] {
         let Some(key) = key else { continue };
-        if key.money.is_some() && input.view != super::model::AnalyticsView::F {
+        if key.money.is_some()
+            && !matches!(
+                input.view,
+                super::model::AnalyticsView::F | super::model::AnalyticsView::M
+            )
+        {
             problems.push(FieldError::new(
                 ErrorCode::ErrOutOfRange,
                 &format!("{field}.money"),
@@ -258,6 +270,28 @@ pub(crate) fn run(
     // View F opens the share rows of a partner, not sale facts.
     if input.view == super::model::AnalyticsView::F {
         return super::partner_lines::run(conn, typed, &key, input, spec);
+    }
+    // View M opens the posted journal lines of an expense head, or, for the partner part, a partner's
+    // share rows and drawings lines; never sale facts.
+    if input.view == super::model::AnalyticsView::M {
+        // A partner's kharch is behind the partner code, which the command checks for the partner
+        // part only; a key that asks for it under the shop part is refused here.
+        if key.money.is_some() && typed.expense_part != super::model::AnalyticsExpensePart::Partner
+        {
+            return Err(ReportsError::Rejected(vec![FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                "row_key.money",
+            )]));
+        }
+        // The partner part has one kind of entry, so a row or the totals row opens it too.
+        let money = key.money.or_else(|| {
+            (typed.expense_part == super::model::AnalyticsExpensePart::Partner)
+                .then_some(super::model::AnalyticsPartnerMoney::Taken)
+        });
+        return match money {
+            Some(money) => super::expense_partners::lines(conn, typed, &key, money, input, spec),
+            None => super::expense::lines(conn, typed, &key, input, spec),
+        };
     }
     // View K opens the fruit entries, not sale facts.
     if input.view == super::model::AnalyticsView::K {

@@ -17,7 +17,7 @@
 
 import { FIT_MIN, type EntryColumn } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks';
-import { isArrivalLot, isGardenLot, isOwnLot } from './draft';
+import { isArrivalLot, isCarriedLot, isGardenLot, isOwnLot } from './draft';
 import { LOT, SALE } from './types';
 
 /**
@@ -44,6 +44,8 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       picker: { kind: 'account', scope: 'lot_seller' },
       headerId: 'bikri-col-seller',
       minWidth: LOT_MIN.seller,
+      // A lot carried over from an earlier بکری is shown, not typed: it is a saved lot (plan 76 point 1).
+      editable: (row) => !isCarriedLot(row),
     },
     // The item and packing of an own goods lot come from its purchase and follow it (PRD FR-12.26),
     // so on that lot they are shown and not typed.
@@ -54,7 +56,7 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       headerId: 'glossary-qism-maal',
       // A short name (Banana, کیلا): the least width keeps the lots grid inside its room with the remove column.
       minWidth: FIT_MIN.figure,
-      editable: (row) => !isOwnLot(row) && !isArrivalLot(row),
+      editable: (row) => !isOwnLot(row) && !isArrivalLot(row) && !isCarriedLot(row),
     },
     {
       field: LOT.packing,
@@ -62,17 +64,35 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       picker: { kind: 'master', scope: 'packing' },
       headerId: 'glossary-packing',
       minWidth: FIT_MIN.figure,
-      editable: (row) => !isOwnLot(row) && !isArrivalLot(row),
+      editable: (row) => !isOwnLot(row) && !isArrivalLot(row) && !isCarriedLot(row),
     },
-    { field: LOT.qty, type: 'qty', headerId: 'bikri-col-qty-received', minWidth: LOT_MIN.qty },
-    { field: LOT.freight, type: 'money', headerId: 'glossary-kiraya' },
-    { field: LOT.labour, type: 'money', headerId: 'glossary-mazdoori', showsCalc: true },
+    {
+      field: LOT.qty,
+      type: 'qty',
+      headerId: 'bikri-col-qty-received',
+      minWidth: LOT_MIN.qty,
+      editable: (row) => !isCarriedLot(row),
+    },
+    {
+      field: LOT.freight,
+      type: 'money',
+      headerId: 'glossary-kiraya',
+      editable: (row) => !isCarriedLot(row),
+    },
+    {
+      field: LOT.labour,
+      type: 'money',
+      headerId: 'glossary-mazdoori',
+      showsCalc: true,
+      editable: (row) => !isCarriedLot(row),
+    },
     {
       field: LOT.munshiana,
       type: 'money',
       headerId: 'glossary-munshiana',
       showsCalc: true,
       minWidth: FIT_MIN.longHeading,
+      editable: (row) => !isCarriedLot(row),
     },
     // A one-time seller's نقد is filled by the backend while empty (FR-13.10), with its working.
     // An own goods lot has no نقد: the firm does not give cash to itself (PRD FR-12.26). A garden's
@@ -83,7 +103,7 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       headerId: 'glossary-naqd',
       showsCalc: true,
       explain: true,
-      editable: (row) => !isOwnLot(row) && !isGardenLot(row),
+      editable: (row) => !isOwnLot(row) && !isGardenLot(row) && !isCarriedLot(row),
     },
     ...(isFromStep(step, 'normal')
       ? ([

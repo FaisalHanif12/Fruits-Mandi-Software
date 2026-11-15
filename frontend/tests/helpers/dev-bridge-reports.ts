@@ -108,6 +108,8 @@ import {
   R6_LOTS,
   R7_ITEMS,
 } from './reports-real';
+import { SHEET as COLLECTION_SHEET, printData as collectionPrintData } from './collection-sheet';
+import { daySlipsData } from './day-slips';
 
 type Input = Record<string, unknown>;
 
@@ -187,12 +189,17 @@ function partyDaySheetPrint(input: Input): ReportPrintData {
   const party = filters['party'] as { account_id?: number } | null;
   const urdu = input['language'] === 'ur';
   if (party?.account_id === undefined) return urdu ? PRINT_R35_TABLE_UR : PRINT_R35_TABLE_EN;
-  if (party.account_id === 18) {
+  if (party.account_id === 19) {
     return blankPaid(urdu ? PRINT_SLIP_SELLER_UR : PRINT_SLIP_SELLER_EN);
   }
   // With the `weighed` flag the buyer's slip has a line of an item sold by weight (PRD A73).
   if (devFlag('weighed')) return urdu ? PRINT_SLIP_WEIGHED_UR : PRINT_SLIP_WEIGHED_EN;
   return blankPaid(urdu ? PRINT_SLIP_BUYER_UR : PRINT_SLIP_BUYER_EN);
+}
+
+/** The paper a print was asked for: A4 unless the input says A5. */
+function paperOf(input: Input): 'a4' | 'a5' {
+  return input['paper'] === 'a5' ? 'a5' : 'a4';
 }
 
 function catalog(): ReportCatalogEntry[] {
@@ -206,7 +213,7 @@ export function page(input: Input): ReportPage {
   const party = filters['party'] as { account_id?: number } | null;
   let base = PAGES[id];
   if (base === undefined) throw refusal('ERR_NOT_FOUND');
-  if (id === 'R13' && party?.account_id === 18) base = R13_RAHIM;
+  if (id === 'R13' && party?.account_id === 19) base = R13_RAHIM;
   if (id === 'R14' && filters['detail'] === true) base = R14_DETAIL;
   if (id === 'R18' && filters['as_of'] !== '') base = R18_AS_OF;
   if (id === 'R28' && filters['group_by'] === 'day') base = R28_BY_DAY;
@@ -240,9 +247,9 @@ export function page(input: Input): ReportPage {
   // for any other account.
   if (id === 'R35' && party?.account_id !== undefined) {
     base =
-      devFlag('weighed') && party.account_id !== 18
+      devFlag('weighed') && party.account_id !== 19
         ? SLIP_BUYER_WEIGHED
-        : blankPaid(party.account_id === 18 ? SLIP_SELLER_RAHIM : SLIP_BUYER_AKRAM);
+        : blankPaid(party.account_id === 19 ? SLIP_SELLER_RAHIM : SLIP_BUYER_AKRAM);
   }
   // `?grade` shows the real answers of plan 58: lines with a quality, a grade column in R2 and R35.
   if (devFlag('grade') && id === 'R2') base = GRADE_R2;
@@ -284,6 +291,35 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_print_header: (input) => printFrameFor(input as unknown as PrintFrameInput),
   reports_buyer_bills_print_data: (input) =>
     input['language'] === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN,
+  // Plan 76: the اگراہی sheet (R5), its print data, the buyer parchi and the overall sale print.
+  day_status: () => ({
+    today: '2026-10-10',
+    closed_up_to: null,
+    today_open: true,
+    first_entry_date: '2026-09-20',
+  }),
+  windows_bounds: () => ({ first_date: '2026-09-20', last_date: '2026-10-10' }),
+  reports_collection_sheet: (input) => {
+    const asked = input['search'];
+    const search = (typeof asked === 'string' ? asked : '').toLowerCase();
+    const rows = COLLECTION_SHEET.rows.filter(
+      (row) =>
+        search === '' ||
+        row.party.name_en.toLowerCase().includes(search) ||
+        row.party.code.includes(search),
+    );
+    return { ...COLLECTION_SHEET, rows, total_count: rows.length };
+  },
+  reports_collection_sheet_print_data: (input) =>
+    collectionPrintData(input['language'] === 'ur' ? 'ur' : 'en'),
+  reports_buyer_parchi_print_data: (input) => {
+    const data = daySlipsData(input['language'] === 'ur' ? 'ur' : 'en', 'parchi', paperOf(input));
+    const first = data.buyers[0];
+    // A day has many buyers: seven of one slip show how the page fills (about six to an A4 page).
+    return first === undefined ? data : { ...data, buyers: Array.from({ length: 7 }, () => first) };
+  },
+  reports_sale_print_data: (input) =>
+    daySlipsData(input['language'] === 'ur' ? 'ur' : 'en', 'sale', paperOf(input)),
   // The partner box (R29, R31) and the person box of R32 (the people who can borrow) read these
   // from the cash book stand-in, so the filter boxes of the new reports work in the browser.
   partners_list: (input) => rokarHandlers['partners_list']?.(input),

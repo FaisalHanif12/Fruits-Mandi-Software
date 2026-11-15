@@ -12,7 +12,7 @@ import type { VouchersListInput } from '../../../bindings/VouchersListInput';
 import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { useDebouncedValue, usePeriod } from '../../../shared/hooks';
+import { useDebouncedValue, useListWindow } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
 import {
   AccountPicker,
@@ -22,7 +22,7 @@ import {
   Field,
   FilterBar,
   FormSpan,
-  PeriodBox,
+  ListWindowBar,
   ShowClosedTick,
   type PickerValue,
   EntryActions,
@@ -57,31 +57,34 @@ export function VoucherListSection({
   onCancel,
   onPrint,
 }: VoucherListSectionProps) {
-  // The list opens on today, and the Owner's last choice of period is kept for this kind of voucher
-  // (plan 38 R4). Rows of finished (cancelled) vouchers are left out until the tick is on.
-  const period = usePeriod(`vouchers.${type}`, 'today', today);
+  // The list shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8). Rows of finished
+  // (cancelled) vouchers are left out until the tick is on.
+  const listWindow = useListWindow({
+    kind: 'days',
+    source: { kind: 'vouchers', voucher_type: type },
+    today,
+  });
   const [account, setAccount] = useState<PickerValue | null>(null);
   const [search, setSearch] = useState('');
   const [showFinished, setShowFinished] = useState(false);
   const searchText = useDebouncedValue(search.trim(), SEARCH_DELAY_MS);
   const input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'> = {
     voucher_type: type,
-    from: period.range.from,
-    to: period.range.to,
+    from: listWindow.range.from,
+    to: listWindow.range.to,
     account_id: account?.id ?? null,
     show_finished: showFinished,
     search: searchText === '' ? null : searchText,
-    // A month heading is worth its row only when the list covers more than one day.
-    group_by_month: period.state.kind !== 'today',
+    // A window is 7 days: the bar under the list says which, so no month heading is drawn.
+    group_by_month: false,
   };
-  const list = useVouchersList(input, period.ready);
+  const list = useVouchersList(input, listWindow.ready);
   const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the filter before it.
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
   const columns = useMemo(() => VOUCHER_COLUMNS, []);
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
-  const onlyToday =
-    period.state.kind === 'today' && account === null && searchText === '' && !showFinished;
+  const onlyToday = listWindow.isLatest && account === null && searchText === '' && !showFinished;
   const months = first === undefined || first.months.length === 0 ? undefined : first.months;
 
   const empty = onlyToday ? (
@@ -98,7 +101,7 @@ export function VoucherListSection({
       action={
         <Button
           onClick={() => {
-            period.change({ kind: 'today', from: '', to: '' });
+            listWindow.latest();
             setAccount(null);
             setSearch('');
             setShowFinished(false);
@@ -124,6 +127,7 @@ export function VoucherListSection({
         void list.refetch();
       }}
       pager={list.pager}
+      onPageKey={listWindow.onPageKey}
       sort={{ value: list.sort, onChange: list.setSort }}
       months={
         months === undefined ? undefined : { months, monthOf: (row) => row.entry_date.slice(0, 7) }
@@ -180,9 +184,7 @@ export function VoucherListSection({
             </FormSpan>
           }
           extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
-        >
-          {period.ready ? <PeriodBox period={period} /> : null}
-        </FilterBar>
+        ></FilterBar>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <EntryActions
@@ -209,6 +211,7 @@ export function VoucherListSection({
         </Localized>
       </div>
       {body}
+      <ListWindowBar window={listWindow} />
     </Card>
   );
 }

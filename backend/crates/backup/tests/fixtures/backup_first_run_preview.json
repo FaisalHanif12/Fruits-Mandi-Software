@@ -1,5 +1,5 @@
 {
-  "app_schema_version": 22,
+  "app_schema_version": 23,
   "checks": [
     {
       "name": "opens",
@@ -32,10 +32,10 @@
   },
   "created_at": "2026-10-10T09:00:00.000Z",
   "needs_upgrade": false,
-  "schema_version": 22,
+  "schema_version": 23,
   "size_bytes": 0,
   "totals": {
-    "accounts": 17,
+    "accounts": 18,
     "audit_rows": 5,
     "bikri_entries": 0,
     "cash_paisa": 0,

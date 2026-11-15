@@ -62,7 +62,7 @@ icu_locale_core = "2.3.0"
 proptest = { version = "1.11.0", default-features = false, features = ["std", "bit-set"] }
 
 # Database (Tech Stack 2): SQLite built in, with the online backup API and custom collations.
-rusqlite = { version = "0.40.2", features = ["bundled", "backup", "collation"] }
+rusqlite = { version = "0.40.2", features = ["bundled", "backup", "collation", "functions"] }
 rusqlite_migration = "2.6.0"
 # Hash chain over audit entries (NFR-SEC-6). Plan 03 4.5.
 blake3 = "1.8.7"

@@ -13,11 +13,12 @@
 //! checked`, `text " باقی ہیں۔"`, and one table of R13 with its last rows.
 
 use mandi_reports::analytics::{AnalyticsKey, AnalyticsView};
+use mandi_reports::dashboard::CommissionSide;
 use mandi_reports::reports::{Cell, Column, MessageArg, Names, ReportId, Row};
 use serde::Serialize;
 use ts_rs::TS;
 
-use crate::source::{AnswerRecord, SourceAnalyticsFilters, SourceReportFilters};
+use crate::source::{AnswerRecord, SourceAnalyticsFilters, SourceParty, SourceReportFilters};
 
 /// The direction word the app puts next to a difference or a change: زیادہ (more), کم (less) or
 /// برابر (the same). The model never chooses it (PRD FR-7.75).
@@ -181,6 +182,21 @@ pub enum AnswerSource {
     Tiles {
         /// The result of this question it came from.
         result_id: String,
+    },
+    /// The commission page of one party in a period (PRD FR-9.3, FR-7.90 v1.42, plan 77). The button
+    /// opens it with the side, the party and the dates already chosen: a month when the dates are
+    /// a whole calendar month, else a range.
+    Commission {
+        /// The result of this question it came from (view B for a seller, view C for a buyer).
+        result_id: String,
+        /// Buyer or seller.
+        side: CommissionSide,
+        /// The party as a whole record and, for a چکتا buyer, his person key.
+        party: SourceParty,
+        /// First day, `YYYY-MM-DD`.
+        from: String,
+        /// Last day, `YYYY-MM-DD`.
+        to: String,
     },
     /// A screen of the app that is not a report or a view: the commission rules, the day close,
     /// the audit log, the dashboard (plan 55 §11.1). The button opens it as it is.

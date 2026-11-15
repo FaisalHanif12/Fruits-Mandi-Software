@@ -84,6 +84,7 @@ import {
   R33_TRIP,
   R34_DAY,
 } from './reports-stock-real';
+import { fakeCollectionSheet } from './collection-sheet';
 
 export * from './reports-real';
 export * from './reports-business-real';
@@ -182,6 +183,8 @@ export interface FakeReports {
 
 /** Sets the answers of the report commands, and returns the pages behind them. */
 export function fakeReports(options: ReportsOptions = {}): FakeReports {
+  // R5 is the اگراہی sheet, its own screen with its own commands (plan 76 point 2).
+  fakeCollectionSheet();
   const pages: Partial<Record<ReportId, ReportPage>> = { ...DEFAULT_PAGES, ...options.pages };
   vi.mocked(reportsApi.reportsCatalog).mockImplementation(() =>
     options.catalog instanceof Error
@@ -232,7 +235,7 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     // day's ids: رحیم is 18 and کریم 19), the buyer's slip for any other (unless the test brought a
     // page of its own).
     if (input.id === 'R35' && input.filters.party !== null && options.pages?.R35 === undefined) {
-      answer = input.filters.party.account_id === 18 ? R35_SLIP_RAHIM : R35_SLIP_AKRAM;
+      answer = input.filters.party.account_id === 19 ? R35_SLIP_RAHIM : R35_SLIP_AKRAM;
     }
     // R10 answers by item when the layout box says so (unless the test brought a page of its own).
     if (

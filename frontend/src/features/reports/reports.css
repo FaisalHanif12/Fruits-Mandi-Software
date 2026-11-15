@@ -133,6 +133,70 @@
   border-block-end: var(--print-rule) dotted var(--color-ink);
 }
 
+/* The buyer parchi and the overall sale print (plan 76 point 3, PRD FR-19.15): party slips side by side, each
+   in a box with dashed cut lines and never cut across a page. A4 has two columns (about six parchis a page),
+   A5 one. The overall sale print is one slip under another, so a seller's deductions have room. */
+.print-report .print-parchi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--print-gap-4);
+  margin-block-start: var(--print-gap-3);
+}
+
+.print-doc[data-paper='a5'] .print-parchi-grid,
+.print-doc[data-paper='mm80'] .print-parchi-grid,
+.print-report.print-parchi-page[data-variant='sale'] .print-parchi-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.print-report .print-parchi-slip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-2);
+  padding: var(--print-gap-3);
+  border: var(--print-rule) dashed var(--color-ink);
+  break-inside: avoid;
+}
+
+.print-report .print-parchi-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--print-gap-2) var(--print-gap-4);
+}
+
+.print-report .print-parchi-collect {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--print-gap-3);
+  margin-block-start: var(--print-gap-3);
+}
+
+.print-report .print-parchi-part {
+  margin-block-start: var(--print-gap-5);
+}
+
+/* A parchi is short, so about six stand on an A4 page: tighter lines in the labelled card under the goods,
+   the card as wide as the slip, the words one step smaller. The firm's name heads each slip. */
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts {
+  max-inline-size: none;
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts th,
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts td {
+  padding-block: 0;
+  font-size: var(--print-text-1);
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-table-dense td,
+.print-report.print-parchi-page[data-variant='parchi'] .print-table-dense th {
+  padding-block: 0;
+}
+
+.print-report .print-parchi-firm {
+  font-size: var(--print-text-1);
+  font-weight: var(--weight-strong);
+}
+
 /* The two short tables of a day of the day total sheet (R34): the buyers' and the sellers', one under
    the other, each in one piece with its title. */
 .print-report .print-day-tables {

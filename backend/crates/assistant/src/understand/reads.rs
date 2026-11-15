@@ -1761,13 +1761,15 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     };
     let asked = lines.len();
     let lines = totals::keep_lines(u, lines);
-    // The gate: with several measures and the gate OFF the reads stay and no line is given.
-    let lines = if u.figures.value.len() > 1 && !u.multi_measure {
+    // The gate: with several measures and the gate OFF the reads stay and no line is given. The one
+    // exception is a party's commission and sale asked together (PRD FR-7.90, v1.42).
+    let open = u.multi_measure || party_commission_and_sale(u);
+    let lines = if u.figures.value.len() > 1 && !open {
         Vec::new()
     } else {
         lines
     };
-    let asked = if u.multi_measure { asked } else { 0 };
+    let asked = if open { asked } else { 0 };
     // Several figures asked and a line dropped (a total that a doubt keeps back, a fruit value nobody asked):
     // the answer would leave a part of the question out, so the model answers (D7, plan 59 C).
     if u.figures.value.len() > 1 && lines.len() < asked {
@@ -3024,7 +3026,10 @@ fn figure(u: &Understanding, period: Option<&PeriodRef>, plan: &mut Plan) -> Opt
     if kinds.len() > 1 && !(flow_figures(u) || (u.multi_measure && combinable_figures(u))) {
         return None;
     }
-    if kinds.len() > 1 && u.multi_measure && !several_figures_are_safe(u, period) {
+    if kinds.len() > 1
+        && (u.multi_measure || party_commission_and_sale(u))
+        && !several_figures_are_safe(u, period)
+    {
         return None;
     }
     if kinds.is_empty() {
@@ -3138,6 +3143,28 @@ fn combinable_figures(u: &Understanding) -> bool {
         && u.parties.len() <= 1
         && u.items.len() <= 1
         && u.records.len() <= 1
+}
+
+/// True when exactly the sale and the commission of ONE named seller or buyer were asked together
+/// ("rahim se is mahine kitna commission aur bikri", "akram ki bikri aur commission"). Umar decided
+/// on 14-11-2026 (PRD FR-7.90 v1.42, plan 77) that the app answers it by itself in one reply, and
+/// opens the commission page of that party, while every other question of several measures stays
+/// with the model behind [`super::MULTI_MEASURE_INSTANT`] (lead decision D333). A laga beside the
+/// commission, an item, a record or a second name is not this question.
+fn party_commission_and_sale(u: &Understanding) -> bool {
+    let kinds = u.figures.value.as_slice();
+    kinds.len() == 2
+        && kinds.contains(&FigureKind::Sale)
+        && kinds.contains(&FigureKind::Commission)
+        && u.items.is_empty()
+        && u.records.is_empty()
+        && u.parties.len() == 1
+        && u.parties.first().is_some_and(|p| {
+            matches!(
+                &p.outcome,
+                Outcome::Found(hit) if matches!(hit.role, PartyRole::Seller | PartyRole::Buyer)
+            )
+        })
 }
 
 /// True when two or three figures were asked and every one is a flow that the same read holds: the
@@ -3476,6 +3503,18 @@ fn party_figure(
                 from,
                 to,
                 ..An::default()
+            };
+            // A buyer's commission is three lines, what the commission page of the buyer shows (Umar,
+            // 14-11-2026, plan 77): his commission, his Laga and the total of the two. View A read with
+            // him and his side holds all three on its totals row, so they come from one read. A list
+            // ("kis kis din kitna commission diya") and his sale or Laga alone keep view C.
+            let buyer_commission =
+                role == PartyRole::Buyer && kind == FigureKind::Commission && !listing;
+            let view = if buyer_commission {
+                a.side = Some("buyer");
+                "A"
+            } else {
+                view
             };
             let who = if role == PartyRole::Seller {
                 a.seller = Some(key.clone());

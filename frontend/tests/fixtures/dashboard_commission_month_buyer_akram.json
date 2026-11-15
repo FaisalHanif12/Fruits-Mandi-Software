@@ -1,0 +1,52 @@
+{
+  "month": "2026-10",
+  "year": 2026,
+  "period": {
+    "kind": "month",
+    "from": "2026-10-01",
+    "to": "2026-10-31"
+  },
+  "party": {
+    "side": "buyer",
+    "party": {
+      "account_id": 21,
+      "code": "0020",
+      "short_code": "0",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": null,
+      "person_key": null
+    }
+  },
+  "first_month": "2026-10",
+  "current_month": "2026-10",
+  "partners": [],
+  "rows": [
+    {
+      "date": "2026-10-10",
+      "seller_comm_paisa": 0,
+      "buyer_comm_paisa": 72000,
+      "laga_paisa": 16000,
+      "total_comm_paisa": 88000,
+      "shared_income_paisa": 0,
+      "partner_shares": null,
+      "sale_paisa": 1200000,
+      "goods_comm_paisa": null
+    }
+  ],
+  "total_count": 1,
+  "offset": 0,
+  "limit": 0,
+  "totals": {
+    "date": "",
+    "seller_comm_paisa": 0,
+    "buyer_comm_paisa": 72000,
+    "laga_paisa": 16000,
+    "total_comm_paisa": 88000,
+    "shared_income_paisa": 0,
+    "partner_shares": null,
+    "sale_paisa": 1200000,
+    "goods_comm_paisa": null
+  },
+  "partners_locked": false
+}

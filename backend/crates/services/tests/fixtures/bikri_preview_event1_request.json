@@ -28,7 +28,7 @@
         "qty_received": "50",
         "sales": [
           {
-            "buyer_account_id": 20,
+            "buyer_account_id": 21,
             "buyer_comm": null,
             "buyer_rate": null,
             "chukta": null,
@@ -43,7 +43,7 @@
             "weight": null
           },
           {
-            "buyer_account_id": 21,
+            "buyer_account_id": 22,
             "buyer_comm": null,
             "buyer_rate": null,
             "chukta": null,
@@ -73,7 +73,7 @@
             "weight": null
           }
         ],
-        "seller_account_id": 18,
+        "seller_account_id": 19,
         "store_id": null,
         "store_rent": null,
         "weight_received": null

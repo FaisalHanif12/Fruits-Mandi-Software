@@ -54,7 +54,7 @@
     },
     {
       "account": {
-        "id": 31,
+        "id": 35,
         "code": "05010001",
         "name_ur": "بجلی",
         "name_en": "Electricity"
@@ -66,7 +66,7 @@
     },
     {
       "account": {
-        "id": 22,
+        "id": 23,
         "code": "06020001",
         "name_ur": "سرمایہ - الف",
         "name_en": "Capital - Partner A"
@@ -78,7 +78,7 @@
     },
     {
       "account": {
-        "id": 25,
+        "id": 27,
         "code": "06020002",
         "name_ur": "سرمایہ - ب",
         "name_en": "Capital - Partner B"
@@ -90,7 +90,7 @@
     },
     {
       "account": {
-        "id": 28,
+        "id": 31,
         "code": "06020003",
         "name_ur": "سرمایہ - ج",
         "name_en": "Capital - Partner C"

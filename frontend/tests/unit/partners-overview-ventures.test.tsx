@@ -107,20 +107,32 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
     return { ...view, user: userEvent.setup() };
   }
 
-  /** The card of the open gardens and trips of a partner: his name is its title (plan 38). */
+  /**
+   * The compact line of the open gardens and trips of a partner (plan 76 point 11), opened: the list
+   * is behind a button, so the button is pressed when the list is not shown yet.
+   */
   async function cardOf(name: string): Promise<HTMLElement> {
-    // The name is also the heading of his row in the table, so the card is the one that is a section.
+    // The name is also the heading of his row in the table, so the line is the one that holds the button.
     const found = await screen.findAllByText(name);
-    const card = found.map((one) => one.closest('section')).find((one) => one !== null);
-    if (!(card instanceof HTMLElement)) throw new Error('no card');
-    return card;
+    const line = found
+      .map((one) => one.closest('[data-open-ventures-line]'))
+      .find((one) => one !== null);
+    if (!(line instanceof HTMLElement)) throw new Error('no line');
+    if (within(line).queryByRole('table') === null) {
+      await userEvent.click(
+        within(line).getByRole('button', {
+          name: (label) => visible(label) === message(language, 'partners-ventures-show'),
+        }),
+      );
+    }
+    return line;
   }
 
-  /** Whether a partner has a card of open gardens and trips under the table. */
+  /** Whether a partner has a line of open gardens and trips under the table. */
   async function hasCard(name: string): Promise<boolean> {
-    // Wait for the table (his row), then look for a section with his name as the title.
+    // Wait for the table (his row), then look for a line with his name.
     const found = await screen.findAllByText(name);
-    return found.some((one) => one.closest('section') !== null);
+    return found.some((one) => one.closest('[data-open-ventures-line]') !== null);
   }
 
   it('shows the garden and the trip a partner is in, with his % and his money, as the backend sent them', async () => {
@@ -141,6 +153,32 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
     }
     expect(text).toContain(message(language, 'glossary-bagh'));
     expect(text).toContain(message(language, 'glossary-safar'));
+  });
+
+  it('is one short line at first, with the count of trips and gardens, and the list behind a button', async () => {
+    await open();
+    const name = nameOf(language, 'الف', 'Partner A');
+    const found = await screen.findAllByText(name);
+    const line = found
+      .map((one) => one.closest('[data-open-ventures-line]'))
+      .find((one) => one !== null);
+    if (!(line instanceof HTMLElement)) throw new Error('no line');
+    expect(visible(line.textContent)).toContain(
+      message(language, 'partners-ventures-line', { trips: 1, gardens: 1 }),
+    );
+    expect(within(line).queryByRole('table')).toBeNull();
+    const button = within(line).getByRole('button', {
+      name: (label) => visible(label) === message(language, 'partners-ventures-show'),
+    });
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    await userEvent.click(button);
+    expect(await within(line).findByRole('table')).toBeTruthy();
+    const hide = within(line).getByRole('button', {
+      name: (label) => visible(label) === message(language, 'partners-ventures-hide'),
+    });
+    expect(hide.getAttribute('aria-expanded')).toBe('true');
+    await userEvent.click(hide);
+    expect(within(line).queryByRole('table')).toBeNull();
   });
 
   it('a partner in no garden or trip has no list under his card', async () => {
@@ -203,20 +241,32 @@ describe.each(LANGUAGES)('the overview with the backend’s real answers (%s)', 
     });
   }
 
-  /** The card of the open gardens and trips of a partner: his name is its title (plan 38). */
+  /**
+   * The compact line of the open gardens and trips of a partner (plan 76 point 11), opened: the list
+   * is behind a button, so the button is pressed when the list is not shown yet.
+   */
   async function cardOf(name: string): Promise<HTMLElement> {
-    // The name is also the heading of his row in the table, so the card is the one that is a section.
+    // The name is also the heading of his row in the table, so the line is the one that holds the button.
     const found = await screen.findAllByText(name);
-    const card = found.map((one) => one.closest('section')).find((one) => one !== null);
-    if (!(card instanceof HTMLElement)) throw new Error('no card');
-    return card;
+    const line = found
+      .map((one) => one.closest('[data-open-ventures-line]'))
+      .find((one) => one !== null);
+    if (!(line instanceof HTMLElement)) throw new Error('no line');
+    if (within(line).queryByRole('table') === null) {
+      await userEvent.click(
+        within(line).getByRole('button', {
+          name: (label) => visible(label) === message(language, 'partners-ventures-show'),
+        }),
+      );
+    }
+    return line;
   }
 
-  /** Whether a partner has a card of open gardens and trips under the table. */
+  /** Whether a partner has a line of open gardens and trips under the table. */
   async function hasCard(name: string): Promise<boolean> {
-    // Wait for the table (his row), then look for a section with his name as the title.
+    // Wait for the table (his row), then look for a line with his name.
     const found = await screen.findAllByText(name);
-    return found.some((one) => one.closest('section') !== null);
+    return found.some((one) => one.closest('[data-open-ventures-line]') !== null);
   }
 
   /** The row of a partner in the table: what holds his name and his figures. */

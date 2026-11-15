@@ -118,7 +118,7 @@ fn books_equity(w: &support::World) -> i64 {
 }
 
 /// The worked day, Events 1 to 5 (PRD 4.4 to 4.8), and ب's 50,000 on 11-10-26 (E2E-35).
-fn events_1_to_5_and_capital() -> support::World {
+pub(super) fn events_1_to_5_and_capital() -> support::World {
     let w = worked_day();
     events_1_to_4(&w);
     let electricity = expense_head(&w, "بجلی", "Electricity");
@@ -188,6 +188,8 @@ fn e2e_35_partner_b_invests_50000_it_is_never_split_and_never_income() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            from: None,
+            to: None,
             group_by_month: false,
             sort: None,
             partner_id: b,
@@ -436,6 +438,8 @@ fn month_close_leaves_the_partner_total_unchanged() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            from: None,
+            to: None,
             group_by_month: false,
             sort: None,
             partner_id: w.partners[0],
@@ -746,6 +750,8 @@ fn d4_a31_a_drawings_opening_debit_counts_as_money_taken() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,

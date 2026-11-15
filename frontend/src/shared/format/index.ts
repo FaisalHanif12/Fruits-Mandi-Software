@@ -13,6 +13,27 @@ export {
   type Paisa,
 } from './money';
 export { addDays, dayOfText, isIsoDay } from './dayMath';
+export {
+  DAYS_WINDOW,
+  canDaysWindowComeNearer,
+  canDaysWindowGoBack,
+  daysWindowEnd,
+  daysWindowOf,
+  stepDaysWindow,
+} from './daysWindow';
+export {
+  addMonths,
+  canMonthComeNearer,
+  canMonthGoBack,
+  displayMonth,
+  isIsoMonth,
+  monthBounds,
+  monthOf,
+  monthOfText,
+  monthParts,
+  stepMonth,
+  windowMonth,
+} from './months';
 export { formatBps } from './percent';
 export { GRADE_CHOICES, GRADE_WORD_ID, gradedItem, type GradeChoice } from './grade';
 export { formatGrams } from './weight';

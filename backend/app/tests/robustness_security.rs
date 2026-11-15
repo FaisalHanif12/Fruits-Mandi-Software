@@ -941,6 +941,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "bikri_mixed_preview",
+            json!({ "input": { "date": "10-10-2026", "carried": [], "new_lots": [] } }),
+            true,
+        ),
+        (
+            "bikri_mixed_save",
+            json!({ "input": { "date": "10-10-2026", "carried": [], "new_lots": [],
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_mixed_undo",
+            json!({ "input": { "later_entry_ids": [], "new_bikri_id": null,
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
             "bikri_open_for_edit",
             json!({ "input": { "bikri_id": 1, "entry_id": 1 } }),
             true,
@@ -1035,6 +1052,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "tables_export_excel",
+            json!({ "input": { "job_id": "j1", "path": "/no-such-folder/mandi-robustness.xlsx", "source": { "kind": "buyer_dues", "language": "en" } } }),
+            true,
+        ),
+        (
             "drafts_save",
             json!({ "input": { "screen": "bikri", "payload_json": "{}" } }),
             true,
@@ -1100,6 +1122,46 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "reports_print_voucher",
             json!({ "input": { "voucher_id": 1, "language": "ur", "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_buyer_parchi_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_sale_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "partners_statement_month",
+            json!({ "input": { "partner_id": 1, "month": null } }),
+            true,
+        ),
+        (
+            "partners_statement_day",
+            json!({ "input": { "partner_id": 1, "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "partners_statement_month_print_data",
+            json!({ "input": { "partner_id": 1, "month": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "partners_open_ventures",
+            json!({ "input": { "partner_id": 1 } }),
             true,
         ),
         (
@@ -1277,6 +1339,43 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         // Run B, plan 19 (append-only block).
+        (
+            "dashboard_commission_month",
+            json!({ "input": { "month": null } }),
+            true,
+        ),
+        (
+            "dashboard_commission_day",
+            json!({ "input": { "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "dashboard_commission_print_data",
+            json!({ "input": { "month": null, "language": "ur" } }),
+            true,
+        ),
+        ("dashboard_buyer_dues", json!({ "input": {} }), true),
+        (
+            "dashboard_buyer_dues_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "windows_bounds",
+            json!({ "input": { "source": { "kind": "expenses" } } }),
+            true,
+        ),
+        (
+            "khata_set_link",
+            json!({ "input": { "khata_account_id": 1, "link": { "kind": "none" } } }),
+            true,
+        ),
+        (
+            "lent_person_update",
+            json!({ "input": { "person_account_id": 1 } }),
+            true,
+        ),
+        ("lent_dues", json!({ "input": {} }), true),
         ("dashboard_get", json!({}), true),
         ("assist_attention", json!({}), true),
         (
@@ -2335,4 +2434,222 @@ fn a_changed_password_is_in_no_audit_row_no_answer_and_no_file() {
             );
         }
     }
+}
+
+// ---- plans 76 and 77: the partner code on the new commands (PRD FR-17.11, NFR-SEC-14, Code Standards S8) ----
+
+const PARTNER_CODE: &str = "4826";
+
+/// Three partners with shares, and the partner code set. The section is open after this.
+fn partners_and_code(h: &Harness) {
+    h.set_up();
+    h.login();
+    for (ur, en) in [("الف", "Partner A"), ("ب", "Partner B"), ("ج", "Partner C")] {
+        h.ok(
+            "partners_create",
+            json!({ "input": { "name_ur": ur, "name_en": en, "opening_capital": null,
+                "confirmed_rules_words": [] } }),
+        );
+    }
+    h.ok(
+        "partners_set_shares",
+        json!({ "input": { "effective_from": "10-10-2026", "shares": [
+            { "partner_id": 1, "share": "40" }, { "partner_id": 2, "share": "30" },
+            { "partner_id": 3, "share": "30" } ] } }),
+    );
+    h.ok(
+        "partners_code_set",
+        json!({ "input": { "password": OWNER_PASSWORD, "code": PARTNER_CODE,
+            "code_again": PARTNER_CODE } }),
+    );
+}
+
+#[test]
+fn the_commission_page_and_the_statement_sheet_keep_partner_figures_behind_the_code() {
+    let h = Harness::new();
+    partners_and_code(&h);
+    let month = json!({ "input": { "month": null } });
+    let print = json!({ "input": { "month": null, "language": "en" } });
+    // Open: the totals row carries the three partner shares, and the page says it is not locked.
+    let open = h.ok("dashboard_commission_month", month.clone());
+    assert_eq!(open["partners_locked"], json!(false));
+    assert_eq!(
+        open["totals"]["partner_shares"].as_array().map(Vec::len),
+        Some(3)
+    );
+    let open_print = h.ok("dashboard_commission_print_data", print.clone());
+    // Locked: no partner share anywhere in the page, the day, the print or the sheet.
+    h.ok("partners_code_lock", json!({}));
+    let locked = h.ok("dashboard_commission_month", month);
+    assert_eq!(locked["partners_locked"], json!(true));
+    assert!(
+        locked["totals"]["partner_shares"].is_null(),
+        "the totals row still has the partner shares: {}",
+        locked["totals"]
+    );
+    for row in locked["rows"].as_array().cloned().unwrap_or_default() {
+        assert!(
+            row["partner_shares"].is_null(),
+            "a day row has partner shares"
+        );
+    }
+    let day = h.ok(
+        "dashboard_commission_day",
+        json!({ "input": { "date": "10-10-2026", "offset": 0, "limit": 0 } }),
+    );
+    assert_eq!(day["partners_locked"], json!(true));
+    assert!(day["totals"]["partner_shares"].is_null());
+    let locked_print = h.ok("dashboard_commission_print_data", print);
+    assert!(
+        locked_print.to_string().len() < open_print.to_string().len(),
+        "the locked print is no smaller than the open one: it still holds the partner columns"
+    );
+    // The sheet of a partner's statement is refused, like the statement itself.
+    let before = h.fingerprint();
+    assert_eq!(
+        h.code(
+            "tables_export_excel",
+            json!({ "input": { "job_id": "j1", "path": "/no-such-folder/x.xlsx",
+                "source": { "kind": "partner_statement_month", "partner_id": 1,
+                            "month": null, "language": "en" } } })
+        ),
+        "ERR_PARTNER_LOCKED"
+    );
+    assert_eq!(h.fingerprint(), before, "a refused sheet wrote something");
+    // The unlock brings the shares back.
+    h.ok(
+        "partners_code_unlock",
+        json!({ "input": { "code": PARTNER_CODE } }),
+    );
+    let again = h.ok(
+        "dashboard_commission_month",
+        json!({ "input": { "month": null } }),
+    );
+    assert_eq!(again["partners_locked"], json!(false));
+}
+
+#[test]
+fn the_window_bounds_of_a_partner_list_are_refused_while_the_section_is_locked() {
+    // S8: partner commands check the partner unlock in the backend. The first day of a partner's
+    // statement or of his money taken is partner history (when he first had a movement).
+    let h = Harness::new();
+    partners_and_code(&h);
+    h.ok("partners_code_lock", json!({}));
+    for source in [
+        json!({ "kind": "partner_statement", "partner_id": 1 }),
+        json!({ "kind": "partner_takes", "partner_id": 1 }),
+    ] {
+        assert_eq!(
+            h.code(
+                "windows_bounds",
+                json!({ "input": { "source": source.clone() } })
+            ),
+            "ERR_PARTNER_LOCKED",
+            "windows_bounds answered for {source} while the partner section was locked"
+        );
+    }
+}
+
+#[test]
+fn the_partner_kharch_of_view_m_and_every_way_to_it_stay_behind_the_code() {
+    // Plan 77, PRD 18.2 M, FR-9.5, FR-17.11: the shop part works without the code; the partner part, its
+    // drill lines, its print and its Excel need it, and no key sent under the shop part opens it.
+    let h = Harness::new();
+    partners_and_code(&h);
+    let filters = |extra: Value| -> Value {
+        let mut base = json!({ "from": "01-10-2026", "to": "10-10-2026", "group_by": "month" });
+        if let (Some(map), Some(more)) = (base.as_object_mut(), extra.as_object()) {
+            for (key, value) in more {
+                map.insert(key.clone(), value.clone());
+            }
+        }
+        base
+    };
+    let run = |extra: Value| json!({ "input": { "view": "M", "filters": filters(extra), "offset": 0, "limit": 10 } });
+    let drill = |extra: Value, key: Value| {
+        json!({ "input": { "view": "M", "filters": filters(extra), "row_key": key,
+            "column_key": null, "offset": 0, "limit": 10 } })
+    };
+    // Open: the partner part answers, with its own-kharch column (a month with no entry has no row).
+    let open = h.ok("analytics_run", run(json!({ "expense_part": "partner" })));
+    assert!(
+        open["columns"]
+            .as_array()
+            .is_some_and(|cols| cols.iter().any(|c| c["key"] == json!("own"))),
+        "{open}"
+    );
+    // Locked.
+    h.ok("partners_code_lock", json!({}));
+    let before = h.fingerprint();
+    let refused = [
+        (
+            "run, partner part",
+            "analytics_run",
+            run(json!({ "expense_part": "partner" })),
+        ),
+        (
+            "run, one partner",
+            "analytics_run",
+            run(json!({ "partner_id": 1 })),
+        ),
+        (
+            "lines, partner part, no key",
+            "analytics_lines",
+            drill(json!({ "expense_part": "partner" }), json!({})),
+        ),
+        (
+            "lines, partner part, one partner",
+            "analytics_lines",
+            drill(
+                json!({ "expense_part": "partner" }),
+                json!({ "partner_id": 1, "money": "taken" }),
+            ),
+        ),
+        (
+            "print, partner part",
+            "analytics_print_data",
+            json!({ "input": { "view": "M", "filters": filters(json!({ "expense_part": "partner" })),
+                "language": "en" } }),
+        ),
+        (
+            "excel, partner part",
+            "analytics_export_excel",
+            json!({ "input": { "job_id": "j1", "view": "M",
+                "filters": filters(json!({ "expense_part": "partner" })), "language": "en",
+                "path": "/no-such-folder/x.xlsx" } }),
+        ),
+    ];
+    for (what, command, payload) in refused {
+        assert_eq!(
+            h.code(command, payload),
+            "ERR_PARTNER_LOCKED",
+            "{what} answered while the partner section was locked"
+        );
+    }
+    // The shop part still works, and a key for the partner's money under the shop part is no way in.
+    assert!(
+        h.call("analytics_run", run(json!({}))).is_ok(),
+        "the shop part needs the code"
+    );
+    assert!(
+        h.call("analytics_run", run(json!({ "expense_part": "shop" })))
+            .is_ok(),
+        "the shop part, spelled out, needs the code"
+    );
+    for key in [
+        json!({ "money": "taken" }),
+        json!({ "money": "taken", "partner_id": 1 }),
+        json!({ "partner_id": 1 }),
+    ] {
+        let answer = h.call("analytics_lines", drill(json!({}), key.clone()));
+        let leaked = answer.as_ref().ok().filter(|page| {
+            page["total_count"].as_i64().unwrap_or(0) > 0
+                || page["rows"].as_array().is_some_and(|rows| !rows.is_empty())
+        });
+        assert!(
+            leaked.is_none(),
+            "the key {key} under the shop part opened lines: {answer:?}"
+        );
+    }
+    assert_eq!(h.fingerprint(), before, "a refused read wrote something");
 }

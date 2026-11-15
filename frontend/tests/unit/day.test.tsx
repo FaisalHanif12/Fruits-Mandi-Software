@@ -194,7 +194,14 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
   });
 
   it('with every day up to today closed there is nothing to ask or close', async () => {
-    await open({ status: { today: '2026-10-10', closed_up_to: '2026-10-10', today_open: false } });
+    await open({
+      status: {
+        today: '2026-10-10',
+        closed_up_to: '2026-10-10',
+        today_open: false,
+        first_entry_date: null,
+      },
+    });
     expect(await screen.findByText(message(language, 'day-close-nothing'))).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: named(message(language, 'day-close-button')) }),
@@ -394,7 +401,9 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
   });
 
   it('with no closed day there is nothing to reopen, and the status bar shows no closed-up-to date', async () => {
-    fakeDay({ status: { today: '2026-10-10', closed_up_to: null, today_open: true } });
+    fakeDay({
+      status: { today: '2026-10-10', closed_up_to: null, today_open: true, first_entry_date: null },
+    });
     await renderApp('/day');
     // The words are the same on the top line and on the reopen card: both are there.
     expect((await screen.findAllByText(message(language, 'day-reopen-none-title'))).length).toBe(2);

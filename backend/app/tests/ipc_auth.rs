@@ -1056,6 +1056,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "bikri_mixed_preview",
+            json!({ "input": { "date": "10-10-2026", "carried": [], "new_lots": [] } }),
+            true,
+        ),
+        (
+            "bikri_mixed_save",
+            json!({ "input": { "date": "10-10-2026", "carried": [], "new_lots": [],
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_mixed_undo",
+            json!({ "input": { "later_entry_ids": [], "new_bikri_id": null,
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
             "bikri_open_for_edit",
             json!({ "input": { "bikri_id": 1, "entry_id": 1 } }),
             true,
@@ -1200,6 +1217,46 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "reports_print_voucher",
             json!({ "input": { "voucher_id": 1, "language": "ur", "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_buyer_parchi_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_sale_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "partners_statement_month",
+            json!({ "input": { "partner_id": 1, "month": null } }),
+            true,
+        ),
+        (
+            "partners_statement_day",
+            json!({ "input": { "partner_id": 1, "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "partners_statement_month_print_data",
+            json!({ "input": { "partner_id": 1, "month": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "partners_open_ventures",
+            json!({ "input": { "partner_id": 1 } }),
             true,
         ),
         (
@@ -1376,6 +1433,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "tables_export_excel",
+            json!({ "input": { "job_id": "j1", "path": "/no-such-folder/mandi-ipc-auth.xlsx", "source": { "kind": "buyer_dues", "language": "en" } } }),
+            true,
+        ),
+        (
             "analytics_export_excel",
             json!({ "input": { "job_id": "j1", "view": "A", "filters": {}, "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
             true,
@@ -1397,6 +1459,43 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         // Run B, plan 19 (append-only block).
+        (
+            "dashboard_commission_month",
+            json!({ "input": { "month": null } }),
+            true,
+        ),
+        (
+            "dashboard_commission_day",
+            json!({ "input": { "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "dashboard_commission_print_data",
+            json!({ "input": { "month": null, "language": "ur" } }),
+            true,
+        ),
+        ("dashboard_buyer_dues", json!({ "input": {} }), true),
+        (
+            "dashboard_buyer_dues_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "windows_bounds",
+            json!({ "input": { "source": { "kind": "expenses" } } }),
+            true,
+        ),
+        (
+            "khata_set_link",
+            json!({ "input": { "khata_account_id": 1, "link": { "kind": "none" } } }),
+            true,
+        ),
+        (
+            "lent_person_update",
+            json!({ "input": { "person_account_id": 1 } }),
+            true,
+        ),
+        ("lent_dues", json!({ "input": {} }), true),
         ("dashboard_get", json!({}), true),
         ("assist_attention", json!({}), true),
         (

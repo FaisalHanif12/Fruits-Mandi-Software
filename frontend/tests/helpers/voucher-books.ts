@@ -222,6 +222,7 @@ export function createBooks(options: BooksOptions = {}) {
       owes_settled_paisa: money(0),
       return_limit_paisa:
         entry.type === 'receipt' && seller ? money(store.advances.get(id) ?? 0) : null,
+      linked_parts: [],
       payable_open_paisa: entry.type === 'payment' && seller ? money(payable) : null,
       payable_is_zero_for_seller: entry.type === 'payment' && seller && payable === 0,
       cash: cashCheck(store.cash, change),
@@ -444,6 +445,8 @@ export function createBooks(options: BooksOptions = {}) {
           ];
     return {
       open: rows,
+      total_count: rows.length,
+      truncated: false,
       open_paisa: money(open),
       last:
         open === 0

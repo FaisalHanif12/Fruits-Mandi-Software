@@ -5,6 +5,7 @@ import type { Balance } from './Balance';
 import type { BillEffect } from './BillEffect';
 import type { CashCheck } from './CashCheck';
 import type { FieldError } from './FieldError';
+import type { LinkedPart } from './LinkedPart';
 import type { RecordRef } from './RecordRef';
 
 /**
@@ -67,6 +68,11 @@ export type VoucherPreview = {
    * `needs_confirm` are false. The screen shows the amounts only when `needs_confirm` is true.
    */
   cash: CashCheck;
+  /**
+   * A khata or loan that is linked: each partner's change of کل رقم by this entry, in the order
+   * of his id. Empty when the entry touches no linked account (plan 76 points 5 and 10).
+   */
+  linked_parts: Array<LinkedPart>;
   /**
    * What stops a save. The screen shows each at its field.
    */

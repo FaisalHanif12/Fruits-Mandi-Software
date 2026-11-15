@@ -16,7 +16,9 @@
     "month_capital_in_paisa": 0,
     "month_ventures_paisa": 0,
     "total_paisa": -162000,
-    "open_ventures": []
+    "open_ventures": [],
+    "open_gardens_count": 0,
+    "open_trips_count": 0
   },
   {
     "partner_id": 2,
@@ -35,7 +37,9 @@
     "month_capital_in_paisa": 5000000,
     "month_ventures_paisa": 0,
     "total_paisa": 5028400,
-    "open_ventures": []
+    "open_ventures": [],
+    "open_gardens_count": 0,
+    "open_trips_count": 0
   },
   {
     "partner_id": 3,
@@ -54,6 +58,8 @@
     "month_capital_in_paisa": 0,
     "month_ventures_paisa": 0,
     "total_paisa": 28400,
-    "open_ventures": []
+    "open_ventures": [],
+    "open_gardens_count": 0,
+    "open_trips_count": 0
   }
 ]

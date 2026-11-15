@@ -153,7 +153,11 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 
 ## R1, the sale book, and R5, the credit buyers' details (round 12, PRD 19.2 R1 and R5, FR-12.12)
 
-- Both are on the generic screen. R5 takes the days and the usual party boxes. Its table writes each
+> Since plan 76 (v1.41) R5 is its own screen, the اگراہی sheet, and its "Print all slips" is the buyer parchi:
+> see the last section. The notes below about R5 on the generic screen are kept for the cell and the print
+> code they describe (the assistant still reads the R5 report).
+
+- Both were on the generic screen. R5 took the days and the usual party boxes. Its table writes each
   sale line the way the client's own print does, "(item qty . rate)" (`report-detail-sale-short`,
   `shortSale` in `cells.ts` and `columns.ts`), and has a numbered first column (`report-col-serial`).
   The print draws the same lines (`buyersList` in `ReportPrintDocument.tsx`).
@@ -165,7 +169,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - R1's print is the bill itself: once a بکری is picked the preview button gives way to the shared
   `PrintAction` of the sale book (its box, its F9, its languages and paper). R1 has its own column
   steps in `COLUMN_STEPS`: the lot's number charges stay behind the wider steps, and the print has all.
-- R5 "Print all slips" (PRD 19.2 R5): the button next to the print preview opens `BuyerBillsPreview`
+- R5 "Print all slips" (PRD 19.2 R5, retired in plan 76): the button next to the print preview opened `BuyerBillsPreview`
   (the same frame as the report preview, with the print language and the paper). It asks the backend's
   own command `reports_buyer_bills_print_data` (`reportsBuyerBillsPrintData`, hook
   `useBuyerBillsPrintData`) for every buyer of the filter, and `print/BuyerBillsPrintDocument.tsx` draws
@@ -307,3 +311,37 @@ report engine once the backend adds `R38` to `ReportId`.
   a new kind stops the build until it has its words) and `specialPrintIdOf`.
 - The first report has the focus when the page opens, set with `focusQuietly`, so no card opens until the
   user points at one or presses a key.
+
+## Plan 76: the اگراہی sheet (R5), the buyer parchi, the overall sale print and the table prints
+
+- **R5 is its own screen** (`pages/CollectionSheetPage.tsx`, route `/reports/collection-sheet`; `/reports/R5` and
+  every link that names `R5` redirect to it). It is the day's compact list: one row for each buyer who owes or
+  bought that day (code, name with tag, goods as "(item qty . rate)", previous due, today's bill, paid on the spot,
+  total due), sorted by name, with the backend's totals and the dead amount listed apart. The day is in the
+  address (`?date=`), the search goes to the backend, Enter opens the ledger (R13). Commands:
+  `reports_collection_sheet` and `reports_collection_sheet_print_data` (`collection-hooks.ts`,
+  `collection-columns.ts`). The old "Print All" of the generic screen is gone: the one slip for each buyer is the
+  buyer parchi.
+- **Table prints.** `TablePrintData` (the backend's header, columns, every row and totals in the print language)
+  is drawn by the shared print layout: `print/table-print.ts` turns it into the `PrintTable` that
+  `ReportPrintDocument` draws (extra totals rows included), and `components/TablePrintPreview.tsx` is the preview
+  frame (language, paper, Print, Save as PDF, Excel). The buyer dues page, the commission page, the partner month
+  statement and the R5 sheet use it (`TablePrintPreview` is exported from the module index).
+- **Buyer parchi and overall sale print** (`print/DaySlipsDocument.tsx`, `components/DaySlipsPreview.tsx`): party
+  slips from the R35 builders (`DaySlipsPrintData`). The parchi has the buyers only, several to an A4 page (two
+  columns, dashed cut lines, never cut across a page, the firm's name on each slip, an empty line for the وصولی);
+  the overall sale print has the one header, the sellers' slips and then the buyers' slips. They open from the sale
+  book's second print box (Shift+F9: what to print, which lines) and from the R5 sheet (the parchi of the day).
+- Print and Save as PDF go through job commands per kind (`reports_collection_sheet_print`,
+  `reports_buyer_parchi_print`, `reports_sale_print`, `dashboard_buyer_dues_print`, `dashboard_commission_print`,
+  `partners_statement_month_print`). The job commands are agreed with `backend` and may still be pending: until
+  they exist the frame shows the backend's refusal. Tests: `collection-sheet-page.test.tsx`,
+  `adhari-print.test.tsx`.
+
+## Plan 76: Excel of the table pages
+
+The اگراہی sheet (R5), the buyer dues, the commission month and a partner's month statement each have an Excel
+button beside Print preview, and in the print preview (with the print language chosen there). One command,
+`tables_export_excel`, writes every row of the filter from the same table as the print
+(`api.ts: tablesExportExcel`, `table-excel.ts: useTableExcel`). The commission partner columns and the partner
+statement follow the partner code. `TablePrintPreview` takes the exporter and shows its notices.

@@ -212,3 +212,68 @@ common-remove-line-confirm = ہٹائیں
 # $grade: the quality word (glossary-darja-awwal, -doyam or -soyam).
 # review: pending
 common-item-grade = { $item } { $grade }
+
+### A screen that shows one month at a time (PRD FR-19.11, FR-17.12, plan 76).
+
+# review: pending
+common-month-nav-label = مہینے کے حساب سے آگے پیچھے جائیں
+
+# review: pending
+common-month-earlier = پچھلا مہینہ
+
+# review: pending
+common-month-later = اگلا مہینہ
+
+# review: pending
+common-month-latest-note = یہ موجودہ مہینہ ہے
+
+# review: pending
+common-month-first-note = یہ پہلا مہینہ ہے جس میں اندراج ہیں
+
+# review: pending
+common-month-latest-button = یہ مہینہ
+
+# $month: the name of the month. $year: the year in digits.
+# review: pending
+common-month-title = { $month } <num>{ $year }</num>
+
+# review: pending
+common-goto-month = مہینے پر جائیں
+
+# review: pending
+common-goto-month-hint = مہینہ لکھیں، جیسے 10-2026۔ مختصر شکل بھی چلتی ہے: 10 یعنی اس سال کا اکتوبر۔
+
+# review: pending
+common-goto-month-placeholder = مہینہ-سال
+
+## The 7-day window of a list that shows many rows a day (PRD FR-19.11, plan 76 point 8).
+
+# review: pending
+common-days-nav-label = 7 دن کے حساب سے آگے پیچھے جائیں
+
+# review: pending
+common-days-earlier = پچھلے <num>{ $days }</num> دن
+
+# review: pending
+common-days-later = اگلے <num>{ $days }</num> دن
+
+# review: pending
+common-days-range = <num>{ $from }</num> تا <num>{ $to }</num>
+
+# review: pending
+common-days-latest-note = یہ آج پر ختم ہونے والے دن ہیں
+
+# review: pending
+common-days-first-note = یہ اندراج والے پہلے دن ہیں
+
+# review: pending
+common-days-latest-button = آج پر واپس
+
+# review: pending
+common-goto-day = دن پر جائیں
+
+# review: pending
+common-goto-day-hint = دن لکھیں، مثلاً 10-10-2026۔ اس دن پر ختم ہونے والے 7 دن کھل جاتے ہیں۔ مختصر شکل بھی چلتی ہے: 10 اس مہینے کی 10 تاریخ ہے۔
+
+# review: pending
+common-goto-day-placeholder = دن-مہینہ-سال

@@ -8,6 +8,7 @@
 import { useParams } from '@tanstack/react-router';
 import { useState } from 'react';
 import { installReportsDevBridge } from '../../../tests/helpers/dev-bridge-reports';
+import { CollectionSheetPage } from '../../features/reports/pages/CollectionSheetPage';
 import { ReportPage } from '../../features/reports/pages/ReportPage';
 import { ReportsHomePage } from '../../features/reports/pages/ReportsHomePage';
 import { AppShell } from '../layout/AppShell';
@@ -36,7 +37,13 @@ export function ReportsPage() {
       date={SAMPLE_DATE}
       day="open"
     >
-      {id === undefined ? <ReportsHomePage /> : <ReportPage />}
+      {id === undefined ? (
+        <ReportsHomePage />
+      ) : id === 'collection-sheet' ? (
+        <CollectionSheetPage />
+      ) : (
+        <ReportPage />
+      )}
     </AppShell>
   );
 }

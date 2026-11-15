@@ -130,7 +130,7 @@ function statementWithSentences(): ReportPage {
 }
 
 const SCREENS: readonly { path: string; ready: string }[] = [
-  { path: '/reports/R5', ready: '.ag-row' },
+  { path: '/reports/collection-sheet', ready: '.ag-row' },
   { path: '/reports/R37', ready: '.ag-row' },
   { path: '/reports/R31?partner=2', ready: '.ag-row' },
   { path: '/reports/R36', ready: '.ag-row' },
@@ -170,8 +170,7 @@ describe.each(LANGUAGES)('numbers in running text are in Inter (%s)', (language:
   });
 
   it.each([
-    { path: '/reports/R5', button: 'report-preview' },
-    { path: '/reports/R5', button: 'report-print-all' },
+    { path: '/reports/collection-sheet', button: 'report-preview' },
     { path: '/reports/R37', button: 'report-preview' },
     { path: '/reports/R31?partner=2', button: 'report-preview' },
     { path: '/reports/R34', button: 'report-preview' },

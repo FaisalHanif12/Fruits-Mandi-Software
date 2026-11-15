@@ -14,7 +14,7 @@ use tempfile::tempdir;
 /// (code, Urdu name, English name, party type, is a shared khata, active), FR-10.4 table order, as the
 /// latest schema holds them: migration 20 (plan 64) named 0030 چکتا کھاتہ and closed 0031 as the old
 /// closed account.
-const ACCOUNTS: [(&str, &str, &str, &str, i64, i64); 17] = [
+const ACCOUNTS: [(&str, &str, &str, &str, i64, i64); 18] = [
     ("01010001", "روکڑ", "Cash", "other", 0, 1),
     ("01020001", "بینک", "Bank", "other", 0, 1),
     ("02010001", "مزدوری کھاتہ", "Labour Payable", "other", 0, 1),
@@ -53,6 +53,15 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64, i64); 17] = [
         1,
     ),
     ("0030", "چکتا کھاتہ", "Chukta Khata", "buyer", 1, 1),
+    // Migration 0023 (plan 76): the contra of every linked khata and loan line (head 03).
+    (
+        "03070001",
+        "الگ کھاتہ اور ادھار رقم: شراکت داروں کا عوض",
+        "Linked Khata and Loans: Partner Offset",
+        "other",
+        0,
+        1,
+    ),
     (
         "04010001",
         "کمیشن آمدن (بیوپاری)",
@@ -134,7 +143,7 @@ fn the_fixed_accounts_match_fr_10_4() {
         .collect();
     let mut want = ACCOUNTS.to_vec();
     want.sort_by_key(|row| row.0);
-    assert_eq!(rows.len(), 17);
+    assert_eq!(rows.len(), 18);
     for (row, (code, ur, en, party, shared, active)) in rows.iter().zip(want) {
         assert_eq!(
             (
@@ -209,14 +218,18 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
         ("0304", "Buyers", "buyer", "03"),
         ("0305", "Separate Khatas", "separate", "03"),
         ("0306", "Gardens", "garden", "03"),
+        // Migration 0023 (plan 76): the contra of linked money, in head 03, outside equity.
+        ("0307", "Linked Khata and Loans Offset", "other", "03"),
         ("0401", "Income", "other", "04"),
         ("0501", "Shop Expenses", "other", "05"),
         ("0601", "Capital", "other", "06"),
         ("0602", "Partner Capital", "other", "06"),
         ("0603", "Drawings", "other", "06"),
         ("0604", "Gardens Trips and Fruit", "other", "06"),
+        // Migration 0023 (plan 76): one account of linked money for each partner.
+        ("0605", "Linked Khata and Loans", "other", "06"),
     ];
-    assert_eq!(controls.len(), 14);
+    assert_eq!(controls.len(), 16);
     for (have, want) in controls.iter().zip(want_controls) {
         assert_eq!(
             (
@@ -250,7 +263,7 @@ fn a_second_run_changes_nothing() {
     let before = seed::counts(&conn).unwrap();
     assert_eq!(
         (before.heads, before.controls, before.accounts),
-        (6, 14, 17)
+        (6, 16, 18)
     );
     let changes_before = conn.total_changes();
     assert_eq!(seed::system_accounts(&conn).unwrap(), 0);

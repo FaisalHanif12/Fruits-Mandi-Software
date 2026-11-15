@@ -7,6 +7,7 @@ import type { AnalyticsPrintInput } from '../../../bindings/AnalyticsPrintInput'
 import { PrintView, type PrintReady } from '../../../shared/print';
 import { ReportPrintDocument } from '../../reports';
 import { useAnalyticsPrintBundle } from '../hooks';
+import { AnalyticsPrintCharts } from './AnalyticsPrintCharts';
 import { printTableOf } from './print-table';
 
 interface AnalyticsPrintViewProps {
@@ -27,7 +28,13 @@ export function AnalyticsPrintView({ input, onReady, onFailed }: AnalyticsPrintV
       {...(onReady === undefined ? {} : { onReady })}
       {...(onFailed === undefined ? {} : { onFailed })}
       render={({ data, frame }, ref) => (
-        <ReportPrintDocument data={printTableOf(data)} frame={frame} applyRoot ref={ref} />
+        <ReportPrintDocument
+          data={printTableOf(data)}
+          frame={frame}
+          applyRoot
+          figures={<AnalyticsPrintCharts data={data} />}
+          ref={ref}
+        />
       )}
     />
   );

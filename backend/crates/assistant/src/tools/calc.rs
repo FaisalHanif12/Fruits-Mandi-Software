@@ -1623,6 +1623,8 @@ fn view_letter(view: AnalyticsView) -> char {
         AnalyticsView::I => 'i',
         AnalyticsView::J => 'j',
         AnalyticsView::K => 'k',
+        AnalyticsView::L => 'l',
+        AnalyticsView::M => 'm',
     }
 }
 

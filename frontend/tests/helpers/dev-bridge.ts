@@ -288,6 +288,17 @@ function editedStampOf<T extends object>(stamp: T | null): (T & { sign?: string 
   return devFlag('signed') ? { ...stamp, sign: 'adnan' } : stamp;
 }
 
+// The question panel listens for Tauri events, and Tauri's own `unlisten` calls
+// `__TAURI_EVENT_PLUGIN_INTERNALS__.unregisterListener` when the panel's effect ends. A plain browser tab has no
+// such object, so the end of that effect threw and the whole page went blank (seen in the plan 76 window check).
+// This stand-in does nothing, which is all the pictures need.
+if (typeof window !== 'undefined' && !('__TAURI_EVENT_PLUGIN_INTERNALS__' in window)) {
+  Object.defineProperty(window, '__TAURI_EVENT_PLUGIN_INTERNALS__', {
+    configurable: true,
+    value: { unregisterListener: () => undefined },
+  });
+}
+
 /** The value of a flag in the hash, for example `type` in `#/dev/vouchers?type=payment`. */
 export function devValue(name: string): string | null {
   return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(name);

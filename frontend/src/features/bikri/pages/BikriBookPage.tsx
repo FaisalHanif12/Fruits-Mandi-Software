@@ -68,7 +68,7 @@ import { PrintAction } from '../print/PrintAction';
 import { PrintAfterSave } from '../print/PrintAfterSave';
 import { usePendingRestore } from '../draft-offer';
 import { BIKRI_DRAFT_SCREEN, applySnapshot } from '../draft-snapshot';
-import { useBikriDetail } from '../hooks/useBikriReads';
+import { useBikriDetail, useStockList } from '../hooks/useBikriReads';
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { useEditDiff } from '../hooks/useEditDiff';
 import { useEditReason, type EditReason } from '../hooks/useEditReason';
@@ -78,9 +78,11 @@ import { keepPastReturn, usePastReturn } from '../hooks/usePastReturn';
 import { firstEditablePosting } from '../edit-target';
 import { pastAddress } from '../past-window';
 import { useSaveFlow, type SaveMutation } from '../hooks/useSaveFlow';
-import { useSaveBikri, useSaveEdit } from '../hooks/useSaveBikri';
+import { isMixedSaved, useSaveBikri, useSaveEdit, useSaveMixed } from '../hooks/useSaveBikri';
 import { UNDO_WINDOW_MS, requestUndo } from '../undo';
 import { afterSave } from '../after-save';
+import { addCarriedLots } from '../carried-lots';
+import { rememberMixedSave } from '../print/mixed-save-ids';
 import { CancelBikriFlow } from '../components/CancelBikriFlow';
 import { ClosedDayNotice } from '../components/ClosedDayNotice';
 import { EditChangesCard } from '../components/EditChangesCard';
@@ -88,7 +90,7 @@ import { LaterPostingEdit } from '../components/LaterPostingEdit';
 import type { Baseline } from '../edit-changes';
 import { lotMarkCells, saleMarkCells } from '../edit-marks';
 import { changedCellWords } from '../edit-view';
-import { editSource } from '../preview-source';
+import { editSource, mixedPath, mixedSource } from '../preview-source';
 import { HeadFields } from '../components/HeadFields';
 import { LotMore } from '../components/LotMore';
 import { ArrivalLotPanel } from '../components/ArrivalLotPanel';
@@ -105,7 +107,7 @@ import {
   useBikriDraft,
   type BikriDraftStores,
 } from '../draft-store';
-import { buildDraft, isArrivalLot, isFilledByUser, isOwnLot } from '../draft';
+import { buildDraft, isArrivalLot, isCarriedLot, isFilledByUser, isOwnLot } from '../draft';
 import { useGridViews } from '../hooks/useGridViews';
 import { LotCountersProvider, useLotCounters, useLotWho } from '../lot-name';
 import { useBikriPreview } from '../hooks/useBikriPreview';
@@ -212,10 +214,15 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   // The lots that come in by themselves from the stock that is ready to sell (plan 33).
   const readyLotCount = useReadyLots(stores, newBikri?.readyLots ?? false);
   const newMutation = useSaveBikri();
+  const mixedMutation = useSaveMixed();
+  // Lots carried over from earlier بکری are on the screen: the preview and the save then use the mixed
+  // commands, which write them with the new lots in one go (plan 76 point 1). With none, nothing changes.
+  const carriedCount = stores.lots((state) => state.rows.filter(isCarriedLot).length);
+  const mixed = edit === null && carriedCount > 0;
   const entryId = edit?.entryId;
   const source = useMemo(
-    () => (entryId === undefined ? undefined : editSource(entryId)),
-    [entryId],
+    () => (entryId !== undefined ? editSource(entryId) : mixed ? mixedSource(stores) : undefined),
+    [entryId, mixed, stores],
   );
   const { query, stale, draft } = useBikriPreview(stores, source);
   const preview = query.data;
@@ -236,9 +243,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     draft,
     preview,
     current: preview !== undefined && !stale,
-    mutation: edit === null ? newMutation : edit.mutation,
+    mutation: edit === null ? (mixed ? mixedMutation : newMutation) : edit.mutation,
     askPreview: source?.run,
-    toastId: edit === null ? undefined : 'bikri-edit-saved-toast',
+    toastId:
+      edit !== null ? 'bikri-edit-saved-toast' : mixed ? 'bikri-mixed-saved-toast' : undefined,
     toastOptions: (saved) =>
       newBikri === null || 'old_entry_id' in saved
         ? undefined
@@ -335,14 +343,24 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   // The preview's problems, and what the backend refused on the last save. A problem that only
   // says "this is empty" waits until he tries to save (plan 12 contract).
   const refused = flow.refusal;
+  // The paths of a refusal of a mixed save name `carried[i]` and `new_lots[k]`: they are put in the form
+  // of the whole screen, like the paths of its preview (every other path is left as it is).
+  const refusedItems = useMemo(
+    () =>
+      refusalErrors(refused).map((item) => ({
+        ...item,
+        field: mixedPath(item.field, carriedCount),
+      })),
+    [refused, carriedCount],
+  );
   const problems = useMemo(
     () =>
       problemsOf(
-        withoutRepeats([...(preview?.errors ?? []), ...refusalErrors(refused)]),
+        withoutRepeats([...(preview?.errors ?? []), ...refusedItems]),
         preview?.warnings ?? [],
         flow.tried,
       ),
-    [preview, refused, flow.tried],
+    [preview, refusedItems, flow.tried],
   );
   const formError = useMemo(() => errorOf(problems), [problems]);
   // The lines the figures leave out: their quantity is wrong, so they are not worked out (PRD
@@ -647,10 +665,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             <ClosedDayNotice date={edit.editable.entry_date} />
           ) : null}
           {refused === null ? null : (
-            <ErrorNotice
-              error={refused}
-              fieldsShown={refusalErrors(refused).map((item) => item.field)}
-            />
+            <ErrorNotice error={refused} fieldsShown={refusedItems.map((item) => item.field)} />
           )}
           {edit === null ? null : (
             <>
@@ -681,24 +696,47 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
               >
                 <LotsSection
                   view={views.lots}
+                  allowCarried={edit === null}
                   note={
-                    readyLotCount === 0 ? null : (
-                      <Notice tone="info">
-                        <Localized
-                          id="bikri-ready-lots-note"
-                          elems={{ num: <Num /> }}
-                          vars={{ count: readyLotCount }}
-                        >
-                          <span />
-                        </Localized>{' '}
-                        <Localized
-                          id="bikri-ready-lots-note-hint"
-                          elems={{ key: <Code /> }}
-                          vars={{ key: SHORTCUTS.removeRow.label }}
-                        >
-                          <span />
-                        </Localized>
-                      </Notice>
+                    readyLotCount === 0 && carriedCount === 0 ? null : (
+                      <div className="flex flex-col gap-2">
+                        {readyLotCount === 0 ? null : (
+                          <Notice tone="info">
+                            <Localized
+                              id="bikri-ready-lots-note"
+                              elems={{ num: <Num /> }}
+                              vars={{ count: readyLotCount }}
+                            >
+                              <span />
+                            </Localized>{' '}
+                            <Localized
+                              id="bikri-ready-lots-note-hint"
+                              elems={{ key: <Code /> }}
+                              vars={{ key: SHORTCUTS.removeRow.label }}
+                            >
+                              <span />
+                            </Localized>
+                          </Notice>
+                        )}
+                        {carriedCount === 0 ? null : (
+                          <Notice tone="info">
+                            <Localized
+                              id="bikri-carried-note"
+                              elems={{ num: <Num /> }}
+                              vars={{ count: carriedCount }}
+                            >
+                              <span />
+                            </Localized>{' '}
+                            <Localized
+                              id="bikri-carried-note-hint"
+                              elems={{ key: <Code /> }}
+                              vars={{ key: SHORTCUTS.removeRow.label }}
+                            >
+                              <span />
+                            </Localized>
+                          </Notice>
+                        )}
+                      </div>
                     )
                   }
                   onCardAccount={setEditorCard}
@@ -723,7 +761,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                     lot={lotPreview}
                   />
                 )}
-                {lotRow === undefined ? null : (
+                {lotRow === undefined || isCarriedLot(lotRow) ? null : (
                   <LotMore
                     row={lotRow}
                     lotIndex={lotIndex}
@@ -875,10 +913,45 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
   // entry only, and the request is taken out of the address so a reload or a save does not ask again.
   const rawSearch: Record<string, unknown> = useSearch({ strict: false });
   const wantsFind = rawSearch['find'] === true;
+  // `?carry=40` brings lot 40 of the goods left onto the new بکری (plan 76 point 1): the Stock page's "sell"
+  // and the old address of a later sale come here. It is taken out of the address once it is on the screen.
+  const carryLot = typeof rawSearch['carry'] === 'number' ? rawSearch['carry'] : null;
   const [session, setSession] = useState(() => newSession(today, initialDraft, wantsFind));
   useEffect(() => {
     if (wantsFind) void navigate({ to: '/bikri/book', search: {}, replace: true });
   }, [wantsFind, navigate]);
+  const carried = useStockList(
+    {
+      date: null,
+      from: null,
+      to: null,
+      seller_id: null,
+      item_id: null,
+      include_written_off: false,
+      lot_id: carryLot,
+      search: null,
+    },
+    carryLot !== null,
+  );
+  const carriedRow = carried.data?.pages[0]?.rows.find((row) => row.lot_id === carryLot);
+  const carriedAsked = useRef<number | null>(null);
+  useEffect(() => {
+    if (carryLot === null || carried.isPending) return;
+    if (carriedAsked.current === carryLot) return;
+    carriedAsked.current = carryLot;
+    if (carriedRow !== undefined && carriedRow.balance > 0) {
+      addCarriedLots(session.stores, [carriedRow]);
+    } else {
+      // The lot was sold out, written off or is not there: nothing is put on the screen and he is told.
+      showToast(
+        'error',
+        <Localized id="bikri-carried-gone">
+          <span />
+        </Localized>,
+      );
+    }
+    void navigate({ to: '/bikri/book', search: {}, replace: true });
+  }, [carryLot, carried.isPending, carriedRow, navigate, session.stores]);
   const [lastSaved, setLastSaved] = useState<{ id: number; number: number } | null>(null);
   // The undo button outlives the render it was made in: it reads the stores of the entry that is
   // open when it is pressed.
@@ -906,7 +979,12 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
           openFind: session.openFind,
           onSaved: (saved, andNext) => {
             setLastSaved({ id: saved.bikri_id, number: saved.number });
-            afterSave(saved, andNext);
+            // The print box offers "this save only" with the old بکری of the carried lots (plan 76 point 3).
+            if (isMixedSaved(saved)) rememberMixedSave(saved.mixed);
+            // A mixed save with no new بکری has nothing of its own to print: its lots print with their
+            // own بکری, and the whole-day print is the choice of the print box (plan 76 point 3).
+            if (!isMixedSaved(saved) || saved.mixed.new_bikri_id !== null)
+              afterSave(saved, andNext);
             setSession((current) => ({
               stores: createBikriDraft(isoToDisplayDate(today)),
               key: current.key + 1,
@@ -926,7 +1004,9 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
               );
               return;
             }
-            requestUndo({ id: saved.bikri_id, number: saved.number });
+            // A mixed save is taken back as a whole: the carried postings and the new بکری together.
+            if (isMixedSaved(saved)) requestUndo({ mixed: saved.mixed });
+            else requestUndo({ id: saved.bikri_id, number: saved.number });
           },
         }}
       />

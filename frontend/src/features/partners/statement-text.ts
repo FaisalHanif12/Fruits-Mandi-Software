@@ -39,6 +39,11 @@ const VOUCHER_SERIES: Readonly<Partial<Record<StatementLine['detail'], string>>>
   capital_out: 'capital-out',
   taken: 'personal-expense',
   returned: 'personal-return',
+  khata_paid: 'khata-out',
+  khata_received: 'khata-in',
+  lent_given: 'money-lent',
+  lent_returned: 'money-lent-return',
+  lent_share_note: 'money-lent',
 };
 
 /** The `values.kind` words that name a series of their own, whatever the detail is. */
@@ -50,6 +55,13 @@ const KIND_SERIES: Readonly<Record<string, string>> = {
   capital_out: 'capital-out',
   personal_expense: 'personal-expense',
   personal_return: 'personal-return',
+  khata_out: 'khata-out',
+  khata_in: 'khata-in',
+  money_lent: 'money-lent',
+  money_lent_return: 'money-lent-return',
+  // The notes of a loan that is the shop's (PRD FR-16.13).
+  given: 'money-lent',
+  returned: 'money-lent-return',
 };
 
 /** The series of a line: its kind first (PRD FR-17.10), else the usual one for its detail. */
@@ -66,6 +78,28 @@ function seriesOf(line: StatementLine): string | undefined {
 export function headingText(line: StatementLine, say: StatementSay): string {
   const id = `partners-statement-heading-${idPart(line.heading)}`;
   return say.exists(id) ? say.text(id) : say.text('partners-statement-heading-other');
+}
+
+/** The words of a text, lower case and without the marks that isolate a number or a name from its neighbours. */
+function wordsOf(text: string): string[] {
+  return text
+    .replace(/[\u2066-\u2069\u200e\u200f]/gu, '')
+    .toLowerCase()
+    .split(/[\s:,.،\-/()]+/u)
+    .filter((word) => word !== '');
+}
+
+/**
+ * True when the sentence of a line already says the words of its group, so a chip with the group in front of
+ * it would only repeat them: "Sale 1: ..." under the group Sale, "Shop Expense E-1: ..." under Expense. A group
+ * that adds something stays (a khata or a loan line under "Separate Khata and Money Lent"). It reads only
+ * words, never a figure (CLAUDE.md rule 1).
+ */
+export function headingRepeated(heading: string, detail: string): boolean {
+  const group = wordsOf(heading);
+  if (group.length === 0) return false;
+  const said = new Set(wordsOf(detail));
+  return group.every((word) => said.has(word));
 }
 
 /** What the secondary number of a trip line is: the backend names it in `values.kind`. */
@@ -100,7 +134,15 @@ export function detailText(line: StatementLine, say: StatementSay): string {
       fruit: number === '' ? '' : say.text('fruit-number', { number }),
     });
   }
-  const id = `partners-statement-detail-${idPart(line.detail)}`;
+  // A share of a posting says what it is a share of ("his 30% of 3,948", PRD FR-17.12): the backend sends the
+  // base and the share of the line, and the words are of their own.
+  const withPart =
+    line.detail === 'income_share' &&
+    line.values['base_paisa'] !== undefined &&
+    line.values['share_bps'] !== undefined;
+  // A trip's sale also says his part of the result when the backend sends it (E2E-34: result 660, his 264).
+  const tripPart = line.detail === 'trip_credit' && line.values['part_paisa'] !== undefined;
+  const id = `partners-statement-detail-${idPart(line.detail)}${withPart || tripPart ? '-part' : ''}`;
   if (!say.exists(id)) {
     return say.text('partners-statement-detail-other', { reason: line.reason });
   }

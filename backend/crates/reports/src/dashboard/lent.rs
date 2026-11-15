@@ -41,6 +41,11 @@ pub(crate) struct LentFacts {
     pub(crate) open: Paisa,
     /// Σ open of the loans past their return-by day.
     pub(crate) overdue: Paisa,
+    /// Σ open of the money lent to persons who are not staff: garden owners, market-trip people
+    /// and others (plan 76 point 10, PRD FR-16.13). Part of `open`.
+    pub(crate) others_open: Paisa,
+    /// How many of those persons have something open.
+    pub(crate) others_people: i64,
     /// The overdue loans, most days past first.
     pub(crate) loans: Vec<Overdue>,
     /// The overdue partner takes, most days past first.
@@ -71,6 +76,16 @@ pub(crate) fn facts(conn: &Connection, today: BusinessDate) -> Result<LentFacts,
     for (account, Loans { loans, .. }) in &grouped {
         let person = persons.get(account);
         let take = by_drawings.get(account);
+        if person.is_some_and(|p| p.person_type != "staff") {
+            let mut open = Paisa::ZERO;
+            for loan in loans {
+                add(&mut open, loan.figures.open)?;
+            }
+            if open > Paisa::ZERO {
+                add(&mut out.others_open, open)?;
+                out.others_people += 1;
+            }
+        }
         for loan in loans {
             if person.is_some() {
                 add(&mut out.open, loan.figures.open)?;

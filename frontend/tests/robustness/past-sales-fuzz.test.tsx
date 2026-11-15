@@ -21,6 +21,11 @@
 //   6. Open, Edit (with and without a save) and Cancel come back to the same window, the same switch and
 //      the same row, and the list asks the backend again.
 //
+// Plan 75 changed the window: each day is one closed line (date, count, خام بکری) and its بکری show in a grid
+// of their own under the line only when the day is open. So rule 3 is now: every day of the window has its
+// line with the backend's figures; a day with a filter or the switch on is open; an open day shows the rows the
+// backend sent for that day, in its order; a day nobody opened is closed. Rule 1 allows the call of one day.
+//
 // It does not click the mouse for the keys it is about. The real timing on WebView2 is on the Windows list.
 
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -157,11 +162,19 @@ const SEARCHES = ['1', '2', '4', '999', 'zzz', 'LES'];
 
 // ---- the screen ----------------------------------------------------------------------------------
 
-/** The ids of the rows and headings of a grid, in the order they stand. */
-function rowIds(grid: HTMLElement): (string | null)[] {
-  return Array.from(grid.querySelectorAll('.ag-row[row-id]:not(.ag-row-pinned)'))
-    .sort((a, b) => Number(a.getAttribute('row-index')) - Number(b.getAttribute('row-index')))
-    .map((row) => row.getAttribute('row-id'));
+/**
+ * The ids of the rows of one grid, or of every open day grid of the window list, in the order they stand
+ * (the days in their order, the rows of a day by their index).
+ */
+function rowIds(root: HTMLElement): (string | null)[] {
+  const grids = root.matches('[role="group"]')
+    ? [root]
+    : Array.from(root.querySelectorAll<HTMLElement>('[role="group"]'));
+  return grids.flatMap((grid) =>
+    Array.from(grid.querySelectorAll('.ag-row[row-id]:not(.ag-row-pinned)'))
+      .sort((a, b) => Number(a.getAttribute('row-index')) - Number(b.getAttribute('row-index')))
+      .map((row) => row.getAttribute('row-id')),
+  );
 }
 
 const outcomes: Record<string, number> = {};
@@ -169,22 +182,12 @@ function counted(kind: string): void {
   outcomes[kind] = (outcomes[kind] ?? 0) + 1;
 }
 
-/** What the grid of the window must hold, in order: each day's heading, then its rows on this page. */
-function expectedWindowIds(world: World, state: State, page: number): string[] {
+/** What the grid of one open day must hold on a page, in the backend's order. */
+function expectedDayIds(world: World, state: State, day: string, page: number): string[] {
   const filter = { all: state.all, show_finished: false, search: state.search };
-  const rows = rowsFor(world, filter, windowFrom(state.end), state.end);
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_ROWS));
-  const onPage = rows.slice((page - 1) * PAGE_ROWS, page * PAGE_ROWS);
-  const days = daysOfWindow(state.end);
-  const from = page <= 1 ? 0 : days.indexOf(onPage[0]?.entry_date ?? '');
-  const to =
-    page >= pageCount ? days.length - 1 : days.indexOf(onPage[onPage.length - 1]?.entry_date ?? '');
-  const ids: string[] = [];
-  for (const day of days.slice(Math.max(from, 0), to + 1)) {
-    ids.push(`group:${day}`);
-    for (const row of onPage) if (row.entry_date === day) ids.push(String(row.id));
-  }
-  return ids;
+  return rowsFor(world, filter, day, day)
+    .slice((page - 1) * PAGE_ROWS, page * PAGE_ROWS)
+    .map((row) => String(row.id));
 }
 
 interface Trial {
@@ -196,16 +199,41 @@ interface Trial {
   asked: BikriListInput[];
   /** What the trial has already done, for the message of a failure. */
   steps: string[];
+  /** The days the trial opened itself, by a click, a day typed or a way back. Only these may be open. */
+  opened: Set<string>;
 }
 
 const label = (t: Trial) => `steps: ${t.steps.join(' | ')}`;
 const m = (t: Trial, id: string, vars: Record<string, string | number> = {}) =>
   message(t.state.lang, id, vars);
+/** The list of the days of the window (one line a day, the rows of an open day under its line). */
 const windowGrid = (t: Trial) =>
-  screen.queryByRole('group', { name: named(m(t, 'bikri-past-label')) });
+  screen.queryByRole('list', { name: named(m(t, 'bikri-past-label')) });
+const dayLi = (list: HTMLElement, day: string) =>
+  list.querySelector<HTMLElement>(`li[data-day="${day}"]`);
 const todayGrid = (t: Trial) =>
   screen.queryByRole('group', { name: named(m(t, 'bikri-list-label')) });
 const pageText = () => visible(document.body.textContent);
+/**
+ * Waits for the title of the saved or edit screen; a miss says where the screen is and what it shows. The
+ * first visit of a test process loads the code of that screen (a lazy route), which can take longer than
+ * `SLOW` on a busy machine: the old list stays drawn until it is there. So this wait is longer.
+ */
+const ROUTE_LOAD = { timeout: 60_000 };
+async function titleOf(t: Trial, id: string, vars: Record<string, string | number>) {
+  try {
+    return await screen.findByRole(
+      'heading',
+      { level: 1, name: named(m(t, id, vars)) },
+      ROUTE_LOAD,
+    );
+  } catch (cause) {
+    const where = `${t.router.state.location.pathname} ${JSON.stringify(t.router.state.location.search)}`;
+    throw new Error(`no title ${id}. At ${where}. Page: ${pageText().slice(0, 600)}. ${label(t)}`, {
+      cause,
+    });
+  }
+}
 const button = (t: Trial, id: string) =>
   screen.getByRole('button', {
     name: (name) => visible(name).startsWith(m(t, id, { days: 7 })),
@@ -222,8 +250,14 @@ const windowCalls = (t: Trial) => t.asked.filter((input) => input.date === null)
 function checkCalls(t: Trial): void {
   for (const input of t.asked) {
     if (input.date !== null) {
-      expect(isoOf(input.date), `today's call asked ${input.date}. ${label(t)}`).toBe(TODAY);
+      // Today's call, or the call of one open day of the window (plan 75): one day, no range, no day rows.
+      const day = isoOf(input.date);
+      expect(day <= TODAY, `a call asked ${day}, after today. ${label(t)}`).toBe(true);
+      expect(dayAfter(day, 0), `a call asked a day that is not real: ${day}. ${label(t)}`).toBe(
+        day,
+      );
       expect(input.from, label(t)).toBeNull();
+      expect(input.to, label(t)).toBeNull();
       expect(input.group_by_day, label(t)).toBe(false);
     } else {
       expect(input.from, `a call with no day at all. ${label(t)}`).not.toBeNull();
@@ -266,40 +300,60 @@ async function settle(t: Trial): Promise<void> {
     expect(search['all'] === true, `the address switch. ${label(t)}`).toBe(state.all);
     const grid = windowGrid(t);
     if (inWindow.length === 0) {
-      expect(grid, `a window with no بکری draws no grid. ${label(t)}`).toBeNull();
+      expect(grid, `a window with no بکری draws no list. ${label(t)}`).toBeNull();
       const said =
         pageText().includes(m(t, 'bikri-past-window-empty')) ||
         pageText().includes(m(t, 'bikri-list-no-match'));
       expect(said, `an empty window says so in words. ${label(t)}`).toBe(true);
       return;
     }
-    expect(grid, `the window grid. ${label(t)}`).not.toBeNull();
+    expect(grid, `the window list. ${label(t)}`).not.toBeNull();
     if (grid === null) return;
-    // The grid draws only the rows near the top while the page has no height (jsdom), so the rows on
-    // screen must be the first rows of what the backend sent, in its order, and not fewer than 8 of them.
-    const wanted = expectedWindowIds(world, state, 1);
-    const shown = rowIds(grid);
-    expect(shown, `the window of ${state.end}. ${label(t)}`).toEqual(wanted.slice(0, shown.length));
-    expect(shown.length, `rows drawn. ${label(t)}`).toBeGreaterThanOrEqual(
-      Math.min(wanted.length, 8),
+    const autoOpen = state.all || state.search.trim() !== '';
+    const lines = Array.from(grid.querySelectorAll('li[data-day]')).map((li) =>
+      li.getAttribute('data-day'),
     );
-    // Each heading has the backend's count and خام بکری, and a day with none says so.
+    expect(lines, `the days of the window, newest first. ${label(t)}`).toEqual(
+      daysOfWindow(state.end),
+    );
+    // Each line has the backend's count and خام بکری, and a day with none says so.
     for (const day of daysOfWindow(state.end)) {
       const ofDay = inWindow.filter((row) => row.entry_date === day);
-      if (!rowIds(grid).includes(`group:${day}`)) continue;
-      const heading = grid.querySelector(`.ag-row[row-id="group:${day}"]`);
-      const chips = Array.from(heading?.querySelectorAll('[data-heading-chip]') ?? []).map((chip) =>
+      const li = dayLi(grid, day);
+      expect(li, `the line of ${day}. ${label(t)}`).not.toBeNull();
+      if (li === null) continue;
+      const chips = Array.from(li.querySelectorAll('[data-heading-chip]')).map((chip) =>
         visible(chip.textContent),
       );
+      const region = li.querySelector<HTMLElement>('[role="region"]');
       if (ofDay.length === 0) {
         expect(chips, `the empty day ${day}. ${label(t)}`).toEqual([]);
-      } else {
-        const gross = ofDay.reduce((sum, row) => sum + (world.rupees.get(row.id) ?? 0), 0);
-        expect(chips, `the figures of ${day}. ${label(t)}`).toEqual([
-          `${m(t, 'bikri-past-day-sales')}${String(ofDay.length)}`,
-          `${m(t, 'glossary-kham-bikri')}${rupeesText(gross)}`,
-        ]);
+        expect(region, `an empty day ${day} is open. ${label(t)}`).toBeNull();
+        continue;
       }
+      const gross = ofDay.reduce((sum, row) => sum + (world.rupees.get(row.id) ?? 0), 0);
+      expect(chips, `the figures of ${day}. ${label(t)}`).toEqual([
+        `${m(t, 'bikri-past-day-sales')}${String(ofDay.length)}`,
+        `${m(t, 'glossary-kham-bikri')}${rupeesText(gross)}`,
+      ]);
+      // A day is open when a search or the switch is on, or when the trial opened it. Never otherwise.
+      if (autoOpen)
+        expect(region, `day ${day} is closed under a filter. ${label(t)}`).not.toBeNull();
+      else if (region !== null) {
+        expect(t.opened.has(day), `day ${day} is open and nobody opened it. ${label(t)}`).toBe(
+          true,
+        );
+      }
+      if (region === null) continue;
+      const dayGrid = region.querySelector<HTMLElement>('[role="group"]');
+      expect(dayGrid, `the rows of the open day ${day}. ${label(t)}`).not.toBeNull();
+      if (dayGrid === null) continue;
+      const wanted = expectedDayIds(world, state, day, 1);
+      const shown = rowIds(dayGrid);
+      expect(shown, `the rows of ${day}. ${label(t)}`).toEqual(wanted.slice(0, shown.length));
+      expect(shown.length, `rows drawn on ${day}. ${label(t)}`).toBeGreaterThanOrEqual(
+        Math.min(wanted.length, 8),
+      );
     }
   }, SLOW);
   // Today's part always shows today's rows.
@@ -318,11 +372,40 @@ async function settle(t: Trial): Promise<void> {
   }, SLOW);
 }
 
-/** Focuses a row of a grid by clicking its number cell, and returns its id. */
+/** Opens the line of a day of the window by a click (a closed day only) and waits for its rows. */
+async function openDay(t: Trial, day: string): Promise<boolean> {
+  const list = windowGrid(t);
+  const line = list === null ? null : dayLi(list, day)?.querySelector('button[data-day-line]');
+  if (line === null || line === undefined) return false;
+  if (line.getAttribute('aria-expanded') === 'false') await t.user.click(line);
+  t.opened.add(day);
+  await waitFor(() => {
+    const now = windowGrid(t);
+    expect(
+      now === null ? [] : rowIds(now),
+      `the rows of ${day} did not come. ${label(t)}`,
+    ).not.toEqual([]);
+  }, SLOW);
+  return true;
+}
+
+/**
+ * Focuses a row of the window list or of today's grid by clicking its number cell, and returns its id.
+ * A row of a closed day is reached by opening its day first, as a person does.
+ */
 async function focusRow(t: Trial, grid: HTMLElement, id?: number): Promise<number | null> {
-  const ids = rowIds(grid).filter(
-    (row): row is string => row !== null && !row.startsWith('group:'),
-  );
+  const real = (ids: (string | null)[]) =>
+    ids.filter((row): row is string => row !== null && !row.startsWith('group:'));
+  let ids = real(rowIds(grid));
+  if (id !== undefined && !ids.includes(String(id))) {
+    const day = t.world.rows.find((row) => row.id === id)?.entry_date;
+    if (day !== undefined && grid.matches('ul') && (await openDay(t, day)))
+      ids = real(rowIds(grid));
+  } else if (id === undefined && ids.length === 0 && grid.matches('ul')) {
+    const first = grid.querySelector<HTMLElement>('li[data-day] button[data-day-line]');
+    const day = first?.closest('li')?.getAttribute('data-day');
+    if (day !== null && day !== undefined && (await openDay(t, day))) ids = real(rowIds(grid));
+  }
   const chosen = id === undefined ? ids[0] : String(id);
   if (chosen === undefined || !ids.includes(chosen)) return null;
   const cell = grid.querySelector<HTMLElement>(`.ag-row[row-id="${chosen}"] [col-id="number"]`);
@@ -357,9 +440,19 @@ async function toRow41(t: Trial) {
   await settle(t);
 }
 
+/**
+ * The row actions: part 0 is today's block; part 1 is the block of the day that holds the row that has focus
+ * (every open day has its own, plan 75).
+ */
 const actionsOf = (part: number): HTMLElement => {
-  const found = document.querySelectorAll<HTMLElement>('[data-past-row-actions]')[part];
-  if (found === undefined) throw new Error(`no actions block ${String(part)}`);
+  const found =
+    part === 1
+      ? document
+          .querySelector('li[data-day] .ag-cell-focus')
+          ?.closest('li[data-day]')
+          ?.querySelector<HTMLElement>('[data-past-row-actions]')
+      : document.querySelectorAll<HTMLElement>('[data-past-row-actions]')[part];
+  if (found === null || found === undefined) throw new Error(`no actions block ${String(part)}`);
   return found;
 };
 const buttonIn = (t: Trial, part: number, id: string) =>
@@ -430,14 +523,17 @@ async function perform(t: Trial, op: Op, random: Random): Promise<void> {
     }
     case 'pageUp':
     case 'pageDown': {
+      // Page Up and Page Down on a day line move the window (plan 75). With no day that has a بکری, the
+      // bar has the same keys through its buttons.
       const grid = windowGrid(t);
-      if (grid === null || (await focusRow(t, grid)) === null) {
-        // No row to focus: the bar has the same keys through its buttons.
+      const line = grid?.querySelector<HTMLElement>('li[data-day] button[data-day-line]') ?? null;
+      if (line === null) {
         await user.click(button(t, 'bikri-past-back'));
         stepEarlier(t);
-        t.steps[t.steps.length - 1] = 'earlier (no row for Page keys)';
+        t.steps[t.steps.length - 1] = 'earlier (no day line for Page keys)';
         break;
       }
+      line.focus();
       await user.keyboard(op === 'pageUp' ? '{PageUp}' : '{PageDown}');
       if (op === 'pageUp') stepEarlier(t);
       else stepNearer(t);
@@ -481,6 +577,8 @@ async function perform(t: Trial, op: Op, random: Random): Promise<void> {
       await user.keyboard(random.below(2) === 0 ? '{Enter}' : '{Tab}');
       if (wanted.go !== undefined) {
         state.end = wanted.go;
+        // The screen opens the day that was asked for (plan 75); allow it to be open.
+        t.opened.add(wanted.go);
         counted('goto-went');
         await waitFor(() => {
           expect(box, label(t)).toHaveValue('');
@@ -551,6 +649,8 @@ async function perform(t: Trial, op: Op, random: Random): Promise<void> {
         t.steps[t.steps.length - 1] = 'open (no row)';
         break;
       }
+      const openedDay = t.world.rows.find((row) => row.id === id)?.entry_date;
+      if (openedDay !== undefined) t.opened.add(openedDay);
       await user.keyboard('{Enter}');
       await waitFor(() => {
         expect(t.router.state.location.pathname, label(t)).toBe('/bikri/book');
@@ -561,11 +661,7 @@ async function perform(t: Trial, op: Op, random: Random): Promise<void> {
       expect(search['pastAll'] === true, `the way back keeps the switch. ${label(t)}`).toBe(
         state.all,
       );
-      await screen.findByRole(
-        'heading',
-        { level: 1, name: named(m(t, 'bikri-saved-title', { number: 1 })) },
-        SLOW,
-      );
+      await titleOf(t, 'bikri-saved-title', { number: 1 });
       const calls = t.asked.length;
       if (op === 'openButton') {
         t.steps[t.steps.length - 1] = 'open (back button)';
@@ -613,11 +709,7 @@ async function perform(t: Trial, op: Op, random: Random): Promise<void> {
         edit: 7,
         past: YESTERDAY,
       });
-      await screen.findByRole(
-        'heading',
-        { level: 1, name: named(m(t, 'bikri-edit-title', { number: 1 })) },
-        SLOW,
-      );
+      await titleOf(t, 'bikri-edit-title', { number: 1 });
       await waitFor(() => {
         expect(cellOf(salesGrid(state.lang), 0, 'rate')).toBeInTheDocument();
       }, SLOW);
@@ -647,16 +739,29 @@ async function perform(t: Trial, op: Op, random: Random): Promise<void> {
       await waitFor(() => {
         expect(t.router.state.location.pathname, `the way back. ${label(t)}`).toBe('/bikri/today');
       }, SLOW);
+      // The way back from an edit opens the day of the بکری by itself (FR-12.46), so it may be open now.
+      t.opened.add(YESTERDAY);
       expect(t.router.state.location.search, label(t)).toMatchObject({ end: YESTERDAY, row: 41 });
       await waitFor(() => {
         expect(t.asked.length, `the list asked again. ${label(t)}`).toBeGreaterThan(calls);
       }, SLOW);
-      await waitFor(() => {
-        expect(
-          windowGrid(t)?.querySelector('.ag-row[row-id="41"] .ag-cell-focus'),
-          `the row has focus again. ${label(t)}`,
-        ).not.toBeNull();
-      }, SLOW);
+      try {
+        await waitFor(() => {
+          expect(
+            windowGrid(t)?.querySelector('.ag-row[row-id="41"] .ag-cell-focus'),
+            `the row has focus again. ${label(t)}`,
+          ).not.toBeNull();
+        }, SLOW);
+      } catch (cause) {
+        const list = windowGrid(t);
+        const line = list === null ? null : dayLi(list, YESTERDAY);
+        const row = list?.querySelector('.ag-row[row-id="41"]') ?? null;
+        const active = document.activeElement;
+        throw new Error(
+          `the row has no focus after the edit. list ${String(list !== null)}, yesterday's line ${String(line !== null)} (open ${String(line?.querySelector('[role="region"]') != null)}), row 41 drawn ${String(row !== null)}, focused cell anywhere ${String(document.querySelector('.ag-cell-focus') !== null)}, active element <${active?.tagName ?? '-'} class="${(active?.getAttribute('class') ?? '').slice(0, 60)}">, address ${JSON.stringify(t.router.state.location.search)}. ${label(t)}`,
+          { cause },
+        );
+      }
       break;
     }
     case 'cancelEsc':
@@ -732,9 +837,19 @@ async function startTrial(
     if (realCancel === undefined) throw new Error('the cancel double is not installed');
     return realCancel(...args);
   });
-  vi.mocked(bikriApi.bikriGet).mockImplementation((id) =>
-    Promise.resolve({ ...savedEvent1(), id }),
-  );
+  // The real backend gives a بکری its own date. The list row says which day it is on, so the saved screen,
+  // and the way back from its edit, name that day (the way back opens it, FR-12.46).
+  vi.mocked(bikriApi.bikriGet).mockImplementation((id) => {
+    const day = world.rows.find((row) => row.id === id)?.entry_date ?? '2026-10-10';
+    const event = savedEvent1();
+    return Promise.resolve({
+      ...event,
+      id,
+      entry_date: day,
+      bill_date: day,
+      postings: event.postings.map((posting) => ({ ...posting, entry_date: day })),
+    });
+  });
   const { router } = await renderApp(`/bikri/today${start.search}`);
   const trial: Trial = {
     world,
@@ -744,6 +859,9 @@ async function startTrial(
     plan,
     asked,
     steps: [`start "${start.search}"`],
+    // An address with a row (the way back from an edit) opens the day of that row by itself (FR-12.46): row 41
+    // lives on yesterday.
+    opened: new Set<string>(/[?&]row=41(&|$)/.test(start.search) ? [YESTERDAY] : []),
   };
   await screen.findByRole('group', { name: named(m(trial, 'bikri-past-nav-label')) }, SLOW);
   await settle(trial);
@@ -974,11 +1092,24 @@ describe.each(LANGUAGES)('پچھلی بکری with 30 بکری on one day (%s)',
   it('the page buttons turn the rows of the window, Page Up still moves the window, and the new window starts on page 1', async () => {
     const world = buildWorld(rng(8), true);
     const trial = await startTrial(language, world, { search: '', end: YESTERDAY, all: false });
-    const pagerNext = () =>
-      screen.getAllByRole('button', {
-        name: (name) => visible(name) === m(trial, 'common-pager-next'),
-      });
-    // The busy day is 08-10-2026, in the window that ends yesterday: more than one page of rows.
+    // The busy day is 08-10-2026, in the window that ends yesterday: more than one page of rows. Its line is
+    // closed at first (plan 75); the Owner opens it, and its own page buttons turn its rows.
+    const busy = dayAfter(YESTERDAY, -1);
+    expect(await openDay(trial, busy), 'the line of the busy day').toBe(true);
+    const region = () => {
+      const list = windowGrid(trial);
+      return list === null
+        ? null
+        : (dayLi(list, busy)?.querySelector<HTMLElement>('[role="region"]') ?? null);
+    };
+    const pagerNext = () => {
+      const open = region();
+      return open === null
+        ? []
+        : within(open).queryAllByRole('button', {
+            name: (name) => visible(name) === m(trial, 'common-pager-next'),
+          });
+    };
     await waitFor(() => {
       expect(pagerNext().length).toBeGreaterThan(0);
     }, SLOW);
@@ -986,23 +1117,24 @@ describe.each(LANGUAGES)('پچھلی بکری with 30 بکری on one day (%s)',
     expect(next).toBeDefined();
     if (next === undefined) return;
     await trial.user.click(next);
-    const filter = { all: false, show_finished: false, search: '' };
-    const inWindow = rowsFor(world, filter, windowFrom(YESTERDAY), YESTERDAY);
-    const wanted = expectedWindowIds(world, trial.state, 2);
+    const wanted = expectedDayIds(world, trial.state, busy, 2);
     await waitFor(() => {
-      const grid = windowGrid(trial);
-      expect(grid, 'the window grid on page 2').not.toBeNull();
-      if (grid === null) return;
-      const shown = rowIds(grid);
-      expect(shown, `page 2 of ${String(inWindow.length)} rows`).toEqual(
-        wanted.slice(0, shown.length),
-      );
-      expect(shown.some((id) => id !== null && !id.startsWith('group:'))).toBe(true);
+      const open = region();
+      expect(open, 'the open busy day').not.toBeNull();
+      const dayGrid = open?.querySelector<HTMLElement>('[role="group"]') ?? null;
+      expect(dayGrid, 'the rows of the busy day on page 2').not.toBeNull();
+      if (dayGrid === null) return;
+      const shown = rowIds(dayGrid);
+      expect(shown, 'page 2 of the busy day').toEqual(wanted.slice(0, shown.length));
+      expect(shown.length).toBeGreaterThan(0);
     }, SLOW);
-    // Page Up in the window grid goes back 7 days (the window), not to page 1 of the rows.
-    const grid = windowGrid(trial);
-    if (grid === null) return;
-    await focusRow(trial, grid);
+    // Page Up on a day line goes back 7 days (the window), not to page 1 of the rows.
+    const line = windowGrid(trial)?.querySelector<HTMLElement>(
+      'li[data-day] button[data-day-line]',
+    );
+    expect(line).toBeDefined();
+    if (line === undefined || line === null) return;
+    line.focus();
     await trial.user.keyboard('{PageUp}');
     stepEarlier(trial);
     await settle(trial);

@@ -433,6 +433,8 @@ fn e2e_29_a_partner_returns_2000_and_the_take_shows_fully_returned() {
         partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                from: None,
+                to: None,
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
@@ -513,7 +515,7 @@ fn e2e_29_a_partner_returns_2000_and_the_take_shows_fully_returned() {
 }
 
 /// Makes the person اسلم and returns his account id.
-fn aslam(w: &support::World, staff: Option<i64>) -> i64 {
+pub(super) fn aslam(w: &support::World, staff: Option<i64>) -> i64 {
     let mut words: Vec<String> = Vec::new();
     loop {
         let input = LentPersonCreateInput {
@@ -541,7 +543,12 @@ fn aslam(w: &support::World, staff: Option<i64>) -> i64 {
     }
 }
 
-fn lent_input(person: i64, amount: &str, date: &str, return_by: Option<&str>) -> MoneyLentInput {
+pub(super) fn lent_input(
+    person: i64,
+    amount: &str,
+    date: &str,
+    return_by: Option<&str>,
+) -> MoneyLentInput {
     MoneyLentInput {
         date: date.into(),
         person_account_id: Some(person),
@@ -569,10 +576,12 @@ fn lent_return(
     }
 }
 
-fn open_of_person(w: &support::World, person: i64) -> i64 {
+pub fn open_of_person(w: &support::World, person: i64) -> i64 {
     lent::list(
         &w.env.ctx,
         &LentListInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,
@@ -771,6 +780,8 @@ fn a_partner_take_past_its_return_by_day_is_in_the_attention_data() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            from: None,
+            to: None,
             show_finished: true,
             group_by_month: false,
             sort: None,

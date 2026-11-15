@@ -516,6 +516,74 @@ const EXPECTED_FILES: &[&str] = &[
     "LaterSaleInput.ts",
     "LaterSaleSaveInput.ts",
     "LaterSaleSaved.ts",
+    "LinkedPart.ts",
+    "LentDuesTotals.ts",
+    "LentDuesPerson.ts",
+    "LentDuesRowKind.ts",
+    "LentDuesRow.ts",
+    "LentDues.ts",
+    "LentDuesInput.ts",
+    "MoneyLentRequest.ts",
+    "LentPersonUpdateInput.ts",
+    "LentPersonCreateRequest.ts",
+    "KhataSetLinkInput.ts",
+    "KhataCreateRequest.ts",
+    "PersonType.ts",
+    "LinkKind.ts",
+    "Link.ts",
+    "WindowsBounds.ts",
+    "WindowSource.ts",
+    "WindowsBoundsInput.ts",
+    "PartnersOpenVenturesInput.ts",
+    "PartnersStatementMonthPrintInput.ts",
+    "PartnerStatementDay.ts",
+    "PartnersStatementDayInput.ts",
+    "StatementColumns.ts",
+    "StatementMonthDay.ts",
+    "PartnerStatementMonth.ts",
+    "PartnersStatementMonthInput.ts",
+    "PrintExtraTotals.ts",
+    "DaySlipsPrintData.ts",
+    "SlipSections.ts",
+    "DaySlipsInput.ts",
+    "CollectionSheetPrintInput.ts",
+    "CollectionSheetTotals.ts",
+    "CollectionSheetRow.ts",
+    "CollectionLine.ts",
+    "CollectionSheet.ts",
+    "CollectionSheetInput.ts",
+    "TablePrintData.ts",
+    "BuyerDuesPrintInput.ts",
+    "BuyerDuesRow.ts",
+    "BuyerDuesPage.ts",
+    "BuyerDuesInput.ts",
+    "CommissionPrintInput.ts",
+    "CommissionEntry.ts",
+    "CommissionDay.ts",
+    "CommissionDayInput.ts",
+    "CommissionDayRow.ts",
+    "PartnerShare.ts",
+    "CommissionPartner.ts",
+    "CommissionMonth.ts",
+    "CommissionMonthInput.ts",
+    "CommissionPeriod.ts",
+    "CommissionPeriodKind.ts",
+    "CommissionPeriodShown.ts",
+    "CommissionParty.ts",
+    "CommissionPartyShown.ts",
+    "CommissionSide.ts",
+    "CarriedLotInput.ts",
+    "CarriedSaved.ts",
+    "MixedPart.ts",
+    "MixedPartKind.ts",
+    "MixedSaleInput.ts",
+    "MixedSalePreview.ts",
+    "MixedSaleSaveInput.ts",
+    "MixedSaleSaved.ts",
+    "MixedUndoCarried.ts",
+    "MixedUndoDraft.ts",
+    "MixedUndoInput.ts",
+    "MixedUndoResult.ts",
     "EditOpenInput.ts",
     "EditableBikri.ts",
     "EditPreviewInput.ts",
@@ -700,6 +768,14 @@ const EXPECTED_FILES: &[&str] = &[
     "ExportStage.ts",
     "ReportsExportRequest.ts",
     "AnalyticsExportRequest.ts",
+    "TableExportSource.ts",
+    "TablesExportRequest.ts",
+    "PageInput.ts",
+    "OpenBillsPageInput.ts",
+    "OpenPayablesPageInput.ts",
+    "AssistAdvancesPageInput.ts",
+    "BikriFindPageInput.ts",
+    "VouchersPreviewRequest.ts",
     "AuditChange.ts",
     "AuditRow.ts",
     "AuditResolvedFilters.ts",
@@ -1265,6 +1341,43 @@ fn export_bindings() {
     bikri::LaterSaleInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaved::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentDues::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentDuesInput::export_all(&cfg).unwrap();
+    mandi_services::core::lent::MoneyLentRequest::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentPersonUpdateInput::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentPersonCreateRequest::export_all(&cfg).unwrap();
+    mandi_services::core::khata::KhataSetLinkInput::export_all(&cfg).unwrap();
+    mandi_services::core::khata::KhataCreateRequest::export_all(&cfg).unwrap();
+    mandi_services::core::links::Link::export_all(&cfg).unwrap();
+    mandi_services::core::windows::WindowsBounds::export_all(&cfg).unwrap();
+    mandi_services::core::windows::WindowsBoundsInput::export_all(&cfg).unwrap();
+    mandi_services::core::partners::PartnersOpenVenturesInput::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnersStatementMonthPrintInput::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnerStatementDay::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnersStatementDayInput::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnerStatementMonth::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnersStatementMonthInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::PrintExtraTotals::export_all(&cfg).unwrap();
+    mandi_reports::reports::DaySlipsPrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::DaySlipsInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::CollectionSheetPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::CollectionSheet::export_all(&cfg).unwrap();
+    mandi_reports::reports::CollectionSheetInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::TablePrintData::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::BuyerDuesPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::BuyerDuesPage::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::BuyerDuesInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionDay::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionDayInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionMonth::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionMonthInput::export_all(&cfg).unwrap();
+    bikri::MixedSaleInput::export_all(&cfg).unwrap();
+    bikri::MixedSaleSaveInput::export_all(&cfg).unwrap();
+    bikri::MixedSalePreview::export_all(&cfg).unwrap();
+    bikri::MixedSaleSaved::export_all(&cfg).unwrap();
+    bikri::MixedUndoInput::export_all(&cfg).unwrap();
+    bikri::MixedUndoResult::export_all(&cfg).unwrap();
     bikri::EditOpenInput::export_all(&cfg).unwrap();
     bikri::EditableBikri::export_all(&cfg).unwrap();
     bikri::EditPreviewInput::export_all(&cfg).unwrap();
@@ -1366,6 +1479,14 @@ fn export_bindings() {
     mandi_app_lib::updates::UpdateInstalled::export_all(&cfg).unwrap();
     mandi_app_lib::commands::export::ReportsExportRequest::export_all(&cfg).unwrap();
     mandi_app_lib::commands::export::AnalyticsExportRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::TableExportSource::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::TablesExportRequest::export_all(&cfg).unwrap();
+    paging::PageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::assist::OpenBillsPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::assist::OpenPayablesPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::assist::AssistAdvancesPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::bikri::BikriFindPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::vouchers::VouchersPreviewRequest::export_all(&cfg).unwrap();
     mandi_app_lib::commands::export::ExportProgressEvent::export_all(&cfg).unwrap();
     mandi_reports::export::ExcelExported::export_all(&cfg).unwrap();
     mandi_services::month::MonthInput::export_all(&cfg).unwrap();
@@ -1440,6 +1561,13 @@ fn export_bindings() {
     mandi_reports::reports::StatementSide::export_all(&cfg).unwrap();
     mandi_reports::reports::StatementKind::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintStatementInput::export_all(&cfg).unwrap();
+    // Plan 77 (append-only block).
+    mandi_reports::dashboard::CommissionPeriod::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPeriodKind::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPeriodShown::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionParty::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPartyShown::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionSide::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

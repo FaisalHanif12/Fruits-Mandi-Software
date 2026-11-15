@@ -158,6 +158,12 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 // Migration 0013 (plan 47) made it; migration 0020 (plan 64) renamed it: the mark of an
                 // old one-time party account, never read again (PRD FR-13.9).
                 "was_one_time_party",
+                // Migration 0023 (plan 76): the link of a khata or a loaned person, the person type
+                // and the newest journal entry when the link was set.
+                "link_kind",
+                "link_partner_id",
+                "link_since_entry_id",
+                "person_type",
             ]);
             v
         }),
@@ -215,6 +221,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "drawings_account_id",
                 // Migration 0006 (plan 16b): his gardens, trips and fruit account (0604).
                 "venture_account_id",
+                // Migration 0023 (plan 76): his account for the money of a linked khata or loan (0605).
+                "linked_account_id",
                 "is_active",
             ],
         ),

@@ -36,8 +36,8 @@ import anRunH from '../fixtures/analytics_run_h.json';
 import anRunHRequest from '../fixtures/analytics_run_h_request.json';
 import anRunACompareNeedsDates from '../fixtures/analytics_run_a_compare_needs_dates.json';
 import anRunACompareNeedsDatesRequest from '../fixtures/analytics_run_a_compare_needs_dates_request.json';
-import anRunAGroupByRefused from '../fixtures/analytics_run_a_group_by_refused.json';
-import anRunAGroupByRefusedRequest from '../fixtures/analytics_run_a_group_by_refused_request.json';
+import anRunHGroupByRefused from '../fixtures/analytics_run_h_group_by_refused.json';
+import anRunHGroupByRefusedRequest from '../fixtures/analytics_run_h_group_by_refused_request.json';
 import anRunAUnknownItem from '../fixtures/analytics_run_a_unknown_item.json';
 import anRunAUnknownItemRequest from '../fixtures/analytics_run_a_unknown_item_request.json';
 import anLinesABanana from '../fixtures/analytics_lines_a_banana.json';
@@ -113,8 +113,9 @@ export const ANALYTICS_RUN_A_COMPARE_NEEDS_DATES = readRefusal(anRunACompareNeed
 export const ANALYTICS_RUN_A_COMPARE_NEEDS_DATES_REQUEST = readRunInput(
   anRunACompareNeedsDatesRequest,
 );
-export const ANALYTICS_RUN_A_GROUP_BY_REFUSED = readRefusal(anRunAGroupByRefused);
-export const ANALYTICS_RUN_A_GROUP_BY_REFUSED_REQUEST = readRunInput(anRunAGroupByRefusedRequest);
+/** The top 10 (H) is the one view that takes no grouping: the backend refuses `group_by` on it (plan 77). */
+export const ANALYTICS_RUN_H_GROUP_BY_REFUSED = readRefusal(anRunHGroupByRefused);
+export const ANALYTICS_RUN_H_GROUP_BY_REFUSED_REQUEST = readRunInput(anRunHGroupByRefusedRequest);
 export const ANALYTICS_RUN_A_UNKNOWN_ITEM = readRefusal(anRunAUnknownItem);
 export const ANALYTICS_RUN_A_UNKNOWN_ITEM_REQUEST = readRunInput(anRunAUnknownItemRequest);
 export const ANALYTICS_LINES_A_BANANA = readLines(anLinesABanana);

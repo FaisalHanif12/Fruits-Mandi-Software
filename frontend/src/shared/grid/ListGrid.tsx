@@ -293,6 +293,8 @@ interface ListGridProps<T> {
   getRowId: (row: T) => string;
   /** The Fluent message ID of the list's name, read by screen readers. */
   labelId: string;
+  /** The values the name needs, for a list that is one of several alike (the day grids of Past Sales). */
+  labelVars?: Record<string, string> | undefined;
   /**
    * Enter or a double click on a row. `column` is the column of the cell that had focus or was
    * clicked, for a list whose cells open different records (the lines behind an analytics number).
@@ -565,6 +567,7 @@ function GridInner<T>({
   rows,
   getRowId,
   labelId,
+  labelVars,
   onOpen,
   onOpenTotals,
   isInactive,
@@ -743,6 +746,65 @@ function GridInner<T>({
     [],
   );
 
+  // The row the screen wants focused is put back when it is drawn after the grid was made, too: a list that
+  // comes back from an edit draws its rows from the cache, or the day it belongs to opens a moment later, so
+  // `onGridReady` (below) found no row yet and nothing had focus, and the keyboard could not go on from the row
+  // (PRD FR-12.46, NFR-USE-7). It is left alone when another control has the keys (a search box above the list)
+  // and when the focus is already on that row, so a click on another cell is never moved.
+  const restoreFrame = useRef(0);
+  // Read at the moment of the restore: a screen makes its `getRowId` anew on every render, and that must not run it.
+  const rowIdOf = useRef(getRowId);
+  useEffect(() => {
+    rowIdOf.current = getRowId;
+  });
+  useEffect(() => {
+    const wanted = focusRowId;
+    if (wanted === null || wanted === undefined || firstField === undefined) return;
+    let frames = 0;
+    const settle = () => {
+      const api = apiRef.current;
+      const root = rootRef.current;
+      if (api === null || root === null) {
+        // The grid is not ready yet (it was made in this very render): ask again in a moment.
+        if (frames < FOCUS_RETRIES) {
+          frames += 1;
+          restoreFrame.current = requestAnimationFrame(settle);
+        }
+        return;
+      }
+      const active = document.activeElement;
+      if (active !== null && active !== document.body && !root.contains(active)) return;
+      let index = -1;
+      api.forEachNode((node, position) => {
+        if (
+          node.data !== undefined &&
+          !isHeadingRow(node.data) &&
+          rowIdOf.current(node.data) === wanted
+        ) {
+          index = position;
+        }
+      });
+      if (index < 0) {
+        // The row is not in the grid yet: it is drawn a moment later (a few frames at most).
+        if (frames < FOCUS_RETRIES) {
+          frames += 1;
+          restoreFrame.current = requestAnimationFrame(settle);
+        }
+        return;
+      }
+      const cell = api.getFocusedCell();
+      if (cell !== null && cell.rowIndex === index && root.contains(active)) return;
+      api.setFocusedCell(index, firstField);
+      api.ensureIndexVisible(index);
+      // The grid marks the cell but leaves the browser focus where it was lost: it is put on the marked cell.
+      root.querySelector<HTMLElement>('.ag-cell-focus')?.focus();
+    };
+    restoreFrame.current = requestAnimationFrame(settle);
+    return () => {
+      cancelAnimationFrame(restoreFrame.current);
+    };
+  }, [rows, focusRowId, firstField]);
+
   // The page turn of the screen is made anew on every render. It is read at the moment of the key,
   // so the options handed to the grid below stay the same object: a new `defaultColDef` on every
   // render made the grid rebuild its columns, and a click on a title or a row was lost (plan 38).
@@ -837,7 +899,7 @@ function GridInner<T>({
       ref={rootRef}
       className={`entry-grid list-grid ag-theme-quartz ${heightMode === 'fill' ? 'list-grid-fill' : ''} ${growing ? 'list-grid-wrap' : ''}`}
       role="group"
-      aria-label={l10n.getString(labelId)}
+      aria-label={l10n.getString(labelId, labelVars)}
       dir={direction}
     >
       <AgGridReact<T>

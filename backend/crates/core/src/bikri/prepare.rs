@@ -153,7 +153,7 @@ fn typed_line_charge(
 
 /// A row with no buyer and no seller rate is a blank row (PRD FR-7.52). Its quantity may be the
 /// quantity the screen filled in, so nothing else in it is read.
-fn is_blank_sale(input: &SaleInput) -> bool {
+pub fn is_blank_sale(input: &SaleInput) -> bool {
     input.buyer_account_id.is_none()
         && input.chukta.as_ref().is_none_or(|p| {
             p.name_ur.trim().is_empty() && p.name_en.trim().is_empty() && p.phone.trim().is_empty()

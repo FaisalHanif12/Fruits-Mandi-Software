@@ -14,7 +14,7 @@
       {
         "key": "lot:1",
         "lot_id": 1,
-        "seller_account_id": 18,
+        "seller_account_id": 19,
         "purchase_id": null,
         "arrival_id": null,
         "item_id": 1,
@@ -44,7 +44,7 @@
           {
             "key": "sale:1",
             "sale_id": 1,
-            "buyer_account_id": 20,
+            "buyer_account_id": 21,
             "chukta": null,
             "qty": "20",
             "weight": null,
@@ -60,7 +60,7 @@
           {
             "key": "sale:2",
             "sale_id": 2,
-            "buyer_account_id": 21,
+            "buyer_account_id": 22,
             "chukta": null,
             "qty": "25",
             "weight": null,
@@ -83,7 +83,7 @@
       "lot_no": 1,
       "lot_counter": 1,
       "seller": {
-        "id": 18,
+        "id": 19,
         "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
@@ -146,7 +146,7 @@
           "journal_entry_id": 3,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 20,
+            "id": 21,
             "code": "0020",
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
@@ -194,7 +194,7 @@
           "journal_entry_id": 3,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 21,
+            "id": 22,
             "code": "0021",
             "name_ur": "ارشد ملتانی",
             "name_en": "Arshad Multani"

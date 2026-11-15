@@ -14,6 +14,7 @@ import type {
   AnalyticsPeriod,
   AnalyticsSide,
   AnalyticsTripView,
+  AnalyticsView,
 } from './types';
 
 /** The period box: a shortcut of PRD 18.1, or the two dates the user types. */
@@ -30,6 +31,29 @@ export const PERIOD_CHOICES: readonly PeriodChoice[] = [
 ];
 
 export const GROUP_BY_CHOICES: readonly AnalyticsGroupBy[] = ['month', 'day', 'year'];
+/**
+ * The grouping of the views that may be read without one (A, B, C, E, F, I, J, K and L: PRD FR-18.9, plan 77): none,
+ * or one row for each day, month or year, with the period as the first column.
+ */
+export const BUCKET_CHOICES = ['none', 'day', 'month', 'year'] as const;
+export type BucketChoice = (typeof BUCKET_CHOICES)[number];
+
+/**
+ * The views whose grouping is a choice: left out, the view is read as a whole. Views D, G and M are always
+ * grouped (a month when none is sent), so they keep `groupBy`.
+ */
+export const OPTIONAL_GROUPING_VIEWS: ReadonlySet<AnalyticsView> = new Set<AnalyticsView>([
+  'A',
+  'B',
+  'C',
+  'E',
+  'F',
+  'I',
+  'J',
+  'K',
+  'L',
+]);
+
 export const SIDE_CHOICES: readonly AnalyticsSide[] = ['both', 'seller', 'buyer'];
 export const COMPARE_CHOICES: readonly AnalyticsCompare[] = ['off', 'previous', 'last_year'];
 /** Which goods: all of them, those consigned to the shop, the trips' goods or the gardens' (PRD 18.1). */
@@ -60,8 +84,10 @@ export interface AnalyticsFilterState {
   /** `DD-MM-YYYY` as typed (the backend also reads `10` and `10-9`). */
   from: string;
   to: string;
-  /** View D only. */
+  /** Views D, G and M: the columns are a day, a month (the first choice) or a year. */
   groupBy: AnalyticsGroupBy;
+  /** Views F, I, J and K: no grouping (the first choice), or a row for each day, month or year. */
+  buckets: BucketChoice;
   item: PickerValue | null;
   seller: PickerValue | null;
   buyer: PickerValue | null;
@@ -89,6 +115,7 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
   from: '',
   to: '',
   groupBy: 'month',
+  buckets: 'none',
   item: null,
   seller: null,
   buyer: null,
@@ -109,11 +136,13 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
  * The filters as the backend reads them. Every key is sent. A box the view does not take is sent
  * empty, because the backend refuses a filter the view does not take if it is filled. `group_by` is
  * sent only for the day and year choices: month is the backend's default, so it is left null, like
- * a request of the backend's own tests.
+ * a request of the backend's own tests. A view whose grouping is a choice (`OPTIONAL_GROUPING_VIEWS`) sends its
+ * `buckets` as they are, and nothing for "none".
  */
 export function filtersToWire(
   state: AnalyticsFilterState,
   takes: readonly AnalyticsFilterKind[],
+  view?: AnalyticsView,
 ): AnalyticsFilters {
   const has = (kind: AnalyticsFilterKind) => takes.includes(kind);
   const period = has('period') && state.period !== 'custom' ? state.period : null;
@@ -124,7 +153,7 @@ export function filtersToWire(
     period,
     from: has('period') && period === null ? state.from.trim() : '',
     to: has('period') && period === null ? state.to.trim() : '',
-    group_by: has('group_by') && state.groupBy !== 'month' ? state.groupBy : null,
+    group_by: !has('group_by') ? null : groupByOf(state, view),
     item_id: has('item') ? (state.item?.id ?? null) : null,
     seller_id: has('seller') ? (state.seller?.id ?? null) : null,
     buyer,
@@ -147,6 +176,17 @@ export function filtersToWire(
   };
 }
 
+/** The grouping that is sent for a view: its buckets, or its month, day or year (month is the default). */
+function groupByOf(
+  state: AnalyticsFilterState,
+  view: AnalyticsView | undefined,
+): AnalyticsGroupBy | null {
+  if (view !== undefined && OPTIONAL_GROUPING_VIEWS.has(view)) {
+    return state.buckets === 'none' ? null : state.buckets;
+  }
+  return state.groupBy === 'month' ? null : state.groupBy;
+}
+
 /** A record that was picked before its names are known: they come with the first answer. */
 function bare(id: number | null): PickerValue | null {
   return id === null ? null : { id, name_ur: '', name_en: '', code: undefined };
@@ -160,6 +200,7 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
     from: filters.from,
     to: filters.to,
     groupBy: filters.group_by ?? 'month',
+    buckets: filters.group_by ?? 'none',
     item: bare(filters.item_id),
     seller: bare(filters.seller_id),
     buyer: bare(buyerId),
@@ -181,8 +222,9 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
 export function isUnfiltered(
   state: AnalyticsFilterState,
   takes: readonly AnalyticsFilterKind[],
+  view?: AnalyticsView,
 ): boolean {
-  const wire = filtersToWire(state, takes);
+  const wire = filtersToWire(state, takes, view);
   return (
     wire.period === null &&
     wire.from === '' &&

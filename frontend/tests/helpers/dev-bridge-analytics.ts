@@ -56,6 +56,18 @@ import {
   ANALYTICS_RUN_J_TRIP_BY_PURCHASE,
 } from './analytics-trips-real';
 
+import {
+  ANALYTICS_RUN_A_BY_MONTH,
+  ANALYTICS_RUN_B_BY_MONTH,
+  ANALYTICS_RUN_C_BY_MONTH,
+  ANALYTICS_RUN_E_BY_MONTH,
+  ANALYTICS_RUN_F_BY_MONTH,
+  ANALYTICS_RUN_L,
+  ANALYTICS_RUN_L_BY_MONTH,
+  ANALYTICS_RUN_M,
+  ANALYTICS_RUN_M_BY_DAY,
+} from './analytics-plan77';
+
 type Input = Record<string, unknown>;
 
 const PAGES: Record<AnalyticsView, AnalyticsPage> = {
@@ -70,6 +82,8 @@ const PAGES: Record<AnalyticsView, AnalyticsPage> = {
   I: ANALYTICS_RUN_I_GARDEN,
   J: ANALYTICS_RUN_J_TRIP,
   K: ANALYTICS_RUN_K_FRUIT,
+  L: ANALYTICS_RUN_L,
+  M: ANALYTICS_RUN_M,
 };
 
 /** Views D and E with more columns than a window holds, to show the window and its buttons. */
@@ -120,6 +134,19 @@ function page(input: Input): AnalyticsPage {
   let base = PAGES[view];
   if (view === 'A' && compared) base = ANALYTICS_RUN_A_COMPARE;
   if (view === 'D' && filters['group_by'] === 'day') base = ANALYTICS_RUN_D_DAY;
+  if (view === 'M' && filters['group_by'] === 'day') base = ANALYTICS_RUN_M_BY_DAY;
+  if (view === 'F' && filters['group_by'] === 'month') base = ANALYTICS_RUN_F_BY_MONTH;
+  // The optional views grouped by month (plan 77): the period is the first column.
+  if (filters['group_by'] === 'month') {
+    const byMonth: Partial<Record<AnalyticsView, AnalyticsPage>> = {
+      A: ANALYTICS_RUN_A_BY_MONTH,
+      B: ANALYTICS_RUN_B_BY_MONTH,
+      C: ANALYTICS_RUN_C_BY_MONTH,
+      E: ANALYTICS_RUN_E_BY_MONTH,
+      L: ANALYTICS_RUN_L_BY_MONTH,
+    };
+    base = byMonth[view] ?? base;
+  }
   if (view === 'G' && filters['group_by'] === 'day') base = ANALYTICS_RUN_G_DAY;
   if (view === 'J' && filters['trip_view'] === 'purchase') base = ANALYTICS_RUN_J_TRIP_BY_PURCHASE;
   if (view === 'I' && filters['side'] === 'seller') base = ANALYTICS_RUN_I_GARDEN_SELLER_SIDE;

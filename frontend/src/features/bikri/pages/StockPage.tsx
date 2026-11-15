@@ -108,7 +108,8 @@ function StockBody({ saved, remember }: MemoryProps) {
 
   const sell = (row: StockRow) => {
     if (row.balance <= 0) return;
-    void navigate({ to: '/bikri/later', search: { bikri: row.bikri_id, lot: row.lot_id } });
+    // The lot is carried onto a new بکری, where new lots can be added beside it (plan 76 point 1).
+    void navigate({ to: '/bikri/book', search: { carry: row.lot_id } });
   };
   useEscape('leave', () => {
     void navigate({ to: '/' });

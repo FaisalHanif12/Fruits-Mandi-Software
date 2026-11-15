@@ -92,7 +92,7 @@ fn released_version_21() -> Migrations<'static> {
 }
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: i64 = 22;
+const LATEST: i64 = 24;
 
 fn connection(path: &Path) -> Connection {
     let conn = Connection::open(path).unwrap();
@@ -177,6 +177,34 @@ fn balances(conn: &Connection) -> Vec<(i64, i64, i64)> {
     )
     .unwrap()
     .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+/// Every control as one text row, for a before and after check (migration 23 adds two).
+fn controls(conn: &Connection) -> Vec<String> {
+    conn.prepare(
+        "SELECT quote(id) || '|' || quote(head_id) || '|' || quote(code) || '|' || quote(name_ur) || '|' || quote(name_en) || '|' || quote(party_type)
+         FROM account_controls ORDER BY id",
+    )
+    .unwrap()
+    .query_map([], |r| r.get(0))
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+/// What an old account is, as one text row: the columns migration 23 may not change. The accounts 0030 and
+/// 0031 are left out: migration 20 renames them on purpose (the checks of that step are above).
+fn account_facts(conn: &Connection) -> Vec<String> {
+    conn.prepare(
+        "SELECT quote(id) || '|' || quote(control_id) || '|' || quote(code) || '|' || quote(name_ur) || '|' || quote(name_en)
+                || '|' || quote(opening_dr_paisa) || '|' || quote(opening_cr_paisa) || '|' || quote(is_active)
+         FROM accounts WHERE code NOT IN ('0030', '0031') ORDER BY id",
+    )
+    .unwrap()
+    .query_map([], |r| r.get(0))
     .unwrap()
     .map(Result::unwrap)
     .collect()
@@ -1157,9 +1185,9 @@ fn lots_without_counter(conn: &Connection) -> Vec<String> {
 }
 
 /// The real upgrade of the hostile file of version 19 runs through every migration to the latest one
-/// (22, lot counters, plan 71) in one go. Not one chain hash, journal row, balance, sale line or lot value
-/// moves; the new column and table are the only change, every lot has a counter, and a second run is a
-/// no-op.
+/// (24, plans 76 and 77) in one go. Not one chain hash, journal row, balance, sale line or lot value
+/// moves; the new columns, tables and the two new controls (0307, 0605) are the only change, every lot
+/// has a counter, no account is linked, and a second run is a no-op.
 #[test]
 fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
     let dir = tempdir().unwrap();
@@ -1167,13 +1195,17 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
     let backups = dir.path().join("backups");
     let old = build_v19(&path, &backups);
     let mut conn = connection(&path);
-    // Migration 22 adds a column to `bikri_lots` and makes `lot_counters`; the other changes are those of 20 and 21.
+    // Migration 22 adds a column to `bikri_lots` and makes `lot_counters`; migration 23 adds columns to
+    // `accounts` and `partners` and the two controls 0307 and 0605 (checked on their own below). The other
+    // changes are those of 20 and 21.
     let skip: Vec<&str> = CHANGES_ON_PURPOSE
         .iter()
         .copied()
-        .chain(["bikri_lots", "lot_counters"])
+        .chain(["bikri_lots", "lot_counters", "account_controls"])
         .collect();
     let rows_before = all_rows(&conn, &skip);
+    let controls_before = controls(&conn);
+    let accounts_before = account_facts(&conn);
     let hashes_before = hashes(&conn);
     let balances_before = balances(&conn);
     let lots_before = lots_without_counter(&conn);
@@ -1181,7 +1213,7 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
     assert!(lots >= 1);
 
     let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((outcome.from, outcome.to), (19, 22));
+    assert_eq!((outcome.from, outcome.to), (19, 24));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), LATEST);
 
@@ -1194,6 +1226,67 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
         lots_before,
         "a lot value moved"
     );
+    // Migration 23: every old control is the same row, and 0307 and 0605 are the only new ones.
+    let controls_after = controls(&conn);
+    for old_control in &controls_before {
+        assert!(
+            controls_after.contains(old_control),
+            "a control changed: {old_control}"
+        );
+    }
+    let mut added: Vec<&String> = controls_after
+        .iter()
+        .filter(|c| !controls_before.contains(c))
+        .collect();
+    added.sort();
+    assert_eq!(added.len(), 2, "new controls: {added:?}");
+    assert!(
+        added.iter().any(|c| c.contains("'0307'")) && added.iter().any(|c| c.contains("'0605'")),
+        "new controls: {added:?}"
+    );
+    // Every old account keeps its id, code, names, opening and active state, and is not linked.
+    let accounts_after = account_facts(&conn);
+    for old_account in &accounts_before {
+        assert!(
+            accounts_after.contains(old_account),
+            "an account changed: {old_account}"
+        );
+    }
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE link_kind <> 'none' OR link_partner_id IS NOT NULL OR link_since_entry_id <> 0"
+        ),
+        0,
+        "an account was linked by the migration"
+    );
+    // Every person of control 0103 has a type; the others have none.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts a JOIN account_controls c ON c.id = a.control_id
+             WHERE (c.code = '0103') <> (a.person_type IS NOT NULL)"
+        ),
+        0
+    );
+    // Migration 24 adds three indexes and nothing else (plan 77): they are there, and the tables of their
+    // columns are the ones migration 23 left.
+    for name in [
+        "idx_partner_share_rows_kind_date",
+        "idx_analytics_facts_date_sums",
+        "idx_analytics_facts_views",
+    ] {
+        assert_eq!(
+            count(
+                &conn,
+                &format!(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = '{name}'"
+                )
+            ),
+            1,
+            "{name} is missing after the upgrade"
+        );
+    }
     // Every lot has a counter of its own seller and item, and the table holds the biggest of each pair.
     assert_eq!(
         count(
@@ -1237,6 +1330,6 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
         0
     );
     let again = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((again.from, again.to), (22, 22));
+    assert_eq!((again.from, again.to), (24, 24));
     assert!(again.copy.is_none());
 }

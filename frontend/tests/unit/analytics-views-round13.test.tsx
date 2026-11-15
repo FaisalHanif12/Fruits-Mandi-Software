@@ -152,11 +152,11 @@ describe.each(LANGUAGES)('تجزیات, view K and the fruit of view F (%s)', (l
   }
 
   describe('view K, the fruit taken', () => {
-    it('is the last tab, with the boxes of the PRD: the days, the item, the partner, the garden and the goods', () => {
-      expect(ANALYTICS_CATALOG.at(-1)).toMatchObject({
+    it('is a tab, with the boxes of the PRD: the days, the item, the partner, the garden, the goods and the grouping', () => {
+      expect(ANALYTICS_CATALOG.find((entry) => entry.id === 'K')).toMatchObject({
         id: 'K',
         title_id: 'analytics-view-k-title',
-        filters: ['period', 'item', 'partner', 'garden', 'goods'],
+        filters: ['period', 'item', 'partner', 'garden', 'goods', 'group_by'],
       });
     });
 
@@ -204,12 +204,14 @@ describe.each(LANGUAGES)('تجزیات, view K and the fruit of view F (%s)', (l
       expect(heading('other_shops')).toBe(m('fruit-source-other'));
     });
 
-    it('has no chart: the backend sends none for the fruit taken (plan 38 R4)', async () => {
+    it('draws the chart the backend sends for the fruit taken (plan 76 point 4)', async () => {
       await openView('K');
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(2);
       }, SLOW_MS);
-      expect(screen.queryByRole('img')).toBeNull();
+      expect(
+        screen.getByRole('img', { name: (name) => visible(name).includes(m('analytics-chart-k')) }),
+      ).toBeInTheDocument();
     });
 
     it('offers no comparison, no side and no trip goods, because the backend has none of them for the fruit', async () => {

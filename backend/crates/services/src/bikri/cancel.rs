@@ -50,12 +50,12 @@ use crate::ledger;
 use crate::vouchers::{rematch_party, role_of_account, stored_cash_change};
 
 /// The postings of a بکری that are in force, with their days.
-struct Live {
-    entry_id: i64,
-    date: BusinessDate,
+pub(super) struct Live {
+    pub(super) entry_id: i64,
+    pub(super) date: BusinessDate,
 }
 
-fn live_postings(conn: &Connection, bikri_id: i64) -> Result<Vec<Live>, ServiceError> {
+pub(super) fn live_postings(conn: &Connection, bikri_id: i64) -> Result<Vec<Live>, ServiceError> {
     edit_repo::postings_in_force(conn, bikri_id)?
         .into_iter()
         .map(|p| {
@@ -69,7 +69,7 @@ fn live_postings(conn: &Connection, bikri_id: i64) -> Result<Vec<Live>, ServiceE
 }
 
 /// The days of these postings that are on or before the "closed up to" day, oldest first.
-fn closed_days(live: &[Live], closed_up_to: Option<BusinessDate>) -> Vec<BusinessDate> {
+pub(super) fn closed_days(live: &[Live], closed_up_to: Option<BusinessDate>) -> Vec<BusinessDate> {
     let mut days: Vec<BusinessDate> = live
         .iter()
         .map(|p| p.date)
@@ -81,7 +81,7 @@ fn closed_days(live: &[Live], closed_up_to: Option<BusinessDate>) -> Vec<Busines
 }
 
 /// What the postings of a بکری did to cash in hand, added up (debit on روکڑ is plus).
-fn cash_of(conn: &Connection, live: &[Live]) -> Result<Paisa, ServiceError> {
+pub(super) fn cash_of(conn: &Connection, live: &[Live]) -> Result<Paisa, ServiceError> {
     let mut total = Paisa::ZERO;
     for posting in live {
         let entry = ledger_repo::get_entry(conn, posting.entry_id)?
@@ -93,7 +93,7 @@ fn cash_of(conn: &Connection, live: &[Live]) -> Result<Paisa, ServiceError> {
     Ok(total)
 }
 
-fn closed_error(ctx: &Context, day: BusinessDate, field: &str) -> ServiceError {
+pub(super) fn closed_error(ctx: &Context, day: BusinessDate, field: &str) -> ServiceError {
     crate::day::closed_rejection(ctx, day, field)
 }
 
@@ -102,7 +102,7 @@ fn closed_error(ctx: &Context, day: BusinessDate, field: &str) -> ServiceError {
 ///
 /// # Errors
 /// `ERR_GARDEN_CLOSED` on `id`.
-fn refuse_closed_garden(conn: &Connection, bikri_id: i64) -> Result<(), ServiceError> {
+pub(super) fn refuse_closed_garden(conn: &Connection, bikri_id: i64) -> Result<(), ServiceError> {
     if mandi_db::gardens::bikri_has_closed_garden_lot(conn, bikri_id)? {
         return Err(ServiceError::reject_field(ErrorCode::ErrGardenClosed, "id"));
     }
@@ -114,7 +114,7 @@ fn refuse_closed_garden(conn: &Connection, bikri_id: i64) -> Result<(), ServiceE
 ///
 /// # Errors
 /// `ERR_BIKRI_HAS_FRUIT` on `id` (value `qty_taken`).
-fn refuse_fruit_taken(conn: &Connection, bikri_id: i64) -> Result<(), ServiceError> {
+pub(super) fn refuse_fruit_taken(conn: &Connection, bikri_id: i64) -> Result<(), ServiceError> {
     let taken = mandi_db::fruit::bikri_qty_taken(conn, bikri_id)?;
     if taken > 0 {
         return Err(ServiceError::Rejected(vec![Rejection {
@@ -163,8 +163,53 @@ pub fn preview(ctx: &Context, input: &CancelPreviewInput) -> Result<CancelPrevie
     })
 }
 
+/// The matching keys (account, person) a posting touched.
+pub(super) type MatchKeys = Vec<(i64, Option<String>)>;
+
+/// Reverses ONE posting of a بکری inside the caller's transaction: the journal entry, its stock
+/// moves, facts, trip credit parts, goods given back, and its sale lines ended as cancelled. It
+/// returns the reversal entry and the matching keys (account, person) the posting touched, so the
+/// caller can match them again. The body of [`cancel_in`], and of the undo of a later posting
+/// (plan 76 point 1). It does not mark the بکری cancelled and does not update the lot totals: the
+/// caller does, from the stored lines.
+///
+/// # Errors
+/// `ServiceError::Db`, `ServiceError::Data`.
+pub(super) fn reverse_posting_in(
+    ctx: &Context,
+    tx: &Connection,
+    user: i64,
+    now: &str,
+    entry_id: i64,
+    date: BusinessDate,
+    reason: &str,
+) -> Result<(i64, MatchKeys), ServiceError> {
+    let entry = ledger_repo::get_entry(tx, entry_id)?
+        .ok_or_else(|| data("a posting of a بکری cannot be read"))?;
+    let keys: Vec<(i64, Option<String>)> = entry
+        .lines
+        .iter()
+        .map(|l| (l.account_id, l.person_key.clone()))
+        .collect();
+    let reversal = ledger::reverse(ctx, tx, user, entry_id, reason)?;
+    edit_repo::reverse_moves(tx, entry_id, reversal.entry_id, user, now)?;
+    edit_repo::reverse_facts(tx, entry_id, reversal.entry_id, user, now)?;
+    // The trip partners' parts of the seller credit are taken back (PRD FR-12.26, C25).
+    edit_repo::reverse_credit_parts(tx, entry_id, reversal.entry_id, user, now)?;
+    // The own goods the lines took go back to their purchases, exactly (PRD FR-12.26).
+    crate::purchases::give_back_entry(tx, entry_id, user, now)?;
+    // The garden goods the lines took go back to their arrivals, exactly (PRD FR-12.40).
+    crate::gardens::arrivals::give_back_entry(tx, entry_id, user, now)?;
+    for sale in edit_repo::active_sales_of_entry(tx, entry_id)? {
+        edit_repo::end_sale(tx, sale.id, Ended::Cancelled, None, user, now)?;
+    }
+    // A trip whose sale is reversed opens again (PRD FR-12.33).
+    crate::purchases::refresh_trips_of_entry(tx, entry_id, &date.to_iso(), user, now)?;
+    Ok((reversal.entry_id, keys))
+}
+
 /// Cancels a بکری inside the caller's transaction and returns the reversal entries.
-fn cancel_in(
+pub(super) fn cancel_in(
     ctx: &Context,
     tx: &Connection,
     actor: &Actor,
@@ -192,35 +237,10 @@ fn cancel_in(
     let mut touched: BTreeSet<(i64, Option<String>)> = BTreeSet::new();
     let mut reversals = Vec::with_capacity(live.len());
     for posting in &live {
-        let entry = ledger_repo::get_entry(tx, posting.entry_id)?
-            .ok_or_else(|| data("a posting of a بکری cannot be read"))?;
-        touched.extend(
-            entry
-                .lines
-                .iter()
-                .map(|l| (l.account_id, l.person_key.clone())),
-        );
-        let reversal = ledger::reverse(ctx, tx, user, posting.entry_id, reason)?;
-        edit_repo::reverse_moves(tx, posting.entry_id, reversal.entry_id, user, &now)?;
-        edit_repo::reverse_facts(tx, posting.entry_id, reversal.entry_id, user, &now)?;
-        // The trip partners' parts of the seller credit are taken back (PRD FR-12.26, C25).
-        edit_repo::reverse_credit_parts(tx, posting.entry_id, reversal.entry_id, user, &now)?;
-        // The own goods the lines took go back to their purchases, exactly (PRD FR-12.26).
-        crate::purchases::give_back_entry(tx, posting.entry_id, user, &now)?;
-        // The garden goods the lines took go back to their arrivals, exactly (PRD FR-12.40).
-        crate::gardens::arrivals::give_back_entry(tx, posting.entry_id, user, &now)?;
-        for sale in edit_repo::active_sales_of_entry(tx, posting.entry_id)? {
-            edit_repo::end_sale(tx, sale.id, Ended::Cancelled, None, user, &now)?;
-        }
-        // A trip whose sale is reversed opens again (PRD FR-12.33).
-        crate::purchases::refresh_trips_of_entry(
-            tx,
-            posting.entry_id,
-            &posting.date.to_iso(),
-            user,
-            &now,
-        )?;
-        reversals.push(reversal.entry_id);
+        let (reversal_id, keys) =
+            reverse_posting_in(ctx, tx, user, &now, posting.entry_id, posting.date, reason)?;
+        touched.extend(keys);
+        reversals.push(reversal_id);
     }
     // The write-offs of its lots are taken back too, so the stock of a cancelled lot nets to zero.
     let lot_ids: Vec<i64> = detail.lots.iter().map(|l| l.id).collect();

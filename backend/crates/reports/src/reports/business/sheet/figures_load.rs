@@ -486,6 +486,8 @@ pub(super) struct LotCharges {
     pub(super) day: String,
     pub(super) account_id: i64,
     pub(super) person: String,
+    /// The بکری of the lot, so a slip of one بکری has the charges of its own lots only.
+    pub(super) bikri_id: i64,
     pub(super) freight: Paisa,
     pub(super) labour: Paisa,
     pub(super) munshiana: Paisa,
@@ -527,7 +529,7 @@ pub(super) fn lot_charges_in(
     let sql = format!(
         "SELECT e.entry_date, l.seller_account_id, COALESCE(l.chukta_person_key, ''),
                 l.freight_paisa, l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa,
-                l.phone_paisa, l.store_rent_paisa, l.cash_paid_paisa
+                l.phone_paisa, l.store_rent_paisa, l.cash_paid_paisa, l.bikri_id
          {from_lots}
          JOIN accounts a ON a.id = l.seller_account_id
          JOIN account_controls k ON k.id = a.control_id
@@ -552,17 +554,26 @@ pub(super) fn lot_charges_in(
                     r.get::<_, i64>(8)?,
                     r.get::<_, i64>(9)?,
                 ],
+                r.get::<_, i64>(10)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut out = Vec::with_capacity(rows.len());
-    for (day, account_id, person, freight, firm_paid, [labour, munshiana, phone, rent, cash]) in
-        rows
+    for (
+        day,
+        account_id,
+        person,
+        freight,
+        firm_paid,
+        [labour, munshiana, phone, rent, cash],
+        bikri_id,
+    ) in rows
     {
         out.push(LotCharges {
             day,
             account_id,
             person,
+            bikri_id,
             // Freight the seller paid the driver himself is shown on the lot but never deducted.
             freight: if firm_paid {
                 paisa(freight)?

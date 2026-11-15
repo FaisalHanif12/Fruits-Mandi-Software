@@ -12,14 +12,23 @@
 //! "C:\\Users\\Owner\\trial.xlsx" }` answers `{ path, size_bytes, rows }` after the events
 //! `reading`, `writing` (0 of 17), `writing` (17 of 17) and `done`.
 
+use mandi_reports::dashboard::{
+    BuyerDuesPrintInput, CommissionPrintInput, buyer_dues_spec, commission_month_spec,
+};
 use mandi_reports::export::{
     AnalyticsExportInput, BikriListExportInput, ExcelExported, ExportProgress, ExportStage,
     ReportExportInput, export_analytics, export_bikri_list, export_report, export_report_page,
+    export_table,
 };
-use mandi_reports::reports::ReportId;
+use mandi_reports::reports::{
+    CollectionSheetPrintInput, ReportId, collection_sheet_spec, partner_statement_month_spec,
+};
 use mandi_services::ServiceError;
 use mandi_services::core::error::ErrorCode;
-use mandi_services::{auth, bikri};
+use mandi_services::core::statement::{
+    PartnersStatementMonthInput, PartnersStatementMonthPrintInput,
+};
+use mandi_services::{auth, bikri, partner_code, partners};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use ts_rs::TS;
@@ -66,6 +75,33 @@ pub struct BikriListExportRequest {
     #[serde(flatten)]
     #[ts(flatten)]
     pub export: BikriListExportInput,
+}
+
+/// The table to export as a sheet (plan 76): the same filter the screen and its print have, with the
+/// language of the sheet inside it. The paper is not used.
+#[derive(Debug, Clone, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TableExportSource {
+    /// One month of the commission page (point 7). The partner columns only when the partner
+    /// section is open.
+    CommissionMonth(CommissionPrintInput),
+    /// The buyers who owe (point 9).
+    BuyerDues(BuyerDuesPrintInput),
+    /// The اگراہی sheet of a day (point 2).
+    CollectionSheet(CollectionSheetPrintInput),
+    /// One month of a partner's statement (point 11). Behind the partner code.
+    PartnerStatementMonth(PartnersStatementMonthPrintInput),
+}
+
+/// The input of `tables_export_excel`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct TablesExportRequest {
+    /// An id the screen picks (letters, digits, `-` and `_`, at most 64) to match the events.
+    pub job_id: String,
+    /// Where to save: an absolute path ending in `.xlsx`, in a folder that exists.
+    pub path: String,
+    /// The table and its filter.
+    pub source: TableExportSource,
 }
 
 /// The payload of the event `export-progress`.
@@ -135,6 +171,57 @@ pub async fn reports_export_excel<R: tauri::Runtime>(
         }
         export_report(ctx.db(), &input.export, &mut |p| emit(&handle, &job, p))
             .map_err(engine_error)
+    })
+    .await
+}
+
+/// Saves one of the tables of plan 76 as an `.xlsx` file with every row of its filter: the
+/// commission month, the buyer dues, the اگراہی sheet or a month of a partner's statement (PRD
+/// FR-19.3, FR-19.11). The sheet is made from the same table as the print, so the two agree.
+/// The partner columns of the commission month stay out while the partner section is locked, and
+/// the partner statement is refused then (PRD FR-17.11).
+#[tauri::command]
+pub async fn tables_export_excel<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: TablesExportRequest,
+) -> Result<ExcelExported, UiError> {
+    let handle = app.clone();
+    run(app, "tables_export_excel", move |ctx| {
+        auth::require(ctx)?;
+        check_job_id(&input.job_id)?;
+        let job = input.job_id.clone();
+        let (spec, language) = match &input.source {
+            TableExportSource::CommissionMonth(i) => {
+                let show_partners = !partner_code::is_locked(ctx)?;
+                (
+                    commission_month_spec(ctx.db(), i, show_partners).map_err(engine_error)?,
+                    i.language,
+                )
+            }
+            TableExportSource::BuyerDues(i) => (
+                buyer_dues_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::CollectionSheet(i) => (
+                collection_sheet_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::PartnerStatementMonth(i) => {
+                partner_code::require_unlocked(ctx)?;
+                let month = partners::statement_month(
+                    ctx,
+                    &PartnersStatementMonthInput {
+                        partner_id: i.partner_id,
+                        month: i.month.clone(),
+                    },
+                )?;
+                (partner_statement_month_spec(&month, i.language), i.language)
+            }
+        };
+        export_table(ctx.db(), &spec, language, &input.path, &mut |p| {
+            emit(&handle, &job, p);
+        })
+        .map_err(engine_error)
     })
     .await
 }

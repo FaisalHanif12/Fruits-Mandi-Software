@@ -6,14 +6,30 @@
 import { Localized } from '@fluent/react';
 import { History, Landmark } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
-import { Card, EmptyState, Fact, Num } from '../../../shared/ui';
+import { useListWindow } from '../../../shared/hooks';
+import { Card, EmptyState, Fact, ListWindowBar, Num } from '../../../shared/ui';
+import { useDayStatus } from '../../../app/use-day-status';
 import { SignedNum } from '../../cashbook';
 import { PagedList } from '../../../shared/grid';
 import { CAPITAL_COLUMNS } from '../capital-columns';
 import { useCapitalHistory } from '../money-hooks';
 
 export function CapitalHistorySection({ partnerId }: { partnerId: number | null }) {
-  const history = useCapitalHistory(partnerId, true);
+  const dayStatus = useDayStatus();
+  // The capital history shows one month at a time, the latest first (PRD FR-19.11, plan 76 point 8). Without
+  // the day (its read failed) the list asks for the whole history, as before the window.
+  const listWindow = useListWindow({
+    kind: 'month',
+    source: { kind: 'capital' },
+    today: dayStatus.data?.today,
+  });
+  const windowed = !dayStatus.isError;
+  const history = useCapitalHistory(
+    partnerId,
+    true,
+    windowed ? { from: listWindow.range.from, to: listWindow.range.to } : { from: null, to: null },
+    listWindow.ready || !windowed,
+  );
   const first = history.data?.pages[0];
   const rows = history.data?.pages.flatMap((page) => page.rows);
   return (
@@ -50,6 +66,7 @@ export function CapitalHistorySection({ partnerId }: { partnerId: number | null 
               void history.refetch();
             }}
             pager={history.pager}
+            onPageKey={listWindow.onPageKey}
             sort={{ value: history.sort, onChange: history.setSort }}
             months={
               first === undefined || first.months.length === 0
@@ -64,6 +81,7 @@ export function CapitalHistorySection({ partnerId }: { partnerId: number | null 
               />
             }
           />
+          {windowed ? <ListWindowBar window={listWindow} /> : null}
         </>
       )}
     </Card>

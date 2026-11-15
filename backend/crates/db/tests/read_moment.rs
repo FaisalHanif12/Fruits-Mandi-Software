@@ -126,3 +126,59 @@ fn a_snapshot_of_the_books_is_one_moment_for_every_read_and_blocks_no_save() {
     assert!(add_city(&snapshot, "9").is_err());
     assert_eq!(db.read(cities).unwrap(), 3);
 }
+
+fn counted_rows(calls: &Cell<u32>) -> impl FnOnce() -> rusqlite::Result<Vec<(i64, i64, i64)>> + '_ {
+    move || {
+        calls.set(calls.get() + 1);
+        Ok(vec![(7, 100, 0), (9, 0, 50)])
+    }
+}
+
+#[test]
+fn the_rows_of_every_account_are_kept_on_the_read_connection_only() {
+    // Plan 76, NFR-SPD-24: the balances of every buyer at the start of a day are the same for
+    // every page of the collection sheet, so the second page takes them from the memory.
+    let dir = tempdir().unwrap();
+    let db = common::open(dir.path());
+    let calls = Cell::new(0);
+    let (first, second) = db
+        .read(|conn| -> Result<_, DbError> {
+            let a = memo::account_rows(conn, "rows", counted_rows(&calls))?;
+            let b = memo::account_rows(conn, "rows", counted_rows(&calls))?;
+            Ok((a, b))
+        })
+        .unwrap();
+    assert_eq!(calls.get(), 1, "the second answer came from the memory");
+    assert_eq!(first, second);
+    assert_eq!(*first, vec![(7, 100, 0), (9, 0, 50)]);
+    // A different question is a different answer.
+    db.read(|conn| -> Result<(), DbError> {
+        memo::account_rows(conn, "other rows", counted_rows(&calls))?;
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(calls.get(), 2);
+    // The write connection sees lines that are not committed yet, so it never keeps an answer.
+    let calls = Cell::new(0);
+    db.write(|tx| -> Result<(), DbError> {
+        memo::account_rows(tx, "written", counted_rows(&calls))?;
+        memo::account_rows(tx, "written", counted_rows(&calls))?;
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(calls.get(), 2, "both were worked out");
+    // Opening a data file forgets every answer.
+    let calls = Cell::new(0);
+    db.read(|conn| -> Result<(), DbError> {
+        memo::account_rows(conn, "again", counted_rows(&calls))?;
+        Ok(())
+    })
+    .unwrap();
+    memo::clear();
+    db.read(|conn| -> Result<(), DbError> {
+        memo::account_rows(conn, "again", counted_rows(&calls))?;
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(calls.get(), 2, "cleared, so worked out again");
+}

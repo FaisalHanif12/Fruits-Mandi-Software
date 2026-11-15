@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::accounts::RecordRef;
+use crate::links::Link;
 use crate::money::Paisa;
 use crate::paging::{MonthSubtotal, SortInput};
 
@@ -45,6 +46,34 @@ pub struct KhataCreateInput {
     pub confirmed_rules_words: Vec<String>,
 }
 
+/// A new separate khata with its link (plan 76 point 5, PRD FR-16.6 v1.41): the fields of
+/// [`KhataCreateInput`] and the link. No `link` means none: the khata is the firm's, as before.
+///
+/// Field paths in errors: those of [`KhataCreateInput`], and `link.partner_id`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct KhataCreateRequest {
+    /// The khata as before.
+    #[serde(flatten)]
+    pub base: KhataCreateInput,
+    /// What the khata is linked to: none, the shop or one partner. Null means none.
+    #[serde(default)]
+    pub link: Option<Link>,
+}
+
+/// Input of `khata_set_link` (plan 76 point 5, PRD FR-16.6 v1.41).
+///
+/// Field paths in errors: `khata_account_id`, `link`, `link.partner_id`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct KhataSetLinkInput {
+    /// The khata (control 0305). `ERR_NOT_FOUND` for an account of another kind.
+    #[ts(type = "number")]
+    pub khata_account_id: i64,
+    /// The new link. It changes only while the khata's balance is 0 (`ERR_LINK_LOCKED`, field
+    /// `link`); a partner link needs its partner (`ERR_LINK_PARTNER_REQUIRED`), who must be active
+    /// (`ERR_PARTNER_INACTIVE`); a shop link needs shares that total 100% (`ERR_SHARES_NOT_100`).
+    pub link: Link,
+}
+
 /// A separate khata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct KhataAccount {
@@ -52,6 +81,8 @@ pub struct KhataAccount {
     pub account: RecordRef,
     /// The note. Empty if none.
     pub note: String,
+    /// What it is linked to (PRD FR-16.6 v1.41).
+    pub link: Link,
     /// Its balance now, signed from the khata's side: plus is credit, minus is debit.
     #[ts(type = "Paisa")]
     pub balance_paisa: Paisa,

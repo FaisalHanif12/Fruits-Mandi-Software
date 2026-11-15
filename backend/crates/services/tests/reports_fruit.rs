@@ -935,13 +935,6 @@ fn a_report_that_does_not_take_a_filter_refuses_it_at_its_field() {
             },
             "filters.goods",
         ),
-        (
-            AnalyticsFilters {
-                group_by: Some(mandi_reports::analytics::AnalyticsGroupBy::Day),
-                ..AnalyticsFilters::default()
-            },
-            "filters.group_by",
-        ),
     ] {
         assert_eq!(
             refused(&w, AnalyticsView::K, filters),

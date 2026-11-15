@@ -7,6 +7,10 @@ use mandi_reports::print::{
     PrintFrameInput, VoucherPrintDataInput, bikri_print_data, collection_print_data, print_frame,
     voucher_print_data,
 };
+use mandi_reports::reports::{
+    CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput, DaySlipsInput,
+    DaySlipsPrintData, TablePrintData, collection_sheet, collection_sheet_print_data, day_slips,
+};
 use mandi_services::ServiceError;
 use mandi_services::auth;
 use mandi_services::core::error::ErrorCode;
@@ -15,6 +19,7 @@ use mandi_services::core::printing::{
 };
 use mandi_services::printing;
 
+use super::reports_engine::engine_error;
 use super::run;
 use crate::error::UiError;
 use crate::print_job;
@@ -152,4 +157,62 @@ pub async fn reports_print_voucher<R: tauri::Runtime>(
     input: PrintVoucherInput,
 ) -> Result<PrintOutcome, UiError> {
     print_job::run_voucher(app, input).await
+}
+
+/// One page of the اگراہی sheet of a day: every buyer who owed at the start or bought that day,
+/// with previous due, today's bill, paid on the spot and total due, and the totals over all
+/// (plan 76 point 2). Read only.
+#[tauri::command]
+pub async fn reports_collection_sheet<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CollectionSheetInput,
+) -> Result<CollectionSheet, UiError> {
+    run(app, "reports_collection_sheet", move |ctx| {
+        auth::require(ctx)?;
+        collection_sheet(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of the اگراہی sheet with every row, in the print language (plan 76 point 2).
+#[tauri::command]
+pub async fn reports_collection_sheet_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CollectionSheetPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "reports_collection_sheet_print_data", move |ctx| {
+        auth::require(ctx)?;
+        collection_sheet_print_data(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The buyer slips of a day for the parchi print: the R35 slip of each buyer who bought, sorted by
+/// name (plan 76 point 3a). The template lays several on one A4. Read only.
+#[tauri::command]
+pub async fn reports_buyer_parchi_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: DaySlipsInput,
+) -> Result<DaySlipsPrintData, UiError> {
+    run(app, "reports_buyer_parchi_print_data", move |ctx| {
+        auth::require(ctx)?;
+        let mut input = input;
+        input.sections = mandi_reports::reports::SlipSections::Buyers;
+        day_slips(ctx.db(), &input, "print-parchi-title").map_err(engine_error)
+    })
+    .await
+}
+
+/// The overall sale print of one بکری or of a whole day: the seller slips and the buyer slips
+/// (plan 76 point 3b and 3c). Read only.
+#[tauri::command]
+pub async fn reports_sale_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: DaySlipsInput,
+) -> Result<DaySlipsPrintData, UiError> {
+    run(app, "reports_sale_print_data", move |ctx| {
+        auth::require(ctx)?;
+        day_slips(ctx.db(), &input, "print-sale-title").map_err(engine_error)
+    })
+    .await
 }

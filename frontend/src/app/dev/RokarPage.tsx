@@ -1,7 +1,7 @@
 // Development page /dev/rokar (plan 17): the screens of the روکڑ area inside the app shell, answered
 // by a stand-in for the backend with the books of the PRD worked day (tests/helpers/cashbook-books.ts),
 // so they can be opened in a plain browser tab and photographed in both languages and at every window
-// size. The flags in the hash choose the screen: `?screen=book|expense|fruit|lent|khata|general|capital|statement|overview|day`, `&type=...` the
+// size. The flags in the hash choose the screen: `?screen=book|expense|fruit|lent|khata|general|capital|statement|overview|day|buyer-dues|others-dues`, `&type=...` the
 // type of an entry screen, `&empty`, `&cash`, `&repeat` (see dev-bridge-rokar.ts). Never shipped: the
 // route exists only when import.meta.env.DEV is true (app/router.tsx).
 
@@ -10,6 +10,8 @@ import { devValue, installDevBridge } from '../../../tests/helpers/dev-bridge';
 import { CashbookPage } from '../../features/cashbook/pages/CashbookPage';
 import { ExpensePage } from '../../features/cashbook/pages/ExpensePage';
 import { KhataPage } from '../../features/cashbook/pages/KhataPage';
+import { OthersDuesPage } from '../../features/cashbook/pages/OthersDuesPage';
+import { BuyerDuesPage } from '../../features/dashboard/pages/BuyerDuesPage';
 import { GeneralPage } from '../../features/cashbook/pages/GeneralPage';
 import { LentPage } from '../../features/cashbook/pages/LentPage';
 import { DayPage } from '../../features/day/pages/DayPage';
@@ -42,6 +44,11 @@ function screenOf(name: string | null): DevScreen {
       return { main: 'partners', id: null, page: <StatementPage /> };
     case 'overview':
       return { main: 'partners', id: null, page: <PartnersOverviewPage /> };
+    // Plan 76: the buyer dues page and the dues of garden owners and others.
+    case 'buyer-dues':
+      return { main: 'dashboard', id: null, page: <BuyerDuesPage /> };
+    case 'others-dues':
+      return { main: 'dashboard', id: null, page: <OthersDuesPage /> };
     case 'day':
       return { main: 'dashboard', id: null, page: <DayPage /> };
     case 'expense':

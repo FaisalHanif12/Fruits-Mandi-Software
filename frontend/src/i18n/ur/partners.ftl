@@ -330,6 +330,11 @@ partners-statement-heading-other = دیگر
 # review: pending
 partners-statement-detail-income-share = { -bikri } { $number }: { -commission }، { -laga } اور { -phone }
 
+# The same line when the backend sends the base and the share of the posting.
+# $number: the number of the sale. $base: the income of the posting. $share: his percent.
+# review: pending
+partners-statement-detail-income-share-part = { -bikri } { $number }: { $base } میں سے ان کا { $share }%
+
 # $voucher: the number of the expense; $subject: the expense head.
 # review: pending
 partners-statement-detail-expense-share = { -dukan-kharcha } { $voucher }: { $subject }
@@ -369,6 +374,13 @@ partners-statement-detail-trip-paid = { $kind ->
 partners-statement-detail-trip-credit = { $source ->
     [bikri] { -market-safar } { $trip }، { -bikri } { $secondary }: { $subject } { $qty }، فروخت { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد
    *[other] { -market-safar } { $trip }، دوسری دکان میں فروخت: { $subject } { $qty }، رقم { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد
+}
+
+# The same, when the backend sends his part of the result ($part, PRD FR-17.12).
+# review: pending
+partners-statement-detail-trip-credit-part = { $source ->
+    [bikri] { -market-safar } { $trip }، { -bikri } { $secondary }: { $subject } { $qty }، فروخت { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }
+   *[other] { -market-safar } { $trip }، دوسری دکان میں فروخت: { $subject } { $qty }، رقم { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }
 }
 
 # review: pending
@@ -525,3 +537,97 @@ partners-code-enter = کوڈ درج کریں
 
 # review: pending
 partners-code-lock-now = ابھی بند کریں
+
+# One compact line for each partner under the overview: how many trips and gardens he is in that are
+# still open, with a button that opens the list (PRD 17.3, plan 76 point 11).
+# review: pending
+partners-ventures-line = کھلے: { -safar } <num>{ $trips }</num>، { -bagh } <num>{ $gardens }</num>
+
+# review: pending
+partners-ventures-show = فہرست دکھائیں
+
+# review: pending
+partners-ventures-hide = فہرست چھپائیں
+
+# review: pending
+partners-ventures-failed = کھلے { -bagh } اور { -safar } پڑھے نہیں جا سکے
+
+## The partner statement, one month at a time (plan 76 point 11, PRD FR-17.12).
+
+# review: pending
+partners-month-label = دن کے حساب سے کھاتہ
+
+# review: pending
+partners-month-col-date = تاریخ
+
+# review: pending
+partners-month-col-commission = { -commission }
+
+# review: pending
+partners-month-col-expense = { -kharcha }
+
+# review: pending
+partners-month-col-ventures = { -bagh } / { -safar }
+
+# review: pending
+partners-month-col-fruit = { -phal }
+
+# review: pending
+partners-month-col-taken = لیا اور واپس
+
+# review: pending
+partners-month-col-capital = { -sarmaya }
+
+# review: pending
+partners-month-col-net = دن کا خالص
+
+# review: pending
+partners-month-col-total = { -kul-raqam }
+
+# review: pending
+partners-month-opening = ابتدائی
+
+# review: pending
+partners-month-empty = اس مہینے میں کوئی حرکت نہیں
+
+# review: pending
+partners-month-empty-help = دوسرے مہینے کے لیے نیچے کے بٹن استعمال کریں۔
+
+# review: pending
+partners-day-failed = اس دن کی حرکتیں پڑھی نہیں جا سکیں
+
+# review: pending
+partners-day-before = اس دن سے پہلے { -kul-raqam }
+
+# review: pending
+partners-day-after = اس دن کے بعد { -kul-raqam }
+
+## Statement lines of a linked { -alag-khata } and of a loan that is linked (plan 76 points 5 and 10, PRD FR-16.6, FR-16.13)
+
+# review: pending
+partners-statement-heading-linked = { -alag-khata } اور { -adhar-raqam }
+
+# $subject: the khata. $voucher: its entry number. $reason: why.
+# review: pending
+partners-statement-detail-khata-paid = { -alag-khata } { $subject }، { $voucher }: رقم دی گئی، { $reason }
+
+# review: pending
+partners-statement-detail-khata-received = { -alag-khata } { $subject }، { $voucher }: رقم آئی، { $reason }
+
+# $subject: the person. $voucher: its entry number. $reason: why.
+# review: pending
+partners-statement-detail-lent-given = { -adhar-raqam } { $voucher }: { $subject } کو دی گئی، { $reason }
+
+# review: pending
+partners-statement-detail-lent-returned = { -adhar-raqam } { -wapsi } { $voucher }: { $subject }
+
+# The other entries of a linked khata: its goods sold, fruit and { -general } lines.
+# review: pending
+partners-statement-detail-linked-other = { -alag-khata } { $subject }، اندراج { $voucher }
+
+# A loan that is the shop's: a note with no amount. $amount: what was given or returned. $part: his part of it.
+# review: pending
+partners-statement-detail-lent-share-note = دکان کی { -adhar-raqam } { $voucher }: { $kind ->
+    [given] { $subject } کو { $amount } دی گئی
+   *[other] { $subject } نے { $amount } واپس کی
+}۔ آپ کا حصہ { $part } ہے۔ رقم دکان کو ہی واپس کرنی ہے، اس لیے آپ کی { -kul-raqam } نہیں بدلتی۔

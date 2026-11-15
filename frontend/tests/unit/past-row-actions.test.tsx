@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as editApi from '../../src/shared/edit/api';
+import { isoToDisplayDate } from '../../src/shared/format';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { fakePlan16 } from '../helpers/bikri-plan16';
@@ -105,7 +106,9 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
   const dayBox = (rowId: number) =>
     present(document.querySelector<HTMLElement>(`[data-day="${present(DAY_OF[rowId])}"]`));
   const windowGrid = (rowId: number) =>
-    within(dayBox(rowId)).getByRole('group', { name: named(m('bikri-past-label')) });
+    within(dayBox(rowId)).getByRole('group', {
+      name: named(m('bikri-past-day-label', { date: isoToDisplayDate(present(DAY_OF[rowId])) })),
+    });
   const todayGrid = () => gridOf(language, 'bikri-list-label');
   const open = async (path = '/bikri/today') => {
     const view = await renderApp(path);

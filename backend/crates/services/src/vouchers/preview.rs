@@ -16,8 +16,8 @@ use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::vouchers::{
-    AdvanceEffect, BillEffect, OpenAdvance, OpenBill, VoucherPreview, VoucherPreviewInput,
-    VoucherRow, VoucherType,
+    AdvanceEffect, BillEffect, LinkedPart, OpenAdvance, OpenBill, VoucherPreview,
+    VoucherPreviewInput, VoucherRow, VoucherType,
 };
 
 use super::common::{Role, balance_of_net, cash_change, stored_cash_change};
@@ -115,6 +115,26 @@ fn open_bill(
 /// answer's `errors`, not an error of the call.
 #[allow(clippy::too_many_lines)]
 pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPreview, ServiceError> {
+    preview_with_link(ctx, input, None)
+}
+
+/// As [`preview`], and for a new loan (ادھار رقم) it works as if the link typed on the loan form
+/// were already the person's (plan 76 point 10, PRD FR-16.13): `link` null uses the stored link. The
+/// save sets that link first, so the parts shown for each partner are the ones it will post. A
+/// different link while he owes is refused here as it is in the save (`ERR_LINK_FIXED_WHILE_OWED`).
+/// The link is ignored for an edit and for any other kind of entry.
+///
+/// Example: نواز owes nothing and الف is typed as the link of a loan of 20,000: the parts are
+/// الف −20,000.
+///
+/// # Errors
+/// As [`preview`].
+#[allow(clippy::too_many_lines)]
+pub fn preview_with_link(
+    ctx: &Context,
+    input: &VoucherPreviewInput,
+    link: Option<&mandi_domain::core::links::Link>,
+) -> Result<VoucherPreview, ServiceError> {
     let window = day::window(ctx)?;
     let today = window.1;
     ctx.db.read(|conn| {
@@ -150,6 +170,41 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
             }
         }
         let remove_entry = replacing.as_ref().map(|r| r.entry.id);
+        // The link typed on a new loan: checked like the save checks it, then used by the mirror.
+        let typed = match (link, replacing.is_none(), planned.account()) {
+            (Some(link), true, Some(person))
+                if planned.voucher_type() == VoucherType::MoneyLent && errors.is_empty() =>
+            {
+                match crate::lent::check_person_link(conn, link, &today.to_iso()) {
+                    Ok(checked) => {
+                        let stored = mandi_db::links::link_of(conn, person.id)?;
+                        let changes = stored
+                            .as_ref()
+                            .is_none_or(|s| crate::linked::link_would_change(s, &checked, true));
+                        if changes && crate::linked::has_balance(conn, person.id)? {
+                            errors.push(FieldError::new(ErrorCode::ErrLinkFixedWhileOwed, "link"));
+                            None
+                        } else {
+                            Some(crate::linked::TypedLink {
+                                account_id: person.id,
+                                checked,
+                            })
+                        }
+                    }
+                    Err(ServiceError::Rejected(items)) => {
+                        for item in items {
+                            errors.push(FieldError::new(
+                                item.code,
+                                item.field.as_deref().unwrap_or("link"),
+                            ));
+                        }
+                        None
+                    }
+                    Err(other) => return Err(other),
+                }
+            }
+            _ => None,
+        };
         let clean = errors.is_empty();
 
         let account = planned.account().cloned();
@@ -408,6 +463,51 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
         }
         .map_err(money_error)?;
 
+        // Plan 76 points 5 and 10: what a linked khata or loan does to each partner's total.
+        let linked_parts = match (clean, date) {
+            (true, Some(day)) => {
+                // An edit is judged like its save: against the entry it replaces (Code Standards B5).
+                let replaced_lines = match &replacing {
+                    Some(old) => {
+                        let key =
+                            ledger_repo::order_key_of(conn, old.entry.id)?.unwrap_or(old.entry.id);
+                        Some((key, ledger_repo::lines_with_order_key(conn, key)?))
+                    }
+                    None => None,
+                };
+                let replaced = replaced_lines
+                    .as_ref()
+                    .map(|(key, lines)| (*key, lines.as_slice()));
+                match crate::linked::preview_parts(
+                    conn,
+                    day,
+                    &planned.entry()?,
+                    replaced,
+                    typed.as_ref(),
+                ) {
+                    Ok(parts) => parts
+                        .into_iter()
+                        .map(|(partner_id, amount_paisa)| LinkedPart {
+                            partner_id,
+                            amount_paisa,
+                        })
+                        .collect(),
+                    // A refusal the save would give is shown now.
+                    Err(ServiceError::Rejected(items)) => {
+                        for item in items {
+                            errors.push(FieldError::new(
+                                item.code,
+                                item.field.as_deref().unwrap_or("amount"),
+                            ));
+                        }
+                        Vec::new()
+                    }
+                    Err(other) => return Err(other),
+                }
+            }
+            _ => Vec::new(),
+        };
+
         Ok(VoucherPreview {
             account,
             amount_paisa: amount,
@@ -421,6 +521,7 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
             payable_open_paisa: payable_open,
             payable_is_zero_for_seller: payable_is_zero,
             cash,
+            linked_parts,
             errors,
             warnings,
         })

@@ -23,4 +23,9 @@ export type AnalyticsChartPoint = {
    * True for the point that adds up the rows beyond the biggest ten.
    */
   is_others: boolean;
+  /**
+   * With a compare on (PRD FR-18.1): the same figure in the compared period, the second series of
+   * the chart. Null when there is no compare or the view has none (plan 76 point 4).
+   */
+  compare: ReportCell | null;
 };

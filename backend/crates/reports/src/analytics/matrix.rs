@@ -30,7 +30,7 @@ use super::model::{
     AnalyticsColumn, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey, AnalyticsRow,
 };
 use super::table::{
-    Table, col, compare_cells, compare_columns, count_of, dynamic_col, item_rows, row,
+    Table, col, compare_cells, compare_columns, count_of, dynamic_col, item_rows, page_window, row,
 };
 use crate::error::ReportsError;
 use crate::reports::PageSpec;
@@ -53,7 +53,7 @@ fn bucket_sql(group_by: AnalyticsGroupBy) -> &'static str {
 
 /// A column for a period bucket (`2026-10-10`, `2026-10` or `2026`): its heading and the days it
 /// covers.
-fn period_column(
+pub(super) fn period_column(
     group_by: AnalyticsGroupBy,
     bucket: &str,
 ) -> Result<AnalyticsColumn, ReportsError> {
@@ -134,11 +134,39 @@ fn cell(amount: Paisa) -> Cell {
 /// # Errors
 /// `ReportsError::Rejected` (`ERR_OUT_OF_RANGE`, `filters.group_by`) when there would be more
 /// than 36 columns; a database error; `ReportsError::Data` for a fact net below 0.
+/// The number of days, months or years a closed range spans, by the grouping of view D. `None` when
+/// the range has no first or no last day (then only the facts can say how many periods there are).
+fn periods_in_range(typed: &Typed) -> Option<usize> {
+    let from = BusinessDate::parse_iso(typed.from.as_deref()?)?;
+    let to = BusinessDate::parse_iso(typed.to.as_deref()?)?;
+    let count = match typed.group_by {
+        AnalyticsGroupBy::Day => to.days_after(from).checked_add(1)?,
+        AnalyticsGroupBy::Month => i64::from(to.year())
+            .checked_sub(i64::from(from.year()))?
+            .checked_mul(12)?
+            .checked_add(i64::from(to.month()))?
+            .checked_sub(i64::from(from.month()))?
+            .checked_add(1)?,
+        AnalyticsGroupBy::Year => i64::from(to.year())
+            .checked_sub(i64::from(from.year()))?
+            .checked_add(1)?,
+    };
+    usize::try_from(count).ok()
+}
+
 pub(crate) fn run_d(
     conn: &Connection,
     typed: &Typed,
     spec: PageSpec,
 ) -> Result<Table, ReportsError> {
+    // A closed range of more than 36 periods is refused from the dates, before any fact is read
+    // (ten years by month used to be read in full and refused after, two seconds later).
+    if periods_in_range(typed).is_some_and(|n| n > MAX_PERIOD_COLUMNS) {
+        return Err(ReportsError::Rejected(vec![FieldError::new(
+            ErrorCode::ErrOutOfRange,
+            "filters.group_by",
+        )]));
+    }
     let none = AnalyticsKey::default();
     let current = facts::groups(
         conn,
@@ -337,7 +365,7 @@ pub(crate) fn run_e(
             .then_with(|| item_code(*a).cmp(&item_code(*b)))
             .then_with(|| a.cmp(b))
     });
-    let overflow = item_order.len() > MAX_ITEM_COLUMNS;
+    let overflow = item_order.len() > MAX_ITEM_COLUMNS && !typed.every_item_column;
     let shown: Vec<i64> = if overflow {
         item_order
             .iter()
@@ -433,24 +461,43 @@ pub(crate) fn run_e(
         }
     }
     let width = shown_sorted.len() + usize::from(overflow);
+    // The totals row is over every seller, read from the sums themselves: one pass over them, not one
+    // lookup for each seller and item. The rows are built for the page only (a ten-year view has
+    // thousands of sellers and a page has a hundred).
     let mut column_totals = vec![Paisa::ZERO; width];
+    let position: HashMap<i64, usize> = shown_sorted
+        .iter()
+        .enumerate()
+        .map(|(index, item)| (*item, index))
+        .collect();
+    for ((_, item), amount) in &amounts {
+        let at = position
+            .get(item)
+            .copied()
+            .or(overflow.then_some(shown_sorted.len()));
+        if let Some(slot) = at.and_then(|i| column_totals.get_mut(i)) {
+            add(slot, *amount)?;
+        }
+    }
     let mut grand = Paisa::ZERO;
     let mut grand_compared = Paisa::ZERO;
-    let mut all_rows: Vec<AnalyticsRow> = Vec::with_capacity(entries.len());
     for entry in &entries {
+        add(&mut grand, entry.total)?;
+        add(&mut grand_compared, entry.compared)?;
+    }
+    let (skip, take) = page_window(spec);
+    let mut all_rows: Vec<AnalyticsRow> = Vec::new();
+    for entry in entries.iter().skip(skip).take(take) {
         let mut out = vec![
             parties
                 .get(&entry.id)
                 .map_or(Cell::Empty, |p| Cell::Party { party: p.clone() }),
         ];
-        for (index, item) in shown_sorted.iter().enumerate() {
+        for item in &shown_sorted {
             let amount = amounts
                 .get(&(entry.id, *item))
                 .copied()
                 .unwrap_or(Paisa::ZERO);
-            if let Some(slot) = column_totals.get_mut(index) {
-                add(slot, amount)?;
-            }
             out.push(cell(amount));
         }
         if overflow {
@@ -458,17 +505,12 @@ pub(crate) fn run_e(
                 .get(&entry.id)
                 .copied()
                 .unwrap_or(Paisa::ZERO);
-            if let Some(slot) = column_totals.get_mut(shown_sorted.len()) {
-                add(slot, rest)?;
-            }
             out.push(cell(rest));
         }
         out.push(Cell::Money { paisa: entry.total });
         if with_compare {
             out.extend(compare_cells(entry.total, entry.compared)?);
         }
-        add(&mut grand, entry.total)?;
-        add(&mut grand_compared, entry.compared)?;
         all_rows.push(row(
             out,
             AnalyticsKey {
@@ -487,8 +529,8 @@ pub(crate) fn run_e(
     Ok(Table {
         charts: Vec::new(),
         columns,
-        total_count: count_of(all_rows.len()),
-        rows: spec.slice(&all_rows),
+        total_count: count_of(entries.len()),
+        rows: all_rows,
         totals,
     })
 }

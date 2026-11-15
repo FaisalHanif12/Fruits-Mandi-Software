@@ -104,8 +104,10 @@ pub use bikri_list::{
 };
 pub use bill_slips::{BuyerBillSlip, BuyerBillsPrintData};
 pub use business::{
-    StatementBalance, StatementDay, StatementEntry, StatementItem, StatementKind,
-    StatementPrintData, StatementPrintDataInput, StatementSide, entry_lines_sql,
+    CollectionLine, CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput,
+    CollectionSheetRow, CollectionSheetTotals, StatementBalance, StatementDay, StatementEntry,
+    StatementItem, StatementKind, StatementPrintData, StatementPrintDataInput, StatementSide,
+    collection_sheet, collection_sheet_print_data, collection_sheet_spec, entry_lines_sql,
     party_statement_print_data,
 };
 pub use ids::posting_types;
@@ -115,12 +117,18 @@ pub use model::{
     ReportGroup, ReportId, ReportPage, ReportPrintInput, ReportRunInput, ReportTable,
     ResolvedFilters, Row, RowKind, RowSource, SourceKind, StockView, SummaryLine, TripView,
 };
+mod day_slips;
+mod statement_month_print;
+mod table_print;
+pub use day_slips::{DaySlipsInput, DaySlipsPrintData, SlipSections, day_slips};
 pub use print_data::{
     PrintArgValue, PrintCell, PrintDetailPart, PrintMessageArg, PrintOptions, PrintReportColumn,
     PrintReportParty, PrintReportRow, PrintReportTable, PrintSummaryLine, ReportPrintData,
     build_print,
 };
 pub use statement::{StatementRequest, statement_page, statement_paging, statement_request};
+pub use statement_month_print::{partner_statement_month_print_data, partner_statement_month_spec};
+pub use table_print::{PrintExtraTotals, TablePrintData, TableSpec, table_print_data};
 pub use view::newest_first_reverses;
 
 pub(crate) use accounts::PageSpec;
@@ -613,6 +621,37 @@ fn page_months(
         };
         build_in(conn, db, id, sub, none)
     })
+}
+
+/// One party's R35 slip narrowed to the sale lines of some بکری when `only_bikri` is not empty (plan
+/// 76 point 3, FR-19.15): their lines and charges only, with the balances of the day. The filter is
+/// set here and not by the caller's filters, so the R35 screen does not take it.
+fn build_slip_in(
+    conn: &Connection,
+    db: &Db,
+    filters: &ReportFilters,
+    only_bikri: &[i64],
+) -> Result<ReportPage, ReportsError> {
+    let entry = spec_of(ReportId::R35)?;
+    let today = common::today(db.clock().now_utc())?;
+    let mut typed: Typed = resolve(
+        conn,
+        today,
+        Takes {
+            kinds: entry.filters,
+            party_required: entry.party_required,
+        },
+        filters,
+    )?;
+    typed.slip_bikri_ids = only_bikri.to_vec();
+    business::run_r35(
+        conn,
+        &typed,
+        PageSpec {
+            offset: 0,
+            limit: None,
+        },
+    )
 }
 
 fn build_in_with(

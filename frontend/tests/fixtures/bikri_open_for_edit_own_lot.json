@@ -35,7 +35,7 @@
           {
             "key": "sale:1",
             "sale_id": 1,
-            "buyer_account_id": 20,
+            "buyer_account_id": 21,
             "chukta": null,
             "qty": "15",
             "weight": null,
@@ -82,7 +82,7 @@
               "name_ur": "الف",
               "name_en": "Partner A"
             },
-            "account_id": 24,
+            "account_id": 25,
             "share_bps": 4000,
             "amount_paisa": 338400
           },
@@ -93,7 +93,7 @@
               "name_ur": "ب",
               "name_en": "Partner B"
             },
-            "account_id": 27,
+            "account_id": 29,
             "share_bps": 3000,
             "amount_paisa": 253800
           },
@@ -104,7 +104,7 @@
               "name_ur": "ج",
               "name_en": "Partner C"
             },
-            "account_id": 30,
+            "account_id": 33,
             "share_bps": 3000,
             "amount_paisa": 253800
           }
@@ -166,7 +166,7 @@
           "journal_entry_id": 4,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 20,
+            "id": 21,
             "code": "0020",
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"

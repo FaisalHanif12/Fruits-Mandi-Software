@@ -1,0 +1,14 @@
+{
+  "limit": null,
+  "month": null,
+  "offset": null,
+  "party": {
+    "account_id": 9,
+    "chukta_person_key": "شاہد|03000000000",
+    "side": "buyer"
+  },
+  "period": {
+    "kind": "month",
+    "month": "2026-10"
+  }
+}

@@ -228,6 +228,7 @@ describe.each(LANGUAGES)('the ادھار رقم screen (%s)', (language) => {
       expect(vouchersApi.vouchersPreview).toHaveBeenLastCalledWith(
         expect.objectContaining({ reason: 'home' }),
         null,
+        null,
       );
     });
     await act(async () => {

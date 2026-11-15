@@ -28,6 +28,7 @@ pub mod gardens;
 pub mod khata;
 pub mod ledger;
 pub mod lent;
+pub(crate) mod linked;
 pub mod masters;
 pub mod matching;
 mod page;
@@ -54,6 +55,7 @@ pub mod translit;
 pub mod trips;
 mod ventures;
 pub mod vouchers;
+pub mod windows;
 
 pub use context::{Context, Parts};
 pub use error::{Rejection, ServiceError};

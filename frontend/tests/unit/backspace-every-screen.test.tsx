@@ -76,7 +76,6 @@ vi.mock('../../src/shared/urdu/api');
 /** Every entry screen of PRD 7.67 and the forms of the Index, by its address. */
 const SCREENS: readonly { name: string; path: string }[] = [
   { name: 'sale book', path: '/bikri/book' },
-  { name: 'later sale', path: '/bikri/later?bikri=1&lot=1' },
   { name: 'voucher: receipt', path: '/bikri/voucher?type=receipt' },
   { name: 'voucher: payment', path: '/bikri/voucher?type=payment' },
   { name: 'voucher: advance', path: '/bikri/voucher?type=advance' },

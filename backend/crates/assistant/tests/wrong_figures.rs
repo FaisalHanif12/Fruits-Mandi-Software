@@ -356,7 +356,7 @@ fn q194_a_sorted_list_never_holds_the_heading_or_total_line_as_a_row() {
                 json!({"from": "2026-01-01", "to": "2026-10-10", "rows": 100,
                        "sort": [{"column": "expense", "order": "desc"}]}),
             )]),
-            final_reply("{{r2.rows.a31.name}} میں سب سے زیادہ گئے: {{r2.rows.a31.expense}}۔"),
+            final_reply("{{r2.rows.a35.name}} میں سب سے زیادہ گئے: {{r2.rows.a35.expense}}۔"),
         ],
     );
     let result = requests[1]["messages"]
@@ -2764,7 +2764,7 @@ fn a_heading_row_named_by_its_key_is_the_whole_of_the_rows_under_it() {
         "sab ka total bakaya mila kar",
         vec![report("R21", json!({}))],
         "sum",
-        &["r1.rows.h1.balance", "r1.rows.a20.balance"],
+        &["r1.rows.h1.balance", "r1.rows.a21.balance"],
     );
     assert!(why.contains("part of another"), "{why}");
 }

@@ -18,10 +18,11 @@
 //!
 //! # How a page is made
 //!
-//! The events are light (a day, an entry, an amount). They are sorted, the running total is
-//! worked out for all of them with checked maths, and only the lines of the page are worded, from
-//! a handful of grouped reads (Code Standards B22, B31, NFR-SPD-24). A note line sorts after the
-//! amounts of its day.
+//! The events are light (a day, an entry, an amount). Only the events of the asked range are read
+//! (a month page reads its month, a day page its day); what came before the range is one sum, his
+//! کل رقم at the end of the day before. The events are sorted, the running total is worked out
+//! with checked maths, and only the lines of the page are worded, from a handful of grouped reads
+//! (Code Standards B22, B31, NFR-SPD-24). A note line sorts after the amounts of its day.
 //!
 //! Worked numbers (PRD D4-A33, the E2E-34 run, partner الف): -4,160 (his shop part of purchase
 //! خ-1), +480 (his part of the commission 1,200), +3,384 (his 40% of the seller credit 8,460),
@@ -37,10 +38,12 @@ use mandi_domain::core::accounts::RecordRef;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::months::Month;
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::statement::{
-    PartnerStatement, PartnersStatementInput, StatementDetail, StatementHeading, StatementLine,
-    StatementTotals,
+    PartnerStatement, PartnerStatementDay, PartnerStatementMonth, PartnersStatementDayInput,
+    PartnersStatementInput, PartnersStatementMonthInput, StatementColumns, StatementDetail,
+    StatementHeading, StatementLine, StatementMonthDay, StatementTotals,
 };
 use mandi_domain::core::validate::{self, FieldErrors};
 
@@ -51,10 +54,13 @@ use crate::page;
 use crate::ventures::record_of;
 
 /// Notes sort after the amounts of their day. Month close, then a write-off, then a closing.
+const NOTE_LENT_SHARE: i64 = i64::MAX - 4;
 const NOTE_MONTH_CLOSE: i64 = i64::MAX - 3;
 const NOTE_WRITE_OFF: i64 = i64::MAX - 2;
 const NOTE_TRIP_CLOSED: i64 = i64::MAX - 1;
 const NOTE_GARDEN_CLOSED: i64 = i64::MAX;
+/// Every event with an entry id below this is a real journal entry; from it up are the notes.
+const FIRST_NOTE: i64 = NOTE_LENT_SHARE;
 
 fn paisa(value: i64) -> Result<Paisa, ServiceError> {
     Paisa::try_from_paisa(value).map_err(money_error)
@@ -67,7 +73,10 @@ fn data(message: &str) -> ServiceError {
 /// What kind of event a line is made from.
 #[derive(Debug, Clone)]
 enum Kind {
-    Share,
+    /// A share row. `expense` is true for a share of a shop expense.
+    Share {
+        expense: bool,
+    },
     Capital,
     Drawings,
     Venture,
@@ -90,6 +99,17 @@ enum Kind {
         venture_entry_id: i64,
         venture_id: i64,
     },
+    /// A line on his 0605 account: money that reached him through a linked khata or loan (plan 76
+    /// points 5 and 10).
+    Linked,
+    /// A loan linked to the shop was given or returned: his % of it, as a note (no amount).
+    LentShare {
+        voucher_number: i64,
+        given: bool,
+        amount_paisa: i64,
+        part_paisa: Option<i64>,
+        person: read::Named,
+    },
 }
 
 /// One event before it is worded: where it sorts, and its amount.
@@ -105,24 +125,32 @@ struct Event {
     kind: Kind,
 }
 
-/// Every event of a partner, unsorted.
-fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, ServiceError> {
+/// The events of a partner dated inside `days`, in the order of the statement. A month page asks
+/// for its month only, so it never reads ten years of share rows to show thirty days (plan 76,
+/// NFR-SPD-24); a whole-history page passes [`read::Days::ALL`].
+fn events_of(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    days: read::Days<'_>,
+) -> Result<Vec<Event>, ServiceError> {
     let mut events = Vec::new();
-    for row in read::share_events(conn, partner.id)? {
+    for row in read::share_events(conn, partner.id, days)? {
         events.push(Event {
             date: row.entry_date,
             entry_id: row.entry_id,
             group: 0,
             id: row.id,
             amount: Some(paisa(row.amount_paisa)?),
-            kind: Kind::Share,
+            kind: Kind::Share {
+                expense: row.kind == "expense",
+            },
         });
     }
     for (account, group, kind) in [
         (partner.capital_account_id, 1, Kind::Capital),
         (partner.drawings_account_id, 2, Kind::Drawings),
     ] {
-        for line in read::line_events(conn, account)? {
+        for line in read::line_events(conn, account, days)? {
             events.push(Event {
                 date: line.entry_date,
                 entry_id: line.entry_id,
@@ -141,7 +169,7 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
     // each lot); anything the parts do not explain is kept as one line, so the running total
     // always equals his کل رقم.
     let mut part_sums: HashMap<i64, Paisa> = HashMap::new();
-    for part in read::lot_credit_events(conn, partner.id)? {
+    for part in read::lot_credit_events(conn, partner.id, days)? {
         let amount = paisa(part.amount_paisa)?;
         let slot = part_sums.entry(part.entry_id).or_insert(Paisa::ZERO);
         *slot = slot.checked_add(amount).map_err(money_error)?;
@@ -159,7 +187,7 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
     }
     if partner.venture_account_id != 0 {
         let mut bikri_net: BTreeMap<i64, (String, i64, Paisa)> = BTreeMap::new();
-        for line in read::line_events(conn, partner.venture_account_id)? {
+        for line in read::line_events(conn, partner.venture_account_id, days)? {
             let amount = paisa(line.cr_paisa)?
                 .checked_sub(paisa(line.dr_paisa)?)
                 .map_err(money_error)?;
@@ -196,7 +224,48 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
             }
         }
     }
-    for note in read::month_close_notes(conn, partner.capital_account_id)? {
+    // Plan 76 points 5 and 10: his 0605 account, the money of a khata or loan linked to him or to
+    // the shop. One line for each journal line, so the running total always equals his کل رقم.
+    if partner.linked_account_id != 0 {
+        for line in read::line_events(conn, partner.linked_account_id, days)? {
+            events.push(Event {
+                date: line.entry_date,
+                entry_id: line.entry_id,
+                group: 2,
+                id: line.id,
+                amount: Some(
+                    paisa(line.cr_paisa)?
+                        .checked_sub(paisa(line.dr_paisa)?)
+                        .map_err(money_error)?,
+                ),
+                kind: Kind::Linked,
+            });
+        }
+    }
+    // A loan that is the shop's changes no total; his % of it is shown as a note (PRD FR-16.13).
+    let notes = read::shop_loan_notes(conn, days)?;
+    if !notes.is_empty() {
+        let mut shares_by_day: HashMap<String, Vec<(i64, mandi_domain::core::money::Bps)>> =
+            HashMap::new();
+        for note in notes {
+            let part = loan_part(conn, &mut shares_by_day, partner.id, &note)?;
+            events.push(Event {
+                date: note.entry_date,
+                entry_id: NOTE_LENT_SHARE,
+                group: 5,
+                id: note.voucher_id,
+                amount: None,
+                kind: Kind::LentShare {
+                    voucher_number: note.number,
+                    given: note.given,
+                    amount_paisa: note.amount_paisa,
+                    part_paisa: part,
+                    person: note.person,
+                },
+            });
+        }
+    }
+    for note in read::month_close_notes(conn, partner.capital_account_id, days)? {
         events.push(Event {
             date: note.date,
             entry_id: NOTE_MONTH_CLOSE,
@@ -206,7 +275,7 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
             kind: Kind::MonthClose,
         });
     }
-    for note in read::write_off_notes(conn, partner.id)? {
+    for note in read::write_off_notes(conn, partner.id, days)? {
         events.push(Event {
             date: note.date,
             entry_id: NOTE_WRITE_OFF,
@@ -218,7 +287,7 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
             },
         });
     }
-    for note in read::closed_trip_notes(conn, partner.id)? {
+    for note in read::closed_trip_notes(conn, partner.id, days)? {
         events.push(Event {
             date: note.date,
             entry_id: NOTE_TRIP_CLOSED,
@@ -230,7 +299,7 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
             },
         });
     }
-    for note in read::unposted_garden_close_notes(conn, partner.id)? {
+    for note in read::unposted_garden_close_notes(conn, partner.id, days)? {
         events.push(Event {
             date: note.date,
             entry_id: NOTE_GARDEN_CLOSED,
@@ -254,6 +323,64 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
     Ok(events)
 }
 
+/// His part of a loan of the shop: `split_by_bps` of the amount by the shares of the loan's day
+/// (PRD C10). None when those shares do not total 100%, so a note never breaks a statement.
+fn loan_part(
+    conn: &Connection,
+    shares_by_day: &mut HashMap<String, Vec<(i64, mandi_domain::core::money::Bps)>>,
+    partner_id: i64,
+    note: &read::ShopLoanNote,
+) -> Result<Option<i64>, ServiceError> {
+    use mandi_domain::core::money::{Bps, split_by_bps};
+    if !shares_by_day.contains_key(&note.entry_date) {
+        let shares = repo::shares_on(conn, &note.entry_date)?
+            .into_iter()
+            .map(|(id, bps)| {
+                i32::try_from(bps)
+                    .ok()
+                    .and_then(|b| Bps::new(b).ok())
+                    .map(|b| (id, b))
+                    .ok_or_else(|| data("a stored share is not 0 to 10,000"))
+            })
+            .collect::<Result<Vec<_>, ServiceError>>()?;
+        shares_by_day.insert(note.entry_date.clone(), shares);
+    }
+    let shares = shares_by_day
+        .get(&note.entry_date)
+        .map_or(&[][..], Vec::as_slice);
+    let Ok(parts) = split_by_bps(paisa(note.amount_paisa)?, shares) else {
+        return Ok(None);
+    };
+    Ok(parts
+        .into_iter()
+        .find(|(id, _)| *id == partner_id)
+        .map(|(_, part)| part.as_paisa()))
+}
+
+/// His part of the result of trip goods: `split_by_bps` of the result by the shares of the trip
+/// (PRD C10, C25; the shares of a trip cannot change after its first entry, FR-12.29). A negative
+/// result is split as positive and every part made negative (M9). None when the trip has no shares
+/// that total 100%, so a note never breaks a statement. Example (E2E-34): result 660 at 40 / 30 /
+/// 30 gives his 264.
+fn trip_result_part(
+    facts: &Facts,
+    partner_id: i64,
+    venture_id: Option<i64>,
+    result: i64,
+) -> Result<Option<i64>, ServiceError> {
+    use mandi_domain::core::money::split_by_bps;
+    let Some(shares) = venture_id.and_then(|id| facts.trip_shares.get(&id)) else {
+        return Ok(None);
+    };
+    let Ok(parts) = split_by_bps(paisa(result)?, shares) else {
+        return Ok(None);
+    };
+    Ok(parts
+        .into_iter()
+        .find(|(id, _)| *id == partner_id)
+        .map(|(_, part)| part.as_paisa()))
+}
+
 /// The facts that word the lines of one page, read in a few grouped queries.
 #[derive(Default)]
 struct Facts {
@@ -269,6 +396,10 @@ struct Facts {
     credit_totals: HashMap<(i64, i64), i64>,
     part_shares: HashMap<i64, i64>,
     garden_closes: HashMap<i64, read::GardenCloseFigures>,
+    /// The khata or person on each entry of a line of his 0605 account.
+    subjects: HashMap<i64, read::Named>,
+    /// The shares of each trip on the page, read once for all its lines (plan 76 point 11).
+    trip_shares: HashMap<i64, Vec<(i64, mandi_domain::core::money::Bps)>>,
 }
 
 fn named(n: &read::Named) -> RecordRef {
@@ -291,7 +422,7 @@ fn sorted(mut ids: Vec<i64>) -> Vec<i64> {
 fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Facts, ServiceError> {
     let entry_ids = sorted(
         page.iter()
-            .filter(|e| e.entry_id < NOTE_MONTH_CLOSE)
+            .filter(|e| e.entry_id < FIRST_NOTE)
             .map(|e| e.entry_id)
             .collect(),
     );
@@ -340,7 +471,22 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
             _ => {}
         }
     }
-    let ventures = read::venture_numbers(conn, &sorted(venture_ids))?;
+    let venture_list = sorted(venture_ids);
+    let ventures = read::venture_numbers(conn, &venture_list)?;
+    let mut trip_shares = HashMap::new();
+    for (venture_id, shares) in venture_repo::partners_of_many(conn, &venture_list)? {
+        let parsed = shares
+            .into_iter()
+            .map(|s| {
+                i32::try_from(s.share_bps)
+                    .ok()
+                    .and_then(|b| mandi_domain::core::money::Bps::new(b).ok())
+                    .map(|b| (s.partner_id, b))
+                    .ok_or_else(|| data("a stored share is not 0 to 10,000"))
+            })
+            .collect::<Result<Vec<_>, ServiceError>>()?;
+        trip_shares.insert(venture_id, parsed);
+    }
     // The lines of a lot were sold in the posting itself, or, for a reversal, in the posting it
     // took back (PRD C21: the cost is stored with the sale line).
     let posting_ids = sorted(
@@ -368,6 +514,13 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
     close_entries.extend(note_closes);
     let close_entries = sorted(close_entries);
     let garden_closes = read::garden_close_figures(conn, partner_id, &close_entries)?;
+    let linked_entries = sorted(
+        page.iter()
+            .filter(|e| matches!(e.kind, Kind::Linked))
+            .map(|e| e.entry_id)
+            .collect(),
+    );
+    let subjects = read::linked_subjects(conn, &linked_entries)?;
     Ok(Facts {
         entries,
         vouchers,
@@ -381,6 +534,8 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
         credit_totals,
         part_shares,
         garden_closes,
+        subjects,
+        trip_shares,
     })
 }
 
@@ -482,7 +637,7 @@ fn draft_of(
     let voucher = info.and_then(|i| voucher_of(facts, i));
     let negative = is_negative(event.amount);
     Ok(match &event.kind {
-        Kind::Share => {
+        Kind::Share { .. } => {
             let info = info.ok_or_else(|| data("a share row has no entry"))?;
             match (info.source_type.as_str(), voucher) {
                 ("bikri", _) => Draft::new(H::Bikri, D::IncomeShare)
@@ -540,7 +695,7 @@ fn draft_of(
                 draft
             }
         }
-        Kind::Venture => venture_draft(facts, info, effective, voucher, negative)?,
+        Kind::Venture => venture_draft(partner.id, facts, info, effective, voucher, negative)?,
         Kind::LotCredit { lot_id, share_bps } => {
             let info = info.ok_or_else(|| data("a trip credit has no entry"))?;
             let lot = facts
@@ -572,6 +727,10 @@ fn draft_of(
             let result = sales
                 .checked_sub(cost)
                 .ok_or_else(|| data("a figure does not fit"))?;
+            let venture_id = lot
+                .purchase_id
+                .and_then(|id| facts.purchases.get(&id))
+                .map(|p| p.venture_id);
             let mut draft = Draft::new(H::Trip, D::TripCredit)
                 .number(trip_number(facts, lot.purchase_id))
                 .number_value("qty", qty)
@@ -579,6 +738,10 @@ fn draft_of(
                 .number_value("cost_paisa", cost)
                 .number_value("result_paisa", result)
                 .number_value("share_bps", *share_bps);
+            // His part of the result (plan 76 point 11, FR-17.12): shown in the trip note.
+            if let Some(part) = trip_result_part(facts, partner.id, venture_id, result)? {
+                draft = draft.number_value("part_paisa", part);
+            }
             draft.secondary = Some(lot.bikri_number);
             draft.subject = Some(named(&lot.item));
             draft
@@ -589,6 +752,43 @@ fn draft_of(
             Draft::new(H::Trip, D::TripWriteOff).number(facts.ventures.get(venture_id).map(|v| v.0))
         }
         Kind::TripClosed { venture_id } => trip_closed_draft(conn, partner, facts, *venture_id)?,
+        Kind::Linked => {
+            let info = info.ok_or_else(|| data("a linked line has no entry"))?;
+            let (detail, kind) = match voucher.map(|v| v.voucher_type.as_str()) {
+                Some("khata_out") => (D::KhataPaid, "khata_out"),
+                Some("khata_in") => (D::KhataReceived, "khata_in"),
+                Some("money_lent") => (D::LentGiven, "money_lent"),
+                Some("money_lent_return") => (D::LentReturned, "money_lent_return"),
+                _ => (D::LinkedOther, "other"),
+            };
+            let mut draft = Draft::new(H::Linked, detail).kind(kind);
+            draft.number = match voucher {
+                Some(v) => Some(v.number),
+                None => facts.bikri.get(&info.source_id).copied(),
+            };
+            draft.subject = facts.subjects.get(&event.entry_id).map(named);
+            if let Some(v) = voucher {
+                draft.reason.clone_from(&v.reason);
+            }
+            draft
+        }
+        Kind::LentShare {
+            voucher_number,
+            given,
+            amount_paisa,
+            part_paisa,
+            person,
+        } => {
+            let mut draft = Draft::new(H::Linked, D::LentShareNote)
+                .number(Some(*voucher_number))
+                .kind(if *given { "given" } else { "returned" })
+                .number_value("amount_paisa", *amount_paisa);
+            if let Some(part) = part_paisa {
+                draft = draft.number_value("part_paisa", *part);
+            }
+            draft.subject = Some(named(person));
+            draft
+        }
         // A closing that posted nothing for him: the same words and figures, with no amount.
         Kind::GardenClosed {
             venture_entry_id,
@@ -636,6 +836,7 @@ fn garden_close_values(
 
 /// A line from the journal of his gardens, trips and fruit account that is not a بکری.
 fn venture_draft(
+    partner_id: i64,
     facts: &Facts,
     info: Option<&read::EntryInfo>,
     effective: Option<&str>,
@@ -694,6 +895,11 @@ fn venture_draft(
                     "share_bps",
                     facts.part_shares.get(&entry.id).copied().unwrap_or(0),
                 );
+            // His part of the result (plan 76 point 11, FR-17.12).
+            if let Some(part) = trip_result_part(facts, partner_id, Some(entry.venture_id), result)?
+            {
+                draft = draft.number_value("part_paisa", part);
+            }
             draft.number = facts.ventures.get(&entry.venture_id).map(|v| v.0);
             draft.subject = entry
                 .purchase_id
@@ -812,6 +1018,21 @@ fn trip_closed_draft(
     )
 }
 
+/// His کل رقم at the end of the day before `first`: the opening of a range. It is the sum of every
+/// event before `first`, read as one aggregate instead of ten years of events (NFR-SPD-24). Zero when
+/// there is no earlier day.
+fn opening_before(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    first: &str,
+) -> Result<Paisa, ServiceError> {
+    let date = BusinessDate::parse_iso(first).ok_or_else(|| data("a range starts on no day"))?;
+    match date.previous_day() {
+        Some(before) => super::money::total_of(conn, partner, Some(&before.to_iso())),
+        None => Ok(Paisa::ZERO),
+    }
+}
+
 /// A partner's statement for a range, one page (PRD FR-17.9, FR-17.10, FR-19.11). Read only.
 ///
 /// # Errors
@@ -840,11 +1061,20 @@ pub fn statement(
     ctx.db.read(|conn| {
         let partner = repo::get(conn, input.partner_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
-        let events = events_of(conn, &partner)?;
+        // Only the events of the range are read. What came before it is one sum, his کل رقم at the
+        // end of the day before (the same figure the events before it would add up to).
+        let days = read::Days {
+            from: from.as_deref(),
+            to: to.as_deref(),
+        };
+        let events = events_of(conn, &partner, days)?;
         let mut month_acc = crate::page::MonthAcc::new(2);
+        let opening = match from.as_deref() {
+            Some(first) => opening_before(conn, &partner, first)?,
+            None => Paisa::ZERO,
+        };
         // The running total at every event, in checked Paisa.
-        let mut opening = Paisa::ZERO;
-        let mut running = Paisa::ZERO;
+        let mut running = opening;
         let mut in_range: Vec<(&Event, Paisa)> = Vec::new();
         let mut totals = StatementTotals {
             plus_paisa: Paisa::ZERO,
@@ -853,13 +1083,6 @@ pub fn statement(
         for event in &events {
             if let Some(amount) = event.amount {
                 running = running.checked_add(amount).map_err(money_error)?;
-            }
-            if from.as_deref().is_some_and(|f| event.date.as_str() < f) {
-                opening = running;
-                continue;
-            }
-            if to.as_deref().is_some_and(|t| event.date.as_str() > t) {
-                continue;
             }
             let (plus, minus) = match event.amount {
                 Some(a) if a.is_negative() => (0, a.checked_neg().map_err(money_error)?.as_paisa()),
@@ -904,7 +1127,7 @@ pub fn statement(
         let mut lines = Vec::with_capacity(page_rows.len());
         for (event, running) in &page_rows {
             let draft = draft_of(conn, &partner, &facts, event)?;
-            let entry_id = (event.entry_id < NOTE_MONTH_CLOSE).then_some(event.entry_id);
+            let entry_id = (event.entry_id < FIRST_NOTE).then_some(event.entry_id);
             lines.push(StatementLine {
                 entry_date: event.date.clone(),
                 heading: draft.heading,
@@ -949,4 +1172,344 @@ fn sort_events(rows: &mut Vec<(&Event, Paisa)>, column: &str, direction: SortDir
     };
     keyed.sort_by(|a, b| direction.apply(cmp(a, b)));
     rows.extend(keyed.into_iter().map(|(_, row)| row));
+}
+
+// ---- One month at a time, and one day in detail (plan 76 point 11) ----
+
+/// The column of the month page an amount event belongs to. A note line has none.
+#[derive(Clone, Copy)]
+enum Column {
+    Commission,
+    Expense,
+    GardensTrips,
+    Fruit,
+    TakenReturned,
+    Capital,
+}
+
+fn column_of(event: &Event, sources: &HashMap<i64, String>) -> Option<Column> {
+    event.amount?;
+    Some(match &event.kind {
+        Kind::Share { expense: true } => Column::Expense,
+        Kind::Share { expense: false } => Column::Commission,
+        Kind::Capital => Column::Capital,
+        Kind::Drawings | Kind::Linked => Column::TakenReturned,
+        // A trip lot credit and the rest of a بکری posting are already lines of his 0604 account:
+        // they are never added a second time.
+        Kind::LotCredit { .. } | Kind::Remainder => Column::GardensTrips,
+        Kind::Venture => {
+            if sources.get(&event.entry_id).is_some_and(|s| s == "fruit") {
+                Column::Fruit
+            } else {
+                Column::GardensTrips
+            }
+        }
+        _ => return None,
+    })
+}
+
+#[derive(Default, Clone, Copy)]
+struct Cols {
+    commission: Paisa,
+    expense: Paisa,
+    gardens_trips: Paisa,
+    fruit: Paisa,
+    taken_returned: Paisa,
+    capital: Paisa,
+}
+
+impl Cols {
+    fn add(&mut self, column: Column, amount: Paisa) -> Result<(), ServiceError> {
+        let slot = match column {
+            Column::Commission => &mut self.commission,
+            Column::Expense => &mut self.expense,
+            Column::GardensTrips => &mut self.gardens_trips,
+            Column::Fruit => &mut self.fruit,
+            Column::TakenReturned => &mut self.taken_returned,
+            Column::Capital => &mut self.capital,
+        };
+        *slot = slot.checked_add(amount).map_err(money_error)?;
+        Ok(())
+    }
+
+    fn merge(&mut self, other: &Cols) -> Result<(), ServiceError> {
+        for (a, b) in [
+            (&mut self.commission, other.commission),
+            (&mut self.expense, other.expense),
+            (&mut self.gardens_trips, other.gardens_trips),
+            (&mut self.fruit, other.fruit),
+            (&mut self.taken_returned, other.taken_returned),
+            (&mut self.capital, other.capital),
+        ] {
+            *a = a.checked_add(b).map_err(money_error)?;
+        }
+        Ok(())
+    }
+
+    fn shown(&self) -> Result<StatementColumns, ServiceError> {
+        let mut net = Paisa::ZERO;
+        for part in [
+            self.commission,
+            self.expense,
+            self.gardens_trips,
+            self.fruit,
+            self.taken_returned,
+            self.capital,
+        ] {
+            net = net.checked_add(part).map_err(money_error)?;
+        }
+        Ok(StatementColumns {
+            commission_paisa: self.commission,
+            expense_paisa: self.expense,
+            gardens_trips_paisa: self.gardens_trips,
+            fruit_paisa: self.fruit,
+            taken_returned_paisa: self.taken_returned,
+            capital_paisa: self.capital,
+            net_paisa: net,
+        })
+    }
+}
+
+/// A partner's statement for one month: his کل رقم at the start, one row for each day with a
+/// movement (by what it was), the month's totals and his کل رقم at the end. Read only. The
+/// closing is checked against `total_of` at the end of the month (two ways to the same figure), so
+/// a month that does not add up is an error and never a printed wrong figure.
+///
+/// Example (partner ب, October 2026, after Events 1 to 5 and E2E-35): opening 0; 10-10-26
+/// commission 1,646, expense -900, کل رقم 746; 11-10-26 capital +50,000, کل رقم 50,746.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `partner_id`; `ERR_FORMAT_INVALID` and `ERR_DATE_IN_FUTURE` on `month`.
+pub fn statement_month(
+    ctx: &Context,
+    input: &PartnersStatementMonthInput,
+) -> Result<PartnerStatementMonth, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let current = Month::of(today);
+    let month = match input
+        .month
+        .as_deref()
+        .map(str::trim)
+        .filter(|m| !m.is_empty())
+    {
+        None => current,
+        Some(text) => Month::parse(text)
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrFormatInvalid, "month"))?,
+    };
+    if month > current {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrDateInFuture,
+            "month",
+        ));
+    }
+    let (Some(first), Some(last)) = (month.first_day(), month.last_day()) else {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrFormatInvalid,
+            "month",
+        ));
+    };
+    let (first_iso, last_iso) = (first.to_iso(), last.to_iso());
+    ctx.db.read(|conn| {
+        let partner = repo::get(conn, input.partner_id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
+        // Only the events of the month are read; the figure before it is one sum (NFR-SPD-24).
+        let range = read::Days {
+            from: Some(&first_iso),
+            to: Some(&last_iso),
+        };
+        let events = events_of(conn, &partner, range)?;
+        let first_month = first_event_date(conn, &partner)?
+            .and_then(|d| d.get(..7).map(str::to_owned))
+            .unwrap_or_else(|| current.key());
+        // Which 0604 lines are fruit: the source of their entries, read for the month only.
+        let venture_entries = sorted(
+            events
+                .iter()
+                .filter(|e| matches!(e.kind, Kind::Venture) && e.entry_id < FIRST_NOTE)
+                .map(|e| e.entry_id)
+                .collect(),
+        );
+        let sources: HashMap<i64, String> = read::entry_infos(conn, &venture_entries)?
+            .into_iter()
+            .map(|(id, info)| (id, info.source_type))
+            .collect();
+        let opening = opening_before(conn, &partner, &first_iso)?;
+        let mut running = opening;
+        let mut days: BTreeMap<String, (Cols, bool, Paisa)> = BTreeMap::new();
+        for event in &events {
+            if let Some(amount) = event.amount {
+                running = running.checked_add(amount).map_err(money_error)?;
+            }
+            let day = days
+                .entry(event.date.clone())
+                .or_insert((Cols::default(), false, running));
+            match (column_of(event, &sources), event.amount) {
+                (Some(column), Some(amount)) => day.0.add(column, amount)?,
+                _ => day.1 = true,
+            }
+            day.2 = running;
+        }
+        let mut totals = Cols::default();
+        let mut rows = Vec::with_capacity(days.len());
+        let mut closing = opening;
+        for (date, (cols, notes, end)) in &days {
+            let shown = cols.shown()?;
+            // The day's columns must be the day's change of the running total.
+            if closing.checked_add(shown.net_paisa).map_err(money_error)? != *end {
+                return Err(data(
+                    "the columns of a day do not add up to his running total",
+                ));
+            }
+            closing = *end;
+            totals.merge(cols)?;
+            rows.push(StatementMonthDay {
+                date: date.clone(),
+                columns: shown,
+                running_paisa: *end,
+                has_notes: *notes,
+            });
+        }
+        // Two ways to the same figure: what the sums of his records say moved in the month. The
+        // lines above and these sums are different reads, so a month that does not add up is
+        // an error and never a printed wrong figure.
+        let moved = super::money::movement_between(conn, &partner, &first_iso, &last_iso)?;
+        if opening.checked_add(moved).map_err(money_error)? != closing {
+            return Err(data("the closing of a month is not his total at its end"));
+        }
+        Ok(PartnerStatementMonth {
+            partner: record_of(partner.id, &partner.name_ur, &partner.name_en),
+            month: month.key(),
+            first_month,
+            current_month: current.key(),
+            opening_total_paisa: opening,
+            days: rows,
+            totals: totals.shown()?,
+            closing_total_paisa: closing,
+        })
+    })
+}
+
+/// Every movement of one day of a partner's statement with its source, and his کل رقم before and
+/// after (plan 76 point 11). A share line carries `base_paisa` (the posting's shared income or
+/// expense) and `share_bps`, so the card can say "his 30% of 3,948". Read only.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `partner_id`; `ERR_DATE_INVALID` on `date`.
+pub fn statement_day(
+    ctx: &Context,
+    input: &PartnersStatementDayInput,
+) -> Result<PartnerStatementDay, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let text = input.date.trim();
+    let date = BusinessDate::parse_iso(text)
+        .or_else(|| mandi_domain::core::dates::parse_ddmmyyyy(text, today).ok())
+        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrDateInvalid, "date"))?;
+    let typed = mandi_domain::core::dates::format_ddmmyyyy(date);
+    let mut page = statement(
+        ctx,
+        &PartnersStatementInput {
+            partner_id: input.partner_id,
+            from: Some(typed.clone()),
+            to: Some(typed),
+            offset: 0,
+            limit: DAY_LINES,
+            sort: None,
+            group_by_month: false,
+        },
+    )?;
+    // What the share lines were worked from.
+    let entry_ids: Vec<i64> = page
+        .lines
+        .iter()
+        .filter(|l| {
+            matches!(
+                l.detail,
+                StatementDetail::IncomeShare | StatementDetail::ExpenseShare
+            )
+        })
+        .filter_map(|l| l.entry_id)
+        .collect();
+    if !entry_ids.is_empty() {
+        let figures = ctx.db.read(|conn| {
+            Ok::<_, ServiceError>(read::share_figures(conn, input.partner_id, &entry_ids)?)
+        })?;
+        for line in &mut page.lines {
+            let kind = match line.detail {
+                StatementDetail::IncomeShare => "income",
+                StatementDetail::ExpenseShare => "expense",
+                _ => continue,
+            };
+            if let Some((base, bps)) = line
+                .entry_id
+                .and_then(|id| figures.get(&(id, kind.to_owned())))
+            {
+                line.values
+                    .insert("base_paisa".to_owned(), ErrorValue::Number(*base));
+                line.values
+                    .insert("share_bps".to_owned(), ErrorValue::Number(*bps));
+            }
+        }
+    }
+    Ok(PartnerStatementDay {
+        partner: page.partner,
+        date: date.to_iso(),
+        opening_total_paisa: page.opening_total_paisa,
+        lines: page.lines,
+        after_total_paisa: page.closing_total_paisa,
+    })
+}
+
+/// The most lines of one day's detail: every movement of a day, not a page of them.
+const DAY_LINES: u32 = 5_000;
+
+/// The day of his first movement, or null when he has none (the back button of his month page).
+///
+/// It is the earliest of the first day of each kind of event, each read by an index or from a
+/// short list, so a partner with ten years of share rows is not read row by row (NFR-SPD-24). A
+/// بکری line on his 0604 account with no stored part and a net of 0 is no event and could make
+/// this day earlier than his first line; that cannot happen in saved data (every such line has a
+/// stored part), so it is left as it is.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn first_event_date(
+    conn: &Connection,
+    partner: &PartnerRecord,
+) -> Result<Option<String>, ServiceError> {
+    let mut first: Option<String> = read::first_share_day(conn, partner.id)?;
+    let mut keep = |day: Option<String>| {
+        if let Some(day) = day
+            && first.as_ref().is_none_or(|f| day < *f)
+        {
+            first = Some(day);
+        }
+    };
+    let all = read::Days::ALL;
+    for account in [
+        partner.capital_account_id,
+        partner.drawings_account_id,
+        partner.venture_account_id,
+        partner.linked_account_id,
+    ] {
+        if account != 0 {
+            keep(read::first_line_day(conn, account)?);
+        }
+    }
+    keep(read::first_lot_credit_day(conn, partner.id)?);
+    for note in read::shop_loan_notes(conn, all)? {
+        keep(Some(note.entry_date));
+    }
+    for note in read::month_close_notes(conn, partner.capital_account_id, all)? {
+        keep(Some(note.date));
+    }
+    for note in read::write_off_notes(conn, partner.id, all)? {
+        keep(Some(note.date));
+    }
+    for note in read::closed_trip_notes(conn, partner.id, all)? {
+        keep(Some(note.date));
+    }
+    for note in read::unposted_garden_close_notes(conn, partner.id, all)? {
+        keep(Some(note.date));
+    }
+    Ok(first)
 }

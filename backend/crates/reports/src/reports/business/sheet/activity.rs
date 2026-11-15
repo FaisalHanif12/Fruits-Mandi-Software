@@ -140,7 +140,7 @@ pub(super) fn parties_of(
 
 /// The parties of some (account, person) keys as the report names them: the account's names with
 /// its tag, and a چکتا buyer with his own names, phone and key.
-pub(super) fn parties_for(
+pub(crate) fn parties_for(
     conn: &Connection,
     keys: &[(i64, Option<String>)],
 ) -> Result<HashMap<(i64, Option<String>), PartyRef>, ReportsError> {
@@ -182,7 +182,7 @@ type Sortable<T> = (Vec<u8>, Option<String>, (i64, Option<String>), T);
 /// The items in the order of their party's Urdu name (the alphabetical order of Urdu); two people
 /// with the same name are told apart by the tag, then by the account and the person (the order of
 /// the all-parties table of R35 and of the tables of R34).
-pub(super) fn sort_by_party<T>(
+pub(crate) fn sort_by_party<T>(
     items: Vec<T>,
     parties: &HashMap<(i64, Option<String>), PartyRef>,
     key_of: impl Fn(&T) -> (i64, Option<String>),

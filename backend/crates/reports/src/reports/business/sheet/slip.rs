@@ -340,8 +340,28 @@ pub(super) fn slip(
         person: key.map(str::to_owned),
         buyer,
     };
-    let figures = load(conn, &[day.to_owned()], Some(&who))?;
+    let mut figures = load(conn, &[day.to_owned()], Some(&who))?;
     let map_key = (day.to_owned(), account, key.unwrap_or_default().to_owned());
+    // The slip of one بکری (plan 76 point 3): its lines only, the balances still the day's.
+    if !typed.slip_bikri_ids.is_empty() {
+        let mut found = false;
+        if let Some(d) = figures.buyers.get_mut(&map_key) {
+            *d = super::figures::narrow_buyer(d, &typed.slip_bikri_ids)?;
+            found = !d.lines.is_empty();
+        }
+        if let Some(d) = figures.sellers.get_mut(&map_key) {
+            *d = super::figures::narrow_seller(d, &typed.slip_bikri_ids)?;
+            found = !d.lines.is_empty() || !d.charges.is_empty();
+        }
+        // A بکری in which the party has nothing is not an empty slip with the whole day in "other
+        // entries": it is refused (money agent, plan 76 C2).
+        if !found {
+            return Err(ReportsError::Rejected(vec![FieldError::new(
+                ErrorCode::ErrNotFound,
+                "filters.bikri_id",
+            )]));
+        }
+    }
     // The weight column is there only when some line of the slip was weighed.
     let weighed = if buyer {
         figures

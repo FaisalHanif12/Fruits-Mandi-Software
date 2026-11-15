@@ -15,7 +15,8 @@
       "goods",
       "garden",
       "compare",
-      "grade"
+      "grade",
+      "group_by"
     ]
   },
   {
@@ -33,7 +34,8 @@
       "trip",
       "goods",
       "garden",
-      "compare"
+      "compare",
+      "group_by"
     ]
   },
   {
@@ -51,7 +53,8 @@
       "trip",
       "goods",
       "garden",
-      "compare"
+      "compare",
+      "group_by"
     ]
   },
   {
@@ -87,7 +90,8 @@
       "trip",
       "goods",
       "garden",
-      "compare"
+      "compare",
+      "group_by"
     ]
   },
   {
@@ -95,7 +99,8 @@
     "title_id": "analytics-view-f-title",
     "filters": [
       "period",
-      "partner"
+      "partner",
+      "group_by"
     ]
   },
   {
@@ -143,7 +148,8 @@
       "item",
       "side",
       "partner",
-      "garden"
+      "garden",
+      "group_by"
     ]
   },
   {
@@ -160,7 +166,8 @@
       "trip",
       "goods",
       "partner",
-      "trip_view"
+      "trip_view",
+      "group_by"
     ]
   },
   {
@@ -171,7 +178,36 @@
       "item",
       "partner",
       "garden",
-      "goods"
+      "goods",
+      "group_by"
+    ]
+  },
+  {
+    "id": "L",
+    "title_id": "analytics-view-l-title",
+    "filters": [
+      "period",
+      "item",
+      "item_group",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "trip",
+      "goods",
+      "garden",
+      "compare",
+      "group_by"
+    ]
+  },
+  {
+    "id": "M",
+    "title_id": "analytics-view-m-title",
+    "filters": [
+      "period",
+      "group_by",
+      "partner",
+      "expense_part"
     ]
   }
 ]

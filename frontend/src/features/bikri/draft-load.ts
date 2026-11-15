@@ -152,7 +152,7 @@ function put(into: Record<string, string>, field: string, value: string | null |
   if (shown !== '') into[field] = shown;
 }
 
-function saleRow(sale: SaleInput, records: DraftRecords): EntryRow {
+export function saleRow(sale: SaleInput, records: DraftRecords): EntryRow {
   const typed: Record<string, string> = {};
   put(typed, SALE.qty, sale.qty);
   put(typed, SALE.weight, sale.weight);

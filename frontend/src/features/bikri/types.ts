@@ -2,7 +2,8 @@
 // Standards F2). What the user types is text (CLAUDE.md rule 1); the amounts the backend sends
 // are `Paisa`, shown and never worked out.
 
-import type { BikriDraft } from '../../bindings/BikriDraft';
+import type { BikriDraft as BackendDraft } from '../../bindings/BikriDraft';
+import type { CarriedLotInput } from '../../bindings/CarriedLotInput';
 import type { BikriPreview } from '../../bindings/BikriPreview';
 import type { FieldError } from '../../bindings/FieldError';
 import type { LineCalc } from '../../bindings/LineCalc';
@@ -12,8 +13,15 @@ import type { RateHint } from '../../bindings/RateHint';
 import type { SellerMemory } from '../../bindings/SellerMemory';
 import type { SummaryTotals } from '../../bindings/SummaryTotals';
 
+/**
+ * The draft of the screen as the backend takes it. When lots carried over from earlier بکری are on the
+ * screen it also holds them: they go with the mixed commands, never with `bikri_preview` or
+ * `bikri_save` (plan 76 point 1). A screen with none has no `carried` at all, so what it sends is
+ * exactly what it sent before.
+ */
+export type BikriDraft = BackendDraft & { carried?: CarriedLotInput[] };
+
 export type {
-  BikriDraft,
   BikriPreview,
   FieldError,
   LineCalc,
@@ -60,6 +68,11 @@ export const LOT = {
   memoryFilledFor: 'memoryFilledFor',
   // The saved lot this row is, when a posting is open for edit (plan 16). An id, never shown.
   lotId: 'lotId',
+  // Set on a lot carried over from an earlier بکری (باقی مال, PRD FR-12.17, FR-12.48): the lot is saved, its
+  // cells are shown and not typed, and only its new sale lines are the day's work. Its `lotId` is the
+  // lot, and `carriedBikri` the number of the بکری it came from (for the words on the screen only).
+  carried: 'carried',
+  carriedBikri: 'carriedBikri',
 } as const;
 
 /** The fields of a sale line (the keys of `typed` and `picked` in the sale lines grid). */

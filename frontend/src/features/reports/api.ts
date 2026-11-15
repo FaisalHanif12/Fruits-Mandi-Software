@@ -8,7 +8,12 @@
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { BuyerBillsPrintData } from '../../bindings/BuyerBillsPrintData';
 import type { CollectionPrintData } from '../../bindings/CollectionPrintData';
+import type { CollectionSheet } from '../../bindings/CollectionSheet';
+import type { CollectionSheetInput } from '../../bindings/CollectionSheetInput';
+import type { CollectionSheetPrintInput } from '../../bindings/CollectionSheetPrintInput';
 import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
+import type { DaySlipsInput } from '../../bindings/DaySlipsInput';
+import type { DaySlipsPrintData } from '../../bindings/DaySlipsPrintData';
 import type { DeadAmountInput } from '../../bindings/DeadAmountInput';
 import type { DeadAmountPage } from '../../bindings/DeadAmountPage';
 import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
@@ -17,8 +22,12 @@ import type { PrintFrame } from '../../bindings/PrintFrame';
 import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
+import type { PrintTo } from '../../bindings/PrintTo';
 import type { PrintReportInput } from '../../bindings/PrintReportInput';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
+import type { TableExportSource } from '../../bindings/TableExportSource';
+import type { TablePrintData } from '../../bindings/TablePrintData';
+import type { TablesExportRequest } from '../../bindings/TablesExportRequest';
 import type { ExcelExported } from '../../bindings/ExcelExported';
 import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
 import type { ReportPage } from '../../bindings/ReportPage';
@@ -141,4 +150,79 @@ export function reportsPrintHeader(input: PrintFrameInput): Promise<PrintFrame> 
  */
 export function reportsDeadAmount(input: DeadAmountInput): Promise<DeadAmountPage> {
   return callCommand<DeadAmountPage>('reports_dead_amount', { input });
+}
+
+/**
+ * The اگراہی sheet of one day (R5, PRD R5, FR-19.11, plan 76 point 2): one row for each buyer who owes or
+ * bought that day, a page at a time, with the totals over the whole filter and the dead amount apart.
+ */
+export function reportsCollectionSheet(input: CollectionSheetInput): Promise<CollectionSheet> {
+  return callCommand<CollectionSheet>('reports_collection_sheet', { input });
+}
+
+/**
+ * The buyer parchi of a day (PRD FR-19.15, plan 76 point 3): the R35 slip of each buyer who bought, sorted by
+ * name, for the template that lays several on one A4. `buyer_ids` null is every buyer of the day.
+ */
+export function reportsBuyerParchiPrintData(input: DaySlipsInput): Promise<DaySlipsPrintData> {
+  return callCommand<DaySlipsPrintData>('reports_buyer_parchi_print_data', { input });
+}
+
+/** Prints the parchi, or saves it as a PDF: the same slips, language and paper as the preview. */
+export function reportsBuyerParchiPrint(input: {
+  slips: DaySlipsInput;
+  to: PrintTo;
+  copies: number | null;
+}): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_buyer_parchi_print', { input });
+}
+
+/**
+ * The overall sale print of one بکری or of a whole day (PRD FR-19.15, FR-12.12): the seller slips, then the
+ * buyer slips. `bikri_id` null is the whole day.
+ */
+export function reportsSalePrintData(input: DaySlipsInput): Promise<DaySlipsPrintData> {
+  return callCommand<DaySlipsPrintData>('reports_sale_print_data', { input });
+}
+
+/** Prints the overall sale print, or saves it as a PDF: the same slips, language and paper as the preview. */
+export function reportsSalePrint(input: {
+  slips: DaySlipsInput;
+  to: PrintTo;
+  copies: number | null;
+}): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_sale_print', { input });
+}
+
+/**
+ * Prints the sheet, or saves it as a PDF (PRD FR-19.3): the filter of the screen, the print language and the
+ * paper. The job opens the hidden print window like the other prints. `copies` null is one.
+ */
+export function reportsCollectionSheetPrint(input: {
+  sheet: CollectionSheetPrintInput;
+  to: PrintTo;
+  copies: number | null;
+}): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_collection_sheet_print', { input });
+}
+
+/** Every row of the sheet written in the print language, for the preview and the print (FR-19.13). */
+export function reportsCollectionSheetPrintData(
+  input: CollectionSheetPrintInput,
+): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('reports_collection_sheet_print_data', { input });
+}
+
+/**
+ * Saves every row of one of the table pages of plan 76 as an Excel file at `path`: the commission month, the buyer
+ * dues, the اگراہی sheet or a month of a partner's statement (PRD FR-19.3). The progress comes by the event
+ * `export-progress` for `job_id`. The partner parts stay out while the partner section is locked.
+ */
+export function tablesExportExcel(input: {
+  job_id: string;
+  path: string;
+  source: TableExportSource;
+}): Promise<ExcelExported> {
+  const request: TablesExportRequest = input;
+  return callCommand<ExcelExported>('tables_export_excel', { input: request });
 }

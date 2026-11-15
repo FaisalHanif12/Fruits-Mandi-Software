@@ -105,6 +105,7 @@ fn heading_id(heading: StatementHeading) -> &'static str {
         StatementHeading::Trip => "partners-statement-heading-trip",
         StatementHeading::Garden => "partners-statement-heading-garden",
         StatementHeading::Fruit => "partners-statement-heading-fruit",
+        StatementHeading::Linked => "partners-statement-heading-linked",
     }
 }
 
@@ -127,6 +128,12 @@ fn detail_id(detail: StatementDetail) -> &'static str {
         StatementDetail::GardenPaid => "partners-statement-detail-garden-paid",
         StatementDetail::GardenClosed => "partners-statement-detail-garden-closed",
         StatementDetail::FruitTaken => "partners-statement-detail-fruit-taken",
+        StatementDetail::KhataPaid => "partners-statement-detail-khata-paid",
+        StatementDetail::KhataReceived => "partners-statement-detail-khata-received",
+        StatementDetail::LentGiven => "partners-statement-detail-lent-given",
+        StatementDetail::LentReturned => "partners-statement-detail-lent-returned",
+        StatementDetail::LinkedOther => "partners-statement-detail-linked-other",
+        StatementDetail::LentShareNote => "partners-statement-detail-lent-share-note",
     }
 }
 
@@ -165,6 +172,13 @@ fn series_of_kind(kind: &str) -> Option<&'static str> {
         "capital_out" => Some("capital-out"),
         "personal_expense" => Some("personal-expense"),
         "personal_return" => Some("personal-return"),
+        "khata_out" => Some("khata-out"),
+        "khata_in" => Some("khata-in"),
+        "money_lent" => Some("money-lent"),
+        "money_lent_return" => Some("money-lent-return"),
+        // The notes of a loan that is the shop's.
+        "given" => Some("money-lent"),
+        "returned" => Some("money-lent-return"),
         _ => None,
     }
 }
@@ -177,6 +191,10 @@ fn series_of_detail(detail: StatementDetail) -> Option<&'static str> {
         StatementDetail::CapitalOut => Some("capital-out"),
         StatementDetail::Taken => Some("personal-expense"),
         StatementDetail::Returned => Some("personal-return"),
+        StatementDetail::KhataPaid => Some("khata-out"),
+        StatementDetail::KhataReceived => Some("khata-in"),
+        StatementDetail::LentGiven | StatementDetail::LentShareNote => Some("money-lent"),
+        StatementDetail::LentReturned => Some("money-lent-return"),
         _ => None,
     }
 }

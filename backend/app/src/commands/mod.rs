@@ -29,6 +29,7 @@ pub mod settings;
 pub mod translit;
 pub mod trips;
 pub mod vouchers;
+pub mod windows;
 // Run B, plan 18 (append-only block).
 pub mod backup;
 // Run B, plan 20 (append-only block).

@@ -207,5 +207,49 @@
       "type": "money",
       "text": "4,560"
     }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "result",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "شاہ پور باغ",
+              "en": "Shahpur Garden"
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": 35,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 1140000
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

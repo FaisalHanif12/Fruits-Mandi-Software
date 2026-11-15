@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-khata-set-link"
+description = "Enables the khata_set_link command without any pre-configured scope."
+commands.allow = ["khata_set_link"]
+
+[[permission]]
+identifier = "deny-khata-set-link"
+description = "Denies the khata_set_link command without any pre-configured scope."
+commands.deny = ["khata_set_link"]

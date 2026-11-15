@@ -10,18 +10,21 @@ import type { CancelPreview } from '../../src/bindings/CancelPreview';
 import type { EditChange } from '../../src/bindings/EditChange';
 import type { EditPreview } from '../../src/bindings/EditPreview';
 import type { EditableBikri } from '../../src/bindings/EditableBikri';
+import type { MixedSaleInput } from '../../src/bindings/MixedSaleInput';
+import type { MixedUndoInput } from '../../src/bindings/MixedUndoInput';
 import type { StockRow } from '../../src/bindings/StockRow';
 import { CommandError } from '../../src/shared/api';
-import { EVENT1_REQUEST, previewFor } from './bikri-data';
+import { previewFor } from './bikri-data';
 import {
   cancelPreview,
   editable,
   editableLater,
-  laterSaleAnswer,
+  mixedAnswer,
+  mixedSaved,
+  mixedUndoResult,
   stockList,
   stockRow,
   undoResult,
-  withIds,
 } from './bikri-plan16-data';
 import { sliceOf } from './paged';
 import { refusal } from './ui-error';
@@ -89,9 +92,11 @@ export interface FakePlan16 {
    * yes (PRD FR-6.7). A test turns this on together with an answer of the preview that says so.
    */
   cashConfirmRequired: boolean;
-  /** Every later sale the screen asked to preview: lot, day and the lines sent. */
-  laterPreviews: { lotId: number; date: string; sales: unknown[] }[];
-  laterSaves: { lotId: number; date: string; sales: unknown[]; confirm: boolean }[];
+  /** Every mixed screen (carried lots and new lots) the screen asked to preview, as it was sent. */
+  mixedPreviews: MixedSaleInput[];
+  /** Every mixed save, as sent, with the answer to the cash question. */
+  mixedSaves: { input: MixedSaleInput; confirm: boolean }[];
+  mixedUndos: MixedUndoInput[];
   editPreviews: { entryId: number; draft: BikriDraft }[];
   editSaves: {
     entryId: number;
@@ -121,8 +126,9 @@ export function fakePlan16(
 ): FakePlan16 {
   const store: FakePlan16 = {
     cashConfirmRequired: false,
-    laterPreviews: [],
-    laterSaves: [],
+    mixedPreviews: [],
+    mixedSaves: [],
+    mixedUndos: [],
     editPreviews: [],
     editSaves: [],
     cancels: [],
@@ -145,26 +151,27 @@ export function fakePlan16(
       rows: sliceOf(matching, input.offset, input.limit),
     });
   });
-  vi.mocked(bikriApi.bikriLaterSalePreview).mockImplementation((lotId, date, sales) => {
-    store.laterPreviews.push({ lotId, date, sales: [...sales] });
-    return Promise.resolve(laterSaleAnswer(sales, rows[0]?.balance ?? 0));
+  vi.mocked(bikriApi.bikriMixedPreview).mockImplementation((input) => {
+    store.mixedPreviews.push(structuredClone(input));
+    return Promise.resolve(mixedAnswer(input, rows[0]?.balance ?? 0));
   });
   const unconfirmed = (confirm: boolean) => {
     if (store.cashConfirmRequired && !confirm) {
       throw refused('ERR_CASH_BELOW_ZERO_NOT_CONFIRMED');
     }
   };
-  vi.mocked(bikriApi.bikriLaterSaleSave).mockImplementation((lotId, date, sales, confirm) => {
+  vi.mocked(bikriApi.bikriMixedSave).mockImplementation((input, confirm) => {
     unconfirmed(confirm);
-    store.laterSaves.push({ lotId, date, sales: [...sales], confirm });
-    const draft = withIds(EVENT1_REQUEST.draft);
-    return Promise.resolve({
-      bikri_id: 41,
-      number: 1,
-      lot_id: lotId,
-      entry_id: 9,
-      preview: previewFor(draft),
-    });
+    store.mixedSaves.push({ input: structuredClone(input), confirm });
+    return Promise.resolve(mixedSaved(input));
+  });
+  vi.mocked(bikriApi.bikriMixedUndo).mockImplementation((input) => {
+    unconfirmed(input.confirm_cash_below_zero);
+    store.mixedUndos.push(structuredClone(input));
+    // The last mixed save is what is taken back (the test saves once).
+    const last = store.mixedSaves.at(-1);
+    if (last === undefined) throw refused('ERR_NOT_FOUND');
+    return Promise.resolve(mixedUndoResult(mixedSaved(last.input), last.input));
   });
   const open = options.editable ?? editable();
   vi.mocked(bikriApi.bikriOpenForEdit).mockImplementation((_bikriId, entryId) =>

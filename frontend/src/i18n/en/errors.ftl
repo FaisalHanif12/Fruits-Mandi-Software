@@ -698,3 +698,53 @@ err-no-base = The base amount cannot be zero when a percent is worked out.
 
 # review: pending
 err-too-little-history = There are not enough full months of records for an estimate.
+
+# review: pending
+err-month-invalid = This month is not valid. Enter the month and the year, for example 10-2026.
+
+# review: pending
+err-month-in-future = A future month is not allowed. Enter this month ({ $month }) or an earlier one.
+
+# review: pending
+err-month-before-first = There are no entries before { $month }. Enter that month or a later one.
+
+# review: pending
+err-year-invalid = This year is not valid. Enter four digits, for example 2026.
+
+# review: pending
+err-year-in-future = A future year is not allowed. Enter this year ({ $year }) or an earlier one.
+
+# review: pending
+err-year-before-first = There is no { -commission } before { $year }. Enter that year or a later one.
+
+
+# review: pending
+err-wrong-party-type = This party is not on the side you chose. After choosing { -gahak } pick a { -gahak }; after { -beopari } pick a { -beopari }.
+
+
+# review: pending
+err-duplicate-lot = The same lot is on the screen twice. Take it off once.
+
+# review: pending
+err-link-partner-required = Choose the { -shirakat-dar } this is linked to.
+
+# review: pending
+err-partner-inactive = This { -shirakat-dar } is no longer active. Choose another { -shirakat-dar }.
+
+# review: pending
+err-link-locked = The link cannot be changed while the balance is not zero. Settle the balance first.
+
+# review: pending
+err-link-fixed-while-owed = This person still owes money, so his link cannot be changed. It can be changed once he owes nothing.
+
+# review: pending
+err-salary-not-allowed-for-linked = A loan linked to a { -shirakat-dar } is returned in cash only. It cannot be deducted from a salary.
+
+# review: pending
+err-link-changed-for-entry = This entry was made while this { -alag-khata } or person had another link, so it cannot be edited. Cancel it and enter it again.
+
+# review: pending
+err-linked-account-restricted = This account is written by the app itself. It cannot be typed in a { -general } entry.
+
+# review: pending
+err-partner-has-linked-balance = This { -shirakat-dar } cannot be made inactive while a { -alag-khata } or a loan linked to him still has a balance. Settle it first.

@@ -22,7 +22,9 @@ use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::expenses::{PersonalExpenseInput, PersonalReturnInput, ShopExpenseInput};
 use mandi_domain::core::ids::AccountId;
-use mandi_domain::core::lent::{LentReturnMode, MoneyLentInput, MoneyLentReturnInput};
+use mandi_domain::core::lent::{
+    LentReturnMode, MoneyLentInput, MoneyLentRequest, MoneyLentReturnInput,
+};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::core::vouchers::{RemovedPaymentFields, VoucherMode, VoucherSaved, VoucherType};
@@ -639,6 +641,16 @@ pub(super) fn plan_money_lent_return(
     )?;
     let account = resolve_person(conn, &mut errors, input.person_account_id, true)?;
     let salary = input.mode == LentReturnMode::Salary;
+    // A loan linked to a partner is that partner's money, so it is not paid back out of a salary,
+    // which is a shop expense split between all the partners (plan 76 point 10, PRD FR-16.13, U3).
+    if let (true, Some(person)) = (salary, &account)
+        && mandi_db::links::link_of(conn, person.id)?.is_some_and(|l| l.kind == "partner")
+    {
+        errors.push(FieldError::new(
+            ErrorCode::ErrSalaryNotAllowedForLinked,
+            "mode",
+        ));
+    }
     let head = if salary {
         // The default is the head called تنخواہ (PRD FR-16.4).
         let id = match input.salary_head_id {
@@ -835,6 +847,45 @@ pub fn save_money_lent(
     save_with(ctx, actor, input.confirm_cash_below_zero, |conn, window| {
         plan_money_lent(conn, window, input)
     })
+}
+
+/// Saves money lent with the link of the person (plan 76 point 10, PRD FR-16.13): the loan of
+/// [`save_money_lent`], and the person's link set in the same transaction when it differs from his
+/// own and he owes nothing. A different link while he owes is refused, and so nothing is written,
+/// the loan included. No link keeps his link as it is.
+///
+/// # Errors
+/// As [`save_money_lent`], with `ERR_LINK_FIXED_WHILE_OWED` on `link` and the partner codes on
+/// `link.partner_id`.
+pub fn save_money_lent_linked(
+    ctx: &Context,
+    actor: &Actor,
+    request: &MoneyLentRequest,
+) -> Result<VoucherSaved, ServiceError> {
+    save_with(
+        ctx,
+        actor,
+        request.base.confirm_cash_below_zero,
+        |conn, window| {
+            let planned = plan_money_lent(conn, window, &request.base)?;
+            if let (true, Some(link), Some(person)) = (
+                planned.errors.is_empty(),
+                request.link.as_ref(),
+                planned.account.as_ref(),
+            ) {
+                let checked = crate::lent::check_person_link(conn, link, &window.1.to_iso())?;
+                crate::linked::apply_link(
+                    ctx,
+                    actor,
+                    conn,
+                    person.id,
+                    &checked,
+                    ErrorCode::ErrLinkFixedWhileOwed,
+                )?;
+            }
+            Ok(planned)
+        },
+    )
 }
 
 /// Saves a return of money lent, in cash or from salary (PRD FR-16.4). A salary deduction moves

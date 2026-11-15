@@ -131,6 +131,7 @@ export function filtersFromSearch(search: AnalyticsSearch): AnalyticsFilterState
     from: search.from ?? '',
     to: search.to ?? '',
     groupBy: search.group_by ?? 'month',
+    buckets: search.group_by ?? 'none',
     item: search.item ?? null,
     seller: search.seller ?? null,
     buyer: search.buyer ?? null,

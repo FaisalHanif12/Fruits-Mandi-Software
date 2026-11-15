@@ -188,7 +188,7 @@ fn find_reads_every_role_and_gives_a_checked_balance_for_accounts() {
     let j = s.json(&buyer);
     assert_eq!(j["matches"].as_array().unwrap().len(), 1);
     let m = &j["matches"][0];
-    assert_eq!(m["key"], "a20");
+    assert_eq!(m["key"], "a21");
     assert_eq!(m["type"], "buyer");
     assert_eq!(
         (rs(&m["balance"]), m["balance"]["side"].as_str()),
@@ -208,7 +208,7 @@ fn find_reads_every_role_and_gives_a_checked_balance_for_accounts() {
     let any = s
         .run("find", json!({"text": "karim", "role": "any_party"}))
         .unwrap();
-    assert_eq!(s.json(&any)["matches"][0]["key"], "a19");
+    assert_eq!(s.json(&any)["matches"][0]["key"], "a20");
     // Items, partners and the lists with no match are lists, not errors.
     let item = s
         .run("find", json!({"text": "کیلا", "role": "item"}))
@@ -270,7 +270,7 @@ fn find_and_the_other_tools_refuse_what_they_cannot_read() {
     assert_eq!(s.error("nonsense", json!({})).code, "ERR_UNKNOWN_TOOL");
     // A key the conversation never showed is not a record.
     assert_eq!(
-        s.error("party_card", json!({"party": "a20"})).code,
+        s.error("party_card", json!({"party": "a21"})).code,
         "ERR_UNKNOWN_REFERENCE"
     );
     assert_eq!(
@@ -413,7 +413,7 @@ fn report_where_and_sort_apply_to_the_reports_own_rows_with_matched_totals_from_
     assert_eq!(rs(&j["matched"]["totals"]["balance"]), 18_684);
     let rows = j["rows"].as_array().unwrap();
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0]["key"], "a21");
+    assert_eq!(rows[0]["key"], "a22");
     assert_eq!(rows[0]["name"]["en"], "Arshad Multani");
     // Each row's balance has its side and both places.
     assert_eq!(rows[0]["balance"]["side"], "بنام");
@@ -433,7 +433,7 @@ fn report_where_and_sort_apply_to_the_reports_own_rows_with_matched_totals_from_
         .iter()
         .map(|r| r["key"].as_str().unwrap())
         .collect();
-    assert_eq!(keys, ["a21", "a20"]);
+    assert_eq!(keys, ["a22", "a21"]);
     // A value of the wrong kind for the column is refused.
     let mut s = Session::new(&w).with_numbers(vec![number(6, "6", NumberUnit::Months)]);
     let bad = json!({"column": "balance", "op": "gt", "value": "q.n1"});
@@ -1048,7 +1048,7 @@ fn a_list_as_of_an_earlier_day_is_not_checked_against_todays_party_card() {
         .as_array()
         .unwrap()
         .iter()
-        .find(|r| r["key"] == "a20")
+        .find(|r| r["key"] == "a21")
         .unwrap();
     assert_eq!(rs(&akram["balance"]), 2_880);
     assert!(
@@ -1062,7 +1062,7 @@ fn a_list_as_of_an_earlier_day_is_not_checked_against_todays_party_card() {
         .as_array()
         .unwrap()
         .iter()
-        .find(|r| r["key"] == "a20")
+        .find(|r| r["key"] == "a21")
         .unwrap();
     assert_eq!(rs(&akram["balance"]), 1_880);
     assert_eq!(akram["balance"]["checked"], true);
@@ -1261,7 +1261,7 @@ fn a_balance_with_no_second_place_beside_a_checked_one_gives_no_check_mark() {
     let sum = s
         .run(
             "calculate",
-            json!({"op": "sum", "inputs": [format!("{past}.rows.a20.balance"), "r2.matches.0.balance"]}),
+            json!({"op": "sum", "inputs": [format!("{past}.rows.a21.balance"), "r2.matches.0.balance"]}),
         )
         .unwrap();
     let j = result(&s, &sum);

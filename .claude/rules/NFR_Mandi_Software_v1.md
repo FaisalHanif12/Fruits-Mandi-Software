@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.18 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026, 09-11-2026 and 12-11-2026) |
+| Version | 1.19 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026, 09-11-2026, 12-11-2026 and 15-11-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -116,7 +116,7 @@ All targets are "95% of the time or better" (p95) on the reference hardware, wit
 | NFR-SPD-21 | Party card after a code is complete (PRD FR-7.38), 10 years of data | Under 100 ms |
 | NFR-SPD-22 | Attention list count (PRD FR-7.44) | Updated within 1 second after any save; the work never slows typing |
 | NFR-SPD-23 | Rate hint and seller or truck memory (PRD FR-7.49 to FR-7.53) | Shown under 100 ms after the field is filled |
-| NFR-SPD-24 | A page of any list, ledger, register, report or analytics table, with 10 years of data (PRD FR-19.11, a page of 100 rows) | First page with the totals over the whole filter under 1 second; each next page under 300 ms. Example: a buyer with 10,000 ledger lines opens his first 100 lines and his closing balance in under 1 second. |
+| NFR-SPD-24 | A page of any list, ledger, register, report or analytics table, with 10 years of data (PRD FR-19.11, a page of 100 rows) | First page with the totals over the whole filter under 1 second; each next page under 300 ms. Example: a buyer with 10,000 ledger lines opens his first 100 lines and his closing balance in under 1 second. [C] (Umar, 15-11-2026, v1.19, plans 76 and 77) One exception: the first page of analytics views A to E, H and L, plain or grouped by day, month or year, over a period longer than one year, may take up to 4 seconds at the NFR-SCL-1 volume; each next page stays under 300 ms. At the shop's expected volume (NFR-SCL-1 is about 10 times it) the same reads are about 10 times faster. |
 
 Everyday comparison for SPD-4: a calculator responds the moment you press a key. If typing in the app ever feels slower than that, it fails.
 
@@ -413,3 +413,4 @@ Umar (01-11-2026 and 02-11-2026): the model is the brain of the question panel o
 | 1.16 | 06-11-2026 | Approved by Umar (PRD v1.29): the fixed part of an assistant request may be 11,600 tokens (NFR-AI-5), for the item group filter. |
 | 1.17 | 09-11-2026 | PRD v1.32, approved by Umar through D8 (his demo feedback of 08-11-2026): 1,000 sale lines in one بکری (NFR-SCL-3); 4 fields and 4 `Enter`s when a line may take credit (NFR-USE-6); digits 0 to 9 only (NFR-URD-14). |
 | 1.18 | 12-11-2026 | PRD v1.35, approved by Umar (12-11-2026): the wrong-try limit of the password and the partner code goes from 5 to 10 (NFR-SEC-2, NFR-SEC-14). |
+| 1.19 | 15-11-2026 | Approved by Umar (plans 76 and 77): the first page of analytics views over more than one year may take up to 4 s at the NFR-SCL-1 volume; next pages stay under 300 ms (NFR-SPD-24). |

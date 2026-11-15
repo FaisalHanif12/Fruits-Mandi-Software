@@ -58,6 +58,7 @@ mod counter;
 mod line;
 mod lookups;
 mod lot;
+mod merge;
 mod own;
 mod person;
 mod process;
@@ -84,6 +85,7 @@ pub use self::lookups::{
     AccountFacts, ArrivalCarried, ArrivalFacts, EntryLot, ItemFacts, ItemSales, Lookups, PartyKind,
     PurchaseFacts, Switches, TripPartnerFacts,
 };
+pub use self::merge::{merge_splits, merge_summaries, sum_changes};
 pub use self::own::own_cost;
 pub use self::person::{CleanPerson, clean_person};
 pub use self::stored::{

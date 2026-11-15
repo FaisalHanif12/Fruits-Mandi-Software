@@ -1268,14 +1268,14 @@ fn cue_f_two_rows_by_name_need_the_together_word() {
             )]),
             tool_reply(&[calculate(
                 "sum",
-                &["r1.rows.a20.balance", "r1.rows.a21.balance"],
+                &["r1.rows.a21.balance", "r1.rows.a22.balance"],
             )]),
         ]
     };
     let mut replies = read();
     replies.push(final_reply("{{c1.result}}"));
     replies.push(final_reply(
-        "{{r1.rows.a20.name}} {{r1.rows.a20.balance}} {{r1.rows.a21.name}} {{r1.rows.a21.balance}}",
+        "{{r1.rows.a21.name}} {{r1.rows.a21.balance}} {{r1.rows.a22.name}} {{r1.rows.a22.balance}}",
     ));
     let (reply, requests) = h.ask("akram aur arshad ka bakaya", None, replies);
     assert_eq!(tool_error_codes(&requests[2]), ["ERR_OUT_OF_RANGE"]);

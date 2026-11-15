@@ -296,6 +296,8 @@ assistant-open-entry = اندراج کی اسکرین کھولیں
 # review: pending
 assistant-open-screen = اسکرین کھولیں
 # review: pending
+assistant-open-commission = { -commission } کا صفحہ کھولیں
+# review: pending
 assistant-open-screen-of = { $source }: اسکرین کھولیں
 # review: pending
 assistant-entry-neutral = رقم خالی رہتی ہے، آپ خود لکھتے ہیں
@@ -533,6 +535,8 @@ assistant-outcome-time-limit = وقت ختم، پڑھا ہوا ریکارڈ دک
 # review: pending
 assistant-source-party-card = پارٹی کارڈ
 # review: pending
+assistant-source-commission = { -commission }
+# review: pending
 assistant-source-analytics = { -tajziat } { $title }
 # review: pending
 assistant-sources-separator = ، 
@@ -726,6 +730,7 @@ assistant-instant-commission = { $role ->
     [seller-own] { -beopari } { $name } سے لیا گیا { $period } کا { -commission }: { $figure }
     [seller] { -beopari } { $name } کے مال پر { $period } کا کل { -commission } (دونوں طرف اور { -laga }، اوپر والی لائن سمیت): { $figure }
     [buyer] { $name } سے لیا گیا { $period } کا { -commission }: { $figure }
+    [buyer-total] { $name } سے لیا گیا { $period } کا { -commission } اور { -laga } ملا کر کل: { $figure }
    *[shop] { $period } کا { -commission } ({ -laga } سمیت): { $figure }
 }
 # review: pending

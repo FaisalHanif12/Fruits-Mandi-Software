@@ -6,6 +6,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
+import type { LentPerson } from '../../../bindings/LentPerson';
 import type { UiError } from '../../../bindings/UiError';
 import { pickedOf } from '../../../shared/accounts';
 import {
@@ -24,8 +25,10 @@ import {
 } from '../../../shared/ui';
 import type { EntryMarks } from '../../../shared/edit';
 import type { LentDraft } from '../lent-draft';
+import { PERSON_LINK_KINDS, SHOP_LINK, linkDraftOf, type LinkDraft } from '../link-draft';
 import type { LentReturnMode } from '../types';
 import { AddAccountDialog } from './AddAccountDialog';
+import { LinkChoice } from './LinkChoice';
 
 /** The control of the persons who can borrow (PRD FR-10.4). */
 const LENT_CONTROL = '0103';
@@ -37,9 +40,29 @@ interface LentFormProps {
   error: UiError | null;
   /** The marks of the edits this entry went through ("Before ...", plan 44); none when new. */
   marks?: EntryMarks | undefined;
+  /** The chosen person as the backend knows him: his link now. Undefined until it is read. */
+  person?: LentPerson | undefined;
+  /** He owes something now: his link is fixed (PRD FR-16.13, `ERR_LINK_FIXED_WHILE_OWED`). */
+  owes?: boolean;
+  /** An entry of a saved voucher is being edited: the link is not part of an edit. */
+  editing?: boolean;
 }
 
-export function LentForm({ draft, onChange, error, marks }: LentFormProps) {
+/** The link the field shows: the one the user chose, else the person's own, else the shop's. */
+export function shownLinkOf(draft: LentDraft, person: LentPerson | undefined): LinkDraft {
+  if (draft.link !== null) return draft.link;
+  return person === undefined ? SHOP_LINK : linkDraftOf(person.link);
+}
+
+export function LentForm({
+  draft,
+  onChange,
+  error,
+  marks,
+  person,
+  owes = false,
+  editing = false,
+}: LentFormProps) {
   const { l10n } = useLocalization();
   const [adding, setAdding] = useState<string | null>(null);
   const lent = draft.type === 'money_lent';
@@ -125,6 +148,19 @@ export function LentForm({ draft, onChange, error, marks }: LentFormProps) {
               />
             )}
           </Field>
+          {editing ? null : (
+            <LinkChoice
+              draft={shownLinkOf(draft, person)}
+              onChange={(link) => {
+                onChange({ link });
+              }}
+              error={error}
+              kinds={PERSON_LINK_KINDS}
+              labelId="cashbook-link-for"
+              helpId="cashbook-link-hint-person"
+              locked={owes}
+            />
+          )}
         </>
       ) : (
         <>

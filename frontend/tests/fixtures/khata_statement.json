@@ -1,12 +1,16 @@
 {
   "khata": {
     "account": {
-      "id": 32,
+      "id": 36,
       "code": "03050001",
       "name_ur": "خاندانی کھاتہ",
       "name_en": "Family Khata"
     },
     "note": "family",
+    "link": {
+      "kind": "none",
+      "partner_id": null
+    },
     "balance_paisa": -600000
   },
   "opening_paisa": 0,

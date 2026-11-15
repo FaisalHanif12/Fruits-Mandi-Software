@@ -343,7 +343,7 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("rahim ki bikri pichle mahine", "period{kind:last_month} | find{role:seller,text:rahim} | analytics{from:2026-09-01,seller:$rahim,to:2026-09-30,view:B}"),
     ("rahim ka commission is mahine", "period{kind:this_month} | find{role:seller,text:rahim} | analytics{from:2026-10-01,seller:$rahim,to:2026-10-10,view:B}"),
     ("rahim ka commission", "find{role:seller,text:rahim} | analytics{seller:$rahim,view:B}"),
-    ("akram ka commission", "find{role:buyer,text:akram} | analytics{buyer:$akram,view:C}"),
+    ("akram ka commission", "find{role:buyer,text:akram} | analytics{buyer:$akram,side:buyer,view:A}"),
     ("akram ka laga is saal", "period{kind:this_year} | find{role:buyer,text:akram} | analytics{buyer:$akram,from:2026-01-01,to:2026-10-10,view:C}"),
     ("akram ki bikri", "find{role:buyer,text:akram} | analytics{buyer:$akram,view:C}"),
     ("rahim ke kitne bikri hue pichle mahine", "period{kind:last_month} | find{role:seller,text:rahim} | analytics{from:2026-09-01,seller:$rahim,to:2026-09-30,view:B}"),
@@ -468,8 +468,8 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("faisal ki kal tak ki bikri", "period{from:2026-08-31,kind:range,to:2026-10-09} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-08-31,to:2026-10-09,view:C}"),
     ("akram ka 30 september tak ka khata", "period{from:2026-08-31,kind:range,to:2026-09-30} | find{role:buyer,text:akram} | report{from:2026-08-31,id:R13,party:$akram,to:2026-09-30}"),
     // ---- BUG-4: a unit of time alone is this one; a time word the app cannot place is the model's
-    ("faisal ka mahine ka commission", "period{kind:this_month} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-10-01,to:2026-10-10,view:C}"),
-    ("faisal ka saal ka commission", "period{kind:this_year} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-01-01,to:2026-10-10,view:C}"),
+    ("faisal ka mahine ka commission", "period{kind:this_month} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-10-01,side:buyer,to:2026-10-10,view:A}"),
+    ("faisal ka saal ka commission", "period{kind:this_year} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-01-01,side:buyer,to:2026-10-10,view:A}"),
     ("akram ki hafte ki bikri", "period{kind:this_week} | find{role:buyer,text:akram} | analytics{buyer:$akram,from:2026-10-05,to:2026-10-10,view:C}"),
     ("rahim ki pichli bikri", "NONE"),
     ("faisal ka do mahine ka commission", "NONE"),
@@ -537,7 +537,7 @@ fn every_planned_read_is_accepted_by_the_real_tools() {
 /// None of these has an instant answer: the model writes from the reads.
 #[rustfmt::skip]
 const NEW_INPUTS: &[(&str, &str)] = &[
-    ("rahim par commission kitna lagta hai", "find{role:seller,text:rahim} | app_state{party:a18,what:rules}"),
+    ("rahim par commission kitna lagta hai", "find{role:seller,text:rahim} | app_state{party:a19,what:rules}"),
     ("kele ka laga rate", "find{role:item,text:Banana} | app_state{item:i1,what:rules}"),
     ("aaj ke kaam", "app_state{what:attention}"),
     ("kya baqi hai", "app_state{what:attention}"),
@@ -548,7 +548,7 @@ const NEW_INPUTS: &[(&str, &str)] = &[
     ("kisne kya badla", "app_state{what:audit}"),
     ("aakhri changes kya hue", "app_state{what:audit}"),
     ("recent changes", "app_state{what:audit}"),
-    ("rahim ka khata kisne badla", "find{role:seller,text:rahim} | app_state{party:a18,what:audit}"),
+    ("rahim ka khata kisne badla", "find{role:seller,text:rahim} | app_state{party:a19,what:audit}"),
     ("kisne badla kaise dekhun", "NONE"),
     ("how many staff do we have", "find{role:staff,text:all}"),
     ("kitne expense heads hain", "find{role:expense_head,text:all}"),
@@ -1307,9 +1307,9 @@ const QUALITY: &[(&str, &str)] = &[
     ("awwal seb aaj kitne ka bika", "period{kind:today} | find{role:item,text:Apple} | analytics{from:2026-10-10,grade:first,item:i2,to:2026-10-10,view:A}"),
     ("doyam kele ka aaj ka rate", "period{kind:today} | find{role:item,text:Banana} | analytics{from:2026-10-10,grade:second,item:i1,to:2026-10-10,view:A}"),
     ("soyam kele ki is mahine ki bikri", "period{kind:this_month} | find{role:item,text:Banana} | analytics{from:2026-10-01,grade:third,item:i1,to:2026-10-10,view:A}"),
-    ("rahim ke seb kis kis darje mein bike", "find{role:item,text:Apple} | find{role:seller,text:rahim} | report{id:R2,item:i2,rows:100,seller:a18}"),
-    ("rahim ke awwal seb aaj kitne ke bike", "period{kind:today} | find{role:item,text:Apple} | find{role:seller,text:rahim} | analytics{from:2026-10-10,grade:first,item:i2,seller:a18,to:2026-10-10,view:A}"),
-    ("arshad ne awwal seb kitne ka liya", "find{role:item,text:Apple} | find{role:buyer,text:arshad} | analytics{buyer:a21,grade:first,item:i2,view:A}"),
+    ("rahim ke seb kis kis darje mein bike", "find{role:item,text:Apple} | find{role:seller,text:rahim} | report{id:R2,item:i2,rows:100,seller:a19}"),
+    ("rahim ke awwal seb aaj kitne ke bike", "period{kind:today} | find{role:item,text:Apple} | find{role:seller,text:rahim} | analytics{from:2026-10-10,grade:first,item:i2,seller:a19,to:2026-10-10,view:A}"),
+    ("arshad ne awwal seb kitne ka liya", "find{role:item,text:Apple} | find{role:buyer,text:arshad} | analytics{buyer:a22,grade:first,item:i2,view:A}"),
     ("اول سیب آج کتنے کا بکا", "period{kind:today} | find{role:item,text:Apple} | analytics{from:2026-10-10,grade:first,item:i2,to:2026-10-10,view:A}"),
     ("دوم کیلے کا آج کا ریٹ", "period{kind:today} | find{role:item,text:Banana} | analytics{from:2026-10-10,grade:second,item:i1,to:2026-10-10,view:A}"),
     ("how much first quality apple sold today", "period{kind:today} | find{role:item,text:Apple} | analytics{from:2026-10-10,grade:first,item:i2,to:2026-10-10,view:A}"),
@@ -1353,7 +1353,7 @@ const COMPARE: &[(&str, &str)] = &[
     ("اس مہینے کا کمیشن پچھلے مہینے سے کتنا زیادہ ہے", "period{kind:this_month} | period{kind:last_month} | analytics{from:2026-10-01,to:2026-10-10,view:A} | analytics{from:2026-09-01,to:2026-09-30,view:A}"),
     ("is mahine ki bikri aur pichle mahine ki bikri mein farq", "period{kind:this_month} | period{kind:last_month} | analytics{from:2026-10-01,to:2026-10-10,view:A} | analytics{from:2026-09-01,to:2026-09-30,view:A}"),
     ("kele ka commission pichle mahine se kitna zyada hai", "period{kind:this_month} | period{kind:last_month} | find{role:item,text:Banana} | analytics{from:2026-10-01,item:i1,to:2026-10-10,view:A} | analytics{from:2026-09-01,item:i1,to:2026-09-30,view:A}"),
-    ("rahim ki bikri pichle mahine se kitni kam hai", "period{kind:this_month} | period{kind:last_month} | find{role:seller,text:rahim} | analytics{from:2026-10-01,seller:a18,to:2026-10-10,view:B} | analytics{from:2026-09-01,seller:a18,to:2026-09-30,view:B}"),
+    ("rahim ki bikri pichle mahine se kitni kam hai", "period{kind:this_month} | period{kind:last_month} | find{role:seller,text:rahim} | analytics{from:2026-10-01,seller:a19,to:2026-10-10,view:B} | analytics{from:2026-09-01,seller:a19,to:2026-09-30,view:B}"),
     ("is saal ka commission pichle saal se kitna zyada hai", "period{kind:this_year} | period{kind:last_year} | analytics{from:2026-01-01,to:2026-10-10,view:A} | analytics{from:2025-01-01,to:2025-12-31,view:A}"),
     // The earlier period is exactly the one the tool works out: one read with `compare`.
     ("august ke muqable september ka commission kitna zyada hai", "period{from:2026-09-01,kind:range,to:2026-09-30} | period{from:2026-08-01,kind:range,to:2026-08-31} | analytics{compare:previous,from:2026-09-01,to:2026-09-30,view:A}"),
@@ -1404,11 +1404,11 @@ fn one_figure_over_two_periods_reads_both_periods_before_the_model_starts() {
 /// It needs a "last" word, one buyer, one item and no period. No instant answer.
 #[rustfmt::skip]
 const LAST_RATE: &[(&str, &str)] = &[
-    ("akram ko kela aakhri kis rate pe diya", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
-    ("akram ko kele ka aakhri rate kya tha", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
-    ("last rate of banana to akram", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
-    ("akram ne kela kis rate pe liya last time", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
-    ("اکرم کو کیلا آخری بار کس ریٹ پر دیا", "find{role:buyer,text:اکرم} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
+    ("akram ko kela aakhri kis rate pe diya", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a21,rows:1,sort:date:desc}"),
+    ("akram ko kele ka aakhri rate kya tha", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a21,rows:1,sort:date:desc}"),
+    ("last rate of banana to akram", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a21,rows:1,sort:date:desc}"),
+    ("akram ne kela kis rate pe liya last time", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a21,rows:1,sort:date:desc}"),
+    ("اکرم کو کیلا آخری بار کس ریٹ پر دیا", "find{role:buyer,text:اکرم} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a21,rows:1,sort:date:desc}"),
     // No "last" word, a period, no buyer, or "last sale" (not a rate): the model's.
     ("akram ko kela kis rate pe diya", "NONE"),
     ("akram ko kela pichle mahine kis rate pe diya", "NONE"),
@@ -1825,7 +1825,7 @@ fn the_sum_of_two_parties_and_the_count_of_an_item_are_read_for_the_model() {
         let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
         let text = render_all(&reads);
         assert!(
-            text.contains("party_card{party:a20}") && text.contains("party_card{party:a21}"),
+            text.contains("party_card{party:a21}") && text.contains("party_card{party:a22}"),
             "{question}: {text}"
         );
         let refused = run_plan(&w, today, question, &reads);
@@ -2013,7 +2013,7 @@ fn a_balance_now_and_the_months_ahead_are_read_together() {
         ),
         (
             "rahim ka khata abhi kitna he aur agle mahine tak kitna ho jaye ga",
-            "find{role:seller,text:rahim} | party_card{party:a18} | estimate{ahead:1,measure:party_balance,party:a18}",
+            "find{role:seller,text:rahim} | party_card{party:a19} | estimate{ahead:1,measure:party_balance,party:a19}",
         ),
     ];
     for (question, want) in cases {

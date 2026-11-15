@@ -826,6 +826,11 @@ fn open_buttons(w: &world::World, reply: &mandi_assistant::ask::AskReply) -> Vec
             AnswerSource::Tiles { .. } => {
                 json!({"kind": "tiles", "label": "tiles", "skipped": true})
             }
+            // The commission page of one party (plan 77) is made from a finished answer: it holds
+            // the figures of view B or C, which are read and compared as that view.
+            AnswerSource::Commission { .. } => {
+                json!({"kind": "commission", "label": "commission", "skipped": true})
+            }
             // A screen button (the commission rules, the day close, the audit log, the dashboard)
             // opens a screen as it is: it holds no figures to compare.
             AnswerSource::Screen { route, .. } => {

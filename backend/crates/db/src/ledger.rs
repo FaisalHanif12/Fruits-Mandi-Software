@@ -622,6 +622,31 @@ pub fn account_totals_in_controls(
     if controls.is_empty() {
         return Ok(Vec::new());
     }
+    // The answer is the same for every page of a list and for every screen that asks again, until
+    // a journal line is written, so it is kept (the memory of `crate::memo`, plan 76, NFR-SPD-24).
+    let what = format!(
+        "totals_in_controls:{}:{}",
+        controls.join(","),
+        as_of.unwrap_or("-")
+    );
+    let rows = crate::memo::account_rows(conn, &what, || {
+        Ok(read_totals_in_controls(conn, controls, as_of)?
+            .into_iter()
+            .map(|(id, t)| (id, t.dr_paisa, t.cr_paisa))
+            .collect())
+    })?;
+    Ok(rows
+        .iter()
+        .map(|&(id, dr_paisa, cr_paisa)| (id, Totals { dr_paisa, cr_paisa }))
+        .collect())
+}
+
+/// The query behind [`account_totals_in_controls`].
+fn read_totals_in_controls(
+    conn: &Connection,
+    controls: &[&str],
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
     let all_posted = as_of.is_none() && !unposted_entries_exist(conn)?;
     let mut args: Vec<String> = Vec::new();
     let as_of_mark = as_of.map(|day| {
@@ -647,6 +672,64 @@ pub fn account_totals_in_controls(
         ))
     })?;
     rows.collect()
+}
+
+/// Which end of an account's days to find.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DayEdge {
+    /// The first day with a posted line.
+    First,
+    /// The last day with a posted line.
+    Last,
+}
+
+/// An account with more lines than this is read by walking the days (see [`edge_day_of_account`]).
+const MANY_LINES: i64 = 20_000;
+
+/// The first or last day with a posted line on an account, or `None` when it has none
+/// (NFR-SPD-24).
+///
+/// A small account is read line by line: one lookup of the entry for each of its lines. A big one
+/// (the cash account, the busiest buyer: tens of thousands of lines over ten years) walks the
+/// entries by day, from the end asked for, and stops at the first entry that has a line of the
+/// account, so a day is found without reading every line. `INDEXED BY` makes SQLite walk the date
+/// index instead of sorting every entry. An account with no line answers at once.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn edge_day_of_account(
+    conn: &Connection,
+    account_id: i64,
+    edge: DayEdge,
+) -> rusqlite::Result<Option<String>> {
+    // Counts at most MANY_LINES + 1 lines on the covering index, so it is cheap for any account.
+    let lines: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines WHERE account_id = ?1 LIMIT ?2)",
+        [account_id, MANY_LINES + 1],
+        |r| r.get(0),
+    )?;
+    if lines == 0 {
+        return Ok(None);
+    }
+    let (aggregate, order) = match edge {
+        DayEdge::First => ("MIN", "ASC"),
+        DayEdge::Last => ("MAX", "DESC"),
+    };
+    if lines <= MANY_LINES {
+        let sql = format!(
+            "SELECT {aggregate}(e.entry_date) FROM journal_lines l
+             JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'
+             WHERE l.account_id = ?1"
+        );
+        return conn.query_row(&sql, [account_id], |r| r.get(0));
+    }
+    let sql = format!(
+        "SELECT e.entry_date FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         WHERE e.status = 'posted'
+           AND EXISTS (SELECT 1 FROM journal_lines l WHERE l.entry_id = e.id AND l.account_id = ?1)
+         ORDER BY e.entry_date {order} LIMIT 1"
+    );
+    conn.query_row(&sql, [account_id], |r| r.get(0)).optional()
 }
 
 /// The SQL of [`totals_for_accounts`] for this many accounts.

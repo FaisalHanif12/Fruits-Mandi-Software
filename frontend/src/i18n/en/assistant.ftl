@@ -299,6 +299,8 @@ assistant-open-entry = Open the entry screen
 # review: pending
 assistant-open-screen = Open the screen
 # review: pending
+assistant-open-commission = Open the { -commission } page
+# review: pending
 assistant-open-screen-of = { $source }: open the screen
 # review: pending
 assistant-entry-neutral = The amount stays empty; you write it yourself
@@ -538,6 +540,8 @@ assistant-outcome-time-limit = Out of time, the records read were shown
 # review: pending
 assistant-source-party-card = Party card
 # review: pending
+assistant-source-commission = { -commission }
+# review: pending
 assistant-source-analytics = { -tajziat } { $title }
 # review: pending
 assistant-sources-separator = , 
@@ -742,6 +746,7 @@ assistant-instant-commission = { $role ->
     [seller-own] { -commission } charged to { -beopari } { $name } { $period }: { $figure }
     [seller] Total { -commission } on the goods of { -beopari } { $name } { $period } (both sides and { -laga }, including the line above): { $figure }
     [buyer] { -commission } charged to { -gahak } { $name } { $period }: { $figure }
+    [buyer-total] { -commission } and { -laga } together, charged to { -gahak } { $name } { $period }: { $figure }
    *[shop] { -commission } (with { -laga }) { $period }: { $figure }
 }
 # review: pending

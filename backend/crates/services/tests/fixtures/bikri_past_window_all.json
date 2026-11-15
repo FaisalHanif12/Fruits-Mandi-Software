@@ -8,7 +8,7 @@
       "truck_no": null,
       "sellers": [
         {
-          "id": 19,
+          "id": 20,
           "code": "0011",
           "name_ur": "کریم",
           "name_en": "Karim"
@@ -26,7 +26,7 @@
         {
           "lot_id": 8,
           "seller": {
-            "id": 19,
+            "id": 20,
             "code": "0011",
             "name_ur": "کریم",
             "name_en": "Karim"
@@ -60,7 +60,7 @@
       "truck_no": null,
       "sellers": [
         {
-          "id": 18,
+          "id": 19,
           "code": "0010",
           "name_ur": "رحیم",
           "name_en": "Rahim"
@@ -78,7 +78,7 @@
         {
           "lot_id": 7,
           "seller": {
-            "id": 18,
+            "id": 19,
             "code": "0010",
             "name_ur": "رحیم",
             "name_en": "Rahim"
@@ -112,7 +112,7 @@
       "truck_no": null,
       "sellers": [
         {
-          "id": 19,
+          "id": 20,
           "code": "0011",
           "name_ur": "کریم",
           "name_en": "Karim"
@@ -130,7 +130,7 @@
         {
           "lot_id": 6,
           "seller": {
-            "id": 19,
+            "id": 20,
             "code": "0011",
             "name_ur": "کریم",
             "name_en": "Karim"
@@ -164,7 +164,7 @@
       "truck_no": null,
       "sellers": [
         {
-          "id": 18,
+          "id": 19,
           "code": "0010",
           "name_ur": "رحیم",
           "name_en": "Rahim"
@@ -182,7 +182,7 @@
         {
           "lot_id": 5,
           "seller": {
-            "id": 18,
+            "id": 19,
             "code": "0010",
             "name_ur": "رحیم",
             "name_en": "Rahim"
@@ -216,7 +216,7 @@
       "truck_no": null,
       "sellers": [
         {
-          "id": 19,
+          "id": 20,
           "code": "0011",
           "name_ur": "کریم",
           "name_en": "Karim"
@@ -234,7 +234,7 @@
         {
           "lot_id": 4,
           "seller": {
-            "id": 19,
+            "id": 20,
             "code": "0011",
             "name_ur": "کریم",
             "name_en": "Karim"
@@ -268,7 +268,7 @@
       "truck_no": null,
       "sellers": [
         {
-          "id": 18,
+          "id": 19,
           "code": "0010",
           "name_ur": "رحیم",
           "name_en": "Rahim"
@@ -286,7 +286,7 @@
         {
           "lot_id": 3,
           "seller": {
-            "id": 18,
+            "id": 19,
             "code": "0010",
             "name_ur": "رحیم",
             "name_en": "Rahim"

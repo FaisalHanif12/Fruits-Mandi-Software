@@ -16,7 +16,7 @@ mod gardens;
 mod income;
 pub(crate) mod lent;
 mod profit;
-mod sheet;
+pub(crate) mod sheet;
 pub(crate) mod trips;
 
 pub(super) use day::run as run_r34;
@@ -29,8 +29,10 @@ pub(super) use lent::run as run_r32;
 pub(super) use profit::run as run_r30;
 pub(super) use sheet::run as run_r35;
 pub use sheet::{
-    StatementBalance, StatementDay, StatementEntry, StatementItem, StatementKind,
-    StatementPrintData, StatementPrintDataInput, StatementSide, entry_lines_sql,
+    CollectionLine, CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput,
+    CollectionSheetRow, CollectionSheetTotals, StatementBalance, StatementDay, StatementEntry,
+    StatementItem, StatementKind, StatementPrintData, StatementPrintDataInput, StatementSide,
+    collection_sheet, collection_sheet_print_data, collection_sheet_spec, entry_lines_sql,
     party_statement_print_data,
 };
 pub(super) use trips::run as run_r33;

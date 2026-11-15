@@ -196,12 +196,14 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       expect(cell('0', 'fruit')).toBe('0');
     });
 
-    it('has no chart: the backend sends none for the partners (plan 38 R4)', async () => {
+    it('draws the chart the backend sends for the partners: the net change of each (plan 76 point 4)', async () => {
       await openView('F');
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(3);
       }, SLOW_MS);
-      expect(screen.queryByRole('img')).toBeNull();
+      expect(
+        screen.getByRole('img', { name: (name) => visible(name).includes(m('analytics-chart-f')) }),
+      ).toBeInTheDocument();
     });
 
     it('does not offer a comparison, which the backend refuses on this view', async () => {
@@ -296,7 +298,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(1);
       }, SLOW_MS);
-      await user.click(screen.getByRole('combobox', { name: m('report-filter-group-by') }));
+      await user.click(screen.getByRole('combobox', { name: m('analytics-filter-group-by') }));
       await user.click(await screen.findByRole('option', { name: m('analytics-group-by-day') }));
       await waitFor(() => {
         expect(lastRun()?.filters.group_by).toBe('day');
@@ -665,7 +667,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       );
       expect(lastLines()).toMatchObject({
         view: 'I',
-        row_key: { seller_id: 31 },
+        row_key: { seller_id: 35 },
         column_key: null,
       });
     });

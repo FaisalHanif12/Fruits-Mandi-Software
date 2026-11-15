@@ -111,6 +111,22 @@ fn refused_commands() -> Vec<(&'static str, Value)> {
             json!({ "input": { "partner_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
         ),
         (
+            "partners_statement_month",
+            json!({ "input": { "partner_id": 1, "month": null } }),
+        ),
+        (
+            "partners_statement_day",
+            json!({ "input": { "partner_id": 1, "date": "2026-10-10" } }),
+        ),
+        (
+            "partners_statement_month_print_data",
+            json!({ "input": { "partner_id": 1, "month": null, "language": "ur" } }),
+        ),
+        (
+            "partners_open_ventures",
+            json!({ "input": { "partner_id": 1 } }),
+        ),
+        (
             "vouchers_save_capital_in",
             json!({ "input": { "date": "10-10-2026", "partner_id": 1, "amount": "50,000",
                 "narration": null, "confirm_cash_below_zero": false } }),
@@ -184,6 +200,16 @@ fn refused_commands() -> Vec<(&'static str, Value)> {
         (
             "analytics_print_view",
             json!({ "input": { "view": { "view": "F", "filters": {}, "language": "en" }, "to": "pdf" } }),
+        ),
+        // The first day of a partner's statement or of his money taken is a partner fact (plan 76
+        // speed review): the other sources of `windows_bounds` stay open.
+        (
+            "windows_bounds",
+            json!({ "input": { "source": { "kind": "partner_statement", "partner_id": 1 } } }),
+        ),
+        (
+            "windows_bounds",
+            json!({ "input": { "source": { "kind": "partner_takes", "partner_id": 1 } } }),
         ),
     ]
 }
@@ -333,6 +359,10 @@ fn what_is_hidden_while_locked_comes_back_with_the_code() {
                     == json!(true),
             ),
             (
+                "lent_dues",
+                h.ok("lent_dues", json!({ "input": {} }))["partner_locked"] == json!(true),
+            ),
+            (
                 "vouchers_preview_expense",
                 h.ok(
                     "vouchers_preview_expense",
@@ -358,6 +388,11 @@ fn what_is_hidden_while_locked_comes_back_with_the_code() {
 
     // Locked: all are hidden, and the strip is empty.
     h.ok("partners_code_lock", json!({}));
+    // The first day of the sales list is not a partner fact: it still answers.
+    h.ok(
+        "windows_bounds",
+        json!({ "input": { "source": { "kind": "sales" } } }),
+    );
     for (command, hidden) in hidden_flags(&h) {
         assert!(hidden, "{command} still shows the partner figures");
     }

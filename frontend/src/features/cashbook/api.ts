@@ -5,11 +5,17 @@
 // There is no mode, bank or cheque in any of them: all money is روکڑ (PRD FR-10.4).
 
 import type { ExpensePreviewInput } from '../../bindings/ExpensePreviewInput';
+import type { KhataCreateRequest } from '../../bindings/KhataCreateRequest';
 import type { KhataInInput } from '../../bindings/KhataInInput';
 import type { KhataOutInput } from '../../bindings/KhataOutInput';
+import type { KhataSetLinkInput } from '../../bindings/KhataSetLinkInput';
 import type { KhataStatementInput } from '../../bindings/KhataStatementInput';
+import type { LentDues } from '../../bindings/LentDues';
+import type { LentDuesInput } from '../../bindings/LentDuesInput';
 import type { LentListInput } from '../../bindings/LentListInput';
-import type { MoneyLentInput } from '../../bindings/MoneyLentInput';
+import type { LentPersonCreateRequest } from '../../bindings/LentPersonCreateRequest';
+import type { LentPersonUpdateInput } from '../../bindings/LentPersonUpdateInput';
+import type { MoneyLentRequest } from '../../bindings/MoneyLentRequest';
 import type { MoneyLentReturnInput } from '../../bindings/MoneyLentReturnInput';
 import type { PartnerTakesInput } from '../../bindings/PartnerTakesInput';
 import type { PersonalExpenseInput } from '../../bindings/PersonalExpenseInput';
@@ -27,11 +33,9 @@ import type {
   GeneralPreview,
   GeneralPreviewInput,
   KhataAccount,
-  KhataCreateInput,
   KhataStatement,
   LentList,
   LentPerson,
-  LentPersonCreateInput,
   PartnerTakes,
   RepeatLastMonth,
 } from './types';
@@ -87,8 +91,11 @@ export function repeatLastMonth(input: RepeatLastMonthInput): Promise<RepeatLast
   return callCommand<RepeatLastMonth>('vouchers_repeat_last_month_preview', { input });
 }
 
-/** Lends money to a person (PRD 16.5): cash goes out. */
-export function saveMoneyLent(input: MoneyLentInput): Promise<VoucherSaved> {
+/**
+ * Lends money to a person (PRD 16.5): cash goes out. `link` is what his loans are linked to (plan 76 point
+ * 10); null keeps his link as it is. While he owes, a different link is refused (`ERR_LINK_FIXED_WHILE_OWED`).
+ */
+export function saveMoneyLent(input: MoneyLentRequest): Promise<VoucherSaved> {
   return callCommand<VoucherSaved>('vouchers_save_money_lent', { input });
 }
 
@@ -97,9 +104,26 @@ export function saveMoneyLentReturn(input: MoneyLentReturnInput): Promise<Vouche
   return callCommand<VoucherSaved>('vouchers_save_money_lent_return', { input });
 }
 
-/** Makes the account of a new person who can borrow (the `F4` of the screen, PRD 16.5). */
-export function lentPersonCreate(input: LentPersonCreateInput): Promise<LentPerson> {
+/**
+ * Makes the account of a new person who can borrow (the `F4` of the screen, PRD 16.5), with his type and the
+ * link of his loans (plan 76 point 10, PRD FR-16.13).
+ */
+export function lentPersonCreate(input: LentPersonCreateRequest): Promise<LentPerson> {
   return callCommand<LentPerson>('lent_person_create', { input });
+}
+
+/** Changes the type and the link of a person; the link changes only while he owes nothing. */
+export function lentPersonUpdate(input: LentPersonUpdateInput): Promise<LentPerson> {
+  return callCommand<LentPerson>('lent_person_update', { input });
+}
+
+/**
+ * The page behind the dashboard tile of garden owners and others (PRD FR-16.13, plan 76 point 10): one month of
+ * money given and returned with the person, type and link of each, and the people with their open amounts.
+ * The totals are the backend's.
+ */
+export function lentDues(input: LentDuesInput): Promise<LentDues> {
+  return callCommand<LentDues>('lent_dues', { input });
 }
 
 /** One person's loans, oldest first, page by page, with his balance and the totals (FR-16.5). */
@@ -107,9 +131,14 @@ export function lentList(input: LentListInput): Promise<LentList> {
   return callCommand<LentList>('lent_list', { input });
 }
 
-/** Makes a new الگ کھاتہ (the `F4` of the screen, PRD 16.6). */
-export function khataCreate(input: KhataCreateInput): Promise<KhataAccount> {
+/** Makes a new الگ کھاتہ with its link: none, the shop or one partner (the `F4` of the screen, PRD 16.6). */
+export function khataCreate(input: KhataCreateRequest): Promise<KhataAccount> {
   return callCommand<KhataAccount>('khata_create', { input });
+}
+
+/** Changes the link of a khata. Only while its balance is 0 (`ERR_LINK_LOCKED`). */
+export function khataSetLink(input: KhataSetLinkInput): Promise<KhataAccount> {
+  return callCommand<KhataAccount>('khata_set_link', { input });
 }
 
 /** Money paid out of a khata's side: the khata goes minus, cash goes out (PRD FR-16.6). */

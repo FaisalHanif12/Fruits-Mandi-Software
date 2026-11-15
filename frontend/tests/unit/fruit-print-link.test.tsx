@@ -56,7 +56,7 @@ describe.each(LANGUAGES)('the fruit screen prints its list as R37 (%s)', (langua
 
   const m = (id: string) => message(language, id);
 
-  it('opens the fruit register with the days of the list, today by default', async () => {
+  it('opens the fruit register with the days of the list, this month by default', async () => {
     const { router } = await renderApp('/rokar/fruit');
     await screen.findByRole('heading', { level: 1, name: named(m('fruit-title')) });
     const user = userEvent.setup();
@@ -64,10 +64,10 @@ describe.each(LANGUAGES)('the fruit screen prints its list as R37 (%s)', (langua
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/reports/R37');
     });
-    // The day typed in the list is the day the register asks for; no partner and no guests.
+    // The month window of the list is the range the register asks for; no partner and no guests.
     const search = router.state.location.search as Record<string, unknown>;
-    expect(typeof search['from']).toBe('string');
-    expect(search['from']).toBe(search['to']);
+    expect(search['from']).toBe('01-10-2026');
+    expect(search['to']).toBe('31-10-2026');
     expect(search['partner']).toBeUndefined();
     expect(search['guests']).toBeUndefined();
   });

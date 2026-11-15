@@ -148,6 +148,16 @@ pub const PAID_ON_THE_SPOT_SQL: &str = include_str!("../migrations/0021_paid_on_
 /// journal line, allocation, amount, id or chain hash changes.
 pub const LOT_COUNTER_SQL: &str = include_str!("../migrations/0022_lot_counter.sql");
 
+/// Migration 23 (plan 76 points 5 and 10): the link of a khata or a loaned person, the person type, and
+/// the 0605 account of each partner; the controls and accounts come from [`linked_money_hook`].
+pub const LINKED_MONEY_SQL: &str = include_str!("../migrations/0023_linked_money.sql");
+
+/// Migration 24 (plan 77, robustness findings 2 and 3): three covering indexes, `partner_share_rows`
+/// by kind and day, `analytics_facts` by day with its commission sums, and `analytics_facts` by day
+/// with its dimensions and sums for the sale views of analytics, so ten years read in seconds.
+/// Indexes only: no table, column, row, amount, id or chain hash changes.
+pub const COMMISSION_SPEED_SQL: &str = include_str!("../migrations/0024_commission_speed.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -182,6 +192,8 @@ pub fn migrations() -> Migrations<'static> {
         M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook),
         M::up(PAID_ON_THE_SPOT_SQL),
         M::up(LOT_COUNTER_SQL),
+        M::up_with_hook(LINKED_MONEY_SQL, linked_money_hook),
+        M::up(COMMISSION_SPEED_SQL),
     ])
 }
 
@@ -284,6 +296,14 @@ pub fn trips_hook(tx: &Transaction) -> Result<(), HookError> {
     widen_checks(tx)?;
     crate::seed::trip_accounts(tx)?;
     crate::seed::partner_venture_accounts(tx)?;
+    Ok(())
+}
+
+/// After the SQL of migration 23: the controls 0307 and 0605, the system account 03070001 and the 0605
+/// account of every partner that exists. Public so the tests can build the file as it was at version 22.
+pub fn linked_money_hook(tx: &Transaction) -> Result<(), HookError> {
+    crate::seed::linked_accounts(tx)?;
+    crate::seed::partner_linked_accounts(tx)?;
     Ok(())
 }
 

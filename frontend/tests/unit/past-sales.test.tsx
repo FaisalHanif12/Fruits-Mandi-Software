@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as appApi from '../../src/app/api';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
+import { isoToDisplayDate } from '../../src/shared/format';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { fakePlan16 } from '../helpers/bikri-plan16';
@@ -126,7 +127,7 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
   /** The grid of the بکری of an open day. */
   const dayGrid = (day: string) =>
     within(present(document.querySelector<HTMLElement>(`[data-day="${day}"]`))).getByRole('group', {
-      name: named(message(language, 'bikri-past-label')),
+      name: named(message(language, 'bikri-past-day-label', { date: isoToDisplayDate(day) })),
     });
   /** What a day of the window says about itself, closed or open. */
   const heading = (day: string) =>

@@ -17,6 +17,7 @@ use mandi_domain::core::accounts::{BalanceSide, RecordRef};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::PageInput;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{
     AdvancesReport, AdvancesReportInput, AdvancesReportRow, CollectionBuyer, CollectionGroup,
@@ -101,13 +102,37 @@ fn party_for_read(
 /// # Errors
 /// `ERR_NOT_FOUND`, `ERR_NOT_A_BUYER` on `account_id`.
 pub fn open_bills(ctx: &Context, input: &OpenBillsInput) -> Result<OpenBills, ServiceError> {
+    open_bills_page(ctx, input, PageInput::default())
+}
+
+/// Where a page of open bills or payable postings starts and how many it holds: at most
+/// `MAX_OPEN_ROWS`, which is also what 0 gives (plan 76 point 8).
+fn open_page(page: PageInput) -> (usize, usize) {
+    let limit = match usize::try_from(page.limit) {
+        Ok(0) | Err(_) => MAX_OPEN_ROWS,
+        Ok(n) => n.min(MAX_OPEN_ROWS),
+    };
+    (usize::try_from(page.offset).unwrap_or(usize::MAX), limit)
+}
+
+/// One page of a buyer's open bills, oldest first (PRD FR-7.58, plan 76 point 8). The count, the
+/// open total and the age of the oldest bill are of all his bills, whatever the page.
+///
+/// # Errors
+/// As [`open_bills`].
+pub fn open_bills_page(
+    ctx: &Context,
+    input: &OpenBillsInput,
+    page: PageInput,
+) -> Result<OpenBills, ServiceError> {
+    let (offset, limit) = open_page(page);
     let (_, today) = day::window(ctx)?;
     ctx.db.read(|conn| {
         let party = party_for_read(conn, input.account_id, "account_id", true)?;
         let key = None;
         let mut bills = Vec::new();
         // The oldest bills only (PRD FR-7.58); the count and the open total are of all of them.
-        let found = repo::open_bill_rows_fast(conn, party.record.id, key, MAX_OPEN_ROWS)?;
+        let found = repo::open_bill_rows_fast(conn, party.record.id, key, offset, limit)?;
         let open_total = paisa(found.open_paisa)?;
         let total_count = count_of(found.total_count)?;
         for row in found.rows {
@@ -134,9 +159,18 @@ pub fn open_bills(ctx: &Context, input: &OpenBillsInput) -> Result<OpenBills, Se
             party.record.id,
             key,
         )?)?;
+        let oldest_days = match found.oldest_entry_date.as_deref() {
+            Some(text) => {
+                let day = BusinessDate::parse_iso(text)
+                    .ok_or_else(|| ServiceError::Data(format!("entry date {text}")))?;
+                Some(today.days_after(day))
+            }
+            None => None,
+        };
+        let shown_to = count_of(offset.saturating_add(bills.len()))?;
         Ok(OpenBills {
-            oldest_days: bills.first().map(|b| b.days),
-            truncated: total_count > count_of(bills.len())?,
+            oldest_days,
+            truncated: total_count > shown_to,
             bills,
             total_count,
             open_paisa: open_total,
@@ -159,12 +193,27 @@ pub fn open_payables(
     ctx: &Context,
     input: &OpenPayablesInput,
 ) -> Result<OpenPayables, ServiceError> {
+    open_payables_page(ctx, input, PageInput::default())
+}
+
+/// One page of what is payable to a seller, oldest first (PRD FR-7.59, plan 76 point 8). The
+/// count and the totals are of all his postings, whatever the page. With `include_settled` and no
+/// `limit` it gives all of them, as before.
+///
+/// # Errors
+/// As [`open_payables`].
+pub fn open_payables_page(
+    ctx: &Context,
+    input: &OpenPayablesInput,
+    page: PageInput,
+) -> Result<OpenPayables, ServiceError> {
     let (_, today) = day::window(ctx)?;
     ctx.db.read(|conn| {
         let party = party_for_read(conn, input.seller_id, "seller_id", false)?;
         let key = None;
         if !input.include_settled {
-            return open_payables_fast(conn, today, party);
+            let (offset, limit) = open_page(page);
+            return open_payables_fast(conn, today, party, offset, limit);
         }
         let live = matching_repo::live_lines(conn, party.record.id)?;
         // The lines of this seller key, with the advance rows as they are stored.
@@ -216,11 +265,19 @@ pub fn open_payables(
                 days: today.days_after(day),
             });
         }
-        // The history of a seller was asked for: all of it, not capped.
+        // The history of a seller was asked for: all of it unless a page was asked for.
+        let total_count = count_of(postings.len())?;
+        let offset = usize::try_from(page.offset).unwrap_or(usize::MAX);
+        let limit = match page.limit {
+            0 => usize::MAX,
+            n => usize::try_from(n).unwrap_or(usize::MAX),
+        };
+        let postings: Vec<PayablePosting> = postings.into_iter().skip(offset).take(limit).collect();
+        let shown_to = count_of(offset.saturating_add(postings.len()))?;
         Ok(OpenPayables {
             account: party.record.clone(),
-            total_count: count_of(postings.len())?,
-            truncated: false,
+            total_count,
+            truncated: total_count > shown_to,
             postings,
             open_paisa: work.open,
             advances_open_paisa: work.advances_open,
@@ -261,12 +318,14 @@ pub(super) fn seller_totals(
 /// The open payables without reading the whole history (money agent review of plan 15): the
 /// totals come from sums, and the open postings are the newest credits, found by walking back
 /// from the newest until they add up to the payable. Gives the postings that [`payables::work`]
-/// gives, for the ones with something to pay, but only the OLDEST `MAX_OPEN_ROWS` of them are read
-/// with their details; the count and the open total are of all of them.
+/// gives, for the ones with something to pay, but only one page of them (from the `offset`-th oldest,
+/// at most `limit`) is read with its details; the count and the open total are of all of them.
 fn open_payables_fast(
     conn: &Connection,
     today: BusinessDate,
     party: Party,
+    offset: usize,
+    limit: usize,
 ) -> Result<OpenPayables, ServiceError> {
     let key = None;
     let totals = seller_totals(conn, party.record.id, key, Paisa::ZERO)?;
@@ -297,7 +356,7 @@ fn open_payables_fast(
         let found = walk.finish();
         total_count = found.len();
         // The details (where each came from) are read for the kept postings only.
-        for posting in found.into_iter().take(MAX_OPEN_ROWS) {
+        for posting in found.into_iter().skip(offset).take(limit) {
             let row = repo::credit_row(conn, posting.line_id)?;
             let day = BusinessDate::parse_iso(&row.entry_date)
                 .ok_or_else(|| ServiceError::Data(format!("entry date {}", row.entry_date)))?;
@@ -314,7 +373,7 @@ fn open_payables_fast(
         }
     }
     Ok(OpenPayables {
-        truncated: total_count > postings.len(),
+        truncated: total_count > offset.saturating_add(postings.len()),
         total_count: count_of(total_count)?,
         postings,
         open_paisa: totals.open,

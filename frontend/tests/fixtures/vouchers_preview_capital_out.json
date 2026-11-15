@@ -1,6 +1,6 @@
 {
   "account": {
-    "id": 25,
+    "id": 27,
     "code": "06020002",
     "name_ur": "سرمایہ - ب",
     "name_en": "Capital - Partner B"
@@ -29,6 +29,7 @@
     "lowers_cash": true,
     "needs_confirm": false
   },
+  "linked_parts": [],
   "errors": [],
   "warnings": [
     {

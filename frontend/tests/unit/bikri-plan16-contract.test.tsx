@@ -41,6 +41,7 @@ import {
 import { blankLine } from '../helpers/bikri-data';
 import {
   cellOf,
+  focusedIn,
   lineDetails,
   lotsGrid,
   named,
@@ -231,45 +232,68 @@ describe('goods left against the backend files', () => {
   });
 });
 
-describe('a later sale against the backend files (E2E-16b)', () => {
+describe('a later sale against the backend files (E2E-16b), now on the sale book as a carried lot', () => {
+  // The lines and the totals of the later sale are the backend's own files; the mixed commands wrap the
+  // same shapes (plan 76 point 1). The backend's own mixed files take their place when it has them.
   it('sends the line of the backend file, shows its numbers, and saves what the file saves', async () => {
     vi.mocked(bikriApi.bikriStockList).mockResolvedValue(STOCK_LIST);
     const finished = LATER_PREVIEW.lots[0]?.lines[0];
     if (finished === undefined) throw new Error('the file has no line');
     // The backend matches each line to the key it was sent; the screen's keys are its own.
-    vi.mocked(bikriApi.bikriLaterSalePreview).mockImplementation((_lot, _date, sales) => {
+    vi.mocked(bikriApi.bikriMixedPreview).mockImplementation((input) => {
+      const sales = input.carried[0]?.sales ?? [];
       const first = sales[0];
       const typed = first?.buyer_account_id != null && first.seller_rate !== '';
       const lot = LATER_PREVIEW.lots[0];
       return Promise.resolve({
-        ...LATER_PREVIEW,
-        lots:
-          lot === undefined
-            ? []
-            : [
-                {
-                  ...lot,
-                  lines: sales.map((sale, index) =>
-                    typed && index === 0
-                      ? { ...finished, key: sale.key }
-                      : blankLine(sale.key, index + 1, 5),
-                  ),
-                },
-              ],
+        preview: {
+          ...LATER_PREVIEW,
+          lots:
+            lot === undefined
+              ? []
+              : [
+                  {
+                    ...lot,
+                    lines: sales.map((sale, index) =>
+                      typed && index === 0
+                        ? { ...finished, key: sale.key }
+                        : blankLine(sale.key, index + 1, 5),
+                    ),
+                  },
+                ],
+        },
+        parts: [],
       });
     });
-    vi.mocked(bikriApi.bikriLaterSaleSave).mockResolvedValue(LATER_SAVE);
+    vi.mocked(bikriApi.bikriMixedSave).mockResolvedValue({
+      date: '2026-10-11',
+      new_bikri_id: null,
+      new_bikri_number: null,
+      carried: [
+        {
+          lot_id: LATER_SAVE.lot_id,
+          old_bikri_id: LATER_SAVE.bikri_id,
+          old_number: LATER_SAVE.number,
+          entry_id: LATER_SAVE.entry_id,
+        },
+      ],
+      entry_ids: [LATER_SAVE.entry_id],
+      // No new بکری: the old بکری of the carried lot, as the backend lists them for the print.
+      print_bikri_ids: [LATER_SAVE.bikri_id],
+      preview: LATER_SAVE.preview,
+    });
     await renderApp(`/bikri/later?lot=${String(LATER_PREVIEW_REQUEST.lot_id)}`);
     const user = userEvent.setup();
-    await screen.findByRole('heading', {
-      level: 1,
-      name: named(message(language, 'bikri-later-title', { number: 1 })),
+    await waitFor(() => {
+      expect(textOf(lotsGrid(language), 0, 'seller')).not.toBe('');
     });
     await waitFor(() => {
       expect(textOf(salesGrid(language), 0, 'qty')).toBe('5');
     });
-    // Arshad (short code 1) takes the 5 that are left, at 560.
-    await user.click(cellOf(salesGrid(language), 0, 'buyer'));
+    // Arshad (short code 1) takes the 5 that are left, at 560. The cursor is on the buyer already.
+    await waitFor(() => {
+      expect(focusedIn(salesGrid(language))).toBe('0:buyer');
+    });
     await user.keyboard('1');
     await screen.findAllByRole('option');
     await user.keyboard('{Enter}{Enter}560{Enter}');
@@ -278,20 +302,23 @@ describe('a later sale against the backend files (E2E-16b)', () => {
     });
     // The seller amount is in the details of the line (the grid has it from 1920 px only).
     expect(visible((await lineDetails(language, 1)).textContent)).toContain('2,800');
-    // The request has the lot, the day and the line of the backend's own file.
-    const sent = vi.mocked(bikriApi.bikriLaterSalePreview).mock.calls.at(-1);
-    expect(sent?.[0]).toBe(LATER_PREVIEW_REQUEST.lot_id);
-    expect(sent?.[1]).toBe(LATER_PREVIEW_REQUEST.date);
-    expect(withoutKeys(sent?.[2][0])).toEqual(withoutKeys(LATER_PREVIEW_REQUEST.sales[0]));
+    // The request has the lot and the line of the backend's own file.
+    const sent = vi.mocked(bikriApi.bikriMixedPreview).mock.calls.at(-1)?.[0];
+    expect(sent?.carried[0]?.lot_id).toBe(LATER_PREVIEW_REQUEST.lot_id);
+    expect(sent?.new_lots).toEqual([]);
+    expect(withoutKeys(sent?.carried[0]?.sales[0])).toEqual(
+      withoutKeys(LATER_PREVIEW_REQUEST.sales[0]),
+    );
     press('F10');
     await waitFor(() => {
-      expect(bikriApi.bikriLaterSaleSave).toHaveBeenCalled();
+      expect(bikriApi.bikriMixedSave).toHaveBeenCalled();
     });
-    const saved = vi.mocked(bikriApi.bikriLaterSaleSave).mock.calls[0];
-    expect(saved?.[0]).toBe(LATER_SAVE_REQUEST.lot_id);
-    expect(saved?.[1]).toBe(LATER_SAVE_REQUEST.date);
-    expect(saved?.[3]).toBe(LATER_SAVE_REQUEST.confirm_cash_below_zero);
-    expect(withoutKeys(saved?.[2][0])).toEqual(withoutKeys(LATER_SAVE_REQUEST.sales[0]));
+    const saved = vi.mocked(bikriApi.bikriMixedSave).mock.calls[0];
+    expect(saved?.[0].carried[0]?.lot_id).toBe(LATER_SAVE_REQUEST.lot_id);
+    expect(saved?.[1]).toBe(LATER_SAVE_REQUEST.confirm_cash_below_zero);
+    expect(withoutKeys(saved?.[0].carried[0]?.sales[0])).toEqual(
+      withoutKeys(LATER_SAVE_REQUEST.sales[0]),
+    );
   });
 });
 

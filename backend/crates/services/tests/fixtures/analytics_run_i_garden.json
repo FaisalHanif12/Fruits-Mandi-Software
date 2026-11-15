@@ -199,7 +199,7 @@
       ],
       "key": {
         "item_id": null,
-        "seller_id": 31,
+        "seller_id": 35,
         "buyer_id": null,
         "person_key": null,
         "from": null,
@@ -286,7 +286,7 @@
           },
           "key": {
             "item_id": null,
-            "seller_id": 31,
+            "seller_id": 35,
             "buyer_id": null,
             "person_key": null,
             "from": null,
@@ -301,7 +301,8 @@
               "paisa": 1140000
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": null
         }
       ],
       "others_count": 0,

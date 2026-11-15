@@ -2385,7 +2385,9 @@ fn local_log(
                 AnswerSource::Screen { route, .. } => {
                     entries.push(("screen", json!({"route": route})));
                 }
-                AnswerSource::PartyCard { .. } | AnswerSource::Analytics { .. } => {}
+                AnswerSource::PartyCard { .. }
+                | AnswerSource::Analytics { .. }
+                | AnswerSource::Commission { .. } => {}
             }
         }
     }

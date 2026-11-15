@@ -10,7 +10,7 @@ mod entry;
 pub use entry::{
     AdvanceEffect, AdvancesReport, AdvancesReportInput, AdvancesReportRow, BillEffect,
     CollectionBuyer, CollectionGroup, CollectionGroupTotal, CollectionList, CollectionListInput,
-    LineSource, MAX_OPEN_ROWS, OpenBill, OpenBills, OpenBillsInput, OpenPayables,
+    LineSource, LinkedPart, MAX_OPEN_ROWS, OpenBill, OpenBills, OpenBillsInput, OpenPayables,
     OpenPayablesInput, PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult, ReceiptsInput,
     ReceiptsSaved, VoucherCancelInput, VoucherCancelled, VoucherEditInput, VoucherEditable,
     VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview, VoucherPreviewInput,
@@ -450,9 +450,15 @@ pub struct LastAdvance {
 /// A seller's advances for the card in the پیشگی screen (PRD FR-7.60). Read only.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct AdvancesInfo {
-    /// The open advances, oldest first.
+    /// One page of the open advances, oldest first (plan 76 point 8: the page is chosen with
+    /// `offset` and `limit`; the first page holds the oldest).
     pub open: Vec<OpenAdvance>,
-    /// Their total: given less adjusted.
+    /// How many open advances he has in all.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// True if there are more open advances after this page.
+    pub truncated: bool,
+    /// Their total over all of them, not only the page: given less adjusted.
     #[ts(type = "Paisa")]
     pub open_paisa: Paisa,
     /// The last پیشگی voucher, or null if there is none.

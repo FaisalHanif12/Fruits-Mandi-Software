@@ -1,51 +1,15 @@
-// The last backup and the books check as dashboard tiles (PRD 9.1, NFR-BAK-10, NFR-OBS-5). Each asks
-// the backend for itself, so one that cannot be read says so in words on its own tile and the rest of
-// the dashboard is unaffected. Both open the screen where the matter is handled. The words and the
-// state of the backup are the backup module's (`statusBarWords`); the books check is the result of
-// the last run, with its time. Colour always has a word with it (NFR-USE-12).
+// The books check as a dashboard tile (PRD 9.1, NFR-OBS-5). It asks the backend for itself, so when it cannot
+// be read it says so in words on its own tile and the rest of the dashboard is unaffected. It opens the
+// screen where the matter is handled. It is the result of the last run, with its time. Colour always has a
+// word with it (NFR-USE-12). The last backup is no longer a tile (plan 76 point 10): its state is in the
+// status bar and the attention list (NFR-BAK-10).
 
 import { Localized } from '@fluent/react';
-import { CloudUpload, ShieldCheck } from 'lucide-react';
-import { statusBarWords, useBackupStatus } from '../../backup';
+import { ShieldCheck } from 'lucide-react';
 import { utcToLocalDisplay } from '../../../shared/format';
-import { Code, Num, Tile, type TileTone } from '../../../shared/ui';
+import { Num, Tile, type TileTone } from '../../../shared/ui';
 import { useLastHealth } from '../../settings';
 import { useOpenDestination } from '../destinations';
-
-export function BackupTile() {
-  const open = useOpenDestination();
-  const status = useBackupStatus();
-  const words = status.data === undefined ? null : statusBarWords(status.data);
-  const tone: TileTone =
-    words === null
-      ? 'neutral'
-      : words.tone === 'good'
-        ? 'good'
-        : words.tone === 'bad'
-          ? 'bad'
-          : 'neutral';
-  return (
-    <Tile
-      words
-      tone={tone}
-      label={<Localized id="dashboard-tile-backup" />}
-      icon={CloudUpload}
-      onOpen={() => {
-        open({ kind: 'backup' });
-      }}
-    >
-      {status.isPending ? (
-        <Localized id="dashboard-tile-checking" />
-      ) : words === null ? (
-        <Localized id="dashboard-tile-unknown" />
-      ) : (
-        <Localized id={words.messageId} vars={words.vars} elems={{ num: <Code /> }}>
-          <span />
-        </Localized>
-      )}
-    </Tile>
-  );
-}
 
 export function HealthTile() {
   const open = useOpenDestination();

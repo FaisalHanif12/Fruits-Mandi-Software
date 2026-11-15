@@ -964,7 +964,7 @@
             {
               "type": "party",
               "party": {
-                "account_id": 21,
+                "account_id": 22,
                 "code": "0021",
                 "short_code": "1",
                 "name_ur": "ارشد ملتانی",
@@ -994,7 +994,7 @@
           ],
           "source": {
             "kind": "account",
-            "id": 21
+            "id": 22
           },
           "kind": "normal"
         },
@@ -1007,7 +1007,7 @@
             {
               "type": "party",
               "party": {
-                "account_id": 20,
+                "account_id": 21,
                 "code": "0020",
                 "short_code": "0",
                 "name_ur": "اکرم ٹول ٹیکس",
@@ -1037,7 +1037,7 @@
           ],
           "source": {
             "kind": "account",
-            "id": 20
+            "id": 21
           },
           "kind": "normal"
         }
@@ -1121,7 +1121,7 @@
             {
               "type": "party",
               "party": {
-                "account_id": 31,
+                "account_id": 35,
                 "code": "0012",
                 "short_code": "2",
                 "name_ur": "حاجی نذیر",
@@ -1157,7 +1157,7 @@
           ],
           "source": {
             "kind": "account",
-            "id": 31
+            "id": 35
           },
           "kind": "normal"
         },
@@ -1170,7 +1170,7 @@
             {
               "type": "party",
               "party": {
-                "account_id": 18,
+                "account_id": 19,
                 "code": "0010",
                 "short_code": "0",
                 "name_ur": "رحیم",
@@ -1206,7 +1206,7 @@
           ],
           "source": {
             "kind": "account",
-            "id": 18
+            "id": 19
           },
           "kind": "normal"
         }

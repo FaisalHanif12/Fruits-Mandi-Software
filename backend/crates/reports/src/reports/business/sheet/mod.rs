@@ -48,7 +48,8 @@ use mandi_core::text::UrduCollator;
 use mandi_db::rusqlite::{Connection, params};
 use std::collections::{HashMap, HashSet};
 
-mod activity;
+pub(crate) mod activity;
+mod collection_sheet;
 mod day_tables;
 mod figures;
 mod figures_load;
@@ -121,6 +122,11 @@ pub(crate) fn run(
     }
 }
 
+pub use collection_sheet::{
+    CollectionLine, CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput,
+    CollectionSheetRow, CollectionSheetTotals, collection_sheet, collection_sheet_print_data,
+    collection_sheet_spec,
+};
 pub(super) use day_tables::{DaySheet, load_days};
 pub use party_statement::{
     StatementBalance, StatementDay, StatementEntry, StatementItem, StatementKind,

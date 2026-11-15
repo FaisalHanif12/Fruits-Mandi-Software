@@ -46,7 +46,14 @@ describe.each(LANGUAGES)('the day close screen with the real answer (%s)', (lang
   });
 
   async function open(answer = real.DAY_CLOSE_PREVIEW) {
-    fakeDay({ status: { today: '2026-10-10', closed_up_to: '2026-10-09', today_open: true } });
+    fakeDay({
+      status: {
+        today: '2026-10-10',
+        closed_up_to: '2026-10-09',
+        today_open: true,
+        first_entry_date: null,
+      },
+    });
     vi.mocked(dayApi.dayClosePreview).mockResolvedValue(answer);
     const app = await renderApp('/day');
     await screen.findByRole('heading', { level: 1, name: message(language, 'day-title') });

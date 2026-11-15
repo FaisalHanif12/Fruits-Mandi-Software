@@ -160,12 +160,14 @@ pub(super) fn stored_line_ids(
         .iter()
         .enumerate()
         .all(|(i, l)| usize::try_from(l.line_no).is_ok_and(|n| n == i.saturating_add(1)));
-    if ids.len() != expected || !in_order {
+    // A linked khata adds its mirror lines after the lines that were built (plan 76): the first
+    // `expected` lines are the built ones, in the same order.
+    if ids.len() < expected || !in_order {
         return Err(data(
             "the stored lines of the journal entry are not as built",
         ));
     }
-    Ok(ids)
+    Ok(ids.into_iter().take(expected).collect())
 }
 
 /// Everything about the posting that the rows after it need.

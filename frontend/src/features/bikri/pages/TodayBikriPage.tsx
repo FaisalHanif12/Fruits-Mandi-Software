@@ -431,9 +431,10 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
             filter={filter}
             columns={columns}
             onOpen={openRow}
-            focusRow={
-              one.date === returnedDay && address.row !== undefined ? String(address.row) : null
-            }
+            // Every open day is told the row the Owner came back to; only the day that holds it gives it focus
+            // (row ids are unique). The day of that بکری is not needed for this, so a day read late, or one
+            // that differs from the list's, never leaves the keyboard without a row (NFR-USE-7).
+            focusRow={address.row === undefined ? null : String(address.row)}
             back={wayBack}
           />
         )}

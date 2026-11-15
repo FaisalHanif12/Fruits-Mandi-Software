@@ -8,15 +8,33 @@ import { Localized } from '@fluent/react';
 import { Notebook, Wallet } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { Card, EmptyState, Fact } from '../../../shared/ui';
+import { useListWindow } from '../../../shared/hooks';
+import { Card, EmptyState, Fact, ListWindowBar } from '../../../shared/ui';
+import { useDayStatus } from '../../../app/use-day-status';
 import { useKhataStatement } from '../hooks';
 import { KHATA_COLUMNS } from '../list-columns';
 import { useOpenVoucher } from '../../../shared/edit';
+import { KhataLinkCard } from './KhataLinkCard';
 import { SignedNum } from './SignedNum';
 
 export function KhataListSection({ khataId }: { khataId: number | null }) {
   const open = useOpenVoucher();
-  const statement = useKhataStatement(khataId, true);
+  const dayStatus = useDayStatus();
+  const today = dayStatus.data?.today;
+  // The khata's entries show one month at a time, the latest first (PRD FR-19.11, plan 76 point 8).
+  const listWindow = useListWindow({
+    kind: 'month',
+    source: { kind: 'khata', account_id: khataId },
+    today,
+  });
+  // Without the day (its read failed) the list asks for the whole history, as before the window.
+  const windowed = !dayStatus.isError;
+  const statement = useKhataStatement(
+    khataId,
+    true,
+    windowed ? { from: listWindow.range.from, to: listWindow.range.to } : { from: null, to: null },
+    listWindow.ready || !windowed,
+  );
   const first = statement.data?.pages[0];
   const rows = statement.data?.pages.flatMap((page) => page.rows);
   return (
@@ -29,6 +47,7 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
         />
       ) : (
         <>
+          {first === undefined ? null : <KhataLinkCard khata={first.khata} />}
           {first === undefined ? null : (
             <dl className="grid grid-cols-2 gap-3">
               <Fact stat label={<Localized id="cashbook-khata-opening" />}>
@@ -61,6 +80,7 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
               void statement.refetch();
             }}
             pager={statement.pager}
+            onPageKey={listWindow.onPageKey}
             sort={{ value: statement.sort, onChange: statement.setSort }}
             months={
               first === undefined || first.months.length === 0
@@ -75,6 +95,7 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
               />
             }
           />
+          {windowed ? <ListWindowBar window={listWindow} /> : null}
         </>
       )}
     </Card>

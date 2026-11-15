@@ -11,10 +11,11 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AuditPage } from '../../../bindings/AuditPage';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
-import { useDebouncedValue } from '../../../shared/hooks';
+import { useDebouncedValue, useListWindow } from '../../../shared/hooks';
 import { useEscape } from '../../../shared/keyboard';
 import { useScreenMemory } from '../../../shared/screen-state';
-import { InfoHint, LoadingState, PartnerLockedBox } from '../../../shared/ui';
+import { InfoHint, ListWindowBar, LoadingState, PartnerLockedBox } from '../../../shared/ui';
+import { useDayStatus } from '../../../app/use-day-status';
 import { AuditDetail } from '../components/AuditDetail';
 import { AuditFilterBar } from '../components/AuditFilterBar';
 import { AuditResults } from '../components/AuditResults';
@@ -68,8 +69,18 @@ function AuditLogBody() {
   const focusRowId = useAuditStore((now) => now.focusRowId);
   const { change, clear, open, setFocusRowId } = useAuditStore.getState();
   const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
-  const wire = useMemo(() => filtersToWire(settled), [settled]);
-  const query = useAuditPages(wire, true);
+  // The log shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8), unless the Owner types
+  // dates of his own in the boxes: those win, and the bar is not shown.
+  const dayStatus = useDayStatus();
+  const today = dayStatus.data?.today;
+  const listWindow = useListWindow({ kind: 'days', source: { kind: 'audit' }, today });
+  // Without the day (its read failed) the log asks for every entry, as before the window.
+  const custom = dayStatus.isError || settled.from.trim() !== '' || settled.to.trim() !== '';
+  const wire = useMemo(() => {
+    const typed = filtersToWire(settled);
+    return custom ? typed : { ...typed, from: listWindow.range.from, to: listWindow.range.to };
+  }, [settled, custom, listWindow.range.from, listWindow.range.to]);
+  const query = useAuditPages(wire, true, custom || listWindow.ready);
   const options = useAuditOptions();
 
   // The page last shown, kept while a half-typed filter is refused. They are state set while
@@ -125,6 +136,7 @@ function AuditLogBody() {
             focusRowId={focusRowId}
             onFocusRow={setFocusRowId}
           />
+          {custom ? null : <ListWindowBar window={listWindow} />}
         </>
       ) : (
         <AuditDetail

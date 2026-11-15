@@ -8,16 +8,35 @@ import { HandCoins } from 'lucide-react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { Balance, Card, Checkbox, EmptyState } from '../../../shared/ui';
+import { useListWindow } from '../../../shared/hooks';
+import { isPositivePaisa } from '../../../shared/format';
+import { Balance, Card, Checkbox, EmptyState, ListWindowBar } from '../../../shared/ui';
+import { useDayStatus } from '../../../app/use-day-status';
 import { useLentList } from '../hooks';
 import { useOpenVoucher } from '../../../shared/edit';
 import { LENT_COLUMNS } from '../list-columns';
+import { PersonDetailsCard } from './PersonDetailsCard';
 
 export function LentListSection({ personId }: { personId: number | null }) {
   const open = useOpenVoucher();
   // A loan that is fully returned is left out until the tick is on (plan 38 G6).
   const [showReturned, setShowReturned] = useState(false);
-  const lent = useLentList(personId, true, showReturned);
+  const dayStatus = useDayStatus();
+  // The loans show one month at a time, the latest first (PRD FR-19.11, plan 76 point 8). Without the day (its
+  // read failed) the list asks for every loan, as before the window.
+  const listWindow = useListWindow({
+    kind: 'month',
+    source: { kind: 'lent' },
+    today: dayStatus.data?.today,
+  });
+  const windowed = !dayStatus.isError;
+  const lent = useLentList(
+    personId,
+    true,
+    showReturned,
+    windowed ? { from: listWindow.range.from, to: listWindow.range.to } : { from: null, to: null },
+    listWindow.ready || !windowed,
+  );
   const first = lent.data?.pages[0];
   const rows = lent.data?.pages.flatMap((page) => page.rows);
   return (
@@ -30,6 +49,12 @@ export function LentListSection({ personId }: { personId: number | null }) {
         />
       ) : (
         <>
+          {first === undefined ? null : (
+            <PersonDetailsCard
+              person={first.person}
+              owes={isPositivePaisa(first.balance.amount_paisa)}
+            />
+          )}
           {first === undefined ? null : (
             <p className="flex items-baseline gap-2 type-body">
               <Localized id="cashbook-lent-balance" />
@@ -56,6 +81,7 @@ export function LentListSection({ personId }: { personId: number | null }) {
               void lent.refetch();
             }}
             pager={lent.pager}
+            onPageKey={listWindow.onPageKey}
             sort={{ value: lent.sort, onChange: lent.setSort }}
             months={
               first === undefined || first.months.length === 0
@@ -83,6 +109,7 @@ export function LentListSection({ personId }: { personId: number | null }) {
                   })
             }
           />
+          {windowed ? <ListWindowBar window={listWindow} /> : null}
         </>
       )}
     </Card>

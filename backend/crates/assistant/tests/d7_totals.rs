@@ -317,11 +317,14 @@ fn a_ledger_question_is_the_balance_with_the_newest_rows_and_the_urdu_may_is_a_m
         );
     }
     // Before: "مئی" was no month, the question read no period and the model was given the books of all
-    // time. D253: May, the buyer's side (one named buyer).
+    // time. D253: May, the buyer's side (one named buyer). A buyer's commission is three lines, what his
+    // commission page shows (Umar, 14-11-2026, plan 77): his commission, his لاگا and the two together.
+    let may_commission = oracle(&f, "d7.sale.akram_toll_tax_may.comm_buyer");
+    let may_laga = oracle(&f, "d7.sale.akram_toll_tax_may.laga");
     instant(
         &h,
         "اکرم ٹول ٹیکس کا مئی کا کمیشن",
-        &[oracle(&f, "d7.sale.akram_toll_tax_may.comm_buyer")],
+        &[may_commission, may_laga, may_commission + may_laga],
     );
     h.scan_requests();
 }

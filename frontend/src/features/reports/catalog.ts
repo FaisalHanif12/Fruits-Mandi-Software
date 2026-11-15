@@ -123,9 +123,10 @@ export function filterLabelIdsOf(entry: ReportCatalogEntry): string[] {
 }
 
 /**
- * The print only some reports have, besides the preview every report has (PRD FR-19.3, FR-12.12, R5, R35): the
- * seller's bill from the sale book, one slip for each buyer from the credit details, and one party's slip
- * or the table of every party from the day sheet. The message of the special print, or null.
+ * The print only some reports have, besides the preview every report has (PRD FR-19.3, FR-12.12, FR-19.15, R5,
+ * R35): the seller's bill from the sale book, the buyer parchi (one slip for each buyer, several to a page) from
+ * the اگراہی sheet, and one party's slip or the table of every party from the day sheet. The message of the
+ * special print, or null.
  */
 export function specialPrintIdOf(entry: ReportCatalogEntry): string | null {
   switch (entry.id) {

@@ -592,7 +592,7 @@ describe.each(LANGUAGES)(
         expect(backend.saves).toHaveLength(1);
       });
       const sent = backend.saves[0]?.draft.lots[0];
-      expect(sent?.seller_account_id).toBe(31);
+      expect(sent?.seller_account_id).toBe(35);
       expect(sent?.arrival_id).toBe(1);
       expect(sent?.purchase_id ?? null).toBeNull();
       expect(sent?.qty_received).toBe('100');
@@ -642,7 +642,7 @@ describe.each(LANGUAGES)(
 );
 
 describe.each(LANGUAGES)(
-  'a saved بکری, an edit and a later sale get no trip lots (%s)',
+  'a saved بکری and an edit get no trip lots, a carried lot does not stop them on a new one (%s)',
   (language) => {
     beforeEach(() => {
       resetClientState(language);
@@ -687,16 +687,28 @@ describe.each(LANGUAGES)(
       expect(bikriApi.bikriReadyGoods).not.toHaveBeenCalled();
     });
 
-    it('a later sale shows the lot it sells, and nothing is added', async () => {
+    it('a lot carried over from a later sale is on the new بکری first, and the trip goods of the day come after it', async () => {
       fakeBikri();
       fakePlan16();
+      // `fakeBikri` made its own account list: اپنا مال is put back among the accounts.
+      const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA, OWN_GOODS];
+      fakeAccounts(everyone);
+      fakeAccountSearch(everyone);
       await renderApp('/bikri/later?lot=40');
-      await heading('bikri-later-title', { number: 1 });
-      expect(pageText()).not.toContain(language === 'ur' ? OWN_GOODS.name_ur : OWN_GOODS.name_en);
-      expect(pageText()).not.toContain(
-        visible(message(language, 'bikri-ready-lots-note-hint', { key: 'Ctrl+Delete' })),
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'seller')).toBe(language === 'ur' ? 'رحیم' : 'Rahim');
+      });
+      // It is a new بکری, so the purchases of the day come in as lots by themselves, after the carried lot.
+      await waitFor(
+        () => {
+          expect(textOf(lotsGrid(language), 1, 'seller')).toBe(
+            language === 'ur' ? OWN_GOODS.name_ur : OWN_GOODS.name_en,
+          );
+        },
+        { timeout: 8_000 },
       );
-      expect(bikriApi.bikriReadyGoods).not.toHaveBeenCalled();
+      expect(rowsIn(lotsGrid(language))).toBe(2);
+      expect(bikriApi.bikriReadyGoods).toHaveBeenCalled();
     });
   },
 );

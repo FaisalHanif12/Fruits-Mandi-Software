@@ -54,6 +54,8 @@ const EMPTY_TILES = {
   gardens_balance_paisa: paisaForTest(0),
   lent_open_paisa: paisaForTest(0),
   lent_overdue_paisa: paisaForTest(0),
+  others_dues_paisa: paisaForTest(0),
+  others_people_count: 0,
   expenses_today_paisa: paisaForTest(0),
 } as const;
 

@@ -97,3 +97,27 @@ nothing (FR-18.8) except the user's list of saved views.
   totals row, so a number opens the lines behind it (date, document, partner, amount). Nothing else
   changed for them: the screen opens any figure that way. F lists its garden, trip and fruit columns
   before the leftover `other` column.
+
+## Plan 76 point 4: charts that print
+
+`analytics_print_data` now carries the same `charts` as `analytics_run` (whole filter, compare and grouping). The
+print draws them under the header (`print/AnalyticsPrintCharts.tsx`, through `ReportPrintDocument`'s `figures`):
+`printChartsOf` makes the plans in the print language and `chartToSvg` (ECharts server mode, patterns for black and
+white) makes an inline SVG, so no file and no network. Test: `analytics-print-charts.test.tsx`.
+
+## Plan 77: the buyer filter in view, and views L and M (PRD FR-18.1, FR-18.9, 18.2)
+
+- The buyer box sits beside the seller box, in view in every window (it no longer waits behind "More filters"), so
+  "what did this buyer buy of سیب" is one screen. Party and item combine in every view that takes both.
+- View L, buyer × item (گاہک × قسم مال), is the mirror of E: one row for each buyer (a چکتا buyer by name), one
+  column for each item, the buyer commission + لاگا in each, and `total_comm` last. It is windowed like D and E
+  (`WINDOWED` in `columns.ts`). It takes no side box.
+- View M, expenses (خرچہ), has two parts on one screen (`components/KharchBoard.tsx`, also drawn by the kharch page of the
+  dashboard, PRD FR-9.5): the shop's kharch (the expense heads against the periods, day, month or year, like D, with
+  `total` last and a trend chart by period, `byColumn` in `chart.ts`) and the partners' own kharch (one row for each
+  partner, `own`, with a total). Each part is one `analytics_run` of view M (`expense_part` shop or partner); it takes
+  the period, the grouping and the partner (for the partner part). A cell opens the posted voucher lines (a line opens
+  its voucher); the partner part is behind the partner code. Each part has its own print preview and Excel, so the
+  screen's own print, Excel and all-lines buttons are off for M.
+- The catalogue lists thirteen views, A to M; the tabs follow it. Tests: `analytics-views-plan77.test.tsx` (the
+  numbers of the plan are in `tests/helpers/analytics-plan77.ts`).

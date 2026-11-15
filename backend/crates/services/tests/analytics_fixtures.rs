@@ -18,8 +18,8 @@ mod support;
 
 use common::*;
 use mandi_reports::analytics::{
-    AnalyticsLinesInput, AnalyticsPrintInput, AnalyticsRunInput, AnalyticsViewsSaveInput, catalog,
-    lines, print_data, run, views_get, views_save,
+    AnalyticsLinesInput, AnalyticsPrintInput, AnalyticsRunInput, AnalyticsViewsSaveInput, lines,
+    print_data, run, screen_catalog, views_get, views_save,
 };
 use mandi_services::core::error::ErrorCode;
 use reports_world::*;
@@ -138,7 +138,8 @@ fn refusal_run(w: &support::World, name: &str, request: Value, code: ErrorCode) 
 #[test]
 fn fixtures_are_the_real_answers() {
     let w = full_day();
-    answer_only("catalog", &catalog());
+    // The command sends the catalogue of the screens, A to M (plan 77).
+    answer_only("catalog", &screen_catalog());
 
     let page = |view: &str, extra: Value| json!({ "view": view, "filters": filters(extra), "offset": 0, "limit": 0 });
     run_pair(&w, "run_a", page("A", json!({})));
@@ -266,8 +267,8 @@ fn fixtures_are_the_real_answers() {
     );
     refusal_run(
         &w,
-        "run_a_group_by_refused",
-        page("A", json!({ "group_by": "day" })),
+        "run_h_group_by_refused",
+        page("H", json!({ "group_by": "day" })),
         ErrorCode::ErrOutOfRange,
     );
     refusal_run(

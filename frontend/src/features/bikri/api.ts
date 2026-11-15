@@ -20,11 +20,13 @@ import type { EditOpenInput } from '../../bindings/EditOpenInput';
 import type { EditPreview } from '../../bindings/EditPreview';
 import type { EditPreviewInput } from '../../bindings/EditPreviewInput';
 import type { EditSaveInput } from '../../bindings/EditSaveInput';
-import type { LaterSaleInput } from '../../bindings/LaterSaleInput';
-import type { LaterSaleSaved } from '../../bindings/LaterSaleSaved';
-import type { LaterSaleSaveInput } from '../../bindings/LaterSaleSaveInput';
+import type { MixedSaleInput } from '../../bindings/MixedSaleInput';
+import type { MixedSalePreview } from '../../bindings/MixedSalePreview';
+import type { MixedSaleSaved } from '../../bindings/MixedSaleSaved';
+import type { MixedSaleSaveInput } from '../../bindings/MixedSaleSaveInput';
+import type { MixedUndoInput } from '../../bindings/MixedUndoInput';
+import type { MixedUndoResult } from '../../bindings/MixedUndoResult';
 import type { ReadyGoods } from '../../bindings/ReadyGoods';
-import type { SaleInput } from '../../bindings/SaleInput';
 import type { StockList } from '../../bindings/StockList';
 import type { StockListInput } from '../../bindings/StockListInput';
 import type { UndoInput } from '../../bindings/UndoInput';
@@ -83,6 +85,7 @@ export function bikriList(input: BikriListInput): Promise<BikriList> {
 
 /** Finds بکری by number, truck, seller, day or item (PRD FR-12.13). Newest first, at most 50. */
 export function bikriFind(input: BikriFindInput): Promise<BikriListRow[]> {
+  // Without an offset and a limit the backend sends the first page, 50 rows (plan 76 point 8).
   return callCommand<BikriListRow[]>('bikri_find', { input });
 }
 
@@ -107,32 +110,6 @@ export function bikriReadyGoods(date: string): Promise<ReadyGoods> {
 /** The lots with goods left, oldest first (PRD FR-12.14, FR-19.10). Read only. */
 export function bikriStockList(input: StockListInput): Promise<StockList> {
   return callCommand<StockList>('bikri_stock_list', { input });
-}
-
-/** Works out new sale lines of a lot dated `date`. Saves nothing (PRD FR-12.17, Code Standards B5). */
-export function bikriLaterSalePreview(
-  lotId: number,
-  date: string,
-  sales: readonly SaleInput[],
-): Promise<BikriPreview> {
-  const input: LaterSaleInput = { lot_id: lotId, date, sales: [...sales] };
-  return callCommand<BikriPreview>('bikri_later_sale_preview', { input });
-}
-
-/** Saves the later sale as its own posting. `confirmCashBelowZero` is always sent (PRD FR-6.7). */
-export function bikriLaterSaleSave(
-  lotId: number,
-  date: string,
-  sales: readonly SaleInput[],
-  confirmCashBelowZero: boolean,
-): Promise<LaterSaleSaved> {
-  const input: LaterSaleSaveInput = {
-    lot_id: lotId,
-    date,
-    sales: [...sales],
-    confirm_cash_below_zero: confirmCashBelowZero,
-  };
-  return callCommand<LaterSaleSaved>('bikri_later_sale_save', { input });
 }
 
 /** Loads one posting of a saved بکری as a draft to change (PRD FR-12.18). */
@@ -209,4 +186,26 @@ export function bikriWriteOff(lotId: number, qty: string, reason: string): Promi
 export function bikriWriteOffUndo(moveId: number, reason: string): Promise<WriteOffUndone> {
   const input: WriteOffUndoInput = { move_id: moveId, reason };
   return callCommand<WriteOffUndone>('bikri_write_off_undo', { input });
+}
+
+// Plan 76 point 1: lots carried over from earlier بکری and new lots on one screen, one save. Used only
+// when at least one carried lot is on the screen; every other screen keeps its own commands.
+
+/** Works out the carried lots and the new lots together. Saves nothing (Code Standards B5). */
+export function bikriMixedPreview(input: MixedSaleInput): Promise<MixedSalePreview> {
+  return callCommand<MixedSalePreview>('bikri_mixed_preview', { input });
+}
+
+/** Saves them in one transaction. `confirmCashBelowZero` is always sent, one answer for all (FR-6.7). */
+export function bikriMixedSave(
+  input: Omit<MixedSaleSaveInput, 'confirm_cash_below_zero'>,
+  confirmCashBelowZero: boolean,
+): Promise<MixedSaleSaved> {
+  const body: MixedSaleSaveInput = { ...input, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<MixedSaleSaved>('bikri_mixed_save', { input: body });
+}
+
+/** Takes back a mixed save just made and gives its values back as a draft (PRD FR-7.47). */
+export function bikriMixedUndo(input: MixedUndoInput): Promise<MixedUndoResult> {
+  return callCommand<MixedUndoResult>('bikri_mixed_undo', { input });
 }

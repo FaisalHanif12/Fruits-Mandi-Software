@@ -7,7 +7,9 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { uiErrorOf } from '../../../shared/api';
 import { draftsDiscard } from '../../../shared/drafts';
-import { bikriEditSave, bikriLaterSaleSave, bikriSave } from '../api';
+import type { BikriSaved } from '../../../bindings/BikriSaved';
+import type { MixedSaleSaved } from '../../../bindings/MixedSaleSaved';
+import { bikriEditSave, bikriMixedSave, bikriSave } from '../api';
 import { BIKRI_DRAFT_SCREEN } from '../draft-snapshot';
 import type { BikriDraft } from '../types';
 
@@ -61,21 +63,6 @@ export function useSaveBikri() {
   });
 }
 
-/** The save of a later sale of one lot (PRD FR-12.17). The new lines are the first lot's lines. */
-export function useSaveLaterSale(lotId: number) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ draft, confirmCashBelowZero }: SaveBikriInput) =>
-      bikriLaterSaleSave(
-        lotId,
-        draft.header.entry_date,
-        draft.lots[0]?.sales ?? [],
-        confirmCashBelowZero,
-      ),
-    onSuccess: () => readAgainAfterPosting(queryClient),
-  });
-}
-
 /**
  * The save of an edit of one posting (PRD FR-12.19). `reason` is read when the save is sent, so
  * the reason typed in the box that asks for it is the one that goes.
@@ -86,5 +73,59 @@ export function useSaveEdit(entryId: number, version: number, reason: () => stri
     mutationFn: ({ draft, confirmCashBelowZero }: SaveBikriInput) =>
       bikriEditSave(entryId, version, draft, reason(), confirmCashBelowZero),
     onSuccess: () => readAgainAfterPosting(queryClient),
+  });
+}
+
+/**
+ * What a mixed save gives back, in the shape of a plain save so the screen's messages, print and last-saved
+ * link work on it as they do for any بکری: the new بکری when the screen made one, else the old بکری of the
+ * first carried lot. `mixed` is what the backend said, which the undo and the day print use.
+ */
+export interface MixedSaved extends BikriSaved {
+  mixed: MixedSaleSaved;
+}
+
+/** Is this the answer of a mixed save? (A plain save has no `mixed`.) */
+export function isMixedSaved(saved: BikriSaved): saved is MixedSaved {
+  return 'mixed' in saved;
+}
+
+/** The mixed answer as a `MixedSaved`. Nothing is worked out: the numbers are the backend's. */
+export function asBikriSaved(answer: MixedSaleSaved): MixedSaved {
+  const first = answer.carried[0];
+  return {
+    // The new بکری is the one to show and print; with none, the old بکری of the first carried lot.
+    bikri_id: answer.new_bikri_id ?? first?.old_bikri_id ?? 0,
+    number: answer.new_bikri_number ?? first?.old_number ?? 0,
+    // The new entry is written last, after the carried ones.
+    entry_id: answer.entry_ids.at(-1) ?? 0,
+    preview: answer.preview,
+    mixed: answer,
+  };
+}
+
+/**
+ * The save of the carried lots and the new lots together (plan 76 point 1, PRD FR-12.17, FR-12.48): one call,
+ * one transaction, one cash question for all of it. After it everything that reads what it wrote is read
+ * again, as after any save.
+ */
+export function useSaveMixed() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ draft, confirmCashBelowZero }: SaveBikriInput): Promise<MixedSaved> =>
+      asBikriSaved(
+        await bikriMixedSave(
+          {
+            date: draft.header.entry_date,
+            carried: draft.carried ?? [],
+            new_lots: draft.lots,
+          },
+          confirmCashBelowZero,
+        ),
+      ),
+    onSuccess: async () => {
+      await draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
+      await readAgainAfterPosting(queryClient);
+    },
   });
 }

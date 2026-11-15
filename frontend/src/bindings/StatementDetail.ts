@@ -21,4 +21,10 @@ export type StatementDetail =
   | 'trip_closed'
   | 'garden_paid'
   | 'garden_closed'
-  | 'fruit_taken';
+  | 'fruit_taken'
+  | 'khata_paid'
+  | 'khata_received'
+  | 'lent_given'
+  | 'lent_returned'
+  | 'linked_other'
+  | 'lent_share_note';

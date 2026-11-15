@@ -171,7 +171,8 @@
               "paisa": 544800
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": null
         }
       ],
       "others_count": 0,

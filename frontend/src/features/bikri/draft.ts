@@ -3,6 +3,7 @@
 // a quantity or an amount is only passed on (Code Standards M12). The backend parses it, checks
 // it and works out every number (PRD 22).
 
+import type { CarriedLotInput } from '../../bindings/CarriedLotInput';
 import type { ChargeInput } from '../../bindings/ChargeInput';
 import type { ChuktaInput } from '../../bindings/ChuktaInput';
 import type { HeaderInput } from '../../bindings/HeaderInput';
@@ -31,6 +32,22 @@ function textOrNull(text: string | undefined): string | null {
  */
 export function headerInput(header: HeaderState): HeaderInput {
   return { entry_date: header.entryDate.trim() };
+}
+
+/** Has nothing been typed on this lot row but what the app filled? */
+export function isEmptyLotRow(row: EntryRow): boolean {
+  if (Object.keys(row.picked ?? {}).length > 0) return false;
+  return Object.entries(row.typed).every(
+    ([field, text]) => text === '' || field === LOT.sellerFilled || field === LOT.memoryFilledFor,
+  );
+}
+
+/**
+ * Is this a lot carried over from an earlier بکری (PRD FR-12.17, FR-12.48)? It is a saved lot with goods
+ * left: only the lines typed on it today are the day's work, and it is sent as `carried`, not as a new lot.
+ */
+export function isCarriedLot(row: EntryRow): boolean {
+  return (row.typed[LOT.carried] ?? '') === ON;
 }
 
 /** Is this a lot of the firm's own goods: the seller is the اپنا مال account (PRD FR-12.26)? */
@@ -202,13 +219,20 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[]): LotInput {
  * quantity by itself a moment after the row appears, so that fill is not a change the user made.
  */
 export function draftKey(draft: BikriDraft): string {
+  const typedLine = (sale: { buyer_account_id: number | null; seller_rate: string }) =>
+    sale.buyer_account_id !== null || sale.seller_rate !== '';
   return JSON.stringify({
     ...draft,
-    lots: draft.lots.map((lot) => ({
-      ...lot,
-      sales: lot.sales.filter((sale) => sale.buyer_account_id !== null || sale.seller_rate !== ''),
-    })),
+    lots: draft.lots.map((lot) => ({ ...lot, sales: lot.sales.filter(typedLine) })),
+    ...(draft.carried === undefined
+      ? {}
+      : { carried: draft.carried.map((lot) => ({ ...lot, sales: lot.sales.filter(typedLine) })) }),
   });
+}
+
+/** Has a line been typed on a carried lot: a buyer or a rate? A carried lot alone is not typed work. */
+function carriedFilled(lot: CarriedLotInput): boolean {
+  return lot.sales.some((sale) => sale.buyer_account_id !== null || sale.seller_rate !== '');
 }
 
 /** Has anything been typed on this lot or its lines? */
@@ -229,7 +253,7 @@ function lotFilled(lot: BikriDraft['lots'][number]): boolean {
 /** Has anything been typed yet? An untouched screen asks the backend nothing. */
 export function isFilled(draft: BikriDraft): boolean {
   // The date alone is not typed work: the header has nothing else (plan 71 H1).
-  return draft.lots.some(lotFilled);
+  return draft.lots.some(lotFilled) || (draft.carried ?? []).some(carriedFilled);
 }
 
 /**
@@ -245,16 +269,37 @@ export function isFilledByUser(stores: BikriDraftStores, draft: BikriDraft): boo
   const cameByItself = (lot: BikriDraft['lots'][number]) =>
     lot.key in readyLots &&
     lot.sales.every((sale) => sale.buyer_account_id === null && sale.seller_rate === '');
-  return draft.lots.some((lot) => !cameByItself(lot) && lotFilled(lot));
+  return (
+    draft.lots.some((lot) => !cameByItself(lot) && lotFilled(lot)) ||
+    (draft.carried ?? []).some(carriedFilled)
+  );
 }
 
 /** The draft of the screen as the backend takes it. Reads the stores as they are now. */
 export function buildDraft(stores: BikriDraftStores): BikriDraft {
+  const rows = stores.lots.getState().rows;
+  const sales = (row: EntryRow) => stores.salesFor(row.rowId).getState().rows;
+  // A lot carried over is sent as its id and the lines typed on it; it is never a new lot (plan 76 point 1).
+  // Its key is the row's, so the answer's lot preview (and the part of a mixed answer) finds its row again.
+  const carried = rows.filter(isCarriedLot).map((row): CarriedLotInput => ({
+    key: row.rowId,
+    lot_id: savedId(row.typed[LOT.lotId]) ?? 0,
+    sales: sales(row).map(saleInput),
+  }));
+  // With carried lots on the screen, the one empty lot row that waits to be typed in is not a new lot: a
+  // screen with only carried lots makes no new بکری (the backend takes an empty `new_lots` as that).
+  const waiting = (row: EntryRow) =>
+    carried.length > 0 &&
+    isEmptyLotRow(row) &&
+    !sales(row).some(
+      (line) => line.picked?.[SALE.buyer] !== undefined || (line.typed[SALE.rate] ?? '') !== '',
+    );
   return {
     header: headerInput(stores.header.getState()),
-    lots: stores.lots
-      .getState()
-      .rows.map((row) => lotInput(row, stores.salesFor(row.rowId).getState().rows)),
+    lots: rows
+      .filter((row) => !isCarriedLot(row) && !waiting(row))
+      .map((row) => lotInput(row, sales(row))),
+    ...(carried.length === 0 ? {} : { carried }),
   };
 }
 

@@ -16,9 +16,10 @@ use mandi_domain::core::accounts::{AccountRow, KHATA_CONTROL, RecordRef};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::khata::{
-    KhataAccount, KhataCreateInput, KhataEntryRow, KhataRowKind, KhataStatement,
-    KhataStatementInput, KhataTotals,
+    KhataAccount, KhataCreateInput, KhataCreateRequest, KhataEntryRow, KhataRowKind,
+    KhataSetLinkInput, KhataStatement, KhataStatementInput, KhataTotals,
 };
+use mandi_domain::core::links::Link;
 use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
@@ -33,6 +34,7 @@ use crate::auth::Actor;
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
+use crate::linked;
 use crate::page;
 use crate::search;
 use crate::spelling::{self, NamePair};
@@ -78,9 +80,13 @@ fn account_of(
             "khata_account_id",
         ));
     }
+    let stored = mandi_db::links::link_of(conn, id)?;
     Ok(KhataAccount {
         account: record(&row),
         note: row.note.clone(),
+        link: stored.map_or(Link::NONE, |l| {
+            linked::link_from_stored(&l.kind, l.partner_id)
+        }),
         balance_paisa: balance_of(conn, id)?,
     })
 }
@@ -97,6 +103,30 @@ pub fn create(
     actor: &Actor,
     input: &KhataCreateInput,
 ) -> Result<KhataAccount, ServiceError> {
+    create_with(ctx, actor, input, None)
+}
+
+/// Makes a separate khata with its link (plan 76 point 5, PRD FR-16.6 v1.41), in one transaction.
+/// No link, or the kind none, makes the khata the firm's, as [`create`].
+///
+/// # Errors
+/// As [`create`], with `ERR_LINK_PARTNER_REQUIRED`, `ERR_NOT_FOUND` and `ERR_PARTNER_INACTIVE` on
+/// `link.partner_id` and `ERR_SHARES_NOT_100` on `link`.
+pub fn create_linked(
+    ctx: &Context,
+    actor: &Actor,
+    request: &KhataCreateRequest,
+) -> Result<KhataAccount, ServiceError> {
+    create_with(ctx, actor, &request.base, request.link.as_ref())
+}
+
+fn create_with(
+    ctx: &Context,
+    actor: &Actor,
+    input: &KhataCreateInput,
+    link: Option<&Link>,
+) -> Result<KhataAccount, ServiceError> {
+    let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
     let name_ur = errors.take(validate::name_ur("name_ur", &input.name_ur));
     let name_en = errors.take(validate::name_en("name_en", &input.name_en));
@@ -131,10 +161,18 @@ pub fn create(
             name_ur: name_ur.clone(),
             name_en: name_en.clone(),
         };
+        // Checked first, so a bad link writes nothing.
+        let checked_link = match link {
+            Some(link) => Some(linked::check_link(tx, link, &today.to_iso())?),
+            None => None,
+        };
         let (id, code) = mandi_db::masters::create_account(tx, &made, actor.user_id, &now)?
             .ok_or_else(|| {
                 ServiceError::reject_with(ErrorCode::ErrSeriesFull, None, "control", 0)
             })?;
+        if let Some(checked_link) = &checked_link {
+            linked::apply_link(ctx, actor, tx, id, checked_link, ErrorCode::ErrLinkLocked)?;
+        }
         if !note.is_empty() {
             account_repo::set_account_note(tx, id, &note, actor.user_id, &now)?;
         }
@@ -149,6 +187,8 @@ pub fn create(
                     "name_en": name_en,
                     "note": note,
                     "made_by": "khata",
+                    "link_kind": checked_link.as_ref().map_or("none", |c| c.kind),
+                    "link_partner_id": checked_link.as_ref().and_then(|c| c.partner_id),
                 }))
                 .into_entry(),
         )?;
@@ -157,6 +197,38 @@ pub fn create(
     learned.after_commit(ctx);
     search::refresh_account(ctx, id);
     ctx.db.read(|conn| account_of(conn, id))
+}
+
+/// Changes the link of a khata (plan 76 point 5, PRD FR-16.6 v1.41), in one transaction. The link
+/// changes only while the khata's balance is 0, because each of its movements was split by the link
+/// of its day and a different link would leave the partners' totals half one way and half the
+/// other.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `khata_account_id`; `ERR_LINK_LOCKED` on `link` while the balance is not 0;
+/// `ERR_LINK_PARTNER_REQUIRED`, `ERR_NOT_FOUND` and `ERR_PARTNER_INACTIVE` on `link.partner_id`;
+/// `ERR_SHARES_NOT_100` on `link`.
+pub fn set_link(
+    ctx: &Context,
+    actor: &Actor,
+    input: &KhataSetLinkInput,
+) -> Result<KhataAccount, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    ctx.db.write(|tx| -> Result<(), ServiceError> {
+        // Reads the khata first: an account of another kind is not found.
+        account_of(tx, input.khata_account_id)?;
+        let checked = linked::check_link(tx, &input.link, &today.to_iso())?;
+        linked::apply_link(
+            ctx,
+            actor,
+            tx,
+            input.khata_account_id,
+            &checked,
+            ErrorCode::ErrLinkLocked,
+        )?;
+        Ok(())
+    })?;
+    ctx.db.read(|conn| account_of(conn, input.khata_account_id))
 }
 
 /// What a line of a khata is (PRD FR-16.6, FR-16.7).

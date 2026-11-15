@@ -10,6 +10,7 @@ import {
   COMPARE_CHOICES,
   EMPTY_ANALYTICS_FILTERS,
   GOODS_CHOICES,
+  BUCKET_CHOICES,
   GROUP_BY_CHOICES,
   PERIOD_CHOICES,
   SIDE_CHOICES,
@@ -32,6 +33,7 @@ export function rememberedAnalytics(state: AnalyticsFilterState): Record<string,
   if (state.from !== '') kept['from'] = state.from;
   if (state.to !== '') kept['to'] = state.to;
   if (state.groupBy !== base.groupBy) kept['groupBy'] = state.groupBy;
+  if (state.buckets !== base.buckets) kept['buckets'] = state.buckets;
   for (const key of ['item', 'seller', 'buyer', 'city', 'adda'] as const) {
     const value = state[key];
     if (value !== null) kept[key] = pickedText(value);
@@ -58,6 +60,7 @@ export function analyticsFromRemembered(raw: unknown): AnalyticsFilterState | nu
     from: dateText(raw['from']),
     to: dateText(raw['to']),
     groupBy: choiceOr(raw['groupBy'], GROUP_BY_CHOICES, base.groupBy),
+    buckets: choiceOr(raw['buckets'], BUCKET_CHOICES, base.buckets),
     item: pickedOrNull(raw['item']),
     seller: pickedOrNull(raw['seller']),
     buyer: pickedOrNull(raw['buyer']),

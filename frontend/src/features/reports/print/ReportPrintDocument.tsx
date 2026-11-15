@@ -7,7 +7,7 @@
 // (CLAUDE.md rule 1). The in-app preview and the hidden print window draw this same page.
 
 import { useLocalization } from '@fluent/react';
-import { useLayoutEffect, useRef, type Ref } from 'react';
+import { useLayoutEffect, useRef, type ReactNode, type Ref } from 'react';
 import type { ReportPrintCell } from '../../../bindings/ReportPrintCell';
 import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
@@ -102,6 +102,8 @@ export interface PrintTable {
   tables?: PrintReportTable[];
   summary?: ReportPrintSummaryLine[];
   words?: { label_id: string; text: string } | null;
+  /** More totals rows under the main one, each with its label and one cell for each column (the dead amount of R5). */
+  extra_totals?: readonly { label_id: string; cells: ReportPrintCell[] }[];
   /** Which report it is, for the words of an empty name in a few reports. */
   report?: ReportId;
 }
@@ -116,6 +118,11 @@ interface ReportPrintDocumentProps {
    * the app's own language.
    */
   applyRoot?: boolean;
+  /**
+   * Pictures that belong with the table (the charts of an analytics print, PRD FR-18.3): drawn under the
+   * header and above the table, inside the print language. They add up nothing.
+   */
+  figures?: ReactNode;
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -174,6 +181,7 @@ interface TableBlockData {
   rows: PrintTable['rows'];
   totals_label_id: string;
   totals: ReportPrintCell[];
+  extra_totals?: PrintTable['extra_totals'];
 }
 
 interface TableBlockProps {
@@ -296,6 +304,23 @@ function TableBlock({ data, block, showHead = true, dense = false, ref }: TableB
               </td>
             ))}
           </tr>
+          {(block.extra_totals ?? []).map((extra) => (
+            <tr key={extra.label_id} data-row="extra-total">
+              {extra.cells.map((cell, position) => (
+                <td
+                  key={position}
+                  data-align={alignOf(block.columns[position]?.kind ?? 'text')}
+                  className={classOf(position)}
+                >
+                  {position === totalsLabelAt && cell.type === 'empty' ? (
+                    l10n.getString(extra.label_id)
+                  ) : (
+                    <Cell cell={cell} />
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
         </tfoot>
       )}
     </table>
@@ -367,7 +392,11 @@ function DayTables({
   );
 }
 
-function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' | 'frame'>) {
+function ReportPrintBody({
+  data,
+  frame,
+  figures,
+}: Pick<ReportPrintDocumentProps, 'data' | 'frame' | 'figures'>) {
   const { l10n } = useLocalization();
   const tableRef = useFitToSheet<HTMLTableElement>(data);
   // The party day sheet (R35) is the client's own slip: its lines first, what the day comes to
@@ -401,6 +430,7 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
       <section className="print-sheet">
         <PrintHeader header={frame.header} />
         {sheet || slip ? null : summaryLines}
+        {figures}
         {segments.map((segment, index) => {
           if ('tables' in segment) {
             return (
@@ -417,6 +447,7 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
             rows: segment.rows,
             totals_label_id: data.totals_label_id,
             totals: data.totals,
+            ...(data.extra_totals === undefined ? {} : { extra_totals: data.extra_totals }),
           };
           if (twoColumns) {
             return <TwoColumnRows key={index} data={data} block={block} showHead={showHead} />;
@@ -452,6 +483,7 @@ export function ReportPrintDocument({
   data,
   frame,
   applyRoot = false,
+  figures,
   ref,
 }: ReportPrintDocumentProps) {
   return (
@@ -461,7 +493,7 @@ export function ReportPrintDocument({
       applyRoot={applyRoot}
       {...(ref === undefined ? {} : { ref })}
     >
-      <ReportPrintBody data={data} frame={frame} />
+      <ReportPrintBody data={data} frame={frame} figures={figures} />
     </PrintRoot>
   );
 }

@@ -256,3 +256,16 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
   edit list "what you changed" names it (`edit-fields.ts`).
 - Prints and reports write the word after the item through `gradedItem` (`shared/format/grade.ts`):
   "سیب اول" / "Apple First". A line with no quality is written exactly as before.
+
+## Plan 76: carried lots beside new lots (FR-12.48)
+
+- "+ From unsold stock" on the بکری screen opens a picker of lots with a balance (`CarriedLotPicker.tsx`); a chosen
+  lot is a carried lot: its seller, item, packing, received quantity and lot charges are locked, and its lines are
+  a later sale. New lots beside it are first postings. One save (`bikri_mixed_save`), one undo
+  (`bikri_mixed_undo`), one cash question; the preview is the whole screen (`bikri_mixed_preview`). The separate
+  later sale screen is gone: `/bikri/later` redirects to the بکری screen with the lot carried, and the "sell"
+  button of باقی مال does the same.
+- The second print box (Shift+F9) offers the buyer parchi or the overall sale print, for the whole day or this بکری
+  (`print/AdhariPrintBox.tsx`, `DaySlipsPreview` of the reports module).
+- Tests: `bikri-carried-lots.test.tsx`, `bikri-plan16-contract.test.tsx` (E2E-16b on the mixed commands),
+  `adhari-print.test.tsx`.

@@ -65,16 +65,16 @@ pub(super) fn lot_charges_of(state: &LotState) -> Result<LotCharges, ServiceErro
 }
 
 /// Everything a later sale works from, read once.
-struct LaterPlan {
-    state: LotState,
-    date: Option<BusinessDate>,
-    prepared: PreparedDraft,
-    basis: Basis,
-    extra: Vec<FieldError>,
+pub(super) struct LaterPlan {
+    pub(super) state: LotState,
+    pub(super) date: Option<BusinessDate>,
+    pub(super) prepared: PreparedDraft,
+    pub(super) basis: Basis,
+    pub(super) extra: Vec<FieldError>,
 }
 
 /// The date of a later sale is `date` on this screen, not `header.entry_date`.
-fn on_date(mut errors: Vec<FieldError>) -> Vec<FieldError> {
+pub(super) fn on_date(mut errors: Vec<FieldError>) -> Vec<FieldError> {
     for error in &mut errors {
         if error.field == "header.entry_date" {
             error.field = "date".to_owned();
@@ -84,7 +84,7 @@ fn on_date(mut errors: Vec<FieldError>) -> Vec<FieldError> {
 }
 
 /// Reads the lot and the draft of a later sale and checks them against each other.
-fn plan_later(
+pub(super) fn plan_later(
     conn: &Connection,
     lot_id: i64,
     date_text: &str,
@@ -169,6 +169,103 @@ fn plan_later(
     })
 }
 
+/// Writes a later sale that has been worked out and checked: the posting, its lines, stock moves,
+/// facts, the lot's running totals, matching, the share check and the audit row. It is the body of
+/// [`save`] and of the mixed save (plan 76 point 1), so both write exactly the same rows.
+///
+/// # Errors
+/// `ServiceError::Db` or `ServiceError::Data` for a failure the user cannot fix.
+pub(super) fn write_later(
+    ctx: &Context,
+    tx: &Connection,
+    actor: &Actor,
+    now: &str,
+    state: &LotState,
+    date: BusinessDate,
+    worked: &super::shared::Worked,
+) -> Result<i64, ServiceError> {
+    let (entry, layout) = worked
+        .entry
+        .as_ref()
+        .ok_or_else(|| data("a later sale without errors has no journal entry"))?;
+    let lots = shape(worked)?;
+    let user = actor.user_id;
+
+    // The posting, then its lines, stock moves and facts. No `received` move: the goods came
+    // with the first posting.
+    let posted = ledger::post(
+        ctx,
+        tx,
+        user,
+        &PostingEvent {
+            date,
+            posting_type: PostingType::BikriLater,
+            source_type: SourceType::Bikri,
+            source_id: state.bikri_id,
+            narration: None,
+            reverses: None,
+            entry: entry.clone(),
+        },
+    )?;
+    let line_ids = stored_line_ids(tx, posted.entry_id, entry.lines().len())?;
+    let date_iso = date.to_iso();
+    let post = Posting {
+        user_id: user,
+        now,
+        bikri_id: state.bikri_id,
+        entry_id: posted.entry_id,
+        date_iso: &date_iso,
+        year: date.year(),
+        month: date.month(),
+        adda_id: state.adda_id,
+    };
+    let new_ids = insert_sales_and_facts(tx, &post, &lots, &[state.id], false)?;
+
+    // The lot's running totals, from every line in force.
+    let shaped = lots
+        .first()
+        .ok_or_else(|| data("a later sale has no lot"))?;
+    if edit_repo::lot_sums_of_entry(tx, state.id, posted.entry_id)? != posting_sums(shaped)? {
+        return Err(data("the saved lines of a lot differ from the preview"));
+    }
+    let sums = edit_repo::lot_sums(tx, state.id, None)?;
+    let running = lot_running_totals(&lot_charges_of(state)?, sums)?;
+    edit_repo::update_lot_totals(tx, state.id, &running, user, now)?;
+    if running
+        .qty_sold
+        .checked_add(state.qty_written_off)
+        .and_then(|v| v.checked_add(state.qty_taken))
+        > Some(state.qty_received)
+    {
+        return Err(data("a lot sold more than it received"));
+    }
+
+    // Matching of a new posting, which is the newest line of its keys.
+    match_posting(tx, &post, &lots, (entry, layout), &line_ids)?;
+    check_shares(tx, posted.entry_id, worked.calc.summary.shared_income)?;
+    edit_repo::bump_version(tx, state.bikri_id, user, now)?;
+    ctx.db.auditor().write(
+        tx,
+        &Event::new(Some(user), "later_sale", "bikri")
+            .entity_id(state.bikri_id)
+            .new_value(json!({
+                "number": state.bikri_number,
+                "lot_id": state.id,
+                "entry_id": posted.entry_id,
+                "entry_date": date_iso,
+                "lines": new_ids.iter().map(Vec::len).sum::<usize>(),
+                "gross_paisa": worked.calc.summary.gross.as_paisa(),
+                "seller_credit_paisa": worked.calc.summary.seller_credit.as_paisa(),
+                "buyer_total_paisa": worked.calc.summary.buyer_total.as_paisa(),
+                "shared_income_paisa": worked.calc.summary.shared_income.as_paisa(),
+                "cash_after_paisa": worked.cash.cash_after_paisa.as_paisa(),
+                "cash_below_zero_confirmed": worked.cash.needs_confirm,
+            }))
+            .into_entry(),
+    )?;
+    Ok(posted.entry_id)
+}
+
 /// Works out a later sale for the live summary (PRD FR-12.17). Nothing is saved.
 ///
 /// # Errors
@@ -222,90 +319,12 @@ pub fn save(
         }
         cash::require_confirmed(&worked.cash, input.confirm_cash_below_zero)?;
         let date = date.ok_or_else(|| data("a later sale without errors has no date"))?;
-        let (entry, layout) = worked
-            .entry
-            .as_ref()
-            .ok_or_else(|| data("a later sale without errors has no journal entry"))?;
-        let lots = shape(&worked)?;
-        let user = actor.user_id;
-
-        // The posting, then its lines, stock moves and facts. No `received` move: the goods came
-        // with the first posting.
-        let posted = ledger::post(
-            ctx,
-            tx,
-            user,
-            &PostingEvent {
-                date,
-                posting_type: PostingType::BikriLater,
-                source_type: SourceType::Bikri,
-                source_id: state.bikri_id,
-                narration: None,
-                reverses: None,
-                entry: entry.clone(),
-            },
-        )?;
-        let line_ids = stored_line_ids(tx, posted.entry_id, entry.lines().len())?;
-        let date_iso = date.to_iso();
-        let post = Posting {
-            user_id: user,
-            now: &now,
-            bikri_id: state.bikri_id,
-            entry_id: posted.entry_id,
-            date_iso: &date_iso,
-            year: date.year(),
-            month: date.month(),
-            adda_id: state.adda_id,
-        };
-        let new_ids = insert_sales_and_facts(tx, &post, &lots, &[state.id], false)?;
-
-        // The lot's running totals, from every line in force.
-        let shaped = lots
-            .first()
-            .ok_or_else(|| data("a later sale has no lot"))?;
-        if edit_repo::lot_sums_of_entry(tx, state.id, posted.entry_id)? != posting_sums(shaped)? {
-            return Err(data("the saved lines of a lot differ from the preview"));
-        }
-        let sums = edit_repo::lot_sums(tx, state.id, None)?;
-        let running = lot_running_totals(&lot_charges_of(&state)?, sums)?;
-        edit_repo::update_lot_totals(tx, state.id, &running, user, &now)?;
-        if running
-            .qty_sold
-            .checked_add(state.qty_written_off)
-            .and_then(|v| v.checked_add(state.qty_taken))
-            > Some(state.qty_received)
-        {
-            return Err(data("a lot sold more than it received"));
-        }
-
-        // Matching of a new posting, which is the newest line of its keys.
-        match_posting(tx, &post, &lots, (entry, layout), &line_ids)?;
-        check_shares(tx, posted.entry_id, worked.calc.summary.shared_income)?;
-        edit_repo::bump_version(tx, state.bikri_id, user, &now)?;
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(user), "later_sale", "bikri")
-                .entity_id(state.bikri_id)
-                .new_value(json!({
-                    "number": state.bikri_number,
-                    "lot_id": state.id,
-                    "entry_id": posted.entry_id,
-                    "entry_date": date_iso,
-                    "lines": new_ids.iter().map(Vec::len).sum::<usize>(),
-                    "gross_paisa": worked.calc.summary.gross.as_paisa(),
-                    "seller_credit_paisa": worked.calc.summary.seller_credit.as_paisa(),
-                    "buyer_total_paisa": worked.calc.summary.buyer_total.as_paisa(),
-                    "shared_income_paisa": worked.calc.summary.shared_income.as_paisa(),
-                    "cash_after_paisa": worked.cash.cash_after_paisa.as_paisa(),
-                    "cash_below_zero_confirmed": worked.cash.needs_confirm,
-                }))
-                .into_entry(),
-        )?;
+        let entry_id = write_later(ctx, tx, actor, &now, &state, date, &worked)?;
         Ok(LaterSaleSaved {
             bikri_id: state.bikri_id,
             number: state.bikri_number,
             lot_id: state.id,
-            entry_id: posted.entry_id,
+            entry_id,
             preview: {
                 let mut preview = worked.preview();
                 preview.errors = on_date(preview.errors);

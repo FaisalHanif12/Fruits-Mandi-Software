@@ -273,6 +273,8 @@ impl SourceAnalyticsFilters {
             garden_id: id_of(&self.garden),
             goods: self.goods,
             trip_view: self.trip_view,
+            // The assistant never reads the partner part of view M.
+            expense_part: None,
             hide_partners: false,
         }
     }

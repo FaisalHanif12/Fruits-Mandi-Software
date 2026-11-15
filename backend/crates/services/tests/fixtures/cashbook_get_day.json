@@ -43,7 +43,7 @@
       "posting_type": "shop_expense",
       "number": 2,
       "account": {
-        "id": 31,
+        "id": 35,
         "code": "05010001",
         "name_ur": "بجلی",
         "name_en": "Electricity"
@@ -63,7 +63,7 @@
       "posting_type": "personal_expense",
       "number": 1,
       "account": {
-        "id": 23,
+        "id": 24,
         "code": "06030001",
         "name_ur": "ذاتی خرچہ - الف",
         "name_en": "Drawings - Partner A"
@@ -83,7 +83,7 @@
       "posting_type": "personal_return",
       "number": 1,
       "account": {
-        "id": 23,
+        "id": 24,
         "code": "06030001",
         "name_ur": "ذاتی خرچہ - الف",
         "name_en": "Drawings - Partner A"

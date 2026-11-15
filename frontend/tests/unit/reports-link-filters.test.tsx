@@ -1,6 +1,6 @@
 // A button under an answer, or any link, opens a report with its filters already set (plan 54 Section 6,
 // PRD FR-7.65, FR-7.74): the Owner presses F9 and nothing else. Each report of the print questions
-// (R35 the party's day slip, R5 the buyer bills, R13 the khata, R14 the statement, R6 the seller's lots,
+// (R35 the party's day slip, R13 the khata, R14 the statement, R6 the seller's lots,
 // R34 the day summary, R2 the sales register), the thirteen reports that follow them (R31, R12, R29,
 // R20, R24, R10, R11, R18, R36, R33, R37, R21) and the reports of plan 55 Section 11.1 (R3, R4, R7,
 // R9, R15, R16, R17, R19, R22, R23, R25, R26, R27, R28, R30, R32, R38, and R33, R36, R37 in their
@@ -88,26 +88,20 @@ const LINKS: readonly {
   {
     id: 'R35',
     asked: "a buyer's day slip",
-    search: `party=20&as_of=${DAY}`,
-    filters: { party: { account_id: 20, person_key: null }, as_of: DAY },
-  },
-  {
-    id: 'R5',
-    asked: "a buyer's bills for a month",
-    search: `party=20&from=${MONTH.from}&to=${MONTH.to}`,
-    filters: { party: { account_id: 20, person_key: null }, ...MONTH },
+    search: `party=21&as_of=${DAY}`,
+    filters: { party: { account_id: 21, person_key: null }, as_of: DAY },
   },
   {
     id: 'R13',
     asked: "a party's khata for a month",
-    search: `party=20&from=${MONTH.from}&to=${MONTH.to}`,
-    filters: { party: { account_id: 20, person_key: null }, ...MONTH },
+    search: `party=21&from=${MONTH.from}&to=${MONTH.to}`,
+    filters: { party: { account_id: 21, person_key: null }, ...MONTH },
   },
   {
     id: 'R14',
     asked: "a party's statement for a month",
-    search: `party=20&from=${MONTH.from}&to=${MONTH.to}`,
-    filters: { party: { account_id: 20, person_key: null }, ...MONTH },
+    search: `party=21&from=${MONTH.from}&to=${MONTH.to}`,
+    filters: { party: { account_id: 21, person_key: null }, ...MONTH },
   },
   {
     id: 'R6',
@@ -218,8 +212,8 @@ const LINKS: readonly {
     {
       id,
       asked: 'the period and a party named',
-      search: `party=20&from=${MONTH.from}&to=${MONTH.to}`,
-      filters: { party: { account_id: 20, person_key: null }, ...MONTH },
+      search: `party=21&from=${MONTH.from}&to=${MONTH.to}`,
+      filters: { party: { account_id: 21, person_key: null }, ...MONTH },
     },
   ]),
   // The fruit register for the shop's guests only: `guests` and no partner (R37 takes a partner or the guests).
@@ -574,7 +568,7 @@ describe.each(LANGUAGES)(
 
     it('R13: the party box shows who he is, with his name, once the answer has come', async () => {
       fakeReports();
-      await renderApp('/reports/R13?party=20&from=01-10-2026&to=31-10-2026');
+      await renderApp('/reports/R13?party=21&from=01-10-2026&to=31-10-2026');
       const box = await screen.findByRole<HTMLInputElement>(
         'combobox',
         { name: (name) => visible(name) === m('report-filter-party') },

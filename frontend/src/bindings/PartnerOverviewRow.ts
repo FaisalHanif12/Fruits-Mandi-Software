@@ -81,4 +81,13 @@ export type PartnerOverviewRow = {
    * balance or result of each (plan 17c). Gardens first, then trips, by number. Empty if none.
    */
   open_ventures: Array<PartnerVentureCard>;
+  /**
+   * How many open gardens he is in. The page shows "کھلے: 1 سفر، 0 باغ" from the two counts and
+   * opens the list with `partners_open_ventures` on demand (plan 76 point 11).
+   */
+  open_gardens_count: number;
+  /**
+   * How many open trips he is in.
+   */
+  open_trips_count: number;
 };

@@ -27,7 +27,6 @@ const HOOK_TIMEOUT_MS = 30_000;
 const LOAD_SENSITIVE_TESTS = [
   'tests/unit/fruit-real-answers.test.tsx',
   'tests/unit/bikri-edit-rules.test.tsx',
-  'tests/unit/bikri-later-sale.test.tsx',
   'tests/unit/trips-trip.test.tsx',
   'tests/unit/bikri-save.test.tsx',
   'tests/unit/bikri-edit-cancel.test.tsx',

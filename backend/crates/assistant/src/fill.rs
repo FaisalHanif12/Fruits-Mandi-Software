@@ -200,6 +200,7 @@ fn set_source_id(mut source: AnswerSource, id: &str) -> AnswerSource {
         AnswerSource::PartyCard { result_id, .. }
         | AnswerSource::Report { result_id, .. }
         | AnswerSource::Analytics { result_id, .. }
+        | AnswerSource::Commission { result_id, .. }
         | AnswerSource::Screen { result_id, .. }
         | AnswerSource::Tiles { result_id } => *result_id = id.to_owned(),
     }
@@ -269,6 +270,7 @@ fn source_result_id(source: &AnswerSource) -> String {
         AnswerSource::PartyCard { result_id, .. }
         | AnswerSource::Report { result_id, .. }
         | AnswerSource::Analytics { result_id, .. }
+        | AnswerSource::Commission { result_id, .. }
         | AnswerSource::Screen { result_id, .. }
         | AnswerSource::Tiles { result_id } => result_id.clone(),
     }
@@ -512,7 +514,7 @@ pub fn fill(env: &Env<'_>, state: &State, answer: &ModelAnswer, read_at: &str) -
             _ => {}
         }
     }
-    Answer {
+    let mut filled = Answer {
         parts,
         tables,
         charts,
@@ -532,7 +534,10 @@ pub fn fill(env: &Env<'_>, state: &State, answer: &ModelAnswer, read_at: &str) -
             .map(|q| next_text(env, state, q))
             .collect(),
         read_at: read_at.to_owned(),
-    }
+    };
+    // A party's commission opens the commission page of that party (PRD FR-7.90, plan 77).
+    crate::commission_button::apply(&mut filled, &answer.text);
+    filled
 }
 
 /// The tool results of this question as plain tables with their sources: what the panel shows

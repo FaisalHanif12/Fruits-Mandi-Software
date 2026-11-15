@@ -18,15 +18,20 @@ export type CapitalHistory = {
    */
   balance_paisa: Paisa;
   /**
+   * His capital balance at the start of the range (before `from`): 0 when there is no `from`
+   * (plan 76 point 8). Every row's `running_paisa` is still its true running balance.
+   */
+  opening_paisa: Paisa;
+  /**
    * The page.
    */
   rows: Array<CapitalRow>;
   /**
-   * How many rows there are in all.
+   * How many rows there are in the range.
    */
   total_count: number;
   /**
-   * The totals over all the rows.
+   * The totals over the rows of the range.
    */
   totals: CapitalTotals;
   /**

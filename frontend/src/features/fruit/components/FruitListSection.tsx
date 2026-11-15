@@ -13,7 +13,7 @@ import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { PagedList } from '../../../shared/grid';
-import { useDebouncedValue, usePeriod, type PeriodControl } from '../../../shared/hooks';
+import { useDebouncedValue, useListWindow, type ListWindow } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { formNavigationProps } from '../../../shared/keyboard';
 import {
@@ -23,7 +23,7 @@ import {
   Field,
   FilterBar,
   FormSpan,
-  PeriodBox,
+  ListWindowBar,
   Picker,
   Select,
   ShowClosedTick,
@@ -76,23 +76,32 @@ export function FruitListSection({
   const language = useLanguage();
   const partners = usePartnerList();
   const openReport = useOpenReport();
-  // The list opens on today and the Owner's last period is kept (plan 38 R4). A list the address
-  // opened on one entry starts on that entry's day, until he chooses another period.
-  const saved = usePeriod('fruit.list', 'today', today);
+  // The list shows one month at a time, the latest first (PRD FR-19.11, plan 76 point 8). A list the address
+  // opened on one entry starts on that entry's day, until he moves the window.
+  const monthWindow = useListWindow({ kind: 'month', source: { kind: 'fruit' }, today });
   const startText = day === undefined ? null : isoToDisplayDate(day);
   const [dayOnly, setDayOnly] = useState(startText !== null && day !== today);
-  const period: PeriodControl =
-    dayOnly && startText !== null
-      ? {
-          state: { kind: 'custom', from: startText, to: startText },
-          range: { from: startText, to: startText },
-          ready: true,
-          change: (next) => {
-            setDayOnly(false);
-            saved.change(next);
-          },
-        }
-      : saved;
+  const listWindow: ListWindow = {
+    ...monthWindow,
+    move: (direction) => {
+      setDayOnly(false);
+      monthWindow.move(direction);
+    },
+    goTo: (value) => {
+      setDayOnly(false);
+      monthWindow.goTo(value);
+    },
+    latest: () => {
+      setDayOnly(false);
+      monthWindow.latest();
+    },
+    onPageKey: (direction) => {
+      setDayOnly(false);
+      monthWindow.onPageKey(direction);
+    },
+  };
+  const range =
+    dayOnly && startText !== null ? { from: startText, to: startText } : monthWindow.range;
   const [forWhom, setForWhom] = useState(EVERYONE);
   const [item, setItem] = useState<PickerValue | null>(null);
   const [search, setSearch] = useState('');
@@ -104,13 +113,13 @@ export function FruitListSection({
     guests_only: forWhom === FOR_GUESTS,
     item_id: item?.id ?? null,
     source: null,
-    from: period.range.from === '' ? null : period.range.from,
-    to: period.range.to === '' ? null : period.range.to,
+    from: range.from === '' ? null : range.from,
+    to: range.to === '' ? null : range.to,
     status: null,
     show_finished: showFinished,
     search: searchText === '' ? null : searchText,
-    // A month heading is worth its row only when the list covers more than one day.
-    group_by_month: period.state.kind !== 'today' && !dayOnly,
+    // A window is one month: the bar under the list says which, so no month heading is drawn.
+    group_by_month: false,
   };
   const list = useFruitList(input);
   const first = list.data?.pages[0];
@@ -119,7 +128,7 @@ export function FruitListSection({
   const columns = useMemo(() => FRUIT_COLUMNS, []);
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
   const onlyToday =
-    period.state.kind === 'today' &&
+    listWindow.isLatest &&
     !dayOnly &&
     forWhom === EVERYONE &&
     item === null &&
@@ -141,7 +150,7 @@ export function FruitListSection({
       action={
         <Button
           onClick={() => {
-            period.change({ kind: 'today', from: '', to: '' });
+            listWindow.latest();
             setForWhom(EVERYONE);
             setItem(null);
             setSearch('');
@@ -181,7 +190,6 @@ export function FruitListSection({
           }
           extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
         >
-          {period.ready ? <PeriodBox period={period} /> : null}
           <Field label={<Localized id="fruit-filter-for" />}>
             {(control) => (
               <Select
@@ -216,8 +224,8 @@ export function FruitListSection({
           <Button
             onClick={() => {
               openReport('R37', {
-                ...(period.range.from === '' ? {} : { from: period.range.from }),
-                ...(period.range.to === '' ? {} : { to: period.range.to }),
+                ...(range.from === '' ? {} : { from: range.from }),
+                ...(range.to === '' ? {} : { to: range.to }),
                 ...(partnerId === null ? {} : { partner: partnerId }),
                 ...(forWhom === FOR_GUESTS ? { guests: true } : {}),
                 ...(item === null ? {} : { item }),
@@ -243,6 +251,7 @@ export function FruitListSection({
           void list.refetch();
         }}
         pager={list.pager}
+        onPageKey={listWindow.onPageKey}
         sort={{ value: list.sort, onChange: list.setSort }}
         months={
           months === undefined
@@ -272,6 +281,7 @@ export function FruitListSection({
               })
         }
       />
+      <ListWindowBar window={listWindow} />
     </Card>
   );
 }

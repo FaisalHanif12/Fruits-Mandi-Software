@@ -30,6 +30,7 @@ pub mod fruit;
 pub mod garden_figures;
 pub mod gardens;
 pub mod ledger;
+pub mod links;
 pub mod listing;
 pub mod masters;
 pub mod matching;

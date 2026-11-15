@@ -337,12 +337,12 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     });
 
     it('opens on the party of the address and sends him as the party filter', async () => {
-      await open('/reports/R13?party=20&from=01-10-2026&to=10-10-2026');
+      await open('/reports/R13?party=21&from=01-10-2026&to=10-10-2026');
       await waitFor(() => {
         expect(drawnRows()).toContain('0');
       }, SLOW_MS);
       const filters = vi.mocked(reportsApi.reportsRun).mock.calls[0]?.[0].filters;
-      expect(filters?.party).toEqual({ account_id: 20, person_key: null });
+      expect(filters?.party).toEqual({ account_id: 21, person_key: null });
       expect(filters?.from).toBe('01-10-2026');
       expect(filters?.to).toBe('10-10-2026');
       // His names come back with the answer and fill the box, in this language.
@@ -353,7 +353,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     });
 
     it('shows the ledger of E2E-33: the goods of the sale, the receipt, and 2,880 owed at the end', async () => {
-      await open('/reports/R13?party=20');
+      await open('/reports/R13?party=21');
       await waitFor(() => {
         expect(cell('0', 'date')).toBe('10-10-2026');
       }, SLOW_MS);
@@ -394,7 +394,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     });
 
     it('puts the side word of a balance in its own slot after the figure', async () => {
-      await open('/reports/R13?party=20');
+      await open('/reports/R13?party=21');
       await waitFor(() => {
         expect(cell('0', 'balance')).not.toBe('');
       }, SLOW_MS);
@@ -405,7 +405,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     });
 
     it('shows a seller credit with its gross sale and deductions', async () => {
-      await open('/reports/R13?party=18', { pages: { R13: R13_RAHIM } });
+      await open('/reports/R13?party=19', { pages: { R13: R13_RAHIM } });
       await waitFor(() => {
         expect(cell('0', 'detail')).not.toBe('');
       }, SLOW_MS);
@@ -428,7 +428,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
 
   describe('a statement: R14', () => {
     it('shows balances only until the detail box is ticked, then the lines of the ledger', async () => {
-      const { user } = await open('/reports/R14?party=20');
+      const { user } = await open('/reports/R14?party=21');
       // The summary of the statement: opening, bought, paid, closing.
       const label = await screen.findByText(
         named(m('report-statement-bought')),
@@ -444,7 +444,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
       }, SLOW_MS);
       const sent = vi.mocked(reportsApi.reportsRun).mock.calls.at(-1)?.[0];
       expect(sent?.filters.detail).toBe(true);
-      expect(sent?.filters.party).toEqual({ account_id: 20, person_key: null });
+      expect(sent?.filters.party).toEqual({ account_id: 21, person_key: null });
     });
   });
 
@@ -689,7 +689,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
 
   describe('a language switch in the middle of a filter', () => {
     it('keeps the filter and the focused row, and draws the same rows in the other language', async () => {
-      const { user } = await open('/reports/R13?party=20');
+      const { user } = await open('/reports/R13?party=21');
       await waitFor(() => {
         expect(cell('0', 'date')).toBe('10-10-2026');
       }, SLOW_MS);

@@ -33,28 +33,31 @@ pub(crate) const MAX_TREND_POINTS: usize = 120;
 
 /// What a view charts.
 enum Plan {
-    /// No chart (the table is short, or a chart means nothing).
-    None,
     /// The biggest rows by one column, in sections when the rows have heading rows.
     Ranked(&'static str),
     /// One point for each row, with these columns as series.
     TrendRows(&'static [&'static str]),
-    /// One point for each period column of the table, with the totals row as the value.
-    TrendColumns,
+    /// One point for each period column of the table, with the totals row as the value. The key
+    /// is the series' name.
+    TrendColumns(&'static str),
 }
 
 fn plan_of(view: AnalyticsView, trip_view: Option<AnalyticsTripView>) -> Plan {
     match view {
-        AnalyticsView::A | AnalyticsView::B | AnalyticsView::E | AnalyticsView::H => {
-            Plan::Ranked("total_comm")
-        }
+        AnalyticsView::A
+        | AnalyticsView::B
+        | AnalyticsView::E
+        | AnalyticsView::H
+        | AnalyticsView::L => Plan::Ranked("total_comm"),
         AnalyticsView::C => Plan::Ranked("purchase_value"),
         AnalyticsView::I => Plan::Ranked("result"),
         AnalyticsView::J => match trip_view {
             Some(AnalyticsTripView::Day) => Plan::TrendRows(&["sales_money", "result"]),
             _ => Plan::Ranked("result"),
         },
-        AnalyticsView::D => Plan::TrendColumns,
+        AnalyticsView::D => Plan::TrendColumns("total_comm"),
+        // Expenses by head: the net expense of each period (plan 77).
+        AnalyticsView::M => Plan::TrendColumns("expense"),
         AnalyticsView::G => Plan::TrendRows(&[
             "gross",
             "commission",
@@ -62,7 +65,10 @@ fn plan_of(view: AnalyticsView, trip_view: Option<AnalyticsTripView>) -> Plan {
             "shop_expenses",
             "profit",
         ]),
-        AnalyticsView::F | AnalyticsView::K => Plan::None,
+        // The partners by their net change, behind the partner code like the view itself; the fruit
+        // taken by value (plan 76 point 4).
+        AnalyticsView::F => Plan::Ranked("net_change"),
+        AnalyticsView::K => Plan::Ranked("value"),
     }
 }
 
@@ -117,6 +123,9 @@ fn ranked(
         kind,
     }];
     let named_by = label_index(columns);
+    // With a compare on, the table has a `compare` column: the compared period's figure of the
+    // main measure. It becomes the second series of the chart (plan 76 point 4).
+    let compare_at = index_of(columns, "compare");
     // The sections: the rows between two heading rows. Without heading rows, one section.
     let mut sections: Vec<(Option<&AnalyticsRow>, Vec<&AnalyticsRow>)> = Vec::new();
     for row in rows {
@@ -141,18 +150,24 @@ fn ranked(
         });
         let mut points = Vec::new();
         let mut rest = 0_i64;
+        let mut rest_compare = 0_i64;
         let mut rest_count = 0_i64;
         for (rank, row) in members.iter().enumerate() {
             let value = row.cells.get(at).and_then(amount).map_or(0, |v| v.0);
+            let compared = compare_at.and_then(|i| row.cells.get(i)).and_then(amount);
             if rank < TOP {
                 points.push(AnalyticsChartPoint {
                     label: row.cells.get(named_by).cloned().unwrap_or(Cell::Empty),
                     key: row.key.clone(),
                     values: vec![cell_of(kind, value)?],
                     is_others: false,
+                    compare: compared.map(|(v, _)| cell_of(kind, v)).transpose()?,
                 });
             } else {
                 rest = rest.checked_add(value).ok_or_else(overflow)?;
+                rest_compare = rest_compare
+                    .checked_add(compared.map_or(0, |c| c.0))
+                    .ok_or_else(overflow)?;
                 rest_count = rest_count.checked_add(1).ok_or_else(overflow)?;
             }
         }
@@ -162,6 +177,11 @@ fn ranked(
                 key: None,
                 values: vec![cell_of(kind, rest)?],
                 is_others: true,
+                compare: if compare_at.is_some() {
+                    Some(cell_of(kind, rest_compare)?)
+                } else {
+                    None
+                },
             });
         }
         charts.push(AnalyticsChart {
@@ -215,6 +235,7 @@ fn trend_rows(
             key: row.key.clone(),
             values,
             is_others: false,
+            compare: None,
         });
     }
     let mut by_month = false;
@@ -274,6 +295,7 @@ fn months_of(
                 key: None,
                 values,
                 is_others: false,
+                compare: None,
             })
         })
         .collect()
@@ -284,6 +306,7 @@ fn months_of(
 fn trend_columns(
     columns: &[AnalyticsColumn],
     totals: &[Cell],
+    series_key: &str,
 ) -> Result<Vec<AnalyticsChart>, ReportsError> {
     let mut points = Vec::new();
     let mut kind = ColumnKind::Money;
@@ -307,6 +330,7 @@ fn trend_columns(
             key: column.drill.clone(),
             values: vec![cell_of(k, value)?],
             is_others: false,
+            compare: None,
         });
     }
     if points.is_empty() {
@@ -314,7 +338,7 @@ fn trend_columns(
     }
     let mut by_month = false;
     let series = vec![AnalyticsChartSeries {
-        key: "total_comm".to_owned(),
+        key: series_key.to_owned(),
         kind,
     }];
     if points.len() > MAX_TREND_POINTS
@@ -333,6 +357,19 @@ fn trend_columns(
     }])
 }
 
+/// The ranked chart of one measure of a table: the 10 biggest rows and "others". For the partner
+/// part of view M (the kharch each partner spent himself, measure `own`).
+///
+/// # Errors
+/// `ReportsError::Money` if a sum does not fit.
+pub(crate) fn ranked_by(
+    columns: &[AnalyticsColumn],
+    rows: &[AnalyticsRow],
+    measure: &str,
+) -> Result<Vec<AnalyticsChart>, ReportsError> {
+    ranked(columns, rows, measure)
+}
+
 /// The charts of a view built from its whole table. An empty list when the view has no chart or
 /// the table has no row.
 ///
@@ -346,10 +383,9 @@ pub(crate) fn build(
     totals: &[Cell],
 ) -> Result<Vec<AnalyticsChart>, ReportsError> {
     match plan_of(view, trip_view) {
-        Plan::None => Ok(Vec::new()),
         Plan::Ranked(measure) => ranked(columns, rows, measure),
         Plan::TrendRows(keys) => trend_rows(columns, rows, keys),
-        Plan::TrendColumns => trend_columns(columns, totals),
+        Plan::TrendColumns(series_key) => trend_columns(columns, totals, series_key),
     }
 }
 

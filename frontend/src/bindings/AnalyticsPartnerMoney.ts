@@ -4,4 +4,4 @@
  * Which money of a partner's gardens, trips and fruit account a column of view F stands for
  * (PRD 18.2 F, FR-18.2): the lines behind the column are his lines on that account.
  */
-export type AnalyticsPartnerMoney = 'trips' | 'gardens' | 'fruit';
+export type AnalyticsPartnerMoney = 'trips' | 'gardens' | 'fruit' | 'taken';

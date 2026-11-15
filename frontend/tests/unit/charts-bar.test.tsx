@@ -14,14 +14,16 @@ import { message } from '../helpers/render';
 
 const chart = vi.hoisted(() => ({
   setOption: vi.fn(),
+  on: vi.fn(),
   resize: vi.fn(),
   dispose: vi.fn(),
 }));
 const init = vi.hoisted(() => vi.fn());
 
 vi.mock('echarts/core', () => ({ use: vi.fn(), init }));
-vi.mock('echarts/charts', () => ({ BarChart: {} }));
+vi.mock('echarts/charts', () => ({ BarChart: {}, LineChart: {} }));
 vi.mock('echarts/components', () => ({
+  AriaComponent: {},
   GridComponent: {},
   LegendComponent: {},
   TooltipComponent: {},
@@ -29,7 +31,7 @@ vi.mock('echarts/components', () => ({
 vi.mock('echarts/renderers', () => ({ SVGRenderer: {} }));
 
 // The component is imported after the mocks.
-const { BarChart, readChartStyle } = await import('../../src/shared/charts');
+const { BarChart, buildBarOption, readChartStyle } = await import('../../src/shared/charts');
 
 const DATA: BarChartData = {
   categories: ['Banana', 'Apple'],
@@ -217,5 +219,78 @@ describe('the look comes from the design tokens', () => {
     expect(style.colors).toHaveLength(6);
     expect(style.colors[0]).toBe('#000001');
     document.documentElement.removeAttribute('style');
+  });
+});
+
+describe('a click on the chart (plan 76, PRD FR-18.3)', () => {
+  const clickHandler = () => {
+    const call = chart.on.mock.calls.find(([name]) => name === 'click');
+    return call?.[1] as ((params: unknown) => void) | undefined;
+  };
+
+  it('tells the screen which bar was clicked, and which series, but only when it asks for it', () => {
+    const onPointClick = vi.fn();
+    act(() => {
+      useLanguageStore.setState({ language: 'en' });
+    });
+    render(
+      <LocalizationProvider l10n={new ReactLocalization([bundles.en])}>
+        <BarChart
+          data={DATA}
+          label={message('en', 'analytics-chart-a')}
+          onPointClick={onPointClick}
+          clickable={[true, false]}
+        />
+      </LocalizationProvider>,
+    );
+    const handler = clickHandler();
+    expect(handler).toBeDefined();
+    handler?.({ componentType: 'series', seriesIndex: 0, dataIndex: 1 });
+    expect(onPointClick).toHaveBeenLastCalledWith({ categoryIndex: 1, seriesIndex: 0 });
+    // The name under a bar is a click on that bar, with no series.
+    handler?.({ componentType: 'xAxis', value: 'Banana' });
+    expect(onPointClick).toHaveBeenLastCalledWith({ categoryIndex: 0, seriesIndex: null });
+    // Anything else on the chart (the grid, a name that is not there) does nothing.
+    handler?.({ componentType: 'xAxis', value: 'Nothing' });
+    handler?.({ componentType: 'grid' });
+    expect(onPointClick).toHaveBeenCalledTimes(2);
+    // The pointer shows only on the bar that opens something.
+    const option = chart.setOption.mock.calls[0]?.[0] as {
+      series: { data: { cursor?: string }[] }[];
+    };
+    expect(option.series[0]?.data.map((point) => point.cursor)).toEqual(['pointer', 'default']);
+  });
+
+  it('draws a trend as a line, a previous period lighter, and a print with patterns and no tooltip', () => {
+    const style = readChartStyle('ltr');
+    const trend: BarChartData = {
+      kind: 'line',
+      categories: ['Sep', 'Oct'],
+      series: [
+        { name: 'Now', values: [5, 8], labels: ['5', '8'] },
+        { name: 'Before', values: [4, 6], labels: ['4', '6'], previous: true },
+      ],
+      stacked: false,
+    };
+    const screenOption = buildBarOption(trend, style) as {
+      series: { type: string; lineStyle: { type?: string } }[];
+      tooltip: { show: boolean; axisPointer: { type: string } };
+      aria?: unknown;
+    };
+    expect(screenOption.series.map((one) => one.type)).toEqual(['line', 'line']);
+    expect(screenOption.series[1]?.lineStyle.type).toBe('dashed');
+    expect(screenOption.tooltip).toMatchObject({ show: true, axisPointer: { type: 'line' } });
+    expect(screenOption.aria).toBeUndefined();
+    const printOption = buildBarOption(DATA, style, { print: true }) as {
+      tooltip: { show: boolean };
+      aria: { enabled: boolean; decal: { show: boolean } };
+    };
+    expect(printOption.tooltip.show).toBe(false);
+    expect(printOption.aria).toEqual({ enabled: true, decal: { show: true } });
+    const bars = buildBarOption(
+      { ...DATA, series: [{ name: 'Before', values: [1, 2], labels: ['1', '2'], previous: true }] },
+      style,
+    ) as { series: { itemStyle: { opacity?: number } }[] };
+    expect(bars.series[0]?.itemStyle.opacity).toBeLessThan(1);
   });
 });

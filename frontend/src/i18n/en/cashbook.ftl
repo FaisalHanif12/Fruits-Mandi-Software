@@ -302,6 +302,10 @@ cashbook-effect-title = What this does to the partner
 # review: pending
 cashbook-effect-none = Choose the partner to see the effect.
 
+# The entry is on a linked khata or a loan linked to a partner or the shop: what the save will do to each partner's total.
+# review: pending
+cashbook-linked-parts-title = What this does to each partner's { -kul-raqam }
+
 # review: pending
 cashbook-effect-total-now = Partner total now
 
@@ -629,4 +633,168 @@ cashbook-general-list-failed = The saved { -general } entries could not be opene
 cashbook-general-list-empty = No { -general } entry in these dates
 
 # review: pending
-cashbook-general-list-empty-help = Fill the lines above and save to add one. Change the dates to see an older entry.
+cashbook-general-list-empty-help = Fill the lines above and save to add one. Use the buttons below to see another month.
+
+## The link of a { -alag-khata } and of a person who is lent money, and the type of that person (plan 76 points 5 and 10, PRD FR-16.6, FR-16.13)
+
+# review: pending
+cashbook-link-label = Linked to
+
+# review: pending
+cashbook-link-for = For
+
+# review: pending
+cashbook-link-kind-none = Nobody (the firm's own)
+
+# review: pending
+cashbook-link-kind-shop = The shop (split by shares)
+
+# review: pending
+cashbook-link-kind-partner = One { -shirakat-dar }
+
+# review: pending
+cashbook-link-partner = { -shirakat-dar }
+
+# review: pending
+cashbook-link-hint-khata = Money paid out lowers the { -kul-raqam } of the partners it is linked to, like money taken, and money back raises it. It is never income or expense.
+
+# review: pending
+cashbook-link-hint-person = Linked to a { -shirakat-dar }, the money lent lowers that partner's { -kul-raqam }. Linked to the shop, it is still owed to the shop and no partner total changes.
+
+# review: pending
+cashbook-link-locked = The link cannot be changed while the balance is not zero.
+
+# review: pending
+cashbook-link-change = Change the link
+
+# review: pending
+cashbook-link-saved = The link is saved
+
+# review: pending
+cashbook-person-type = Type
+
+# review: pending
+cashbook-person-type-staff = Staff
+
+# review: pending
+cashbook-person-type-garden-owner = Garden owner
+
+# review: pending
+cashbook-person-type-trip-person = { -market-safar } person
+
+# review: pending
+cashbook-person-type-other = Other
+
+# review: pending
+cashbook-person-change = Change type or link
+
+# review: pending
+cashbook-person-saved = The person is saved
+
+## The page behind the dashboard tile of garden owners and others (plan 76 point 10, PRD FR-16.13)
+
+# review: pending
+cashbook-dues-title = Garden owners' and others' dues
+
+# review: pending
+cashbook-dues-help = { -adhar-raqam } given to people who are not staff (garden owners, { -market-safar } people and others) and what came back, one month at a time. The figures are the ones of the tile.
+
+# review: pending
+cashbook-dues-back = Back to the dashboard
+
+# review: pending
+cashbook-dues-filter-type = Type
+
+# review: pending
+cashbook-dues-filter-link = Linked to
+
+# review: pending
+cashbook-dues-type-default = Everyone except staff
+
+# review: pending
+cashbook-dues-link-all = All
+
+# review: pending
+cashbook-dues-link-shop = The shop
+
+# review: pending
+cashbook-dues-link-partner = One { -shirakat-dar }
+
+# review: pending
+cashbook-dues-open = Still open
+
+# review: pending
+cashbook-dues-people = People who owe
+
+# review: pending
+cashbook-dues-given = Given this month
+
+# review: pending
+cashbook-dues-returned = Returned this month
+
+# review: pending
+cashbook-dues-people-title = People with something open
+
+# review: pending
+cashbook-dues-people-label = People who owe money
+
+# review: pending
+cashbook-dues-people-empty = Nobody owes anything
+
+# review: pending
+cashbook-dues-people-empty-help = A person shows here as soon as he is given money and has not returned it.
+
+# review: pending
+cashbook-dues-entries-title = Entries of the month
+
+# review: pending
+cashbook-dues-entries-label = Money given and returned in the month
+
+# review: pending
+cashbook-dues-failed = The dues could not be read
+
+# review: pending
+cashbook-dues-empty = Nothing was given or returned in this month
+
+# review: pending
+cashbook-dues-empty-help = Use the buttons below to go to another month.
+
+# review: pending
+cashbook-dues-col-person = Person
+
+# review: pending
+cashbook-dues-col-type = Type
+
+# review: pending
+cashbook-dues-col-link = Linked to
+
+# review: pending
+cashbook-dues-col-kind = Entry
+
+# review: pending
+cashbook-dues-col-amount = Amount
+
+# review: pending
+cashbook-dues-col-lent = Given
+
+# review: pending
+cashbook-dues-col-returned = Returned
+
+# review: pending
+cashbook-dues-col-open = Open
+
+# review: pending
+cashbook-dues-kind-given = Given
+
+# review: pending
+cashbook-dues-kind-returned = Returned
+
+# The short words of a link, for a list or a card (the choice box has the long ones above).
+# review: pending
+cashbook-link-word-none = Nobody
+
+# review: pending
+cashbook-link-word-shop = The shop
+
+# review: pending
+cashbook-link-word-partner = One { -shirakat-dar }

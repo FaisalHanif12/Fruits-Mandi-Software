@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::accounts::{Balance, RecordRef};
+use crate::links::{Link, LinkKind, PersonType};
 use crate::money::Paisa;
 use crate::paging::{MonthSubtotal, SortInput};
 use crate::vouchers::MAX_OPEN_ROWS;
@@ -115,6 +116,53 @@ pub struct LentPersonCreateInput {
     pub confirmed_rules_words: Vec<String>,
 }
 
+/// A new person who can be lent money, with his type and link (plan 76 point 10, PRD FR-16.13).
+///
+/// Field paths in errors: those of [`LentPersonCreateInput`], and `link.partner_id`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct LentPersonCreateRequest {
+    /// The person as before.
+    #[serde(flatten)]
+    pub base: LentPersonCreateInput,
+    /// His type. Null means staff when `staff_id` is sent, else other.
+    #[serde(default)]
+    pub person_type: Option<PersonType>,
+    /// What his loans are linked to. Null means the shop.
+    #[serde(default)]
+    pub link: Option<Link>,
+}
+
+/// Input of `lent_person_update`: the type and the link of a person (plan 76 point 10).
+///
+/// Field paths in errors: `person_account_id`, `link`, `link.partner_id`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct LentPersonUpdateInput {
+    /// His ادھار رقم account.
+    #[ts(type = "number")]
+    pub person_account_id: i64,
+    /// His new type. Null leaves it as it is.
+    #[serde(default)]
+    pub person_type: Option<PersonType>,
+    /// His new link. Null leaves it as it is. It changes only while he owes nothing
+    /// (`ERR_LINK_FIXED_WHILE_OWED`, field `link`).
+    #[serde(default)]
+    pub link: Option<Link>,
+}
+
+/// ادھار رقم given with the link of the person (plan 76 point 10, PRD FR-16.13): the fields of
+/// [`MoneyLentInput`] and the link. The link is read only while the person owes nothing; while he
+/// owes, a different link is refused (`ERR_LINK_FIXED_WHILE_OWED`, field `link`) and the same one is
+/// fine.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct MoneyLentRequest {
+    /// The loan as before.
+    #[serde(flatten)]
+    pub base: MoneyLentInput,
+    /// What this person's loans are linked to. Null keeps his link as it is.
+    #[serde(default)]
+    pub link: Option<Link>,
+}
+
 /// A person who can be lent money.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct LentPerson {
@@ -124,6 +172,139 @@ pub struct LentPerson {
     pub staff: Option<RecordRef>,
     /// His phone. Empty if none.
     pub phone: String,
+    /// His type (PRD FR-16.4 v1.41).
+    pub person_type: PersonType,
+    /// What his loans are linked to (PRD FR-16.13).
+    pub link: Link,
+}
+
+/// What a row of the dues page is (plan 76 point 10).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum LentDuesRowKind {
+    /// Money given.
+    Given,
+    /// Money returned (cash or salary).
+    Returned,
+}
+
+/// Input of `lent_dues`: the page behind the dashboard tile of garden owners and others (plan 76
+/// point 10, PRD FR-16.13), one month at a time.
+#[derive(Debug, Clone, Default, Deserialize, TS)]
+pub struct LentDuesInput {
+    /// The types to show. Empty means every type except staff (what the tile counts).
+    #[serde(default)]
+    pub person_types: Vec<PersonType>,
+    /// The kinds of link to show. Empty means all.
+    #[serde(default)]
+    pub link_kinds: Vec<LinkKind>,
+    /// One partner, for the kind `partner`. Null means any.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub partner_id: Option<i64>,
+    /// The month, `YYYY-MM`. Null means the current month. A month after today is refused.
+    #[serde(default)]
+    pub month: Option<String>,
+    /// How many rows to skip.
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives the default page of 100 rows.
+    #[serde(default)]
+    pub limit: u32,
+    /// How many people of the per-person list to skip (PRD FR-19.11, Code Standards B31).
+    #[serde(default)]
+    pub people_offset: u32,
+    /// How many people to return. 0 gives the default page of 100 people.
+    #[serde(default)]
+    pub people_limit: u32,
+}
+
+/// One entry of the dues page: money given or returned on a day.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LentDuesRow {
+    /// Given or returned.
+    pub kind: LentDuesRowKind,
+    /// The day, `YYYY-MM-DD`.
+    pub entry_date: String,
+    /// The person's account.
+    pub person: RecordRef,
+    /// His type.
+    pub person_type: PersonType,
+    /// His link now.
+    pub link: Link,
+    /// The voucher, or null for an opening debit.
+    #[ts(type = "number | null")]
+    pub voucher_id: Option<i64>,
+    /// Its number in its series, or null.
+    #[ts(type = "number | null")]
+    pub number: Option<i64>,
+    /// Why (given). Empty if none.
+    pub reason: String,
+    /// The amount, positive.
+    #[ts(type = "Paisa")]
+    pub amount_paisa: Paisa,
+}
+
+/// One person with something open, or an entry in the month, on the dues page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LentDuesPerson {
+    /// The person's account.
+    pub person: RecordRef,
+    /// His type.
+    pub person_type: PersonType,
+    /// His link now.
+    pub link: Link,
+    /// Σ lent, all time.
+    #[ts(type = "Paisa")]
+    pub lent_paisa: Paisa,
+    /// Σ returned, all time.
+    #[ts(type = "Paisa")]
+    pub returned_paisa: Paisa,
+    /// Still open, as of today.
+    #[ts(type = "Paisa")]
+    pub open_paisa: Paisa,
+}
+
+/// The totals of the dues page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LentDuesTotals {
+    /// Σ given in the month.
+    #[ts(type = "Paisa")]
+    pub given_paisa: Paisa,
+    /// Σ returned in the month.
+    #[ts(type = "Paisa")]
+    pub returned_paisa: Paisa,
+    /// Σ open of the people in the filter, as of today (all time, not only the month). With the
+    /// default types it equals the dashboard tile.
+    #[ts(type = "Paisa")]
+    pub open_paisa: Paisa,
+    /// How many people in the filter have something open.
+    #[ts(type = "number")]
+    pub open_people_count: i64,
+}
+
+/// The dues page of one month (plan 76 point 10, PRD FR-16.13). Read only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LentDues {
+    /// The month, `YYYY-MM`.
+    pub month: String,
+    /// The entries of the month, oldest first, one page.
+    pub rows: Vec<LentDuesRow>,
+    /// How many entries there are in the month.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The totals.
+    pub totals: LentDuesTotals,
+    /// One page of the people in the filter who have something open or an entry in the month, the
+    /// biggest open amount first (`people_offset` and `people_limit` of the input).
+    pub people: Vec<LentDuesPerson>,
+    /// How many people there are in the filter, so a screen can reach every page of `people`.
+    #[ts(type = "number")]
+    pub people_total_count: i64,
+    /// True while the partner section is locked (PRD FR-17.11, NFR-SEC-14). Then no row and no
+    /// person says which partner a loan is linked to: a partner link has `partner_id` null, and the
+    /// screen shows its "کوڈ درج کریں" box there. The amounts and totals are the shop's and stay.
+    pub partner_locked: bool,
 }
 
 /// Input of `lent_list`.
@@ -132,6 +313,14 @@ pub struct LentListInput {
     /// The person's account. `ERR_NOT_FOUND` on `person_id`.
     #[ts(type = "number")]
     pub person_id: i64,
+    /// First day of the range, `DD-MM-YYYY` or a shortcut. Null or empty means no lower limit
+    /// (plan 76 point 8: a screen sends the first day of its month). The rows, the count, the
+    /// totals and the months are over the range.
+    #[serde(default)]
+    pub from: Option<String>,
+    /// Last day of the range. Null or empty means no upper limit.
+    #[serde(default)]
+    pub to: Option<String>,
     /// How many rows to skip.
     #[serde(default)]
     pub offset: u32,

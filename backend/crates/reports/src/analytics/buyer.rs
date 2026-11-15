@@ -19,8 +19,10 @@
 //! 720, 160, dues 2,880; the چکتا buyer شاہد 10, 12,000, 720, 80, dues 0, average 0 days.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use mandi_core::accounts::Balance;
+use mandi_core::bikri::SavedChukta;
 use mandi_core::money::Paisa;
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
@@ -42,6 +44,7 @@ use crate::reports::common::{
 };
 use crate::reports::grouped_sums::chukta_names;
 use crate::reports::{Cell, ColumnKind, PartyRef};
+use crate::result_cache;
 
 /// The key of a row: the buyer account and, for a چکتا کھاتہ person, his key.
 type BuyerKey = (i64, Option<String>);
@@ -155,11 +158,39 @@ fn days_to_pay(
     Ok(found)
 }
 
-/// Builds view C.
-///
-/// # Errors
-/// A database error; `ReportsError::Data` for a fact net below 0; `ReportsError::Money`.
-pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Table, ReportsError> {
+/// Everything of view C that does not depend on the page: the buyers in order, their names, the
+/// totals and the chart. The dues and the days to pay are worked out for the page only, so they are
+/// not in it. It is kept in memory for the next page of the same filter (`result_cache`).
+struct Base {
+    entries: Vec<Entry>,
+    parties: HashMap<i64, PartyRef>,
+    names: HashMap<String, SavedChukta>,
+    sum: Sums,
+    grand_compared: Paisa,
+    charts: Vec<AnalyticsChart>,
+}
+
+impl Base {
+    /// The party of a row: the account and, for a چکتا کھاتہ person, his saved names.
+    fn party_of(&self, key: &BuyerKey) -> Option<PartyRef> {
+        let base = self.parties.get(&key.0)?.clone();
+        Some(match &key.1 {
+            Some(person) => {
+                let saved = self.names.get(person);
+                chukta_party(
+                    base,
+                    Some(person.clone()),
+                    saved.map(|p| p.name_ur.as_str()),
+                    saved.map(|p| p.name_en.as_str()),
+                )
+            }
+            None => base,
+        })
+    }
+}
+
+/// Reads the facts of the filter and puts the buyers in order (see [`Base`]).
+fn base(conn: &Connection, typed: &Typed) -> Result<Base, ReportsError> {
     let none = AnalyticsKey::default();
     let dims = ["f.buyer_account_id", "f.chukta_person_key"];
     let current = facts::groups(conn, &facts::conds(typed, run_range(typed), &none), &dims)?;
@@ -238,6 +269,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             .cmp(&a.sums.buyer_value)
             .then_with(|| code(a).cmp(&code(b)))
             .then_with(|| a.key.1.cmp(&b.key.1))
+            .then_with(|| a.key.0.cmp(&b.key.0))
     });
 
     let mut sum = Sums::default();
@@ -273,6 +305,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
                         paisa: entry.sums.buyer_value,
                     }],
                     is_others: false,
+                    compare: None,
                 });
             } else {
                 add(&mut rest, entry.sums.buyer_value)?;
@@ -287,6 +320,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
                 key: None,
                 values: vec![Cell::Money { paisa: rest }],
                 is_others: true,
+                compare: None,
             });
         }
         if points.is_empty() {
@@ -330,6 +364,35 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         });
     }
 
+    Ok(Base {
+        entries,
+        parties,
+        names,
+        sum,
+        grand_compared,
+        charts,
+    })
+}
+
+/// Builds view C: the buyers in order from the kept base (or worked out now), then the dues and the
+/// days to pay of the buyers of the page only.
+///
+/// # Errors
+/// A database error; `ReportsError::Data` for a fact net below 0; `ReportsError::Money`.
+pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Table, ReportsError> {
+    // The question without its page: every page of one filter takes the same base from memory.
+    // A read of one bucket of a grouped view (it has a column for every item) is not kept: a grouped
+    // view reads a hundred of them and would push every other result out of memory.
+    let base = if typed.every_item_column {
+        Arc::new(base(conn, typed)?)
+    } else {
+        let what = format!("analytics view C|{typed:?}");
+        result_cache::remembered(conn, &what, || base(conn, typed))?
+    };
+    let entries = &base.entries;
+    let sum = base.sum;
+    let grand_compared = base.grand_compared;
+
     // Dues and days to pay for the rows of this page only.
     let page_entries: Vec<&Entry> = {
         let ordered: Vec<&Entry> = entries.iter().collect();
@@ -368,7 +431,8 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     let marks = mandi_db::dead::marks_on(conn, None)?;
     let mut rows: Vec<AnalyticsRow> = Vec::with_capacity(page_entries.len());
     for entry in page_entries {
-        let buyer = party_of(&entry.key)
+        let buyer = base
+            .party_of(&entry.key)
             .map(|mut party| {
                 party.dead = marks
                     .iter()
@@ -437,6 +501,6 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         total_count: count_of(entries.len()),
         rows,
         totals,
-        charts,
+        charts: base.charts.clone(),
     })
 }

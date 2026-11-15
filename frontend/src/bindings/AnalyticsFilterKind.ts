@@ -19,4 +19,5 @@ export type AnalyticsFilterKind =
   | 'trip_view'
   | 'garden'
   | 'item_group'
-  | 'grade';
+  | 'grade'
+  | 'expense_part';

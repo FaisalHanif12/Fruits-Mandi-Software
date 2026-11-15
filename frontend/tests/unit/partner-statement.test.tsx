@@ -1,8 +1,10 @@
-// The partner statement (plan 17 F2, PRD FR-17.9, FR-17.10, FR-19.11, E2E-37, D4-A33), in the Urdu
-// and in the English app, by keyboard, against a fake backend: one dated line for every amount that
-// reaches a partner, the heading and the sentence from Fluent, the signed amount and the running
-// کل رقم, note lines without an amount, the totals over the whole range, paging, and the four
-// states. The screen shows what the backend sends and adds nothing up (CLAUDE.md rule 1).
+// The partner statement, one month at a time (plan 76 point 11, PRD FR-17.12, FR-17.10, FR-19.11, E2E-37,
+// D4-A33), in the Urdu and in the English app, by keyboard, against a fake backend: the opening کل رقم of
+// the month on top, one row for each day with a movement (commission, expense share, gardens and trips,
+// fruit, money taken, capital, the day's net and the کل رقم at the end of the day), the month totals and
+// the closing, a day that opens in place with every movement and its source, the month buttons and the box
+// that go to another month (kept in the address), and the four states. The screen shows what the backend
+// sends and adds nothing up (CLAUDE.md rule 1).
 
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -11,11 +13,16 @@ import * as appApi from '../../src/app/api';
 import * as partnersApi from '../../src/features/partners/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
-import { cellOf, gridOf, textOf } from '../helpers/bikri-screen';
-import { choose, named, pageText, startsWith } from '../helpers/cashbook-screen';
+import { choose, named, startsWith } from '../helpers/cashbook-screen';
+import { printData } from '../helpers/collection-sheet';
+import { fakePartnerMonth, openDays } from '../helpers/partner-month';
+import * as real from '../helpers/partner-money-real';
 import { DAY, fail, leaveAppWindow, renderApp } from '../helpers/app';
-import { preparePartnerMoney, type PartnerMoney } from '../helpers/partner-money';
-import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
+import {
+  preparePartnerMoney,
+  PARTNER_MONTH_TODAY,
+  type PartnerMoney,
+} from '../helpers/partner-money';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -40,68 +47,133 @@ afterEach(() => {
   leaveAppWindow();
 });
 
-describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
+/** The texts of the cells of every row of the list: the lead row, a row for each day, the totals. */
+function rowsOf(list: HTMLElement): string[][] {
+  return Array.from(list.querySelectorAll('[role="row"]'))
+    .map((row) =>
+      Array.from(row.querySelectorAll(':scope > div > [role="gridcell"]')).map((cell) =>
+        visible(cell.textContent),
+      ),
+    )
+    .filter((cells) => cells.length > 0);
+}
+
+describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
   let books: PartnerMoney;
 
   beforeEach(() => {
     books = preparePartnerMoney(language);
-    // The statement opens on this year up to today: the days of the books (to 11-11-2026) are in it.
-    vi.mocked(appApi.dayStatus).mockResolvedValue({ ...DAY, today: '2026-12-31' });
+    // The app opens on the last month of the year, so the days of the books (October and November 2026)
+    // need a month in the address.
+    vi.mocked(appApi.dayStatus).mockResolvedValue({ ...DAY, today: PARTNER_MONTH_TODAY });
+    vi.mocked(partnersApi.partnersStatementMonthPrintData).mockImplementation((input) =>
+      Promise.resolve(printData(input.language, input.paper ?? 'a4')),
+    );
   });
 
-  const grid = () => gridOf(language, 'partners-statement-label');
-  const rows = () => grid().querySelectorAll('.ag-row[row-index]').length;
+  const m = (id: string, vars: Record<string, string | number> = {}) => message(language, id, vars);
+  const list = () => screen.getByRole('treegrid');
 
   async function open(search = '') {
     const app = await renderApp(`/partners/statement${search}`);
-    await screen.findByRole('heading', {
-      level: 1,
-      name: named(message(language, 'partners-statement-title')),
-    });
+    await screen.findByRole('heading', { level: 1, name: named(m('partners-statement-title')) });
     return { ...app, user: userEvent.setup() };
   }
 
   it('without a partner it says to choose one, and asks nothing', async () => {
     await open();
-    expect(
-      await screen.findByText(named(message(language, 'partners-statement-pick'))),
-    ).toBeInTheDocument();
-    expect(partnersApi.partnersStatement).not.toHaveBeenCalled();
+    expect(await screen.findByText(named(m('partners-statement-pick')))).toBeInTheDocument();
+    expect(partnersApi.partnersStatementMonth).not.toHaveBeenCalled();
   });
 
-  it('E2E-37: partner ب has one dated line for each amount, with the running total ending at 746', async () => {
-    await open('?partner=2');
+  it('E2E-37: partner ب in October has one row for 10-10-26 and the کل رقم ends at 746', async () => {
+    await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
     await waitFor(() => {
-      expect(rows()).toBe(3);
+      expect(rowsOf(list()).length).toBe(3);
     });
-    // 10-10-26 بکری 1 share 1,184, بکری 2 share 462, the electricity share -900: 1,184, 1,646, 746.
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'running'))).toEqual([
-      '1,184',
-      '1,646',
-      '746',
-    ]);
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'amount'))).toEqual(['1,184', '462', '-900']);
-    expect(textOf(grid(), 0, 'date')).toBe('10-10-2026');
-    expect(textOf(grid(), 0, 'detail')).toBe(
-      message(language, 'partners-statement-detail-income-share', { number: 1 }),
-    );
-    expect(textOf(grid(), 2, 'detail')).toBe(
-      message(language, 'partners-statement-detail-expense-share', {
-        voucher: message(language, 'vouchers-number-shop-expense', { number: 1 }),
+    const [lead, day, totals] = rowsOf(list());
+    // Opening: the کل رقم before the month (0), under the running column.
+    expect(lead?.[0]).toBe(m('partners-month-opening'));
+    expect(lead?.[8]).toBe('0');
+    // The day: 1,184 + 462 of commission, -900 of expense, net 746 and 746 at the end of the day.
+    expect(day).toEqual(['10-10-2026', '1,646', '-900', '', '', '', '', '746', '746']);
+    // The totals and the closing are the backend's, under the same columns.
+    expect(totals?.[0]).toBe(m('glossary-meezan'));
+    expect(totals?.slice(1)).toEqual(['1,646', '-900', '', '', '', '', '746', '746']);
+    expect(partnersApi.partnersStatementMonth).toHaveBeenCalledWith({
+      partner_id: 2,
+      month: '2026-10',
+    });
+  });
+
+  it('a click on the day opens every movement of it in place, with the کل رقم before and after, and a second click shuts it', async () => {
+    const { user } = await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
+    const dayRow = await screen.findByRole('row', { name: (name) => name.includes('10-10-2026') });
+    await user.click(dayRow);
+    const card = await waitFor(() => {
+      const found = list().querySelector('[data-partner-day="2026-10-10"]');
+      if (!(found instanceof HTMLElement)) throw new Error('the day is not open');
+      return found;
+    });
+    await waitFor(() => {
+      expect(within(card).getAllByRole('listitem').length).toBe(3);
+    });
+    const text = visible(card.textContent);
+    // The sentences of the shared statement words, and each amount as the backend sent it.
+    expect(text).toContain(m('partners-statement-detail-income-share', { number: 1 }));
+    expect(text).toContain(m('partners-statement-detail-income-share', { number: 2 }));
+    expect(text).toContain(
+      m('partners-statement-detail-expense-share', {
+        voucher: m('vouchers-number-shop-expense', { number: 1 }),
         subject: nameOf(language, 'بجلی', 'Electricity'),
       }),
     );
-    // The totals above the list are the backend's over the whole range.
-    const totals = visible(
-      screen.getByText(named(message(language, 'partners-statement-opening'))).closest('dl')
-        ?.textContent,
-    );
-    expect(totals).toContain('1,646');
-    expect(totals).toContain('900');
-    expect(totals).toContain('746');
+    for (const figure of ['1,184', '462', '-900']) expect(text).toContain(figure);
+    // Before the day 0, after it 746.
+    expect(text).toContain(m('partners-day-before'));
+    expect(text).toContain(m('partners-day-after'));
+    expect(text).toContain('746');
+    expect(partnersApi.partnersStatementDay).toHaveBeenCalledWith({
+      partner_id: 2,
+      date: '2026-10-10',
+    });
+    await user.click(dayRow);
+    await waitFor(() => {
+      expect(list().querySelector('[data-partner-day]')).toBeNull();
+    });
   });
 
-  it('a capital line joins the statement once saved, and the total goes to 50,746 (E2E-37)', async () => {
+  it('a share line says what it is a share of: his 30% of 3,948 (PRD FR-17.12)', async () => {
+    const income = real.STATEMENT_B.lines[0];
+    if (income === undefined) throw new Error('no line');
+    fakePartnerMonth(
+      real.STATEMENT_B.partner,
+      [{ ...income, values: { base_paisa: 394_800, share_bps: 3_000 } }],
+      PARTNER_MONTH_TODAY,
+    );
+    const { user } = await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
+    const lines = (await openDays(user, ['2026-10-10'])).get('2026-10-10') ?? [];
+    expect(lines[0]?.detail).toBe(
+      m('partners-statement-detail-income-share-part', { number: 1, share: '30', base: '3,948' }),
+    );
+    // "Sale 1: ..." already says the group, so no chip repeats it in front.
+    expect(lines[0]?.heading).toBe('');
+  });
+
+  it('Enter on the day opens it, from the keyboard', async () => {
+    const { user } = await open('?partner=2&month=2026-10');
+    const grid = await screen.findByRole('treegrid');
+    grid.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(list().querySelector('[data-partner-day="2026-10-10"]')).not.toBeNull();
+    });
+  });
+
+  it('a capital line joins the month it was saved in, and the کل رقم goes to 50,746 (E2E-37)', async () => {
     // Partner ب puts in 50,000 on 11-10-26, through the same books the capital screen saves to.
     books.money.saveCapital('capital_in', {
       date: '11-10-2026',
@@ -110,200 +182,195 @@ describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
       narration: null,
       confirm_cash_below_zero: false,
     });
+    await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(4);
+    });
+    const rows = rowsOf(list());
+    // 11-10-26: only the capital column and the net, the running total 746 + 50,000.
+    expect(rows[2]).toEqual(['11-10-2026', '', '', '', '', '', '50,000', '50,000', '50,746']);
+    expect(rows[3]?.[8]).toBe('50,746');
+  });
+
+  it('D4-A33: partner الف in October has the trip part, the commission and the trip credit on one day, ending at -296', async () => {
+    await open('?partner=1&month=2026-10');
+    await screen.findByRole('treegrid');
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(3);
+    });
+    const [, day, totals] = rowsOf(list());
+    // 10-10-26: commission 480, gardens and trips -4,160 + 3,384 = -776, net -296.
+    expect(day).toEqual(['10-10-2026', '480', '', '-776', '', '', '', '-296', '-296']);
+    expect(totals?.[8]).toBe('-296');
+  });
+
+  it('a day that has only notes (a write-off and a trip closing) has no figures and the کل رقم stays at -296', async () => {
+    await open('?partner=1&month=2026-11');
+    await screen.findByRole('treegrid');
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(3);
+    });
+    const [lead, day] = rowsOf(list());
+    // The opening is the -296 carried from October.
+    expect(lead?.[8]).toBe('-296');
+    expect(day?.[0]).toBe('11-11-2026');
+    expect(day?.slice(1, 7)).toEqual(['', '', '', '', '', '']);
+    expect(day?.slice(7)).toEqual(['0', '-296']);
+  });
+
+  it('the notes of that day show without an amount when the day is opened', async () => {
+    const { user } = await open('?partner=1&month=2026-11');
+    await screen.findByRole('treegrid');
+    await user.click(
+      await screen.findByRole('row', { name: (name) => name.includes('11-11-2026') }),
+    );
+    const card = await waitFor(() => {
+      const found = list().querySelector('[data-partner-day="2026-11-11"]');
+      if (!(found instanceof HTMLElement)) throw new Error('the day is not open');
+      return found;
+    });
+    await waitFor(() => {
+      expect(within(card).getAllByRole('listitem').length).toBe(2);
+    });
+    const text = visible(card.textContent);
+    expect(text).toContain('0070');
+    expect(text).toContain('10,400');
+    expect(text).toContain('-776');
+  });
+
+  it('the previous-month button goes back one month, keeps it in the address and asks for it', async () => {
+    const { user, router } = await open('?partner=1&month=2026-11');
+    await screen.findByRole('treegrid');
+    await user.click(
+      await screen.findByRole('button', { name: startsWith(m('common-month-earlier')) }),
+    );
+    await waitFor(() => {
+      expect(partnersApi.partnersStatementMonth).toHaveBeenLastCalledWith({
+        partner_id: 1,
+        month: '2026-10',
+      });
+    });
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ month: '2026-10' });
+    });
+    // October is the first month with a movement of his: the earlier button says so and is off.
+    expect(await screen.findByText(m('common-month-first-note'))).toBeInTheDocument();
+  });
+
+  it('the box goes to a typed month, 11-2026', async () => {
+    const { user } = await open('?partner=1&month=2026-10');
+    await screen.findByRole('treegrid');
+    const box = await screen.findByLabelText<HTMLInputElement>(named(m('common-goto-month')));
+    await user.type(box, '11-2026{Enter}');
+    await waitFor(() => {
+      expect(partnersApi.partnersStatementMonth).toHaveBeenLastCalledWith({
+        partner_id: 1,
+        month: '2026-11',
+      });
+    });
+  });
+
+  it('opens on the current month when the address has none', async () => {
     await open('?partner=2');
-    await waitFor(() => {
-      expect(rows()).toBe(4);
+    await screen.findByRole('treegrid');
+    expect(vi.mocked(partnersApi.partnersStatementMonth).mock.calls[0]?.[0]).toEqual({
+      partner_id: 2,
+      month: null,
     });
-    expect(textOf(grid(), 3, 'running')).toBe('50,746');
-    expect(textOf(grid(), 3, 'detail')).toBe(
-      message(language, 'partners-statement-detail-capital-in', {
-        voucher: message(language, 'vouchers-number-capital-in', { number: 1 }),
-      }),
-    );
-  });
-
-  it('D4-A33: partner الف has -4,160, +480 and +3,384 ending at -296, then two note lines without an amount', async () => {
-    await open('?partner=1');
-    await waitFor(() => {
-      expect(rows()).toBe(5);
-    });
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'amount'))).toEqual([
-      '-4,160',
-      '480',
-      '3,384',
-    ]);
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'running'))).toEqual([
-      '-4,160',
-      '-3,680',
-      '-296',
-    ]);
-    // The trip line names the trip, the purchase and the money from the shop (PRD FR-17.10).
-    expect(textOf(grid(), 0, 'detail')).toBe(
-      message(language, 'partners-statement-detail-trip-paid', {
-        kind: 'purchase',
-        trip: '0070',
-        secondary: message(language, 'purchases-number', { number: 1 }),
-      }),
-    );
-    // The sale line of a trip carries the figures of the backend: 8,460, 7,800, 660 and 40%.
-    const credit = textOf(grid(), 2, 'detail');
-    for (const figure of ['8,460', '7,800', '660', '40']) expect(credit).toContain(figure);
-    // The notes: no amount, and the running total stays -296.
-    for (const row of [3, 4]) {
-      expect(textOf(grid(), row, 'amount')).toBe('');
-      expect(textOf(grid(), row, 'running')).toBe('-296');
-    }
-    expect(textOf(grid(), 3, 'detail')).toContain('0070');
-    const closed = textOf(grid(), 4, 'detail');
-    expect(closed).toContain('10,400');
-    expect(closed).toContain('-776');
-  });
-
-  it('a date range limits the lines and the opening total is the balance before it', async () => {
-    const { user } = await open('?partner=2');
-    await waitFor(() => {
-      expect(rows()).toBe(3);
-    });
-    // "Choose the dates" starts from the days of the period, to be edited.
-    await user.click(
-      await screen.findByRole('combobox', {
-        name: named(message(language, 'common-period-label')),
-      }),
-    );
-    await user.click(
-      await screen.findByRole('option', { name: named(message(language, 'common-period-custom')) }),
-    );
-    const from = await screen.findByLabelText<HTMLInputElement>(
-      named(message(language, 'common-period-from')),
-    );
-    await user.clear(from);
-    await user.keyboard('11-10-2026');
-    await waitFor(() => {
-      expect(partnersApi.partnersStatement).toHaveBeenLastCalledWith(
-        expect.objectContaining({ partner_id: 2, from: '11-10-2026' }),
-      );
-    });
-    expect(
-      await screen.findByText(named(message(language, 'partners-statement-empty'))),
-    ).toBeInTheDocument();
-    // The opening total is the 746 of the days before; no line is drawn.
-    const totals = visible(
-      screen.getByText(named(message(language, 'partners-statement-opening'))).closest('dl')
-        ?.textContent,
-    );
-    expect(totals).toContain('746');
+    // The current month, December, has no movement.
+    expect(await screen.findByText(named(m('partners-month-empty')))).toBeInTheDocument();
   });
 
   it('the partner is chosen from the drop-down and the statement follows', async () => {
-    const { user } = await open();
+    const { user } = await open('?month=2026-10');
     await choose(user, language, 'cashbook-field-partner', nameOf(language, 'ب', 'Partner B'));
     await waitFor(() => {
-      expect(rows()).toBe(3);
+      expect(partnersApi.partnersStatementMonth).toHaveBeenCalledWith({
+        partner_id: 2,
+        month: '2026-10',
+      });
     });
-    expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
-      expect.objectContaining({ partner_id: 2, offset: 0 }),
-    );
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(3);
+    });
   });
 
-  it('the statement failing to load says so with a retry that works', async () => {
-    vi.mocked(partnersApi.partnersStatement).mockRejectedValueOnce(
-      fail({ code: 'ERR_NOT_IMPLEMENTED' }),
-    );
-    const { user } = await open('?partner=2');
-    const title = await screen.findByText(named(message(language, 'partners-statement-failed')));
-    const alert = title.closest('[role="alert"]');
-    if (!(alert instanceof HTMLElement)) throw new Error('no alert');
+  it('a month with no movement says so and the buttons still work', async () => {
+    await open('?partner=3&month=2026-10');
+    expect(await screen.findByText(named(m('partners-month-empty')))).toBeInTheDocument();
+    expect(screen.getByText(m('partners-month-empty-help'))).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: startsWith(m('common-month-earlier')) }),
+    ).toBeInTheDocument();
+  });
+
+  it('the print button shows the month of the partner on screen in the print layout, and Back returns', async () => {
+    const { user } = await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
     await user.click(
-      within(alert).getByRole('button', { name: startsWith(message(language, 'common-retry')) }),
+      await screen.findByRole('button', {
+        name: (name) => visible(name).includes(m('report-preview')),
+      }),
     );
     await waitFor(() => {
-      expect(rows()).toBe(3);
+      expect(vi.mocked(partnersApi.partnersStatementMonthPrintData).mock.calls[0]?.[0]).toEqual({
+        partner_id: 2,
+        month: '2026-10',
+        language,
+        paper: 'a4',
+      });
+    });
+    await waitFor(() => {
+      expect(visible(document.querySelector('.print-sheet')?.textContent)).toContain('44,364');
+    });
+    await user.click(
+      await screen.findByRole('button', { name: (name) => visible(name) === m('common-back') }),
+    );
+    expect(await screen.findByRole('treegrid')).toBeInTheDocument();
+  });
+
+  it('the month failing to load says so with a retry that works', async () => {
+    vi.mocked(partnersApi.partnersStatementMonth).mockRejectedValueOnce(
+      fail({ code: 'ERR_NOT_IMPLEMENTED' }),
+    );
+    const { user } = await open('?partner=2&month=2026-10');
+    const title = await screen.findByText(named(m('partners-statement-failed')));
+    const alert = title.closest('[role="alert"]');
+    if (!(alert instanceof HTMLElement)) throw new Error('no alert');
+    await user.click(within(alert).getByRole('button', { name: startsWith(m('common-retry')) }));
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(3);
     });
   });
 
-  it('a partner with no lines gets a helpful empty message', async () => {
-    await open('?partner=3');
-    expect(
-      await screen.findByText(named(message(language, 'partners-statement-empty'))),
-    ).toBeInTheDocument();
-    expect(pageText()).toContain(message(language, 'partners-statement-empty-help'));
+  it('a day that cannot be read says so, and the rest of the month stays', async () => {
+    vi.mocked(partnersApi.partnersStatementDay).mockRejectedValueOnce(
+      fail({ code: 'ERR_NOT_IMPLEMENTED' }),
+    );
+    const { user } = await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
+    await user.click(
+      await screen.findByRole('row', { name: (name) => name.includes('10-10-2026') }),
+    );
+    expect(await screen.findByText(named(m('partners-day-failed')))).toBeInTheDocument();
+    expect(rowsOf(list()).length).toBe(3);
   });
 
   it('switching the language rebuilds the list in the other language with the same figures', async () => {
-    await open('?partner=1');
+    await open('?partner=1&month=2026-10');
+    await screen.findByRole('treegrid');
     await waitFor(() => {
-      expect(rows()).toBe(5);
+      expect(rowsOf(list()).length).toBe(3);
     });
+    const before = rowsOf(list()).map((cells) => cells.slice(1));
     const other: Language = language === 'ur' ? 'en' : 'ur';
     act(() => {
       useLanguageStore.setState({ language: other });
     });
-    const rebuilt = gridOf(other, 'partners-statement-label');
     await waitFor(() => {
-      expect(textOf(rebuilt, 2, 'running')).toBe('-296');
+      expect(visible(list().textContent)).toContain(message(other, 'partners-month-opening'));
     });
-    expect(textOf(rebuilt, 0, 'heading')).toBe(message(other, 'partners-statement-heading-trip'));
-    expect(cellOf(rebuilt, 0, 'detail')).toBeInTheDocument();
-  });
-
-  it('opens on this year, with "from the first date" among the choices of the period box', async () => {
-    const { user } = await open('?partner=2');
-    await waitFor(() => {
-      expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
-        expect.objectContaining({
-          partner_id: 2,
-          from: '01-01-2026',
-          to: '31-12-2026',
-        }),
-      );
-    });
-    const period = await screen.findByRole('combobox', {
-      name: named(message(language, 'common-period-label')),
-    });
-    expect(period).toHaveTextContent(message(language, 'common-period-year'));
-    await user.click(period);
-    expect(
-      await screen.findByRole('option', { name: named(message(language, 'common-period-all')) }),
-    ).toBeInTheDocument();
-  });
-
-  it("pages 25 lines at a time and the count is the backend's over the whole range", async () => {
-    const full = books.money.statement({
-      partner_id: 2,
-      from: null,
-      to: null,
-      offset: 0,
-      limit: 0,
-      sort: null,
-      group_by_month: false,
-    });
-    // Thirty lines in all: the three real ones again and again, each with its own id.
-    const lines = Array.from({ length: 30 }, (_, index) => {
-      const base = full.lines[index % full.lines.length];
-      return base === undefined ? [] : [{ ...base, id: `line-${String(index)}` }];
-    }).flat();
-    vi.mocked(partnersApi.partnersStatement).mockImplementation((input) =>
-      Promise.resolve({
-        ...full,
-        lines: lines.slice(input.offset, input.offset + input.limit),
-        total_count: 30,
-      }),
-    );
-    const { user } = await open('?partner=2');
-    await waitFor(() => {
-      expect(visible(pageText())).toContain(rangeText(language, 1, 25, 30));
-    });
-    expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
-      expect.objectContaining({ offset: 0, limit: PAGE_ROWS }),
-    );
-    await user.click(await pagerButton(language, 'next'));
-    await waitFor(() => {
-      expect(partnersApi.partnersStatement).toHaveBeenLastCalledWith(
-        expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
-      );
-    });
-    await waitFor(() => {
-      expect(visible(pageText())).toContain(rangeText(language, 26, 30, 30));
-    });
+    expect(rowsOf(list()).map((cells) => cells.slice(1))).toEqual(before);
   });
 });

@@ -68,7 +68,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 32,
+            "account_id": 36,
             "code": "01030001",
             "short_code": null,
             "name_ur": "اسلم",
@@ -111,7 +111,7 @@
       ],
       "source": {
         "kind": "account",
-        "id": 32
+        "id": 36
       },
       "kind": "normal"
     }

@@ -691,3 +691,53 @@ err-no-base = فیصد نکالنے کے لیے بنیادی رقم صفر نہ�
 
 # review: pending
 err-too-little-history = اندازے کے لیے پورے مہینوں کا ریکارڈ کافی نہیں۔
+
+# review: pending
+err-month-invalid = یہ مہینہ درست نہیں۔ مہینہ اور سال درست لکھیں، جیسے 10-2026۔
+
+# review: pending
+err-month-in-future = آگے کا مہینہ نہیں لکھ سکتے۔ یہ مہینہ ({ $month }) یا اس سے پہلے کا مہینہ لکھیں۔
+
+# review: pending
+err-month-before-first = { $month } سے پہلے کوئی اندراج نہیں۔ وہ مہینہ یا اس کے بعد کا مہینہ لکھیں۔
+
+# review: pending
+err-year-invalid = یہ سال درست نہیں۔ چار ہندسے لکھیں، جیسے 2026۔
+
+# review: pending
+err-year-in-future = آگے کا سال نہیں لکھ سکتے۔ یہ سال ({ $year }) یا اس سے پہلے کا سال لکھیں۔
+
+# review: pending
+err-year-before-first = { $year } سے پہلے کوئی { -commission } نہیں۔ وہ سال یا اس کے بعد کا سال لکھیں۔
+
+
+# review: pending
+err-wrong-party-type = یہ پارٹی آپ کی چنی ہوئی طرف کی نہیں۔ { -gahak } چنا ہے تو { -gahak } ہی چنیں، { -beopari } چنا ہے تو { -beopari } ہی۔
+
+
+# review: pending
+err-duplicate-lot = یہ لاٹ سکرین پر دو بار ہے۔ ایک بار ہٹا دیں۔
+
+# review: pending
+err-link-partner-required = جس { -shirakat-dar } سے جوڑنا ہے اسے چنیں۔
+
+# review: pending
+err-partner-inactive = یہ { -shirakat-dar } اب فعال نہیں۔ دوسرا { -shirakat-dar } چنیں۔
+
+# review: pending
+err-link-locked = جب تک بقایا صفر نہیں ہوتا، جوڑ بدلا نہیں جا سکتا۔ پہلے بقایا پورا کریں۔
+
+# review: pending
+err-link-fixed-while-owed = اس شخص کے ذمے ابھی رقم ہے، اس لیے اس کا جوڑ نہیں بدل سکتا۔ رقم پوری ہو جائے تو بدلا جا سکتا ہے۔
+
+# review: pending
+err-salary-not-allowed-for-linked = { -shirakat-dar } سے جڑا ہوا ادھار صرف نقد میں واپس ہوتا ہے۔ اسے تنخواہ سے نہیں کاٹا جا سکتا۔
+
+# review: pending
+err-link-changed-for-entry = یہ اندراج اس وقت بنا تھا جب اس { -alag-khata } یا شخص کا جوڑ کچھ اور تھا، اس لیے اس میں تبدیلی نہیں ہو سکتی۔ اسے منسوخ کر کے دوبارہ لکھیں۔
+
+# review: pending
+err-linked-account-restricted = یہ کھاتہ ایپ خود لکھتی ہے۔ اسے { -general } اندراج میں ہاتھ سے نہیں لکھا جا سکتا۔
+
+# review: pending
+err-partner-has-linked-balance = جب تک اس { -shirakat-dar } سے جڑے { -alag-khata } یا ادھار پر بقایا ہے، اسے غیر فعال نہیں کر سکتے۔ پہلے بقایا پورا کریں۔

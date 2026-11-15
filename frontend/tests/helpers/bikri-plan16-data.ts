@@ -9,6 +9,11 @@ import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import type { CancelPreview } from '../../src/bindings/CancelPreview';
 import type { CashCheck } from '../../src/bindings/CashCheck';
 import type { EditableBikri } from '../../src/bindings/EditableBikri';
+import type { LotInput } from '../../src/bindings/LotInput';
+import type { MixedSaleInput } from '../../src/bindings/MixedSaleInput';
+import type { MixedSalePreview } from '../../src/bindings/MixedSalePreview';
+import type { MixedSaleSaved } from '../../src/bindings/MixedSaleSaved';
+import type { MixedUndoResult } from '../../src/bindings/MixedUndoResult';
 import type { RecordRef } from '../../src/bindings/RecordRef';
 import type { SaleInput } from '../../src/bindings/SaleInput';
 import type { StockList } from '../../src/bindings/StockList';
@@ -180,4 +185,112 @@ export function laterSaleAnswer(sales: readonly SaleInput[], left: number): Bikr
     }
   }
   return answer;
+}
+
+/** A lot with nothing but its lines, to stand for a carried lot in a draft the preview double reads. */
+function carriedShell(lotId: number, sales: readonly SaleInput[]): LotInput {
+  return {
+    key: `lot:${String(lotId)}`,
+    lot_id: lotId,
+    seller_account_id: IDS.rahim,
+    item_id: null,
+    packing_id: null,
+    marka_id: null,
+    store_id: null,
+    qty_received: '50',
+    weight_received: null,
+    freight: null,
+    freight_paid_by: 'firm',
+    labour: null,
+    munshiana: null,
+    phone: null,
+    cash_paid: null,
+    store_rent: null,
+    adjust_advance: false,
+    sales: [...sales],
+  };
+}
+
+/**
+ * The answer of `bikri_mixed_preview`: the whole screen as a plain preview whose lots are the carried
+ * lots first and then the new lots (the double of `previewFor`, with each carried lot's blank line
+ * starting at what the lot has left), and the part of each entry. The numbers are the PRD's.
+ */
+export function mixedAnswer(input: MixedSaleInput, left: number): MixedSalePreview {
+  const whole = previewFor({
+    header: { entry_date: input.date },
+    lots: [
+      ...input.carried.map((carried) => carriedShell(carried.lot_id, carried.sales)),
+      ...input.new_lots,
+    ],
+  });
+  const carriedCount = input.carried.length;
+  whole.lots.forEach((lot, index) => {
+    if (index >= carriedCount) return;
+    for (const line of lot.lines) if (line.is_blank) line.remaining_qty = left;
+  });
+  return {
+    preview: whole,
+    parts: [
+      ...input.carried.map((carried) => ({
+        kind: 'carried' as const,
+        key: carried.key,
+        lot_id: carried.lot_id,
+        old_bikri_id: 41,
+        old_number: 1,
+        summary: whole.summary,
+        split: whole.split,
+      })),
+      ...(input.new_lots.length === 0
+        ? []
+        : [
+            {
+              kind: 'new' as const,
+              key: null,
+              lot_id: null,
+              old_bikri_id: null,
+              old_number: null,
+              summary: whole.summary,
+              split: whole.split,
+            },
+          ]),
+    ],
+  };
+}
+
+/** What `bikri_mixed_save` gives back for the input: the carried postings, then the new بکری. */
+export function mixedSaved(input: Omit<MixedSaleInput, never>): MixedSaleSaved {
+  const answer = mixedAnswer(input, 0);
+  const made = input.new_lots.length > 0;
+  return {
+    date: '2026-10-10',
+    new_bikri_id: made ? 42 : null,
+    new_bikri_number: made ? 2 : null,
+    carried: input.carried.map((carried, index) => ({
+      lot_id: carried.lot_id,
+      old_bikri_id: 41,
+      old_number: 1,
+      entry_id: 50 + index,
+    })),
+    entry_ids: [...input.carried.map((_, index) => 50 + index), ...(made ? [60] : [])],
+    // The backend's list for the print: the new بکری, if any, then the old بکری of each carried lot (here all 41).
+    print_bikri_ids: [...(made ? [42] : []), ...(input.carried.length > 0 ? [41] : [])],
+    preview: answer.preview,
+  };
+}
+
+/** The values of an undone mixed save: the carried lot's line and, when there was one, the new lots. */
+export function mixedUndoResult(saved: MixedSaleSaved, input: MixedSaleInput): MixedUndoResult {
+  return {
+    reversal_entry_ids: [...saved.entry_ids].reverse().map((id) => id + 100),
+    cancelled_bikri_id: saved.new_bikri_id,
+    draft: {
+      date: '10-10-2026',
+      carried: input.carried.map((carried) => ({ lot_id: carried.lot_id, sales: carried.sales })),
+      new_draft:
+        input.new_lots.length === 0
+          ? null
+          : { header: { entry_date: '10-10-2026' }, lots: input.new_lots },
+    },
+  };
 }

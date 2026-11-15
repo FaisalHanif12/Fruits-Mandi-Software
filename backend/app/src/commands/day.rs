@@ -22,6 +22,10 @@ pub struct DayStatus {
     pub closed_up_to: Option<String>,
     /// True when today is after the closed-up-to date, so entries can be posted.
     pub today_open: bool,
+    /// The first day of the books (the oldest date of a posted entry, a trip, a garden, a purchase
+    /// or a stock move), `YYYY-MM-DD`. Null until there is one. The windows of the list screens
+    /// stop here when they go back (plan 76 point 8).
+    pub first_entry_date: Option<String>,
 }
 
 /// Today and the day state.
@@ -30,21 +34,21 @@ pub async fn day_status<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<D
     run(app, "day_status", |ctx| {
         auth::require(ctx)?;
         let info = day::status(ctx)?;
-        Ok(DayStatus {
-            today: info.today,
-            closed_up_to: info.closed_up_to,
-            today_open: info.today_open,
-        })
+        status_of(ctx, info)
     })
     .await
 }
 
-fn status_of(info: day::DayStatusInfo) -> DayStatus {
-    DayStatus {
+fn status_of(
+    ctx: &mandi_services::Context,
+    info: day::DayStatusInfo,
+) -> Result<DayStatus, mandi_services::ServiceError> {
+    Ok(DayStatus {
         today: info.today,
         closed_up_to: info.closed_up_to,
         today_open: info.today_open,
-    }
+        first_entry_date: day::first_book_day(ctx)?.map(|d| d.to_iso()),
+    })
 }
 
 /// What closing the days up to a day would do (PRD FR-21.1): the days, the trial balance, the
@@ -75,7 +79,7 @@ pub async fn day_close<R: tauri::Runtime>(
 ) -> Result<DayStatus, UiError> {
     run(app, "day_close", move |ctx| {
         let actor = auth::require(ctx)?;
-        Ok(status_of(day::close(ctx, &actor, &input)?))
+        status_of(ctx, day::close(ctx, &actor, &input)?)
     })
     .await
 }
@@ -89,7 +93,7 @@ pub async fn day_reopen<R: tauri::Runtime>(
 ) -> Result<DayStatus, UiError> {
     run(app, "day_reopen", move |ctx| {
         let actor = auth::require(ctx)?;
-        Ok(status_of(day::reopen(ctx, &actor, &input)?))
+        status_of(ctx, day::reopen(ctx, &actor, &input)?)
     })
     .await
 }

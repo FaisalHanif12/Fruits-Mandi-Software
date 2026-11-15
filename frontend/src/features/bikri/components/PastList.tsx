@@ -32,6 +32,8 @@ interface PastListProps {
   query: PastListQuery;
   columns: readonly ListColumn<BikriListRow>[];
   labelId: string;
+  /** The values the name needs: the day of one open day's grid (several are alike). */
+  labelVars?: Record<string, string> | undefined;
   failedId: string;
   /** Shown when the filter has no rows. */
   empty: ReactNode;
@@ -63,6 +65,7 @@ export function PastList({
   query,
   columns,
   labelId,
+  labelVars,
   failedId,
   empty,
   onOpen,
@@ -104,6 +107,7 @@ export function PastList({
       rows={rows}
       getRowId={(row) => String(row.id)}
       labelId={labelId}
+      labelVars={labelVars}
       failedId={failedId}
       error={error}
       onRetry={() => {

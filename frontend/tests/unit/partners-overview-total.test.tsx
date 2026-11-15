@@ -133,7 +133,7 @@ describe.each(LANGUAGES)('the partner overview, plan 17 columns (%s)', (language
       name: named(message(language, 'partners-statement-title')),
     });
     await waitFor(() => {
-      expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
+      expect(partnersApi.partnersStatementMonth).toHaveBeenCalledWith(
         expect.objectContaining({ partner_id: 2 }),
       );
     });

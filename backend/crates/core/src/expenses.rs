@@ -234,6 +234,14 @@ pub struct PartnerTakesInput {
     /// The partner. `ERR_NOT_FOUND` on `partner_id`.
     #[ts(type = "number")]
     pub partner_id: i64,
+    /// First day of the range, `DD-MM-YYYY` or a shortcut. Null or empty means no lower limit
+    /// (plan 76 point 8: a screen sends the first day of its month). The rows, the count, the
+    /// totals and the months are over the range.
+    #[serde(default)]
+    pub from: Option<String>,
+    /// Last day of the range. Null or empty means no upper limit.
+    #[serde(default)]
+    pub to: Option<String>,
     /// How many rows to skip. 0 for the first page.
     #[serde(default)]
     pub offset: u32,

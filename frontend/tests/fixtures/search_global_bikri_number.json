@@ -2,7 +2,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 21,
+      "id": 22,
       "code": "0021",
       "name_ur": "ارشد ملتانی",
       "name_en": "Arshad Multani",
@@ -20,7 +20,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 19,
+      "id": 20,
       "code": "0011",
       "name_ur": "کریم",
       "name_en": "Karim",
@@ -38,7 +38,61 @@
   {
     "kind": "account",
     "hit": {
-      "id": 24,
+      "id": 26,
+      "code": "06050001",
+      "name_ur": "الگ کھاتہ اور ادھار رقم - الف",
+      "name_en": "Linked Khata and Loans - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 16,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 30,
+      "code": "06050002",
+      "name_ur": "الگ کھاتہ اور ادھار رقم - ب",
+      "name_en": "Linked Khata and Loans - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 16,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 34,
+      "code": "06050003",
+      "name_ur": "الگ کھاتہ اور ادھار رقم - ج",
+      "name_en": "Linked Khata and Loans - Partner C",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 16,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 25,
       "code": "06040001",
       "name_ur": "باغ سفر اور پھل - الف",
       "name_en": "Gardens Trips and Fruit - Partner A",
@@ -56,7 +110,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 27,
+      "id": 29,
       "code": "06040002",
       "name_ur": "باغ سفر اور پھل - ب",
       "name_en": "Gardens Trips and Fruit - Partner B",
@@ -74,7 +128,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 30,
+      "id": 33,
       "code": "06040003",
       "name_ur": "باغ سفر اور پھل - ج",
       "name_en": "Gardens Trips and Fruit - Partner C",
@@ -92,7 +146,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 23,
+      "id": 24,
       "code": "06030001",
       "name_ur": "ذاتی خرچہ - الف",
       "name_en": "Drawings - Partner A",
@@ -103,60 +157,6 @@
       "chukta_id": null,
       "phone": null,
       "control_id": 11,
-      "is_active": true,
-      "is_dead": false
-    }
-  },
-  {
-    "kind": "account",
-    "hit": {
-      "id": 26,
-      "code": "06030002",
-      "name_ur": "ذاتی خرچہ - ب",
-      "name_en": "Drawings - Partner B",
-      "extra_ur": "",
-      "extra_en": "",
-      "account_type": "other",
-      "kind": "account",
-      "chukta_id": null,
-      "phone": null,
-      "control_id": 11,
-      "is_active": true,
-      "is_dead": false
-    }
-  },
-  {
-    "kind": "account",
-    "hit": {
-      "id": 29,
-      "code": "06030003",
-      "name_ur": "ذاتی خرچہ - ج",
-      "name_en": "Drawings - Partner C",
-      "extra_ur": "",
-      "extra_en": "",
-      "account_type": "other",
-      "kind": "account",
-      "chukta_id": null,
-      "phone": null,
-      "control_id": 11,
-      "is_active": true,
-      "is_dead": false
-    }
-  },
-  {
-    "kind": "account",
-    "hit": {
-      "id": 22,
-      "code": "06020001",
-      "name_ur": "سرمایہ - الف",
-      "name_en": "Capital - Partner A",
-      "extra_ur": "",
-      "extra_en": "",
-      "account_type": "other",
-      "kind": "account",
-      "chukta_id": null,
-      "phone": null,
-      "control_id": 10,
       "is_active": true,
       "is_dead": false
     }

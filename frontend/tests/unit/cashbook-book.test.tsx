@@ -91,12 +91,10 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
 
   it("shows the day: the opening and closing cash, every movement and the backend's totals", async () => {
     await open();
-    // The book opens on today, as the period box says (remembered per screen, plan 38 R4).
+    // The book shows 7 days at a time and opens on the latest, the days that end today (PRD FR-19.11).
     expect(
-      await screen.findByRole('combobox', {
-        name: named(message(language, 'common-period-label')),
-      }),
-    ).toHaveTextContent(message(language, 'common-period-today'));
+      await screen.findByText(message(language, 'common-days-latest-note')),
+    ).toBeInTheDocument();
     const list = await screen.findByRole('group', {
       name: named(message(language, 'cashbook-list-label')),
     });
@@ -121,9 +119,11 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
 
   it('has no box to type counted cash (PRD FR-16.1)', async () => {
     await open();
-    await screen.findByRole('combobox', { name: named(message(language, 'common-period-label')) });
-    // The period is a choice, not a box to type in, and there is nothing else to type in.
-    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
+    await screen.findByText(message(language, 'common-days-latest-note'));
+    // The only box to type in is the one that goes to a day: there is no box for counted cash.
+    const boxes = screen.queryAllByRole('textbox');
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0]).toBe(await labelled(language, 'common-goto-day'));
     expect(pageText()).not.toMatch(/count/i);
   });
 
@@ -141,7 +141,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     const { user } = await open();
     await waitFor(() => {
       expect(cashbookApi.cashbookGet).toHaveBeenCalledWith({
-        from: '10-10-2026',
+        from: '04-10-2026',
         to: '10-10-2026',
         offset: 0,
         limit: PAGE_ROWS,
@@ -283,28 +283,29 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     }
   });
 
-  it('a language switch redraws the book in the other language and keeps the range', async () => {
+  it('a language switch redraws the book in the other language and keeps the window', async () => {
     const { user } = await open();
+    // One window back: the 7 days before the latest.
     await user.click(
-      await screen.findByRole('combobox', {
-        name: named(message(language, 'common-period-label')),
+      await screen.findByRole('button', {
+        name: (name) =>
+          visible(name).includes(message(language, 'common-days-earlier', { days: '7' })),
       }),
     );
-    await user.click(
-      await screen.findByRole('option', { name: named(message(language, 'common-period-custom')) }),
-    );
-    const from = await labelled(language, 'common-period-from');
-    await user.clear(from);
-    await user.keyboard('01-10-2026');
+    await waitFor(() => {
+      expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(
+        expect.objectContaining({ from: '27-09-2026', to: '03-10-2026' }),
+      );
+    });
     const other: Language = language === 'ur' ? 'en' : 'ur';
     act(() => {
       useLanguageStore.setState({ language: other });
     });
-    expect((await labelled(other, 'common-period-from')).value).toBe('01-10-2026');
-    expect(
-      await screen.findByRole('group', { name: named(message(other, 'cashbook-list-label')) }),
-    ).toBeInTheDocument();
-    expect(screen.queryByLabelText(named(message(language, 'common-period-from')))).toBeNull();
+    await waitFor(() => {
+      expect(visible(pageText())).toContain('27-09-2026');
+    });
+    // The 7 days before have no cash movement: the page says so, in the other language.
+    expect(await screen.findByText(message(other, 'cashbook-empty'))).toBeInTheDocument();
     // Alt+L is the same switch from the keyboard.
     press('KeyL', { altKey: true });
     expect(

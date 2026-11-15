@@ -36,7 +36,7 @@ pub(crate) mod rows;
 mod statement;
 
 pub use money::{capital_history, takes};
-pub use statement::statement;
+pub use statement::{first_event_date, statement, statement_day, statement_month};
 
 pub use rows::split_entry;
 
@@ -277,8 +277,10 @@ pub fn create(
         let drawings = drawings_account(&name_ur, &name_en);
         // PRD FR-10.4 v1.6: his gardens, trips and fruit account (0604) is made with him.
         let venture = venture_account(&name_ur, &name_en);
+        // Plan 76: his account for linked khata and loan money (0605) is made with him.
+        let linked = mandi_domain::core::partners::linked_account(&name_ur, &name_en);
         let mut made = Vec::new();
-        for account in [&capital, &drawings, &venture] {
+        for account in [&capital, &drawings, &venture, &linked] {
             let (id, code) = master_repo::create_account(tx, account, actor.user_id, &now)?
                 .ok_or_else(|| series_full(account.control_code))?;
             ctx.db.auditor().write(
@@ -295,11 +297,11 @@ pub fn create(
             )?;
             made.push(id);
         }
-        let (capital_id, drawings_id, venture_id) = match made.as_slice() {
-            [c, d, v] => (*c, *d, *v),
+        let (capital_id, drawings_id, venture_id, linked_id) = match made.as_slice() {
+            [c, d, v, l] => (*c, *d, *v, *l),
             _ => {
                 return Err(ServiceError::Data(
-                    "a partner needs three accounts".to_owned(),
+                    "a partner needs four accounts".to_owned(),
                 ));
             }
         };
@@ -311,6 +313,7 @@ pub fn create(
                 capital_account_id: capital_id,
                 drawings_account_id: drawings_id,
                 venture_account_id: venture_id,
+                linked_account_id: linked_id,
             },
             actor.user_id,
             &now,
@@ -482,6 +485,17 @@ pub fn update(
                 "is_active",
             ));
         }
+        // A khata or loan linked to him that still has a balance is his money (plan 76 points 5 and
+        // 10); compare E69.
+        if old.is_active
+            && !input.is_active
+            && mandi_db::links::partner_has_linked_balance(tx, old.id)?
+        {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrPartnerHasLinkedBalance,
+                "is_active",
+            ));
+        }
         if !old.is_active
             && input.is_active
             && usize::try_from(repo::active_count(tx)?).unwrap_or(usize::MAX) >= MAX_PARTNERS
@@ -522,6 +536,15 @@ pub fn update(
                     tx,
                     old.venture_account_id,
                     &venture_account(&name_ur, &name_en),
+                    actor.user_id,
+                    &now,
+                )?;
+            }
+            if old.linked_account_id != 0 {
+                master_repo::rename_account(
+                    tx,
+                    old.linked_account_id,
+                    &mandi_domain::core::partners::linked_account(&name_ur, &name_en),
                     actor.user_id,
                     &now,
                 )?;
@@ -777,6 +800,8 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
             if !partner.is_active && numbers.iter().all(|n| *n == Paisa::ZERO) {
                 continue;
             }
+            let gardens = crate::gardens::cards_of_partner(conn, id)?;
+            let trips = crate::trips::cards_of_partner(conn, id)?;
             out.push(PartnerOverviewRow {
                 partner_id: id,
                 name_ur: partner.name_ur.clone(),
@@ -795,13 +820,34 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 month_ventures_paisa: month_ventures,
                 total_paisa: total,
                 // The open gardens and trips under his card (PRD 17.3): gardens first, then trips.
+                open_gardens_count: i64::try_from(gardens.len()).unwrap_or(i64::MAX),
+                open_trips_count: i64::try_from(trips.len()).unwrap_or(i64::MAX),
                 open_ventures: {
-                    let mut cards = crate::gardens::cards_of_partner(conn, id)?;
-                    cards.extend(crate::trips::cards_of_partner(conn, id)?);
+                    let mut cards = gardens;
+                    cards.extend(trips);
                     cards
                 },
             });
         }
         Ok(out)
+    })
+}
+
+/// The open gardens and trips a partner is in, with his %, his money in and back and the running
+/// balance or result of each: the list the partner page opens on demand (plan 76 point 11). Gardens
+/// first, then trips, by number. Read only.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `partner_id`; `ServiceError::Db`.
+pub fn open_ventures(
+    ctx: &Context,
+    partner_id: i64,
+) -> Result<Vec<mandi_domain::core::partners::PartnerVentureCard>, ServiceError> {
+    ctx.db.read(|conn| {
+        repo::get(conn, partner_id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
+        let mut cards = crate::gardens::cards_of_partner(conn, partner_id)?;
+        cards.extend(crate::trips::cards_of_partner(conn, partner_id)?);
+        Ok(cards)
     })
 }

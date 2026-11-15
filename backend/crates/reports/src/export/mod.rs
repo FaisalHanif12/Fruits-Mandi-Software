@@ -23,6 +23,7 @@ pub mod l10n;
 pub mod model;
 pub mod numbers;
 pub(crate) mod report;
+pub(crate) mod table;
 pub mod writer;
 
 use mandi_core::auth::Language;
@@ -46,6 +47,7 @@ pub use model::{
     ColumnShape, ExportColumn, ExportProgress, ExportRow, ExportSheet, ExportStage, XCell,
 };
 pub use numbers::{count_as_f64, rupees_as_f64};
+pub use table::export_table;
 pub use writer::{check_path, signed_balance, tab_name, write_workbook};
 
 /// The input of `reports_export_excel`.

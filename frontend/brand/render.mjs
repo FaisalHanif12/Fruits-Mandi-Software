@@ -19,8 +19,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const CHROME =
-  process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const SIZES = [1024, 128, 32];
 const GROUNDS = { light: '#e8e8ed', dark: '#1d1d1f' };
 
@@ -99,15 +98,21 @@ if (command === 'options') {
   const small = [16, 32, 64];
   for (const size of small) {
     for (const [groundName, ground] of Object.entries(GROUNDS)) {
-      shoot(wrap(file, size, ground), path.join(out, `${name}-${size}-${groundName}.png`), size, size);
+      shoot(
+        wrap(file, size, ground),
+        path.join(out, `${name}-${size}-${groundName}.png`),
+        size,
+        size,
+      );
     }
   }
-  const row = (groundName) => `<div class="row ${groundName}">${small
-    .map((size) => {
-      const src = pathToFileURL(path.join(out, `${name}-${size}-${groundName}.png`)).href;
-      return `<div><img src="${src}"><img class="zoom" style="width:${size * 12}px;height:${size * 12}px" src="${src}"></div>`;
-    })
-    .join('')}</div>`;
+  const row = (groundName) =>
+    `<div class="row ${groundName}">${small
+      .map((size) => {
+        const src = pathToFileURL(path.join(out, `${name}-${size}-${groundName}.png`)).href;
+        return `<div><img src="${src}"><img class="zoom" style="width:${size * 12}px;height:${size * 12}px" src="${src}"></div>`;
+      })
+      .join('')}</div>`;
   const sheet = `<!doctype html><meta charset="utf-8"><style>
     body{margin:0}.row{display:flex;gap:32px;align-items:flex-end;padding:24px}
     .light{background:#e8e8ed}.dark{background:#1d1d1f}

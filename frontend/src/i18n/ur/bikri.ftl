@@ -1108,6 +1108,10 @@ bikri-past-failed = پچھلے دنوں کی فہرست کھل نہیں سکی
 # review: pending
 bikri-past-label = پچھلے دنوں کی { -bikri }
 
+# The name of the grid of one open day of the window, read by screen readers: its date.
+# review: pending
+bikri-past-day-label = { -bikri } { $date }
+
 ## Past Sales: the divider, the headings of the two parts and the buttons that move the window (plan 72, Umar 12-11-2026).
 
 # The heading of the table of the window: the earlier { $days } days.
@@ -1149,3 +1153,46 @@ bikri-past-row-for = { -bikri } <num>{ $number }</num>:
 # The button on the sale book that goes back to the list the { -bikri } was opened from, at the same window and row.
 # review: pending
 bikri-past-back-to-list = پچھلی { -bikri } پر واپس
+
+## Lots carried over from earlier { -bikri } and new lots on one screen (plan 76 point 1, PRD FR-12.17, FR-12.48).
+
+# The button under the lots grid that adds a lot of goods left from an earlier { -bikri }.
+# review: pending
+bikri-carried-add = { -baqi-maal } سے
+
+# review: pending
+bikri-carried-title = { -baqi-maal } میں سے { -lot } چنیں
+
+# review: pending
+bikri-carried-help = پچھلی { -bikri } کا وہ مال جو ابھی بِکا نہیں۔ وہ اسی { -bikri } میں بیچا جاتا ہے، اور اس کا کرایہ، مزدوری اور باقی { -lot } کے خرچے دوبارہ نہیں لگتے۔
+
+# review: pending
+bikri-carried-search = بیوپاری، قسم مال یا نمبر سے تلاش کریں
+
+# review: pending
+bikri-carried-empty = بیچنے کے لیے کوئی مال باقی نہیں
+
+# review: pending
+bikri-carried-empty-help = ہر { -lot } بِک چکی ہے، یا اس اسکرین پر پہلے سے موجود ہے۔
+
+# review: pending
+bikri-carried-failed = باقی مال پڑھا نہیں جا سکا
+
+# The note above the lots when some of them are carried over. $count: how many.
+# review: pending
+bikri-carried-note = پچھلی { -bikri } سے <num>{ $count }</num> { -lot } آگے لائی گئی ہیں۔ ان کے { -lot } کے خرچے دوبارہ نہیں لگتے۔
+
+# review: pending
+bikri-carried-note-hint = خریدار اور ریٹ لکھیں۔ کسی { -lot } کو چھوڑنا ہو تو اسے <key>{ $key }</key> سے ہٹا دیں۔
+
+# The words of a carried lot's row: where it came from. $number: the { -bikri } it was received in.
+# review: pending
+bikri-carried-from = { -bikri } <num>{ $number }</num> سے
+
+# The message after a save that held lots carried over from an earlier { -bikri }. $number: the { -bikri } it was written on.
+# review: pending
+bikri-mixed-saved-toast = { -bikri } <num>{ $number }</num> محفوظ ہو گئی، آگے لایا گیا مال بھی اسی میں۔
+
+# The lot asked for on the address is not there any more: sold out, written off or taken back.
+# review: pending
+bikri-carried-gone = اس { -lot } میں بیچنے کو کچھ نہیں بچا، اس لیے شامل نہیں ہوئی۔

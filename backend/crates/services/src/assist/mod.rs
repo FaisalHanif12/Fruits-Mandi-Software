@@ -13,6 +13,7 @@ use mandi_domain::core::bikri::{LastRateInput, RateHint, RateHintSource, SellerM
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::PageInput;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{AdvancesInfo, OpenAdvance};
 
@@ -217,6 +218,27 @@ fn chukta_card_of(
 /// `ERR_NOT_FOUND` and `ERR_NOT_A_SELLER` on `seller_id`; `ServiceError::Data` if more was
 /// adjusted against an advance than was given.
 pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceError> {
+    advances_page(ctx, seller_id, PageInput::default())
+}
+
+/// The most open advances one page of the card holds; also what a `limit` of 0 gives.
+const MAX_ADVANCE_ROWS: usize = 200;
+
+/// One page of a seller's open advances, oldest first (plan 76 point 8). The count and the total
+/// are of all his open advances, whatever the page.
+///
+/// # Errors
+/// As [`advances`].
+pub fn advances_page(
+    ctx: &Context,
+    seller_id: i64,
+    page: PageInput,
+) -> Result<AdvancesInfo, ServiceError> {
+    let offset = usize::try_from(page.offset).unwrap_or(usize::MAX);
+    let limit = match usize::try_from(page.limit) {
+        Ok(0) | Err(_) => MAX_ADVANCE_ROWS,
+        Ok(n) => n.min(MAX_ADVANCE_ROWS),
+    };
     ctx.db.read(|conn| {
         let facts = account_repo::facts(conn, seller_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "seller_id"))?;
@@ -228,6 +250,7 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
         }
         let mut open = Vec::new();
         let mut total = Paisa::ZERO;
+        let mut count = 0_usize;
         for line in voucher_repo::advance_lines(conn, seller_id)? {
             let given = paisa(line.given_paisa)?;
             let adjusted = paisa(line.adjusted_paisa)?;
@@ -245,6 +268,10 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
                 continue;
             }
             total = total.checked_add(left).map_err(money_error)?;
+            count = count.saturating_add(1);
+            if count <= offset || open.len() >= limit {
+                continue;
+            }
             open.push(OpenAdvance {
                 // Only a پیشگی voucher or an opening debit makes an advance line.
                 source: if line.voucher_number.is_some() {
@@ -259,7 +286,11 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
                 open_paisa: left,
             });
         }
+        let shown_to = offset.saturating_add(open.len());
         Ok(AdvancesInfo {
+            truncated: count > shown_to,
+            total_count: i64::try_from(count)
+                .map_err(|_| ServiceError::reject(ErrorCode::ErrOverflow))?,
             open,
             open_paisa: total,
             last: voucher_repo::last_advance(conn, seller_id)?,

@@ -115,6 +115,8 @@ describe('the canned data of the cash book tests has the real shape', () => {
         real.PARTNER_TAKES,
         books.partnerTakes({
           partner_id: 1,
+          from: null,
+          to: null,
           offset: 0,
           limit: 0,
           sort: null,
@@ -152,6 +154,8 @@ describe('the canned data of the cash book tests has the real shape', () => {
         real.LENT_LIST,
         books.lentList({
           person_id: ASLAM.id,
+          from: null,
+          to: null,
           offset: 0,
           limit: 0,
           sort: null,
@@ -169,6 +173,8 @@ describe('the canned data of the cash book tests has the real shape', () => {
           phone: null,
           staff_id: null,
           confirmed_rules_words: [],
+          person_type: null,
+          link: null,
         }),
       ),
     ).toBeNull();
@@ -241,7 +247,7 @@ describe('the screen builds the request the backend’s own test sent', () => {
   });
 
   it('money lent, and its return in cash or from the salary', () => {
-    const person = { ...ASLAM, id: 33 };
+    const person = { ...ASLAM, id: 37 };
     const lent = buildLent(
       {
         ...newLentDraft('money_lent', '2026-10-10'),

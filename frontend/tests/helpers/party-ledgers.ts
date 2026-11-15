@@ -34,7 +34,7 @@ export * from './party-ledgers-real';
 export interface FakeLedgers {
   buyers?: PartyLedgersList;
   sellers?: PartyLedgersList;
-  /** The statement by account id; the default is the backend's own answer for 20 and 18. */
+  /** The statement by account id; the default is the backend's own answer for 21 and 19. */
   statements?: Readonly<Record<number, PartyLedgerStatement>>;
   /** Refuses the statement of this call with this error. */
   refuseStatement?: (
@@ -103,7 +103,7 @@ function narrowed(list: PartyLedgersList, text: string | null): PartyLedgersList
 export function fakePartyLedgers(options: FakeLedgers = {}): void {
   const buyers = options.buyers ?? LEDGER_BUYERS;
   const sellers = options.sellers ?? LEDGER_SELLERS;
-  const statements = options.statements ?? { 20: STATEMENT_AKRAM, 18: STATEMENT_RAHIM };
+  const statements = options.statements ?? { 21: STATEMENT_AKRAM, 19: STATEMENT_RAHIM };
   vi.mocked(ledgersApi.partyLedgersList).mockImplementation((input) => {
     if (options.failList !== undefined) return Promise.reject(new CommandError(options.failList));
     const all = narrowed(input.side === 'buyer' ? buyers : sellers, input.text);

@@ -76,7 +76,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 18,
+            "account_id": 19,
             "code": "0010",
             "short_code": "0",
             "name_ur": "رحیم",
@@ -129,7 +129,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 19,
+            "account_id": 20,
             "code": "0011",
             "short_code": "1",
             "name_ur": "کریم",

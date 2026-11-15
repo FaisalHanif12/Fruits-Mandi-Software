@@ -48,7 +48,9 @@ export function PastDayRows({ day, filter, columns, onOpen, focusRow, back }: Pa
       <PastList
         query={query}
         columns={columns}
-        labelId="bikri-past-label"
+        // Each open day names itself, so a screen reader can tell the day grids apart.
+        labelId="bikri-past-day-label"
+        labelVars={{ date: isoToDisplayDate(day) }}
         failedId="bikri-past-failed"
         empty={
           <p className="type-body text-ink-muted">

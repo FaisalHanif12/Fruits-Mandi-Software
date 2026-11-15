@@ -24,7 +24,7 @@ export type OpenPayables = {
    */
   total_count: number;
   /**
-   * True if `postings` holds only the oldest of them.
+   * True if there are more postings after this page.
    */
   truncated: boolean;
   /**

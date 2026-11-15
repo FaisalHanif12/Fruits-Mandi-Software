@@ -22,6 +22,7 @@ pub mod pack;
 pub mod partner_guard;
 pub mod print;
 pub mod reports;
+pub mod result_cache;
 
 pub use error::ReportsError;
 

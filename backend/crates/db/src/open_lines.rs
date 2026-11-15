@@ -129,6 +129,12 @@ pub struct PersonFacts {
     pub staff_id: Option<i64>,
     /// The staff member's names.
     pub staff_names: Option<(String, String)>,
+    /// His type: `staff`, `garden_owner`, `trip_person` or `other` (plan 76 point 10).
+    pub person_type: String,
+    /// His link: `none`, `shop` or `partner`.
+    pub link_kind: String,
+    /// The partner of a partner link.
+    pub link_partner_id: Option<i64>,
 }
 
 /// The accounts under control 0103 with their phone and staff record. `ids` limits the answer to
@@ -143,7 +149,8 @@ pub fn persons(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i64, 
         format!("AND a.id IN ({})", vec!["?"; ids.len()].join(", "))
     };
     let mut statement = conn.prepare(&format!(
-        "SELECT a.id, a.code, a.name_ur, a.name_en, COALESCE(a.phone1, ''), s.id, s.name_ur, s.name_en, a.tag
+        "SELECT a.id, a.code, a.name_ur, a.name_en, COALESCE(a.phone1, ''), s.id, s.name_ur, s.name_en, a.tag,
+                COALESCE(a.person_type, 'other'), a.link_kind, a.link_partner_id
          FROM accounts a JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN staff s ON s.account_id = a.id
          WHERE c.code = '0103' {filter}"
@@ -161,6 +168,9 @@ pub fn persons(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i64, 
             tag: r.get(8)?,
             staff_id,
             staff_names: staff_ur.zip(staff_en),
+            person_type: r.get(9)?,
+            link_kind: r.get(10)?,
+            link_partner_id: r.get(11)?,
         })
     })?;
     rows.map(|row| row.map(|p| (p.account_id, p))).collect()

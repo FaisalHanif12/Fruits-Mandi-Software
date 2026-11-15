@@ -22,6 +22,8 @@
     "gardens_balance_paisa": 0,
     "lent_open_paisa": 0,
     "lent_overdue_paisa": 0,
+    "others_dues_paisa": 0,
+    "others_people_count": 0,
     "expenses_today_paisa": 300000
   },
   "partners": [
@@ -86,7 +88,7 @@
   "oldest_dues": [
     {
       "party": {
-        "account_id": 21,
+        "account_id": 22,
         "code": "0021",
         "short_code": "1",
         "name_ur": "ارشد ملتانی",
@@ -101,7 +103,7 @@
     },
     {
       "party": {
-        "account_id": 20,
+        "account_id": 21,
         "code": "0020",
         "short_code": "0",
         "name_ur": "اکرم ٹول ٹیکس",

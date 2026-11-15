@@ -40,6 +40,10 @@ export type AnalyticsKey = {
    */
   partner_id: number | null;
   /**
+   * One shop expense head, an account of head 05 (the journal lines behind a row of view M).
+   */
+  head_id?: number | null;
+  /**
    * The trip purchases whose sales are meant (the lines behind a row of view J).
    */
   purchase_ids: Array<number>;

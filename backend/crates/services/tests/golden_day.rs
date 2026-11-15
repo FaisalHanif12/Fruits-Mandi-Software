@@ -1513,3 +1513,13 @@ mod sale_line_figures;
 // Plan 65 (D8 Feature 4): money paid on the spot (E2E-65).
 #[path = "golden_day/paid_on_the_spot.rs"]
 mod paid_on_the_spot;
+
+#[path = "golden_day/plan76_reads.rs"]
+mod plan76_reads;
+
+// Plan 77: the commission page for one party and a period, views L and M, the coverage audit.
+#[path = "golden_day/plan77_reads.rs"]
+mod plan77_reads;
+
+#[path = "golden_day/linked_money.rs"]
+mod linked_money;

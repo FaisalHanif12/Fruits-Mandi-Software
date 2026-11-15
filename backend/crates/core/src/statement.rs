@@ -68,6 +68,10 @@ pub enum StatementHeading {
     Garden,
     /// پھل (D4R): fruit taken, with item, qty and rate.
     Fruit,
+    /// کھاتہ اور ادھار (plan 76 points 5 and 10, PRD FR-16.6, FR-16.13): money that reached him
+    /// through a separate khata or a loan linked to him or to the shop. `subject` is the khata or
+    /// the person.
+    Linked,
 }
 
 /// Which kind of line it is inside its heading. It picks the Fluent message. The note lines
@@ -101,7 +105,8 @@ pub enum StatementDetail {
     /// `trip`: his part of a seller credit of a trip lot, or of money from a sale in another shop.
     /// `number` is the trip number, `secondary_number` the بکری number (0 or null for another
     /// shop); `subject` is the item; `values`: `qty`, `sales_paisa`, `cost_paisa`, `result_paisa`,
-    /// `share_bps`.
+    /// `share_bps` and `part_paisa` (his part of the result: `split_by_bps` of it by the trip's
+    /// shares, plan 76 point 11, PRD FR-17.12; absent when the trip's shares do not total 100%).
     TripCredit,
     /// `trip`, note: trip goods were written off. No amount.
     TripWriteOff,
@@ -115,6 +120,22 @@ pub enum StatementDetail {
     GardenClosed,
     /// `fruit` (D4R): fruit taken.
     FruitTaken,
+    /// `linked`: his part of money paid out to a khata (negative). `number` is the voucher number.
+    KhataPaid,
+    /// `linked`: his part of money that came back from a khata.
+    KhataReceived,
+    /// `linked`: money given to a person linked to him or to the shop (negative).
+    LentGiven,
+    /// `linked`: money a person returned.
+    LentReturned,
+    /// `linked`: any other entry on a linked khata (the credit of its goods sold, fruit, a جنرل
+    /// line), with its sign. `number` is the بکری or voucher number when it has one.
+    LinkedOther,
+    /// `linked`, note: a loan linked to the shop was given or returned. No amount, because the money
+    /// is still owed to the shop and his total does not change. `values`: `kind` (`given` or
+    /// `returned`), `amount_paisa` (the loan), `part_paisa` (his % of it, whole rupees; absent when
+    /// the shares of that day did not total 100%).
+    LentShareNote,
 }
 
 /// One line of the statement.
@@ -191,4 +212,129 @@ pub struct PartnerStatement {
     /// The count and subtotals of each month of the whole range, in the order of the list, when
     /// asked with `group_by_month` and the list is in date order. Figures: `plus_paisa` and `minus_paisa`.
     pub months: Vec<MonthSubtotal>,
+}
+
+// ---- One month at a time (plan 76 point 11, PRD FR-17.9 v1.41) ----
+
+/// Input of `partners_statement_month`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PartnersStatementMonthInput {
+    /// The partner. `ERR_NOT_FOUND` on `partner_id`.
+    #[ts(type = "number")]
+    pub partner_id: i64,
+    /// The month, `YYYY-MM`. Null or empty is the current month. A month after the current one is
+    /// refused (`ERR_DATE_IN_FUTURE` on `month`).
+    #[serde(default)]
+    pub month: Option<String>,
+}
+
+/// The money of a day or a month by what it was, signed: plus raises his کل رقم, minus lowers it.
+/// The columns add up to the net.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct StatementColumns {
+    /// His share of the income of the day's postings (commission, لاگا, فون, ریٹ فرق).
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+    /// His share of the shop expenses (negative).
+    #[ts(type = "Paisa")]
+    pub expense_paisa: Paisa,
+    /// His gardens and trips: his parts paid from the shop's cash and the money credited to him.
+    #[ts(type = "Paisa")]
+    pub gardens_trips_paisa: Paisa,
+    /// Fruit he took (negative).
+    #[ts(type = "Paisa")]
+    pub fruit_paisa: Paisa,
+    /// Money taken and returned: his drawings (and, from plan 76 points 5 and 10, the linked الگ
+    /// کھاتہ and ادھار رقم).
+    #[ts(type = "Paisa")]
+    pub taken_returned_paisa: Paisa,
+    /// Capital in and out, with his opening capital.
+    #[ts(type = "Paisa")]
+    pub capital_paisa: Paisa,
+    /// The six columns added up.
+    #[ts(type = "Paisa")]
+    pub net_paisa: Paisa,
+}
+
+/// One day of the month that has a movement.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct StatementMonthDay {
+    /// The day, `YYYY-MM-DD`.
+    pub date: String,
+    /// What came in and went out that day.
+    pub columns: StatementColumns,
+    /// His کل رقم at the end of the day.
+    #[ts(type = "Paisa")]
+    pub running_paisa: Paisa,
+    /// True when the day also has a note line (a trip closing, a write-off, a month close).
+    pub has_notes: bool,
+}
+
+/// What `partners_statement_month` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartnerStatementMonth {
+    /// The partner. `code` is empty.
+    pub partner: RecordRef,
+    /// The month shown, `YYYY-MM`.
+    pub month: String,
+    /// The first month with a movement of his, or the current month when he has none. The back
+    /// button stops here.
+    pub first_month: String,
+    /// The current month, where the next button stops.
+    pub current_month: String,
+    /// His کل رقم at the start of the month.
+    #[ts(type = "Paisa")]
+    pub opening_total_paisa: Paisa,
+    /// The days of the month that have a movement, oldest first.
+    pub days: Vec<StatementMonthDay>,
+    /// The month's columns added up.
+    pub totals: StatementColumns,
+    /// His کل رقم at the end of the month: the partner overview and R31 for the current month.
+    #[ts(type = "Paisa")]
+    pub closing_total_paisa: Paisa,
+}
+
+/// Input of `partners_statement_day`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PartnersStatementDayInput {
+    /// The partner.
+    #[ts(type = "number")]
+    pub partner_id: i64,
+    /// The day, `YYYY-MM-DD` (as the month rows give it) or `DD-MM-YYYY`.
+    pub date: String,
+}
+
+/// What `partners_statement_day` gives back: every movement of one day with its source, in the
+/// order of the statement.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartnerStatementDay {
+    /// The partner. `code` is empty.
+    pub partner: RecordRef,
+    /// The day, `YYYY-MM-DD`.
+    pub date: String,
+    /// His کل رقم at the start of the day.
+    #[ts(type = "Paisa")]
+    pub opening_total_paisa: Paisa,
+    /// The lines, with their entry ids and headings so each opens its entry.
+    pub lines: Vec<StatementLine>,
+    /// His کل رقم after the day.
+    #[ts(type = "Paisa")]
+    pub after_total_paisa: Paisa,
+}
+
+/// Input of `partners_statement_month_print_data`: the month as the page shows it and the print
+/// language.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PartnersStatementMonthPrintInput {
+    /// The partner.
+    #[ts(type = "number")]
+    pub partner_id: i64,
+    /// The month, `YYYY-MM`; null is the current month.
+    #[serde(default)]
+    pub month: Option<String>,
+    /// The print language (PRD FR-7.36).
+    pub language: crate::auth::Language,
+    /// The paper; A4 when missing.
+    #[serde(default)]
+    pub paper: Option<crate::printing::Paper>,
 }

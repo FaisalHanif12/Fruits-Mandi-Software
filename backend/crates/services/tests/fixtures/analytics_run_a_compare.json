@@ -312,7 +312,11 @@
               "paisa": 392800
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": {
+            "type": "money",
+            "paisa": 0
+          }
         },
         {
           "label": {
@@ -339,7 +343,11 @@
               "paisa": 152000
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": {
+            "type": "money",
+            "paisa": 0
+          }
         }
       ],
       "others_count": 0,

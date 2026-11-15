@@ -4,12 +4,15 @@
 //
 // - The names go through NamePair, and a word made by the spelling rules alone is checked before
 //   the save (useSpellingFlow, PRD FR-7.66).
-// - A person has a phone and may be a staff member; a khata has a note.
+// - A person has a phone, may be a staff member, has a type (staff, garden owner, market-trip person, other) and
+//   a link: his loans are the shop's or one partner's (plan 76 point 10, PRD FR-16.13). A khata has a note
+//   and a link: nobody, the shop or one partner (plan 76 point 5, PRD FR-16.6).
 // - Keys: F10 saves, Esc closes (the screen under it keeps what was typed there).
-// - A refusal shows at its field (name_ur, name_en, phone, note, staff_id).
+// - A refusal shows at its field (name_ur, name_en, phone, note, staff_id, link, link.partner_id).
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
+import type { PersonType } from '../../../bindings/PersonType';
 import type { RecordRef } from '../../../bindings/RecordRef';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
@@ -23,6 +26,7 @@ import {
   FreeTextInput,
   NamePair,
   Picker,
+  Select,
   TextInput,
   fieldError,
   showToast,
@@ -30,10 +34,22 @@ import {
   type PickerValue,
 } from '../../../shared/ui';
 import { useCreateKhata, useCreateLentPerson } from '../hooks';
+import {
+  KHATA_LINK_KINDS,
+  LINK_FIELD_PATHS,
+  NO_LINK,
+  PERSON_LINK_KINDS,
+  PERSON_TYPES,
+  SHOP_LINK,
+  linkOf,
+  personTypeId,
+  type LinkDraft,
+} from '../link-draft';
+import { LinkChoice } from './LinkChoice';
 
 export type AddKind = 'person' | 'khata';
 
-const FIELD_PATHS = ['name_ur', 'name_en', 'phone', 'staff_id', 'note'];
+const FIELD_PATHS = ['name_ur', 'name_en', 'phone', 'staff_id', 'note', ...LINK_FIELD_PATHS];
 const URDU_LETTER = /[؀-ۿ]/;
 
 interface AddAccountDialogProps {
@@ -64,6 +80,9 @@ function AddForm({
   const [phone, setPhone] = useState('');
   const [staff, setStaff] = useState<PickerValue | null>(null);
   const [note, setNote] = useState('');
+  // A person starts as other and his loans the shop's; a khata starts with no link (the firm's, as before).
+  const [personType, setPersonType] = useState<PersonType>('other');
+  const [link, setLink] = useState<LinkDraft>(kind === 'person' ? SHOP_LINK : NO_LINK);
   const [error, setError] = useState<UiError | null>(null);
   const createPerson = useCreateLentPerson();
   const createKhata = useCreateKhata();
@@ -82,6 +101,8 @@ function AddForm({
                 phone: phone.trim() === '' ? null : phone.trim(),
                 staff_id: staff?.id ?? null,
                 confirmed_rules_words: confirmed,
+                person_type: personType,
+                link: linkOf(link),
               })
               .then((person) => person.account)
           : createKhata
@@ -90,6 +111,7 @@ function AddForm({
                 name_en: names.english.trim(),
                 note: note.trim() === '' ? null : note.trim(),
                 confirmed_rules_words: confirmed,
+                link: linkOf(link),
               })
               .then((khata) => khata.account),
       );
@@ -153,17 +175,50 @@ function AddForm({
                             name_en: hit.name_en,
                           },
                     );
+                    // A staff record makes him staff; the type can still be changed.
+                    if (hit !== null) setPersonType('staff');
                   }}
                 />
               )}
             </Field>
+            <Field label={<Localized id="cashbook-person-type" />}>
+              {(props) => (
+                <Select<PersonType>
+                  {...props}
+                  value={personType}
+                  onChange={setPersonType}
+                  options={PERSON_TYPES.map((type) => ({
+                    value: type,
+                    label: <Localized id={personTypeId(type)} />,
+                  }))}
+                />
+              )}
+            </Field>
+            <LinkChoice
+              draft={link}
+              onChange={setLink}
+              error={error}
+              kinds={PERSON_LINK_KINDS}
+              labelId="cashbook-link-for"
+              helpId="cashbook-link-hint-person"
+            />
           </>
         ) : (
-          <div className="normal:col-span-2">
-            <Field label={<Localized id="cashbook-add-note" />} error={fieldError(error, 'note')}>
-              {(props) => <FreeTextInput {...props} value={note} onChange={setNote} />}
-            </Field>
-          </div>
+          <>
+            <div className="normal:col-span-2">
+              <Field label={<Localized id="cashbook-add-note" />} error={fieldError(error, 'note')}>
+                {(props) => <FreeTextInput {...props} value={note} onChange={setNote} />}
+              </Field>
+            </div>
+            <LinkChoice
+              draft={link}
+              onChange={setLink}
+              error={error}
+              kinds={KHATA_LINK_KINDS}
+              labelId="cashbook-link-label"
+              helpId="cashbook-link-hint-khata"
+            />
+          </>
         )}
       </div>
       <div className="flex flex-wrap justify-end gap-2">

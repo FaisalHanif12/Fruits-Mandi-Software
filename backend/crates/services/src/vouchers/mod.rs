@@ -34,8 +34,8 @@ use mandi_domain::core::vouchers::{VoucherRow, VouchersList, VouchersListInput, 
 pub use advance::{preview_advances, save_advance, save_advances};
 pub use capital_kinds::{save_capital_in, save_capital_out};
 pub use cash_kinds::{
-    save_money_lent, save_money_lent_return, save_personal_expense, save_personal_return,
-    save_shop_expense,
+    save_money_lent, save_money_lent_linked, save_money_lent_return, save_personal_expense,
+    save_personal_return, save_shop_expense,
 };
 pub(crate) use common::{rematch_party, role_of_account, stored_cash_change};
 pub use edit::{cancel, edit, get};
@@ -44,8 +44,11 @@ pub use general_kind::{general_preview, general_save};
 pub use khata_kinds::{save_khata_in, save_khata_out};
 pub use open_edit::open_for_edit;
 pub use payment::save_payment;
-pub use preview::preview;
-pub use reads::{advances_report, collection_list, open_bills, open_payables};
+pub use preview::{preview, preview_with_link};
+pub use reads::{
+    advances_report, collection_list, open_bills, open_bills_page, open_payables,
+    open_payables_page,
+};
 pub use receipt::{save_receipt, save_receipts_batch};
 
 use crate::context::Context;

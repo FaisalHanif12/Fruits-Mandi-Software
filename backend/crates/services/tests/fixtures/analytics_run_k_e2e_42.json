@@ -185,5 +185,74 @@
       "paisa": 300000
     }
   ],
-  "charts": []
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "value",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "label",
+            "id": "fruit-for-guests"
+          },
+          "key": {
+            "item_id": 2,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": [],
+            "guests": true
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 300000
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        },
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "الف",
+              "en": "Partner A"
+            }
+          },
+          "key": {
+            "item_id": 1,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": 1,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 116000
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
+  ]
 }

@@ -53,6 +53,8 @@ describe('the canned capital data has the real shape', () => {
         real.CAPITAL_HISTORY,
         money.capitalHistory({
           partner_id: 2,
+          from: null,
+          to: null,
           offset: 0,
           limit: 0,
           sort: null,
@@ -227,7 +229,7 @@ describe('the canned الگ کھاتہ data has the real shape', () => {
   });
 
   it('the screen sends the request the backend’s own test sent', () => {
-    const khata = { ...FAMILY_KHATA, id: 32 };
+    const khata = { ...FAMILY_KHATA, id: 36 };
     const out = buildKhata(
       {
         ...newKhataDraft('khata_out', '2026-10-10'),
@@ -298,11 +300,11 @@ describe('the canned جنرل data has the real shape', () => {
   });
 
   it('the screen sends the request the backend’s own test sent', () => {
-    const balanced = [line(20, '1,000', '', 'fix'), line(18, '', '1,000', null)];
+    const balanced = [line(21, '1,000', '', 'fix'), line(19, '', '1,000', null)];
     expect(
       sendsTheSame(buildGeneralPreview('11-10-2026', balanced), real.REQUEST_GENERAL_BALANCED),
     ).toBeNull();
-    const unbalanced = [line(20, '1,000', '', null), line(1, '', '900', null)];
+    const unbalanced = [line(21, '1,000', '', null), line(1, '', '900', null)];
     expect(
       sendsTheSame(buildGeneralPreview('', unbalanced), real.REQUEST_GENERAL_UNBALANCED),
     ).toBeNull();

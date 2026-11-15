@@ -5,7 +5,7 @@
 // Every other command is answered by the reports stand-in or refused with ERR_NOT_IMPLEMENTED.
 // Never part of a build: only the development route imports it.
 //
-// Flags in the hash, for example `#/dev/party-ledgers?party=20&date=2026-10-10`:
+// Flags in the hash, for example `#/dev/party-ledgers?party=21&date=2026-10-10`:
 //   side=seller  the sellers       empty  no parties          many  230 parties (page by page)
 //   dead         ارشد is in the dead amount        down  the backend fails
 //   four         the statement of اکرم with four dates in two windows of 30 days (plan 74); today is 10-10-2026
@@ -38,7 +38,7 @@ function listFor(input: Input): PartyLedgersList {
   let count = real.count;
   if (devFlag('dead')) {
     rows = rows.map((row) =>
-      row.account_id === 21 ? { ...row, is_dead: true, is_active: false } : row,
+      row.account_id === 22 ? { ...row, is_dead: true, is_active: false } : row,
     );
   }
   const firstRow = rows[0];
@@ -66,10 +66,10 @@ const handlers: Record<string, (input: Input) => unknown> = {
   day_status: () => ({ today: '2026-10-10', closed_up_to: null, today_open: true }),
   party_ledgers_list: listFor,
   party_ledgers_statement: (input) => {
-    const four = fourDates && input['account_id'] === 20;
+    const four = fourDates && input['account_id'] === 21;
     const found = four
       ? FOUR_DAY_STATEMENT
-      : input['account_id'] === 18
+      : input['account_id'] === 19
         ? STATEMENT_RAHIM
         : STATEMENT_AKRAM;
     // The dates asked for as typed, `DD-MM-YYYY`: the rows inside them, as the backend reads a range.
@@ -104,7 +104,7 @@ const handlers: Record<string, (input: Input) => unknown> = {
     if (
       fourDates &&
       input['id'] === 'R35' &&
-      filters?.party?.account_id === 20 &&
+      filters?.party?.account_id === 21 &&
       typeof filters.as_of === 'string' &&
       filters.as_of !== ''
     ) {

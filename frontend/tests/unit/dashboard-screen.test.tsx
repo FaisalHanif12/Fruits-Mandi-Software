@@ -200,17 +200,19 @@ describe.each(LANGUAGES)('the dashboard (%s)', (language) => {
 describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (language) => {
   const CASES: readonly [string, string][] = [
     ['dashboard-tile-sales', '/bikri/today'],
-    ['dashboard-tile-commission', '/analytics'],
+    ['dashboard-tile-commission', '/commission'],
     ['dashboard-tile-cash', '/rokar'],
-    ['dashboard-tile-dues', '/reports/R20'],
+    ['dashboard-tile-dues', '/dues'],
     ['dashboard-tile-payable', '/reports/R24'],
     ['dashboard-tile-advances', '/reports/R26'],
     ['dashboard-tile-stock', '/bikri/stock'],
     ['dashboard-tile-trips', '/trips'],
     ['dashboard-tile-gardens', '/gardens'],
     ['dashboard-tile-lent', '/reports/R32'],
-    ['dashboard-tile-expenses', '/reports/R29'],
-    ['dashboard-tile-backup', '/backup'],
+    // The kharch page: the shop's kharch per head and each partner's own (PRD FR-9.5, plan 77).
+    ['dashboard-tile-expenses', '/kharch'],
+    // The tile of garden owners' and others' dues replaced the last backup tile (plan 76 point 10).
+    ['dashboard-tile-others', '/others-dues'],
   ];
 
   it.each(CASES)('%s opens %s', async (labelId, path) => {
@@ -305,13 +307,12 @@ describe.each(LANGUAGES)('the states of the dashboard (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('when the backend fails (one error for the whole dashboard): the error with a retry that works, and the backup and books check tiles still show', async () => {
+  it('when the backend fails (one error for the whole dashboard): the error with a retry that works, and the books check tile still shows', async () => {
     fakeDashboard({ dashboard: new CommandError(refusal([{ code: 'ERR_INTERNAL' }])) });
     await openDashboard(language);
     const alert = await screen.findByRole('alert');
     expect(visible(alert.textContent)).toContain(message(language, 'dashboard-load-failed'));
-    // The two tiles ask for themselves, so one failed part does not blank the page.
-    expect(tileText(language, 'dashboard-tile-backup').length).toBeGreaterThan(0);
+    // The books check tile asks for itself, so one failed part does not blank the page.
     await waitFor(() => {
       expect(tileText(language, 'dashboard-tile-health')).toContain(
         message(language, 'dashboard-health-ok'),
@@ -489,8 +490,8 @@ describe.each(LANGUAGES)('the states of the dashboard (%s)', (language) => {
   });
 });
 
-describe.each(LANGUAGES)('the backup, the books check and the new version (%s)', (language) => {
-  it('the backup tile says the state in words and the books check says its result and time', async () => {
+describe.each(LANGUAGES)('the books check and the new version (%s)', (language) => {
+  it('the books check says its result and time', async () => {
     await openDashboard(language);
     await whenLoaded(language);
     await waitFor(() => {
@@ -499,7 +500,9 @@ describe.each(LANGUAGES)('the backup, the books check and the new version (%s)',
       );
     });
     expect(tileText(language, 'dashboard-tile-health')).toContain('2026');
-    expect(tile(language, 'dashboard-tile-backup').getAttribute('class')).toBeTruthy();
+    // The tile of garden owners' and others' dues stands where the last backup tile was; the backup state is
+    // in the status bar and the attention list (plan 76 point 10).
+    expect(tile(language, 'dashboard-tile-others')).toBeInTheDocument();
   });
 
   it('a books check that found a problem says so in words', async () => {

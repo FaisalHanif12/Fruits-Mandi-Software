@@ -32,6 +32,7 @@ import { khataDraftOf, useEditDraft } from '../edit-seed';
 import { EntryBalances } from '../components/EntryBalances';
 import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
+import { LinkedPartsCard } from '../components/LinkedPartsCard';
 import { KhataForm } from '../components/KhataForm';
 import { KhataListSection } from '../components/KhataListSection';
 import { previewRefusal, useFollowType } from '../entry-support';
@@ -182,6 +183,7 @@ function KhataEditor({ today, urlType, editable = null, initial = null }: KhataE
               />
             )}
             <EntryBalances preview={preview} />
+            <LinkedPartsCard parts={preview?.linked_parts ?? []} />
             <EntryNotes warnings={preview?.warnings ?? []} cash={preview?.cash} />
             {query.isError && entry !== null ? (
               <ErrorState

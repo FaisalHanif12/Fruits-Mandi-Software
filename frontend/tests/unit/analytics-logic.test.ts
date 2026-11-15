@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { AnalyticsRunInput } from '../../src/bindings/AnalyticsRunInput';
 import type { AnalyticsView } from '../../src/bindings/AnalyticsView';
 import { chartsOf } from '../../src/features/analytics/chart';
+import { paisaForTest } from '../helpers/paisa';
 import {
   analyticsColumns,
   headingText,
@@ -24,13 +25,14 @@ import {
 import { columnWidth, fitColumns, STEP_ROOM, windowOf } from '../../src/features/analytics/fit';
 import { formatPaisa } from '../../src/shared/format';
 import type { ListContext } from '../../src/shared/grid';
+import { WHOLE_FILTER_KEY } from '../../src/features/analytics/keys';
 import { buildBarOption } from '../../src/shared/charts';
 import {
   ANALYTICS_CATALOG,
   ANALYTICS_RUN_A,
   ANALYTICS_RUN_A_COMPARE,
   ANALYTICS_RUN_A_COMPARE_REQUEST,
-  ANALYTICS_RUN_A_GROUP_BY_REFUSED_REQUEST,
+  ANALYTICS_RUN_H_GROUP_BY_REFUSED_REQUEST,
   ANALYTICS_RUN_A_REQUEST,
   ANALYTICS_RUN_A_SELLER_SIDE_REQUEST,
   ANALYTICS_RUN_A_UNKNOWN_ITEM_REQUEST,
@@ -107,9 +109,9 @@ describe('the boxes become the request the backend wrote', () => {
 
   it('never sends a grouping to a view that has none, which the backend would refuse', () => {
     const state: AnalyticsFilterState = { ...EMPTY_ANALYTICS_FILTERS, groupBy: 'day' };
-    expect(filtersToWire(state, takesOf('A')).group_by).toBeNull();
+    expect(filtersToWire(state, takesOf('H')).group_by).toBeNull();
     // The backend’s refusal of exactly that request is in the fixtures; the screen cannot make it.
-    expect(filtersOf(ANALYTICS_RUN_A_GROUP_BY_REFUSED_REQUEST).group_by).toBe('day');
+    expect(filtersOf(ANALYTICS_RUN_H_GROUP_BY_REFUSED_REQUEST).group_by).toBe('day');
   });
 
   it('a shortcut wins over the dates, and the dates are not sent with it', () => {
@@ -403,9 +405,9 @@ describe('what each chart draws (the backend’s charts of the whole filter, nev
     expect([plan?.shown, plan?.total]).toEqual([2, 7]);
   });
 
-  it('draws nothing when the backend sent no chart (F, K, no rows)', () => {
+  it('draws nothing when the backend sent no chart (no rows)', () => {
     expect(chartsOf('A', { ...ANALYTICS_RUN_A, charts: [] }, context)).toEqual([]);
-    expect(chartsOf('F', ANALYTICS_RUN_F, context)).toEqual([]);
+    expect(chartsOf('F', { ...ANALYTICS_RUN_F, charts: [] }, context)).toEqual([]);
   });
 });
 
@@ -632,9 +634,13 @@ describe('round 11: the columns of views F, G and J', () => {
 });
 
 describe('round 11: what the charts of G and J draw', () => {
-  it('F: has no chart', () => {
-    expect(chartsOf('F', ANALYTICS_RUN_F, context)).toEqual([]);
-    expect(chartsOf('F', ANALYTICS_RUN_F_TRIP, context)).toEqual([]);
+  it('F: a bar for the net change of each partner, as the backend sent it (plan 76 point 4)', () => {
+    for (const page of [ANALYTICS_RUN_F, ANALYTICS_RUN_F_TRIP]) {
+      const plan = firstChart('F', page);
+      expect(plan?.labelId).toBe('analytics-chart-f');
+      expect(plan?.data.categories).toHaveLength(3);
+      expect(plan?.data.series).toHaveLength(1);
+    }
   });
 
   it('G: the money of each period side by side, five measures', () => {
@@ -781,5 +787,86 @@ describe('the garden slice: the columns and the chart of view I', () => {
     const plan = firstChart('G', ANALYTICS_RUN_G_GARDEN_DAY);
     expect(plan?.data.categories).toEqual(['10-10-2026', '11-10-2026', '12-10-2026']);
     expect(plan?.data.series[0]?.labels).toEqual(['0', '0', '60,000']);
+  });
+});
+
+describe('what a click on a chart opens (plan 76, PRD FR-18.2, FR-18.3)', () => {
+  it('A: a bar opens the lines of its row; the name under it does the same', () => {
+    const plan = firstChart('A', ANALYTICS_RUN_A);
+    const key = ANALYTICS_RUN_A.charts[0]?.points[0]?.key;
+    expect(plan?.clickable).toEqual([true, true]);
+    expect(plan?.drillOf(0, 0)).toEqual({
+      row: key,
+      column: null,
+      about: 'Banana · <report-col-total-comm>',
+    });
+    // The name under the bar has no series: the first one is the figure of the chart.
+    expect(plan?.drillOf(0, null)?.row).toEqual(key);
+  });
+
+  it('D: a month point opens the lines of that month for the whole filter, G: a period point its own row', () => {
+    const month = firstChart('D', ANALYTICS_RUN_D_MONTH);
+    const monthKey = ANALYTICS_RUN_D_MONTH.charts[0]?.points[0]?.key;
+    expect(month?.drillOf(0, 0)).toMatchObject({ row: WHOLE_FILTER_KEY, column: monthKey });
+    expect(month?.data.kind).toBe('line');
+    const trend = firstChart('G', ANALYTICS_RUN_G_DAY);
+    const rowKey = ANALYTICS_RUN_G_DAY.charts[0]?.points[0]?.key;
+    expect(trend?.drillOf(0, 1)?.row).toEqual(rowKey);
+    expect(trend?.data.kind).toBe('line');
+    // A ranking stays bars.
+    expect(firstChart('A', ANALYTICS_RUN_A)?.data.kind).toBe('bar');
+  });
+
+  it('with a compare on, the compared period is a second, lighter series that opens nothing', () => {
+    const chart = ANALYTICS_RUN_A.charts[0];
+    if (chart === undefined) throw new Error('no chart');
+    const money = (rupees: number) => ({
+      type: 'money' as const,
+      paisa: paisaForTest(rupees * 100),
+    });
+    const page = {
+      ...ANALYTICS_RUN_A,
+      charts: [
+        {
+          ...chart,
+          points: chart.points.map((point, index) => ({
+            ...point,
+            compare: money(index === 0 ? 3_000 : 1_000),
+          })),
+        },
+      ],
+    };
+    const plan = firstChart('A', page);
+    expect(plan?.data.series).toHaveLength(2);
+    const compared = plan?.data.series[1];
+    expect(compared?.name).toBe('<analytics-col-compare>');
+    expect(compared?.previous).toBe(true);
+    expect(compared?.values).toEqual([300_000, 100_000]);
+    expect(compared?.labels).toEqual(['3,000', '1,000']);
+    // The figure of this period still opens its lines; the compared figure is of another period.
+    expect(plan?.drillOf(0, 0)).not.toBeNull();
+    expect(plan?.drillOf(0, 1)).toBeNull();
+    // With no compare there is one series, as before.
+    expect(firstChart('A', ANALYTICS_RUN_A)?.data.series).toHaveLength(1);
+  });
+
+  it('the bar of the rows beyond the biggest ten and a point without a key open nothing', () => {
+    const chart = ANALYTICS_RUN_A.charts[0];
+    const point = chart?.points[0];
+    if (chart === undefined || point === undefined) throw new Error('no chart');
+    const page = {
+      ...ANALYTICS_RUN_A,
+      charts: [
+        {
+          ...chart,
+          points: [...chart.points, { ...point, is_others: true, key: null }],
+          others_count: 5,
+        },
+      ],
+    };
+    const plan = firstChart('A', page);
+    expect(plan?.clickable).toEqual([true, true, false]);
+    expect(plan?.drillOf(2, 0)).toBeNull();
+    expect(plan?.drillOf(9, 0)).toBeNull();
   });
 });

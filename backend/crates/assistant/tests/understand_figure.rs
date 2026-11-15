@@ -226,6 +226,7 @@ fn button_line(source: &AnswerSource) -> String {
             .ok()
             .and_then(|v| v.as_str().map(|s| format!("view {s}")))
             .unwrap_or_default(),
+        AnswerSource::Commission { side, .. } => format!("commission {side:?}").to_lowercase(),
         AnswerSource::Tiles { .. } => "tiles".to_owned(),
         AnswerSource::Screen { route, .. } => format!("screen {route:?}").to_lowercase(),
     }
@@ -465,10 +466,10 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("byopariyon ko kitna dena hai", "shop[kind=payable]", "r1.totals.payable", "10160", "R24"),
     ("gahakon se kitna lena hai", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
     // A seller's commission is two labelled lines (Umar's ruling): charged to him, and the total on his goods.
-    ("rahim ka commission aaj kitna hai", "commission[role=seller-own,period=today] + commission[role=seller,period=today]", "r2.matches.0.name r3.rows.a18.seller_comm r2.matches.0.name r3.rows.a18.total_comm", "1764 3928", "view B"),
-    ("rahim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm", "1764 3928", "view B"),
-    ("karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm", "720 1520", "view B"),
-    ("rahim aur karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r4.rows.a18.total_comm r3.matches.0.name r1.from r1.to r5.rows.a19.seller_comm r3.matches.0.name r1.from r1.to r5.rows.a19.total_comm", "1764 3928 720 1520", "view B view B"),
+    ("rahim ka commission aaj kitna hai", "commission[role=seller-own,period=today] + commission[role=seller,period=today]", "r2.matches.0.name r3.rows.a19.seller_comm r2.matches.0.name r3.rows.a19.total_comm", "1764 3928", "commission seller"),
+    ("rahim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm", "1764 3928", "commission seller"),
+    ("karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a20.total_comm", "720 1520", "commission seller"),
+    ("rahim aur karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r4.rows.a19.total_comm r3.matches.0.name r1.from r1.to r5.rows.a20.seller_comm r3.matches.0.name r1.from r1.to r5.rows.a20.total_comm", "1764 3928 720 1520", "commission seller commission seller"),
     // A partner's capital now: R31 for him, read in two places (the worked day has none). The button is the
     // partner overview: the capital is not on the statement page of R31, and a button opens only what holds
     // the figure (D331, plan 59 C1).
@@ -510,24 +511,24 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("saib ka laga is mahine", "laga[role=item,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.i2.laga", "80", "view A"),
     ("kele aur saib ka commission is mahine", "commission[role=item,period=range] + commission[role=item,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.i1.total_comm r3.matches.0.name r1.from r1.to r5.rows.i2.total_comm", "3928 1520", "view A view A"),
     ("kele aur saib ki bikri is mahine", "sale[role=item,period=range] + sale[role=item,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.i1.gross r3.matches.0.name r1.from r1.to r5.rows.i2.gross", "29400 12000", "view A view A"),
-    ("rahim ki bikri is mahine", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross", "29400", "view B"),
-    ("rahim ke kitne bikri hue is mahine", "sale-count[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.bikri_count", "n1", "view B"),
-    ("rahim ki bikri aaj", "sale[role=seller,period=today]", "r2.matches.0.name r3.rows.a18.gross", "29400", "view B"),
+    ("rahim ki bikri is mahine", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.gross", "29400", "view B"),
+    ("rahim ke kitne bikri hue is mahine", "sale-count[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.bikri_count", "n1", "view B"),
+    ("rahim ki bikri aaj", "sale[role=seller,period=today]", "r2.matches.0.name r3.rows.a19.gross", "29400", "view B"),
     ("rahim ki bikri pichle mahine", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.totals.gross", "0", "view B"),
-    ("karim ki bikri is mahine", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.gross", "12000", "view B"),
-    ("karim ke kitne bikri hue is mahine", "sale-count[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.bikri_count", "n1", "view B"),
-    ("rahim aur karim ki bikri is mahine", "sale[role=seller,period=range] + sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a18.gross r3.matches.0.name r1.from r1.to r5.rows.a19.gross", "29400 12000", "view B view B"),
-    ("akram ki bikri is mahine", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.purchase_value", "12000", "view C"),
-    ("akram ka commission is mahine", "commission[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.buyer_comm", "720", "view C"),
-    ("akram ka laga is mahine", "laga[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.laga", "160", "view C"),
-    ("akram ki bikri aaj", "sale[role=buyer,period=today]", "r2.matches.0.name r3.rows.a20.purchase_value", "12000", "view C"),
-    ("akram ka commission aaj", "commission[role=buyer,period=today]", "r2.matches.0.name r3.rows.a20.buyer_comm", "720", "view C"),
-    ("arshad ki bikri is mahine", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a21.purchase_value", "17400", "view C"),
-    ("arshad ka commission is mahine", "commission[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a21.buyer_comm", "1044", "view C"),
-    ("arshad ka laga is mahine", "laga[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a21.laga", "240", "view C"),
-    ("akram aur arshad ki bikri is mahine", "sale[role=buyer,period=range] + sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a20.purchase_value r3.matches.0.name r1.from r1.to r5.rows.a21.purchase_value", "12000 17400", "view C view C"),
+    ("karim ki bikri is mahine", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.gross", "12000", "view B"),
+    ("karim ke kitne bikri hue is mahine", "sale-count[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.bikri_count", "n1", "view B"),
+    ("rahim aur karim ki bikri is mahine", "sale[role=seller,period=range] + sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a19.gross r3.matches.0.name r1.from r1.to r5.rows.a20.gross", "29400 12000", "view B view B"),
+    ("akram ki bikri is mahine", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a21.purchase_value", "12000", "view C"),
+    ("akram ka commission is mahine", "commission[role=buyer,period=range] + laga[role=buyer,period=range] + commission[role=buyer-total,period=range]", "r2.matches.0.name r1.from r1.to r3.totals.buyer_comm r2.matches.0.name r1.from r1.to r3.totals.laga r2.matches.0.name r1.from r1.to r3.totals.total_comm", "720 160 880", "commission buyer"),
+    ("akram ka laga is mahine", "laga[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a21.laga", "160", "view C"),
+    ("akram ki bikri aaj", "sale[role=buyer,period=today]", "r2.matches.0.name r3.rows.a21.purchase_value", "12000", "view C"),
+    ("akram ka commission aaj", "commission[role=buyer,period=today] + laga[role=buyer,period=today] + commission[role=buyer-total,period=today]", "r2.matches.0.name r3.totals.buyer_comm r2.matches.0.name r3.totals.laga r2.matches.0.name r3.totals.total_comm", "720 160 880", "commission buyer"),
+    ("arshad ki bikri is mahine", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a22.purchase_value", "17400", "view C"),
+    ("arshad ka commission is mahine", "commission[role=buyer,period=range] + laga[role=buyer,period=range] + commission[role=buyer-total,period=range]", "r2.matches.0.name r1.from r1.to r3.totals.buyer_comm r2.matches.0.name r1.from r1.to r3.totals.laga r2.matches.0.name r1.from r1.to r3.totals.total_comm", "1044 240 1284", "commission buyer"),
+    ("arshad ka laga is mahine", "laga[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a22.laga", "240", "view C"),
+    ("akram aur arshad ki bikri is mahine", "sale[role=buyer,period=range] + sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a21.purchase_value r3.matches.0.name r1.from r1.to r5.rows.a22.purchase_value", "12000 17400", "view C view C"),
     ("akram aur arshad ka bakaya", "party[kind=balance] + party[kind=balance]", "r3.party.name r3.balance r4.party.name r4.balance", "2880dr✓ 18684dr✓", "party_card party_card"),
-    ("akram aur arshad ka commission is mahine", "commission[role=buyer,period=range] + commission[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a20.buyer_comm r3.matches.0.name r1.from r1.to r5.rows.a21.buyer_comm", "720 1044", "view C view C"),
+    ("akram aur arshad ka commission is mahine", "commission[role=buyer,period=range] + laga[role=buyer,period=range] + commission[role=buyer-total,period=range] + commission[role=buyer,period=range] + laga[role=buyer,period=range] + commission[role=buyer-total,period=range]", "r2.matches.0.name r1.from r1.to r4.totals.buyer_comm r2.matches.0.name r1.from r1.to r4.totals.laga r2.matches.0.name r1.from r1.to r4.totals.total_comm r3.matches.0.name r1.from r1.to r5.totals.buyer_comm r3.matches.0.name r1.from r1.to r5.totals.laga r3.matches.0.name r1.from r1.to r5.totals.total_comm", "720 160 880 1044 240 1284", "commission buyer commission buyer"),
     ("cash kitna hai", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
     ("cash in hand", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
     ("roqar kitni hai", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
@@ -573,13 +574,13 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("باقی مال کتنا ہے", "stock[role=shop]", "r2.totals.balance r2.count", "n0 n0", "tiles R10"),
     ("الف کی کل رقم", "partner-total[]", "r1.rows.s1.name r1.rows.s1.total", "-1004✓", "R31"),
     ("کیلے کی بکری اس مہینے", "sale[role=item,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.i1.gross", "29400", "view A"),
-    ("اکرم کی بکری اس مہینے", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.purchase_value", "12000", "view C"),
-    ("رحیم کی بکری اس مہینے", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross", "29400", "view B"),
+    ("اکرم کی بکری اس مہینے", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a21.purchase_value", "12000", "view C"),
+    ("رحیم کی بکری اس مہینے", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.gross", "29400", "view B"),
     ("what is akram's balance", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card"),
     ("akram's balance", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card"),
     ("how much commission this month", "commission[role=shop,period=range]", "r1.from r1.to r2.totals.total_comm", "5448", "view A"),
     ("commission on banana this month", "commission[role=item,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.i1.total_comm", "3928", "view A"),
-    ("sales of rahim this month", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross", "29400", "view B"),
+    ("sales of rahim this month", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.gross", "29400", "view B"),
     ("akram ka balance kya hai", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card"),
     ("aaj ka total commission", "commission[role=shop,period=today]", "r1.today_commission.amount", "5448✓", "tiles"),
     ("this month ka commission", "commission[role=shop,period=range]", "r1.from r1.to r2.totals.total_comm", "5448", "view A"),
@@ -590,8 +591,8 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("aaj ka kamishan", "commission[role=shop,period=today]", "r1.today_commission.amount", "5448✓", "tiles"),
     ("cash balance", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
     ("how much payable to sellers", "shop[kind=payable]", "r1.totals.payable", "10160", "R24"),
-    ("how much did rahim sell this month", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross", "29400", "view B"),
-    ("how much commission from akram this month", "commission[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a20.buyer_comm", "720", "view C"),
+    ("how much did rahim sell this month", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.gross", "29400", "view B"),
+    ("how much commission from akram this month", "commission[role=buyer,period=range] + laga[role=buyer,period=range] + commission[role=buyer-total,period=range]", "r2.matches.0.name r1.from r1.to r3.totals.buyer_comm r2.matches.0.name r1.from r1.to r3.totals.laga r2.matches.0.name r1.from r1.to r3.totals.total_comm", "720 160 880", "commission buyer"),
     ("kitna commission mila is mahine", "commission[role=shop,period=range]", "r1.from r1.to r2.totals.total_comm", "5448", "view A"),
     ("kitni bikri hui is mahine", "sale[role=shop,period=range]", "r1.from r1.to r2.totals.gross", "41400", "view A"),
     ("is saal ki bikri kitni hui", "sale[role=shop,period=range]", "r1.from r1.to r2.totals.gross", "41400", "view A"),
@@ -602,7 +603,7 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("b ki kul raqam", "partner-total[]", "r1.rows.s2.name r1.rows.s2.total", "746✓", "R31"),
     ("kele ki bikri aaj", "sale[role=item,period=today]", "r2.matches.0.name r3.rows.i1.gross", "29400", "view A"),
     ("saib ka commission aaj", "commission[role=item,period=today]", "r2.matches.0.name r3.rows.i2.total_comm", "1520", "view A"),
-    ("rahim ke bikri aaj", "sale[role=seller,period=today]", "r2.matches.0.name r3.rows.a18.gross", "29400", "view B"),
+    ("rahim ke bikri aaj", "sale[role=seller,period=today]", "r2.matches.0.name r3.rows.a19.gross", "29400", "view B"),
     ("karim ki bikri kal", "sale[role=seller,period=day]", "r2.matches.0.name r1.from r3.totals.gross", "0", "view B"),
     ("akram ka bakaya aur arshad ka bakaya", "party[kind=balance] + party[kind=balance]", "r3.party.name r3.balance r4.party.name r4.balance", "2880dr✓ 18684dr✓", "party_card party_card"),
     ("kele aur saib ka laga is mahine", "laga[role=item,period=range] + laga[role=item,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.i1.laga r3.matches.0.name r1.from r1.to r5.rows.i2.laga", "400 80", "view A view A"),
@@ -614,7 +615,7 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
 #[rustfmt::skip]
 const YEAR: &[(&str, &str, &str, &str, &str)] = &[
     // H2 (live run 2, Q154): a seller's "mal" is the owner of the figure; the total with Laga is in it.
-    ("raheem ke mal ka commision is sal kitna he", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm", "581015 1186254", "view B"),
+    ("raheem ke mal ka commision is sal kitna he", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm", "581015 1186254", "commission seller"),
     ("kele ka stock", "stock[role=item]", "r1.matches.0.name r2.totals.balance r2.count", "n87 n9", "R10"),
     ("saib ka stock", "stock[role=item]", "r1.matches.0.name r2.totals.balance r2.count", "n40 n3", "R10"),
     ("cash kitna hai", "shop[kind=cash]", "r1.cash_in_hand.amount", "8272035✓", "tiles"),
@@ -651,9 +652,9 @@ const YEAR: &[(&str, &str, &str, &str, &str)] = &[
     ("faisal ka bakaya kitna hai", "party[kind=balance]", "r2.party.name r2.balance", "496211dr✓", "party_card"),
     ("usman ghani ka bakaya kitna hai", "party[kind=balance]", "r2.party.name r2.balance", "688551dr✓", "party_card"),
     ("rahim ko kitna dena hai", "party[kind=balance]", "r2.party.name r2.balance", "620667cr✓", "party_card"),
-    ("rahim ki bikri pichle mahine", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross", "949500", "view B"),
-    ("faisal ki bikri pichle mahine", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a31.purchase_value", "466350", "view C"),
-    ("faisal ka commission is saal", "commission[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a31.buyer_comm", "280387", "view C"),
+    ("rahim ki bikri pichle mahine", "sale[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.gross", "949500", "view B"),
+    ("faisal ki bikri pichle mahine", "sale[role=buyer,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a32.purchase_value", "466350", "view C"),
+    ("faisal ka commission is saal", "commission[role=buyer,period=range] + laga[role=buyer,period=range] + commission[role=buyer-total,period=range]", "r2.matches.0.name r1.from r1.to r3.totals.buyer_comm r2.matches.0.name r1.from r1.to r3.totals.laga r2.matches.0.name r1.from r1.to r3.totals.total_comm", "0 0 0", "commission buyer"),
     ("partner usman ki kul raqam", "partner-total[]", "r1.rows.s3.name r1.rows.s3.total", "2506856✓", "R31"),
     ("alif ki kul raqam", "partner-total[]", "r1.rows.s1.name r1.rows.s1.total", "2563113✓", "R31"),
     ("partners ki kul raqam", "partner-total[] + partner-total[] + partner-total[]", "r1.rows.s1.name r1.rows.s1.total r1.rows.s2.name r1.rows.s2.total r1.rows.s3.name r1.rows.s3.total", "2563113✓ 2902581✓ 2506856✓", "R31 R31 R31"),
@@ -667,13 +668,6 @@ const YEAR: &[(&str, &str, &str, &str, &str)] = &[
 /// instant answers only behind the gate `MULTI_MEASURE_INSTANT` (lead decision D333: PRD FR-7.90 sends two-part
 /// questions to the model), so they are checked with the gate ON, and the next test checks them with it OFF.
 const TWO_MEASURES: &[(&str, &str, &str, &str, &str)] = &[
-    (
-        "rahim ki bikri aur commission is mahine",
-        "sale[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]",
-        "r2.matches.0.name r1.from r1.to r3.rows.a18.gross r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm",
-        "29400 1764 3928",
-        "view B",
-    ),
     (
         "commission aur sale aaj ki",
         "commission[role=shop,period=today] + sale[role=shop,period=today]",
@@ -729,6 +723,34 @@ const TWO_MEASURES: &[(&str, &str, &str, &str, &str)] = &[
         "r2.matches.0.name r1.from r1.to r3.rows.i1.total_comm r2.matches.0.name r1.from r1.to r3.rows.i1.gross",
         "3928 29400",
         "view A",
+    ),
+];
+
+/// A party's commission and sale asked together (PRD FR-7.90 v1.42, Umar 14-11-2026, plan 77): the one
+/// two-measure question the app answers by itself with the gate of several measures OFF, one reply with
+/// his sale and the commission charged to him and on his goods (a seller) or what he was charged (a
+/// buyer). The button opens the commission page of that party for the same dates, not the analytics view.
+const PARTY_COMMISSION_AND_SALE: &[(&str, &str, &str, &str, &str)] = &[
+    (
+        "rahim ki bikri aur commission is mahine",
+        "sale[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]",
+        "r2.matches.0.name r1.from r1.to r3.rows.a19.gross r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm",
+        "29400 1764 3928",
+        "commission seller",
+    ),
+    (
+        "rahim se is mahine kitna commission aur bikri",
+        "commission[role=seller-own,period=range] + commission[role=seller,period=range] + sale[role=seller,period=range]",
+        "r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm r2.matches.0.name r1.from r1.to r3.rows.a19.gross",
+        "1764 3928 29400",
+        "commission seller",
+    ),
+    (
+        "akram ki bikri aur commission is mahine",
+        "sale[role=buyer,period=range] + commission[role=buyer,period=range] + laga[role=buyer,period=range] + commission[role=buyer-total,period=range]",
+        "r2.matches.0.name r1.from r1.to r3.rows.a21.purchase_value r2.matches.0.name r1.from r1.to r4.totals.buyer_comm r2.matches.0.name r1.from r1.to r4.totals.laga r2.matches.0.name r1.from r1.to r4.totals.total_comm",
+        "12000 720 160 880",
+        "view C commission buyer",
     ),
 ];
 
@@ -1367,6 +1389,20 @@ fn the_two_measure_rows_answer_by_themselves_with_the_gate_on() {
     for language in [Language::En, Language::Ur] {
         let wrong = run_table(&w, today, language, TWO_MEASURES, true, true);
         report(&wrong, TWO_MEASURES.len());
+    }
+}
+
+/// A party's commission and sale are answered by the app alone, with the gate OFF and ON alike.
+#[test]
+fn a_partys_commission_and_sale_answer_by_themselves_with_the_gate_off() {
+    let w = books();
+    worked::events_1_to_5(&w);
+    let today = on(2026, 10, 10);
+    for language in [Language::En, Language::Ur] {
+        let wrong = run_table(&w, today, language, PARTY_COMMISSION_AND_SALE, true, false);
+        report(&wrong, PARTY_COMMISSION_AND_SALE.len());
+        let wrong = run_table(&w, today, language, PARTY_COMMISSION_AND_SALE, true, true);
+        report(&wrong, PARTY_COMMISSION_AND_SALE.len());
     }
 }
 

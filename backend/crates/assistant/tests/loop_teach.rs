@@ -94,7 +94,7 @@ fn tool_messages(request: &Value) -> Vec<String> {
 fn advice() -> Value {
     json!({
         "kind": "advice",
-        "text": "سب سے زیادہ کمیشن {{r2.rows.i1.name}} سے آیا: {{r2.rows.i1.total_comm}}۔\n• سب سے بڑا بیوپاری {{r3.rows.a18.name}} ہے: {{r3.rows.a18.gross}}۔",
+        "text": "سب سے زیادہ کمیشن {{r2.rows.i1.name}} سے آیا: {{r2.rows.i1.total_comm}}۔\n• سب سے بڑا بیوپاری {{r3.rows.a19.name}} ہے: {{r3.rows.a19.gross}}۔",
         "show": [{"result": "r2", "as": "table", "rows": null}],
         "next": [], "choose": null, "entry": null, "nearest": null
     })

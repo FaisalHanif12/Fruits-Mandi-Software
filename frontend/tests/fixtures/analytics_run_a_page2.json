@@ -219,7 +219,8 @@
               "paisa": 392800
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": null
         },
         {
           "label": {
@@ -246,7 +247,8 @@
               "paisa": 152000
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": null
         }
       ],
       "others_count": 0,

@@ -396,6 +396,9 @@ impl Cx<'_> {
             // A seller's commission is two figures, each labelled (Umar's ruling of 05-11-2026): the
             // commission charged to him, and the total commission on his goods.
             (Who::Seller(key), What::Commission) => self.seller_commission(key),
+            // A buyer's commission is three figures too: his commission, his Laga and the total of the
+            // two, the figures of his commission page (Umar, 14-11-2026, plan 77).
+            (Who::Buyer(key), What::Commission) => self.buyer_commission(key),
             // One named party and one item (D7, plan 59 S-A1, S-A2): the row of the item in view A read
             // for him, and the newest line of the register for the last rate.
             (Who::BuyerItem(buyer, item), What::Commission) => self
@@ -425,7 +428,7 @@ impl Cx<'_> {
             (Who::Shop, What::Sale | What::SaleCount | What::Commission | What::Laga)
             | (Who::Item(_), What::Sale | What::Commission | What::Laga)
             | (Who::Seller(_), What::Sale | What::SaleCount)
-            | (Who::Buyer(_), What::Sale | What::Commission | What::Laga) => {
+            | (Who::Buyer(_), What::Sale | What::Laga) => {
                 self.flow(&line.who, line.what).map(|s| vec![s])
             }
             // The figures read from the totals of a report or a view (D7, plan 59 F3).
@@ -659,6 +662,40 @@ impl Cx<'_> {
             .collect()
     }
 
+    /// A buyer's commission, in three lines: the commission charged to him (`buyer_comm`), his Laga and
+    /// the total of the two (`total_comm` of his side), what his commission page shows. All three are
+    /// the totals row of the one read of view A with him and his side, over the period of the question.
+    fn buyer_commission(&self, key: &str) -> Option<Vec<Sentence>> {
+        if self.u.periods.is_empty() {
+            return None;
+        }
+        let view = self.result("analytics", |r| {
+            input_str(r, "view") == Some("A")
+                && input_str(r, "buyer") == Some(key)
+                && input_str(r, "item").is_none()
+                && input_str(r, "side") == Some("buyer")
+        })?;
+        let name = self.name_of(key)?;
+        [
+            ("assistant-instant-commission", "buyer", "buyer_comm"),
+            ("assistant-instant-laga", "buyer", "laga"),
+            ("assistant-instant-commission", "buyer-total", "total_comm"),
+        ]
+        .into_iter()
+        .map(|(id, role, column)| {
+            Some(Sentence {
+                id,
+                args: vec![
+                    ("role", role.to_owned()),
+                    ("name", name.clone()),
+                    ("figure", reference(view, &["totals", column])?),
+                ],
+                period: Some(Box::new(self.period()?)),
+            })
+        })
+        .collect()
+    }
+
     /// One figure of a named party's row for one item in view A (the view read with that party and that
     /// item): `column` of the row of the item, or of the totals when the party sold none of it (the
     /// figure is 0). The sentence names the party, the item and the period.
@@ -852,7 +889,6 @@ impl Cx<'_> {
                 // A buyer's view has its own columns for the same figures.
                 let column = match what {
                     What::Sale => "purchase_value",
-                    What::Commission => "buyer_comm",
                     _ => column,
                 };
                 (

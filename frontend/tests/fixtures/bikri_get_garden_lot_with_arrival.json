@@ -23,7 +23,7 @@
       "lot_no": 1,
       "lot_counter": 1,
       "seller": {
-        "id": 31,
+        "id": 35,
         "code": "0080",
         "name_ur": "شاہ پور باغ",
         "name_en": "Shahpur Garden"
@@ -92,7 +92,7 @@
           "journal_entry_id": 4,
           "entry_date": "2026-10-12",
           "buyer": {
-            "id": 20,
+            "id": 21,
             "code": "0020",
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"

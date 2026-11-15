@@ -98,7 +98,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 31,
+            "account_id": 35,
             "code": "0080",
             "short_code": null,
             "name_ur": "شاہ پور باغ",
@@ -110,7 +110,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 21,
+            "account_id": 22,
             "code": "0021",
             "short_code": "1",
             "name_ur": "ارشد ملتانی",

@@ -47,6 +47,16 @@ pub(crate) const COL_NAME: &str = "analytics-col-name";
 pub(crate) const COL_PERIOD: &str = "analytics-col-period";
 pub(crate) const COL_ITEM_COLUMN: &str = "analytics-col-item-column";
 pub(crate) const COL_ROW_TOTAL: &str = "analytics-col-row-total";
+// Column headings of view M, expenses by head: the words of the expense report.
+pub(crate) const COL_HEAD: &str = "report-col-head";
+pub(crate) const COL_EXPENSE: &str = "report-col-expense";
+/// The part of view M, as whole header facts: the shop's kharch and the partners' kharch.
+pub(crate) const FILTER_EXPENSE_SHOP: &str = "analytics-filter-expense-shop";
+pub(crate) const FILTER_EXPENSE_PARTNER: &str = "analytics-filter-expense-partner";
+// Column headings of the partner part of view M: the kharch each partner spent himself.
+pub(crate) const COL_OWN_KHARCH: &str = "analytics-col-own-kharch";
+// The reason of an entry behind a number of view M.
+pub(crate) const COL_REASON: &str = "dead-col-reason";
 
 // Column headings of views F, G and J.
 pub(crate) const COL_PARTNER: &str = "report-col-partner";

@@ -9,9 +9,18 @@ import { HandCoins, ReceiptText } from 'lucide-react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { useDebouncedValue } from '../../../shared/hooks';
+import { useDebouncedValue, useListWindow } from '../../../shared/hooks';
 import { formNavigationProps } from '../../../shared/keyboard';
-import { Card, Checkbox, EmptyState, FilterBar, ShowClosedTick } from '../../../shared/ui';
+import {
+  Card,
+  Checkbox,
+  EmptyState,
+  FilterBar,
+  ListWindowBar,
+  PartnerLockedBox,
+  ShowClosedTick,
+} from '../../../shared/ui';
+import { useDayStatus } from '../../../app/use-day-status';
 import { useVouchersList } from '../../vouchers';
 import { useOpenVoucher } from '../../../shared/edit';
 import { VoucherRowActions } from './VoucherRowActions';
@@ -110,9 +119,29 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
   const open = useOpenVoucher();
   // A take that is fully returned is left out until the tick is on (plan 38 G6).
   const [showReturned, setShowReturned] = useState(false);
-  const takes = usePartnerTakes(partnerId, true, showReturned);
+  const dayStatus = useDayStatus();
+  // The partner's money taken shows one month at a time (PRD FR-19.11, plan 76 point 8).
+  const listWindow = useListWindow({
+    kind: 'month',
+    source: { kind: 'partner_takes', partner_id: partnerId },
+    today: dayStatus.data?.today,
+  });
+  const windowed = !dayStatus.isError;
+  const takes = usePartnerTakes(
+    partnerId,
+    true,
+    showReturned,
+    windowed ? { from: listWindow.range.from, to: listWindow.range.to } : { from: null, to: null },
+    listWindow.ready || !windowed,
+  );
   const first = takes.data?.pages[0];
   const rows = takes.data?.pages.flatMap((page) => page.rows);
+  // A partner's money is behind his code: while it is locked the box stands in the list's place, never an error with a
+  // retry (PRD FR-17.11). The month window is refused for the same reason, so there is no window bar either.
+  const locked =
+    takes.isError &&
+    uiErrorOf(takes.error).errors.some((item) => item.code === 'ERR_PARTNER_LOCKED');
+  if (locked) return <PartnerLockedBox />;
   return (
     <>
       <Checkbox
@@ -137,6 +166,7 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
           void takes.refetch();
         }}
         pager={takes.pager}
+        onPageKey={listWindow.onPageKey}
         sort={{ value: takes.sort, onChange: takes.setSort }}
         months={
           first === undefined || first.months.length === 0
@@ -164,6 +194,7 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
               })
         }
       />
+      {windowed ? <ListWindowBar window={listWindow} /> : null}
     </>
   );
 }

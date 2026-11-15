@@ -52,3 +52,26 @@ one more route; the tab strip shows itself when there are two.
 `expense-draft.ts`, `lent-draft.ts`, `khata-draft.ts`, `entry-support.ts`, `expense-tabs.ts`,
 `components/`, `pages/`. Test doubles: `tests/helpers/cashbook-books.ts` (plain books),
 `cashbook.ts` (mocks), `dev-bridge-rokar.ts` (the page `/dev/rokar`).
+
+## Plan 76: linked khatas, person types and the dues of garden owners and others (PRD FR-16.6, FR-16.13)
+
+- A الگ کھاتہ and a person who is lent money have a **link**: nobody (a khata only, the firm's own), the shop (every
+  movement is split between the partners by the shares of its day) or one partner. `link-draft.ts` holds the form
+  value (`LinkDraft`) and builds the link the backend takes; `components/LinkChoice.tsx` is the one pair of fields
+  (kind, and the partner for a partner link), used by the add dialog, the khata card and the person card.
+  The backend splits and posts; the screen only sends the link.
+- `AddAccountDialog` (the `F4` form) asks the link of a new khata, and the type (staff, garden owner,
+  market-trip person, other) and the link of a new person. `KhataLinkCard` (in the khata list) shows the link in
+  words and changes it (`khata_set_link`); the button is off while the khata's balance is not 0, with the words
+  `cashbook-link-locked` (the backend refuses it too: `ERR_LINK_LOCKED`). `PersonDetailsCard` (in the ادھار رقم
+  list) shows his type and link and changes them (`lent_person_update`); while he owes, the link is fixed
+  (`ERR_LINK_FIXED_WHILE_OWED`). The money lent form has a "For" field: it shows the person's link, is fixed while
+  he owes, and sends the link only when he owes nothing (`linkToSend`). A salary return for a partner-linked
+  person is refused by the backend (`ERR_SALARY_NOT_ALLOWED_FOR_LINKED`) and shown at its field.
+- The dashboard tile "Garden owners' and others' dues" opens `/others-dues` (`pages/OthersDuesPage.tsx`):
+  the money given to people who are not staff and what came back, one month at a time (`useListWindow`, source
+  `lent_dues`), with the filters person type and link (the shop, or one partner), the people with something open
+  and the entries of the month. Every figure and total is `lent_dues`'s. Enter opens the person on the ادھار رقم
+  screen. Tests: `others-dues-page.test.tsx`, `khata-link.test.tsx`, `lent-link.test.tsx`.
+- The lists under the ادھار رقم, partner takes (خرچہ) and capital forms show **one month at a time**
+  (`ListWindowBar`, PRD FR-19.11): the hooks take the month's `from` and `to`.

@@ -316,7 +316,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       await waitFor(() => {
         expect(drawnColumns()).toEqual(['item', 'packing', 'qty', 'rate', 'amount']);
       }, SLOW_MS);
-      expect(lastRun()?.filters.party).toEqual({ account_id: 20, person_key: null });
+      expect(lastRun()?.filters.party).toEqual({ account_id: 21, person_key: null });
       await waitFor(() => {
         expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
       }, SLOW_MS);
@@ -358,7 +358,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       const { user } = await openSheet();
       await openSlip(user, '5');
       await waitFor(() => {
-        expect(lastRun()?.filters.party).toEqual({ account_id: 18, person_key: null });
+        expect(lastRun()?.filters.party).toEqual({ account_id: 19, person_key: null });
       }, SLOW_MS);
       await waitFor(() => {
         expect(slipLines()).toHaveLength(11);
@@ -587,7 +587,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       // The first row is the heading of the buyers; the second is Arshad, the third Akram.
       await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
       await waitFor(() => {
-        expect(lastRun()?.filters.party).toEqual({ account_id: 20, person_key: null });
+        expect(lastRun()?.filters.party).toEqual({ account_id: 21, person_key: null });
       }, SLOW_MS);
       await waitFor(() => {
         expect(drawnColumns()).toEqual(['item', 'packing', 'qty', 'rate', 'amount']);

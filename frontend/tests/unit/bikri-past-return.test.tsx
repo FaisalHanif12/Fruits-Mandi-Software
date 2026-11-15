@@ -18,6 +18,7 @@ import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { FALLBACK_ERROR_MESSAGE_ID } from '../../src/shared/api';
 import * as editApi from '../../src/shared/edit/api';
+import { isoToDisplayDate } from '../../src/shared/format';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
@@ -109,7 +110,9 @@ const dayLineOf = () => document.querySelector<HTMLElement>(`${DAY_SELECTOR} [da
 const dayGridOf = (language: Language): HTMLElement => {
   const day = document.querySelector<HTMLElement>(DAY_SELECTOR);
   if (day === null) throw new Error('the day is not on screen');
-  return within(day).getByRole('group', { name: named(message(language, 'bikri-past-label')) });
+  return within(day).getByRole('group', {
+    name: named(message(language, 'bikri-past-day-label', { date: isoToDisplayDate(WINDOW_END) })),
+  });
 };
 
 /**

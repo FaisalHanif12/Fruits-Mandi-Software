@@ -24,6 +24,8 @@ import {
 import { fakePartners, overviewRow, THREE_PARTNERS } from './partners';
 import { AKRAM, CHUKTA_KHATA, RAHIM } from './vouchers';
 import { money } from './accounts';
+import { fail } from './app';
+import { dayAnswerOf, monthAnswerOf } from './partner-month';
 
 type AccountRow = ReturnType<typeof AccountFn>;
 
@@ -42,6 +44,9 @@ export interface PartnerMoney {
   money: PartnerMoneyBooks;
   partners: ReturnType<typeof fakePartners>;
 }
+
+/** The day of the app in the statement tests: the month it opens on is the last one of the year. */
+export const PARTNER_MONTH_TODAY = '2026-12-31';
 
 /** Sets every fake an app test of the second half of plan 17 needs, and returns the books. */
 export function preparePartnerMoney(
@@ -71,6 +76,26 @@ export function preparePartnerMoney(
   );
   vi.mocked(partnersApi.partnersStatement).mockImplementation((input) =>
     answer(() => books.statement(input)),
+  );
+  // The month of the statement and its days (PRD FR-17.12): made from the same lines as the range.
+  vi.mocked(partnersApi.partnersStatementMonth).mockImplementation((input) =>
+    answer(() => {
+      const partner = books.partnerRef(input.partner_id);
+      if (partner === null) throw fail({ code: 'ERR_NOT_FOUND', field: 'partner_id' });
+      return monthAnswerOf(
+        partner,
+        books.statementLines(input.partner_id),
+        input.month === null || input.month === '' ? null : input.month,
+        PARTNER_MONTH_TODAY,
+      );
+    }),
+  );
+  vi.mocked(partnersApi.partnersStatementDay).mockImplementation((input) =>
+    answer(() => {
+      const partner = books.partnerRef(input.partner_id);
+      if (partner === null) throw fail({ code: 'ERR_NOT_FOUND', field: 'partner_id' });
+      return dayAnswerOf(partner, books.statementLines(input.partner_id), input.date);
+    }),
   );
   // The generic voucher preview also answers for the capital kinds.
   const previous = vi.mocked(vouchersApi.vouchersPreview).getMockImplementation();

@@ -232,6 +232,20 @@ pub struct AdvanceEffect {
     pub still_open_paisa: Paisa,
 }
 
+/// What an entry on a linked khata or on a loan linked to a partner or the shop does to one partner's
+/// کل رقم (plan 76 points 5 and 10, PRD FR-16.6, FR-16.13). Worked out by the function the save uses.
+/// The names of the partners are not behind the partner code (FR-17.11); his total is not in it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LinkedPart {
+    /// The partner.
+    #[ts(type = "number")]
+    pub partner_id: i64,
+    /// The change of his کل رقم, signed: minus when money goes out on his account, plus when it
+    /// comes back.
+    #[ts(type = "Paisa")]
+    pub amount_paisa: Paisa,
+}
+
 /// The entry checked and worked out, nothing saved (PRD FR-7.58, FR-7.59, FR-6.7, FR-7.68).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct VoucherPreview {
@@ -272,6 +286,9 @@ pub struct VoucherPreview {
     /// `cash_before_paisa` and `cash_after_paisa` are 0 and `lowers_cash`, `below_zero` and
     /// `needs_confirm` are false. The screen shows the amounts only when `needs_confirm` is true.
     pub cash: CashCheck,
+    /// A khata or loan that is linked: each partner's change of کل رقم by this entry, in the order
+    /// of his id. Empty when the entry touches no linked account (plan 76 points 5 and 10).
+    pub linked_parts: Vec<LinkedPart>,
     /// What stops a save. The screen shows each at its field.
     pub errors: Vec<FieldError>,
     /// What only warns. A save is allowed. For example `ERR_PAYMENT_ABOVE_PAYABLE` (PRD FR-15.7).
@@ -377,12 +394,14 @@ pub const MAX_OPEN_ROWS: usize = 200;
 pub struct OpenBills {
     /// The buyer.
     pub account: RecordRef,
-    /// The oldest open bills, oldest first, at most `MAX_OPEN_ROWS` (200).
+    /// One page of the open bills, oldest first, at most `MAX_OPEN_ROWS` (200). The first page
+    /// holds the oldest (plan 76 point 8: the page is chosen with `offset` and `limit`).
     pub bills: Vec<OpenBill>,
     /// How many open bills he has in all. The screen says "first 200 of N" when `truncated`.
     #[ts(type = "number")]
     pub total_count: i64,
-    /// True if `bills` holds only the oldest of them (`total_count` is more than its length).
+    /// True if there are more bills after this page (`offset` plus the length of `bills` is less
+    /// than `total_count`).
     pub truncated: bool,
     /// Σ of what is open on ALL his open bills, not only on `bills`. The "پورا بقایا" button fills
     /// this amount. It equals his balance when he has no credit waiting for a bill.
@@ -393,7 +412,7 @@ pub struct OpenBills {
     pub unmatched_credit_paisa: Paisa,
     /// His balance now.
     pub balance: Balance,
-    /// The age in days of the oldest open bill, or null if there is none.
+    /// The age in days of the oldest open bill of all of them, or null if there is none.
     #[ts(type = "number | null")]
     pub oldest_days: Option<i64>,
 }
@@ -451,7 +470,7 @@ pub struct OpenPayables {
     /// are in all). The screen says "first 200 of N" when `truncated`.
     #[ts(type = "number")]
     pub total_count: i64,
-    /// True if `postings` holds only the oldest of them.
+    /// True if there are more postings after this page.
     pub truncated: bool,
     /// Σ still to pay on ALL his postings, not only on `postings`. The "پورا بقایا" button fills
     /// this amount.

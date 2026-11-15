@@ -95,12 +95,6 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         &facts::conds(typed, run_range(typed), &none),
         &["f.seller_account_id", "f.bikri_id"],
     )?;
-    // The distinct بکری of the whole filter, for the total row.
-    let all_bikri = facts::groups(
-        conn,
-        &facts::conds(typed, run_range(typed), &none),
-        &["f.bikri_id"],
-    )?;
     let compared = if typed.compare.is_some() {
         totals_by_id(
             &facts::groups(
@@ -114,6 +108,10 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         HashMap::new()
     };
 
+    // The distinct بکری of the whole filter, for the total row: the net of a بکری over all its
+    // sellers is nothing exactly when the net of each of its sellers is (every net is 0 or more), so
+    // they are the بکری of the groups just read, and no second read of the facts is made.
+    let mut all_bikri: HashSet<i64> = HashSet::new();
     let mut by_seller: HashMap<i64, (Sums, HashSet<i64>)> = HashMap::new();
     for group in &current {
         let (Some(seller), Some(bikri)) = (group.int(0), group.int(1)) else {
@@ -122,6 +120,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         let slot = by_seller.entry(seller).or_default();
         slot.0.add(&group.sums)?;
         slot.1.insert(bikri);
+        all_bikri.insert(bikri);
     }
 
     // The net is given when the lots' charges can be matched to the rows. A garden, a trip or the

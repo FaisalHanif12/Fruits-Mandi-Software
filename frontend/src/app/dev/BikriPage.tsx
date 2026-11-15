@@ -23,7 +23,6 @@ import { fillUmarsLot } from '../../../tests/helpers/bikri-umar-data';
 import { paisaForTest } from '../../../tests/helpers/paisa';
 import { BikriDraftOffer } from '../../features/bikri/draft-offer';
 import { BikriBookPage } from '../../features/bikri/pages/BikriBookPage';
-import { LaterSalePage } from '../../features/bikri/pages/LaterSalePage';
 import { StockPage } from '../../features/bikri/pages/StockPage';
 import { TodayBikriPage } from '../../features/bikri/pages/TodayBikriPage';
 import { PrintingTab } from '../../features/settings/components/PrintingTab';
@@ -102,8 +101,6 @@ export function BikriPage() {
         <TodayBikriPage />
       ) : devFlag('stock') ? (
         <StockPage />
-      ) : devFlag('later') ? (
-        <LaterSalePage />
       ) : (
         <BikriBookPage
           initialDraft={

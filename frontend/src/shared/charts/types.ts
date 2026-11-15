@@ -16,6 +16,11 @@ export interface BarSeries {
    */
   stack?: string | undefined;
   /**
+   * The same figure for the period before (the compare choice of the analytics, PRD 18.1): drawn
+   * lighter than the series it belongs to, so it is never taken for the period itself. Default: false.
+   */
+  previous?: boolean | undefined;
+  /**
    * A scenario, not a result: drawn as an empty bar with a dashed outline, and in the legend as a
    * dashed box, so it is never taken for a figure of the books. Default: false.
    */
@@ -26,6 +31,11 @@ export interface BarChartData {
   /** The names along the axis, in the order of the table (already in the app language). */
   categories: readonly string[];
   series: readonly BarSeries[];
+  /**
+   * How the series are drawn: bars (a ranking, the parts of a total) or lines (a trend over days or
+   * months, PRD FR-18.3). Default: bars.
+   */
+  kind?: 'bar' | 'line' | undefined;
   /** One stack of bars for each category (the parts of a total), or bars side by side. */
   stacked: boolean;
   /**
@@ -45,4 +55,12 @@ export interface ChartStyle {
   inkMuted: string;
   border: string;
   surface: string;
+}
+
+/** What a click or a tap on a chart is on: the bar or point, or the name under it. */
+export interface ChartPointClick {
+  /** The position of the category in `categories`. */
+  categoryIndex: number;
+  /** The position of the series, or null when the name under the bar was clicked. */
+  seriesIndex: number | null;
 }

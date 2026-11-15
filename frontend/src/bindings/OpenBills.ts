@@ -13,7 +13,8 @@ export type OpenBills = {
    */
   account: RecordRef;
   /**
-   * The oldest open bills, oldest first, at most `MAX_OPEN_ROWS` (200).
+   * One page of the open bills, oldest first, at most `MAX_OPEN_ROWS` (200). The first page
+   * holds the oldest (plan 76 point 8: the page is chosen with `offset` and `limit`).
    */
   bills: Array<OpenBill>;
   /**
@@ -21,7 +22,8 @@ export type OpenBills = {
    */
   total_count: number;
   /**
-   * True if `bills` holds only the oldest of them (`total_count` is more than its length).
+   * True if there are more bills after this page (`offset` plus the length of `bills` is less
+   * than `total_count`).
    */
   truncated: boolean;
   /**
@@ -38,7 +40,7 @@ export type OpenBills = {
    */
   balance: Balance;
   /**
-   * The age in days of the oldest open bill, or null if there is none.
+   * The age in days of the oldest open bill of all of them, or null if there is none.
    */
   oldest_days: number | null;
 };

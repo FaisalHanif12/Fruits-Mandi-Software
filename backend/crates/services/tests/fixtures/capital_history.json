@@ -6,6 +6,7 @@
     "name_en": "Partner B"
   },
   "balance_paisa": 5000000,
+  "opening_paisa": 0,
   "rows": [
     {
       "kind": "invested",

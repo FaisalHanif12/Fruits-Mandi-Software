@@ -375,7 +375,7 @@ fn opening_condition(has_opening: Option<bool>) -> Option<String> {
             "(a.opening_dr_paisa = 0 AND a.opening_cr_paisa = 0 AND a.is_chukta_khata = 0 \
              AND c.head_id NOT IN (SELECT id FROM account_heads WHERE code IN ('{INCOME_HEAD}', '{EXPENSE_HEAD}')) \
              AND a.code NOT IN ('{OPENING_DIFFERENCE_CODE}', '{NAQDI_MANDI_CODE}', '{OWN_GOODS_CODE}', '{BANK_ACCOUNT_CODE}') \
-             AND c.code NOT IN ('{VENTURE_CONTROL_CODE}', '{GARDEN_CONTROL_CODE}'))"
+             AND c.code NOT IN ('{VENTURE_CONTROL_CODE}', '{GARDEN_CONTROL_CODE}', '0605', '0307'))"
         )),
     }
 }

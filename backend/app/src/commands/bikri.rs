@@ -10,14 +10,33 @@ use mandi_services::core::bikri::{
     BikriListInput, BikriListRow, BikriNavigateInput, BikriPreview, BikriPreviewInput,
     BikriSaveInput, BikriSaved, CancelInput, CancelPreview, CancelPreviewInput, EditOpenInput,
     EditPreviewInput, EditSaveInput, EditableBikri, LaterSaleInput, LaterSaleSaveInput,
-    LaterSaleSaved, StockList, StockListInput, UndoInput, UndoResult, WriteOffDone, WriteOffInput,
-    WriteOffUndoInput, WriteOffUndone,
+    LaterSaleSaved, MixedSaleInput, MixedSalePreview, MixedSaleSaveInput, MixedSaleSaved,
+    MixedUndoInput, MixedUndoResult, StockList, StockListInput, UndoInput, UndoResult,
+    WriteOffDone, WriteOffInput, WriteOffUndoInput, WriteOffUndone,
 };
+use mandi_services::core::paging::PageInput;
 use mandi_services::{auth, bikri};
+use serde::Deserialize;
+use ts_rs::TS;
 
 use super::reports_engine::engine_error;
 use super::run;
 use crate::error::UiError;
+
+/// Input of `bikri_find`: the filters and, since plan 76 point 8, the page. No page gives the
+/// newest 50, as before.
+#[derive(Debug, Clone, Default, Deserialize, TS)]
+pub struct BikriFindPageInput {
+    /// The filters.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: BikriFindInput,
+    /// Where the page starts and how many rows it holds (at most 100). A page that is full may
+    /// have another after it.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub page: PageInput,
+}
 
 /// Works out a whole typed بکری for the live summary: every line, commission and لاگا with its
 /// working, the seller summary, the buyer bills, the live partner split, the cash note and all
@@ -109,16 +128,17 @@ pub async fn bikri_list_print_data<R: tauri::Runtime>(
     .await
 }
 
-/// Finds بکری by number, truck, seller, day or item (PRD FR-12.13, F3). Newest first, at most 50.
+/// Finds بکری by number, truck, seller, day or item (PRD FR-12.13, F3). Newest first, one page: 50
+/// rows unless `limit` says otherwise (at most 100); `offset` skips the rows of the earlier pages.
 /// Read only. Errors: the date codes on `date`.
 #[tauri::command]
 pub async fn bikri_find<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: BikriFindInput,
+    input: BikriFindPageInput,
 ) -> Result<Vec<BikriListRow>, UiError> {
     run(app, "bikri_find", move |ctx| {
         auth::require(ctx)?;
-        bikri::find(ctx, &input)
+        bikri::find_page(ctx, &input.base, input.page)
     })
     .await
 }
@@ -180,6 +200,48 @@ pub async fn bikri_later_sale_save<R: tauri::Runtime>(
     run(app, "bikri_later_sale_save", move |ctx| {
         let actor = auth::require(ctx)?;
         bikri::later_sale_save(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Works out a screen that holds carried lots and new lots for the live summary (plan 76 point 1,
+/// PRD FR-12.17). It shares its working with `bikri_mixed_save`. Nothing is saved.
+#[tauri::command]
+pub async fn bikri_mixed_preview<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: MixedSaleInput,
+) -> Result<MixedSalePreview, UiError> {
+    run(app, "bikri_mixed_preview", move |ctx| {
+        auth::require(ctx)?;
+        bikri::mixed_preview(ctx, &input)
+    })
+    .await
+}
+
+/// Saves carried lots and new lots in one transaction: a later posting for each carried lot and a
+/// new بکری for the new lots (plan 76 point 1).
+#[tauri::command]
+pub async fn bikri_mixed_save<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: MixedSaleSaveInput,
+) -> Result<MixedSaleSaved, UiError> {
+    run(app, "bikri_mixed_save", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::mixed_save(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Undoes a mixed save straight after it: the later postings are reversed and the new بکری is
+/// cancelled, in one transaction (plan 76 point 1, PRD FR-7.47).
+#[tauri::command]
+pub async fn bikri_mixed_undo<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: MixedUndoInput,
+) -> Result<MixedUndoResult, UiError> {
+    run(app, "bikri_mixed_undo", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::mixed_undo(ctx, &actor, &input)
     })
     .await
 }

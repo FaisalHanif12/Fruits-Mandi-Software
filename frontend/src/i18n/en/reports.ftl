@@ -1236,7 +1236,7 @@ report-r1-help = The lots of one { -bikri }: what came, what was sold, the charg
 report-r5-title = { -udhari } Details
 
 # review: pending
-report-r5-help = Every buyer of the day with his goods, what they come to with the { -commission } and { -laga }, what was { -mauqa-par-jama } and what is { -khate-mein-baqi }.
+report-r5-help = The day's collection list: every buyer who owes the shop or bought that day, with his goods, what he owed at the start of the day, the day's bill, what was { -mauqa-par-jama } and what he owes now.
 
 # review: pending
 report-col-serial = No.
@@ -1257,9 +1257,6 @@ report-bikri-hit = { -bikri } <num>{ $number }</num> · <num>{ $date }</num>
 report-detail-sale-short = ({ $item } { $qty } . { $rate })
 
 ## Print all the credit buyers' slips (R5, PRD 19.2 R5 "Print All"): one slip for each buyer.
-
-# review: pending
-report-print-all = Print all slips
 
 # review: pending
 report-buyer-bills-slips = Slips
@@ -1508,7 +1505,7 @@ report-guide-action-excel = Excel
 report-guide-special-r1 = Print the seller's bill of the chosen { -bikri }
 
 # review: pending
-report-guide-special-r5 = { report-print-all }: one slip for each buyer
+report-guide-special-r5 = Buyer parchi: one slip for each buyer of the day, several to an A4 page
 
 # review: pending
 report-guide-special-r35 = Choose a party to print his slip, or print the table of every party
@@ -1544,10 +1541,10 @@ report-r4-detail = The sale lines that still have something { -khate-mein-baqi }
 report-r4-when = To see what was sold on credit.
 
 # review: pending
-report-r5-detail = Every buyer of the day, also one who paid in full. Each row has his goods written as (item quantity . rate), their value, the value with { -commission } and { -laga }, what was { -mauqa-par-jama } and what is { -khate-mein-baqi }.
+report-r5-detail = Every buyer who owes or bought on the day, also one who paid in full, one row each, sorted by name. Each row has his goods written as (item quantity . rate), his previous due, the day's bill, what was { -mauqa-par-jama } and what he owes now. A { -wasooli } of the day shows in the next day's previous due.
 
 # review: pending
-report-r5-when = For the buyers' bills of the day. { report-print-all } gives one slip for each buyer.
+report-r5-when = For the collector's round and for the list of what is owed after the day's sales.
 
 # review: pending
 report-r6-detail = Every { -lot } of the days you choose: the seller, the { -kham-bikri }, each deduction, the total deductions and the { -safi-bikri }.
@@ -1734,3 +1731,78 @@ report-r38-detail = Everyone moved to the { -doobi-raqam }: what he owed when he
 
 # review: pending
 report-r38-when = To follow up money that is hard to recover.
+
+## The collection sheet: R5 as the day's اگراہی list (plan 76 point 2, PRD R5, FR-19.11).
+
+# review: pending
+collection-title = { -udhari } Details
+
+# review: pending
+collection-help = Every { -gahak } who owes the shop or bought on the chosen day, also one who paid in full: his goods, what he owed at the start of the day, the day's bill, what was { -mauqa-par-jama } and what he owes now. A { -wasooli } of the day shows in the next day's previous due. The totals are over every buyer, not only the rows on screen.
+
+# review: pending
+collection-back = Back to the reports
+
+# review: pending
+collection-search = Search by code or name
+
+# review: pending
+collection-label = Buyers of the day
+
+# review: pending
+collection-failed = The sheet could not be read
+
+# review: pending
+collection-empty = No buyer owes anything and nobody bought on this day
+
+# review: pending
+collection-empty-help = Choose another day, or enter a { -bikri } first.
+
+# review: pending
+collection-no-match = No buyer matches
+
+# review: pending
+collection-no-match-help = Change the words, or clear the search.
+
+# review: pending
+collection-clear = Clear the search
+
+# review: pending
+collection-parchi = Buyer parchi
+
+# review: pending
+collection-goto = Go to day
+
+# review: pending
+collection-goto-hint = Type a day, for example 10-10-2026. A short form works too: 10 is the 10th of this month.
+
+# review: pending
+collection-goto-placeholder = DD-MM-YYYY
+
+# review: pending
+collection-today = Today
+
+# review: pending
+collection-col-party = { -gahak }
+
+# review: pending
+collection-col-detail = Goods
+
+# review: pending
+collection-col-previous = { -sabiqa-raqam }
+
+# review: pending
+collection-col-bill = { -taza-banam }
+
+# review: pending
+collection-col-paid = { -mauqa-par-jama }
+
+# review: pending
+collection-col-total-due = { -total-raqam }
+
+# review: pending
+collection-dead-line = { -doobi-raqam } (listed apart, not in the total above): { -sabiqa-raqam } <prev></prev>, { -taza-banam } <bill></bill>, { -total-raqam } <due></due>
+
+# The buyers whose total due ends in Credit (the shop owes them): listed apart so the total above stays what the buyers owe.
+# review: pending
+collection-credit-line = { -gahak } in { -jama } (listed apart, not in the total above): { -sabiqa-raqam } <prev></prev>, { -taza-banam } <bill></bill>, { -total-raqam } <due></due>

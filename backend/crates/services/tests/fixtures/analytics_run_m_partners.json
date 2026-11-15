@@ -1,0 +1,248 @@
+{
+  "view": "M",
+  "title_id": "analytics-view-m-title",
+  "filters": {
+    "period": null,
+    "from": "2026-10-01",
+    "to": "2026-10-31",
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "garden": null,
+    "goods": "all",
+    "trip_view": null,
+    "expense_part": "partner"
+  },
+  "columns": [
+    {
+      "key": "partner",
+      "title_id": "report-col-partner",
+      "kind": "names",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "own",
+      "title_id": "analytics-col-own-kharch",
+      "kind": "money",
+      "heading": null,
+      "drill": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": [],
+        "money": "taken"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 200000
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": 1,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "ب",
+            "en": "Partner B"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": 2,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "ج",
+            "en": "Partner C"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": 3,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 200000
+    }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "own",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "الف",
+              "en": "Partner A"
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": 1,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 200000
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        },
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "ب",
+              "en": "Partner B"
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": 2,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 0
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        },
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "ج",
+              "en": "Partner C"
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": 3,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 0
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
+  ]
+}

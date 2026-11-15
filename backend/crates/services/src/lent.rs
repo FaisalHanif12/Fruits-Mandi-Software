@@ -13,11 +13,14 @@ use mandi_domain::core::accounts::{AccountType, RecordRef};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::lent::{
-    AttentionOverdue, LentList, LentListInput, LentPerson, LentPersonCreateInput, LentReport,
-    LentReportInput, LentReportRow, LentReportTotals, LentRow, LentTotals, MAX_OVERDUE_ITEMS,
-    OverdueItem, OverdueKind,
+    AttentionOverdue, LentDues, LentDuesInput, LentDuesPerson, LentDuesRow, LentDuesRowKind,
+    LentDuesTotals, LentList, LentListInput, LentPerson, LentPersonCreateInput,
+    LentPersonCreateRequest, LentPersonUpdateInput, LentReport, LentReportInput, LentReportRow,
+    LentReportTotals, LentRow, LentTotals, MAX_OVERDUE_ITEMS, OverdueItem, OverdueKind,
 };
+use mandi_domain::core::links::{Link, LinkKind, PersonType};
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::months::Month;
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::text;
 use mandi_domain::core::validate;
@@ -31,6 +34,7 @@ use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
 use crate::ledger;
+use crate::linked;
 use crate::page;
 use crate::search;
 use crate::ventures::record_of;
@@ -62,6 +66,45 @@ fn lent_person(person: &PersonFacts) -> LentPerson {
             .zip(person.staff_names.as_ref())
             .map(|(id, (ur, en))| record_of(id, ur, en)),
         phone: person.phone.clone(),
+        person_type: PersonType::parse(&person.person_type).unwrap_or(PersonType::Other),
+        link: person_link(&person.link_kind, person.link_partner_id),
+    }
+}
+
+/// The link of a person who is lent money. A loan with no link belongs to the shop, as it always
+/// did, so a stored `none` reads as the shop (plan 76 point 10, PRD FR-16.13).
+fn person_link(kind: &str, partner_id: Option<i64>) -> Link {
+    match linked::link_from_stored(kind, partner_id) {
+        Link {
+            kind: LinkKind::None,
+            ..
+        } => Link {
+            kind: LinkKind::Shop,
+            partner_id: None,
+        },
+        other => other,
+    }
+}
+
+/// Checks the link of a person: a partner link needs an active partner; the shop, and no link,
+/// both mean the shop and need nothing (a shop-linked loan posts as before, so the shares are not
+/// needed until a statement splits its note, PRD FR-16.13).
+///
+/// # Errors
+/// `ERR_LINK_PARTNER_REQUIRED`, `ERR_NOT_FOUND` and `ERR_PARTNER_INACTIVE` on `link.partner_id`;
+/// `ERR_FORMAT_INVALID` on `link.partner_id` for a shop link or no link that names a partner.
+pub(crate) fn check_person_link(
+    tx: &Connection,
+    link: &Link,
+    shares_day: &str,
+) -> Result<linked::CheckedLink, ServiceError> {
+    linked::refuse_stray_partner(link)?;
+    match link.kind {
+        LinkKind::Partner => linked::check_link(tx, link, shares_day),
+        LinkKind::None | LinkKind::Shop => Ok(linked::CheckedLink {
+            kind: "shop",
+            partner_id: None,
+        }),
     }
 }
 
@@ -78,6 +121,36 @@ pub fn person_create(
     ctx: &Context,
     actor: &Actor,
     input: &LentPersonCreateInput,
+) -> Result<LentPerson, ServiceError> {
+    person_create_with(ctx, actor, input, None, None)
+}
+
+/// Makes a person with his type and link (plan 76 point 10, PRD FR-16.13), in one transaction. No
+/// type means staff when he is a staff member, else other; no link means the shop.
+///
+/// # Errors
+/// As [`person_create`], with `ERR_LINK_PARTNER_REQUIRED`, `ERR_NOT_FOUND` and
+/// `ERR_PARTNER_INACTIVE` on `link.partner_id`.
+pub fn person_create_linked(
+    ctx: &Context,
+    actor: &Actor,
+    request: &LentPersonCreateRequest,
+) -> Result<LentPerson, ServiceError> {
+    person_create_with(
+        ctx,
+        actor,
+        &request.base,
+        request.person_type,
+        request.link.as_ref(),
+    )
+}
+
+fn person_create_with(
+    ctx: &Context,
+    actor: &Actor,
+    input: &LentPersonCreateInput,
+    person_type: Option<PersonType>,
+    link: Option<&Link>,
 ) -> Result<LentPerson, ServiceError> {
     let window = day::window(ctx)?;
     let account_input = mandi_domain::core::accounts::AccountInput {
@@ -112,6 +185,15 @@ pub fn person_create(
     let (id, learned) = ctx
         .db
         .write(|tx| {
+            // Checked first, so a bad link writes nothing.
+            let checked_link = check_person_link(
+                tx,
+                link.unwrap_or(&Link {
+                    kind: LinkKind::Shop,
+                    partner_id: None,
+                }),
+                &window.1.to_iso(),
+            )?;
             if let Some(staff_id) = input.staff_id {
                 match open_lines::staff(tx, staff_id)? {
                     None => {
@@ -130,6 +212,20 @@ pub fn person_create(
                 }
             }
             let (id, learned) = accounts::create_in(ctx, actor, tx, &account_input, window)?;
+            let kind = person_type.unwrap_or(if input.staff_id.is_some() {
+                PersonType::Staff
+            } else {
+                PersonType::Other
+            });
+            mandi_db::links::set_person_type(tx, id, kind.as_str())?;
+            linked::apply_link(
+                ctx,
+                actor,
+                tx,
+                id,
+                &checked_link,
+                ErrorCode::ErrLinkFixedWhileOwed,
+            )?;
             if let Some(staff_id) = input.staff_id {
                 open_lines::link_staff_account(tx, staff_id, id, actor.user_id, &ctx.now_text())?;
                 ctx.db.auditor().write(
@@ -152,6 +248,57 @@ pub fn person_create(
             .remove(&id)
             .map(|person| lent_person(&person))
             .ok_or_else(|| ServiceError::Data("the new person cannot be read back".to_owned()))
+    })
+}
+
+/// Changes the type and the link of a person (plan 76 point 10, PRD FR-16.13), in one transaction.
+/// The type is a label and changes any time; the link changes only while he owes nothing.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `person_account_id`; `ERR_LINK_FIXED_WHILE_OWED` on `link`;
+/// `ERR_LINK_PARTNER_REQUIRED`, `ERR_NOT_FOUND` and `ERR_PARTNER_INACTIVE` on `link.partner_id`.
+pub fn person_update(
+    ctx: &Context,
+    actor: &Actor,
+    input: &LentPersonUpdateInput,
+) -> Result<LentPerson, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let id = input.person_account_id;
+    ctx.db.write(|tx| -> Result<(), ServiceError> {
+        let person = open_lines::persons(tx, &[id])?.remove(&id).ok_or_else(|| {
+            ServiceError::reject_field(ErrorCode::ErrNotFound, "person_account_id")
+        })?;
+        if let Some(kind) = input.person_type
+            && kind.as_str() != person.person_type
+        {
+            mandi_db::links::set_person_type(tx, id, kind.as_str())?;
+            ctx.db.auditor().write(
+                tx,
+                &Event::new(Some(actor.user_id), "update", "account")
+                    .entity_id(id)
+                    .old(json!({ "person_type": person.person_type }))
+                    .new_value(json!({ "person_type": kind.as_str() }))
+                    .into_entry(),
+            )?;
+        }
+        if let Some(link) = &input.link {
+            let checked = check_person_link(tx, link, &today.to_iso())?;
+            linked::apply_link(
+                ctx,
+                actor,
+                tx,
+                id,
+                &checked,
+                ErrorCode::ErrLinkFixedWhileOwed,
+            )?;
+        }
+        Ok(())
+    })?;
+    ctx.db.read(|conn| {
+        open_lines::persons(conn, &[id])?
+            .remove(&id)
+            .map(|person| lent_person(&person))
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "person_account_id"))
     })
 }
 
@@ -259,6 +406,7 @@ fn loans_by_person<'a>(
 /// `ERR_NOT_FOUND` on `person_id`.
 pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceError> {
     let (_, today) = day::window(ctx)?;
+    let (from, to) = page::date_range(input.from.as_ref(), input.to.as_ref(), today)?;
     // The sort is checked first: an unknown column is refused (plan 38 R4).
     if let Some(sort) = &input.sort {
         sort.check(&LOAN_COLUMNS)
@@ -284,6 +432,11 @@ pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceErr
             // A fully returned loan is finished: it steps aside, with its money, unless asked for
             // (plan 38 R5). The totals and the months are over the rows listed.
             if !input.show_finished && loan.figures.open == Paisa::ZERO {
+                continue;
+            }
+            // The range keeps the loans dated inside it (plan 76 point 8); what has been returned
+            // against a loan is still its true figure, whenever the return was made.
+            if !page::in_range(&loan.line.entry_date, from.as_deref(), to.as_deref()) {
                 continue;
             }
             let amount = paisa(loan.line.dr_paisa)?;
@@ -338,6 +491,177 @@ pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceErr
             total_count,
             totals,
             months,
+        })
+    })
+}
+
+/// The types the dashboard tile and the dues page show when none is chosen: everyone but staff
+/// (plan 76 point 10, PRD FR-16.13).
+const DEFAULT_DUES_TYPES: [PersonType; 3] = [
+    PersonType::GardenOwner,
+    PersonType::TripPerson,
+    PersonType::Other,
+];
+
+/// The page behind the tile of garden owners and others, one month at a time (plan 76 point 10,
+/// PRD FR-16.13, FR-19.11): each amount given and each return of the month with the person, his
+/// type and his link, the totals of the month, and the people with their open amounts as of today.
+/// People in the dead amount are left out, as on the tile, so with the default filter the open
+/// total equals `others_dues_paisa` of the dashboard. Read only.
+///
+/// Example: نواز (garden owner, linked to الف) was given 20,000 on 01-11-26 and returned 5,000 on
+/// 10-11-26. For November: given 20,000, returned 5,000, open 15,000, 1 person.
+///
+/// # Errors
+/// `ERR_FORMAT_INVALID` on `month`; `ERR_DATE_IN_FUTURE` on `month` for a month after this one.
+pub fn dues(ctx: &Context, input: &LentDuesInput) -> Result<LentDues, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let current = Month::of(today);
+    let month = match input
+        .month
+        .as_deref()
+        .map(str::trim)
+        .filter(|m| !m.is_empty())
+    {
+        None => current,
+        Some(text) => Month::parse(text)
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrFormatInvalid, "month"))?,
+    };
+    if month > current {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrDateInFuture,
+            "month",
+        ));
+    }
+    let (Some(first), Some(last)) = (month.first_day(), month.last_day()) else {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrFormatInvalid,
+            "month",
+        ));
+    };
+    let (from, to) = (first.to_iso(), last.to_iso());
+    let types: &[PersonType] = if input.person_types.is_empty() {
+        &DEFAULT_DUES_TYPES
+    } else {
+        &input.person_types
+    };
+    // Which partner a loan is linked to is a partner fact (PRD FR-17.11, NFR-SEC-14). While the
+    // section is locked, a filter by partner is refused and a partner link carries no partner.
+    let locked = crate::partner_code::is_locked(ctx)?;
+    if locked && input.partner_id.is_some() {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrPartnerLocked,
+            "partner_id",
+        ));
+    }
+    ctx.db.read(|conn| {
+        let dead = mandi_db::dead::dead_set(conn, None)?;
+        let mut persons = open_lines::persons(conn, &[])?;
+        persons.retain(|id, p| {
+            let link = person_link(&p.link_kind, p.link_partner_id);
+            PersonType::parse(&p.person_type).is_some_and(|t| types.contains(&t))
+                && !dead.has_account(*id)
+                && (input.link_kinds.is_empty() || input.link_kinds.contains(&link.kind))
+                && input
+                    .partner_id
+                    .is_none_or(|partner| link.partner_id == Some(partner))
+        });
+        let ids: Vec<i64> = persons.keys().copied().collect();
+        let lines = open_lines::live_lines(conn, &ids)?;
+        let grouped = loans_by_person(&lines, None)?;
+        let mut rows: Vec<(i64, i64, LentDuesRow)> = Vec::new();
+        let mut totals = LentDuesTotals {
+            given_paisa: Paisa::ZERO,
+            returned_paisa: Paisa::ZERO,
+            open_paisa: Paisa::ZERO,
+            open_people_count: 0,
+        };
+        let mut people: Vec<LentDuesPerson> = Vec::new();
+        for (account, person) in &persons {
+            let mut link = person_link(&person.link_kind, person.link_partner_id);
+            if locked && link.kind == LinkKind::Partner {
+                link.partner_id = None;
+            }
+            let person_type = PersonType::parse(&person.person_type).unwrap_or(PersonType::Other);
+            let (mut lent, mut returned, mut open) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+            if let Some(loans) = grouped.get(account) {
+                for loan in &loans.loans {
+                    add(&mut lent, paisa(loan.line.dr_paisa)?)?;
+                    add(&mut returned, loan.figures.returned)?;
+                    add(&mut open, loan.figures.open)?;
+                }
+            }
+            let mut in_month = false;
+            for line in lines.iter().filter(|l| l.account_id == *account) {
+                if line.entry_date.as_str() < from.as_str()
+                    || line.entry_date.as_str() > to.as_str()
+                {
+                    continue;
+                }
+                in_month = true;
+                let (kind, amount) = if line.dr_paisa > 0 {
+                    (LentDuesRowKind::Given, paisa(line.dr_paisa)?)
+                } else {
+                    (LentDuesRowKind::Returned, paisa(line.cr_paisa)?)
+                };
+                add(
+                    if kind == LentDuesRowKind::Given {
+                        &mut totals.given_paisa
+                    } else {
+                        &mut totals.returned_paisa
+                    },
+                    amount,
+                )?;
+                rows.push((
+                    line.entry_id,
+                    line.line_id,
+                    LentDuesRow {
+                        kind,
+                        entry_date: line.entry_date.clone(),
+                        person: person_ref(person),
+                        person_type,
+                        link,
+                        voucher_id: line.voucher_id,
+                        number: line.number,
+                        reason: line.reason.clone(),
+                        amount_paisa: amount,
+                    },
+                ));
+            }
+            if open > Paisa::ZERO {
+                add(&mut totals.open_paisa, open)?;
+                totals.open_people_count += 1;
+            }
+            if open > Paisa::ZERO || in_month {
+                people.push(LentDuesPerson {
+                    person: person_ref(person),
+                    person_type,
+                    link,
+                    lent_paisa: lent,
+                    returned_paisa: returned,
+                    open_paisa: open,
+                });
+            }
+        }
+        rows.sort_by(|a, b| {
+            (a.2.entry_date.as_str(), a.0, a.1).cmp(&(b.2.entry_date.as_str(), b.0, b.1))
+        });
+        let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+        let rows: Vec<LentDuesRow> = rows.into_iter().map(|(_, _, row)| row).collect();
+        people.sort_by(|a, b| {
+            b.open_paisa
+                .cmp(&a.open_paisa)
+                .then_with(|| a.person.code.cmp(&b.person.code))
+        });
+        let people_total_count = i64::try_from(people.len()).unwrap_or(i64::MAX);
+        Ok(LentDues {
+            month: month.key(),
+            rows: page::slice(rows, input.offset, input.limit),
+            total_count,
+            totals,
+            people: page::slice(people, input.people_offset, input.people_limit),
+            people_total_count,
+            partner_locked: locked,
         })
     })
 }

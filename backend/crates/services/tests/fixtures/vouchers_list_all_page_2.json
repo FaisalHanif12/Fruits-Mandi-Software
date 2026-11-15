@@ -6,7 +6,7 @@
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
-        "id": 18,
+        "id": 19,
         "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
@@ -36,7 +36,7 @@
       "number": 2,
       "entry_date": "2026-10-10",
       "account": {
-        "id": 20,
+        "id": 21,
         "code": "0020",
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax"

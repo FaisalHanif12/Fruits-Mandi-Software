@@ -242,10 +242,10 @@ print-toast-dialog = پرنٹ کی کھڑکی کھل گئی
 print-adhari-title = { report-r5-title } پرنٹ کریں
 
 # review: pending
-print-adhari-help = ہر { -gahak } کی ایک پرچی: اس کا مال، کمیشن اور { -laga } کے بعد رقم، { -mauqa-par-jama } اور { -khate-mein-baqi }۔
+print-adhari-help = { -gahak } کی پرچی چنیں، ہر { -gahak } کی ایک مختصر پرچی، یا { -bikri } کی مکمل پرنٹ جس میں { -beopari } اور { -gahak } کی پرچیاں ہیں۔ صفحہ وہی ہے جو پرنٹ ہوتا ہے۔
 
 # review: pending
-print-adhari-scope = کیا پرنٹ کرنا ہے
+print-adhari-scope = کون سی قطاریں
 
 # $date is the day of the { -bikri } on screen.
 # review: pending
@@ -253,6 +253,10 @@ print-adhari-whole-day = پورا دن (<num>{ $date }</num>)
 
 # review: pending
 print-adhari-this-bikri = صرف یہ { -bikri } (<num>{ $number }</num>)
+
+# The save had carried lots: the new { -bikri } and the old { -bikri } of each carried lot. $numbers: their numbers, new first.
+# review: pending
+print-adhari-this-save = صرف یہ محفوظ کردہ ({ -bikri } <num>{ $numbers }</num>)
 
 ## The preview
 
@@ -477,3 +481,195 @@ bikri-list-day-heading = { $date }: { -bikri } { $count }
 
 # review: pending
 bikri-list-day-heading-empty = { $date }: کوئی { -bikri } نہیں
+
+## The buyer parchi and the overall sale print (plan 76 point 3, PRD FR-19.15, FR-12.12).
+
+# The title of the buyer parchi print (the backend sends it in the header).
+# review: pending
+print-parchi-title = { -gahak } کی پرچی
+
+# The title of the overall sale print: the seller slips and the buyer slips of one { -bikri } or of the day.
+# review: pending
+print-sale-title = { -bikri } کی مکمل پرنٹ
+
+# The heading of the sellers' part and of the buyers' part of the overall sale print.
+# review: pending
+print-sale-sellers = { -beopari }
+
+# review: pending
+print-sale-buyers = { -gahak }
+
+# The empty line at the foot of a parchi, for the collector to write what he got.
+# review: pending
+print-parchi-collect = { -wasooli }
+
+# review: pending
+print-parchi-empty = اس دن کسی { -gahak } کی پرچی نہیں
+
+# review: pending
+print-parchi-label = { -gahak } کی پرچی، ہر { -gahak } کی ایک
+
+# review: pending
+print-sale-label = { -bikri } کی مکمل پرنٹ، { -beopari } اور { -gahak }
+
+# review: pending
+print-adhari-kind = کیا پرنٹ کرنا ہے
+
+# review: pending
+print-adhari-kind-parchi = { -gahak } کی پرچی
+
+# review: pending
+print-adhari-kind-sale = { -bikri } کی مکمل پرنٹ
+
+## The titles, facts, totals and column heads of the table prints of plan 76 (the backend writes their ids into the print data).
+
+# review: pending
+print-commission-title = { -commission } کا مہینہ
+
+# review: pending
+print-buyer-dues-title = { -gahak } کے ذمے رقم
+
+# review: pending
+print-collection-sheet-title = { report-r5-title }
+
+# review: pending
+print-partner-month-title = { -shirakat-dar } کھاتہ، مہینہ وار
+
+# review: pending
+print-fact-month = مہینہ
+
+# review: pending
+print-fact-search = تلاش
+
+# review: pending
+print-fact-partner = { -shirakat-dar }
+
+# review: pending
+print-commission-total = { -meezan }
+
+# review: pending
+print-buyer-dues-total = { -meezan }
+
+# review: pending
+print-collection-sheet-total = { -meezan }
+
+# review: pending
+print-collection-sheet-dead-total = { -doobi-raqam }، الگ شمار
+
+# review: pending
+print-collection-sheet-credit-total = { -jama } والے { -gahak }، الگ شمار
+
+# review: pending
+print-partner-month-total = { -meezan }
+
+# review: pending
+print-partner-month-opening = ابتدائی { -kul-raqam }
+
+# review: pending
+print-commission-col-date = تاریخ
+
+# review: pending
+print-commission-col-seller = { -beopari } { -commission }
+
+# review: pending
+print-commission-col-buyer = { -gahak } { -commission }
+
+# review: pending
+print-commission-col-laga = { -laga }
+
+# review: pending
+print-commission-col-total = کل { -commission }
+
+# review: pending
+print-commission-col-shared = مشترکہ آمدن
+
+# review: pending
+print-commission-col-partner = { -shirakat-dar }
+
+# review: pending
+print-commission-title-period = { -commission } کی مدت
+
+# review: pending
+print-fact-year = سال
+
+# review: pending
+print-fact-from = از
+
+# review: pending
+print-fact-to = تا
+
+# review: pending
+print-fact-seller = { -beopari }
+
+# review: pending
+print-fact-buyer = { -gahak }
+
+# review: pending
+print-commission-col-sale = { -kham-bikri }
+
+# review: pending
+print-commission-col-purchase = خریداری کی رقم
+
+# review: pending
+print-commission-col-goods = اس کے مال پر { -commission }
+
+
+# review: pending
+print-buyer-dues-col-party = { -gahak }
+
+# review: pending
+print-buyer-dues-col-city = شہر
+
+# review: pending
+print-buyer-dues-col-balance = بقایا
+
+# review: pending
+print-buyer-dues-col-last = آخری تبدیلی
+
+# review: pending
+print-collection-sheet-col-code = کوڈ
+
+# review: pending
+print-collection-sheet-col-party = { -gahak }
+
+# review: pending
+print-collection-sheet-col-detail = مال
+
+# review: pending
+print-collection-sheet-col-previous = { -sabiqa-raqam }
+
+# review: pending
+print-collection-sheet-col-bill = { -taza-banam }
+
+# review: pending
+print-collection-sheet-col-paid = { -mauqa-par-jama }
+
+# review: pending
+print-collection-sheet-col-due = { -total-raqam }
+
+# review: pending
+print-partner-month-col-date = تاریخ
+
+# review: pending
+print-partner-month-col-commission = { -commission }
+
+# review: pending
+print-partner-month-col-expense = { -kharcha }
+
+# review: pending
+print-partner-month-col-gardens-trips = { -bagh } / { -safar }
+
+# review: pending
+print-partner-month-col-fruit = { -phal }
+
+# review: pending
+print-partner-month-col-taken-returned = لیا اور لوٹایا
+
+# review: pending
+print-partner-month-col-capital = { -sarmaya }
+
+# review: pending
+print-partner-month-col-net = دن کا خالص
+
+# review: pending
+print-partner-month-col-running = { -kul-raqam }

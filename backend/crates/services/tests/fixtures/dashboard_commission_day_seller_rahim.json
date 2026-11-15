@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-10",
+  "party": {
+    "side": "seller",
+    "party": {
+      "account_id": 19,
+      "code": "0010",
+      "short_code": "0",
+      "name_ur": "رحیم",
+      "name_en": "Rahim",
+      "tag": null,
+      "person_key": null
+    }
+  },
+  "partners": [],
+  "entries": [
+    {
+      "entry_id": 4,
+      "posting_type": "bikri_first",
+      "source_type": "bikri",
+      "source_id": 1,
+      "bikri_id": 1,
+      "bikri_number": 1,
+      "sellers": [
+        {
+          "account_id": 19,
+          "code": "0010",
+          "short_code": "0",
+          "name_ur": "رحیم",
+          "name_en": "Rahim",
+          "tag": null,
+          "person_key": null
+        }
+      ],
+      "buyers": [
+        {
+          "account_id": 21,
+          "code": "0020",
+          "short_code": "0",
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null,
+          "person_key": null
+        },
+        {
+          "account_id": 22,
+          "code": "0021",
+          "short_code": "1",
+          "name_ur": "ارشد ملتانی",
+          "name_en": "Arshad Multani",
+          "tag": null,
+          "person_key": null
+        }
+      ],
+      "figures": {
+        "date": "2026-10-10",
+        "seller_comm_paisa": 176400,
+        "buyer_comm_paisa": 176400,
+        "laga_paisa": 40000,
+        "total_comm_paisa": 392800,
+        "shared_income_paisa": 0,
+        "partner_shares": null,
+        "sale_paisa": 2940000,
+        "goods_comm_paisa": 392800
+      }
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "date": "2026-10-10",
+    "seller_comm_paisa": 176400,
+    "buyer_comm_paisa": 176400,
+    "laga_paisa": 40000,
+    "total_comm_paisa": 392800,
+    "shared_income_paisa": 0,
+    "partner_shares": null,
+    "sale_paisa": 2940000,
+    "goods_comm_paisa": 392800
+  },
+  "partners_locked": false
+}

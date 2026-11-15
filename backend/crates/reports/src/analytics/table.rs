@@ -161,3 +161,13 @@ pub(crate) fn item_rows(
     }
     Ok(found)
 }
+
+/// The rows of a page as how many to skip and how many to take (`usize::MAX` for no limit). A view
+/// builds the rows of its page only, so a page of a ten-year view does not build every row.
+pub(crate) fn page_window(spec: crate::reports::PageSpec) -> (usize, usize) {
+    let skip = usize::try_from(spec.offset).unwrap_or(usize::MAX);
+    let take = spec
+        .limit
+        .map_or(usize::MAX, |l| usize::try_from(l).unwrap_or(usize::MAX));
+    (skip, take)
+}

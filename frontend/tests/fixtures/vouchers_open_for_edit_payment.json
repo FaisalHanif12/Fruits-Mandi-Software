@@ -5,7 +5,7 @@
     "number": 1,
     "entry_date": "2026-10-10",
     "account": {
-      "id": 18,
+      "id": 19,
       "code": "0010",
       "name_ur": "رحیم",
       "name_en": "Rahim"
@@ -32,7 +32,7 @@
   "entry": {
     "type": "payment",
     "date": "10-10-2026",
-    "account_id": 18,
+    "account_id": 19,
     "amount": "4316",
     "reason": "",
     "narration": "",

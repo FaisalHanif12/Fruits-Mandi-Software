@@ -19,10 +19,11 @@ export function useAuditOptions() {
  * the whole filter, so the screen never adds up the rows it holds. While the filters change, the
  * rows already on screen stay until the new ones come.
  */
-export function useAuditPages(filters: AuditFilters, groupByMonth = false) {
+export function useAuditPages(filters: AuditFilters, groupByMonth = false, ready = true) {
   return usePagedQuery({
     screen: 'audit.log',
     queryKey: ['audit_list', filters, groupByMonth],
+    enabled: ready,
     fetchPage: (offset, limit, sort) =>
       auditList({ filters, offset, limit, sort, group_by_month: groupByMonth && sort === null }),
     rowsIn: (page) => page.rows.length,

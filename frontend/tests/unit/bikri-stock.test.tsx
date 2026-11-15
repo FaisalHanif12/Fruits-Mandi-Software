@@ -207,7 +207,7 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     });
   });
 
-  it('Enter on a lot starts a later sale of that lot', async () => {
+  it('Enter on a lot carries it onto a new بکری, where it is sold (plan 76 point 1)', async () => {
     fakePlan16();
     const { router, user } = await open();
     await waitFor(() => {
@@ -218,9 +218,14 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     await user.click(target);
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/bikri/later');
+      expect(router.state.location.pathname).toBe('/bikri/book');
     });
-    expect(router.state.location.search).toMatchObject({ lot: 40 });
+    // The lot is read by its id for the sale book; the request is taken out of the address after.
+    await waitFor(() => {
+      expect(
+        vi.mocked(bikriApi.bikriStockList).mock.calls.some(([input]) => input.lot_id === 40),
+      ).toBe(true);
+    });
   });
 
   it('the tick for written-off lots asks the backend for them', async () => {

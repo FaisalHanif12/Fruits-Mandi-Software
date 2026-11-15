@@ -17,6 +17,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
+import { isPositivePaisa } from '../../../shared/format';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { OpenOnItsScreen, finishFixSession } from '../../../shared/edit';
 import { ErrorState, LoadingState, showToast, FormAside } from '../../../shared/ui';
@@ -33,12 +34,14 @@ import { lentDraftOf, useEditDraft } from '../edit-seed';
 import { EntryBalances } from '../components/EntryBalances';
 import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
+import { LinkedPartsCard } from '../components/LinkedPartsCard';
 import { LentForm } from '../components/LentForm';
 import { LentListSection } from '../components/LentListSection';
-import { useEntryPreview, useSaveLent } from '../hooks';
+import { useEntryPreview, useLentPerson, useSaveLent } from '../hooks';
 import {
   LENT_FIELD_PATHS,
   buildLent,
+  linkToSend,
   changeLentType,
   lentIsFilled,
   newLentDraft,
@@ -84,7 +87,19 @@ function LentEditor({ today, urlType, editable = null, initial = null }: LentEdi
     [draft],
   );
   const edit = useVoucherEdit(editable, entry);
-  const { query, current } = useEntryPreview(entry, edit?.editing.row.id ?? null);
+  // The person's link and whether he owes anything: his link is fixed while he does (PRD FR-16.13).
+  const lentPerson = useLentPerson(draft.person?.id ?? null);
+  const owes =
+    lentPerson.data !== undefined && isPositivePaisa(lentPerson.data.balance.amount_paisa);
+  // The link typed on the form of a NEW loan goes with the preview, so it shows what the save will post for
+  // each partner; every other entry sends none (the person's own link is used). Kept the same object until
+  // the choice changes, so the preview is not asked again on every key.
+  const editing = edit !== null;
+  const previewLink = useMemo(
+    () => (!editing && draft.type === 'money_lent' ? linkToSend(draft, owes) : null),
+    [editing, draft, owes],
+  );
+  const { query, current } = useEntryPreview(entry, edit?.editing.row.id ?? null, previewLink);
   // An answer about another type (kept on screen while the next one is on its way) is never shown.
   const preview =
     entry === null || query.data?.type !== draft.type ? undefined : query.data.preview;
@@ -95,9 +110,14 @@ function LentEditor({ today, urlType, editable = null, initial = null }: LentEdi
   const flow = useEntrySaveFlow({
     draftText,
     build: (confirm) => buildLent(draft, confirm),
-    save: (input) => (edit === null ? saveLent.mutateAsync(input) : edit.send(input)),
+    save: (input) =>
+      edit === null
+        ? saveLent.mutateAsync({ entry: input, link: linkToSend(draft, owes) })
+        : edit.send(input),
     freshCash: (input) =>
-      vouchersPreview(input, edit?.editing.row.id ?? null).then((answer) => answer.cash),
+      vouchersPreview(input, edit?.editing.row.id ?? null, previewLink).then(
+        (answer) => answer.cash,
+      ),
     cash: preview?.cash,
     current,
     onSaved: (saved) => {
@@ -166,7 +186,17 @@ function LentEditor({ today, urlType, editable = null, initial = null }: LentEdi
       below={<LentListSection personId={draft.person?.id ?? null} />}
     >
       <FormAside
-        form={<LentForm draft={draft} onChange={change} error={error} marks={edit?.marks} />}
+        form={
+          <LentForm
+            draft={draft}
+            onChange={change}
+            error={error}
+            marks={edit?.marks}
+            person={lentPerson.data?.person}
+            owes={owes}
+            editing={edit !== null}
+          />
+        }
         aside={
           <>
             {edit === null ? null : (
@@ -183,6 +213,7 @@ function LentEditor({ today, urlType, editable = null, initial = null }: LentEdi
               />
             )}
             <EntryBalances preview={preview} />
+            <LinkedPartsCard parts={preview?.linked_parts ?? []} />
             <EntryNotes warnings={preview?.warnings ?? []} cash={preview?.cash} />
             {query.isError && entry !== null ? (
               <ErrorState

@@ -1,7 +1,7 @@
 {
   "confirm_cash_below_zero": false,
   "entry": {
-    "account_id": 20,
+    "account_id": 21,
     "amount": "4,000",
     "collector_staff_id": null,
     "date": "10-10-2026",

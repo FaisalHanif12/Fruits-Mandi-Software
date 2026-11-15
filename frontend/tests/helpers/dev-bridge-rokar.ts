@@ -17,7 +17,7 @@ import type { PersonalExpenseInput } from '../../src/bindings/PersonalExpenseInp
 import type { PersonalReturnInput } from '../../src/bindings/PersonalReturnInput';
 import type { ShopExpenseInput } from '../../src/bindings/ShopExpenseInput';
 import type { LentListInput } from '../../src/bindings/LentListInput';
-import type { LentPersonCreateInput } from '../../src/bindings/LentPersonCreateInput';
+import type { LentPersonCreateRequest } from '../../src/bindings/LentPersonCreateRequest';
 import type { PartnerTakesInput } from '../../src/bindings/PartnerTakesInput';
 import type { VoucherEntry } from '../../src/bindings/VoucherEntry';
 import type { VouchersListInput } from '../../src/bindings/VouchersListInput';
@@ -40,9 +40,13 @@ import type { FruitListInput } from '../../src/bindings/FruitListInput';
 import type { FruitLotsInput } from '../../src/bindings/FruitLotsInput';
 import type { GeneralInput } from '../../src/bindings/GeneralInput';
 import type { GeneralPreviewInput } from '../../src/bindings/GeneralPreviewInput';
+import type { PartnersStatementDayInput } from '../../src/bindings/PartnersStatementDayInput';
 import type { PartnersStatementInput } from '../../src/bindings/PartnersStatementInput';
+import type { PartnersStatementMonthInput } from '../../src/bindings/PartnersStatementMonthInput';
+import { plan76Handlers } from './dev-bridge-plan76';
 import { createFruitBooks, HAJI_NAZIR } from './fruit-data';
 import { GENERAL_ACCOUNTS, createPartnerMoneyBooks } from './partner-money-books';
+import { dayAnswerOf, monthAnswerOf } from './partner-month';
 import { paisaForTest } from './paisa';
 import { overviewRow, partnerRow, THREE_PARTNERS } from './partners';
 
@@ -106,6 +110,8 @@ const OVERVIEW = (() => {
   if (a === undefined || b === undefined || c === undefined) throw new Error('no partners');
   return [
     overviewRow(a, {
+      open_gardens_count: 1,
+      open_trips_count: 1,
       month_profit_paisa: money(996),
       month_taken_paisa: money(2000),
       month_net_paisa: money(-1004),
@@ -206,6 +212,7 @@ if (!flag('empty')) {
 }
 
 export const rokarHandlers: Record<string, Handler> = {
+  ...plan76Handlers,
   fruit_preview: (input) => fruitBooks.preview(input as unknown as FruitInput),
   fruit_save: (input) => fruitBooks.save(input as unknown as FruitInput),
   fruit_edit: (input) => fruitBooks.edit(input as unknown as FruitEditInput),
@@ -230,6 +237,31 @@ export const rokarHandlers: Record<string, Handler> = {
     moneyBooks.saveCapital('capital_out', input as unknown as CapitalInput),
   capital_history: (input) => moneyBooks.capitalHistory(input as unknown as CapitalHistoryInput),
   partners_statement: (input) => moneyBooks.statement(input as unknown as PartnersStatementInput),
+  // The first day with data of a list, for the back button of its window (plan 76 point 8).
+  day_status: () => ({
+    today: '2026-10-10',
+    closed_up_to: null,
+    today_open: true,
+    first_entry_date: '2026-09-20',
+  }),
+  windows_bounds: () => ({ first_date: '2026-09-20', last_date: '2026-10-10' }),
+  partners_statement_month: (input) => {
+    const wanted = input as unknown as PartnersStatementMonthInput;
+    const partner = moneyBooks.partnerRef(wanted.partner_id);
+    if (partner === null) throw new Error('no such partner');
+    return monthAnswerOf(
+      partner,
+      moneyBooks.statementLines(wanted.partner_id),
+      wanted.month === null || wanted.month === '' ? null : wanted.month,
+      '2026-11-12',
+    );
+  },
+  partners_statement_day: (input) => {
+    const wanted = input as unknown as PartnersStatementDayInput;
+    const partner = moneyBooks.partnerRef(wanted.partner_id);
+    if (partner === null) throw new Error('no such partner');
+    return dayAnswerOf(partner, moneyBooks.statementLines(wanted.partner_id), wanted.date);
+  },
   partners_overview: () => OVERVIEW,
   day_close_preview: () => ({
     from_date: '2026-10-10',
@@ -262,7 +294,7 @@ export const rokarHandlers: Record<string, Handler> = {
     books.saveLentOrKhata({ type: 'khata_in', ...(input as unknown as KhataInInput) }),
   partner_takes: (input) => books.partnerTakes(input as unknown as PartnerTakesInput),
   vouchers_repeat_last_month_preview: (input) => books.repeat(asText(input['month'])),
-  lent_person_create: (input) => books.createPerson(input as unknown as LentPersonCreateInput),
+  lent_person_create: (input) => books.createPerson(input as unknown as LentPersonCreateRequest),
   lent_list: (input) => books.lentList(input as unknown as LentListInput),
   khata_create: (input) =>
     books.createKhata(

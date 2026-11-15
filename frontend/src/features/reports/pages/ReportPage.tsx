@@ -16,7 +16,7 @@
 
 import { Localized } from '@fluent/react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, FileText, FileX, Files, Printer } from 'lucide-react';
+import { ArrowLeft, FileText, FileX, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import type { ReportPage as ReportPageData } from '../../../bindings/ReportPage';
@@ -28,16 +28,23 @@ import {
   exportFileName,
   useExcelExport,
 } from '../../../shared/export';
-import { useDebouncedValue, useFocusFirstField } from '../../../shared/hooks';
+import { useDebouncedValue, useFocusFirstField, useListWindow } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type ScreenMemory } from '../../../shared/screen-state';
-import { Button, EmptyState, ErrorState, ListPage, LoadingState } from '../../../shared/ui';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  ListPage,
+  ListWindowBar,
+  LoadingState,
+} from '../../../shared/ui';
+import { useDayStatus } from '../../../app/use-day-status';
 import { PrintAction } from '../../bikri';
 import { useOpenArrival } from '../../gardens';
 import { DeadMoveButton } from '../components/DeadMoveButton';
 import { ReportFilterBar } from '../components/ReportFilterBar';
-import { BuyerBillsPreview } from '../components/BuyerBillsPreview';
 import { ReportPreview } from '../components/ReportPreview';
 import { ReportResults } from '../components/ReportResults';
 import type { ReportRowView } from '../columns';
@@ -50,6 +57,7 @@ import {
   type ReportFilterState,
 } from '../filters';
 import { reportsExportExcel } from '../api';
+import { hasOwnDates, reportWindowOf } from '../windows';
 import { useOpenRowSource } from '../open-source';
 import { MOVABLE_REPORTS, partyOfFocusedRow } from '../dead-row';
 import { useReportCatalog, useReportPages } from '../hooks';
@@ -164,19 +172,39 @@ function ReportBody({
   useEffect(() => {
     remember(rememberedFilters(state));
   }, [state, remember]);
-  const [view, setView] = useState<'table' | 'preview' | 'slips'>('table');
+  const [view, setView] = useState<'table' | 'preview'>('table');
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const settled = useDebouncedValue(state, FILTER_SETTLE_MS);
   const language = useLanguage();
   // The day sheet (R35) sorts a seller's lots in the order of the app language (PRD FR-12.12, plan 71
   // L7), so a language switch asks the backend again.
-  const wire = useMemo(
-    () =>
-      canRun(settled, entry)
-        ? withOrderLanguage(filtersToWire(settled, entry.filters), entry.id, language)
-        : null,
-    [settled, entry, language],
-  );
+  // The registers with many rows a day show 7 days at a time, the lists with few rows a day one month (PRD
+  // FR-19.11, plan 76 point 8). The window is the range the report is asked for, unless dates are typed.
+  const dayStatus = useDayStatus();
+  const today = dayStatus.data?.today;
+  // Without the day (its read failed) the report asks for every row, as before the window.
+  const dayFailed = dayStatus.isError;
+  const windowed = reportWindowOf(entry.id, state);
+  const listWindow = useListWindow({
+    kind: windowed?.kind ?? 'days',
+    source: windowed?.source ?? null,
+    today: windowed === null ? undefined : today,
+  });
+  const isWindowed = windowed !== null && !dayFailed;
+  const windowOn = isWindowed && !hasOwnDates(state);
+  const windowFrom = listWindow.range.from;
+  const windowTo = listWindow.range.to;
+  const windowReady = listWindow.ready;
+  const wire = useMemo(() => {
+    if (!canRun(settled, entry)) return null;
+    const base = withOrderLanguage(filtersToWire(settled, entry.filters), entry.id, language);
+    if (settled.period !== 'custom' || settled.from.trim() !== '' || settled.to.trim() !== '') {
+      return base;
+    }
+    // A windowed report waits for the day, then asks for the window.
+    if (!isWindowed) return base;
+    return windowReady ? { ...base, from: windowFrom, to: windowTo } : null;
+  }, [settled, entry, language, isWindowed, windowReady, windowFrom, windowTo]);
   const monthsOn = MONTH_REPORTS.has(entry.id);
   const query = useReportPages(entry.id, wire, monthsOn);
   const openSource = useOpenSource(catalog, entry.id);
@@ -188,7 +216,10 @@ function ReportBody({
         ? reportsExportExcel({
             job_id: jobId,
             id: entry.id,
-            filters: filtersToWire(state, entry.filters),
+            // The sheet holds the window on screen (or the dates typed), every row of it.
+            filters: windowOn
+              ? { ...filtersToWire(state, entry.filters), from: windowFrom, to: windowTo }
+              : filtersToWire(state, entry.filters),
             language: sheet,
             path,
             // The sheet has the order and the month headings that are on screen (plan 38 R4).
@@ -272,16 +303,7 @@ function ReportBody({
   const filtering = !isUnfiltered(state, entry.filters);
 
   let body;
-  if (view === 'slips' && wire !== null) {
-    body = (
-      <BuyerBillsPreview
-        filters={wire}
-        onBack={() => {
-          setView('table');
-        }}
-      />
-    );
-  } else if (view === 'preview' && wire !== null) {
+  if (view === 'preview' && wire !== null) {
     body = (
       <ReportPreview
         id={entry.id}
@@ -304,19 +326,22 @@ function ReportBody({
     );
   } else {
     body = (
-      <ReportResults
-        takes={entry.filters}
-        query={query}
-        kept={filterRefusal === null ? null : kept}
-        filtering={filtering}
-        balanceOnly={balanceOnly}
-        onClear={() => {
-          setState(EMPTY_FILTERS);
-        }}
-        onOpen={open}
-        focusRowId={focusRowId}
-        onFocusRow={setFocusRowId}
-      />
+      <>
+        <ReportResults
+          takes={entry.filters}
+          query={query}
+          kept={filterRefusal === null ? null : kept}
+          filtering={filtering}
+          balanceOnly={balanceOnly}
+          onClear={() => {
+            setState(EMPTY_FILTERS);
+          }}
+          onOpen={open}
+          focusRowId={focusRowId}
+          onFocusRow={setFocusRowId}
+        />
+        {windowOn ? <ListWindowBar window={listWindow} /> : null}
+      </>
     );
   }
 
@@ -358,18 +383,6 @@ function ReportBody({
               <Localized id="report-preview" />
             </Button>
           )}
-          {/* The credit buyers' details (R5) can print one slip for each buyer (PRD 19.2 R5). */}
-          {entry.id === 'R5' ? (
-            <Button
-              disabled={wire === null || !tableView}
-              onClick={() => {
-                setView('slips');
-              }}
-            >
-              <Files aria-hidden="true" className="size-icon-md" />
-              <Localized id="report-print-all" />
-            </Button>
-          ) : null}
           {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
           {tableView ? (
             <ExcelExportButton

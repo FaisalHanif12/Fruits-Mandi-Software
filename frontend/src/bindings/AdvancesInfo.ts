@@ -8,11 +8,20 @@ import type { OpenAdvance } from './OpenAdvance';
  */
 export type AdvancesInfo = {
   /**
-   * The open advances, oldest first.
+   * One page of the open advances, oldest first (plan 76 point 8: the page is chosen with
+   * `offset` and `limit`; the first page holds the oldest).
    */
   open: Array<OpenAdvance>;
   /**
-   * Their total: given less adjusted.
+   * How many open advances he has in all.
+   */
+  total_count: number;
+  /**
+   * True if there are more open advances after this page.
+   */
+  truncated: boolean;
+  /**
+   * Their total over all of them, not only the page: given less adjusted.
    */
   open_paisa: Paisa;
   /**

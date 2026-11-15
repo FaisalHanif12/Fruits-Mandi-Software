@@ -139,7 +139,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 20,
+            "account_id": 21,
             "code": "0020",
             "short_code": "0",
             "name_ur": "اکرم ٹول ٹیکس",
@@ -184,7 +184,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 18,
+            "account_id": 19,
             "code": "0010",
             "short_code": "0",
             "name_ur": "رحیم",
@@ -229,7 +229,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 31,
+            "account_id": 35,
             "code": "05010001",
             "short_code": null,
             "name_ur": "بجلی",
@@ -275,7 +275,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 23,
+            "account_id": 24,
             "code": "06030001",
             "short_code": null,
             "name_ur": "ذاتی خرچہ - الف",

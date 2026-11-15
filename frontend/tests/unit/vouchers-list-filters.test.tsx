@@ -10,7 +10,6 @@ import * as vouchersApi from '../../src/features/vouchers/api';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
-import { paisaForTest } from '../helpers/paisa';
 import { fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
 import {
   healthyBackend,
@@ -89,10 +88,10 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     return { ...app, user: userEvent.setup() };
   }
 
-  it('opens on today with the cancelled vouchers left out', async () => {
+  it('opens on the 7 days that end today with the cancelled vouchers left out', async () => {
     await open();
     expect(lastCall()).toMatchObject({
-      from: '10-10-2026',
+      from: '04-10-2026',
       to: '10-10-2026',
       show_finished: false,
       search: null,
@@ -118,41 +117,23 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     });
   });
 
-  it('a month period asks for month heading rows and draws them with the backend’s subtotals', async () => {
+  it('the buttons under the list move the window by 7 days, and the later one is off on the latest', async () => {
     const { user } = await open();
-    vi.mocked(vouchersApi.vouchersList).mockImplementation((input) => {
-      const rows = store.rows.slice(0, 2);
-      return Promise.resolve({
-        rows,
-        total_count: 2,
-        totals: { cancelled_count: 0, total_paisa: paisaForTest(2_000_000) },
-        months: input.group_by_month
-          ? [
-              {
-                month: '2026-10',
-                count: 2,
-                figures: [{ key: 'amount', is_money: true, value: 2_000_000 }],
-              },
-            ]
-          : [],
-      });
-    });
+    expect(
+      await screen.findByText(message(language, 'common-days-latest-note')),
+    ).toBeInTheDocument();
     await user.click(
-      screen.getByRole('combobox', { name: named(message(language, 'common-period-label')) }),
-    );
-    await user.click(
-      await screen.findByRole('option', { name: named(message(language, 'common-period-month')) }),
+      screen.getByRole('button', {
+        name: (name) =>
+          visible(name).includes(message(language, 'common-days-earlier', { days: '7' })),
+      }),
     );
     await waitFor(() => {
-      expect(lastCall()).toMatchObject({ from: '01-10-2026', group_by_month: true });
+      expect(lastCall()).toMatchObject({ from: '27-09-2026', to: '03-10-2026' });
     });
-    await waitFor(() => {
-      expect(document.querySelectorAll('.month-heading')).toHaveLength(1);
-    });
-    expect(visible(document.querySelector('.month-heading')?.textContent)).toContain(
-      `${message(language, 'report-month-10')} 2026`,
-    );
-    expect(visible(document.querySelector('.month-heading')?.textContent)).toContain('20,000');
+    expect(
+      screen.queryByText(message(language, 'common-days-latest-note')),
+    ).not.toBeInTheDocument();
   });
 
   it('a click on the amount title asks the backend for that order', async () => {

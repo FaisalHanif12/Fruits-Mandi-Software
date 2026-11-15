@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-mixed-undo"
+description = "Enables the bikri_mixed_undo command without any pre-configured scope."
+commands.allow = ["bikri_mixed_undo"]
+
+[[permission]]
+identifier = "deny-bikri-mixed-undo"
+description = "Denies the bikri_mixed_undo command without any pre-configured scope."
+commands.deny = ["bikri_mixed_undo"]

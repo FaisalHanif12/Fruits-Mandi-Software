@@ -100,6 +100,7 @@ export function signedKeysOf(
  */
 const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
   A: [
+    'period',
     'item',
     'total_comm',
     'compare',
@@ -113,6 +114,7 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
     'avg_rate',
   ],
   B: [
+    'period',
     'seller',
     'total_comm',
     'compare',
@@ -125,6 +127,7 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
     'buyer_comm',
   ],
   C: [
+    'period',
     'buyer',
     'purchase_value',
     'dues_now',
@@ -141,6 +144,7 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
   // the commission and the expenses, then his gardens, trips and fruit side by side (PRD 18.2 F), which
   // open the lines behind them (`drill`). What is left over (`other`) comes last.
   F: [
+    'period',
     'partner',
     'profit_share',
     'net_change',
@@ -157,6 +161,7 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
   // Gardens (I): the garden, its result and the sales, then what was paid and the commission. The
   // partner columns are inserted from the page itself (`priorityOf`).
   I: [
+    'period',
     'group',
     'status',
     'result',
@@ -170,6 +175,7 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
   // Trips (J): the name, the result and where it came from. The partner columns are inserted
   // from the page itself (`priorityOf`), because a trip has one pair for each partner.
   J: [
+    'period',
     'group',
     'result',
     'sales_money',
@@ -184,7 +190,10 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
     'left_cost',
   ],
   // Fruit taken (K): who it was for and the item, the value and the quantity, then where it came from.
-  K: ['for', 'item', 'value', 'qty', 'own_shop', 'other_shops'],
+  K: ['period', 'for', 'item', 'value', 'qty', 'own_shop', 'other_shops'],
+  // Buyer × item (L) and expenses by head (M) have a column for each item or period: windowed like D and E.
+  L: [],
+  M: [],
 };
 
 /**
@@ -192,21 +201,26 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
  * is never shown without the item, seller or buyer it belongs to.
  */
 const ANCHORS: Readonly<Record<AnalyticsView, readonly string[]>> = {
-  A: ['item'],
-  B: ['seller'],
-  C: ['buyer'],
+  A: ['period', 'item'],
+  B: ['period', 'seller'],
+  C: ['period', 'buyer'],
   D: [],
   E: [],
-  F: ['partner'],
+  F: ['period', 'partner'],
   G: ['period'],
   H: ['rank', 'name'],
-  I: ['group'],
-  J: ['group'],
-  K: ['for', 'item'],
+  I: ['period', 'group'],
+  J: ['period', 'group'],
+  K: ['period', 'for', 'item'],
+  L: [],
+  M: [],
 };
 
-/** The views whose columns are one for each period or item: a window of them is shown (D and E). */
-const WINDOWED: ReadonlySet<AnalyticsView> = new Set<AnalyticsView>(['D', 'E']);
+/**
+ * The views whose columns are one for each period or item: a window of them is shown (D and E; and from plan 77
+ * L, one column for each item of a buyer, and M, one for each period of an expense head).
+ */
+const WINDOWED: ReadonlySet<AnalyticsView> = new Set<AnalyticsView>(['D', 'E', 'L', 'M']);
 
 /**
  * Where the partner columns of a view go in its priority list: his part comes right after the key in
@@ -386,11 +400,13 @@ const LINES_PRIORITY: readonly string[] = [
   'buyer',
   'for',
   'item',
+  'name',
   'kind',
   'qty',
   'value',
   'total_comm',
   'amount',
+  'reason',
   'doc',
   'rate',
   'source',
@@ -414,7 +430,11 @@ export function linesColumns(
     LINES_PRIORITY,
     STEP_ROOM[step],
   );
-  return columns.flatMap((column, index) =>
-    keep.has(column.key) ? [listColumnOf<ReportRowView>(column, index)] : [],
-  );
+  return columns.flatMap((column, index) => {
+    if (!keep.has(column.key)) return [];
+    const made = listColumnOf<ReportRowView>(column, index);
+    // The reason of an entry (view M, plan 77: date, amount and reason) is what the Owner opens the entries for, so
+    // it is shown at every step; a text column of a report waits for the wide step otherwise.
+    return [column.key === 'reason' ? { ...made, from: 'compact' as const } : made];
+  });
 }

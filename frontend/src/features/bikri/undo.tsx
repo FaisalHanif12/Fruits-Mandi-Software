@@ -17,6 +17,7 @@
 // backend's words. Nothing ever ends in silence.
 
 import { Localized } from '@fluent/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
@@ -24,12 +25,15 @@ import { uiErrorOf } from '../../shared/api';
 import type { Paisa } from '../../shared/format';
 import { useLatest } from '../../shared/hooks';
 import { CashConfirmDialog, ErrorMessage, showToast } from '../../shared/ui';
-import { bikriCancelPreview } from './api';
+import type { MixedSaleSaved } from '../../bindings/MixedSaleSaved';
+import { bikriCancelPreview, bikriMixedUndo } from './api';
 import { applyBackendDraft, resolveDraftRecords } from './draft-load';
 import { usePendingRestore } from './draft-offer';
 import { createBikriDraft } from './draft-store';
+import { snapshotOfMixedUndo } from './mixed-undo';
 import { parseSnapshot, serialiseDraft } from './draft-snapshot';
 import { useUndoBikri } from './hooks/useStockActions';
+import { readAgainAfterPosting } from './hooks/useSaveBikri';
 import type { BikriDraft } from './types';
 
 /** How long the undo button stays on the message (PRD FR-7.47). */
@@ -44,9 +48,15 @@ export interface UndoTarget {
   number: number;
 }
 
+/**
+ * What the undo takes back: a بکری (a plain save), or everything a mixed save wrote (the carried lots'
+ * postings and the new بکری, plan 76 point 1), given back by the backend as it saved them.
+ */
+export type UndoRequest = UndoTarget | { mixed: MixedSaleSaved };
+
 interface UndoRequests {
-  request: { target: UndoTarget; serial: number } | null;
-  ask: (target: UndoTarget) => void;
+  request: { target: UndoRequest; serial: number } | null;
+  ask: (target: UndoRequest) => void;
   take: () => void;
 }
 
@@ -61,7 +71,7 @@ const useUndoRequests = create<UndoRequests>()((set) => ({
 }));
 
 /** The undo button or Alt+Z of the message after a save. Works from any screen. */
-export function requestUndo(target: UndoTarget): void {
+export function requestUndo(target: UndoRequest): void {
   useUndoRequests.getState().ask(target);
 }
 
@@ -92,9 +102,40 @@ function failureToast(failure: unknown) {
 
 export function UndoHost() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const undo = useUndoBikri();
   // The box that asks about cash below zero: which بکری, and the cash after the undo.
   const [ask, setAsk] = useState<{ target: UndoTarget; cashAfter: Paisa } | null>(null);
+
+  /**
+   * Takes back a mixed save. The backend asks the cash question inside the undo, so a refusal for cash is
+   * told in words with the backend's own text (there is no preview of it to ask the box with).
+   */
+  const runMixed = async (saved: MixedSaleSaved) => {
+    try {
+      const result = await bikriMixedUndo({
+        later_entry_ids: saved.carried.map((one) => one.entry_id),
+        new_bikri_id: saved.new_bikri_id,
+        confirm_cash_below_zero: false,
+      });
+      const snapshot = await snapshotOfMixedUndo(result.draft);
+      if (snapshot === null) throw new Error('the draft cannot be shown');
+      usePendingRestore.getState().offer(snapshot);
+      await readAgainAfterPosting(queryClient);
+      showToast(
+        'success',
+        <Localized
+          id="bikri-undo-done"
+          vars={{ number: String(saved.new_bikri_number ?? saved.carried[0]?.old_number ?? 0) }}
+        >
+          <span />
+        </Localized>,
+      );
+      void navigate({ to: '/bikri/book', search: {} });
+    } catch (failure: unknown) {
+      failureToast(failure);
+    }
+  };
 
   const run = async (target: UndoTarget, confirm: boolean) => {
     try {
@@ -124,7 +165,12 @@ export function UndoHost() {
     }
   };
 
-  const start = async (target: UndoTarget) => {
+  const start = async (request: UndoRequest) => {
+    if ('mixed' in request) {
+      await runMixed(request.mixed);
+      return;
+    }
+    const target = request;
     try {
       const preview = await bikriCancelPreview(target.id);
       if (preview.cash.needs_confirm) {

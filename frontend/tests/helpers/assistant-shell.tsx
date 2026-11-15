@@ -111,6 +111,8 @@ const ROUTES: readonly string[] = [
     '/gardens/$id',
     '/trips/$id',
     '/settings',
+    // The commission page of a party and a period (PRD FR-9.3, plan 77).
+    '/commission',
     // The main screens a help answer opens (PRD FR-7.89), each with its own route.
     ...Object.values(MAIN_SCREEN_PATHS),
   ]),

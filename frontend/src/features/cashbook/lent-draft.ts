@@ -4,7 +4,8 @@
 
 import { isoToDisplayDate } from '../../shared/format';
 import type { PickerValue } from '../../shared/ui';
-import type { LentReturnMode, VoucherEntry } from './types';
+import { LINK_FIELD_PATHS, linkOf, type LinkDraft } from './link-draft';
+import type { LentReturnMode, Link, VoucherEntry } from './types';
 import type { LentType } from './screen-type';
 
 /** One entry as the form holds it. The person is the record the picker holds. */
@@ -23,6 +24,11 @@ export interface LentDraft {
   mode: LentReturnMode;
   /** Returned by salary: the expense head the picker holds, or null for the default تنخواہ. */
   salaryHead: PickerValue | null;
+  /**
+   * Lent only: what his loans are linked to (PRD FR-16.13), when the user chose one. Null means he did not:
+   * the field shows the link the person has now, and the backend keeps it.
+   */
+  link: LinkDraft | null;
   narration: string;
 }
 
@@ -38,6 +44,7 @@ export function newLentDraft(type: LentType, today: string): LentDraft {
     returnBy: '',
     mode: 'cash',
     salaryHead: null,
+    link: null,
     narration: '',
   };
 }
@@ -104,7 +111,23 @@ export function buildLent(draft: LentDraft, confirm: boolean): LentEntry {
   };
 }
 
+/**
+ * The link to send with money lent (PRD FR-16.13): the one the user chose, only while the person owes nothing;
+ * null keeps his link as it is. While he owes, a different link is refused, so none is sent.
+ */
+export function linkToSend(draft: LentDraft, owes: boolean): Link | null {
+  return draft.link === null || owes ? null : linkOf(draft.link);
+}
+
 export const LENT_FIELD_PATHS: Record<LentType, readonly string[]> = {
-  money_lent: ['date', 'person_account_id', 'amount', 'reason', 'return_by', 'narration'],
+  money_lent: [
+    'date',
+    'person_account_id',
+    'amount',
+    'reason',
+    'return_by',
+    'narration',
+    ...LINK_FIELD_PATHS,
+  ],
   money_lent_return: ['date', 'person_account_id', 'amount', 'mode', 'salary_head_id', 'narration'],
 };

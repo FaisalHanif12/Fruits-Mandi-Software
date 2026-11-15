@@ -13,7 +13,7 @@
        "type": "function",
        "function": {
         "name": "party_card",
-        "arguments": "{\"party\": \"a20\"}"
+        "arguments": "{\"party\": \"a21\"}"
        }
       }
      ]

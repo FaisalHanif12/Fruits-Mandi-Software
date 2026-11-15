@@ -3,6 +3,7 @@
 // `formatPaisa` (the list context's `money`), names through `displayName` (Code Standards F38), and
 // the words around the goods of a ledger line from Fluent. It adds up nothing (CLAUDE.md rule 1).
 
+import type { CollectionLine } from '../../bindings/CollectionLine';
 import type { ReportArgValue } from '../../bindings/ReportArgValue';
 import type { ReportCell } from '../../bindings/ReportCell';
 import type { ReportDetailPart } from '../../bindings/ReportDetailPart';
@@ -75,6 +76,24 @@ export function partyText(party: ReportParty, language: Language, deadWord?: str
 export function sideText(cell: ReportCell, context: ListContext): string {
   if (cell.type !== 'balance' || cell.side === 'zero') return '';
   return context.text(cell.side === 'dr' ? 'report-side-dr' : 'report-side-cr');
+}
+
+/**
+ * One sale line of the اگراہی sheet (R5, plan 76 point 2) in short, the way the client's own print writes it:
+ * "(item qty . rate)", with the quality after the item and the rate plain. Example: a line of 20 box of
+ * banana at 600 reads "(Banana 20 . 600)". The words come from the same message as the old R5 detail.
+ */
+export function collectionLineText(line: CollectionLine, context: ListContext): string {
+  const { language, text, money } = context;
+  return text('report-detail-sale-short', {
+    item: gradedItem(
+      text,
+      displayName({ name_ur: line.item.ur, name_en: line.item.en }, language),
+      line.grade,
+    ),
+    qty: String(line.qty),
+    rate: money(line.rate_paisa, true),
+  });
 }
 
 function detailPartText(part: ReportDetailPart, context: ListContext, shortSale: boolean): string {

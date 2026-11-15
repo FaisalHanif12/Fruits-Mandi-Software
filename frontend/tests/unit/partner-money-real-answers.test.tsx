@@ -8,6 +8,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as appApi from '../../src/app/api';
 import * as cashbookApi from '../../src/features/cashbook/api';
 import * as partnersApi from '../../src/features/partners/api';
 import * as vouchersApi from '../../src/features/vouchers/api';
@@ -26,10 +27,10 @@ import {
   typeAmount,
 } from '../helpers/cashbook-screen';
 import { paisaForTest } from '../helpers/paisa';
-import { leaveAppWindow, press, renderApp } from '../helpers/app';
+import { DAY, leaveAppWindow, press, renderApp } from '../helpers/app';
+import { fakePartnerMonth, openDays } from '../helpers/partner-month';
 import { preparePartnerMoney } from '../helpers/partner-money';
 import * as real from '../helpers/partner-money-real';
-import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -202,10 +203,8 @@ describe.each(LANGUAGES)('the partner overview with the real answers (%s)', (lan
 describe.each(LANGUAGES)('the partner statement with the real answers (%s)', (language) => {
   beforeEach(() => {
     preparePartnerMoney(language);
+    vi.mocked(appApi.dayStatus).mockResolvedValue({ ...DAY, today: '2026-10-31' });
   });
-
-  const grid = () => gridOf(language, 'partners-statement-label');
-  const rows = () => grid().querySelectorAll('.ag-row[row-index]').length;
 
   async function open(search: string) {
     const app = await renderApp(`/partners/statement${search}`);
@@ -216,65 +215,47 @@ describe.each(LANGUAGES)('the partner statement with the real answers (%s)', (la
     return { ...app, user: userEvent.setup() };
   }
 
-  it('partner ب: the three lines and the running total ending at 50,284, with the series of each voucher', async () => {
-    vi.mocked(partnersApi.partnersStatement).mockResolvedValue(real.STATEMENT_B);
-    await open('?partner=2');
-    await waitFor(() => {
-      expect(rows()).toBe(3);
-    });
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'amount'))).toEqual([
-      '1,184',
-      '-900',
-      '50,000',
-    ]);
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'running'))).toEqual([
-      '1,184',
-      '284',
-      '50,284',
-    ]);
-    expect(textOf(grid(), 1, 'detail')).toBe(
+  it('partner ب: the month and its two days, with the running total ending at 50,284 and the series of each voucher', async () => {
+    fakePartnerMonth(real.STATEMENT_B.partner, real.STATEMENT_B.lines, '2026-10-31');
+    const { user } = await open('?partner=2&month=2026-10');
+    const days = await openDays(user, ['2026-10-10', '2026-10-11']);
+    const first = days.get('2026-10-10') ?? [];
+    const second = days.get('2026-10-11') ?? [];
+    expect([...first, ...second].map((line) => line.amount)).toEqual(['1,184', '-900', '50,000']);
+    expect(first[1]?.detail).toBe(
       message(language, 'partners-statement-detail-expense-share', {
         voucher: message(language, 'vouchers-number-shop-expense', { number: 1 }),
         subject: nameOf(language, 'بجلی', 'Electricity'),
       }),
     );
-    expect(textOf(grid(), 2, 'detail')).toBe(
+    expect(second[0]?.detail).toBe(
       message(language, 'partners-statement-detail-capital-in', {
         voucher: message(language, 'vouchers-number-capital-in', { number: 1 }),
       }),
     );
-    expect(textOf(grid(), 2, 'date')).toBe('11-10-2026');
-    expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
-      // The statement opens on this year (plan 38), so the range is the year's, not open.
-      expect.objectContaining({ partner_id: 2, offset: 0 }),
-    );
+    // The month closes on the 50,284 the backend gave: 1,184 - 900 + 50,000.
+    const closing = screen.getAllByRole('row').at(-1);
+    expect(visible(closing?.textContent)).toContain('50,284');
+    expect(partnersApi.partnersStatementMonth).toHaveBeenCalledWith({
+      partner_id: 2,
+      month: '2026-10',
+    });
     expect(pageText()).not.toContain('ERR_');
   });
 
   it('E2E-34: partner الف has -4,160, +480 and +3,384, ending at -296, with the trip and the purchase named', async () => {
-    vi.mocked(partnersApi.partnersStatement).mockResolvedValue(real.STATEMENT_A_E2E34);
-    await open('?partner=1');
-    await waitFor(() => {
-      expect(rows()).toBe(3);
-    });
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'amount'))).toEqual([
-      '-4,160',
-      '480',
-      '3,384',
-    ]);
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'running'))).toEqual([
-      '-4,160',
-      '-3,680',
-      '-296',
-    ]);
-    expect(textOf(grid(), 0, 'detail')).toBe(
+    fakePartnerMonth(real.STATEMENT_A_E2E34.partner, real.STATEMENT_A_E2E34.lines, '2026-10-31');
+    const { user } = await open('?partner=1&month=2026-10');
+    const lines = (await openDays(user, ['2026-10-10'])).get('2026-10-10') ?? [];
+    expect(lines.map((line) => line.amount)).toEqual(['-4,160', '480', '3,384']);
+    expect(lines[0]?.detail).toBe(
       message(language, 'partners-statement-detail-trip-paid', {
         kind: 'purchase',
         trip: '0070',
         secondary: message(language, 'purchases-number', { number: 1 }),
       }),
     );
-    const credit = textOf(grid(), 2, 'detail');
+    const credit = lines[2]?.detail ?? '';
     // The sale line names the item, 15 box, the sales money, the cost and his 40%.
     expect(credit).toContain(nameOf(language, 'مالٹا', 'Orange'));
     for (const figure of ['15', '8,460', '7,800', '660', '40']) expect(credit).toContain(figure);
@@ -282,48 +263,23 @@ describe.each(LANGUAGES)('the partner statement with the real answers (%s)', (la
   });
 
   it('a salary deduction and a جنرل keep the series of their own voucher (LR- and G-)', async () => {
-    const [income, expense] = real.STATEMENT_B.lines;
-    if (income === undefined || expense === undefined) throw new Error('no lines');
-    vi.mocked(partnersApi.partnersStatement).mockResolvedValue({
-      ...real.STATEMENT_B,
-      lines: [
+    const expense = real.STATEMENT_B.lines[1];
+    if (expense === undefined) throw new Error('no lines');
+    fakePartnerMonth(
+      real.STATEMENT_B.partner,
+      [
         { ...expense, number: 5, values: { kind: 'salary' } },
         { ...expense, number: 2, values: { kind: 'general' } },
       ],
-      total_count: 2,
-    });
-    await open('?partner=2');
-    await waitFor(() => {
-      expect(rows()).toBe(2);
-    });
-    expect(textOf(grid(), 0, 'detail')).toContain(
+      '2026-10-31',
+    );
+    const { user } = await open('?partner=2&month=2026-10');
+    const lines = (await openDays(user, ['2026-10-10'])).get('2026-10-10') ?? [];
+    expect(lines).toHaveLength(2);
+    expect(lines[0]?.detail).toContain(
       message(language, 'vouchers-number-money-lent-return', { number: 5 }),
     );
-    expect(textOf(grid(), 1, 'detail')).toContain(
-      message(language, 'vouchers-number-general', { number: 2 }),
-    );
-    expect(cellOf(grid(), 0, 'detail')).toBeInTheDocument();
-  });
-
-  it('a first page and a next page: the next page starts at the offset of the page size', async () => {
-    // The real files hold a page of two lines. The screen pages by 25, so the first page says the
-    // statement has 30 lines (its other fields are the backend's own) and the next page is the real second one.
-    vi.mocked(partnersApi.partnersStatement).mockImplementation((input) =>
-      Promise.resolve(
-        input.offset === 0 ? { ...real.STATEMENT_A_PAGE, total_count: 30 } : real.STATEMENT_B,
-      ),
-    );
-    const { user } = await open('?partner=1');
-    await waitFor(() => {
-      expect(rows()).toBe(2);
-    });
-    expect(visible(pageText())).toContain(rangeText(language, 1, 25, 30));
-    await user.click(await pagerButton(language, 'next'));
-    await waitFor(() => {
-      expect(partnersApi.partnersStatement).toHaveBeenLastCalledWith(
-        expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
-      );
-    });
+    expect(lines[1]?.detail).toContain(message(language, 'vouchers-number-general', { number: 2 }));
   });
 });
 
@@ -360,7 +316,13 @@ describe.each(LANGUAGES)('the الگ کھاتہ screen with the real answers (%s
     // The closing balance above the list is the backend's: -6,000, from the khata's side.
     expect(pageText()).toContain('-6,000');
     expect(cashbookApi.khataStatement).toHaveBeenCalledWith(
-      expect.objectContaining({ khata_account_id: 71, from: null, to: null, offset: 0 }),
+      // The list shows the month of today (10-10-2026) at a time (plan 76 point 8).
+      expect.objectContaining({
+        khata_account_id: 71,
+        from: '01-10-2026',
+        to: '31-10-2026',
+        offset: 0,
+      }),
     );
     expect(pageText()).not.toContain('ERR_');
   });

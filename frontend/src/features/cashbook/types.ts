@@ -17,12 +17,19 @@ import type { GeneralLinePreview } from '../../bindings/GeneralLinePreview';
 import type { GeneralPreview } from '../../bindings/GeneralPreview';
 import type { GeneralPreviewInput } from '../../bindings/GeneralPreviewInput';
 import type { KhataAccount } from '../../bindings/KhataAccount';
-import type { KhataCreateInput } from '../../bindings/KhataCreateInput';
+import type { KhataCreateRequest } from '../../bindings/KhataCreateRequest';
 import type { KhataEntryRow } from '../../bindings/KhataEntryRow';
 import type { KhataStatement } from '../../bindings/KhataStatement';
 import type { LentList } from '../../bindings/LentList';
 import type { LentPerson } from '../../bindings/LentPerson';
-import type { LentPersonCreateInput } from '../../bindings/LentPersonCreateInput';
+import type { LentDues } from '../../bindings/LentDues';
+import type { LentDuesInput } from '../../bindings/LentDuesInput';
+import type { LentDuesPerson } from '../../bindings/LentDuesPerson';
+import type { LentDuesRow } from '../../bindings/LentDuesRow';
+import type { LentPersonCreateRequest } from '../../bindings/LentPersonCreateRequest';
+import type { Link } from '../../bindings/Link';
+import type { LinkKind } from '../../bindings/LinkKind';
+import type { PersonType } from '../../bindings/PersonType';
 import type { LentReturnMode } from '../../bindings/LentReturnMode';
 import type { LentRow } from '../../bindings/LentRow';
 import type { PartnerTakes } from '../../bindings/PartnerTakes';
@@ -46,12 +53,19 @@ export type {
   GeneralPreview,
   GeneralPreviewInput,
   KhataAccount,
-  KhataCreateInput,
+  KhataCreateRequest,
   KhataEntryRow,
   KhataStatement,
   LentList,
   LentPerson,
-  LentPersonCreateInput,
+  LentDues,
+  LentDuesInput,
+  LentDuesPerson,
+  LentDuesRow,
+  LentPersonCreateRequest,
+  Link,
+  LinkKind,
+  PersonType,
   LentReturnMode,
   LentRow,
   PartnerTakes,

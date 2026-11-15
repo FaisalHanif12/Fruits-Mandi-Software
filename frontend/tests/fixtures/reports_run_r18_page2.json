@@ -122,7 +122,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 31,
+            "account_id": 35,
             "code": "05010001",
             "short_code": null,
             "name_ur": "بجلی",
@@ -141,7 +141,7 @@
       ],
       "source": {
         "kind": "account",
-        "id": 31
+        "id": 35
       },
       "kind": "normal"
     },
@@ -205,7 +205,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 23,
+            "account_id": 24,
             "code": "06030001",
             "short_code": null,
             "name_ur": "ذاتی خرچہ - الف",
@@ -224,7 +224,7 @@
       ],
       "source": {
         "kind": "account",
-        "id": 23
+        "id": 24
       },
       "kind": "normal"
     }

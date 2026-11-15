@@ -7,7 +7,17 @@ import type { PartnerCodeResetInput } from '../../bindings/PartnerCodeResetInput
 import type { PartnerCodeSetInput } from '../../bindings/PartnerCodeSetInput';
 import type { PartnerCodeStatus } from '../../bindings/PartnerCodeStatus';
 import { callCommand } from '../../shared/api';
+import type { PartnerStatementDay } from '../../bindings/PartnerStatementDay';
+import type { PartnerStatementMonth } from '../../bindings/PartnerStatementMonth';
+import type { PartnerVentureCard } from '../../bindings/PartnerVentureCard';
+import type { PartnersStatementDayInput } from '../../bindings/PartnersStatementDayInput';
+import type { PartnersStatementMonthInput } from '../../bindings/PartnersStatementMonthInput';
+import type { PartnersStatementMonthPrintInput } from '../../bindings/PartnersStatementMonthPrintInput';
+import type { PrintOutcome } from '../../bindings/PrintOutcome';
+import type { PrintTo } from '../../bindings/PrintTo';
+import type { TablePrintData } from '../../bindings/TablePrintData';
 import type { PartnersList } from '../../bindings/PartnersList';
+import type { PartnersOpenVenturesInput } from '../../bindings/PartnersOpenVenturesInput';
 import type {
   CapitalHistory,
   CapitalHistoryInput,
@@ -119,4 +129,47 @@ export function partnersCodeLock(): Promise<PartnerCodeStatus> {
 /** A forgotten code: the Owner's password or the recovery code makes a new one. */
 export function partnersCodeReset(input: PartnerCodeResetInput): Promise<PartnerCodeStatus> {
   return callCommand<PartnerCodeStatus>('partners_code_reset', { input });
+}
+
+/**
+ * The open gardens and trips one partner is in, with his % and his money in each (PRD 17.3, FR-12.29,
+ * plan 76 point 11). Asked when the compact line of the overview is opened, not with the overview.
+ * Behind the partner code.
+ */
+export function partnersOpenVentures(partnerId: number): Promise<PartnerVentureCard[]> {
+  const input: PartnersOpenVenturesInput = { partner_id: partnerId };
+  return callCommand<PartnerVentureCard[]>('partners_open_ventures', { input });
+}
+
+/**
+ * One month of a partner's statement: his opening کل رقم, a row for each day with a movement, the month's
+ * totals and his کل رقم at its end (PRD FR-17.12). Behind the partner code. Read only.
+ */
+export function partnersStatementMonth(
+  input: PartnersStatementMonthInput,
+): Promise<PartnerStatementMonth> {
+  return callCommand<PartnerStatementMonth>('partners_statement_month', { input });
+}
+
+/** Every movement of one day of a partner's statement, with its source and reason (PRD FR-17.12). */
+export function partnersStatementDay(
+  input: PartnersStatementDayInput,
+): Promise<PartnerStatementDay> {
+  return callCommand<PartnerStatementDay>('partners_statement_day', { input });
+}
+
+/** One month of a partner's statement in the print language: every day with its figures (PRD FR-17.12). */
+export function partnersStatementMonthPrintData(
+  input: PartnersStatementMonthPrintInput,
+): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('partners_statement_month_print_data', { input });
+}
+
+/** Prints the month statement, or saves it as a PDF: the same partner, month, language and paper as the preview. */
+export function partnersStatementMonthPrint(input: {
+  statement: PartnersStatementMonthPrintInput;
+  to: PrintTo;
+  copies: number | null;
+}): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('partners_statement_month_print', { input });
 }

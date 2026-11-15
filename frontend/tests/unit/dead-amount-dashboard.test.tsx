@@ -160,7 +160,8 @@ describe.each(LANGUAGES)('the dues tiles (%s)', (language: Language) => {
   });
 
   const OPENS: readonly [string, string][] = [
-    ['dashboard-tile-dues', '/reports/R20'],
+    // The buyers' dues tile opens its own page, a simple list with the tile's total (PRD FR-9.4, v1.41).
+    ['dashboard-tile-dues', '/dues'],
     ['dashboard-tile-dues-sellers', '/reports/R24'],
     ['dashboard-tile-dues-total', '/reports/R20'],
     ['dashboard-tile-dead', '/reports/dead-amount'],

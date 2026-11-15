@@ -1691,6 +1691,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     // ---- Money taken by a partner ----
     let takes = |input: PartnerTakesInput| partners::takes(&w.env.ctx, &input).unwrap();
     let take_base = PartnerTakesInput {
+        from: None,
+        to: None,
         show_finished: true,
         partner_id: a,
         offset: 0,
@@ -1701,6 +1703,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     let natural = takes(take_base.clone());
     assert_eq!(natural.rows.len(), 3);
     let by_amount: Vec<i64> = takes(PartnerTakesInput {
+        from: None,
+        to: None,
         sort: sort("amount_paisa", SortDirection::Desc),
         ..take_base.clone()
     })
@@ -1710,6 +1714,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     .collect();
     assert_eq!(by_amount, [200_000, 100_000, 50_000]);
     let second = takes(PartnerTakesInput {
+        from: None,
+        to: None,
         sort: sort("amount_paisa", SortDirection::Desc),
         offset: 1,
         limit: 1,
@@ -1719,6 +1725,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     let bad = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            from: None,
+            to: None,
             sort: sort("partner", SortDirection::Asc),
             ..take_base.clone()
         },
@@ -1726,6 +1734,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     .unwrap_err();
     assert!(rejected_column(&bad));
     let months = takes(PartnerTakesInput {
+        from: None,
+        to: None,
         group_by_month: true,
         ..take_base.clone()
     })
@@ -1737,6 +1747,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     assert_eq!(shape, [("2026-10", 2, 250_000), ("2026-11", 1, 100_000)]);
     assert!(
         takes(PartnerTakesInput {
+            from: None,
+            to: None,
             group_by_month: true,
             sort: sort("amount_paisa", SortDirection::Asc),
             ..take_base.clone()
@@ -1746,6 +1758,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     );
     assert_eq!(
         takes(PartnerTakesInput {
+            from: None,
+            to: None,
             group_by_month: true,
             sort: sort("entry_date", SortDirection::Desc),
             ..take_base
@@ -1759,6 +1773,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     let history =
         |input: CapitalHistoryInput| partners::capital_history(&w.env.ctx, &input).unwrap();
     let capital_base = CapitalHistoryInput {
+        from: None,
+        to: None,
         partner_id: a,
         offset: 0,
         limit: 0,
@@ -1768,12 +1784,16 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     let natural = history(capital_base.clone());
     assert_eq!(natural.rows.len(), 2);
     let sorted = history(CapitalHistoryInput {
+        from: None,
+        to: None,
         sort: sort("amount_paisa", SortDirection::Asc),
         ..capital_base.clone()
     });
     assert_eq!(sorted.rows[0].amount_paisa.as_paisa(), 300_000);
     assert_eq!(sorted.rows[0].running_paisa, natural.rows[1].running_paisa);
     let months = history(CapitalHistoryInput {
+        from: None,
+        to: None,
         group_by_month: true,
         ..capital_base.clone()
     })
@@ -1872,6 +1892,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     // ---- One person's loans ----
     let loans = |input: LentListInput| lent::list(&w.env.ctx, &input).unwrap();
     let lent_base = LentListInput {
+        from: None,
+        to: None,
         show_finished: true,
         person_id: aslam,
         offset: 0,
@@ -1880,6 +1902,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
         group_by_month: false,
     };
     let sorted = loans(LentListInput {
+        from: None,
+        to: None,
         sort: sort("amount_paisa", SortDirection::Asc),
         ..lent_base.clone()
     });
@@ -1890,6 +1914,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
         .collect();
     assert_eq!(amounts, [100_000, 400_000]);
     let months = loans(LentListInput {
+        from: None,
+        to: None,
         group_by_month: true,
         ..lent_base.clone()
     })
@@ -1899,6 +1925,8 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     let bad = lent::list(
         &w.env.ctx,
         &LentListInput {
+            from: None,
+            to: None,
             sort: sort("person", SortDirection::Asc),
             ..lent_base
         },
@@ -2515,6 +2543,8 @@ fn a_fully_returned_take_or_loan_is_finished_and_the_totals_follow_the_rows_show
         partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                from: None,
+                to: None,
                 partner_id: a,
                 offset: 0,
                 limit: 0,
@@ -2621,6 +2651,8 @@ fn a_fully_returned_take_or_loan_is_finished_and_the_totals_follow_the_rows_show
         lent::list(
             &w.env.ctx,
             &LentListInput {
+                from: None,
+                to: None,
                 person_id: aslam,
                 offset: 0,
                 limit: 0,

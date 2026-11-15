@@ -88,37 +88,37 @@ describe('the wrappers send what the backend reads', () => {
 
 describe('go to a date (plan 74 W5)', () => {
   it('sends the account and the date as it is typed, and nothing else', async () => {
-    await partyLedgersGoToDate({ account_id: 20, date: '20-09-2026' });
+    await partyLedgersGoToDate({ account_id: 21, date: '20-09-2026' });
     expect(call).toHaveBeenCalledWith('party_ledgers_go_to_date', {
-      input: { account_id: 20, date: '20-09-2026' },
+      input: { account_id: 21, date: '20-09-2026' },
     });
   });
 });
 
 describe('level 3 is the R35 slip of one party and one date', () => {
   it('the filters are the report screen’s own request for the buyer’s and the seller’s slip', () => {
-    expect(partyDayFilters(20, '2026-10-10')).toEqual(R35_SLIP_AKRAM_REQUEST.filters);
-    expect(partyDayFilters(18, '2026-10-10')).toEqual(R35_SLIP_RAHIM_REQUEST.filters);
+    expect(partyDayFilters(21, '2026-10-10')).toEqual(R35_SLIP_AKRAM_REQUEST.filters);
+    expect(partyDayFilters(19, '2026-10-10')).toEqual(R35_SLIP_RAHIM_REQUEST.filters);
   });
 
   it('the slip on the screen adds the language that sorts a seller’s lots, and nothing else (plan 71 L7)', () => {
-    expect(partyDayFilters(18, '2026-10-10', 'ur')).toEqual({
+    expect(partyDayFilters(19, '2026-10-10', 'ur')).toEqual({
       ...R35_SLIP_RAHIM_REQUEST.filters,
       order_language: 'ur',
     });
-    expect(partyDayFilters(18, '2026-10-10', 'en')).toMatchObject({ order_language: 'en' });
+    expect(partyDayFilters(19, '2026-10-10', 'en')).toMatchObject({ order_language: 'en' });
   });
 });
 
 describe('the address of the screen', () => {
   it('reads the side, the party and the date, and drops what does not read', () => {
-    expect(parseLedgerSearch({ side: 'seller', party: '18', date: '2026-10-10' })).toEqual({
+    expect(parseLedgerSearch({ side: 'seller', party: '19', date: '2026-10-10' })).toEqual({
       side: 'seller',
-      party: 18,
+      party: 19,
       date: '2026-10-10',
     });
     expect(parseLedgerSearch({ side: 'dealer', party: 'x', date: '2026-10-10' })).toEqual({});
     // A date alone, or a date that is not a date, shows the level above.
-    expect(parseLedgerSearch({ party: 20, date: '10-10-2026' })).toEqual({ party: 20 });
+    expect(parseLedgerSearch({ party: 21, date: '10-10-2026' })).toEqual({ party: 21 });
   });
 });

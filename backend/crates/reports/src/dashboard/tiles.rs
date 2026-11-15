@@ -121,6 +121,8 @@ pub(crate) fn build(
         gardens_balance_paisa: gardens_balance,
         lent_open_paisa: lent.open,
         lent_overdue_paisa: lent.overdue,
+        others_dues_paisa: lent.others_open,
+        others_people_count: lent.others_people,
         expenses_today_paisa: expense_dr.checked_sub(expense_cr)?,
     })
 }

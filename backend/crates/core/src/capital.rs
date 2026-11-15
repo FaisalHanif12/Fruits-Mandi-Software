@@ -53,6 +53,14 @@ pub struct CapitalHistoryInput {
     /// The partner. `ERR_NOT_FOUND` on `partner_id`.
     #[ts(type = "number")]
     pub partner_id: i64,
+    /// First day of the range, `DD-MM-YYYY` or a shortcut. Null or empty means no lower limit
+    /// (plan 76 point 8: a screen sends the first day of its month). The rows, the count, the
+    /// totals and the months are over the range.
+    #[serde(default)]
+    pub from: Option<String>,
+    /// Last day of the range. Null or empty means no upper limit.
+    #[serde(default)]
+    pub to: Option<String>,
     /// How many rows to skip.
     #[serde(default)]
     pub offset: u32,
@@ -125,12 +133,16 @@ pub struct CapitalHistory {
     /// His capital balance now (signed, credit is plus).
     #[ts(type = "Paisa")]
     pub balance_paisa: Paisa,
+    /// His capital balance at the start of the range (before `from`): 0 when there is no `from`
+    /// (plan 76 point 8). Every row's `running_paisa` is still its true running balance.
+    #[ts(type = "Paisa")]
+    pub opening_paisa: Paisa,
     /// The page.
     pub rows: Vec<CapitalRow>,
-    /// How many rows there are in all.
+    /// How many rows there are in the range.
     #[ts(type = "number")]
     pub total_count: i64,
-    /// The totals over all the rows.
+    /// The totals over the rows of the range.
     pub totals: CapitalTotals,
     /// The count and subtotals of each month of the whole range, in the order of the list, when
     /// asked with `group_by_month` and the list is in date order. Figures: `invested_paisa` and `taken_back_paisa`.

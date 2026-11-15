@@ -86,7 +86,12 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
-export const DAY: DayStatus = { today: '2026-10-10', closed_up_to: null, today_open: true };
+export const DAY: DayStatus = {
+  today: '2026-10-10',
+  closed_up_to: null,
+  today_open: true,
+  first_entry_date: null,
+};
 
 /** A backend refusal, the way a command fails. */
 export function fail(...items: RefusalItem[]): CommandError {

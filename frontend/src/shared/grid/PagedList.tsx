@@ -29,6 +29,8 @@ interface PagedListProps<T> {
   getRowId: (row: T) => string;
   /** The Fluent message ID of the list's name, read by screen readers. */
   labelId: string;
+  /** The values the name needs, for a list that is one of several alike. */
+  labelVars?: Record<string, string> | undefined;
   /** The Fluent message ID of "the list could not be opened". */
   failedId: string;
   /** Why the first page could not load, or null. */
@@ -85,6 +87,7 @@ export function PagedList<T>({
   rows,
   getRowId,
   labelId,
+  labelVars,
   failedId,
   error,
   onRetry,
@@ -127,6 +130,7 @@ export function PagedList<T>({
           rows={rows}
           getRowId={getRowId}
           labelId={labelId}
+          labelVars={labelVars}
           onOpen={onOpen ?? (() => undefined)}
           onFocusRow={(rowId) => {
             setOwnFocusId(rowId);

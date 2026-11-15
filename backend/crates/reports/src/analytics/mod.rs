@@ -20,12 +20,16 @@
 //! 5,448 total commission, the same as the dashboard.
 
 mod buyer;
+mod buyer_matrix;
 mod calc;
 mod chart;
+mod expense;
+mod expense_partners;
 mod facts;
 mod filters;
 mod fruit;
 mod gardens;
+mod grouped;
 mod ids;
 mod item;
 mod lines;
@@ -56,12 +60,13 @@ pub use calc::{average_days, share_hundredths};
 pub use filters::compare_window;
 pub use model::{
     AnalyticsCatalogEntry, AnalyticsChart, AnalyticsChartKind, AnalyticsChartPoint,
-    AnalyticsChartSeries, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind, AnalyticsFilters,
-    AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey, AnalyticsLinesInput,
-    AnalyticsLinesPage, AnalyticsPage, AnalyticsPartnerMoney, AnalyticsPeriod,
-    AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintInput,
-    AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsRow, AnalyticsRunInput,
-    AnalyticsSavedView, AnalyticsSide, AnalyticsTripView, AnalyticsView, AnalyticsViewsSaveInput,
+    AnalyticsChartSeries, AnalyticsColumn, AnalyticsCompare, AnalyticsExpensePart,
+    AnalyticsFilterKind, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading,
+    AnalyticsKey, AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsPage, AnalyticsPartnerMoney,
+    AnalyticsPeriod, AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading,
+    AnalyticsPrintInput, AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsRow,
+    AnalyticsRunInput, AnalyticsSavedView, AnalyticsSide, AnalyticsTripView, AnalyticsView,
+    AnalyticsViewsSaveInput,
 };
 pub use series::{
     BALANCE_WINDOW_MONTHS, BalanceSeries, BalanceSubject, MonthAmount, SalePart, balance_series,
@@ -72,7 +77,8 @@ pub use store::{MAX_NAME_LETTERS, MAX_VIEWS, PREF_KEY, views_get, views_save};
 use filters::{Typed, resolve};
 use table::Table;
 
-/// The views of the catalogue, in order.
+/// The views of the assistant's catalogue, in order: A to K, the views its fixed instructions name
+/// (PRD FR-7.87, `D6-system-prompt.md`). Views L and M are on the screens only (PRD v1.42, plan 77).
 const VIEWS: [AnalyticsView; 11] = [
     AnalyticsView::A,
     AnalyticsView::B,
@@ -87,10 +93,36 @@ const VIEWS: [AnalyticsView; 11] = [
     AnalyticsView::K,
 ];
 
+/// Every view of the screens, in order: A to K and the two of PRD v1.42 (plan 77).
+const SCREEN_VIEWS: [AnalyticsView; 13] = [
+    AnalyticsView::A,
+    AnalyticsView::B,
+    AnalyticsView::C,
+    AnalyticsView::D,
+    AnalyticsView::E,
+    AnalyticsView::F,
+    AnalyticsView::G,
+    AnalyticsView::H,
+    AnalyticsView::I,
+    AnalyticsView::J,
+    AnalyticsView::K,
+    AnalyticsView::L,
+    AnalyticsView::M,
+];
+
 /// The filters a view takes (PRD 18.1). Views D and G take the grouping, view J the layout of its
 /// rows. Partners work on periods: F takes the period and the partner only; G and J take the sale
 /// filters, the partner, the trip and the goods, and no comparison.
 fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
+    // Expenses by head: the period and the columns. It counts no sale, so no sale filter applies.
+    if view == AnalyticsView::M {
+        return vec![
+            AnalyticsFilterKind::Period,
+            AnalyticsFilterKind::GroupBy,
+            AnalyticsFilterKind::Partner,
+            AnalyticsFilterKind::ExpensePart,
+        ];
+    }
     if view == AnalyticsView::F {
         return vec![AnalyticsFilterKind::Period, AnalyticsFilterKind::Partner];
     }
@@ -127,6 +159,10 @@ fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
         AnalyticsFilterKind::Trip,
         AnalyticsFilterKind::Goods,
     ];
+    // View L is each buyer's own commission (buyer commission and لاگا): the side is not his.
+    if view == AnalyticsView::L {
+        kinds.retain(|k| *k != AnalyticsFilterKind::Side);
+    }
     if view != AnalyticsView::J {
         kinds.push(AnalyticsFilterKind::Garden);
     }
@@ -158,7 +194,8 @@ fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
     kinds
 }
 
-/// The catalogue: every view with its title and the filters it takes (PRD 18.2).
+/// The assistant's catalogue: the views A to K with their titles and the filters they take (PRD
+/// 18.2). Its fixed instructions name exactly these (plan 77 leaves them unchanged).
 pub fn catalog() -> Vec<AnalyticsCatalogEntry> {
     VIEWS
         .iter()
@@ -166,6 +203,29 @@ pub fn catalog() -> Vec<AnalyticsCatalogEntry> {
             id: *view,
             title_id: ids::title_id(*view),
             filters: filters_of(*view),
+        })
+        .collect()
+}
+
+/// The catalogue of the screens: every view, A to M, with its title and the filters it takes
+/// (PRD 18.2, plan 77). `analytics_catalog` sends this one.
+pub fn screen_catalog() -> Vec<AnalyticsCatalogEntry> {
+    SCREEN_VIEWS
+        .iter()
+        .map(|view| {
+            let mut filters = filters_of(*view);
+            // The rows of F, I, J and K can be grouped by day, month or year on the screens (plan 77
+            // coverage audit); the assistant's catalogue does not list it.
+            if grouped::takes_row_grouping(*view, AnalyticsExpensePart::Shop)
+                && !filters.contains(&AnalyticsFilterKind::GroupBy)
+            {
+                filters.push(AnalyticsFilterKind::GroupBy);
+            }
+            AnalyticsCatalogEntry {
+                id: *view,
+                title_id: ids::title_id(*view),
+                filters,
+            }
         })
         .collect()
 }
@@ -190,18 +250,22 @@ fn build_in(
 ) -> Result<(Typed, Table), ReportsError> {
     let now = today(db.clock().now_utc())?;
     let typed = resolve(conn, now, view, input)?;
-    let table = match view {
-        AnalyticsView::A => item::run(conn, &typed, spec)?,
-        AnalyticsView::B => seller::run(conn, &typed, spec)?,
-        AnalyticsView::C => buyer::run(conn, &typed, spec)?,
-        AnalyticsView::D => matrix::run_d(conn, &typed, spec)?,
-        AnalyticsView::E => matrix::run_e(conn, &typed, spec)?,
-        AnalyticsView::F => partner::run(conn, &typed, spec)?,
-        AnalyticsView::G => trend::run(conn, &typed, spec)?,
-        AnalyticsView::H => top::run(conn, &typed, spec)?,
-        AnalyticsView::I => gardens::run(conn, &typed, spec)?,
-        AnalyticsView::J => trips::run(conn, &typed, spec)?,
-        AnalyticsView::K => fruit::run(conn, &typed, spec)?,
+    let grouped = typed.rows_by.filter(|_| grouped::applies(view, &typed));
+    let table = match (view, grouped) {
+        (_, Some(group)) => grouped::run(conn, &typed, view, group, spec)?,
+        (AnalyticsView::A, _) => item::run(conn, &typed, spec)?,
+        (AnalyticsView::B, _) => seller::run(conn, &typed, spec)?,
+        (AnalyticsView::C, _) => buyer::run(conn, &typed, spec)?,
+        (AnalyticsView::D, _) => matrix::run_d(conn, &typed, spec)?,
+        (AnalyticsView::E, _) => matrix::run_e(conn, &typed, spec)?,
+        (AnalyticsView::F, _) => partner::run(conn, &typed, spec)?,
+        (AnalyticsView::G, _) => trend::run(conn, &typed, spec)?,
+        (AnalyticsView::H, _) => top::run(conn, &typed, spec)?,
+        (AnalyticsView::I, _) => gardens::run(conn, &typed, spec)?,
+        (AnalyticsView::J, _) => trips::run(conn, &typed, spec)?,
+        (AnalyticsView::K, _) => fruit::run(conn, &typed, spec)?,
+        (AnalyticsView::L, _) => buyer_matrix::run_l(conn, &typed, spec)?,
+        (AnalyticsView::M, _) => expense::run_m(conn, &typed, spec)?,
     };
     let mut table = table;
     if typed.hide_partners {
@@ -301,30 +365,66 @@ fn table_for(
     spec: PageSpec,
     sort: Option<&mandi_core::paging::SortInput>,
 ) -> Result<(Typed, Table), ReportsError> {
-    if view == AnalyticsView::C {
+    // A sale view with its rows grouped by period reads its own page: it counts the rows of each
+    // bucket and reads only the buckets of the page, so no screen waits for every row of ten years
+    // (robustness finding 2). A sort by a column needs every row, so it is built the long way.
+    if sort.is_none() && grouped::pages_itself(view, filters.group_by) {
+        return build(conn, db, view, filters, spec);
+    }
+    // View C cuts its page early; with its rows grouped by period it is built like the others.
+    if view == AnalyticsView::C && filters.group_by.is_none() {
         return crate::reports::common::in_snapshot(conn, |conn| {
             build_with_sort(conn, db, view, filters, spec, sort)
         });
     }
-    let all = PageSpec {
-        offset: 0,
-        limit: None,
-    };
-    let (typed, mut table) = build(conn, db, view, filters, all)?;
-    let charts = chart::build(
-        view,
-        Some(typed.trip_view),
-        &table.columns,
-        &table.rows,
-        &table.totals,
-    )?;
-    if let Some(sort) = sort {
-        table.rows = chart::sort_rows(&table.columns, std::mem::take(&mut table.rows), sort)?;
-    }
-    table.charts = charts;
-    table.total_count = i64::try_from(table.rows.len()).unwrap_or(i64::MAX);
-    table.rows = spec.slice(&table.rows);
-    Ok((typed, table))
+    // The whole table of one filter, with its sort and its charts, is worked out once and kept in
+    // memory: the next page of the same filter cuts its rows from it, and does not group ten years
+    // of facts again. The question includes the day of today, because the shortcuts of a period
+    // (this month, last year) are worked out from it (`result_cache`).
+    let now = today(db.clock().now_utc())?;
+    let what = format!(
+        "analytics view|{view:?}|{}|{filters:?}|{sort:?}",
+        now.to_iso()
+    );
+    let built = crate::result_cache::remembered(conn, &what, || {
+        let all = PageSpec {
+            offset: 0,
+            limit: None,
+        };
+        let (typed, mut table) = build(conn, db, view, filters, all)?;
+        // A view with its rows grouped by period has no ranked chart: its first cell is the period.
+        let charts = if grouped::applies(view, &typed) {
+            Vec::new()
+        } else if view == AnalyticsView::M && typed.expense_part == AnalyticsExpensePart::Partner {
+            // The kharch each partner spent himself, ranked (plan 77).
+            chart::ranked_by(&table.columns, &table.rows, "own")?
+        } else {
+            chart::build(
+                view,
+                Some(typed.trip_view),
+                &table.columns,
+                &table.rows,
+                &table.totals,
+            )?
+        };
+        if let Some(sort) = sort {
+            table.rows = chart::sort_rows(&table.columns, std::mem::take(&mut table.rows), sort)?;
+        }
+        table.charts = charts;
+        table.total_count = i64::try_from(table.rows.len()).unwrap_or(i64::MAX);
+        Ok((typed, table))
+    })?;
+    let (typed, full) = &*built;
+    Ok((
+        typed.clone(),
+        Table {
+            columns: full.columns.clone(),
+            rows: spec.slice(&full.rows),
+            total_count: full.total_count,
+            totals: full.totals.clone(),
+            charts: full.charts.clone(),
+        },
+    ))
 }
 
 fn build_with_sort(

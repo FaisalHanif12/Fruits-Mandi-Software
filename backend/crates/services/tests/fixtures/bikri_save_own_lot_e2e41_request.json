@@ -23,7 +23,7 @@
         "qty_received": "80",
         "sales": [
           {
-            "buyer_account_id": 21,
+            "buyer_account_id": 22,
             "buyer_comm": null,
             "buyer_rate": null,
             "chukta": null,

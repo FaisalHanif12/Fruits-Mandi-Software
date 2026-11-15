@@ -41,6 +41,8 @@ export interface StatementSearch {
   partner?: number;
   from?: string;
   to?: string;
+  /** The month the statement shows, `YYYY-MM` (plan 76 point 11). */
+  month?: string;
 }
 
 function textOf(value: unknown): string | null {
@@ -51,7 +53,10 @@ export function parseStatementSearch(search: Record<string, unknown>): Statement
   const partner = idOf(search['partner']);
   const from = textOf(search['from']);
   const to = textOf(search['to']);
+  // The month the statement shows, `?month=2026-10` (plan 76 point 11).
+  const month = textOf(search['month']);
   return {
+    ...(month !== null && /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? { month } : {}),
     ...(partner === null ? {} : { partner }),
     ...(from === null ? {} : { from }),
     ...(to === null ? {} : { to }),

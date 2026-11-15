@@ -43,6 +43,10 @@ interface ButtonProps {
   detail?: ReactNode;
   /** The id of text that explains the button, for example why it is off (read after its name). */
   describedBy?: string;
+  /** A button that opens and shuts a part of the page: whether it is open now (read by a screen reader). */
+  expanded?: boolean;
+  /** The id of the part of the page that an `expanded` button opens and shuts. */
+  controls?: string;
   /** The tip that shows when the button is pointed at; it is the same words as its accessible name. */
   title?: string;
   ref?: Ref<HTMLButtonElement>;
@@ -69,6 +73,8 @@ export function Button({
   small = false,
   detail,
   describedBy,
+  expanded,
+  controls,
   title,
   ref,
 }: ButtonProps) {
@@ -85,6 +91,8 @@ export function Button({
       aria-busy={busy}
       aria-label={accessibleName}
       aria-describedby={describedBy}
+      aria-expanded={expanded}
+      aria-controls={controls}
       title={title}
       className={`inline-flex ${detail === undefined ? (small ? 'h-target' : 'h-control') : 'min-h-control py-2'} shrink-0 items-center gap-2 ${round ? 'rounded-full' : 'rounded-2'} border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? `${small ? 'w-target' : 'w-control'} justify-center px-0` : 'px-4'} ${VARIANT_CLASSES[variant]}`}
     >

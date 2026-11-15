@@ -16,7 +16,7 @@ import { displayName, otherScriptLang, otherScriptName, useLanguage } from '../.
 import { Button, Card, Num } from '../../../shared/ui';
 import { SignedNum } from '../../cashbook';
 import type { PartnerOverviewRow } from '../types';
-import { OpenVentures } from './OpenVentures';
+import { OpenVenturesLine } from './OpenVenturesLine';
 
 interface OverviewTableProps {
   rows: readonly PartnerOverviewRow[];
@@ -190,18 +190,23 @@ export function OverviewTable({ rows, more }: OverviewTableProps) {
           })}
         </tbody>
       </table>
-      {/* The open gardens and trips of the partners that are in any (PRD 17.3, FR-12.29). */}
-      {rows
-        .filter((row) => row.open_ventures.length > 0)
-        .map((row) => (
-          <Card
-            compact
-            key={row.partner_id}
-            title={<span lang={language}>{displayName(row, language)}</span>}
-          >
-            <OpenVentures ventures={row.open_ventures} partnerName={displayName(row, language)} />
-          </Card>
-        ))}
+      {/* The open gardens and trips of the partners that are in any: one compact line for each partner,
+          the list one click away, so the page stays short as the trips and gardens grow (PRD 17.3,
+          FR-12.29, plan 76 point 11). */}
+      {rows.some((row) => row.open_trips_count + row.open_gardens_count > 0) ? (
+        <Card compact title={<Localized id="partners-ventures-title" />}>
+          <div className="flex flex-col gap-3">
+            {rows.map((row) => (
+              <OpenVenturesLine
+                key={row.partner_id}
+                partner={row}
+                trips={row.open_trips_count}
+                gardens={row.open_gardens_count}
+              />
+            ))}
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }

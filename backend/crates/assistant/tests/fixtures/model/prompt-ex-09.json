@@ -42,7 +42,7 @@
             {
               "finish_reason": "stop",
               "message": {
-                "content": "{\"kind\": \"advice\", \"text\": \"پہلے {{r1.rows.a21.name}} سے وصولی کریں: {{r1.rows.a21.balance}}، ان کا بل {{r1.rows.a21.days}} دن پرانا ہے۔\\n• پھر {{r1.rows.a20.name}} سے: {{r1.rows.a20.balance}}، بل {{r1.rows.a20.days}} دن پرانا۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "content": "{\"kind\": \"advice\", \"text\": \"پہلے {{r1.rows.a22.name}} سے وصولی کریں: {{r1.rows.a22.balance}}، ان کا بل {{r1.rows.a22.days}} دن پرانا ہے۔\\n• پھر {{r1.rows.a21.name}} سے: {{r1.rows.a21.balance}}، بل {{r1.rows.a21.days}} دن پرانا۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
                 "role": "assistant"
               }
             }

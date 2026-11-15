@@ -157,7 +157,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   }
 
   const names = (ur: string, en: string) => (language === 'ur' ? ur : en);
-  const VIEW_IDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'] as const;
+  const VIEW_IDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'] as const;
 
   async function openView(view: string, options: AnalyticsOptions = {}, query = '') {
     const fake = fakeAnalytics(options);
@@ -173,7 +173,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   }
 
   describe('the area', () => {
-    it('opens on view A, with a tab for each of the eleven views, and asks for nothing filtered', async () => {
+    it('opens on view A, with a tab for each of the thirteen views, and asks for nothing filtered', async () => {
       await openView('');
       const tabs = screen.getByRole('tablist', { name: m('analytics-views-label') });
       const labels = within(tabs)
@@ -248,17 +248,22 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       expect(chart.getAttribute('dir')).toBe(language === 'ur' ? 'rtl' : 'ltr');
     });
 
-    it('starts with the chart folded in a window not higher than 800, and one button shows it (plan 38)', async () => {
-      // A short window: the style rule (max-height 800) matches, so the table is what is in view.
-      Object.defineProperty(window, 'matchMedia', {
-        configurable: true,
-        value: (query: string) => ({
-          matches: query.includes('max-height'),
-          media: query,
-          addEventListener: () => undefined,
-          removeEventListener: () => undefined,
-        }),
-      });
+    it('shows the chart from 1366 wide, even in a window 768 high (plan 76, PRD FR-18.3)', async () => {
+      // 1366 x 768 is the normal step (the test window has no layout, which is the same step). The
+      // chart is no longer folded by the height of the window: it is shown, and one button hides it.
+      await openView('A');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+      expect(
+        await screen.findByRole('img', { name: named(m('analytics-chart-a')) }, SLOW_MS),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: named(m('analytics-chart-hide')) })).toBeTruthy();
+    });
+
+    it('starts with the chart folded at the compact step (1024 x 600), and one button shows it', async () => {
+      // 1024 wide: the compact step, where the chart would push the table out of view.
+      vi.mocked(useLayoutStep).mockReturnValue('compact');
       try {
         const { user } = await openView('A');
         await waitFor(() => {
@@ -270,7 +275,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
           await screen.findByRole('img', { name: named(m('analytics-chart-a')) }, SLOW_MS),
         ).toBeInTheDocument();
       } finally {
-        Reflect.deleteProperty(window, 'matchMedia');
+        vi.mocked(useLayoutStep).mockReturnValue('normal');
       }
     });
 
@@ -535,9 +540,9 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       }, SLOW_MS);
     });
 
-    it('asks for the days of view D when the grouping says so, and only view D has that box', async () => {
+    it('asks for the days of view D when the grouping says so, and the top 10 (H) is the one view with no such box', async () => {
       const { user } = await openView('D');
-      await user.click(screen.getByRole('combobox', { name: m('report-filter-group-by') }));
+      await user.click(screen.getByRole('combobox', { name: m('analytics-filter-group-by') }));
       await user.click(await screen.findByRole('option', { name: m('analytics-group-by-day') }));
       await waitFor(() => {
         expect(lastRun()?.filters.group_by).toBe('day');
@@ -545,9 +550,9 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       await waitFor(() => {
         expect(headerText('p_2026_10_10')).toBe('10-10-2026');
       }, SLOW_MS);
-      await user.click(screen.getByRole('tab', { name: m('analytics-view-a-title') }));
-      await screen.findByRole('heading', { level: 1, name: named(m('analytics-view-a-title')) });
-      expect(screen.queryByRole('combobox', { name: m('report-filter-group-by') })).toBeNull();
+      await user.click(screen.getByRole('tab', { name: m('analytics-view-h-title') }));
+      await screen.findByRole('heading', { level: 1, name: named(m('analytics-view-h-title')) });
+      expect(screen.queryByRole('combobox', { name: m('analytics-filter-group-by') })).toBeNull();
     });
 
     it('sends the side asked for, and the seller side leaves the buyer side blank', async () => {
@@ -582,17 +587,22 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   });
 
   describe('the filter boxes in a compact window', () => {
-    it('keeps period, dates, item and seller in view, folds the rest behind “More filters”, and opens them on a press', async () => {
+    it('keeps period, dates, item, seller and buyer in view, folds the rest behind “More filters”, and opens them on a press', async () => {
       vi.mocked(useLayoutStep).mockReturnValue('compact');
       const { user } = await openView('A');
       const folded = [
-        'analytics-filter-buyer',
         'report-filter-city',
         'report-filter-adda',
         'analytics-filter-side',
         'analytics-filter-compare',
       ];
-      for (const id of ['report-filter-period', 'report-filter-item', 'report-filter-seller']) {
+      // The buyer sits beside the seller, never behind the fold (PRD FR-18.9, plan 77).
+      for (const id of [
+        'report-filter-period',
+        'report-filter-item',
+        'report-filter-seller',
+        'analytics-filter-buyer',
+      ]) {
         expect(screen.getByRole('combobox', { name: m(id) })).toBeInTheDocument();
       }
       for (const id of folded) {
@@ -1038,7 +1048,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
         expect(cell('0', 'p_2026_10')).toBe('3,928');
       }, SLOW_MS);
       await user.type(screen.getByLabelText(m('report-filter-from')), '01-10-2026');
-      await user.click(screen.getByRole('combobox', { name: m('report-filter-group-by') }));
+      await user.click(screen.getByRole('combobox', { name: m('analytics-filter-group-by') }));
       await user.click(await screen.findByRole('option', { name: m('analytics-group-by-day') }));
       await waitFor(() => {
         expect(lastRun()?.filters).toMatchObject({ group_by: 'day', from: '01-10-2026' });
@@ -1057,7 +1067,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
         );
       }, SLOW_MS);
       expect(
-        screen.getByRole('combobox', { name: message(other, 'report-filter-group-by') }),
+        screen.getByRole('combobox', { name: message(other, 'analytics-filter-group-by') }),
       ).toHaveTextContent(message(other, 'analytics-group-by-day'));
       await waitFor(() => {
         expect(cell('0', 'item')).toBe(other === 'ur' ? 'کیلا' : 'Banana');

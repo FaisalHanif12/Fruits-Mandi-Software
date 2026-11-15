@@ -145,7 +145,7 @@ describe('the fixtures are the backend’s own', () => {
 const keysOf = (value: object) => Object.keys(value).sort();
 
 describe('the answers carry exactly the fields of the generated types', () => {
-  it('AnalyticsCatalogEntry: the eleven views, each with the filters it takes', () => {
+  it('AnalyticsCatalogEntry: the thirteen views, each with the filters it takes', () => {
     expect(ANALYTICS_CATALOG.map((entry) => entry.id)).toEqual([
       'A',
       'B',
@@ -158,18 +158,24 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'I',
       'J',
       'K',
+      'L',
+      'M',
     ]);
     for (const entry of ANALYTICS_CATALOG) {
       expect(keysOf(entry)).toEqual(['filters', 'id', 'title_id']);
-      // Only views D and G take a grouping.
-      expect(entry.filters.includes('group_by')).toBe(entry.id === 'D' || entry.id === 'G');
-      // The comparison is refused on the partner, trend, gardens, trips and fruit views: they do not offer it.
-      expect(entry.filters.includes('compare')).toBe(!['F', 'G', 'I', 'J', 'K'].includes(entry.id));
-      // The partner box is on F, G, I, J and K only; the trip layout on J only.
-      expect(entry.filters.includes('partner')).toBe(['F', 'G', 'I', 'J', 'K'].includes(entry.id));
+      // A grouping by day, month or year is taken by every view but the top 10 (PRD FR-18.9, plan 77).
+      expect(entry.filters.includes('group_by')).toBe(entry.id !== 'H');
+      // The comparison is refused on the partner, trend, gardens, trips, fruit and expenses views: they do not offer it.
+      expect(entry.filters.includes('compare')).toBe(
+        !['F', 'G', 'I', 'J', 'K', 'M'].includes(entry.id),
+      );
+      // The partner box is on F, G, I, J, K and M only; the trip layout on J only.
+      expect(entry.filters.includes('partner')).toBe(
+        ['F', 'G', 'I', 'J', 'K', 'M'].includes(entry.id),
+      );
       expect(entry.filters.includes('trip_view')).toBe(entry.id === 'J');
-      // The garden box is on every view but F and J, which refuse a garden.
-      expect(entry.filters.includes('garden')).toBe(!['F', 'J'].includes(entry.id));
+      // The garden box is on every view but F, J and M, which refuse a garden.
+      expect(entry.filters.includes('garden')).toBe(!['F', 'J', 'M'].includes(entry.id));
     }
   });
 
@@ -284,7 +290,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
     ]);
     expect(partner.map((column) => column.kind)).toEqual(['percent', 'money', 'percent', 'money']);
     // The row names its garden by his account, to send back for the lines behind it.
-    expect(ANALYTICS_RUN_I_GARDEN.rows[0]?.key?.seller_id).toBe(31);
+    expect(ANALYTICS_RUN_I_GARDEN.rows[0]?.key?.seller_id).toBe(35);
     expect(ANALYTICS_RUN_I_GARDEN_SELLER_SIDE.filters.side).toBe('seller');
   });
 
@@ -455,6 +461,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_PRINT_DATA_I_EN,
     ]) {
       expect(keysOf(data)).toEqual([
+        // The charts of the view (plan 76 point 4): the print draws the same charts as the screen.
+        'charts',
         'columns',
         'dir',
         'filters',

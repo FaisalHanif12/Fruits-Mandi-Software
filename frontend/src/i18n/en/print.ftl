@@ -242,10 +242,10 @@ print-toast-dialog = The print window is open
 print-adhari-title = Print { report-r5-title }
 
 # review: pending
-print-adhari-help = One slip for each buyer: his goods, the amount after commission and { -laga }, { -mauqa-par-jama } and { -khate-mein-baqi }.
+print-adhari-help = Choose the buyer parchi, one short slip for each buyer, or the overall sale print with the sellers' and the buyers' slips. The page is the same one that is printed.
 
 # review: pending
-print-adhari-scope = What to print
+print-adhari-scope = Which lines
 
 # $date is the day of the { -bikri } on screen.
 # review: pending
@@ -253,6 +253,10 @@ print-adhari-whole-day = Whole day (<num>{ $date }</num>)
 
 # review: pending
 print-adhari-this-bikri = This { -bikri } only (<num>{ $number }</num>)
+
+# The save had carried lots: the new { -bikri } and the old { -bikri } of each carried lot. $numbers: their numbers, new first.
+# review: pending
+print-adhari-this-save = This save only ({ -bikri } <num>{ $numbers }</num>)
 
 ## The preview
 
@@ -477,3 +481,195 @@ bikri-list-day-heading = { $date }: { -bikri }s { $count }
 
 # review: pending
 bikri-list-day-heading-empty = { $date }: No { -bikri }s
+
+## The buyer parchi and the overall sale print (plan 76 point 3, PRD FR-19.15, FR-12.12).
+
+# The title of the buyer parchi print (the backend sends it in the header).
+# review: pending
+print-parchi-title = Buyer parchi
+
+# The title of the overall sale print: the seller slips and the buyer slips of one { -bikri } or of the day.
+# review: pending
+print-sale-title = Overall sale print
+
+# The heading of the sellers' part and of the buyers' part of the overall sale print.
+# review: pending
+print-sale-sellers = Sellers
+
+# review: pending
+print-sale-buyers = Buyers
+
+# The empty line at the foot of a parchi, for the collector to write what he got.
+# review: pending
+print-parchi-collect = { -wasooli }
+
+# review: pending
+print-parchi-empty = No buyer has a parchi for this day
+
+# review: pending
+print-parchi-label = Buyer parchi, one slip for each buyer
+
+# review: pending
+print-sale-label = Overall sale print, the sellers and the buyers
+
+# review: pending
+print-adhari-kind = What to print
+
+# review: pending
+print-adhari-kind-parchi = Buyer parchi
+
+# review: pending
+print-adhari-kind-sale = Overall sale print
+
+## The titles, facts, totals and column heads of the table prints of plan 76 (the backend writes their ids into the print data).
+
+# review: pending
+print-commission-title = { -commission } of the month
+
+# review: pending
+print-buyer-dues-title = Buyers' dues
+
+# review: pending
+print-collection-sheet-title = { report-r5-title }
+
+# review: pending
+print-partner-month-title = { -shirakat-dar } statement by month
+
+# review: pending
+print-fact-month = Month
+
+# review: pending
+print-fact-search = Search
+
+# review: pending
+print-fact-partner = { -shirakat-dar }
+
+# review: pending
+print-commission-total = { -meezan }
+
+# review: pending
+print-buyer-dues-total = { -meezan }
+
+# review: pending
+print-collection-sheet-total = { -meezan }
+
+# review: pending
+print-collection-sheet-dead-total = { -doobi-raqam }, listed apart
+
+# review: pending
+print-collection-sheet-credit-total = { -gahak } in { -jama }, listed apart
+
+# review: pending
+print-partner-month-total = { -meezan }
+
+# review: pending
+print-partner-month-opening = Opening { -kul-raqam }
+
+# review: pending
+print-commission-col-date = Date
+
+# review: pending
+print-commission-col-seller = Seller { -commission }
+
+# review: pending
+print-commission-col-buyer = Buyer { -commission }
+
+# review: pending
+print-commission-col-laga = { -laga }
+
+# review: pending
+print-commission-col-total = Total { -commission }
+
+# review: pending
+print-commission-col-shared = Shared income
+
+# review: pending
+print-commission-col-partner = { -shirakat-dar }
+
+# review: pending
+print-commission-title-period = { -commission } of the period
+
+# review: pending
+print-fact-year = Year
+
+# review: pending
+print-fact-from = From
+
+# review: pending
+print-fact-to = To
+
+# review: pending
+print-fact-seller = { -beopari }
+
+# review: pending
+print-fact-buyer = { -gahak }
+
+# review: pending
+print-commission-col-sale = { -kham-bikri }
+
+# review: pending
+print-commission-col-purchase = Purchase value
+
+# review: pending
+print-commission-col-goods = { -commission } on his goods
+
+
+# review: pending
+print-buyer-dues-col-party = { -gahak }
+
+# review: pending
+print-buyer-dues-col-city = City
+
+# review: pending
+print-buyer-dues-col-balance = Balance
+
+# review: pending
+print-buyer-dues-col-last = Last change
+
+# review: pending
+print-collection-sheet-col-code = Code
+
+# review: pending
+print-collection-sheet-col-party = { -gahak }
+
+# review: pending
+print-collection-sheet-col-detail = Goods
+
+# review: pending
+print-collection-sheet-col-previous = { -sabiqa-raqam }
+
+# review: pending
+print-collection-sheet-col-bill = { -taza-banam }
+
+# review: pending
+print-collection-sheet-col-paid = { -mauqa-par-jama }
+
+# review: pending
+print-collection-sheet-col-due = { -total-raqam }
+
+# review: pending
+print-partner-month-col-date = Date
+
+# review: pending
+print-partner-month-col-commission = { -commission }
+
+# review: pending
+print-partner-month-col-expense = { -kharcha }
+
+# review: pending
+print-partner-month-col-gardens-trips = { -bagh } / { -safar }
+
+# review: pending
+print-partner-month-col-fruit = { -phal }
+
+# review: pending
+print-partner-month-col-taken-returned = Taken and returned
+
+# review: pending
+print-partner-month-col-capital = { -sarmaya }
+
+# review: pending
+print-partner-month-col-net = Day's net
+
+# review: pending
+print-partner-month-col-running = { -kul-raqam }

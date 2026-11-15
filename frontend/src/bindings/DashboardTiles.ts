@@ -98,6 +98,16 @@ export type DashboardTiles = {
    */
   lent_overdue_paisa: Paisa;
   /**
+   * باغوں کے مالکوں / دوسروں کے ذمے: Σ open of the money lent to persons who are not staff,
+   * leaving out the dead amount (PRD 9.1, FR-16.13, plan 76 point 10). Part of
+   * `lent_open_paisa`.
+   */
+  others_dues_paisa: Paisa;
+  /**
+   * How many of those people have something open.
+   */
+  others_people_count: number;
+  /**
    * آج کا خرچہ: دکان خرچہ today (the 0501 heads only).
    */
   expenses_today_paisa: Paisa;

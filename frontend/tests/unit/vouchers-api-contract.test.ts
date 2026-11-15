@@ -63,10 +63,23 @@ describe('each wrapper sends the command and the input of the backend', () => {
       replacing_voucher_id: null,
     };
     await api.vouchersPreview(input.entry, null);
-    expect(call).toHaveBeenLastCalledWith('vouchers_preview', { input });
+    // Every entry that is not a new loan sends no link: the person's own is used (plan 76 point 10).
+    expect(call).toHaveBeenLastCalledWith('vouchers_preview', { input: { ...input, link: null } });
     await api.vouchersPreview({ type: 'payment', ...PAYMENT }, 502);
     expect(call).toHaveBeenLastCalledWith('vouchers_preview', {
-      input: { entry: { type: 'payment', ...PAYMENT }, replacing_voucher_id: 502 },
+      input: { entry: { type: 'payment', ...PAYMENT }, replacing_voucher_id: 502, link: null },
+    });
+    // The link typed on the form of a new loan goes with it.
+    await api.vouchersPreview({ type: 'payment', ...PAYMENT }, null, {
+      kind: 'partner',
+      partner_id: 2,
+    });
+    expect(call).toHaveBeenLastCalledWith('vouchers_preview', {
+      input: {
+        entry: { type: 'payment', ...PAYMENT },
+        replacing_voucher_id: null,
+        link: { kind: 'partner', partner_id: 2 },
+      },
     });
   });
 
@@ -182,7 +195,10 @@ describe('each wrapper sends exactly the request the backend’s own test sent',
     });
     const preview = real.REQUEST_PREVIEW_RECEIPT_EDIT;
     await api.vouchersPreview(preview.entry, preview.replacing_voucher_id);
-    expect(call).toHaveBeenLastCalledWith('vouchers_preview', { input: preview });
+    // The backend's request has no link; the wrapper says so with null, which it reads the same.
+    expect(call).toHaveBeenLastCalledWith('vouchers_preview', {
+      input: { ...preview, link: null },
+    });
     const edit = real.REQUEST_EDIT_RECEIPT;
     await api.vouchersEdit({
       id: edit.id,

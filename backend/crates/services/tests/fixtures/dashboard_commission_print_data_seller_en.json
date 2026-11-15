@@ -1,0 +1,106 @@
+{
+  "frame": {
+    "language": "en",
+    "dir": "ltr",
+    "header": {
+      "firm": {
+        "name": "Maher Adnan and Brothers",
+        "mandi": "New Sabzi Mandi Kot Radha Kishan",
+        "address": "Kot Radha Kishan",
+        "phone": "0300-1234567"
+      },
+      "contacts": [],
+      "trade_mark": null,
+      "title_id": "print-commission-title",
+      "facts": [
+        {
+          "label_id": "print-fact-month",
+          "value": "10-2026"
+        },
+        {
+          "label_id": "print-fact-seller",
+          "value": "Rahim (0010)"
+        }
+      ]
+    },
+    "footer": {
+      "printed_label_id": "print-printed-at",
+      "printed_at": "10-10-2026 14:00",
+      "page_label_id": "print-page-label",
+      "of_label_id": "print-page-of"
+    }
+  },
+  "paper": "a4",
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "print-commission-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "sale",
+      "title_id": "print-commission-col-sale",
+      "kind": "money"
+    },
+    {
+      "key": "seller_comm",
+      "title_id": "print-commission-col-seller",
+      "kind": "money"
+    },
+    {
+      "key": "goods_comm",
+      "title_id": "print-commission-col-goods",
+      "kind": "money"
+    }
+  ],
+  "column_labels": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "money",
+          "text": "29,400"
+        },
+        {
+          "type": "money",
+          "text": "1,764"
+        },
+        {
+          "type": "money",
+          "text": "3,928"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "1",
+  "totals_label_id": "print-commission-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "29,400"
+    },
+    {
+      "type": "money",
+      "text": "1,764"
+    },
+    {
+      "type": "money",
+      "text": "3,928"
+    }
+  ],
+  "words": null,
+  "extra_totals": []
+}

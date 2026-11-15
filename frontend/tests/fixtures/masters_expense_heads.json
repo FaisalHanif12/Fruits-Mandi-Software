@@ -8,7 +8,7 @@
         "name_ur": "بجلی",
         "name_en": "Electricity"
       },
-      "account_id": 31,
+      "account_id": 35,
       "use_count": 1,
       "last_used_date": "2026-09-05"
     },
@@ -20,7 +20,7 @@
         "name_ur": "تنخواہ",
         "name_en": "Salaries"
       },
-      "account_id": 32,
+      "account_id": 36,
       "use_count": 0,
       "last_used_date": null
     }

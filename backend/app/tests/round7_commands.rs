@@ -353,7 +353,7 @@ fn a_bad_print_request_is_refused_at_its_field_before_any_paper_is_used() {
     let view = h
         .call(
             "analytics_print_view",
-            json!({ "input": { "view": { "view": "A",
+            json!({ "input": { "view": { "view": "H",
                 "filters": { "group_by": "day" }, "language": "en" }, "to": "pdf" } }),
         )
         .unwrap_err();

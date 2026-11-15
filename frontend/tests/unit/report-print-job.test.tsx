@@ -1,4 +1,4 @@
-// "Print" and "Save as PDF" in the preview of a report, of the slips of R5 and of an analytics view
+// "Print" and "Save as PDF" in the preview of a report and of an analytics view
 // (round 14, 17e, PRD FR-19.3, FR-18.4, FR-7.36), in the Urdu and in the English app. The buttons send
 // the page on screen to the backend's print job with the language and the paper chosen in the frame:
 // the files of a PDF are shown, "sent to the printer" is said for a printer job, a refusal (printing
@@ -25,7 +25,7 @@ import { fakeGardens } from '../helpers/gardens';
 import { fakePartners, partnerRow } from '../helpers/partners';
 import { PRINT_WINDOWS_ONLY } from '../helpers/print-job';
 import { message, visible } from '../helpers/render';
-import { PRINT_R5_EN, R5_CREDIT_BUYERS, fakeReports } from '../helpers/reports';
+import { PRINT_R5_EN, R4_CREDIT, fakeReports } from '../helpers/reports';
 import { fakeTrips } from '../helpers/trips';
 
 vi.mock('../../src/app/api');
@@ -95,20 +95,20 @@ describe.each(LANGUAGES)('print and PDF from a preview (%s)', (language: Languag
   describe('a report', () => {
     it('Save as PDF sends the report with the language and paper of the frame, and shows the file', async () => {
       fakeReports();
-      const user = await openPreview('/reports/R5');
+      const user = await openPreview('/reports/R4');
       await user.click(screen.getByRole('button', { name: named(m('report-print-pdf')) }));
       await waitFor(() => {
         expect(reportsApi.reportsPrintReport).toHaveBeenCalledTimes(1);
       }, SLOW_MS);
       expect(vi.mocked(reportsApi.reportsPrintReport).mock.calls[0]?.[0]).toMatchObject({
-        report: { id: 'R5', language, paper: 'a4' },
+        report: { id: 'R4', language, paper: 'a4' },
         slips: false,
         to: 'pdf',
         copies: null,
       });
       const notice = await screen.findByRole('status', undefined, SLOW_MS);
       expect(visible(notice.textContent)).toContain(m('print-box-done-pdf'));
-      expect(visible(notice.textContent)).toContain(`report-r5-20261010-${language}.pdf`);
+      expect(visible(notice.textContent)).toContain(`report-r4-20261010-${language}.pdf`);
     });
 
     it('Print sends it to the printer and says so, in words', async () => {
@@ -129,7 +129,7 @@ describe.each(LANGUAGES)('print and PDF from a preview (%s)', (language: Languag
       const agent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC_USER_AGENT);
       try {
         fakeReports();
-        const user = await openPreview('/reports/R5');
+        const user = await openPreview('/reports/R4');
         expect(visible(document.body.textContent)).toContain(m('print-dialog-hint'));
         await user.click(screen.getByRole('button', { name: named(m('report-print-pdf')) }));
         const notice = await screen.findByRole('status', undefined, SLOW_MS);
@@ -184,11 +184,11 @@ describe.each(LANGUAGES)('print and PDF from a preview (%s)', (language: Languag
 
     it('sends nothing for a page with no rows: both buttons are off', async () => {
       fakeReports({
-        pages: { R5: { ...R5_CREDIT_BUYERS, rows: [], total_count: 0 } },
+        pages: { R4: { ...R4_CREDIT, rows: [], total_count: 0 } },
         print: { ...PRINT_R5_EN, rows: [], summary: [] },
       });
       const user = userEvent.setup();
-      await renderApp('/reports/R5');
+      await renderApp('/reports/R4');
       await screen.findByRole('heading', { level: 1 }, SLOW_MS);
       await screen.findByText(m('report-empty'), undefined, SLOW_MS);
       // The empty table has no print to preview: the preview button is on, and its page says so.
@@ -202,23 +202,6 @@ describe.each(LANGUAGES)('print and PDF from a preview (%s)', (language: Languag
       expect(screen.getByRole('button', { name: named(m('report-print-print')) })).toBeDisabled();
       expect(screen.getByRole('button', { name: named(m('report-print-pdf')) })).toBeDisabled();
       expect(reportsApi.reportsPrintReport).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('the slips of R5', () => {
-    it('Print and Save as PDF send the slips of all the credit buyers', async () => {
-      fakeReports();
-      const user = await openPreview('/reports/R5', 'report-print-all');
-      await user.click(screen.getByRole('button', { name: named(m('report-print-pdf')) }));
-      await waitFor(() => {
-        expect(vi.mocked(reportsApi.reportsPrintReport).mock.calls[0]?.[0]).toMatchObject({
-          report: { id: 'R5', language, paper: 'a4' },
-          slips: true,
-          to: 'pdf',
-        });
-      }, SLOW_MS);
-      const notice = await screen.findByRole('status', undefined, SLOW_MS);
-      expect(visible(notice.textContent)).toContain(`report-r5-slips-20261010-${language}.pdf`);
     });
   });
 

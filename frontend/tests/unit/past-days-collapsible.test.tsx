@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
+import { isoToDisplayDate } from '../../src/shared/format';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { listRow, savedEvent1 } from '../helpers/bikri-saved';
@@ -100,7 +101,9 @@ describe.each(LANGUAGES)('پچھلی بکری, the days are closed by default (%
   const dayBox = (day: string) =>
     present(document.querySelector<HTMLElement>(`[data-day="${day}"]`));
   const dayGrid = (day: string) =>
-    within(dayBox(day)).getByRole('group', { name: named(message(language, 'bikri-past-label')) });
+    within(dayBox(day)).getByRole('group', {
+      name: named(message(language, 'bikri-past-day-label', { date: isoToDisplayDate(day) })),
+    });
   const isOpen = (day: string) => present(dayLine(day)).getAttribute('aria-expanded') === 'true';
   const open = async (path = '/bikri/today') => {
     const view = await renderApp(path);

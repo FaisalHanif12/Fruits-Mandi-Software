@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { accountsResolveCode, pickedOf, type AccountHit } from '../../../shared/accounts';
 import type { EntryRow } from '../../../shared/grid';
+import { isCarriedLot, isEmptyLotRow } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { byDayThenNumber, readyKey, type ReadyStock } from '../ready-stock';
 import { LOT, ON, OWN_GOODS_CODE, SALE } from '../types';
@@ -58,14 +59,6 @@ function useOwnGoodsAccount(enabled: boolean) {
   });
 }
 
-/** Has nothing been typed on this lot row but what the app filled? */
-function isEmptyLotRow(row: EntryRow): boolean {
-  if (Object.keys(row.picked ?? {}).length > 0) return false;
-  return Object.entries(row.typed).every(
-    ([field, text]) => text === '' || field === LOT.sellerFilled || field === LOT.memoryFilledFor,
-  );
-}
-
 /** Has a line been typed on the lot: a buyer or a rate? */
 function hasLines(stores: BikriDraftStores, lotKey: string): boolean {
   return stores
@@ -82,11 +75,13 @@ function hasLines(stores: BikriDraftStores, lotKey: string): boolean {
  */
 function isUntouched(stores: BikriDraftStores): boolean {
   const { readyLots } = stores.view.getState();
-  return stores.lots
-    .getState()
-    .rows.every(
-      (row) => !hasLines(stores, row.rowId) && (row.rowId in readyLots || isEmptyLotRow(row)),
-    );
+  return stores.lots.getState().rows.every(
+    (row) =>
+      !hasLines(stores, row.rowId) &&
+      // A lot carried over from an earlier بکری that has no line yet is not the user's work either: the
+      // ready lots still follow the date, and come after it (plan 76 point 1).
+      (row.rowId in readyLots || isEmptyLotRow(row) || isCarriedLot(row)),
+  );
 }
 
 /**
@@ -182,11 +177,15 @@ export function useReadyLots(stores: BikriDraftStores, enabled: boolean): number
     ) {
       return;
     }
+    // The lots carried over stay where they are, first; the ready lots come after them.
+    const carried = rows.filter(isCarriedLot);
     stores.lots.setState({
-      rows:
-        lots.length > 0
+      rows: [
+        ...carried,
+        ...(lots.length > 0
           ? lots.map((lot) => lot.row)
-          : [{ rowId: globalThis.crypto.randomUUID(), typed: {} }],
+          : [{ rowId: globalThis.crypto.randomUUID(), typed: {} }]),
+      ],
     });
     stores.view
       .getState()

@@ -125,14 +125,14 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       fakePartyLedgers();
       await open();
       await waitFor(() => {
-        expect(cell(20, 'debit')).toBe('2,880');
+        expect(cell(21, 'debit')).toBe('2,880');
       }, SLOW_MS);
-      expect(cell(20, 'code')).toBe('0020');
-      expect(cell(20, 'name')).toBe(names.akram);
-      expect(cell(20, 'credit')).toBe('');
-      expect(cell(21, 'code')).toBe('0021');
-      expect(cell(21, 'name')).toBe(names.arshad);
-      expect(cell(21, 'debit')).toBe('18,684');
+      expect(cell(21, 'code')).toBe('0020');
+      expect(cell(21, 'name')).toBe(names.akram);
+      expect(cell(21, 'credit')).toBe('');
+      expect(cell(22, 'code')).toBe('0021');
+      expect(cell(22, 'name')).toBe(names.arshad);
+      expect(cell(22, 'debit')).toBe('18,684');
       // The footer is the plain total of the debit and of the credit, the backend's, not a sum of the rows.
       expect(pinned('name')).toBe(m('glossary-meezan'));
       expect(pinned('debit')).toBe('21,564');
@@ -147,11 +147,11 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       fakePartyLedgers();
       const { user, router } = await open();
       await waitFor(() => {
-        expect(cell(20, 'debit')).toBe('2,880');
+        expect(cell(21, 'debit')).toBe('2,880');
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('party-ledgers-side-seller')) }));
       await waitFor(() => {
-        expect(cell(19, 'credit')).toBe('10,160');
+        expect(cell(20, 'credit')).toBe('10,160');
       }, SLOW_MS);
       expect(ledgersApi.partyLedgersList).toHaveBeenLastCalledWith({
         side: 'seller',
@@ -159,11 +159,11 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
         offset: 0,
         limit: PAGE_ROWS,
       });
-      expect(cell(19, 'name')).toBe(names.karim);
-      expect(cell(19, 'debit')).toBe('');
-      expect(cell(18, 'name')).toBe(names.rahim);
-      expect(cell(18, 'debit')).toBe('0');
-      expect(cell(18, 'credit')).toBe('');
+      expect(cell(20, 'name')).toBe(names.karim);
+      expect(cell(20, 'debit')).toBe('');
+      expect(cell(19, 'name')).toBe(names.rahim);
+      expect(cell(19, 'debit')).toBe('0');
+      expect(cell(19, 'credit')).toBe('');
       expect(pinned('debit')).toBe('0');
       expect(pinned('credit')).toBe('10,160');
       expect(router.state.location.search).toMatchObject({ side: 'seller' });
@@ -182,24 +182,24 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
         );
       });
       await waitFor(() => {
-        expect(rowOf(21)).toBeNull();
+        expect(rowOf(22)).toBeNull();
       }, SLOW_MS);
-      expect(cell(20, 'name')).toBe(names.akram);
+      expect(cell(21, 'name')).toBe(names.akram);
       // The footer follows the search: it is the backend's total for what was found.
       expect(pinned('debit')).toBe('2,880');
     });
 
     it('a person in the dead amount shows his balance, marked in words (PRD FR-10.10)', async () => {
       const dead: PartyLedgerRow[] = LEDGER_BUYERS.rows.map((row) =>
-        row.account_id === 21 ? { ...row, is_dead: true, is_active: false } : row,
+        row.account_id === 22 ? { ...row, is_dead: true, is_active: false } : row,
       );
       fakePartyLedgers({ buyers: { ...LEDGER_BUYERS, rows: dead } });
       await open();
       await waitFor(() => {
-        expect(cell(21, 'debit')).toBe('18,684');
+        expect(cell(22, 'debit')).toBe('18,684');
       }, SLOW_MS);
-      expect(cell(21, 'name')).toBe(`${names.arshad} (${m('dead-tag')})`);
-      expect(cell(20, 'name')).toBe(names.akram);
+      expect(cell(22, 'name')).toBe(`${names.arshad} (${m('dead-tag')})`);
+      expect(cell(21, 'name')).toBe(names.akram);
     });
 
     it('nothing yet: says why and offers the Index', async () => {
@@ -233,7 +233,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       ).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: m('party-ledgers-clear') }));
       await waitFor(() => {
-        expect(cell(20, 'debit')).toBe('2,880');
+        expect(cell(21, 'debit')).toBe('2,880');
       }, SLOW_MS);
     });
 
@@ -246,7 +246,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       fakePartyLedgers();
       await user.click(screen.getByRole('button', { name: m('common-retry') }));
       await waitFor(() => {
-        expect(cell(20, 'debit')).toBe('2,880');
+        expect(cell(21, 'debit')).toBe('2,880');
       }, SLOW_MS);
     });
   });
@@ -271,17 +271,17 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       fakePartyLedgers();
       const { user, router } = await open();
       await waitFor(() => {
-        expect(cell(20, 'debit')).toBe('2,880');
+        expect(cell(21, 'debit')).toBe('2,880');
       }, SLOW_MS);
-      await focusRow(user, 20);
+      await focusRow(user, 21);
       await user.keyboard('{Enter}');
       await waitFor(() => {
         expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
-      expect(router.state.location.search).toMatchObject({ party: 20 });
+      expect(router.state.location.search).toMatchObject({ party: 21 });
       // Today is 10-10-2026 in the tests: the first window is the 30 days that end today, in one read.
       expect(ledgersApi.partyLedgersStatement).toHaveBeenLastCalledWith({
-        account_id: 20,
+        account_id: 21,
         from: '11-09-2026',
         to: '10-10-2026',
         offset: 0,
@@ -319,9 +319,9 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       const { user } = await open();
       await user.click(screen.getByRole('button', { name: named(m('party-ledgers-side-seller')) }));
       await waitFor(() => {
-        expect(cell(18, 'name')).toBe(names.rahim);
+        expect(cell(19, 'name')).toBe(names.rahim);
       }, SLOW_MS);
-      await focusRow(user, 18);
+      await focusRow(user, 19);
       await user.keyboard('{Enter}');
       await waitFor(() => {
         expect(dayRow('2026-10-10')).not.toBeNull();
@@ -346,7 +346,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
         refuseStatement: (input) =>
           input.from === 'x1' ? refusal([{ code: 'ERR_DATE_INVALID', field: 'from' }]) : null,
       });
-      const { user } = await open('/bikri/party-ledgers?party=20');
+      const { user } = await open('/bikri/party-ledgers?party=21');
       await waitFor(() => {
         expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
@@ -355,17 +355,17 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       // The page last shown stays on screen.
       expect(cellsOf(dayRow('2026-10-10'))[2]).toBe('12,880');
       expect(ledgersApi.partyLedgersStatement).toHaveBeenLastCalledWith(
-        expect.objectContaining({ account_id: 20, from: 'x1', to: null }),
+        expect.objectContaining({ account_id: 21, from: 'x1', to: null }),
       );
     });
 
     it('no entry in the window or in the dates: words that say so, and a way out of the dates', async () => {
       fakePartyLedgers({
         statements: {
-          20: { ...STATEMENT_AKRAM, rows: [], count: 0 },
+          21: { ...STATEMENT_AKRAM, rows: [], count: 0 },
         },
       });
-      const { user } = await open('/bikri/party-ledgers?party=20');
+      const { user } = await open('/bikri/party-ledgers?party=21');
       expect(
         await screen.findByText(said(m('party-ledgers-window-empty')), {}, SLOW_MS),
       ).toBeInTheDocument();
@@ -400,9 +400,9 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
     /** Goes down to the statement with the keyboard, the way the Owner does, and opens the first date in place. */
     async function downToTheSlip(user: ReturnType<typeof userEvent.setup>) {
       await waitFor(() => {
-        expect(cell(20, 'debit')).toBe('2,880');
+        expect(cell(21, 'debit')).toBe('2,880');
       }, SLOW_MS);
-      await focusRow(user, 20);
+      await focusRow(user, 21);
       await user.keyboard('{Enter}');
       await waitFor(() => {
         expect(dayRow('2026-10-10')).not.toBeNull();
@@ -419,7 +419,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       const { user, router } = await open();
       await downToTheSlip(user);
       // Still on the statement: the day is under its row, not on another page.
-      expect(router.state.location.search).toMatchObject({ side: 'buyer', party: 20 });
+      expect(router.state.location.search).toMatchObject({ side: 'buyer', party: 21 });
       expect(router.state.location.search).not.toHaveProperty('date');
       expect(dayRow('2026-10-10')?.getAttribute('aria-expanded')).toBe('true');
       expect(dayRow('2026-10-10')?.nextElementSibling?.querySelector('section dl')).not.toBeNull();
@@ -448,7 +448,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
 
     it('a seller’s slip is asked for with his account and the same date (the full-page address still works)', async () => {
       fakePartyLedgers();
-      await open('/bikri/party-ledgers?side=seller&party=18&date=2026-10-10');
+      await open('/bikri/party-ledgers?side=seller&party=19&date=2026-10-10');
       await waitFor(() => {
         expect(reportsApi.reportsRun).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -499,7 +499,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
         expect(router.state.location.href).toBe('/bikri/party-ledgers?side=buyer');
       }, SLOW_MS);
       await waitFor(() => {
-        expect(cell(20, 'debit')).toBe('2,880');
+        expect(cell(21, 'debit')).toBe('2,880');
       }, SLOW_MS);
       press('Escape');
       await waitFor(() => {
@@ -510,7 +510,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
     it('the back button of the statement goes to the list of the party’s own kind', async () => {
       fakePartyLedgers();
       // The address leaves the side out: the backend says he is a seller, so the list is the sellers.
-      const { user, router } = await open('/bikri/party-ledgers?party=18');
+      const { user, router } = await open('/bikri/party-ledgers?party=19');
       await waitFor(() => {
         expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
@@ -523,7 +523,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
 
   it('a language switch in the middle of level 2 keeps the level, the open day and the typed dates', async () => {
     fakePartyLedgers();
-    const { user, router } = await open('/bikri/party-ledgers?party=20');
+    const { user, router } = await open('/bikri/party-ledgers?party=21');
     await waitFor(() => {
       expect(dayRow('2026-10-10')).not.toBeNull();
     }, SLOW_MS);
@@ -547,7 +547,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
     await waitFor(() => {
       expect(dayRow('2026-10-10')).not.toBeNull();
     }, SLOW_MS);
-    expect(router.state.location.search).toMatchObject({ party: 20 });
+    expect(router.state.location.search).toMatchObject({ party: 21 });
     expect(
       await screen.findByRole(
         'textbox',

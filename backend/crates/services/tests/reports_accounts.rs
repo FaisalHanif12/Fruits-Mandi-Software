@@ -574,6 +574,8 @@ fn r16_lists_accounts_and_its_sides_equal_the_trial_balance() {
         "0021",
         "0030",
         "03040000",
+        // Migration 0023 (plan 76): the contra account.
+        "03070001",
         "04010001",
         "04010002",
         "04010003",
@@ -591,6 +593,10 @@ fn r16_lists_accounts_and_its_sides_equal_the_trial_balance() {
         "06040001",
         "06040002",
         "06040003",
+        // Migration 0023 (plan 76): each partner's account for linked khata and loan money.
+        "06050001",
+        "06050002",
+        "06050003",
     ];
     assert_eq!(codes, want);
     assert!(

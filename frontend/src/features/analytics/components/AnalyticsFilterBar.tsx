@@ -9,7 +9,7 @@
 // Something refused by the backend shows under its own box (PRD FR-7.6). A comparison needs both
 // dates (ERR_REQUIRED on `filters.from` and `filters.to`); with a shortcut chosen those two boxes are
 // not drawn, so the refusal shows under the comparison box instead. In a compact window the boxes
-// that are used less (buyer, city, اڈا, side, trip, goods, comparison) wait behind "More filters", and open by
+// that are used less (city, اڈا, side, trip, goods, comparison) wait behind "More filters", and open by
 // themselves when one of them holds a value or a refusal (Code Standards F22).
 
 import { Localized, useLocalization } from '@fluent/react';
@@ -34,15 +34,18 @@ import {
 import { GardenFilterSelect } from '../../gardens';
 import { ReportPartnerSelect } from '../../reports';
 import {
+  BUCKET_CHOICES,
   COMPARE_CHOICES,
   GOODS_CHOICES,
   GROUP_BY_CHOICES,
+  OPTIONAL_GROUPING_VIEWS,
   PERIOD_CHOICES,
   SIDE_CHOICES,
   TRIP_VIEW_CHOICES,
   periodMessageId,
   tripViewMessageId,
   type AnalyticsFilterState,
+  type BucketChoice,
   type PeriodChoice,
 } from '../filters';
 import type {
@@ -78,7 +81,6 @@ function valueOf(
 
 /** The fields of the folded boxes, so a refusal on one of them opens the fold. */
 const FOLDED_FIELDS = [
-  'filters.buyer',
   'filters.city_id',
   'filters.adda_id',
   'filters.side',
@@ -165,25 +167,42 @@ export function AnalyticsFilterBar({
     }
   }
   if (has('group_by')) {
+    // Views D, G and M are always grouped (a month, a day or a year). Views F, I, J and K may be read as a whole
+    // ("no grouping") or with one row for each day, month or year, the period as their first column (FR-18.9).
+    const optional = OPTIONAL_GROUPING_VIEWS.has(view);
     primary.push(
       <Field
         key="group_by"
-        label={<Localized id="report-filter-group-by" />}
+        label={<Localized id="analytics-filter-group-by" />}
         error={fieldError(error, 'filters.group_by')}
       >
-        {(control) => (
-          <Select<AnalyticsGroupBy>
-            {...control}
-            value={state.groupBy}
-            onChange={(groupBy) => {
-              onChange({ groupBy });
-            }}
-            options={GROUP_BY_CHOICES.map((choice) => ({
-              value: choice,
-              label: l10n.getString(`analytics-group-by-${choice}`),
-            }))}
-          />
-        )}
+        {(control) =>
+          optional ? (
+            <Select<BucketChoice>
+              {...control}
+              value={state.buckets}
+              onChange={(buckets) => {
+                onChange({ buckets });
+              }}
+              options={BUCKET_CHOICES.map((choice) => ({
+                value: choice,
+                label: l10n.getString(`analytics-group-by-${choice}`),
+              }))}
+            />
+          ) : (
+            <Select<AnalyticsGroupBy>
+              {...control}
+              value={state.groupBy}
+              onChange={(groupBy) => {
+                onChange({ groupBy });
+              }}
+              options={GROUP_BY_CHOICES.map((choice) => ({
+                value: choice,
+                label: l10n.getString(`analytics-group-by-${choice}`),
+              }))}
+            />
+          )
+        }
       </Field>,
     );
   }
@@ -323,7 +342,9 @@ export function AnalyticsFilterBar({
     );
   }
   if (has('buyer')) {
-    folded.push(
+    // The buyer sits beside the seller, in view (PRD FR-18.1, FR-18.9, plan 77): "what did this buyer buy of
+    // سیب" is one screen, so it never waits behind "More filters".
+    primary.push(
       <Field
         key="buyer"
         label={<Localized id="analytics-filter-buyer" />}
@@ -485,7 +506,6 @@ export function AnalyticsFilterBar({
   }
 
   const filledCount = [
-    state.buyer !== null,
     state.city !== null,
     state.adda !== null,
     state.side !== 'both',
@@ -495,7 +515,6 @@ export function AnalyticsFilterBar({
     state.compare !== 'off',
   ].filter(Boolean).length;
   const filled =
-    state.buyer !== null ||
     state.city !== null ||
     state.adda !== null ||
     state.side !== 'both' ||

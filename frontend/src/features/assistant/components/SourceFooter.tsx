@@ -40,6 +40,8 @@ export function sourceLabel(source: AnswerSource, l10n: ReactLocalization): stri
       });
     case 'tiles':
       return l10n.getString('layout-nav-dashboard');
+    case 'commission':
+      return l10n.getString('assistant-source-commission');
     case 'screen':
       return l10n.getString(SCREEN_LABEL_IDS[source.route]);
   }
@@ -142,6 +144,12 @@ function buttonText(
   l10n: ReactLocalization,
 ): string {
   if (source.kind === 'tiles') return l10n.getString('assistant-open-dashboard');
+  // The commission page (PRD FR-9.3, plan 77) is a screen, opened with the party and the days the answer read.
+  if (source.kind === 'commission') {
+    return several
+      ? l10n.getString('assistant-open-screen-of', { source: label })
+      : l10n.getString('assistant-open-commission');
+  }
   if (source.kind === 'screen') {
     return several
       ? l10n.getString('assistant-open-screen-of', { source: label })

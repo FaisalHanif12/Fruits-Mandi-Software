@@ -46,7 +46,26 @@ pub(crate) fn total_of(
     partner: &PartnerRecord,
     as_of: Option<&str>,
 ) -> Result<Paisa, ServiceError> {
-    let parts = repo::total_parts(conn, partner, as_of)?;
+    total_from(repo::total_parts(conn, partner, as_of)?)
+}
+
+/// What moved a partner's کل رقم from one day to another, both included: `total_of(to)` less
+/// `total_of(day before from)`, read as sums over those days only (a month page checks its lines
+/// against it, PRD FR-17.9, NFR-SPD-24). Month close moves nothing.
+///
+/// # Errors
+/// `ServiceError::Db`; `ERR_OVERFLOW`.
+pub(crate) fn movement_between(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    from: &str,
+    to: &str,
+) -> Result<Paisa, ServiceError> {
+    total_from(repo::movement_parts(conn, partner, from, to)?)
+}
+
+/// The C22 formula on the sums, with checked maths.
+fn total_from(parts: repo::TotalParts) -> Result<Paisa, ServiceError> {
     let capital = paisa(parts.capital_cr)?
         .checked_sub(paisa(parts.capital_dr)?)
         .map_err(money_error)?;
@@ -56,10 +75,15 @@ pub(crate) fn total_of(
     let ventures = paisa(parts.venture_cr)?
         .checked_sub(paisa(parts.venture_dr)?)
         .map_err(money_error)?;
+    // PRD C22 v1.41: his account for linked khata and loan money (جمع less بنام) is one more term.
+    let linked = paisa(parts.linked_cr)?
+        .checked_sub(paisa(parts.linked_dr)?)
+        .map_err(money_error)?;
     capital
         .checked_add(paisa(parts.shares)?)
         .and_then(|v| v.checked_sub(taken_net))
         .and_then(|v| v.checked_add(ventures))
+        .and_then(|v| v.checked_add(linked))
         .map_err(money_error)
 }
 
@@ -77,6 +101,7 @@ fn is_take(line: &LiveLine) -> bool {
 /// `ERR_NOT_FOUND` on `partner_id`.
 pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, ServiceError> {
     let (_, today) = day::window(ctx)?;
+    let (from, to) = page::date_range(input.from.as_ref(), input.to.as_ref(), today)?;
     // The sort is checked first: an unknown column is refused (plan 38 R4).
     if let Some(sort) = &input.sort {
         sort.check(&TAKE_COLUMNS)
@@ -115,6 +140,10 @@ pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, S
             // A fully returned take is finished: it steps aside, with its money, unless asked for
             // (plan 38 R5). The totals and the months are over the rows listed.
             if !input.show_finished && figures.open == Paisa::ZERO {
+                continue;
+            }
+            // The range keeps the takes dated inside it (plan 76 point 8).
+            if !page::in_range(&line.entry_date, from.as_deref(), to.as_deref()) {
                 continue;
             }
             let amount = paisa(line.dr_paisa)?;
@@ -197,6 +226,8 @@ pub fn capital_history(
     ctx: &Context,
     input: &CapitalHistoryInput,
 ) -> Result<CapitalHistory, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let (from, to) = page::date_range(input.from.as_ref(), input.to.as_ref(), today)?;
     // The sort is checked first: an unknown column is refused (plan 38 R4).
     if let Some(sort) = &input.sort {
         sort.check(&CAPITAL_COLUMNS)
@@ -207,7 +238,26 @@ pub fn capital_history(
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
         let lines = open_lines::live_lines(conn, &[partner.capital_account_id])?;
         let mut month_acc = page::MonthAcc::new(2);
+        // His balance now is every line. The opening balance of the range is every line dated
+        // before `from`, whatever its place in the list (his opening capital comes first in the
+        // list even when it is dated later, so the order cannot be trusted). The running balance
+        // of a row starts from that opening and adds the lines of the range, so the opening plus
+        // the rows of the range is the last running balance (plan 76 point 8).
         let mut balance = Paisa::ZERO;
+        let mut opening = Paisa::ZERO;
+        for line in &lines {
+            let amount = paisa(line.cr_paisa)?
+                .checked_sub(paisa(line.dr_paisa)?)
+                .map_err(money_error)?;
+            balance = balance.checked_add(amount).map_err(money_error)?;
+            if from
+                .as_deref()
+                .is_some_and(|f| line.entry_date.as_str() < f)
+            {
+                opening = opening.checked_add(amount).map_err(money_error)?;
+            }
+        }
+        let mut running = opening;
         let mut totals = CapitalTotals {
             invested_paisa: Paisa::ZERO,
             taken_back_paisa: Paisa::ZERO,
@@ -216,6 +266,9 @@ pub fn capital_history(
         for line in &lines {
             let (dr, cr) = (paisa(line.dr_paisa)?, paisa(line.cr_paisa)?);
             let amount = cr.checked_sub(dr).map_err(money_error)?;
+            if !page::in_range(&line.entry_date, from.as_deref(), to.as_deref()) {
+                continue;
+            }
             let kind = match line.posting_type.as_str() {
                 "opening" => CapitalRowKind::Opening,
                 "month_close" => CapitalRowKind::MonthClose,
@@ -231,7 +284,7 @@ pub fn capital_history(
                     .checked_add(dr)
                     .map_err(money_error)?;
             }
-            balance = balance.checked_add(amount).map_err(money_error)?;
+            running = running.checked_add(amount).map_err(money_error)?;
             // Month close moves profit between his accounts, so it adds nothing to the month's
             // money (the same rule as the totals).
             let (put_in, put_out) = if kind == CapitalRowKind::MonthClose {
@@ -248,7 +301,7 @@ pub fn capital_history(
                 entry_date: line.entry_date.clone(),
                 amount_paisa: amount,
                 narration: line.narration.clone(),
-                running_paisa: balance,
+                running_paisa: running,
             });
         }
         let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
@@ -273,6 +326,7 @@ pub fn capital_history(
                 tag: None,
             },
             balance_paisa: balance,
+            opening_paisa: opening,
             rows: page::slice(rows, input.offset, input.limit),
             total_count,
             totals,

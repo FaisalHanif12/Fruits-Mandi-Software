@@ -1,6 +1,6 @@
 {
   "account": {
-    "id": 19,
+    "id": 20,
     "code": "0011",
     "name_ur": "کریم",
     "name_en": "Karim"
@@ -29,6 +29,7 @@
     "lowers_cash": true,
     "needs_confirm": true
   },
+  "linked_parts": [],
   "errors": [],
   "warnings": [
     {

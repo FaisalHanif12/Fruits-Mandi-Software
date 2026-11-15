@@ -20,7 +20,8 @@ import type { KhataStatementInput } from '../../src/bindings/KhataStatementInput
 import type { LentList } from '../../src/bindings/LentList';
 import type { LentListInput } from '../../src/bindings/LentListInput';
 import type { LentPerson } from '../../src/bindings/LentPerson';
-import type { LentPersonCreateInput } from '../../src/bindings/LentPersonCreateInput';
+import type { LentPersonCreateRequest } from '../../src/bindings/LentPersonCreateRequest';
+import type { Link } from '../../src/bindings/Link';
 import type { LentRow } from '../../src/bindings/LentRow';
 import type { PartnerTakes } from '../../src/bindings/PartnerTakes';
 import type { PartnerTakesInput } from '../../src/bindings/PartnerTakesInput';
@@ -233,8 +234,23 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
     takes: new Map(),
     loans: new Map(),
     khataRows: new Map(),
-    persons: [{ account: ASLAM, staff: null, phone: '' }],
-    khatas: [{ account: FAMILY_KHATA, note: '', balance_paisa: money(0) }],
+    persons: [
+      {
+        account: ASLAM,
+        staff: null,
+        phone: '',
+        person_type: 'other',
+        link: { kind: 'shop', partner_id: null },
+      },
+    ],
+    khatas: [
+      {
+        account: FAMILY_KHATA,
+        note: '',
+        link: { kind: 'none', partner_id: null },
+        balance_paisa: money(0),
+      },
+    ],
     repeat: [],
   };
   const counters = new Map<string, number>();
@@ -596,6 +612,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       advance_effects: [],
       owes_settled_paisa: money(0),
       return_limit_paisa: null,
+      linked_parts: [],
       payable_open_paisa: null,
       payable_is_zero_for_seller: false,
       cash,
@@ -846,7 +863,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       })),
       total_paisa: money(store.repeat.reduce((sum, row) => sum + row.amount, 0)),
     }),
-    createPerson: (input: LentPersonCreateInput): LentPerson => {
+    createPerson: (input: LentPersonCreateRequest): LentPerson => {
       const person: LentPerson = {
         account: {
           id: 62 + store.persons.length,
@@ -856,6 +873,8 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
         },
         staff: null,
         phone: input.phone ?? '',
+        person_type: input.person_type ?? (input.staff_id === null ? 'other' : 'staff'),
+        link: input.link ?? { kind: 'shop', partner_id: null },
       };
       store.persons.push(person);
       return person;
@@ -864,6 +883,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       name_ur: string;
       name_en: string;
       note: string | null;
+      link?: Link | null;
     }): KhataAccount => {
       const khata: KhataAccount = {
         account: {
@@ -873,6 +893,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
           name_en: input.name_en,
         },
         note: input.note ?? '',
+        link: input.link ?? { kind: 'none', partner_id: null },
         balance_paisa: money(0),
       };
       store.khatas.push(khata);

@@ -17,7 +17,7 @@ import { useDayStatus } from '../../../app/use-day-status';
 import type { CashbookRow } from '../../../bindings/CashbookRow';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList, type ListContext } from '../../../shared/grid';
-import { usePeriod } from '../../../shared/hooks';
+import { useListWindow } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
 import {
   Button,
@@ -27,7 +27,7 @@ import {
   FilterBar,
   ListPage,
   LoadingState,
-  PeriodBox,
+  ListWindowBar,
   FilterCard,
 } from '../../../shared/ui';
 import { useOpenRowSource } from '../../reports';
@@ -49,11 +49,11 @@ const CASH_MONTH_COLUMNS = { in_paisa: 'in', out_paisa: 'out', running_paisa: 'r
 function CashbookScreen({ today }: { today: string }) {
   const navigate = useNavigate();
   const openSource = useOpenRowSource();
-  // The book opens on today and the Owner may widen it (the period is remembered, plan 38 R4).
-  const period = usePeriod('cashbook.book', 'today', today);
+  // The book shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8).
+  const listWindow = useListWindow({ kind: 'days', source: { kind: 'cashbook' }, today });
   const range = useMemo(
-    () => ({ from: textOrNull(period.range.from), to: textOrNull(period.range.to) }),
-    [period.range.from, period.range.to],
+    () => ({ from: textOrNull(listWindow.range.from), to: textOrNull(listWindow.range.to) }),
+    [listWindow.range.from, listWindow.range.to],
   );
   const book = useCashbook(range, true);
   const first = book.data?.pages[0];
@@ -95,7 +95,6 @@ function CashbookScreen({ today }: { today: string }) {
       filters={
         <FilterCard {...formNavigationProps}>
           <FilterBar screen="cashbook.book">
-            <PeriodBox period={period} />
             {/* The cash at the start and at the end of the range sit in the same row as the period
                 (the backend's figures over the whole range). */}
             {first === undefined ? null : (
@@ -138,6 +137,7 @@ function CashbookScreen({ today }: { today: string }) {
           void book.refetch();
         }}
         pager={book.pager}
+        onPageKey={listWindow.onPageKey}
         sort={{ value: book.sort, onChange: book.setSort }}
         months={
           first === undefined
@@ -158,6 +158,7 @@ function CashbookScreen({ today }: { today: string }) {
         }
         totals={totals}
       />
+      <ListWindowBar window={listWindow} />
     </ListPage>
   );
 }

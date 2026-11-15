@@ -2,8 +2,9 @@
 //! signed-in Owner. Reads only read (Code Standards B29).
 
 use mandi_services::core::lent::{
-    AttentionOverdue, LentList, LentListInput, LentPerson, LentPersonCreateInput, LentReport,
-    LentReportInput, MoneyLentInput, MoneyLentReturnInput,
+    AttentionOverdue, LentDues, LentDuesInput, LentList, LentListInput, LentPerson,
+    LentPersonCreateRequest, LentPersonUpdateInput, LentReport, LentReportInput, MoneyLentRequest,
+    MoneyLentReturnInput,
 };
 use mandi_services::core::vouchers::VoucherSaved;
 use mandi_services::{auth, lent, vouchers};
@@ -11,26 +12,29 @@ use mandi_services::{auth, lent, vouchers};
 use super::run;
 use crate::error::UiError;
 
-/// Saves money lent (PRD 16.5): the person's account بنام, روکڑ جمع. One transaction. Errors: the
-/// date and money codes; `ERR_LENT_PERSON_REQUIRED` and `ERR_NOT_FOUND` on `person_account_id`;
-/// `ERR_REASON_REQUIRED` on `reason`; `ERR_RETURN_BY_BEFORE_ENTRY` on `return_by` (PRD FR-16.9);
-/// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`).
+/// Saves money lent (PRD 16.5): the person's account بنام, روکڑ جمع. One transaction. The link of
+/// the person (plan 76 point 10) is set in the same transaction when it is sent, differs from his
+/// own and he owes nothing. Errors: the date and money codes; `ERR_LENT_PERSON_REQUIRED` and
+/// `ERR_NOT_FOUND` on `person_account_id`; `ERR_REASON_REQUIRED` on `reason`;
+/// `ERR_RETURN_BY_BEFORE_ENTRY` on `return_by` (PRD FR-16.9); `ERR_LINK_FIXED_WHILE_OWED` on
+/// `link`; `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`).
 #[tauri::command]
 pub async fn vouchers_save_money_lent<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: MoneyLentInput,
+    input: MoneyLentRequest,
 ) -> Result<VoucherSaved, UiError> {
     run(app, "vouchers_save_money_lent", move |ctx| {
         let actor = auth::require(ctx)?;
-        vouchers::save_money_lent(ctx, &actor, &input)
+        vouchers::save_money_lent_linked(ctx, &actor, &input)
     })
     .await
 }
 
 /// Saves a return of money lent (PRD FR-16.4): in cash (روکڑ بنام, person جمع) or from salary (the
 /// salary head بنام, person جمع, split as a shop expense). Errors: as `vouchers_save_money_lent`
-/// without `reason` and `return_by`; `ERR_RETURN_EXCEEDS_OPEN` (value `open_paisa`) on `amount`;
-/// `ERR_NOT_FOUND` on `salary_head_id`.
+/// without `reason`, `return_by` and `link`; `ERR_RETURN_EXCEEDS_OPEN` (value `open_paisa`) on
+/// `amount`; `ERR_NOT_FOUND` on `salary_head_id`; `ERR_SALARY_NOT_ALLOWED_FOR_LINKED` on `mode`
+/// for a person whose loans are linked to a partner.
 #[tauri::command]
 pub async fn vouchers_save_money_lent_return<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -43,17 +47,51 @@ pub async fn vouchers_save_money_lent_return<R: tauri::Runtime>(
     .await
 }
 
-/// Makes the account of a person who can be lent money (control 0103; the `F4` of the screen).
-/// Errors: the name codes on `name_ur` and `name_en`, `ERR_SPELLING_UNCONFIRMED`, the phone code
-/// on `phone`, `ERR_NOT_FOUND` on `staff_id`.
+/// Makes the account of a person who can be lent money (control 0103; the `F4` of the screen),
+/// with his type and link (plan 76 point 10; no link is the shop). Errors: the name codes on
+/// `name_ur` and `name_en`, `ERR_SPELLING_UNCONFIRMED`, the phone code on `phone`,
+/// `ERR_NOT_FOUND` on `staff_id`; `ERR_LINK_PARTNER_REQUIRED`, `ERR_NOT_FOUND` and
+/// `ERR_PARTNER_INACTIVE` on `link.partner_id`.
 #[tauri::command]
 pub async fn lent_person_create<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: LentPersonCreateInput,
+    input: LentPersonCreateRequest,
 ) -> Result<LentPerson, UiError> {
     run(app, "lent_person_create", move |ctx| {
         let actor = auth::require(ctx)?;
-        lent::person_create(ctx, &actor, &input)
+        lent::person_create_linked(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Changes the type and the link of a person who is lent money (plan 76 point 10, PRD FR-16.13).
+/// The link changes only while he owes nothing. Errors: `ERR_NOT_FOUND` on `person_account_id`;
+/// `ERR_LINK_FIXED_WHILE_OWED` on `link`; `ERR_LINK_PARTNER_REQUIRED`, `ERR_NOT_FOUND` and
+/// `ERR_PARTNER_INACTIVE` on `link.partner_id`.
+#[tauri::command]
+pub async fn lent_person_update<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: LentPersonUpdateInput,
+) -> Result<LentPerson, UiError> {
+    run(app, "lent_person_update", move |ctx| {
+        let actor = auth::require(ctx)?;
+        lent::person_update(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// The page behind the dashboard tile of garden owners and others (plan 76 point 10, PRD
+/// FR-16.13): one month of money given and returned, with the person, type and link of each, and
+/// the people with their open amounts. Read only. Errors: `ERR_FORMAT_INVALID` and
+/// `ERR_DATE_IN_FUTURE` on `month`.
+#[tauri::command]
+pub async fn lent_dues<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: LentDuesInput,
+) -> Result<LentDues, UiError> {
+    run(app, "lent_dues", move |ctx| {
+        auth::require(ctx)?;
+        lent::dues(ctx, &input)
     })
     .await
 }

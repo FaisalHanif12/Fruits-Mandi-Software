@@ -132,7 +132,14 @@ analytics-group-by-day = دن
 analytics-group-by-year = سال
 
 # review: pending
+analytics-group-by-none = گروپ کے بغیر
+
+# review: pending
 analytics-filter-buyer = { -gahak }
+
+# The grouping box of the views. Its own words, because the trips layout box is "Show by" in English and ترتیب in Urdu.
+# review: pending
+analytics-filter-group-by = مدت کے لحاظ سے
 
 # review: pending
 analytics-filter-side = جانب
@@ -485,7 +492,40 @@ analytics-view-k-title = { -phal }
 analytics-view-k-help = ہر شراکت دار (یا دکان کے { -mehman }) اور { -qism-maal } کا لیا گیا پھل: تعداد اور قیمت، ہماری دکان سے اور دوسری دکانوں سے۔
 
 # review: pending
+analytics-view-l-title = { -gahak } × { -qism-maal }
+
+# review: pending
+analytics-view-l-help = ہر { -gahak } کا { -commission } قسم مال کے حساب سے: ہر قسم پر اس کا گاہک { -commission } اور { -laga }۔
+
+# review: pending
+analytics-view-m-title = خرچہ
+
+# review: pending
+analytics-view-m-help = ہر مد اور پوری دکان کا { -dukan-kharcha }، اور ہر { -shirakat-dar } نے اپنے لیے جو خرچ کیا ({ -zati-kharcha })، دن، مہینے یا سال کے حساب سے۔
+
+# review: pending
 analytics-chart-k = ہماری دکان اور دوسری دکانوں سے لیا گیا پھل
+
+# review: pending
+analytics-chart-l = { -gahak } کے لحاظ سے { -commission }، ہر قسم مال کا الگ حصہ
+
+# review: pending
+analytics-chart-m = ہر مدت کا { -dukan-kharcha }
+
+# review: pending
+analytics-chart-m-partner = ہر { -shirakat-dar } کا اپنا { -kharcha }
+
+## View M, expenses (plan 77, PRD FR-9.5, 18.2): the shop's expense by head and what each partner spent himself.
+
+# review: pending
+analytics-col-own-kharch = { -zati-kharcha }
+
+# The name of each part: the heading of its table and the label-only fact of its print header.
+# review: pending
+analytics-filter-expense-shop = { -dukan-kharcha }
+
+# review: pending
+analytics-filter-expense-partner = { -shirakat-dar } { -kharcha }
 
 ## The bar of the rows beyond the biggest ten in a chart (plan 38 R4).
 

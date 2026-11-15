@@ -16,7 +16,12 @@ import * as bikriApi from '../../src/features/bikri/api';
 import type { BikriList } from '../../src/bindings/BikriList';
 import { headingDaysOnPage } from '../../src/features/bikri/past-window';
 import { LANGUAGES } from '../../src/i18n';
-import { DEFAULT_GROUPING, formatPaisa, type Paisa } from '../../src/shared/format';
+import {
+  DEFAULT_GROUPING,
+  formatPaisa,
+  isoToDisplayDate,
+  type Paisa,
+} from '../../src/shared/format';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { savedEvent1 } from '../helpers/bikri-saved';
@@ -67,6 +72,7 @@ beforeEach(() => {
     today: PAST_TODAY_ISO,
     closed_up_to: null,
     today_open: true,
+    first_entry_date: null,
   });
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
@@ -122,7 +128,9 @@ describe.each(LANGUAGES)('پچھلی بکری from the backend’s answers (%s)'
   const dayLine = (date: string) =>
     document.querySelector<HTMLElement>(`[data-day="${date}"] [data-day-line]`);
   const dayGrid = (date: string) =>
-    within(present(day(date))).getByRole('group', { name: named(m('bikri-past-label')) });
+    within(present(day(date))).getByRole('group', {
+      name: named(m('bikri-past-day-label', { date: isoToDisplayDate(date) })),
+    });
   const shown = async () => {
     await waitFor(() => {
       expect(document.querySelector('[data-day]')).not.toBeNull();

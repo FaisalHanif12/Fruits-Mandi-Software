@@ -494,7 +494,13 @@ describe.each(LANGUAGES)('opening an entry from the lists under the forms (%s)',
   it('a person’s loans: Enter or a double click on a loan opens it', async () => {
     vi.mocked(vouchersApi.vouchersOpenForEdit).mockResolvedValue(moneyLent());
     vi.mocked(cashbookApi.lentList).mockResolvedValue({
-      person: { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' },
+      person: {
+        account: { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' },
+        staff: null,
+        phone: '',
+        person_type: 'other',
+        link: { kind: 'shop', partner_id: null },
+      },
       balance: { amount_paisa: paisaForTest(500_000), side: 'dr' },
       rows: [
         {
@@ -527,7 +533,12 @@ describe.each(LANGUAGES)('opening an entry from the lists under the forms (%s)',
   it('a khata’s statement: a payment opens its voucher, a sale of its goods opens nothing', async () => {
     vi.mocked(vouchersApi.vouchersOpenForEdit).mockResolvedValue(khataOut());
     vi.mocked(cashbookApi.khataStatement).mockResolvedValue({
-      khata: { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' },
+      khata: {
+        account: { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' },
+        note: '',
+        link: { kind: 'none', partner_id: null },
+        balance_paisa: paisaForTest(-1_000_000),
+      },
       opening_paisa: paisaForTest(0),
       closing_paisa: paisaForTest(-1_000_000),
       rows: [

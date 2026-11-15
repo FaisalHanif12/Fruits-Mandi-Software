@@ -128,6 +128,10 @@ pub fn can_take_opening(
         // A garden's account has the code of its garden (0080), so it is told by its control.
         && control_code != VENTURE_CONTROL_CODE
         && control_code != GARDEN_CONTROL_CODE
+        // The 0605 accounts and the contra account 0307 hold only the mirror lines of linked
+        // khatas and loans (plan 76).
+        && control_code != "0605"
+        && control_code != "0307"
         && !is_chukta_khata
 }
 
@@ -139,7 +143,8 @@ impl ControlRule {
     /// their own way in: 0103 is the type ادھار رقم, 0501 is filled by expense heads and 0102 by
     /// bank accounts (plan 06). 0604 (gardens, trips and fruit) is made with each partner (plan 11).
     pub fn allows_other(code: &str, party_type: &str) -> bool {
-        party_type == "other" && !matches!(code, "0103" | "0501" | "0102" | "0604")
+        party_type == "other"
+            && !matches!(code, "0103" | "0501" | "0102" | "0604" | "0605" | "0307")
     }
 }
 

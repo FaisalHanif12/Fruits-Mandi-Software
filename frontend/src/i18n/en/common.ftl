@@ -213,3 +213,68 @@ common-remove-line-confirm = Remove
 # $grade: the quality word (glossary-darja-awwal, -doyam or -soyam).
 # review: pending
 common-item-grade = { $item } { $grade }
+
+### A screen that shows one month at a time (PRD FR-19.11, FR-17.12, plan 76).
+
+# review: pending
+common-month-nav-label = Move by month
+
+# review: pending
+common-month-earlier = Previous month
+
+# review: pending
+common-month-later = Next month
+
+# review: pending
+common-month-latest-note = This is the current month
+
+# review: pending
+common-month-first-note = This is the first month with entries
+
+# review: pending
+common-month-latest-button = This month
+
+# $month: the name of the month. $year: the year in digits.
+# review: pending
+common-month-title = { $month } <num>{ $year }</num>
+
+# review: pending
+common-goto-month = Go to month
+
+# review: pending
+common-goto-month-hint = Type a month, for example 10-2026. A short form works too: 10 is October of this year.
+
+# review: pending
+common-goto-month-placeholder = MM-YYYY
+
+## The 7-day window of a list that shows many rows a day (PRD FR-19.11, plan 76 point 8).
+
+# review: pending
+common-days-nav-label = Move by 7 days
+
+# review: pending
+common-days-earlier = Earlier <num>{ $days }</num> days
+
+# review: pending
+common-days-later = Later <num>{ $days }</num> days
+
+# review: pending
+common-days-range = <num>{ $from }</num> to <num>{ $to }</num>
+
+# review: pending
+common-days-latest-note = The window ends today
+
+# review: pending
+common-days-first-note = This is the first window with entries
+
+# review: pending
+common-days-latest-button = Back to today
+
+# review: pending
+common-goto-day = Go to day
+
+# review: pending
+common-goto-day-hint = Type a day, for example 10-10-2026. The 7 days that end on it open. A short form works too: 10 is the 10th of this month.
+
+# review: pending
+common-goto-day-placeholder = DD-MM-YYYY

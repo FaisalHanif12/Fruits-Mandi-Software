@@ -4,6 +4,7 @@
 import { callCommand } from '../../shared/api';
 import type { VoucherEditable } from '../../bindings/VoucherEditable';
 import type { EditPreview } from '../../bindings/EditPreview';
+import type { Link } from '../../bindings/Link';
 import type { AdvancesInfo } from '../../bindings/AdvancesInfo';
 import type { CollectionList } from '../../bindings/CollectionList';
 import type { CollectionListInput } from '../../bindings/CollectionListInput';
@@ -15,6 +16,7 @@ import type { ReceiptInput } from '../../bindings/ReceiptInput';
 import type { ReceiptsSaved } from '../../bindings/ReceiptsSaved';
 import type { VouchersList } from '../../bindings/VouchersList';
 import type { VouchersListInput } from '../../bindings/VouchersListInput';
+import type { VouchersPreviewRequest } from '../../bindings/VouchersPreviewRequest';
 import type { BuiltVoucher } from './draft';
 import type {
   VoucherCancelled,
@@ -33,10 +35,12 @@ import type {
 export function vouchersPreview(
   entry: VoucherEntry,
   replacing: number | null,
+  link: Link | null = null,
 ): Promise<VoucherPreview> {
-  return callCommand<VoucherPreview>('vouchers_preview', {
-    input: { entry, replacing_voucher_id: replacing },
-  });
+  // `link` is what the person's loans would be linked to, as typed on the form of a NEW loan, so the preview
+  // shows what the save will post for each partner (PRD FR-16.13). Every other caller sends null.
+  const input: VouchersPreviewRequest = { entry, replacing_voucher_id: replacing, link };
+  return callCommand<VoucherPreview>('vouchers_preview', { input });
 }
 
 /** Saves one voucher: one posting event and one transaction (PRD 15.2 to 15.4, NFR-SPD-9). */
@@ -128,6 +132,7 @@ export function vouchersList(input: VouchersListInput): Promise<VouchersList> {
 
 /** A buyer's open bills, oldest first (PRD FR-7.58). Read only. */
 export function assistOpenBills(input: OpenBillsInput): Promise<OpenBills> {
+  // Without an offset and a limit the backend sends the first page, the oldest 200 (plan 76 point 8).
   return callCommand<OpenBills>('assist_open_bills', { input });
 }
 

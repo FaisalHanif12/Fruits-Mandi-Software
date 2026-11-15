@@ -324,22 +324,38 @@ fn post_checked(
     order_key: Option<i64>,
 ) -> Result<Posted, ServiceError> {
     check_own_goods_account(tx, &event.entry)?;
+    // An `order_key` is the mark of an edit: it is the key of the entry the new posting replaces.
+    let replaced = match order_key {
+        Some(key) if event.reverses.is_none() => Some((key, repo::lines_with_order_key(tx, key)?)),
+        _ => None,
+    };
+    let replaced_ref = replaced
+        .as_ref()
+        .map(|(key, lines)| (*key, lines.as_slice()));
+    if event.reverses.is_none() && event.posting_type != PostingType::MonthClose {
+        crate::linked::refuse_typed_lines(tx, &event.entry)?;
+    }
+    // Plan 76: every line on a linked khata or partner-linked loan gets its mirror pair (not a
+    // reversal, which copies the stored lines, mirror lines included).
+    let mirrored =
+        crate::linked::mirror_new_posting(tx, event, replaced_ref)?.map(|entry| PostingEvent {
+            entry,
+            ..event.clone()
+        });
+    let event = mirrored.as_ref().unwrap_or(event);
     // PRD FR-17.6: a month close only moves balances that are already posted, so it may touch an
     // expense head that was made inactive after the month (like a reversal, it skips this check).
     if event.reverses.is_none() && event.posting_type != PostingType::MonthClose {
         // A person in the dead amount: a recovery may touch him, and so may an edit of a posting he
-        // is already in (PRD FR-10.10, A67). An `order_key` is the mark of an edit: it is the key of
-        // the entry the new posting replaces.
-        let replaced = match order_key {
-            Some(key) => repo::lines_with_order_key(tx, key)?,
-            None => Vec::new(),
-        };
+        // is already in (PRD FR-10.10, A67).
         let rules = DeadRules {
             recovery: matches!(
                 event.posting_type,
                 PostingType::Receipt | PostingType::MoneyLentReturn
             ),
-            replaced: &replaced,
+            replaced: replaced
+                .as_ref()
+                .map_or(&[][..], |(_, lines)| lines.as_slice()),
         };
         check_accounts_active(tx, &event.entry, rules)?;
         check_dead_people(tx, &event.entry, rules)?;

@@ -217,6 +217,59 @@ fn read_line(
     })
 }
 
+/// A loan linked to a partner is that partner's money, so it is returned in cash only (PRD FR-16.13,
+/// Umar's A18). The return by salary deduction is refused on its own screen; a جنرل entry that
+/// credits such a person against a shop expense head (head 05) or an income account (head 04) is the
+/// same deduction written by hand, so it is refused too, at the credit line (plan 76 point 10, money
+/// agent 10b, B1). An entry that bundles such a debit with a genuine cash return is refused as a
+/// whole: it is entered as two.
+///
+/// Example: a جنرل with تنخواہ بنام 2,000 and نواز (his loans linked to الف) جمع 2,000 is refused.
+fn refuse_salary_for_partner_loans(
+    conn: &Connection,
+    read: &mut [ReadLine],
+) -> Result<(), ServiceError> {
+    // A debit on an account of head 04 or 05 changes the shared income of all the partners, so a
+    // partner-linked person credited against it makes the other partners pay his loan (money agent,
+    // plan 76 10b). Tested by the head of the account, not by its code.
+    let mut writes_shares = false;
+    for line in read.iter() {
+        if line.dr == Paisa::ZERO {
+            continue;
+        }
+        let Some(account) = line.account.as_ref() else {
+            continue;
+        };
+        let head = account_repo::facts(conn, account.id)?.map(|f| f.head_code);
+        if matches!(head.as_deref(), Some("04" | "05")) {
+            writes_shares = true;
+        }
+    }
+    if !writes_shares {
+        return Ok(());
+    }
+    for (index, line) in read.iter_mut().enumerate() {
+        if line.cr == Paisa::ZERO {
+            continue;
+        }
+        let Some(account) = line.account.as_ref() else {
+            continue;
+        };
+        let is_person = account_repo::facts(conn, account.id)?
+            .is_some_and(|f| f.control_code == mandi_domain::core::accounts::MONEY_LENT_CONTROL);
+        if is_person
+            && mandi_db::links::link_of(conn, account.id)?.is_some_and(|l| l.kind == "partner")
+        {
+            line.errors.push(FieldError::new(
+                ErrorCode::ErrSalaryNotAllowedForLinked,
+                &format!("lines[{index}].account_id"),
+            ));
+            line.line = None;
+        }
+    }
+    Ok(())
+}
+
 /// Checks a جنرل entry as typed: the date (when one is sent, or when `need_date`), every line,
 /// the number of lines and that the totals are equal. Nothing is written.
 ///
@@ -247,6 +300,7 @@ pub(super) fn plan_general(
     for (index, line) in lines.iter().take(MAX_GENERAL_LINES).enumerate() {
         read.push(read_line(conn, index, line)?);
     }
+    refuse_salary_for_partner_loans(conn, &mut read)?;
     if lines.len() > MAX_GENERAL_LINES {
         entry_errors.push(FieldError::new(ErrorCode::ErrFormatInvalid, "lines"));
     }

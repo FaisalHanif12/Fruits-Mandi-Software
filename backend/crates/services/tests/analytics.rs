@@ -1294,11 +1294,11 @@ fn the_buyers_city_and_the_adda_narrow_the_facts() {
 #[test]
 fn bad_filters_are_refused_together_with_their_fields() {
     let w = full_day();
-    // The grouping belongs to view D only.
+    // The top 10 takes no grouping (the others group their columns or their rows, plan 77).
     assert_eq!(
         refused(
             &w,
-            AnalyticsView::A,
+            AnalyticsView::H,
             AnalyticsFilters {
                 group_by: Some(AnalyticsGroupBy::Day),
                 ..filters()
@@ -1658,7 +1658,13 @@ fn the_fact_queries_use_the_date_index() {
     let day = Some("2026-10-10");
     for query in [view_a(day, day), view_b(day, day)] {
         let text = plan(query);
-        assert!(text.contains("idx_analytics_facts_date"), "{text}");
+        // The small date index, or the covering index of the sale views (migration 24) that starts
+        // with the date too.
+        assert!(
+            text.contains("idx_analytics_facts_date") || text.contains("idx_analytics_facts_views"),
+            "{text}"
+        );
+        assert!(text.contains("entry_date>"), "{text}");
     }
 }
 
@@ -1865,6 +1871,76 @@ fn copy_fact(w: &support::World, item: i64, date: &str) {
             mandi_services::db::rusqlite::params![item, date],
         )
         .unwrap();
+}
+
+#[test]
+fn grouped_views_e_and_l_never_lose_an_item_the_whole_period_folds_into_other_items() {
+    let w = full_day();
+    // 25 new items, half sold in October and half in November. The whole period has more than 24
+    // items, so it keeps 23 item columns and "other items"; each month has about 13 items, so a
+    // month names items the whole period folded (plan 77, reviewer finding).
+    for n in 0..25 {
+        let item = support::add_item(
+            &w.env,
+            &w.owner,
+            &format!("قسم {n}"),
+            &format!("Kind {n}"),
+            "fruit",
+            "unit",
+        );
+        copy_fact(
+            &w,
+            item,
+            if n % 2 == 0 {
+                "2026-10-10"
+            } else {
+                "2026-11-10"
+            },
+        );
+    }
+    let range = on("01-10-2026", "30-11-2026");
+    for v in [AnalyticsView::E, AnalyticsView::L] {
+        let plain = view(&w, v, range.clone());
+        let grouped = view(
+            &w,
+            v,
+            AnalyticsFilters {
+                group_by: Some(AnalyticsGroupBy::Month),
+                ..range.clone()
+            },
+        );
+        let width = plain.columns.len();
+        // The period, then the columns of the whole period, with one "other items" column.
+        assert_eq!(grouped.columns.len(), width + 1, "{v:?}");
+        assert_eq!(
+            grouped
+                .columns
+                .iter()
+                .filter(|c| matches!(
+                    c.heading,
+                    Some(mandi_reports::analytics::AnalyticsHeading::OtherItems)
+                ))
+                .count(),
+            1,
+            "{v:?}"
+        );
+        assert_eq!(grouped.totals[1..], plain.totals[..], "{v:?}");
+        // Every row of a month adds up: its item cells and its "other items" cell are its total.
+        assert!(!data_rows(&grouped).is_empty());
+        for row in data_rows(&grouped) {
+            let cells: i64 = row.cells[2..width].iter().map(money).sum();
+            assert_eq!(cells, money(&row.cells[width]), "{v:?}");
+        }
+        // Over the months, every column adds up to the same cell of the view for the whole period.
+        for at in 1..width {
+            let whole: i64 = data_rows(&plain).iter().map(|r| money(&r.cells[at])).sum();
+            let months: i64 = data_rows(&grouped)
+                .iter()
+                .map(|r| money(&r.cells[at + 1]))
+                .sum();
+            assert_eq!(months, whole, "{v:?} column {at}");
+        }
+    }
 }
 
 #[test]

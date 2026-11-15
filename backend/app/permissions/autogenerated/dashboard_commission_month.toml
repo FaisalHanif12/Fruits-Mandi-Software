@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-commission-month"
+description = "Enables the dashboard_commission_month command without any pre-configured scope."
+commands.allow = ["dashboard_commission_month"]
+
+[[permission]]
+identifier = "deny-dashboard-commission-month"
+description = "Denies the dashboard_commission_month command without any pre-configured scope."
+commands.deny = ["dashboard_commission_month"]

@@ -47,7 +47,7 @@
               "name_ur": "الف",
               "name_en": "Partner A"
             },
-            "account_id": 24,
+            "account_id": 25,
             "share_bps": 5000,
             "amount_paisa": 5264000
           },
@@ -58,7 +58,7 @@
               "name_ur": "ب",
               "name_en": "Partner B"
             },
-            "account_id": 27,
+            "account_id": 29,
             "share_bps": 5000,
             "amount_paisa": 5264000
           }
@@ -120,7 +120,7 @@
           "journal_entry_id": 5,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 21,
+            "id": 22,
             "code": "0021",
             "name_ur": "ارشد ملتانی",
             "name_en": "Arshad Multani"

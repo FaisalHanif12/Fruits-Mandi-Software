@@ -242,6 +242,8 @@ fn taking_back_more_than_the_balance_warns_in_the_preview_and_still_saves() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            from: None,
+            to: None,
             group_by_month: false,
             sort: None,
             partner_id: b,
@@ -333,6 +335,8 @@ fn a_capital_entry_is_edited_and_cancelled_by_reversal() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            from: None,
+            to: None,
             group_by_month: false,
             sort: None,
             partner_id: b,
@@ -360,6 +364,8 @@ fn a_capital_entry_is_edited_and_cancelled_by_reversal() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            from: None,
+            to: None,
             group_by_month: false,
             sort: None,
             partner_id: b,
@@ -385,6 +391,8 @@ fn the_capital_history_pages_and_the_totals_cover_every_row() {
         partners::capital_history(
             &w.env.ctx,
             &CapitalHistoryInput {
+                from: None,
+                to: None,
                 group_by_month: false,
                 sort: None,
                 partner_id: a,
@@ -406,6 +414,8 @@ fn the_capital_history_pages_and_the_totals_cover_every_row() {
     let unknown = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            from: None,
+            to: None,
             group_by_month: false,
             sort: None,
             partner_id: 777,

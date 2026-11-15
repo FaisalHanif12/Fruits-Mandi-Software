@@ -1,10 +1,15 @@
 {
   "account": {
-    "id": 33,
+    "id": 37,
     "code": "01030001",
     "name_ur": "اسلم",
     "name_en": "Aslam"
   },
   "staff": null,
-  "phone": "03001234567"
+  "phone": "03001234567",
+  "person_type": "other",
+  "link": {
+    "kind": "shop",
+    "partner_id": null
+  }
 }

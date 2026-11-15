@@ -2,6 +2,7 @@
 //! (PRD FR-7.67). The other kinds use the same list and numbering in later plans. A voucher is
 //! never deleted; it is cancelled by a reversal.
 
+use mandi_services::core::links::Link;
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesInput, AdvancesPreview, AdvancesReport, AdvancesReportInput,
     AdvancesSaved, PaymentInput, ReceiptInput, ReceiptsInput, ReceiptsSaved, VoucherCancelInput,
@@ -9,9 +10,25 @@ use mandi_services::core::vouchers::{
     VoucherPreviewInput, VoucherRow, VoucherSaved, VouchersList, VouchersListInput,
 };
 use mandi_services::{auth, vouchers};
+use serde::Deserialize;
+use ts_rs::TS;
 
 use super::run;
 use crate::error::UiError;
+
+/// Input of `vouchers_preview`: the entry as before and, since plan 76 point 10, the link typed on
+/// a new loan (ادھار رقم). Null uses the person's stored link, so every other caller sends null.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct VouchersPreviewRequest {
+    /// The entry as typed, and the voucher an edit replaces.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: VoucherPreviewInput,
+    /// What the person's loans would be linked to, as typed on the loan form. Ignored for an
+    /// edit and for every entry that is not a new loan.
+    #[serde(default)]
+    pub link: Option<Link>,
+}
 
 /// Gives an advance to a seller (PRD 15.4): seller بنام (an advance line), روکڑ جمع.
 /// One transaction: the voucher, its journal entry, the audit row. Errors: the validate codes
@@ -122,11 +139,11 @@ pub async fn vouchers_save_payment<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn vouchers_preview<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: VoucherPreviewInput,
+    input: VouchersPreviewRequest,
 ) -> Result<VoucherPreview, UiError> {
     run(app, "vouchers_preview", move |ctx| {
         auth::require(ctx)?;
-        vouchers::preview(ctx, &input)
+        vouchers::preview_with_link(ctx, &input.base, input.link.as_ref())
     })
     .await
 }

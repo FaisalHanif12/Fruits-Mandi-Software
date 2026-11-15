@@ -245,6 +245,29 @@ pub enum ErrorCode {
     ErrLotNotFound,
     /// A later sale of a lot that has nothing left to sell (PRD FR-12.17). Field `lot_id`.
     ErrNothingToSell,
+    /// The same carried lot is on the screen twice (plan 76 point 1). Field `carried[i].lot_id`.
+    ErrDuplicateLot,
+    /// A partner link without a partner (plan 76 points 5 and 10). Field `link.partner_id`.
+    ErrLinkPartnerRequired,
+    /// The partner a khata or loan is linked to is not an active partner (plan 76 points 5 and 10).
+    /// Field `link.partner_id`.
+    ErrPartnerInactive,
+    /// The link of a khata cannot change while its balance is not 0 (PRD FR-16.6). Field `link`.
+    ErrLinkLocked,
+    /// An entry that was made under another link of its khata or person cannot be edited: cancel it
+    /// and enter it again (plan 76 points 5 and 10, PRD FR-7.70). Field `link`.
+    ErrLinkChangedForEntry,
+    /// A typed line on the contra account 03070001 or on a partner's 0605 account: the app writes
+    /// those lines by itself (plan 76 points 5 and 10, PRD FR-17.9).
+    ErrLinkedAccountRestricted,
+    /// A partner cannot be made inactive while a khata or loan linked to him has a balance (PRD
+    /// FR-16.6, FR-16.13; compare E69). Field `is_active`.
+    ErrPartnerHasLinkedBalance,
+    /// The link of a person who still owes cannot change (PRD FR-16.4). Field `link`.
+    ErrLinkFixedWhileOwed,
+    /// A salary deduction on a loan linked to a partner is refused: return it in cash (PRD FR-16.4).
+    /// Field `mode`.
+    ErrSalaryNotAllowedForLinked,
     /// A write-off of more نگ than the lot has left (PRD FR-12.16). Field `qty`. Values:
     /// `available` (نگ left).
     ErrWriteOffExceedsBalance,
@@ -456,11 +479,14 @@ pub enum ErrorCode {
     /// chain key: the box was dismissed, closed or its password was wrong. Nothing was saved. Sign
     /// in again and allow the app (plan 75 Section 7.8, NFR-SEC-6). No field.
     ErrKeystoreDenied,
+    /// The account is not of the side asked for: a seller was sent as a buyer or the other way
+    /// round (the commission page party filter, PRD FR-9.3, plan 77). Field `party.account_id`.
+    ErrWrongPartyType,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 160] = [
+    pub const ALL: [ErrorCode; 170] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -555,6 +581,15 @@ impl ErrorCode {
         ErrorCode::ErrBikriCancelled,
         ErrorCode::ErrLotNotFound,
         ErrorCode::ErrNothingToSell,
+        ErrorCode::ErrDuplicateLot,
+        ErrorCode::ErrLinkPartnerRequired,
+        ErrorCode::ErrPartnerInactive,
+        ErrorCode::ErrLinkLocked,
+        ErrorCode::ErrLinkChangedForEntry,
+        ErrorCode::ErrLinkedAccountRestricted,
+        ErrorCode::ErrPartnerHasLinkedBalance,
+        ErrorCode::ErrLinkFixedWhileOwed,
+        ErrorCode::ErrSalaryNotAllowedForLinked,
         ErrorCode::ErrWriteOffExceedsBalance,
         ErrorCode::ErrDateBeforeReceived,
         ErrorCode::ErrQtyBelowSold,
@@ -621,6 +656,7 @@ impl ErrorCode {
         ErrorCode::ErrSignRequired,
         ErrorCode::ErrSignWrong,
         ErrorCode::ErrKeystoreDenied,
+        ErrorCode::ErrWrongPartyType,
     ];
 }
 

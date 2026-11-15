@@ -124,7 +124,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
       expect(router.state.location.pathname).toBe('/reports/R13');
     });
     // The seller of the fixture, کریم, is account 19.
-    expect(router.state.location.search).toMatchObject({ party: 19 });
+    expect(router.state.location.search).toMatchObject({ party: 20 });
   });
 
   it('works by keyboard: Enter opens the list, ↓ moves between its lines, Enter opens one, Esc closes it', async () => {

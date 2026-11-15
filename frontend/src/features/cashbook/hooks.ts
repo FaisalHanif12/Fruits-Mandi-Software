@@ -5,6 +5,7 @@
 // (PRD FR-19.11, Code Standards F34, B31).
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { VOUCHERS_KEY, vouchersPreview } from '../vouchers';
 import {
@@ -13,9 +14,12 @@ import {
   generalPreview,
   generalSave,
   khataCreate,
+  khataSetLink,
   khataStatement,
+  lentDues,
   lentList,
   lentPersonCreate,
+  lentPersonUpdate,
   partnerTakes,
   repeatLastMonth,
   saveKhataIn,
@@ -32,8 +36,10 @@ import type {
   GeneralInput,
   GeneralPreview,
   GeneralPreviewInput,
-  KhataCreateInput,
-  LentPersonCreateInput,
+  KhataCreateRequest,
+  LentDuesInput,
+  Link,
+  LentPersonCreateRequest,
   VoucherEntry,
   VoucherPreview,
   VoucherSaved,
@@ -94,13 +100,20 @@ export function useExpensePreview(entry: ExpenseEntry | null, replacing: number 
  * another type. `replacing` is the saved entry being edited: the preview is then the effect of the
  * change, with that entry taken out first (plan 44).
  */
-export function useEntryPreview(entry: VoucherEntry | null, replacing: number | null = null) {
+export function useEntryPreview(
+  entry: VoucherEntry | null,
+  replacing: number | null = null,
+  link: Link | null = null,
+) {
+  // `link` is what a NEW loan would be linked to, as typed on its form (PRD FR-16.13): the preview then shows
+  // what the save will post for each partner. The caller keeps it the same object until it changes.
+  const asked = useMemo(() => (entry === null ? null : { entry, link }), [entry, link]);
   return usePreviewQuery(
     [...CASHBOOK_KEY, 'entry-preview', replacing],
-    entry,
-    async (asked): Promise<TaggedPreview> => ({
-      type: asked.type,
-      preview: await vouchersPreview(asked, replacing),
+    asked,
+    async (wanted): Promise<TaggedPreview> => ({
+      type: wanted.entry.type,
+      preview: await vouchersPreview(wanted.entry, replacing, wanted.link),
     }),
   );
 }
@@ -116,14 +129,18 @@ export function usePartnerTakes(
   partnerId: number | null,
   groupByMonth = false,
   showFinished = false,
+  range: { from: string | null; to: string | null } = { from: null, to: null },
+  ready = true,
 ) {
   return usePagedQuery({
     screen: 'cashbook.takes',
-    queryKey: [...CASHBOOK_KEY, 'takes', partnerId, groupByMonth, showFinished],
-    enabled: partnerId !== null,
+    queryKey: [...CASHBOOK_KEY, 'takes', partnerId, groupByMonth, showFinished, range],
+    enabled: partnerId !== null && ready,
     fetchPage: (offset, limit, sort) =>
       partnerTakes({
         partner_id: partnerId ?? 0,
+        from: range.from,
+        to: range.to,
         offset,
         limit,
         sort,
@@ -145,15 +162,23 @@ export function useRepeatLastMonth(month: string, enabled: boolean) {
   });
 }
 
-/** One person's loans, page by page (PRD FR-16.5). */
-export function useLentList(personId: number | null, groupByMonth = false, showFinished = false) {
+/** One person's loans, page by page (PRD FR-16.5). `range` is the month window of the list (PRD FR-19.11). */
+export function useLentList(
+  personId: number | null,
+  groupByMonth = false,
+  showFinished = false,
+  range: { from: string | null; to: string | null } = { from: null, to: null },
+  ready = true,
+) {
   return usePagedQuery({
     screen: 'cashbook.lent',
-    queryKey: [...CASHBOOK_KEY, 'lent', personId, groupByMonth, showFinished],
-    enabled: personId !== null,
+    queryKey: [...CASHBOOK_KEY, 'lent', personId, groupByMonth, showFinished, range],
+    enabled: personId !== null && ready,
     fetchPage: (offset, limit, sort) =>
       lentList({
         person_id: personId ?? 0,
+        from: range.from,
+        to: range.to,
         offset,
         limit,
         sort,
@@ -165,17 +190,25 @@ export function useLentList(personId: number | null, groupByMonth = false, showF
   });
 }
 
-/** A khata's entries with the running balance, page by page (PRD FR-16.6). */
-export function useKhataStatement(khataId: number | null, groupByMonth = false) {
+/**
+ * A khata's entries with the running balance, page by page (PRD FR-16.6). `range` is the month window of the
+ * list (PRD FR-19.11); no range is the whole history.
+ */
+export function useKhataStatement(
+  khataId: number | null,
+  groupByMonth = false,
+  range: { from: string | null; to: string | null } = { from: null, to: null },
+  ready = true,
+) {
   return usePagedQuery({
     screen: 'cashbook.khata',
-    queryKey: [...CASHBOOK_KEY, 'khata', khataId, groupByMonth],
-    enabled: khataId !== null,
+    queryKey: [...CASHBOOK_KEY, 'khata', khataId, groupByMonth, range],
+    enabled: khataId !== null && ready,
     fetchPage: (offset, limit, sort) =>
       khataStatement({
         khata_account_id: khataId ?? 0,
-        from: null,
-        to: null,
+        from: range.from,
+        to: range.to,
         offset,
         limit,
         sort,
@@ -204,13 +237,19 @@ export function useSaveExpense() {
   });
 }
 
+/** One entry of the ادھار رقم screen and, for money lent, the link the form asks for (null keeps his link). */
+export interface LentSave {
+  entry: Extract<VoucherEntry, { type: 'money_lent' | 'money_lent_return' }>;
+  link: Link | null;
+}
+
 /** Saves an entry of the ادھار رقم screen. */
 export function useSaveLent() {
   const readAgain = useReadAgain();
   return useMutation({
-    mutationFn: (entry: Extract<VoucherEntry, { type: 'money_lent' | 'money_lent_return' }>) =>
+    mutationFn: ({ entry, link }: LentSave) =>
       entry.type === 'money_lent'
-        ? saveMoneyLent(inputOf(entry))
+        ? saveMoneyLent({ ...inputOf(entry), link })
         : saveMoneyLentReturn(inputOf(entry)),
     onSuccess: readAgain,
   });
@@ -230,17 +269,101 @@ export function useSaveKhata() {
 export function useCreateLentPerson() {
   const readAgain = useReadAgain();
   return useMutation({
-    mutationFn: (input: LentPersonCreateInput) => lentPersonCreate(input),
+    mutationFn: (input: LentPersonCreateRequest) => lentPersonCreate(input),
     onSuccess: readAgain,
   });
 }
 
-/** Makes a new الگ کھاتہ. */
+/** Changes the type and link of a person who is lent money (plan 76 point 10). */
+export function useUpdateLentPerson() {
+  const readAgain = useReadAgain();
+  return useMutation({
+    mutationFn: lentPersonUpdate,
+    onSuccess: readAgain,
+  });
+}
+
+/** Makes a new الگ کھاتہ with its link. */
 export function useCreateKhata() {
   const readAgain = useReadAgain();
   return useMutation({
-    mutationFn: (input: KhataCreateInput) => khataCreate(input),
+    mutationFn: (input: KhataCreateRequest) => khataCreate(input),
     onSuccess: readAgain,
+  });
+}
+
+/** Changes the link of a khata (plan 76 point 5); its page and the lists are read again. */
+export function useSetKhataLink() {
+  const readAgain = useReadAgain();
+  return useMutation({
+    mutationFn: khataSetLink,
+    onSuccess: readAgain,
+  });
+}
+
+/**
+ * One person's type, link and whether he owes anything, for the ادھار رقم form: the first row of his loans,
+ * which carries them with his balance. Never kept: a save changes the balance.
+ */
+export function useLentPerson(personId: number | null) {
+  return useQuery({
+    queryKey: [...CASHBOOK_KEY, 'lent-person', personId],
+    queryFn: () =>
+      lentList({
+        person_id: personId ?? 0,
+        from: null,
+        to: null,
+        offset: 0,
+        limit: 1,
+        sort: null,
+        group_by_month: false,
+        show_finished: false,
+      }),
+    enabled: personId !== null,
+    staleTime: 0,
+  });
+}
+
+/**
+ * The page behind the dashboard tile of garden owners and others, one month at a time, page by page
+ * (PRD FR-16.13, plan 76 point 10). The people and the totals come with every page and are the backend's.
+ */
+/** What the dues page asks about: the filters and the month. The rows and the people have a page each. */
+export type LentDuesFilter = Omit<
+  LentDuesInput,
+  'offset' | 'limit' | 'people_offset' | 'people_limit'
+>;
+
+/**
+ * The entries of the month, page by page, with the totals over the whole filter. The people of the same answer
+ * have their own pages (`useLentDuesPeople`), so one row of people is asked for here and the rest is left out.
+ */
+export function useLentDues(filter: LentDuesFilter, enabled = true) {
+  return usePagedQuery({
+    screen: 'cashbook.lent_dues',
+    queryKey: [...CASHBOOK_KEY, 'lent-dues', filter],
+    enabled,
+    fetchPage: (offset, limit) =>
+      lentDues({ ...filter, offset, limit, people_offset: 0, people_limit: 1 }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+  });
+}
+
+/**
+ * The people with something open or an entry in the month, page by page (PRD FR-19.11, Code Standards B31): the
+ * backend gives 100 of them a page and says how many there are in all, so none is cut off. One entry row is asked
+ * for with each page, as the entries have their own pages.
+ */
+export function useLentDuesPeople(filter: LentDuesFilter, enabled = true) {
+  return usePagedQuery({
+    screen: 'cashbook.lent_dues_people',
+    queryKey: [...CASHBOOK_KEY, 'lent-dues-people', filter],
+    enabled,
+    fetchPage: (offset, limit) =>
+      lentDues({ ...filter, offset: 0, limit: 1, people_offset: offset, people_limit: limit }),
+    rowsIn: (page) => page.people.length,
+    totalOf: (page) => page.people_total_count,
   });
 }
 

@@ -31,6 +31,8 @@ export const ANALYTICS_VIEW_IDS: readonly AnalyticsView[] = [
   'I',
   'J',
   'K',
+  'L',
+  'M',
 ];
 
 const filtersSchema = z.custom<AnalyticsFilters>(

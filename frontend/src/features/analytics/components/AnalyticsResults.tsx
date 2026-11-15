@@ -17,7 +17,7 @@ import type { AnalyticsPage } from '../../../bindings/AnalyticsPage';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, ListRegion, Pager, listHeightMode, useListPaging } from '../../../shared/grid';
 import { useRememberedFlag } from '../../../shared/hooks';
-import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
+import { isFromStep, useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, RUNNING_NUMBER } from '../../../shared/ui';
 import { cellText, totalsFor } from '../../reports';
 import {
@@ -28,39 +28,14 @@ import {
   type AnalyticsRowView,
 } from '../columns';
 import type { useAnalyticsPages } from '../hooks';
+import { WHOLE_FILTER_KEY } from '../keys';
 import { useListContext } from '../list-context';
 import type { AnalyticsView } from '../types';
 import { AnalyticsChart } from './AnalyticsChart';
 import { AnalyticsRange } from './AnalyticsRange';
 
 /** The key of the whole filter: the lines behind a total (the backend reads an empty key so). */
-/**
- * A window this high or lower starts with the chart folded: the table, its totals and its page
- * buttons are what the user came for, and the chart is one click away (plan 38). 1366 x 768 is
- * included; 1920 x 1080 shows the chart.
- */
-const CHART_FOLD_HEIGHT_PX = 800;
-
-/** True in a window where the chart starts folded (read where no local name hides `window`). */
-function isShortWindow(): boolean {
-  // The same rule as a style: the height of the window, not of the page.
-  return (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia(`(max-height: ${String(CHART_FOLD_HEIGHT_PX)}px)`).matches
-  );
-}
-
-export const WHOLE_FILTER_KEY: AnalyticsKey = {
-  item_id: null,
-  seller_id: null,
-  buyer_id: null,
-  person_key: null,
-  from: null,
-  to: null,
-  not_item_ids: [],
-  partner_id: null,
-  purchase_ids: [],
-};
+export { WHOLE_FILTER_KEY };
 
 interface AnalyticsResultsProps {
   view: AnalyticsView;
@@ -100,9 +75,12 @@ export function AnalyticsResults({
   onFocusRow,
 }: AnalyticsResultsProps) {
   const step = useLayoutStep();
-  // The chart starts folded in a short window, where it would push the table out of view; the
-  // choice is kept for the screen.
-  const [chartOpen, setChartOpen] = useRememberedFlag('analytics.chart_open', !isShortWindow());
+  // The chart is always shown from 1366 wide (PRD FR-18.3, plan 76): at the compact step (1024 x 600) it
+  // starts folded, one click away, because it would push the table out of view. The choice is kept.
+  const [chartOpen, setChartOpen] = useRememberedFlag(
+    'analytics.chart_shown',
+    isFromStep(step, 'normal'),
+  );
   const context = useListContext();
   const paging = useListPaging(query.pager);
   const data = query.data ?? kept ?? undefined;
@@ -289,7 +267,9 @@ export function AnalyticsResults({
         )}
       </div>
       {/* The charts cover the whole filter, whatever page or order the table has (plan 38 R4). */}
-      {rows.length === 0 || !chartOpen ? null : <AnalyticsChart view={view} page={last} />}
+      {rows.length === 0 || !chartOpen ? null : (
+        <AnalyticsChart view={view} page={last} onDrill={onDrill} />
+      )}
       {body}
     </div>
   );

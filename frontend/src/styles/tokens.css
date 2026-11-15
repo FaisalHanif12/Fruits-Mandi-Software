@@ -237,6 +237,10 @@
     --chat-launcher: 48px;
     --chat-edge: var(--space-2);
     --chat-gap: var(--space-2);
+
+    /* The chart above an analytics table stays shown here (plan 76, PRD FR-18.3): it is lower, so the
+       table keeps its rows at 1366 x 768. */
+    --chart-h: 160px;
   }
 }
 

@@ -10,6 +10,16 @@ export type LentListInput = {
    */
   person_id: number;
   /**
+   * First day of the range, `DD-MM-YYYY` or a shortcut. Null or empty means no lower limit
+   * (plan 76 point 8: a screen sends the first day of its month). The rows, the count, the
+   * totals and the months are over the range.
+   */
+  from: string | null;
+  /**
+   * Last day of the range. Null or empty means no upper limit.
+   */
+  to: string | null;
+  /**
    * How many rows to skip.
    */
   offset: number;

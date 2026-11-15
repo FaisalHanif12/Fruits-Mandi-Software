@@ -9,9 +9,9 @@ import { BookOpen, ReceiptText } from 'lucide-react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { useDebouncedValue, usePeriod } from '../../../shared/hooks';
+import { useDebouncedValue, useListWindow } from '../../../shared/hooks';
 import { formNavigationProps } from '../../../shared/keyboard';
-import { Card, EmptyState, FilterBar, PeriodBox, ShowClosedTick } from '../../../shared/ui';
+import { Card, EmptyState, FilterBar, ListWindowBar, ShowClosedTick } from '../../../shared/ui';
 import { useVouchersList } from '../../vouchers';
 import { GENERAL_LIST_COLUMNS } from '../list-columns';
 import type { VoucherRow } from '../types';
@@ -23,7 +23,8 @@ const SEARCH_DELAY_MS = 150;
 
 export function GeneralListSection({ today }: { today: string }) {
   const open = useOpenVoucher();
-  const period = usePeriod('cashbook.general', 'today', today);
+  // The جنرل list shows one month at a time, the latest first (PRD FR-19.11, plan 76 point 8).
+  const listWindow = useListWindow({ kind: 'month', source: { kind: 'journal' }, today });
   const [search, setSearch] = useState('');
   const [showFinished, setShowFinished] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -31,14 +32,14 @@ export function GeneralListSection({ today }: { today: string }) {
   const list = useVouchersList(
     {
       voucher_type: 'general',
-      from: period.range.from,
-      to: period.range.to,
+      from: listWindow.range.from,
+      to: listWindow.range.to,
       account_id: null,
       show_finished: showFinished,
       search: searchText === '' ? null : searchText,
-      group_by_month: period.state.kind !== 'today',
+      group_by_month: false,
     },
-    period.ready,
+    listWindow.ready,
   );
   const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the filter before it.
@@ -52,9 +53,7 @@ export function GeneralListSection({ today }: { today: string }) {
           screen="cashbook.general.list"
           search={{ value: search, onChange: setSearch }}
           extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
-        >
-          {period.ready ? <PeriodBox period={period} /> : null}
-        </FilterBar>
+        ></FilterBar>
       </div>
       <VoucherRowActions row={selected} />
       <PagedList<VoucherRow>
@@ -68,6 +67,7 @@ export function GeneralListSection({ today }: { today: string }) {
           void list.refetch();
         }}
         pager={list.pager}
+        onPageKey={listWindow.onPageKey}
         sort={{ value: list.sort, onChange: list.setSort }}
         months={
           months === undefined
@@ -104,6 +104,7 @@ export function GeneralListSection({ today }: { today: string }) {
               })
         }
       />
+      <ListWindowBar window={listWindow} />
     </Card>
   );
 }

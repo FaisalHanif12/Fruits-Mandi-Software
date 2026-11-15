@@ -269,14 +269,14 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
-    // The buyers' dues tile opens R20, the buyers' dues report (FR-9.1).
+    // The buyers' dues tile opens the buyer dues page (FR-9.1, FR-9.4).
     await user.click(
       await screen.findByRole('button', {
         name: (name) => visible(name).startsWith(message(language, 'dashboard-tile-dues')),
       }),
     );
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/reports/R20');
+      expect(router.state.location.pathname).toBe('/dues');
     });
   });
 

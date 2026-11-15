@@ -302,6 +302,10 @@ cashbook-effect-title = شراکت دار پر اس کا اثر
 # review: pending
 cashbook-effect-none = اثر دیکھنے کے لیے شراکت دار چنیں۔
 
+# The entry is on a linked khata or a loan linked to a partner or the shop: what the save will do to each partner's total.
+# review: pending
+cashbook-linked-parts-title = ہر شراکت دار کی { -kul-raqam } پر اس کا اثر
+
 # review: pending
 cashbook-effect-total-now = کل رقم اب
 
@@ -629,4 +633,168 @@ cashbook-general-list-failed = محفوظ شدہ { -general } اندراج کھ�
 cashbook-general-list-empty = ان تاریخوں میں کوئی { -general } اندراج نہیں
 
 # review: pending
-cashbook-general-list-empty-help = اوپر سطریں بھر کر محفوظ کریں تو یہاں آ جائے گا۔ پرانا اندراج دیکھنے کے لیے تاریخیں بدلیں۔
+cashbook-general-list-empty-help = اوپر سطریں بھر کر محفوظ کریں تو یہاں آ جائے گا۔ دوسرا مہینہ دیکھنے کے لیے نیچے کے بٹن استعمال کریں۔
+
+## The link of a { -alag-khata } and of a person who is lent money, and the type of that person (plan 76 points 5 and 10, PRD FR-16.6, FR-16.13)
+
+# review: pending
+cashbook-link-label = جڑا ہوا
+
+# review: pending
+cashbook-link-for = کس کی طرف سے
+
+# review: pending
+cashbook-link-kind-none = کوئی نہیں (فرم کا اپنا)
+
+# review: pending
+cashbook-link-kind-shop = دکان (حصوں کے مطابق تقسیم)
+
+# review: pending
+cashbook-link-kind-partner = ایک { -shirakat-dar }
+
+# review: pending
+cashbook-link-partner = { -shirakat-dar }
+
+# review: pending
+cashbook-link-hint-khata = نکالی گئی رقم جن شراکت داروں سے جڑی ہو ان کی { -kul-raqam } لی گئی رقم کی طرح کم کرتی ہے، اور واپسی اسے بڑھاتی ہے۔ یہ کبھی آمدن یا خرچہ نہیں بنتی۔
+
+# review: pending
+cashbook-link-hint-person = { -shirakat-dar } سے جڑی ہو تو دی گئی رقم اس شراکت دار کی { -kul-raqam } کم کرتی ہے۔ دکان سے جڑی ہو تو رقم پھر بھی دکان کو واپس کرنی ہے اور کسی شراکت دار کی کل رقم نہیں بدلتی۔
+
+# review: pending
+cashbook-link-locked = جب تک بقایا صفر نہیں ہوتا، جوڑ بدلا نہیں جا سکتا۔
+
+# review: pending
+cashbook-link-change = جوڑ بدلیں
+
+# review: pending
+cashbook-link-saved = جوڑ محفوظ ہو گیا
+
+# review: pending
+cashbook-person-type = قسم
+
+# review: pending
+cashbook-person-type-staff = عملہ
+
+# review: pending
+cashbook-person-type-garden-owner = باغ کا مالک
+
+# review: pending
+cashbook-person-type-trip-person = { -market-safar } کا شخص
+
+# review: pending
+cashbook-person-type-other = دیگر
+
+# review: pending
+cashbook-person-change = قسم یا جوڑ بدلیں
+
+# review: pending
+cashbook-person-saved = شخص کی تفصیل محفوظ ہو گئی
+
+## The page behind the dashboard tile of garden owners and others (plan 76 point 10, PRD FR-16.13)
+
+# review: pending
+cashbook-dues-title = باغوں کے مالکوں / دوسروں کے ذمے
+
+# review: pending
+cashbook-dues-help = ان لوگوں کو دی گئی { -adhar-raqam } جو عملے میں نہیں (باغ کے مالک، { -market-safar } والے اور دوسرے) اور جو واپس آئی، ایک وقت میں ایک مہینہ۔ اعداد ٹائل والے ہی ہیں۔
+
+# review: pending
+cashbook-dues-back = ڈیش بورڈ پر واپس
+
+# review: pending
+cashbook-dues-filter-type = قسم
+
+# review: pending
+cashbook-dues-filter-link = جڑا ہوا
+
+# review: pending
+cashbook-dues-type-default = عملے کے سوا سب
+
+# review: pending
+cashbook-dues-link-all = سب
+
+# review: pending
+cashbook-dues-link-shop = دکان
+
+# review: pending
+cashbook-dues-link-partner = ایک { -shirakat-dar }
+
+# review: pending
+cashbook-dues-open = ابھی باقی
+
+# review: pending
+cashbook-dues-people = جن کے ذمے رقم ہے
+
+# review: pending
+cashbook-dues-given = اس مہینے دی گئی
+
+# review: pending
+cashbook-dues-returned = اس مہینے واپس آئی
+
+# review: pending
+cashbook-dues-people-title = جن کے ذمے رقم باقی ہے
+
+# review: pending
+cashbook-dues-people-label = وہ لوگ جن کے ذمے رقم ہے
+
+# review: pending
+cashbook-dues-people-empty = کسی کے ذمے کچھ نہیں
+
+# review: pending
+cashbook-dues-people-empty-help = کسی کو رقم دی جائے اور وہ واپس نہ کرے تو وہ یہاں آ جاتا ہے۔
+
+# review: pending
+cashbook-dues-entries-title = مہینے کے اندراجات
+
+# review: pending
+cashbook-dues-entries-label = مہینے میں دی گئی اور واپس آئی رقم
+
+# review: pending
+cashbook-dues-failed = ذمے کی رقم پڑھی نہیں جا سکی
+
+# review: pending
+cashbook-dues-empty = اس مہینے میں نہ کوئی رقم دی گئی نہ واپس آئی
+
+# review: pending
+cashbook-dues-empty-help = دوسرے مہینے کے لیے نیچے کے بٹن استعمال کریں۔
+
+# review: pending
+cashbook-dues-col-person = نام
+
+# review: pending
+cashbook-dues-col-type = قسم
+
+# review: pending
+cashbook-dues-col-link = جڑا ہوا
+
+# review: pending
+cashbook-dues-col-kind = اندراج
+
+# review: pending
+cashbook-dues-col-amount = رقم
+
+# review: pending
+cashbook-dues-col-lent = دی گئی
+
+# review: pending
+cashbook-dues-col-returned = واپس
+
+# review: pending
+cashbook-dues-col-open = باقی
+
+# review: pending
+cashbook-dues-kind-given = دی گئی
+
+# review: pending
+cashbook-dues-kind-returned = واپس
+
+# The short words of a link, for a list or a card (the choice box has the long ones above).
+# review: pending
+cashbook-link-word-none = کوئی نہیں
+
+# review: pending
+cashbook-link-word-shop = دکان
+
+# review: pending
+cashbook-link-word-partner = ایک { -shirakat-dar }

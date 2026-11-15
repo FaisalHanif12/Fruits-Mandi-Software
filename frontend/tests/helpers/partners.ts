@@ -82,8 +82,12 @@ export function overviewRow(
     month_capital_in_paisa: money(0),
     month_ventures_paisa: money(0),
     total_paisa: money(0),
-    // The open gardens and trips he is in (plan 17c): none until a test gives some.
+    // The open gardens and trips he is in (plan 17c): none until a test gives some. The two counts
+    // are what the backend counts from them (plan 76 point 11).
     open_ventures: [],
+    open_gardens_count: (numbers.open_ventures ?? []).filter((card) => card.kind === 'garden')
+      .length,
+    open_trips_count: (numbers.open_ventures ?? []).filter((card) => card.kind === 'trip').length,
     ...numbers,
   };
 }
@@ -154,6 +158,12 @@ export function fakePartners(
     Promise.resolve(store.rows.map((row) => ({ ...row }))),
   );
   vi.mocked(partnersApi.partnersOverview).mockImplementation(() => Promise.resolve(store.overview));
+  // The list behind the compact line of the overview, read when it is opened (plan 76 point 11).
+  vi.mocked(partnersApi.partnersOpenVentures).mockImplementation((partnerId) =>
+    Promise.resolve(
+      store.overview.find((row) => row.partner_id === partnerId)?.open_ventures ?? [],
+    ),
+  );
   vi.mocked(partnersApi.partnersGet).mockImplementation((id) => {
     const row = store.rows.find((one) => one.id === id);
     if (row === undefined) return Promise.reject(fail({ code: 'ERR_NOT_FOUND', field: 'id' }));

@@ -314,8 +314,9 @@ fn base_tokens(result: &ToolResult) -> Option<Vec<String>> {
         }
         AnswerSource::PartyCard { party, .. } => Some(vec![format!("a{}", party.id)]),
         AnswerSource::Tiles { .. } => Some(vec![TILE.to_owned()]),
-        // A screen holds no figure of its own.
-        AnswerSource::Screen { .. } => None,
+        // A screen holds no figure of its own, and the commission page button is made from a
+        // finished answer, never from a result.
+        AnswerSource::Screen { .. } | AnswerSource::Commission { .. } => None,
     }
 }
 

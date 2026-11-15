@@ -12,6 +12,8 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { parseAnalyticsSearch } from '../features/analytics/search';
+import { parseCommissionSearch } from '../features/dashboard/commission-search';
+import { parseKharchSearch } from '../features/dashboard/kharch-search';
 import { parseReportSearch } from '../features/reports/search';
 import { parseMonthSearch } from '../features/month';
 import { parseLedgerSearch } from '../features/party_ledgers';
@@ -23,6 +25,7 @@ import {
 import { parseFruitSearch } from '../features/fruit/screen-search';
 import { parsePastReturn, parsePastSearch, type PastReturn } from '../features/bikri/past-window';
 import { parseGardenSearch } from '../features/gardens/screen-type';
+import { isIsoDay } from '../shared/format';
 import { parseTripSearch } from '../features/trips/screen-type';
 import { parseGeneralSearch } from '../features/cashbook/screen-type';
 import { parseCapitalSearch, parseStatementSearch } from '../features/partners/screen-type';
@@ -158,14 +161,17 @@ const bikriBookRoute = createRoute({
   path: '/bikri/book',
   validateSearch: (
     search: Record<string, unknown>,
-  ): { id?: number; edit?: number; find?: true } & Partial<PastReturn> => {
+  ): { id?: number; edit?: number; find?: true; carry?: number } & Partial<PastReturn> => {
     const id = positiveId(search['id']);
     const edit = positiveId(search['edit']);
     const find = search['find'] === true || search['find'] === 'true';
+    // `carry=40` is a new بکری with lot 40 of the goods left already on it (plan 76 point 1).
+    const carry = positiveId(search['carry']);
     return {
       ...(id === undefined ? {} : { id }),
       ...(id !== undefined && edit !== undefined ? { edit } : {}),
       ...(id === undefined && find ? { find: true as const } : {}),
+      ...(id === undefined && carry !== undefined ? { carry } : {}),
       ...(id === undefined ? {} : parsePastReturn(search)),
     };
   },
@@ -194,6 +200,51 @@ const stockRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/stock',
   component: lazyRouteComponent(() => import('../features/bikri/pages/StockPage'), 'StockPage'),
+});
+
+// The two pages the dashboard tiles open (plan 76): `/dues` is the simple buyer dues page (PRD FR-9.4) and
+// `/commission` the commission page: a date, a month, a year or a range, and one buyer or seller (PRD FR-9.3, `?month=2026-10`,
+// `?period=year&year=2026&side=seller&party=...`).
+const buyerDuesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/dues',
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/BuyerDuesPage'),
+    'BuyerDuesPage',
+  ),
+});
+
+// The page behind the dashboard tile of garden owners and others (PRD FR-16.13, plan 76 point 10): the money
+// given to people who are not staff, and what came back, one month at a time.
+const othersDuesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/others-dues',
+  component: lazyRouteComponent(
+    () => import('../features/cashbook/pages/OthersDuesPage'),
+    'OthersDuesPage',
+  ),
+});
+
+// The kharch page behind the dashboard tile آج کا خرچہ (PRD FR-9.5, plan 77): the shop's kharch and each partner's own, for
+// a period (`?period=year&year=2026&partner=2`).
+const kharchRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/kharch',
+  validateSearch: (search: Record<string, unknown>) => parseKharchSearch(search),
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/KharchPage'),
+    'KharchPage',
+  ),
+});
+
+const commissionRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/commission',
+  validateSearch: (search: Record<string, unknown>) => parseCommissionSearch(search),
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/CommissionPage'),
+    'CommissionPage',
+  ),
 });
 
 // پارٹی کھاتے (PRD FR-12.43): the party ledgers in three levels. `?side=buyer|seller` is the list,
@@ -257,21 +308,20 @@ const tripRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/trips/pages/TripPage'), 'TripPage'),
 });
 
+// The old address of a later sale (`/bikri/later?lot=40`) goes on to the sale book with that lot carried
+// onto a new بکری, where new lots can be added beside it (plan 76 point 1, PRD FR-12.48). Without a lot
+// it goes to the goods left, where a lot is chosen.
 const laterSaleRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/later',
-  validateSearch: (search: Record<string, unknown>): { bikri?: number; lot?: number } => {
-    const bikri = positiveId(search['bikri']);
+  validateSearch: (search: Record<string, unknown>): { lot?: number } => {
     const lot = positiveId(search['lot']);
-    return {
-      ...(bikri === undefined ? {} : { bikri }),
-      ...(lot === undefined ? {} : { lot }),
-    };
+    return lot === undefined ? {} : { lot };
   },
-  component: lazyRouteComponent(
-    () => import('../features/bikri/pages/LaterSalePage'),
-    'LaterSalePage',
-  ),
+  beforeLoad: ({ search }) => {
+    if (search.lot === undefined) return redirect({ to: '/bikri/stock' });
+    return redirect({ to: '/bikri/book', search: { carry: search.lot } });
+  },
 });
 
 // وصولی, ادائیگی and پیشگی are one voucher screen with a type list at the top (PRD FR-7.67,
@@ -520,6 +570,21 @@ const deadAmountRoute = createRoute({
   ),
 });
 
+// R5, the اگراہی sheet (plan 76 point 2, PRD R5): the day's compact list of buyers. Its own address, found
+// before `/reports/$id`; the catalogue and the links that name `R5` land on it. The day is in the address.
+const collectionSheetRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/reports/collection-sheet',
+  validateSearch: (search: Record<string, unknown>) => {
+    const { date } = search;
+    return isIsoDay(date) ? { date } : {};
+  },
+  component: lazyRouteComponent(
+    () => import('../features/reports/pages/CollectionSheetPage'),
+    'CollectionSheetPage',
+  ),
+});
+
 const reportRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/reports/$id',
@@ -529,6 +594,7 @@ const reportRoute = createRoute({
   beforeLoad: ({ params }) => {
     // Like the voucher addresses above: the redirect is returned, which the router follows.
     if (params.id === 'R38') return redirect({ to: '/reports/dead-amount', replace: true });
+    if (params.id === 'R5') return redirect({ to: '/reports/collection-sheet', replace: true });
     return undefined;
   },
   component: lazyRouteComponent(() => import('../features/reports/pages/ReportPage'), 'ReportPage'),
@@ -586,6 +652,10 @@ const appRoutes = [
   todayRoute,
   partyLedgersRoute,
   stockRoute,
+  buyerDuesRoute,
+  commissionRoute,
+  kharchRoute,
+  othersDuesRoute,
   laterSaleRoute,
   rokarRoute,
   expenseRoute,
@@ -609,6 +679,7 @@ const appRoutes = [
   backupRoute,
   reportsRoute,
   deadAmountRoute,
+  collectionSheetRoute,
   reportRoute,
 ];
 
@@ -809,6 +880,20 @@ const dashboardDevRoutes = import.meta.env.DEV
         getParentRoute: () => rootRoute,
         path: '/dev/dashboard',
         component: lazyRouteComponent(() => import('./dev/DashboardDevPage'), 'DashboardDevPage'),
+      }),
+      // Plan 77: the kharch page (the shop's kharch and each partner's own) with the backend's own answers.
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/kharch',
+        validateSearch: (search: Record<string, unknown>) => parseKharchSearch(search),
+        component: lazyRouteComponent(() => import('./dev/KharchDevPage'), 'KharchDevPage'),
+      }),
+      // Plan 77: the commission page with a period and a party, with the numbers of the plan.
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/commission',
+        validateSearch: (search: Record<string, unknown>) => parseCommissionSearch(search),
+        component: lazyRouteComponent(() => import('./dev/CommissionDevPage'), 'CommissionDevPage'),
       }),
     ]
   : [];

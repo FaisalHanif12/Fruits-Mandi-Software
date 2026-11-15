@@ -13,14 +13,26 @@
 //!
 //! Example: page 1 of the cash book reads the 514,000 cash lines once (0.4 s); page 2 reads the
 //! highest line id (instant) and takes the answer from here.
+//!
+//! The same memory keeps the totals of every account of some controls up to a day
+//! ([`account_rows`]): the balance of every buyer at the start of a day, which every page of the
+//! collection sheet needs and which does not change between its pages (plan 76, NFR-SPD-24).
 
 use std::collections::HashMap;
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use rusqlite::Connection;
 
 /// The most answers kept. The oldest are dropped first.
 const CAPACITY: usize = 64;
+
+/// The most per-account answers kept (each holds a row for every account asked, a few hundred
+/// kilobytes at 20,000 accounts).
+const ROWS_CAPACITY: usize = 8;
+
+/// For each account: its id, Σ debits and Σ credits, paisa.
+pub type AccountRows = Arc<Vec<(i64, i64, i64)>>;
 
 /// Count and two sums of a range of journal lines: the shape every ledger total has.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -40,6 +52,10 @@ struct Store {
     answers: HashMap<Key, (i64, Sums)>,
     /// The order the keys were added, oldest first.
     order: Vec<Key>,
+    /// The same for the answers that hold a row for each account.
+    rows: HashMap<Key, (i64, AccountRows)>,
+    /// The order the keys of `rows` were added, oldest first.
+    rows_order: Vec<Key>,
 }
 
 fn store() -> MutexGuard<'static, Store> {
@@ -49,17 +65,33 @@ fn store() -> MutexGuard<'static, Store> {
             Mutex::new(Store {
                 answers: HashMap::new(),
                 order: Vec::new(),
+                rows: HashMap::new(),
+                rows_order: Vec::new(),
             })
         })
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
 }
 
+/// Changes every time the memory is cleared: every time a data file is opened or its content is
+/// replaced (a restore). A result kept elsewhere (`mandi_reports::result_cache`) uses it as part of
+/// its key, so a restored file can never be given an answer made for the file before it.
+static GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// The generation of the memory (see [`GENERATION`]).
+pub fn generation() -> u64 {
+    GENERATION.load(Ordering::Acquire)
+}
+
 /// Forgets every answer. Called when a data file is opened.
 pub fn clear() {
+    // The generation moves first, so a result made for the old file is never matched afterwards.
+    GENERATION.fetch_add(1, Ordering::AcqRel);
     let mut store = store();
     store.answers.clear();
     store.order.clear();
+    store.rows.clear();
+    store.rows_order.clear();
 }
 
 /// True for a connection opened read only (`PRAGMA query_only`), the way the read connection of
@@ -111,5 +143,45 @@ pub fn sums(
         store.order.push(key.clone());
     }
     store.answers.insert(key, (now, answer));
+    Ok(answer)
+}
+
+/// As [`sums`], for an answer that has a row for each account (see [`AccountRows`]). The same
+/// rule keeps it correct: it is used only while no journal line has been written since, and only
+/// on the read connection. The rows are shared, not copied.
+///
+/// # Errors
+/// Any SQLite error from reading the version or from `compute`.
+pub fn account_rows(
+    conn: &Connection,
+    what: &str,
+    compute: impl FnOnce() -> rusqlite::Result<Vec<(i64, i64, i64)>>,
+) -> rusqlite::Result<AccountRows> {
+    let path = conn.path().unwrap_or("");
+    if path.is_empty() || !is_read_connection(conn)? {
+        return compute().map(Arc::new);
+    }
+    let key: Key = (path.to_owned(), what.to_owned());
+    let now = version(conn)?;
+    if let Some((then, answer)) = store().rows.get(&key)
+        && *then == now
+    {
+        return Ok(Arc::clone(answer));
+    }
+    let answer: AccountRows = Arc::new(compute()?);
+    // A save that commits while the rows are worked out may be inside them. Then the answer is
+    // given but not kept, so it can never be taken for the answer of an older moment.
+    if version(conn)? != now {
+        return Ok(answer);
+    }
+    let mut store = store();
+    if !store.rows.contains_key(&key) {
+        if store.rows_order.len() >= ROWS_CAPACITY && !store.rows_order.is_empty() {
+            let oldest = store.rows_order.remove(0);
+            store.rows.remove(&oldest);
+        }
+        store.rows_order.push(key.clone());
+    }
+    store.rows.insert(key, (now, Arc::clone(&answer)));
     Ok(answer)
 }

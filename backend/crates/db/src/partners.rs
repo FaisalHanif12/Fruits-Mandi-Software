@@ -33,6 +33,9 @@ pub struct PartnerRecord {
     pub venture_account_id: i64,
     /// Its code (empty if he has none).
     pub venture_account_code: String,
+    /// His account for the money of a linked khata or loan (control 0605, plan 76). 0 only for a
+    /// partner made before migration 23, which the migration never leaves.
+    pub linked_account_id: i64,
     /// Active.
     pub is_active: bool,
     /// Version.
@@ -52,11 +55,13 @@ pub struct NewPartner<'a> {
     pub drawings_account_id: i64,
     /// His gardens, trips and fruit account (already made, control 0604).
     pub venture_account_id: i64,
+    /// His account for linked khata and loan money (already made, control 0605).
+    pub linked_account_id: i64,
 }
 
 const PARTNER_SELECT: &str = "SELECT p.id, p.name_ur, p.name_en, p.capital_account_id, ca.code,
         p.drawings_account_id, da.code, COALESCE(p.venture_account_id, 0), COALESCE(va.code, ''),
-        p.is_active, p.version
+        p.is_active, p.version, COALESCE(p.linked_account_id, 0)
      FROM partners p
      JOIN accounts ca ON ca.id = p.capital_account_id
      JOIN accounts da ON da.id = p.drawings_account_id
@@ -75,6 +80,7 @@ fn partner_from(r: &Row<'_>) -> rusqlite::Result<PartnerRecord> {
         venture_account_code: r.get(8)?,
         is_active: r.get(9)?,
         version: r.get(10)?,
+        linked_account_id: r.get(11)?,
     })
 }
 
@@ -140,8 +146,8 @@ pub fn insert(
 ) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO partners (created_at, created_by, updated_at, updated_by, name_ur, name_en,
-             capital_account_id, drawings_account_id, venture_account_id, is_active)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, 1)",
+             capital_account_id, drawings_account_id, venture_account_id, linked_account_id, is_active)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1)",
         params![
             now,
             user_id,
@@ -149,7 +155,8 @@ pub fn insert(
             partner.name_en,
             partner.capital_account_id,
             partner.drawings_account_id,
-            partner.venture_account_id
+            partner.venture_account_id,
+            partner.linked_account_id
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -550,6 +557,10 @@ pub struct TotalParts {
     pub venture_dr: i64,
     /// Σ credits on his gardens, trips and fruit account.
     pub venture_cr: i64,
+    /// Σ debits on his account for linked khata and loan money (control 0605, plan 76).
+    pub linked_dr: i64,
+    /// Σ credits on it.
+    pub linked_cr: i64,
     /// Σ of his share rows, income positive and expense negative.
     pub shares: i64,
 }
@@ -569,6 +580,69 @@ fn account_sums(
     )
 }
 
+/// The sums of the lines on one account dated from `from` to `to`, both included (month close
+/// left out).
+fn account_sums_between(
+    conn: &Connection,
+    account_id: i64,
+    from: &str,
+    to: &str,
+) -> rusqlite::Result<(i64, i64)> {
+    conn.query_row(
+        "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id = ?1 AND e.status = 'posted' AND e.source_type <> 'month_close'
+           AND e.entry_date >= ?2 AND e.entry_date <= ?3",
+        params![account_id, from, to],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )
+}
+
+/// What moved a partner's کل رقم between two days, both included: the same sums as
+/// [`total_parts`] over `from..=to` only, so a month page can check its lines against a second
+/// way without adding up ten years of share rows again (PRD FR-17.9, NFR-SPD-24).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn movement_parts(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    from: &str,
+    to: &str,
+) -> rusqlite::Result<TotalParts> {
+    let (capital_dr, capital_cr) =
+        account_sums_between(conn, partner.capital_account_id, from, to)?;
+    let (drawings_dr, drawings_cr) =
+        account_sums_between(conn, partner.drawings_account_id, from, to)?;
+    let (venture_dr, venture_cr) = if partner.venture_account_id == 0 {
+        (0, 0)
+    } else {
+        account_sums_between(conn, partner.venture_account_id, from, to)?
+    };
+    let (linked_dr, linked_cr) = if partner.linked_account_id == 0 {
+        (0, 0)
+    } else {
+        account_sums_between(conn, partner.linked_account_id, from, to)?
+    };
+    let shares: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(amount_paisa), 0) FROM partner_share_rows
+         WHERE partner_id = ?1 AND entry_date >= ?2 AND entry_date <= ?3",
+        params![partner.id, from, to],
+        |r| r.get(0),
+    )?;
+    Ok(TotalParts {
+        capital_dr,
+        capital_cr,
+        drawings_dr,
+        drawings_cr,
+        venture_dr,
+        venture_cr,
+        linked_dr,
+        linked_cr,
+        shares,
+    })
+}
+
 /// The sums of one partner, up to `as_of` (`YYYY-MM-DD`, included) or all time.
 ///
 /// # Errors
@@ -585,12 +659,31 @@ pub fn total_parts(
     } else {
         account_sums(conn, partner.venture_account_id, as_of)?
     };
-    let shares: i64 = conn.query_row(
-        "SELECT COALESCE(SUM(amount_paisa), 0) FROM partner_share_rows
-         WHERE partner_id = ?1 AND (?2 IS NULL OR entry_date <= ?2)",
-        params![partner.id, as_of],
-        |r| r.get(0),
-    )?;
+    let (linked_dr, linked_cr) = if partner.linked_account_id == 0 {
+        (0, 0)
+    } else {
+        account_sums(conn, partner.linked_account_id, as_of)?
+    };
+    // The covering index of migration 24 (kind, day, partner, amount) holds everything this sum
+    // needs, so ten years of share rows are summed from the index alone, with no lookup of each
+    // row (about twice as fast, NFR-SPD-24). No condition on `kind` is added: the sum is over
+    // every row of the partner, whatever kinds exist, and the hint only chooses the way to read.
+    let shares: i64 = match as_of {
+        Some(day) => conn.query_row(
+            "SELECT COALESCE(SUM(amount_paisa), 0)
+             FROM partner_share_rows INDEXED BY idx_partner_share_rows_kind_date
+             WHERE entry_date <= ?2 AND partner_id = ?1",
+            params![partner.id, day],
+            |r| r.get(0),
+        )?,
+        None => conn.query_row(
+            "SELECT COALESCE(SUM(amount_paisa), 0)
+             FROM partner_share_rows INDEXED BY idx_partner_share_rows_kind_date
+             WHERE partner_id = ?1",
+            params![partner.id],
+            |r| r.get(0),
+        )?,
+    };
     Ok(TotalParts {
         capital_dr,
         capital_cr,
@@ -598,6 +691,8 @@ pub fn total_parts(
         drawings_cr,
         venture_dr,
         venture_cr,
+        linked_dr,
+        linked_cr,
         shares,
     })
 }

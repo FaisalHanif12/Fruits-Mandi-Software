@@ -1,21 +1,22 @@
-// The fruit lines of a partner's statement (plan 17d, PRD FR-17.10, E2E-42), in the Urdu and the
-// English app, with the REAL answer of the backend for partner الف (tests/fixtures/
-// partners_statement_fruit_alif.json): his income share, what he took home ("2 Box Banana @ 580 =
-// 1,160") and his equal part of the fruit served to the shop's guests ("3 Box Apple @ 1,000 =
-// 3,000", his part 1,000). The amount and the running total are the backend's (+1,424, then −1,160
-// and −1,000, ending at −736); the words come from Fluent; nothing is added up on the screen
+// The fruit lines of a partner's statement (plan 17d, PRD FR-17.10, FR-17.12, E2E-42), in the Urdu and the
+// English app, with the REAL lines of the backend for partner الف (tests/fixtures/
+// partners_statement_fruit_alif.json), shown in the day that opens in place on the month statement: his
+// income share, what he took home ("2 Box Banana @ 580 = 1,160") and his equal part of the fruit served to
+// the shop's guests ("3 Box Apple @ 1,000 = 3,000", his part 1,000). The amounts are the backend's (+1,424,
+// then −1,160 and −1,000, ending at −736); the words come from Fluent; nothing is added up on the screen
 // (CLAUDE.md rule 1).
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as partnersApi from '../../src/features/partners/api';
+import * as appApi from '../../src/app/api';
 import { LANGUAGES } from '../../src/i18n';
-import { gridOf, textOf } from '../helpers/bikri-screen';
 import { named } from '../helpers/cashbook-screen';
-import { leaveAppWindow, renderApp } from '../helpers/app';
+import { DAY, leaveAppWindow, renderApp } from '../helpers/app';
 import * as real from '../helpers/fruit-real';
+import { fakePartnerMonth, openDays } from '../helpers/partner-month';
 import { preparePartnerMoney } from '../helpers/partner-money';
-import { message } from '../helpers/render';
+import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -37,45 +38,48 @@ afterEach(() => {
   leaveAppWindow();
 });
 
+const DATE = '2026-10-10';
+
 describe.each(LANGUAGES)('the fruit lines of a partner statement (%s)', (language) => {
+  const statement = real.PARTNERS_STATEMENT_FRUIT_ALIF;
+
   beforeEach(() => {
     preparePartnerMoney(language);
-    vi.mocked(partnersApi.partnersStatement).mockResolvedValue(real.PARTNERS_STATEMENT_FRUIT_ALIF);
+    vi.mocked(appApi.dayStatus).mockResolvedValue({ ...DAY, today: '2026-10-31' });
+    fakePartnerMonth(statement.partner, statement.lines, '2026-10-31');
   });
 
-  const grid = () => gridOf(language, 'partners-statement-label');
-
   async function open() {
-    await renderApp('/partners/statement?partner=1');
+    await renderApp('/partners/statement?partner=1&month=2026-10');
     await screen.findByRole('heading', {
       level: 1,
       name: named(message(language, 'partners-statement-title')),
     });
-    await waitFor(() => {
-      expect(grid().querySelectorAll('.ag-row[row-index]').length).toBe(3);
-    });
+    const user = userEvent.setup();
+    const days = await openDays(user, [DATE]);
+    return days.get(DATE) ?? [];
   }
 
-  it('the heading is پھل and the amount and the running total are the backend’s', async () => {
+  it('the month row shows the fruit column and the کل رقم the backend gave: +1,424, −2,160, ending at −736', async () => {
     await open();
-    expect(textOf(grid(), 1, 'heading')).toBe(
-      message(language, 'partners-statement-heading-fruit'),
+    const row = screen.getByRole('row', { name: (name) => name.includes('10-10-2026') });
+    const text = visible(row.textContent);
+    for (const figure of ['1,424', '-2,160', '-736']) expect(text).toContain(figure);
+  });
+
+  it('the group پھل is said once, by the sentence, and the amounts are the backend’s', async () => {
+    const lines = await open();
+    expect(lines.map((line) => line.amount)).toEqual(['1,424', '-1,160', '-1,000']);
+    // "Fruit Taken for home: ..." already says the group, so there is no chip in front of it.
+    expect(lines[1]?.heading).toBe('');
+    expect(lines[1]?.detail).toContain(
+      visible(message(language, 'partners-statement-heading-fruit')),
     );
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'amount'))).toEqual([
-      '1,424',
-      '-1,160',
-      '-1,000',
-    ]);
-    expect([0, 1, 2].map((row) => textOf(grid(), row, 'running'))).toEqual([
-      '1,424',
-      '264',
-      '-736',
-    ]);
   });
 
   it('fruit taken home reads: the item, the quantity, the packing, the rate and the value', async () => {
-    await open();
-    expect(textOf(grid(), 1, 'detail')).toBe(
+    const lines = await open();
+    expect(lines[1]?.detail).toBe(
       message(language, 'partners-statement-detail-fruit-taken', {
         for: 'home',
         subject: language === 'ur' ? 'کیلا' : 'Banana',
@@ -88,19 +92,19 @@ describe.each(LANGUAGES)('the fruit lines of a partner statement (%s)', (languag
   });
 
   it('an earlier posting of a changed entry has its number only and reads as that, not as a sentence with holes', async () => {
-    const statement = real.PARTNERS_STATEMENT_FRUIT_ALIF;
     const fruit = statement.lines[1];
     if (fruit === undefined) throw new Error('no fruit line');
-    vi.mocked(partnersApi.partnersStatement).mockResolvedValue({
-      ...statement,
-      lines: [
+    fakePartnerMonth(
+      statement.partner,
+      [
         statement.lines[0] ?? fruit,
         { ...fruit, subject: null, packing: null, values: {} },
         statement.lines[2] ?? fruit,
       ],
-    });
-    await open();
-    const words = textOf(grid(), 1, 'detail');
+      '2026-10-31',
+    );
+    const lines = await open();
+    const words = lines[1]?.detail ?? '';
     expect(words).toBe(
       message(language, 'partners-statement-detail-fruit-earlier', {
         fruit: message(language, 'fruit-number', { number: 1 }),
@@ -108,12 +112,12 @@ describe.each(LANGUAGES)('the fruit lines of a partner statement (%s)', (languag
     );
     expect(words).not.toMatch(/[{}$]/);
     // The amount of the line is still the backend's.
-    expect(textOf(grid(), 1, 'amount')).toBe('-1,160');
+    expect(lines[1]?.amount).toBe('-1,160');
   });
 
   it('fruit for the guests says his equal part and shows the whole value', async () => {
-    await open();
-    expect(textOf(grid(), 2, 'detail')).toBe(
+    const lines = await open();
+    expect(lines[2]?.detail).toBe(
       message(language, 'partners-statement-detail-fruit-taken', {
         for: 'guests',
         subject: language === 'ur' ? 'سیب' : 'Apple',

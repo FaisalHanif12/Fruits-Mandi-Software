@@ -19,6 +19,8 @@ interface WindowNavProps {
   earlierDetail?: ReactNode;
   earlierShortcut?: Shortcut;
   onEarlier: () => void;
+  /** Set when the window is the first one with data: the earlier button is off and these words say why. */
+  earlierOffNote?: ReactNode;
   /** The words of the later button, and under them the days it goes to. */
   later: ReactNode;
   laterDetail?: ReactNode;
@@ -36,6 +38,7 @@ export function WindowNav({
   earlierDetail,
   earlierShortcut,
   onEarlier,
+  earlierOffNote,
   later,
   laterDetail,
   laterShortcut,
@@ -44,7 +47,9 @@ export function WindowNav({
   middle,
 }: WindowNavProps) {
   const off = laterOffNote !== undefined;
+  const earlierOff = earlierOffNote !== undefined;
   const reasonId = useId();
+  const earlierReasonId = useId();
   return (
     <div
       role="group"
@@ -54,19 +59,32 @@ export function WindowNav({
         const step = readingStep(event.key, elementDirection(event.currentTarget));
         if (step === null) return;
         event.preventDefault();
-        if (step === 'toStart') onEarlier();
-        else if (!off) onLater();
+        if (step === 'toStart') {
+          if (!earlierOff) onEarlier();
+        } else if (!off) onLater();
       }}
       className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border pt-3"
     >
-      <Button
-        {...(earlierShortcut === undefined ? {} : { shortcut: earlierShortcut })}
-        {...(earlierDetail === undefined ? {} : { detail: earlierDetail })}
-        onClick={onEarlier}
-      >
-        <ChevronLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-        {earlier}
-      </Button>
+      <div className="flex flex-col items-start gap-1">
+        <Button
+          {...(earlierShortcut === undefined ? {} : { shortcut: earlierShortcut })}
+          disabled={earlierOff}
+          {...(earlierOff
+            ? { describedBy: earlierReasonId }
+            : earlierDetail === undefined
+              ? {}
+              : { detail: earlierDetail })}
+          onClick={onEarlier}
+        >
+          <ChevronLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
+          {earlier}
+        </Button>
+        {earlierOff ? (
+          <p id={earlierReasonId} className="type-chip text-ink-muted">
+            {earlierOffNote}
+          </p>
+        ) : null}
+      </div>
       {/* At the compact step the two buttons fill the row; the days of the window go on a line of their own under them. */}
       {middle === undefined ? null : (
         <div className="order-last flex basis-full flex-col items-center justify-center gap-1 normal:order-none normal:basis-auto">

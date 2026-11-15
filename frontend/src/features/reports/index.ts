@@ -41,6 +41,11 @@ export { ReportPartnerSelect } from './components/ReportPartnerSelect';
 // Plan 68: the print of ادھاری تفصیل (R5), opened from the sale book's second print button.
 export { BuyerBillsPreview } from './components/BuyerBillsPreview';
 export { PrintPreviewFrame } from './components/PrintPreviewFrame';
+// Plan 76: the print preview of the new table prints (R5 sheet, buyer dues, commission, partner month).
+export { TablePrintPreview } from './components/TablePrintPreview';
+export { useTableExcel } from './table-excel';
+// Plan 76 point 3: the buyer parchi and the overall sale print (sale book, R5 sheet).
+export { DaySlipsPreview, type DaySlipsScope } from './components/DaySlipsPreview';
 export { usePrintJob } from './components/usePrintJob';
 export { LANGUAGE_VALUES, isReportAddress, paperOf, readJsonObject, sortOf } from './print/params';
 export { ReportPrintPage } from './print/ReportPrintPage';

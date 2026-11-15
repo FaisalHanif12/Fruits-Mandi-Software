@@ -108,9 +108,6 @@ dashboard-tile-lent-overdue = <money></money> کی واپسی کی تاریخ گ
 dashboard-tile-expenses = آج کا { -dukan-kharcha }
 
 # review: pending
-dashboard-tile-backup = آخری بیک اپ
-
-# review: pending
 dashboard-tile-health = حساب کی جانچ
 
 # review: pending
@@ -294,3 +291,277 @@ dashboard-tile-dead-note = { $count ->
 
 # review: pending
 dashboard-tile-dead-none = کوئی نہیں
+
+## The buyer dues page (plan 76 point 9, PRD FR-9.4): the tile "Buyers' dues" opens it.
+
+# review: pending
+dues-title = گاہکوں کے ذمے
+
+# review: pending
+dues-help = ہر { -gahak } جس کے ذمے دکان کی رقم ہے، اس کے ذمے ابھی کتنا ہے اور اس کا حساب آخری بار کس دن بدلا۔ میزان ٹائل والا ہی ہے۔ ہر ذمے کی عمر رپورٹ R20 میں ہے۔
+
+# review: pending
+dues-back = ڈیش بورڈ پر واپس
+
+# review: pending
+dues-search = کوڈ یا نام سے تلاش کریں
+
+# review: pending
+dues-label = گاہک جن کے ذمے رقم ہے
+
+# review: pending
+dues-failed = گاہکوں کے ذمے پڑھے نہیں جا سکے
+
+# review: pending
+dues-empty = کسی گاہک کے ذمے کچھ نہیں
+
+# review: pending
+dues-empty-help = جیسے ہی کسی گاہک کے ذمے کچھ ہوا، وہ یہاں نظر آئے گا۔
+
+# review: pending
+dues-no-match = کوئی گاہک نہیں ملا
+
+# review: pending
+dues-no-match-help = الفاظ بدل کر دیکھیں، یا تلاش صاف کریں۔
+
+# review: pending
+dues-clear = تلاش صاف کریں
+
+# review: pending
+dues-col-last-change = آخری تبدیلی
+
+## The commission page (plan 76 point 7, PRD FR-9.3): the tile "Today's commission" opens it.
+
+# review: pending
+commission-title = { -commission }
+
+# review: pending
+commission-help = مدت چنیں: ایک تاریخ، ایک مہینہ، ایک سال یا تاریخوں کی حد۔ { -gahak } یا { -beopari } چنیں تو صرف اسی پارٹی کا { -commission } اور بکری نظر آتی ہے۔ سب پارٹیوں کے لیے ہر قطار میں بیوپاری اور گاہک کا { -commission }، { -laga }، میزان، مشترکہ آمدن اور اس میں ہر شراکت دار کا حصہ ہوتا ہے۔ دن کھولیں تو وہ بکریاں نظر آئیں گی جن سے وہ بنا۔ شراکت داروں کے حصے مشترکہ آمدن کے برابر ہوتے ہیں، کل { -commission } کے نہیں۔
+
+# review: pending
+commission-back = ڈیش بورڈ پر واپس
+
+# review: pending
+commission-label = دن کے حساب سے { -commission }
+
+# review: pending
+commission-failed = { -commission } پڑھا نہیں جا سکا
+
+# review: pending
+commission-col-date = تاریخ
+
+# review: pending
+commission-col-seller = بیوپاری { -commission }
+
+# review: pending
+commission-col-buyer = گاہک { -commission }
+
+# review: pending
+commission-col-laga = { -laga }
+
+# review: pending
+commission-col-total = کل { -commission }
+
+# review: pending
+commission-col-shared = مشترکہ آمدن
+
+# review: pending
+commission-empty = اس مہینے میں کوئی { -commission } نہیں
+
+# review: pending
+commission-empty-help = دوسرے مہینے کے لیے نیچے کے بٹن استعمال کریں۔
+
+# review: pending
+commission-empty-other-help = اوپر دوسری مدت چنیں، یا نیچے کے بٹن استعمال کریں۔
+
+# review: pending
+commission-bikri = { -bikri } <num>{ $number }</num>
+
+# review: pending
+commission-posting-bikri-first = بکری
+
+# review: pending
+commission-posting-bikri-later = بعد کی بکری
+
+# review: pending
+commission-posting-reversal = واپس لی گئی
+
+# review: pending
+commission-posting-general = جنرل
+
+# review: pending
+commission-posting-other = دوسرا اندراج
+
+# review: pending
+commission-day-failed = اس دن کی بکریاں پڑھی نہیں جا سکیں
+
+# review: pending
+commission-day-empty = اس دن کے پیچھے کچھ نہیں
+
+# review: pending
+commission-day-empty-help = اس دن کا کوئی اندراج باقی نہیں۔
+
+# review: pending
+commission-day-more = اس دن کے <num>{ $total }</num> اندراجات میں سے <num>{ $shown }</num> دکھائے گئے ہیں۔
+
+## The period and the party of the commission page (plan 77, PRD FR-9.3): one date, a month, a year or a range, and one buyer or seller.
+
+# review: pending
+commission-filters-label = { -commission } کے فلٹر
+
+# review: pending
+period-label = مدت
+
+# review: pending
+period-day = تاریخ
+
+# review: pending
+period-month = مہینہ
+
+# review: pending
+period-year = سال
+
+# review: pending
+period-range = از تا
+
+# review: pending
+commission-side-label = پارٹی
+
+# review: pending
+commission-side-all = سب
+
+# review: pending
+commission-side-buyer = { -gahak }
+
+# review: pending
+commission-side-seller = { -beopari }
+
+# review: pending
+commission-pick-buyer = { -gahak } چنیں، پھر اس کا { -commission } نظر آئے گا
+
+# review: pending
+commission-pick-seller = { -beopari } چنیں، پھر اس کا { -commission } اور بکری نظر آئے گی
+
+# review: pending
+commission-pick-help = اوپر کے خانے میں اس کا نام یا کوڈ لکھیں، یا ہر پارٹی دیکھنے کے لیے سب چنیں۔
+
+
+
+# review: pending
+period-goto-date = تاریخ پر جائیں
+
+# review: pending
+period-goto-date-hint = تاریخ لکھیں، مثلاً 10-10-2026۔ مختصر شکل بھی چلتی ہے: 10 اس مہینے کی 10 تاریخ ہے۔
+
+
+# review: pending
+period-goto-year = سال پر جائیں
+
+# review: pending
+period-goto-year-hint = سال لکھیں، مثلاً 2026۔ مختصر شکل بھی چلتی ہے: 26 یعنی 2026۔
+
+# review: pending
+period-goto-year-placeholder = سال
+
+# review: pending
+period-date-nav-label = دن کے لحاظ سے آگے پیچھے جائیں
+
+# review: pending
+period-date-earlier = پچھلا دن
+
+# review: pending
+period-date-later = اگلا دن
+
+# review: pending
+period-date-latest-note = یہ آج کا دن ہے
+
+# review: pending
+period-date-latest-button = آج
+
+# review: pending
+period-date-title = <num>{ $date }</num>
+
+# review: pending
+period-year-nav-label = سال کے لحاظ سے آگے پیچھے جائیں
+
+# review: pending
+period-year-earlier = پچھلا سال
+
+# review: pending
+period-year-later = اگلا سال
+
+# review: pending
+period-year-first-note = یہ پہلا سال ہے جس میں اندراج ہیں
+
+# review: pending
+period-year-latest-note = یہ موجودہ سال ہے
+
+# review: pending
+period-year-latest-button = یہ سال
+
+# review: pending
+period-year-title = سال <num>{ $year }</num>
+
+## The kharch page (plan 77, PRD FR-9.5): the tile "Today's Shop Expense" opens it.
+
+# review: pending
+kharch-title = { -kharcha }
+
+# review: pending
+kharch-help = ایک مدت (ایک تاریخ، ایک مہینہ، ایک سال یا تاریخوں کی حد) کے دو حصے: ہر مد کا { -dukan-kharcha } اور پوری دکان کا میزان، اور ہر { -shirakat-dar } نے اپنے لیے جو خرچ کیا ({ -zati-kharcha }) اس کے میزان کے ساتھ۔ کسی رقم کو کھولیں تو اس کے اندراج نظر آئیں گے: تاریخ، رقم اور وجہ۔ شراکت دار کا حصہ شراکت دار کوڈ کا انتظار کرتا ہے، دکان کا حصہ اس کے بغیر بھی نظر آتا ہے۔
+
+# review: pending
+kharch-back = ڈیش بورڈ پر واپس
+
+# review: pending
+kharch-filters-label = { -kharcha } کے فلٹر
+
+
+# review: pending
+commission-col-month = مہینہ
+
+# review: pending
+commission-col-sale = { -kham-bikri }
+
+# review: pending
+commission-col-purchase = خریداری کی رقم
+
+# review: pending
+commission-col-charged = اس سے لیا گیا { -commission }
+
+# review: pending
+commission-col-goods = اس کے مال پر { -commission }
+
+# review: pending
+commission-empty-day = اس تاریخ کو کوئی { -commission } نہیں
+
+# review: pending
+commission-empty-year = اس سال میں کوئی { -commission } نہیں
+
+# review: pending
+commission-empty-range = ان تاریخوں میں کوئی { -commission } نہیں
+
+# review: pending
+commission-empty-party = اس مدت میں اس پارٹی کا کوئی { -commission } نہیں
+
+# review: pending
+commission-empty-party-help = اوپر دوسری مدت چنیں، یا سب چنیں۔
+
+# review: pending
+commission-party-lost = یہ پارٹی ملی نہیں
+
+# review: pending
+commission-party-lost-help = اوپر کے خانے میں اسے دوبارہ چنیں، یا سب چنیں۔
+
+
+
+## The tile of garden owners and others (plan 76 point 10, PRD FR-9.1, FR-16.13): it replaces the last backup tile.
+
+# review: pending
+dashboard-tile-others = باغوں کے مالکوں / دوسروں کے ذمے
+
+# review: pending
+dashboard-tile-others-note = { $count ->
+    [one] <num>{ $count }</num> شخص
+   *[other] <num>{ $count }</num> افراد
+}

@@ -31,6 +31,7 @@ pub mod answer;
 pub mod ask;
 pub mod check;
 pub mod client;
+pub mod commission_button;
 pub mod conversation;
 pub mod echo;
 pub mod fill;

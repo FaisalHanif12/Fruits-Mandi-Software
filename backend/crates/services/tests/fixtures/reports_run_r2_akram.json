@@ -7,7 +7,7 @@
     "to": null,
     "as_of": null,
     "party": {
-      "account_id": 20,
+      "account_id": 21,
       "code": "0020",
       "short_code": "0",
       "name_ur": "اکرم ٹول ٹیکس",
@@ -85,7 +85,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 20,
+            "account_id": 21,
             "code": "0020",
             "short_code": "0",
             "name_ur": "اکرم ٹول ٹیکس",

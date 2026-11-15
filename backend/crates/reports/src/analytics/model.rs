@@ -51,6 +51,12 @@ pub enum AnalyticsView {
     /// Fruit taken, پھل.
     #[serde(rename = "K")]
     K,
+    /// Buyer by item, گاہک × قسم مال (PRD v1.42, plan 77).
+    #[serde(rename = "L")]
+    L,
+    /// Expenses by head, خرچہ مد وار (PRD v1.42, plan 77).
+    #[serde(rename = "M")]
+    M,
 }
 
 impl AnalyticsView {
@@ -68,6 +74,8 @@ impl AnalyticsView {
             AnalyticsView::I => "I",
             AnalyticsView::J => "J",
             AnalyticsView::K => "K",
+            AnalyticsView::L => "L",
+            AnalyticsView::M => "M",
         }
     }
 }
@@ -169,6 +177,21 @@ pub enum AnalyticsPartnerMoney {
     Gardens,
     /// His lines for fruit taken: what he took home and his part of the guests' fruit.
     Fruit,
+    /// His own kharch, the money he took (ذاتی خرچہ): the debits of his drawings account (view M,
+    /// partner part).
+    Taken,
+}
+
+/// Which part of view M is read (PRD 18.2 M, FR-9.5, plan 77): the shop's kharch by head, or each
+/// partner's own kharch (behind the partner code, FR-17.11).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AnalyticsExpensePart {
+    /// دکان خرچہ by head, with the shop total (the default).
+    #[default]
+    Shop,
+    /// A row for each partner: the kharch he spent himself (ذاتی خرچہ), and a total row.
+    Partner,
 }
 
 /// Which filter boxes a view shows.
@@ -207,6 +230,8 @@ pub enum AnalyticsFilterKind {
     ItemGroup,
     /// The quality of the sale lines, اول، دوم or سوم (view A; PRD FR-12.42).
     Grade,
+    /// Which part of view M: the shop's kharch or the partners' (plan 77).
+    ExpensePart,
 }
 
 /// One view in the catalogue.
@@ -275,6 +300,12 @@ pub struct AnalyticsFilters {
     pub goods: AnalyticsGoods,
     /// How view J lays out its rows. Trip when left out; refused for the other views.
     pub trip_view: Option<AnalyticsTripView>,
+    /// Which part of view M: the shop's kharch (the default) or the partners'. Refused for the other
+    /// views. The partner part needs the partner code (PRD FR-17.11). Left out of the wire form when
+    /// none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub expense_part: Option<AnalyticsExpensePart>,
     /// Set by the app, never by the screen: the partner section is locked, so the partner columns
     /// of this view are left out (PRD FR-17.11). It is not read from JSON and not sent.
     #[serde(skip)]
@@ -303,6 +334,7 @@ impl Default for AnalyticsFilters {
             garden_id: None,
             goods: AnalyticsGoods::All,
             trip_view: None,
+            expense_part: None,
             hide_partners: false,
         }
     }
@@ -355,6 +387,10 @@ pub struct AnalyticsResolvedFilters {
     pub goods: AnalyticsGoods,
     /// How view J lays out its rows.
     pub trip_view: Option<AnalyticsTripView>,
+    /// Which part of view M was read. Left out of the wire form for the other views.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub expense_part: Option<AnalyticsExpensePart>,
 }
 
 /// Which lines a row or a column stands for. It is what the screen sends back to open the lines
@@ -384,6 +420,10 @@ pub struct AnalyticsKey {
     /// One partner (the share rows behind a number of view F).
     #[ts(type = "number | null")]
     pub partner_id: Option<i64>,
+    /// One shop expense head, an account of head 05 (the journal lines behind a row of view M).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "number | null", optional)]
+    pub head_id: Option<i64>,
     /// The trip purchases whose sales are meant (the lines behind a row of view J).
     #[ts(type = "Array<number>")]
     pub purchase_ids: Vec<i64>,
@@ -517,6 +557,9 @@ pub struct AnalyticsChartPoint {
     pub values: Vec<Cell>,
     /// True for the point that adds up the rows beyond the biggest ten.
     pub is_others: bool,
+    /// With a compare on (PRD FR-18.1): the same figure in the compared period, the second series of
+    /// the chart. Null when there is no compare or the view has none (plan 76 point 4).
+    pub compare: Option<Cell>,
 }
 
 /// A chart of a view, over the WHOLE filter. Its numbers are the sums of the table.
@@ -718,6 +761,10 @@ pub struct AnalyticsPrintData {
     pub totals_label_id: String,
     /// The totals row, one cell for each column.
     pub totals: Vec<PrintCell>,
+    /// The charts of the view over the whole filter, the same as `analytics_run` gives (plan 76
+    /// point 4, PRD FR-18.3: the chart prints with the view). Their figures are the backend's, so
+    /// the print draws them and adds nothing up. Empty for a view with no chart.
+    pub charts: Vec<AnalyticsChart>,
 }
 
 /// One saved view of PRD FR-18.5: a name and a set of filters.

@@ -142,8 +142,8 @@ describe("the wrappers send the backend's requests and read its answers", () => 
 
   it('assist_party_card reads the tag and the balance of the card', async () => {
     backend({ assist_party_card: real.PARTY_CARD_TAG });
-    const card = await assistPartyCard(20);
-    expect(call).toHaveBeenCalledWith('assist_party_card', { input: { account_id: 20 } });
+    const card = await assistPartyCard(21);
+    expect(call).toHaveBeenCalledWith('assist_party_card', { input: { account_id: 21 } });
     expect(card.tag).toBe('K');
     expect(card.balance.side).toBe('dr');
   });
@@ -244,7 +244,7 @@ describe.each(LANGUAGES)('the screens show the real answers with the tag (%s)', 
   it('the party card names him with his tag, his balance and his credit used', async () => {
     setLanguage(language);
     backend({ assist_party_card: real.PARTY_CARD_TAG });
-    renderIn(language, wrapper(<PartyCard accountId={20} />));
+    renderIn(language, wrapper(<PartyCard accountId={21} />));
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain(akram);
     });
@@ -292,7 +292,7 @@ describe.each(LANGUAGES)('the screens show the real answers with the tag (%s)', 
     expect(visible(within(row).getByText(akram).textContent)).toBe(akram);
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(picked.at(-1)).toMatchObject({ id: 20, tag: 'K' });
+      expect(picked.at(-1)).toMatchObject({ id: 21, tag: 'K' });
     });
     expect(input.value).toBe(akram);
   });

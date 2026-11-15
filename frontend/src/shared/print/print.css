@@ -147,21 +147,44 @@ html:has(.print-doc[data-paper='mm80']) {
   padding-block-start: var(--print-gap-2);
 }
 
-/* The header: the firm at the start, the title of the document at the end. */
+/* The header (PRD FR-19.13, plan 76): three zones in one row, then the title of the document under
+   them. The fruit picture is at the physical left edge and the people of the firm at the physical
+   right edge in BOTH print languages, with the firm name between them. The row is a flex row in the
+   direction of the sheet, so in a right-to-left sheet the first item is on the right-hand side: the `order` of
+   the two outer zones is turned there, and nothing is written with left or right. */
 .print-header {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--print-gap-3);
+  flex-direction: column;
+  gap: var(--print-gap-2);
   padding-block-end: var(--print-gap-3);
   border-block-end: var(--print-rule-strong) solid var(--color-ink);
 }
 
+.print-zones {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--print-gap-3);
+}
+
+/* The picture keeps its shape and never grows the header: it is no taller than the people list. */
+.print-mark {
+  flex: none;
+  inline-size: 15mm;
+  block-size: 17mm;
+  color: var(--color-ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
 .print-firm {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
+  align-items: center;
   min-inline-size: 0;
+  text-align: center;
 }
 
 .print-firm-name {
@@ -187,14 +210,16 @@ html:has(.print-doc[data-paper='mm80']) {
   font-size: var(--print-text-4);
   font-weight: var(--weight-strong);
   color: var(--color-primary);
+  text-align: center;
 }
 
-/* The firm name at the start and the trade mark in a box beside it (PRD FR-19.13, Section 21). A
-   trade mark that is not set has no box at all: the element is not drawn. */
+/* The firm name and the trade mark in a box beside it (PRD FR-19.13, Section 21). A trade mark that is
+   not set has no box at all: the element is not drawn. */
 .print-firm-top {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: var(--print-gap-3);
 }
 
@@ -209,16 +234,18 @@ html:has(.print-doc[data-paper='mm80']) {
   font-weight: var(--weight-strong);
 }
 
-/* The people of the firm, up to six: the owners first, then the munshi, side by side. Each has the
-   word of his role in front of his name (PRD Section 21, FR-19.13, v1.12). The name is the strong
-   part of the line, the role word the quiet one. */
+/* The people of the firm, up to six: the owners first, then the munshi, one under the other at the
+   outer edge of the header. Each has the word of his role in front of his name (PRD Section 21,
+   FR-19.13, v1.12). The name is the strong part of the line, the role word the quiet one. */
 .print-contacts {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--print-gap-4);
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
   margin: 0;
   padding: 0;
   list-style: none;
+  max-inline-size: 40%;
 }
 
 .print-contacts .print-firm-line {
@@ -229,19 +256,47 @@ html:has(.print-doc[data-paper='mm80']) {
   color: var(--color-ink-muted);
 }
 
-.print-doc[data-paper='mm80'] .print-firm-top,
-.print-doc[data-paper='mm80'] .print-contacts {
-  justify-content: center;
-}
-
 .print-doc[data-paper='mm80'] .print-header {
-  flex-direction: column;
   align-items: center;
   text-align: center;
 }
 
-.print-doc[data-paper='mm80'] .print-firm {
+/* On the roll there is no room for three zones: they stack, centred, with a smaller picture. */
+.print-doc[data-paper='mm80'] .print-zones {
+  flex-direction: column;
   align-items: center;
+}
+
+.print-doc[data-paper='mm80'] .print-mark {
+  inline-size: 11mm;
+  block-size: 12mm;
+}
+
+.print-doc[data-paper='mm80'] .print-contacts {
+  align-items: center;
+  max-inline-size: none;
+}
+
+/* In a right-to-left sheet the first item of the row is at the right, so the order of the three zones
+   is turned there: the picture stays at the left edge and the people at the right edge (plan 76). On
+   the roll the zones are a stack and keep their natural order. These rules come last, after every
+   other rule of the three zones. */
+.print-doc[dir='rtl'] .print-zones > .print-mark {
+  order: 3;
+}
+
+.print-doc[dir='rtl'] .print-zones > .print-firm {
+  order: 2;
+}
+
+.print-doc[dir='rtl'] .print-zones > .print-contacts {
+  order: 1;
+}
+
+.print-doc[data-paper='mm80'] .print-zones > .print-mark,
+.print-doc[data-paper='mm80'] .print-zones > .print-firm,
+.print-doc[data-paper='mm80'] .print-zones > .print-contacts {
+  order: 0;
 }
 
 /* The facts under the header: number, date, bill date, truck. */
@@ -782,4 +837,35 @@ html:has(.print-doc[data-paper='mm80']) {
     margin-block-start: 0;
     padding-block-start: var(--print-gap-5);
   }
+}
+
+/* The charts of an analytics print (PRD FR-18.3): under the header, above the table, one figure for each chart.
+   Each is an inline SVG made for paper (patterns, no tooltip) that takes the width of the sheet and keeps its
+   shape. A figure never splits across pages. */
+.print-charts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-3);
+  padding-block: var(--print-gap-3);
+}
+
+.print-chart {
+  margin: 0;
+  break-inside: avoid;
+}
+
+.print-chart-caption {
+  margin-block-end: var(--print-gap-2);
+  font-size: var(--print-text-4);
+  font-weight: var(--weight-strong);
+  color: var(--color-ink);
+}
+
+.print-chart-svg svg {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 70mm;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }

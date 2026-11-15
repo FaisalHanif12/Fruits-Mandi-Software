@@ -25,10 +25,10 @@ import {
   ANALYTICS_RUN_A,
   ANALYTICS_RUN_A_COMPARE,
   ANALYTICS_RUN_A_COMPARE_NEEDS_DATES,
-  ANALYTICS_RUN_A_GROUP_BY_REFUSED,
   ANALYTICS_RUN_A_SELLER_SIDE,
   ANALYTICS_RUN_A_UNKNOWN_ITEM,
   ANALYTICS_RUN_B,
+  ANALYTICS_RUN_H_GROUP_BY_REFUSED,
   ANALYTICS_RUN_C,
   ANALYTICS_RUN_D_DAY,
   ANALYTICS_RUN_D_MONTH,
@@ -67,6 +67,21 @@ import {
   ANALYTICS_RUN_J_TRIP_PARTNER,
 } from './analytics-trips-real';
 
+import {
+  ANALYTICS_LINES_L_AKRAM_BANANA,
+  ANALYTICS_LINES_M_ELECTRICITY,
+  ANALYTICS_LINES_M_PARTNER_ALIF,
+  ANALYTICS_RUN_A_BY_MONTH,
+  ANALYTICS_RUN_B_BY_MONTH,
+  ANALYTICS_RUN_C_BY_MONTH,
+  ANALYTICS_RUN_E_BY_MONTH,
+  ANALYTICS_RUN_L_BY_MONTH,
+  ANALYTICS_RUN_F_BY_MONTH,
+  ANALYTICS_RUN_L,
+  ANALYTICS_RUN_M,
+  ANALYTICS_RUN_M_BY_DAY,
+  ANALYTICS_RUN_M_PARTNERS,
+} from './analytics-plan77';
 import { fakePrintFrame } from './print-frame';
 import { printOutcomeFor } from './print-job';
 
@@ -108,14 +123,14 @@ const DEFAULT_PAGES: Record<AnalyticsView, AnalyticsPage> = {
   I: ANALYTICS_RUN_I_GARDEN,
   J: ANALYTICS_RUN_J_TRIP,
   K: ANALYTICS_RUN_K_FRUIT,
+  L: ANALYTICS_RUN_L,
+  M: ANALYTICS_RUN_M,
 };
 
 /** The views that have no comparison (the catalogue says so): the backend refuses one. */
-const NO_COMPARE: readonly AnalyticsView[] = ['F', 'G', 'I', 'J', 'K'];
+const NO_COMPARE: readonly AnalyticsView[] = ['F', 'G', 'I', 'J', 'K', 'M'];
 /** The views that refuse a garden: the backend answers ERR_OUT_OF_RANGE on `filters.garden_id`. */
 const NO_GARDEN: readonly AnalyticsView[] = ['F', 'J'];
-/** The views that take a grouping. */
-const GROUPED: readonly AnalyticsView[] = ['D', 'G'];
 
 /** The refusal of a garden on a view that takes none. */
 const GARDEN_REFUSED: UiError = {
@@ -147,10 +162,10 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
     const refused = options.refuse?.(input) ?? null;
     if (refused !== null) return Promise.reject(refusedWith(refused));
     const { filters, view } = input;
-    // The refusals of the backend's own fixtures: a grouping on a view that has none, an unknown
-    // item, and a comparison without both dates.
-    if (!GROUPED.includes(view) && filters.group_by !== null) {
-      return Promise.reject(refusedWith(ANALYTICS_RUN_A_GROUP_BY_REFUSED));
+    // The refusals of the backend's own fixtures: a grouping on the top 10 (the one view that has none), an
+    // unknown item, and a comparison without both dates.
+    if (view === 'H' && filters.group_by !== null) {
+      return Promise.reject(refusedWith(ANALYTICS_RUN_H_GROUP_BY_REFUSED));
     }
     if (NO_COMPARE.includes(view) && filters.compare !== 'off') {
       return Promise.reject(refusedWith(ANALYTICS_RUN_F_COMPARE_REFUSED));
@@ -177,6 +192,20 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
     if (view === 'A' && filters.goods === 'consigned') answer = ANALYTICS_RUN_A_GOODS_CONSIGNED;
     if (view === 'A' && filters.goods === 'trip') answer = ANALYTICS_RUN_A_GOODS_TRIP;
     if (view === 'D' && filters.group_by === 'day') answer = ANALYTICS_RUN_D_DAY;
+    if (view === 'M' && filters.group_by === 'day') answer = ANALYTICS_RUN_M_BY_DAY;
+    if (view === 'M' && filters.expense_part === 'partner') answer = ANALYTICS_RUN_M_PARTNERS;
+    if (view === 'F' && filters.group_by === 'month') answer = ANALYTICS_RUN_F_BY_MONTH;
+    if (filters.group_by === 'month') {
+      // The optional views grouped by month: the backend's own answers (the period is the first column).
+      const byMonth: Partial<Record<string, AnalyticsPage>> = {
+        A: ANALYTICS_RUN_A_BY_MONTH,
+        B: ANALYTICS_RUN_B_BY_MONTH,
+        C: ANALYTICS_RUN_C_BY_MONTH,
+        E: ANALYTICS_RUN_E_BY_MONTH,
+        L: ANALYTICS_RUN_L_BY_MONTH,
+      };
+      answer = byMonth[view] ?? answer;
+    }
     if (view === 'G' && filters.group_by === 'day') answer = ANALYTICS_RUN_G_DAY;
     if (view === 'J' && filters.trip_view === 'purchase') {
       answer = ANALYTICS_RUN_J_TRIP_BY_PURCHASE;
@@ -204,7 +233,13 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
                 ? ANALYTICS_LINES_I_GARDEN
                 : input.view === 'K'
                   ? ANALYTICS_LINES_K_GUESTS
-                  : ANALYTICS_LINES_A_BANANA);
+                  : input.view === 'L'
+                    ? ANALYTICS_LINES_L_AKRAM_BANANA
+                    : input.view === 'M'
+                      ? input.filters.expense_part === 'partner'
+                        ? ANALYTICS_LINES_M_PARTNER_ALIF
+                        : ANALYTICS_LINES_M_ELECTRICITY
+                      : ANALYTICS_LINES_A_BANANA);
     const size = input.limit > 0 ? input.limit : 100;
     return Promise.resolve({
       ...page,

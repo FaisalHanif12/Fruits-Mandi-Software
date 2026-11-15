@@ -3,14 +3,60 @@
 
 use mandi_services::core::accounts::{PartyCard, PartyCardInput};
 use mandi_services::core::bikri::{LastRateInput, RateHint, SellerMemory, SellerMemoryInput};
+use mandi_services::core::paging::PageInput;
 use mandi_services::core::vouchers::{
     AdvancesInfo, AssistAdvancesInput, CollectionList, CollectionListInput, OpenBills,
     OpenBillsInput, OpenPayables, OpenPayablesInput,
 };
 use mandi_services::{assist, auth, vouchers};
 
+use serde::Deserialize;
+use ts_rs::TS;
+
 use super::run;
 use crate::error::UiError;
+
+/// Input of `assist_open_bills`: the buyer and, since plan 76 point 8, the page of his bills. No
+/// page gives the oldest 200, as before.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct OpenBillsPageInput {
+    /// The buyer.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: OpenBillsInput,
+    /// Where the page starts and how many bills it holds (at most 200).
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub page: PageInput,
+}
+
+/// Input of `assist_open_payables`: the seller and the page of his postings. No page gives the
+/// oldest 200, as before (all of them with `include_settled`).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct OpenPayablesPageInput {
+    /// The seller.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: OpenPayablesInput,
+    /// Where the page starts and how many postings it holds.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub page: PageInput,
+}
+
+/// Input of `assist_advances`: the seller and the page of his open advances. No page gives the
+/// oldest 200.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct AssistAdvancesPageInput {
+    /// The seller.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: AssistAdvancesInput,
+    /// Where the page starts and how many advances it holds (at most 200).
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub page: PageInput,
+}
 
 /// The card next to an account field: names, father or firm, city, phone, balance with its
 /// side, last entry date, a buyer's credit limit and use, a seller's open advance, and warnings
@@ -37,11 +83,11 @@ pub async fn assist_party_card<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn assist_advances<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: AssistAdvancesInput,
+    input: AssistAdvancesPageInput,
 ) -> Result<AdvancesInfo, UiError> {
     run(app, "assist_advances", move |ctx| {
         auth::require(ctx)?;
-        assist::advances(ctx, input.seller_id)
+        assist::advances_page(ctx, input.base.seller_id, input.page)
     })
     .await
 }
@@ -82,11 +128,11 @@ pub async fn assist_last_rate<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn assist_open_bills<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: OpenBillsInput,
+    input: OpenBillsPageInput,
 ) -> Result<OpenBills, UiError> {
     run(app, "assist_open_bills", move |ctx| {
         auth::require(ctx)?;
-        vouchers::open_bills(ctx, &input)
+        vouchers::open_bills_page(ctx, &input.base, input.page)
     })
     .await
 }
@@ -99,11 +145,11 @@ pub async fn assist_open_bills<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn assist_open_payables<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: OpenPayablesInput,
+    input: OpenPayablesPageInput,
 ) -> Result<OpenPayables, UiError> {
     run(app, "assist_open_payables", move |ctx| {
         auth::require(ctx)?;
-        vouchers::open_payables(ctx, &input)
+        vouchers::open_payables_page(ctx, &input.base, input.page)
     })
     .await
 }

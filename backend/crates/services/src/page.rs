@@ -5,6 +5,38 @@
 /// The page size when the screen sends 0.
 pub(crate) const DEFAULT_PAGE: u32 = 100;
 
+/// The optional first and last day of a list (plan 76 point 8): each `DD-MM-YYYY` or a shortcut,
+/// null or empty for no limit. Both are checked together, so a screen sees every wrong field at
+/// once. The result is `YYYY-MM-DD`, ready to compare with a stored date.
+///
+/// Example: `from` "01-11-2026", `to` "30-11-2026" gives `(Some("2026-11-01"), Some("2026-11-30"))`.
+///
+/// # Errors
+/// `ERR_DATE_INVALID` on `from` or `to`.
+pub(crate) fn date_range(
+    from: Option<&String>,
+    to: Option<&String>,
+    today: mandi_domain::core::dates::BusinessDate,
+) -> Result<(Option<String>, Option<String>), crate::error::ServiceError> {
+    use mandi_domain::core::validate::{self, FieldErrors};
+    let mut errors = FieldErrors::default();
+    let mut bound = |field: &str, text: Option<&String>| -> Option<String> {
+        let text = text.map(|t| t.trim()).filter(|t| !t.is_empty())?;
+        errors
+            .take(validate::date(field, text, today))
+            .map(mandi_domain::core::dates::BusinessDate::to_iso)
+    };
+    let first = bound("from", from);
+    let last = bound("to", to);
+    errors.finish()?;
+    Ok((first, last))
+}
+
+/// Whether a stored day (`YYYY-MM-DD`) is inside the range from [`date_range`].
+pub(crate) fn in_range(day: &str, from: Option<&str>, to: Option<&str>) -> bool {
+    from.is_none_or(|f| day >= f) && to.is_none_or(|t| day <= t)
+}
+
 /// The rows of one page of a list that is already whole in memory. An offset past the end gives
 /// an empty page.
 pub(crate) fn slice<T>(rows: Vec<T>, offset: u32, limit: u32) -> Vec<T> {

@@ -246,6 +246,7 @@ export function createPartnerMoneyBooks(
       advance_effects: [],
       owes_settled_paisa: money(0),
       return_limit_paisa: null,
+      linked_parts: [],
       payable_open_paisa: null,
       payable_is_zero_for_seller: false,
       cash: cashCheck(entry.type === 'capital_out', amount),
@@ -327,6 +328,8 @@ export function createPartnerMoneyBooks(
     return {
       partner: refOf(partner),
       balance_paisa: money(capitalBalance(partner.id)),
+      // The window starts at the first day of the books in these fakes: nothing comes before it.
+      opening_paisa: money(0),
       rows: rows.slice(input.offset, input.offset + size).map((one) => one.row),
       total_count: rows.length,
       totals: { invested_paisa: money(invested), taken_back_paisa: money(taken) },
@@ -335,6 +338,38 @@ export function createPartnerMoneyBooks(
   }
 
   // ---- The partner statement (PRD FR-17.9, FR-17.10).
+
+  /** Every line of a partner's statement with its running total, for the month and day answers. */
+  function statementLines(partnerId: number): StatementLine[] {
+    let running = 0;
+    return (store.statements.get(partnerId) ?? []).map((one, index) => {
+      running += one.amount ?? 0;
+      return {
+        entry_date: one.date,
+        heading: one.heading,
+        detail: one.detail,
+        entry_id: one.amount === null ? null : 1900 + index,
+        number: one.number,
+        venture_code:
+          (one.heading === 'garden' || one.heading === 'trip') && one.number !== null
+            ? `${one.heading === 'garden' ? '008' : '007'}${String(one.number - 1)}`
+            : null,
+        secondary_number: one.secondary,
+        subject: one.subject,
+        packing: null,
+        reason: one.reason,
+        amount_paisa: one.amount === null ? null : money(one.amount),
+        running_paisa: money(running),
+        values: one.values,
+      };
+    });
+  }
+
+  /** The partner as a record, or null when there is none with that id. */
+  const partnerRef = (id: number): RecordRef | null => {
+    const partner = partnerOf(id);
+    return partner === null ? null : { ...refOf(partner), code: '' };
+  };
 
   function statement(input: PartnersStatementInput): PartnerStatement {
     const partner = partnerOf(input.partner_id);
@@ -522,6 +557,8 @@ export function createPartnerMoneyBooks(
     saveCapital,
     capitalHistory,
     statement,
+    statementLines,
+    partnerRef,
     generalPreview,
     generalSave,
     accounts,

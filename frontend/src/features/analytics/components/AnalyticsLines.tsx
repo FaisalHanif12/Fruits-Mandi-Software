@@ -1,19 +1,18 @@
 // The lines behind a number (PRD FR-18.2): opened with Enter on a figure of a view or on its total.
 // Each line is one sale line of the posting that makes up the figure, with the بکری it belongs to; a
 // reversal line shows negative amounts, so the lines add up to the number (the totals row says so).
-// Enter on a line opens its بکری. Esc (or the back button) returns to the view with its filters, its
+// Enter on a line opens the record behind it: its بکری, or (view M, plan 77) its voucher. Esc (or the back button) returns to the view with its filters, its
 // window of columns and its focused row as they were. Four states: loading, an error with a retry,
 // nothing found, and the lines. Lists load 100 lines at a time with the backend's totals (F34).
 
 import { Localized } from '@fluent/react';
-import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { totalsFor, type ReportRowView } from '../../reports';
+import { totalsFor, useOpenRowSource, type ReportRowView } from '../../reports';
 import { linesColumns } from '../columns';
 import { useAnalyticsLines, type LinesRequest } from '../hooks';
 
@@ -27,7 +26,7 @@ interface AnalyticsLinesProps {
 }
 
 export function AnalyticsLines({ request, about, onBack }: AnalyticsLinesProps) {
-  const navigate = useNavigate();
+  const openSource = useOpenRowSource();
   const step = useLayoutStep();
   const query = useAnalyticsLines(request);
   const paging = useListPaging(query.pager);
@@ -78,10 +77,7 @@ export function AnalyticsLines({ request, about, onBack }: AnalyticsLinesProps) 
             getRowId={(view) => view.key}
             labelId="analytics-lines-grid-label"
             onOpen={(view) => {
-              const source = view.row.source;
-              if (source?.kind === 'bikri') {
-                void navigate({ to: '/bikri/book', search: { id: source.id } });
-              }
+              openSource(view.row.source ?? null);
             }}
             onFocusRow={setFocusRowId}
             focusRowId={focusRowId}

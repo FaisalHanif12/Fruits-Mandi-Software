@@ -4,13 +4,16 @@
 // asks first, like any other way out of it (FR-7.9). Where no router exists (a component test, a
 // gallery page) the functions are null and no button shows.
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import type { AnswerSource } from '../../bindings/AnswerSource';
+import type { DayStatus } from '../../bindings/DayStatus';
 import type { EntryRoute } from '../../bindings/EntryRoute';
 import type { EntryScreen } from '../../bindings/EntryScreen';
 import type { ScreenRoute } from '../../bindings/ScreenRoute';
 import type { GardenOpenType } from '../gardens';
+import { commissionSearchOfSource } from '../dashboard';
 import { useOpenReport } from '../reports';
 import type { TripOpenType } from '../trips';
 import { analyticsSearchFromFilters, entryPartyOf, reportSearchFromFilters } from './addresses';
@@ -104,6 +107,7 @@ export interface AssistantNavigation {
 export function useAssistantNavigation(): AssistantNavigation | null {
   const router = useRouter({ warn: false }) as ReturnType<typeof useRouter> | undefined;
   const openReport = useOpenReport();
+  const queryClient = useQueryClient();
   return useMemo<AssistantNavigation | null>(() => {
     if (router === undefined) return null;
     return {
@@ -121,6 +125,17 @@ export function useAssistantNavigation(): AssistantNavigation | null {
             return;
           case 'tiles':
             void router.navigate({ to: '/' });
+            return;
+          case 'commission':
+            // The commission page of that party and those days (PRD FR-7.90, plan 77). With no dates it opens from
+            // the first day with entries, which the shell has read (the status bar); until it is there, the month.
+            void router.navigate({
+              to: '/commission',
+              search: commissionSearchOfSource(
+                source,
+                queryClient.getQueryData<DayStatus>(['day_status'])?.first_entry_date ?? null,
+              ),
+            });
             return;
           case 'screen':
             openScreenRoute(router, source.route);
@@ -220,5 +235,5 @@ export function useAssistantNavigation(): AssistantNavigation | null {
         void router.navigate({ to: '/settings', search: { tab: 'assistant' } });
       },
     };
-  }, [router, openReport]);
+  }, [router, openReport, queryClient]);
 }

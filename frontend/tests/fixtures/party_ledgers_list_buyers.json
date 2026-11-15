@@ -1,7 +1,7 @@
 {
   "rows": [
     {
-      "account_id": 20,
+      "account_id": 21,
       "code": "0020",
       "name_ur": "اکرم ٹول ٹیکس",
       "name_en": "Akram Toll Tax",
@@ -11,7 +11,7 @@
       "is_dead": false
     },
     {
-      "account_id": 21,
+      "account_id": 22,
       "code": "0021",
       "name_ur": "ارشد ملتانی",
       "name_en": "Arshad Multani",

@@ -78,7 +78,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 21,
+            "account_id": 22,
             "code": "0021",
             "short_code": "1",
             "name_ur": "ارشد ملتانی",
@@ -115,7 +115,7 @@
       "key": {
         "item_id": null,
         "seller_id": null,
-        "buyer_id": 21,
+        "buyer_id": 22,
         "person_key": null,
         "from": null,
         "to": null,
@@ -130,7 +130,7 @@
         {
           "type": "party",
           "party": {
-            "account_id": 20,
+            "account_id": 21,
             "code": "0020",
             "short_code": "0",
             "name_ur": "اکرم ٹول ٹیکس",
@@ -167,7 +167,7 @@
       "key": {
         "item_id": null,
         "seller_id": null,
-        "buyer_id": 20,
+        "buyer_id": 21,
         "person_key": null,
         "from": null,
         "to": null,
@@ -278,11 +278,44 @@
           "label": {
             "type": "party",
             "party": {
-              "account_id": 21,
+              "account_id": 22,
               "code": "0021",
               "short_code": "1",
               "name_ur": "ارشد ملتانی",
               "name_en": "Arshad Multani",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": 22,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 1740000
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        },
+        {
+          "label": {
+            "type": "party",
+            "party": {
+              "account_id": 21,
+              "code": "0020",
+              "short_code": "0",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
               "tag": null,
               "person_key": null
             }
@@ -301,42 +334,11 @@
           "values": [
             {
               "type": "money",
-              "paisa": 1740000
-            }
-          ],
-          "is_others": false
-        },
-        {
-          "label": {
-            "type": "party",
-            "party": {
-              "account_id": 20,
-              "code": "0020",
-              "short_code": "0",
-              "name_ur": "اکرم ٹول ٹیکس",
-              "name_en": "Akram Toll Tax",
-              "tag": null,
-              "person_key": null
-            }
-          },
-          "key": {
-            "item_id": null,
-            "seller_id": null,
-            "buyer_id": 20,
-            "person_key": null,
-            "from": null,
-            "to": null,
-            "not_item_ids": [],
-            "partner_id": null,
-            "purchase_ids": []
-          },
-          "values": [
-            {
-              "type": "money",
               "paisa": 1200000
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": null
         },
         {
           "label": {
@@ -369,7 +371,8 @@
               "paisa": 1200000
             }
           ],
-          "is_others": false
+          "is_others": false,
+          "compare": null
         }
       ],
       "others_count": 0,
