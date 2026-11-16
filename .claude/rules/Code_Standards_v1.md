@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.23 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026 and 09-11-2026) |
+| Version | 1.24 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026, 09-11-2026 and 17-11-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.34 (the master), NFR v1.17, Tech Stack v1.10 |
+| Depends on | PRD v1.43 (the master), NFR v1.17, Tech Stack v1.10 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -62,7 +62,7 @@ This is the most important section. The business is commission on sales, split b
 | M2 | Percent rates are **basis points** in an integer (`Bps(i32)`, 1% = 100 bps) | 6% = `Bps(600)`, 2.5% = `Bps(250)` |
 | M3 | MUST NOT use `f32`, `f64`, JavaScript `Number` arithmetic, `parseFloat`, `toFixed`, `Math.round` or SQL `REAL` for money. The one approved exception is the Excel export boundary (M13). | |
 | M4 | Multiply first, divide last, in `i128`, then round once with the shared rounding function | 12,000 × 6%: 1,200,000 paisa × 600 ÷ 10,000 = 72,000 paisa = 720 rupees |
-| M5 | Rounding happens in exactly one function, `core::money::round_to_rupee` (nearest rupee, half up; a fixed rule, not a setting). It is called only by `apply_bps`, `weight_value` and `avg_rate`. Splits use `split_by_bps` and `split_by_qty`. | 337.8 → 338 |
+| M5 | Rounding happens in exactly one function, `core::money::round_to_rupee` (nearest rupee, half up; a fixed rule, not a setting). It is called only by `apply_bps`, `weight_value` and `avg_rate`. Splits use `split_by_bps`, `split_by_qty` and, from v1.24, `split_by_open_parts` (an advance coming back to the partners by the parts still open, PRD C28). | 337.8 → 338 |
 | M6 | A rounded amount is calculated once and the same value is posted to every side | Never round commission separately for the buyer bill and for the journal |
 | M7 | All arithmetic on money is checked (overflow is an error, never a wrap-around) | `a.checked_add(b).ok_or(Error::Overflow)?` |
 | M8 | Money from the user arrives as **text** and is parsed by the backend (`parse_rupees`). Never parsed as a float. Decimals are rejected. | `"1,200"` → `Paisa(120000)`; `"1,200.50"` → `ERR_DECIMALS_NOT_ALLOWED` |
@@ -442,7 +442,7 @@ A change is done only when every box is ticked:
 
 - [ ] Implements the PRD IDs listed, nothing more, nothing less
 - [ ] Formatter and linters clean, no warnings
-- [ ] No floats, no JS arithmetic on money; rounding only through `core::money::round_to_rupee`; splits only through `split_by_bps` / `split_by_qty`; all amounts whole rupees
+- [ ] No floats, no JS arithmetic on money; rounding only through `core::money::round_to_rupee`; splits only through `split_by_bps` / `split_by_qty` / `split_by_open_parts`; all amounts whole rupees
 - [ ] Splits add back exactly; journals balance; audit written
 - [ ] Backend validates every input; errors have codes and point to fields
 - [ ] One transaction per user action; preview and save share the same function
@@ -486,4 +486,5 @@ A change is done only when every box is ticked:
 | 1.20 | 06-11-2026 | Approved by Umar (NFR v1.16): `MAX_PREFIX_TOKENS` is 11,600 (Q9). |
 | 1.21 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the field rule for paid on the spot (4.2); چکتا کھاتہ in the account code rule (4.2) and F41; `Backspace` and `Delete` (F27); golden tests E2E-64 to E2E-69 (9.2), and E2E-21 replaced. |
 | 1.22 | 10-11-2026 | Correction from the D8 end gate: the files of golden tests E2E-64 to E2E-68 in 9.2. No rule changed. |
+| 1.24 | 17-11-2026 | PRD v1.43, approved by Umar (plan 78 B4): a third split function, `split_by_open_parts`, for an advance coming back to the partners by the parts still open (M5, Section 11, PRD C28). |
 | 1.23 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): E2E-25 tests the seller memory and the lot name; truck memory is retired (9.2). |
