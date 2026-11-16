@@ -179,7 +179,7 @@ export function AssistantDock() {
         data-open={open}
         data-size={tall ? 'large' : 'normal'}
         onKeyDown={onKeyDown}
-        className="chat-window flex flex-col overflow-hidden rounded-5 border border-border bg-surface text-ink shadow-overlay"
+        className="chat-window flex flex-col overflow-clip rounded-5 border border-border bg-surface text-ink shadow-overlay"
       >
         {/* Closed, the window holds nothing: the controls of a shut window are not on the page for a
             screen reader or a test to find. They stay while it fades away. */}

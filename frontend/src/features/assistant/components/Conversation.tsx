@@ -53,20 +53,36 @@ function DayLabel() {
   );
 }
 
+/** The little room kept above the newest question when it is brought to the top of the conversation. */
+const SCROLL_TOP_GAP_PX = 8;
+
 /** What the assistant says, as a card: the corner by the speaker is square, the others are round. */
 const ASSISTANT_BUBBLE = 'rounded-4 rounded-ss-1 border border-border bg-surface';
 
 export function Conversation({ entries, onAsk, onPick, busy, chips }: ConversationProps) {
   const { l10n } = useLocalization();
   const end = useRef<HTMLLIElement>(null);
-  // The newest question is brought into view when it is added (the answer grows under it).
+  const scroller = useRef<HTMLDivElement>(null);
+  // The newest question is brought to the top of the conversation when it is added (the answer grows
+  // under it). Only the conversation scrolls: scrollIntoView would also scroll every ancestor, and the
+  // chat window and the page with it (plan 78 F2).
   const count = entries.length;
+  // It runs again when the newest answer arrives: until then the entry is short, so the scroller cannot
+  // yet carry its top to the top of the conversation.
+  const newestWorking = entries.at(-1)?.working === true;
   useEffect(() => {
-    if (count > 0) end.current?.scrollIntoView({ block: 'start' });
-  }, [count]);
+    const box = scroller.current;
+    const newest = end.current;
+    if (count === 0 || box === null || newest === null) return;
+    // The scroller is `relative`, so the entry's offsetTop is measured from the scroller itself.
+    box.scrollTop = Math.max(0, newest.offsetTop - SCROLL_TOP_GAP_PX);
+  }, [count, newestWorking]);
   if (count === 0) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-bg p-4">
+      <div
+        ref={scroller}
+        className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-bg p-4"
+      >
         <DayLabel />
         <div className={`flex max-w-4/5 flex-col gap-1 px-4 py-3 ${ASSISTANT_BUBBLE}`}>
           <h3 className="type-lead text-ink">
@@ -81,7 +97,10 @@ export function Conversation({ entries, onAsk, onPick, busy, chips }: Conversati
     );
   }
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-bg p-4">
+    <div
+      ref={scroller}
+      className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-bg p-4"
+    >
       <DayLabel />
       <ol
         aria-label={l10n.getString('assistant-conversation-label')}
