@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.27 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026, 09-11-2026, 12-11-2026 13-11-2026 and 14-11-2026, and his answers of 15-10-2026) |
+| Version | 1.28 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026, 09-11-2026, 12-11-2026 13-11-2026, 14-11-2026 and 17-11-2026, and his answers of 15-10-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.42 (the master), NFR v1.17, Tech Stack v1.10, Code Standards v1.23 |
+| Derived from | PRD v1.43 (the master), NFR v1.17, Tech Stack v1.10, Code Standards v1.23 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -747,6 +747,7 @@ erDiagram
 | `venture_partners` | `venture_id`, `partner_id`, `share_bps`, `source` (shop, pocket). Unique (`venture_id`, `partner_id`). The rows of one venture total 10,000 bps. No change after its first entry (PRD FR-12.29). |
 | `venture_entries` | `venture_id`, `kind` (installment, cost, purchase, other_sale, close), `number` (unique per kind), `entry_date`, `amount_paisa` (the payment, or the money received), `reason`, `purchase_id` (null; a trip purchase, or the purchase sold in another shop), `qty` (null; other_sale), `shop_name` (null; as typed), `journal_entry_id` (null when nothing posts, PRD FR-12.30), `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
 | `venture_entry_parts` | `entry_id`, `partner_id`, `share_bps`, `source` (shop, pocket), `amount_paisa`. One row per partner in the venture; the parts add up to the entry's amount (C23, C25, C26). A pocket part has no journal line. Migration 0014: `is_active` and `replaced_by`; an edit retires the old parts and writes new ones, never deletes (CLAUDE.md rule 4); one active row per (`entry_id`, `partner_id`); readers use active rows only. |
+| `venture_items` | A garden's items, one or several (PRD 12.11, v1.43, migration 0025). `venture_id`, `item_id`. Unique (`venture_id`, `item_id`). Backfilled from `ventures.item_id`, which keeps the first item. Arrival lines are not limited to these items. |
 | `purchase_cost_parts` | How one trip cost is spread over its purchases (C24). Migration 0014: `is_active` and `replaced_by`, one active row per (entry, purchase), retired on an edit, never deleted; readers use active rows only. |
 
 ### 15.6 Sales and stock
@@ -1040,6 +1041,7 @@ The model never touches the database and no tool writes (Code Standards Q2). Eve
 | 1.18 | 04-11-2026 | Plan 54, approved by Umar (the hard time limit of plan 55): migration 0018 lets the question log keep the outcome `time_limit` (15.3). It changes no book, amount or chain hash. |
 | 1.19 | 06-11-2026 | PRD v1.30, Umar: migration 0019 adds `bikri_sales.grade` (null or first, second, third), the quality of a sale line (15.6). It changes no amount or chain hash. |
 | 1.20 | 09-11-2026 | PRD v1.32, approved by Umar through D8: `bikri_sales.paid_paisa` (15.6); table `chukta_buyers` (15.4); migration 0020 renames `pukhta_*` columns to `chukta_*` and `is_pukhta_khata` to `is_chukta_khata` (15.2 to 15.8); diagrams 4, 5, 6, 9 and 11. Old migrations are unchanged. It changes no amount or chain hash. |
+| 1.28 | 17-11-2026 | PRD v1.43, approved by Umar (plan 78): table `venture_items` in migration 0025, a garden with several items (15.5). No amount or chain hash changes. Advances in the partners' totals (FR-17.13) are worked out at read time, with no new table. |
 | 1.27 | 14-11-2026 | Correction from the plan 76 backend handoff: migration 0023 adds `accounts.link_since_entry_id` and no voucher link columns (15.4, 15.7). PRD v1.42 (plan 77) changes no table. Migration 0024 (plan 76 and 77 speed fixes) adds covering indexes only (15.8); no amount or chain hash changes. |
 | 1.26 | 14-11-2026 | PRD v1.41, approved by Umar (plan 76): migration 0023 adds the link, link-since and person type columns on accounts (no voucher column), the control 0605 with one account per partner, and the contra 03070001 (15.4, 15.5, 15.7). A mixed بکری save writes a later entry per carried lot and one first entry for new lots (no new table). Unlinked khatas and loans post as before; no amount or chain hash changes. |
 | 1.25 | 13-11-2026 | PRD v1.36, approved by Umar (plan 73): the settings key `owner_sign`; the sign is kept in the audit entries of a reopen and its edits (15.3). No table or amount changed. |
