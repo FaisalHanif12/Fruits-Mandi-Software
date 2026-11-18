@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.24 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026, 09-11-2026 and 17-11-2026) |
+| Version | 1.25 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026, 09-11-2026 and 17-11-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
 | Depends on | PRD v1.43 (the master), NFR v1.17, Tech Stack v1.10 |
@@ -319,7 +319,7 @@ The model is the brain, but a stranger to our rules. It may call our tools and w
 | F40 | Every account field uses `AccountPicker`, which shows `PartyCard`. MUST NOT build a screen's own party lookup. |
 | F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The buyer picker of a بکری line lists چکتا buyers beside ordinary buyers, each marked (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
 | F42 | Every calculated amount on screen has `CalcInfo`, which shows the backend's `working` (B30). The frontend never builds a working itself. |
-| F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints: the last rate is shown only as placeholder text (PRD FR-7.53). Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
+| F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints. From v1.25 the sale line rate cell shows no hint at all (PRD FR-7.53 retired); the پھل screen keeps its placeholder hint. Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
 | F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
 
 ---
@@ -390,7 +390,7 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 | NFR-AI-2 (the 100-question list against the real model, and the Urdu review of its answers) | `scripts/ai-eval/` | Before every release and before a new model name is used at the shop |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
 | E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
-| E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, seller memory and the lot name in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
+| E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, seller memory and the lot name in E2E-25, remaining qty, no rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
 | E2E-22 to E2E-27, full screen runs (including the language switch of E2E-22) | Windows end-to-end suite | Before every release |
 
 They MUST pass. Their expected numbers MUST NOT be changed without a PRD change.
@@ -486,5 +486,6 @@ A change is done only when every box is ticked:
 | 1.20 | 06-11-2026 | Approved by Umar (NFR v1.16): `MAX_PREFIX_TOKENS` is 11,600 (Q9). |
 | 1.21 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the field rule for paid on the spot (4.2); چکتا کھاتہ in the account code rule (4.2) and F41; `Backspace` and `Delete` (F27); golden tests E2E-64 to E2E-69 (9.2), and E2E-21 replaced. |
 | 1.22 | 10-11-2026 | Correction from the D8 end gate: the files of golden tests E2E-64 to E2E-68 in 9.2. No rule changed. |
+| 1.25 | 18-11-2026 | PRD v1.44, approved by Umar (plan 79): the sale line rate hint is retired (F43, 9.2). |
 | 1.24 | 17-11-2026 | PRD v1.43, approved by Umar (plan 78 B4): a third split function, `split_by_open_parts`, for an advance coming back to the partners by the parts still open (M5, Section 11, PRD C28). |
 | 1.23 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): E2E-25 tests the seller memory and the lot name; truck memory is retired (9.2). |

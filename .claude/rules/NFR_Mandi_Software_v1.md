@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.19 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026, 09-11-2026, 12-11-2026 and 15-11-2026) |
+| Version | 1.20 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026, 09-11-2026, 12-11-2026, 15-11-2026 and 18-11-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -355,7 +355,7 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | NFR-OBS-2 | Logs never contain passwords, keys or full account balances. The log files never contain the text of a question asked in the question panel either; that is kept only in the question log table (PRD FR-7.84) |
 | NFR-OBS-3 | Each error shown to the user has a reference number that matches a log line |
 | NFR-OBS-4 | A "مدد کے لیے معلومات" (support info) button collects the log, app version and system info into one file the client can send us |
-| NFR-OBS-5 | Daily health check result (books balance, last backup, data check) visible to the Owner |
+| NFR-OBS-5 | Daily health check result (books balance, last backup, data check) visible to the Owner. From v1.20 (PRD v1.44, plan 79) it has no dashboard tile: a failed check is an item in the attention list (PRD FR-7.44), and the last result is a line in Settings. |
 
 ## 10a. Ask the app (AI)
 
@@ -413,4 +413,5 @@ Umar (01-11-2026 and 02-11-2026): the model is the brain of the question panel o
 | 1.16 | 06-11-2026 | Approved by Umar (PRD v1.29): the fixed part of an assistant request may be 11,600 tokens (NFR-AI-5), for the item group filter. |
 | 1.17 | 09-11-2026 | PRD v1.32, approved by Umar through D8 (his demo feedback of 08-11-2026): 1,000 sale lines in one بکری (NFR-SCL-3); 4 fields and 4 `Enter`s when a line may take credit (NFR-USE-6); digits 0 to 9 only (NFR-URD-14). |
 | 1.18 | 12-11-2026 | PRD v1.35, approved by Umar (12-11-2026): the wrong-try limit of the password and the partner code goes from 5 to 10 (NFR-SEC-2, NFR-SEC-14). |
+| 1.20 | 18-11-2026 | PRD v1.44, approved by Umar (plan 79): the health check moves from its dashboard tile to the attention list and a line in Settings (NFR-OBS-5). |
 | 1.19 | 15-11-2026 | Approved by Umar (plans 76 and 77): the first page of analytics views over more than one year may take up to 4 s at the NFR-SCL-1 volume; next pages stay under 300 ms (NFR-SPD-24). |

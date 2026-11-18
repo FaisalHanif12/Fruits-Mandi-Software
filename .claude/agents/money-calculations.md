@@ -137,7 +137,7 @@ These four rows MUST be unit tests, plus every boundary (99, 100, 999, 1,000, 99
 ### 3.4 Working records, hints and filled amounts (PRD 7.6)
 
 - **Working (FR-7.43, Code Standards B30).** The `working` record for an amount is produced inside the same domain function that calculates it, from the same values. Example for PRD 4.4: inputs 12,000 and 6%, formula "12,000 × 6 ÷ 100", result 720, rule "default seller commission 6%". The result in the working MUST equal the stored amount. A test checks this for every amount in the golden day.
-- **Rate hint (FR-7.53).** The last rate is returned as a `RateHint`, a different type from an input rate, so it cannot be saved by mistake. It is never put into the rate field. `Ctrl+D` copies the previous line's rate text into the field, and it is then parsed like typed text.
+- **Rate hint (FR-7.53, retired for the sale line in PRD v1.44; the پھل screen keeps it).** The last rate is returned as a `RateHint`, a different type from an input rate, so it cannot be saved by mistake. It is never put into the rate field. `Ctrl+D` copies the previous line's rate text into the field, and it is then parsed like typed text.
 - **Full-balance buttons (FR-7.58, FR-7.59).** "پورا بقایا" and "پرانا بل" put the backend's open amount into the amount field as text. On save it is parsed and checked again like any typed amount, against the balance at the moment of saving.
 - **Party card balances (FR-7.38)** are read from `journal_lines` and the matching tables, never from the search index or a cache.
 - **Undo (FR-7.47)** is a normal cancel by reversal (Section 7). It never deletes.
