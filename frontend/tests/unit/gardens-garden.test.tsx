@@ -26,11 +26,15 @@ import {
   signedIn,
 } from '../helpers/app';
 import { e40Closed, e40Garden, e40History, fakeGardens, gardenRow } from '../helpers/gardens';
+import { BANANA } from '../helpers/gardens-data';
+import { paisaForTest } from '../helpers/paisa';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { settlePreview } from '../helpers/preview-settled';
+
+const money = (rupees: number) => paisaForTest(rupees * 100);
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -118,6 +122,25 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     await settlePreview();
   }
 
+  it('plan 78 D2: the card names every item of the garden, the main fruit first, and says so in words when it has none', async () => {
+    const mango = { id: 63, code: '0063', name_ur: 'آم', name_en: 'Mango' };
+    fakeGardens({ gardens: [e40Garden({ items: [BANANA, mango] })] });
+    await open();
+    const card = screen.getAllByText(said(message(language, 'glossary-qism-maal')))[0];
+    const text = visible(card?.closest('div')?.textContent);
+    const order = language === 'ur' ? ['کیلا', 'آم'] : ['Banana', 'Mango'];
+    expect(text).toContain(order[0]);
+    expect(text).toContain(order[1]);
+    expect(text.indexOf(order[0] ?? '')).toBeLessThan(text.indexOf(order[1] ?? ''));
+  });
+
+  it('plan 78 D2: a garden with no item says so, not an empty box', async () => {
+    fakeGardens({ gardens: [e40Garden({ item: null, items: [] })] });
+    await open();
+    const card = screen.getAllByText(said(message(language, 'glossary-qism-maal')))[0];
+    expect(visible(card?.closest('div')?.textContent)).toContain(message(language, 'gardens-none'));
+  });
+
   it('shows the garden: its number, name and state, the running balance with its working, and the rent due', async () => {
     fakeGardens();
     await open();
@@ -197,6 +220,91 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
         }),
       }),
     );
+  });
+
+  it('plan 78 D3: after a relief the card shows the rent now, the rent it was made with, the relief and what the owner owes; the refund type is offered', async () => {
+    fakeGardens({
+      gardens: [
+        e40Garden({
+          rent_paisa: money(45_000),
+          rent_original_paisa: money(50_000),
+          relief_paisa: money(5_000),
+          refunds_paisa: money(0),
+          owner_owes_paisa: money(5_000),
+        }),
+      ],
+    });
+    await open();
+    const line = (id: string) =>
+      screen.getAllByText(said(message(language, id)))[0]?.closest('div')?.textContent;
+    expect(visible(line('gardens-fact-rent'))).toContain('45,000');
+    expect(visible(line('gardens-fact-rent-original'))).toContain('50,000');
+    expect(visible(line('gardens-fact-relief'))).toContain('5,000');
+    expect(visible(line('gardens-fact-owner-owes'))).toContain('5,000');
+    // Nothing was paid back yet: no such line.
+    expect(screen.queryByText(said(message(language, 'gardens-fact-refunds')))).toBeNull();
+    expect(
+      within(typeList()).getByRole('button', {
+        name: named(message(language, 'gardens-type-refund')),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('plan 78 D3: a garden whose rent was never changed has no relief lines, and the refund type is not offered', async () => {
+    fakeGardens();
+    await open();
+    for (const id of [
+      'gardens-fact-rent-original',
+      'gardens-fact-relief',
+      'gardens-fact-refunds',
+      'gardens-fact-owner-owes',
+    ]) {
+      expect(screen.queryByText(said(message(language, id)))).toBeNull();
+    }
+    expect(
+      within(typeList()).queryByRole('button', {
+        name: named(message(language, 'gardens-type-refund')),
+      }),
+    ).toBeNull();
+  });
+
+  it('plan 78 D3: the refund is the money and a note, with no sources; F10 sends it and tells the number', async () => {
+    const fake = fakeGardens({
+      gardens: [
+        e40Garden({
+          rent_paisa: money(45_000),
+          rent_original_paisa: money(50_000),
+          relief_paisa: money(5_000),
+          owner_owes_paisa: money(5_000),
+        }),
+      ],
+    });
+    const { user } = await open();
+    await user.click(
+      within(typeList()).getByRole('button', {
+        name: named(message(language, 'gardens-type-refund')),
+      }),
+    );
+    await user.type(field('gardens-refund-amount'), '5000');
+    await user.type(field('gardens-field-note'), 'Owner paid back');
+    await waitFor(() => {
+      expect(gardensApi.gardensEntryPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ type: 'refund', garden_id: 1, amount: '5000' }),
+      );
+    });
+    // A refund comes into the cash book: nobody pays, so no sources are asked.
+    expect(screen.queryByText(said(message(language, 'gardens-sources-title')))).toBeNull();
+    press('F10');
+    await waitFor(() => {
+      expect(fake.saved.entries).toHaveLength(1);
+    });
+    expect(fake.saved.entries[0]).toEqual({
+      type: 'refund',
+      garden_id: 1,
+      date: '10-10-2026',
+      amount: '5000',
+      note: 'Owner paid back',
+    });
   });
 
   it('a closed garden takes no entry: a note with the day instead of the form, and a button to undo', async () => {

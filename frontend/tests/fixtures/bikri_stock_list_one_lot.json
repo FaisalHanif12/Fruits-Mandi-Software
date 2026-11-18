@@ -32,7 +32,8 @@
       "qty_taken": 0,
       "balance": 6,
       "days_waiting": 0,
-      "write_offs": []
+      "write_offs": [],
+      "adjust_advance": true
     }
   ],
   "balance_total": 6,

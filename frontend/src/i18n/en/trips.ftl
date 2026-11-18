@@ -162,8 +162,6 @@ trips-detail-title = { $code }
 # review: pending
 trips-detail-failed = The trip could not be opened
 
-# review: pending
-trips-back = All trips
 
 # review: pending
 trips-status-open = Open
@@ -439,3 +437,10 @@ trips-cancelled-reopened = { $entry } cancelled. The trip is open again.
 # The button on the facts of a trip that opens the market, who was sent and the note for change (plan 44).
 # review: pending
 trips-header-edit = Change the trip details
+
+# What the default shares of a new trip are (plan 78 D1). They cannot be typed in; "Custom shares" opens them.
+# review: pending
+trips-share-default-last = The shares of the last trip. To change them, choose "Custom { -hissa }s".
+
+# review: pending
+trips-share-default-firm = The firm's { -hissa }s. To change them, choose "Custom { -hissa }s".

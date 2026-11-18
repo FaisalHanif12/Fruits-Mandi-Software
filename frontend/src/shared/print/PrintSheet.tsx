@@ -5,7 +5,7 @@
 
 import { useLocalization } from '@fluent/react';
 import { PrintGoods } from './PrintGoods';
-import { PrintHeader } from './PrintHeader';
+import { NAMED_TITLE_IDS, PrintHeader } from './PrintHeader';
 import { PrintPartyBlock } from './PrintPartyBlock';
 import { PrintR5 } from './PrintR5';
 import { PrintScreenFooter } from './PrintScreenFooter';
@@ -21,6 +21,17 @@ interface PrintSheetProps {
   layout?: 'goods' | 'r5';
 }
 
+/** The title that names the party ("<name> کا بل"), or nothing when the document's title is not one (plan 78 A3). */
+function namedTitle(
+  getString: (id: string, vars?: Record<string, string>) => string,
+  titleId: string,
+  page: PrintPage,
+): string | undefined {
+  if (!NAMED_TITLE_IDS.has(titleId)) return undefined;
+  const { name, tag } = page.party;
+  return getString(titleId, { name: tag === undefined ? name : `${name} ${tag}` });
+}
+
 export function PrintSheet({ data, page, columns, layout = 'goods' }: PrintSheetProps) {
   const { l10n } = useLocalization();
   return (
@@ -30,7 +41,10 @@ export function PrintSheet({ data, page, columns, layout = 'goods' }: PrintSheet
           <span className="print-stamp-text">{l10n.getString(LAYOUT_IDS.cancelled)}</span>
         </div>
       ) : null}
-      <PrintHeader header={data.header} />
+      <PrintHeader
+        header={data.header}
+        title={namedTitle((id, vars) => l10n.getString(id, vars), data.header.title_id, page)}
+      />
       {/* A reprint after a correction cannot be taken for the first print (PRD FR-7.71). */}
       {data.revised_on === null ? null : (
         <p className="print-revised">

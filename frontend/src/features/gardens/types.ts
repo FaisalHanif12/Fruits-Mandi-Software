@@ -113,9 +113,16 @@ export type {
 };
 
 /** The types of the type list on the garden screen (PRD FR-7.67), in the order they are shown. */
-export type EntryType = 'installment' | 'cost' | 'other_sale' | 'arrival';
+export type EntryType = 'installment' | 'cost' | 'other_sale' | 'arrival' | 'refund';
 
-export const ENTRY_TYPES: readonly EntryType[] = ['installment', 'cost', 'other_sale', 'arrival'];
+export const ENTRY_TYPES: readonly EntryType[] = [
+  'installment',
+  'cost',
+  'other_sale',
+  'arrival',
+  // The owner's refund after a rent relief (plan 78 D3): offered only while the owner owes the garden money.
+  'refund',
+];
 
 /** The new garden form as text (PRD FR-12.29): the shares first, then the sources, then the details. */
 export interface GardenDraft {
@@ -125,8 +132,8 @@ export interface GardenDraft {
   names: NamePairValue;
   /** `DD-MM-YYYY` as typed. */
   date: string;
-  /** The main fruit, or null. */
-  item: PickerValue | null;
+  /** The items of the garden, one or several (plan 78 D2); the first is the main fruit. Empty is none. */
+  items: PickerValue[];
   /** The full rent for the season, whole rupees as typed. */
   rent: string;
   /** The first installment as typed, or empty. */

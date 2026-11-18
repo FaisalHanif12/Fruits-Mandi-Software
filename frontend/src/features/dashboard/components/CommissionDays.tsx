@@ -32,6 +32,7 @@ import {
   RUNNING_NUMBER,
 } from '../../../shared/ui';
 import { nameWithTag } from '../../reports';
+import type { AnalyticsGoods } from '../../../bindings/AnalyticsGoods';
 import { useCommissionDay } from '../commission-hooks';
 import { useOpenDestination } from '../destinations';
 
@@ -160,13 +161,15 @@ function EntryCard({
 function DayDetail({
   date,
   party,
+  goods,
   side,
 }: {
   date: string;
   party: CommissionParty | null;
+  goods: AnalyticsGoods;
   side: RowsSide;
 }) {
-  const day = useCommissionDay(date, party, true);
+  const day = useCommissionDay(date, party, goods, true);
   if (day.isError) {
     return (
       <ErrorState
@@ -221,6 +224,8 @@ interface CommissionDaysProps {
   empty: ReactNode;
   /** The party the rows are of, as the backend reads it (for the postings of an open day); null is every party. */
   party: CommissionParty | null;
+  /** Which goods the rows are of (plan 78 D4); the postings of an open day are of the same goods. */
+  goods: AnalyticsGoods;
 }
 
 export function CommissionDays({
@@ -232,10 +237,12 @@ export function CommissionDays({
   onActive,
   empty,
   party,
+  goods,
 }: CommissionDaysProps) {
   const language = useLanguage();
   const side: RowsSide = data.party?.side ?? null;
-  const showPartners = side === null && !data.partners_locked;
+  // Under a goods filter the shares and the shared income are not shown: they belong to whole postings (plan 78 D4).
+  const showPartners = side === null && goods === 'all' && !data.partners_locked;
   // A year is one row for each month, its date `YYYY-MM` (PRD FR-9.3).
   const byMonth = data.period.kind === 'year';
   const columns = useMemo<readonly DayColumn<CommissionDayRow>[]>(() => {
@@ -316,7 +323,7 @@ export function CommissionDays({
       onToggle={onToggle}
       active={active}
       onActive={onActive}
-      renderDay={(date) => <DayDetail date={date} party={party} side={side} />}
+      renderDay={(date) => <DayDetail date={date} party={party} goods={goods} side={side} />}
       busy={busy}
       labelId="commission-label"
       empty={empty}

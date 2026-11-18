@@ -318,7 +318,7 @@ describe.each(LANGUAGES)('the collection sheet, R5 (%s)', (language) => {
     expect(visible(document.querySelector('.print-sheet')?.textContent)).toContain('44,364');
     expect(document.querySelector('.print-sheet')).not.toBeNull();
     await user.click(
-      await screen.findByRole('button', {
+      await within(screen.getByRole('main')).findByRole('button', {
         name: (name) => visible(name) === m('common-back'),
       }),
     );
@@ -350,11 +350,12 @@ describe.each(LANGUAGES)('the collection sheet, R5 (%s)', (language) => {
       });
     });
     await waitFor(() => {
-      expect(document.querySelectorAll('.print-parchi-slip').length).toBe(1);
+      // The backend's own slips of the worked day: one for each buyer of the day (ارشد, اکرم, شاہد).
+      expect(document.querySelectorAll('.print-parchi-slip').length).toBe(3);
     });
     expect(document.querySelector('.print-parchi-collect .print-write-line')).not.toBeNull();
     await user.click(
-      await screen.findByRole('button', {
+      await within(screen.getByRole('main')).findByRole('button', {
         name: (name) => visible(name) === m('common-back'),
       }),
     );

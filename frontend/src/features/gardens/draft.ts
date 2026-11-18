@@ -41,7 +41,7 @@ export function newGardenDraft(defaults: GardenDefaults, today: string): GardenD
     })),
     names: { urdu: '', english: '' },
     date: today === '' ? '' : isoToDisplayDate(today),
-    item: null,
+    items: [],
     rent: '',
     paidNow: '',
     paidNowReason: '',
@@ -69,7 +69,9 @@ export function buildGarden(draft: GardenDraft, confirmCash: boolean): GardenInp
     name_en: draft.names.english.trim(),
     confirmed_rules_words: confirmedSpelling(draft.names),
     date: draft.date.trim(),
-    item_id: draft.item?.id ?? null,
+    // The list wins over `item_id` and its first item is the main fruit (plan 78 D2).
+    item_id: null,
+    item_ids: draft.items.map((item) => item.id),
     rent: draft.rent.trim(),
     season_end: textOrNull(draft.seasonEnd),
     note: textOrNull(draft.note),
@@ -92,6 +94,7 @@ export const GARDEN_FIELD_PATHS = [
   'name_en',
   'date',
   'item_id',
+  'item_ids',
   'rent',
   'season_end',
   'note',
@@ -133,7 +136,7 @@ export function changeType(draft: EntryDraft, type: EntryType): EntryDraft {
     date: draft.date,
     amount: draft.amount,
     note: draft.note,
-    sources: type === 'other_sale' || type === 'arrival' ? {} : draft.sources,
+    sources: type === 'other_sale' || type === 'arrival' || type === 'refund' ? {} : draft.sources,
   };
 }
 
@@ -169,6 +172,9 @@ export function entryIsFilled(draft: EntryDraft, lines: readonly EntryRow[]): bo
       );
     case 'arrival':
       return linesAreFilled(lines) || draft.sellDate.trim() !== '' || draft.note.trim() !== '';
+    case 'refund':
+      // The refund has the money and a note; its day is the form's own (plan 78 D3).
+      return draft.amount.trim() !== '' || draft.note.trim() !== '';
   }
 }
 
@@ -231,6 +237,16 @@ export function buildEntry(
       note: textOrNull(draft.note),
     };
   }
+  if (draft.type === 'refund') {
+    // The owner pays money back: it comes into روکڑ, so there are no parts and no cash question (plan 78 D3).
+    return {
+      type: 'refund',
+      garden_id: gardenId,
+      date: draft.date.trim(),
+      amount: draft.amount.trim(),
+      note: textOrNull(draft.note),
+    };
+  }
   return {
     type: draft.type,
     garden_id: gardenId,
@@ -248,4 +264,5 @@ export const ENTRY_FIELD_PATHS: Record<EntryType, readonly string[]> = {
   cost: ['date', 'amount', 'reason'],
   other_sale: ['date', 'shop', 'arrival_id', 'qty', 'amount', 'note'],
   arrival: ['date', 'sell_date', 'note', 'garden_id'],
+  refund: ['date', 'amount', 'note', 'garden_id'],
 };

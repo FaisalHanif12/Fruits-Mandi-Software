@@ -306,8 +306,6 @@ dues-title = Buyers' dues
 # review: pending
 dues-help = Every { -gahak } who owes the shop, with what he owes now and the day his balance last changed. The total is the tile's figure. The age of each due is in report R20.
 
-# review: pending
-dues-back = Back to the dashboard
 
 # review: pending
 dues-search = Search by code or name
@@ -344,8 +342,6 @@ commission-title = { -commission }
 # review: pending
 commission-help = Pick a period: one date, a month, a year or a range of dates. Pick a { -gahak } or a { -beopari } to see only that party's { -commission } and sales. For all parties each row shows the { -commission } of the seller and of the buyer, { -laga }, the total, the shared income and each partner's share of it. Open a day to see the sales that made it. The partners' shares add up to the shared income, not to the total commission.
 
-# review: pending
-commission-back = Back to the dashboard
 
 # review: pending
 commission-label = Commission by day
@@ -516,8 +512,6 @@ kharch-title = { -kharcha }
 # review: pending
 kharch-help = Two parts for one period (one date, a month, a year or a range): the { -dukan-kharcha } of each head with the total of the whole shop, and what each { -shirakat-dar } spent himself ({ -zati-kharcha }) with the total. Open a figure to see its entries: date, amount and reason. The partner part waits for the partner code; the shop part shows without it.
 
-# review: pending
-kharch-back = Back to the dashboard
 
 # review: pending
 kharch-filters-label = { -kharcha } filters

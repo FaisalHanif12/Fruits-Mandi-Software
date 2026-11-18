@@ -50,6 +50,11 @@ export function isCarriedLot(row: EntryRow): boolean {
   return (row.typed[LOT.carried] ?? '') === ON;
 }
 
+/** Was this lot loaded by hand from a trip purchase or a garden's goods arrived (PRD FR-12.50)? */
+export function isGoodsLot(row: EntryRow): boolean {
+  return (row.typed[LOT.purchase] ?? '') !== '' || (row.typed[LOT.arrival] ?? '') !== '';
+}
+
 /** Is this a lot of the firm's own goods: the seller is the اپنا مال account (PRD FR-12.26)? */
 export function isOwnLot(row: EntryRow): boolean {
   return row.picked?.[LOT.seller]?.code === OWN_GOODS_CODE;
@@ -159,7 +164,43 @@ export function saleInput(row: EntryRow): SaleInput {
   };
 }
 
-export function lotInput(row: EntryRow, sales: readonly EntryRow[]): LotInput {
+/** Does the seller's tick of the summary cover this lot: not carried, not own goods, not a garden's (plan 78 C3)? */
+function takesTick(row: EntryRow): boolean {
+  return !isCarriedLot(row) && !isOwnLot(row) && !isGardenLot(row);
+}
+
+/** Has the lot been saved before (an edit)? It keeps the tick it was saved with unless the munshi changes it. */
+function isSavedLot(row: EntryRow): boolean {
+  return (row.typed[LOT.lotId] ?? '') !== '';
+}
+
+/** The lots of the بکری that the tick of one seller covers, in order. */
+export function tickLotsOf(rows: readonly EntryRow[], sellerId: number): EntryRow[] {
+  return rows.filter((row) => takesTick(row) && row.picked?.[LOT.seller]?.id === sellerId);
+}
+
+/**
+ * What a lot sends as its tick "پیشگی اس بکری سے کاٹیں" (PRD FR-12.23, plan 78 C3). The tick is the seller's, made
+ * in his summary and off when a بکری opens, and the backend still takes one for each lot. A lot with no tick to
+ * take (own goods, a garden) sends none. A saved lot sends the tick it carries. A new lot sends the seller's tick:
+ * on when any new lot of his has it on, so a lot added after the tick was made is covered too.
+ */
+export function adjustAdvanceOf(row: EntryRow, rows: readonly EntryRow[]): boolean {
+  if (!takesTick(row)) return false;
+  if (isSavedLot(row)) return row.typed[LOT.adjustAdvance] === ON;
+  const sellerId = row.picked?.[LOT.seller]?.id;
+  if (sellerId === undefined) return row.typed[LOT.adjustAdvance] === ON;
+  return tickLotsOf(rows, sellerId).some(
+    (lot) => !isSavedLot(lot) && lot.typed[LOT.adjustAdvance] === ON,
+  );
+}
+
+export function lotInput(
+  row: EntryRow,
+  sales: readonly EntryRow[],
+  /** What the lot sends as its tick: the seller's tick from his summary (plan 78 C3, `advance-tick.ts`). */
+  adjustAdvance = row.typed[LOT.adjustAdvance] === ON,
+): LotInput {
   const typed = row.typed;
   const lotId = savedId(typed[LOT.lotId]);
   // A lot of own goods takes its goods from one purchase (PRD FR-12.26). There is no cash for the
@@ -206,9 +247,9 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[]): LotInput {
     phone: chargeInput(typed[LOT.phone], typed[LOT.phoneMethod]),
     cash_paid: noCash && lotId === null ? null : textOrNull(typed[LOT.cash]),
     store_rent: textOrNull(typed[LOT.storeRent]),
-    // The tick starts on (PRD FR-12.23); only "0" is an untick. Trip goods have no advance to
-    // deduct, and the backend stores and sends back false for them.
-    adjust_advance: noCash ? false : typed[LOT.adjustAdvance] !== '0',
+    // The tick starts OFF and is made in the seller's summary (PRD FR-12.23, plan 78 C3). Trip goods have no
+    // advance to deduct, and the backend stores and sends back false for them.
+    adjust_advance: noCash ? false : adjustAdvance,
     sales: sales.map(saleInput),
   };
 }
@@ -257,22 +298,12 @@ export function isFilled(draft: BikriDraft): boolean {
 }
 
 /**
- * Has the user put anything on the screen? The lots that came in by themselves from the ready stock
- * (plan 33, PRD FR-12.39, FR-12.40) and that he has not worked on (no buyer and no rate on any of
- * their lines) are not his work yet: a form with only those asks no "save changes?", keeps no draft
- * and asks no preview. As soon as he types a line on any lot, the screen counts as filled and the
- * whole draft goes to the preview, those lots too, so a ready lot he leaves alone is still checked
- * and must be sold or removed (FR-12.26).
+ * Has the user put anything on the screen? A lot he loaded by hand (trip goods, garden goods, a lot carried over)
+ * or typed is his work, so a form with one asks "save changes?" when he leaves it (PRD FR-7.9). An empty row that
+ * only waits to be typed in is not.
  */
-export function isFilledByUser(stores: BikriDraftStores, draft: BikriDraft): boolean {
-  const { readyLots } = stores.view.getState();
-  const cameByItself = (lot: BikriDraft['lots'][number]) =>
-    lot.key in readyLots &&
-    lot.sales.every((sale) => sale.buyer_account_id === null && sale.seller_rate === '');
-  return (
-    draft.lots.some((lot) => !cameByItself(lot) && lotFilled(lot)) ||
-    (draft.carried ?? []).some(carriedFilled)
-  );
+export function isFilledByUser(draft: BikriDraft): boolean {
+  return draft.lots.some(lotFilled) || (draft.carried ?? []).some(carriedFilled);
 }
 
 /** The draft of the screen as the backend takes it. Reads the stores as they are now. */
@@ -286,10 +317,12 @@ export function buildDraft(stores: BikriDraftStores): BikriDraft {
     lot_id: savedId(row.typed[LOT.lotId]) ?? 0,
     sales: sales(row).map(saleInput),
   }));
-  // With carried lots on the screen, the one empty lot row that waits to be typed in is not a new lot: a
-  // screen with only carried lots makes no new بکری (the backend takes an empty `new_lots` as that).
+  // With carried lots or goods loaded by hand on the screen, the one empty lot row that waits to be typed in is not
+  // a new lot: a screen with only carried lots makes no new بکری (the backend takes an empty `new_lots` as that),
+  // and a loaded lot is the lot of the sale, not one lot and a stray empty one (plan 78 C1).
+  const hasWork = carried.length > 0 || rows.some(isGoodsLot);
   const waiting = (row: EntryRow) =>
-    carried.length > 0 &&
+    hasWork &&
     isEmptyLotRow(row) &&
     !sales(row).some(
       (line) => line.picked?.[SALE.buyer] !== undefined || (line.typed[SALE.rate] ?? '') !== '',
@@ -298,7 +331,7 @@ export function buildDraft(stores: BikriDraftStores): BikriDraft {
     header: headerInput(stores.header.getState()),
     lots: rows
       .filter((row) => !isCarriedLot(row) && !waiting(row))
-      .map((row) => lotInput(row, sales(row))),
+      .map((row) => lotInput(row, sales(row), adjustAdvanceOf(row, rows))),
     ...(carried.length === 0 ? {} : { carried }),
   };
 }

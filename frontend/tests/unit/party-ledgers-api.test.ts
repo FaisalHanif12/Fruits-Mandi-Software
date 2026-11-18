@@ -8,20 +8,11 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  partyLedgersGoToDate,
-  partyLedgersList,
-  partyLedgersStatement,
-} from '../../src/features/party_ledgers/api';
+import { partyLedgersGoToDate, partyLedgersList } from '../../src/features/party_ledgers/api';
 import { parseLedgerSearch } from '../../src/features/party_ledgers/search';
 import { partyDayFilters } from '../../src/features/reports/party-day';
 import * as invoke from '../../src/shared/api/invoke';
-import {
-  LEDGER_BUYERS_REQUEST,
-  LEDGER_SELLERS_REQUEST,
-  STATEMENT_AKRAM_REQUEST,
-  STATEMENT_RAHIM_REQUEST,
-} from '../helpers/party-ledgers-real';
+import { LEDGER_BUYERS_REQUEST, LEDGER_SELLERS_REQUEST } from '../helpers/party-ledgers-real';
 import { R35_SLIP_AKRAM_REQUEST, R35_SLIP_RAHIM_REQUEST } from '../helpers/reports-party-real';
 
 vi.mock('../../src/shared/api/invoke');
@@ -36,7 +27,7 @@ beforeEach(() => {
 const COMMANDS = path.resolve(__dirname, '../../../backend/app/src/commands');
 
 describe('the commands of the party ledgers are the ones the backend declares', () => {
-  it('all four commands are in commands/party_ledgers.rs', () => {
+  it('every command is in commands/party_ledgers.rs', () => {
     const text = readFileSync(path.join(COMMANDS, 'party_ledgers.rs'), 'utf8');
     const names = [...text.matchAll(/pub async fn (\w+)</g)].map((match) => match[1] ?? '');
     expect(names).toEqual([
@@ -44,6 +35,9 @@ describe('the commands of the party ledgers are the ones the backend declares', 
       'party_ledgers_statement',
       'party_ledgers_go_to_date',
       'party_ledgers_statement_print_data',
+      // Plan 78 A7, B1 to B3: the statement with a row for each entry, and its print.
+      'party_ledgers_statement_rows',
+      'party_ledgers_statement_rows_print_data',
     ]);
   });
 });
@@ -72,17 +66,6 @@ describe('the wrappers send what the backend reads', () => {
     expect(call).toHaveBeenCalledWith('party_ledgers_list', { input: LEDGER_BUYERS_REQUEST });
     await partyLedgersList(LEDGER_SELLERS_REQUEST);
     expect(call).toHaveBeenLastCalledWith('party_ledgers_list', { input: LEDGER_SELLERS_REQUEST });
-  });
-
-  it('the statement sends the account, the two dates and the page', async () => {
-    await partyLedgersStatement(STATEMENT_AKRAM_REQUEST);
-    expect(call).toHaveBeenCalledWith('party_ledgers_statement', {
-      input: STATEMENT_AKRAM_REQUEST,
-    });
-    await partyLedgersStatement(STATEMENT_RAHIM_REQUEST);
-    expect(call).toHaveBeenLastCalledWith('party_ledgers_statement', {
-      input: STATEMENT_RAHIM_REQUEST,
-    });
   });
 });
 

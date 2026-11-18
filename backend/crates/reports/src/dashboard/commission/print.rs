@@ -15,6 +15,8 @@ use super::model::{
     CommissionPeriodKind, CommissionPrintInput, CommissionSide,
 };
 use super::read::commission_every_row;
+use crate::analytics::AnalyticsGoods;
+use crate::analytics::print::goods_fact;
 use crate::error::ReportsError;
 use crate::print::PrintFact;
 use crate::reports::{
@@ -89,6 +91,8 @@ fn facts_of(month: &CommissionMonth, language: Language) -> Vec<PrintFact> {
         };
         facts.push(fact(label, party_text(shown, language)));
     }
+    // The goods say it all in their label, so their value is empty (as the analytics header).
+    facts.extend(goods_fact(month.goods));
     facts
 }
 
@@ -108,6 +112,7 @@ pub fn commission_month_spec(
             month: input.month.clone(),
             period: input.period.clone(),
             party: input.party.clone(),
+            goods: input.goods,
             offset: None,
             limit: None,
         },
@@ -133,6 +138,10 @@ pub fn commission_month_spec(
         Shared,
     }
     let parts: &[Part] = match month.party.as_ref().map(|p| p.side) {
+        // Shared income is of whole postings: not shown under a goods filter (plan 78 D4).
+        None if month.goods != AnalyticsGoods::All => {
+            &[Part::Seller, Part::Buyer, Part::Laga, Part::Total]
+        }
         None => &[
             Part::Seller,
             Part::Buyer,

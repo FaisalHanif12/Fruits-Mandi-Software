@@ -843,7 +843,8 @@ fn r31_e2e_37_the_statement_of_bay_is_a_report_with_the_running_total() {
     let page = r31(&w, &partner(w.partners[1]), 0, 100);
     assert_eq!(page.id, ReportId::R31);
     assert_eq!(page.title_id, "report-r31-title");
-    // date, amount, running: +1,184, +462, -900, +50,000 (E2E-37).
+    // date, amount, running: -4,500 (his 30% of رحیم's open advance), +1,184, +4,500 (it comes back
+    // with بکری 1), +462, -900, +50,000 (E2E-37, PRD v1.43).
     let figures: Vec<(String, i64, i64)> = page
         .rows
         .iter()
@@ -858,7 +859,9 @@ fn r31_e2e_37_the_statement_of_bay_is_a_report_with_the_running_total() {
     assert_eq!(
         figures,
         vec![
-            ("2026-10-10".to_owned(), 1_184, 1_184),
+            ("2026-09-01".to_owned(), -4_500, -4_500),
+            ("2026-10-10".to_owned(), 1_184, -3_316),
+            ("2026-10-10".to_owned(), 4_500, 1_184),
             ("2026-10-10".to_owned(), 462, 1_646),
             ("2026-10-10".to_owned(), -900, 746),
             ("2026-10-11".to_owned(), 50_000, 50_746),
@@ -869,16 +872,27 @@ fn r31_e2e_37_the_statement_of_bay_is_a_report_with_the_running_total() {
     assert_eq!(
         headings,
         vec![
+            "partners-statement-heading-advance",
             "partners-statement-heading-bikri",
+            "partners-statement-heading-advance",
             "partners-statement-heading-bikri",
             "partners-statement-heading-expense",
             "partners-statement-heading-capital"
         ]
     );
-    let (id, args) = message_args(&page.rows[0].cells[2]);
+    // Rows 0 and 2 are his part of رحیم's advance going out and coming back (PRD FR-17.13, v1.43).
+    assert_eq!(
+        message_args(&page.rows[0].cells[2]).0,
+        "partners-statement-detail-advance-out"
+    );
+    assert_eq!(
+        message_args(&page.rows[2].cells[2]).0,
+        "partners-statement-detail-advance-back"
+    );
+    let (id, args) = message_args(&page.rows[1].cells[2]);
     assert_eq!(id, "partners-statement-detail-income-share");
     assert!(matches!(arg(&args, "number"), ArgValue::Text { text } if text == "1"));
-    let (id, args) = message_args(&page.rows[2].cells[2]);
+    let (id, args) = message_args(&page.rows[4].cells[2]);
     assert_eq!(id, "partners-statement-detail-expense-share");
     // The voucher is a number in its own series, and the subject is the expense head.
     assert!(matches!(
@@ -889,13 +903,14 @@ fn r31_e2e_37_the_statement_of_bay_is_a_report_with_the_running_total() {
         arg(&args, "subject"),
         ArgValue::Names { names } if names.en == "Electricity"
     ));
-    let (id, args) = message_args(&page.rows[3].cells[2]);
+    let (id, args) = message_args(&page.rows[5].cells[2]);
     assert_eq!(id, "partners-statement-detail-capital-in");
     assert!(matches!(
         arg(&args, "voucher"),
         ArgValue::Message { id, .. } if id == "vouchers-number-capital-in"
     ));
-    // Opening 0, added 51,646, taken away 900, closing 50,746. The totals row is the net.
+    // Opening 0, added 56,146 (51,646 and his 4,500 of the advance coming back), taken away 5,400 (900
+    // and the 4,500 going out), closing 50,746. The totals row is the net.
     assert_eq!(
         page.summary
             .iter()
@@ -903,8 +918,8 @@ fn r31_e2e_37_the_statement_of_bay_is_a_report_with_the_running_total() {
             .collect::<Vec<_>>(),
         vec![
             ("partners-statement-opening", 0),
-            ("partners-statement-plus", 51_646),
-            ("partners-statement-minus", 900),
+            ("partners-statement-plus", 56_146),
+            ("partners-statement-minus", 5_400),
             ("partners-statement-closing", 50_746)
         ]
     );
@@ -912,7 +927,7 @@ fn r31_e2e_37_the_statement_of_bay_is_a_report_with_the_running_total() {
         (money(&page.totals[3]), money(&page.totals[4])),
         (50_746, 50_746)
     );
-    assert_eq!(page.total_count, 4);
+    assert_eq!(page.total_count, 6);
     assert_eq!(
         page.filters.partner.as_ref().map(|n| n.en.as_str()),
         Some("Partner B")
@@ -947,9 +962,9 @@ fn r31_a_range_opens_with_the_total_before_it_and_a_page_keeps_the_running_total
             .iter()
             .map(|r| money(&r.cells[4]))
             .collect::<Vec<_>>(),
-        vec![746, 50_746]
+        vec![1_184, 1_646]
     );
-    assert_eq!((second.offset, second.limit, second.total_count), (2, 2, 4));
+    assert_eq!((second.offset, second.limit, second.total_count), (2, 2, 6));
 }
 
 #[test]
@@ -1055,9 +1070,9 @@ fn r31_prints_its_sentences_in_the_print_language_with_the_numbers_already_writt
     };
     for (language, subject) in [(Language::En, "Electricity"), (Language::Ur, "بجلی")] {
         let data = print(language);
-        assert_eq!(data.rows.len(), 4);
-        let PrintCell::Message { id, args } = &data.rows[2].cells[2] else {
-            panic!("{:?}", data.rows[2].cells[2]);
+        assert_eq!(data.rows.len(), 6);
+        let PrintCell::Message { id, args } = &data.rows[4].cells[2] else {
+            panic!("{:?}", data.rows[4].cells[2]);
         };
         assert_eq!(id, "partners-statement-detail-expense-share");
         assert_eq!(text_of_arg(args, "subject"), subject);
@@ -1068,8 +1083,8 @@ fn r31_prints_its_sentences_in_the_print_language_with_the_numbers_already_writt
                 && text_of_arg(args, "number") == "1"
         ));
         // The amounts are text in the print's number style, the running total included.
-        let PrintCell::Money { text } = &data.rows[3].cells[4] else {
-            panic!("{:?}", data.rows[3].cells[4]);
+        let PrintCell::Money { text } = &data.rows[5].cells[4] else {
+            panic!("{:?}", data.rows[5].cells[4]);
         };
         assert_eq!(text, "50,746");
         // The partner is one of the facts in the header.
@@ -1108,7 +1123,7 @@ fn r31_exports_to_a_sheet_with_the_sentences_and_the_numbers_in_both_languages()
             &mut |_| {},
         )
         .unwrap();
-        assert_eq!(done.rows, 4);
+        assert_eq!(done.rows, 6);
         let sheet = xlsx_support::read(&path);
         assert_eq!(sheet.right_to_left, right_to_left);
         let texts = sheet.all_texts();

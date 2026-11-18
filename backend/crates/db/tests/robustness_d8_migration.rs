@@ -92,7 +92,7 @@ fn released_version_21() -> Migrations<'static> {
 }
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: i64 = 24;
+const LATEST: i64 = 25;
 
 fn connection(path: &Path) -> Connection {
     let conn = Connection::open(path).unwrap();
@@ -1185,7 +1185,7 @@ fn lots_without_counter(conn: &Connection) -> Vec<String> {
 }
 
 /// The real upgrade of the hostile file of version 19 runs through every migration to the latest one
-/// (24, plans 76 and 77) in one go. Not one chain hash, journal row, balance, sale line or lot value
+/// (25, plans 76, 77 and 78) in one go. Not one chain hash, journal row, balance, sale line or lot value
 /// moves; the new columns, tables and the two new controls (0307, 0605) are the only change, every lot
 /// has a counter, no account is linked, and a second run is a no-op.
 #[test]
@@ -1196,12 +1196,18 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
     let old = build_v19(&path, &backups);
     let mut conn = connection(&path);
     // Migration 22 adds a column to `bikri_lots` and makes `lot_counters`; migration 23 adds columns to
-    // `accounts` and `partners` and the two controls 0307 and 0605 (checked on their own below). The other
-    // changes are those of 20 and 21.
+    // `accounts` and `partners` and the two controls 0307 and 0605 (checked on their own below); migration 25
+    // makes `venture_items` and adds a column to `ventures`. The other changes are those of 20 and 21.
     let skip: Vec<&str> = CHANGES_ON_PURPOSE
         .iter()
         .copied()
-        .chain(["bikri_lots", "lot_counters", "account_controls"])
+        .chain([
+            "bikri_lots",
+            "lot_counters",
+            "account_controls",
+            "ventures",
+            "venture_items",
+        ])
         .collect();
     let rows_before = all_rows(&conn, &skip);
     let controls_before = controls(&conn);
@@ -1213,7 +1219,7 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
     assert!(lots >= 1);
 
     let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((outcome.from, outcome.to), (19, 24));
+    assert_eq!((outcome.from, outcome.to), (19, 25));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), LATEST);
 
@@ -1330,6 +1336,6 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
         0
     );
     let again = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((again.from, again.to), (24, 24));
+    assert_eq!((again.from, again.to), (25, 25));
     assert!(again.copy.is_none());
 }

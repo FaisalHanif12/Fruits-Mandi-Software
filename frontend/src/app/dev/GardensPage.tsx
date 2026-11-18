@@ -4,7 +4,7 @@
 // size. The flags in the hash choose the screen: `?list` the list of gardens (`&empty` for none),
 // `?new` the new garden form, `?overview` the partners overview with the open gardens under each
 // card, else one garden (`&closed` closed, `&fresh` with nothing paid yet, `&cash` with little cash
-// in hand, so the amber note shows). Never shipped: the route exists only when import.meta.env.DEV
+// in hand, so the amber note shows, `&relief` after a rent relief: the old rent, the relief and what the owner owes). Never shipped: the route exists only when import.meta.env.DEV
 // is true (app/router.tsx).
 
 import { useState } from 'react';

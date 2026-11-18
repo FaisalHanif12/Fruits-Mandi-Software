@@ -4,6 +4,14 @@
   "dir": "rtl",
   "paper": "a4",
   "title_id": "report-r35-title",
+  "party": {
+    "short_code": "0",
+    "code": "0010",
+    "name": "رحیم",
+    "tag": null,
+    "person_key": null
+  },
+  "named_title_id": "print-seller-day-slip-title",
   "filters": [
     {
       "label_id": "report-filter-day",

@@ -21,6 +21,7 @@ pub fn add_partners(env: &TestEnv, actor: &auth::Actor) {
                 name_ur: ur.to_owned(),
                 name_en: en.to_owned(),
                 opening_capital: None,
+                opening_capital_where: None,
                 confirmed_rules_words: words.clone(),
             };
             match partners::create(&env.ctx, actor, &input) {

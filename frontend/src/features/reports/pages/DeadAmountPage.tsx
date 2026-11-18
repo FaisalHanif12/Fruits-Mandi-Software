@@ -14,8 +14,7 @@
 // - Four states: loading, an error with a retry, nothing yet (with what to do next), and the rows.
 
 import { Localized } from '@fluent/react';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, FileText, Printer, SearchX, UserRoundX } from 'lucide-react';
+import { BookOpen, FileText, Printer, SearchX, UserRoundX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { DeadFilter } from '../../../bindings/DeadFilter';
 import type { DeadRow } from '../../../bindings/DeadRow';
@@ -74,7 +73,6 @@ function wireOf(filter: DeadFilter): ReportFilters {
 }
 
 export function DeadAmountPage() {
-  const navigate = useNavigate();
   const open = useOpenReport();
   const actions = useDeadAmountActions();
   const [filter, setFilter] = useState<DeadFilter>('owed');
@@ -100,10 +98,15 @@ export function DeadAmountPage() {
         group_by_month: false,
       }),
   });
-  useEscape('leave', () => {
-    if (view === 'preview') setView('table');
-    else void navigate({ to: '/' });
-  });
+  // Esc closes the preview first; with the table showing, Esc is the shell's: back to the page the user came
+  // from (plan 78 F1).
+  useEscape(
+    'leave',
+    () => {
+      setView('table');
+    },
+    view === 'preview',
+  );
   useShortcut(SHORTCUTS.print, () => {
     if (view === 'table') setView('preview');
   });
@@ -184,15 +187,6 @@ export function DeadAmountPage() {
       }
       actions={
         <>
-          <Button
-            onClick={() => {
-              if (view === 'preview') setView('table');
-              else void navigate({ to: '/' });
-            }}
-          >
-            <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-            <Localized id="dead-report-back" />
-          </Button>
           {view === 'table' ? (
             <Button
               disabled={focused === undefined || open === null}

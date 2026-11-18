@@ -190,6 +190,45 @@ export function GardenEntryFieldsForm({
       </>
     );
   }
+  if (draft.type === 'refund') {
+    // The owner's refund after a rent relief (plan 78 D3): the money, and a note. It comes into روکڑ.
+    return (
+      <>
+        <Field
+          label={<Localized id="gardens-refund-amount" />}
+          info={
+            <Localized id="gardens-refund-amount-hint">
+              <p />
+            </Localized>
+          }
+          error={fieldError(error, 'amount')}
+        >
+          {(props) => (
+            <MoneyInput
+              {...props}
+              value={draft.amount}
+              onChange={(amount) => {
+                onChange({ amount });
+              }}
+            />
+          )}
+        </Field>
+        <div className="col-span-2">
+          <Field label={<Localized id="gardens-field-note" />} error={fieldError(error, 'note')}>
+            {(props) => (
+              <FreeTextInput
+                {...props}
+                value={draft.note}
+                onChange={(note) => {
+                  onChange({ note });
+                }}
+              />
+            )}
+          </Field>
+        </div>
+      </>
+    );
+  }
   const costType = draft.type === 'cost';
   return (
     <>

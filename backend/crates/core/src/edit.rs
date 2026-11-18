@@ -523,9 +523,15 @@ pub struct GardenHeaderEditInput {
     /// The garden as it should be. `date` must be the garden's own date; `paid_now` and `parts`
     /// are ignored (the first installment is an entry of its own).
     pub garden: GardenInput,
-    /// Why. Required when the garden is not of today.
+    /// Why. Required when the garden is not of today, and ALWAYS when the rent changes (PRD FR-12.51,
+    /// plan 78 D3: `ERR_REASON_REQUIRED` on `reason`).
     #[serde(default)]
     pub reason: String,
+    /// The Owner's sign (دستخط), required when the rent changes (`ERR_SIGN_REQUIRED`,
+    /// `ERR_SIGN_WRONG` on `sign`). A wrong sign changes nothing and is written to the audit log.
+    #[serde(default)]
+    #[ts(optional)]
+    pub sign: Option<String>,
 }
 
 /// The audit entity names an edit stamp and a history can be asked for. Each stands for the

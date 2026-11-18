@@ -284,16 +284,14 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   };
   const navigation = useFormNavigation(saveAndClose);
   useShortcut(SHORTCUTS.save, saveAndClose);
+  // The form drawn over a screen (a picker's "add") has its own Back: it closes the form. The form of the
+  // page has none: the Back of the top bar and Esc take the user to where he came from (plan 78 F1).
   const goBack = () => {
-    if (embedded === undefined) {
-      void navigate({ to: '/index/accounts' });
-    } else if (dirty) {
-      setAskLeave(true);
-    } else {
-      embedded.onDone(null);
-    }
+    if (embedded === undefined) return;
+    if (dirty) setAskLeave(true);
+    else embedded.onDone(null);
   };
-  useEscape('leave', goBack, !askLeave);
+  useEscape('leave', goBack, embedded !== undefined && !askLeave);
 
   const changeActive = (isActive: boolean) => {
     if (account === null) return;
@@ -822,9 +820,11 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button shortcut={SHORTCUTS.back} onClick={goBack}>
-            <Localized id="common-back" />
-          </Button>
+          {embedded === undefined ? null : (
+            <Button shortcut={SHORTCUTS.back} onClick={goBack}>
+              <Localized id="common-back" />
+            </Button>
+          )}
           <Button
             variant="primary"
             shortcut={SHORTCUTS.save}

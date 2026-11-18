@@ -30,7 +30,7 @@ export type GardenSummaryRow = {
    */
   balance_paisa: Paisa;
   /**
-   * The rent still due (signed).
+   * The rent still due, never below 0 (what was paid above the rent is what the owner owes).
    */
   rent_due_paisa: Paisa;
   /**

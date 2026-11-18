@@ -34,7 +34,7 @@
       "today_paisa": 320000,
       "month_paisa": 320000,
       "year_paisa": 320000,
-      "total_paisa": -2980000
+      "total_paisa": -3580000
     },
     {
       "partner_id": 2,
@@ -43,7 +43,7 @@
       "today_paisa": 240000,
       "month_paisa": 240000,
       "year_paisa": 240000,
-      "total_paisa": 240000
+      "total_paisa": -210000
     },
     {
       "partner_id": 3,
@@ -52,7 +52,7 @@
       "today_paisa": 240000,
       "month_paisa": 240000,
       "year_paisa": 240000,
-      "total_paisa": 240000
+      "total_paisa": -210000
     }
   ],
   "gardens": [

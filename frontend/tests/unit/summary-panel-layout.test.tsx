@@ -23,12 +23,7 @@ describe.each(LANGUAGES)('the summary card (%s)', (language) => {
   const draw = () =>
     renderIn(
       language,
-      <SummaryPanel
-        totals={EVENT1.lots[0]?.totals ?? null}
-        whole={false}
-        lotNumber={1}
-        netIsNegative={false}
-      />,
+      <SummaryPanel totals={EVENT1.lots[0]?.totals ?? null} whole={false} netIsNegative={false} />,
     );
 
   it('puts its two sides in a grid that is one column until the card itself is wide enough', () => {

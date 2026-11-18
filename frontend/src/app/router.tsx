@@ -801,14 +801,6 @@ const partyLedgersDevRoutes = import.meta.env.DEV
   ? [
       createRoute({
         getParentRoute: () => rootRoute,
-        path: '/dev/statement-print',
-        component: lazyRouteComponent(
-          () => import('./dev/StatementPrintDevPage'),
-          'StatementPrintDevPage',
-        ),
-      }),
-      createRoute({
-        getParentRoute: () => rootRoute,
         path: '/dev/party-ledgers',
         validateSearch: (search: Record<string, unknown>) => parseLedgerSearch(search),
         component: lazyRouteComponent(

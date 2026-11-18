@@ -1584,6 +1584,86 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "offset": 0, "limit": 100 } }),
             true,
         ),
+        // Plan 78 (append-only block): the commands of the print menu, the compact statement, the
+        // load buttons and the capital card. All need the Owner; the card and the partner month print
+        // also need the partner code.
+        ("bikri_goods_sources", json!({}), true),
+        (
+            "bikri_goods_to_load",
+            json!({ "input": { "kind": "trip" } }),
+            true,
+        ),
+        ("cashbook_capital_where", json!({}), true),
+        (
+            "dashboard_buyer_dues_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_commission_print",
+            json!({ "input": { "sheet": { "month": null, "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "partners_statement_month_print",
+            json!({ "input": { "statement": { "partner_id": 1, "month": null, "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows",
+            json!({ "input": { "account_id": 1, "from": null, "to": null, "include_history": false, "newest_first": false, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows_print_data",
+            json!({ "input": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "items": false, "include_history": false, "language": "en" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows_print",
+            json!({ "input": { "statement": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "items": false, "include_history": false, "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_buyer_parchi_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_sale_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_seller_bills_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_seller_bills_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
     ]
 }
 

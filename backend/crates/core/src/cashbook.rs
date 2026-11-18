@@ -40,6 +40,24 @@ pub struct CashbookInput {
     pub group_by_month: bool,
 }
 
+/// What a cash row is, for the rows that start the book or move a partner's capital (plan 78 E,
+/// PRD FR-16.14). The posting type says what the entry is; this says it in the words the Owner
+/// reads: the opening cash, a partner's opening capital, and capital put in or taken back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum CashbookKind {
+    /// The opening balance typed on the cash account itself (ابتدائی روکڑ).
+    OpeningCash,
+    /// A partner's opening capital that came into cash (`partner` says whose).
+    OpeningCapital,
+    /// Capital a partner put in (سرمایہ جمع).
+    CapitalIn,
+    /// Capital a partner took back (سرمایہ واپسی).
+    CapitalOut,
+    /// Any other row: a sale, a voucher, an expense and the rest. `posting_type` says which.
+    Other,
+}
+
 /// One cash movement.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct CashbookRow {
@@ -60,6 +78,12 @@ pub struct CashbookRow {
     /// The other account of the entry (for example the buyer of a وصولی), or null when there are
     /// several.
     pub account: Option<RecordRef>,
+    /// What the row is when it opens the book or moves a partner's capital (plan 78 E). `other` for
+    /// every other row.
+    pub kind: CashbookKind,
+    /// The partner of an opening capital, capital in or capital out row. Null for every other row.
+    /// `code` is empty: a partner has no code.
+    pub partner: Option<RecordRef>,
     /// The note. Empty if none.
     pub narration: String,
     /// Cash in (0 if the row is cash out).
@@ -100,6 +124,9 @@ pub struct Cashbook {
     /// Cash in hand at the end of the range (signed).
     #[ts(type = "Paisa")]
     pub closing_paisa: Paisa,
+    /// The day of the first entry that ever moved cash (not only in this range), `YYYY-MM-DD`, or
+    /// null when cash never moved. The window screen goes back to it (plan 78 E, PRD FR-16.14).
+    pub first_entry_date: Option<String>,
     /// The page, by day and posting order.
     pub rows: Vec<CashbookRow>,
     /// How many rows there are in the range.
@@ -111,4 +138,91 @@ pub struct Cashbook {
     /// on the page), in the order of the list, when asked with `group_by_month` and the list is in
     /// day order. Figures: `in_paisa` and `out_paisa`.
     pub months: Vec<MonthSubtotal>,
+}
+
+// ---- Where the capital is (PRD FR-16.14 v1.43, plan 78 E) ----
+
+/// What a line of "where the partners' money is now" is (the left side of the card).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum CapitalWhereKind {
+    /// روکڑ: cash in hand.
+    Cash,
+    /// What the buyers owe the shop, the dead amount included (the ledger balances of every buyer).
+    BuyersOwe,
+    /// Advances with sellers, still open (PRD FR-15.8).
+    SellerAdvances,
+    /// What sellers owe beyond their open advances (PRD FR-15.9).
+    SellersOweBeyond,
+    /// Minus what the shop owes sellers (their open payables, negative).
+    SellersPayable,
+    /// ادھار رقم: money lent and not yet returned.
+    MoneyLent,
+    /// Minus what is owed to labour, transport, the munshi and stores (head 02, negative).
+    OwedForCharges,
+    /// الگ کھاتے: separate khatas.
+    SeparateKhatas,
+    /// Minus the gardens' money held until closing (negative).
+    GardensHeld,
+    /// Minus linked money already in the partners' totals (the contra account, negative).
+    LinkedInPartnerTotals,
+    /// Any other account of the left side. Only when not 0.
+    Other,
+}
+
+/// One line of the left side. Signed: money the shop has or is owed is plus, what it owes is minus.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct CapitalWhereLine {
+    /// What it is.
+    pub kind: CapitalWhereKind,
+    /// The amount.
+    #[ts(type = "Paisa")]
+    pub amount_paisa: Paisa,
+}
+
+/// What a line of "whose it is" (the right side of the card) is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum CapitalWhoseKind {
+    /// A partner's کل رقم (`partner` says whose).
+    PartnerTotal,
+    /// ابتدائی سرمایہ (the firm's, account 06010001).
+    OpeningCapital,
+    /// The partners' parts of the advances to sellers still open (PRD FR-17.13).
+    AdvancesOpen,
+    /// ابتدائی فرق when not 0: "رقم کا مقام درج نہیں" (where the money is was not recorded).
+    UnrecordedWhere,
+    /// Any other difference. Only when not 0; the books balance, so it shows a bug.
+    Other,
+}
+
+/// One line of the right side.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct CapitalWhoseLine {
+    /// What it is.
+    pub kind: CapitalWhoseKind,
+    /// The partner of a `partner_total` line. `code` is empty.
+    pub partner: Option<RecordRef>,
+    /// The amount.
+    #[ts(type = "Paisa")]
+    pub amount_paisa: Paisa,
+}
+
+/// The card on the روکڑ page: where the partners' money is, and whose it is. Behind the partner code
+/// (`ERR_PARTNER_LOCKED`). The two totals are always equal, because the trial balance balances.
+///
+/// Example (after Events 1 to 5): 58,484 + 21,564 − 10,160 − 4,400 = 65,488 on the left; partners
+/// −1,004 + 746 + 746 and ابتدائی سرمایہ 65,000 on the right.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct CapitalWhere {
+    /// Where it is.
+    pub where_lines: Vec<CapitalWhereLine>,
+    /// Σ of the left side.
+    #[ts(type = "Paisa")]
+    pub where_total_paisa: Paisa,
+    /// Whose it is.
+    pub whose_lines: Vec<CapitalWhoseLine>,
+    /// Σ of the right side.
+    #[ts(type = "Paisa")]
+    pub whose_total_paisa: Paisa,
 }

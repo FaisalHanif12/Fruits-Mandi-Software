@@ -3,6 +3,7 @@ import type { Language } from './Language';
 import type { Paper } from './Paper';
 import type { PrintFact } from './PrintFact';
 import type { PrintReportColumn } from './PrintReportColumn';
+import type { PrintReportParty } from './PrintReportParty';
 import type { PrintReportRow } from './PrintReportRow';
 import type { PrintReportTable } from './PrintReportTable';
 import type { PrintWords } from './PrintWords';
@@ -35,6 +36,17 @@ export type ReportPrintData = {
    * Fluent message ID of the title.
    */
   title_id: string;
+  /**
+   * The party of a one-party print (a day slip, a ledger, a statement), with his name in the print
+   * language (plan 78 A2, A3, A6). Null for a print that is not for one party.
+   */
+  party: PrintReportParty | null;
+  /**
+   * Fluent message ID of a title that names the party, for example "{ $name } کی روزانہ پرچی": the
+   * template passes `party.name` (with the tag) as `$name`. Null when the title has no name; the
+   * template then uses `title_id`.
+   */
+  named_title_id: string | null;
   /**
    * The filters of the run, the facts under the title: dates and party (FR-19.10). They go to
    * `reports_print_header` with the title.

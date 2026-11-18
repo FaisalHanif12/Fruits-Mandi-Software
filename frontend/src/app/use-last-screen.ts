@@ -10,6 +10,7 @@
 
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
+import { promiseNavigation } from '../shared/navigation';
 import { useScreenMemory } from '../shared/screen-state';
 
 /** The name under which the last screen is kept. */
@@ -36,6 +37,8 @@ export function useLastScreen(active: boolean): void {
     decided.current = true;
     const saved = typeof memory.saved === 'string' ? memory.saved : null;
     if (pathname === '/' && saved !== null && isRestorablePath(saved)) {
+      // Opening where he left off is a fresh start, not a page opened from the dashboard (plan 78 F1).
+      promiseNavigation('fresh', saved);
       void navigate({ to: saved });
     }
     setSettled(true);

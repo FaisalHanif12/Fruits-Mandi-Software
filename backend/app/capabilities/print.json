@@ -14,6 +14,15 @@
     "allow-analytics-print-data",
     "allow-bikri-list-print-data",
     "allow-party-ledgers-statement-print-data",
+    "allow-party-ledgers-statement-rows-print-data",
+    "allow-reports-buyer-parchi-print-data",
+    "allow-reports-seller-bills-print-data",
+    "allow-reports-sale-print-data",
+    "allow-reports-adhari-sheet-print-data",
+    "allow-reports-collection-sheet-print-data",
+    "allow-dashboard-buyer-dues-print-data",
+    "allow-dashboard-commission-print-data",
+    "allow-partners-statement-month-print-data",
     "allow-reports-print-header",
     "core:event:default"
   ]

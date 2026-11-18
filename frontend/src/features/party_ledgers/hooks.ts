@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import type { LedgerSide } from '../../bindings/LedgerSide';
 import { isoToDisplayDate } from '../../shared/format';
 import { useDebouncedValue, usePagedQuery } from '../../shared/hooks';
-import { partyLedgersList, partyLedgersStatement } from './api';
+import { partyLedgersList, partyLedgersStatementRows } from './api';
 
 /** The most rows one read may ask for (Code Standards B31); 30 days never come near it. */
 const WINDOW_LIMIT = 100;
@@ -19,8 +19,19 @@ const WINDOW_LIMIT = 100;
 const WINDOW_FRESH_MS = 2_000;
 
 /** The cache key of the 30 days of one party's statement. */
-export function partyWindowKey(accountId: number, window: { from: string; to: string } | null) {
-  return ['party_ledgers', 'window', accountId, window?.from ?? null, window?.to ?? null] as const;
+export function partyWindowKey(
+  accountId: number,
+  window: { from: string; to: string } | null,
+  history: boolean,
+) {
+  return [
+    'party_ledgers',
+    'window',
+    accountId,
+    window?.from ?? null,
+    window?.to ?? null,
+    history,
+  ] as const;
 }
 
 /** A short pause so a burst of key presses in a filter box asks once (Code Standards F35). */
@@ -48,20 +59,27 @@ export function usePartyLedgersList(side: LedgerSide, search: string) {
 }
 
 /**
- * The 30 days of one party's statement, newest first, as one read: the rows of the window, the
- * balance at its start and at its end, and what it charged and what was paid, all the backend's (PRD
- * FR-12.47, plan 74 W3). The window is a range, so it is the same command as level 2; it is one page,
- * because 30 days hold at most 30 dates. Days are `YYYY-MM-DD`; the backend is sent them as typed
- * dates. The window last shown stays on screen while the next one is on its way.
+ * The 30 days of one party's statement, one row for each entry, oldest first, as one read: the rows of the
+ * window with the balance before it, what it charged and what was paid, and the balance at its end, all the
+ * backend's (PRD FR-12.47, FR-19.16, plan 78 B1 to B3). It is one page, because 30 days hold at most 100 entries
+ * of one party. Days are `YYYY-MM-DD`; the backend is sent them as typed dates. The window last shown stays on
+ * screen while the next one is on its way. `history` shows the entries an edit or a cancel replaced too.
  */
-export function usePartyWindow(accountId: number, window: { from: string; to: string } | null) {
+export function usePartyWindow(
+  accountId: number,
+  window: { from: string; to: string } | null,
+  history: boolean,
+) {
   return useQuery({
-    queryKey: partyWindowKey(accountId, window),
+    queryKey: partyWindowKey(accountId, window, history),
     queryFn: () =>
-      partyLedgersStatement({
+      partyLedgersStatementRows({
         account_id: accountId,
-        from: window === null ? null : isoToDisplayDate(window.from),
-        to: window === null ? null : isoToDisplayDate(window.to),
+        ...(window === null
+          ? {}
+          : { from: isoToDisplayDate(window.from), to: isoToDisplayDate(window.to) }),
+        include_history: history,
+        newest_first: false,
         offset: 0,
         limit: WINDOW_LIMIT,
       }),
@@ -83,23 +101,31 @@ export function useSettledDates(from: string, to: string) {
 
 /**
  * Level 2 as a range: the statement of one party between two dates, as they are typed (`DD-MM-YYYY`; the
- * backend reads the shortcuts and refuses a bad date under its own box), page by page with its own
- * opening and closing balance. The dates are already settled (`useSettledDates`). With `enabled` off
- * nothing is asked (the screen shows its 30-day window instead).
+ * backend reads the shortcuts and refuses a bad date under its own box), one row for each entry, page by page
+ * with its own balance brought forward and closing balance. The dates are already settled (`useSettledDates`).
+ * With `enabled` off nothing is asked (the screen shows its 30-day window instead).
  */
-export function usePartyStatement(accountId: number, from: string, to: string, enabled = true) {
+export function usePartyStatement(
+  accountId: number,
+  from: string,
+  to: string,
+  history: boolean,
+  enabled = true,
+) {
   const dates = useMemo(
     () => ({ accountId, from: textOrNull(from), to: textOrNull(to) }),
     [accountId, from, to],
   );
   return usePagedQuery({
     screen: 'party_ledgers.statement',
-    queryKey: ['party_ledgers', 'statement', dates.accountId, dates.from, dates.to],
+    queryKey: ['party_ledgers', 'statement', dates.accountId, dates.from, dates.to, history],
     fetchPage: (offset, limit) =>
-      partyLedgersStatement({
+      partyLedgersStatementRows({
         account_id: dates.accountId,
-        from: dates.from,
-        to: dates.to,
+        ...(dates.from === null ? {} : { from: dates.from }),
+        ...(dates.to === null ? {} : { to: dates.to }),
+        include_history: history,
+        newest_first: false,
         offset,
         limit,
       }),

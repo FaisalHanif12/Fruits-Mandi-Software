@@ -54,6 +54,7 @@ mod day_tables;
 mod figures;
 mod figures_load;
 mod party_statement;
+mod sale_print;
 mod slip;
 mod table;
 
@@ -123,9 +124,10 @@ pub(crate) fn run(
 }
 
 pub use collection_sheet::{
+    AdhariSheet, AdhariSheetInput, AdhariSheetPrintInput, AdhariSheetRow, AdhariSheetTotals,
     CollectionLine, CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput,
-    CollectionSheetRow, CollectionSheetTotals, collection_sheet, collection_sheet_print_data,
-    collection_sheet_spec,
+    CollectionSheetRow, CollectionSheetTotals, adhari_sheet, adhari_sheet_print_data,
+    adhari_sheet_spec, collection_sheet, collection_sheet_print_data, collection_sheet_spec,
 };
 pub(super) use day_tables::{DaySheet, load_days};
 pub use party_statement::{
@@ -133,6 +135,7 @@ pub use party_statement::{
     StatementPrintData, StatementPrintDataInput, StatementSide, entry_lines_sql,
     party_statement_print_data,
 };
+pub use sale_print::{SalePrintData, sale_print};
 pub(crate) use table::table_columns;
 
 /// The rows of one of the day queries read in both forms, as text, entries first and lines first.

@@ -31,6 +31,7 @@ import {
   FilterCard,
 } from '../../../shared/ui';
 import { useOpenRowSource } from '../../reports';
+import { CapitalWhereCard } from '../components/CapitalWhereCard';
 import { SignedNum } from '../components/SignedNum';
 import { useCashbook } from '../hooks';
 import { CASHBOOK_COLUMNS } from '../list-columns';
@@ -121,6 +122,10 @@ function CashbookScreen({ today }: { today: string }) {
           <p className="shrink-0 type-body text-ink-muted" />
         </Localized>
       ) : null}
+      {/* Where the partners' money is, behind the partner code; shut until it is opened (plan 78 E). */}
+      <div className="shrink-0">
+        <CapitalWhereCard />
+      </div>
       <PagedList<CashbookRow>
         columns={CASHBOOK_COLUMNS}
         rows={rows}

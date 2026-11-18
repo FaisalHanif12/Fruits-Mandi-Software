@@ -71,3 +71,25 @@ pub struct ReadyGoods {
     /// The rows.
     pub rows: Vec<ReadyGoodsRow>,
 }
+
+/// What the بکری screen has to load by hand (plan 78 C1): how many rows each of its three load
+/// buttons would list. A button is shown only when its count is above 0.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct GoodsSources {
+    /// Saved lots with goods left (باقی مال): lots of earlier بکری, listed by `bikri_stock_list`.
+    #[ts(type = "number")]
+    pub stock_lots: i64,
+    /// Purchases of open trips with goods left for our shop, on any day to sell.
+    #[ts(type = "number")]
+    pub trip_rows: i64,
+    /// Arrivals of open gardens with goods left for our shop, on any day to sell.
+    #[ts(type = "number")]
+    pub garden_rows: i64,
+}
+
+/// Input of `bikri_goods_to_load`: which card to fill (plan 78 C1).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct GoodsToLoadInput {
+    /// `trip` lists the purchases of open trips, `garden` the arrivals of open gardens.
+    pub kind: VentureKind,
+}

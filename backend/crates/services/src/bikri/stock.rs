@@ -104,6 +104,7 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 qty_taken: lot.qty_taken,
                 balance,
                 days_waiting,
+                adjust_advance: lot.adjust_advance,
                 write_offs: write_offs
                     .iter()
                     .filter(|w| w.lot_id == lot.lot_id)
@@ -425,8 +426,7 @@ pub fn ready_goods(
     ctx: &Context,
     input: &mandi_domain::core::bikri::ReadyGoodsInput,
 ) -> Result<mandi_domain::core::bikri::ReadyGoods, ServiceError> {
-    use mandi_domain::core::bikri::{ReadyGoods, ReadyGoodsRow};
-    use mandi_domain::core::ventures::{TripRef, VentureKind};
+    use mandi_domain::core::bikri::ReadyGoods;
     let (_, today) = day::window(ctx)?;
     let date = if input.date.trim().is_empty() {
         today
@@ -436,65 +436,135 @@ pub fn ready_goods(
     let date_iso = date.to_iso();
     let limit = 100_i64;
     ctx.db.read(|conn| {
-        let mut rows: Vec<ReadyGoodsRow> = Vec::new();
-        for rec in mandi_db::purchases::ready_by(conn, &date_iso, limit)? {
-            rows.push(ReadyGoodsRow {
-                kind: VentureKind::Trip,
-                id: rec.id,
-                number: rec.number,
-                sell_date: rec.sell_date.clone(),
-                entry_date: rec.entry_date.clone(),
-                item: rec.item.clone(),
-                packing: rec.packing.clone(),
-                qty: rec.qty,
-                qty_left: mandi_domain::core::split::StockParts::of(
-                    rec.qty,
-                    rec.other_qty,
-                    rec.qty_sold,
-                    rec.qty_sold_other,
-                    rec.qty_written_off,
-                )
-                .ok_or_else(|| data("the split of a purchase does not fit"))?
-                .our_left,
-                weight_grams: rec.weight_grams,
-                trip: Some(TripRef {
-                    id: rec.trip_id,
-                    number: rec.trip_number,
-                    code: mandi_domain::core::codes::number_code(
-                        mandi_domain::core::codes::CodeType::Trip,
-                        rec.trip_number,
-                    ),
-                    name_ur: rec.trip_name_ur.clone(),
-                    name_en: rec.trip_name_en.clone(),
-                }),
-                garden: None,
-            });
-        }
-        for rec in mandi_db::arrivals::ready_by(conn, &date_iso, limit)? {
-            rows.push(ReadyGoodsRow {
-                kind: VentureKind::Garden,
-                id: rec.id,
-                number: rec.number,
-                sell_date: rec.sell_date.clone(),
-                entry_date: rec.entry_date.clone(),
-                item: rec.item.clone(),
-                packing: rec.packing.clone(),
-                qty: rec.qty,
-                qty_left: crate::gardens::arrivals::parts_of(&rec)?.our_left,
-                weight_grams: rec.weight_grams,
-                trip: None,
-                garden: Some(crate::gardens::arrivals::garden_ref(&rec)),
-            });
-        }
-        // Oldest day to sell first, then number; a trip purchase before a garden arrival.
-        rows.sort_by(|a, b| {
-            (&a.sell_date, a.number, a.kind != VentureKind::Trip).cmp(&(
-                &b.sell_date,
-                b.number,
-                b.kind != VentureKind::Trip,
-            ))
+        let mut rows = trip_ready_rows(&mandi_db::purchases::ready_by(conn, &date_iso, limit)?)?;
+        rows.extend(garden_ready_rows(&mandi_db::arrivals::ready_by(
+            conn, &date_iso, limit,
+        )?)?);
+        sort_ready(&mut rows);
+        Ok(ReadyGoods { rows })
+    })
+}
+
+/// A trip purchase as a ready row: the goods left for our shop (PRD FR-12.39, FR-12.41).
+fn trip_ready_rows(
+    recs: &[mandi_db::purchases::PurchaseRec],
+) -> Result<Vec<mandi_domain::core::bikri::ReadyGoodsRow>, ServiceError> {
+    use mandi_domain::core::bikri::ReadyGoodsRow;
+    use mandi_domain::core::ventures::{TripRef, VentureKind};
+    let mut rows = Vec::with_capacity(recs.len());
+    for rec in recs {
+        rows.push(ReadyGoodsRow {
+            kind: VentureKind::Trip,
+            id: rec.id,
+            number: rec.number,
+            sell_date: rec.sell_date.clone(),
+            entry_date: rec.entry_date.clone(),
+            item: rec.item.clone(),
+            packing: rec.packing.clone(),
+            qty: rec.qty,
+            qty_left: mandi_domain::core::split::StockParts::of(
+                rec.qty,
+                rec.other_qty,
+                rec.qty_sold,
+                rec.qty_sold_other,
+                rec.qty_written_off,
+            )
+            .ok_or_else(|| data("the split of a purchase does not fit"))?
+            .our_left,
+            weight_grams: rec.weight_grams,
+            trip: Some(TripRef {
+                id: rec.trip_id,
+                number: rec.trip_number,
+                code: mandi_domain::core::codes::number_code(
+                    mandi_domain::core::codes::CodeType::Trip,
+                    rec.trip_number,
+                ),
+                name_ur: rec.trip_name_ur.clone(),
+                name_en: rec.trip_name_en.clone(),
+            }),
+            garden: None,
         });
-        rows.truncate(100);
+    }
+    Ok(rows)
+}
+
+/// A garden arrival as a ready row: the goods left for our shop (PRD FR-12.40, FR-12.41).
+fn garden_ready_rows(
+    recs: &[mandi_db::arrivals::ArrivalRec],
+) -> Result<Vec<mandi_domain::core::bikri::ReadyGoodsRow>, ServiceError> {
+    use mandi_domain::core::bikri::ReadyGoodsRow;
+    use mandi_domain::core::ventures::VentureKind;
+    let mut rows = Vec::with_capacity(recs.len());
+    for rec in recs {
+        rows.push(ReadyGoodsRow {
+            kind: VentureKind::Garden,
+            id: rec.id,
+            number: rec.number,
+            sell_date: rec.sell_date.clone(),
+            entry_date: rec.entry_date.clone(),
+            item: rec.item.clone(),
+            packing: rec.packing.clone(),
+            qty: rec.qty,
+            qty_left: crate::gardens::arrivals::parts_of(rec)?.our_left,
+            weight_grams: rec.weight_grams,
+            trip: None,
+            garden: Some(crate::gardens::arrivals::garden_ref(rec)),
+        });
+    }
+    Ok(rows)
+}
+
+/// Oldest day to sell first, then number; a trip purchase before a garden arrival.
+fn sort_ready(rows: &mut Vec<mandi_domain::core::bikri::ReadyGoodsRow>) {
+    use mandi_domain::core::ventures::VentureKind;
+    rows.sort_by(|a, b| {
+        (&a.sell_date, a.number, a.kind != VentureKind::Trip).cmp(&(
+            &b.sell_date,
+            b.number,
+            b.kind != VentureKind::Trip,
+        ))
+    });
+    rows.truncate(100);
+}
+
+/// How many rows each of the three load buttons of the بکری screen would list (plan 78 C1, PRD
+/// FR-12.39, FR-12.40 as changed in v1.43): the lots with goods left (باقی مال), the purchases of open
+/// trips and the arrivals of open gardens with goods left for our shop, on any day to sell. The
+/// screen shows a button only when its count is above 0. Read only; one cheap query for each.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn goods_sources(
+    ctx: &Context,
+) -> Result<mandi_domain::core::bikri::GoodsSources, ServiceError> {
+    ctx.db.read(|conn| {
+        Ok(mandi_domain::core::bikri::GoodsSources {
+            stock_lots: edit_repo::stock_lot_count(conn)?,
+            trip_rows: mandi_db::purchases::goods_count(conn)?,
+            garden_rows: mandi_db::arrivals::goods_count(conn)?,
+        })
+    })
+}
+
+/// The rows of one of the two cards that load goods by hand (plan 78 C1): the purchases of open trips
+/// (`trip`) or the arrivals of open gardens (`garden`) with goods left for our shop, on ANY day to sell
+/// (the day to sell stays in the row as information), oldest day to sell first, then number. At most
+/// 100 rows. Nothing is reserved, as for [`ready_goods`]: the save refuses more than is left.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn goods_to_load(
+    ctx: &Context,
+    input: &mandi_domain::core::bikri::GoodsToLoadInput,
+) -> Result<mandi_domain::core::bikri::ReadyGoods, ServiceError> {
+    use mandi_domain::core::bikri::ReadyGoods;
+    use mandi_domain::core::ventures::VentureKind;
+    ctx.db.read(|conn| {
+        let mut rows = match input.kind {
+            VentureKind::Trip => trip_ready_rows(&mandi_db::purchases::ready_all(conn, 100)?)?,
+            VentureKind::Garden => garden_ready_rows(&mandi_db::arrivals::ready_all(conn, 100)?)?,
+        };
+        sort_ready(&mut rows);
         Ok(ReadyGoods { rows })
     })
 }

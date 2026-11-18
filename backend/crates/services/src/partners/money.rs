@@ -46,7 +46,36 @@ pub(crate) fn total_of(
     partner: &PartnerRecord,
     as_of: Option<&str>,
 ) -> Result<Paisa, ServiceError> {
-    total_from(repo::total_parts(conn, partner, as_of)?)
+    let before_advances = total_from(repo::total_parts(conn, partner, as_of)?)?;
+    // PRD FR-17.13 (plan 78 B4): his part of the advances to sellers still out is taken off.
+    let out = advance_net(conn, partner.id, None, as_of)?;
+    before_advances.checked_sub(out).map_err(money_error)
+}
+
+/// What a partner's parts of the advances to sellers still have out, over events dated from `from`
+/// to `to` (both included, `None` leaves an end open). Read from the advance matching at read time.
+///
+/// # Errors
+/// `ServiceError::Data` when the shares of an advance's day do not total 100% or the matching rows
+/// settle more than an advance; `ServiceError::Db`; `ERR_OVERFLOW`.
+pub(crate) fn advance_net(
+    conn: &Connection,
+    partner_id: i64,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<Paisa, ServiceError> {
+    let all = mandi_db::advances::read_all(conn).map_err(advance_error)?;
+    all.net(partner_id, from, to).map_err(money_error)
+}
+
+/// A read error of the advances as a service error.
+pub(crate) fn advance_error(error: mandi_db::advances::AdvanceReadError) -> ServiceError {
+    use mandi_db::advances::AdvanceReadError as E;
+    match error {
+        E::Db(e) => ServiceError::from(e),
+        E::Advance(e) => ServiceError::Data(format!("the advances do not add up: {e:?}")),
+        E::Data(message) => ServiceError::Data(message.to_owned()),
+    }
 }
 
 /// What moved a partner's کل رقم from one day to another, both included: `total_of(to)` less
@@ -61,7 +90,9 @@ pub(crate) fn movement_between(
     from: &str,
     to: &str,
 ) -> Result<Paisa, ServiceError> {
-    total_from(repo::movement_parts(conn, partner, from, to)?)
+    let before_advances = total_from(repo::movement_parts(conn, partner, from, to)?)?;
+    let out = advance_net(conn, partner.id, Some(from), Some(to))?;
+    before_advances.checked_sub(out).map_err(money_error)
 }
 
 /// The C22 formula on the sums, with checked maths.

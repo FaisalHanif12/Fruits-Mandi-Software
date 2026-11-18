@@ -483,7 +483,8 @@ pub fn garden_entry_preview(
         | mandi_domain::core::gardens::GardenEntryInput::Cost(p) => {
             p.confirm_cash_below_zero = true;
         }
-        mandi_domain::core::gardens::GardenEntryInput::OtherSale(_) => {}
+        mandi_domain::core::gardens::GardenEntryInput::OtherSale(_)
+        | mandi_domain::core::gardens::GardenEntryInput::Refund(_) => {}
     }
     if asked.reason.trim().is_empty() {
         asked.reason = "-".to_owned();
@@ -676,6 +677,19 @@ pub fn garden_header_preview(
             diff::changes_of_rows,
         );
     }
+    // A change of the rent needs its reason and the Owner's sign, shown here as the save will say it
+    // (PRD FR-12.51, plan 78 D3). The preview never writes the audit entry of a wrong sign.
+    let rent_sign = match crate::gardens::header_edit::rent_sign(ctx, None, input) {
+        Ok(sign) => sign,
+        Err(refused) => {
+            return preview_of(
+                ctx,
+                entry_date,
+                Err::<Rehearsed<serde_json::Value>, _>(refused),
+                diff::changes_of_rows,
+            );
+        }
+    };
     let mut asked = input.clone();
     if asked.reason.trim().is_empty() {
         asked.reason = "-".to_owned();
@@ -690,8 +704,16 @@ pub fn garden_header_preview(
         entry_date,
         |conn| crate::gardens::header_edit::row_value(conn, id),
         |tx| {
-            crate::gardens::header_edit::edit_in(ctx, &actor, tx, window, &asked, None)
-                .map(|(edited, _)| edited)
+            crate::gardens::header_edit::edit_in(
+                ctx,
+                &actor,
+                tx,
+                window,
+                &asked,
+                None,
+                rent_sign.as_deref(),
+            )
+            .map(|(edited, _)| edited)
         },
     )
 }
@@ -706,6 +728,8 @@ pub fn garden_header_save(
     actor: &Actor,
     input: &GardenHeaderEditInput,
 ) -> Result<EntryEdited, ServiceError> {
+    // The sign first: a wrong one writes its audit entry and changes nothing (PRD FR-12.51).
+    let rent_sign = crate::gardens::header_edit::rent_sign(ctx, Some(actor), input)?;
     let preview = garden_header_preview(ctx, input)?;
     if !preview.errors.is_empty() {
         return Err(ServiceError::from(preview.errors));
@@ -717,7 +741,15 @@ pub fn garden_header_save(
         .read(|conn| mandi_db::gardens::get(conn, input.id).map_err(ServiceError::from))?
         .map(|g| g.account.id);
     let (edited, learned) = ctx.db.write(|tx| {
-        crate::gardens::header_edit::edit_in(ctx, actor, tx, window, input, spelled.as_ref())
+        crate::gardens::header_edit::edit_in(
+            ctx,
+            actor,
+            tx,
+            window,
+            input,
+            spelled.as_ref(),
+            rent_sign.as_deref(),
+        )
     })?;
     if let Some(learned) = learned {
         learned.after_commit(ctx);

@@ -401,6 +401,11 @@ partners-statement-detail-garden-paid = { $garden }: { $reason }، { -dukan-se }
 # review: pending
 partners-statement-detail-garden-closed = { $garden } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }، { -wapsi } { $back }
 
+# A garden's closing line when the owner gave relief (PRD FR-12.51): the same as the closing line, with the rent now, the rent it was made with and the relief.
+# $garden: the garden number; $cost, $sales, $result: the garden's figures; $share: his %; $part: his part of the result; $back: his money back; $rent: the rent now; $rent_original: the rent when it was made; $relief: what the owner took off.
+# review: pending
+partners-statement-detail-garden-closed-relief = { $garden } بند: { -thaika } { $rent } (پہلے { $rent_original }، رعایت { $relief })، لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }، { -wapsi } { $back }
+
 # A fruit line in a partner's statement (PRD FR-17.10, plan 17d): the fruit he took home, or his
 # equal part of the fruit served to the shop's guests (C27).
 # review: pending
@@ -631,3 +636,36 @@ partners-statement-detail-lent-share-note = دکان کی { -adhar-raqam } { $vo
     [given] { $subject } کو { $amount } دی گئی
    *[other] { $subject } نے { $amount } واپس کی
 }۔ آپ کا حصہ { $part } ہے۔ رقم دکان کو ہی واپس کرنی ہے، اس لیے آپ کی { -kul-raqam } نہیں بدلتی۔
+
+## Where the opening capital is (plan 78 E, PRD 17.1).
+
+# review: pending
+partners-field-capital-where = یہ رقم کہاں ہے؟
+
+# review: pending
+partners-capital-where-cash = موجود { -rokar }
+
+# review: pending
+partners-capital-where-counted = پہلے سے درج
+
+# review: pending
+partners-capital-where-cash-help = یہ رقم { -rokar } میں آ جاتی ہے، یعنی موجود { -rokar } اتنی بڑھ جاتی ہے۔
+
+# review: pending
+partners-capital-where-counted-help = یہ رقم کسی اور ابتدائی رقم میں پہلے سے گنی جا چکی ہے۔ موجود { -rokar } نہیں بدلتی۔
+
+## Advances to sellers in the partner statement (plan 78 B4, PRD FR-17.13). The words are for the lines of `advance_out` and `advance_back`.
+
+# review: pending
+partners-month-col-advances = { -peshgi }
+
+# review: pending
+partners-statement-heading-advance = { -peshgi }
+
+# $subject: the seller. $amount: the advance. $share: his percent on that day.
+# review: pending
+partners-statement-detail-advance-out = { -peshgi } { $subject } { $amount }، آپ کا { $share } فیصد
+
+# $subject: the seller. $amount: what was settled. $share: his percent.
+# review: pending
+partners-statement-detail-advance-back = { -peshgi } واپس { $subject } { $amount }، آپ کا { $share } فیصد

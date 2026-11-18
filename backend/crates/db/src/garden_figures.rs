@@ -52,7 +52,9 @@ pub struct Money {
     pub paid_pocket: Paisa,
     /// The money of sales in other shops.
     pub other_shop: Paisa,
-    /// The rent still to pay: rent less installments. Signed (more paid than the rent is negative).
+    /// The rent still to pay: rent less installments, never below 0. What was paid above the rent is
+    /// not a negative rent due: it is what the owner owes (PRD FR-12.51), shown on its own, so the
+    /// same money never shows twice and a total of rent due never nets one garden against another.
     pub rent_due: Paisa,
     /// Money in: credits less debits on its account, the closing and its undo left out.
     pub money_in: Paisa,
@@ -87,6 +89,11 @@ impl Money {
         let account_balance =
             whole(f.account_credits_paisa)?.checked_sub(whole(f.account_debits_paisa)?)?;
         let rent_due = whole(rent_paisa)?.checked_sub(installments)?;
+        let rent_due = if rent_due.is_negative() {
+            Paisa::ZERO
+        } else {
+            rent_due
+        };
         Ok(Money {
             installments,
             costs,

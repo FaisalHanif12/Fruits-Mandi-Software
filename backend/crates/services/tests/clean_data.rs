@@ -286,6 +286,7 @@ fn a_live_file_with_partners_is_not_cleaned_by_mistake_and_an_existing_file_is_n
             name_ur: "رحیم".into(),
             name_en: "Rahim".into(),
             opening_capital: None,
+            opening_capital_where: None,
             confirmed_rules_words: vec!["رحیم".into(), "rahim".into()],
         },
     )

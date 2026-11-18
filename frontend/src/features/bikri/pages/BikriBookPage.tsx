@@ -100,6 +100,7 @@ import { ProblemList } from '../components/ProblemList';
 import { ActiveLine, SalesSection } from '../components/SalesSection';
 import { NumbersStrip } from '../components/NumbersStrip';
 import { SplitPanel } from '../components/SplitPanel';
+import { AdvanceTicks } from '../components/AdvanceTicks';
 import { SummaryPanel } from '../components/SummaryPanel';
 import {
   BikriDraftProvider,
@@ -109,10 +110,9 @@ import {
 } from '../draft-store';
 import { buildDraft, isArrivalLot, isCarriedLot, isFilledByUser, isOwnLot } from '../draft';
 import { useGridViews } from '../hooks/useGridViews';
-import { LotCountersProvider, useLotCounters, useLotWho } from '../lot-name';
+import { LotCountersProvider, lotLabelVars, useLotCounters, useLotWho } from '../lot-name';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
-import { useReadyLots } from '../hooks/useReadyLots';
 import { LOT_GRID_FIELD, LOT_OWN_FIELD, problemsOf, type Problem } from '../problems';
 import { LOT, SALE } from '../types';
 
@@ -182,11 +182,6 @@ export interface NewMode {
   onUndo: (saved: BikriSaved) => void;
   /** The بکری saved last, with a way to open it. */
   lastSaved: { id: number; number: number } | null;
-  /**
-   * The stock that is ready to sell comes in as lots (PRD FR-12.39, FR-12.40). False for a draft
-   * that was restored or seeded: it is what the user left, and nothing is added to it.
-   */
-  readyLots: boolean;
   /** The find box (F3) opens with the screen: the address asked for it (plan 55 Section 11.1). */
   openFind: boolean;
 }
@@ -211,8 +206,6 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const edit = mode.kind === 'edit' ? mode : null;
   const newBikri = mode.kind === 'new' ? mode : null;
   const lastSaved = newBikri?.lastSaved ?? null;
-  // The lots that come in by themselves from the stock that is ready to sell (plan 33).
-  const readyLotCount = useReadyLots(stores, newBikri?.readyLots ?? false);
   const newMutation = useSaveBikri();
   const mixedMutation = useSaveMixed();
   // Lots carried over from earlier بکری are on the screen: the preview and the save then use the mixed
@@ -457,13 +450,8 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   // A refusal above the grid he is typing in is brought into view (never left unseen).
   useRefusalIntoView(rootRef, refused);
-  /** The next thing to type after the date: the buyer of the first ready lot, else the first seller. */
+  /** The next thing to type after the date: the first seller. */
   const goToLots = useCallback(() => {
-    const first = stores.lots.getState().rows[0];
-    if (first !== undefined && first.rowId in stores.view.getState().readyLots) {
-      stores.focusSaleLine(first.rowId, 0, SALE.buyer);
-      return;
-    }
     stores.lots.getState().setPendingFocus({ rowIndex: 0, field: LOT.seller });
   }, [stores]);
   // The user starts on the date, the first field (plan 71 H1). A posting open for edit keeps its
@@ -525,13 +513,25 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           <SummaryPanel
             totals={totals}
             whole={whole}
-            lotNumber={lotIndex + 1}
-            lotWho={lotWho(lotRow)}
-            onWholeChange={(next) => {
-              stores.view.getState().setWhole(next);
+            lots={lotRows.map((row, index) =>
+              l10n.getString('bikri-summary-lot', { ...lotLabelVars(index + 1, lotWho(row)) }),
+            )}
+            selectedLot={lotIndex + 1}
+            onChoose={(lot) => {
+              const view = stores.view.getState();
+              if (lot === null) {
+                view.setWhole(true);
+                return;
+              }
+              const chosen = lotRows[lot - 1];
+              if (chosen !== undefined) view.select(chosen.rowId);
+              view.setWhole(false);
             }}
             netIsNegative={netIsNegative}
             leftOut={whole ? leftOutWhole : leftOutLot}
+            advance={
+              <AdvanceTicks shown={whole ? lotRows : lotRows.slice(lotIndex, lotIndex + 1)} />
+            }
           />
           <SplitPanel preview={preview} />
         </>
@@ -556,8 +556,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   // beside the preview's (plan 16).
   const beforeTotals = edit?.before?.lots.find((lot) => lot.key === lotKey)?.totals ?? null;
 
-  const dirty =
-    edit === null ? isFilledByUser(stores, draft) : !edit.done && !(diff?.unchanged ?? true);
+  const dirty = edit === null ? isFilledByUser(draft) : !edit.done && !(diff?.unchanged ?? true);
 
   return (
     <LotCountersProvider value={lotCounters}>
@@ -698,26 +697,8 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   view={views.lots}
                   allowCarried={edit === null}
                   note={
-                    readyLotCount === 0 && carriedCount === 0 ? null : (
+                    carriedCount === 0 ? null : (
                       <div className="flex flex-col gap-2">
-                        {readyLotCount === 0 ? null : (
-                          <Notice tone="info">
-                            <Localized
-                              id="bikri-ready-lots-note"
-                              elems={{ num: <Num /> }}
-                              vars={{ count: readyLotCount }}
-                            >
-                              <span />
-                            </Localized>{' '}
-                            <Localized
-                              id="bikri-ready-lots-note-hint"
-                              elems={{ key: <Code /> }}
-                              vars={{ key: SHORTCUTS.removeRow.label }}
-                            >
-                              <span />
-                            </Localized>
-                          </Notice>
-                        )}
                         {carriedCount === 0 ? null : (
                           <Notice tone="info">
                             <Localized
@@ -898,7 +879,7 @@ function newSession(
   if (restored !== null) applySnapshot(stores, restored);
   initialDraft?.(stores);
   // A restored or seeded draft is what the user left: today's trip goods are not added to it.
-  return { stores, key: 0, readyLots: restored === null && initialDraft === undefined, openFind };
+  return { stores, key: 0, openFind };
 }
 
 /**
@@ -975,7 +956,6 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
         mode={{
           kind: 'new',
           lastSaved,
-          readyLots: session.readyLots,
           openFind: session.openFind,
           onSaved: (saved, andNext) => {
             setLastSaved({ id: saved.bikri_id, number: saved.number });
@@ -988,14 +968,13 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
             setSession((current) => ({
               stores: createBikriDraft(isoToDisplayDate(today)),
               key: current.key + 1,
-              readyLots: true,
               openFind: false,
             }));
           },
           onUndo: (saved) => {
             // The undone values replace the entry that is open. If he has already started
             // another, nothing of his is lost: he is told to finish or clear it first.
-            if (isFilledByUser(sessionRef.current.stores, buildDraft(sessionRef.current.stores))) {
+            if (isFilledByUser(buildDraft(sessionRef.current.stores))) {
               showToast(
                 'error',
                 <Localized id="bikri-undo-busy">

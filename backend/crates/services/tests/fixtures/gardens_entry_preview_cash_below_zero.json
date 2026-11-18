@@ -86,7 +86,7 @@
     },
     "balance_before_paisa": -5500000,
     "balance_after_paisa": -14500000,
-    "rent_due_after_paisa": -9000000,
+    "rent_due_after_paisa": 0,
     "balance_working": {
       "message_id": "working-garden-balance",
       "args": [

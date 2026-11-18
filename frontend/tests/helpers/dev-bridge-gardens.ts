@@ -41,7 +41,22 @@ const books = createGardenBooks(
       ? { gardens: [e40Closed()], history: e40History(true) }
       : flag('fresh')
         ? { gardens: [gardenRow()], history: [] }
-        : { gardens: [e40Garden()], history: e40History() },
+        : flag('relief')
+          ? // After a relief from the owner (plan 78 D3): the rent was 50,000, is 45,000 now, 55,000 is paid, so the
+            // owner owes the garden 10,000 less what the 5,000 relief covers: 5,000.
+            {
+              gardens: [
+                e40Garden({
+                  rent_paisa: money(45_000),
+                  rent_original_paisa: money(50_000),
+                  relief_paisa: money(5_000),
+                  refunds_paisa: money(0),
+                  owner_owes_paisa: money(5_000),
+                }),
+              ],
+              history: e40History(),
+            }
+          : { gardens: [e40Garden()], history: e40History() },
 );
 if (flag('cash')) books.store.cashBefore = 5_000;
 

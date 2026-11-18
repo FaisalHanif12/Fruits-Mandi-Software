@@ -272,6 +272,7 @@ fn shop_split_fixtures_of_the_entries_the_split_and_the_sales_in_another_shop() 
             ],
             date: "10-10-2026".into(),
             item_id: Some(w.banana),
+            item_ids: Vec::new(),
             rent: "50,000".into(),
             season_end: None,
             note: None,

@@ -10,6 +10,7 @@ import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate, type Paisa } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
+import type { Language } from '../../i18n';
 import { STATUS_CANCELLED, STATUS_SAVED } from '../../shared/ui';
 import { voucherNumberText } from '../vouchers';
 import type { CashbookRow, KhataEntryRow, LentRow, TakeRow, VoucherRow } from './types';
@@ -21,8 +22,20 @@ export function kindId(kind: string): string {
   return kind.replaceAll('_', '-');
 }
 
-/** The row of the cash book as words: the kind of posting, and its number when it has one. */
-export function cashbookKindText(row: Pick<CashbookRow, 'posting_type' | 'number'>, text: Say) {
+/**
+ * The row of the cash book as words: the kind of posting, and its number when it has one. The rows that start the
+ * book or move a partner's capital say what they are, with the partner's name (plan 78 E, PRD FR-16.14): "Opening
+ * cash", "Opening capital: Partner A", "Capital invested: Partner A", "Capital taken back: Partner A".
+ */
+export function cashbookKindText(
+  row: Pick<CashbookRow, 'posting_type' | 'number' | 'kind' | 'partner'>,
+  text: Say,
+  language: Language,
+) {
+  if (row.kind !== 'other') {
+    const partner = row.partner === null ? '' : displayName(row.partner, language);
+    return text(`cashbook-row-${kindId(row.kind)}`, { partner });
+  }
   const kind = text(`cashbook-kind-${kindId(row.posting_type)}`);
   return row.number === null
     ? kind
@@ -51,7 +64,7 @@ export const CASHBOOK_COLUMNS: readonly ListColumn<CashbookRow>[] = [
     headerId: 'cashbook-col-kind',
     sortKey: 'posting_type',
     grow: true,
-    value: (row, { text }) => cashbookKindText(row, text),
+    value: (row, { language, text }) => cashbookKindText(row, text, language),
   },
   {
     field: 'account',

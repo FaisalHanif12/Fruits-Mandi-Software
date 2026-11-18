@@ -43,9 +43,13 @@ export type GardenRow = {
    */
   entry_date: string;
   /**
-   * The main fruit.
+   * The main fruit: the first of `items`.
    */
   item: RecordRef | null;
+  /**
+   * The items of the garden, the main fruit first (plan 78 D2).
+   */
+  items: Array<RecordRef>;
   /**
    * The full rent for the season.
    */
@@ -95,10 +99,28 @@ export type GardenRow = {
    */
   paid_pocket_paisa: Paisa;
   /**
-   * The rent less the live installments (FR-12.34). Signed: a negative number means more was paid
-   * than the rent.
+   * The rent less the live installments (FR-12.34), never below 0. What was paid above the rent is
+   * `owner_owes_paisa` (FR-12.51), not a negative rent due.
    */
   rent_due_paisa: Paisa;
+  /**
+   * The rent the garden was made with, once the Owner has changed it (plan 78 D3, PRD FR-12.51);
+   * null while it is the original. `rent_paisa` is the rent now.
+   */
+  rent_original_paisa: Paisa | null;
+  /**
+   * The relief: the original rent less the rent now, when that is more than 0; else 0.
+   */
+  relief_paisa: Paisa;
+  /**
+   * What the owner has paid back (Σ live refunds).
+   */
+  refunds_paisa: Paisa;
+  /**
+   * What the owner still owes the garden (مالک کے ذمے): the installments paid above the rent, less
+   * the refunds. 0 or more.
+   */
+  owner_owes_paisa: Paisa;
   /**
    * Money in: the seller credits of its lots, the money of sales in other shops and the fruit
    * taken from its lots, less any negative credit. The closing and its undo are left out.

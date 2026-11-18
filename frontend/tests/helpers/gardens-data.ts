@@ -124,6 +124,7 @@ export function gardenRow(over: Partial<GardenRow> = {}): GardenRow {
     account: GARDEN_ACCOUNT,
     entry_date: '2026-10-10',
     item: BANANA,
+    items: [BANANA],
     rent_paisa: money(50_000),
     season_end_date: '2026-12-31',
     note: null,
@@ -137,6 +138,11 @@ export function gardenRow(over: Partial<GardenRow> = {}): GardenRow {
     paid_shop_paisa: money(0),
     paid_pocket_paisa: money(0),
     rent_due_paisa: money(50_000),
+    // The rent has not been changed: no relief, no refund and nothing owed by the owner (plan 78 D3).
+    rent_original_paisa: null,
+    relief_paisa: money(0),
+    refunds_paisa: money(0),
+    owner_owes_paisa: money(0),
     money_in_paisa: money(0),
     other_shop_paisa: money(0),
     balance_paisa: money(0),
@@ -631,6 +637,15 @@ export function createGardenBooks(options: GardensOptions = {}) {
           warnings: [],
         };
       }
+      if (input.type === 'refund') {
+        return {
+          kind: 'refund',
+          numbers: null,
+          cash: cashOf(store.cashBefore, 0),
+          errors: input.amount === '' ? [problem('ERR_REQUIRED', 'amount')] : [],
+          warnings: [],
+        };
+      }
       if (input.amount === '' || input.reason === '') {
         const errors = [
           ...(input.amount === '' ? [problem('ERR_REQUIRED', 'amount')] : []),
@@ -671,7 +686,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
     },
     entrySave: (input: GardenEntryInput): GardenEntrySaved => {
       if (store.refuse.entry !== undefined) return refuse(store.refuse.entry);
-      if (input.type !== 'other_sale') {
+      if (input.type !== 'other_sale' && input.type !== 'refund') {
         const split = splitOf(input.amount);
         const [a, b] = sourcesOf(input.parts);
         const { shop } = partsView(paymentParts(split[0] + split[1], split, [a, b]), split);

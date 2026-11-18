@@ -705,6 +705,9 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       out_paisa: money(row.outRupees),
       running_paisa: money(row.running),
       source: null,
+      // Plan 78 E: a row that is not an opening or a capital row is `other`, with no partner.
+      kind: 'other',
+      partner: null,
     }));
     return {
       opening_paisa: money(opening),
@@ -713,6 +716,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       total_count: inRange.length,
       totals: { in_paisa: money(totalIn), out_paisa: money(totalOut) },
       months: [],
+      first_entry_date: store.cashRows[0]?.date ?? null,
     };
   }
 

@@ -178,16 +178,13 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
   const navigation = useFormNavigation(saveAndClose);
   useShortcut(SHORTCUTS.save, saveAndClose);
 
+  // See AccountForm: only the embedded form has a Back of its own (plan 78 F1).
   const goBack = () => {
-    if (embedded === undefined) {
-      void navigate({ to: listPath });
-    } else if (dirty) {
-      setAskLeave(true);
-    } else {
-      embedded.onDone(null);
-    }
+    if (embedded === undefined) return;
+    if (dirty) setAskLeave(true);
+    else embedded.onDone(null);
   };
-  useEscape('leave', goBack, !askLeave);
+  useEscape('leave', goBack, embedded !== undefined && !askLeave);
 
   const changeActive = (isActive: boolean) => {
     if (record === null) return;
@@ -405,9 +402,11 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button shortcut={SHORTCUTS.back} onClick={goBack}>
-              <Localized id="common-back" />
-            </Button>
+            {embedded === undefined ? null : (
+              <Button shortcut={SHORTCUTS.back} onClick={goBack}>
+                <Localized id="common-back" />
+              </Button>
+            )}
             <Button
               variant="primary"
               shortcut={SHORTCUTS.save}

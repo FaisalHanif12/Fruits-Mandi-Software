@@ -521,6 +521,8 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
       name_ur: 'د',
       name_en: 'Partner D',
       opening_capital: '50000',
+      // Where that money is: in the shop's cash unless the Owner says otherwise (plan 78 E).
+      opening_capital_where: 'cash',
       confirmed_rules_words: [],
     });
     expect(store.rows).toHaveLength(4);
@@ -543,6 +545,97 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
         ),
       ).toHaveFocus();
     });
+  });
+
+  it('plan 78 E: the question "where is this money?" shows only once a capital is typed, starts on cash, and the other choice is sent as typed', async () => {
+    const { user } = await open();
+    press('F2');
+    const dialog = await screen.findByRole('dialog', {
+      name: named(message(language, 'partners-add-title')),
+    });
+    const where = () =>
+      within(dialog).queryByRole('group', {
+        name: named(message(language, 'partners-field-capital-where')),
+      });
+    // No capital, no question.
+    expect(where()).toBeNull();
+    const urdu = await within(dialog).findByLabelText<HTMLInputElement>(
+      named(message(language, 'partners-field-name-ur')),
+    );
+    await user.click(urdu);
+    await user.keyboard('د');
+    await user.click(
+      within(dialog).getByLabelText<HTMLInputElement>(
+        named(message(language, 'partners-field-capital')),
+      ),
+    );
+    await user.keyboard('50000');
+    const group = await waitFor(() => {
+      const found = where();
+      if (found === null) throw new Error('no question yet');
+      return found;
+    });
+    const cash = within(group).getByRole('button', {
+      name: named(message(language, 'partners-capital-where-cash')),
+    });
+    const counted = within(group).getByRole('button', {
+      name: named(message(language, 'partners-capital-where-counted')),
+    });
+    expect(cash.getAttribute('aria-pressed')).toBe('true');
+    expect(visible(dialog.textContent)).toContain(
+      message(language, 'partners-capital-where-cash-help'),
+    );
+    await user.click(counted);
+    expect(counted.getAttribute('aria-pressed')).toBe('true');
+    expect(visible(dialog.textContent)).toContain(
+      message(language, 'partners-capital-where-counted-help'),
+    );
+    press('F10');
+    await waitFor(() => {
+      expect(partnersApi.partnersCreate).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(partnersApi.partnersCreate).mock.calls[0]?.[0]).toMatchObject({
+      opening_capital: '50000',
+      opening_capital_where: 'counted_elsewhere',
+    });
+  });
+
+  it('plan 78 E: no capital typed, no "where" is sent, and the next partner of "save and add another" starts on cash again', async () => {
+    const { user } = await open([]);
+    press('F2');
+    const dialog = await screen.findByRole('dialog', {
+      name: named(message(language, 'partners-add-title')),
+    });
+    const urdu = await within(dialog).findByLabelText<HTMLInputElement>(
+      named(message(language, 'partners-field-name-ur')),
+    );
+    await user.click(urdu);
+    await user.keyboard('الف');
+    press('Enter', { ctrlKey: true });
+    await waitFor(() => {
+      expect(partnersApi.partnersCreate).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(partnersApi.partnersCreate).mock.calls[0]?.[0]).not.toHaveProperty(
+      'opening_capital_where',
+    );
+    // The next partner: a capital typed shows the question again, on cash.
+    const again = await screen.findByRole('dialog', {
+      name: named(message(language, 'partners-add-title')),
+    });
+    await user.click(
+      within(again).getByLabelText<HTMLInputElement>(
+        named(message(language, 'partners-field-capital')),
+      ),
+    );
+    await user.keyboard('1000');
+    const group = await within(again).findByRole('group', {
+      name: named(message(language, 'partners-field-capital-where')),
+    });
+    expect(
+      within(group)
+        .getByRole('button', { name: named(message(language, 'partners-capital-where-cash')) })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   it('Ctrl+Enter saves and keeps the dialog open and empty for the next partner', async () => {

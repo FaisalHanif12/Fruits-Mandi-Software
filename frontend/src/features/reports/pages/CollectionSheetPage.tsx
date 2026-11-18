@@ -14,8 +14,7 @@
 //   the rows.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, FileText, Files, Printer, SearchX } from 'lucide-react';
+import { FileText, Files, Printer, SearchX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { CollectionSheetRow } from '../../../bindings/CollectionSheetRow';
 import { uiErrorOf } from '../../../shared/api';
@@ -55,7 +54,6 @@ function rowId(row: CollectionSheetRow): string {
 }
 
 export function CollectionSheetPage() {
-  const navigate = useNavigate();
   const open = useOpenReport();
   const { l10n } = useLocalization();
   const today = useDayStatus().data?.today ?? null;
@@ -77,10 +75,13 @@ export function CollectionSheetPage() {
     language: sheet,
     paper: null,
   }));
-  useEscape('leave', () => {
-    if (view !== 'table') setView('table');
-    else void navigate({ to: '/reports' });
-  });
+  useEscape(
+    'leave',
+    () => {
+      setView('table');
+    },
+    view !== 'table',
+  );
   useShortcut(SHORTCUTS.print, () => {
     if (view === 'table') setView('preview');
   });
@@ -209,15 +210,6 @@ export function CollectionSheetPage() {
       }
       actions={
         <>
-          <Button
-            shortcut={SHORTCUTS.back}
-            onClick={() => {
-              void navigate({ to: '/reports' });
-            }}
-          >
-            <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-            <Localized id="collection-back" />
-          </Button>
           <Button
             shortcut={SHORTCUTS.print}
             onClick={() => {

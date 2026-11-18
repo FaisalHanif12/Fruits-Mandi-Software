@@ -10,12 +10,11 @@
 // Four states: loading, an error with a retry (also for a trip that does not exist), the trip.
 
 import { Localized } from '@fluent/react';
-import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft } from 'lucide-react';
+import { useParams, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
-import { Button, ErrorState, LoadingState, Notice, PartnerLockedBox } from '../../../shared/ui';
+import { ErrorState, LoadingState, Notice, PartnerLockedBox } from '../../../shared/ui';
 import type { PagerState } from '../../../shared/hooks';
 import { TripEntriesSection } from '../components/TripEntriesSection';
 import { TripEntryEdit } from '../components/TripEntryEdit';
@@ -49,7 +48,6 @@ function TripBody({
   initialType: TripOpenType | undefined;
   pager: PagerState;
 }) {
-  const navigate = useNavigate();
   const { detail } = view;
   const trip = detail.row;
   const [selectedPurchase, setSelectedPurchase] = useState<number | null>(initialPurchase);
@@ -68,14 +66,6 @@ function TripBody({
         <Localized id="trips-title">
           <h1 className="sr-only normal:not-sr-only normal:type-title" />
         </Localized>
-        <Button
-          onClick={() => {
-            void navigate({ to: '/trips' });
-          }}
-        >
-          <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-          <Localized id="trips-back" />
-        </Button>
       </div>
       <TripHeaderCard
         trip={trip}

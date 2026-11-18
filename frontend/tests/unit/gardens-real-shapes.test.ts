@@ -26,6 +26,7 @@ import {
   gardenRow,
 } from '../helpers/gardens-data';
 import * as real from '../helpers/gardens-real';
+import * as plan78 from '../helpers/plan78-real';
 import { overviewRow, THREE_PARTNERS } from '../helpers/partners';
 import { message } from '../helpers/render';
 import { same, sendsTheSame } from '../helpers/shapes';
@@ -340,7 +341,7 @@ describe('the screens build the request the backend tested', () => {
       english: request.name_en,
       spelling: { urdu: [], english: [], confirmed: request.confirmed_rules_words },
     };
-    draft.item = { id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' };
+    draft.items = [{ id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' }];
     draft.rent = request.rent;
     draft.paidNow = request.paid_now ?? '';
     draft.paidNowReason = request.paid_now_reason ?? '';
@@ -359,7 +360,14 @@ describe('the screens build the request the backend tested', () => {
       ...request.partners,
       { partner_id: 3, share: '0', source: 'shop' },
     ]);
-    expect(sendsTheSame({ ...built, partners: request.partners }, request)).toBeNull();
+    // The backend's test sent the main item as `item_id`; the screen sends the list `item_ids` and no `item_id`
+    // (plan 78 D2: the list wins and its first is the main fruit).
+    const sentByTheScreen = {
+      ...request,
+      item_id: null,
+      item_ids: request.item_id === null ? [] : [request.item_id],
+    };
+    expect(sendsTheSame({ ...built, partners: request.partners }, sentByTheScreen)).toBeNull();
   });
 
   it('a garden without a first installment sends no amount and no reason', () => {
@@ -371,7 +379,7 @@ describe('the screens build the request the backend tested', () => {
       english: request.name_en,
       spelling: { urdu: [], english: [], confirmed: request.confirmed_rules_words },
     };
-    draft.item = { id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' };
+    draft.items = [{ id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' }];
     draft.rent = request.rent;
     const built = buildGarden(draft, false);
     expect(built.paid_now).toBeNull();
@@ -382,16 +390,17 @@ describe('the screens build the request the backend tested', () => {
     const install = real.GARDENS_ENTRY_SAVE_INSTALLMENT_REQUEST;
     const draft = newEntryDraft('installment', '');
     draft.date = install.date;
-    if (install.type === 'other_sale') throw new Error('not an installment');
+    if (install.type === 'other_sale' || install.type === 'refund')
+      throw new Error('not an installment');
     draft.amount = install.amount;
     draft.reason = install.reason;
     const sent = buildEntry(draft, install.garden_id ?? 0, partners, false);
     expect(sendsTheSame(withoutParts(sent), withoutParts(install))).toBeNull();
-    if (sent.type === 'other_sale') throw new Error('not an installment');
+    if (sent.type === 'other_sale' || sent.type === 'refund') throw new Error('not an installment');
     expect(sent.parts).toHaveLength(2);
 
     const cost = real.GARDENS_ENTRY_SAVE_COST_REQUEST;
-    if (cost.type === 'other_sale') throw new Error('not a cost');
+    if (cost.type === 'other_sale' || cost.type === 'refund') throw new Error('not a cost');
     const costDraft = newEntryDraft('cost', '');
     costDraft.date = cost.date;
     costDraft.amount = cost.amount;
@@ -415,15 +424,47 @@ describe('the screens build the request the backend tested', () => {
     ).toBeNull();
   });
 
+  it('plan 78 D3: the refund the screen builds is the request the backend’s own test sent (رعایت واپسی)', () => {
+    const request = plan78.REFUND_REQUEST;
+    if (request.type !== 'refund') throw new Error('not a refund');
+    const draft = newEntryDraft('refund', '');
+    draft.date = request.date;
+    draft.amount = request.amount;
+    // No note typed: the backend's request has none either.
+    expect(
+      sendsTheSame(buildEntry(draft, request.garden_id ?? 0, partners, false), request),
+    ).toBeNull();
+    // A refund has no parts and no cash question: the owner pays money in.
+    expect(buildEntry(draft, request.garden_id ?? 0, partners, false)).not.toHaveProperty('parts');
+  });
+
+  it('plan 78 D3: a change of the rent sends the reason and the sign the backend’s own request has, and the same keys', () => {
+    const request = plan78.HEADER_EDIT_RELIEF_REQUEST;
+    const draft = newGardenDraft({ partners: firmPartners() }, '10-10-2026');
+    draft.rent = request.garden.rent;
+    const sent = {
+      id: request.id,
+      version: request.version,
+      garden: buildGarden(draft, false),
+      reason: request.reason,
+      sign: request.sign ?? '',
+    };
+    expect(Object.keys(sent).sort()).toEqual(Object.keys(request).sort());
+    expect(Object.keys(sent.garden).sort()).toEqual(Object.keys(request.garden).sort());
+    expect(sent.sign).toBe('adnan');
+    expect(sent.reason).toBe('relief from the owner');
+  });
+
   it('the cash question is asked again with the answer: the same request with the flag on', () => {
     const request = real.GARDENS_ENTRY_SAVE_CASH_BELOW_ZERO_REQUEST;
-    if (request.type === 'other_sale') throw new Error('not a payment');
+    if (request.type === 'other_sale' || request.type === 'refund')
+      throw new Error('not a payment');
     const draft = newEntryDraft('installment', '');
     draft.date = request.date;
     draft.amount = request.amount;
     draft.reason = request.reason;
     const again = buildEntry(draft, request.garden_id ?? 0, partners, true);
-    if (again.type === 'other_sale') throw new Error('not a payment');
+    if (again.type === 'other_sale' || again.type === 'refund') throw new Error('not a payment');
     expect(again.confirm_cash_below_zero).toBe(true);
     expect(request.confirm_cash_below_zero).toBe(false);
   });

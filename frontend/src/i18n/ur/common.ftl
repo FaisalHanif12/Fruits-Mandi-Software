@@ -277,3 +277,12 @@ common-goto-day-hint = دن لکھیں، مثلاً 10-10-2026۔ اس دن پر 
 
 # review: pending
 common-goto-day-placeholder = دن-مہینہ-سال
+
+## A field of several records (plan 78 D2).
+
+# $name: the record that is taken off the list.
+# review: pending
+ui-multi-remove = { $name } ہٹائیں
+
+# review: pending
+ui-multi-hint = ایک سے زیادہ چنے جا سکتے ہیں۔ ہر چناؤ فہرست میں شامل ہو جاتا ہے۔

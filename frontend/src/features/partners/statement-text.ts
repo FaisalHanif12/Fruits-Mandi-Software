@@ -142,7 +142,11 @@ export function detailText(line: StatementLine, say: StatementSay): string {
     line.values['share_bps'] !== undefined;
   // A trip's sale also says his part of the result when the backend sends it (E2E-34: result 660, his 264).
   const tripPart = line.detail === 'trip_credit' && line.values['part_paisa'] !== undefined;
-  const id = `partners-statement-detail-${idPart(line.detail)}${withPart || tripPart ? '-part' : ''}`;
+  // A garden's closing line says the rent now, the rent it was made with and the relief, only when the owner gave
+  // relief: the backend then sends `relief_paisa` (PRD FR-12.51, plan 78 D3).
+  const relief = line.detail === 'garden_closed' && line.values['relief_paisa'] !== undefined;
+  const suffix = withPart || tripPart ? '-part' : relief ? '-relief' : '';
+  const id = `partners-statement-detail-${idPart(line.detail)}${suffix}`;
   if (!say.exists(id)) {
     return say.text('partners-statement-detail-other', { reason: line.reason });
   }

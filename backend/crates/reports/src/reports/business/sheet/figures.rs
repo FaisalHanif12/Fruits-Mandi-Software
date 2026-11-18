@@ -56,6 +56,11 @@ pub(super) struct BuyerDay {
     pub(super) other: Paisa,
     /// True when there is a debit or a credit among the other entries, even if they cancel.
     pub(super) has_other: bool,
+    /// The opening balance posted on his account that day, debits less credits (PRD FR-10.9). It is
+    /// part of `other`; a slip carves it out as a line of its own (plan 78 A6).
+    pub(super) opening: Paisa,
+    /// True when there is a debit or a credit among the other entries besides the opening.
+    pub(super) has_other_beyond_opening: bool,
     pub(super) left: Paisa,
     pub(super) new: Paisa,
     /// True when the party has a line on the books or a sale line that day.
@@ -82,6 +87,9 @@ pub(super) struct SellerDay {
     pub(super) paid: Paisa,
     pub(super) other: Paisa,
     pub(super) has_other: bool,
+    /// As on a buyer's day: the opening balance of the day, part of `other` (plan 78 A6).
+    pub(super) opening: Paisa,
+    pub(super) has_other_beyond_opening: bool,
     pub(super) left: Paisa,
     pub(super) new: Paisa,
     pub(super) has_entry: bool,
@@ -310,6 +318,8 @@ fn empty_row(day: &str, buyer: bool) -> LedgerRow {
         bikri_cr: Paisa::ZERO,
         receipts_cr: Paisa::ZERO,
         payments_dr: Paisa::ZERO,
+        opening_dr: Paisa::ZERO,
+        opening_cr: Paisa::ZERO,
     }
 }
 
@@ -372,6 +382,10 @@ fn buyer_day(
         ));
     }
     let other = other_dr.checked_sub(other_cr)?;
+    // The opening of the day is inside the other entries (PRD FR-10.9); the slip shows it apart.
+    let opening = today.opening_dr.checked_sub(today.opening_cr)?;
+    let beyond = other_dr.checked_sub(today.opening_dr)? != Paisa::ZERO
+        || other_cr.checked_sub(today.opening_cr)? != Paisa::ZERO;
     let paid = on_spot.checked_add(today.receipts_cr)?;
     let left = total.checked_add(other)?.checked_sub(paid)?;
     let new = previous.checked_add(left)?;
@@ -394,6 +408,8 @@ fn buyer_day(
         paid,
         other,
         has_other: other_dr != Paisa::ZERO || other_cr != Paisa::ZERO,
+        opening,
+        has_other_beyond_opening: beyond,
         left,
         new,
         has_entry,
@@ -452,6 +468,9 @@ fn seller_day(
         ));
     }
     let other = other_dr.checked_sub(other_cr)?;
+    let opening = today.opening_dr.checked_sub(today.opening_cr)?;
+    let beyond = other_dr.checked_sub(today.opening_dr)? != Paisa::ZERO
+        || other_cr.checked_sub(today.opening_cr)? != Paisa::ZERO;
     let paid = cash_given.checked_add(today.payments_dr)?;
     let left = sale.checked_add(other)?.checked_add(paid)?;
     let new = previous.checked_add(left)?;
@@ -480,6 +499,8 @@ fn seller_day(
         paid,
         other,
         has_other: other_dr != Paisa::ZERO || other_cr != Paisa::ZERO,
+        opening,
+        has_other_beyond_opening: beyond,
         left,
         new,
         has_entry,
@@ -534,6 +555,7 @@ pub(super) fn narrow_buyer(d: &BuyerDay, bikri_ids: &[i64]) -> Result<BuyerDay, 
         paid: on_spot,
         other,
         has_other: other != Paisa::ZERO,
+        has_other_beyond_opening: other.checked_sub(d.opening)? != Paisa::ZERO,
         ..d.clone()
     })
 }
@@ -592,6 +614,7 @@ pub(super) fn narrow_seller(d: &SellerDay, bikri_ids: &[i64]) -> Result<SellerDa
         paid: cash_given,
         other,
         has_other: other != Paisa::ZERO,
+        has_other_beyond_opening: other.checked_sub(d.opening)? != Paisa::ZERO,
         charges,
         ..d.clone()
     })

@@ -300,8 +300,6 @@ dues-title = گاہکوں کے ذمے
 # review: pending
 dues-help = ہر { -gahak } جس کے ذمے دکان کی رقم ہے، اس کے ذمے ابھی کتنا ہے اور اس کا حساب آخری بار کس دن بدلا۔ میزان ٹائل والا ہی ہے۔ ہر ذمے کی عمر رپورٹ R20 میں ہے۔
 
-# review: pending
-dues-back = ڈیش بورڈ پر واپس
 
 # review: pending
 dues-search = کوڈ یا نام سے تلاش کریں
@@ -338,8 +336,6 @@ commission-title = { -commission }
 # review: pending
 commission-help = مدت چنیں: ایک تاریخ، ایک مہینہ، ایک سال یا تاریخوں کی حد۔ { -gahak } یا { -beopari } چنیں تو صرف اسی پارٹی کا { -commission } اور بکری نظر آتی ہے۔ سب پارٹیوں کے لیے ہر قطار میں بیوپاری اور گاہک کا { -commission }، { -laga }، میزان، مشترکہ آمدن اور اس میں ہر شراکت دار کا حصہ ہوتا ہے۔ دن کھولیں تو وہ بکریاں نظر آئیں گی جن سے وہ بنا۔ شراکت داروں کے حصے مشترکہ آمدن کے برابر ہوتے ہیں، کل { -commission } کے نہیں۔
 
-# review: pending
-commission-back = ڈیش بورڈ پر واپس
 
 # review: pending
 commission-label = دن کے حساب سے { -commission }
@@ -510,8 +506,6 @@ kharch-title = { -kharcha }
 # review: pending
 kharch-help = ایک مدت (ایک تاریخ، ایک مہینہ، ایک سال یا تاریخوں کی حد) کے دو حصے: ہر مد کا { -dukan-kharcha } اور پوری دکان کا میزان، اور ہر { -shirakat-dar } نے اپنے لیے جو خرچ کیا ({ -zati-kharcha }) اس کے میزان کے ساتھ۔ کسی رقم کو کھولیں تو اس کے اندراج نظر آئیں گے: تاریخ، رقم اور وجہ۔ شراکت دار کا حصہ شراکت دار کوڈ کا انتظار کرتا ہے، دکان کا حصہ اس کے بغیر بھی نظر آتا ہے۔
 
-# review: pending
-kharch-back = ڈیش بورڈ پر واپس
 
 # review: pending
 kharch-filters-label = { -kharcha } کے فلٹر

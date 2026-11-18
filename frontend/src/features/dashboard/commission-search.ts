@@ -9,6 +9,7 @@
 
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
+import type { AnalyticsGoods } from '../../bindings/AnalyticsGoods';
 import type { AnswerSource } from '../../bindings/AnswerSource';
 import { isIsoDay, isIsoMonth, monthBounds } from '../../shared/format';
 import { pickedOrNull } from '../../shared/screen-state';
@@ -21,6 +22,9 @@ export type CommissionKind = (typeof COMMISSION_KINDS)[number];
 /** The side of the party filter. No side is every party (the page of plan 76). */
 export const COMMISSION_SIDES = ['buyer', 'seller'] as const;
 export type CommissionSide = (typeof COMMISSION_SIDES)[number];
+
+/** The goods filter, in the order the Owner sees it (plan 78 D4, PRD FR-9.3): all, consigned, trip or garden goods. */
+export const COMMISSION_GOODS: readonly AnalyticsGoods[] = ['all', 'consigned', 'trip', 'garden'];
 
 /** The kind the page opens on. */
 export const DEFAULT_COMMISSION_KIND: CommissionKind = 'month';
@@ -43,6 +47,8 @@ export interface CommissionSearch {
   party?: PickerValue;
   /** The person key of a چکتا buyer, when the address came from an answer that names one. */
   person?: string;
+  /** Which goods the commission is of (plan 78 D4); none is all goods. */
+  goods?: AnalyticsGoods;
 }
 
 /** True when the text is a year, `YYYY` (1900 to 2999: a year of the books, not a typo). */
@@ -74,8 +80,10 @@ export function parseCommissionSearch(search: Record<string, unknown>): Commissi
   const side = oneOf(COMMISSION_SIDES, search['side']);
   const party = side === undefined ? null : pickedOrNull(search['party']);
   const person = search['person'];
+  const goods = oneOf(COMMISSION_GOODS, search['goods']);
   return {
     ...parsePeriodSearch(search),
+    ...(goods === undefined || goods === 'all' ? {} : { goods }),
     ...(side === undefined ? {} : { side }),
     ...(party === null ? {} : { party }),
     ...(party !== null && typeof person === 'string' && person.trim() !== ''
@@ -117,6 +125,8 @@ export interface CommissionFilters {
   side: CommissionSide | null;
   party: PickerValue | null;
   person: string | null;
+  /** Which goods: all, consigned, trip or garden (plan 78 D4). */
+  goods: AnalyticsGoods;
 }
 
 /** The part of the filters that is the period (one date, a month, a year or a range): shared with the kharch page. */
@@ -146,6 +156,7 @@ export function filtersOfSearch(search: CommissionSearch): CommissionFilters {
     side: search.side ?? null,
     party: search.party ?? null,
     person: search.person ?? null,
+    goods: search.goods ?? 'all',
   };
 }
 
@@ -172,6 +183,7 @@ export function searchOfPeriod(
 export function searchOfFilters(filters: CommissionFilters): CommissionSearch {
   return {
     ...searchOfPeriod(filters),
+    ...(filters.goods === 'all' ? {} : { goods: filters.goods }),
     ...(filters.side === null ? {} : { side: filters.side }),
     ...(filters.side !== null && filters.party !== null ? { party: filters.party } : {}),
     ...(filters.side !== null && filters.party !== null && filters.person !== null
@@ -182,7 +194,9 @@ export function searchOfFilters(filters: CommissionFilters): CommissionSearch {
 
 /** True when the filters are the page as plan 76 had it: the current month of every party. */
 export function isPlainCommission(filters: CommissionFilters): boolean {
-  return filters.kind === DEFAULT_COMMISSION_KIND && filters.side === null;
+  return (
+    filters.kind === DEFAULT_COMMISSION_KIND && filters.side === null && filters.goods === 'all'
+  );
 }
 
 /**

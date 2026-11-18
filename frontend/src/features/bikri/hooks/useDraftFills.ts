@@ -73,8 +73,12 @@ export function useDraftFills(
       // A lot carried over from an earlier بکری is not a lot typed on this screen: its seller is not carried
       // to the new lot after it (plan 76 point 1).
       const previous = index === 0 ? undefined : lotRows[index - 1];
+      // A lot loaded from a garden's goods is bound to its entry: its seller is not carried to the next lot either
+      // (plan 78 C1), so the row that waits after it stays empty.
       const candidate =
-        previous === undefined || isCarriedLot(previous) ? null : previous.picked?.[LOT.seller];
+        previous === undefined || isCarriedLot(previous) || isArrivalLot(previous)
+          ? null
+          : previous.picked?.[LOT.seller];
       // The firm's own goods are sold lot by lot from a purchase, never carried to the next lot.
       if (candidate === null || candidate === undefined || isOwnGoods(candidate)) return;
       stores.lots.getState().patchRow(row.rowId, {

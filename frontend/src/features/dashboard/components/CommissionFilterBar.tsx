@@ -16,10 +16,12 @@ import {
   Field,
   FilterCard,
   SegmentedControl,
+  Select,
   fieldError,
   type PickerValue,
 } from '../../../shared/ui';
 import {
+  COMMISSION_GOODS,
   COMMISSION_SIDES,
   type CommissionFilters,
   type CommissionSide,
@@ -72,6 +74,21 @@ export function CommissionFilterBar({ filters, onChange, today, error }: Commiss
               }}
             />
           </div>
+        )}
+      </Field>
+      <Field label={<Localized id="analytics-filter-goods" />} error={fieldError(error, 'goods')}>
+        {(control) => (
+          <Select
+            {...control}
+            value={filters.goods}
+            onChange={(goods) => {
+              onChange({ goods });
+            }}
+            options={COMMISSION_GOODS.map((choice) => ({
+              value: choice,
+              label: l10n.getString(`analytics-goods-${choice}`),
+            }))}
+          />
         )}
       </Field>
       {side === null ? null : (

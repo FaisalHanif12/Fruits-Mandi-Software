@@ -699,8 +699,6 @@ cashbook-dues-title = Garden owners' and others' dues
 # review: pending
 cashbook-dues-help = { -adhar-raqam } given to people who are not staff (garden owners, { -market-safar } people and others) and what came back, one month at a time. The figures are the ones of the tile.
 
-# review: pending
-cashbook-dues-back = Back to the dashboard
 
 # review: pending
 cashbook-dues-filter-type = Type
@@ -798,3 +796,88 @@ cashbook-link-word-shop = The shop
 
 # review: pending
 cashbook-link-word-partner = One { -shirakat-dar }
+
+## The rows that start the book or move a partner's capital (plan 78 E, PRD FR-16.14). $partner: the partner, with his tag.
+
+# review: pending
+cashbook-row-opening-cash = Opening cash
+
+# review: pending
+cashbook-row-opening-capital = Opening { -sarmaya }: { $partner }
+
+# review: pending
+cashbook-row-capital-in = { -sarmaya } invested: { $partner }
+
+# review: pending
+cashbook-row-capital-out = { -sarmaya } taken back: { $partner }
+
+## Where the capital is, a card of the cash book behind the partner code (plan 78 E, PRD FR-16.14).
+
+# review: pending
+cashbook-capital-title = Where the { -sarmaya } is
+
+# review: pending
+cashbook-capital-help = Where the partners' money is now, and whose it is. The two totals are always equal.
+
+# review: pending
+cashbook-capital-failed = The { -sarmaya } could not be read
+
+# review: pending
+cashbook-capital-where-title = Where it is
+
+# review: pending
+cashbook-capital-whose-title = Whose it is
+
+# review: pending
+cashbook-capital-col-what = Detail
+
+# review: pending
+cashbook-capital-col-amount = Amount
+
+# review: pending
+cashbook-capital-where-cash = Cash in hand
+
+# review: pending
+cashbook-capital-where-buyers-owe = What { -gahakon } owe ({ -doobi-raqam } included)
+
+# review: pending
+cashbook-capital-where-seller-advances = { -peshgi } with { -beopariyon }
+
+# review: pending
+cashbook-capital-where-sellers-owe-beyond = What { -beopariyon } owe beyond their { -peshgi }
+
+# review: pending
+cashbook-capital-where-sellers-payable = Minus: owed to { -beopariyon }
+
+# review: pending
+cashbook-capital-where-money-lent = { -adhar-raqam } not yet returned
+
+# review: pending
+cashbook-capital-where-owed-for-charges = Minus: owed for { -mazdoori }, { -kiraya }, { -munshiana } and stores
+
+# review: pending
+cashbook-capital-where-separate-khatas = { -alag-khata }
+
+# review: pending
+cashbook-capital-where-gardens-held = Minus: money of { -baghat } held until they close
+
+# review: pending
+cashbook-capital-where-linked-in-partner-totals = Minus: linked money already in the partners' { -kul-raqam }
+
+# review: pending
+cashbook-capital-where-other = Other
+
+# review: pending
+cashbook-capital-whose-partner-total = { -kul-raqam }: { $partner }
+
+# review: pending
+cashbook-capital-whose-opening-capital = Opening { -sarmaya }
+
+# review: pending
+cashbook-capital-whose-advances-open = Partners' part of the open { -peshgi }
+
+# review: pending
+cashbook-capital-whose-unrecorded-where = Where the money is was not recorded
+
+# review: pending
+cashbook-capital-whose-other = Other difference

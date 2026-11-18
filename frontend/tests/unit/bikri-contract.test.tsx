@@ -15,9 +15,11 @@ import {
   focusedIn,
   lotsGrid,
   named,
+  names,
   openBook,
   salesGrid,
   textOf,
+  tickAdvance,
   typeEvent1Lot,
 } from '../helpers/bikri-screen';
 import {
@@ -98,6 +100,11 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
       const sent = backend.previews.at(-1)?.lots[0]?.sales[1]?.seller_rate;
       expect(sent).toBe('580');
     });
+    // Event 1 takes the advance off this sale: the tick is off when a بکری opens, so the munshi ticks it (C3).
+    await tickAdvance(user, language, names(language).rahim);
+    await waitFor(() => {
+      expect(backend.previews.at(-1)?.lots[0]?.adjust_advance).toBe(true);
+    });
     const sent = normalized(backend.lastDraft()) as BikriDraft;
     const file = wanted(EVENT1_REQUEST) as BikriDraft;
     expect(sent.header).toEqual(file.header);
@@ -121,6 +128,10 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
     });
     await waitFor(() => {
       expect(backend.previews.at(-1)?.lots[0]?.sales[1]?.qty).toBe('30');
+    });
+    await tickAdvance(user, language, names(language).rahim);
+    await waitFor(() => {
+      expect(backend.previews.at(-1)?.lots[0]?.adjust_advance).toBe(true);
     });
     expect(normalized(backend.lastDraft())).toEqual(wanted(E2E26_REQUEST));
   });

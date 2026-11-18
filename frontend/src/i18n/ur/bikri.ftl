@@ -187,7 +187,11 @@ bikri-more-freight-paid-by = { -kiraya } کس نے دیا
 
 # PRD FR-12.23.
 # review: pending
-bikri-more-adjust-advance = { -peshgi } سے کاٹیں
+bikri-more-adjust-advance = { -peshgi } اس { -bikri } سے کاٹیں
+
+# The tick of a seller on the summary (plan 78 C3). $name: the seller, with his tag.
+# review: pending
+bikri-summary-take-advance = { $name }: { -peshgi } اس { -bikri } سے کاٹیں
 
 # review: pending
 bikri-more-advance-open = { -peshgi } باقی: <num>{ $amount }</num>
@@ -265,6 +269,10 @@ bikri-summary-lot = { $named ->
     [yes] { -lot } { $lot }: { $who }
    *[no] { -lot } { $lot }
 }
+
+# The name of the dropdown of the summary; it is read by a screen reader and not drawn (plan 78 C2).
+# review: pending
+bikri-summary-which = کون سی { -lot } کا خلاصہ دیکھنا ہے
 
 # review: pending
 bikri-summary-whole = پوری { -bikri }
@@ -975,14 +983,6 @@ bikri-stock-own-total-cost = کل لاگت
 # review: pending
 bikri-stock-own-trip = { -market-safar }
 
-## Ready goods that come into a new sale by themselves (plan 33, PRD FR-12.39, FR-12.40).
-
-# review: pending
-bikri-ready-lots-note = فروخت کے لیے تیار مال سے <num>{ $count }</num> { -lot } شامل کیے گئے۔
-
-# review: pending
-bikri-ready-lots-note-hint = خریدار اور ریٹ لکھیں۔ کسی { -lot } کو چھوڑنا ہو تو اسے <key>{ $key }</key> سے ہٹا دیں۔
-
 ## A lot of a garden's goods arrived (plan 33 version 1.1, PRD FR-12.40).
 
 # review: pending
@@ -1004,7 +1004,7 @@ bikri-saved-arrival-open = { $garden } میں اندراج { $number } کھول�
 bikri-stock-garden-title = { -bagh } کا مال
 
 # review: pending
-bikri-stock-garden-help = وہ مال جو { -bagh } سے آیا اور ابھی بکا نہیں۔ یہ { -bagh } کا ہے۔ ہر نئی { -bikri } میں بکنے کے لیے تیار ہر مال کا ایک { -lot } پہلے سے موجود ہوتا ہے۔
+bikri-stock-garden-help = وہ مال جو { -bagh } سے آیا اور ابھی بکا نہیں۔ یہ { -bagh } کا ہے۔ { -bikri } میں اسے خود شامل کیا جاتا ہے۔
 
 # review: pending
 bikri-stock-garden-label = باقی { -bagh } کے مال کی فہرست
@@ -1196,3 +1196,56 @@ bikri-mixed-saved-toast = { -bikri } <num>{ $number }</num> محفوظ ہو گئ
 # The lot asked for on the address is not there any more: sold out, written off or taken back.
 # review: pending
 bikri-carried-gone = اس { -lot } میں بیچنے کو کچھ نہیں بچا، اس لیے شامل نہیں ہوئی۔
+
+## The load buttons of the بکری screen and the cards of trip goods and garden goods (plan 78 C1, PRD FR-12.50).
+
+# review: pending
+bikri-goods-trip-add = مارکیٹ سفر کا مال
+
+# review: pending
+bikri-goods-garden-add = باغ کا مال
+
+# review: pending
+bikri-goods-trip-title = مارکیٹ سفر کا مال چنیں
+
+# review: pending
+bikri-goods-garden-title = باغ کا مال چنیں
+
+# review: pending
+bikri-goods-trip-help = مارکیٹ سفر کی خریداری کا وہ مال جو ہماری دکان میں ابھی بکا نہیں۔ چنا ہوا مال اس { -bikri } کا لاٹ بن جاتا ہے۔
+
+# review: pending
+bikri-goods-garden-help = باغ کا وہ آیا ہوا مال جو ہماری دکان میں ابھی بکا نہیں۔ چنا ہوا مال اس { -bikri } کا لاٹ بن جاتا ہے۔
+
+# review: pending
+bikri-goods-trip-label = مارکیٹ سفر کا مال
+
+# review: pending
+bikri-goods-garden-label = باغ کا مال
+
+# review: pending
+bikri-goods-col-number-trip = خریداری
+
+# review: pending
+bikri-goods-col-number-garden = مال آیا
+
+# review: pending
+bikri-goods-col-trip = سفر
+
+# review: pending
+bikri-goods-col-garden = { -bagh }
+
+# review: pending
+bikri-goods-col-left = باقی
+
+# review: pending
+bikri-goods-col-sell-date = { -sell-date }
+
+# review: pending
+bikri-goods-empty = بیچنے کے لیے کوئی مال باقی نہیں
+
+# review: pending
+bikri-goods-empty-help = سارا مال بک چکا ہے، یا اس اسکرین پر آ چکا ہے۔
+
+# review: pending
+bikri-goods-failed = مال پڑھا نہیں جا سکا

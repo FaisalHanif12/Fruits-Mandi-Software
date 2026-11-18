@@ -151,6 +151,16 @@ export function fakePlan16(
       rows: sliceOf(matching, input.offset, input.limit),
     });
   });
+  // The three load buttons of a new بکری (plan 78 C1): the lots with goods left are the stock button; no trip or
+  // garden goods wait in these tests.
+  vi.mocked(bikriApi.bikriGoodsSources).mockImplementation(() =>
+    Promise.resolve({
+      stock_lots: rows.filter((row) => row.balance > 0).length,
+      trip_rows: 0,
+      garden_rows: 0,
+    }),
+  );
+  vi.mocked(bikriApi.bikriGoodsToLoad).mockResolvedValue({ rows: [] });
   vi.mocked(bikriApi.bikriMixedPreview).mockImplementation((input) => {
     store.mixedPreviews.push(structuredClone(input));
     return Promise.resolve(mixedAnswer(input, rows[0]?.balance ?? 0));

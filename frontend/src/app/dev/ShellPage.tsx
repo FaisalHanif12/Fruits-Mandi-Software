@@ -1,4 +1,4 @@
-// Development page /dev/shell (plan 04): the app shell with the main menu, the بکری side menu,
+// Development page /dev/shell (plan 04, plan 78 F1 `?back`): the app shell with the main menu, the بکری side menu,
 // the top bar, the status bar and a small form, to try the arrow keys, Ctrl+K, text size and the
 // language switch in both layouts. Sample values only. Never shipped: the route exists only when
 // import.meta.env.DEV is true (app/router.tsx).
@@ -7,6 +7,7 @@ import { Localized } from '@fluent/react';
 import { useState } from 'react';
 import { SHORTCUTS, formNavigationProps } from '../../shared/keyboard';
 import {
+  BackButton,
   Button,
   Card,
   DateInput,
@@ -16,6 +17,7 @@ import {
   SaveChangesPrompt,
   TextInput,
 } from '../../shared/ui';
+import { devValue } from '../../../tests/helpers/dev-bridge';
 import { useLanguage } from '../../shared/i18n';
 import { GalleryLocalization } from './GalleryLocalization';
 import { AppShell } from '../layout/AppShell';
@@ -83,6 +85,8 @@ function Content() {
       onOpenVoucher={() => undefined}
       date={SAMPLE_DATE}
       day="open"
+      // `#/dev/shell?back` shows the top bar of a page that was opened from another page (plan 78 F1).
+      back={devValue('back') === null ? null : <BackButton onClick={() => undefined} />}
     >
       <SampleForm />
     </AppShell>

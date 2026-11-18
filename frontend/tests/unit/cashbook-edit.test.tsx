@@ -599,6 +599,9 @@ describe.each(LANGUAGES)('opening an entry from the cash book (%s)', (language) 
         in_paisa: paisaForTest(0),
         out_paisa: paisaForTest(300_000),
         running_paisa: paisaForTest(-300_000),
+        // A row that is not an opening or a capital row (plan 78 E).
+        kind: 'other',
+        partner: null,
         ...row,
       })),
       total_count: rows.length,

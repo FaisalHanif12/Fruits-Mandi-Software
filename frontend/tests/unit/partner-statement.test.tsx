@@ -17,12 +17,14 @@ import { choose, named, startsWith } from '../helpers/cashbook-screen';
 import { printData } from '../helpers/collection-sheet';
 import { fakePartnerMonth, openDays } from '../helpers/partner-month';
 import * as real from '../helpers/partner-money-real';
+import * as plan78 from '../helpers/plan78-real';
 import { DAY, fail, leaveAppWindow, renderApp } from '../helpers/app';
 import {
   preparePartnerMoney,
   PARTNER_MONTH_TODAY,
   type PartnerMoney,
 } from '../helpers/partner-money';
+import { paisaForTest } from '../helpers/paisa';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -95,12 +97,12 @@ describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
     const [lead, day, totals] = rowsOf(list());
     // Opening: the کل رقم before the month (0), under the running column.
     expect(lead?.[0]).toBe(m('partners-month-opening'));
-    expect(lead?.[8]).toBe('0');
+    expect(lead?.[9]).toBe('0');
     // The day: 1,184 + 462 of commission, -900 of expense, net 746 and 746 at the end of the day.
-    expect(day).toEqual(['10-10-2026', '1,646', '-900', '', '', '', '', '746', '746']);
+    expect(day).toEqual(['10-10-2026', '1,646', '-900', '', '', '', '', '', '746', '746']);
     // The totals and the closing are the backend's, under the same columns.
     expect(totals?.[0]).toBe(m('glossary-meezan'));
-    expect(totals?.slice(1)).toEqual(['1,646', '-900', '', '', '', '', '746', '746']);
+    expect(totals?.slice(1)).toEqual(['1,646', '-900', '', '', '', '', '', '746', '746']);
     expect(partnersApi.partnersStatementMonth).toHaveBeenCalledWith({
       partner_id: 2,
       month: '2026-10',
@@ -163,6 +165,105 @@ describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
     expect(lines[0]?.heading).toBe('');
   });
 
+  it('plan 78 B4: an advance to a seller and its return are lines of his statement and a column of the month: his part goes out, then comes back', async () => {
+    const template = real.STATEMENT_B.lines[0];
+    if (template === undefined) throw new Error('no line');
+    const rahim = { id: 19, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
+    const line = (
+      date: string,
+      detail: 'advance_out' | 'advance_back',
+      part: number,
+      running: number,
+    ) => ({
+      ...template,
+      entry_date: date,
+      heading: 'advance' as const,
+      detail,
+      subject: rahim,
+      number: null,
+      reason: '',
+      amount_paisa: paisaForTest(part * 100),
+      running_paisa: paisaForTest(running * 100),
+      values: { amount_paisa: 1_500_000, share_bps: 3_000 },
+    });
+    fakePartnerMonth(
+      real.STATEMENT_B.partner,
+      [
+        line('2026-10-02', 'advance_out', -4_500, -4_500),
+        line('2026-10-10', 'advance_back', 4_500, 0),
+      ],
+      PARTNER_MONTH_TODAY,
+    );
+    const { user } = await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(4);
+    });
+    const rows = rowsOf(list());
+    // The new column is the one before the day's net: -4,500 on the day it went out, +4,500 on the day it came back.
+    expect(
+      screen.getAllByRole('columnheader').map((header) => visible(header.textContent)),
+    ).toContain(m('partners-month-col-advances'));
+    expect(rows[1]).toEqual(['02-10-2026', '', '', '', '', '', '', '-4,500', '-4,500', '-4,500']);
+    expect(rows[2]).toEqual(['10-10-2026', '', '', '', '', '', '', '4,500', '4,500', '0']);
+    // The month totals: what went out and came back is 0 in the column, and the closing is 0.
+    expect(rows[3]?.slice(1)).toEqual(['', '', '', '', '', '', '', '0', '0']);
+    // The lines of a day say what they are, with the seller, his part and the amount.
+    const lines = (await openDays(user, ['2026-10-02', '2026-10-10'])).get('2026-10-02') ?? [];
+    expect(lines[0]?.detail).toBe(
+      m('partners-statement-detail-advance-out', {
+        subject: nameOf(language, 'رحیم', 'Rahim'),
+        amount: '15,000',
+        share: '30',
+      }),
+    );
+  });
+
+  it('plan 78 B4: the backend’s own months with an advance: September has it going out, October part of it coming back', async () => {
+    vi.mocked(partnersApi.partnersStatementMonth).mockImplementation((input) =>
+      Promise.resolve(
+        input.month === '2026-09'
+          ? plan78.STATEMENT_ADVANCE_SEPTEMBER
+          : plan78.STATEMENT_ADVANCE_OCTOBER,
+      ),
+    );
+    await open('?partner=2&month=2026-09');
+    await screen.findByRole('treegrid');
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(3);
+    });
+    const september = rowsOf(list());
+    // His part of the advance goes out: -4,500 under the advances column, the net, and the کل رقم after the day.
+    expect(september[1]).toEqual([
+      '01-09-2026',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '-4,500',
+      '-4,500',
+      '-4,500',
+    ]);
+    expect(september[2]?.slice(-3)).toEqual(['-4,500', '-4,500', '-4,500']);
+  });
+
+  it('plan 78 B4: October opens on the -4,500 of September and 3,000 of the advance comes back on 10-10-2026', async () => {
+    vi.mocked(partnersApi.partnersStatementMonth).mockResolvedValue(
+      plan78.STATEMENT_ADVANCE_OCTOBER,
+    );
+    await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBe(3);
+    });
+    const [lead, day, totals] = rowsOf(list());
+    expect(lead?.[9]).toBe('-4,500');
+    expect(day).toEqual(['10-10-2026', '', '', '', '', '', '', '3,000', '3,000', '-1,500']);
+    expect(totals?.slice(1)).toEqual(['', '', '', '', '', '', '3,000', '3,000', '-1,500']);
+  });
+
   it('Enter on the day opens it, from the keyboard', async () => {
     const { user } = await open('?partner=2&month=2026-10');
     const grid = await screen.findByRole('treegrid');
@@ -189,8 +290,8 @@ describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
     });
     const rows = rowsOf(list());
     // 11-10-26: only the capital column and the net, the running total 746 + 50,000.
-    expect(rows[2]).toEqual(['11-10-2026', '', '', '', '', '', '50,000', '50,000', '50,746']);
-    expect(rows[3]?.[8]).toBe('50,746');
+    expect(rows[2]).toEqual(['11-10-2026', '', '', '', '', '', '50,000', '', '50,000', '50,746']);
+    expect(rows[3]?.[9]).toBe('50,746');
   });
 
   it('D4-A33: partner الف in October has the trip part, the commission and the trip credit on one day, ending at -296', async () => {
@@ -201,8 +302,8 @@ describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
     });
     const [, day, totals] = rowsOf(list());
     // 10-10-26: commission 480, gardens and trips -4,160 + 3,384 = -776, net -296.
-    expect(day).toEqual(['10-10-2026', '480', '', '-776', '', '', '', '-296', '-296']);
-    expect(totals?.[8]).toBe('-296');
+    expect(day).toEqual(['10-10-2026', '480', '', '-776', '', '', '', '', '-296', '-296']);
+    expect(totals?.[9]).toBe('-296');
   });
 
   it('a day that has only notes (a write-off and a trip closing) has no figures and the کل رقم stays at -296', async () => {
@@ -213,10 +314,10 @@ describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
     });
     const [lead, day] = rowsOf(list());
     // The opening is the -296 carried from October.
-    expect(lead?.[8]).toBe('-296');
+    expect(lead?.[9]).toBe('-296');
     expect(day?.[0]).toBe('11-11-2026');
-    expect(day?.slice(1, 7)).toEqual(['', '', '', '', '', '']);
-    expect(day?.slice(7)).toEqual(['0', '-296']);
+    expect(day?.slice(1, 8)).toEqual(['', '', '', '', '', '', '']);
+    expect(day?.slice(8)).toEqual(['0', '-296']);
   });
 
   it('the notes of that day show without an amount when the day is opened', async () => {
@@ -325,7 +426,9 @@ describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
       expect(visible(document.querySelector('.print-sheet')?.textContent)).toContain('44,364');
     });
     await user.click(
-      await screen.findByRole('button', { name: (name) => visible(name) === m('common-back') }),
+      await within(screen.getByRole('main')).findByRole('button', {
+        name: (name) => visible(name) === m('common-back'),
+      }),
     );
     expect(await screen.findByRole('treegrid')).toBeInTheDocument();
   });

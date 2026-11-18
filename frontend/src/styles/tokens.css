@@ -227,6 +227,12 @@
 
   /* The same slot in a short table that shares a narrow sheet (the buyers' and sellers' list of a day). */
   --print-unit-slot-narrow: 9mm;
+
+  /* The slot after a figure on a party's slip: the side word is written for the reader, "You owe" or "The
+     shop owes you" (plan 78 A6), so it is longer than بنام and جمع. A buyer's slip shares a narrow page and lets
+     the word turn to two lines; a seller's bill has a whole page and keeps it in one. */
+  --print-slip-side-slot: 20mm;
+  --print-slip-side-slot-wide: 34mm;
 }
 
 /* A window that is short (the `short:` variant of globals.css, 800 px high, so 1366 x 768 and 1024 x 600):

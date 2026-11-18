@@ -188,7 +188,11 @@ bikri-more-freight-paid-by = Freight paid by
 
 # PRD FR-12.23.
 # review: pending
-bikri-more-adjust-advance = Deduct from advance
+bikri-more-adjust-advance = Take the advance off this sale
+
+# The tick of a seller on the summary (plan 78 C3). $name: the seller, with his tag.
+# review: pending
+bikri-summary-take-advance = { $name }: take the advance off this sale
 
 # review: pending
 bikri-more-advance-open = Open advance: <num>{ $amount }</num>
@@ -266,6 +270,10 @@ bikri-summary-lot = { $named ->
     [yes] Lot { $lot }: { $who }
    *[no] Lot { $lot }
 }
+
+# The name of the dropdown of the summary; it is read by a screen reader and not drawn (plan 78 C2).
+# review: pending
+bikri-summary-which = Which lot to show the summary of
 
 # review: pending
 bikri-summary-whole = Whole sale
@@ -974,17 +982,6 @@ bikri-stock-own-total-cost = Total cost
 # review: pending
 bikri-stock-own-trip = { -market-safar }
 
-## Ready goods that come into a new sale by themselves (plan 33, PRD FR-12.39, FR-12.40).
-
-# review: pending
-bikri-ready-lots-note = { $count ->
-    [one] <num>1</num> { -lot }
-   *[other] <num>{ $count }</num> { -lot }s
-} added from goods that are ready to sell.
-
-# review: pending
-bikri-ready-lots-note-hint = Add the buyers and rates. To leave one out, remove its lot with <key>{ $key }</key>.
-
 ## A lot of a garden's goods arrived (plan 33 version 1.1, PRD FR-12.40).
 
 # review: pending
@@ -1006,7 +1003,7 @@ bikri-saved-arrival-open = Open entry { $number } in { $garden }
 bikri-stock-garden-title = { -bagh } goods
 
 # review: pending
-bikri-stock-garden-help = Goods that came to a { -bagh } and are not sold yet. They belong to the garden. A new { -bikri } holds a lot for each one that is ready to sell.
+bikri-stock-garden-help = Goods that came to a { -bagh } and are not sold yet. They belong to the garden. A { -bikri } takes them when you add them by hand.
 
 # review: pending
 bikri-stock-garden-label = List of garden goods left
@@ -1204,3 +1201,56 @@ bikri-mixed-saved-toast = { -bikri } <num>{ $number }</num> saved, with the good
 # The lot asked for on the address is not there any more: sold out, written off or taken back.
 # review: pending
 bikri-carried-gone = That lot has nothing left to sell, so it was not added.
+
+## The load buttons of the بکری screen and the cards of trip goods and garden goods (plan 78 C1, PRD FR-12.50).
+
+# review: pending
+bikri-goods-trip-add = Market trip goods
+
+# review: pending
+bikri-goods-garden-add = Garden goods
+
+# review: pending
+bikri-goods-trip-title = Choose market trip goods
+
+# review: pending
+bikri-goods-garden-title = Choose garden goods
+
+# review: pending
+bikri-goods-trip-help = Goods of a market trip purchase that are not sold in our shop yet. The goods you choose become a lot of this { -bikri }.
+
+# review: pending
+bikri-goods-garden-help = Goods that arrived for a garden and are not sold in our shop yet. The goods you choose become a lot of this { -bikri }.
+
+# review: pending
+bikri-goods-trip-label = Market trip goods
+
+# review: pending
+bikri-goods-garden-label = Garden goods
+
+# review: pending
+bikri-goods-col-number-trip = Purchase
+
+# review: pending
+bikri-goods-col-number-garden = Goods arrived
+
+# review: pending
+bikri-goods-col-trip = Trip
+
+# review: pending
+bikri-goods-col-garden = { -bagh }
+
+# review: pending
+bikri-goods-col-left = Left
+
+# review: pending
+bikri-goods-col-sell-date = { -sell-date }
+
+# review: pending
+bikri-goods-empty = No goods left to sell
+
+# review: pending
+bikri-goods-empty-help = All the goods are sold, or are on this screen already.
+
+# review: pending
+bikri-goods-failed = The goods could not be read

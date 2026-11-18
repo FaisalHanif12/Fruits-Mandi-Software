@@ -20,7 +20,13 @@ export type GardenHeaderEditInput = {
    */
   garden: GardenInput;
   /**
-   * Why. Required when the garden is not of today.
+   * Why. Required when the garden is not of today, and ALWAYS when the rent changes (PRD FR-12.51,
+   * plan 78 D3: `ERR_REASON_REQUIRED` on `reason`).
    */
   reason: string;
+  /**
+   * The Owner's sign (دستخط), required when the rent changes (`ERR_SIGN_REQUIRED`,
+   * `ERR_SIGN_WRONG` on `sign`). A wrong sign changes nothing and is written to the audit log.
+   */
+  sign?: string;
 };

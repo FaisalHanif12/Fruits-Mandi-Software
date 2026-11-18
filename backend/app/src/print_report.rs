@@ -25,16 +25,23 @@
 use std::path::PathBuf;
 
 use mandi_reports::analytics::{AnalyticsPrintInput, print_data as analytics_print_data};
+use mandi_reports::dashboard::{
+    BuyerDuesPrintInput, CommissionPrintInput, buyer_dues_print_data, commission_month_print_data,
+};
 use mandi_reports::reports::{
-    BikriListPrintInput, ReportId, ReportPrintInput, StatementPrintDataInput,
-    bikri_list_print_data, buyer_bills_print_data, party_statement_print_data, print_data,
-    print_data_for_page, today_iso,
+    AdhariSheetPrintInput, BikriListPrintInput, CollectionSheetPrintInput, DaySlipsInput, ReportId,
+    ReportPrintInput, StatementPrintDataInput, StatementRowsPrintInput, adhari_sheet_print_data,
+    bikri_list_print_data, buyer_bills_print_data, collection_sheet_print_data, day_slips,
+    party_statement_print_data, print_data, print_data_for_page, sale_print, seller_bills,
+    statement_rows_print_data, today_iso,
 };
 use mandi_services::auth::{self, Actor};
 use mandi_services::core::auth::Language;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::paging::SortInput;
 use mandi_services::core::printing::{Paper, PrintOutcome, PrintTo, parse_copies};
+use mandi_services::core::statement::PartnersStatementMonthInput;
+use mandi_services::core::statement::PartnersStatementMonthPrintInput;
 use mandi_services::db::audit::AuditEntry;
 use mandi_services::{Context, ServiceError, bikri, party_ledgers, printing};
 use serde::Deserialize;
@@ -101,6 +108,95 @@ pub struct PrintStatementInput {
     /// The party, the period as typed, the print language and the paper (A4 when left out): the input
     /// of `party_ledgers_statement_print_data`.
     pub statement: StatementPrintDataInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `reports_buyer_parchi_print`, `reports_seller_bills_print` and `reports_sale_print`: the
+/// slips of a scope (plan 78 A1) to the printer or to a PDF.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintSlipsInput {
+    /// The scope (a بکری, a save or the day), the print language and the paper: the input of the
+    /// matching `*_print_data` command.
+    pub slips: DaySlipsInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `reports_adhari_sheet_print`: the ادھاری تفصیل of a day to the printer or to a PDF
+/// (plan 78 A5).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintAdhariInput {
+    /// The day, the print language and the paper.
+    pub sheet: AdhariSheetPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `reports_collection_sheet_print`: the اگراہی sheet of a day (the R5 screen) to the
+/// printer or to a PDF.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintCollectionSheetInput {
+    /// The day, the search, the sort, the print language and the paper.
+    pub sheet: CollectionSheetPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `party_ledgers_statement_rows_print`: one party's statement with a row for each entry to
+/// the printer or to a PDF (plan 78 A7).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintStatementRowsInput {
+    /// The party, the period, whether the items are printed, the print language and the paper.
+    pub statement: StatementRowsPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_buyer_dues_print`: the buyer dues page to the printer or to a PDF.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintBuyerDuesInput {
+    /// The search, the sort, the print language and the paper.
+    pub sheet: BuyerDuesPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_commission_print`: the commission page to the printer or to a PDF.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintCommissionInput {
+    /// The period, the party, the print language and the paper.
+    pub sheet: CommissionPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `partners_statement_month_print`: a partner's month statement to the printer or to a PDF.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintPartnerMonthInput {
+    /// The partner, the month, the print language and the paper.
+    pub statement: PartnersStatementMonthPrintInput,
     /// The printer of the Printing settings, or a PDF.
     pub to: PrintTo,
     /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
@@ -626,6 +722,375 @@ pub async fn run_statement<R: tauri::Runtime>(
         .await?
     };
     run_prepared(&app, state, "party_ledgers_statement_print", prepared).await
+}
+
+/// The route query of a print made of one print data command (plan 78): the hidden window reads
+/// `print=<kind>`, asks the print data command of that kind with `input` (JSON) and lays it out in
+/// `language` on `paper`. Kinds: `parchi`, `seller-bills`, `sale`, `adhari`, `collection-sheet`.
+fn data_query(
+    kind: &str,
+    language: Language,
+    paper: Paper,
+    input: &Value,
+) -> Result<String, UiError> {
+    let json = serde_json::to_string(input).map_err(UiError::internal)?;
+    Ok(format!(
+        "print={kind}&language={}&paper={}&input={}",
+        language.as_str(),
+        paper_text(paper),
+        encode_query(&json)
+    ))
+}
+
+/// The PDF name of a data print: `<kind>-<YYYYMMDD>-<lang>.pdf`, for example
+/// `sale-20261010-ur.pdf`.
+#[must_use]
+pub fn data_pdf_name(kind: &str, date_iso: &str, language: Language) -> String {
+    format!(
+        "{kind}-{}-{}.pdf",
+        compact_date(date_iso),
+        language.as_str()
+    )
+}
+
+/// What a data print is made from.
+struct DataPrint<'a> {
+    kind: &'static str,
+    /// The entity of the audit row.
+    entity: &'static str,
+    /// The input of the print data command, as JSON.
+    input: Value,
+    language: Language,
+    paper: Option<Paper>,
+    to: PrintTo,
+    copies: Option<&'a str>,
+}
+
+/// Checks a data print request and makes its one job. `check` builds the print data once, so a
+/// request that cannot be built stops before any paper is used.
+fn prepare_data(
+    state: &AppState,
+    request: &DataPrint<'_>,
+    pdf_dir: tauri::Result<PathBuf>,
+    check: impl FnOnce(&Context) -> Result<(), ServiceError>,
+) -> Result<Prepared, UiError> {
+    let ctx = state.context()?;
+    let actor = auth::require(&ctx)?;
+    let (printer, copies) = printer_and_copies(&ctx, &actor, request.copies)?;
+    check(&ctx)?;
+    let paper = request.paper.unwrap_or(Paper::A4);
+    let today = today_iso(ctx.db()).map_err(engine_error)?;
+    let name = data_pdf_name(request.kind, &today, request.language);
+    let job = Job {
+        doc: None,
+        paper,
+        query: data_query(request.kind, request.language, paper, &request.input)?,
+        target: job_target(request.to, printer, copies, pdf_dir, name)?,
+    };
+    let audit = json!({
+        "kind": request.kind,
+        "input": request.input,
+        "language": request.language.as_str(),
+        "to": request.to,
+        "copies": copies,
+    });
+    Ok(Prepared {
+        actor,
+        job,
+        entity: request.entity,
+        audit,
+    })
+}
+
+/// Prepares on a worker thread, then prints or saves the one job.
+async fn run_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    name: &'static str,
+    make: impl FnOnce(&AppState, tauri::Result<PathBuf>) -> Result<Prepared, UiError> + Send + 'static,
+) -> Result<PrintOutcome, UiError> {
+    let state = AppState::of(&app)?;
+    let data_dir = crate::profile::app_data_dir(&app);
+    let prepared = {
+        let state = state.clone();
+        run_blocking(name, move || {
+            make(&state, data_dir.map(|dir| dir.join(PDF_FOLDER)))
+        })
+        .await?
+    };
+    run_prepared(&app, state, name, prepared).await
+}
+
+/// Runs the print of the buyer slips (the parchi) of a scope (plan 78 A1).
+///
+/// # Errors
+/// As `reports_buyer_parchi_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_parchi<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintSlipsInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "reports_buyer_parchi_print", move |state, dir| {
+        let mut slips = input.slips.clone();
+        slips.sections = mandi_reports::reports::SlipSections::Buyers;
+        let request = DataPrint {
+            kind: "parchi",
+            entity: "buyer_parchi",
+            input: serde_json::to_value(&slips).map_err(UiError::internal)?,
+            language: slips.language,
+            paper: slips.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            day_slips(ctx.db(), &slips, "print-parchi-title")
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of the seller bills of a scope (plan 78 A1, A3).
+///
+/// # Errors
+/// As `reports_seller_bills_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_seller_bills<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintSlipsInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "reports_seller_bills_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "seller-bills",
+            entity: "seller_bills",
+            input: serde_json::to_value(&input.slips).map_err(UiError::internal)?,
+            language: input.slips.language,
+            paper: input.slips.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            seller_bills(ctx.db(), &input.slips)
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of the whole sale print of a scope (plan 78 A4).
+///
+/// # Errors
+/// As `reports_sale_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_sale<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintSlipsInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "reports_sale_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "sale",
+            entity: "sale_print",
+            input: serde_json::to_value(&input.slips).map_err(UiError::internal)?,
+            language: input.slips.language,
+            paper: input.slips.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            sale_print(ctx.db(), &input.slips)
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of the ادھاری تفصیل of a day (plan 78 A5).
+///
+/// # Errors
+/// As `reports_adhari_sheet_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_adhari<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintAdhariInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "reports_adhari_sheet_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "adhari",
+            entity: "adhari_sheet",
+            input: serde_json::to_value(&input.sheet).map_err(UiError::internal)?,
+            language: input.sheet.language,
+            paper: input.sheet.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            adhari_sheet_print_data(ctx.db(), &input.sheet)
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of the اگراہی sheet of a day, the R5 screen (plan 76 point 2).
+///
+/// # Errors
+/// As `reports_collection_sheet_print_data`, the copies codes on `copies`,
+/// `ERR_PRINT_WINDOWS_ONLY`, `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_collection_sheet<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCollectionSheetInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "reports_collection_sheet_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "collection-sheet",
+            entity: "collection_sheet",
+            input: serde_json::to_value(&input.sheet).map_err(UiError::internal)?,
+            language: input.sheet.language,
+            paper: input.sheet.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            collection_sheet_print_data(ctx.db(), &input.sheet)
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of one party's statement with a row for each entry (plan 78 A7).
+///
+/// # Errors
+/// As `party_ledgers_statement_rows_print_data`, the copies codes on `copies`,
+/// `ERR_PRINT_WINDOWS_ONLY`, `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_statement_rows<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintStatementRowsInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(
+        app,
+        "party_ledgers_statement_rows_print",
+        move |state, dir| {
+            let request = DataPrint {
+                kind: "statement-rows",
+                entity: "party_statement",
+                input: serde_json::to_value(&input.statement).map_err(UiError::internal)?,
+                language: input.statement.language,
+                paper: input.statement.paper,
+                to: input.to,
+                copies: input.copies.as_deref(),
+            };
+            prepare_data(state, &request, dir, |ctx| {
+                statement_rows_print_data(ctx.db(), &input.statement)
+                    .map(drop)
+                    .map_err(engine_error)
+            })
+        },
+    )
+    .await
+}
+
+/// Runs the print of the buyer dues page (plan 76 point 9).
+///
+/// # Errors
+/// As `dashboard_buyer_dues_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_buyer_dues<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintBuyerDuesInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "dashboard_buyer_dues_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "buyer-dues",
+            entity: "buyer_dues",
+            input: serde_json::to_value(&input.sheet).map_err(UiError::internal)?,
+            language: input.sheet.language,
+            paper: input.sheet.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            buyer_dues_print_data(ctx.db(), &input.sheet)
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of the commission page (plan 76 point 7, plan 77). The partner columns are left
+/// out while the partner section is locked, as on the screen.
+///
+/// # Errors
+/// As `dashboard_commission_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_commission<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCommissionInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "dashboard_commission_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "commission",
+            entity: "commission_month",
+            input: serde_json::to_value(&input.sheet).map_err(UiError::internal)?,
+            language: input.sheet.language,
+            paper: input.sheet.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            let show_partners = !mandi_services::partner_code::is_locked(ctx)?;
+            commission_month_print_data(ctx.db(), &input.sheet, show_partners)
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of a partner's month statement (plan 76 point 11). Behind the partner code.
+///
+/// # Errors
+/// `ERR_PARTNER_LOCKED`; as `partners_statement_month_print_data`, the copies codes on `copies`,
+/// `ERR_PRINT_WINDOWS_ONLY`, `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_partner_month<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintPartnerMonthInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "partners_statement_month_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "partner-month",
+            entity: "partner_statement_month",
+            input: serde_json::to_value(&input.statement).map_err(UiError::internal)?,
+            language: input.statement.language,
+            paper: input.statement.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            mandi_services::partner_code::require_unlocked(ctx)?;
+            let month = mandi_services::partners::statement_month(
+                ctx,
+                &PartnersStatementMonthInput {
+                    partner_id: input.statement.partner_id,
+                    month: input.statement.month.clone(),
+                },
+            )?;
+            mandi_reports::reports::partner_statement_month_print_data(
+                ctx.db(),
+                &month,
+                input.statement.language,
+                input.statement.paper,
+            )
+            .map(drop)
+            .map_err(engine_error)
+        })
+    })
+    .await
 }
 
 #[cfg(test)]

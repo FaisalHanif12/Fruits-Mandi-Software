@@ -40,6 +40,9 @@ export function historyDetailText(row: GardenHistoryRow, text: Say): string {
       return row.bikri_number === null
         ? ''
         : text('gardens-history-detail-bikri', { number: String(row.bikri_number) });
+    case 'refund':
+      // The owner's refund after a rent relief (plan 78 D3): its note, as typed.
+      return row.note ?? '';
     case 'fruit':
     case 'close':
       return '';

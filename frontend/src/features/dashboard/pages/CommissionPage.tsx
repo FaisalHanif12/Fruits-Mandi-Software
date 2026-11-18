@@ -16,8 +16,7 @@
 //   side and no party, a note to pick one), and the rows.
 
 import { Localized } from '@fluent/react';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Percent, Printer, UserSearch } from 'lucide-react';
+import { Percent, Printer, UserSearch } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
@@ -46,7 +45,6 @@ import { commissionInput, commissionParty, useCommissionRead } from '../commissi
 import { addYears, useCommissionFilters, yearOf } from '../commission-search';
 
 export function CommissionPage() {
-  const navigate = useNavigate();
   const day = useDayStatus();
   const today = day.data?.today ?? null;
   const [filters, change] = useCommissionFilters();
@@ -54,10 +52,15 @@ export function CommissionPage() {
   const [active, setActive] = useState<string | null>(null);
   const [view, setView] = useState<'table' | 'preview'>('table');
   const language = useLanguage();
-  useEscape('leave', () => {
-    if (view === 'preview') setView('table');
-    else void navigate({ to: '/' });
-  });
+  // Esc closes the preview first; with the table showing, Esc is the shell's: back to the page the user came
+  // from (plan 78 F1).
+  useEscape(
+    'leave',
+    () => {
+      setView('table');
+    },
+    view === 'preview',
+  );
   useShortcut(SHORTCUTS.print, () => {
     if (view === 'table') setView('preview');
   });
@@ -213,6 +216,7 @@ export function CommissionPage() {
     month: filters.kind === 'month' ? (shownMonth ?? filters.month) : null,
     ...(asked?.period === undefined ? {} : { period: asked.period }),
     ...(asked?.party === undefined ? {} : { party: asked.party }),
+    ...(filters.goods === 'all' ? {} : { goods: filters.goods }),
     language: printLanguage,
     paper,
   });
@@ -278,6 +282,7 @@ export function CommissionPage() {
           busy={read.isFetching}
           open={open}
           party={commissionParty(filters)}
+          goods={filters.goods}
           onToggle={(date, isOpen) => {
             if (data.period.kind === 'year') {
               // A month of a year opens as that month (its date is `YYYY-MM`).
@@ -343,15 +348,6 @@ export function CommissionPage() {
       }
       actions={
         <>
-          <Button
-            shortcut={SHORTCUTS.back}
-            onClick={() => {
-              void navigate({ to: '/' });
-            }}
-          >
-            <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-            <Localized id="commission-back" />
-          </Button>
           <Button
             shortcut={SHORTCUTS.print}
             disabled={data === undefined}

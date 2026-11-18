@@ -259,15 +259,33 @@ fn e2e_37_partner_totals_the_statement_of_b_and_the_firm_equity() {
             )
         })
         .collect();
+    // PRD v1.43 (FR-17.13, plan 78 B4): رحیم's advance of 15,000 (01-09-26) takes ب's 30% off
+    // (-4,500) and بکری 1 settles it on 10-10-26 (+4,500, after his share of that بکری).
     assert_eq!(
         rows,
         vec![
+            (
+                "2026-09-01",
+                StatementHeading::Advance,
+                StatementDetail::AdvanceOut,
+                None,
+                Some(-4_500),
+                -4_500
+            ),
             (
                 "2026-10-10",
                 StatementHeading::Bikri,
                 StatementDetail::IncomeShare,
                 Some(1),
                 Some(1_184),
+                -3_316
+            ),
+            (
+                "2026-10-10",
+                StatementHeading::Advance,
+                StatementDetail::AdvanceBack,
+                None,
+                Some(4_500),
                 1_184
             ),
             (
@@ -298,7 +316,7 @@ fn e2e_37_partner_totals_the_statement_of_b_and_the_firm_equity() {
     );
     // The expense line names its head and the capital line its voucher.
     assert_eq!(
-        statement.lines[2]
+        statement.lines[4]
             .subject
             .as_ref()
             .map(|s| s.name_en.as_str()),
@@ -310,14 +328,14 @@ fn e2e_37_partner_totals_the_statement_of_b_and_the_firm_equity() {
             statement.closing_total_paisa.rupees(),
             statement.total_count
         ),
-        (0, 50_746, 4)
+        (0, 50_746, 6)
     );
     assert_eq!(
         (
             statement.totals.plus_paisa.rupees(),
             statement.totals.minus_paisa.rupees()
         ),
-        (51_646, 900)
+        (56_146, 5_400)
     );
 
     // The last running total of every partner is his کل رقم.
@@ -578,7 +596,9 @@ fn e2e_38_the_family_khata_pays_out_gets_back_and_sells_its_goods() {
         .collect();
     assert_eq!(
         totals,
-        vec![248, 186, 186],
+        // 248 / 186 / 186 less each one's part of رحیم's open advance, -6,000 / -4,500 / -4,500
+        // (PRD v1.43, FR-17.13).
+        vec![-5_752, -4_314, -4_314],
         "the khata is in nobody's total"
     );
     // The partners' gardens, trips and fruit accounts are empty.
@@ -744,7 +764,8 @@ fn d4_a31_a_drawings_opening_debit_counts_as_money_taken() {
             row.month_net_paisa.rupees(),
             row.total_paisa.rupees()
         ),
-        (2_000, 0, 0, -2_000, -2_000)
+        // The total also carries his 40% of رحیم's open advance, -6,000 (PRD v1.43, FR-17.13).
+        (2_000, 0, 0, -2_000, -8_000)
     );
     // The take list shows it as an opening, open 2,000.
     let takes = partners::takes(
@@ -772,8 +793,10 @@ fn d4_a31_a_drawings_opening_debit_counts_as_money_taken() {
     );
     // His statement has the line, dated its opening date.
     let statement = statement_of(&w, a);
-    assert_eq!(statement.lines.len(), 1);
-    let line = &statement.lines[0];
+    // PRD v1.43: the first line is his 40% of رحیم's open advance of 15,000 (-6,000, 01-09-26).
+    assert_eq!(statement.lines.len(), 2);
+    assert_eq!(statement.lines[0].detail, StatementDetail::AdvanceOut);
+    let line = &statement.lines[1];
     assert_eq!(
         (
             line.heading,
@@ -787,9 +810,9 @@ fn d4_a31_a_drawings_opening_debit_counts_as_money_taken() {
             StatementDetail::DrawingsOpening,
             "2026-10-10",
             Some(-2_000),
-            -2_000
+            -8_000
         )
     );
-    // The other partners are not affected.
-    assert_eq!(overview_row(&w, w.partners[1]).total_paisa.rupees(), 0);
+    // The other partners are not affected, apart from their part of the advance (-4,500).
+    assert_eq!(overview_row(&w, w.partners[1]).total_paisa.rupees(), -4_500);
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-goods-to-load"
+description = "Enables the bikri_goods_to_load command without any pre-configured scope."
+commands.allow = ["bikri_goods_to_load"]
+
+[[permission]]
+identifier = "deny-bikri-goods-to-load"
+description = "Denies the bikri_goods_to_load command without any pre-configured scope."
+commands.deny = ["bikri_goods_to_load"]

@@ -323,6 +323,9 @@ pub struct GardenHeaderEdit<'a> {
     pub item_id: Option<i64>,
     /// The rent, paisa. Changing it needs the garden's edit window (`edit_windows`).
     pub rent_paisa: i64,
+    /// The rent the garden had before this change, set only when the rent changes and the garden has
+    /// no original yet (plan 78 D3). The first original is kept for good.
+    pub rent_was_paisa: Option<i64>,
     /// The end of the season, `YYYY-MM-DD`.
     pub season_end_date: Option<&'a str>,
     /// A note.
@@ -343,7 +346,8 @@ pub fn update_garden_header(
     conn.execute(
         "UPDATE ventures SET name_ur = ?2, name_en = ?3, search_ur = ?4, search_en = ?5,
              search_phonetic = ?6, item_id = ?7, rent_paisa = ?8, season_end_date = ?9, note = ?10,
-             updated_at = ?11, updated_by = ?12, version = version + 1
+             updated_at = ?11, updated_by = ?12, version = version + 1,
+             rent_original_paisa = COALESCE(rent_original_paisa, ?13)
          WHERE id = ?1",
         params![
             id,
@@ -357,7 +361,8 @@ pub fn update_garden_header(
             header.season_end_date,
             header.note,
             now,
-            user_id
+            user_id,
+            header.rent_was_paisa
         ],
     )?;
     Ok(())

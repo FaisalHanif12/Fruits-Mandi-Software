@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reports-adhari-sheet-print-data"
+description = "Enables the reports_adhari_sheet_print_data command without any pre-configured scope."
+commands.allow = ["reports_adhari_sheet_print_data"]
+
+[[permission]]
+identifier = "deny-reports-adhari-sheet-print-data"
+description = "Denies the reports_adhari_sheet_print_data command without any pre-configured scope."
+commands.deny = ["reports_adhari_sheet_print_data"]

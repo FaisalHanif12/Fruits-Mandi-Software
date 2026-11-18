@@ -56,7 +56,7 @@ export function dashboardBuyerDuesPrintData(input: BuyerDuesPrintInput): Promise
 export function dashboardBuyerDuesPrint(input: {
   dues: BuyerDuesPrintInput;
   to: PrintTo;
-  copies: number | null;
+  copies: string | null;
 }): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('dashboard_buyer_dues_print', { input });
 }
@@ -70,7 +70,7 @@ export function dashboardCommissionPrintData(input: CommissionPrintInput): Promi
 export function dashboardCommissionPrint(input: {
   commission: CommissionPrintInput;
   to: PrintTo;
-  copies: number | null;
+  copies: string | null;
 }): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('dashboard_commission_print', { input });
 }

@@ -1111,7 +1111,7 @@ report-r34-open-qty = { -nag } Left
 ## R35, the party day sheet (plan 27, PRD FR-19.12): the table of every party and the slip of one party.
 
 # review: pending
-report-r35-title = Party Day Sheet
+report-r35-title = Party Day List
 
 # review: pending
 report-r35-help = For one day: what each party owed at the start, what was debited and credited, and what is left. Pick a party to see his slip. A bill edited or cancelled on its own day counts once in the day's columns; the balances agree with the ledger.
@@ -1199,6 +1199,14 @@ report-col-running-balance = Running Balance
 
 # review: pending
 report-col-rent-due = Rent Due
+
+# Under the table of R36, only when the owner of a garden gave relief on its rent (PRD FR-12.51, plan 78 D3): the rent when the garden was made.
+# review: pending
+report-r36-rent-original = Original { -thaika }
+
+# The relief: how much the owner took off the rent, over the whole filter.
+# review: pending
+report-r36-relief = Relief from the owner
 
 # review: pending
 report-garden-open = Open
@@ -1348,7 +1356,7 @@ report-r35-laga = { -laga }
 
 # What the buyer owes for the day: the goods, the commission and the laga.
 # review: pending
-report-r35-today-total = Today's Total
+report-r35-today-total = Today's Bill
 
 # Other entries of the day on the party's account, for example cash lent or a journal line.
 # review: pending
@@ -1356,10 +1364,10 @@ report-r35-other = Other Entries
 
 # The line the collector fills in by hand when nothing was paid yet.
 # review: pending
-report-r35-paid-today = Paid Today
+report-r35-paid-today = Cash Paid In
 
 # review: pending
-report-r35-today-left = Left Today
+report-r35-today-left = Credit Today
 
 # review: pending
 report-r35-new-balance = New Balance
@@ -1400,16 +1408,16 @@ report-r34-commission-buyer = Buyer { -commission }
 report-r34-commission-laga = { -laga }
 
 # review: pending
-report-r34-buyers-billed = Buyers' Total Today
+report-r34-buyers-billed = Buyers' Bills Today
 
 # review: pending
 report-r34-buyers-other = Buyers' Other Entries
 
 # review: pending
-report-r34-buyers-received = Paid Today by Buyers
+report-r34-buyers-received = Buyers' Cash Paid In
 
 # review: pending
-report-r34-buyers-left = Buyers' Left Today
+report-r34-buyers-left = Buyers' Credit Today
 
 # review: pending
 report-r34-sellers-net = Sellers' { -safi-bikri } Today
@@ -1418,7 +1426,7 @@ report-r34-sellers-net = Sellers' { -safi-bikri } Today
 report-r34-sellers-other = Sellers' Other Entries
 
 # review: pending
-report-r34-sellers-paid = Paid Today to Sellers
+report-r34-sellers-paid = Sellers' Cash Paid Out
 
 # The two short tables under the lines of a day.
 # review: pending
@@ -1428,7 +1436,7 @@ report-r34-table-buyers = Buyers' List
 report-r34-table-sellers = Sellers' List
 
 # review: pending
-report-col-today-total = Today's Total
+report-col-today-total = Today's Bill
 
 # review: pending
 report-col-net-sale = { -safi-bikri } Today
@@ -1437,7 +1445,7 @@ report-col-net-sale = { -safi-bikri } Today
 report-col-other-entries = Other Entries
 
 # review: pending
-report-col-paid-today = Paid Today
+report-col-paid-today = Cash Paid In
 
 # review: pending
 report-col-new-balance = New Balance
@@ -1792,17 +1800,35 @@ collection-col-detail = Goods
 collection-col-previous = { -sabiqa-raqam }
 
 # review: pending
-collection-col-bill = { -taza-banam }
+collection-col-bill = Today's Bill
 
 # review: pending
-collection-col-paid = { -mauqa-par-jama }
+collection-col-paid = Cash
 
 # review: pending
-collection-col-total-due = { -total-raqam }
+collection-col-total-due = Total Credit
 
 # review: pending
-collection-dead-line = { -doobi-raqam } (listed apart, not in the total above): { -sabiqa-raqam } <prev></prev>, { -taza-banam } <bill></bill>, { -total-raqam } <due></due>
+collection-dead-line = { -doobi-raqam } (listed apart, not in the total above): { -sabiqa-raqam } <prev></prev>, { -taza-banam } <bill></bill>, { collection-col-total-due } <due></due>
 
 # The buyers whose total due ends in Credit (the shop owes them): listed apart so the total above stays what the buyers owe.
 # review: pending
-collection-credit-line = { -gahak } in { -jama } (listed apart, not in the total above): { -sabiqa-raqam } <prev></prev>, { -taza-banam } <bill></bill>, { -total-raqam } <due></due>
+collection-credit-line = { -gahak } in { -jama } (listed apart, not in the total above): { -sabiqa-raqam } <prev></prev>, { -taza-banam } <bill></bill>, { collection-col-total-due } <due></due>
+
+## Plan 78: the clear words of a party's day slip (A6). The seller's slip has its own words where a buyer's does not fit.
+
+# Opening balance: the balance the account was made with, on the day it was posted (PRD FR-19.12, FR-19.16).
+# review: pending
+report-r35-opening = { -ibtidai-baqaya }
+
+# Seller's slip: what the shop paid him that day in cash (his cash and the payments).
+# review: pending
+report-r35-paid-today-seller = Cash Paid Out
+
+# Seller's slip: what the shop still has to pay him for the day.
+# review: pending
+report-r35-today-left-seller = Still to Pay Today
+
+# The same column in the short table of sellers of the day summary (R34).
+# review: pending
+report-col-paid-today-seller = Cash Paid Out

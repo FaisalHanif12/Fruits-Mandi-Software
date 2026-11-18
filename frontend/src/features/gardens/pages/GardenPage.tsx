@@ -10,8 +10,8 @@
 // Four states: loading, an error with a retry (also for a garden that does not exist), the garden.
 
 import { Localized } from '@fluent/react';
-import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, Undo2 } from 'lucide-react';
+import { useParams, useSearch } from '@tanstack/react-router';
+import { Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
@@ -47,7 +47,6 @@ function GardenBody({
   today: string;
   pager: PagerState;
 }) {
-  const navigate = useNavigate();
   // What the address asks the screen to open on (PRD FR-7.79): an entry type, or the closing.
   const rawSearch: Record<string, unknown> = useSearch({ strict: false });
   const openType = parseGardenSearch(rawSearch).type;
@@ -66,14 +65,6 @@ function GardenBody({
         <Localized id="gardens-title">
           <h1 className="sr-only normal:not-sr-only normal:type-title" />
         </Localized>
-        <Button
-          onClick={() => {
-            void navigate({ to: '/gardens' });
-          }}
-        >
-          <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-          <Localized id="gardens-back" />
-        </Button>
       </div>
       <GardenHeaderCard
         garden={garden}

@@ -71,4 +71,9 @@ export type StockRow = {
    * The write-offs of this lot that can still be undone, oldest first.
    */
   write_offs: Array<WriteOffRow>;
+  /**
+   * The advance tick stored on the lot (PRD FR-12.23, plan 78 C3). A later sale of the lot keeps
+   * it, so the screen shows it on a carried lot and does not let it be changed there.
+   */
+  adjust_advance: boolean;
 };

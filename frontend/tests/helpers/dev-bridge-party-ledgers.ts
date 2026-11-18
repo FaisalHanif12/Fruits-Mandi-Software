@@ -8,23 +8,27 @@
 // Flags in the hash, for example `#/dev/party-ledgers?party=21&date=2026-10-10`:
 //   side=seller  the sellers       empty  no parties          many  230 parties (page by page)
 //   dead         ارشد is in the dead amount        down  the backend fails
-//   four         the statement of اکرم with four dates in two windows of 30 days (plan 74); today is 10-10-2026
+//   real         the statement of احسان (seller, party=35) as the backend writes it for the worked day: the opening
+//                balance first, then his بکری and his ادائیگی (plan 78 A7); today is 31-10-2026
+//   later        with `real`: today is 09-11-2026, so the window starts on 11-10-2026 and opens with the balance brought forward
+//   four         the statement of اکرم with five entries on four dates in two windows of 30 days (plan 74, plan 78); today is 10-10-2026
 // The screen's own address (`side`, `party`, `date`) is read from the same hash.
 
 import type { PartyLedgerRow } from '../../src/bindings/PartyLedgerRow';
 import type { PartyLedgersList } from '../../src/bindings/PartyLedgersList';
 import { devFlag } from './dev-bridge';
 import { installReportsDevBridge, page as reportPage } from './dev-bridge-reports';
-import { SLIP_BUYER_AKRAM } from './day-slips-real';
 import { addDays } from '../../src/shared/format';
+import { STATEMENT_ROWS_FROM_11_10, STATEMENT_ROWS_WHOLE } from './plan78-real';
 import { paisaForTest } from './paisa';
-import { FOUR_DAY_STATEMENT, isoOfTypedDate, slipForDate, windowTotals } from './party-statement';
 import {
-  LEDGER_BUYERS,
-  LEDGER_SELLERS,
-  STATEMENT_AKRAM,
-  STATEMENT_RAHIM,
-} from './party-ledgers-real';
+  AKRAM_STATEMENT,
+  BUYER_STATEMENT,
+  HEAD_AKRAM,
+  SELLER_STATEMENT,
+  windowTotals,
+} from './party-statement-rows';
+import { LEDGER_BUYERS, LEDGER_SELLERS, STATEMENT_AKRAM } from './party-ledgers-real';
 
 type Input = Record<string, unknown>;
 
@@ -63,15 +67,29 @@ let fourDates = false;
 
 const handlers: Record<string, (input: Input) => unknown> = {
   // Today is 10-10-2026: the first window of a statement ends on it (plan 74).
-  day_status: () => ({ today: '2026-10-10', closed_up_to: null, today_open: true }),
+  day_status: () => ({
+    // `real`: the 30 days that end on 31-10-2026 hold the whole of احسان's statement (the opening, the بکری and the payment).
+    today: devFlag('later') ? '2026-11-09' : devFlag('real') ? '2026-10-31' : '2026-10-10',
+    closed_up_to: null,
+    today_open: true,
+  }),
   party_ledgers_list: listFor,
-  party_ledgers_statement: (input) => {
+  party_ledgers_statement_rows: (input) => {
+    if (devFlag('real') && input['account_id'] === STATEMENT_ROWS_WHOLE.head.account_id) {
+      // The backend's own answers: the whole period (its opening balance is the first row), or a window that
+      // starts on 11-10-2026 (the balance of the day before is brought forward).
+      const from = typeof input['from'] === 'string' ? input['from'] : '';
+      const [day = '', month = '', year = ''] = from.split('-');
+      return `${year}-${month}-${day}` > '2026-10-10'
+        ? STATEMENT_ROWS_FROM_11_10
+        : STATEMENT_ROWS_WHOLE;
+    }
     const four = fourDates && input['account_id'] === 21;
     const found = four
-      ? FOUR_DAY_STATEMENT
+      ? { ...BUYER_STATEMENT, head: HEAD_AKRAM }
       : input['account_id'] === 19
-        ? STATEMENT_RAHIM
-        : STATEMENT_AKRAM;
+        ? SELLER_STATEMENT
+        : AKRAM_STATEMENT;
     // The dates asked for as typed, `DD-MM-YYYY`: the rows inside them, as the backend reads a range.
     const iso = (text: unknown) => {
       if (typeof text !== 'string') return null;
@@ -80,13 +98,17 @@ const handlers: Record<string, (input: Input) => unknown> = {
     };
     const first = iso(input['from']);
     const last = iso(input['to']);
+    const history = input['include_history'] === true;
     const inside = found.rows.filter(
-      (row) => (first === null || row.date >= first) && (last === null || row.date <= last),
+      (row) =>
+        (first === null || row.date >= first) &&
+        (last === null || row.date <= last) &&
+        (history || !row.is_replaced),
     );
     const offset = Number(input['offset'] ?? 0);
     const limit = Number(input['limit'] ?? 100) || 100;
     const totals = four
-      ? windowTotals({ from: typeof input['from'] === 'string' ? input['from'] : null })
+      ? windowTotals({ from: typeof input['from'] === 'string' ? input['from'] : undefined })
       : undefined;
     return {
       ...found,
@@ -97,33 +119,20 @@ const handlers: Record<string, (input: Input) => unknown> = {
   },
   // The 30 days that end on the earlier of the date plus 15 days and today (10-10-2026), with an entry
   // when the party has one that day, as the backend's command says.
-  // The slip of a date of the four-date statement shows that day's own figures, not another day's.
-  reports_run: (input) => {
-    const filters = input['filters'] as
-      { party?: { account_id?: number } | null; as_of?: string } | undefined;
-    if (
-      fourDates &&
-      input['id'] === 'R35' &&
-      filters?.party?.account_id === 21 &&
-      typeof filters.as_of === 'string' &&
-      filters.as_of !== ''
-    ) {
-      return slipForDate(SLIP_BUYER_AKRAM, isoOfTypedDate(filters.as_of));
-    }
-    return reportPage(input);
-  },
+  reports_run: (input) => reportPage(input),
   party_ledgers_go_to_date: (input) => {
     const [day = '', month = '', year = ''] = String(input['date']).split('-');
     const date = `${year}-${month}-${day}`;
     const plus = addDays(date, 15);
     const to = plus < '2026-10-10' ? plus : '2026-10-10';
     const from = addDays(to, -29);
-    const rows = FOUR_DAY_STATEMENT.rows.filter((row) => row.date >= from && row.date <= to);
+    const rows = BUYER_STATEMENT.rows.filter((row) => row.date >= from && row.date <= to);
     const place = rows.findIndex((row) => row.date === date);
     return {
       from,
       to,
-      statement: { ...FOUR_DAY_STATEMENT, rows, count: rows.length },
+      // The answer still carries the old window page (the shape of plan 74); the screen ignores it.
+      statement: STATEMENT_AKRAM,
       has_entry: place >= 0,
       row: place >= 0 ? place : null,
     };

@@ -22,3 +22,5 @@ export {
   usePartnerCodeStatus,
 } from './code-hooks';
 export { ChangeCodeCard } from './components/ChangeCodeCard';
+// Plan 78: the hidden print window of a partner's month statement reads this (app/print-kinds).
+export { partnersStatementMonthPrintData } from './api';

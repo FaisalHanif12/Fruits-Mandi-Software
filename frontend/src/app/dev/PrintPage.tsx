@@ -3,7 +3,9 @@
 // on A4, A5 and the 80 mm roll, with the print style on (browser "emulate print media"). The flags in
 // the hash choose the document: `?doc=seller_bill|buyer_slips|collection_list&language=
 // ur|en&paper=a4|a5|mm80&window&cancelled&long=15&lines=60&contacts&mark=RH&grade`. `grade`
-// puts a quality on the lines, First, Second, Third in turn (plan 58). `contacts` and
+// puts a quality on the lines, First, Second, Third in turn (plan 58). The prints of plan 78 are
+// `?doc=parchi|seller-bills|sale|adhari` (with `named` the slips carry the party's name in their title).
+// `contacts` and
 // `mark` set the firm's contact persons and trade mark in the header. Never shipped: the route
 // exists only when import.meta.env.DEV is true (app/router.tsx).
 
@@ -14,7 +16,14 @@ import {
   manyLinesData,
   printDataFor,
 } from '../../../tests/helpers/print-data';
+import { adhariPrintData, daySlipsData, salePrintData } from '../../../tests/helpers/day-slips';
 import { BikriPrintDocument } from '../../features/bikri/print/BikriPrintDocument';
+import {
+  DaySlipsDocument,
+  ReportPrintDocument,
+  SalePrintDocument,
+  printTableOf,
+} from '../../features/reports';
 import { CollectionListTemplate } from '../../features/vouchers/print/CollectionListTemplate';
 import type { PrintDoc } from '../../bindings/PrintDoc';
 import type { Paper } from '../../bindings/Paper';
@@ -28,6 +37,33 @@ export function PrintPage() {
   const doc = DOCS.find((candidate) => candidate === search.get('doc')) ?? 'seller_bill';
   const language = search.get('language') === 'en' ? 'en' : 'ur';
   const paper = PAPER_VALUES.find((candidate) => candidate === search.get('paper'));
+  // The prints of plan 78: the slips of a day, the whole sale print and ادھاری تفصیل.
+  const kind = search.get('doc');
+  const asWindow = search.has('window');
+  if (kind === 'parchi' || kind === 'seller-bills') {
+    // The backend's own answer of the worked day: one slip for each buyer (ارشد, اکرم, شاہد), each titled with
+    // its party's name. `?many` repeats the first slip seven times to show how a page fills.
+    const slips = daySlipsData(language, kind, paper ?? 'a4');
+    const first = slips.buyers[0];
+    const filled =
+      search.has('many') && first !== undefined
+        ? { ...slips, buyers: Array.from({ length: 7 }, () => first) }
+        : slips;
+    return <DaySlipsDocument data={filled} variant={kind} applyRoot={asWindow} />;
+  }
+  if (kind === 'sale') {
+    return <SalePrintDocument data={salePrintData(language, paper ?? 'a4')} applyRoot={asWindow} />;
+  }
+  if (kind === 'adhari') {
+    const data = adhariPrintData(language, paper ?? 'a4');
+    return (
+      <ReportPrintDocument
+        data={printTableOf(data, 'R5')}
+        frame={data.frame}
+        applyRoot={asWindow}
+      />
+    );
+  }
   const mark = search.get('mark');
   const options = {
     language,

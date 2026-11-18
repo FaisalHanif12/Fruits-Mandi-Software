@@ -64,6 +64,7 @@ fn the_commission_month_is_a_sheet_with_the_day_and_the_partner_shares() {
         month: None,
         period: None,
         party: None,
+        goods: None,
         language: Language::En,
         paper: None,
     };
@@ -162,17 +163,21 @@ fn a_month_of_a_partner_statement_is_a_sheet_with_the_opening_and_the_closing() 
     let spec = partner_statement_month_spec(&month, Language::En);
     let sheet = export(&w, &spec, Language::En, "statement");
     let head = head_row(&sheet, &spec, Language::En);
-    // الف: commission 2,196, expense -1,200, money taken -2,000, day net -1,004, کل رقم -1,004 (E2E-9).
-    // Row 1 is the opening (کل رقم 0), row 2 the day, row 3 the totals.
-    assert_eq!(sheet.num(head + 1, 8), "0");
+    // الف: commission 2,196, expense -1,200, money taken -2,000, his part of رحیم's advance coming
+    // back +6,000 (PRD FR-17.13, v1.43), day net 4,996; کل رقم -6,000 at the start and -1,004 at the end
+    // (E2E-9 plus the advance). Row 1 is the opening, row 2 the day, row 3 the totals. The column
+    // "advances" is the 7th figure, so the running total is column 9.
+    assert_eq!(sheet.num(head + 1, 9), "-6000");
     assert_eq!(
-        nums(&sheet, head + 2, 1, 9),
-        ["2196", "-1200", "0", "0", "-2000", "0", "-1004", "-1004"]
+        nums(&sheet, head + 2, 1, 10),
+        [
+            "2196", "-1200", "0", "0", "-2000", "0", "6000", "4996", "-1004"
+        ]
     );
-    assert_eq!(sheet.num(head + 3, 8), "-1004");
+    assert_eq!(sheet.num(head + 3, 9), "-1004");
     // Urdu reads right to left and has the same numbers.
     let urdu = export(&w, &spec, Language::Ur, "statement-ur");
     assert!(urdu.right_to_left);
     let head = head_row(&urdu, &spec, Language::Ur);
-    assert_eq!(urdu.num(head + 2, 8), "-1004");
+    assert_eq!(urdu.num(head + 2, 9), "-1004");
 }

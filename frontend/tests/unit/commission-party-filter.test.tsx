@@ -129,6 +129,7 @@ function month(
     year: 2026,
     period: { kind: 'month', from: '2026-10-01', to: '2026-10-31' },
     party,
+    goods: 'all',
     first_month: '2026-09',
     current_month: '2026-10',
     partners: party === null ? PARTNERS : [],
@@ -145,6 +146,7 @@ function month(
 const dayOf = (row: CommissionDayRow, party: CommissionPartyShown | null): CommissionDay => ({
   date: '2026-10-10',
   party,
+  goods: 'all',
   partners: party === null ? PARTNERS : [],
   entries: [
     {
@@ -528,7 +530,9 @@ describe.each(LANGUAGES)('the commission page with a party and a period (%s)', (
       });
     });
     await user.click(
-      await screen.findByRole('button', { name: (name) => visible(name) === m('common-back') }),
+      await within(screen.getByRole('main')).findByRole('button', {
+        name: (name) => visible(name) === m('common-back'),
+      }),
     );
     expect(await screen.findByRole('treegrid')).toBeTruthy();
   });

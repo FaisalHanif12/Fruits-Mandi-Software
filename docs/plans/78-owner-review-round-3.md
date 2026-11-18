@@ -4,7 +4,7 @@
 |---|---|
 | Asked by | Umar, 17-11-2026 (points U1 to U6 at 01:16, points U7 to U20 at 01:53), after testing plans 76 and 77 |
 | Branch | `feature/d8-demo-feedback` (Mac phase) |
-| Status | Approved by Umar, 17-11-2026, with the answers in Section 7 and the defaults marked [A] |
+| Status | Approved by Umar, 17-11-2026, with the answers in Section 7 and the defaults marked [A]. **Built 18-11-2026** (all 20 points, builders' checks green). Review gate (reviewer, robustness) waits for Umar's "continue". |
 | Top priority | **Part A, printing.** The way the prints work today does not match what the shop needs. |
 | Screenshots | `docs/plans/assets/78/` (index in Section 9) |
 | Overlap | Where this plan and plans 76 or 77 say different things, this plan wins. |
@@ -504,9 +504,25 @@ Requirement documents: PRD v1.43 (FR-7.73, FR-7.92, FR-9.3, 4.4, 12.3, FR-12.23,
   - D4: `goods` (all | consigned | trip | garden) on `CommissionMonthInput`, `CommissionDayInput`, `CommissionPrintInput`, with the analytics SQL fragment; partner and shared-income columns hidden under a goods filter. A test runs views A to E, H and L by goods and checks consigned + trip + garden = all.
   - E read side: the cash book already has a row per cash entry with running balance and from/to windows. Added: `Cashbook.first_entry_date`, `CashbookRow.kind` (opening_cash | opening_capital | capital_in | capital_out | other) with the partner. Cause of s05/s14: `post_opening_capital` posts Dr ابتدائی فرق, Cr 0602, never روکڑ.
 - **Decisions on backend's last questions (lead and Umar, 17-11-2026):** (a) `reports_party_sheet` opening test: the 7,000 moves from دیگر اندراج to ابتدائی بقایا, as PRD FR-19.12 v1.43 requires (label only, no amount). (b) Installment cap dropped (above). (c) Umar approved adding پچھلا بقایا and ابتدائی بقایا to the glossary line of `D6-system-prompt.md` v1.11; backend copies the prompt files and runs P1 to P8; the live NFR-AI-2 run is a follow-up before release. (d) `robustness_d8_migration.rs` skip list gains `ventures` and `venture_items` (migration 25 changed them), no expected value changes. Capital card: the four main lines (cash, buyers owe, advances with sellers, the shop owes sellers) always; every other line only when not 0. `bikri_ready_goods` and the old `party_ledgers_statement*` commands may be removed now that the screens no longer call them.
-- **Ownership exception (lead, 17-11-2026):** robustness was not running, so backend made compile-only edits in robustness-owned files: `goods: None` in five struct literals of `services/tests/robustness_plan76.rs` and `robustness_plan77.rs`, and the latest migration 24 → 25 in `db/tests/robustness_d8_migration.rs`. No assertion, threshold or expected value changed.
+- **D6 prompt size:** after v1.11 the fixed part was 11,608 tokens; the روکڑ note was shortened to "(drawer and bank)", same meaning, and it is now exactly 11,600 (P1 passes at the limit, no room left). Follow-up: any new glossary word needs a shortening or Umar raising NFR-AI-5.
+- **Ownership exception (lead, 17-11-2026):** robustness was not running, so backend made compile-only edits in robustness-owned files: `goods: None` in five struct literals of `services/tests/robustness_plan76.rs` and `robustness_plan77.rs`, and the latest migration 24 → 25 in `db/tests/robustness_d8_migration.rs`. No assertion, threshold or expected value changed. Later the same day: the `ventures` and `venture_items` tables added to the skip list of `robustness_d8_migration.rs`, and 17 new commands added as rows to `command_table()` of `app/tests/robustness_security.rs` (all protected; no existing row changed).
 - **G pages checked (backend, in code):** party statement rows, R13, R14, partner statement, روکڑ, dashboard drills, trips and gardens lists, ادھاری تفصیل: all windowed or paged with backend totals. Watch: the statement print of a 10-year period for a heavy buyer reads about 55,000 lines. Speed runs at 10 years go to robustness at the gate: `party_ledgers_statement_rows` (30 days, 1 year), the ادھاری تفصیل sheet, `reports_sale_print_data`.
 - **Contracts (command names and types):** as above; exact ts types after backend's `pnpm gen:types`.
+
+- **Rent-due clamp (lead, 17-11-2026, after the money review):** rent due = max(0, rent − installments), مالک کے ذمے = max(0, installments − rent − refunds), so an overpaid garden never shows the same money twice and the R36 total and the dashboard tile never net it against other gardens. plan78_garden_relief:298 now expects rent due 0.
+- **Build evidence (18-11-2026):** backend final `cargo test --workspace`: 4,110 passed, 5 failed (security table rows, fixed; four load-timing tests, each green alone); golden_day 163 of 163; robustness binaries core 66, services 105, backup 20, assistant 143, db 7 green; fmt and clippy clean; D6 prompt P1 to P8 green (P1 at exactly 11,600). Frontend: typecheck, lint (eslint and stylelint), i18n:check, prettier green (lead ran them); one full vitest run with 34 files failing at load 100+, each rerun alone green after the fixes. Print PDFs from the worked day: ادھاری تفصیل 44,364 / 12,800 / 31,564 / 0 / 31,564; whole sale print with 15 seller columns; one slip per buyer; statement with its opening row (screenshots in `.playwright-mcp/plan78-frontend/r2-*`).
+
+## 8a. Follow-ups (for the gate or later)
+
+1. D6 prompt is at exactly 11,600 tokens: any new glossary word needs a shortening or a higher NFR-AI-5 limit. The live NFR-AI-2 run is due before the next release.
+2. `assistant_quick` with chip `cash_in_hand` returned ERR_INTERNAL in one random hostile state (`quick.rs` hides the cause); robustness to look.
+3. The hostile-input security test now takes about 19 minutes (17 print rows with `to: pdf`); robustness may shorten payloads.
+4. The garden closing line reads the rent and relief live, so a closing undone, re-edited and closed again shows today's rent on the first closing line (display only).
+5. The garden installment preview does not show مالک کے ذمے after the entry (display only).
+6. Old commands `party_ledgers_statement*` and `bikri_ready_goods` can be removed in a later cleanup.
+7. New Urdu and English texts are "review: pending" (NFR-URD-4).
+8. Umar's test shop: the partners' opening capital was posted against ابتدائی فرق, so روکڑ looks short; fix by reopen and fix, or a جنرل dated today (Dr روکڑ, Cr ابتدائی فرق).
+9. Windows LOCAL-ONLY: Urdu shaping in prints and printing on WebView2.
 
 ## 9. Screenshot index
 

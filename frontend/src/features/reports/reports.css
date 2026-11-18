@@ -90,7 +90,8 @@
 }
 
 /* A date and the kind of an entry ("Receipt 1") are short and are never broken across two lines. */
-.print-report .print-table td.print-nowrap {
+.print-report .print-table td.print-nowrap,
+.print-report .print-table p.print-nowrap {
   white-space: nowrap;
 }
 
@@ -105,14 +106,27 @@
    A figure is followed by a slot for the side word of a balance (بنام, جمع); a plain amount keeps the
    empty slot, so the figures of all the lines are under one another (NFR-USE-19, plan 39 R8). */
 .print-report .print-slip-lines .print-num {
-  inline-size: 38mm;
+  inline-size: 46mm;
 }
 
 .print-report .print-slip-value {
   display: inline-grid;
-  grid-template-columns: auto var(--print-unit-slot);
+  grid-template-columns: auto var(--print-slip-side-slot);
   align-items: baseline;
   column-gap: var(--print-gap-2);
+}
+
+/* A seller's bill has a whole page: the longer side word stays on one line. */
+.print-report[data-variant='seller-bills'] .print-slip-lines {
+  max-inline-size: 115mm;
+}
+
+.print-report[data-variant='seller-bills'] .print-slip-lines .print-num {
+  inline-size: 68mm;
+}
+
+.print-report[data-variant='seller-bills'] .print-slip-value {
+  grid-template-columns: auto var(--print-slip-side-slot-wide);
 }
 
 .print-report .print-slip-value > :first-child {
@@ -183,8 +197,23 @@
 
 .print-report.print-parchi-page[data-variant='parchi'] .print-amounts th,
 .print-report.print-parchi-page[data-variant='parchi'] .print-amounts td {
-  padding-block: 0;
+  /* A hair of space above and below (a quarter of a millimetre): the tall letters of Nastaliq do not touch the line next to them. */
+  padding-block: var(--print-rule);
   font-size: var(--print-text-1);
+}
+
+/* A parchi is about 80 mm wide: the figures and the side word take a narrower column so the label of a line
+   ("مال کی رقم", "نقد جمع کروایا") has room and stays on one line, never over the line under it (plan 78 A2). */
+.print-report.print-parchi-page[data-variant='parchi'] .print-slip-lines {
+  --print-slip-side-slot: 16mm;
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-slip-lines .print-num {
+  inline-size: 38mm;
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts th {
+  white-space: nowrap;
 }
 
 .print-report.print-parchi-page[data-variant='parchi'] .print-table-dense td,
@@ -195,6 +224,20 @@
 .print-report .print-parchi-firm {
   font-size: var(--print-text-1);
   font-weight: var(--weight-strong);
+}
+
+/* The title of one party's slip, "اکرم ٹول ٹیکس کی روزانہ پرچی": his name in the words (plan 78 A2, A6). */
+.print-report .print-slip-title {
+  margin: 0;
+
+  /* Room under the line for the tails of Nastaliq letters, and a long name with its tag wraps between words
+     (balanced) and never runs past the slip (plan 78 A2). */
+  padding-block-end: var(--print-gap-1);
+  font-size: var(--print-text-2);
+  font-weight: var(--weight-strong);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  break-after: avoid;
 }
 
 /* The two short tables of a day of the day total sheet (R34): the buyers' and the sellers', one under

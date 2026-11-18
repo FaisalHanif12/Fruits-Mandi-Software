@@ -11,7 +11,7 @@ import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
-import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, formNavigationProps, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   AccountPicker,
@@ -75,9 +75,6 @@ function RulesBody({ saved, remember }: MemoryProps) {
     void navigate({ to: '/index/rules/new' });
   };
   useShortcut(SHORTCUTS.newEntry, openNew);
-  useEscape('leave', () => {
-    void navigate({ to: '/index' });
-  });
 
   const newButton = (
     <Button variant="primary" shortcut={SHORTCUTS.newEntry} onClick={openNew}>

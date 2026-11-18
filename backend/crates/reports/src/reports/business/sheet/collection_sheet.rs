@@ -21,7 +21,7 @@
 //!
 //! Example (after Events 1 to 5, 10-10-26): اکرم 0 + 12,880 − 0 = 12,880; ارشد 0 + 18,684 − 0 =
 //! 18,684; شاہد (چکتا) 0 + 12,800 − 12,800 = 0; the total 0 + 44,364 − 12,800 = 31,564. The next
-//! day, with no sale: اکرم 2,880 and ارشد 18,684, total 21,564, the total of R20.
+//! day, with no sale and no other entry: اکرم 2,880 and ارشد 18,684, total 21,564, the total of R20.
 
 use std::collections::HashMap;
 
@@ -201,7 +201,7 @@ fn day_of(text: &str, today: BusinessDate) -> Result<BusinessDate, ReportsError>
 }
 
 /// The bikri numbers of the lines, in one read.
-fn numbers_of(
+pub(super) fn numbers_of(
     conn: &mandi_db::rusqlite::Connection,
     lines: &[&BuyerLine],
 ) -> Result<HashMap<i64, i64>, ReportsError> {
@@ -252,10 +252,57 @@ struct Loaded {
     main: Sums,
     dead: Option<Sums>,
     credit: Option<Sums>,
+    /// The buyers who owe at the start of the day and bought nothing that day: only in the
+    /// `DayBuyers` scope (plan 78 A5), where they are not rows but one total.
+    others: Option<Sums>,
+    others_count: i64,
+}
+
+/// Which buyers are the rows of the sheet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Scope {
+    /// Every buyer who owed at the start of the day or bought that day (plan 76 point 2).
+    EveryoneWhoOwes,
+    /// Only the buyers who bought that day; the rest are one total (plan 78 A5, ادھاری تفصیل).
+    DayBuyers,
+}
+
+/// An opening balance posted on `day` on a buyer account, which stands before that day's sales:
+/// the ledger balance of an account made today with an opening (PRD FR-10.9, plan 78 A5). The two
+/// halves of a same-day edit of the opening are left out, as in every day figure.
+fn openings_of_day(
+    conn: &mandi_db::rusqlite::Connection,
+    iso: &str,
+) -> Result<HashMap<i64, Paisa>, ReportsError> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         CROSS JOIN journal_lines l ON l.entry_id = e.id
+         CROSS JOIN accounts a ON a.id = l.account_id
+         CROSS JOIN account_controls k ON k.id = a.control_id
+         WHERE e.entry_date = ?1 AND e.status = 'posted' AND e.posting_type = 'opening'
+           AND k.code = ?2 AND NOT ({})
+         GROUP BY l.account_id",
+        super::activity::SAME_DAY_PAIR
+    ))?;
+    let rows = statement
+        .query_map(mandi_db::rusqlite::params![iso, BUYER_CONTROL], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut out = HashMap::new();
+    for (account, dr, cr) in rows {
+        out.insert(account, paisa(dr)?.checked_sub(paisa(cr)?)?);
+    }
+    Ok(out)
 }
 
 /// Every row of the sheet, sorted, with the totals.
-fn load_all(db: &Db, input: &CollectionSheetInput) -> Result<Loaded, ReportsError> {
+fn load_all(db: &Db, input: &CollectionSheetInput, scope: Scope) -> Result<Loaded, ReportsError> {
     if let Some(sort) = &input.sort {
         sort.check(&SORT_COLUMNS)
             .map_err(|e| ReportsError::Rejected(vec![e]))?;
@@ -283,6 +330,13 @@ fn load_all(db: &Db, input: &CollectionSheetInput) -> Result<Loaded, ReportsErro
             let mut keys: Vec<(i64, Option<String>)> = Vec::new();
             let mut previous: HashMap<(i64, Option<String>), Paisa> = HashMap::new();
             let chukta = chukta_accounts(conn)?;
+            // The ادھاری تفصیل counts an opening dated today in what he owed before today.
+            let todays_openings = if scope == Scope::DayBuyers {
+                openings_of_day(conn, &iso)?
+            } else {
+                HashMap::new()
+            };
+            let mut others: Vec<(i64, Paisa)> = Vec::new();
             if let Some(before) = day.previous_day() {
                 for (account, totals) in
                     account_totals_in_controls(conn, &[BUYER_CONTROL], Some(&before.to_iso()))?
@@ -290,21 +344,57 @@ fn load_all(db: &Db, input: &CollectionSheetInput) -> Result<Loaded, ReportsErro
                     if chukta.contains(&account) {
                         continue;
                     }
-                    let prev = paisa(totals.dr_paisa)?.checked_sub(paisa(totals.cr_paisa)?)?;
+                    let mut prev = paisa(totals.dr_paisa)?.checked_sub(paisa(totals.cr_paisa)?)?;
+                    if let Some(opening) = todays_openings.get(&account) {
+                        prev = prev.checked_add(*opening)?;
+                    }
                     previous.insert((account, None), prev);
                     if prev > Paisa::ZERO {
                         keys.push((account, None));
                     }
                 }
             }
+            // An account made today has no line before today: his opening is all he owed.
+            for (account, opening) in &todays_openings {
+                if chukta.contains(account) || previous.contains_key(&(*account, None)) {
+                    continue;
+                }
+                previous.insert((*account, None), *opening);
+                if *opening > Paisa::ZERO {
+                    keys.push((*account, None));
+                }
+            }
             for key in by_party.keys() {
                 previous.entry(key.clone()).or_insert(Paisa::ZERO);
                 keys.push(key.clone());
+            }
+            if scope == Scope::DayBuyers {
+                // The buyers who bought nothing today are not rows, only the total of what they owe.
+                keys.retain(|key| {
+                    let bought = by_party.contains_key(key);
+                    if !bought && let Some(prev) = previous.get(key) {
+                        others.push((key.0, *prev));
+                    }
+                    bought
+                });
             }
             keys.sort();
             keys.dedup();
             let parties = parties_for(conn, &keys)?;
             let dead = mandi_db::dead::dead_set(conn, Some(&iso))?;
+            let mut others_sums = Sums::default();
+            let mut others_count = 0_i64;
+            for (account, prev) in &others {
+                // A person in the dead amount who bought nothing is left out, as R20 leaves out the
+                // dead amount (the ones who bought have `dead_totals`).
+                if dead.has_account(*account) {
+                    continue;
+                }
+                others_sums.add_row(*prev, Paisa::ZERO, Paisa::ZERO)?;
+                others_count = others_count
+                    .checked_add(1)
+                    .ok_or_else(|| ReportsError::Data("too many buyers".to_owned()))?;
+            }
             let typed = input.search.as_deref().map_or("", str::trim);
             let (text_ur, text_en) = (search_ur(typed), search_en(typed));
             let numbers = numbers_of(conn, &all_lines.iter().collect::<Vec<_>>())?;
@@ -416,6 +506,8 @@ fn load_all(db: &Db, input: &CollectionSheetInput) -> Result<Loaded, ReportsErro
                 main,
                 dead: any_dead.then_some(dead_sums),
                 credit: any_credit.then_some(credit_sums),
+                others: (others_count > 0).then_some(others_sums),
+                others_count,
             })
         })
     })
@@ -436,7 +528,8 @@ pub fn collection_sheet(
         main,
         dead,
         credit,
-    } = load_all(db, input)?;
+        ..
+    } = load_all(db, input, Scope::EveryoneWhoOwes)?;
     let total_count = i64::try_from(entries.len()).unwrap_or(i64::MAX);
     let limit = match input.limit as usize {
         0 => PAGE,
@@ -458,7 +551,7 @@ pub fn collection_sheet(
 }
 
 /// Input of `reports_collection_sheet_print_data`: the screen's filter and the print language.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
 pub struct CollectionSheetPrintInput {
     /// The day, as in [`CollectionSheetInput`].
     #[serde(default)]
@@ -503,6 +596,7 @@ pub fn collection_sheet_spec(
         main,
         dead,
         credit,
+        ..
     } = load_all(
         db,
         &CollectionSheetInput {
@@ -512,6 +606,7 @@ pub fn collection_sheet_spec(
             offset: 0,
             limit: 0,
         },
+        Scope::EveryoneWhoOwes,
     )?;
     let column = |key: &str, title: &str, kind: ColumnKind| Column {
         key: key.to_owned(),
@@ -642,5 +737,369 @@ pub fn collection_sheet_spec(
         .filter_map(|(label, sums)| sums.map(|s| (label, s)))
         .map(|(label, sums)| Ok((label.to_owned(), totals_cells(&sums.totals()?))))
         .collect::<Result<Vec<_>, ReportsError>>()?,
+    })
+}
+
+// ---------------------------------------------------------------------------------------------
+// ادھاری تفصیل (plan 78 A5): how much the shop still has to take from its buyers, today and in total.
+// ---------------------------------------------------------------------------------------------
+
+/// Input of `reports_adhari_sheet`.
+#[derive(Debug, Clone, Default, Deserialize, TS)]
+pub struct AdhariSheetInput {
+    /// The day, `DD-MM-YYYY` or a shortcut (PRD FR-7.19), or `YYYY-MM-DD`. Empty is today. A day
+    /// after today is refused (`ERR_DATE_IN_FUTURE` on `date`).
+    #[serde(default)]
+    pub date: String,
+    /// How many rows to skip.
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return, at most 100. 0 gives 100.
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One buyer of the ادھاری تفصیل: a buyer who bought that day.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AdhariSheetRow {
+    /// The buyer, a چکتا buyer by his own names.
+    pub party: PartyRef,
+    /// What he bought that day, in short.
+    pub lines: Vec<CollectionLine>,
+    /// Today's bill.
+    #[ts(type = "Paisa")]
+    pub bill_paisa: Paisa,
+    /// نقد: what he paid on the spot (PRD FR-12.44).
+    #[ts(type = "Paisa")]
+    pub cash_paisa: Paisa,
+    /// آج کا ادھار: today's bill less نقد.
+    #[ts(type = "Paisa")]
+    pub today_credit_paisa: Paisa,
+    /// پچھلا بقایا: what he owed at the start of the day (an opening dated today counts).
+    pub previous_due: Balance,
+    /// کل ادھار: پچھلا بقایا + آج کا ادھار.
+    pub total_due: Balance,
+    /// True when he is in the dead amount (PRD FR-10.10).
+    pub is_dead: bool,
+}
+
+/// The five figures of the ادھاری تفصیل added up.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AdhariSheetTotals {
+    /// Σ today's bills.
+    #[ts(type = "Paisa")]
+    pub bill_paisa: Paisa,
+    /// Σ نقد.
+    #[ts(type = "Paisa")]
+    pub cash_paisa: Paisa,
+    /// Σ آج کا ادھار.
+    #[ts(type = "Paisa")]
+    pub today_credit_paisa: Paisa,
+    /// Σ پچھلا بقایا.
+    pub previous_due: Balance,
+    /// Σ کل ادھار.
+    pub total_due: Balance,
+}
+
+/// What `reports_adhari_sheet` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AdhariSheet {
+    /// The day, `YYYY-MM-DD`.
+    pub date: String,
+    /// One page of the buyers who bought that day, by name in the Urdu order.
+    pub rows: Vec<AdhariSheetRow>,
+    /// How many buyers bought that day (the dead ones included).
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The total of today's buyers (not the dead amount, not those whose کل ادھار ends in جمع).
+    pub totals: AdhariSheetTotals,
+    /// The buyers who owe at the start of the day and bought nothing today, as one total: their
+    /// پچھلا بقایا is their کل ادھار. Null when there is none.
+    pub others: Option<AdhariSheetTotals>,
+    /// How many buyers are in `others`.
+    #[ts(type = "number")]
+    pub others_count: i64,
+    /// کل ادھار: today's buyers and the others together. On a day with no sale, no وصولی and no other entry of a buyer it is the total of R20
+    /// (PRD FR-19.9).
+    pub all_totals: AdhariSheetTotals,
+    /// The people in the dead amount who bought that day, as a total of their own; null when none.
+    pub dead_totals: Option<AdhariSheetTotals>,
+    /// The buyers whose کل ادھار ends in جمع, as a total of their own; null when none.
+    pub credit_totals: Option<AdhariSheetTotals>,
+}
+
+fn adhari_totals(sums: &Sums) -> Result<AdhariSheetTotals, ReportsError> {
+    let due = sums
+        .previous
+        .checked_add(sums.bill)?
+        .checked_sub(sums.paid)?;
+    Ok(AdhariSheetTotals {
+        bill_paisa: sums.bill,
+        cash_paisa: sums.paid,
+        today_credit_paisa: sums.bill.checked_sub(sums.paid)?,
+        previous_due: Balance::from_net(sums.previous)?,
+        total_due: Balance::from_net(due)?,
+    })
+}
+
+/// Today's buyers and the others added: the whole amount owed by all buyers.
+fn all_sums(main: &Sums, others: Option<&Sums>) -> Result<Sums, ReportsError> {
+    let mut all = Sums {
+        previous: main.previous,
+        bill: main.bill,
+        paid: main.paid,
+    };
+    if let Some(others) = others {
+        all.previous = all.previous.checked_add(others.previous)?;
+    }
+    Ok(all)
+}
+
+fn adhari_row(entry: &Entry) -> Result<AdhariSheetRow, ReportsError> {
+    let row = &entry.row;
+    Ok(AdhariSheetRow {
+        party: row.party.clone(),
+        lines: row.lines.clone(),
+        bill_paisa: row.bill_paisa,
+        cash_paisa: row.paid_paisa,
+        today_credit_paisa: row.bill_paisa.checked_sub(row.paid_paisa)?,
+        previous_due: row.previous_due,
+        total_due: row.total_due,
+        is_dead: row.is_dead,
+    })
+}
+
+/// A page of the ادھاری تفصیل of a day (plan 78 A5, PRD R5). Rows are the buyers who bought that
+/// day. The totals cover them and everyone else who owes. A وصولی of the day is not on the sheet:
+/// it shows in the next day's پچھلا بقایا. Read only.
+///
+/// Example (after Events 1 to 5, 10-10-26): اکرم bill 12,880, نقد 0, آج کا ادھار 12,880, پچھلا بقایا 0,
+/// کل ادھار 12,880; ارشد 18,684; شاہد (چکتا) bill 12,800, نقد 12,800, ادھار 0. Today's buyers total
+/// 44,364 / 12,800 / 31,564 / 0 / 31,564, with no others, so کل ادھار is 31,564. The next day, with no
+/// sale and no other entry, there are no rows and the others are 21,564, the total of R20.
+///
+/// # Errors
+/// `ERR_DATE_INVALID` and `ERR_DATE_IN_FUTURE` on `date`; a database or money error.
+pub fn adhari_sheet(db: &Db, input: &AdhariSheetInput) -> Result<AdhariSheet, ReportsError> {
+    let Loaded {
+        date,
+        entries,
+        main,
+        dead,
+        credit,
+        others,
+        others_count,
+    } = load_all(
+        db,
+        &CollectionSheetInput {
+            date: input.date.clone(),
+            ..CollectionSheetInput::default()
+        },
+        Scope::DayBuyers,
+    )?;
+    let total_count = i64::try_from(entries.len()).unwrap_or(i64::MAX);
+    let limit = match input.limit as usize {
+        0 => PAGE,
+        n => n.min(PAGE),
+    };
+    let rows = entries
+        .iter()
+        .skip(input.offset as usize)
+        .take(limit)
+        .map(adhari_row)
+        .collect::<Result<Vec<_>, _>>()?;
+    let all = all_sums(&main, others.as_ref())?;
+    Ok(AdhariSheet {
+        date,
+        rows,
+        total_count,
+        totals: adhari_totals(&main)?,
+        others: others.as_ref().map(adhari_totals).transpose()?,
+        others_count,
+        all_totals: adhari_totals(&all)?,
+        dead_totals: dead.as_ref().map(adhari_totals).transpose()?,
+        credit_totals: credit.as_ref().map(adhari_totals).transpose()?,
+    })
+}
+
+/// Input of `reports_adhari_sheet_print_data`: the day and the print language.
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
+pub struct AdhariSheetPrintInput {
+    /// The day, as in [`AdhariSheetInput`].
+    #[serde(default)]
+    pub date: String,
+    /// The print language (PRD FR-7.36).
+    pub language: Language,
+    /// The paper; A4 when missing.
+    #[serde(default)]
+    pub paper: Option<Paper>,
+}
+
+/// The print of the ادھاری تفصیل: every buyer of the day on one table, then the total of today's
+/// buyers, the others, and کل ادھار (plan 78 A5).
+///
+/// # Errors
+/// As [`adhari_sheet`]; a stored amount that cannot be written in words.
+pub fn adhari_sheet_print_data(
+    db: &Db,
+    input: &AdhariSheetPrintInput,
+) -> Result<TablePrintData, ReportsError> {
+    let spec = adhari_sheet_spec(db, input)?;
+    table_print_data(db, input.language, input.paper, spec)
+}
+
+/// The table of the ادھاری تفصیل for print and Excel.
+///
+/// # Errors
+/// As [`adhari_sheet`]; a stored amount that cannot be written in words.
+pub fn adhari_sheet_spec(
+    db: &Db,
+    input: &AdhariSheetPrintInput,
+) -> Result<TableSpec, ReportsError> {
+    let Loaded {
+        date,
+        entries,
+        main,
+        dead,
+        credit,
+        others,
+        ..
+    } = load_all(
+        db,
+        &CollectionSheetInput {
+            date: input.date.clone(),
+            ..CollectionSheetInput::default()
+        },
+        Scope::DayBuyers,
+    )?;
+    let column = |key: &str, title: &str, kind: ColumnKind| Column {
+        key: key.to_owned(),
+        title_id: title.to_owned(),
+        kind,
+    };
+    let columns = vec![
+        column("party", "print-adhari-sheet-col-party", ColumnKind::Party),
+        column(
+            "detail",
+            "print-adhari-sheet-col-detail",
+            ColumnKind::Detail,
+        ),
+        column("bill", "print-adhari-sheet-col-bill", ColumnKind::Money),
+        column("cash", "print-adhari-sheet-col-cash", ColumnKind::Money),
+        column(
+            "today_credit",
+            "print-adhari-sheet-col-today-credit",
+            ColumnKind::Money,
+        ),
+        column(
+            "previous_due",
+            "print-adhari-sheet-col-previous",
+            ColumnKind::Balance,
+        ),
+        column(
+            "total_due",
+            "print-adhari-sheet-col-total",
+            ColumnKind::Balance,
+        ),
+    ];
+    let count = i64::try_from(entries.len()).unwrap_or(i64::MAX);
+    let rows = entries
+        .into_iter()
+        .map(|e| {
+            let row = adhari_row(&e)?;
+            Ok(Row {
+                cells: vec![
+                    Cell::Party { party: row.party },
+                    if e.parts.is_empty() {
+                        Cell::Empty
+                    } else {
+                        Cell::Detail { parts: e.parts }
+                    },
+                    Cell::Money {
+                        paisa: row.bill_paisa,
+                    },
+                    Cell::Money {
+                        paisa: row.cash_paisa,
+                    },
+                    Cell::Money {
+                        paisa: row.today_credit_paisa,
+                    },
+                    Cell::Balance {
+                        paisa: row.previous_due.amount_paisa,
+                        side: row.previous_due.side,
+                    },
+                    Cell::Balance {
+                        paisa: row.total_due.amount_paisa,
+                        side: row.total_due.side,
+                    },
+                ],
+                source: None,
+                kind: RowKind::Normal,
+            })
+        })
+        .collect::<Result<Vec<_>, ReportsError>>()?;
+    let totals_cells = |t: &AdhariSheetTotals, only_previous: bool| -> Vec<Cell> {
+        let money = |paisa: Paisa| {
+            if only_previous {
+                Cell::Empty
+            } else {
+                Cell::Money { paisa }
+            }
+        };
+        vec![
+            Cell::Empty,
+            Cell::Empty,
+            money(t.bill_paisa),
+            money(t.cash_paisa),
+            money(t.today_credit_paisa),
+            Cell::Balance {
+                paisa: t.previous_due.amount_paisa,
+                side: t.previous_due.side,
+            },
+            Cell::Balance {
+                paisa: t.total_due.amount_paisa,
+                side: t.total_due.side,
+            },
+        ]
+    };
+    let totals = adhari_totals(&main)?;
+    let all = adhari_totals(&all_sums(&main, others.as_ref())?)?;
+    let mut extra_totals = Vec::new();
+    if let Some(others) = &others {
+        extra_totals.push((
+            "print-adhari-sheet-others".to_owned(),
+            totals_cells(&adhari_totals(others)?, true),
+        ));
+    }
+    extra_totals.push((
+        "print-adhari-sheet-all".to_owned(),
+        totals_cells(&all, false),
+    ));
+    for (label, sums) in [
+        ("print-collection-sheet-dead-total", &dead),
+        ("print-collection-sheet-credit-total", &credit),
+    ] {
+        if let Some(sums) = sums {
+            extra_totals.push((label.to_owned(), totals_cells(&adhari_totals(sums)?, false)));
+        }
+    }
+    let (y, rest) = date.split_once('-').unwrap_or(("", ""));
+    let (m, d) = rest.split_once('-').unwrap_or(("", ""));
+    Ok(TableSpec {
+        title_id: "print-adhari-sheet-title".to_owned(),
+        facts: vec![PrintFact {
+            label_id: "print-fact-date".to_owned(),
+            value: format!("{d}-{m}-{y}"),
+        }],
+        column_names: vec![None; columns.len()],
+        columns,
+        rows,
+        totals_label_id: "print-adhari-sheet-total".to_owned(),
+        totals: totals_cells(&totals, false),
+        total_count: count,
+        words_of: Some(all.total_due.amount_paisa)
+            .filter(|a| *a != Paisa::ZERO && all.total_due.side == BalanceSide::Dr),
+        plain_sale: true,
+        extra_totals,
     })
 }

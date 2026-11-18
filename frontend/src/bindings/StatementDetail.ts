@@ -27,4 +27,6 @@ export type StatementDetail =
   | 'lent_given'
   | 'lent_returned'
   | 'linked_other'
+  | 'advance_out'
+  | 'advance_back'
   | 'lent_share_note';

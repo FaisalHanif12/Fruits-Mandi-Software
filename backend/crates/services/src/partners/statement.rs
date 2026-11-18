@@ -102,6 +102,13 @@ enum Kind {
     /// A line on his 0605 account: money that reached him through a linked khata or loan (plan 76
     /// points 5 and 10).
     Linked,
+    /// His part of an advance to a seller, going out or coming back (plan 78 B4, PRD FR-17.13).
+    Advance {
+        out: bool,
+        seller: RecordRef,
+        amount_paisa: i64,
+        share_bps: i32,
+    },
     /// A loan linked to the shop was given or returned: his % of it, as a note (no amount).
     LentShare {
         voucher_number: i64,
@@ -241,6 +248,39 @@ fn events_of(
                 kind: Kind::Linked,
             });
         }
+    }
+    // PRD FR-17.13 (plan 78 B4): his parts of the advances to sellers, out and back, worked out from
+    // the advance matching. One line for each, so the running total always equals his کل رقم.
+    let advances = mandi_db::advances::read_all(conn).map_err(super::money::advance_error)?;
+    for e in advances
+        .events
+        .iter()
+        .filter(|e| e.partner_id == partner.id)
+        .filter(|e| days.from.is_none_or(|d| e.date.as_str() >= d))
+        .filter(|e| days.to.is_none_or(|d| e.date.as_str() <= d))
+    {
+        use mandi_domain::core::advances::AdvanceEventKind;
+        let out = e.kind == AdvanceEventKind::Out;
+        let Some(seller) = advances.sellers.get(&e.line_id) else {
+            return Err(data("an advance has no seller"));
+        };
+        events.push(Event {
+            date: e.date.clone(),
+            entry_id: e.entry_id,
+            group: 2,
+            id: e.allocation_id.unwrap_or(e.line_id),
+            amount: Some(if out {
+                e.part.checked_neg().map_err(money_error)?
+            } else {
+                e.part
+            }),
+            kind: Kind::Advance {
+                out,
+                seller: seller.clone(),
+                amount_paisa: e.amount.as_paisa(),
+                share_bps: e.share_bps,
+            },
+        });
     }
     // A loan that is the shop's changes no total; his % of it is shown as a note (PRD FR-16.13).
     let notes = read::shop_loan_notes(conn, days)?;
@@ -772,6 +812,21 @@ fn draft_of(
             }
             draft
         }
+        Kind::Advance {
+            out,
+            seller,
+            amount_paisa,
+            share_bps,
+        } => {
+            let mut draft = Draft::new(
+                H::Advance,
+                if *out { D::AdvanceOut } else { D::AdvanceBack },
+            )
+            .number_value("amount_paisa", *amount_paisa)
+            .number_value("share_bps", i64::from(*share_bps));
+            draft.subject = Some(seller.clone());
+            draft
+        }
         Kind::LentShare {
             voucher_number,
             given,
@@ -825,13 +880,28 @@ fn garden_close_values(
         .back_paisa
         .checked_sub(figures.paid_paisa)
         .ok_or_else(|| data("a figure does not fit"))?;
-    Ok(draft
+    let draft = draft
         .number_value("cost_paisa", signed(figures.cost_paisa)?)
         .number_value("sales_paisa", signed(figures.sales_paisa)?)
         .number_value("result_paisa", signed(result)?)
         .number_value("share_bps", figures.share_bps)
         .number_value("part_paisa", signed(part)?)
-        .number_value("back_paisa", signed(figures.back_paisa)?))
+        .number_value("back_paisa", signed(figures.back_paisa)?);
+    // PRD FR-12.51: where the owner gave relief, the closing line also says the rent now and the
+    // rent the garden was made with. Its figures are the garden's (not his part), so they are not
+    // signed for a reversal.
+    match figures.rent_original_paisa {
+        Some(original) if original > figures.rent_paisa => Ok(draft
+            .number_value("rent_paisa", figures.rent_paisa)
+            .number_value("rent_original_paisa", original)
+            .number_value(
+                "relief_paisa",
+                original
+                    .checked_sub(figures.rent_paisa)
+                    .ok_or_else(|| data("a figure does not fit"))?,
+            )),
+        _ => Ok(draft),
+    }
 }
 
 /// A line from the journal of his gardens, trips and fruit account that is not a بکری.
@@ -1185,6 +1255,7 @@ enum Column {
     Fruit,
     TakenReturned,
     Capital,
+    Advances,
 }
 
 fn column_of(event: &Event, sources: &HashMap<i64, String>) -> Option<Column> {
@@ -1194,6 +1265,7 @@ fn column_of(event: &Event, sources: &HashMap<i64, String>) -> Option<Column> {
         Kind::Share { expense: false } => Column::Commission,
         Kind::Capital => Column::Capital,
         Kind::Drawings | Kind::Linked => Column::TakenReturned,
+        Kind::Advance { .. } => Column::Advances,
         // A trip lot credit and the rest of a بکری posting are already lines of his 0604 account:
         // they are never added a second time.
         Kind::LotCredit { .. } | Kind::Remainder => Column::GardensTrips,
@@ -1216,6 +1288,7 @@ struct Cols {
     fruit: Paisa,
     taken_returned: Paisa,
     capital: Paisa,
+    advances: Paisa,
 }
 
 impl Cols {
@@ -1227,6 +1300,7 @@ impl Cols {
             Column::Fruit => &mut self.fruit,
             Column::TakenReturned => &mut self.taken_returned,
             Column::Capital => &mut self.capital,
+            Column::Advances => &mut self.advances,
         };
         *slot = slot.checked_add(amount).map_err(money_error)?;
         Ok(())
@@ -1240,6 +1314,7 @@ impl Cols {
             (&mut self.fruit, other.fruit),
             (&mut self.taken_returned, other.taken_returned),
             (&mut self.capital, other.capital),
+            (&mut self.advances, other.advances),
         ] {
             *a = a.checked_add(b).map_err(money_error)?;
         }
@@ -1255,6 +1330,7 @@ impl Cols {
             self.fruit,
             self.taken_returned,
             self.capital,
+            self.advances,
         ] {
             net = net.checked_add(part).map_err(money_error)?;
         }
@@ -1265,6 +1341,7 @@ impl Cols {
             fruit_paisa: self.fruit,
             taken_returned_paisa: self.taken_returned,
             capital_paisa: self.capital,
+            advances_paisa: self.advances,
             net_paisa: net,
         })
     }
@@ -1496,6 +1573,16 @@ pub fn first_event_date(
         }
     }
     keep(read::first_lot_credit_day(conn, partner.id)?);
+    // His first part of an advance to a seller (PRD FR-17.13, plan 78 B4).
+    let advances = mandi_db::advances::read_all(conn).map_err(super::money::advance_error)?;
+    keep(
+        advances
+            .events
+            .iter()
+            .filter(|e| e.partner_id == partner.id)
+            .map(|e| e.date.clone())
+            .min(),
+    );
     for note in read::shop_loan_notes(conn, all)? {
         keep(Some(note.entry_date));
     }

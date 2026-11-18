@@ -11,7 +11,7 @@
 //   and are Enter stops like the rest (useDraftFills).
 
 import { Localized } from '@fluent/react';
-import { PackagePlus } from 'lucide-react';
+import { PackagePlus, Route, Sprout } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { groupDigits, useGrouping } from '../../../shared/format';
 import {
@@ -27,12 +27,16 @@ import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
 import { addCarriedLots, carriedLotIds } from '../carried-lots';
+import { addGoodsLot, goodsLotIds, goodsLotRow, useOwnGoodsAccount } from '../goods-lots';
 import { isCarriedLot, isGardenLot, isOwnLot } from '../draft';
 import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
 import { MAX_LOTS } from '../limits';
 import { LOT, SALE } from '../types';
+import { useGoodsSources } from '../hooks/useGoodsSources';
+import type { ReadyStock } from '../ready-stock';
 import { CarriedLotPicker } from './CarriedLotPicker';
+import { GoodsLoadPicker } from './GoodsLoadPicker';
 import { LotMoreToggle } from './LotMore';
 import { focusOwnPurchaseSoon } from './OwnLotPanel';
 
@@ -58,8 +62,9 @@ interface LotsSectionProps {
   /** A note between the title and the grid, for example where some of the lots came from. */
   note?: ReactNode;
   /**
-   * Offer "From باقی مال": carry a lot with goods left from an earlier بکری onto this screen (plan 76 point
-   * 1). Only the new بکری has it; an edit of a saved posting does not.
+   * Offer the three load buttons: "From باقی مال" (a lot with goods left from an earlier بکری, plan 76 point 1),
+   * "Market trip goods" and "Garden goods" (plan 78 C1). Each shows only when it has goods to load. Only the new
+   * بکری has them; an edit of a saved posting does not.
    */
   allowCarried?: boolean | undefined;
 }
@@ -83,6 +88,11 @@ export function LotsSection({
   const focus = stores.lots((state) => state.focus);
   const selected = stores.view((state) => state.selectedLot);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // The card of trip goods or of garden goods that is open, if any (plan 78 C1).
+  const [goodsOpen, setGoodsOpen] = useState<'trip' | 'garden' | null>(null);
+  // What each button has to list: a button shows only when its count is above 0.
+  const sources = useGoodsSources(allowCarried);
+  const own = useOwnGoodsAccount(allowCarried && (sources?.trip_rows ?? 0) > 0);
   // A lot carried over has no "more" panel: its charges were taken with its first posting.
   const selectedRow = rows.find((row) => row.rowId === selected);
 
@@ -201,7 +211,7 @@ export function LotsSection({
         />
         <div className="flex flex-wrap items-center gap-2">
           <AddRowButton labelId="bikri-lots-add-row" onAdd={addLot} limit={limit} link={addLink} />
-          {allowCarried ? (
+          {allowCarried && (sources?.stock_lots ?? 0) > 0 ? (
             <Button
               onClick={() => {
                 setPickerOpen(true);
@@ -212,8 +222,44 @@ export function LotsSection({
               <Localized id="bikri-carried-add" />
             </Button>
           ) : null}
+          {allowCarried && (sources?.trip_rows ?? 0) > 0 ? (
+            <Button
+              onClick={() => {
+                setGoodsOpen('trip');
+              }}
+              disabled={lotsFull}
+            >
+              <Route aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-goods-trip-add" />
+            </Button>
+          ) : null}
+          {allowCarried && (sources?.garden_rows ?? 0) > 0 ? (
+            <Button
+              onClick={() => {
+                setGoodsOpen('garden');
+              }}
+              disabled={lotsFull}
+            >
+              <Sprout aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-goods-garden-add" />
+            </Button>
+          ) : null}
         </div>
       </div>
+      {allowCarried && goodsOpen !== null ? (
+        <GoodsLoadPicker
+          kind={goodsOpen}
+          open
+          onOpenChange={(next) => {
+            if (!next) setGoodsOpen(null);
+          }}
+          taken={goodsLotIds(rows, goodsOpen)}
+          onPick={(stock: ReadyStock) => {
+            const row = goodsLotRow(stock, own.data ?? null);
+            if (row !== null) addGoodsLot(stores, row);
+          }}
+        />
+      ) : null}
       {allowCarried ? (
         <CarriedLotPicker
           open={pickerOpen}

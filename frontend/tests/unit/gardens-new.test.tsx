@@ -9,6 +9,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as gardensApi from '../../src/features/gardens/api';
+import * as partnersApi from '../../src/features/partners/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { CommandError } from '../../src/shared/api';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -27,6 +28,7 @@ import {
 import { fakeGardenItemPicker, fakeGardens } from '../helpers/gardens';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
+import { chooseCustomShares } from '../helpers/share-mode';
 import { message, visible } from '../helpers/render';
 import { refusal } from '../helpers/ui-error';
 import { settlePreview } from '../helpers/preview-settled';
@@ -125,6 +127,7 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
 
   /** The garden of E2E-40: A 60% from the shop, B 40% from his pocket, C not in it. */
   async function fillE40(user: User) {
+    await chooseCustomShares(user, language);
     await user.clear(shareBox(names.a));
     await user.type(shareBox(names.a), '60');
     await user.clear(shareBox(names.b));
@@ -171,10 +174,72 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
+  it('starts on the default shares: shown, not typed in, with what they are, and "Custom shares" opens them', async () => {
+    fakeGardens();
+    const { user } = await open();
+    const choice = (id: string) =>
+      screen.getByRole('button', {
+        name: (name) => visible(name) === visible(message(language, id)),
+      });
+    expect(choice('ventures-share-mode-default')).toHaveAttribute('aria-pressed', 'true');
+    expect(choice('ventures-share-mode-custom')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(said(message(language, 'gardens-share-default')))).toBeInTheDocument();
+    for (const name of Object.values(names)) expect(shareBox(name)).toHaveAttribute('readonly');
+    // The source of each partner can still be chosen on the default shares.
+    await choose(user, names.b, 'pocket');
+    await chooseCustomShares(user, language);
+    expect(choice('ventures-share-mode-custom')).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByText(said(message(language, 'ventures-share-mode-custom-help'))),
+    ).toBeInTheDocument();
+    for (const name of Object.values(names)) expect(shareBox(name)).not.toHaveAttribute('readonly');
+  });
+
+  it('back to the default shares puts every share back to what it was, and keeps the sources', async () => {
+    fakeGardens();
+    const { user } = await open();
+    await chooseCustomShares(user, language);
+    await user.clear(shareBox(names.a));
+    await user.type(shareBox(names.a), '55.55');
+    await choose(user, names.b, 'pocket');
+    await user.click(
+      screen.getByRole('button', {
+        name: (name) => visible(name) === visible(message(language, 'ventures-share-mode-default')),
+      }),
+    );
+    expect(shareBox(names.a)).toHaveValue('40');
+    expect(shareBox(names.b)).toHaveValue('30');
+    expect(shareBox(names.a)).toHaveAttribute('readonly');
+    const pocket = within(sourceGroup(names.b)).getByRole('button', {
+      name: message(language, 'ventures-source-pocket'),
+    });
+    expect(pocket).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('custom shares take up to 2 decimals, and a partner can be at 0: the backend is sent them as typed', async () => {
+    fakeGardens();
+    const { user } = await open();
+    await chooseCustomShares(user, language);
+    await user.clear(shareBox(names.a));
+    await user.type(shareBox(names.a), '33.33');
+    await user.clear(shareBox(names.b));
+    await user.type(shareBox(names.b), '66.67');
+    await user.clear(shareBox(names.c));
+    expect(screen.getAllByText(said(message(language, 'ventures-not-in')))).toHaveLength(1);
+    await waitFor(() => {
+      expect(vi.mocked(partnersApi.partnersCheckShares).mock.calls.at(-1)?.[0]).toEqual([
+        { partner_id: 1, share: '33.33' },
+        { partner_id: 2, share: '66.67' },
+        { partner_id: 3, share: '0' },
+      ]);
+    });
+  });
+
   it('shares that do not total 100% show the total in red with words and block the save', async () => {
     fakeGardens();
     const { user } = await open();
     await screen.findByText(said(message(language, 'partners-total-ok')));
+    await chooseCustomShares(user, language);
     await user.clear(shareBox(names.c));
     await user.type(shareBox(names.c), '20');
     expect(
@@ -186,6 +251,7 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
   it('a partner with no share is not in the garden: his source choice goes and 0 is sent', async () => {
     const fake = fakeGardens();
     const { user } = await open();
+    await chooseCustomShares(user, language);
     await user.clear(shareBox(names.a));
     await user.type(shareBox(names.a), '60');
     await user.clear(shareBox(names.b));
@@ -228,7 +294,9 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
       name_en: ENGLISH_NAME,
       confirmed_rules_words: [],
       date: '10-10-2026',
-      item_id: 62,
+      // The list of items is sent; the old single item is not (plan 78 D2).
+      item_id: null,
+      item_ids: [62],
       rent: '50000',
       season_end: null,
       note: null,
@@ -246,6 +314,58 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/gardens/2');
     });
+  });
+
+  it('plan 78 D2: a garden can have several items: each one picked is listed, one can be removed, and the list is sent in the order picked', async () => {
+    const mango = { id: 63, code: '0063', name_ur: 'آم', name_en: 'Mango' };
+    fakeGardenItemPicker([mango]);
+    const fake = fakeGardens();
+    const { user } = await open();
+    await fillE40(user);
+    const banana = language === 'ur' ? 'کیلا' : 'Banana';
+    const mangoName = language === 'ur' ? 'آم' : 'Mango';
+    const pick = async (typed: string, wanted: string) => {
+      const item = field('glossary-qism-maal');
+      await user.click(item);
+      await user.type(item, typed);
+      // The option of the name asked for: the list still holds the earlier choices while it filters.
+      await user.click(
+        await screen.findByRole('option', { name: (name) => visible(name).includes(wanted) }),
+      );
+    };
+    await pick(language === 'ur' ? 'ک' : 'Ban', banana);
+    await pick(language === 'ur' ? 'آ' : 'Man', mangoName);
+    // Both are listed above the picker, which is empty again.
+    await waitFor(() => {
+      expect(screen.getAllByRole('listitem').length).toBeGreaterThanOrEqual(2);
+    });
+    const listed = visible(
+      screen
+        .getAllByRole('list')
+        .map((list) => list.textContent)
+        .join(' '),
+    );
+    expect(listed).toContain(language === 'ur' ? 'کیلا' : 'Banana');
+    expect(listed).toContain(language === 'ur' ? 'آم' : 'Mango');
+    // A removed one is not sent.
+    await user.click(
+      screen.getByRole('button', {
+        name: (name) =>
+          visible(name) ===
+          message(language, 'ui-multi-remove', { name: language === 'ur' ? 'کیلا' : 'Banana' }),
+      }),
+    );
+    await pick(language === 'ur' ? 'ک' : 'Ban', banana);
+    await waitFor(() => {
+      expect(saveButton()).toBeEnabled();
+    });
+    await user.click(saveButton());
+    await waitFor(() => {
+      expect(fake.saved.gardens).toHaveLength(1);
+    });
+    // Mango first (it stayed), then the banana picked again: the first is the main fruit.
+    expect(fake.saved.gardens[0]?.item_ids).toEqual([63, 62]);
+    expect(fake.saved.gardens[0]?.item_id).toBeNull();
   });
 
   it('shows each partner’s part of the first installment before the save, from the shop or a pocket', async () => {

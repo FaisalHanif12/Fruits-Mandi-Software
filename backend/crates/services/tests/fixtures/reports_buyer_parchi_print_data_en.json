@@ -1,0 +1,538 @@
+{
+  "frame": {
+    "language": "en",
+    "dir": "ltr",
+    "header": {
+      "firm": {
+        "name": "Maher Adnan and Brothers",
+        "mandi": "New Sabzi Mandi Kot Radha Kishan",
+        "address": "Kot Radha Kishan",
+        "phone": "0300-1234567"
+      },
+      "contacts": [],
+      "trade_mark": null,
+      "title_id": "print-parchi-title",
+      "facts": [
+        {
+          "label_id": "print-fact-date",
+          "value": "10-10-2026"
+        }
+      ]
+    },
+    "footer": {
+      "printed_label_id": "print-printed-at",
+      "printed_at": "10-10-2026 14:00",
+      "page_label_id": "print-page-label",
+      "of_label_id": "print-page-of"
+    }
+  },
+  "paper": "a4",
+  "date": "2026-10-10",
+  "sellers": [],
+  "buyers": [
+    {
+      "report": "R35",
+      "language": "en",
+      "dir": "ltr",
+      "paper": "a4",
+      "title_id": "report-r35-title",
+      "party": {
+        "short_code": "1",
+        "code": "0021",
+        "name": "Arshad Multani",
+        "tag": null,
+        "person_key": null
+      },
+      "named_title_id": "print-buyer-day-slip-title",
+      "filters": [
+        {
+          "label_id": "report-filter-day",
+          "value": "10-10-2026"
+        },
+        {
+          "label_id": "report-filter-party",
+          "value": "1 Arshad Multani"
+        }
+      ],
+      "columns": [
+        {
+          "key": "item",
+          "title_id": "report-col-item",
+          "kind": "names"
+        },
+        {
+          "key": "packing",
+          "title_id": "report-col-packing",
+          "kind": "names"
+        },
+        {
+          "key": "qty",
+          "title_id": "report-col-qty",
+          "kind": "number"
+        },
+        {
+          "key": "rate",
+          "title_id": "report-col-rate",
+          "kind": "money"
+        },
+        {
+          "key": "amount",
+          "title_id": "report-col-amount",
+          "kind": "money"
+        }
+      ],
+      "summary": [
+        {
+          "label_id": "report-r35-goods",
+          "cell": {
+            "type": "money",
+            "text": "17,400"
+          }
+        },
+        {
+          "label_id": "report-r35-commission",
+          "cell": {
+            "type": "money",
+            "text": "1,044"
+          }
+        },
+        {
+          "label_id": "report-r35-laga",
+          "cell": {
+            "type": "money",
+            "text": "240"
+          }
+        },
+        {
+          "label_id": "report-r35-today-total",
+          "cell": {
+            "type": "money",
+            "text": "18,684"
+          }
+        },
+        {
+          "label_id": "report-r35-paid-today",
+          "cell": {
+            "type": "empty"
+          }
+        },
+        {
+          "label_id": "report-r35-today-left",
+          "cell": {
+            "type": "balance",
+            "text": "18,684",
+            "side_id": "report-side-dr"
+          }
+        },
+        {
+          "label_id": "report-r35-previous",
+          "cell": {
+            "type": "balance",
+            "text": "0",
+            "side_id": "report-side-zero"
+          }
+        },
+        {
+          "label_id": "report-r35-new-balance",
+          "cell": {
+            "type": "balance",
+            "text": "18,684",
+            "side_id": "report-side-dr"
+          }
+        },
+        {
+          "label_id": "report-r35-total-qty",
+          "cell": {
+            "type": "number",
+            "text": "30"
+          }
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "names",
+              "text": "Banana"
+            },
+            {
+              "type": "names",
+              "text": "Box"
+            },
+            {
+              "type": "number",
+              "text": "30"
+            },
+            {
+              "type": "money",
+              "text": "580"
+            },
+            {
+              "type": "money",
+              "text": "17,400"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "tables": [],
+      "row_count": "1",
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "words": null
+    },
+    {
+      "report": "R35",
+      "language": "en",
+      "dir": "ltr",
+      "paper": "a4",
+      "title_id": "report-r35-title",
+      "party": {
+        "short_code": "0",
+        "code": "0020",
+        "name": "Akram Toll Tax",
+        "tag": null,
+        "person_key": null
+      },
+      "named_title_id": "print-buyer-day-slip-title",
+      "filters": [
+        {
+          "label_id": "report-filter-day",
+          "value": "10-10-2026"
+        },
+        {
+          "label_id": "report-filter-party",
+          "value": "0 Akram Toll Tax"
+        }
+      ],
+      "columns": [
+        {
+          "key": "item",
+          "title_id": "report-col-item",
+          "kind": "names"
+        },
+        {
+          "key": "packing",
+          "title_id": "report-col-packing",
+          "kind": "names"
+        },
+        {
+          "key": "qty",
+          "title_id": "report-col-qty",
+          "kind": "number"
+        },
+        {
+          "key": "rate",
+          "title_id": "report-col-rate",
+          "kind": "money"
+        },
+        {
+          "key": "amount",
+          "title_id": "report-col-amount",
+          "kind": "money"
+        }
+      ],
+      "summary": [
+        {
+          "label_id": "report-r35-goods",
+          "cell": {
+            "type": "money",
+            "text": "12,000"
+          }
+        },
+        {
+          "label_id": "report-r35-commission",
+          "cell": {
+            "type": "money",
+            "text": "720"
+          }
+        },
+        {
+          "label_id": "report-r35-laga",
+          "cell": {
+            "type": "money",
+            "text": "160"
+          }
+        },
+        {
+          "label_id": "report-r35-today-total",
+          "cell": {
+            "type": "money",
+            "text": "12,880"
+          }
+        },
+        {
+          "label_id": "report-r35-paid-today",
+          "cell": {
+            "type": "money",
+            "text": "10,000"
+          }
+        },
+        {
+          "label_id": "report-r35-today-left",
+          "cell": {
+            "type": "balance",
+            "text": "2,880",
+            "side_id": "report-side-dr"
+          }
+        },
+        {
+          "label_id": "report-r35-previous",
+          "cell": {
+            "type": "balance",
+            "text": "0",
+            "side_id": "report-side-zero"
+          }
+        },
+        {
+          "label_id": "report-r35-new-balance",
+          "cell": {
+            "type": "balance",
+            "text": "2,880",
+            "side_id": "report-side-dr"
+          }
+        },
+        {
+          "label_id": "report-r35-total-qty",
+          "cell": {
+            "type": "number",
+            "text": "20"
+          }
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "names",
+              "text": "Banana"
+            },
+            {
+              "type": "names",
+              "text": "Box"
+            },
+            {
+              "type": "number",
+              "text": "20"
+            },
+            {
+              "type": "money",
+              "text": "600"
+            },
+            {
+              "type": "money",
+              "text": "12,000"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "tables": [],
+      "row_count": "1",
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "words": null
+    },
+    {
+      "report": "R35",
+      "language": "en",
+      "dir": "ltr",
+      "paper": "a4",
+      "title_id": "report-r35-title",
+      "party": {
+        "short_code": null,
+        "code": "0030",
+        "name": "Shahid",
+        "tag": null,
+        "person_key": "شاہد|03000000000",
+        "phone": "0300-0000000"
+      },
+      "named_title_id": "print-buyer-day-slip-title",
+      "filters": [
+        {
+          "label_id": "report-filter-day",
+          "value": "10-10-2026"
+        },
+        {
+          "label_id": "report-filter-party",
+          "value": "0030 Shahid (0300-0000000)"
+        }
+      ],
+      "columns": [
+        {
+          "key": "item",
+          "title_id": "report-col-item",
+          "kind": "names"
+        },
+        {
+          "key": "packing",
+          "title_id": "report-col-packing",
+          "kind": "names"
+        },
+        {
+          "key": "qty",
+          "title_id": "report-col-qty",
+          "kind": "number"
+        },
+        {
+          "key": "rate",
+          "title_id": "report-col-rate",
+          "kind": "money"
+        },
+        {
+          "key": "amount",
+          "title_id": "report-col-amount",
+          "kind": "money"
+        }
+      ],
+      "summary": [
+        {
+          "label_id": "report-r35-goods",
+          "cell": {
+            "type": "money",
+            "text": "12,000"
+          }
+        },
+        {
+          "label_id": "report-r35-commission",
+          "cell": {
+            "type": "money",
+            "text": "720"
+          }
+        },
+        {
+          "label_id": "report-r35-laga",
+          "cell": {
+            "type": "money",
+            "text": "80"
+          }
+        },
+        {
+          "label_id": "report-r35-today-total",
+          "cell": {
+            "type": "money",
+            "text": "12,800"
+          }
+        },
+        {
+          "label_id": "report-r35-paid-today",
+          "cell": {
+            "type": "money",
+            "text": "12,800"
+          }
+        },
+        {
+          "label_id": "report-r35-today-left",
+          "cell": {
+            "type": "balance",
+            "text": "0",
+            "side_id": "report-side-zero"
+          }
+        },
+        {
+          "label_id": "report-r35-previous",
+          "cell": {
+            "type": "balance",
+            "text": "0",
+            "side_id": "report-side-zero"
+          }
+        },
+        {
+          "label_id": "report-r35-new-balance",
+          "cell": {
+            "type": "balance",
+            "text": "0",
+            "side_id": "report-side-zero"
+          }
+        },
+        {
+          "label_id": "report-r35-total-qty",
+          "cell": {
+            "type": "number",
+            "text": "10"
+          }
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "names",
+              "text": "Apple"
+            },
+            {
+              "type": "names",
+              "text": "Box"
+            },
+            {
+              "type": "number",
+              "text": "10"
+            },
+            {
+              "type": "money",
+              "text": "1,200"
+            },
+            {
+              "type": "money",
+              "text": "12,000"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "tables": [],
+      "row_count": "1",
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "words": null
+    }
+  ]
+}

@@ -46,7 +46,7 @@ purchases-field-other-cost = دیگر خرچ
 
 # PRD FR-12.39. The box shows the day of the purchase until it is changed.
 # review: pending
-purchases-sell-date-hint = شروع میں خریداری کا دن ہوتا ہے۔ اس دن سے مال ہر نئی { -bikri } میں آتا رہتا ہے جب تک بک نہ جائے۔
+purchases-sell-date-hint = شروع میں خریداری کا دن ہوتا ہے۔ { -bikri } میں شامل کرتے وقت انتظار والا مال اسی دن کی ترتیب میں آتا ہے، پہلے دن والا پہلے۔
 
 # review: pending
 purchases-field-note = نوٹ
@@ -271,7 +271,7 @@ purchases-sell-date-title = { -sell-date } بدلیں
 
 # $number: the purchase.
 # review: pending
-purchases-sell-date-text = اس دن سے { $number } کا مال ہر نئی { -bikri } میں آئے گا جب تک بک نہ جائے۔ یہ دن خریداری کے دن سے پہلے نہیں ہو سکتا۔
+purchases-sell-date-text = { $number } کا مال { -bikri } میں شامل کرتے وقت اسی دن کی ترتیب میں آئے گا، پہلے دن والا پہلے۔ یہ دن خریداری کے دن سے پہلے نہیں ہو سکتا۔
 
 # review: pending
 purchases-sell-date-done = { -sell-date } بدل گئی۔

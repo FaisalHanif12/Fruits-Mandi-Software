@@ -1,6 +1,7 @@
 // The days of one month of a partner's statement (PRD FR-17.12, plan 76 point 11): the opening کل رقم of the
 // month on top, then one row for each day that has a movement: his commission share, his expense share, his
-// gardens and trips, the fruit he took, the money taken and returned, capital in and out, the day's net, and
+// gardens and trips, the fruit he took, the money taken and returned, capital in and out, his part of the advances to
+// sellers, the day's net, and
 // his کل رقم at the end of the day; under them the month's totals and the closing کل رقم. A day opens in place
 // (`PartnerDayCard`) with every movement of that day. Every figure is the backend's, read from posted
 // records; nothing is added up here (CLAUDE.md rule 1). A figure of 0 is left empty, so the row shows only what
@@ -36,6 +37,8 @@ const FIGURES: readonly {
   { key: 'fruit_paisa', headerId: 'partners-month-col-fruit', from: 'normal' },
   { key: 'taken_returned_paisa', headerId: 'partners-month-col-taken', from: 'normal' },
   { key: 'capital_paisa', headerId: 'partners-month-col-capital', from: 'normal' },
+  // Advances to sellers: his part going out and coming back (plan 78 B4, PRD FR-17.13).
+  { key: 'advances_paisa', headerId: 'partners-month-col-advances', from: 'normal' },
 ];
 
 interface StatementMonthDaysProps {

@@ -169,7 +169,7 @@ export function partnersStatementMonthPrintData(
 export function partnersStatementMonthPrint(input: {
   statement: PartnersStatementMonthPrintInput;
   to: PrintTo;
-  copies: number | null;
+  copies: string | null;
 }): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('partners_statement_month_print', { input });
 }

@@ -162,8 +162,6 @@ trips-detail-title = { $code }
 # review: pending
 trips-detail-failed = سفر نہیں کھل سکا
 
-# review: pending
-trips-back = سب سفر
 
 # review: pending
 trips-status-open = کھلا
@@ -439,3 +437,10 @@ trips-cancelled-reopened = { $entry } کو منسوخ کر دیا گیا۔ سف�
 # The button on the facts of a trip that opens the market, who was sent and the note for change (plan 44).
 # review: pending
 trips-header-edit = سفر کی تفصیل تبدیل کریں
+
+# What the default shares of a new trip are (plan 78 D1). They cannot be typed in; "Custom shares" opens them.
+# review: pending
+trips-share-default-last = پچھلے سفر کے { -hissa }۔ بدلنے ہوں تو «اپنے { -hissa }» چنیں۔
+
+# review: pending
+trips-share-default-firm = فرم کے { -hissa }۔ بدلنے ہوں تو «اپنے { -hissa }» چنیں۔

@@ -4,6 +4,14 @@
   "dir": "ltr",
   "paper": "a4",
   "title_id": "report-r13-title",
+  "party": {
+    "short_code": "3",
+    "code": "0023",
+    "name": "Anas",
+    "tag": null,
+    "person_key": null
+  },
+  "named_title_id": null,
   "filters": [
     {
       "label_id": "report-filter-party",

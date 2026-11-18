@@ -13,6 +13,10 @@
 # review: pending
 -beopari = Seller
 
+# Sellers, as in "sellers' bills" (plan 78)
+# review: pending
+-beopariyon = Sellers
+
 # Seller side: landowner
 # review: pending
 -zamindar = Zamindar
@@ -24,6 +28,10 @@
 # Buyer
 # review: pending
 -gahak = Buyer
+
+# Buyers, as in "buyers' slips" (plan 78)
+# review: pending
+-gahakon = Buyers
 
 # Buyer
 # review: pending
@@ -290,6 +298,10 @@
 # review: pending
 -sabiqa-raqam = Previous Balance
 
+# The balance an account was made with: the first line of every statement and history (PRD Section 3, FR-19.16, plan 78)
+# review: pending
+-ibtidai-baqaya = Opening Balance
+
 # Previous balance plus today's bill less what was paid (PRD Section 3, FR-19.12)
 # review: pending
 -total-raqam = Total Due
@@ -448,6 +460,8 @@ glossary-safar = { -safar }
 glossary-phal = { -phal }
 glossary-taza-banam = { -taza-banam }
 glossary-sabiqa-raqam = { -sabiqa-raqam }
+
+glossary-ibtidai-baqaya = { -ibtidai-baqaya }
 glossary-total-raqam = { -total-raqam }
 glossary-baqaya = { -baqaya }
 glossary-kul-agrahi = { -kul-agrahi }

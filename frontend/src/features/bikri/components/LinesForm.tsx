@@ -257,7 +257,6 @@ export function LinesForm<R extends { number: number }>({
         <SummaryPanel
           totals={lotPreview?.totals ?? null}
           whole={false}
-          lotNumber={1}
           netIsNegative={lotPreview?.net_is_negative ?? false}
         />
         <SplitPanel preview={preview} />

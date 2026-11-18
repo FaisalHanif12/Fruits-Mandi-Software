@@ -10,7 +10,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { Calculator, Pencil } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { formatBps, isoToDisplayDate } from '../../../shared/format';
+import { formatBps, isoToDisplayDate, isZeroPaisa } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   Button,
@@ -114,10 +114,15 @@ export function GardenHeaderCard({ garden, onEdit }: GardenHeaderCardProps) {
             <Code>{isoToDisplayDate(garden.entry_date)}</Code>
           </Fact>
           <Fact label={<Localized id="glossary-qism-maal" />}>
-            {garden.item === null ? (
+            {garden.items.length === 0 ? (
               <Localized id="gardens-none" />
             ) : (
-              <span lang={language}>{displayName(garden.item, language)}</span>
+              // Every item of the garden, the main fruit first (plan 78 D2).
+              <span lang={language}>
+                {garden.items
+                  .map((item) => displayName(item, language))
+                  .join(language === 'ur' ? '، ' : ', ')}
+              </span>
             )}
           </Fact>
           <Fact label={<Localized id="gardens-field-season-end" />}>
@@ -152,8 +157,31 @@ export function GardenHeaderCard({ garden, onEdit }: GardenHeaderCardProps) {
 export function GardenFiguresCard({ garden }: GardenCardProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
+  // After a relief (plan 78 D3, PRD FR-12.51) the rent is the one now; the rent the garden was made with, the
+  // relief, what the owner paid back and what he still owes show under it. A line that is 0 or not there is left out.
+  const relief: readonly { id: string; message: string; paisa: GardenRow['rent_paisa'] }[] = [
+    ...(garden.rent_original_paisa === null
+      ? []
+      : [
+          {
+            id: 'rent-original',
+            message: 'gardens-fact-rent-original',
+            paisa: garden.rent_original_paisa,
+          },
+        ]),
+    ...(isZeroPaisa(garden.relief_paisa)
+      ? []
+      : [{ id: 'relief', message: 'gardens-fact-relief', paisa: garden.relief_paisa }]),
+    ...(isZeroPaisa(garden.refunds_paisa)
+      ? []
+      : [{ id: 'refunds', message: 'gardens-fact-refunds', paisa: garden.refunds_paisa }]),
+    ...(isZeroPaisa(garden.owner_owes_paisa)
+      ? []
+      : [{ id: 'owner-owes', message: 'gardens-fact-owner-owes', paisa: garden.owner_owes_paisa }]),
+  ];
   const rows: readonly { id: string; message: string; paisa: GardenRow['rent_paisa'] }[] = [
     { id: 'rent', message: 'gardens-fact-rent', paisa: garden.rent_paisa },
+    ...relief,
     { id: 'installments', message: 'gardens-fact-installments', paisa: garden.installments_paisa },
     { id: 'costs', message: 'gardens-fact-costs', paisa: garden.costs_paisa },
     { id: 'paid', message: 'gardens-fact-paid', paisa: garden.paid_paisa },

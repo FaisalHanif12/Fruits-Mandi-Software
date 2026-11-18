@@ -447,6 +447,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 &[
                     "item_id",
                     "rent_paisa",
+                    "rent_original_paisa",
                     "season_end_date",
                     "market",
                     "sent_person",
@@ -462,6 +463,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
             "venture_partners",
             vec!["venture_id", "partner_id", "share_bps", "source"],
         ),
+        // Migration 25 (plan 78 D2): a garden with several items.
+        ("venture_items", vec!["venture_id", "item_id", "is_active"]),
         (
             "venture_entries",
             vec![
@@ -745,8 +748,9 @@ fn table_list_equals_architecture_15() {
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
     // 46 tables of migrations 1 to 10, `dead_marks` of migration 11, `edit_windows` of 12,
-    // `assistant_questions` of 15, `chukta_buyers` of 20 and `lot_counters` of 22.
-    assert_eq!(want.len(), 51);
+    // `assistant_questions` of 15, `chukta_buyers` of 20, `lot_counters` of 22 and `venture_items`
+    // of 25.
+    assert_eq!(want.len(), 52);
     assert_eq!(tables(&conn), want);
 }
 
@@ -779,7 +783,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 51);
+    assert_eq!(rows.len(), 52);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn
@@ -839,7 +843,8 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     // fruit_takes 2 more; of migration 11: dead_marks 1; and of migration 21: bikri_sales 1
     // (`paid_paisa`, written as three column CHECKs, one of them the whole rupee check).
     // Migration 22 adds none: `lot_counter` and `last_counter` are counters, not money.
-    assert_eq!(found, 65);
+    // Migration 25 adds ventures 1 (`rent_original_paisa`).
+    assert_eq!(found, 66);
 }
 
 /// Every `*_date` column checks for a real date.

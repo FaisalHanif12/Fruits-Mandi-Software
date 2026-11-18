@@ -16,7 +16,7 @@ changes nothing and works out no figure (CLAUDE.md rule 1).
   then the dashboard), a language switch keeps the level, and another screen can open a party's
   ledger with `?party=`. A bad address shows level 1 (`search.ts`).
 - Enter (or a double click) on a row of the list opens it. In the statement, Enter or a click opens a day
-  in place and a second one shuts it (`StatementDays`: one tab stop, ↑ ↓ Home End, the arrow at the
+  in place and a second one shuts it (`StatementEntries`, on the shared `DayTable`: one tab stop, ↑ ↓ Home End, the arrow at the
   children opens, the other shuts, from `shared/keyboard`). Several days can be open; moving the window
   shuts them. Everything works with the keyboard alone.
 - The statement window is `statement-window.ts` (30 days that end today at first; the later button stops

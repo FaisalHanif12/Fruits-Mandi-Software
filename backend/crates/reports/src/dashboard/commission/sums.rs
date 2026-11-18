@@ -20,6 +20,8 @@ use mandi_db::rusqlite::{Connection, params_from_iter};
 use super::model::{
     CommissionDayRow, CommissionPartner, CommissionParty, CommissionSide, PartnerShare,
 };
+use crate::analytics::AnalyticsGoods;
+use crate::analytics::facts::goods_condition;
 use crate::error::ReportsError;
 use crate::reports::common::{add, paisa};
 
@@ -189,6 +191,22 @@ pub(super) fn party_sql(party: Option<&CommissionParty>, first: usize) -> (Strin
     (sql, args)
 }
 
+/// The narrowing of the facts to one party and to some goods: the SQL text (constants of this crate)
+/// and its values. The facts table is named `f`, the name of the goods text of analytics (plan 78
+/// D4). The party values are numbered from `first`.
+pub(super) fn narrow_sql(
+    party: Option<&CommissionParty>,
+    goods: AnalyticsGoods,
+    first: usize,
+) -> (String, Vec<Value>) {
+    let (mut sql, args) = party_sql(party, first);
+    if let Some(goods) = goods_condition(goods) {
+        sql.push_str(" AND ");
+        sql.push_str(goods);
+    }
+    (sql, args)
+}
+
 /// The sale column of a shape: a seller's خام بکری or a buyer's purchase value.
 const fn sale_column(shape: Shape) -> &'static str {
     match shape {
@@ -225,7 +243,7 @@ pub(super) fn facts_sql(shape: Shape, bucket_len: usize, narrow: &str) -> String
         "SELECT {bucket}, {sale},
                 SUM(sign * seller_comm_paisa), SUM(sign * buyer_comm_paisa),
                 SUM(sign * laga_paisa)
-         FROM analytics_facts WHERE entry_date >= ?1 AND entry_date <= ?2{narrow}
+         FROM analytics_facts f WHERE entry_date >= ?1 AND entry_date <= ?2{narrow}
          GROUP BY {bucket}"
     )
 }
@@ -256,10 +274,11 @@ pub(super) fn buckets_in(
     to: &str,
     bucket_len: usize,
     party: Option<&CommissionParty>,
+    goods: AnalyticsGoods,
 ) -> Result<BTreeMap<String, Day>, ReportsError> {
     let shape = Shape::of(party);
     let mut days: BTreeMap<String, Day> = BTreeMap::new();
-    let (narrow, narrow_args) = party_sql(party, 3);
+    let (narrow, narrow_args) = narrow_sql(party, goods, 3);
     let sql = facts_sql(shape, bucket_len, &narrow);
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
     args.extend(narrow_args);
@@ -281,7 +300,8 @@ pub(super) fn buckets_in(
         day.buyer = paisa(buyer)?;
         day.laga = paisa(laga)?;
     }
-    if shape != Shape::Shop {
+    // Partner shares belong to whole postings, not to one party's lines or to some goods.
+    if shape != Shape::Shop || goods != AnalyticsGoods::All {
         return Ok(days);
     }
     let mut shares = conn.prepare(&shares_sql(bucket_len))?;

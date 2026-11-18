@@ -5,17 +5,10 @@
 
 import { PartnerGate } from '../components/PartnerGate';
 import { Localized } from '@fluent/react';
-import { useNavigate } from '@tanstack/react-router';
-import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
-import { Button, InfoHint } from '../../../shared/ui';
+import { InfoHint } from '../../../shared/ui';
 import { PartnerSetupForm } from '../components/PartnerSetupForm';
 
 function PartnerSetupPageScreen() {
-  const navigate = useNavigate();
-  const goBack = () => {
-    void navigate({ to: '/partners' });
-  };
-  useEscape('leave', goBack);
   return (
     <div className="flex max-w-form flex-col gap-3 short:gap-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -29,9 +22,6 @@ function PartnerSetupPageScreen() {
             </Localized>
           </InfoHint>
         </div>
-        <Button shortcut={SHORTCUTS.back} onClick={goBack}>
-          <Localized id="common-back" />
-        </Button>
       </div>
       <PartnerSetupForm labelId="partners-save" leaveGuard onSaved={() => undefined} />
     </div>

@@ -47,7 +47,10 @@ function rowKey(row: GardenHistoryRow, index: number): string {
 /** The rows that are an entry of the garden itself; a sale, fruit taken and the closing are not. */
 function isGardenEntry(row: GardenHistoryRow): boolean {
   return (
-    (row.kind === 'installment' || row.kind === 'cost' || row.kind === 'other_sale') &&
+    (row.kind === 'installment' ||
+      row.kind === 'cost' ||
+      row.kind === 'other_sale' ||
+      row.kind === 'refund') &&
     row.entry_id !== null &&
     row.version !== null
   );

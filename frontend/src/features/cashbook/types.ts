@@ -4,6 +4,12 @@
 // `Paisa`, shown and never worked out.
 
 import type { Cashbook } from '../../bindings/Cashbook';
+import type { CapitalWhere } from '../../bindings/CapitalWhere';
+import type { CapitalWhereKind } from '../../bindings/CapitalWhereKind';
+import type { CapitalWhereLine } from '../../bindings/CapitalWhereLine';
+import type { CapitalWhoseKind } from '../../bindings/CapitalWhoseKind';
+import type { CapitalWhoseLine } from '../../bindings/CapitalWhoseLine';
+import type { CashbookKind } from '../../bindings/CashbookKind';
 import type { CashbookInput } from '../../bindings/CashbookInput';
 import type { CashbookRow } from '../../bindings/CashbookRow';
 import type { ExpenseEntry } from '../../bindings/ExpenseEntry';
@@ -39,7 +45,13 @@ import type { RepeatedExpense } from '../../bindings/RepeatedExpense';
 import type { TakeRow } from '../../bindings/TakeRow';
 
 export type {
+  CapitalWhere,
+  CapitalWhereKind,
+  CapitalWhereLine,
+  CapitalWhoseKind,
+  CapitalWhoseLine,
   Cashbook,
+  CashbookKind,
   CashbookInput,
   CashbookRow,
   ExpenseEntry,

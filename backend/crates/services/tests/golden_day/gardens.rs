@@ -40,6 +40,7 @@ fn garden_input(w: &support::World, paid_now: Option<&str>) -> GardenInput {
         ],
         date: "10-10-2026".into(),
         item_id: Some(w.banana),
+        item_ids: Vec::new(),
         rent: "50,000".into(),
         season_end: None,
         note: None,
@@ -169,9 +170,10 @@ fn e2e_40_the_parts_of_the_payments_and_what_each_partner_paid() {
         .map(|h| h.running_balance_paisa.rupees())
         .collect();
     assert_eq!(balances, [-30_000, -50_000, -55_000]);
-    // الف's total came down by his shop parts (E2E-40: -33,000), ب's did not move.
-    assert_eq!(partner_total(&w, 0), -33_000);
-    assert_eq!(partner_total(&w, 1), 0);
+    // الف's total came down by his shop parts (E2E-40: -33,000) and by his 40% of رحیم's open advance
+    // (-6,000); ب's only by his 30% of it, -4,500 (PRD v1.43).
+    assert_eq!(partner_total(&w, 0), -39_000);
+    assert_eq!(partner_total(&w, 1), -4_500);
     assert_eq!(
         trial(&w),
         65_000,
@@ -248,8 +250,8 @@ fn e2e_40b_only_the_other_shops_10000_so_a_loss_of_45000() {
     // The closing is not money in: the running balance still reads the result.
     assert_eq!(closed.row.balance_paisa.rupees(), -45_000);
     assert_eq!(closed.row.money_in_paisa.rupees(), 10_000);
-    // E2E-40b: الف -27,000, ب +4,000, ج 0; cash 27,000.
-    assert_eq!(totals_of_three(&w), [-27_000, 4_000, 0]);
+    // E2E-40b (PRD v1.43): الف -27,000 - 6,000, ب +4,000 - 4,500, ج 0 - 4,500; cash 27,000.
+    assert_eq!(totals_of_three(&w), [-33_000, -500, -4_500]);
     assert_eq!(cash_balance(&w), 27_000);
     assert_equity_is_the_partner_totals(&w, 42_000);
     // Debits: cash 27,000 + رحیم's advance 15,000 + الف's 0604 27,000 (33,000 paid less 6,000 back) =
@@ -314,7 +316,11 @@ fn e2e_40_the_whole_check_sale_other_shop_closing_and_the_partner_totals() {
     let shares: Vec<i64> = (0..3)
         .map(|i| super::own_goods::partner_total(&w, i))
         .collect();
-    assert_eq!(shares, [3_200 - 33_000, 2_400, 2_400]);
+    // Less each one's part of رحیم's open advance, 6,000 / 4,500 / 4,500 (PRD v1.43).
+    assert_eq!(
+        shares,
+        [3_200 - 33_000 - 6_000, 2_400 - 4_500, 2_400 - 4_500]
+    );
     assert_eq!(
         scalar(
             &w,
@@ -470,7 +476,8 @@ fn e2e_40_the_whole_check_sale_other_shop_closing_and_the_partner_totals() {
         [SourceKind::Bikri, SourceKind::Garden, SourceKind::Garden]
     );
     // الف: -33,000 + 3,200 + 39,840 = 10,040; ب: 2,400 + 26,560 = 28,960; ج: 2,400.
-    assert_eq!(totals_of_three(&w), [10_040, 28_960, 2_400]);
+    // PRD v1.43 (E2E-40): 4,040 / 24,460 / -2,100, each less his part of رحیم's open advance.
+    assert_eq!(totals_of_three(&w), [4_040, 24_460, -2_100]);
     // Their parts of the result: 39,840 - 33,000 = 6,840 and 26,560 - 22,000 = 4,560, which add up to
     // the result 11,400.
     let nets: Vec<i64> = detail(&w, garden.id)
@@ -587,14 +594,15 @@ fn e2e_40_the_statement_of_alif_runs_18000_12000_3000_then_3200_then_39840_to_10
         .iter()
         .filter_map(|l| l.amount_paisa.map(|a| a.rupees()))
         .collect();
-    assert_eq!(amounts, [-18_000, -12_000, -3_000, 3_200, 39_840]);
-    assert_eq!(alif.closing_total_paisa.rupees(), 10_040);
+    // PRD v1.43 (FR-17.13): the first line is his 40% of رحیم's open advance of 15,000, -6,000.
+    assert_eq!(amounts, [-6_000, -18_000, -12_000, -3_000, 3_200, 39_840]);
+    assert_eq!(alif.closing_total_paisa.rupees(), 4_040);
     let running: Vec<i64> = alif
         .lines
         .iter()
         .map(|l| l.running_paisa.rupees())
         .collect();
-    assert_eq!(running, [-18_000, -30_000, -33_000, -29_800, 10_040]);
+    assert_eq!(running, [-6_000, -24_000, -36_000, -39_000, -35_800, 4_040]);
     // The closing line carries the numbers of FR-17.10, all from stored rows.
     let closing = alif
         .lines
@@ -831,7 +839,7 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
     assert_eq!(reopened.row.account_balance_paisa.rupees(), 66_400);
     assert_eq!(
         totals_of_three(&w),
-        [-29_800, 2_400, 2_400],
+        [-35_800, -2_100, -2_100],
         "the closing is reversed"
     );
     let hits = mandi_services::search::search_accounts(
@@ -977,7 +985,7 @@ fn a_garden_with_no_sales_closes_at_zero_and_the_whole_cost_is_the_loss() {
     );
     assert!(!closed.preview.numbers.unwrap().posts_entry);
     assert_eq!(closed.row.status, VentureStatus::Closed);
-    assert_eq!(totals_of_three(&w), [-33_000, 0, 0]);
+    assert_eq!(totals_of_three(&w), [-39_000, -4_500, -4_500]);
     let nets: Vec<i64> = detail(&w, garden.id)
         .partner_results
         .iter()
@@ -1205,8 +1213,9 @@ fn a_closing_that_posts_nothing_still_gives_each_partner_a_note_line() {
     assert_eq!(notes.len(), 1);
     let note = notes[0];
     assert_eq!(note.amount_paisa, None, "a note has no amount");
-    assert_eq!(note.running_paisa.rupees(), -33_000, "and leaves the total");
-    assert_eq!(alif.closing_total_paisa.rupees(), -33_000);
+    // -33,000 paid from the shop and -6,000 for his part of رحیم's open advance (PRD v1.43).
+    assert_eq!(note.running_paisa.rupees(), -39_000, "and leaves the total");
+    assert_eq!(alif.closing_total_paisa.rupees(), -39_000);
     assert_eq!(
         (
             value_of(note, "cost_paisa") / 100,
@@ -1218,15 +1227,22 @@ fn a_closing_that_posts_nothing_still_gives_each_partner_a_note_line() {
         ),
         (55_000, 0, -55_000, 6_000, -33_000, 0)
     );
-    // ب paid from his pocket: nothing posted for him at all, the note is his only line.
+    // ب paid from his pocket: nothing posted for him from the garden, the note is his only garden
+    // line. His other line is his 30% of رحیم's open advance, -4,500 (PRD v1.43, FR-17.13).
     let bob = statement_of(&w, b);
-    assert_eq!(bob.lines.len(), 1);
-    assert_eq!(bob.lines[0].detail, StatementDetail::GardenClosed);
-    assert_eq!(bob.lines[0].amount_paisa, None);
-    assert_eq!(bob.closing_total_paisa.rupees(), 0);
-    assert_eq!(value_of(&bob.lines[0], "part_paisa") / 100, -22_000);
-    // ج is not in the garden: no line.
-    assert!(statement_of(&w, c).lines.is_empty());
+    assert_eq!(bob.lines.len(), 2);
+    assert_eq!(bob.lines[0].detail, StatementDetail::AdvanceOut);
+    assert_eq!(bob.lines[1].detail, StatementDetail::GardenClosed);
+    assert_eq!(bob.lines[1].amount_paisa, None);
+    assert_eq!(bob.closing_total_paisa.rupees(), -4_500);
+    assert_eq!(value_of(&bob.lines[1], "part_paisa") / 100, -22_000);
+    // ج is not in the garden: no garden line, only his part of the advance.
+    assert!(
+        statement_of(&w, c)
+            .lines
+            .iter()
+            .all(|l| l.detail == StatementDetail::AdvanceOut)
+    );
     // Undo the closing: the notes go (the closing is not in force any more).
     gardens::reopen(
         &w.env.ctx,
@@ -1238,7 +1254,12 @@ fn a_closing_that_posts_nothing_still_gives_each_partner_a_note_line() {
         },
     )
     .unwrap();
-    assert!(statement_of(&w, b).lines.is_empty());
+    assert!(
+        statement_of(&w, b)
+            .lines
+            .iter()
+            .all(|l| l.detail == StatementDetail::AdvanceOut)
+    );
 }
 
 #[test]
@@ -1267,14 +1288,16 @@ fn a_partner_whose_part_comes_to_zero_gets_a_note_and_the_other_gets_the_line() 
         .find(|l| l.detail == StatementDetail::GardenClosed)
         .unwrap();
     assert_eq!(closing.amount_paisa.unwrap().rupees(), 1, "his 1 rupee");
-    assert_eq!(alif.closing_total_paisa.rupees(), 1);
+    // His 1 rupee less his 40% of رحیم's open advance, 6,000 (PRD v1.43, FR-17.13).
+    assert_eq!(alif.closing_total_paisa.rupees(), -5_999);
     let bob = statement_of(&w, b);
-    assert_eq!(bob.lines.len(), 1);
-    assert_eq!(bob.lines[0].detail, StatementDetail::GardenClosed);
-    assert_eq!(bob.lines[0].amount_paisa, None);
-    assert_eq!(value_of(&bob.lines[0], "back_paisa"), 0);
-    assert_eq!(value_of(&bob.lines[0], "share_bps"), 4_000);
-    assert_eq!(bob.closing_total_paisa.rupees(), 0);
+    assert_eq!(bob.lines.len(), 2);
+    assert_eq!(bob.lines[0].detail, StatementDetail::AdvanceOut);
+    assert_eq!(bob.lines[1].detail, StatementDetail::GardenClosed);
+    assert_eq!(bob.lines[1].amount_paisa, None);
+    assert_eq!(value_of(&bob.lines[1], "back_paisa"), 0);
+    assert_eq!(value_of(&bob.lines[1], "share_bps"), 4_000);
+    assert_eq!(bob.closing_total_paisa.rupees(), -4_500);
 }
 
 #[test]
@@ -1337,7 +1360,7 @@ fn fruit_taken_from_a_garden_lot_goes_to_the_garden_and_a_closed_garden_refuses_
     assert_eq!(credit_balance(&w, garden.account.id), 0);
     let sum: i64 = totals_of_three(&w).iter().sum();
     assert_eq!(
-        sum + 65_000,
+        sum + 65_000 + super::open_advances(&w),
         super::own_goods::equity(&w),
         "the totals add up to the equity"
     );

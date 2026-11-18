@@ -297,6 +297,7 @@ fn run(path: &Path) -> Result<(), ServiceError> {
                     name_ur: ur.into(),
                     name_en: en.into(),
                     opening_capital: None,
+                    opening_capital_where: None,
                     confirmed_rules_words: words.to_vec(),
                 },
             )

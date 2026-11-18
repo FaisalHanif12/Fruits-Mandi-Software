@@ -65,6 +65,8 @@ export function stockRow(overrides: Partial<StockRow> = {}): StockRow {
     balance: 5,
     days_waiting: 1,
     write_offs: [],
+    // The tick the lot was saved with (plan 78 C3); a lot of the worked day took the advance off.
+    adjust_advance: true,
     ...overrides,
   };
 }

@@ -224,13 +224,7 @@ describe.each(LANGUAGES)('two lines of 30 on a lot of 50, the backend answer (%s
   it('the panel shows only line 1 in its totals and says one line is left out', () => {
     renderIn(
       language,
-      <SummaryPanel
-        totals={lot?.totals ?? null}
-        whole={false}
-        lotNumber={1}
-        netIsNegative={false}
-        leftOut={1}
-      />,
+      <SummaryPanel totals={lot?.totals ?? null} whole={false} netIsNegative={false} leftOut={1} />,
     );
     expect(visible(document.body.textContent)).toContain('18,000');
     expect(
@@ -283,7 +277,6 @@ describe.each(LANGUAGES)('the summary and the strip when a line is left out (%s)
       <SummaryPanel
         totals={counted ? totals : null}
         whole={false}
-        lotNumber={1}
         netIsNegative={false}
         leftOut={leftOut}
       />,

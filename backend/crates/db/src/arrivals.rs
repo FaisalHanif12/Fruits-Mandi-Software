@@ -601,6 +601,36 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
     Ok(out)
 }
 
+/// The saved arrivals of open gardens with goods left for our shop, on any day to sell, oldest day to
+/// sell first, then by number (plan 78 C1). At most `limit` rows.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn ready_all(conn: &Connection, limit: i64) -> rusqlite::Result<Vec<ArrivalRec>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT {REC_COLUMNS} {REC_FROM}
+         WHERE a.status = 'saved' AND v.status = 'open'
+           AND a.qty - a.other_qty - (a.qty_sold - a.qty_sold_other) - a.qty_written_off > 0
+         ORDER BY a.sell_date, a.number LIMIT ?1"
+    ))?;
+    let rows = statement.query_map(params![limit], read_rec)?;
+    rows.collect()
+}
+
+/// How many saved arrivals of open gardens have goods left for our shop (plan 78 C1).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn goods_count(conn: &Connection) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM garden_arrivals a JOIN ventures v ON v.id = a.venture_id
+         WHERE a.status = 'saved' AND v.status = 'open'
+           AND a.qty - a.other_qty - (a.qty_sold - a.qty_sold_other) - a.qty_written_off > 0",
+        [],
+        |r| r.get(0),
+    )
+}
+
 /// The saved arrivals of open gardens with goods left and a day to sell on or before `date`, oldest
 /// day to sell first, then by number (PRD FR-12.39, FR-12.40). At most `limit` rows.
 ///

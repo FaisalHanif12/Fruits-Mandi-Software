@@ -31,12 +31,22 @@ export { useOpenReport, partyReportSearch, type OpenReport } from './open-report
 export { parseReportSearch, type ReportSearch } from './search';
 
 // ---- Plan 21: what the analytics module borrows (cells of a report are cells of a view). ----
-export { cellText, monthText, nameWithTag, partyText, sideText } from './cells';
+export { cellText, detailLines, monthText, nameWithTag, partyText, sideText } from './cells';
 // ---- Plan 49 (ask the app): the answer's tables are drawn with the report screens' own cell
 // renderer, so a cell reads the same in the panel as on its report. ----
 export { emptyNameMessageId, messageText, percentText } from './cells';
 // The print of a report with the filters an answer read it with (plan 49).
-export { reportsPrintReport } from './api';
+export { reportsAdhariSheetPrint, reportsAdhariSheetPrintData, reportsPrintReport } from './api';
+// Plan 78: the hidden print window of the new prints reads these (app/print-kinds).
+export {
+  reportsBuyerParchiPrintData,
+  reportsCollectionSheetPrintData,
+  reportsSalePrintData,
+  reportsSellerBillsPrintData,
+} from './api';
+export { DaySlipsDocument, type DaySlipsVariant } from './print/DaySlipsDocument';
+export { SalePrintDocument } from './print/SalePrintDocument';
+export { printTableOf } from './print/table-print';
 export { ReportPartnerSelect } from './components/ReportPartnerSelect';
 // Plan 68: the print of ادھاری تفصیل (R5), opened from the sale book's second print button.
 export { BuyerBillsPreview } from './components/BuyerBillsPreview';
@@ -45,7 +55,11 @@ export { PrintPreviewFrame } from './components/PrintPreviewFrame';
 export { TablePrintPreview } from './components/TablePrintPreview';
 export { useTableExcel } from './table-excel';
 // Plan 76 point 3: the buyer parchi and the overall sale print (sale book, R5 sheet).
-export { DaySlipsPreview, type DaySlipsScope } from './components/DaySlipsPreview';
+export {
+  DaySlipsPreview,
+  type DaySlipsScope,
+  type SlipsPreviewVariant,
+} from './components/DaySlipsPreview';
 export { usePrintJob } from './components/usePrintJob';
 export { LANGUAGE_VALUES, isReportAddress, paperOf, readJsonObject, sortOf } from './print/params';
 export { ReportPrintPage } from './print/ReportPrintPage';

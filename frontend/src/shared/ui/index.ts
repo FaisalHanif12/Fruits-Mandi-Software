@@ -12,6 +12,7 @@ export {
   type MasterAddKind,
 } from './add-record';
 export { Balance, sideMessageId, type BalanceValue } from './Balance';
+export { BackButton } from './BackButton';
 export { Button, type ButtonVariant } from './Button';
 export { CalcInfo, CalcInfoAt, type Working } from './CalcInfo';
 export { Card } from './Card';
@@ -66,7 +67,9 @@ export { MoneyInput } from './MoneyInput';
 export { Notice, type NoticeTone } from './Notice';
 export { NamePair, type NamePairValue } from './NamePair';
 export { Num, RUNNING_NUMBER } from './Num';
+export { MultiPicker } from './MultiPicker';
 export { PartnerSharesEditor, isOutOfVenture, type VentureShareRow } from './PartnerSharesEditor';
+export { ShareModeChoice, type ShareMode } from './ShareModeChoice';
 export { PartyCard } from './PartyCard';
 export { PercentInput } from './PercentInput';
 export { PasswordInput } from './PasswordInput';

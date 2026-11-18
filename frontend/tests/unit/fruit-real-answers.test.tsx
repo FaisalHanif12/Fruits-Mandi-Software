@@ -43,7 +43,14 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const HAJI = account(31, 'seller', '0012', 'حاجی نذیر', 'Haji Nazeer');
+// The other shop's account has the id the backend's own request carries (its test made the accounts in its own order).
+const HAJI = account(
+  real.FRUIT_SAVE_GUESTS_REQUEST.agent_account_id ?? 0,
+  'seller',
+  '0012',
+  'حاجی نذیر',
+  'Haji Nazeer',
+);
 
 /** The masters the backend's test used: item 2 (apple), item 5 (sold by weight), packing 1 (box). */
 const hit = (id: number, kind: 'item' | 'packing', ur: string, en: string) => ({

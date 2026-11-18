@@ -143,6 +143,7 @@ fn the_day_detail_lists_the_bikri_that_made_it() {
             offset: 0,
             limit: 0,
             party: None,
+            goods: None,
         },
     )
     .unwrap();
@@ -169,6 +170,7 @@ fn the_day_detail_lists_the_bikri_that_made_it() {
             offset: 1,
             limit: 1,
             party: None,
+            goods: None,
         },
     )
     .unwrap();
@@ -184,6 +186,7 @@ fn the_commission_print_has_every_row_and_the_partner_columns_when_open() {
         month: None,
         period: None,
         party: None,
+        goods: None,
         language: Language::En,
         paper: None,
     };
@@ -540,12 +543,15 @@ fn partner_b_october_is_the_example_of_the_plan() {
     let b = w.partners[1];
     let m = partners::statement_month(&w.env.ctx, &month_input(b, Some("2026-10"))).unwrap();
     assert_eq!(m.month, "2026-10");
-    assert_eq!(m.first_month, "2026-10");
-    assert_eq!(rupees_of(m.opening_total_paisa), 0);
+    // PRD v1.43 (FR-17.13): his 30% of رحیم's open advance of 15,000 went out on 01-09-26, so the
+    // first month is September and October opens at -4,500.
+    assert_eq!(m.first_month, "2026-09");
+    assert_eq!(rupees_of(m.opening_total_paisa), -4_500);
     assert_eq!(m.days.len(), 2);
     let (d10, d11) = (&m.days[0], &m.days[1]);
     assert_eq!(d10.date, "2026-10-10");
-    // 10-10-26: commission 1,184 + 462 = 1,646, expense -900, day net 746, کل رقم 746.
+    // 10-10-26: commission 1,184 + 462 = 1,646, expense -900, the advance back +4,500, day net 5,246,
+    // کل رقم 746.
     assert_eq!(
         (
             rupees_of(d10.columns.commission_paisa),
@@ -553,8 +559,9 @@ fn partner_b_october_is_the_example_of_the_plan() {
             rupees_of(d10.columns.net_paisa),
             rupees_of(d10.running_paisa),
         ),
-        (1_646, -900, 746, 746)
+        (1_646, -900, 5_246, 746)
     );
+    assert_eq!(rupees_of(d10.columns.advances_paisa), 4_500);
     // 11-10-26: capital +50,000, کل رقم 50,746.
     assert_eq!(
         (
@@ -567,7 +574,8 @@ fn partner_b_october_is_the_example_of_the_plan() {
     assert_eq!(rupees_of(m.totals.commission_paisa), 1_646);
     assert_eq!(rupees_of(m.totals.expense_paisa), -900);
     assert_eq!(rupees_of(m.totals.capital_paisa), 50_000);
-    assert_eq!(rupees_of(m.totals.net_paisa), 50_746);
+    assert_eq!(rupees_of(m.totals.advances_paisa), 4_500);
+    assert_eq!(rupees_of(m.totals.net_paisa), 55_246);
     assert_eq!(rupees_of(m.closing_total_paisa), 50_746);
     // The closing is his کل رقم on the overview and the last running total of R31 (E2E-37).
     let overview = partners::overview(&w.env.ctx).unwrap();
@@ -592,8 +600,10 @@ fn partner_b_october_is_the_example_of_the_plan() {
     assert_eq!(default.month, "2026-10");
     let september =
         partners::statement_month(&w.env.ctx, &month_input(b, Some("2026-09"))).unwrap();
-    assert!(september.days.is_empty());
-    assert_eq!(rupees_of(september.closing_total_paisa), 0);
+    // September holds his part of the advance going out, -4,500 (PRD v1.43).
+    assert_eq!(september.days.len(), 1);
+    assert_eq!(rupees_of(september.days[0].columns.advances_paisa), -4_500);
+    assert_eq!(rupees_of(september.closing_total_paisa), -4_500);
     // A future month and a bad one are refused.
     assert!(partners::statement_month(&w.env.ctx, &month_input(b, Some("2026-11"))).is_err());
     assert!(partners::statement_month(&w.env.ctx, &month_input(b, Some("26-10"))).is_err());
@@ -612,7 +622,9 @@ fn the_day_card_lists_every_movement_with_its_source() {
     )
     .unwrap();
     assert_eq!(day.date, "2026-10-10");
-    assert_eq!(rupees_of(day.opening_total_paisa), 0);
+    // PRD v1.43: his opening on 10-10-26 is -4,500 (his part of رحیم's advance), and the card also
+    // holds the advance back, +4,500, from بکری 1.
+    assert_eq!(rupees_of(day.opening_total_paisa), -4_500);
     assert_eq!(rupees_of(day.after_total_paisa), 746);
     // بکری 1: his 30% of 3,948 = 1,184; بکری 2: 30% of 1,540 = 462; بجلی -900.
     let lines: Vec<(i64, Option<i64>, Option<i64>)> = day
@@ -639,6 +651,10 @@ fn the_day_card_lists_every_movement_with_its_source() {
         "{lines:?}"
     );
     assert!(lines.iter().any(|l| l.0 == -900));
+    assert!(
+        lines.iter().any(|l| l.0 == 4_500),
+        "the advance back: {lines:?}"
+    );
     // Every line keeps its entry id and its heading so the card can open the entry.
     assert!(day.lines.iter().all(|l| l.entry_id.is_some()));
     // A day with nothing is an empty card, not an error.

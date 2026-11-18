@@ -35,7 +35,7 @@ use crate::error::ReportsError;
 use crate::print::{PrintFact, PrintFrame, PrintFrameInput, print_frame};
 
 /// What a day's slips are made for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum SlipSections {
     /// Only the sellers' slips.
@@ -47,7 +47,7 @@ pub enum SlipSections {
 }
 
 /// Input of `reports_buyer_parchi_print_data` and `reports_sale_print_data`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
 pub struct DaySlipsInput {
     /// The day, `DD-MM-YYYY` or a shortcut, or `YYYY-MM-DD`. Empty is today.
     #[serde(default)]
@@ -200,6 +200,22 @@ fn slip_of(
     };
     let page = super::build_slip_in(conn, db, &filters, only_bikri)?;
     build_print(&page, options)
+}
+
+/// The seller bills of a scope (plan 78 A1, A3): the R35 slip of each seller who sold in it, each
+/// titled with his name ("{ $name } کا بل"). The same slips as the sellers of [`day_slips`]; only
+/// the sellers are read. Read only.
+///
+/// # Errors
+/// As [`day_slips`].
+pub fn seller_bills(db: &Db, input: &DaySlipsInput) -> Result<DaySlipsPrintData, ReportsError> {
+    let mut input = input.clone();
+    input.sections = SlipSections::Sellers;
+    let mut data = day_slips(db, &input, "print-seller-bills-title")?;
+    for slip in &mut data.sellers {
+        slip.named_title_id = Some(super::ids::SELLER_BILL_TITLE.to_owned());
+    }
+    Ok(data)
 }
 
 /// The slips of a day in the print language (plan 76 point 3). Read only.

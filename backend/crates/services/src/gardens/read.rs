@@ -132,9 +132,16 @@ impl Money {
         let account_balance = paisa(f.account_credits_paisa)?
             .checked_sub(paisa(f.account_debits_paisa)?)
             .map_err(money_error)?;
+        // Never below 0: what was paid above the rent is what the owner owes (PRD FR-12.51), shown on
+        // its own.
         let rent_due = paisa(rec.rent_paisa)?
             .checked_sub(installments)
             .map_err(money_error)?;
+        let rent_due = if rent_due.is_negative() {
+            Paisa::ZERO
+        } else {
+            rent_due
+        };
         Ok(Money {
             installments,
             costs,
@@ -169,6 +176,31 @@ pub(super) fn balance_working(money_in: Paisa, paid: Paisa, balance: Paisa) -> W
     }
 }
 
+/// What the owner still owes the garden (PRD FR-12.51): the installments paid above the rent, less the
+/// refunds he has paid back. 0 or more.
+///
+/// Example: rent 45,00,000 after a relief and 50,00,000 paid in installments: the owner owes
+/// 5,00,000; after he pays 5,00,000 back he owes 0.
+///
+/// # Errors
+/// `ERR_OVERFLOW`.
+pub(super) fn owner_owes_of(
+    installments: Paisa,
+    rent: Paisa,
+    refunds: Paisa,
+) -> Result<Paisa, ServiceError> {
+    let above = installments.checked_sub(rent).map_err(money_error)?;
+    if above <= Paisa::ZERO {
+        return Ok(Paisa::ZERO);
+    }
+    let open = above.checked_sub(refunds).map_err(money_error)?;
+    Ok(if open.is_negative() {
+        Paisa::ZERO
+    } else {
+        open
+    })
+}
+
 /// One garden as the screens show it.
 ///
 /// # Errors
@@ -190,6 +222,18 @@ fn row_with(
 ) -> Result<GardenRow, ServiceError> {
     let rec = &garden.rec;
     let (commission_paisa, commission_working) = commission_view(commission)?;
+    // The rent relief (plan 78 D3, PRD FR-12.51): the original rent, the relief, the refunds and what the
+    // owner still owes, all from stored rows.
+    let rent_now = paisa(rec.rent_paisa)?;
+    let rent_original = repo::rent_original(conn, rec.id)?.map(paisa).transpose()?;
+    let relief = match rent_original {
+        Some(original) if original > rent_now => {
+            original.checked_sub(rent_now).map_err(money_error)?
+        }
+        _ => Paisa::ZERO,
+    };
+    let refunds = paisa(repo::refunds_total(conn, rec.id)?)?;
+    let owner_owes = owner_owes_of(money.installments, rent_now, refunds)?;
     Ok(GardenRow {
         id: rec.id,
         version: rec.version,
@@ -203,6 +247,7 @@ fn row_with(
         account: rec.account.clone(),
         entry_date: rec.entry_date.clone(),
         item: rec.item.clone(),
+        items: mandi_db::gardens::items_of(conn, rec.id)?,
         rent_paisa: paisa(rec.rent_paisa)?,
         season_end_date: rec.season_end_date.clone(),
         note: rec.note.clone(),
@@ -217,6 +262,10 @@ fn row_with(
         paid_shop_paisa: money.paid_shop,
         paid_pocket_paisa: money.paid_pocket,
         rent_due_paisa: money.rent_due,
+        rent_original_paisa: rent_original,
+        relief_paisa: relief,
+        refunds_paisa: refunds,
+        owner_owes_paisa: owner_owes,
         money_in_paisa: money.money_in,
         other_shop_paisa: money.other_shop,
         balance_paisa: money.balance,
@@ -498,6 +547,7 @@ fn history_kind_of(kind: &str) -> Result<GardenHistoryKind, ServiceError> {
         "installment" => Ok(GardenHistoryKind::Installment),
         "cost" => Ok(GardenHistoryKind::Cost),
         "other_sale" => Ok(GardenHistoryKind::OtherSale),
+        "refund" => Ok(GardenHistoryKind::Refund),
         "close" => Ok(GardenHistoryKind::Close),
         _ => Err(data("a garden entry has a kind that is not known")),
     }
@@ -632,7 +682,10 @@ fn entry_item(
     // `history`.
     let flags = if !matches!(
         kind,
-        GardenHistoryKind::Installment | GardenHistoryKind::Cost | GardenHistoryKind::OtherSale
+        GardenHistoryKind::Installment
+            | GardenHistoryKind::Cost
+            | GardenHistoryKind::OtherSale
+            | GardenHistoryKind::Refund
     ) {
         EntryFlags::plain(false, false)
     } else if !garden_open {

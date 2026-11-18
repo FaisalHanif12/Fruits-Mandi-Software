@@ -67,6 +67,7 @@ import type { PaymentInput } from '../../src/bindings/PaymentInput';
 import type { ReceiptInput } from '../../src/bindings/ReceiptInput';
 import type { VoucherEntry } from '../../src/features/vouchers/types';
 import * as arrivalsReal from './arrivals-real';
+import * as plan78Real from './plan78-real';
 import { createBikriDraft, type BikriDraftStores } from '../../src/features/bikri/draft-store';
 import { serialiseDraft } from '../../src/features/bikri/draft-snapshot';
 
@@ -359,11 +360,12 @@ const tripBooks = createTripBooks({
 });
 const tripsDefaults = tripBooks.defaults();
 
-// `#/dev/bikri?tripday`: stock that is ready to sell today, so a new بکری opens with a lot for each
-// (PRD FR-12.39, FR-12.40, plan 33): two trip purchases, one of them left over from yesterday, and a
-// garden's goods arrived. The rows are the backend's real ones (bikri_ready_goods) with the days set.
-const READY_TRIP = arrivalsReal.READY_GOODS.rows.find((row) => row.kind === 'trip');
-const READY_GARDEN = arrivalsReal.READY_GOODS.rows.find((row) => row.kind === 'garden');
+// `#/dev/bikri?tripday`: goods that wait to be loaded into a new بکری by hand (PRD FR-12.50, plan 78 C1): two trip
+// purchases, one of them left over from yesterday, a garden's goods arrived, and a lot with goods left from an
+// earlier بکری, so all three load buttons show. The rows are the backend's real ones (bikri_goods_to_load) with the
+// days set.
+const READY_TRIP = plan78Real.GOODS_TO_LOAD_TRIP.rows[0];
+const READY_GARDEN = plan78Real.GOODS_TO_LOAD_GARDEN.rows[0];
 const READY_TODAY: ReadyGoods = {
   rows:
     READY_TRIP === undefined || READY_GARDEN === undefined
@@ -434,8 +436,20 @@ const handlers: Record<string, Handler> = {
     devFlag('own')
       ? { ...tripsReal.PURCHASES_LIST_ALL, rows: [tripsReal.PURCHASE_GET_AFTER_SALES] }
       : tripBooks.purchaseList(input as PurchasesListInput),
-  // The stock that is ready to sell on the day of a new بکری (plan 33): `?tripday`, else nothing.
-  bikri_ready_goods: () => (devFlag('tripday') ? READY_TODAY : { rows: [] }),
+  // The goods a new بکری can load by hand (plan 78 C1): the counts of the three load buttons, and the rows of the
+  // card of one kind. `?tripday` has goods of every kind; otherwise there are none, so no button shows.
+  bikri_goods_sources: () => ({
+    stock_lots: devFlag('tripday') ? 1 : 0,
+    trip_rows: devFlag('tripday')
+      ? READY_TODAY.rows.filter((row) => row.kind === 'trip').length
+      : 0,
+    garden_rows: devFlag('tripday')
+      ? READY_TODAY.rows.filter((row) => row.kind === 'garden').length
+      : 0,
+  }),
+  bikri_goods_to_load: (input) => ({
+    rows: devFlag('tripday') ? READY_TODAY.rows.filter((row) => row.kind === input['kind']) : [],
+  }),
   purchases_set_sell_date: (input) => ({
     id: asNumber(input['id']),
     version: asNumber(input['version']) + 1,

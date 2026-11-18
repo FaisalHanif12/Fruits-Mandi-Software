@@ -11,7 +11,7 @@ import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import { previewFor } from '../helpers/bikri-data';
 import { seedBikriDraft } from '../helpers/bikri-seed';
-import { named, openBook } from '../helpers/bikri-screen';
+import { named, openBook, summaryChoice } from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -84,7 +84,8 @@ function expectNamed(language: Language, text: string) {
     .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
     .closest('section');
   if (summary === null) throw new Error('no summary');
-  expect(within(summary).getByRole('button', { name: named(lotButton) })).toBeInTheDocument();
+  // The dropdown of the summary shows the lot (plan 78 C2).
+  expect(summaryChoice(summary)).toBe(lotButton);
   // The "more" button of the lot.
   expect(
     screen.getByRole('button', { name: named(message(language, 'bikri-more-toggle', vars)) }),

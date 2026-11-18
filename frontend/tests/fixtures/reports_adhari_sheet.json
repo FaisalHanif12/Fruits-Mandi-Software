@@ -1,0 +1,151 @@
+{
+  "date": "2026-10-10",
+  "rows": [
+    {
+      "party": {
+        "account_id": 22,
+        "code": "0021",
+        "short_code": "1",
+        "name_ur": "ارشد ملتانی",
+        "name_en": "Arshad Multani",
+        "tag": null,
+        "person_key": null
+      },
+      "lines": [
+        {
+          "item": {
+            "ur": "کیلا",
+            "en": "Banana"
+          },
+          "packing": {
+            "ur": "پیٹی",
+            "en": "Box"
+          },
+          "qty": 30,
+          "weight_grams": null,
+          "rate_paisa": 58000
+        }
+      ],
+      "bill_paisa": 1868400,
+      "cash_paisa": 0,
+      "today_credit_paisa": 1868400,
+      "previous_due": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "total_due": {
+        "amount_paisa": 1868400,
+        "side": "dr"
+      },
+      "is_dead": false
+    },
+    {
+      "party": {
+        "account_id": 21,
+        "code": "0020",
+        "short_code": "0",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax",
+        "tag": null,
+        "person_key": null
+      },
+      "lines": [
+        {
+          "item": {
+            "ur": "کیلا",
+            "en": "Banana"
+          },
+          "packing": {
+            "ur": "پیٹی",
+            "en": "Box"
+          },
+          "qty": 20,
+          "weight_grams": null,
+          "rate_paisa": 60000
+        }
+      ],
+      "bill_paisa": 1288000,
+      "cash_paisa": 0,
+      "today_credit_paisa": 1288000,
+      "previous_due": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "total_due": {
+        "amount_paisa": 1288000,
+        "side": "dr"
+      },
+      "is_dead": false
+    },
+    {
+      "party": {
+        "account_id": 9,
+        "code": "0030",
+        "short_code": null,
+        "name_ur": "شاہد",
+        "name_en": "Shahid",
+        "tag": null,
+        "person_key": "شاہد|03000000000",
+        "phone": "0300-0000000"
+      },
+      "lines": [
+        {
+          "item": {
+            "ur": "سیب",
+            "en": "Apple"
+          },
+          "packing": {
+            "ur": "پیٹی",
+            "en": "Box"
+          },
+          "qty": 10,
+          "weight_grams": null,
+          "rate_paisa": 120000
+        }
+      ],
+      "bill_paisa": 1280000,
+      "cash_paisa": 1280000,
+      "today_credit_paisa": 0,
+      "previous_due": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "total_due": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "is_dead": false
+    }
+  ],
+  "total_count": 3,
+  "totals": {
+    "bill_paisa": 4436400,
+    "cash_paisa": 1280000,
+    "today_credit_paisa": 3156400,
+    "previous_due": {
+      "amount_paisa": 0,
+      "side": "zero"
+    },
+    "total_due": {
+      "amount_paisa": 3156400,
+      "side": "dr"
+    }
+  },
+  "others": null,
+  "others_count": 0,
+  "all_totals": {
+    "bill_paisa": 4436400,
+    "cash_paisa": 1280000,
+    "today_credit_paisa": 3156400,
+    "previous_due": {
+      "amount_paisa": 0,
+      "side": "zero"
+    },
+    "total_due": {
+      "amount_paisa": 3156400,
+      "side": "dr"
+    }
+  },
+  "dead_totals": null,
+  "credit_totals": null
+}

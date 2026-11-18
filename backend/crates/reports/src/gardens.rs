@@ -105,6 +105,9 @@ pub(crate) struct Garden {
     pub(crate) other_in: Paisa,
     pub(crate) commission: Commission,
     pub(crate) partners: Vec<PartnerFigure>,
+    /// The rent the garden was made with, when the Owner has changed it since (PRD FR-12.51). `None`
+    /// while the rent is the original. The relief is this less the rent now.
+    pub(crate) rent_original: Option<Paisa>,
 }
 
 fn data(message: &str) -> ReportsError {
@@ -184,7 +187,11 @@ pub(crate) fn load(conn: &Connection, pick: &Pick) -> Result<Vec<Garden>, Report
             rec.id,
         )?;
         check_partners(&rec, &money, &partners)?;
+        let rent_original = repo::rent_original(conn, rec.id)?
+            .map(Paisa::try_from_paisa)
+            .transpose()?;
         out.push(Garden {
+            rent_original,
             commission: commissions
                 .get(&rec.account.id)
                 .copied()

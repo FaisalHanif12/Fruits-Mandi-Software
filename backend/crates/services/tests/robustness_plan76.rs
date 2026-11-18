@@ -791,6 +791,7 @@ fn commission(
         month: month.map(str::to_owned),
         period,
         party,
+        goods: None,
         offset,
         limit,
     }
@@ -1079,6 +1080,7 @@ fn the_commission_page_refuses_bad_periods_and_parties_and_never_ends_in_a_data_
                 offset,
                 limit,
                 party: None,
+                goods: None,
             },
         )
         .unwrap();
@@ -1092,6 +1094,7 @@ fn the_commission_page_refuses_bad_periods_and_parties_and_never_ends_in_a_data_
                 offset: 0,
                 limit: 0,
                 party: None,
+                goods: None,
             },
         );
         match refused {
@@ -2115,6 +2118,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         offset: 0,
         limit: 0,
         party: None,
+        goods: None,
     };
     match commission_day(db, &day_input) {
         Ok(a_day) => {

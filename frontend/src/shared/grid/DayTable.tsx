@@ -41,14 +41,19 @@ export interface DayColumn<Row> {
 interface DayTableProps<Row extends { date: string }> {
   columns: readonly DayColumn<Row>[];
   rows: readonly Row[];
-  /** The dates that are open (`YYYY-MM-DD`). */
+  /**
+   * What names a row: its date (`YYYY-MM-DD`) by default, one row for each date. A list with more than one row
+   * on a date (a party's statement, one row for each entry, plan 78 B3) gives the row its own key.
+   */
+  rowKey?: (row: Row) => string;
+  /** The keys of the rows that are open (the dates, `YYYY-MM-DD`, unless `rowKey` says otherwise). */
   open: ReadonlySet<string>;
-  onToggle: (date: string, open: boolean) => void;
-  /** The date the keys are on, or null: the first one. */
+  onToggle: (key: string, open: boolean) => void;
+  /** The key of the row the keys are on, or null: the first one. */
   active: string | null;
-  onActive: (date: string) => void;
-  /** What an open day shows under its row. */
-  renderDay: (date: string) => ReactNode;
+  onActive: (key: string) => void;
+  /** What an open row shows under it. It gets the row's key. */
+  renderDay: (key: string) => ReactNode;
   /** Shown in place of the rows when there are none; the heading and the footer stay. */
   empty: ReactNode;
   /** A new window or page is on its way: the rows on screen are the last ones. */
@@ -63,9 +68,12 @@ interface DayTableProps<Row extends { date: string }> {
 
 const CELL = 'min-w-0 text-center';
 
+const BY_DATE = (row: { date: string }): string => row.date;
+
 export function DayTable<Row extends { date: string }>({
   columns,
   rows,
+  rowKey = BY_DATE,
   open,
   onToggle,
   active,
@@ -87,7 +95,7 @@ export function DayTable<Row extends { date: string }>({
   );
   const template = `repeat(${String(shown.length)}, minmax(0, 1fr))`;
   const activeIndex = Math.max(
-    rows.findIndex((row) => row.date === active),
+    rows.findIndex((row) => rowKey(row) === active),
     0,
   );
   const current = rows[activeIndex];
@@ -101,7 +109,7 @@ export function DayTable<Row extends { date: string }>({
   }, [active, listId]);
 
   const toggleCurrent = () => {
-    if (current !== undefined) onToggle(current.date, !open.has(current.date));
+    if (current !== undefined) onToggle(rowKey(current), !open.has(rowKey(current)));
   };
   const onTreeKey = treeKeyHandler({
     count: rows.length,
@@ -109,14 +117,14 @@ export function DayTable<Row extends { date: string }>({
     pageSize: TREE_PAGE_ROWS,
     onMove: (index) => {
       const row = rows[index];
-      if (row !== undefined) onActive(row.date);
+      if (row !== undefined) onActive(rowKey(row));
     },
     onHorizontal: (action) => {
       if (current === undefined) return false;
-      const isOpen = open.has(current.date);
+      const isOpen = open.has(rowKey(current));
       // A flat list: the arrow towards the children opens the day, the one towards the parent shuts it.
-      if (action === 'opens' && !isOpen) onToggle(current.date, true);
-      else if (action === 'closes' && isOpen) onToggle(current.date, false);
+      if (action === 'opens' && !isOpen) onToggle(rowKey(current), true);
+      else if (action === 'closes' && isOpen) onToggle(rowKey(current), false);
       else return false;
       return true;
     },
@@ -143,7 +151,7 @@ export function DayTable<Row extends { date: string }>({
       tabIndex={0}
       aria-labelledby={`${listId}-label`}
       aria-busy={busy}
-      aria-activedescendant={current === undefined ? undefined : `${listId}-${current.date}`}
+      aria-activedescendant={current === undefined ? undefined : `${listId}-${rowKey(current)}`}
       onKeyDown={(event) => {
         // A key inside an open day (its print button, its goods) is that day's own.
         if (event.target !== event.currentTarget) return;
@@ -198,18 +206,19 @@ export function DayTable<Row extends { date: string }>({
         <div className="px-3 py-6">{empty}</div>
       ) : (
         rows.map((row) => {
-          const isOpen = open.has(row.date);
-          const isActive = row.date === current?.date;
+          const key = rowKey(row);
+          const isOpen = open.has(key);
+          const isActive = current !== undefined && key === rowKey(current);
           return (
-            <div key={row.date}>
+            <div key={key}>
               <div
-                id={`${listId}-${row.date}`}
+                id={`${listId}-${key}`}
                 role="row"
                 aria-expanded={isOpen}
                 aria-selected={isActive}
                 onClick={() => {
-                  onActive(row.date);
-                  onToggle(row.date, !isOpen);
+                  onActive(key);
+                  onToggle(key, !isOpen);
                   boxRef.current?.focus();
                 }}
                 className={`flex min-h-target cursor-pointer items-center gap-3 border-b border-border px-3 py-2 type-body text-ink ${isActive ? 'bg-row-current' : ''}`}
@@ -228,7 +237,7 @@ export function DayTable<Row extends { date: string }>({
                     data-day-detail=""
                     className="border-b border-border bg-surface-sunken p-3"
                   >
-                    {renderDay(row.date)}
+                    {renderDay(key)}
                   </div>
                 </div>
               ) : null}

@@ -369,3 +369,34 @@ pub async fn bikri_ready_goods<R: tauri::Runtime>(
     })
     .await
 }
+
+/// How many rows each of the three load buttons of the بکری screen would list (plan 78 C1): the lots
+/// with goods left (`stock_lots`, the باقی مال card), the purchases of open trips (`trip_rows`) and the
+/// arrivals of open gardens (`garden_rows`) with goods left for our shop, on any day to sell. A
+/// button is shown only when its count is above 0. Read only.
+#[tauri::command]
+pub async fn bikri_goods_sources<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<mandi_services::core::bikri::GoodsSources, UiError> {
+    run(app, "bikri_goods_sources", move |ctx| {
+        auth::require(ctx)?;
+        bikri::goods_sources(ctx)
+    })
+    .await
+}
+
+/// The rows of the card of one kind of goods that is loaded by hand (plan 78 C1): the purchases of open
+/// trips (`kind` `trip`) or the arrivals of open gardens (`garden`) with goods left for our shop, on any
+/// day to sell, oldest day to sell first, then number. The same rows as `bikri_ready_goods`, with no
+/// day filter. Each picked row becomes a lot posted as before. Read only.
+#[tauri::command]
+pub async fn bikri_goods_to_load<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: mandi_services::core::bikri::GoodsToLoadInput,
+) -> Result<mandi_services::core::bikri::ReadyGoods, UiError> {
+    run(app, "bikri_goods_to_load", move |ctx| {
+        auth::require(ctx)?;
+        bikri::goods_to_load(ctx, &input)
+    })
+    .await
+}

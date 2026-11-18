@@ -11,6 +11,7 @@ use mandi_core::printing::Paper;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::analytics::AnalyticsGoods;
 use crate::reports::PartyRef;
 
 /// What a period is (PRD FR-9.3, plan 77): one date, a month, a year or a range of dates.
@@ -115,6 +116,12 @@ pub struct CommissionMonthInput {
     #[serde(default)]
     #[ts(optional)]
     pub party: Option<CommissionParty>,
+    /// Which goods are counted (plan 78 D4, PRD FR-9.3): all (the default), consigned goods, trip
+    /// goods or garden goods, as the goods filter of analytics (PRD 18.1). Under a goods filter the
+    /// shared income and the partner columns are not shown.
+    #[serde(default)]
+    #[ts(optional)]
+    pub goods: Option<AnalyticsGoods>,
     /// Rows to skip: only a range is paged.
     #[serde(default)]
     #[ts(type = "number | null", optional)]
@@ -200,6 +207,9 @@ pub struct CommissionMonth {
     pub period: CommissionPeriodShown,
     /// The party the rows are for; null for the whole shop.
     pub party: Option<CommissionPartyShown>,
+    /// The goods the rows are for (plan 78 D4). Under a goods filter `partners` is empty and every
+    /// row has no partner shares and no shared income.
+    pub goods: AnalyticsGoods,
     /// The first month with a commission fact, or null when there is none. The back button stops
     /// here.
     pub first_month: Option<String>,
@@ -229,7 +239,7 @@ impl CommissionMonth {
     /// Hides every partner share, while the partner section is locked (PRD FR-17.11). The shared
     /// income stays: it is the shop's, not a partner's. A party page has no partner columns.
     pub fn hide_partners(&mut self) {
-        if self.party.is_some() {
+        if self.party.is_some() || self.goods != AnalyticsGoods::All {
             return;
         }
         for row in &mut self.rows {
@@ -255,6 +265,10 @@ pub struct CommissionDayInput {
     #[serde(default)]
     #[ts(optional)]
     pub party: Option<CommissionParty>,
+    /// Only these goods (plan 78 D4). Null is all goods.
+    #[serde(default)]
+    #[ts(optional)]
+    pub goods: Option<AnalyticsGoods>,
 }
 
 /// One posting behind a day's commission.
@@ -291,7 +305,9 @@ pub struct CommissionDay {
     pub date: String,
     /// The party the postings are for; null for the whole day.
     pub party: Option<CommissionPartyShown>,
-    /// The partners, always sent. Empty under a party filter.
+    /// The goods the postings are for (plan 78 D4).
+    pub goods: AnalyticsGoods,
+    /// The partners, always sent. Empty under a party filter or a goods filter.
     pub partners: Vec<CommissionPartner>,
     /// One page of the postings of the day, oldest first.
     pub entries: Vec<CommissionEntry>,
@@ -307,7 +323,7 @@ pub struct CommissionDay {
 impl CommissionDay {
     /// Hides every partner share, while the partner section is locked. A party page has none.
     pub fn hide_partners(&mut self) {
-        if self.party.is_some() {
+        if self.party.is_some() || self.goods != AnalyticsGoods::All {
             return;
         }
         for entry in &mut self.entries {
@@ -320,7 +336,7 @@ impl CommissionDay {
 
 /// Input of `dashboard_commission_print_data` and of the sheet of kind `commission_month`: the
 /// period, the party, the print language.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
 pub struct CommissionPrintInput {
     /// The month, `YYYY-MM`; null is the current month. `period` wins when both are sent.
     #[serde(default)]
@@ -333,6 +349,10 @@ pub struct CommissionPrintInput {
     #[serde(default)]
     #[ts(optional)]
     pub party: Option<CommissionParty>,
+    /// Which goods (plan 78 D4); null is all goods. The header names a goods filter.
+    #[serde(default)]
+    #[ts(optional)]
+    pub goods: Option<AnalyticsGoods>,
     /// The print language (PRD FR-7.36).
     pub language: Language,
     /// The paper; A4 when missing.

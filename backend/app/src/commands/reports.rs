@@ -8,8 +8,10 @@ use mandi_reports::print::{
     voucher_print_data,
 };
 use mandi_reports::reports::{
-    CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput, DaySlipsInput,
-    DaySlipsPrintData, TablePrintData, collection_sheet, collection_sheet_print_data, day_slips,
+    AdhariSheet, AdhariSheetInput, AdhariSheetPrintInput, CollectionSheet, CollectionSheetInput,
+    CollectionSheetPrintInput, DaySlipsInput, DaySlipsPrintData, SalePrintData, TablePrintData,
+    adhari_sheet, adhari_sheet_print_data, collection_sheet, collection_sheet_print_data,
+    day_slips, sale_print, seller_bills,
 };
 use mandi_services::ServiceError;
 use mandi_services::auth;
@@ -203,16 +205,57 @@ pub async fn reports_buyer_parchi_print_data<R: tauri::Runtime>(
     .await
 }
 
-/// The overall sale print of one بکری or of a whole day: the seller slips and the buyer slips
-/// (plan 76 point 3b and 3c). Read only.
+/// The seller bills of one بکری, one save or a whole day: the R35 slip of each seller who sold in
+/// it, each titled with his name (plan 78 A1, A3). Only `sellers` is filled. Read only.
+#[tauri::command]
+pub async fn reports_seller_bills_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: DaySlipsInput,
+) -> Result<DaySlipsPrintData, UiError> {
+    run(app, "reports_seller_bills_print_data", move |ctx| {
+        auth::require(ctx)?;
+        seller_bills(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The whole sale print of one بکری, one save or a whole day: the sellers table (one row for each
+/// lot) and the buyers table (one row for each buyer), on one or two pages (plan 78 A4). Read only.
 #[tauri::command]
 pub async fn reports_sale_print_data<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: DaySlipsInput,
-) -> Result<DaySlipsPrintData, UiError> {
+) -> Result<SalePrintData, UiError> {
     run(app, "reports_sale_print_data", move |ctx| {
         auth::require(ctx)?;
-        day_slips(ctx.db(), &input, "print-sale-title").map_err(engine_error)
+        sale_print(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The ادھاری تفصیل of a day: the buyers who bought that day, and the whole amount owed by all
+/// buyers (plan 78 A5). Read only.
+#[tauri::command]
+pub async fn reports_adhari_sheet<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: AdhariSheetInput,
+) -> Result<AdhariSheet, UiError> {
+    run(app, "reports_adhari_sheet", move |ctx| {
+        auth::require(ctx)?;
+        adhari_sheet(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of the ادھاری تفصیل with every row, in the print language (plan 78 A5).
+#[tauri::command]
+pub async fn reports_adhari_sheet_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: AdhariSheetPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "reports_adhari_sheet_print_data", move |ctx| {
+        auth::require(ctx)?;
+        adhari_sheet_print_data(ctx.db(), &input).map_err(engine_error)
     })
     .await
 }

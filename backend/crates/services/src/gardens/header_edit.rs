@@ -6,6 +6,10 @@
 //!
 //! Example: rent 50,000 with 30,000 paid is edited to 60,000: the rent still due goes from 20,000 to
 //! 30,000 and nothing is posted.
+//!
+//! A change of the rent needs a reason and the Owner's sign, also on a garden of today (PRD FR-12.51,
+//! plan 78 D3): it is how a relief from the garden's owner is written. The first rent is kept
+//! (`ventures.rent_original_paisa`) so the relief shows as the original less the rent now.
 
 use mandi_db::edit_windows::{self, Window};
 use mandi_db::gardens as repo;
@@ -47,10 +51,67 @@ pub(crate) fn row_value(conn: &Connection, id: i64) -> Result<Value, ServiceErro
     Ok(json!({
         "name": { "name_ur": garden.name_ur, "name_en": garden.name_en },
         "item": garden.item.as_ref().map(|i| json!({ "name_ur": i.name_ur, "name_en": i.name_en })),
+        "items": repo::items_of(conn, id)?
+            .iter()
+            .map(|i| json!({ "name_ur": i.name_ur, "name_en": i.name_en }))
+            .collect::<Vec<_>>(),
         "rent_paisa": garden.rent_paisa,
         "season_end_date": garden.season_end_date,
         "note": garden.note,
     }))
+}
+
+/// Checks the reason and the sign of a change of the rent (PRD FR-12.51, plan 78 D3) and gives the sign
+/// to save (the Owner's own spelling of it), or `None` when the rent does not change. A missing reason
+/// or sign is refused first, both together. A wrong sign is refused with `ERR_SIGN_WRONG`; when `actor`
+/// is given (the save, not the preview) one audit entry `garden_rent_sign_wrong` is written first, with
+/// no typed text, and nothing changes.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `id`; `ERR_REASON_REQUIRED` on `reason`; `ERR_SIGN_REQUIRED` and `ERR_SIGN_WRONG`
+/// on `sign`.
+pub(crate) fn rent_sign(
+    ctx: &Context,
+    actor: Option<&Actor>,
+    input: &GardenHeaderEditInput,
+) -> Result<Option<String>, ServiceError> {
+    let garden = ctx
+        .db
+        .read(|conn| repo::get(conn, input.id).map_err(ServiceError::from))?
+        .ok_or_else(|| not_found("id"))?;
+    // A rent that cannot be read is reported by the edit itself, with the other mistakes.
+    let Ok(new_rent) = validate::money("rent", &input.garden.rent) else {
+        return Ok(None);
+    };
+    if new_rent.as_paisa() == garden.rent_paisa {
+        return Ok(None);
+    }
+    let typed = input.sign.as_deref().unwrap_or("");
+    let mut errors = FieldErrors::default();
+    if input.reason.trim().is_empty() {
+        errors.push(FieldError::new(ErrorCode::ErrReasonRequired, "reason"));
+    }
+    if typed.trim().is_empty() {
+        errors.push(FieldError::new(ErrorCode::ErrSignRequired, "sign"));
+    }
+    errors.finish()?;
+    let configured = ctx.db.read(crate::owner_sign::configured)?;
+    if let Some(sign) = crate::owner_sign::accepted(typed, configured.as_deref()) {
+        return Ok(Some(sign));
+    }
+    if let Some(actor) = actor {
+        ctx.db.write(|tx| {
+            ctx.db.auditor().write(
+                tx,
+                &Event::new(Some(actor.user_id), "garden_rent_sign_wrong", "garden")
+                    .entity_id(garden.id)
+                    .new_value(json!({ "number": garden.number }))
+                    .into_entry(),
+            )?;
+            Ok::<(), ServiceError>(())
+        })?;
+    }
+    Err(ServiceError::reject_field(ErrorCode::ErrSignWrong, "sign"))
 }
 
 /// The names the edit asks for, when they differ from the garden's own. The spelling check of a new
@@ -93,6 +154,7 @@ pub(crate) fn edit_in(
     window: (Option<BusinessDate>, BusinessDate),
     input: &GardenHeaderEditInput,
     learned: Option<&SpellingCheck>,
+    rent_sign: Option<&str>,
 ) -> Result<(Edited, Option<crate::spelling::Learned>), ServiceError> {
     let garden = repo::get(tx, input.id)?.ok_or_else(|| not_found("id"))?;
     if garden.version != input.version {
@@ -139,15 +201,7 @@ pub(crate) fn edit_in(
         );
     }
     let note = optional_text(&mut errors, "note", typed.note.as_deref());
-    if let Some(item_id) = typed.item_id {
-        match mandi_db::bikri::items(tx, &[item_id])?.into_iter().next() {
-            None => errors.push(FieldError::new(ErrorCode::ErrNotFound, "item_id")),
-            Some(item) if !item.is_active => {
-                errors.push(FieldError::new(ErrorCode::ErrAccountInactive, "item_id"));
-            }
-            Some(_) => {}
-        }
-    }
+    let item_ids = super::make::resolve_items(tx, &mut errors, typed)?;
     let mut found = errors.finish().err().unwrap_or_default();
     // The partners and their shares are the garden's own (PRD FR-12.29).
     let parsed = read_partners(tx, &mut found, &typed.partners)?;
@@ -170,6 +224,29 @@ pub(crate) fn edit_in(
     let (Some(name_ur), Some(name_en), Some(rent)) = (name_ur, name_en, rent) else {
         return Err(ServiceError::reject(ErrorCode::ErrInternal));
     };
+    // PRD FR-12.51: a change of the rent always has a reason and the Owner's sign, also today.
+    let rent_changed = rent.as_paisa() != garden.rent_paisa;
+    if rent_changed {
+        // A closed garden is reopened (its closing undone) before its rent changes (PRD FR-12.51).
+        if garden.status != "open" {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrGardenClosed,
+                "rent",
+            ));
+        }
+        if reason.is_none() {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrReasonRequired,
+                "reason",
+            ));
+        }
+        if rent_sign.is_none() {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrSignRequired,
+                "sign",
+            ));
+        }
+    }
     let user = actor.user_id;
     let now = ctx.now_text();
     let old_value = row_value(tx, garden.id)?;
@@ -187,14 +264,16 @@ pub(crate) fn edit_in(
             search_ur: &search_ur,
             search_en: &search_en,
             search_phonetic: &search_phonetic,
-            item_id: typed.item_id,
+            item_id: item_ids.first().copied(),
             rent_paisa: rent.as_paisa(),
+            rent_was_paisa: rent_changed.then_some(garden.rent_paisa),
             season_end_date: season_iso.as_deref(),
             note: note.as_deref(),
         },
         user,
         &now,
     )?;
+    mandi_db::gardens::set_items(tx, garden.id, &item_ids, user, &now)?;
     edit_windows::close(tx, Window::Venture, garden.id)?;
     // The garden's account carries its names (PRD FR-12.34).
     if name_ur != garden.name_ur || name_en != garden.name_en {
@@ -224,7 +303,8 @@ pub(crate) fn edit_in(
     if let Some(reason) = &reason {
         event = event.reason(reason);
     }
-    event = event.sign(crate::day::fix_sign(tx, &garden.entry_date)?.as_deref());
+    let fix = crate::day::fix_sign(tx, &garden.entry_date)?;
+    event = event.sign(rent_sign.or(fix.as_deref()));
     ctx.db.auditor().write(tx, &event.into_entry())?;
     let version = repo::get(tx, garden.id)?
         .map(|g| g.version)

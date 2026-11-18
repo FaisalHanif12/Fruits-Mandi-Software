@@ -1,7 +1,7 @@
 //! The روکڑ بک (PRD 16.1, plan 17). Needs the signed-in Owner. Read only.
 
-use mandi_services::core::cashbook::{Cashbook, CashbookInput};
-use mandi_services::{auth, cashbook};
+use mandi_services::core::cashbook::{CapitalWhere, Cashbook, CashbookInput};
+use mandi_services::{auth, cashbook, partner_code};
 
 use super::run;
 use crate::error::UiError;
@@ -17,6 +17,21 @@ pub async fn cashbook_get<R: tauri::Runtime>(
     run(app, "cashbook_get", move |ctx| {
         auth::require(ctx)?;
         cashbook::get(ctx, &input)
+    })
+    .await
+}
+
+/// Where the partners' money is now and whose it is (PRD FR-16.14 v1.43, plan 78 E): the card on the
+/// روکڑ page. Behind the partner code (PRD FR-17.11, Code Standards S8). Read only.
+/// Errors: `ERR_PARTNER_LOCKED`.
+#[tauri::command]
+pub async fn cashbook_capital_where<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<CapitalWhere, UiError> {
+    run(app, "cashbook_capital_where", move |ctx| {
+        auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
+        cashbook::capital_where(ctx)
     })
     .await
 }

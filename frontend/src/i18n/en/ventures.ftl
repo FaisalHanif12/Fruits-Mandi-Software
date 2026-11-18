@@ -60,3 +60,17 @@ ventures-parts-no-posting = Every part is from a pocket, so nothing is posted an
 
 # review: pending
 ventures-credits-none = No money comes in yet.
+
+## Default or custom shares of a new trip or garden (plan 78 D1, PRD FR-12.29).
+
+# review: pending
+ventures-share-mode-label = How the shares are set
+
+# review: pending
+ventures-share-mode-default = Default { -hissa }s
+
+# review: pending
+ventures-share-mode-custom = Custom { -hissa }s
+
+# review: pending
+ventures-share-mode-custom-help = Type each partner's share, up to 2 decimals. Use 0 for a partner who is not in it. The total must be exactly 100%.

@@ -4,6 +4,8 @@
   "dir": "ltr",
   "paper": "a4",
   "title_id": "report-r31-title",
+  "party": null,
+  "named_title_id": null,
   "filters": [
     {
       "label_id": "report-filter-partner",
@@ -49,14 +51,14 @@
       "label_id": "partners-statement-plus",
       "cell": {
         "type": "money",
-        "text": "51,646"
+        "text": "56,146"
       }
     },
     {
       "label_id": "partners-statement-minus",
       "cell": {
         "type": "money",
-        "text": "900"
+        "text": "5,400"
       }
     },
     {
@@ -68,6 +70,96 @@
     }
   ],
   "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "01-09-2026"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-advance"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-advance-out",
+          "args": [
+            {
+              "name": "amount_paisa",
+              "value": {
+                "type": "text",
+                "text": "15,000"
+              }
+            },
+            {
+              "name": "amount",
+              "value": {
+                "type": "text",
+                "text": "15,000"
+              }
+            },
+            {
+              "name": "share_bps",
+              "value": {
+                "type": "text",
+                "text": "3,000"
+              }
+            },
+            {
+              "name": "share",
+              "value": {
+                "type": "text",
+                "text": "30"
+              }
+            },
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": "Rahim"
+              }
+            },
+            {
+              "name": "packing",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "-4,500"
+        },
+        {
+          "type": "money",
+          "text": "-4,500"
+        }
+      ],
+      "kind": "normal"
+    },
     {
       "cells": [
         {
@@ -122,6 +214,96 @@
         {
           "type": "money",
           "text": "1,184"
+        },
+        {
+          "type": "money",
+          "text": "-3,316"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-advance"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-advance-back",
+          "args": [
+            {
+              "name": "amount_paisa",
+              "value": {
+                "type": "text",
+                "text": "15,000"
+              }
+            },
+            {
+              "name": "amount",
+              "value": {
+                "type": "text",
+                "text": "15,000"
+              }
+            },
+            {
+              "name": "share_bps",
+              "value": {
+                "type": "text",
+                "text": "3,000"
+              }
+            },
+            {
+              "name": "share",
+              "value": {
+                "type": "text",
+                "text": "30"
+              }
+            },
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": "Rahim"
+              }
+            },
+            {
+              "name": "packing",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "4,500"
         },
         {
           "type": "money",
@@ -350,7 +532,7 @@
     }
   ],
   "tables": [],
-  "row_count": "4",
+  "row_count": "6",
   "totals_label_id": "report-total",
   "totals": [
     {

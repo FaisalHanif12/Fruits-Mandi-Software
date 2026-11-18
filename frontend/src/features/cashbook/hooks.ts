@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { VOUCHERS_KEY, vouchersPreview } from '../vouchers';
 import {
+  cashbookCapitalWhere,
   cashbookGet,
   expensePreview,
   generalPreview,
@@ -80,6 +81,20 @@ export function useCashbook(
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
+  });
+}
+
+/**
+ * Where the partners' money is and whose it is (PRD FR-16.14, plan 78 E). It is read only when the card is open, and
+ * read again after every save (the key starts with `cashbook`). A locked partner section is an error the card shows
+ * as the code box (`ErrorState`).
+ */
+export function useCapitalWhere(enabled: boolean) {
+  return useQuery({
+    queryKey: [...CASHBOOK_KEY, 'capital-where'],
+    queryFn: cashbookCapitalWhere,
+    enabled,
+    staleTime: 0,
   });
 }
 

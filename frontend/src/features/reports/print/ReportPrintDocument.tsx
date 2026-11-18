@@ -144,7 +144,7 @@ function roomOf(sheet: HTMLElement): number {
  * again when the data, the language or the paper change. All the tables of one scope get the SAME zoom,
  * the smallest one any of them needs, so the buyers' list and the sellers' list of a day are in one size.
  */
-function useFitToSheet<E extends HTMLElement>(key: unknown) {
+export function useFitToSheet<E extends HTMLElement>(key: unknown) {
   const ref = useRef<E>(null);
   useLayoutEffect(() => {
     const scope = ref.current;
@@ -175,7 +175,7 @@ function useFitToSheet<E extends HTMLElement>(key: unknown) {
 }
 
 /** What one printed table is drawn from: the main table, or one of the short tables of a day (R34). */
-interface TableBlockData {
+export interface TableBlockData {
   columns: PrintTable['columns'];
   headings?: PrintTable['headings'];
   rows: PrintTable['rows'];
@@ -199,7 +199,7 @@ interface TableBlockProps {
  * main table, a part of it (the day total sheet is cut after its sellers' lines) and each short table
  * of a day are drawn by this one function, so a figure, a name and a balance look the same in all.
  */
-function TableBlock({ data, block, showHead = true, dense = false, ref }: TableBlockProps) {
+export function TableBlock({ data, block, showHead = true, dense = false, ref }: TableBlockProps) {
   const { l10n } = useLocalization();
   // The buyers' list (R5) writes each sale line as "(item qty . rate)", like the client's own print.
   const buyersList = data.report === 'R5';

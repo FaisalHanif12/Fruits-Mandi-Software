@@ -41,7 +41,7 @@ import {
 } from '../../../shared/grid';
 import { useSingleFlight } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
-import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, formNavigationProps, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
   DateInput,
@@ -108,7 +108,6 @@ function CollectionRound({ list, date, carried, onSaved, saveSlot }: RoundProps)
   const { l10n } = useLocalization();
   const language = useLanguage();
   const grouping = useGrouping();
-  const navigate = useNavigate();
   const rows = useMemo(() => collectionRows(list), [list]);
   const [start] = useState(() => {
     const store = createEntryStore(
@@ -217,9 +216,6 @@ function CollectionRound({ list, date, carried, onSaved, saveSlot }: RoundProps)
     void submit();
   };
   useShortcut(SHORTCUTS.save, submitNow);
-  useEscape('leave', () => {
-    void navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });
-  });
 
   const lines = Object.entries(problems).flatMap(([rowId, items]) => {
     const row = rowOf.get(rowId);
@@ -376,14 +372,6 @@ export function CollectionPage() {
           >
             <Printer aria-hidden="true" className="size-icon-md" />
             <Localized id="vouchers-print" />
-          </Button>
-          <Button
-            shortcut={SHORTCUTS.back}
-            onClick={() => {
-              void navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });
-            }}
-          >
-            <Localized id="vouchers-collection-back" />
           </Button>
           {/* The round draws its "save all" button here. */}
           <span ref={setSaveSlot} />

@@ -30,9 +30,15 @@ export type GardenInput = {
    */
   date: string;
   /**
-   * The main fruit. Null if none.
+   * The main fruit. Null if none. Used when `item_ids` is empty.
    */
   item_id: number | null;
+  /**
+   * The items of the garden, one or several (plan 78 D2). When it is not empty it wins over
+   * `item_id`, and its first item is the main fruit. Each must exist and be active (`ERR_NOT_FOUND`,
+   * `ERR_ACCOUNT_INACTIVE` on `item_ids[i]`). A repeated item counts once.
+   */
+  item_ids: Array<number>;
   /**
    * The full rent (ٹھیکہ) for the season, whole rupees, more than 0.
    */

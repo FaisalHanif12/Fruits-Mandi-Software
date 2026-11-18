@@ -5,7 +5,6 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { isoToDisplayDate } from '../../../shared/format';
-import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
 import { Button, Card } from '../../../shared/ui';
 import type { RuleRow } from '../types';
 import { RuleSummary } from './RuleSummary';
@@ -13,10 +12,6 @@ import { RuleSummary } from './RuleSummary';
 export function DefaultRuleView({ rule }: { rule: RuleRow }) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
-  const goBack = () => {
-    void navigate({ to: '/index/rules' });
-  };
-  useEscape('leave', goBack);
   return (
     <div className="flex max-w-form flex-col gap-5">
       <Localized id="rules-default-title">
@@ -38,9 +33,6 @@ export function DefaultRuleView({ rule }: { rule: RuleRow }) {
           <p className="type-body" />
         </Localized>
         <div className="flex flex-wrap gap-2">
-          <Button shortcut={SHORTCUTS.back} onClick={goBack}>
-            <Localized id="common-back" />
-          </Button>
           <Button
             variant="primary"
             onClick={() => {

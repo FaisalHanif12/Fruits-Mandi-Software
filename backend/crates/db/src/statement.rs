@@ -827,6 +827,10 @@ pub struct GardenCloseFigures {
     pub share_bps: i64,
     /// His part of the closing, signed: his money back, paisa.
     pub back_paisa: i64,
+    /// The rent of the garden now, paisa (PRD FR-12.51).
+    pub rent_paisa: i64,
+    /// The rent it was made with, when the Owner has changed it since, paisa.
+    pub rent_original_paisa: Option<i64>,
 }
 
 /// The figures of these closings for one partner, read from stored rows only. A closing the partner
@@ -880,6 +884,11 @@ pub fn garden_close_figures(
             params![garden_id, partner_id],
             |r| r.get(0),
         )?;
+        let (rent, rent_original): (i64, Option<i64>) = conn.query_row(
+            "SELECT rent_paisa, rent_original_paisa FROM ventures WHERE id = ?1",
+            [garden_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?;
         out.insert(
             *id,
             GardenCloseFigures {
@@ -888,6 +897,8 @@ pub fn garden_close_figures(
                 paid_paisa: paid,
                 share_bps,
                 back_paisa: back,
+                rent_paisa: rent,
+                rent_original_paisa: rent_original,
             },
         );
     }

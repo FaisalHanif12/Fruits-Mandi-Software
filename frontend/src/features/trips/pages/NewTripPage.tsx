@@ -21,7 +21,7 @@ import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { formatBps } from '../../../shared/format';
 import { useFocusFirstField, useRefusalIntoView, useSingleFlight } from '../../../shared/hooks';
-import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
   Card,
@@ -34,6 +34,8 @@ import {
   LoadingState,
   Notice,
   PartnerSharesEditor,
+  ShareModeChoice,
+  type ShareMode,
   fieldError,
   showToast,
   InfoHint,
@@ -72,6 +74,8 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
   const flight = useSingleFlight();
   const start = useMemo(() => newTripDraft(defaults, today), [defaults, today]);
   const [draft, setDraft] = useState<TripDraft>(start);
+  // Default shares (the firm's, or the last trip's) are shown and cannot be typed in; custom shares can (plan 78 D1).
+  const [shareMode, setShareMode] = useState<ShareMode>('default');
   const [refusal, setRefusal] = useState<{ error: UiError; text: string } | null>(null);
   // The id of the trip once it is made: the leave guard is off by then, and the trip opens.
   const [createdId, setCreatedId] = useState<number | null>(null);
@@ -101,6 +105,21 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
     }));
   };
 
+  /** Back to the default shares: every share is what it was when the form opened, each source stays as chosen. */
+  const chooseShareMode = (mode: ShareMode) => {
+    if (mode === 'default') {
+      setDraft((previous) => ({
+        ...previous,
+        partners: previous.partners.map((row) => ({
+          ...row,
+          share:
+            start.partners.find((first) => first.partner.id === row.partner.id)?.share ?? row.share,
+        })),
+      }));
+    }
+    setShareMode(mode);
+  };
+
   /** True when the trip was made. A refusal is shown in the form, at the fields. */
   const save = async (): Promise<boolean> => {
     if (!canSave) return false;
@@ -125,9 +144,6 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
   };
   const navigation = useFormNavigation(saveNow);
   useShortcut(SHORTCUTS.save, saveNow);
-  useEscape('leave', () => {
-    void navigate({ to: '/trips' });
-  });
 
   return (
     <div ref={rootRef} className="flex max-w-page flex-col gap-4">
@@ -210,16 +226,34 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
               <Localized id="trips-new-no-partners" />
             </Notice>
           ) : (
-            <PartnerSharesEditor
-              rows={draft.partners}
-              error={error}
-              onShareChange={(index, share) => {
-                patchPartner(index, { share });
-              }}
-              onSourceChange={(index, source) => {
-                patchPartner(index, { source });
-              }}
-            />
+            <div className="flex flex-col gap-3">
+              <ShareModeChoice
+                mode={shareMode}
+                onChange={chooseShareMode}
+                defaultHelp={
+                  <Localized
+                    id={
+                      defaults.from_last_trip
+                        ? 'trips-share-default-last'
+                        : 'trips-share-default-firm'
+                    }
+                  >
+                    <p className="type-body text-ink-muted" />
+                  </Localized>
+                }
+              />
+              <PartnerSharesEditor
+                rows={draft.partners}
+                error={error}
+                sharesLocked={shareMode === 'default'}
+                onShareChange={(index, share) => {
+                  patchPartner(index, { share });
+                }}
+                onSourceChange={(index, source) => {
+                  patchPartner(index, { source });
+                }}
+              />
+            </div>
           )}
           <SharesTotal
             state={totalState}

@@ -19,6 +19,14 @@
       "name_ur": "کیلا",
       "name_en": "Banana"
     },
+    "items": [
+      {
+        "id": 1,
+        "code": "0040",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      }
+    ],
     "rent_paisa": 5000000,
     "season_end_date": null,
     "note": null,
@@ -53,6 +61,10 @@
     "paid_shop_paisa": 0,
     "paid_pocket_paisa": 0,
     "rent_due_paisa": 5000000,
+    "rent_original_paisa": null,
+    "relief_paisa": 0,
+    "refunds_paisa": 0,
+    "owner_owes_paisa": 0,
     "money_in_paisa": 0,
     "other_shop_paisa": 0,
     "balance_paisa": 0,

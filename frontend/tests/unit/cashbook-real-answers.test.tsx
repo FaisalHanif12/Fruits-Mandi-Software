@@ -84,8 +84,8 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
       expect(visible(list.textContent)).toContain('50,000');
     });
     const text = visible(list.textContent);
-    // The first row is the opening entry; its other side is a named account.
-    expect(text).toContain(message(language, 'cashbook-kind-opening'));
+    // The first row is the opening cash, said as what it is (plan 78 E); its other side is a named account.
+    expect(text).toContain(message(language, 'cashbook-row-opening-cash'));
     expect(text).toContain(nameOf(language, 'ابتدائی فرق', 'Opening Difference'));
     expect(text).toContain(
       message(language, 'cashbook-kind-number', {

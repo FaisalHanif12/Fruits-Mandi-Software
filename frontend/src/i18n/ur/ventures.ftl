@@ -60,3 +60,17 @@ ventures-parts-no-posting = ہر حصہ جیب سے ہے، اس لیے کچھ پ
 
 # review: pending
 ventures-credits-none = ابھی کوئی رقم نہیں آئی۔
+
+## Default or custom shares of a new trip or garden (plan 78 D1, PRD FR-12.29).
+
+# review: pending
+ventures-share-mode-label = حصوں کا طریقہ
+
+# review: pending
+ventures-share-mode-default = عام { -hissa }
+
+# review: pending
+ventures-share-mode-custom = اپنے { -hissa }
+
+# review: pending
+ventures-share-mode-custom-help = ہر شراکت دار کا حصہ لکھیں، دو اعشاریہ تک۔ جو شامل نہ ہو اس کا حصہ 0 رکھیں۔ کل ٹھیک 100 فیصد ہونا چاہیے۔

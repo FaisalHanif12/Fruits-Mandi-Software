@@ -157,7 +157,7 @@ export function useChangePurchaseSplit() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SplitInput) => purchasesChangeSplit(input),
-    // The ready lots and the stock lists change with the split: everything is read again.
+    // The goods to load and the stock lists change with the split: everything is read again.
     onSuccess: () => readAgainAfterPurchase(queryClient),
   });
 }

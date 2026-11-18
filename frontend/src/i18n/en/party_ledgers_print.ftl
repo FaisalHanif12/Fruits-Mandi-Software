@@ -35,7 +35,7 @@ print-statement-item = <item>{ $item }</item> <num>{ $qty }</num> <num>×</num> 
 print-statement-item-weight = <item>{ $item }</item> <num>{ $weight }</num> kg <num>×</num> <num>{ $rate }</num> <num>=</num> <num>{ $amount }</num>
 
 # review: pending
-print-statement-paid-on-spot = { -mauqa-par-jama }
+print-statement-paid-on-spot = Cash
 
 # The day's bill of a buyer and the day's net sale of a seller (the backend sends one of the two).
 # review: pending
@@ -103,7 +103,7 @@ statement-print-button = Statement print
 statement-print-title = Statement print
 
 # review: pending
-statement-print-help = A short, clean print of this party's ledger for a period, the oldest date first. Choose the period, then Print or Save as PDF.
+statement-print-help = A short, clean print of this party's statement for a period: one row for each entry, the opening balance first, the oldest first. Choose the period, then Print or Save as PDF.
 
 # review: pending
 statement-print-period = Period
@@ -129,3 +129,44 @@ statement-print-to = To
 # The dates the print is for, under the choice of the period.
 # review: pending
 statement-print-range = <num>{ $from }</num> to <num>{ $to }</num>
+
+## Plan 78 A7, B3: the statement with one row for each entry (PRD FR-12.47, FR-19.16).
+
+# review: pending
+print-statement-rows-title = Statement
+
+# $name: the name of the party in the print language, with his tag.
+# review: pending
+print-statement-named-title = Statement: { $name }
+
+# review: pending
+print-statement-rows-total = { -meezan }
+
+# The balance at the start of a period that starts after the first entry.
+# review: pending
+print-statement-rows-brought-forward = { -sabiqa-raqam }
+
+# review: pending
+print-statement-rows-col-date = Date
+
+# review: pending
+print-statement-rows-col-entry = Entry
+
+# review: pending
+print-statement-rows-col-detail = Details
+
+# review: pending
+print-statement-rows-col-debit = { -banaam }
+
+# review: pending
+print-statement-rows-col-credit = { -jama }
+
+# review: pending
+print-statement-rows-col-balance = { -baqaya }
+
+# The statement print box (plan 78 A7): two choices that start off.
+# review: pending
+statement-print-items = Print the items of each entry too
+
+# review: pending
+statement-print-history = Print cancelled entries too

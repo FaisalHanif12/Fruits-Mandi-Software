@@ -156,8 +156,6 @@ gardens-preview-failed = The numbers could not be worked out
 gardens-created = { $code } has been made
 
 ## One garden.
-# review: pending
-gardens-back = Back to the gardens
 # $number: the number of the garden.
 # review: pending
 gardens-detail-title = { $code }
@@ -402,16 +400,16 @@ gardens-arrival-qty = { -nag } arrived
 gardens-arrival-qty-hint = A whole number. You can type a sum, for example 20+25.
 
 # review: pending
-gardens-arrival-sell-date-hint = Starts as the day the goods arrived. From this day they come into every new { -bikri } until they are sold.
+gardens-arrival-sell-date-hint = Starts as the day the goods arrived. Goods that wait are listed by this day, earliest first, when you add them to a { -bikri }.
 
 # review: pending
-gardens-arrival-posts-nothing = These goods carry no money. They stay in the stock of the { -bagh } until they are sold in a { -bikri } or written off. A new { -bikri } holds a lot for them from the { -sell-date }.
+gardens-arrival-posts-nothing = These goods carry no money. They stay in the stock of the { -bagh } until they are sold in a { -bikri } or written off. Add them to a { -bikri } by hand when you sell them.
 
 # review: pending
 gardens-arrival-title = { -maal-aaya }
 
 # review: pending
-gardens-arrival-help = The goods that came from this { -bagh } and are not sold yet. A new { -bikri } holds a lot for each one on its { -sell-date }. What is not sold comes again the next day.
+gardens-arrival-help = The goods that came from this { -bagh } and are not sold yet. They wait here until you add them to a { -bikri } by hand and sell them. There they are listed by their { -sell-date }.
 
 # review: pending
 gardens-arrival-failed = The goods arrived could not be read
@@ -474,7 +472,7 @@ gardens-arrival-sell-date-title = Change the { -sell-date }
 
 # $number: the entry.
 # review: pending
-gardens-arrival-sell-date-text = From this day the goods of { $number } come into every new { -bikri } until they are sold. The day cannot be before the day the goods arrived.
+gardens-arrival-sell-date-text = The goods of { $number } are listed by this day when you add them to a { -bikri }, earliest first. The day cannot be before the day the goods arrived.
 
 # review: pending
 gardens-arrival-reason = Reason
@@ -535,3 +533,53 @@ gardens-numbers-left-after = Left in the entry after this
 # The button on the facts of a garden that opens its names, main fruit, rent, season end and note for change (plan 44).
 # review: pending
 gardens-header-edit = Change the garden details
+
+# What the default shares of a new garden are (plan 78 D1). They cannot be typed in; "Custom shares" opens them.
+# review: pending
+gardens-share-default = The firm's { -hissa }s or the last garden's. To change them, choose "Custom { -hissa }s".
+
+## The owner's refund after a rent relief (plan 78 D3, PRD FR-12.51).
+
+# review: pending
+gardens-kind-refund = Relief refund
+
+# review: pending
+gardens-type-refund = Relief refund
+
+# $number: the number of the entry.
+# review: pending
+gardens-saved-refund = Relief refund { $number } has been saved
+
+# review: pending
+gardens-refund-amount = Money paid back by the owner
+
+# review: pending
+gardens-refund-amount-hint = The owner pays back what he owes the garden after the relief. It comes into the cash book and counts as the garden's money in.
+
+## A change of the rent: relief from the owner (plan 78 D3, PRD FR-12.51).
+
+# review: pending
+gardens-rent-change-help = A change of the { -thaika } always needs a reason and your { -dastakhat }, also for a garden of today. Nothing is posted: a lower { -thaika } is relief from the owner, and the rent still due, the running balance and the result follow it.
+
+# review: pending
+gardens-rent-change-reason = Why the { -thaika } changes
+
+# review: pending
+gardens-rent-change-reason-hint = For example: relief received from the owner.
+
+# review: pending
+gardens-rent-sign-hint = Only the Owner's { -dastakhat } changes the { -thaika }.
+
+## The figures of a rent relief on the garden card (plan 78 D3, PRD FR-12.51).
+
+# review: pending
+gardens-fact-rent-original = { -thaika } when the garden was made
+
+# review: pending
+gardens-fact-relief = Relief from the owner
+
+# review: pending
+gardens-fact-refunds = Paid back by the owner
+
+# review: pending
+gardens-fact-owner-owes = The owner owes the garden

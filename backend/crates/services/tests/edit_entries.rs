@@ -825,6 +825,7 @@ fn garden_of_two(w: &World) -> mandi_services::core::gardens::GardenRow {
             ],
             date: "10-10-2026".into(),
             item_id: Some(w.banana),
+            item_ids: Vec::new(),
             rent: "50,000".into(),
             season_end: None,
             note: None,
@@ -1221,6 +1222,7 @@ fn a_garden_header_is_edited_and_its_account_and_rent_follow() {
             ],
             date: "10-10-2026".into(),
             item_id: Some(w.banana),
+            item_ids: Vec::new(),
             rent: rent.into(),
             season_end: None,
             note: Some("نیا نوٹ".into()),
@@ -1230,7 +1232,9 @@ fn a_garden_header_is_edited_and_its_account_and_rent_follow() {
             parts: Vec::new(),
             confirm_cash_below_zero: false,
         },
-        reason: String::new(),
+        // A change of the rent always has a reason and the Owner's sign (PRD FR-12.51, plan 78 D3).
+        reason: "rent changed".into(),
+        sign: Some("adnan".into()),
     };
     let preview =
         edit::garden_header_preview(ctx, &input("60,000", "Shahpur Bagh", garden.version)).unwrap();
@@ -1238,7 +1242,7 @@ fn a_garden_header_is_edited_and_its_account_and_rent_follow() {
     pair(
         "gardens_header_edit_preview_rent_60000",
         &json!({
-            "id": garden.id, "version": garden.version, "reason": "",
+            "id": garden.id, "version": garden.version, "reason": "rent changed", "sign": "adnan",
             "garden": {
                 "name_ur": "شاہ پور باغ", "name_en": "Shahpur Bagh",
                 "confirmed_rules_words": ["شاہ", "پور", "باغ", "Shahpur", "Garden", "Bagh"],

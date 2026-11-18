@@ -20,7 +20,15 @@ import {
   SAVED_EVENT1,
   SAVE_EVENT1_REQUEST,
 } from '../helpers/bikri-real';
-import { named, openBook, salesGrid, textOf, typeEvent1Lot } from '../helpers/bikri-screen';
+import {
+  named,
+  names,
+  openBook,
+  salesGrid,
+  textOf,
+  tickAdvance,
+  typeEvent1Lot,
+} from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -189,6 +197,8 @@ describe.each(LANGUAGES)('saving Event 1 as the backend’s file has it (%s)', (
     await waitFor(() => {
       expect(backend.previews.at(-1)?.lots[0]?.sales[1]?.seller_rate).toBe('580');
     });
+    // Event 1 takes the advance off this sale: the munshi ticks it in the summary (plan 78 C3).
+    await tickAdvance(user, language, names(language).rahim);
     // The backend’s own answer for this save, with the number it gave.
     vi.mocked(bikriApi.bikriSave).mockResolvedValueOnce(SAVED_EVENT1);
     press('F10');

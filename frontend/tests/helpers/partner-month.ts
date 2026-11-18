@@ -43,6 +43,9 @@ const COLUMN_OF: Record<StatementDetail, ColumnKey | null> = {
   lent_given: 'taken_returned_paisa',
   lent_returned: 'taken_returned_paisa',
   linked_other: 'taken_returned_paisa',
+  // An advance to a seller goes out of his total by his part and comes back when it is settled (plan 78 B4).
+  advance_out: 'advances_paisa',
+  advance_back: 'advances_paisa',
   lent_share_note: null,
 };
 
@@ -53,6 +56,7 @@ const COLUMN_KEYS: readonly ColumnKey[] = [
   'fruit_paisa',
   'taken_returned_paisa',
   'capital_paisa',
+  'advances_paisa',
 ];
 
 type Sums = Record<ColumnKey, number>;
@@ -64,6 +68,7 @@ const emptySums = (): Sums => ({
   fruit_paisa: 0,
   taken_returned_paisa: 0,
   capital_paisa: 0,
+  advances_paisa: 0,
 });
 
 function columnsOf(sums: Sums): StatementColumns {
@@ -75,6 +80,7 @@ function columnsOf(sums: Sums): StatementColumns {
     fruit_paisa: paisaForTest(sums.fruit_paisa),
     taken_returned_paisa: paisaForTest(sums.taken_returned_paisa),
     capital_paisa: paisaForTest(sums.capital_paisa),
+    advances_paisa: paisaForTest(sums.advances_paisa),
     net_paisa: paisaForTest(net),
   };
 }

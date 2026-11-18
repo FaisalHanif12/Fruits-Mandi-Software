@@ -26,7 +26,7 @@ import {
   type ListContext,
 } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
-import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
+import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   AccountPicker,
@@ -111,9 +111,6 @@ function StockBody({ saved, remember }: MemoryProps) {
     // The lot is carried onto a new بکری, where new lots can be added beside it (plan 76 point 1).
     void navigate({ to: '/bikri/book', search: { carry: row.lot_id } });
   };
-  useEscape('leave', () => {
-    void navigate({ to: '/' });
-  });
 
   // The total under the balance column is the backend's figure (Code Standards F19). It is a
   // count of نگ, not an amount, so it is passed as text.

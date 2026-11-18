@@ -29,7 +29,7 @@ export function PartyDay({ accountId, date, onBack }: PartyDayProps) {
   const [printing, setPrinting] = useState(false);
   // The names, the kind and the marks of the party come with his statement (the same answer level 2
   // read, so it is usually in the cache).
-  const statement = usePartyStatement(accountId, '', '');
+  const statement = usePartyStatement(accountId, '', '', false);
   const head = statement.data?.pages[0]?.head ?? null;
   const kind: LedgerSide | null = head === null ? null : head.kind;
 

@@ -20,10 +20,10 @@ use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::partners::{
-    CAPITAL_CONTROL, DRAWINGS_CONTROL, MAX_PARTNERS, PartnerCreateInput, PartnerDetail,
-    PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput, PartnersList,
-    PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed, check_shares, not_100,
-    read_shares, venture_account,
+    CAPITAL_CONTROL, DRAWINGS_CONTROL, MAX_PARTNERS, OpeningCapitalWhere, PartnerCreateInput,
+    PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput,
+    PartnersList, PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed, check_shares,
+    not_100, read_shares, venture_account,
 };
 use mandi_domain::core::text;
 use mandi_domain::core::translit::Kind;
@@ -40,7 +40,7 @@ pub use statement::{first_event_date, statement, statement_day, statement_month}
 
 pub use rows::split_entry;
 
-use crate::accounts::apply_opening;
+use crate::accounts::{OpeningCounter, apply_opening_with};
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::context::Context;
@@ -231,7 +231,9 @@ fn names_of(name_ur: &str, name_en: &str) -> (Option<String>, Option<String>, Fi
 
 /// Adds a partner with his capital account (0602xxxx) and drawings account (0603xxxx), both
 /// named in two scripts. He has no share (0 bps) until [`set_shares`]. An opening capital, if
-/// given, is posted as the opening credit of his capital account dated today (PRD FR-10.9).
+/// given, is posted as the opening credit of his capital account dated today, against روکڑ by
+/// default or against ابتدائی فرق when `opening_capital_where` says it is counted elsewhere (PRD
+/// FR-10.9, PRD 17.1 v1.43).
 ///
 /// # Errors
 /// The name codes (`name_ur`, `name_en`); `ERR_SPELLING_UNCONFIRMED`; the money codes on
@@ -319,7 +321,11 @@ pub fn create(
             &now,
         )?;
         if let Some(amount) = opening {
-            post_opening_capital(ctx, actor, tx, capital_id, today, amount, &now)?;
+            let counter = match input.opening_capital_where.unwrap_or_default() {
+                OpeningCapitalWhere::Cash => OpeningCounter::Cash,
+                OpeningCapitalWhere::CountedElsewhere => OpeningCounter::Difference,
+            };
+            post_opening_capital(ctx, actor, tx, capital_id, (today, amount, counter), &now)?;
         }
         let learned = checked.learn(ctx, actor, tx)?;
         ctx.db.auditor().write(
@@ -333,6 +339,7 @@ pub fn create(
                     "drawings_account_id": drawings_id,
                     "venture_account_id": venture_id,
                     "opening_capital_paisa": opening.map(Paisa::as_paisa),
+                    "opening_capital_where": opening.map(|_| input.opening_capital_where.unwrap_or_default()),
                 }))
                 .into_entry(),
         )?;
@@ -352,14 +359,14 @@ pub fn create(
 }
 
 /// Posts the opening capital of a new partner through the accounts opening service (PRD
-/// FR-10.9): his capital account جمع, ابتدائی فرق بنام, dated today.
+/// FR-10.9, PRD 17.1 v1.43): his capital account جمع, dated today, and on the other side روکڑ بنام when
+/// the money is in cash (the default) or ابتدائی فرق بنام when it is already counted elsewhere.
 fn post_opening_capital(
     ctx: &Context,
     actor: &Actor,
     tx: &Connection,
     capital_id: i64,
-    today: BusinessDate,
-    amount: Paisa,
+    (today, amount, counter): (BusinessDate, Paisa, OpeningCounter),
     now: &str,
 ) -> Result<(), ServiceError> {
     let facts = mandi_db::accounts::facts(tx, capital_id)?
@@ -370,7 +377,7 @@ fn post_opening_capital(
         cr: amount,
         is_advance: false,
     };
-    apply_opening(
+    apply_opening_with(
         ctx,
         tx,
         actor.user_id,
@@ -379,6 +386,7 @@ fn post_opening_capital(
         &wanted,
         "opening_capital",
         OpeningDay::Open,
+        counter,
     )
     .map_err(on_opening_capital)?;
     ctx.db.auditor().write(

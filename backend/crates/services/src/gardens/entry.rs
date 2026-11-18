@@ -11,6 +11,7 @@
 use mandi_db::accounts as account_repo;
 use mandi_db::arrivals as arrival_repo;
 use mandi_db::bikri::edit as edit_repo;
+use mandi_db::gardens as repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as vrepo, NewEntry};
@@ -20,7 +21,7 @@ use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::gardens::{
     GardenEntryCancelInput, GardenEntryCancelled, GardenEntryInput, GardenEntryNumbers,
     GardenEntryPreview, GardenEntrySaved, GardenHistoryKind, GardenOtherSaleInput,
-    GardenPaymentInput,
+    GardenPaymentInput, GardenRefundInput,
 };
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
@@ -66,6 +67,8 @@ pub(super) enum Body {
         arrival_id: Option<i64>,
         moved: i64,
     },
+    /// Money the owner pays back after a rent relief, with its journal entry (plan 78 D3).
+    Refund { entry: BalancedEntry },
 }
 
 /// An entry after the checks.
@@ -165,6 +168,26 @@ pub(super) fn plan(
     window: (Option<BusinessDate>, BusinessDate),
     input: &GardenEntryInput,
 ) -> Result<Plan, ServiceError> {
+    plan_replacing(conn, window, input, None)
+}
+
+/// The entry an edit replaces: its kind and amount. The old row is still `saved` while the edit
+/// plans the new one, so the cap of a refund (PRD FR-12.51) leaves its amount out.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Replacing {
+    /// `refund`, the one kind with a cap; any other kind needs no care.
+    pub(super) kind: GardenHistoryKind,
+    /// Its amount.
+    pub(super) amount: Paisa,
+}
+
+/// [`plan`] for an edit: `replacing` is the saved entry the new one takes the place of.
+pub(super) fn plan_replacing(
+    conn: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    input: &GardenEntryInput,
+    replacing: Option<Replacing>,
+) -> Result<Plan, ServiceError> {
     match input {
         GardenEntryInput::Installment(payment) => {
             plan_payment_entry(conn, window, payment, GardenHistoryKind::Installment)
@@ -173,7 +196,106 @@ pub(super) fn plan(
             plan_payment_entry(conn, window, payment, GardenHistoryKind::Cost)
         }
         GardenEntryInput::OtherSale(sale) => plan_other_sale(conn, window, sale),
+        GardenEntryInput::Refund(refund) => plan_refund(conn, window, refund, replacing),
     }
+}
+
+/// A refund of the garden's owner after a rent relief (PRD FR-12.51, plan 78 D3): روکڑ بنام and the
+/// garden's account جمع. More than the owner owes is refused (`ERR_RETURN_EXCEEDS_OPEN`, value `open`).
+///
+/// Example: the owner owes 5,00,000; a refund of 5,00,000 puts 5,00,000 into cash and into the garden's
+/// money in, and he owes 0.
+fn plan_refund(
+    conn: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    input: &GardenRefundInput,
+    replacing: Option<Replacing>,
+) -> Result<Plan, ServiceError> {
+    let kind = GardenHistoryKind::Refund;
+    let mut errors = FieldErrors::default();
+    let (garden, date) = garden_and_date(conn, window, input.garden_id, &input.date, &mut errors)?;
+    let note = optional_text(&mut errors, "note", input.note.as_deref());
+    let amount = positive_money(&mut errors, "amount", &input.amount);
+    let money = match garden.as_ref() {
+        Some(g) => Some(money_of(conn, g)?),
+        None => None,
+    };
+    if let (Some(g), Some(m), Some(amount)) = (garden.as_ref(), money.as_ref(), amount) {
+        let mut refunds =
+            Paisa::try_from_paisa(repo::refunds_total(conn, g.rec.id)?).map_err(money_error)?;
+        // An edit replaces a refund: the old one no longer counts.
+        if let Some(Replacing {
+            kind: GardenHistoryKind::Refund,
+            amount: old,
+        }) = replacing
+        {
+            refunds = refunds.checked_sub(old).map_err(money_error)?;
+        }
+        let rent = Paisa::try_from_paisa(g.rec.rent_paisa).map_err(money_error)?;
+        let open = super::read::owner_owes_of(m.installments, rent, refunds)?;
+        if amount > open {
+            errors.push(
+                FieldError::new(ErrorCode::ErrReturnExceedsOpen, "amount")
+                    .with("open_paisa", ErrorValue::Number(open.as_paisa())),
+            );
+        }
+    }
+    let found = errors.finish().err().unwrap_or_default();
+    // The money comes into روکڑ: nothing here can take cash below 0.
+    let cash = cash::cash_after_entry(conn, amount.unwrap_or(Paisa::ZERO))?;
+    let (Some(garden), Some(date), Some(amount), Some(money)) = (garden, date, amount, money)
+    else {
+        return Ok(Plan {
+            kind,
+            errors: found,
+            ready: None,
+            cash,
+        });
+    };
+    if !found.is_empty() {
+        return Ok(Plan {
+            kind,
+            errors: found,
+            ready: None,
+            cash,
+        });
+    }
+    let cash_id = account_repo::id_by_code(conn, cash::CASH_ACCOUNT_CODE)?
+        .ok_or_else(|| data("the cash account is missing"))?;
+    let entry = build_entry(vec![
+        LedgerLine::new(AccountId::new(cash_id), Side::Dr, amount),
+        LedgerLine::new(AccountId::new(garden.rec.account.id), Side::Cr, amount),
+    ])
+    .map_err(ledger::ledger_error)?;
+    let balance_after = money.balance.checked_add(amount).map_err(money_error)?;
+    let money_in_after = money.money_in.checked_add(amount).map_err(money_error)?;
+    let numbers = GardenEntryNumbers {
+        amount,
+        parts: None,
+        balance_before_paisa: money.balance,
+        balance_after_paisa: balance_after,
+        rent_due_after_paisa: money.rent_due,
+        balance_working: balance_working(money_in_after, money.paid, balance_after),
+        qty_from_our_shop: None,
+        qty_left_after: None,
+        qty_other_left_after: None,
+        qty_our_left_after: None,
+    };
+    Ok(Plan {
+        kind,
+        errors: found,
+        ready: Some(Ready {
+            garden,
+            kind,
+            date,
+            amount,
+            reason: note,
+            shop: None,
+            body: Body::Refund { entry },
+            numbers,
+        }),
+        cash,
+    })
 }
 
 fn plan_payment_entry(
@@ -198,6 +320,8 @@ fn plan_payment_entry(
         Some(g) => resolve_sources_of(&g.venture.partners, &input.parts, &mut errors)?,
         None => None,
     };
+    // PRD FR-12.51: an installment is not checked against the rent. What is paid above it shows as
+    // مالک کے ذمے (the owner owes), and he pays it back by a refund.
     let found = errors.finish().err().unwrap_or_default();
     let (Some(garden), Some(date), Some(amount), Some(reason), Some(partners)) =
         (garden, date, amount, reason, partners)
@@ -222,7 +346,13 @@ fn plan_payment_entry(
     let balance_after = money.balance.checked_sub(amount).map_err(money_error)?;
     let paid_after = money.paid.checked_add(amount).map_err(money_error)?;
     let rent_due_after = if kind == GardenHistoryKind::Installment {
-        money.rent_due.checked_sub(amount).map_err(money_error)?
+        // Never below 0, like the rent due itself (PRD FR-12.51).
+        let after = money.rent_due.checked_sub(amount).map_err(money_error)?;
+        if after.is_negative() {
+            Paisa::ZERO
+        } else {
+            after
+        }
     } else {
         money.rent_due
     };
@@ -426,7 +556,7 @@ pub(super) fn save(
     let now = ctx.now_text();
     let confirmed = match input {
         GardenEntryInput::Installment(p) | GardenEntryInput::Cost(p) => p.confirm_cash_below_zero,
-        GardenEntryInput::OtherSale(_) => false,
+        GardenEntryInput::OtherSale(_) | GardenEntryInput::Refund(_) => false,
     };
     ctx.db.write(|tx| {
         let planned = plan(tx, window, input)?;
@@ -444,6 +574,7 @@ pub(super) fn save(
         let kind_text = match ready.kind {
             GardenHistoryKind::Installment => "installment",
             GardenHistoryKind::Cost => "cost",
+            GardenHistoryKind::Refund => "refund",
             _ => "other_sale",
         };
         let number = vrepo::next_entry_number(tx, kind_text)?;
@@ -454,7 +585,7 @@ pub(super) fn save(
                 moved,
                 ..
             } => (Some(*qty), *arrival_id, *moved),
-            Body::Payment { .. } => (None, None, 0),
+            Body::Payment { .. } | Body::Refund { .. } => (None, None, 0),
         };
         let id = vrepo::insert_entry(
             tx,
@@ -480,7 +611,9 @@ pub(super) fn save(
                 ventures::write_parts(tx, user, &now, id, &payment.parts)?;
                 (payment.entry.as_ref(), PostingType::GardenPayment)
             }
-            Body::OtherSale { entry, .. } => (Some(entry), PostingType::VentureReceipt),
+            Body::OtherSale { entry, .. } | Body::Refund { entry } => {
+                (Some(entry), PostingType::VentureReceipt)
+            }
         };
         let journal_entry_id = ventures::post_settlement(
             ctx,
@@ -571,7 +704,12 @@ pub(super) fn cancel(
     let now = ctx.now_text();
     ctx.db.write(|tx| {
         let entry = vrepo::get_entry(tx, input.id)?
-            .filter(|e| matches!(e.kind.as_str(), "installment" | "cost" | "other_sale"))
+            .filter(|e| {
+                matches!(
+                    e.kind.as_str(),
+                    "installment" | "cost" | "other_sale" | "refund"
+                )
+            })
             .ok_or_else(|| not_found("id"))?;
         let garden = load(tx, entry.venture_id)?.ok_or_else(|| not_found("id"))?;
         if entry.status == "cancelled" {

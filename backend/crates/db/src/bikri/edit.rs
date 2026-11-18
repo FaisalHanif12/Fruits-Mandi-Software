@@ -937,6 +937,22 @@ pub struct StockLot {
     pub qty_written_off: i64,
     /// نگ taken as fruit (PRD FR-16.11).
     pub qty_taken: i64,
+    /// The advance tick stored on the lot (PRD FR-12.23, plan 78 C3): a later sale keeps it.
+    pub adjust_advance: bool,
+}
+
+/// How many saved lots have goods left (plan 78 C1): the lots the باقی مال card lists, with no filter.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn stock_lot_count(conn: &Connection) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
+         WHERE e.status = 'saved'
+           AND l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken > 0",
+        [],
+        |r| r.get(0),
+    )
 }
 
 /// The lots of saved (not cancelled) بکری with goods left, oldest received first (PRD FR-12.14).
@@ -947,7 +963,8 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
     let mut statement = conn.prepare(
         "SELECT l.id, l.lot_no, e.id, e.number, e.entry_date, sa.id, sa.code, sa.name_ur, sa.name_en,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
-                l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken, sa.tag, l.lot_counter
+                l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken, sa.tag, l.lot_counter,
+                l.adjust_advance
          FROM bikri_lots l
          JOIN bikri_entries e ON e.id = l.bikri_id
          JOIN accounts sa ON sa.id = l.seller_account_id
@@ -1001,6 +1018,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
                 qty_sold: r.get(18)?,
                 qty_written_off: r.get(19)?,
                 qty_taken: r.get(20)?,
+                adjust_advance: r.get(23)?,
             })
         },
     )?;

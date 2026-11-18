@@ -38,7 +38,8 @@ use crate::reports::common::{add, col, count_of, names_cell};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, Column, ColumnKind, GardenView, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, Column, ColumnKind, GardenView, ReportId, ReportPage, Row, RowKind, RowSource,
+    SourceKind, SummaryLine,
 };
 
 fn money(paisa: Paisa) -> Cell {
@@ -142,7 +143,37 @@ fn by_garden(gardens: &[Garden], spec: PageSpec) -> Result<ReportPage, ReportsEr
     }
     let mut total_cells = vec![Cell::Empty; 3];
     total_cells.extend(totals.into_iter().map(money));
-    Ok(page(garden_columns(), rows, total_cells, spec))
+    let mut page = page(garden_columns(), rows, total_cells, spec);
+    // PRD FR-12.51: where an owner gave relief, the rent the gardens were made with and the relief
+    // show under the table, over the whole filter. Nothing shows while no rent was changed.
+    let (mut original, mut relief) = (Paisa::ZERO, Paisa::ZERO);
+    let mut any = false;
+    for garden in gardens {
+        let rent = Paisa::try_from_paisa(garden.rec.rent_paisa)?;
+        if let Some(was) = garden.rent_original {
+            any = true;
+            add(&mut original, was)?;
+            // A rent raised again is no relief (the same rule as the garden screen).
+            if was > rent {
+                add(&mut relief, was.checked_sub(rent)?)?;
+            }
+        } else {
+            add(&mut original, rent)?;
+        }
+    }
+    if any {
+        page.summary = vec![
+            SummaryLine {
+                label_id: ids::R36_RENT_ORIGINAL.to_owned(),
+                cell: money(original),
+            },
+            SummaryLine {
+                label_id: ids::R36_RELIEF.to_owned(),
+                cell: money(relief),
+            },
+        ];
+    }
+    Ok(page)
 }
 
 fn partner_columns() -> Vec<Column> {

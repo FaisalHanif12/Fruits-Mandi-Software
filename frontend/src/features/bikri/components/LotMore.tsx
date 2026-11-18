@@ -1,5 +1,5 @@
 // The rest of a lot, behind "مزید" (PRD FR-12.2, 12.3): the مارکہ, store, weight, فون, کرایہ سٹور,
-// who paid the freight, the tick "پیشگی سے کاٹیں" (FR-12.23), how each charge typed in the grid is
+// who paid the freight, how each charge typed in the grid is
 // meant (the amount itself, for each نگ, or for the lot), and the one-time seller. It is for the
 // selected lot. A problem on one of these fields opens it by itself, so it is never hidden.
 //
@@ -9,13 +9,12 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { UiError } from '../../../bindings/UiError';
-import { pickedOf, usePartyCard } from '../../../shared/accounts';
+import { pickedOf } from '../../../shared/accounts';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import type { EntryRow, PickedRecord } from '../../../shared/grid';
 import {
   Button,
   Card,
-  Checkbox,
   Field,
   MoneyInput,
   Num,
@@ -24,9 +23,9 @@ import {
   fieldError,
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
-import { isGardenLot, isOwnLot } from '../draft';
+import { isOwnLot } from '../draft';
 import { lotLabelVars, useLotWho } from '../lot-name';
-import { LOT, ON, type LotPreview } from '../types';
+import { LOT, type LotPreview } from '../types';
 
 interface LotMoreProps {
   row: EntryRow;
@@ -88,11 +87,6 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
   const grouping = useGrouping();
   const stores = useBikriDraft();
   const open = stores.view((state) => state.moreOpen) || hasProblem;
-  const seller = row.picked?.[LOT.seller];
-  const card = usePartyCard(seller?.id ?? null);
-  const advance = card.data?.advance_open ?? null;
-  // The tick shows only for a seller who has an advance open (PRD 12.3).
-  const hasAdvance = advance !== null && formatPaisa(advance, { grouping }) !== '0';
   const path = (sub: string) => `lots[${String(lotIndex)}].${sub}`;
   const typed = (field: string) => row.typed[field] ?? '';
   const setTyped = (field: string, text: string) => {
@@ -205,24 +199,6 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
                 />
               </div>
             )}
-            {hasAdvance && !isOwnLot(row) && !isGardenLot(row) ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <Checkbox
-                  checked={typed(LOT.adjustAdvance) !== '0'}
-                  onChange={(checked) => {
-                    setTyped(LOT.adjustAdvance, checked ? ON : '0');
-                  }}
-                  label={<Localized id="bikri-more-adjust-advance" />}
-                />
-                <Localized
-                  id="bikri-more-advance-open"
-                  vars={{ amount: formatPaisa(advance, { grouping }) }}
-                  elems={{ num: <Num /> }}
-                >
-                  <span className="type-body text-ink-muted" />
-                </Localized>
-              </div>
-            ) : null}
           </div>
           <div className="flex flex-col gap-2">
             <Localized id="bikri-more-charge-method">

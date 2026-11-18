@@ -42,6 +42,7 @@ fn garden_input(w: &World, partners: Vec<VenturePartnerInput>) -> GardenInput {
         ],
         date: "10-10-2026".into(),
         item_id: Some(w.banana),
+        item_ids: Vec::new(),
         rent: "50,000".into(),
         season_end: None,
         note: None,

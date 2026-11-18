@@ -1,11 +1,13 @@
-// Stock that is ready to sell (PRD FR-12.39, FR-12.40, plan 33). A new بکری brings in a lot for every
-// stock record that has goods left and whose date to sell is on or before the بکری's date. Today
-// the only kind is a trip purchase; a garden's goods arrived join it (plan 33, R10). The screen
-// works with this one shape, so the way lots are made, removed and counted does not depend on the
-// kind. The quantity is what the backend says is left: the screen counts nothing.
+// Goods that are loaded into a بکری by hand (PRD FR-12.50, FR-12.26, FR-12.36, plan 78 C1): a trip purchase
+// or a garden's goods arrived entry with goods left for our shop. The munshi picks one from its card and it
+// becomes a lot (it no longer comes in by itself, plan 33 is replaced). The screen works with this one shape,
+// so the way a lot is made does not depend on the kind. The quantity is what the backend says is left: the
+// screen counts nothing.
 
 import type { GardenRef } from '../../bindings/GardenRef';
+import type { ReadyGoods } from '../../bindings/ReadyGoods';
 import type { RecordRef } from '../../bindings/RecordRef';
+import type { TripRef } from '../../bindings/TripRef';
 
 /**
  * Where the goods are: a trip purchase (the lot's seller is اپنا مال, FR-12.26) or a garden's
@@ -27,11 +29,33 @@ export interface ReadyStock {
   qtyLeft: number;
   /** The garden of a garden entry: its account is the seller of the lot. Null for trip goods. */
   garden: GardenRef | null;
+  /** The trip of a trip purchase. Null for garden goods. */
+  trip: TripRef | null;
 }
 
-/** A stable key of a stock record across kinds, for "this one was removed from this form". */
-export function readyKey(stock: Pick<ReadyStock, 'kind' | 'id'>): string {
-  return `${stock.kind}:${String(stock.id)}`;
+/**
+ * The goods the backend listed as stock rows. The backend lists goods left; the screen still checks it, so a wrong
+ * answer never makes a lot: a trip row has its trip, a garden row its garden, and nothing is left means no row.
+ */
+export function readyStockOf(answer: ReadyGoods): ReadyStock[] {
+  return answer.rows.flatMap((row): ReadyStock[] => {
+    if (row.qty_left <= 0) return [];
+    const base = {
+      id: row.id,
+      number: row.number,
+      sellDate: row.sell_date,
+      item: row.item,
+      packing: row.packing,
+      qtyLeft: row.qty_left,
+    };
+    if (row.kind === 'trip' && row.trip !== null) {
+      return [{ ...base, kind: 'trip', garden: null, trip: row.trip }];
+    }
+    if (row.kind === 'garden' && row.garden !== null) {
+      return [{ ...base, kind: 'garden', garden: row.garden, trip: null }];
+    }
+    return [];
+  });
 }
 
 /** Which kind comes first on the same day. A new kind must be given its place here. */

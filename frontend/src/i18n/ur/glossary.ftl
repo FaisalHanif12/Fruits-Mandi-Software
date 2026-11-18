@@ -19,6 +19,10 @@
 -beopari = بیوپاری
     .gender = masculine
 
+# Sellers, as in "sellers' bills" (plan 78)
+# review: pending
+-beopariyon = بیوپاریوں
+
 # Seller side: landowner
 # review: pending
 -zamindar = زمیندار
@@ -33,6 +37,10 @@
 # review: pending
 -gahak = گاہک
     .gender = masculine
+
+# Buyers, as in "buyers' slips" (plan 78)
+# review: pending
+-gahakon = گاہکوں
 
 # Buyer
 # review: pending
@@ -333,7 +341,11 @@
 
 # A party's balance at the start of the day (PRD Section 3, FR-19.12)
 # review: pending
--sabiqa-raqam = سابقہ رقم
+-sabiqa-raqam = پچھلا بقایا
+
+# The balance an account was made with: the first line of every statement and history (PRD Section 3, FR-19.16, plan 78)
+# review: pending
+-ibtidai-baqaya = ابتدائی بقایا
 
 # Previous balance plus today's bill less what was paid (PRD Section 3, FR-19.12)
 # review: pending
@@ -495,6 +507,8 @@ glossary-safar = { -safar }
 glossary-phal = { -phal }
 glossary-taza-banam = { -taza-banam }
 glossary-sabiqa-raqam = { -sabiqa-raqam }
+
+glossary-ibtidai-baqaya = { -ibtidai-baqaya }
 glossary-total-raqam = { -total-raqam }
 glossary-baqaya = { -baqaya }
 glossary-kul-agrahi = { -kul-agrahi }

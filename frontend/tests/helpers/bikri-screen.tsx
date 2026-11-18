@@ -16,6 +16,34 @@ export type User = ReturnType<typeof userEvent.setup>;
 
 export const named = (text: string) => (name: string) => visible(name) === text;
 
+/**
+ * The dropdown of the summary card (plan 78 C2): it shows the lot (or the whole sale) the summary is
+ * about, and lists every lot and "the whole sale". `area` is the summary section.
+ */
+export const summaryDropdown = (area: HTMLElement): HTMLElement =>
+  within(area).getByRole('combobox');
+
+/** What the summary dropdown shows now, without the isolation marks of Fluent. */
+export const summaryChoice = (area: HTMLElement): string =>
+  visible(summaryDropdown(area).textContent);
+
+/** Opens the summary dropdown and picks the choice with this exact label. */
+export async function chooseInSummary(user: User, area: HTMLElement, label: string) {
+  await user.click(summaryDropdown(area));
+  await user.click(await screen.findByRole('option', { name: named(label) }));
+}
+
+/**
+ * Ticks "take the advance off this sale" for a seller in the summary, the way the munshi does in Event 1 (plan 78
+ * C3: the tick is off when a بکری opens, and it is the seller's, not the lot's).
+ */
+export async function tickAdvance(user: User, language: Language, seller: string) {
+  const box = await screen.findByRole('checkbox', {
+    name: named(message(language, 'bikri-summary-take-advance', { name: seller })),
+  });
+  if (!(box instanceof HTMLInputElement && box.checked)) await user.click(box);
+}
+
 /** The field called `id` in the app language (a picker, the truck number). */
 export const combo = (language: Language, id: string) =>
   screen.findByRole('combobox', { name: named(message(language, id)) });

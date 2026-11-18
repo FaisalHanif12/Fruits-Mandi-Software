@@ -25,7 +25,7 @@ mod calc;
 mod chart;
 mod expense;
 mod expense_partners;
-mod facts;
+pub(crate) mod facts;
 mod filters;
 mod fruit;
 mod gardens;

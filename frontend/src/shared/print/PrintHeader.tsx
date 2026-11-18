@@ -22,7 +22,24 @@ const ROLE_ID: Record<FirmRole, string> = {
   munshi: 'print-role-munshi',
 };
 
-export function PrintHeader({ header }: { header: PrintHeaderData }) {
+interface PrintHeaderProps {
+  header: PrintHeaderData;
+  /**
+   * The title as words, when the document's own title names a party ("<name> کا بل", plan 78 A2, A3): the
+   * caller resolves the message with the party's name. Left out, the title is the message of the header.
+   */
+  title?: string | undefined;
+}
+
+/** The titles that take the party's name (`$name`): the print window must give it, or the title reads wrong. */
+export const NAMED_TITLE_IDS: ReadonlySet<string> = new Set([
+  'print-buyer-day-slip-title',
+  'print-seller-day-slip-title',
+  'print-seller-bill-named-title',
+  'print-statement-named-title',
+]);
+
+export function PrintHeader({ header, title }: PrintHeaderProps) {
   const { l10n } = useLocalization();
   const { firm } = header;
   const parts: ReactNode[] = [];
@@ -80,7 +97,9 @@ export function PrintHeader({ header }: { header: PrintHeaderData }) {
             </ul>
           )}
         </div>
-        <h1 className="print-title">{l10n.getString(header.title_id)}</h1>
+        <h1 className="print-title">
+          {title === undefined ? l10n.getString(header.title_id) : <PrintText text={title} />}
+        </h1>
       </header>
       {header.facts.length === 0 ? null : (
         <dl className="print-facts">

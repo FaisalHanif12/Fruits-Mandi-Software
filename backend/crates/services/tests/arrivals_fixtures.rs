@@ -152,6 +152,7 @@ fn arrivals_fixtures_of_the_date_to_sell_the_arrival_and_its_linked_lot() {
             ],
             date: "10-10-2026".into(),
             item_id: Some(w.banana),
+            item_ids: Vec::new(),
             rent: "50,000".into(),
             season_end: None,
             note: None,

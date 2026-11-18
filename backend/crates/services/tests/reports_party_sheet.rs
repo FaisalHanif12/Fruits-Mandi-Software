@@ -788,7 +788,7 @@ fn a_buyer_who_pays_more_than_he_owes_is_in_credit_and_is_not_taken_off_the_coll
 #[test]
 fn an_opening_set_and_changed_on_the_sheet_day_is_one_other_debit() {
     // An opening debit of 5,000 on اکرم dated the sheet day, then changed to 7,000: the first
-    // opening and its reversal are left out of the day, the new one is his other entry.
+    // opening and its reversal are left out of the day, the new one is his opening line.
     let w = worked_day();
     let set_opening = |dr: &str| {
         let version = accounts::get(&w.env.ctx, w.akram).unwrap().version;
@@ -823,7 +823,10 @@ fn an_opening_set_and_changed_on_the_sheet_day_is_one_other_debit() {
         0,
         0,
     );
-    assert_eq!(line_of(&slip, "report-r35-other"), 7_000);
+    // PRD FR-19.12 v1.43 (U6): an opening dated the day is never "other entries"; it is its own line,
+    // ابتدائی بقایا, and the new balance is the same 7,000.
+    assert_eq!(line_of(&slip, "report-r35-other"), 0);
+    assert_eq!(line_of(&slip, "report-r35-opening"), 7_000);
     assert_eq!(line_of(&slip, "report-r35-new-balance"), 7_000);
 }
 

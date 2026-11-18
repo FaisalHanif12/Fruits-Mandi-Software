@@ -86,7 +86,8 @@ proptest! {
             prop_assert_eq!(m.paid.as_paisa(), paid);
             prop_assert_eq!(m.money_in.as_paisa(), credits - debits);
             prop_assert_eq!(m.balance.as_paisa(), credits - debits - paid);
-            prop_assert_eq!(m.rent_due.as_paisa(), rent - installments);
+            // Never below 0: what was paid above the rent is what the owner owes (PRD FR-12.51).
+            prop_assert_eq!(m.rent_due.as_paisa(), (rent - installments).max(0));
             prop_assert_eq!(m.account_balance.as_paisa(), account_credits - account_debits);
             prop_assert_eq!(m.paid_shop.as_paisa() + m.paid_pocket.as_paisa(), m.paid.as_paisa());
             prop_assert_eq!(m.other_shop.as_paisa(), other);

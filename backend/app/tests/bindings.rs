@@ -226,6 +226,7 @@ const EXPECTED_FILES: &[&str] = &[
     "PartnerDetail.ts",
     "PartnersGetInput.ts",
     "PartnerCreateInput.ts",
+    "OpeningCapitalWhere.ts",
     "PartnerUpdateInput.ts",
     "ShareInput.ts",
     "PartnersSetSharesInput.ts",
@@ -234,6 +235,12 @@ const EXPECTED_FILES: &[&str] = &[
     "PartnerOverviewRow.ts",
     "CashbookInput.ts",
     "Cashbook.ts",
+    "CapitalWhere.ts",
+    "CapitalWhereKind.ts",
+    "CapitalWhereLine.ts",
+    "CapitalWhoseKind.ts",
+    "CapitalWhoseLine.ts",
+    "CashbookKind.ts",
     "CashbookRow.ts",
     "ShopExpenseInput.ts",
     "PersonalExpenseInput.ts",
@@ -419,6 +426,8 @@ const EXPECTED_FILES: &[&str] = &[
     "ReadyGoods.ts",
     "ReadyGoodsInput.ts",
     "ReadyGoodsRow.ts",
+    "GoodsSources.ts",
+    "GoodsToLoadInput.ts",
     "TripInput.ts",
     "TripSetPartnersInput.ts",
     "TripDefaults.ts",
@@ -500,6 +509,7 @@ const EXPECTED_FILES: &[&str] = &[
     "GardensSummary.ts",
     "GardenPaymentInput.ts",
     "GardenOtherSaleInput.ts",
+    "GardenRefundInput.ts",
     "GardenEntryInput.ts",
     "GardenEntryNumbers.ts",
     "GardenEntryPreview.ts",
@@ -920,6 +930,26 @@ const EXPECTED_FILES: &[&str] = &[
     "StatementSide.ts",
     "StatementKind.ts",
     "PrintStatementInput.ts",
+    // Plan 78 (append-only block).
+    "AdhariSheetInput.ts",
+    "AdhariSheetPrintInput.ts",
+    "AdhariSheetRow.ts",
+    "AdhariSheetTotals.ts",
+    "AdhariSheet.ts",
+    "SalePrintData.ts",
+    "StatementRowsInput.ts",
+    "StatementShortItem.ts",
+    "StatementEdited.ts",
+    "StatementRowsRow.ts",
+    "StatementRows.ts",
+    "StatementRowsPrintInput.ts",
+    "PrintSlipsInput.ts",
+    "PrintAdhariInput.ts",
+    "PrintCollectionSheetInput.ts",
+    "PrintStatementRowsInput.ts",
+    "PrintBuyerDuesInput.ts",
+    "PrintCommissionInput.ts",
+    "PrintPartnerMonthInput.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -1074,12 +1104,19 @@ fn export_bindings() {
     partners::PartnerDetail::export_all(&cfg).unwrap();
     partners::PartnersGetInput::export_all(&cfg).unwrap();
     partners::PartnerCreateInput::export_all(&cfg).unwrap();
+    partners::OpeningCapitalWhere::export_all(&cfg).unwrap();
     partners::PartnerUpdateInput::export_all(&cfg).unwrap();
     partners::PartnersSetSharesInput::export_all(&cfg).unwrap();
     partners::PartnersCheckSharesInput::export_all(&cfg).unwrap();
     partners::SharesCheck::export_all(&cfg).unwrap();
     partners::PartnerOverviewRow::export_all(&cfg).unwrap();
     cashbook::CashbookInput::export_all(&cfg).unwrap();
+    cashbook::CapitalWhere::export_all(&cfg).unwrap();
+    cashbook::CapitalWhereKind::export_all(&cfg).unwrap();
+    cashbook::CapitalWhereLine::export_all(&cfg).unwrap();
+    cashbook::CapitalWhoseKind::export_all(&cfg).unwrap();
+    cashbook::CapitalWhoseLine::export_all(&cfg).unwrap();
+    cashbook::CashbookKind::export_all(&cfg).unwrap();
     cashbook::CashbookRow::export_all(&cfg).unwrap();
     cashbook::CashbookTotals::export_all(&cfg).unwrap();
     cashbook::Cashbook::export_all(&cfg).unwrap();
@@ -1243,6 +1280,8 @@ fn export_bindings() {
     bikri::ReadyGoodsInput::export_all(&cfg).unwrap();
     bikri::ReadyGoods::export_all(&cfg).unwrap();
     bikri::ReadyGoodsRow::export_all(&cfg).unwrap();
+    bikri::GoodsSources::export_all(&cfg).unwrap();
+    bikri::GoodsToLoadInput::export_all(&cfg).unwrap();
     purchases::PurchaseWriteOffUndone::export_all(&cfg).unwrap();
     trips::TripInput::export_all(&cfg).unwrap();
     trips::TripSetPartnersInput::export_all(&cfg).unwrap();
@@ -1286,6 +1325,7 @@ fn export_bindings() {
     gardens::GardensSummary::export_all(&cfg).unwrap();
     gardens::GardenPaymentInput::export_all(&cfg).unwrap();
     gardens::GardenOtherSaleInput::export_all(&cfg).unwrap();
+    gardens::GardenRefundInput::export_all(&cfg).unwrap();
     gardens::GardenEntryInput::export_all(&cfg).unwrap();
     gardens::GardenEntryNumbers::export_all(&cfg).unwrap();
     gardens::GardenEntryPreview::export_all(&cfg).unwrap();
@@ -1569,6 +1609,26 @@ fn export_bindings() {
     mandi_reports::dashboard::CommissionPartyShown::export_all(&cfg).unwrap();
     mandi_reports::dashboard::CommissionSide::export_all(&cfg).unwrap();
 
+    // Plan 78 (append-only block).
+    mandi_reports::reports::AdhariSheetInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheetPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheetRow::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheetTotals::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheet::export_all(&cfg).unwrap();
+    mandi_reports::reports::SalePrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRowsInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementShortItem::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementEdited::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRowsRow::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRows::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRowsPrintInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintSlipsInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintAdhariInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCollectionSheetInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintStatementRowsInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintBuyerDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCommissionInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintPartnerMonthInput::export_all(&cfg).unwrap();
     for file in EXPECTED_FILES {
         assert!(
             dir.join(file).is_file(),

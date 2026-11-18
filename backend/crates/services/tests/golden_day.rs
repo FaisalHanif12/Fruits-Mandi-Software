@@ -395,6 +395,21 @@ fn scalar(w: &support::World, sql: &str) -> i64 {
     raw(&w.dir).query_row(sql, [], |r| r.get(0)).unwrap()
 }
 
+/// What the advances to sellers still have out, in rupees: Σ of each live advance line less what its
+/// active matching rows settled (PRD FR-15.8). The new term of PRD FR-17.9 (v1.43): Σ کل رقم +
+/// ابتدائی سرمایہ + this = the equity of the books. Read with plain SQL, apart from the code that works
+/// the partners' parts out, so the two can be held against each other.
+fn open_advances(w: &support::World) -> i64 {
+    scalar(
+        w,
+        "SELECT COALESCE(SUM(l.dr_paisa - COALESCE((SELECT SUM(a.amount_paisa) FROM advance_allocations a
+                                                    WHERE a.advance_line_id = l.id AND a.is_active = 1), 0)), 0) / 100
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.is_advance = 1 AND l.dr_paisa > 0 AND e.status = 'posted' AND e.reverses_entry_id IS NULL
+           AND NOT EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id AND r.status = 'posted')",
+    )
+}
+
 fn save_ok(w: &support::World, draft: &BikriDraft, confirm: bool) -> BikriSaved {
     // Event 2 still names its truck in the retired header field: it is written as old data (v1.34).
     support::save_old(w, draft, confirm)

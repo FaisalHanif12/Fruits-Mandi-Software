@@ -148,6 +148,14 @@ function detailPartText(part: ReportDetailPart, context: ListContext, shortSale:
 }
 
 /**
+ * The lines behind an entry (a statement row's items in full, plan 78 B2): one line of words for each part,
+ * written the way a ledger line writes it (FR-19.8). Nothing is worked out.
+ */
+export function detailLines(parts: readonly ReportDetailPart[], context: ListContext): string[] {
+  return parts.map((part) => detailPartText(part, context, false));
+}
+
+/**
  * One argument of a message cell as the words of the screen (plan 24, R31 and the partner lines).
  * Money is written with the app's grouping, a name in the app language, a percent as the reader
  * writes it (40, 33.33), and a message inside a message is worked out first. Nothing is added up.

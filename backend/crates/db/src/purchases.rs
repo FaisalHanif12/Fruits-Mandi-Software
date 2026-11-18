@@ -1284,6 +1284,37 @@ pub fn trips_of_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Vec<
     rows.collect()
 }
 
+/// The saved purchases of open trips with goods left for our shop, on any day to sell, oldest day to
+/// sell first, then by number (plan 78 C1: the goods are loaded by hand, so no day is waited for). At
+/// most `limit` rows.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn ready_all(conn: &Connection, limit: i64) -> rusqlite::Result<Vec<PurchaseRec>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT {REC_COLUMNS} {REC_FROM}
+         WHERE p.status = 'saved' AND v.status = 'open'
+           AND p.qty - p.other_qty - (p.qty_sold - p.qty_sold_other) - p.qty_written_off > 0
+         ORDER BY COALESCE(p.sell_date, p.entry_date), p.number LIMIT ?1"
+    ))?;
+    let rows = statement.query_map(params![limit], read_rec)?;
+    rows.collect()
+}
+
+/// How many saved purchases of open trips have goods left for our shop (plan 78 C1).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn goods_count(conn: &Connection) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM purchases p JOIN ventures v ON v.id = p.venture_id
+         WHERE p.status = 'saved' AND v.status = 'open'
+           AND p.qty - p.other_qty - (p.qty_sold - p.qty_sold_other) - p.qty_written_off > 0",
+        [],
+        |r| r.get(0),
+    )
+}
+
 /// The saved purchases of open trips with goods left and a day to sell on or before `date`, oldest
 /// day to sell first, then by number (PRD FR-12.39, FR-12.40). At most `limit` rows.
 ///

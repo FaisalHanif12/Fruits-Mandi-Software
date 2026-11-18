@@ -109,7 +109,7 @@ import {
   R7_ITEMS,
 } from './reports-real';
 import { SHEET as COLLECTION_SHEET, printData as collectionPrintData } from './collection-sheet';
-import { daySlipsData } from './day-slips';
+import { daySlipsData, salePrintData } from './day-slips';
 
 type Input = Record<string, unknown>;
 
@@ -318,8 +318,10 @@ const handlers: Record<string, (input: Input) => unknown> = {
     // A day has many buyers: seven of one slip show how the page fills (about six to an A4 page).
     return first === undefined ? data : { ...data, buyers: Array.from({ length: 7 }, () => first) };
   },
+  reports_seller_bills_print_data: (input) =>
+    daySlipsData(input['language'] === 'ur' ? 'ur' : 'en', 'seller-bills', paperOf(input)),
   reports_sale_print_data: (input) =>
-    daySlipsData(input['language'] === 'ur' ? 'ur' : 'en', 'sale', paperOf(input)),
+    salePrintData(input['language'] === 'ur' ? 'ur' : 'en', paperOf(input)),
   // The partner box (R29, R31) and the person box of R32 (the people who can borrow) read these
   // from the cash book stand-in, so the filter boxes of the new reports work in the browser.
   partners_list: (input) => rokarHandlers['partners_list']?.(input),

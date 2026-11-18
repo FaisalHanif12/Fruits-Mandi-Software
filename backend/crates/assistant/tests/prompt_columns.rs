@@ -196,7 +196,8 @@ fn engine() -> Engine {
             variants.push(json!({"compare": "previous"}));
         }
         if entry.filters.contains(&AnalyticsFilterKind::GroupBy) {
-            variants.push(json!({"group_by": "day"}));
+            // View D refuses more than 36 periods (plan 77), so the days are asked for one month.
+            variants.push(json!({"group_by": "day", "from": "2026-09-10"}));
             variants.push(json!({"group_by": "month"}));
         }
         for extra in variants {

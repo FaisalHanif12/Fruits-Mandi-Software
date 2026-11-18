@@ -699,8 +699,6 @@ cashbook-dues-title = باغوں کے مالکوں / دوسروں کے ذمے
 # review: pending
 cashbook-dues-help = ان لوگوں کو دی گئی { -adhar-raqam } جو عملے میں نہیں (باغ کے مالک، { -market-safar } والے اور دوسرے) اور جو واپس آئی، ایک وقت میں ایک مہینہ۔ اعداد ٹائل والے ہی ہیں۔
 
-# review: pending
-cashbook-dues-back = ڈیش بورڈ پر واپس
 
 # review: pending
 cashbook-dues-filter-type = قسم
@@ -798,3 +796,88 @@ cashbook-link-word-shop = دکان
 
 # review: pending
 cashbook-link-word-partner = ایک { -shirakat-dar }
+
+## The rows that start the book or move a partner's capital (plan 78 E, PRD FR-16.14). $partner: the partner, with his tag.
+
+# review: pending
+cashbook-row-opening-cash = ابتدائی { -rokar }
+
+# review: pending
+cashbook-row-opening-capital = ابتدائی { -sarmaya }، { $partner }
+
+# review: pending
+cashbook-row-capital-in = { -sarmaya } جمع، { $partner }
+
+# review: pending
+cashbook-row-capital-out = { -sarmaya } واپسی، { $partner }
+
+## Where the capital is, a card of the cash book behind the partner code (plan 78 E, PRD FR-16.14).
+
+# review: pending
+cashbook-capital-title = { -sarmaya } کہاں ہے
+
+# review: pending
+cashbook-capital-help = شراکت داروں کی رقم اس وقت کہاں ہے، اور کس کی ہے۔ دونوں میزان ہمیشہ برابر ہوتے ہیں۔
+
+# review: pending
+cashbook-capital-failed = { -sarmaya } کا حساب نہیں کھل سکا
+
+# review: pending
+cashbook-capital-where-title = رقم کہاں ہے
+
+# review: pending
+cashbook-capital-whose-title = رقم کس کی ہے
+
+# review: pending
+cashbook-capital-col-what = تفصیل
+
+# review: pending
+cashbook-capital-col-amount = رقم
+
+# review: pending
+cashbook-capital-where-cash = موجود { -rokar }
+
+# review: pending
+cashbook-capital-where-buyers-owe = { -gahakon } کے ذمے ({ -doobi-raqam } سمیت)
+
+# review: pending
+cashbook-capital-where-seller-advances = { -beopariyon } کے پاس { -peshgi }
+
+# review: pending
+cashbook-capital-where-sellers-owe-beyond = { -beopariyon } کے ذمے ({ -peshgi } سے زیادہ)
+
+# review: pending
+cashbook-capital-where-sellers-payable = منفی: { -beopariyon } کو ادائیگی باقی
+
+# review: pending
+cashbook-capital-where-money-lent = { -adhar-raqam } باقی
+
+# review: pending
+cashbook-capital-where-owed-for-charges = منفی: { -mazdoori }، { -kiraya }، { -munshiana } اور سٹور کے واجبات
+
+# review: pending
+cashbook-capital-where-separate-khatas = { -alag-khata }
+
+# review: pending
+cashbook-capital-where-gardens-held = منفی: { -baghat } کی بند ہونے تک رکی رقم
+
+# review: pending
+cashbook-capital-where-linked-in-partner-totals = منفی: جو منسلک رقم شراکت داروں کی { -kul-raqam } میں آ چکی ہے
+
+# review: pending
+cashbook-capital-where-other = دیگر
+
+# review: pending
+cashbook-capital-whose-partner-total = { -kul-raqam }: { $partner }
+
+# review: pending
+cashbook-capital-whose-opening-capital = ابتدائی { -sarmaya }
+
+# review: pending
+cashbook-capital-whose-advances-open = کھلی { -peshgi } میں شراکت داروں کا حصہ
+
+# review: pending
+cashbook-capital-whose-unrecorded-where = رقم کا مقام درج نہیں
+
+# review: pending
+cashbook-capital-whose-other = دیگر فرق

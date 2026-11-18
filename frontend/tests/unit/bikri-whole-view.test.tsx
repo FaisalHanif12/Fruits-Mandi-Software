@@ -9,12 +9,15 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import { previewFor } from '../helpers/bikri-data';
 import {
   cellOf,
+  chooseInSummary,
   focusedIn,
   lotsGrid,
   named,
   names,
   openBook,
   salesGrid,
+  summaryChoice,
+  summaryDropdown,
   textOf,
   typeHeaderAndLot,
   typeTwoLines,
@@ -133,12 +136,17 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     const summary = summaryArea(language);
     expect(switchTo(lines, language, true)).toHaveAttribute('aria-pressed', 'false');
     await user.click(switchTo(lines, language, true));
-    expect(switchTo(summary, language, true)).toHaveAttribute('aria-pressed', 'true');
+    // The summary's dropdown follows: it shows the whole sale (plan 78 C2).
+    expect(summaryChoice(summary)).toBe(message(language, 'bikri-summary-whole'));
     expect(switchTo(linesArea(language, true), language, true)).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    await user.click(switchTo(summary, language, false));
+    await chooseInSummary(
+      user,
+      summary,
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+    );
     await screen.findByRole('heading', {
       name: named(message(language, 'bikri-sales-title', lotNamed(language, 2))),
     });
@@ -146,6 +154,45 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
       'aria-pressed',
       'false',
     );
+  });
+
+  it('the summary dropdown lists every lot and the whole sale; choosing one shows it at once (plan 78 C2)', async () => {
+    const { user } = await openBook(language);
+    await twoLots(user, language);
+    const summary = summaryArea(language);
+    // Lot 2 is the one on screen after adding it; the dropdown names it.
+    expect(summaryChoice(summary)).toBe(
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+    );
+    // It lists lot 1, lot 2 and the whole sale, in that order.
+    await user.click(summaryDropdown(summary));
+    const options = (await screen.findAllByRole('option')).map((option) =>
+      visible(option.textContent),
+    );
+    expect(options).toEqual([
+      message(language, 'bikri-summary-lot', lotNamed(language, 1)),
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+      message(language, 'bikri-summary-whole'),
+    ]);
+    await user.keyboard('{Escape}');
+    // Lot 1 by the keyboard alone: open with Enter, move up, choose with Enter. The lines area follows.
+    summaryDropdown(summary).focus();
+    await user.keyboard('{Enter}{ArrowUp}{Enter}');
+    await screen.findByRole('heading', {
+      name: named(message(language, 'bikri-sales-title', lotNamed(language, 1))),
+    });
+    expect(summaryChoice(summary)).toBe(
+      message(language, 'bikri-summary-lot', lotNamed(language, 1)),
+    );
+    // And back to lot 2 with the pointer.
+    await chooseInSummary(
+      user,
+      summary,
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+    );
+    await screen.findByRole('heading', {
+      name: named(message(language, 'bikri-sales-title', lotNamed(language, 2))),
+    });
   });
 
   it('the docked strip names the lot on screen, and the whole sale when the switch says so (plan 38)', async () => {

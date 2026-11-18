@@ -893,6 +893,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "from": null, "to": null, "offset": 0, "limit": 0 } }),
             true,
         ),
+        ("cashbook_capital_where", json!({}), true),
         (
             "vouchers_save_shop_expense",
             json!({ "input": { "date": "10-10-2026", "expense_head_id": 1, "amount": "3,000", "paid_to": null, "narration": null, "confirm_cash_below_zero": false } }),
@@ -1044,6 +1045,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "date": "10-10-2026" } }),
             true,
         ),
+        ("bikri_goods_sources", json!({}), true),
+        (
+            "bikri_goods_to_load",
+            json!({ "input": { "kind": "trip" } }),
+            true,
+        ),
         (
             "bikri_later_sale_preview",
             json!({ "input": { "lot_id": 1, "date": "10-10-2026", "sales": [] } }),
@@ -1147,6 +1154,21 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "party_ledgers_statement_rows",
+            json!({ "input": { "account_id": 1 } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows_print_data",
+            json!({ "input": { "account_id": 1, "language": "en" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows_print",
+            json!({ "input": { "statement": { "account_id": 1, "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
             "party_ledgers_statement_print",
             json!({ "input": { "statement": { "account_id": 1, "from": "01-10-2026", "to": "10-10-2026", "language": "en" }, "to": "pdf" } }),
             true,
@@ -1237,6 +1259,61 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "reports_sale_print_data",
             json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_seller_bills_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_buyer_parchi_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_seller_bills_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_sale_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_buyer_dues_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_commission_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "partners_statement_month_print",
+            json!({ "input": { "statement": { "partner_id": 1, "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
             true,
         ),
         (

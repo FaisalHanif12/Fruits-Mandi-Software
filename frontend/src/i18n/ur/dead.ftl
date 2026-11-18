@@ -100,8 +100,6 @@ dead-report-title = { -doobi-raqam }
 # review: pending
 dead-report-help = جن لوگوں کو { -doobi-raqam } میں ڈالا گیا: اس دن ان کے ذمے کتنی رقم تھی، اس کے بعد کتنی وصول ہوئی اور اب بھی کتنی ذمے ہے۔
 
-# review: pending
-dead-report-back = واپس
 
 # review: pending
 dead-report-label = { -doobi-raqam } میں ڈالے گئے لوگ

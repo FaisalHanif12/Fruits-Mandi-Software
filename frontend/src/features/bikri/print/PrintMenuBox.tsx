@@ -1,10 +1,9 @@
-// The second print box of the sale book (PRD FR-12.12, FR-19.15, plan 68, plan 76 point 3), opened with
-// Shift+F9 or its button next to the seller-bill print. It asks two things: what to print, the buyer
-// parchi (one short slip for each buyer, several to an A4 page; the default) or the overall sale print
-// (the sellers' slips and the buyers' slips), and which lines, the whole day of the saved بکری (the default)
-// or this بکری only. Then it is the slips' own print preview (language, paper, Print and Save as PDF), so
-// what is previewed is what is printed (`DaySlipsPreview`). The backend works out every figure and writes
-// every date; nothing here adds up.
+// The print menu of the sale book (PRD FR-12.12, FR-19.15, plan 78 A1), opened with F9 or its button on a saved
+// بکری. It asks two things: what to print, with one line saying what each print is for (the buyer slips, the
+// seller bills, or the whole sale print), and which lines, this بکری only (or the whole save that made it) or the
+// whole day. Then it is the print's own preview (language, paper, Print and Save as PDF), so what is previewed is
+// what is printed (`DaySlipsPreview`). The backend works out every figure and writes every date; nothing here
+// adds up. ادھاری تفصیل has its own box (AdhariSheetBox): it is not one of these three.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
@@ -23,15 +22,22 @@ import { DaySlipsPreview, type DaySlipsScope } from '../../reports';
 import { useBikriDetail } from '../hooks/useBikriReads';
 import { daySlipsScope, type AdhariScope, type SlipsKind } from './adhari-filters';
 import { mixedSaveOf } from './mixed-save-ids';
-import type { PrintTarget } from './PrintBox';
+import type { PrintTarget } from './target';
 
-interface AdhariPrintBoxProps {
+interface PrintMenuBoxProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   target: PrintTarget;
 }
 
-function AdhariBody({ target, onClose }: { target: PrintTarget; onClose: () => void }) {
+/** What each print is for, the line under the choice. */
+const PURPOSE_ID: Record<SlipsKind, string> = {
+  parchi: 'print-menu-buyers-purpose',
+  'seller-bills': 'print-menu-sellers-purpose',
+  sale: 'print-menu-sale-purpose',
+};
+
+function MenuBody({ target, onClose }: { target: PrintTarget; onClose: () => void }) {
   const { l10n } = useLocalization();
   const detail = useBikriDetail(target.id);
   const [scope, setScope] = useState<AdhariScope>('day');
@@ -57,7 +63,7 @@ function AdhariBody({ target, onClose }: { target: PrintTarget; onClose: () => v
       value: 'day',
       label: (
         <Localized
-          id="print-adhari-whole-day"
+          id="print-menu-whole-day"
           vars={{ date: isoToDisplayDate(day) }}
           elems={{ num: <Num /> }}
         >
@@ -70,7 +76,7 @@ function AdhariBody({ target, onClose }: { target: PrintTarget; onClose: () => v
       label:
         save === null ? (
           <Localized
-            id="print-adhari-this-bikri"
+            id="print-menu-this-bikri"
             vars={{ number: String(target.number) }}
             elems={{ num: <Num /> }}
           >
@@ -78,7 +84,7 @@ function AdhariBody({ target, onClose }: { target: PrintTarget; onClose: () => v
           </Localized>
         ) : (
           <Localized
-            id="print-adhari-this-save"
+            id="print-menu-this-save"
             vars={{ numbers: save.numbers.join(', ') }}
             elems={{ num: <Num /> }}
           >
@@ -88,34 +94,39 @@ function AdhariBody({ target, onClose }: { target: PrintTarget; onClose: () => v
     },
   ];
   const kindOptions: readonly SegmentedOption<SlipsKind>[] = [
-    { value: 'parchi', label: <Localized id="print-adhari-kind-parchi" /> },
-    { value: 'sale', label: <Localized id="print-adhari-kind-sale" /> },
+    { value: 'parchi', label: <Localized id="print-menu-buyers" /> },
+    { value: 'seller-bills', label: <Localized id="print-menu-sellers" /> },
+    { value: 'sale', label: <Localized id="print-menu-sale" /> },
   ];
   return (
     <div className="flex flex-col gap-3">
-      <Localized id="print-adhari-help">
+      <Localized id="print-menu-help">
         <p className="type-body text-ink-muted" />
       </Localized>
-      <Field label={<Localized id="print-adhari-scope" />}>
+      <Field label={<Localized id="print-menu-kind" />}>
+        {() => (
+          <div className="flex flex-col gap-2">
+            <SegmentedControl
+              options={kindOptions}
+              value={kind}
+              groupLabel={l10n.getString('print-menu-kind')}
+              onChange={setKind}
+            />
+            {/* What the chosen print is for, one line (plan 78 A0). */}
+            <Localized id={PURPOSE_ID[kind]}>
+              <p className="type-body text-ink-muted" />
+            </Localized>
+          </div>
+        )}
+      </Field>
+      <Field label={<Localized id="print-menu-scope" />}>
         {() => (
           <div>
             <SegmentedControl
               options={options}
               value={scope}
-              groupLabel={l10n.getString('print-adhari-scope')}
+              groupLabel={l10n.getString('print-menu-scope')}
               onChange={setScope}
-            />
-          </div>
-        )}
-      </Field>
-      <Field label={<Localized id="print-adhari-kind" />}>
-        {() => (
-          <div>
-            <SegmentedControl
-              options={kindOptions}
-              value={kind}
-              groupLabel={l10n.getString('print-adhari-kind')}
-              onChange={setKind}
             />
           </div>
         )}
@@ -131,16 +142,16 @@ function AdhariBody({ target, onClose }: { target: PrintTarget; onClose: () => v
   );
 }
 
-export function AdhariPrintBox({ open, onOpenChange, target }: AdhariPrintBoxProps) {
+export function PrintMenuBox({ open, onOpenChange, target }: PrintMenuBoxProps) {
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={<Localized id="print-adhari-title" />}
+      title={<Localized id="print-box-title" vars={{ number: String(target.number) }} />}
     >
       {/* The body is made when the box opens, so every opening starts from the whole day. */}
       {open ? (
-        <AdhariBody
+        <MenuBody
           target={target}
           onClose={() => {
             onOpenChange(false);

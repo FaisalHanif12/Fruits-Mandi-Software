@@ -5,8 +5,13 @@
 
 ## Titles
 
+# The title of the sale book's seller bill (R1), as it was: the seller's word and "bill".
 # review: pending
 print-seller-bill-title = { -beopari } کا بل
+
+# The title of one seller's bill when it names him (plan 78 A3). $name: the seller, with his tag.
+# review: pending
+print-seller-bill-named-title = { $name } کا بل
 
 # review: pending
 print-buyer-slip-title = { -gahak } کی پرچی
@@ -66,7 +71,7 @@ print-store-rent = { -kiraya-store }
 print-phone-charge = { -phone }
 
 # review: pending
-print-total-deductions = کل اخراجات
+print-total-deductions = کل کٹوتی
 
 # review: pending
 print-net-sale = { -safi-bikri }
@@ -100,10 +105,10 @@ print-payment-credit = { -udhari } بکری: رقم باقی ہے
 
 # The two lines of a buyer slip when he paid part of the bill on the spot (PRD FR-12.44).
 # review: pending
-print-paid-on-spot = { -mauqa-par-jama }
+print-paid-on-spot = نقد
 
 # review: pending
-print-left-on-account = { -khate-mein-baqi }
+print-left-on-account = ادھار
 
 ## Column heads of the goods table
 
@@ -242,21 +247,21 @@ print-toast-dialog = پرنٹ کی کھڑکی کھل گئی
 print-adhari-title = { report-r5-title } پرنٹ کریں
 
 # review: pending
-print-adhari-help = { -gahak } کی پرچی چنیں، ہر { -gahak } کی ایک مختصر پرچی، یا { -bikri } کی مکمل پرنٹ جس میں { -beopari } اور { -gahak } کی پرچیاں ہیں۔ صفحہ وہی ہے جو پرنٹ ہوتا ہے۔
+print-menu-help = ہر پرنٹ کا ایک ہی کام ہے۔ ایک چنیں، پھر نیچے پرنٹ کا صفحہ دیکھ لیں۔
 
 # review: pending
-print-adhari-scope = کون سی قطاریں
+print-menu-scope = کون سی قطاریں
 
 # $date is the day of the { -bikri } on screen.
 # review: pending
-print-adhari-whole-day = پورا دن (<num>{ $date }</num>)
+print-menu-whole-day = پورا دن (<num>{ $date }</num>)
 
 # review: pending
-print-adhari-this-bikri = صرف یہ { -bikri } (<num>{ $number }</num>)
+print-menu-this-bikri = صرف یہ { -bikri } (<num>{ $number }</num>)
 
 # The save had carried lots: the new { -bikri } and the old { -bikri } of each carried lot. $numbers: their numbers, new first.
 # review: pending
-print-adhari-this-save = صرف یہ محفوظ کردہ ({ -bikri } <num>{ $numbers }</num>)
+print-menu-this-save = صرف یہ محفوظ کردہ ({ -bikri } <num>{ $numbers }</num>)
 
 ## The preview
 
@@ -410,10 +415,10 @@ print-collection-col-serial = نمبر
 print-collection-col-code = کوڈ
 
 # review: pending
-print-collection-col-party = پارٹی
+print-collection-col-party = { -gahak }
 
 # review: pending
-print-collection-col-dues = ذمے
+print-collection-col-dues = ادھار
 
 # The date of the oldest bill still open, and how many days old it is.
 # review: pending
@@ -486,11 +491,11 @@ bikri-list-day-heading-empty = { $date }: کوئی { -bikri } نہیں
 
 # The title of the buyer parchi print (the backend sends it in the header).
 # review: pending
-print-parchi-title = { -gahak } کی پرچی
+print-parchi-title = { -gahak } کی پرچیاں
 
 # The title of the overall sale print: the seller slips and the buyer slips of one { -bikri } or of the day.
 # review: pending
-print-sale-title = { -bikri } کی مکمل پرنٹ
+print-sale-title = پوری { -bikri }
 
 # The heading of the sellers' part and of the buyers' part of the overall sale print.
 # review: pending
@@ -507,19 +512,19 @@ print-parchi-collect = { -wasooli }
 print-parchi-empty = اس دن کسی { -gahak } کی پرچی نہیں
 
 # review: pending
-print-parchi-label = { -gahak } کی پرچی، ہر { -gahak } کی ایک
+print-parchi-label = { -gahakon } کی پرچیاں، ہر { -gahak } کی ایک
 
 # review: pending
-print-sale-label = { -bikri } کی مکمل پرنٹ، { -beopari } اور { -gahak }
+print-sale-label = پوری { -bikri }، { -beopari } اور { -gahak }
 
 # review: pending
-print-adhari-kind = کیا پرنٹ کرنا ہے
+print-menu-kind = کیا پرنٹ کرنا ہے
 
 # review: pending
-print-adhari-kind-parchi = { -gahak } کی پرچی
+print-menu-buyers = { -gahakon } کی پرچیاں
 
 # review: pending
-print-adhari-kind-sale = { -bikri } کی مکمل پرنٹ
+print-menu-sale = پوری { -bikri }
 
 ## The titles, facts, totals and column heads of the table prints of plan 76 (the backend writes their ids into the print data).
 
@@ -639,13 +644,13 @@ print-collection-sheet-col-detail = مال
 print-collection-sheet-col-previous = { -sabiqa-raqam }
 
 # review: pending
-print-collection-sheet-col-bill = { -taza-banam }
+print-collection-sheet-col-bill = آج کا بل
 
 # review: pending
-print-collection-sheet-col-paid = { -mauqa-par-jama }
+print-collection-sheet-col-paid = نقد
 
 # review: pending
-print-collection-sheet-col-due = { -total-raqam }
+print-collection-sheet-col-due = کل ادھار
 
 # review: pending
 print-partner-month-col-date = تاریخ
@@ -673,3 +678,114 @@ print-partner-month-col-net = دن کا خالص
 
 # review: pending
 print-partner-month-col-running = { -kul-raqam }
+
+## Plan 78: the prints that each do one job, with the party's name in the title (PRD FR-19.15, FR-12.12, plan 78 A2 to A6).
+
+# The title of a buyer's day slip and of a seller's day slip: the party's name, then the words.
+# $name: the name of the party in the print language, with his tag.
+# review: pending
+print-buyer-day-slip-title = { $name } کی روزانہ پرچی
+
+# review: pending
+print-seller-day-slip-title = { $name } کی روزانہ پرچی
+
+# The title of the print of every seller's bill (the frame of the job).
+# review: pending
+print-seller-bills-title = { -beopari } کی پرچیاں
+
+# The side of a balance on a slip, written for the party who reads it (the party's own words, not the books').
+# review: pending
+print-slip-side-dr = آپ کے ذمے
+
+# review: pending
+print-slip-side-cr = دکان کے ذمے
+
+## The whole sale print: the sellers table, then the buyers table (PRD FR-19.15).
+
+# review: pending
+print-sale-buyers-title = { -gahak }
+
+# review: pending
+print-sale-buyers-total = { -meezan }
+
+# review: pending
+print-sale-col-buyer = { -gahak }
+
+# What the buyer bought, in short: (item quantity . rate).
+# review: pending
+print-sale-col-bought = مال
+
+# review: pending
+print-sale-col-bill = بل
+
+# review: pending
+print-sale-col-cash = نقد
+
+# review: pending
+print-sale-col-credit = ادھار
+
+## ادھاری تفصیل: how much the shop has to take from its buyers (PRD R5, FR-19.15).
+
+# review: pending
+print-adhari-sheet-title = { report-r5-title }
+
+# The totals row of today's buyers.
+# review: pending
+print-adhari-sheet-total = آج کے { -gahak }
+
+# The buyers who owed at the start of the day and bought nothing today, as one total.
+# review: pending
+print-adhari-sheet-others = دوسرے { -gahak } جنہوں نے آج نہیں خریدا
+
+# Everything every buyer owes the shop.
+# review: pending
+print-adhari-sheet-all = کل ادھار، سب { -gahak }
+
+# review: pending
+print-adhari-sheet-col-party = { -gahak }
+
+# review: pending
+print-adhari-sheet-col-detail = آج کا مال
+
+# review: pending
+print-adhari-sheet-col-bill = آج کا بل
+
+# review: pending
+print-adhari-sheet-col-cash = نقد
+
+# review: pending
+print-adhari-sheet-col-today-credit = آج کا ادھار
+
+# review: pending
+print-adhari-sheet-col-previous = { -sabiqa-raqam }
+
+# review: pending
+print-adhari-sheet-col-total = کل ادھار
+
+## The print menu of the sale book, F9 (PRD FR-12.12, plan 78 A1): three prints, each with one purpose.
+
+# review: pending
+print-menu-sellers = { -beopariyon } کی پرچیاں
+
+# What each print is for, one line, shown under the choice (plan 78 A0).
+# review: pending
+print-menu-buyers-purpose = ہر { -gahak } نے آج کیا خریدا اور اس کے ذمے کتنا ہے۔ ایک صفحے پر کئی پرچیاں، کاٹنے کی لکیروں کے ساتھ۔
+
+# review: pending
+print-menu-sellers-purpose = ہر { -beopari } نے آج کیا بیچا، اس کی کٹوتیاں اور دکان کے ذمے کتنا ہے۔ ہر { -beopari } کا الگ بل۔
+
+# review: pending
+print-menu-sale-purpose = آج کی پوری { -bikri } ایک جگہ: سب { -beopari } اور سب { -gahak }، ایک یا دو صفحوں پر۔
+
+# review: pending
+print-seller-bills-label = { -beopariyon } کے بل، ہر { -beopari } کا ایک
+
+# review: pending
+print-seller-bills-empty = اس دن کسی { -beopari } کا بل نہیں
+
+# review: pending
+print-sale-empty = اس دن کوئی { -bikri } نہیں
+
+# What ادھاری تفصیل is for, one line (plan 78 A0, A5).
+# review: pending
+print-adhari-box-help = آج کے ہر { -gahak } کی ایک قطار: کتنا بل، کتنا نقد، آج کا ادھار، پہلے کا بقایا اور کل ادھار۔ آخر میں سب { -gahakon } کا کل ادھار۔

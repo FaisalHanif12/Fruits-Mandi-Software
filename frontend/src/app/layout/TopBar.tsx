@@ -4,7 +4,7 @@
 // is on them (plan 75, item 9), so the bar shows two boxes, the search and the language switch, and the
 // pressed language is the one strong colour in it.
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { ChangePasswordDialog } from '../../features/auth/components/ChangePasswordDialog';
 import type { VoucherSearchHit } from '../../shared/accounts';
 import { AttentionBell } from './AttentionBell';
@@ -24,6 +24,11 @@ interface TopBarProps {
   onOpenBikri: (id: number) => void;
   /** A search result was chosen: open that voucher. */
   onOpenVoucher: (hit: VoucherSearchHit) => void;
+  /**
+   * The Back button of a page that was opened from another page (plan 78 F1), or nothing. It stands at the
+   * start of the bar, so it is in the same place on every page.
+   */
+  back?: ReactNode;
 }
 
 export function TopBar({
@@ -33,11 +38,13 @@ export function TopBar({
   onOpenAccount,
   onOpenBikri,
   onOpenVoucher,
+  back,
 }: TopBarProps) {
   const [changingPassword, setChangingPassword] = useState(false);
   const userButton = useRef<HTMLButtonElement>(null);
   return (
     <header className="flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-5">
+      {back}
       <GlobalSearch
         onOpenAccount={onOpenAccount}
         onOpenBikri={onOpenBikri}

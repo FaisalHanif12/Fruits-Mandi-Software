@@ -63,6 +63,7 @@ const MONTH: CommissionMonth = {
   year: 2026,
   period: { kind: 'month', from: '2026-10-01', to: '2026-10-31' },
   party: null,
+  goods: 'all',
   total_count: 1,
   offset: 0,
   limit: 100,
@@ -77,6 +78,7 @@ const MONTH: CommissionMonth = {
 const DAY: CommissionDay = {
   date: '2026-10-10',
   party: null,
+  goods: 'all',
   partners: PARTNERS,
   entries: [
     {
@@ -253,7 +255,9 @@ describe.each(LANGUAGES)('the commission page (%s)', (language) => {
       expect(visible(document.querySelector('.print-sheet')?.textContent)).toContain('44,364');
     });
     await user.click(
-      await screen.findByRole('button', { name: (name) => visible(name) === m('common-back') }),
+      await within(screen.getByRole('main')).findByRole('button', {
+        name: (name) => visible(name) === m('common-back'),
+      }),
     );
     expect(await screen.findByRole('treegrid')).toBeTruthy();
   });

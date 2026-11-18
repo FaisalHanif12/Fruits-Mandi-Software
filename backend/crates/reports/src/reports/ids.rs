@@ -100,6 +100,9 @@ pub(crate) const COL_RETURN_BY: &str = "report-col-return-by";
 pub(crate) const COL_DAYS_PAST: &str = "report-col-days-past";
 pub(crate) const STAFF_YES: &str = "report-staff-yes";
 pub(crate) const R32_OVERDUE: &str = "report-r32-overdue";
+/// R36: the rent the gardens were made with, and the relief the owners gave (PRD FR-12.51).
+pub(crate) const R36_RENT_ORIGINAL: &str = "report-r36-rent-original";
+pub(crate) const R36_RELIEF: &str = "report-r36-relief";
 // Column headings of R10, R33 and R34 (plan d5-late, round 8).
 pub(crate) const COL_PACKING: &str = "report-col-packing";
 pub(crate) const COL_RECEIVED: &str = "report-col-received";
@@ -163,6 +166,16 @@ pub(crate) const R35_BUYERS: &str = "report-r35-buyers";
 pub(crate) const R35_SELLERS: &str = "report-r35-sellers";
 pub(crate) const R35_TOTAL_QTY: &str = "report-r35-total-qty";
 pub(crate) const R35_PREVIOUS: &str = "report-r35-previous";
+/// The opening balance of an account made that day, on a party's day slip (plan 78 A6, PRD FR-10.9):
+/// "ابتدائی بقایا". Shown right after the previous balance, only when the party's opening is dated
+/// that day.
+pub(crate) const R35_OPENING: &str = "report-r35-opening";
+/// The titles of a day slip that name the party: "{ $name } کی روزانہ پرچی" for a buyer and for a
+/// seller, and "{ $name } کا بل" for the seller bill (plan 78 A2, A3, A6). The template passes the
+/// party's name and tag as `$name`.
+pub(crate) const SLIP_TITLE_BUYER: &str = "print-buyer-day-slip-title";
+pub(crate) const SLIP_TITLE_SELLER: &str = "print-seller-day-slip-title";
+pub(crate) const SELLER_BILL_TITLE: &str = "print-seller-bill-named-title";
 /// The party column of the all-parties table (PRD FR-19.12 says پارٹی).
 pub(crate) const COL_PARTY: &str = "report-col-party";
 pub(crate) const R35_COLLECTION: &str = "report-r35-collection";

@@ -353,6 +353,10 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       await waitFor(() => {
         expect(focusedIn(lotsGrid(language))).toBe('0:seller');
       });
+      // A picker opens its list as soon as it has the focus (PRD FR-7.16): the first Enter is pressed once it has.
+      await waitFor(() => {
+        expect(document.activeElement?.getAttribute('role')).toBe('combobox');
+      });
       // The eight stops of the lot, then the first line's buyer, quantity and rate.
       await user.keyboard('{Enter}'.repeat(8));
       await waitFor(() => {

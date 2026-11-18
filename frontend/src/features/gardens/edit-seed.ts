@@ -37,7 +37,10 @@ function sourcesOf(row: GardenHistoryRow): Record<number, MoneySource> {
  * payment keeps its reason).
  */
 export function draftOfGardenEntry(row: GardenHistoryRow, grouping: Grouping): EntryDraft {
-  const kind = row.kind === 'installment' || row.kind === 'cost' ? row.kind : 'other_sale';
+  const kind =
+    row.kind === 'installment' || row.kind === 'cost' || row.kind === 'refund'
+      ? row.kind
+      : 'other_sale';
   const fresh = newEntryDraft(kind, '');
   const base = {
     ...fresh,
@@ -45,6 +48,10 @@ export function draftOfGardenEntry(row: GardenHistoryRow, grouping: Grouping): E
     amount: formatPaisa(row.amount_paisa, { grouping }),
     sources: sourcesOf(row),
   };
+  if (kind === 'refund') {
+    // A refund keeps its note where a payment keeps its reason (plan 78 D3).
+    return { ...base, note: row.note ?? '' };
+  }
   if (kind === 'other_sale') {
     return {
       ...base,
@@ -123,7 +130,7 @@ export function gardenHeaderDraftOf(garden: GardenRow, grouping: Grouping): Gard
     })),
     names: { urdu: garden.name_ur, english: garden.name_en },
     date: isoToDisplayDate(garden.entry_date),
-    item: garden.item === null ? null : pickedOf(garden.item),
+    items: garden.items.map((item) => pickedOf(item)),
     rent: formatPaisa(garden.rent_paisa, { grouping }),
     paidNow: '',
     paidNowReason: '',

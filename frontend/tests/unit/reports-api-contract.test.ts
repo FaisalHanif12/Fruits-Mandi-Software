@@ -347,7 +347,10 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'dir',
         'filters',
         'language',
+        // The party of a one-party print and the title that names him (plan 78 A2, A3, A6): null for these reports.
+        'named_title_id',
         'paper',
+        'party',
         'report',
         'row_count',
         'rows',

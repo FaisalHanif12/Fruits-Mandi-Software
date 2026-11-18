@@ -240,8 +240,8 @@ fn check_open(w: &World, garden: i64, cash0: i64, run: &Run) {
     assert_eq!(row.other_shop_paisa.as_paisa(), other);
     assert_eq!(
         row.rent_due_paisa.as_paisa(),
-        row.rent_paisa.as_paisa() - run.installments(),
-        "rent still due is the rent less the live installments"
+        (row.rent_paisa.as_paisa() - run.installments()).max(0),
+        "rent still due is the rent less the live installments, never below 0 (PRD FR-12.51)"
     );
     // The cash: shop parts left, the money of other shops came in; a garden lot gives no cash.
     assert_eq!(cash0 - cash_paisa(w), shop_parts - other);
@@ -347,6 +347,7 @@ fn run(case: &Case) {
             ],
             date: "10-10-2026".into(),
             item_id: Some(w.banana),
+            item_ids: Vec::new(),
             rent: case.rent.to_string(),
             season_end: None,
             note: None,

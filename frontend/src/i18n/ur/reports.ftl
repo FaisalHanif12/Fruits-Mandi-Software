@@ -1112,7 +1112,7 @@ report-r34-open-qty = باقی { -nag }
 ## R35, the party day sheet (plan 27, PRD FR-19.12): the table of every party and the slip of one party.
 
 # review: pending
-report-r35-title = پارٹی کی روزانہ پرچی
+report-r35-title = روزانہ پارٹی فہرست
 
 # review: pending
 report-r35-help = ایک دن کا: ہر پارٹی کے ذمے شروع میں کتنی رقم تھی، اس دن کا بنام اور جمع، اور جو باقی ہے۔ پرچی دیکھنے کے لیے پارٹی چنیں۔ جو بل اسی دن بدلا یا منسوخ ہوا وہ دن کے خانوں میں ایک ہی بار گنا جاتا ہے؛ بقایا کھاتے سے ملتے ہیں۔
@@ -1200,6 +1200,14 @@ report-col-running-balance = چلتا بقایا
 
 # review: pending
 report-col-rent-due = ٹھیکہ باقی
+
+# Under the table of R36, only when the owner of a garden gave relief on its rent (PRD FR-12.51, plan 78 D3): the rent when the garden was made.
+# review: pending
+report-r36-rent-original = باغ بنتے وقت کا { -thaika }
+
+# The relief: how much the owner took off the rent, over the whole filter.
+# review: pending
+report-r36-relief = مالک کی طرف سے رعایت
 
 # review: pending
 report-garden-open = کھلا
@@ -1349,7 +1357,7 @@ report-r35-laga = { -laga }
 
 # What the buyer owes for the day: the goods, the commission and the laga.
 # review: pending
-report-r35-today-total = آج کا کل
+report-r35-today-total = آج کا بل
 
 # Other entries of the day on the party's account, for example cash lent or a journal line.
 # review: pending
@@ -1357,10 +1365,10 @@ report-r35-other = دیگر اندراج
 
 # The line the collector fills in by hand when nothing was paid yet.
 # review: pending
-report-r35-paid-today = آج ادا
+report-r35-paid-today = نقد جمع کروایا
 
 # review: pending
-report-r35-today-left = آج کا باقی
+report-r35-today-left = آج کا ادھار
 
 # review: pending
 report-r35-new-balance = نیا بقایا
@@ -1401,16 +1409,16 @@ report-r34-commission-buyer = { -commission } گاہک
 report-r34-commission-laga = { -laga }
 
 # review: pending
-report-r34-buyers-billed = گاہکوں کا آج کا کل
+report-r34-buyers-billed = گاہکوں کا آج کا بل
 
 # review: pending
 report-r34-buyers-other = گاہکوں کے دیگر اندراج
 
 # review: pending
-report-r34-buyers-received = گاہکوں کی طرف سے آج ادا
+report-r34-buyers-received = گاہکوں نے نقد جمع کروایا
 
 # review: pending
-report-r34-buyers-left = گاہکوں کا آج کا باقی
+report-r34-buyers-left = گاہکوں کا آج کا ادھار
 
 # review: pending
 report-r34-sellers-net = بیوپاریوں کی آج کی { -safi-bikri }
@@ -1419,7 +1427,7 @@ report-r34-sellers-net = بیوپاریوں کی آج کی { -safi-bikri }
 report-r34-sellers-other = بیوپاریوں کے دیگر اندراج
 
 # review: pending
-report-r34-sellers-paid = بیوپاریوں کو آج ادا
+report-r34-sellers-paid = بیوپاریوں کو نقد ادا کر دیا
 
 # The two short tables under the lines of a day.
 # review: pending
@@ -1429,7 +1437,7 @@ report-r34-table-buyers = گاہکوں کی فہرست
 report-r34-table-sellers = بیوپاریوں کی فہرست
 
 # review: pending
-report-col-today-total = آج کا کل
+report-col-today-total = آج کا بل
 
 # review: pending
 report-col-net-sale = آج کی { -safi-bikri }
@@ -1438,7 +1446,7 @@ report-col-net-sale = آج کی { -safi-bikri }
 report-col-other-entries = دیگر اندراج
 
 # review: pending
-report-col-paid-today = آج ادا
+report-col-paid-today = نقد جمع کروایا
 
 # review: pending
 report-col-new-balance = نیا بقایا
@@ -1793,17 +1801,35 @@ collection-col-detail = مال
 collection-col-previous = { -sabiqa-raqam }
 
 # review: pending
-collection-col-bill = { -taza-banam }
+collection-col-bill = آج کا بل
 
 # review: pending
-collection-col-paid = { -mauqa-par-jama }
+collection-col-paid = نقد
 
 # review: pending
-collection-col-total-due = { -total-raqam }
+collection-col-total-due = کل ادھار
 
 # review: pending
-collection-dead-line = { -doobi-raqam } (الگ شمار، اوپر کے میزان میں نہیں): { -sabiqa-raqam } <prev></prev>، { -taza-banam } <bill></bill>، { -total-raqam } <due></due>
+collection-dead-line = { -doobi-raqam } (الگ شمار، اوپر کے میزان میں نہیں): { -sabiqa-raqam } <prev></prev>، { -taza-banam } <bill></bill>، { collection-col-total-due } <due></due>
 
 # The buyers whose total due ends in جمع (the shop owes them): listed apart so the total above stays what the buyers owe.
 # review: pending
-collection-credit-line = { -jama } والے { -gahak } (الگ شمار، اوپر کے میزان میں نہیں): { -sabiqa-raqam } <prev></prev>، { -taza-banam } <bill></bill>، { -total-raqam } <due></due>
+collection-credit-line = { -jama } والے { -gahak } (الگ شمار، اوپر کے میزان میں نہیں): { -sabiqa-raqam } <prev></prev>، { -taza-banam } <bill></bill>، { collection-col-total-due } <due></due>
+
+## Plan 78: the clear words of a party's day slip (A6). The seller's slip has its own words where a buyer's does not fit.
+
+# Opening balance: the balance the account was made with, on the day it was posted (PRD FR-19.12, FR-19.16).
+# review: pending
+report-r35-opening = { -ibtidai-baqaya }
+
+# Seller's slip: what the shop paid him that day in cash (his نقد and the ادائیگی).
+# review: pending
+report-r35-paid-today-seller = نقد ادا کر دیا
+
+# Seller's slip: what the shop still has to pay him for the day.
+# review: pending
+report-r35-today-left-seller = آج دینا باقی
+
+# The same column in the short table of sellers of the day summary (R34).
+# review: pending
+report-col-paid-today-seller = نقد ادا کر دیا

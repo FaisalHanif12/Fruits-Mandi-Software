@@ -637,7 +637,13 @@ fn the_sales_queries_use_the_date_index_and_never_scan_the_sale_lines() {
     let lots = plan(r6_page(day, day));
     assert!(lots.contains("idx_bikri_entries_date"), "{lots}");
     let facts = plan(r7(day, day));
-    assert!(facts.contains("idx_analytics_facts_date"), "{facts}");
+    // Migration 24 made the covering index of the views (`idx_analytics_facts_views`) the one SQLite
+    // picks; what matters is that it searches the facts by the date range and never scans them.
+    assert!(
+        facts.contains("idx_analytics_facts_") && facts.contains("(entry_date>? AND entry_date<?)"),
+        "{facts}"
+    );
+    assert!(!facts.contains("SCAN f"), "{facts}");
     let income = plan(r28_page(day, day));
     assert!(!income.contains("SCAN "), "{income}");
     // No filter at all is still a valid query.

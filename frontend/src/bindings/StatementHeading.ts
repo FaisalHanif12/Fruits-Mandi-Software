@@ -4,4 +4,4 @@
  * Where a line came from (PRD FR-17.10 "headings").
  */
 export type StatementHeading =
-  'bikri' | 'expense' | 'capital' | 'drawings' | 'trip' | 'garden' | 'fruit' | 'linked';
+  'bikri' | 'expense' | 'capital' | 'drawings' | 'trip' | 'garden' | 'fruit' | 'linked' | 'advance';

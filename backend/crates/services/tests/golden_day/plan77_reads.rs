@@ -38,6 +38,7 @@ fn month_for(
             month: None,
             period,
             party,
+            goods: None,
             offset: None,
             limit: None,
         },
@@ -56,6 +57,7 @@ fn refused(
             month: None,
             period,
             party,
+            goods: None,
             offset: None,
             limit: None,
         },
@@ -322,6 +324,7 @@ fn a_future_date_a_reversed_range_and_missing_fields_are_refused() {
                 offset: 0,
                 limit: 0,
                 party,
+                goods: None,
             },
         )
         .unwrap_err();
@@ -342,6 +345,7 @@ fn a_future_date_a_reversed_range_and_missing_fields_are_refused() {
             offset: 0,
             limit: 0,
             party: None,
+            goods: None,
         },
     )
     .unwrap();
@@ -399,6 +403,7 @@ fn a_range_is_paged_and_its_totals_cover_the_whole_range() {
                     ..period(CommissionPeriodKind::Range)
                 }),
                 party: None,
+                goods: None,
                 offset: Some(offset),
                 limit: Some(limit),
             },
@@ -436,6 +441,7 @@ fn the_day_detail_lists_only_the_postings_of_the_party() {
                 offset: 0,
                 limit: 0,
                 party,
+                goods: None,
             },
         )
         .unwrap()
@@ -480,6 +486,7 @@ fn the_print_names_the_party_and_the_period() {
             month: None,
             period,
             party,
+            goods: None,
             language,
             paper: None,
         }
@@ -1507,6 +1514,7 @@ fn kept_counts(w: &support::World) -> (i64, i64, i64) {
                 ..period(CommissionPeriodKind::Range)
             }),
             party: None,
+            goods: None,
             offset: Some(0),
             limit: Some(1),
         },

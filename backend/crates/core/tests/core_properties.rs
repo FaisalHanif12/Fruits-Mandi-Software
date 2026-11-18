@@ -5,7 +5,7 @@
 use mandi_core::english_words::english_words;
 use mandi_core::money::{
     Bps, Grams, Grouping, MAX_RUPEES, Paisa, Qty, apply_bps, avg_rate, format_paisa, line_value,
-    parse_rupees, parse_sum_rupees, split_by_bps, split_by_qty, weight_value,
+    parse_rupees, parse_sum_rupees, split_by_bps, split_by_open_parts, split_by_qty, weight_value,
 };
 use mandi_core::text::{normalize_urdu, search_en, search_phonetic, search_ur};
 use mandi_core::urdu_words::urdu_words;
@@ -248,4 +248,84 @@ fn keys_are_stable_for_every_char_and_mark_pair() {
 #[test]
 fn every_property_runs_10_000_cases() {
     assert_eq!(config().cases, 10_000);
+}
+
+/// 1 to 10 open parts (whole rupees, some of them 0) with distinct ids in a random order.
+fn open_parts() -> impl Strategy<Value = Vec<(u32, Paisa)>> {
+    prop::collection::vec(0i64..=2_000_000, 1..=10).prop_flat_map(|rupees| {
+        let ids: Vec<u32> = (1..=u32::try_from(rupees.len()).unwrap())
+            .map(|i| i * 5)
+            .collect();
+        (Just(rupees), Just(ids).prop_shuffle()).prop_map(|(rupees, ids)| {
+            ids.into_iter()
+                .zip(rupees)
+                .map(|(id, r)| (id, Paisa::from_rupees(r).unwrap()))
+                .collect()
+        })
+    })
+}
+
+proptest! {
+    #![proptest_config(config())]
+
+    /// PRD C28: what comes back adds up to what was settled, no part is below 0 or above what is
+    /// open of it, and a part with nothing open gets nothing.
+    #[test]
+    fn split_by_open_parts_adds_back_exactly_and_stays_inside_each_open_part(
+        open in open_parts(),
+        pick in 0u64..=10_000,
+    ) {
+        let total: i64 = open.iter().map(|(_, p)| p.rupees()).sum();
+        let settled = i64::try_from(i128::from(total) * i128::from(pick) / 10_000).unwrap();
+        let parts = split_by_open_parts(Paisa::from_rupees(settled).unwrap(), &open).unwrap();
+        prop_assert_eq!(parts.len(), open.len());
+        let mut sum = 0i64;
+        for ((id, part), (open_id, open_part)) in parts.iter().zip(open.iter()) {
+            prop_assert_eq!(id, open_id);
+            prop_assert!(*part >= Paisa::ZERO && part <= open_part);
+            if *open_part == Paisa::ZERO {
+                prop_assert_eq!(*part, Paisa::ZERO);
+            }
+            sum += part.rupees();
+        }
+        prop_assert_eq!(sum, settled);
+    }
+
+    /// Everything settled gives exactly the open parts back.
+    #[test]
+    fn split_by_open_parts_settling_everything_gives_the_open_parts(open in open_parts()) {
+        let total: i64 = open.iter().map(|(_, p)| p.rupees()).sum();
+        let parts = split_by_open_parts(Paisa::from_rupees(total).unwrap(), &open).unwrap();
+        prop_assert_eq!(parts, open);
+    }
+
+    /// A run of part settlements that adds up to the whole gives each open part back exactly.
+    #[test]
+    fn split_by_open_parts_in_steps_gives_each_part_back_exactly(
+        open in open_parts(),
+        cuts in prop::collection::vec(0u64..=10_000, 0..=5),
+    ) {
+        let total: i64 = open.iter().map(|(_, p)| p.rupees()).sum();
+        let mut marks: Vec<i64> = cuts
+            .iter()
+            .map(|c| i64::try_from(i128::from(total) * i128::from(*c) / 10_000).unwrap())
+            .collect();
+        marks.push(0);
+        marks.push(total);
+        marks.sort_unstable();
+        let mut left = open.clone();
+        let mut gave = vec![0i64; open.len()];
+        for pair in marks.windows(2) {
+            let step = pair[1] - pair[0];
+            let parts = split_by_open_parts(Paisa::from_rupees(step).unwrap(), &left).unwrap();
+            for (i, (_, part)) in parts.iter().enumerate() {
+                gave[i] += part.rupees();
+                left[i].1 = left[i].1.checked_sub(*part).unwrap();
+                prop_assert!(left[i].1 >= Paisa::ZERO);
+            }
+        }
+        for (i, (_, part)) in open.iter().enumerate() {
+            prop_assert_eq!(gave[i], part.rupees());
+        }
+    }
 }

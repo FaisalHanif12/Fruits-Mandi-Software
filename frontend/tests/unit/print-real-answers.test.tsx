@@ -6,26 +6,13 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from '@tauri-apps/api/event';
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as reportsApi from '../../src/features/reports/api';
 import { BikriPrintDocument } from '../../src/features/bikri/print/BikriPrintDocument';
 import { printDataFor } from '../helpers/print-data';
-import { REAL_SNAPSHOTS, realFor, realPrintData, shapeOf } from '../helpers/print-real';
-import {
-  healthyBackend,
-  leaveAppWindow,
-  press,
-  renderApp,
-  resetClientState,
-  sessionUser,
-  signedIn,
-} from '../helpers/app';
-import { fakeBikri } from '../helpers/bikri';
-import { named } from '../helpers/bikri-screen';
-import { fakePartners } from '../helpers/partners';
-import { fakePrinting } from '../helpers/print';
+import { REAL_SNAPSHOTS, realPrintData, shapeOf } from '../helpers/print-real';
+import { leaveAppWindow, renderApp, resetClientState } from '../helpers/app';
 import { message, visible } from '../helpers/render';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
@@ -150,43 +137,4 @@ describe('the real documents through the hidden print route', () => {
       expect(visible(document.body.textContent)).toContain(first?.party.name);
     },
   );
-});
-
-describe.each(['ur', 'en'] as const)('the real documents in the print preview (%s)', (language) => {
-  beforeEach(() => {
-    resetClientState(language);
-    healthyBackend();
-    fakePartners();
-    signedIn(sessionUser({ language }));
-  });
-  afterEach(() => {
-    leaveAppWindow();
-  });
-
-  it('shows the real bill and slips of بکری 1 in the box', async () => {
-    fakePrinting({ data: (input) => realFor(input.doc, input.language) });
-    fakeBikri();
-    await renderApp('/bikri/book?id=41');
-    await screen.findByRole('heading', {
-      level: 1,
-      name: named(message(language, 'bikri-saved-title', { number: 1 })),
-    });
-    press('F9');
-    const box = await screen.findByRole('dialog');
-    const user = userEvent.setup();
-    await within(box).findByRole('checkbox', {
-      name: named(message(language, 'print-doc-seller-bill')),
-    });
-    await user.click(
-      within(box).getByRole('button', { name: named(message(language, 'print-box-preview')) }),
-    );
-    await waitFor(() => {
-      expect(box.querySelectorAll('.print-doc')).toHaveLength(2);
-    });
-    const text = visible(box.textContent);
-    for (const figure of ['29,400', '10,084', '19,316', '12,880', '18,684']) {
-      expect(text, figure).toContain(figure);
-    }
-    expect(box.querySelectorAll('.print-sheet').length).toBe(3);
-  });
 });

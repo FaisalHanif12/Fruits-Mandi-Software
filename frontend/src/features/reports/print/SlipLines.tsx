@@ -21,6 +21,22 @@ const SUBTOTAL_IDS: ReadonlySet<string> = new Set([
   'report-r35-net-sale',
 ]);
 
+/**
+ * The lines whose words differ for a seller (plan 78 A6): what the shop paid him in cash and what it still has to
+ * pay him. The backend uses ONE label for the buyer's slip and the seller's (the golden tests name it); a slip with
+ * a net-sale line is a seller's.
+ */
+const SELLER_LABEL_ID: Readonly<Record<string, string>> = {
+  'report-r35-paid-today': 'report-r35-paid-today-seller',
+  'report-r35-today-left': 'report-r35-today-left-seller',
+};
+
+/** The side of a balance on a slip is written for the person who reads it (plan 78, Umar 17-11-2026). */
+const SLIP_SIDE_ID: Readonly<Record<string, string>> = {
+  'report-side-dr': 'print-slip-side-dr',
+  'report-side-cr': 'print-slip-side-cr',
+};
+
 /** The line the slip ends on: the new balance, with a double rule under it. */
 const TOTAL_IDS: ReadonlySet<string> = new Set(['report-r35-new-balance']);
 
@@ -52,7 +68,9 @@ function SlipValue({ cell }: { cell: ReportPrintCell }) {
         <span className="print-slip-value">
           <Num>{cell.text}</Num>
           <span className="print-balance-side">
-            {cell.side_id === ZERO_SIDE_ID ? null : l10n.getString(cell.side_id)}
+            {cell.side_id === ZERO_SIDE_ID
+              ? null
+              : l10n.getString(SLIP_SIDE_ID[cell.side_id] ?? cell.side_id)}
           </span>
         </span>
       );
@@ -72,13 +90,18 @@ function SlipValue({ cell }: { cell: ReportPrintCell }) {
 export function SlipLines({ lines }: { lines: readonly ReportPrintSummaryLine[] }) {
   const { l10n } = useLocalization();
   if (lines.length === 0) return null;
+  const seller = lines.some((line) => line.label_id === 'report-r35-net-sale');
   return (
     <div className="print-summary">
       <table className="print-amounts print-slip-lines">
         <tbody>
           {lines.map((line) => (
             <tr key={line.label_id} className={rowClass(line.label_id)}>
-              <th scope="row">{l10n.getString(line.label_id)}</th>
+              <th scope="row">
+                {l10n.getString(
+                  (seller ? SELLER_LABEL_ID[line.label_id] : undefined) ?? line.label_id,
+                )}
+              </th>
               <td className="print-num">
                 <SlipValue cell={line.cell} />
               </td>

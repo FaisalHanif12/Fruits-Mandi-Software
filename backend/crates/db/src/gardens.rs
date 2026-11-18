@@ -467,3 +467,83 @@ pub fn paid_by_partner(
     let rows = statement.query_map([garden_id], |r| Ok((r.get(0)?, (r.get(1)?, r.get(2)?))))?;
     rows.collect()
 }
+
+/// The items of a garden, the first (the one in `ventures.item_id`) first (plan 78 D2).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn items_of(conn: &Connection, venture_id: i64) -> rusqlite::Result<Vec<RecordRef>> {
+    let mut statement = conn.prepare_cached(
+        "SELECT it.id, it.code, it.name_ur, it.name_en
+         FROM venture_items vi
+         JOIN items it ON it.id = vi.item_id
+         JOIN ventures v ON v.id = vi.venture_id
+         WHERE vi.venture_id = ?1 AND vi.is_active = 1
+         ORDER BY CASE WHEN it.id = v.item_id THEN 0 ELSE 1 END, vi.id",
+    )?;
+    let rows = statement.query_map([venture_id], |r| {
+        Ok(RecordRef {
+            id: r.get(0)?,
+            code: r.get(1)?,
+            name_ur: r.get(2)?,
+            name_en: r.get(3)?,
+            tag: None,
+        })
+    })?;
+    rows.collect()
+}
+
+/// Sets the items of a garden to exactly `item_ids`: an item not in the list is switched off, never
+/// deleted, and one that comes back is switched on again (plan 78 D2, Code Standards D3).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn set_items(
+    conn: &Connection,
+    venture_id: i64,
+    item_ids: &[i64],
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE venture_items SET is_active = 0, updated_at = ?2, updated_by = ?3, version = version + 1
+         WHERE venture_id = ?1 AND is_active = 1",
+        params![venture_id, now, user_id],
+    )?;
+    for item_id in item_ids {
+        conn.execute(
+            "INSERT INTO venture_items (created_at, created_by, updated_at, updated_by, venture_id, item_id)
+             VALUES (?1, ?2, ?1, ?2, ?3, ?4)
+             ON CONFLICT (venture_id, item_id) DO UPDATE
+                SET is_active = 1, updated_at = ?1, updated_by = ?2, version = version + 1",
+            params![now, user_id, venture_id, item_id],
+        )?;
+    }
+    Ok(())
+}
+
+/// The rent a garden was made with, when the Owner has changed it since (plan 78 D3, PRD FR-12.51).
+/// `None` while the rent is the original.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn rent_original(conn: &Connection, garden_id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT rent_original_paisa FROM ventures WHERE id = ?1 AND kind = 'garden'",
+        [garden_id],
+        |r| r.get(0),
+    )
+}
+
+/// Σ of the live refunds (رعایت واپسی) of a garden: what the owner has paid back (plan 78 D3).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn refunds_total(conn: &Connection, garden_id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COALESCE(SUM(amount_paisa), 0) FROM venture_entries
+         WHERE venture_id = ?1 AND kind = 'refund' AND status = 'saved'",
+        [garden_id],
+        |r| r.get(0),
+    )
+}

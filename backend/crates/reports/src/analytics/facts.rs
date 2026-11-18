@@ -152,6 +152,28 @@ impl Group {
     }
 }
 
+/// The condition of a goods filter on the facts, with the table named `f` (PRD 18.1 "goods"), or
+/// none for all goods. The commission page uses the same text (plan 78 D4), so a goods filter means
+/// the same thing in both places.
+pub(crate) const fn goods_condition(goods: AnalyticsGoods) -> Option<&'static str> {
+    match goods {
+        AnalyticsGoods::All => None,
+        // Consigned goods have no venture and are not a garden's (PRD 18.1).
+        AnalyticsGoods::Consigned => Some(
+            "f.venture_id IS NULL AND f.seller_account_id NOT IN
+             (SELECT account_id FROM ventures WHERE kind = 'garden' AND account_id IS NOT NULL)",
+        ),
+        AnalyticsGoods::Trip => {
+            Some("f.venture_id IN (SELECT id FROM ventures WHERE kind = 'trip')")
+        }
+        AnalyticsGoods::Garden => Some(
+            "(f.venture_id IN (SELECT id FROM ventures WHERE kind = 'garden')
+              OR f.seller_account_id IN
+                 (SELECT account_id FROM ventures WHERE kind = 'garden' AND account_id IS NOT NULL))",
+        ),
+    }
+}
+
 /// The conditions on the facts for a run: the date range given (the run's or the compared one),
 /// the picked records, and the extra narrowing of a drill-down key.
 pub(crate) fn conds(
@@ -185,25 +207,8 @@ pub(crate) fn conds(
         // The goods of one garden: the lots whose seller is its account (FR-12.36).
         .id("f.seller_account_id = ?", typed.garden_account_id)
         .in_list("f.purchase_id", &key.purchase_ids);
-    match typed.goods {
-        AnalyticsGoods::All => {}
-        // Consigned goods have no venture and are not a garden's (PRD 18.1).
-        AnalyticsGoods::Consigned => {
-            c.always(
-                "f.venture_id IS NULL AND f.seller_account_id NOT IN
-                 (SELECT account_id FROM ventures WHERE kind = 'garden' AND account_id IS NOT NULL)",
-            );
-        }
-        AnalyticsGoods::Trip => {
-            c.always("f.venture_id IN (SELECT id FROM ventures WHERE kind = 'trip')");
-        }
-        AnalyticsGoods::Garden => {
-            c.always(
-                "(f.venture_id IN (SELECT id FROM ventures WHERE kind = 'garden')
-                  OR f.seller_account_id IN
-                     (SELECT account_id FROM ventures WHERE kind = 'garden' AND account_id IS NOT NULL))",
-            );
-        }
+    if let Some(sql) = goods_condition(typed.goods) {
+        c.always(sql);
     }
     c
 }

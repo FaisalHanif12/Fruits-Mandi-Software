@@ -14,12 +14,12 @@
 
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, WalletCards } from 'lucide-react';
+import { WalletCards } from 'lucide-react';
 import { useMemo } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { addDays, addMonths, monthOf, windowMonth } from '../../../shared/format';
 import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
-import { Button, GoToMonth, ListPage, LoadingState, MonthNav } from '../../../shared/ui';
+import { GoToMonth, ListPage, LoadingState, MonthNav } from '../../../shared/ui';
 import { KharchBoard } from '../../analytics';
 import { addYears, yearOf } from '../commission-search';
 import { DayNav, GoToCommissionDate, GoToYear, YearNav } from '../components/CommissionNav';
@@ -116,17 +116,6 @@ export function KharchPage() {
         <Localized id="kharch-help">
           <p />
         </Localized>
-      }
-      actions={
-        <Button
-          shortcut={SHORTCUTS.back}
-          onClick={() => {
-            void navigate({ to: '/' });
-          }}
-        >
-          <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-          <Localized id="kharch-back" />
-        </Button>
       }
       filters={<KharchFilterBar filters={filters} onChange={change} today={today} />}
     >

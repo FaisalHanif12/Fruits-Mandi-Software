@@ -6,6 +6,7 @@
 // `&repeat` (two regular expenses of last month). Never part of a build: only the development
 // route imports it.
 
+import type { CapitalWhere } from '../../src/bindings/CapitalWhere';
 import type { CashbookInput } from '../../src/bindings/CashbookInput';
 import type { ExpenseEntry } from '../../src/bindings/ExpenseEntry';
 import type { KhataStatementInput } from '../../src/bindings/KhataStatementInput';
@@ -43,6 +44,7 @@ import type { GeneralPreviewInput } from '../../src/bindings/GeneralPreviewInput
 import type { PartnersStatementDayInput } from '../../src/bindings/PartnersStatementDayInput';
 import type { PartnersStatementInput } from '../../src/bindings/PartnersStatementInput';
 import type { PartnersStatementMonthInput } from '../../src/bindings/PartnersStatementMonthInput';
+import { devFlag } from './dev-bridge';
 import { plan76Handlers } from './dev-bridge-plan76';
 import { createFruitBooks, HAJI_NAZIR } from './fruit-data';
 import { GENERAL_ACCOUNTS, createPartnerMoneyBooks } from './partner-money-books';
@@ -211,6 +213,36 @@ if (!flag('empty')) {
   });
 }
 
+/** The card of the روکڑ page after Events 1 to 5 (PRD FR-16.14): both sides are 65,488. */
+const CAPITAL_WHERE: CapitalWhere = {
+  where_lines: [
+    { kind: 'cash', amount_paisa: money(58_484) },
+    { kind: 'buyers_owe', amount_paisa: money(21_564) },
+    { kind: 'sellers_payable', amount_paisa: money(-10_160) },
+    { kind: 'owed_for_charges', amount_paisa: money(-4_400) },
+  ],
+  where_total_paisa: money(65_488),
+  whose_lines: [
+    {
+      kind: 'partner_total',
+      partner: { id: 1, code: '', name_ur: 'الف', name_en: 'Partner A' },
+      amount_paisa: money(-1_004),
+    },
+    {
+      kind: 'partner_total',
+      partner: { id: 2, code: '', name_ur: 'ب', name_en: 'Partner B' },
+      amount_paisa: money(746),
+    },
+    {
+      kind: 'partner_total',
+      partner: { id: 3, code: '', name_ur: 'ج', name_en: 'Partner C' },
+      amount_paisa: money(746),
+    },
+    { kind: 'opening_capital', partner: null, amount_paisa: money(65_000) },
+  ],
+  whose_total_paisa: money(65_488),
+};
+
 export const rokarHandlers: Record<string, Handler> = {
   ...plan76Handlers,
   fruit_preview: (input) => fruitBooks.preview(input as unknown as FruitInput),
@@ -221,6 +253,18 @@ export const rokarHandlers: Record<string, Handler> = {
   fruit_list: (input) => fruitBooks.list(input as unknown as FruitListInput),
   fruit_lots: (input) => fruitBooks.lots(input as unknown as FruitLotsInput),
   cashbook_get: (input) => books.cashbook(input as unknown as CashbookInput),
+  // Where the partners' money is and whose it is (plan 78 E): the worked day after Events 1 to 5. `?locked` is the
+  // partner section locked, which asks for the code in the place of the card.
+  cashbook_capital_where: () => {
+    if (devFlag('locked')) {
+      throw Object.assign(new Error('ERR_PARTNER_LOCKED'), {
+        ok: false,
+        errors: [{ code: 'ERR_PARTNER_LOCKED', field: null, values: {} }],
+        ref: 'E-20261010-0001',
+      });
+    }
+    return CAPITAL_WHERE;
+  },
   masters_expense_heads: () => books.heads(),
   vouchers_preview_expense: (input) => books.expensePreview(input['entry'] as ExpenseEntry),
   vouchers_preview: (input) => {

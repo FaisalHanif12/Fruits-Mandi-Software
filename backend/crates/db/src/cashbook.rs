@@ -61,6 +61,81 @@ pub struct CashRow {
     pub venture_kind: Option<String>,
 }
 
+/// The partner behind an entry of capital (plan 78 E): who put capital in or took it back, or whose
+/// opening capital came into cash.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CapitalPartner {
+    /// The journal entry.
+    pub entry_id: i64,
+    /// The partner.
+    pub partner_id: i64,
+    /// His Urdu name.
+    pub name_ur: String,
+    /// His English name.
+    pub name_en: String,
+}
+
+/// The partner of each of these entries that is an entry of capital: a capital voucher (in or out)
+/// by its voucher's partner, and an opening posted on a partner's capital account by that partner.
+/// Any other entry has no row. One query.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn capital_partners(
+    conn: &Connection,
+    entry_ids: &[i64],
+) -> rusqlite::Result<Vec<CapitalPartner>> {
+    if entry_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let marks = vec!["?"; entry_ids.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT e.id, p.id, p.name_ur, p.name_en
+         FROM journal_entries e
+         JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id
+         JOIN partners p ON p.id = v.partner_id
+         WHERE e.posting_type IN ('capital_in', 'capital_out') AND e.id IN ({marks})
+         UNION ALL
+         SELECT e.id, p.id, p.name_ur, p.name_en
+         FROM journal_entries e
+         JOIN partners p ON e.source_type = 'account' AND p.capital_account_id = e.source_id
+         WHERE e.posting_type = 'opening' AND e.id IN ({marks})"
+    ))?;
+    let mut values: Vec<i64> = Vec::with_capacity(entry_ids.len().saturating_mul(2));
+    values.extend_from_slice(entry_ids);
+    values.extend_from_slice(entry_ids);
+    let rows = statement.query_map(params_from_iter(values.iter()), |r| {
+        Ok(CapitalPartner {
+            entry_id: r.get(0)?,
+            partner_id: r.get(1)?,
+            name_ur: r.get(2)?,
+            name_en: r.get(3)?,
+        })
+    })?;
+    rows.collect()
+}
+
+/// The day of the first posted entry that moved cash, or `None` when none did. It walks the entries
+/// by day and stops at the first that touches the cash account, so it costs a few lookups.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn first_entry_date(conn: &Connection, cash_id: i64) -> rusqlite::Result<Option<String>> {
+    conn.query_row(
+        "SELECT e.entry_date FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         WHERE e.status = 'posted'
+           AND EXISTS (SELECT 1 FROM journal_lines l WHERE l.entry_id = e.id AND l.account_id = ?1)
+         ORDER BY e.entry_date, e.id LIMIT 1",
+        [cash_id],
+        |r| r.get(0),
+    )
+    .map(Some)
+    .or_else(|e| match e {
+        rusqlite::Error::QueryReturnedNoRows => Ok(None),
+        other => Err(other),
+    })
+}
+
 /// The sums over a whole range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CashRange {
@@ -630,5 +705,102 @@ pub fn counterparts(
         let row = row?;
         out.entry(row.entry_id).or_default().push(row);
     }
+    Ok(out)
+}
+
+/// The net of an account, with where it sits in the chart: for the card "where the capital is"
+/// (plan 78 E). `net_paisa` is Σ debit less Σ credit of its posted lines.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccountNet {
+    /// Row id.
+    pub id: i64,
+    /// Its code.
+    pub code: String,
+    /// The code of its control.
+    pub control_code: String,
+    /// The code of its head (`01` to `06`).
+    pub head_code: String,
+    /// Σ debit, paisa.
+    pub dr_paisa: i64,
+    /// Σ credit, paisa.
+    pub cr_paisa: i64,
+}
+
+/// Every account with the sums of its posted lines and its place in the chart, one pass.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn account_nets(conn: &Connection) -> rusqlite::Result<Vec<AccountNet>> {
+    let mut statement = conn.prepare(
+        "SELECT a.id, a.code, k.code, h.code,
+                COALESCE((SELECT SUM(l.dr_paisa) FROM journal_lines l WHERE l.account_id = a.id), 0),
+                COALESCE((SELECT SUM(l.cr_paisa) FROM journal_lines l WHERE l.account_id = a.id), 0)
+         FROM accounts a
+         JOIN account_controls k ON k.id = a.control_id
+         JOIN account_heads h ON h.id = k.head_id
+         ORDER BY a.id",
+    )?;
+    let rows = statement.query_map([], |r| {
+        Ok(AccountNet {
+            id: r.get(0)?,
+            code: r.get(1)?,
+            control_code: r.get(2)?,
+            head_code: r.get(3)?,
+            dr_paisa: r.get(4)?,
+            cr_paisa: r.get(5)?,
+        })
+    })?;
+    rows.collect()
+}
+
+/// What each seller's advances still have open, `(account id, paisa)`: Σ of his live advance lines
+/// less what their active matching rows settled (PRD FR-15.8). Only sellers with something open. The
+/// two sums are read apart and subtracted with checked maths (money agent Section 9).
+///
+/// # Errors
+/// Any SQLite error; an amount that does not fit.
+pub fn open_advances_by_seller(conn: &Connection) -> rusqlite::Result<Vec<(i64, i64)>> {
+    let mut given: HashMap<i64, i64> = HashMap::new();
+    {
+        let mut statement = conn.prepare(&format!(
+            "SELECT l.account_id, SUM(l.dr_paisa)
+             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+             WHERE l.is_advance = 1 AND l.dr_paisa > 0 AND {live}
+             GROUP BY l.account_id",
+            live = crate::matching::LIVE
+        ))?;
+        let rows = statement.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))?;
+        for row in rows {
+            let (account, sum) = row?;
+            given.insert(account, sum);
+        }
+    }
+    let mut settled: HashMap<i64, i64> = HashMap::new();
+    {
+        let mut statement = conn.prepare(&format!(
+            "SELECT l.account_id, SUM(a.amount_paisa)
+             FROM advance_allocations a
+             JOIN journal_lines l ON l.id = a.advance_line_id
+             JOIN journal_entries e ON e.id = l.entry_id
+             WHERE a.is_active = 1 AND l.is_advance = 1 AND l.dr_paisa > 0 AND {live}
+             GROUP BY l.account_id",
+            live = crate::matching::LIVE
+        ))?;
+        let rows = statement.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))?;
+        for row in rows {
+            let (account, sum) = row?;
+            settled.insert(account, sum);
+        }
+    }
+    let mut out = Vec::new();
+    for (account, sum) in given {
+        let open = sum
+            .checked_sub(settled.get(&account).copied().unwrap_or(0))
+            .ok_or_else(overflow)?;
+        if open > 0 {
+            out.push((account, open));
+        }
+    }
+    out.sort_unstable();
     Ok(out)
 }

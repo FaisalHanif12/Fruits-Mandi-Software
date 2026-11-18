@@ -82,12 +82,23 @@ const hitOf = (record: RecordRef, kind: SearchHit['kind']): SearchHit => ({
   sold_by_weight: false,
 });
 
-/** The item picker of the new garden form: one banana. */
-export function fakeGardenItemPicker(): void {
-  const hitsOf = (scope: string): SearchHit[] => (scope === 'item' ? [hitOf(BANANA, 'item')] : []);
-  vi.mocked(searchApi.searchMasters).mockImplementation(({ scope }) =>
-    Promise.resolve(hitsOf(scope)),
-  );
+/** The item picker of the new garden form: one banana, and the other items a test adds (plan 78 D2). */
+export function fakeGardenItemPicker(others: readonly RecordRef[] = []): void {
+  const items = [BANANA, ...others];
+  const hitsOf = (scope: string): SearchHit[] =>
+    scope === 'item' ? items.map((record) => hitOf(record, 'item')) : [];
+  vi.mocked(searchApi.searchMasters).mockImplementation(({ scope, text }) => {
+    const wanted = text.trim().toLowerCase();
+    return Promise.resolve(
+      hitsOf(scope).filter(
+        (hit) =>
+          wanted === '' ||
+          hit.name_en.toLowerCase().includes(wanted) ||
+          hit.name_ur.includes(wanted) ||
+          hit.code.includes(wanted),
+      ),
+    );
+  });
   vi.mocked(searchApi.searchRecent).mockImplementation(({ scope }) =>
     Promise.resolve(hitsOf(scope)),
   );

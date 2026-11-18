@@ -23,7 +23,7 @@ pub use parse::{
     MAX_QTY, MAX_RUPEES, MAX_WEIGHT_GRAMS, parse_bps, parse_qty, parse_rupees, parse_sum_qty,
     parse_sum_rupees, parse_weight,
 };
-pub use split::{split_by_bps, split_by_qty};
+pub use split::{split_by_bps, split_by_open_parts, split_by_qty};
 
 /// Paisa in one rupee.
 const PAISA_PER_RUPEE: i64 = 100;
@@ -61,6 +61,9 @@ pub enum MoneyError {
     /// The same partner or lot appears twice in one split.
     #[error("duplicate id in split")]
     DuplicateId,
+    /// More was settled than is open (`split_by_open_parts`, PRD C28).
+    #[error("more settled than is open")]
+    SettledMoreThanOpen,
 }
 
 impl MoneyError {
@@ -74,7 +77,8 @@ impl MoneyError {
             | MoneyError::NegativeValue
             | MoneyError::DivisionByZero
             | MoneyError::BpsOutOfRange
-            | MoneyError::DuplicateId => ErrorCode::ErrInternal,
+            | MoneyError::DuplicateId
+            | MoneyError::SettledMoreThanOpen => ErrorCode::ErrInternal,
         }
     }
 }
@@ -421,6 +425,7 @@ mod tests {
             MoneyError::DivisionByZero,
             MoneyError::BpsOutOfRange,
             MoneyError::DuplicateId,
+            MoneyError::SettledMoreThanOpen,
         ] {
             assert_eq!(bug.code(), ErrorCode::ErrInternal, "{bug}");
         }

@@ -46,7 +46,7 @@ purchases-field-other-cost = Other cost
 
 # PRD FR-12.39. The box shows the day of the purchase until it is changed.
 # review: pending
-purchases-sell-date-hint = Starts as the day of the purchase. From this day the goods come into every new { -bikri } until they are sold.
+purchases-sell-date-hint = Starts as the day of the purchase. Goods that wait are listed by this day, earliest first, when you add them to a { -bikri }.
 
 # review: pending
 purchases-field-note = Note
@@ -271,7 +271,7 @@ purchases-sell-date-title = Change the { -sell-date }
 
 # $number: the purchase.
 # review: pending
-purchases-sell-date-text = From this day the goods of { $number } come into every new { -bikri } until they are sold. The day cannot be before the day of the purchase.
+purchases-sell-date-text = The goods of { $number } are listed by this day when you add them to a { -bikri }, earliest first. The day cannot be before the day of the purchase.
 
 # review: pending
 purchases-sell-date-done = The { -sell-date } was changed.

@@ -7,13 +7,14 @@
 //
 // - One search box (code, running number, name in either script). The filter lives here, above the
 //   table, so a language switch loses nothing.
-// - ↑ ↓ choose a buyer; Enter opens his ledger (R13). Page Up and Page Down turn the pages.
+// - ↑ ↓ choose a buyer; Enter opens his history: the party ledgers statement, one row for each entry with the
+//   opening balance first (plan 78 B1, B2, FR-19.16). Page Up and Page Down turn the pages.
 // - Four states: loading, an error with a retry, nobody owes anything (or nothing matches the
 //   search, with a way out), and the rows.
 
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Printer, SearchX, Users } from 'lucide-react';
+import { Printer, SearchX, Users } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { BuyerDuesRow } from '../../../bindings/BuyerDuesRow';
 import { uiErrorOf } from '../../../shared/api';
@@ -23,7 +24,7 @@ import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../..
 import { Button, EmptyState, FilterBar, ListPage } from '../../../shared/ui';
 import { ExcelExportButton, ExcelExportNotices } from '../../../shared/export';
 import { useLanguage } from '../../../shared/i18n';
-import { TablePrintPreview, useOpenReport, useTableExcel } from '../../reports';
+import { TablePrintPreview, useTableExcel } from '../../reports';
 import { dashboardBuyerDuesPrint, dashboardBuyerDuesPrintData } from '../api';
 import { BUYER_DUES_COLUMNS } from '../dues-columns';
 import { useBuyerDues } from '../dues-hooks';
@@ -39,7 +40,6 @@ function rowId(row: BuyerDuesRow): string {
 
 export function BuyerDuesPage() {
   const navigate = useNavigate();
-  const open = useOpenReport();
   const [search, setSearch] = useState('');
   const [focusId, setFocusId] = useState<string | null>(null);
   const [view, setView] = useState<'table' | 'preview'>('table');
@@ -54,10 +54,13 @@ export function BuyerDuesPage() {
     language: sheet,
     paper: null,
   }));
-  useEscape('leave', () => {
-    if (view === 'preview') setView('table');
-    else void navigate({ to: '/' });
-  });
+  useEscape(
+    'leave',
+    () => {
+      setView('table');
+    },
+    view === 'preview',
+  );
   useShortcut(SHORTCUTS.print, () => {
     if (view === 'table') setView('preview');
   });
@@ -69,9 +72,12 @@ export function BuyerDuesPage() {
 
   const openLedger = useCallback(
     (row: BuyerDuesRow) => {
-      open?.('R13', { party: row.party.account_id });
+      void navigate({
+        to: '/bikri/party-ledgers',
+        search: { side: 'buyer', party: row.party.account_id },
+      });
     },
-    [open],
+    [navigate],
   );
 
   // The totals row is the backend's, over every buyer of the search and not over the rows loaded.
@@ -159,15 +165,6 @@ export function BuyerDuesPage() {
       }
       actions={
         <>
-          <Button
-            shortcut={SHORTCUTS.back}
-            onClick={() => {
-              void navigate({ to: '/' });
-            }}
-          >
-            <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-            <Localized id="dues-back" />
-          </Button>
           <Button
             shortcut={SHORTCUTS.print}
             onClick={() => {

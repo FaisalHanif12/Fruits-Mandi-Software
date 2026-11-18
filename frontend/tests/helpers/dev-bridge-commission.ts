@@ -8,6 +8,7 @@
 // Flags in the hash, for example `#/dev/commission?empty`:
 //   empty   no commission at all   down   the commission call fails   locked   the partner section is locked
 
+import type { AnalyticsGoods } from '../../src/bindings/AnalyticsGoods';
 import type { CommissionDay } from '../../src/bindings/CommissionDay';
 import type { CommissionDayRow } from '../../src/bindings/CommissionDayRow';
 import type { CommissionMonth } from '../../src/bindings/CommissionMonth';
@@ -120,9 +121,11 @@ function month(input: CommissionMonthInput): CommissionMonth {
     year: 2026,
     period: { kind, from: '2026-10-01', to: '2026-10-31' },
     party,
+    goods: asGoods(input.goods),
     first_month: '2026-08',
     current_month: '2026-10',
-    partners: party === null ? PARTNERS : [],
+    // Under a goods filter the partner columns are not sent (plan 78 D4).
+    partners: party === null && asGoods(input.goods) === 'all' ? PARTNERS : [],
     rows,
     total_count: all.length,
     offset,
@@ -132,6 +135,11 @@ function month(input: CommissionMonthInput): CommissionMonth {
   };
 }
 
+/** The goods the dev page was asked for (plan 78 D4); anything else is all goods. */
+function asGoods(value: unknown): AnalyticsGoods {
+  return value === 'consigned' || value === 'trip' || value === 'garden' ? value : 'all';
+}
+
 function day(input: Input): CommissionDay {
   const party = input['party'] as { side: 'buyer' | 'seller' } | undefined;
   const dateInput = input['date'];
@@ -139,7 +147,8 @@ function day(input: Input): CommissionDay {
   return {
     date: row.date,
     party: party === undefined ? null : partyShown(party.side),
-    partners: party === undefined ? PARTNERS : [],
+    goods: asGoods(input['goods']),
+    partners: party === undefined && asGoods(input['goods']) === 'all' ? PARTNERS : [],
     entries: [
       {
         entry_id: 5,

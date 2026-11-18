@@ -24,6 +24,7 @@ import type { RepeatLastMonthInput } from '../../bindings/RepeatLastMonthInput';
 import type { ShopExpenseInput } from '../../bindings/ShopExpenseInput';
 import { callCommand } from '../../shared/api';
 import type {
+  CapitalWhere,
   Cashbook,
   CashbookInput,
   ExpenseEntry,
@@ -47,6 +48,14 @@ import type { VoucherSaved } from '../vouchers';
  */
 export function cashbookGet(input: CashbookInput): Promise<Cashbook> {
   return callCommand<Cashbook>('cashbook_get', { input });
+}
+
+/**
+ * Where the partners' money is now and whose it is: the card on the روکڑ page (PRD FR-16.14, plan 78 E). Behind the
+ * partner code: while the section is locked the backend answers `ERR_PARTNER_LOCKED`.
+ */
+export function cashbookCapitalWhere(): Promise<CapitalWhere> {
+  return callCommand<CapitalWhere>('cashbook_capital_where');
 }
 
 /** The shop expense heads, the most used first (PRD FR-7.62). */

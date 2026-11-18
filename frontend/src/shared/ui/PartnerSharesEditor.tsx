@@ -33,6 +33,8 @@ interface PartnerSharesEditorProps {
   onSourceChange: (index: number, source: MoneySource) => void;
   /** What the backend refused, with the field paths of the rows. */
   error: UiError | null;
+  /** The shares are shown and cannot be typed in (the default shares of a new trip or garden, plan 78 D1). */
+  sharesLocked?: boolean;
 }
 
 /** True when the typed share says "not in it": empty, or only zeros. A reading of text, no sum. */
@@ -45,6 +47,7 @@ export function PartnerSharesEditor({
   onShareChange,
   onSourceChange,
   error,
+  sharesLocked = false,
 }: PartnerSharesEditorProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -76,6 +79,7 @@ export function PartnerSharesEditor({
               {(control) => (
                 <PercentInput
                   {...control}
+                  readOnly={sharesLocked}
                   value={row.share}
                   label={shareLabel}
                   onChange={(text) => {

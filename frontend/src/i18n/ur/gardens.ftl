@@ -156,8 +156,6 @@ gardens-preview-failed = اعداد نہیں نکل سکے
 gardens-created = { $code } بن گیا
 
 ## One garden.
-# review: pending
-gardens-back = باغات پر واپس
 # $number: the number of the garden.
 # review: pending
 gardens-detail-title = { $code }
@@ -402,16 +400,16 @@ gardens-arrival-qty = آئے ہوئے { -nag }
 gardens-arrival-qty-hint = پورا عدد۔ آپ جوڑ بھی لکھ سکتے ہیں، مثلاً 20+25۔
 
 # review: pending
-gardens-arrival-sell-date-hint = شروع میں مال آنے کا دن ہوتا ہے۔ اس دن سے مال ہر نئی { -bikri } میں آتا رہتا ہے جب تک بک نہ جائے۔
+gardens-arrival-sell-date-hint = شروع میں مال آنے کا دن ہوتا ہے۔ { -bikri } میں شامل کرتے وقت انتظار والا مال اسی دن کی ترتیب میں آتا ہے، پہلے دن والا پہلے۔
 
 # review: pending
-gardens-arrival-posts-nothing = اس مال کے ساتھ کوئی رقم نہیں ہے۔ یہ { -bagh } کے ذخیرے میں رہتا ہے جب تک { -bikri } میں بک نہ جائے یا ضائع نہ لکھا جائے۔ { -sell-date } سے نئی { -bikri } میں اس کا { -lot } پہلے سے موجود ہوتا ہے۔
+gardens-arrival-posts-nothing = اس مال کے ساتھ کوئی رقم نہیں ہے۔ یہ { -bagh } کے ذخیرے میں رہتا ہے جب تک { -bikri } میں بک نہ جائے یا ضائع نہ لکھا جائے۔ بیچتے وقت اسے { -bikri } میں خود شامل کریں۔
 
 # review: pending
 gardens-arrival-title = { -maal-aaya }
 
 # review: pending
-gardens-arrival-help = اس { -bagh } سے آیا ہوا وہ مال جو ابھی بکا نہیں۔ ہر نئی { -bikri } میں اس کی { -sell-date } پر اس کا ایک { -lot } پہلے سے موجود ہوتا ہے۔ جو نہ بکے وہ اگلے دن پھر آتا ہے۔
+gardens-arrival-help = اس { -bagh } سے آیا ہوا وہ مال جو ابھی بکا نہیں۔ یہ یہاں رہتا ہے جب تک آپ اسے { -bikri } میں شامل کر کے بیچ نہ دیں۔ وہاں یہ اپنی { -sell-date } کی ترتیب میں آتا ہے۔
 
 # review: pending
 gardens-arrival-failed = آیا ہوا مال پڑھا نہیں جا سکا
@@ -474,7 +472,7 @@ gardens-arrival-sell-date-title = { -sell-date } بدلیں
 
 # $number: the entry.
 # review: pending
-gardens-arrival-sell-date-text = اس دن سے { $number } کا مال ہر نئی { -bikri } میں آئے گا جب تک بک نہ جائے۔ یہ دن مال آنے کے دن سے پہلے نہیں ہو سکتا۔
+gardens-arrival-sell-date-text = { $number } کا مال { -bikri } میں شامل کرتے وقت اسی دن کی ترتیب میں آئے گا، پہلے دن والا پہلے۔ یہ دن مال آنے کے دن سے پہلے نہیں ہو سکتا۔
 
 # review: pending
 gardens-arrival-reason = وجہ
@@ -535,3 +533,53 @@ gardens-numbers-left-after = اس کے بعد اندراج میں باقی
 # The button on the facts of a garden that opens its names, main fruit, rent, season end and note for change (plan 44).
 # review: pending
 gardens-header-edit = باغ کی تفصیل تبدیل کریں
+
+# What the default shares of a new garden are (plan 78 D1). They cannot be typed in; "Custom shares" opens them.
+# review: pending
+gardens-share-default = فرم کے { -hissa } یا پچھلے باغ کے۔ بدلنے ہوں تو «اپنے { -hissa }» چنیں۔
+
+## The owner's refund after a rent relief (plan 78 D3, PRD FR-12.51).
+
+# review: pending
+gardens-kind-refund = رعایت واپسی
+
+# review: pending
+gardens-type-refund = رعایت واپسی
+
+# $number: the number of the entry.
+# review: pending
+gardens-saved-refund = رعایت واپسی { $number } محفوظ ہو گئی
+
+# review: pending
+gardens-refund-amount = مالک کی طرف سے واپس کی گئی رقم
+
+# review: pending
+gardens-refund-amount-hint = رعایت کے بعد جو رقم مالک پر باغ کی بنتی ہے وہ وہ واپس کرتا ہے۔ یہ { -rokar } میں آتی ہے اور باغ کی آمدن میں گنی جاتی ہے۔
+
+## A change of the rent: relief from the owner (plan 78 D3, PRD FR-12.51).
+
+# review: pending
+gardens-rent-change-help = { -thaika } بدلنے کے لیے وجہ اور آپ کا { -dastakhat } ہمیشہ چاہیے، آج کے باغ کے لیے بھی۔ کچھ پوسٹ نہیں ہوتا: کم { -thaika } مالک کی طرف سے رعایت ہے، اور ٹھیکہ باقی، چلتا ہوا بقایا اور نتیجہ اس کے ساتھ بدل جاتے ہیں۔
+
+# review: pending
+gardens-rent-change-reason = { -thaika } کیوں بدلا جا رہا ہے
+
+# review: pending
+gardens-rent-change-reason-hint = مثال: مالک سے رعایت ملی۔
+
+# review: pending
+gardens-rent-sign-hint = صرف مالک کا { -dastakhat } { -thaika } بدل سکتا ہے۔
+
+## The figures of a rent relief on the garden card (plan 78 D3, PRD FR-12.51).
+
+# review: pending
+gardens-fact-rent-original = باغ بنتے وقت کا { -thaika }
+
+# review: pending
+gardens-fact-relief = مالک کی طرف سے رعایت
+
+# review: pending
+gardens-fact-refunds = مالک کی طرف سے واپس کی گئی رقم
+
+# review: pending
+gardens-fact-owner-owes = مالک کے ذمے

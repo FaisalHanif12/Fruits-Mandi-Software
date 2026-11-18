@@ -16,7 +16,8 @@ use super::model::{
     CommissionPeriodShown, CommissionSide,
 };
 use super::period::{self, Resolved};
-use super::sums::{Day, Shape, buckets_in, partners_in, party_sql};
+use super::sums::{Day, Shape, buckets_in, narrow_sql, partners_in};
+use crate::analytics::AnalyticsGoods;
 use crate::error::ReportsError;
 use crate::reports::common::{
     chukta_party, in_snapshot, load_parties, load_party, paisa, parse_day, today as today_of,
@@ -119,18 +120,30 @@ pub(super) fn read_period(
     let party_shown = resolve_party(conn, input.party.as_ref())?;
     let party = narrowed(input.party.as_ref());
     let shape = Shape::of(party.as_ref());
+    let goods = input.goods.unwrap_or_default();
     let (from, to) = (resolved.from.to_iso(), resolved.to.to_iso());
     // The sums of every day of the range are the same for every page of it, and on ten years they
     // cost a pass over every fact: the first page works them out, the next pages take them from
     // memory while the books are as they were (`result_cache`, robustness finding 3).
-    let what = format!("commission|{from}|{to}|{}|{party:?}", resolved.bucket_len());
+    let what = format!(
+        "commission|{from}|{to}|{}|{party:?}|{goods:?}",
+        resolved.bucket_len()
+    );
     let read = crate::result_cache::remembered(conn, &what, || {
-        let partners = if shape == Shape::Shop {
+        // Partner columns are for the whole shop and all goods only (plan 78 D4).
+        let partners = if shape == Shape::Shop && goods == AnalyticsGoods::All {
             partners_in(conn, &from, &to)?
         } else {
             Vec::new()
         };
-        let buckets = buckets_in(conn, &from, &to, resolved.bucket_len(), party.as_ref())?;
+        let buckets = buckets_in(
+            conn,
+            &from,
+            &to,
+            resolved.bucket_len(),
+            party.as_ref(),
+            goods,
+        )?;
         Ok((partners, buckets))
     })?;
     let (partners, buckets) = (&read.0, &read.1);
@@ -181,6 +194,7 @@ pub(super) fn read_period(
             to,
         },
         party: party_shown,
+        goods,
         first_month: first_month.and_then(|d| d.get(..7).map(str::to_owned)),
         current_month: Month::of(today).key(),
         totals: sum.row("", partners, shape)?,
@@ -253,7 +267,8 @@ pub fn commission_day(db: &Db, input: &CommissionDayInput) -> Result<CommissionD
             let party_shown = resolve_party(conn, input.party.as_ref())?;
             let party = narrowed(input.party.as_ref());
             let shape = Shape::of(party.as_ref());
-            let partners = if shape == Shape::Shop {
+            let goods = input.goods.unwrap_or_default();
+            let partners = if shape == Shape::Shop && goods == AnalyticsGoods::All {
                 partners_in(conn, &iso, &iso)?
             } else {
                 Vec::new()
@@ -264,7 +279,7 @@ pub fn commission_day(db: &Db, input: &CommissionDayInput) -> Result<CommissionD
             let mut by_entry: BTreeMap<i64, Day> = BTreeMap::new();
             let mut bikri_of: HashMap<i64, i64> = HashMap::new();
             // `?1` is the day; the party values follow from `?2`.
-            let (narrow, narrow_args) = party_sql(party.as_ref(), 2);
+            let (narrow, narrow_args) = narrow_sql(party.as_ref(), goods, 2);
             let sale = match shape {
                 Shape::Buyer => "buyer_value_paisa",
                 Shape::Seller => "seller_amount_paisa",
@@ -275,7 +290,7 @@ pub fn commission_day(db: &Db, input: &CommissionDayInput) -> Result<CommissionD
             let mut facts = conn.prepare(&format!(
                 "SELECT journal_entry_id, MIN(bikri_id), SUM(sign * seller_comm_paisa),
                         SUM(sign * buyer_comm_paisa), SUM(sign * laga_paisa), SUM(sign * {sale})
-                 FROM analytics_facts WHERE entry_date = ?1{narrow} GROUP BY journal_entry_id"
+                 FROM analytics_facts f WHERE entry_date = ?1{narrow} GROUP BY journal_entry_id"
             ))?;
             for row in facts.query_map(params_from_iter(args.iter()), |r| {
                 Ok((
@@ -297,7 +312,7 @@ pub fn commission_day(db: &Db, input: &CommissionDayInput) -> Result<CommissionD
                     bikri_of.insert(entry, b);
                 }
             }
-            if shape == Shape::Shop {
+            if shape == Shape::Shop && goods == AnalyticsGoods::All {
                 let mut shares = conn.prepare(
                     "SELECT journal_entry_id, partner_id, SUM(amount_paisa) FROM partner_share_rows
                      WHERE kind = 'income' AND entry_date = ?1
@@ -352,9 +367,9 @@ pub fn commission_day(db: &Db, input: &CommissionDayInput) -> Result<CommissionD
                     "SELECT posting_type, source_type, source_id FROM journal_entries WHERE id = ?1",
                 )?;
                 // `?1` is the posting, `?2` the day; the party values follow from `?3`.
-                let (who_narrow, who_args) = party_sql(party.as_ref(), 3);
+                let (who_narrow, who_args) = narrow_sql(party.as_ref(), goods, 3);
                 let mut who = conn.prepare(&format!(
-                    "SELECT DISTINCT seller_account_id, buyer_account_id FROM analytics_facts
+                    "SELECT DISTINCT seller_account_id, buyer_account_id FROM analytics_facts f
                      WHERE journal_entry_id = ?1 AND entry_date = ?2{who_narrow}"
                 ))?;
                 let mut number = conn.prepare("SELECT number FROM bikri_entries WHERE id = ?1")?;
@@ -431,6 +446,7 @@ pub fn commission_day(db: &Db, input: &CommissionDayInput) -> Result<CommissionD
             Ok(CommissionDay {
                 date: iso.clone(),
                 party: party_shown,
+                goods,
                 totals: totals.row(&iso, &partners, shape)?,
                 partners,
                 entries,

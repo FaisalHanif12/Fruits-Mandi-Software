@@ -15,7 +15,7 @@
 //   says so, and the buttons still work).
 
 import { Localized } from '@fluent/react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useSearch } from '@tanstack/react-router';
 import { Printer, ScrollText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
@@ -59,7 +59,6 @@ function StatementPageScreen() {
 
 function StatementBody({ saved, remember }: MemoryProps) {
   const language = useLanguage();
-  const navigate = useNavigate();
   const rawSearch: Record<string, unknown> = useSearch({ strict: false });
   const search = parseStatementSearch(rawSearch);
   const partners = usePartnerList();
@@ -72,10 +71,13 @@ function StatementBody({ saved, remember }: MemoryProps) {
   }, [partnerId, remember]);
 
   const [view, setView] = useState<'table' | 'preview'>('table');
-  useEscape('leave', () => {
-    if (view === 'preview') setView('table');
-    else void navigate({ to: '/partners' });
-  });
+  useEscape(
+    'leave',
+    () => {
+      setView('table');
+    },
+    view === 'preview',
+  );
   useShortcut(SHORTCUTS.print, () => {
     if (view === 'table') setView('preview');
   });
@@ -208,14 +210,6 @@ function StatementBody({ saved, remember }: MemoryProps) {
       }
       actions={
         <>
-          <Button
-            shortcut={SHORTCUTS.back}
-            onClick={() => {
-              void navigate({ to: '/partners' });
-            }}
-          >
-            <Localized id="common-back" />
-          </Button>
           <Button
             shortcut={SHORTCUTS.print}
             disabled={data === undefined}

@@ -278,3 +278,12 @@ common-goto-day-hint = Type a day, for example 10-10-2026. The 7 days that end o
 
 # review: pending
 common-goto-day-placeholder = DD-MM-YYYY
+
+## A field of several records (plan 78 D2).
+
+# $name: the record that is taken off the list.
+# review: pending
+ui-multi-remove = Remove { $name }
+
+# review: pending
+ui-multi-hint = You can choose more than one. Each one you choose is added to the list.

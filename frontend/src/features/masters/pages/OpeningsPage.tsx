@@ -39,7 +39,7 @@ import {
 } from '../../../shared/grid';
 import { useDebouncedValue, useSingleFlight } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
 import {
   Balance,
   Button,
@@ -382,9 +382,6 @@ function OpeningsScreen({ today }: { today: string }) {
     void submit();
   };
   useShortcut(SHORTCUTS.save, submitNow);
-  useEscape('leave', () => {
-    void navigate({ to: '/index/accounts' });
-  });
 
   const notice = refusal?.rest ?? null;
   const total = preview.data;
@@ -493,14 +490,6 @@ function OpeningsScreen({ today }: { today: string }) {
           </InfoHint>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            shortcut={SHORTCUTS.back}
-            onClick={() => {
-              void navigate({ to: '/index/accounts' });
-            }}
-          >
-            <Localized id="common-back" />
-          </Button>
           <Button
             variant="primary"
             shortcut={SHORTCUTS.save}

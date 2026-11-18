@@ -192,7 +192,7 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
 
   const error = query.isError ? uiErrorOf(query.error) : null;
   return (
-    <div className="relative max-w-reading flex-1">
+    <div className="relative min-w-0 max-w-reading flex-1">
       <div className="flex h-control-compact items-center gap-2 rounded-2 border border-border-control bg-bg px-3">
         <Search aria-hidden="true" className="size-icon-sm shrink-0 text-ink-muted" />
         <input

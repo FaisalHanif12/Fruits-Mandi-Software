@@ -106,6 +106,7 @@ fn heading_id(heading: StatementHeading) -> &'static str {
         StatementHeading::Garden => "partners-statement-heading-garden",
         StatementHeading::Fruit => "partners-statement-heading-fruit",
         StatementHeading::Linked => "partners-statement-heading-linked",
+        StatementHeading::Advance => "partners-statement-heading-advance",
     }
 }
 
@@ -128,6 +129,8 @@ fn detail_id(detail: StatementDetail) -> &'static str {
         StatementDetail::GardenPaid => "partners-statement-detail-garden-paid",
         StatementDetail::GardenClosed => "partners-statement-detail-garden-closed",
         StatementDetail::FruitTaken => "partners-statement-detail-fruit-taken",
+        StatementDetail::AdvanceOut => "partners-statement-detail-advance-out",
+        StatementDetail::AdvanceBack => "partners-statement-detail-advance-back",
         StatementDetail::KhataPaid => "partners-statement-detail-khata-paid",
         StatementDetail::KhataReceived => "partners-statement-detail-khata-received",
         StatementDetail::LentGiven => "partners-statement-detail-lent-given",

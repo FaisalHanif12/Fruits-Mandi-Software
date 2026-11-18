@@ -69,10 +69,8 @@ function linesOf(root: HTMLElement): [string, string][] {
   ]);
 }
 
-const SIDE = {
-  en: { dr: 'Debit', cr: 'Credit' },
-  ur: { dr: 'بنام', cr: 'جمع' },
-} as const;
+// The side of a balance on a slip is written for the person who reads it: "You owe" and "The shop owes you"
+// (plan 78 A6), not the book words of a ledger.
 
 const LANGS = [
   ['English', 'en', PRINT_SLIP_BUYER_EN, PRINT_SLIP_SELLER_EN, PRINT_DAY_SHEET_EN],
@@ -81,7 +79,7 @@ const LANGS = [
 
 describe.each(LANGS)('the buyer slip of اکرم in %s', (_name, language, buyer) => {
   const m = (id: string) => message(language, id);
-  const side = SIDE[language];
+  const side = { dr: m('print-slip-side-dr'), cr: m('print-slip-side-cr') };
 
   it('is one page in the print language and direction, with the worked numbers of the day', () => {
     const { root } = show(buyer);
@@ -172,7 +170,7 @@ describe.each(LANGS)('the buyer slip of اکرم in %s', (_name, language, buyer
 
 describe.each(LANGS)('the seller slip of رحیم in %s', (_name, language, _buyer, seller) => {
   const m = (id: string) => message(language, id);
-  const side = SIDE[language];
+  const side = { dr: m('print-slip-side-dr'), cr: m('print-slip-side-cr') };
 
   it('lists his two lots and, after them, the item total row with its quantity and amount', () => {
     const { root } = show(seller);
@@ -200,8 +198,8 @@ describe.each(LANGS)('the seller slip of رحیم in %s', (_name, language, _buy
       [m('report-r35-munshiana'), '50'],
       [m('report-r35-phone'), '20'],
       [m('report-r35-net-sale'), `24,316 ${side.cr}`],
-      [m('report-r35-paid-today'), '9,316'],
-      [m('report-r35-today-left'), `15,000 ${side.cr}`],
+      [m('report-r35-paid-today-seller'), '9,316'],
+      [m('report-r35-today-left-seller'), `15,000 ${side.cr}`],
       [m('report-r35-previous'), `15,000 ${side.dr}`],
       [m('report-r35-new-balance'), '0'],
     ]);
@@ -299,7 +297,7 @@ describe.each([
 
 describe.each(LANGS)('the day total sheet R34 in %s', (_name, language, _buyer, _seller, day) => {
   const m = (id: string) => message(language, id);
-  const side = SIDE[language];
+  const side = { dr: m('report-side-dr'), cr: m('report-side-cr') };
 
   /** A row of the main table by the id of its line, as [count, amount]. */
   function lineOf(root: HTMLElement, id: string): [string, string] {

@@ -26,7 +26,6 @@ import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
 import type { PurchaseSaved } from '../../src/bindings/PurchaseSaved';
 import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
-import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
 import type { SellDateInput } from '../../src/bindings/SellDateInput';
 import type { SellDateSet } from '../../src/bindings/SellDateSet';
 import type { UiError } from '../../src/bindings/UiError';
@@ -37,7 +36,6 @@ import arrivalEntryPreviewTwoLinesRequest from '../fixtures/gardens_arrival_entr
 import arrivalEntrySaveLineError from '../fixtures/gardens_arrival_entry_save_line_error.json';
 import arrivalEntrySaveTwoLines from '../fixtures/gardens_arrival_entry_save_two_lines.json';
 import gardenOtherSaleWithArrival from '../fixtures/gardens_entry_preview_other_sale_with_arrival.json';
-import readyGoodsOurShopOnly from '../fixtures/bikri_ready_goods_our_shop_only.json';
 import stockListWithSplit from '../fixtures/bikri_stock_list_with_the_split.json';
 import arrivalCancel from '../fixtures/gardens_arrival_cancel.json';
 import arrivalCancelRequest from '../fixtures/gardens_arrival_cancel_request.json';
@@ -70,9 +68,6 @@ import purchaseSaveWithSellDate from '../fixtures/purchases_save_with_sell_date.
 import purchaseSaveWithSellDateRequest from '../fixtures/purchases_save_with_sell_date_request.json';
 import purchaseSetSellDate from '../fixtures/purchases_set_sell_date.json';
 import purchaseSetSellDateRequest from '../fixtures/purchases_set_sell_date_request.json';
-import readyGoods from '../fixtures/bikri_ready_goods.json';
-import readyGoodsAfterPartSale from '../fixtures/bikri_ready_goods_after_a_part_sale.json';
-import readyGoodsNone from '../fixtures/bikri_ready_goods_none_yet.json';
 
 // The files are the wire shapes the backend sent. These readers are the one place that says so.
 function readArrivalCancelInput(value: unknown): ArrivalCancelInput {
@@ -126,9 +121,6 @@ function readReportPage(value: unknown): ReportPage {
 function readReportPrintData(value: unknown): ReportPrintData {
   return value as ReportPrintData;
 }
-function readReadyGoods(value: unknown): ReadyGoods {
-  return value as ReadyGoods;
-}
 function readSellDateInput(value: unknown): SellDateInput {
   return value as SellDateInput;
 }
@@ -141,10 +133,6 @@ function readStockList(value: unknown): StockList {
 function readUiError(value: unknown): UiError {
   return value as UiError;
 }
-
-export const READY_GOODS = readReadyGoods(readyGoods);
-export const READY_GOODS_AFTER_A_PART_SALE = readReadyGoods(readyGoodsAfterPartSale);
-export const READY_GOODS_NONE = readReadyGoods(readyGoodsNone);
 
 export const ARRIVAL_SAVE = readArrivalSaved(arrivalSave);
 export const ARRIVAL_SAVE_REQUEST = readArrivalInput(arrivalSaveRequest);
@@ -199,5 +187,4 @@ export const ARRIVAL_ENTRY_SAVE_LINE_ERROR = readUiError(arrivalEntrySaveLineErr
 export const ARRIVAL_CHANGE_SPLIT = arrivalChangeSplit as unknown as SplitSet;
 export const GARDEN_OTHER_SALE_WITH_ARRIVAL =
   gardenOtherSaleWithArrival as unknown as GardenEntryPreview;
-export const READY_GOODS_OUR_SHOP_ONLY = readReadyGoods(readyGoodsOurShopOnly);
 export const STOCK_LIST_WITH_SPLIT = readStockList(stockListWithSplit);

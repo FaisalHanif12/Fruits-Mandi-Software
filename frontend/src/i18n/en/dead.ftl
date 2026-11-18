@@ -100,8 +100,6 @@ dead-report-title = { -doobi-raqam }
 # review: pending
 dead-report-help = Everyone who was moved to { -doobi-raqam }: what he owed then, what was recovered since and what he still owes.
 
-# review: pending
-dead-report-back = Back
 
 # review: pending
 dead-report-label = Moves to { -doobi-raqam }

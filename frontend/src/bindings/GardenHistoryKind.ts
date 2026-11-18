@@ -3,4 +3,5 @@
 /**
  * What a row of a garden's history is (PRD FR-7.67: the type list of the garden screen, FR-12.37).
  */
-export type GardenHistoryKind = 'installment' | 'cost' | 'other_sale' | 'sale' | 'fruit' | 'close';
+export type GardenHistoryKind =
+  'installment' | 'cost' | 'other_sale' | 'sale' | 'fruit' | 'close' | 'refund';

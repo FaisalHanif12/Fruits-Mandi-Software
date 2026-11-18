@@ -142,7 +142,7 @@ describe.each(LANGUAGES)('the buyer dues page (%s)', (language) => {
     expect(visible(document.querySelector('.ag-row-pinned')?.textContent)).toContain('18,684');
   });
 
-  it('Enter on a buyer opens his ledger', async () => {
+  it('Enter on a buyer opens his history: the statement with a row for each entry (plan 78 B2)', async () => {
     const user = userEvent.setup();
     const { router } = await open();
     await waitFor(() => {
@@ -153,9 +153,9 @@ describe.each(LANGUAGES)('the buyer dues page (%s)', (language) => {
     await user.click(cell);
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/reports/R13');
+      expect(router.state.location.pathname).toBe('/bikri/party-ledgers');
     });
-    expect(router.state.location.search).toMatchObject({ party: 20 });
+    expect(router.state.location.search).toMatchObject({ side: 'buyer', party: 20 });
   });
 
   it('the print button shows every buyer of the search and the order in the print layout, and Back returns', async () => {
@@ -182,7 +182,9 @@ describe.each(LANGUAGES)('the buyer dues page (%s)', (language) => {
       expect(visible(document.querySelector('.print-sheet')?.textContent)).toContain('44,364');
     });
     await user.click(
-      await screen.findByRole('button', { name: (name) => visible(name) === m('common-back') }),
+      await within(screen.getByRole('main')).findByRole('button', {
+        name: (name) => visible(name) === m('common-back'),
+      }),
     );
     await waitFor(() => {
       expect(rowOf(20)).not.toBeNull();

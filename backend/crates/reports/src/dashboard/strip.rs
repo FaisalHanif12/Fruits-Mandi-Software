@@ -32,16 +32,26 @@ fn share_of(sums: &[ShareSum], partner: i64) -> Result<Paisa, ReportsError> {
     Ok(total)
 }
 
-/// C22 for one partner, now.
-fn total_of(conn: &Connection, partner: &PartnerRecord) -> Result<Paisa, ReportsError> {
+/// C22 for one partner, now: the capital, his shares, what he took, his gardens, trips and fruit,
+/// his linked money (PRD C22 v1.41) and, less than all of it, his part of the advances to sellers
+/// still out (PRD FR-17.13 v1.43). `advances` holds every advance of the books, read once.
+fn total_of(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    advances: &mandi_db::advances::Advances,
+) -> Result<Paisa, ReportsError> {
     let parts = total_parts(conn, partner, None)?;
     let capital = paisa(parts.capital_cr)?.checked_sub(paisa(parts.capital_dr)?)?;
     let taken_net = paisa(parts.drawings_dr)?.checked_sub(paisa(parts.drawings_cr)?)?;
     let ventures = paisa(parts.venture_cr)?.checked_sub(paisa(parts.venture_dr)?)?;
+    let linked = paisa(parts.linked_cr)?.checked_sub(paisa(parts.linked_dr)?)?;
+    let out = advances.net(partner.id, None, None)?;
     Ok(capital
         .checked_add(paisa(parts.shares)?)?
         .checked_sub(taken_net)?
-        .checked_add(ventures)?)
+        .checked_add(ventures)?
+        .checked_add(linked)?
+        .checked_sub(out)?)
 }
 
 /// The strip, in the order the partners were made.
@@ -63,13 +73,15 @@ pub(crate) fn build(
     let day_sums = share_sums(conn, &today_iso, &today_iso)?;
     let month_sums = share_sums(conn, &month_start, &today_iso)?;
     let year_sums = share_sums(conn, &year_start, &today_iso)?;
+    let advances = mandi_db::advances::read_all(conn)
+        .map_err(|e| ReportsError::Data(format!("the advances do not add up: {e:?}")))?;
     let mut out = Vec::new();
     for partner in mandi_db::partners::list(conn)? {
         let numbers = [
             share_of(&day_sums, partner.id)?,
             share_of(&month_sums, partner.id)?,
             share_of(&year_sums, partner.id)?,
-            total_of(conn, &partner)?,
+            total_of(conn, &partner, &advances)?,
         ];
         if !partner.is_active && numbers.iter().all(|n| *n == Paisa::ZERO) {
             continue;

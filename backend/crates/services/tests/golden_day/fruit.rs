@@ -748,6 +748,7 @@ fn new_partner(w: &support::World, name_ur: &str, name_en: &str) -> i64 {
             name_ur: name_ur.to_owned(),
             name_en: name_en.to_owned(),
             opening_capital: None,
+            opening_capital_where: None,
             confirmed_rules_words: words.clone(),
         };
         match partners::create(&w.env.ctx, &w.owner, &input) {

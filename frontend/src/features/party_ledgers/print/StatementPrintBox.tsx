@@ -1,14 +1,17 @@
-// The box of "اسٹیٹمنٹ پرنٹ" (plan 74 T3, PRD FR-12.47), opened from the top of a party's statement. It asks one
-// thing, which period: the last 10 days, the last 30 days (the default), the last 6 months, or two dates the
-// user types (FR-7.19 shortcuts: "10" is the 10th of this month, `+` and `-` move a day). Then it is the
-// statement's own print preview (print language, paper, Print and Save PDF), so what is previewed is what is
-// printed. The period is only dates as typed; the backend reads and checks them and builds every figure.
+// The box of "اسٹیٹمنٹ پرنٹ" (plan 74 T3, plan 78 A7, PRD FR-12.47), opened from the top of a party's statement.
+// It asks which period: the last 10 days, the last 30 days (the default), the last 6 months, or two dates the
+// user types (FR-7.19 shortcuts: "10" is the 10th of this month, `+` and `-` move a day), and two choices
+// that are off at first: the items of each entry in full, and the entries an edit or a cancel replaced. Then
+// it is the statement's own print preview (print language, paper, Print and Save PDF), so what is previewed
+// is what is printed. The period is only dates as typed; the backend reads and checks them and builds every
+// figure.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { useDebouncedValue } from '../../../shared/hooks';
 import {
+  Checkbox,
   DateInput,
   ErrorState,
   Field,
@@ -43,6 +46,9 @@ function BoxBody({ accountId, onClose }: { accountId: number; onClose: () => voi
   const [period, setPeriod] = useState<StatementPeriod>(DEFAULT_STATEMENT_PERIOD);
   const [typedFrom, setTypedFrom] = useState('');
   const [typedTo, setTypedTo] = useState('');
+  // Both start off: one line of items for each entry, and no entry that was replaced.
+  const [items, setItems] = useState(false);
+  const [history, setHistory] = useState(false);
   const from = useDebouncedValue(typedFrom.trim(), DATE_DELAY_MS);
   const to = useDebouncedValue(typedTo.trim(), DATE_DELAY_MS);
 
@@ -113,6 +119,18 @@ function BoxBody({ accountId, onClose }: { accountId: number; onClose: () => voi
           <p className="type-body text-ink" />
         </Localized>
       )}
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <Checkbox
+          checked={items}
+          onChange={setItems}
+          label={<Localized id="statement-print-items" />}
+        />
+        <Checkbox
+          checked={history}
+          onChange={setHistory}
+          label={<Localized id="statement-print-history" />}
+        />
+      </div>
       {/* A new period is a new page: the preview starts again, with no old notice about the other page. */}
       {ready ? (
         <StatementPreview
@@ -120,6 +138,8 @@ function BoxBody({ accountId, onClose }: { accountId: number; onClose: () => voi
           accountId={accountId}
           from={shown.from}
           to={shown.to}
+          items={items}
+          history={history}
           onBack={onClose}
         />
       ) : null}

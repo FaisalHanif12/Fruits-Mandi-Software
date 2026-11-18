@@ -5,8 +5,13 @@
 
 ## Titles
 
+# The title of the sale book's seller bill (R1), as it was: the seller's word and "bill".
 # review: pending
 print-seller-bill-title = { -beopari } Bill
+
+# The title of one seller's bill when it names him (plan 78 A3). $name: the seller, with his tag.
+# review: pending
+print-seller-bill-named-title = Bill: { $name }
 
 # review: pending
 print-buyer-slip-title = { -gahak } Slip
@@ -100,10 +105,10 @@ print-payment-credit = { -udhari } sale: payment due
 
 # The two lines of a buyer slip when he paid part of the bill on the spot (PRD FR-12.44).
 # review: pending
-print-paid-on-spot = { -mauqa-par-jama }
+print-paid-on-spot = Cash
 
 # review: pending
-print-left-on-account = { -khate-mein-baqi }
+print-left-on-account = Credit
 
 ## Column heads of the goods table
 
@@ -242,21 +247,21 @@ print-toast-dialog = The print window is open
 print-adhari-title = Print { report-r5-title }
 
 # review: pending
-print-adhari-help = Choose the buyer parchi, one short slip for each buyer, or the overall sale print with the sellers' and the buyers' slips. The page is the same one that is printed.
+print-menu-help = Each print does one job. Choose one, then look at the page below.
 
 # review: pending
-print-adhari-scope = Which lines
+print-menu-scope = Which lines
 
 # $date is the day of the { -bikri } on screen.
 # review: pending
-print-adhari-whole-day = Whole day (<num>{ $date }</num>)
+print-menu-whole-day = Whole day (<num>{ $date }</num>)
 
 # review: pending
-print-adhari-this-bikri = This { -bikri } only (<num>{ $number }</num>)
+print-menu-this-bikri = This { -bikri } only (<num>{ $number }</num>)
 
 # The save had carried lots: the new { -bikri } and the old { -bikri } of each carried lot. $numbers: their numbers, new first.
 # review: pending
-print-adhari-this-save = This save only ({ -bikri } <num>{ $numbers }</num>)
+print-menu-this-save = This save only ({ -bikri } <num>{ $numbers }</num>)
 
 ## The preview
 
@@ -410,10 +415,10 @@ print-collection-col-serial = No.
 print-collection-col-code = Code
 
 # review: pending
-print-collection-col-party = Party
+print-collection-col-party = Buyer
 
 # review: pending
-print-collection-col-dues = Dues
+print-collection-col-dues = Credit
 
 # The date of the oldest bill still open, and how many days old it is.
 # review: pending
@@ -486,11 +491,11 @@ bikri-list-day-heading-empty = { $date }: No { -bikri }s
 
 # The title of the buyer parchi print (the backend sends it in the header).
 # review: pending
-print-parchi-title = Buyer parchi
+print-parchi-title = Buyer slips
 
 # The title of the overall sale print: the seller slips and the buyer slips of one { -bikri } or of the day.
 # review: pending
-print-sale-title = Overall sale print
+print-sale-title = Whole sale
 
 # The heading of the sellers' part and of the buyers' part of the overall sale print.
 # review: pending
@@ -507,19 +512,19 @@ print-parchi-collect = { -wasooli }
 print-parchi-empty = No buyer has a parchi for this day
 
 # review: pending
-print-parchi-label = Buyer parchi, one slip for each buyer
+print-parchi-label = Buyer slips, one for each buyer
 
 # review: pending
-print-sale-label = Overall sale print, the sellers and the buyers
+print-sale-label = Whole sale, the sellers and the buyers
 
 # review: pending
-print-adhari-kind = What to print
+print-menu-kind = What to print
 
 # review: pending
-print-adhari-kind-parchi = Buyer parchi
+print-menu-buyers = Buyer slips
 
 # review: pending
-print-adhari-kind-sale = Overall sale print
+print-menu-sale = Whole sale
 
 ## The titles, facts, totals and column heads of the table prints of plan 76 (the backend writes their ids into the print data).
 
@@ -639,13 +644,13 @@ print-collection-sheet-col-detail = Goods
 print-collection-sheet-col-previous = { -sabiqa-raqam }
 
 # review: pending
-print-collection-sheet-col-bill = { -taza-banam }
+print-collection-sheet-col-bill = Today's Bill
 
 # review: pending
-print-collection-sheet-col-paid = { -mauqa-par-jama }
+print-collection-sheet-col-paid = Cash
 
 # review: pending
-print-collection-sheet-col-due = { -total-raqam }
+print-collection-sheet-col-due = Total Credit
 
 # review: pending
 print-partner-month-col-date = Date
@@ -673,3 +678,114 @@ print-partner-month-col-net = Day's net
 
 # review: pending
 print-partner-month-col-running = { -kul-raqam }
+
+## Plan 78: the prints that each do one job, with the party's name in the title (PRD FR-19.15, FR-12.12, plan 78 A2 to A6).
+
+# The title of a buyer's day slip and of a seller's day slip: the words, then the party's name.
+# $name: the name of the party in the print language, with his tag.
+# review: pending
+print-buyer-day-slip-title = Day slip: { $name }
+
+# review: pending
+print-seller-day-slip-title = Day slip: { $name }
+
+# The title of the print of every seller's bill (the frame of the job).
+# review: pending
+print-seller-bills-title = Seller bills
+
+# The side of a balance on a slip, written for the party who reads it (the party's own words, not the books').
+# review: pending
+print-slip-side-dr = You owe
+
+# review: pending
+print-slip-side-cr = The shop owes you
+
+## The whole sale print: the sellers table, then the buyers table (PRD FR-19.15).
+
+# review: pending
+print-sale-buyers-title = Buyers
+
+# review: pending
+print-sale-buyers-total = { -meezan }
+
+# review: pending
+print-sale-col-buyer = Buyer
+
+# What the buyer bought, in short: (item quantity . rate).
+# review: pending
+print-sale-col-bought = Goods
+
+# review: pending
+print-sale-col-bill = Bill
+
+# review: pending
+print-sale-col-cash = Cash
+
+# review: pending
+print-sale-col-credit = Credit
+
+## ادھاری تفصیل: how much the shop has to take from its buyers (PRD R5, FR-19.15).
+
+# review: pending
+print-adhari-sheet-title = { report-r5-title }
+
+# The totals row of today's buyers.
+# review: pending
+print-adhari-sheet-total = Today's buyers
+
+# The buyers who owed at the start of the day and bought nothing today, as one total.
+# review: pending
+print-adhari-sheet-others = Other buyers who did not buy today
+
+# Everything every buyer owes the shop.
+# review: pending
+print-adhari-sheet-all = Total credit, all buyers
+
+# review: pending
+print-adhari-sheet-col-party = Buyer
+
+# review: pending
+print-adhari-sheet-col-detail = Goods Today
+
+# review: pending
+print-adhari-sheet-col-bill = Today's Bill
+
+# review: pending
+print-adhari-sheet-col-cash = Cash
+
+# review: pending
+print-adhari-sheet-col-today-credit = Credit Today
+
+# review: pending
+print-adhari-sheet-col-previous = { -sabiqa-raqam }
+
+# review: pending
+print-adhari-sheet-col-total = Total Credit
+
+## The print menu of the sale book, F9 (PRD FR-12.12, plan 78 A1): three prints, each with one purpose.
+
+# review: pending
+print-menu-sellers = Seller bills
+
+# What each print is for, one line, shown under the choice (plan 78 A0).
+# review: pending
+print-menu-buyers-purpose = What each buyer bought today and what he owes. Several slips to a page, with cut lines.
+
+# review: pending
+print-menu-sellers-purpose = What each seller sold today, his deductions and what the shop owes him. One bill for each seller.
+
+# review: pending
+print-menu-sale-purpose = Everything sold today in one place: every seller and every buyer, on one or two pages.
+
+# review: pending
+print-seller-bills-label = Seller bills, one for each seller
+
+# review: pending
+print-seller-bills-empty = No seller has a bill for this day
+
+# review: pending
+print-sale-empty = Nothing was sold on this day
+
+# What ادھاری تفصیل is for, one line (plan 78 A0, A5).
+# review: pending
+print-adhari-box-help = One row for each of today's buyers: the bill, the cash, today's credit, the balance before and the total credit. At the end, the total credit of all buyers.

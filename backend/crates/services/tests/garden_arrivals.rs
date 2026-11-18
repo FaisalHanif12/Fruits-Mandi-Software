@@ -63,6 +63,7 @@ fn garden(w: &World, name_en: &str, name_ur: &str) -> GardenRow {
             ],
             date: "10-10-2026".into(),
             item_id: Some(w.banana),
+            item_ids: Vec::new(),
             rent: "50,000".into(),
             season_end: None,
             note: None,

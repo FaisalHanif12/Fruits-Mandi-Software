@@ -9,6 +9,7 @@
 //! - [`DbError`]: the one error type, with a code for the screen.
 
 pub mod accounts;
+pub mod advances;
 pub mod arrivals;
 pub mod assistant;
 pub mod audit;

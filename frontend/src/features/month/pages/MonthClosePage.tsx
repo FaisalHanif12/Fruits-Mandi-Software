@@ -12,12 +12,11 @@
 // - Four states: loading, an error with a retry, nothing yet (no entry, so no month), and the list.
 
 import { Localized } from '@fluent/react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useSearch } from '@tanstack/react-router';
 import { CalendarCheck } from 'lucide-react';
 import { useState } from 'react';
 import type { MonthRow } from '../../../bindings/MonthRow';
 import { uiErrorOf } from '../../../shared/api';
-import { useEscape } from '../../../shared/keyboard';
 import { EmptyState, ErrorState, InfoHint, LoadingState } from '../../../shared/ui';
 import { MonthClosedCard } from '../components/MonthClosedCard';
 import { MonthListGrid } from '../components/MonthListGrid';
@@ -33,13 +32,8 @@ function firstMonth(rows: readonly MonthRow[], wanted: string | undefined): stri
 
 export function MonthClosePage() {
   const list = useMonthList();
-  const navigate = useNavigate();
   const search = parseMonthSearch(useSearch({ strict: false }));
   const [picked, setPicked] = useState<string | null>(null);
-  // Esc leaves the screen (PRD FR-7.18).
-  useEscape('leave', () => {
-    void navigate({ to: '/partners' });
-  });
 
   if (list.isPending) return <LoadingState />;
   if (list.isError) {

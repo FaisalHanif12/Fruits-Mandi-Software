@@ -17,6 +17,11 @@ export type Cashbook = {
    */
   closing_paisa: Paisa;
   /**
+   * The day of the first entry that ever moved cash (not only in this range), `YYYY-MM-DD`, or
+   * null when cash never moved. The window screen goes back to it (plan 78 E, PRD FR-16.14).
+   */
+  first_entry_date: string | null;
+  /**
    * The page, by day and posting order.
    */
   rows: Array<CashbookRow>;

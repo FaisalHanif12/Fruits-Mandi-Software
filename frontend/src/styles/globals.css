@@ -12,9 +12,6 @@
 
 /* Run B, plan 20: the printed report (the totals row, a balance with its side word). */
 @import '../features/reports/reports.css';
-
-/* Plan 74 T3: one party's statement on paper. */
-@import '../features/party_ledgers/print/statement-print.css';
 @import '../shared/export/export.css';
 
 /* A window that is short, like 1366 x 768 or 1024 x 600 (NFR-USE-15, NFR-USE-17): a screen gives back

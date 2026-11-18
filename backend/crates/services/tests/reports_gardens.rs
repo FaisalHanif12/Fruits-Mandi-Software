@@ -691,9 +691,10 @@ fn r31_of_alif_after_e2e_40_has_the_garden_lines_and_ends_at_his_total_10040() {
     )
     .unwrap();
     let page = statement_page(&request, &statement, 0, 100).unwrap();
-    // The lines with an amount: -18,000 (the installment of 10-10), -12,000 and -3,000 (11-10), his
-    // share of the commission +3,200 (12-10) and the closing +39,840 (13-10); the running total
-    // ends at his کل رقم 10,040 (C22).
+    // The lines with an amount: his 40% of رحیم's open advance -6,000 (01-09, PRD FR-17.13 v1.43),
+    // -18,000 (the installment of 10-10), -12,000 and -3,000 (11-10), his share of the commission
+    // +3,200 (12-10) and the closing +39,840 (13-10); the running total ends at his کل رقم 4,040
+    // (C22).
     let lines: Vec<(i64, i64)> = page
         .rows
         .iter()
@@ -703,11 +704,12 @@ fn r31_of_alif_after_e2e_40_has_the_garden_lines_and_ends_at_his_total_10040() {
     assert_eq!(
         lines,
         [
-            (-18_000, -18_000),
-            (-12_000, -30_000),
-            (-3_000, -33_000),
-            (3_200, -29_800),
-            (39_840, 10_040)
+            (-6_000, -6_000),
+            (-18_000, -24_000),
+            (-12_000, -36_000),
+            (-3_000, -39_000),
+            (3_200, -35_800),
+            (39_840, 4_040)
         ]
     );
 }

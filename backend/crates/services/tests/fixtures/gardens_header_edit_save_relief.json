@@ -1,0 +1,50 @@
+{
+  "id": 1,
+  "number": 1,
+  "version": 2,
+  "entry_id": null,
+  "reversal_entry_id": null,
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "rent",
+        "before": {
+          "type": "money",
+          "paisa": 5000000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 4500000
+        }
+      }
+    ],
+    "effect": {
+      "parties": [],
+      "cash": null,
+      "partners": [],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  },
+  "edited": {
+    "at": "2026-10-10T09:00:00.000Z",
+    "local_date": "2026-10-10",
+    "local_time": "14:00",
+    "by": "Maher Adnan",
+    "count": 1,
+    "reason": "relief from the owner",
+    "sign": null
+  }
+}

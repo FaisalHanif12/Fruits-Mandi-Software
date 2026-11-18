@@ -31,7 +31,8 @@
 //! - **Running balance** (FR-12.37) is the money in less every live payment, shop and pocket parts
 //!   together. Money in is every line on the garden's account (seller credits of its lots, the money
 //!   of sales in other shops, a negative credit lowering it), except the closing and its undo.
-//! - **Rent due** is the rent less the live installments (costs do not count), signed.
+//! - **Rent due** is the rent less the live installments (costs do not count), never below 0. What was
+//!   paid above the rent is what the owner owes (PRD FR-12.51), shown on its own.
 //! - **Closing** (C26): the garden account's balance B is split by the garden's shares with
 //!   `split_by_bps`. A negative B is split as a positive amount and every part is made negative
 //!   (C11). The garden's account ends at 0. B = 0 posts nothing and the garden still closes (E64).
@@ -78,10 +79,16 @@ pub struct GardenInput {
     pub confirmed_rules_words: Vec<String>,
     /// The day, `DD-MM-YYYY` or a shortcut. An open day (PRD FR-6.6).
     pub date: String,
-    /// The main fruit. Null if none.
+    /// The main fruit. Null if none. Used when `item_ids` is empty.
     #[serde(default)]
     #[ts(type = "number | null")]
     pub item_id: Option<i64>,
+    /// The items of the garden, one or several (plan 78 D2). When it is not empty it wins over
+    /// `item_id`, and its first item is the main fruit. Each must exist and be active (`ERR_NOT_FOUND`,
+    /// `ERR_ACCOUNT_INACTIVE` on `item_ids[i]`). A repeated item counts once.
+    #[serde(default)]
+    #[ts(type = "Array<number>")]
+    pub item_ids: Vec<i64>,
     /// The full rent (ٹھیکہ) for the season, whole rupees, more than 0.
     pub rent: String,
     /// The last day of the season, `DD-MM-YYYY`. Not before `date`. Null or empty if none.
@@ -178,7 +185,7 @@ pub struct GardensTotals {
     /// Σ running balances (money in less paid).
     #[ts(type = "Paisa")]
     pub balance_paisa: Paisa,
-    /// Σ rent due (signed).
+    /// Σ rent due. Each garden's rent due is 0 or more, so an overpaid garden is not netted against another.
     #[ts(type = "Paisa")]
     pub rent_due_paisa: Paisa,
     /// Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
@@ -246,8 +253,10 @@ pub struct GardenRow {
     pub account: RecordRef,
     /// The day it was made, `YYYY-MM-DD`.
     pub entry_date: String,
-    /// The main fruit.
+    /// The main fruit: the first of `items`.
     pub item: Option<RecordRef>,
+    /// The items of the garden, the main fruit first (plan 78 D2).
+    pub items: Vec<RecordRef>,
     /// The full rent for the season.
     #[ts(type = "Paisa")]
     pub rent_paisa: Paisa,
@@ -278,10 +287,24 @@ pub struct GardenRow {
     /// Of that, the parts paid from pockets.
     #[ts(type = "Paisa")]
     pub paid_pocket_paisa: Paisa,
-    /// The rent less the live installments (FR-12.34). Signed: a negative number means more was paid
-    /// than the rent.
+    /// The rent less the live installments (FR-12.34), never below 0. What was paid above the rent is
+    /// `owner_owes_paisa` (FR-12.51), not a negative rent due.
     #[ts(type = "Paisa")]
     pub rent_due_paisa: Paisa,
+    /// The rent the garden was made with, once the Owner has changed it (plan 78 D3, PRD FR-12.51);
+    /// null while it is the original. `rent_paisa` is the rent now.
+    #[ts(type = "Paisa | null")]
+    pub rent_original_paisa: Option<Paisa>,
+    /// The relief: the original rent less the rent now, when that is more than 0; else 0.
+    #[ts(type = "Paisa")]
+    pub relief_paisa: Paisa,
+    /// What the owner has paid back (Σ live refunds).
+    #[ts(type = "Paisa")]
+    pub refunds_paisa: Paisa,
+    /// What the owner still owes the garden (مالک کے ذمے): the installments paid above the rent, less
+    /// the refunds. 0 or more.
+    #[ts(type = "Paisa")]
+    pub owner_owes_paisa: Paisa,
     /// Money in: the seller credits of its lots, the money of sales in other shops and the fruit
     /// taken from its lots, less any negative credit. The closing and its undo are left out.
     #[ts(type = "Paisa")]
@@ -356,6 +379,9 @@ pub enum GardenHistoryKind {
     Fruit,
     /// The closing (FR-12.38). It moves the balance out to the partners and is not money in.
     Close,
+    /// رعایت واپسی: money the garden's owner paid back after a rent relief (PRD FR-12.51, plan 78 D3).
+    /// It is money in, like a sale in another shop.
+    Refund,
 }
 
 /// One row of a garden's history, oldest first by day, with the running balance after it (PRD
@@ -498,7 +524,7 @@ pub struct GardenSummaryRow {
     /// Its running balance.
     #[ts(type = "Paisa")]
     pub balance_paisa: Paisa,
-    /// The rent still due (signed).
+    /// The rent still due, never below 0 (what was paid above the rent is what the owner owes).
     #[ts(type = "Paisa")]
     pub rent_due_paisa: Paisa,
     /// Its commission on the goods sold in our shop (plan 36).
@@ -583,8 +609,29 @@ pub struct GardenOtherSaleInput {
     pub note: Option<String>,
 }
 
+/// Money the garden's owner pays back after a rent relief (رعایت واپسی, PRD FR-12.51, plan 78 D3). It
+/// posts روکڑ بنام and the garden's account جمع, and counts as the garden's money in; it is split at the
+/// closing like every other money in (C26).
+///
+/// Field paths in errors: `garden_id`, `date`, `amount`, `note`. `ERR_RETURN_EXCEEDS_OPEN` on `amount`
+/// (value `open`: what the owner still owes) when it is more than the owner owes.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct GardenRefundInput {
+    /// The garden. `ERR_NOT_FOUND`; `ERR_GARDEN_CLOSED`.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub garden_id: Option<i64>,
+    /// The day, `DD-MM-YYYY`. An open day, not before the garden's day.
+    pub date: String,
+    /// The money paid back, whole rupees, more than 0.
+    pub amount: String,
+    /// A note, up to 500 characters.
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
 /// One entry of the type list of the garden screen (PRD FR-7.67): قسط, باغ خرچ or
-/// دوسری دکان میں فروخت.
+/// دوسری دکان میں فروخت, and, after a rent relief, رعایت واپسی.
 #[derive(Debug, Clone, Deserialize, TS)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GardenEntryInput {
@@ -594,6 +641,8 @@ pub enum GardenEntryInput {
     Cost(GardenPaymentInput),
     /// دوسری دکان میں فروخت.
     OtherSale(GardenOtherSaleInput),
+    /// رعایت واپسی: the owner paid back what a rent relief made him owe (PRD FR-12.51).
+    Refund(GardenRefundInput),
 }
 
 /// What an entry does, worked out by the same function as the save (Code Standards B5).

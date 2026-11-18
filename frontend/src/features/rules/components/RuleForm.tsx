@@ -18,7 +18,7 @@ import { LeaveGuard } from '../../../app/LeaveGuard';
 import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { useFocusFirstField, useSingleFlight } from '../../../shared/hooks';
-import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   AccountPicker,
   Button,
@@ -122,10 +122,6 @@ export function RuleForm({ rule, today }: RuleFormProps) {
   const submit = overlaps.length > 0 ? finish : saveAndClose;
   const navigation = useFormNavigation(submit);
   useShortcut(SHORTCUTS.save, submit);
-  const goBack = () => {
-    void navigate({ to: '/index/rules' });
-  };
-  useEscape('leave', goBack);
 
   const changeActive = (isActive: boolean) => {
     if (rule === null) return;
@@ -428,9 +424,6 @@ export function RuleForm({ rule, today }: RuleFormProps) {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button shortcut={SHORTCUTS.back} onClick={goBack}>
-              <Localized id="common-back" />
-            </Button>
             {overlaps.length > 0 ? (
               <Button variant="primary" onClick={finish}>
                 <Localized id="rules-overlap-done" />

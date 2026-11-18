@@ -84,12 +84,52 @@ struct First {
     plan: PaymentPlan,
 }
 
+/// The items of a garden asked for (plan 78 D2): `item_ids` when it is not empty, else the single
+/// `item_id`. A repeated item counts once, the first item is the main fruit, and each must exist and
+/// be active (`ERR_NOT_FOUND` or `ERR_ACCOUNT_INACTIVE` on `item_ids[i]`, or on `item_id` when only that
+/// one was sent).
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub(super) fn resolve_items(
+    conn: &Connection,
+    errors: &mut FieldErrors,
+    input: &GardenInput,
+) -> Result<Vec<i64>, ServiceError> {
+    let (asked, many): (Vec<i64>, bool) = if input.item_ids.is_empty() {
+        (input.item_id.into_iter().collect(), false)
+    } else {
+        (input.item_ids.clone(), true)
+    };
+    let mut out: Vec<i64> = Vec::with_capacity(asked.len());
+    for (index, item_id) in asked.into_iter().enumerate() {
+        if out.contains(&item_id) {
+            continue;
+        }
+        let field = if many {
+            format!("item_ids[{index}]")
+        } else {
+            "item_id".to_owned()
+        };
+        match mandi_db::bikri::items(conn, &[item_id])?.into_iter().next() {
+            None => errors.push(FieldError::new(ErrorCode::ErrNotFound, &field)),
+            Some(item) if !item.is_active => {
+                errors.push(FieldError::new(ErrorCode::ErrAccountInactive, &field));
+            }
+            Some(_) => out.push(item_id),
+        }
+    }
+    Ok(out)
+}
+
 /// A new garden after the checks.
 struct Ready {
     date: BusinessDate,
     name_ur: String,
     name_en: String,
     item_id: Option<i64>,
+    /// Every item of the garden, the main fruit first (plan 78 D2).
+    item_ids: Vec<i64>,
     rent: Paisa,
     season_end: Option<BusinessDate>,
     note: Option<String>,
@@ -177,15 +217,7 @@ fn plan(
         );
     }
     let note = optional_text(&mut errors, "note", input.note.as_deref());
-    if let Some(item_id) = input.item_id {
-        match mandi_db::bikri::items(conn, &[item_id])?.into_iter().next() {
-            None => errors.push(FieldError::new(ErrorCode::ErrNotFound, "item_id")),
-            Some(item) if !item.is_active => {
-                errors.push(FieldError::new(ErrorCode::ErrAccountInactive, "item_id"));
-            }
-            Some(_) => {}
-        }
-    }
+    let item_ids = resolve_items(conn, &mut errors, input)?;
     let paid_now = match input
         .paid_now
         .as_deref()
@@ -263,7 +295,8 @@ fn plan(
             date,
             name_ur,
             name_en,
-            item_id: input.item_id,
+            item_id: item_ids.first().copied(),
+            item_ids,
             rent,
             season_end,
             note,
@@ -396,6 +429,7 @@ pub(super) fn create(
             &now,
         )?;
         write_partners(tx, id, &ready.partners, user, &now)?;
+        repo::set_items(tx, id, &ready.item_ids, user, &now)?;
         let learned = spelled.learn(ctx, actor, tx)?;
         // The first installment is the garden's first entry; the shares are locked by it.
         let (first_entry_id, journal_entry_id) = match &ready.first {
@@ -466,6 +500,7 @@ pub(super) fn create(
                     "rent_paisa": ready.rent.as_paisa(),
                     "season_end_date": season_end,
                     "item_id": ready.item_id,
+                    "item_ids": ready.item_ids,
                     "partners": partners_json(&ready.partners),
                     "cash_after_paisa": planned.cash.cash_after_paisa.as_paisa(),
                     "cash_below_zero_confirmed": planned.cash.needs_confirm,

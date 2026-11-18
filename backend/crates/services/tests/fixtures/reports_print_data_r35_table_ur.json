@@ -4,6 +4,8 @@
   "dir": "rtl",
   "paper": "a4",
   "title_id": "report-r35-title",
+  "party": null,
+  "named_title_id": null,
   "filters": [
     {
       "label_id": "report-filter-day",

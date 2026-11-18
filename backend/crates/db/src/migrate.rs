@@ -158,6 +158,11 @@ pub const LINKED_MONEY_SQL: &str = include_str!("../migrations/0023_linked_money
 /// Indexes only: no table, column, row, amount, id or chain hash changes.
 pub const COMMISSION_SPEED_SQL: &str = include_str!("../migrations/0024_commission_speed.sql");
 
+/// Migration 25 (plan 78 D2, PRD FR-12.11 v1.43): the table `venture_items`, the items of a garden,
+/// filled from `ventures.item_id`, which stays and holds the first item. No journal line, amount, id
+/// or chain hash changes.
+pub const GARDEN_ITEMS_SQL: &str = include_str!("../migrations/0025_garden_items.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -194,6 +199,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(LOT_COUNTER_SQL),
         M::up_with_hook(LINKED_MONEY_SQL, linked_money_hook),
         M::up(COMMISSION_SPEED_SQL),
+        M::up_with_hook(GARDEN_ITEMS_SQL, garden_items_hook),
     ])
 }
 
@@ -305,6 +311,18 @@ pub fn linked_money_hook(tx: &Transaction) -> Result<(), HookError> {
     crate::seed::linked_accounts(tx)?;
     crate::seed::partner_linked_accounts(tx)?;
     Ok(())
+}
+
+/// The CHECK that migration 25 widens (plan 78 D3): a garden entry can be a `refund` (PRD FR-12.51).
+const WIDEN_REFUND: [Widen; 1] = [Widen {
+    table: "venture_entries",
+    from: "'other_sale', 'close')",
+    to: "'other_sale', 'close', 'refund')",
+}];
+
+/// After the SQL of migration 25: allow the entry kind `refund` in `venture_entries`.
+pub fn garden_items_hook(tx: &Transaction) -> Result<(), HookError> {
+    edit_table_text(tx, &WIDEN_REFUND, "migration 25")
 }
 
 /// The one CHECK that migration 7 widens: `accounts.serial` was limited to 0 to 9999 for the old

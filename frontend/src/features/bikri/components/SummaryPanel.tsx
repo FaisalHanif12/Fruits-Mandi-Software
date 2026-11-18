@@ -1,5 +1,7 @@
 // The live summary (PRD 12.5): the seller's side, the buyer's side and the partners' share, for
-// the selected lot or for the whole بکری ("پوری بکری", FR-12.1). Every line is the backend's
+// the selected lot or for the whole بکری ("پوری بکری", FR-12.1). A dropdown at the top lists every lot
+// (its number, seller and name) and "پوری بکری", so the munshi reaches any lot's summary at once without
+// scrolling to the lots and back (plan 78 C2). Every line is the backend's
 // number, shown with formatPaisa, and has its ⓘ with the backend's working (FR-7.43, F42). A
 // net below zero is red with "بیوپاری کے ذمے" and is allowed (FR-12.7). The rate difference shows
 // only when it is not 0. The cost, the trip partners' parts and the result of a lot of trip goods
@@ -8,11 +10,11 @@
 
 import { Localized } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { Working } from '../../../bindings/Working';
 import { formatPaisa, useGrouping } from '../../../shared/format';
-import { CalcInfo, Num, SegmentedControl } from '../../../shared/ui';
+import { CalcInfo, Field, Num, Select, type SelectOption } from '../../../shared/ui';
 import { useLocalization } from '@fluent/react';
-import { lotLabelVars } from '../lot-name';
 import type { SummaryTotals } from '../types';
 import type { Paisa } from '../../../shared/format';
 
@@ -24,19 +26,25 @@ interface Line {
   emphasis?: 'total' | 'negative';
 }
 
+/** The dropdown's value for the whole بکری. A lot's value is its number (1, 2 ...), so it is never this. */
+const WHOLE_VALUE = '0';
+
 interface SummaryPanelProps {
   totals: SummaryTotals | null;
   /** Which part is shown: the selected lot or the whole بکری. */
   whole: boolean;
-  lotNumber: number | null;
-  /** The lot's seller and item, for its label on the switch (PRD FR-12.6). Empty: the number alone. */
-  lotWho?: string | undefined;
-  /** Without it there is one lot only (a later sale) and the lot / whole switch is not drawn. */
-  onWholeChange?: ((whole: boolean) => void) | undefined;
+  /** The label of each lot of the بکری, in order ("لاٹ 2: فیصل F، کیلا-1"). Without them there is one lot only (a later sale) and no dropdown. */
+  lots?: readonly string[] | undefined;
+  /** The number of the lot whose summary is shown, from 1 (used while `whole` is false). */
+  selectedLot?: number | undefined;
+  /** A lot (its number, from 1) was chosen in the dropdown, or the whole بکری (null). */
+  onChoose?: ((lot: number | null) => void) | undefined;
   /** The net is below zero: the seller owes the firm (PRD FR-12.7). */
   netIsNegative: boolean;
   /** How many lines of this part the figures leave out, their quantity being wrong (PRD FR-12.6). */
   leftOut?: number | undefined;
+  /** The tick of each seller's advance (plan 78 C3), under the seller's lines. */
+  advance?: ReactNode;
 }
 
 function sellerLines(totals: SummaryTotals): Line[] {
@@ -112,17 +120,25 @@ function Rows({ lines, negativeNet }: { lines: readonly Line[]; negativeNet: boo
 export function SummaryPanel({
   totals,
   whole,
-  lotNumber,
-  lotWho,
-  onWholeChange,
+  lots,
+  selectedLot,
+  onChoose,
   netIsNegative,
   leftOut = 0,
+  advance,
 }: SummaryPanelProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   // The rate difference shows only when it is not 0 (PRD 12.5). The test is on the text the
   // backend's number is written as, so nothing is compared as a number here.
   const hasRateDiff = totals !== null && formatPaisa(totals.rate_diff, { grouping }) !== '0';
+  const choices: readonly SelectOption<string>[] | null =
+    lots === undefined || onChoose === undefined
+      ? null
+      : [
+          ...lots.map((label, index) => ({ value: String(index + 1), label })),
+          { value: WHOLE_VALUE, label: l10n.getString('bikri-summary-whole') },
+        ];
   return (
     <section
       aria-labelledby="bikri-summary-heading"
@@ -132,25 +148,27 @@ export function SummaryPanel({
         <Localized id="bikri-summary-title">
           <h2 id="bikri-summary-heading" className="type-section text-ink" />
         </Localized>
-        {onWholeChange === undefined ? null : (
-          <SegmentedControl
-            groupLabel={l10n.getString('bikri-summary-title')}
-            value={whole ? 'whole' : 'lot'}
-            onChange={(next) => {
-              onWholeChange(next === 'whole');
-            }}
-            options={[
-              {
-                value: 'lot',
-                label: l10n.getString('bikri-summary-lot', {
-                  ...lotLabelVars(lotNumber ?? 1, lotWho ?? ''),
-                }),
-              },
-              { value: 'whole', label: l10n.getString('bikri-summary-whole') },
-            ]}
-          />
+        {choices === null || onChoose === undefined ? null : (
+          // The one dropdown of the summary: every lot and the whole بکری. The arrow keys, Enter and Esc come
+          // from the shared Select, so the screen writes no key handler of its own (Code Standards F27).
+          <div className="min-w-0 max-w-form flex-1">
+            <Field label={<Localized id="bikri-summary-which" />} hideLabel>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={whole ? WHOLE_VALUE : String(selectedLot ?? 1)}
+                  onChange={(value) => {
+                    onChoose(value === WHOLE_VALUE ? null : Number(value));
+                  }}
+                  options={choices}
+                />
+              )}
+            </Field>
+          </div>
         )}
       </div>
+      {/* The seller's tick shows whenever there is a summary, also while no line is worked out yet. */}
+      {advance}
       {totals === null ? (
         // No line is worked out: when the reason is a quantity, the words say the totals wait for it.
         <Localized id={leftOut > 0 ? 'bikri-summary-waits-qty' : 'bikri-summary-incomplete'}>

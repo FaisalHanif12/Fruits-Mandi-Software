@@ -73,6 +73,13 @@ function card(): HTMLElement | null {
   return document.querySelector('[data-guide-step]');
 }
 
+/** The guide's own button of this name: the top bar has a Back of its own on a page opened from another page (plan 78 F1). */
+function inCard(name: (accessibleName: string) => boolean): HTMLElement {
+  const found = card();
+  if (found === null) throw new Error('the guide card is not on the page');
+  return within(found).getByRole('button', { name });
+}
+
 async function guideStep(id: string) {
   await waitFor(() => {
     expect(card()?.getAttribute('data-guide-step')).toBe(id);
@@ -93,9 +100,13 @@ describe.each(LANGUAGES)('the first-run guide (%s)', (language) => {
       expect(screen.getByRole('button', { name: named(language, 'guide-next') })).toHaveFocus();
     });
     // The first step has no Back.
-    expect(
-      screen.queryByRole('button', { name: named(language, 'guide-back') }),
-    ).not.toBeInTheDocument();
+    const guide = card();
+    expect(guide).not.toBeNull();
+    if (guide !== null) {
+      expect(
+        within(guide).queryByRole('button', { name: named(language, 'guide-back') }),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it('does not open again once it was seen', async () => {
@@ -149,7 +160,7 @@ describe.each(LANGUAGES)('the first-run guide (%s)', (language) => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: named(language, 'guide-next') }));
     await guideStep('index');
-    await user.click(screen.getByRole('button', { name: named(language, 'guide-back') }));
+    await user.click(inCard(named(language, 'guide-back')));
     await guideStep('dashboard');
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/');

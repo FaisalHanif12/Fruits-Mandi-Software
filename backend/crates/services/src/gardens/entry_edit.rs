@@ -30,7 +30,7 @@ use mandi_domain::ledger::{PostingType, SourceType};
 use serde_json::{Value, json};
 
 use super::data;
-use super::entry::{Body, plan};
+use super::entry::Body;
 use super::read::load;
 use crate::audit::Event;
 use crate::auth::Actor;
@@ -50,7 +50,12 @@ use crate::vouchers::stored_cash_change;
 /// `ERR_NOT_FOUND` on `id`; `ServiceError::Db`.
 pub(crate) fn row_value(conn: &Connection, id: i64) -> Result<Value, ServiceError> {
     let entry = repo::get_entry(conn, id)?
-        .filter(|e| matches!(e.kind.as_str(), "installment" | "cost" | "other_sale"))
+        .filter(|e| {
+            matches!(
+                e.kind.as_str(),
+                "installment" | "cost" | "other_sale" | "refund"
+            )
+        })
         .ok_or_else(|| not_found("id"))?;
     let parts = repo::parts_of(conn, &[id])?;
     let names = |r: &mandi_domain::core::accounts::RecordRef| json!({ "name_ur": r.name_ur, "name_en": r.name_en });
@@ -77,6 +82,7 @@ fn kind_text(entry: &GardenEntryInput) -> &'static str {
         GardenEntryInput::Installment(_) => "installment",
         GardenEntryInput::Cost(_) => "cost",
         GardenEntryInput::OtherSale(_) => "other_sale",
+        GardenEntryInput::Refund(_) => "refund",
     }
 }
 
@@ -131,6 +137,7 @@ pub(crate) fn edit_in(
             (p.garden_id, p.date.as_str(), entry.arrival_id)
         }
         GardenEntryInput::OtherSale(s) => (s.garden_id, s.date.as_str(), s.arrival_id),
+        GardenEntryInput::Refund(r) => (r.garden_id, r.date.as_str(), entry.arrival_id),
     };
     if validate::date("date", typed_date, window.1).is_ok_and(|d| d != old_date) {
         return Err(date_fixed("date", old_date));
@@ -164,7 +171,7 @@ pub(crate) fn edit_in(
     let old_value = row_value(tx, entry.id)?;
     let cash_before = cash_in_hand(tx)?;
     // A sale in another shop always posts its money; a payment with every part from a pocket does not.
-    if entry.kind == "other_sale" && entry.journal_entry_id.is_none() {
+    if matches!(entry.kind.as_str(), "other_sale" | "refund") && entry.journal_entry_id.is_none() {
         return Err(data("a sale in another shop has no journal entry"));
     }
     let old_cash = match entry.journal_entry_id {
@@ -199,7 +206,15 @@ pub(crate) fn edit_in(
         None => None,
     };
     // 2. The same checking and working out as a new entry.
-    let planned = plan(tx, window, &input.entry)?;
+    let replacing = match entry.kind.as_str() {
+        "refund" => Some(super::entry::Replacing {
+            kind: mandi_domain::core::gardens::GardenHistoryKind::Refund,
+            amount: mandi_domain::core::money::Paisa::try_from_paisa(entry.amount_paisa)
+                .map_err(money_error)?,
+        }),
+        _ => None,
+    };
+    let planned = super::entry::plan_replacing(tx, window, &input.entry, replacing)?;
     if !planned.errors.is_empty() {
         return Err(ServiceError::from(planned.errors.clone()));
     }
@@ -213,7 +228,7 @@ pub(crate) fn edit_in(
             net_cash_check(cash_before, old_cash, planned.cash.change_paisa)?,
             p.confirm_cash_below_zero,
         ),
-        GardenEntryInput::OtherSale(_) => {
+        GardenEntryInput::OtherSale(_) | GardenEntryInput::Refund(_) => {
             let net = ready.amount.checked_sub(old_cash).map_err(money_error)?;
             (
                 cash::check(cash_before, net).map_err(money_error)?,
@@ -229,7 +244,7 @@ pub(crate) fn edit_in(
     let expect_parts = matches!(&ready.body, Body::Payment { .. });
     let (qty, moved) = match &ready.body {
         Body::OtherSale { qty, moved, .. } => (Some(*qty), *moved),
-        Body::Payment { .. } => (None, 0),
+        Body::Payment { .. } | Body::Refund { .. } => (None, 0),
     };
     edit_windows::open(tx, Window::VentureEntry, entry.id, user, &now)?;
     let retired = repo::retire_parts(tx, entry.id, user, &now)?;
@@ -251,7 +266,9 @@ pub(crate) fn edit_in(
             ventures::write_parts(tx, user, &now, entry.id, &payment.parts)?;
             (payment.entry.as_ref(), PostingType::GardenPayment)
         }
-        Body::OtherSale { entry: posted, .. } => (Some(posted), PostingType::VentureReceipt),
+        Body::OtherSale { entry: posted, .. } | Body::Refund { entry: posted } => {
+            (Some(posted), PostingType::VentureReceipt)
+        }
     };
     let new_entry_id = ventures::post_settlement(
         ctx,

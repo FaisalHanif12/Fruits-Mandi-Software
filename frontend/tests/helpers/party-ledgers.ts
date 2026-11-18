@@ -8,7 +8,8 @@
 import { vi } from 'vitest';
 import type { PartyLedgerRow } from '../../src/bindings/PartyLedgerRow';
 import type { PartyLedgersList } from '../../src/bindings/PartyLedgersList';
-import type { PartyLedgerStatement } from '../../src/bindings/PartyLedgerStatement';
+import type { StatementRows } from '../../src/bindings/StatementRows';
+import type { StatementRowsInput } from '../../src/bindings/StatementRowsInput';
 import type { ReportPage } from '../../src/bindings/ReportPage';
 import * as reportsApi from '../../src/features/reports/api';
 import type { UiError } from '../../src/bindings/UiError';
@@ -22,24 +23,18 @@ import { paisaForTest } from './paisa';
 import { sliceOf } from './paged';
 import { fakeReports, type ReportsOptions } from './reports';
 import { refusal } from './ui-error';
-import {
-  LEDGER_BUYERS,
-  LEDGER_SELLERS,
-  STATEMENT_AKRAM,
-  STATEMENT_RAHIM,
-} from './party-ledgers-real';
+import { LEDGER_BUYERS, LEDGER_SELLERS, STATEMENT_AKRAM } from './party-ledgers-real';
+import { AKRAM_STATEMENT, SELLER_STATEMENT } from './party-statement-rows';
 
 export * from './party-ledgers-real';
 
 export interface FakeLedgers {
   buyers?: PartyLedgersList;
   sellers?: PartyLedgersList;
-  /** The statement by account id; the default is the backend's own answer for 21 and 19. */
-  statements?: Readonly<Record<number, PartyLedgerStatement>>;
+  /** The statement by account id; the default is the worked day's, for 21 (اکرم) and 19 (رحیم). */
+  statements?: Readonly<Record<number, StatementRows>>;
   /** Refuses the statement of this call with this error. */
-  refuseStatement?: (
-    input: Parameters<typeof ledgersApi.partyLedgersStatement>[0],
-  ) => UiError | null;
+  refuseStatement?: (input: StatementRowsInput) => UiError | null;
   /** Fails the list call with this error. */
   failList?: UiError;
   /**
@@ -47,9 +42,7 @@ export interface FakeLedgers {
    * that shows a window other than the whole statement gives the opening, sums and closing it wants
    * to see. Without it the totals of the fixture stay, whatever rows the dates leave.
    */
-  totalsOf?: (
-    input: Parameters<typeof ledgersApi.partyLedgersStatement>[0],
-  ) => Partial<PartyLedgerStatement> | undefined;
+  totalsOf?: (input: StatementRowsInput) => Partial<StatementRows> | undefined;
   /**
    * "Go to a date" (plan 74 W5). The default double answers like the backend: the 30 days that end on
    * the earlier of the date plus 15 days and today (10-10-2026), with an entry when the party's rows
@@ -69,8 +62,8 @@ export interface FakeLedgers {
 const TODAY = DAY.today;
 
 /** A typed date `DD-MM-YYYY` as `YYYY-MM-DD`, or null for a box left empty. */
-function isoOfTyped(text: string | null): string | null {
-  if (text === null) return null;
+function isoOfTyped(text: string | null | undefined): string | null {
+  if (text === null || text === undefined) return null;
   const [day = '', month = '', year = ''] = text.split('-');
   return `${year}-${month}-${day}`;
 }
@@ -103,20 +96,23 @@ function narrowed(list: PartyLedgersList, text: string | null): PartyLedgersList
 export function fakePartyLedgers(options: FakeLedgers = {}): void {
   const buyers = options.buyers ?? LEDGER_BUYERS;
   const sellers = options.sellers ?? LEDGER_SELLERS;
-  const statements = options.statements ?? { 21: STATEMENT_AKRAM, 19: STATEMENT_RAHIM };
+  const statements = options.statements ?? { 21: AKRAM_STATEMENT, 19: SELLER_STATEMENT };
   vi.mocked(ledgersApi.partyLedgersList).mockImplementation((input) => {
     if (options.failList !== undefined) return Promise.reject(new CommandError(options.failList));
     const all = narrowed(input.side === 'buyer' ? buyers : sellers, input.text);
     return Promise.resolve({ ...all, rows: sliceOf(all.rows, input.offset, input.limit) });
   });
   /** The rows of an account inside the dates asked for, as the backend reads a range (a window is one). */
-  const statementFor = (input: Parameters<typeof ledgersApi.partyLedgersStatement>[0]) => {
+  const statementFor = (input: StatementRowsInput): StatementRows | undefined => {
     const found = statements[input.account_id];
     if (found === undefined) return undefined;
     const first = isoOfTyped(input.from);
     const last = isoOfTyped(input.to);
     const inside = found.rows.filter(
-      (row) => (first === null || row.date >= first) && (last === null || row.date <= last),
+      (row) =>
+        (first === null || row.date >= first) &&
+        (last === null || row.date <= last) &&
+        (input.include_history || !row.is_replaced),
     );
     return {
       ...found,
@@ -125,7 +121,7 @@ export function fakePartyLedgers(options: FakeLedgers = {}): void {
       count: inside.length,
     };
   };
-  vi.mocked(ledgersApi.partyLedgersStatement).mockImplementation((input) => {
+  vi.mocked(ledgersApi.partyLedgersStatementRows).mockImplementation((input) => {
     const refused = options.refuseStatement?.(input) ?? null;
     if (refused !== null) return Promise.reject(new CommandError(refused));
     const answer = statementFor(input);
@@ -151,6 +147,8 @@ export function fakePartyLedgers(options: FakeLedgers = {}): void {
       account_id: input.account_id,
       from: typed(from),
       to: typed(to),
+      include_history: false,
+      newest_first: false,
       offset: 0,
       limit: 100,
     });
@@ -163,7 +161,8 @@ export function fakePartyLedgers(options: FakeLedgers = {}): void {
     return Promise.resolve({
       from,
       to,
-      statement,
+      // The go-to answer still carries the old window page (backend plan 74 shape); the screen ignores it.
+      statement: STATEMENT_AKRAM,
       has_entry: place >= 0,
       row: place >= 0 ? place : null,
     });

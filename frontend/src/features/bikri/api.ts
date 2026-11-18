@@ -26,7 +26,9 @@ import type { MixedSaleSaved } from '../../bindings/MixedSaleSaved';
 import type { MixedSaleSaveInput } from '../../bindings/MixedSaleSaveInput';
 import type { MixedUndoInput } from '../../bindings/MixedUndoInput';
 import type { MixedUndoResult } from '../../bindings/MixedUndoResult';
+import type { GoodsSources } from '../../bindings/GoodsSources';
 import type { ReadyGoods } from '../../bindings/ReadyGoods';
+import type { VentureKind } from '../../bindings/VentureKind';
 import type { StockList } from '../../bindings/StockList';
 import type { StockListInput } from '../../bindings/StockListInput';
 import type { UndoInput } from '../../bindings/UndoInput';
@@ -99,12 +101,20 @@ export function bikriNavigate(currentId: number | null, to: NavigateTo): Promise
 // FR-7.47). Every number comes back from the backend; the screen sends only text and ids.
 
 /**
- * The stock that is ready to sell on a day: trip purchases and garden goods arrived with goods left
- * whose date to sell is on or before the day, oldest first (PRD FR-12.39, FR-12.40). `date` is
- * `DD-MM-YYYY`. Read only.
+ * How many rows each of the three load buttons of the بکری screen would list (PRD FR-12.50, plan 78 C1): lots with
+ * goods left (باقی مال), trip goods and garden goods for our shop. A button shows only when its count is above 0.
+ * Read only.
  */
-export function bikriReadyGoods(date: string): Promise<ReadyGoods> {
-  return callCommand<ReadyGoods>('bikri_ready_goods', { input: { date } });
+export function bikriGoodsSources(): Promise<GoodsSources> {
+  return callCommand<GoodsSources>('bikri_goods_sources');
+}
+
+/**
+ * The rows of the card of trip goods (`trip`) or garden goods (`garden`): every row with goods left for our shop, on
+ * any day to sell, oldest first (PRD FR-12.50). Read only.
+ */
+export function bikriGoodsToLoad(kind: VentureKind): Promise<ReadyGoods> {
+  return callCommand<ReadyGoods>('bikri_goods_to_load', { input: { kind } });
 }
 
 /** The lots with goods left, oldest first (PRD FR-12.14, FR-19.10). Read only. */

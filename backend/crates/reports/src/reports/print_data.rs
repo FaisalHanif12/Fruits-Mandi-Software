@@ -300,6 +300,13 @@ pub struct ReportPrintData {
     pub paper: Paper,
     /// Fluent message ID of the title.
     pub title_id: String,
+    /// The party of a one-party print (a day slip, a ledger, a statement), with his name in the print
+    /// language (plan 78 A2, A3, A6). Null for a print that is not for one party.
+    pub party: Option<PrintReportParty>,
+    /// Fluent message ID of a title that names the party, for example "{ $name } کی روزانہ پرچی": the
+    /// template passes `party.name` (with the tag) as `$name`. Null when the title has no name; the
+    /// template then uses `title_id`.
+    pub named_title_id: Option<String>,
     /// The filters of the run, the facts under the title: dates and party (FR-19.10). They go to
     /// `reports_print_header` with the title.
     pub filters: Vec<PrintFact>,
@@ -740,6 +747,23 @@ pub(crate) fn filter_facts(
     Ok(facts)
 }
 
+/// The title that names the party of a day slip (plan 78 A6): "{ $name } کی روزانہ پرچی". A seller's
+/// slip is told by its net sale line.
+fn slip_title_id(page: &ReportPage) -> Option<String> {
+    if page.id != ReportId::R35 || page.filters.party.is_none() {
+        return None;
+    }
+    let seller = page.summary.iter().any(|s| s.label_id == ids::R35_NET_SALE);
+    Some(
+        if seller {
+            ids::SLIP_TITLE_SELLER
+        } else {
+            ids::SLIP_TITLE_BUYER
+        }
+        .to_owned(),
+    )
+}
+
 /// Builds the print data from a page that holds every row. Pure: it reads nothing else.
 ///
 /// # Errors
@@ -792,6 +816,8 @@ pub fn build_print(
         dir: TextDir::of(language),
         paper: options.paper,
         title_id: page.title_id.clone(),
+        party: page.filters.party.as_ref().map(|p| fmt.party(p)),
+        named_title_id: slip_title_id(page),
         filters: filter_facts(&fmt, page.id, &page.filters)?,
         columns: page
             .columns

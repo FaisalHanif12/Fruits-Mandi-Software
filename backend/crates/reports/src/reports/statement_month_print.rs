@@ -48,6 +48,7 @@ pub fn partner_statement_month_spec(
         column("fruit", ColumnKind::Money),
         column("taken_returned", ColumnKind::Money),
         column("capital", ColumnKind::Money),
+        column("advances", ColumnKind::Money),
         column("net", ColumnKind::Money),
         column("running", ColumnKind::Money),
     ];
@@ -61,6 +62,7 @@ pub fn partner_statement_month_spec(
             money(c.fruit_paisa),
             money(c.taken_returned_paisa),
             money(c.capital_paisa),
+            money(c.advances_paisa),
             money(c.net_paisa),
             money(running),
         ]
@@ -70,6 +72,7 @@ pub fn partner_statement_month_spec(
             Cell::Label {
                 id: "print-partner-month-opening".to_owned(),
             },
+            Cell::Empty,
             Cell::Empty,
             Cell::Empty,
             Cell::Empty,

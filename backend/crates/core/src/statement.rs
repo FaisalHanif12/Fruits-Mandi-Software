@@ -72,6 +72,9 @@ pub enum StatementHeading {
     /// through a separate khata or a loan linked to him or to the shop. `subject` is the khata or
     /// the person.
     Linked,
+    /// پیشگی (plan 78 B4, PRD FR-17.13): his part of an advance to a seller, out or back. `subject`
+    /// is the seller.
+    Advance,
 }
 
 /// Which kind of line it is inside its heading. It picks the Fluent message. The note lines
@@ -131,6 +134,13 @@ pub enum StatementDetail {
     /// `linked`: any other entry on a linked khata (the credit of its goods sold, fruit, a جنرل
     /// line), with its sign. `number` is the بکری or voucher number when it has one.
     LinkedOther,
+    /// `advance`: his part of an advance to a seller that went out (negative). `subject` is the
+    /// seller; `values`: `amount_paisa` (the advance) and `share_bps` (his share on that day).
+    AdvanceOut,
+    /// `advance`: his part of what a seller settled (a بکری credit with the tick, or his وصولی),
+    /// added back. `subject` is the seller; `values`: `amount_paisa` (what was settled) and
+    /// `share_bps`.
+    AdvanceBack,
     /// `linked`, note: a loan linked to the shop was given or returned. No amount, because the money
     /// is still owed to the shop and his total does not change. `values`: `kind` (`given` or
     /// `returned`), `amount_paisa` (the loan), `part_paisa` (his % of it, whole rupees; absent when
@@ -251,7 +261,10 @@ pub struct StatementColumns {
     /// Capital in and out, with his opening capital.
     #[ts(type = "Paisa")]
     pub capital_paisa: Paisa,
-    /// The six columns added up.
+    /// Advances to sellers: his parts going out (negative) and coming back (plus), PRD FR-17.13.
+    #[ts(type = "Paisa")]
+    pub advances_paisa: Paisa,
+    /// The seven columns added up.
     #[ts(type = "Paisa")]
     pub net_paisa: Paisa,
 }
@@ -324,7 +337,7 @@ pub struct PartnerStatementDay {
 
 /// Input of `partners_statement_month_print_data`: the month as the page shows it and the print
 /// language.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
 pub struct PartnersStatementMonthPrintInput {
     /// The partner.
     #[ts(type = "number")]

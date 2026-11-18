@@ -411,7 +411,8 @@ fn q202_a_partner_statement_with_dates_is_read() {
         ],
     );
     let statement = result_of(&requests[1], "r3");
-    assert_eq!(statement["count"]["n"], 4, "{statement}");
+    // 6 lines: his 4 and the two of his part of رحیم's open advance (PRD FR-17.13, v1.43).
+    assert_eq!(statement["count"]["n"], 6, "{statement}");
     assert_eq!(statement["filters"]["from"], "2026-01-01");
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
     // The 2,000 he took is a line of his statement with its minus sign.

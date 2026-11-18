@@ -35,7 +35,7 @@ export function useDraftAutosave(stores: BikriDraftStores, { enabled }: Options)
     const send = async () => {
       if (!dirty.current || isStopped()) return;
       dirty.current = false;
-      const filled = isFilledByUser(stores, buildDraft(stores));
+      const filled = isFilledByUser(buildDraft(stores));
       try {
         if (!filled) {
           if (onBackend.current) {

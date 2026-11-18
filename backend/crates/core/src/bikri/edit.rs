@@ -156,6 +156,9 @@ pub struct StockRow {
     pub days_waiting: i64,
     /// The write-offs of this lot that can still be undone, oldest first.
     pub write_offs: Vec<WriteOffRow>,
+    /// The advance tick stored on the lot (PRD FR-12.23, plan 78 C3). A later sale of the lot keeps
+    /// it, so the screen shows it on a carried lot and does not let it be changed there.
+    pub adjust_advance: bool,
 }
 
 /// One purchase of a trip with stock left, marked اپنا مال with its trip (PRD FR-12.25): bought,

@@ -5,6 +5,7 @@
 // asks all queries to read again.
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { AnalyticsGoods } from '../../bindings/AnalyticsGoods';
 import type { CommissionMonthInput } from '../../bindings/CommissionMonthInput';
 import type { CommissionParty } from '../../bindings/CommissionParty';
 import type { CommissionPeriod } from '../../bindings/CommissionPeriod';
@@ -68,6 +69,8 @@ export function commissionInput(
     month: filters.kind === 'month' ? filters.month : null,
     ...(filters.kind === 'month' ? {} : { period }),
     ...(party === null ? {} : { party }),
+    // Which goods (plan 78 D4): all goods is asked as nothing, so the request is the old one.
+    ...(filters.goods === 'all' ? {} : { goods: filters.goods }),
     ...(page ?? {}),
   };
 }
@@ -86,15 +89,21 @@ export function useCommissionRead(input: CommissionMonthInput | null) {
 }
 
 /** The postings of one day, read when its row is opened (`day` is `YYYY-MM-DD`), of one party when there is one. */
-export function useCommissionDay(day: string, party: CommissionParty | null, enabled: boolean) {
+export function useCommissionDay(
+  day: string,
+  party: CommissionParty | null,
+  goods: AnalyticsGoods,
+  enabled: boolean,
+) {
   return useQuery({
-    queryKey: ['dashboard', 'commission_day', day, party],
+    queryKey: ['dashboard', 'commission_day', day, party, goods],
     queryFn: () =>
       dashboardCommissionDay({
         date: day,
         offset: 0,
         limit: DAY_ENTRIES,
         ...(party === null ? {} : { party }),
+        ...(goods === 'all' ? {} : { goods }),
       }),
     enabled,
     staleTime: 0,

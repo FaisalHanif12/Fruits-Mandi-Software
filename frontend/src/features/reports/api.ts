@@ -13,10 +13,13 @@ import type { CollectionSheetInput } from '../../bindings/CollectionSheetInput';
 import type { CollectionSheetPrintInput } from '../../bindings/CollectionSheetPrintInput';
 import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
 import type { DaySlipsInput } from '../../bindings/DaySlipsInput';
+import type { AdhariSheetPrintInput } from '../../bindings/AdhariSheetPrintInput';
 import type { DaySlipsPrintData } from '../../bindings/DaySlipsPrintData';
 import type { DeadAmountInput } from '../../bindings/DeadAmountInput';
 import type { DeadAmountPage } from '../../bindings/DeadAmountPage';
+import type { PrintAdhariInput } from '../../bindings/PrintAdhariInput';
 import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
+import type { PrintSlipsInput } from '../../bindings/PrintSlipsInput';
 import type { PrintData } from '../../bindings/PrintData';
 import type { PrintFrame } from '../../bindings/PrintFrame';
 import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
@@ -35,6 +38,7 @@ import type { ReportPrintData } from '../../bindings/ReportPrintData';
 import type { ReportPrintInput } from '../../bindings/ReportPrintInput';
 import type { ReportRunInput } from '../../bindings/ReportRunInput';
 import type { ReportsExportRequest } from '../../bindings/ReportsExportRequest';
+import type { SalePrintData } from '../../bindings/SalePrintData';
 import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput';
 import { callCommand } from '../../shared/api';
 
@@ -169,29 +173,47 @@ export function reportsBuyerParchiPrintData(input: DaySlipsInput): Promise<DaySl
 }
 
 /** Prints the parchi, or saves it as a PDF: the same slips, language and paper as the preview. */
-export function reportsBuyerParchiPrint(input: {
-  slips: DaySlipsInput;
-  to: PrintTo;
-  copies: number | null;
-}): Promise<PrintOutcome> {
+export function reportsBuyerParchiPrint(input: PrintSlipsInput): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('reports_buyer_parchi_print', { input });
 }
 
 /**
- * The overall sale print of one بکری or of a whole day (PRD FR-19.15, FR-12.12): the seller slips, then the
- * buyer slips. `bikri_id` null is the whole day.
+ * The seller bills of a day or of one بکری (PRD FR-19.15, plan 78 A1, A3): the R35 slip of each seller, sorted by
+ * name, each titled "<name> کا بل". Only `sellers` is filled.
  */
-export function reportsSalePrintData(input: DaySlipsInput): Promise<DaySlipsPrintData> {
-  return callCommand<DaySlipsPrintData>('reports_sale_print_data', { input });
+export function reportsSellerBillsPrintData(input: DaySlipsInput): Promise<DaySlipsPrintData> {
+  return callCommand<DaySlipsPrintData>('reports_seller_bills_print_data', { input });
 }
 
-/** Prints the overall sale print, or saves it as a PDF: the same slips, language and paper as the preview. */
-export function reportsSalePrint(input: {
-  slips: DaySlipsInput;
-  to: PrintTo;
-  copies: number | null;
-}): Promise<PrintOutcome> {
+/** Prints the seller bills, or saves them as a PDF: the same slips, language and paper as the preview. */
+export function reportsSellerBillsPrint(input: PrintSlipsInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_seller_bills_print', { input });
+}
+
+/**
+ * The whole sale print of one بکری or of a whole day (PRD FR-19.15, plan 78 A4): the sellers table, then the
+ * buyers table, on one or two pages. `bikri_id` null is the whole day.
+ */
+export function reportsSalePrintData(input: DaySlipsInput): Promise<SalePrintData> {
+  return callCommand<SalePrintData>('reports_sale_print_data', { input });
+}
+
+/** Prints the whole sale print, or saves it as a PDF: the same scope, language and paper as the preview. */
+export function reportsSalePrint(input: PrintSlipsInput): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('reports_sale_print', { input });
+}
+
+/**
+ * ادھاری تفصیل of a day for print (PRD R5, plan 78 A5): today's buyers one row each, then the totals of the
+ * others and of everyone who owes. Always the whole day.
+ */
+export function reportsAdhariSheetPrintData(input: AdhariSheetPrintInput): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('reports_adhari_sheet_print_data', { input });
+}
+
+/** Prints ادھاری تفصیل, or saves it as a PDF: the same day, language and paper as the preview. */
+export function reportsAdhariSheetPrint(input: PrintAdhariInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_adhari_sheet_print', { input });
 }
 
 /**
@@ -201,7 +223,7 @@ export function reportsSalePrint(input: {
 export function reportsCollectionSheetPrint(input: {
   sheet: CollectionSheetPrintInput;
   to: PrintTo;
-  copies: number | null;
+  copies: string | null;
 }): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('reports_collection_sheet_print', { input });
 }

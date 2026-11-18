@@ -204,20 +204,27 @@ fn lacking() -> ReportsError {
     ReportsError::Data("a slip is missing one of its lines".to_owned())
 }
 
-/// The buyer's lines, in the PRD order.
+/// The buyer's lines, in the PRD order. An opening balance of the day is a line of its own, right
+/// after the previous balance, and is not one of the "other entries" (plan 78 A6).
 fn buyer_summary(d: &BuyerDay) -> Result<Vec<SummaryLine>, ReportsError> {
     let previous = net_cell(d.previous)?;
-    let other = net_cell(d.other)?;
+    // The day's left and other entries, without the opening: new = previous + opening + left.
+    let other_value = d.other.checked_sub(d.opening)?;
+    let left_value = d.left.checked_sub(d.opening)?;
+    let other = net_cell(other_value)?;
     // Left empty when 0: the collector writes what he is paid.
     let paid = blank_if_zero(d.paid);
-    let left = net_cell(d.left)?;
+    let left = net_cell(left_value)?;
     let new = net_cell(d.new)?;
+    let opening = net_cell(d.opening)?;
     // The identity, on the cells that are printed.
     let want_left = d
         .total
         .checked_add(signed(&other)?)?
         .checked_sub(signed(&paid)?)?;
-    let want_new = signed(&previous)?.checked_add(signed(&left)?)?;
+    let want_new = signed(&previous)?
+        .checked_add(signed(&opening)?)?
+        .checked_add(signed(&left)?)?;
     // C5 on what is printed: goods + commission + لاگا is today's total.
     let want_total = d.goods.checked_add(d.commission)?.checked_add(d.laga)?;
     if signed(&left)? != want_left || signed(&new)? != want_new || want_total != d.total {
@@ -231,29 +238,38 @@ fn buyer_summary(d: &BuyerDay) -> Result<Vec<SummaryLine>, ReportsError> {
         line(ids::R35_LAGA, money(d.laga)),
         line(ids::R35_TODAY_TOTAL, money(d.total)),
     ];
-    if d.has_other {
+    if d.has_other_beyond_opening {
         out.push(line(ids::R35_OTHER, other));
     }
     out.push(line(ids::R35_PAID_TODAY, paid));
     out.push(line(ids::R35_TODAY_LEFT, left));
     out.push(line(ids::R35_PREVIOUS, previous));
+    if d.opening != Paisa::ZERO {
+        out.push(line(ids::R35_OPENING, opening));
+    }
     out.push(line(ids::R35_NEW_BALANCE, new));
     out.push(line(ids::R35_TOTAL_QTY, Cell::Number { value: d.qty }));
     Ok(out)
 }
 
-/// The seller's lines, in the PRD order. A deduction is shown only when it is not 0.
+/// The seller's lines, in the PRD order. A deduction is shown only when it is not 0. An opening
+/// balance of the day is a line of its own, right after the previous balance (plan 78 A6).
 fn seller_summary(d: &SellerDay) -> Result<Vec<SummaryLine>, ReportsError> {
     let previous = net_cell(d.previous)?;
     let sale = net_cell(d.sale)?;
-    let other = net_cell(d.other)?;
+    let other_value = d.other.checked_sub(d.opening)?;
+    let left_value = d.left.checked_sub(d.opening)?;
+    let other = net_cell(other_value)?;
     let paid = blank_if_zero(d.paid);
-    let left = net_cell(d.left)?;
+    let left = net_cell(left_value)?;
     let new = net_cell(d.new)?;
+    let opening = net_cell(d.opening)?;
     let want_left = signed(&sale)?
         .checked_add(signed(&other)?)?
         .checked_add(signed(&paid)?)?;
-    let want_new = signed(&previous)?.checked_add(signed(&left)?)?;
+    let want_new = signed(&previous)?
+        .checked_add(signed(&opening)?)?
+        .checked_add(signed(&left)?)?;
     // The lines above the net sale must give it: every deduction shown, less the gross.
     let deduction_lines = [
         (ids::R35_COMMISSION, d.commission),
@@ -280,12 +296,15 @@ fn seller_summary(d: &SellerDay) -> Result<Vec<SummaryLine>, ReportsError> {
         }
     }
     out.push(line(ids::R35_NET_SALE, sale));
-    if d.has_other {
+    if d.has_other_beyond_opening {
         out.push(line(ids::R35_OTHER, other));
     }
     out.push(line(ids::R35_PAID_TODAY, paid));
     out.push(line(ids::R35_TODAY_LEFT, left));
     out.push(line(ids::R35_PREVIOUS, previous));
+    if d.opening != Paisa::ZERO {
+        out.push(line(ids::R35_OPENING, opening));
+    }
     out.push(line(ids::R35_NEW_BALANCE, new));
     Ok(out)
 }

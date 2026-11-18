@@ -62,6 +62,11 @@ pub(super) struct LedgerRow {
     pub(super) receipts_cr: Paisa,
     /// Debits of payments (a seller was paid).
     pub(super) payments_dr: Paisa,
+    /// Debits and credits of an opening balance posted that day (PRD FR-10.9). They are part of
+    /// the day's debits and credits, and of "other entries" until a slip carves them out (plan 78
+    /// A6).
+    pub(super) opening_dr: Paisa,
+    pub(super) opening_cr: Paisa,
 }
 
 /// The balance of a party before the first day.
@@ -122,7 +127,9 @@ pub(super) fn ledger_rows_in(
                 SUM(CASE WHEN paired OR NOT is_bikri THEN 0 ELSE dr END),
                 SUM(CASE WHEN paired OR NOT is_bikri THEN 0 ELSE cr END),
                 SUM(CASE WHEN paired OR posting_type <> 'receipt' THEN 0 ELSE cr END),
-                SUM(CASE WHEN paired OR posting_type <> 'payment' THEN 0 ELSE dr END)
+                SUM(CASE WHEN paired OR posting_type <> 'payment' THEN 0 ELSE dr END),
+                SUM(CASE WHEN paired OR posting_type <> 'opening' THEN 0 ELSE dr END),
+                SUM(CASE WHEN paired OR posting_type <> 'opening' THEN 0 ELSE cr END)
          FROM (
            SELECT l.account_id AS account_id, COALESCE(l.chukta_person_key, '') AS person,
                   k.code AS code, e.entry_date AS entry_date, l.dr_paisa AS dr, l.cr_paisa AS cr,
@@ -152,6 +159,8 @@ pub(super) fn ledger_rows_in(
                     r.get::<_, i64>(9)?,
                     r.get::<_, i64>(10)?,
                     r.get::<_, i64>(11)?,
+                    r.get::<_, i64>(12)?,
+                    r.get::<_, i64>(13)?,
                 ],
             ))
         })?
@@ -167,6 +176,8 @@ pub(super) fn ledger_rows_in(
             bikri_cr,
             receipts_cr,
             payments_dr,
+            opening_dr,
+            opening_cr,
         ] = v;
         out.push(LedgerRow {
             account_id,
@@ -181,6 +192,8 @@ pub(super) fn ledger_rows_in(
             bikri_cr: paisa(bikri_cr)?,
             receipts_cr: paisa(receipts_cr)?,
             payments_dr: paisa(payments_dr)?,
+            opening_dr: paisa(opening_dr)?,
+            opening_cr: paisa(opening_cr)?,
         });
     }
     Ok(out)

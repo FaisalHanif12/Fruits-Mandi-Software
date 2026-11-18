@@ -35,6 +35,8 @@ interface AppShellProps {
   onOpenDay?: () => void;
   /** The last good cloud backup for the status bar (PRD NFR-BAK-10). */
   backup?: ReactNode;
+  /** The Back button for a page that was opened from another page (plan 78 F1); the top bar shows it. */
+  back?: ReactNode;
   children: ReactNode;
 }
 
@@ -52,6 +54,7 @@ export function AppShell({
   closedUpTo = null,
   onOpenDay,
   backup,
+  back,
   children,
 }: AppShellProps) {
   useTextSize();
@@ -74,6 +77,7 @@ export function AppShell({
             onOpenAccount={onOpenAccount}
             onOpenBikri={onOpenBikri}
             onOpenVoucher={onOpenVoucher}
+            back={back}
           />
           {/* The Index form of a picker's "add" button is drawn over the screen, in the slot below
               (shared/ui/work-area.ts). */}

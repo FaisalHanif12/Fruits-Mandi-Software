@@ -16,7 +16,7 @@ export {
   type PrintDescription,
   type PrintViewProps,
 } from './PrintView';
-export { PrintHeader } from './PrintHeader';
+export { NAMED_TITLE_IDS, PrintHeader } from './PrintHeader';
 export { PrintName } from './PrintName';
 export { PrintText } from './PrintText';
 export { PrintR5 } from './PrintR5';

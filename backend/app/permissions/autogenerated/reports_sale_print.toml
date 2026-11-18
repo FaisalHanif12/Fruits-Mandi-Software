@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reports-sale-print"
+description = "Enables the reports_sale_print command without any pre-configured scope."
+commands.allow = ["reports_sale_print"]
+
+[[permission]]
+identifier = "deny-reports-sale-print"
+description = "Denies the reports_sale_print command without any pre-configured scope."
+commands.deny = ["reports_sale_print"]

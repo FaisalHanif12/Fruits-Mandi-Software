@@ -1,0 +1,309 @@
+{
+  "frame": {
+    "language": "ur",
+    "dir": "rtl",
+    "header": {
+      "firm": {
+        "name": "ماہر عدنان اینڈ برادرز",
+        "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+        "address": "Kot Radha Kishan",
+        "phone": "0300-1234567"
+      },
+      "contacts": [],
+      "trade_mark": null,
+      "title_id": "print-adhari-sheet-title",
+      "facts": [
+        {
+          "label_id": "print-fact-date",
+          "value": "10-10-2026"
+        }
+      ]
+    },
+    "footer": {
+      "printed_label_id": "print-printed-at",
+      "printed_at": "10-10-2026 14:00",
+      "page_label_id": "print-page-label",
+      "of_label_id": "print-page-of"
+    }
+  },
+  "paper": "a4",
+  "columns": [
+    {
+      "key": "party",
+      "title_id": "print-adhari-sheet-col-party",
+      "kind": "party"
+    },
+    {
+      "key": "detail",
+      "title_id": "print-adhari-sheet-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "bill",
+      "title_id": "print-adhari-sheet-col-bill",
+      "kind": "money"
+    },
+    {
+      "key": "cash",
+      "title_id": "print-adhari-sheet-col-cash",
+      "kind": "money"
+    },
+    {
+      "key": "today_credit",
+      "title_id": "print-adhari-sheet-col-today-credit",
+      "kind": "money"
+    },
+    {
+      "key": "previous_due",
+      "title_id": "print-adhari-sheet-col-previous",
+      "kind": "balance"
+    },
+    {
+      "key": "total_due",
+      "title_id": "print-adhari-sheet-col-total",
+      "kind": "balance"
+    }
+  ],
+  "column_labels": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "1",
+            "code": "0021",
+            "name": "ارشد ملتانی",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": "1",
+              "item": "کیلا",
+              "packing": "پیٹی",
+              "qty": "30",
+              "rate": "580",
+              "value": "17,400",
+              "commission": "1,044",
+              "laga": "240"
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        },
+        {
+          "type": "balance",
+          "text": "18,684",
+          "side_id": "report-side-dr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "0",
+            "code": "0020",
+            "name": "اکرم ٹول ٹیکس",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": "1",
+              "item": "کیلا",
+              "packing": "پیٹی",
+              "qty": "20",
+              "rate": "600",
+              "value": "12,000",
+              "commission": "720",
+              "laga": "160"
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "12,880"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "12,880"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        },
+        {
+          "type": "balance",
+          "text": "12,880",
+          "side_id": "report-side-dr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "0030",
+            "name": "شاہد",
+            "tag": null,
+            "person_key": "شاہد|03000000000",
+            "phone": "0300-0000000"
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": "2",
+              "item": "سیب",
+              "packing": "پیٹی",
+              "qty": "10",
+              "rate": "1200",
+              "value": "12,000",
+              "commission": "720",
+              "laga": "80"
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "12,800"
+        },
+        {
+          "type": "money",
+          "text": "12,800"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "3",
+  "totals_label_id": "print-adhari-sheet-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "44,364"
+    },
+    {
+      "type": "money",
+      "text": "12,800"
+    },
+    {
+      "type": "money",
+      "text": "31,564"
+    },
+    {
+      "type": "balance",
+      "text": "0",
+      "side_id": "report-side-zero"
+    },
+    {
+      "type": "balance",
+      "text": "31,564",
+      "side_id": "report-side-dr"
+    }
+  ],
+  "words": {
+    "label_id": "print-in-words",
+    "text": "اکتیس ہزار پانچ سو چونسٹھ روپے"
+  },
+  "extra_totals": [
+    {
+      "label_id": "print-adhari-sheet-all",
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "44,364"
+        },
+        {
+          "type": "money",
+          "text": "12,800"
+        },
+        {
+          "type": "money",
+          "text": "31,564"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        },
+        {
+          "type": "balance",
+          "text": "31,564",
+          "side_id": "report-side-dr"
+        }
+      ]
+    }
+  ]
+}

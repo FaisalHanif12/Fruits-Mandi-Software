@@ -65,6 +65,9 @@ pub fn new_partner(
             name_ur: name_ur.to_owned(),
             name_en: name_en.to_owned(),
             opening_capital: opening.map(str::to_owned),
+            opening_capital_where: Some(
+                mandi_services::core::partners::OpeningCapitalWhere::CountedElsewhere,
+            ),
             confirmed_rules_words: words.clone(),
         };
         match partners::create(&env.ctx, owner, &input) {

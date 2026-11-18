@@ -157,6 +157,20 @@ pub struct PartnersOpenVenturesInput {
     pub partner_id: i64,
 }
 
+/// Where a partner's opening capital is (PRD 17.1 v1.43, plan 78 E): in the shop's cash, or already
+/// counted in other openings.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum OpeningCapitalWhere {
+    /// In روکڑ (the default): the opening posts روکڑ بنام and his capital account جمع, so cash in hand
+    /// shows the money. Example: 50,000 makes cash 50,000 higher.
+    #[default]
+    Cash,
+    /// Already counted in other openings (پہلے سے درج): the opening posts against ابتدائی فرق, as
+    /// before v1.43 (PRD FR-10.9), so cash does not change.
+    CountedElsewhere,
+}
+
 /// A new partner (PRD 17.1). He has no share until shares are set.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct PartnerCreateInput {
@@ -168,6 +182,11 @@ pub struct PartnerCreateInput {
     /// account dated today (PRD FR-10.9). Empty or null for none.
     #[serde(default)]
     pub opening_capital: Option<String>,
+    /// Where that money is (plan 78 E, PRD 17.1 v1.43). Missing means `cash`. Used only when
+    /// `opening_capital` is typed.
+    #[serde(default)]
+    #[ts(optional)]
+    pub opening_capital_where: Option<OpeningCapitalWhere>,
     /// Words the user confirmed in the spelling check (PRD FR-7.66).
     #[serde(default)]
     pub confirmed_rules_words: Vec<String>,

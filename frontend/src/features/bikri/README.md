@@ -216,6 +216,11 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
 - The goods left list shows the trip's purchases apart (`OwnStockSection`, `own-stock-columns.ts`):
   the card has every figure, the write-off and its undo (nothing is posted), and a way to open the
   trip.
+- The advance tick (plan 78 C3, PRD FR-12.23): "Take the advance off this sale" is the SELLER's, in the summary
+  (`components/AdvanceTicks.tsx`), not the lot's. It is off when a بکری opens. One tick covers every lot of that
+  seller (`advance-tick.ts` changes them all, `adjustAdvanceOf` in `draft.ts` says what each lot sends: a new lot
+  sends the seller's tick, a saved lot the tick it was saved with). Own goods, a garden's lot and a carried lot
+  are not covered. It shows only for a seller who has an open advance (the party card's, the backend's).
 - **Tests**: `bikri-own-real-answers.test.tsx` (the panel, the saved view of E2E-34 and E2E-41, the
   goods left list, write-off and undo and an edit, on the backend's `bikri_*_own_lot_*` and
   `bikri_stock_list_own_rows` files, read through `tests/helpers/bikri-own-real.ts`),

@@ -69,7 +69,7 @@ export function useBikriPreview(stores: BikriDraftStores, source?: PreviewSource
   const draft = useSyncExternalStore(stores.version.subscribe, () => draftOf(stores));
   const settled = useDebouncedValue(draft, PREVIEW_DELAY_MS);
   // Lots that came in by themselves and were not worked on ask nothing (plan 33, R3).
-  const ready = source?.ready ?? ((candidate: BikriDraft) => isFilledByUser(stores, candidate));
+  const ready = source?.ready ?? ((candidate: BikriDraft) => isFilledByUser(candidate));
   const run = source?.run ?? bikriPreview;
   const query = useQuery({
     queryKey:

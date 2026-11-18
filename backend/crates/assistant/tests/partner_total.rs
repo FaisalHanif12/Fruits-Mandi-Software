@@ -274,7 +274,8 @@ fn a_dated_statement_is_not_ticked_and_a_dated_capital_question_is_told_there_is
 #[test]
 fn the_overview_to_an_earlier_day_gives_that_day_and_not_todays_total_with_a_tick() {
     // Money review BUG 1: R31 for everyone ignored `to` and showed today's totals, ticked.
-    // To 09-10-26 nobody had earned anything yet: 0 for each, no tick, and the day is echoed.
+    // To 09-10-26 nobody had earned anything yet; each only carries his part of رحیم's open advance
+    // of 15,000 (PRD FR-17.13, v1.43): -6,000, -4,500 and -4,500. No tick, and the day is echoed.
     let mut call = overview();
     call["to"] = json!("2026-10-09");
     let h = Harness::day();
@@ -287,9 +288,9 @@ fn the_overview_to_an_earlier_day_gives_that_day_and_not_todays_total_with_a_tic
         ],
     );
     let result = report_result(&requests);
-    for key in ["s1", "s2", "s3"] {
+    for (key, want) in [("s1", -6_000), ("s2", -4_500), ("s3", -4_500)] {
         let total = &row_of(&result, key)["total"];
-        assert_eq!(total["rs"], 0, "{key}: {result}");
+        assert_eq!(total["rs"], want, "{key}: {result}");
         assert!(
             total.get("checked").is_none(),
             "{key}: no tick for an earlier day"

@@ -33,7 +33,7 @@ function shell(key: string, sales: LotInput['sales']): LotInput {
     phone: null,
     cash_paid: null,
     store_rent: null,
-    adjust_advance: true,
+    adjust_advance: false,
     sales,
   };
 }

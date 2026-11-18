@@ -1564,6 +1564,7 @@ fn make_garden(y: &mut Year, dd: &str, a: i64, b: i64) {
                 confirmed_rules_words: words.to_vec(),
                 date: dd.to_owned(),
                 item_id: item,
+                item_ids: Vec::new(),
                 rent: "400,000".into(),
                 season_end: None,
                 note: None,

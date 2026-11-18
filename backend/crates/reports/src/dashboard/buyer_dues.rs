@@ -289,7 +289,7 @@ pub fn buyer_dues(db: &Db, input: &BuyerDuesInput) -> Result<BuyerDuesPage, Repo
 }
 
 /// Input of `dashboard_buyer_dues_print_data`: the filter of the screen and the print language.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
 pub struct BuyerDuesPrintInput {
     /// The search of the screen.
     #[serde(default)]

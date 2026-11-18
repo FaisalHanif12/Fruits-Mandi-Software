@@ -4,7 +4,9 @@
 //! the party and the date, read with `reports_run` and printed with `reports_print_data`.
 
 use mandi_reports::reports::{
-    StatementPrintData, StatementPrintDataInput, party_statement_print_data,
+    StatementPrintData, StatementPrintDataInput, StatementRows, StatementRowsInput,
+    StatementRowsPrintInput, TablePrintData, party_statement_print_data, statement_rows,
+    statement_rows_print_data,
 };
 use mandi_services::core::party_ledgers::{
     PartyLedgerGoTo, PartyLedgerGoToInput, PartyLedgerStatement, PartyLedgerStatementInput,
@@ -88,6 +90,42 @@ pub async fn party_ledgers_statement_print_data<R: tauri::Runtime>(
         auth::require(ctx)?;
         let whole = party_ledgers::statement_whole(ctx, input.account_id, &input.from, &input.to)?;
         party_statement_print_data(ctx.db(), &whole, &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// One party's statement with a row for each ENTRY (plan 78 A7, B1, B2, B3): the opening balance is its
+/// own row, a بکری is one row with its items inside and the money paid on the spot in the same row, an
+/// edited entry shows once with its edited mark and the entry it replaced and that entry's reversal
+/// are hidden (they net to zero on the party; `include_history` shows them). Each row has the balance
+/// after it; `brought_forward` is the balance before `from`, and the totals and `closing` are over
+/// every entry of the period, never the page. With no `to`, `closing` is his balance now. Read only.
+/// Errors: `ERR_NOT_FOUND` on `account_id` (not a buyer or a seller), `ERR_DATE_INVALID` on `from` or
+/// `to`, `ERR_DATE_RANGE` on `to`.
+#[tauri::command]
+pub async fn party_ledgers_statement_rows<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: StatementRowsInput,
+) -> Result<StatementRows, UiError> {
+    run(app, "party_ledgers_statement_rows", move |ctx| {
+        auth::require(ctx)?;
+        statement_rows(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of that statement, every row of the period, in the print language: a table of date, entry,
+/// one line of detail, بنام, جمع and بقایا, with the totals and the closing balance in words. `items`
+/// puts each row's items in full instead of one line. Read only. Errors as
+/// `party_ledgers_statement_rows`.
+#[tauri::command]
+pub async fn party_ledgers_statement_rows_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: StatementRowsPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "party_ledgers_statement_rows_print_data", move |ctx| {
+        auth::require(ctx)?;
+        statement_rows_print_data(ctx.db(), &input).map_err(engine_error)
     })
     .await
 }

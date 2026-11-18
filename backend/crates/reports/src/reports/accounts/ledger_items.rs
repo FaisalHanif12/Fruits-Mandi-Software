@@ -27,13 +27,13 @@ use crate::reports::model::{DetailPart, Names};
 
 /// A ledger line that may have items.
 #[derive(Debug, Clone)]
-pub(super) struct DetailQuery {
-    pub(super) entry_id: i64,
-    pub(super) line_no: i64,
+pub(crate) struct DetailQuery {
+    pub(crate) entry_id: i64,
+    pub(crate) line_no: i64,
     /// For a line of a بکری entry: that entry, or the entry it reverses.
-    pub(super) bikri_base_entry: Option<i64>,
+    pub(crate) bikri_base_entry: Option<i64>,
     /// For a line of a voucher entry: the voucher type and its reason.
-    pub(super) voucher: Option<(String, Option<String>)>,
+    pub(crate) voucher: Option<(String, Option<String>)>,
 }
 
 struct BaseLine {
@@ -73,7 +73,7 @@ struct SaleRow {
 ///
 /// # Errors
 /// A database error; `ReportsError::Money` for a stored amount that is not whole rupees.
-pub(super) fn load(
+pub(crate) fn load(
     conn: &Connection,
     queries: &[DetailQuery],
     ledger_is_buyer: bool,

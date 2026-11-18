@@ -23,6 +23,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
+import { chooseCustomShares } from '../helpers/share-mode';
 import { message, visible } from '../helpers/render';
 import { fakeTrips, tripPartners } from '../helpers/trips';
 import { refusal } from '../helpers/ui-error';
@@ -133,10 +134,51 @@ describe.each(LANGUAGES)('a new trip (%s)', (language) => {
     expect(pocket).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('starts on the default shares: shown, not typed in, with what they are; "Custom shares" opens them and "Default shares" puts them back', async () => {
+    fakeTrips({
+      defaults: { partners: tripPartners(['shop', 'shop', 'shop']), from_last_trip: true },
+    });
+    const { user } = await open();
+    const choice = (id: string) =>
+      screen.getByRole('button', {
+        name: (name) => visible(name) === visible(message(language, id)),
+      });
+    expect(choice('ventures-share-mode-default')).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByText(said(message(language, 'trips-share-default-last'))),
+    ).toBeInTheDocument();
+    for (const name of Object.values(names)) expect(shareBox(name)).toHaveAttribute('readonly');
+    await chooseCustomShares(user, language);
+    expect(choice('ventures-share-mode-custom')).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByText(said(message(language, 'ventures-share-mode-custom-help'))),
+    ).toBeInTheDocument();
+    for (const name of Object.values(names)) expect(shareBox(name)).not.toHaveAttribute('readonly');
+    // A share of 2 decimals is kept as typed, and the default puts every share back.
+    const before = (shareBox(names.a) as HTMLInputElement).value;
+    await user.clear(shareBox(names.a));
+    await user.type(shareBox(names.a), '12.34');
+    expect(shareBox(names.a)).toHaveValue('12.34');
+    await user.click(choice('ventures-share-mode-default'));
+    expect(shareBox(names.a)).toHaveValue(before);
+    expect(shareBox(names.a)).toHaveAttribute('readonly');
+  });
+
+  it('the first trip names the firm’s shares as its default', async () => {
+    fakeTrips({
+      defaults: { partners: tripPartners(['shop', 'shop', 'shop']), from_last_trip: false },
+    });
+    await open();
+    expect(
+      screen.getByText(said(message(language, 'trips-share-default-firm'))),
+    ).toBeInTheDocument();
+  });
+
   it('shares that do not total 100% show the total in red with words and block the save', async () => {
     fakeTrips();
     const { user } = await open();
     await screen.findByText(said(message(language, 'partners-total-ok')));
+    await chooseCustomShares(user, language);
     await user.clear(shareBox(names.c));
     await user.type(shareBox(names.c), '20');
     expect(
@@ -148,6 +190,7 @@ describe.each(LANGUAGES)('a new trip (%s)', (language) => {
   it('a partner with no share is not in the trip: his source choice goes and 0 is sent', async () => {
     const fake = fakeTrips();
     const { user } = await open();
+    await chooseCustomShares(user, language);
     await user.clear(shareBox(names.c));
     await user.clear(shareBox(names.b));
     await user.type(shareBox(names.b), '60');

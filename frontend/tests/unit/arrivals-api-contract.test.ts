@@ -7,11 +7,11 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as bikriApi from '../../src/features/bikri/api';
 import * as gardensApi from '../../src/features/gardens/api';
 import * as purchasesApi from '../../src/features/purchases/api';
 import * as invoke from '../../src/shared/api/invoke';
 import * as arrivals from '../helpers/arrivals-real';
+import * as plan78 from '../helpers/plan78-real';
 
 vi.mock('../../src/shared/api/invoke');
 
@@ -48,17 +48,11 @@ describe('the commands the screens call are the ones the backend declares', () =
     ]) {
       expect(gardens).toContain(name);
     }
-    expect(declared('bikri.rs')).toContain('bikri_ready_goods');
     expect(declared('purchases.rs')).toContain('purchases_set_sell_date');
   });
 });
 
 describe('every wrapper sends its command name and its input', () => {
-  it('the goods ready for a new بکری: the day of the بکری as DD-MM-YYYY', async () => {
-    await bikriApi.bikriReadyGoods('12-10-2026');
-    expect(call).toHaveBeenLastCalledWith('bikri_ready_goods', { input: { date: '12-10-2026' } });
-  });
-
   it('the date to sell of a purchase', async () => {
     const input = arrivals.PURCHASE_SET_SELL_DATE_REQUEST;
     await purchasesApi.purchasesSetSellDate(input);
@@ -123,8 +117,9 @@ describe('every wrapper sends its command name and its input', () => {
 });
 
 describe('the real answers have the shapes the screens read', () => {
-  it('the ready goods: a trip row with its trip and a garden row with its garden and its account', () => {
-    const [trip, garden] = arrivals.READY_GOODS.rows;
+  it('the goods to load: a trip row with its trip and a garden row with its garden and its account', () => {
+    const [trip] = plan78.GOODS_TO_LOAD_TRIP.rows;
+    const [garden] = plan78.GOODS_TO_LOAD_GARDEN.rows;
     expect(trip?.kind).toBe('trip');
     expect(trip?.trip?.code).toBe('0070');
     expect(trip?.garden).toBeNull();
@@ -132,13 +127,6 @@ describe('the real answers have the shapes the screens read', () => {
     expect(garden?.garden?.code).toBe('0080');
     expect(garden?.garden?.account.code).toBe('0080');
     expect(garden?.trip).toBeNull();
-    expect(arrivals.READY_GOODS_NONE.rows).toEqual([]);
-  });
-
-  it('after a part sale the same goods come with what is left', () => {
-    const garden = arrivals.READY_GOODS_AFTER_A_PART_SALE.rows.find((row) => row.kind === 'garden');
-    expect(garden?.qty).toBe(100);
-    expect(garden?.qty_left).toBe(40);
   });
 
   it('a garden lot with its arrival: the preview carries it, the saved lot names it, the oversale is refused', () => {

@@ -149,7 +149,8 @@ fn equity_holds(w: &support::World) {
          JOIN accounts a ON a.id = l.account_id
          WHERE substr(a.code, 1, 2) IN ('04', '05', '06')",
     );
-    assert_eq!(sum + 65_000, books);
+    // PRD FR-17.9 v1.43: the advances still out are partners' money too.
+    assert_eq!(sum + 65_000 + open_advances(w), books);
 }
 
 /// The contra account 03070001 balance (جمع less بنام) in rupees.
@@ -195,7 +196,7 @@ fn a_khata_linked_to_the_shop_splits_every_movement_by_the_shares_of_its_day() {
     assert_eq!((total_dr, total_cr), (20_000, 20_000));
     assert_eq!(khata_balance(&w, family), -10_000);
     assert_eq!(cash(&w), 40_000);
-    assert_eq!(totals(&w), vec![-4_000, -3_000, -3_000]);
+    assert_eq!(totals(&w), vec![-10_000, -7_500, -7_500]);
     assert_eq!(offset_balance(&w), 10_000);
     equity_holds(&w);
 
@@ -210,7 +211,7 @@ fn a_khata_linked_to_the_shop_splits_every_movement_by_the_shares_of_its_day() {
     .unwrap();
     assert_eq!(khata_balance(&w, family), -6_000);
     assert_eq!(cash(&w), 44_000);
-    assert_eq!(totals(&w), vec![-2_400, -1_800, -1_800]);
+    assert_eq!(totals(&w), vec![-8_400, -6_300, -6_300]);
     assert_eq!(offset_balance(&w), 6_000);
     equity_holds(&w);
 
@@ -230,7 +231,7 @@ fn a_khata_linked_to_one_partner_is_all_his() {
         &super::partner_money::khata_out_input(family, "10,000", "10-10-2026"),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-10_000, 0, 0]);
+    assert_eq!(totals(&w), vec![-16_000, -4_500, -4_500]);
     set_today(&w.env, 2026, 10, 11);
     vouchers::save_khata_in(
         &w.env.ctx,
@@ -238,7 +239,7 @@ fn a_khata_linked_to_one_partner_is_all_his() {
         &super::partner_money::khata_in_input(family, "4,000", "11-10-2026"),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-6_000, 0, 0]);
+    assert_eq!(totals(&w), vec![-12_000, -4_500, -4_500]);
     assert_eq!(khata_balance(&w, family), -6_000);
     equity_holds(&w);
 }
@@ -255,7 +256,7 @@ fn an_unlinked_khata_posts_exactly_as_before() {
     .unwrap();
     // Two lines only: the khata بنام and روکڑ جمع; no partner is touched (E2E-38).
     assert_eq!(entry_lines(&w, out.entry_id).len(), 2);
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     assert_eq!(offset_balance(&w), 0);
 }
 
@@ -398,7 +399,7 @@ fn a_garden_owner_linked_to_a_partner_lowers_his_total_and_a_return_raises_it() 
     let total_dr: i64 = entry_lines(&w, saved.entry_id).iter().map(|l| l.1).sum();
     let total_cr: i64 = entry_lines(&w, saved.entry_id).iter().map(|l| l.2).sum();
     assert_eq!((total_dr, total_cr), (40_000, 40_000));
-    assert_eq!(totals(&w), vec![-20_000, 0, 0]);
+    assert_eq!(totals(&w), vec![-26_000, -4_500, -4_500]);
     assert_eq!(cash(&w), 30_000);
     equity_holds(&w);
 
@@ -410,7 +411,7 @@ fn a_garden_owner_linked_to_a_partner_lowers_his_total_and_a_return_raises_it() 
         &lent_back(nawaz, "5,000", "11-10-2026", LentReturnMode::Cash),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-15_000, 0, 0]);
+    assert_eq!(totals(&w), vec![-21_000, -4_500, -4_500]);
     assert_eq!(super::day_money::open_of_person(&w, nawaz), 15_000);
     equity_holds(&w);
 
@@ -451,11 +452,11 @@ fn a_loan_linked_to_the_shop_posts_as_before_and_shows_a_note_in_each_statement(
     .unwrap();
     // Exactly E2E-30: two lines, no partner total moves.
     assert_eq!(entry_lines(&w, saved.entry_id).len(), 2);
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     assert_eq!(offset_balance(&w), 0);
     // Each statement shows his % as a note with no amount: 5,000 at 40 / 30 / 30.
     let mut parts = Vec::new();
-    for partner in &w.partners {
+    for (at, partner) in w.partners.iter().enumerate() {
         let statement = partners::statement(
             &w.env.ctx,
             &PartnersStatementInput {
@@ -480,7 +481,11 @@ fn a_loan_linked_to_the_shop_posts_as_before_and_shows_a_note_in_each_statement(
             panic!("the note has no part");
         };
         parts.push(*part / 100);
-        assert_eq!(statement.closing_total_paisa.rupees(), 0);
+        // The note moves no total; what is left is his part of رحیم's open advance (PRD v1.43).
+        assert_eq!(
+            statement.closing_total_paisa.rupees(),
+            [-6_000, -4_500, -4_500][at]
+        );
     }
     assert_eq!(parts, vec![2_000, 1_500, 1_500]);
     // A salary deduction is still allowed for a shop loan (E2E-30).
@@ -532,7 +537,7 @@ fn a_partner_linked_loan_is_not_paid_back_from_a_salary_and_its_link_is_fixed_wh
     assert_eq!(moved.code(), ErrorCode::ErrLinkFixedWhileOwed);
     assert_eq!(first_field(&moved).as_deref(), Some("link"));
     assert_eq!(scalar(&w, "SELECT COUNT(*) FROM vouchers"), vouchers_before);
-    assert_eq!(totals(&w), vec![-20_000, 0, 0]);
+    assert_eq!(totals(&w), vec![-26_000, -4_500, -4_500]);
     // The same link is fine.
     vouchers::save_money_lent_linked(
         &w.env.ctx,
@@ -540,7 +545,7 @@ fn a_partner_linked_loan_is_not_paid_back_from_a_salary_and_its_link_is_fixed_wh
         &lent_request(nawaz, "1,000", "11-10-2026", Some(partner_link(a))),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-21_000, 0, 0]);
+    assert_eq!(totals(&w), vec![-27_000, -4_500, -4_500]);
     // And lent_person_update refuses the move too.
     let update = lent::person_update(
         &w.env.ctx,
@@ -560,7 +565,7 @@ fn a_partner_linked_loan_is_not_paid_back_from_a_salary_and_its_link_is_fixed_wh
         &lent_back(nawaz, "21,000", "11-10-2026", LentReturnMode::Cash),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     let done = lent::person_update(
         &w.env.ctx,
         &w.owner,
@@ -621,7 +626,7 @@ fn the_partner_statement_shows_the_linked_money_and_its_closing_is_his_total() {
             (StatementDetail::KhataReceived, 1_600)
         ]
     );
-    assert_eq!(statement.closing_total_paisa.rupees(), -2_400);
+    assert_eq!(statement.closing_total_paisa.rupees(), -8_400);
     // The khata is named on each line.
     assert!(
         statement
@@ -642,11 +647,11 @@ fn an_edit_of_a_linked_voucher_mirrors_the_new_version_and_a_cancel_takes_both_b
         &super::partner_money::khata_out_input(family, "10,000", "10-10-2026"),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-4_000, -3_000, -3_000]);
+    assert_eq!(totals(&w), vec![-10_000, -7_500, -7_500]);
     // An edit to 9,000 on the same day: the old parts and their reversal net to 0, the new ones are
     // 40 / 30 / 30 of 9,000 (3,600 / 2,700 / 2,700), and the contra holds 9,000.
     edit_khata_out(&w, out.voucher_id, family, "9,000").unwrap();
-    assert_eq!(totals(&w), vec![-3_600, -2_700, -2_700]);
+    assert_eq!(totals(&w), vec![-9_600, -7_200, -7_200]);
     assert_eq!(offset_balance(&w), 9_000);
     assert_eq!(khata_balance(&w, family), -9_000);
     equity_holds(&w);
@@ -663,7 +668,7 @@ fn an_edit_of_a_linked_voucher_mirrors_the_new_version_and_a_cancel_takes_both_b
     )
     .unwrap();
     // The reversal copies the stored lines, mirror lines included: everything is back to 0.
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     assert_eq!(offset_balance(&w), 0);
     assert_eq!(khata_balance(&w, family), 0);
     assert_eq!(cash(&w), 50_000);
@@ -715,14 +720,14 @@ fn the_preview_shows_each_partner_part_worked_out_by_the_same_function_as_the_sa
         .is_empty()
     );
     // The preview wrote nothing, and the save then books exactly the previewed parts.
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     vouchers::save_khata_out(
         &w.env.ctx,
         &w.owner,
         &super::partner_money::khata_out_input(shop, "10,000", "10-10-2026"),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-4_000, -3_000, -3_000]);
+    assert_eq!(totals(&w), vec![-10_000, -7_500, -7_500]);
 }
 
 fn edit_khata_out(
@@ -770,7 +775,7 @@ fn an_entry_made_under_another_link_is_not_edited_and_a_cancel_still_takes_it_ba
         &super::partner_money::khata_in_input(family, "10,000", "10-10-2026"),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     khata::set_link(
         &w.env.ctx,
         &w.owner,
@@ -783,7 +788,11 @@ fn an_entry_made_under_another_link_is_not_edited_and_a_cancel_still_takes_it_ba
     let refused = edit_khata_out(&w, out.voucher_id, family, "9,000").unwrap_err();
     assert_eq!(refused.code(), ErrorCode::ErrLinkChangedForEntry);
     assert_eq!(first_field(&refused).as_deref(), Some("link"));
-    assert_eq!(totals(&w), vec![0, 0, 0], "a refused edit writes nothing");
+    assert_eq!(
+        totals(&w),
+        vec![-6_000, -4_500, -4_500],
+        "a refused edit writes nothing"
+    );
     // F4: the preview of the edit says the same.
     let preview = vouchers::preview(
         &w.env.ctx,
@@ -815,7 +824,7 @@ fn an_entry_made_under_another_link_is_not_edited_and_a_cancel_still_takes_it_ba
         },
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![4_000, 3_000, 3_000]);
+    assert_eq!(totals(&w), vec![-2_000, -1_500, -1_500]);
     assert_eq!(khata_balance(&w, family), 10_000);
     equity_holds(&w);
     let _ = (pa, pb);
@@ -852,7 +861,7 @@ fn an_entry_made_before_the_link_stays_unmirrored_when_edited_and_one_moved_onto
     .unwrap();
     // Editing the old entry: no mirror on the new version (its reversal has none either).
     edit_khata_out(&w, old_out.voucher_id, plain, "4,000").unwrap();
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     assert_eq!(offset_balance(&w), 0);
     // A new entry on the now linked khata is mirrored as usual.
     let fresh = vouchers::save_khata_out(
@@ -861,7 +870,7 @@ fn an_entry_made_before_the_link_stays_unmirrored_when_edited_and_one_moved_onto
         &super::partner_money::khata_out_input(plain, "10,000", "10-10-2026"),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-4_000, -3_000, -3_000]);
+    assert_eq!(totals(&w), vec![-10_000, -7_500, -7_500]);
     // F2: an entry that was on an unlinked khata is moved to a linked one: the new version is
     // mirrored, so the later return does not leave the partners with a plus and no minus.
     let unlinked = khata_with(&w, "ذاتی کھاتہ", "Personal Khata", None);
@@ -871,9 +880,9 @@ fn an_entry_made_before_the_link_stays_unmirrored_when_edited_and_one_moved_onto
         &super::partner_money::khata_out_input(unlinked, "10,000", "10-10-2026"),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-4_000, -3_000, -3_000]);
+    assert_eq!(totals(&w), vec![-10_000, -7_500, -7_500]);
     edit_khata_out(&w, moved.voucher_id, shop, "10,000").unwrap();
-    assert_eq!(totals(&w), vec![-8_000, -6_000, -6_000]);
+    assert_eq!(totals(&w), vec![-14_000, -10_500, -10_500]);
     assert_eq!(offset_balance(&w), 20_000);
     let _ = fresh;
     equity_holds(&w);
@@ -908,7 +917,7 @@ fn a_typed_line_on_the_contra_account_or_a_partner_0605_account_is_refused() {
             "{code}: {refused:?}"
         );
     }
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     assert_eq!(cash(&w), 50_000);
 }
 
@@ -1114,7 +1123,7 @@ fn the_loan_preview_uses_the_link_typed_on_the_form() {
     // A partner link typed on the form: all of it is الف's, as the save will book it.
     assert_eq!(parts(Some(&partner_link(a))), vec![(a, -20_000)]);
     // The preview wrote nothing and did not set the link.
-    assert_eq!(totals(&w), vec![0, 0, 0]);
+    assert_eq!(totals(&w), vec![-6_000, -4_500, -4_500]);
     assert_eq!(
         scalar(
             &w,
@@ -1140,7 +1149,7 @@ fn the_loan_preview_uses_the_link_typed_on_the_form() {
         &lent_request(nawaz, "20,000", "10-10-2026", Some(partner_link(a))),
     )
     .unwrap();
-    assert_eq!(totals(&w), vec![-20_000, 0, 0]);
+    assert_eq!(totals(&w), vec![-26_000, -4_500, -4_500]);
     // While he owes, a different typed link is refused in the preview as it is in the save, and
     // the same link still shows his part.
     assert!(

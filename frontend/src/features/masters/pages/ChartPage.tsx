@@ -7,7 +7,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, type ListColumn } from '../../../shared/grid';
-import { useEscape } from '../../../shared/keyboard';
 import { displayName } from '../../../shared/i18n';
 import { ErrorState, LoadingState, Tabs, sideMessageId } from '../../../shared/ui';
 import { useCoaTree } from '../../../shared/accounts';
@@ -47,9 +46,6 @@ export function ChartPage() {
   const navigate = useNavigate();
   const tree = useCoaTree();
   const [tab, setTab] = useState('tree');
-  useEscape('leave', () => {
-    void navigate({ to: '/index' });
-  });
   const heads = tree.data;
   const controls = useMemo<ChartControl[]>(
     () => (heads === undefined ? [] : heads.flatMap((head) => head.controls)),

@@ -33,7 +33,7 @@ import {
   useRefusalIntoView,
   useSpellingFlow,
 } from '../../../shared/hooks';
-import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
   CashConfirmDialog,
@@ -51,7 +51,9 @@ import {
   NamePair,
   Notice,
   PartnerSharesEditor,
-  Picker,
+  ShareModeChoice,
+  type ShareMode,
+  MultiPicker,
   fieldError,
   showToast,
   type PickerValue,
@@ -109,6 +111,8 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
   const spelling = useSpellingFlow();
   const start = useMemo(() => newGardenDraft(defaults, today), [defaults, today]);
   const [draft, setDraft] = useState<GardenDraft>(start);
+  // Default shares (the firm's, or the last garden's) are shown and cannot be typed in; custom shares can (plan 78 D1).
+  const [shareMode, setShareMode] = useState<ShareMode>('default');
   const [tried, setTried] = useState(false);
   // The id of the garden once it is made: the leave guard is off by then, and the garden opens.
   const [createdId, setCreatedId] = useState<number | null>(null);
@@ -188,6 +192,20 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
       ),
     }));
   };
+  /** Back to the default shares: every share is what it was when the form opened, each source stays as chosen. */
+  const chooseShareMode = (mode: ShareMode) => {
+    if (mode === 'default') {
+      setDraft((previous) => ({
+        ...previous,
+        partners: previous.partners.map((row) => ({
+          ...row,
+          share:
+            start.partners.find((first) => first.partner.id === row.partner.id)?.share ?? row.share,
+        })),
+      }));
+    }
+    setShareMode(mode);
+  };
   const change = (patch: Partial<GardenDraft>) => {
     setDraft((previous) => ({ ...previous, ...patch }));
     setTried(false);
@@ -206,9 +224,6 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
   };
   const navigation = useFormNavigation(saveNow);
   useShortcut(SHORTCUTS.save, saveNow);
-  useEscape('leave', () => {
-    void navigate({ to: '/gardens' });
-  });
 
   return (
     <div ref={rootRef} className="flex max-w-page flex-col gap-4">
@@ -292,16 +307,28 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
               <Localized id="gardens-new-no-partners" />
             </Notice>
           ) : (
-            <PartnerSharesEditor
-              rows={draft.partners}
-              error={error}
-              onShareChange={(index, share) => {
-                patchPartner(index, { share });
-              }}
-              onSourceChange={(index, source) => {
-                patchPartner(index, { source });
-              }}
-            />
+            <div className="flex flex-col gap-3">
+              <ShareModeChoice
+                mode={shareMode}
+                onChange={chooseShareMode}
+                defaultHelp={
+                  <Localized id="gardens-share-default">
+                    <p className="type-body text-ink-muted" />
+                  </Localized>
+                }
+              />
+              <PartnerSharesEditor
+                rows={draft.partners}
+                error={error}
+                sharesLocked={shareMode === 'default'}
+                onShareChange={(index, share) => {
+                  patchPartner(index, { share });
+                }}
+                onSourceChange={(index, source) => {
+                  patchPartner(index, { source });
+                }}
+              />
+            </div>
           )}
           <SharesTotal
             state={totalState}
@@ -341,15 +368,16 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
                   <p />
                 </Localized>
               }
-              error={fieldError(error, 'item_id')}
+              error={fieldError(error, 'item_ids') ?? fieldError(error, 'item_id')}
             >
               {(props) => (
-                <Picker
+                <MultiPicker
                   {...props}
                   scope="item"
-                  value={draft.item}
-                  onChange={(hit) => {
-                    change({ item: hit === null ? null : valueOf(hit) });
+                  values={draft.items}
+                  valueOf={valueOf}
+                  onChange={(items) => {
+                    change({ items });
                   }}
                 />
               )}

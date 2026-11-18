@@ -24,7 +24,10 @@ function readPage(value: unknown): ReportPage {
   return value as ReportPage;
 }
 function readPrint(value: unknown): ReportPrintData {
-  return value as ReportPrintData;
+  // The older answers have no party and no named title (plan 78 A2): a print for no one party sends null for both.
+  const answer = value as Partial<ReportPrintData> &
+    Omit<ReportPrintData, 'party' | 'named_title_id'>;
+  return { ...answer, party: answer.party ?? null, named_title_id: answer.named_title_id ?? null };
 }
 
 /** The buyer's slip of اکرم: one line, 20 نگ, 12,880 with commission and لاگا; 10,000 paid; 2,880 left. */

@@ -93,12 +93,7 @@ pub(crate) fn filter_facts(
         facts.push(fact(ids::FILTER_GARDEN, fmt.names(garden)));
     }
     // The goods and the layout say it all in their label, so their value is empty.
-    match filters.goods {
-        AnalyticsGoods::All => {}
-        AnalyticsGoods::Consigned => facts.push(fact(ids::FILTER_GOODS_CONSIGNED, String::new())),
-        AnalyticsGoods::Trip => facts.push(fact(ids::FILTER_GOODS_TRIP, String::new())),
-        AnalyticsGoods::Garden => facts.push(fact(ids::FILTER_GOODS_GARDEN, String::new())),
-    }
+    facts.extend(goods_fact(filters.goods));
     if let Some(view) = filters.trip_view {
         let label = match view {
             AnalyticsTripView::Trip => ids::FILTER_TRIP_BY_TRIP,
@@ -187,5 +182,20 @@ pub(crate) fn build(
         totals_label_id: page.totals_label_id.clone(),
         totals: fmt.cells(&page.totals)?,
         charts: page.charts.clone(),
+    })
+}
+
+/// The header line of a goods filter: its label, with an empty value, or nothing for all goods. The
+/// commission page header uses it too (plan 78 D4).
+pub(crate) fn goods_fact(goods: AnalyticsGoods) -> Option<PrintFact> {
+    let label = match goods {
+        AnalyticsGoods::All => return None,
+        AnalyticsGoods::Consigned => ids::FILTER_GOODS_CONSIGNED,
+        AnalyticsGoods::Trip => ids::FILTER_GOODS_TRIP,
+        AnalyticsGoods::Garden => ids::FILTER_GOODS_GARDEN,
+    };
+    Some(PrintFact {
+        label_id: label.to_owned(),
+        value: String::new(),
     })
 }

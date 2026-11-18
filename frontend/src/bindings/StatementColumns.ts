@@ -32,7 +32,11 @@ export type StatementColumns = {
    */
   capital_paisa: Paisa;
   /**
-   * The six columns added up.
+   * Advances to sellers: his parts going out (negative) and coming back (plus), PRD FR-17.13.
+   */
+  advances_paisa: Paisa;
+  /**
+   * The seven columns added up.
    */
   net_paisa: Paisa;
 };

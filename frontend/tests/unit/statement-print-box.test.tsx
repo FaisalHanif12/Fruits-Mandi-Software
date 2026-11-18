@@ -1,8 +1,9 @@
-// The statement print box on پارٹی کھاتے (plan 74 T3, PRD FR-12.47, FR-7.19, FR-7.36): the button "اسٹیٹمنٹ پرنٹ"
-// with its key F9, the box with the period (the last 10 days, the last 30 days by default, the last 6 months,
-// own dates), the print language and the paper, the preview of the page that is printed, Print and Save as
-// PDF. Only dates as typed are sent: the backend reads them and builds every figure. The backend's answers are
-// doubles of the plan's contract (tests/helpers/statement-print.ts). In the Urdu and the English app.
+// The statement print box on پارٹی کھاتے (plan 74 T3, plan 78 A7, PRD FR-12.47, FR-7.19, FR-7.36): the button
+// "اسٹیٹمنٹ پرنٹ" with its key F9, the box with the period (the last 10 days, the last 30 days by default, the
+// last 6 months, own dates), the items and cancelled-entries choices, the print language and the paper, the
+// preview of the page that is printed (a table with a row for each entry), Print and Save as PDF. Only dates
+// as typed are sent: the backend reads them and builds every figure. The backend's answers are doubles of its
+// contract (tests/helpers/party-statement-rows.ts). In the Urdu and the English app.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -10,17 +11,14 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import * as appApi from '../../src/app/api';
 import { StatementPrintAction } from '../../src/features/party_ledgers';
-import * as statementApi from '../../src/features/party_ledgers/print/statement-api';
-import * as reportsApi from '../../src/features/reports/api';
+import * as ledgersApi from '../../src/features/party_ledgers/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { DAY, fail, press, resetClientState } from '../helpers/app';
 import { message, renderIn, visible } from '../helpers/render';
-import { printFrameFor } from '../helpers/print-frame-real';
-import { statementAnswer } from '../helpers/statement-print';
+import { statementRowsPrintAnswer } from '../helpers/party-statement-rows';
 
 vi.mock('../../src/app/api');
-vi.mock('../../src/features/party_ledgers/print/statement-api');
-vi.mock('../../src/features/reports/api');
+vi.mock('../../src/features/party_ledgers/api');
 
 /** Today in the doubles is 12-11-2026, so the periods can be read off the calendar. */
 const TODAY = '2026-11-12';
@@ -44,13 +42,10 @@ function host() {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(appApi.dayStatus).mockResolvedValue({ ...DAY, today: TODAY });
-  vi.mocked(statementApi.partyLedgersStatementPrintData).mockImplementation((input) =>
-    Promise.resolve(statementAnswer(input)),
+  vi.mocked(ledgersApi.partyLedgersStatementRowsPrintData).mockImplementation((input) =>
+    Promise.resolve(statementRowsPrintAnswer(input)),
   );
-  vi.mocked(reportsApi.reportsPrintHeader).mockImplementation((input) =>
-    Promise.resolve(printFrameFor(input)),
-  );
-  vi.mocked(statementApi.partyLedgersStatementPrint).mockResolvedValue({
+  vi.mocked(ledgersApi.partyLedgersStatementRowsPrint).mockResolvedValue({
     printed: [],
     pdf_paths: null,
   });
@@ -81,7 +76,7 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
   const period = (box: HTMLElement, id: string) =>
     within(box).getByRole('button', { name: (name) => visible(name) === m(id) });
   const lastRequest = () =>
-    vi.mocked(statementApi.partyLedgersStatementPrintData).mock.calls.at(-1)?.[0];
+    vi.mocked(ledgersApi.partyLedgersStatementRowsPrintData).mock.calls.at(-1)?.[0];
 
   it('the button shows its key F9, and the box starts on the last 30 days with the dates written out', async () => {
     renderIn(language, host());
@@ -102,12 +97,15 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
         account_id: 20,
         from: '14-10-2026',
         to: '12-11-2026',
+        items: false,
+        include_history: false,
         language,
+        paper: 'a4',
       });
     });
-    // The page that will be printed is the preview: the party, the closing balance and the words.
+    // The page that will be printed is the preview: a row for each entry and the closing balance.
     const page = await waitFor(() => must(box.querySelector<HTMLElement>('.print-doc')));
-    expect(visible(page.textContent)).toContain('252,216');
+    expect(visible(page.textContent)).toContain('33,000');
   });
 
   it('keyboard only: F9 opens the box, Tab reaches Print, Enter prints, Esc closes', async () => {
@@ -124,10 +122,18 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
     expect(document.activeElement).toBe(print);
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(statementApi.partyLedgersStatementPrint).toHaveBeenCalledTimes(1);
+      expect(ledgersApi.partyLedgersStatementRowsPrint).toHaveBeenCalledTimes(1);
     });
-    expect(vi.mocked(statementApi.partyLedgersStatementPrint).mock.calls[0]?.[0]).toEqual({
-      statement: { account_id: 20, from: '14-10-2026', to: '12-11-2026', language, paper: 'a4' },
+    expect(vi.mocked(ledgersApi.partyLedgersStatementRowsPrint).mock.calls[0]?.[0]).toEqual({
+      statement: {
+        account_id: 20,
+        from: '14-10-2026',
+        to: '12-11-2026',
+        items: false,
+        include_history: false,
+        language,
+        paper: 'a4',
+      },
       to: 'printer',
       copies: null,
     });
@@ -170,16 +176,16 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
       expect(lastRequest()).toMatchObject({ from: '10', to: '10-9' });
     });
     // One date missing: nothing is asked and no page is drawn.
-    vi.mocked(statementApi.partyLedgersStatementPrintData).mockClear();
+    vi.mocked(ledgersApi.partyLedgersStatementRowsPrintData).mockClear();
     await user.clear(to);
     await waitFor(() => {
       expect(box.querySelector('.print-doc')).toBeNull();
     });
-    expect(statementApi.partyLedgersStatementPrintData).not.toHaveBeenCalled();
+    expect(ledgersApi.partyLedgersStatementRowsPrintData).not.toHaveBeenCalled();
   });
 
   it('a date the backend refuses is told in words, with a retry', async () => {
-    vi.mocked(statementApi.partyLedgersStatementPrintData).mockRejectedValueOnce(
+    vi.mocked(ledgersApi.partyLedgersStatementRowsPrintData).mockRejectedValueOnce(
       fail({ code: 'ERR_DATE_INVALID', field: 'from' }),
     );
     const { user, box } = await open();
@@ -208,38 +214,41 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
     expect(within(box).getByRole('button', { name: named(m('report-print-pdf')) })).toBeDisabled();
   });
 
-  it('a period with no entry but a balance prints as a one-line statement: the page is drawn and Print is enabled', async () => {
+  it('the items and the cancelled entries start off, and a tick sends them: the page is asked for again', async () => {
     const { user, box } = await open();
-    await user.click(period(box, 'statement-print-custom'));
-    const from = within(box).getByRole('textbox', { name: named(m('statement-print-from')) });
-    await user.clear(from);
-    await user.type(from, '20-11-2026');
-    const to = within(box).getByRole('textbox', { name: named(m('statement-print-to')) });
-    await user.clear(to);
-    await user.type(to, '30-11-2026');
-    const page = await waitFor(() => must(box.querySelector<HTMLElement>('.print-doc')));
-    // The opening balance and the closing equal to it, no day blocks and no totals of the period.
-    expect(visible(page.textContent)).toContain(m('print-statement-opening'));
-    expect(visible(page.textContent)).toContain(m('print-statement-total-closing'));
-    expect(visible(page.textContent)).toContain('1,000');
-    expect(box.querySelector('tbody.print-statement-day')).toBeNull();
-    expect(visible(page.textContent)).not.toContain(m('print-statement-total-bought'));
-    expect(page.querySelector('.print-words')).not.toBeNull();
-    expect(within(box).queryByText(m('report-print-empty'))).toBeNull();
-    const print = within(box).getByRole('button', { name: named(m('report-print-print')) });
-    expect(print).toBeEnabled();
-    await user.click(print);
     await waitFor(() => {
-      expect(statementApi.partyLedgersStatementPrint).toHaveBeenCalledTimes(1);
+      expect(box.querySelector('.print-doc')).not.toBeNull();
     });
-    expect(vi.mocked(statementApi.partyLedgersStatementPrint).mock.calls[0]?.[0]).toMatchObject({
-      statement: { account_id: 20, from: '20-11-2026', to: '30-11-2026', language },
+    const items = within(box).getByRole('checkbox', { name: named(m('statement-print-items')) });
+    const history = within(box).getByRole('checkbox', {
+      name: named(m('statement-print-history')),
+    });
+    expect(items).not.toBeChecked();
+    expect(history).not.toBeChecked();
+    await user.click(items);
+    await waitFor(() => {
+      expect(lastRequest()).toMatchObject({ items: true, include_history: false });
+    });
+    await user.click(history);
+    await waitFor(() => {
+      expect(lastRequest()).toMatchObject({ items: true, include_history: true });
+    });
+    await waitFor(() => {
+      expect(box.querySelector('.print-doc')).not.toBeNull();
+    });
+    // Print sends the same choices.
+    await user.click(within(box).getByRole('button', { name: named(m('report-print-print')) }));
+    await waitFor(() => {
+      expect(ledgersApi.partyLedgersStatementRowsPrint).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(ledgersApi.partyLedgersStatementRowsPrint).mock.calls[0]?.[0]).toMatchObject({
+      statement: { account_id: 20, items: true, include_history: true, language },
       to: 'printer',
     });
   });
 
   it('the page is loading while the answer has not come', async () => {
-    vi.mocked(statementApi.partyLedgersStatementPrintData).mockReturnValue(
+    vi.mocked(ledgersApi.partyLedgersStatementRowsPrintData).mockReturnValue(
       new Promise(() => undefined),
     );
     const { box } = await open();
@@ -252,7 +261,7 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
 
   it('the print language can differ from the app: the page is asked for again in it, Print and PDF send it with the paper', async () => {
     const other: Language = language === 'ur' ? 'en' : 'ur';
-    vi.mocked(statementApi.partyLedgersStatementPrint).mockResolvedValue({
+    vi.mocked(ledgersApi.partyLedgersStatementRowsPrint).mockResolvedValue({
       printed: [],
       pdf_paths: [`statement-0020-${other}.pdf`],
     });
@@ -274,13 +283,15 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
     await user.click(within(box).getByRole('button', { name: named(m('print-paper-a5')) }));
     await user.click(within(box).getByRole('button', { name: named(m('report-print-pdf')) }));
     await waitFor(() => {
-      expect(statementApi.partyLedgersStatementPrint).toHaveBeenCalledTimes(1);
+      expect(ledgersApi.partyLedgersStatementRowsPrint).toHaveBeenCalledTimes(1);
     });
-    expect(vi.mocked(statementApi.partyLedgersStatementPrint).mock.calls[0]?.[0]).toEqual({
+    expect(vi.mocked(ledgersApi.partyLedgersStatementRowsPrint).mock.calls[0]?.[0]).toEqual({
       statement: {
         account_id: 20,
         from: '14-10-2026',
         to: '12-11-2026',
+        items: false,
+        include_history: false,
         language: other,
         paper: 'a5',
       },
@@ -296,7 +307,7 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
   });
 
   it('a refusal of the print is told in words and the preview stays', async () => {
-    vi.mocked(statementApi.partyLedgersStatementPrint).mockRejectedValue(
+    vi.mocked(ledgersApi.partyLedgersStatementRowsPrint).mockRejectedValue(
       fail({ code: 'ERR_PRINT_WINDOWS_ONLY' }),
     );
     const { user, box } = await open();

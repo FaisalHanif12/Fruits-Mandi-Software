@@ -14,6 +14,7 @@ import * as urduApi from '../../src/shared/urdu/api';
 import * as arrivals from '../helpers/arrivals-real';
 import { named } from '../helpers/bikri-screen';
 import {
+  fail,
   healthyBackend,
   leaveAppWindow,
   press,
@@ -25,7 +26,8 @@ import {
 import { noChangeReview } from '../helpers/edit-real';
 import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { CLOSED_DAY_ENTRY } from '../helpers/entry-flags';
-import { e40Garden, e40History, fakeGardens } from '../helpers/gardens';
+import { e40Garden, e40History, fakeGardenItemPicker, fakeGardens } from '../helpers/gardens';
+import { BANANA } from '../helpers/gardens-data';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
@@ -305,6 +307,159 @@ describe.each(LANGUAGES)('goods arrived and the garden header open for edit (%s)
       reason: '',
       arrival: { garden_id: 1, qty: String(first.qty + 1), item_id: first.item.id },
     });
+  });
+
+  it('plan 78 D2: the items of the garden open as saved in the header edit, one is added and sent in the list', async () => {
+    const mango = { id: 63, code: '0063', name_ur: 'آم', name_en: 'Mango' };
+    fakeGardenItemPicker([mango]);
+    fakeGardens({ gardens: [e40Garden({ items: [BANANA] })] });
+    vi.mocked(gardensApi.gardensHeaderEditSave).mockResolvedValue(EDITED);
+    const { user } = await open();
+    await user.click(
+      screen.getByRole('button', { name: startsWith(message(language, 'gardens-header-edit')) }),
+    );
+    const item = await screen.findByRole('combobox', {
+      name: named(message(language, 'glossary-qism-maal')),
+    });
+    // The saved item is listed above the picker.
+    expect(
+      visible(
+        screen
+          .getAllByRole('list')
+          .map((list) => list.textContent)
+          .join(' '),
+      ),
+    ).toContain(language === 'ur' ? 'کیلا' : 'Banana');
+    await user.click(item);
+    await user.type(item, language === 'ur' ? 'آ' : 'Man');
+    await user.click(await screen.findByRole('option'));
+    await waitFor(() => {
+      expect(gardensApi.gardensHeaderEditPreview).toHaveBeenCalled();
+    });
+    press('F10');
+    await waitFor(() => {
+      expect(gardensApi.gardensHeaderEditSave).toHaveBeenCalledTimes(1);
+    });
+    const sent = vi.mocked(gardensApi.gardensHeaderEditSave).mock.calls[0]?.[0];
+    expect(sent?.garden.item_ids).toEqual([BANANA.id, 63]);
+    expect(sent?.garden.item_id).toBeNull();
+  });
+
+  /** The rent box of the header edit, found by its label. */
+  const rentBox = () =>
+    screen.getByRole<HTMLInputElement>('textbox', {
+      name: (name) => visible(name).startsWith(message(language, 'gardens-field-rent')),
+    });
+  const asked = (id: string) =>
+    screen.queryByText((text) => visible(text) === message(language, id));
+
+  it('plan 78 D3: a changed rent asks for a reason and the sign at their fields before anything is sent, then sends both', async () => {
+    fakeGardens({ gardens: [e40Garden()] });
+    vi.mocked(gardensApi.gardensHeaderEditSave).mockResolvedValue(EDITED);
+    const { user } = await open();
+    await user.click(
+      screen.getByRole('button', { name: startsWith(message(language, 'gardens-header-edit')) }),
+    );
+    await screen.findByRole('combobox', { name: named(message(language, 'gardens-field-note')) });
+    // The rent is as saved: no reason box and no sign box.
+    expect(asked('gardens-rent-change-reason')).toBeNull();
+    await user.clear(rentBox());
+    await user.type(rentBox(), '45000');
+    expect(
+      await screen.findByText(said(message(language, 'gardens-rent-change-reason'))),
+    ).toBeInTheDocument();
+    expect(screen.getByText(said(message(language, 'edit-fix-sign-label')))).toBeInTheDocument();
+    // Saving with both empty tells each at its field and sends nothing.
+    press('F10');
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(said(message(language, 'err-required'))).length,
+      ).toBeGreaterThanOrEqual(2);
+    });
+    expect(gardensApi.gardensHeaderEditSave).not.toHaveBeenCalled();
+    await user.type(
+      screen.getByRole('combobox', {
+        name: named(message(language, 'gardens-rent-change-reason')),
+      }),
+      'Relief received from the owner',
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: named(message(language, 'edit-fix-sign-label')) }),
+      'adnan',
+    );
+    // The review is asked with the same reason and sign once they are typed.
+    await waitFor(() => {
+      expect(gardensApi.gardensHeaderEditPreview).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'Relief received from the owner', sign: 'adnan' }),
+      );
+    });
+    press('F10');
+    await waitFor(() => {
+      expect(gardensApi.gardensHeaderEditSave).toHaveBeenCalledTimes(1);
+    });
+    const sent = vi.mocked(gardensApi.gardensHeaderEditSave).mock.calls[0]?.[0];
+    expect(sent).toMatchObject({
+      id: 1,
+      reason: 'Relief received from the owner',
+      sign: 'adnan',
+      garden: { rent: '45000' },
+    });
+  });
+
+  it('plan 78 D3: a wrong sign is told under the sign, nothing else is lost, and the rent can be tried again', async () => {
+    fakeGardens({ gardens: [e40Garden()] });
+    vi.mocked(gardensApi.gardensHeaderEditSave).mockRejectedValueOnce(
+      fail({ code: 'ERR_SIGN_WRONG', field: 'sign', values: {} }),
+    );
+    const { user } = await open();
+    await user.click(
+      screen.getByRole('button', { name: startsWith(message(language, 'gardens-header-edit')) }),
+    );
+    await screen.findByRole('combobox', { name: named(message(language, 'gardens-field-note')) });
+    await user.clear(rentBox());
+    await user.type(rentBox(), '45000');
+    await user.type(
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'gardens-rent-change-reason')),
+      }),
+      'Relief',
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: named(message(language, 'edit-fix-sign-label')) }),
+      'munshi',
+    );
+    press('F10');
+    expect(await screen.findAllByText(said(message(language, 'err-sign-wrong')))).not.toHaveLength(
+      0,
+    );
+    // What was typed stays.
+    expect(rentBox().value).toBe('45,000');
+    expect(
+      screen.getByRole<HTMLInputElement>('textbox', {
+        name: named(message(language, 'edit-fix-sign-label')),
+      }).value,
+    ).toBe('munshi');
+  });
+
+  it('plan 78 D3: a change that is not the rent sends no sign', async () => {
+    fakeGardens({ gardens: [e40Garden({ note: 'near the river' })] });
+    vi.mocked(gardensApi.gardensHeaderEditSave).mockResolvedValue(EDITED);
+    const { user } = await open();
+    await user.click(
+      screen.getByRole('button', { name: startsWith(message(language, 'gardens-header-edit')) }),
+    );
+    const note = await screen.findByRole('combobox', {
+      name: named(message(language, 'gardens-field-note')),
+    });
+    fireEvent.change(note, { target: { value: 'near the canal' } });
+    expect(asked('gardens-rent-change-reason')).toBeNull();
+    press('F10');
+    await waitFor(() => {
+      expect(gardensApi.gardensHeaderEditSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(gardensApi.gardensHeaderEditSave).mock.calls[0]?.[0]).not.toHaveProperty(
+      'sign',
+    );
   });
 
   it('the facts of the garden open for edit and save with gardens_header_edit_save', async () => {

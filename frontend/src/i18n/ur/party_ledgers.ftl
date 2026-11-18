@@ -161,3 +161,44 @@ party-ledgers-back-statement = کھاتے پر واپس
 
 # review: pending
 party-ledgers-day-title = <name>{ $name }</name> <code>{ $code }</code>، <date>{ $date }</date>
+
+## Plan 78 B1 to B3: a statement with one row for each entry.
+
+# review: pending
+party-ledgers-col-entry = اندراج
+
+# review: pending
+party-ledgers-col-detail = تفصیل
+
+# The part of the credit a buyer paid on the spot, in the same row as his bill (PRD FR-12.44).
+# review: pending
+party-ledgers-col-cash = نقد
+
+# The first line of a window that starts after the first entry: the balance before it.
+# review: pending
+party-ledgers-brought-forward = { -sabiqa-raqam }
+
+# The running balance after an entry.
+# review: pending
+party-ledgers-col-running = { -baqaya }
+
+# Shown beside an entry that an edit or a cancel replaced (only with the cancelled entries shown).
+# review: pending
+party-ledgers-replaced = بدلا ہوا
+
+# review: pending
+party-ledgers-show-history = منسوخ بھی دکھائیں
+
+# What goes between two items on one line.
+# review: pending
+party-ledgers-list-separator = {"، "}
+
+# $reason: the reason typed with the edit.
+# review: pending
+party-ledgers-edited-reason = تبدیلی کی وجہ: { $reason }
+
+# review: pending
+party-ledgers-day-slip-button = اس دن کی پرچی
+
+# review: pending
+party-ledgers-open-record = اندراج کھولیں

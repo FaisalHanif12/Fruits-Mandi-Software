@@ -13,7 +13,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, HandCoins } from 'lucide-react';
+import { HandCoins } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { LentDuesPerson } from '../../../bindings/LentDuesPerson';
@@ -25,9 +25,8 @@ import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
 import { useListWindow } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
+import { formNavigationProps } from '../../../shared/keyboard';
 import {
-  Button,
   Card,
   EmptyState,
   ErrorState,
@@ -80,9 +79,6 @@ export function OthersDuesPage() {
     kind: 'month',
     source: { kind: 'lent_dues' },
     today: day.data?.today,
-  });
-  useEscape('leave', () => {
-    void navigate({ to: '/' });
   });
 
   const names: PartnerNames = useMemo(
@@ -297,17 +293,6 @@ export function OthersDuesPage() {
         <Localized id="cashbook-dues-help">
           <p />
         </Localized>
-      }
-      actions={
-        <Button
-          shortcut={SHORTCUTS.back}
-          onClick={() => {
-            void navigate({ to: '/' });
-          }}
-        >
-          <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-          <Localized id="cashbook-dues-back" />
-        </Button>
       }
       filters={filters}
     >

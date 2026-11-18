@@ -201,7 +201,11 @@ pub(super) fn partner_total(w: &support::World, index: usize) -> i64 {
              WHERE partner_id = {partner}"
         ),
     );
+    // PRD v1.43 (FR-17.13): less his part of the advances to sellers still out. The worlds of these
+    // tests hold one advance, رحیم's 15,000, at 40 / 30 / 30, whole or settled whole, so his part is
+    // that share of what is open: 6,000 / 4,500 / 4,500 (a separate proof, not the code under test).
     shares + credit_balance(w, venture_account(w, partner))
+        - super::open_advances(w) * [40, 30, 30][index] / 100
 }
 
 pub(super) fn totals_of_three(w: &support::World) -> Vec<i64> {
@@ -224,7 +228,12 @@ pub(super) fn equity(w: &support::World) -> i64 {
 /// Σ of the partners' totals + the firm's opening capital 65,000 is the equity in the books.
 pub(super) fn assert_equity_is_the_partner_totals(w: &support::World, expected: i64) {
     let sum: i64 = totals_of_three(w).iter().sum();
-    assert_eq!(sum + 65_000, expected, "the partner totals add up");
+    // PRD FR-17.9 v1.43: the advances still out are the partners' money too.
+    assert_eq!(
+        sum + 65_000 + super::open_advances(w),
+        expected,
+        "the partner totals add up"
+    );
     assert_eq!(equity(w), expected, "the equity worked out from the books");
 }
 
@@ -443,7 +452,9 @@ fn e2e_34_the_own_lot_sells_15_and_the_partners_get_the_seller_credit() {
     // Nothing is owed to the اپنا مال account: it never holds a balance.
     assert_eq!(balance(&w, support::id_of(&w.env, "030119998")).1, 0);
     // Partner totals: -4,160 + 480 + 3,384 = -296, and -3,120 + 360 + 2,538 = -222 twice.
-    assert_eq!(totals_of_three(&w), vec![-296, -222, -222]);
+    // PRD v1.43 (E2E-34): each partner's part of رحیم's open advance, -6,000 / -4,500 / -4,500, is
+    // taken off.
+    assert_eq!(totals_of_three(&w), vec![-6_296, -4_722, -4_722]);
     // Σ -740 + 65,000 = 64,260 = the equity in the books (capital 65,000, the partners' trip
     // accounts -1,940, the income 1,200).
     assert_equity_is_the_partner_totals(&w, 64_260);
@@ -541,7 +552,9 @@ fn e2e_34b_the_last_5_spoil_and_the_trip_closes() {
         .collect();
     assert_eq!(nets, vec![-776, -582, -582]);
     // The partner totals did not move: the loss was in them already.
-    assert_eq!(totals_of_three(&w), vec![-296, -222, -222]);
+    // PRD v1.43 (E2E-34): each partner's part of رحیم's open advance, -6,000 / -4,500 / -4,500, is
+    // taken off.
+    assert_eq!(totals_of_three(&w), vec![-6_296, -4_722, -4_722]);
     // Σ -740 + 65,000 = 64,260 = the firm's equity: capital 65,000 less the partners' trip accounts
     // 1,940 plus the income 1,200. Worked out from the books too, not only from the totals.
     assert_equity_is_the_partner_totals(&w, 64_260);
@@ -668,7 +681,8 @@ fn e2e_41_a_pocket_source_a_truck_and_one_own_lot_that_sells_everything() {
     // Everything is sold: the trip closes by itself.
     assert_eq!(trip_status(&w, trip), VentureStatus::Closed);
     // الف: -50,000 + 5,632 + 52,640 = 8,272. ب paid from his pocket: 4,224 + 52,640 = 56,864.
-    assert_eq!(totals_of_three(&w), vec![8_272, 56_864, 4_224]);
+    // PRD v1.43 (E2E-41): 8,272 - 6,000, 56,864 - 4,500, 4,224 - 4,500.
+    assert_eq!(totals_of_three(&w), vec![2_272, 52_364, -276]);
     // Σ 69,360 + 65,000 = 134,360 = the equity in the books (ب's pocket part is not in the books).
     assert_equity_is_the_partner_totals(&w, 134_360);
     let detail = trip_detail(&w, trip);
@@ -862,7 +876,7 @@ fn cancelling_the_sale_reverses_the_partner_credits_and_opens_the_trip() {
         scalar(&w, "SELECT SUM(amount_paisa) FROM lot_credit_parts"),
         0
     );
-    assert_eq!(totals_of_three(&w), vec![-4_160, -3_120, -3_120]);
+    assert_eq!(totals_of_three(&w), vec![-10_160, -7_620, -7_620]);
     assert_eq!(cash_balance(&w), 39_600);
     let refused = purchases::cancel(
         &w.env.ctx,
@@ -903,7 +917,8 @@ fn cancelling_the_sale_reverses_the_partner_credits_and_opens_the_trip() {
     )
     .unwrap();
     assert_eq!(cash_balance(&w), 50_000);
-    assert_eq!(totals_of_three(&w), vec![0, 0, 0]);
+    // Only his part of رحیم's open advance is left (PRD v1.43): -6,000 / -4,500 / -4,500.
+    assert_eq!(totals_of_three(&w), vec![-6_000, -4_500, -4_500]);
     // A cancelled purchase cannot be sold from.
     let draft = support::draft(vec![support::with_sales(
         own_lot(&w, "own-2", s.purchase, "1"),
@@ -1574,7 +1589,7 @@ fn undo_after_the_save_of_an_own_lot_opens_the_trip_and_the_draft_can_be_saved_a
         scalar(&w, "SELECT SUM(amount_paisa) FROM lot_credit_parts"),
         0
     );
-    assert_eq!(totals_of_three(&w), vec![-48_000, 0, 0]);
+    assert_eq!(totals_of_three(&w), vec![-54_000, -4_500, -4_500]);
     assert_eq!(undone.draft.lots[0].purchase_id, Some(purchase));
 
     let again = save_ok(&w, &undone.draft, false);
@@ -1582,7 +1597,7 @@ fn undo_after_the_save_of_an_own_lot_opens_the_trip_and_the_draft_can_be_saved_a
     assert_eq!(trip_status(&w, trip), VentureStatus::Closed);
     // The same numbers as the sale had before the undo (no truck cost in this run): الف paid 48,000
     // from the shop, so -48,000 + 5,632 + 52,640; ب paid from his pocket, so 4,224 + 52,640.
-    assert_eq!(totals_of_three(&w), vec![10_272, 56_864, 4_224]);
+    assert_eq!(totals_of_three(&w), vec![4_272, 52_364, -276]);
     let row = get_purchase(&w, purchase);
     assert_eq!(
         (row.qty_left, row.cost_released_paisa.rupees()),
@@ -1635,16 +1650,26 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
             )
         })
         .collect();
+    // PRD v1.43 (FR-17.13): the first line is his 40% of رحیم's open advance of 15,000, -6,000, so
+    // every running total after it is 6,000 lower than before.
     assert_eq!(
         rows,
         vec![
+            (
+                StatementHeading::Advance,
+                StatementDetail::AdvanceOut,
+                None,
+                None,
+                Some(-6_000),
+                -6_000
+            ),
             (
                 StatementHeading::Trip,
                 StatementDetail::TripPaid,
                 Some(1),
                 Some(1),
                 Some(-4_160),
-                -4_160
+                -10_160
             ),
             (
                 StatementHeading::Bikri,
@@ -1652,7 +1677,7 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
                 Some(1),
                 None,
                 Some(480),
-                -3_680
+                -9_680
             ),
             (
                 StatementHeading::Trip,
@@ -1660,16 +1685,16 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
                 Some(1),
                 Some(1),
                 Some(3_384),
-                -296
+                -6_296
             ),
         ]
     );
     // The lines carry what the words need: a purchase, and the figures of the sale (PRD C21, C25).
     assert_eq!(
-        st.lines[0].values.get("kind"),
+        st.lines[1].values.get("kind"),
         Some(&ErrorValue::Text("purchase".into()))
     );
-    let credit = &st.lines[2];
+    let credit = &st.lines[3];
     let number = |name: &str| match credit.values.get(name) {
         Some(ErrorValue::Number(n)) => *n,
         other => panic!("{name}: {other:?}"),
@@ -1705,7 +1730,7 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
         card_credit.values.get("part_paisa"),
         credit.values.get("part_paisa")
     );
-    assert_eq!(day.after_total_paisa.rupees(), -296);
+    assert_eq!(day.after_total_paisa.rupees(), -6_296);
     assert_eq!(
         credit.subject.as_ref().map(|r| r.name_en.as_str()),
         Some("Orange")
@@ -1715,7 +1740,7 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
             st.opening_total_paisa.rupees(),
             st.closing_total_paisa.rupees()
         ),
-        (0, -296)
+        (0, -6_296)
     );
     // His total on the overview is the same number.
     assert_eq!(
@@ -1724,15 +1749,16 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
             .iter()
             .find(|r| r.partner_id == a)
             .map(|r| (r.total_paisa.rupees(), r.month_ventures_paisa.rupees())),
-        Some((-296, -4_160 + 3_384))
+        Some((-6_296, -4_160 + 3_384))
     );
 
     // E2E-34b: the last 5 spoil on 11-10-26 and the trip closes. Two note lines, no amount.
     set_today(&w.env, 2026, 10, 11);
     write_off(&w, s.purchase, "5");
     let st = statement_of(&w);
-    assert_eq!(st.lines.len(), 5);
-    let notes: Vec<_> = st.lines[3..]
+    // PRD v1.43: one more line at the start, his 40% of رحیم's open advance (-6,000, 01-09-26).
+    assert_eq!(st.lines.len(), 6);
+    let notes: Vec<_> = st.lines[4..]
         .iter()
         .map(|l| {
             (
@@ -1746,11 +1772,11 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
     assert_eq!(
         notes,
         vec![
-            ("2026-10-11", StatementDetail::TripWriteOff, None, -296),
-            ("2026-10-11", StatementDetail::TripClosed, None, -296),
+            ("2026-10-11", StatementDetail::TripWriteOff, None, -6_296),
+            ("2026-10-11", StatementDetail::TripClosed, None, -6_296),
         ]
     );
-    let closed = &st.lines[4];
+    let closed = &st.lines[5];
     let figure = |name: &str| match closed.values.get(name) {
         Some(ErrorValue::Number(n)) => *n / 100,
         other => panic!("{name}: {other:?}"),
@@ -1770,16 +1796,17 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
         closed.values.get("share_bps"),
         Some(&ErrorValue::Number(4_000))
     );
-    assert_eq!(st.closing_total_paisa.rupees(), -296);
+    assert_eq!(st.closing_total_paisa.rupees(), -6_296);
     assert_eq!(
         (
             st.totals.plus_paisa.rupees(),
             st.totals.minus_paisa.rupees()
         ),
-        (3_864, 4_160)
+        // Taken away: 4,160 for the purchase and 6,000 of the advance (PRD v1.43).
+        (3_864, 10_160)
     );
 
-    // A range starting on 11-10-26 opens at -296 and holds only the two notes.
+    // A range starting on 11-10-26 opens at -6,296 and holds only the two notes.
     let ranged = partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
@@ -1799,7 +1826,7 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
             ranged.lines.len(),
             ranged.closing_total_paisa.rupees()
         ),
-        (-296, 2, -296)
+        (-6_296, 2, -6_296)
     );
 }
 
@@ -1831,8 +1858,9 @@ fn the_statement_of_a_cancelled_trip_sale_nets_to_the_total_of_the_books() {
             st.lines.last().map(|l| l.running_paisa.rupees()),
             Some(total)
         );
-        // Only the purchase part is left: -4,160 / -3,120 / -3,120.
-        assert_eq!(total, [-4_160, -3_120, -3_120][index]);
+        // Only the purchase part is left, and his part of رحیم's open advance (PRD v1.43):
+        // -4,160 - 6,000, -3,120 - 4,500, -3,120 - 4,500.
+        assert_eq!(total, [-10_160, -7_620, -7_620][index]);
     }
 }
 
@@ -1863,9 +1891,11 @@ fn partner_a_statement_month_shows_the_trip_columns_of_e2e_34() {
             r(d.columns.net_paisa),
             r(d.running_paisa),
         ),
-        (-776, 480, -296, -296)
+        // PRD v1.43: the running total and the closing carry his 40% of رحیم's open advance of
+        // 15,000 (-6,000) taken off on 01-09-26, before this month: -296 - 6,000 = -6,296 (E2E-34).
+        (-776, 480, -296, -6_296)
     );
-    assert_eq!(r(m.closing_total_paisa), -296);
+    assert_eq!(r(m.closing_total_paisa), -6_296);
     // Nothing of the trip is counted twice: the columns add up to the net and the closing is the
     // total of his records (checked inside the service as well).
     assert_eq!(r(m.totals.net_paisa), -296);

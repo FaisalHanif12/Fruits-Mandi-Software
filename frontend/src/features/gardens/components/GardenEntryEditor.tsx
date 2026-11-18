@@ -26,6 +26,7 @@ import { useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import { isZeroPaisa } from '../../../shared/format';
 import { createEntryStore } from '../../../shared/grid';
 import {
   useEntrySaveFlow,
@@ -292,7 +293,12 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
     void navigate({ to: '/gardens' });
   });
 
-  const typeOptions = ENTRY_TYPES.map((type) => ({
+  // The refund type is offered only while the owner owes the garden money after a relief (plan 78 D3), or while
+  // the entry on screen is one (an old refund open for edit keeps its own type).
+  const ownerOwes = !isZeroPaisa(garden.owner_owes_paisa);
+  const typeOptions = ENTRY_TYPES.filter(
+    (type) => type !== 'refund' || ownerOwes || draft.type === 'refund',
+  ).map((type) => ({
     value: type,
     label: l10n.getString(`gardens-type-${type.replaceAll('_', '-')}`),
   }));

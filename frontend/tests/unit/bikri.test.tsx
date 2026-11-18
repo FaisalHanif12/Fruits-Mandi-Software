@@ -10,12 +10,14 @@ import * as urduApi from '../../src/shared/urdu/api';
 import { IDS } from '../helpers/bikri-data';
 import {
   cellOf,
+  chooseInSummary,
   focusedIn,
   lotsGrid,
   named,
   names,
   openBook,
   salesGrid,
+  summaryChoice,
   textOf,
   typeCodeAndEnter,
   typeHeaderAndLot,
@@ -433,13 +435,12 @@ describe.each(LANGUAGES)('the summary of a lot and of the whole sale (%s)', (lan
       .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
       .closest('section');
     if (summary === null) throw new Error('no summary');
-    const whole = within(summary).getByRole('button', {
-      name: named(message(language, 'bikri-summary-whole')),
-    });
-    expect(whole).toHaveAttribute('aria-pressed', 'false');
-    await user.click(whole);
+    // The dropdown of the summary shows the lot; choosing the whole sale shows the figures of all lots
+    // (plan 78 C2).
+    expect(summaryChoice(summary)).not.toBe(message(language, 'bikri-summary-whole'));
+    await chooseInSummary(user, summary, message(language, 'bikri-summary-whole'));
     await waitFor(() => {
-      expect(whole).toHaveAttribute('aria-pressed', 'true');
+      expect(summaryChoice(summary)).toBe(message(language, 'bikri-summary-whole'));
       expect(visible(summary.textContent)).toContain('29,400');
     });
   });

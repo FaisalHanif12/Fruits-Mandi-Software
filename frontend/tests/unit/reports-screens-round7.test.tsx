@@ -353,21 +353,29 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
         );
       }, SLOW_MS);
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(4);
+        expect(drawnRows()).toHaveLength(6);
       }, SLOW_MS);
-      expect(cell('0', 'date')).toBe('10-10-2026');
-      expect(cell('0', 'heading')).toBe(m('partners-statement-heading-bikri'));
+      // The advance to Rahim goes out of his total on 01-09-2026 and comes back on 10-10-2026 (plan 78 B4).
+      expect(cell('0', 'date')).toBe('01-09-2026');
+      expect(cell('0', 'heading')).toBe(m('partners-statement-heading-advance'));
       expect(cell('0', 'detail')).toBe(
+        names('پیشگی رحیم 15,000، آپ کا 30 فیصد', 'Advance to Rahim 15,000, your 30%'),
+      );
+      expect(cell('0', 'amount')).toBe('-4,500');
+      expect(cell('1', 'date')).toBe('10-10-2026');
+      expect(cell('1', 'heading')).toBe(m('partners-statement-heading-bikri'));
+      expect(cell('1', 'detail')).toBe(
         names('بکری 1: کمیشن، لاگا اور فون', 'Sale 1: Commission, Laga and Phone Charge'),
       );
-      expect(cell('2', 'detail')).toBe(
+      expect(cell('2', 'amount')).toBe('4,500');
+      expect(cell('4', 'detail')).toBe(
         names('دکان خرچہ خ-1: بجلی', 'Shop Expense E-1: Electricity'),
       );
-      expect(cell('3', 'detail')).toBe(names('سرمایہ لگایا س-1', 'Capital put in CI-1'));
+      expect(cell('5', 'detail')).toBe(names('سرمایہ لگایا س-1', 'Capital put in CI-1'));
       // A share is plus, an expense share is minus, and the running total follows (FR-17.9).
-      expect(cell('0', 'amount')).toBe('1,184');
-      expect(cell('2', 'amount')).toBe('-900');
-      expect(cell('3', 'running')).toBe('50,746');
+      expect(cell('1', 'amount')).toBe('1,184');
+      expect(cell('4', 'amount')).toBe('-900');
+      expect(cell('5', 'running')).toBe('50,746');
       expect(totalsCell('running')).toBe('50,746');
       expect(drawnColumns()).toEqual(['date', 'heading', 'detail', 'amount', 'running']);
       // No sentence is left with a hole in it: no variable, no raw message ID.
@@ -379,7 +387,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       const { user } = await openReport('R31');
       await pickPartner(user, names('ب', 'Partner B'));
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(4);
+        expect(drawnRows()).toHaveLength(6);
       }, SLOW_MS);
       for (const id of [
         'partners-statement-opening',
@@ -389,7 +397,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       ]) {
         expect(screen.getByText(named(m(id)))).toBeInTheDocument();
       }
-      expect(visible(document.body.textContent)).toContain('51,646');
+      expect(visible(document.body.textContent)).toContain('56,146');
     });
 
     it('opens on the partner of the address, and the box shows him', async () => {
@@ -401,14 +409,14 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
         names('ب', 'Partner B'),
       );
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(4);
+        expect(drawnRows()).toHaveLength(6);
       }, SLOW_MS);
     });
 
     it('re-words the sentences and the partner’s name in the other language and asks nothing again', async () => {
       await openReport('R31', {}, '?partner=2');
       await waitFor(() => {
-        expect(cell('0', 'detail')).toBe(
+        expect(cell('1', 'detail')).toBe(
           names('بکری 1: کمیشن، لاگا اور فون', 'Sale 1: Commission, Laga and Phone Charge'),
         );
       }, SLOW_MS);
@@ -416,11 +424,11 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       switchLanguage();
       const inOther = (ur: string, en: string) => (other === 'ur' ? ur : en);
       await waitFor(() => {
-        expect(cell('0', 'detail')).toBe(
+        expect(cell('1', 'detail')).toBe(
           inOther('بکری 1: کمیشن، لاگا اور فون', 'Sale 1: Commission, Laga and Phone Charge'),
         );
       }, SLOW_MS);
-      expect(cell('2', 'detail')).toBe(
+      expect(cell('4', 'detail')).toBe(
         inOther('دکان خرچہ خ-1: بجلی', 'Shop Expense E-1: Electricity'),
       );
       expect(
@@ -432,7 +440,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
     it('shows the print with the same sentences, in the print language, and asks with the partner', async () => {
       const { user } = await openReport('R31', { print: PRINT_R31_BAY_EN }, '?partner=2');
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(4);
+        expect(drawnRows()).toHaveLength(6);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
       await waitFor(() => {
@@ -485,7 +493,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       await screen.findByText(named(m('report-load-failed')), undefined, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('common-retry')) }));
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(4);
+        expect(drawnRows()).toHaveLength(6);
       }, SLOW_MS);
     });
   });
@@ -597,7 +605,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
         expect(lastRun()?.filters.partner_id).toBe(2);
       }, SLOW_MS);
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(4);
+        expect(drawnRows()).toHaveLength(6);
       }, SLOW_MS);
       await user.keyboard('{Escape}');
       await waitFor(() => {

@@ -1,9 +1,10 @@
 //! Opening balances (PRD FR-10.9): one account at a time from the form, many at once from the
 //! grid. The preview and the save use the same plan (Code Standards B5).
 //!
-//! An opening is a posted entry against ابتدائی فرق (06019999). Changing it reverses the old
-//! entry (on its own date, which must still be open) and posts a new one; an opening that did
-//! not change writes nothing.
+//! An opening is a posted entry against ابتدائی فرق (06019999), or, for a partner's opening capital
+//! that is in the shop's cash (PRD 17.1 v1.43), against روکڑ. Changing it reverses the old entry (on
+//! its own date, which must still be open) and posts a new one on the same other side; an opening
+//! that did not change writes nothing.
 
 use mandi_db::accounts as repo;
 use mandi_db::rusqlite::Connection;
@@ -23,6 +24,7 @@ use serde_json::json;
 use super::{current_opening, opening_allowed};
 use crate::audit::Event;
 use crate::auth::Actor;
+use crate::cash::{CASH_ACCOUNT_CODE, cash_after_entry, require_confirmed};
 use crate::context::Context;
 use crate::day;
 use crate::error::{Rejection, ServiceError, money_error};
@@ -60,6 +62,22 @@ fn on_opening_date(error: ServiceError) -> ServiceError {
                     } else if item.field.is_none() && item.code == ErrorCode::ErrAccountInactive {
                         item.field = Some("opening_dr".to_owned());
                     }
+                    item
+                })
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
+/// Gives a refusal that names no field the field of the amount that caused it.
+fn on_field(error: ServiceError, field: &str) -> ServiceError {
+    match error {
+        ServiceError::Rejected(items) => ServiceError::Rejected(
+            items
+                .into_iter()
+                .map(|mut item| {
+                    item.field.get_or_insert_with(|| field.to_owned());
                     item
                 })
                 .collect(),
@@ -110,6 +128,99 @@ pub(crate) fn apply(
     amount_field: &str,
     day: OpeningDay,
 ) -> Result<bool, ServiceError> {
+    apply_with(
+        ctx,
+        tx,
+        user_id,
+        now,
+        facts,
+        wanted,
+        amount_field,
+        day,
+        OpeningCounter::AsBefore,
+    )
+}
+
+/// The account on the other side of an opening entry (PRD FR-10.9, PRD 17.1 v1.43).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OpeningCounter {
+    /// ابتدائی فرق: the money is already counted in other openings. The only way before v1.43.
+    Difference,
+    /// روکڑ: the money is in the shop's cash (a partner's opening capital put into cash, plan 78 E).
+    Cash,
+    /// The same as the opening in force: an opening that came into cash stays in cash when it is
+    /// changed, and one against ابتدائی فرق stays against it. A first opening is against
+    /// ابتدائی فرق.
+    AsBefore,
+}
+
+/// True when the opening entry in force of an account has a line on روکڑ, so its other side is the
+/// shop's cash (a partner's opening capital that came into cash, plan 78 E). The opening typed on
+/// the cash account itself is not "in cash": it is cash by its own account.
+fn opening_is_in_cash(
+    tx: &Connection,
+    facts: &repo::AccountFacts,
+    cash_id: i64,
+) -> Result<bool, ServiceError> {
+    let Some(entry_id) = facts.opening_entry_id.filter(|_| facts.id != cash_id) else {
+        return Ok(false);
+    };
+    let found: bool = tx.query_row(
+        "SELECT EXISTS (SELECT 1 FROM journal_lines WHERE entry_id = ?1 AND account_id = ?2)",
+        [entry_id, cash_id],
+        |r| r.get(0),
+    )?;
+    Ok(found)
+}
+
+/// What cash gains from an opening that is in cash: a credit opening on the account puts the same
+/// amount into روکڑ (Dr روکڑ), a debit opening takes it out (Cr روکڑ).
+fn cash_effect(opening: &OpeningRequest) -> Result<Paisa, ServiceError> {
+    opening.cr.checked_sub(opening.dr).map_err(money_error)
+}
+
+/// What changing an opening does to cash in hand: the new entry's effect less the old entry's, each
+/// only when that opening is in cash. The one formula of the save and of the preview (Code Standards
+/// B5). Negative means the change takes cash out (PRD FR-6.7).
+fn opening_cash_change(
+    have: &OpeningRequest,
+    was_in_cash: bool,
+    wanted: &OpeningRequest,
+    will_be_in_cash: bool,
+) -> Result<Paisa, ServiceError> {
+    let old = if was_in_cash {
+        cash_effect(have)?
+    } else {
+        Paisa::ZERO
+    };
+    let new = if will_be_in_cash {
+        cash_effect(wanted)?
+    } else {
+        Paisa::ZERO
+    };
+    new.checked_sub(old).map_err(money_error)
+}
+
+/// [`apply`] with the account on the other side chosen (plan 78 E).
+///
+/// An opening that is in cash and is changed or taken away changes cash: when the change would
+/// leave cash below zero it is refused with `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (PRD FR-6.7), because
+/// an opening form has no way to confirm it.
+///
+/// # Errors
+/// As [`apply`]; `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn apply_with(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    now: &str,
+    facts: &repo::AccountFacts,
+    wanted: &OpeningRequest,
+    amount_field: &str,
+    day: OpeningDay,
+    counter: OpeningCounter,
+) -> Result<bool, ServiceError> {
     let have = current_opening(facts)?;
     if same_opening(&have, wanted) {
         return Ok(false);
@@ -143,6 +254,26 @@ pub(crate) fn apply(
             amount_field,
         ));
     }
+    // Which account takes the other side, and what the change does to cash (plan 78 E).
+    let cash_id = repo::id_by_code(tx, CASH_ACCOUNT_CODE)?
+        .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
+    // The opening typed on the cash account itself is cash by its own account, never "in cash" as
+    // the other side, and it keeps the rules it always had.
+    let was_in_cash = opening_is_in_cash(tx, facts, cash_id)?;
+    let in_cash = facts.id != cash_id
+        && match counter {
+            OpeningCounter::Difference => false,
+            OpeningCounter::Cash => true,
+            OpeningCounter::AsBefore => was_in_cash,
+        };
+    let counter_id = if in_cash { cash_id } else { difference_id(tx)? };
+    // PRD FR-6.7: changing an opening that is in cash takes cash out (the old entry goes, the new
+    // one comes). When cash would end below zero the change is refused; this form has no confirm.
+    let cash_change = opening_cash_change(&have, was_in_cash, wanted, in_cash)?;
+    if cash_change.is_negative() {
+        let check = cash_after_entry(tx, cash_change)?;
+        require_confirmed(&check, false).map_err(|e| on_field(e, amount_field))?;
+    }
     if have.has_amount() {
         let old_entry = facts
             .opening_entry_id
@@ -167,7 +298,7 @@ pub(crate) fn apply(
                 side,
                 amount,
                 wanted.is_advance,
-                AccountId::new(difference_id(tx)?),
+                AccountId::new(counter_id),
             )
             .map_err(ledger::ledger_error)?;
             let event = PostingEvent {
@@ -275,6 +406,11 @@ fn plan(
     input: &OpeningsInput,
 ) -> Result<Vec<PlannedLine>, ServiceError> {
     let (closed, today) = window;
+    let cash_id = repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
+        .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
+    // Cash in hand while the lines are checked in order, as the save sees it (read only when a line
+    // changes an opening that is in cash).
+    let mut cash_running: Option<Paisa> = None;
     let mut seen: Vec<i64> = Vec::new();
     let mut lines = Vec::with_capacity(input.lines.len());
     for (index, line) in input.lines.iter().enumerate() {
@@ -385,6 +521,31 @@ fn plan(
                                 }
                             }
                         }
+                        // PRD FR-6.7 (plan 78 E): changing an opening that is in cash takes cash out;
+                        // refused when cash would end below zero, as the save refuses it (B5).
+                        if !same_opening(&have, &found) && opening_is_in_cash(conn, facts, cash_id)?
+                        {
+                            let change = opening_cash_change(&have, true, &found, true)?;
+                            let before = match cash_running {
+                                Some(cash) => cash,
+                                None => crate::cash::cash_in_hand(conn)?,
+                            };
+                            let check =
+                                mandi_domain::cash::check(before, change).map_err(money_error)?;
+                            if check.needs_confirm {
+                                errors.push(LineError {
+                                    code: ErrorCode::ErrCashBelowZeroNotConfirmed,
+                                    field: format!("{prefix}opening_dr"),
+                                    values: std::collections::BTreeMap::from([(
+                                        "cash_after_paisa".to_owned(),
+                                        mandi_domain::core::error::ErrorValue::Number(
+                                            check.cash_after_paisa.as_paisa(),
+                                        ),
+                                    )]),
+                                });
+                            }
+                            cash_running = Some(check.cash_after_paisa);
+                        }
                         request = Some(found);
                     }
                     Err(found) => {
@@ -416,6 +577,8 @@ fn difference_delta(have: &OpeningRequest, wanted: &OpeningRequest) -> Result<Pa
 }
 
 fn difference_after(conn: &Connection, lines: &[PlannedLine]) -> Result<Balance, ServiceError> {
+    let cash_id = repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
+        .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
     let now = ledger::balance_in(conn, difference_id(conn)?, None, None)?;
     // Balance -> signed net (debit positive).
     let mut net = match now.side {
@@ -427,7 +590,8 @@ fn difference_after(conn: &Connection, lines: &[PlannedLine]) -> Result<Balance,
     for line in lines {
         if let (Some(facts), Some(wanted)) = (&line.facts, &line.request) {
             let have = current_opening(facts)?;
-            if !same_opening(&have, wanted) {
+            // An opening that is in cash stays in cash: it never moves ابتدائی فرق (plan 78 E).
+            if !same_opening(&have, wanted) && !opening_is_in_cash(conn, facts, cash_id)? {
                 net = net
                     .checked_add(difference_delta(&have, wanted)?)
                     .map_err(money_error)?;

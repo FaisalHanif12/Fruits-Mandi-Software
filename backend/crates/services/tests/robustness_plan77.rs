@@ -447,6 +447,7 @@ fn a_save_or_a_cancel_between_page_1_and_page_2_changes_the_answer() {
                 month: None,
                 period: Some(range.clone()),
                 party: None,
+                goods: None,
                 offset: Some(offset),
                 limit: Some(1),
             },

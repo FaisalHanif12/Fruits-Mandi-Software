@@ -24,7 +24,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 24;
+const LATEST: usize = 25;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -4703,10 +4703,14 @@ fn migration_23_adds_the_link_columns_and_the_0605_accounts_and_touches_no_numbe
         ("accounts", "link_since_entry_id"),
         ("accounts", "person_type"),
         ("partners", "linked_account_id"),
+        // Migration 25 (plan 78): the original rent of a garden is new.
+        ("ventures", "rent_original_paisa"),
     ];
     // A table is one text of all its rows; the rows the migration made are taken out of it by line.
+    // `venture_items` is the table of migration 25.
     let after: Vec<(String, String)> = all_rows_without(&conn, &skip)
         .into_iter()
+        .filter(|(table, _)| table != "venture_items")
         .map(|(table, rows)| {
             let kept: Vec<&str> = rows
                 .lines()
@@ -4829,4 +4833,104 @@ fn migration_24_adds_the_two_covering_indexes_of_the_commission_page() {
         assert!(text.contains(&format!("COVERING INDEX {index}")), "{text}");
         assert!(!text.contains("TEMP B-TREE"), "{text}");
     }
+}
+
+#[test]
+fn migration_25_makes_venture_items_and_fills_it_from_the_item_of_each_garden() {
+    // Plan 78 D2 (PRD FR-12.11 v1.43, Architecture 15.5 v1.28). A file at version 24 holds a garden with
+    // its item, a garden with no item and a trip with an item. The upgrade makes `venture_items`, one
+    // row for the garden that has an item, none for the others, keeps `ventures.item_id`, and moves
+    // no amount, row value or chain hash.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrations().to_version(&mut conn, 24).unwrap();
+    assert_eq!(user_version(&conn), 24);
+    assert!(!table_exists(&conn, "venture_items"));
+    let f = common::fixture(&conn);
+    let garden_account = |code: &str, serial: i64| -> i64 {
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0306'), ?1, ?2, 'garden', 'x', 'x', 'x', 'x', 'x')",
+            mandi_db::rusqlite::params![code, serial],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let insert = |kind: &str, number: i64, item: Option<i64>, account: Option<i64>| -> i64 {
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, item_id, account_id)
+             VALUES (?1, ?2, '2026-10-10', 'x', 'x', 'x', 'x', 'x', ?3, ?4)",
+            mandi_db::rusqlite::params![kind, number, item, account],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let with_item = insert("garden", 1, Some(f.item), Some(garden_account("0080", 1)));
+    let without_item = insert("garden", 2, None, Some(garden_account("0081", 2)));
+    let trip = insert("trip", 1, Some(f.item), None);
+    let rows_before = count(&conn, "SELECT COUNT(*) FROM journal_lines");
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (24, LATEST));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), LATEST as i64);
+
+    let items_of = |venture: i64| -> Vec<(i64, i64)> {
+        conn.prepare("SELECT item_id, is_active FROM venture_items WHERE venture_id = ?1")
+            .unwrap()
+            .query_map([venture], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    let index_columns: Vec<String> = conn
+        .prepare("PRAGMA index_info(idx_analytics_facts_goods_sums)")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(2))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        index_columns,
+        [
+            "entry_date",
+            "venture_id",
+            "seller_account_id",
+            "sign",
+            "seller_comm_paisa",
+            "buyer_comm_paisa",
+            "laga_paisa"
+        ]
+    );
+    assert_eq!(items_of(with_item), vec![(f.item, 1)]);
+    assert!(items_of(without_item).is_empty());
+    assert!(
+        items_of(trip).is_empty(),
+        "a trip has no item list: only gardens do"
+    );
+    // `ventures.item_id` stays and holds the first item.
+    let kept: Option<i64> = conn
+        .query_row(
+            "SELECT item_id FROM ventures WHERE id = ?1",
+            [with_item],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(kept, Some(f.item));
+    // An item is listed once per garden, and a row is switched off, never deleted.
+    assert!(
+        conn.execute(
+            "INSERT INTO venture_items (venture_id, item_id) VALUES (?1, ?2)",
+            [with_item, f.item],
+        )
+        .is_err(),
+        "the same item twice in one garden"
+    );
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM journal_lines"),
+        rows_before
+    );
+    let again = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((again.from, again.to), (LATEST, LATEST));
 }

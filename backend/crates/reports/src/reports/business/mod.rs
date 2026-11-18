@@ -29,11 +29,13 @@ pub(super) use lent::run as run_r32;
 pub(super) use profit::run as run_r30;
 pub(super) use sheet::run as run_r35;
 pub use sheet::{
+    AdhariSheet, AdhariSheetInput, AdhariSheetPrintInput, AdhariSheetRow, AdhariSheetTotals,
     CollectionLine, CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput,
-    CollectionSheetRow, CollectionSheetTotals, StatementBalance, StatementDay, StatementEntry,
-    StatementItem, StatementKind, StatementPrintData, StatementPrintDataInput, StatementSide,
-    collection_sheet, collection_sheet_print_data, collection_sheet_spec, entry_lines_sql,
-    party_statement_print_data,
+    CollectionSheetRow, CollectionSheetTotals, SalePrintData, StatementBalance, StatementDay,
+    StatementEntry, StatementItem, StatementKind, StatementPrintData, StatementPrintDataInput,
+    StatementSide, adhari_sheet, adhari_sheet_print_data, adhari_sheet_spec, collection_sheet,
+    collection_sheet_print_data, collection_sheet_spec, entry_lines_sql,
+    party_statement_print_data, sale_print,
 };
 pub(super) use trips::run as run_r33;
 

@@ -24,7 +24,8 @@ import { uiErrorOf } from '../shared/api';
 import { isoToDisplayDate } from '../shared/format';
 import { useLanguageStore } from '../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../shared/keyboard';
-import { ErrorState, LoadingState } from '../shared/ui';
+import { promiseNavigation, useBack, usePageTrail } from '../shared/navigation';
+import { BackButton, ErrorState, LoadingState } from '../shared/ui';
 import { FirstRunGate } from './FirstRunGate';
 import { confirmLeaveAll } from './leave-guards';
 import { AppShell } from './layout/AppShell';
@@ -66,6 +67,9 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const lock = useLock();
   const logout = useLogout();
   useSavePreferences(user);
+  // The pages he opens one from another, so Back and Esc can take him back (plan 78 F1, PRD FR-7.18).
+  usePageTrail();
+  const back = useBack();
   // Start where he left off (PRD FR-7.45), and keep the screen that is open.
   useLastScreen(!locked);
   // The first-run guide opens once; the user menu opens it again (PRD FR-7.12).
@@ -87,12 +91,16 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
     });
   };
 
+  // A way in from a menu, a key or the status bar starts the trail of pages again: it is not "another
+  // page" the user can go back to (plan 78 F1).
   const goTo = (to: string) => {
+    promiseNavigation('fresh', to);
     void navigate({ to });
   };
   // وصولی, ادائیگی and پیشگی are one screen with the type chosen (PRD FR-7.67, FR-15.10). Going to a
   // type from the voucher screen keeps what was typed, so it is one address with another `type`.
   const goToVoucher = (type: ScreenType) => {
+    promiseNavigation('fresh', '/bikri/voucher');
     void navigate({ to: '/bikri/voucher', search: { type } });
   };
   // A key from anywhere (PRD 7.3, NFR-USE-9).
@@ -110,13 +118,15 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   });
   // Alt+K opens the خرچہ screen as دکان خرچہ (PRD 7.3, 16.2).
   useShortcut(SHORTCUTS.newExpense, () => {
+    promiseNavigation('fresh', '/rokar/expense');
     void navigate({ to: '/rokar/expense', search: { type: 'shop_expense' } });
   });
-  // Esc, when nothing else wants it, leaves the screen for the dashboard (PRD FR-7.18).
+  // Esc, when nothing else wants it, goes back to the page the user came from, else to the parent of
+  // this page, else to the dashboard (PRD FR-7.18, plan 78 F1). The Back button does the same.
   useEscape(
     'leave',
     () => {
-      goTo(MAIN_ROUTES.dashboard);
+      if (!back.go()) goTo(MAIN_ROUTES.dashboard);
     },
     pathname !== '/' && !locked,
   );
@@ -160,6 +170,15 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
           ) : null
         }
         userName={user.display_name}
+        back={
+          back.available ? (
+            <BackButton
+              onClick={() => {
+                back.go();
+              }}
+            />
+          ) : null
+        }
         onLock={lockNow}
         onGuide={guide.replay}
         onOpenAccount={(id) => {

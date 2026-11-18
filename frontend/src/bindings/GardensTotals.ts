@@ -22,7 +22,7 @@ export type GardensTotals = {
    */
   balance_paisa: Paisa;
   /**
-   * Σ rent due (signed).
+   * Σ rent due. Each garden's rent due is 0 or more, so an overpaid garden is not netted against another.
    */
   rent_due_paisa: Paisa;
   /**
