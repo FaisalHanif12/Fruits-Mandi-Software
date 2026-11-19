@@ -2,8 +2,9 @@
 // one set of filters: today's بکری on top, fully open, and under a divider bar the window of 7 earlier
 // days, each day one closed line (the date, the count and the خام بکری of the day, all the backend's) that
 // opens its بکری under it. The window starts on yesterday and moves 7 days at a time (the two buttons, Page
-// Up, Page Down and the arrow keys on a line), or to the day typed in "تاریخ پر جائیں", which opens that
-// day. A search or a filter opens every day with a match, and so does "پوری بکری دکھائیں" (it sets the filters
+// Up and Page Down as the registry shortcuts `pastEarlier` and `pastLater` wherever the focus is, except in
+// a list or an open picker, which keep their own page keys, and the arrow keys on a line), or to the day
+// typed in "تاریخ پر جائیں", which opens that day. A search or a filter opens every day with a match, and so does "پوری بکری دکھائیں" (it sets the filters
 // aside; they keep their values). A click or Enter on a row opens the whole بکری on the sale book; the way
 // back from an edit lands on the same window with that day open and the row selected, and every figure is
 // read again (P10).
@@ -21,9 +22,9 @@ import type { BikriListRow } from '../../../bindings/BikriListRow';
 import type { BikriStatus } from '../../../bindings/BikriStatus';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { isLongList } from '../../../shared/grid';
+import { LIST_GRID_SELECTOR, isLongList } from '../../../shared/grid';
 import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
-import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
+import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   AccountPicker,
@@ -74,6 +75,9 @@ interface HeldDays {
 
 const ALL = 'all';
 type StatusChoice = BikriStatus | typeof ALL;
+
+/** The controls that keep Page Up and Page Down while they have the focus: a list grid, an open picker or select list. */
+const PAGE_KEY_OWNERS = `${LIST_GRID_SELECTOR}, [role="listbox"], [role="combobox"][aria-expanded="true"]`;
 
 /** The filters start as the Owner left them (PRD FR-7.45); the window always starts on yesterday. */
 export function TodayBikriPage() {
@@ -230,6 +234,24 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
     const next = stepWindowEnd(end, direction, today);
     if (next !== end) goEnd(next);
   };
+  // Page Up and Page Down move the window from anywhere on the screen, as on the other window pages (F27,
+  // F29, FR-12.46): the keys on the two buttons are these shortcuts. A list (today's, or an open day's) and
+  // an open picker list own the two keys while they have the focus: the list turns its own page.
+  const windowKeys = { enabled: print.preview === null, unlessFocusIn: PAGE_KEY_OWNERS };
+  useShortcut(
+    SHORTCUTS.pastEarlier,
+    () => {
+      move(-1);
+    },
+    windowKeys,
+  );
+  useShortcut(
+    SHORTCUTS.pastLater,
+    () => {
+      move(1);
+    },
+    windowKeys,
+  );
   const openRow = (row: BikriListRow) => {
     void navigate({
       to: '/bikri/book',

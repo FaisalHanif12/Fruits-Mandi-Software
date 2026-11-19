@@ -583,7 +583,6 @@
           "line_no": 1,
           "is_blank": false,
           "remaining_qty": 50,
-          "rate_hint": null,
           "calc": {
             "qty": 20,
             "weight_grams": null,
@@ -913,11 +912,6 @@
           "line_no": 2,
           "is_blank": true,
           "remaining_qty": 30,
-          "rate_hint": {
-            "rate_paisa": 60000,
-            "source": "this_bikri",
-            "date": "2026-10-10"
-          },
           "calc": null,
           "warnings": []
         }

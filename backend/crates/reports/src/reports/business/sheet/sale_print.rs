@@ -244,7 +244,7 @@ fn lot_rows(
     let mut statement = conn.prepare(&format!(
         "SELECT {LOT_COLUMNS}
          FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
-         CROSS JOIN bikri_lots l ON l.first_entry_id = e.id
+         CROSS JOIN bikri_lots l ON l.first_entry_id = e.id AND l.removed_at IS NULL
          CROSS JOIN bikri_entries b ON b.id = l.bikri_id
          CROSS JOIN items i ON i.id = l.item_id
          WHERE e.status = 'posted' AND e.entry_date = ?1 AND NOT ({SAME_DAY_PAIR}){scope}

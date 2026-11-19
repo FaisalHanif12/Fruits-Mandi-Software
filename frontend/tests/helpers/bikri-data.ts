@@ -50,14 +50,13 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-/** A row the backend ignores: no buyer and no rate. It still gets the quantity left and the hint. */
+/** A row the backend ignores: no buyer and no rate. It still gets the quantity left (no rate hint, FR-7.53). */
 export function blankLine(key: string, lineNo: number, remaining: number): LinePreview {
   return {
     key,
     line_no: lineNo,
     is_blank: true,
     remaining_qty: remaining,
-    rate_hint: null,
     calc: null,
     warnings: [],
   };
@@ -75,10 +74,7 @@ function lineFor(base: LotPreview, index: number, sale: SaleInput): LinePreview 
   if (at?.is_blank === true) return { ...clone(at), key: sale.key, line_no: index + 1 };
   // A row that is finished in the file but empty here: what the backend says for a blank row.
   const source = at ?? base.lines.at(-1);
-  return {
-    ...blankLine(sale.key, index + 1, source?.remaining_qty ?? 0),
-    rate_hint: source?.rate_hint ?? null,
-  };
+  return blankLine(sale.key, index + 1, source?.remaining_qty ?? 0);
 }
 
 /**

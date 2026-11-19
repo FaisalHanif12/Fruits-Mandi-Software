@@ -12,7 +12,7 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use mandi_backup::api::{BackupStatus, CloudLevel};
 use mandi_services::core::money::Paisa;
-use mandi_services::health::{self, BooksCheck, ChainState};
+use mandi_services::health::{self, BooksCheck, ChainState, TablesState};
 use mandi_services::{Context, ServiceError, auth};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -46,6 +46,10 @@ pub struct BooksHealth {
     pub journal_chain: ChainHealth,
     /// The audit chain.
     pub audit_chain: ChainHealth,
+    /// The money tables against the journal: the sale lines, lot totals, partner share rows, stock
+    /// moves and analytics facts (NFR-SEC-6 v1.21). `at` is the first table and record that
+    /// differs, with no amount.
+    pub tables: ChainHealth,
     /// Posted journal entries.
     #[ts(type = "number")]
     pub journal_entries: i64,
@@ -122,6 +126,16 @@ fn chain(state: &ChainState) -> ChainHealth {
     }
 }
 
+fn tables(state: &TablesState) -> ChainHealth {
+    match state {
+        TablesState::Ok => ChainHealth { ok: true, at: None },
+        TablesState::Differs { first, .. } => ChainHealth {
+            ok: false,
+            at: Some(first.clone()),
+        },
+    }
+}
+
 fn backup_part(status: &BackupStatus) -> BackupHealth {
     BackupHealth {
         last_local_at: status.last_local_at.clone(),
@@ -144,6 +158,7 @@ fn books_part(books: &Result<BooksCheck, ServiceError>) -> BooksHealth {
             difference_paisa: found.difference,
             journal_chain: chain(&found.journal_chain),
             audit_chain: chain(&found.audit_chain),
+            tables: tables(&found.tables),
             journal_entries: found.journal_entries,
             audit_rows: found.audit_rows,
         },
@@ -156,6 +171,10 @@ fn books_part(books: &Result<BooksCheck, ServiceError>) -> BooksHealth {
                 at: None,
             },
             audit_chain: ChainHealth {
+                ok: false,
+                at: None,
+            },
+            tables: ChainHealth {
                 ok: false,
                 at: None,
             },
@@ -244,9 +263,21 @@ pub async fn health_last<R: tauri::Runtime>(
         auth::require(ctx)?;
         match health::last(ctx)? {
             None => Ok(None),
-            Some(value) => serde_json::from_value(value)
-                .map(Some)
-                .map_err(|e| ServiceError::Data(format!("the stored health result: {e}"))),
+            Some(mut value) => {
+                // A result stored before the money tables were compared has no `tables`: it reads as
+                // good until the next run (NFR-SEC-6 v1.21).
+                if let Some(books) = value
+                    .get_mut("books")
+                    .and_then(serde_json::Value::as_object_mut)
+                {
+                    books
+                        .entry("tables")
+                        .or_insert_with(|| serde_json::json!({ "ok": true }));
+                }
+                serde_json::from_value(value)
+                    .map(Some)
+                    .map_err(|e| ServiceError::Data(format!("the stored health result: {e}")))
+            }
         }
     })
     .await
@@ -328,10 +359,11 @@ mod tests {
             difference: Paisa::ZERO,
             journal_chain: ChainState::Ok,
             audit_chain: ChainState::Ok,
+            tables: TablesState::Ok,
             journal_entries: 2,
             audit_rows: 5,
         }));
-        assert!(found.ran && found.balanced && found.journal_chain.ok);
+        assert!(found.ran && found.balanced && found.journal_chain.ok && found.tables.ok);
         assert_eq!((found.journal_entries, found.audit_rows), (2, 5));
     }
 

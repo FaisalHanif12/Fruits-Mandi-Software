@@ -1864,7 +1864,7 @@ fn group_word(scan: &Scan, names: &Names, cue: Cue) -> bool {
 /// collector or city (R21, R22 hold the buyers' dues: the figure of that list is the buyers' tile).
 ///
 /// Example: "what is the total dues of the shop" is true; "total dues by collector" is false.
-fn total_dues_asked(scan: &Scan) -> bool {
+pub(super) fn total_dues_asked(scan: &Scan) -> bool {
     let is = |w: &str, list: &[&str]| list.iter().any(|x| key(x) == w);
     const WHOLE: [&str; 4] = ["kul", "total", "ٹوٹل", "کل"];
     const DUES: [&str; 8] = [

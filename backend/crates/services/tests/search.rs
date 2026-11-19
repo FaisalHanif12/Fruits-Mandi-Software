@@ -681,3 +681,161 @@ fn the_bank_account_is_offered_in_no_picker_and_no_search() {
             .all(|hit| !matches!(hit, GlobalHit::Account { hit } if hit.code == "01020001"))
     );
 }
+
+/// Gate finding R3-2 (plan 80, Tech Stack 4.7, Code Standards B27): an account keeps the name of its
+/// city in its search text. Renaming the city updates the index at once, with no restart, so the
+/// account is found by the new city name and no longer by the old one.
+#[test]
+fn renaming_a_city_updates_the_accounts_and_addas_of_that_city_in_the_index() {
+    use mandi_services::core::accounts::{
+        AccountInput, AccountScope, AccountType, SearchAccountsInput,
+    };
+    use mandi_services::core::error::{ErrorCode, ErrorValue};
+    use mandi_services::core::masters::AddaInput;
+    let w = support::world();
+    let ctx = &w.env.ctx;
+    let find_accounts = |text: &str| -> Vec<String> {
+        search::search_accounts(
+            ctx,
+            &w.owner,
+            &SearchAccountsInput {
+                include_dead: None,
+                scope: AccountScope::Seller,
+                control_id: None,
+                text: text.into(),
+                limit: 10,
+                offset: 0,
+                with_chukta: None,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.name_en)
+        .collect()
+    };
+    // An اڈا is found by its own name; the picker row shows its city beside it (`extra_en`), and
+    // that text must follow a renamed city too.
+    let adda_city = |text: &str| -> Vec<(String, String)> {
+        search::search(ctx, &w.owner, SearchScope::Adda, text, 20)
+            .unwrap()
+            .into_iter()
+            .map(|hit| (hit.name_en, hit.extra_en))
+            .collect()
+    };
+    // The saves below confirm any spelling the check asks about (not the subject of this test).
+    let confirm = |items: Vec<mandi_services::Rejection>, words: &mut Vec<String>| {
+        for item in items {
+            assert_eq!(item.code, ErrorCode::ErrSpellingUnconfirmed);
+            if let Some(ErrorValue::Text(found)) = item.values.get("words") {
+                words.extend(found.split(' ').map(str::to_owned));
+            }
+        }
+    };
+    let save_city = |id: Option<i64>, version: Option<i64>, ur: &str, en: &str| {
+        let mut words: Vec<String> = Vec::new();
+        loop {
+            let input = CityInput {
+                id,
+                version,
+                code: String::new(),
+                name_ur: ur.into(),
+                name_en: en.into(),
+                confirmed_rules_words: words.clone(),
+            };
+            match masters::save(ctx, &w.owner, &MasterInput::City(input)) {
+                Ok(row) => return row,
+                Err(ServiceError::Rejected(items)) => confirm(items, &mut words),
+                Err(other) => panic!("{other:?}"),
+            }
+        }
+    };
+
+    let city = save_city(None, None, "لاہور", "Lahore");
+    // A seller and an اڈا in that city.
+    let mut input = AccountInput {
+        id: None,
+        version: None,
+        account_type: AccountType::Seller,
+        control_id: None,
+        code: String::new(),
+        name_ur: "نواز".into(),
+        name_en: "Nawaz".into(),
+        confirmed_rules_words: Vec::new(),
+        father_or_firm_ur: String::new(),
+        father_or_firm_en: String::new(),
+        city_id: Some(city.id()),
+        adda_id: None,
+        phone1: String::new(),
+        phone2: String::new(),
+        address: String::new(),
+        linked_account_id: None,
+        opening_date: String::new(),
+        opening_dr: String::new(),
+        opening_cr: String::new(),
+        opening_is_advance: false,
+        credit_allowed: true,
+        credit_limit: String::new(),
+        default_marka_id: None,
+        collector_staff_id: None,
+        is_active: true,
+        note: String::new(),
+        tag: String::new(),
+    };
+    let mut words: Vec<String> = Vec::new();
+    loop {
+        input.confirmed_rules_words = words.clone();
+        match mandi_services::accounts::save(ctx, &w.owner, &input) {
+            Ok(_) => break,
+            Err(ServiceError::Rejected(items)) => confirm(items, &mut words),
+            Err(other) => panic!("{other:?}"),
+        }
+    }
+    let mut words: Vec<String> = Vec::new();
+    loop {
+        let adda = AddaInput {
+            id: None,
+            version: None,
+            code: String::new(),
+            name_ur: "سوات اڈا".into(),
+            name_en: "Swat Adda".into(),
+            city_id: Some(city.id()),
+            confirmed_rules_words: words.clone(),
+        };
+        match masters::save(ctx, &w.owner, &MasterInput::Adda(adda)) {
+            Ok(_) => break,
+            Err(ServiceError::Rejected(items)) => confirm(items, &mut words),
+            Err(other) => panic!("{other:?}"),
+        }
+    }
+    // The index is built by these searches; the city name finds both.
+    assert_eq!(find_accounts("Lahore"), vec!["Nawaz"]);
+    assert_eq!(find_accounts("لاہور"), vec!["Nawaz"]);
+    assert_eq!(
+        adda_city("swat"),
+        vec![("Swat Adda".to_owned(), "Lahore".to_owned())]
+    );
+
+    // Rename the city.
+    save_city(Some(city.id()), Some(city.version()), "ملتان", "Multan");
+    assert_eq!(
+        find_accounts("Multan"),
+        vec!["Nawaz"],
+        "found by the new name"
+    );
+    assert_eq!(find_accounts("ملتان"), vec!["Nawaz"]);
+    assert!(
+        find_accounts("Lahore").is_empty(),
+        "no longer found by the old name"
+    );
+    assert!(find_accounts("لاہور").is_empty());
+    assert_eq!(
+        adda_city("swat"),
+        vec![("Swat Adda".to_owned(), "Multan".to_owned())],
+        "the city shown beside the اڈا is the new name"
+    );
+
+    // A made-up index would hide the fault: a rebuilt one gives the same answers.
+    search::rebuild(ctx).unwrap();
+    assert_eq!(find_accounts("Multan"), vec!["Nawaz"]);
+    assert!(find_accounts("Lahore").is_empty());
+}

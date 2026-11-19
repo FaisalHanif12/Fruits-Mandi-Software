@@ -25,4 +25,11 @@ export type FruitList = {
    * of the saved entries.
    */
   months: Array<MonthSubtotal>;
+  /**
+   * True while the partner section is locked (PRD FR-17.11): the rows, the count and the totals
+   * are the fruit for the shop's guests only, and the screen shows "کوڈ درج کریں" (the
+   * `PartnerLockedBox`) in place of the partners' fruit. A request for one partner's fruit is
+   * refused with `ERR_PARTNER_LOCKED` instead.
+   */
+  partners_locked: boolean;
 };

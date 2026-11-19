@@ -69,11 +69,14 @@ function QuickAddChuktaForm({
   const submit = async () => {
     setError(null);
     try {
-      const saved = await spelling.guard(names, setNames, () =>
+      // The words he confirmed go with the save: the backend refuses a word that only the rules made and that is
+      // not among them, with ERR_SPELLING_UNCONFIRMED, and the guard then asks him once more (FR-7.66).
+      const saved = await spelling.guard(names, setNames, (confirmedWords) =>
         add.mutateAsync({
           name_ur: names.urdu.trim(),
           name_en: names.english.trim(),
           phone: phone.trim() === '' ? null : phone.trim(),
+          confirmed_rules_words: confirmedWords,
         }),
       );
       if (saved === undefined) return;

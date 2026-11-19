@@ -291,6 +291,68 @@ describe.each(LANGUAGES)('lots carried over onto a new بکری (%s)', (language
     expect(bikriApi.bikriUndo).not.toHaveBeenCalled();
   });
 
+  // The undo of a mixed save asks the cash question inside the backend: it answers ERR_CASH_BELOW_ZERO_NOT_CONFIRMED
+  // with the cash after, and the box "is this entry correct?" opens with that figure; the yes sends the undo
+  // again with the confirmation (PRD FR-6.7, FR-7.47; plan 80 R2-1). Cash after the undo here: -2,000.
+  describe('an undo of the whole save that would take cash below zero', () => {
+    /** Saves the mixed entry, then makes the undo refuse until it is confirmed. Returns the plan and the user. */
+    const saveThenRefuseUndo = async (values: Record<string, string | number>) => {
+      const plan = fakePlan16();
+      const confirmed = vi.mocked(bikriApi.bikriMixedUndo).getMockImplementation();
+      if (confirmed === undefined) throw new Error('the double has no undo');
+      vi.mocked(bikriApi.bikriMixedUndo).mockImplementation((input) =>
+        input.confirm_cash_below_zero
+          ? confirmed(input)
+          : Promise.reject(refused('ERR_CASH_BELOW_ZERO_NOT_CONFIRMED', null, values)),
+      );
+      const { user } = await open();
+      await typeLine(user);
+      await settlePreview();
+      press('F10');
+      await waitFor(() => {
+        expect(plan.mixedSaves).toHaveLength(1);
+      });
+      const button = await screen.findByRole('button', {
+        name: (label) => visible(label).startsWith(message(language, 'bikri-undo')),
+      });
+      await user.click(button);
+      return { plan, user };
+    };
+
+    it('opens the cash box with the cash after from the refusal, and the yes sends the undo again confirmed', async () => {
+      const { plan, user } = await saveThenRefuseUndo({ cash_after_paisa: -200_000 });
+      const box = await screen.findByRole('alertdialog');
+      expect(visible(box.textContent)).toContain(message(language, 'common-cash-confirm-title'));
+      expect(visible(box.textContent)).toContain('-2,000');
+      // Nothing is undone yet: the first call was the refused one.
+      expect(plan.mixedUndos).toEqual([]);
+      expect(vi.mocked(bikriApi.bikriMixedUndo)).toHaveBeenCalledTimes(1);
+      await user.click(
+        screen.getByRole('button', { name: message(language, 'common-cash-confirm-yes') }),
+      );
+      await waitFor(() => {
+        expect(plan.mixedUndos).toEqual([
+          { later_entry_ids: [50], new_bikri_id: null, confirm_cash_below_zero: true },
+        ]);
+      });
+      // The lot is on the screen again with the line that was typed, as after any undo.
+      await waitFor(() => {
+        expect(textOf(salesGrid(language), 0, 'rate')).toBe('560');
+      });
+    });
+
+    it('the focus starts on "No": Enter out of habit undoes nothing and sends nothing again', async () => {
+      const { plan, user } = await saveThenRefuseUndo({ cash_after_paisa: -200_000 });
+      await screen.findByRole('alertdialog');
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+      });
+      expect(plan.mixedUndos).toEqual([]);
+      expect(vi.mocked(bikriApi.bikriMixedUndo)).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('a language switch in the middle loses nothing and keeps the lot carried', async () => {
     const plan = fakePlan16();
     const { user } = await open();

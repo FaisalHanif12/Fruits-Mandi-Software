@@ -155,6 +155,26 @@ fn tables(large: bool) -> &'static str {
     }
 }
 
+/// True when the days of the filter include every day that has an entry: no first day or one on or
+/// before the first entry, and no last day or one on or after the last. Two looks at the ends of the
+/// date index.
+fn covers_every_day(conn: &Connection, f: &LineFilter) -> mandi_db::rusqlite::Result<bool> {
+    let (first, last): (Option<String>, Option<String>) = conn.query_row(
+        "SELECT MIN(entry_date), MAX(entry_date) FROM journal_entries",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let from_ok = match (&f.from, &first) {
+        (Some(from), Some(first)) => from <= first,
+        _ => true,
+    };
+    let to_ok = match (&f.to, &last) {
+        (Some(to), Some(last)) => to >= last,
+        _ => true,
+    };
+    Ok(from_ok && to_ok)
+}
+
 fn no_drafts(conn: &Connection) -> mandi_db::rusqlite::Result<bool> {
     let any: bool = conn.query_row(
         "SELECT EXISTS(SELECT 1 FROM journal_entries WHERE status <> 'posted')",
@@ -179,6 +199,18 @@ pub(crate) fn totals(conn: &Connection, f: &LineFilter) -> Result<Sums, ReportsE
                 "SELECT COUNT(*), COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
                  FROM journal_lines WHERE account_id = ?1",
                 [account],
+                read_sums,
+            );
+        }
+        if f.account.is_none() && f.person.is_none() && covers_every_day(conn, f)? && no_drafts(conn)?
+        {
+            // The whole journal (the day book of every day, ten years): every line is in, so the
+            // covering index alone gives the sums, with no look at each line's entry (plan 80 gate:
+            // 1 second down to 0.4).
+            return conn.query_row(
+                "SELECT COUNT(*), COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+                 FROM journal_lines",
+                [],
                 read_sums,
             );
         }
@@ -282,16 +314,136 @@ pub(crate) fn page_query(
         mandi_db::row_source_sql::VENTURE_ID,
     );
     let sql = format!(
+        "{} FROM {by} {} WHERE e.status = 'posted'{conditions}
+         ORDER BY {order} LIMIT ? OFFSET ?",
+        raw_select(venture_kind, venture_id),
+        RAW_JOINS
+    );
+    Ok((sql, binds))
+}
+
+/// The columns of a [`RawLine`], in the order `read_raw` takes them.
+fn raw_select(venture_kind: &str, venture_id: &str) -> String {
+    format!(
         "SELECT e.id, e.entry_date, l.line_no, e.posting_type, e.source_type, e.source_id,
                 e.reverses_entry_id, l.account_id, COALESCE(l.narration, e.narration),
                 l.chukta_person_key, l.dr_paisa, l.cr_paisa,
-                COALESCE(b.number, v.number), v.type, v.reason, {venture_kind}, {venture_id}
-         FROM {by} LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
-         LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id
-         WHERE e.status = 'posted'{conditions}
-         ORDER BY {order} LIMIT ? OFFSET ?"
+                COALESCE(b.number, v.number), v.type, v.reason, {venture_kind}, {venture_id}"
+    )
+}
+
+/// The joins that give a line its document number, voucher and venture.
+const RAW_JOINS: &str = "LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
+         LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id";
+
+fn read_raw(r: &mandi_db::rusqlite::Row<'_>) -> mandi_db::rusqlite::Result<RawLine> {
+    Ok(RawLine {
+        entry_id: r.get(0)?,
+        entry_date: r.get(1)?,
+        line_no: r.get(2)?,
+        posting_type: r.get(3)?,
+        source_type: r.get(4)?,
+        source_id: r.get(5)?,
+        reverses: r.get(6)?,
+        account_id: r.get(7)?,
+        narration: r.get(8)?,
+        person_key: r.get(9)?,
+        dr: r.get(10)?,
+        cr: r.get(11)?,
+        doc_number: r.get(12)?,
+        voucher_type: r.get(13)?,
+        voucher_reason: r.get(14)?,
+        venture_kind: r.get(15)?,
+        venture_id: r.get(16)?,
+    })
+}
+
+/// One entry of an account as the statement needs it to order its rows: the entry and the sums of
+/// the account's lines in it. No line is read.
+pub(crate) struct EntrySums {
+    pub(crate) entry_id: i64,
+    pub(crate) entry_date: String,
+    pub(crate) posting_type: String,
+    pub(crate) reverses: Option<i64>,
+    pub(crate) dr: i64,
+    pub(crate) cr: i64,
+}
+
+/// The query of [`entry_sums`] and its values (public for the query plan test, Code Standards B18).
+pub(crate) fn entry_sums_query(f: &LineFilter) -> (String, Vec<Value>) {
+    let (conditions, binds) = f.conditions();
+    let sql = format!(
+        "SELECT e.id, e.entry_date, e.posting_type, e.reverses_entry_id,
+                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM {} WHERE e.status = 'posted'{conditions}
+         GROUP BY e.id",
+        tables(false)
     );
-    Ok((sql, binds))
+    (sql, binds)
+}
+
+/// Every entry of the filter with the sums of its lines, in no particular order. One pass over the
+/// covering index of the account and one look at each entry: no line row, no document, no voucher
+/// (plan 80 gate: the statement of the busiest buyer read 97,000 lines in full for every page).
+///
+/// # Errors
+/// A database error.
+pub(crate) fn entry_sums(conn: &Connection, f: &LineFilter) -> Result<Vec<EntrySums>, ReportsError> {
+    let (sql, binds) = entry_sums_query(f);
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement
+        .query_map(params_from_iter(binds.iter()), |r| {
+            Ok(EntrySums {
+                entry_id: r.get(0)?,
+                entry_date: r.get(1)?,
+                posting_type: r.get(2)?,
+                reverses: r.get(3)?,
+                dr: r.get(4)?,
+                cr: r.get(5)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+/// The query of [`lines_of_entries`] for `count` entries, and the position of its first entry mark.
+/// Public for the query plan test (Code Standards B18).
+pub(crate) fn lines_of_entries_query(account: i64, entry_ids: &[i64]) -> (String, Vec<Value>) {
+    let (venture_kind, venture_id) = (
+        mandi_db::row_source_sql::VENTURE_KIND,
+        mandi_db::row_source_sql::VENTURE_ID,
+    );
+    let marks = vec!["?"; entry_ids.len()].join(", ");
+    let sql = format!(
+        "{} FROM journal_entries e CROSS JOIN journal_lines l ON l.entry_id = e.id {}
+         WHERE e.status = 'posted' AND l.account_id = ? AND e.id IN ({marks})
+         ORDER BY e.entry_date, e.id, l.line_no",
+        raw_select(venture_kind, venture_id),
+        RAW_JOINS
+    );
+    let mut binds = vec![Value::Integer(account)];
+    binds.extend(entry_ids.iter().map(|id| Value::Integer(*id)));
+    (sql, binds)
+}
+
+/// The lines of one account in these entries, as the page reads them, in the order of the journal.
+///
+/// # Errors
+/// A database error.
+pub(crate) fn lines_of_entries(
+    conn: &Connection,
+    account: i64,
+    entry_ids: &[i64],
+) -> Result<Vec<RawLine>, ReportsError> {
+    if entry_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (sql, binds) = lines_of_entries_query(account, entry_ids);
+    let mut statement = conn.prepare(&sql)?;
+    let lines = statement
+        .query_map(params_from_iter(binds.iter()), read_raw)?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(lines)
 }
 
 /// One page of the lines in the order of the journal.
@@ -320,27 +472,7 @@ pub(crate) fn page_by(
     let (sql, binds) = page_query(conn, f, sort, window)?;
     let mut statement = conn.prepare(&sql)?;
     let lines = statement
-        .query_map(params_from_iter(binds.iter()), |r| {
-            Ok(RawLine {
-                entry_id: r.get(0)?,
-                entry_date: r.get(1)?,
-                line_no: r.get(2)?,
-                posting_type: r.get(3)?,
-                source_type: r.get(4)?,
-                source_id: r.get(5)?,
-                reverses: r.get(6)?,
-                account_id: r.get(7)?,
-                narration: r.get(8)?,
-                person_key: r.get(9)?,
-                dr: r.get(10)?,
-                cr: r.get(11)?,
-                doc_number: r.get(12)?,
-                voucher_type: r.get(13)?,
-                voucher_reason: r.get(14)?,
-                venture_kind: r.get(15)?,
-                venture_id: r.get(16)?,
-            })
-        })?
+        .query_map(params_from_iter(binds.iter()), read_raw)?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(lines)
 }
@@ -469,8 +601,28 @@ pub(crate) fn page_with_running_newest(
 /// The page queries, for the query plan test (Code Standards B18).
 #[doc(hidden)]
 pub mod plans {
-    use super::{LineFilter, Value, page_query};
+    use super::{LineFilter, Value, entry_sums_query, lines_of_entries_query, page_query};
     use mandi_db::rusqlite::Connection;
+
+    /// The query of the sums of an account's lines in each of its entries.
+    pub fn entry_sums(
+        account: i64,
+        from: Option<&str>,
+        to: Option<&str>,
+    ) -> (String, Vec<Value>) {
+        let f = LineFilter {
+            account: Some(account),
+            person: None,
+            from: from.map(str::to_owned),
+            to: to.map(str::to_owned),
+        };
+        entry_sums_query(&f)
+    }
+
+    /// The query of the lines of an account in some entries.
+    pub fn lines_of_entries(account: i64, entry_ids: &[i64]) -> (String, Vec<Value>) {
+        lines_of_entries_query(account, entry_ids)
+    }
 
     /// The page query of the party ledger R13 for one account and a range of days.
     pub fn ledger_page(

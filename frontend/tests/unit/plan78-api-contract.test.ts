@@ -45,14 +45,14 @@ describe('every wrapper of plan 78 sends its command and its input', () => {
     expect(real.GOODS_SOURCES).toEqual({ stock_lots: 1, trip_rows: 1, garden_rows: 1 });
   });
 
-  it('the rows of a card ask for their kind, the same input as the backend’s own request', async () => {
-    await bikriApi.bikriGoodsToLoad('trip');
+  it('the rows of a card ask for their kind and a page, with the kind of the backend’s own request (plan 80 R2-5)', async () => {
+    await bikriApi.bikriGoodsToLoad('trip', 0, 25);
     expect(call).toHaveBeenLastCalledWith('bikri_goods_to_load', {
-      input: real.GOODS_TO_LOAD_TRIP_REQUEST,
+      input: { ...real.GOODS_TO_LOAD_TRIP_REQUEST, offset: 0, limit: 25 },
     });
-    await bikriApi.bikriGoodsToLoad('garden');
+    await bikriApi.bikriGoodsToLoad('garden', 50, 50);
     expect(call).toHaveBeenLastCalledWith('bikri_goods_to_load', {
-      input: real.GOODS_TO_LOAD_GARDEN_REQUEST,
+      input: { ...real.GOODS_TO_LOAD_GARDEN_REQUEST, offset: 50, limit: 50 },
     });
   });
 

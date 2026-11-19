@@ -75,13 +75,19 @@ day-closed = Days up to { $date } are closed
 day-reopen-title = Reopen a day
 
 # review: pending
-day-reopen-help = Reopening a date reopens every later date too. A reason is required and is written to the audit log.
+day-reopen-help = Reopening a date reopens every later date too. A reason and the Owner's { -dastakhat } are required, and the reason is written to the audit log.
 
 # review: pending
 day-reopen-date = Date to reopen
 
 # review: pending
 day-reopen-reason = Reason
+
+# review: pending
+day-reopen-sign = { -dastakhat }
+
+# review: pending
+day-reopen-sign-hint = Only the Owner's { -dastakhat } opens a closed day.
 
 # review: pending
 day-reopen-button = Reopen

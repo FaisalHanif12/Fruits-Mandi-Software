@@ -131,3 +131,7 @@ dev-data/
 # Python byte code
 __pycache__/
 *.pyc
+
+# Gate lane build folders (plan 80)
+backend/target-gate-*/
+backend/target-fix-*/

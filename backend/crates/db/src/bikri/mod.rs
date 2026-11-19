@@ -11,6 +11,7 @@
 use rusqlite::{Connection, OptionalExtension, params_from_iter};
 
 pub mod edit;
+pub mod posted;
 pub mod saved;
 pub mod write;
 
@@ -297,7 +298,7 @@ pub fn seller_last_lot(conn: &Connection, seller_id: i64) -> rusqlite::Result<Op
     conn.query_row(
         "SELECT l.item_id, l.packing_id, l.marka_id
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
-         WHERE l.seller_account_id = ?1 AND e.status = 'saved'
+         WHERE l.seller_account_id = ?1 AND e.status = 'saved' AND l.removed_at IS NULL
          ORDER BY e.entry_date DESC, l.id DESC
          LIMIT 1",
         [seller_id],
@@ -362,7 +363,10 @@ pub fn lots_named(
     limit: i64,
 ) -> rusqlite::Result<(Vec<mandi_core::bikri::LotFound>, i64)> {
     use mandi_core::accounts::RecordRef;
-    let mut conditions = vec!["e.status = 'saved'".to_owned()];
+    let mut conditions = vec![
+        "e.status = 'saved'".to_owned(),
+        "l.removed_at IS NULL".to_owned(),
+    ];
     let mut args: Vec<rusqlite::types::Value> = Vec::new();
     let mut add_list = |column: &str, ids: &[i64], conditions: &mut Vec<String>| {
         if !ids.is_empty() {

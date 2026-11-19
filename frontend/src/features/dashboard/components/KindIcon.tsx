@@ -11,6 +11,7 @@ import {
   FileClock,
   HandCoins,
   PackageOpen,
+  Scale,
   ShieldAlert,
   Tag,
   WalletCards,
@@ -43,5 +44,7 @@ export function KindIcon({ kind }: { kind: AttentionKind }) {
       return <Tag aria-hidden="true" className={CLASSES} />;
     case 'health_check':
       return <ShieldAlert aria-hidden="true" className={CLASSES} />;
+    case 'records_differ':
+      return <Scale aria-hidden="true" className={CLASSES} />;
   }
 }

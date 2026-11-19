@@ -538,6 +538,9 @@ pub struct AttentionOverdue {
     pub total_count: i64,
     /// True if `items` holds only the first `MAX_OPEN_ROWS` of them.
     pub truncated: bool,
+    /// True while the partner section is locked (PRD FR-17.11): the money partners took is left
+    /// out of `items` and `total_count`.
+    pub partners_locked: bool,
 }
 
 /// The most items `assist_attention_overdue` gives.

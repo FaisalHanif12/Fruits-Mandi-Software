@@ -858,11 +858,14 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
     .unwrap();
     assert_eq!(hits.len(), 1);
     installment(&w, garden.id, "13-10-2026", "100");
-    // Closing again gives a new closing with a new number, and works out its balance again.
-    let again = gardens::close(
+    // Closing again gives a new closing with a new number, and works out its balance again. The 100
+    // installment is above the rent, so the owner owes it back and the close asks first (PRD FR-12.51,
+    // plan 80 gate Q-R4-2); the answer here is "yes". No expected number changes.
+    let again = gardens::close_with_confirm(
         &w.env.ctx,
         &w.owner,
         &close_input(&w, garden.id, "13-10-2026"),
+        true,
     )
     .unwrap();
     assert_eq!(again.row.status, VentureStatus::Closed);

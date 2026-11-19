@@ -5,6 +5,7 @@ import {
   formatPaisa,
   formatPaisaValue,
   groupDigits,
+  paisaOfErrorValue,
   type Grouping,
 } from '../../src/shared/format/money';
 import { paisaForTest } from '../helpers/paisa';
@@ -83,6 +84,31 @@ describe('formatPaisaValue', () => {
     expect(formatPaisaValue(paisa, { grouping: 'international' })).toBe(international);
     expect(formatPaisaValue(paisa, { grouping: 'lakh' })).toBe(lakh);
   });
+});
+
+describe('paisaOfErrorValue', () => {
+  // The cash after of ERR_CASH_BELOW_ZERO_NOT_CONFIRMED is a plain number in the values of the refusal. The cash
+  // box takes it as the same Paisa the backend sent: it shows the same text as the number does (plan 80 R2-1).
+  it.each(cases)('%d paisa is an amount that shows as formatPaisaValue shows it', (paisa) => {
+    const amount = paisaOfErrorValue(paisa);
+    if (amount === null) throw new Error('a whole number of rupees is an amount');
+    expect(formatPaisa(amount, { grouping: 'international' })).toBe(
+      formatPaisaValue(paisa, { grouping: 'international' }),
+    );
+  });
+
+  it('a negative cash after is an amount', () => {
+    const amount = paisaOfErrorValue(-200_000);
+    if (amount === null) throw new Error('a negative amount is an amount');
+    expect(formatPaisa(amount, { grouping: 'international' })).toBe('-2,000');
+  });
+
+  it.each([undefined, 'x', 12.5, 150, Number.NaN, Number.MAX_SAFE_INTEGER + 2])(
+    '%s is not an amount',
+    (value) => {
+      expect(paisaOfErrorValue(value)).toBeNull();
+    },
+  );
 });
 
 describe('formatPaisa with plain', () => {

@@ -6,6 +6,7 @@
 //! not at all. The search index is updated after the commit (Code Standards B27). Nothing is
 //! ever deleted (PRD FR-10.6).
 
+mod link_check;
 mod openings;
 
 use mandi_db::accounts as repo;
@@ -25,7 +26,9 @@ use mandi_domain::core::validate;
 use serde_json::{Map, Value, json};
 
 pub(crate) use openings::{OpeningCounter, apply_with as apply_opening_with};
-pub use openings::{openings_preview, openings_save};
+pub use openings::{
+    openings_preview, openings_preview_with_confirm, openings_save, openings_save_with_confirm,
+};
 
 use crate::audit::Event;
 use crate::auth::Actor;
@@ -340,6 +343,22 @@ pub fn save(
     actor: &Actor,
     input: &AccountInput,
 ) -> Result<AccountRow, ServiceError> {
+    save_with_confirm(ctx, actor, input, false)
+}
+
+/// [`save`] with the answer of the cash box (PRD FR-6.7, plan 80 gate R4-4): with
+/// `confirm_cash_below_zero` true, a change of an opening that is in روکڑ may take cash in hand
+/// below 0. Without it that change is refused with `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value
+/// `cash_after_paisa`), the signal for the screen to ask.
+///
+/// # Errors
+/// As [`save`].
+pub fn save_with_confirm(
+    ctx: &Context,
+    actor: &Actor,
+    input: &AccountInput,
+    confirm_cash_below_zero: bool,
+) -> Result<AccountRow, ServiceError> {
     let (closed, today) = day::window(ctx)?;
     // An edit that leaves the opening as it is must not trip over a closed opening day.
     let stored = match input.id {
@@ -368,7 +387,8 @@ pub fn save(
         ));
     }
     let in_force = stored.as_ref().map(current_opening).transpose()?;
-    let prepared = prepare_account(input, closed, today, in_force.as_ref())?;
+    let mut prepared = prepare_account(input, closed, today, in_force.as_ref())?;
+    prepared.confirm_cash_below_zero = confirm_cash_below_zero;
     let checks = spelling_checks(ctx, &prepared)?;
     let (id, learned) = ctx
         .db
@@ -460,6 +480,8 @@ fn write(
         }
         None => None,
     };
+    // The link must be one clean pair of a seller and a buyer (PRD E10, FR-10.2).
+    link_check::check(tx, prepared)?;
 
     let id = match &old {
         None => {
@@ -518,6 +540,7 @@ fn write(
         } else {
             OpeningDay::Open
         },
+        prepared.confirm_cash_below_zero,
     )?;
 
     let learned = checks

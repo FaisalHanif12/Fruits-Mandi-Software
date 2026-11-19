@@ -387,6 +387,8 @@ fn post_opening_capital(
         "opening_capital",
         OpeningDay::Open,
         counter,
+        // A new opening puts cash in, never takes it out, so no cash question can come up.
+        false,
     )
     .map_err(on_opening_capital)?;
     ctx.db.auditor().write(
@@ -735,6 +737,8 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
             .collect();
         let capital_month = repo::net_between(conn, &capitals, &month_start, &today_iso)?;
         let venture_month = repo::net_between(conn, &ventures, &month_start, &today_iso)?;
+        // The advances to sellers are read and replayed once for every partner (R1-4).
+        let advances = money::read_advances(conn)?;
         let net_of = |sums: Option<&repo::NetSums>| -> Result<Paisa, ServiceError> {
             let (dr, cr) = sums.map_or((0, 0), |s| (s.dr, s.cr));
             Paisa::try_from_paisa(cr)
@@ -784,7 +788,7 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
             // PRD C22, FR-17.9: everything he has in the firm, from the posted records.
             let record = repo::get(conn, id)?
                 .ok_or_else(|| ServiceError::Data("a partner of the list is missing".to_owned()))?;
-            let total = money::total_of(conn, &record, None)?;
+            let total = money::total_with(conn, &record, None, &advances)?;
             // The credit balance of his capital account; negative if it stands on the debit side.
             let capital = match capital_totals.get(&partner.capital_account_id) {
                 Some(totals) => ledger::signed(ledger::balance_of(*totals)?)?

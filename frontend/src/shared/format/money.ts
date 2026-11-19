@@ -138,6 +138,18 @@ export function formatPaisaValue(value: number, options: FormatPaisaOptions): st
 }
 
 /**
+ * An amount that arrived as a plain JSON number inside the values of a backend error (`cash_after_paisa`
+ * of `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`) as a `Paisa`, for a component that shows money (the cash box).
+ * It is the amount the backend sent, never worked out here. Null when the value is missing, is text, or is
+ * not a whole number of rupees, so a malformed value is never shown as money. It lives here because this
+ * file is the only one that looks inside a Paisa (Code Standards F3).
+ */
+export function paisaOfErrorValue(value: string | number | undefined): Paisa | null {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value % 100 !== 0) return null;
+  return value as unknown as Paisa;
+}
+
+/**
  * The height of a bar in a chart (plan 21, PRD FR-18.3): a number for the drawing only. It is never
  * added, shown or sent anywhere; every label on a chart is the text of `formatPaisa`. It lives here
  * because this file is the only one that looks inside a Paisa (Code Standards F3).

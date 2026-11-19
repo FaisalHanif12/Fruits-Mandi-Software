@@ -6,7 +6,7 @@
 // requests and answers.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -148,8 +148,12 @@ describe.each(LANGUAGES)('the short form of a new چکتا buyer (%s)', (languag
     await waitFor(() => {
       expect(accountApi.chuktaAdd).toHaveBeenCalledTimes(1);
     });
-    // The very request the backend's own test wrote.
-    expect(vi.mocked(accountApi.chuktaAdd).mock.calls[0]?.[0]).toEqual(CHUKTA_ADD_NASIR_REQUEST);
+    // The very request the backend's own test wrote, with the words he confirmed (none here: both names are
+    // in the word list, so nothing was marked, PRD FR-7.66).
+    expect(vi.mocked(accountApi.chuktaAdd).mock.calls[0]?.[0]).toEqual({
+      ...CHUKTA_ADD_NASIR_REQUEST,
+      confirmed_rules_words: [],
+    });
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledWith(CHUKTA_ADD_NASIR);
     });
@@ -175,6 +179,81 @@ describe.each(LANGUAGES)('the short form of a new چکتا buyer (%s)', (languag
       name_ur: 'ناصر',
       name_en: 'Nasir',
       phone: null,
+      confirmed_rules_words: [],
+    });
+  });
+
+  // A word that only the spelling rules made is confirmed on the screen before the save, and the backend is
+  // told which words he confirmed (`confirmed_rules_words`): it refuses a rule-made word that is not there with
+  // ERR_SPELLING_UNCONFIRMED (PRD FR-7.66; plan 80 R3-1).
+  describe('a name whose spelling only the rules made', () => {
+    beforeEach(() => {
+      vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+        Promise.resolve(
+          suggestionsFor(
+            {
+              toUrdu: { nadeem: ['ندیم'] },
+              toEnglish: { ندیم: 'Nadeem' },
+              rulesOnly: ['nadeem', 'ندیم'],
+            },
+            text,
+            direction,
+          ),
+        ),
+      );
+    });
+    const typedRuleName = language === 'ur' ? 'ندیم' : 'Nadeem';
+
+    it('is marked, asked before the save, and the confirmed words go with chukta_add', async () => {
+      const user = setup(language, { typed: typedRuleName });
+      const other = await field(
+        language,
+        language === 'ur' ? 'accounts-field-name-en' : 'accounts-field-name-ur',
+      );
+      await waitFor(() => {
+        expect(other.value).not.toBe('');
+      });
+      press('F10');
+      const confirm = await screen.findByRole('button', {
+        name: named(message(language, 'translit-spelling-confirm')),
+      });
+      // Nothing is saved while the question is open.
+      expect(accountApi.chuktaAdd).not.toHaveBeenCalled();
+      await user.click(confirm);
+      await waitFor(() => {
+        expect(accountApi.chuktaAdd).toHaveBeenCalledTimes(1);
+      });
+      // The word the rules made is the one in the name that was filled, not the one he typed: the English
+      // name in the Urdu app, the Urdu name in the English app.
+      expect(vi.mocked(accountApi.chuktaAdd).mock.calls[0]?.[0]).toEqual({
+        name_ur: 'ندیم',
+        name_en: 'Nadeem',
+        phone: null,
+        confirmed_rules_words: language === 'ur' ? ['Nadeem'] : ['ندیم'],
+      });
+    });
+
+    it('going back to fix the spelling saves nothing', async () => {
+      const user = setup(language, { typed: typedRuleName });
+      const other = await field(
+        language,
+        language === 'ur' ? 'accounts-field-name-en' : 'accounts-field-name-ur',
+      );
+      await waitFor(() => {
+        expect(other.value).not.toBe('');
+      });
+      press('F10');
+      // The button carries its key (Esc) in its name, so it is found by the start of its words.
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(
+        within(dialog).getByRole('button', {
+          name: (label) => visible(label).startsWith(message(language, 'common-back')),
+        }),
+      );
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+      });
+      expect(accountApi.chuktaAdd).not.toHaveBeenCalled();
     });
   });
 

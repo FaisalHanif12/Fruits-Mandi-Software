@@ -352,6 +352,9 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     expect((await labelled(language, 'day-reopen-date')).value).toBe('30-09-2026');
     await user.click(await labelled(language, 'day-reopen-reason'));
     await user.keyboard('Wrong rate');
+    // The plain reopen asks the Owner's sign too, like the reopen to fix an entry (plan 80 Q-R2-2, FR-21.4).
+    await user.click(await labelled(language, 'day-reopen-sign'));
+    await user.keyboard('adnan');
     await user.click(
       screen.getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
     );
@@ -363,7 +366,7 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
       within(dialog).getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
     );
     await waitFor(() => {
-      expect(dayApi.dayReopen).toHaveBeenCalledWith('30-09-2026', 'Wrong rate');
+      expect(dayApi.dayReopen).toHaveBeenCalledWith('30-09-2026', 'Wrong rate', 'adnan');
     });
     expect(
       (
@@ -375,6 +378,34 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     await waitFor(() => {
       expect(statusBar()).toContain(closedUpTo(language, '29-09-2026'));
     });
+  });
+
+  it('a reopen with a wrong or missing sign is refused at the sign field, nothing reopens and nothing typed is lost (plan 80 Q-R2-2)', async () => {
+    const { user } = await open();
+    vi.mocked(dayApi.dayReopen).mockRejectedValueOnce(
+      fail({ code: 'ERR_SIGN_WRONG', field: 'sign' }),
+    );
+    await user.click(await labelled(language, 'day-reopen-reason'));
+    await user.keyboard('Wrong rate');
+    await user.click(await labelled(language, 'day-reopen-sign'));
+    await user.keyboard('munshi');
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(
+      within(dialog).getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
+    );
+    const sign = await labelled(language, 'day-reopen-sign');
+    await waitFor(() => {
+      expect(sign).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(
+      await screen.findByText((text) => visible(text).includes(message(language, 'err-sign-wrong'))),
+    ).toBeInTheDocument();
+    expect(sign.value).toBe('munshi');
+    expect((await labelled(language, 'day-reopen-reason')).value).toBe('Wrong rate');
+    expect(statusBar()).toContain(closedUpTo(language, '30-09-2026'));
   });
 
   it('a reopen without a reason is refused at the reason field, and nothing typed is lost', async () => {

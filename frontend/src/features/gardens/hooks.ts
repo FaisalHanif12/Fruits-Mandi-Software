@@ -203,7 +203,14 @@ export function useGardenClosePreview(input: GardenCloseInput | null) {
 export function useCloseGarden() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: GardenCloseInput) => gardensClose(input),
+    // `confirmOwnerOwes` is the yes of the owner-owes box (PRD FR-12.51); the first try is asked without it.
+    mutationFn: ({
+      input,
+      confirmOwnerOwes,
+    }: {
+      input: GardenCloseInput;
+      confirmOwnerOwes: boolean;
+    }) => gardensClose(input, confirmOwnerOwes),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }

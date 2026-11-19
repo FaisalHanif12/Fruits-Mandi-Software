@@ -54,6 +54,7 @@ fn add_raw(
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.map(str::to_owned),
+            confirmed_rules_words: Vec::new(),
         },
     )
 }

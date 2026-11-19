@@ -256,6 +256,36 @@ pub struct CardWarning {
     pub amount_paisa: Option<Paisa>,
 }
 
+/// The other account of one person who is both a seller and a buyer, and the two balances added
+/// together (PRD E10, FR-10.2, gate finding T4-2). Read only: worked out in Rust from both ledgers,
+/// never by the screen, and nothing is posted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LinkedBalance {
+    /// The other account (the one this card's account is linked to, or the one linked to it).
+    #[ts(type = "number")]
+    pub account_id: i64,
+    /// Its full code.
+    pub code: String,
+    /// What kind of account it is (a seller or a buyer).
+    pub account_type: AccountType,
+    /// Its Urdu name.
+    pub name_ur: String,
+    /// Its English name.
+    pub name_en: String,
+    /// Its tag (نشان), or absent if none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
+    /// False when the other account is hidden from pickers. Its balance is still counted.
+    pub is_active: bool,
+    /// The balance of the other account now, with its side.
+    pub balance: Balance,
+    /// This account's balance and the other's added together as signed amounts (debit minus
+    /// credit), with the side it ends on. Example: a buyer account 2,880 بنام and a seller account
+    /// 10,160 جمع give 7,280 جمع.
+    pub combined: Balance,
+}
+
 /// Everything the card next to an account field shows (PRD FR-7.38). Read only. Balances come
 /// from the posted journal, never from the search index (Code Standards B27).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -312,6 +342,11 @@ pub struct PartyCard {
     pub advance_open: Option<Paisa>,
     /// Warnings, each shown with a word and a colour.
     pub warnings: Vec<CardWarning>,
+    /// The other account of the same person (a seller who is also a buyer) with the combined
+    /// balance (PRD E10). Left out when the account has no link; the TypeScript field is optional.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub linked: Option<LinkedBalance>,
 }
 
 /// Global search (`Ctrl+K`, PRD FR-5.4).

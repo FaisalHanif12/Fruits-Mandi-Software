@@ -367,6 +367,8 @@ const tripsDefaults = tripBooks.defaults();
 const READY_TRIP = plan78Real.GOODS_TO_LOAD_TRIP.rows[0];
 const READY_GARDEN = plan78Real.GOODS_TO_LOAD_GARDEN.rows[0];
 const READY_TODAY: ReadyGoods = {
+  // The card has these three rows in all (PRD FR-19.11); none when the real rows are not there.
+  total_count: READY_TRIP === undefined || READY_GARDEN === undefined ? 0 : 3,
   rows:
     READY_TRIP === undefined || READY_GARDEN === undefined
       ? []

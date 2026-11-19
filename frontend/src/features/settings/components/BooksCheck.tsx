@@ -53,8 +53,12 @@ function CheckCard({ title, children }: { title: ReactNode; children: ReactNode 
   );
 }
 
-/** One hash chain: ok, or the first entry that does not match its seal (or no entry named). */
-function ChainLine({ chain, kind }: { chain: ChainHealth; kind: 'journal' | 'audit' }) {
+/**
+ * One check of the books that names the first thing that does not match (or none): a hash chain, ok or the
+ * first entry that does not match its seal, and the money tables, ok or the first difference from the journal
+ * as the backend wrote it (NFR-SEC-6 v1.21).
+ */
+function ChainLine({ chain, kind }: { chain: ChainHealth; kind: 'journal' | 'audit' | 'tables' }) {
   if (chain.ok) {
     return (
       <Line tone="ok">
@@ -103,6 +107,7 @@ function BooksCard({ books }: { books: BooksHealth }) {
         <>
           <ChainLine chain={books.journal_chain} kind="journal" />
           <ChainLine chain={books.audit_chain} kind="audit" />
+          <ChainLine chain={books.tables} kind="tables" />
         </>
       ) : null}
     </CheckCard>

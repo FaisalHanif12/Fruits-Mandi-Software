@@ -904,6 +904,9 @@ bikri-undo-done = { -bikri } { $number } واپس لے لی گئی۔ اسے در
 bikri-undo-failed = محفوظ کیا ہوا اندراج واپس نہیں ہو سکا
 
 # review: pending
+bikri-undo-changed = یہ { -bikri } محفوظ کرنے کے بعد بدل چکی ہے، اس لیے اب واپس نہیں لی جا سکتی۔ اسے درست کرنے کے لیے پچھلی بکری کی فہرست سے کھولیں۔
+
+# review: pending
 bikri-undo-busy = آپ نے دوسری { -bikri } شروع کر دی ہے۔ پہلے اسے مکمل کریں یا صاف کریں، پھر واپس لیں۔
 
 ## Trip goods in the sale book (plan 16b, PRD 12.3, FR-12.26, FR-12.27).

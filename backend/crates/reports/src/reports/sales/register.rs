@@ -16,6 +16,8 @@
 //! 41,400, buyer totals 12,880 + 18,684 + 12,800 = 44,364. R3 has شاہد's line only (paid 12,800,
 //! left 0). R4 has اکرم's and ارشد's lines (paid 0, left 12,880 and 18,684).
 
+use std::sync::Arc;
+
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
@@ -226,6 +228,132 @@ pub(crate) fn totals_query(typed: &Typed, condition: Option<&'static str>) -> (S
     (sql, c.args().to_vec())
 }
 
+/// The count and the sums of the whole filter of a register, and the three questions that decide its
+/// optional columns (see [`run`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct RegisterTotals {
+    count: i64,
+    qty: i64,
+    value: i64,
+    total: i64,
+    with_grade: bool,
+    with_rate_diff: bool,
+    with_packing: bool,
+    paid: i64,
+}
+
+impl RegisterTotals {
+    fn as_tuple(self) -> (i64, i64, i64, i64, bool, bool, bool, i64) {
+        (
+            self.count,
+            self.qty,
+            self.value,
+            self.total,
+            self.with_grade,
+            self.with_rate_diff,
+            self.with_packing,
+            self.paid,
+        )
+    }
+
+    fn read(r: &mandi_db::rusqlite::Row<'_>) -> mandi_db::rusqlite::Result<Self> {
+        Ok(Self {
+            count: r.get(0)?,
+            qty: r.get(1)?,
+            value: r.get(2)?,
+            total: r.get(3)?,
+            with_grade: r.get(4)?,
+            with_rate_diff: r.get(5)?,
+            with_packing: r.get(6)?,
+            paid: r.get(7)?,
+        })
+    }
+}
+
+/// A date range with this many entries or more is read from the sale lines, not from the entries:
+/// for each entry the lines of the day are found by a search, and a search costs more than the
+/// line it finds, so a long range is cheaper to read as one scan of the lines (plan 80 gate: ten
+/// years took 2 seconds, and the same read again for every next page).
+const WIDE_ENTRIES: i64 = 50_000;
+
+/// True when the filter is the date range, the quality and the kind only: the filters that the
+/// covering index `idx_bikri_sales_register` (migration 0028) holds. A filter on a buyer, a seller,
+/// an item, a lot, a city or a بکری is selective and keeps its own search.
+fn is_plain(typed: &Typed) -> bool {
+    typed.party_id.is_none()
+        && typed.person_key.is_none()
+        && typed.seller_id.is_none()
+        && typed.zamindar_id.is_none()
+        && typed.bikri_id.is_none()
+        && typed.item_id.is_none()
+        && typed.lot_id.is_none()
+        && typed.item_group.is_none()
+        && typed.city_id.is_none()
+        && typed.adda_id.is_none()
+}
+
+/// True when the date range of the filter holds at least [`WIDE_ENTRIES`] journal entries. Reads at
+/// most that many entries of the date index.
+fn is_wide(conn: &Connection, typed: &Typed) -> Result<bool, ReportsError> {
+    let mut sql = String::from("SELECT COUNT(*) FROM (SELECT 1 FROM journal_entries WHERE 1 = 1");
+    let mut args: Vec<Value> = Vec::new();
+    if let Some(from) = &typed.from {
+        sql.push_str(" AND entry_date >= ?");
+        args.push(Value::Text(from.clone()));
+    }
+    if let Some(to) = &typed.to {
+        sql.push_str(" AND entry_date <= ?");
+        args.push(Value::Text(to.clone()));
+    }
+    sql.push_str(" LIMIT ?)");
+    args.push(Value::Integer(WIDE_ENTRIES));
+    let counted: i64 = conn.query_row(&sql, params_from_iter(args.iter()), |r| r.get(0))?;
+    Ok(counted >= WIDE_ENTRIES)
+}
+
+/// The totals of the whole filter as one scan of the sale lines (see [`WIDE_ENTRIES`]): the covering
+/// index `idx_bikri_sales_register` in the order of the entries' ids, each line's entry and lot
+/// looked up by their keys. The same lines as [`totals_query`] when [`is_plain`]: a line is in when
+/// it is active, its entry is posted and dated in the range. The packing question is
+/// `MIN <> MAX` of the lots' packings, which is the same as more than one distinct packing.
+pub(crate) fn wide_totals_query(
+    typed: &Typed,
+    condition: Option<&'static str>,
+) -> (String, Vec<Value>) {
+    let c = conds(typed, condition);
+    let sql = format!(
+        "SELECT COUNT(*), COALESCE(SUM(s.qty), 0), COALESCE(SUM(s.buyer_value_paisa), 0),
+                COALESCE(SUM(s.buyer_total_paisa), 0), COALESCE(MAX(s.grade IS NOT NULL), 0),
+                COALESCE(MAX(s.seller_rate_paisa <> s.buyer_rate_paisa), 0),
+                COALESCE(MIN(l.packing_id) <> MAX(l.packing_id), 0), COALESCE(SUM(s.paid_paisa), 0)
+         FROM bikri_sales s INDEXED BY idx_bikri_sales_register
+         CROSS JOIN journal_entries je ON je.id = s.journal_entry_id
+         CROSS JOIN bikri_lots l ON l.id = s.lot_id
+         WHERE {}",
+        c.sql()
+    );
+    (sql, c.args().to_vec())
+}
+
+/// The totals of the whole filter. The same for every page of it, so the first page works them out
+/// and the next pages take them from memory while the books are as they were (`result_cache`).
+fn totals_of(
+    conn: &Connection,
+    typed: &Typed,
+    condition: Option<&'static str>,
+) -> Result<Arc<RegisterTotals>, ReportsError> {
+    let wide = is_plain(typed) && is_wide(conn, typed)?;
+    let (sql, args) = if wide {
+        wide_totals_query(typed, condition)
+    } else {
+        totals_query(typed, condition)
+    };
+    let what = format!("register_totals|{sql}|{args:?}");
+    crate::result_cache::remembered(conn, &what, || {
+        Ok(conn.query_row(&sql, params_from_iter(args.iter()), RegisterTotals::read)?)
+    })
+}
+
 /// What was paid on the spot and what is left of a buyer total (PRD FR-12.44), from the stored
 /// columns: `left = total - paid` by one checked subtraction, shared with R5.
 fn paid_and_left(paid: i64, total: i64) -> Result<(Paisa, Paisa), ReportsError> {
@@ -275,7 +403,6 @@ pub(crate) fn run(
     kind: Kind,
 ) -> Result<ReportPage, ReportsError> {
     let condition = kind.condition();
-    let (totals_sql, totals_args) = totals_query(typed, condition);
     // `with_grade` is true when some line of the whole filter has a quality (PRD FR-12.42): then
     // every page of the register has the quality column after the item, so the columns do not
     // change from page to page. With no quality anywhere the register is exactly as it was.
@@ -286,27 +413,8 @@ pub(crate) fn run(
     // `with_packing` is true when the lines of the whole filter were sold in more than one packing: then
     // every page names the packing after the item, because the rate of an item in a peti is not the rate
     // of the same item in a crate (PRD FR-7.53, which keeps the last rate per item and packing).
-    let (count, qty, value, total, with_grade, with_rate_diff, with_packing, paid_total): (
-        i64,
-        i64,
-        i64,
-        i64,
-        bool,
-        bool,
-        bool,
-        i64,
-    ) = conn.query_row(&totals_sql, params_from_iter(totals_args.iter()), |r| {
-        Ok((
-            r.get(0)?,
-            r.get(1)?,
-            r.get(2)?,
-            r.get(3)?,
-            r.get(4)?,
-            r.get(5)?,
-            r.get(6)?,
-            r.get(7)?,
-        ))
-    })?;
+    let (count, qty, value, total, with_grade, with_rate_diff, with_packing, paid_total) =
+        totals_of(conn, typed, condition)?.as_tuple();
 
     let (page_sql, page_args) = page_query(typed, condition, spec.sql_limit(), spec.offset);
     let mut statement = conn.prepare(&page_sql)?;

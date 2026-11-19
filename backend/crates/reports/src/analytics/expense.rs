@@ -1,7 +1,7 @@
 //! View M, expenses by head, خرچہ مد وار (PRD 18.2, FR-18.6, FR-18.9, plan 77).
 //!
 //! One row for each shop expense head (دکان خرچہ, an account of head 05) with its net expense in
-//! each day, month or year of the period (`group_by`, month by default, at most 36 columns), and
+//! each day, month or year of the period (`group_by`, month by default, at most 144 columns), and
 //! the row total. The numbers are read from the journal, not from the sale facts (FR-18.6): the
 //! posted lines of the head, debit less credit, by the date of their entry, with the entries of a
 //! month close left out (they only move amounts between accounts, PRD FR-17.6). The conditions
@@ -50,7 +50,8 @@ use crate::reports::common::{Conds, add, amount_or_empty, paisa};
 use crate::reports::{Cell, ColumnKind, Names, PageSpec, Row, RowKind, RowSource};
 
 /// Most columns of view M.
-const MAX_PERIOD_COLUMNS: usize = 36;
+/// Most columns of view M: 144 periods, as view D (twelve years by month) (plan 80 gate).
+const MAX_PERIOD_COLUMNS: usize = 144;
 
 /// The conditions of the shop expense lines: posted entries of head 05 accounts, a month close
 /// left out, the dates of the run and, for the lines behind a number, the head and the days of
@@ -186,7 +187,7 @@ fn page_sql(read: ReadFrom, where_: &str) -> String {
 ///
 /// # Errors
 /// `ReportsError::Rejected` (`ERR_OUT_OF_RANGE`, `filters.group_by`) when there would be more
-/// than 36 columns; a database error; `ReportsError::Money`.
+/// than 144 columns; a database error; `ReportsError::Money`.
 pub(crate) fn run_m(
     conn: &Connection,
     typed: &Typed,

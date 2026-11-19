@@ -17,13 +17,15 @@
 //! | `dead_amount` | R38, the amount still owed |
 //! | `total_dues` | each of its four parts checked as above (the open money lent against the total of R32) |
 //!
-//! The other tiles have no second place and carry no check mark. `last_backup` is what the backup
-//! service says (passed in by the app): whether the cloud copy is on and how many hours old it is.
+//! The other tiles have no second place and carry no check mark. The tiles are those of the dashboard
+//! (PRD 9.1 v1.44), no more: there is no backup tile since v1.41 (the cloud copy's age is an item of
+//! the attention list), and `today_cash_sales` (آج کی نقدی) and `others_dues` (باغوں کے مالکوں /
+//! دوسروں کے ذمے) are in.
 //!
 //! Example (worked day): `today_sales.amount` is 41,400 in the tile and in view A: checked.
 
 use mandi_reports::analytics::{AnalyticsFilters, AnalyticsRunInput, AnalyticsView};
-use mandi_reports::dashboard::{self as narrow, BackupFacts, DashboardTiles, DuesParts, tiles_now};
+use mandi_reports::dashboard::{self as narrow, DashboardTiles, DuesParts, tiles_now};
 use mandi_reports::reports::{
     Cell, ReportFilters, ReportId, ReportRunInput, run as engine_run, run_dues_without_ages,
 };
@@ -382,18 +384,23 @@ fn tiles_node(
             "today_expenses",
             Node::obj(vec![("amount", plain(t.expenses_today_paisa))]),
         ),
-    ])
-}
-
-/// The tile `last_backup`: the cloud copy on or off and its age in hours (null when there is none).
-fn last_backup_node(backup: BackupFacts) -> Node {
-    Node::obj(vec![
-        ("cloud_on", Node::Bool(backup.cloud_on)),
+        // آج کی نقدی: the money buyers paid on the spot today and how many buyers paid (PRD 9.1,
+        // FR-9.8, FR-12.44). No second place.
         (
-            "age_hours",
-            backup
-                .cloud_age_hours
-                .map_or(Node::Null, |h| Node::Val(Val::Count(h))),
+            "today_cash_sales",
+            Node::obj(vec![
+                ("amount", plain(t.cash_sales_today_paisa)),
+                ("count", count(t.cash_sales_today_buyers)),
+            ]),
+        ),
+        // باغوں کے مالکوں / دوسروں کے ذمے: the open money lent to people who are not staff, and how
+        // many people (PRD 9.1, FR-16.13). A part of `money_lent_open` and of `total_dues`.
+        (
+            "others_dues",
+            Node::obj(vec![
+                ("amount", plain(t.others_dues_paisa)),
+                ("count", count(t.others_people_count)),
+            ]),
         ),
     ])
 }
@@ -401,16 +408,12 @@ fn last_backup_node(backup: BackupFacts) -> Node {
 /// The tool.
 pub fn run(env: &Env<'_>, _state: &State, args: &Json) -> Result<Draft, Stop> {
     let _: Input = input(args)?;
-    // The backup state is not read here (see the module doc): the facts say "no cloud copy".
     let now = tiles_now(env.ctx.db()).map_err(reports_stop)?;
     let today = now.today.clone();
     let sales = view_a_today(env, &today).map_err(|_| internal("view A"))?;
     let cash = cash_closing(env, &today).map_err(|_| internal("R12"))?;
     let dues = dues_places(env, &today).map_err(|_| internal("R20, R24, R32 or R38"))?;
-    let mut node = tiles_node(&now.tiles, sales, cash, &dues);
-    if let Node::Obj(fields) = &mut node {
-        fields.push(("last_backup".to_owned(), last_backup_node(env.backup)));
-    }
+    let node = tiles_node(&now.tiles, sales, cash, &dues);
     let mut draft = Draft::new("tiles", args.clone(), node);
     draft.source = Some(AnswerSource::Tiles {
         result_id: String::new(),

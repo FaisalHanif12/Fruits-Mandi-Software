@@ -160,14 +160,14 @@ pub(super) fn load(
         buyer,
         dr,
         cr,
-    } in base_rows(conn, from, filter)?
+    } in crate::prof::timed("fig.base_rows", || base_rows(conn, from, filter))?
     {
         let entry = data.entry((account_id, person)).or_default();
         entry.buyer = buyer;
         entry.base_dr = dr;
         entry.base_cr = cr;
     }
-    for row in ledger_rows(conn, from, to, filter)? {
+    for row in crate::prof::timed("fig.ledger_rows", || ledger_rows(conn, from, to, filter))? {
         let entry = data
             .entry((row.account_id, row.person.clone()))
             .or_default();
@@ -184,7 +184,7 @@ pub(super) fn load(
     // The lines of each party, by day. Keyed by the party first, so the loop below looks a party
     // up by the key it already holds and copies nothing.
     let mut buyer_by: DayMap<BuyerLine> = HashMap::new();
-    for line in buyer_lines(conn, from, to, filter)? {
+    for line in crate::prof::timed("fig.buyer_lines", || buyer_lines(conn, from, to, filter))? {
         buyer_by
             .entry((line.account_id, line.person.clone()))
             .or_default()
@@ -193,7 +193,7 @@ pub(super) fn load(
             .push(line);
     }
     let mut seller_by: DayMap<SellerLine> = HashMap::new();
-    for line in seller_lines(conn, from, to, filter)? {
+    for line in crate::prof::timed("fig.seller_lines", || seller_lines(conn, from, to, filter))? {
         seller_by
             .entry((line.account_id, line.person.clone()))
             .or_default()
@@ -202,7 +202,7 @@ pub(super) fn load(
             .push(line);
     }
     let mut charges_by: DayMap<LotCharges> = HashMap::new();
-    for charges in lot_charges(conn, from, to, filter)? {
+    for charges in crate::prof::timed("fig.lot_charges", || lot_charges(conn, from, to, filter))? {
         charges_by
             .entry((charges.account_id, charges.person.clone()))
             .or_default()
@@ -223,6 +223,7 @@ pub(super) fn load(
     }
 
     let asked = who.is_some();
+    let _loop = std::time::Instant::now(); // TEMP PROFILE
     let mut out = Figures::default();
     for (party_key, key) in &data {
         // A party with nothing on the books in the range and no line is not worked out.
@@ -301,6 +302,7 @@ pub(super) fn load(
             }
         }
     }
+    if std::env::var_os("MANDI_PROFILE").is_some() { eprintln!("PROF fig.loop: {:?}", _loop.elapsed()); } // TEMP PROFILE
     Ok(out)
 }
 

@@ -30,6 +30,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 
+use mandi_db::advances::Advances;
 use mandi_db::partners::{self as repo, PartnerRecord};
 use mandi_db::rusqlite::Connection;
 use mandi_db::statement as read;
@@ -139,6 +140,7 @@ fn events_of(
     conn: &Connection,
     partner: &PartnerRecord,
     days: read::Days<'_>,
+    advances: &Advances,
 ) -> Result<Vec<Event>, ServiceError> {
     let mut events = Vec::new();
     for row in read::share_events(conn, partner.id, days)? {
@@ -250,8 +252,8 @@ fn events_of(
         }
     }
     // PRD FR-17.13 (plan 78 B4): his parts of the advances to sellers, out and back, worked out from
-    // the advance matching. One line for each, so the running total always equals his کل رقم.
-    let advances = mandi_db::advances::read_all(conn).map_err(super::money::advance_error)?;
+    // the advance matching. One line for each, so the running total always equals his کل رقم. The
+    // events are read once by the request (R1-4), not for each partner or period.
     for e in advances
         .events
         .iter()
@@ -364,7 +366,9 @@ fn events_of(
 }
 
 /// His part of a loan of the shop: `split_by_bps` of the amount by the shares of the loan's day
-/// (PRD C10). None when those shares do not total 100%, so a note never breaks a statement.
+/// (PRD C10). None when no share was set that day, or when he had none that day (the note then has
+/// no part to show). Any other split error is returned, never swallowed: shares that do not total 100% or an overflow
+/// would be a wrong figure on a statement (plan 80 gate R1-6, Principle 4).
 fn loan_part(
     conn: &Connection,
     shares_by_day: &mut HashMap<String, Vec<(i64, mandi_domain::core::money::Bps)>>,
@@ -388,37 +392,59 @@ fn loan_part(
     let shares = shares_by_day
         .get(&note.entry_date)
         .map_or(&[][..], Vec::as_slice);
-    let Ok(parts) = split_by_bps(paisa(note.amount_paisa)?, shares) else {
+    if shares.is_empty() {
         return Ok(None);
-    };
+    }
+    let parts = split_by_bps(paisa(note.amount_paisa)?, shares).map_err(money_error)?;
     Ok(parts
         .into_iter()
         .find(|(id, _)| *id == partner_id)
         .map(|(_, part)| part.as_paisa()))
 }
 
-/// His part of the result of trip goods: `split_by_bps` of the result by the shares of the trip
-/// (PRD C10, C25; the shares of a trip cannot change after its first entry, FR-12.29). A negative
-/// result is split as positive and every part made negative (M9). None when the trip has no shares
-/// that total 100%, so a note never breaks a statement. Example (E2E-34): result 660 at 40 / 30 /
-/// 30 gives his 264.
+/// His part of the result of trip goods, as the real money (plan 80 gate Q-R1-2, PRD FR-17.12): his
+/// credit of this sale (C25: for a بکری lot his stored `lot_credit_parts` row, for a sale in another
+/// shop his line on his 0604 account, signed like the line, so a reversal is negative) less his part
+/// of the cost of the goods sold (C21), `split_by_bps(cost, the shares of the trip)`. So the note adds up with the credit he
+/// sees on his line. The shares of a trip cannot change after its first entry (FR-12.29).
+///
+/// Example (E2E-34, 40 / 30 / 30): sale 8,460, cost 7,800. His credit 3,384, his part of the cost
+/// 3,120, so his part is 264 (198 and 198 for the others, 660 in all). A reversal gives −264.
+///
+/// The cost part is the shares' split of one sale's cost, not what he paid for that sale. Each split
+/// rounds down and gives its leftover to the largest share, so the parts of the sales can differ
+/// from his real payments (C23, each payment split on its own) by up to about one rupee for each
+/// sale and each payment (and up to the number of partners less one in one split, for the largest
+/// share). The note carries no amount, so no total (C22) and no line moves.
+///
+/// None when the line has no trip or no credit to compare. A trip with no shares, a split that
+/// does not total 100% and an overflow are errors, never a missing figure.
 fn trip_result_part(
     facts: &Facts,
     partner_id: i64,
     venture_id: Option<i64>,
-    result: i64,
+    credit: Option<Paisa>,
+    cost: i64,
 ) -> Result<Option<i64>, ServiceError> {
     use mandi_domain::core::money::split_by_bps;
-    let Some(shares) = venture_id.and_then(|id| facts.trip_shares.get(&id)) else {
+    let (Some(venture_id), Some(credit)) = (venture_id, credit) else {
         return Ok(None);
     };
-    let Ok(parts) = split_by_bps(paisa(result)?, shares) else {
-        return Ok(None);
-    };
-    Ok(parts
+    let shares = facts
+        .trip_shares
+        .get(&venture_id)
+        .filter(|shares| !shares.is_empty())
+        .ok_or_else(|| data("a trip has no shares"))?;
+    let parts = split_by_bps(paisa(cost)?, shares).map_err(money_error)?;
+    // A credit for a partner who is not in the shares of his trip is a data error, not a cost of 0.
+    let (_, his_cost) = parts
         .into_iter()
         .find(|(id, _)| *id == partner_id)
-        .map(|(_, part)| part.as_paisa()))
+        .ok_or_else(|| {
+            data("a trip credit belongs to a partner who is not in the trip's shares")
+        })?;
+    let part = credit.checked_sub(his_cost).map_err(money_error)?;
+    Ok(Some(part.as_paisa()))
 }
 
 /// The facts that word the lines of one page, read in a few grouped queries.
@@ -735,7 +761,12 @@ fn draft_of(
                 draft
             }
         }
-        Kind::Venture => venture_draft(partner.id, facts, info, effective, voucher, negative)?,
+        Kind::Venture => venture_draft(
+            partner.id,
+            facts,
+            (info, effective, voucher),
+            (negative, event.amount),
+        )?,
         Kind::LotCredit { lot_id, share_bps } => {
             let info = info.ok_or_else(|| data("a trip credit has no entry"))?;
             let lot = facts
@@ -779,7 +810,8 @@ fn draft_of(
                 .number_value("result_paisa", result)
                 .number_value("share_bps", *share_bps);
             // His part of the result (plan 76 point 11, FR-17.12): shown in the trip note.
-            if let Some(part) = trip_result_part(facts, partner.id, venture_id, result)? {
+            if let Some(part) = trip_result_part(facts, partner.id, venture_id, event.amount, cost)?
+            {
                 draft = draft.number_value("part_paisa", part);
             }
             draft.secondary = Some(lot.bikri_number);
@@ -908,10 +940,12 @@ fn garden_close_values(
 fn venture_draft(
     partner_id: i64,
     facts: &Facts,
-    info: Option<&read::EntryInfo>,
-    effective: Option<&str>,
-    voucher: Option<&read::VoucherInfo>,
-    negative: bool,
+    (info, effective, voucher): (
+        Option<&read::EntryInfo>,
+        Option<&str>,
+        Option<&read::VoucherInfo>,
+    ),
+    (negative, credit): (bool, Option<Paisa>),
 ) -> Result<Draft, ServiceError> {
     use StatementDetail as D;
     use StatementHeading as H;
@@ -966,7 +1000,8 @@ fn venture_draft(
                     facts.part_shares.get(&entry.id).copied().unwrap_or(0),
                 );
             // His part of the result (plan 76 point 11, FR-17.12).
-            if let Some(part) = trip_result_part(facts, partner_id, Some(entry.venture_id), result)?
+            if let Some(part) =
+                trip_result_part(facts, partner_id, Some(entry.venture_id), credit, cost)?
             {
                 draft = draft.number_value("part_paisa", part);
             }
@@ -1095,10 +1130,11 @@ fn opening_before(
     conn: &Connection,
     partner: &PartnerRecord,
     first: &str,
+    advances: &Advances,
 ) -> Result<Paisa, ServiceError> {
     let date = BusinessDate::parse_iso(first).ok_or_else(|| data("a range starts on no day"))?;
     match date.previous_day() {
-        Some(before) => super::money::total_of(conn, partner, Some(&before.to_iso())),
+        Some(before) => super::money::total_with(conn, partner, Some(&before.to_iso()), advances),
         None => Ok(Paisa::ZERO),
     }
 }
@@ -1137,10 +1173,12 @@ pub fn statement(
             from: from.as_deref(),
             to: to.as_deref(),
         };
-        let events = events_of(conn, &partner, days)?;
+        // The advance events are read and replayed once for the whole request (R1-4).
+        let advances = super::money::read_advances(conn)?;
+        let events = events_of(conn, &partner, days, &advances)?;
         let mut month_acc = crate::page::MonthAcc::new(2);
         let opening = match from.as_deref() {
-            Some(first) => opening_before(conn, &partner, first)?,
+            Some(first) => opening_before(conn, &partner, first, &advances)?,
             None => Paisa::ZERO,
         };
         // The running total at every event, in checked Paisa.
@@ -1394,8 +1432,10 @@ pub fn statement_month(
             from: Some(&first_iso),
             to: Some(&last_iso),
         };
-        let events = events_of(conn, &partner, range)?;
-        let first_month = first_event_date(conn, &partner)?
+        // The advance events are read and replayed once for the whole request (R1-4).
+        let advances = super::money::read_advances(conn)?;
+        let events = events_of(conn, &partner, range, &advances)?;
+        let first_month = first_event_date_with(conn, &partner, &advances)?
             .and_then(|d| d.get(..7).map(str::to_owned))
             .unwrap_or_else(|| current.key());
         // Which 0604 lines are fruit: the source of their entries, read for the month only.
@@ -1410,7 +1450,7 @@ pub fn statement_month(
             .into_iter()
             .map(|(id, info)| (id, info.source_type))
             .collect();
-        let opening = opening_before(conn, &partner, &first_iso)?;
+        let opening = opening_before(conn, &partner, &first_iso, &advances)?;
         let mut running = opening;
         let mut days: BTreeMap<String, (Cols, bool, Paisa)> = BTreeMap::new();
         for event in &events {
@@ -1449,7 +1489,7 @@ pub fn statement_month(
         // Two ways to the same figure: what the sums of his records say moved in the month. The
         // lines above and these sums are different reads, so a month that does not add up is
         // an error and never a printed wrong figure.
-        let moved = super::money::movement_between(conn, &partner, &first_iso, &last_iso)?;
+        let moved = super::money::movement_with(conn, &partner, &first_iso, &last_iso, &advances)?;
         if opening.checked_add(moved).map_err(money_error)? != closing {
             return Err(data("the closing of a month is not his total at its end"));
         }
@@ -1553,6 +1593,18 @@ pub fn first_event_date(
     conn: &Connection,
     partner: &PartnerRecord,
 ) -> Result<Option<String>, ServiceError> {
+    first_event_date_with(conn, partner, &super::money::read_advances(conn)?)
+}
+
+/// [`first_event_date`] with the advance events already read by the request (R1-4).
+///
+/// # Errors
+/// `ServiceError::Db`.
+fn first_event_date_with(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    advances: &Advances,
+) -> Result<Option<String>, ServiceError> {
     let mut first: Option<String> = read::first_share_day(conn, partner.id)?;
     let mut keep = |day: Option<String>| {
         if let Some(day) = day
@@ -1574,7 +1626,6 @@ pub fn first_event_date(
     }
     keep(read::first_lot_credit_day(conn, partner.id)?);
     // His first part of an advance to a seller (PRD FR-17.13, plan 78 B4).
-    let advances = mandi_db::advances::read_all(conn).map_err(super::money::advance_error)?;
     keep(
         advances
             .events
@@ -1599,4 +1650,117 @@ pub fn first_event_date(
         keep(Some(note.date));
     }
     Ok(first)
+}
+
+#[cfg(test)]
+mod tests {
+    //! Plan 80 gate R1-6 and Q-R1-2: the notes of the statement show the real money and never hide a
+    //! split error.
+
+    use mandi_domain::core::money::Bps;
+
+    use super::*;
+
+    fn rs(rupees: i64) -> Paisa {
+        Paisa::from_rupees(rupees).unwrap()
+    }
+
+    fn shares(list: &[(i64, i32)]) -> Vec<(i64, Bps)> {
+        list.iter()
+            .map(|&(id, bps)| (id, Bps::new(bps).unwrap()))
+            .collect()
+    }
+
+    fn facts_with(trip: i64, list: &[(i64, i32)]) -> Facts {
+        let mut facts = Facts::default();
+        facts.trip_shares.insert(trip, shares(list));
+        facts
+    }
+
+    #[test]
+    fn the_trip_part_is_his_credit_less_his_part_of_the_cost() {
+        // E2E-34 at 40 / 30 / 30: sale 8,460, cost 7,800. His credit 3,384, his part of the cost
+        // 3,120, so his part is 264 (198 and 198 for the others, 660 in all).
+        let facts = facts_with(1, &[(1, 4_000), (2, 3_000), (3, 3_000)]);
+        let part = |partner, credit| {
+            trip_result_part(
+                &facts,
+                partner,
+                Some(1),
+                Some(rs(credit)),
+                rs(7_800).as_paisa(),
+            )
+            .unwrap()
+        };
+        assert_eq!(part(1, 3_384), Some(rs(264).as_paisa()));
+        assert_eq!(part(2, 2_538), Some(rs(198).as_paisa()));
+        assert_eq!(part(3, 2_538), Some(rs(198).as_paisa()));
+        // A reversal is the opposite: -3,384 and a cost of -7,800 give -264.
+        let back =
+            trip_result_part(&facts, 1, Some(1), Some(rs(-3_384)), rs(-7_800).as_paisa()).unwrap();
+        assert_eq!(back, Some(rs(-264).as_paisa()));
+    }
+
+    #[test]
+    fn the_trip_part_follows_the_credit_he_sees_where_split_of_the_result_differs() {
+        // The money agent's smallest case, 60 / 40: sale 3 rupees, cost 1 rupee. The credits are 2 and
+        // 1; the cost parts 1 and 0; the parts of the result 1 and 1 (they add up to the result 2). The
+        // old `split_by_bps(result = 2)` gave 2 and 0, which did not match his lines.
+        let facts = facts_with(1, &[(1, 6_000), (2, 4_000)]);
+        let part = |partner, credit| {
+            trip_result_part(&facts, partner, Some(1), Some(rs(credit)), rs(1).as_paisa()).unwrap()
+        };
+        assert_eq!(part(1, 2), Some(rs(1).as_paisa()));
+        assert_eq!(part(2, 1), Some(rs(1).as_paisa()));
+    }
+
+    #[test]
+    fn the_trip_part_says_nothing_without_a_trip_or_a_credit_and_fails_on_bad_data() {
+        let facts = facts_with(1, &[(1, 6_000), (2, 4_000)]);
+        assert_eq!(
+            trip_result_part(&facts, 1, None, Some(rs(1)), 0).unwrap(),
+            None
+        );
+        assert_eq!(trip_result_part(&facts, 1, Some(1), None, 0).unwrap(), None);
+        // A trip with no shares in the facts, or shares that do not total 100%, is an error and never
+        // a missing figure (R1-6).
+        assert!(trip_result_part(&facts, 1, Some(9), Some(rs(1)), 100).is_err());
+        let broken = facts_with(1, &[(1, 5_000), (2, 4_000)]);
+        assert!(trip_result_part(&broken, 1, Some(1), Some(rs(1)), 100).is_err());
+    }
+
+    fn note(date: &str) -> read::ShopLoanNote {
+        read::ShopLoanNote {
+            voucher_id: 1,
+            number: 1,
+            entry_date: date.to_owned(),
+            given: true,
+            amount_paisa: rs(10_000).as_paisa(),
+            person: (1, "00601".into(), "ا".into(), "A".into()),
+        }
+    }
+
+    #[test]
+    fn a_loan_part_is_none_only_when_no_share_was_set_that_day() {
+        let conn = Connection::open_in_memory().unwrap();
+        let mut by_day = HashMap::new();
+        // No share that day: no part to show.
+        by_day.insert("2026-10-10".to_owned(), Vec::new());
+        assert_eq!(
+            loan_part(&conn, &mut by_day, 1, &note("2026-10-10")).unwrap(),
+            None
+        );
+        // Shares that total 100%: his 40% of 10,000.
+        by_day.insert(
+            "2026-10-11".to_owned(),
+            shares(&[(1, 4_000), (2, 3_000), (3, 3_000)]),
+        );
+        assert_eq!(
+            loan_part(&conn, &mut by_day, 1, &note("2026-10-11")).unwrap(),
+            Some(rs(4_000).as_paisa())
+        );
+        // Shares that do not total 100% were swallowed as None before the fix; now it is an error.
+        by_day.insert("2026-10-12".to_owned(), shares(&[(1, 4_000), (2, 3_000)]));
+        assert!(loan_part(&conn, &mut by_day, 1, &note("2026-10-12")).is_err());
+    }
 }

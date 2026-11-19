@@ -5,11 +5,12 @@
 //! Example (PRD 18.4, view A): کیلا 3,928 of 5,448 is `(3,928 × 10,000 + 5,448 / 2) / 5,448 =
 //! 7,210`, shown as 72.10%.
 
-use mandi_core::money::Paisa;
+use mandi_core::money::{Paisa, hundredths};
 
 use crate::error::ReportsError;
 
-/// The whole in hundredths of a percent: 100.00%.
+/// The whole in hundredths of a percent: 100.00%. Used by the tests of this file.
+#[cfg(test)]
 pub(crate) const WHOLE: i64 = 10_000;
 
 fn data(what: &str) -> ReportsError {
@@ -17,7 +18,7 @@ fn data(what: &str) -> ReportsError {
 }
 
 /// `part` as hundredths of a percent of `total`: `(part × 10,000 + total / 2) / total` in `i128`
-/// with checked maths, whole numbers, half up. Paisa totals are multiples of 100, so paisa and
+/// with checked maths, whole numbers, half up, worked out by `mandi_core::money::hundredths`. Paisa totals are multiples of 100, so paisa and
 /// rupees give the same answer.
 ///
 /// Returns `None` when `total` is 0 or less (there is nothing to take a share of). The rows are
@@ -42,14 +43,8 @@ pub fn share_hundredths(part: Paisa, total: Paisa) -> Result<Option<i64>, Report
     if part.is_negative() || part > total {
         return Err(data("a share is outside 0 to 100 percent"));
     }
-    let part = i128::from(part.as_paisa());
-    let total = i128::from(total.as_paisa());
-    let value = part
-        .checked_mul(i128::from(WHOLE))
-        .and_then(|scaled| scaled.checked_add(total / 2))
-        .and_then(|scaled| scaled.checked_div(total))
-        .ok_or_else(|| data("a share does not fit"))?;
-    i64::try_from(value)
+    // The one "% of all" formula of the money agent, in `core` (Code Standards G6, M14).
+    hundredths(i128::from(part.as_paisa()), i128::from(total.as_paisa()))
         .map(Some)
         .map_err(|_| data("a share does not fit"))
 }

@@ -163,6 +163,21 @@ pub const COMMISSION_SPEED_SQL: &str = include_str!("../migrations/0024_commissi
 /// or chain hash changes.
 pub const GARDEN_ITEMS_SQL: &str = include_str!("../migrations/0025_garden_items.sql");
 
+/// Migration 26 (plan 80 gate Q-R4-1, PRD FR-12.29): goods arrived counts as an entry of a garden for
+/// locking its shares. Three triggers on `venture_partners`; no row, amount, id or chain hash changes.
+pub const GARDEN_SHARES_LOCK_ARRIVALS_SQL: &str =
+    include_str!("../migrations/0026_garden_shares_lock_arrivals.sql");
+
+/// Migration 27 (plan 80 gate Q-R2-1, PRD FR-7.70): a saved lot can be removed in an edit of the first
+/// posting of its بکری. One nullable column `bikri_lots.removed_at`; no row, amount, id or chain hash
+/// changes.
+pub const LOT_REMOVED_SQL: &str = include_str!("../migrations/0027_lot_removed.sql");
+
+/// Migration 28 (plan 80 gate, the speed fix loop, NFR-SPD-24): a covering index of the sale lines for
+/// the totals of the sales registers R2, R3 and R4. An index only: no table, column, row, amount, id
+/// or chain hash changes.
+pub const SPEED_GATE_SQL: &str = include_str!("../migrations/0028_speed_gate.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -200,6 +215,9 @@ pub fn migrations() -> Migrations<'static> {
         M::up_with_hook(LINKED_MONEY_SQL, linked_money_hook),
         M::up(COMMISSION_SPEED_SQL),
         M::up_with_hook(GARDEN_ITEMS_SQL, garden_items_hook),
+        M::up(GARDEN_SHARES_LOCK_ARRIVALS_SQL),
+        M::up(LOT_REMOVED_SQL),
+        M::up(SPEED_GATE_SQL),
     ])
 }
 

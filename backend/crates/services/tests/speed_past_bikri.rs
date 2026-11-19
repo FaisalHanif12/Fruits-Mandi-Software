@@ -115,6 +115,18 @@ fn add_bikri(path: &std::path::Path) -> i64 {
                'credit', 1, 0
         FROM b;
 
+        -- One posted fact for each line, and its reversal for each line of a cancelled بکری (PRD FR-18.7):
+        -- پچھلی بکری reads what was posted on a day from the facts (PRD FR-12.46, plan 80 R5-1).
+        INSERT INTO analytics_facts (journal_entry_id, entry_date, year, month, bikri_id, lot_id, sale_id,
+               item_id, seller_account_id, buyer_account_id, qty, seller_amount_paisa, seller_comm_paisa,
+               buyer_value_paisa, buyer_comm_paisa, laga_paisa, sign)
+        SELECT s.journal_entry_id, s.entry_date, CAST(substr(s.entry_date, 1, 4) AS INTEGER),
+               CAST(substr(s.entry_date, 6, 2) AS INTEGER), s.bikri_id, s.lot_id, s.id, l.item_id,
+               l.seller_account_id, s.buyer_account_id, s.qty, s.seller_amount_paisa, s.seller_comm_paisa,
+               s.buyer_value_paisa, s.buyer_comm_paisa, s.laga_paisa, g.sign
+        FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id JOIN bikri_entries e ON e.id = s.bikri_id
+             JOIN (SELECT 1 AS sign UNION ALL SELECT -1) g ON g.sign = 1 OR e.status = 'cancelled';
+
         -- A line of a cancelled بکری is not in force.
         UPDATE bikri_sales SET is_active = 0, ended = 'cancelled'
         WHERE bikri_id IN (SELECT id FROM bikri_entries WHERE status = 'cancelled');

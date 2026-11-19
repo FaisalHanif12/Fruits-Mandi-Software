@@ -144,6 +144,28 @@ fn refused_commands() -> Vec<(&'static str, Value)> {
             "partner_takes",
             json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
         ),
+        // Plan 80 gate R4-1 and R4-2: the fruit one partner took, and the lists of a partner's own
+        // money (the lists of every type leave those vouchers out instead, see the second test).
+        (
+            "fruit_list",
+            json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
+        ),
+        (
+            "vouchers_list",
+            json!({ "input": { "voucher_type": "personal_expense", "from": "", "to": "" } }),
+        ),
+        (
+            "vouchers_list",
+            json!({ "input": { "voucher_type": "personal_return", "from": "", "to": "" } }),
+        ),
+        (
+            "vouchers_list",
+            json!({ "input": { "voucher_type": "capital_in", "from": "", "to": "" } }),
+        ),
+        (
+            "vouchers_list",
+            json!({ "input": { "voucher_type": "capital_out", "from": "", "to": "" } }),
+        ),
         // The partner reports and views, in every way to ask for them.
         (
             "reports_run",
@@ -361,6 +383,15 @@ fn what_is_hidden_while_locked_comes_back_with_the_code() {
             (
                 "lent_dues",
                 h.ok("lent_dues", json!({ "input": {} }))["partner_locked"] == json!(true),
+            ),
+            // Plan 80 gate R4-1 and R4-2.
+            (
+                "fruit_list",
+                h.ok("fruit_list", json!({ "input": {} }))["partners_locked"] == json!(true),
+            ),
+            (
+                "assist_attention_overdue",
+                h.ok("assist_attention_overdue", json!({}))["partners_locked"] == json!(true),
             ),
             (
                 "vouchers_preview_expense",

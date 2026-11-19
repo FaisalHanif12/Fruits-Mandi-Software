@@ -2,6 +2,7 @@
 //! list of a day or a range, the find, and first / previous / next / last. Read only (Code
 //! Standards B29). Every number is a stored value: nothing is worked out again (B20).
 
+use mandi_db::bikri::posted;
 use mandi_db::bikri::saved::{self as repo, ListFilter};
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::bikri::{
@@ -215,10 +216,10 @@ fn prepare_list(today: BusinessDate, input: &BikriListInput) -> Result<Prepared,
         .sort
         .as_ref()
         .map(|s| {
-            s.order_by(&repo::SORT_COLUMNS).map(|order| {
+            s.order_by(&posted::SORT_COLUMNS).map(|order| {
                 // Rows of the same day follow the same direction by number.
                 if s.column == "entry_date" {
-                    format!("{order}, e.number {}", s.direction.sql())
+                    format!("{order}, number {}", s.direction.sql())
                 } else {
                     order
                 }
@@ -283,14 +284,15 @@ fn prepare_list(today: BusinessDate, input: &BikriListInput) -> Result<Prepared,
 /// one read snapshot), so every figure of the answer is of the same moment.
 fn read_list(conn: &Connection, prepared: &Prepared) -> Result<BikriList, ServiceError> {
     let filter = &prepared.filter;
-    let totals = repo::list_totals(conn, filter)?;
-    let mut rows = repo::list(conn, filter)?;
-    mark_rows(conn, &mut rows)?;
+    // A row is a بکری on a day it was posted (PRD FR-12.46, Umar 19-11-2026), so every figure is of
+    // the postings of that day and agrees with the tile آج کی بکری (FR-9.1, FR-6.1).
+    let totals = posted::totals(conn, filter)?;
+    let rows = mark_posted_rows(conn, posted::list(conn, filter)?)?;
     let paisa = |value: i64| Paisa::try_from_paisa(value).map_err(crate::error::money_error);
     // Month headings with their subtotals, over the whole filter (plan 38 R4).
     let mut months = Vec::new();
     if prepared.group_by_month && prepared.in_date_order {
-        for rec in repo::list_months(conn, filter)? {
+        for rec in posted::months(conn, filter)? {
             months.push(MonthSubtotal {
                 month: rec.month,
                 count: rec.count,
@@ -338,7 +340,7 @@ fn window_days(
     filter: &ListFilter,
     descending: bool,
 ) -> Result<Vec<BikriDay>, ServiceError> {
-    let recs = repo::list_days(conn, filter)?;
+    let recs = posted::days(conn, filter)?;
     let (Some(first), Some(last)) = (
         filter.from.as_deref().and_then(BusinessDate::parse_iso),
         filter.to.as_deref().and_then(BusinessDate::parse_iso),
@@ -545,6 +547,32 @@ pub fn find_page(
         mark_rows(conn, &mut rows)?;
         Ok(rows)
     })
+}
+
+/// Sets the flags of the rows of the list of postings and gives back the plain rows. The Edit and
+/// Cancel buttons work on the whole بکری, so the reopen and the month lock follow the day of its
+/// first posting, not the day of the row.
+fn mark_posted_rows(
+    conn: &Connection,
+    posted_rows: Vec<posted::PostedRow>,
+) -> Result<Vec<BikriListRow>, ServiceError> {
+    let ids: Vec<i64> = posted_rows.iter().map(|r| r.row.id).collect();
+    let marker = Marker::load(conn, EditEntity::Bikri, &ids)?;
+    Ok(posted_rows
+        .into_iter()
+        .map(|posted| {
+            let mut row = posted.row;
+            let mut flags = EntryFlags::open();
+            marker.mark(
+                row.id,
+                &posted.own_date,
+                row.status == BikriStatus::Saved,
+                &mut flags,
+            );
+            row.flags = flags;
+            row
+        })
+        .collect())
 }
 
 /// Sets the flags of the rows of a list (PRD FR-7.70, FR-7.71, FR-21.4): both buttons work on a

@@ -151,7 +151,7 @@ fn run(
     };
 
     let mut summary = vec![SummaryLine {
-        label_id: ids::OPENING_BALANCE.to_owned(),
+        label_id: ids::PERIOD_START_BALANCE.to_owned(),
         cell: balance_cell(opening),
     }];
     if id == ReportId::R14 {
@@ -205,6 +205,13 @@ fn run(
         label_id: ids::CLOSING_BALANCE.to_owned(),
         cell: balance_cell(closing),
     });
+    // The same person's other account, when the two are linked (PRD E10). Not for one person of
+    // چکتا کھاتہ, who has no link.
+    if person.is_none()
+        && let Some(line) = super::linked::combined_line(conn, account_id, closing, to)?
+    {
+        summary.push(line);
+    }
 
     Ok(ReportPage {
         group_above: None,

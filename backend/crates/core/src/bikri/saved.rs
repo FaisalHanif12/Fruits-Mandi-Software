@@ -729,10 +729,10 @@ pub struct BikriListInput {
 pub struct BikriList {
     /// This page, newest first.
     pub rows: Vec<BikriListRow>,
-    /// How many بکری match the filter, cancelled ones too.
+    /// How many rows (a بکری on a day it was posted) match the filter, cancelled ones too.
     #[ts(type = "number")]
     pub total_count: i64,
-    /// The sums over every matching بکری that is not cancelled, never over the page.
+    /// The sums over every matching row of a بکری that is not cancelled, never over the page.
     pub totals: BikriListTotals,
     /// The month subtotals over the whole filter (`qty_received`, `qty_sold`, `gross`, `net`,
     /// `buyer_total`), oldest month first or newest first as the list is. Empty unless
@@ -745,16 +745,20 @@ pub struct BikriList {
     pub days: Vec<BikriDay>,
 }
 
-/// One day of the window of the list of بکری (PRD 12.7, plan 72 P4): the heading of the day.
+/// One day of the window of the list of بکری (PRD 12.7, FR-12.46, plan 72 P4): the heading of the day.
 ///
-/// A بکری belongs to the day of its first posting (`entry_date`), and its خام بکری is the stored
-/// total of its lots over all its postings, later sales included. So a heading is the sum of the
-/// rows under it, except for a cancelled بکری that is shown: it counts in `count` and its row shows
-/// its own خام بکری, but the heading leaves that money out, like `totals.gross`. It is not the "sales posted on that day" of the dashboard tile or of R2: a later
-/// sale made on 11-11 of a lot first sold on 05-11 counts under 05-11 here, and under 11-11 there.
+/// A row of the list is a بکری on a day it was posted (the first save, a later sale, or a lot carried
+/// into a newer بکری), with the figures of that day's postings only (Umar, 19-11-2026, plan 80
+/// R5-1). So a heading is the sum of the rows under it, and the headings and the page total add up to
+/// the dashboard tile آج کی بکری, the commission page and R34, which read the same posted records
+/// (PRD FR-9.1, FR-6.1). A cancelled بکری that is shown counts in `count` and its row shows its
+/// lines as they stood when it was cancelled, but the heading leaves that money out, like
+/// `totals.gross`.
 ///
-/// Example: a day with two saved بکری of 29,400 and 12,000 خام بکری has `count` 2 and
-/// `gross_paisa` 4,140,000. A day with none has `count` 0 and `gross_paisa` 0.
+/// Example (E2E-16 and E2E-16b): 45 of 50 are sold on 10-10-26 and the last 5 on 11-10-26. The
+/// heading of 10-10-26 has `count` 1 and 26,500 rupees; the heading of 11-10-26 has `count` 1 and
+/// 2,800 rupees (the same بکری, listed on both days). A day with none has `count` 0 and
+/// `gross_paisa` 0.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct BikriDay {
     /// The day, `YYYY-MM-DD`.
@@ -808,6 +812,11 @@ pub struct LotName {
 
 /// One row of the list of بکری (PRD FR-12.7: number, time, truck, sellers, items, نگ, خام, صافی,
 /// buyer total, status). All sums are of stored values.
+///
+/// In پچھلی بکری (`bikri_list`) a row is a بکری on one day it was posted (PRD FR-12.46, plan 80
+/// R5-1): `entry_date` is that day, and the figures are those of that day's postings, so the same
+/// بکری can be a row on several days (its `id` is then the same). In the find (`bikri_find`) a row
+/// is the whole بکری and `entry_date` is its own first day.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct BikriListRow {
     /// Row id.
@@ -828,19 +837,21 @@ pub struct BikriListRow {
     pub items: Vec<RecordRef>,
     /// The names of its lots (PRD FR-12.45), in lot order: each lot's seller, item and counter.
     pub lots: Vec<LotName>,
-    /// نگ received over all its lots.
+    /// نگ received over all its lots. In پچھلی بکری: the lots first posted on this row's day (0 on
+    /// a later day).
     #[ts(type = "number")]
     pub qty_received: i64,
-    /// نگ sold over all its lots.
+    /// نگ sold over all its lots. In پچھلی بکری: sold on this row's day.
     #[ts(type = "number")]
     pub qty_sold: i64,
-    /// خام بکری.
+    /// خام بکری. In پچھلی بکری: of this row's day.
     #[ts(type = "Paisa")]
     pub gross: Paisa,
-    /// صافی بکری. Can be negative.
+    /// صافی بکری. Can be negative. In پچھلی بکری: this row's day's خام, less its seller commission,
+    /// less the lot charges when the lots were first posted on this day (a later sale has none).
     #[ts(type = "Paisa")]
     pub net: Paisa,
-    /// The buyer bills of its lines in force.
+    /// The buyer bills of its lines in force. In پچھلی بکری: of this row's day.
     #[ts(type = "Paisa")]
     pub buyer_total: Paisa,
     /// Saved or cancelled.

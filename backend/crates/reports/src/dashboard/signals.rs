@@ -10,9 +10,10 @@ use mandi_core::dates::BusinessDate;
 use mandi_db::purchases::{ListFilter, StateFilter};
 use mandi_db::rusqlite::{Connection, OptionalExtension};
 
+use super::charts::days_before;
 use super::model::{
     AttentionFirst, AttentionItem, AttentionKind, AttentionTarget, BACKUP_OLD_HOURS, BackupFacts,
-    STOCK_WAIT_DAYS,
+    RECORDS_DIFFER_DAYS, STOCK_WAIT_DAYS,
 };
 use crate::error::ReportsError;
 
@@ -268,8 +269,10 @@ pub(crate) fn names_missing(conn: &Connection) -> Result<Option<AttentionItem>, 
 }
 
 /// The daily check failed (PRD FR-7.44, NFR-OBS-5): read from the stored result `health_last`.
-/// It is on the list when the books do not balance, a hash chain does not match, the check could not
-/// run, or the data file failed its check. An old cloud copy is the item `BackupOld`, not this
+/// It is on the list when the books do not balance, a hash chain does not match, a money table
+/// differs from the journal (`books.tables.ok` false, plan 80 Q-T3-3; a result stored before that
+/// check has no `tables` and is not held against the books), the check could not run, or the data
+/// file failed its check. An old cloud copy is the item `BackupOld`, not this
 /// one. No result yet, or a good one, is no item.
 pub(crate) fn health_check(conn: &Connection) -> Result<Option<AttentionItem>, ReportsError> {
     let text: Option<String> = conn
@@ -294,11 +297,37 @@ pub(crate) fn health_check(conn: &Connection) -> Result<Option<AttentionItem>, R
     let books_good = flag(&["books", "ran"]) == Some(true)
         && flag(&["books", "balanced"]) == Some(true)
         && flag(&["books", "journal_chain", "ok"]) == Some(true)
-        && flag(&["books", "audit_chain", "ok"]) == Some(true);
+        && flag(&["books", "audit_chain", "ok"]) == Some(true)
+        && flag(&["books", "tables", "ok"]) != Some(false);
     let data_failed = value
         .get("data")
         .and_then(|d| d.get("state"))
         .and_then(serde_json::Value::as_str)
         == Some("failed");
     Ok((!books_good || data_failed).then(|| counted(AttentionKind::HealthCheck, 1)))
+}
+
+/// Questions of the assistant that ended with a difference between the two places of a figure, in
+/// the last [`RECORDS_DIFFER_DAYS`] days (PRD FR-7.76 point 2, FR-7.44). `count` is how many
+/// questions, `days` the age of the newest. No record to open: the screen links to the question log
+/// in Settings. A question asked exactly [`RECORDS_DIFFER_DAYS`] days ago is still listed.
+///
+/// Example: one question on 12-11-26 that ended `records_differ`: on 19-11-26 the item is listed
+/// (7 days); on 20-11-26 it is not.
+pub(crate) fn records_differ(
+    conn: &Connection,
+    today: BusinessDate,
+) -> Result<Option<AttentionItem>, ReportsError> {
+    let since = days_before(today, RECORDS_DIFFER_DAYS)?;
+    let (count, newest) = mandi_db::assistant::records_differ_since(conn, &since.to_iso())?;
+    if count <= 0 {
+        return Ok(None);
+    }
+    let mut item = counted(AttentionKind::RecordsDiffer, count);
+    // The question log keeps the day as a plain date; a day that does not read gives no age.
+    item.days = newest
+        .as_deref()
+        .and_then(BusinessDate::parse_iso)
+        .map(|day| today.days_after(day).max(0));
+    Ok(Some(item))
 }

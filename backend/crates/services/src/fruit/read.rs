@@ -133,7 +133,15 @@ fn optional_date(
 }
 
 /// One page of entries with the totals over the whole filter (B31). Read only.
+///
+/// While the partner section is locked (PRD FR-17.11, NFR-SEC-14, Code Standards S8) the list is
+/// the one of report R37: a request for one partner's fruit is refused with `ERR_PARTNER_LOCKED`,
+/// and a request for everyone lists the shop's guests' fruit only, with `partners_locked` true.
 pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, ServiceError> {
+    let locked = crate::partner_code::is_locked(ctx)?;
+    if locked && input.partner_id.is_some() {
+        return Err(ServiceError::reject(ErrorCode::ErrPartnerLocked));
+    }
     let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
     let from = optional_date(&mut errors, "from", input.from.as_ref(), today);
@@ -159,7 +167,8 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
         .is_none_or(|s| s.direction == SortDirection::Desc);
     let filter = ListFilter {
         partner_id: input.partner_id,
-        guests_only: input.guests_only,
+        // While the partner section is locked only the guests' fruit is listed (PRD FR-17.11, as R37).
+        guests_only: input.guests_only || locked,
         item_id: input.item_id,
         source: input.source.map(|s| s.as_str().to_owned()),
         from,
@@ -205,6 +214,7 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
                 value_paisa: paisa(value)?,
             },
             months,
+            partners_locked: locked,
         })
     })
 }

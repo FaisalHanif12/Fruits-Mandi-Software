@@ -2,7 +2,6 @@
 
 use mandi_core::bikri::{
     ChargeInput, ChargeSource, ChuktaInput, LineChargeInput, LineChargeMethod, LotChargeMethod,
-    RateHint, RateHintSource,
 };
 use mandi_core::error::{ErrorCode, ErrorValue};
 use mandi_core::money::Paisa;
@@ -408,10 +407,10 @@ fn cash_change_of_event_2_with_cash_paid_is_plus_7_800() {
     assert!(!cash::check(p(0), change).unwrap().needs_confirm);
 }
 
-// ---- Rate hint and remaining quantity (PRD FR-7.52, FR-7.53, E2E-26) ----
+// ---- Remaining quantity (PRD FR-7.52, E2E-26). The rate hint is retired (FR-7.53, v1.44). ----
 
 #[test]
-fn a_new_row_starts_at_the_remaining_quantity_with_the_rate_of_the_line_above() {
+fn a_new_row_starts_at_the_remaining_quantity() {
     let calc = run(&draft(vec![with(
         lot(RAHIM, BANANA, "50"),
         vec![sale(AKRAM, "20", "600"), blank("30")],
@@ -419,50 +418,6 @@ fn a_new_row_starts_at_the_remaining_quantity_with_the_rate_of_the_line_above() 
     let rows = &calc.lots[0].lines;
     assert_eq!(rows[0].remaining_qty, 50);
     assert_eq!(rows[1].remaining_qty, 30);
-    let hint = rows[1].rate_hint.as_ref().unwrap();
-    assert_eq!(
-        (r(hint.rate_paisa), hint.source),
-        (600, RateHintSource::ThisBikri)
-    );
-    // The first row has no earlier line to take a hint from.
-    assert!(rows[0].rate_hint.is_none());
-}
-
-#[test]
-fn a_saved_rate_is_the_hint_until_an_earlier_line_has_one() {
-    let mut lookups = lookups();
-    lookups.saved_hints.insert(
-        (BANANA, BOX),
-        RateHint {
-            rate_paisa: p(590),
-            source: RateHintSource::LastDay,
-            date: "2026-10-08".into(),
-        },
-    );
-    let calc = run_with(
-        &draft(vec![with(
-            lot(RAHIM, BANANA, "50"),
-            vec![blank("50"), sale(AKRAM, "20", "600"), blank("30")],
-        )]),
-        &lookups,
-        default_rules(),
-        switches(),
-    );
-    let rows = &calc.lots[0].lines;
-    assert_eq!(
-        rows[0]
-            .rate_hint
-            .as_ref()
-            .map(|h| (r(h.rate_paisa), h.source)),
-        Some((590, RateHintSource::LastDay))
-    );
-    assert_eq!(
-        rows[2]
-            .rate_hint
-            .as_ref()
-            .map(|h| (r(h.rate_paisa), h.source)),
-        Some((600, RateHintSource::ThisBikri))
-    );
 }
 
 #[test]

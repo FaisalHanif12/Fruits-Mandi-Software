@@ -73,6 +73,14 @@ pub(super) fn party_row(item: &Activity, party: &PartyRef) -> Result<Row, Report
     })
 }
 
+/// Every row of the all-parties table and its summary lines: the same for every page of the day,
+/// so the first page works them out and the next pages take them from memory while the books are
+/// as they were (`result_cache`, NFR-SPD-24).
+struct Whole {
+    rows: Vec<Row>,
+    summary: Vec<SummaryLine>,
+}
+
 /// The all-parties layout.
 pub(super) fn table(
     conn: &Connection,
@@ -80,6 +88,33 @@ pub(super) fn table(
     spec: PageSpec,
     day: &str,
 ) -> Result<ReportPage, ReportsError> {
+    // The rows depend on the day and on the collector only; the page (offset and limit) is cut
+    // from the whole below.
+    let what = format!("r35_table|{day}|{:?}", typed.collector_id);
+    let whole = crate::result_cache::remembered(conn, &what, || whole(conn, typed, day))?;
+    let rows = &whole.rows;
+    let mut resolved = typed.resolved.clone();
+    resolved.as_of = Some(day.to_owned());
+    Ok(ReportPage {
+        group_above: None,
+        tables: Vec::new(),
+        id: ReportId::R35,
+        title_id: ids::title_id("R35"),
+        filters: resolved,
+        columns: table_columns(),
+        total_count: count_of(rows.len()),
+        rows: spec.slice(rows),
+        offset: spec.offset,
+        limit: spec.reported_limit(),
+        totals_label_id: ids::TOTAL.to_owned(),
+        // No pinned totals row, as R34 (a row of empty cells, one for each column).
+        totals: vec![Cell::Empty; 7],
+        summary: whole.summary.clone(),
+    })
+}
+
+/// Every row and summary line of the all-parties table for the day.
+fn whole(conn: &Connection, typed: &Typed, day: &str) -> Result<Whole, ReportsError> {
     // People in the dead amount on this day (PRD FR-10.10, plan 40 D8): a row only on a day he has
     // an entry, marked ڈوبی; it is left out of the totals of its section, and a second total row
     // adds it back.
@@ -188,22 +223,5 @@ pub(super) fn table(
         summary.push(line(ids::R35_SELLERS_REMAINING, net_cell(sellers.end_net)?));
     }
 
-    let mut resolved = typed.resolved.clone();
-    resolved.as_of = Some(day.to_owned());
-    Ok(ReportPage {
-        group_above: None,
-        tables: Vec::new(),
-        id: ReportId::R35,
-        title_id: ids::title_id("R35"),
-        filters: resolved,
-        columns: table_columns(),
-        total_count: count_of(rows.len()),
-        rows: spec.slice(&rows),
-        offset: spec.offset,
-        limit: spec.reported_limit(),
-        totals_label_id: ids::TOTAL.to_owned(),
-        // No pinned totals row, as R34 (a row of empty cells, one for each column).
-        totals: vec![Cell::Empty; 7],
-        summary,
-    })
+    Ok(Whole { rows, summary })
 }

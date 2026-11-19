@@ -310,6 +310,99 @@ pub fn left_out_single_key_sql(controls: &[&str], before: &str) -> (String, Vec<
     (sql, binds.values)
 }
 
+/// With no more entries than this dated on or after the day, the balance before a day is the
+/// all-time sums less the lines of those few entries (see [`single_key_by_subtraction`]).
+const SUBTRACT_UP_TO_ENTRIES: i64 = 100_000;
+
+/// True when at most [`SUBTRACT_UP_TO_ENTRIES`] entries are dated on or after `day`. Reads at most that
+/// many entries of the date index.
+fn few_entries_from(conn: &Connection, day: &str) -> rusqlite::Result<bool> {
+    let counted: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM (SELECT 1 FROM journal_entries WHERE entry_date >= ?1 LIMIT ?2)",
+        rusqlite::params![day, SUBTRACT_UP_TO_ENTRIES.saturating_add(1)],
+        |r| r.get(0),
+    )?;
+    Ok(counted <= SUBTRACT_UP_TO_ENTRIES)
+}
+
+/// The balance before `before` of the accounts with one key, as the all-time sums less the lines of
+/// the posted entries dated on or after the day. The same sums as the left-out read
+/// ([`left_out_single_key_sql`]), found without looking up, for each of millions of lines, whether
+/// its entry is left out (plan 80 gate: a day near the end of ten years took 0.6 seconds and now takes
+/// the all-time pass, which is kept for the next read, and the lines of a day or a few). An account
+/// with no line before the day is not in the answer: it has no debit and no credit left, because
+/// every line has an amount.
+fn single_key_by_subtraction(
+    conn: &Connection,
+    controls: &[&str],
+    before: &str,
+    meta: &HashMap<i64, String>,
+) -> rusqlite::Result<Vec<PartyTotals>> {
+    let overflow = || broken("the balance before a day does not fit");
+    let mut binds = Binds::default();
+    let single = accounts_of(&mut binds, controls, false);
+    let day = binds.add(Value::Text(before.to_owned()));
+    // The lines of the posted entries to leave out, by account.
+    let sql = format!(
+        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         CROSS JOIN journal_lines l ON l.entry_id = e.id
+         WHERE e.status = 'posted' AND e.entry_date >= {day} AND l.account_id IN ({single})
+         GROUP BY l.account_id"
+    );
+    let mut after: HashMap<i64, (i64, i64)> = HashMap::new();
+    {
+        let mut statement = conn.prepare(&sql)?;
+        let rows = statement.query_map(params_from_iter(binds.values.iter()), |r| {
+            Ok((r.get::<_, i64>(0)?, (r.get::<_, i64>(1)?, r.get::<_, i64>(2)?)))
+        })?;
+        for row in rows {
+            let (account, sums) = row?;
+            after.insert(account, sums);
+        }
+    }
+    // The accounts with one key, to take the shared accounts out of the all-time sums.
+    let mut binds = Binds::default();
+    let shared_sql = format!(
+        "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
+         WHERE k.code IN ({}) AND a.is_chukta_khata = 1",
+        binds.add_texts(controls)
+    );
+    let mut shared: std::collections::HashSet<i64> = std::collections::HashSet::new();
+    {
+        let mut statement = conn.prepare(&shared_sql)?;
+        let rows = statement.query_map(params_from_iter(binds.values.iter()), |r| {
+            r.get::<_, i64>(0)
+        })?;
+        for row in rows {
+            shared.insert(row?);
+        }
+    }
+    let mut out = Vec::new();
+    // One control at a time, so each is the kept answer other reads of the same control use.
+    for control in controls {
+        for (account_id, totals) in crate::ledger::account_totals_in_controls(conn, &[control], None)? {
+            if shared.contains(&account_id) {
+                continue;
+            }
+            let (after_dr, after_cr) = after.get(&account_id).copied().unwrap_or((0, 0));
+            let dr = totals.dr_paisa.checked_sub(after_dr).ok_or_else(overflow)?;
+            let cr = totals.cr_paisa.checked_sub(after_cr).ok_or_else(overflow)?;
+            if dr == 0 && cr == 0 {
+                continue;
+            }
+            out.push(PartyTotals {
+                account_id,
+                person_key: String::new(),
+                control_code: meta.get(&account_id).cloned().unwrap_or_default(),
+                dr_paisa: dr,
+                cr_paisa: cr,
+            });
+        }
+    }
+    Ok(out)
+}
+
 /// The left-out read of the whole book (see [`BeforeMethod::LeftOut`]).
 fn totals_before_left_out(
     conn: &Connection,
@@ -336,7 +429,9 @@ fn totals_before_left_out(
     }
     let mut out: Vec<PartyTotals> = Vec::new();
     // Accounts with one key (no person): all-time sums less the entries to leave out.
-    {
+    if few_entries_from(conn, before)? {
+        out.extend(single_key_by_subtraction(conn, controls, before, &meta)?);
+    } else {
         let (sql, values) = left_out_single_key_sql(controls, before);
         let mut statement = conn.prepare(&sql)?;
         let rows = statement.query_map(params_from_iter(values.iter()), |r| {
@@ -497,6 +592,10 @@ pub const BULK_FROM_ACCOUNTS: usize = 200;
 /// whole app may use 400 MB, NFR-SPD-16). A file with more entries than this (NFR-SCL-1 has 1.2
 /// million, 12 MB) uses the line-by-line read.
 const MAX_DENSE_ENTRY_ID: i64 = 5_000_000;
+
+/// The line ids the bulk read can hold matched sums for: 8 bytes each, so this is 96 MB. A file with
+/// more lines than this (NFR-SCL-1 has 3.5 million, 28 MB) uses the line-by-line read.
+const MAX_DENSE_LINE_ID: i64 = 12_000_000;
 
 /// A hasher for integer keys: ids are small and spread, so one multiplication is enough. A map of
 /// 300,000 matched lines is built and read many times in one report, and the default hasher is made
@@ -756,15 +855,90 @@ pub const BUYER_DEBIT_LINES_SQL: &str =
 
 /// The bulk read of the open bills of ordinary buyers (see [`open_buyer_bills`]).
 fn open_bills_bulk(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<OpenBill>> {
-    let wanted: std::collections::HashSet<i64> = ids.iter().copied().collect();
-    // What the active matching rows take from each line, once for all lines.
-    let mut matched: IdMap<i64> = IdMap::default();
+    let mut found = Vec::new();
+    let done = for_each_open_bill_bulk(conn, ids, |bill| {
+        let date = std::str::from_utf8(&bill.date)
+            .map_err(|_| broken("an entry date is not text"))?
+            .to_owned();
+        found.push(OpenBill {
+            line_id: bill.line_id,
+            account_id: bill.account_id,
+            person_key: None,
+            entry_id: bill.entry_id,
+            entry_date: date,
+            open_paisa: bill.open,
+        });
+        Ok(())
+    })?;
+    match done {
+        Bulk::Done => Ok(found),
+        // A file with more entries than the dense list holds is read line by line.
+        Bulk::TooManyEntries => open_bills_per_line(conn, ids),
+    }
+}
+
+/// One open bill as the bulk read sees it, before anything is made of it.
+struct BulkBill {
+    account_id: i64,
+    entry_id: i64,
+    line_id: i64,
+    /// The day of the entry, `YYYY-MM-DD`, exactly 10 bytes.
+    date: [u8; 10],
+    /// What is still open: the debit less what the active matching rows take, paisa.
+    open: i64,
+}
+
+/// How [`for_each_open_bill_bulk`] ended.
+enum Bulk {
+    Done,
+    TooManyEntries,
+}
+
+/// The one pass of the bulk read: calls `visit` for every open bill of the requested ordinary buyers
+/// (see [`open_buyer_bills`] for what is open), in the order of the covering index of the amounts,
+/// and builds nothing else. A file with a million open bills must not make a million objects.
+fn for_each_open_bill_bulk(
+    conn: &Connection,
+    ids: &[i64],
+    mut visit: impl FnMut(&BulkBill) -> rusqlite::Result<()>,
+) -> rusqlite::Result<Bulk> {
+    // The accounts asked for, as a list of flags by account id (ids are small and dense).
+    let max_account = ids.iter().copied().max().unwrap_or(0);
+    let wanted_size = usize::try_from(max_account.saturating_add(1)).map_err(|_| broken("account ids"))?;
+    if max_account > MAX_DENSE_ENTRY_ID {
+        return Ok(Bulk::TooManyEntries);
+    }
+    let mut wanted: Vec<bool> = vec![false; wanted_size];
+    for id in ids {
+        let slot = usize::try_from(*id)
+            .ok()
+            .and_then(|i| wanted.get_mut(i))
+            .ok_or_else(|| broken("an account id"))?;
+        *slot = true;
+    }
+    // What the active matching rows take from each line, once for all lines, by line id. Line ids are
+    // dense too (one per journal line), so a list by id costs a few nanoseconds for each of the
+    // millions of lookups where a hash map costs a few tens.
+    let max_line: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(id), 0) FROM journal_lines",
+        [],
+        |r| r.get(0),
+    )?;
+    if max_line > MAX_DENSE_LINE_ID {
+        return Ok(Bulk::TooManyEntries);
+    }
+    let line_size = usize::try_from(max_line.saturating_add(1)).map_err(|_| broken("line ids"))?;
+    let mut matched: Vec<i64> = vec![0; line_size];
     {
         let mut statement = conn.prepare(MATCHED_SUMS_SQL)?;
-        let rows = statement.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))?;
-        for row in rows {
-            let (line, sum) = row?;
-            matched.insert(line, sum);
+        let mut rows = statement.query([])?;
+        while let Some(row) = rows.next()? {
+            let (line, sum): (i64, i64) = (row.get(0)?, row.get(1)?);
+            let slot = usize::try_from(line)
+                .ok()
+                .and_then(|i| matched.get_mut(i))
+                .ok_or_else(|| broken("a matching row names a line that is not there"))?;
+            *slot = sum;
         }
     }
     // The entries that are not live: not posted, a reversal, or reversed by a posted reversal. The
@@ -790,7 +964,7 @@ fn open_bills_bulk(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<OpenB
         |r| r.get(0),
     )?;
     if max_id > MAX_DENSE_ENTRY_ID {
-        return open_bills_per_line(conn, ids);
+        return Ok(Bulk::TooManyEntries);
     }
     let size = usize::try_from(max_id.saturating_add(1)).map_err(|_| broken("entry ids"))?;
     let mut dates: Vec<[u8; 10]> = vec![[0; 10]; size];
@@ -817,33 +991,134 @@ fn open_bills_bulk(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<OpenB
     // The debit lines of the ordinary buyers, from the covering index; the ones asked for are joined.
     let mut statement = conn.prepare(BUYER_DEBIT_LINES_SQL)?;
     let mut rows = statement.query([])?;
-    let mut found = Vec::new();
     while let Some(row) = rows.next()? {
         let account_id: i64 = row.get(0)?;
-        if !wanted.contains(&account_id) {
+        let is_wanted = usize::try_from(account_id)
+            .ok()
+            .and_then(|i| wanted.get(i))
+            .copied()
+            .unwrap_or(false);
+        if !is_wanted {
             continue;
         }
         let (entry_id, line_id, dr): (i64, i64, i64) = (row.get(1)?, row.get(2)?, row.get(3)?);
-        let taken = matched.get(&line_id).copied().unwrap_or(0);
+        let taken = usize::try_from(line_id)
+            .ok()
+            .and_then(|i| matched.get(i))
+            .copied()
+            .unwrap_or(0);
         if dr <= taken || not_live.contains(&entry_id) {
             continue;
         }
         let date = usize::try_from(entry_id)
             .ok()
             .and_then(|i| dates.get(i))
-            .and_then(|d| std::str::from_utf8(d).ok())
-            .filter(|d| !d.starts_with('\0'))
+            .filter(|d| d[0] != 0)
             .ok_or_else(|| broken("a line is on an entry that is not there"))?;
-        found.push(OpenBill {
-            line_id,
+        visit(&BulkBill {
             account_id,
-            person_key: None,
             entry_id,
-            entry_date: date.to_owned(),
-            open_paisa: dr
+            line_id,
+            date: *date,
+            open: dr
                 .checked_sub(taken)
                 .ok_or_else(|| broken("a bill is matched for more than it holds"))?,
+        })?;
+    }
+    Ok(Bulk::Done)
+}
+
+/// The three days that divide the ages of the open bills into four bands (`today` less 7, 30 and 90
+/// days, `YYYY-MM-DD`): a bill dated on or after the first is 0 to 7 days old (a bill dated after
+/// today too), on or after the second 8 to 30, on or after the third 31 to 90, else 91 days or more.
+#[derive(Debug, Clone, Copy)]
+pub struct AgeCuts<'a> {
+    /// Today less 7 days.
+    pub seven: &'a str,
+    /// Today less 30 days.
+    pub thirty: &'a str,
+    /// Today less 90 days.
+    pub ninety: &'a str,
+}
+
+/// The open bills of one ordinary buyer added up by age, without the bills themselves.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgedBuyer {
+    /// The buyer's account.
+    pub account_id: i64,
+    /// The day of his oldest open bill, `YYYY-MM-DD`.
+    pub oldest: String,
+    /// The open amounts, paisa, of the bills 0 to 7, 8 to 30, 31 to 90 and 91 or more days old.
+    pub bands: [i64; 4],
+}
+
+/// The open bills of ordinary buyers added up by age band and oldest day, in one pass. The same
+/// bills as [`open_buyer_bills`] gives for these buyers, only never made into objects: with a million
+/// open bills (the NFR-SCL-1 volume with a few payments) the objects cost more than the rest of the
+/// read together. `None` when the bulk read cannot be used (a person key on an ordinary buyer, or
+/// more entries than the dense list holds): the caller reads the bills line by line then.
+///
+/// # Errors
+/// Any SQLite error; an amount that does not fit.
+pub fn open_buyer_ages_bulk(
+    conn: &Connection,
+    ids: &[i64],
+    cuts: AgeCuts<'_>,
+) -> rusqlite::Result<Option<Vec<AgedBuyer>>> {
+    let mut unique: Vec<i64> = ids.to_vec();
+    unique.sort_unstable();
+    unique.dedup();
+    let ordinary = ordinary_buyers(conn, &unique)?;
+    if unique.iter().any(|id| !ordinary.contains(id))
+        || !person_keys_only_on_shared(conn, &[mandi_core::accounts::BUYER_CONTROL])?
+    {
+        return Ok(None);
+    }
+    let cut = |text: &str| -> rusqlite::Result<[u8; 10]> {
+        text.as_bytes()
+            .try_into()
+            .map_err(|_| broken("a day is not 10 characters"))
+    };
+    let (seven, thirty, ninety) = (cut(cuts.seven)?, cut(cuts.thirty)?, cut(cuts.ninety)?);
+    let mut by_account: IdMap<([u8; 10], [i64; 4])> = IdMap::default();
+    let done = for_each_open_bill_bulk(conn, &unique, |bill| {
+        let band = if bill.date >= seven {
+            0
+        } else if bill.date >= thirty {
+            1
+        } else if bill.date >= ninety {
+            2
+        } else {
+            3
+        };
+        let slot = by_account
+            .entry(bill.account_id)
+            .or_insert((bill.date, [0; 4]));
+        if bill.date < slot.0 {
+            slot.0 = bill.date;
+        }
+        let amount = slot
+            .1
+            .get_mut(band)
+            .ok_or_else(|| broken("an age band"))?;
+        *amount = amount
+            .checked_add(bill.open)
+            .ok_or_else(|| broken("the open bills of a buyer do not fit"))?;
+        Ok(())
+    })?;
+    if matches!(done, Bulk::TooManyEntries) {
+        return Ok(None);
+    }
+    let mut out: Vec<AgedBuyer> = Vec::with_capacity(by_account.len());
+    for (account_id, (oldest, bands)) in by_account {
+        out.push(AgedBuyer {
+            account_id,
+            oldest: std::str::from_utf8(&oldest)
+                .map_err(|_| broken("an entry date is not text"))?
+                .to_owned(),
+            bands,
         });
     }
-    Ok(found)
+    out.sort_by_key(|a| a.account_id);
+    Ok(Some(out))
 }

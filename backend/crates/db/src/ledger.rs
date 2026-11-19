@@ -561,6 +561,34 @@ pub fn account_totals(
     conn: &Connection,
     as_of: Option<&str>,
 ) -> rusqlite::Result<Vec<(i64, Totals)>> {
+    // The answer is the same for every page of the account index and the trial balance, and for every
+    // screen that asks again, until a journal line is written, so it is kept (the memory of
+    // `crate::memo`, plan 80 gate, NFR-SPD-24): the first page pays for the pass over the 5.5
+    // million lines, the next pages do not.
+    //
+    // Only while no entry is waiting as a draft: the kept answer is valid while no line is written, and
+    // posting a draft writes no line, so with a draft in the file the sums are read again each time.
+    if unposted_entries_exist(conn)? {
+        return read_account_totals(conn, as_of);
+    }
+    let what = format!("account_totals:{}", as_of.unwrap_or("-"));
+    let rows = crate::memo::account_rows(conn, &what, || {
+        Ok(read_account_totals(conn, as_of)?
+            .into_iter()
+            .map(|(id, t)| (id, t.dr_paisa, t.cr_paisa))
+            .collect())
+    })?;
+    Ok(rows
+        .iter()
+        .map(|&(id, dr_paisa, cr_paisa)| (id, Totals { dr_paisa, cr_paisa }))
+        .collect())
+}
+
+/// The query behind [`account_totals`].
+fn read_account_totals(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
     let all_posted = as_of.is_none() && !unposted_entries_exist(conn)?;
     let sql = if all_posted {
         ACCOUNT_TOTALS_ALL_POSTED_SQL.to_owned()

@@ -1389,10 +1389,11 @@ fn a_page_of_a_grouped_sale_view_is_that_part_of_all_its_rows() {
 }
 
 #[test]
-fn view_d_refuses_a_closed_range_of_more_than_36_periods_from_its_dates() {
+fn view_d_refuses_a_closed_range_of_more_than_144_periods_from_its_dates() {
     // Robustness finding 2 (D): ten years by month was read in full and refused two seconds later. The
     // periods of a closed range are counted from its dates, so even a range with sales in one month
-    // only is refused before a fact is read.
+    // only is refused before a fact is read. Plan 80 gate: the cap is 144 periods (twelve years by
+    // month, PRD 18.2 view D: one column for each month); it was 36, which refused five years.
     let w = worked_day();
     events_1_to_4(&w);
     let d = |from: &str, to: &str, group: Option<AnalyticsGroupBy>| {
@@ -1420,24 +1421,28 @@ fn view_d_refuses_a_closed_range_of_more_than_36_periods_from_its_dates() {
         other => panic!("expected a refusal, got {other:?}"),
     };
     let group_by = vec![(ErrorCode::ErrOutOfRange, "filters.group_by".to_owned())];
-    // 2020 to October 2026 by month (82 months), by default (month) and by day.
+    // Twelve years and a month by month (145 months), by default (month) and by day over 283 days.
     assert_eq!(
-        refused_at(d("01-01-2020", "10-10-2026", Some(AnalyticsGroupBy::Month))),
+        refused_at(d("01-10-2014", "10-10-2026", Some(AnalyticsGroupBy::Month))),
         group_by
     );
-    assert_eq!(refused_at(d("01-01-2020", "10-10-2026", None)), group_by);
+    assert_eq!(refused_at(d("01-10-2014", "10-10-2026", None)), group_by);
     assert_eq!(
         refused_at(d("01-01-2026", "10-10-2026", Some(AnalyticsGroupBy::Day))),
         group_by
     );
-    // 37 months are refused, 36 are read; the same years by year are read.
+    // 144 months are read (ten years and the 121 months of the 10-year volume, and five years by
+    // month, which the cap of 36 used to refuse), 145 are refused; the same years by year are read.
+    assert!(d("01-11-2014", "10-10-2026", Some(AnalyticsGroupBy::Month)).is_ok());
+    assert!(d("11-10-2016", "10-10-2026", Some(AnalyticsGroupBy::Month)).is_ok());
+    assert!(d("01-10-2021", "10-10-2026", Some(AnalyticsGroupBy::Month)).is_ok());
+    assert!(d("01-01-2020", "10-10-2026", Some(AnalyticsGroupBy::Year)).is_ok());
+    // 144 days are read, 145 are refused.
+    assert!(d("20-05-2026", "10-10-2026", Some(AnalyticsGroupBy::Day)).is_ok());
     assert_eq!(
-        refused_at(d("01-10-2023", "10-10-2026", Some(AnalyticsGroupBy::Month))),
+        refused_at(d("19-05-2026", "10-10-2026", Some(AnalyticsGroupBy::Day))),
         group_by
     );
-    assert!(d("01-11-2023", "10-10-2026", Some(AnalyticsGroupBy::Month)).is_ok());
-    assert!(d("01-01-2020", "10-10-2026", Some(AnalyticsGroupBy::Year)).is_ok());
-    assert!(d("05-09-2026", "10-10-2026", Some(AnalyticsGroupBy::Day)).is_ok());
 }
 
 #[test]

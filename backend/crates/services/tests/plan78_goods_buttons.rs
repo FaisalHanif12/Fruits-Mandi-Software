@@ -25,7 +25,15 @@ fn a_button_has_a_count_only_when_its_kind_of_goods_is_left() {
     let w = worked_day();
     assert_eq!(sources(&w), (0, 0, 0));
     for kind in [VentureKind::Trip, VentureKind::Garden] {
-        let card = bikri::goods_to_load(&w.env.ctx, &GoodsToLoadInput { kind }).unwrap();
+        let card = bikri::goods_to_load(
+            &w.env.ctx,
+            &GoodsToLoadInput {
+                kind,
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap();
         assert!(card.rows.is_empty(), "{kind:?}");
     }
 
@@ -45,6 +53,8 @@ fn a_button_has_a_count_only_when_its_kind_of_goods_is_left() {
         &w.env.ctx,
         &GoodsToLoadInput {
             kind: VentureKind::Garden,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -67,6 +77,8 @@ fn a_button_has_a_count_only_when_its_kind_of_goods_is_left() {
         &w.env.ctx,
         &GoodsToLoadInput {
             kind: VentureKind::Trip,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -82,6 +94,8 @@ fn the_trip_card_lists_a_purchase_with_goods_left() {
         &w.env.ctx,
         &GoodsToLoadInput {
             kind: VentureKind::Trip,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -92,4 +106,71 @@ fn the_trip_card_lists_a_purchase_with_goods_left() {
     assert!(card.rows[0].trip.is_some());
     // An own lot never has a balance in باقی مال: the count of lots stays 0.
     assert_eq!(sources(&w).0, 0);
+}
+
+/// Plan 80 R2-5 (PRD FR-12.50, FR-19.11, Code Standards B31): a card of goods to load comes a page at a
+/// time with the count of the whole card, so every row can be reached (it stopped at 100 rows before).
+/// Three arrivals of one garden, oldest day to sell first: page 1 of 2 rows, page 2 of 1 row, a page
+/// past the end is empty, and the count is 3 in all of them.
+#[test]
+fn a_card_of_goods_is_paged_with_the_count_of_the_whole_card() {
+    use mandi_services::core::arrivals::ArrivalInput;
+    let w = worked_day();
+    let (_account, first) = garden_with_arrival(&w, "10", "20-10-2026");
+    for (qty, sell_date) in [("20", "15-10-2026"), ("30", "25-10-2026")] {
+        mandi_services::gardens::arrivals::save(
+            &w.env.ctx,
+            &w.owner,
+            &ArrivalInput {
+                garden_id: Some(first.garden.id),
+                date: "10-10-2026".into(),
+                sell_date: Some(sell_date.into()),
+                item_id: Some(w.banana),
+                packing_id: Some(w.box_),
+                qty: qty.into(),
+                weight: None,
+                note: None,
+            },
+        )
+        .unwrap();
+    }
+    let page = |offset: u32, limit: u32| {
+        let card = bikri::goods_to_load(
+            &w.env.ctx,
+            &GoodsToLoadInput {
+                kind: VentureKind::Garden,
+                offset,
+                limit,
+            },
+        )
+        .unwrap();
+        (
+            card.rows
+                .iter()
+                .map(|r| (r.sell_date.clone(), r.qty_left))
+                .collect::<Vec<_>>(),
+            card.total_count,
+        )
+    };
+    let all = page(0, 0);
+    assert_eq!(
+        all,
+        (
+            vec![
+                ("2026-10-15".to_owned(), 20),
+                ("2026-10-20".to_owned(), 10),
+                ("2026-10-25".to_owned(), 30)
+            ],
+            3
+        )
+    );
+    assert_eq!(
+        page(0, 2),
+        (
+            vec![("2026-10-15".to_owned(), 20), ("2026-10-20".to_owned(), 10)],
+            3
+        )
+    );
+    assert_eq!(page(2, 2), (vec![("2026-10-25".to_owned(), 30)], 3));
+    assert_eq!(page(3, 2), (Vec::new(), 3));
 }

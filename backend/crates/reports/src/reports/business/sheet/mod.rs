@@ -49,6 +49,7 @@ use mandi_db::rusqlite::{Connection, params};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) mod activity;
+pub use activity::{DayActivity, day_activities};
 mod collection_sheet;
 mod day_tables;
 mod figures;

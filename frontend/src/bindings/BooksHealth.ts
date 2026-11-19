@@ -28,6 +28,12 @@ export type BooksHealth = {
    */
   audit_chain: ChainHealth;
   /**
+   * The money tables against the journal: the sale lines, lot totals, partner share rows, stock
+   * moves and analytics facts (NFR-SEC-6 v1.21). `at` is the first table and record that
+   * differs, with no amount.
+   */
+  tables: ChainHealth;
+  /**
    * Posted journal entries.
    */
   journal_entries: number;

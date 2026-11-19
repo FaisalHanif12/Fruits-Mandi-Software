@@ -51,9 +51,7 @@ fn data(message: &str) -> ServiceError {
 /// # Errors
 /// `ERR_NOT_FOUND` on `id`; `ServiceError::Db`.
 pub(crate) fn row_value(conn: &Connection, id: i64) -> Result<Value, ServiceError> {
-    let entry = repo::get_entry(conn, id)?
-        .filter(|e| e.kind == "other_sale")
-        .ok_or_else(|| not_found("id"))?;
+    let entry = super::trip_entry(conn, id, "other_sale")?.ok_or_else(|| not_found("id"))?;
     let parts = repo::parts_of(conn, &[id])?;
     let names = |r: &mandi_domain::core::accounts::RecordRef| json!({ "name_ur": r.name_ur, "name_en": r.name_en });
     Ok(json!({
@@ -89,9 +87,7 @@ pub(crate) fn edit_in(
     window: (Option<BusinessDate>, BusinessDate),
     input: &TripOtherSaleEditInput,
 ) -> Result<Edited, ServiceError> {
-    let entry = repo::get_entry(tx, input.id)?
-        .filter(|e| e.kind == "other_sale")
-        .ok_or_else(|| not_found("id"))?;
+    let entry = super::trip_entry(tx, input.id, "other_sale")?.ok_or_else(|| not_found("id"))?;
     if entry.status == "cancelled" {
         return Err(ServiceError::reject_field(
             ErrorCode::ErrTripEntryCancelled,

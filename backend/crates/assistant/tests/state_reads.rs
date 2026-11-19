@@ -5,7 +5,7 @@
 //!   defaults, and the rules behind it. Its winners are the very ones the "test a rule" box gives.
 //! - R2: `app_state{what:"attention"}` is the attention list of the bell.
 //! - R3: `app_state{what:"days"}` is the day state and the last month close.
-//! - R4: `app_state{what:"audit"}` gives the audit rows of one بکری or one account, and no text.
+//! - R4 (gone, plan 80 R6-2): there is no audit read; `app_state{what:"audit"}` is refused.
 //! - R5: `find` with the roles `staff` and `expense_head` lists and counts them.
 //! - R6: `find` with the role `truck` finds the بکری of a truck number.
 //! - P1 to P4: `report` passes `seller`, `zamindar`, `status`, `voucher_type`, `layout` and
@@ -846,11 +846,9 @@ fn each_state_read_has_the_button_of_its_screen() {
     let rules_id = s.ok("app_state", state_input("rules", json!({})));
     let days_id = s.ok("app_state", state_input("days", json!({})));
     let attention_id = s.ok("app_state", state_input("attention", json!({})));
-    let audit_id = s.ok("app_state", state_input("audit", json!({"bikri": 1})));
     assert_eq!(screen(&s, &rules_id), ScreenRoute::CommissionRules);
     assert_eq!(screen(&s, &days_id), ScreenRoute::DayClose);
     assert_eq!(screen(&s, &attention_id), ScreenRoute::Dashboard);
-    assert_eq!(screen(&s, &audit_id), ScreenRoute::Audit);
     // On the wire: the kind, the words of the screen, the id of the result filled in later.
     let wire = serde_json::to_value(s.result(&days_id).source.as_ref().unwrap()).unwrap();
     assert_eq!(
@@ -972,13 +970,15 @@ fn find_finds_the_bikri_of_a_truck_number() {
     assert_eq!(s.json(&sale_book)["source"], "R1");
 }
 
-// ---- the whole audit log and the partner lock -------------------------------------------------------
+// ---- no audit rows, locked or not (plan 80 R6-2) ---------------------------------------------------
 
+/// The audit log never goes to the model (PRD FR-7.83, Code Standards Q7). `app_state` has no audit
+/// read, and an old call for one gets the input error, with the partner section open and locked, so
+/// no row of the log (a partner's shares, a capital or personal-take voucher) can reach a request.
 #[test]
-fn the_whole_audit_log_hides_a_partners_shares_while_the_section_is_locked() {
+fn the_audit_log_is_not_readable_by_the_model_locked_or_not() {
     let w = day();
-    // The newest event of the log is a change of the partners' shares (the same 40 / 30 / 30,
-    // from today): an event of entity `partner`, with his shares in it.
+    // The newest event of the log is a change of the partners' shares.
     mandi_services::partners::set_shares(
         &w.env.ctx,
         &w.owner,
@@ -1000,39 +1000,21 @@ fn the_whole_audit_log_hides_a_partners_shares_while_the_section_is_locked() {
         },
     )
     .unwrap();
-    let read = |locked: bool| {
+    for locked in [false, true] {
         let mut s = Session::new(&w);
         s.locked = locked;
-        let id = s.ok("app_state", state_input("audit", json!({})));
-        let flags = (
-            s.result(&id).partner_data,
-            s.result(&id).partner_parts_locked,
-        );
-        (s.json(&id), flags)
-    };
-    let (open, open_flags) = read(false);
-    let (locked, locked_flags) = read(true);
-    let partner_row = |j: &Value| {
-        j["rows"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|r| r["entity"] == "partner")
-            .cloned()
-            .expect("an event of the partners in the newest rows")
-    };
-    // Open: his shares are in the row, and the result is marked so it is not resent once locked.
-    assert!(!partner_row(&open)["changes"].as_array().unwrap().is_empty());
-    assert_eq!(open_flags, (true, false));
-    // Locked: who, when and what stay; his old and new values do not, and the result says so.
-    assert!(
-        partner_row(&locked)["changes"]
-            .as_array()
-            .unwrap()
-            .is_empty()
-    );
-    assert_eq!(locked_flags, (false, true));
-    assert_eq!(locked["partner_parts"], "locked");
+        for filters in [
+            json!({}),
+            json!({"bikri": 1}),
+            json!({"party": "a1"}),
+            json!({"bikri": 9999}),
+        ] {
+            let error = s.error("app_state", state_input("audit", filters));
+            assert_eq!(error.code, "ERR_FORMAT_INVALID", "locked={locked}");
+        }
+        // No result of the session holds an audit row: nothing was read.
+        assert!(s.state.results.is_empty(), "locked={locked}");
+    }
 }
 
 // ---- gap Q5: the smaller master lists ---------------------------------------------------------------
@@ -1660,103 +1642,29 @@ fn rules_for_a_party_win_over_the_defaults_and_agree_with_test_a_rule() {
     assert_eq!(item_as_party.code, "ERR_FORMAT_INVALID");
 }
 
-// ---- R4: audit ------------------------------------------------------------------------------------
+// ---- R4: no audit read (plan 80 R6-2) -----------------------------------------------------------
 
 #[test]
-fn audit_gives_the_rows_of_a_bikri_or_an_account_and_never_a_text() {
+fn app_state_has_no_audit_read_and_bikri_is_always_null() {
     let w = day();
     let mut s = Session::new(&w);
-    // بکری 1: the row that saved it.
-    let id = s.ok("app_state", state_input("audit", json!({"bikri": 1})));
-    let j = s.json(&id);
-    assert_eq!(j["entity"], "bikri");
-    assert!(j["count"]["n"].as_i64().unwrap() >= 1);
-    let rows = j["rows"].as_array().unwrap();
-    assert!(rows.iter().any(|r| r["action"] == "create"));
-    assert!(rows.iter().all(|r| r["date"]["date"].is_string()));
-    assert!(
-        !j.to_string().contains("LES-1234"),
-        "a truck number is a text"
-    );
-    // رحیم's account: it was made with a phone, an address, a father's name and a note.
-    let rahim = s.find("rahim", "seller");
-    let id = s.ok(
-        "app_state",
-        state_input("audit", json!({"party": format!("{rahim}.matches.0")})),
-    );
-    let text = s.json(&id).to_string();
-    assert_eq!(s.json(&id)["entity"], "account");
-    for private in [
-        worked::PRIVATE_PHONE,
-        worked::PRIVATE_ADDRESS,
-        worked::PRIVATE_NOTE,
-        "Haji Sahib",
-        "حاجی صاحب",
-    ] {
-        assert!(!text.contains(private), "{private}");
+    // The word is not one of the three reads: the strict input check refuses it, whatever else is given.
+    for filters in [json!({}), json!({"bikri": 1}), json!({"bikri": 9999})] {
+        assert_eq!(
+            s.error("app_state", state_input("audit", filters)).code,
+            "ERR_FORMAT_INVALID"
+        );
     }
-    // The count agrees with the audit viewer.
-    let page = mandi_reports::audit::list(
-        w.env.ctx.db(),
-        &mandi_reports::audit::AuditListInput {
-            filters: mandi_reports::audit::AuditFilters {
-                entity: "account".into(),
-                entity_id: Some(w.rahim),
-                ..Default::default()
-            },
-            offset: 0,
-            limit: 100,
-            sort: None,
-            group_by_month: false,
-        },
-    )
-    .unwrap();
-    assert_eq!(
-        s.json(&id)["count"]["n"].as_i64().unwrap(),
-        page.total_count
-    );
-    // Exactly one of a party and a number; a بکری that does not exist.
-    // Neither: the newest rows of the whole log (the Owner asks what changed lately).
-    let whole = s.ok("app_state", state_input("audit", json!({})));
-    let j = s.json(&whole);
-    assert_eq!(j["entity"], "all");
-    let everything = mandi_reports::audit::list(
-        w.env.ctx.db(),
-        &mandi_reports::audit::AuditListInput {
-            filters: mandi_reports::audit::AuditFilters::default(),
-            offset: 0,
-            limit: 100,
-            sort: None,
-            group_by_month: false,
-        },
-    )
-    .unwrap();
-    assert_eq!(j["count"]["n"].as_i64().unwrap(), everything.total_count);
-    assert_eq!(j["rows"].as_array().unwrap().len(), 12);
-    assert_eq!(j["more"], true);
-    assert!(matches!(
-        s.result(&whole).source,
-        Some(AnswerSource::Screen {
-            route: ScreenRoute::Audit,
-            ..
-        })
-    ));
-    assert_eq!(
-        s.error(
-            "app_state",
-            state_input(
-                "audit",
-                json!({"bikri": 1, "party": format!("{rahim}.matches.0")})
-            )
-        )
-        .code,
-        "ERR_REQUIRED"
-    );
-    assert_eq!(
-        s.error("app_state", state_input("audit", json!({"bikri": 9999})))
-            .code,
-        "ERR_NOT_FOUND"
-    );
+    // A بکری number is no filter of any read now: the field is always null.
+    for what in ["rules", "attention", "days"] {
+        let error = s.error("app_state", state_input(what, json!({"bikri": 1})));
+        assert_eq!(error.code, "ERR_OUT_OF_RANGE", "{what}");
+        assert_eq!(error.field.as_deref(), Some("bikri"), "{what}");
+    }
+    // The three reads still run with `bikri` null.
+    for what in ["rules", "attention", "days"] {
+        s.ok("app_state", state_input(what, json!({})));
+    }
 }
 
 // ---- the tool itself ---------------------------------------------------------------------------------
@@ -1980,35 +1888,6 @@ fn on_the_rich_year_every_read_agrees_with_the_screens() {
         );
         assert!(j.to_string().contains("\"gross\""));
     }
-
-    // R4: the audit rows of the last بکری and of a buyer are the viewer's.
-    let last = newest.first().unwrap();
-    let id = s.ok(
-        "app_state",
-        state_input("audit", json!({"bikri": last.number})),
-    );
-    let viewer = |entity: &str, entity_id: i64| {
-        mandi_reports::audit::list(
-            w.env.ctx.db(),
-            &mandi_reports::audit::AuditListInput {
-                filters: mandi_reports::audit::AuditFilters {
-                    entity: entity.into(),
-                    entity_id: Some(entity_id),
-                    ..Default::default()
-                },
-                offset: 0,
-                limit: 100,
-                sort: None,
-                group_by_month: false,
-            },
-        )
-        .unwrap()
-        .total_count
-    };
-    assert_eq!(
-        s.json(&id)["count"]["n"].as_i64().unwrap(),
-        viewer("bikri", last.id)
-    );
 
     // R1: the winners are "test a rule" for sellers, buyers and items of the year.
     let sellers: Vec<_> = y.sellers.iter().take(3).collect();

@@ -459,6 +459,49 @@ fn free_text_refuses_bidi_controls() {
     assert!(validate::free_text("note", "Akram اکرم 12-3").is_ok());
 }
 
+/// Gate finding Q-T4-3 (plan 80, Code Standards 4.2): a note loses the zero-width characters and the
+/// direction marks, as a name does, and a note of only such marks is empty. So a required reason of
+/// a pasted zero-width space is not a reason.
+#[test]
+fn free_text_drops_zero_width_and_direction_marks_and_invisible_only_text_is_empty() {
+    for mark in [
+        '\u{200B}', '\u{200C}', '\u{200D}', '\u{2060}', '\u{FEFF}', '\u{200E}', '\u{200F}',
+        '\u{061C}',
+    ] {
+        let label = format!("U+{:04X}", u32::from(mark));
+        // Inside, at the start and at the end of the text.
+        assert_eq!(
+            validate::free_text("note", &format!("{mark}رقم{mark} 12{mark}")),
+            Ok("رقم 12".to_owned()),
+            "{label}"
+        );
+        // Only such marks, with spaces round them: empty, like text of only spaces.
+        assert_eq!(
+            validate::free_text("note", &format!(" {mark}{mark} {mark}")),
+            Ok(String::new()),
+            "{label}"
+        );
+    }
+    // The 500 characters are counted after the marks are gone.
+    let padded = format!("{}{}", "x".repeat(500), "\u{200B}".repeat(20));
+    assert_eq!(validate::free_text("note", &padded), Ok("x".repeat(500)));
+    let too_long = format!("{}{}", "x".repeat(501), "\u{200B}");
+    assert_eq!(
+        code(validate::free_text("note", &too_long)),
+        ErrorCode::ErrTextTooLong
+    );
+    // The bidi embeddings, overrides and isolates are still refused, even with marks round them.
+    assert_eq!(
+        code(validate::free_text("note", "\u{200B}\u{202E}0021")),
+        ErrorCode::ErrControlChars
+    );
+    // A name and a note are cleaned the same way.
+    assert_eq!(
+        validate::name_en("name_en", "\u{FEFF}Akram\u{200B}"),
+        Ok("Akram".to_owned())
+    );
+}
+
 #[test]
 fn free_text() {
     assert_eq!(validate::free_text("note", "  نوٹ  "), Ok("نوٹ".to_owned()));

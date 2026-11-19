@@ -17,6 +17,7 @@
 
 mod common;
 mod reports_world;
+mod speed_gate_f;
 #[allow(dead_code)]
 #[path = "bikri_preview/support.rs"]
 mod support;
@@ -509,6 +510,7 @@ fn assert_rows_exist(w: &World, label: &str, base_after: usize, open: usize, hel
 }
 
 fn check_all(w: &World, label: &str) {
+    speed_gate_f::check_gate_f(w, label);
     check_forms(w, label);
     check_r20_ages(w, label);
     check_a1(w, label);
@@ -1023,6 +1025,7 @@ fn a_keyed_line_on_an_ordinary_account_makes_the_fast_reads_fall_back() {
     });
     check_a2(&w, "the stray key");
     check_a4(&w, "the stray key");
+    speed_gate_f::check_gate_f(&w, "the stray key");
 }
 
 #[test]
@@ -1050,6 +1053,7 @@ fn a_line_without_a_key_on_a_shared_account_is_its_own_group() {
     );
     check_a1(&w, "an unkeyed line on the shared buyer");
     check_a3(&w, "an unkeyed line on the shared buyer");
+    speed_gate_f::check_gate_f(&w, "an unkeyed line on the shared buyer");
 }
 
 #[test]

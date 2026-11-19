@@ -12,8 +12,13 @@ interface ParentRule {
 }
 
 const RULES: readonly ParentRule[] = [
-  // The pages the dashboard tiles and the status bar open.
-  { match: /^\/(dues|others-dues|kharch|commission|day)$/, parent: '/' },
+  // The pages the dashboard tiles and the status bar open. The five tile pages of plan 79 are the dues pages
+  // under /dues (sellers, total, lent, advances) and the cash sales page (PRD FR-9.1 v1.44, FR-7.92).
+  {
+    match:
+      /^\/(dues|dues\/(sellers|total|lent|advances)|others-dues|kharch|commission|day|cash-sales)$/,
+    parent: '/',
+  },
   // انڈکس: the forms are opened from their list, the lists from the menu of lists.
   { match: /^\/index\/accounts\/[^/]+$/, parent: '/index/accounts' },
   { match: /^\/index\/rules\/[^/]+$/, parent: '/index/rules' },

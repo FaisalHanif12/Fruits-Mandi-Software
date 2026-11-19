@@ -620,18 +620,18 @@ const deadAmountRoute = createRoute({
   ),
 });
 
-// R5, the اگراہی sheet (plan 76 point 2, PRD R5): the day's compact list of buyers. Its own address, found
+// R5, ادھاری تفصیل (plan 80 Q-R5-2, PRD R5 v1.43): the day's buyers on one compact page. Its own address, found
 // before `/reports/$id`; the catalogue and the links that name `R5` land on it. The day is in the address.
-const collectionSheetRoute = createRoute({
+const adhariSheetRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: '/reports/collection-sheet',
+  path: '/reports/adhari-sheet',
   validateSearch: (search: Record<string, unknown>) => {
     const { date } = search;
     return isIsoDay(date) ? { date } : {};
   },
   component: lazyRouteComponent(
-    () => import('../features/reports/pages/CollectionSheetPage'),
-    'CollectionSheetPage',
+    () => import('../features/reports/pages/AdhariSheetPage'),
+    'AdhariSheetPage',
   ),
 });
 
@@ -644,7 +644,7 @@ const reportRoute = createRoute({
   beforeLoad: ({ params }) => {
     // Like the voucher addresses above: the redirect is returned, which the router follows.
     if (params.id === 'R38') return redirect({ to: '/reports/dead-amount', replace: true });
-    if (params.id === 'R5') return redirect({ to: '/reports/collection-sheet', replace: true });
+    if (params.id === 'R5') return redirect({ to: '/reports/adhari-sheet', replace: true });
     return undefined;
   },
   component: lazyRouteComponent(() => import('../features/reports/pages/ReportPage'), 'ReportPage'),
@@ -734,7 +734,7 @@ const appRoutes = [
   backupRoute,
   reportsRoute,
   deadAmountRoute,
-  collectionSheetRoute,
+  adhariSheetRoute,
   reportRoute,
 ];
 

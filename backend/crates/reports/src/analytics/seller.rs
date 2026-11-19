@@ -37,6 +37,7 @@ use crate::reports::{Cell, ColumnKind};
 fn lot_charges(conn: &Connection, typed: &Typed) -> Result<HashMap<i64, Paisa>, ReportsError> {
     let mut c = Conds::new();
     c.always("b.status = 'saved'")
+        .always("l.removed_at IS NULL")
         .text("b.entry_date >= ?", typed.from.as_deref())
         .text("b.entry_date <= ?", typed.to.as_deref())
         .id("l.seller_account_id = ?", typed.seller_id)

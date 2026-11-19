@@ -381,3 +381,10 @@ attention-names-missing = { $count ->
 
 # review: pending
 attention-health-check = The books check found a problem. See it in Settings.
+
+# A question of the last week whose two places of a figure differed (PRD FR-7.76 point 2): no answer was shown. The row is in the question log.
+# review: pending
+attention-records-differ = { $count ->
+    [one] <num>{ $count }</num> question in the past week had a figure that did not agree with the records. See the question log in Settings.
+   *[other] <num>{ $count }</num> questions in the past week had a figure that did not agree with the records. See the question log in Settings.
+}

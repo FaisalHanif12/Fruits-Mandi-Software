@@ -1,0 +1,18 @@
+-- Migration 28 (plan 80 gate, the speed fix loop, NFR-SPD-10, NFR-SPD-24, Code Standards B18): one
+-- covering index so the sales registers R2, R3 and R4 add up ten years of sale lines in a fraction of
+-- a second instead of two seconds, and again for every next page.
+--
+-- Their rows for Architecture 15.8 go to Umar with the next document version; this run changes no
+-- requirement document.
+--
+-- This file adds an index only. It adds no table, no column and no stored total (PRD FR-6.1), and no
+-- row, amount, id or chain hash changes.
+--
+-- The totals of a register (count, quantity, value, buyer total, money paid on the spot, and the three
+-- questions that decide its optional columns) are summed over the sale lines in force whose entry is
+-- posted and dated in the range. Without this index each of the 1.2 million lines is read from the
+-- 400-byte row of `bikri_sales`, and its lot, its بکری and its buyer are looked up (2 seconds). With
+-- it the lines are read from the index alone, in the order of their entry's id, and only the entry
+-- (for its day and status) and the lot (for its packing) are looked up: 0.4 seconds. About 45 MB for
+-- 1.2 million lines.
+CREATE INDEX idx_bikri_sales_register ON bikri_sales (journal_entry_id, is_active, lot_id, qty, buyer_value_paisa, buyer_total_paisa, paid_paisa, seller_rate_paisa, buyer_rate_paisa, grade);

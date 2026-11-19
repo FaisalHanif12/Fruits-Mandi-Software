@@ -19,4 +19,9 @@ export type AttentionOverdue = {
    * True if `items` holds only the first `MAX_OPEN_ROWS` of them.
    */
   truncated: boolean;
+  /**
+   * True while the partner section is locked (PRD FR-17.11): the money partners took is left
+   * out of `items` and `total_count`.
+   */
+  partners_locked: boolean;
 };

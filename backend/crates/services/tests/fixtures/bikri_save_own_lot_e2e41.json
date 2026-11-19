@@ -681,7 +681,6 @@
             "line_no": 1,
             "is_blank": false,
             "remaining_qty": 80,
-            "rate_hint": null,
             "calc": {
               "qty": 80,
               "weight_grams": null,

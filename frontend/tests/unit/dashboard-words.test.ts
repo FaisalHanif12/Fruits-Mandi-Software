@@ -29,6 +29,7 @@ const KINDS: readonly AttentionKind[] = [
   'takes_overdue',
   'names_missing',
   'health_check',
+  'records_differ',
 ];
 
 function bundleOf(language: 'ur' | 'en'): FluentBundle {
@@ -101,6 +102,13 @@ describe('the English singular and plural', () => {
     expect(say('en', 'attention-drafts', { count: 2 })).toBe('2 unsaved drafts');
     expect(say('en', 'attention-open-days', { count: 1 })).toBe('1 earlier day is not closed');
     expect(say('en', 'attention-open-days', { count: 8 })).toBe('8 earlier days are not closed');
+    // Questions refused because two places of a figure differed (plan 80 R6-3).
+    expect(say('en', 'attention-records-differ', { count: 1 })).toContain(
+      '1 question in the past week',
+    );
+    expect(say('en', 'attention-records-differ', { count: 3 })).toContain(
+      '3 questions in the past week',
+    );
     expect(say('en', 'attention-backup-old', { days: 1 })).toContain('1 day old');
     expect(say('en', 'attention-backup-old', { days: 2 })).toContain('2 days old');
     const loan = (count: number, days: number) =>
@@ -115,6 +123,7 @@ describe('the words only name a message the wrapper makes', () => {
     expect(messageOfKind('over_credit_limit')).toBe('attention-over-credit-limit');
     expect(messageOfKind('names_missing')).toBe('attention-names-missing');
     expect(messageOfKind('health_check')).toBe('attention-health-check');
+    expect(messageOfKind('records_differ')).toBe('attention-records-differ');
   });
 
   it('the aged message is chosen only when the backend names an age', () => {
@@ -137,6 +146,8 @@ describe('where a line leads', () => {
     // The books check that found a problem: its result is a line of the Day tab of Settings (plan 79 item 2c).
     expect(destinationOfKind('health_check')).toEqual({ kind: 'settings-day' });
     expect(destinationOfKind('takes_overdue')).toEqual({ kind: 'personal-drawings' });
+    // A question whose two places differed: its row is in the question log of the assistant, in Settings (plan 80 R6-3).
+    expect(destinationOfKind('records_differ')).toEqual({ kind: 'settings-assistant' });
   });
 
   it('the most urgent record opens itself: a ledger, a statement, a بکری', () => {

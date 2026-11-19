@@ -158,6 +158,7 @@ fn reopen(
         &DayReopenInput {
             date: date.into(),
             reason: reason.into(),
+            sign: "adnan".into(),
         },
     )
 }

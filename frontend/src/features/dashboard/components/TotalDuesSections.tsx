@@ -16,7 +16,6 @@ import type { TotalDuesPart } from '../../../bindings/TotalDuesPart';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList, type ListColumn } from '../../../shared/grid';
 import { Card, EmptyState, Num } from '../../../shared/ui';
-import { useOpenDestination, ledgerOf } from '../destinations';
 import { lentSearchOf } from '../dues-links';
 import { useBuyerDues, useDeadOwed, useLentOpen, useSellerDues } from '../dues-hooks';
 import { BUYER_DUES_COLUMNS } from '../dues-columns';
@@ -153,10 +152,10 @@ export function SellersSection({ part }: { part: TotalDuesPart | undefined }) {
 
 export function DeadSection({ part }: { part: TotalDuesPart | undefined }) {
   const navigate = useNavigate();
-  const openDestination = useOpenDestination();
   const list = useDeadOwed();
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
-  // A buyer or a seller opens his ledger (R13, the opening balance first); a person who borrowed opens his loans.
+  // A buyer or a seller opens his history on پارٹی کھاتے, one row for each بکری, as the buyers and sellers
+  // sections do (PRD FR-19.8 v1.43, FR-9.7); a person who borrowed opens his loans.
   const open = useCallback(
     (row: DeadRow) => {
       if (row.party_type === 'money_lent') {
@@ -175,9 +174,12 @@ export function DeadSection({ part }: { part: TotalDuesPart | undefined }) {
         });
         return;
       }
-      openDestination(ledgerOf(row.account_id));
+      void navigate({
+        to: '/bikri/party-ledgers',
+        search: { side: row.party_type, party: row.account_id },
+      });
     },
-    [navigate, openDestination],
+    [navigate],
   );
   return (
     <Section icon={UserX} titleId="total-dues-dead" part={part}>

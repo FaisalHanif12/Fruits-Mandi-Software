@@ -496,100 +496,122 @@ pub fn close(
     actor: &Actor,
     input: &DayCloseInput,
 ) -> Result<DayStatusInfo, ServiceError> {
-    let today = ctx.clock().local_today();
-    let today = BusinessDate::parse_iso(&today.format(DATE_FORMAT).to_string())
-        .ok_or_else(|| ServiceError::Data("today is not a date".to_owned()))?;
-    ctx.db.write(|tx| {
-        // The "closed up to" date is read inside the transaction, so two calls queued on the
-        // writer cannot work from an old value (PRD FR-21.2: closing never moves it back).
-        let window = (closed_in(tx)?, today);
-        let (from, to) = close_range(tx, window, &input.up_to)?;
-        let (summary, balanced) = close_summary(tx, from, to)?;
-        // Every day must balance on its own, not only the last one.
-        let days = day_summaries(tx, from, to)?;
-        check_rows_match_summary(&days, &summary)?;
-        if !balanced || days.iter().any(|d| d.trial_dr != d.trial_cr) {
-            return Err(ServiceError::reject_field(
-                ErrorCode::ErrTrialNotBalanced,
-                "up_to",
-            ));
-        }
-        let now = ctx.now_text();
-        repo::set_closed_up_to(tx, Some(&to.to_iso()), actor.user_id, &now)?;
-        // One history row for each day closed, each with its own numbers (Architecture 15.3).
-        for day in &days {
-            let numbers = json!({
-                "trial_dr_paisa": day.trial_dr.as_paisa(),
-                "trial_cr_paisa": day.trial_cr.as_paisa(),
-                "cash_in_hand_paisa": day.cash.amount_paisa.as_paisa(),
-                "cash_in_hand_side": match day.cash.side {
-                    BalanceSide::Dr => "dr",
-                    BalanceSide::Cr => "cr",
-                    BalanceSide::Zero => "zero",
-                },
-                "entries": day.entries,
-                "closed_in_one_step_up_to": summary.up_to,
-            });
-            repo::insert_day_close(
-                tx,
-                &day.date.to_iso(),
-                "close",
-                actor.user_id,
-                &now,
-                None,
-                &numbers.to_string(),
-            )?;
-        }
-        let numbers = json!({
-            "from_date": summary.from_date,
-            "up_to": summary.up_to,
-            "days": summary.days,
-            "trial_dr_paisa": summary.trial_dr_paisa.as_paisa(),
-            "trial_cr_paisa": summary.trial_cr_paisa.as_paisa(),
-            "cash_in_hand_paisa": summary.cash_in_hand.amount_paisa.as_paisa(),
-            "entries": summary.entries,
-        });
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(actor.user_id), "day_close", "day")
-                .old(json!({ "closed_up_to": window.0.map(BusinessDate::to_iso) }))
-                .new_value(numbers)
-                .into_entry(),
-        )?;
-        Ok(())
-    })?;
+    ctx.db.write(|tx| close_in(ctx, tx, actor, input))?;
     status(ctx)
 }
 
+/// The writes of [`close`] inside a transaction the caller owns, so a reopen-and-fix can close its
+/// days in the same one (PRD FR-21.4, Code Standards B3). A refusal comes before any write.
+fn close_in(
+    ctx: &Context,
+    tx: &Connection,
+    actor: &Actor,
+    input: &DayCloseInput,
+) -> Result<(), ServiceError> {
+    let today = ctx.clock().local_today();
+    let today = BusinessDate::parse_iso(&today.format(DATE_FORMAT).to_string())
+        .ok_or_else(|| ServiceError::Data("today is not a date".to_owned()))?;
+    // The "closed up to" date is read inside the transaction, so two calls queued on the
+    // writer cannot work from an old value (PRD FR-21.2: closing never moves it back).
+    let window = (closed_in(tx)?, today);
+    let (from, to) = close_range(tx, window, &input.up_to)?;
+    let (summary, balanced) = close_summary(tx, from, to)?;
+    // Every day must balance on its own, not only the last one.
+    let days = day_summaries(tx, from, to)?;
+    check_rows_match_summary(&days, &summary)?;
+    if !balanced || days.iter().any(|d| d.trial_dr != d.trial_cr) {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrTrialNotBalanced,
+            "up_to",
+        ));
+    }
+    let now = ctx.now_text();
+    repo::set_closed_up_to(tx, Some(&to.to_iso()), actor.user_id, &now)?;
+    // One history row for each day closed, each with its own numbers (Architecture 15.3).
+    for day in &days {
+        let numbers = json!({
+            "trial_dr_paisa": day.trial_dr.as_paisa(),
+            "trial_cr_paisa": day.trial_cr.as_paisa(),
+            "cash_in_hand_paisa": day.cash.amount_paisa.as_paisa(),
+            "cash_in_hand_side": match day.cash.side {
+                BalanceSide::Dr => "dr",
+                BalanceSide::Cr => "cr",
+                BalanceSide::Zero => "zero",
+            },
+            "entries": day.entries,
+            "closed_in_one_step_up_to": summary.up_to,
+        });
+        repo::insert_day_close(
+            tx,
+            &day.date.to_iso(),
+            "close",
+            actor.user_id,
+            &now,
+            None,
+            &numbers.to_string(),
+        )?;
+    }
+    let numbers = json!({
+        "from_date": summary.from_date,
+        "up_to": summary.up_to,
+        "days": summary.days,
+        "trial_dr_paisa": summary.trial_dr_paisa.as_paisa(),
+        "trial_cr_paisa": summary.trial_cr_paisa.as_paisa(),
+        "cash_in_hand_paisa": summary.cash_in_hand.amount_paisa.as_paisa(),
+        "entries": summary.entries,
+    });
+    ctx.db.auditor().write(
+        tx,
+        &Event::new(Some(actor.user_id), "day_close", "day")
+            .old(json!({ "closed_up_to": window.0.map(BusinessDate::to_iso) }))
+            .new_value(numbers)
+            .into_entry(),
+    )?;
+    Ok(())
+}
+
 /// Reopens a day and every later day (PRD FR-21.2): "closed up to" moves back to the day before.
-/// A reason is required and goes to the audit log with the old and new date. One user, so no
-/// role check beyond sign-in. A month that was month-closed cannot be reopened until its month
+/// A reason is required and goes to the audit log with the old and new date. Only the Owner's sign
+/// opens the day, as in a reopen to fix an entry (PRD FR-21.4, Umar 19-11-2026, plan 80 Q-R2-2): a
+/// wrong sign opens nothing and is audited without the typed text, and the right sign is kept in the
+/// audit entry beside the reason. A month that was month-closed cannot be reopened until its month
 /// close is reversed.
 ///
 /// # Errors
-/// `ERR_REASON_REQUIRED` on `reason`; the date codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`;
-/// `ERR_MONTH_CLOSED` on `date`.
+/// `ERR_REASON_REQUIRED` on `reason`; `ERR_SIGN_REQUIRED` and `ERR_SIGN_WRONG` on `sign`; the date
+/// codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`; `ERR_MONTH_CLOSED` on `date`.
 pub fn reopen(
     ctx: &Context,
     actor: &Actor,
     input: &DayReopenInput,
 ) -> Result<DayStatusInfo, ServiceError> {
-    reopen_signed(ctx, actor, input, None)
+    let sign = check_sign(
+        ctx,
+        actor,
+        &SignCheck {
+            reason: &input.reason,
+            sign: &input.sign,
+            date: &input.date,
+            wrong_action: "day_reopen_sign_wrong",
+        },
+    )?;
+    let (date, reason) = parse_reopen(ctx, &input.date, &input.reason)?;
+    ctx.db
+        .write(|tx| reopen_in(ctx, tx, actor, date, &reason, Some(&sign)))?;
+    status(ctx)
 }
 
-/// [`reopen`] that also saves the Owner's sign (PRD FR-21.4, plan 73) in the audit entry and in the
-/// day-close row, beside the reason. The sign has been checked by the caller.
-fn reopen_signed(
+/// The date and the reason of a reopen, checked (nothing is read but today).
+fn parse_reopen(
     ctx: &Context,
-    actor: &Actor,
-    input: &DayReopenInput,
-    sign: Option<&str>,
-) -> Result<DayStatusInfo, ServiceError> {
+    date_text: &str,
+    reason_text: &str,
+) -> Result<(BusinessDate, String), ServiceError> {
     let (_, today) = window(ctx)?;
     let mut errors = validate::FieldErrors::default();
-    let date = errors.take(validate::date("date", &input.date, today));
+    let date = errors.take(validate::date("date", date_text, today));
     let reason = errors
-        .take(validate::free_text("reason", &input.reason))
+        .take(validate::free_text("reason", reason_text))
         .and_then(|r| {
             if r.is_empty() {
                 errors.push(mandi_domain::core::error::FieldError::new(
@@ -602,57 +624,67 @@ fn reopen_signed(
             }
         });
     errors.finish()?;
-    let (Some(date), Some(reason)) = (date, reason) else {
-        return Err(ServiceError::reject(ErrorCode::ErrInternal));
+    match (date, reason) {
+        (Some(date), Some(reason)) => Ok((date, reason)),
+        _ => Err(ServiceError::reject(ErrorCode::ErrInternal)),
+    }
+}
+
+/// The writes of a reopen inside a transaction the caller owns: the "closed up to" date moves back,
+/// one day-close row and one audit entry say who, why and (for a reopen to fix) with which sign.
+/// Returns the day that was the "closed up to" day before it. The state is read inside the
+/// transaction (see [`close_in`]).
+fn reopen_in(
+    ctx: &Context,
+    tx: &Connection,
+    actor: &Actor,
+    date: BusinessDate,
+    reason: &str,
+    sign: Option<&str>,
+) -> Result<BusinessDate, ServiceError> {
+    let Some(closed_day) = closed_in(tx)?.filter(|c| date <= *c) else {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrDayNotClosed,
+            "date",
+        ));
     };
-    let new_closed = date.previous_day();
-    ctx.db.write(|tx| {
-        // The state is read inside the transaction (see `close`).
-        let Some(closed_day) = closed_in(tx)?.filter(|c| date <= *c) else {
-            return Err(ServiceError::reject_field(
-                ErrorCode::ErrDayNotClosed,
-                "date",
-            ));
-        };
-        let month = date.to_iso().chars().take(7).collect::<String>();
-        if repo::month_closed_from(tx, &month)? {
-            return Err(ServiceError::reject_field(
-                ErrorCode::ErrMonthClosed,
-                "date",
-            ));
-        }
-        let now = ctx.now_text();
-        let new_iso = new_closed.map(BusinessDate::to_iso);
-        repo::set_closed_up_to(tx, new_iso.as_deref(), actor.user_id, &now)?;
-        let mut numbers = json!({
-            "reopened_from": date.to_iso(),
-            "closed_up_to_before": closed_day.to_iso(),
-            "closed_up_to_after": new_iso,
-        });
-        if let (Some(sign), Some(object)) = (sign, numbers.as_object_mut()) {
-            object.insert("sign".to_owned(), json!(sign));
-        }
-        repo::insert_day_close(
-            tx,
-            &date.to_iso(),
-            "reopen",
-            actor.user_id,
-            &now,
-            Some(&reason),
-            &numbers.to_string(),
-        )?;
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(actor.user_id), "day_reopen", "day")
-                .old(json!({ "closed_up_to": closed_day.to_iso() }))
-                .new_value(json!({ "closed_up_to": new_iso }))
-                .sign(sign)
-                .reason(&reason)
-                .into_entry(),
-        )?;
-        Ok(())
-    })?;
-    status(ctx)
+    let month = date.to_iso().chars().take(7).collect::<String>();
+    if repo::month_closed_from(tx, &month)? {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrMonthClosed,
+            "date",
+        ));
+    }
+    let now = ctx.now_text();
+    let new_iso = date.previous_day().map(BusinessDate::to_iso);
+    repo::set_closed_up_to(tx, new_iso.as_deref(), actor.user_id, &now)?;
+    let mut numbers = json!({
+        "reopened_from": date.to_iso(),
+        "closed_up_to_before": closed_day.to_iso(),
+        "closed_up_to_after": new_iso,
+    });
+    if let (Some(sign), Some(object)) = (sign, numbers.as_object_mut()) {
+        object.insert("sign".to_owned(), json!(sign));
+    }
+    repo::insert_day_close(
+        tx,
+        &date.to_iso(),
+        "reopen",
+        actor.user_id,
+        &now,
+        Some(reason),
+        &numbers.to_string(),
+    )?;
+    ctx.db.auditor().write(
+        tx,
+        &Event::new(Some(actor.user_id), "day_reopen", "day")
+            .old(json!({ "closed_up_to": closed_day.to_iso() }))
+            .new_value(json!({ "closed_up_to": new_iso }))
+            .sign(sign)
+            .reason(reason)
+            .into_entry(),
+    )?;
+    Ok(closed_day)
 }
 
 /// The setting that remembers a fix in progress: `{ "token", "first", "last", "sign" }` (PRD
@@ -755,6 +787,9 @@ fn days_between(first: BusinessDate, last: BusinessDate) -> Vec<BusinessDate> {
 /// and writes an audit entry without the typed text, and the sign is saved with the reason in the
 /// audit entry of the reopen and, through the fix record, of every edit saved in this fix.
 ///
+/// The reopen, the fix record and the audit entry are one save (Code Standards B3, plan 80 T3-1):
+/// if any of them fails, nothing is reopened.
+///
 /// # Errors
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_SIGN_REQUIRED` and `ERR_SIGN_WRONG` on `sign`; the date
 /// codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`; `ERR_MONTH_CLOSED` on `date`.
@@ -763,35 +798,30 @@ pub fn fix_open(
     actor: &Actor,
     input: &DayFixOpenInput,
 ) -> Result<DayFixOpened, ServiceError> {
-    let sign = check_fix_sign(ctx, actor, input)?;
-    let (closed_before, _) = window(ctx)?;
-    // A record of a fix that no longer fits the closed-up-to day is stale (a day was closed or
-    // reopened some other way since): it is ignored, so its old last day is not closed again.
-    let pending = ctx
-        .db
-        .read(pending_of)?
-        .filter(|p| closed_before == p.first.previous_day());
-    let status = reopen_signed(
+    let sign = check_sign(
         ctx,
         actor,
-        &DayReopenInput {
-            date: input.date.clone(),
-            reason: input.reason.clone(),
+        &SignCheck {
+            reason: &input.reason,
+            sign: &input.sign,
+            date: &input.date,
+            wrong_action: "day_fix_sign_wrong",
         },
-        Some(&sign),
     )?;
-    let (_, today) = window(ctx)?;
-    let first = validate::date("date", &input.date, today).map_err(ServiceError::from)?;
-    let before =
-        closed_before.ok_or_else(|| ServiceError::Data("a reopen of no day".to_owned()))?;
-    // A fix in progress keeps its last day: the days between stay open and are closed with it.
-    let last = pending.as_ref().map_or(before, |p| p.last.max(before));
-    let token = new_token(ctx)?;
-    let days: Vec<String> = days_between(first, last)
-        .into_iter()
-        .map(BusinessDate::to_iso)
-        .collect();
-    ctx.db.write(|tx| {
+    let (first, reason) = parse_reopen(ctx, &input.date, &input.reason)?;
+    let opened = ctx.db.write(|tx| {
+        let closed_before = closed_in(tx)?;
+        // A record of a fix that no longer fits the closed-up-to day is stale (a day was closed or
+        // reopened some other way since): it is ignored, so its old last day is not closed again.
+        let pending = pending_of(tx)?.filter(|p| closed_before == p.first.previous_day());
+        let before = reopen_in(ctx, tx, actor, first, &reason, Some(&sign))?;
+        // A fix in progress keeps its last day: the days between stay open and are closed with it.
+        let last = pending.as_ref().map_or(before, |p| p.last.max(before));
+        let token = new_token(ctx)?;
+        let days: Vec<String> = days_between(first, last)
+            .into_iter()
+            .map(BusinessDate::to_iso)
+            .collect();
         crate::store::set_setting(
             tx,
             KEY_FIX_PENDING,
@@ -808,45 +838,51 @@ pub fn fix_open(
             &Event::new(Some(actor.user_id), "day_fix_open", "day")
                 .new_value(json!({ "days": days }))
                 .sign(Some(&sign))
-                .reason(input.reason.trim())
+                .reason(&reason)
                 .into_entry(),
         )?;
-        Ok::<(), ServiceError>(())
+        Ok::<(String, Vec<String>), ServiceError>((token, days))
     })?;
     Ok(DayFixOpened {
-        token,
-        days,
-        closed_up_to: status.closed_up_to,
+        token: opened.0,
+        days: opened.1,
+        closed_up_to: status(ctx)?.closed_up_to,
     })
 }
 
-/// Checks the reason and the sign of a reopen to fix (PRD FR-21.4, plan 73) and gives the sign to
-/// save: the Owner's own spelling of it, not the typed text. A missing reason or sign is refused
-/// first, both together. A wrong sign writes one audit entry (`day_fix_sign_wrong`) that holds no
-/// typed text, and refuses with `ERR_SIGN_WRONG`: nothing opens.
-fn check_fix_sign(
-    ctx: &Context,
-    actor: &Actor,
-    input: &DayFixOpenInput,
-) -> Result<String, ServiceError> {
+/// What [`check_sign`] looks at.
+struct SignCheck<'a> {
+    reason: &'a str,
+    sign: &'a str,
+    date: &'a str,
+    /// The audit action written when the sign is wrong.
+    wrong_action: &'static str,
+}
+
+/// Checks the reason and the sign of a reopen (PRD FR-21.2, FR-21.4, plan 73, plan 80 Q-R2-2) and
+/// gives the sign to save: the Owner's own spelling of it, not the typed text. A missing reason or
+/// sign is refused first, both together. A wrong sign writes one audit entry that holds no typed
+/// text, and refuses with `ERR_SIGN_WRONG`: nothing opens.
+fn check_sign(ctx: &Context, actor: &Actor, check: &SignCheck<'_>) -> Result<String, ServiceError> {
     let mut errors = validate::FieldErrors::default();
-    if input.reason.trim().is_empty() {
+    if check.reason.trim().is_empty() {
         errors.push(FieldError::new(ErrorCode::ErrReasonRequired, "reason"));
     }
-    if input.sign.trim().is_empty() {
+    if check.sign.trim().is_empty() {
         errors.push(FieldError::new(ErrorCode::ErrSignRequired, "sign"));
     }
     errors.finish()?;
     let configured = ctx.db.read(crate::owner_sign::configured)?;
-    if let Some(sign) = crate::owner_sign::accepted(&input.sign, configured.as_deref()) {
+    if let Some(sign) = crate::owner_sign::accepted(check.sign, configured.as_deref()) {
         return Ok(sign);
     }
+    // The refused try is audited on its own: the refusal must not roll the entry back.
     ctx.db.write(|tx| {
         ctx.db.auditor().write(
             tx,
-            &Event::new(Some(actor.user_id), "day_fix_sign_wrong", "day")
+            &Event::new(Some(actor.user_id), check.wrong_action, "day")
                 .new_value(
-                    json!({ "date": input.date.trim().chars().take(10).collect::<String>() }),
+                    json!({ "date": check.date.trim().chars().take(10).collect::<String>() }),
                 )
                 .into_entry(),
         )?;
@@ -860,6 +896,10 @@ fn check_fix_sign(
 /// because days are closed in order. A day that was closed or opened some other way since the
 /// token was given makes the token invalid.
 ///
+/// The days closed, the clearing of the fix record and the audit entry are one save (Code Standards
+/// B3, plan 80 T3-2). A day's refusal comes before any write of that day, so the days before it stay
+/// closed and the fix record is cleared with them; any other error undoes the whole save.
+///
 /// # Errors
 /// `ERR_FIX_TOKEN_INVALID` on `token`.
 pub fn fix_close(
@@ -868,49 +908,50 @@ pub fn fix_close(
     input: &DayFixCloseInput,
 ) -> Result<DayFixClosed, ServiceError> {
     let invalid = || ServiceError::reject_field(ErrorCode::ErrFixTokenInvalid, "token");
-    let (closed_now, _) = window(ctx)?;
-    let pending = ctx.db.read(pending_of)?.ok_or_else(invalid)?;
-    // The days must still be exactly as the reopen left them: the day before the first is the last
-    // closed one.
-    if pending.token != input.token || closed_now != pending.first.previous_day() {
-        return Err(invalid());
-    }
-    let mut closed = Vec::new();
-    let mut stayed_open: Vec<DayFixStayedOpen> = Vec::new();
-    for day in days_between(pending.first, pending.last) {
-        if !stayed_open.is_empty() {
-            stayed_open.push(DayFixStayedOpen {
-                date: day.to_iso(),
-                errors: Vec::new(),
-            });
-            continue;
+    let (closed, stayed_open) = ctx.db.write(|tx| {
+        let closed_now = closed_in(tx)?;
+        let pending = pending_of(tx)?.ok_or_else(invalid)?;
+        // The days must still be exactly as the reopen left them: the day before the first is the
+        // last closed one.
+        if pending.token != input.token || closed_now != pending.first.previous_day() {
+            return Err(invalid());
         }
-        let result = close(
-            ctx,
-            actor,
-            &DayCloseInput {
-                up_to: mandi_domain::core::dates::format_ddmmyyyy(day),
-            },
-        );
-        match result {
-            Ok(_) => closed.push(day.to_iso()),
-            Err(ServiceError::Rejected(items)) if !items.is_empty() => {
+        let mut closed = Vec::new();
+        let mut stayed_open: Vec<DayFixStayedOpen> = Vec::new();
+        for day in days_between(pending.first, pending.last) {
+            if !stayed_open.is_empty() {
                 stayed_open.push(DayFixStayedOpen {
                     date: day.to_iso(),
-                    errors: items
-                        .into_iter()
-                        .map(|r| mandi_domain::core::error::FieldError {
-                            code: r.code,
-                            field: r.field.unwrap_or_default(),
-                            values: r.values,
-                        })
-                        .collect(),
+                    errors: Vec::new(),
                 });
+                continue;
             }
-            Err(other) => return Err(other),
+            let result = close_in(
+                ctx,
+                tx,
+                actor,
+                &DayCloseInput {
+                    up_to: mandi_domain::core::dates::format_ddmmyyyy(day),
+                },
+            );
+            match result {
+                Ok(()) => closed.push(day.to_iso()),
+                Err(ServiceError::Rejected(items)) if !items.is_empty() => {
+                    stayed_open.push(DayFixStayedOpen {
+                        date: day.to_iso(),
+                        errors: items
+                            .into_iter()
+                            .map(|r| mandi_domain::core::error::FieldError {
+                                code: r.code,
+                                field: r.field.unwrap_or_default(),
+                                values: r.values,
+                            })
+                            .collect(),
+                    });
+                }
+                Err(other) => return Err(other),
+            }
         }
-    }
-    ctx.db.write(|tx| {
         clear_pending(tx, actor.user_id)?;
         ctx.db.auditor().write(
             tx,
@@ -921,7 +962,7 @@ pub fn fix_close(
                 }))
                 .into_entry(),
         )?;
-        Ok::<(), ServiceError>(())
+        Ok::<(Vec<String>, Vec<DayFixStayedOpen>), ServiceError>((closed, stayed_open))
     })?;
     Ok(DayFixClosed {
         closed,

@@ -246,6 +246,11 @@ pub(crate) fn edit_in(
                 "sign",
             ));
         }
+        // The refunds of the owner may not end above what he could owe after the new rent
+        // (PRD FR-12.51, plan 80 gate R4-3).
+        let installments = Paisa::try_from_paisa(repo::figures(tx, &garden)?.installments_paisa)
+            .map_err(crate::error::money_error)?;
+        super::read::require_refunds_covered(tx, garden.id, rent, installments, "rent")?;
     }
     let user = actor.user_id;
     let now = ctx.now_text();

@@ -101,7 +101,10 @@ pub async fn fruit_get<R: tauri::Runtime>(
 }
 
 /// One page of entries with the totals over the whole filter (PRD FR-19.11). Read only. The filters
-/// are partner or guests, item, source, dates and status.
+/// are partner or guests, item, source, dates and status. While the partner section is locked
+/// (PRD FR-17.11, NFR-SEC-14) a request for one partner's fruit is refused with
+/// `ERR_PARTNER_LOCKED`, and a request for everyone lists the shop's guests' fruit only, with
+/// `partners_locked` true (the same rule as report R37).
 #[tauri::command]
 pub async fn fruit_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

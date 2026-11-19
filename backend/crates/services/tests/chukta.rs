@@ -29,7 +29,14 @@ use mandi_services::core::vouchers::{ReceiptInput, RemovedPaymentFields};
 use mandi_services::{ServiceError, assist, chukta, ledger, search, vouchers};
 use support::*;
 
-fn add(w: &World, ur: &str, en: &str, phone: Option<&str>) -> Result<i64, ServiceError> {
+/// The strict call: the words the user confirmed are given, nothing else.
+fn add_with(
+    w: &World,
+    ur: &str,
+    en: &str,
+    phone: Option<&str>,
+    confirmed: &[&str],
+) -> Result<i64, ServiceError> {
     chukta::add(
         &w.env.ctx,
         &w.owner,
@@ -37,9 +44,35 @@ fn add(w: &World, ur: &str, en: &str, phone: Option<&str>) -> Result<i64, Servic
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.map(str::to_owned),
+            confirmed_rules_words: confirmed.iter().map(|w| (*w).to_owned()).collect(),
         },
     )
     .map(|b| b.id)
+}
+
+/// Adds a buyer, confirming whatever spelling the check asks about (most tests here are not about
+/// the spelling check, PRD FR-7.66).
+fn add(w: &World, ur: &str, en: &str, phone: Option<&str>) -> Result<i64, ServiceError> {
+    let mut confirmed: Vec<String> = Vec::new();
+    loop {
+        let words: Vec<&str> = confirmed.iter().map(String::as_str).collect();
+        match add_with(w, ur, en, phone, &words) {
+            Err(ServiceError::Rejected(items))
+                if items
+                    .iter()
+                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
+            {
+                for item in items {
+                    if let Some(mandi_services::core::error::ErrorValue::Text(words)) =
+                        item.values.get("words")
+                    {
+                        confirmed.extend(words.split(' ').map(str::to_owned));
+                    }
+                }
+            }
+            other => return other,
+        }
+    }
 }
 
 fn find(w: &World, text: &str) -> Vec<String> {
@@ -360,4 +393,53 @@ fn no_voucher_takes_the_account_0030_he_has_no_ledger() {
     // And his bill figures are nothing: 0030 holds no balance by any reading.
     let b = ledger::account_balance(&w.env.ctx, w.chukta_khata).unwrap();
     assert_eq!(b.side, BalanceSide::Zero);
+}
+
+/// Gate finding R3-1 (plan 80, PRD FR-7.66, Code Standards V0): a new چکتا buyer whose name holds a
+/// word that only the spelling rules made is refused until the user confirms it, and the confirmed
+/// pair is learned like any other record's. The screen is not trusted to have asked.
+#[test]
+fn a_rules_only_spelling_is_refused_until_it_is_confirmed_and_then_learned() {
+    let w = world();
+    let before = scalar(&w, "SELECT COUNT(*) FROM chukta_buyers");
+    // "زیبق" / "Zaibq" is made by the rules alone (the same words as the accounts test).
+    let error = add_with(&w, "زیبق", "Zaibq", None, &[]).unwrap_err();
+    let ServiceError::Rejected(items) = error else {
+        panic!("not a refusal of the user's entry")
+    };
+    assert!(
+        !items.is_empty()
+            && items
+                .iter()
+                .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed),
+        "{items:?}"
+    );
+    let fields: Vec<&str> = items.iter().filter_map(|i| i.field.as_deref()).collect();
+    assert!(
+        fields.contains(&"name_ur") && fields.contains(&"name_en"),
+        "{fields:?}"
+    );
+    // Nothing was written: no buyer, no audit row, nothing learned.
+    assert_eq!(scalar(&w, "SELECT COUNT(*) FROM chukta_buyers"), before);
+    assert_eq!(
+        scalar(
+            &w,
+            "SELECT COUNT(*) FROM translit_pairs WHERE roman = 'zaibq'"
+        ),
+        0
+    );
+    // Confirmed, he is saved and the pair is learned for the next word typed.
+    let id = add_with(&w, "زیبق", "Zaibq", None, &["زیبق", "Zaibq"]).unwrap();
+    assert!(id > 0);
+    assert_eq!(scalar(&w, "SELECT COUNT(*) FROM chukta_buyers"), before + 1);
+    assert_eq!(
+        scalar(
+            &w,
+            "SELECT COUNT(*) FROM translit_pairs WHERE roman = 'zaibq'"
+        ),
+        1,
+        "the confirmed pair is learned (FR-7.26)"
+    );
+    // A name made of known words needs no confirmation (PRD 4.5).
+    add_with(&w, "شاہد", "Shahid", Some("0300-0000000"), &[]).unwrap();
 }

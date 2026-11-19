@@ -189,8 +189,6 @@ pub struct LinePreview {
     /// quantity of the rows before it (PRD FR-7.52).
     #[ts(type = "number")]
     pub remaining_qty: i64,
-    /// The last rate of this item and packing, as grey text only (PRD FR-7.53).
-    pub rate_hint: Option<RateHint>,
     /// The numbers, or null while the row is not complete. Also null for a row refused because it
     /// takes the lot over the quantity it has left (`ERR_QTY_EXCEEDS_LOT` on its quantity, PRD
     /// FR-12.6): it has no amount, commission or total, and the lot and the whole بکری leave it out.

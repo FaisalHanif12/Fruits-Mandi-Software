@@ -18,7 +18,8 @@ use mandi_reports::dashboard::{
 use mandi_reports::export::export_table;
 use mandi_reports::export::l10n::L10n;
 use mandi_reports::reports::{
-    CollectionSheetPrintInput, TableSpec, collection_sheet_spec, partner_statement_month_spec,
+    AdhariSheetPrintInput, CollectionSheetPrintInput, TableSpec, adhari_sheet_spec,
+    collection_sheet_spec, partner_statement_month_spec,
 };
 use mandi_services::core::auth::Language;
 use mandi_services::core::statement::PartnersStatementMonthInput;
@@ -146,6 +147,35 @@ fn the_collection_sheet_is_a_sheet_with_the_totals_of_the_day() {
     assert_eq!(
         (1..=3).map(|i| sheet.num(head + i, 6)).collect::<Vec<_>>(),
         ["18684", "12880", "0"]
+    );
+}
+
+/// Plan 80 Q-R5-2 (PRD v1.43 R5, FR-19.3): the buyers-only ادھاری تفصیل sheet of a day is a sheet too
+/// (`tables_export_excel`, kind `adhari_sheet`), made from the table of its print. After Events 1 to 5
+/// on 10-10-26: today's bills 44,364, paid on the spot 12,800, credit of today 31,564, previous 0,
+/// total credit 31,564. Money and counts go through `rupees_as_f64` and `count_as_f64` (M13).
+#[test]
+fn the_adhari_sheet_is_a_sheet_with_the_totals_of_the_day() {
+    let w = full_day();
+    let spec = adhari_sheet_spec(
+        w.env.ctx.db(),
+        &AdhariSheetPrintInput {
+            date: "10-10-2026".into(),
+            language: Language::En,
+            paper: None,
+        },
+    )
+    .unwrap();
+    let sheet = export(&w, &spec, Language::En, "adhari");
+    let head = head_row(&sheet, &spec, Language::En);
+    // Three buyers bought today (اکرم, ارشد, شاہد), one row each, then the totals row.
+    assert_eq!(
+        nums(&sheet, head + 4, 2, 7),
+        ["44364", "12800", "31564", "0", "31564"]
+    );
+    assert_eq!(
+        (1..=3).map(|i| sheet.num(head + i, 2)).collect::<Vec<_>>(),
+        ["18684", "12880", "12800"]
     );
 }
 

@@ -47,12 +47,13 @@ use crate::ask::{
 use crate::check::{Check, Failure, NameBook, NameSet, Verdict};
 use crate::client::{CallError, ModelClient, Reply, ToolCall};
 use crate::conversation::{CallTiming, Conversation, Timing, ToolTiming, Turn, Wait, Waiting};
+use crate::dues_guard;
 use crate::echo;
 use crate::fill;
 use crate::hedge::{Attempt, End, Side};
 use crate::help_guard;
 use crate::limits::{
-    DAILY_LIMIT, FIRST_BYTE_SECS, MAX_CALL_OUTPUT_TOKENS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
+    DAILY_LIMIT, FIRST_BYTE_SECS, MAX_CALL_OUTPUT_TOKENS, MAX_CONVERSATION_ID_CHARS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
     MAX_OUTPUT_TOKENS, MAX_QUESTION_CHARS, MAX_REWRITES, MAX_TOOL_CALLS, QUESTION_TIMEOUT_SECS,
     RETRY_MIN_LEFT_SECS, TOOLS_OFF_AT_SECS,
 };
@@ -82,7 +83,8 @@ pub struct Deps<'a> {
     pub client: &'a dyn ModelClient,
     /// Where step lines go (the `assistant://step` event).
     pub emit: &'a dyn Fn(AssistantStep),
-    /// What the backup service says about the cloud copy (for the tile `last_backup`).
+    /// What the backup service says about the cloud copy (for the attention list, `backup_old`;
+    /// there is no backup tile since PRD v1.41).
     pub backup: BackupFacts,
 }
 
@@ -1279,6 +1281,7 @@ impl<'a> Run<'a> {
         let mut kind_set = false;
         let mut months_fixed = false;
         let mut measure_fixed = false;
+        let mut dues_fixed = false;
         // What the model wrote before the app put a name back: the log keeps the model's own words
         // (the call marks `repaired`), so the next live run shows what it typed.
         let mut written_by_model: Option<String> = None;
@@ -1324,6 +1327,12 @@ impl<'a> Run<'a> {
                     Some(scope) => scope_guard::failures(&scope, &state, &parsed, &[]),
                     None => Vec::new(),
                 };
+                // The one period the question named: every cited view or report must be for those
+                // days, also when the app planned a tile and no view (plan 80, T5-2).
+                if let Some(asked) = &turn.asked_days {
+                    let more = scope_guard::period_failures(asked, &state, &parsed, &wrong, &[]);
+                    wrong.extend(more);
+                }
                 // And an answer of the guide alone, when a figure was asked and read (G3).
                 wrong.extend(scope_guard::guide_only(
                     &state,
@@ -1370,6 +1379,37 @@ impl<'a> Run<'a> {
                     }
                 }
                 _ => verdict,
+            };
+            // "kul ugrahi" is the tile `total_dues` (buyers, sellers, the dead amount and the money
+            // lent): an answer that cites only the buyers' dues is made to cite the total, in the same
+            // tiles result (plan 80 R6-x). A repair is made once; what is left is refused.
+            let verdict = if !swapped && matches!(verdict, Verdict::Ok | Verdict::Retry(_)) {
+                let repairs = dues_guard::plan(
+                    crate::understand::asks_total_dues(&turn.question),
+                    &parsed.text,
+                    &state,
+                );
+                if repairs.is_empty() {
+                    verdict
+                } else {
+                    let fixed = (matches!(verdict, Verdict::Ok) && !dues_fixed)
+                        .then(|| {
+                            map_texts(&content, &|text| measure_guard::rewrite(text, &repairs))
+                        })
+                        .flatten();
+                    if let Some(fixed) = fixed {
+                        dues_fixed = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired.push("dues".to_owned());
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
+                    with_failures(verdict, measure_guard::repair_failures(&repairs))
+                }
+            } else {
+                verdict
             };
             // An answer that cites nothing of the books and only the Owner's own amount is refused: it
             // would give his number back as a confirmation (D7 R13, money review 11).
@@ -2793,17 +2833,30 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
             "text",
         ));
     }
+    // The conversation id comes from the screen and is untrusted (V0): when one is given it must be
+    // a short text with no control character, or the log row would be refused after the model's
+    // reply was paid for (plan 80, T5-7). An empty or blank one starts a new conversation.
+    let given = input
+        .conversation_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|c| !c.is_empty());
+    if let Some(given) = given
+        && (given.chars().count() > MAX_CONVERSATION_ID_CHARS
+            || given.chars().any(char::is_control))
+    {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrFormatInvalid,
+            "conversation_id",
+        ));
+    }
     require_on(d)?;
     let _guard = d
         .runtime
         .try_begin()
         .ok_or_else(|| reject(ErrorCode::ErrAssistantBusy))?;
     let run = Run::new(d)?;
-    let id = input
-        .conversation_id
-        .clone()
-        .filter(|c| !c.trim().is_empty())
-        .unwrap_or_else(|| d.runtime.new_conversation_id(d.ctx));
+    let id = given.map_or_else(|| d.runtime.new_conversation_id(d.ctx), str::to_owned);
     let mut conv = d
         .runtime
         .take(&id)
@@ -2823,6 +2876,7 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     };
     // The side of the commission the question asks (D7, plan 59 F1): the guard keeps the answer on that
     // column.
+    turn.asked_days = crate::understand::asked_days(text, run.today);
     turn.commission_side = understood.as_ref().and_then(|u| u.commission_side);
     turn.commission_laga = understood.as_ref().is_some_and(|u| {
         u.figures
@@ -2953,6 +3007,8 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
     let Some(mut turn) = conv.turns.pop() else {
         return Err(not_waiting());
     };
+    // The question as it was before the click, kept for a try again if the call fails (plan 80, T5-6).
+    let before_click = turn.clone();
     let outcome = match (&waiting.wait, &input.choice) {
         // "All lots" (plan 71 L9): the model reads the seller and the item together, with no lot
         // narrowing. Only a list of lots has this button.
@@ -3065,7 +3121,18 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
     // A new moment: what this question read before is read again on it, so all of it is one.
     run.refresh(&mut conv, &turn);
     let finished = run.drive(&mut conv, &mut turn, pending);
-    run.conclude(conv, turn, finished, Source::Continue, Some(row.id))
+    let failed = finished.failure.is_some();
+    let conversation_id = conv.id.clone();
+    let reply = run.conclude(conv, turn, finished, Source::Continue, Some(row.id))?;
+    // The call failed ("جواب نہیں آ سکا، دوبارہ کوشش کریں"): the question goes on waiting for the same
+    // click, as it was, so the Owner can try again without typing it anew.
+    if failed && let Some(mut again) = d.runtime.take(&conversation_id) {
+        again.turns.pop();
+        again.turns.push(before_click);
+        again.waiting = Some(waiting);
+        d.runtime.keep(again);
+    }
+    Ok(reply)
 }
 
 /// Reads an old answer again on today's books (`assistant_rerun`): the same tool calls, shown as
@@ -3138,6 +3205,19 @@ pub fn test_connection(d: &Deps<'_>) -> Result<AssistantTestResult, ServiceError
         .try_begin()
         .ok_or_else(|| reject(ErrorCode::ErrAssistantBusy))?;
     let run = Run::new(d)?;
+    // The daily limit is a hard stop for the connection test too, which counts as a question
+    // (PRD FR-7.81, FR-7.85; plan 80, T5-5): at the limit nothing is sent and nothing is written.
+    let used = assistant::count_today(d.ctx)?;
+    if used >= DAILY_LIMIT {
+        return Ok(AssistantTestResult {
+            worked: false,
+            millis: 0,
+            model: run.model.clone(),
+            failure: None,
+            count_today: used,
+            limit: DAILY_LIMIT,
+        });
+    }
     let started = Instant::now();
     let conv = Conversation::new(&d.runtime.new_conversation_id(d.ctx));
     let mut turn = Turn {

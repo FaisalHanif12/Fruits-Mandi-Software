@@ -360,6 +360,8 @@ export function createFruitBooks(options: FruitOptions = {}) {
           value_paisa: money(saved.reduce((sum, row) => sum + (rupees.get(row.id) ?? 0), 0)),
         },
         months: [],
+        // The partner section is open in these tests unless one says otherwise (PRD FR-17.11).
+        partners_locked: false,
       };
     },
     lots: (input: FruitLotsInput): FruitLots => {

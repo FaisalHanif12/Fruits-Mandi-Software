@@ -188,6 +188,12 @@ fn put_ages(
     let mut unique = ids.clone();
     unique.sort_unstable();
     unique.dedup();
+    // Many ordinary buyers with many bills: the open bills are added up by age in the one pass that
+    // finds them, and never made into objects (plan 80 gate: with 960,000 open bills the objects were
+    // half of the time of R20 and of the dashboard).
+    if put_ages_in_bulk(conn, today, buyers, &unique)? {
+        return Ok(());
+    }
     let bills = mandi_db::party_reads::open_buyer_bills(conn, &unique)?;
     let mut by_key: HashMap<(i64, Option<String>), Ages> = HashMap::new();
     for bill in &bills {
@@ -220,6 +226,78 @@ fn put_ages(
         }));
     }
     Ok(())
+}
+
+/// The bulk way of [`put_ages`]: the open bills of the buyers added up by band and oldest day in one
+/// pass (`party_reads::open_buyer_ages_bulk`), when the bulk read is the one the bills would be read
+/// with. False when it is not (few buyers, few bills, a person key on an ordinary buyer), and the
+/// caller reads the bills. The bands and the oldest day are exactly those of the bills: a day on or
+/// after `today` less 7 days is at most 7 days old, and so on.
+fn put_ages_in_bulk(
+    conn: &Connection,
+    today: BusinessDate,
+    buyers: &mut [Buyer],
+    unique: &[i64],
+) -> Result<bool, ReportsError> {
+    use mandi_db::party_reads::{
+        AgeCuts, BULK_FROM_ACCOUNTS, BULK_FROM_DEBIT_LINES, OpenMethod, choose_open_method,
+    };
+    let (method, bulk_ids, line_ids) = choose_open_method(
+        conn,
+        unique,
+        OpenMethod::Auto,
+        BULK_FROM_ACCOUNTS,
+        BULK_FROM_DEBIT_LINES,
+    )?;
+    if method != OpenMethod::Bulk || !line_ids.is_empty() {
+        return Ok(false);
+    }
+    let cut = |days: i64| -> Result<String, ReportsError> {
+        today
+            .plus_days(-days)
+            .map(BusinessDate::to_iso)
+            .ok_or_else(|| ReportsError::Data("a day before today is outside the calendar".into()))
+    };
+    let (seven, thirty, ninety) = (cut(7)?, cut(30)?, cut(90)?);
+    let Some(aged) = mandi_db::party_reads::open_buyer_ages_bulk(
+        conn,
+        &bulk_ids,
+        AgeCuts {
+            seven: &seven,
+            thirty: &thirty,
+            ninety: &ninety,
+        },
+    )?
+    else {
+        return Ok(false);
+    };
+    let mut by_account: HashMap<i64, Ages> = HashMap::with_capacity(aged.len());
+    for buyer in aged {
+        let day = BusinessDate::parse_iso(&buyer.oldest)
+            .ok_or_else(|| ReportsError::Data(format!("entry date {}", buyer.oldest)))?;
+        let mut bands = [Paisa::ZERO; 4];
+        for (slot, amount) in bands.iter_mut().zip(buyer.bands) {
+            *slot = paisa(amount)?;
+        }
+        by_account.insert(
+            buyer.account_id,
+            Ages {
+                oldest: Some((buyer.oldest, today.days_after(day).max(0))),
+                bands,
+            },
+        );
+    }
+    for buyer in buyers.iter_mut() {
+        buyer.ages = Some(
+            by_account
+                .remove(&buyer.party.account_id)
+                .unwrap_or(Ages {
+                    oldest: None,
+                    bands: [Paisa::ZERO; 4],
+                }),
+        );
+    }
+    Ok(true)
 }
 
 fn band_cells(ages: Option<&Ages>) -> Vec<Cell> {
@@ -340,7 +418,15 @@ pub(crate) fn run(
     spec: PageSpec,
     layout: Layout,
 ) -> Result<ReportPage, ReportsError> {
-    let (buyers, as_of_is_now) = load_buyers(conn, typed)?;
+    // The buyers who owe are the same for every page of the report: the first page reads them (the
+    // balances and the ages of the open bills), the next pages take them from memory while the books
+    // are as they were (`result_cache`, plan 80 gate, NFR-SPD-24).
+    let what = format!(
+        "buyers_who_owe|{:?}|{:?}|{:?}|{:?}|{:?}",
+        typed.as_of, typed.city_id, typed.party_id, typed.collector_id, typed.today
+    );
+    let loaded = crate::result_cache::remembered(conn, &what, || load_buyers(conn, typed))?;
+    let (buyers, as_of_is_now) = (&loaded.0, loaded.1);
     page_of(conn, typed, spec, layout, buyers, as_of_is_now)
 }
 
@@ -418,13 +504,13 @@ pub(crate) fn run_without_ages(
     layout: Layout,
 ) -> Result<ReportPage, ReportsError> {
     let buyers = balances_owing(conn, typed)?;
-    page_of(conn, typed, spec, layout, buyers, false)
+    page_of(conn, typed, spec, layout, &buyers, false)
 }
 
 /// The buyers who owe under these filters, with their ages when the day is today or later, and
 /// whether the ages were worked out.
 fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), ReportsError> {
-    let mut buyers = balances_owing(conn, typed)?;
+    let mut buyers = crate::prof::timed("buyers.balances_owing", || balances_owing(conn, typed))?;
 
     // The ages are known only for today or later: the matching rows are not dated.
     let today = typed
@@ -435,7 +521,7 @@ fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), R
         .as_deref()
         .is_none_or(|as_of| as_of >= today.to_iso().as_str());
     if as_of_is_now {
-        put_ages(conn, today, &mut buyers)?;
+        crate::prof::timed("buyers.put_ages", || put_ages(conn, today, &mut buyers))?;
     }
     Ok((buyers, as_of_is_now))
 }
@@ -446,13 +532,13 @@ fn page_of(
     typed: &Typed,
     spec: PageSpec,
     layout: Layout,
-    buyers: Vec<Buyer>,
+    buyers: &[Buyer],
     as_of_is_now: bool,
 ) -> Result<ReportPage, ReportsError> {
     // Totals over the whole filter.
     let mut total_balance = Paisa::ZERO;
     let mut total_bands = [Paisa::ZERO; 4];
-    for buyer in &buyers {
+    for buyer in buyers {
         add(&mut total_balance, buyer.balance)?;
         if let Some(ages) = &buyer.ages {
             for (slot, band) in total_bands.iter_mut().zip(ages.bands) {
@@ -463,11 +549,11 @@ fn page_of(
 
     let city_names = cities(conn)?;
     let all_rows = match layout {
-        Layout::Flat => flat_rows(&buyers, &city_names)?,
-        Layout::ByCity => grouped_rows(&buyers, &city_names, |b| b.city_id, false, &city_names)?,
+        Layout::Flat => flat_rows(buyers, &city_names)?,
+        Layout::ByCity => grouped_rows(buyers, &city_names, |b| b.city_id, false, &city_names)?,
         Layout::ByCollector => {
             let staff = collectors(conn)?;
-            grouped_rows(&buyers, &staff, |b| b.collector_id, true, &city_names)?
+            grouped_rows(buyers, &staff, |b| b.collector_id, true, &city_names)?
         }
     };
 

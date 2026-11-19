@@ -566,7 +566,7 @@ pub fn posting_lots(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<
                 l.freight_paisa, l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa,
                 l.store_rent_paisa, l.phone_paisa, l.lot_no
          FROM bikri_lots l
-         WHERE l.seller_account_id = ?1 AND l.first_entry_id IS NOT NULL
+         WHERE l.seller_account_id = ?1 AND l.first_entry_id IS NOT NULL AND l.removed_at IS NULL
          UNION ALL
          SELECT s.journal_entry_id, l.id, 0, l.adjust_advance,
                 SUM(s.seller_amount_paisa), SUM(s.seller_comm_paisa), 0, 0, 0, 0, 0, 0, l.lot_no

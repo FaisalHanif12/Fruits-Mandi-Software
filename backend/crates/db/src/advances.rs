@@ -216,16 +216,26 @@ pub fn read_all(conn: &Connection) -> Result<Advances, AdvanceReadError> {
 /// # Errors
 /// As [`read_all`].
 pub fn open_parts_total(conn: &Connection, as_of: Option<&str>) -> Result<Paisa, AdvanceReadError> {
-    let all = read_all(conn)?;
-    let mut sum = Paisa::ZERO;
-    for event in &all.events {
-        if as_of.is_some_and(|d| event.date.as_str() > d) {
-            continue;
+    Ok(read_all(conn)?.open_parts_total(as_of)?)
+}
+
+impl Advances {
+    /// What the advances of every partner still have out at the end of `as_of` (or now), from the
+    /// events already read: Σ out less Σ back.
+    ///
+    /// # Errors
+    /// `Overflow`.
+    pub fn open_parts_total(&self, as_of: Option<&str>) -> Result<Paisa, MoneyError> {
+        let mut sum = Paisa::ZERO;
+        for event in &self.events {
+            if as_of.is_some_and(|d| event.date.as_str() > d) {
+                continue;
+            }
+            sum = match event.kind {
+                mandi_core::advances::AdvanceEventKind::Out => sum.checked_add(event.part)?,
+                mandi_core::advances::AdvanceEventKind::Back => sum.checked_sub(event.part)?,
+            };
         }
-        sum = match event.kind {
-            mandi_core::advances::AdvanceEventKind::Out => sum.checked_add(event.part)?,
-            mandi_core::advances::AdvanceEventKind::Back => sum.checked_sub(event.part)?,
-        };
+        Ok(sum)
     }
-    Ok(sum)
 }

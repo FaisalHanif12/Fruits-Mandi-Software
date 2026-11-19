@@ -5,7 +5,13 @@ import type { WireCode } from '../../bindings/WireCode';
 import type { UiError } from '../../bindings/UiError';
 import type { UiErrorItem } from '../../bindings/UiErrorItem';
 import { isoDayToDisplay } from '../format/dates';
-import { formatPaisaValue, groupDigits, type Grouping } from '../format/money';
+import {
+  formatPaisaValue,
+  groupDigits,
+  paisaOfErrorValue,
+  type Grouping,
+  type Paisa,
+} from '../format/money';
 import { formatBps } from '../format/percent';
 import { CommandError, toUiError } from './invoke';
 
@@ -26,6 +32,19 @@ export const FALLBACK_ERROR_MESSAGE_ID = errorMessageId('ERR_INTERNAL');
 /** The UiError inside anything a query or mutation failed with. */
 export function uiErrorOf(error: unknown): UiError {
   return error instanceof CommandError ? error.uiError : toUiError(error);
+}
+
+/**
+ * The cash in hand after the entry that the backend names when it refuses a save for the cash question
+ * (`ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`, value `cash_after_paisa`, PRD FR-6.7), or null when the failure is not
+ * that refusal or carries no amount. A screen then opens the cash box with this figure and sends the save again
+ * with the answer; with null it shows the refusal in words, as any other.
+ */
+export function cashAfterOfRefusal(failure: unknown): Paisa | null {
+  const item = uiErrorOf(failure).errors.find(
+    (one) => one.code === 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED',
+  );
+  return item === undefined ? null : paisaOfErrorValue(item.values['cash_after_paisa']);
 }
 
 /** True when the problem points at one field or grid cell, not at the whole form. */

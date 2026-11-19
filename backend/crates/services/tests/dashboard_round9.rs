@@ -1092,6 +1092,17 @@ fn every_kind_of_the_bell_appears_once_the_count_is_the_list_and_the_overdue_agr
             .map_err(mandi_services::db::DbError::from)
         })
         .unwrap();
+    // A question of the assistant that ended with two places of a figure that differ, 5 days ago
+    // (plan 80 R6-3, PRD FR-7.76 point 2).
+    w.env
+        .ctx
+        .db()
+        .write(|tx| {
+            mandi_services::db::assistant::insert(tx, &records_differ_question("2026-11-10"))
+                .map(|_| ())
+                .map_err(mandi_services::db::DbError::from)
+        })
+        .unwrap();
     set_today(&w.env, 2026, 11, 15);
     let backup = BackupFacts {
         cloud_on: true,
@@ -1377,4 +1388,78 @@ mod fixtures {
         .unwrap();
         pair("prefs_screen_set", &request, &state);
     }
+}
+
+/// A question log row that ended `records_differ`, asked on `day` (Pakistan date).
+pub(crate) fn records_differ_question(day: &str) -> mandi_services::db::assistant::NewQuestion<'_> {
+    mandi_services::db::assistant::NewQuestion {
+        asked_at: "2026-11-10T09:00:00.000Z",
+        asked_day: day,
+        asked_by: None,
+        question: "akram ka bakaya",
+        language: "ur",
+        conversation_id: "c1",
+        parent_id: None,
+        source: "model",
+        counted: true,
+        sources_json: "[]",
+        outcome: "records_differ",
+        tool_calls_json: "[]",
+        answer_json: None,
+        model: Some("openai/gpt-6-luna"),
+        model_calls: Some(1),
+        tokens_in: Some(100),
+        tokens_cached: Some(0),
+        tokens_out: Some(10),
+        tokens_reasoning: Some(0),
+        finish_reason: Some("stop"),
+        total_millis: None,
+        model_millis: None,
+        tool_millis: None,
+        calls_json: None,
+    }
+}
+
+/// Plan 80 Q-T3-3 (NFR-SEC-6 v1.21, PRD FR-7.44, NFR-OBS-5): a daily check that found a money table that
+/// differs from the journal (`books.tables.ok` false) puts the health check on the bell like a broken
+/// chain; a good compare, and a result stored before the compare existed (no `tables`), do not.
+#[test]
+fn a_failed_compare_of_the_money_tables_puts_the_health_check_on_the_bell() {
+    let w = support::world();
+    let backup = BackupFacts {
+        cloud_on: false,
+        cloud_age_hours: None,
+    };
+    let store = |tables: &str| {
+        let json = format!(
+            r#"{{"ok":true,"books":{{"ran":true,"balanced":true,
+                "journal_chain":{{"ok":true}},"audit_chain":{{"ok":true}}{tables}}},
+                "data":{{"state":"ok"}}}}"#
+        );
+        w.env
+            .ctx
+            .db()
+            .write(|tx| {
+                tx.execute(
+                    "INSERT INTO settings (key, value_json, created_by, updated_by, version)
+                     VALUES ('health_last', ?1, 1, 1, 1)
+                     ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+                    [json],
+                )
+                .map_err(mandi_services::db::DbError::from)
+            })
+            .unwrap();
+        bell(&w, backup)
+            .items
+            .iter()
+            .any(|i| i.kind == AttentionKind::HealthCheck)
+    };
+    // Stored before the compare existed: no `tables` key, nothing on the bell.
+    assert!(!store(""));
+    // A good compare: nothing.
+    assert!(!store(r#","tables":{"ok":true,"at":"","count":0}"#));
+    // A table that differs from the journal: the item.
+    assert!(store(
+        r#","tables":{"ok":false,"at":"bikri_sales: journal entry 5: seller_amount","count":1}"#
+    ));
 }

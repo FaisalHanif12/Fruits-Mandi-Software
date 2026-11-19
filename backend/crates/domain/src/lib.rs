@@ -10,6 +10,7 @@
 
 pub mod auth;
 pub mod bikri;
+pub mod books_check;
 pub mod capital;
 pub mod cash;
 pub mod expenses;

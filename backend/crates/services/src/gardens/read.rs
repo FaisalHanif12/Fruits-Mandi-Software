@@ -11,6 +11,7 @@ use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as vrepo, EntryRec, PartRec};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
+use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::gardens::{
     GardenDetail, GardenGetInput, GardenHistoryKind, GardenHistoryRow, GardenPartnerResult,
     GardenRow, GardenSummaryRow, GardensList, GardensListInput, GardensSummary, GardensTotals,
@@ -28,7 +29,7 @@ use mandi_domain::ventures::{credit_working, payment_working};
 use super::{DEFAULT_PAGE, data};
 use crate::context::Context;
 use crate::day;
-use crate::error::{ServiceError, money_error};
+use crate::error::{Rejection, ServiceError, money_error};
 use crate::flags::Marker;
 use crate::ventures::{self, Venture, commission_view, not_found, partner_rows, record_of};
 
@@ -174,6 +175,46 @@ pub(super) fn balance_working(money_in: Paisa, paid: Paisa, balance: Paisa) -> W
         ],
         rule_id: None,
     }
+}
+
+/// Refuses a change that would leave the refunds of a garden's owner above what he could owe: the
+/// refunds must stay at most the installments paid above the rent, `max(0, installments − rent)`
+/// (PRD FR-12.51, plan 80 gate R4-3). A rent raised after refunds were entered, or an installment
+/// cancelled or lowered, would otherwise leave refunds with nothing to refund, silently.
+///
+/// `rent` and `installments` are the figures AFTER the change. The refusal is
+/// `ERR_RETURN_EXCEEDS_OPEN` at `field`, with `open_paisa` (the most the owner could owe after the
+/// change, so the most refunds may be) and `refunded_paisa` (what he has already paid back).
+///
+/// Example (PRD FR-12.51): rent 45,00,000, installments 50,00,000, one refund of 5,00,000. Raising
+/// the rent back to 50,00,000 gives `open_paisa` 0 against `refunded_paisa` 5,00,000: refused.
+/// Cancelling a 10,00,000 installment gives 40,00,000 against a rent of 45,00,000: also refused.
+///
+/// # Errors
+/// `ERR_RETURN_EXCEEDS_OPEN`; `ERR_OVERFLOW`; `ServiceError::Db`.
+pub(super) fn require_refunds_covered(
+    conn: &Connection,
+    garden_id: i64,
+    rent: Paisa,
+    installments: Paisa,
+    field: &str,
+) -> Result<(), ServiceError> {
+    let refunds = paisa(repo::refunds_total(conn, garden_id)?)?;
+    let most = owner_owes_of(installments, rent, Paisa::ZERO)?;
+    if refunds > most {
+        return Err(ServiceError::Rejected(vec![Rejection {
+            code: ErrorCode::ErrReturnExceedsOpen,
+            field: Some(field.to_owned()),
+            values: std::collections::BTreeMap::from([
+                ("open_paisa".to_owned(), ErrorValue::Number(most.as_paisa())),
+                (
+                    "refunded_paisa".to_owned(),
+                    ErrorValue::Number(refunds.as_paisa()),
+                ),
+            ]),
+        }]));
+    }
+    Ok(())
 }
 
 /// What the owner still owes the garden (PRD FR-12.51): the installments paid above the rent, less the

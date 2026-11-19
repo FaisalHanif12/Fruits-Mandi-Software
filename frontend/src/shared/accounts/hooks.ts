@@ -179,10 +179,13 @@ export function useSaveAccount() {
     mutationFn: ({
       draft,
       confirmedWords,
+      confirmCashBelowZero = false,
     }: {
       draft: AccountDraft;
       confirmedWords: readonly string[];
-    }) => accountsSave(draft, confirmedWords),
+      /** The yes of the cash box: the change of an opening in روکڑ may take cash below 0 (PRD FR-6.7). */
+      confirmCashBelowZero?: boolean;
+    }) => accountsSave(draft, confirmedWords, confirmCashBelowZero),
     onSuccess: refresh,
   });
 }
@@ -295,10 +298,13 @@ export function useGlobalSearch(text: string) {
  * lines and what ابتدائی فرق would be. The same backend function as the save (Code Standards B5).
  * Never kept: a balance changes with every posting.
  */
-export function useOpeningsPreview(lines: readonly OpeningLineInput[]) {
+export function useOpeningsPreview(
+  lines: readonly OpeningLineInput[],
+  confirmCashBelowZero = false,
+) {
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'openings-preview', lines],
-    queryFn: () => accountsOpeningsPreview({ lines: [...lines] }),
+    queryKey: [...ACCOUNTS_KEY, 'openings-preview', lines, confirmCashBelowZero],
+    queryFn: () => accountsOpeningsPreview({ lines: [...lines] }, confirmCashBelowZero),
     placeholderData: keepPreviousData,
     staleTime: 0,
     gcTime: 0,
@@ -309,7 +315,14 @@ export function useOpeningsPreview(lines: readonly OpeningLineInput[]) {
 export function useSaveOpenings() {
   const refresh = useRefreshAfterChange();
   return useMutation({
-    mutationFn: (lines: readonly OpeningLineInput[]) => accountsOpeningsSave({ lines: [...lines] }),
+    mutationFn: ({
+      lines,
+      confirmCashBelowZero = false,
+    }: {
+      lines: readonly OpeningLineInput[];
+      /** The yes of the cash box: a change of an opening in روکڑ may take cash below 0 (PRD FR-6.7). */
+      confirmCashBelowZero?: boolean;
+    }) => accountsOpeningsSave({ lines: [...lines] }, confirmCashBelowZero),
     onSuccess: refresh,
   });
 }

@@ -478,7 +478,9 @@ fn run(case: &Case) {
 
     if case.close {
         let before = detail(&w, garden.id);
-        let closed = gardens::close(
+        // The random installments may be above the rent, so the owner may owe money back; the close
+        // then asks first (PRD FR-12.51, plan 80 gate Q-R4-2) and this property answers "yes".
+        let closed = gardens::close_with_confirm(
             &w.env.ctx,
             &w.owner,
             &GardenCloseInput {
@@ -486,6 +488,7 @@ fn run(case: &Case) {
                 version: before.row.version,
                 date: "10-10-2026".into(),
             },
+            true,
         )
         .unwrap();
         assert_eq!(closed.row.status, VentureStatus::Closed);
@@ -508,7 +511,7 @@ fn run(case: &Case) {
                 again.row.money_in_paisa, before.row.money_in_paisa,
                 "the undo gives the account its money back"
             );
-            let closed_again = gardens::close(
+            let closed_again = gardens::close_with_confirm(
                 &w.env.ctx,
                 &w.owner,
                 &GardenCloseInput {
@@ -516,6 +519,7 @@ fn run(case: &Case) {
                     version: again.row.version,
                     date: "10-10-2026".into(),
                 },
+                true,
             )
             .unwrap();
             assert_eq!(closed_again.row.status, VentureStatus::Closed);

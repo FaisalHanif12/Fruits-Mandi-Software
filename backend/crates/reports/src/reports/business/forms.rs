@@ -9,6 +9,7 @@
 use mandi_db::rusqlite::Connection;
 
 use super::sheet;
+pub use super::sheet::DayActivity;
 use crate::error::ReportsError;
 
 /// The rows of one query in both forms, as text.
@@ -65,4 +66,12 @@ pub fn buyer_moves(conn: &Connection, from: &str, to: &str) -> Result<FormRows, 
         entries_first: text(true)?,
         lines_first: text(false)?,
     })
+}
+
+/// The sums of every buyer and seller on one day, as plain numbers (the all-parties table of R35).
+///
+/// # Errors
+/// A database error.
+pub fn day_activities(conn: &Connection, day: &str) -> Result<Vec<DayActivity>, ReportsError> {
+    sheet::day_activities(conn, day)
 }

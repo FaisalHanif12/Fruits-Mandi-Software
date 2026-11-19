@@ -237,22 +237,20 @@ fn the_lockout_table() {
     );
     rows += 1;
     env.mono.advance_seconds(1);
-    // Tries 21 to 29, then 30 is locked 900 seconds, and so are 40 and 50.
-    for step in 0..3 {
-        for left in tries_left() {
-            expect_wrong(&env, left);
-            rows += 1;
-        }
+    // Plan 80 gate Q-R7-2 (NFR-SEC-2 v1.21): every wrong try after the 20th is locked 900 seconds, the
+    // 21st, the 22nd and so on, not only the 30th, 40th and 50th as before.
+    for step in 0..5 {
         let error = wrong_try(&env, "owner");
         assert_eq!(
             code_and_value(&error, "seconds"),
             (ErrorCode::ErrLockedWait, Some(900)),
-            "step {step}"
+            "try {}",
+            21 + step
         );
         rows += 1;
         env.mono.advance_seconds(900);
     }
-    assert_eq!(failed_attempts(&dir), 50);
+    assert_eq!(failed_attempts(&dir), 25);
     // The right password after the wait signs in and sets the count back to 0.
     login_owner(&env);
     assert_eq!(failed_attempts(&dir), 0);

@@ -71,6 +71,48 @@ pub mod plans {
         super::sales::register_totals_query(&dates(from, to), None)
     }
 
+    /// The conditions of R3 (`cash`) or R4 (not `cash`).
+    fn kind_condition(cash: bool) -> Option<&'static str> {
+        Some(if cash {
+            "s.paid_paisa > 0"
+        } else {
+            "s.paid_paisa < s.buyer_total_paisa"
+        })
+    }
+
+    /// The totals query of R3 (`cash`) or R4 (not `cash`) for a date range, read from the entries.
+    pub fn r3_r4_totals(
+        from: Option<&str>,
+        to: Option<&str>,
+        cash: bool,
+    ) -> (String, Vec<Value>) {
+        super::sales::register_totals_query(&dates(from, to), kind_condition(cash))
+    }
+
+    /// The totals query of R2 for a date range, read from the sale lines (a long range).
+    pub fn r2_totals_wide(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
+        super::sales::register_wide_totals_query(&dates(from, to), None)
+    }
+
+    /// The totals query of R3 (`cash`) or R4 (not `cash`) for a date range, read from the sale lines.
+    pub fn r3_r4_totals_wide(
+        from: Option<&str>,
+        to: Option<&str>,
+        cash: bool,
+    ) -> (String, Vec<Value>) {
+        super::sales::register_wide_totals_query(&dates(from, to), kind_condition(cash))
+    }
+
+    /// Every period and account of R28 by month for a date range, read from the entries
+    /// (`income_first` false) or from the income accounts (a long range).
+    pub fn r28_groups(
+        from: Option<&str>,
+        to: Option<&str>,
+        income_first: bool,
+    ) -> (String, Vec<Value>) {
+        super::business::r28_grouped_query(&dates(from, to), income_first)
+    }
+
     /// The page query of R6 for a date range.
     pub fn r6_page(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
         super::sales::r6_page_query(&dates(from, to), 100, 0)
@@ -79,6 +121,27 @@ pub mod plans {
     /// The query of R7 for a date range.
     pub fn r7(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
         super::sales::r7_query(&dates(from, to))
+    }
+
+    /// The query that gives the sums of an account's lines in each of its entries (the statement of a
+    /// party, one pass), for a range of days.
+    pub fn statement_entry_sums(
+        account: i64,
+        from: Option<&str>,
+        to: Option<&str>,
+    ) -> (String, Vec<Value>) {
+        super::accounts::lines::plans::entry_sums(account, from, to)
+    }
+
+    /// The query that reads the lines of an account in some entries (the page of a statement).
+    pub fn statement_lines_of_entries(account: i64, entry_ids: &[i64]) -> (String, Vec<Value>) {
+        super::accounts::lines::plans::lines_of_entries(account, entry_ids)
+    }
+
+    /// The lines of the entries of one day grouped by party (the all-parties table of R35): `?1` the
+    /// day, `?2` an account or null, `?3` a person or null.
+    pub fn r35_day_lines() -> String {
+        super::business::r35_day_lines_sql()
     }
 
     /// The page query of R28 for a date range.
@@ -97,7 +160,7 @@ pub mod grouped_sums {
 #[doc(hidden)]
 pub mod day_query_forms {
     pub use super::business::forms::{
-        FormRows, buyer_moves, ledger_rows, lot_charges, seller_lines,
+        DayActivity, FormRows, buyer_moves, day_activities, ledger_rows, lot_charges, seller_lines,
     };
 }
 
@@ -134,7 +197,7 @@ pub use statement::{StatementRequest, statement_page, statement_paging, statemen
 pub use statement_month_print::{partner_statement_month_print_data, partner_statement_month_spec};
 pub use statement_rows::{
     StatementEdited, StatementRows, StatementRowsInput, StatementRowsRow, StatementShortItem,
-    statement_rows,
+    statement_rows, statement_rows_by_whole,
 };
 pub use statement_rows_print::{
     StatementRowsPrintInput, statement_rows_print_data, statement_rows_spec,

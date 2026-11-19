@@ -9,6 +9,11 @@ import type { RecordRef } from './RecordRef';
 /**
  * One row of the list of بکری (PRD FR-12.7: number, time, truck, sellers, items, نگ, خام, صافی,
  * buyer total, status). All sums are of stored values.
+ *
+ * In پچھلی بکری (`bikri_list`) a row is a بکری on one day it was posted (PRD FR-12.46, plan 80
+ * R5-1): `entry_date` is that day, and the figures are those of that day's postings, so the same
+ * بکری can be a row on several days (its `id` is then the same). In the find (`bikri_find`) a row
+ * is the whole بکری and `entry_date` is its own first day.
  */
 export type BikriListRow = {
   /**
@@ -44,23 +49,25 @@ export type BikriListRow = {
    */
   lots: Array<LotName>;
   /**
-   * نگ received over all its lots.
+   * نگ received over all its lots. In پچھلی بکری: the lots first posted on this row's day (0 on
+   * a later day).
    */
   qty_received: number;
   /**
-   * نگ sold over all its lots.
+   * نگ sold over all its lots. In پچھلی بکری: sold on this row's day.
    */
   qty_sold: number;
   /**
-   * خام بکری.
+   * خام بکری. In پچھلی بکری: of this row's day.
    */
   gross: Paisa;
   /**
-   * صافی بکری. Can be negative.
+   * صافی بکری. Can be negative. In پچھلی بکری: this row's day's خام, less its seller commission,
+   * less the lot charges when the lots were first posted on this day (a later sale has none).
    */
   net: Paisa;
   /**
-   * The buyer bills of its lines in force.
+   * The buyer bills of its lines in force. In پچھلی بکری: of this row's day.
    */
   buyer_total: Paisa;
   /**

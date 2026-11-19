@@ -160,7 +160,7 @@ export function fakePlan16(
       garden_rows: 0,
     }),
   );
-  vi.mocked(bikriApi.bikriGoodsToLoad).mockResolvedValue({ rows: [] });
+  vi.mocked(bikriApi.bikriGoodsToLoad).mockResolvedValue({ rows: [], total_count: 0 });
   vi.mocked(bikriApi.bikriMixedPreview).mockImplementation((input) => {
     store.mixedPreviews.push(structuredClone(input));
     return Promise.resolve(mixedAnswer(input, rows[0]?.balance ?? 0));

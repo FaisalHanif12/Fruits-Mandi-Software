@@ -208,7 +208,7 @@ pub fn list(conn: &Connection, filter: &RulesFilter) -> rusqlite::Result<Vec<Rul
                 WHEN r.account_id IS NOT NULL THEN 3
                 WHEN r.item_id IS NOT NULL THEN 4
                 WHEN r.item_group IS NOT NULL THEN 5 ELSE 6 END,
-           r.from_date DESC, r.id DESC"
+           r.from_date DESC, r.updated_at DESC, r.id DESC"
     );
     let mut statement = conn.prepare(&sql)?;
     let rows = statement.query_map(params_from_iter(values), row_from)?;
@@ -368,7 +368,7 @@ pub fn overlaps(
            AND (?6 IS NULL OR id <> ?6)
            AND from_date <= COALESCE(?8, '9999-12-31')
            AND COALESCE(to_date, '9999-12-31') >= ?7
-         ORDER BY from_date DESC, id DESC",
+         ORDER BY from_date DESC, updated_at DESC, id DESC",
     )?;
     let rows = statement.query_map(
         params![
@@ -417,6 +417,9 @@ pub struct RuleRecord {
     pub from_date: String,
     /// The last day, or none.
     pub to_date: Option<String>,
+    /// When the row was last saved (`updated_at`, UTC text). Of two rules at one level that start
+    /// on the same day, the one saved last wins (PRD FR-11.5).
+    pub saved_at: String,
 }
 
 /// Every active rule (in one query, B22).
@@ -426,7 +429,7 @@ pub struct RuleRecord {
 pub fn load_active(conn: &Connection) -> rusqlite::Result<Vec<RuleRecord>> {
     let mut statement = conn.prepare(
         "SELECT id, side, charge_type, account_id, item_id, item_group, method, value_bps,
-                value_paisa, from_date, to_date
+                value_paisa, from_date, to_date, updated_at
          FROM charge_rules WHERE is_active = 1 ORDER BY id",
     )?;
     let rows = statement.query_map([], |r| {
@@ -445,6 +448,7 @@ pub fn load_active(conn: &Connection) -> rusqlite::Result<Vec<RuleRecord>> {
             value_paisa: r.get(8)?,
             from_date: r.get(9)?,
             to_date: r.get(10)?,
+            saved_at: r.get(11)?,
         })
     })?;
     rows.collect()
@@ -483,7 +487,7 @@ pub fn default_in_force(
             "{ROW_SELECT} WHERE r.is_active = 1 AND r.side = ?1 AND r.charge_type = ?2
                AND r.account_id IS NULL AND r.item_id IS NULL AND r.item_group IS ?3
                AND r.from_date <= ?4 AND (r.to_date IS NULL OR r.to_date >= ?4)
-             ORDER BY r.from_date DESC, r.id DESC LIMIT 1"
+             ORDER BY r.from_date DESC, r.updated_at DESC, r.id DESC LIMIT 1"
         ),
         params![
             side.as_str(),

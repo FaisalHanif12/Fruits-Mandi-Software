@@ -361,8 +361,7 @@ pub fn trip_cost_preview(
     let window = day::window(ctx)?;
     let id = input.id;
     let old = ctx.db.read(|conn| {
-        mandi_db::ventures::get_entry(conn, id)?
-            .filter(|e| e.kind == "cost")
+        crate::trips::trip_entry(conn, id, "cost")?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
     })?;
     let entry_date = BusinessDate::parse_iso(&old.entry_date)
@@ -415,8 +414,7 @@ pub fn trip_other_sale_preview(
     let window = day::window(ctx)?;
     let id = input.id;
     let old = ctx.db.read(|conn| {
-        mandi_db::ventures::get_entry(conn, id)?
-            .filter(|e| e.kind == "other_sale")
+        crate::trips::trip_entry(conn, id, "other_sale")?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
     })?;
     let entry_date = BusinessDate::parse_iso(&old.entry_date)
@@ -470,9 +468,14 @@ pub fn garden_entry_preview(
     let window = day::window(ctx)?;
     let id = input.id;
     let old = ctx.db.read(|conn| {
-        mandi_db::ventures::get_entry(conn, id)?
-            .filter(|e| matches!(e.kind.as_str(), "installment" | "cost" | "other_sale"))
-            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
+        // The kinds `cost` and `other_sale` are shared with trips: the entry's venture must be a
+        // garden too (Code Standards V0).
+        let entry = mandi_db::ventures::get_entry(conn, id)?
+            .filter(|e| matches!(e.kind.as_str(), "installment" | "cost" | "other_sale"));
+        match entry {
+            Some(e) if mandi_db::gardens::get(conn, e.venture_id)?.is_some() => Ok(e),
+            _ => Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "id")),
+        }
     })?;
     let entry_date = BusinessDate::parse_iso(&old.entry_date)
         .ok_or_else(|| ServiceError::Data("the date of a garden entry is not a date".to_owned()))?;

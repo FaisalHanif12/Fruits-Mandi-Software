@@ -573,15 +573,15 @@ pub(crate) fn run(
     let cash_id = account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
         .ok_or_else(|| ReportsError::Data("the cash account is missing".to_owned()))?;
 
-    let mut days = active_days(conn, &from, &to)?;
+    let mut days = crate::prof::timed("r34.active_days", || active_days(conn, &from, &to))?;
     if from == to {
         days.insert(from.clone());
     }
 
-    let sales = sales_by_day(conn, &from, &to)?;
+    let sales = crate::prof::timed("r34.sales_by_day", || sales_by_day(conn, &from, &to))?;
     // The buyers' and the sellers' figures of every day, tied to the sales facts (plan 42).
     let day_list: Vec<String> = days.iter().cloned().collect();
-    let sheet = load_days(conn, &day_list, &sales)?;
+    let sheet = crate::prof::timed("r34.load_days", || load_days(conn, &day_list, &sales))?;
     let cash = by_day(
         conn,
         "SELECT e.entry_date, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
@@ -597,7 +597,7 @@ pub(crate) fn run(
     let receipts = vouchers_by_day(conn, "receipt", &from, &to)?;
     let payments = vouchers_by_day(conn, "payment", &from, &to)?;
     let advances = vouchers_by_day(conn, "advance", &from, &to)?;
-    let expenses = expenses_by_day(conn, &from, &to)?;
+    let expenses = crate::prof::timed("r34.expenses", || expenses_by_day(conn, &from, &to))?;
     let drawings = live_lines(
         conn,
         "JOIN partners p ON p.drawings_account_id = l.account_id",
@@ -701,7 +701,7 @@ pub(crate) fn run(
     let (mut run_dr, mut run_cr) = (open_dr, open_cr);
     let cash_days: Vec<(&String, &(i64, i64))> = cash.iter().collect();
     let mut cash_next = 0_usize;
-    let (dues_before, dues_moves) = buyer_moves(conn, &from, &to)?;
+    let (dues_before, dues_moves) = crate::prof::timed("r34.buyer_moves", || buyer_moves(conn, &from, &to))?;
     let mut dues = Dues::new(dues_before, dues_moves)?;
     // The dead amount (PRD FR-10.10): the moves, and which of the moved accounts are buyers'.
     let dead_marks = mandi_db::dead::all_marks(conn)?;
@@ -718,15 +718,17 @@ pub(crate) fn run(
     let today_iso = typed.today.map(|t| t.to_iso());
     let sellers_dues_now = match &today_iso {
         Some(today) => {
-            let (sellers, _) = crate::reports::collections::payables::candidates(
-                conn,
-                &Typed {
-                    today: typed.today,
-                    ..Typed::default()
-                },
-                today,
-                true,
-            )?;
+            let (sellers, _) = crate::prof::timed("r34.sellers_candidates", || {
+                crate::reports::collections::payables::candidates(
+                    conn,
+                    &Typed {
+                        today: typed.today,
+                        ..Typed::default()
+                    },
+                    today,
+                    true,
+                )
+            })?;
             let mut total = Paisa::ZERO;
             for seller in &sellers {
                 if let Some(working) = seller.working {
@@ -740,10 +742,10 @@ pub(crate) fn run(
     // The open money lent is the fourth part of the total dues (PRD 9.1 v1.44): it has the same
     // read-time working, so it is given for today or later only.
     let lent_open_now = match typed.today {
-        Some(today) => Some(crate::dashboard::lent_open_now(conn, today)?),
+        Some(today) => Some(crate::prof::timed("r34.lent_open_now", || crate::dashboard::lent_open_now(conn, today))?),
         None => None,
     };
-    let (stock_before, stock_during) = stock_moves(conn, &from, &to)?;
+    let (stock_before, stock_during) = crate::prof::timed("r34.stock_moves", || stock_moves(conn, &from, &to))?;
     let mut stock = Stock::new(stock_before, stock_during)?;
 
     let mut all_rows = Vec::new();

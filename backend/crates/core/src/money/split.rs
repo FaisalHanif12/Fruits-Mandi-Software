@@ -1,10 +1,22 @@
-//! Splits that always add back exactly to the total (PRD C10, C11, C17; Code Standards M9;
-//! money agent Section 5).
+//! Splits that always add back exactly to the total (PRD C10, C11, C21, C23 to C27; Code Standards
+//! M9; money agent Section 5).
 //!
-//! Each part is the floor of its exact share in whole rupees. The leftover rupees go to the
-//! part with the largest weight (largest share or most نگ); on a tie, to the smallest id
-//! (the partner created first, or the lowest lot number). A negative amount is split as
+//! Each part is the floor of its exact share in whole rupees. ALL the leftover rupees go to ONE
+//! part: the one with the largest weight (largest share, or most نگ); on a tie, to the smallest id
+//! (the partner created first, or the lowest purchase or lot id). A negative amount is split as
 //! positive, then every part is made negative.
+//!
+//! Where each function is used:
+//!
+//! | Function | Used for |
+//! |---|---|
+//! | `split_by_bps` | C10 and C11 (income and expense between partners), C23, C25, C26 (a garden or trip payment, a trip's sales money, a garden's closing, by the shares) |
+//! | `split_by_qty` | C21 (the cost of trip goods taken, `[qty taken, qty left]`), C24 (a trip cost over its purchases, by نگ bought), C27 (fruit for the guests, 1 for each partner) |
+//! | `split_by_open_parts` | C28 (an advance coming back to the partners, by the parts still open) |
+//!
+//! Example (C27): 1,000 over three partners, weight 1 each: floors 333 / 333 / 333, leftover 1 to
+//! the partner created first, so 334 / 333 / 333. Example (C21): 10,400 over `[15, 5]`: 7,800 /
+//! 2,600, no leftover.
 
 use super::{BPS_FULL, Bps, MoneyError, Paisa, Qty};
 
@@ -33,11 +45,22 @@ pub fn split_by_bps<Id: Copy + Ord>(
     split_weighted(amount, &weights, total)
 }
 
-/// Splits a header freight total across lots by نگ received (PRD C17).
+/// Splits an amount over parts by their نگ (PRD C21, C24, C27; the header freight split of C17 is
+/// retired since v1.34).
 ///
-/// `Id` is the lot number; on a tie in نگ the lowest lot number gets the leftover.
+/// Each part is the floor of its exact share. All the leftover rupees go to the part with the most
+/// نگ. On a tie in نگ they go to the smallest `Id`, so each caller chooses its tie by the ids it
+/// passes:
 ///
-/// Example: 1,000 over lots of 30 and 20 نگ → 600 / 400.
+/// - C21, the cost of trip goods: parts `[qty taken, qty left]`, the taken part has the smaller id,
+///   so on a tie it takes the leftover (money agent Section 5.4).
+/// - C24, a trip cost over its purchases: `Id` is the purchase id, so on a tie the earlier purchase
+///   takes the leftover.
+/// - C27, guest fruit: every partner has weight 1 and the `Id` is the partner id, so the partner
+///   created first takes the leftover.
+///
+/// Examples: C24, 1,000 over purchases of 30 and 20 نگ → 600 / 400. C27, 1,000 over three partners
+/// → 334 / 333 / 333.
 pub fn split_by_qty<Id: Copy + Ord>(
     amount: Paisa,
     parts: &[(Id, Qty)],

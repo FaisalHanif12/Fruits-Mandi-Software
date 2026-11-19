@@ -113,12 +113,16 @@ describe.each(LANGUAGES)('the opening balances by pages (%s)', (language) => {
       expect(textOf(1002, 'opening_dr')).toBe('4,000');
     });
     await waitFor(() => {
-      expect(accountApi.accountsOpeningsPreview).toHaveBeenLastCalledWith({
-        lines: [
-          expect.objectContaining({ account_id: 1002, opening_dr: '4000', opening_cr: '' }),
-          expect.objectContaining({ account_id: 1030, opening_dr: '', opening_cr: '700' }),
-        ],
-      });
+      expect(accountApi.accountsOpeningsPreview).toHaveBeenLastCalledWith(
+        {
+          lines: [
+            expect.objectContaining({ account_id: 1002, opening_dr: '4000', opening_cr: '' }),
+            expect.objectContaining({ account_id: 1030, opening_dr: '', opening_cr: '700' }),
+          ],
+        },
+        // The cash question is asked later, only when the preview says cash would go below zero.
+        false,
+      );
     });
     // F10 sends the two changed rows from the two pages, and nothing else.
     press('F10');

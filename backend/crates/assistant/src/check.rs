@@ -165,6 +165,30 @@ impl NameBook {
                 .flat_map(|kind| lists.both(kind).map(|w| padded(w).trim().to_lowercase())),
             )
             .collect();
+        // The words of the app's own vocabulary: of the glossary, of every list of `words.tsv`, and the
+        // common words of the questions. A one-word name that is one of them (a party named باقی) is
+        // not looked for in answers about other parties (plan 80, T5-8).
+        let common: std::collections::HashSet<String> = glossary_phrases()
+            .iter()
+            .map(|p| p.as_str())
+            .chain(
+                [
+                    WordKind::Number,
+                    WordKind::Month,
+                    WordKind::Never,
+                    WordKind::ShopOwes,
+                    WordKind::OwesShop,
+                ]
+                .into_iter()
+                .flat_map(|kind| lists.both(kind).map(String::as_str)),
+            )
+            .flat_map(|phrase| {
+                padded(phrase)
+                    .split_whitespace()
+                    .map(str::to_lowercase)
+                    .collect::<Vec<_>>()
+            })
+            .collect();
         let mut phrases = std::collections::HashSet::new();
         let mut longest = 1usize;
         for (ur, en, _tag) in names {
@@ -173,6 +197,9 @@ impl NameBook {
                 let words = p.split(' ').filter(|w| !w.is_empty()).count();
                 // A one-letter or two-letter single word is not a name worth matching.
                 if words == 0 || (words == 1 && p.chars().count() < 3) || skip.contains(&p) {
+                    continue;
+                }
+                if words == 1 && (common.contains(&p) || crate::understand::is_common_word(&p)) {
                     continue;
                 }
                 if words <= BOOK_MAX_WORDS {
@@ -219,12 +246,37 @@ fn is_word_char(c: char) -> bool {
     c.is_alphabetic() || text::is_urdu_mark(c)
 }
 
+/// True for a character that draws nothing, or only a mark on the letter before it, so a word
+/// written with it between its letters reads as the word to the Owner (plan 80, T5-1): the soft
+/// hyphen, the combining grapheme joiner, the Arabic letter mark, the Hangul and Khmer fillers, the
+/// Mongolian free variation selectors and vowel separator, the zero-width and direction marks, the
+/// bidi controls, the invisible operators, the variation selectors, the tag characters and the
+/// combining marks of Latin text (an acute on a letter).
+fn is_hidden(c: char) -> bool {
+    matches!(c,
+        '\u{00AD}' | '\u{034F}' | '\u{061C}' | '\u{115F}'..='\u{1160}' | '\u{17B4}'..='\u{17B5}'
+        | '\u{180B}'..='\u{180F}' | '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}'
+        | '\u{2060}'..='\u{206F}' | '\u{3164}' | '\u{FE00}'..='\u{FE0F}' | '\u{FEFF}'
+        | '\u{FFA0}' | '\u{FFF9}'..='\u{FFFB}' | '\u{E0000}'..='\u{E007F}'
+        | '\u{E0100}'..='\u{E01EF}'
+        // Combining marks: diacriticals, extended, supplement, for symbols, half marks.
+        | '\u{0300}'..='\u{036F}' | '\u{1AB0}'..='\u{1AFF}' | '\u{1DC0}'..='\u{1DFF}'
+        | '\u{20D0}'..='\u{20FF}' | '\u{FE20}'..='\u{FE2F}')
+}
+
+/// The text with every hidden character taken out, so the word checks see the word the Owner
+/// reads: "thou\u{AD}sand" is "thousand".
+pub(crate) fn without_hidden(s: &str) -> String {
+    s.chars().filter(|c| !is_hidden(*c)).collect()
+}
+
 /// Words only, one space between: punctuation, digits and signs become spaces. Urdu letter
-/// variants are made one (ي to ی). Padded with a space at both ends.
+/// variants are made one (ي to ی). Hidden characters are taken out first (they are no space and no
+/// letter). Padded with a space at both ends.
 pub(crate) fn padded(s: &str) -> String {
     let mut out = String::from(" ");
     let mut last_space = true;
-    for c in text::normalize_urdu(s).chars() {
+    for c in text::normalize_urdu(&without_hidden(s)).chars() {
         if is_word_char(c) {
             out.push(c);
             last_space = false;
@@ -755,35 +807,60 @@ fn side_of_node(node: &Node) -> Option<Side> {
     }
 }
 
+/// True for a letter of the Arabic script, the one script of an Urdu answer.
+fn is_arabic_script(c: char) -> bool {
+    ('\u{0600}'..='\u{06FF}').contains(&c)
+        || ('\u{0750}'..='\u{077F}').contains(&c)
+        || ('\u{FB50}'..='\u{FDFF}').contains(&c)
+        || ('\u{FE70}'..='\u{FEFF}').contains(&c)
+}
+
+/// The first letter that is of another script than the answer's: Latin letters in an Urdu answer,
+/// and in an English one any letter that is not Latin (Arabic script, but also Cyrillic, Greek,
+/// full-width and mathematical letters that look like Latin ones, plan 80 T5-1). Marks and signs
+/// are no letters.
 fn wrong_script(language: Language, s: &str) -> Option<String> {
     let bad = |c: char| match language {
-        Language::Ur => c.is_ascii_alphabetic(),
-        Language::En => {
-            ('\u{0600}'..='\u{06FF}').contains(&c)
-                || ('\u{0750}'..='\u{077F}').contains(&c)
-                || ('\u{FB50}'..='\u{FDFF}').contains(&c)
-                || ('\u{FE70}'..='\u{FEFF}').contains(&c)
-        }
+        Language::Ur => c.is_alphabetic() && !is_arabic_script(c),
+        Language::En => c.is_alphabetic() && !text::is_latin_letter(c),
     };
     s.chars().find(|c| bad(*c)).map(|c| c.to_string())
 }
+
+/// Every shape of a check mark: the check mark, the heavy one, the ballot box with a check, the white
+/// heavy one (✅, the one a language model writes most), the light one, the ballot box with a bold check,
+/// the square root sign and the squared OK.
+const CHECK_MARKS: [char; 8] = [
+    '\u{2713}',
+    '\u{2714}',
+    '\u{2611}',
+    '\u{2705}',
+    '\u{1F5F8}',
+    '\u{1F5F9}',
+    '\u{221A}',
+    '\u{1F197}',
+];
 
 /// The checks of the words alone (`text` or one `next` question): digits, number words, months,
 /// names, ✓, script, never-use words.
 fn word_failures(env: &Env<'_>, names: &NameSet, items: &[Item], out: &mut Vec<Failure>) {
     let lists = words();
-    let joined: String = items
-        .iter()
-        .map(|i| match i {
-            Item::Words(w) => w.as_str(),
-            Item::Ref { .. } => " ",
-        })
-        .collect::<Vec<_>>()
-        .join(" ");
+    // Hidden characters are taken out before any rule: they change no word the Owner reads.
+    let joined: String = without_hidden(
+        &items
+            .iter()
+            .map(|i| match i {
+                Item::Words(w) => w.as_str(),
+                Item::Ref { .. } => " ",
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
+    );
     if let Some(d) = joined.chars().find(|c| c.is_numeric()) {
         out.push(Failure::new("digit", &d.to_string()));
     }
-    if joined.contains(['✓', '✔', '☑']) {
+    // Only the app puts a check mark on a figure, in any of its shapes (plan 80, T5-4).
+    if joined.contains(CHECK_MARKS) {
         out.push(Failure::new("check_mark", "✓"));
     }
     if joined.contains("{{") || joined.contains("}}") {

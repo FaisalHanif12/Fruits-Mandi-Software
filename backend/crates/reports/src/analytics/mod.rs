@@ -538,6 +538,16 @@ pub mod plans {
         (facts::groups_sql(&c, &["f.item_id"]), c.args().to_vec())
     }
 
+    /// The query every view reads the facts with since plan 80 (no `GROUP BY`, the sums are added up in
+    /// memory): the dimensions of view H's buyer list and the six summed columns for a date range.
+    pub fn facts_rows(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
+        let c = facts::dated((from, to));
+        (
+            facts::rows_sql(&c, &["f.buyer_account_id", "f.chukta_person_key"]),
+            c.args().to_vec(),
+        )
+    }
+
     /// The facts query of view B (by seller and بکری) for a date range.
     pub fn view_b(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
         let c = facts::dated((from, to));

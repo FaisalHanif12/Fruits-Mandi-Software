@@ -412,6 +412,9 @@ pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceErr
         sort.check(&LOAN_COLUMNS)
             .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
     }
+    // Which partner a loan is linked to is a partner fact (PRD FR-17.11, NFR-SEC-14): while the
+    // section is locked a partner link carries no partner, as on the dues page.
+    let locked = crate::partner_code::is_locked(ctx)?;
     ctx.db.read(|conn| {
         let person = open_lines::persons(conn, &[input.person_id])?
             .remove(&input.person_id)
@@ -484,8 +487,12 @@ pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceErr
         } else {
             Vec::new()
         };
+        let mut shown = lent_person(&person);
+        if locked && shown.link.kind == LinkKind::Partner {
+            shown.link.partner_id = None;
+        }
         Ok(LentList {
-            person: lent_person(&person),
+            person: shown,
             balance: ledger::balance_in(conn, person.account_id, None, None)?,
             rows: page::slice(rows, input.offset, input.limit),
             total_count,
@@ -803,6 +810,9 @@ fn report_rows(
 /// `ServiceError::Db`.
 pub fn attention_overdue(ctx: &Context) -> Result<AttentionOverdue, ServiceError> {
     let (_, today) = day::window(ctx)?;
+    // The money a partner took is behind the partner code (PRD FR-17.11, NFR-SEC-14): while the
+    // section is locked the partner takes are left out of the items and the count.
+    let locked = crate::partner_code::is_locked(ctx)?;
     ctx.db.read(|conn| {
         let persons = open_lines::persons(conn, &[])?;
         let partners = mandi_db::partners::list(conn)?;
@@ -818,6 +828,7 @@ pub fn attention_overdue(ctx: &Context) -> Result<AttentionOverdue, ServiceError
         for (account, Loans { loans, .. }) in &grouped {
             let (kind, who) = match (persons.get(account), by_drawings.get(account)) {
                 (Some(person), _) => (OverdueKind::Loan, person_ref(person)),
+                (None, Some(_)) if locked => continue,
                 (None, Some(partner)) => (
                     OverdueKind::Take,
                     record_of(partner.id, &partner.name_ur, &partner.name_en),
@@ -861,6 +872,7 @@ pub fn attention_overdue(ctx: &Context) -> Result<AttentionOverdue, ServiceError
             items,
             total_count,
             truncated,
+            partners_locked: locked,
         })
     })
 }

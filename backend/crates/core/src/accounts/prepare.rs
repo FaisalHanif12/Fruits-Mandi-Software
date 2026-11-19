@@ -66,6 +66,9 @@ pub struct PreparedAccount {
     pub references: Vec<Reference>,
     /// The opening that was typed.
     pub opening: OpeningRequest,
+    /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7): a change of an
+    /// opening that is in روکڑ may take cash in hand below 0. Set by the caller (`false` here).
+    pub confirm_cash_below_zero: bool,
 }
 
 fn error(code: ErrorCode, field: &str) -> FieldError {
@@ -504,6 +507,7 @@ pub fn prepare_account(
         confirmed_rules_words: input.confirmed_rules_words.clone(),
         references,
         opening,
+        confirm_cash_below_zero: false,
     })
 }
 

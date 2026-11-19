@@ -2060,3 +2060,80 @@ fn e2e_13b_numbers_through_the_default_in_force_on_the_day() {
         "the day before keeps 6%"
     );
 }
+
+/// Plan 80 gate Q-R3-1 (PRD FR-11.5): of two rules at one level that start on the same day, the one
+/// saved last wins, and an edit counts as a save. Before the fix the bigger id won, so editing the
+/// older rule A after B was made changed nothing.
+#[test]
+fn on_the_same_start_day_the_rule_saved_last_wins_and_an_edit_counts_as_a_save() {
+    let f = fixture();
+    let start = "01-11-2026";
+    let make = |value: &str| RuleInput {
+        from_date: start.into(),
+        ..seller_commission(&f, Some(f.rahim), None, value)
+    };
+    let winner = || {
+        rules::test(
+            &f.env.ctx,
+            &RuleTestInput {
+                seller_id: f.rahim,
+                buyer_id: f.akram,
+                item_id: f.apple,
+                date: "15-11-2026".into(),
+                qty: "20".into(),
+                rate: "600".into(),
+            },
+        )
+        .unwrap()
+        .charges[0]
+            .winner
+            .and_then(|w| w.rule_id)
+    };
+    let a = save(&f, &make("4"));
+    f.env.clock.advance_seconds(5);
+    let b = save(&f, &make("5"));
+    assert!(b.row.id > a.row.id);
+    // Both start on 01-11 and B was saved last.
+    assert_eq!(winner(), Some(b.row.id));
+    // A is edited after B was made: A was saved last now (the PRD's example: A id 5, B id 6).
+    f.env.clock.advance_seconds(5);
+    let edited_a = save(
+        &f,
+        &RuleInput {
+            id: Some(a.row.id),
+            version: Some(a.row.version),
+            ..make("4.5")
+        },
+    );
+    assert_eq!(winner(), Some(a.row.id), "A was edited after B was saved");
+    // B edited again after that: B wins once more.
+    f.env.clock.advance_seconds(5);
+    save(
+        &f,
+        &RuleInput {
+            id: Some(b.row.id),
+            version: Some(b.row.version),
+            ..make("5.5")
+        },
+    );
+    assert_eq!(winner(), Some(b.row.id));
+    // The rule list shows the same order as the lookup: the later start first, then the one saved
+    // last (B), then A.
+    let listed = rules::list(
+        &f.env.ctx,
+        &RulesFilter {
+            side: None,
+            charge_type: None,
+            account_id: Some(f.rahim),
+            item_id: None,
+            include_inactive: false,
+        },
+    )
+    .unwrap();
+    let order: Vec<i64> = listed
+        .iter()
+        .filter(|r| r.account.as_ref().is_some_and(|a| a.id == f.rahim))
+        .map(|r| r.id)
+        .collect();
+    assert_eq!(order, vec![b.row.id, edited_a.row.id]);
+}

@@ -441,7 +441,8 @@ pub fn ready_goods(
             conn, &date_iso, limit,
         )?)?);
         sort_ready(&mut rows);
-        Ok(ReadyGoods { rows })
+        let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+        Ok(ReadyGoods { rows, total_count })
     })
 }
 
@@ -548,8 +549,10 @@ pub fn goods_sources(
 
 /// The rows of one of the two cards that load goods by hand (plan 78 C1): the purchases of open trips
 /// (`trip`) or the arrivals of open gardens (`garden`) with goods left for our shop, on ANY day to sell
-/// (the day to sell stays in the row as information), oldest day to sell first, then number. At most
-/// 100 rows. Nothing is reserved, as for [`ready_goods`]: the save refuses more than is left.
+/// (the day to sell stays in the row as information), oldest day to sell first, then number. One page
+/// at a time with the count of the whole card (PRD FR-19.11, Code Standards B31; plan 80 R2-5): every
+/// row can be reached, and the count and the page are of the same moment. Nothing is reserved, as for
+/// [`ready_goods`]: the save refuses more than is left.
 ///
 /// # Errors
 /// `ServiceError::Db`.
@@ -559,13 +562,31 @@ pub fn goods_to_load(
 ) -> Result<mandi_domain::core::bikri::ReadyGoods, ServiceError> {
     use mandi_domain::core::bikri::ReadyGoods;
     use mandi_domain::core::ventures::VentureKind;
-    ctx.db.read(|conn| {
-        let mut rows = match input.kind {
-            VentureKind::Trip => trip_ready_rows(&mandi_db::purchases::ready_all(conn, 100)?)?,
-            VentureKind::Garden => garden_ready_rows(&mandi_db::arrivals::ready_all(conn, 100)?)?,
+    let limit = crate::page::limit_of(input.limit);
+    let offset = usize::try_from(input.offset).unwrap_or(usize::MAX);
+    let wanted = limit.saturating_add(i64::from(input.offset));
+    ctx.db.read_snapshot(|conn| {
+        // The database order (day to sell, then number) is the order of the card for one kind, so
+        // the page is cut from it: the first `offset + limit` rows are read, the first `offset` skipped.
+        let (total_count, rows) = match input.kind {
+            VentureKind::Trip => {
+                let recs = mandi_db::purchases::ready_all(conn, wanted)?;
+                let page: Vec<_> = recs.into_iter().skip(offset).collect();
+                (
+                    mandi_db::purchases::goods_count(conn)?,
+                    trip_ready_rows(&page)?,
+                )
+            }
+            VentureKind::Garden => {
+                let recs = mandi_db::arrivals::ready_all(conn, wanted)?;
+                let page: Vec<_> = recs.into_iter().skip(offset).collect();
+                (
+                    mandi_db::arrivals::goods_count(conn)?,
+                    garden_ready_rows(&page)?,
+                )
+            }
         };
-        sort_ready(&mut rows);
-        Ok(ReadyGoods { rows })
+        Ok(ReadyGoods { rows, total_count })
     })
 }
 

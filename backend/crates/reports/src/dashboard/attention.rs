@@ -332,13 +332,13 @@ pub(crate) fn list(
 ) -> Result<AttentionList, ReportsError> {
     let today: BusinessDate = facts.today;
     // In the order of `AttentionKind::ALL`.
-    let found: [Option<AttentionItem>; 11] = [
-        signals::drafts(conn)?,
-        signals::open_days(conn, today)?,
-        signals::stock_waiting(conn, today)?,
-        over_credit_limit(conn)?,
-        dues_old(facts)?,
-        payables_old(conn, facts)?,
+    let found: [Option<AttentionItem>; 12] = [
+        crate::prof::timed("sig.drafts", || signals::drafts(conn))?,
+        crate::prof::timed("sig.open_days", || signals::open_days(conn, today))?,
+        crate::prof::timed("sig.stock_waiting", || signals::stock_waiting(conn, today))?,
+        crate::prof::timed("sig.over_credit", || over_credit_limit(conn))?,
+        crate::prof::timed("sig.dues_old", || dues_old(facts))?,
+        crate::prof::timed("sig.payables_old", || payables_old(conn, facts))?,
         signals::backup_old(backup),
         overdue_item(
             AttentionKind::LoansOverdue,
@@ -350,8 +350,9 @@ pub(crate) fn list(
             AttentionTarget::Partner,
             &lent.takes,
         )?,
-        signals::names_missing(conn)?,
-        signals::health_check(conn)?,
+        crate::prof::timed("sig.names_missing", || signals::names_missing(conn))?,
+        crate::prof::timed("sig.health_check", || signals::health_check(conn))?,
+        crate::prof::timed("sig.records_differ", || signals::records_differ(conn, today))?,
     ];
     let items: Vec<AttentionItem> = found.into_iter().flatten().collect();
     let mut total_count = 0_i64;

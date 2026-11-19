@@ -64,6 +64,7 @@ const EXPECTED_FILES: &[&str] = &[
     "Source.ts",
     "AccountType.ts",
     "AccountInput.ts",
+    "AccountSaveRequest.ts",
     "RecordRef.ts",
     "BalanceSide.ts",
     "Balance.ts",
@@ -78,6 +79,7 @@ const EXPECTED_FILES: &[&str] = &[
     "SimilarAccount.ts",
     "OpeningLineInput.ts",
     "OpeningsInput.ts",
+    "OpeningsRequest.ts",
     "LineError.ts",
     "OpeningPreviewRow.ts",
     "OpeningsPreview.ts",
@@ -517,6 +519,7 @@ const EXPECTED_FILES: &[&str] = &[
     "GardenEntryCancelInput.ts",
     "GardenEntryCancelled.ts",
     "GardenCloseInput.ts",
+    "GardenCloseRequest.ts",
     "GardenCloseNumbers.ts",
     "GardenClosePreview.ts",
     "GardenClosed.ts",
@@ -1036,6 +1039,7 @@ fn export_bindings() {
     search::SearchRecentInput::export_all(&cfg).unwrap();
     search::SearchTouchInput::export_all(&cfg).unwrap();
     accounts::AccountInput::export_all(&cfg).unwrap();
+    accounts::AccountSaveRequest::export_all(&cfg).unwrap();
     accounts::AccountRow::export_all(&cfg).unwrap();
     accounts::AccountsListInput::export_all(&cfg).unwrap();
     accounts::AccountsList::export_all(&cfg).unwrap();
@@ -1045,6 +1049,7 @@ fn export_bindings() {
     accounts::AccountsSimilarInput::export_all(&cfg).unwrap();
     accounts::SimilarAccount::export_all(&cfg).unwrap();
     accounts::OpeningsInput::export_all(&cfg).unwrap();
+    accounts::OpeningsRequest::export_all(&cfg).unwrap();
     accounts::OpeningsPreview::export_all(&cfg).unwrap();
     accounts::OpeningsSaved::export_all(&cfg).unwrap();
     accounts::CoaTree::export_all(&cfg).unwrap();
@@ -1362,6 +1367,7 @@ fn export_bindings() {
     gardens::GardenEntryCancelInput::export_all(&cfg).unwrap();
     gardens::GardenEntryCancelled::export_all(&cfg).unwrap();
     gardens::GardenCloseInput::export_all(&cfg).unwrap();
+    gardens::GardenCloseRequest::export_all(&cfg).unwrap();
     gardens::GardenCloseNumbers::export_all(&cfg).unwrap();
     gardens::GardenClosePreview::export_all(&cfg).unwrap();
     gardens::GardenClosed::export_all(&cfg).unwrap();

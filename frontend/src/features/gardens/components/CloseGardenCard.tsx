@@ -9,6 +9,10 @@
 // and nothing is posted (E64); the card says so. After the closing the garden takes no more
 // entries, and the closing can be undone while its day is open.
 //
+// While the owner still owes money back (the installments paid are above the rent, FR-12.51) the backend
+// refuses the closing with ERR_OWNER_OWES_NOT_CONFIRMED and the amount; a second confirm box shows it (Back has
+// the focus), and its yes sends the closing again with `confirm_owner_owes` (plan 80 Q-R4-2).
+//
 // Four states: the preview loading, an error with a retry, the numbers, and a refusal (for
 // example a day before the garden's last entry) shown at the day field.
 
@@ -21,7 +25,9 @@ import {
   formatPaisa,
   isNegativePaisa,
   isoToDisplayDate,
+  paisaOfErrorValue,
   useGrouping,
+  type Paisa,
 } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { formNavigationProps } from '../../../shared/keyboard';
@@ -101,16 +107,27 @@ export function CloseGardenCard({ garden, today, focusOnOpen = false }: CloseGar
   }, [focusOnOpen, canClose]);
   const loss = numbers !== null && isNegativePaisa(numbers.result_paisa);
 
-  const confirm = () => {
+  // The second question: the owner still owes money back (PRD FR-12.51). It opens when the backend refuses the
+  // closing with ERR_OWNER_OWES_NOT_CONFIRMED and names the amount; the yes sends the closing again confirmed.
+  const [owes, setOwes] = useState<Paisa | null>(null);
+
+  const confirm = (confirmOwnerOwes: boolean) => {
     if (input === null) return;
     setRefusal(null);
     close
-      .mutateAsync(input)
+      .mutateAsync({ input, confirmOwnerOwes })
       .then((closed) => {
         showToast('success', l10n.getString('gardens-closed-toast', { code: closed.row.code }));
       })
       .catch((failure: unknown) => {
-        setRefusal({ error: uiErrorOf(failure), date });
+        const failed = uiErrorOf(failure);
+        const debt = failed.errors.find((item) => item.code === 'ERR_OWNER_OWES_NOT_CONFIRMED');
+        const amount = debt === undefined ? null : paisaOfErrorValue(debt.values['owes_paisa']);
+        if (!confirmOwnerOwes && amount !== null) {
+          setOwes(amount);
+          return;
+        }
+        setRefusal({ error: failed, date });
       });
   };
 
@@ -257,7 +274,34 @@ export function CloseGardenCard({ garden, today, focusOnOpen = false }: CloseGar
           )
         }
         confirmLabel={<Localized id="gardens-close-confirm" />}
-        onConfirm={confirm}
+        onConfirm={() => {
+          confirm(false);
+        }}
+      />
+      <ConfirmDialog
+        open={owes !== null}
+        onOpenChange={(open) => {
+          if (!open) setOwes(null);
+        }}
+        tone="danger"
+        title={<Localized id="gardens-close-owes-title" />}
+        description={
+          owes === null ? null : (
+            <Localized
+              id="gardens-close-owes-text"
+              vars={{
+                name: displayName(garden, language),
+                owes: formatPaisa(owes, { grouping }),
+              }}
+            >
+              <span />
+            </Localized>
+          )
+        }
+        confirmLabel={<Localized id="gardens-close-owes-confirm" />}
+        onConfirm={() => {
+          confirm(true);
+        }}
       />
     </Card>
   );

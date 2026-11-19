@@ -112,6 +112,13 @@ pub(super) fn plan_advance(
         }
     }
 
+    // An advance is split between the partners by their shares (PRD FR-17.13). With partners but no
+    // share set at all it would have no partner parts, and the check of FR-17.9 would miss it: it
+    // is refused until the shares are set (plan 80 gate Q-R1-3, R1-3). Before any partner exists
+    // it is allowed (PRD 4.3: the opening position of the worked day).
+    if mandi_db::partners::partners_without_shares(conn)? {
+        errors.push(FieldError::new(ErrorCode::ErrSharesNot100, "date"));
+    }
     // The balance before and after, counting the lines above for the same seller. A line with a
     // mistake will not be saved, so it moves nothing: its "after" is its "before".
     let errors = errors.finish().err().unwrap_or_default();

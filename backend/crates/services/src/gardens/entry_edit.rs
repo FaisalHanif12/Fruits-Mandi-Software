@@ -25,6 +25,7 @@ use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::edit::GardenEntryEditInput;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::gardens::GardenEntryInput;
+use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
 use mandi_domain::ledger::{PostingType, SourceType};
 use serde_json::{Value, json};
@@ -221,6 +222,22 @@ pub(crate) fn edit_in(
     let ready = planned
         .ready
         .ok_or_else(|| data("an entry without errors has no numbers"))?;
+    // An installment edited down may leave the owner's refunds above what he could owe (PRD
+    // FR-12.51, plan 80 gate R4-3).
+    if entry.kind == "installment" {
+        let paid = mandi_db::gardens::figures(tx, &garden.rec)?.installments_paisa;
+        let after = paid
+            .checked_sub(entry.amount_paisa)
+            .and_then(|rest| rest.checked_add(ready.amount.as_paisa()))
+            .ok_or_else(|| data("the installments of a garden do not fit"))?;
+        super::read::require_refunds_covered(
+            tx,
+            garden.rec.id,
+            Paisa::try_from_paisa(garden.rec.rent_paisa).map_err(money_error)?,
+            Paisa::try_from_paisa(after).map_err(money_error)?,
+            "amount",
+        )?;
+    }
     // The cash question. A payment asks inside the entry (its shop parts, after the reversal gave the
     // old ones back); a sale asks about the net change of the money received.
     let (cash_check, confirmed) = match &input.entry {

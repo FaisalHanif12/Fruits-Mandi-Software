@@ -253,6 +253,24 @@ pub struct AccountInput {
     pub note: String,
 }
 
+/// Input of `accounts_save`: the account form and the answer of the cash box (PRD FR-6.7, plan 80
+/// gate R4-4).
+///
+/// Changing the opening of an account whose opening is in روکڑ (a partner's opening capital put
+/// into cash, PRD 17.1 v1.43) takes cash out. When cash would end below 0 the save answers
+/// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` with the value `cash_after_paisa`; the screen shows the
+/// box of FR-6.7 with that value and sends the form again with `confirm_cash_below_zero` true.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct AccountSaveRequest {
+    /// The account as before.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: AccountInput,
+    /// True after the user said yes to the cash box. Missing means false.
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
+}
+
 /// A small pointer to another record, for the lists and the form.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct RecordRef {
@@ -319,6 +337,38 @@ impl Balance {
     pub fn from_totals(dr: Paisa, cr: Paisa) -> Result<Balance, crate::money::MoneyError> {
         let net = dr.checked_sub(cr)?;
         Balance::from_net(net)
+    }
+
+    /// The balance as a signed amount: debit positive, credit negative (debit minus credit).
+    ///
+    /// # Errors
+    /// `MoneyError` if the amount cannot be negated.
+    pub fn signed(self) -> Result<Paisa, crate::money::MoneyError> {
+        match self.side {
+            BalanceSide::Dr => Ok(self.amount_paisa),
+            BalanceSide::Cr => self.amount_paisa.checked_neg(),
+            BalanceSide::Zero => Ok(Paisa::ZERO),
+        }
+    }
+
+    /// This balance and another added together as signed amounts: the combined balance of two
+    /// linked accounts (PRD E10, FR-10.2). Checked arithmetic.
+    ///
+    /// ```
+    /// use mandi_core::accounts::{Balance, BalanceSide};
+    /// use mandi_core::money::Paisa;
+    /// let rupees = |n| Paisa::from_rupees(n).unwrap();
+    /// // He owes 2,880 as a buyer and is owed 10,160 as a seller: the shop owes him 7,280.
+    /// let buyer = Balance::from_totals(rupees(2_880), rupees(0)).unwrap();
+    /// let seller = Balance::from_totals(rupees(0), rupees(10_160)).unwrap();
+    /// let both = buyer.combined_with(seller).unwrap();
+    /// assert_eq!((both.amount_paisa, both.side), (rupees(7_280), BalanceSide::Cr));
+    /// ```
+    ///
+    /// # Errors
+    /// `MoneyError` on overflow.
+    pub fn combined_with(self, other: Balance) -> Result<Balance, crate::money::MoneyError> {
+        Balance::from_net(self.signed()?.checked_add(other.signed()?)?)
     }
 
     /// The balance from a signed net (debit minus credit).
@@ -597,6 +647,21 @@ pub struct OpeningLineInput {
 pub struct OpeningsInput {
     /// The lines, in the order of the grid.
     pub lines: Vec<OpeningLineInput>,
+}
+
+/// Input of `accounts_openings_preview` and `accounts_openings_save`: the grid and the answer of
+/// the cash box (PRD FR-6.7, plan 80 gate R4-4). A line that changes an opening that is in روکڑ and
+/// would take cash below 0 has `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`) until
+/// `confirm_cash_below_zero` is true.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct OpeningsRequest {
+    /// The grid as before.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: OpeningsInput,
+    /// True after the user said yes to the cash box. Missing means false.
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
 }
 
 /// A problem on one line of the grid.

@@ -19,7 +19,7 @@ pub(super) use items::{query as r7_query, run as run_r7};
 pub(super) use lots::{r6_page_query, run_r1, run_r6, run_r27};
 pub(super) use register::{
     Kind as RegisterKind, page_query as register_page_query, run as run_register,
-    totals_query as register_totals_query,
+    totals_query as register_totals_query, wide_totals_query as register_wide_totals_query,
 };
 pub(super) use stock::run as run_r10;
 

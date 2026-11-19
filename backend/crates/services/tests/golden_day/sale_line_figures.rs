@@ -20,7 +20,7 @@
 //! The preview and the answer of the two cases the frontend tests use are written as fixtures
 //! (`bikri_preview_d8_line3`, `bikri_preview_d8_line3_rate_empty`).
 
-use mandi_services::core::bikri::{BikriDraft, BikriPreview, RateHintSource};
+use mandi_services::core::bikri::{BikriDraft, BikriPreview};
 
 use super::day_close::write_or_check;
 use super::*;
@@ -125,9 +125,9 @@ fn e2e_64_a_complete_third_line_is_worked_out_and_counted_when_its_rate_equals_t
     let c = case();
     let w = &c.w;
 
-    // The screen after line 2: line 3 has its buyer and quantity, the rate cell is empty and shows
-    // the hint, the last rate of this item and packing in this بکری, 900 (FR-7.53). The line is
-    // not complete, so it has no figures and the summary counts lines 1 and 2 only.
+    // The screen after line 2: line 3 has its buyer and quantity, the rate cell is empty and has no
+    // hint (FR-7.53 is retired, PRD v1.44). The line is not complete, so it has no figures and the
+    // summary counts lines 1 and 2 only.
     let waiting = c.draft(vec![
         c.line1(),
         c.line2(),
@@ -135,9 +135,6 @@ fn e2e_64_a_complete_third_line_is_worked_out_and_counted_when_its_rate_equals_t
     ]);
     let p = bikri::preview(&w.env.ctx, &waiting).unwrap();
     assert!(p.lots[0].lines[2].calc.is_none());
-    let hint = p.lots[0].lines[2].rate_hint.as_ref().unwrap();
-    assert_eq!(support::r(hint.rate_paisa), 900);
-    assert_eq!(hint.source, RateHintSource::ThisBikri);
     assert_eq!(support::r(p.summary.gross), 65_000, "lines 1 and 2 only");
     preview_fixture("bikri_preview_d8_line3_rate_empty", &waiting, &p);
 

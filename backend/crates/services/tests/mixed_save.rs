@@ -446,9 +446,10 @@ fn the_cash_question_is_asked_once_over_all_entries() {
     assert_eq!(cash_now(&w), 2_000 * 100);
 }
 
-/// The later posting a mixed save writes on an OLD بکری counts under the day of that بکری, exactly
-/// as a later sale did before (plan 72: a heading is the sum of its rows), and the find follows the
-/// same rule. The new بکری of the same save is on the day of the save.
+/// The later posting a mixed save writes on an OLD بکری counts under the day it was posted (Umar,
+/// 19-11-2026, plan 80 R5-1: a day lists what was posted on it, as the tile does; before this a
+/// later sale counted under the day of the بکری, plan 72). The new بکری of the same save is on the day
+/// of the save. The find still finds a whole بکری.
 #[test]
 fn the_list_and_the_find_show_both_kinds_the_way_a_later_sale_always_did() {
     let w = support::world();
@@ -462,17 +463,24 @@ fn the_list_and_the_find_show_both_kinds_the_way_a_later_sale_always_did() {
         ..BikriListInput::default()
     };
     let list = bikri::list(&w.env.ctx, &window).unwrap();
-    let row = |number: i64| list.rows.iter().find(|r| r.number == number).unwrap();
-    // بکری 1 is dated 10-10 and now holds the carried sale too: 29,400 sold gross (E2E-16b).
+    // بکری 1 is a row on 10-10 (45 sold, 26,500, E2E-16) and again on 11-10 (the carried sale: 5
+    // sold, 2,800, E2E-16b); بکری 2 is the new one, dated the day of the save: کریم's 10 سیب.
+    let by_day = |number: i64| {
+        list.rows
+            .iter()
+            .filter(|r| r.number == number)
+            .map(|r| (r.entry_date.as_str(), r.qty_sold, r.gross))
+            .collect::<Vec<_>>()
+    };
     assert_eq!(
-        (row(1).entry_date.as_str(), row(1).qty_sold, row(1).gross),
-        ("2026-10-10", 50, rupees(29_300))
+        by_day(1),
+        [
+            ("2026-10-11", 5, rupees(2_800)),
+            ("2026-10-10", 45, rupees(26_500))
+        ]
     );
-    // بکری 2 is the new one, dated the day of the save: کریم's 10 سیب at 1,200.
-    assert_eq!(
-        (row(2).entry_date.as_str(), row(2).qty_sold, row(2).gross),
-        ("2026-10-11", 10, rupees(12_000))
-    );
+    assert_eq!(by_day(2), [("2026-10-11", 10, rupees(12_000))]);
+    assert_eq!(list.total_count, 3);
     // Each day heading is the sum of its rows.
     for day in &list.days {
         let sum = list
@@ -621,4 +629,255 @@ fn the_sale_print_of_a_mixed_save_covers_the_new_bikri_and_the_old_one_of_each_c
     let only_old = slips(None, Some(vec![old_id]));
     assert_eq!((only_old.buyers.len(), only_old.sellers.len()), (1, 1));
     assert_eq!(text(&only_old.buyers[0], "report-r35-goods"), "2,800");
+}
+
+/// What a list row shows, in rupees: (number, day, qty received, qty sold, خام, صافی, buyer total).
+fn figures(
+    row: &mandi_services::core::bikri::BikriListRow,
+) -> (i64, String, i64, i64, i64, i64, i64) {
+    (
+        row.number,
+        row.entry_date.clone(),
+        row.qty_received,
+        row.qty_sold,
+        row.gross.rupees(),
+        row.net.rupees(),
+        row.buyer_total.rupees(),
+    )
+}
+
+fn tile(w: &World) -> (i64, i64) {
+    use mandi_reports::dashboard::{self, BackupFacts};
+    let tiles = dashboard::get(
+        w.env.ctx.db(),
+        BackupFacts {
+            cloud_on: false,
+            cloud_age_hours: None,
+        },
+    )
+    .unwrap()
+    .tiles;
+    (tiles.sales_gross_paisa.rupees(), tiles.sales_count)
+}
+
+fn day_list(w: &World, date: &str) -> mandi_services::core::bikri::BikriList {
+    bikri::list(
+        &w.env.ctx,
+        &BikriListInput {
+            date: Some(date.into()),
+            ..BikriListInput::default()
+        },
+    )
+    .unwrap()
+}
+
+/// Plan 80 R5-1 (PRD FR-12.46, FR-9.1, FR-6.1; Umar, 19-11-2026): پچھلی بکری counts what was posted on
+/// a day. E2E-16 and E2E-16b: 45 of 50 are sold on 10-10-26 (خام 26,500, صافی 16,590) and the last 5 on
+/// 11-10-26 (2,800, seller credit 2,632, buyer bills 3,008). The tile of 11-10-26 is 2,800 in 1 بکری,
+/// and so is today's section, which lists بکری 1 again with that day's figures. Before the fix the
+/// section was empty (the بکری is dated 10-10-26) and the heading of 10-10-26 said 29,300.
+#[test]
+fn a_later_sale_is_a_row_of_its_own_day_and_the_page_agrees_with_the_tile_e2e_16b() {
+    use mandi_services::core::bikri::BikriListWholeInput;
+    let w = support::world();
+    let lot_id = e2e16(&w);
+    bikri::later_sale_save(
+        &w.env.ctx,
+        &w.owner,
+        &LaterSaleSaveInput {
+            lot_id,
+            date: "11-10-2026".into(),
+            sales: vec![support::sale("c-1", w.arshad, "5", "560")],
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(tile(&w), (2_800, 1));
+    // Today's section: the بکری with a posting today, with today's figures only.
+    let today = day_list(&w, "11-10-2026");
+    assert_eq!(today.total_count, 1);
+    assert_eq!(
+        today.rows.iter().map(figures).collect::<Vec<_>>(),
+        [(1, "2026-10-11".to_owned(), 0, 5, 2_800, 2_632, 3_008)]
+    );
+    assert_eq!(
+        (today.totals.gross.rupees(), today.totals.net.rupees()),
+        (2_800, 2_632)
+    );
+    // The first day: 26,500 of the first posting, with its lot charges (E2E-16: 12,880 + 15,570).
+    let first = day_list(&w, "10-10-2026");
+    assert_eq!(
+        first.rows.iter().map(figures).collect::<Vec<_>>(),
+        [(1, "2026-10-10".to_owned(), 50, 45, 26_500, 16_590, 28_450)]
+    );
+    // The two days of the lot add up to the lot's own figures (E2E-16b: خام 29,300, صافی 19,222).
+    assert_eq!(26_500 + 2_800, 29_300);
+    assert_eq!(16_590 + 2_632, 19_222);
+    // A window of both days: each heading is its day's postings, and the page total is theirs.
+    let window = bikri::list(
+        &w.env.ctx,
+        &BikriListInput {
+            from: Some("10-10-2026".into()),
+            to: Some("11-10-2026".into()),
+            group_by_day: true,
+            ..BikriListInput::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        window
+            .days
+            .iter()
+            .map(|d| (d.date.as_str(), d.count, d.gross_paisa.rupees()))
+            .collect::<Vec<_>>(),
+        [("2026-10-11", 1, 2_800), ("2026-10-10", 1, 26_500)]
+    );
+    assert_eq!(window.total_count, 2);
+    assert_eq!(window.totals.gross.rupees(), 29_300);
+    assert_eq!(window.totals.net.rupees(), 19_222);
+    // The same بکری twice, newest day first.
+    assert_eq!(
+        window
+            .rows
+            .iter()
+            .map(|r| (r.id, r.entry_date.as_str()))
+            .collect::<Vec<_>>(),
+        [(1, "2026-10-11"), (1, "2026-10-10")]
+    );
+    // A print reads the same rows, so it cannot differ from the screen.
+    let whole = bikri::list_whole(
+        &w.env.ctx,
+        &BikriListWholeInput {
+            from: "10-10-2026".into(),
+            to: "10-10-2026".into(),
+            with_today: true,
+            seller_id: None,
+            item_id: None,
+            status: None,
+            show_finished: false,
+            search: None,
+            all: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        whole
+            .today
+            .as_ref()
+            .unwrap()
+            .rows
+            .iter()
+            .map(figures)
+            .collect::<Vec<_>>(),
+        today.rows.iter().map(figures).collect::<Vec<_>>()
+    );
+}
+
+/// Plan 80 R5-1, a mixed save (PRD FR-12.48): on 11-10-26 a carried lot and a new بکری are saved
+/// together. Today's section lists both: the new بکری 2 (خام 12,000, 12,800 of buyer bills) and the
+/// old بکری 1 with only the carried sale (2,800). The page total is the tile: 14,800 in 2 بکری.
+#[test]
+fn a_mixed_save_lists_the_new_bikri_and_the_old_one_of_its_carried_lot() {
+    let w = support::world();
+    let lot_id = e2e16(&w);
+    bikri::mixed_save(&w.env.ctx, &w.owner, &save_input(&mixed(&w, lot_id))).unwrap();
+    assert_eq!(tile(&w), (14_800, 2));
+    let today = day_list(&w, "11-10-2026");
+    assert_eq!(today.total_count, 2);
+    // Newest number first within the day.
+    assert_eq!(
+        today
+            .rows
+            .iter()
+            .map(|r| (r.number, r.gross.rupees(), r.qty_sold))
+            .collect::<Vec<_>>(),
+        [(2, 12_000, 10), (1, 2_800, 5)]
+    );
+    assert_eq!(today.totals.gross.rupees(), 14_800);
+    // The new بکری's lot charges are on its own day: 12,000 - 720 - 1,000 (freight) - 50 - 50 - 20.
+    let new_row = today.rows.iter().find(|r| r.number == 2).unwrap();
+    assert_eq!(new_row.net.rupees(), 12_000 - 720 - 1_000 - 50 - 50 - 20);
+    assert_eq!(new_row.qty_received, 10);
+    // The carried sale has no lot charge and no received qty.
+    let old_row = today.rows.iter().find(|r| r.number == 1).unwrap();
+    assert_eq!(
+        (
+            old_row.qty_received,
+            old_row.net.rupees(),
+            old_row.buyer_total.rupees()
+        ),
+        (0, 2_632, 3_008)
+    );
+}
+
+/// Plan 80 R2-2 (PRD FR-7.47, V0): an undo is only for the moment straight after the save. A بکری
+/// that has a later sale since, or a changed version, is refused with `ERR_VERSION_CHANGED` and
+/// stays saved; a mixed undo refuses a carried posting that is no longer the newest of its بکری and a
+/// new بکری that changed.
+#[test]
+fn an_undo_is_refused_once_the_bikri_has_changed_since_its_save() {
+    use mandi_services::core::bikri::UndoInput;
+    use mandi_services::core::error::ErrorCode;
+    let refused = |error: mandi_services::ServiceError| match error {
+        mandi_services::ServiceError::Rejected(items) => items
+            .iter()
+            .map(|r| (r.code, r.field.clone()))
+            .collect::<Vec<_>>(),
+        other => panic!("not a refusal: {other:?}"),
+    };
+    // A later sale after the first save: the undo of the first save is stale.
+    let w = support::world();
+    let lot_id = e2e16(&w);
+    let first = day_list(&w, "10-10-2026").rows[0].id;
+    bikri::later_sale_save(
+        &w.env.ctx,
+        &w.owner,
+        &LaterSaleSaveInput {
+            lot_id,
+            date: "11-10-2026".into(),
+            sales: vec![support::sale("c-1", w.arshad, "5", "560")],
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let error = bikri::undo(
+        &w.env.ctx,
+        &w.owner,
+        &UndoInput {
+            id: first,
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap_err();
+    assert_eq!(
+        refused(error),
+        [(ErrorCode::ErrVersionChanged, Some("id".into()))]
+    );
+    assert_eq!(
+        bikri::get(&w.env.ctx, first).unwrap().status,
+        mandi_services::core::bikri::BikriStatus::Saved
+    );
+    // A mixed save, then its new بکری changes (its version moves): the mixed undo is refused.
+    let w = support::world();
+    let lot_id = e2e16(&w);
+    let saved = bikri::mixed_save(&w.env.ctx, &w.owner, &save_input(&mixed(&w, lot_id))).unwrap();
+    let new_id = saved.new_bikri_id.unwrap();
+    raw(&w.dir)
+        .execute(
+            "UPDATE bikri_entries SET version = version + 1 WHERE id = ?1",
+            [new_id],
+        )
+        .unwrap();
+    let undo = MixedUndoInput {
+        later_entry_ids: vec![saved.carried[0].entry_id],
+        new_bikri_id: Some(new_id),
+        confirm_cash_below_zero: true,
+    };
+    let error = bikri::mixed_undo(&w.env.ctx, &w.owner, &undo).unwrap_err();
+    assert_eq!(
+        refused(error),
+        [(ErrorCode::ErrVersionChanged, Some("new_bikri_id".into()))]
+    );
+    // Nothing was undone: the mixed save is still whole.
+    assert_eq!(tile(&w), (14_800, 2));
 }

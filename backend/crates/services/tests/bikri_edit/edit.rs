@@ -82,6 +82,7 @@ fn a_closed_day_cannot_be_edited_or_cancelled_until_the_owner_reopens_it() {
         &DayReopenInput {
             date: "10-10-2026".into(),
             reason: "ریٹ کی درستی".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap();
@@ -365,23 +366,6 @@ fn the_credit_limit_of_an_edit_leaves_out_the_posting_it_replaces() {
         ),
         Some(1_309_200)
     );
-}
-
-#[test]
-fn the_rate_hint_of_an_edit_does_not_count_the_posting_it_replaces() {
-    // Event 1 sold at 600 and 580. The edit sells the first line at 610 and adds a blank row: the
-    // hint is the 610 of this draft, never a rate of the saved posting that the edit replaces.
-    let w = world();
-    let saved = save_ok(&w, &event1(&w));
-    let opened = tools::open(&w, saved.bikri_id, saved.entry_id);
-    let mut d = opened.draft.clone();
-    d.lots[0].sales.truncate(1);
-    d.lots[0].sales[0].seller_rate = "610".into();
-    d.lots[0].sales[0].qty = "10".into();
-    d.lots[0].sales.push(blank_sale("s-new", "5"));
-    let p = tools::preview(&w, &opened, &d);
-    let hint = p.lots[0].lines[1].rate_hint.as_ref().expect("a hint");
-    assert_eq!(hint.rate_paisa.rupees(), 610);
 }
 
 #[test]

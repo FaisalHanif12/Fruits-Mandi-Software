@@ -11,6 +11,7 @@ use mandi_domain::core::chukta::{
     self, ChuktaAddInput, ChuktaBuyer, ChuktaSearchInput, SEARCH_LIMIT,
 };
 use mandi_domain::core::error::ErrorCode;
+use mandi_domain::core::translit::Kind;
 use serde_json::json;
 
 use crate::audit::Event;
@@ -18,6 +19,7 @@ use crate::auth::Actor;
 use crate::context::Context;
 use crate::error::ServiceError;
 use crate::search;
+use crate::spelling::{self, NamePair};
 
 /// The most characters of the typed text; longer text is refused before it becomes keys.
 const MAX_TEXT_CHARS: usize = search::MAX_QUERY_CHARS;
@@ -58,16 +60,34 @@ pub fn search(ctx: &Context, input: &ChuktaSearchInput) -> Result<Vec<ChuktaBuye
 ///
 /// # Errors
 /// `ERR_CHUKTA_NAME_REQUIRED`, `ERR_NAME_UR_SCRIPT`, `ERR_NAME_EN_SCRIPT` or `ERR_PHONE_INVALID` on
-/// `name_ur`, `name_en` or `phone`, all together; `ServiceError::Db`.
+/// `name_ur`, `name_en` or `phone`, all together; `ERR_SPELLING_UNCONFIRMED` on `name_ur` and/or
+/// `name_en` (value `words`) for a word only the spelling rules made that is not in
+/// `confirmed_rules_words` (PRD FR-7.66); `ServiceError::Db`. Nothing is written when any of them
+/// is returned.
 pub fn add(
     ctx: &Context,
     actor: &Actor,
     input: &ChuktaAddInput,
 ) -> Result<ChuktaBuyer, ServiceError> {
     let clean = chukta::clean(input)?;
+    // A rules-only spelling is never saved without the user confirming it, whatever the screen did
+    // (PRD FR-7.66, Code Standards V0). The check only reads, so it can refuse before the
+    // transaction starts; the pairs the confirmed words teach are learned inside it (FR-7.26).
+    let checked = spelling::check(
+        ctx,
+        &NamePair {
+            field_ur: "name_ur",
+            name_ur: &clean.name_ur,
+            field_en: "name_en",
+            name_en: &clean.name_en,
+            kind: Kind::Name,
+        },
+        &input.confirmed_rules_words,
+    )?;
     let now = ctx.now_text();
-    let (buyer, added) = ctx.db.write(|tx| {
+    let (buyer, added, learned) = ctx.db.write(|tx| {
         let (id, added) = repo::ensure(tx, &clean, actor.user_id, &now)?;
+        let learned = checked.learn(ctx, actor, tx)?;
         if added {
             ctx.db.auditor().write(
                 tx,
@@ -83,8 +103,9 @@ pub fn add(
         }
         let buyer = repo::get(tx, id)?
             .ok_or_else(|| ServiceError::Data("a چکتا buyer just made is missing".to_owned()))?;
-        Ok::<_, ServiceError>((buyer, added))
+        Ok::<_, ServiceError>((buyer, added, learned))
     })?;
+    learned.after_commit(ctx);
     if added {
         search::refresh_chukta(ctx, buyer.id);
     }

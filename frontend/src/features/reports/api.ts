@@ -13,6 +13,8 @@ import type { CollectionSheetInput } from '../../bindings/CollectionSheetInput';
 import type { CollectionSheetPrintInput } from '../../bindings/CollectionSheetPrintInput';
 import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
 import type { DaySlipsInput } from '../../bindings/DaySlipsInput';
+import type { AdhariSheet } from '../../bindings/AdhariSheet';
+import type { AdhariSheetInput } from '../../bindings/AdhariSheetInput';
 import type { AdhariSheetPrintInput } from '../../bindings/AdhariSheetPrintInput';
 import type { DaySlipsPrintData } from '../../bindings/DaySlipsPrintData';
 import type { DeadAmountInput } from '../../bindings/DeadAmountInput';
@@ -162,6 +164,15 @@ export function reportsDeadAmount(input: DeadAmountInput): Promise<DeadAmountPag
  */
 export function reportsCollectionSheet(input: CollectionSheetInput): Promise<CollectionSheet> {
   return callCommand<CollectionSheet>('reports_collection_sheet', { input });
+}
+
+/**
+ * ادھاری تفصیل of one day on screen (R5, PRD R5 v1.43, FR-19.11, plan 80 Q-R5-2): one row for each buyer who bought
+ * that day, a page at a time, with today's total, the buyers who did not buy today, the total credit of all
+ * buyers, and the dead amount and the credit-side buyers apart. Every figure is the backend's.
+ */
+export function reportsAdhariSheet(input: AdhariSheetInput): Promise<AdhariSheet> {
+  return callCommand<AdhariSheet>('reports_adhari_sheet', { input });
 }
 
 /**

@@ -215,6 +215,7 @@ pub(super) fn close(
     ctx: &Context,
     actor: &Actor,
     input: &GardenCloseInput,
+    confirm_owner_owes: bool,
 ) -> Result<GardenClosed, ServiceError> {
     let window = day::window(ctx)?;
     let now = ctx.now_text();
@@ -227,6 +228,25 @@ pub(super) fn close(
         let ready = planned
             .ready
             .ok_or_else(|| data("a closing without errors has no numbers"))?;
+        // The owner still owes money back (PRD FR-12.51), and a closed garden takes no refund: ask
+        // first (plan 80 gate Q-R4-2).
+        let owes = {
+            let figures = repo::figures(tx, &ready.garden.rec)?;
+            let refunds = repo::refunds_total(tx, ready.garden.rec.id)?;
+            super::read::owner_owes_of(
+                Paisa::try_from_paisa(figures.installments_paisa).map_err(money_error)?,
+                Paisa::try_from_paisa(ready.garden.rec.rent_paisa).map_err(money_error)?,
+                Paisa::try_from_paisa(refunds).map_err(money_error)?,
+            )?
+        };
+        if owes > Paisa::ZERO && !confirm_owner_owes {
+            return Err(ServiceError::reject_with(
+                ErrorCode::ErrOwnerOwesNotConfirmed,
+                Some("id"),
+                "owes_paisa",
+                owes.as_paisa(),
+            ));
+        }
         let user = actor.user_id;
         let date_iso = ready.date.to_iso();
         let magnitude = if ready.balance.is_negative() {

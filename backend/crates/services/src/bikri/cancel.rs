@@ -345,15 +345,48 @@ pub fn cancel(
     })
 }
 
+/// The version of a بکری straight after its save: a new بکری starts at 1 and only a later sale, an
+/// edit or a mixed save adds to it.
+const FRESH_VERSION: i64 = 1;
+
+/// Refuses an undo of a بکری that is no longer as its save left it: its version is not the fresh
+/// one, or it has a posting the save did not make (a later sale or an edit). An undo is only for the
+/// moment straight after the save (PRD FR-7.47; plan 80 R2-2, V0).
+///
+/// # Errors
+/// `ERR_VERSION_CHANGED` on `field`.
+pub(super) fn refuse_changed_since_save(
+    conn: &Connection,
+    detail: &BikriDetail,
+    field: &str,
+) -> Result<(), ServiceError> {
+    let postings = edit_repo::postings_in_force(conn, detail.id)?;
+    if detail.version != FRESH_VERSION || postings.len() != 1 {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrVersionChanged,
+            field,
+        ));
+    }
+    Ok(())
+}
+
 /// Undoes a بکری straight after its save (PRD FR-7.47): a cancel with the fixed reason
 /// `UNDO_REASON_ID`, giving back a draft with the same values, so the screen opens a new unsaved
 /// entry to correct. The cancelled number is not used again. Works only while the day is open.
 ///
 /// # Errors
-/// As [`cancel`], without the reason and the version.
+/// As [`cancel`], without the reason and the version; `ERR_VERSION_CHANGED` on `id` when the بکری
+/// has a later sale, an edit or any other change since its save (plan 80 R2-2).
 pub fn undo(ctx: &Context, actor: &Actor, input: &UndoInput) -> Result<UndoResult, ServiceError> {
     ctx.db.write(|tx| {
         let detail = detail_of(tx, input.id, "id")?;
+        if detail.status == BikriStatus::Cancelled {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrBikriCancelled,
+                "id",
+            ));
+        }
+        refuse_changed_since_save(tx, &detail, "id")?;
         refuse_closed_garden(tx, detail.id)?;
         refuse_fruit_taken(tx, detail.id)?;
         // The values to give back are those of the first posting.

@@ -349,8 +349,11 @@ pub fn capital_where(ctx: &Context) -> Result<CapitalWhere, ServiceError> {
         let right_total = right_all.checked_neg().map_err(money_error)?;
         let mut whose_lines: Vec<CapitalWhoseLine> = Vec::new();
         let mut listed = Paisa::ZERO;
+        // The advances to sellers are read and replayed once: for every partner's total and for
+        // the advances still open (R1-4).
+        let advances = super::partners::money::read_advances(conn)?;
         for partner in mandi_db::partners::list(conn)? {
-            let total = super::partners::money::total_of(conn, &partner, None)?;
+            let total = super::partners::money::total_with(conn, &partner, None, &advances)?;
             add(&mut listed, total)?;
             whose_lines.push(CapitalWhoseLine {
                 kind: CapitalWhoseKind::PartnerTotal,
@@ -371,8 +374,7 @@ pub fn capital_where(ctx: &Context) -> Result<CapitalWhere, ServiceError> {
             partner: None,
             amount_paisa: opening,
         });
-        let open_parts = mandi_db::advances::open_parts_total(conn, None)
-            .map_err(super::partners::money::advance_error)?;
+        let open_parts = advances.open_parts_total(None).map_err(money_error)?;
         add(&mut listed, open_parts)?;
         whose_lines.push(CapitalWhoseLine {
             kind: CapitalWhoseKind::AdvancesOpen,

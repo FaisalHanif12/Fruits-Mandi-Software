@@ -360,6 +360,9 @@ err-qty-below-sold = The quantity received cannot be less than the quantity alre
 err-edit-not-allowed = { $rule ->
     [day_changed] The day of a saved entry cannot be changed in an edit. Write the old day back.
     [lot_removed] A saved lot cannot be removed, because its sales and its goods rest on it. Put the lot back. To take the whole sale back, cancel it.
+    [lot_has_later_sale] A later sale already rests on this lot, so it cannot be removed. Put the lot back. To take the whole sale back, cancel it.
+    [lot_has_write_off] Goods of this lot were written off, so it cannot be removed. Undo the write-off first, or put the lot back.
+    [lot_has_fruit] { -phal } was taken from this lot, so it cannot be removed. Cancel the { -phal } entry first, or put the lot back.
     [lot_not_in_posting] This lot is not part of the entry being edited. Close the edit and open the entry again.
     [lot_order_changed] Saved lots keep their order, and new lots come after them. Move the new lot to the end.
     [lot_seller_locked] A later entry or sale already rests on this lot, so its seller cannot be changed. Choose the old seller again.

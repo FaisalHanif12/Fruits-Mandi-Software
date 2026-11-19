@@ -55,7 +55,7 @@ fn sellers_sql() -> String {
 /// The date of the last saved بکری of each seller key.
 const LAST_DATE_SQL: &str = "SELECT l.seller_account_id, l.chukta_person_key, MAX(b.entry_date)
     FROM bikri_lots l JOIN bikri_entries b ON b.id = l.bikri_id
-    WHERE b.status = 'saved' GROUP BY l.seller_account_id, l.chukta_person_key";
+    WHERE b.status = 'saved' AND l.removed_at IS NULL GROUP BY l.seller_account_id, l.chukta_person_key";
 
 /// What the working gives for one seller key.
 #[derive(Debug, Clone, Copy)]
@@ -102,7 +102,7 @@ pub(crate) fn candidates(
     // The payable sums of every seller, from a few grouped queries and not one set of queries for
     // each seller (Code Standards B22).
     let sums = if current {
-        Some(payable_sums(conn, typed.party_id)?)
+        Some(crate::prof::timed("cand.payable_sums", || payable_sums(conn, typed.party_id))?)
     } else {
         None
     };
@@ -110,29 +110,29 @@ pub(crate) fn candidates(
     let totals: HashMap<i64, Totals> = if typed.party_id.is_some() {
         HashMap::new()
     } else {
-        account_totals_in_controls(conn, &[SELLER_CONTROL], as_of)?
+        crate::prof::timed("cand.totals", || account_totals_in_controls(conn, &[SELLER_CONTROL], as_of))?
             .into_iter()
             .collect()
     };
     let with_advance: HashSet<i64> = if current {
-        advance_totals(conn, as_of.unwrap_or(today_iso), typed.party_id)?
+        crate::prof::timed("cand.advance_totals", || advance_totals(conn, as_of.unwrap_or(today_iso), typed.party_id))?
             .into_iter()
             .map(|a| a.account_id)
             .collect()
     } else {
         HashSet::new()
     };
-    let last_dates = {
+    let last_dates = crate::prof::timed("cand.last_dates", || -> Result<_, ReportsError> {
         let mut statement = conn.prepare(LAST_DATE_SQL)?;
-        statement
+        Ok(statement
             .query_map([], |r| {
                 Ok((
                     (r.get::<_, i64>(0)?, r.get::<_, Option<String>>(1)?),
                     r.get::<_, String>(2)?,
                 ))
             })?
-            .collect::<Result<HashMap<_, _>, _>>()?
-    };
+            .collect::<Result<HashMap<_, _>, _>>()?)
+    })?;
 
     // People in the dead amount are not in the payables or the sellers' dues: their whole balance
     // is in R38 and the tile ڈوبی رقم (PRD FR-10.10, A66).
@@ -290,12 +290,22 @@ pub(crate) fn run(
         .as_of
         .as_deref()
         .is_none_or(|as_of| as_of >= today_iso.as_str());
-    let (sellers, _) = candidates(conn, typed, &today_iso, current)?;
+    // The sellers with their workings are the same for every page of the report, so the first page
+    // reads them and the next pages take them from memory while the books are as they were
+    // (`result_cache`, plan 80 gate, NFR-SPD-24).
+    let what = format!(
+        "sellers_payable|{:?}|{:?}|{today_iso}|{current}",
+        typed.as_of, typed.party_id
+    );
+    let loaded = crate::result_cache::remembered(conn, &what, || {
+        Ok(candidates(conn, typed, &today_iso, current)?.0)
+    })?;
+    let sellers: &[Seller] = &loaded;
 
     // Totals over the whole filter.
     let (mut open, mut advance, mut owes) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
     let (mut sum_dr, mut sum_cr) = (Paisa::ZERO, Paisa::ZERO);
-    for seller in &sellers {
+    for seller in sellers {
         if let Some(w) = seller.working {
             add(&mut open, w.open)?;
             add(&mut advance, w.advances_open)?;

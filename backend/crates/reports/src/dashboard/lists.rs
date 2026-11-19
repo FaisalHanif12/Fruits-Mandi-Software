@@ -27,8 +27,9 @@ fn first_sellers(conn: &Connection, ids: &[i64]) -> Result<FirstSellers, Reports
             "SELECT l.bikri_id, COALESCE(l.chukta_name_ur, a.name_ur), COALESCE(l.chukta_name_en, a.name_en),
                     CASE WHEN l.chukta_name_ur IS NULL THEN a.tag END
              FROM bikri_lots l JOIN accounts a ON a.id = l.seller_account_id
-             WHERE l.bikri_id IN ({}) AND l.lot_no = (SELECT MIN(m.lot_no) FROM bikri_lots m
-                                                      WHERE m.bikri_id = l.bikri_id)",
+             WHERE l.bikri_id IN ({}) AND l.removed_at IS NULL
+               AND l.lot_no = (SELECT MIN(m.lot_no) FROM bikri_lots m
+                               WHERE m.bikri_id = l.bikri_id AND m.removed_at IS NULL)",
             placeholders(chunk.len())
         );
         let mut statement = conn.prepare(&sql)?;
@@ -70,7 +71,7 @@ pub(crate) fn bikri_today(
         "SELECT b.id, b.number, b.truck_no, b.status = 'cancelled',
                 COALESCE(SUM(l.gross_paisa), 0), COALESCE(SUM(l.net_paisa), 0),
                 COUNT(DISTINCT l.seller_account_id || '|' || COALESCE(l.chukta_person_key, ''))
-         FROM bikri_entries b LEFT JOIN bikri_lots l ON l.bikri_id = b.id
+         FROM bikri_entries b LEFT JOIN bikri_lots l ON l.bikri_id = b.id AND l.removed_at IS NULL
          WHERE b.entry_date = ?1
          GROUP BY b.id ORDER BY b.number, b.id LIMIT ?2",
     )?;

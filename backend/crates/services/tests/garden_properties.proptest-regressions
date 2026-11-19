@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc c6b40b490e20c6c17ed2304b451be3ea30a1d2985e1dd1929fbb59382b9bb350 # shrinks to case = Case { weights: [1], pockets: [false, false, false], rent: 1, steps: [OwnSale { qty: 1, rate: 1, labour: 2 }], close: false, reopen: false }
+cc cb2b4d400a9ac20c8408abbe6dd5066283aee75724a1df2c09edf04d8d9a6832 # shrinks to case = Case { weights: [1], pockets: [false, false, false], rent: 1, steps: [Installment { amount: 2 }], close: true, reopen: false }

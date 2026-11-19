@@ -182,9 +182,8 @@ function doneLine(
 
 /**
  * What the backend says for this draft. A row with no buyer and no rate is blank (it only gets the
- * quantity left and the hint); a row with something typed but not all of it has no figures and says
- * what is missing; a complete row has its figures. The hint is the rate of the nearest earlier
- * line that has one (PRD FR-7.53).
+ * quantity left); a row with something typed but not all of it has no figures and says what is
+ * missing; a complete row has its figures. There is no rate hint (PRD FR-7.53, retired in v1.44).
  */
 export function umarAnswer(draft: BikriDraft): BikriPreview {
   const lot = draft.lots[0];
@@ -197,17 +196,8 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
   // What the buyers paid on the spot and what stays on their accounts (PRD FR-12.44).
   let paidSum = 0;
   let leftSum = 0;
-  let lastRate: { rate: number; date: string } | null = null;
   lot.sales.forEach((sale, index) => {
     const remaining = Math.max(LOT_QTY - sold, 0);
-    const hint =
-      lastRate === null
-        ? null
-        : {
-            rate_paisa: rupees(lastRate.rate),
-            source: 'this_bikri' as const,
-            date: draft.header.entry_date,
-          };
     const noBuyer = sale.buyer_account_id === null;
     if (noBuyer && sale.seller_rate === '') {
       lines.push({
@@ -215,7 +205,6 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
         line_no: index + 1,
         is_blank: true,
         remaining_qty: remaining,
-        rate_hint: hint,
         calc: null,
         warnings: [],
       });
@@ -228,7 +217,6 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
       line_no: index + 1,
       is_blank: false,
       remaining_qty: remaining,
-      rate_hint: hint,
       calc,
       warnings: [],
     });
@@ -258,7 +246,7 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
     const figures = LINE_FIGURES[`${sale.qty}@${sale.seller_rate}`];
     if (figures === undefined) throw new Error(`no figures for ${sale.qty}@${sale.seller_rate}`);
     const done = doneLine(sale, index, remaining, figures);
-    lines.push({ ...done.line, rate_hint: hint });
+    lines.push(done.line);
     // More than the buyer total is refused on the paid cell, with the most allowed (PRD FR-12.44).
     if (done.paid.over) {
       errors.push({
@@ -270,7 +258,6 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
     paidSum += done.paid.paid;
     leftSum += done.paid.left;
     stand += 1;
-    lastRate = { rate: Number(sale.seller_rate), date: draft.header.entry_date };
   });
   const lotPreview: LotPreview = structuredClone(template);
   lotPreview.key = lot.key;

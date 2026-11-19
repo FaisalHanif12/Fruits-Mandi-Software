@@ -353,7 +353,8 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
       await screen.findByRole('button', { name: message(language, 'gardens-close-confirm') }),
     );
     await waitFor(() => {
-      expect(gardensApi.gardensClose).toHaveBeenCalledWith(real.GARDENS_CLOSE_E2E40_REQUEST);
+      // The request the backend's own test wrote, and the answer of the owner-owes box: none here (no debt).
+      expect(gardensApi.gardensClose).toHaveBeenCalledWith(real.GARDENS_CLOSE_E2E40_REQUEST, false);
     });
   });
 

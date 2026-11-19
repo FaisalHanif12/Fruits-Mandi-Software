@@ -19,7 +19,7 @@ use rusqlite::types::{FromSql, Value};
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
 /// Reads the columns of a row one after the other, so a long SELECT has no index to count.
-struct Cols<'a> {
+pub(super) struct Cols<'a> {
     row: &'a Row<'a>,
     at: usize,
 }
@@ -33,17 +33,17 @@ fn bad(column: usize, what: &str) -> rusqlite::Error {
 }
 
 impl<'a> Cols<'a> {
-    fn new(row: &'a Row<'a>) -> Self {
+    pub(super) fn new(row: &'a Row<'a>) -> Self {
         Self { row, at: 0 }
     }
 
-    fn get<T: FromSql>(&mut self) -> rusqlite::Result<T> {
+    pub(super) fn get<T: FromSql>(&mut self) -> rusqlite::Result<T> {
         let value = self.row.get(self.at)?;
         self.at = self.at.saturating_add(1);
         Ok(value)
     }
 
-    fn paisa(&mut self) -> rusqlite::Result<Paisa> {
+    pub(super) fn paisa(&mut self) -> rusqlite::Result<Paisa> {
         let at = self.at;
         let value: i64 = self.get()?;
         Paisa::try_from_paisa(value).map_err(|_| bad(at, "an amount that is not a whole rupee"))
@@ -109,7 +109,7 @@ impl<'a> Cols<'a> {
         }))
     }
 
-    fn status(&mut self) -> rusqlite::Result<BikriStatus> {
+    pub(super) fn status(&mut self) -> rusqlite::Result<BikriStatus> {
         let at = self.at;
         let text: String = self.get()?;
         BikriStatus::parse(&text).ok_or_else(|| bad(at, "a status that is not saved or cancelled"))
@@ -454,7 +454,7 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
          JOIN items it ON it.id = l.item_id
          JOIN packings pk ON pk.id = l.packing_id
          LEFT JOIN markas mk ON mk.id = l.marka_id
-         WHERE l.bikri_id = ?1 ORDER BY l.lot_no",
+         WHERE l.bikri_id = ?1 AND l.removed_at IS NULL ORDER BY l.lot_no",
     )?;
     let lots = statement.query_map([id], |row| read_lot(&mut Cols::new(row)))?;
     detail.lots = lots.collect::<rusqlite::Result<Vec<_>>>()?;
@@ -589,25 +589,31 @@ fn like_contains(text: &str) -> String {
 /// filter really sets are written, so SQLite can search `idx_bikri_entries_date` instead of
 /// reading every بکری (Code Standards B18, NFR-SPD-24). The text is empty for no condition.
 fn list_where(filter: &ListFilter) -> (String, Vec<Value>) {
+    where_of(filter, true)
+}
+
+/// [`list_where`] with or without the two conditions on the day of the بکری. The list of what was
+/// posted on a day (`posted`) puts the dates on the postings instead.
+pub(super) fn where_of(filter: &ListFilter, with_dates: bool) -> (String, Vec<Value>) {
     let mut conditions: Vec<&str> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
-    if let Some(from) = &filter.from {
+    if let (true, Some(from)) = (with_dates, &filter.from) {
         conditions.push("e.entry_date >= ?");
         binds.push(Value::Text(from.clone()));
     }
-    if let Some(to) = &filter.to {
+    if let (true, Some(to)) = (with_dates, &filter.to) {
         conditions.push("e.entry_date <= ?");
         binds.push(Value::Text(to.clone()));
     }
     if let Some(seller) = filter.seller_id {
         conditions.push(
-            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.seller_account_id = ?)",
+            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.removed_at IS NULL AND l2.seller_account_id = ?)",
         );
         binds.push(Value::Integer(seller));
     }
     if let Some(item) = filter.item_id {
         conditions.push(
-            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.item_id = ?)",
+            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.removed_at IS NULL AND l2.item_id = ?)",
         );
         binds.push(Value::Integer(item));
     }
@@ -680,10 +686,10 @@ pub fn list_query(filter: &ListFilter) -> (String, Vec<Value>) {
     (
         format!(
             "SELECT e.id, e.number, e.entry_date, e.created_at, e.truck_no, e.status,
-                (SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
-                (SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
-                (SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
-                (SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
+                (SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
+                (SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
+                (SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
+                (SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
                 (SELECT COALESCE(SUM(s.buyer_total_paisa), 0) FROM bikri_sales s
                    WHERE s.bikri_id = e.id AND s.is_active = 1)
              FROM bikri_entries e{condition}
@@ -707,19 +713,19 @@ pub const SORT_COLUMNS: [(&str, &str); 9] = [
     ("status", "e.status"),
     (
         "qty_received",
-        "(SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+        "(SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
     ),
     (
         "qty_sold",
-        "(SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+        "(SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
     ),
     (
         "gross",
-        "(SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+        "(SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
     ),
     (
         "net",
-        "(SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+        "(SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
     ),
     (
         "buyer_total",
@@ -795,7 +801,7 @@ pub fn list_totals_queries(filter: &ListFilter) -> [(String, Vec<Value>); 3] {
             format!(
                 "SELECT COALESCE(SUM(l.qty_received), 0), COALESCE(SUM(l.qty_sold), 0),
                         COALESCE(SUM(l.gross_paisa), 0), COALESCE(SUM(l.net_paisa), 0)
-                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id
+                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id AND l.removed_at IS NULL
                  WHERE e.status = 'saved'{and}"
             ),
             binds.clone(),
@@ -905,7 +911,7 @@ pub fn list_months(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<V
         "SELECT substr(e.entry_date, 1, 7), COALESCE(SUM(l.qty_received), 0),
                 COALESCE(SUM(l.qty_sold), 0), COALESCE(SUM(l.gross_paisa), 0),
                 COALESCE(SUM(l.net_paisa), 0)
-         FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id
+         FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id AND l.removed_at IS NULL
          WHERE e.status = 'saved'{and} GROUP BY 1"
     ))?;
     let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
@@ -970,7 +976,7 @@ pub fn list_days_queries(filter: &ListFilter) -> [(String, Vec<Value>); 2] {
         (
             format!(
                 "SELECT e.entry_date, COALESCE(SUM(l.gross_paisa), 0)
-                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id
+                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id AND l.removed_at IS NULL
                  WHERE e.status = 'saved'{and}
                  GROUP BY e.entry_date ORDER BY e.entry_date"
             ),
@@ -1017,7 +1023,10 @@ pub fn list_days(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec
 }
 
 /// Adds the sellers (each once, in lot order) and the items of each row, from one statement.
-fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusqlite::Result<()> {
+pub(super) fn fill_sellers_and_items(
+    conn: &Connection,
+    rows: &mut [BikriListRow],
+) -> rusqlite::Result<()> {
     if rows.is_empty() {
         return Ok(());
     }
@@ -1027,7 +1036,7 @@ fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusql
         "SELECT l.bikri_id, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
                 it.id, it.code, it.name_ur, it.name_en, l.id, l.lot_counter
          FROM bikri_lots l JOIN accounts sa ON sa.id = l.seller_account_id JOIN items it ON it.id = l.item_id
-         WHERE l.bikri_id IN ({marks}) ORDER BY l.bikri_id, l.lot_no"
+         WHERE l.bikri_id IN ({marks}) AND l.removed_at IS NULL ORDER BY l.bikri_id, l.lot_no"
     ))?;
     let lots = statement.query_map(rusqlite::params_from_iter(&ids), |row| {
         let mut c = Cols::new(row);

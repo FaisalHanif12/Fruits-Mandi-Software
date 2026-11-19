@@ -32,7 +32,9 @@ use crate::reports::model::{
 /// The conditions of R6 and R27, with only the filters that are set (Code Standards B18).
 fn conds(typed: &Typed) -> Conds {
     let mut c = Conds::new();
+    // A lot removed by an edit is not in R6 or R27 (PRD FR-7.70, plan 80 Q-R2-1).
     c.always("b.status = 'saved'")
+        .always("l.removed_at IS NULL")
         .text("b.entry_date >= ?", typed.from.as_deref())
         .text("b.entry_date <= ?", typed.to.as_deref())
         .id("l.seller_account_id = ?", typed.seller_id)

@@ -91,7 +91,15 @@ pub fn rule_set_in(conn: &Connection) -> Result<RuleSet, ServiceError> {
         .iter()
         .map(domain_rule)
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(RuleSet::build(rules))
+    // Of two rules at one level that start on the same day, the one saved last wins: the last saved
+    // time (an edit counts), then the bigger id (PRD FR-11.5).
+    let mut saved: Vec<(&str, i64)> = records
+        .iter()
+        .map(|r| (r.saved_at.as_str(), r.id))
+        .collect();
+    saved.sort_unstable();
+    let order: Vec<i64> = saved.into_iter().map(|(_, id)| id).collect();
+    Ok(RuleSet::build(rules).with_saved_order(&order))
 }
 
 /// The active rules, kept in memory (a live preview calls this on every change). The same

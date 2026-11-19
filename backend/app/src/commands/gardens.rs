@@ -10,11 +10,11 @@ use mandi_services::core::arrivals::{
     ArrivalsList, ArrivalsListInput, SellDateInput, SellDateSet,
 };
 use mandi_services::core::gardens::{
-    GardenCloseInput, GardenClosePreview, GardenClosed, GardenCreatePreview, GardenCreated,
-    GardenDefaults, GardenDetail, GardenEntryCancelInput, GardenEntryCancelled, GardenEntryInput,
-    GardenEntryPreview, GardenEntrySaved, GardenGetInput, GardenInput, GardenReopenInput,
-    GardenReopened, GardenRow, GardenSetPartnersInput, GardensList, GardensListInput,
-    GardensSummary,
+    GardenCloseInput, GardenClosePreview, GardenCloseRequest, GardenClosed, GardenCreatePreview,
+    GardenCreated, GardenDefaults, GardenDetail, GardenEntryCancelInput, GardenEntryCancelled,
+    GardenEntryInput, GardenEntryPreview, GardenEntrySaved, GardenGetInput, GardenInput,
+    GardenReopenInput, GardenReopened, GardenRow, GardenSetPartnersInput, GardensList,
+    GardensListInput, GardensSummary,
 };
 use mandi_services::core::split::{SplitInput, SplitSet};
 use mandi_services::partner_code;
@@ -195,15 +195,18 @@ pub async fn gardens_close_preview<R: tauri::Runtime>(
 
 /// Closes a garden: its account goes to 0 and each partner is credited his part (PRD FR-12.38).
 /// Errors: `ERR_NOT_FOUND` on `id`; `ERR_VERSION_CHANGED` on `version`; `ERR_GARDEN_CLOSED` on `id`;
-/// the date codes on `date`; `ERR_CLOSE_BEFORE_LAST_ENTRY` on `date` (value `last_date`).
+/// the date codes on `date`; `ERR_CLOSE_BEFORE_LAST_ENTRY` on `date` (value `last_date`);
+/// `ERR_OWNER_OWES_NOT_CONFIRMED` on `id` (value `owes_paisa`) while the owner still owes money back
+/// and `confirm_owner_owes` is not true (PRD FR-12.51).
 #[tauri::command]
 pub async fn gardens_close<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: GardenCloseInput,
+    input: GardenCloseRequest,
 ) -> Result<GardenClosed, UiError> {
     run(app, "gardens_close", move |ctx| {
         let actor = auth::require(ctx)?;
-        let mut shown = gardens::close(ctx, &actor, &input)?;
+        let mut shown =
+            gardens::close_with_confirm(ctx, &actor, &input.base, input.confirm_owner_owes)?;
         if partner_code::is_locked(ctx)? {
             shown.preview.hide_partners();
         }

@@ -2884,15 +2884,10 @@ fn the_bikri_commands_work_through_the_ipc() {
         "working-percent"
     );
     assert_eq!(line["calc"]["seller_comm"]["source"], "default");
-    assert_eq!(
-        p["lots"][0]["lines"][0]["rate_hint"],
-        Value::Null,
-        "the first line has no hint"
-    );
-    assert_eq!(
-        p["lots"][0]["lines"][1]["rate_hint"],
-        json!({ "rate_paisa": 60_000, "source": "this_bikri", "date": "2026-10-10" }),
-        "the second line is shown the rate of the first"
+    assert!(
+        p["lots"][0]["lines"][0].get("rate_hint").is_none()
+            && p["lots"][0]["lines"][1].get("rate_hint").is_none(),
+        "the retired rate hint is not sent (PRD FR-7.53, v1.44)"
     );
     let split: Vec<i64> = p["split"]
         .as_array()

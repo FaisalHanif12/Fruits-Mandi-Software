@@ -253,7 +253,18 @@ pub struct ListFilter<'a> {
     pub order_by: Option<&'a str>,
     /// True to leave the cancelled vouchers out of the rows and the count (plan 38 R5).
     pub hide_cancelled: bool,
+    /// True to leave out the vouchers of a partner's own money: ذاتی خرچہ, its واپسی, سرمایہ جمع and
+    /// سرمایہ واپسی (PRD FR-17.11). Set while the partner section is locked.
+    pub hide_partner_money: bool,
 }
+
+/// The voucher types that hold a partner's own money (PRD FR-17.11): kept apart for the lock.
+pub const PARTNER_MONEY_TYPES: [VoucherType; 4] = [
+    VoucherType::PersonalExpense,
+    VoucherType::PersonalReturn,
+    VoucherType::CapitalIn,
+    VoucherType::CapitalOut,
+];
 
 /// The columns a list can be sorted by: the name of the field of the row, and its SQL expression.
 /// The first four are indexed or small; `account` sorts by the account code.
@@ -314,6 +325,10 @@ fn list_where(filter: &ListFilter<'_>, hide: bool) -> (String, Vec<Value>) {
     if let Some(kind) = filter.voucher_type {
         conditions.push("v.type = ?".to_owned());
         binds.push(Value::Text(kind.as_str().to_owned()));
+    }
+    if filter.hide_partner_money {
+        let kinds = PARTNER_MONEY_TYPES.map(|kind| format!("'{}'", kind.as_str()));
+        conditions.push(format!("v.type NOT IN ({})", kinds.join(", ")));
     }
     if let Some(from) = filter.from {
         conditions.push("v.entry_date >= ?".to_owned());

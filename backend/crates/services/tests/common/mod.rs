@@ -63,6 +63,22 @@ pub fn audit_key() -> AuditKey {
 /// Panics unless the whole audit chain is intact.
 pub fn assert_chain_ok(dir: &TempDir) {
     verify_audit_chain(&raw(dir), &audit_key()).unwrap();
+    // The sweep of plan 80 Q-T3-3: with `MANDI_TABLES_SWEEP` set, every book these tests build must
+    // also pass the comparison of the money tables with the journal (NFR-SEC-6 v1.21). Off by
+    // default, so a test that changes a table on purpose is not affected.
+    if std::env::var_os("MANDI_TABLES_SWEEP").is_some() {
+        let found = mandi_services::health::compare_connection(&raw(dir)).unwrap();
+        assert!(
+            found.count == 0,
+            "the books check found {} difference(s): {:?}",
+            found.count,
+            found
+                .reasons
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        );
+    }
 }
 
 /// How many audit rows have this action.

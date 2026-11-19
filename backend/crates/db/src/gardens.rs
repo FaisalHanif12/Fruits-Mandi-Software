@@ -215,7 +215,8 @@ pub fn account_is_closed(conn: &Connection, account_id: i64) -> rusqlite::Result
 }
 
 /// True once a garden's shares are fixed: it has an entry of its own (an installment, a cost, a sale
-/// in another shop), or its account has a posted line, for example the seller credit of a بکری lot
+/// in another shop), goods arrived (مال آیا, plan 80 gate Q-R4-1: migration 26 locks the rows too), or
+/// its account has a posted line, for example the seller credit of a بکری lot
 /// sold into it (PRD FR-12.29, E66, Umar 25-10-2026).
 ///
 /// # Errors
@@ -223,6 +224,7 @@ pub fn account_is_closed(conn: &Connection, account_id: i64) -> rusqlite::Result
 pub fn shares_locked(conn: &Connection, garden_id: i64) -> rusqlite::Result<bool> {
     conn.query_row(
         "SELECT EXISTS (SELECT 1 FROM venture_entries WHERE venture_id = ?1)
+             OR EXISTS (SELECT 1 FROM garden_arrivals WHERE venture_id = ?1)
              OR EXISTS (SELECT 1 FROM journal_lines l JOIN ventures v ON v.account_id = l.account_id
                         WHERE v.id = ?1)",
         [garden_id],
@@ -239,7 +241,8 @@ pub fn bikri_has_closed_garden_lot(conn: &Connection, bikri_id: i64) -> rusqlite
     conn.query_row(
         "SELECT EXISTS (SELECT 1 FROM bikri_lots l
                         JOIN ventures v ON v.account_id = l.seller_account_id
-                        WHERE l.bikri_id = ?1 AND v.kind = 'garden' AND v.status = 'closed')",
+                        WHERE l.bikri_id = ?1 AND l.removed_at IS NULL
+                          AND v.kind = 'garden' AND v.status = 'closed')",
         [bikri_id],
         |r| r.get(0),
     )

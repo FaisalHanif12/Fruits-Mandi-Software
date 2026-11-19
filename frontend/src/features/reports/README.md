@@ -123,10 +123,10 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - The footer is under the lines, like the client's own slip, on screen (`ReportResults`) and in the
   print (`ReportPrintDocument`, `data.report === 'R35'`); every other report has its lines above the
   table. The words of the footer are backend message IDs; the glossary has the four terms the client's
-  slip uses (تازہ بنام, سابقہ رقم, ٹوٹل رقم, بقایا). A buyer's slip says "Receipt" (وصولی,
+  slip uses (تازہ بنام, پچھلا بقایا, ٹوٹل رقم, بقایا). A buyer's slip says "Receipt" (وصولی,
   `report-r35-received`), a seller's says "Payment" (ادائیگی, `report-r35-paid`).
 - 17e, the client's own layouts (Umar 20-10-2026): a slip has no totals row, its total نگ is the first
-  footer line, then the lines in the backend's order (buyer: total نگ, تازہ بنام, سابقہ رقم, then
+  footer line, then the lines in the backend's order (buyer: total نگ, تازہ بنام, پچھلا بقایا, then
   موقع پر ادا, وصولی and the others only when the backend sends them, ٹوٹل رقم; seller: ends with
   `report-r35-balance`). The all-parties table prints its short code in its own column (never wrapped,
   `print-nowrap`) and the party as his name with tag and phone only (`Cell nameOnly`), so the code is
@@ -153,8 +153,10 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 
 ## R1, the sale book, and R5, the credit buyers' details (round 12, PRD 19.2 R1 and R5, FR-12.12)
 
-> Since plan 76 (v1.41) R5 is its own screen, the اگراہی sheet, and its "Print all slips" is the buyer parchi:
-> see the last section. The notes below about R5 on the generic screen are kept for the cell and the print
+> Since plan 80 (Q-R5-2, PRD v1.43) R5 is its own screen, ادھاری تفصیل (`pages/AdhariSheetPage.tsx`,
+> route `/reports/adhari-sheet`, command `reports_adhari_sheet`, columns in `adhari-columns.ts`). It replaces the
+> v1.41 اگراہی sheet: no search box, no parchi button, its print is only itself (`reports_adhari_sheet_print`).
+> Its guide card shows the sheet's own columns and its one filter, the day (`catalog.ts`). The notes below about R5 on the generic screen are kept for the cell and the print
 > code they describe (the assistant still reads the R5 report).
 
 - Both were on the generic screen. R5 took the days and the usual party boxes. Its table writes each

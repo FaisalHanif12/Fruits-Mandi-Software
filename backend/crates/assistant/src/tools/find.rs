@@ -167,7 +167,16 @@ fn account_matches(
         },
     )
     .map_err(service_stop)?;
-    let hits: Vec<AccountHit> = hits.into_iter().filter(|h| keep(role, h)).collect();
+    // The model's find matches the code, the names and the tag only: the pickers' search also takes
+    // the phone, the father or firm name and the city, which would let a probe confirm them (PRD
+    // FR-7.83; plan 80, T5-10).
+    let hits: Vec<AccountHit> = hits
+        .into_iter()
+        .filter(|h| keep(role, h))
+        .filter(|h| {
+            super::names_only::matches(query, &h.code, &h.name_ur, &h.name_en, h.tag.as_deref())
+        })
+        .collect();
     // The name typed IS an account's name: no close spelling beside it (E2E-52: the names that start
     // with it still stay, the Owner has to say which Akram).
     let exact = Exact::of(query);
@@ -214,6 +223,11 @@ fn chukta_matches(env: &Env<'_>, query: &str) -> Result<(Vec<Node>, bool), Stop>
         },
     )
     .map_err(service_stop)?;
+    // A walk-in buyer is found by his name only, not by his phone (plan 80, T5-10).
+    let found: Vec<_> = found
+        .into_iter()
+        .filter(|b| super::names_only::matches(query, "", &b.name_ur, &b.name_en, None))
+        .collect();
     let more = found.len() > MAX_OPTIONS;
     let matches = found
         .into_iter()

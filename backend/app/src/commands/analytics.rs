@@ -54,7 +54,7 @@ pub async fn analytics_catalog<R: tauri::Runtime>(
 /// totals over the whole filter (never a sum of the page), the filters as read, and for each row
 /// the key that opens the lines behind it. `limit` 0 means 100; at most 1,000. Read only.
 /// Errors: `ERR_OUT_OF_RANGE` on `offset`, `limit`, on `filters.group_by` (a view that does not
-/// take it, or more than 36 columns) and on `filters.buyer.person_key`; `ERR_DATE_INVALID` on
+/// take it, or more than 144 columns) and on `filters.buyer.person_key`; `ERR_DATE_INVALID` on
 /// `filters.from`, `filters.to`; `ERR_DATE_RANGE` on `filters.to`; `ERR_REQUIRED` on
 /// `filters.from` and `filters.to` for a comparison; `ERR_NOT_FOUND` on a picked record.
 #[tauri::command]

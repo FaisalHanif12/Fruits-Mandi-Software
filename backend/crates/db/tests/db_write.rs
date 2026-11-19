@@ -194,6 +194,82 @@ fn a_waiting_save_goes_on_when_the_background_check_passes() {
     assert_eq!(city_count(&db), 1);
 }
 
+/// NFR-REL-7, plan 80 gate: a save that arrives while the start-up check is RUNNING waits for its
+/// end however long that takes. On the 10-year volume the check takes 16 to 23 seconds, longer than
+/// `check_wait` (30 s on a slow Mac), and the save must still go on, never be refused as busy.
+#[test]
+fn a_save_waits_for_a_running_check_longer_than_check_wait() {
+    let dir = tempdir().unwrap();
+    // check_wait is 300 ms in the test options: the check below runs four times as long.
+    let db = Arc::new(Db::open(&common::db_path(dir.path()), common::options(dir.path())).unwrap());
+    let checker = {
+        let db = Arc::clone(&db);
+        std::thread::spawn(move || {
+            db.run_check_with(|| {
+                std::thread::sleep(std::time::Duration::from_millis(1_200));
+                Ok(())
+            })
+        })
+    };
+    // Let the check start, then save: the save arrives while the check is running.
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    assert_eq!(db.data_state(), DataState::Checking);
+    let started = std::time::Instant::now();
+    add_city(&db, "1", false).expect("the save waited for the check and went on");
+    assert!(
+        started.elapsed() >= std::time::Duration::from_millis(900),
+        "the save was held until the check ended, it took {:?}",
+        started.elapsed()
+    );
+    assert_eq!(checker.join().unwrap(), DataState::Ok);
+    assert_eq!(city_count(&db), 1);
+}
+
+/// The other end: when the running check finds damage, the waiting save is refused with the data
+/// check error (not busy), and nothing is written.
+#[test]
+fn a_save_waiting_for_a_running_check_is_refused_if_the_check_fails() {
+    let dir = tempdir().unwrap();
+    let db = Arc::new(Db::open(&common::db_path(dir.path()), common::options(dir.path())).unwrap());
+    let checker = {
+        let db = Arc::clone(&db);
+        std::thread::spawn(move || {
+            db.run_check_with(|| {
+                std::thread::sleep(std::time::Duration::from_millis(700));
+                Err("page 12 is damaged".to_owned())
+            })
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    let error = add_city(&db, "1", false).unwrap_err();
+    assert!(matches!(error, DbError::DataCheckFailed(_)), "{error:?}");
+    assert_eq!(error.code(), ErrorCode::ErrDataCheckFailed);
+    assert_eq!(checker.join().unwrap(), DataState::Failed);
+    assert_eq!(city_count(&db), 0);
+}
+
+/// A check that stops without an answer (a bug) must not hold saves for ever: the state becomes
+/// `Failed` and the waiting save is let go with the data check error.
+#[test]
+fn a_check_that_panics_does_not_hold_saves_for_ever() {
+    let dir = tempdir().unwrap();
+    let db = Arc::new(Db::open(&common::db_path(dir.path()), common::options(dir.path())).unwrap());
+    let checker = {
+        let db = Arc::clone(&db);
+        std::thread::spawn(move || {
+            db.run_check_with(|| {
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                panic!("the check broke");
+            })
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    let error = add_city(&db, "1", false).unwrap_err();
+    assert!(matches!(error, DbError::DataCheckFailed(_)), "{error:?}");
+    assert!(checker.join().is_err(), "the check thread panicked");
+    assert_eq!(db.data_state(), DataState::Failed);
+}
+
 #[test]
 fn a_failed_check_stops_every_save_with_err_data_check_failed() {
     let dir = tempdir().unwrap();

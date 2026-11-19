@@ -593,7 +593,7 @@ pub struct LotRec {
 
 /// A lot is offered when its بکری is saved, it has a balance, it is not trip goods and its seller is
 /// not the account of a closed garden (PRD FR-16.11).
-const LOT_WHERE: &str = "WHERE e.status = 'saved' AND l.purchase_id IS NULL
+const LOT_WHERE: &str = "WHERE e.status = 'saved' AND l.removed_at IS NULL AND l.purchase_id IS NULL
        AND l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken > 0
        AND NOT EXISTS (SELECT 1 FROM ventures v WHERE v.kind = 'garden' AND v.status = 'closed'
                        AND v.account_id = l.seller_account_id)

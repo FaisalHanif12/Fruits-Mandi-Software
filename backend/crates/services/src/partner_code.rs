@@ -8,7 +8,7 @@
 //!   when the user leaves the section (`lock`), on the idle lock, on a logout, after a restore and
 //!   when the app closes.
 //! - **Waits as sign-in** (PRD FR-8.2): after 10 wrong codes 1 minute, after 10 more five minutes,
-//!   then 15 minutes each time (the table of `mandi_domain::auth::lockout`). The wait is kept in
+//!   then 15 minutes after every further wrong code (the table of `mandi_domain::auth::lockout`, NFR-SEC-14). The wait is kept in
 //!   memory by a monotonic clock and on disk by the wall clock (NFR-REL-11). Every wrong try is in
 //!   the audit log, without the code.
 //! - **Setting needs the Owner's password**, changing needs the old code or the password, and a
@@ -20,7 +20,7 @@
 //! figures) after the sign-in check (Code Standards S8).
 //!
 //! Example (PRD E2E-46): the code is 4826. `unlock("1111")` gives `ERR_PARTNER_CODE_WRONG` with
-//! `tries_left` 4; `unlock("4826")` opens the section; `lock()` closes it.
+//! `tries_left` 9; `unlock("4826")` opens the section; `lock()` closes it.
 
 use chrono::Duration as ChronoDuration;
 use mandi_db::clock::format_utc;

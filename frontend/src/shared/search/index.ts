@@ -11,6 +11,7 @@ export {
   useTouchRecord,
   type PickerSource,
 } from './hooks';
+export { hasShortCodes, namesTheRecord, resolveShortCode } from './short-code';
 export type {
   SearchHit,
   SearchInput,

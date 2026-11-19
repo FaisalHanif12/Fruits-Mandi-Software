@@ -731,23 +731,35 @@ pub struct AccountNet {
 /// # Errors
 /// Any SQLite error.
 pub fn account_nets(conn: &Connection) -> rusqlite::Result<Vec<AccountNet>> {
+    // The sums of every account in one pass over the covering index of the amounts, kept for the next
+    // read while no line is written (`crate::memo`). Two correlated sums for each of the 20,000
+    // accounts read every line twice (plan 80 gate: 0.7 seconds on the 10-year book).
+    let sums = crate::memo::account_rows(conn, "journal_sums_by_account", || {
+        let mut statement = conn.prepare(
+            "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+             FROM journal_lines GROUP BY account_id",
+        )?;
+        let rows = statement.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
+        rows.collect()
+    })?;
+    let by_account: HashMap<i64, (i64, i64)> = sums.iter().map(|&(id, dr, cr)| (id, (dr, cr))).collect();
     let mut statement = conn.prepare(
-        "SELECT a.id, a.code, k.code, h.code,
-                COALESCE((SELECT SUM(l.dr_paisa) FROM journal_lines l WHERE l.account_id = a.id), 0),
-                COALESCE((SELECT SUM(l.cr_paisa) FROM journal_lines l WHERE l.account_id = a.id), 0)
+        "SELECT a.id, a.code, k.code, h.code
          FROM accounts a
          JOIN account_controls k ON k.id = a.control_id
          JOIN account_heads h ON h.id = k.head_id
          ORDER BY a.id",
     )?;
     let rows = statement.query_map([], |r| {
+        let id: i64 = r.get(0)?;
+        let (dr_paisa, cr_paisa) = by_account.get(&id).copied().unwrap_or((0, 0));
         Ok(AccountNet {
-            id: r.get(0)?,
+            id,
             code: r.get(1)?,
             control_code: r.get(2)?,
             head_code: r.get(3)?,
-            dr_paisa: r.get(4)?,
-            cr_paisa: r.get(5)?,
+            dr_paisa,
+            cr_paisa,
         })
     })?;
     rows.collect()

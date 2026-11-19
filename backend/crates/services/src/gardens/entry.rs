@@ -730,6 +730,21 @@ pub(super) fn cancel(
         let date = BusinessDate::parse_iso(&entry.entry_date)
             .ok_or_else(|| data("the date of a garden entry is not a date"))?;
         require_open_day(ctx, date, "id")?;
+        // An installment cancelled may leave the owner's refunds above what he could owe (PRD
+        // FR-12.51, plan 80 gate R4-3).
+        if entry.kind == "installment" {
+            let paid = repo::figures(tx, &garden.rec)?.installments_paisa;
+            let after = paid
+                .checked_sub(entry.amount_paisa)
+                .ok_or_else(|| data("the installments of a garden do not fit"))?;
+            super::read::require_refunds_covered(
+                tx,
+                garden.rec.id,
+                Paisa::try_from_paisa(garden.rec.rent_paisa).map_err(money_error)?,
+                Paisa::try_from_paisa(after).map_err(money_error)?,
+                "id",
+            )?;
+        }
         let user = actor.user_id;
         let reversal_entry_id = match entry.journal_entry_id {
             Some(journal_id) => {

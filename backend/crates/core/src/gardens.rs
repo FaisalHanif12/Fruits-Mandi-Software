@@ -764,6 +764,22 @@ pub struct GardenCloseInput {
     pub date: String,
 }
 
+/// Input of `gardens_close`: the closing and the answer of the owner-owes box (PRD FR-12.51, plan 80
+/// gate Q-R4-2). While the installments paid are above the rent the owner still owes money back (مالک
+/// کے ذمے), and a closed garden takes no refund. The save then answers
+/// `ERR_OWNER_OWES_NOT_CONFIRMED` (field `id`, value `owes_paisa`) until `confirm_owner_owes` is
+/// true, the answer "yes" of a confirm box that shows the amount.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct GardenCloseRequest {
+    /// The closing as before.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: GardenCloseInput,
+    /// True after the user said yes to the box. Missing means false.
+    #[serde(default)]
+    pub confirm_owner_owes: bool,
+}
+
 /// What a closing does, worked out by the same function as the save.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct GardenCloseNumbers {

@@ -1984,6 +1984,7 @@ fn state_and_list_facts(o: &mut Oracle, y: &Year) {
                 AttentionKind::TakesOverdue => "takes_overdue",
                 AttentionKind::NamesMissing => "names_missing",
                 AttentionKind::HealthCheck => "health_check",
+                AttentionKind::RecordsDiffer => "records_differ",
             };
             o.put(format!("attention.{k}.count"), item.count.to_string());
             if let Some(amount) = item.amount_paisa {

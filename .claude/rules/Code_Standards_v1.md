@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.25 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026, 09-11-2026 and 17-11-2026) |
+| Version | 1.26 (the plan 80 gate decisions of 19-11-2026; Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026, 09-11-2026 and 17-11-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
 | Depends on | PRD v1.43 (the master), NFR v1.17, Tech Stack v1.10 |
@@ -219,8 +219,8 @@ The model is the brain, but a stranger to our rules. It may call our tools and w
 | Q5 | Sums, differences, averages, percents and estimates are worked out only by `domain::figures` and `domain::forecast` (M14), through `services`. `mandi-assistant` does no arithmetic on `Paisa` or quantities (clippy `arithmetic_side_effects` is denied in the crate). The check of PRD FR-7.76 only compares values for equality. |
 | Q6 | All reads of one question happen in one read snapshot. The only write is the question log row, in its own save after the answer (NFR-AI-6). Partner tools check the partner unlock after the sign-in check, as S8. |
 | Q7 | The request body is built by one function, `request_body()`, and every tool result by one function, `tool_result_json()`. They leave out every field PRD FR-7.83 says never goes (phones, addresses, father or firm names, notes, reasons, narrations typed by hand, driver names, supplier and shop names typed on entries, the market and the person sent typed on a trip, مارکہ text, the audit log, keys, and partner figures while locked), in new results and in the conversation they resend. Every figure with a second place carries both places and its checked status wherever it appears. The provider block (`only: ["azure"]`, `allow_fallbacks: false`, `zdr: true`, `data_collection: "deny"`, `require_parameters: true`) is a constant inside `request_body()`, not a setting. The golden tests check every body, including that block (PRD E2E-54). |
-| Q8 | The key is read from `keyring` at call time. It is never stored in app state, a log, an error or a reply to the screens (NFR-SEC-15). The client allows one host and one path, HTTPS only, with a 15 second timeout a call and 45 seconds a question. |
-| Q9 | The limits are named constants in `mandi-assistant` (G8): 20 counted questions a day, 6 model calls plus one rewrite, 12 tool calls, 90,000 input tokens (cached included) and 4,000 output tokens a question (v1.16; 4, 8, 60,000 and 3,000 before), 30 seconds a call and 90 a question, shared with its continuations; 11,600 tokens for the fixed part (9,500 in v1.15 and v1.16, 9,000 in v1.14, 8,000 before), that is the tool definitions, the instructions and the answer schema (`MAX_PREFIX_TOKENS`, checked by a test); 130 words an answer; 12 months for an estimate. The model name is a setting. |
+| Q8 | The key is read from `keyring` at call time. It is never stored in app state, a log, an error or a reply to the screens (NFR-SEC-15). The client allows one host and one path, HTTPS only, with the time limits of NFR-AI-3 (12 seconds a try, one retry, 25 seconds a question; v1.26). |
+| Q9 | The limits are named constants in `mandi-assistant` (G8): 20 counted questions a day, 6 model calls plus one rewrite, 12 tool calls, 90,000 input tokens (cached included) and 4,000 output tokens a question (v1.16; 4, 8, 60,000 and 3,000 before), 12 seconds a try of a call with one retry, 25 seconds a question (NFR-AI-3, v1.26), shared with its continuations; 11,600 tokens for the fixed part (9,500 in v1.15 and v1.16, 9,000 in v1.14, 8,000 before), that is the tool definitions, the instructions and the answer schema (`MAX_PREFIX_TOKENS`, checked by a test); 130 words an answer; 12 months for an estimate. The model name is a setting. |
 | Q10 | Text sent to the model from the books is data, never instructions: tool results are JSON values, and the instructions say so. Because no tool writes and Q4 checks every figure, a record that reads like an instruction can change nothing (PRD E92). |
 | Q11 | The four prompt files (`prompt/system.md`, `tools.json`, `answer.schema.json`, `words.tsv`) are copied word for word from `docs/deliverables/D6-system-prompt.md`, and its test P7 keeps them equal. `check.rs` reads its word lists (number words, months, never-use words, side words) from `words.tsv` only, never from a second list in code. A change to any of the four is a requirement change: the file first, approved by Umar, then the tests P1 to P7 and NFR-AI-2 again. |
 
@@ -330,7 +330,7 @@ The model is the brain, but a stranger to our rules. It may call our tools and w
 |---|---|
 | D1 | Names follow Tech Stack Section 6 (snake_case, plural tables, `_paisa`, `_bps`, `_date`, `_at`) |
 | D2 | Every table has `id`, `created_at`, `created_by`, `updated_at`, `updated_by`, `version` |
-| D3 | Soft states only: `is_active`, `status`. No `DELETE` of business records (see B17 for the append-only tables). |
+| D3 | Soft states only: `is_active`, `status`. No `DELETE` of business records (see B17 for the append-only tables). One recorded exception (plan 80, v1.26): the `venture_partners` rows of a garden or trip may be replaced while it has no entry and no goods arrived; the service checks it, a trigger refuses it afterwards, and the old rows go to the audit log. |
 | D4 | Lookups by name use the indexed columns `search_ur`, `search_en` and `search_phonetic` (B26), never the display names |
 | D5 | Each sale line stores the rule used and its value (snapshot), never only a rule ID (PRD FR-11.6) |
 
@@ -375,7 +375,10 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 | Tests | Where | When |
 |---|---|---|
 | E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, the preview numbers of E2E-39, E2E-40, E2E-40b, E2E-41, E2E-42 and E2E-44 (tiles, refusals, trial balance) | `backend/crates/services/tests/golden_day.rs` | Every commit |
-| E2E-33 (ledger with items, R20 total), E2E-36 (day summary R34, filtered print data), E2E-43 (party day sheet R35) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
+| E2E-33 (ledger with items, R20 total) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-36 (day summary R34, filtered print data) | `backend/crates/services/tests/golden_day/day_money.rs` | Every commit |
+| E2E-43 (party day sheet R35) | `backend/crates/services/tests/reports_party_sheet.rs` | Every commit |
+| E2E-70 (lot names, and old lots numbered by the migration) | `backend/crates/services/tests/lot_names.rs`, `backend/crates/db/tests/migration.rs` | Every commit |
 | E2E-44 (R20, R21, R22 and R38 rows) | `backend/crates/services/tests/reports_dead.rs` | Every commit |
 | E2E-45 (edit of a closed day through reopen and fix, and its stamp) | `backend/crates/services/tests/golden_day.rs` | Every commit |
 | E2E-46 (partner code) | `backend/crates/services/tests/partner_code.rs` | Every commit |
@@ -486,6 +489,7 @@ A change is done only when every box is ticked:
 | 1.20 | 06-11-2026 | Approved by Umar (NFR v1.16): `MAX_PREFIX_TOKENS` is 11,600 (Q9). |
 | 1.21 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the field rule for paid on the spot (4.2); چکتا کھاتہ in the account code rule (4.2) and F41; `Backspace` and `Delete` (F27); golden tests E2E-64 to E2E-69 (9.2), and E2E-21 replaced. |
 | 1.22 | 10-11-2026 | Correction from the D8 end gate: the files of golden tests E2E-64 to E2E-68 in 9.2. No rule changed. |
+| 1.26 | 19-11-2026 | The plan 80 gate: the assistant's time limits follow NFR-AI-3 v1.21 (Q8, Q9); the real files of E2E-33, E2E-36 and E2E-43 and a row for E2E-70 (9.2); one recorded exception to D3 for `venture_partners` before the first entry. No rule of money changed. |
 | 1.25 | 18-11-2026 | PRD v1.44, approved by Umar (plan 79): the sale line rate hint is retired (F43, 9.2). |
 | 1.24 | 17-11-2026 | PRD v1.43, approved by Umar (plan 78 B4): a third split function, `split_by_open_parts`, for an advance coming back to the partners by the parts still open (M5, Section 11, PRD C28). |
 | 1.23 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): E2E-25 tests the seller memory and the lot name; truck memory is retired (9.2). |

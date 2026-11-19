@@ -110,11 +110,16 @@ export function bikriGoodsSources(): Promise<GoodsSources> {
 }
 
 /**
- * The rows of the card of trip goods (`trip`) or garden goods (`garden`): every row with goods left for our shop, on
- * any day to sell, oldest first (PRD FR-12.50). Read only.
+ * One page of the card of trip goods (`trip`) or garden goods (`garden`): the rows with goods left for our shop, on
+ * any day to sell, oldest first (PRD FR-12.50), 25, 50 or 100 at a time, with the count of the whole card
+ * (PRD FR-19.11, plan 80 R2-5). Read only.
  */
-export function bikriGoodsToLoad(kind: VentureKind): Promise<ReadyGoods> {
-  return callCommand<ReadyGoods>('bikri_goods_to_load', { input: { kind } });
+export function bikriGoodsToLoad(
+  kind: VentureKind,
+  offset: number,
+  limit: number,
+): Promise<ReadyGoods> {
+  return callCommand<ReadyGoods>('bikri_goods_to_load', { input: { kind, offset, limit } });
 }
 
 /** The lots with goods left, oldest first (PRD FR-12.14, FR-19.10). Read only. */

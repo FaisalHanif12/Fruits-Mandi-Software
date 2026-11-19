@@ -58,7 +58,11 @@ function readAuditPage(value: unknown): AuditPage {
   return value as AuditPage;
 }
 function readDailyHealth(value: unknown): DailyHealth {
-  return value as DailyHealth;
+  // A result stored before the money tables were checked has no `tables`: the backend reads it as ok (NFR-SEC-6
+  // v1.21), so a fixture without the line is read the same way. A fixture that has it keeps its own.
+  const raw = value as { books: Record<string, unknown> };
+  const books = { tables: { ok: true, at: null }, ...raw.books } as DailyHealth['books'];
+  return { ...(value as DailyHealth), books };
 }
 function readDaySettings(value: unknown): DaySettings {
   return value as DaySettings;

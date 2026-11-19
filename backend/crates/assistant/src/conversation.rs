@@ -231,6 +231,9 @@ pub struct Turn {
     /// True when the question also asks a Laga (with a commission side): the total of both sides and
     /// Laga is never rewritten to one side's figure.
     pub commission_laga: bool,
+    /// The one period the question names, as its first and last day, when the app reads it with
+    /// certainty (plan 80, T5-2): a view or report an answer cites must be for these days.
+    pub asked_days: Option<(String, String)>,
     /// The lot the question is about (plan 71 L9, PRD FR-7.77), as its key (`l7`): the only lot the
     /// app found for a seller and an item the question names, or the one the Owner picked. The
     /// model's own `report` calls of that seller and item are narrowed to it.

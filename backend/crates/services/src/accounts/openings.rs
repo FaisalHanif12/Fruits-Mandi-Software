@@ -127,6 +127,7 @@ pub(crate) fn apply(
     wanted: &OpeningRequest,
     amount_field: &str,
     day: OpeningDay,
+    confirmed: bool,
 ) -> Result<bool, ServiceError> {
     apply_with(
         ctx,
@@ -138,6 +139,7 @@ pub(crate) fn apply(
         amount_field,
         day,
         OpeningCounter::AsBefore,
+        confirmed,
     )
 }
 
@@ -204,8 +206,9 @@ fn opening_cash_change(
 /// [`apply`] with the account on the other side chosen (plan 78 E).
 ///
 /// An opening that is in cash and is changed or taken away changes cash: when the change would
-/// leave cash below zero it is refused with `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (PRD FR-6.7), because
-/// an opening form has no way to confirm it.
+/// leave cash below zero it is refused with `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value
+/// `cash_after_paisa`, PRD FR-6.7) unless `confirmed` is true, the answer "ہاں، محفوظ کریں" of the
+/// cash box (plan 80 gate R4-4).
 ///
 /// # Errors
 /// As [`apply`]; `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`).
@@ -220,6 +223,7 @@ pub(crate) fn apply_with(
     amount_field: &str,
     day: OpeningDay,
     counter: OpeningCounter,
+    confirmed: bool,
 ) -> Result<bool, ServiceError> {
     let have = current_opening(facts)?;
     if same_opening(&have, wanted) {
@@ -254,6 +258,17 @@ pub(crate) fn apply_with(
             amount_field,
         ));
     }
+    // An opening advance is split between the partners by their shares (PRD FR-17.13). With
+    // partners but no share set at all it would have no partner parts and the check of FR-17.9
+    // would miss it, so it is refused until the shares are set (plan 80 gate Q-R1-3, R1-3). With no
+    // partner yet it is allowed (PRD 4.3).
+    if wanted.has_amount() && wanted.is_advance && mandi_db::partners::partners_without_shares(tx)?
+    {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrSharesNot100,
+            amount_field,
+        ));
+    }
     // Which account takes the other side, and what the change does to cash (plan 78 E).
     let cash_id = repo::id_by_code(tx, CASH_ACCOUNT_CODE)?
         .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
@@ -268,11 +283,12 @@ pub(crate) fn apply_with(
         };
     let counter_id = if in_cash { cash_id } else { difference_id(tx)? };
     // PRD FR-6.7: changing an opening that is in cash takes cash out (the old entry goes, the new
-    // one comes). When cash would end below zero the change is refused; this form has no confirm.
+    // one comes). When cash would end below zero the user is asked first: the refusal carries the
+    // cash after the change, and the save goes through when the form is sent again confirmed.
     let cash_change = opening_cash_change(&have, was_in_cash, wanted, in_cash)?;
     if cash_change.is_negative() {
         let check = cash_after_entry(tx, cash_change)?;
-        require_confirmed(&check, false).map_err(|e| on_field(e, amount_field))?;
+        require_confirmed(&check, confirmed).map_err(|e| on_field(e, amount_field))?;
     }
     if have.has_amount() {
         let old_entry = facts
@@ -404,6 +420,7 @@ fn plan(
     window: (Option<BusinessDate>, BusinessDate),
     conn: &Connection,
     input: &OpeningsInput,
+    confirmed: bool,
 ) -> Result<Vec<PlannedLine>, ServiceError> {
     let (closed, today) = window;
     let cash_id = repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
@@ -532,7 +549,7 @@ fn plan(
                             };
                             let check =
                                 mandi_domain::cash::check(before, change).map_err(money_error)?;
-                            if check.needs_confirm {
+                            if check.needs_confirm && !confirmed {
                                 errors.push(LineError {
                                     code: ErrorCode::ErrCashBelowZeroNotConfirmed,
                                     field: format!("{prefix}opening_dr"),
@@ -609,10 +626,24 @@ pub fn openings_preview(
     ctx: &Context,
     input: &OpeningsInput,
 ) -> Result<OpeningsPreview, ServiceError> {
+    openings_preview_with_confirm(ctx, input, false)
+}
+
+/// [`openings_preview`] with the answer of the cash box (PRD FR-6.7, plan 80 gate R4-4): with
+/// `confirm_cash_below_zero` true a line that takes cash below 0 has no
+/// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`. The save uses the same plan (B5).
+///
+/// # Errors
+/// As [`openings_preview`].
+pub fn openings_preview_with_confirm(
+    ctx: &Context,
+    input: &OpeningsInput,
+    confirm_cash_below_zero: bool,
+) -> Result<OpeningsPreview, ServiceError> {
     // The day window is read first: the read connection is not re-entrant.
     let window = day::window(ctx)?;
     ctx.db.read(|conn| {
-        let planned = plan(window, conn, input)?;
+        let planned = plan(window, conn, input, confirm_cash_below_zero)?;
         let (mut total_dr, mut total_cr) = (Paisa::ZERO, Paisa::ZERO);
         let mut rows = Vec::with_capacity(planned.len());
         for line in &planned {
@@ -647,10 +678,23 @@ pub fn openings_save(
     actor: &Actor,
     input: &OpeningsInput,
 ) -> Result<OpeningsSaved, ServiceError> {
+    openings_save_with_confirm(ctx, actor, input, false)
+}
+
+/// [`openings_save`] with the answer of the cash box (PRD FR-6.7, plan 80 gate R4-4).
+///
+/// # Errors
+/// As [`openings_save`].
+pub fn openings_save_with_confirm(
+    ctx: &Context,
+    actor: &Actor,
+    input: &OpeningsInput,
+    confirm_cash_below_zero: bool,
+) -> Result<OpeningsSaved, ServiceError> {
     let ids: Vec<i64> = input.lines.iter().map(|l| l.account_id).collect();
     let window = day::window(ctx)?;
     ctx.db.write(|tx| {
-        let planned = plan(window, tx, input)?;
+        let planned = plan(window, tx, input, confirm_cash_below_zero)?;
         let problems: Vec<Rejection> = planned
             .iter()
             .flat_map(|line| line.errors.iter())
@@ -679,6 +723,7 @@ pub fn openings_save(
                 wanted,
                 &field,
                 OpeningDay::Open,
+                confirm_cash_below_zero,
             )
             .map_err(|e| on_line(e, index))?
             {

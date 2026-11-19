@@ -50,13 +50,16 @@ pub(crate) fn load_days(
     days: &[String],
     facts: &BTreeMap<String, Sales>,
 ) -> Result<DaySheet, ReportsError> {
-    let figures = load(conn, days, None)?;
+    let figures = crate::prof::timed("days.load", || load(conn, days, None))?;
     let sheet = DaySheet { figures };
-    for day in days {
-        sheet.tie_to_facts(day, facts.get(day).copied().unwrap_or_default())?;
-    }
+    crate::prof::timed("days.tie_facts", || -> Result<(), ReportsError> {
+        for day in days {
+            sheet.tie_to_facts(day, facts.get(day).copied().unwrap_or_default())?;
+        }
+        Ok(())
+    })?;
     if let (Some(from), Some(to)) = (days.first(), days.last()) {
-        tie_sellers(conn, from, to, facts)?;
+        crate::prof::timed("days.tie_sellers", || tie_sellers(conn, from, to, facts))?;
     }
     Ok(sheet)
 }

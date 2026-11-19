@@ -746,6 +746,49 @@ fn summary_key(label_id: &str) -> String {
     short.replace('-', "_")
 }
 
+/// The ledgers and balance lists whose lines can be a partner's money (plan 80, T5-11): the day book,
+/// the cash book, a party's ledger and statement, the voucher list, the head balances and the trial
+/// balance.
+const PARTNER_LEDGERS: [ReportId; 7] = [
+    ReportId::R11,
+    ReportId::R12,
+    ReportId::R13,
+    ReportId::R14,
+    ReportId::R15,
+    ReportId::R17,
+    ReportId::R18,
+];
+
+/// The document labels of the postings that are a partner's own money: capital in and out, money
+/// taken for himself and given back.
+const PARTNER_DOCS: [&str; 4] = [
+    "report-doc-capital-in",
+    "report-doc-capital-out",
+    "report-doc-personal-expense",
+    "report-doc-personal-return",
+];
+
+/// The code prefixes of the controls of a partner's capital (0602), drawings (0603), garden, trip and
+/// fruit (0604) and linked khata and money lent (0605) accounts (PRD FR-10.4).
+const PARTNER_CODES: [&str; 4] = ["0602", "0603", "0604", "0605"];
+
+/// True when a row of the page is a line of a partner's money: its account is a partner's capital,
+/// drawings, venture or linked account (a party cell, or the code column of the balance lists), or its
+/// document is a capital or a personal-take posting.
+fn rows_hold_partner_lines(columns: &[Column], rows: &[Row]) -> bool {
+    rows.iter().any(|row| {
+        row.cells.iter().enumerate().any(|(at, cell)| match cell {
+            Cell::Party { party } => PARTNER_CODES.iter().any(|p| party.code.starts_with(p)),
+            Cell::Doc { type_id, .. } => PARTNER_DOCS.contains(&type_id.as_str()),
+            Cell::Text { text } => {
+                columns.get(at).is_some_and(|c| c.key == "code")
+                    && PARTNER_CODES.iter().any(|p| text.starts_with(p))
+            }
+            _ => false,
+        })
+    })
+}
+
 /// The tool.
 pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: Input = input(args)?;
@@ -865,6 +908,15 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
             Err(other) => return Err(other),
         }
     };
+    // The ledgers that are not behind the partner code as a whole but hold, as lines, the money of a
+    // partner's capital, drawings, venture or linked account: while the section is locked, a read
+    // whose lines hold one pauses for the code like any partner source (PRD FR-7.82, NFR-SEC-14;
+    // plan 80, T5-11). Unlocked, the result is marked so it is not sent again once locked.
+    let partner_lines =
+        PARTNER_LEDGERS.contains(&id) && rows_hold_partner_lines(&page.columns, &rows);
+    if partner_lines && env.partner_locked {
+        return Err(Stop::Locked);
+    }
     let closing = closing_check(env, id, &built, &page)?;
     let mut draft = assemble(
         env,
@@ -877,7 +929,7 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         hidden_parts,
         closing,
     );
-    draft.partner_data = partner_data;
+    draft.partner_data = partner_data || partner_lines;
     // A partner's capital, next to his statement, when the statement runs up to now (his capital
     // balance is today's): Q203 and Q204 of the live run 2 found only his کل رقم. Only when the
     // question asks for the capital: its `balance` is a figure of its own, and beside the

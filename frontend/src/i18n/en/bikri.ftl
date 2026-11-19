@@ -903,6 +903,9 @@ bikri-undo-done = { -bikri } { $number } was taken back. Correct it and save aga
 bikri-undo-failed = The save could not be undone
 
 # review: pending
+bikri-undo-changed = This { -bikri } was changed after you saved it, so it cannot be taken back now. Open it from the list of past sales to correct it.
+
+# review: pending
 bikri-undo-busy = You have started another { -bikri }. Finish it or clear it first, then undo.
 
 ## Trip goods in the sale book (plan 16b, PRD 12.3, FR-12.26, FR-12.27).

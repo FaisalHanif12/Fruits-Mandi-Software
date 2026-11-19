@@ -19,7 +19,7 @@ use mandi_domain::core::khata::{
     KhataAccount, KhataCreateInput, KhataCreateRequest, KhataEntryRow, KhataRowKind,
     KhataSetLinkInput, KhataStatement, KhataStatementInput, KhataTotals,
 };
-use mandi_domain::core::links::Link;
+use mandi_domain::core::links::{Link, LinkKind};
 use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
@@ -267,8 +267,14 @@ pub fn statement(
         sort.check(&SORT_COLUMNS)
             .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
     }
+    // Which partner a khata is linked to is a partner fact (PRD FR-17.11, NFR-SEC-14): while the
+    // section is locked a partner link carries no partner, as on the dues page of the loans.
+    let locked = crate::partner_code::is_locked(ctx)?;
     ctx.db.read(|conn| {
-        let khata = account_of(conn, input.khata_account_id)?;
+        let mut khata = account_of(conn, input.khata_account_id)?;
+        if locked && khata.link.kind == LinkKind::Partner {
+            khata.link.partner_id = None;
+        }
         let lines = open_lines::live_lines(conn, &[khata.account.id])?;
         let mut month_acc = page::MonthAcc::new(2);
         let mut opening = Paisa::ZERO;

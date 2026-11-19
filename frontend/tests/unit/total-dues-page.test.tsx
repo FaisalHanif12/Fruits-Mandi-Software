@@ -168,6 +168,40 @@ describe.each(LANGUAGES)('the total dues page (%s)', (language) => {
     expect(router.state.location.search).toMatchObject({ side: 'seller', party: 50 });
   });
 
+  // A dead buyer or seller opens the same history as the buyers and sellers sections: پارٹی کھاتے, one row
+  // for each بکری, with his side (PRD FR-19.8 v1.43, FR-9.7, NFR-USE-10; plan 80 R5-3). Not R13. A person who
+  // borrowed keeps his loans page.
+  describe.each([
+    ['buyer', 'buyer', '/bikri/party-ledgers', { side: 'buyer', party: 40 }],
+    ['seller', 'seller', '/bikri/party-ledgers', { side: 'seller', party: 40 }],
+    ['money_lent', 'a person who borrowed', '/rokar/lent', { type: 'money_lent' }],
+  ] as const)('a dead %s row', (partyType, _label, pathname, search) => {
+    it(`opens ${pathname}`, async () => {
+      vi.mocked(dashboardApi.dashboardTotalDues).mockResolvedValue(TOTAL_DUES_FULL);
+      const row = DEAD.rows[0];
+      if (row === undefined) throw new Error('no dead row');
+      vi.mocked(dashboardApi.dashboardDeadAmount).mockResolvedValue({
+        ...DEAD,
+        rows: [{ ...row, party_type: partyType }],
+      });
+      const user = userEvent.setup();
+      const { router } = await open();
+      await waitFor(() => {
+        expect(document.querySelector('.ag-row[row-id="5"]')).not.toBeNull();
+      });
+      const cell = document
+        .querySelector<HTMLElement>('.ag-row[row-id="5"]')
+        ?.querySelector<HTMLElement>('[col-id="party"]');
+      if (cell === null || cell === undefined) throw new Error('no cell');
+      await user.click(cell);
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe(pathname);
+      });
+      expect(router.state.location.search).toMatchObject(search);
+    });
+  });
+
   it('a refused read of the totals is an error with a retry, and the lists still work', async () => {
     vi.mocked(dashboardApi.dashboardTotalDues).mockRejectedValueOnce(
       new CommandError(refusal([{ code: 'ERR_INTERNAL', field: null, values: {} }])),

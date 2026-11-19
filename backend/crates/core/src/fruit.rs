@@ -543,6 +543,11 @@ pub struct FruitList {
     /// asked with `group_by_month` and the list is in date order. Figures: `qty` and `value_paisa`
     /// of the saved entries.
     pub months: Vec<MonthSubtotal>,
+    /// True while the partner section is locked (PRD FR-17.11): the rows, the count and the totals
+    /// are the fruit for the shop's guests only, and the screen shows "کوڈ درج کریں" (the
+    /// `PartnerLockedBox`) in place of the partners' fruit. A request for one partner's fruit is
+    /// refused with `ERR_PARTNER_LOCKED` instead.
+    pub partners_locked: bool,
 }
 
 // ---- The lot picker ----

@@ -533,11 +533,11 @@ pub(super) fn lot_charges_in(
     let filter = who.sql("l.seller_account_id", "l.chukta_person_key", &mut args);
     let from_lots = if !entries_first {
         "FROM bikri_lots l
-         JOIN journal_entries e ON e.id = l.first_entry_id"
+         JOIN journal_entries e ON e.id = l.first_entry_id AND l.removed_at IS NULL"
     } else {
         // The entries of the days first (see [`lines_of_days`]).
         "FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
-         CROSS JOIN bikri_lots l ON l.first_entry_id = e.id"
+         CROSS JOIN bikri_lots l ON l.first_entry_id = e.id AND l.removed_at IS NULL"
     };
     let sql = format!(
         "SELECT e.entry_date, l.seller_account_id, COALESCE(l.chukta_person_key, ''),

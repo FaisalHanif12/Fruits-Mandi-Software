@@ -26,6 +26,7 @@ mod receipt;
 use mandi_db::vouchers as repo;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::edit::EntryFlags;
+use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::validate;
@@ -64,6 +65,17 @@ pub const MAX_LIST_LINES: usize = 500;
 /// # Errors
 /// The date codes on `from` and `to`; `ServiceError::Db`.
 pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, ServiceError> {
+    // A partner's own money is behind the partner code (PRD FR-17.11, NFR-SEC-14, Code Standards
+    // S8): while locked, a list of ذاتی خرچہ, its واپسی, سرمایہ جمع or سرمایہ واپسی is refused, and
+    // the list of every type leaves those vouchers out of its rows, count and total.
+    let locked = crate::partner_code::is_locked(ctx)?;
+    if locked
+        && input
+            .voucher_type
+            .is_some_and(|kind| repo::PARTNER_MONEY_TYPES.contains(&kind))
+    {
+        return Err(ServiceError::reject(ErrorCode::ErrPartnerLocked));
+    }
     let (_, today) = day::window(ctx)?;
     let mut errors = validate::FieldErrors::default();
     let bound = |errors: &mut validate::FieldErrors, field: &str, text: &str| {
@@ -98,6 +110,7 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
         search: input.search.as_deref(),
         order_by: order_by.as_deref(),
         hide_cancelled: !input.show_finished,
+        hide_partner_money: locked,
     };
     // One page and the totals over the whole filter, each from one query (PRD FR-19.11, B31).
     let (mut rows, totals, months) = ctx.db.read(|conn| {

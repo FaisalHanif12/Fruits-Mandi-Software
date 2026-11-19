@@ -37,7 +37,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { EMPTY_PAIRS } from '../helpers/paged';
-import { message, visible } from '../helpers/render';
+import { message, paragraph, visible } from '../helpers/render';
 import { fakeTrips } from '../helpers/trips';
 import * as trips from '../helpers/trips-real';
 
@@ -113,9 +113,14 @@ function answerLikeTheBackend() {
       garden_rows: stock.filter((row) => row.kind === 'garden' && row.qty_left > 0).length,
     }),
   );
-  vi.mocked(bikriApi.bikriGoodsToLoad).mockImplementation((kind) =>
-    Promise.resolve({ rows: stock.filter((row) => row.kind === kind && row.qty_left > 0) }),
-  );
+  // One page of the card at a time, with the count of the whole card (PRD FR-19.11, plan 80 R2-5).
+  vi.mocked(bikriApi.bikriGoodsToLoad).mockImplementation((kind, offset, limit) => {
+    const all = stock.filter((row) => row.kind === kind && row.qty_left > 0);
+    return Promise.resolve({
+      rows: all.slice(offset, offset + (limit === 0 ? 100 : limit)),
+      total_count: all.length,
+    });
+  });
 }
 
 beforeEach(() => {
@@ -470,6 +475,55 @@ describe.each(LANGUAGES)('the three load buttons of a new بکری (%s, PRD FR-1
     });
     expect(textOf(lotsGrid(language), 1, 'seller')).toBe(gardenName);
     expect(textOf(lotsGrid(language), 1, 'qty')).toBe(String(gardenLeft));
+  });
+
+  it('R13: a card of 130 rows is read a page at a time, with its pager, so no row is out of reach (plan 80 R2-5)', async () => {
+    // The backend gave at most 100 rows before; a trip with 130 purchases with goods left lost the last 30.
+    stock = Array.from({ length: 130 }, (_, index) => purchase(index + 1, index + 1));
+    const { user } = await openWithOwnGoods(language, fitted);
+    const opener = await waitFor(() => {
+      const found = tripButton();
+      if (found === null) throw new Error('no trip button');
+      return found;
+    });
+    await user.click(opener);
+    const dialog = await screen.findByRole('dialog');
+    // The first page, 25 rows, with the count of the whole card.
+    await waitFor(() => {
+      expect(bikriApi.bikriGoodsToLoad).toHaveBeenCalledWith('trip', 0, 25);
+    });
+    await within(dialog).findByText(
+      paragraph(message(language, 'common-pager-range', { from: 1, to: 25, total: 130 })),
+    );
+    // The next page asks for the next 25 rows.
+    await user.click(
+      within(dialog).getByRole('button', { name: named(message(language, 'common-pager-next')) }),
+    );
+    await waitFor(() => {
+      expect(bikriApi.bikriGoodsToLoad).toHaveBeenCalledWith('trip', 25, 25);
+    });
+    // The last page holds the last 5 rows: the ones the old card could not reach.
+    await user.click(
+      within(dialog).getByRole('button', { name: named(message(language, 'common-pager-last')) }),
+    );
+    await waitFor(() => {
+      expect(bikriApi.bikriGoodsToLoad).toHaveBeenCalledWith('trip', 125, 25);
+    });
+    await within(dialog).findByText(
+      paragraph(message(language, 'common-pager-range', { from: 126, to: 130, total: 130 })),
+    );
+    // A row of the last page becomes a lot, as on the first page.
+    const cells = await within(dialog).findAllByRole('gridcell');
+    const cell = cells[0];
+    if (cell === undefined) throw new Error('no row on the last page');
+    await user.click(cell);
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    await waitFor(() => {
+      expect(textOf(lotsGrid(language), 0, 'seller')).toBe(ownName);
+    });
   });
 
   it('R11: a card that cannot be read says so and can be tried again', async () => {

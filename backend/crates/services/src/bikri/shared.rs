@@ -115,8 +115,6 @@ struct Named {
     packings: BTreeSet<i64>,
     markas: BTreeSet<i64>,
     stores: BTreeSet<i64>,
-    /// (item, packing) pairs, for the saved rate hint.
-    pairs: BTreeSet<(i64, i64)>,
     /// (seller, item) pairs, for the counter of each lot's name (PRD FR-12.45).
     lot_pairs: BTreeSet<(i64, i64)>,
 }
@@ -132,9 +130,6 @@ fn named(prepared: &PreparedDraft) -> Named {
         n.packings.extend(lot.packing_id);
         n.markas.extend(lot.marka_id);
         n.stores.extend(lot.store_id);
-        if let Some(pair) = lot.item_id.zip(lot.packing_id) {
-            n.pairs.insert(pair);
-        }
         for sale in lot.sales.iter().filter(|s| !s.is_blank) {
             n.accounts.extend(sale.buyer_account_id);
         }
@@ -473,36 +468,30 @@ fn load_lookups(
         },
         ..Lookups::default()
     };
-    // The saved rates need the posting day (PRD FR-7.53, FR-7.55). Without a valid day the
-    // header already has its error and no row is worked out.
-    if let Some(date) = prepared.header.entry_date {
-        for &(item, packing) in &n.pairs {
-            if let Some(hint) =
-                crate::assist::saved_rate_hint_except(conn, item, packing, date, replaces)?
-            {
-                lookups.saved_hints.insert((item, packing), hint);
-            }
-        }
-        if rate_check {
-            // The posting day and the 6 days before it.
-            let from = (1..RATE_CHECK_DAYS).try_fold(date, |d, _| d.previous_day());
-            if let Some(from) = from {
-                for &item in &n.items {
-                    let (qty, amount) = repo::item_sales_between_except(
-                        conn,
-                        item,
-                        &from.to_iso(),
-                        &date.to_iso(),
-                        replaces,
-                    )?;
-                    lookups.item_sales.insert(
-                        item,
-                        ItemSales {
-                            qty,
-                            amount: paisa(amount)?,
-                        },
-                    );
-                }
+    // The rate check needs the posting day (PRD FR-7.55). Without a valid day the header already
+    // has its error and no row is worked out. The retired rate hint (PRD FR-7.53, v1.44) is no
+    // longer read here: a preview asks for no saved rate (plan 80 R2-6, Code Standards B22).
+    if let Some(date) = prepared.header.entry_date
+        && rate_check
+    {
+        // The posting day and the 6 days before it.
+        let from = (1..RATE_CHECK_DAYS).try_fold(date, |d, _| d.previous_day());
+        if let Some(from) = from {
+            for &item in &n.items {
+                let (qty, amount) = repo::item_sales_between_except(
+                    conn,
+                    item,
+                    &from.to_iso(),
+                    &date.to_iso(),
+                    replaces,
+                )?;
+                lookups.item_sales.insert(
+                    item,
+                    ItemSales {
+                        qty,
+                        amount: paisa(amount)?,
+                    },
+                );
             }
         }
     }

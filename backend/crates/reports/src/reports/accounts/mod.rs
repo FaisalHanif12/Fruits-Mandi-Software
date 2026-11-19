@@ -14,6 +14,7 @@ mod cash;
 mod journal;
 mod ledger;
 pub(crate) mod ledger_items;
+mod linked;
 pub(crate) mod lines;
 
 pub(super) use balances::{run_r16, run_r17, run_r18, run_r19};

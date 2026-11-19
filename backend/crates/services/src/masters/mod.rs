@@ -163,6 +163,10 @@ pub fn save(ctx: &Context, actor: &Actor, input: &MasterInput) -> Result<MasterR
         learned.after_commit(ctx);
     }
     search::refresh(ctx, kind, row.id());
+    // The accounts and addas of a city carry its name in their search text (gate finding R3-2).
+    if kind == MasterKind::City {
+        search::refresh_city_dependents(ctx);
+    }
     // The account an expense head made is searchable too (plan 07).
     if let MasterRow::ExpenseHead(r) = &row {
         search::refresh_account(ctx, r.account_id);
@@ -339,6 +343,9 @@ pub fn set_active(
     })?;
     if changed {
         search::refresh(ctx, kind, id);
+        if kind == MasterKind::City {
+            search::refresh_city_dependents(ctx);
+        }
         if let MasterRow::ExpenseHead(r) = &row {
             search::refresh_account(ctx, r.account_id);
         }

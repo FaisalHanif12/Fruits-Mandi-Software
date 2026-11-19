@@ -5,7 +5,6 @@
 
 use std::collections::{HashMap, HashSet};
 
-use mandi_core::bikri::RateHint;
 use mandi_core::money::Paisa;
 use mandi_core::rules::ItemGroup;
 use mandi_core::ventures::{GardenRef, TripRef};
@@ -223,8 +222,6 @@ pub struct Lookups {
     pub markas: HashSet<i64>,
     /// The stores that exist.
     pub stores: HashSet<i64>,
-    /// The saved rate hint of each (item, packing) the draft uses: today's, else the last day.
-    pub saved_hints: HashMap<(i64, i64), RateHint>,
     /// The saved sales of each item the draft uses, for the rate check.
     pub item_sales: HashMap<i64, ItemSales>,
     /// The purchases the lots of the draft name (PRD FR-12.26).

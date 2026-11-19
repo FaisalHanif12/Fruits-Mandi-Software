@@ -153,8 +153,11 @@ fn a_cash_opening_that_is_changed_stays_in_cash() {
 #[test]
 fn a_cash_opening_cannot_be_changed_when_cash_would_go_below_zero() {
     // Cash is 50,000 and D's 50,000 is in it. After 80,000 is paid out, cash is 20,000 and the
-    // opening cannot be lowered by 30,000: cash would be -10,000, and an opening form has no confirm.
-    let w = support::world_with(50_000, false);
+    // opening cannot be lowered by 30,000 without the answer of the cash box: cash would be -10,000
+    // (plan 80 gate R4-4: the form asks, and `gate_c_money.rs` saves it with the answer "yes"). The
+    // world has shares because an advance is refused while partners exist and no share was set
+    // (plan 80 gate Q-R1-3).
+    let w = support::world();
     let d = make(&w, "50,000", Some(OpeningCapitalWhere::Cash));
     let [a, _, _] = w.partners;
     let expense = mandi_services::core::vouchers::AdvanceInput {
@@ -218,7 +221,7 @@ fn removing_a_cash_opening_takes_the_cash_out_and_is_checked() {
 
 #[test]
 fn the_preview_says_what_the_save_will_say_for_a_cash_opening() {
-    let w = support::world_with(50_000, false);
+    let w = support::world();
     let d = make(&w, "50,000", Some(OpeningCapitalWhere::Cash));
     advance(&w, "80,000");
     assert_eq!(cash(&w), 20_000);

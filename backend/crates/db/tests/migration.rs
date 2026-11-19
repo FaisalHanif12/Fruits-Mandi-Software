@@ -24,7 +24,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 25;
+const LATEST: usize = 26;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -4933,4 +4933,149 @@ fn migration_25_makes_venture_items_and_fills_it_from_the_item_of_each_garden() 
     );
     let again = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
     assert_eq!((again.from, again.to), (LATEST, LATEST));
+}
+
+#[test]
+fn migration_26_locks_the_shares_of_a_garden_after_goods_arrived() {
+    // Plan 80 gate Q-R4-1 (PRD FR-12.29, Architecture 15.5 v1.29). Migration 6 locks the rows of
+    // `venture_partners` once the venture has an entry. Goods arrived (`garden_arrivals`) is not an
+    // entry and posts nothing, so a garden with goods arrived and nothing sold could still change its
+    // shares. Migration 26 adds three triggers that refuse an insert, a change of a share and a delete
+    // once the garden has a `garden_arrivals` row. A garden with no arrival, and every trip, are as
+    // before, and no row, amount or chain hash moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrations().to_version(&mut conn, 25).unwrap();
+    assert_eq!(user_version(&conn), 25);
+    let f = common::fixture(&conn);
+    let packing: i64 = conn
+        .query_row("SELECT id FROM packings LIMIT 1", [], |r| r.get(0))
+        .unwrap();
+    let account_ids: Vec<i64> = conn
+        .prepare("SELECT id FROM accounts ORDER BY id LIMIT 4")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let mut partners = Vec::new();
+    for (pair, (ur, en)) in [("الف", "A"), ("ب", "B")].iter().enumerate() {
+        conn.execute(
+            "INSERT INTO partners (name_ur, name_en, capital_account_id, drawings_account_id)
+             VALUES (?1, ?2, ?3, ?4)",
+            (ur, en, account_ids[pair * 2], account_ids[pair * 2 + 1]),
+        )
+        .unwrap();
+        partners.push(conn.last_insert_rowid());
+    }
+    let garden = |number: i64, account: i64| -> i64 {
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, account_id)
+             VALUES ('garden', ?1, '2026-10-10', 'g', 'g', 'g', 'g', 'g', ?2)",
+            (number, account),
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let with_goods = garden(1, account_ids[0]);
+    let without_goods = garden(2, account_ids[1]);
+    let set_shares = |conn: &Connection, venture: i64| {
+        for (partner, share, source) in
+            [(partners[0], 6_000, "shop"), (partners[1], 4_000, "pocket")]
+        {
+            conn.execute(
+                "INSERT INTO venture_partners (venture_id, partner_id, share_bps, source) VALUES (?1, ?2, ?3, ?4)",
+                (venture, partner, share, source),
+            )
+            .unwrap();
+        }
+    };
+    set_shares(&conn, with_goods);
+    set_shares(&conn, without_goods);
+    conn.execute(
+        "INSERT INTO garden_arrivals (number, venture_id, entry_date, sell_date, item_id, packing_id, qty)
+         VALUES (1, ?1, '2026-10-10', '2026-10-10', ?2, ?3, 100)",
+        (with_goods, f.item, packing),
+    )
+    .unwrap();
+    // Before the migration the shares of the garden with goods arrived can still be changed: this is
+    // the gap. The change is put back at once.
+    conn.execute(
+        "UPDATE venture_partners SET share_bps = 5_000 WHERE venture_id = ?1 AND partner_id = ?2",
+        (with_goods, partners[0]),
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE venture_partners SET share_bps = 6_000 WHERE venture_id = ?1 AND partner_id = ?2",
+        (with_goods, partners[0]),
+    )
+    .unwrap();
+    let rows_before = count(&conn, "SELECT COUNT(*) FROM journal_lines");
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (25, LATEST));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 26);
+
+    // The garden with goods arrived: no change of a share, no new row, no delete.
+    let refused = |sql: &str, args: &[&dyn mandi_db::rusqlite::ToSql]| -> String {
+        conn.execute(sql, args)
+            .expect_err("the trigger of migration 26 must refuse this")
+            .to_string()
+    };
+    assert!(
+        refused(
+            "UPDATE venture_partners SET share_bps = 5_000 WHERE venture_id = ?1 AND partner_id = ?2",
+            &[&with_goods, &partners[0]],
+        )
+        .contains("ERR_VENTURE_SHARES_LOCKED")
+    );
+    assert!(
+        refused(
+            "DELETE FROM venture_partners WHERE venture_id = ?1",
+            &[&with_goods],
+        )
+        .contains("ERR_VENTURE_SHARES_LOCKED")
+    );
+    // The source of a partner is only the default for the next entry: it may still change.
+    conn.execute(
+        "UPDATE venture_partners SET source = 'shop' WHERE venture_id = ?1 AND partner_id = ?2",
+        (with_goods, partners[1]),
+    )
+    .unwrap();
+    // The garden with no goods arrived and no entry is as before: its shares can be set again.
+    conn.execute(
+        "DELETE FROM venture_partners WHERE venture_id = ?1",
+        [without_goods],
+    )
+    .unwrap();
+    set_shares(&conn, without_goods);
+    // A cancelled arrival counts too, like a cancelled entry: the rows stay locked.
+    conn.execute(
+        "UPDATE garden_arrivals SET status = 'cancelled', cancel_reason = 'x' WHERE venture_id = ?1",
+        [with_goods],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "DELETE FROM venture_partners WHERE venture_id = ?1",
+            [with_goods]
+        )
+        .is_err()
+    );
+    // Nothing else moved.
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM journal_lines"),
+        rows_before
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM venture_partners WHERE venture_id = {with_goods} AND share_bps = 6000"
+            ),
+        ),
+        1
+    );
 }

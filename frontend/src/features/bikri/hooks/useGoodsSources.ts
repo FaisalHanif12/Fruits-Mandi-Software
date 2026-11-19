@@ -6,6 +6,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { usePagedQuery } from '../../../shared/hooks';
 import type { GoodsSources } from '../../../bindings/GoodsSources';
 import type { VentureKind } from '../../../bindings/VentureKind';
 import { bikriGoodsSources, bikriGoodsToLoad } from '../api';
@@ -24,18 +25,24 @@ export function useGoodsSources(enabled: boolean): GoodsSources | undefined {
   return answer.data;
 }
 
-/** The rows of the card of one kind, or undefined while they are not known. Nothing is asked while the card is shut. */
+/**
+ * The rows of the card of one kind, a page at a time (PRD FR-12.50, FR-19.11, plan 80 R2-5), or undefined while they
+ * are not known. Nothing is asked while the card is shut. `pager` is the backend's count of the whole card, so a card
+ * of more than 100 rows is reached with the page buttons and nothing is left out.
+ */
 export function useGoodsToLoad(kind: VentureKind, enabled: boolean) {
-  const answer = useQuery({
+  const list = usePagedQuery({
+    screen: `bikri.goods_to_load.${kind}`,
     queryKey: ['bikri', 'goods-to-load', kind],
-    queryFn: () => bikriGoodsToLoad(kind),
+    fetchPage: (offset, limit) => bikriGoodsToLoad(kind, offset, limit),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
     enabled,
-    staleTime: 0,
-    gcTime: 0,
   });
+  const page = list.data?.pages[0];
   const rows: ReadyStock[] | undefined = useMemo(
-    () => (answer.data === undefined ? undefined : readyStockOf(answer.data)),
-    [answer.data],
+    () => (page === undefined ? undefined : readyStockOf(page)),
+    [page],
   );
-  return { query: answer, rows };
+  return { query: list, rows, pager: list.pager };
 }

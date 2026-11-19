@@ -4,6 +4,7 @@ import type { AccountType } from './AccountType';
 import type { Balance } from './Balance';
 import type { CardWarning } from './CardWarning';
 import type { DeadInfo } from './DeadInfo';
+import type { LinkedBalance } from './LinkedBalance';
 
 /**
  * Everything the card next to an account field shows (PRD FR-7.38). Read only. Balances come
@@ -94,4 +95,9 @@ export type PartyCard = {
    * Warnings, each shown with a word and a colour.
    */
   warnings: Array<CardWarning>;
+  /**
+   * The other account of the same person (a seller who is also a buyer) with the combined
+   * balance (PRD E10). Left out when the account has no link; the TypeScript field is optional.
+   */
+  linked?: LinkedBalance;
 };

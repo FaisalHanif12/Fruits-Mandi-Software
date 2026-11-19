@@ -1,10 +1,20 @@
 // The picker for the master lists: cities, items, packings and the rest of انڈکس (plan 06). All
 // the behaviour is in PickerBase; this one only says where its records come from (shared/search)
-// and which short form its add row opens (plan 41, PRD FR-7.69).
+// and which short form its add row opens (plan 41, PRD FR-7.69). In an item, packing or staff box a short
+// code (the running number of the code) is taken on Enter, by the base, and on leaving the field, here
+// (PRD FR-7.38, FR-7.39, Code Standards 4.2; plan 80 R3-3). Other text typed and left is dropped.
 // Accounts have their own, AccountPicker, built on the same base (plan 08).
 
 import { useMemo } from 'react';
-import { findMaster, masterSource, type SearchHit, type SearchScope } from '../search';
+import {
+  findMaster,
+  hasShortCodes,
+  masterSource,
+  resolveShortCode,
+  useTouchRecord,
+  type SearchHit,
+  type SearchScope,
+} from '../search';
 import { useAddRecord, type AddRecordKind, type VentureScope } from './add-record';
 import { PickerBase, type PickerValue } from './PickerBase';
 import type { FieldControlProps } from './Field';
@@ -71,11 +81,27 @@ function isVentureScope(scope: SearchScope): scope is VentureScope {
 export function Picker({ scope, canAdd = true, addOwner, ...rest }: PickerProps) {
   const source = useMemo(() => masterSource(scope), [scope]);
   const addRecord = useAddRecord();
+  const touch = useTouchRecord(source);
   const add = isVentureScope(scope) ? null : ADD[scope];
   const adds = canAdd && add !== null;
+  // Digits left in the box take the record with that running number, as Enter would; no record with it, or
+  // text that is not digits, is dropped by the base. The record is remembered as used, as a pick is.
+  const onLeave = hasShortCodes(scope)
+    ? (typed: string) => {
+        resolveShortCode(scope, typed).then(
+          (hit) => {
+            if (hit === null) return;
+            rest.onChange(hit);
+            touch.mutate(hit.id);
+          },
+          () => undefined,
+        );
+      }
+    : undefined;
   return (
     <PickerBase<SearchHit>
       source={source}
+      onLeave={onLeave}
       {...(adds ? { addNoun: add.noun } : {})}
       onAddRecord={
         adds && addRecord !== null

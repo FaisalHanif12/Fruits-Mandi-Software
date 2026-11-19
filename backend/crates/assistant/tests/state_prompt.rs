@@ -88,7 +88,9 @@ fn every_property_of_app_state_is_one_the_code_reads() {
         .as_object()
         .unwrap();
     let whats = props["what"]["enum"].as_array().unwrap().clone();
-    assert_eq!(whats.len(), 4);
+    // Three reads, and no audit read (PRD FR-7.83, plan 80 R6-2): the schema does not offer it ...
+    assert_eq!(whats.len(), 3);
+    assert!(!whats.iter().any(|w| w == "audit"), "{whats:?}");
     for what in whats {
         let input: StateInput = serde_json::from_value(
             json!({"what": what, "party": null, "item": null, "bikri": null}),
@@ -96,9 +98,16 @@ fn every_property_of_app_state_is_one_the_code_reads() {
         .unwrap_or_else(|e| panic!("{what}: {e}"));
         assert!(matches!(
             input.what,
-            What::Rules | What::Attention | What::Days | What::Audit
+            What::Rules | What::Attention | What::Days
         ));
     }
+    // ... and the input check refuses it.
+    assert!(
+        serde_json::from_value::<StateInput>(
+            json!({"what": "audit", "party": null, "item": null, "bikri": 1})
+        )
+        .is_err()
+    );
     // Nothing the code does not read.
     let all: serde_json::Map<String, Value> = props
         .keys()

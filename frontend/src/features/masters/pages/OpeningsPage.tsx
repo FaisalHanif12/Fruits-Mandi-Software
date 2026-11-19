@@ -27,7 +27,12 @@ import {
 } from '../../../shared/api';
 import type { UiError } from '../../../bindings/UiError';
 import type { UiErrorItem } from '../../../bindings/UiErrorItem';
-import { isoToDisplayDate, useGrouping } from '../../../shared/format';
+import {
+  isoToDisplayDate,
+  paisaOfErrorValue,
+  useGrouping,
+  type Paisa,
+} from '../../../shared/format';
 import {
   EntryGrid,
   ListRegion,
@@ -43,6 +48,7 @@ import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
 import {
   Balance,
   Button,
+  CashConfirmDialog,
   DateInput,
   EmptyState,
   ErrorNotice,
@@ -81,6 +87,20 @@ import {
 const PREVIEW_DELAY_MS = 50;
 /** A pause so a burst of key presses in the search box asks once. */
 const SEARCH_DELAY_MS = 150;
+/** The backend's answer for a change of a cash opening that takes cash below 0 (PRD FR-6.7, plan 80 R4-4). */
+const CASH_CODE = 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED';
+
+/**
+ * The cash after the change, when the only thing between the lines and the save is the cash question: every
+ * problem is the cash refusal, and nothing else (a line with another problem is fixed first). The last one is
+ * the figure after all the cash lines together (the backend carries the running cash from line to line).
+ */
+function cashQuestionOf(problems: readonly LineProblem[], rest: UiError | null): Paisa | null {
+  if (rest !== null || problems.length === 0) return null;
+  if (!problems.every((problem) => problem.item.code === CASH_CODE)) return null;
+  const last = problems[problems.length - 1];
+  return last === undefined ? null : paisaOfErrorValue(last.item.values['cash_after_paisa']);
+}
 
 const BASE_COLUMNS: readonly EntryColumn[] = [
   { field: 'code', type: 'calc', headerId: 'accounts-col-code' },
@@ -245,7 +265,10 @@ function OpeningsScreen({ today }: { today: string }) {
   const changed = useMemo(() => changedLines(editRows, baselines), [editRows, baselines]);
   const settled = useDebouncedValue(changed, PREVIEW_DELAY_MS);
   const settledLines = useMemo(() => settled.map((entry) => entry.line), [settled]);
-  const preview = useOpeningsPreview(settledLines);
+  // The yes of the cash box belongs to the lines it was given for: a change after it asks again (PRD FR-6.7).
+  const [cashYes, setCashYes] = useState<readonly ChangedLine[] | null>(null);
+  const [cashAsk, setCashAsk] = useState<Paisa | null>(null);
+  const preview = useOpeningsPreview(settledLines, cashYes !== null && cashYes === settled);
 
   const refusal = useMemo(
     () =>
@@ -361,11 +384,11 @@ function OpeningsScreen({ today }: { today: string }) {
 
   // One save at a time: a second F10 while one is on its way does nothing (NFR-REL-1).
   const flight = useSingleFlight();
-  const submitOnce = (): Promise<boolean> => {
+  const submitOnce = (confirmCashBelowZero: boolean): Promise<boolean> => {
     if (changed.length === 0) return Promise.resolve(true);
     const sent = changed;
     return save
-      .mutateAsync(sent.map((entry) => entry.line))
+      .mutateAsync({ lines: sent.map((entry) => entry.line), confirmCashBelowZero })
       .then((saved) => {
         setRefused(null);
         applySaved(saved);
@@ -373,11 +396,27 @@ function OpeningsScreen({ today }: { today: string }) {
         return true;
       })
       .catch((error: unknown) => {
-        setRefused({ error: uiErrorOf(error), sent });
+        const refusedBy = uiErrorOf(error);
+        setRefused({ error: refusedBy, sent });
+        // The save was refused only for the cash question (the preview had not answered it yet): ask it now.
+        if (!confirmCashBelowZero) {
+          const split = problemsOfError(refusedBy, sent);
+          const after = cashQuestionOf(split.problems, split.rest);
+          if (after !== null) setCashAsk(after);
+        }
         return false;
       });
   };
-  const submit = (): Promise<boolean> => flight.run(submitOnce, false);
+  const submit = (): Promise<boolean> => {
+    const yes = cashYes !== null && cashYes === changed;
+    // A change of a cash opening that takes cash below zero is asked before it is saved (PRD FR-6.7).
+    const after = yes ? null : cashQuestionOf(problems, refusal?.rest ?? null);
+    if (after !== null) {
+      setCashAsk(after);
+      return Promise.resolve(false);
+    }
+    return flight.run(() => submitOnce(yes), false);
+  };
   const submitNow = () => {
     void submit();
   };
@@ -587,6 +626,21 @@ function OpeningsScreen({ today }: { today: string }) {
       {body}
       {/* The band of the round assistant button, as on every list (ListPage): the page buttons end above it. */}
       <div aria-hidden="true" className="h-corner shrink-0" />
+      {/* The cash question of PRD FR-6.7: No has the focus; the yes saves the same lines with the answer. */}
+      {cashAsk === null ? null : (
+        <CashConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setCashAsk(null);
+          }}
+          cashAfter={cashAsk}
+          onConfirm={() => {
+            setCashYes(changed);
+            setCashAsk(null);
+            void flight.run(() => submitOnce(true), false);
+          }}
+        />
+      )}
     </div>
   );
 }

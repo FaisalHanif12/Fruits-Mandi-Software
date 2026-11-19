@@ -37,12 +37,12 @@ pub mod find_masters;
 pub mod help;
 pub mod party;
 pub mod period;
+pub mod names_only;
 pub mod records;
 pub mod report;
 pub mod report_extra;
 pub mod scope;
 pub mod state;
-pub mod state_audit;
 pub mod state_rules;
 pub mod teach;
 pub mod tiles;
@@ -68,7 +68,8 @@ pub struct Env<'a> {
     /// his word for it (the end of the year, "double"), never to look up a name or a figure
     /// (plan 52 item 5).
     pub question: &'a str,
-    /// What the backup service says about the cloud copy (for the tile `last_backup`).
+    /// What the backup service says about the cloud copy (for the attention list, `backup_old`;
+    /// there is no backup tile since PRD v1.41).
     pub backup: BackupFacts,
 }
 

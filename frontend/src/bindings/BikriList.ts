@@ -13,11 +13,11 @@ export type BikriList = {
    */
   rows: Array<BikriListRow>;
   /**
-   * How many بکری match the filter, cancelled ones too.
+   * How many rows (a بکری on a day it was posted) match the filter, cancelled ones too.
    */
   total_count: number;
   /**
-   * The sums over every matching بکری that is not cancelled, never over the page.
+   * The sums over every matching row of a بکری that is not cancelled, never over the page.
    */
   totals: BikriListTotals;
   /**

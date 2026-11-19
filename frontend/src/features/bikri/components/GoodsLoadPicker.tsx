@@ -9,7 +9,14 @@ import { PackageX } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { VentureKind } from '../../../bindings/VentureKind';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, ListRegion, listHeightMode, type ListColumn } from '../../../shared/grid';
+import {
+  ListGrid,
+  ListRegion,
+  Pager,
+  listHeightMode,
+  useListPaging,
+  type ListColumn,
+} from '../../../shared/grid';
 import { displayName } from '../../../shared/i18n';
 import { SHORTCUTS } from '../../../shared/keyboard';
 import { Button, EmptyState, ErrorState, FormDialog, LoadingState } from '../../../shared/ui';
@@ -88,7 +95,9 @@ interface GoodsLoadPickerProps {
 }
 
 export function GoodsLoadPicker({ kind, open, onOpenChange, taken, onPick }: GoodsLoadPickerProps) {
-  const { query, rows: found } = useGoodsToLoad(kind, open);
+  const { query, rows: found, pager } = useGoodsToLoad(kind, open);
+  // Page Up and Page Down turn the page, like every list that loads page by page (F27, FR-7.17).
+  const paging = useListPaging(pager);
   const columns = useMemo(() => columnsOf(kind), [kind]);
   const rows = useMemo(
     () => (found ?? []).filter((row) => row.kind === kind && !taken.has(row.id)),
@@ -133,11 +142,15 @@ export function GoodsLoadPicker({ kind, open, onOpenChange, taken, onPick }: Goo
     body = <LoadingState rows={4} />;
   } else if (rows.length === 0) {
     body = (
-      <EmptyState
-        icon={PackageX}
-        title={<Localized id="bikri-goods-empty" />}
-        help={<Localized id="bikri-goods-empty-help" />}
-      />
+      <div className="flex flex-col gap-3">
+        <EmptyState
+          icon={PackageX}
+          title={<Localized id="bikri-goods-empty" />}
+          help={<Localized id="bikri-goods-empty-help" />}
+        />
+        {/* Every row of this page is on the screen already, but the card has more pages (R2-5). */}
+        {pager.total > 0 ? <Pager pager={pager} /> : null}
+      </div>
     );
   } else {
     body = (
@@ -153,8 +166,10 @@ export function GoodsLoadPicker({ kind, open, onOpenChange, taken, onPick }: Goo
               onOpenChange(false);
             }}
             heightMode={listHeightMode(rows.length)}
+            paging={paging}
           />
         </ListRegion>
+        <Pager pager={pager} />
       </div>
     );
   }

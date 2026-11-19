@@ -29,6 +29,12 @@ vi.mock('../../src/features/dashboard/api');
 const CHILD_PAGES: readonly (readonly [string, string])[] = [
   ['/commission', '/'],
   ['/dues', '/'],
+  // The five tile pages of plan 79 (FR-9.1 v1.44, FR-7.92): they have a Back fallback parent too.
+  ['/dues/sellers', '/'],
+  ['/dues/total', '/'],
+  ['/dues/lent', '/'],
+  ['/dues/advances', '/'],
+  ['/cash-sales', '/'],
   ['/partners/capital', '/partners'],
   ['/partners/statement', '/partners'],
   ['/reports/R10', '/reports'],

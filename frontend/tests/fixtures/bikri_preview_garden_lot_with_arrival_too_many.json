@@ -40,7 +40,6 @@
           "line_no": 1,
           "is_blank": false,
           "remaining_qty": 101,
-          "rate_hint": null,
           "calc": null,
           "warnings": []
         }

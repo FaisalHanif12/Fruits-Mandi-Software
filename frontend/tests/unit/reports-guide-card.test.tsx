@@ -87,7 +87,7 @@ describe.each(LANGUAGES)('the words of the guide card (%s)', (language: Language
     }
     expect(
       BACKEND_CATALOG.filter((entry) => specialPrintIdOf(entry) !== null).map((entry) => entry.id),
-    ).toEqual(['R1', 'R5', 'R35']);
+    ).toEqual(['R1', 'R35']);
   });
 });
 
@@ -146,14 +146,16 @@ describe.each(LANGUAGES)('the card of one report (%s)', (language: Language) => 
     expect(chips.map((chip) => visible(chip.textContent))).toEqual(columns.map((id) => m(id)));
   });
 
-  it('shows, for every report of the catalogue, exactly the columns it sends, in the order it sends them', () => {
+  it('shows, for every report of the catalogue, exactly the columns it sends, in the order it sends them (R5 shows the sheet it opens)', () => {
     for (const entry of BACKEND_CATALOG) {
       const { unmount } = draw(entry);
       const chips = within(under('report-guide-columns')).getAllByRole('listitem');
       expect(
         chips.map((chip) => visible(chip.textContent)),
         `${language}: ${entry.id}`,
-      ).toEqual(entry.column_title_ids.map((id) => m(id)));
+      ).toEqual(columnTitleIdsOf(entry).map((id) => m(id)));
+      // The card's columns are the catalogue's own for every report but R5, which opens ادھاری تفصیل (v1.43).
+      if (entry.id !== 'R5') expect(columnTitleIdsOf(entry)).toEqual(entry.column_title_ids);
       unmount();
     }
   });
@@ -200,12 +202,39 @@ describe.each(LANGUAGES)('the card of one report (%s)', (language: Language) => 
     }
   });
 
-  it.each(['R1', 'R5', 'R35'])('adds the special print of %s', (id) => {
+  it.each(['R1', 'R35'])('adds the special print of %s', (id) => {
     draw(entryOf(id));
     const actions = within(under('report-guide-actions'));
     expect(
       actions.getByText(exactly(m(`report-guide-special-${id.toLowerCase()}`))),
     ).toBeInTheDocument();
+  });
+
+  it('R5 describes ادھاری تفصیل: its own columns and its one filter, the day, and no special print (plan 80 Q-R5-2)', () => {
+    // The backend's R5 entry has the columns and the nine filters of the R5 data the assistant reads.
+    const entry = entryOf('R5');
+    expect(entry.column_title_ids).toContain('report-col-buyer-total');
+    draw(entry);
+    const columns = Array.from(under('report-guide-columns').querySelectorAll('li')).map((chip) =>
+      visible(chip.textContent),
+    );
+    expect(columns).toEqual(
+      [
+        'print-adhari-sheet-col-party',
+        'print-adhari-sheet-col-detail',
+        'print-adhari-sheet-col-bill',
+        'print-adhari-sheet-col-cash',
+        'print-adhari-sheet-col-today-credit',
+        'print-adhari-sheet-col-previous',
+        'print-adhari-sheet-col-total',
+      ].map((id) => m(id)),
+    );
+    const filters = Array.from(under('report-guide-filters').querySelectorAll('li')).map((chip) =>
+      visible(chip.textContent),
+    );
+    expect(filters).toEqual([m('report-filter-day')]);
+    expect(visible(under('report-guide-shows').textContent)).toBe(m('report-r5-detail'));
+    expect(specialPrintIdOf(entry)).toBeNull();
   });
 
   it('opens the report from its button', async () => {
@@ -285,7 +314,7 @@ describe.each(LANGUAGES)('the guide card on the reports page (%s)', (language: L
     const text = visible(card.textContent);
     expect(text).toContain(m('report-r5-detail'));
     expect(text).toContain(m('report-r5-when'));
-    expect(text).toContain(m('report-guide-special-r5'));
+    // R5 opens ادھاری تفصیل since v1.43 and prints only itself: no special print on its card (plan 80 Q-R5-2).
     expect(vi.mocked(reportsApi.reportsRun).mock.calls.length).toBe(callsBefore);
   });
 

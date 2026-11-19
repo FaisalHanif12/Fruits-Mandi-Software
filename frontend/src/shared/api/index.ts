@@ -8,6 +8,7 @@ export {
 export { emitEvent, listenEvent } from './events';
 export {
   FALLBACK_ERROR_MESSAGE_ID,
+  cashAfterOfRefusal,
   errorMessageId,
   errorsForField,
   errorsOutsideFields,

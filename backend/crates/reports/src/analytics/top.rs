@@ -74,27 +74,36 @@ fn heading(label: &str, width: usize) -> AnalyticsRow {
     }
 }
 
+/// The facts of a date range grouped by item, by seller and by buyer (and person): one read.
+fn three_ways(
+    conn: &Connection,
+    typed: &Typed,
+    range: (Option<&str>, Option<&str>),
+) -> Result<(Vec<Group>, Vec<Group>, Vec<Group>), ReportsError> {
+    let none = AnalyticsKey::default();
+    let mut lists = facts::groups_multi(
+        conn,
+        &facts::conds(typed, range, &none),
+        &[
+            &["f.item_id"],
+            &["f.seller_account_id"],
+            &["f.buyer_account_id", "f.chukta_person_key"],
+        ],
+    )?
+    .into_iter();
+    let mut next = || lists.next().unwrap_or_default();
+    let (by_item, by_seller, by_buyer) = (next(), next(), next());
+    Ok((by_item, by_seller, by_buyer))
+}
+
 /// Builds view H.
 ///
 /// # Errors
 /// A database error; `ReportsError::Data` for a fact net below 0; `ReportsError::Money`.
 pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Table, ReportsError> {
-    let none = AnalyticsKey::default();
-    let by_item = facts::groups(
-        conn,
-        &facts::conds(typed, run_range(typed), &none),
-        &["f.item_id"],
-    )?;
-    let by_seller = facts::groups(
-        conn,
-        &facts::conds(typed, run_range(typed), &none),
-        &["f.seller_account_id"],
-    )?;
-    let by_buyer = facts::groups(
-        conn,
-        &facts::conds(typed, run_range(typed), &none),
-        &["f.buyer_account_id", "f.chukta_person_key"],
-    )?;
+    // The three lists are the same facts grouped three ways: one read of them, not three (plan 80
+    // gate: ten years of facts took 6 seconds as three `GROUP BY` passes).
+    let (by_item, by_seller, by_buyer) = three_ways(conn, typed, run_range(typed))?;
     let (mut items, grand) = candidates(&by_item, typed, false)?;
     let (mut sellers, _) = candidates(&by_seller, typed, false)?;
     let (mut buyers, _) = candidates(&by_buyer, typed, true)?;
@@ -138,27 +147,20 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     let mut grand_compared = Paisa::ZERO;
     if with_compare {
         let range = compare_range(typed);
-        for group in facts::groups(conn, &facts::conds(typed, range, &none), &["f.item_id"])? {
+        let (by_item, by_seller, by_buyer) = three_ways(conn, typed, range)?;
+        for group in &by_item {
             if let Some(id) = group.int(0) {
                 let total = group.sums.total_comm(typed.side)?;
                 add(&mut grand_compared, total)?;
                 compare_item.insert(id, total);
             }
         }
-        for group in facts::groups(
-            conn,
-            &facts::conds(typed, range, &none),
-            &["f.seller_account_id"],
-        )? {
+        for group in &by_seller {
             if let Some(id) = group.int(0) {
                 compare_seller.insert(id, group.sums.total_comm(typed.side)?);
             }
         }
-        for group in facts::groups(
-            conn,
-            &facts::conds(typed, range, &none),
-            &["f.buyer_account_id", "f.chukta_person_key"],
-        )? {
+        for group in &by_buyer {
             if let Some(id) = group.int(0) {
                 compare_buyer.insert((id, group.text(1)), group.sums.total_comm(typed.side)?);
             }

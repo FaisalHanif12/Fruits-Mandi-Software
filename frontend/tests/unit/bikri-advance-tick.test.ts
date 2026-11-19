@@ -97,15 +97,31 @@ describe('the seller’s advance tick', () => {
     expect(untouched[0]?.typed[LOT.adjustAdvance]).toBe('0');
   });
 
-  it('a saved lot keeps the tick it was saved with, whatever its new sibling says', () => {
+  it('a saved lot keeps the tick it was saved with, and a new lot of the seller takes the tick the summary shows', () => {
     const savedOff = lot(RAHIM, { [LOT.lotId]: '5', [LOT.adjustAdvance]: '0' });
     const savedOn = lot(RAHIM, { [LOT.lotId]: '6', [LOT.adjustAdvance]: ON });
     const fresh = lot(RAHIM);
     const rows = [savedOff, savedOn, fresh];
-    // Nothing was ticked now: each saved lot sends its own, and the new lot (no new lot ticked) sends off.
-    expect(rows.map((row) => adjustAdvanceOf(row, rows))).toEqual([false, true, false]);
-    // The summary shows the seller ticked when a lot of his has it on.
+    // The summary shows the seller ticked because a lot of his has it on, so the new lot is covered too (plan 80
+    // R2-4, Q-R2-3). Each saved lot still sends the tick it was saved with, until the munshi changes it.
     expect(isSellerTicked(rows, 1)).toBe(true);
+    expect(rows.map((row) => adjustAdvanceOf(row, rows))).toEqual([false, true, true]);
+  });
+
+  it('in an edit, a seller whose saved lot is ticked gets a new lot that takes the advance too (R2-4)', () => {
+    const saved = lot(RAHIM, { [LOT.lotId]: '5', [LOT.adjustAdvance]: ON });
+    const added = lot(RAHIM);
+    const rows = [saved, added];
+    // What the lot sends is what the summary shows: ticked, so the new lot sends true, not false.
+    expect(isSellerTicked(rows, 1)).toBe(true);
+    expect(adjustAdvanceOf(added, rows)).toBe(true);
+    expect(lotInput(added, [], adjustAdvanceOf(added, rows)).adjust_advance).toBe(true);
+    // A seller whose saved lot is not ticked shows no tick, and the new lot sends none.
+    const savedOff = lot(RAHIM, { [LOT.lotId]: '6', [LOT.adjustAdvance]: '0' });
+    const addedOff = lot(RAHIM);
+    const off = [savedOff, addedOff];
+    expect(isSellerTicked(off, 1)).toBe(false);
+    expect(adjustAdvanceOf(addedOff, off)).toBe(false);
   });
 
   it('in an edit the tick changes every lot of the seller, saved or new, and the edit sends it', () => {

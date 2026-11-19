@@ -1,7 +1,8 @@
 // The party card (PRD FR-7.38, NFR-USE-27, Code Standards F40): everything about a party, shown
 // next to an account field as soon as the account is known. Name with father or firm, city,
 // phone, current balance with its side as a word, last entry date; for a buyer his credit limit
-// and how much of it is used; for a seller his open advance. Warnings come with a word and an icon
+// and how much of it is used; for a seller his open advance; for one person who is both a seller and a
+// buyer, his other account and both balances together (PRD E10). Warnings come with a word and an icon
 // as well as a colour (NFR-USE-12). Every figure is read from the books by the backend; nothing is
 // worked out here, and a card is never reused from an earlier look (balances change with every
 // posting).
@@ -152,6 +153,50 @@ function ChuktaBody({ person }: { person: { name_ur: string; name_en: string; ph
   );
 }
 
+/**
+ * The other account of one person who is both a seller and a buyer, with its balance and both balances
+ * added together (PRD E10, FR-10.2). The backend worked it out from both ledgers; nothing is added here.
+ * An inactive other account is shown too, marked inactive: its balance is real and is in the combined one.
+ */
+function LinkedAccount({ linked }: { linked: NonNullable<PartyCardData['linked']> }) {
+  const language = useLanguage();
+  return (
+    <div
+      data-linked-account=""
+      className="flex flex-col gap-1 rounded-1 border border-border bg-surface-sunken px-3 py-2 type-body text-ink"
+    >
+      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Localized id="party-card-linked-heading">
+          <span className="text-ink-muted" />
+        </Localized>
+        <span className="type-field text-ink">{displayName(linked, language)}</span>
+        <Code>{linked.code}</Code>
+        <Localized id={typeMessageId(linked.account_type)}>
+          <span className="type-chip rounded-1 bg-surface px-2 text-ink-muted" />
+        </Localized>
+        {linked.is_active ? null : (
+          <span
+            className={`flex items-center gap-2 rounded-1 border px-3 type-body ${WARNING_STYLE.inactive}`}
+          >
+            <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+            <Localized id={WARNING_ID.inactive} />
+          </span>
+        )}
+      </p>
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+        <Fact labelId="assist-card-balance">
+          <Balance balance={linked.balance} />
+        </Fact>
+        <Fact labelId="party-card-linked-both">
+          <span className="type-field">
+            <Balance balance={linked.combined} />
+          </span>
+        </Fact>
+      </div>
+    </div>
+  );
+}
+
 function CardBody({ card }: { card: PartyCardData }) {
   const language = useLanguage();
   const father = displayName(
@@ -200,6 +245,7 @@ function CardBody({ card }: { card: PartyCardData }) {
           </Fact>
         )}
       </div>
+      {card.linked === undefined ? null : <LinkedAccount linked={card.linked} />}
       {card.warnings.length === 0 ? null : (
         <ul className="flex flex-wrap gap-2">
           {card.warnings.map((warning) => (

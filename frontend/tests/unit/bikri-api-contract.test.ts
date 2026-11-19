@@ -113,8 +113,12 @@ describe('each wrapper sends the command and the input of the backend’s file',
       name_ur: String(CHUKTA_ADD_NASIR_REQUEST['name_ur']),
       name_en: String(CHUKTA_ADD_NASIR_REQUEST['name_en']),
       phone: String(CHUKTA_ADD_NASIR_REQUEST['phone']),
+      // The words he confirmed in the spelling check (PRD FR-7.66, plan 80 R3-1): none for this name.
+      confirmed_rules_words: [],
     });
-    expect(call).toHaveBeenLastCalledWith('chukta_add', { input: CHUKTA_ADD_NASIR_REQUEST });
+    expect(call).toHaveBeenLastCalledWith('chukta_add', {
+      input: { ...CHUKTA_ADD_NASIR_REQUEST, confirmed_rules_words: [] },
+    });
     // The picker's search goes to search_accounts, and the card of a چکتا buyer asks with his id.
     answers(SEARCH_CHUKTA_BUYER);
     await accountApi.searchAccounts({
@@ -275,5 +279,32 @@ describe('what the real answers say, read as the screen reads them', () => {
   it('the list is newest first: number 2, then number 1', () => {
     expect(LIST_DAY.rows.map((row) => row.number)).toEqual([2, 1]);
     expect(LIST_DAY.total_count).toBe(2);
+  });
+});
+
+describe('the sale line preview has no rate hint (PRD FR-7.53 retired in v1.44, plan 80 R2-6)', () => {
+  // The backend's own answers, copied: none of them may carry `rate_hint` on a sale line any more. A copy that still
+  // has it is an old one, and a screen that read it would show a number that looks like a rate.
+  const files = import.meta.glob<unknown>('../fixtures/bikri_*.json', { eager: true });
+
+  /** Every key at every level of a value. */
+  function keysOf(value: unknown, found: Set<string> = new Set<string>()): Set<string> {
+    if (Array.isArray(value)) {
+      for (const item of value) keysOf(item, found);
+    } else if (typeof value === 'object' && value !== null) {
+      for (const [key, inner] of Object.entries(value)) {
+        found.add(key);
+        keysOf(inner, found);
+      }
+    }
+    return found;
+  }
+
+  it('no fixture of the sale book carries a rate_hint', () => {
+    expect(Object.keys(files).length).toBeGreaterThan(20);
+    const withHint = Object.entries(files)
+      .filter(([, content]) => keysOf(content).has('rate_hint'))
+      .map(([path]) => path);
+    expect(withHint).toEqual([]);
   });
 });

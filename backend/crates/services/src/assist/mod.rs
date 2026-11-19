@@ -6,8 +6,8 @@ use mandi_db::bikri as bikri_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::vouchers as voucher_repo;
 use mandi_domain::core::accounts::{
-    AccountRow, AccountType, Balance, BalanceSide, CardWarning, CardWarningKind, PartyCard,
-    SELLER_CONTROL,
+    AccountRow, AccountType, Balance, BalanceSide, CardWarning, CardWarningKind, LinkedBalance,
+    PartyCard, SELLER_CONTROL,
 };
 use mandi_domain::core::bikri::{LastRateInput, RateHint, RateHintSource, SellerMemory};
 use mandi_domain::core::dates::BusinessDate;
@@ -123,6 +123,7 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             None
         };
         let warnings = warnings(&row, credit_used, advance_open, balance)?;
+        let linked = linked_balance(conn, account_id, balance)?;
         let (city_ur, city_en) = row
             .city
             .as_ref()
@@ -154,8 +155,44 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             credit_used,
             advance_open,
             warnings,
+            linked,
         })
     })
+}
+
+/// The other account of the same person and the two balances added (PRD E10, FR-10.2, gate finding
+/// T4-2). The link is read from the account or from the account that points at it; the combined
+/// balance adds the signed balances of both ledgers (each one a `SUM()` of paisa columns, Code
+/// Standards M1) and is only shown, never posted. `None` when there is no link, when the other
+/// account is missing or when it is چکتا کھاتہ, which has no ledger (PRD FR-13.6). An inactive
+/// account is still shown, with its flag, because its balance is real.
+fn linked_balance(
+    conn: &mandi_db::rusqlite::Connection,
+    account_id: i64,
+    own: Balance,
+) -> Result<Option<LinkedBalance>, ServiceError> {
+    let Some(other_id) = account_repo::linked_account_of(conn, account_id)? else {
+        return Ok(None);
+    };
+    let Some(other) = account_repo::get(conn, other_id)? else {
+        return Ok(None);
+    };
+    if other.id == account_id || other.is_chukta_khata {
+        return Ok(None);
+    }
+    let balance = ledger::balance_in(conn, other.id, None, None)?;
+    let combined = own.combined_with(balance).map_err(money_error)?;
+    Ok(Some(LinkedBalance {
+        account_id: other.id,
+        code: other.code,
+        account_type: other.account_type,
+        name_ur: other.name_ur,
+        name_en: other.name_en,
+        tag: other.tag,
+        is_active: other.is_active,
+        balance,
+        combined,
+    }))
 }
 
 /// The card of one چکتا buyer (PRD FR-7.38, v1.32): his name and phone, no balance, no credit, no
@@ -204,6 +241,7 @@ fn chukta_card_of(
         credit_used: None,
         advance_open: None,
         warnings: Vec::new(),
+        linked: None,
     }
 }
 

@@ -10,6 +10,10 @@
 //! The guide holds no figure of the books and no name of a person: it reads nothing, writes
 //! nothing and needs no partner code.
 //!
+//! "Who changed what" is answered from the topic `audit` and nothing else: no audit row ever goes
+//! to the model (PRD FR-7.83), so the answer carries a button that opens the log's own screen, as
+//! the local answer of the same topic does.
+//!
 //! Example: `app_help{topic:"bikri_book"}` gives `title`, `summary`, `steps` (a list), `keys` and
 //! `example`, each a text of the guide.
 
@@ -17,7 +21,9 @@ use mandi_services::core::auth::Language;
 use serde::Deserialize;
 use serde_json::Value as Json;
 
+use super::state::on_screen;
 use super::{Draft, Env, State, Stop, ToolError, input};
+use crate::answer::ScreenRoute;
 use crate::prompt::guide;
 use crate::results::{Node, Val};
 
@@ -61,5 +67,10 @@ pub fn run(env: &Env<'_>, _state: &State, args: &Json) -> Result<Draft, Stop> {
         ("keys", text(&guide_text.keys)),
         ("example", text(&guide_text.example)),
     ]);
-    Ok(Draft::new("app_help", args.clone(), node))
+    let draft = Draft::new("app_help", args.clone(), node);
+    // The audit log is a tab of Settings: a link-only button opens it (plan 80 R6-2).
+    if parsed.topic == "audit" {
+        return Ok(on_screen(draft, ScreenRoute::Audit));
+    }
+    Ok(draft)
 }

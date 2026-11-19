@@ -24,7 +24,7 @@ use mandi_domain::ledger::BalancedEntry;
 
 use crate::assist::saved_rate_hint_except;
 use crate::error::{ServiceError, money_error};
-use crate::partners::money::total_of;
+use crate::partners::money::total_with;
 
 /// The firm's shares total 100% (PRD FR-17.1).
 const FULL_BPS: i64 = 10_000;
@@ -459,14 +459,16 @@ fn finish(
         ));
     }
 
-    // Each partner's کل رقم now and after; in an edit his old part is given back first.
+    // Each partner's کل رقم now and after; in an edit his old part is given back first. The
+    // advances to sellers are read and replayed once for every partner (plan 80 gate R1-4).
+    let advances = crate::partners::money::read_advances(conn)?;
     let mut shown = Vec::new();
     for part in parts.parts.iter().filter(|p| p.amount > Paisa::ZERO) {
         let partner = all
             .iter()
             .find(|p| p.id == part.partner_id.get())
             .ok_or_else(|| data("a part of a fruit entry has no partner"))?;
-        let mut before = total_of(conn, partner, None)?;
+        let mut before = total_with(conn, partner, None, &advances)?;
         if let Some(old) = old_parts.iter().find(|o| o.partner.id == partner.id) {
             before = before
                 .checked_add(Paisa::try_from_paisa(old.amount_paisa).map_err(money_error)?)

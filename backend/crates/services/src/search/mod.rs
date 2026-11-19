@@ -130,6 +130,35 @@ pub fn refresh(ctx: &Context, kind: MasterKind, id: i64) {
     }
 }
 
+/// Updates what shows a city's name after the city was saved or made active or inactive (gate
+/// finding R3-2, Tech Stack 4.7, Code Standards B27). An account and an اڈا keep the name of their
+/// city in their search text (PRD FR-7.40: city is searched), so a renamed city leaves them stale
+/// until the next start. They are read again in three indexed queries, the same ones the start-up
+/// build runs. Any failure throws the index away so it is built again on the next use.
+pub fn refresh_city_dependents(ctx: &Context) {
+    let mut slot = ctx.search_lock();
+    let Some(index) = slot.as_mut() else {
+        return;
+    };
+    let sources = ctx.db.read(|conn| {
+        Ok::<_, mandi_db::rusqlite::Error>((
+            repo::search_sources(conn, MasterKind::Adda, None)?,
+            mandi_db::accounts::search_sources(conn, None)?,
+            mandi_db::chukta::search_sources(conn, None)?,
+        ))
+    });
+    match sources {
+        Ok((addas, accounts, chukta)) => {
+            let index = Arc::make_mut(index);
+            index.set_scope(MasterKind::Adda, addas);
+            // `set_accounts` makes the buyer list again, so the چکتا buyers go in after it.
+            index.set_accounts(accounts);
+            index.set_chukta(chukta);
+        }
+        Err(_) => *slot = None,
+    }
+}
+
 /// Updates the index for one account after the save that changed it has committed (plan 07).
 /// Like [`refresh`], any failure throws the index away so it is built again on the next use.
 pub fn refresh_account(ctx: &Context, id: i64) {

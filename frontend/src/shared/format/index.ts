@@ -8,6 +8,7 @@ export {
   isNegativePaisa,
   isPositivePaisa,
   isZeroPaisa,
+  paisaOfErrorValue,
   type FormatPaisaOptions,
   type Grouping,
   type Paisa,

@@ -190,6 +190,7 @@ fn the_closing_and_the_entries_cannot_be_undone_once_their_day_is_closed() {
         &DayReopenInput {
             date: "11-10-2026".into(),
             reason: "check".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap();

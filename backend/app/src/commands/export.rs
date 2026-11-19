@@ -24,7 +24,8 @@ use mandi_reports::export::{
     export_table,
 };
 use mandi_reports::reports::{
-    CollectionSheetPrintInput, ReportId, collection_sheet_spec, partner_statement_month_spec,
+    AdhariSheetPrintInput, CollectionSheetPrintInput, ReportId, adhari_sheet_spec,
+    collection_sheet_spec, partner_statement_month_spec,
 };
 use mandi_services::ServiceError;
 use mandi_services::core::error::ErrorCode;
@@ -104,6 +105,8 @@ pub enum TableExportSource {
     CashSalesDay(CashSalesDayPrintInput),
     /// The اگراہی sheet of a day (point 2).
     CollectionSheet(CollectionSheetPrintInput),
+    /// The ادھاری تفصیل sheet of a day, the buyers-only sheet of R5 (PRD v1.43, plan 80 Q-R5-2).
+    AdhariSheet(AdhariSheetPrintInput),
     /// One month of a partner's statement (point 11). Behind the partner code.
     PartnerStatementMonth(PartnersStatementMonthPrintInput),
 }
@@ -242,6 +245,10 @@ pub async fn tables_export_excel<R: tauri::Runtime>(
             ),
             TableExportSource::CollectionSheet(i) => (
                 collection_sheet_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::AdhariSheet(i) => (
+                adhari_sheet_spec(ctx.db(), i).map_err(engine_error)?,
                 i.language,
             ),
             TableExportSource::PartnerStatementMonth(i) => {

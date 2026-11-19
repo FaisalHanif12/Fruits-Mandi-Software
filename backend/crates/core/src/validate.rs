@@ -223,8 +223,10 @@ fn digit_text(input: &str) -> String {
     visible.trim().chars().map(ascii_digit).collect()
 }
 
-/// Trims, applies NFC and removes zero-width characters, as for every name.
-fn clean_name(input: &str) -> String {
+/// Trims, applies NFC and removes the zero-width characters and the direction marks (LRM, RLM, ALM),
+/// as for every name and every free text (Code Standards 4.2). Text of only such marks is empty
+/// afterwards.
+fn clean_visible_text(input: &str) -> String {
     input
         .trim()
         .nfc()
@@ -241,7 +243,7 @@ fn name(
     script_ok: fn(&str) -> bool,
     script_error: ErrorCode,
 ) -> Result<String, FieldError> {
-    let cleaned = clean_name(input);
+    let cleaned = clean_visible_text(input);
     if cleaned.is_empty() {
         return Err(error(ErrorCode::ErrRequired, field));
     }
@@ -357,15 +359,20 @@ pub fn phone_optional(field: &str, input: &str) -> Result<Option<String>, FieldE
     phone(field, input).map(Some)
 }
 
-/// Free text such as a note or a narration: trimmed, NFC, up to 500 characters,
-/// no control characters. Empty text is allowed and returned as "".
+/// Free text such as a note or a narration: trimmed, NFC, up to 500 characters, no control
+/// characters. Empty text is allowed and returned as "".
+///
+/// The zero-width characters and the direction marks (LRM, RLM, ALM) are removed, as in a name
+/// (Code Standards 4.2, gate finding Q-T4-3), and text that holds only such marks is empty: a
+/// required reason of only a pasted zero-width space is `ERR_REASON_REQUIRED`, not a saved reason
+/// nobody can see.
 ///
 /// The bidi embeddings, overrides and isolates (U+202A to U+202E, U+2066 to U+2069) are
 /// refused as `ERR_CONTROL_CHARS`: they change the order text is shown and printed in, so
 /// a note could show digits that differ from the digits saved (Trojan Source, PRD FR-19.6,
 /// finding R02-3).
 pub fn free_text(field: &str, input: &str) -> Result<String, FieldError> {
-    let cleaned: String = input.trim().nfc().collect();
+    let cleaned = clean_visible_text(input);
     if cleaned.chars().count() > MAX_TEXT_CHARS {
         return Err(error(ErrorCode::ErrTextTooLong, field));
     }

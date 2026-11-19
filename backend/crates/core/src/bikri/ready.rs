@@ -64,12 +64,17 @@ pub struct ReadyGoodsRow {
     pub garden: Option<GardenRef>,
 }
 
-/// The answer of `bikri_ready_goods`: oldest date to sell first, then number (trip purchases and
-/// garden arrivals together, in one list). At most 100 rows.
+/// The answer of `bikri_ready_goods` and `bikri_goods_to_load`: oldest date to sell first, then
+/// number. `bikri_ready_goods` lists trip purchases and garden arrivals together, at most 100 rows.
+/// `bikri_goods_to_load` lists one kind a page at a time (Code Standards B31).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct ReadyGoods {
-    /// The rows.
+    /// The rows of this page.
     pub rows: Vec<ReadyGoodsRow>,
+    /// How many rows the card has in all, not only this page (PRD FR-19.11). For
+    /// `bikri_ready_goods`: the number of rows sent.
+    #[ts(type = "number")]
+    pub total_count: i64,
 }
 
 /// What the بکری screen has to load by hand (plan 78 C1): how many rows each of its three load
@@ -92,4 +97,10 @@ pub struct GoodsSources {
 pub struct GoodsToLoadInput {
     /// `trip` lists the purchases of open trips, `garden` the arrivals of open gardens.
     pub kind: VentureKind,
+    /// How many rows to skip. 0 for the first page (PRD FR-19.11, Code Standards B31; plan 80 R2-5).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return: 25, 50 or 100. 0 gives a page of 100.
+    #[serde(default)]
+    pub limit: u32,
 }

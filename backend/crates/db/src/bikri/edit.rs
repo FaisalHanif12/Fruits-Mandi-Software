@@ -156,7 +156,7 @@ pub fn arrival_charges(
                                         AND s.seller_comm_paisa > 0)
                          THEN b.number * 1000 + l.lot_no END)
          FROM bikri_lots l JOIN bikri_entries b ON b.id = l.bikri_id
-         WHERE l.arrival_id IN ({}) AND b.status = 'saved' {except}
+         WHERE l.arrival_id IN ({}) AND b.status = 'saved' AND l.removed_at IS NULL {except}
          GROUP BY l.arrival_id",
         marks(arrival_ids.len())
     ))?;
@@ -371,7 +371,7 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 l.cash_paid_paisa, l.store_rent_paisa, l.weight_received_grams, e.adda_id, l.purchase_id,
                 l.qty_taken, l.arrival_id, l.lot_counter
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
-         WHERE l.id = ?1",
+         WHERE l.id = ?1 AND l.removed_at IS NULL",
         [lot_id],
         |r| {
             Ok(LotState {
@@ -454,6 +454,40 @@ pub fn update_lot_totals(
         ],
     )?;
     Ok(())
+}
+
+/// Marks a lot removed by an edit of the first posting of its بکری (PRD FR-7.70, plan 80 Q-R2-1). The row
+/// stays (Code Standards D3) and keeps its columns as the record of what was removed; every read that
+/// lists or adds up lots leaves it out. Returns false if the lot was not in force.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn mark_lot_removed(
+    conn: &Connection,
+    lot_id: i64,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<bool> {
+    let changed = conn.execute(
+        "UPDATE bikri_lots SET removed_at = ?2, updated_at = ?2, updated_by = ?3,
+             version = version + 1
+         WHERE id = ?1 AND removed_at IS NULL",
+        params![lot_id, now, user_id],
+    )?;
+    Ok(changed == 1)
+}
+
+/// The biggest lot number a بکری has ever had, a removed lot's included (0 if it has none), so a new
+/// lot never takes the number of a removed one (`UNIQUE (bikri_id, lot_no)`).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn max_lot_no(conn: &Connection, bikri_id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COALESCE(MAX(lot_no), 0) FROM bikri_lots WHERE bikri_id = ?1",
+        [bikri_id],
+        |r| r.get(0),
+    )
 }
 
 /// Rewrites a lot of the first posting in ONE update: its facts, its charges, its cash and its
@@ -948,7 +982,7 @@ pub struct StockLot {
 pub fn stock_lot_count(conn: &Connection) -> rusqlite::Result<i64> {
     conn.query_row(
         "SELECT COUNT(*) FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
-         WHERE e.status = 'saved'
+         WHERE e.status = 'saved' AND l.removed_at IS NULL
            AND l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken > 0",
         [],
         |r| r.get(0),
@@ -970,7 +1004,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
          JOIN accounts sa ON sa.id = l.seller_account_id
          JOIN items it ON it.id = l.item_id
          JOIN packings pk ON pk.id = l.packing_id
-         WHERE e.status = 'saved'
+         WHERE e.status = 'saved' AND l.removed_at IS NULL
            AND (?1 IS NULL OR e.entry_date >= ?1) AND (?2 IS NULL OR e.entry_date <= ?2)
            AND (?3 IS NULL OR l.seller_account_id = ?3) AND (?4 IS NULL OR l.item_id = ?4)
            AND (?6 IS NULL OR l.id = ?6)

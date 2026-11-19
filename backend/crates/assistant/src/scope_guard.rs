@@ -333,6 +333,51 @@ pub fn failures(
     out
 }
 
+/// The failures of an answer that cites a view or a report read for other days than the one period
+/// the question named (plan 80, T5-2). The question "aaj ka commission" plans the dashboard tile, not a
+/// view, so the planned scope has no dates; a model that reads another period ("yesterday",
+/// "this_month") and cites its total would otherwise be shown as today's. The days are those the
+/// result itself echoes (`filters.from` and `filters.to`), so a date the model passed as a reference
+/// to a period result is compared too. A report of a balance "as of" a day has no period and is not
+/// compared.
+///
+/// Example: the question asks 10-10-26 only; an answer that cites view A for 01-10-26 to 10-10-26 is
+/// refused.
+pub fn period_failures(
+    asked: &(String, String),
+    state: &State,
+    answer: &ModelAnswer,
+    already: &[Failure],
+    right: &[String],
+) -> Vec<Failure> {
+    let mut out = Vec::new();
+    for id in cited_ids(answer) {
+        if already.iter().any(|f| f.rule == "scope" && f.at == id) {
+            continue;
+        }
+        let Some(result) = state.find(&id).filter(|r| r.turn == state.turn) else {
+            continue;
+        };
+        let Some(takes) = takes_of(result.tool, &result.input) else {
+            continue;
+        };
+        if !takes.period {
+            continue;
+        }
+        let day = |name: &str| match result.node.get(&["filters", name]) {
+            Some(crate::results::Node::Str(s)) => Some(s.clone()),
+            _ => None,
+        };
+        let (Some(from), Some(to)) = (day("from"), day("to")) else {
+            continue;
+        };
+        if (from, to) != *asked {
+            out.push(Failure::scope(&id, right));
+        }
+    }
+    out
+}
+
 /// The failures of an answer made only of the app's guide (`app_help`) when the question asks for a
 /// figure and a report, a view, a tile or an estimate was read for it (live run 2, G3: "total open
 /// advances" read R26 and answered with the advance screen's guide). `how_to` is true for a question

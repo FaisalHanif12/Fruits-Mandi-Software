@@ -121,10 +121,16 @@ describe('the parent of a page opened from another page', () => {
     ['/trips/9', '/trips'],
     ['/reports/R10', '/reports'],
     ['/reports/dead-amount', '/reports'],
-    ['/reports/collection-sheet', '/reports'],
+    ['/reports/adhari-sheet', '/reports'],
     ['/analytics/A', '/analytics'],
     ['/bikri/collection', '/bikri/voucher'],
     ['/bikri/later', '/bikri/stock'],
+    // The five tile pages of plan 79 (PRD FR-9.1 v1.44, FR-7.92): opened from a dashboard tile.
+    ['/dues/sellers', '/'],
+    ['/dues/total', '/'],
+    ['/dues/lent', '/'],
+    ['/dues/advances', '/'],
+    ['/cash-sales', '/'],
   ])('%s goes back to %s', (path, parent) => {
     expect(parentOf(path)).toBe(parent);
   });

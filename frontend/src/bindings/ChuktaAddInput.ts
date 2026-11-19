@@ -16,4 +16,10 @@ export type ChuktaAddInput = {
    * Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`. Null or empty if he gave none.
    */
   phone: string | null;
+  /**
+   * The words of the names that only the spelling rules could have made and that the user
+   * confirmed on the screen (PRD FR-7.66). A word that is not here and is not in the word list
+   * or the learned pairs is refused with `ERR_SPELLING_UNCONFIRMED`.
+   */
+  confirmed_rules_words: Array<string>;
 };

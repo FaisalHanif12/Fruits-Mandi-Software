@@ -365,10 +365,7 @@ fn the_check_says_what_is_new_in_both_languages_and_fails_clearly_without_a_serv
     assert_eq!(found.notes_en, "- One\n- Two");
     // The check never downloads the package.
     assert_eq!(server.paths(), ["/latest.json"]);
-    write_or_check(
-        "b5_updates_check_available.json",
-        &serde_json::to_value(&found).unwrap(),
-    );
+    write_or_check("b5_updates_check_available.json", &fixture_of_check(&found));
 
     // No newer version.
     let none = Server::start(|_| {
@@ -381,10 +378,7 @@ fn the_check_says_what_is_new_in_both_languages_and_fails_clearly_without_a_serv
     let rig = self::rig(&none.endpoint());
     let found = tauri::async_runtime::block_on(check(rig.app.handle(), &rig.env.ctx)).unwrap();
     assert!(!found.available && found.version.is_none() && found.notes.is_empty());
-    write_or_check(
-        "b5_updates_check_none.json",
-        &serde_json::to_value(&found).unwrap(),
-    );
+    write_or_check("b5_updates_check_none.json", &fixture_of_check(&found));
 
     // The server is not there: a clear code, nothing changed.
     let down = rig_for_down_server();
@@ -414,6 +408,18 @@ fn fixtures_folder() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("fixtures")
+}
+
+/// The version written into the fixtures of the check. The app's real version (from
+/// `tauri.conf.json`) is asserted by the test itself, so a fixture never has to follow a change of
+/// the version (plan 80 gate, Q-R7-1: 0.1.0 until go-live, then 1.0.0).
+const FIXTURE_VERSION: &str = "0.1.0";
+
+/// The answer of the check as a fixture: the same JSON with the fixed version.
+fn fixture_of_check(found: &impl serde::Serialize) -> Value {
+    let mut value = serde_json::to_value(found).unwrap();
+    value["current_version"] = Value::String(FIXTURE_VERSION.to_owned());
+    value
 }
 
 fn write_or_check(file: &str, value: &Value) {

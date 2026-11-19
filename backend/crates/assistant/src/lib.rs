@@ -33,6 +33,7 @@ pub mod check;
 pub mod client;
 pub mod commission_button;
 pub mod conversation;
+pub mod dues_guard;
 pub mod echo;
 pub mod fill;
 pub mod hedge;

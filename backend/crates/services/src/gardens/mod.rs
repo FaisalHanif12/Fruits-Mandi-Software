@@ -172,7 +172,23 @@ pub fn close(
     actor: &Actor,
     input: &GardenCloseInput,
 ) -> Result<GardenClosed, ServiceError> {
-    close::close(ctx, actor, input)
+    close::close(ctx, actor, input, false)
+}
+
+/// [`close`] with the answer of the owner-owes box (PRD FR-12.51, plan 80 gate Q-R4-2): with
+/// `confirm_owner_owes` true a garden whose owner still owes money back may be closed. Without it
+/// that closing is refused with `ERR_OWNER_OWES_NOT_CONFIRMED` (field `id`, value `owes_paisa`),
+/// because a closed garden takes no refund.
+///
+/// # Errors
+/// As [`close`]; `ERR_OWNER_OWES_NOT_CONFIRMED`.
+pub fn close_with_confirm(
+    ctx: &Context,
+    actor: &Actor,
+    input: &GardenCloseInput,
+    confirm_owner_owes: bool,
+) -> Result<GardenClosed, ServiceError> {
+    close::close(ctx, actor, input, confirm_owner_owes)
 }
 
 /// Undoes the closing of a garden by reversal while its day is open (PRD FR-12.38).

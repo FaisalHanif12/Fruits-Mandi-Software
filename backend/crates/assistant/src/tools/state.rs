@@ -1,17 +1,21 @@
 //! The tool `app_state`: small read-only reads of the app's own state (PRD FR-7.87, plan 55 §11.1,
-//! R1 to R4). One tool, four reads, so the fixed part of the prompt stays small:
+//! R1 to R3). One tool, three reads, so the fixed part of the prompt stays small:
 //!
 //! | `what` | Gives | Same as |
 //! |---|---|---|
 //! | `rules` | the commission and charge rule that wins for a party, an item, an item group or the defaults, and the rules behind it (PRD 11.3) | the rule list and the "test a rule" box |
 //! | `attention` | the attention list "آج کے کام" (PRD FR-7.44) | the bell and the dashboard list |
 //! | `days` | the day state: closed up to, whether today is open, the last month close | the status bar and day close |
-//! | `audit` | the audit rows of one بکری or one account (or, with neither, the newest of the whole log), with the fields that changed | the audit viewer (PRD FR-21.3) |
+//!
+//! There is no read of the audit log: PRD FR-7.83 and Code Standards Q7 say the audit log never goes
+//! to the model (plan 80, R6-2, decided by Umar's gate answer Q-R6-1). A question about who changed
+//! what is answered by the guide topic `audit` of `app_help`, which opens the log's own screen.
+//! `what: "audit"` is not a read: the schema of the tool does not offer it and the input check
+//! refuses it.
 //!
 //! Nothing is written (Code Standards B29). Nothing of PRD FR-7.83's never-send list goes into a
 //! result: no phone, address, father or firm name, note, reason, typed text or driver. A partner
-//! figure obeys the partner lock (PRD FR-7.82). The rules and audit reads are in `state_rules.rs`
-//! and `state_audit.rs`.
+//! figure obeys the partner lock (PRD FR-7.82). The rules read is in `state_rules.rs`.
 //!
 //! Example (worked day): `app_state{what:"days"}` gives today 10-10-26, closed up to 09-10-26,
 //! today open, and no month close yet.
@@ -37,8 +41,6 @@ pub enum What {
     Attention,
     /// The day state.
     Days,
-    /// The audit rows of one entry.
-    Audit,
 }
 
 /// The input of `app_state`.
@@ -47,14 +49,14 @@ pub enum What {
 pub struct Input {
     /// Which read.
     pub what: What,
-    /// A seller or a buyer (a find match or a key): for `rules`, his rules; for `audit`, an account's
-    /// rows.
+    /// A seller or a buyer (a find match or a key): `rules` only, his rules.
     #[serde(default)]
     pub party: Option<String>,
     /// An item (a find match or a key), or the word `fruit` or `vegetable` for a group: `rules` only.
     #[serde(default)]
     pub item: Option<String>,
-    /// A بکری number: `audit` only.
+    /// Always null: no read takes a بکری number any more (the audit read is gone, R6-2). The field
+    /// stays in the schema so the strict tool shape of `tools.json` does not change.
     #[serde(default)]
     pub bikri: Option<i64>,
 }
@@ -75,28 +77,25 @@ fn only(field: &str, given: bool, what: &str) -> Result<(), ToolError> {
 /// The tool.
 pub fn run(env: &Env<'_>, state: &State, args: &Value) -> Result<Draft, Stop> {
     let parsed: Input = input(args)?;
-    let (party, item, bikri) = (&parsed.party, &parsed.item, &parsed.bikri);
+    let (party, item) = (&parsed.party, &parsed.item);
+    // No read takes a بکری number (the field is always null).
+    only(
+        "bikri",
+        parsed.bikri.is_some(),
+        "bikri is always null; party and item are what `rules` takes",
+    )?;
     match parsed.what {
-        What::Rules => {
-            only("bikri", bikri.is_some(), "party and item are what it takes")?;
-            super::state_rules::run(env, state, args, party.as_deref(), item.as_deref())
-        }
-        What::Audit => {
-            only("item", item.is_some(), "party or bikri is what it takes")?;
-            super::state_audit::run(env, state, args, party.as_deref(), *bikri)
-        }
+        What::Rules => super::state_rules::run(env, state, args, party.as_deref(), item.as_deref()),
         What::Attention => {
             let what = "it takes no filter";
             only("party", party.is_some(), what)?;
             only("item", item.is_some(), what)?;
-            only("bikri", bikri.is_some(), what)?;
             attention_read(env, args)
         }
         What::Days => {
             let what = "it takes no filter";
             only("party", party.is_some(), what)?;
             only("item", item.is_some(), what)?;
-            only("bikri", bikri.is_some(), what)?;
             days_read(env, args)
         }
     }
@@ -202,6 +201,7 @@ fn kind_key(kind: AttentionKind) -> &'static str {
         AttentionKind::TakesOverdue => "takes_overdue",
         AttentionKind::NamesMissing => "names_missing",
         AttentionKind::HealthCheck => "health_check",
+        AttentionKind::RecordsDiffer => "records_differ",
     }
 }
 

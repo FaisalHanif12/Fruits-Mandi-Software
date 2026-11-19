@@ -428,3 +428,54 @@ fn the_owner_changes_his_sign_with_his_password_and_only_the_new_sign_opens() {
     );
     assert_chain_ok(&w.dir);
 }
+
+/// Plan 80 Q-R2-2 (PRD FR-21.2): the plain reopen asks the Owner's sign too. A wrong or missing sign
+/// opens nothing, writes one audit entry without the typed text, and the right sign is kept in the
+/// audit entry of the reopen beside the reason.
+#[test]
+fn the_plain_reopen_asks_the_owners_sign_too() {
+    use mandi_services::core::vouchers::DayReopenInput;
+    let (w, _) = closed_day();
+    let reopen = |sign: &str, reason: &str| {
+        day::reopen(
+            &w.env.ctx,
+            &w.owner,
+            &DayReopenInput {
+                date: "10-10-2026".into(),
+                reason: reason.into(),
+                sign: sign.into(),
+            },
+        )
+    };
+    // Missing sign, with a reason: refused on `sign`, nothing audited, still closed.
+    let error = reopen("  ", REASON).unwrap_err();
+    assert_eq!(
+        refusals(&error),
+        [(ErrorCode::ErrSignRequired, Some("sign".into()))]
+    );
+    assert_eq!(count_of(&w, "day_reopen_sign_wrong"), 0);
+    // A wrong sign: refused, audited without what was typed, still closed.
+    let error = reopen("munshi", REASON).unwrap_err();
+    assert_eq!(
+        refusals(&error),
+        [(ErrorCode::ErrSignWrong, Some("sign".into()))]
+    );
+    assert_eq!(count_of(&w, "day_reopen_sign_wrong"), 1);
+    assert!(
+        !rows_of(&w, "day_reopen_sign_wrong")[0]
+            .0
+            .clone()
+            .unwrap_or_default()
+            .contains("munshi")
+    );
+    assert_eq!(count_of(&w, "day_reopen"), 0);
+    assert_eq!(closed_up_to(&w).as_deref(), Some("2026-10-10"));
+    // The right sign opens the day and is kept beside the reason.
+    let status = reopen("ADNAN ", REASON).unwrap();
+    assert_eq!(status.closed_up_to.as_deref(), Some("2026-10-09"));
+    let rows = rows_of(&w, "day_reopen");
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].1.as_deref(), Some(REASON));
+    assert!(rows[0].0.clone().unwrap().contains("\"adnan\""), "{rows:?}");
+    assert_chain_ok(&w.dir);
+}

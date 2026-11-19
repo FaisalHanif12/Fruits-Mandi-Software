@@ -500,12 +500,27 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       });
     });
 
-    it('a saved lot cannot be removed with Ctrl+Delete, a line can', async () => {
-      fakePlan16();
+    it('a saved lot of a first posting can be removed with Ctrl+Delete (the backend refuses a lot a later sale rests on), and a line can too', async () => {
+      const plan = fakePlan16();
       const { user } = await openEdit();
       await user.click(cellOf(lotsGrid(language), 0, 'qty'));
       press('Delete', { ctrlKey: true });
-      expect(textOf(lotsGrid(language), 0, 'qty')).toBe('50');
+      // The lot is out of the edit (plan 80 Q-R2-1, PRD FR-7.70): its row is gone and the preview asks without it.
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'qty')).not.toBe('50');
+      });
+      await waitFor(() => {
+        const last = plan.editPreviews.at(-1);
+        expect(last).toBeDefined();
+        expect(
+          last?.draft.lots.some((lot) => lot.lot_id !== undefined && lot.lot_id !== null),
+        ).toBe(false);
+      });
+    });
+
+    it('a line of a saved lot can be removed with Ctrl+Delete', async () => {
+      fakePlan16();
+      const { user } = await openEdit();
       await user.click(cellOf(salesGrid(language), 1, 'qty'));
       press('Delete', { ctrlKey: true });
       await waitFor(() => {
@@ -899,6 +914,19 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
           said(message(language, 'err-date-closed', { closed_up_to: '10-10-2026' })),
         ),
       ).toBeInTheDocument();
+      expect(plan.undos).toEqual([]);
+    });
+
+    it('an undo refused because the بکری changed since the save says so in words, and undoes nothing (plan 80 R2-2)', async () => {
+      const { plan } = await saveEvent1();
+      const { refused } = await import('../helpers/bikri-plan16');
+      vi.mocked(bikriApi.bikriUndo).mockRejectedValue(refused('ERR_VERSION_CHANGED', 'id', {}));
+      press('KeyZ', { altKey: true });
+      expect(
+        await screen.findByText(said(message(language, 'bikri-undo-changed'))),
+      ).toBeInTheDocument();
+      // Not the general "open it again" of the code, which would send him nowhere.
+      expect(screen.queryByText(said(message(language, 'err-version-changed')))).toBeNull();
       expect(plan.undos).toEqual([]);
     });
 

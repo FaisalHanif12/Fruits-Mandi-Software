@@ -161,21 +161,3 @@ fn a_replaced_or_cancelled_sale_does_not_give_a_rate() {
         .unwrap();
     assert!(last_rate(&w, "10-10-2026").is_none());
 }
-
-#[test]
-fn a_saved_rate_is_the_hint_in_the_preview_until_a_line_above_has_one() {
-    let w = world();
-    let mut s = SavedSale::new(1, "2026-10-10", w.karim, w.arshad, w.banana, w.box_);
-    s.rate = 590;
-    insert_saved(&w, &s);
-    let d = draft(vec![with_sales(
-        lot(&w, "lot-1", w.rahim, w.banana, "50"),
-        vec![blank_sale("s-1", "50")],
-    )]);
-    let p = preview(&w, &d);
-    let hint = p.lots[0].lines[0].rate_hint.as_ref().unwrap();
-    assert_eq!(
-        (r(hint.rate_paisa), hint.source),
-        (590, RateHintSource::Today)
-    );
-}

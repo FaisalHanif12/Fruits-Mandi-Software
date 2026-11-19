@@ -5,6 +5,11 @@
 // marked in words. The list loads page by page; the quantity and value under it are the backend's
 // totals over the whole filter, never a sum of the rows on screen. Four states: loading, an error
 // with a retry, nothing to list, and the rows. The print and Excel of this list come with R37 (D5).
+//
+// While the partner section is locked (PRD FR-17.11) the backend answers with `partners_locked`: the rows and
+// totals are the fruit for the shop's guests only, and the code box stands where the partners' fruit would be
+// (plan 80 R4-1). A request for one partner's fruit is refused with ERR_PARTNER_LOCKED, which the list's error
+// state shows as the same box, never as a failure with a retry.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Apple, Printer, SearchX } from 'lucide-react';
@@ -24,6 +29,7 @@ import {
   FilterBar,
   FormSpan,
   ListWindowBar,
+  PartnerLockedBox,
   Picker,
   Select,
   ShowClosedTick,
@@ -241,6 +247,7 @@ export function FruitListSection({
           <p className="type-body text-ink-muted" />
         </Localized>
       </div>
+      {first?.partners_locked === true ? <PartnerLockedBox /> : null}
       <PagedList<FruitRow>
         columns={columns}
         rows={rows}

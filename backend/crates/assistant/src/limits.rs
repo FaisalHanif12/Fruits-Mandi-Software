@@ -72,3 +72,6 @@ pub const CONVERSATION_QUESTIONS: usize = 3;
 pub const LOG_PAGE_ROWS: i64 = 100;
 /// Longest question, in characters after trimming (command input, Code Standards 4.2).
 pub const MAX_QUESTION_CHARS: usize = 500;
+/// Longest conversation id the panel may send, in characters after trimming. The ids the app makes
+/// (`c-20261110090000000-3`) are about 25 characters (plan 80, T5-7).
+pub const MAX_CONVERSATION_ID_CHARS: usize = 64;

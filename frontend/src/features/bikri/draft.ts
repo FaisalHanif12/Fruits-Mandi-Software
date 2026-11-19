@@ -182,17 +182,16 @@ export function tickLotsOf(rows: readonly EntryRow[], sellerId: number): EntryRo
 /**
  * What a lot sends as its tick "پیشگی اس بکری سے کاٹیں" (PRD FR-12.23, plan 78 C3). The tick is the seller's, made
  * in his summary and off when a بکری opens, and the backend still takes one for each lot. A lot with no tick to
- * take (own goods, a garden) sends none. A saved lot sends the tick it carries. A new lot sends the seller's tick:
- * on when any new lot of his has it on, so a lot added after the tick was made is covered too.
+ * take (own goods, a garden) sends none. A saved lot sends the tick it carries. A new lot sends the seller's tick
+ * as his summary shows it: on when any lot of his that the tick covers has it on, saved or new, so a lot added in
+ * an edit is covered too (plan 80 R2-4, Q-R2-3: one tick covers every lot of that seller in the بکری).
  */
 export function adjustAdvanceOf(row: EntryRow, rows: readonly EntryRow[]): boolean {
   if (!takesTick(row)) return false;
   if (isSavedLot(row)) return row.typed[LOT.adjustAdvance] === ON;
   const sellerId = row.picked?.[LOT.seller]?.id;
   if (sellerId === undefined) return row.typed[LOT.adjustAdvance] === ON;
-  return tickLotsOf(rows, sellerId).some(
-    (lot) => !isSavedLot(lot) && lot.typed[LOT.adjustAdvance] === ON,
-  );
+  return tickLotsOf(rows, sellerId).some((lot) => lot.typed[LOT.adjustAdvance] === ON);
 }
 
 export function lotInput(

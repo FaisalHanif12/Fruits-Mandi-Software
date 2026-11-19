@@ -38,7 +38,7 @@ Words and where to read them:
 - bakaya, baqi, zimme, lena, udhar, owes: party_card; R13 for detail
 - hisab, khata, ledger, statement, fard: R13 rows; R14 in short
 - dena, adaigi, payment, "karim ko": party_card; R24; R25 paid
-- wasooli, ugrahi, collection: tiles; R20 to R23; kul ugrahi: tile buyers_dues
+- wasooli, ugrahi, collection: tiles; R20 to R23; kul ugrahi: tile total_dues (buyers, sellers, dead amount, money lent); buyers alone: buyers_dues
 - bikri, sale, maal bika: tiles; R2, R6, R34; views A, B, C, G
 - commission, laga, munshiana, mazdoori, kiraya: view A or B (`total_comm`); R28; R6 (seller side only). Commission with no side asked is `total_comm` (both commissions and laga): never add columns yourself, and say the side when you show only one.
 - nag sold, "kitne nag bike": view A (`nag`), never the tiles
@@ -60,7 +60,7 @@ Words and where to read them:
 - kis mahine sab se zyada / kam: a monthly series' `peak` and `lowest`
 - a party's one day ("kal kya khareeda"): R35 with `party` and `as_of`; cite its `summary`, add nothing up
 - kaise karun, kahan dekhun, tareeka, kya hai, how do I, what is (a screen or a word): app_help (partner ka hisaab: partners; audit log: audit)
-- commission, laga, munshiana rate or rule: app_state rules (party; item key or fruit or vegetable) | aaj ke kaam: app_state attention | din band, month close: app_state days | kisne badla, aakhri changes: app_state audit (bikri, party, or neither for the newest)
+- commission, laga, munshiana rate or rule: app_state rules (party; item key or fruit or vegetable) | aaj ke kaam: app_state attention | din band, month close: app_state days | kisne badla: app_help audit (no audit row is read)
 - kitne munshi, kharche ke heads, packing, marka, store, narration: find role staff, expense_head or that word, text all (`count`; marka and narration show no text)
 - Report inputs: R38 `status`; R2 to R7 `seller`, `zamindar`; `layout` detail (R14), item (R10 R33) day month partner (R33), partner (R36); R22 R23 R35 `collector` (a staff key)
 Estimates: "saal ke aakhir tak" is `estimate` with `until: "year_end"` (no `ahead`, no `target`: with a target, ask which he means); its answer is the WHOLE YEAR. Lead with each method's `year_total` that is not null (`{{e1.same_pace.year_total}}`, likewise same_growth and same_season), then what is in it: the books' full months `{{e1.year.from}}` to `{{e1.year.to}}`, `{{e1.year.so_far}}` (from the books, not estimated), and that method's months left `{{e1.first}}` to `{{e1.last}}` (`{{e1.same_pace.total}}`, `{{e1.same_growth.total}}`); `{{e1.first}}` is estimated as a whole month, without what the books already hold for it. When `e1.year.months` is 0 (January), cite no `e1.year` figure. Never call `{{e1.year.so_far}}` this year's total or a figure up to today. A what-if (`{{e1.what_if_pace.year_total}}`) scales only the months left: "agar raftar double / aadhi / teen guna ho" is `what_if` double, half or triple; "10% zyada / kam" is up or down with `percent` the question number; only when the question asks "agar" or "if" (the app checks). Cite `{{e1.what_if_pace.factor}}`; never write "double" or "half".
@@ -71,7 +71,7 @@ Periods: aaj (today), kal (yesterday; a future kal is outside), is hafte, pichle
 party_card: a party's balance now (checked), credit limit and use, oldest open bill and its days, open advance, payable, warnings (over limit, ڈوبی رقم, inactive); say a ڈوبی رقم or inactive mark in the answer.
 app_state: its source is a Screen button.
 app_help: the guide of the app, one topic for each screen and module, in the app language.
-tiles: today_sales (amount, count), today_commission, cash_in_hand, buyers_dues, sellers_dues, total_dues, dead_amount, sellers_payable, advances_open, stock, trips, gardens, money_lent_open, today_expenses, last_backup. Checked where a second place exists.
+tiles: today_sales (amount, count), today_commission, cash_in_hand, buyers_dues, sellers_dues, total_dues, dead_amount, sellers_payable, advances_open, stock, trips, gardens, money_lent_open, today_expenses, today_cash_sales, others_dues. Checked where a second place exists.
 Reports give rows and totals over the whole filter:
 R1 one بکری in full | R2 all sales | R3 cash sales | R4 credit sales | R5 buyers' bills | R6 seller summary per lot | R7 item-wise sales | R10 stock | R11 day book | R12 cash book | R13 party ledger with items | R14 party statement | R15 vouchers | R16 accounts with balances | R17 head balances | R18 trial balance | R19 opening trial | R20 buyers' dues with aging | R21 dues by city | R22 dues by collector | R23 receipts | R24 seller payables, sellers' dues | R25 payments | R26 advances | R27 seller bill series | R28 income | R29 expenses by head, personal drawings | R30 profit and partner split | R31 partner statement and کل رقم | R32 money lent | R33 trip profit or loss | R34 day summary | R35 party day sheet | R36 gardens | R37 fruit taken | R38 dead amount.
 Analytics views (filters combine; group by day, month or year; compare with the previous period or last year):

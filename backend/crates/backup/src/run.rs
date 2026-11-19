@@ -250,7 +250,20 @@ impl BackupService {
         report.snapshot_ms = u64::try_from(timer.elapsed().as_millis()).unwrap_or(u64::MAX);
 
         let timer = Instant::now();
-        let inspected = match inspect(&snap) {
+        // NFR-BAK-5 (v1.21, plan 80 gate Q-T3-1): the check of a copy is the data check, the counts,
+        // the checksum and BOTH hash chains of NFR-SEC-6. A snapshot of a file changed outside the
+        // app has a broken chain and is marked bad, so an alert shows and the copy is not kept.
+        let inspected = match inspect(&snap).and_then(|found| {
+            let key = self.db.auditor().key()?;
+            if crate::chain::chains_verify(&snap, &key)? {
+                Ok(found)
+            } else {
+                Err(BackupError::new(
+                    BackupCode::ErrBackupCorrupt,
+                    "the hash chains of the snapshot do not verify",
+                ))
+            }
+        }) {
             Ok(inspected) => inspected,
             Err(error) => {
                 tracing::error!("the snapshot failed its check: {error}");

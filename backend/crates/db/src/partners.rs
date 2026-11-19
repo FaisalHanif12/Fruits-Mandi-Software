@@ -255,6 +255,23 @@ pub fn shares_on(conn: &Connection, date: &str) -> rusqlite::Result<Vec<(i64, i6
     rows.collect()
 }
 
+/// True when an active partner exists and no share was ever set. Then an advance to a seller would
+/// have no partner parts (PRD FR-17.13) and the check of FR-17.9 would miss it, so it is refused
+/// (plan 80 gate Q-R1-3). With no partner at all nothing is refused: the worked day of PRD 4.3 gives
+/// رحیم his advance on 01-09-26, before any partner or share exists, and its parts are worked out
+/// at read time from the first shares ever set (PRD FR-17.13).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn partners_without_shares(conn: &Connection) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM partners WHERE is_active = 1)
+                AND NOT EXISTS (SELECT 1 FROM partner_shares)",
+        [],
+        |r| r.get(0),
+    )
+}
+
 /// A share row to insert (append-only, Code Standards B17).
 #[derive(Debug, Clone, Copy)]
 pub struct NewShareRow<'a> {

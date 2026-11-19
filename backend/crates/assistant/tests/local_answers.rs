@@ -456,18 +456,17 @@ fn a_question_about_the_attention_list_gets_a_screen_source_that_opens_the_dashb
 
 #[test]
 fn a_question_about_who_changed_a_bikri_gets_a_screen_source_that_opens_the_audit_log() {
-    // The same for the audit log (the lead's request of 06-11-2026): the model asks `app_state`
-    // `audit` for بکری 1 in its own call, and the source is the audit log tab of Settings. The
-    // frontend copies this fixture next to the dashboard one.
+    // The same for the audit log (the lead's request of 06-11-2026). Since plan 80 (R6-2) no audit
+    // row is read: the model asks `app_help` for the topic `audit`, and the source is the audit log
+    // tab of Settings. The frontend copies this fixture next to the dashboard one.
     let question = "bikri 1 mein kisne badla";
     let ask_audit = serde_json::json!({
         "model": "openai/gpt-6-luna",
         "choices": [{"finish_reason": "tool_calls", "message": {
             "role": "assistant", "content": null,
             "tool_calls": [{"id": "call_0", "type": "function", "function": {
-                "name": "app_state",
-                "arguments": serde_json::json!(
-                    {"what": "audit", "party": null, "item": null, "bikri": 1}).to_string()}}]}}],
+                "name": "app_help",
+                "arguments": serde_json::json!({"topic": "audit"}).to_string()}}]}}],
         "usage": {
             "prompt_tokens": 7_200, "completion_tokens": 60,
             "prompt_tokens_details": {"cached_tokens": 7_000},
@@ -475,10 +474,7 @@ fn a_question_about_who_changed_a_bikri_gets_a_screen_source_that_opens_the_audi
         },
     });
     let h = Harness::day();
-    let client = RecordedClient::new(vec![
-        ask_audit,
-        answer_reply("اس بکری کے ریکارڈ میں {{r1.count}} اندراج ہیں"),
-    ]);
+    let client = RecordedClient::new(vec![ask_audit, answer_reply("{{r1.summary}}")]);
     let reply = h.ask_with(question, None, &client);
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
     let answer = reply.answer.as_ref().unwrap();

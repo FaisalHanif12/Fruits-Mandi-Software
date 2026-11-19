@@ -260,9 +260,26 @@ fn check_first(
             }
         }
     }
-    // No lot can be removed in an edit: its postings and stock rest on it.
-    if stored.iter().any(|l| !seen_lots.contains(&l.id)) {
-        errors.push(not_allowed("lots", "lot_removed"));
+    // A saved lot the draft leaves out is removed (PRD FR-7.70, plan 80 Q-R2-1), unless a later sale, a
+    // write-off or fruit taken rests on it: then the edit is refused at `lots`, as A74 does for the
+    // seller, with the lot id and the reason as the rule.
+    for found in stored.iter().filter(|l| !seen_lots.contains(&l.id)) {
+        let rule = if found
+            .sales
+            .iter()
+            .any(|s| s.is_active && s.journal_entry_id != entry_id)
+        {
+            Some("lot_has_later_sale")
+        } else if found.qty_written_off > 0 {
+            Some("lot_has_write_off")
+        } else if found.qty_taken > 0 {
+            Some("lot_has_fruit")
+        } else {
+            None
+        };
+        if let Some(rule) = rule {
+            errors.push(not_allowed("lots", rule).with("lot_id", ErrorValue::Number(found.id)));
+        }
     }
     errors
 }
@@ -639,12 +656,8 @@ fn write_edit(
 
     // 3. New lots (first posting only), then the new sale lines of every lot.
     let mut lot_ids = Vec::with_capacity(lots.len());
-    let mut next_lot_no = detail
-        .lots
-        .iter()
-        .map(|l| l.lot_no)
-        .max()
-        .unwrap_or(0)
+    // A removed lot keeps its number, so a new lot goes after it.
+    let mut next_lot_no = edit_repo::max_lot_no(tx, detail.id)?
         .checked_add(1)
         .ok_or_else(|| data("too many lots"))?;
     for shaped in &lots {
@@ -726,6 +739,26 @@ fn write_edit(
         edit_repo::end_sale(tx, old.id, ended, by, user, &now)?;
     }
 
+    // 4b. A saved lot the draft leaves out is removed (first posting only, PRD FR-7.70, plan 80 Q-R2-1).
+    // Its posting is reversed and its lines ended above, so only its row is left: marked, never deleted.
+    // A removed lot keeps `first_entry_id` on the posting that was reversed: it is not pointed at the
+    // new posting (the matching of advances pairs credit lines with lots through it).
+    let mut removed_lots: Vec<Value> = Vec::new();
+    if first {
+        for lot in &detail.lots {
+            if !lots.iter().any(|s| s.lot.lot_id == Some(lot.id)) {
+                edit_repo::mark_lot_removed(tx, lot.id, user, &now)?;
+                removed_lots.push(json!({
+                    "lot_id": lot.id,
+                    "lot_no": lot.lot_no,
+                    "lot_counter": lot.lot_counter,
+                    "seller_account_id": lot.seller.id,
+                    "item_id": lot.item.id,
+                }));
+            }
+        }
+    }
+
     // 5. The lots: ONE update each, with the first posting pointing at the new entry.
     for (shaped, lot_id) in lots.iter().zip(&lot_ids) {
         let sums = edit_repo::lot_sums(tx, *lot_id, None)?;
@@ -791,6 +824,10 @@ fn write_edit(
         object.insert("entry_date".to_owned(), date);
     }
     if let Some(object) = new_value.as_object_mut() {
+        // The lots this edit removed, named (the posting above no longer has them).
+        if !removed_lots.is_empty() {
+            object.insert("removed_lots".to_owned(), Value::Array(removed_lots));
+        }
         object.insert("reversal_entry_id".to_owned(), json!(reversal.entry_id));
         object.insert(
             "gross_paisa".to_owned(),

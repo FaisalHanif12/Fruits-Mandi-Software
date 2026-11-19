@@ -417,14 +417,15 @@ fn r13_after_a_cancel_shows_the_reversal_with_the_same_items() {
 fn r14_is_the_statement_balance_only_or_with_detail() {
     let w = full_day();
     let page = report(&w, ReportId::R14, party(w.akram), 0, 0);
-    // Balance only: no lines, four summary lines: opening, bought, paid, closing.
+    // Balance only: no lines, four summary lines: the balance at the start of the period (not the
+    // word of the opening row, plan 80 R5-4), bought, paid, closing.
     assert!(page.rows.is_empty());
     assert_eq!(page.total_count, 0);
     let labels: Vec<&str> = page.summary.iter().map(|s| s.label_id.as_str()).collect();
     assert_eq!(
         labels,
         vec![
-            "report-opening-balance",
+            "report-period-start-balance",
             "report-statement-bought",
             "report-statement-paid",
             "report-closing-balance"

@@ -45,7 +45,8 @@ export function useCloseDays() {
 export function useReopenDay() {
   const refresh = useRefreshAfterChange();
   return useMutation({
-    mutationFn: ({ date, reason }: { date: string; reason: string }) => dayReopen(date, reason),
+    mutationFn: ({ date, reason, sign }: { date: string; reason: string; sign: string }) =>
+      dayReopen(date, reason, sign),
     onSuccess: refresh,
   });
 }

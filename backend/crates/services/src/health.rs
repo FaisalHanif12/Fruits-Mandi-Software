@@ -1,6 +1,8 @@
 //! The daily books check (plan 22 early, NFR-REL-8, NFR-OBS-5, NFR-SEC-6): the trial balance
-//! difference must be 0, and the keyed hash chains of the journal and of the audit log must
-//! still match. It reads posted records only and changes nothing in the books.
+//! difference must be 0, the keyed hash chains of the journal and of the audit log must still
+//! match, and (NFR-SEC-6 v1.21, plan 80 Q-T3-3) every money table, the sale lines, lot totals,
+//! partner share rows, stock moves and analytics facts, must be what the posted journal gives
+//! (`tables`). It reads posted records only and changes nothing in the books.
 //!
 //! The result of the latest run is kept in the `settings` row `health_last` (a system record, not
 //! a business record) so the Owner sees it without waiting for a new run. A run that finds a
@@ -12,6 +14,10 @@
 
 use mandi_db::audit::VerifyError;
 use serde_json::{Value, json};
+
+mod tables;
+
+pub use tables::{Found, compare_connection};
 
 use crate::audit::Event;
 use crate::context::Context;
@@ -39,6 +45,29 @@ impl ChainState {
     }
 }
 
+/// How the money tables stand against the journal (NFR-SEC-6 v1.21).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TablesState {
+    /// Every sale line, lot total, partner share row, stock move and analytics fact is what the
+    /// posted journal gives.
+    Ok,
+    /// A table differs from the journal: it was changed outside the app. The text names the
+    /// first table and record; it holds no amount.
+    Differs {
+        /// How many differences were found.
+        count: usize,
+        /// The first, naming a table and a record.
+        first: String,
+    },
+}
+
+impl TablesState {
+    /// True when no table differs.
+    pub fn is_ok(&self) -> bool {
+        matches!(self, TablesState::Ok)
+    }
+}
+
 /// The result of the books check.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BooksCheck {
@@ -52,6 +81,8 @@ pub struct BooksCheck {
     pub journal_chain: ChainState,
     /// The audit chain (NFR-SEC-6).
     pub audit_chain: ChainState,
+    /// The money tables against the journal (NFR-SEC-6 v1.21).
+    pub tables: TablesState,
     /// Posted journal entries.
     pub journal_entries: i64,
     /// Audit rows.
@@ -59,9 +90,13 @@ pub struct BooksCheck {
 }
 
 impl BooksCheck {
-    /// True when the books balance and both chains match.
+    /// True when the books balance, both chains match and no money table differs from the
+    /// journal.
     pub fn is_ok(&self) -> bool {
-        self.difference == Paisa::ZERO && self.journal_chain.is_ok() && self.audit_chain.is_ok()
+        self.difference == Paisa::ZERO
+            && self.journal_chain.is_ok()
+            && self.audit_chain.is_ok()
+            && self.tables.is_ok()
     }
 
     /// The JSON kept as the latest result: counts, the difference and the chain states; no
@@ -71,11 +106,18 @@ impl BooksCheck {
             ChainState::Ok => json!({ "ok": true }),
             ChainState::Broken(at) => json!({ "ok": false, "at": at }),
         };
+        let tables = match &self.tables {
+            TablesState::Ok => json!({ "ok": true }),
+            TablesState::Differs { count, first } => {
+                json!({ "ok": false, "at": first, "count": count })
+            }
+        };
         json!({
             "balanced": self.difference == Paisa::ZERO,
             "difference_paisa": self.difference.as_paisa(),
             "journal_chain": chain(&self.journal_chain),
             "audit_chain": chain(&self.audit_chain),
+            "tables": tables,
             "journal_entries": self.journal_entries,
             "audit_rows": self.audit_rows,
         })
@@ -139,6 +181,16 @@ pub fn check_books(ctx: &Context) -> Result<BooksCheck, ServiceError> {
                 Err(VerifyError::Db(db)) => Err(ServiceError::Db(db)),
             },
         )?;
+    let tables = {
+        let found = tables::compare(ctx)?;
+        match found.reasons.first() {
+            None => TablesState::Ok,
+            Some(first) => TablesState::Differs {
+                count: found.count,
+                first: first.to_string(),
+            },
+        }
+    };
     let (journal_entries, audit_rows) = ctx.db.read(|conn| {
         let entries: i64 = conn.query_row(
             "SELECT COUNT(*) FROM journal_entries WHERE status = 'posted'",
@@ -154,6 +206,7 @@ pub fn check_books(ctx: &Context) -> Result<BooksCheck, ServiceError> {
         difference,
         journal_chain,
         audit_chain,
+        tables,
         journal_entries,
         audit_rows,
     })

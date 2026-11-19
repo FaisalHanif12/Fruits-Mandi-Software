@@ -919,7 +919,8 @@ pub fn lots_of(conn: &Connection, purchase_id: i64) -> rusqlite::Result<Vec<LotO
                 COALESCE((SELECT SUM(c.amount_paisa) FROM lot_credit_parts c WHERE c.lot_id = l.id), 0),
                 l.lot_counter
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
-         WHERE l.purchase_id = ?1 AND e.status = 'saved' ORDER BY e.entry_date, e.number, l.lot_no",
+         WHERE l.purchase_id = ?1 AND e.status = 'saved' AND l.removed_at IS NULL
+         ORDER BY e.entry_date, e.number, l.lot_no",
     )?;
     let rows = statement.query_map([purchase_id], |r| {
         Ok(LotOfPurchase {

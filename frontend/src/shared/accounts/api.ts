@@ -25,6 +25,8 @@ import type {
 } from './types';
 import type { AccountBalance } from '../../bindings/AccountBalance';
 import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
+import type { AccountSaveRequest } from '../../bindings/AccountSaveRequest';
+import type { OpeningsRequest } from '../../bindings/OpeningsRequest';
 import type { ChuktaAddInput } from '../../bindings/ChuktaAddInput';
 import type { ChuktaBuyer } from '../../bindings/ChuktaBuyer';
 import type { ChuktaSearchInput } from '../../bindings/ChuktaSearchInput';
@@ -110,10 +112,16 @@ export function accountsSimilar(input: {
 export function accountsSave(
   draft: AccountDraft,
   confirmedRulesWords: readonly string[],
+  confirmCashBelowZero = false,
 ): Promise<AccountRow> {
-  return callCommand<AccountRow>('accounts_save', {
-    input: accountInputOf(draft, confirmedRulesWords),
-  });
+  // Changing an opening that is in روکڑ takes cash out: when cash would end below 0 the backend answers
+  // `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`) until `confirm_cash_below_zero` is true,
+  // the yes of the cash box (PRD FR-6.7, plan 80 R4-4).
+  const input: AccountSaveRequest = {
+    ...accountInputOf(draft, confirmedRulesWords),
+    confirm_cash_below_zero: confirmCashBelowZero,
+  };
+  return callCommand<AccountRow>('accounts_save', { input });
 }
 
 /** Makes an account inactive or active again. An account is never deleted (PRD FR-10.6). */
@@ -121,14 +129,26 @@ export function accountsSetActive(id: number, isActive: boolean): Promise<Accoun
   return callCommand<AccountRow>('accounts_set_active', { input: { id, is_active: isActive } });
 }
 
-/** Checks the openings grid and says what ابتدائی فرق would be. Nothing is saved. */
-export function accountsOpeningsPreview(input: OpeningsInput): Promise<OpeningsPreview> {
-  return callCommand<OpeningsPreview>('accounts_openings_preview', { input });
+/**
+ * Checks the openings grid and says what ابتدائی فرق would be. Nothing is saved. A line that changes an opening
+ * in روکڑ and would take cash below 0 has `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`) until
+ * `confirmCashBelowZero` is true (PRD FR-6.7, plan 80 R4-4).
+ */
+export function accountsOpeningsPreview(
+  input: OpeningsInput,
+  confirmCashBelowZero = false,
+): Promise<OpeningsPreview> {
+  const body: OpeningsRequest = { ...input, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<OpeningsPreview>('accounts_openings_preview', { input: body });
 }
 
 /** Saves the openings grid in one transaction. Errors point to `lines[i].<field>`. */
-export function accountsOpeningsSave(input: OpeningsInput): Promise<OpeningsSaved> {
-  return callCommand<OpeningsSaved>('accounts_openings_save', { input });
+export function accountsOpeningsSave(
+  input: OpeningsInput,
+  confirmCashBelowZero = false,
+): Promise<OpeningsSaved> {
+  const body: OpeningsRequest = { ...input, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<OpeningsSaved>('accounts_openings_save', { input: body });
 }
 
 // ---- Plan 08: short codes, the party card, search (PRD FR-7.38 to FR-7.42).

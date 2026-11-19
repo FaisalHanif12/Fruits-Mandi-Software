@@ -2,12 +2,18 @@
 import type { ReadyGoodsRow } from './ReadyGoodsRow';
 
 /**
- * The answer of `bikri_ready_goods`: oldest date to sell first, then number (trip purchases and
- * garden arrivals together, in one list). At most 100 rows.
+ * The answer of `bikri_ready_goods` and `bikri_goods_to_load`: oldest date to sell first, then
+ * number. `bikri_ready_goods` lists trip purchases and garden arrivals together, at most 100 rows.
+ * `bikri_goods_to_load` lists one kind a page at a time (Code Standards B31).
  */
 export type ReadyGoods = {
   /**
-   * The rows.
+   * The rows of this page.
    */
   rows: Array<ReadyGoodsRow>;
+  /**
+   * How many rows the card has in all, not only this page (PRD FR-19.11). For
+   * `bikri_ready_goods`: the number of rows sent.
+   */
+  total_count: number;
 };

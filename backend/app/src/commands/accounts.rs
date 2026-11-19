@@ -3,10 +3,10 @@
 //! No delete command exists: an account with postings can only be made inactive (PRD FR-10.6).
 
 use mandi_services::core::accounts::{
-    AccountBalance, AccountInput, AccountRow, AccountsBalancesInput, AccountsGetInput,
+    AccountBalance, AccountRow, AccountSaveRequest, AccountsBalancesInput, AccountsGetInput,
     AccountsList, AccountsListInput, AccountsNextCodeInput, AccountsSetActiveInput,
     AccountsSimilarInput, CoaControl, CoaControlAccounts, CoaControlAccountsInput, CoaHead,
-    CoaTree, OpeningsInput, OpeningsPreview, OpeningsSaved, ResolveCodeInput, ResolvedCode,
+    CoaTree, OpeningsPreview, OpeningsRequest, OpeningsSaved, ResolveCodeInput, ResolvedCode,
     SimilarAccount,
 };
 use mandi_services::{accounts, auth, coa, search};
@@ -25,11 +25,11 @@ use crate::error::UiError;
 #[tauri::command]
 pub async fn accounts_save<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: AccountInput,
+    input: AccountSaveRequest,
 ) -> Result<AccountRow, UiError> {
     run(app, "accounts_save", move |ctx| {
         let actor = auth::require(ctx)?;
-        accounts::save(ctx, &actor, &input)
+        accounts::save_with_confirm(ctx, &actor, &input.base, input.confirm_cash_below_zero)
     })
     .await
 }
@@ -111,11 +111,11 @@ pub async fn accounts_similar<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn accounts_openings_preview<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: OpeningsInput,
+    input: OpeningsRequest,
 ) -> Result<OpeningsPreview, UiError> {
     run(app, "accounts_openings_preview", move |ctx| {
         auth::require(ctx)?;
-        accounts::openings_preview(ctx, &input)
+        accounts::openings_preview_with_confirm(ctx, &input.base, input.confirm_cash_below_zero)
     })
     .await
 }
@@ -125,11 +125,16 @@ pub async fn accounts_openings_preview<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn accounts_openings_save<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: OpeningsInput,
+    input: OpeningsRequest,
 ) -> Result<OpeningsSaved, UiError> {
     run(app, "accounts_openings_save", move |ctx| {
         let actor = auth::require(ctx)?;
-        accounts::openings_save(ctx, &actor, &input)
+        accounts::openings_save_with_confirm(
+            ctx,
+            &actor,
+            &input.base,
+            input.confirm_cash_below_zero,
+        )
     })
     .await
 }

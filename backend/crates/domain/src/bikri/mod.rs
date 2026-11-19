@@ -282,7 +282,6 @@ fn calc_pass(
         .unwrap_or_default();
     let mut run = Run {
         owed: HashMap::new(),
-        last_rates: HashMap::new(),
         own: OwnRun::new(lookups),
         arrivals: lookups
             .arrivals

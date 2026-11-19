@@ -129,6 +129,7 @@ function manyTasks(): AttentionList {
     },
     { kind: 'names_missing', count: 4, amount_paisa: null, qty: null, days: null, first: null },
     { kind: 'health_check', count: 1, amount_paisa: null, qty: null, days: null, first: null },
+    { kind: 'records_differ', count: 1, amount_paisa: null, qty: null, days: 0, first: null },
   ];
   return {
     items,

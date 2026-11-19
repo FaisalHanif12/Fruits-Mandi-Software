@@ -48,6 +48,8 @@ export type Destination =
   | { kind: 'shop-expenses' }
   | { kind: 'settings-day' }
   | { kind: 'settings-app' }
+  /** The question log of the assistant, in Settings (PRD FR-7.84, FR-7.76 point 2, plan 80 R6-3). */
+  | { kind: 'settings-assistant' }
   | { kind: 'receipt' }
   | { kind: 'payment' }
   | { kind: 'advance' }
@@ -78,6 +80,9 @@ export function destinationOfKind(kind: AttentionKind): Destination {
     // The books check found a problem: its result is a line of the Day tab of Settings (PRD FR-7.44, NFR-OBS-5, plan 79 item 2c).
     case 'health_check':
       return { kind: 'settings-day' };
+    // A question whose two places of a figure differed: its row is in the question log in Settings (PRD FR-7.76 point 2).
+    case 'records_differ':
+      return { kind: 'settings-assistant' };
   }
 }
 
@@ -202,6 +207,9 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'settings-app':
         void navigate({ to: '/settings', search: { tab: 'app' } });
+        return;
+      case 'settings-assistant':
+        void navigate({ to: '/settings', search: { tab: 'assistant' } });
         return;
       case 'receipt':
         void navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });

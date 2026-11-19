@@ -14,9 +14,9 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
-import { uiErrorOf } from '../../../shared/api';
+import { cashAfterOfRefusal, uiErrorOf } from '../../../shared/api';
 import { finishFixSession, useEntryStamp, useFixDayFlow } from '../../../shared/edit';
-import { useGrouping } from '../../../shared/format';
+import { useGrouping, type Paisa } from '../../../shared/format';
 import {
   focusFirstEmptyField,
   useFocusFirstField,
@@ -29,6 +29,7 @@ import type { SearchHit } from '../../../shared/search';
 import {
   AccountPicker,
   Button,
+  CashConfirmDialog,
   Card,
   Checkbox,
   Code,
@@ -176,6 +177,8 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   const [confirmInactive, setConfirmInactive] = useState(false);
   // The question "save changes?" of Esc above another screen (the route guard cannot ask it there).
   const [askLeave, setAskLeave] = useState(false);
+  // The cash question: the cash in hand after the change, from the backend's refusal (PRD FR-6.7, plan 80 R4-4).
+  const [cashAsk, setCashAsk] = useState<Paisa | null>(null);
   const save = useSaveAccount();
   const setActive = useSetAccountActive();
   // A person moved to the dead amount (PRD FR-10.10): the form says so, and "make active" becomes
@@ -249,7 +252,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
     setValues((current) => ({ ...current, father }));
   };
 
-  const persistOnce = async (): Promise<boolean> => {
+  const persistOnce = async (confirmCashBelowZero: boolean): Promise<boolean> => {
     try {
       // The names first, then father or firm: each pair asks about its own marked words.
       const saved = await spelling.guard(values.names, setNames, (confirmedNames) =>
@@ -262,6 +265,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
               control_id: controlId,
             },
             confirmedWords: [...new Set([...confirmedNames, ...confirmedFather])],
+            confirmCashBelowZero,
           }),
         ),
       );
@@ -272,11 +276,17 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
       // Days reopened for the opening are closed again (plan 44, PRD FR-21.4).
       void finishFixSession(l10n);
       return true;
-    } catch {
+    } catch (failure: unknown) {
+      // The change of an opening in روکڑ would take cash below zero: ask the question of PRD FR-6.7 with the
+      // figure the backend named. The refusal stays on the form behind the box, as any refusal does.
+      if (!confirmCashBelowZero) {
+        const after = cashAfterOfRefusal(failure);
+        if (after !== null) setCashAsk(after);
+      }
       return false;
     }
   };
-  const persist = (): Promise<boolean> => flight.run(persistOnce, false);
+  const persist = (): Promise<boolean> => flight.run(() => persistOnce(false), false);
   const saveAndClose = () => {
     void persist().then((ok) => {
       if (ok) setLeaving(true);
@@ -839,6 +849,25 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
           of buttons keeps its place above it. */}
       {embedded === undefined ? <div aria-hidden="true" className="h-corner shrink-0" /> : null}
       {spelling.dialog}
+      {/* The cash question of PRD FR-6.7: a change of an opening in روکڑ that takes cash below zero. No has the
+          focus; the yes sends the same account again with the answer. */}
+      {cashAsk === null ? null : (
+        <CashConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setCashAsk(null);
+          }}
+          cashAfter={cashAsk}
+          onConfirm={() => {
+            setCashAsk(null);
+            void flight
+              .run(() => persistOnce(true), false)
+              .then((ok) => {
+                if (ok) setLeaving(true);
+              });
+          }}
+        />
+      )}
       {embedded === undefined ? null : (
         <SaveChangesPrompt
           open={askLeave}

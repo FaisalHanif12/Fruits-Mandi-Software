@@ -1,5 +1,7 @@
 //! The sums of one party on the day: the day columns and the true ledger balance (R35).
 
+use std::collections::BTreeMap;
+
 use super::*;
 
 /// An entry that is one half of a same-day cancel or edit: the posting dated the same day as its
@@ -61,68 +63,166 @@ impl Activity {
     }
 }
 
-/// The parties' sums for the day, optionally for one account and one person. One grouped query
-/// over the posted lines of the buyer and seller accounts up to the day (Code Standards B22).
+/// What one party has on one day, from the three reads of [`activities`].
+#[derive(Debug, Default, Clone, Copy)]
+struct DayParts {
+    prev_dr: i64,
+    prev_cr: i64,
+    /// Every posted line of the day.
+    all_dr: i64,
+    all_cr: i64,
+    /// The lines of the day that are not half of a same-day cancel or edit.
+    day_dr: i64,
+    day_cr: i64,
+}
+
+/// The lines of the entries of one day, grouped by party: `?1` the day, `?2` an account or null, `?3`
+/// a person or null. Public for the query plan test (Code Standards B18).
+pub(crate) fn day_lines_sql() -> String {
+    format!(
+        "SELECT l.account_id, COALESCE(l.chukta_person_key, ''), k.code,
+                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0),
+                COALESCE(SUM(CASE WHEN NOT ({SAME_DAY_PAIR}) THEN l.dr_paisa END), 0),
+                COALESCE(SUM(CASE WHEN NOT ({SAME_DAY_PAIR}) THEN l.cr_paisa END), 0)
+         FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         CROSS JOIN journal_lines l ON l.entry_id = e.id
+         JOIN accounts a ON a.id = l.account_id
+         JOIN account_controls k ON k.id = a.control_id
+         WHERE k.code IN ('{BUYER_CONTROL}', '{SELLER_CONTROL}') AND e.status = 'posted'
+           AND e.entry_date = ?1
+           AND (?2 IS NULL OR l.account_id = ?2)
+           AND (?3 IS NULL OR l.chukta_person_key = ?3)
+         GROUP BY l.account_id, l.chukta_person_key, k.code"
+    )
+}
+
+/// The parties' sums for the day, optionally for one account and one person (Code Standards B22,
+/// NFR-SPD-24).
+///
+/// Three reads, none of them a pass over the journal joined with its entries:
+///
+/// 1. the balance before the day of every buyer and seller (`party_reads::totals_before`: the
+///    all-time sums from the covering index less the lines of the few entries dated on or after the
+///    day, 0.3 seconds for ten years, or the lines before the day when few entries are older);
+/// 2. the lines of the entries of the day, found by the day index, grouped by party: all of them,
+///    and those that are not half of a same-day cancel or edit (the day columns).
+///
+/// The balance at the end of the day is the balance before it plus every line of the day, which is
+/// every posted line up to and including the day. The one grouped query over all the lines of the
+/// buyers and sellers up to the day that did this before took 16 to 28 seconds on the NFR-SCL-1
+/// volume, and the same query was run again for every page.
 pub(super) fn activities(
     conn: &Connection,
     day: &str,
     account: Option<i64>,
     person_key: Option<&str>,
 ) -> Result<Vec<Activity>, ReportsError> {
-    let sql = format!(
-        "SELECT l.account_id, l.chukta_person_key, k.code,
-                COALESCE(SUM(CASE WHEN e.entry_date < ?1 THEN l.dr_paisa END), 0),
-                COALESCE(SUM(CASE WHEN e.entry_date < ?1 THEN l.cr_paisa END), 0),
-                COALESCE(SUM(CASE WHEN e.entry_date = ?1 AND NOT ({SAME_DAY_PAIR})
-                                  THEN l.dr_paisa END), 0),
-                COALESCE(SUM(CASE WHEN e.entry_date = ?1 AND NOT ({SAME_DAY_PAIR})
-                                  THEN l.cr_paisa END), 0),
-                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l
-         JOIN journal_entries e ON e.id = l.entry_id
-         JOIN accounts a ON a.id = l.account_id
-         JOIN account_controls k ON k.id = a.control_id
-         WHERE k.code IN ('{BUYER_CONTROL}', '{SELLER_CONTROL}') AND e.status = 'posted'
-           AND e.entry_date <= ?1
-           AND (?2 IS NULL OR l.account_id = ?2)
-           AND (?3 IS NULL OR l.chukta_person_key = ?3)
-         GROUP BY l.account_id, l.chukta_person_key, k.code
-         ORDER BY l.account_id, l.chukta_person_key"
-    );
+    let controls = [BUYER_CONTROL, SELLER_CONTROL];
+    let scope = mandi_db::party_reads::PartyScope {
+        account_id: account,
+        person_key,
+    };
+    // (account, person) -> the sums. A line with no person key has the empty one, as in the
+    // balance read.
+    let mut parts: BTreeMap<(i64, String), (String, DayParts)> = BTreeMap::new();
+    // Two groups of one account that the read gives the same key (a line with no person key and a
+    // line with an empty one) are never merged silently: that is an error, not a lost sum.
+    let twice = || {
+        ReportsError::Data("two groups of lines of one party have the same key".to_owned())
+    };
+    for before in mandi_db::party_reads::totals_before(conn, &controls, day, scope)? {
+        let slot = parts
+            .entry((before.account_id, before.person_key))
+            .or_insert_with(|| (before.control_code.clone(), DayParts::default()));
+        if slot.1.prev_dr != 0 || slot.1.prev_cr != 0 {
+            return Err(twice());
+        }
+        slot.1.prev_dr = before.dr_paisa;
+        slot.1.prev_cr = before.cr_paisa;
+    }
+    let sql = day_lines_sql();
     let mut statement = conn.prepare(&sql)?;
     let rows = statement
         .query_map(params![day, account, person_key], |r| {
             Ok((
                 r.get::<_, i64>(0)?,
-                r.get::<_, Option<String>>(1)?,
+                r.get::<_, String>(1)?,
                 r.get::<_, String>(2)?,
                 r.get::<_, i64>(3)?,
                 r.get::<_, i64>(4)?,
                 r.get::<_, i64>(5)?,
                 r.get::<_, i64>(6)?,
-                r.get::<_, i64>(7)?,
-                r.get::<_, i64>(8)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
-    let mut out = Vec::with_capacity(rows.len());
-    for (account_id, person_key, control, prev_dr, prev_cr, day_dr, day_cr, end_dr, end_cr) in rows
-    {
+    for (account_id, key, control, all_dr, all_cr, day_dr, day_cr) in rows {
+        let slot = parts
+            .entry((account_id, key))
+            .or_insert_with(|| (control, DayParts::default()));
+        if slot.1.all_dr != 0 || slot.1.all_cr != 0 {
+            return Err(twice());
+        }
+        slot.1.all_dr = all_dr;
+        slot.1.all_cr = all_cr;
+        slot.1.day_dr = day_dr;
+        slot.1.day_cr = day_cr;
+    }
+    let overflow = || ReportsError::Data("the sums of a party's day do not fit".to_owned());
+    let mut out = Vec::with_capacity(parts.len());
+    for ((account_id, key), (control, p)) in parts {
         let item = Activity {
             account_id,
-            person_key,
+            person_key: (!key.is_empty()).then_some(key),
             buyer: control == BUYER_CONTROL,
-            prev_dr: paisa(prev_dr)?,
-            prev_cr: paisa(prev_cr)?,
-            day_dr: paisa(day_dr)?,
-            day_cr: paisa(day_cr)?,
-            end_dr: paisa(end_dr)?,
-            end_cr: paisa(end_cr)?,
+            prev_dr: paisa(p.prev_dr)?,
+            prev_cr: paisa(p.prev_cr)?,
+            day_dr: paisa(p.day_dr)?,
+            day_cr: paisa(p.day_cr)?,
+            end_dr: paisa(p.prev_dr.checked_add(p.all_dr).ok_or_else(overflow)?)?,
+            end_cr: paisa(p.prev_cr.checked_add(p.all_cr).ok_or_else(overflow)?)?,
         };
         item.check()?;
         out.push(item);
     }
     Ok(out)
+}
+
+/// One party's sums of the day as plain numbers, for the test that holds [`activities`] to the
+/// grouped query it replaced.
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DayActivity {
+    /// The account.
+    pub account_id: i64,
+    /// The person of a چکتا کھاتہ account.
+    pub person_key: Option<String>,
+    /// True for a buyer.
+    pub buyer: bool,
+    /// Σ debits and credits before the day.
+    pub prev: (i64, i64),
+    /// Σ debits and credits of the day, a same-day cancel or edit left out.
+    pub day: (i64, i64),
+    /// Σ debits and credits up to and including the day.
+    pub end: (i64, i64),
+}
+
+/// [`activities`] for the whole book as plain numbers.
+///
+/// # Errors
+/// As [`activities`].
+#[doc(hidden)]
+pub fn day_activities(conn: &Connection, day: &str) -> Result<Vec<DayActivity>, ReportsError> {
+    Ok(activities(conn, day, None, None)?
+        .into_iter()
+        .map(|a| DayActivity {
+            account_id: a.account_id,
+            person_key: a.person_key,
+            buyer: a.buyer,
+            prev: (a.prev_dr.as_paisa(), a.prev_cr.as_paisa()),
+            day: (a.day_dr.as_paisa(), a.day_cr.as_paisa()),
+            end: (a.end_dr.as_paisa(), a.end_cr.as_paisa()),
+        })
+        .collect())
 }
 
 /// The parties of the activities as the report names them: the account's names with its tag, and

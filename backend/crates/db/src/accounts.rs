@@ -167,6 +167,40 @@ pub fn id_by_code(conn: &Connection, code: &str) -> rusqlite::Result<Option<i64>
     .optional()
 }
 
+/// The account this one is linked to (PRD E10: the same person as a seller and as a buyer), if
+/// any. The link is stored on one of the two accounts, so the account it points at counts as
+/// linked too: this account's own `linked_account_id` first, else the lowest id of an account whose
+/// `linked_account_id` is this one. One query.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn linked_account_of(conn: &Connection, id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT COALESCE(
+             (SELECT linked_account_id FROM accounts WHERE id = ?1),
+             (SELECT MIN(id) FROM accounts WHERE linked_account_id = ?1))",
+        [id],
+        |r| r.get(0),
+    )
+}
+
+/// The ids of the accounts, other than `except`, whose `linked_account_id` is `id`: who points at
+/// this account (PRD E10). Used to keep a link one clean pair.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn accounts_linking_to(
+    conn: &Connection,
+    id: i64,
+    except: Option<i64>,
+) -> rusqlite::Result<Vec<i64>> {
+    let mut statement = conn.prepare(
+        "SELECT id FROM accounts WHERE linked_account_id = ?1 AND id IS NOT ?2 ORDER BY id",
+    )?;
+    let rows = statement.query_map(params![id, except], |r| r.get(0))?;
+    rows.collect()
+}
+
 /// True if another account (not `except_id`) already has this code.
 ///
 /// # Errors

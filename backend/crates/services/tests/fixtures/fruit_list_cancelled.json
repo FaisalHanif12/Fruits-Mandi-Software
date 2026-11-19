@@ -76,5 +76,6 @@
     "qty": 0,
     "value_paisa": 0
   },
-  "months": []
+  "months": [],
+  "partners_locked": false
 }

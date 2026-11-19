@@ -214,6 +214,8 @@ describe.each(LANGUAGES)('Settings, Day and check (%s)', (language) => {
       ).toBeInTheDocument();
       expect(screen.getByText(words(m('settings-check-journal-ok')))).toBeInTheDocument();
       expect(screen.getByText(words(m('settings-check-audit-ok')))).toBeInTheDocument();
+      // The money tables match the journal (NFR-SEC-6 v1.21, plan 80).
+      expect(screen.getByText(words(m('settings-check-tables-ok')))).toBeInTheDocument();
       expect(screen.getByText(words(m('settings-check-data-ok')))).toBeInTheDocument();
       // Cloud backup is not set up in the backend's fixture: said in words, not as a failure.
       expect(screen.getByText(words(m('settings-check-backup-off')))).toBeInTheDocument();
@@ -263,6 +265,35 @@ describe.each(LANGUAGES)('Settings, Day and check (%s)', (language) => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(words(m('settings-check-backup-errors', { count: 1 }))),
+      ).toBeInTheDocument();
+    });
+
+    // The first difference between a money table and the journal is shown as the backend wrote it: a table name
+    // and a record, not translated; without one the line still says it in words (NFR-SEC-6 v1.21, plan 80).
+    it('says when a money table differs from the journal, with the first difference as written', async () => {
+      const at = 'bikri_sales: journal entry 5: account 12 does not match the sale lines and lots';
+      vi.mocked(maintenance.healthLast).mockResolvedValue({
+        ...HEALTH_RUN,
+        ok: false,
+        books: { ...HEALTH_RUN.books, tables: { ok: false, at } },
+      });
+      await openTab('settings-tab-day');
+      expect(await screen.findByText(m('settings-check-bad'))).toBeInTheDocument();
+      expect(
+        screen.getByText(words(m('settings-check-tables-bad', { entry: at }))),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(words(m('settings-check-tables-ok')))).toBeNull();
+    });
+
+    it('a table that differs with no place named says so in words too', async () => {
+      vi.mocked(maintenance.healthLast).mockResolvedValue({
+        ...HEALTH_RUN,
+        ok: false,
+        books: { ...HEALTH_RUN.books, tables: { ok: false, at: null } },
+      });
+      await openTab('settings-tab-day');
+      expect(
+        await screen.findByText(words(m('settings-check-tables-bad-unknown'))),
       ).toBeInTheDocument();
     });
 

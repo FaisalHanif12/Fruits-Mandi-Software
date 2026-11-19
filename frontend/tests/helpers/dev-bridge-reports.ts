@@ -108,7 +108,11 @@ import {
   R6_LOTS,
   R7_ITEMS,
 } from './reports-real';
-import { SHEET as COLLECTION_SHEET, printData as collectionPrintData } from './collection-sheet';
+import {
+  ADHARI_SHEET,
+  SHEET as COLLECTION_SHEET,
+  printData as collectionPrintData,
+} from './collection-sheet';
 import { daySlipsData, salePrintData } from './day-slips';
 
 type Input = Record<string, unknown>;
@@ -311,6 +315,10 @@ const handlers: Record<string, (input: Input) => unknown> = {
     return { ...COLLECTION_SHEET, rows, total_count: rows.length };
   },
   reports_collection_sheet_print_data: (input) =>
+    collectionPrintData(input['language'] === 'ur' ? 'ur' : 'en'),
+  // Plan 80 Q-R5-2: R5 in the reports menu is ادھاری تفصیل of the day (the v1.43 sheet) and its print.
+  reports_adhari_sheet: () => ADHARI_SHEET,
+  reports_adhari_sheet_print_data: (input) =>
     collectionPrintData(input['language'] === 'ur' ? 'ur' : 'en'),
   reports_buyer_parchi_print_data: (input) => {
     const data = daySlipsData(input['language'] === 'ur' ? 'ur' : 'en', 'parchi', paperOf(input));

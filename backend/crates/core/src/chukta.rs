@@ -60,6 +60,11 @@ pub struct ChuktaAddInput {
     /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`. Null or empty if he gave none.
     #[serde(default)]
     pub phone: Option<String>,
+    /// The words of the names that only the spelling rules could have made and that the user
+    /// confirmed on the screen (PRD FR-7.66). A word that is not here and is not in the word list
+    /// or the learned pairs is refused with `ERR_SPELLING_UNCONFIRMED`.
+    #[serde(default)]
+    pub confirmed_rules_words: Vec<String>,
 }
 
 /// A چکتا buyer whose names and phone passed the checks, ready to save.
@@ -179,6 +184,7 @@ mod tests {
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.map(str::to_owned),
+            confirmed_rules_words: Vec::new(),
         }
     }
 

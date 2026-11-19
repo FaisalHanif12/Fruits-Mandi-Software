@@ -462,6 +462,18 @@ pub fn undo(
                 .first()
                 .map(|s| s.lot_id)
                 .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, &field))?;
+            // The carried posting must still be the newest of its بکری (the other carried postings of
+            // the same save apart): a later sale or an edit since the save makes the undo stale
+            // (plan 80 R2-2).
+            if edit_repo::postings_in_force(tx, entry.source_id)?
+                .iter()
+                .any(|p| p.entry_id > *entry_id && !input.later_entry_ids.contains(&p.entry_id))
+            {
+                return Err(ServiceError::reject_field(
+                    ErrorCode::ErrVersionChanged,
+                    &field,
+                ));
+            }
             // A lot of a closed garden is not changed until the closing is undone (PRD FR-12.38).
             refuse_closed_garden(tx, entry.source_id)?;
             later.push((*entry_id, entry.source_id, date, lot_id));
@@ -476,6 +488,7 @@ pub fn undo(
                         "new_bikri_id",
                     ));
                 }
+                super::cancel::refuse_changed_since_save(tx, &detail, "new_bikri_id")?;
                 refuse_closed_garden(tx, detail.id)?;
                 refuse_fruit_taken(tx, detail.id)?;
                 Some(detail)

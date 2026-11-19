@@ -283,6 +283,58 @@ fn short_of(parts: &[DetailPart]) -> Result<Vec<StatementShortItem>, ReportsErro
     Ok(out)
 }
 
+/// The last edit of the record behind an entry, as the row shows it.
+fn edit_of(
+    edits: &HashMap<(String, i64), mandi_db::edit_stamps::LastEdit>,
+    entry: &Entry,
+) -> Option<StatementEdited> {
+    edits
+        .get(&(entry.source_type.clone(), entry.source_id))
+        .map(|last| StatementEdited {
+            at: last.at.clone(),
+            by: last.by.clone(),
+            count: last.count,
+            reason: last.reason.clone(),
+            sign: last.sign.clone(),
+        })
+}
+
+/// One row of the statement: the one place a row is made, for the whole period and for a page.
+/// `money` is the debit, the credit and what was paid on the spot; `balance` is the balance after
+/// the row.
+fn row_of(
+    entry: &Entry,
+    parts: Vec<DetailPart>,
+    money: (Paisa, Paisa, Paisa),
+    balance: Balance,
+    edited: Option<StatementEdited>,
+    is_replaced: bool,
+) -> Result<StatementRowsRow, ReportsError> {
+    let (dr, cr, on_spot) = money;
+    Ok(StatementRowsRow {
+        date: entry.date.clone(),
+        entry_id: entry.id,
+        type_id: ids::doc_id(&entry.posting_type),
+        number: entry.doc_number,
+        source: source_of(
+            &entry.source_type,
+            entry.source_id,
+            entry.id,
+            (entry.venture.0.as_deref(), entry.venture.1),
+        ),
+        dr_paisa: dr,
+        cr_paisa: cr,
+        on_spot_paisa: on_spot,
+        balance,
+        short: short_of(&parts)?,
+        parts,
+        narration: entry.narration.clone(),
+        edited,
+        is_reversal: entry.reverses.is_some(),
+        is_replaced,
+    })
+}
+
 /// What the buyer paid on the spot in each entry, from the value stored on his sale lines of it
 /// (PRD FR-12.44): Σ `paid_paisa` by posting. A line replaced by an edit keeps its old posting, so
 /// an entry shown with the history has its own sum. A چکتا buyer has no statement.
@@ -317,6 +369,88 @@ fn paid_on_spot(
     Ok(out)
 }
 
+/// What both readings of a statement start from: the period, the party and what stood before it.
+struct Prepared {
+    head: PartyLedgerHead,
+    kind: LedgerSide,
+    from: Option<String>,
+    to: Option<String>,
+    filter: LineFilter,
+    open_dr: Paisa,
+    open_cr: Paisa,
+}
+
+/// The period, the head of the party and the balance before the first day.
+///
+/// # Errors
+/// As [`whole`].
+fn prepare(
+    conn: &mandi_db::rusqlite::Connection,
+    today: BusinessDate,
+    input: &StatementRowsInput,
+) -> Result<Prepared, ReportsError> {
+    let day = |text: &Option<String>, field: &str| {
+        text.as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(|t| parse_day(t, today).map_err(|code| reject(code, field)))
+            .transpose()
+    };
+    let from = day(&input.from, "from")?;
+    let to = day(&input.to, "to")?;
+    if let (Some(first), Some(last)) = (from, to)
+        && first > last
+    {
+        return Err(reject(ErrorCode::ErrDateRange, "to"));
+    }
+    let (from, to) = (from.map(BusinessDate::to_iso), to.map(BusinessDate::to_iso));
+
+    let not_found = || reject(ErrorCode::ErrNotFound, "account_id");
+    let head_row = mandi_db::party_ledgers::head(conn, input.account_id)?
+        .filter(|h| !h.is_system)
+        .ok_or_else(not_found)?;
+    let kind = match head_row.control_code.as_str() {
+        BUYER_CONTROL => LedgerSide::Buyer,
+        SELLER_CONTROL => LedgerSide::Seller,
+        _ => return Err(not_found()),
+    };
+    let is_dead = mandi_db::dead::dead_set(conn, None)?.has_account(input.account_id);
+    let head = PartyLedgerHead {
+        account_id: input.account_id,
+        code: head_row.party.code,
+        name_ur: head_row.party.name_ur,
+        name_en: head_row.party.name_en,
+        tag: head_row.party.tag,
+        kind,
+        is_active: head_row.party.is_active,
+        is_dead,
+    };
+
+    // What stood before the first day, and every line of the period.
+    let filter = LineFilter {
+        account: Some(input.account_id),
+        person: None,
+        from: from.clone(),
+        to: to.clone(),
+    };
+    let (open_dr, open_cr) = match from.as_deref() {
+        Some(first) => {
+            let (dr, cr) = lines::before_day(conn, &filter, first)?;
+            (paisa(dr)?, paisa(cr)?)
+        }
+        None => (Paisa::ZERO, Paisa::ZERO),
+    };
+    Ok(Prepared {
+        head,
+        kind,
+        from,
+        to,
+        filter,
+        open_dr,
+        open_cr,
+    })
+}
+
 /// The whole period, every entry in the day order.
 pub(crate) struct Whole {
     pub(crate) head: PartyLedgerHead,
@@ -341,57 +475,15 @@ pub(crate) fn whole(db: &Db, input: &StatementRowsInput) -> Result<Whole, Report
     db.read(|conn| {
         in_snapshot(conn, |conn| {
             let today = today_of(db.clock().now_utc())?;
-            let day = |text: &Option<String>, field: &str| {
-                text.as_deref()
-                    .map(str::trim)
-                    .filter(|t| !t.is_empty())
-                    .map(|t| parse_day(t, today).map_err(|code| reject(code, field)))
-                    .transpose()
-            };
-            let from = day(&input.from, "from")?;
-            let to = day(&input.to, "to")?;
-            if let (Some(first), Some(last)) = (from, to)
-                && first > last
-            {
-                return Err(reject(ErrorCode::ErrDateRange, "to"));
-            }
-            let (from, to) = (from.map(BusinessDate::to_iso), to.map(BusinessDate::to_iso));
-
-            let not_found = || reject(ErrorCode::ErrNotFound, "account_id");
-            let head_row = mandi_db::party_ledgers::head(conn, input.account_id)?
-                .filter(|h| !h.is_system)
-                .ok_or_else(not_found)?;
-            let kind = match head_row.control_code.as_str() {
-                BUYER_CONTROL => LedgerSide::Buyer,
-                SELLER_CONTROL => LedgerSide::Seller,
-                _ => return Err(not_found()),
-            };
-            let is_dead = mandi_db::dead::dead_set(conn, None)?.has_account(input.account_id);
-            let head = PartyLedgerHead {
-                account_id: input.account_id,
-                code: head_row.party.code,
-                name_ur: head_row.party.name_ur,
-                name_en: head_row.party.name_en,
-                tag: head_row.party.tag,
+            let Prepared {
+                head,
                 kind,
-                is_active: head_row.party.is_active,
-                is_dead,
-            };
-
-            // What stood before the first day, and every line of the period.
-            let filter = LineFilter {
-                account: Some(input.account_id),
-                person: None,
-                from: from.clone(),
-                to: to.clone(),
-            };
-            let (open_dr, open_cr) = match from.as_deref() {
-                Some(first) => {
-                    let (dr, cr) = lines::before_day(conn, &filter, first)?;
-                    (paisa(dr)?, paisa(cr)?)
-                }
-                None => (Paisa::ZERO, Paisa::ZERO),
-            };
+                from,
+                to,
+                filter,
+                open_dr,
+                open_cr,
+            } = prepare(conn, today, input)?;
             let brought_forward = Balance::from_totals(open_dr, open_cr)?;
             let mut entries = entries_of(lines::page(conn, &filter, (0, -1))?)?;
             // An opening is the first entry of its day (plan 78 B1); the rest keep the journal order.
@@ -479,37 +571,15 @@ pub(crate) fn whole(db: &Db, input: &StatementRowsInput) -> Result<Whole, Report
                 add(&mut sum_dr, dr)?;
                 add(&mut sum_cr, cr)?;
                 add(&mut sum_spot, on_spot)?;
-                let edited = edits
-                    .get(&(entry.source_type.clone(), entry.source_id))
-                    .map(|last| StatementEdited {
-                        at: last.at.clone(),
-                        by: last.by.clone(),
-                        count: last.count,
-                        reason: last.reason.clone(),
-                        sign: last.sign.clone(),
-                    });
-                rows.push(StatementRowsRow {
-                    date: entry.date.clone(),
-                    entry_id: entry.id,
-                    type_id: ids::doc_id(&entry.posting_type),
-                    number: entry.doc_number,
-                    source: source_of(
-                        &entry.source_type,
-                        entry.source_id,
-                        entry.id,
-                        (entry.venture.0.as_deref(), entry.venture.1),
-                    ),
-                    dr_paisa: dr,
-                    cr_paisa: cr,
-                    on_spot_paisa: on_spot,
-                    balance: Balance::from_totals(run_dr, run_cr)?,
-                    short: short_of(&parts)?,
+                let edited = edit_of(&edits, entry);
+                rows.push(row_of(
+                    entry,
                     parts,
-                    narration: entry.narration.clone(),
+                    (dr, cr, on_spot),
+                    Balance::from_totals(run_dr, run_cr)?,
                     edited,
-                    is_reversal: entry.reverses.is_some(),
-                    is_replaced: replaced.contains(&entry.id),
-                });
+                    replaced.contains(&entry.id),
+                )?);
             }
 
             // The shown rows carry the party to the same closing as every line of the period: the
@@ -541,12 +611,293 @@ pub(crate) fn whole(db: &Db, input: &StatementRowsInput) -> Result<Whole, Report
     })
 }
 
+/// One entry of the statement as the order of its rows needs it, with the running balance after it.
+/// The lines, the items and the edit stamp of the entry are read only when its row is on the page.
+struct Light {
+    id: i64,
+    /// The balance after the entry, the sums of the period up to it.
+    run: (Paisa, Paisa),
+    /// What the buyer paid on the spot in it (PRD FR-12.44).
+    on_spot: Paisa,
+    is_replaced: bool,
+}
+
+/// What every page of one statement shares: the head, the totals and the order and balances of all
+/// its rows. The first page works it out, the next pages take it from memory while the books are as
+/// they were (`result_cache`, NFR-SPD-24).
+struct Skeleton {
+    head: PartyLedgerHead,
+    from: Option<String>,
+    to: Option<String>,
+    brought_forward: Balance,
+    /// The shown entries, oldest first.
+    shown: Vec<Light>,
+    dr_total: Paisa,
+    cr_total: Paisa,
+    on_spot_total: Paisa,
+    closing: Balance,
+}
+
+/// Reads the skeleton: every entry of the period with the sums of its lines only (one pass over
+/// the covering index of the account, no line row), the order, the pairs an edit or a cancel
+/// replaced, the running balance and the totals. It is the first half of [`whole`] with the same
+/// rules, and holds the shown rows to the same closing as every line of the period.
+fn skeleton(
+    conn: &mandi_db::rusqlite::Connection,
+    today: BusinessDate,
+    input: &StatementRowsInput,
+) -> Result<Skeleton, ReportsError> {
+    let Prepared {
+        head,
+        kind,
+        from,
+        to,
+        filter,
+        open_dr,
+        open_cr,
+    } = prepare(conn, today, input)?;
+    let brought_forward = Balance::from_totals(open_dr, open_cr)?;
+    let mut sums = lines::entry_sums(conn, &filter)?;
+    // An opening is the first entry of its day (plan 78 B1); the rest keep the journal order.
+    sums.sort_by_key(|e| (e.entry_date.clone(), e.posting_type != "opening", e.entry_id));
+
+    // The pairs an edit or a cancel of the same day cancelled (the test of `replaced_ids`).
+    let date_of: HashMap<i64, &str> = sums
+        .iter()
+        .map(|e| (e.entry_id, e.entry_date.as_str()))
+        .collect();
+    let mut replaced = BTreeSet::new();
+    for entry in &sums {
+        if let Some(original) = entry.reverses
+            && date_of.get(&original) == Some(&entry.entry_date.as_str())
+        {
+            replaced.insert(entry.entry_id);
+            replaced.insert(original);
+        }
+    }
+    let (mut all_dr, mut all_cr) = (0_i64, 0_i64);
+    for entry in &sums {
+        all_dr = all_dr.checked_add(entry.dr).ok_or_else(overflow)?;
+        all_cr = all_cr.checked_add(entry.cr).ok_or_else(overflow)?;
+    }
+    let shown: Vec<&lines::EntrySums> = sums
+        .iter()
+        .filter(|e| input.include_history || !replaced.contains(&e.entry_id))
+        .collect();
+
+    // What a buyer paid on the spot in each entry: one grouped read of his sale lines.
+    let paid_of = if kind == LedgerSide::Buyer {
+        paid_on_spot_all(conn, input.account_id)?
+    } else {
+        HashMap::new()
+    };
+    let (mut run_dr, mut run_cr) = (open_dr, open_cr);
+    let (mut sum_dr, mut sum_cr, mut sum_spot) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+    let mut light = Vec::with_capacity(shown.len());
+    for entry in shown {
+        let (dr, cr) = (paisa(entry.dr)?, paisa(entry.cr)?);
+        let on_spot = paisa(paid_of.get(&entry.entry_id).copied().unwrap_or(0))?;
+        if on_spot > cr {
+            return Err(ReportsError::Data(format!(
+                "an entry of account {} was paid on the spot more than it credits",
+                input.account_id
+            )));
+        }
+        add(&mut run_dr, dr)?;
+        add(&mut run_cr, cr)?;
+        add(&mut sum_dr, dr)?;
+        add(&mut sum_cr, cr)?;
+        add(&mut sum_spot, on_spot)?;
+        light.push(Light {
+            id: entry.entry_id,
+            run: (run_dr, run_cr),
+            on_spot,
+            is_replaced: replaced.contains(&entry.entry_id),
+        });
+    }
+    let closing = Balance::from_totals(run_dr, run_cr)?;
+    let whole = Balance::from_totals(
+        open_dr.checked_add(paisa(all_dr)?)?,
+        open_cr.checked_add(paisa(all_cr)?)?,
+    )?;
+    if closing != whole {
+        return Err(ReportsError::Data(format!(
+            "the statement of account {} does not add up to his ledger",
+            input.account_id
+        )));
+    }
+    Ok(Skeleton {
+        head,
+        from,
+        to,
+        brought_forward,
+        shown: light,
+        dr_total: sum_dr,
+        cr_total: sum_cr,
+        on_spot_total: sum_spot,
+        closing,
+    })
+}
+
+/// What a buyer paid on the spot in each of his entries (the value stored on his sale lines of it,
+/// PRD FR-12.44): Σ `paid_paisa` by posting, over all his sale lines in one read. The same sums as
+/// [`paid_on_spot`] for the entries asked, which is what a page takes from it.
+fn paid_on_spot_all(
+    conn: &mandi_db::rusqlite::Connection,
+    account_id: i64,
+) -> Result<HashMap<i64, i64>, ReportsError> {
+    let mut statement = conn.prepare(
+        "SELECT journal_entry_id, COALESCE(SUM(paid_paisa), 0) FROM bikri_sales
+         WHERE buyer_account_id = ?1 AND chukta_person_key IS NULL
+         GROUP BY journal_entry_id",
+    )?;
+    let rows = statement
+        .query_map([account_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))?
+        .collect::<Result<HashMap<_, _>, _>>()?;
+    Ok(rows)
+}
+
 /// One page of the statement of a party, one row for each entry, with the totals over the whole
 /// period (PRD FR-19.11). Read only.
+///
+/// Only the rows of the page are read in full: the order, the balance after each row and the totals
+/// come from the sums of the entries (`skeleton`), and the lines, the items and the edit stamps are
+/// read for the entries of the page alone. Reading every line of a buyer with 97,000 lines for
+/// every page took 5 seconds (plan 80 gate). The rows are exactly the rows [`whole`] gives.
 ///
 /// # Errors
 /// As [`whole`].
 pub fn statement_rows(db: &Db, input: &StatementRowsInput) -> Result<StatementRows, ReportsError> {
+    db.read(|conn| {
+        in_snapshot(conn, |conn| {
+            let today = today_of(db.clock().now_utc())?;
+            // The skeleton does not depend on the page, so the next pages take it from memory.
+            // The days are the parsed ones, so a shortcut like "today" is the same key all day.
+            let what = format!(
+                "statement_rows|{}|{:?}|{:?}|{}|{}",
+                input.account_id,
+                input.from.as_deref().map(str::trim),
+                input.to.as_deref().map(str::trim),
+                input.include_history,
+                today.to_iso()
+            );
+            let skeleton =
+                crate::result_cache::remembered(conn, &what, || skeleton(conn, today, input))?;
+            let kind = skeleton.head.kind;
+            let count = i64::try_from(skeleton.shown.len()).unwrap_or(i64::MAX);
+            let limit = match input.limit as usize {
+                0 => PAGE,
+                n => n.min(PAGE),
+            };
+            // The rows of the page, in the order asked for: the indexes into the oldest-first list.
+            let order: Vec<usize> = if input.newest_first {
+                (0..skeleton.shown.len()).rev().collect()
+            } else {
+                (0..skeleton.shown.len()).collect()
+            };
+            let picked: Vec<&Light> = order
+                .into_iter()
+                .skip(input.offset as usize)
+                .take(limit)
+                .filter_map(|i| skeleton.shown.get(i))
+                .collect();
+            let rows = page_rows(conn, input.account_id, kind, &picked)?;
+            Ok(StatementRows {
+                head: skeleton.head.clone(),
+                from: skeleton.from.clone(),
+                to: skeleton.to.clone(),
+                brought_forward: skeleton.brought_forward,
+                rows,
+                count,
+                dr_total_paisa: skeleton.dr_total,
+                cr_total_paisa: skeleton.cr_total,
+                on_spot_total_paisa: skeleton.on_spot_total,
+                closing: skeleton.closing,
+            })
+        })
+    })
+}
+
+/// The rows of some entries of the skeleton, in the order given: the lines, the items and the edit
+/// stamps are read for these entries only.
+fn page_rows(
+    conn: &mandi_db::rusqlite::Connection,
+    account_id: i64,
+    kind: LedgerSide,
+    picked: &[&Light],
+) -> Result<Vec<StatementRowsRow>, ReportsError> {
+    let ids: Vec<i64> = picked.iter().map(|l| l.id).collect();
+    let mut entries: HashMap<i64, Entry> = HashMap::new();
+    for chunk in ids.chunks(super::common::IN_CHUNK) {
+        for entry in entries_of(lines::lines_of_entries(conn, account_id, chunk)?)? {
+            entries.insert(entry.id, entry);
+        }
+    }
+    let queries: Vec<DetailQuery> = picked
+        .iter()
+        .filter_map(|l| entries.get(&l.id))
+        .flat_map(|e| {
+            e.lines.iter().map(|(line_no, _, _)| DetailQuery {
+                entry_id: e.id,
+                line_no: *line_no,
+                bikri_base_entry: (e.source_type == "bikri").then(|| e.reverses.unwrap_or(e.id)),
+                voucher: e.voucher.clone(),
+            })
+        })
+        .collect();
+    let mut details = load(conn, &queries, kind == LedgerSide::Buyer)?;
+    let mut edits: HashMap<(String, i64), mandi_db::edit_stamps::LastEdit> = HashMap::new();
+    for (source, entity) in [("bikri", "bikri"), ("voucher", "voucher")] {
+        let mut source_ids: Vec<i64> = entries
+            .values()
+            .filter(|e| e.source_type == source)
+            .map(|e| e.source_id)
+            .collect();
+        source_ids.sort_unstable();
+        source_ids.dedup();
+        for (id, last) in mandi_db::edit_stamps::last_edits(conn, entity, &source_ids)? {
+            edits.insert((source.to_owned(), id), last);
+        }
+    }
+    let mut rows = Vec::with_capacity(picked.len());
+    for light in picked {
+        let entry = entries.get(&light.id).ok_or_else(|| {
+            ReportsError::Data(format!(
+                "an entry of account {account_id} has no line on his statement"
+            ))
+        })?;
+        let (dr, cr) = (paisa(entry.dr)?, paisa(entry.cr)?);
+        let mut parts: Vec<DetailPart> = Vec::new();
+        for (line_no, _, _) in &entry.lines {
+            for part in details.remove(&(entry.id, *line_no)).unwrap_or_default() {
+                // The money paid on the spot is `on_spot`, not a part of the row.
+                if !matches!(part, DetailPart::PaidOnSpot { .. }) {
+                    parts.push(part);
+                }
+            }
+        }
+        rows.push(row_of(
+            entry,
+            parts,
+            (dr, cr, light.on_spot),
+            Balance::from_totals(light.run.0, light.run.1)?,
+            edit_of(&edits, entry),
+            light.is_replaced,
+        )?);
+    }
+    Ok(rows)
+}
+
+/// [`statement_rows`] read the old way, every entry in full and then the page cut from it. The
+/// rows are the same; only the time differs. For the tests that hold the page read to this one.
+///
+/// # Errors
+/// As [`whole`].
+#[doc(hidden)]
+pub fn statement_rows_by_whole(
+    db: &Db,
+    input: &StatementRowsInput,
+) -> Result<StatementRows, ReportsError> {
     let mut whole = whole(db, input)?;
     let count = i64::try_from(whole.rows.len()).unwrap_or(i64::MAX);
     if input.newest_first {

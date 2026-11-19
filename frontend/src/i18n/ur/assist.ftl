@@ -324,3 +324,10 @@ attention-names-missing = <num>{ $count }</num> ریکارڈ میں دو نام�
 
 # review: pending
 attention-health-check = حساب کی جانچ میں مسئلہ ملا ہے، ترتیبات میں دیکھیں
+
+# A question of the last week whose two places of a figure differed (PRD FR-7.76 point 2): no answer was shown. The row is in the question log.
+# review: pending
+attention-records-differ = { $count ->
+    [one] پچھلے ہفتے <num>{ $count }</num> سوال کا ایک عدد ریکارڈ سے نہیں ملا۔ ترتیبات میں سوالات کا ریکارڈ دیکھیں
+   *[other] پچھلے ہفتے <num>{ $count }</num> سوالوں کے اعداد ریکارڈ سے نہیں ملے۔ ترتیبات میں سوالات کا ریکارڈ دیکھیں
+}

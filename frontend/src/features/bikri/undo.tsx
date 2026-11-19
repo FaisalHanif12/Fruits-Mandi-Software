@@ -13,6 +13,11 @@
 //    restored at start-up (`usePendingRestore`), so it works from any screen and replaces the
 //    empty entry that was opened after the save.
 //
+// The undo of a mixed save (carried lots and a new بکری) has no preview: the backend asks the cash
+// question inside `bikri_mixed_undo`, over everything it takes back together. A refusal for cash
+// carries the cash after (`cash_after_paisa`), and the same box opens with that figure; the yes sends
+// the undo again with the confirmation (PRD FR-6.7, FR-7.47).
+//
 // A refusal (the day was closed meanwhile, the بکری changed) is told in a message with the
 // backend's words. Nothing ever ends in silence.
 
@@ -21,7 +26,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
-import { uiErrorOf } from '../../shared/api';
+import { cashAfterOfRefusal, uiErrorOf } from '../../shared/api';
 import type { Paisa } from '../../shared/format';
 import { useLatest } from '../../shared/hooks';
 import { CashConfirmDialog, ErrorMessage, showToast } from '../../shared/ui';
@@ -86,6 +91,17 @@ async function snapshotOf(draft: BikriDraft) {
 /** A refusal as a message in words (the first problem of it), or a general one. */
 function failureToast(failure: unknown) {
   const first = uiErrorOf(failure).errors[0];
+  // A later sale or an edit since the save: the backend refuses the undo (ERR_VERSION_CHANGED, plan 80 R2-2,
+  // FR-7.47). "Open it again" would send him nowhere, so the toast says what happened and where to correct it.
+  if (first?.code === 'ERR_VERSION_CHANGED') {
+    showToast(
+      'error',
+      <Localized id="bikri-undo-changed">
+        <span />
+      </Localized>,
+    );
+    return;
+  }
   showToast(
     'error',
     first === undefined ? (
@@ -104,19 +120,19 @@ export function UndoHost() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const undo = useUndoBikri();
-  // The box that asks about cash below zero: which بکری, and the cash after the undo.
-  const [ask, setAsk] = useState<{ target: UndoTarget; cashAfter: Paisa } | null>(null);
+  // The box that asks about cash below zero: the cash after the undo, and what the yes does.
+  const [ask, setAsk] = useState<{ cashAfter: Paisa; confirm: () => void } | null>(null);
 
   /**
-   * Takes back a mixed save. The backend asks the cash question inside the undo, so a refusal for cash is
-   * told in words with the backend's own text (there is no preview of it to ask the box with).
+   * Takes back a mixed save. The backend asks the cash question inside the undo (there is no preview of it),
+   * and its refusal carries the cash after: the box opens with it, and the yes sends the undo again confirmed.
    */
-  const runMixed = async (saved: MixedSaleSaved) => {
+  const runMixed = async (saved: MixedSaleSaved, confirm: boolean) => {
     try {
       const result = await bikriMixedUndo({
         later_entry_ids: saved.carried.map((one) => one.entry_id),
         new_bikri_id: saved.new_bikri_id,
-        confirm_cash_below_zero: false,
+        confirm_cash_below_zero: confirm,
       });
       const snapshot = await snapshotOfMixedUndo(result.draft);
       if (snapshot === null) throw new Error('the draft cannot be shown');
@@ -133,6 +149,16 @@ export function UndoHost() {
       );
       void navigate({ to: '/bikri/book', search: {} });
     } catch (failure: unknown) {
+      const cashAfter = confirm ? null : cashAfterOfRefusal(failure);
+      if (cashAfter !== null) {
+        setAsk({
+          cashAfter,
+          confirm: () => {
+            void runMixed(saved, true);
+          },
+        });
+        return;
+      }
       failureToast(failure);
     }
   };
@@ -157,7 +183,12 @@ export function UndoHost() {
       if (uiErrorOf(failure).errors.some((item) => item.code === CASH_REFUSAL)) {
         const fresh = await bikriCancelPreview(target.id).catch(() => null);
         if (fresh?.cash.needs_confirm === true) {
-          setAsk({ target, cashAfter: fresh.cash.cash_after_paisa });
+          setAsk({
+            cashAfter: fresh.cash.cash_after_paisa,
+            confirm: () => {
+              void run(target, true);
+            },
+          });
           return;
         }
       }
@@ -167,14 +198,19 @@ export function UndoHost() {
 
   const start = async (request: UndoRequest) => {
     if ('mixed' in request) {
-      await runMixed(request.mixed);
+      await runMixed(request.mixed, false);
       return;
     }
     const target = request;
     try {
       const preview = await bikriCancelPreview(target.id);
       if (preview.cash.needs_confirm) {
-        setAsk({ target, cashAfter: preview.cash.cash_after_paisa });
+        setAsk({
+          cashAfter: preview.cash.cash_after_paisa,
+          confirm: () => {
+            void run(target, true);
+          },
+        });
         return;
       }
     } catch (failure: unknown) {
@@ -205,9 +241,9 @@ export function UndoHost() {
       }}
       cashAfter={ask.cashAfter}
       onConfirm={() => {
-        const target = ask.target;
+        const confirmed = ask.confirm;
         setAsk(null);
-        void run(target, true);
+        confirmed();
       }}
     />
   );

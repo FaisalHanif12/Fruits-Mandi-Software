@@ -224,6 +224,24 @@ pub fn count_counted_on(conn: &Connection, day: &str) -> rusqlite::Result<i64> {
     )
 }
 
+/// The questions that ended because the two places of a figure differed (outcome `records_differ`,
+/// PRD FR-7.76 point 2) and were asked on or after `since_day`: how many, and the newest day. Feeds
+/// the attention list (PRD FR-7.44, plan 80 R6-3). One indexed range read on `asked_day`.
+///
+/// # Errors
+/// A database error.
+pub fn records_differ_since(
+    conn: &Connection,
+    since_day: &str,
+) -> rusqlite::Result<(i64, Option<String>)> {
+    conn.query_row(
+        "SELECT COUNT(*), MAX(asked_day) FROM assistant_questions
+         WHERE asked_day >= ?1 AND outcome = 'records_differ'",
+        [since_day],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )
+}
+
 /// One page of the log, newest first (Code Standards B31).
 ///
 /// # Errors

@@ -424,6 +424,76 @@ describe.each(LANGUAGES)('پچھلی بکری (%s)', (language) => {
       expect(lastWindow()).toMatchObject({ from: '19-09-2026', to: '25-09-2026' });
     });
 
+    // The key chips on the two buttons are the registry shortcuts (SHORTCUTS.pastEarlier and pastLater, Code
+    // Standards F27 and F29): they answer wherever the focus is on the screen, as on the other window pages,
+    // not only on a day line (plan 80 R7-2).
+    it('Page Up and Page Down on the buttons of the bar move the window', async () => {
+      const { user } = await open();
+      await windowShown();
+      button('bikri-past-back').focus();
+      await user.keyboard('{PageUp}');
+      await waitFor(() => {
+        expect(lastWindow()).toMatchObject({ from: '26-09-2026', to: '02-10-2026' });
+      });
+      // The window has no بکری now, so the bar is the only thing left to hold the focus.
+      button('bikri-past-back').focus();
+      await user.keyboard('{PageDown}');
+      await waitFor(() => {
+        expect(lastWindow()).toMatchObject({ from: '03-10-2026', to: '09-10-2026' });
+      });
+    });
+
+    it('Page Up and Page Down in the search box of the filters, and with nothing focused, move the window', async () => {
+      const { user } = await open();
+      await windowShown();
+      const search = screen.getByPlaceholderText(
+        message(language, 'bikri-list-search-placeholder'),
+      );
+      search.focus();
+      await user.keyboard('{PageUp}');
+      await waitFor(() => {
+        expect(lastWindow()).toMatchObject({ from: '26-09-2026', to: '02-10-2026' });
+      });
+      await waitFor(() => {
+        expect(button('bikri-past-forward')).toBeEnabled();
+      });
+      // The key went to the window once: one step, not two.
+      const calls = windowCalls().length;
+      await user.keyboard('{PageDown}');
+      await waitFor(() => {
+        expect(lastWindow()).toMatchObject({ from: '03-10-2026', to: '09-10-2026' });
+      });
+      expect(windowCalls().length).toBe(calls + 1);
+      // Nothing has focus: the key still moves the window.
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      expect(document.activeElement === document.body).toBe(true);
+      await user.keyboard('{PageUp}');
+      await waitFor(() => {
+        expect(lastWindow()).toMatchObject({ from: '26-09-2026', to: '02-10-2026' });
+      });
+    });
+
+    it('Page Up on a day line moves the window once, and a Page key in today’s list turns that list, not the window', async () => {
+      const { user } = await open();
+      await windowShown();
+      await waitFor(() => {
+        expect(document.querySelector('.ag-row[row-id="41"]')).not.toBeNull();
+      });
+      // Inside a list the key is the list's own (its page), as on the other screens with a list and a window.
+      const cell = present(document.querySelector<HTMLElement>('.ag-row[row-id="41"] .ag-cell'));
+      await user.click(cell);
+      const before = windowCalls().length;
+      await user.keyboard('{PageUp}{PageDown}');
+      expect(windowCalls().length).toBe(before);
+      // On a day line the key moves the window by one step: the screen handles it in one place only.
+      present(dayLine('2026-10-09')).focus();
+      await user.keyboard('{PageUp}');
+      await waitFor(() => {
+        expect(lastWindow()).toMatchObject({ from: '26-09-2026', to: '02-10-2026' });
+      });
+      expect(windowCalls().length).toBe(before + 1);
+    });
+
     it('with focus on the bar, the arrow that points back in reading goes back, the other comes nearer', async () => {
       const { user } = await open();
       await windowShown();

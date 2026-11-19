@@ -24,10 +24,13 @@ pub(super) use dead::run as run_r38;
 pub(super) use expenses::run as run_r29;
 pub(super) use fruit::run as run_r37;
 pub(super) use gardens::run as run_r36;
-pub(super) use income::{page_query as r28_page_query, run as run_r28};
+pub(super) use income::{
+    grouped_query as r28_grouped_query, page_query as r28_page_query, run as run_r28,
+};
 pub(super) use lent::run as run_r32;
 pub(super) use profit::run as run_r30;
 pub(super) use sheet::run as run_r35;
+pub(super) use sheet::activity::day_lines_sql as r35_day_lines_sql;
 pub use sheet::{
     AdhariSheet, AdhariSheetInput, AdhariSheetPrintInput, AdhariSheetRow, AdhariSheetTotals,
     CollectionLine, CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput,

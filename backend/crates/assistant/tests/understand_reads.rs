@@ -544,11 +544,11 @@ const NEW_INPUTS: &[(&str, &str)] = &[
     ("kaunse din band hain", "app_state{what:days}"),
     ("mahina band hua", "app_state{what:days}"),
     ("kitne munshi hain", "find{role:staff,text:munshi}"),
-    // Who changed what: the newest rows of the audit log, or those of one party or one بکری.
-    ("kisne kya badla", "app_state{what:audit}"),
-    ("aakhri changes kya hue", "app_state{what:audit}"),
-    ("recent changes", "app_state{what:audit}"),
-    ("rahim ka khata kisne badla", "find{role:seller,text:rahim} | app_state{party:a19,what:audit}"),
+    // Who changed what: no read is planned (the audit log never goes to the model, plan 80 R6-2).
+    ("kisne kya badla", "NONE"),
+    ("aakhri changes kya hue", "NONE"),
+    ("recent changes", "NONE"),
+    ("rahim ka khata kisne badla", "NONE"),
     ("kisne badla kaise dekhun", "NONE"),
     ("how many staff do we have", "find{role:staff,text:all}"),
     ("kitne expense heads hain", "find{role:expense_head,text:all}"),
@@ -830,17 +830,30 @@ fn what_is_not_sure_plans_no_reads() {
     }
 }
 
-/// The audit of one بکری is read with its number; the real tool needs the بکری to exist.
+/// No audit read is planned for any wording of "who changed what", with a بکری number or without
+/// (plan 80 R6-2: the audit log never goes to the model); nothing is read, so the question is the
+/// model's, which answers from the guide topic `audit`.
 #[test]
-fn the_audit_of_one_bikri_is_planned_with_its_number_and_the_tool_accepts_it() {
+fn no_audit_read_is_planned_for_who_changed_what() {
     let w = worked::worked_day();
     worked::events_1_to_5(&w);
     let today = on(2026, 10, 10);
-    let u = understand(&reader(&w, today), "bikri 1 mein kisne kya badla");
-    let reads = plan_reads(&u).expect("reads");
-    assert_eq!(render_all(&reads), "app_state{bikri:1,what:audit}");
-    let refused = run_plan(&w, today, "bikri 1 mein kisne kya badla", &reads);
-    assert!(refused.is_empty(), "refused: {refused:?}");
+    for question in [
+        "bikri 1 mein kisne kya badla",
+        "kisne kya badla",
+        "rahim ka khata kisne badla",
+        "recent changes",
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let reads = plan_reads(&u);
+        assert!(
+            reads
+                .as_ref()
+                .is_none_or(|r| !render_all(r).contains("audit")),
+            "{question:?}: {:?}",
+            reads.as_ref().map(|r| render_all(r))
+        );
+    }
 }
 
 // ---- vegetables like fruit, and the group words (Umar: the shop sells vegetables as well as fruit) ----

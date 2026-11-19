@@ -628,7 +628,14 @@ fn tiles_carry_both_places_where_there_are_two() {
         }
     }
     assert_eq!(j["stock"]["qty"]["n"], 0);
-    assert_eq!(j["last_backup"]["cloud_on"], false);
+    // PRD 9.1 v1.41 and v1.44 (plan 80 R6-x): there is no backup tile; آج کی نقدی and the others'
+    // dues are tiles. On the worked day شاہد (چکتا) is the one buyer who paid on the spot (12,800),
+    // and nothing is lent to anyone.
+    assert!(j.get("last_backup").is_none(), "the backup tile is retired");
+    assert_eq!(rs(&j["today_cash_sales"]["amount"]), 12_800);
+    assert_eq!(j["today_cash_sales"]["count"]["n"], 1);
+    assert_eq!(rs(&j["others_dues"]["amount"]), 0);
+    assert_eq!(j["others_dues"]["count"]["n"], 0);
 }
 
 // ---- calculate --------------------------------------------------------------------------------

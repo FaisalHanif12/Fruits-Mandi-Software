@@ -9,9 +9,10 @@
 //! - [`Db::read`] uses the second connection, so reads never wait for a save.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use rusqlite::{Connection, OpenFlags, Transaction, TransactionBehavior};
 
@@ -23,8 +24,13 @@ use crate::migrate::{self, MigrationOutcome};
 
 /// How long SQLite waits for another process that holds the file (B13).
 pub const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
-/// How long a save waits for the start-up check before it gives up with `ERR_DB_BUSY`.
+/// How long a save waits for a start-up check to START before it gives up with `ERR_DB_BUSY`. Once
+/// the check is running a save waits for its end, however long it takes (NFR-REL-7).
 pub const CHECK_WAIT: Duration = Duration::from_secs(30);
+
+/// How often a save that waits for the running check looks at the state again, in case a wake-up
+/// was missed.
+const RUNNING_RECHECK: Duration = Duration::from_millis(250);
 
 /// Where the start-up check of the data file stands (NFR-REL-7).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,7 +56,7 @@ pub struct DbOptions {
     pub key_store: Arc<dyn KeyStore>,
     /// SQLite busy timeout.
     pub busy_timeout: Duration,
-    /// How long a save waits for the start-up check.
+    /// How long a save waits for a start-up check to start (once it runs, a save waits for its end).
     pub check_wait: Duration,
 }
 
@@ -71,6 +77,50 @@ impl DbOptions {
 struct Health {
     state: Mutex<(DataState, Option<String>)>,
     changed: Condvar,
+    /// True while a start-up check is running (NFR-REL-7). A save that arrives while this is true
+    /// waits for the check to end, however long it takes: on the 10-year volume the check takes
+    /// 16 to 23 seconds, and a save is held, never refused for time.
+    running: AtomicBool,
+}
+
+impl Health {
+    fn new(state: DataState) -> Self {
+        Self {
+            state: Mutex::new((state, None)),
+            changed: Condvar::new(),
+            running: AtomicBool::new(false),
+        }
+    }
+}
+
+/// Marks the check as running for as long as it lives. If the check thread stops without an answer
+/// (a panic), the data is not known to be sound, so the state becomes `Failed` and every waiting
+/// save is let go with `ERR_DATA_CHECK_FAILED` instead of waiting for ever.
+struct CheckRun<'a> {
+    health: &'a Health,
+}
+
+impl<'a> CheckRun<'a> {
+    fn start(health: &'a Health) -> Self {
+        health.running.store(true, Ordering::SeqCst);
+        health.changed.notify_all();
+        Self { health }
+    }
+}
+
+impl Drop for CheckRun<'_> {
+    fn drop(&mut self) {
+        let mut state = lock(&self.health.state);
+        if state.0 == DataState::Checking {
+            *state = (
+                DataState::Failed,
+                Some("the start-up data check stopped without an answer".to_owned()),
+            );
+        }
+        self.health.running.store(false, Ordering::SeqCst);
+        drop(state);
+        self.health.changed.notify_all();
+    }
 }
 
 /// The key store of a snapshot ([`Db::open_snapshot`]): a snapshot writes nothing, so it has no
@@ -159,6 +209,10 @@ fn open_connection(
     conn.pragma_update(None, "synchronous", "FULL")?;
     if read_only {
         conn.pragma_update(None, "query_only", "ON")?;
+        // TEMP PROFILE: a cache size for the read connection, to see what it buys.
+        if let Some(kib) = std::env::var("MANDI_READ_CACHE_KIB").ok().and_then(|v| v.parse::<i64>().ok()) {
+            conn.pragma_update(None, "cache_size", -kib)?;
+        }
     }
     Ok(conn)
 }
@@ -182,10 +236,7 @@ impl Db {
             path: path.to_owned(),
             writer: Mutex::new(writer),
             reader: Mutex::new(reader),
-            health: Health {
-                state: Mutex::new((DataState::Checking, None)),
-                changed: Condvar::new(),
-            },
+            health: Health::new(DataState::Checking),
             disk_probe: options.disk_probe,
             auditor: Auditor::new(options.key_store, Arc::clone(&options.clock)),
             clock: options.clock,
@@ -223,10 +274,7 @@ impl Db {
             path: path.to_owned(),
             writer: Mutex::new(writer),
             reader: Mutex::new(reader),
-            health: Health {
-                state: Mutex::new((DataState::Ok, None)),
-                changed: Condvar::new(),
-            },
+            health: Health::new(DataState::Ok),
             disk_probe: options.disk_probe,
             auditor: Auditor::new(options.key_store, Arc::clone(&options.clock)),
             clock: options.clock,
@@ -279,10 +327,7 @@ impl Db {
             path: self.path.clone(),
             writer: Mutex::new(writer),
             reader: Mutex::new(reader),
-            health: Health {
-                state: Mutex::new((DataState::Ok, None)),
-                changed: Condvar::new(),
-            },
+            health: Health::new(DataState::Ok),
             disk_probe: Arc::clone(&self.disk_probe),
             auditor: Auditor::new(Arc::new(NoKeyStore), Arc::clone(&self.clock)),
             clock: Arc::clone(&self.clock),
@@ -340,7 +385,15 @@ impl Db {
     /// Runs `PRAGMA quick_check` on its own connection (reads and the check do not block each
     /// other), sets the state and returns it (NFR-REL-7).
     pub fn run_quick_check(&self) -> DataState {
-        match self.quick_check() {
+        self.run_check_with(|| self.quick_check())
+    }
+
+    /// [`Db::run_quick_check`] with the check itself given, so a test can make it slow, fail or
+    /// stop. Saves wait for it exactly as for the real check.
+    #[doc(hidden)]
+    pub fn run_check_with(&self, check: impl FnOnce() -> Result<(), String>) -> DataState {
+        let _run = CheckRun::start(&self.health);
+        match check() {
             Ok(()) => {
                 self.set_state(DataState::Ok, None);
                 DataState::Ok
@@ -387,22 +440,44 @@ impl Db {
         }
     }
 
-    /// Waits for the start-up check, then says whether saving is allowed.
+    /// Waits for the start-up check, then says whether saving is allowed (NFR-REL-7: saving is
+    /// held until the check passes).
+    ///
+    /// A save that arrives while the check is RUNNING waits until it ends, however long that takes:
+    /// it is never refused for time (plan 80, the 10-year volume takes 16 to 23 seconds). If no
+    /// check has been started at all, the save waits at most `check_wait` for one to start and then
+    /// gives up with `ERR_DB_BUSY`, because nothing would ever let it go (a data file opened and
+    /// never checked).
     fn wait_until_writable(&self) -> Result<(), DbError> {
-        let guard = lock(&self.health.state);
-        let (guard, _timeout) = self
-            .health
-            .changed
-            .wait_timeout_while(guard, self.check_wait, |(state, _)| {
-                *state == DataState::Checking
-            })
-            .unwrap_or_else(PoisonError::into_inner);
-        match guard.0 {
-            DataState::Ok => Ok(()),
-            DataState::Failed => Err(DbError::DataCheckFailed(
-                guard.1.clone().unwrap_or_default(),
-            )),
-            DataState::Checking => Err(DbError::Busy),
+        let start_by = Instant::now() + self.check_wait;
+        let mut guard = lock(&self.health.state);
+        loop {
+            match guard.0 {
+                DataState::Ok => return Ok(()),
+                DataState::Failed => {
+                    return Err(DbError::DataCheckFailed(
+                        guard.1.clone().unwrap_or_default(),
+                    ));
+                }
+                DataState::Checking => {}
+            }
+            let slice = if self.health.running.load(Ordering::SeqCst) {
+                // The check is running: its end wakes this wait. The slice only guards against a
+                // missed wake-up.
+                RUNNING_RECHECK
+            } else {
+                let now = Instant::now();
+                if now >= start_by {
+                    return Err(DbError::Busy);
+                }
+                start_by.saturating_duration_since(now).min(RUNNING_RECHECK)
+            };
+            guard = self
+                .health
+                .changed
+                .wait_timeout(guard, slice)
+                .unwrap_or_else(PoisonError::into_inner)
+                .0;
         }
     }
 

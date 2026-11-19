@@ -252,6 +252,17 @@ settings-check-audit-bad = The audit entry { $entry } does not match its seal. S
 # review: pending
 settings-check-audit-bad-unknown = An audit entry does not match its seal. Someone may have changed the records outside the app. Contact support.
 
+# The money tables compared with the journal (NFR-SEC-6 v1.21).
+# review: pending
+settings-check-tables-ok = The sale lines, lot totals, partner shares, stock moves and analytics records match the books.
+
+# $entry is the first difference as the backend wrote it: a table name and a record, not translated.
+# review: pending
+settings-check-tables-bad = { $entry }: a sale line, lot total, partner share, stock move or analytics record differs from the books. Someone may have changed the records outside the app. Contact support.
+
+# review: pending
+settings-check-tables-bad-unknown = A sale line, lot total, partner share, stock move or analytics record differs from the books. Someone may have changed the records outside the app. Contact support.
+
 # review: pending
 settings-check-data = Data file
 

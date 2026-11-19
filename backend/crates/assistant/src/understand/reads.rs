@@ -902,20 +902,12 @@ fn party_card(key: &str) -> PlannedRead {
 }
 
 /// An `app_state` read (plan 55 §11.1): the rule that wins for a party or an item, the attention
-/// list, or the closed days. Every field of the tool's input is written.
+/// list, or the closed days. Every field of the tool's input is written; `bikri` is always null (the
+/// audit read it served is gone, plan 80 R6-2).
 fn app_state(what: &str, party: Option<String>, item: Option<String>) -> PlannedRead {
-    app_state_of(what, party, item, None)
-}
-
-fn app_state_of(
-    what: &str,
-    party: Option<String>,
-    item: Option<String>,
-    bikri: Option<i64>,
-) -> PlannedRead {
     PlannedRead {
         tool: "app_state",
-        input: json!({"what": what, "party": party, "item": item, "bikri": bikri}),
+        input: json!({"what": what, "party": party, "item": item, "bikri": null}),
     }
 }
 
@@ -1599,8 +1591,8 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
         return None;
     }
     // A بکری number named ("kal bikri number 5 ka commission kitna tha"): no read of a figure has a filter
-    // for it, so the plain figure would be the whole shop's for the day. Only its own audit is read here
-    // (`Ask`); anything else is the model's, which reads R1 for that بکری (D7, plan 59 R3).
+    // for it, so the plain figure would be the whole shop's for the day. The model
+    // reads R1 for that بکری (D7, plan 59 R3).
     // With or without an item, or with a group ("sabzi ki bori ki bikri"): no read has a packing filter.
     if u.packing_filter {
         return None;
@@ -3014,8 +3006,8 @@ fn figure(u: &Understanding, period: Option<&PeriodRef>, plan: &mut Plan) -> Opt
     // One figure, or up to three flows of the same record or of the shop ("kal ki bikri aur
     // commission"): each is read and each is one line of the answer.
     let kinds = u.figures.value.as_slice();
-    // A question about the app's own state names its read ("bikri 1 mein kisne kya badla": the
-    // audit of بکری 1); the figure words beside it only say what it is about.
+    // A question about the app's own state names its read ("aaj ke kaam": the attention list); the
+    // figure words beside it only say what it is about.
     if let Some(ask) = kinds.iter().find(|k| matches!(k, FigureKind::Ask(_))) {
         return figure_of_kind(u, *ask, period, plan);
     }
@@ -3317,27 +3309,10 @@ fn ask_figure(
                     .or_else(|| group.map(str::to_owned)),
             ));
         }
-        // Who changed what: the newest rows of the audit log, or those of one party or one بکری.
-        "audit" => {
-            let party = u.parties.iter().find_map(|p| match &p.outcome {
-                Outcome::Found(hit) => role_word(hit.role)
-                    .filter(|_| hit.role != PartyRole::Partner)
-                    .map(|word| (p.text.as_str(), word, hit.key.clone())),
-                _ => None,
-            });
-            if u.parties.len() > usize::from(party.is_some()) || !u.items.is_empty() {
-                return None;
-            }
-            if let Some((text, word, _)) = &party {
-                plan.find(text, word);
-            }
-            plan.read(app_state_of(
-                "audit",
-                party.map(|(_, _, key)| key),
-                None,
-                u.bikri_number,
-            ));
-        }
+        // Who changed what: no read. The audit log never goes to the model (PRD FR-7.83, Code
+        // Standards Q7; plan 80 R6-2), so there is no instant answer and no read to plan. The model
+        // answers from the guide topic `audit` (`app_help`), which opens the log's own screen.
+        "audit" => return None,
         "staff_munshi" => plan.find("munshi", "staff"),
         "staff_collector" => plan.find("collector", "staff"),
         "staff_labour" => plan.find("labour", "staff"),

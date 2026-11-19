@@ -75,6 +75,10 @@ export interface ListCellControl<T> {
   readonly onSpace: (row: T) => void;
 }
 
+/** The class of the box of every list grid, and the selector that finds it (for `useShortcut`'s `unlessFocusIn`). */
+export const LIST_GRID_CLASS = 'list-grid';
+export const LIST_GRID_SELECTOR = `.${LIST_GRID_CLASS}`;
+
 /** The mark on the element of a cell control, so a click or a key on it is not the row's. */
 const CELL_CONTROL_MARK = 'data-cell-control';
 
@@ -897,7 +901,7 @@ function GridInner<T>({
   return (
     <div
       ref={rootRef}
-      className={`entry-grid list-grid ag-theme-quartz ${heightMode === 'fill' ? 'list-grid-fill' : ''} ${growing ? 'list-grid-wrap' : ''}`}
+      className={`entry-grid ${LIST_GRID_CLASS} ag-theme-quartz${heightMode === 'fill' ? 'list-grid-fill' : ''} ${growing ? 'list-grid-wrap' : ''}`}
       role="group"
       aria-label={l10n.getString(labelId, labelVars)}
       dir={direction}

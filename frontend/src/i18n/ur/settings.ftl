@@ -251,6 +251,17 @@ settings-check-audit-bad = آڈٹ کا اندراج { $entry } اپنی مہر �
 # review: pending
 settings-check-audit-bad-unknown = آڈٹ کا ایک اندراج اپنی مہر سے نہیں ملتا۔ ہو سکتا ہے کسی نے ایپ کے باہر ریکارڈ بدلا ہو۔ مدد کے لیے رابطہ کریں۔
 
+# The money tables compared with the journal (NFR-SEC-6 v1.21).
+# review: pending
+settings-check-tables-ok = { -bikri }، { -lot }، { -shirakat-dar } کے { -hissa }، { -stock } اور { -tajziat } کے ریکارڈ حساب سے ملتے ہیں۔
+
+# $entry is the first difference as the backend wrote it: a table name and a record, not translated.
+# review: pending
+settings-check-tables-bad = { $entry }: { -bikri } کی لائن، { -lot } کا ٹوٹل، { -shirakat-dar } کا { -hissa }، { -stock } کی حرکت یا { -tajziat } کا ریکارڈ حساب سے نہیں ملتا۔ ہو سکتا ہے کسی نے ایپ کے باہر ریکارڈ بدلا ہو۔ مدد کے لیے رابطہ کریں۔
+
+# review: pending
+settings-check-tables-bad-unknown = { -bikri } کی لائن، { -lot } کا ٹوٹل، { -shirakat-dar } کا { -hissa }، { -stock } کی حرکت یا { -tajziat } کا ریکارڈ حساب سے نہیں ملتا۔ ہو سکتا ہے کسی نے ایپ کے باہر ریکارڈ بدلا ہو۔ مدد کے لیے رابطہ کریں۔
+
 # review: pending
 settings-check-data = ڈیٹا فائل
 

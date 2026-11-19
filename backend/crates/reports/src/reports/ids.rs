@@ -298,7 +298,13 @@ pub(crate) const FILTER_BY_MONTH: &str = "report-filter-by-month";
 // Labels of summary and total lines.
 pub(crate) const TOTAL: &str = "report-total";
 pub(crate) const OPENING_BALANCE: &str = "report-opening-balance";
+/// The balance of a party at the start of the period of R13 and R14: پچھلا بقایا / Previous Balance.
+/// ابتدائی بقایا (`OPENING_BALANCE`) is the account's own opening row (PRD FR-19.16, glossary v1.43;
+/// plan 80 R5-4).
+pub(crate) const PERIOD_START_BALANCE: &str = "report-period-start-balance";
 pub(crate) const CLOSING_BALANCE: &str = "report-closing-balance";
+/// The closing balances of two linked accounts added together (PRD E10), on R13 and R14.
+pub(crate) const LINKED_COMBINED: &str = "report-linked-combined";
 pub(crate) const DIFFERENCE: &str = "report-difference";
 pub(crate) const STATEMENT_BOUGHT: &str = "report-statement-bought";
 pub(crate) const STATEMENT_SOLD: &str = "report-statement-sold";

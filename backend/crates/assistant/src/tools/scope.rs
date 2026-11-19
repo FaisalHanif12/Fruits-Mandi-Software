@@ -143,15 +143,24 @@ const MEASURE_PARTS: [(&str, &[&str]); 5] = [
             "store_rent",
         ],
     ),
+    // The total dues hold four parts (PRD 9.1 v1.44): the money lent is the fourth, and the others'
+    // dues (garden owners and the like) are a part of the money lent. Adding any of them to the
+    // total counts it twice.
     (
         "total_dues.amount",
         &[
             "buyers_dues.amount",
             "sellers_dues.amount",
             "dead_amount.amount",
+            "money_lent_open.amount",
+            "money_lent_open.overdue",
+            "others_dues.amount",
         ],
     ),
-    ("money_lent_open.amount", &["money_lent_open.overdue"]),
+    (
+        "money_lent_open.amount",
+        &["money_lent_open.overdue", "others_dues.amount"],
+    ),
 ];
 
 fn measure_inside(part: &str, whole: &str) -> bool {
@@ -810,6 +819,20 @@ mod tests {
             input("*", "r1", "buyers_dues.amount"),
         ]);
         assert!(tiles.whole_and_part);
+        // The money lent is the fourth part of the total dues (PRD 9.1 v1.44), and the others' dues
+        // are a part of the money lent: no sum of them with the total, or with each other.
+        for part in ["money_lent_open.amount", "others_dues.amount"] {
+            let with_total = mix_of(&[
+                input("*", "r1", "total_dues.amount"),
+                input("*", "r1", part),
+            ]);
+            assert!(with_total.whole_and_part, "{part} is a part of total_dues");
+        }
+        let lent = mix_of(&[
+            input("*", "r1", "money_lent_open.amount"),
+            input("*", "r1", "others_dues.amount"),
+        ]);
+        assert!(lent.whole_and_part);
         // Two columns that are not made of each other are two figures.
         let apart = mix_of(&[
             input("*", "r1", "seller_comm"),

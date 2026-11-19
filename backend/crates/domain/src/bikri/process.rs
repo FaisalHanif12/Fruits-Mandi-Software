@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
     ArrivalLotPreview, FreightPaidBy, LinePreview, LotCharge, LotPreview, OwnLotPreview,
-    PreparedLot, PreparedSale, RateHint, RateHintSource, SummaryTotals,
+    PreparedLot, PreparedSale, SummaryTotals,
 };
 use mandi_core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_core::ids::AccountId;
@@ -33,8 +33,6 @@ use crate::ventures::credit_parts;
 pub(super) struct Run {
     /// What each buyer would owe, for the credit limit.
     pub owed: HashMap<i64, Paisa>,
-    /// The last seller rate typed for each (item, packing), for the rate hint.
-    pub last_rates: HashMap<(i64, i64), Paisa>,
     /// What is left of each purchase of own goods, shared by the lots (PRD FR-12.26, C21).
     pub own: OwnRun,
     /// What is left of each garden arrival, shared by the lots linked to it (PRD FR-12.40).
@@ -80,7 +78,6 @@ pub(super) struct LotOutcome {
 struct LotCtx<'a> {
     env: Option<&'a Env<'a>>,
     lookups: &'a Lookups,
-    date_iso: &'a str,
     index: usize,
     prefix: String,
     lot: &'a PreparedLot,
@@ -97,25 +94,6 @@ struct LotCtx<'a> {
 fn too_large(issues: &mut Issues, field: &str) {
     let max = MAX_LINE_PAISA.checked_div(100).unwrap_or(i64::MAX);
     issues.error_with(ErrorCode::ErrAmountTooLarge, field, &[("max", max)]);
-}
-
-/// The hint under an empty rate cell (PRD FR-7.53): the nearest earlier line of this بکری with
-/// the same item and packing, else the saved rate of today or the last day it sold.
-fn rate_hint(
-    run: &Run,
-    lookups: &Lookups,
-    key: Option<(i64, i64)>,
-    date_iso: &str,
-) -> Option<RateHint> {
-    let key = key?;
-    if let Some(rate) = run.last_rates.get(&key) {
-        return Some(RateHint {
-            rate_paisa: *rate,
-            source: RateHintSource::ThisBikri,
-            date: date_iso.to_owned(),
-        });
-    }
-    lookups.saved_hints.get(&key).cloned()
 }
 
 /// The facts of a lot that are needed to work out its rows.
@@ -539,7 +517,6 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             &[("sold", elsewhere)],
         );
     }
-    let hint_key = lot.item_id.zip(lot.packing_id);
     // The per-lot seller commission is charged once per lot (PRD FR-11.9). If an unchanged line
     // of an edit still carries it, nothing else may take it.
     let mut pending_move: Option<StoredCharge> = match (ctx.env, ctx.stored_lot) {
@@ -603,7 +580,6 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             line_no: i64::try_from(j).unwrap_or(i64::MAX).saturating_add(1),
             is_blank: row.is_blank,
             remaining_qty: remaining,
-            rate_hint: rate_hint(run, ctx.lookups, hint_key, ctx.date_iso),
             calc: None,
             warnings: Vec::new(),
         };
@@ -692,10 +668,6 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             rows.sold = rows.sold.saturating_add(q.get());
         }
         rows.any_refused |= refused;
-        // The rate hint is what was typed, also on a refused row: it is a hint, not money.
-        if let (Some(rate), Some(key)) = (row.seller_rate, hint_key) {
-            run.last_rates.insert(key, rate);
-        }
         rows.lines.push(preview);
     }
     Ok(rows)
@@ -1045,7 +1017,6 @@ pub(super) fn process_lot(
     let ctx = LotCtx {
         env,
         lookups,
-        date_iso,
         index,
         prefix,
         lot,

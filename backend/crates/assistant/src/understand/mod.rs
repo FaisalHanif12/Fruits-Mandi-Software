@@ -66,6 +66,47 @@ pub use figure::{FigureAnswer, Sentence, compose_figure};
 pub use plan::{PlanFilters, ReportPlan};
 pub use reads::{PlannedRead, plan_pre_reads, plan_reads};
 
+/// The days the typed question asks, when it names exactly one period that the app reads with
+/// certainty and that is not in the future: its first and last day, `YYYY-MM-DD`. Read from the words
+/// alone, whether or not the question was understood as a whole (plan 80, T5-2): the scope guard
+/// compares them with the dates of every view and report an answer cites.
+///
+/// Example (today 10-10-26): "aaj ka commission" is ("2026-10-10", "2026-10-10"); "aaj aur kal ka
+/// commission" (two periods) and "akram ka bakaya" (none) are `None`.
+#[must_use]
+pub fn asked_days(question: &str, today: BusinessDate) -> Option<(String, String)> {
+    let today = NaiveDate::parse_from_str(&today.to_iso(), "%Y-%m-%d").ok()?;
+    let scan = scan::Scan::new(question, today);
+    let periods = when::periods(&scan, today);
+    match periods.as_slice() {
+        [p] if !p.future && matches!(p.confidence, Confidence::High) => {
+            let from = p.from?;
+            Some((from.format("%Y-%m-%d").to_string(), p.to_iso()))
+        }
+        _ => None,
+    }
+}
+
+/// True for a word the app's own questions and answers use as an ordinary word (a pronoun, a
+/// connective, a common verb): the check of the books' names leaves such a one-word name out
+/// (plan 80, T5-8).
+#[must_use]
+pub fn is_common_word(word: &str) -> bool {
+    function_words::all().contains(&lexicon::key(word))
+}
+
+/// True when the typed question asks the shop's total dues ("kul ugrahi", "total dues", "کل اگراہی"),
+/// read from its words alone (no books, no names): the figure of the tile `total_dues`, which holds
+/// the buyers' dues, what sellers owe, the dead amount and the open money lent (PRD 9.1 v1.44, FR-7.76).
+/// Not when the dues are asked by collector or city. Used by the dues guard (plan 80 R6-x), which
+/// works for every question, whether or not the app understood it first.
+///
+/// Example: "kul ugrahi kitni hai" is true; "collector wise ugrahi" is false.
+#[must_use]
+pub fn asks_total_dues(question: &str) -> bool {
+    what::total_dues_asked(&scan::Scan::new(question, chrono::NaiveDate::default()))
+}
+
 /// How sure the app is of one part of the understanding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Confidence {

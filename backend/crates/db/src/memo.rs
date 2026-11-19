@@ -108,8 +108,34 @@ fn version(conn: &Connection) -> rusqlite::Result<i64> {
     })
 }
 
+/// Runs `f` in one read transaction when the connection is in autocommit, so the version, the
+/// answer and the check after it all see the same moment (the same as `mandi_reports::result_cache`
+/// does for its fingerprint). In a transaction already, `f` just runs.
+fn in_one_view<T>(conn: &Connection, f: impl FnOnce() -> rusqlite::Result<T>) -> rusqlite::Result<T> {
+    if conn.is_autocommit() {
+        let tx = conn.unchecked_transaction()?;
+        let result = f();
+        // Nothing was written, so ending the transaction is a rollback.
+        drop(tx);
+        result
+    } else {
+        f()
+    }
+}
+
+/// True while an entry waits as a draft. Posting a draft writes no journal line, so the version
+/// below would not move: nothing is kept while a draft exists (it never does outside a save, B16).
+fn draft_exists(conn: &Connection) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM journal_entries WHERE status <> 'posted')",
+        [],
+        |r| r.get(0),
+    )
+}
+
 /// The answer for `what` on this data file if the journal has not grown since it was made;
-/// otherwise `compute()` is run and its answer kept.
+/// otherwise `compute()` is run and its answer kept. The version, the answer and the check after it
+/// are one read transaction, and nothing is kept while a draft entry exists.
 ///
 /// # Errors
 /// Any SQLite error from reading the version or from `compute`.
@@ -127,28 +153,38 @@ pub fn sums(
         return compute();
     }
     let key: Key = (path.to_owned(), what.to_owned());
-    let now = version(conn)?;
-    if let Some((then, answer)) = store().answers.get(&key)
-        && *then == now
-    {
-        return Ok(*answer);
-    }
-    let answer = compute()?;
-    let mut store = store();
-    if !store.answers.contains_key(&key) {
-        if store.order.len() >= CAPACITY && !store.order.is_empty() {
-            let oldest = store.order.remove(0);
-            store.answers.remove(&oldest);
+    in_one_view(conn, || {
+        if draft_exists(conn)? {
+            return compute();
         }
-        store.order.push(key.clone());
-    }
-    store.answers.insert(key, (now, answer));
-    Ok(answer)
+        let now = version(conn)?;
+        if let Some((then, answer)) = store().answers.get(&key)
+            && *then == now
+        {
+            return Ok(*answer);
+        }
+        let answer = compute()?;
+        // A save that commits while the answer is worked out is not inside this view, but the check
+        // is kept: an answer is stored only for the version it was made at.
+        if version(conn)? != now {
+            return Ok(answer);
+        }
+        let mut store = store();
+        if !store.answers.contains_key(&key) {
+            if store.order.len() >= CAPACITY && !store.order.is_empty() {
+                let oldest = store.order.remove(0);
+                store.answers.remove(&oldest);
+            }
+            store.order.push(key.clone());
+        }
+        store.answers.insert(key.clone(), (now, answer));
+        Ok(answer)
+    })
 }
 
 /// As [`sums`], for an answer that has a row for each account (see [`AccountRows`]). The same
-/// rule keeps it correct: it is used only while no journal line has been written since, and only
-/// on the read connection. The rows are shared, not copied.
+/// rule keeps it correct: it is used only while no journal line has been written since, only on the
+/// read connection and never while a draft entry exists. The rows are shared, not copied.
 ///
 /// # Errors
 /// Any SQLite error from reading the version or from `compute`.
@@ -162,26 +198,31 @@ pub fn account_rows(
         return compute().map(Arc::new);
     }
     let key: Key = (path.to_owned(), what.to_owned());
-    let now = version(conn)?;
-    if let Some((then, answer)) = store().rows.get(&key)
-        && *then == now
-    {
-        return Ok(Arc::clone(answer));
-    }
-    let answer: AccountRows = Arc::new(compute()?);
-    // A save that commits while the rows are worked out may be inside them. Then the answer is
-    // given but not kept, so it can never be taken for the answer of an older moment.
-    if version(conn)? != now {
-        return Ok(answer);
-    }
-    let mut store = store();
-    if !store.rows.contains_key(&key) {
-        if store.rows_order.len() >= ROWS_CAPACITY && !store.rows_order.is_empty() {
-            let oldest = store.rows_order.remove(0);
-            store.rows.remove(&oldest);
+    in_one_view(conn, || {
+        if draft_exists(conn)? {
+            return compute().map(Arc::new);
         }
-        store.rows_order.push(key.clone());
-    }
-    store.rows.insert(key, (now, Arc::clone(&answer)));
-    Ok(answer)
+        let now = version(conn)?;
+        if let Some((then, answer)) = store().rows.get(&key)
+            && *then == now
+        {
+            return Ok(Arc::clone(answer));
+        }
+        let answer: AccountRows = Arc::new(compute()?);
+        // A save that commits while the rows are worked out may be inside them. Then the answer is
+        // given but not kept, so it can never be taken for the answer of an older moment.
+        if version(conn)? != now {
+            return Ok(answer);
+        }
+        let mut store = store();
+        if !store.rows.contains_key(&key) {
+            if store.rows_order.len() >= ROWS_CAPACITY && !store.rows_order.is_empty() {
+                let oldest = store.rows_order.remove(0);
+                store.rows.remove(&oldest);
+            }
+            store.rows_order.push(key.clone());
+        }
+        store.rows.insert(key.clone(), (now, Arc::clone(&answer)));
+        Ok(answer)
+    })
 }

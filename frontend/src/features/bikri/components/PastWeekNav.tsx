@@ -5,8 +5,10 @@
 // 02-10-2026". When the window already ends yesterday the later button is off and says why under its
 // words. In the middle, when the window is not the latest, a small button jumps back to the window that
 // ends yesterday. With focus on the bar, the arrow keys move the window the way the text reads (FR-7.13).
-// Page Up and Page Down are handled by the list (`shared/keyboard`), as before. The days of each button are
-// worked out from the window by the date helpers of `past-window.ts`; there is no money here.
+// Page Up and Page Down are the page's registry shortcuts (`useShortcut` with `SHORTCUTS.pastEarlier` and
+// `pastLater` in `TodayBikriPage`), so they answer wherever the focus is; this bar only shows their keys.
+// The days of each button are worked out from the window by the date helpers of `past-window.ts`; there is
+// no money here.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useId } from 'react';

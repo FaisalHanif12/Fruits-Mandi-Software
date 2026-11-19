@@ -490,12 +490,15 @@ fn writes_the_fixtures_the_frontend_copies() {
     assert!(p.errors.is_empty(), "{:?}", p.errors);
     let remaining: Vec<i64> = p.lots[0].lines.iter().map(|l| l.remaining_qty).collect();
     assert_eq!(remaining, [50, 30, 0]);
-    let hints: Vec<Option<i64>> = p.lots[0]
-        .lines
-        .iter()
-        .map(|l| l.rate_hint.as_ref().map(|h| r(h.rate_paisa)))
-        .collect();
-    assert_eq!(hints, [None, Some(600), Some(580)]);
+    // The retired rate hint is not in a line at all (PRD FR-7.53, v1.44; plan 80 R2-6).
+    let lines = serde_json::to_value(&p.lots[0].lines).unwrap();
+    assert!(
+        lines
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|l| l.get("rate_hint").is_none())
+    );
     // The answer holds numbers (paisa), never text amounts.
     assert!(
         serde_json::to_string(&p)

@@ -1,10 +1,12 @@
 // The days of the window of earlier days of پچھلی بکری, each one closed line (PRD FR-12.46 v1.39, plan 75
 // 7.7; Umar 13-11-2026): a small arrow, the date, the بکری count and the خام بکری. The arrow (a click, or
 // Enter or Space on the line) opens the day's بکری under its line and closes it again; several days can be
-// open. A day with no بکری is one quiet line with no arrow. ↑ ↓ move between the lines, ← → and Page Up and
-// Page Down move the window (the arrow that points back in reading goes to the earlier days). What is open
-// is the screen's state, not the grid's, so a language switch keeps it (F39). The count and the خام بکری
-// are the backend's; nothing is added up here (CLAUDE.md rule 1).
+// open. A day with no بکری is one quiet line with no arrow. ↑ ↓ move between the lines and ← → move the
+// window (the arrow that points back in reading goes to the earlier days). Page Up and Page Down are the
+// screen's registry shortcuts (`SHORTCUTS.pastEarlier` and `pastLater`, used by the page, F27 and F29): a
+// line leaves them alone, so they are not also a page jump of the lines. What is open is the screen's
+// state, not the grid's, so a language switch keeps it (F39). The count and the خام بکری are the
+// backend's; nothing is added up here (CLAUDE.md rule 1).
 
 import { useLocalization } from '@fluent/react';
 import { ChevronRight } from 'lucide-react';
@@ -22,7 +24,7 @@ interface PastDaysProps {
   highlight: string | null;
   /** The rows of an open day, drawn under its line. */
   children: (day: BikriDay) => ReactNode;
-  /** ← → and Page Up and Page Down on a line move the window. */
+  /** ← → on a line move the window (Page Up and Page Down are the page's shortcuts). */
   onMove: (direction: 'previous' | 'next') => void;
   /** The window's own totals, after the last day. */
   totals: ReactNode;
@@ -101,11 +103,8 @@ export function PastDays({
     ) {
       return;
     }
-    if (event.key === 'PageUp' || event.key === 'PageDown') {
-      event.preventDefault();
-      onMove(event.key === 'PageUp' ? 'previous' : 'next');
-      return;
-    }
+    // The window's shortcut answers these two (useShortcut on the page); the lines must not take them for a jump.
+    if (event.key === 'PageUp' || event.key === 'PageDown') return;
     const step = readingStep(event.key, elementDirection(event.currentTarget));
     if (step !== null) {
       event.preventDefault();

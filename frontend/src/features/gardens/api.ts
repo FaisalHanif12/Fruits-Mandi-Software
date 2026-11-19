@@ -6,6 +6,7 @@ import { callCommand } from '../../shared/api';
 import type { EditPreview } from '../../bindings/EditPreview';
 import type { EntryEdited } from '../../bindings/EntryEdited';
 import type { GardenArrivalEditInput } from '../../bindings/GardenArrivalEditInput';
+import type { GardenCloseRequest } from '../../bindings/GardenCloseRequest';
 import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
 import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput';
 import type {
@@ -103,8 +104,17 @@ export function gardensClosePreview(input: GardenCloseInput): Promise<GardenClos
   return callCommand<GardenClosePreview>('gardens_close_preview', { input });
 }
 
-export function gardensClose(input: GardenCloseInput): Promise<GardenClosed> {
-  return callCommand<GardenClosed>('gardens_close', { input });
+/**
+ * Closes the garden. While the owner still owes money back (the installments paid are above the rent, PRD
+ * FR-12.51) the backend answers `ERR_OWNER_OWES_NOT_CONFIRMED` (value `owes_paisa`) until `confirmOwnerOwes` is
+ * true, the yes of the box that shows the amount (plan 80 Q-R4-2).
+ */
+export function gardensClose(
+  input: GardenCloseInput,
+  confirmOwnerOwes = false,
+): Promise<GardenClosed> {
+  const body: GardenCloseRequest = { ...input, confirm_owner_owes: confirmOwnerOwes };
+  return callCommand<GardenClosed>('gardens_close', { input: body });
 }
 
 /** Undoes the closing by reversal while its day is open (PRD FR-12.38). */

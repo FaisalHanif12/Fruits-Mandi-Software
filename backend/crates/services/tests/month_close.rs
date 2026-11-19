@@ -331,6 +331,7 @@ fn while_a_month_is_closed_its_days_cannot_be_reopened_until_the_close_is_revers
             &mandi_services::core::vouchers::DayReopenInput {
                 date: date.into(),
                 reason: "check".into(),
+                sign: "adnan".into(),
             },
         )
     };

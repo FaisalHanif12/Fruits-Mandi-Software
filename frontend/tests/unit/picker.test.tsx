@@ -11,7 +11,7 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { formNavigationProps, useEscapeDispatcher } from '../../src/shared/keyboard';
 import * as searchApi from '../../src/shared/search/api';
-import type { SearchHit } from '../../src/shared/search';
+import type { SearchHit, SearchScope } from '../../src/shared/search';
 import { Field, Picker, type PickerValue } from '../../src/shared/ui';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fail } from '../helpers/app';
@@ -63,9 +63,11 @@ interface HarnessProps {
   onValue?: (value: PickerValue | null) => void;
   /** The list opens above the field (plan 51, the chat window's party box). */
   above?: boolean;
+  /** The list the box searches; the cities by default. */
+  scope?: SearchScope;
 }
 
-function Harness({ initial = null, onValue, above = false }: HarnessProps) {
+function Harness({ initial = null, onValue, above = false, scope = 'city' }: HarnessProps) {
   const [value, setValue] = useState<PickerValue | null>(initial);
   useEscapeDispatcher();
   return (
@@ -75,7 +77,7 @@ function Harness({ initial = null, onValue, above = false }: HarnessProps) {
         {(control) => (
           <Picker
             {...control}
-            scope="city"
+            scope={scope}
             listAbove={above}
             value={value}
             onChange={(next) => {
@@ -314,7 +316,7 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     expect(options()).toHaveLength(3);
   });
 
-  it('emptying the field and leaving clears the value; other typing is dropped on leaving', async () => {
+  it('emptying the field and leaving clears the value; text that is not a short code is dropped on leaving', async () => {
     const onValue = vi.fn();
     const { input, user } = setup(language, { initial: AKRAM, onValue });
     await user.click(input);
@@ -591,5 +593,118 @@ describe.each(LANGUAGES)('Picker, opened by the focus (%s)', (language) => {
       ).toBe(true);
     });
     expect(input.value).toBe(other === 'ur' ? AKRAM.name_ur : AKRAM.name_en);
+  });
+});
+
+// A short code is the running number of a code (PRD FR-10.2, FR-7.39). In a seller, buyer, item, packing or
+// staff field it is taken on Enter or on leaving the field (Code Standards 4.2, PRD FR-7.38): Tab and a click
+// away take it as Enter does. Plan 80 R3-3.
+const SHORT_CODE_LISTS: readonly (readonly [SearchScope, string])[] = [
+  ['item', '004'],
+  ['packing', '005'],
+  ['staff', '006'],
+];
+
+function codeHit(kind: SearchScope, id: number, code: string, name: string): SearchHit {
+  return { ...hit(id, code, name, name), kind };
+}
+
+/** The backend's order for digits: the exact code, the running number the digits name, then the rest that start with them. */
+function fakeCodes(rows: readonly SearchHit[], type: string) {
+  const running = (row: SearchHit) => row.code.slice(type.length);
+  vi.mocked(searchApi.searchMasters).mockImplementation(({ text }) => {
+    const wanted = text.trim();
+    if (wanted === '') return Promise.resolve([...rows]);
+    const exact = rows.filter((row) => row.code === wanted || running(row) === wanted);
+    const starts = rows.filter((row) => !exact.includes(row) && running(row).startsWith(wanted));
+    return Promise.resolve([...exact, ...starts]);
+  });
+  vi.mocked(searchApi.searchRecent).mockResolvedValue([...rows]);
+  vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
+}
+
+describe.each(LANGUAGES)('Picker, a short code left with Tab (%s)', (language) => {
+  describe.each(SHORT_CODE_LISTS)('the %s box', (scope, type) => {
+    const zero = codeHit(scope, 1, `${type}0`, 'Zero');
+    const one = codeHit(scope, 2, `${type}1`, 'One');
+    const ten = codeHit(scope, 3, `${type}10`, 'Ten');
+
+    it('digits typed and Tab take the record with that running number, and no other that starts with them', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('1');
+      await user.tab();
+      await waitFor(() => {
+        expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 2, code: `${type}1` }));
+      });
+      expect(onValue).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(input.value).toBe('One');
+      });
+    });
+
+    it('a full code typed and Tab takes that record too', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard(`${type}10`);
+      await user.tab();
+      await waitFor(() => {
+        expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
+      });
+    });
+
+    it('a running number nobody has is dropped, even when other codes start with it', async () => {
+      // No record has the running number 1: only 10 starts with it, and it is not the short code 1.
+      fakeCodes([zero, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('1');
+      await user.tab();
+      // Give an answer that came late the time to arrive: nothing is taken.
+      await waitFor(() => {
+        expect(searchApi.searchMasters).toHaveBeenCalled();
+      });
+      expect(onValue).not.toHaveBeenCalled();
+      expect(input.value).toBe('');
+    });
+
+    it('a name typed and Tab is dropped, as before', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('On');
+      await user.tab();
+      expect(onValue).not.toHaveBeenCalled();
+      expect(input.value).toBe('');
+    });
+
+    it('Enter takes the short code as it always did, and goes on to the next field', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('1{Enter}');
+      await waitFor(() => {
+        expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+      });
+      expect(screen.getByTestId('after')).toHaveFocus();
+    });
+  });
+
+  it('a list with no short codes (the cities) drops digits on leaving, whatever its codes are', async () => {
+    // AKRAM's code ends in 1, but a city has no running number: nothing is taken.
+    const onValue = vi.fn();
+    const { input, user } = setup(language, { onValue });
+    await user.click(input);
+    await user.keyboard('1');
+    await user.tab();
+    expect(onValue).not.toHaveBeenCalled();
+    expect(input.value).toBe('');
   });
 });

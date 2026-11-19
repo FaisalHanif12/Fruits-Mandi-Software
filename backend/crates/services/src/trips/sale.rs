@@ -443,9 +443,8 @@ pub(super) fn cancel(
     let reason = required_reason(&input.reason)?;
     let now = ctx.now_text();
     ctx.db.write(|tx| {
-        let entry = repo::get_entry(tx, input.id)?
-            .filter(|e| e.kind == "other_sale")
-            .ok_or_else(|| not_found("id"))?;
+        let entry =
+            super::trip_entry(tx, input.id, "other_sale")?.ok_or_else(|| not_found("id"))?;
         if entry.status == "cancelled" {
             return Err(ServiceError::reject_field(
                 ErrorCode::ErrTripEntryCancelled,

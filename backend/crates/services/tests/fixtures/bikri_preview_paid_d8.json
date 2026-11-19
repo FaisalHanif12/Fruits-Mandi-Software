@@ -541,7 +541,6 @@
           "line_no": 1,
           "is_blank": false,
           "remaining_qty": 200,
-          "rate_hint": null,
           "calc": {
             "qty": 20,
             "weight_grams": null,
@@ -871,11 +870,6 @@
           "line_no": 2,
           "is_blank": false,
           "remaining_qty": 180,
-          "rate_hint": {
-            "rate_paisa": 100000,
-            "source": "this_bikri",
-            "date": "2026-10-10"
-          },
           "calc": {
             "qty": 50,
             "weight_grams": null,
@@ -1205,11 +1199,6 @@
           "line_no": 3,
           "is_blank": false,
           "remaining_qty": 130,
-          "rate_hint": {
-            "rate_paisa": 90000,
-            "source": "this_bikri",
-            "date": "2026-10-10"
-          },
           "calc": {
             "qty": 130,
             "weight_grams": null,

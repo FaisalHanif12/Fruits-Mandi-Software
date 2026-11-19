@@ -21,7 +21,11 @@ use super::party::side_of;
 use crate::results::{Money, NameVal, Node, Val};
 
 /// Columns that hold what a person typed by hand or private details: never sent (PRD FR-7.83).
-const LEFT_OUT_COLUMNS: [&str; 17] = [
+///
+/// This list is the second line of defence. The first is [`is_left_out`]: every column of kind
+/// `Text` is left out unless it is in [`SYSTEM_TEXT_COLUMNS`], so a typed-text column nobody
+/// thought of (R6-1: `shop_name`) is kept from the model by default.
+const LEFT_OUT_COLUMNS: [&str; 18] = [
     "narration",
     "note",
     "notes",
@@ -35,19 +39,30 @@ const LEFT_OUT_COLUMNS: [&str; 17] = [
     "driver_name",
     "supplier",
     "shop",
+    "shop_name",
     "market",
     "sent",
     "marka",
     "taken_by",
 ];
 
+/// The only columns of kind `Text` the model may read. Each holds text the app makes, not text a
+/// person typed (PRD FR-7.83): an account code (R16 to R19, the tables of R34 and R35), the
+/// collector's name from the staff list (R35: a record name, sent like every record name) and a
+/// weight in kilos written from grams (R37). A new `Text` column is left out until it is added here
+/// on purpose, with its report named.
+const SYSTEM_TEXT_COLUMNS: [&str; 3] = ["code", "collector", "weight"];
+
 /// True for a column the model must not read. A phone NUMBER is never read (PRD FR-7.83); R6's
 /// `phone_charge` is the فون charge, money the Owner asks about, and is read (lead ruling, plan 53
-/// Section 9).
+/// Section 9). Every column of kind `Text` is left out unless it is on the allow list of text the
+/// app makes (R6-1, Code Standards Q7: what a person typed by hand never goes).
 ///
-/// Example: `phone1` is left out; `phone_charge` is not.
+/// Example: `phone1` is left out; `phone_charge` is not; `shop_name` (typed on a purchase) is left
+/// out; `code` (an account code) is read.
 pub fn is_left_out(column: &Column) -> bool {
     LEFT_OUT_COLUMNS.contains(&column.key.as_str())
+        || (column.kind == ColumnKind::Text && !SYSTEM_TEXT_COLUMNS.contains(&column.key.as_str()))
         || (column.key.contains("phone") && column.key != PHONE_CHARGE)
         || column.key.starts_with("paid_to")
 }
@@ -393,5 +408,57 @@ pub fn signed_paisa(cell: &Cell) -> Option<i64> {
             _ => paisa.as_paisa(),
         }),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn column(key: &str, kind: ColumnKind) -> Column {
+        Column {
+            key: key.to_owned(),
+            title_id: String::new(),
+            kind,
+        }
+    }
+
+    /// R6-1: the typed name of another shop (`shop_name` of R10) is a `Text` column, so it is left
+    /// out although no list names it, and so is any `Text` column a later change adds.
+    #[test]
+    fn a_text_column_is_left_out_unless_it_is_system_text() {
+        for key in ["shop_name", "supplier_text", "anything_typed", "truck"] {
+            assert!(
+                is_left_out(&column(key, ColumnKind::Text)),
+                "{key} is typed text and must be left out"
+            );
+        }
+        for key in SYSTEM_TEXT_COLUMNS {
+            assert!(
+                !is_left_out(&column(key, ColumnKind::Text)),
+                "{key} is text the app makes and is read"
+            );
+        }
+    }
+
+    /// The named columns stay left out whatever their kind says, and what is not text is read.
+    #[test]
+    fn named_columns_and_other_kinds_keep_their_rule() {
+        assert!(is_left_out(&column("shop_name", ColumnKind::Names)));
+        assert!(is_left_out(&column("reason", ColumnKind::Message)));
+        assert!(is_left_out(&column("phone1", ColumnKind::Number)));
+        assert!(is_left_out(&column("paid_to_ur", ColumnKind::Names)));
+        assert!(!is_left_out(&column(PHONE_CHARGE, ColumnKind::Money)));
+        for kind in [
+            ColumnKind::Money,
+            ColumnKind::Balance,
+            ColumnKind::Number,
+            ColumnKind::Date,
+            ColumnKind::Party,
+            ColumnKind::Names,
+            ColumnKind::Doc,
+        ] {
+            assert!(!is_left_out(&column("amount", kind)), "{kind:?}");
+        }
     }
 }

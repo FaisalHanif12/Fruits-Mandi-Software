@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use mandi_db::advances::Advances;
 use mandi_db::open_lines::{self, LiveLine};
 use mandi_db::partners::{self as repo, PartnerRecord};
 use mandi_db::rusqlite::Connection;
@@ -46,26 +47,36 @@ pub(crate) fn total_of(
     partner: &PartnerRecord,
     as_of: Option<&str>,
 ) -> Result<Paisa, ServiceError> {
+    total_with(conn, partner, as_of, &read_advances(conn)?)
+}
+
+/// [`total_of`] with the advance events already read, so a request that works out the total of
+/// several partners or several days reads and replays the advances once (Code Standards B22,
+/// NFR-SPD-24, plan 80 gate R1-4).
+///
+/// # Errors
+/// `ServiceError::Db`; `ERR_OVERFLOW`.
+pub(crate) fn total_with(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    as_of: Option<&str>,
+    advances: &Advances,
+) -> Result<Paisa, ServiceError> {
     let before_advances = total_from(repo::total_parts(conn, partner, as_of)?)?;
     // PRD FR-17.13 (plan 78 B4): his part of the advances to sellers still out is taken off.
-    let out = advance_net(conn, partner.id, None, as_of)?;
+    let out = advances.net(partner.id, None, as_of).map_err(money_error)?;
     before_advances.checked_sub(out).map_err(money_error)
 }
 
-/// What a partner's parts of the advances to sellers still have out, over events dated from `from`
-/// to `to` (both included, `None` leaves an end open). Read from the advance matching at read time.
+/// Reads and replays every advance to a seller once (PRD FR-17.13, FR-15.8). A request that needs
+/// the parts of several partners or periods calls this once and passes the result on, instead of
+/// replaying the advances for each partner or period.
 ///
 /// # Errors
 /// `ServiceError::Data` when the shares of an advance's day do not total 100% or the matching rows
-/// settle more than an advance; `ServiceError::Db`; `ERR_OVERFLOW`.
-pub(crate) fn advance_net(
-    conn: &Connection,
-    partner_id: i64,
-    from: Option<&str>,
-    to: Option<&str>,
-) -> Result<Paisa, ServiceError> {
-    let all = mandi_db::advances::read_all(conn).map_err(advance_error)?;
-    all.net(partner_id, from, to).map_err(money_error)
+/// settle more than an advance; `ServiceError::Db`.
+pub(crate) fn read_advances(conn: &Connection) -> Result<Advances, ServiceError> {
+    mandi_db::advances::read_all(conn).map_err(advance_error)
 }
 
 /// A read error of the advances as a service error.
@@ -80,18 +91,22 @@ pub(crate) fn advance_error(error: mandi_db::advances::AdvanceReadError) -> Serv
 
 /// What moved a partner's کل رقم from one day to another, both included: `total_of(to)` less
 /// `total_of(day before from)`, read as sums over those days only (a month page checks its lines
-/// against it, PRD FR-17.9, NFR-SPD-24). Month close moves nothing.
+/// against it, PRD FR-17.9, NFR-SPD-24). Month close moves nothing. The advance events are read
+/// by the caller, once for the request.
 ///
 /// # Errors
 /// `ServiceError::Db`; `ERR_OVERFLOW`.
-pub(crate) fn movement_between(
+pub(crate) fn movement_with(
     conn: &Connection,
     partner: &PartnerRecord,
     from: &str,
     to: &str,
+    advances: &Advances,
 ) -> Result<Paisa, ServiceError> {
     let before_advances = total_from(repo::movement_parts(conn, partner, from, to)?)?;
-    let out = advance_net(conn, partner.id, Some(from), Some(to))?;
+    let out = advances
+        .net(partner.id, Some(from), Some(to))
+        .map_err(money_error)?;
     before_advances.checked_sub(out).map_err(money_error)
 }
 

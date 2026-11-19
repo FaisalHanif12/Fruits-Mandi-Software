@@ -739,6 +739,7 @@ fn reopen_step(w: &mut World) {
         &DayReopenInput {
             date: ddmmyyyy,
             reason: reason.clone(),
+            sign: "adnan".into(),
         },
     );
     check(

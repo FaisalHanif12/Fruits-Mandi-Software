@@ -54,6 +54,98 @@ const JOINS: &str = "FROM journal_lines l
      JOIN account_controls c ON c.id = a.control_id
      JOIN account_heads h ON h.id = c.head_id";
 
+/// The tables with the entries of the range first, by the date index of the entries.
+const JOINS_ENTRIES_FIRST: &str = "FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+     CROSS JOIN journal_lines l ON l.entry_id = e.id
+     CROSS JOIN accounts a ON a.id = l.account_id
+     CROSS JOIN account_controls c ON c.id = a.control_id
+     CROSS JOIN account_heads h ON h.id = c.head_id";
+
+/// The same tables with the income accounts first: the lines of the few income accounts are read
+/// from the covering index of the amounts, and each line's entry is looked up for its day and kind.
+/// For a long range (ten years) this reads 780,000 lines instead of every line of 1.08 million
+/// entries (plan 80 gate: 4 seconds down to 0.7). `CROSS JOIN` fixes the order, as the app's file
+/// has no table statistics.
+const JOINS_INCOME_FIRST: &str = "FROM account_heads h
+     CROSS JOIN account_controls c ON c.head_id = h.id
+     CROSS JOIN accounts a ON a.control_id = c.id
+     CROSS JOIN journal_lines l INDEXED BY idx_journal_lines_account_amounts ON l.account_id = a.id
+     CROSS JOIN journal_entries e ON e.id = l.entry_id";
+
+/// A date range with this many entries or more reads the income accounts first (see
+/// [`JOINS_INCOME_FIRST`]): the lines of the entries of a shorter range are fewer than the lines of
+/// the income accounts.
+const WIDE_ENTRIES: i64 = 60_000;
+
+/// The periods and accounts of the whole filter, in the order of the report, with no page cut. The
+/// SQL of the page and of the totals together: the count, the totals and every page come from this
+/// one read (plan 80 gate: three passes over the lines became one).
+pub(crate) fn grouped_query(typed: &Typed, income_first: bool) -> (String, Vec<Value>) {
+    let c = conds(typed);
+    let len = period_length(typed.group_by);
+    // The entries first, found through the date index, when the range has a first or a last day; the
+    // app's file has no table statistics, so without this SQLite starts from the income accounts.
+    let dated = typed.from.is_some() || typed.to.is_some();
+    let joins = if income_first {
+        JOINS_INCOME_FIRST
+    } else if dated {
+        JOINS_ENTRIES_FIRST
+    } else {
+        JOINS
+    };
+    let sql = format!(
+        "SELECT substr(e.entry_date, 1, {len}), l.account_id, COALESCE(SUM(l.dr_paisa), 0),
+            COALESCE(SUM(l.cr_paisa), 0)
+         {joins}
+         WHERE {}
+         GROUP BY substr(e.entry_date, 1, {len}), l.account_id
+         ORDER BY substr(e.entry_date, 1, {len}), a.code",
+        c.sql()
+    );
+    (sql, c.args().to_vec())
+}
+
+/// True when the date range of the filter holds at least [`WIDE_ENTRIES`] journal entries. Reads at
+/// most that many entries of the date index.
+fn is_wide(conn: &Connection, typed: &Typed) -> Result<bool, ReportsError> {
+    let mut sql = String::from("SELECT COUNT(*) FROM (SELECT 1 FROM journal_entries WHERE 1 = 1");
+    let mut args: Vec<Value> = Vec::new();
+    if let Some(from) = &typed.from {
+        sql.push_str(" AND entry_date >= ?");
+        args.push(Value::Text(from.clone()));
+    }
+    if let Some(to) = &typed.to {
+        sql.push_str(" AND entry_date <= ?");
+        args.push(Value::Text(to.clone()));
+    }
+    sql.push_str(" LIMIT ?)");
+    args.push(Value::Integer(WIDE_ENTRIES));
+    let counted: i64 = conn.query_row(&sql, params_from_iter(args.iter()), |r| r.get(0))?;
+    Ok(counted >= WIDE_ENTRIES)
+}
+
+/// One period and account of the report with its sums.
+type Group = (String, i64, i64, i64);
+
+/// Every period and account of the filter, in the order of the report.
+fn groups_of(conn: &Connection, typed: &Typed) -> Result<std::sync::Arc<Vec<Group>>, ReportsError> {
+    let (sql, args) = grouped_query(typed, is_wide(conn, typed)?);
+    let what = format!("r28_groups|{sql}|{args:?}");
+    crate::result_cache::remembered(conn, &what, || {
+        let mut statement = conn.prepare(&sql)?;
+        Ok(statement
+            .query_map(params_from_iter(args.iter()), |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, i64>(1)?,
+                    r.get::<_, i64>(2)?,
+                    r.get::<_, i64>(3)?,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?)
+    })
+}
+
 /// One page of periods and accounts.
 pub(crate) fn page_query(typed: &Typed, limit: i64, offset: i64) -> (String, Vec<Value>) {
     let c = conds(typed);
@@ -69,29 +161,6 @@ pub(crate) fn page_query(typed: &Typed, limit: i64, offset: i64) -> (String, Vec
         c.sql()
     );
     (sql, c.page_args(limit, offset))
-}
-
-/// The number of periods and accounts over the whole filter.
-fn count_query(typed: &Typed) -> (String, Vec<Value>) {
-    let c = conds(typed);
-    let len = period_length(typed.group_by);
-    let sql = format!(
-        "SELECT COUNT(*) FROM (SELECT 1 {JOINS}
-         WHERE {}
-         GROUP BY substr(e.entry_date, 1, {len}), l.account_id)",
-        c.sql()
-    );
-    (sql, c.args().to_vec())
-}
-
-/// The totals over the whole filter.
-fn totals_query(typed: &Typed) -> (String, Vec<Value>) {
-    let c = conds(typed);
-    let sql = format!(
-        "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0) {JOINS} WHERE {}",
-        c.sql()
-    );
-    (sql, c.args().to_vec())
 }
 
 /// The cell of a period text: `2026-10-10` is a date, `2026-10` a month.
@@ -133,27 +202,18 @@ pub(crate) fn run(
     typed: &Typed,
     spec: PageSpec,
 ) -> Result<ReportPage, ReportsError> {
-    let (count_sql, count_args) = count_query(typed);
-    let count: i64 = conn.query_row(&count_sql, params_from_iter(count_args.iter()), |r| {
-        r.get(0)
-    })?;
-    let (totals_sql, totals_args) = totals_query(typed);
-    let (dr, cr): (i64, i64) =
-        conn.query_row(&totals_sql, params_from_iter(totals_args.iter()), |r| {
-            Ok((r.get(0)?, r.get(1)?))
-        })?;
-    let (page_sql, page_args) = page_query(typed, spec.sql_limit(), spec.offset);
-    let mut statement = conn.prepare(&page_sql)?;
-    let lines = statement
-        .query_map(params_from_iter(page_args.iter()), |r| {
-            Ok((
-                r.get::<_, String>(0)?,
-                r.get::<_, i64>(1)?,
-                r.get::<_, i64>(2)?,
-                r.get::<_, i64>(3)?,
-            ))
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+    // The count, the totals and the rows are one read of the periods and accounts of the whole
+    // filter. It is the same for every page, so the first page reads it and the next pages take it
+    // from memory while the books are as they were (`result_cache`).
+    let groups = groups_of(conn, typed)?;
+    let count = i64::try_from(groups.len()).unwrap_or(i64::MAX);
+    let overflow = || ReportsError::Data("the income total does not fit".to_owned());
+    let (mut dr, mut cr) = (0_i64, 0_i64);
+    for group in groups.iter() {
+        dr = dr.checked_add(group.2).ok_or_else(overflow)?;
+        cr = cr.checked_add(group.3).ok_or_else(overflow)?;
+    }
+    let lines: Vec<Group> = spec.slice(&groups);
     let account_ids: Vec<i64> = lines.iter().map(|l| l.1).collect();
     let parties = load_parties(conn, &account_ids)?;
     let mut rows = Vec::with_capacity(lines.len());

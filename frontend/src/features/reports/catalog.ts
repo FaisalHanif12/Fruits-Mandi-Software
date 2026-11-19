@@ -7,6 +7,7 @@ import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
 import type { ReportFilterKind } from '../../bindings/ReportFilterKind';
 import type { ReportGroup } from '../../bindings/ReportGroup';
 import type { ReportId } from '../../bindings/ReportId';
+import { ADHARI_COLUMN_TITLE_IDS } from './adhari-columns';
 
 /** The groups in the order of PRD 19.2. */
 export const REPORT_GROUPS: readonly ReportGroup[] = [
@@ -112,6 +113,9 @@ const FILTER_LABEL_IDS: Record<ReportFilterKind, string | null> = {
  * (R35) asks for one day and the money lent report (R32) for a borrower, as their own boxes do.
  */
 export function filterLabelIdsOf(entry: ReportCatalogEntry): string[] {
+  // R5 opens ادھاری تفصیل, the day's buyers (PRD R5 v1.43, plan 80 Q-R5-2): its only filter is the day. The
+  // catalogue's filters are those of the R5 data the assistant reads, which this screen does not have.
+  if (entry.id === 'R5') return ['report-filter-day'];
   const ids: string[] = [];
   for (const kind of entry.filters) {
     let id = FILTER_LABEL_IDS[kind];
@@ -123,15 +127,13 @@ export function filterLabelIdsOf(entry: ReportCatalogEntry): string[] {
 }
 
 /**
- * The print only some reports have, besides the preview every report has (PRD FR-19.3, FR-12.12, FR-19.15, R5,
- * R35): the seller's bill from the sale book, the buyer parchi (one slip for each buyer, several to a page) from
- * the اگراہی sheet, and one party's slip or the table of every party from the day sheet. The message of the
- * special print, or null.
+ * The print only some reports have, besides the preview every report has (PRD FR-19.3, FR-12.12, FR-19.15, R35):
+ * the seller's bill from the sale book, and one party's slip or the table of every party from the day sheet. The
+ * message of the special print, or null. R5 has none since v1.43: ادھاری تفصیل prints only itself (FR-12.12).
  */
 export function specialPrintIdOf(entry: ReportCatalogEntry): string | null {
   switch (entry.id) {
     case 'R1':
-    case 'R5':
     case 'R35':
       return `report-guide-special-${entry.id.toLowerCase()}`;
     default:
@@ -145,5 +147,8 @@ export function specialPrintIdOf(entry: ReportCatalogEntry): string | null {
  * never lists a column the report does not have.
  */
 export function columnTitleIdsOf(entry: ReportCatalogEntry): readonly string[] {
+  // R5 opens ادھاری تفصیل (PRD R5 v1.43, plan 80 Q-R5-2): the columns the Owner will see are the sheet's own, not
+  // those of the R5 data the assistant reads.
+  if (entry.id === 'R5') return ADHARI_COLUMN_TITLE_IDS;
   return entry.column_title_ids;
 }

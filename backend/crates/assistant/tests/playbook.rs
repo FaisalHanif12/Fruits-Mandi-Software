@@ -393,9 +393,11 @@ fn an_alert_about_old_bills_and_old_stock_has_a_path_with_the_number_of_the_ques
             json!({"where": {"column": "days", "op": "gt", "value": "q.n1"}}),
         ),
     );
-    // The backup alert is a tile.
+    // The cloud copy's age is an item of the attention list, not a tile (PRD 9.1 v1.41); the tiles
+    // are the dashboard's, and آج کی نقدی is one of them (v1.44).
     let tiles = s.ok("tiles", json!({}));
-    assert!(s.json(&tiles).get("last_backup").is_some());
+    assert!(s.json(&tiles).get("last_backup").is_none());
+    assert!(s.json(&tiles).get("today_cash_sales").is_some());
 }
 
 // ---- the failure list: the first try is refused with the way out -------------------------------

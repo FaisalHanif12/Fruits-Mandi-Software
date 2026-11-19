@@ -7,7 +7,7 @@
 //! column together (FR-18.2).
 //!
 //! - **D** has one column for each day, month or year that has sales (`group_by`, month when
-//!   left out), at most 36.
+//!   left out), at most 144 (twelve years by month, plan 80 gate: it was 36, which refused 5 years).
 //! - **E** has one column for each item that has sales, at most 24. When there are more, the
 //!   items with the most commission keep their column and all the others are added in one
 //!   "other items" column.
@@ -37,8 +37,9 @@ use crate::reports::PageSpec;
 use crate::reports::common::{add, amount_or_empty, load_parties};
 use crate::reports::{Cell, ColumnKind, Names};
 
-/// Most columns of view D.
-const MAX_PERIOD_COLUMNS: usize = 36;
+/// Most columns of view D: 144 periods, twelve years by month (PRD 18.2: one column for each month; the
+/// cap of 36 refused five years of months, plan 80 gate).
+const MAX_PERIOD_COLUMNS: usize = 144;
 /// Most columns of view E, the "other items" column included.
 const MAX_ITEM_COLUMNS: usize = 24;
 
@@ -133,7 +134,7 @@ fn cell(amount: Paisa) -> Cell {
 ///
 /// # Errors
 /// `ReportsError::Rejected` (`ERR_OUT_OF_RANGE`, `filters.group_by`) when there would be more
-/// than 36 columns; a database error; `ReportsError::Data` for a fact net below 0.
+/// than 144 columns; a database error; `ReportsError::Data` for a fact net below 0.
 /// The number of days, months or years a closed range spans, by the grouping of view D. `None` when
 /// the range has no first or no last day (then only the facts can say how many periods there are).
 fn periods_in_range(typed: &Typed) -> Option<usize> {
@@ -159,7 +160,7 @@ pub(crate) fn run_d(
     typed: &Typed,
     spec: PageSpec,
 ) -> Result<Table, ReportsError> {
-    // A closed range of more than 36 periods is refused from the dates, before any fact is read
+    // A closed range of more than 144 periods is refused from the dates, before any fact is read
     // (ten years by month used to be read in full and refused after, two seconds later).
     if periods_in_range(typed).is_some_and(|n| n > MAX_PERIOD_COLUMNS) {
         return Err(ReportsError::Rejected(vec![FieldError::new(

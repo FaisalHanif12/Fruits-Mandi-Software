@@ -55,6 +55,7 @@ fn voucher_filter<'a>(
         from: day,
         to: day,
         account_id: account,
+        hide_partner_money: false,
     }
 }
 
@@ -320,4 +321,51 @@ fn the_party_ledgers_queries_search_an_index() {
         ],
     );
     assert!(!list.contains("journal_lines"), "{list}");
+}
+
+/// Plan 80 R5-1 (PRD FR-12.46, NFR-SPD-24, Code Standards B18): the list of what was posted on a day
+/// reads the postings of the window with one range search on the covering index of the analytics
+/// facts (`idx_analytics_facts_views`), and the بکری by their key. No query reads a whole table, for
+/// the page, its totals, its months and its days alike.
+#[test]
+fn the_list_of_postings_searches_the_facts_by_date_and_the_bikri_by_key() {
+    use mandi_db::bikri::posted::{days_query, list_query, months_query, totals_query};
+    let (_dir, conn) = setup();
+    for (name, filter) in [
+        ("one day", bikri_filter(Some("2026-10-10"))),
+        (
+            "a window",
+            BikriFilter {
+                from: Some("2026-10-04".into()),
+                to: Some("2026-10-10".into()),
+                ..bikri_filter(None)
+            },
+        ),
+    ] {
+        for (which, (sql, binds)) in [
+            ("page", list_query(&filter)),
+            ("totals", totals_query(&filter)),
+            ("months", months_query(&filter)),
+            ("days", days_query(&filter)),
+        ] {
+            let text = plan(&conn, &sql, &binds);
+            // `SCAN p` is the grouped postings of the window (a co-routine over the range search
+            // below), not a table.
+            let without_p = text
+                .lines()
+                .filter(|line| *line != "SCAN p")
+                .collect::<Vec<_>>()
+                .join("\n");
+            assert!(
+                !scans_a_whole_table(&without_p),
+                "{name} {which} reads a whole table:\n{text}"
+            );
+            assert!(
+                text.contains(
+                    "USING COVERING INDEX idx_analytics_facts_views (entry_date>? AND entry_date<?)"
+                ),
+                "{name} {which} does not search the facts by date:\n{text}"
+            );
+        }
+    }
 }

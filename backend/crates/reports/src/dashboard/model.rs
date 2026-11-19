@@ -29,6 +29,10 @@ pub const DUES_OLD_DAYS: i64 = 30;
 pub const PAYABLES_OLD_DAYS: i64 = 7;
 /// The cloud copy is on the attention list when it is older than this many hours (NFR-BAK-10).
 pub const BACKUP_OLD_HOURS: i64 = 24;
+/// A question of the assistant that ended with a difference between the two places of a figure is
+/// on the attention list for this many days, counting back from today (PRD FR-7.76 point 2). A
+/// question asked exactly this many days ago is still listed.
+pub const RECORDS_DIFFER_DAYS: i64 = 7;
 
 /// What the command layer knows about the backups and the database does not: the backup state is
 /// kept by the backup service. Passed in, never read from a file here.
@@ -262,11 +266,15 @@ pub enum AttentionKind {
     /// the data file is damaged (PRD FR-7.44, NFR-OBS-5; it replaced the dashboard tile in
     /// v1.44, plan 79 item 2c). One item when the last stored result is not good.
     HealthCheck,
+    /// A question to the assistant ended because the two places of a figure differed, in the last
+    /// [`RECORDS_DIFFER_DAYS`] days (PRD FR-7.76 point 2, FR-7.44; plan 80 R6-3). The Owner opens the
+    /// question log in Settings and the report, to see which figure.
+    RecordsDiffer,
 }
 
 impl AttentionKind {
     /// Every kind, in the order of the list on the screen.
-    pub const ALL: [AttentionKind; 11] = [
+    pub const ALL: [AttentionKind; 12] = [
         AttentionKind::Drafts,
         AttentionKind::OpenDays,
         AttentionKind::StockWaiting,
@@ -278,6 +286,7 @@ impl AttentionKind {
         AttentionKind::TakesOverdue,
         AttentionKind::NamesMissing,
         AttentionKind::HealthCheck,
+        AttentionKind::RecordsDiffer,
     ];
 }
 

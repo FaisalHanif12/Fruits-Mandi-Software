@@ -498,11 +498,6 @@
             "line_no": 1,
             "is_blank": false,
             "remaining_qty": 5,
-            "rate_hint": {
-              "rate_paisa": 58000,
-              "source": "today",
-              "date": "2026-10-10"
-            },
             "calc": {
               "qty": 5,
               "weight_grams": null,

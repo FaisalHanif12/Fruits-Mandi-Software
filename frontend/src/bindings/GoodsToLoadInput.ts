@@ -9,4 +9,12 @@ export type GoodsToLoadInput = {
    * `trip` lists the purchases of open trips, `garden` the arrivals of open gardens.
    */
   kind: VentureKind;
+  /**
+   * How many rows to skip. 0 for the first page (PRD FR-19.11, Code Standards B31; plan 80 R2-5).
+   */
+  offset: number;
+  /**
+   * How many rows to return: 25, 50 or 100. 0 gives a page of 100.
+   */
+  limit: number;
 };

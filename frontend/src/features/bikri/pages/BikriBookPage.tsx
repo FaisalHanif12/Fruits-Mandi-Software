@@ -192,9 +192,15 @@ interface EditorProps {
   mode: NewMode | EditMode;
 }
 
-/** A saved lot of an edit cannot be removed (plan 16); a lot added in the edit can. */
-function isNewLot(row: EntryRow): boolean {
-  return (row.typed[LOT.lotId] ?? '') === '';
+/**
+ * Which lots of an edit can be removed with Ctrl+Delete or the row's button (PRD FR-7.70, plan 80 Q-R2-1). In the edit
+ * of a first posting every lot can: a lot added in the edit, and a saved one, which the backend takes out of the
+ * بکری unless a later sale, a write-off or fruit taken rests on it (then it refuses and the words say why, at the
+ * lots). A carried lot belongs to an earlier بکری and is never removed here, and the lot of a later sale is not
+ * the edit's to remove (its own lines only).
+ */
+function removableLot(firstPosting: boolean): (row: EntryRow) => boolean {
+  return (row) => (row.typed[LOT.lotId] ?? '') === '' || (firstPosting && !isCarriedLot(row));
 }
 
 function Editor({ onOpenSaved, mode }: EditorProps) {
@@ -204,6 +210,13 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const errorText = useErrorText();
   const language = useLanguage();
   const edit = mode.kind === 'edit' ? mode : null;
+  // In an edit, which lots can be removed (plan 80 Q-R2-1): all in a first posting, only a new one in a later sale.
+  const inEdit = edit !== null;
+  const firstPosting = edit?.editable.posting_type === 'bikri_first';
+  const canRemoveLot = useMemo(
+    () => (inEdit ? removableLot(firstPosting) : undefined),
+    [inEdit, firstPosting],
+  );
   const newBikri = mode.kind === 'new' ? mode : null;
   const lastSaved = newBikri?.lastSaved ?? null;
   const newMutation = useSaveBikri();
@@ -725,7 +738,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   moreForced={lotMoreForced}
                   cellChanged={lotChanged}
                   cellMarks={lotMarks}
-                  canRemoveRow={edit === null ? undefined : isNewLot}
+                  canRemoveRow={canRemoveLot}
                 />
                 {lotRow === undefined || !isOwnLot(lotRow) ? null : (
                   <OwnLotPanel

@@ -267,8 +267,11 @@ fn the_days_follow_show_finished_a_cancelled_bikri_counts_but_has_no_gross() {
     assert_eq!(cancelled.totals.gross, Paisa::ZERO);
 }
 
+/// Plan 80 R5-1 (Umar, 19-11-2026; it replaces the plan 72 rule that counted a later sale under the day
+/// of its بکری): a later sale counts under the day it was posted, so a heading is the sum of its rows
+/// and the page agrees with R2 and the tile, which read the postings of each day.
 #[test]
-fn a_later_sale_counts_under_the_day_of_its_bikri_so_a_heading_equals_its_rows() {
+fn a_later_sale_counts_under_the_day_it_was_posted_so_the_page_equals_r2() {
     let w = world_of_days();
     // Number 3 (05-11) has 6 نگ left. On today, 12-11, 3 of them are sold to اکرم at 700.
     let rows = list(&w, &window("05-11-2026", "11-11-2026")).rows;
@@ -285,13 +288,10 @@ fn a_later_sale_counts_under_the_day_of_its_bikri_so_a_heading_equals_its_rows()
         },
     )
     .unwrap();
-    // The window: the later sale's 3 x 700 = 2,100 is in the خام بکری of number 3 and of its day, 05-11.
+    // The window: the later sale's 3 x 700 = 2,100 is NOT under 05-11 (numbers 3 and 4: 2,412 + 2,416).
     let first = list(&w, &window("05-11-2026", "11-11-2026"));
     let day = first.days.iter().find(|d| d.date == "2026-11-05").unwrap();
-    assert_eq!(
-        day.gross_paisa,
-        Paisa::from_rupees(2_412 + 2_100 + 2_416).unwrap()
-    );
+    assert_eq!(day.gross_paisa, Paisa::from_rupees(2_412 + 2_416).unwrap());
     let row_sum = first
         .rows
         .iter()
@@ -299,13 +299,19 @@ fn a_later_sale_counts_under_the_day_of_its_bikri_so_a_heading_equals_its_rows()
         .try_fold(Paisa::ZERO, |sum, r| sum.checked_add(r.gross))
         .unwrap();
     assert_eq!(row_sum, day.gross_paisa, "a heading is the sum of its rows");
-    // Today's section holds only the بکری dated today: 2,428 + 2,432.
+    // Today's section holds what was posted today: 2,428 + 2,432 and the later sale of number 3.
     let today = list(&w, &window("12-11-2026", "12-11-2026"));
     assert_eq!(
         today.totals.gross,
-        Paisa::from_rupees(2_428 + 2_432).unwrap()
+        Paisa::from_rupees(2_428 + 2_432 + 2_100).unwrap()
     );
-    // R2 reads the postings of each day, so it differs from the list by exactly the later sale.
+    assert_eq!(today.total_count, 3);
+    let later = today.rows.iter().find(|r| r.number == 3).unwrap();
+    assert_eq!(
+        (later.entry_date.as_str(), later.qty_sold, later.gross),
+        ("2026-11-12", 3, Paisa::from_rupees(2_100).unwrap())
+    );
+    // R2 reads the postings of each day, and so does the list: the totals are the same.
     let r2_gross = |from: &str, to: &str| {
         paisa_of(
             r2(
@@ -322,13 +328,13 @@ fn a_later_sale_counts_under_the_day_of_its_bikri_so_a_heading_equals_its_rows()
     };
     assert_eq!(
         r2_gross("05-11-2026", "11-11-2026"),
-        Paisa::from_rupees(2_412 + 2_416 + 2_440).unwrap(),
-        "the window of R2 leaves the later sale out"
+        first.totals.gross,
+        "the window of R2 is the window of the list"
     );
     assert_eq!(
         r2_gross("12-11-2026", "12-11-2026"),
-        Paisa::from_rupees(2_428 + 2_432 + 2_100).unwrap(),
-        "the day of R2 holds it"
+        today.totals.gross,
+        "the day of R2 is today's section"
     );
 }
 

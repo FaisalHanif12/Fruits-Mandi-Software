@@ -103,21 +103,27 @@ pub(crate) fn run(
     spec: PageSpec,
 ) -> Result<ReportPage, ReportsError> {
     let (sql, args) = query(typed);
-    let mut statement = conn.prepare(&sql)?;
-    let raw = statement
-        .query_map(params_from_iter(args.iter()), |r| {
-            let mut sums = [0_i64; 10];
-            for (slot, index) in sums.iter_mut().zip(3_usize..) {
-                *slot = r.get(index)?;
-            }
-            Ok((r.get::<_, String>(1)?, r.get::<_, String>(2)?, sums))
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+    // The sums of every item are the same for every page of the report: the first page reads the
+    // facts, the next pages take them from memory while the books are as they were (`result_cache`,
+    // plan 80 gate, NFR-SPD-24).
+    let what = format!("r7_items|{sql}|{args:?}");
+    let raw = crate::result_cache::remembered(conn, &what, || {
+        let mut statement = conn.prepare(&sql)?;
+        Ok(statement
+            .query_map(params_from_iter(args.iter()), |r| {
+                let mut sums = [0_i64; 10];
+                for (slot, index) in sums.iter_mut().zip(3_usize..) {
+                    *slot = r.get(index)?;
+                }
+                Ok((r.get::<_, String>(1)?, r.get::<_, String>(2)?, sums))
+            })?
+            .collect::<Result<Vec<_>, _>>()?)
+    })?;
 
     let mut items = Vec::with_capacity(raw.len());
     let mut total_qty = 0_i64;
     let mut totals = [Paisa::ZERO; 4];
-    for (name_ur, name_en, s) in raw {
+    for (name_ur, name_en, s) in raw.iter().cloned() {
         let qty = net(s[0], s[1])?;
         let amounts = [
             paisa(net(s[2], s[3])?)?,

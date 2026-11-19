@@ -29,9 +29,34 @@ use mandi_domain::core::trips::{
     TripsSummary,
 };
 
+use mandi_db::rusqlite::Connection;
+use mandi_db::ventures::{self as venture_repo, EntryRec};
+
 use crate::auth::Actor;
 use crate::context::Context;
 use crate::error::ServiceError;
+
+/// The entry of a TRIP with this id and kind (`cost` or `other_sale`), or `None`.
+///
+/// The kinds `cost` and `other_sale` are shared by trips and gardens, so a kind check alone lets a
+/// trip command reach the entry of a garden, even one of a closed garden (PRD FR-12.38, Code
+/// Standards V0). The entry's venture must be a trip too. A command maps `None` to `ERR_NOT_FOUND`
+/// on `id`.
+///
+/// # Errors
+/// Any SQLite error.
+pub(crate) fn trip_entry(
+    conn: &Connection,
+    id: i64,
+    kind: &str,
+) -> mandi_db::rusqlite::Result<Option<EntryRec>> {
+    let Some(entry) = venture_repo::get_entry(conn, id)?.filter(|e| e.kind == kind) else {
+        return Ok(None);
+    };
+    Ok(venture_repo::get(conn, entry.venture_id)?
+        .is_some_and(|v| v.kind == "trip")
+        .then_some(entry))
+}
 
 /// The form of a new trip, filled from the last trip (PRD A56). Read only.
 ///

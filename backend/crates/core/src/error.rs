@@ -482,11 +482,24 @@ pub enum ErrorCode {
     /// The account is not of the side asked for: a seller was sent as a buyer or the other way
     /// round (the commission page party filter, PRD FR-9.3, plan 77). Field `party.account_id`.
     ErrWrongPartyType,
+    /// Closing a garden while the owner still owes (مالک کے ذمے, PRD FR-12.51): the installments paid
+    /// are above the rent, so the owner owes money back, and a closed garden takes no refund. The
+    /// closing needs the answer "yes" of a confirm box (plan 80 gate Q-R4-2). Field `id`. Value
+    /// `owes_paisa`: what he still owes.
+    ErrOwnerOwesNotConfirmed,
+    /// The link of an account (PRD E10, FR-10.2) joins a seller and a buyer. A link to an account of
+    /// the same kind, to a money-lent or other account, or to چکتا کھاتہ or another system account is
+    /// refused (gate finding T4-2, plan 80). Field `linked_account_id`.
+    ErrLinkNotSellerBuyer,
+    /// The link of an account (PRD E10) must be one clean pair: the other account is already linked
+    /// to a third account, or a third account already points at it or at this account (so a chain
+    /// A to B to C is refused too). Field `linked_account_id`.
+    ErrLinkAlreadyLinked,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 170] = [
+    pub const ALL: [ErrorCode; 173] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -657,6 +670,9 @@ impl ErrorCode {
         ErrorCode::ErrSignWrong,
         ErrorCode::ErrKeystoreDenied,
         ErrorCode::ErrWrongPartyType,
+        ErrorCode::ErrOwnerOwesNotConfirmed,
+        ErrorCode::ErrLinkNotSellerBuyer,
+        ErrorCode::ErrLinkAlreadyLinked,
     ];
 }
 

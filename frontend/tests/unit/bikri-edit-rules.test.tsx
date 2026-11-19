@@ -56,6 +56,10 @@ const said = (text: string) => (content: string) => visible(content) === text;
 const RULES = [
   { rule: 'day_changed', field: 'header.entry_date', entry: 7 },
   { rule: 'lot_removed', field: 'lots', entry: 7 },
+  // A saved lot can be removed in an edit of a first posting unless something rests on it (plan 80 Q-R2-1).
+  { rule: 'lot_has_later_sale', field: 'lots', entry: 7 },
+  { rule: 'lot_has_write_off', field: 'lots', entry: 7 },
+  { rule: 'lot_has_fruit', field: 'lots', entry: 7 },
   { rule: 'lot_not_in_posting', field: 'lots[0].lot_id', entry: 7 },
   { rule: 'lot_order_changed', field: 'lots[0].lot_id', entry: 7 },
   { rule: 'lot_seller_locked', field: 'lots[0].seller_account_id', entry: 7 },
