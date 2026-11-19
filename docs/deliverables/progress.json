@@ -19,14 +19,14 @@
     "08-party-card-and-short-codes": "passed",
     "09-commission-rules": "passed",
     "10-opening-position": "passed",
-    "11-partners": "reviewing",
-    "12-bikri-entry": "reviewing",
-    "13-bikri-save": "reviewing",
-    "14-bikri-prints": "reviewing",
-    "15-vouchers": "reviewing",
-    "16-later-sales-edit-cancel": "reviewing",
-    "16b-own-goods": "reviewing",
-    "17-cash-book-and-day-close": "building",
+    "11-partners": "built (committed); awaiting the single end gate",
+    "12-bikri-entry": "built (committed); awaiting the single end gate",
+    "13-bikri-save": "built (committed); awaiting the single end gate",
+    "14-bikri-prints": "built (committed); awaiting the single end gate",
+    "15-vouchers": "built (committed); awaiting the single end gate",
+    "16-later-sales-edit-cancel": "built (committed); awaiting the single end gate",
+    "16b-own-goods": "built (committed); awaiting the single end gate",
+    "17-cash-book-and-day-close": "built (committed); awaiting the single end gate",
     "17b-refresh-built-screens": "waiting",
     "17c-gardens": "waiting",
     "17d-fruit-taken": "waiting",
@@ -65,17 +65,17 @@
   "d5_early": {
     "branch": "feature/d5-early",
     "plans": {
-      "18-backup-and-restore": "built (committed ccb35fd, 617c0cb)",
-      "20-reports-early": "engine and Accounts reports committed; round 3 reports built, not committed",
-      "21-analytics-early": "backend built and committed (a7fb278); F4 screens coded, unverified",
-      "22-settings-audit-updates-early": "B5 backend built (uncommitted); F5 waiting"
+      "18-backup-and-restore": "built (committed)",
+      "20-reports-early": "built (committed)",
+      "21-analytics-early": "built (committed)",
+      "22-settings-audit-updates-early": "built (committed)"
     }
   },
   "paused": {
     "by": "Umar",
-    "at": "2026-10-24T00:40+05:00",
-    "run_a": "feature/refresh-v16 abf9aef: D4R 17b: T1 done, T2 mostly written (backend stop report missing: ask first), F1 F2 done; 17b uncommitted; lot_id and id filters still owed",
-    "run_b": "feature/d5-early f33764e: round 7 backend built uncommitted, money review must be re-run; frontend round 7 not started; Excel buttons committed"
+    "at": "2026-10-26",
+    "state": "ALL BUILD WORK DONE AND COMMITTED. Waiting for Umar's 'continue'. All four teammates idle, trees clean. Run A feature/refresh-v16 code head f9f861a; Run B feature/d5-early head 6f3ab8a (contains Run A). Gate not started.",
+    "resume": "On continue: merge feature/d5-early into feature/refresh-v16 (one tree), launch reviewer and robustness once over D3, D4, D4R and D5, fix loop, final checks, DONE REPORTS. See docs/deliverables/status.md first bullet."
   },
   "order": {
     "decided_by": "Umar",
@@ -83,29 +83,29 @@
     "text": "Build everything missing from v1.6 and v1.7 first (plan 17, D4R 17b to 17e, D5 early and late), then ONE reviewer and robustness gate over all of it."
   },
   "d4r": {
-    "branch": "feature/refresh-v16 (from feature/bikri after plan 17 is committed)",
+    "branch": "feature/refresh-v16",
     "plans": {
-      "17b-refresh-built-screens": "in progress (T1 done, T2 mostly written, F1 and F2 done; uncommitted)",
-      "17c-gardens": "waiting",
-      "17d-fruit-taken": "waiting",
-      "17e-tag-and-prints": "waiting"
+      "17b-refresh-built-screens": "built (committed)",
+      "17c-gardens": "built (committed)",
+      "17d-fruit-taken": "built (committed 855ce77)",
+      "17e-tag-and-prints": "built (T1 ef444b2, T2 and F1 d80cc1e, phones 92183ba, F2 e6884c0, fixes f9f861a)"
     }
   },
   "d5_late": {
     "branch": "feature/d5-early",
     "plan": "docs/plans/d5-late.md (on feature/d5-early)",
     "rounds": {
-      "7 month close, R12 R29 R31 R32": "backend built uncommitted (money review to re-run); frontend not started",
-      "8 R33 R34 R15 R23 R25 R10": "waiting",
-      "9 dashboard (plan 19)": "waiting",
-      "10 Excel and backup pack": "committed (backend 8244083, snapshot pack a0bb77c, buttons f33764e)",
-      "11 R35 R36 R37, analytics F G I J K, prints, after D4R": "waiting",
-      "12 go-live parts on the Mac": "waiting"
+      "7 month close, R12 R29 R31 R32": "built (committed)",
+      "8 R33 R34 R15 R23 R25 R10": "built (committed)",
+      "9 dashboard (plan 19)": "built (committed)",
+      "10 Excel and backup pack": "built (committed)",
+      "11 R35 R36 R37, analytics F G I J K, prints, after D4R": "built (committed; head 6f3ab8a)",
+      "12 go-live parts on the Mac": "version 1.0.0, whats-new, demo checklist, urdu-review and Windows specs done; perf generator and word list gates wait for the gate and Umar's data"
     }
   },
   "gate_approval": {
     "decided_by": "Umar",
-    "at": "2026-10-25",
-    "text": "Review gate (reviewer and robustness) starts only after Umar says continue. Finish all build work first, then stop all agents and wait for his approval."
+    "at": "2026-10-26",
+    "text": "Review gate (reviewer and robustness) starts only after Umar says continue. All build work is done; all agents are stopped and waiting."
   }
 }
