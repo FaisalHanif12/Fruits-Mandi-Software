@@ -6,6 +6,9 @@
 //! - `properties`: random drafts keep the books balanced.
 
 mod cases;
+mod counter;
+mod edit;
+mod own;
 mod properties;
 mod worked;
 
@@ -21,8 +24,8 @@ use mandi_core::money::{Bps, Paisa};
 use mandi_core::rules::{ChargeSide, ChargeType, ChargeValue, ItemGroup, Working, WorkingValue};
 
 use super::{
-    AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingKind, Switches,
-    calc_posting,
+    AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingTarget,
+    StoredPosting, Switches, calc_posting,
 };
 use crate::ledger::BalancedEntry;
 use crate::ledger::bikri::{SystemAccounts, build_bikri_entry};
@@ -33,10 +36,10 @@ pub const KARIM: i64 = 2;
 pub const AKRAM: i64 = 3;
 pub const ARSHAD: i64 = 4;
 pub const NAQDI: i64 = 5;
-pub const PUKHTA_BUYER: i64 = 6;
-pub const PUKHTA_SELLER: i64 = 7;
+pub const CHUKTA_BUYER: i64 = 6;
 pub const OWN_GOODS: i64 = 8;
 pub const CASH_ONLY_BUYER: i64 = 9;
+pub const KHATA: i64 = 10;
 pub const BANANA: i64 = 1;
 pub const APPLE: i64 = 2;
 pub const MOOLI: i64 = 3;
@@ -87,10 +90,12 @@ pub fn default_rules() -> Vec<Rule> {
 fn account(kind: PartyKind) -> AccountFacts {
     AccountFacts {
         kind,
-        is_pukhta: false,
+        is_chukta: false,
         is_naqdi_mandi: false,
         is_own_goods: false,
+        garden_closed: false,
         is_active: true,
+        in_edited_posting: false,
         credit_allowed: true,
         credit_limit: None,
         balance: Paisa::ZERO,
@@ -113,24 +118,25 @@ pub fn lookups() -> Lookups {
             },
         ),
         (
-            PUKHTA_BUYER,
+            CHUKTA_BUYER,
             AccountFacts {
-                is_pukhta: true,
+                is_chukta: true,
                 ..buyer()
-            },
-        ),
-        (
-            PUKHTA_SELLER,
-            AccountFacts {
-                is_pukhta: true,
-                ..seller()
             },
         ),
         (
             OWN_GOODS,
             AccountFacts {
                 is_own_goods: true,
+                garden_closed: false,
                 ..seller()
+            },
+        ),
+        (
+            KHATA,
+            AccountFacts {
+                kind: PartyKind::Khata,
+                ..account(PartyKind::Seller)
             },
         ),
         (
@@ -202,9 +208,11 @@ pub fn per_unit(value: &str) -> Option<ChargeInput> {
 /// The lot of PRD 4.4: freight 3,000 (firm), labour 5 per نگ, munshiana 50, phone 20, نقد 5,000.
 pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        arrival_id: None,
         key: format!("lot-{seller}-{item}"),
+        lot_id: None,
         seller_account_id: Some(seller),
-        pukhta: None,
+        purchase_id: None,
         item_id: Some(item),
         packing_id: Some(BOX),
         marka_id: None,
@@ -226,6 +234,7 @@ pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
 /// A lot with no typed charge at all, so the rules decide.
 pub fn bare_lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        lot_id: None,
         freight: None,
         labour: None,
         munshiana: None,
@@ -238,23 +247,26 @@ pub fn bare_lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
 pub fn sale(buyer: i64, qty: &str, rate: &str) -> SaleInput {
     SaleInput {
         key: format!("s-{buyer}-{qty}-{rate}"),
+        sale_id: None,
         buyer_account_id: Some(buyer),
-        pukhta: None,
+        chukta: None,
         qty: qty.into(),
         weight: None,
         seller_rate: rate.into(),
         rate_differs: false,
         buyer_rate: None,
-        payment_type: None,
+        paid: None,
         seller_comm: None,
         buyer_comm: None,
         laga: None,
+        grade: None,
         note: None,
     }
 }
 
 pub fn blank(qty: &str) -> SaleInput {
     SaleInput {
+        sale_id: None,
         buyer_account_id: None,
         ..sale(0, qty, "")
     }
@@ -288,11 +300,12 @@ pub fn run_with(
 ) -> PostingCalc {
     let prepared = prepare_draft(draft, today(), None);
     calc_posting(
-        PostingKind::First,
+        PostingTarget::New,
         &prepared,
         lookups,
         &RuleSet::build(rules),
         switches,
+        &StoredPosting::none(),
     )
     .unwrap()
 }
@@ -384,6 +397,9 @@ pub fn assert_every_working_matches(calc: &PostingCalc) {
             assert_result(&n("buyer_value"), c.buyer_value, &c.workings.buyer_value);
             assert_result(&n("buyer_total"), c.buyer_total, &c.workings.buyer_total);
             assert_result(&n("rate_diff"), c.rate_diff, &c.workings.rate_diff);
+            // PRD FR-12.44: what was paid on the spot and what is left.
+            assert_result(&n("paid"), c.paid_paisa, &c.workings.paid);
+            assert_result(&n("left"), c.left_paisa, &c.workings.left);
             for (what, charge) in [
                 ("seller_comm", &c.seller_comm),
                 ("buyer_comm", &c.buyer_comm),

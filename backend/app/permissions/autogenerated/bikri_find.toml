@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-find"
+description = "Enables the bikri_find command without any pre-configured scope."
+commands.allow = ["bikri_find"]
+
+[[permission]]
+identifier = "deny-bikri-find"
+description = "Denies the bikri_find command without any pre-configured scope."
+commands.deny = ["bikri_find"]

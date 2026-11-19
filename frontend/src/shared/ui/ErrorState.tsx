@@ -2,6 +2,7 @@
 // errors.ftl, what to do, the reference number in Latin digits (NFR-REL-6, NFR-OBS-3), and a
 // retry button. Never a raw error code (NFR-USE-14).
 
+import { PartnerLockedBox } from './PartnerLockedBox';
 import { Localized } from '@fluent/react';
 import { CircleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -19,6 +20,15 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ title, error, onRetry }: ErrorStateProps) {
+  // A report or a screen that the partner code keeps closed does not fail: it asks for the code
+  // (plan 44, PRD FR-17.11). When the code is right every answer is read again and it opens.
+  if (error.errors.some((item) => item.code === 'ERR_PARTNER_LOCKED')) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 p-4 text-center">
+        <PartnerLockedBox />
+      </div>
+    );
+  }
   return (
     <div role="alert" className="flex flex-col items-center justify-center gap-3 p-4 text-center">
       <StateBadge icon={CircleAlert} tone="due" />

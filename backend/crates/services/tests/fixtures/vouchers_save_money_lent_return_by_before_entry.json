@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "ERR_RETURN_BY_BEFORE_ENTRY",
+      "field": "return_by",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

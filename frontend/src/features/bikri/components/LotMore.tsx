@@ -1,5 +1,5 @@
 // The rest of a lot, behind "مزید" (PRD FR-12.2, 12.3): the مارکہ, store, weight, فون, کرایہ سٹور,
-// who paid the freight, the tick "پیشگی سے کاٹیں" (FR-12.23), how each charge typed in the grid is
+// who paid the freight, how each charge typed in the grid is
 // meant (the amount itself, for each نگ, or for the lot), and the one-time seller. It is for the
 // selected lot. A problem on one of these fields opens it by itself, so it is never hidden.
 //
@@ -9,13 +9,12 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { UiError } from '../../../bindings/UiError';
-import { usePartyCard } from '../../../shared/accounts';
+import { pickedOf } from '../../../shared/accounts';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import type { EntryRow, PickedRecord } from '../../../shared/grid';
 import {
   Button,
   Card,
-  Checkbox,
   Field,
   MoneyInput,
   Num,
@@ -24,9 +23,9 @@ import {
   fieldError,
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
-import { isPukhtaSeller } from '../draft';
-import { LOT, ON, type LotPreview } from '../types';
-import { PukhtaFields } from './PukhtaFields';
+import { isOwnLot } from '../draft';
+import { lotLabelVars, useLotWho } from '../lot-name';
+import { LOT, type LotPreview } from '../types';
 
 interface LotMoreProps {
   row: EntryRow;
@@ -64,6 +63,8 @@ function methodOf(text: string | undefined): Method {
 export function LotMoreToggle({ lotIndex, forced }: { lotIndex: number; forced: boolean }) {
   const stores = useBikriDraft();
   const open = stores.view((state) => state.moreOpen);
+  const lotWho = useLotWho();
+  const lotRow = stores.lots((state) => state.rows)[lotIndex];
   return (
     <Button
       disabled={forced}
@@ -76,7 +77,7 @@ export function LotMoreToggle({ lotIndex, forced }: { lotIndex: number; forced: 
       ) : (
         <ChevronDown aria-hidden="true" className="size-icon-md" />
       )}
-      <Localized id="bikri-more-toggle" vars={{ lot: String(lotIndex + 1) }} />
+      <Localized id="bikri-more-toggle" vars={{ ...lotLabelVars(lotIndex + 1, lotWho(lotRow)) }} />
     </Button>
   );
 }
@@ -85,28 +86,14 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   const stores = useBikriDraft();
-  // A one-time seller needs his name and phone, so the panel opens for him by itself.
-  const open = stores.view((state) => state.moreOpen) || hasProblem || isPukhtaSeller(row);
-  const seller = row.picked?.[LOT.seller];
-  const card = usePartyCard(seller?.id ?? null);
-  const advance = card.data?.advance_open ?? null;
-  // The tick shows only for a seller who has an advance open (PRD 12.3).
-  const hasAdvance = advance !== null && formatPaisa(advance, { grouping }) !== '0';
+  const open = stores.view((state) => state.moreOpen) || hasProblem;
   const path = (sub: string) => `lots[${String(lotIndex)}].${sub}`;
   const typed = (field: string) => row.typed[field] ?? '';
   const setTyped = (field: string, text: string) => {
     stores.lots.getState().updateTyped(row.rowId, field, text);
   };
   const setPicked = (field: string, hit: PickedRecord | null) => {
-    stores.lots
-      .getState()
-      .updatePicked(
-        row.rowId,
-        field,
-        hit === null
-          ? null
-          : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-      );
+    stores.lots.getState().updatePicked(row.rowId, field, hit === null ? null : pickedOf(hit));
   };
   const methodLabel: Record<Method, string> = {
     manual: l10n.getString('bikri-method-manual'),
@@ -124,6 +111,8 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
                 <Picker
                   {...control}
                   scope="marka"
+                  // A مارکہ added from a lot belongs to the lot's seller (PRD FR-7.69).
+                  addOwner={row.picked?.[LOT.seller] ?? null}
                   value={row.picked?.[LOT.marka] ?? null}
                   onChange={(hit) => {
                     setPicked(LOT.marka, hit);
@@ -192,40 +181,24 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             </Field>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <div className="flex items-center gap-3">
-              <Localized id="bikri-more-freight-paid-by">
-                <span className="type-label" />
-              </Localized>
-              <SegmentedControl
-                groupLabel={l10n.getString('bikri-more-freight-paid-by')}
-                value={typed(LOT.freightPaidBy) === 'seller' ? 'seller' : 'firm'}
-                onChange={(who) => {
-                  setTyped(LOT.freightPaidBy, who);
-                }}
-                options={[
-                  { value: 'firm', label: <Localized id="glossary-arhti" /> },
-                  { value: 'seller', label: <Localized id="glossary-beopari" /> },
-                ]}
-              />
-            </div>
-            {hasAdvance ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <Checkbox
-                  checked={typed(LOT.adjustAdvance) !== '0'}
-                  onChange={(checked) => {
-                    setTyped(LOT.adjustAdvance, checked ? ON : '0');
-                  }}
-                  label={<Localized id="bikri-more-adjust-advance" />}
-                />
-                <Localized
-                  id="bikri-more-advance-open"
-                  vars={{ amount: formatPaisa(advance, { grouping }) }}
-                  elems={{ num: <Num /> }}
-                >
-                  <span className="type-body text-ink-muted" />
+            {isOwnLot(row) ? null : (
+              <div className="flex items-center gap-3">
+                <Localized id="bikri-more-freight-paid-by">
+                  <span className="type-label" />
                 </Localized>
+                <SegmentedControl
+                  groupLabel={l10n.getString('bikri-more-freight-paid-by')}
+                  value={typed(LOT.freightPaidBy) === 'seller' ? 'seller' : 'firm'}
+                  onChange={(who) => {
+                    setTyped(LOT.freightPaidBy, who);
+                  }}
+                  options={[
+                    { value: 'firm', label: <Localized id="glossary-arhti" /> },
+                    { value: 'seller', label: <Localized id="glossary-beopari" /> },
+                  ]}
+                />
               </div>
-            ) : null}
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <Localized id="bikri-more-charge-method">
@@ -264,28 +237,6 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
               })}
             </div>
           </div>
-          {isPukhtaSeller(row) ? (
-            <PukhtaFields
-              store={stores.lots}
-              row={row}
-              keys={{
-                ur: LOT.pukhtaUr,
-                en: LOT.pukhtaEn,
-                phone: LOT.pukhtaPhone,
-                marks: `${LOT.pukhtaUr}Marks`,
-              }}
-              paths={{
-                ur: path('pukhta.name_ur'),
-                en: path('pukhta.name_en'),
-                phone: path('pukhta.phone'),
-              }}
-              error={error}
-              onDone={() => {
-                const index = stores.lots.getState().rows.findIndex((r) => r.rowId === row.rowId);
-                stores.lots.getState().setPendingFocus({ rowIndex: index, field: LOT.item });
-              }}
-            />
-          ) : null}
         </Card>
       ) : null}
     </div>

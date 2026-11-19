@@ -1,0 +1,17 @@
+{
+  "date": "11-10-2026",
+  "lines": [
+    {
+      "account_id": 21,
+      "cr": "",
+      "dr": "1,000",
+      "narration": "fix"
+    },
+    {
+      "account_id": 19,
+      "cr": "1,000",
+      "dr": "",
+      "narration": null
+    }
+  ]
+}

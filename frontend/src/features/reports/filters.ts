@@ -1,0 +1,316 @@
+// What the filter boxes of a report hold, and how it becomes the filters the backend wants (PRD
+// FR-19.1, FR-19.2, FR-19.10). The screen keeps the filters as typed (dates as text) and sends them
+// as text: the backend reads the dates, the shortcuts and the party (CLAUDE.md rule 1). Nothing is
+// worked out here.
+
+import type { ReportDateShortcut } from '../../bindings/ReportDateShortcut';
+import type { ReportFilterKind } from '../../bindings/ReportFilterKind';
+import type { ReportFilters } from '../../bindings/ReportFilters';
+import type { ReportGardenView } from '../../bindings/ReportGardenView';
+import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
+import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
+import type { ReportStockView } from '../../bindings/ReportStockView';
+import type { ReportTripView } from '../../bindings/ReportTripView';
+import type { VoucherType } from '../../bindings/VoucherType';
+import type { Language } from '../../i18n';
+import { GRADE_CHOICES, type GradeChoice } from '../../shared/format';
+import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
+
+/** The period box: a shortcut of FR-19.2, or the two dates the user types. */
+export type PeriodChoice = ReportDateShortcut | 'custom';
+
+export const PERIOD_CHOICES: readonly PeriodChoice[] = [
+  'custom',
+  'today',
+  'yesterday',
+  'this_week',
+  'this_month',
+  'last_month',
+];
+
+/** The Fluent message of a period choice. */
+export function periodMessageId(choice: PeriodChoice): string {
+  return `report-period-${choice.replaceAll('_', '-')}`;
+}
+
+/** The paid or due box of the dead amount report (R38): `all` is no filter. */
+export type PaidChoice = ReportPaidFilter | 'all';
+
+export const PAID_CHOICES: readonly PaidChoice[] = ['all', 'paid', 'due'];
+
+/** The vouchers list (R15) takes one kind of voucher, or `all` for every kind (no filter). */
+export type VoucherChoice = VoucherType | 'all';
+
+/** In the order of the voucher kinds of PRD 15 and 16. Each has a `report-doc-<kind>` message. */
+export const VOUCHER_CHOICES: readonly VoucherChoice[] = [
+  'all',
+  'receipt',
+  'payment',
+  'advance',
+  'shop_expense',
+  'personal_expense',
+  'personal_return',
+  'money_lent',
+  'money_lent_return',
+  'capital_in',
+  'capital_out',
+  'khata_out',
+  'khata_in',
+  'general',
+];
+
+/** The Fluent message of a voucher kind: `report-doc-shop-expense` for `shop_expense`. */
+export function voucherMessageId(kind: VoucherType): string {
+  return `report-doc-${kind.replaceAll('_', '-')}`;
+}
+
+/** The trip profit or loss (R33) is laid out by trip (the default), item, day, month or partner. */
+export const TRIP_VIEW_CHOICES: readonly ReportTripView[] = [
+  'trip',
+  'item',
+  'day',
+  'month',
+  'partner',
+];
+
+/** The Fluent message of a trip layout: `report-filter-trip-by-partner`. */
+export function tripViewMessageId(view: ReportTripView): string {
+  return `report-filter-trip-by-${view}`;
+}
+
+/** The stock report (R10) is laid out by lot (the default) or by item, the biggest balance first. */
+export const STOCK_VIEW_CHOICES: readonly ReportStockView[] = ['lot', 'item'];
+
+/** The Fluent message of a stock layout: `report-filter-stock-view-item`. */
+export function stockViewMessageId(view: ReportStockView): string {
+  return `report-filter-stock-view-${view}`;
+}
+
+/** The gardens report (R36) is laid out by garden (the default) or by partner. */
+export const GARDEN_VIEW_CHOICES: readonly ReportGardenView[] = ['garden', 'partner'];
+
+/** The Fluent message of a garden layout: `report-filter-garden-by-partner`. */
+export function gardenViewMessageId(view: ReportGardenView): string {
+  return `report-filter-garden-by-${view}`;
+}
+
+/** The quality box of the sales registers (R2, R3, R4; PRD FR-12.42): the choices are shared with analytics. */
+export { GRADE_CHOICES, type GradeChoice };
+
+/** The income report groups its lines by month or by day (R28). */
+export const GROUP_BY_CHOICES: readonly ReportGroupBy[] = ['month', 'day'];
+
+/**
+ * The بکری picked for the sale book report (R1): its row id for the request, its number to show.
+ */
+export interface ReportBikri {
+  id: number;
+  number: number;
+}
+
+/** What the filter boxes hold. Every box that a report does not take is simply not shown. */
+export interface ReportFilterState {
+  period: PeriodChoice;
+  /** `DD-MM-YYYY` as typed (the backend also reads `10` and `10-9`). */
+  from: string;
+  to: string;
+  asOf: string;
+  party: PickerValue | null;
+  /**
+   * One چکتا buyer inside the account چکتا کھاتہ, when the day sheet (R35) opened his row (PRD
+   * FR-13.7): his key, as the backend sent it. Null for any party picked in the box. It is only ever
+   * set from a row, never typed, and is let go with the party.
+   */
+  partyPersonKey: string | null;
+  seller: PickerValue | null;
+  zamindar: PickerValue | null;
+  item: PickerValue | null;
+  city: PickerValue | null;
+  adda: PickerValue | null;
+  /** One collector, a staff member (R22, R23, R35); null is every collector. */
+  collector: PickerValue | null;
+  /**
+   * One lot (R2 to R6, R10, R27; PRD FR-12.45, FR-7.77, plan 71 L9). It has no box: it is set only by
+   * the address the assistant's "open the full report" button builds, so the report opens on that one
+   * lot. Its name shows in the line under the filters, and it is let go with "clear filters".
+   */
+  lot: PickerValue | null;
+  detail: boolean;
+  /** Paid or due lines only (R38). */
+  paid: PaidChoice;
+  /** The income report by month or by day (R28). */
+  groupBy: ReportGroupBy;
+  /** The partner of a partner statement (R31, required) or of the expense report (R29, optional). */
+  partner: number | null;
+  /** The fruit register (R37) for the shop's guests only; never together with a partner. */
+  guestsOnly: boolean;
+  /** One kind of voucher in the vouchers list (R15); `all` is no filter. */
+  voucherType: VoucherChoice;
+  /** The group of the items, fruit or vegetables (R2, R3, R4, R7, R10, R27); `all` is no filter. */
+  itemGroup: ItemGroupChoice;
+  /** The quality of the sale lines (R2, R3, R4); `all` is no filter. */
+  grade: GradeChoice;
+  /** How the trip profit or loss is laid out (R33). It is a layout, not a filter to clear. */
+  tripView: ReportTripView;
+  /** How the stock report (R10) is laid out: by lot or by item. A layout, not a filter to clear. */
+  stockView: ReportStockView;
+  /** One garden of the gardens report (R36); null is every garden. */
+  garden: number | null;
+  /** How the gardens report is laid out (R36): by garden or by partner. A layout, not a filter. */
+  gardenView: ReportGardenView;
+  /** The one بکری of the sale book report (R1, required there). */
+  bikri: ReportBikri | null;
+  /** What is typed in the بکری box, kept here so a language switch loses nothing. */
+  bikriText: string;
+}
+
+export const EMPTY_FILTERS: ReportFilterState = {
+  period: 'custom',
+  from: '',
+  to: '',
+  asOf: '',
+  party: null,
+  partyPersonKey: null,
+  seller: null,
+  zamindar: null,
+  item: null,
+  city: null,
+  adda: null,
+  collector: null,
+  lot: null,
+  detail: false,
+  paid: 'all',
+  groupBy: 'month',
+  partner: null,
+  guestsOnly: false,
+  voucherType: 'all',
+  itemGroup: 'all',
+  grade: 'all',
+  tripView: 'trip',
+  stockView: 'lot',
+  garden: null,
+  gardenView: 'garden',
+  bikri: null,
+  bikriText: '',
+};
+
+/**
+ * The filters as the backend reads them. Every key is sent. A box the report does not take is
+ * sent empty, because the backend refuses a filter the report does not take if it is filled
+ * (ERR_OUT_OF_RANGE), and a box left over from another report must never reach it.
+ */
+export function filtersToWire(
+  state: ReportFilterState,
+  takes: readonly ReportFilterKind[],
+): ReportFilters {
+  const has = (kind: ReportFilterKind) => takes.includes(kind);
+  const dates = has('date_range');
+  const shortcut = dates && state.period !== 'custom' ? state.period : null;
+  // The party is an account, and for a row of a چکتا buyer on the day sheet also his key (PRD FR-13.7).
+  const party: ReportFilters['party'] =
+    has('party') && state.party !== null
+      ? { account_id: state.party.id, person_key: state.partyPersonKey }
+      : null;
+  return {
+    shortcut,
+    from: dates && shortcut === null ? state.from.trim() : '',
+    to: dates && shortcut === null ? state.to.trim() : '',
+    as_of: has('as_of') ? state.asOf.trim() : '',
+    party,
+    seller_id: has('seller') ? (state.seller?.id ?? null) : null,
+    zamindar_id: has('zamindar') ? (state.zamindar?.id ?? null) : null,
+    item_id: has('item') ? (state.item?.id ?? null) : null,
+    city_id: has('city') ? (state.city?.id ?? null) : null,
+    adda_id: has('adda') ? (state.adda?.id ?? null) : null,
+    partner_id: has('partner') ? state.partner : null,
+    garden_id: has('garden') ? state.garden : null,
+    bikri_id: has('bikri') ? (state.bikri?.id ?? null) : null,
+    detail: has('detail') && state.detail,
+    // The two newer keys are sent only when they are set; the backend reads a missing key as its
+    // default (all lines; by month), so an old request stays valid.
+    ...(has('status') && state.paid !== 'all' ? { status: state.paid } : {}),
+    // A kind of voucher is sent only when one is picked (the backend reads a missing key as every
+    // kind). The trip layout is sent whenever the report takes it, the default included.
+    // One group of items is sent only when it is chosen (the backend reads a missing key as every item).
+    ...(has('item_group') && state.itemGroup !== 'all' ? { item_group: state.itemGroup } : {}),
+    // One quality is sent only when it is chosen (the backend reads a missing key as every line).
+    ...(has('grade') && state.grade !== 'all' ? { grade: state.grade } : {}),
+    ...(has('voucher_type') && state.voucherType !== 'all'
+      ? { voucher_type: state.voucherType }
+      : {}),
+    ...(has('trip_view') ? { trip_view: state.tripView } : {}),
+    // The stock layout is sent only when it is not the first (the backend reads a missing key as by lot).
+    ...(has('stock_view') && state.stockView !== 'lot' ? { stock_view: state.stockView } : {}),
+    // One collector is sent only when he is picked (the backend reads a missing key as every collector).
+    ...(has('collector') && state.collector !== null ? { collector_id: state.collector.id } : {}),
+    // One lot is sent only when the address named it (the backend reads a missing key as every lot).
+    ...(has('lot') && state.lot !== null ? { lot_id: state.lot.id } : {}),
+    // The guests choice of the fruit register is sent only when it is set (the backend reads a
+    // missing key as every line) and never with a partner, which it refuses.
+    ...(has('guests') && state.guestsOnly && state.partner === null ? { guests_only: true } : {}),
+    // The gardens layout is sent only when it is not the first, like the grouping of R28.
+    ...(has('garden_view') && state.gardenView !== 'garden'
+      ? { garden_view: state.gardenView }
+      : {}),
+    ...(has('group_by') && state.groupBy !== 'month' ? { group_by: state.groupBy } : {}),
+  };
+}
+
+/**
+ * The language whose alphabet sorts the lots of a seller's day slip (R35; PRD FR-12.12, plan 71 L7).
+ * The backend sorts by item in that language's order and then by the lot counter, so the screen draws
+ * the rows in the order it is given. It is not a filter: only the day sheet reads it, and a print sets
+ * its own language, so no other report is sent it.
+ */
+export function withOrderLanguage(
+  wire: ReportFilters,
+  id: string,
+  language: Language,
+): ReportFilters {
+  return id === 'R35' ? { ...wire, order_language: language } : wire;
+}
+
+/** True when no box that the report takes is filled: nothing to clear. */
+export function isUnfiltered(
+  state: ReportFilterState,
+  takes: readonly ReportFilterKind[],
+): boolean {
+  const wire = filtersToWire(state, takes);
+  return (
+    wire.shortcut === null &&
+    wire.from === '' &&
+    wire.to === '' &&
+    wire.as_of === '' &&
+    wire.party === null &&
+    wire.seller_id === null &&
+    wire.zamindar_id === null &&
+    wire.item_id === null &&
+    wire.city_id === null &&
+    wire.adda_id === null &&
+    wire.collector_id === undefined &&
+    wire.lot_id === undefined &&
+    wire.partner_id === null &&
+    wire.garden_id === null &&
+    wire.bikri_id === null &&
+    !wire.detail &&
+    wire.status === undefined &&
+    wire.voucher_type === undefined &&
+    wire.item_group === undefined &&
+    wire.grade === undefined &&
+    wire.guests_only === undefined
+  );
+}
+
+/**
+ * A report that needs a party or a partner cannot run until one is picked: R13 and R14 need an
+ * account, R31 needs a partner (the catalogue says which box by the filters the report takes).
+ */
+export function canRun(
+  state: ReportFilterState,
+  entry: { filters: readonly ReportFilterKind[]; party_required: boolean },
+): boolean {
+  if (!entry.party_required) return true;
+  // The required box is the one the report takes: a partner (R31), a بکری (R1) or an account.
+  if (entry.filters.includes('bikri')) return state.bikri !== null;
+  return entry.filters.includes('partner') ? state.partner !== null : state.party !== null;
+}

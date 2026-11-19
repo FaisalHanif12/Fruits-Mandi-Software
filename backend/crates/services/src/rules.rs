@@ -15,7 +15,7 @@ use std::sync::Arc;
 use mandi_db::accounts as account_repo;
 use mandi_db::rules::{self as repo, NewRule};
 use mandi_db::rusqlite::Connection;
-use mandi_domain::core::accounts::{BUYER_CONTROL, SELLER_CONTROL};
+use mandi_domain::core::accounts::{BUYER_CONTROL, KHATA_CONTROL, SELLER_CONTROL};
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::{Paisa, Qty, line_value};
@@ -23,7 +23,8 @@ use mandi_domain::core::rules::{
     ChargeSide, ChargeTest, ChargeType, ChargeValue, ChargesInput, ChargesSettings,
     CreditLimitMode, DEFAULT_RATE_CHECK_PERCENT, DefaultCharge, ItemGroup, OverridesSettings,
     RATE_CHECK_PERCENT_RANGE, RuleInput, RuleRow, RuleSaved, RuleTest, RuleTestInput, RulesFilter,
-    check_combination, is_default_scope, level_of, prepare_rule, rule_value,
+    RulesList, RulesListInput, RulesTotals, check_combination, is_default_scope, level_of,
+    prepare_rule, rule_value,
 };
 use mandi_domain::core::validate;
 use mandi_domain::rules::{Query, Rule, RuleSet, charge_amount, resolve};
@@ -90,7 +91,15 @@ pub fn rule_set_in(conn: &Connection) -> Result<RuleSet, ServiceError> {
         .iter()
         .map(domain_rule)
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(RuleSet::build(rules))
+    // Of two rules at one level that start on the same day, the one saved last wins: the last saved
+    // time (an edit counts), then the bigger id (PRD FR-11.5).
+    let mut saved: Vec<(&str, i64)> = records
+        .iter()
+        .map(|r| (r.saved_at.as_str(), r.id))
+        .collect();
+    saved.sort_unstable();
+    let order: Vec<i64> = saved.into_iter().map(|(_, id)| id).collect();
+    Ok(RuleSet::build(rules).with_saved_order(&order))
 }
 
 /// The active rules, kept in memory (a live preview calls this on every change). The same
@@ -152,6 +161,44 @@ pub fn list(ctx: &Context, filter: &RulesFilter) -> Result<Vec<RuleRow>, Service
     })
 }
 
+/// One page of the rules that match a filter, in the order of [`list`], with the counts over every
+/// matching rule (PRD FR-19.11, B31). The order depends on the level of each rule, which is worked
+/// out for all of them (at most 10,000, NFR-SCL-6) before the page is cut.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn list_page(ctx: &Context, input: &RulesListInput) -> Result<RulesList, ServiceError> {
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&SORT_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
+    let mut rows = list(ctx, &input.filter)?;
+    // A search keeps the rules it names, before they are counted.
+    if let Some(typed) = input
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
+        rows.retain(|row| rule_matches(row, typed));
+    }
+    // A sort reorders the whole list before the page is cut. It is stable, so equal rules keep
+    // the order of the rule list.
+    if let Some(sort) = &input.sort {
+        sort_rules(&mut rows, &sort.column, sort.direction);
+    }
+    let count =
+        |n: usize| i64::try_from(n).map_err(|_| ServiceError::Data("too many rows".to_owned()));
+    let total_count = count(rows.len())?;
+    let active_count = count(rows.iter().filter(|r| r.is_active).count())?;
+    Ok(RulesList {
+        rows: crate::page::slice(rows, input.offset, input.limit),
+        total_count,
+        totals: RulesTotals { active_count },
+    })
+}
+
 /// One rule, for the edit form.
 ///
 /// # Errors
@@ -178,6 +225,40 @@ fn new_rule(prepared: &mandi_domain::core::rules::PreparedRule) -> NewRule {
         is_active: prepared.is_active,
         note: prepared.note.clone(),
     }
+}
+
+/// The first field (in the order of the form) that differs between a stored rule and the typed one,
+/// leaving out the end date and the active flag, which a used rule may change. The note counts: the
+/// rest of a used rule is locked.
+fn first_changed_field(old: &NewRule, new: &NewRule) -> Option<&'static str> {
+    if old.side != new.side {
+        return Some("side");
+    }
+    if old.charge != new.charge {
+        return Some("charge_type");
+    }
+    if old.account_id != new.account_id {
+        return Some("account_id");
+    }
+    if old.item_id != new.item_id {
+        return Some("item_id");
+    }
+    if old.item_group != new.item_group {
+        return Some("item_group");
+    }
+    if old.method != new.method {
+        return Some("method");
+    }
+    if old.value_bps != new.value_bps || old.value_paisa != new.value_paisa {
+        return Some("value");
+    }
+    if old.from_date != new.from_date {
+        return Some("from_date");
+    }
+    if old.note != new.note {
+        return Some("note");
+    }
+    None
 }
 
 fn audit_json(rule: &NewRule) -> Value {
@@ -215,7 +296,8 @@ fn row_json(row: &RuleRow) -> Value {
 }
 
 /// A party must be on the rule's side (PRD 11.3): a seller on the seller side, a buyer on the
-/// buyer side. The پختہ کھاتہ accounts count (PRD FR-11.7).
+/// buyer side. The چکتا کھاتہ accounts count (PRD FR-11.7). A separate khata can be the party of a
+/// seller-side rule, because it can be the seller of a lot (PRD FR-16.7).
 fn check_party(conn: &Connection, side: ChargeSide, account_id: i64) -> Result<(), ServiceError> {
     let facts = account_repo::facts(conn, account_id)?
         .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "account_id"))?;
@@ -223,7 +305,9 @@ fn check_party(conn: &Connection, side: ChargeSide, account_id: i64) -> Result<(
         ChargeSide::Seller => SELLER_CONTROL,
         ChargeSide::Buyer => BUYER_CONTROL,
     };
-    if facts.control_code == wanted {
+    if facts.control_code == wanted
+        || (side == ChargeSide::Seller && facts.control_code == KHATA_CONTROL)
+    {
         Ok(())
     } else {
         Err(not_allowed("account_id"))
@@ -296,6 +380,20 @@ pub fn save(ctx: &Context, actor: &Actor, input: &RuleInput) -> Result<RuleSaved
                 // The version of the row read must still be the stored one.
                 if prepared.version != Some(old.version) {
                     return Err(ServiceError::reject(ErrorCode::ErrVersionChanged));
+                }
+                // A rule that saved lines were worked out with keeps what it was: only its end date
+                // and its active flag may change; a newer rule from a date replaces the rest (PRD
+                // FR-7.70, FR-11.6, plan 44).
+                if old.used
+                    && let Some(field) = first_changed_field(&new_rule_from_row(&old), &rule)
+                {
+                    let lines = repo::saved_lines_using(tx, id)?;
+                    return Err(ServiceError::reject_with(
+                        ErrorCode::ErrRuleUsed,
+                        Some(field),
+                        "saved_lines",
+                        lines,
+                    ));
                 }
                 refuse_second_default(
                     prepared.side,
@@ -691,17 +789,18 @@ pub fn set_charges(
 // ---- Settings: overrides and checks ----
 
 /// Reads the stored switches. A missing value means the starting position of PRD FR-11.10 v1.5
-/// and FR-7.55: a typed commission or لاگا is allowed, a credit limit warns, and the rate check
-/// is on at 30%. A value stored as `false` stays `false` (the Owner turned it off), and a stored
-/// percent in range is kept as stored.
+/// and FR-7.55 (v1.44, plan 79): a typed commission or لاگا is allowed, a credit limit warns, and
+/// the rate check is OFF (at 30% when the Owner turns it on). A value stored as `true` or `false`
+/// stays as stored (the Owner chose it), and a stored percent in range is kept as stored.
 fn overrides_from(value: Option<Value>) -> OverridesSettings {
-    let flag = |key: &str| {
+    let stored = |key: &str, default: bool| {
         value
             .as_ref()
             .and_then(|v| v.get(key))
             .and_then(Value::as_bool)
-            .unwrap_or(true)
+            .unwrap_or(default)
     };
+    let flag = |key: &str| stored(key, true);
     let mode = match value
         .as_ref()
         .and_then(|v| v.get("credit_limit_mode"))
@@ -722,7 +821,7 @@ fn overrides_from(value: Option<Value>) -> OverridesSettings {
     OverridesSettings {
         allow_line_override: flag("allow_line_override"),
         credit_limit_mode: mode,
-        rate_check_enabled: flag("rate_check_enabled"),
+        rate_check_enabled: stored("rate_check_enabled", false),
         rate_check_percent: percent,
     }
 }
@@ -790,4 +889,73 @@ pub fn set_overrides(
         }
         Ok(*input)
     })
+}
+
+/// The columns the rule list can be sorted by: the names of the fields of the row.
+const SORT_COLUMNS: [&str; 11] = [
+    "side",
+    "charge_type",
+    "account",
+    "item",
+    "item_group",
+    "level",
+    "method",
+    "from_date",
+    "to_date",
+    "is_active",
+    "note",
+];
+
+/// True if the text is in the rule's party or item (code or name in either script) or its note.
+fn rule_matches(row: &RuleRow, typed: &str) -> bool {
+    use mandi_domain::core::text;
+    let lower = typed.to_lowercase();
+    let ur = text::search_ur(typed);
+    let en = text::search_en(typed);
+    let record = |r: &Option<mandi_domain::core::accounts::RecordRef>| {
+        r.as_ref().is_some_and(|r| {
+            r.code.to_lowercase().contains(&lower)
+                || (!ur.is_empty() && text::search_ur(&r.name_ur).contains(&ur))
+                || (!en.is_empty() && text::search_en(&r.name_en).contains(&en))
+        })
+    };
+    record(&row.account) || record(&row.item) || row.note.to_lowercase().contains(&lower)
+}
+
+/// Sorts the whole rule list by a column (checked by [`SORT_COLUMNS`]). A stable sort.
+fn sort_rules(
+    rows: &mut [RuleRow],
+    column: &str,
+    direction: mandi_domain::core::paging::SortDirection,
+) {
+    use std::cmp::Ordering;
+    let cmp: fn(&RuleRow, &RuleRow) -> Ordering = match column {
+        "side" => |a, b| (a.side as u8).cmp(&(b.side as u8)),
+        "charge_type" => |a, b| (a.charge_type as u8).cmp(&(b.charge_type as u8)),
+        "account" => |a, b| {
+            a.account
+                .as_ref()
+                .map(|r| &r.code)
+                .cmp(&b.account.as_ref().map(|r| &r.code))
+        },
+        "item" => |a, b| {
+            a.item
+                .as_ref()
+                .map(|r| &r.code)
+                .cmp(&b.item.as_ref().map(|r| &r.code))
+        },
+        "item_group" => |a, b| {
+            a.item_group
+                .map(|g| g as u8)
+                .cmp(&b.item_group.map(|g| g as u8))
+        },
+        "level" => |a, b| a.level.cmp(&b.level),
+        "method" => |a, b| (a.method as u8).cmp(&(b.method as u8)),
+        "from_date" => |a, b| a.from_date.cmp(&b.from_date),
+        "to_date" => |a, b| a.to_date.cmp(&b.to_date),
+        "is_active" => |a, b| a.is_active.cmp(&b.is_active),
+        "note" => |a, b| a.note.cmp(&b.note),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
 }

@@ -1,0 +1,24 @@
+{
+  "lines": [
+    {
+      "key": "a",
+      "qty": 10,
+      "qty_our": 10
+    },
+    {
+      "key": "b",
+      "qty": 5,
+      "qty_our": -4
+    }
+  ],
+  "errors": [
+    {
+      "code": "ERR_SPLIT_ABOVE_QTY",
+      "field": "lines[1].other_qty",
+      "values": {
+        "qty": 5
+      }
+    }
+  ],
+  "warnings": []
+}

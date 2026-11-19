@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { allLinesColumns, lotColumns, saleColumns } from '../../src/features/bikri/columns';
-import { FIT_MIN_WIDTHS, type EntryColumn } from '../../src/shared/grid';
+import { FIT_MIN_WIDTHS, REMOVE_COLUMN_WIDTH, type EntryColumn } from '../../src/shared/grid';
 import type { LayoutStep } from '../../src/shared/hooks';
 
 const SCROLLBAR = 17;
@@ -15,8 +15,16 @@ const BORDER = 2;
 /** The width of the grid in the smallest window of each step, without a scrollbar. */
 const ROOM: Record<LayoutStep, number> = { compact: 694, normal: 876, wide: 948 };
 
+/**
+ * The least width of a grid: its columns and the remove column every entry grid has after them (plan 43).
+ * The remove column was left out of this sum at first, so the lots grid scrolled sideways by 14 to 16 px at
+ * 1366 and 1024 px while the test passed (the core sweep of plan 72 measured it in a browser).
+ */
 function leastWidth(columns: readonly EntryColumn[]): number {
-  return columns.reduce((sum, column) => sum + (column.minWidth ?? FIT_MIN_WIDTHS[column.type]), 0);
+  return (
+    REMOVE_COLUMN_WIDTH +
+    columns.reduce((sum, column) => sum + (column.minWidth ?? FIT_MIN_WIDTHS[column.type]), 0)
+  );
 }
 
 const STEPS: readonly LayoutStep[] = ['compact', 'normal', 'wide'];
@@ -42,13 +50,75 @@ describe.each(STEPS)('the grids of the sale book in a %s window', (step) => {
   });
 });
 
-describe('the whole-sale view keeps the payment type except in the narrowest window', () => {
+describe('the payment type is not a column of the grid (it is in the details of the line)', () => {
+  it.each(STEPS)(
+    '%s: no payment column in the grid of one lot or in the whole-sale view',
+    (step) => {
+      expect(saleColumns(step).some((column) => column.field === 'payment')).toBe(false);
+      expect(allLinesColumns(step).some((column) => column.field === 'payment')).toBe(false);
+    },
+  );
+});
+
+describe('the quality column (درجہ) is right after the rate and never an Enter stop', () => {
+  it.each(STEPS)('%s: grid of one lot', (step) => {
+    const columns = saleColumns(step);
+    const at = columns.findIndex((column) => column.field === 'rate');
+    expect(columns[at + 1]?.field).toBe('grade');
+    expect(columns[at + 1]?.type).toBe('select');
+    expect(columns[at + 1]?.enterStop).toBe(false);
+  });
+
   it.each([
     ['compact', false],
     ['normal', true],
     ['wide', true],
-  ] as const)('%s: payment column %s', (step, kept) => {
-    const has = allLinesColumns(step).some((column) => column.field === 'payment');
-    expect(has).toBe(kept);
+  ] as const)('%s: in the whole-sale view: %s', (step, kept) => {
+    expect(allLinesColumns(step).some((column) => column.field === 'grade')).toBe(kept);
+  });
+});
+
+describe('the paid on the spot cell (موقع پر جمع, PRD FR-12.44) is the last cell of the line, in every window', () => {
+  it.each(STEPS)('%s: after the buyer total, an Enter stop the backend can close', (step) => {
+    const columns = saleColumns(step);
+    expect(columns.at(-1)?.field).toBe('paid');
+    expect(columns.at(-2)?.field).toBe('buyerTotal');
+    expect(columns.at(-1)?.type).toBe('money');
+    // A stop (default), unless the backend closes it: the buyer who must pay in full.
+    expect(columns.at(-1)?.enterStop).toBeUndefined();
+    expect(columns.at(-1)?.fixedFromCalc).toBe('paidFixed');
+    // The Enter stops of a line are buyer, qty, rate and paid (the quality is not one).
+    const stops = columns.filter(
+      (column) => column.enterStop !== false && column.type !== 'calc' && column.type !== 'label',
+    );
+    expect(stops.map((column) => column.field)).toEqual(['buyer', 'qty', 'rate', 'paid']);
+  });
+
+  it.each(STEPS)('%s: the whole-sale view ends with it too', (step) => {
+    expect(allLinesColumns(step).at(-1)?.field).toBe('paid');
+  });
+});
+
+describe('the figure columns of a sale line, by window (plan 72 P13: what is typed in the details moves a figure the user sees)', () => {
+  const figures = (step: LayoutStep) =>
+    saleColumns(step)
+      .filter((column) => column.type === 'calc')
+      .map((column) => column.field);
+
+  it('compact: the buyer total only (the amounts are in the details of the line)', () => {
+    expect(figures('compact')).toEqual(['buyerTotal']);
+  });
+
+  it('normal (1366 px): the seller commission and the buyer commission, then the buyer total', () => {
+    expect(figures('normal')).toEqual(['sellerComm', 'buyerComm', 'buyerTotal']);
+  });
+
+  it('wide (1920 px): the seller amount as well', () => {
+    expect(figures('wide')).toEqual(['amount', 'sellerComm', 'buyerComm', 'buyerTotal']);
+  });
+
+  it.each(STEPS)('%s: the لاگا is never a column; it is in the details of the line', (step) => {
+    expect(saleColumns(step).some((column) => column.field === 'laga')).toBe(false);
+    expect(allLinesColumns(step).some((column) => column.field === 'laga')).toBe(false);
   });
 });

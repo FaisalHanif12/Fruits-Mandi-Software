@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Option 2: the balance scale (taraazu) weighing a fruit against a leaf. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f3659"/>
+      <stop offset="1" stop-color="#14233b"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="126%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.34"/>
+    </filter>
+    <radialGradient id="orange" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#FFD684"/>
+      <stop offset="1" stop-color="#F08B1E"/>
+    </radialGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="104" y="104" width="816" height="816" rx="181" fill="none" stroke="#fff" stroke-opacity="0.08" stroke-width="8"/>
+  <!-- stand -->
+  <rect x="356" y="756" width="312" height="64" rx="32" fill="#EAB44B"/>
+  <rect x="482" y="300" width="60" height="470" rx="14" fill="#F6F1E4"/>
+  <!-- beam, tilted: the fruit side is the heavy one -->
+  <g transform="rotate(-8 512 296)">
+    <rect x="276" y="274" width="472" height="46" rx="23" fill="#F6F1E4"/>
+  </g>
+  <circle cx="512" cy="296" r="48" fill="#EAB44B"/>
+  <circle cx="512" cy="296" r="16" fill="#14233b"/>
+  <!-- left pan (low): strings, bowl, fruit -->
+  <path d="M279 331 L196 548 M279 331 L362 548" stroke="#F6F1E4" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <circle cx="279" cy="478" r="70" fill="url(#orange)"/>
+  <path d="M184 540 H374 A95 62 0 0 1 184 540 Z" fill="#EAB44B"/>
+  <!-- right pan (high): strings, bowl, leaf -->
+  <path d="M745 261 L662 448 M745 261 L828 448" stroke="#F6F1E4" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <path d="M672 440 C672 372 722 336 800 340 C806 414 762 446 672 440 Z" fill="#5CC06A"/>
+  <path d="M676 438 C716 404 758 376 790 346" fill="none" stroke="#2E8F4E" stroke-width="12" stroke-linecap="round"/>
+  <path d="M650 440 H840 A95 62 0 0 1 650 440 Z" fill="#EAB44B"/>
+</svg>

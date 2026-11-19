@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fruit-lots"
+description = "Enables the fruit_lots command without any pre-configured scope."
+commands.allow = ["fruit_lots"]
+
+[[permission]]
+identifier = "deny-fruit-lots"
+description = "Denies the fruit_lots command without any pre-configured scope."
+commands.deny = ["fruit_lots"]

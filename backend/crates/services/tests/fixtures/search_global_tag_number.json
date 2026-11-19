@@ -1,0 +1,176 @@
+[
+  {
+    "kind": "account",
+    "hit": {
+      "id": 22,
+      "code": "0021",
+      "name_ur": "ارشد ملتانی",
+      "name_en": "Arshad Multani",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "buyer",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 6,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 20,
+      "code": "0011",
+      "name_ur": "کریم",
+      "name_en": "Karim",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "seller",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 5,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 21,
+      "code": "0020",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": "K",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "buyer",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 6,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 26,
+      "code": "06050001",
+      "name_ur": "الگ کھاتہ اور ادھار رقم - الف",
+      "name_en": "Linked Khata and Loans - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 16,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 30,
+      "code": "06050002",
+      "name_ur": "الگ کھاتہ اور ادھار رقم - ب",
+      "name_en": "Linked Khata and Loans - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 16,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 34,
+      "code": "06050003",
+      "name_ur": "الگ کھاتہ اور ادھار رقم - ج",
+      "name_en": "Linked Khata and Loans - Partner C",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 16,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 25,
+      "code": "06040001",
+      "name_ur": "باغ سفر اور پھل - الف",
+      "name_en": "Gardens Trips and Fruit - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 14,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 29,
+      "code": "06040002",
+      "name_ur": "باغ سفر اور پھل - ب",
+      "name_en": "Gardens Trips and Fruit - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 14,
+      "is_active": true,
+      "is_dead": false
+    }
+  },
+  {
+    "kind": "bikri",
+    "hit": {
+      "id": 1,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "truck_no": null,
+      "status": "saved",
+      "matched": "number"
+    }
+  },
+  {
+    "kind": "voucher",
+    "hit": {
+      "id": 1,
+      "voucher_type": "receipt",
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "account": {
+        "id": 21,
+        "code": "0020",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax",
+        "tag": "K"
+      },
+      "amount_paisa": 1000000,
+      "status": "saved"
+    }
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "control_id": null,
+  "include_dead": null,
+  "limit": 10,
+  "offset": 0,
+  "scope": "buyer",
+  "text": "shahid",
+  "with_chukta": true
+}

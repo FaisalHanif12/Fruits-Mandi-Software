@@ -20,9 +20,12 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
+import { openInfo } from '../helpers/info';
 import { message, visible } from '../helpers/render';
 import { at } from '../helpers/sample';
 import { suggestionsFor } from '../helpers/translit';
+import { EMPTY_PAIRS, pairsOf } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -48,7 +51,7 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -86,10 +89,10 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       expect(router.state.location.pathname).toBe('/settings');
     });
 
-    it('has five tabs, and ← and → move between them in the direction the user sees', async () => {
+    it('has ten tabs (the questions group is the tenth), and ← and → move between them in the direction the user sees', async () => {
       const { user } = await open();
       const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(5);
+      expect(tabs).toHaveLength(10);
       expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
       tabs[0]?.focus();
       // The next tab is on the left in Urdu and on the right in English.
@@ -116,6 +119,19 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
   });
 
   describe('firm', () => {
+    it('says the munshis are managed in the staff list, with a link that opens it (PRD v1.23)', async () => {
+      const { user, router } = await open();
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'settings-firm-munshi-note'),
+      );
+      await user.click(
+        screen.getByRole('button', { name: named(language, 'settings-firm-munshi-link') }),
+      );
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/index/staff');
+      });
+    });
+
     it('shows the saved firm, and F10 saves what was changed with a message', async () => {
       vi.mocked(settingsApi.settingsSetFirm).mockImplementation((input) => Promise.resolve(input));
       const { user } = await open();
@@ -135,6 +151,54 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
         );
       });
       expect(await screen.findByText(message(language, 'settings-saved'))).toBeInTheDocument();
+    });
+
+    it('changing only the English firm name makes the Urdu name follow, and the save sends both; the sign-in data is read again (PRD FR-7.24 v1.40)', async () => {
+      vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+        Promise.resolve(
+          suggestionsFor(
+            {
+              toUrdu: {
+                maher: ['ماہر'],
+                adnan: ['عدنان'],
+                and: ['اینڈ'],
+                usman: ['عثمان'],
+                brothers: ['برادرز'],
+              },
+              toEnglish: {},
+            },
+            text,
+            direction,
+          ),
+        ),
+      );
+      vi.mocked(settingsApi.settingsSetFirm).mockImplementation((input) => Promise.resolve(input));
+      const { user } = await open();
+      const english = field(language, 'settings-firm-name-en');
+      const urdu = field(language, 'settings-firm-name-ur');
+      const before = urdu.value;
+      await user.clear(english);
+      await user.type(english, 'Maher Adnan and Maher Usman Brothers');
+      // The Urdu name follows, in view, before the save.
+      await waitFor(() => {
+        expect(urdu.value).toBe('ماہر عدنان اینڈ ماہر عثمان برادرز');
+      });
+      expect(urdu.value).not.toBe(before);
+      const statusReads = vi.mocked(authApi.authStatus).mock.calls.length;
+      press('F10');
+      await waitFor(() => {
+        expect(settingsApi.settingsSetFirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name_en: 'Maher Adnan and Maher Usman Brothers',
+            name_ur: 'ماہر عدنان اینڈ ماہر عثمان برادرز',
+          }),
+        );
+      });
+      // The sign-in screen takes the firm from the sign-in status: it is read again after the save, so the
+      // new names are on the sign-in panel in both languages as soon as it is shown.
+      await waitFor(() => {
+        expect(vi.mocked(authApi.authStatus).mock.calls.length).toBeGreaterThan(statusReads);
+      });
     });
 
     it('a firm name word made by the spelling rules alone is checked before the save (FR-7.66)', async () => {
@@ -243,19 +307,24 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
           document.getElementById(english.getAttribute('aria-describedby') ?? '')?.textContent,
         ),
       ).toBe(message(language, 'err-name-en-script'));
-      expect(visible(document.body.textContent)).toContain(
+      // What each name takes is behind the ⓘ of its label (plan 38 G5).
+      await openInfo(user, language, message(language, 'settings-firm-name-en'));
+      expect(visible(screen.getByRole('dialog').textContent)).toBe(
         message(
           language,
           language === 'ur' ? 'translit-pair-english-hint' : 'translit-pair-english-hint-first',
         ),
       );
-      expect(visible(document.body.textContent)).toContain(
+      await user.keyboard('{Escape}');
+      await openInfo(user, language, message(language, 'settings-firm-name-ur'));
+      expect(visible(screen.getByRole('dialog').textContent)).toBe(
         message(
           language,
           language === 'ur' ? 'translit-pair-urdu-hint' : 'translit-pair-urdu-hint-second',
           { key: 'Alt+U' },
         ),
       );
+      await user.keyboard('{Escape}');
     });
 
     it('asks "Save changes?" when he leaves with unsaved text, and each button does what it says', async () => {
@@ -389,7 +458,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
     }
 
     it('lists each pair with its kind and how often it was used', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       await openWords();
       const table = await screen.findByRole('table', {
         name: message(language, 'translit-words-table'),
@@ -408,8 +477,32 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       );
     });
 
+    it('150 pairs come page by page: 25 at once with the count of the backend, Next page loads the next 25', async () => {
+      const many = Array.from({ length: 150 }, (_, index) => ({
+        id: 100 + index,
+        roman: `word${String(index)}`,
+        urdu: 'لفظ',
+        kind: 'word' as const,
+        use_count: 1,
+        last_used_at: null,
+      }));
+      vi.mocked(urduApi.translitPairsList).mockImplementation((offset, limit) =>
+        Promise.resolve(pairsOf(many, offset, limit)),
+      );
+      const { user } = await openWords();
+      await waitFor(() => {
+        expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
+      });
+      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(0, PAGE_ROWS);
+      await user.click(await pagerButton(language, 'next'));
+      await waitFor(() => {
+        expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
+      });
+      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(PAGE_ROWS, PAGE_ROWS);
+    });
+
     it('Remove asks first, says what will happen, and then removes only that pair', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       vi.mocked(urduApi.translitPairsRemove).mockResolvedValue(null);
       const { user } = await openWords();
       await screen.findByRole('table');
@@ -428,7 +521,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       expect(
         within(dialog).getByRole('button', { name: new RegExp(message(language, 'common-back')) }),
       ).toHaveFocus();
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue([at(pairs, 1)]);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf([at(pairs, 1)]));
       await user.click(
         within(dialog).getByRole('button', { name: message(language, 'translit-words-remove') }),
       );
@@ -444,7 +537,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
     });
 
     it('Esc keeps the word', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       const { user } = await openWords();
       await screen.findByRole('table');
       await user.click(
@@ -473,7 +566,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       const { user } = await openWords();
       const alert = await screen.findByRole('alert');
       expect(visible(alert.textContent)).toContain(message(language, 'err-db-busy'));
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       await user.click(
         within(alert).getByRole('button', { name: message(language, 'common-retry') }),
       );
@@ -481,7 +574,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
     });
 
     it('a failed removal is told, and the list stays', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       vi.mocked(urduApi.translitPairsRemove).mockRejectedValue(fail({ code: 'ERR_NOT_FOUND' }));
       const { user } = await openWords();
       await screen.findByRole('table');

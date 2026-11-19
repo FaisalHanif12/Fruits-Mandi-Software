@@ -12,4 +12,10 @@ export type DayReopenInput = {
    * Why. Required.
    */
   reason: string;
+  /**
+   * The Owner's sign (دستخط): only his sign opens the day (PRD FR-21.2, FR-21.4, plan 80 Q-R2-2).
+   * Required; compared after trimming, ignoring case. Left out of a request, it is empty and
+   * refused.
+   */
+  sign: string;
 };

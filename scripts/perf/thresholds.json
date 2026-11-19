@@ -254,6 +254,15 @@
       "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause that waits for the last key press. D3 plan 12. bikri::preview: read the text, the facts, calc_posting, the journal entry, the partner split and cash. Measured on the NFR-SCL-1 volume with 3 partners added."
     },
     {
+      "id": "bikri/save_30_lines",
+      "action": "Save a بکری with 30 sale lines (server time)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-8",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "300 ms = NFR-SPD-8. D3 plan 13. bikri::save in one transaction: the بکری, lots, lines, journal and its balance check, partner rows, stock, analytics facts, matching, audit, one commit with synchronous = FULL. Measured on the NFR-SCL-1 volume with 3 partners added, 3 lots of 10 lines."
+    },
+    {
       "id": "bikri/preview_500_lines",
       "action": "Live summary of a بکری with 50 lots and 500 sale lines (server time)",
       "kind": "nfr",
@@ -423,6 +432,240 @@
       "stat": "p95",
       "target_ms": 50,
       "$comment": "D2 plan 05 benchmark: services::translit::suggest with 500 learned pairs and the embedded word list, texts from the frozen 1,000-name list (NFR-URD-24). README Section 7."
+    },
+    {
+      "id": "vouchers/save_receipt_busiest_buyer",
+      "action": "Save a وصولی from the busiest buyer (about 55,000 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. vouchers::save_receipt in one transaction: the voucher, the journal entry, the matching of the oldest open bills, the audit row, one commit with synchronous = FULL. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/save_receipt_ordinary_buyer",
+      "action": "Save a وصولی from an ordinary buyer (about 90 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. The same save as for the busiest buyer, for the buyer the Owner meets all day. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines), so the cash account has about 514,000 lines."
+    },
+    {
+      "id": "vouchers/preview_receipt_ordinary_buyer",
+      "action": "Preview of a وصولی for an ordinary buyer, server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause. D4 plan 15. The same preview as for the busiest buyer, for an ordinary one. It reads cash in hand (a sum over the cash account's lines) because the screen shows cash after the entry."
+    },
+    {
+      "id": "assist/open_bills_ordinary_buyer",
+      "action": "Open bills of an ordinary buyer (about 90 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D4 plan 15. assist_open_bills for a party just picked, next to the party card, for the buyer the Owner meets all day."
+    },
+    {
+      "id": "vouchers/save_payment_busiest_seller",
+      "action": "Save an ادائیگی to the busiest seller (about 49,000 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. vouchers::save_payment in one transaction: the voucher, the journal entry, the cash question, the audit row. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/save_cash_lent_busiest_buyer",
+      "action": "Save cash lent to the busiest buyer (about 55,000 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. vouchers::save_payment to a buyer: the new bill is matched to any credit he has waiting. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/preview_receipt_busiest_buyer",
+      "action": "Preview of a وصولی for the busiest buyer, server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause that waits for the last key press. D4 plan 15. vouchers::preview reads the open bills only (the same fast path as the save). Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/preview_payment_busiest_seller",
+      "action": "Preview of an ادائیگی to the busiest seller, server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause. D4 plan 15. vouchers::preview takes the payable from sums of the seller's lines, not line by line. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "assist/open_bills_busiest_buyer",
+      "action": "Open bills of the busiest buyer (about 55,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D4 plan 15. assist_open_bills for a party just picked, next to the party card. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "assist/open_payables_busiest_seller",
+      "action": "Payable postings of the busiest seller (about 49,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D4 plan 15. assist_open_payables for a party just picked: the totals from sums and a walk back from the newest credit. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "assistant/quick_cash_in_hand",
+      "action": "Quick question: cash in hand",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "A quick question (PRD FR-7.80) answers under 300 ms, like opening a screen (NFR-SPD-3). D6 plan 50 R4. The figure is read from the cash book and checked against its second place, then the log row is written. No model. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines)."
+    },
+    {
+      "id": "assistant/quick_today_sales",
+      "action": "Quick question: today's sales",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the day's sales and the count of بکری from the dashboard tiles and their second place."
+    },
+    {
+      "id": "assistant/quick_total_dues",
+      "action": "Quick question: total dues (اگراہی)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the total dues of all buyers, checked through its three parts (R20, R24, R38). The heaviest chip: it reads the dues of every buyer. Over target on worst-case data; accepted by Umar 02-11-2026; FR-6.1 kept."
+    },
+    {
+      "id": "assistant/quick_sellers_payable",
+      "action": "Quick question: sellers payable",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for what the shop owes its sellers (R24)."
+    },
+    {
+      "id": "assistant/quick_party_busiest_buyer",
+      "action": "Quick question: ledger of the busiest buyer (about 55,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the party chip: his checked balance and the last rows of his ledger. The stress case for a party."
+    },
+    {
+      "id": "assistant/quick_today_commission",
+      "action": "Quick question: today's commission",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the commission of the day (the dashboard tile and its second place)."
+    },
+    {
+      "id": "assistant/quick_buyers_dues",
+      "action": "Quick question: buyers' dues",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for what buyers owe (the dashboard tile, checked through R20)."
+    },
+    {
+      "id": "assistant/quick_dead_amount",
+      "action": "Quick question: dead amount (ڈوبی رقم)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the dead amount (the dashboard tile, checked through R38)."
+    },
+    {
+      "id": "assistant/quick_advances_open",
+      "action": "Quick question: open advances",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the advances not yet adjusted (the dashboard tile, checked through R26)."
+    },
+    {
+      "id": "assistant/quick_stock_left",
+      "action": "Quick question: goods not sold",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the stock left (the dashboard tile, checked through R10)."
+    },
+    {
+      "id": "assistant/round_ledger_busiest_buyer",
+      "action": "App's part of a question: find, card and ledger of the busiest buyer, checks, fill, log",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "NFR-AI-3: the app's own part in each round (running the tools and the checks) is under 300 ms. The whole D6 worked question over recorded model replies (find by code, then party_card and R13 together, then the checked answer with its table), so both rounds and the checks are inside the 300 ms. Measured on the NFR-SCL-1 volume; the volume has no sale lines, so analytics and estimate tools are not measured (README Section 7)."
+    },
+    {
+      "id": "assistant/round_advice_dues_r20",
+      "action": "App's part of a question: dues report R20 over all buyers, checks, fill, log",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "NFR-AI-3 as above, for the advice question 'whom to collect from first': R20 sorted oldest first, ten rows, over every buyer of the volume, then the checked advice answer. Over target on worst-case data; accepted by Umar 02-11-2026; FR-6.1 kept."
+    },
+    {
+      "id": "dashboard/get_full_volume",
+      "action": "Dashboard tiles on the NFR-SCL-1 volume",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-2",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "The dashboard loads fully under 1 s after login. Found at 5.7 to 6.1 s by the assistant benchmarks (D6 plan 50 R4): the quick questions and the tiles tool read the same tiles. Passes since P48-S3 (migration 0016 and the rewritten report SQL): 0.59 s p95 without statistics, which is how the real app runs. Measured on the NFR-SCL-1 volume with the matching of every buyer and seller written once, as a real file has it (benches/assistant.rs, matched_volume). The volume has no stock moves or sale lines yet, so the stock queries behind the tiles and the attention list are not timed (plan 50 findings). Held at the NFR target."
+    },
+    {
+      "id": "reports/r34_one_day_full_volume",
+      "action": "R34 day summary for one day on the NFR-SCL-1 volume",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-10",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "Any report for one day under 1 s. Found at 8.7 s (all dates) by the assistant benchmarks (D6 plan 50 R4). Passes since P48-S3: 0.63 s p95 without statistics, which is how the real app runs. Same volume as dashboard/get_full_volume, so it has no stock moves or sale lines yet and the queries that read them are not timed (plan 50 findings). Held at the NFR target."
+    },
+    {
+      "id": "assistant/estimate_buyers_dues",
+      "action": "Estimate tool: what the buyers owe at the same pace (one level for each owner, month by month)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "Lead's K8 (06-11-2026): the tool itself well under 1 s on the NFR-SCL-1 volume, so a figure answer stays under 2 s and a model answer under 8 s. Called directly through tools::call, no model. The volume has no sale lines; the dues series reads journal lines only, so it is measured here."
+    },
+    {
+      "id": "assistant/estimate_party_balance",
+      "action": "Estimate tool: a party's balance at the same pace (busiest buyer, about 55,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "As estimate_buyers_dues, for the balance of the busiest buyer: the monthly change of one account from his journal lines."
     }
   ],
   "install": {

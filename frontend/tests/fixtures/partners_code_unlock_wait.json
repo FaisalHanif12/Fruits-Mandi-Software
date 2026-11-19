@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_LOCKED_WAIT",
+      "field": "code",
+      "values": {
+        "seconds": 60
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

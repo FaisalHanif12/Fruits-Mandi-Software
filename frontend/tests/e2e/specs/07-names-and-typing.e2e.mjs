@@ -6,8 +6,8 @@
 //  - `tariq mehmood` becomes طارق محمود and the English name fills itself as "Tariq Mehmood";
 //  - saving gives the next buyer code, and the box in the top bar finds him in both languages,
 //    also with a small spelling mistake ("tarq").
-// The PRD test says code 03040003 because two buyers exist by then; this run starts with none,
-// so it checks that the code is the next free buyer code (0304 and four digits).
+// The PRD test says code 0022 because two buyers exist by then; this run starts with none,
+// so it checks that the code is the next free buyer code (002 and a running number).
 
 import { $, browser, expect } from '@wdio/globals';
 import { OWNER } from '../support/credentials.mjs';
@@ -119,7 +119,7 @@ describe('typing names (Urdu app)', () => {
       await row.waitForDisplayed({ timeout: SUGGEST_WAIT_MS });
       const shown = (await pageText()).includes(language === 'ur' ? 'طارق محمود' : 'Tariq Mehmood');
       expect(shown).toBe(true);
-      expect(await pageText()).toMatch(/0304\d{4}/);
+      expect(await pageText()).toMatch(/002\d+/);
       await type(Key.Escape);
     }
     await switchLanguage('ur');

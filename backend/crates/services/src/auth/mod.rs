@@ -8,6 +8,7 @@
 mod firstrun;
 pub(crate) mod lockout;
 mod login;
+mod owner_proof;
 mod password;
 mod session;
 
@@ -18,6 +19,7 @@ use crate::settings::Firm;
 
 pub use firstrun::{first_run, first_run_confirmed, recover};
 pub use login::{login, unlock};
+pub(crate) use owner_proof::prove_owner;
 pub use password::change_password;
 pub use session::{lock, logout, require, status};
 

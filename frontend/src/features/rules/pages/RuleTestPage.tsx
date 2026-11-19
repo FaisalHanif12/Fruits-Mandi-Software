@@ -9,6 +9,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { UiError } from '../../../bindings/UiError';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { useEscape, useFormNavigation } from '../../../shared/keyboard';
@@ -21,6 +22,7 @@ import {
   ErrorNotice,
   Field,
   fieldError,
+  FigureCell,
   LinkButton,
   MoneyInput,
   Num,
@@ -34,6 +36,7 @@ import { formatBps, formatPaisa, isoToDisplayDate, useGrouping } from '../../../
 import { levelMessageId } from '../../../shared/i18n';
 import { useTestRule } from '../hooks';
 import type { ChargeTest, WinnerView } from '../types';
+import { FlaskConical } from 'lucide-react';
 
 const FIELD_PATHS = ['seller_id', 'buyer_id', 'item_id', 'date', 'qty', 'rate'];
 
@@ -124,15 +127,13 @@ const RESULT_COLUMNS: TableColumn<ChargeTest>[] = [
     id: 'amount',
     header: <Localized id="rules-test-amount" />,
     kind: 'number',
-    // The ⓘ has a slot of its own at the start of the cell, so the icons line up and the number
-    // sits on the physical right edge (NFR-USE-19).
+    size: 'money',
+    // The figure stands in the middle of the column, under its heading; the ⓘ hangs after it
+    // (NFR-USE-19, plan 39 R1).
     cell: (charge) => (
-      <div className="flex items-center justify-between gap-1">
-        <span className="inline-flex size-control-compact shrink-0 items-center justify-center">
-          <CalcInfo working={charge.working} />
-        </span>
+      <FigureCell extra={<CalcInfo working={charge.working} inCell />}>
         <Num paisa={charge.amount_paisa} />
-      </div>
+      </FigureCell>
     ),
   },
 ];
@@ -179,9 +180,7 @@ export function RuleTestPage() {
     void navigate({ to: '/index/rules' });
   });
   const toValue = (hit: { id: number; code: string; name_ur: string; name_en: string } | null) =>
-    hit === null
-      ? null
-      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+    hit === null ? null : pickedOf(hit);
 
   return (
     <div className="flex max-w-form flex-col gap-5">
@@ -211,6 +210,8 @@ export function RuleTestPage() {
               {(props) => (
                 <AccountPicker
                   {...props}
+                  // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                  canAdd={false}
                   scope="seller"
                   value={seller}
                   onChange={(hit) => {
@@ -227,6 +228,8 @@ export function RuleTestPage() {
               {(props) => (
                 <AccountPicker
                   {...props}
+                  // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                  canAdd={false}
                   scope="buyer"
                   value={buyer}
                   onChange={(hit) => {
@@ -240,6 +243,8 @@ export function RuleTestPage() {
               {(props) => (
                 <Picker
                   {...props}
+                  // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                  canAdd={false}
                   scope="item"
                   value={item}
                   onChange={(hit) => {
@@ -266,7 +271,7 @@ export function RuleTestPage() {
           </div>
         </Card>
       </form>
-      <Card title={<Localized id="rules-test-result" />}>
+      <Card icon={FlaskConical} title={<Localized id="rules-test-result" />}>
         {test.data === undefined ? (
           <Localized id={test.isPending ? 'common-loading' : 'rules-test-nothing'}>
             <p className="type-body text-ink-muted" />

@@ -21,7 +21,8 @@ export type AccountRow = {
    */
   code: string;
   /**
-   * The 4-digit serial as a number.
+   * The serial as a number: the running number of a seller's or buyer's code (`0` for `0010`),
+   * the 4-digit serial of every other account.
    */
   serial: number;
   /**
@@ -40,6 +41,10 @@ export type AccountRow = {
    * English name.
    */
   name_en: string;
+  /**
+   * The tag (نشان), or absent if none (PRD 10.2).
+   */
+  tag?: string;
   /**
    * Father or firm name in Urdu. Empty if none.
    */
@@ -105,10 +110,6 @@ export type AccountRow = {
    */
   collector: RecordRef | null;
   /**
-   * The collection day, 0 (Monday) to 6 (Sunday), or null.
-   */
-  collection_weekday: number | null;
-  /**
    * A system account of PRD FR-10.4: its code cannot change and it cannot be deleted.
    */
   is_system: boolean;
@@ -118,9 +119,10 @@ export type AccountRow = {
    */
   can_take_opening: boolean;
   /**
-   * The پختہ کھاتہ account of one-time people (PRD Section 13).
+   * The چکتا کھاتہ account of walk-in buyers, whose person is typed on the line (PRD Section 13,
+   * account `0030`), and the old closed account `0031`.
    */
-  is_pukhta_khata: boolean;
+  is_chukta_khata: boolean;
   /**
    * False when hidden from pickers.
    */

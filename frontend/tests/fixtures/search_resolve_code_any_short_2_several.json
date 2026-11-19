@@ -1,0 +1,37 @@
+{
+  "status": "several",
+  "account": null,
+  "candidates": [
+    {
+      "id": 35,
+      "code": "0012",
+      "name_ur": "نذیر",
+      "name_en": "Nazir",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "seller",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 5,
+      "is_active": true,
+      "is_dead": false
+    },
+    {
+      "id": 37,
+      "code": "0022",
+      "name_ur": "طارق",
+      "name_en": "Tariq",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "buyer",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 6,
+      "is_active": true,
+      "is_dead": false
+    }
+  ],
+  "suggested_code": null
+}

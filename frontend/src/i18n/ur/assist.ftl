@@ -10,6 +10,9 @@ assist-card-balance = بقایا
 assist-card-last-entry = آخری اندراج
 # review: pending
 assist-card-never = ابھی کوئی اندراج نہیں
+# The card of a walk-in buyer (PRD FR-7.38, FR-13.6): he has no balance, he pays the whole bill on the spot.
+# review: pending
+assist-card-chukta-cash = { -chukta }: پورا نقد
 # review: pending
 assist-card-credit-limit = ادھار کی حد
 # review: pending
@@ -32,7 +35,7 @@ accountpicker-unknown-buyer = اس کوڈ کا کوئی { -gahak } نہیں
 # review: pending
 accountpicker-unknown-any = اس کوڈ کا کوئی کھاتہ نہیں
 # review: pending
-accountpicker-reserved = یہ کوڈ خاص کھاتوں کے لیے ہے۔ عام کھاتے کا یہ کوڈ نہیں ہو سکتا۔
+accountpicker-reserved = یہ کوڈ نظام کے کھاتوں کے لیے رکھا گیا ہے۔ عام کھاتے کا یہ کوڈ نہیں ہو سکتا۔
 # review: pending
 accountpicker-inactive = { $name } ({ $code }) غیر فعال ہے۔ نئے اندراج میں اسے استعمال نہیں کیا جا سکتا۔
 # review: pending
@@ -43,6 +46,13 @@ accountpicker-add = نیا کھاتہ شامل کریں
 accountpicker-add-title = نیا کھاتہ
 # review: pending
 accountpicker-add-help = صرف وہ باتیں لکھیں جن سے یہ کھاتہ پہچانا جائے۔ باقی تفصیل بعد میں { -index } سے بھر سکتے ہیں۔
+# The short form of a new walk-in buyer, from the buyer box of a sale line (PRD FR-7.69, FR-13.3).
+# review: pending
+chukta-add-title = نیا { -chukta } { -gahak }
+# review: pending
+chukta-add-help = اس کا نام لکھیں اور فون ہو تو وہ بھی۔ وہ پورا بل اسی وقت دیتا ہے اور اس کا کوئی کھاتہ نہیں ہوتا۔
+# review: pending
+chukta-saved = { -chukta } { -gahak } شامل ہو گیا
 
 ## How was this worked out? (PRD FR-7.43). The backend names the message and gives its values.
 
@@ -79,7 +89,10 @@ working-manual-per-unit-received = ہاتھ سے لکھا گیا: <num>{ $qty_re
 # review: pending
 working-manual-per-lot = ہاتھ سے لکھا گیا: <num>{ $value }</num> فی { -lot } = <num>{ $result }</num>
 # review: pending
-working-per-lot-already-charged = { -lot } کا یہ چارج پہلی { -bikri } میں لگ چکا ہے، اس لیے اب کچھ نہیں لگا۔
+working-per-lot-already-charged = یہ چارج ہر { -lot } پر ایک ہی بار لگتا ہے اور پہلی { -bikri } میں لگ چکا ہے، اس لیے اب کچھ نہیں جڑتا۔
+# PRD FR-12.41, plan 37: a charge a rule works out for each lot is made once for each goods-arrived entry, on its first lot. $entry: the number of the entry; $value: the amount the rule gives for a lot; $result: what is charged on this lot (0).
+# review: pending
+working-per-lot-charged-on-entry = یہ چارج { -maal-aaya } کے ہر اندراج پر ایک بار لیا جاتا ہے، اور اندراج <num>{ $entry }</num> کی پہلی { -lot } پر (<num>{ $value }</num>) لیا جا چکا ہے، اس لیے اب کچھ نہیں جڑتا: <num>{ $result }</num>
 
 ## How the amounts of the sale screen were worked out (plan 12, PRD 22). The backend names the message and gives its values.
 
@@ -92,6 +105,21 @@ working-weight-value = <num>{ $grams }</num> گرام × <num>{ $rate }</num> ف
 # C5: what the buyer pays for a line.
 # review: pending
 working-buyer-total = قیمت <num>{ $value }</num> + { -commission } <num>{ $comm }</num> + { -laga } <num>{ $laga }</num> = <num>{ $result }</num>
+# PRD FR-12.44: the money a buyer paid on the spot, as typed (or none).
+# review: pending
+working-paid-typed = { -mauqa-par-jama } (جو لکھی گئی): <num>{ $result }</num>
+# PRD FR-12.44: a buyer who must pay in full pays the whole buyer total.
+# review: pending
+working-paid-full = یہ { -gahak } پوری رقم دیتا ہے: رقم { -gahak } <num>{ $total }</num>، اس لیے { -mauqa-par-jama } <num>{ $result }</num>
+# PRD FR-12.44, plan 65 point 10a: an unchanged line of an edit keeps what it was saved with.
+# review: pending
+working-paid-kept = { -mauqa-par-jama } جیسی محفوظ ہوئی تھی ویسی ہی رہی: <num>{ $result }</num>
+# PRD FR-12.44: what was typed is more than the buyer total, so it is counted as 0 until it is fixed.
+# review: pending
+working-paid-over = لکھی گئی رقم <num>{ $typed }</num> لائن کی رقم <num>{ $total }</num> سے زیادہ ہے، اس لیے { -mauqa-par-jama } <num>{ $result }</num> گنی گئی ہے
+# PRD FR-12.44: what stays on the buyer's account.
+# review: pending
+working-left = رقم { -gahak } <num>{ $total }</num> − { -mauqa-par-jama } <num>{ $paid }</num> = <num>{ $result }</num>
 # C19: the rate difference of a line.
 # review: pending
 working-rate-diff = { -gahak } کی قیمت <num>{ $buyer_value }</num> − { -beopari } کی رقم <num>{ $seller_amount }</num> = <num>{ $result }</num>
@@ -114,9 +142,192 @@ working-shared-income = <num>{ $seller_comm }</num> + <num>{ $buyer_comm }</num>
 # The largest share also gets the rupees left over, so this is not base × percent ÷ 100.
 # review: pending
 working-partner-share = { -hissa } <num>{ $bps }</num> فیصد از <num>{ $base }</num> = <num>{ $result }</num>
+# C11: one partner's part of a shop expense (PRD 16.2, FR-16.8). $bps is a percent: 40 is 40%.
+# The rupees left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-expense-share = { -dukan-kharcha } <num>{ $amount }</num>، { -hissa } <num>{ $bps }</num> فیصد (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے بڑے { -hissa } کو): <num>{ $result }</num>
+# C22: the partner total before and after one entry of the { -zati-kharcha } screen (PRD FR-16.8).
+# The same message is used for money taken and for money returned, so it does not say plus or minus.
+# review: pending
+working-partner-total = { -kul-raqam } پہلے <num>{ $before }</num>، یہ اندراج <num>{ $amount }</num>، بعد میں <num>{ $after }</num>
+# C10, C11: one partner's part of the income and shop expense lines of a { -general } entry (PRD FR-6.5, 16.4).
+# The part is the net of all such lines: expense is positive, income is negative. The rupees left over go to the largest share.
+# review: pending
+working-general-share = اس اندراج کی آمدن اور { -dukan-kharcha } کی لائنوں کا خالص، { -hissa } <num>{ $bps }</num> فیصد (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے بڑے { -hissa } کو): <num>{ $result }</num>
 # A charge of a line that no rule applies to, for example { -laga } on a vegetable (PRD 11.3).
 # review: pending
 working-none-line = اس لائن پر کوئی اصول نہیں لگا، اس لیے رقم <num>{ $result }</num> ہے۔
-# A one-time seller is paid his whole net at once while { -naqd } is empty (PRD FR-13.10).
+
+## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
+## The backend names the message and gives its values.
+
+# C21: the cost of the trip goods sold or written off, a part of the cost left (the cost of one
+# { -nag } is the average of the purchase, PRD A45). The leftover rupees of the split go to the
+# larger part, so the message does not claim an exact equation (money review of plan 16b).
 # review: pending
-working-cash-pukhta = { -pukhta-khata } کے بیوپاری کو اس کی پوری { -safi-bikri } اسی وقت دی جاتی ہے: <num>{ $result }</num>
+working-cost-of-goods = باقی لاگت <num>{ $cost_left }</num>، <num>{ $qty_left }</num> { -nag } میں سے <num>{ $qty }</num> { -nag } کا حصہ (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے بڑے حصے کو): <num>{ $result }</num>
+# C21 when the last { -nag } are taken: all the cost left goes with them.
+# review: pending
+working-cost-of-goods-last = آخری <num>{ $qty }</num> { -nag } کے ساتھ باقی ساری لاگت جاتی ہے: <num>{ $result }</num>
+# FR-12.20: a line an edit left as it was keeps the cost it had.
+# review: pending
+working-cost-of-goods-kept = یہ لائن جیسی تھی ویسی رہی، اس لیے اس کی پرانی لاگت وہی رہتی ہے: <num>{ $result }</num>
+# C23: a partner's part of a payment of a trip. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-part = ادائیگی <num>{ $amount }</num>، اس کا <num>{ $bps }</num> ÷ 10,000 (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے بڑے { -hissa } کو): <num>{ $result }</num>
+# C25: a partner's part of money that comes in. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-credit = آنے والی رقم <num>{ $amount }</num>، اس کا <num>{ $bps }</num> ÷ 10,000 (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے بڑے { -hissa } کو): <num>{ $result }</num>
+# PRD 16.7, C1: the value of the fruit taken (qty × rate).
+# review: pending
+working-fruit-value = <num>{ $qty }</num> × <num>{ $rate }</num> = <num>{ $result }</num>
+# PRD 16.7, C1 for fruit of an item sold by weight: the weight is in grams, the rate is for each kilo.
+# review: pending
+working-fruit-value-weight = <num>{ $grams }</num> گرام × <num>{ $rate }</num> فی کلو ÷ <num>1,000</num> = <num>{ $result }</num> (قریب ترین روپے تک)
+# PRD 16.7, C27: fruit for the shop's guests is shared equally between the partners who have a share
+# on the day. Each part is rounded down and the rupees left over go to the partner made first, so
+# $result is the first partner's part and the message does not claim an exact equation.
+# review: pending
+working-fruit-guests = قیمت <num>{ $value }</num> کو <num>{ $count }</num> { -shirakat-dar } میں برابر بانٹا (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے پہلے بنائے گئے { -shirakat-dar } کو): پہلا حصہ <num>{ $result }</num>
+# C24: the part of a trip cost that one purchase carries, by the { -nag } bought. The rupees left
+# over go to the larger part, so the message does not claim an exact equation.
+# review: pending
+working-trip-cost-spread = خرچ <num>{ $cost }</num>، <num>{ $total_qty }</num> { -nag } میں سے <num>{ $qty }</num> { -nag } کا حصہ (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے بڑے حصے کو): <num>{ $result }</num>
+# FR-12.27: the result of a trip (sales money and money from other shops, less the cost sold and written off).
+# review: pending
+working-trip-result = فروخت کی رقم <num>{ $sales }</num> + دوسری دکانوں کی رقم <num>{ $other_shop }</num> − بکے ہوئے مال کی لاگت <num>{ $cost_sold }</num> − ضائع مال کی لاگت <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.27: what a partner has so far: money back less money in from the shop and from his pocket.
+# review: pending
+working-trip-partner-net = واپس ملا <num>{ $back }</num> − دکان سے لگایا <num>{ $in_shop }</num> − اپنی جیب سے لگایا <num>{ $in_pocket }</num> = <num>{ $result }</num>
+# FR-12.37: the running balance of a garden: its money in less everything paid in (installments and
+# costs, from the shop and from pockets). It starts in minus.
+# review: pending
+working-garden-balance = آنے والی رقم <num>{ $money_in }</num> − ادا کی گئی ہر رقم (قسطیں اور باغ کے خرچ، دکان سے اور اپنی جیب سے) <num>{ $paid }</num> = <num>{ $result }</num>
+# FR-12.27: the result of one purchase.
+# review: pending
+working-purchase-result = فروخت کی رقم <num>{ $sales }</num> + دوسری دکانوں کی رقم <num>{ $other_shop }</num> − بکے ہوئے مال کی لاگت <num>{ $cost_sold }</num> − ضائع مال کی لاگت <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.32: the result of one sale in another shop.
+# review: pending
+working-other-sale-result = ملی ہوئی رقم <num>{ $amount }</num> − بکے ہوئے مال کی لاگت <num>{ $cost }</num> = <num>{ $result }</num>
+# C21 for a whole lot of trip goods: the cost of the goods its lines took (the sum of the lines).
+# review: pending
+working-own-lot-cost = اس لاٹ کے بکے ہوئے <num>{ $qty }</num> { -nag } کی لاگت، جو خریداری سے لی گئی: <num>{ $result }</num>
+# FR-12.27: the result of a lot of trip goods (the seller credit less the cost of the goods sold).
+# review: pending
+working-own-lot-result = بیوپاری کی جمع <num>{ $credit }</num> − بکے ہوئے مال کی لاگت <num>{ $cost }</num> = <num>{ $result }</num>
+# FR-12.24: the total cost of a purchase: what was paid now and its part of the trip costs.
+# review: pending
+working-purchase-total-cost = ابھی ادا شدہ <num>{ $paid_now }</num> + { -market-safar } کے خرچ کا حصہ <num>{ $trip_cost }</num> = <num>{ $result }</num>
+# PRD A45: the cost of one { -nag }, worked out for the whole purchase.
+# review: pending
+working-purchase-avg-cost = <num>{ $total }</num> ÷ <num>{ $qty }</num> = <num>{ $result }</num> (قریب ترین روپے تک)
+# FR-12.24: what is paid now. Freight, labour and other cost are always paid at once.
+# review: pending
+working-purchase-paid-now = <num>{ $value }</num> + <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $other_cost }</num> = <num>{ $result }</num>
+# FR-12.41: a partner's part of a purchase entry with many lines. $lines: how many lines; $amount: his parts of all of them added together.
+# review: pending
+working-entry-part-sum = <num>{ $lines }</num> لائنوں میں سے ہر ایک میں اس کا حصہ، جمع کر کے: <num>{ $amount }</num>
+# PRD FR-12.27, FR-12.37: the shop's commission on the goods sold in our shop. $seller: the seller commission; $buyer: the buyer commission; $laga: the Laga; $total: all three.
+# review: pending
+working-goods-commission = { -commission }: بیوپاری <num>{ $seller }</num> + گاہک <num>{ $buyer }</num> + { -laga } <num>{ $laga }</num> = <num>{ $total }</num>
+
+## The attention list and the bell (plan 19, PRD FR-7.44). Every Urdu line says what its English line says (NFR-URD-29).
+
+# review: pending
+attention-bell-label = توجہ طلب: { $count }
+
+# review: pending
+attention-title = توجہ طلب
+
+# review: pending
+attention-empty-title = کسی کام پر توجہ کی ضرورت نہیں
+
+# review: pending
+attention-empty-help = جب کوئی کام باقی ہو گا تو یہاں نظر آئے گا۔
+
+# review: pending
+attention-load-failed = فہرست کھل نہیں سکی
+
+# review: pending
+attention-update = نیا ورژن <num>{ $version }</num> تیار ہے۔ دن ختم کر کے ترتیبات سے لگائیں۔
+
+# review: pending
+attention-open-first = سب سے ضروری: <name>{ $name }</name>
+
+# review: pending
+attention-drafts = { $count ->
+    [one] <num>{ $count }</num> غیر محفوظ مسودہ
+   *[other] <num>{ $count }</num> غیر محفوظ مسودے
+}
+
+# review: pending
+attention-open-days = { $count ->
+    [one] <num>{ $count }</num> پچھلا دن بند نہیں ہوا
+   *[other] <num>{ $count }</num> پچھلے دن بند نہیں ہوئے
+}
+
+# review: pending
+attention-stock-waiting = { -baqi-maal } میں <num>{ $count }</num> { -lot } انتظار میں ہیں، کل <num>{ $qty }</num> { -nag }
+
+# review: pending
+attention-stock-waiting-aged = { -baqi-maal } میں <num>{ $count }</num> { -lot } انتظار میں ہیں، کل <num>{ $qty }</num> { -nag }، سب سے پرانا <num>{ $days }</num> دن سے
+
+# review: pending
+attention-over-credit-limit = <num>{ $count }</num> { -gahak } ادھار کی حد سے آگے ہیں
+
+# review: pending
+attention-dues-old = <num>{ $count }</num> { -gahak } کے ذمے پرانی رقم ہے: <num>{ $amount }</num>
+
+# review: pending
+attention-dues-old-aged = <num>{ $count }</num> { -gahak } کے ذمے پرانی رقم ہے: <num>{ $amount }</num>، سب سے پرانا بل <num>{ $days }</num> دن پرانا ہے
+
+# review: pending
+attention-payables-old = <num>{ $count }</num> { -beopari } ادائیگی کے انتظار میں ہیں: <num>{ $amount }</num>
+
+# review: pending
+attention-payables-old-aged = <num>{ $count }</num> { -beopari } ادائیگی کے انتظار میں ہیں: <num>{ $amount }</num>، سب سے زیادہ <num>{ $days }</num> دن سے
+
+# review: pending
+attention-backup-old = آخری کلاؤڈ بیک اپ <num>{ $days }</num> دن پرانا ہے
+
+# review: pending
+attention-backup-never = ابھی تک کلاؤڈ بیک اپ نہیں بنا
+
+# review: pending
+attention-loans-overdue = { $count ->
+    [one] { -adhar-raqam } کے <num>{ $count }</num> اندراج کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+   *[other] { -adhar-raqam } کے <num>{ $count }</num> اندراجات کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-loans-overdue-aged = { $count ->
+    [one] { -adhar-raqam } کے <num>{ $count }</num> اندراج کی واپسی کی تاریخ کو <num>{ $days }</num> دن گزر چکے ہیں: <num>{ $amount }</num>
+   *[other] { -adhar-raqam } کے <num>{ $count }</num> اندراجات کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-takes-overdue = { $count ->
+    [one] شراکت دار کی لی ہوئی <num>{ $count }</num> رقم کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+   *[other] شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-takes-overdue-aged = { $count ->
+    [one] شراکت دار کی لی ہوئی <num>{ $count }</num> رقم کی واپسی کی تاریخ کو <num>{ $days }</num> دن گزر چکے ہیں: <num>{ $amount }</num>
+   *[other] شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-names-missing = <num>{ $count }</num> ریکارڈ میں دو ناموں میں سے ایک ہی نام ہے
+
+# review: pending
+attention-health-check = حساب کی جانچ میں مسئلہ ملا ہے، ترتیبات میں دیکھیں
+
+# A question of the last week whose two places of a figure differed (PRD FR-7.76 point 2): no answer was shown. The row is in the question log.
+# review: pending
+attention-records-differ = { $count ->
+    [one] پچھلے ہفتے <num>{ $count }</num> سوال کا ایک عدد ریکارڈ سے نہیں ملا۔ ترتیبات میں سوالات کا ریکارڈ دیکھیں
+   *[other] پچھلے ہفتے <num>{ $count }</num> سوالوں کے اعداد ریکارڈ سے نہیں ملے۔ ترتیبات میں سوالات کا ریکارڈ دیکھیں
+}

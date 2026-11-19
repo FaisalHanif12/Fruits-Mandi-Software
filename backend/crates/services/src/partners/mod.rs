@@ -14,16 +14,16 @@ use std::collections::HashMap;
 use mandi_db::masters as master_repo;
 use mandi_db::partners as repo;
 use mandi_db::rusqlite::Connection;
-use mandi_domain::core::accounts::OpeningRequest;
+use mandi_domain::core::accounts::{OpeningDay, OpeningRequest};
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::partners::{
-    CAPITAL_CONTROL, DRAWINGS_CONTROL, MAX_PARTNERS, PartnerCreateInput, PartnerDetail,
-    PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput,
-    PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed, check_shares, not_100,
-    read_shares,
+    CAPITAL_CONTROL, DRAWINGS_CONTROL, MAX_PARTNERS, OpeningCapitalWhere, PartnerCreateInput,
+    PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput,
+    PartnersList, PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed, check_shares,
+    not_100, read_shares, venture_account,
 };
 use mandi_domain::core::text;
 use mandi_domain::core::translit::Kind;
@@ -31,11 +31,16 @@ use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::partners::ShareKind;
 use serde_json::{Value, json};
 
+pub(crate) mod money;
 pub(crate) mod rows;
+mod statement;
+
+pub use money::{capital_history, takes};
+pub use statement::{first_event_date, statement, statement_day, statement_month};
 
 pub use rows::split_entry;
 
-use crate::accounts::apply_opening;
+use crate::accounts::{OpeningCounter, apply_opening_with};
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::context::Context;
@@ -66,6 +71,8 @@ fn row_of(record: &repo::PartnerRecord, share_bps: i32) -> PartnerRow {
         capital_account_code: record.capital_account_code.clone(),
         drawings_account_id: record.drawings_account_id,
         drawings_account_code: record.drawings_account_code.clone(),
+        venture_account_id: record.venture_account_id,
+        venture_account_code: record.venture_account_code.clone(),
         share_bps,
         is_active: record.is_active,
         version: record.version,
@@ -113,6 +120,27 @@ fn too_many() -> ServiceError {
 pub fn list(ctx: &Context) -> Result<Vec<PartnerRow>, ServiceError> {
     let (_, today) = day::window(ctx)?;
     ctx.db.read(|conn| rows_in(conn, &today.to_iso()))
+}
+
+/// The list for the pickers, as `partners_list` answers it (PRD FR-17.11, plan 44): the partners
+/// by name, and `partners_locked` true while the partner section is locked, when the shares are
+/// left out (set to 0).
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn list_view(ctx: &Context) -> Result<PartnersList, ServiceError> {
+    let mut partners = list(ctx)?;
+    let partners_locked = crate::partner_code::is_locked(ctx)?;
+    if partners_locked {
+        // Names only: the shares are behind the code (PRD FR-17.11).
+        for partner in &mut partners {
+            partner.share_bps = 0;
+        }
+    }
+    Ok(PartnersList {
+        partners,
+        partners_locked,
+    })
 }
 
 /// One partner with his share history, oldest first.
@@ -203,7 +231,9 @@ fn names_of(name_ur: &str, name_en: &str) -> (Option<String>, Option<String>, Fi
 
 /// Adds a partner with his capital account (0602xxxx) and drawings account (0603xxxx), both
 /// named in two scripts. He has no share (0 bps) until [`set_shares`]. An opening capital, if
-/// given, is posted as the opening credit of his capital account dated today (PRD FR-10.9).
+/// given, is posted as the opening credit of his capital account dated today, against روکڑ by
+/// default or against ابتدائی فرق when `opening_capital_where` says it is counted elsewhere (PRD
+/// FR-10.9, PRD 17.1 v1.43).
 ///
 /// # Errors
 /// The name codes (`name_ur`, `name_en`); `ERR_SPELLING_UNCONFIRMED`; the money codes on
@@ -240,15 +270,19 @@ pub fn create(
         &input.confirmed_rules_words,
     )?;
     let (_, today) = day::window(ctx)?;
-    let (row, capital_id, drawings_id, learned) = ctx.db.write(|tx| {
+    let (row, account_ids, learned) = ctx.db.write(|tx| {
         if usize::try_from(repo::active_count(tx)?).unwrap_or(usize::MAX) >= MAX_PARTNERS {
             return Err(too_many());
         }
         let now = ctx.now_text();
         let capital = capital_account(&name_ur, &name_en);
         let drawings = drawings_account(&name_ur, &name_en);
+        // PRD FR-10.4 v1.6: his gardens, trips and fruit account (0604) is made with him.
+        let venture = venture_account(&name_ur, &name_en);
+        // Plan 76: his account for linked khata and loan money (0605) is made with him.
+        let linked = mandi_domain::core::partners::linked_account(&name_ur, &name_en);
         let mut made = Vec::new();
-        for account in [&capital, &drawings] {
+        for account in [&capital, &drawings, &venture, &linked] {
             let (id, code) = master_repo::create_account(tx, account, actor.user_id, &now)?
                 .ok_or_else(|| series_full(account.control_code))?;
             ctx.db.auditor().write(
@@ -265,11 +299,11 @@ pub fn create(
             )?;
             made.push(id);
         }
-        let (capital_id, drawings_id) = match made.as_slice() {
-            [c, d] => (*c, *d),
+        let (capital_id, drawings_id, venture_id, linked_id) = match made.as_slice() {
+            [c, d, v, l] => (*c, *d, *v, *l),
             _ => {
                 return Err(ServiceError::Data(
-                    "a partner needs two accounts".to_owned(),
+                    "a partner needs four accounts".to_owned(),
                 ));
             }
         };
@@ -280,12 +314,18 @@ pub fn create(
                 name_en: &name_en,
                 capital_account_id: capital_id,
                 drawings_account_id: drawings_id,
+                venture_account_id: venture_id,
+                linked_account_id: linked_id,
             },
             actor.user_id,
             &now,
         )?;
         if let Some(amount) = opening {
-            post_opening_capital(ctx, actor, tx, capital_id, today, amount, &now)?;
+            let counter = match input.opening_capital_where.unwrap_or_default() {
+                OpeningCapitalWhere::Cash => OpeningCounter::Cash,
+                OpeningCapitalWhere::CountedElsewhere => OpeningCounter::Difference,
+            };
+            post_opening_capital(ctx, actor, tx, capital_id, (today, amount, counter), &now)?;
         }
         let learned = checked.learn(ctx, actor, tx)?;
         ctx.db.auditor().write(
@@ -297,29 +337,36 @@ pub fn create(
                     "name_en": name_en,
                     "capital_account_id": capital_id,
                     "drawings_account_id": drawings_id,
+                    "venture_account_id": venture_id,
                     "opening_capital_paisa": opening.map(Paisa::as_paisa),
+                    "opening_capital_where": opening.map(|_| input.opening_capital_where.unwrap_or_default()),
                 }))
                 .into_entry(),
         )?;
         let record = repo::get(tx, id)?
             .ok_or_else(|| ServiceError::Data("the saved partner is missing".to_owned()))?;
-        Ok((row_of(&record, 0), capital_id, drawings_id, learned))
+        Ok((
+            row_of(&record, 0),
+            [capital_id, drawings_id, venture_id],
+            learned,
+        ))
     })?;
     learned.after_commit(ctx);
-    search::refresh_account(ctx, capital_id);
-    search::refresh_account(ctx, drawings_id);
+    for account_id in account_ids {
+        search::refresh_account(ctx, account_id);
+    }
     Ok(row)
 }
 
 /// Posts the opening capital of a new partner through the accounts opening service (PRD
-/// FR-10.9): his capital account جمع, ابتدائی فرق بنام, dated today.
+/// FR-10.9, PRD 17.1 v1.43): his capital account جمع, dated today, and on the other side روکڑ بنام when
+/// the money is in cash (the default) or ابتدائی فرق بنام when it is already counted elsewhere.
 fn post_opening_capital(
     ctx: &Context,
     actor: &Actor,
     tx: &Connection,
     capital_id: i64,
-    today: BusinessDate,
-    amount: Paisa,
+    (today, amount, counter): (BusinessDate, Paisa, OpeningCounter),
     now: &str,
 ) -> Result<(), ServiceError> {
     let facts = mandi_db::accounts::facts(tx, capital_id)?
@@ -330,7 +377,7 @@ fn post_opening_capital(
         cr: amount,
         is_advance: false,
     };
-    apply_opening(
+    apply_opening_with(
         ctx,
         tx,
         actor.user_id,
@@ -338,6 +385,10 @@ fn post_opening_capital(
         &facts,
         &wanted,
         "opening_capital",
+        OpeningDay::Open,
+        counter,
+        // A new opening puts cash in, never takes it out, so no cash question can come up.
+        false,
     )
     .map_err(on_opening_capital)?;
     ctx.db.auditor().write(
@@ -398,8 +449,9 @@ fn has_share_from(history: &[repo::ShareRecord], today_iso: &str) -> bool {
 ///
 /// # Errors
 /// The name codes; `ERR_SPELLING_UNCONFIRMED`; `ERR_NOT_FOUND` on `id`; `ERR_VERSION_CHANGED`;
-/// `ERR_PARTNER_HAS_SHARE` on `is_active` (he has a share today or later); `ERR_TOO_MANY_PARTNERS`
-/// when making one active would pass the limit.
+/// `ERR_PARTNER_HAS_SHARE` on `is_active` (he has a share today or later);
+/// `ERR_PARTNER_IN_OPEN_VENTURE` on `is_active` (he is in an open garden or trip, PRD A63);
+/// `ERR_TOO_MANY_PARTNERS` when making one active would pass the limit.
 pub fn update(
     ctx: &Context,
     actor: &Actor,
@@ -437,6 +489,23 @@ pub fn update(
                 ));
             }
         }
+        if old.is_active && !input.is_active && repo::in_open_venture(tx, old.id)? {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrPartnerInOpenVenture,
+                "is_active",
+            ));
+        }
+        // A khata or loan linked to him that still has a balance is his money (plan 76 points 5 and
+        // 10); compare E69.
+        if old.is_active
+            && !input.is_active
+            && mandi_db::links::partner_has_linked_balance(tx, old.id)?
+        {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrPartnerHasLinkedBalance,
+                "is_active",
+            ));
+        }
         if !old.is_active
             && input.is_active
             && usize::try_from(repo::active_count(tx)?).unwrap_or(usize::MAX) >= MAX_PARTNERS
@@ -472,6 +541,24 @@ pub fn update(
                 actor.user_id,
                 &now,
             )?;
+            if old.venture_account_id != 0 {
+                master_repo::rename_account(
+                    tx,
+                    old.venture_account_id,
+                    &venture_account(&name_ur, &name_en),
+                    actor.user_id,
+                    &now,
+                )?;
+            }
+            if old.linked_account_id != 0 {
+                master_repo::rename_account(
+                    tx,
+                    old.linked_account_id,
+                    &mandi_domain::core::partners::linked_account(&name_ur, &name_en),
+                    actor.user_id,
+                    &now,
+                )?;
+            }
         }
         let learned = checked.learn(ctx, actor, tx)?;
         ctx.db.auditor().write(
@@ -501,6 +588,9 @@ pub fn update(
     learned.after_commit(ctx);
     search::refresh_account(ctx, row.capital_account_id);
     search::refresh_account(ctx, row.drawings_account_id);
+    if row.venture_account_id != 0 {
+        search::refresh_account(ctx, row.venture_account_id);
+    }
     Ok(row)
 }
 
@@ -638,6 +728,24 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
         let capitals: Vec<i64> = partners.iter().map(|p| p.capital_account_id).collect();
         let taken = repo::taken_between(conn, &drawings, &month_start, &today_iso)?;
         let capital_totals = mandi_db::ledger::totals_for_accounts(conn, &capitals)?;
+        // This month's capital put in and the net of his gardens, trips and fruit account, with
+        // the entries of month close left out (PRD FR-17.6, FR-17.7, FR-17.10).
+        let ventures: Vec<i64> = partners
+            .iter()
+            .map(|p| p.venture_account_id)
+            .filter(|id| *id != 0)
+            .collect();
+        let capital_month = repo::net_between(conn, &capitals, &month_start, &today_iso)?;
+        let venture_month = repo::net_between(conn, &ventures, &month_start, &today_iso)?;
+        // The advances to sellers are read and replayed once for every partner (R1-4).
+        let advances = money::read_advances(conn)?;
+        let net_of = |sums: Option<&repo::NetSums>| -> Result<Paisa, ServiceError> {
+            let (dr, cr) = sums.map_or((0, 0), |s| (s.dr, s.cr));
+            Paisa::try_from_paisa(cr)
+                .map_err(money_error)?
+                .checked_sub(Paisa::try_from_paisa(dr).map_err(money_error)?)
+                .map_err(money_error)
+        };
         let mut out = Vec::with_capacity(partners.len());
         for partner in &partners {
             let id = partner.id;
@@ -653,13 +761,34 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 .map_err(money_error)?;
             // Money taken: ordinary debits on his drawings account, less the takes that were
             // cancelled or edited (reversal credits), in checked Paisa maths.
-            let (debits, reversed) = taken
-                .get(&partner.drawings_account_id)
-                .map_or((0, 0), |t| (t.debits, t.reversed_credits));
+            let sums = taken.get(&partner.drawings_account_id);
+            let (debits, reversed) = sums.map_or((0, 0), |t| (t.debits, t.reversed_credits));
             let month_taken = Paisa::try_from_paisa(debits)
                 .map_err(money_error)?
                 .checked_sub(Paisa::try_from_paisa(reversed).map_err(money_error)?)
                 .map_err(money_error)?;
+            // Money returned (PRD FR-16.2): the credits of ordinary entries, less the returns that
+            // were cancelled or edited (their reversals debit the account).
+            let (credits, reversed_debits) =
+                sums.map_or((0, 0), |t| (t.credits, t.reversed_debits));
+            let month_returned = Paisa::try_from_paisa(credits)
+                .map_err(money_error)?
+                .checked_sub(Paisa::try_from_paisa(reversed_debits).map_err(money_error)?)
+                .map_err(money_error)?;
+            // PRD C20: خالص = profit share - (money taken - money returned).
+            let month_net = month_profit
+                .checked_sub(
+                    month_taken
+                        .checked_sub(month_returned)
+                        .map_err(money_error)?,
+                )
+                .map_err(money_error)?;
+            let month_capital_in = net_of(capital_month.get(&partner.capital_account_id))?;
+            let month_ventures = net_of(venture_month.get(&partner.venture_account_id))?;
+            // PRD C22, FR-17.9: everything he has in the firm, from the posted records.
+            let record = repo::get(conn, id)?
+                .ok_or_else(|| ServiceError::Data("a partner of the list is missing".to_owned()))?;
+            let total = money::total_with(conn, &record, None, &advances)?;
             // The credit balance of his capital account; negative if it stands on the debit side.
             let capital = match capital_totals.get(&partner.capital_account_id) {
                 Some(totals) => ledger::signed(ledger::balance_of(*totals)?)?
@@ -675,10 +804,16 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 month_profit,
                 month_taken,
                 capital,
+                month_returned,
+                month_capital_in,
+                month_ventures,
+                total,
             ];
             if !partner.is_active && numbers.iter().all(|n| *n == Paisa::ZERO) {
                 continue;
             }
+            let gardens = crate::gardens::cards_of_partner(conn, id)?;
+            let trips = crate::trips::cards_of_partner(conn, id)?;
             out.push(PartnerOverviewRow {
                 partner_id: id,
                 name_ur: partner.name_ur.clone(),
@@ -691,8 +826,40 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 month_profit_paisa: month_profit,
                 month_taken_paisa: month_taken,
                 capital_balance_paisa: capital,
+                month_returned_paisa: month_returned,
+                month_net_paisa: month_net,
+                month_capital_in_paisa: month_capital_in,
+                month_ventures_paisa: month_ventures,
+                total_paisa: total,
+                // The open gardens and trips under his card (PRD 17.3): gardens first, then trips.
+                open_gardens_count: i64::try_from(gardens.len()).unwrap_or(i64::MAX),
+                open_trips_count: i64::try_from(trips.len()).unwrap_or(i64::MAX),
+                open_ventures: {
+                    let mut cards = gardens;
+                    cards.extend(trips);
+                    cards
+                },
             });
         }
         Ok(out)
+    })
+}
+
+/// The open gardens and trips a partner is in, with his %, his money in and back and the running
+/// balance or result of each: the list the partner page opens on demand (plan 76 point 11). Gardens
+/// first, then trips, by number. Read only.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `partner_id`; `ServiceError::Db`.
+pub fn open_ventures(
+    ctx: &Context,
+    partner_id: i64,
+) -> Result<Vec<mandi_domain::core::partners::PartnerVentureCard>, ServiceError> {
+    ctx.db.read(|conn| {
+        repo::get(conn, partner_id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
+        let mut cards = crate::gardens::cards_of_partner(conn, partner_id)?;
+        cards.extend(crate::trips::cards_of_partner(conn, partner_id)?);
+        Ok(cards)
     })
 }

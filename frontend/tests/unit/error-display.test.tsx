@@ -85,6 +85,133 @@ describe.each(LANGUAGES)('showing a backend error (%s)', (language) => {
     expect(ref).toHaveTextContent(TEST_REFERENCE);
   });
 
+  it('a closed day offers today when today is open, the reopening when it is not, and never "a date after X"', () => {
+    const open = renderIn(
+      language,
+      <ErrorNotice
+        error={refusal([
+          {
+            code: 'ERR_DATE_CLOSED',
+            values: { closed_up_to: '09-10-2026', today: '10-10-2026', today_open: 1 },
+          },
+        ])}
+      />,
+    );
+    expect(visible(screen.getByRole('alert').textContent)).toContain(
+      message(language, 'err-date-closed', { today_state: 'open', today: '10-10-2026' }),
+    );
+    open.unmount();
+    renderIn(
+      language,
+      <ErrorNotice
+        error={refusal([
+          {
+            code: 'ERR_DATE_CLOSED',
+            values: { closed_up_to: '10-10-2026', today: '10-10-2026', today_open: 0 },
+          },
+        ])}
+      />,
+    );
+    const shown = visible(screen.getByRole('alert').textContent);
+    expect(shown).toContain(message(language, 'err-date-closed', { today_state: 'closed' }));
+    // Today is closed: no date is offered at all.
+    expect(shown).not.toContain('10-10-2026');
+  });
+
+  it('a cloud address refusal says why: not https (a path after the host is its own refusal, below)', () => {
+    for (const reason of ['https']) {
+      const view = renderIn(
+        language,
+        <ErrorNotice
+          error={refusal([
+            { code: 'ERR_OUT_OF_RANGE', field: 'cloud_endpoint', values: { reason } },
+          ])}
+        />,
+      );
+      const shown = visible(screen.getByRole('alert').textContent);
+      expect(shown).toContain(message(language, 'err-out-of-range', { reason }));
+      // Not the plain range words, and no hole where a range would be.
+      expect(shown).not.toContain(
+        message(language, 'err-out-of-range', { reason: '', min: '', max: '' }),
+      );
+      expect(shown).not.toContain('$');
+      view.unmount();
+    }
+    // The reason reads differently from the plain range; the old path reason is gone (the backend sends
+    // ERR_BACKUP_CLOUD_ADDRESS_PATH now), and an unknown one falls back to the plain range words.
+    expect(message(language, 'err-out-of-range', { reason: 'https' })).not.toBe(
+      message(language, 'err-out-of-range', { reason: '', min: '1', max: '2' }),
+    );
+    expect(message(language, 'err-out-of-range', { reason: 'path', min: '1', max: '2' })).toBe(
+      message(language, 'err-out-of-range', { reason: '', min: '1', max: '2' }),
+    );
+  });
+
+  it('a cloud address with a path after the host is its own refusal: the address to use, the part cut off, and the bucket field', () => {
+    renderIn(
+      language,
+      <ErrorNotice
+        error={refusal([
+          {
+            code: 'ERR_BACKUP_CLOUD_ADDRESS_PATH',
+            field: 'cloud_endpoint',
+            values: {
+              address: 'https://acct.r2.cloudflarestorage.com',
+              path: '/mandidemo',
+              bucket: 'mandidemo',
+            },
+          },
+        ])}
+      />,
+    );
+    const shown = visible(screen.getByRole('alert').textContent);
+    expect(shown).toContain('https://acct.r2.cloudflarestorage.com');
+    expect(shown).toContain('/mandidemo');
+    expect(shown).toContain(message(language, 'backup-set-bucket'));
+    // No hole where a value should be, and no code.
+    expect(shown).not.toContain('$');
+    expect(shown).not.toContain('ERR_BACKUP_CLOUD_ADDRESS_PATH');
+  });
+
+  it('a refusal with a range and no reason keeps the range words', () => {
+    renderIn(
+      language,
+      <ErrorNotice
+        error={refusal([
+          {
+            code: 'ERR_OUT_OF_RANGE',
+            field: 'closing_time',
+            values: { min: '00:00', max: '23:59' },
+          },
+        ])}
+      />,
+    );
+    expect(visible(screen.getByRole('alert').textContent)).toContain(
+      message(language, 'err-out-of-range', { reason: '', min: '00:00', max: '23:59' }),
+    );
+  });
+
+  it('a day sent as YYYY-MM-DD reads as DD-MM-YYYY in the words of ERR_CLOSE_BEFORE_LAST_ENTRY and ERR_DATE_BEFORE_GARDEN', () => {
+    renderIn(
+      language,
+      <ErrorNotice
+        error={refusal([
+          { code: 'ERR_CLOSE_BEFORE_LAST_ENTRY', values: { last_date: '2026-10-12' } },
+          { code: 'ERR_DATE_BEFORE_GARDEN', values: { garden_date: '2026-10-10' } },
+        ])}
+      />,
+    );
+    const text = visible(screen.getByRole('alert').textContent);
+    expect(text).toContain(
+      message(language, 'err-close-before-last-entry', { last_date: '12-10-2026' }),
+    );
+    expect(text).toContain(
+      message(language, 'err-date-before-garden', { garden_date: '10-10-2026' }),
+    );
+    expect(text).not.toContain('2026-10-12');
+    expect(text).not.toContain('2026-10-10');
+  });
+
   it('shows no reference line when the backend sent none', () => {
     renderIn(language, <ErrorNotice error={refusal([{ code: 'ERR_REQUIRED' }], '')} />);
     expect(visible(screen.getByRole('alert').textContent)).toBe(message(language, 'err-required'));

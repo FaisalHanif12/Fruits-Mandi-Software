@@ -1,0 +1,30 @@
+{
+  "cloud_reachable": true,
+  "rows": [
+    {
+      "created_at": "2026-10-10T09:01:00.000Z",
+      "encrypted": false,
+      "kind": "local",
+      "name": "mandi-local-20261010T090100000Z.db",
+      "size_bytes": 0,
+      "status": "good"
+    },
+    {
+      "created_at": "2026-10-10T09:01:00.000Z",
+      "encrypted": true,
+      "kind": "usb",
+      "name": "mandi-20261010T090100000Z.mbk",
+      "size_bytes": 0,
+      "status": "good"
+    },
+    {
+      "created_at": "2026-10-10T09:01:00.000Z",
+      "encrypted": true,
+      "kind": "cloud",
+      "name": "mandi-20261010T090100000Z.mbk",
+      "size_bytes": 0,
+      "status": "good"
+    }
+  ],
+  "total_count": 3
+}

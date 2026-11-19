@@ -1,0 +1,427 @@
+{
+  "report": "R18",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "title_id": "report-r18-title",
+  "party": null,
+  "named_title_id": null,
+  "filters": [],
+  "columns": [
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-difference",
+      "cell": {
+        "type": "balance",
+        "text": "0",
+        "side_id": "report-side-zero"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "01010001",
+            "name": "Cash",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "text": "58,484"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "02010001",
+            "name": "Labour Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "300"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "02010002",
+            "name": "Freight Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "4,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "02010004",
+            "name": "Munshiana Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "100"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "0",
+            "code": "0010",
+            "name": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "1",
+            "code": "0011",
+            "name": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "10,160"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "0",
+            "code": "0020",
+            "name": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "text": "2,880"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "1",
+            "code": "0021",
+            "name": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "0030",
+            "name": "Chukta Khata",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010001",
+            "name": "Commission Income (Seller)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010002",
+            "name": "Commission Income (Buyer)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010003",
+            "name": "Laga Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "480"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010004",
+            "name": "Phone Charge Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "40"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "05010001",
+            "name": "Electricity",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "text": "3,000"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "06010001",
+            "name": "Opening Capital",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "65,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "06019999",
+            "name": "Opening Difference",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "06030001",
+            "name": "Drawings - Partner A",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "text": "2,000"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "tables": [],
+  "row_count": "17",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "85,048"
+    },
+    {
+      "type": "money",
+      "text": "85,048"
+    }
+  ],
+  "words": null
+}

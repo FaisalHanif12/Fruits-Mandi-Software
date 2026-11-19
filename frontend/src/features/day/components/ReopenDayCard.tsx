@@ -1,4 +1,4 @@
-// Reopen a day (PRD FR-21.2): the date and the reason, which is required. Reopening a date reopens
+// Reopen a day (PRD FR-21.2): the date, the reason and the Owner's sign (FR-21.4, plan 80 Q-R2-2), both required. Reopening a date reopens
 // every later date too, and the reason goes to the audit log. A confirm box says exactly that
 // (FR-7.8). Nothing is reopened until the backend has checked the date and the reason.
 
@@ -18,11 +18,12 @@ import {
   fieldError,
   FreeTextInput,
   showToast,
+  TextInput,
 } from '../../../shared/ui';
-import { Lock } from 'lucide-react';
+import { Lock, LockOpen } from 'lucide-react';
 import { useReopenDay } from '../hooks';
 
-const FIELD_PATHS = ['date', 'reason'];
+const FIELD_PATHS = ['date', 'reason', 'sign'];
 
 interface ReopenDayCardProps {
   /** The last closed day, `YYYY-MM-DD`, or null when no day is closed. */
@@ -35,6 +36,8 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
   const [typedDate, setTypedDate] = useState<string | null>(null);
   const date = typedDate ?? (closedUpTo === null ? '' : isoToDisplayDate(closedUpTo));
   const [reason, setReason] = useState('');
+  // The Owner's sign is raw text, compared as typed by the backend: never converted from Roman letters.
+  const [sign, setSign] = useState('');
   const [confirming, setConfirming] = useState(false);
   const reopen = useReopenDay();
   // One reopen at a time: a second Enter on the confirm box does nothing (NFR-REL-1).
@@ -43,7 +46,7 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
 
   if (closedUpTo === null) {
     return (
-      <Card title={<Localized id="day-reopen-title" />}>
+      <Card icon={LockOpen} title={<Localized id="day-reopen-title" />}>
         <EmptyState
           icon={Lock}
           title={<Localized id="day-reopen-none-title" />}
@@ -58,10 +61,11 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
     void flight.run(
       () =>
         reopen
-          .mutateAsync({ date, reason })
+          .mutateAsync({ date, reason, sign })
           .then(() => {
             showToast('success', l10n.getString('day-reopened', { date }));
             setReason('');
+            setSign('');
           })
           // The refusal is shown on the card by its fields.
           .catch(() => undefined),
@@ -81,6 +85,13 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
         </Field>
         <Field label={<Localized id="day-reopen-reason" />} error={fieldError(error, 'reason')}>
           {(props) => <FreeTextInput {...props} value={reason} onChange={setReason} />}
+        </Field>
+        <Field
+          label={<Localized id="day-reopen-sign" />}
+          hint={<Localized id="day-reopen-sign-hint" />}
+          error={fieldError(error, 'sign')}
+        >
+          {(props) => <TextInput {...props} value={sign} onChange={setSign} />}
         </Field>
       </div>
       <div>

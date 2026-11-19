@@ -150,9 +150,20 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "collector_staff_id",
                 "collection_weekday",
                 "is_system",
-                "is_pukhta_khata",
+                "is_chukta_khata",
                 "is_active",
                 "note",
+                // Migration 0006 (PRD v1.7): the tag after a name (null for none).
+                "tag",
+                // Migration 0013 (plan 47) made it; migration 0020 (plan 64) renamed it: the mark of an
+                // old one-time party account, never read again (PRD FR-13.9).
+                "was_one_time_party",
+                // Migration 0023 (plan 76): the link of a khata or a loaned person, the person type
+                // and the newest journal entry when the link was set.
+                "link_kind",
+                "link_partner_id",
+                "link_since_entry_id",
+                "person_type",
             ]);
             v
         }),
@@ -175,7 +186,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
         ("expense_heads", with_code(&["account_id", "is_active"])),
         (
             "staff",
-            named(&[], &["role", "phone", "account_id", "is_active"]),
+            // Migration 7 (plan 32) gave staff a code.
+            named(&[], &["role", "phone", "account_id", "is_active", "code"]),
         ),
         (
             "bank_accounts",
@@ -207,6 +219,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "user_id",
                 "capital_account_id",
                 "drawings_account_id",
+                // Migration 0006 (plan 16b): his gardens, trips and fruit account (0604).
+                "venture_account_id",
+                // Migration 0023 (plan 76): his account for the money of a linked khata or loan (0605).
+                "linked_account_id",
                 "is_active",
             ],
         ),
@@ -254,11 +270,12 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
                 "bikri_id",
                 "lot_no",
+                "lot_counter",
                 "seller_account_id",
-                "pukhta_name_ur",
-                "pukhta_name_en",
-                "pukhta_phone",
-                "pukhta_person_key",
+                "chukta_name_ur",
+                "chukta_name_en",
+                "chukta_phone",
+                "chukta_person_key",
                 "item_id",
                 "packing_id",
                 "marka_id",
@@ -289,6 +306,12 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "seller_comm_paisa",
                 "deductions_paisa",
                 "net_paisa",
+                // Migration 0006 (plan 16b): the purchase a trip lot takes its goods from, and the fruit
+                // taken from the lot (PRD FR-16.11).
+                "purchase_id",
+                "qty_taken",
+                // Migration 0009 (plan 33 v1.1): the garden arrival a garden lot takes its goods from.
+                "arrival_id",
             ],
         ),
         (
@@ -300,10 +323,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "journal_entry_id",
                 "entry_date",
                 "buyer_account_id",
-                "pukhta_name_ur",
-                "pukhta_name_en",
-                "pukhta_phone",
-                "pukhta_person_key",
+                "chukta_name_ur",
+                "chukta_name_en",
+                "chukta_phone",
+                "chukta_person_key",
                 "qty",
                 "weight_grams",
                 "seller_rate_paisa",
@@ -331,6 +354,14 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "is_active",
                 "replaced_by_sale_id",
                 "note",
+                // Migration 0005 (plan 16): how a sale line left force.
+                "ended",
+                // Migration 0006 (plan 16b): the cost of the own goods this line sold (C21).
+                "cost_paisa",
+                // Migration 0019 (plan 58, PRD FR-12.42): the quality of the line.
+                "grade",
+                // Migration 0021 (plan 65, PRD FR-12.44): money paid on the spot.
+                "paid_paisa",
             ],
         ),
         (
@@ -342,6 +373,178 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "kind",
                 "qty",
                 "reason",
+                // Migration 0005 (plan 16): the move this one reverses.
+                "reverses_move_id",
+                // Migration 0006 (plan 16b): a purchase move has a purchase and no lot, and the cost of
+                // the trip goods it releases (C21).
+                "purchase_id",
+                "cost_paisa",
+                // Migration 0009 (plan 33 v1.1): a move of a garden arrival.
+                "arrival_id",
+            ],
+        ),
+        (
+            "garden_arrivals",
+            // Migration 0009 (plan 33 v1.1, PRD FR-12.40): goods that arrived from a garden.
+            vec![
+                "number",
+                "venture_id",
+                "entry_date",
+                "sell_date",
+                "item_id",
+                "packing_id",
+                "qty",
+                "weight_grams",
+                "note",
+                "status",
+                "cancel_reason",
+                "qty_sold",
+                "qty_written_off",
+                // Migration 0010 (plan 35): the split between our shop and another shop.
+                "other_qty",
+                "qty_sold_other",
+                "shop_name",
+            ],
+        ),
+        (
+            "purchases",
+            vec![
+                "number",
+                "venture_id",
+                "entry_date",
+                "supplier_text",
+                "item_id",
+                "packing_id",
+                "qty",
+                "weight_grams",
+                "rate_paisa",
+                "value_paisa",
+                "freight_paisa",
+                "labour_paisa",
+                "other_cost_paisa",
+                "paid_now_paisa",
+                "trip_cost_paisa",
+                "total_cost_paisa",
+                "journal_entry_id",
+                "status",
+                "cancel_reason",
+                "note",
+                "qty_sold",
+                "qty_written_off",
+                "cost_released_paisa",
+                // Migration 0009 (plan 33 v1.1): the day to sell (PRD FR-12.39).
+                "sell_date",
+                // Migration 0010 (plan 35): the split between our shop and another shop.
+                "other_qty",
+                "qty_sold_other",
+                "shop_name",
+            ],
+        ),
+        (
+            "ventures",
+            named(
+                &["kind", "number", "entry_date"],
+                &[
+                    "item_id",
+                    "rent_paisa",
+                    "rent_original_paisa",
+                    "season_end_date",
+                    "market",
+                    "sent_person",
+                    "account_id",
+                    "status",
+                    "closed_date",
+                    "close_entry_id",
+                    "note",
+                ],
+            ),
+        ),
+        (
+            "venture_partners",
+            vec!["venture_id", "partner_id", "share_bps", "source"],
+        ),
+        // Migration 25 (plan 78 D2): a garden with several items.
+        ("venture_items", vec!["venture_id", "item_id", "is_active"]),
+        (
+            "venture_entries",
+            vec![
+                "venture_id",
+                "kind",
+                "number",
+                "entry_date",
+                "amount_paisa",
+                "reason",
+                "purchase_id",
+                "qty",
+                "shop_name",
+                "cost_paisa",
+                "journal_entry_id",
+                "status",
+                "cancel_reason",
+                "current_entry_id",
+                // Migration 0010 (plan 35): the arrival of a garden's sale in another shop, and what it moved.
+                "arrival_id",
+                "moved_qty",
+            ],
+        ),
+        (
+            "venture_entry_parts",
+            vec![
+                "entry_id",
+                "partner_id",
+                "share_bps",
+                "source",
+                "amount_paisa",
+                // Migration 14: soft state, an edit retires the old rows.
+                "is_active",
+                "replaced_by",
+            ],
+        ),
+        (
+            "purchase_cost_parts",
+            vec![
+                "entry_id",
+                "purchase_id",
+                "amount_paisa",
+                "is_active",
+                "replaced_by",
+            ],
+        ),
+        (
+            "lot_counters",
+            vec!["seller_account_id", "item_id", "last_counter"],
+        ),
+        (
+            "lot_credit_parts",
+            vec![
+                "lot_id",
+                "journal_entry_id",
+                "partner_id",
+                "share_bps",
+                "amount_paisa",
+            ],
+        ),
+        (
+            "fruit_takes",
+            vec![
+                "number",
+                "entry_date",
+                "partner_id",
+                "source",
+                "lot_id",
+                "credit_account_id",
+                "chukta_person_key",
+                "item_id",
+                "packing_id",
+                "qty",
+                "weight_grams",
+                "rate_paisa",
+                "value_paisa",
+                "note",
+                "journal_entry_id",
+                "status",
+                "cancel_reason",
+                "current_entry_id",
             ],
         ),
         (
@@ -357,7 +560,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "item_id",
                 "seller_account_id",
                 "buyer_account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "city_id",
                 "adda_id",
                 "qty",
@@ -366,7 +569,69 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "buyer_value_paisa",
                 "buyer_comm_paisa",
                 "laga_paisa",
+                // Migration 0006 (plan 16b): trip goods in the facts.
+                "purchase_id",
+                "venture_id",
+                "cost_paisa",
                 "sign",
+            ],
+        ),
+        // 15.4 (v1.20, migration 0020, plan 64): the list of چکتا buyers (PRD FR-13.2).
+        (
+            "chukta_buyers",
+            named(&["person_key"], &["phone", "is_active"]),
+        ),
+        // 15.3 (v1.12, migration 0012): the edit window of one trip or garden entry (plan 44).
+        ("edit_windows", vec!["entity", "entity_id"]),
+        // 15.3 (v1.15, migration 0015): the question log of the assistant (PRD FR-7.84, plan 48).
+        (
+            "assistant_questions",
+            vec![
+                "asked_at",
+                "asked_day",
+                "asked_by",
+                "question",
+                "language",
+                "conversation_id",
+                "parent_id",
+                "source",
+                "counted",
+                "sources_json",
+                "outcome",
+                "tool_calls_json",
+                "answer_json",
+                "model",
+                "model_calls",
+                "tokens_in",
+                "tokens_cached",
+                "tokens_out",
+                "tokens_reasoning",
+                "finish_reason",
+                // Migration 0017 (plan 51 P51-B2): the time of a run. Architecture 15.3 gets these
+                // four columns with the next document version.
+                "total_millis",
+                "model_millis",
+                "tool_millis",
+                "calls_json",
+            ],
+        ),
+        // 15.4 (v1.9, migration 0011): the people moved to the dead amount (PRD FR-10.10).
+        (
+            "dead_marks",
+            vec![
+                "account_id",
+                "chukta_person_key",
+                "entry_date",
+                "reason",
+                "note",
+                "owed_paisa",
+                "after_entry_id",
+                "is_active",
+                "undone_at",
+                "undone_by",
+                "undo_reason",
+                "undone_after_entry_id",
+                "undone_date",
             ],
         ),
         // 15.7
@@ -377,7 +642,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "number",
                 "entry_date",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "amount_paisa",
                 "mode",
                 "bank_account_id",
@@ -408,6 +673,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "status",
                 "total_paisa",
                 "chain_hash",
+                // Migration 0005 (plan 16): keeps an edited posting in its place for matching.
+                "order_key",
             ],
         ),
         (
@@ -416,7 +683,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "entry_id",
                 "line_no",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "dr_paisa",
                 "cr_paisa",
                 "is_advance",
@@ -429,7 +696,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "bill_line_id",
                 "payment_line_id",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "amount_paisa",
                 "is_active",
                 "undone_at",
@@ -442,7 +709,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "advance_line_id",
                 "credit_line_id",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "amount_paisa",
                 "is_active",
                 "undone_at",
@@ -480,7 +747,10 @@ fn table_list_equals_architecture_15() {
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
-    assert_eq!(want.len(), 37);
+    // 46 tables of migrations 1 to 10, `dead_marks` of migration 11, `edit_windows` of 12,
+    // `assistant_questions` of 15, `chukta_buyers` of 20, `lot_counters` of 22 and `venture_items`
+    // of 25.
+    assert_eq!(want.len(), 52);
     assert_eq!(tables(&conn), want);
 }
 
@@ -513,7 +783,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 37);
+    assert_eq!(rows.len(), 52);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn
@@ -567,8 +837,14 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     }
     // Counted by hand from Architecture 15: accounts 3, charge_rules 1, partner_share_rows 2,
     // bikri_entries 1, bikri_lots 13, bikri_sales 12, analytics_facts 5, vouchers 1,
-    // journal_entries 1, journal_lines 2, bill_allocations 1, advance_allocations 1.
-    assert_eq!(found, 43);
+    // journal_entries 1, journal_lines 2, bill_allocations 1, advance_allocations 1; and of
+    // migration 6: purchases 9, bikri_sales 1, analytics_facts 1, stock_moves 1, ventures 1,
+    // venture_entries 2, venture_entry_parts 1, purchase_cost_parts 1, lot_credit_parts 1 and
+    // fruit_takes 2 more; of migration 11: dead_marks 1; and of migration 21: bikri_sales 1
+    // (`paid_paisa`, written as three column CHECKs, one of them the whole rupee check).
+    // Migration 22 adds none: `lot_counter` and `last_counter` are counters, not money.
+    // Migration 25 adds ventures 1 (`rent_original_paisa`).
+    assert_eq!(found, 66);
 }
 
 /// Every `*_date` column checks for a real date.
@@ -589,8 +865,12 @@ fn every_date_column_has_the_date_check() {
             .into_iter()
             .filter(|c| c.ends_with("_date") || c == "effective_from")
         {
+            // `purchases.sell_date` is nullable (SQLite cannot add a NOT NULL column without a
+            // default, migration 0009), so its check also lets NULL through.
+            let nullable = format!("CHECK ({column} IS NULL OR date({column}) IS {column})");
             assert!(
-                sql.contains(&format!("CHECK (date({column}) IS {column})")),
+                sql.contains(&format!("CHECK (date({column}) IS {column})"))
+                    || sql.contains(&nullable),
                 "{table}.{column}"
             );
         }
@@ -601,13 +881,17 @@ fn every_date_column_has_the_date_check() {
 fn listed_indexes() -> Vec<(&'static str, Vec<&'static str>)> {
     let mut v = vec![
         ("journal_lines", vec!["account_id", "entry_id"]),
-        ("journal_lines", vec!["account_id", "pukhta_person_key"]),
+        ("journal_lines", vec!["account_id", "chukta_person_key"]),
         ("journal_entries", vec!["entry_date"]),
         ("journal_entries", vec!["source_type", "source_id"]),
         ("bikri_sales", vec!["lot_id"]),
         ("bikri_sales", vec!["buyer_account_id", "entry_date"]),
         ("bikri_sales", vec!["journal_entry_id"]),
         ("bikri_lots", vec!["bikri_id"]),
+        (
+            "bikri_lots",
+            vec!["seller_account_id", "item_id", "lot_counter"],
+        ),
         ("bikri_lots", vec!["seller_account_id", "id"]),
         ("bikri_lots", vec!["item_id", "packing_id"]),
         (
@@ -621,11 +905,11 @@ fn listed_indexes() -> Vec<(&'static str, Vec<&'static str>)> {
         ("partner_share_rows", vec!["partner_id", "entry_date"]),
         (
             "bill_allocations",
-            vec!["account_id", "pukhta_person_key", "is_active"],
+            vec!["account_id", "chukta_person_key", "is_active"],
         ),
         (
             "advance_allocations",
-            vec!["account_id", "pukhta_person_key", "is_active"],
+            vec!["account_id", "chukta_person_key", "is_active"],
         ),
         ("bikri_entries", vec!["truck_no", "entry_date"]),
         ("accounts", vec!["party_type", "serial"]),
@@ -665,6 +949,7 @@ fn listed_indexes() -> Vec<(&'static str, Vec<&'static str>)> {
         "markas",
         "stores",
         "expense_heads",
+        "staff",
     ] {
         v.push((table, vec!["code"]));
     }
@@ -683,9 +968,12 @@ fn index_columns(conn: &Connection, table: &str) -> Vec<Vec<String>> {
     names
         .iter()
         .map(|name| {
+            // An expression column (migration 11, `COALESCE(chukta_person_key, '')`) has no name.
             conn.prepare("SELECT name FROM pragma_index_info(?1) ORDER BY seqno")
                 .unwrap()
-                .query_map([name], |row| row.get::<_, String>(0))
+                .query_map([name], |row| {
+                    Ok(row.get::<_, Option<String>>(0)?.unwrap_or_default())
+                })
                 .unwrap()
                 .map(Result::unwrap)
                 .collect()

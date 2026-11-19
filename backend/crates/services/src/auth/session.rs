@@ -126,6 +126,7 @@ pub fn logout(ctx: &Context) -> Result<(), ServiceError> {
         return Err(ServiceError::reject(ErrorCode::ErrNotLoggedIn));
     };
     *ctx.session_lock() = None;
+    ctx.set_partner_open(false);
     audit_session_change(ctx, open.user_id, "logout");
     Ok(())
 }
@@ -146,12 +147,15 @@ pub fn lock(ctx: &Context) -> Result<(), ServiceError> {
     if let Some(session) = ctx.session_lock().as_mut() {
         session.locked = true;
     }
+    // The idle lock also closes the partner section (PRD FR-17.11).
+    ctx.set_partner_open(false);
     audit_session_change(ctx, open.user_id, "lock");
     Ok(())
 }
 
 /// Opens the session for a user who has just proved his password.
 pub(super) fn open(ctx: &Context, user: &UserRecord) {
+    ctx.set_partner_open(false);
     *ctx.session_lock() = Some(Session {
         user_id: user.id,
         username: user.username.clone(),

@@ -1,0 +1,9 @@
+{
+  "amount": "5,000",
+  "confirm_cash_below_zero": false,
+  "date": "11-10-2026",
+  "garden_id": 1,
+  "parts": [],
+  "reason": "labour",
+  "type": "cost"
+}

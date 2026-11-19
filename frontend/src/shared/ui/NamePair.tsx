@@ -5,8 +5,11 @@
 //   English name is exactly what was typed with capital first letters: "tariq mehmood" gives
 //   "Tariq Mehmood". Urdu typed with a keyboard gets an English suggestion from the backend.
 // - Typing the English name gives an Urdu suggestion.
-// - A field the user has typed in is never overwritten again. A pair that arrives already filled
-//   (an existing record) is never overwritten at all.
+// - A field the user has typed in is never overwritten again.
+// - A pair that arrives already filled (a saved record) is edited the same way (PRD FR-7.24 v1.40, plan 75
+//   7.9): changing one name fills the other from it, in view before the save, with the spelling check
+//   of the words the rules alone made, unless the user has also changed the other name in this edit. A name
+//   the app filled is still his to change, and a new change of the first name fills it again until he does.
 // - In the English app the English name comes first and is the one to type; in the Urdu app the
 //   Urdu name comes first. The fields themselves work the same.
 //
@@ -37,8 +40,9 @@ import { capitalizeWords, wordsOf, withoutTrailingLatinRun } from '../urdu/text'
 import type { TypingMode } from '../urdu/typing-mode';
 import type { Suggestions } from '../../bindings/Suggestions';
 import { Field } from './Field';
-import { RomanUrduInput, type ConvertedWord } from './RomanUrduInput';
+import { RomanUrduInput, type ConvertedWord, type ListExtra } from './RomanUrduInput';
 import { SpellingMark } from './SpellingMark';
+import { SuggestInput } from './SuggestInput';
 import { TextInput } from './TextInput';
 
 /** The two names, and the words of them that the user has to check (PRD FR-7.66). */
@@ -93,6 +97,19 @@ interface NamePairProps {
    * `F4`): the other name is filled from it once, at open, like after typing.
    */
   fillOnOpen?: boolean | undefined;
+  /**
+   * The form was not changed by the user when the pair filled the other name on open. When this
+   * is given, the fill goes here instead of `onChange`, so the form can take it as its starting
+   * point and not ask "save changes?" for text the app wrote (plan 32, R8).
+   */
+  onFilledOnOpen?: ((value: NamePairValue) => void) | undefined;
+  /**
+   * Records already known that the name may be (the one-time people, PRD FR-7.29). They are rows
+   * at the head of the list of the name typed first: the Urdu field in the Urdu app, the English
+   * field in the English app. Taking one fills both names and whatever else the screen puts in
+   * `onPick`, and the pair then treats both names as typed, so nothing overwrites them.
+   */
+  knownRecords?: readonly ListExtra[] | undefined;
 }
 
 const LATIN_WORD = /^[A-Za-z]+$/;
@@ -107,6 +124,8 @@ export function NamePair({
   kind,
   checkSpelling = true,
   fillOnOpen = false,
+  onFilledOnOpen,
+  knownRecords,
 }: NamePairProps) {
   const language = useLanguage();
   // In the English app the English name is the one typed, and the Urdu name fills from it.
@@ -116,13 +135,22 @@ export function NamePair({
   // The Urdu word -> the English letters it was typed with, for this pair.
   const known = useRef(new Map<string, string>());
   // A field the user has typed in is never filled by the app again.
-  const typedBy = useRef({ urdu: value.urdu !== '', english: value.english !== '' });
+  // A pair that arrives with both names is a saved record: neither name is "typed" yet, so the one he does not
+  // change follows the one he does (FR-7.24 v1.40). A pair with one name only keeps that one as typed. A known
+  // record taken from a list sets both as typed (below), and a pair filled on open is a new record.
+  const typedBy = useRef({
+    urdu: value.urdu !== '' && !(value.english !== '' && !fillOnOpen && knownRecords === undefined),
+    english:
+      value.english !== '' && !(value.urdu !== '' && !fillOnOpen && knownRecords === undefined),
+  });
   const latest = useRef(value);
   const request = useRef(0);
   const onChangeRef = useRef(onChange);
+  const onFilledRef = useRef(onFilledOnOpen);
   useEffect(() => {
     latest.current = value;
     onChangeRef.current = onChange;
+    onFilledRef.current = onFilledOnOpen;
   });
 
   // A pair that opens with one name typed fills the other from it once (fillOnOpen).
@@ -153,7 +181,7 @@ export function NamePair({
                 'english',
                 checkSpelling ? worked.rulesWords : [],
               );
-        onChangeRef.current(filled);
+        (onFilledRef.current ?? onChangeRef.current)(filled);
       })
       .catch(() => undefined);
     return () => {
@@ -244,6 +272,16 @@ export function NamePair({
     }
   };
 
+  // A known record taken from the list: both names are his, and neither is overwritten again.
+  const knownRows: ListExtra[] | undefined = knownRecords?.map((row) => ({
+    ...row,
+    onPick: () => {
+      typedBy.current = { urdu: true, english: true };
+      request.current += 1;
+      row.onPick();
+    },
+  }));
+
   // The English word being typed is not Urdu yet, so it is not a mistake.
   const urduChecked = pending === '' ? value.urdu : withoutTrailingLatinRun(value.urdu);
   const marks = value.spelling ?? NO_MARKS;
@@ -253,11 +291,13 @@ export function NamePair({
   const urduField = (
     <Field
       label={urduLabel}
-      hint={
+      info={
         <Localized
           id={englishFirst ? 'translit-pair-urdu-hint-second' : 'translit-pair-urdu-hint'}
           vars={{ key: SHORTCUTS.typingMode.label }}
-        />
+        >
+          <p />
+        </Localized>
       }
       error={urduError ?? (urduHintId === null ? undefined : <Localized id={urduHintId} />)}
     >
@@ -272,6 +312,7 @@ export function NamePair({
           onWordConverted={converted}
           onPendingChange={setPending}
           marked={marks.urdu}
+          extras={englishFirst ? undefined : knownRows}
         />
       )}
     </Field>
@@ -279,10 +320,12 @@ export function NamePair({
   const englishField = (
     <Field
       label={englishLabel}
-      hint={
+      info={
         <Localized
           id={englishFirst ? 'translit-pair-english-hint-first' : 'translit-pair-english-hint'}
-        />
+        >
+          <p />
+        </Localized>
       }
       error={
         englishError ?? (englishHintId === null ? undefined : <Localized id={englishHintId} />)
@@ -290,7 +333,21 @@ export function NamePair({
     >
       {(control) => (
         <>
-          <TextInput {...control} value={value.english} onChange={changeEnglish} lang="en" />
+          {/* The same input stays while the list comes and goes, so focus is never lost. */}
+          {englishFirst && knownRows !== undefined ? (
+            <SuggestInput
+              {...control}
+              value={value.english}
+              onChange={changeEnglish}
+              suggestions={knownRows.map((row) => ({
+                value: row.key,
+                content: row.content,
+                onPick: row.onPick,
+              }))}
+            />
+          ) : (
+            <TextInput {...control} value={value.english} onChange={changeEnglish} lang="en" />
+          )}
           <SpellingMark words={wordsStillIn(value.english, marks.english)} lang="en" />
         </>
       )}

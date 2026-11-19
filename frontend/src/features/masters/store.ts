@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import type { MasterKind } from './types';
 
-/** The lists that remember a row: the ten masters and the accounts. */
+/** The lists that remember a row: the nine masters and the accounts. */
 type FocusKind = MasterKind | 'account';
 
 interface MasterFocusState {

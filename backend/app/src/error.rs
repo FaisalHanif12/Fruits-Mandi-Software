@@ -111,7 +111,7 @@ impl UiError {
     }
 
     /// An error with one code and no field, whose cause goes to the log (Code Standards B12).
-    fn coded(code: ErrorCode, detail: &dyn std::fmt::Display) -> Self {
+    pub(crate) fn coded(code: ErrorCode, detail: &dyn std::fmt::Display) -> Self {
         let error = Self::build(vec![UiErrorItem {
             code,
             field: None,
@@ -251,6 +251,20 @@ mod tests {
         assert_eq!(value["errors"][0]["code"], "ERR_DATA_CHECK_FAILED");
         assert!(
             !value.to_string().contains("page 3"),
+            "the cause stays in the log"
+        );
+    }
+
+    #[test]
+    fn a_key_store_refusal_has_its_own_code_and_no_field() {
+        let value = serde_json::to_value(UiError::from(DbError::KeyStoreDenied(
+            "Platform failure: the passphrase is not correct".into(),
+        )))
+        .unwrap();
+        assert_eq!(value["errors"][0]["code"], "ERR_KEYSTORE_DENIED");
+        assert!(value["errors"][0]["field"].is_null());
+        assert!(
+            !value.to_string().contains("passphrase"),
             "the cause stays in the log"
         );
     }

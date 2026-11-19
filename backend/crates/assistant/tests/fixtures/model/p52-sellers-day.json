@@ -1,0 +1,96 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_0_0",
+       "type": "function",
+       "function": {
+        "name": "find",
+        "arguments": "{\"text\": \"rahim\", \"role\": \"seller\"}"
+       }
+      },
+      {
+       "id": "call_0_1",
+       "type": "function",
+       "function": {
+        "name": "period",
+        "arguments": "{\"kind\": \"today\", \"month\": null, \"day\": null, \"from\": null, \"to\": null, \"n\": null}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_1_0",
+       "type": "function",
+       "function": {
+        "name": "report",
+        "arguments": "{\"id\": \"R35\", \"adda\": null, \"as_of\": \"r2.from\", \"bikri\": null, \"city\": null, \"collector\": null, \"from\": null, \"garden\": null, \"group_by\": null, \"item\": null, \"partner\": null, \"party\": \"r1.matches.0\", \"rows\": null, \"sort\": null, \"to\": null, \"trip\": null, \"where\": null}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5600,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 4800
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "stop",
+    "message": {
+     "role": "assistant",
+     "content": "{\"kind\": \"answer\", \"text\": \"{{r1.matches.0.name}} نے {{r2.from}} {{r3.rows.je1.qty}} {{r3.rows.je1.packing}} {{r3.rows.je1.name}} بیچا، رقم {{r3.rows.je1.amount}}۔\\n• پھر {{r3.rows.je1_2.qty}} {{r3.rows.je1_2.packing}} {{r3.rows.je1_2.name}} بیچا، رقم {{r3.rows.je1_2.amount}}۔\\n• آج کی کل بکری {{r3.summary.r35_gross}} ہے۔\", \"show\": [{\"result\": \"r3\", \"as\": \"table\", \"rows\": 7}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 6200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 5000
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ }
+]

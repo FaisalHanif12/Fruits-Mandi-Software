@@ -16,6 +16,34 @@ export type User = ReturnType<typeof userEvent.setup>;
 
 export const named = (text: string) => (name: string) => visible(name) === text;
 
+/**
+ * The dropdown of the summary card (plan 78 C2): it shows the lot (or the whole sale) the summary is
+ * about, and lists every lot and "the whole sale". `area` is the summary section.
+ */
+export const summaryDropdown = (area: HTMLElement): HTMLElement =>
+  within(area).getByRole('combobox');
+
+/** What the summary dropdown shows now, without the isolation marks of Fluent. */
+export const summaryChoice = (area: HTMLElement): string =>
+  visible(summaryDropdown(area).textContent);
+
+/** Opens the summary dropdown and picks the choice with this exact label. */
+export async function chooseInSummary(user: User, area: HTMLElement, label: string) {
+  await user.click(summaryDropdown(area));
+  await user.click(await screen.findByRole('option', { name: named(label) }));
+}
+
+/**
+ * Ticks "take the advance off this sale" for a seller in the summary, the way the munshi does in Event 1 (plan 78
+ * C3: the tick is off when a بکری opens, and it is the seller's, not the lot's).
+ */
+export async function tickAdvance(user: User, language: Language, seller: string) {
+  const box = await screen.findByRole('checkbox', {
+    name: named(message(language, 'bikri-summary-take-advance', { name: seller })),
+  });
+  if (!(box instanceof HTMLInputElement && box.checked)) await user.click(box);
+}
+
 /** The field called `id` in the app language (a picker, the truck number). */
 export const combo = (language: Language, id: string) =>
   screen.findByRole('combobox', { name: named(message(language, id)) });
@@ -37,13 +65,30 @@ export function cellOf(grid: HTMLElement, rowIndex: number, field: string): HTML
   return found;
 }
 
+/**
+ * The details of a sale line, the section under the grid that holds its charges, its seller amount and what
+ * is left on the buyer's account, by the line's number from 1. The seller amount is in the grid only from
+ * 1920 px, and here in every window (plan 72 P13, NFR-USE-27).
+ */
+export const lineDetails = (language: Language, line: number) =>
+  screen.findByRole('region', {
+    name: named(message(language, 'bikri-line-title', { line: String(line) })),
+  });
+
 export const textOf = (grid: HTMLElement, rowIndex: number, field: string) =>
   visible(cellOf(grid, rowIndex, field).textContent).trim();
 
-/** Where focus is in a grid now, as "row:column". */
+/**
+ * Where focus is in a grid now, as "row:column". A picker cell opens its picker as soon as the
+ * cell has the focus (plan 46, PRD FR-7.16): the field with the cursor is then in a popup outside
+ * the grid, and its cell is the one the grid shows as focused.
+ */
 export function focusedIn(grid: HTMLElement): string | null {
   const active = document.activeElement;
-  const cell = active?.closest<HTMLElement>('.ag-cell');
+  const inEditor = active?.closest('.ag-custom-component-popup') != null;
+  const cell = inEditor
+    ? grid.querySelector<HTMLElement>('.ag-cell-focus')
+    : active?.closest<HTMLElement>('.ag-cell');
   if (cell == null || !grid.contains(cell)) return null;
   const row = cell.closest<HTMLElement>('.ag-row');
   return `${row?.getAttribute('row-index') ?? '?'}:${cell.getAttribute('col-id') ?? '?'}`;
@@ -81,47 +126,61 @@ export async function openBook(
 }
 
 /**
- * Types the header and the lot of Event 1 with the keys only: the truck (which fills the اڈا, the
- * زمیندار and the driver), then Enter through the filled fields to the lots, then the lot's cells.
- * Ends with focus on the buyer of the first sale line.
+ * Types the lot of Event 1 with the keys only. The header is only the date (plan 71 H1): it has the
+ * cursor when the screen opens, and Enter goes on to the first lot's seller. The seller is typed as
+ * his short code (`0` is Rahim, 0010); his item and packing come from his last lot. Then the lot's
+ * cells. Ends with focus on the buyer of the first sale line.
  */
 export async function typeHeaderAndLot(user: User, language: Language) {
-  await user.keyboard('LES-1234{Enter}');
-  await waitFor(() => {
-    expect(
-      screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
-    ).toHaveValue(names(language).rahim);
-  });
-  await user.keyboard('{Enter}{Enter}{Enter}');
+  await user.keyboard('{Enter}');
   const lots = lotsGrid(language);
   await waitFor(() => {
     expect(focusedIn(lots)).toBe('0:seller');
   });
+  await typeCodeAndEnter(user, '0');
+  await waitFor(() => {
+    expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
+  });
   await waitFor(() => {
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
   });
-  await user.keyboard('{Enter}{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
+  // Picking the seller moved on to the item: the item and the packing, then the quantity.
+  await user.keyboard('{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
   await waitFor(() => {
     expect(focusedIn(salesGrid(language))).toBe('0:buyer');
+  });
+}
+
+/**
+ * A new, empty بکری is open (as after a save): the cursor is on the date, the first field, and the
+ * first lot has no seller. Waits, because the screen is made again a moment after the save.
+ */
+export async function expectNewEmptyBook(language: Language) {
+  await waitFor(() => {
+    expect(
+      screen.getByRole('textbox', { name: named(message(language, 'bikri-header-date')) }),
+    ).toHaveFocus();
+    expect(textOf(lotsGrid(language), 0, 'seller')).toBe('');
   });
 }
 
 /** Types the two sale lines of Event 1: Akram 20 at 600 and Arshad 30 at 580. */
 export async function typeTwoLines(user: User, language: Language) {
   const sales = salesGrid(language);
-  await user.keyboard('1{Enter}');
+  await user.keyboard('0{Enter}');
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('0:qty');
   });
-  await user.keyboard('20{Enter}600{Enter}');
+  // Buyer, qty, rate and the paid cell: four Enters, then the next line (PRD FR-12.44, NFR-USE-6).
+  await user.keyboard('20{Enter}600{Enter}{Enter}');
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('1:buyer');
   });
-  await user.keyboard('2{Enter}');
+  await user.keyboard('1{Enter}');
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('1:qty');
   });
-  await user.keyboard('{Enter}580{Enter}');
+  await user.keyboard('{Enter}580{Enter}{Enter}');
 }
 
 /** Types a picker field and takes the first match: waits for the list, so Enter finds it. */
@@ -132,30 +191,38 @@ export async function typeAndPick(user: User, text: string) {
 }
 
 /**
- * Types Event 1 the way the backend's request files have it, with no truck memory: the truck, the
- * زمیندار picked by name, the lot (50 نگ, freight 3,000, labour 5 for each نگ, munshiana 50,
- * phone charge 20, نقد 5,000). The method of the labour and the phone charge are in the "more"
- * panel of the lot. Ends with the cursor on the buyer of the first sale line.
+ * Types Event 1 the way the backend's request files have it: the seller by his short code, the lot
+ * (50 نگ, freight 3,000, labour 5 for each نگ, munshiana 50, phone charge 20, نقد 5,000). The method
+ * of the labour and the phone charge are in the "more" panel of the lot. Ends with the cursor on the
+ * buyer of the first sale line.
  */
 export async function typeEvent1Lot(user: User, language: Language) {
-  await user.keyboard('LES-1234{Enter}');
-  await typeAndPick(user, 'rahim');
-  // The adda and the total freight stay empty; the freight is typed on the lot.
-  await user.keyboard('{Enter}{Enter}');
+  await user.keyboard('{Enter}');
   const lots = lotsGrid(language);
   await waitFor(() => {
     expect(focusedIn(lots)).toBe('0:seller');
   });
-  // The seller is the زمیندار, and his item and packing come from his last lot.
+  await typeCodeAndEnter(user, '0');
+  // His item and packing come from his last lot.
+  await waitFor(() => {
+    expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
+  });
   await waitFor(() => {
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
   });
-  await user.keyboard('{Enter}{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
+  await user.keyboard('{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
   await waitFor(() => {
     expect(focusedIn(salesGrid(language))).toBe('0:buyer');
   });
   await user.click(
-    screen.getByRole('button', { name: named(message(language, 'bikri-more-toggle', { lot: 1 })) }),
+    // The button names the lot after its number once the seller or item is chosen (PRD FR-12.6),
+    // so it is found by the words that come first.
+    screen.getByRole('button', {
+      name: (label) =>
+        visible(label).startsWith(
+          message(language, 'bikri-more-toggle', { lot: 1, who: '', named: 'no' }),
+        ),
+    }),
   );
   const labour = await screen.findByRole('group', {
     name: named(message(language, 'glossary-mazdoori')),
@@ -168,4 +235,39 @@ export async function typeEvent1Lot(user: User, language: Language) {
   );
   await user.keyboard('20');
   await user.click(cellOf(salesGrid(language), 0, 'buyer'));
+}
+
+/**
+ * Types a code into the picker cell the cursor is on and presses Enter. The first key opens the
+ * cell's editor; the rest is typed once the editor has the focus, and Enter is pressed once the
+ * list has answered. An Enter that comes before the list is open is the grid's Enter, which closes
+ * the cell without taking the code, so on a busy computer the helper waits for the list, as a
+ * person looking at the screen does.
+ */
+export async function typeCodeAndEnter(user: User, code: string) {
+  await user.keyboard(code.slice(0, 1));
+  await waitFor(
+    () => {
+      expect(document.activeElement?.tagName).toBe('INPUT');
+    },
+    { timeout: 8_000 },
+  );
+  if (code.length > 1) await user.keyboard(code.slice(1));
+  await screen.findAllByRole('option', undefined, { timeout: 8_000 });
+  await user.keyboard('{Enter}');
+}
+
+/**
+ * Waits until the first sale line has its quantity: the screen fills it from the lot's remaining
+ * quantity a moment after the lot is typed (PRD FR-7.52). A test that checks the cells of the line
+ * waits for it first, so it reads the filled value. (A fill that lands while a cell is being typed
+ * in does not close the cell: bikri-fill-while-typing.test.tsx.)
+ */
+export async function waitForLineFill(language: Language) {
+  await waitFor(
+    () => {
+      expect(textOf(salesGrid(language), 0, 'qty')).not.toBe('');
+    },
+    { timeout: 8_000 },
+  );
 }

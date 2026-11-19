@@ -7,8 +7,9 @@ mod common;
 
 use common::*;
 use mandi_services::core::accounts::{
-    AccountFilter, AccountInput, AccountRow, AccountType, AccountsListInput, AccountsSimilarInput,
-    BalanceSide, OpeningLineInput, OpeningsInput,
+    AccountFilter, AccountHit, AccountInput, AccountListKind, AccountRow, AccountScope,
+    AccountType, AccountsListInput, AccountsSimilarInput, BalanceSide, OpeningLineInput,
+    OpeningsInput, SearchAccountsInput, SimilarAccount,
 };
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::money::Paisa;
@@ -56,9 +57,9 @@ fn input(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -101,6 +102,34 @@ fn buyer(env: &TestEnv, owner: &auth::Actor, ur: &str, en: &str) -> AccountRow {
     save(env, owner, input(AccountType::Buyer, "", ur, en))
 }
 
+/// Every account of the chart with the code of its control, read the way the chart screen reads
+/// it: the tree for the controls, then each control a page at a time (plan 38 B1).
+fn chart_accounts(env: &TestEnv) -> Vec<(String, mandi_services::core::accounts::AccountNode)> {
+    let tree = coa::tree(&env.ctx).unwrap();
+    let mut out = Vec::new();
+    for control in tree.heads.iter().flat_map(|h| &h.controls) {
+        let mut offset = 0;
+        loop {
+            let page = coa::control_accounts(
+                &env.ctx,
+                &mandi_services::core::accounts::CoaControlAccountsInput {
+                    control_id: control.id,
+                    offset,
+                    limit: 25,
+                },
+            )
+            .unwrap();
+            let got = u32::try_from(page.rows.len()).unwrap();
+            out.extend(page.rows.into_iter().map(|a| (control.code.clone(), a)));
+            offset += got;
+            if got == 0 || offset >= page.total_count {
+                break;
+            }
+        }
+    }
+    out
+}
+
 fn account_id(env: &TestEnv, code: &str) -> i64 {
     env.ctx
         .db()
@@ -131,10 +160,291 @@ fn difference(env: &TestEnv) -> (BalanceSide, Paisa) {
     (balance.side, balance.amount_paisa)
 }
 
+/// The three search columns and the tag of one account, as stored.
+fn stored_keys(dir: &TempDir, id: i64) -> (String, String, String, Option<String>) {
+    raw(dir)
+        .query_row(
+            "SELECT search_ur, search_en, search_phonetic, tag FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap()
+}
+
 #[test]
-fn codes_follow_the_series_and_skip_the_reserved_serials() {
-    // PRD FR-10.2 and FR-10.3: control code plus a 4 digit serial; 0000 and 9000 to 9999 are for
-    // the system. 03040000 and 03049999 exist from the start, so the first buyer is still 0001.
+fn the_tag_is_checked_stored_once_and_never_inside_a_name() {
+    // PRD 10.2, Code Standards 4.2: "k" is saved as "K"; "1A", "ABCDE", "ب" and "K-" are refused.
+    let (dir, env, owner) = ready();
+    for (typed, saved) in [("K", "K"), ("BA", "BA"), ("D.P", "D.P"), ("k", "K")] {
+        let mut form = input(AccountType::Buyer, "", "طارق", "Tariq");
+        form.tag = typed.into();
+        let row = save(&env, &owner, form);
+        assert_eq!(row.tag.as_deref(), Some(saved), "{typed}");
+        // Stored once, in its own column: never inside either name.
+        assert_eq!(
+            (row.name_ur.as_str(), row.name_en.as_str()),
+            ("طارق", "Tariq")
+        );
+        assert_eq!(stored_keys(&dir, row.id).3.as_deref(), Some(saved));
+    }
+    let before = count(&dir, "SELECT COUNT(*) FROM accounts");
+    for bad in ["1A", "ABCDE", "ب", "K-"] {
+        let mut form = input(AccountType::Buyer, "", "طارق", "Tariq");
+        form.tag = bad.into();
+        let error = accounts::save(&env.ctx, &owner, &form).unwrap_err();
+        assert_eq!(
+            first_error(error),
+            (ErrorCode::ErrTagInvalid, Some("tag".to_owned())),
+            "{bad}"
+        );
+    }
+    assert_eq!(
+        count(&dir, "SELECT COUNT(*) FROM accounts"),
+        before,
+        "nothing written"
+    );
+    // No tag: the row has none, and the JSON has no `tag` key at all.
+    let plain = save(&env, &owner, input(AccountType::Buyer, "", "طارق", "Tariq"));
+    assert_eq!(plain.tag, None);
+    assert!(serde_json::to_value(&plain).unwrap().get("tag").is_none());
+    assert_eq!(stored_keys(&dir, plain.id).3, None);
+}
+
+#[test]
+fn the_tag_is_one_more_word_in_the_three_keys_and_an_untagged_account_keeps_its_keys() {
+    let (dir, env, owner) = ready();
+    let mut form = input(AccountType::Buyer, "", "عاشق ظفر", "Ashiq Zafar");
+    form.tag = "k".into();
+    let tagged = save(&env, &owner, form);
+    assert_eq!(
+        stored_keys(&dir, tagged.id),
+        (
+            "عاشق ظفر k".to_owned(),
+            "ashiq zafar k".to_owned(),
+            "ashqzfrk".to_owned(),
+            Some("K".to_owned())
+        )
+    );
+    // An account with no tag has exactly the keys `core::text` makes from its names.
+    let plain = buyer(&env, &owner, "عاشق ظفر", "Ashiq Zafar");
+    let (ur, en, ph, tag) = stored_keys(&dir, plain.id);
+    assert_eq!(
+        (ur, en, ph, tag),
+        (
+            mandi_services::core::text::search_ur("عاشق ظفر"),
+            mandi_services::core::text::search_en("Ashiq Zafar"),
+            mandi_services::core::text::search_phonetic("Ashiq Zafar"),
+            None
+        )
+    );
+}
+
+#[test]
+fn ashiq_k_finds_the_tagged_account_in_both_scripts_and_the_hit_carries_the_tag() {
+    // PRD FR-7.40: "ashiq k" finds عاشق ظفر K.
+    let (_dir, env, owner) = ready();
+    let mut form = input(AccountType::Buyer, "", "عاشق ظفر", "Ashiq Zafar");
+    form.tag = "K".into();
+    let tagged = save(&env, &owner, form);
+    let plain = buyer(&env, &owner, "عاشق ظفر", "Ashiq Zafar");
+    let kamran = buyer(&env, &owner, "عاشق کامران", "Ashiq Kamran");
+    let find = |text: &str| -> Vec<AccountHit> {
+        search::search_accounts(
+            &env.ctx,
+            &owner,
+            &SearchAccountsInput {
+                include_dead: None,
+                scope: AccountScope::Any,
+                control_id: None,
+                text: text.into(),
+                limit: 20,
+                offset: 0,
+                with_chukta: None,
+            },
+        )
+        .unwrap()
+    };
+    for typed in [
+        "ashiq k",
+        "ASHIQ K",
+        "ashiq zafar k",
+        "عاشق k",
+        "عاشق ظفر k",
+    ] {
+        let hits = find(typed);
+        let hit = hits
+            .iter()
+            .find(|h| h.id == tagged.id)
+            .unwrap_or_else(|| panic!("{typed} did not find the tagged account: {hits:?}"));
+        assert_eq!(hit.tag.as_deref(), Some("K"), "{typed}");
+    }
+    // The tag narrows the search: the same name with no tag is not an "ashiq zafar k".
+    let ids: Vec<i64> = find("ashiq zafar k").iter().map(|h| h.id).collect();
+    assert_eq!(ids, vec![tagged.id]);
+    // "ashiq" alone still finds all three, and only the tagged one carries a tag.
+    let all = find("ashiq");
+    for id in [tagged.id, plain.id, kamran.id] {
+        assert!(all.iter().any(|h| h.id == id));
+    }
+    assert!(
+        all.iter()
+            .filter(|h| h.id != tagged.id)
+            .all(|h| h.tag.is_none())
+    );
+}
+
+#[test]
+fn the_duplicate_check_compares_name_tag_and_phone() {
+    // PRD FR-10.7, E38: اسلم BA and اسلم are two different people.
+    let (_dir, env, owner) = ready();
+    let mut with_tag = input(AccountType::Buyer, "", "اسلم", "Aslam");
+    with_tag.phone1 = "0300-1111111".into();
+    with_tag.tag = "BA".into();
+    let ba = save(&env, &owner, with_tag);
+    let mut without = input(AccountType::Buyer, "", "اسلم", "Aslam");
+    without.phone1 = "0300-1111111".into();
+    let none = save(&env, &owner, without);
+    let ask = |tag: &str, phone: &str| {
+        accounts::similar(
+            &env.ctx,
+            &AccountsSimilarInput {
+                name_ur: "اسلم".into(),
+                name_en: "".into(),
+                phone: phone.into(),
+                tag: tag.into(),
+                exclude_id: None,
+            },
+        )
+        .unwrap()
+    };
+    let flags = |found: &[SimilarAccount]| -> Vec<(i64, bool)> {
+        let mut v: Vec<_> = found.iter().map(|a| (a.id, a.is_duplicate)).collect();
+        v.sort();
+        v
+    };
+    // Same name, tag and phone: that one is the duplicate; the other is only listed as similar.
+    let found = ask("BA", "03001111111");
+    assert_eq!(found.len(), 2, "both are listed");
+    assert_eq!(flags(&found).iter().filter(|(_, d)| *d).count(), 1);
+    assert!(
+        found[0].is_duplicate && found[0].id == ba.id,
+        "a duplicate comes first"
+    );
+    assert_eq!(found[0].tag.as_deref(), Some("BA"));
+    // A lower-case tag is the same tag.
+    assert!(ask("ba", "0300-1111111")[0].is_duplicate);
+    // No tag typed: the account with no tag is the duplicate.
+    let found = ask("", "0300-1111111");
+    assert!(found[0].is_duplicate && found[0].id == none.id);
+    assert_eq!(found.iter().filter(|a| a.is_duplicate).count(), 1);
+    // Another tag, or another phone: nothing is a duplicate (same name and phone, different tag).
+    assert!(ask("K", "0300-1111111").iter().all(|a| !a.is_duplicate));
+    assert!(ask("BA", "0300-2222222").iter().all(|a| !a.is_duplicate));
+    // A tag that is not valid yet marks nothing, and the list is still there.
+    let found = ask("1A", "0300-1111111");
+    assert_eq!(found.len(), 2);
+    assert!(found.iter().all(|a| !a.is_duplicate));
+}
+
+#[test]
+fn an_edit_changes_the_tag_and_the_keys_and_the_search_follows() {
+    let (dir, env, owner) = ready();
+    let row = buyer(&env, &owner, "اسلم", "Aslam");
+    let edit = |tag: &str| {
+        let current = accounts::get(&env.ctx, row.id).unwrap();
+        let mut form = input(AccountType::Buyer, &current.code, "اسلم", "Aslam");
+        form.id = Some(current.id);
+        form.version = Some(current.version);
+        form.tag = tag.into();
+        save(&env, &owner, form)
+    };
+    let find = |text: &str| {
+        search::search_accounts(
+            &env.ctx,
+            &owner,
+            &SearchAccountsInput {
+                include_dead: None,
+                scope: AccountScope::Buyer,
+                control_id: None,
+                text: text.into(),
+                limit: 5,
+                offset: 0,
+                with_chukta: None,
+            },
+        )
+        .unwrap()
+    };
+    assert!(find("aslam ba").is_empty() || find("aslam ba").iter().all(|h| h.tag.is_none()));
+    let tagged = edit("ba");
+    assert_eq!(tagged.tag.as_deref(), Some("BA"));
+    assert_eq!(stored_keys(&dir, row.id).1, "aslam ba");
+    assert_eq!(find("aslam ba")[0].tag.as_deref(), Some("BA"));
+    // The audit row of the edit holds the old and the new tag (Code Standards S7).
+    let (old, new): (String, String) = raw(&dir)
+        .query_row(
+            "SELECT old_json, new_json FROM audit_log WHERE entity = 'account' AND action = 'edit' AND entity_id = ?1 ORDER BY id DESC LIMIT 1",
+            [row.id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(!old.contains("\"tag\""), "no tag before: {old}");
+    assert!(new.contains("\"tag\":\"BA\""), "{new}");
+    // Clearing the tag gives the old keys back.
+    let cleared = edit("");
+    assert_eq!(cleared.tag, None);
+    assert_eq!(
+        stored_keys(&dir, row.id),
+        (
+            mandi_services::core::text::search_ur("اسلم"),
+            mandi_services::core::text::search_en("Aslam"),
+            mandi_services::core::text::search_phonetic("Aslam"),
+            None
+        )
+    );
+    assert!(find("aslam ba").iter().all(|h| h.tag.is_none()));
+}
+
+#[test]
+fn the_tag_shows_in_the_row_the_party_card_and_the_chart() {
+    let (_dir, env, owner) = ready();
+    let mut form = input(AccountType::Buyer, "", "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    form.tag = "gm".into();
+    let row = save(&env, &owner, form);
+    assert_eq!(
+        accounts::get(&env.ctx, row.id).unwrap().tag.as_deref(),
+        Some("GM")
+    );
+    assert_eq!(
+        mandi_services::assist::party_card(&env.ctx, row.id)
+            .unwrap()
+            .tag
+            .as_deref(),
+        Some("GM")
+    );
+    let node = chart_accounts(&env)
+        .into_iter()
+        .map(|(_, a)| a)
+        .find(|a| a.id == row.id)
+        .unwrap();
+    assert_eq!(node.tag.as_deref(), Some("GM"));
+    // A linked account carries its own tag in the row that points at it.
+    let mut other = input(AccountType::Seller, "", "اکرم", "Akram");
+    other.linked_account_id = Some(row.id);
+    let linked = save(&env, &owner, other);
+    assert_eq!(
+        linked
+            .linked_account
+            .as_ref()
+            .and_then(|l| l.tag.as_deref()),
+        Some("GM")
+    );
+}
+
+#[test]
+fn codes_are_the_type_number_and_a_running_number_from_zero() {
+    // Plan 32 R1, R2 (PRD 1.8): seller 001, buyer 002, then the running number from 0 with no
+    // padding. The two چکتا کھاتہ accounts are 0030 and 0031 and نقدی منڈی keeps 03040000, so
+    // none of them is in the way: the first buyer is 0020.
     let (_dir, env, owner) = ready();
     let rahim = seller(&env, &owner, "رحیم", "Rahim");
     let karim = seller(&env, &owner, "کریم", "Karim");
@@ -142,23 +452,23 @@ fn codes_follow_the_series_and_skip_the_reserved_serials() {
     let arshad = buyer(&env, &owner, "ارشد ملتانی", "Arshad Multani");
     assert_eq!(
         (rahim.code.as_str(), rahim.serial),
-        ("030110001", 1),
-        "seller codes are 03011 plus the serial"
+        ("0010", 0),
+        "seller codes are 001 plus the running number; the serial is the running number"
     );
-    assert_eq!(karim.code, "030110002");
-    assert_eq!(akram.code, "03040001");
-    assert_eq!(arshad.code, "03040002");
+    assert_eq!((karim.code.as_str(), karim.serial), ("0011", 1));
+    assert_eq!(akram.code, "0020");
+    assert_eq!(arshad.code, "0021");
     assert_eq!(rahim.account_type, AccountType::Seller);
     assert_eq!(akram.account_type, AccountType::Buyer);
     assert!(!akram.is_system && akram.is_active && akram.credit_allowed);
     // The next code the form suggests.
     assert_eq!(
         accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap(),
-        "03040003"
+        "0022"
     );
     assert_eq!(
         accounts::next_code(&env.ctx, AccountType::Seller, None).unwrap(),
-        "030110003"
+        "0012"
     );
     assert_eq!(
         accounts::next_code(&env.ctx, AccountType::MoneyLent, None).unwrap(),
@@ -190,26 +500,37 @@ fn codes_follow_the_series_and_skip_the_reserved_serials() {
 }
 
 #[test]
-fn a_typed_code_must_be_free_unreserved_and_in_the_control() {
+fn a_typed_code_must_be_free_and_a_full_code_of_the_type() {
+    // Plan 32 R2: the code box is filled by itself and stays editable to a free code of the same
+    // type. A buyer's code is 002 plus a running number with no padding.
     let (dir, env, owner) = ready();
     let first = save(
         &env,
         &owner,
-        input(AccountType::Buyer, "03040007", "ناصر", "Nasir"),
+        input(AccountType::Buyer, "0027", "ناصر", "Nasir"),
     );
-    assert_eq!((first.code.as_str(), first.serial), ("03040007", 7));
-    // The suggestion goes on from the highest normal serial.
+    assert_eq!((first.code.as_str(), first.serial), ("0027", 7));
+    // The suggestion goes on from the highest running number, so no code is used twice.
     assert_eq!(
         accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap(),
-        "03040008"
+        "0028"
+    );
+    assert_eq!(
+        accounts::next_code(&env.ctx, AccountType::Seller, None).unwrap(),
+        "0010",
+        "sellers have their own numbers"
     );
     let written = count(&dir, "SELECT COUNT(*) FROM accounts");
     for (typed, wanted) in [
-        ("03040007", ErrorCode::ErrCodeTaken),
-        ("03049999", ErrorCode::ErrCodeReserved),
-        ("03040000", ErrorCode::ErrCodeReserved),
-        ("03110001", ErrorCode::ErrCodeInvalid),
-        ("0304001", ErrorCode::ErrCodeInvalid),
+        ("0027", ErrorCode::ErrCodeTaken),
+        // A code of another type, of the system, padded, without a running number, or the old form.
+        ("0010", ErrorCode::ErrCodeInvalid),
+        ("0030", ErrorCode::ErrCodeInvalid),
+        ("03040000", ErrorCode::ErrCodeInvalid),
+        ("03040007", ErrorCode::ErrCodeInvalid),
+        ("00201", ErrorCode::ErrCodeInvalid),
+        ("002", ErrorCode::ErrCodeInvalid),
+        ("0020x", ErrorCode::ErrCodeInvalid),
     ] {
         let error = accounts::save(
             &env.ctx,
@@ -229,18 +550,83 @@ fn a_typed_code_must_be_free_unreserved_and_in_the_control() {
         written,
         "a refused save writes nothing"
     );
+    // A free code of the type is taken as typed, the lowest one included.
+    let low = save(
+        &env,
+        &owner,
+        input(AccountType::Buyer, "0020", "فرید", "Farid"),
+    );
+    assert_eq!((low.code.as_str(), low.serial), ("0020", 0));
 }
 
 #[test]
-fn the_full_series_is_refused_with_a_clear_code() {
-    // PRD FR-10.3: when 8999 is used the app says the series is full. A buyer takes 8999 by
-    // typing it; the next suggestion then has nowhere to go.
+fn the_eleventh_seller_is_00110_and_a_code_is_never_reused() {
+    // Plan 32 Section 3: first seller 0010, second 0011, eleventh 00110. The next code is the
+    // highest running number plus one, so it also moves on after a hand-typed code.
     let (_dir, env, owner) = ready();
+    let mut codes = Vec::new();
+    for n in 0..11 {
+        let row = seller(
+            &env,
+            &owner,
+            &format!("بیوپاری {n}"),
+            &format!("Seller {n}"),
+        );
+        codes.push(row.code);
+    }
+    assert_eq!(codes[0], "0010");
+    assert_eq!(codes[1], "0011");
+    assert_eq!(codes[9], "0019");
+    assert_eq!(codes[10], "00110");
+    assert_eq!(
+        accounts::next_code(&env.ctx, AccountType::Seller, None).unwrap(),
+        "00111"
+    );
+    // A hand-typed code far ahead moves the suggestion past it.
     save(
         &env,
         &owner,
-        input(AccountType::Buyer, "03048999", "آخری", "Akhri"),
+        input(AccountType::Seller, "00150", "دور", "Dur"),
     );
+    assert_eq!(
+        accounts::next_code(&env.ctx, AccountType::Seller, None).unwrap(),
+        "00151"
+    );
+    // The accounts list shows the sellers in running-number order: 0019 before 00110.
+    let list = accounts::list(
+        &env.ctx,
+        &AccountsListInput {
+            sort: None,
+            filter: AccountFilter {
+                kind: AccountListKind::Seller,
+                text: String::new(),
+                include_inactive: false,
+                has_opening: None,
+            },
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    let listed: Vec<&str> = list.rows.iter().map(|r| r.code.as_str()).collect();
+    assert_eq!(
+        &listed[8..],
+        ["0018", "0019", "00110", "00150"],
+        "numbers, not text, decide the order"
+    );
+}
+
+#[test]
+fn the_numbers_of_a_type_can_run_out_with_a_clear_code() {
+    // The running number has at most 7 digits (a code has at most 10). A buyer takes the last one by
+    // typing it; the next suggestion then has nowhere to go (ERR_SERIES_FULL).
+    let (_dir, env, owner) = ready();
+    let last = save(
+        &env,
+        &owner,
+        input(AccountType::Buyer, "0029999999", "آخری", "Akhri"),
+    );
+    assert_eq!((last.code.as_str(), last.serial), ("0029999999", 9_999_999));
     let (code, _) =
         first_error(accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap_err());
     assert_eq!(code, ErrorCode::ErrSeriesFull);
@@ -255,6 +641,11 @@ fn the_full_series_is_refused_with_a_clear_code() {
     assert_eq!(
         (code, field.as_deref()),
         (ErrorCode::ErrSeriesFull, Some("code"))
+    );
+    // Sellers are not affected.
+    assert_eq!(
+        accounts::next_code(&env.ctx, AccountType::Seller, None).unwrap(),
+        "0010"
     );
 }
 
@@ -291,7 +682,7 @@ fn an_edit_keeps_the_code_checks_the_version_and_refreshes_search() {
     // The code and the type cannot change.
     let mut again = edit.clone();
     again.version = Some(saved.version);
-    again.code = "03040009".into();
+    again.code = "0029".into();
     let (code, field) = first_error(accounts::save(&env.ctx, &owner, &again).unwrap_err());
     assert_eq!(
         (code, field.as_deref()),
@@ -366,7 +757,7 @@ fn an_account_is_made_inactive_never_deleted() {
 #[test]
 fn a_system_account_cannot_be_made_inactive() {
     // PRD FR-10.4: the app posts to these by itself (cash, opening difference, the income
-    // accounts, نقدی منڈی, the two پختہ کھاتہ accounts ...), so a picker must always offer them.
+    // accounts, نقدی منڈی, the two چکتا کھاتہ accounts ...), so a picker must always offer them.
     // The lead decided on 13-10-2026: refused with a code on `id`; the screen shows the Active
     // box ticked and cannot be changed.
     let (dir, env, owner) = ready();
@@ -382,12 +773,7 @@ fn a_system_account_cannot_be_made_inactive() {
             .collect()
     };
     for code in [
-        "01010001",
-        "06019999",
-        "04010001",
-        "03040000",
-        "03049999",
-        "030119999",
+        "01010001", "06019999", "04010001", "03040000", "0030", "0031",
     ] {
         assert!(
             system.iter().any(|(_, c)| c == code),
@@ -395,7 +781,7 @@ fn a_system_account_cannot_be_made_inactive() {
         );
     }
     let audit_before = audit_total(&dir);
-    for (id, code) in &system {
+    for (id, code) in system.iter().filter(|(_, c)| c != "0031") {
         let (error_code, field) =
             first_error(accounts::set_active(&env.ctx, &owner, *id, false).unwrap_err());
         assert_eq!(
@@ -411,6 +797,12 @@ fn a_system_account_cannot_be_made_inactive() {
                 .is_active
         );
     }
+    // The old closed account 0031 is inactive since migration 20 and stays closed (PRD FR-13.9).
+    let closed = system.iter().find(|(_, c)| c == "0031").unwrap().0;
+    assert!(!accounts::get(&env.ctx, closed).unwrap().is_active);
+    let (error_code, _) =
+        first_error(accounts::set_active(&env.ctx, &owner, closed, true).unwrap_err());
+    assert_eq!(error_code, ErrorCode::ErrSystemAccount);
     assert_eq!(audit_total(&dir), audit_before, "a refusal writes nothing");
     // The Active box of the account form is held to the same rule.
     let cash = accounts::get(&env.ctx, account_id(&env, "01010001")).unwrap();
@@ -442,7 +834,7 @@ fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
     buyer(&env, &owner, "ارشد ملتانی", "Arshad Multani");
     accounts::set_active(&env.ctx, &owner, akram.id, false).unwrap();
     // Openings: Rahim 15,000 debit, Arshad 3,000 credit (the date is open: nothing is closed).
-    let arshad = account_id(&env, "03040002");
+    let arshad = account_id(&env, "0021");
     let grid = OpeningsInput {
         lines: vec![
             line(&env, rahim.id, "31-08-2026", "15,000", "", true),
@@ -451,14 +843,16 @@ fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
     };
     accounts::openings_save(&env.ctx, &owner, &grid).unwrap();
 
-    let list = |text: &str, kind: Option<AccountType>, inactive: bool| {
+    let list = |text: &str, kind: AccountListKind, inactive: bool| {
         accounts::list(
             &env.ctx,
             &AccountsListInput {
+                sort: None,
                 filter: AccountFilter {
-                    account_type: kind,
+                    kind,
                     text: text.into(),
                     include_inactive: inactive,
+                    has_opening: None,
                 },
                 offset: 0,
                 limit: 0,
@@ -466,18 +860,18 @@ fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
         )
         .unwrap()
     };
-    let buyers = list("", Some(AccountType::Buyer), false);
+    let buyers = list("", AccountListKind::Buyer, false);
     let codes: Vec<&str> = buyers.rows.iter().map(|r| r.code.as_str()).collect();
-    assert!(codes.contains(&"03040002") && !codes.contains(&"03040001"));
-    let with_inactive = list("", Some(AccountType::Buyer), true);
-    assert!(with_inactive.rows.iter().any(|r| r.code == "03040001"));
+    assert!(codes.contains(&"0021") && !codes.contains(&"0020"));
+    let with_inactive = list("", AccountListKind::Buyer, true);
+    assert!(with_inactive.rows.iter().any(|r| r.code == "0020"));
     assert_eq!(
         with_inactive.count,
         u32::try_from(with_inactive.rows.len()).unwrap()
     );
 
     // Footer: the opening debit and credit of all matching accounts.
-    let sellers = list("", Some(AccountType::Seller), false);
+    let sellers = list("", AccountListKind::Seller, false);
     assert_eq!(sellers.total_dr_paisa, rupees(15_000));
     assert_eq!(sellers.total_cr_paisa, rupees(0));
     assert_eq!(buyers.total_cr_paisa, rupees(3_000));
@@ -493,9 +887,9 @@ fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
         (BalanceSide::Cr, rupees(3_000))
     );
     // A text filter finds by code or by a name in either script.
-    assert_eq!(list("arshad", None, false).rows.len(), 1);
-    assert_eq!(list("ارشد", None, false).rows.len(), 1);
-    assert_eq!(list("03040002", None, false).rows.len(), 1);
+    assert_eq!(list("arshad", AccountListKind::All, false).rows.len(), 1);
+    assert_eq!(list("ارشد", AccountListKind::All, false).rows.len(), 1);
+    assert_eq!(list("0021", AccountListKind::All, false).rows.len(), 1);
 }
 
 #[test]
@@ -704,7 +1098,7 @@ fn the_account_form_posts_its_opening_and_marks_a_seller_advance() {
     assert_eq!(
         count(
             &dir,
-            "SELECT COUNT(*) FROM journal_lines WHERE account_id = (SELECT id FROM accounts WHERE code = '030110001') AND dr_paisa = 1500000 AND is_advance = 1"
+            "SELECT COUNT(*) FROM journal_lines WHERE account_id = (SELECT id FROM accounts WHERE code = '0010') AND dr_paisa = 1500000 AND is_advance = 1"
         ),
         1
     );
@@ -945,13 +1339,13 @@ fn the_grid_saves_all_lines_or_none_and_points_at_each_bad_line() {
     )
     .unwrap_err();
     assert_eq!(first_error(error).0, ErrorCode::ErrOpeningNotAllowed);
-    // A پختہ کھاتہ account has no person to hold a balance (FR-13.5).
-    let pukhta = account_id(&env, "03049999");
+    // A چکتا کھاتہ account has no person to hold a balance (FR-13.5).
+    let chukta = account_id(&env, "0030");
     let error = accounts::openings_save(
         &env.ctx,
         &owner,
         &OpeningsInput {
-            lines: vec![line(&env, pukhta, "31-08-2026", "100", "", false)],
+            lines: vec![line(&env, chukta, "31-08-2026", "100", "", false)],
         },
     )
     .unwrap_err();
@@ -1006,22 +1400,29 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
         .find(|c| c.code == "0304")
         .unwrap();
     assert_eq!(buyers.balance.amount_paisa, rupees(2_880));
-    let node = buyers.accounts.iter().find(|a| a.id == akram.id).unwrap();
+    // The accounts of the control come a page at a time (plan 38 B1).
+    let page = coa::control_accounts(
+        &env.ctx,
+        &mandi_services::core::accounts::CoaControlAccountsInput {
+            control_id: buyers.id,
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    assert_eq!(i64::from(page.total_count), buyers.account_count);
+    assert_eq!(page.balance, buyers.balance, "the control's own balance");
+    let node = page.rows.iter().find(|a| a.id == akram.id).unwrap();
     assert_eq!(
         (node.balance.side, node.balance.amount_paisa),
         (BalanceSide::Dr, rupees(2_880))
     );
     // The seeded accounts are in the tree and marked as system accounts, by code.
-    let codes: Vec<&str> = buyers.accounts.iter().map(|a| a.code.as_str()).collect();
+    let codes: Vec<&str> = page.rows.iter().map(|a| a.code.as_str()).collect();
     let mut sorted = codes.clone();
     sorted.sort_unstable();
     assert_eq!(codes, sorted);
-    assert!(
-        buyers
-            .accounts
-            .iter()
-            .any(|a| a.code == "03049999" && a.is_system)
-    );
+    assert!(page.rows.iter().any(|a| a.code == "0030" && a.is_system));
     // Heads add up to the books: the debit heads and the credit heads are equal.
     let (mut dr, mut cr) = (0_i64, 0_i64);
     for h in &tree.heads {
@@ -1033,6 +1434,86 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
     }
     assert_eq!(dr, cr);
     assert_eq!(coa::heads(&env.ctx).unwrap().len(), 6);
+}
+
+#[test]
+fn a_control_gives_its_accounts_a_page_at_a_time_with_the_count_and_balance_of_all_of_them() {
+    // Plan 38 B1: the chart sends heads and controls with a balance and an account count; the
+    // accounts of a control come in pages of 25, 50 or 100, and the control's own balance is over
+    // every account, not the page.
+    let (_dir, env, owner) = ready();
+    for i in 0..7 {
+        save(
+            &env,
+            &owner,
+            input(
+                AccountType::Buyer,
+                "",
+                &format!("گاہک {i}"),
+                &format!("Buyer {i}"),
+            ),
+        );
+    }
+    let tree = coa::tree(&env.ctx).unwrap();
+    let buyers = tree
+        .heads
+        .iter()
+        .flat_map(|h| &h.controls)
+        .find(|c| c.code == "0304")
+        .unwrap();
+    // The two seeded buyers (نقدی منڈی, چکتا کھاتہ) and the seven.
+    assert_eq!(buyers.account_count, 9);
+    let page = |offset: u32, limit: u32| {
+        coa::control_accounts(
+            &env.ctx,
+            &mandi_services::core::accounts::CoaControlAccountsInput {
+                control_id: buyers.id,
+                offset,
+                limit,
+            },
+        )
+        .unwrap()
+    };
+    for limit in [25, 50, 100] {
+        let all = page(0, limit);
+        assert_eq!((all.rows.len(), all.total_count, all.limit), (9, 9, limit));
+    }
+    // Pages of 4 read one after the other hold every account once, in the order of one big page.
+    let whole: Vec<i64> = page(0, 100).rows.iter().map(|a| a.id).collect();
+    let mut paged = Vec::new();
+    for offset in [0, 4, 8] {
+        let p = page(offset, 4);
+        assert_eq!((p.total_count, p.balance), (9, buyers.balance));
+        paged.extend(p.rows.iter().map(|a| a.id));
+    }
+    assert_eq!(paged, whole);
+    // Past the end: no rows, the same count and balance. A limit of 0 is a page of 100.
+    let past = page(40, 25);
+    assert_eq!((past.rows.len(), past.total_count), (0, 9));
+    assert_eq!(page(0, 0).limit, 100);
+    // An unknown control and a page above 500 are refused.
+    let missing = coa::control_accounts(
+        &env.ctx,
+        &mandi_services::core::accounts::CoaControlAccountsInput {
+            control_id: 9_999,
+            offset: 0,
+            limit: 25,
+        },
+    )
+    .unwrap_err();
+    assert!(
+        matches!(missing, ServiceError::Rejected(ref r) if r[0].code == ErrorCode::ErrNotFound)
+    );
+    let big = coa::control_accounts(
+        &env.ctx,
+        &mandi_services::core::accounts::CoaControlAccountsInput {
+            control_id: buyers.id,
+            offset: 0,
+            limit: 501,
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(big, ServiceError::Rejected(ref r) if r[0].code == ErrorCode::ErrOutOfRange));
 }
 
 #[test]
@@ -1052,6 +1533,7 @@ fn similar_accounts_are_found_by_name_in_either_script_and_by_phone() {
                 name_ur: ur.into(),
                 name_en: en.into(),
                 phone: phone.into(),
+                tag: String::new(),
                 exclude_id: exclude,
             },
         )
@@ -1203,19 +1685,15 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
                  VALUES (?1, ?2, ?3, ?4, 'ناصر', 'Nasir', 'ناصر', 'nasir', 'nsr')",
             )
             .unwrap();
-        for serial in 1..=8_999_i64 {
+        // Plan 32: sellers 001n and buyers 002n, the running number n from 0, no padding. The list
+        // shows only sellers, buyers and the two چکتا کھاتہ accounts, so 10,000 of each make more
+        // than 20,000 listed accounts.
+        for n in 0..10_000_i64 {
             statement
-                .execute((buyers, format!("0304{serial:04}"), serial, "buyer"))
+                .execute((buyers, format!("002{n}"), n, "buyer"))
                 .unwrap();
             statement
-                .execute((sellers, format!("03011{serial:04}"), serial, "seller"))
-                .unwrap();
-        }
-        // 2,000 more under the cash control, so the list holds more than 20,000.
-        let others = control("0101");
-        for serial in 2..=2_001_i64 {
-            statement
-                .execute((others, format!("0101{serial:04}"), serial, "other"))
+                .execute((sellers, format!("001{n}"), n, "seller"))
                 .unwrap();
         }
         drop(statement);
@@ -1226,17 +1704,17 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
                 r.get(0)
             })
             .unwrap();
-        for serial in 1..=2_000_i64 {
+        for n in 0..2_000_i64 {
             let buyer: i64 = conn
                 .query_row(
                     "SELECT id FROM accounts WHERE code = ?1",
-                    [format!("0304{serial:04}")],
+                    [format!("002{n}")],
                     |r| r.get(0),
                 )
                 .unwrap();
             conn.execute(
                 "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id) VALUES ('2026-09-01', 'general', 'voucher', ?1)",
-                [serial],
+                [n + 1],
             )
             .unwrap();
             let entry = conn.last_insert_rowid();
@@ -1262,10 +1740,12 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
     let all = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
-                account_type: None,
+                kind: AccountListKind::All,
                 text: String::new(),
                 include_inactive: true,
+                has_opening: None,
             },
             offset: 0,
             limit: 0,
@@ -1278,29 +1758,31 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
         all.rows.len()
     );
     assert!(took.as_millis() < BOUND_MS, "{took:?}");
-    // Every account is there: no cap. 2 x 8,999 and 2,000 made here, and the 16 system accounts.
-    assert_eq!(all.rows.len(), 2 * 8_999 + 2_000 + 16);
-    assert!(all.rows.len() > 20_000);
+    // Every listed account is there: no cap. 2 x 10,000 made here; چکتا کھاتہ is no seller or buyer of the
+    // list (PRD FR-10.5).
+    assert_eq!(all.rows.len(), 2 * 10_000);
     assert_eq!(all.count, u32::try_from(all.rows.len()).unwrap());
     let codes: Vec<&str> = all.rows.iter().map(|r| r.code.as_str()).collect();
     let mut sorted = codes.clone();
-    sorted.sort_unstable();
-    assert_eq!(codes, sorted, "by code");
-    let row = all.rows.iter().find(|r| r.code == "03040007").unwrap();
+    sorted.sort_by_key(|code| mandi_services::core::codes::code_sort_key(code));
+    assert_eq!(codes, sorted, "by code, as numbers: 0019 before 00110");
+    let row = all.rows.iter().find(|r| r.code == "0026").unwrap();
     assert_eq!(
         (row.balance.side, row.balance.amount_paisa),
         (BalanceSide::Dr, rupees(1_000))
     );
-    let row = all.rows.iter().find(|r| r.code == "03042001").unwrap();
+    let row = all.rows.iter().find(|r| r.code == "0022000").unwrap();
     assert_eq!(row.balance.side, BalanceSide::Zero);
     // A page of it is the same rows with the same balances, with a short named query.
     let page = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
-                account_type: Some(AccountType::Buyer),
+                kind: AccountListKind::Buyer,
                 text: String::new(),
                 include_inactive: true,
+                has_opening: None,
             },
             offset: 5,
             limit: 3,
@@ -1309,15 +1791,20 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
     .unwrap();
     assert_eq!(page.rows.len(), 3);
     assert_eq!(
-        page.count, 9_001,
+        page.count, 10_000,
         "the count is of all that match, not of the page"
+    );
+    assert_eq!(
+        page.rows
+            .iter()
+            .map(|r| r.code.as_str())
+            .collect::<Vec<_>>(),
+        ["0025", "0026", "0027"]
     );
     assert!(
         page.rows
             .iter()
-            .all(|r| r.balance.amount_paisa == rupees(1_000)
-                || r.code.ends_with("9999")
-                || r.code.ends_with("0000"))
+            .all(|r| r.balance.amount_paisa == rupees(1_000))
     );
     let _ = owner;
 }
@@ -1328,36 +1815,33 @@ fn the_account_rows_say_whether_they_can_take_an_opening() {
     // uses (ERR_OPENING_NOT_ALLOWED).
     let (_dir, env, owner) = ready();
     let rahim = seller(&env, &owner, "رحیم", "Rahim");
-    let list = accounts::list(
-        &env.ctx,
-        &AccountsListInput {
-            filter: AccountFilter {
-                account_type: None,
-                text: String::new(),
-                include_inactive: true,
-            },
-            offset: 0,
-            limit: 0,
-        },
-    )
-    .unwrap();
-    let flag = |code: &str| {
-        list.rows
-            .iter()
-            .find(|r| r.code == code)
-            .unwrap()
-            .can_take_opening
-    };
+    // The list shows only sellers, buyers and the two چکتا کھاتہ accounts (plan 32 R6); the other
+    // accounts are read one by one.
+    let by_code = |code: &str| accounts::get(&env.ctx, account_id(&env, code)).unwrap();
+    let flag = |code: &str| by_code(code).can_take_opening;
     assert!(flag("01010001"), "روکڑ");
     assert!(flag("06010001"), "ابتدائی سرمایہ");
     assert!(flag(&rahim.code), "a seller");
     assert!(!flag("04010001"), "income");
     assert!(!flag("06019999"), "ابتدائی فرق");
     assert!(!flag("03040000"), "نقدی منڈی");
-    assert!(!flag("03049999"), "پختہ کھاتہ (buyer)");
-    assert!(!flag("030119999"), "پختہ کھاتہ (seller)");
-    // The flag and the save agree for every account.
-    for row in &list.rows {
+    assert!(!flag("0030"), "چکتا کھاتہ (buyer)");
+    assert!(!flag("0031"), "چکتا کھاتہ (seller)");
+    // The flag and the save agree for these accounts.
+    let mut codes = vec![
+        "01010001",
+        "01020001",
+        "02010001",
+        "04010001",
+        "06010001",
+        "06019999",
+        "03040000",
+        "030119998",
+        "0030",
+        "0031",
+    ];
+    codes.push(rahim.code.as_str());
+    for row in codes.iter().map(|code| by_code(code)) {
         let tried = accounts::openings_save(
             &env.ctx,
             &owner,
@@ -1676,4 +2160,276 @@ fn an_inactive_account_takes_no_new_opening_but_can_be_edited_and_cleared() {
         Paisa::ZERO
     );
     ledger::verify_journal_chain(&env.ctx).unwrap();
+}
+
+#[test]
+fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
+    // Plan 32 decision D4: `kind = every` returns every active account, as the list did before
+    // plan 32, in chart order, with the footer over those rows. `all` leaves cash and the other
+    // system accounts out. The Openings screen needs cash and the capital accounts.
+    let (_dir, env, owner) = ready();
+    let rahim = seller(&env, &owner, "رحیم", "Rahim");
+    let akram = buyer(&env, &owner, "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    save(
+        &env,
+        &owner,
+        input(AccountType::MoneyLent, "", "اسلم", "Aslam"),
+    );
+    accounts::openings_save(
+        &env.ctx,
+        &owner,
+        &OpeningsInput {
+            lines: vec![
+                line(
+                    &env,
+                    account_id(&env, "01010001"),
+                    "31-08-2026",
+                    "65,000",
+                    "",
+                    false,
+                ),
+                line(
+                    &env,
+                    account_id(&env, "06010001"),
+                    "31-08-2026",
+                    "",
+                    "65000",
+                    false,
+                ),
+                line(&env, rahim.id, "31-08-2026", "", "4,000", false),
+                line(&env, akram.id, "31-08-2026", "4,000", "", false),
+            ],
+        },
+    )
+    .unwrap();
+    let list = |kind: AccountListKind| {
+        accounts::list(
+            &env.ctx,
+            &AccountsListInput {
+                sort: None,
+                filter: AccountFilter {
+                    kind,
+                    text: String::new(),
+                    include_inactive: false,
+                    has_opening: None,
+                },
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    let every = list(AccountListKind::Every);
+    let codes: Vec<&str> = every.rows.iter().map(|r| r.code.as_str()).collect();
+    for want in [
+        "01010001",
+        "01020001",
+        "02010001",
+        "04010001",
+        "06010001",
+        "06019999",
+        "06020001",
+        "03040000",
+        "030119998",
+        "0030",
+        "0010",
+        "0020",
+        "01030001",
+    ] {
+        if want == "06020001" {
+            continue; // a partner's capital account: there is no partner in this test
+        }
+        assert!(
+            codes.contains(&want),
+            "{want} is in the full list: {codes:?}"
+        );
+    }
+    // Chart order: by control, then by running number inside it (cash first, sellers before buyers).
+    let at = |code: &str| codes.iter().position(|c| *c == code).unwrap();
+    assert_eq!(at("01010001"), 0);
+    assert!(at("01010001") < at("01030001"));
+    assert!(at("01030001") < at("0010"));
+    assert!(at("0010") < at("0020"));
+    assert!(at("0020") < at("04010001"));
+    assert!(at("04010001") < at("06010001"));
+    // The footer is over these rows: the openings that were saved.
+    assert_eq!(every.count, u32::try_from(every.rows.len()).unwrap());
+    assert_eq!(every.total_dr_paisa, rupees(69_000));
+    assert_eq!(every.total_cr_paisa, rupees(69_000));
+    // Cash and the opening capital take an opening; ابتدائی فرق and income do not.
+    let flag = |code: &str| {
+        every
+            .rows
+            .iter()
+            .find(|r| r.code == code)
+            .unwrap()
+            .can_take_opening
+    };
+    assert!(flag("01010001") && flag("06010001") && flag("01030001") && flag("0010"));
+    assert!(!flag("06019999") && !flag("04010001") && !flag("03040000"));
+    // `all` is the Accounts list: sellers and buyers only (PRD FR-10.5). No cash, no capital, no
+    // money-lent person, and neither چکتا کھاتہ (0030) nor the old closed account (0031).
+    let all = list(AccountListKind::All);
+    let all_codes: Vec<&str> = all.rows.iter().map(|r| r.code.as_str()).collect();
+    assert_eq!(all_codes, ["0010", "0020"]);
+    assert_eq!(all.total_dr_paisa, rupees(4_000));
+    assert_eq!(all.total_cr_paisa, rupees(4_000));
+    // A text filter works inside `every` too.
+    let found = accounts::list(
+        &env.ctx,
+        &AccountsListInput {
+            sort: None,
+            filter: AccountFilter {
+                kind: AccountListKind::Every,
+                text: "cash".into(),
+                include_inactive: false,
+                has_opening: None,
+            },
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    assert!(found.rows.iter().any(|r| r.code == "01010001"));
+}
+
+#[test]
+fn an_account_that_is_not_in_the_list_still_opens_and_saves_from_the_chart() {
+    // Plan 32 R6 (lead's addition): cash, a payable, a money-lent person and a khata are not in the
+    // Accounts list, but the chart opens them by id, and the form saves them with the type they have.
+    let (_dir, env, owner) = ready();
+    let lent = save(
+        &env,
+        &owner,
+        input(AccountType::MoneyLent, "", "اسلم", "Aslam"),
+    );
+    let khata = mandi_services::khata::create(
+        &env.ctx,
+        &owner,
+        &mandi_services::core::khata::KhataCreateInput {
+            name_ur: "خاندانی کھاتہ".into(),
+            name_en: "Family Khata".into(),
+            note: None,
+            confirmed_rules_words: vec![
+                "Family".into(),
+                "family".into(),
+                "خاندانی".into(),
+                "khata".into(),
+            ],
+        },
+    )
+    .unwrap();
+    let chart = chart_accounts(&env);
+    let in_chart: Vec<&str> = chart.iter().map(|(_, a)| a.code.as_str()).collect();
+    for id in [
+        account_id(&env, "01010001"),
+        account_id(&env, "02010001"),
+        lent.id,
+        khata.account.id,
+    ] {
+        let row = accounts::get(&env.ctx, id).unwrap();
+        assert!(
+            in_chart.contains(&row.code.as_str()),
+            "{} is in the chart",
+            row.code
+        );
+        let mut form = input(row.account_type, &row.code, &row.name_ur, &row.name_en);
+        form.id = Some(row.id);
+        form.version = Some(row.version);
+        // The form of an account under another control sends its control, as the chart does.
+        form.control_id = Some(row.control.id);
+        form.phone1 = "0300-1234567".into();
+        form.note = "نوٹ".into();
+        form.is_active = row.is_active;
+        let saved = save(&env, &owner, form);
+        assert_eq!(saved.code, row.code, "the code stays");
+        assert_eq!(saved.account_type, row.account_type, "the type stays");
+        assert_eq!(saved.control.id, row.control.id);
+        assert_eq!(saved.phone1, "03001234567");
+        assert_eq!(saved.version, row.version + 1);
+    }
+}
+
+#[test]
+fn the_opening_filter_lists_the_accounts_that_can_take_an_opening_and_have_none() {
+    // Plan 38 (PRD FR-10.9): the Opening balances screen opens on "no opening yet".
+    let (_dir, env, owner) = ready();
+    let rahim = seller(&env, &owner, "رحیم", "Rahim");
+    buyer(&env, &owner, "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    buyer(&env, &owner, "ارشد ملتانی", "Arshad Multani");
+    let arshad = account_id(&env, "0021");
+    let list = |has_opening: Option<bool>| {
+        accounts::list(
+            &env.ctx,
+            &AccountsListInput {
+                sort: None,
+                filter: AccountFilter {
+                    kind: AccountListKind::Every,
+                    text: String::new(),
+                    include_inactive: false,
+                    has_opening,
+                },
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    let codes = |l: &mandi_services::core::accounts::AccountsList| -> Vec<String> {
+        l.rows.iter().map(|r| r.code.clone()).collect()
+    };
+    let none_yet = list(Some(false));
+    let names = codes(&none_yet);
+    // Cash, the capital account and the people can take an opening.
+    for code in ["01010001", "06010001", "0010", "0020", "0021"] {
+        assert!(names.contains(&code.to_owned()), "{code} is missing");
+    }
+    // Income, ابتدائی فرق, نقدی منڈی and the two چکتا کھاتہ accounts never can.
+    for code in ["04010001", "06019999", "03040000", "0030", "0031"] {
+        assert!(!names.contains(&code.to_owned()), "{code} cannot take one");
+    }
+    // The SQL and `can_take_opening` say the same: this is the whole list, less the rows that
+    // cannot take an opening or already have one.
+    let every = list(None);
+    let expected: Vec<String> = every
+        .rows
+        .iter()
+        .filter(|r| {
+            r.can_take_opening
+                && r.opening_dr_paisa.as_paisa() == 0
+                && r.opening_cr_paisa.as_paisa() == 0
+        })
+        .map(|r| r.code.clone())
+        .collect();
+    assert_eq!(names, expected);
+    assert_eq!(none_yet.total_dr_paisa.as_paisa(), 0);
+    assert_eq!(none_yet.total_cr_paisa.as_paisa(), 0);
+
+    // Two openings are entered: those two accounts move from "none yet" to "has one".
+    let grid = OpeningsInput {
+        lines: vec![
+            line(&env, rahim.id, "31-08-2026", "15,000", "", true),
+            line(&env, arshad, "31-08-2026", "", "3000", false),
+        ],
+    };
+    accounts::openings_save(&env.ctx, &owner, &grid).unwrap();
+    let after = list(Some(false));
+    let names_after = codes(&after);
+    assert!(!names_after.contains(&"0010".to_owned()) && !names_after.contains(&"0021".to_owned()));
+    assert_eq!(after.count, none_yet.count - 2);
+    let with = list(Some(true));
+    assert_eq!(codes(&with), ["0010", "0021"]);
+    assert_eq!(with.total_dr_paisa.as_paisa(), 1_500_000);
+    assert_eq!(with.total_cr_paisa.as_paisa(), 300_000);
+    // The three lists add up to the whole list: with an opening, without, and the accounts that
+    // cannot take one.
+    let cannot = every.rows.iter().filter(|r| !r.can_take_opening).count();
+    let all = list(None);
+    assert_eq!(
+        usize::try_from(with.count + after.count).unwrap() + cannot,
+        usize::try_from(all.count).unwrap()
+    );
+    // The totals of the whole list are the totals of the accounts with an opening.
+    assert_eq!(all.total_dr_paisa, with.total_dr_paisa);
+    assert_eq!(all.total_cr_paisa, with.total_cr_paisa);
 }

@@ -1,0 +1,50 @@
+{
+  "head": {
+    "account_id": 35,
+    "code": "0012",
+    "name_ur": "احسان",
+    "name_en": "Ehsan",
+    "kind": "seller",
+    "is_active": true,
+    "is_dead": false
+  },
+  "from": "2026-10-11",
+  "to": null,
+  "brought_forward": {
+    "amount_paisa": 18008000,
+    "side": "cr"
+  },
+  "rows": [
+    {
+      "date": "2026-10-11",
+      "entry_id": 7,
+      "type_id": "report-doc-payment",
+      "number": 1,
+      "source": {
+        "kind": "voucher",
+        "id": 2
+      },
+      "dr_paisa": 10000000,
+      "cr_paisa": 0,
+      "on_spot_paisa": 0,
+      "balance": {
+        "amount_paisa": 8008000,
+        "side": "cr"
+      },
+      "short": [],
+      "parts": [],
+      "narration": null,
+      "edited": null,
+      "is_reversal": false,
+      "is_replaced": false
+    }
+  ],
+  "count": 1,
+  "dr_total_paisa": 10000000,
+  "cr_total_paisa": 0,
+  "on_spot_total_paisa": 0,
+  "closing": {
+    "amount_paisa": 8008000,
+    "side": "cr"
+  }
+}

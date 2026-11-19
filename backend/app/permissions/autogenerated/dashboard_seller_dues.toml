@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-seller-dues"
+description = "Enables the dashboard_seller_dues command without any pre-configured scope."
+commands.allow = ["dashboard_seller_dues"]
+
+[[permission]]
+identifier = "deny-dashboard-seller-dues"
+description = "Denies the dashboard_seller_dues command without any pre-configured scope."
+commands.deny = ["dashboard_seller_dues"]

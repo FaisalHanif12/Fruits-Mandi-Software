@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.4 (Umar's changes of 14-10-2026 and 15-10-2026) |
-| Date | 15 October 2026 |
+| Version | 1.26 (the plan 80 gate decisions of 19-11-2026; Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026, 09-11-2026 and 17-11-2026) |
+| Date | 12 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.5 (the master), NFR v1.3, Tech Stack v1.3 |
+| Depends on | PRD v1.43 (the master), NFR v1.17, Tech Stack v1.10 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -60,9 +60,9 @@ This is the most important section. The business is commission on sales, split b
 |---|---|---|
 | M1 | Every business amount is a **whole rupee** (PRD Section 22). Inside the code, money is a 64-bit integer number of paisa (`Paisa(i64)` in Rust), always a multiple of 100. Never a float. | 1,050 rupees = `Paisa(105000)` |
 | M2 | Percent rates are **basis points** in an integer (`Bps(i32)`, 1% = 100 bps) | 6% = `Bps(600)`, 2.5% = `Bps(250)` |
-| M3 | MUST NOT use `f32`, `f64`, JavaScript `Number` arithmetic, `parseFloat`, `toFixed`, `Math.round` or SQL `REAL` for money | |
+| M3 | MUST NOT use `f32`, `f64`, JavaScript `Number` arithmetic, `parseFloat`, `toFixed`, `Math.round` or SQL `REAL` for money. The one approved exception is the Excel export boundary (M13). | |
 | M4 | Multiply first, divide last, in `i128`, then round once with the shared rounding function | 12,000 × 6%: 1,200,000 paisa × 600 ÷ 10,000 = 72,000 paisa = 720 rupees |
-| M5 | Rounding happens in exactly one function, `core::money::round_to_rupee` (nearest rupee, half up; a fixed rule, not a setting). It is called only by `apply_bps`, `weight_value` and `avg_rate`. Splits use `split_by_bps` and `split_by_qty`. | 337.8 → 338 |
+| M5 | Rounding happens in exactly one function, `core::money::round_to_rupee` (nearest rupee, half up; a fixed rule, not a setting). It is called only by `apply_bps`, `weight_value` and `avg_rate`. Splits use `split_by_bps`, `split_by_qty` and, from v1.24, `split_by_open_parts` (an advance coming back to the partners by the parts still open, PRD C28). | 337.8 → 338 |
 | M6 | A rounded amount is calculated once and the same value is posted to every side | Never round commission separately for the buyer bill and for the journal |
 | M7 | All arithmetic on money is checked (overflow is an error, never a wrap-around) | `a.checked_add(b).ok_or(Error::Overflow)?` |
 | M8 | Money from the user arrives as **text** and is parsed by the backend (`parse_rupees`). Never parsed as a float. Decimals are rejected. | `"1,200"` → `Paisa(120000)`; `"1,200.50"` → `ERR_DECIMALS_NOT_ALLOWED` |
@@ -70,6 +70,8 @@ This is the most important section. The business is commission on sales, split b
 | M10 | Every journal entry MUST balance before it is written, and the database rejects it if not (B16) | |
 | M11 | Every money function has unit tests with the PRD worked numbers and property tests (Section 9) | |
 | M12 | The frontend MUST NOT calculate money. It formats paisa received from the backend, nothing else. | `formatPaisa(1200000)` → `"12,000"` |
+| M13 | **Excel export exception (Umar, 23-10-2026, D5-Q1).** Excel stores every number as floating point, so money is written to a spreadsheet through ONE function, `rupees_as_f64`, in one file, `numbers.rs`, of the export code of `mandi-reports`. It divides whole paisa by 100 with integer division first, refuses a value of 2^53 or more (so the conversion is exact; the export code uses the stricter limit of 10^15 rupees, because Excel shows only 15 digits, and no real amount comes near it), and only then converts. A whole-number quantity (a نگ count) goes through its twin `count_as_f64` in the same file, with the same limit (Umar, 23-10-2026, second answer). A unit test covers the largest allowed amount (10,00,00,00,000 rupees) and the refusal. An Excel value is never read back into the app and never added up by our code, and no other code may use `f64` for money or quantities. A percent is written as text from the integer formatter, never as a float. | 12,000 rupees = `Paisa(1200000)` → cell `12000` |
+| M14 | **The assistant's calculator and estimator (Umar, 02-11-2026, PRD FR-7.75, FR-7.86).** `domain::figures` works out a sum and a difference of `Paisa` with checked operations, an average through `avg_rate`, a percent of with the "% of all" formula of the money agent (Section 9), and a change in percent the same way. `domain::figures` also reads the numbers of a question ("3 lakh" = 3,00,000; "10%" = `Bps(1000)`). `domain::forecast` works out the three methods of PRD FR-7.86, the what-if scale of the same pace (a factor in basis points, one `apply_bps`, v1.17), the months to the end of the year and the month a target is reached, on whole months, at most 12 ahead or to the year end: a per-month figure is rounded once through `avg_rate`, a total is that figure times the months (so the shown figures always agree), and no projected month is below 0. A balance (v1.18, PRD v1.26) is the balance now plus the average net change of a month times the months: the average of the signed monthly changes is rounded once, half away from zero, and a balance may end on either side; only what the buyers owe is refused below 0. Both are display only, like `avg_rate`: never posted, saved or added to a report. Both are pure, have unit tests with the PRD E2E-59 and E2E-61 numbers and property tests (9.3), and are reviewed by the money-calculations agent (its Section 9.1). | Same pace: (45,000 + 48,000 + 51,000) ÷ 3 = 48,000 a month; × 6 = 288,000 |
 
 ---
 
@@ -93,14 +95,16 @@ Rule V0: the backend MUST treat everything from the frontend as untrusted, even 
 | Field type | Accepted input | Rejected | Stored as |
 |---|---|---|---|
 | Money | Whole rupees: digits with optional commas. Urdu digits (۰-۹) accepted and converted. Max 10,00,00,00,000 (1,000 crore) per value | Letters, any decimal point, negative, empty when required | `INTEGER` paisa (multiple of 100), column `*_paisa` |
+| Paid on the spot (موقع پر جمع) | Same as money. Empty means 0. From 0 up to the line's buyer total (PRD FR-12.44). A buyer who must pay in full is set by the backend, never typed | More than the line's buyer total (`ERR_PAID_EXCEEDS_TOTAL`, with `max`, at `lots[i].sales[j].paid`), negative, decimals | `INTEGER` `paid_paisa`, multiple of 100, not above `buyer_total_paisa` |
 | Rate (money per نگ or per kg) | Same as money, must be more than 0 | 0, negative, decimals | `INTEGER` paisa |
 | Percent | Digits with up to 2 decimals, 0 to 100 | More than 100, more than 2 decimals | `INTEGER` bps |
 | Quantity (نگ) | Whole number, 1 to 1,000,000. A simple sum such as `20+25` (PRD FR-7.48) is evaluated by the backend parser `core::validate::parse_sum`, then checked like a typed number. The same applies to money. | 0, negative, decimals, `×` or `÷`, a sum below 0 | `INTEGER` |
 | Weight | Up to 3 decimals, more than 0 | | `INTEGER` grams |
 | Date | `DD-MM-YYYY`, or shortcuts (PRD FR-7.19) | Impossible dates; for postings, dates on or before the "closed up to" date or after today (PRD FR-6.6) | `TEXT` `YYYY-MM-DD` |
-| Account code | Digits only: control code + 4-digit serial (8 digits, or 9 for sellers). 1 to 4 digits are a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller or buyer field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that serial, each with its type. Must exist and be active for new postings. | Inactive accounts in new postings; reserved serials for user accounts (PRD FR-10.3) | `TEXT` |
+| Account code | Digits only. Sellers, buyers, چکتا کھاتہ, items, packings and staff: the 3-digit type number + a running number from 0 with no padding (0010, 00110; PRD FR-10.2). Other accounts: control code + 4-digit serial. The running number alone is a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller, buyer, item, packing or staff field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that running number, each with its type. Must exist and be active for new postings, except a وصولی or ادھار رقم واپسی on an account in the dead amount (PRD FR-10.10). | Inactive accounts in new postings; a code already used; a code of another type | `TEXT` |
 | Name (Urdu) | 1 to 100 characters: Urdu letters, digits, spaces and `. - ' ( ) / &`; at least one Urdu letter (PRD FR-7.28) | Empty, only spaces, any Latin letter, control characters | `TEXT` `name_ur` (original) + `search_ur` (normalised) |
 | Name (English) | 1 to 100 characters: Latin letters, digits, spaces and `. - ' ( ) / &`; at least one Latin letter | Empty, only spaces, any Urdu letter, control characters | `TEXT` `name_en` (original) + `search_en` (lower case) + `search_phonetic` |
+| Tag (نشان) | Empty, or 1 to 4 characters: English capital letters A to Z and `.`, at least one letter; lower-case letters are made capital (PRD 10.2) | Urdu letters, digits, spaces, any other sign | `TEXT` `tag` (null), added to `search_en` and `search_phonetic` |
 | Phone | `03XXXXXXXXX` or `03XX-XXXXXXX` | Other lengths | `TEXT` digits only |
 | Free text (notes) | Up to 500 characters | Control characters | `TEXT` trimmed |
 
@@ -170,12 +174,13 @@ Shown as: "مقدار باقی مال سے زیادہ ہے: باقی 5 نگ ہی
 | B23 | Reports and analytics query indexed tables or the `analytics_facts` table, never recalculate from raw lines |
 | B24 | Any command expected to take more than 300 ms runs in a background task and reports progress |
 | B25 | Speed targets from NFR Section 2 have benchmarks in `criterion`; a slower result fails the release check |
+| B31 | A list, ledger, register, report or analytics command takes a page (a key or an offset, and a limit of 100 by default) and returns that page's rows with the row count and the totals over the whole filter, each from one indexed query. A print or export command reads every row, in the background when long (B24). Totals are never summed from a page (PRD FR-19.11, NFR-SPD-24). |
 
 ### 5.5 Names, search and assistance
 
 | # | Rule |
 |---|---|
-| B26 | Every save of a named record validates both names (Section 4.2) and writes `search_ur`, `search_en` and `search_phonetic` in the same transaction. The search keys are built only by `core::text`. |
+| B26 | Every save of a named record validates both names and the tag (Section 4.2) and writes `search_ur`, `search_en` and `search_phonetic` in the same transaction. The search keys are built only by `core::text`. |
 | B27 | The in-memory search index (Tech Stack 4.7) is a speed aid, never a source of truth. It is updated after the transaction commits, rebuilt at start-up and after a restore, and balances on the party card are always read from the database. |
 | B28 | `core::translit` is pure and deterministic: the same word list, learned pairs and input give the same suggestions. It never panics on any input and never changes a saved name. |
 | B29 | `assist_*` and `search_*` commands are read-only. They MUST NOT write anything. A rate or amount they return is a hint and is labelled as such in its type (`RateHint`), so it cannot be passed where an input value is expected. |
@@ -200,6 +205,24 @@ pub async fn bikri_save(state: State<'_, AppState>, input: BikriInput) -> Result
 ```
 
 Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED_IN` / `ERR_SESSION_LOCKED`. There are no roles (PRD Section 2).
+
+### 5.7 Ask the app (PRD Section 7.7)
+
+The model is the brain, but a stranger to our rules. It may call our tools and write the answer; it may never put a figure on the screen. Treat every reply like input from the screens (V0).
+
+| # | Rule |
+|---|---|
+| Q1 | The model's reply is untrusted input. Each tool call is parsed with that tool's strict input type and every field is checked like a command input (Section 4). A call to an unknown tool, a filter its source does not have, or a bad date returns an error result to the model and runs nothing (PRD FR-7.79). Nothing in a reply is run as code, followed as a link or shown without the checks of Q4. |
+| Q2 | Every tool is read-only, and no tool that writes exists. The tools are only those of PRD FR-7.87. Adding a tool is a requirement change. |
+| Q3 | A tool calls the same function its screen uses (`reports::run`, the analytics view functions, the dashboard tiles, `assist_party_card`, the search index), with the same filter types. It never has its own query for a figure. This is B5 for answers: one calculation path. |
+| Q4 | Every figure, count, date, month and name in the answer text is a reference to a value of this question (a tool result, `calculate`, `estimate`, or a number the app read from the typed question, `{{q.n1}}`). Rows are referred to by their record's stable key, never by their place. `check.rs` refuses, in the text and in the next questions: any Unicode digit (class Nd) outside a reference, a number word or month name outside a reference, a name of a party, partner, item, garden, trip, city, اڈا or staff member returned by this question's tools outside a reference (not a glossary word or a seeded system account), a typed ✓, an unknown reference, a reference to a result of an earlier question, a reference to a figure whose two places differ, the other side's words next to a balance (up to the nearest punctuation mark, new line, point mark or other money figure on each side (a name or date never ends it)), the wrong script, a never-use word, or more than 130 words (`MAX_ANSWER_WORDS`). It sends the reasons back for one rewrite; a second failure shows the tool results as plain tables. A figure whose two places differ is final: no rewrite, the difference message. The app fills the references: money through the shared formatter with its side, a difference with its direction word, names through `displayName`. |
+| Q5 | Sums, differences, averages, percents and estimates are worked out only by `domain::figures` and `domain::forecast` (M14), through `services`. `mandi-assistant` does no arithmetic on `Paisa` or quantities (clippy `arithmetic_side_effects` is denied in the crate). The check of PRD FR-7.76 only compares values for equality. |
+| Q6 | All reads of one question happen in one read snapshot. The only write is the question log row, in its own save after the answer (NFR-AI-6). Partner tools check the partner unlock after the sign-in check, as S8. |
+| Q7 | The request body is built by one function, `request_body()`, and every tool result by one function, `tool_result_json()`. They leave out every field PRD FR-7.83 says never goes (phones, addresses, father or firm names, notes, reasons, narrations typed by hand, driver names, supplier and shop names typed on entries, the market and the person sent typed on a trip, مارکہ text, the audit log, keys, and partner figures while locked), in new results and in the conversation they resend. Every figure with a second place carries both places and its checked status wherever it appears. The provider block (`only: ["azure"]`, `allow_fallbacks: false`, `zdr: true`, `data_collection: "deny"`, `require_parameters: true`) is a constant inside `request_body()`, not a setting. The golden tests check every body, including that block (PRD E2E-54). |
+| Q8 | The key is read from `keyring` at call time. It is never stored in app state, a log, an error or a reply to the screens (NFR-SEC-15). The client allows one host and one path, HTTPS only, with the time limits of NFR-AI-3 (12 seconds a try, one retry, 25 seconds a question; v1.26). |
+| Q9 | The limits are named constants in `mandi-assistant` (G8): 20 counted questions a day, 6 model calls plus one rewrite, 12 tool calls, 90,000 input tokens (cached included) and 4,000 output tokens a question (v1.16; 4, 8, 60,000 and 3,000 before), 12 seconds a try of a call with one retry, 25 seconds a question (NFR-AI-3, v1.26), shared with its continuations; 11,600 tokens for the fixed part (9,500 in v1.15 and v1.16, 9,000 in v1.14, 8,000 before), that is the tool definitions, the instructions and the answer schema (`MAX_PREFIX_TOKENS`, checked by a test); 130 words an answer; 12 months for an estimate. The model name is a setting. |
+| Q10 | Text sent to the model from the books is data, never instructions: tool results are JSON values, and the instructions say so. Because no tool writes and Q4 checks every figure, a record that reads like an instruction can change nothing (PRD E92). |
+| Q11 | The four prompt files (`prompt/system.md`, `tools.json`, `answer.schema.json`, `words.tsv`) are copied word for word from `docs/deliverables/D6-system-prompt.md`, and its test P7 keeps them equal. `check.rs` reads its word lists (number words, months, never-use words, side words) from `words.tsv` only, never from a second list in code. A change to any of the four is a requirement change: the file first, approved by Umar, then the tests P1 to P7 and NFR-AI-2 again. |
 
 ---
 
@@ -240,7 +263,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 |---|---|
 | F15 | Every screen uses the layout grid from `shared/ui` (12 columns, gutters from tokens). Fields line up on that grid. |
 | F16 | Labels sit above fields, aligned to the field's start edge (right edge in RTL) |
-| F17 | Numbers use tabular digits and sit on the **physical right edge** of their cell in every table, grid, tile and print, so units line up under units (NFR-USE-19). Number cells use `direction: ltr; text-align: end`, set once in `shared/grid` column types and the `<Num>` component. |
+| F17 | Numbers use tabular digits and are written left to right. In every table, grid and print column, a number cell, its heading and its total are **centred** (NFR-USE-19, v1.10): number cells use `direction: ltr; text-align: center`, set once in `shared/grid` column types, `shared/ui/Table` and the print tables. Text columns and their headings use `text-align: start`. In a label and value card or tile, the value sits on the physical right edge (`direction: ltr; text-align: end`) through `<Num>`. Example: 17 and 250 centred under تعداد / Quantity. |
 | F18 | In grids, column widths are set per column type (money, qty, account, date) in `shared/grid`, so the same column type has the same width everywhere |
 | F19 | Totals rows align exactly under their columns |
 
@@ -257,7 +280,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 
 | # | Rule |
 |---|---|
-| F24 | Use logical CSS properties only (`margin-inline-start`, Tailwind `ms-`, `pe-`, `start-`, `text-align: end`). MUST NOT use `left`/`right` or `ml-`/`pr-`. Lint rule enforces this. (Number cells reach the physical right edge with `direction: ltr; text-align: end`, so they need no exception.) |
+| F24 | Use logical CSS properties only (`margin-inline-start`, Tailwind `ms-`, `pe-`, `start-`, `text-align: end`). MUST NOT use `left`/`right` or `ml-`/`pr-`. Lint rule enforces this. (Number cells use `text-align: center`, or `direction: ltr; text-align: end` in a card, so they need no exception.) |
 | F25 | Every number, code, phone and truck number inside text uses `<Num>` or `<Code>` (bidi isolation, NFR-URD-13) |
 | F26 | Direction-sensitive icons (arrows, chevrons, "back") are mirrored in RTL; others are not |
 
@@ -265,7 +288,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 
 | # | Rule |
 |---|---|
-| F27 | Keyboard behaviour follows PRD Sections 7.2 and 7.3 exactly. Forms, pickers and menus get it from `shared/keyboard`. Grids get it from `shared/grid`, which configures AG Grid (cell navigation, Enter skipping read-only calculated cells but stopping on editable cells the app filled, F2 not starting edit, Esc order) to match. Screens only declare their fields, order and which cells are editable; they MUST NOT write their own navigation key handlers. |
+| F27 | Keyboard behaviour follows PRD Sections 7.2 and 7.3 exactly. `Backspace` and `Delete` only delete and never leave a screen (PRD FR-7.91). Forms, pickers and menus get it from `shared/keyboard`. Grids get it from `shared/grid`, which configures AG Grid (cell navigation, Enter skipping read-only calculated cells but stopping on editable cells the app filled, F2 not starting edit, Esc order) to match. Screens only declare their fields, order and which cells are editable; they MUST NOT write their own navigation key handlers. |
 | F28 | Every interactive element is reachable by keyboard and has a visible focus outline |
 | F29 | Every shortcut is registered in one place (`shared/keyboard/shortcuts.ts`) and shown on its button |
 | F30 | Each screen has a test that completes its main task with the keyboard only |
@@ -282,7 +305,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 
 | # | Rule |
 |---|---|
-| F34 | Lists over 100 rows are virtualised (AG Grid does this) |
+| F34 | Every list, ledger, register, report and analytics table loads its rows page by page from the backend (B31) and draws only the visible rows (AG Grid does this). Its totals row shows the backend's totals over the whole filter, never a sum of the loaded rows. Print and Excel ask the backend for every row (PRD FR-19.11). |
 | F35 | Live summary calls wait 50 ms after the last key press and cancel the previous call (NFR-SPD-7) |
 | F36 | Screens load their code only when opened (lazy routes) |
 
@@ -291,13 +314,13 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 | # | Rule |
 |---|---|
 | F37 | Every screen works in both directions. Layout comes only from logical properties and the direction provider. MUST NOT write `if (language === 'ur')` for layout. Screenshot tests (F14) run in both languages. |
-| F38 | Names are shown only through `displayName(record, language)`, which picks `name_ur` or `name_en`. MUST NOT read `name_ur` or `name_en` directly in a component. Prints pass the print language. |
+| F38 | Names are shown only through `displayName(record, language)`, which picks `name_ur` or `name_en` and adds the tag after it ("عاشق ظفر K"). MUST NOT read `name_ur` or `name_en` directly in a component. Prints pass the print language. |
 | F39 | Unsaved entry data lives in the screen's store or form state, never only inside a grid, so a language switch (which re-creates grids) loses nothing. Each entry screen has a test that switches language in the middle of an entry. |
 | F40 | Every account field uses `AccountPicker`, which shows `PartyCard`. MUST NOT build a screen's own party lookup. |
-| F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The پختہ کھاتہ name field shows one merged list (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
+| F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The buyer picker of a بکری line lists چکتا buyers beside ordinary buyers, each marked (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
 | F42 | Every calculated amount on screen has `CalcInfo`, which shows the backend's `working` (B30). The frontend never builds a working itself. |
-| F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints: the last rate is shown only as placeholder text (PRD FR-7.53). Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
-| F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, mode, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
+| F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints. From v1.25 the sale line rate cell shows no hint at all (PRD FR-7.53 retired); the پھل screen keeps its placeholder hint. Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
+| F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
 
 ---
 
@@ -307,7 +330,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 |---|---|
 | D1 | Names follow Tech Stack Section 6 (snake_case, plural tables, `_paisa`, `_bps`, `_date`, `_at`) |
 | D2 | Every table has `id`, `created_at`, `created_by`, `updated_at`, `updated_by`, `version` |
-| D3 | Soft states only: `is_active`, `status`. No `DELETE` of business records (see B17 for the append-only tables). |
+| D3 | Soft states only: `is_active`, `status`. No `DELETE` of business records (see B17 for the append-only tables). One recorded exception (plan 80, v1.26): the `venture_partners` rows of a garden or trip may be replaced while it has no entry and no goods arrived; the service checks it, a trigger refuses it afterwards, and the old rows go to the audit log. |
 | D4 | Lookups by name use the indexed columns `search_ur`, `search_en` and `search_phonetic` (B26), never the display names |
 | D5 | Each sale line stores the rule used and its value (snapshot), never only a rule ID (PRD FR-11.6) |
 
@@ -324,6 +347,8 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 | S5 | Content Security Policy: no remote scripts, no inline scripts, no remote fonts |
 | S6 | `cargo deny` and `pnpm audit` run in CI; known vulnerabilities block release |
 | S7 | Every change to money, rules, shares, the password or settings writes an audit entry in the same transaction |
+| S8 | Partner commands and partner reports check the partner unlock in the backend, after the sign-in check, and return `ERR_PARTNER_LOCKED` when it is missing (PRD FR-17.11, NFR-SEC-14) |
+| S9 | An edit is one service function and one transaction: reverse, post the corrected entry on the same date, re-match, write the audit entry with old and new values. Worked-out amounts are never taken from the screen in an edit, and a changed date is refused (PRD FR-7.70, FR-7.71) |
 
 ---
 
@@ -340,6 +365,8 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 | Any user-facing text | Both languages, `pnpm i18n:check`, reviewer noted for each language |
 | Change to `translit` or the word list | The 1,000-name accuracy test (NFR-URD-24, NFR-URD-25) must not drop |
 | Bug fix | A test that fails before the fix and passes after |
+| Change to the assistant's tools, instructions, checks or model | The golden questions (9.2) and, before the next release, the NFR-AI-2 list against the real model with the Urdu review |
+| Change to `domain::figures` or `domain::forecast` | Unit tests with the PRD numbers, property tests, review by the money-calculations agent |
 
 ### 9.2 Golden tests
 
@@ -347,11 +374,26 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 
 | Tests | Where | When |
 |---|---|---|
-| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, and the preview numbers of E2E-39 | `backend/crates/services/tests/golden_day.rs` | Every commit |
-| E2E-33 (ledger with items, R20 total) and E2E-36 (day summary R34, filtered print data) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
+| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, the preview numbers of E2E-39, E2E-40, E2E-40b, E2E-41, E2E-42 and E2E-44 (tiles, refusals, trial balance) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-33 (ledger with items, R20 total) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-36 (day summary R34, filtered print data) | `backend/crates/services/tests/golden_day/day_money.rs` | Every commit |
+| E2E-43 (party day sheet R35) | `backend/crates/services/tests/reports_party_sheet.rs` | Every commit |
+| E2E-70 (lot names, and old lots numbered by the migration) | `backend/crates/services/tests/lot_names.rs`, `backend/crates/db/tests/migration.rs` | Every commit |
+| E2E-44 (R20, R21, R22 and R38 rows) | `backend/crates/services/tests/reports_dead.rs` | Every commit |
+| E2E-45 (edit of a closed day through reopen and fix, and its stamp) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-46 (partner code) | `backend/crates/services/tests/partner_code.rs` | Every commit |
+| E2E-47 to E2E-63 (ask the app: figures, the check from two places, which one, change refused, privacy, limit, offline, wrong tool calls, follow-up, estimates, references, the calculator, the same question in other words, advice), with recorded model transcripts and no network | `backend/crates/assistant/tests/golden_questions.rs` | Every commit |
+| The prompt files: size, catalogue, glossary, words, the 15 examples, schemas, word for word (`D6-system-prompt.md` P1 to P7) | `backend/crates/assistant/tests/prompt.rs` | Every commit |
+| E2E-64 and E2E-65 (D8: the sale line figures of image 1, paid on the spot) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-66 (D8: old data keeps its numbers) | `backend/crates/db/tests/migration.rs` | Every commit |
+| E2E-67 (D8: party ledgers) | `backend/crates/services/tests/party_ledgers.rs` | Every commit |
+| E2E-68 (D8: a change of buyer, and back) | `backend/crates/services/tests/bikri_find_edit.rs` | Every commit |
+| E2E-69 (no Urdu digits in the Urdu PDFs of R1, R5 and R35) | Mac phase: the PDFs of plan 63, with their text extracted | Before every release |
+| E2E-59 and E2E-61 numbers (the estimator and the calculator) | `backend/crates/domain/tests/figures_forecast.rs` | Every commit |
+| NFR-AI-2 (the 100-question list against the real model, and the Urdu review of its answers) | `scripts/ai-eval/` | Before every release and before a new model name is used at the shop |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
 | E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
-| E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
+| E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, seller memory and the lot name in E2E-25, remaining qty, no rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
 | E2E-22 to E2E-27, full screen runs (including the language switch of E2E-22) | Windows end-to-end suite | Before every release |
 
 They MUST pass. Their expected numbers MUST NOT be changed without a PRD change.
@@ -361,14 +403,17 @@ They MUST pass. Their expected numbers MUST NOT be changed without a PRD change.
 With `proptest`, for thousands of random inputs:
 
 - Partner split parts always add up to the total.
-- For any random sequence of postings, Σ partner share rows = income − expenses of head 05, including cost of own goods (PRD FR-6.5, FR-17.3).
+- For any random sequence of postings, Σ partner share rows = income − expenses of head 05 (PRD FR-6.5, FR-17.3).
 - Every built journal entry balances.
-- For any sequence of sales and write-offs of one own goods purchase, the cost released never exceeds its total cost and equals it once nothing is left (PRD C21).
+- For any sequence of sales (in بکری or another shop) and write-offs of one trip purchase, the cost released never exceeds its total cost and equals it once nothing is left (PRD C21).
+- For any garden or trip: the parts of every payment add up to the payment (C23); the money credited to its partners equals its sales money (trip, C25) or its account balance at closing (garden, C26); a garden's account is 0 after closing; once a garden or a trip is closed, Σ over its partners of (money credited − parts paid from the shop − parts paid from pockets) = its result.
+- Guest fruit parts add up to the value, and every part is at least the value ÷ the number of partners, rounded down (C27).
 - For any random sequence of postings, Σ partner کل رقم + ابتدائی سرمایہ = the firm's equity in the trial balance (PRD FR-17.9, C22).
 - Parse then format then parse gives the same paisa.
 - Commission is never negative and never more than the line value for percent rules up to 100%.
 - Reversal of an entry plus the entry gives zero on every account.
 - Amount in words (Urdu and English) returns text for every amount from 0 to the maximum and never panics.
+- `domain::figures`: a sum equals the sum of its parts, a difference plus its second figure gives the first, and nothing overflows silently. `domain::forecast`: a series of equal months gives that same figure by every method; no projected month is below 0.
 - `translit` and the search key builders never panic on any Unicode input, and always return at most 3 suggestions.
 
 ### 9.4 Coverage gates
@@ -400,7 +445,7 @@ A change is done only when every box is ticked:
 
 - [ ] Implements the PRD IDs listed, nothing more, nothing less
 - [ ] Formatter and linters clean, no warnings
-- [ ] No floats, no JS arithmetic on money; rounding only through `core::money::round_to_rupee`; splits only through `split_by_bps` / `split_by_qty`; all amounts whole rupees
+- [ ] No floats, no JS arithmetic on money; rounding only through `core::money::round_to_rupee`; splits only through `split_by_bps` / `split_by_qty` / `split_by_open_parts`; all amounts whole rupees
 - [ ] Splits add back exactly; journals balance; audit written
 - [ ] Backend validates every input; errors have codes and point to fields
 - [ ] One transaction per user action; preview and save share the same function
@@ -412,6 +457,7 @@ A change is done only when every box is ticked:
 - [ ] All text from Fluent in both languages; Urdu and English reviewed; `i18n:check` passes
 - [ ] Tests added as in Section 9; golden tests still pass
 - [ ] Speed targets still met (for screens and commands on the NFR list)
+- [ ] Assistant code: read-only tools only, no arithmetic in `mandi-assistant`, every shown figure a checked reference, nothing left out by Q7 in a request, the prompt files equal to `D6-system-prompt.md` (Q1 to Q11)
 - [ ] Module README and doc comments updated
 
 ---
@@ -425,3 +471,25 @@ A change is done only when every box is ticked:
 | 1.2 | 12-10-2026 | PRD v1.2: sign-in check instead of roles (B2, 5.6, S1, S7); golden tests E2E-28 to E2E-33 (9.2); one pull request per goal run (P3). |
 | 1.3 | 15-10-2026 | PRD v1.3: golden tests E2E-34 to E2E-38 (9.2); property tests for the cost of own goods and the partner total (9.3). |
 | 1.4 | 15-10-2026 | PRD v1.4: related entries share one screen (F44); E2E-39 (9.2). |
+| 1.5 | 19-10-2026 | Approved by Umar (PRD v1.6): lists page by page (B31, F34); no mode among the shared fields (F44); golden tests E2E-40 to E2E-43 (9.2); property tests for gardens, trips and guest fruit, and the trip purchase cost (9.3). |
+| 1.6 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag field (4.2, B26, F38). |
+| 1.7 | 23-10-2026 | Approved by Umar (D5-Q1): one exception to the no-float rule, at the Excel export boundary only (M3, M13). |
+| 1.8 | 23-10-2026 | Approved by Umar: the same exception also covers whole-number quantities, through `count_as_f64` in the same file (M13). |
+| 1.9 | 27-10-2026 | Approved by Umar (PRD v1.8): account and master codes by type, short code = running number (4.2). |
+| 1.10 | 30-10-2026 | Approved by Umar (PRD v1.9): number cells, their headings and totals centred in table columns; values in cards stay on the right edge (F17, F24). |
+| 1.11 | 30-10-2026 | Approved by Umar (PRD v1.10): golden test E2E-44, the dead amount (9.2); a وصولی or ادھار رقم واپسی may post on an account in the dead amount (4.2). |
+| 1.12 | 31-10-2026 | Approved by Umar (PRD v1.13): the partner code check (S8) and one edit model (S9); golden tests E2E-45 and E2E-46 (9.2). |
+| 1.13 | 01-11-2026 | Approved by Umar (PRD v1.16): ask the app (5.7); golden questions and the NFR-AI-2 list (9.2); review checklist (11). Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint, with no fallback; the model is the brain with read-only tools, and every figure it shows is a checked reference (5.7, Q1 to Q10); the calculator and estimator (M14, 9.1, 9.2, 9.3). Further amended 02-11-2026 (Umar): the prompt files and their tests (Q11, 9.2), the fixed part measured (Q9), the ✓, earlier-question and side-word checks (Q4), advice in the golden questions (9.2). |
+| 1.14 | 02-11-2026 | Approved by Umar (NFR v1.9): `MAX_PREFIX_TOKENS` is 9,000 (Q9). |
+| 1.15 | 02-11-2026 | Approved by Umar (NFR v1.11): `MAX_PREFIX_TOKENS` is 9,500 (Q9). |
+| 1.16 | 02-11-2026 | Approved by Umar (NFR v1.12, plan 52): the new question limits in Q9. |
+| 1.17 | 03-11-2026 | Approved by Umar (PRD v1.20, NFR v1.13): `MAX_PREFIX_TOKENS` is 11,000 (Q9); the what-if scale and the year end in M14. |
+| 1.18 | 05-11-2026 | Approved by Umar (PRD v1.26): a balance estimate in M14. |
+| 1.19 | 06-11-2026 | Approved by Umar (NFR v1.15): `MAX_PREFIX_TOKENS` is 11,500 (Q9). |
+| 1.20 | 06-11-2026 | Approved by Umar (NFR v1.16): `MAX_PREFIX_TOKENS` is 11,600 (Q9). |
+| 1.21 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the field rule for paid on the spot (4.2); چکتا کھاتہ in the account code rule (4.2) and F41; `Backspace` and `Delete` (F27); golden tests E2E-64 to E2E-69 (9.2), and E2E-21 replaced. |
+| 1.22 | 10-11-2026 | Correction from the D8 end gate: the files of golden tests E2E-64 to E2E-68 in 9.2. No rule changed. |
+| 1.26 | 19-11-2026 | The plan 80 gate: the assistant's time limits follow NFR-AI-3 v1.21 (Q8, Q9); the real files of E2E-33, E2E-36 and E2E-43 and a row for E2E-70 (9.2); one recorded exception to D3 for `venture_partners` before the first entry. No rule of money changed. |
+| 1.25 | 18-11-2026 | PRD v1.44, approved by Umar (plan 79): the sale line rate hint is retired (F43, 9.2). |
+| 1.24 | 17-11-2026 | PRD v1.43, approved by Umar (plan 78 B4): a third split function, `split_by_open_parts`, for an advance coming back to the partners by the parts still open (M5, Section 11, PRD C28). |
+| 1.23 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): E2E-25 tests the seller memory and the lot name; truck memory is retired (9.2). |

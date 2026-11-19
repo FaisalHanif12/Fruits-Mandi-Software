@@ -1,15 +1,48 @@
-// Typed wrappers around the بکری commands (plan 12; module `bikri` and the `assist` reads, Tech
-// Stack 5.2). Components never call invoke() (Code Standards F4). The only file that knows the
+// Typed wrappers around the بکری commands (plans 12 and 13; module `bikri` and the `assist`
+// reads, Tech Stack 5.2). Components never call invoke() (Code Standards F4). The only file that knows the
 // wire shape. Every command takes one `{ input }` object.
 
+import type { BikriCancelled } from '../../bindings/BikriCancelled';
+import type { BikriDetail } from '../../bindings/BikriDetail';
+import type { BikriEdited } from '../../bindings/BikriEdited';
+import type { BikriFindInput } from '../../bindings/BikriFindInput';
+import type { BikriGetInput } from '../../bindings/BikriGetInput';
+import type { BikriListRow } from '../../bindings/BikriListRow';
+import type { BikriNavigateInput } from '../../bindings/BikriNavigateInput';
 import type { BikriPreviewInput } from '../../bindings/BikriPreviewInput';
-import type { FreightLotInput } from '../../bindings/FreightLotInput';
-import type { FreightPart } from '../../bindings/FreightPart';
+import type { BikriSaveInput } from '../../bindings/BikriSaveInput';
+import type { BikriSaved } from '../../bindings/BikriSaved';
+import type { CancelInput } from '../../bindings/CancelInput';
+import type { CancelPreview } from '../../bindings/CancelPreview';
+import type { CancelPreviewInput } from '../../bindings/CancelPreviewInput';
+import type { EditableBikri } from '../../bindings/EditableBikri';
+import type { EditOpenInput } from '../../bindings/EditOpenInput';
+import type { EditPreview } from '../../bindings/EditPreview';
+import type { EditPreviewInput } from '../../bindings/EditPreviewInput';
+import type { EditSaveInput } from '../../bindings/EditSaveInput';
+import type { MixedSaleInput } from '../../bindings/MixedSaleInput';
+import type { MixedSalePreview } from '../../bindings/MixedSalePreview';
+import type { MixedSaleSaved } from '../../bindings/MixedSaleSaved';
+import type { MixedSaleSaveInput } from '../../bindings/MixedSaleSaveInput';
+import type { MixedUndoInput } from '../../bindings/MixedUndoInput';
+import type { MixedUndoResult } from '../../bindings/MixedUndoResult';
+import type { GoodsSources } from '../../bindings/GoodsSources';
+import type { ReadyGoods } from '../../bindings/ReadyGoods';
+import type { VentureKind } from '../../bindings/VentureKind';
+import type { StockList } from '../../bindings/StockList';
+import type { StockListInput } from '../../bindings/StockListInput';
+import type { UndoInput } from '../../bindings/UndoInput';
+import type { UndoResult } from '../../bindings/UndoResult';
+import type { WriteOffDone } from '../../bindings/WriteOffDone';
+import type { WriteOffInput } from '../../bindings/WriteOffInput';
+import type { WriteOffUndoInput } from '../../bindings/WriteOffUndoInput';
+import type { WriteOffUndone } from '../../bindings/WriteOffUndone';
+import type { NavigateTo } from '../../bindings/NavigateTo';
 import type { SellerMemoryInput } from '../../bindings/SellerMemoryInput';
-import type { SplitFreightInput } from '../../bindings/SplitFreightInput';
-import type { TruckMemoryInput } from '../../bindings/TruckMemoryInput';
 import { callCommand } from '../../shared/api';
-import type { BikriDraft, BikriPreview, SellerMemory, TruckMemory } from './types';
+import type { BikriList } from '../../bindings/BikriList';
+import type { BikriListInput } from '../../bindings/BikriListInput';
+import type { BikriDraft, BikriPreview, SellerMemory } from './types';
 
 /**
  * Works out the whole بکری as typed and says every number, the live partner split, the cash after
@@ -21,23 +54,173 @@ export function bikriPreview(draft: BikriDraft): Promise<BikriPreview> {
   return callCommand<BikriPreview>('bikri_preview', { input });
 }
 
-/** Splits the header's total freight over the lots by their نگ (PRD C17). Read only. */
-export function bikriSplitFreight(
-  totalFreight: string,
-  lots: readonly FreightLotInput[],
-): Promise<FreightPart[]> {
-  const input: SplitFreightInput = { total_freight: totalFreight, lots: [...lots] };
-  return callCommand<FreightPart[]>('bikri_split_freight', { input });
-}
-
-/** What the app remembers about a truck number and the same-day notice (PRD FR-7.49, FR-7.50). */
-export function assistTruckMemory(truckNo: string, date: string): Promise<TruckMemory> {
-  const input: TruckMemoryInput = { truck_no: truckNo, date };
-  return callCommand<TruckMemory>('assist_truck_memory', { input });
-}
-
 /** What the app remembers about a seller: item, packing and مارکہ of his last lot (FR-7.51). */
 export function assistSellerMemory(sellerAccountId: number): Promise<SellerMemory> {
   const input: SellerMemoryInput = { seller_account_id: sellerAccountId };
   return callCommand<SellerMemory>('assist_seller_memory', { input });
+}
+
+/**
+ * Saves the بکری as one action, all or nothing (PRD FR-12.8). The draft goes as the text typed and
+ * the backend works it out again with the same function as the preview (Code Standards B5).
+ * `confirmCashBelowZero` is true only after the user said yes to "is this entry correct?"
+ * (PRD FR-6.7). It is always sent, true or false.
+ */
+export function bikriSave(draft: BikriDraft, confirmCashBelowZero: boolean): Promise<BikriSaved> {
+  const input: BikriSaveInput = { draft, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<BikriSaved>('bikri_save', { input });
+}
+
+/** A saved بکری with the values stored when it was saved, never worked out again. */
+export function bikriGet(id: number): Promise<BikriDetail> {
+  const input: BikriGetInput = { id };
+  return callCommand<BikriDetail>('bikri_get', { input });
+}
+
+/**
+ * One page of the list of بکری with the count and the totals of the whole filter (PRD FR-12.7,
+ * FR-19.11). Dates are text as typed; empty means no limit.
+ */
+export function bikriList(input: BikriListInput): Promise<BikriList> {
+  return callCommand<BikriList>('bikri_list', { input });
+}
+
+/** Finds بکری by number, truck, seller, day or item (PRD FR-12.13). Newest first, at most 50. */
+export function bikriFind(input: BikriFindInput): Promise<BikriListRow[]> {
+  // Without an offset and a limit the backend sends the first page, 50 rows (plan 76 point 8).
+  return callCommand<BikriListRow[]>('bikri_find', { input });
+}
+
+/** The id of the first, previous, next or last بکری by number, or null when there is none. */
+export function bikriNavigate(currentId: number | null, to: NavigateTo): Promise<number | null> {
+  const input: BikriNavigateInput = { current_id: currentId, to };
+  return callCommand<number | null>('bikri_navigate', { input });
+}
+
+// Plan 16: goods left in stock, later sales, edit, cancel, undo and write-off (PRD 12.8, 12.9,
+// FR-7.47). Every number comes back from the backend; the screen sends only text and ids.
+
+/**
+ * How many rows each of the three load buttons of the بکری screen would list (PRD FR-12.50, plan 78 C1): lots with
+ * goods left (باقی مال), trip goods and garden goods for our shop. A button shows only when its count is above 0.
+ * Read only.
+ */
+export function bikriGoodsSources(): Promise<GoodsSources> {
+  return callCommand<GoodsSources>('bikri_goods_sources');
+}
+
+/**
+ * One page of the card of trip goods (`trip`) or garden goods (`garden`): the rows with goods left for our shop, on
+ * any day to sell, oldest first (PRD FR-12.50), 25, 50 or 100 at a time, with the count of the whole card
+ * (PRD FR-19.11, plan 80 R2-5). Read only.
+ */
+export function bikriGoodsToLoad(
+  kind: VentureKind,
+  offset: number,
+  limit: number,
+): Promise<ReadyGoods> {
+  return callCommand<ReadyGoods>('bikri_goods_to_load', { input: { kind, offset, limit } });
+}
+
+/** The lots with goods left, oldest first (PRD FR-12.14, FR-19.10). Read only. */
+export function bikriStockList(input: StockListInput): Promise<StockList> {
+  return callCommand<StockList>('bikri_stock_list', { input });
+}
+
+/** Loads one posting of a saved بکری as a draft to change (PRD FR-12.18). */
+export function bikriOpenForEdit(bikriId: number, entryId: number): Promise<EditableBikri> {
+  const input: EditOpenInput = { bikri_id: bikriId, entry_id: entryId };
+  return callCommand<EditableBikri>('bikri_open_for_edit', { input });
+}
+
+/** The edited draft worked out as the save will. Saves nothing. */
+export function bikriEditPreview(entryId: number, draft: BikriDraft): Promise<BikriPreview> {
+  const input: EditPreviewInput = { entry_id: entryId, draft };
+  return callCommand<BikriPreview>('bikri_edit_preview', { input });
+}
+
+/** The changes of an edit and their effect on balances, cash and partners (plan 44, FR-7.70). */
+export function bikriEditReview(entryId: number, draft: BikriDraft): Promise<EditPreview> {
+  const input: EditPreviewInput = { entry_id: entryId, draft };
+  return callCommand<EditPreview>('bikri_edit_review', { input });
+}
+
+/** Saves an edit: a reversal of the posting plus a new posting on the same day (PRD FR-12.19). */
+export function bikriEditSave(
+  entryId: number,
+  version: number,
+  draft: BikriDraft,
+  reason: string | null,
+  confirmCashBelowZero: boolean,
+): Promise<BikriEdited> {
+  const input: EditSaveInput = {
+    entry_id: entryId,
+    version,
+    draft,
+    reason,
+    confirm_cash_below_zero: confirmCashBelowZero,
+  };
+  return callCommand<BikriEdited>('bikri_edit_save', { input });
+}
+
+/** What a cancel would do, for the confirm box (PRD FR-7.8, FR-6.7). Read only. */
+export function bikriCancelPreview(id: number): Promise<CancelPreview> {
+  const input: CancelPreviewInput = { id };
+  return callCommand<CancelPreview>('bikri_cancel_preview', { input });
+}
+
+/** Cancels the whole بکری by reversal. A reason is required (PRD FR-12.11, FR-12.22). */
+export function bikriCancel(
+  id: number,
+  version: number,
+  reason: string,
+  confirmCashBelowZero: boolean,
+): Promise<BikriCancelled> {
+  const input: CancelInput = {
+    id,
+    version,
+    reason,
+    confirm_cash_below_zero: confirmCashBelowZero,
+  };
+  return callCommand<BikriCancelled>('bikri_cancel', { input });
+}
+
+/** Takes back a بکری just saved and gives its draft back (PRD FR-7.47). */
+export function bikriUndo(id: number, confirmCashBelowZero: boolean): Promise<UndoResult> {
+  const input: UndoInput = { id, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<UndoResult>('bikri_undo', { input });
+}
+
+/** Writes goods off a lot with a reason (PRD FR-12.16). The quantity goes as typed. */
+export function bikriWriteOff(lotId: number, qty: string, reason: string): Promise<WriteOffDone> {
+  const input: WriteOffInput = { lot_id: lotId, qty, reason };
+  return callCommand<WriteOffDone>('bikri_write_off', { input });
+}
+
+/** Undoes one write-off with a reason (PRD FR-12.16). */
+export function bikriWriteOffUndo(moveId: number, reason: string): Promise<WriteOffUndone> {
+  const input: WriteOffUndoInput = { move_id: moveId, reason };
+  return callCommand<WriteOffUndone>('bikri_write_off_undo', { input });
+}
+
+// Plan 76 point 1: lots carried over from earlier بکری and new lots on one screen, one save. Used only
+// when at least one carried lot is on the screen; every other screen keeps its own commands.
+
+/** Works out the carried lots and the new lots together. Saves nothing (Code Standards B5). */
+export function bikriMixedPreview(input: MixedSaleInput): Promise<MixedSalePreview> {
+  return callCommand<MixedSalePreview>('bikri_mixed_preview', { input });
+}
+
+/** Saves them in one transaction. `confirmCashBelowZero` is always sent, one answer for all (FR-6.7). */
+export function bikriMixedSave(
+  input: Omit<MixedSaleSaveInput, 'confirm_cash_below_zero'>,
+  confirmCashBelowZero: boolean,
+): Promise<MixedSaleSaved> {
+  const body: MixedSaleSaveInput = { ...input, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<MixedSaleSaved>('bikri_mixed_save', { input: body });
+}
+
+/** Takes back a mixed save just made and gives its values back as a draft (PRD FR-7.47). */
+export function bikriMixedUndo(input: MixedUndoInput): Promise<MixedUndoResult> {
+  return callCommand<MixedUndoResult>('bikri_mixed_undo', { input });
 }

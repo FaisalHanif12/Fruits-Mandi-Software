@@ -1,0 +1,84 @@
+{
+  "month": "2026-10",
+  "year": 2026,
+  "period": {
+    "kind": "range",
+    "from": "2026-10-01",
+    "to": "2026-10-10"
+  },
+  "party": null,
+  "goods": "all",
+  "first_month": "2026-10",
+  "current_month": "2026-10",
+  "partners": [
+    {
+      "id": 1,
+      "name_ur": "الف",
+      "name_en": "Partner A"
+    },
+    {
+      "id": 2,
+      "name_ur": "ب",
+      "name_en": "Partner B"
+    },
+    {
+      "id": 3,
+      "name_ur": "ج",
+      "name_en": "Partner C"
+    }
+  ],
+  "rows": [
+    {
+      "date": "2026-10-10",
+      "seller_comm_paisa": 248400,
+      "buyer_comm_paisa": 248400,
+      "laga_paisa": 48000,
+      "total_comm_paisa": 544800,
+      "shared_income_paisa": 548800,
+      "partner_shares": [
+        {
+          "partner_id": 1,
+          "share_paisa": 219600
+        },
+        {
+          "partner_id": 2,
+          "share_paisa": 164600
+        },
+        {
+          "partner_id": 3,
+          "share_paisa": 164600
+        }
+      ],
+      "sale_paisa": null,
+      "goods_comm_paisa": null
+    }
+  ],
+  "total_count": 1,
+  "offset": 0,
+  "limit": 25,
+  "totals": {
+    "date": "",
+    "seller_comm_paisa": 248400,
+    "buyer_comm_paisa": 248400,
+    "laga_paisa": 48000,
+    "total_comm_paisa": 544800,
+    "shared_income_paisa": 548800,
+    "partner_shares": [
+      {
+        "partner_id": 1,
+        "share_paisa": 219600
+      },
+      {
+        "partner_id": 2,
+        "share_paisa": 164600
+      },
+      {
+        "partner_id": 3,
+        "share_paisa": 164600
+      }
+    ],
+    "sale_paisa": null,
+    "goods_comm_paisa": null
+  },
+  "partners_locked": false
+}

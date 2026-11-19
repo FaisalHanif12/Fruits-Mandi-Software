@@ -48,6 +48,14 @@ const PLUGIN_PERMISSIONS = new Set([
   'dialog:allow-message',
   'dialog:allow-ask',
   'dialog:allow-confirm',
+  // The save dialog only returns a path. The backend checks it (absolute, .xlsx or .txt, an existing
+  // folder) and writes the file itself: the Excel export and the support file. A one-line update
+  // made by frontend at the lead's word, not by robustness.
+  'dialog:allow-save',
+  // Plan 56 (approved there, Section 8, Q4): the open dialog only returns a path, for the file and
+  // folder picker of "restore on a new computer". The backend checks the path itself and reads the
+  // copy itself (ERR_ALREADY_SET_UP once a shop exists). Nothing else is added.
+  'dialog:allow-open',
 ]);
 
 /** The five plugins of Tech Stack 2. */
@@ -97,8 +105,10 @@ describe('Capability file (NFR-SEC-10, Code Standards S4)', () => {
   const listed = /APP_COMMANDS[^=]*=\s*&\[([^\]]*)\]/.exec(buildRs)?.[1] ?? '';
   const appCommands = [...listed.matchAll(/"([a-z][a-z0-9_]*)"/g)].map((m) => m[1] ?? '');
 
-  it('is the only capability the app loads', () => {
-    expect(conf.app.security.capabilities).toEqual(['default']);
+  // Plan 14 added the capability `print` for the hidden print windows (labels print-*), which may
+  // call one data command and nothing else. A one-line update made by frontend, not robustness.
+  it('loads only the capabilities default and print', () => {
+    expect(conf.app.security.capabilities).toEqual(['default', 'print']);
   });
 
   it('allows no plugin permission outside the allow list', () => {
@@ -125,6 +135,19 @@ describe('Capability file (NFR-SEC-10, Code Standards S4)', () => {
     expect(ids.filter((id) => id.startsWith('process:'))).toEqual([
       'process:allow-restart',
       'process:allow-exit',
+    ]);
+  });
+
+  it('gives exactly the five dialog permissions the plans approved and no other', () => {
+    // message, ask and confirm (plan 04), save (the Excel export and the support file) and open (plan 56
+    // Section 8, Q4: the file and folder picker of "restore on a new computer", it only returns a path).
+    // `dialog:default` and every other dialog permission stay refused.
+    expect(ids.filter((id) => id.startsWith('dialog:'))).toEqual([
+      'dialog:allow-message',
+      'dialog:allow-ask',
+      'dialog:allow-confirm',
+      'dialog:allow-save',
+      'dialog:allow-open',
     ]);
   });
 

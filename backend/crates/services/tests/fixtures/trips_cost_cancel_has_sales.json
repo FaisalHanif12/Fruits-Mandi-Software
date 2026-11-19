@@ -1,0 +1,14 @@
+{
+  "errors": [
+    {
+      "code": "ERR_TRIP_COST_HAS_SALES",
+      "field": "id",
+      "values": {
+        "qty_sold": 80,
+        "qty_written_off": 0
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

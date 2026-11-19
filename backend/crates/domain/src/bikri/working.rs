@@ -66,6 +66,50 @@ pub(super) fn buyer_total(value: Paisa, comm: Paisa, laga: Paisa, result: Paisa)
     )
 }
 
+/// موقع پر جمع typed by hand (or empty, which is 0), PRD FR-12.44.
+pub(super) fn paid_typed(result: Paisa) -> Working {
+    working("working-paid-typed", vec![money("result", result)])
+}
+
+/// موقع پر جمع of a buyer who must pay in full (PRD FR-12.44): the whole buyer total.
+pub(super) fn paid_full(total: Paisa, result: Paisa) -> Working {
+    working(
+        "working-paid-full",
+        vec![money("total", total), money("result", result)],
+    )
+}
+
+/// موقع پر جمع of an unchanged line of an edit, kept as it was saved (PRD FR-12.44, plan 65 point
+/// 10a): nothing was typed, and a buyer who must pay in full keeps what his line was saved with.
+pub(super) fn paid_kept(result: Paisa) -> Working {
+    working("working-paid-kept", vec![money("result", result)])
+}
+
+/// موقع پر جمع typed above the buyer total: refused, and counted as 0 so no cash is posted
+/// (PRD FR-12.44, `ERR_PAID_EXCEEDS_TOTAL`).
+pub(super) fn paid_over(total: Paisa, typed: Paisa, result: Paisa) -> Working {
+    working(
+        "working-paid-over",
+        vec![
+            money("total", total),
+            money("typed", typed),
+            money("result", result),
+        ],
+    )
+}
+
+/// کھاتے میں باقی (PRD FR-12.44): the buyer total less what was paid on the spot.
+pub(super) fn left(total: Paisa, paid: Paisa, result: Paisa) -> Working {
+    working(
+        "working-left",
+        vec![
+            money("total", total),
+            money("paid", paid),
+            money("result", result),
+        ],
+    )
+}
+
 /// C19.
 pub(super) fn rate_diff(buyer_value: Paisa, seller_amount: Paisa, result: Paisa) -> Working {
     working(
@@ -86,6 +130,23 @@ pub(super) fn sum(items: i64, result: Paisa) -> Working {
     )
 }
 
+/// A charge a rule works out per lot, which a goods-arrived entry takes once, on its first active
+/// lot (PRD FR-12.40, plan 37): this lot carries 0. `entry` is the number of the goods-arrived entry
+/// and `value` the rule's amount for a lot, which the first lot has taken.
+pub(super) fn per_lot_on_entry(entry: i64, value: Paisa, rule_id: Option<i64>) -> Working {
+    Working {
+        rule_id,
+        ..working(
+            "working-per-lot-charged-on-entry",
+            vec![
+                count("entry", entry),
+                money("value", value),
+                money("result", Paisa::ZERO),
+            ],
+        )
+    }
+}
+
 /// An amount typed by hand (freight, نقد, کرایہ سٹور of a lot).
 pub(super) fn typed(result: Paisa) -> Working {
     working("working-manual", vec![money("result", result)])
@@ -94,11 +155,6 @@ pub(super) fn typed(result: Paisa) -> Working {
 /// No rule applies to a charge of a sale line, so it is 0.
 pub(super) fn none_line() -> Working {
     working("working-none-line", vec![money("result", Paisa::ZERO)])
-}
-
-/// A one-time seller is paid his whole net on the spot (PRD FR-13.10).
-pub(super) fn pukhta_cash(result: Paisa) -> Working {
-    working("working-cash-pukhta", vec![money("result", result)])
 }
 
 /// C6.
@@ -184,6 +240,64 @@ pub(super) fn shared_income(
             money("laga", laga),
             money("phone", phone),
             money("rate_diff", rate_diff),
+            money("result", result),
+        ],
+    )
+}
+
+/// C21 for a line that does not take the last نگ of the purchase: the cost left times the نگ taken
+/// over the نگ left, the leftover rupees going to the larger part (E2E-34: 10,400 × 15 ÷ 20 = 7,800).
+pub(super) fn cost_of_goods(
+    cost_left: Paisa,
+    qty_taken: i64,
+    qty_left: i64,
+    result: Paisa,
+) -> Working {
+    working(
+        "working-cost-of-goods",
+        vec![
+            money("cost_left", cost_left),
+            count("qty", qty_taken),
+            count("qty_left", qty_left),
+            money("result", result),
+        ],
+    )
+}
+
+/// C21 for the line or write-off that takes the last نگ: it takes all the cost that is left.
+pub(super) fn cost_of_goods_last(cost_left: Paisa, qty_taken: i64) -> Working {
+    working(
+        "working-cost-of-goods-last",
+        vec![
+            money("cost_left", cost_left),
+            count("qty", qty_taken),
+            money("result", cost_left),
+        ],
+    )
+}
+
+/// C21 for a line that an edit left with its quantity and purchase: it keeps its stored cost
+/// (PRD FR-12.20).
+pub(super) fn cost_kept(result: Paisa) -> Working {
+    working("working-cost-of-goods-kept", vec![money("result", result)])
+}
+
+/// C21 for a whole own lot: the sum of the costs its lines took (E2E-34: 15 نگ took 7,800).
+pub(super) fn own_lot_cost(qty: i64, result: Paisa) -> Working {
+    working(
+        "working-own-lot-cost",
+        vec![count("qty", qty), money("result", result)],
+    )
+}
+
+/// The result of an own lot (PRD FR-12.27): the seller credit less the cost of the goods sold.
+/// Can be negative (E2E-34: 8,460 − 7,800 = 660).
+pub(super) fn own_lot_result(credit: Paisa, cost: Paisa, result: Paisa) -> Working {
+    working(
+        "working-own-lot-result",
+        vec![
+            money("credit", credit),
+            money("cost", cost),
             money("result", result),
         ],
     )

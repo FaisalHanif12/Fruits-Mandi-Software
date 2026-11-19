@@ -12,6 +12,10 @@ layout-nav-bikri = { -bikri }
 # review: pending
 layout-nav-rokar = { -rokar }
 # review: pending
+layout-nav-gardens = { -baghat }
+# review: pending
+layout-nav-trips = { -market-safar }
+# review: pending
 layout-nav-partners = Partners
 # review: pending
 layout-nav-analytics = { -tajziat }
@@ -35,9 +39,9 @@ layout-module-payment = { -adaigi }
 # review: pending
 layout-module-advance = { -peshgi-khata }
 # review: pending
-layout-module-pukhta = { -pukhta-khata }
+layout-module-today = Past Sales
 # review: pending
-layout-module-today = Today's { -bikri }
+layout-module-party-ledgers = { party-ledgers-title }
 # review: pending
 layout-module-stock = { -baqi-maal }
 
@@ -46,11 +50,7 @@ layout-module-stock = { -baqi-maal }
 # review: pending
 layout-search-label = Search
 # review: pending
-layout-search-placeholder = Search by code, name, { -bikri } number or truck
-# review: pending
-layout-coming-soon = This is coming soon.
-# review: pending
-layout-attention-label = Needs attention
+layout-search-placeholder = Search by code, name or { -bikri } number
 # review: pending
 layout-user-menu = User menu
 
@@ -94,7 +94,7 @@ layout-user-change-password = Change password
 layout-user-lock = Lock the app
 
 # review: pending
-layout-user-signout = Sign out
+layout-user-signout = Log out
 
 # review: pending
 layout-loading-session = Opening the app…
@@ -111,3 +111,71 @@ layout-search-searching = Searching…
 layout-search-none = No account found.
 # review: pending
 layout-search-failed = The search could not be done.
+
+## The side menu of the { -rokar } area (PRD 5, plan 17).
+
+# review: pending
+layout-rokar-label = { -rokar } menu
+# review: pending
+layout-rokar-cashbook = { -rokar }
+# review: pending
+layout-rokar-expense = { -kharcha }
+# review: pending
+layout-rokar-lent = { -adhar-raqam }
+# review: pending
+layout-rokar-khata = { -alag-khata }
+# review: pending
+layout-rokar-voucher = { -wasooli } / { -adaigi } / { -peshgi-khata }
+
+# review: pending
+layout-rokar-general = { -general }
+
+# review: pending
+layout-user-guide = Show the guide
+
+## The first-run guide (plan 19, PRD FR-7.12).
+
+# review: pending
+guide-progress = Step <num>{ $step }</num> of <num>{ $total }</num>
+
+# review: pending
+guide-next = Next
+
+# review: pending
+guide-back = Back
+
+# review: pending
+guide-skip = Skip the guide
+
+# review: pending
+guide-done = Done
+
+# review: pending
+guide-step-dashboard-title = The dashboard
+
+# review: pending
+guide-step-dashboard-body = Today at a glance: sales, cash, dues, partners and what needs your attention. Press any tile to open the screen behind it.
+
+# review: pending
+guide-step-index-title = { -index }
+
+# review: pending
+guide-step-index-body = Add your sellers, buyers, items and cities here. Every account has a code. Type a code, or a few letters of a name, anywhere to bring up the party.
+
+# review: pending
+guide-step-bikri-title = { -bikri-book }
+
+# review: pending
+guide-step-bikri-body = Enter a truck: its lots, then each buyer with the quantity and the rate. The summary and the partners' shares change as you type. Save with <key>{ $key }</key>.
+
+# review: pending
+guide-step-receipt-title = { -wasooli }
+
+# review: pending
+guide-step-receipt-body = Record the money a buyer pays. His open bills show, the oldest first, and the money settles the oldest bill first.
+
+# review: pending
+guide-step-reports-title = Reports
+
+# review: pending
+guide-step-reports-body = Every report has dates and party filters, and can be printed or saved to Excel.

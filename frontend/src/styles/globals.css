@@ -8,6 +8,20 @@
 @import './tokens.css';
 @import './fonts.css';
 @import '../shared/grid/grid.css';
+@import '../shared/print/print.css';
+
+/* Run B, plan 20: the printed report (the totals row, a balance with its side word). */
+@import '../features/reports/reports.css';
+@import '../shared/export/export.css';
+
+/* A window that is short, like 1366 x 768 or 1024 x 600 (NFR-USE-15, NFR-USE-17): a screen gives back
+   some of its padding so more of the work is in view (plan 38). `short:` is used like `normal:`. */
+@custom-variant short (@media (max-height: 800px));
+
+/* The smallest window there is, 1024 x 600 (NFR-USE-15): a part that is only just too tall for it gives
+   back a little height, as the main menu does with its twelve items (plan 75 T3). `shortest:` is used
+   like `short:`. */
+@custom-variant shortest (@media (max-height: 640px));
 
 html {
   background-color: var(--color-bg);
@@ -72,12 +86,47 @@ body {
   }
 }
 
+/*
+ * A cell of figures has the font and the line of a figure. The line of an Urdu cell is Nastaliq tall, and
+ * a figure in Inter sits on its baseline, 4 px above the middle of the row. With the figure's own
+ * font in the cell, the figure stands in the middle of the row like the words in the cells beside it
+ * (plan 39 R7). The table sets `data-align="num"` on a number column.
+ */
+@layer base {
+  td[data-align='num'] {
+    font-family: var(--font-latin);
+    line-height: var(--leading-latin);
+  }
+}
+
 /* Design system 7: no motion for people who ask for none. */
 @media (prefers-reduced-motion: reduce) {
   * {
     transition-duration: 0s;
     animation-duration: 0s;
   }
+}
+
+/* A screen of a fixed height (a list with its own scrolling table) runs on down through the screen's bottom
+   padding, which is as tall as the round launcher and its gaps, so it reaches the status bar. It ends
+   with a spacer of that height (`h-corner`), so its page buttons and totals stay clear of the launcher,
+   also when the window is so short that the screen scrolls (plan 52, after Umar's own test). */
+@utility fill-to-corner {
+  block-size: calc(100% + var(--chat-corner));
+
+  /* The padding is added again after the screen in the scroll area: take it back, or the screen scrolls. */
+  margin-block-end: calc(-1 * var(--chat-corner));
+}
+
+/* The boxes of a report or an analytics filter bar (plan 59, NFR-USE-16). As many columns as fit the
+   free width, none narrower than `--field-filter-grid-min-w`, so a select never squeezes its text onto
+   two lines that overflow the box, in Urdu or in English. The boxes that do not fit go to the next row.
+   It follows the width of its own box, not the window. */
+@utility filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--field-filter-grid-min-w), 1fr));
+  align-items: end;
+  gap: var(--space-3) var(--space-4);
 }
 
 /* Type roles (design system 3). One class, the right font and size for each script. */
@@ -106,6 +155,47 @@ body {
   font-variant-numeric: tabular-nums;
   font-size: var(--text-latin-2);
   line-height: var(--leading-latin);
+}
+
+/* The big figure of a dashboard tile: Inter with equal-width digits, step 4 (22 px). */
+@utility type-figure {
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-latin-4);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-latin);
+}
+
+/* A date or a range inside a line of words: Inter with equal-width digits, at the size of the words around it. */
+@utility number-run {
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+
+  /* Room from the words beside it (tokens.css, --number-gap). A number alone in its box has none. */
+  &:not(:only-child) {
+    margin-inline: var(--number-gap);
+  }
+
+  /* A number at the start or the end of a cell's text has no words beside it on that side, so it keeps no
+     gap there: the cell starts and ends where the heading and the total of its column do (plan 75).
+     The run is a left-to-right isolate, so its own `inline` sides are always left (start) and right (end).
+     The cell's start is the run's left side in English and its right side in Urdu, so the Urdu rules swap the
+     two: the cell's start edge clears the run's `margin-inline-end`, the cell's end edge its `margin-inline-start`. */
+  &.number-run-start:not(:only-child) {
+    margin-inline-start: 0;
+  }
+
+  &.number-run-end:not(:only-child) {
+    margin-inline-end: 0;
+  }
+
+  :root[dir='rtl'] &.number-run-start:not(:only-child) {
+    margin-inline: var(--number-gap) 0;
+  }
+
+  :root[dir='rtl'] &.number-run-end:not(:only-child) {
+    margin-inline: 0 var(--number-gap);
+  }
 }
 
 /* Two thin lines, like the rule drawn under a total in a ledger. */
@@ -143,6 +233,18 @@ body {
 @utility type-chip {
   font-family: var(--font-text);
   font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/*
+ * The word inside a status chip of a list (plan 75, item 4): step 1 of the type scale, which is 14 px
+ * in Latin and 18 px in Urdu (NFR-USE-20: Latin in a grid is at least 14 px), so a chip with an icon and
+ * a word such as "Cancelled" fits the 120 px status column. Semibold in English, Gulzar's one weight in Urdu.
+ */
+@utility type-chip-small {
+  font-family: var(--font-text);
+  font-size: var(--text-1);
   font-weight: var(--weight-strong);
   line-height: var(--leading-text);
 }
@@ -186,8 +288,115 @@ body {
   text-align: end;
 }
 
+/*
+ * The figure of a line in a card of labels and values (a summary, the parts of a payment, a partner's
+ * line; plan 39 R8). The label stands at the start edge, the figure at the other end, and every
+ * figure of the card ends on the same physical right edge: the value has one width (`--value-col-w`)
+ * and is written left to right, so a row with a short figure and a row with a long one end level, in
+ * Urdu and in English. The ⓘ of a row hangs after its figure in room kept for it at the end, so a row
+ * with an ⓘ and a row without one end level too. Spacing between the parts is a margin, never a gap,
+ * because a gap before the ⓘ would push the figure.
+ */
+@utility value-col {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-inline-size: var(--value-col-w);
+  padding-inline-end: var(--target-min);
+  direction: ltr;
+
+  & > button {
+    margin-inline-end: calc(-1 * var(--target-min));
+  }
+
+  & > * + *:not(button) {
+    margin-inline-start: var(--space-1);
+  }
+}
+
+/*
+ * A figure in a cell with something beside it (an ⓘ, a loss mark): the figure stands in the middle of
+ * the column, under the middle of its heading (plan 39 R1), and what goes with it hangs on its sides
+ * in the room that is left. Three columns: room for a mark before the figure, the figure, room for
+ * the ⓘ after it. Left to right in both languages, like every figure.
+ */
+@utility figure-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-1);
+  inline-size: 100%;
+  direction: ltr;
+
+  & > [data-slot='lead'] {
+    grid-column: 1;
+    justify-self: end;
+  }
+
+  & > [data-slot='figure'] {
+    grid-column: 2;
+  }
+
+  & > [data-slot='extra'] {
+    grid-column: 3;
+    justify-self: start;
+  }
+}
+
+/* The arrow of a day of the past sales turns a quarter when the day opens (plan 75): a turn is the one thing
+   besides colour that moves, at most 150 ms, and not at all when the system asks for no motion. */
+@utility transition-turn {
+  transition-property: transform;
+  transition-duration: var(--motion-fast);
+}
+
 /* Only colour and opacity move, at most 150 ms (design system 7). */
 @utility transition-calm {
   transition-property: color, background-color, border-color, opacity;
   transition-duration: var(--motion-fast);
+}
+
+/*
+ * The chat window of Ask the app (plan 51, PRD FR-7.73). It stands above the round launcher at the end
+ * side of the window (bottom right in English, bottom left in Urdu, through the logical offsets) and
+ * grows upward. Its wrapper in the app shell is as tall as nothing and sits on the top edge of the
+ * status bar, so the offsets count from there. Two sizes, set by data-size:
+ * - normal: half the window wide (never under --chat-min-w) and most of the room above the launcher,
+ *   but it stops under the top bar, so the search, the bell, the language switch and the user menu stay
+ *   in reach while it is open (at 1024 x 600 it fills all the room under the top bar);
+ * - large: nearly the whole window, over the top bar too.
+ * It opens in at most 150 ms (NFR-USE-24) with a small rise and fade, from the corner the launcher
+ * stands in. Shut, it is hidden (after the fade), so nothing in it can take the focus; opening shows it
+ * at once, so the focus can go into it in the same moment.
+ */
+@utility chat-window {
+  --chat-room: calc(
+    100vh - var(--statusbar-h) - var(--chat-launcher) - var(--chat-gap) - 2 * var(--chat-edge)
+  );
+
+  position: absolute;
+  inset-block-end: calc(var(--chat-edge) + var(--chat-launcher) + var(--chat-gap));
+  inset-inline-end: var(--chat-edge);
+  inline-size: min(max(var(--chat-min-w), 50%), 100% - 2 * var(--chat-edge));
+  block-size: min(var(--chat-room) - var(--topbar-h), var(--chat-normal-share));
+  transform-origin: 100% 100%;
+  transition-property: transform, opacity, inline-size, block-size, visibility;
+  transition-duration:
+    var(--motion-fast), var(--motion-fast), var(--motion-fast), var(--motion-fast), 0s;
+
+  &:dir(rtl) {
+    transform-origin: 0 100%;
+  }
+
+  &[data-size='large'] {
+    inline-size: calc(100% - 2 * var(--chat-edge));
+    block-size: var(--chat-room);
+  }
+
+  &[data-open='false'] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(var(--space-3)) scale(0.96);
+    transition-delay: 0s, 0s, 0s, 0s, var(--motion-fast);
+  }
 }

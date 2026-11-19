@@ -1,0 +1,165 @@
+{
+  "report": "R7",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "title_id": "report-r7-title",
+  "party": null,
+  "named_title_id": null,
+  "filters": [],
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money"
+    },
+    {
+      "key": "avg_rate",
+      "title_id": "report-col-avg-rate",
+      "kind": "money"
+    },
+    {
+      "key": "seller_comm",
+      "title_id": "report-col-seller-comm",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_comm",
+      "title_id": "report-col-buyer-comm",
+      "kind": "money"
+    },
+    {
+      "key": "laga",
+      "title_id": "report-col-laga",
+      "kind": "money"
+    },
+    {
+      "key": "total_comm",
+      "title_id": "report-col-total-comm",
+      "kind": "money"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Banana"
+        },
+        {
+          "type": "number",
+          "text": "50"
+        },
+        {
+          "type": "money",
+          "text": "29,400"
+        },
+        {
+          "type": "money",
+          "text": "588"
+        },
+        {
+          "type": "money",
+          "text": "1,764"
+        },
+        {
+          "type": "money",
+          "text": "1,764"
+        },
+        {
+          "type": "money",
+          "text": "400"
+        },
+        {
+          "type": "money",
+          "text": "3,928"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Apple"
+        },
+        {
+          "type": "number",
+          "text": "10"
+        },
+        {
+          "type": "money",
+          "text": "12,000"
+        },
+        {
+          "type": "money",
+          "text": "1,200"
+        },
+        {
+          "type": "money",
+          "text": "720"
+        },
+        {
+          "type": "money",
+          "text": "720"
+        },
+        {
+          "type": "money",
+          "text": "80"
+        },
+        {
+          "type": "money",
+          "text": "1,520"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "tables": [],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "text": "60"
+    },
+    {
+      "type": "money",
+      "text": "41,400"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "2,484"
+    },
+    {
+      "type": "money",
+      "text": "2,484"
+    },
+    {
+      "type": "money",
+      "text": "480"
+    },
+    {
+      "type": "money",
+      "text": "5,448"
+    }
+  ],
+  "words": null
+}

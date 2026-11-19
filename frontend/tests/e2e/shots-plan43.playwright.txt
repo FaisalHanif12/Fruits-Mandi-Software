@@ -1,0 +1,53 @@
+// Screenshots of plan 43 (PRD FR-7.3, FR-7.4, NFR-USE-8): the visible remove button at the end of each
+// row of the entry grids, and the question before a lot that has sale lines is removed, in both
+// languages at 1366 x 900 and 1024 x 640. It is a developer tool: run it with the Vite dev server up
+// (`pnpm --filter frontend dev`), as a snippet for `playwright-core` (a snippet for that tool, not a
+// module, so it is kept as .txt and the linter does not read it). The pages are the development pages
+// /dev/bikri (the lots and the sale lines of the worked day) and /dev/rokar?screen=general (the جنرل
+// lines). The sale book asks "leave the page?" when it is left with a draft, so every picture is taken
+// in a page of its own that is closed afterwards. It also measures sideways overflow (NFR-USE-15).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan43';
+  const context = page.context();
+  const report = [];
+  async function scenario(hash, l, w, h, fn) {
+    const p = await context.newPage();
+    p.on('dialog', (d) => d.accept().catch(() => undefined));
+    await p.setViewportSize({ width: w, height: h });
+    await p.goto('http://localhost:5173/#/dev/' + hash);
+    await p.waitForSelector('.row-remove-button', { timeout: 20000 });
+    await p.waitForTimeout(800);
+    if (l === 'en') {
+      await p.getByRole('button', { name: 'English', exact: true }).first().click();
+      await p.waitForTimeout(800);
+    }
+    try {
+      await fn(p);
+    } finally {
+      await p.close({ runBeforeUnload: false }).catch(() => undefined);
+    }
+  }
+  const overflow = (p) =>
+    p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  for (const [w, h] of [[1366, 900], [1024, 640]]) {
+    for (const l of ['ur', 'en']) {
+      await scenario('bikri', l, w, h, async (p) => {
+        let name = `bikri-buttons-${l}-${w}x${h}`;
+        await p.screenshot({ path: `${OUT}/${name}.png` });
+        report.push([name, await overflow(p), await p.evaluate(() => document.querySelectorAll('.row-remove-button').length)]);
+        await p.locator('.ag-row[row-index="0"] .row-remove-button').first().click();
+        await p.waitForTimeout(800);
+        name = `bikri-lot-question-${l}-${w}x${h}`;
+        await p.screenshot({ path: `${OUT}/${name}.png` });
+        report.push([name, await overflow(p), await p.evaluate(() => (document.querySelector('[role="alertdialog"]') || {}).textContent || null)]);
+      });
+      await scenario('rokar?screen=general', l, w, h, async (p) => {
+        const name = `general-buttons-${l}-${w}x${h}`;
+        await p.screenshot({ path: `${OUT}/${name}.png` });
+        report.push([name, await overflow(p), await p.evaluate(() => document.querySelectorAll('.row-remove-button').length)]);
+      });
+    }
+  }
+  return report;
+};

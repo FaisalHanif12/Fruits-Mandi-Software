@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-statement"
+description = "Enables the partners_statement command without any pre-configured scope."
+commands.allow = ["partners_statement"]
+
+[[permission]]
+identifier = "deny-partners-statement"
+description = "Denies the partners_statement command without any pre-configured scope."
+commands.deny = ["partners_statement"]

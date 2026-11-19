@@ -1,0 +1,23 @@
+{
+  "errors": [
+    {
+      "code": "ERR_OUT_OF_RANGE",
+      "field": "source.cloud.endpoint",
+      "values": {
+        "reason": "https"
+      }
+    },
+    {
+      "code": "ERR_REQUIRED",
+      "field": "source.cloud.bucket",
+      "values": {}
+    },
+    {
+      "code": "ERR_REQUIRED",
+      "field": "source.cloud.key_id",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-00000000-0000"
+}

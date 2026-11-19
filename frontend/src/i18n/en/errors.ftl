@@ -48,9 +48,15 @@ err-qty-too-large = The quantity is too large. The most you can enter is { $max 
 err-weight-too-large = The weight is too large. The most you can enter is { $max } kg.
 # review: pending
 err-date-invalid = This date is not valid. Enter the day, month and year correctly.
-# PRD FR-6.6. $closed_up_to: DD-MM-YYYY.
+# PRD FR-6.6, plan 53. It never asks for "a date after X": X may be today, and no later date is allowed.
+# $today: DD-MM-YYYY. $today_state: open or closed (today_open of the backend); missing says only
+# that the day is closed and the Owner can reopen it.
 # review: pending
-err-date-closed = This day is closed. Enter a date after { $closed_up_to }, or ask the Owner to reopen the day.
+err-date-closed = { $today_state ->
+    [open] This day is closed. Use today's date ({ $today }), or ask the Owner to reopen the day.
+    [closed] This day is closed, and so is today. Ask the Owner to reopen the day.
+   *[other] This day is closed. Ask the Owner to reopen the day.
+}
 # PRD FR-6.6. $today: DD-MM-YYYY.
 # review: pending
 err-date-in-future = A future date is not allowed. Enter today ({ $today }) or an earlier date.
@@ -63,6 +69,13 @@ err-name-ur-script = Write the Urdu name in Urdu letters.
 # PRD FR-7.28.
 # review: pending
 err-name-en-script = Write the English name in English letters.
+# PRD FR-7.24, FR-13.2. A walk-in buyer needs both names; the phone is optional.
+# review: pending
+err-chukta-name-required = Write the name of the { -chukta } { -gahak } in both Urdu and English.
+# PRD 10.2, Code Standards 4.2 (Tag). The code name is the backend's (plan 17e T1).
+# review: pending
+err-tag-invalid = The tag must be 1 to 4 English capital letters or dots, with at least one letter. For example K, BA or D.P.
+
 # review: pending
 err-name-too-long = The name is too long. Use at most { $max } characters.
 # review: pending
@@ -138,16 +151,25 @@ err-not-locked = The app is not locked.
 err-recovery-code-wrong = The user name or the recovery code is wrong. Check and type them again.
 # review: pending
 err-already-set-up = First-time setup is already done. Please sign in.
-# $min and $max: the allowed range.
+# $min and $max: the allowed range. `$reason` (the cloud address, backup and first start): https means it
+# does not start with https:// or is not one word. (An address with a path after the host is its own
+# refusal, ERR_BACKUP_CLOUD_ADDRESS_PATH.)
 # review: pending
-err-out-of-range = This value must be between { $min } and { $max }.
+err-out-of-range = { $reason ->
+    [https] The cloud address must start with https:// and be one word, for example https://your-account.r2.cloudflarestorage.com.
+   *[other] This value must be between { $min } and { $max }.
+}
 # review: pending
 err-not-logged-in = Please sign in first.
+# The Mac asked for the password to open the app's key in Mac Keychain and was refused or left unanswered.
+# Only on a Mac (plan 75 7.8). It says what to do, so it has no reference number.
+# review: pending
+err-keystore-denied = Mac Keychain did not allow the app. Enter your Mac password in the Keychain box and choose Always Allow, then sign in again.
 # PRD FR-8.4.
 # review: pending
 err-session-locked = The app is locked. Type your password to unlock it.
 # review: pending
-err-not-found = This item was not found. Open the list again.
+err-not-found = This was not found. Open the page again and choose again.
 # PRD FR-7.66, E49.
 # review: pending
 err-spelling-unconfirmed = The spelling of these words is not confirmed: { $words }. Check the spelling, then confirm it or fix it.
@@ -178,15 +200,19 @@ err-opening-both-sides = Enter an opening Debit or an opening Credit, not both.
 # review: pending
 err-advance-not-seller = An opening Advance can only be set on the opening Debit of a Seller.
 
-# PRD FR-10.9, FR-6.5, FR-13.5. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one.
+# plan 17b: an old client sent a mode, a bank or a cheque; the screens never do (PRD 15.1).
 # review: pending
-err-opening-not-allowed = This account cannot have an opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -pukhta-khata } and Opening Difference cannot take one.
+err-field-not-allowed = This field is no longer used. Leave it out.
+
+# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Chukta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
+# review: pending
+err-opening-not-allowed = This account cannot take this opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -chukta-khata } and Opening Difference cannot take one. A partner's { -zati-kharcha } account and a { -adhar-raqam } account can take an opening debit only.
 
 ## Advances and closing days (plan 10).
 
-# PRD FR-15.4. An advance goes to a seller, never to Pukhta Khata.
+# PRD FR-15.4. An advance goes to a seller, never to Chukta Khata.
 # review: pending
-err-not-a-seller = This is not a { -beopari } account. An { -peshgi } can only be given to a { -beopari }, not to { -pukhta-khata }.
+err-not-a-seller = This is not a { -beopari } account. An { -peshgi } can only be given to a { -beopari }, not to { -chukta-khata }.
 # PRD FR-10.2. Hidden from pickers.
 # review: pending
 err-account-inactive = This account is inactive and cannot be used in a new entry. Choose another account.
@@ -196,6 +222,12 @@ err-system-account = This is a system account. The books use it, so it cannot be
 # PRD FR-21.2.
 # review: pending
 err-reason-required = A reason is required.
+# PRD FR-21.4 (plan 73). Nothing was opened.
+# review: pending
+err-sign-required = The { -dastakhat } is required.
+# PRD FR-21.4 (plan 73). Only the Owner's sign opens a closed day. Nothing was opened.
+# review: pending
+err-sign-wrong = The { -dastakhat } is not correct.
 # NFR-REL-8. Nothing was closed.
 # review: pending
 err-trial-not-balanced = The { -trial-balance } has a difference, so the day cannot be closed. Check the { -trial-balance } and fix the difference first.
@@ -222,7 +254,7 @@ err-date-range = The last date is before the first date. Enter a last date on or
 
 # PRD FR-12.6. A line sells more than the lot has left.
 # review: pending
-err-qty-exceeds-lot = The quantity is more than the lot has left. Only { $available } { -nag } are left.
+err-qty-exceeds-lot = That quantity is not available: only { $available } { -nag } are left.
 # PRD FR-11.10. The setting is off.
 # review: pending
 err-override-not-allowed = Changing the { -commission } or { -laga } on a line is switched off. The Owner can switch it on in Settings.
@@ -233,12 +265,6 @@ err-credit-limit-exceeded = This sale takes the buyer's balance to { $would_owe 
 err-seller-required = Choose the seller of this lot.
 # review: pending
 err-buyer-required = Choose the buyer of this line.
-# PRD FR-13.2.
-# review: pending
-err-pukhta-name-required = A name is required for { -pukhta-khata }.
-# PRD FR-13.2.
-# review: pending
-err-pukhta-phone-required = A phone number is required for this { -pukhta-khata } person.
 # PRD FR-12.8.
 # review: pending
 err-no-lots = Add at least one lot.
@@ -253,9 +279,10 @@ err-weight-required = Enter the weight in kilograms. This item is sold by weight
 err-cash-below-zero-not-confirmed = After this entry cash in hand would be { $cash_after }. Confirm the entry to save it.
 # review: pending
 err-not-a-buyer = This is not a { -gahak } account. Choose a buyer.
-# PRD 12.4, 10.2. The buyer's credit is off, or he is the nameless cash buyer.
+# PRD FR-12.44. The money paid on the spot is more than the line's buyer total. $max is the most
+# allowed, in rupees.
 # review: pending
-err-credit-not-allowed = Credit is not allowed for this buyer. Change the line to cash.
+err-paid-exceeds-total = { -mauqa-par-jama } cannot be more than the buyer total of the line. The most you can enter is Rs { $max }.
 # A warning (PRD FR-12.8): the rest goes to باقی مال.
 # review: pending
 err-qty-left-unsold = { $left } { -nag } are left. They will stay in { -baqi-maal }.
@@ -265,3 +292,463 @@ err-lot-net-negative = The { -safi-bikri } of this lot is below zero ({ $net }).
 # A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
 # review: pending
 err-rate-far-from-average = This rate is more than { $percent }% away from the average of the last 7 days ({ $average }). Check it.
+
+## Drafts (plan 13, PRD FR-12.10).
+
+# $max_bytes: the most the app keeps for one unfinished entry. The number is not shown.
+# review: pending
+err-draft-invalid = Your unfinished work could not be kept for now. Save the entry now. If this happens again, tell us.
+
+## Printing (plan 14).
+
+# PRD FR-12.12. Printing works on Windows and on a Mac (plan 69); on any other computer the preview
+# shows how it will print.
+# review: pending
+err-print-windows-only = Printing works only on Windows and on a Mac. On this computer, use the preview to see how the document will print.
+
+# $printer is the printer name in Settings.
+# review: pending
+err-printer-not-found = The printer { $printer } was not found. Check that it is on and connected, or choose another printer in Settings.
+
+# review: pending
+err-print-failed = The document could not be printed. Check the printer and try again. If it keeps happening, ask for help.
+
+## Vouchers (plan 15, PRD 15.1 to 15.4).
+
+# PRD FR-15.11. Money paid to a buyer is cash lent to him.
+# review: pending
+err-payment-to-buyer-needs-reason = Money paid to a { -gahak } is { -naqd-udhar }. Please write the reason.
+
+# PRD FR-15.12, FR-16.2. $open is the most that can be returned, in rupees.
+# review: pending
+err-return-exceeds-open = This is more than can be returned. The most that can be returned is { $open }.
+
+# PRD FR-15.3.
+# review: pending
+err-voucher-cancelled = This voucher is cancelled and cannot be changed.
+
+# A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
+# amount is more than it, both in rupees.
+# review: pending
+err-payment-above-payable = This is { $over } more than what is payable to the { -beopari } ({ $payable }). You can still save it. The extra shows as owed by the { -beopari }; it is not an { -peshgi }.
+
+## Later sales, edit, cancel and write-off (plan 16).
+
+# review: pending
+err-bikri-cancelled = This { -bikri } is cancelled and cannot be changed.
+
+# review: pending
+err-lot-not-found = This lot was not found. Open the list of { -baqi-maal } and choose again.
+
+# review: pending
+err-nothing-to-sell = Nothing is left in this lot to sell.
+
+# $available: how many { -nag } are left in the lot.
+# review: pending
+err-write-off-exceeds-balance = You cannot write off more than is left. Only { $available } { -nag } are left.
+
+# review: pending
+err-date-before-received = The day cannot be before the day the goods were received.
+
+# review: pending
+err-qty-below-sold = The quantity received cannot be less than the quantity already sold from this lot.
+
+# PRD FR-12.18 to FR-12.20. The edit rules of a saved { -bikri }. $rule is a fixed name from the
+# backend, one case each: the day, a lot, its order, its seller or item, a line, a later sale's lot.
+# Every case says what to do. The field points at the lot or the line.
+# review: pending
+err-edit-not-allowed = { $rule ->
+    [day_changed] The day of a saved entry cannot be changed in an edit. Write the old day back.
+    [lot_removed] A saved lot cannot be removed, because its sales and its goods rest on it. Put the lot back. To take the whole sale back, cancel it.
+    [lot_has_later_sale] A later sale already rests on this lot, so it cannot be removed. Put the lot back. To take the whole sale back, cancel it.
+    [lot_has_write_off] Goods of this lot were written off, so it cannot be removed. Undo the write-off first, or put the lot back.
+    [lot_has_fruit] { -phal } was taken from this lot, so it cannot be removed. Cancel the { -phal } entry first, or put the lot back.
+    [lot_not_in_posting] This lot is not part of the entry being edited. Close the edit and open the entry again.
+    [lot_order_changed] Saved lots keep their order, and new lots come after them. Move the new lot to the end.
+    [lot_seller_locked] A later entry or sale already rests on this lot, so its seller cannot be changed. Choose the old seller again.
+    [lot_item_locked] A later entry or sale already rests on this lot, so its item cannot be changed. Choose the old item again.
+    [line_not_in_posting] This line is not part of the entry being edited. Close the edit and open the entry again.
+    [posting_lots_locked] In a later sale only its own lines can be changed, not the lot. Change the lot in the first entry.
+    [goods_moved] The goods of this entry have been sold or written off, so it cannot be changed.
+    [month_closed] The month of this entry is closed. Reverse the month close first.
+    [garden_closed] The { -bagh } is closed, so its entries cannot be changed.
+    [returns_stand] Returns are recorded against this entry, so it cannot be changed.
+    [cancelled] This entry is cancelled and cannot be changed.
+   *[other] This change is not allowed in this entry. Close the edit and open the entry again.
+}
+
+## Trip goods and trips (plan 16b, PRD 12.10, FR-12.24, FR-12.26, FR-12.29, FR-12.31).
+
+# PRD FR-12.26. $qty_left: how many { -nag } of the quantity taken are not sold on the lines.
+# review: pending
+err-own-lot-not-fully-sold = This lot of { -apna-maal } must be sold in full in this { -bikri }. { $qty_left } { -nag } are not sold on the lines yet. Sell them on the lines, or take fewer { -nag } from the purchase. What you do not take stays in the purchase.
+
+# PRD FR-12.26. The account offered only as the seller of a lot.
+# review: pending
+err-own-goods-account-restricted = { -apna-maal } can only be the seller of a lot in the { -bikri }. Choose another account.
+
+# PRD FR-12.24. $qty_sold and $qty_written_off: how many { -nag }.
+# review: pending
+err-purchase-has-sales = This purchase cannot be cancelled, because { $qty_sold } { -nag } were sold and { $qty_written_off } { -nag } were written off. Cancel the sales or undo the write-off first.
+
+# review: pending
+err-purchase-cancelled = This purchase is cancelled. Choose another purchase.
+
+# A warning, not a refusal (PRD FR-12.26).
+# review: pending
+err-own-lot-freight-in-cost = The freight of the purchase is already in its cost. A freight typed here is counted a second time. Leave it empty unless that is what you mean.
+
+# A warning (plan 37, PRD FR-11.9): the save is allowed and the typed amount is kept. $lot_no is the
+# earlier lot that took the charge, $bikri_number its sale (0 means a lot of this same sale; the
+# message chooses by $bikri_number_zero) and $entry the goods-arrived entry.
+# review: pending
+err-entry-charge-already-taken = { $bikri_number_zero ->
+    [yes] This charge was already taken on { -lot } { $lot_no } of { -maal-aaya } entry { $entry }. The amount you typed is kept.
+   *[no] This charge was already taken on { -lot } { $lot_no } of { -bikri } { $bikri_number }, { -maal-aaya } entry { $entry }. The amount you typed is kept.
+}
+
+# PRD FR-12.31, FR-12.33: a closed trip takes no new purchase or cost.
+# review: pending
+err-trip-closed = This { -market-safar } is closed. It takes no new purchase or cost.
+
+# PRD FR-12.31: a trip cost is spread over the purchases that still have goods left.
+# review: pending
+err-trip-no-stock = No purchase of this { -market-safar } has goods left, so there is nothing to spread the cost over. Record the purchase first.
+
+# PRD FR-12.29: the shares are fixed after the first entry.
+# review: pending
+err-venture-shares-locked = This { -market-safar } already has an entry, so the { -hissa } of its partners can no longer be changed.
+
+# PRD FR-12.24. $trip_date: the day of the trip.
+# review: pending
+err-purchase-before-trip = The day is before the day of the { -market-safar } ({ $trip_date }). Choose the day of the trip or a later day.
+
+# PRD FR-12.31. $qty_sold and $qty_written_off: how many { -nag } of the purchases it was spread over.
+# review: pending
+err-trip-cost-has-sales = This cost cannot be cancelled, because { $qty_sold } { -nag } of the purchases it was spread over were sold and { $qty_written_off } { -nag } were written off. Cancel the sales or undo the write-off first.
+
+# PRD A63: a partner cannot be made inactive while he is in an open trip.
+# review: pending
+err-partner-in-open-venture = This { -shirakat-dar } is in an open { -market-safar }, so he cannot be made inactive. Let the { -market-safar } close first.
+
+# PRD FR-12.31: cancel the cost first.
+# review: pending
+err-purchase-carries-trip-cost = This purchase carries a part of a { -market-safar } cost, so it cannot be cancelled. Cancel that cost first.
+
+# review: pending
+err-trip-entry-cancelled = This entry is cancelled already.
+
+## Backup and restore (plan 18, PRD Section 20). The codes of `BackupCode` that core has not got yet.
+## The seven that core has already (disk full, internal, data check, busy, required, out of range,
+## migration) share the messages above.
+
+# review: pending
+err-backup-not-found = This copy was not found. It may have been removed. Look for the copies again and try again.
+
+# review: pending
+err-backup-key-not-set = There is no backup key on this computer yet. Make the key first.
+
+# review: pending
+err-backup-key-already-set = A backup key is in use already, so a new one cannot be made.
+
+# review: pending
+err-backup-key-format = The key is not written the right way. It has six groups of four letters and numbers, with dashes between them.
+
+# review: pending
+err-backup-key-wrong = This is not the right key. Check the printed sheet and try again. Nothing was changed.
+
+# review: pending
+err-backup-key-required = This copy is locked with the backup key. Type the key from your printed sheet.
+
+# review: pending
+err-backup-corrupt = This copy is damaged and cannot be used. Nothing was changed. Use another copy.
+
+# review: pending
+err-backup-check-failed = The copy was made but did not pass its check, so it cannot be trusted. Make a new copy.
+
+# review: pending
+err-backup-cloud-not-configured = The cloud copy is not set up. Fill in the cloud details in the backup settings.
+
+# $reason is offline, refused or not_found.
+# review: pending
+err-backup-cloud-failed =
+    { $reason ->
+        [offline] The cloud could not be reached. Check the internet and the cloud address. A copy that was being made waits and is sent again by itself.
+        [refused] The cloud did not accept the keys. Check the cloud access key and the cloud secret key.
+        [not_found] The cloud bucket or the copy was not found. Check the bucket name and the folder name.
+       *[other] The cloud copy failed. Try again later.
+    }
+
+# review: pending
+err-backup-usb-not-present = The USB drive, the folder or the file was not found. Plug the drive in and check the path. To stop the USB copies, switch them off in the backup settings.
+
+# review: pending
+err-backup-usb-failed = The copy to the USB drive failed. Check the drive and the folder.
+
+# review: pending
+err-backup-local-failed = The copy on this computer failed. Check the folder in the backup settings and the free space on the disk.
+
+# review: pending
+err-backup-busy = A backup or restore is running already. Wait until it is done.
+
+# review: pending
+err-backup-not-confirmed = Please confirm before the restore starts. Nothing was changed.
+
+# review: pending
+err-backup-newer-than-app = This copy is from a newer version of the app than the one on this computer. Update the app first.
+
+# review: pending
+err-backup-chain-key-missing = This copy has no key for the tamper checks, so it cannot be trusted on a new computer. Use another copy, or contact support.
+
+# The cloud address has a path after the host (plan 53 Section 10). $address: the address cut off at the host,
+# the one to use. $path: what was cut off, for example /mandidemo. Nothing was saved.
+# review: pending
+err-backup-cloud-address-path = The cloud address must be only the host, with nothing after it. The part { $path } does not belong in it. Use { $address }, and put the bucket name in the field { backup-set-bucket }.
+# review: pending
+err-backup-no-owner = The first-time setup was never finished on the computer that made this copy, so nobody could sign in after restoring it. Nothing was changed. Use another copy.
+
+# review: pending
+err-backup-not-started = The backup service is not running yet. Wait a moment and try again.
+
+# review: pending
+err-backup-restore-failed = The restore could not be finished. Close the app and open it again. If your books look wrong, contact support: when there were books on this computer, a safety copy was made before the restore.
+
+## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
+
+# PRD FR-16.9. The same day is allowed.
+# review: pending
+err-return-by-before-entry = The return-by date cannot be before the entry date.
+
+# review: pending
+err-partner-required = Choose the { -shirakat-dar }.
+
+# review: pending
+err-expense-head-required = Choose the expense head.
+
+# review: pending
+err-lent-person-required = Choose the person.
+
+# review: pending
+err-khata-required = Choose the { -alag-khata }.
+
+# PRD 16.4. Nothing is saved. $dr and $cr are the two totals in rupees.
+# review: pending
+err-general-not-balanced = The { -banaam } total is { $dr } and the { -jama } total is { $cr }. They must be equal before the entry can be saved.
+
+# review: pending
+err-general-too-few-lines = A { -general } entry needs at least two lines.
+
+# PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
+# review: pending
+err-capital-exceeds-balance = This is more than the partner's { -sarmaya } balance of { $balance }, by { $over }. You can still save it.
+
+## Plan 22: updates and the support file (PRD NFR-INS-3, NFR-INS-4, NFR-SEC-11, NFR-OBS-4).
+
+# review: pending
+err-update-check-failed = The app could not look for a new version. Check the internet connection and try again. Your work is not affected.
+
+# review: pending
+err-update-not-signed = This update is not signed by us, so it was not installed. Nothing was changed and no copy was made. Do not use this update.
+
+# $drafts is the number of unsaved entries.
+# review: pending
+err-update-during-work = There are unsaved entries ({ $drafts }). Save them or throw them away, then update. Nothing was installed.
+
+# review: pending
+err-update-not-confirmed = The update was not confirmed, so nothing was installed. Press the update button and answer the question.
+
+# review: pending
+err-update-backup-failed = The safety copy before the update could not be made, so nothing was installed. Look at the backup screen and try again.
+
+# review: pending
+err-update-changed = A different version is on offer now. Look for the new version again and read what is new before you update.
+
+# review: pending
+err-update-none = There is no newer version. The app is up to date.
+
+## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
+
+# PRD FR-16.12: the fruit entry was cancelled already (it cannot be changed or cancelled again).
+# review: pending
+err-fruit-cancelled = This fruit entry was cancelled already, so it cannot be changed.
+
+# PRD 16.11, FR-12.22: fruit was taken from a lot of this sale, so the sale cannot be cancelled or undone.
+# $qty_taken: the نگ taken from its lots.
+# review: pending
+err-bikri-has-fruit = { $qty_taken } { -nag } of { -phal } were taken from a lot of this { -bikri }, so it cannot be cancelled. Cancel the { -phal } entry first.
+
+# PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
+# review: pending
+err-garden-closed = This { -bagh } is closed, so it takes no new entry, no lot and no fruit. Undo its closing first.
+
+# PRD FR-12.38. The garden is open, so there is no closing to undo.
+# review: pending
+err-garden-not-closed = This { -bagh } is open, so there is no closing to undo.
+
+# PRD FR-12.34. $garden_date: the day of the garden.
+# review: pending
+err-date-before-garden = The day is before the day of the { -bagh } ({ $garden_date }). Choose the day of the garden or a later day.
+
+# Plan 17c. $last_date: the day of the latest entry or lot of the garden.
+# review: pending
+err-close-before-last-entry = The { -bagh } cannot be closed before its latest entry or lot ({ $last_date }). Choose that day or a later day.
+
+# Plan 17c. The entry of the garden was cancelled already.
+# review: pending
+err-garden-entry-cancelled = This entry of the { -bagh } is cancelled already.
+
+## Plan 33 version 1.1: the date to sell, the goods that arrived at a garden.
+
+# PRD FR-12.39. $entry_date: the day of the purchase or arrival.
+# review: pending
+err-sell-date-before-entry = The { -sell-date } cannot be before the day the goods came ({ $entry_date }). Choose that day or a later day.
+
+# PRD FR-12.40. The goods arrived entry was cancelled already.
+# review: pending
+err-arrival-cancelled = This { -maal-aaya } entry is cancelled already.
+
+# PRD FR-12.40. $qty_sold, $qty_written_off: what has been sold and written off from it.
+# review: pending
+err-arrival-has-sales = This { -maal-aaya } entry cannot be cancelled: { $qty_sold } { -nag } are sold and { $qty_written_off } are written off.
+
+# PRD FR-12.40. $qty_left: how many { -nag } of the arrival are not sold on the lines.
+# review: pending
+err-arrival-lot-not-fully-sold = This lot of garden goods must be sold in full in this { -bikri }. { $qty_left } { -nag } are not sold on the lines yet. Sell them on the lines, or take fewer { -nag }. What you do not take stays with the { -maal-aaya } entry.
+
+# PRD FR-12.40. $qty_left: how many { -nag } of garden goods are still left.
+# review: pending
+err-garden-has-stock = This { -bagh } still has goods that are not sold ({ $qty_left } { -nag }). Sell them or write them off before closing it.
+
+# PRD FR-12.41. $min_other: the most that other shops have sold; $max_other: the { -nag } less what { -apni-dukan } has sold.
+# review: pending
+err-split-below-sold = The { -nag } for { -dusri-dukan } must be between { $min_other } and { $max_other }. Goods that are sold already cannot be moved to the other part.
+
+# PRD FR-12.41. $qty: how many { -nag } the entry has in all.
+# review: pending
+err-split-above-qty = The { -nag } for { -dusri-dukan } cannot be more than all { $qty } { -nag } of this entry.
+
+# PRD FR-12.41. $max: the most lines an entry can have.
+# review: pending
+err-too-many-lines = An entry can have at most { $max } lines.
+
+# PRD FR-10.10, plan 40. The person owes nothing, so there is nothing to move.
+# review: pending
+err-nothing-owed = He owes nothing, so there is nothing to move. If he has gone, only make the account inactive.
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-dead-not-allowed = A partner, a { -alag-khata }, a { -bagh } or a system account cannot be moved to { -doobi-raqam }.
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-already-dead = He is already in { -doobi-raqam }. To make him active, use "Make active again".
+
+# PRD FR-10.10, plan 40. The reason Other needs a note.
+# review: pending
+err-note-required = Write a note when the reason is Other.
+
+# PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
+# review: pending
+err-date-before-last-posting = The date cannot be before his last entry ({ $last_posting_date }).
+
+## Edit everywhere and the partner code (plan 44, PRD FR-7.70, FR-21.4, FR-17.11).
+
+# review: pending
+err-edit-date-fixed = The day of an entry cannot be changed. To move it to another day, cancel it and enter it again on the right day.
+
+# $saved_lines: how many saved lines were charged by this rule.
+# review: pending
+err-rule-used = { $saved_lines } saved lines were charged by this rule, so only its last date and its active switch can be changed. For a new rate, write a new rule from a new date.
+
+# review: pending
+err-fix-token-invalid = This fix is no longer running. Open the day screen to close the days.
+
+# review: pending
+err-partner-locked = The partner figures are not shown without the partner code. Enter the code first.
+
+# review: pending
+err-partner-code-not-set = The partner code has not been made yet. Make it first.
+
+# review: pending
+err-partner-code-already-set = The partner code is already made. To change it, use Change code in Settings.
+
+# $tries_left: tries left before the wait.
+# review: pending
+err-partner-code-wrong = The code is wrong. { $tries_left } tries left.
+
+# review: pending
+err-partner-code-invalid = The code must be 4 digits.
+
+# review: pending
+err-partner-codes-differ = The two codes are not the same. Write the same code both times.
+
+## Ask the app (plan 49, PRD FR-7.81, FR-7.85)
+
+# review: pending
+err-assistant-off = Asking questions is off. Turn it on in Settings.
+
+# review: pending
+err-assistant-key-missing = The OpenRouter key is not saved yet. Add the key in Settings.
+
+# review: pending
+err-assistant-busy = A question is already running. Let it finish.
+
+# review: pending
+err-assistant-not-waiting = This question is no longer waiting for a choice. Ask a new question.
+
+# review: pending
+err-no-base = The base amount cannot be zero when a percent is worked out.
+
+# review: pending
+err-too-little-history = There are not enough full months of records for an estimate.
+
+# review: pending
+err-month-invalid = This month is not valid. Enter the month and the year, for example 10-2026.
+
+# review: pending
+err-month-in-future = A future month is not allowed. Enter this month ({ $month }) or an earlier one.
+
+# review: pending
+err-month-before-first = There are no entries before { $month }. Enter that month or a later one.
+
+# review: pending
+err-year-invalid = This year is not valid. Enter four digits, for example 2026.
+
+# review: pending
+err-year-in-future = A future year is not allowed. Enter this year ({ $year }) or an earlier one.
+
+# review: pending
+err-year-before-first = There is no { -commission } before { $year }. Enter that year or a later one.
+
+
+# review: pending
+err-wrong-party-type = This party is not on the side you chose. After choosing { -gahak } pick a { -gahak }; after { -beopari } pick a { -beopari }.
+
+
+# review: pending
+err-duplicate-lot = The same lot is on the screen twice. Take it off once.
+
+# review: pending
+err-link-partner-required = Choose the { -shirakat-dar } this is linked to.
+
+# review: pending
+err-partner-inactive = This { -shirakat-dar } is no longer active. Choose another { -shirakat-dar }.
+
+# review: pending
+err-link-locked = The link cannot be changed while the balance is not zero. Settle the balance first.
+
+# review: pending
+err-link-fixed-while-owed = This person still owes money, so his link cannot be changed. It can be changed once he owes nothing.
+
+# review: pending
+err-salary-not-allowed-for-linked = A loan linked to a { -shirakat-dar } is returned in cash only. It cannot be deducted from a salary.
+
+# review: pending
+err-link-changed-for-entry = This entry was made while this { -alag-khata } or person had another link, so it cannot be edited. Cancel it and enter it again.
+
+# review: pending
+err-linked-account-restricted = This account is written by the app itself. It cannot be typed in a { -general } entry.
+
+# review: pending
+err-partner-has-linked-balance = This { -shirakat-dar } cannot be made inactive while a { -alag-khata } or a loan linked to him still has a balance. Settle it first.
+

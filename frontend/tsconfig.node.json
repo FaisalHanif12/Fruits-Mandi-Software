@@ -26,5 +26,7 @@
     "eslint-rules/**/*.js",
     "stylelint-rules/**/*.js",
     "tests/e2e/**/*.mjs"
-  ]
+  ],
+  // The alignment tool (plan 39) is a developer tool for Playwright, outside the typed set (eslint.config.js).
+  "exclude": ["tests/e2e/alignment/**"]
 }

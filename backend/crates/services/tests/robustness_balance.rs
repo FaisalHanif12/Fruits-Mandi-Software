@@ -15,9 +15,12 @@
 //!    and on a small account, then posted, then rolled back.
 //! 3. `a_draft_left_in_a_damaged_file_is_never_part_of_any_balance`: a committed draft.
 //! 4. `an_old_file_migrated_to_0002_keeps_every_number` (with and without a left-over draft):
-//!    a populated file is put back to schema version 1 (the three indexes dropped), opened
-//!    again through the real start-up path, and every number, every table row and both hash
-//!    chains are compared. The copy taken before the upgrade is checked.
+//!    a populated file is put back to the shape of an old release (schema version 1 or 2: a new
+//!    file made from the released migration texts of the db crate, with every row copied in),
+//!    opened again through the real start-up path, and every number, every table row and both
+//!    hash chains are compared. The copy taken before the upgrade is checked. Migrations 0002 to
+//!    0006 all run on that file; what 0006 adds (eight tables, ten columns, two controls) is left
+//!    out of the row comparison, and nothing else is.
 //! 5. `a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing`.
 #![cfg(test)]
 
@@ -35,8 +38,9 @@ use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::ids::AccountId;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
+use mandi_services::core::vouchers::AdvanceInput;
 use mandi_services::db::ledger as repo;
+use mandi_services::db::migrate::{BALANCE_INDEXES_SQL, INIT_SQL};
 use mandi_services::db::rusqlite::{Connection, OpenFlags, params, types::Value};
 use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
 use mandi_services::ledger::{self, PostingEvent};
@@ -50,7 +54,86 @@ const INDEXES_OF_0002: [&str; 3] = [
     "idx_journal_lines_advance",
 ];
 const TRIGGER_OF_0003: &str = "accounts_system_stays_active";
-const LATEST_VERSION: i64 = 3;
+/// The triggers of migration 0004 (plan 13: the بکری tables lose no row, a number is final).
+const TRIGGERS_OF_0004: [&str; 7] = [
+    "bikri_entries_no_delete",
+    "bikri_lots_no_delete",
+    "bikri_sales_no_delete",
+    "bikri_entries_number_is_final",
+    "bikri_entries_no_replace",
+    "bikri_lots_no_replace",
+    "bikri_sales_no_replace",
+];
+/// The newest schema version: the highest number among the migration files, so a new migration never
+/// needs this file edited (it was a constant, and went stale at 0011).
+fn latest_version() -> i64 {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("db")
+        .join("migrations");
+    std::fs::read_dir(dir)
+        .expect("the migrations folder")
+        .filter_map(|e| {
+            e.ok()?
+                .file_name()
+                .to_str()?
+                .split('_')
+                .next()?
+                .parse::<i64>()
+                .ok()
+        })
+        .max()
+        .expect("at least one migration")
+}
+/// The tables migration 0006 adds (plan 16b). A file of an old release does not have them, and
+/// they are empty in this test, so the row fingerprint leaves them out.
+const TABLES_OF_0006: [&str; 8] = [
+    "ventures",
+    "venture_partners",
+    "venture_entries",
+    "venture_entry_parts",
+    "purchases",
+    "purchase_cost_parts",
+    "lot_credit_parts",
+    "fruit_takes",
+];
+/// The columns migration 0006 adds to old tables. A row's numbers do not change when they appear,
+/// so the row fingerprint leaves them out.
+const COLUMNS_OF_0006: [(&str, &str); 10] = [
+    ("bikri_lots", "purchase_id"),
+    ("bikri_lots", "qty_taken"),
+    ("bikri_sales", "cost_paisa"),
+    ("stock_moves", "purchase_id"),
+    ("stock_moves", "cost_paisa"),
+    ("analytics_facts", "purchase_id"),
+    ("analytics_facts", "venture_id"),
+    ("analytics_facts", "cost_paisa"),
+    ("partners", "venture_account_id"),
+    ("accounts", "tag"),
+];
+/// The table migration 0009 adds (plan 33 v1.1). A file of an old release does not have it, and it
+/// is empty in this test, so the row fingerprint leaves it out.
+const TABLES_OF_0009: [&str; 1] = ["garden_arrivals"];
+/// The columns migration 0009 adds to old tables. A row's numbers do not change when they appear,
+/// so the row fingerprint leaves them out. (`purchases.sell_date` is in a table of 0006.) The two
+/// `venture_entries` columns are migration 0010's (plan 35, the shop split).
+const COLUMNS_OF_0009: [(&str, &str); 4] = [
+    ("bikri_lots", "arrival_id"),
+    ("stock_moves", "arrival_id"),
+    ("venture_entries", "arrival_id"),
+    ("venture_entries", "moved_qty"),
+];
+/// The two controls whose party types (separate, garden) the CHECK lists of an old release do not
+/// hold. Migration 0006 seeds them, so they are not copied into the old file and are left out of
+/// the row fingerprint.
+const CONTROLS_OF_0006: [&str; 2] = ["0305", "0306"];
+/// The three nullable columns migration 0005 adds (plan 16). A row's numbers do not change when
+/// they appear, so the row fingerprint leaves them out.
+const COLUMNS_OF_0005: [(&str, &str); 3] = [
+    ("journal_entries", "order_key"),
+    ("stock_moves", "reverses_move_id"),
+    ("bikri_sales", "ended"),
+];
 const NOW: &str = "2026-10-10T09:00:00Z";
 
 // ---- small helpers ----
@@ -111,9 +194,9 @@ fn account_input(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -260,8 +343,10 @@ fn assert_balance_is(balance: &Balance, dr: i64, cr: i64, note: &str) {
     assert_eq!(balance.amount_paisa.as_paisa(), amount, "{note}: amount");
 }
 
-/// All rows of all tables (except those named), hashed.
-fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
+/// The tables of a file and the columns of each, in order.
+type Shape = Vec<(String, Vec<String>)>;
+
+fn shape_of(dir: &TempDir) -> Shape {
     let conn = raw(dir);
     let tables: Vec<String> = {
         let mut statement = conn
@@ -275,11 +360,97 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
             .collect::<Result<_, _>>()
             .unwrap()
     };
+    tables
+        .into_iter()
+        .map(|table| {
+            let columns: Vec<String> = {
+                let mut info = conn
+                    .prepare(&format!("PRAGMA table_info(\"{table}\")"))
+                    .unwrap();
+                info.query_map([], |r| r.get::<_, String>(1))
+                    .unwrap()
+                    .collect::<Result<Vec<_>, _>>()
+                    .unwrap()
+            };
+            (table, columns)
+        })
+        .collect()
+}
+
+/// All rows of all tables (except those named), hashed.
+fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
+    fingerprint_in(dir, skip, None)
+}
+
+/// As [`fingerprint`]. With a `shape` (the tables and columns of an OLD file) only those tables and
+/// columns are hashed: what a later migration adds (a table, a column) is not a changed row. This
+/// keeps the migration tests true for every migration after the old file's version, with no list to
+/// extend (the lists of 0005, 0006 and 0009 are still used without a shape).
+/// The name a column had before migration 0020 (plan 64) renamed every `pukhta_*` column to
+/// `chukta_*`, `is_pukhta_khata` to `is_chukta_khata` and `is_pukhta_party` to `was_one_time_party`.
+/// Any other name is its own.
+fn name_before_0020(column: &str) -> String {
+    match column {
+        "is_chukta_khata" => "is_pukhta_khata".to_owned(),
+        "was_one_time_party" => "is_pukhta_party".to_owned(),
+        other => other
+            .strip_prefix("chukta_")
+            .map_or_else(|| other.to_owned(), |rest| format!("pukhta_{rest}")),
+    }
+}
+
+fn fingerprint_in(dir: &TempDir, skip: &[&str], shape: Option<&Shape>) -> u64 {
+    let now = shape_of(dir);
     let mut hasher = DefaultHasher::new();
-    for table in tables.iter().filter(|t| !skip.contains(&t.as_str())) {
+    for (table, all_columns) in now.iter().filter(|(t, _)| {
+        !skip.contains(&t.as_str())
+            && match shape {
+                Some(old) => old.iter().any(|(name, _)| name == t),
+                None => {
+                    !TABLES_OF_0006.contains(&t.as_str()) && !TABLES_OF_0009.contains(&t.as_str())
+                }
+            }
+    }) {
+        let conn = raw(dir);
         table.hash(&mut hasher);
+        let names: Vec<String> = all_columns
+            .iter()
+            .filter(|c| match shape {
+                // A column that migration 0020 renamed is the same column: its old name is in the
+                // old file (plan 64). Its values are read from the new name, in the same place.
+                Some(old) => old.iter().any(|(name, cols)| {
+                    name == table && (cols.contains(c) || cols.contains(&name_before_0020(c)))
+                }),
+                None => {
+                    !COLUMNS_OF_0005.contains(&(table.as_str(), c.as_str()))
+                        && !COLUMNS_OF_0006.contains(&(table.as_str(), c.as_str()))
+                        && !COLUMNS_OF_0009.contains(&(table.as_str(), c.as_str()))
+                }
+            })
+            .cloned()
+            .collect();
+        // Migration 0020 (plan 64) gives 0030 its new name and closes 0031 on purpose; every other
+        // account is a row that must not change.
+        let filter = if table == "accounts" {
+            "WHERE code NOT IN ('0030', '0031')".to_owned()
+        } else if table == "account_controls" {
+            format!(
+                "WHERE code NOT IN ({})",
+                CONTROLS_OF_0006
+                    .iter()
+                    .map(|c| format!("'{c}'"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        } else {
+            String::new()
+        };
+        let list: Vec<String> = names.iter().map(|c| format!("\"{c}\"")).collect();
         let mut statement = conn
-            .prepare(&format!("SELECT * FROM \"{table}\" ORDER BY rowid"))
+            .prepare(&format!(
+                "SELECT {} FROM \"{table}\" {filter} ORDER BY rowid",
+                list.join(", ")
+            ))
             .unwrap();
         let columns = statement.column_count();
         let mut rows = statement.query([]).unwrap();
@@ -697,10 +868,12 @@ fn a_draft_left_in_a_damaged_file_is_never_part_of_any_balance() {
     let trial_before = ledger::trial_balance(&w.env.ctx, None).unwrap();
     let card_before = assist::party_card(&w.env.ctx, busy).unwrap();
     let list_input = AccountsListInput {
+        sort: None,
         filter: AccountFilter {
-            account_type: None,
+            kind: mandi_services::core::accounts::AccountListKind::All,
             text: String::new(),
             include_inactive: true,
+            has_opening: None,
         },
         offset: 0,
         limit: 0,
@@ -781,13 +954,11 @@ fn vouchers_advance(w: &World, seller: i64, amount: &str, date: &str) {
         &w.env.ctx,
         &w.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: true,
             date: date.into(),
             seller_account_id: seller,
             amount: amount.into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },
@@ -845,10 +1016,12 @@ fn snapshot(env: &TestEnv, dir: &TempDir, watch: &[i64], busy: i64) -> Vec<Strin
     let list = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
-                account_type: None,
+                kind: mandi_services::core::accounts::AccountListKind::All,
                 text: String::new(),
                 include_inactive: true,
+                has_opening: None,
             },
             offset: 0,
             limit: 0,
@@ -888,8 +1061,128 @@ fn objects(dir: &TempDir) -> Vec<(String, String)> {
         .unwrap()
 }
 
-/// `from_version` is the schema version of the faked old file: 1 (0002 and 0003 both run) or
-/// 2 (only 0003 runs).
+/// The names of the columns of a table of an attached database, in table order.
+fn column_names(conn: &Connection, schema: &str, table: &str) -> Vec<String> {
+    conn.prepare("SELECT name FROM pragma_table_info(?1, ?2) ORDER BY cid")
+        .unwrap()
+        .query_map([table, schema], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+}
+
+/// Puts the populated file of `dir` back to the shape of an old release, at schema version
+/// `from_version`: 1 (migrations 0002 to 0006 are still to run) or 2 (0003 to 0006 are).
+///
+/// The old file is made from the released migration texts of the db crate (`INIT_SQL`, and
+/// `BALANCE_INDEXES_SQL` for version 2), so its tables, CHECK lists, triggers and indexes are exactly
+/// those of that release. Then every row of every table of the populated file is copied in, for the
+/// columns the old table has. The journal entries go in as drafts and are posted after their lines,
+/// one by one in id order, the way a save does it (Code Standards B16); every column, also the
+/// keyed hash, is copied as it was. The two controls whose party types the old CHECK lists do not
+/// hold are not copied: migration 0006 seeds them again.
+fn put_back_to_old_release(dir: &TempDir, from_version: i64) {
+    assert!(from_version == 1 || from_version == 2);
+    let live = dir.path().join("data").join("mandi.db");
+    let old = dir.path().join("data").join("old-release.db");
+    {
+        let conn = Connection::open(&old).unwrap();
+        conn.execute_batch(INIT_SQL).unwrap();
+        if from_version == 2 {
+            conn.execute_batch(BALANCE_INDEXES_SQL).unwrap();
+        }
+        conn.pragma_update(None, "foreign_keys", "OFF").unwrap();
+        conn.execute("ATTACH DATABASE ?1 AS latest", [live.to_str().unwrap()])
+            .unwrap();
+        let tables: Vec<String> = conn
+            .prepare(
+                "SELECT name FROM main.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+            )
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        for table in &tables {
+            let in_latest = column_names(&conn, "latest", table);
+            let common: Vec<String> = column_names(&conn, "main", table)
+                .into_iter()
+                .filter(|c| in_latest.contains(c))
+                .collect();
+            let list: Vec<String> = common.iter().map(|c| format!("\"{c}\"")).collect();
+            let select: Vec<String> = common
+                .iter()
+                .map(|c| {
+                    if table == "journal_entries" && c == "status" {
+                        "'draft'".to_owned()
+                    } else {
+                        format!("\"{c}\"")
+                    }
+                })
+                .collect();
+            if table == "day_state" {
+                // The text of migration 0001 itself puts the one row in and the table keeps it (a
+                // trigger refuses a delete): its columns are set to the real row's.
+                let sets: Vec<String> = common
+                    .iter()
+                    .filter(|c| c.as_str() != "id")
+                    .map(|c| {
+                        format!("\"{c}\" = (SELECT \"{c}\" FROM latest.day_state WHERE id = 1)")
+                    })
+                    .collect();
+                conn.execute_batch(&format!("UPDATE main.day_state SET {}", sets.join(", ")))
+                    .unwrap();
+                continue;
+            }
+            let filter = if table == "account_controls" {
+                "WHERE code NOT IN ('0305', '0306')"
+            } else {
+                ""
+            };
+            conn.execute_batch(&format!(
+                "INSERT INTO main.\"{table}\" ({}) SELECT {} FROM latest.\"{table}\" {filter} ORDER BY rowid",
+                list.join(", "),
+                select.join(", ")
+            ))
+            .unwrap_or_else(|e| panic!("copying {table} into the old release failed: {e}"));
+        }
+        let posted: Vec<i64> = conn
+            .prepare("SELECT id FROM latest.journal_entries WHERE status = 'posted' ORDER BY id")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        for id in posted {
+            conn.execute(
+                "UPDATE main.journal_entries SET status = 'posted' WHERE id = ?1",
+                [id],
+            )
+            .unwrap_or_else(|e| panic!("posting entry {id} in the old release failed: {e}"));
+        }
+        let broken: i64 = conn
+            .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(
+            broken, 0,
+            "the copy into the old release broke a foreign key"
+        );
+        conn.execute_batch("DETACH DATABASE latest").unwrap();
+        conn.pragma_update(None, "user_version", from_version)
+            .unwrap();
+    }
+    for suffix in ["", "-wal", "-shm"] {
+        let mut path = live.clone().into_os_string();
+        path.push(suffix);
+        let _ = std::fs::remove_file(path);
+    }
+    std::fs::rename(&old, &live).unwrap();
+}
+
+/// `from_version` is the schema version of the old file: 1 (migrations 0002 to 0006 run) or 2 (0003
+/// to 0006 run).
 fn migration_case(with_draft: bool, from_version: i64) {
     assert!(from_version == 1 || from_version == 2);
     let w = world();
@@ -911,21 +1204,9 @@ fn migration_case(with_draft: bool, from_version: i64) {
     let World { dir, env, .. } = w;
     drop(env);
 
-    // Put the file back to an old schema version. The only differences from the latest file are
-    // what the later migrations add: the three indexes of 0002 (gone at version 1 only) and the
-    // trigger `accounts_system_stays_active` of 0003 (gone at versions 1 and 2).
-    {
-        let conn = raw(&dir);
-        if from_version == 1 {
-            for name in INDEXES_OF_0002 {
-                conn.execute_batch(&format!("DROP INDEX {name}")).unwrap();
-            }
-        }
-        conn.execute_batch(&format!("DROP TRIGGER {TRIGGER_OF_0003}"))
-            .unwrap();
-        conn.pragma_update(None, "user_version", from_version)
-            .unwrap();
-    }
+    // Put the file back to the shape of an old release (schema version 1 or 2): a new file is made
+    // from the released migration texts, and every row is copied in (see the function).
+    put_back_to_old_release(&dir, from_version);
     for name in INDEXES_OF_0002 {
         assert_eq!(
             index_names(&dir).iter().any(|n| n == name),
@@ -937,12 +1218,19 @@ fn migration_case(with_draft: bool, from_version: i64) {
         !objects(&dir).iter().any(|(_, n)| n == TRIGGER_OF_0003),
         "{TRIGGER_OF_0003} must be gone"
     );
+    for name in TRIGGERS_OF_0004 {
+        assert!(
+            !objects(&dir).iter().any(|(_, n)| n == name),
+            "{name} must be gone"
+        );
+    }
     assert_eq!(
         old_totals(&raw(&dir), p.busy, None),
         busy_total,
         "dropping indexes changed data"
     );
-    let rows_before = fingerprint(&dir, &["audit_log"]);
+    let old_shape = shape_of(&dir);
+    let rows_before = fingerprint_in(&dir, &["audit_log"], Some(&old_shape));
     let audit_rows_before = audit_total(&dir);
     let old_file_numbers: Vec<(i64, i64, i64)> = old_all_accounts(&raw(&dir), None);
 
@@ -954,7 +1242,7 @@ fn migration_case(with_draft: bool, from_version: i64) {
     let version: i64 = raw(&dir)
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, LATEST_VERSION, "schema version after opening");
+    assert_eq!(version, latest_version(), "schema version after opening");
     for name in INDEXES_OF_0002 {
         assert!(
             index_names(&dir).iter().any(|n| n == name),
@@ -964,10 +1252,10 @@ fn migration_case(with_draft: bool, from_version: i64) {
     assert_eq!(
         objects(&dir),
         objects_before,
-        "a table, trigger or view differs from the latest file (0003's trigger must be back)"
+        "a table, trigger or view differs from the latest file (the triggers of 0003 and 0004 must be back)"
     );
     assert_eq!(
-        fingerprint(&dir, &["audit_log"]),
+        fingerprint_in(&dir, &["audit_log"], Some(&old_shape)),
         rows_before,
         "the migration changed a row"
     );
@@ -992,7 +1280,10 @@ fn migration_case(with_draft: bool, from_version: i64) {
         .map(|e| e.unwrap().path())
         .filter(|p| {
             p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
-                n.starts_with(&format!("pre-migration-{from_version}-{LATEST_VERSION}-"))
+                n.starts_with(&format!(
+                    "pre-migration-{from_version}-{}-",
+                    latest_version()
+                ))
             })
         })
         .collect();
@@ -1075,20 +1366,28 @@ fn a_version_2_file_migrated_to_0003_keeps_every_number() {
 #[test]
 fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
     let w = world();
-    let list = accounts::list(
-        &w.env.ctx,
-        &AccountsListInput {
-            filter: AccountFilter {
-                account_type: None,
-                text: String::new(),
-                include_inactive: true,
-            },
-            offset: 0,
-            limit: 0,
-        },
-    )
-    .unwrap();
-    let system: Vec<_> = list.rows.iter().filter(|r| r.is_system).collect();
+    // The accounts list shows only sellers and buyers since plan 32, so the system accounts are
+    // read from the table.
+    struct SystemAccount {
+        id: i64,
+        code: String,
+    }
+    let system: Vec<SystemAccount> = {
+        let conn = raw(&w.dir);
+        let mut statement = conn
+            .prepare("SELECT id, code FROM accounts WHERE is_system = 1 ORDER BY code")
+            .unwrap();
+        statement
+            .query_map([], |r| {
+                Ok(SystemAccount {
+                    id: r.get(0)?,
+                    code: r.get(1)?,
+                })
+            })
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
     assert!(system.len() >= 15, "only {} system accounts", system.len());
 
     for row in &system {
@@ -1115,14 +1414,30 @@ fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
             "{}: a refusal wrote an audit row",
             row.code
         );
-        assert!(
+        // 0031 is the one system account that is inactive since migration 0020 (PRD FR-13.9).
+        assert_eq!(
             accounts::get(&w.env.ctx, row.id).unwrap().is_active,
+            row.code != "0031",
             "{}",
             row.code
         );
 
-        // Asking for the state it already has changes nothing and writes nothing.
-        accounts::set_active(&w.env.ctx, &w.owner, row.id, true).unwrap();
+        // Asking for the state it already has changes nothing and writes nothing. The old closed
+        // account 0031 is inactive, so asking to make it active is a change the app refuses: it
+        // stays closed (PRD FR-13.9), and the refusal writes nothing either.
+        let asked = accounts::set_active(&w.env.ctx, &w.owner, row.id, true);
+        if row.code == "0031" {
+            assert!(
+                matches!(
+                    &asked,
+                    Err(ServiceError::Rejected(items))
+                        if items.first().is_some_and(|i| i.code == ErrorCode::ErrSystemAccount)
+                ),
+                "0031 must stay closed: {asked:?}"
+            );
+        } else {
+            asked.unwrap();
+        }
         assert_eq!(
             fingerprint(&w.dir, &[]),
             before,
@@ -1192,14 +1507,16 @@ fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
         refused.to_string().contains("ERR_SYSTEM_ACCOUNT"),
         "wrong message: {refused}"
     );
-    let still_inactive: i64 = raw_conn
-        .query_row(
-            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND is_active = 0",
-            [],
-            |r| r.get(0),
-        )
-        .unwrap();
-    assert_eq!(still_inactive, 0, "a system account was made inactive");
+    // The only inactive system account is the old closed 0031 (migration 0020, PRD FR-13.9); the
+    // refused update made no other one inactive.
+    let inactive: Vec<String> = raw_conn
+        .prepare("SELECT code FROM accounts WHERE is_system = 1 AND is_active = 0 ORDER BY code")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(inactive, ["0031"], "a system account was made inactive");
     drop(raw_conn);
     assert_eq!(
         fingerprint(&w.dir, &[]),

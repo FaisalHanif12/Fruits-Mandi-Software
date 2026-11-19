@@ -27,19 +27,26 @@ import type {
   ValueSetterParams,
 } from 'ag-grid-community';
 import { AgGridReact, type CustomCellRendererProps } from 'ag-grid-react';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, Pencil } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CardChukta } from '../accounts';
 import { useGrouping, type Grouping } from '../format';
 import { useLatest } from '../hooks/useLatest';
 import { directionOf, displayName, useLanguage } from '../i18n';
 import { useEscape } from '../keyboard';
 import { CalcInfo, CalcInfoAt, type Working } from '../ui/CalcInfo';
+import { FigureCell } from '../ui/FigureCell';
 import { displayText } from '../ui/NumberTextInput';
 import './agGridSetup';
 import { COLUMN_WIDTHS, FIT_MIN_WIDTHS, FIT_WEIGHTS, isNumberLike } from './columnTypes';
-import { isEditable } from './enterOrder';
-import type { EntryStore } from './entryStore';
+import type { AddRowLink } from './addLink';
+import { isEditable, nextEnterStop } from './enterOrder';
+import { addRowAndFocus, type EntryStore } from './entryStore';
+import { syncEditedText } from './editEnd';
 import { createGridKeyHandler } from './gridKeys';
 import { PickerCellEditor } from './PickerCellEditor';
+import { SelectCellEditor } from './SelectCellEditor';
+import { REMOVE_COLUMN_ID, removeColumnDef, useRemoveRow, type RemoveQuestion } from './removeRow';
 import {
   isReadOnlyType,
   type CellRef,
@@ -73,10 +80,46 @@ interface EntryGridProps {
   /** What only warns, per row and field: the amber look and the words as the tooltip. */
   cellWarnings?: PerRow<string>;
   /**
+   * Cells the user changed in a posting open for edit (plan 16), per row and field, with the words
+   * "changed, it was ..." as the tooltip. The cell gets a corner mark, so colour is never the only
+   * signal; the screen lists the changes in words too (NFR-USE-12).
+   */
+  cellChanged?: PerRow<string>;
+  /**
+   * The cells an EARLIER edit changed (plan 44, PRD FR-7.71), by row and field: the whole sentence
+   * "Before: 600 → now: 610, 31-10-2026 4:35 pm, Owner" as the tooltip. The cell gets a corner mark
+   * on the end side, so colour is never the only signal; the entry's edit history lists them too.
+   */
+  cellMarks?: PerRow<string>;
+  /**
+   * The calculated cells whose figure depends on a value the user typed by hand instead of the rule's
+   * (a commission or لاگا rate typed on a sale line, PRD FR-11.10), by row and field, with the word for it
+   * ("Manual"). The cell gets a small pencil before its figure, and the word as its tooltip and for a
+   * screen reader. It is a mark only: it holds no figure, and the screen says which cells from what the
+   * backend sent (`source: typed`), never from its own sums (plan 72 P13).
+   */
+  cellManual?: PerRow<string>;
+  /**
+   * Can the row be removed, by Ctrl+Delete or by its remove button? Default: yes. A saved lot of an edit
+   * cannot be removed, and has no button.
+   */
+  canRemoveRow?: (row: EntryRow) => boolean;
+  /**
+   * What is under a row that is about to be removed, as one sentence, or null when it is only itself.
+   * A lot with sale lines says so, and the user is asked before it goes (plan 43 R3). Both the key and
+   * the button ask.
+   */
+  removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
+  /**
    * 'fill': the parent gives the grid its height and only visible rows are drawn. 'auto': the
    * grid is as tall as its rows and draws them all (short grids, the development page, tests).
    */
   heightMode?: 'fill' | 'auto';
+  /**
+   * An 'auto' grid keeps the room of four rows even with fewer, so a screen of lines (the journal)
+   * does not look empty and does not jump as lines are added (plan 38).
+   */
+  minRows?: 4;
   /**
    * The columns share the free width of the grid down to a least width each, so the grid never
    * scrolls sideways at the smallest window (NFR-USE-15). Default: fixed widths per type.
@@ -86,8 +129,17 @@ interface EntryGridProps {
   workings?: PerRow<Working>;
   /** What the screen adds to Enter and ↑ (moving between grids and panels). */
   interceptors?: GridInterceptors;
-  /** The account the screen's party card would show now, while a picker cell is open. */
-  onCardAccount?: (accountId: number | null) => void;
+  /**
+   * The link to the "+" button under this grid (`useAddRowLink`, the same one the `AddRowButton` gets): `↓` on
+   * the trash cell of the last row goes to the button, and the button's `↑` comes back to that cell
+   * (addLink.ts). A grid with no such button leaves it out.
+   */
+  addLink?: AddRowLink;
+  /**
+   * The account the screen's party card would show now, while a picker cell is open; for a چکتا
+   * buyer also who he is (his names and phone, PRD FR-13.6).
+   */
+  onCardAccount?: (accountId: number | null, chukta?: CardChukta | null) => void;
 }
 
 /** What the backend sent, read by the cells when they draw. Kept apart from the column setup. */
@@ -96,6 +148,19 @@ interface Live {
   workings: PerRow<Working> | undefined;
   cellErrors: PerRow<string> | undefined;
   cellWarnings: PerRow<string> | undefined;
+  cellChanged: PerRow<string> | undefined;
+  cellMarks: PerRow<string> | undefined;
+  cellManual: PerRow<string> | undefined;
+}
+
+/** What a select cell shows: its word, and a small arrow so the cell looks like a list (PRD FR-12.42). */
+function SelectCellFace(props: CustomCellRendererProps<EntryRow>) {
+  return (
+    <span className="flex items-center justify-center gap-1">
+      <span>{props.valueFormatted ?? ''}</span>
+      <ChevronDown aria-hidden="true" className="size-icon-sm shrink-0 text-ink-muted" />
+    </span>
+  );
 }
 
 /** The word of a choice column for a value, or undefined when it has no word. */
@@ -117,8 +182,42 @@ interface ColumnEnv {
   live: () => Live;
   fit: boolean;
   getKeyHandler: () => KeyHandler;
-  onCardAccount: ((accountId: number | null) => void) | undefined;
+  onCardAccount: ((accountId: number | null, chukta?: CardChukta | null) => void) | undefined;
   cycle: (cell: CellRef) => void;
+  /** The cell a mouse press has just put the focus on, read by the click that follows it. */
+  mouseFocus: MouseFocus;
+}
+
+/**
+ * Whether a click only selected its cell. A press on a cell that is not focused focuses it, and
+ * the grid says so (`cellFocused`) before the click arrives; a click on a cell that already has
+ * the focus has no such move before it.
+ */
+interface MouseFocus {
+  /** The grid moved the focus to this cell (from another) and tells what pressed. */
+  noteFocus: (cell: { rowIndex: number; colId: string }, pressedByMouse: boolean) => void;
+  /** True once if the click on this cell only selected it (a press that moved the focus here). */
+  onlySelected: (cell: { rowIndex: number; colId: string }) => boolean;
+}
+
+/** Keeps the cell a mouse press has just focused, for the click that follows it. */
+function useMouseFocus(): MouseFocus {
+  const state = useRef<{
+    pressed: { rowIndex: number; colId: string } | null;
+    last: { rowIndex: number; colId: string } | null;
+  }>({ pressed: null, last: null });
+  const noteFocus = useCallback<MouseFocus['noteFocus']>((cell, pressedByMouse) => {
+    const { last } = state.current;
+    const moved = !(last?.rowIndex === cell.rowIndex && last.colId === cell.colId);
+    state.current.last = cell;
+    state.current.pressed = pressedByMouse && moved ? cell : null;
+  }, []);
+  const onlySelected = useCallback<MouseFocus['onlySelected']>((cell) => {
+    const { pressed } = state.current;
+    state.current.pressed = null;
+    return pressed?.rowIndex === cell.rowIndex && pressed.colId === cell.colId;
+  }, []);
+  return useMemo(() => ({ noteFocus, onlySelected }), [noteFocus, onlySelected]);
 }
 
 function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
@@ -131,9 +230,21 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     row === undefined ? undefined : live().cellErrors?.[row.rowId]?.[column.field];
   const warningOf = (row: EntryRow | undefined): string | undefined =>
     row === undefined ? undefined : live().cellWarnings?.[row.rowId]?.[column.field];
+  const changedOf = (row: EntryRow | undefined): string | undefined =>
+    row === undefined ? undefined : live().cellChanged?.[row.rowId]?.[column.field];
+  const markOf = (row: EntryRow | undefined): string | undefined =>
+    row === undefined ? undefined : live().cellMarks?.[row.rowId]?.[column.field];
+  const manualOf = (row: EntryRow | undefined): string | undefined =>
+    row === undefined ? undefined : live().cellManual?.[row.rowId]?.[column.field];
   // The grey hint of an empty cell: written in the column, or sent by the backend (the last rate).
   const hintOf = (row: EntryRow): string | undefined =>
     column.hintFromCalc === true ? calcOf(row) || undefined : column.placeholder?.(row);
+  // The amount the backend decided for a cell it closed (PRD FR-12.44): shown instead of what was typed.
+  const fixedOf = (row: EntryRow | undefined): string | undefined => {
+    if (row === undefined || column.fixedFromCalc === undefined) return undefined;
+    const text = live().calc?.[row.rowId]?.[column.fixedFromCalc];
+    return text === undefined || text === '' ? undefined : text;
+  };
   const sizes = fit
     ? {
         flex: FIT_WEIGHTS[column.type],
@@ -155,13 +266,16 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     suppressMovable: true,
     editable: (params) => params.data !== undefined && isEditable(column, params.data),
     cellClass: numberLike ? ['cell-num'] : [],
-    // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
+    // The heading of a number column is centred over its figures (NFR-USE-19, plan 39 R1).
     headerClass: numberLike ? ['header-num'] : [],
     tooltipValueGetter: (params) => {
       const row = params.data;
       if (row === undefined) return undefined;
-      const error = errorOf(row) ?? warningOf(row);
+      const error = errorOf(row) ?? warningOf(row) ?? changedOf(row) ?? markOf(row);
       if (error !== undefined) return error;
+      // A figure that rests on a value typed by hand says so (plan 72 P13).
+      const manual = manualOf(row);
+      if (manual !== undefined) return manual;
       if ((row.typed[column.field] ?? '') === '' && column.hintTooltipField !== undefined) {
         return live().calc?.[row.rowId]?.[column.hintTooltipField];
       }
@@ -173,12 +287,14 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       'cell-error': (params) => errorOf(params.data) !== undefined,
       'cell-warn': (params) =>
         errorOf(params.data) === undefined && warningOf(params.data) !== undefined,
-      'cell-calc': () => readOnly,
+      'cell-changed': (params) => changedOf(params.data) !== undefined,
+      'cell-marked': (params) => markOf(params.data) !== undefined,
+      'cell-manual': (params) => manualOf(params.data) !== undefined,
+      'cell-calc': (params) => readOnly || fixedOf(params.data) !== undefined,
       'cell-hint': (params) =>
         params.data !== undefined &&
         (params.value === '' || params.value === undefined) &&
         hintOf(params.data) !== undefined,
-      'cell-hint-number': () => column.hintIsNumber === true,
     },
   };
 
@@ -195,6 +311,22 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       cellEditor: PickerCellEditor,
       cellEditorPopup: true,
       cellEditorPopupPosition: 'under',
+      // A picker cell opens its picker with the full list as soon as it gets the focus, by a click
+      // or by a key (GridInner.onCellFocused, PRD FR-7.16, plan 46). A click on the cell that
+      // already has the focus, with its list closed (Esc), opens it again, like a click on the
+      // field of a form (plan 32, R7). Alt+↓ is the key for that (gridKeys.ts).
+      onCellClicked: (event) => {
+        if (event.data === undefined || !isEditable(column, event.data)) return;
+        const { rowIndex } = event;
+        if (rowIndex === null) return;
+        if (env.mouseFocus.onlySelected({ rowIndex, colId: column.field })) return;
+        const editing = event.api
+          .getEditingCells()
+          .some((cell) => cell.rowIndex === rowIndex && cell.colId === column.field);
+        if (editing) return;
+        store.getState().setEditHint('open-list');
+        event.api.startEditingCell({ rowIndex, colKey: column.field });
+      },
       cellEditorParams:
         spec === undefined
           ? undefined
@@ -206,7 +338,11 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
               onCardAccount: env.onCardAccount,
             },
       tooltipValueGetter: (params) => {
-        const error = errorOf(params.data) ?? warningOf(params.data);
+        const error =
+          errorOf(params.data) ??
+          warningOf(params.data) ??
+          changedOf(params.data) ??
+          markOf(params.data);
         if (error !== undefined) return error;
         const record = params.data?.picked?.[column.field];
         return record === undefined ? undefined : `${record.code} ${displayName(record, language)}`;
@@ -226,7 +362,9 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
         params.data === undefined ? '' : shown(params.data),
       valueFormatter: (params: ValueFormatterParams<EntryRow>) =>
         choiceLabel(column, typeof params.value === 'string' ? params.value : '', word) ?? '',
-      cellClass: ['cell-choice'],
+      // A choice (ادھاری / نقدی) is a small column: its words and its heading are centred (plan 39 R3).
+      cellClass: ['cell-choice', 'cell-center'],
+      headerClass: ['header-center'],
       onCellClicked: (event) => {
         if (event.data === undefined || !isEditable(column, event.data)) return;
         env.cycle({ rowId: event.data.rowId, field: column.field });
@@ -234,14 +372,53 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     };
   }
 
+  if (column.type === 'select') {
+    const options = (column.choices ?? []).map((choice) => ({
+      value: choice.value,
+      label: word(choice.labelId),
+    }));
+    return {
+      ...base,
+      editable: (params) => params.data !== undefined && isEditable(column, params.data),
+      valueGetter: (params: ValueGetterParams<EntryRow>) => params.data?.typed[column.field] ?? '',
+      // The cell shows the word of the value; the empty choice shows nothing but the arrow.
+      valueFormatter: (params: ValueFormatterParams<EntryRow>) =>
+        typeof params.value !== 'string' || params.value === ''
+          ? ''
+          : (choiceLabel(column, params.value, word) ?? ''),
+      // The editor writes the word to the store itself; the grid has nothing to set.
+      valueSetter: () => false,
+      cellRenderer: SelectCellFace,
+      cellEditor: SelectCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
+      cellEditorParams: { options, store, field: column.field, getKeyHandler: env.getKeyHandler },
+      // A small column: its words and its heading are centred like a choice cell's (plan 39 R3).
+      cellClass: ['cell-choice', 'cell-center'],
+      headerClass: ['header-center'],
+      // A click opens the list, as a click on a picker cell opens its list.
+      onCellClicked: (event) => {
+        if (event.data === undefined || !isEditable(column, event.data)) return;
+        const { rowIndex } = event;
+        if (rowIndex === null) return;
+        const editing = event.api
+          .getEditingCells()
+          .some((cell) => cell.rowIndex === rowIndex && cell.colId === column.field);
+        if (!editing) event.api.startEditingCell({ rowIndex, colKey: column.field });
+      },
+    };
+  }
+
   // A calculated cell, or an editable cell that shows a calculated value while it is empty.
-  const explainable = column.explain === true && (readOnly || column.showsCalc === true);
+  const explainable =
+    column.explain === true &&
+    (readOnly || column.showsCalc === true || column.fixedFromCalc !== undefined);
   return {
     ...base,
     valueGetter: (params: ValueGetterParams<EntryRow>) => {
       if (params.data === undefined) return '';
       if (readOnly) return calcOf(params.data);
-      return params.data.typed[column.field] ?? '';
+      return fixedOf(params.data) ?? params.data.typed[column.field] ?? '';
     },
     // The text goes to the store. Returning false tells the grid the value did not change in
     // its own data, so the row is redrawn from the store (the one source of truth).
@@ -251,6 +428,9 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     },
     valueFormatter: (params: ValueFormatterParams<EntryRow>) => {
       const value = typeof params.value === 'string' ? params.value : '';
+      // A cell the backend closed shows its amount as the screen wrote it (already grouped).
+      const fixed = fixedOf(params.data);
+      if (fixed !== undefined) return fixed;
       if (value === '' && params.data !== undefined) {
         if (column.showsCalc === true) return calcOf(params.data);
         return hintOf(params.data) ?? '';
@@ -264,11 +444,22 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
             const working =
               row === undefined ? undefined : live().workings?.[row.rowId]?.[column.field];
             const text = params.valueFormatted ?? String(params.value ?? '');
+            const manual = manualOf(row);
+            // The figure stands in the middle of the column; the ⓘ hangs after it and the pencil of a
+            // value typed by hand before it (plan 39 R1, plan 72 P13). The pencil is a shape, and its
+            // word is its name for a screen reader (not text of the cell, so the figure reads clean) and
+            // the tooltip, so colour is never the only signal.
             return (
-              <span className="flex items-center justify-between gap-1">
-                {working === undefined ? <span /> : <CalcInfo working={working} inCell />}
-                <span>{text}</span>
-              </span>
+              <FigureCell
+                lead={
+                  manual === undefined ? undefined : (
+                    <Pencil role="img" aria-label={manual} className="size-icon-sm shrink-0" />
+                  )
+                }
+                extra={working === undefined ? undefined : <CalcInfo working={working} inCell />}
+              >
+                {text}
+              </FigureCell>
             );
           },
         }
@@ -295,11 +486,18 @@ function GridInner({
   fixedRows,
   cellErrors,
   cellWarnings,
+  cellChanged,
+  cellMarks,
+  cellManual,
+  canRemoveRow,
+  removeQuestion,
   heightMode = 'fill',
+  minRows,
   fit = false,
   workings,
   interceptors,
   onCardAccount,
+  addLink,
 }: EntryGridProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -313,7 +511,15 @@ function GridInner({
   // The cell whose working is open (Ctrl+I), and the element the box opens next to.
   const [explaining, setExplaining] = useState<{ cell: CellRef; anchor: HTMLElement } | null>(null);
 
-  const live = useLatest<Live>({ calc, workings, cellErrors, cellWarnings });
+  const live = useLatest<Live>({
+    calc,
+    workings,
+    cellErrors,
+    cellWarnings,
+    cellChanged,
+    cellMarks,
+    cellManual,
+  });
 
   // Esc while typing in a cell cancels the typing and keeps the old value (PRD FR-7.18).
   useEscape(
@@ -358,6 +564,45 @@ function GridInner({
     [onExplain, root, live],
   );
 
+  // One way to remove a row, for the key and for the button (plan 43).
+  const removing = useRemoveRow({
+    store,
+    columns,
+    apiRef,
+    fixedRows: fixedRows ?? false,
+    canRemoveRow,
+    removeQuestion,
+  });
+  const { request: requestRemove, canRemove } = removing;
+
+  // The link to the "+" button under the grid (addLink.ts): the grid puts the focus on the button, and gives
+  // the button a way back to the trash cell of the last row (or the last cell, when that row has no trash).
+  const focusAdd = useCallback((): boolean => {
+    const button = addLink?.buttonRef.current ?? null;
+    // A button that is off (the limit of rows) takes no focus: the cursor stays where it is.
+    if (button === null || button.disabled) return false;
+    button.focus();
+    return true;
+  }, [addLink]);
+  useEffect(() => {
+    if (addLink === undefined) return undefined;
+    addLink.setFocusLastRemove(() => {
+      const api = apiRef.current;
+      if (api === null || api.isDestroyed()) return false;
+      const all = store.getState().rows;
+      const last = all[all.length - 1];
+      if (last === undefined) return false;
+      const field = canRemove(last) ? REMOVE_COLUMN_ID : columns[columns.length - 1]?.field;
+      if (field === undefined) return false;
+      api.setFocusedCell(all.length - 1, field);
+      api.ensureIndexVisible(all.length - 1);
+      return true;
+    });
+    return () => {
+      addLink.setFocusLastRemove(null);
+    };
+  }, [addLink, store, columns, canRemove]);
+
   const keyHandler = useMemo(
     () =>
       createGridKeyHandler({
@@ -366,18 +611,42 @@ function GridInner({
         direction,
         copyAbove: copyAbove ?? false,
         fixedRows: fixedRows ?? false,
+        ...(canRemoveRow === undefined ? {} : { canRemoveRow }),
+        requestRemove,
         onExplain: explain,
         cycleChoice: cycle,
         ...(interceptors === undefined ? {} : { interceptors }),
+        ...(addLink === undefined ? {} : { focusAdd }),
       }),
-    [store, columns, direction, copyAbove, explain, fixedRows, cycle, interceptors],
+    [
+      store,
+      columns,
+      direction,
+      copyAbove,
+      explain,
+      fixedRows,
+      canRemoveRow,
+      requestRemove,
+      cycle,
+      interceptors,
+      addLink,
+      focusAdd,
+    ],
   );
   const getKeyHandler = useLatest(keyHandler);
 
+  const mouseFocusTracker = useMouseFocus();
+  // The cell that had the focus before, so a picker cell opens its list when the focus MOVES onto
+  // it, not each time the grid says the same cell is focused again (after Esc, for example).
+  const lastFocus = useRef<{ rowIndex: number; colId: string } | null>(null);
+  // True while a new grid puts the focus back on the cell it had (a language switch): the list is
+  // not opened by that.
+  const restoring = useRef(false);
   const columnDefs = useMemo(
-    () =>
-      columns.map((column) =>
+    () => [
+      ...columns.map((column) =>
         toColDef(column, {
+          mouseFocus: mouseFocusTracker,
           grouping,
           language,
           word: (id) => l10n.getString(id),
@@ -389,7 +658,25 @@ function GridInner({
           cycle,
         }),
       ),
-    [columns, l10n, grouping, language, store, fit, onCardAccount, cycle, live, getKeyHandler],
+      // The remove button of each row, last, at the end edge (plan 43). A grid with fixed rows has none.
+      ...(fixedRows === true ? [] : [removeColumnDef({ canRemove, onRemove: requestRemove })]),
+    ],
+    [
+      columns,
+      l10n,
+      grouping,
+      language,
+      store,
+      fit,
+      onCardAccount,
+      cycle,
+      live,
+      getKeyHandler,
+      mouseFocusTracker,
+      fixedRows,
+      canRemove,
+      requestRemove,
+    ],
   );
 
   const defaultColDef = useMemo<ColDef<EntryRow>>(
@@ -400,7 +687,57 @@ function GridInner({
   // A new answer from the backend: the cells read it again. Editing is not interrupted.
   useLayoutEffect(() => {
     apiRef.current?.refreshCells({ force: true });
-  }, [calc, workings, cellErrors, cellWarnings]);
+  }, [calc, workings, cellErrors, cellWarnings, cellChanged, cellMarks, cellManual]);
+
+  // A cell the backend closes while the cursor is on it (the paid amount of a buyer who must pay in full,
+  // PRD FR-12.44): the answer for a line comes a moment after its rate was typed, when Enter has already
+  // taken the cursor onto the paid cell. The cursor then goes on as an Enter would, so such a line takes
+  // three Enters (NFR-USE-6). Only the answer that closes the cell does this: a closed cell that the user
+  // reaches with an arrow or a click keeps the cursor, and a new grid (a language switch) never moves it.
+  const closedBefore = useRef<ReadonlySet<string> | null>(null);
+  useEffect(() => {
+    const now = new Set<string>();
+    for (const column of columns) {
+      const key = column.fixedFromCalc;
+      if (key === undefined) continue;
+      for (const [rowId, cells] of Object.entries(calc ?? {})) {
+        if ((cells[key] ?? '') !== '') now.add(`${rowId}|${column.field}`);
+      }
+    }
+    const before = closedBefore.current;
+    closedBefore.current = now;
+    const api = apiRef.current;
+    const focus = store.getState().focus;
+    if (before === null || api === null || focus === null) return;
+    const id = `${focus.rowId}|${focus.field}`;
+    if (!now.has(id) || before.has(id)) return;
+    const rows = store.getState().rows;
+    const rowIndex = rows.findIndex((row) => row.rowId === focus.rowId);
+    const focused = api.getFocusedCell();
+    if (
+      rowIndex < 0 ||
+      focused?.rowIndex !== rowIndex ||
+      focused.column.getColId() !== focus.field
+    ) {
+      return;
+    }
+    // Text being typed in the cell is dropped: the amount is the backend's.
+    api.stopEditing(true);
+    const step = nextEnterStop(columns, rows, { rowIndex, field: focus.field });
+    if (step === null) return;
+    if (step.kind === 'cell') {
+      api.setFocusedCell(step.rowIndex, step.field);
+      api.ensureIndexVisible(step.rowIndex);
+    } else if (fixedRows !== true) {
+      addRowAndFocus(store, step.field);
+    }
+  }, [calc, columns, store, fixedRows]);
+
+  // The marks of earlier edits come from the history, which can answer before the grid is ready:
+  // the cells then read them once, when the grid has become ready.
+  useLayoutEffect(() => {
+    if (ready && live().cellMarks !== undefined) apiRef.current?.refreshCells({ force: true });
+  }, [ready, live]);
 
   // After a key or the screen asked for a cell, focus it once the rows are drawn.
   const pendingFocus = store((state) => state.pendingFocus);
@@ -414,6 +751,8 @@ function GridInner({
         : Math.min(pendingFocus.rowIndex, rows.length - 1);
     api.setFocusedCell(rowIndex, pendingFocus.field);
     api.ensureIndexVisible(rowIndex);
+    // The screen asked for typing to start with the text selected (a cell that must be fixed).
+    if (pendingFocus.edit === true) api.startEditingCell({ rowIndex, colKey: pendingFocus.field });
   }, [pendingFocus, rows, store, ready]);
 
   const onGridReady = (event: GridReadyEvent<EntryRow>) => {
@@ -423,15 +762,68 @@ function GridInner({
     const focus = store.getState().focus;
     const rowIndex =
       focus === null ? -1 : store.getState().rows.findIndex((row) => row.rowId === focus.rowId);
-    if (focus !== null && rowIndex >= 0) event.api.setFocusedCell(rowIndex, focus.field);
+    if (focus !== null && rowIndex >= 0) {
+      restoring.current = true;
+      event.api.setFocusedCell(rowIndex, focus.field);
+      restoring.current = false;
+      lastFocus.current = { rowIndex, colId: focus.field };
+    }
+  };
+
+  // A picker cell that gets the focus opens its picker with the full list (PRD FR-7.16, plan 46).
+  // It waits one turn, so the press of the mouse that focused the cell is over, and checks again
+  // that the focus is still on the cell and that nothing is being typed in yet.
+  const openPickerCell = (rowIndex: number, field: string) => {
+    window.setTimeout(() => {
+      const api = apiRef.current;
+      if (api === null || api.isDestroyed()) return;
+      const focused = api.getFocusedCell();
+      if (focused?.rowIndex !== rowIndex || focused.column.getColId() !== field) return;
+      if (api.getEditingCells().length > 0) return;
+      store.getState().setEditHint('open-list');
+      api.startEditingCell({ rowIndex, colKey: field });
+    }, 0);
   };
 
   const onCellFocused = (event: CellFocusedEvent<EntryRow>) => {
     if (event.rowIndex === null || event.column === null || typeof event.column === 'string')
       return;
+    // The remove button is not a cell the user types in: the store keeps the cell he was on.
+    if (event.column.getColId() === REMOVE_COLUMN_ID) return;
+    // The grid says `cellFocused` for a press on the focused cell too; the tracker tells a move
+    // of the focus by a mouse press from a press that stayed where it was.
+    const source = event.sourceEvent?.type;
+    mouseFocusTracker.noteFocus(
+      { rowIndex: event.rowIndex, colId: event.column.getColId() },
+      source === 'pointerdown' || source === 'mousedown' || source === 'touchstart',
+    );
     const row = store.getState().rows[event.rowIndex];
-    if (row !== undefined)
-      store.getState().setFocus({ rowId: row.rowId, field: event.column.getColId() });
+    const colId = event.column.getColId();
+    // A row the screen holds on one cell (a refused quantity) gives the focus back to that cell when a
+    // click puts it on another cell of the row.
+    const held = row === undefined ? null : (interceptors?.heldField?.(row.rowId) ?? null);
+    if (row !== undefined && held !== null && held !== colId) {
+      const { rowIndex } = event;
+      window.setTimeout(() => {
+        const api = apiRef.current;
+        if (api !== null && !api.isDestroyed()) api.setFocusedCell(rowIndex, held);
+      }, 0);
+      return;
+    }
+    if (row !== undefined) store.getState().setFocus({ rowId: row.rowId, field: colId });
+    const previous = lastFocus.current;
+    lastFocus.current = { rowIndex: event.rowIndex, colId };
+    const moved = previous?.rowIndex !== event.rowIndex || previous.colId !== colId;
+    const column = columns.find((candidate) => candidate.field === colId);
+    if (
+      moved &&
+      !restoring.current &&
+      row !== undefined &&
+      column?.type === 'picker' &&
+      isEditable(column, row)
+    ) {
+      openPickerCell(event.rowIndex, colId);
+    }
   };
 
   const explainedWorking =
@@ -440,7 +832,7 @@ function GridInner({
   return (
     <div
       ref={setRoot}
-      className={`entry-grid ag-theme-quartz ${fit ? 'entry-grid-fit' : ''}`}
+      className={`entry-grid ag-theme-quartz ${fit ? 'entry-grid-fit' : ''} ${minRows === 4 ? 'entry-grid-min4' : ''} ${heightMode === 'fill' ? 'entry-grid-fill' : ''}`}
       role="group"
       aria-label={l10n.getString(labelId)}
       dir={direction}
@@ -452,6 +844,7 @@ function GridInner({
         if (!(next instanceof Element) || event.currentTarget.contains(next)) return;
         if (next.closest('.ag-popup') !== null) return;
         if ((apiRef.current?.getEditingCells().length ?? 0) > 0) return;
+        lastFocus.current = null;
         apiRef.current?.clearFocusedCell();
       }}
     >
@@ -473,7 +866,12 @@ function GridInner({
         popupParent={document.body}
         onGridReady={onGridReady}
         onCellFocused={onCellFocused}
+        // The store holds what the user typed whatever the grid saw as a change (editEnd.ts).
+        onCellEditingStopped={(event) => {
+          syncEditedText(store, columns, event);
+        }}
       />
+      {removing.dialog}
       {explaining !== null && explainedWorking !== undefined ? (
         <CalcInfoAt
           working={explainedWorking}

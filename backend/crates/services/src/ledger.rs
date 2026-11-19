@@ -98,18 +98,18 @@ pub fn check_posting_date(ctx: &Context, date: BusinessDate) -> Result<(), Servi
     Ok(())
 }
 
-/// A line on a پختہ کھاتہ account must name its person, and a line on any other account must
+/// A line on a چکتا کھاتہ account must name its person, and a line on any other account must
 /// not (PRD FR-13.5): balances, matching and aging are kept per person there. The checks are
 /// bug signals, so they are `ServiceError::Data`, not user errors.
 fn check_person_keys(tx: &Connection, entry: &BalancedEntry) -> Result<(), ServiceError> {
-    let pukhta = repo::pukhta_khata_ids(tx)?;
+    let chukta = repo::chukta_khata_ids(tx)?;
     for (index, line) in entry.lines().iter().enumerate() {
-        let is_pukhta = pukhta.contains(&line.account_id.get());
+        let is_chukta = chukta.contains(&line.account_id.get());
         let key = line.person_key.as_deref().map(str::trim);
         let wrong = match key {
             Some("") => true,
-            Some(_) => !is_pukhta,
-            None => is_pukhta,
+            Some(_) => !is_chukta,
+            None => is_chukta,
         };
         if wrong {
             return Err(ServiceError::Data(format!(
@@ -122,14 +122,47 @@ fn check_person_keys(tx: &Connection, entry: &BalancedEntry) -> Result<(), Servi
     Ok(())
 }
 
+/// What a new posting may do with people in the dead amount (PRD FR-10.10, A67).
+#[derive(Debug, Clone, Copy)]
+struct DeadRules<'a> {
+    /// A recovery (a وصولی or an ادھار رقم واپسی): it may touch a person in the dead amount.
+    recovery: bool,
+    /// The (account, person key) pairs of the posting an edit replaces. An edit of an earlier
+    /// posting may keep a person in the dead amount who is already in it, and may not add one.
+    replaced: &'a [(i64, Option<String>)],
+}
+
+impl DeadRules<'_> {
+    /// True when the posting may touch this account (or person) although he is in the dead amount.
+    fn allows(&self, account: i64, key: Option<&str>) -> bool {
+        self.recovery
+            || self
+                .replaced
+                .iter()
+                .any(|(a, k)| *a == account && k.as_deref() == key)
+    }
+}
+
 /// A new posting may only touch active accounts (PRD FR-10.2: inactive = hidden from pickers,
 /// "must exist and be active for new postings", Code Standards 4.2). One query for the whole
 /// entry. A reversal does not come here (see [`post`]).
-fn check_accounts_active(tx: &Connection, entry: &BalancedEntry) -> Result<(), ServiceError> {
+///
+/// A person in the dead amount has an inactive account (PRD FR-10.10); `rules` lets him through for
+/// a recovery and for an edit of a posting he is already in (PRD A67). Every other new posting on
+/// him is refused as on any inactive account.
+fn check_accounts_active(
+    tx: &Connection,
+    entry: &BalancedEntry,
+    rules: DeadRules<'_>,
+) -> Result<(), ServiceError> {
     let mut ids: Vec<i64> = entry.lines().iter().map(|l| l.account_id.get()).collect();
     ids.sort_unstable();
     ids.dedup();
-    let inactive = account_repo::inactive_among(tx, &ids)?;
+    let mut inactive = account_repo::inactive_among(tx, &ids)?;
+    if !inactive.is_empty() {
+        let dead = mandi_db::dead::dead_set(tx, None)?;
+        inactive.retain(|id| !(dead.has_account(*id) && rules.allows(*id, None)));
+    }
     match inactive.first() {
         Some(id) => Err(ServiceError::Rejected(vec![Rejection {
             code: ErrorCode::ErrAccountInactive,
@@ -141,6 +174,71 @@ fn check_accounts_active(tx: &Connection, entry: &BalancedEntry) -> Result<(), S
         }])),
         None => Ok(()),
     }
+}
+
+/// The people in the dead amount inside a new posting (PRD FR-10.10, plan 40 D2).
+///
+/// * A recovery (`receipt`, `money_lent_return`) may not put more credit on a person in the dead
+///   amount than he still owes: `ERR_RETURN_EXCEEDS_OPEN`, value `open_paisa`, field `amount`. The
+///   balance is read inside the transaction, so the second of two receipts in one batch sees the
+///   first, and an edit sees its own reversal already posted.
+fn check_dead_people(
+    tx: &Connection,
+    entry: &BalancedEntry,
+    rules: DeadRules<'_>,
+) -> Result<(), ServiceError> {
+    let dead = mandi_db::dead::dead_set(tx, None)?;
+    if dead.is_empty() {
+        return Ok(());
+    }
+    let mut credits: Vec<(i64, Paisa)> = Vec::new();
+    for line in entry.lines() {
+        let account = line.account_id.get();
+        if !dead.has_account(account) {
+            continue;
+        }
+        if rules.recovery && line.side == Side::Cr {
+            match credits.iter_mut().find(|(k, _)| *k == account) {
+                Some((_, total)) => *total = total.checked_add(line.amount).map_err(money_error)?,
+                None => credits.push((account, line.amount)),
+            }
+        }
+    }
+    for (account, credit) in credits {
+        let still = crate::dead::still_owed(tx, account)?;
+        if credit > still {
+            return Err(ServiceError::Rejected(vec![Rejection {
+                code: ErrorCode::ErrReturnExceedsOpen,
+                field: Some("amount".to_owned()),
+                values: std::collections::BTreeMap::from([(
+                    "open_paisa".to_owned(),
+                    ErrorValue::Number(still.as_paisa()),
+                )]),
+            }]));
+        }
+    }
+    Ok(())
+}
+
+/// The اپنا مال account (030119998) never holds a balance: a trip lot credits the trip's partners
+/// and takes its goods out of a purchase instead (PRD FR-12.26, FR-10.4). Any line on it, from a
+/// voucher, a جنرل entry or an opening, is refused, so no screen can put a balance on it.
+fn check_own_goods_account(tx: &Connection, entry: &BalancedEntry) -> Result<(), ServiceError> {
+    let Some(own) = account_repo::id_by_code(tx, mandi_domain::core::accounts::OWN_GOODS_CODE)?
+    else {
+        return Ok(());
+    };
+    if entry.lines().iter().any(|l| l.account_id.get() == own) {
+        return Err(ServiceError::Rejected(vec![Rejection {
+            code: ErrorCode::ErrOwnGoodsAccountRestricted,
+            field: None,
+            values: std::collections::BTreeMap::from([(
+                "account_id".to_owned(),
+                ErrorValue::Number(own),
+            )]),
+        }]));
+    }
+    Ok(())
 }
 
 /// Posts an entry inside the caller's transaction `tx`.
@@ -160,9 +258,107 @@ pub fn post(
     user_id: i64,
     event: &PostingEvent,
 ) -> Result<Posted, ServiceError> {
+    post_ordered(ctx, tx, user_id, event, None)
+}
+
+/// The order key a posting must take to keep the place of the entry it replaces (migration 0005,
+/// plan 16): the key of that entry, or its id if it has none. An edit passes it to [`post_ordered`]
+/// for the new posting, so the edited posting stays where it was among the entries of its day for
+/// matching. Read it before or after the reversal: the reversal does not change it.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `id` if there is no such entry; `ServiceError::Db`.
+pub fn order_key_of(tx: &Connection, entry_id: i64) -> Result<i64, ServiceError> {
+    repo::order_key_of(tx, entry_id)?
+        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
+}
+
+/// [`post`] with an order key (see [`order_key_of`]). `None` is a new posting, which is the newest
+/// of its day: its key is its own id.
+///
+/// # Errors
+/// As [`post`].
+pub fn post_ordered(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    event: &PostingEvent,
+    order_key: Option<i64>,
+) -> Result<Posted, ServiceError> {
     check_posting_date(ctx, event.date)?;
-    if event.reverses.is_none() {
-        check_accounts_active(tx, &event.entry)?;
+    post_checked(ctx, tx, user_id, event, order_key)
+}
+
+/// Posts the opening entry of a NEW account (PRD FR-10.11, plan 53 T1). Its date may lie on a
+/// closed day; a date after today is still refused. This is the only posting that skips the
+/// closed-day check: the caller is the account save, for an account that has no opening yet, and
+/// it writes the audit row.
+///
+/// # Errors
+/// As [`post`], with `ERR_DATE_IN_FUTURE` for a date after today instead of the closed-day code.
+pub(crate) fn post_new_opening(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    event: &PostingEvent,
+) -> Result<Posted, ServiceError> {
+    if event.posting_type != PostingType::Opening
+        || event.source_type != SourceType::Account
+        || event.reverses.is_some()
+    {
+        return Err(ServiceError::Data(
+            "only an opening may be posted on a closed day".to_owned(),
+        ));
+    }
+    let (_, today) = day::window(ctx)?;
+    validate::posting_date("entry_date", &format_ddmmyyyy(event.date), None, today)?;
+    post_checked(ctx, tx, user_id, event, None)
+}
+
+/// The rest of [`post_ordered`], after the date has been checked.
+fn post_checked(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    event: &PostingEvent,
+    order_key: Option<i64>,
+) -> Result<Posted, ServiceError> {
+    check_own_goods_account(tx, &event.entry)?;
+    // An `order_key` is the mark of an edit: it is the key of the entry the new posting replaces.
+    let replaced = match order_key {
+        Some(key) if event.reverses.is_none() => Some((key, repo::lines_with_order_key(tx, key)?)),
+        _ => None,
+    };
+    let replaced_ref = replaced
+        .as_ref()
+        .map(|(key, lines)| (*key, lines.as_slice()));
+    if event.reverses.is_none() && event.posting_type != PostingType::MonthClose {
+        crate::linked::refuse_typed_lines(tx, &event.entry)?;
+    }
+    // Plan 76: every line on a linked khata or partner-linked loan gets its mirror pair (not a
+    // reversal, which copies the stored lines, mirror lines included).
+    let mirrored =
+        crate::linked::mirror_new_posting(tx, event, replaced_ref)?.map(|entry| PostingEvent {
+            entry,
+            ..event.clone()
+        });
+    let event = mirrored.as_ref().unwrap_or(event);
+    // PRD FR-17.6: a month close only moves balances that are already posted, so it may touch an
+    // expense head that was made inactive after the month (like a reversal, it skips this check).
+    if event.reverses.is_none() && event.posting_type != PostingType::MonthClose {
+        // A person in the dead amount: a recovery may touch him, and so may an edit of a posting he
+        // is already in (PRD FR-10.10, A67).
+        let rules = DeadRules {
+            recovery: matches!(
+                event.posting_type,
+                PostingType::Receipt | PostingType::MoneyLentReturn
+            ),
+            replaced: replaced
+                .as_ref()
+                .map_or(&[][..], |(_, lines)| lines.as_slice()),
+        };
+        check_accounts_active(tx, &event.entry, rules)?;
+        check_dead_people(tx, &event.entry, rules)?;
     }
     check_person_keys(tx, &event.entry)?;
     // PRD FR-6.5: the partner share rows are planned first, so a refusal (shares not 100%)
@@ -170,7 +366,7 @@ pub fn post(
     let shares = partner_rows::plan(tx, event)?;
     let now = ctx.now_text();
     let iso = event.date.to_iso();
-    let entry_id = repo::insert_draft(
+    let entry_id = repo::insert_draft_ordered(
         tx,
         &repo::EntryHeader {
             entry_date: &iso,
@@ -180,6 +376,7 @@ pub fn post(
             reverses_entry_id: event.reverses.map(EntryId::get),
             narration: event.narration.as_deref(),
         },
+        order_key,
         user_id,
         &now,
     )?;
@@ -287,7 +484,10 @@ pub fn reverse(
         reverses: Some(EntryId::new(entry_id)),
         entry: mirror,
     };
-    let mut posted = post(ctx, tx, user_id, &event)?;
+    // A reversal has no order key: it and the entry it takes back are both left out of matching,
+    // and its hash is the one every reversal had before migration 0005. The NEW posting of an
+    // edit is the one that takes the place of the old one (see `post_ordered`).
+    let mut posted = post_ordered(ctx, tx, user_id, &event, None)?;
     posted.matching_off = matching_off;
     Ok(posted)
 }
@@ -316,7 +516,7 @@ pub fn balance_of(totals: repo::Totals) -> Result<Balance, ServiceError> {
     Balance::from_totals(paisa(totals.dr_paisa)?, paisa(totals.cr_paisa)?).map_err(money_error)
 }
 
-/// The balance of one account now, from the posted journal, all persons of a پختہ کھاتہ account
+/// The balance of one account now, from the posted journal, all persons of a چکتا کھاتہ account
 /// together (PRD FR-6.1).
 ///
 /// # Errors
@@ -325,7 +525,7 @@ pub fn account_balance(ctx: &Context, account_id: i64) -> Result<Balance, Servic
     ctx.db.read(|conn| balance_in(conn, account_id, None, None))
 }
 
-/// The balance of one person of a پختہ کھاتہ account (PRD FR-13.5).
+/// The balance of one person of a چکتا کھاتہ account (PRD FR-13.5).
 ///
 /// # Errors
 /// `ServiceError::Db`.
@@ -354,6 +554,15 @@ pub(crate) fn balances_by_account(
     as_of: Option<&str>,
 ) -> Result<HashMap<i64, repo::Totals>, ServiceError> {
     Ok(repo::account_totals(conn, as_of)?.into_iter().collect())
+}
+
+/// The balances of these accounts only (a page of a list), as a map. An account with no posted
+/// line is not in it.
+pub(crate) fn balances_for_accounts(
+    conn: &Connection,
+    ids: &[i64],
+) -> Result<HashMap<i64, repo::Totals>, ServiceError> {
+    Ok(repo::totals_for_accounts(conn, ids)?)
 }
 
 /// A date given to a query must be `YYYY-MM-DD`: SQL compares it as text, so a wrong form would
@@ -500,7 +709,7 @@ pub struct LedgerEntry {
     pub posting_type: String,
     /// The note.
     pub narration: Option<String>,
-    /// The person inside a پختہ کھاتہ account.
+    /// The person inside a چکتا کھاتہ account.
     pub person_key: Option<String>,
     /// Debit.
     pub dr: Paisa,

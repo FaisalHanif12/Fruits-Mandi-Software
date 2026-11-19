@@ -4,6 +4,9 @@
 #![cfg(test)]
 
 mod common;
+#[allow(dead_code)]
+#[path = "bikri_preview/support.rs"]
+mod support;
 
 use std::time::Instant;
 
@@ -107,10 +110,10 @@ fn a_mistyped_roman_word_and_look_alike_urdu_letters_find_the_record() {
             .map(String::as_str),
         Some("Arshad Multani")
     );
-    // Nothing near: nothing. Empty text: nothing.
+    // Nothing near: nothing. Empty text is the whole list (plan 32 R7): the three cities, by code.
     assert!(find(&env, &owner, "zzzzzzz").is_empty());
-    assert!(find(&env, &owner, "").is_empty());
-    assert!(find(&env, &owner, "   ").is_empty());
+    assert_eq!(find(&env, &owner, "").len(), 3);
+    assert_eq!(find(&env, &owner, "   ").len(), 3);
 }
 
 #[test]
@@ -316,8 +319,8 @@ fn the_index_built_again_gives_the_same_answers_after_a_simulated_restore() {
 }
 
 #[test]
-fn masters_without_search_columns_and_the_bank_text_are_found() {
-    use mandi_services::core::masters::{BankAccountInput, MarkaInput, NarrationInput};
+fn masters_without_search_columns_are_found() {
+    use mandi_services::core::masters::{MarkaInput, NarrationInput};
     let (_dir, env, owner) = ready();
     masters::save(
         &env.ctx,
@@ -343,21 +346,6 @@ fn masters_without_search_columns_and_the_bank_text_are_found() {
         }),
     )
     .unwrap();
-    let mut bank = BankAccountInput {
-        id: None,
-        version: None,
-        bank_name: "Habib Bank".into(),
-        title: "Maher Adnan".into(),
-        number: "0001-234567".into(),
-        name_ur: "حبیب بینک".into(),
-        name_en: "Habib Bank".into(),
-        confirmed_rules_words: Vec::new(),
-    };
-    if masters::save(&env.ctx, &owner, &MasterInput::BankAccount(bank.clone())).is_err() {
-        bank.confirmed_rules_words =
-            vec!["Habib".into(), "حبیب".into(), "Bank".into(), "بینک".into()];
-        masters::save(&env.ctx, &owner, &MasterInput::BankAccount(bank)).unwrap();
-    }
     let s =
         |scope: SearchScope, text: &str| search::search(&env.ctx, &owner, scope, text, 10).unwrap();
     assert_eq!(s(SearchScope::Marka, "ar")[0].name_en, "AR");
@@ -368,15 +356,6 @@ fn masters_without_search_columns_and_the_bank_text_are_found() {
     assert_eq!(
         s(SearchScope::Narration, "بجلی")[0].name_en,
         "Electricity bill"
-    );
-    // The bank account is found by its account name, and by the bank, title and number as typed.
-    for typed in ["habib", "حبیب", "maher", "0001"] {
-        assert_eq!(s(SearchScope::BankAccount, typed).len(), 1, "{typed}");
-    }
-    assert!(
-        s(SearchScope::BankAccount, "habib")[0]
-            .extra_en
-            .contains("Maher Adnan")
     );
 }
 
@@ -507,4 +486,356 @@ fn a_huge_search_text_is_refused_in_the_master_search_like_in_the_account_search
     }
     // `search_recent` takes only the list, so it has no text to check.
     search::recent(&env.ctx, &owner, SearchScope::City).unwrap();
+}
+
+/// PRD 12.3, FR-16.7, E2E-38: the seller field of a lot offers the separate khatas (control 0305)
+/// besides the sellers and اپنا مال. No other field offers a khata as a seller or a buyer, and a
+/// short code still means a seller serial.
+#[test]
+fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_field() {
+    use mandi_services::core::accounts::{
+        AccountScope, ResolveCodeInput, ResolveStatus, SearchAccountsInput,
+    };
+    use mandi_services::core::error::{ErrorCode, ErrorValue};
+    use mandi_services::core::khata::KhataCreateInput;
+    let w = support::world();
+    let find = |scope: AccountScope, text: &str| -> Vec<String> {
+        search::search_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &SearchAccountsInput {
+                include_dead: None,
+                scope,
+                control_id: None,
+                text: text.into(),
+                limit: 10,
+                offset: 0,
+                with_chukta: None,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.name_en)
+        .collect()
+    };
+    // The index is built by this first search, so the khata below reaches it by a save.
+    assert_eq!(find(AccountScope::LotSeller, "rahim"), vec!["Rahim"]);
+    assert!(find(AccountScope::LotSeller, "family").is_empty());
+
+    let mut words: Vec<String> = Vec::new();
+    let khata = loop {
+        match mandi_services::khata::create(
+            &w.env.ctx,
+            &w.owner,
+            &KhataCreateInput {
+                name_ur: "خاندانی کھاتہ".into(),
+                name_en: "Family Khata".into(),
+                note: None,
+                confirmed_rules_words: words.clone(),
+            },
+        ) {
+            Ok(done) => break done,
+            Err(ServiceError::Rejected(items))
+                if items
+                    .iter()
+                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
+            {
+                for item in items {
+                    if let Some(ErrorValue::Text(t)) = item.values.get("words") {
+                        words.extend(t.split(' ').map(str::to_owned));
+                    }
+                }
+            }
+            Err(other) => panic!("{other:?}"),
+        }
+    };
+    assert!(
+        khata.account.code.starts_with("0305"),
+        "{}",
+        khata.account.code
+    );
+
+    // The seller field of a lot finds it by either name, and still finds sellers. اپنا مال is not
+    // offered while no open trip has a purchase with goods left (PRD 12.3, FR-12.26, plan 46).
+    assert_eq!(
+        find(AccountScope::LotSeller, "family"),
+        vec!["Family Khata"]
+    );
+    assert_eq!(
+        find(AccountScope::LotSeller, "خاندانی"),
+        vec!["Family Khata"]
+    );
+    assert_eq!(find(AccountScope::LotSeller, "rahim"), vec!["Rahim"]);
+    assert!(
+        find(AccountScope::LotSeller, "own").is_empty(),
+        "اپنا مال is offered in a lot only while a trip has goods to sell (see lot_seller_list.rs)"
+    );
+    // A seller field, a buyer field and the account lists of other screens do not offer it as a
+    // seller or a buyer; a field that takes any account does.
+    assert!(find(AccountScope::Seller, "family").is_empty());
+    assert!(find(AccountScope::Buyer, "family").is_empty());
+    assert_eq!(find(AccountScope::Any, "family"), vec!["Family Khata"]);
+    assert!(
+        find(AccountScope::Seller, "own").is_empty(),
+        "اپنا مال only in a lot"
+    );
+
+    // The picker list (Alt+Down) of the lot field has it; the seller field's does not.
+    let recent = |scope: AccountScope| -> Vec<String> {
+        search::recent_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &mandi_services::core::accounts::AccountsRecentInput {
+                include_dead: None,
+                scope,
+                control_id: None,
+                with_chukta: None,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.name_en)
+        .collect()
+    };
+    assert!(recent(AccountScope::LotSeller).contains(&"Family Khata".to_owned()));
+    assert!(!recent(AccountScope::Seller).contains(&"Family Khata".to_owned()));
+
+    // A short code still means a seller's running number: `0` in a lot field is Rahim (0010), never the khata.
+    let resolved = search::resolve_code(
+        &w.env.ctx,
+        &ResolveCodeInput {
+            scope: AccountScope::LotSeller,
+            control_id: None,
+            text: "0".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(resolved.status, ResolveStatus::Found);
+    assert_eq!(resolved.account.unwrap().name_en, "Rahim");
+    // Its full code works in the lot field (the code is taken as typed).
+    let by_code = search::resolve_code(
+        &w.env.ctx,
+        &ResolveCodeInput {
+            scope: AccountScope::LotSeller,
+            control_id: None,
+            text: khata.account.code.clone(),
+        },
+    )
+    .unwrap();
+    assert_eq!(by_code.status, ResolveStatus::Found);
+    assert_eq!(by_code.account.unwrap().id, khata.account.id);
+}
+
+#[test]
+fn the_bank_account_is_offered_in_no_picker_and_no_search() {
+    // PRD FR-10.4 (v1.6): all money is روکڑ. بینک 01020001 stays in the chart, but no picker, code,
+    // short code or global search offers it, so nothing can be posted to it by mistake.
+    use mandi_services::core::accounts::SearchGlobalInput;
+    use mandi_services::core::accounts::{AccountScope, GlobalHit, SearchAccountsInput};
+    let w = support::world();
+    let find = |scope: AccountScope, text: &str| -> Vec<String> {
+        search::search_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &SearchAccountsInput {
+                include_dead: None,
+                scope,
+                control_id: None,
+                text: text.into(),
+                limit: 10,
+                offset: 0,
+                with_chukta: None,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.code)
+        .collect()
+    };
+    // The cash account is still found: the exclusion is the bank's alone.
+    assert_eq!(find(AccountScope::Any, "01010001"), vec!["01010001"]);
+    for scope in [
+        AccountScope::Any,
+        AccountScope::Seller,
+        AccountScope::Buyer,
+        AccountScope::LotSeller,
+    ] {
+        for text in ["01020001", "bank", "بینک", "1"] {
+            assert!(
+                !find(scope, text).iter().any(|code| code == "01020001"),
+                "{text} in {scope:?}"
+            );
+        }
+    }
+    let hits = search::global(
+        &w.env.ctx,
+        &w.owner,
+        &SearchGlobalInput {
+            text: "bank".into(),
+            limit: 20,
+        },
+    )
+    .unwrap();
+    assert!(
+        hits.iter()
+            .all(|hit| !matches!(hit, GlobalHit::Account { hit } if hit.code == "01020001"))
+    );
+}
+
+/// Gate finding R3-2 (plan 80, Tech Stack 4.7, Code Standards B27): an account keeps the name of its
+/// city in its search text. Renaming the city updates the index at once, with no restart, so the
+/// account is found by the new city name and no longer by the old one.
+#[test]
+fn renaming_a_city_updates_the_accounts_and_addas_of_that_city_in_the_index() {
+    use mandi_services::core::accounts::{
+        AccountInput, AccountScope, AccountType, SearchAccountsInput,
+    };
+    use mandi_services::core::error::{ErrorCode, ErrorValue};
+    use mandi_services::core::masters::AddaInput;
+    let w = support::world();
+    let ctx = &w.env.ctx;
+    let find_accounts = |text: &str| -> Vec<String> {
+        search::search_accounts(
+            ctx,
+            &w.owner,
+            &SearchAccountsInput {
+                include_dead: None,
+                scope: AccountScope::Seller,
+                control_id: None,
+                text: text.into(),
+                limit: 10,
+                offset: 0,
+                with_chukta: None,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.name_en)
+        .collect()
+    };
+    // An اڈا is found by its own name; the picker row shows its city beside it (`extra_en`), and
+    // that text must follow a renamed city too.
+    let adda_city = |text: &str| -> Vec<(String, String)> {
+        search::search(ctx, &w.owner, SearchScope::Adda, text, 20)
+            .unwrap()
+            .into_iter()
+            .map(|hit| (hit.name_en, hit.extra_en))
+            .collect()
+    };
+    // The saves below confirm any spelling the check asks about (not the subject of this test).
+    let confirm = |items: Vec<mandi_services::Rejection>, words: &mut Vec<String>| {
+        for item in items {
+            assert_eq!(item.code, ErrorCode::ErrSpellingUnconfirmed);
+            if let Some(ErrorValue::Text(found)) = item.values.get("words") {
+                words.extend(found.split(' ').map(str::to_owned));
+            }
+        }
+    };
+    let save_city = |id: Option<i64>, version: Option<i64>, ur: &str, en: &str| {
+        let mut words: Vec<String> = Vec::new();
+        loop {
+            let input = CityInput {
+                id,
+                version,
+                code: String::new(),
+                name_ur: ur.into(),
+                name_en: en.into(),
+                confirmed_rules_words: words.clone(),
+            };
+            match masters::save(ctx, &w.owner, &MasterInput::City(input)) {
+                Ok(row) => return row,
+                Err(ServiceError::Rejected(items)) => confirm(items, &mut words),
+                Err(other) => panic!("{other:?}"),
+            }
+        }
+    };
+
+    let city = save_city(None, None, "لاہور", "Lahore");
+    // A seller and an اڈا in that city.
+    let mut input = AccountInput {
+        id: None,
+        version: None,
+        account_type: AccountType::Seller,
+        control_id: None,
+        code: String::new(),
+        name_ur: "نواز".into(),
+        name_en: "Nawaz".into(),
+        confirmed_rules_words: Vec::new(),
+        father_or_firm_ur: String::new(),
+        father_or_firm_en: String::new(),
+        city_id: Some(city.id()),
+        adda_id: None,
+        phone1: String::new(),
+        phone2: String::new(),
+        address: String::new(),
+        linked_account_id: None,
+        opening_date: String::new(),
+        opening_dr: String::new(),
+        opening_cr: String::new(),
+        opening_is_advance: false,
+        credit_allowed: true,
+        credit_limit: String::new(),
+        default_marka_id: None,
+        collector_staff_id: None,
+        is_active: true,
+        note: String::new(),
+        tag: String::new(),
+    };
+    let mut words: Vec<String> = Vec::new();
+    loop {
+        input.confirmed_rules_words = words.clone();
+        match mandi_services::accounts::save(ctx, &w.owner, &input) {
+            Ok(_) => break,
+            Err(ServiceError::Rejected(items)) => confirm(items, &mut words),
+            Err(other) => panic!("{other:?}"),
+        }
+    }
+    let mut words: Vec<String> = Vec::new();
+    loop {
+        let adda = AddaInput {
+            id: None,
+            version: None,
+            code: String::new(),
+            name_ur: "سوات اڈا".into(),
+            name_en: "Swat Adda".into(),
+            city_id: Some(city.id()),
+            confirmed_rules_words: words.clone(),
+        };
+        match masters::save(ctx, &w.owner, &MasterInput::Adda(adda)) {
+            Ok(_) => break,
+            Err(ServiceError::Rejected(items)) => confirm(items, &mut words),
+            Err(other) => panic!("{other:?}"),
+        }
+    }
+    // The index is built by these searches; the city name finds both.
+    assert_eq!(find_accounts("Lahore"), vec!["Nawaz"]);
+    assert_eq!(find_accounts("لاہور"), vec!["Nawaz"]);
+    assert_eq!(
+        adda_city("swat"),
+        vec![("Swat Adda".to_owned(), "Lahore".to_owned())]
+    );
+
+    // Rename the city.
+    save_city(Some(city.id()), Some(city.version()), "ملتان", "Multan");
+    assert_eq!(
+        find_accounts("Multan"),
+        vec!["Nawaz"],
+        "found by the new name"
+    );
+    assert_eq!(find_accounts("ملتان"), vec!["Nawaz"]);
+    assert!(
+        find_accounts("Lahore").is_empty(),
+        "no longer found by the old name"
+    );
+    assert!(find_accounts("لاہور").is_empty());
+    assert_eq!(
+        adda_city("swat"),
+        vec![("Swat Adda".to_owned(), "Multan".to_owned())],
+        "the city shown beside the اڈا is the new name"
+    );
+
+    // A made-up index would hide the fault: a rebuilt one gives the same answers.
+    search::rebuild(ctx).unwrap();
+    assert_eq!(find_accounts("Multan"), vec!["Nawaz"]);
+    assert!(find_accounts("Lahore").is_empty());
 }

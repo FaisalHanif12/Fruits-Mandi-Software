@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trips-summary"
+description = "Enables the trips_summary command without any pre-configured scope."
+commands.allow = ["trips_summary"]
+
+[[permission]]
+identifier = "deny-trips-summary"
+description = "Denies the trips_summary command without any pre-configured scope."
+commands.deny = ["trips_summary"]

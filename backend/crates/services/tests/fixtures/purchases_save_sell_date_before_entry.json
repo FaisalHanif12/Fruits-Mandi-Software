@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_SELL_DATE_BEFORE_ENTRY",
+      "field": "sell_date",
+      "values": {
+        "entry_date": "2026-10-11"
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261011-0001"
+}

@@ -1,0 +1,13 @@
+{
+  "limit": null,
+  "month": null,
+  "offset": null,
+  "party": {
+    "account_id": 19,
+    "side": "seller"
+  },
+  "period": {
+    "kind": "year",
+    "year": 2026
+  }
+}

@@ -3,9 +3,11 @@
 use serde::Serialize;
 use ts_rs::TS;
 
+use mandi_services::core::edit::{DayFixCloseInput, DayFixClosed, DayFixOpenInput, DayFixOpened};
 use mandi_services::core::vouchers::{
     DayCloseInput, DayClosePreview, DayClosePreviewInput, DayReopenInput,
 };
+use mandi_services::partner_code;
 use mandi_services::{auth, day};
 
 use super::run;
@@ -20,6 +22,10 @@ pub struct DayStatus {
     pub closed_up_to: Option<String>,
     /// True when today is after the closed-up-to date, so entries can be posted.
     pub today_open: bool,
+    /// The first day of the books (the oldest date of a posted entry, a trip, a garden, a purchase
+    /// or a stock move), `YYYY-MM-DD`. Null until there is one. The windows of the list screens
+    /// stop here when they go back (plan 76 point 8).
+    pub first_entry_date: Option<String>,
 }
 
 /// Today and the day state.
@@ -28,21 +34,21 @@ pub async fn day_status<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<D
     run(app, "day_status", |ctx| {
         auth::require(ctx)?;
         let info = day::status(ctx)?;
-        Ok(DayStatus {
-            today: info.today,
-            closed_up_to: info.closed_up_to,
-            today_open: info.today_open,
-        })
+        status_of(ctx, info)
     })
     .await
 }
 
-fn status_of(info: day::DayStatusInfo) -> DayStatus {
-    DayStatus {
+fn status_of(
+    ctx: &mandi_services::Context,
+    info: day::DayStatusInfo,
+) -> Result<DayStatus, mandi_services::ServiceError> {
+    Ok(DayStatus {
         today: info.today,
         closed_up_to: info.closed_up_to,
         today_open: info.today_open,
-    }
+        first_entry_date: day::first_book_day(ctx)?.map(|d| d.to_iso()),
+    })
 }
 
 /// What closing the days up to a day would do (PRD FR-21.1): the days, the trial balance, the
@@ -55,7 +61,11 @@ pub async fn day_close_preview<R: tauri::Runtime>(
 ) -> Result<DayClosePreview, UiError> {
     run(app, "day_close_preview", move |ctx| {
         auth::require(ctx)?;
-        day::close_preview(ctx, &input)
+        let mut shown = day::close_preview(ctx, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.summary.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }
@@ -69,7 +79,7 @@ pub async fn day_close<R: tauri::Runtime>(
 ) -> Result<DayStatus, UiError> {
     run(app, "day_close", move |ctx| {
         let actor = auth::require(ctx)?;
-        Ok(status_of(day::close(ctx, &actor, &input)?))
+        status_of(ctx, day::close(ctx, &actor, &input)?)
     })
     .await
 }
@@ -83,7 +93,38 @@ pub async fn day_reopen<R: tauri::Runtime>(
 ) -> Result<DayStatus, UiError> {
     run(app, "day_reopen", move |ctx| {
         let actor = auth::require(ctx)?;
-        Ok(status_of(day::reopen(ctx, &actor, &input)?))
+        status_of(ctx, day::reopen(ctx, &actor, &input)?)
+    })
+    .await
+}
+
+/// Reopens the date of an entry to fix, and every later closed date, and gives a token to close
+/// the same days again (PRD FR-21.4, plan 44). The reason goes to the audit log. Errors:
+/// `ERR_REASON_REQUIRED` on `reason`; the date codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`;
+/// `ERR_MONTH_CLOSED` on `date`. Until plan 44 T2c: `ERR_NOT_IMPLEMENTED`.
+#[tauri::command]
+pub async fn day_fix_open<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: DayFixOpenInput,
+) -> Result<DayFixOpened, UiError> {
+    run(app, "day_fix_open", move |ctx| {
+        let actor = auth::require(ctx)?;
+        day::fix_open(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Closes the days `day_fix_open` reopened, oldest first, each with the checks of PRD FR-21.1. A
+/// day whose checks fail stays open and is listed with the reason. Errors:
+/// `ERR_FIX_TOKEN_INVALID` on `token`. Until plan 44 T2c: `ERR_NOT_IMPLEMENTED`.
+#[tauri::command]
+pub async fn day_fix_close<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: DayFixCloseInput,
+) -> Result<DayFixClosed, UiError> {
+    run(app, "day_fix_close", move |ctx| {
+        let actor = auth::require(ctx)?;
+        day::fix_close(ctx, &actor, &input)
     })
     .await
 }

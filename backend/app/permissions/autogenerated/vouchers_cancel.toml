@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-cancel"
+description = "Enables the vouchers_cancel command without any pre-configured scope."
+commands.allow = ["vouchers_cancel"]
+
+[[permission]]
+identifier = "deny-vouchers-cancel"
+description = "Denies the vouchers_cancel command without any pre-configured scope."
+commands.deny = ["vouchers_cancel"]

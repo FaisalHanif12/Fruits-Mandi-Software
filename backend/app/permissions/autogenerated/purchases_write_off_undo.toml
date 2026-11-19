@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-purchases-write-off-undo"
+description = "Enables the purchases_write_off_undo command without any pre-configured scope."
+commands.allow = ["purchases_write_off_undo"]
+
+[[permission]]
+identifier = "deny-purchases-write-off-undo"
+description = "Denies the purchases_write_off_undo command without any pre-configured scope."
+commands.deny = ["purchases_write_off_undo"]

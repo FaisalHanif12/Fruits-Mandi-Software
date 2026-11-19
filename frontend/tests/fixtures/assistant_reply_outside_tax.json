@@ -1,0 +1,60 @@
+{
+  "question_id": 1,
+  "conversation_id": "c-20261010090000000-0",
+  "outcome": "outside_books",
+  "answer": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "یہ ایپ جی ایس ٹی یا کوئی ٹیکس نہیں نکالتی۔ یہ آپ کی بکری، کمیشن اور خرچہ رکھتی ہے۔"
+      }
+    ],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "general_advice": false,
+    "sources": [
+      {
+        "kind": "report",
+        "result_id": "",
+        "label_id": "report-r2-title",
+        "id": "R2",
+        "filters": {
+          "shortcut": null,
+          "from": "",
+          "to": "",
+          "as_of": "",
+          "party": null,
+          "seller": null,
+          "zamindar": null,
+          "item": null,
+          "city": null,
+          "adda": null,
+          "detail": false,
+          "group_by": null,
+          "status": null,
+          "partner": null,
+          "voucher_type": null,
+          "trip_view": null,
+          "garden": null,
+          "garden_view": null,
+          "bikri": null,
+          "guests_only": false
+        }
+      }
+    ],
+    "how": [],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T09:00:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 0,
+  "limit": 20
+}

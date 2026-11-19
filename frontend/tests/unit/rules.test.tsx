@@ -23,8 +23,10 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakeMasters, record } from '../helpers/masters';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { fakeRuleTest, fakeRules, pointer, rule, testResult } from '../helpers/rules';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -35,8 +37,8 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax');
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim');
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax');
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim');
 const BANANA = record('item', 5, '0005', 'کیلا', 'Banana');
 const APPLE = record('item', 6, '0006', 'سیب', 'Apple');
 
@@ -81,7 +83,7 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   fakeMasters({ item: [BANANA, APPLE] });
   fakeAccounts([AKRAM, RAHIM]);
   fakeAccountSearch([AKRAM, RAHIM]);
@@ -213,6 +215,53 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
     }
   });
 
+  it('150 rules come page by page: 25 at once with the count of the backend, Next page loads the next 25', async () => {
+    fakeRules(Array.from({ length: 150 }, (_, index) => rule(index + 1)));
+    await renderApp('/index/rules');
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
+    });
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, PAGE_ROWS, {
+      search: null,
+      sort: null,
+    });
+    await userEvent.setup().click(await pagerButton(language, 'next'));
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
+    });
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), PAGE_ROWS, PAGE_ROWS, {
+      search: null,
+      sort: null,
+    });
+  });
+
+  it('the search box sends the text, and the party and the item are behind "More filters"', async () => {
+    fakeRules();
+    await renderApp('/index/rules');
+    await waitFor(() => {
+      expect(rowIds()).toEqual(['1', '2', '3']);
+    });
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByRole('textbox', { name: named(message(language, 'common-search-label')) }),
+      'rahim',
+    );
+    await waitFor(() => {
+      expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, PAGE_ROWS, {
+        search: 'rahim',
+        sort: null,
+      });
+    });
+    expect(
+      screen.queryByRole('combobox', { name: named(message(language, 'rules-filter-party')) }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
+    expect(await dropdown(language, 'rules-filter-party')).toBeInTheDocument();
+    expect(await dropdown(language, 'rules-filter-item')).toBeInTheDocument();
+  });
+
   it('the side, the charge and the inactive tick go to the backend filter', async () => {
     fakeRules([...fakeRulesRows(), rule(9, { is_active: false, value: '3' })]);
     await renderApp('/index/rules');
@@ -229,19 +278,27 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
     await waitFor(() => {
       expect(rowIds()).toEqual(['2', '3']);
     });
-    expect(rulesApi.rulesList).toHaveBeenLastCalledWith({
-      side: 'buyer',
-      charge_type: null,
-      account_id: null,
-      item_id: null,
-      include_inactive: false,
-    });
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(
+      {
+        side: 'buyer',
+        charge_type: null,
+        account_id: null,
+        item_id: null,
+        include_inactive: false,
+      },
+      0,
+      PAGE_ROWS,
+      { search: null, sort: null },
+    );
     await user.click(
       screen.getByRole('checkbox', { name: message(language, 'rules-show-inactive') }),
     );
     await waitFor(() => {
       expect(rulesApi.rulesList).toHaveBeenLastCalledWith(
         expect.objectContaining({ include_inactive: true }),
+        0,
+        PAGE_ROWS,
+        { search: null, sort: null },
       );
     });
   });
@@ -416,7 +473,7 @@ describe.each(LANGUAGES)('the rule form (%s)', (language) => {
     const user = userEvent.setup();
     const group = await dropdown(language, 'rules-field-group');
     expect(group).toBeEnabled();
-    await pick(user, language, 'rules-field-party', 'rahim', '030110001');
+    await pick(user, language, 'rules-field-party', 'rahim', '0010');
     await waitFor(() => {
       expect(group).toBeDisabled();
     });
@@ -555,7 +612,7 @@ describe.each(LANGUAGES)('the rule form (%s)', (language) => {
     fakeRules([
       rule(7, {
         side: 'buyer',
-        account: pointer(21, '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax'),
+        account: pointer(21, '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax'),
         value: '7',
         level: 'party',
       }),

@@ -4,6 +4,7 @@
 // than 1024 points (NFR-USE-18); the buttons stop there too.
 
 import { Localized, useLocalization } from '@fluent/react';
+import type { Grouping } from '../../../bindings/Grouping';
 import type { Language } from '../../../bindings/Language';
 import {
   DEFAULT_TEXT_SIZE,
@@ -23,6 +24,7 @@ import {
 } from '../../../shared/ui';
 import { useSetDefaultLanguage } from '../hooks';
 import { LearnedWords } from './LearnedWords';
+import { NumberGroupingSection } from './NumberGroupingSection';
 
 const LANGUAGE_OPTIONS: readonly SegmentedOption<Language>[] = [
   { value: 'ur', lang: 'ur', label: <Localized id="common-language-ur" /> },
@@ -31,9 +33,10 @@ const LANGUAGE_OPTIONS: readonly SegmentedOption<Language>[] = [
 
 interface LanguageTabProps {
   defaultLanguage: Language;
+  numberGrouping: Grouping;
 }
 
-export function LanguageTab({ defaultLanguage }: LanguageTabProps) {
+export function LanguageTab({ defaultLanguage, numberGrouping }: LanguageTabProps) {
   const { l10n } = useLocalization();
   const chosen = useTextSizeStore((state) => state.chosen);
   const setChosen = useTextSizeStore((state) => state.setChosen);
@@ -109,6 +112,7 @@ export function LanguageTab({ defaultLanguage }: LanguageTabProps) {
           </Button>
         </div>
       </section>
+      <NumberGroupingSection grouping={numberGrouping} />
       <LearnedWords />
     </div>
   );

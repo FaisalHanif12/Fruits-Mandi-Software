@@ -1,0 +1,194 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_0_0",
+       "type": "function",
+       "function": {
+        "name": "tiles",
+        "arguments": "{}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_1_0",
+       "type": "function",
+       "function": {
+        "name": "tiles",
+        "arguments": "{}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5600,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 4800
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_2_0",
+       "type": "function",
+       "function": {
+        "name": "tiles",
+        "arguments": "{}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 6000,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 4800
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_3_0",
+       "type": "function",
+       "function": {
+        "name": "tiles",
+        "arguments": "{}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 6400,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 4800
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_4_0",
+       "type": "function",
+       "function": {
+        "name": "tiles",
+        "arguments": "{}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 6800,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 4800
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_5_0",
+       "type": "function",
+       "function": {
+        "name": "tiles",
+        "arguments": "{}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 7200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 4800
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ }
+]

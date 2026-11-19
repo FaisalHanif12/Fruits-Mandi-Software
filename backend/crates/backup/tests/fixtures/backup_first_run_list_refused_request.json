@@ -1,0 +1,12 @@
+{
+  "source": {
+    "cloud": {
+      "bucket": "",
+      "endpoint": "http://nope",
+      "key_id": "",
+      "prefix": "mandi",
+      "region": "auto",
+      "secret": "x"
+    }
+  }
+}

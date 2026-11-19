@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-masters-dead-preview"
+description = "Enables the masters_dead_preview command without any pre-configured scope."
+commands.allow = ["masters_dead_preview"]
+
+[[permission]]
+identifier = "deny-masters-dead-preview"
+description = "Denies the masters_dead_preview command without any pre-configured scope."
+commands.deny = ["masters_dead_preview"]

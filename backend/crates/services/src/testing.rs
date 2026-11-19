@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use chrono::{DateTime, TimeZone, Utc};
-use mandi_db::audit::{AuditKey, MemoryKeyStore};
+use mandi_db::audit::{AuditKey, KeyStore, MemoryKeyStore};
 use mandi_db::clock::ManualClock;
 use mandi_db::disk::{DiskProbe, MIN_FREE_DISK_BYTES};
 use mandi_db::{Db, DbOptions};
@@ -129,6 +129,18 @@ impl TestEnv {
     /// Whatever opening the database returns, or `ServiceError::Hash` if the test hasher
     /// cannot be made.
     pub fn new(dir: &Path) -> Result<Self, ServiceError> {
+        Self::with_key_store(
+            dir,
+            Arc::new(MemoryKeyStore::new(AuditKey::from_bytes([7; 32]))),
+        )
+    }
+
+    /// As [`TestEnv::new`], with this key store for the audit chain key. Tests use it to count
+    /// the reads of the store or to make it refuse (plan 75 Section 7.8).
+    ///
+    /// # Errors
+    /// As [`TestEnv::new`].
+    pub fn with_key_store(dir: &Path, key_store: Arc<dyn KeyStore>) -> Result<Self, ServiceError> {
         let clock = Arc::new(ManualClock::new(test_start()));
         let disk = Arc::new(AdjustableDiskProbe(AtomicU64::new(
             AdjustableDiskProbe::PLENTY,
@@ -137,7 +149,7 @@ impl TestEnv {
             backups_dir: dir.join("backups"),
             disk_probe: disk.clone(),
             clock: clock.clone(),
-            key_store: Arc::new(MemoryKeyStore::new(AuditKey::from_bytes([7; 32]))),
+            key_store,
             busy_timeout: Duration::from_millis(500),
             check_wait: Duration::from_millis(500),
         };

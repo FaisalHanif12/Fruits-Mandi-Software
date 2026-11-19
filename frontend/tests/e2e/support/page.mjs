@@ -215,17 +215,33 @@ export async function pageText() {
 }
 
 /**
- * Signs out from the user menu.
+ * Closes the first-run guide (PRD FR-7.12) the first time it opens, with Esc. The app opens it by
+ * itself at the first sign-in and keeps a mark when it is closed, so it never opens by itself again:
+ * only the spec of the first sign-in needs this. It waits for the guide, so it does not close
+ * something that is not there yet; it does nothing when the guide does not appear.
+ * @param {number} [waitMs] how long to wait for the guide to appear
+ */
+export async function closeGuide(waitMs = SHORT_WAIT_MS * 2) {
+  const card = await $('[data-guide-step]');
+  try {
+    await card.waitForDisplayed({ timeout: waitMs });
+  } catch {
+    return;
+  }
+  await browser.keys(Key.Escape);
+  await card.waitForDisplayed({ timeout: WAIT_MS, reverse: true });
+}
+
+/**
+ * Signs out from the bottom of the main menu (plan 75 T3).
  * @param {Language} language
  */
 export async function signOut(language) {
-  const menu = await $(`button[aria-label=${quoted(t(language, 'layout-user-menu'))}]`);
-  await menu.click();
-  const item = await $(
-    `//*[@role="menuitem"][contains(${PLAIN}, ${quoted(t(language, 'layout-user-signout'))})]`,
+  const button = await $(
+    `nav button[data-nav-item][aria-label=${quoted(t(language, 'layout-user-signout'))}]`,
   );
-  await item.waitForDisplayed({ timeout: WAIT_MS });
-  await item.click();
+  await button.waitForDisplayed({ timeout: WAIT_MS });
+  await button.click();
   await waitForHeading(language, 'auth-login-title');
 }
 

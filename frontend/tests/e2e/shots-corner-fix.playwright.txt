@@ -1,0 +1,143 @@
+// Screenshots of plan 52 item 7 (the launcher corner): with the chat window SHUT, the round launcher
+// floats at the end corner above the status bar. This looks at five screens, in both languages, at
+// 1024 x 600 and 1366 x 768, and measures what the launcher covers: every control and every piece of
+// content whose box meets the launcher's box, once as the screen opens and once with the screen
+// scrolled to its end. A developer tool: run it with the Vite dev server up (`pnpm --filter frontend
+// dev`), as a snippet for the Playwright tool (a snippet, not a module, so it is kept as .txt and the
+// linter does not read it). The pages are the development pages (app/dev), answered by the stand-in
+// for the backend (tests/helpers/dev-bridge*). Set SIZES and SHOW before a run to choose a part.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/corner-fix';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+  ];
+  const SHOW = {
+    dashboard: 'dashboard',
+    bikri: 'bikri',
+    reportshome: 'reports',
+    report: 'reports/R10?many',
+    vouchers: 'vouchers',
+    cashbook: 'rokar',
+    accounts: 'lists/accounts',
+    accountform: 'index?screen=account',
+    settings: 'settings',
+    analytics: 'analytics/A',
+  };
+  const context = page.context();
+  const report = [];
+  const LANG_BUTTON = { ur: 'اردو', en: 'English' };
+
+  // What the launcher covers, measured in the page. A control or content box that meets the launcher's
+  // box (its ring included) counts when the launcher is the top element at the middle of the overlap.
+  const measure = () => {
+    const launcher = document.querySelector('button[aria-controls="assistant-chat-window"]');
+    if (launcher === null) return { error: 'no launcher' };
+    const lr = launcher.getBoundingClientRect();
+    const RING = 4;
+    const box = { l: lr.left - RING, r: lr.right + RING, t: lr.top - RING, b: lr.bottom + RING };
+    const main = document.querySelector('main');
+    const mr = main === null ? null : main.getBoundingClientRect();
+    const controls = [];
+    const content = [];
+    const seen = new Set();
+    const nodes = document.querySelectorAll(
+      'main button, main a[href], main input, main select, main textarea, main [role="button"], main [role="tab"], main [role="combobox"], main [role="checkbox"], main th, main td, main [role="gridcell"], main [role="columnheader"], main label, main p, main h1, main h2, main h3, main li',
+    );
+    for (const el of nodes) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      const l = Math.max(r.left, box.l);
+      const rr = Math.min(r.right, box.r);
+      const t = Math.max(r.top, box.t);
+      const b = Math.min(r.bottom, box.b);
+      if (rr <= l || b <= t) continue;
+      const px = (l + rr) / 2;
+      const py = (t + b) / 2;
+      // Skip what an ancestor clips away (a grid row scrolled out of its own area is not seen).
+      let clipped = false;
+      for (let a = el.parentElement; a !== null && a !== document.body; a = a.parentElement) {
+        const o = getComputedStyle(a);
+        if (o.overflowX === 'visible' && o.overflowY === 'visible') continue;
+        const ar = a.getBoundingClientRect();
+        if (px < ar.left || px > ar.right || py < ar.top || py > ar.bottom) {
+          clipped = true;
+          break;
+        }
+      }
+      if (clipped) continue;
+      const top = document.elementFromPoint(px, py);
+      if (top === null || !(top === launcher || launcher.contains(top))) continue;
+      const text = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40);
+      const key = el.tagName + text + Math.round(r.left) + Math.round(r.top);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const isControl = el.matches(
+        'button, a[href], input, select, textarea, [role="button"], [role="tab"], [role="combobox"], [role="checkbox"]',
+      );
+      (isControl ? controls : content).push({
+        tag: el.tagName.toLowerCase(),
+        text,
+        covered: Math.round((rr - l) * (b - t)),
+      });
+    }
+    return {
+      launcher: { x: Math.round(lr.left), y: Math.round(lr.top), w: Math.round(lr.width), h: Math.round(lr.height) },
+      mainScrolls: main !== null && main.scrollHeight > main.clientHeight + 1,
+      mainBottomPadding: main === null ? null : getComputedStyle(main).paddingBottom,
+      mainBottomGap: mr === null ? null : Math.round(mr.bottom - lr.bottom),
+      controls,
+      content: content.slice(0, 8),
+      contentCount: content.length,
+      sidewaysOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    };
+  };
+
+  for (const [w, h] of SIZES) {
+    for (const lang of ['ur', 'en']) {
+      for (const [name, hash] of Object.entries(SHOW)) {
+        const p = await context.newPage();
+        p.setDefaultTimeout(10000);
+        p.on('dialog', (d) => d.accept().catch(() => undefined));
+        await p.setViewportSize({ width: w, height: h });
+        await p.goto('http://localhost:5199/#/dev/' + hash);
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const ok = await p
+            .waitForFunction((label) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').trim() === label), LANG_BUTTON[lang], { timeout: 12000 })
+            .then(() => true)
+            .catch(() => false);
+          if (ok) break;
+          await p.reload();
+        }
+        await p.waitForTimeout(1200);
+        try {
+          await p.getByRole('button', { name: LANG_BUTTON[lang], exact: true }).first().click();
+          await p.waitForTimeout(900);
+          const file = `${OUT}/launcher-${name}-${lang}-${w}x${h}`;
+          await p.screenshot({ path: file + '.png' });
+          const opening = await p.evaluate(measure);
+          // Scroll the screen to its end, which is as far as the Owner can bring the last control.
+          const scrolled = await p.evaluate(() => {
+            const main = document.querySelector('main');
+            if (main === null) return false;
+            main.scrollTop = main.scrollHeight;
+            return main.scrollTop > 0;
+          });
+          let atEnd = null;
+          if (scrolled) {
+            await p.waitForTimeout(300);
+            await p.screenshot({ path: file + '-end.png' });
+            atEnd = await p.evaluate(measure);
+          }
+          report.push({ name, lang, size: `${w}x${h}`, opening, atEnd });
+        } catch (e) {
+          report.push({ name, lang, size: `${w}x${h}`, error: String(e).slice(0, 200) });
+        } finally {
+          await p.close({ runBeforeUnload: false }).catch(() => undefined);
+        }
+      }
+    }
+  }
+  return report;
+}

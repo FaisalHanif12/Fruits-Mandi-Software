@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trips-cost-save"
+description = "Enables the trips_cost_save command without any pre-configured scope."
+commands.allow = ["trips_cost_save"]
+
+[[permission]]
+identifier = "deny-trips-cost-save"
+description = "Denies the trips_cost_save command without any pre-configured scope."
+commands.deny = ["trips_cost_save"]

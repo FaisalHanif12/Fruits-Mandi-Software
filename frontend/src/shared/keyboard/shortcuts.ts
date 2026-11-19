@@ -5,7 +5,7 @@
 // with an Urdu keyboard layout and on a Mac, where Alt changes the typed character.
 
 /** Where a key works. `anywhere` keys work in the whole window. */
-export type ShortcutScope = 'anywhere' | 'entry' | 'grid' | 'field' | 'picker';
+export type ShortcutScope = 'anywhere' | 'entry' | 'grid' | 'field' | 'picker' | 'panel';
 
 /** One physical key with its modifiers. Modifiers not listed must be up. */
 export interface ShortcutKey {
@@ -35,6 +35,8 @@ export const SHORTCUTS = {
   addAccount: { code: 'F4', label: 'F4', scope: 'picker' },
   /** Print. */
   print: { code: 'F9', label: 'F9', scope: 'anywhere' },
+  /** On the sale book: print ادھاری تفصیل (R5), the second print button (PRD FR-12.12). */
+  printAdhari: { code: 'F9', shift: true, label: 'Shift+F9', scope: 'anywhere' },
   /** Save on entry screens. Ctrl+S does the same. */
   save: { code: 'F10', label: 'F10', scope: 'entry', also: [{ code: 'KeyS', ctrl: true }] },
   /** Save, print the ticked documents and start a new entry (FR-7.57). */
@@ -47,6 +49,12 @@ export const SHORTCUTS = {
   languageToggle: { code: 'KeyL', alt: true, label: 'Alt+L', scope: 'anywhere' },
   /** Global search. */
   globalSearch: { code: 'KeyK', ctrl: true, label: 'Ctrl+K', scope: 'anywhere' },
+  /** Open or close the chat window of Ask the app, above the round launcher (PRD FR-7.73). */
+  askApp: { code: 'F1', label: 'F1', scope: 'anywhere' },
+  /** Inside the chat window: make it larger, the large size (PRD FR-7.73). */
+  dockTaller: { code: 'ArrowUp', ctrl: true, label: 'Ctrl+↑', scope: 'panel' },
+  /** Inside the chat window: make it smaller, the normal size (PRD FR-7.73). */
+  dockShorter: { code: 'ArrowDown', ctrl: true, label: 'Ctrl+↓', scope: 'panel' },
   /** On a calculated amount: how was this worked out? (FR-7.43). */
   explain: { code: 'KeyI', ctrl: true, label: 'Ctrl+I', scope: 'field' },
   /** In a sale-line cell: copy the value from the line above (FR-7.54). */
@@ -92,6 +100,10 @@ export const SHORTCUTS = {
   back: { code: 'Escape', label: 'Esc', scope: 'anywhere' },
   /** In a picker: open the full list without typing (FR-7.16). */
   openList: { code: 'ArrowDown', alt: true, label: 'Alt+↓', scope: 'picker' },
+  /** In the window of earlier days of پچھلی بکری: go back 7 days (PRD 12.7, plan 72 P5). */
+  pastEarlier: { code: 'PageUp', label: 'Page Up', scope: 'grid' },
+  /** In the window of earlier days of پچھلی بکری: come 7 days nearer (PRD 12.7, plan 72 P5). */
+  pastLater: { code: 'PageDown', label: 'Page Down', scope: 'grid' },
   /** In a date field: next day (FR-7.19). */
   dateNextDay: {
     code: 'Equal',

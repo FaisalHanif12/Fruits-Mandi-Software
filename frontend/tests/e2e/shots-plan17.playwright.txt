@@ -1,0 +1,125 @@
+// Screenshots of the screens of the روکڑ area in both languages at the three window sizes (plan 17),
+// taken from the development page /dev/rokar with the Playwright tool. It is a developer tool: run
+// it with the Vite dev server up (`pnpm --filter frontend dev`). It also measures sideways overflow
+// (NFR-USE-15): the screen area, and every table or grid inside it, must not scroll sideways.
+// Usage with the Playwright MCP tool: browser_run_code_unsafe with `filename` set to this file.
+// (It is a snippet for that tool, not a module, so it is kept as .txt and the linter does not read
+// it. The Windows check is spec 24.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/plan17';
+  const BASE = 'http://localhost:5173/#/dev/rokar';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const settle = (ms) => page.waitForTimeout(ms);
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type !== 'beforeunload') add(type, ...rest);
+    };
+  });
+  const amount = () => page.locator('main input[inputmode="numeric"]').first();
+  const chooseSelect = async (index, optionIndex) => {
+    await page.locator('main button[role="combobox"]').nth(index).click();
+    await settle(150);
+    await page.getByRole('option').nth(optionIndex).click();
+    await settle(150);
+  };
+  const pickPicker = async (text) => {
+    const box = page.locator('main input[role="combobox"]').first();
+    await box.click();
+    await box.fill(text);
+    await settle(300);
+    await page.keyboard.press('Enter');
+    await settle(300);
+  };
+  const SCENARIOS = {
+    'book': { query: '?screen=book', run: async () => {} },
+    'book-empty': { query: '?screen=book&empty', run: async () => {} },
+    'expense-empty': { query: '?screen=expense&type=shop_expense', run: async () => {} },
+    'expense-shop': {
+      query: '?screen=expense&type=shop_expense&repeat',
+      run: async () => {
+        await chooseSelect(0, 0);
+        await amount().fill('3000');
+        await settle(500);
+      },
+    },
+    'expense-shop-cash': {
+      query: '?screen=expense&type=shop_expense&cash',
+      run: async () => {
+        await chooseSelect(0, 0);
+        await amount().fill('3000');
+        await settle(500);
+      },
+    },
+    'expense-personal': {
+      query: '?screen=expense&type=personal_expense',
+      run: async () => {
+        await chooseSelect(0, 0);
+        await amount().fill('2000');
+        await settle(500);
+      },
+    },
+    'lent': {
+      query: '?screen=lent&type=money_lent',
+      run: async () => {
+        await pickPicker('aslam');
+        await amount().fill('5000');
+        await settle(500);
+      },
+    },
+    'lent-return-salary': {
+      query: '?screen=lent&type=money_lent_return',
+      run: async () => {
+        await pickPicker('aslam');
+        await chooseSelect(0, 1);
+        await amount().fill('2000');
+        await settle(500);
+      },
+    },
+    'khata': {
+      query: '?screen=khata&type=khata_out',
+      run: async () => {
+        await pickPicker('family');
+        await amount().fill('10000');
+        await settle(500);
+      },
+    },
+  };
+  const result = [];
+  for (const [name, scenario] of Object.entries(SCENARIOS)) {
+    for (const language of ['ur', 'en']) {
+      for (const [width, height] of SIZES) {
+        await page.setViewportSize({ width, height });
+        await page.goto('about:blank');
+        await page.goto(`${BASE}${scenario.query}`);
+        await page.reload();
+        await settle(900);
+        if (language === 'en') {
+          await page.keyboard.press('Alt+KeyL');
+          await settle(500);
+        }
+        await scenario.run();
+        const overflow = await page.evaluate(() => {
+          const main = document.querySelector('main');
+          const wide = [...document.querySelectorAll('main *')].filter(
+            (el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX === 'visible' && el.clientWidth > 0,
+          );
+          return {
+            main: main ? main.scrollWidth - main.clientWidth : -1,
+            page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            wide: wide.length,
+          };
+        });
+        const file = `${OUT}/${name}-${language}-${width}x${height}.png`;
+        await page.screenshot({ path: file, fullPage: false });
+        result.push(`${name} ${language} ${width}x${height} overflow main=${overflow.main} page=${overflow.page} wide=${overflow.wide}`);
+      }
+    }
+  }
+  return result.join('\n');
+}

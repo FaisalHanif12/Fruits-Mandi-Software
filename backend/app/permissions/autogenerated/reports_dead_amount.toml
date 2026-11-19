@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reports-dead-amount"
+description = "Enables the reports_dead_amount command without any pre-configured scope."
+commands.allow = ["reports_dead_amount"]
+
+[[permission]]
+identifier = "deny-reports-dead-amount"
+description = "Denies the reports_dead_amount command without any pre-configured scope."
+commands.deny = ["reports_dead_amount"]

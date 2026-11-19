@@ -1,0 +1,83 @@
+{
+  "rows": [
+    {
+      "id": 8,
+      "version": 1,
+      "side": "seller",
+      "charge_type": "commission",
+      "account": null,
+      "item": {
+        "id": 4,
+        "code": "0043",
+        "name_ur": "انگور",
+        "name_en": "Grapes"
+      },
+      "item_group": null,
+      "level": "item",
+      "is_default": false,
+      "method": "percent",
+      "value_bps": 800,
+      "value_paisa": null,
+      "value_text": "8",
+      "from_date": "2026-10-01",
+      "to_date": null,
+      "is_active": false,
+      "used": false,
+      "note": ""
+    },
+    {
+      "id": 6,
+      "version": 1,
+      "side": "seller",
+      "charge_type": "commission",
+      "account": null,
+      "item": {
+        "id": 3,
+        "code": "0042",
+        "name_ur": "مولی",
+        "name_en": "Radish"
+      },
+      "item_group": null,
+      "level": "item",
+      "is_default": false,
+      "method": "percent",
+      "value_bps": 700,
+      "value_paisa": null,
+      "value_text": "7",
+      "from_date": "2026-10-01",
+      "to_date": null,
+      "is_active": true,
+      "used": false,
+      "note": ""
+    },
+    {
+      "id": 5,
+      "version": 1,
+      "side": "seller",
+      "charge_type": "commission",
+      "account": null,
+      "item": {
+        "id": 2,
+        "code": "0041",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      },
+      "item_group": null,
+      "level": "item",
+      "is_default": false,
+      "method": "percent",
+      "value_bps": 400,
+      "value_paisa": null,
+      "value_text": "4",
+      "from_date": "2026-10-01",
+      "to_date": null,
+      "is_active": true,
+      "used": false,
+      "note": ""
+    }
+  ],
+  "total_count": 8,
+  "totals": {
+    "active_count": 7
+  }
+}

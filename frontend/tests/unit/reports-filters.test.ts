@@ -1,0 +1,660 @@
+// The filters of a report (plan 20, PRD FR-19.1, FR-19.2, FR-19.10): what the boxes hold becomes the
+// filters the backend reads, with every key sent and nothing for a box the report does not take;
+// the address of a report starts the boxes; a ledger cannot run without its party. The screen sends
+// text and ids and works out nothing.
+
+import { describe, expect, it } from 'vitest';
+import type { ReportFilters } from '../../src/bindings/ReportFilters';
+import type { ReportRunInput } from '../../src/bindings/ReportRunInput';
+import { groupCatalog, helpIdOf, partyBoxOf } from '../../src/features/reports/catalog';
+import {
+  EMPTY_FILTERS,
+  canRun,
+  filtersToWire,
+  gardenViewMessageId,
+  isUnfiltered,
+  withOrderLanguage,
+  periodMessageId,
+  tripViewMessageId,
+  voucherMessageId,
+  TRIP_VIEW_CHOICES,
+  VOUCHER_CHOICES,
+  type ReportFilterState,
+} from '../../src/features/reports/filters';
+import {
+  emptyNameMessageId,
+  monthMessageId,
+  monthText,
+  percentText,
+} from '../../src/features/reports/cells';
+import { parseReportSearch, stateFromSearch } from '../../src/features/reports/search';
+import {
+  CATALOG,
+  R11_TODAY_REQUEST,
+  R13_AKRAM_REQUEST,
+  R18_AS_OF_REQUEST,
+  R2_ALL_REQUEST,
+  R2_AKRAM_REQUEST,
+  R2_UNKNOWN_SELLER_REQUEST,
+  R20_AS_OF_10_10_REQUEST,
+  R20_DUES_REQUEST,
+  R24_PAYABLES_REQUEST,
+  R28_BY_DAY_REQUEST,
+  R28_BY_MONTH_REQUEST,
+  R3_CASH_REQUEST,
+  R4_CREDIT_REQUEST,
+  R7_ITEMS_REQUEST,
+} from '../helpers/reports-real';
+import { R36_PARTNER_REQUEST } from '../helpers/reports-gardens-real';
+import { R1_BIKRI_1_REQUEST } from '../helpers/reports-sales-real';
+import {
+  PRINT_R33_PARTNER_EN_REQUEST,
+  R10_STOCK_REQUEST,
+  R15_ALL_REQUEST,
+  R15_PAYMENTS_REQUEST,
+  R23_DAY_REQUEST,
+  R25_DAY_REQUEST,
+  R33_ITEM_REQUEST,
+  R33_MONTH_REQUEST,
+  R33_PARTNER_REQUEST,
+  R33_TRIP_REQUEST,
+  R34_DAY_REQUEST,
+} from '../helpers/reports-stock-real';
+import {
+  PRINT_R31_BAY_EN_REQUEST,
+  R12_DAY_REQUEST,
+  R29_ALIF_REQUEST,
+  R29_DAY_REQUEST,
+  R31_BAY_REQUEST,
+  R31_PARTNER_REQUIRED_REQUEST,
+  R32_E2E_30B_REQUEST,
+} from '../helpers/reports-business-real';
+
+const PARTY = { id: 21, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '0020' };
+const entryOf = (id: string) => {
+  const found = CATALOG.find((entry) => entry.id === id);
+  if (found === undefined) throw new Error(`no ${id}`);
+  return found;
+};
+
+describe('filtersToWire', () => {
+  it('sends every key, empty, for nothing filled', () => {
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R11').filters)).toEqual({
+      shortcut: null,
+      from: '',
+      to: '',
+      as_of: '',
+      party: null,
+      seller_id: null,
+      zamindar_id: null,
+      item_id: null,
+      city_id: null,
+      adda_id: null,
+      partner_id: null,
+      garden_id: null,
+      bikri_id: null,
+      detail: false,
+    });
+  });
+
+  it('is exactly the request the backend wrote for the day book of today', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, period: 'today' };
+    expect(filtersToWire(state, entryOf('R11').filters)).toEqual(wireOf(R11_TODAY_REQUEST));
+  });
+
+  it('is exactly the request the backend wrote for the as-of day of R18', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, asOf: '09-10-2026' };
+    expect(filtersToWire(state, entryOf('R18').filters)).toEqual(wireOf(R18_AS_OF_REQUEST));
+  });
+
+  it('is exactly the request the backend wrote for the ledger of اکرم', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, party: PARTY };
+    expect(filtersToWire(state, entryOf('R13').filters)).toEqual(wireOf(R13_AKRAM_REQUEST));
+  });
+
+  it('a shortcut wins over the dates, and the dates are not sent with it', () => {
+    const state: ReportFilterState = {
+      ...EMPTY_FILTERS,
+      period: 'this_week',
+      from: '01-10-2026',
+      to: '10-10-2026',
+    };
+    const wire = filtersToWire(state, entryOf('R11').filters);
+    expect(wire.shortcut).toBe('this_week');
+    expect(wire.from).toBe('');
+    expect(wire.to).toBe('');
+  });
+
+  it('trims what was typed, and sends dates as typed', () => {
+    const wire = filtersToWire(
+      { ...EMPTY_FILTERS, from: ' 10 ', to: ' 10-9 ' },
+      entryOf('R11').filters,
+    );
+    expect(wire.from).toBe('10');
+    expect(wire.to).toBe('10-9');
+  });
+
+  it('leaves out a box the report does not take, even when a left-over value is in it', () => {
+    const left: ReportFilterState = {
+      ...EMPTY_FILTERS,
+      period: 'today',
+      from: '01-10-2026',
+      asOf: '09-10-2026',
+      party: PARTY,
+      seller: PARTY,
+      item: PARTY,
+      detail: true,
+    };
+    // R19 takes nothing: the backend would refuse every one of these (ERR_OUT_OF_RANGE).
+    expect(filtersToWire(left, entryOf('R19').filters)).toEqual({
+      shortcut: null,
+      from: '',
+      to: '',
+      as_of: '',
+      party: null,
+      seller_id: null,
+      zamindar_id: null,
+      item_id: null,
+      city_id: null,
+      adda_id: null,
+      partner_id: null,
+      garden_id: null,
+      bikri_id: null,
+      detail: false,
+    });
+    // R18 takes only the day.
+    const r18 = filtersToWire(left, entryOf('R18').filters);
+    expect(r18.as_of).toBe('09-10-2026');
+    expect(r18.party).toBeNull();
+    expect(r18.shortcut).toBeNull();
+    expect(r18.detail).toBe(false);
+  });
+
+  it('the detail tick is sent only for a report that has it (R14)', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, party: PARTY, detail: true };
+    expect(filtersToWire(state, entryOf('R14').filters).detail).toBe(true);
+    expect(filtersToWire(state, entryOf('R13').filters).detail).toBe(false);
+  });
+
+  it('the city of R16 is sent as its id', () => {
+    const state: ReportFilterState = {
+      ...EMPTY_FILTERS,
+      city: { id: 7, name_ur: 'کوٹ رادھا کشن', name_en: 'Kot Radha Kishan', code: undefined },
+    };
+    expect(filtersToWire(state, entryOf('R16').filters).city_id).toBe(7);
+  });
+});
+
+describe('canRun and isUnfiltered', () => {
+  it('a ledger and a statement need a party; the others run at once', () => {
+    expect(canRun(EMPTY_FILTERS, entryOf('R13'))).toBe(false);
+    expect(canRun(EMPTY_FILTERS, entryOf('R14'))).toBe(false);
+    expect(canRun({ ...EMPTY_FILTERS, party: PARTY }, entryOf('R13'))).toBe(true);
+    expect(canRun(EMPTY_FILTERS, entryOf('R18'))).toBe(true);
+  });
+
+  it('the partner statement needs a partner, not an account (R31); the expense report runs at once', () => {
+    expect(canRun(EMPTY_FILTERS, entryOf('R31'))).toBe(false);
+    // An account in the party box does not stand in for the partner.
+    expect(canRun({ ...EMPTY_FILTERS, party: PARTY }, entryOf('R31'))).toBe(false);
+    expect(canRun({ ...EMPTY_FILTERS, partner: 2 }, entryOf('R31'))).toBe(true);
+    expect(canRun(EMPTY_FILTERS, entryOf('R29'))).toBe(true);
+    expect(canRun(EMPTY_FILTERS, entryOf('R12'))).toBe(true);
+    expect(canRun(EMPTY_FILTERS, entryOf('R32'))).toBe(true);
+  });
+
+  it('a partner counts as a filter to clear for the reports that take the box', () => {
+    const r29 = entryOf('R29').filters;
+    expect(isUnfiltered(EMPTY_FILTERS, r29)).toBe(true);
+    expect(isUnfiltered({ ...EMPTY_FILTERS, partner: 1 }, r29)).toBe(false);
+    // R12 has no partner box: a left-over partner is not a filter there.
+    expect(isUnfiltered({ ...EMPTY_FILTERS, partner: 1 }, entryOf('R12').filters)).toBe(true);
+  });
+
+  it('only a box the report takes counts as a filter to clear', () => {
+    const r18 = entryOf('R18').filters;
+    expect(isUnfiltered(EMPTY_FILTERS, r18)).toBe(true);
+    expect(isUnfiltered({ ...EMPTY_FILTERS, asOf: '09-10-2026' }, r18)).toBe(false);
+    expect(isUnfiltered({ ...EMPTY_FILTERS, party: PARTY }, r18)).toBe(true);
+  });
+});
+
+describe('the address of a report', () => {
+  it('reads the period, the dates, the day and the party; anything else is left out', () => {
+    expect(
+      parseReportSearch({
+        period: 'last_month',
+        from: ' 01-10-2026 ',
+        to: '',
+        as_of: '09-10-2026',
+        party: '21',
+        junk: 'x',
+      }),
+    ).toEqual({ period: 'last_month', from: '01-10-2026', as_of: '09-10-2026', party: 21 });
+    expect(parseReportSearch({ period: 'someday', party: '-3' })).toEqual({});
+    expect(parseReportSearch({ party: 'abc' })).toEqual({});
+  });
+
+  it('starts the boxes: a party comes without names, to be filled by the answer', () => {
+    const state = stateFromSearch({ party: 21, from: '01-10-2026' });
+    expect(state.party).toEqual({ id: 21, name_ur: '', name_en: '', code: undefined });
+    expect(state.from).toBe('01-10-2026');
+    expect(state.period).toBe('custom');
+  });
+});
+
+describe('the catalogue', () => {
+  it('groups in the order of PRD 19.2 and leaves out the groups with no report', () => {
+    expect(groupCatalog(CATALOG).map((group) => group.group)).toEqual([
+      'sales',
+      'accounts',
+      'collections',
+      'business',
+    ]);
+    const accounts = CATALOG.filter((entry) => entry.group === 'accounts');
+    expect(groupCatalog(accounts).map((group) => group.group)).toEqual(['accounts']);
+    const business = {
+      ...entryOf('R13'),
+      group: 'business' as const,
+      group_title_id: 'report-group-business',
+    };
+    const sales = {
+      ...entryOf('R11'),
+      group: 'sales' as const,
+      group_title_id: 'report-group-sales',
+    };
+    expect(groupCatalog([business, ...accounts, sales]).map((group) => group.group)).toEqual([
+      'sales',
+      'accounts',
+      'business',
+    ]);
+  });
+
+  it('puts R2 before R11 inside a group (a number, not a text, order)', () => {
+    const nine = { ...entryOf('R11'), id: 'R2' as never };
+    const ids = groupCatalog([entryOf('R18'), entryOf('R11'), nine])[0]?.entries.map(
+      (entry) => entry.id,
+    );
+    expect(ids).toEqual(['R2', 'R11', 'R18']);
+  });
+
+  it('the help message of a report is the title message with -help', () => {
+    expect(helpIdOf(entryOf('R18'))).toBe('report-r18-help');
+  });
+
+  it('every period choice has a message', () => {
+    expect(periodMessageId('this_week')).toBe('report-period-this-week');
+    expect(periodMessageId('custom')).toBe('report-period-custom');
+  });
+});
+
+/**
+ * The filters of a request the backend wrote, as the screen sends them. The backend's requests
+ * carry the two newer keys (`group_by`, `status`) as null when unset; the screen leaves them out,
+ * which the backend reads the same way (its default), so null and missing are one thing here.
+ */
+function wireOf(request: ReportRunInput): ReportFilters {
+  const {
+    group_by: groupBy,
+    status,
+    partner_id: partnerId,
+    voucher_type: voucherType,
+    trip_view: tripView,
+    garden_id: gardenId,
+    garden_view: gardenView,
+    bikri_id: bikriId,
+    ...rest
+  } = request.filters;
+  return {
+    ...rest,
+    // The round 8 requests carry the two newest keys as null where the report does not take them;
+    // the screen leaves them out (the backend reads a missing key as every kind, and as the trip).
+    ...(voucherType === undefined || (voucherType as unknown) === null
+      ? {}
+      : { voucher_type: voucherType }),
+    ...(tripView === undefined || (tripView as unknown) === null ? {} : { trip_view: tripView }),
+    // The requests the backend wrote before round 7 have no `partner_id`; it reads a missing key as
+    // none, and the screen always sends it (null when the report takes no partner box).
+    partner_id: partnerId ?? null,
+    // `garden_id` is left out of the backend's requests when unset; the screen always sends it.
+    garden_id: gardenId ?? null,
+    bikri_id: bikriId ?? null,
+    ...(gardenView === undefined ? {} : { garden_view: gardenView }),
+    ...(groupBy === undefined || (groupBy as unknown) === null ? {} : { group_by: groupBy }),
+    ...(status === undefined || (status as unknown) === null ? {} : { status }),
+  };
+}
+
+const ITEM = { id: 1, name_ur: 'کیلا', name_en: 'Banana', code: undefined };
+const SELLER_999 = { id: 999999, name_ur: 'x', name_en: 'x', code: undefined };
+
+describe('the requests the screen builds are the ones the backend wrote (round 4 reports)', () => {
+  const cases: [string, ReportRunInput, Partial<ReportFilterState>][] = [
+    ['R2 for اکرم (the buyer)', R2_AKRAM_REQUEST, { party: PARTY }],
+    ['R2 with nothing filled', R2_ALL_REQUEST, {}],
+    ['R2 for a seller that does not exist', R2_UNKNOWN_SELLER_REQUEST, { seller: SELLER_999 }],
+    ['R3 for today', R3_CASH_REQUEST, { period: 'today' }],
+    ['R4 for one item', R4_CREDIT_REQUEST, { item: ITEM }],
+    ['R7 for one day, typed', R7_ITEMS_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R20 with nothing filled', R20_DUES_REQUEST, {}],
+    ['R20 as of one day', R20_AS_OF_10_10_REQUEST, { asOf: '10-10-2026' }],
+    ['R24 with nothing filled', R24_PAYABLES_REQUEST, {}],
+    ['R28 by day', R28_BY_DAY_REQUEST, { groupBy: 'day' }],
+    ['R28 by month (the default sends no group_by)', R28_BY_MONTH_REQUEST, {}],
+  ];
+  it.each(cases)('%s', (_name, request, part) => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, ...part };
+    expect(filtersToWire(state, entryOf(request.id).filters)).toEqual(wireOf(request));
+  });
+
+  it('never sends a partner to a report that has no partner box', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, partner: 2 };
+    expect(filtersToWire(state, entryOf('R11').filters).partner_id).toBeNull();
+    expect(filtersToWire(state, entryOf('R31').filters).partner_id).toBe(2);
+  });
+
+  it('never sends the two newer keys to a report that does not take them', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, paid: 'due', groupBy: 'day' };
+    const wire = filtersToWire(state, entryOf('R11').filters);
+    expect(wire).not.toHaveProperty('status');
+    expect(wire).not.toHaveProperty('group_by');
+  });
+});
+
+describe('the requests the screen builds are the ones the backend wrote (round 7 reports)', () => {
+  const cases: [string, ReportRunInput, Partial<ReportFilterState>][] = [
+    ['R12 for one day', R12_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R29 for one partner', R29_ALIF_REQUEST, { partner: 1 }],
+    ['R29 for one day, all partners', R29_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R31 for partner ب', R31_BAY_REQUEST, { partner: 2 }],
+    // The screen never asks without a partner (canRun), but the wire for it is the same.
+    ['R31 with no partner', R31_PARTNER_REQUIRED_REQUEST, {}],
+    ['R32 as of one day', R32_E2E_30B_REQUEST, { asOf: '16-10-2026' }],
+  ];
+  it.each(cases)('%s', (_name, request, part) => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, ...part };
+    expect(filtersToWire(state, entryOf(request.id).filters)).toEqual(wireOf(request));
+  });
+
+  it('is exactly the print request of the statement of partner ب', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, partner: 2 };
+    // The backend leaves `garden_id` out when it is unset; the screen always sends it, as null.
+    expect(filtersToWire(state, entryOf('R31').filters)).toEqual({
+      ...PRINT_R31_BAY_EN_REQUEST.filters,
+      garden_id: null,
+      bikri_id: null,
+    });
+  });
+
+  it('the address can carry a partner: a whole number above 0, nothing else', () => {
+    expect(parseReportSearch({ partner: '2' })).toEqual({ partner: 2 });
+    expect(parseReportSearch({ partner: 0 })).toEqual({});
+    expect(parseReportSearch({ partner: 'x' })).toEqual({});
+    expect(stateFromSearch({ partner: 2 }).partner).toBe(2);
+    expect(stateFromSearch({}).partner).toBeNull();
+  });
+
+  it('R32 takes its person from the people who can borrow, the others from the accounts', () => {
+    expect(partyBoxOf('R32')).toBe('lent');
+    expect(partyBoxOf('R13')).toBe('any');
+  });
+});
+
+describe('the requests the screen builds are the ones the backend wrote (round 8 reports)', () => {
+  const cases: [string, ReportRunInput, Partial<ReportFilterState>][] = [
+    ['R10 with nothing filled', R10_STOCK_REQUEST, {}],
+    ['R15 with no kind picked', R15_ALL_REQUEST, {}],
+    ['R15 for the payments', R15_PAYMENTS_REQUEST, { voucherType: 'payment' }],
+    ['R23 for one day', R23_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R25 for one day', R25_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R33 by trip', R33_TRIP_REQUEST, { tripView: 'trip' }],
+    ['R33 by partner', R33_PARTNER_REQUEST, { tripView: 'partner' }],
+    ['R33 by item', R33_ITEM_REQUEST, { tripView: 'item' }],
+    ['R33 by month', R33_MONTH_REQUEST, { tripView: 'month' }],
+    ['R34 for one day', R34_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+  ];
+  it.each(cases)('%s', (_name, request, part) => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, ...part };
+    expect(filtersToWire(state, entryOf(request.id).filters)).toEqual(wireOf(request));
+  });
+
+  it('is exactly the print request of the trip result by partner', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, tripView: 'partner' };
+    expect(filtersToWire(state, entryOf('R33').filters)).toEqual(
+      wireOf(PRINT_R33_PARTNER_EN_REQUEST as unknown as ReportRunInput),
+    );
+  });
+
+  it('sends a kind of voucher only when one is picked, and only to the report that takes it', () => {
+    const picked: ReportFilterState = { ...EMPTY_FILTERS, voucherType: 'shop_expense' };
+    expect(filtersToWire(picked, entryOf('R15').filters).voucher_type).toBe('shop_expense');
+    expect(filtersToWire(picked, entryOf('R25').filters)).not.toHaveProperty('voucher_type');
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R15').filters)).not.toHaveProperty('voucher_type');
+  });
+
+  it('sends the trip layout to R33 always, the default included, and to no other report', () => {
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R33').filters).trip_view).toBe('trip');
+    expect(
+      filtersToWire({ ...EMPTY_FILTERS, tripView: 'day' }, entryOf('R33').filters).trip_view,
+    ).toBe('day');
+    expect(
+      filtersToWire({ ...EMPTY_FILTERS, tripView: 'day' }, entryOf('R34').filters),
+    ).not.toHaveProperty('trip_view');
+  });
+
+  it('a kind of voucher is a filter to clear for R15; the trip layout is not one for R33', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, voucherType: 'payment' }, entryOf('R15').filters)).toBe(
+      false,
+    );
+    expect(isUnfiltered({ ...EMPTY_FILTERS, tripView: 'partner' }, entryOf('R33').filters)).toBe(
+      true,
+    );
+  });
+
+  it('every voucher kind and every layout has a message', () => {
+    expect(voucherMessageId('shop_expense')).toBe('report-doc-shop-expense');
+    expect(VOUCHER_CHOICES).toHaveLength(14);
+    expect(tripViewMessageId('partner')).toBe('report-filter-trip-by-partner');
+    expect(TRIP_VIEW_CHOICES).toEqual(['trip', 'item', 'day', 'month', 'partner']);
+  });
+});
+
+describe('a چکتا buyer in the party filter (PRD FR-13.5, FR-13.7)', () => {
+  const khata = { id: 9, name_ur: 'شاہد', name_en: 'Shahid', code: '0030' };
+
+  it('goes with his account as the person key, as the contract says', () => {
+    const state: ReportFilterState = {
+      ...EMPTY_FILTERS,
+      party: khata,
+      partyPersonKey: 'شاہد|03000000000',
+    };
+    expect(filtersToWire(state, entryOf('R35').filters).party).toEqual({
+      account_id: 9,
+      person_key: 'شاہد|03000000000',
+    });
+  });
+
+  it('is an account only when no person key was set, and nothing without a party', () => {
+    expect(filtersToWire({ ...EMPTY_FILTERS, party: khata }, entryOf('R35').filters).party).toEqual(
+      {
+        account_id: 9,
+        person_key: null,
+      },
+    );
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R35').filters).party).toBeNull();
+  });
+
+  it('is not sent to a report that takes no party', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, party: khata, partyPersonKey: 'k' };
+    expect(filtersToWire(state, entryOf('R30').filters).party).toBeNull();
+  });
+
+  it('comes from the address with his party, and from nowhere else', () => {
+    const search = parseReportSearch({ party: 9, person_key: 'شاہد|03000000000' });
+    expect(search).toMatchObject({ party: 9, person_key: 'شاہد|03000000000' });
+    expect(stateFromSearch(search).partyPersonKey).toBe('شاہد|03000000000');
+    // A key with no party asks for nothing, and an empty key is dropped.
+    expect(stateFromSearch(parseReportSearch({ person_key: 'x' })).partyPersonKey).toBeNull();
+    expect(parseReportSearch({ party: 9, person_key: '' }).person_key).toBeUndefined();
+  });
+});
+
+describe('which accounts the party box of a report takes', () => {
+  it.each([
+    ['R2', 'buyer'],
+    ['R3', 'buyer'],
+    ['R4', 'buyer'],
+    ['R7', 'buyer'],
+    ['R20', 'buyer'],
+    ['R21', 'buyer'],
+    ['R22', 'buyer'],
+    ['R24', 'seller'],
+    ['R11', 'any'],
+    ['R13', 'any'],
+    ['R14', 'any'],
+    ['R28', 'any'],
+  ] as const)('%s takes %s', (id, box) => {
+    expect(partyBoxOf(id)).toBe(box);
+  });
+});
+
+describe('the words and figures of a cell that is not money (round 4)', () => {
+  it('writes a share in hundredths of a percent with two decimals and the sign', () => {
+    expect(percentText(7210)).toBe('72.10%');
+    expect(percentText(2790)).toBe('27.90%');
+    expect(percentText(10000)).toBe('100.00%');
+    expect(percentText(5)).toBe('0.05%');
+    expect(percentText(0)).toBe('0.00%');
+  });
+
+  it('names a month from its number and puts the year after it', () => {
+    expect(monthMessageId(1)).toBe('report-month-1');
+    expect(monthMessageId(12)).toBe('report-month-12');
+    expect(monthText((id) => `<${id}>`, 2026, 10)).toBe('<report-month-10> 2026');
+  });
+
+  it('has words for a name left empty on purpose, in the reports that leave one', () => {
+    expect(emptyNameMessageId('R21', 'group')).toBe('report-group-no-city');
+    expect(emptyNameMessageId('R22', 'group')).toBe('report-group-no-collector');
+    // A buyer under a heading has an empty first cell by design, and says nothing.
+    expect(emptyNameMessageId('R21', 'normal')).toBeNull();
+    expect(emptyNameMessageId('R20', 'normal')).toBeNull();
+  });
+});
+
+describe('the garden slice: the boxes of R36 become the request the backend wrote', () => {
+  const entry = entryOf('R36');
+
+  it('by garden is the default and is not sent; a garden picked is sent by its id', () => {
+    const wire = filtersToWire(EMPTY_FILTERS, entry.filters);
+    expect(wire.garden_id).toBeNull();
+    expect(wire.garden_view).toBeUndefined();
+    expect(filtersToWire({ ...EMPTY_FILTERS, garden: 1 }, entry.filters).garden_id).toBe(1);
+  });
+
+  it('by partner is the request the backend wrote', () => {
+    const wire = filtersToWire({ ...EMPTY_FILTERS, gardenView: 'partner' }, entry.filters);
+    // The backend leaves `garden_id` and `partner_id` out of its request when unset; the screen sends them.
+    expect(wire).toEqual({
+      ...R36_PARTNER_REQUEST.filters,
+      garden_id: null,
+      bikri_id: null,
+      partner_id: null,
+    });
+  });
+
+  it('no other report takes a garden or a layout, so none is sent to it', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, garden: 1, gardenView: 'partner' };
+    for (const id of ['R11', 'R18', 'R33', 'R34'] as const) {
+      const wire = filtersToWire(state, entryOf(id).filters);
+      expect(wire.garden_id).toBeNull();
+      expect(wire.garden_view).toBeUndefined();
+    }
+  });
+
+  it('a garden is a filter, so “clear the filters” is offered; the layout is not', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, garden: 1 }, entry.filters)).toBe(false);
+    expect(isUnfiltered({ ...EMPTY_FILTERS, gardenView: 'partner' }, entry.filters)).toBe(true);
+  });
+
+  it('the layout has a message for each choice', () => {
+    expect(gardenViewMessageId('garden')).toBe('report-filter-garden-by-garden');
+    expect(gardenViewMessageId('partner')).toBe('report-filter-garden-by-partner');
+  });
+});
+
+describe("plan 71 L9: one lot, set only by the assistant's button (PRD FR-7.77)", () => {
+  const LOT = { id: 41, name_ur: 'احسان، آم-2', name_en: 'Ehsan, Mango-2', code: undefined };
+  const lotReports = ['R2', 'R3', 'R4', 'R5', 'R6', 'R10', 'R27'] as const;
+
+  it('the reports that take a lot send its id; the others send none', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, lot: LOT };
+    for (const id of lotReports) {
+      expect(entryOf(id).filters, id).toContain('lot');
+      expect(filtersToWire(state, entryOf(id).filters).lot_id, id).toBe(41);
+    }
+    for (const id of ['R11', 'R18', 'R33'] as const) {
+      expect(filtersToWire(state, entryOf(id).filters), id).not.toHaveProperty('lot_id');
+    }
+    // No lot, nothing sent: the backend reads a missing key as every lot.
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R2').filters)).not.toHaveProperty('lot_id');
+  });
+
+  it('a lot is a filter, so “clear the filters” is offered', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, lot: LOT }, entryOf('R2').filters)).toBe(false);
+    expect(isUnfiltered(EMPTY_FILTERS, entryOf('R2').filters)).toBe(true);
+  });
+});
+
+describe('plan 71 L7: the order language of the day sheet (R35)', () => {
+  it('is added for R35 only, with the app language, and no other report is sent it', () => {
+    const wire = filtersToWire(EMPTY_FILTERS, entryOf('R35').filters);
+    expect(withOrderLanguage(wire, 'R35', 'en')).toEqual({ ...wire, order_language: 'en' });
+    expect(withOrderLanguage(wire, 'R35', 'ur')).toMatchObject({ order_language: 'ur' });
+    for (const id of ['R2', 'R6', 'R13', 'R34'] as const) {
+      expect(withOrderLanguage(wire, id, 'en'), id).not.toHaveProperty('order_language');
+    }
+  });
+});
+
+describe('round 12: the بکری of the sale book report (R1) becomes the request the backend wrote', () => {
+  const entry = entryOf('R1');
+
+  it('cannot run without a بکری, and runs once one is picked', () => {
+    expect(canRun(EMPTY_FILTERS, entry)).toBe(false);
+    expect(canRun({ ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } }, entry)).toBe(true);
+    // A report that does not take the box is not held back by it.
+    expect(canRun(EMPTY_FILTERS, entryOf('R5'))).toBe(true);
+  });
+
+  it('sends the id of the بکری picked, and is exactly the request the backend wrote', () => {
+    const wire = filtersToWire({ ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } }, entry.filters);
+    expect(wire.bikri_id).toBe(1);
+    expect(wire).toEqual({
+      ...R1_BIKRI_1_REQUEST.filters,
+      garden_id: null,
+      partner_id: null,
+    });
+  });
+
+  it('sends none to a report that takes no بکری, even if one is left in the boxes', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } };
+    // R4 is a sales register like R5, but only R5 takes the بکری (plan 68), so R4 sends none.
+    for (const id of ['R4', 'R11', 'R36'] as const) {
+      expect(filtersToWire(state, entryOf(id).filters).bikri_id).toBeNull();
+    }
+  });
+
+  it('sends the بکری to R5, which takes it so that the sale book can print ادھاری تفصیل for one بکری (plan 68)', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } };
+    expect(entryOf('R5').filters).toContain('bikri');
+    expect(filtersToWire(state, entryOf('R5').filters).bikri_id).toBe(1);
+  });
+
+  it('a بکری is a filter, so “clear the filters” is offered', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } }, entry.filters)).toBe(
+      false,
+    );
+    expect(isUnfiltered(EMPTY_FILTERS, entry.filters)).toBe(true);
+  });
+});

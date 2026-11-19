@@ -25,6 +25,7 @@ tauri-build.workspace = true
 mandi-services.workspace = true
 mandi-reports.workspace = true
 mandi-backup.workspace = true
+mandi-assistant.workspace = true
 tauri.workspace = true
 tauri-plugin-single-instance.workspace = true
 tauri-plugin-updater.workspace = true
@@ -43,6 +44,9 @@ tracing-appender.workspace = true
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.39.1"
 windows-core = "0.62.2"
+# The printer list of the Printing settings (src/webview2/print.rs, plan 14). Already in the tree
+# through webview2-com; only the printing feature is added.
+windows = { version = "0.62.2", features = ["Win32_Graphics_Printing"] }
 
 [dev-dependencies]
 tauri = { workspace = true, features = ["test"] }

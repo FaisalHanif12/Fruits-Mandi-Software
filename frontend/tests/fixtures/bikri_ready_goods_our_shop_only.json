@@ -1,0 +1,64 @@
+{
+  "rows": [
+    {
+      "kind": "trip",
+      "id": 1,
+      "number": 1,
+      "sell_date": "2026-10-10",
+      "entry_date": "2026-10-10",
+      "item": {
+        "id": 1,
+        "code": "0040",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 80,
+      "qty_left": 55,
+      "weight_grams": null,
+      "trip": {
+        "id": 1,
+        "number": 1,
+        "code": "0070",
+        "name_ur": "0070 10-10-2026",
+        "name_en": "0070 10-10-2026"
+      },
+      "garden": null
+    },
+    {
+      "kind": "trip",
+      "id": 2,
+      "number": 2,
+      "sell_date": "2026-10-10",
+      "entry_date": "2026-10-10",
+      "item": {
+        "id": 2,
+        "code": "0041",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 40,
+      "qty_left": 40,
+      "weight_grams": null,
+      "trip": {
+        "id": 1,
+        "number": 1,
+        "code": "0070",
+        "name_ur": "0070 10-10-2026",
+        "name_en": "0070 10-10-2026"
+      },
+      "garden": null
+    }
+  ]
+}

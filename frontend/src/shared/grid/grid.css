@@ -50,26 +50,57 @@
   font-size: var(--text-1);
 }
 
-/* Numbers, codes and dates: Inter, equal-width digits, written left to right and set against
-   the physical right edge in both languages (NFR-USE-19, F17). */
+/* Numbers, codes and dates: Inter, equal-width digits, written left to right and CENTRED in the
+   column, in both languages (plan 39 R1, NFR-USE-19 v1.6, F17). The heading and the total of the
+   column are centred the same way, so a figure stands under the middle of its heading. */
 .entry-grid .cell-num,
 .entry-grid .cell-num input {
   direction: ltr;
-  text-align: end;
+  text-align: center;
   font-family: var(--font-latin);
   font-variant-numeric: tabular-nums;
   font-size: var(--text-latin-1);
 }
 
-/* The heading of a number column: the same physical right edge as its figures, in both
-   languages, so a heading stands over its column (NFR-USE-19, F17). */
-.entry-grid .header-num .ag-header-cell-label {
-  direction: ltr;
-  justify-content: flex-end;
+/* A small column (a tick, a chip, a choice, an icon): the content and the heading in the middle
+   (plan 39 R3). */
+.entry-grid .cell-center {
+  text-align: center;
 }
 
-.entry-grid .header-num .ag-header-cell-text {
-  text-align: end;
+/* The cell of a status chip (plan 75, item 4) keeps less room at its edges, so a chip with an icon and a
+   word such as "Cancelled" fits the status column without being cut. */
+.entry-grid .cell-chip {
+  padding-inline: var(--space-1);
+}
+
+/* The heading of a number column and of a small column: centred over its figures, in both
+   languages (plan 39 R1, R3). */
+.entry-grid .header-num .ag-header-cell-label,
+.entry-grid .header-center .ag-header-cell-label {
+  justify-content: center;
+  overflow: visible;
+}
+
+.entry-grid .header-num .ag-header-cell-label {
+  direction: ltr;
+}
+
+.entry-grid .header-num .ag-header-cell-text,
+.entry-grid .header-center .ag-header-cell-text {
+  text-align: center;
+
+  /* The ink of a Nastaliq letter can lean past the width of its line box. The heading of a column
+     of figures is set left to right, so the first letter of an Urdu word, the one on the right, was
+     cut off ("کمیشن" read "میشن", plan 36). It may now reach into the padding of its cell. */
+  overflow: visible;
+}
+
+/* A Nastaliq letter leans above its line box: the top stroke of the first letter of "کمیشن" was cut
+   by the edge of a one-line heading (plan 36). Urdu headings get a little room above and below, more
+   above where the stroke leans, and a heading with it grows its row by the same. */
+:lang(ur) .entry-grid .ag-header-cell-text {
+  padding-block: var(--space-2) var(--space-1);
 }
 
 /* The total row under the last row: sunken ground, the emphasis a total has (F19). */
@@ -100,22 +131,60 @@
   background-color: var(--color-warn-soft);
 }
 
-/* The rate hint, for example the last rate. Never saved (PRD FR-7.53). It is words with a
-   number in them, so it reads in the direction of the language, not like a number cell. */
+/* A cell the user changed in a posting open for edit (plan 16): a soft ground and a corner mark on
+   the start side. The corner is a shape, so colour is never the only signal; the words are in the
+   tooltip and in the list "What you changed" (NFR-USE-12). */
+.entry-grid .cell-changed {
+  background-color: var(--color-primary-soft);
+}
+
+.entry-grid .cell-changed::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: var(--spacing-3);
+  block-size: var(--spacing-3);
+  background-color: var(--color-primary);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* The corner follows the direction of the cell itself: a number cell is left to right in both
+   languages (its start is the left), a text cell in Urdu is right to left. */
+.entry-grid .cell-changed:dir(rtl)::after {
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+/* A cell that an earlier edit changed (plan 44, PRD FR-7.71): a corner mark on the end side, a
+   different shape from the corner of a cell changed now, so the two never look alike. The words
+   ("Before 600, 31-10-2026 4:35 pm, Owner") are in the tooltip and in the entry's edit history
+   (NFR-USE-12). */
+.entry-grid .cell-marked::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: var(--spacing-3);
+  block-size: var(--spacing-3);
+  background-color: var(--color-ink-muted);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+/* The corner follows the direction of the cell itself, as the corner of a changed cell does. */
+.entry-grid .cell-marked:dir(rtl)::before {
+  clip-path: polygon(0 0, 0 100%, 100% 0);
+}
+
+/* The rate hint, for example "Last 900". Never saved (PRD FR-7.53). It is words with a number in
+   them, in smaller grey italic type, and it reads in the direction of the language, not like a
+   figure, so it is never taken for a typed rate (D8 Bug 1). */
 .entry-grid .cell-num.cell-hint {
   direction: inherit;
   text-align: start;
   font-family: var(--font-text);
   font-size: var(--text-1);
+  font-style: italic;
   color: var(--color-ink-placeholder);
-}
-
-/* A hint that is a number (the last rate) stays on the physical right edge like the figures. */
-.entry-grid .cell-num.cell-hint.cell-hint-number {
-  direction: ltr;
-  text-align: end;
-  font-family: var(--font-latin);
-  font-size: var(--text-latin-1);
 }
 
 /* A choice cell (ادھاری / نقدی) changes with Space or a click. */
@@ -123,9 +192,20 @@
   cursor: pointer;
 }
 
-/* A grid that must fit a 1024 px window (the بکری grids): the columns sit closer. */
+/* A grid that must fit a 1024 px window (the بکری grids): the columns sit closer. In a short window
+   its rows are a little tighter too, so the lots and the first sale lines are on screen together
+   (plan 38, sale book). */
 .entry-grid.entry-grid-fit.ag-theme-quartz {
   --ag-cell-horizontal-padding: var(--space-2);
+
+  @variant short {
+    --ag-row-height: var(--control-h-compact);
+  }
+}
+
+/* A grid of lines that keeps the room of four rows, its heading and its total row (the journal). */
+.entry-grid.entry-grid-min4.ag-theme-quartz {
+  --ag-auto-height-min-body-height: calc(var(--control-h) * 4);
 }
 
 /* The row with focus, and the focused cell: always clearly visible (NFR-USE-22). */
@@ -163,8 +243,214 @@
   line-height: var(--leading-text);
 }
 
+/* A grid in 'fill' mode takes the height its parent gives it and draws only the rows in view. Without
+   this the grid is only as tall as its heading, so a sale book of more than 30 lines showed an empty
+   strip (D8 plan 61, NFR-SCL-3: 1,000 sale lines). */
+.entry-grid.entry-grid-fill {
+  block-size: 100%;
+}
+
 /* A list fills the height its parent gives it, with room for a few rows at least. */
 .entry-grid.list-grid-fill {
   block-size: 100%;
-  min-block-size: calc(var(--control-h) * 5);
+  min-block-size: calc(var(--list-row-h) * 6);
+}
+
+/* The rows of a read-only list are a little tighter than the cells of an entry grid, so a page of
+   25 rows and its buttons fit the window (plan 38 G2). The heading keeps its height: an Urdu
+   heading needs the room above its letters. */
+.entry-grid.list-grid.ag-theme-quartz {
+  --ag-row-height: var(--list-row-h);
+
+  /* A read-only list (plan 75, item 8): a lighter heading than the sunken ground of an entry grid, so the
+     figures lead and the total row is the one band that is darker; and a row under the pointer is tinted,
+     because a click on it opens the row. Entry grids keep their own, with no hover (they are typed in). */
+  --ag-header-background-color: var(--color-surface-readonly);
+  --ag-row-hover-color: var(--color-row-current);
+}
+
+/* A zero amount in a money column: the quiet ink, never a different place or size (plan 75, item 8). */
+.entry-grid.list-grid .cell-zero {
+  color: var(--color-ink-muted);
+}
+
+/* A row that heads a group (a head above its controls in the list of head balances) reads stronger
+   and sits on the sunken ground, with a word or a code as well, so style is never the only signal. */
+.entry-grid .row-group .ag-cell {
+  background-color: var(--color-surface-sunken);
+  font-weight: var(--weight-strong);
+}
+
+/* The heading row of a month in a register (plan 38 R4): across the whole row, stronger, on the
+   sunken ground. The month and its count come first, then the subtotals with their column names, so
+   style is never the only signal. */
+.entry-grid .month-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  padding-inline: var(--space-3);
+  block-size: 100%;
+  align-content: center;
+  background-color: var(--color-surface-sunken);
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+  line-height: var(--leading-text);
+}
+
+.entry-grid .month-heading-title {
+  font-weight: var(--weight-strong);
+  color: var(--color-ink);
+}
+
+/* The heading of a group of rows (a day of the past sales, plan 72): a thin rule above it sets the group
+   a little apart from the rows of the group before. */
+.entry-grid .month-heading-group {
+  border-block-start: var(--border-w) solid var(--color-border);
+}
+
+/* A group with no rows (a day with no بکری): one quiet line on the page ground, so the days that hold
+   sales stand out. Its words are still there, so nothing is told by shade alone. */
+.entry-grid .month-heading-quiet {
+  background-color: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+
+.entry-grid .month-heading-quiet .month-heading-title {
+  font-weight: var(--font-weight-normal);
+  color: var(--color-ink-muted);
+}
+
+.entry-grid .month-heading-count,
+.entry-grid .month-heading-label {
+  color: var(--color-ink-muted);
+}
+
+.entry-grid .month-heading-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A long text in a read-only list wraps, in the script of the app, with room for Nastaliq lines. */
+.entry-grid .cell-wrap {
+  white-space: normal;
+  line-height: var(--leading-text);
+  padding-block: var(--space-2);
+}
+
+/* A figure with a short word after it (a balance's side, بنام or جمع): the figure stands in the
+   middle of the column, under the middle of its heading, and the word hangs after it in the room on
+   its other side (plan 39 R1, NFR-USE-19). Three columns: room, figure, word. The cell is left to
+   right, so the word is on the physical right in both languages. */
+.entry-grid .cell-with-unit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline;
+
+  /* The gap, not a margin: the word has its own direction (a Urdu word is right to left) and a
+     margin on its start side would be on the wrong side of it. */
+  column-gap: var(--space-2);
+  inline-size: 100%;
+}
+
+.entry-grid .cell-with-unit > :first-child {
+  grid-column: 2;
+}
+
+/* A figure that reads as a loss (a trip that lost money). The word after it and the minus sign
+   say the same, so the colour is never the only signal (NFR-USE-12). */
+.entry-grid .cell-tone-due {
+  color: var(--color-due);
+}
+
+.entry-grid .cell-unit {
+  grid-column: 3;
+  justify-self: start;
+  white-space: nowrap;
+  text-align: start;
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+}
+
+/* A list that has a column of long words (the goods behind a ledger line) has rows that grow with
+   them. The other cells of such a row keep their words in the middle of it, top to bottom, whatever
+   the height of the row (plan 39 R7). The cell holds one `cell-fill` element, which centres its one
+   inner element; the inner element fills the width, so the figures stay centred and the words
+   stay at the start edge. */
+.entry-grid .cell-fill {
+  display: flex;
+  align-items: center;
+  block-size: 100%;
+}
+
+.entry-grid .cell-fill > * {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* A text of figures only has the font and line of a figure (plan 39 R7). */
+.entry-grid .cell-latin {
+  font-family: var(--font-latin);
+  line-height: var(--leading-latin);
+}
+
+.entry-grid .cell-fill > .cell-with-unit {
+  align-self: center;
+}
+
+/* A cell whose height follows its words (the long column) stands in the middle of a row that is
+   taller than it, because a neighbour has more lines (plan 39 R7). */
+.entry-grid .ag-cell.ag-cell-auto-height {
+  display: flex;
+  align-items: center;
+}
+
+.entry-grid .ag-cell.ag-cell-auto-height > .ag-cell-wrapper {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* Inside a wrapping cell a number run has no line height of its own, so a line with figures in it is
+   as tall as a line of words only and every row of the list has one height (plan 39 R7). */
+.entry-grid .cell-wrap .number-run {
+  line-height: var(--leading-chip);
+}
+
+/*
+ * The list of a picker cell hangs below its cell, over whatever is there: the numbers strip that
+ * sticks to the bottom of the screen (z-index 10) must not cover its rows or its "add" button
+ * (plan 32, R8). The popups are drawn on the page, so the rule is not inside the grid's class.
+ */
+.ag-popup-child {
+  z-index: 20;
+}
+
+/* While the Index form of a picker's "add" button is open, no cell popup shows beside it. */
+body[data-index-form] .ag-popup {
+  visibility: hidden;
+}
+
+/* The remove button of a row (plan 43): a small trash button in the full ink (older eyes must find it,
+   Umar's lead 31-10-2026), a click target of 32 px (NFR-USE-23), red when it is pointed at. Its focus ring
+   is the one of the whole app (globals.css, NFR-USE-22). */
+.entry-grid .cell-remove {
+  padding-inline: 0;
+}
+
+.entry-grid .row-remove-button {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--radius-2);
+  color: var(--color-ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.entry-grid .row-remove-button:hover {
+  color: var(--color-due);
+  background: var(--color-surface-sunken);
 }

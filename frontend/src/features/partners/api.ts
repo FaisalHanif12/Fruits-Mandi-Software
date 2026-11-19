@@ -2,21 +2,47 @@
 // Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
 // Every command except the two lists takes one object named `input`.
 
+import type { PartnerCodeChangeInput } from '../../bindings/PartnerCodeChangeInput';
+import type { PartnerCodeResetInput } from '../../bindings/PartnerCodeResetInput';
+import type { PartnerCodeSetInput } from '../../bindings/PartnerCodeSetInput';
+import type { PartnerCodeStatus } from '../../bindings/PartnerCodeStatus';
 import { callCommand } from '../../shared/api';
+import type { PartnerStatementDay } from '../../bindings/PartnerStatementDay';
+import type { PartnerStatementMonth } from '../../bindings/PartnerStatementMonth';
+import type { PartnerVentureCard } from '../../bindings/PartnerVentureCard';
+import type { PartnersStatementDayInput } from '../../bindings/PartnersStatementDayInput';
+import type { PartnersStatementMonthInput } from '../../bindings/PartnersStatementMonthInput';
+import type { PartnersStatementMonthPrintInput } from '../../bindings/PartnersStatementMonthPrintInput';
+import type { PrintOutcome } from '../../bindings/PrintOutcome';
+import type { PrintTo } from '../../bindings/PrintTo';
+import type { TablePrintData } from '../../bindings/TablePrintData';
+import type { PartnersList } from '../../bindings/PartnersList';
+import type { PartnersOpenVenturesInput } from '../../bindings/PartnersOpenVenturesInput';
 import type {
+  CapitalHistory,
+  CapitalHistoryInput,
+  CapitalInput,
   PartnerCreateInput,
   PartnerDetail,
   PartnerOverviewRow,
   PartnerRow,
+  PartnerStatement,
   PartnerUpdateInput,
   PartnersSetSharesInput,
+  PartnersStatementInput,
   ShareInput,
   SharesCheck,
 } from './types';
+import type { VoucherSaved } from '../vouchers';
 
-/** Every partner, active ones first. `share_bps` is the share on today's date. */
-export function partnersList(): Promise<PartnerRow[]> {
-  return callCommand<PartnerRow[]>('partners_list');
+/**
+ * Every partner, active ones first. `share_bps` is the share on today's date. The list is open
+ * without the partner code; while the section is locked it holds the names only (plan 44, PRD
+ * FR-17.11), so the pickers of the expense, fruit and capital screens keep working.
+ */
+export async function partnersList(): Promise<PartnerRow[]> {
+  const list = await callCommand<PartnersList>('partners_list');
+  return list.partners;
 }
 
 /** One partner with his share history, oldest first. */
@@ -50,4 +76,100 @@ export function partnersCheckShares(shares: readonly ShareInput[]): Promise<Shar
 /** One row per active partner for the overview page (PRD 17.3). */
 export function partnersOverview(): Promise<PartnerOverviewRow[]> {
   return callCommand<PartnerOverviewRow[]>('partners_overview');
+}
+
+/** A partner puts money into the shop: cash comes in, his capital grows (PRD 17.4, E2E-35). */
+export function saveCapitalIn(input: CapitalInput): Promise<VoucherSaved> {
+  return callCommand<VoucherSaved>('vouchers_save_capital_in', { input });
+}
+
+/** A partner takes capital back: cash goes out, his capital goes down (PRD 17.4, FR-17.8). */
+export function saveCapitalOut(input: CapitalInput): Promise<VoucherSaved> {
+  return callCommand<VoucherSaved>('vouchers_save_capital_out', { input });
+}
+
+/** One partner's capital history, oldest first, page by page, with his balance (PRD 17.4). */
+export function capitalHistory(input: CapitalHistoryInput): Promise<CapitalHistory> {
+  return callCommand<CapitalHistory>('capital_history', { input });
+}
+
+/**
+ * One partner's statement, page by page: a dated line for every amount that reaches him, with the
+ * running کل رقم, and the totals over the whole range (PRD FR-17.9, FR-17.10, FR-19.11).
+ */
+export function partnersStatement(input: PartnersStatementInput): Promise<PartnerStatement> {
+  return callCommand<PartnerStatement>('partners_statement', { input });
+}
+
+/** Whether a partner code is set, whether the section is open now, and the wait after wrong tries. */
+export function partnersCodeStatus(): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_status');
+}
+
+/** Makes the partner code the first time. It needs the Owner's password (PRD FR-17.11). */
+export function partnersCodeSet(input: PartnerCodeSetInput): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_set', { input });
+}
+
+/** Changes the code. It asks for the old code or the Owner's password. */
+export function partnersCodeChange(input: PartnerCodeChangeInput): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_change', { input });
+}
+
+/** Opens the section with the code. Wrong tries are counted and waited out by the backend. */
+export function partnersCodeUnlock(code: string): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_unlock', { input: { code } });
+}
+
+/** Closes the section again. */
+export function partnersCodeLock(): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_lock');
+}
+
+/** A forgotten code: the Owner's password or the recovery code makes a new one. */
+export function partnersCodeReset(input: PartnerCodeResetInput): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_reset', { input });
+}
+
+/**
+ * The open gardens and trips one partner is in, with his % and his money in each (PRD 17.3, FR-12.29,
+ * plan 76 point 11). Asked when the compact line of the overview is opened, not with the overview.
+ * Behind the partner code.
+ */
+export function partnersOpenVentures(partnerId: number): Promise<PartnerVentureCard[]> {
+  const input: PartnersOpenVenturesInput = { partner_id: partnerId };
+  return callCommand<PartnerVentureCard[]>('partners_open_ventures', { input });
+}
+
+/**
+ * One month of a partner's statement: his opening کل رقم, a row for each day with a movement, the month's
+ * totals and his کل رقم at its end (PRD FR-17.12). Behind the partner code. Read only.
+ */
+export function partnersStatementMonth(
+  input: PartnersStatementMonthInput,
+): Promise<PartnerStatementMonth> {
+  return callCommand<PartnerStatementMonth>('partners_statement_month', { input });
+}
+
+/** Every movement of one day of a partner's statement, with its source and reason (PRD FR-17.12). */
+export function partnersStatementDay(
+  input: PartnersStatementDayInput,
+): Promise<PartnerStatementDay> {
+  return callCommand<PartnerStatementDay>('partners_statement_day', { input });
+}
+
+/** One month of a partner's statement in the print language: every day with its figures (PRD FR-17.12). */
+export function partnersStatementMonthPrintData(
+  input: PartnersStatementMonthPrintInput,
+): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('partners_statement_month_print_data', { input });
+}
+
+/** Prints the month statement, or saves it as a PDF: the same partner, month, language and paper as the preview. */
+export function partnersStatementMonthPrint(input: {
+  statement: PartnersStatementMonthPrintInput;
+  to: PrintTo;
+  copies: string | null;
+}): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('partners_statement_month_print', { input });
 }

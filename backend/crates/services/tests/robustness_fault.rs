@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use common::*;
 use mandi_services::core::accounts::{AccountInput, AccountType, OpeningLineInput, OpeningsInput};
 use mandi_services::core::error::ErrorCode;
-use mandi_services::core::vouchers::{AdvanceInput, AdvancesInput, VoucherMode};
+use mandi_services::core::vouchers::{AdvanceInput, AdvancesInput};
 use mandi_services::db::audit::{AuditKey, MemoryKeyStore};
 use mandi_services::db::clock::ManualClock;
 use mandi_services::db::disk::DiskProbe;
@@ -92,9 +92,9 @@ fn buyer_input(n: u64) -> AccountInput {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -111,13 +111,11 @@ fn seller_input(ur: &str, en: &str) -> AccountInput {
 
 fn advance(seller: i64, amount: u64) -> AdvanceInput {
     AdvanceInput {
+        confirm_cash_below_zero: true,
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: amount.to_string(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
     }
@@ -195,13 +193,13 @@ fn child_process_for_the_kill_tests() {
     let rahim = env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "030110001"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0010"))
         .unwrap()
         .unwrap();
     let karim = env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "030110002"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0011"))
         .unwrap()
         .unwrap();
     let mut n = 0_u64;
@@ -1053,10 +1051,12 @@ fn damaged_files_never_crash_the_program_and_a_file_that_fails_its_check_stops_s
                 let _ = accounts::list(
                     &ctx,
                     &mandi_services::core::accounts::AccountsListInput {
+                        sort: None,
                         filter: mandi_services::core::accounts::AccountFilter {
-                            account_type: None,
+                            kind: mandi_services::core::accounts::AccountListKind::All,
                             text: String::new(),
                             include_inactive: true,
+                            has_opening: None,
                         },
                         offset: 0,
                         limit: 0,
@@ -1165,10 +1165,13 @@ fn a_long_run_of_many_operations_shows_no_slowdown_and_no_memory_growth() {
                         &env.ctx,
                         &owner,
                         &mandi_services::core::accounts::SearchAccountsInput {
+                            include_dead: None,
                             scope: mandi_services::core::accounts::AccountScope::Any,
                             control_id: None,
                             text: text.into(),
                             limit: 20,
+                            offset: 0,
+                            with_chukta: None,
                         },
                     )
                     .unwrap();

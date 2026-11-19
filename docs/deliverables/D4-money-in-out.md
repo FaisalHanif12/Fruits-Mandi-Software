@@ -1,8 +1,10 @@
 # D4. Money in and out: changes to sales, vouchers, expenses and the full day
 
-Version 1.4, 15-10-2026 (PRD v1.5: opening credit payable, cash warning, return-by date, per-lot commission on edit, opening rules; PRD v1.4: one خرچہ screen and one voucher screen; v1.3: own goods and partner capital; v1.2: partner money returns, ادھار رقم, cash lent to buyers, seller advance returns). Deliverable 4 of 5. Read `README.md` in this folder first.
+Version 1.6, 22-10-2026 (PRD v1.7: migration 0006 also adds `accounts.tag`; PRD v1.6: plan 16b becomes market trips, plan 17 has one cash account, no cash count, statement lines and lists page by page; PRD v1.5: opening credit payable, cash warning, return-by date, per-lot commission on edit, opening rules; PRD v1.4: one خرچہ screen and one voucher screen; v1.3: own goods and partner capital; v1.2: partner money returns, ادھار رقم, cash lent to buyers, seller advance returns). Deliverable 4 of 5. Read `README.md` in this folder first.
 Depends on: D3 done. Plan files: `15-vouchers`, `16-later-sales-edit-cancel`, `16b-own-goods`, `17-cash-book-and-day-close`.
-Build order step: CLAUDE.md MVP step 6. At the end, the whole PRD worked day (Section 4) runs, and every golden test passes except E2E-11, E2E-18, E2E-33 and E2E-36 (analytics, backup and reports), which come in D5.
+Build order step: CLAUDE.md MVP step 6. At the end, the whole PRD worked day (Section 4) runs, and every golden test passes except E2E-11, E2E-18, E2E-33, E2E-36 and E2E-43 (analytics, backup and reports), which come in D5, and E2E-40, E2E-40b and E2E-42 (gardens and fruit), which come in D4R.
+
+**PRD v1.6 (Umar, 19-10-2026).** Plans 15 and 16 are built under v1.5 (last code commit `c24f327`). Their sections below stay as built: do not change those screens in this run. Their v1.6 changes (one cash account on the voucher screen, lists page by page) are built in `D4R-refresh-v1.6.md`, which runs right after this run and before D5. Plans 16b and 17 are not finished, so they are built to v1.6 here, as written below. `changes-v1.6.md` says what to keep and what to change in the uncommitted work of plan 16b.
 
 ## Decisions
 
@@ -16,18 +18,20 @@ The munshi runs the whole of 10-10-26 from PRD Section 4, by keyboard:
 2. وصولی: اکرم pays 10,000. His card showed 12,880 and his open bill from بکری 1; after saving, he owes 2,880.
 3. ادائیگی: رحیم's card shows 4,316 payable, and that his 15,000 advance was already adjusted when بکری 1 was saved (D3). "پورا بقایا" fills 4,316. His balance becomes 0.
 4. On the one خرچہ screen: electricity 3,000 as دکان خرچہ, with the split 1,200 / 900 / 900 shown before save; then الف's 2,000 as ذاتی خرچہ, charged to him only (E2E-39).
-5. The cash book shows 58,484. The munshi counts the cash and types it in the cash count box.
+5. The cash book shows 58,484.
 6. Day close shows the day summary: 2 بکری, خام بکری 41,400, the commission, the partner shares, cash 58,484, trial balance difference 0, nothing left in باقی مال. He confirms.
 
 He can also record the money that moves outside sales. When الف brings back the 2,000 he took, the munshi enters it on the same خرچہ screen as type ذاتی خرچہ واپسی, and الف's خالص goes from −1,004 back to 996 (E2E-29). Staff member اسلم borrows 5,000 under ادھار رقم with a reason and a return date; he returns 3,000 in cash and 2,000 from his salary (E2E-30). A seller can bring back part of his advance (E2E-31), and a buyer can borrow cash, which then sits in his اگراہی like any bill (E2E-32).
 
-The firm can also trade its own goods. On خریداری he records 20 پیٹی مالٹا bought at 500 with 400 freight (cost 10,400). In a بکری he sells 15 of them to اکرم at 600, and the app shows the commission, the cost of the goods sold (7,800) and the profit (660) at once (E2E-34). When the last 5 spoil, the write-off shows the loss (E2E-34b). When partner ب puts 50,000 into the shop, he records it as سرمایہ جمع (E2E-35).
+Partners can also send a person to a bigger market (مارکیٹ سفر). He opens a trip with the partners in it, each one's %, and whether each one pays from the shop's cash or his own pocket. On the trip he records 20 پیٹی مالٹا bought at 500 with 400 freight (cost 10,400). Each partner's part paid from the shop's cash comes off his total at once; a part from his own pocket changes nothing. In a بکری he sells 15 of them to اکرم at 600. The commission (1,200) is the firm's, split by the firm's shares as always. The rest of the seller's money (8,460) goes to the trip's partners by their %, the same day, and the app shows the cost of the goods sold (7,800) and the result (660) (E2E-34). When the last 5 spoil, the write-off posts nothing and the trip shows its loss (E2E-34b). When partner ب puts 50,000 into the shop, he records it as سرمایہ جمع (E2E-35).
 
 He can also correct a mistake: edit اکرم's rate from 600 to 610, and every number follows; edit it back, and every number returns exactly. He can cancel بکری 2, and everything it did is reversed. If a lot is not fully sold, its remaining goods sit in باقی مال until a later sale on another day.
 
 ## 2. Plan files
 
 ### 15-vouchers: وصولی, ادائیگی and the rest of پیشگی
+
+Built (v1.5). D4R plan 17b removes the bank and cheque modes and adds paging. Do not change it in this run.
 
 **Requirements:** PRD 15.1 to 15.4 (FR-15.1 to FR-15.7, FR-15.9 to FR-15.12), FR-7.67 and FR-7.68 (one voucher screen, the پیشگی note), 13 (FR-13.7, FR-13.8), R26 data (the advances query), FR-7.38 (oldest open bill and payables on the party card), FR-7.58, FR-7.59, FR-7.61, FR-5.4 (voucher numbers in global search); NFR-SPD-9, NFR-SPD-21; Architecture 11; the money-calculations agent. E2E-6, E2E-7, E2E-21, E2E-27, E2E-28 (the ادائیگی part), E2E-31, E2E-32.
 
@@ -51,6 +55,8 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 **Done when:** E2E-6, E2E-7, E2E-21, E2E-27, E2E-28, E2E-31 and E2E-32 pass.
 
 ### 16-later-sales-edit-cancel: باقی مال, later sales, edit, cancel and undo
+
+Built (v1.5). Plan 16b adds trip rows to باقی مال; D4R adds paging (17b) and fruit taken from a lot (17d). Do not change it otherwise in this run.
 
 **Requirements:** PRD 12.8 (FR-12.14 to FR-12.16), 12.9 (FR-12.17 to FR-12.22), FR-12.11, FR-7.47, FR-6.3, FR-6.6; NFR-SEC-5; Architecture 12; the money-calculations agent. E2E-13, E2E-13b, E2E-14, E2E-15, E2E-16, E2E-16b.
 
@@ -76,50 +82,68 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 
 **Done when:** the six golden tests above pass with the PRD numbers.
 
-### 16b-own-goods: the firm's own goods (خریداری)
+### 16b-own-goods: market trips and their goods (اپنا مال)
 
-**Requirements:** PRD 12.10 (FR-12.24 to FR-12.28), C21, FR-12.16 (write-off of own goods), 4.2, FR-7.59 (purchase credits are payable), 9.1 (اپنا مال tile data), FR-10.4 (seeded accounts 01040001, 030119998, 04010006, 05020001), E50 to E52, A45 to A47; Architecture 6 and 15.6 (`purchases`, `bikri_lots.purchase_id`, `bikri_sales.cost_paisa`); the money agent Section 5.4. E2E-34, E2E-34b.
+**v1.6 rework.** This plan was half built under v1.3 when the run paused, and none of it is committed. Migration 0006 is not released. So it is finished to v1.6: the goods belong to the trip's partners, not to the firm. There is no stock account, no trading sales account and no cost of goods sold account. Keep what still fits (the purchase form and list, the C21 code, the own lot path in `calc_posting`, the stock rows, the CHECK edit hook) and change the rest. `changes-v1.6.md` Section 3 lists both.
+
+**Requirements:** PRD 12.10 (FR-12.24 to FR-12.33), FR-12.29 and FR-12.30 (shares and money sources, shared with gardens), C21, C23, C24, C25, C22 (the 0604 account), FR-12.16, FR-5.2 and FR-5.3 (مارکیٹ سفر in the main bar; خریداری leaves the بکری side menu), FR-7.67 (one trip screen), 9.1 (data of the مارکیٹ سفر tile), FR-10.4 (030119998, the 0604 accounts), FR-10.9 (no opening on 030119998 or a 0604 account), FR-6.7, FR-19.11, E50 to E52, E61 to E63, E65, E66, A53 to A57, A62 to A64; Architecture 6, 9 and 15.5 to 15.8; the money agent Sections 5.4 and 5.5. E2E-34, E2E-34b, E2E-41.
 
 `backend` calls the money-calculations agent before writing and again to review.
 
 **backend builds:**
 
-- A migration with the `purchases` table, the new columns and the four seeded accounts (a new numbered file if 0001 is released by then).
-- خریداری save, cancel (only while nothing is sold or written off) and list: stock بنام total cost; supplier جمع the value on ادھار, else cash or bank; costs paid at once (FR-12.24). Numbers in their own series (خ-1).
-- Own stock per purchase in باقی مال, marked اپنا مال (FR-12.25).
-- In `bikri_preview` and `bikri_save`: a lot with seller اپنا مال picks a purchase with stock left; its seller credit posts to تجارتی فروخت; cost of goods sold (C21) posts in the same entry; both are split (FR-12.26). An own lot must be fully sold in its بکری (no balance, no later sale); unsold goods stay in the purchase. Edit and cancel give back exactly the stored cost and qty. نقد, the advance tick and freight are 0 on own lots; اپنا مال is offered only in the lot seller field.
-- Write-off of own stock posts its cost as a loss (FR-12.28).
-- Profit or loss per purchase (FR-12.27), as data for R33 in D5.
-- `golden_day.rs`: E2E-34 and E2E-34b.
+- **Migration 0006** (unreleased, finished in place). It holds every v1.6 and v1.7 database change, so no later plan needs a migration:
+  - keeps what plan 17 needs: posting and voucher types `capital_in`, `capital_out`, `khata_out`, `khata_in`; control 0305 with party type `separate`;
+  - drops what v1.6 removed: controls 0104 and 0502, accounts 01040001, 04010006 and 05020001, posting type `own_write_off`;
+  - adds posting types `purchase`, `trip_cost`, `garden_payment`, `venture_receipt`, `garden_close`, `fruit_taken` and source types `purchase`, `venture`, `fruit`; party type `garden` and control 0306 (for D4R); control 0604 باغ، سفر اور پھل under head 06, one 0604 account for every partner (`partners.venture_account_id`), and the partner save of plan 11 makes one for each new partner;
+  - adds the tables `ventures`, `venture_partners`, `venture_entries`, `venture_entry_parts`, `fruit_takes` and `purchases` exactly as Architecture 15.5 and 15.6 (a purchase belongs to a trip; supplier as text; no supplier account, پختہ columns, payment type or bank); the columns `bikri_lots.purchase_id`, `bikri_lots.qty_taken` (0), `bikri_sales.cost_paisa`, `stock_moves.purchase_id`, stock move kind `taken`, `analytics_facts.purchase_id`, `venture_id` and `cost_paisa`; and `accounts.tag` (TEXT, null, PRD v1.7; D4R plan 17e builds its use);
+  - renames, with their search columns: 030119998 English "Own Goods (Trips)", 01010001 English "Cash";
+  - its test: a populated golden-day file migrates with every number and the journal chain unchanged; `integrity_check` and `foreign_key_check` pass; a new posting type and a new venture row insert.
+- **Ventures** (`domain/ventures`, shared with gardens in D4R): the partners in it total 100% (`ERR_SHARES_NOT_100`); shares are fixed after the first entry (`ERR_VENTURE_SHARES_LOCKED`); each entry carries each partner's source, filled from the venture and changeable on that entry. A payment is split with C23 into `venture_entry_parts`; each shop part posts his 0604 بنام, روکڑ جمع; a pocket part posts nothing; an entry with only pocket parts has no journal entry. The FR-6.7 cash check uses the shop parts. A partner in an open venture cannot be made inactive (A63).
+- **Trips** (12.10): create (shares first, then sources, then details, FR-12.29), list, get (purchases, costs, other-shop sales, stock, result); numbers سفر-1 and TRP-1. A trip closes by itself once it has a purchase and nothing is left, and opens again when a sale or write-off of it is reversed (FR-12.33).
+- **Purchases** (FR-12.24): on an open trip, dated on or after the trip; paid now = value + freight + labour + other cost, through ventures; numbers خ-1 and PUR-1; cancel by reversal only while nothing of it is sold or written off.
+- **Trip costs** (FR-12.31): amount and reason, through ventures; spread with C24 over the purchases with goods left (`ERR_TRIP_NO_STOCK` when none); cancel by the rule of FR-12.31.
+- **Own lot in بکری** (FR-12.26): as in the T1 contract, except the money. The commission and فون are firm income through the plan 11 hook, and the other lot charges are payables, as for any lot; the shared income of the lot is the commission only (1,200 in E2E-34, not 9,660). The seller credit (C8) posts in the same entry to each trip partner's 0604 جمع his part (C25). The cost (C21) is stored on each line and never posted. Edit and cancel give back exactly the stored qty and cost and reverse the partners' lines.
+- **Sale in another shop** (FR-12.32): date, shop as typed, purchase, qty, money; the qty and its C21 cost come off the purchase; روکڑ بنام, each trip partner's 0604 جمع his part (C25); posting type `venture_receipt`.
+- **Write-off** (FR-12.28): `purchases_write_off` and its undo, with a reason; no posting.
+- **Result** (FR-12.27): per purchase, per day and per trip, with each partner's %, money in (shop and pocket parts) and money back (C25 parts). It is the R33 data for D5. `trips_summary()` returns the tile data (open trips' نگ left and cost left).
+- `bikri_stock_list` includes trip purchases with goods left, marked اپنا مال with their trip.
+- Guard: 030119998 only in the lot seller field (`ERR_OWN_GOODS_ACCOUNT_RESTRICTED`); no opening on it or on a 0604 account (FR-10.9).
+- Lists of trips, purchases and their entries load page by page with totals over the whole filter (FR-19.11, B31).
+- Tests: `golden_day.rs` gains E2E-34, E2E-34b and E2E-41; property tests (C21; for a trip: Σ parts = payment, Σ shop parts = its روکڑ جمع, money credited = sales money, and once closed Σ over partners of (money credited − shop parts − pocket parts) = its result); refusals (shares not 100, shares locked, a purchase or cost on a closed trip, a purchase dated before its trip, selling more than the stock left, an own lot not fully sold); the migration test; sign-in refusal.
 
-**frontend builds:** the خریداری screen in the بکری side menu (form, list, stock and profit per purchase); اپنا مال in the lot seller picker with the purchase picker; own lots marked in باقی مال; the cost and profit lines in the lot summary, each with `CalcInfo`.
+**frontend builds:** مارکیٹ سفر in the main bar (item 6; D4R adds باغات as item 5 before it) and خریداری removed from the بکری side menu (7 items, FR-5.3). A trips list; a new trip form with the shares first, then each partner's source, then the details. One trip screen with a type list: خریداری, سفر خرچ, دوسری دکان میں فروخت (FR-7.67), showing each partner's part before save (shop part off his total, pocket part recorded only); the trip's purchases with stock, write-off and undo, and its result with each partner's part. In بکری: اپنا مال in the lot seller picker with a purchase picker of open trips; the lot shows the commission, each trip partner's part of the seller credit, the cost and the result, each with `CalcInfo`; نقد and the advance tick hidden; freight starts at 0 with a warning if typed. Trip rows in باقی مال. No mode, bank or cheque field anywhere.
 
-**Worked checks** (PRD 27.2):
+**Worked checks** (PRD 27.2; `worked_day.py` gives the same):
 
-- E2E-34: cost 10,000 + 400 = 10,400; cash 39,600. Sale of 15 at 600: value 9,000; seller comm 540; buyer comm 540; لاگا 120; اکرم pays 9,660; trading sales 8,460; cost 10,400 × 15 ÷ 20 = 7,800; profit 660; entry 17,460 = 17,460; split income 3,864 / 2,898 / 2,898, cost −3,120 / −2,340 / −2,340.
-- E2E-34b: the last 5 written off: loss 2,600, split −1,040 / −780 / −780; purchase profit or loss −1,940.
+- E2E-34: cost 10,400, paid from the shop 4,160 / 3,120 / 3,120; cash 39,600. Sale of 15 at 600: اکرم pays 9,660; entry 9,660 = 540 + 540 + 120 + 8,460; commission 1,200 → 480 / 360 / 360; the trip's 8,460 → 3,384 / 2,538 / 2,538; cost shown 7,800, result 660; totals −296 / −222 / −222; stock left 5, cost 2,600.
+- E2E-34b: the last 5 written off: nothing posts; result −1,940, parts −776 / −582 / −582; totals unchanged; Σ −740 + 65,000 = 64,260 = equity; trial balance 66,200.
+- E2E-41: الف 50% from the shop, ب 50% from his pocket. Purchase 96,000 → 48,000 / 48,000; truck 4,000 → 2,000 / 2,000; cash 0; cost 100,000. Sale of 80 at 1,400: ارشد pays 119,360; commission 14,080 → 5,632 / 4,224 / 4,224; the trip's 105,280 → 52,640 / 52,640; result 5,280; the trip closes; totals 8,272 / 56,864 / 4,224; trial balance 134,360.
 
-**Done when:** E2E-34 and E2E-34b pass, and the property test of Code Standards 9.3 for the cost of own goods passes.
+**Done when:** E2E-34, E2E-34b and E2E-41 pass, the property tests pass, and the migration test passes.
 
 ### 17-cash-book-and-day-close: روکڑ, expenses, جنرل and the full day
 
-**Requirements:** PRD 16 (16.1 to 16.5, FR-16.1 to FR-16.5, FR-16.8), FR-7.67, FR-7.68 (the partner-name note), 17.3 (taken, returned and خالص columns), C20, FR-7.44 (overdue loans and partner money), FR-7.62, FR-6.5, FR-21.1 (full day summary), 4.6 to 4.9; NFR-REL-8, NFR-URD-29; Architecture 6, 10 and 15.7; the money agent Section 8.2b; partner capital and the partner total (17.4, FR-17.7 to FR-17.9, C22); الگ کھاتہ (16.6, FR-16.6, FR-16.7, control 0305). E2E-8, E2E-9, E2E-10, E2E-12, E2E-20, E2E-24, E2E-29, E2E-30, E2E-30b, E2E-35.
+**v1.6:** one cash account (no mode, bank or cheque on any screen of this plan), no cash count (FR-16.1), the partner statement lines of FR-17.10, C22 with the 0604 account, lists page by page (FR-19.11), and E2E-38 is the خاندانی کھاتہ.
+
+**Requirements:** PRD 16 (16.1 to 16.5, FR-16.1 to FR-16.5, FR-16.8), FR-7.67, FR-7.68 (the partner-name note), 17.3 (taken, returned and خالص columns), C20, FR-7.44 (overdue loans and partner money), FR-7.62, FR-6.5, FR-21.1 (full day summary), 4.6 to 4.9; NFR-REL-8, NFR-URD-29; Architecture 6, 10 and 15.7; the money agent Section 8.2b; partner capital, the partner total and its statement lines (17.4, FR-17.7 to FR-17.10, C22); FR-19.11; الگ کھاتہ (16.6, FR-16.6, FR-16.7, control 0305). E2E-8, E2E-9, E2E-10, E2E-12, E2E-20, E2E-24, E2E-29, E2E-30, E2E-30b, E2E-35, E2E-37, E2E-38, E2E-39.
 
 **backend builds:**
 
-- روکڑ بک: opening cash, every cash in and out from all modules, closing cash, for a date range (16.1). Cash count box: shows the difference from the book; posts nothing (FR-16.1).
+- روکڑ بک: opening cash, every cash in and out from all modules, closing cash, for a date range (16.1). There is no cash count box (FR-16.1).
 - One خرچہ screen (16.2) with the types دکان خرچہ, ذاتی خرچہ and ذاتی خرچہ واپسی. A preview command returns, before save, each partner's share (دکان خرچہ) or the chosen partner's کل رقم now and after (ذاتی خرچہ, واپسی), using the same domain functions as the save (FR-16.8, B5). It writes nothing.
-- دکان خرچہ: expense head بنام, cash or bank جمع, split between partners by their shares on that date (16.2, FR-6.5). Most-used heads first, and "repeat last month's expenses" (FR-7.62).
-- ذاتی خرچہ and its واپسی, types on the same خرچہ screen (16.3): money taken (reason required, optional return-by date and taken-by name) posts drawings بنام, cash or bank جمع; money returned posts the opposite. Never split. The list of takes with returned and still open, worked out at read time (FR-16.2). The partner overview gains taken, returned and خالص (FR-16.3, C20).
-- ادھار رقم (16.5): one account per person under control 0103, made with `F4` (and linked to the staff record when he is staff). Lend: person بنام, cash or bank جمع. Return in cash or bank, or by salary deduction: salary head بنام, person جمع, split as a shop expense (FR-16.4). Open amounts oldest first at read time; overdue loans and partner takes in the attention list data (FR-16.5, FR-7.44). The R32 data query (D5 shows the report).
-- سرمایہ جمع and سرمایہ واپسی on one screen in the شراکت دار area (17.4): cash or bank and the partner's capital account; never split; a warning when more than his capital is taken back (FR-17.7, FR-17.8). The partner overview gains سرمایہ لگایا and کل رقم (C22). The partner statement data: every dated movement with the running کل رقم (FR-17.9); D5 prints it as R31.
+- دکان خرچہ: expense head بنام, روکڑ جمع, split between partners by their shares on that date (16.2, FR-6.5). Most-used heads first, and "repeat last month's expenses" (FR-7.62).
+- ذاتی خرچہ and its واپسی, types on the same خرچہ screen (16.3): money taken (reason required, optional return-by date and taken-by name) posts drawings بنام, روکڑ جمع; money returned posts the opposite. Never split. The list of takes with returned and still open, worked out at read time (FR-16.2). The partner overview gains taken, returned and خالص (FR-16.3, C20).
+- ادھار رقم (16.5): one account per person under control 0103, made with `F4` (and linked to the staff record when he is staff). Lend: person بنام, روکڑ جمع. Return in cash, or by salary deduction: salary head بنام, person جمع, split as a shop expense (FR-16.4). Open amounts oldest first at read time; overdue loans and partner takes in the attention list data (FR-16.5, FR-7.44). The R32 data query (D5 shows the report).
+- سرمایہ جمع and سرمایہ واپسی on one screen in the شراکت دار area (17.4): روکڑ and the partner's capital account; never split; a warning when more than his capital is taken back (FR-17.7, FR-17.8). The partner overview gains سرمایہ لگایا, the باغ، سفر اور پھل column and کل رقم (C22, with his 0604 account). The partner statement data: one line for every amount that reaches him, with date, heading, reason, amount and the running کل رقم, made from posted records (FR-17.9, FR-17.10): income and expense shares per posting, capital, money taken and returned, his trip lines from plan 16b, and note lines (month close, a trip's closing, a write-off of trip goods). Garden and fruit lines come in D4R. D5 prints it as R31.
 - الگ کھاتہ on one screen in the روکڑ area (16.6): paid out (minus) and received (plus), reason required, list with running signed balance; never split, never in any partner's total (FR-16.6). A الگ کھاتہ can be a lot's seller in بکری: its seller credit goes to the khata, seller-side defaults 0, buyer side as usual (FR-16.7).
-- v1.5 (Umar, 15-10-2026): a return-by date before the entry date is refused for ذاتی خرچہ and ادھار رقم; the same day is allowed (FR-16.9). Every save that would take روکڑ below 0 uses the FR-6.7 cash check (note, then confirm box): خرچہ, ادھار رقم, سرمایہ واپسی, الگ کھاتہ رقم دی, خریداری, a جنرل with a cash credit, and an edit, cancel or undo that takes cash back. A partner's drawings opening debit (FR-10.9) shows in his money-taken list and counts in خالص and کل رقم (C20, C22). اپنا مال refuses an opening (FR-10.9).
+- Every list of this plan (the خرچہ list, takes, loans, capital history, الگ کھاتہ entries, the statement, the روکڑ بک) loads page by page, with its totals from the backend over the whole filter (FR-19.11, B31).
+- v1.5 (Umar, 15-10-2026): a return-by date before the entry date is refused for ذاتی خرچہ and ادھار رقم; the same day is allowed (FR-16.9). Every save that would take روکڑ below 0 uses the FR-6.7 cash check (note, then confirm box): خرچہ, ادھار رقم, سرمایہ واپسی, الگ کھاتہ رقم دی, a جنرل with a cash credit, and an edit, cancel or undo that takes cash back. A partner's drawings opening debit (FR-10.9) shows in his money-taken list and counts in خالص and کل رقم (C20, C22).
 - جنرل: lines of account, بنام, جمع, narration (and person for پختہ lines); saves only when the totals match; lines on income or shop expense accounts are split (16.4).
 - The full day close summary of FR-21.1: بکری count, خام بکری, commission, partner shares, cash in hand, trial balance difference, lots with باقی مال.
 - `golden_day.rs`: Event 5 (with its reason) and the whole day, E2E-8, E2E-9, E2E-10, E2E-12, E2E-20, E2E-29, E2E-30, E2E-30b, E2E-35, E2E-37, E2E-38, and the preview numbers of E2E-39 (1,200 / 900 / 900; الف 996 → −1,004). `assist.rs`: the backend part of E2E-24.
 
-**frontend builds:** the روکڑ area with روکڑ بک and the cash count box, the one خرچہ screen (type list; split or partner total shown before save; the day's expenses or the partner's list below the form; the partner-name note of FR-7.68), ادھار رقم (one screen for lent and returned, with the person's list below the form), partner capital (one screen for invested and taken back), الگ کھاتہ (one screen, signed balance), and the جنرل grid (with the `entry-grid` skill), plus a link to the voucher screen (FR-15.10); the full day close summary. The Windows run of E2E-39.
+**frontend builds:** the روکڑ area with روکڑ بک (no cash count box), the one خرچہ screen (type list; split or partner total shown before save; the day's expenses or the partner's list below the form; the partner-name note of FR-7.68), ادھار رقم (one screen for lent and returned, with the person's list below the form), partner capital (one screen for invested and taken back), الگ کھاتہ (one screen, signed balance), and the جنرل grid (with the `entry-grid` skill), plus a link to the voucher screen (FR-15.10); the partner statement screen with its dated lines; the full day close summary. No mode, bank or cheque field anywhere (the salary deduction on ادھار رقم واپسی stays). The Windows run of E2E-39.
 
 **Worked checks** (PRD 4.9 and 27.2):
 
@@ -131,7 +155,7 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 - E2E-30: اسلم lent 5,000 (cash 53,484); returns 3,000 (open 2,000, cash 56,484); 2,000 from salary (open 0, cash 56,484, تنخواہ split −800 / −600 / −600).
 - E2E-35: ب invests 50,000 on 11-10-26: cash 108,484; ب capital 50,000 جمع; his profit share still 746; trial balance 135,048 = 135,048.
 - E2E-37: کل رقم الف −1,004, ب 50,746, ج 746; Σ 50,488 + 65,000 = 115,488 = equity; ب's record runs 1,184, 1,646, 746, 50,746.
-- E2E-38: باغ −10,000 (cash 40,000), −6,000 (cash 44,000), then the sale of 10 کیلا at 900 adds 9,000: +3,000; ارشد pays 9,620; shared income 620 → 248 / 186 / 186.
+- E2E-38: خاندانی کھاتہ (Family Khata) −10,000 (cash 40,000), −6,000 (cash 44,000), then the sale of 10 کیلا at 900 adds 9,000: +3,000; ارشد pays 9,620; shared income 620 → 248 / 186 / 186.
 - E2E-39: preview of بجلی 3,000 = 1,200 + 900 + 900 (C11, same as E2E-9); الف's کل رقم before his 2,000 = 2,196 − 1,200 = 996, after = 996 − 2,000 = −1,004 (same as E2E-37).
 
 **Done when:** the whole worked day passes in `golden_day.rs`, and the day close summary shows the PRD 4.9 values.
@@ -144,16 +168,16 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 2. The same screen as ادائیگی, with payable postings, the "more than due" warning and the پیشگی note.
 3. The باقی مال list and the later sale form.
 4. A saved بکری in edit mode, showing what changed, and the cancel dialog.
-5. The روکڑ بک with the cash count box; the one خرچہ screen (each type, with the split or the partner total before save); ادھار رقم on one screen; the جنرل grid.
+5. The روکڑ بک; the one خرچہ screen (each type, with the split or the partner total before save); ادھار رقم on one screen; the جنرل grid.
 6. The full day close summary.
 7. The receipt slip (A5 and 80 mm).
-8. The خریداری screen with stock and profit per purchase, and an own lot in بکری with its cost and profit lines.
-9. The partner capital screen.
+8. The مارکیٹ سفر section: the trips list, the new trip form (shares, then sources, then details), one trip with its purchases, costs, other-shop sales, stock and result; an own lot in بکری with each partner's part, the cost and the result.
+9. The partner capital screen and the partner statement with its dated lines.
 
 ## 4. Team flow for D4
 
 - Plan files run in order: 15, 16, 16b, 17 (README Section 4).
-- 16b after 16: own lots use the later sale, edit, cancel and write-off paths built there.
+- 16b after 16: own lots use the edit, cancel and write-off paths built there. 16b carries migration 0006 with every v1.6 and v1.7 database change, so plan 17 and D4R need no migration.
 - 15 (vouchers) before 16 (edit and cancel), because a cancel must turn matched receipts back into credit (FR-12.22), and the attack list mixes both.
 - 17 last: E2E-10 and E2E-24 need everything before it.
 - `backend` uses the money-calculations agent for all four.
@@ -165,7 +189,8 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 - Partner shares on every income and expense posting, never on payables, never on ذاتی خرچہ or its واپسی. A salary deduction of a loan is split like any shop expense.
 - Urdu labels of the new screens say exactly what the English says (NFR-URD-29).
 - Shared screens (FR-7.67): each type calls its own service and posting; the preview and the save use the same function; no second screen was built for a type.
-- Own goods: the seller credit of an own lot never reaches a seller account; cost of goods sold is in the same entry; Σ cost released per purchase never passes its total cost (C21).
+- Trips: the commission of an own lot is firm income split by the firm's shares; its seller credit goes only to the trip's partners by the trip's % (C25); a pocket part posts nothing; the cost (C21) is never posted; Σ cost released per purchase never passes its total cost.
+- One cash account: no new screen or command of this run has a mode, bank or cheque field, except the salary deduction on ادھار رقم واپسی.
 - Partner capital is never split and never counted as income.
 - Golden tests: every number in PRD 27.2 for E2E-1 to E2E-10, E2E-12 to E2E-16b, E2E-13b and E2E-19 to E2E-21, unchanged. (E2E-11 is analytics, checked in D5.)
 
@@ -176,12 +201,12 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 3. **Order of events.** Cancel a بکری that has a later sale; edit a posting after a receipt has matched its bill (the bill matching recalculates; nothing is lost); pay a seller twice.
 4. **Power cut** during an edit (the reversal and the new posting are saved together or not at all).
 5. **Speed.** Save any voucher under NFR-SPD-9; party card with 10 years of open bills under NFR-SPD-21; matching against a buyer with 10,000 open bills.
-6. **Bad inputs.** Amount 0, negative, decimal; cheque mode with no cheque number; a جنرل entry that does not balance; a ذاتی خرچہ with no partner or no reason; an ادھار رقم with no reason; a salary deduction larger than the open loan; an ادائیگی to a buyer with no reason.
+6. **Bad inputs.** Amount 0, negative, decimal; a جنرل entry that does not balance; a ذاتی خرچہ with no partner or no reason; an ادھار رقم with no reason; a salary deduction larger than the open loan; an ادائیگی to a buyer with no reason.
 7. **Type switching.** On the خرچہ and voucher screens, change the type many times in the middle of an entry, then save: the saved type, posting and partner split match the type shown at save; no field of the old type is saved.
-8. **Returns.** Random sequences of lends, takes and returns (cash, bank, salary): open amounts always equal the account balance; a return never makes an open amount negative.
-9. **Own goods.** Random purchases, sales (whole, part, several بکری), edits, cancels and write-offs: Σ cost released per purchase equals its total cost when nothing is left; own stock in باقی مال equals bought − sold − written off; profit or loss per purchase equals trading sales − cost released. Selling more than the stock left, or saving an own lot that is not fully sold, is refused. No voucher or جنرل can post to the اپنا مال account.
+8. **Returns.** Random sequences of lends, takes and returns (cash, salary): open amounts always equal the account balance; a return never makes an open amount negative.
+9. **Trips.** Random trips with random shares and sources; random purchases, trip costs, sales (whole, part, several بکری, another shop), edits, cancels and write-offs: Σ parts of each payment = the payment; Σ shop parts = its روکڑ جمع; Σ cost released per purchase equals its total cost when nothing is left; stock in باقی مال equals bought − sold − written off; once a trip closes, Σ over its partners of (money credited − shop parts − pocket parts) = its result; the trial balance difference is 0 after every step. Selling more than the stock left, saving an own lot that is not fully sold, changing shares after the first entry and a purchase on a closed trip are refused. No voucher or جنرل can post to the اپنا مال account.
 
-## 7. Acceptance (D4-A1 to D4-A31)
+## 7. Acceptance (D4-A1 to D4-A34)
 
 | ID | Item | Evidence expected |
 |---|---|---|
@@ -201,23 +226,27 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 | D4-A14 | E2E-8 and E2E-9 pass | golden_day output |
 | D4-A15 | E2E-20 passes; ذاتی خرچہ never split; an unbalanced جنرل entry cannot save | Test output |
 | D4-A16 | E2E-10 passes (85,048 on both sides) and E2E-12 passes (باقی مال empty) | golden_day output |
-| D4-A17 | The day close summary shows the PRD 4.9 values; the cash count box shows the difference and posts nothing | Test output; screenshot |
+| D4-A17 | The day close summary shows the PRD 4.9 values; the روکڑ بک has no cash count box (FR-16.1) | Test output; screenshot |
 | D4-A18 | NFR-SPD-9 and NFR-SPD-21 met at their runner thresholds; the full test suite, including every earlier test, passes on the final main; every D4 screen matches the design | `pnpm perf`; full test run; `windows-verify` report |
 | D4-A19 | E2E-28 (open payable 19,316 and the payment part), E2E-31 and E2E-32 (Σ buyer debit balances 24,564) pass | golden_day output |
 | D4-A20 | E2E-29 passes; the partner overview shows taken, returned and خالص | golden_day output; screenshot |
 | D4-A21 | E2E-30 and E2E-30b pass (an overdue loan shows in the attention list data) | golden_day output |
 | D4-A22 | The خرچہ, voucher and ادھار رقم screens work by keyboard in both languages, with the list below the form | Windows E2E names; screenshots |
-| D4-A23 | E2E-34 and E2E-34b pass; the cost of own goods property test passes | golden_day output; property test output |
-| D4-A24 | خریداری screen and own lots in بکری work by keyboard in both languages; own stock and profit per purchase shown | Windows E2E names; screenshots |
+| D4-A23 | E2E-34, E2E-34b and E2E-41 pass; the C21 property test and the trip property test pass | golden_day output; property test output |
+| D4-A24 | The مارکیٹ سفر section (trip, purchase, trip cost, other-shop sale, write-off) and own lots in بکری work by keyboard in both languages; stock and result per purchase and per trip shown, with each partner's part | Windows E2E names; screenshots |
 | D4-A25 | E2E-35 passes; partner capital is never split; taking back more than the balance warns | golden_day output; test output |
-| D4-A26 | E2E-37 passes; the partner total property test passes (Σ کل رقم + ابتدائی سرمایہ = equity); month close leaves کل رقم unchanged | golden_day output; property test output |
-| D4-A27 | E2E-38 passes; a الگ کھاتہ never reaches any partner's total or the partner split | golden_day output; test output |
+| D4-A26 | E2E-37 passes; the partner total property test passes (Σ کل رقم + ابتدائی سرمایہ = equity, with the 0604 accounts); month close leaves کل رقم unchanged | golden_day output; property test output |
+| D4-A27 | E2E-38 (خاندانی کھاتہ) passes; a الگ کھاتہ never reaches any partner's total or the partner split | golden_day output; test output |
 | D4-A28 | E2E-39 passes (preview numbers in golden_day, the screen run in the Windows suite); changing the type keeps the shared fields; the FR-7.68 notes show and never switch by themselves | golden_day output; Windows E2E names; screenshots |
 | D4-A29 | A seller's opening credit is payable (FR-7.59): کریم with an opening 10,160 جمع and an ادائیگی of 4,000 shows paid 4,000, still open 6,160, balance 6,160 جمع, and no پیشگی note. A جنرل credit of 1,000 on رحیم (advance 15,000 open) leaves the advance at 15,000 and shows 1,000 payable; Σ still open − Σ open advances = his balance (16.4, money agent 8.2a) | Test output |
 | D4-A30 | Every cash-out entry that takes روکڑ below 0 shows the note and, on save, the confirm box; Yes saves, No saves nothing, and the backend refuses it without the confirmation (FR-6.7). Example: روکڑ 20,000, پیشگی 25,000 cash shows −5,000; a return-by date before the entry date is refused and the same day saves (FR-16.9) | Test output |
 | D4-A31 | A per-lot seller commission of 500 sits on line 1 of 2; an edit removes line 1; line 2 now carries 500 with the stored method and value, and the lot's seller commission includes 500 once (FR-11.9). An opening on اپنا مال is refused. A drawings opening of 2,000 for الف, with nothing else posted, gives خالص −2,000 and کل رقم −2,000 (FR-10.9, C20, C22) | Test output |
+| D4-A32 | Migration 0006 keeps every number and the journal chain of a populated file; the accounts of v1.6 exist (a 0604 account for each partner, control 0306, 030119998 "Own Goods (Trips)", روکڑ "Cash") and 01040001, 04010006 and 05020001 do not; an opening on a 0604 account is refused (FR-10.9); `accounts.tag` exists and is null on every migrated account | Test output |
+| D4-A33 | The partner statement shows one dated line for each amount that reaches a partner, with heading, reason and the running کل رقم, and note lines for a month close, a trip's closing and a write-off of trip goods (FR-17.10). E2E-34: الف's lines run −4,160, +480, +3,384, ending at −296 | Test output; screenshot |
+| D4-A34 | No screen or command of plans 16b and 17 has a mode, bank or cheque field (only ادھار رقم واپسی keeps its salary deduction); their lists load page by page with totals over the whole filter (FR-19.11) | Test output; screenshot |
 
 ## 8. Not in D4
 
 - Dashboard, attention bell, reports (R2 onwards), analytics, month close, audit viewer: D5.
 - Cloud backup started by day close: D5.
+- Gardens, fruit taken, and the v1.6 changes to the screens built in plans 05 to 16 (one cash account, lists page by page): D4R.

@@ -1,0 +1,12 @@
+{
+  "source": {
+    "cloud": {
+      "bucket": "mandi-backup",
+      "endpoint": "https://<account>.r2.cloudflarestorage.com",
+      "key_id": "<access key id>",
+      "prefix": "mandi",
+      "region": "auto",
+      "secret": "<secret access key>"
+    }
+  }
+}

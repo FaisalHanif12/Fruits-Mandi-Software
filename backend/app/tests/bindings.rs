@@ -17,7 +17,11 @@ use mandi_app_lib::commands::{auth, day, settings, translit};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::{accounts, bikri, cash, masters, partners, rules, search, vouchers};
+use mandi_services::core::{
+    accounts, arrivals, bikri, capital, cash, cashbook, chukta, dead, drafts, expenses, fruit,
+    gardens, general, khata, lent, masters, paging, partners, party_ledgers, printing, purchases,
+    rules, search, split, statement, trips, ventures, vouchers,
+};
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -51,12 +55,16 @@ const EXPECTED_FILES: &[&str] = &[
     "Suggestions.ts",
     "LearnInput.ts",
     "PairRow.ts",
+    "PairsListInput.ts",
+    "PairsList.ts",
+    "PairsTotals.ts",
     "RemovePairInput.ts",
     "Direction.ts",
     "Kind.ts",
     "Source.ts",
     "AccountType.ts",
     "AccountInput.ts",
+    "AccountSaveRequest.ts",
     "RecordRef.ts",
     "BalanceSide.ts",
     "Balance.ts",
@@ -71,11 +79,14 @@ const EXPECTED_FILES: &[&str] = &[
     "SimilarAccount.ts",
     "OpeningLineInput.ts",
     "OpeningsInput.ts",
+    "OpeningsRequest.ts",
     "LineError.ts",
     "OpeningPreviewRow.ts",
     "OpeningsPreview.ts",
     "OpeningsSaved.ts",
     "CoaTree.ts",
+    "CoaControlAccounts.ts",
+    "CoaControlAccountsInput.ts",
     "HeadNode.ts",
     "ControlNode.ts",
     "AccountNode.ts",
@@ -92,8 +103,9 @@ const EXPECTED_FILES: &[&str] = &[
     "NarrationInput.ts",
     "ExpenseHeadInput.ts",
     "StaffInput.ts",
-    "BankAccountInput.ts",
     "MastersListInput.ts",
+    "MastersList.ts",
+    "MastersTotals.ts",
     "MastersSetActiveInput.ts",
     "MastersNextCodeInput.ts",
     "MasterRow.ts",
@@ -106,7 +118,6 @@ const EXPECTED_FILES: &[&str] = &[
     "NarrationRow.ts",
     "ExpenseHeadRow.ts",
     "StaffRow.ts",
-    "BankAccountRow.ts",
     "SearchScope.ts",
     "SearchHit.ts",
     "SearchMastersInput.ts",
@@ -145,6 +156,8 @@ const EXPECTED_FILES: &[&str] = &[
     "RuleRow.ts",
     "RulesFilter.ts",
     "RulesListInput.ts",
+    "RulesList.ts",
+    "RulesTotals.ts",
     "RulesGetInput.ts",
     "RulesSetActiveInput.ts",
     "RuleOverlap.ts",
@@ -167,12 +180,45 @@ const EXPECTED_FILES: &[&str] = &[
     "AdvancesPreview.ts",
     "AdvanceRowResult.ts",
     "AdvancesSaved.ts",
+    "VouchersList.ts",
+    "VouchersTotals.ts",
     "VouchersListInput.ts",
     "VoucherRow.ts",
     "AssistAdvancesInput.ts",
     "OpenAdvance.ts",
     "LastAdvance.ts",
     "AdvancesInfo.ts",
+    "ReceiptInput.ts",
+    "PaymentInput.ts",
+    "VoucherEntry.ts",
+    "VoucherPreviewInput.ts",
+    "LineSource.ts",
+    "OpenBill.ts",
+    "BillEffect.ts",
+    "AdvanceEffect.ts",
+    "VoucherPreview.ts",
+    "VoucherGetInput.ts",
+    "VoucherEditInput.ts",
+    "VoucherEditable.ts",
+    "VoucherCancelInput.ts",
+    "VoucherCancelled.ts",
+    "OpenBillsInput.ts",
+    "OpenBills.ts",
+    "OpenPayablesInput.ts",
+    "PayablePosting.ts",
+    "OpenPayables.ts",
+    "AdvancesReportInput.ts",
+    "AdvancesReportRow.ts",
+    "AdvancesReport.ts",
+    "CollectionListInput.ts",
+    "CollectionBuyer.ts",
+    "CollectionGroup.ts",
+    "CollectionGroupTotal.ts",
+    "CollectionList.ts",
+    "ReceiptsInput.ts",
+    "ReceiptRowResult.ts",
+    "ReceiptsSaved.ts",
+    "VoucherHit.ts",
     "DayClosePreviewInput.ts",
     "DayClosePreview.ts",
     "DayCloseInput.ts",
@@ -182,22 +228,76 @@ const EXPECTED_FILES: &[&str] = &[
     "PartnerDetail.ts",
     "PartnersGetInput.ts",
     "PartnerCreateInput.ts",
+    "OpeningCapitalWhere.ts",
     "PartnerUpdateInput.ts",
     "ShareInput.ts",
     "PartnersSetSharesInput.ts",
     "PartnersCheckSharesInput.ts",
     "SharesCheck.ts",
     "PartnerOverviewRow.ts",
+    "CashbookInput.ts",
+    "Cashbook.ts",
+    "CapitalWhere.ts",
+    "CapitalWhereKind.ts",
+    "CapitalWhereLine.ts",
+    "CapitalWhoseKind.ts",
+    "CapitalWhoseLine.ts",
+    "CashbookKind.ts",
+    "CashbookRow.ts",
+    "ShopExpenseInput.ts",
+    "PersonalExpenseInput.ts",
+    "PersonalReturnInput.ts",
+    "ExpenseEntry.ts",
+    "ExpensePreviewInput.ts",
+    "ExpensePreview.ts",
+    "PartnerTakes.ts",
+    "RepeatLastMonth.ts",
+    "ExpenseHeadUse.ts",
+    "ExpenseHeads.ts",
+    "MoneyLentInput.ts",
+    "MoneyLentReturnInput.ts",
+    "LentPersonCreateInput.ts",
+    "LentPerson.ts",
+    "LentList.ts",
+    "LentReport.ts",
+    "AttentionOverdue.ts",
+    "CapitalInput.ts",
+    "CapitalHistory.ts",
+    "KhataCreateInput.ts",
+    "KhataAccount.ts",
+    "KhataOutInput.ts",
+    "KhataInInput.ts",
+    "KhataStatement.ts",
+    "GeneralInput.ts",
+    "GeneralPreviewInput.ts",
+    "GeneralPreview.ts",
+    "PartnersStatementInput.ts",
+    "PartnerStatement.ts",
+    "StatementLine.ts",
+    "DayCloseSummary.ts",
     "BikriPreviewInput.ts",
     "BikriDraft.ts",
     "HeaderInput.ts",
     "LotInput.ts",
     "SaleInput.ts",
-    "PukhtaInput.ts",
+    "ChuktaInput.ts",
+    // Plan 64: the چکتا buyers.
+    "ChuktaBuyer.ts",
+    "ChuktaSearchInput.ts",
+    "ChuktaAddInput.ts",
+    // Plan 66: the party ledgers.
+    "LedgerSide.ts",
+    "PartyLedgersListInput.ts",
+    "PartyLedgerRow.ts",
+    "PartyLedgersList.ts",
+    "PartyLedgerStatementInput.ts",
+    "PartyLedgerHead.ts",
+    "PartyLedgerDay.ts",
+    "PartyLedgerStatement.ts",
+    "HitKind.ts",
     "ChargeInput.ts",
     "LineChargeInput.ts",
     "FreightPaidBy.ts",
-    "PaymentType.ts",
     "LotChargeMethod.ts",
     "LineChargeMethod.ts",
     "StoredMethod.ts",
@@ -217,17 +317,671 @@ const EXPECTED_FILES: &[&str] = &[
     "RuleLabel.ts",
     "RateHint.ts",
     "RateHintSource.ts",
-    "SplitFreightInput.ts",
-    "FreightLotInput.ts",
-    "FreightPart.ts",
-    "TruckMemoryInput.ts",
-    "TruckMemory.ts",
-    "TruckLast.ts",
-    "TruckSameDay.ts",
-    "TruckSuggestion.ts",
     "SellerMemoryInput.ts",
     "SellerMemory.ts",
     "LastRateInput.ts",
+    "BikriSaveInput.ts",
+    "BikriSaved.ts",
+    "BikriStatus.ts",
+    "BikriGetInput.ts",
+    "SavedChukta.ts",
+    "SavedCharge.ts",
+    "SavedLotCharge.ts",
+    "SavedSale.ts",
+    "SavedLot.ts",
+    "SavedTotals.ts",
+    "SavedPosting.ts",
+    "SavedSplit.ts",
+    "BikriDetail.ts",
+    "BikriListInput.ts",
+    "SortDirection.ts",
+    "SortInput.ts",
+    "MonthFigure.ts",
+    "MonthSubtotal.ts",
+    "BikriListRow.ts",
+    "LotName.ts",
+    "BikriList.ts",
+    "BikriListTotals.ts",
+    "BikriDay.ts",
+    "BikriListPrintInput.ts",
+    "BikriListPrintData.ts",
+    "BikriListPrintDay.ts",
+    "BikriListExportRequest.ts",
+    "PrintBikriListInput.ts",
+    "BikriFindInput.ts",
+    "NavigateTo.ts",
+    "BikriNavigateInput.ts",
+    "BikriMatch.ts",
+    "BikriHit.ts",
+    "StockListInput.ts",
+    "WriteOffRow.ts",
+    "StockRow.ts",
+    "StockList.ts",
+    "OwnStockRow.ts",
+    "SavedPurchaseRef.ts",
+    "SavedCredit.ts",
+    "SavedOwnLot.ts",
+    "OwnLotPreview.ts",
+    "MoneySource.ts",
+    "VentureKind.ts",
+    "VentureStatus.ts",
+    "VenturePartnerInput.ts",
+    "VenturePartnerRow.ts",
+    "EntryPartInput.ts",
+    "EntryPart.ts",
+    "EntryParts.ts",
+    "ShareAmount.ts",
+    "TripRef.ts",
+    "PurchaseInput.ts",
+    "PurchasePreview.ts",
+    "PurchaseNumbers.ts",
+    "PurchaseWorkings.ts",
+    "PurchaseSaved.ts",
+    "PurchaseCancelInput.ts",
+    "PurchaseCancelled.ts",
+    "PurchaseGetInput.ts",
+    "PurchasesListInput.ts",
+    "PurchasesList.ts",
+    "PurchasesTotals.ts",
+    "PurchaseRow.ts",
+    "PurchaseLotRef.ts",
+    "PurchaseStatus.ts",
+    "PurchaseStateFilter.ts",
+    "PurchaseWriteOffInput.ts",
+    "PurchaseWriteOffDone.ts",
+    "PurchaseWriteOffUndoInput.ts",
+    "PurchaseWriteOffUndone.ts",
+    "ArrivalCancelInput.ts",
+    "ArrivalCancelled.ts",
+    "ArrivalGetInput.ts",
+    "ArrivalInput.ts",
+    "ArrivalLotRef.ts",
+    "ArrivalRow.ts",
+    "ArrivalSaved.ts",
+    "ArrivalStateFilter.ts",
+    "ArrivalStatus.ts",
+    "ArrivalWriteOffDone.ts",
+    "ArrivalWriteOffInput.ts",
+    "ArrivalWriteOffUndoInput.ts",
+    "ArrivalWriteOffUndone.ts",
+    "ArrivalsList.ts",
+    "ArrivalsListInput.ts",
+    "ArrivalsTotals.ts",
+    "ArrivalLotPreview.ts",
+    "GardenRef.ts",
+    "GardenStockRow.ts",
+    "SavedArrivalRef.ts",
+    "SellDateInput.ts",
+    "SellDateSet.ts",
+    "PurchaseLineInput.ts",
+    "PurchaseEntryInput.ts",
+    "PurchaseLinePreview.ts",
+    "PurchaseEntryPreview.ts",
+    "PurchaseEntrySaved.ts",
+    "SplitInput.ts",
+    "SplitSet.ts",
+    "ArrivalLineInput.ts",
+    "ArrivalEntryInput.ts",
+    "ArrivalEntryPreview.ts",
+    "ArrivalEntrySaved.ts",
+    "ArrivalLinePreview.ts",
+    "ReadyGoods.ts",
+    "ReadyGoodsInput.ts",
+    "ReadyGoodsRow.ts",
+    "GoodsSources.ts",
+    "GoodsToLoadInput.ts",
+    "TripInput.ts",
+    "TripSetPartnersInput.ts",
+    "TripDefaults.ts",
+    "TripsListInput.ts",
+    "TripsList.ts",
+    "TripsTotals.ts",
+    "TripRow.ts",
+    "TripGetInput.ts",
+    "TripDetail.ts",
+    "TripEntryRow.ts",
+    "TripEntryKind.ts",
+    "CostSpreadPart.ts",
+    "TripPartnerResult.ts",
+    "TripsSummary.ts",
+    "TripCostInput.ts",
+    "TripCostNumbers.ts",
+    "TripCostPreview.ts",
+    "TripCostSaved.ts",
+    "OtherSaleInput.ts",
+    "OtherSaleNumbers.ts",
+    "OtherSalePreview.ts",
+    "OtherSaleSaved.ts",
+    "TripEntryCancelInput.ts",
+    "TripEntryCancelled.ts",
+    "FruitSource.ts",
+    "FruitStatus.ts",
+    "FruitInput.ts",
+    "FruitPart.ts",
+    "FruitCredit.ts",
+    "FruitLotBalance.ts",
+    "FruitNumbers.ts",
+    "FruitPreview.ts",
+    "FruitSaved.ts",
+    "FruitEditInput.ts",
+    "FruitEdited.ts",
+    "FruitCancelInput.ts",
+    "FruitCancelled.ts",
+    "FruitLotRef.ts",
+    "FruitPartRow.ts",
+    "FruitRow.ts",
+    "FruitGetInput.ts",
+    "FruitListInput.ts",
+    "FruitTotals.ts",
+    "FruitList.ts",
+    "FruitLotsInput.ts",
+    "FruitLotRow.ts",
+    "FruitLots.ts",
+    "DeadReason.ts",
+    "DeadPartyType.ts",
+    "DeadInfo.ts",
+    "DeadLinked.ts",
+    "DeadPreviewInput.ts",
+    "DeadPreview.ts",
+    "DeadMarkInput.ts",
+    "DeadMarked.ts",
+    "DeadUndoInput.ts",
+    "DeadUndone.ts",
+    "DeadFilter.ts",
+    "DeadStatus.ts",
+    "DeadAmountInput.ts",
+    "DeadRow.ts",
+    "DeadTotals.ts",
+    "DeadAmountPage.ts",
+    "GardenInput.ts",
+    "GardenSetPartnersInput.ts",
+    "GardenDefaults.ts",
+    "GardenCreatePreview.ts",
+    "GardenCreated.ts",
+    "GardensTotals.ts",
+    "GardensListInput.ts",
+    "GardenRow.ts",
+    "GardensList.ts",
+    "GardenGetInput.ts",
+    "GardenHistoryKind.ts",
+    "GardenHistoryRow.ts",
+    "GardenPartnerResult.ts",
+    "GardenDetail.ts",
+    "GardenSummaryRow.ts",
+    "GardensSummary.ts",
+    "GardenPaymentInput.ts",
+    "GardenOtherSaleInput.ts",
+    "GardenRefundInput.ts",
+    "GardenEntryInput.ts",
+    "GardenEntryNumbers.ts",
+    "GardenEntryPreview.ts",
+    "GardenEntrySaved.ts",
+    "GardenEntryCancelInput.ts",
+    "GardenEntryCancelled.ts",
+    "GardenCloseInput.ts",
+    "GardenCloseRequest.ts",
+    "GardenCloseNumbers.ts",
+    "GardenClosePreview.ts",
+    "GardenClosed.ts",
+    "GardenReopenInput.ts",
+    "GardenReopened.ts",
+    "PartnerVentureCard.ts",
+    "LaterSaleInput.ts",
+    "LaterSaleSaveInput.ts",
+    "LaterSaleSaved.ts",
+    "LinkedPart.ts",
+    "LentDuesTotals.ts",
+    "LentDuesPerson.ts",
+    "LentDuesRowKind.ts",
+    "LentDuesRow.ts",
+    "LentDues.ts",
+    "LentDuesInput.ts",
+    "MoneyLentRequest.ts",
+    "LentPersonUpdateInput.ts",
+    "LentPersonCreateRequest.ts",
+    "KhataSetLinkInput.ts",
+    "KhataCreateRequest.ts",
+    "PersonType.ts",
+    "LinkKind.ts",
+    "Link.ts",
+    "WindowsBounds.ts",
+    "WindowSource.ts",
+    "WindowsBoundsInput.ts",
+    "PartnersOpenVenturesInput.ts",
+    "PartnersStatementMonthPrintInput.ts",
+    "PartnerStatementDay.ts",
+    "PartnersStatementDayInput.ts",
+    "StatementColumns.ts",
+    "StatementMonthDay.ts",
+    "PartnerStatementMonth.ts",
+    "PartnersStatementMonthInput.ts",
+    "PrintExtraTotals.ts",
+    "DaySlipsPrintData.ts",
+    "SlipSections.ts",
+    "DaySlipsInput.ts",
+    "CollectionSheetPrintInput.ts",
+    "CollectionSheetTotals.ts",
+    "CollectionSheetRow.ts",
+    "CollectionLine.ts",
+    "CollectionSheet.ts",
+    "CollectionSheetInput.ts",
+    "TablePrintData.ts",
+    "BuyerDuesPrintInput.ts",
+    "BuyerDuesRow.ts",
+    "BuyerDuesPage.ts",
+    "BuyerDuesInput.ts",
+    // Plan 79 (append-only block).
+    "SellerDuesSide.ts",
+    "SellerDuesInput.ts",
+    "SellerDuesRow.ts",
+    "SellerDuesPage.ts",
+    "SellerDuesPrintInput.ts",
+    "TotalDuesSection.ts",
+    "TotalDuesPart.ts",
+    "TotalDues.ts",
+    "LentOpenInput.ts",
+    "LentOpenRow.ts",
+    "LentOpenPage.ts",
+    "CashSalesMonthInput.ts",
+    "CashSalesDayRow.ts",
+    "CashSalesMonth.ts",
+    "CashSalesDayInput.ts",
+    "CashSalesBuyerRow.ts",
+    "CashSalesDay.ts",
+    "TotalDuesPrintInput.ts",
+    "LentOpenPrintInput.ts",
+    "CashSalesMonthPrintInput.ts",
+    "CashSalesDayPrintInput.ts",
+    "AdvancesReportPrintInput.ts",
+    "CommissionPrintInput.ts",
+    "CommissionEntry.ts",
+    "CommissionDay.ts",
+    "CommissionDayInput.ts",
+    "CommissionDayRow.ts",
+    "PartnerShare.ts",
+    "CommissionPartner.ts",
+    "CommissionMonth.ts",
+    "CommissionMonthInput.ts",
+    "CommissionPeriod.ts",
+    "CommissionPeriodKind.ts",
+    "CommissionPeriodShown.ts",
+    "CommissionParty.ts",
+    "CommissionPartyShown.ts",
+    "CommissionSide.ts",
+    "CarriedLotInput.ts",
+    "CarriedSaved.ts",
+    "MixedPart.ts",
+    "MixedPartKind.ts",
+    "MixedSaleInput.ts",
+    "MixedSalePreview.ts",
+    "MixedSaleSaveInput.ts",
+    "MixedSaleSaved.ts",
+    "MixedUndoCarried.ts",
+    "MixedUndoDraft.ts",
+    "MixedUndoInput.ts",
+    "MixedUndoResult.ts",
+    "EditOpenInput.ts",
+    "EditableBikri.ts",
+    "EditPreviewInput.ts",
+    "EditSaveInput.ts",
+    "BikriEdited.ts",
+    "CancelPreviewInput.ts",
+    "CancelPreview.ts",
+    "CancelInput.ts",
+    "BikriCancelled.ts",
+    "UndoInput.ts",
+    "UndoResult.ts",
+    "WriteOffInput.ts",
+    "WriteOffDone.ts",
+    "WriteOffUndoInput.ts",
+    "WriteOffUndone.ts",
+    "DraftSaveInput.ts",
+    "DraftSaved.ts",
+    "DraftGetInput.ts",
+    "DraftDiscardInput.ts",
+    "DraftRow.ts",
+    "PrintDoc.ts",
+    "Paper.ts",
+    "PrintTo.ts",
+    "PrintingSettings.ts",
+    "SetPrintingInput.ts",
+    "PrintInput.ts",
+    "PrintOutcome.ts",
+    "BikriPrintDataInput.ts",
+    "VoucherPrintDataInput.ts",
+    "PrintVoucherInput.ts",
+    "TextDir.ts",
+    "PrintFirm.ts",
+    "PrintFact.ts",
+    "PrintContact.ts",
+    "PrintHeader.ts",
+    "PrintFooter.ts",
+    "PrintFrameInput.ts",
+    "PrintFrame.ts",
+    "CollectionPrintDataInput.ts",
+    "CollectionPrintRow.ts",
+    "CollectionPrintGroup.ts",
+    "CollectionPrintData.ts",
+    "PrintCollectionInput.ts",
+    "FirmContact.ts",
+    "FirmRole.ts",
+    "PrintParty.ts",
+    "PrintLine.ts",
+    "AmountRole.ts",
+    "PrintAmount.ts",
+    "PrintWords.ts",
+    "PrintPage.ts",
+    "PrintData.ts",
+    // Run B, plan 18 (append-only block).
+    "BackupRef.ts",
+    "CloudLevel.ts",
+    "CloudReason.ts",
+    "StatusError.ts",
+    "BackupStatus.ts",
+    "BackupListInput.ts",
+    "RowStatus.ts",
+    "BackupRow.ts",
+    "BackupList.ts",
+    "TargetResult.ts",
+    "RunReport.ts",
+    "RestorePreviewInput.ts",
+    "LostWork.ts",
+    "RestorePreview.ts",
+    "RestoreInput.ts",
+    "RestoreDone.ts",
+    "TestRestoreInput.ts",
+    "TestCheckName.ts",
+    "TestCheck.ts",
+    "TestRestoreResult.ts",
+    "KeyCreated.ts",
+    "KeyConfirmInput.ts",
+    "BackupSettingsView.ts",
+    "BackupSettingsInput.ts",
+    "BackupNowInput.ts",
+    "BackupKind.ts",
+    "BackupTotals.ts",
+    "BackupSettings.ts",
+    "BackupCode.ts",
+    "WireCode.ts",
+    "BackupErrorItem.ts",
+    "BackupWireError.ts",
+    // Plan 56, restore on a new computer (append-only block).
+    "CloudAccountInput.ts",
+    "RestoreSource.ts",
+    "FirstRunListInput.ts",
+    "FirstRunCopies.ts",
+    "FirstRunPreviewInput.ts",
+    "FirstRunRestoreInput.ts",
+    "FirstRunCheckName.ts",
+    "FirstRunCheck.ts",
+    "FirstRunPreview.ts",
+    "FirstRunRestoreDone.ts",
+    "RestoreStage.ts",
+    "RestoreProgress.ts",
+    // Run B, plan 20 (append-only block).
+    "ReportId.ts",
+    "ReportGroup.ts",
+    "ReportFilterKind.ts",
+    "ReportCatalogEntry.ts",
+    "ReportDateShortcut.ts",
+    "ReportPartyFilter.ts",
+    "ReportFilters.ts",
+    "ReportNames.ts",
+    "ReportParty.ts",
+    "ReportResolvedFilters.ts",
+    "ReportColumnKind.ts",
+    "ReportColumn.ts",
+    "ReportDetailPart.ts",
+    "ReportCell.ts",
+    "ReportSourceKind.ts",
+    "ReportRowSource.ts",
+    "ReportRowKind.ts",
+    "ReportRow.ts",
+    "ReportSummaryLine.ts",
+    "ReportPage.ts",
+    "ReportRunInput.ts",
+    "ReportPrintInput.ts",
+    "PrintReportParty.ts",
+    "ReportPrintDetailPart.ts",
+    "ReportPrintCell.ts",
+    "PrintReportColumn.ts",
+    "PrintReportRow.ts",
+    "ReportPrintSummaryLine.ts",
+    "ReportPrintData.ts",
+    // Plan 42: the tables under R34 and the people of the print header.
+    "ReportTable.ts",
+    "PrintReportTable.ts",
+    // Run B, plan 20, step B3 (append-only block).
+    "ReportGroupBy.ts",
+    "ReportPaidFilter.ts",
+    // Run B, plan 21 (append-only block).
+    "AnalyticsView.ts",
+    "AnalyticsPeriod.ts",
+    "AnalyticsGroupBy.ts",
+    "AnalyticsSide.ts",
+    "AnalyticsCompare.ts",
+    "AnalyticsFilterKind.ts",
+    "AnalyticsCatalogEntry.ts",
+    "AnalyticsFilters.ts",
+    "AnalyticsResolvedFilters.ts",
+    "AnalyticsKey.ts",
+    "AnalyticsHeading.ts",
+    "AnalyticsColumn.ts",
+    "AnalyticsRow.ts",
+    "AnalyticsRunInput.ts",
+    "AnalyticsPage.ts",
+    "AnalyticsChart.ts",
+    "AnalyticsChartKind.ts",
+    "AnalyticsChartPoint.ts",
+    "AnalyticsChartSeries.ts",
+    "AnalyticsLinesInput.ts",
+    "AnalyticsLinesPage.ts",
+    "AnalyticsPrintInput.ts",
+    "AnalyticsPrintHeading.ts",
+    "AnalyticsPrintColumn.ts",
+    "AnalyticsPrintRow.ts",
+    "AnalyticsPrintData.ts",
+    "AnalyticsSavedView.ts",
+    "AnalyticsViewsSaveInput.ts",
+    // Run B, plan 22 (append-only block).
+    "DaySettings.ts",
+    "AuditFilters.ts",
+    "AuditListInput.ts",
+    "AuditUser.ts",
+    "AuditValue.ts",
+    "ExcelExported.ts",
+    "MonthInput.ts",
+    "MonthReverseInput.ts",
+    "MonthPreview.ts",
+    "MonthLine.ts",
+    "MonthLineKind.ts",
+    "MonthClosed.ts",
+    "MonthReversed.ts",
+    "MonthList.ts",
+    "MonthRow.ts",
+    "MonthState.ts",
+    "ExportProgressEvent.ts",
+    "ExportStage.ts",
+    "ReportsExportRequest.ts",
+    "AnalyticsExportRequest.ts",
+    "TableExportSource.ts",
+    "TablesExportRequest.ts",
+    "PageInput.ts",
+    "OpenBillsPageInput.ts",
+    "OpenPayablesPageInput.ts",
+    "AssistAdvancesPageInput.ts",
+    "BikriFindPageInput.ts",
+    "VouchersPreviewRequest.ts",
+    "AuditChange.ts",
+    "AuditRow.ts",
+    "AuditResolvedFilters.ts",
+    "AuditPage.ts",
+    "AuditOptions.ts",
+    "ChainHealth.ts",
+    "BooksHealth.ts",
+    "DataHealthState.ts",
+    "DataHealth.ts",
+    "BackupHealth.ts",
+    "DailyHealth.ts",
+    "SetNumberGroupingInput.ts",
+    "SetOwnerSignInput.ts",
+    "SupportInfoInput.ts",
+    "SupportInfoSaved.ts",
+    "UpdateCheck.ts",
+    "UpdateInstallInput.ts",
+    "UpdateInstalled.ts",
+    // Run B, plan 19 (append-only block).
+    "Dashboard.ts",
+    "DashboardTiles.ts",
+    "DashboardPartner.ts",
+    "DashboardBikri.ts",
+    "DashboardDue.ts",
+    "DashboardChartDay.ts",
+    "DashboardChartItem.ts",
+    "AttentionKind.ts",
+    "AttentionTarget.ts",
+    "AttentionFirst.ts",
+    "AttentionItem.ts",
+    "AttentionList.ts",
+    "ScreenStateGetInput.ts",
+    "ScreenStateSetInput.ts",
+    "ScreenState.ts",
+    // Run B, D5 round 12 (append-only block).
+    "BuyerBillsPrintData.ts",
+    "BuyerBillSlip.ts",
+    // Run B, D5 round 14 (append-only block).
+    "PrintReportInput.ts",
+    "PrintAnalyticsViewInput.ts",
+    // Plan 44 (append-only block).
+    "PartnersList.ts",
+    "EntryFlags.ts",
+    "LockedReason.ts",
+    "EditStamp.ts",
+    "EditPreview.ts",
+    "EntryEdited.ts",
+    "EditReview.ts",
+    "EditChange.ts",
+    "EditPlace.ts",
+    "EditPlaceKind.ts",
+    "ChangeValue.ts",
+    "EditEffect.ts",
+    "EffectParty.ts",
+    "EffectCash.ts",
+    "EffectPartner.ts",
+    "EditEntity.ts",
+    "PurchaseEditInput.ts",
+    "TripCostEditInput.ts",
+    "TripOtherSaleEditInput.ts",
+    "GardenEntryEditInput.ts",
+    "GardenArrivalEditInput.ts",
+    "TripHeaderEditInput.ts",
+    "GardenHeaderEditInput.ts",
+    "DayFixOpenInput.ts",
+    "DayFixOpened.ts",
+    "DayFixCloseInput.ts",
+    "DayFixClosed.ts",
+    "DayFixStayedOpen.ts",
+    "PartnerCodeStatus.ts",
+    "PartnerCodeSetInput.ts",
+    "PartnerCodeChangeInput.ts",
+    "PartnerCodeUnlockInput.ts",
+    "PartnerCodeResetInput.ts",
+    "EditStampInput.ts",
+    "EditStampRow.ts",
+    "EditHistoryInput.ts",
+    "EditHistory.ts",
+    "EditVersion.ts",
+    // Plan 48, ask the app (append-only block).
+    "AskReply.ts",
+    "AskOutcome.ts",
+    "AssistantFailure.ts",
+    "FailureKind.ts",
+    "AssistantAskInput.ts",
+    "AssistantQuickInput.ts",
+    "QuickChip.ts",
+    "AssistantPickInput.ts",
+    "PickChoice.ts",
+    "AssistantRerunInput.ts",
+    "AssistantNewConversationInput.ts",
+    "ConversationStarted.ts",
+    "Answer.ts",
+    "AnswerPart.ts",
+    "AnswerName.ts",
+    "AnswerSource.ts",
+    "ScreenRoute.ts",
+    "AnswerRow.ts",
+    "AnswerTable.ts",
+    "AnswerMonth.ts",
+    "AnswerChart.ts",
+    "ChartSeries.ts",
+    "ChartSeriesKind.ts",
+    "AnswerEstimate.ts",
+    "EstimateMethod.ts",
+    "EstimateMethodKind.ts",
+    "AnswerWorking.ts",
+    "HowStep.ts",
+    "WorkingStep.ts",
+    "WorkingOp.ts",
+    "PlaceValue.ts",
+    "FigureDifference.ts",
+    "FigureDirection.ts",
+    "EntryRoute.ts",
+    "EntryScreen.ts",
+    "AnswerOption.ts",
+    "AssistantStatus.ts",
+    "AssistantSettingsSetInput.ts",
+    "AssistantKeySaveInput.ts",
+    "AssistantKeyRemoveInput.ts",
+    "AssistantTestResult.ts",
+    "AssistantLogListInput.ts",
+    "AssistantLogPage.ts",
+    "AssistantLogRow.ts",
+    "LogSource.ts",
+    "LogTool.ts",
+    "AssistantStep.ts",
+    "AnswerRecord.ts",
+    "SourceParty.ts",
+    "SourceBikri.ts",
+    "SourceReportFilters.ts",
+    "SourceAnalyticsFilters.ts",
+    // Plan 74 (append-only block): one party's statement, 30 days at a time, and its print.
+    "PartyLedgerGoToInput.ts",
+    "PartyLedgerGoTo.ts",
+    "StatementPrintDataInput.ts",
+    "StatementPrintData.ts",
+    "StatementDay.ts",
+    "StatementItem.ts",
+    "StatementEntry.ts",
+    "StatementBalance.ts",
+    "StatementSide.ts",
+    "StatementKind.ts",
+    "PrintStatementInput.ts",
+    // Plan 78 (append-only block).
+    "AdhariSheetInput.ts",
+    "AdhariSheetPrintInput.ts",
+    "AdhariSheetRow.ts",
+    "AdhariSheetTotals.ts",
+    "AdhariSheet.ts",
+    "SalePrintData.ts",
+    "StatementRowsInput.ts",
+    "StatementShortItem.ts",
+    "StatementEdited.ts",
+    "StatementRowsRow.ts",
+    "StatementRows.ts",
+    "StatementRowsPrintInput.ts",
+    "PrintSlipsInput.ts",
+    "PrintAdhariInput.ts",
+    "PrintCollectionSheetInput.ts",
+    "PrintStatementRowsInput.ts",
+    "PrintBuyerDuesInput.ts",
+    "PrintSellerDuesInput.ts",
+    "PrintTotalDuesInput.ts",
+    "PrintLentOpenInput.ts",
+    "PrintAdvancesOpenInput.ts",
+    "PrintCashSalesMonthInput.ts",
+    "PrintCashSalesDayInput.ts",
+    "PrintCommissionInput.ts",
+    "PrintPartnerMonthInput.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -267,11 +1021,16 @@ fn export_bindings() {
     translit::Suggestions::export_all(&cfg).unwrap();
     translit::LearnInput::export_all(&cfg).unwrap();
     translit::PairRow::export_all(&cfg).unwrap();
+    translit::PairsListInput::export_all(&cfg).unwrap();
+    translit::PairsList::export_all(&cfg).unwrap();
+    translit::PairsTotals::export_all(&cfg).unwrap();
     translit::RemovePairInput::export_all(&cfg).unwrap();
     masters::MasterInput::export_all(&cfg).unwrap();
     masters::MasterRow::export_all(&cfg).unwrap();
     masters::MasterKind::export_all(&cfg).unwrap();
     masters::MastersListInput::export_all(&cfg).unwrap();
+    masters::MastersList::export_all(&cfg).unwrap();
+    masters::MastersTotals::export_all(&cfg).unwrap();
     masters::MastersSetActiveInput::export_all(&cfg).unwrap();
     masters::MastersNextCodeInput::export_all(&cfg).unwrap();
     search::SearchScope::export_all(&cfg).unwrap();
@@ -280,6 +1039,7 @@ fn export_bindings() {
     search::SearchRecentInput::export_all(&cfg).unwrap();
     search::SearchTouchInput::export_all(&cfg).unwrap();
     accounts::AccountInput::export_all(&cfg).unwrap();
+    accounts::AccountSaveRequest::export_all(&cfg).unwrap();
     accounts::AccountRow::export_all(&cfg).unwrap();
     accounts::AccountsListInput::export_all(&cfg).unwrap();
     accounts::AccountsList::export_all(&cfg).unwrap();
@@ -289,9 +1049,12 @@ fn export_bindings() {
     accounts::AccountsSimilarInput::export_all(&cfg).unwrap();
     accounts::SimilarAccount::export_all(&cfg).unwrap();
     accounts::OpeningsInput::export_all(&cfg).unwrap();
+    accounts::OpeningsRequest::export_all(&cfg).unwrap();
     accounts::OpeningsPreview::export_all(&cfg).unwrap();
     accounts::OpeningsSaved::export_all(&cfg).unwrap();
     accounts::CoaTree::export_all(&cfg).unwrap();
+    accounts::CoaControlAccounts::export_all(&cfg).unwrap();
+    accounts::CoaControlAccountsInput::export_all(&cfg).unwrap();
     accounts::CoaHead::export_all(&cfg).unwrap();
     accounts::CoaControl::export_all(&cfg).unwrap();
     accounts::SearchAccountsInput::export_all(&cfg).unwrap();
@@ -301,6 +1064,14 @@ fn export_bindings() {
     accounts::AccountBalance::export_all(&cfg).unwrap();
     accounts::PartyCardInput::export_all(&cfg).unwrap();
     accounts::PartyCard::export_all(&cfg).unwrap();
+    accounts::HitKind::export_all(&cfg).unwrap();
+    chukta::ChuktaBuyer::export_all(&cfg).unwrap();
+    chukta::ChuktaSearchInput::export_all(&cfg).unwrap();
+    chukta::ChuktaAddInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgersListInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgersList::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgerStatementInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgerStatement::export_all(&cfg).unwrap();
     accounts::SearchGlobalInput::export_all(&cfg).unwrap();
     accounts::AccountsRecentInput::export_all(&cfg).unwrap();
     accounts::AccountsTouchInput::export_all(&cfg).unwrap();
@@ -308,6 +1079,8 @@ fn export_bindings() {
     rules::RuleInput::export_all(&cfg).unwrap();
     rules::RuleSaved::export_all(&cfg).unwrap();
     rules::RulesListInput::export_all(&cfg).unwrap();
+    rules::RulesList::export_all(&cfg).unwrap();
+    rules::RulesTotals::export_all(&cfg).unwrap();
     rules::RulesGetInput::export_all(&cfg).unwrap();
     rules::RulesSetActiveInput::export_all(&cfg).unwrap();
     rules::RuleTestInput::export_all(&cfg).unwrap();
@@ -321,9 +1094,42 @@ fn export_bindings() {
     vouchers::AdvancesPreview::export_all(&cfg).unwrap();
     vouchers::AdvancesSaved::export_all(&cfg).unwrap();
     vouchers::VouchersListInput::export_all(&cfg).unwrap();
+    vouchers::VouchersList::export_all(&cfg).unwrap();
+    vouchers::VouchersTotals::export_all(&cfg).unwrap();
     vouchers::VoucherRow::export_all(&cfg).unwrap();
     vouchers::AssistAdvancesInput::export_all(&cfg).unwrap();
     vouchers::AdvancesInfo::export_all(&cfg).unwrap();
+    vouchers::ReceiptInput::export_all(&cfg).unwrap();
+    vouchers::PaymentInput::export_all(&cfg).unwrap();
+    vouchers::VoucherEntry::export_all(&cfg).unwrap();
+    vouchers::VoucherPreviewInput::export_all(&cfg).unwrap();
+    vouchers::LineSource::export_all(&cfg).unwrap();
+    vouchers::OpenBill::export_all(&cfg).unwrap();
+    vouchers::BillEffect::export_all(&cfg).unwrap();
+    vouchers::AdvanceEffect::export_all(&cfg).unwrap();
+    vouchers::VoucherPreview::export_all(&cfg).unwrap();
+    vouchers::VoucherGetInput::export_all(&cfg).unwrap();
+    vouchers::VoucherEditInput::export_all(&cfg).unwrap();
+    vouchers::VoucherEditable::export_all(&cfg).unwrap();
+    vouchers::VoucherCancelInput::export_all(&cfg).unwrap();
+    vouchers::VoucherCancelled::export_all(&cfg).unwrap();
+    vouchers::OpenBillsInput::export_all(&cfg).unwrap();
+    vouchers::OpenBills::export_all(&cfg).unwrap();
+    vouchers::OpenPayablesInput::export_all(&cfg).unwrap();
+    vouchers::PayablePosting::export_all(&cfg).unwrap();
+    vouchers::OpenPayables::export_all(&cfg).unwrap();
+    vouchers::AdvancesReportInput::export_all(&cfg).unwrap();
+    vouchers::AdvancesReportRow::export_all(&cfg).unwrap();
+    vouchers::AdvancesReport::export_all(&cfg).unwrap();
+    vouchers::CollectionListInput::export_all(&cfg).unwrap();
+    vouchers::CollectionBuyer::export_all(&cfg).unwrap();
+    vouchers::CollectionGroup::export_all(&cfg).unwrap();
+    vouchers::CollectionGroupTotal::export_all(&cfg).unwrap();
+    vouchers::CollectionList::export_all(&cfg).unwrap();
+    vouchers::ReceiptsInput::export_all(&cfg).unwrap();
+    vouchers::ReceiptRowResult::export_all(&cfg).unwrap();
+    vouchers::ReceiptsSaved::export_all(&cfg).unwrap();
+    vouchers::VoucherHit::export_all(&cfg).unwrap();
     vouchers::DayClosePreviewInput::export_all(&cfg).unwrap();
     vouchers::DayClosePreview::export_all(&cfg).unwrap();
     vouchers::DayCloseInput::export_all(&cfg).unwrap();
@@ -332,26 +1138,560 @@ fn export_bindings() {
     partners::PartnerDetail::export_all(&cfg).unwrap();
     partners::PartnersGetInput::export_all(&cfg).unwrap();
     partners::PartnerCreateInput::export_all(&cfg).unwrap();
+    partners::OpeningCapitalWhere::export_all(&cfg).unwrap();
     partners::PartnerUpdateInput::export_all(&cfg).unwrap();
     partners::PartnersSetSharesInput::export_all(&cfg).unwrap();
     partners::PartnersCheckSharesInput::export_all(&cfg).unwrap();
     partners::SharesCheck::export_all(&cfg).unwrap();
     partners::PartnerOverviewRow::export_all(&cfg).unwrap();
+    cashbook::CashbookInput::export_all(&cfg).unwrap();
+    cashbook::CapitalWhere::export_all(&cfg).unwrap();
+    cashbook::CapitalWhereKind::export_all(&cfg).unwrap();
+    cashbook::CapitalWhereLine::export_all(&cfg).unwrap();
+    cashbook::CapitalWhoseKind::export_all(&cfg).unwrap();
+    cashbook::CapitalWhoseLine::export_all(&cfg).unwrap();
+    cashbook::CashbookKind::export_all(&cfg).unwrap();
+    cashbook::CashbookRow::export_all(&cfg).unwrap();
+    cashbook::CashbookTotals::export_all(&cfg).unwrap();
+    cashbook::Cashbook::export_all(&cfg).unwrap();
+    expenses::ShopExpenseInput::export_all(&cfg).unwrap();
+    expenses::PersonalExpenseInput::export_all(&cfg).unwrap();
+    expenses::PersonalReturnInput::export_all(&cfg).unwrap();
+    expenses::ExpenseEntry::export_all(&cfg).unwrap();
+    expenses::ExpensePreviewInput::export_all(&cfg).unwrap();
+    expenses::ExpenseShare::export_all(&cfg).unwrap();
+    expenses::PartnerTotalEffect::export_all(&cfg).unwrap();
+    expenses::ExpensePreview::export_all(&cfg).unwrap();
+    expenses::PartnerTakesInput::export_all(&cfg).unwrap();
+    expenses::TakeSource::export_all(&cfg).unwrap();
+    expenses::TakeRow::export_all(&cfg).unwrap();
+    expenses::TakesTotals::export_all(&cfg).unwrap();
+    expenses::PartnerTakes::export_all(&cfg).unwrap();
+    expenses::RepeatLastMonthInput::export_all(&cfg).unwrap();
+    expenses::RepeatedExpense::export_all(&cfg).unwrap();
+    expenses::RepeatLastMonth::export_all(&cfg).unwrap();
+    expenses::ExpenseHeadUse::export_all(&cfg).unwrap();
+    expenses::ExpenseHeads::export_all(&cfg).unwrap();
+    lent::MoneyLentInput::export_all(&cfg).unwrap();
+    lent::LentReturnMode::export_all(&cfg).unwrap();
+    lent::MoneyLentReturnInput::export_all(&cfg).unwrap();
+    lent::LentPersonCreateInput::export_all(&cfg).unwrap();
+    lent::LentPerson::export_all(&cfg).unwrap();
+    lent::LentListInput::export_all(&cfg).unwrap();
+    lent::LentRow::export_all(&cfg).unwrap();
+    lent::LentTotals::export_all(&cfg).unwrap();
+    lent::LentList::export_all(&cfg).unwrap();
+    lent::LentReportInput::export_all(&cfg).unwrap();
+    lent::LentReportRow::export_all(&cfg).unwrap();
+    lent::LentReportTotals::export_all(&cfg).unwrap();
+    lent::LentReport::export_all(&cfg).unwrap();
+    lent::OverdueKind::export_all(&cfg).unwrap();
+    lent::OverdueItem::export_all(&cfg).unwrap();
+    lent::AttentionOverdue::export_all(&cfg).unwrap();
+    capital::CapitalInput::export_all(&cfg).unwrap();
+    capital::CapitalHistoryInput::export_all(&cfg).unwrap();
+    capital::CapitalRowKind::export_all(&cfg).unwrap();
+    capital::CapitalRow::export_all(&cfg).unwrap();
+    capital::CapitalTotals::export_all(&cfg).unwrap();
+    capital::CapitalHistory::export_all(&cfg).unwrap();
+    khata::KhataCreateInput::export_all(&cfg).unwrap();
+    khata::KhataAccount::export_all(&cfg).unwrap();
+    khata::KhataOutInput::export_all(&cfg).unwrap();
+    khata::KhataInInput::export_all(&cfg).unwrap();
+    khata::KhataStatementInput::export_all(&cfg).unwrap();
+    khata::KhataRowKind::export_all(&cfg).unwrap();
+    khata::KhataEntryRow::export_all(&cfg).unwrap();
+    khata::KhataTotals::export_all(&cfg).unwrap();
+    khata::KhataStatement::export_all(&cfg).unwrap();
+    general::GeneralLineInput::export_all(&cfg).unwrap();
+    general::GeneralInput::export_all(&cfg).unwrap();
+    general::GeneralPreviewInput::export_all(&cfg).unwrap();
+    general::GeneralLinePreview::export_all(&cfg).unwrap();
+    general::GeneralPreview::export_all(&cfg).unwrap();
+    statement::PartnersStatementInput::export_all(&cfg).unwrap();
+    statement::StatementHeading::export_all(&cfg).unwrap();
+    statement::StatementDetail::export_all(&cfg).unwrap();
+    statement::StatementLine::export_all(&cfg).unwrap();
+    statement::StatementTotals::export_all(&cfg).unwrap();
+    statement::PartnerStatement::export_all(&cfg).unwrap();
+    vouchers::DayClosePartner::export_all(&cfg).unwrap();
+    vouchers::DayCloseSummary::export_all(&cfg).unwrap();
     bikri::BikriPreviewInput::export_all(&cfg).unwrap();
     bikri::BikriPreview::export_all(&cfg).unwrap();
-    bikri::SplitFreightInput::export_all(&cfg).unwrap();
-    bikri::FreightPart::export_all(&cfg).unwrap();
-    bikri::TruckMemoryInput::export_all(&cfg).unwrap();
-    bikri::TruckMemory::export_all(&cfg).unwrap();
     bikri::SellerMemoryInput::export_all(&cfg).unwrap();
     bikri::SellerMemory::export_all(&cfg).unwrap();
     bikri::LastRateInput::export_all(&cfg).unwrap();
     bikri::RateHint::export_all(&cfg).unwrap();
+    bikri::BikriSaveInput::export_all(&cfg).unwrap();
+    bikri::BikriSaved::export_all(&cfg).unwrap();
+    bikri::BikriGetInput::export_all(&cfg).unwrap();
+    bikri::BikriDetail::export_all(&cfg).unwrap();
+    paging::SortDirection::export_all(&cfg).unwrap();
+    paging::SortInput::export_all(&cfg).unwrap();
+    paging::MonthFigure::export_all(&cfg).unwrap();
+    paging::MonthSubtotal::export_all(&cfg).unwrap();
+    bikri::BikriListInput::export_all(&cfg).unwrap();
+    bikri::BikriListRow::export_all(&cfg).unwrap();
+    bikri::LotName::export_all(&cfg).unwrap();
+    bikri::BikriList::export_all(&cfg).unwrap();
+    bikri::BikriListTotals::export_all(&cfg).unwrap();
+    bikri::BikriDay::export_all(&cfg).unwrap();
+    mandi_reports::reports::BikriListPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::BikriListPrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::BikriListPrintDay::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::BikriListExportRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintBikriListInput::export_all(&cfg).unwrap();
+    bikri::BikriFindInput::export_all(&cfg).unwrap();
+    bikri::BikriNavigateInput::export_all(&cfg).unwrap();
+    bikri::BikriHit::export_all(&cfg).unwrap();
+    bikri::StockListInput::export_all(&cfg).unwrap();
+    bikri::StockList::export_all(&cfg).unwrap();
+    bikri::OwnStockRow::export_all(&cfg).unwrap();
+    bikri::SavedPurchaseRef::export_all(&cfg).unwrap();
+    bikri::SavedOwnLot::export_all(&cfg).unwrap();
+    bikri::OwnLotPreview::export_all(&cfg).unwrap();
+    ventures::MoneySource::export_all(&cfg).unwrap();
+    ventures::VentureKind::export_all(&cfg).unwrap();
+    ventures::VentureStatus::export_all(&cfg).unwrap();
+    ventures::VenturePartnerInput::export_all(&cfg).unwrap();
+    ventures::VenturePartnerRow::export_all(&cfg).unwrap();
+    ventures::EntryPartInput::export_all(&cfg).unwrap();
+    ventures::EntryPart::export_all(&cfg).unwrap();
+    ventures::EntryParts::export_all(&cfg).unwrap();
+    ventures::ShareAmount::export_all(&cfg).unwrap();
+    ventures::TripRef::export_all(&cfg).unwrap();
+    purchases::PurchaseInput::export_all(&cfg).unwrap();
+    purchases::PurchasePreview::export_all(&cfg).unwrap();
+    purchases::PurchaseNumbers::export_all(&cfg).unwrap();
+    purchases::PurchaseWorkings::export_all(&cfg).unwrap();
+    purchases::PurchaseSaved::export_all(&cfg).unwrap();
+    purchases::PurchaseCancelInput::export_all(&cfg).unwrap();
+    purchases::PurchaseCancelled::export_all(&cfg).unwrap();
+    purchases::PurchaseGetInput::export_all(&cfg).unwrap();
+    purchases::PurchasesListInput::export_all(&cfg).unwrap();
+    purchases::PurchasesList::export_all(&cfg).unwrap();
+    purchases::PurchasesTotals::export_all(&cfg).unwrap();
+    purchases::PurchaseRow::export_all(&cfg).unwrap();
+    purchases::PurchaseLotRef::export_all(&cfg).unwrap();
+    purchases::PurchaseStatus::export_all(&cfg).unwrap();
+    purchases::PurchaseStateFilter::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffInput::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffDone::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffUndoInput::export_all(&cfg).unwrap();
+    // Goods that arrived from a garden, the date to sell and the ready goods of a new sale (plan 33
+    // v1.1).
+    arrivals::ArrivalInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalSaved::export_all(&cfg).unwrap();
+    arrivals::ArrivalRow::export_all(&cfg).unwrap();
+    arrivals::ArrivalLotRef::export_all(&cfg).unwrap();
+    arrivals::ArrivalStatus::export_all(&cfg).unwrap();
+    arrivals::ArrivalStateFilter::export_all(&cfg).unwrap();
+    arrivals::ArrivalCancelInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalCancelled::export_all(&cfg).unwrap();
+    arrivals::ArrivalGetInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalsListInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalsList::export_all(&cfg).unwrap();
+    arrivals::ArrivalsTotals::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffDone::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffUndoInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffUndone::export_all(&cfg).unwrap();
+    arrivals::SellDateInput::export_all(&cfg).unwrap();
+    arrivals::SellDateSet::export_all(&cfg).unwrap();
+    // Many item lines in one entry, and the split between our shop and another shop (plan 35).
+    purchases::PurchaseLineInput::export_all(&cfg).unwrap();
+    purchases::PurchaseEntryInput::export_all(&cfg).unwrap();
+    purchases::PurchaseLinePreview::export_all(&cfg).unwrap();
+    purchases::PurchaseEntryPreview::export_all(&cfg).unwrap();
+    purchases::PurchaseEntrySaved::export_all(&cfg).unwrap();
+    arrivals::ArrivalLineInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalEntryInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalEntryPreview::export_all(&cfg).unwrap();
+    arrivals::ArrivalEntrySaved::export_all(&cfg).unwrap();
+    arrivals::ArrivalLinePreview::export_all(&cfg).unwrap();
+    split::SplitInput::export_all(&cfg).unwrap();
+    split::SplitSet::export_all(&cfg).unwrap();
+    bikri::ReadyGoodsInput::export_all(&cfg).unwrap();
+    bikri::ReadyGoods::export_all(&cfg).unwrap();
+    bikri::ReadyGoodsRow::export_all(&cfg).unwrap();
+    bikri::GoodsSources::export_all(&cfg).unwrap();
+    bikri::GoodsToLoadInput::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffUndone::export_all(&cfg).unwrap();
+    trips::TripInput::export_all(&cfg).unwrap();
+    trips::TripSetPartnersInput::export_all(&cfg).unwrap();
+    trips::TripDefaults::export_all(&cfg).unwrap();
+    trips::TripsListInput::export_all(&cfg).unwrap();
+    trips::TripsList::export_all(&cfg).unwrap();
+    trips::TripsTotals::export_all(&cfg).unwrap();
+    trips::TripRow::export_all(&cfg).unwrap();
+    trips::TripGetInput::export_all(&cfg).unwrap();
+    trips::TripDetail::export_all(&cfg).unwrap();
+    trips::TripEntryRow::export_all(&cfg).unwrap();
+    trips::TripEntryKind::export_all(&cfg).unwrap();
+    trips::CostSpreadPart::export_all(&cfg).unwrap();
+    trips::TripPartnerResult::export_all(&cfg).unwrap();
+    trips::TripsSummary::export_all(&cfg).unwrap();
+    trips::TripCostInput::export_all(&cfg).unwrap();
+    trips::TripCostNumbers::export_all(&cfg).unwrap();
+    trips::TripCostPreview::export_all(&cfg).unwrap();
+    trips::TripCostSaved::export_all(&cfg).unwrap();
+    trips::OtherSaleInput::export_all(&cfg).unwrap();
+    trips::OtherSaleNumbers::export_all(&cfg).unwrap();
+    trips::OtherSalePreview::export_all(&cfg).unwrap();
+    trips::OtherSaleSaved::export_all(&cfg).unwrap();
+    trips::TripEntryCancelInput::export_all(&cfg).unwrap();
+    trips::TripEntryCancelled::export_all(&cfg).unwrap();
+    gardens::GardenInput::export_all(&cfg).unwrap();
+    gardens::GardenSetPartnersInput::export_all(&cfg).unwrap();
+    gardens::GardenDefaults::export_all(&cfg).unwrap();
+    gardens::GardenCreatePreview::export_all(&cfg).unwrap();
+    gardens::GardenCreated::export_all(&cfg).unwrap();
+    gardens::GardensTotals::export_all(&cfg).unwrap();
+    gardens::GardensListInput::export_all(&cfg).unwrap();
+    gardens::GardenRow::export_all(&cfg).unwrap();
+    gardens::GardensList::export_all(&cfg).unwrap();
+    gardens::GardenGetInput::export_all(&cfg).unwrap();
+    gardens::GardenHistoryKind::export_all(&cfg).unwrap();
+    gardens::GardenHistoryRow::export_all(&cfg).unwrap();
+    gardens::GardenPartnerResult::export_all(&cfg).unwrap();
+    gardens::GardenDetail::export_all(&cfg).unwrap();
+    gardens::GardenSummaryRow::export_all(&cfg).unwrap();
+    gardens::GardensSummary::export_all(&cfg).unwrap();
+    gardens::GardenPaymentInput::export_all(&cfg).unwrap();
+    gardens::GardenOtherSaleInput::export_all(&cfg).unwrap();
+    gardens::GardenRefundInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryNumbers::export_all(&cfg).unwrap();
+    gardens::GardenEntryPreview::export_all(&cfg).unwrap();
+    gardens::GardenEntrySaved::export_all(&cfg).unwrap();
+    gardens::GardenEntryCancelInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryCancelled::export_all(&cfg).unwrap();
+    gardens::GardenCloseInput::export_all(&cfg).unwrap();
+    gardens::GardenCloseRequest::export_all(&cfg).unwrap();
+    gardens::GardenCloseNumbers::export_all(&cfg).unwrap();
+    gardens::GardenClosePreview::export_all(&cfg).unwrap();
+    gardens::GardenClosed::export_all(&cfg).unwrap();
+    gardens::GardenReopenInput::export_all(&cfg).unwrap();
+    gardens::GardenReopened::export_all(&cfg).unwrap();
+    fruit::FruitSource::export_all(&cfg).unwrap();
+    fruit::FruitStatus::export_all(&cfg).unwrap();
+    fruit::FruitInput::export_all(&cfg).unwrap();
+    fruit::FruitPart::export_all(&cfg).unwrap();
+    fruit::FruitCredit::export_all(&cfg).unwrap();
+    fruit::FruitLotBalance::export_all(&cfg).unwrap();
+    fruit::FruitNumbers::export_all(&cfg).unwrap();
+    fruit::FruitPreview::export_all(&cfg).unwrap();
+    fruit::FruitSaved::export_all(&cfg).unwrap();
+    fruit::FruitEditInput::export_all(&cfg).unwrap();
+    fruit::FruitEdited::export_all(&cfg).unwrap();
+    fruit::FruitCancelInput::export_all(&cfg).unwrap();
+    fruit::FruitCancelled::export_all(&cfg).unwrap();
+    fruit::FruitLotRef::export_all(&cfg).unwrap();
+    fruit::FruitPartRow::export_all(&cfg).unwrap();
+    fruit::FruitRow::export_all(&cfg).unwrap();
+    fruit::FruitGetInput::export_all(&cfg).unwrap();
+    fruit::FruitListInput::export_all(&cfg).unwrap();
+    fruit::FruitTotals::export_all(&cfg).unwrap();
+    fruit::FruitList::export_all(&cfg).unwrap();
+    fruit::FruitLotsInput::export_all(&cfg).unwrap();
+    fruit::FruitLotRow::export_all(&cfg).unwrap();
+    fruit::FruitLots::export_all(&cfg).unwrap();
+    dead::DeadReason::export_all(&cfg).unwrap();
+    dead::DeadPartyType::export_all(&cfg).unwrap();
+    dead::DeadInfo::export_all(&cfg).unwrap();
+    dead::DeadLinked::export_all(&cfg).unwrap();
+    dead::DeadPreviewInput::export_all(&cfg).unwrap();
+    dead::DeadPreview::export_all(&cfg).unwrap();
+    dead::DeadMarkInput::export_all(&cfg).unwrap();
+    dead::DeadMarked::export_all(&cfg).unwrap();
+    dead::DeadUndoInput::export_all(&cfg).unwrap();
+    dead::DeadUndone::export_all(&cfg).unwrap();
+    dead::DeadFilter::export_all(&cfg).unwrap();
+    dead::DeadStatus::export_all(&cfg).unwrap();
+    dead::DeadAmountInput::export_all(&cfg).unwrap();
+    dead::DeadRow::export_all(&cfg).unwrap();
+    dead::DeadTotals::export_all(&cfg).unwrap();
+    dead::DeadAmountPage::export_all(&cfg).unwrap();
+    partners::PartnerVentureCard::export_all(&cfg).unwrap();
+    bikri::LaterSaleInput::export_all(&cfg).unwrap();
+    bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();
+    bikri::LaterSaleSaved::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentDues::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentDuesInput::export_all(&cfg).unwrap();
+    mandi_services::core::lent::MoneyLentRequest::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentPersonUpdateInput::export_all(&cfg).unwrap();
+    mandi_services::core::lent::LentPersonCreateRequest::export_all(&cfg).unwrap();
+    mandi_services::core::khata::KhataSetLinkInput::export_all(&cfg).unwrap();
+    mandi_services::core::khata::KhataCreateRequest::export_all(&cfg).unwrap();
+    mandi_services::core::links::Link::export_all(&cfg).unwrap();
+    mandi_services::core::windows::WindowsBounds::export_all(&cfg).unwrap();
+    mandi_services::core::windows::WindowsBoundsInput::export_all(&cfg).unwrap();
+    mandi_services::core::partners::PartnersOpenVenturesInput::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnersStatementMonthPrintInput::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnerStatementDay::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnersStatementDayInput::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnerStatementMonth::export_all(&cfg).unwrap();
+    mandi_services::core::statement::PartnersStatementMonthInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::PrintExtraTotals::export_all(&cfg).unwrap();
+    mandi_reports::reports::DaySlipsPrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::DaySlipsInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::CollectionSheetPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::CollectionSheet::export_all(&cfg).unwrap();
+    mandi_reports::reports::CollectionSheetInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::TablePrintData::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::BuyerDuesPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::BuyerDuesPage::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::BuyerDuesInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesSide::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesPage::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDuesSection::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDuesPart::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDues::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenPage::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesMonthInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDayRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesMonth::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDayInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesBuyerRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDay::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDuesPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesMonthPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDayPrintInput::export_all(&cfg).unwrap();
+    vouchers::AdvancesReportPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionDay::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionDayInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionMonth::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionMonthInput::export_all(&cfg).unwrap();
+    bikri::MixedSaleInput::export_all(&cfg).unwrap();
+    bikri::MixedSaleSaveInput::export_all(&cfg).unwrap();
+    bikri::MixedSalePreview::export_all(&cfg).unwrap();
+    bikri::MixedSaleSaved::export_all(&cfg).unwrap();
+    bikri::MixedUndoInput::export_all(&cfg).unwrap();
+    bikri::MixedUndoResult::export_all(&cfg).unwrap();
+    bikri::EditOpenInput::export_all(&cfg).unwrap();
+    bikri::EditableBikri::export_all(&cfg).unwrap();
+    bikri::EditPreviewInput::export_all(&cfg).unwrap();
+    bikri::EditSaveInput::export_all(&cfg).unwrap();
+    bikri::BikriEdited::export_all(&cfg).unwrap();
+    bikri::CancelPreviewInput::export_all(&cfg).unwrap();
+    bikri::CancelPreview::export_all(&cfg).unwrap();
+    bikri::CancelInput::export_all(&cfg).unwrap();
+    bikri::BikriCancelled::export_all(&cfg).unwrap();
+    bikri::UndoInput::export_all(&cfg).unwrap();
+    bikri::UndoResult::export_all(&cfg).unwrap();
+    bikri::WriteOffInput::export_all(&cfg).unwrap();
+    bikri::WriteOffDone::export_all(&cfg).unwrap();
+    bikri::WriteOffUndoInput::export_all(&cfg).unwrap();
+    bikri::WriteOffUndone::export_all(&cfg).unwrap();
+    drafts::DraftSaveInput::export_all(&cfg).unwrap();
+    drafts::DraftSaved::export_all(&cfg).unwrap();
+    drafts::DraftGetInput::export_all(&cfg).unwrap();
+    drafts::DraftDiscardInput::export_all(&cfg).unwrap();
+    drafts::DraftRow::export_all(&cfg).unwrap();
     cash::CashCheck::export_all(&cfg).unwrap();
+    printing::PrintingSettings::export_all(&cfg).unwrap();
+    printing::SetPrintingInput::export_all(&cfg).unwrap();
+    printing::PrintInput::export_all(&cfg).unwrap();
+    printing::PrintOutcome::export_all(&cfg).unwrap();
+    mandi_reports::print::BikriPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::print::VoucherPrintDataInput::export_all(&cfg).unwrap();
+    printing::PrintVoucherInput::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintData::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintFrameInput::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintFrame::export_all(&cfg).unwrap();
+    mandi_reports::print::CollectionPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::print::CollectionPrintData::export_all(&cfg).unwrap();
+    printing::PrintCollectionInput::export_all(&cfg).unwrap();
+    mandi_services::core::firm::FirmContact::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();
+    // Run B, plan 18 (append-only block).
+    mandi_backup::api::BackupStatus::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupListInput::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupList::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupNowInput::export_all(&cfg).unwrap();
+    mandi_backup::api::RunReport::export_all(&cfg).unwrap();
+    mandi_backup::api::RestorePreviewInput::export_all(&cfg).unwrap();
+    mandi_backup::api::RestorePreview::export_all(&cfg).unwrap();
+    mandi_backup::api::RestoreInput::export_all(&cfg).unwrap();
+    mandi_backup::api::RestoreDone::export_all(&cfg).unwrap();
+    mandi_backup::api::TestRestoreInput::export_all(&cfg).unwrap();
+    mandi_backup::api::TestRestoreResult::export_all(&cfg).unwrap();
+    mandi_backup::api::KeyCreated::export_all(&cfg).unwrap();
+    mandi_backup::api::KeyConfirmInput::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupSettingsView::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupSettingsInput::export_all(&cfg).unwrap();
+    mandi_backup::BackupCode::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::backup::BackupWireError::export_all(&cfg).unwrap();
+    // Plan 56, restore on a new computer (append-only block).
+    mandi_backup::api::RestoreSource::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunListInput::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunCopies::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunPreviewInput::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunRestoreInput::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunPreview::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunRestoreDone::export_all(&cfg).unwrap();
+    mandi_backup::api::RestoreProgress::export_all(&cfg).unwrap();
+    // Run B, plan 20 (append-only block).
+    mandi_reports::reports::CatalogEntry::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportRunInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportPage::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportPrintData::export_all(&cfg).unwrap();
+    // Run B, plan 20, step B3 (append-only block).
+    // Run B, plan 21 (append-only block).
+    mandi_reports::analytics::AnalyticsCatalogEntry::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsRunInput::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsPage::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChart::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChartKind::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChartPoint::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChartSeries::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsLinesInput::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsLinesPage::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsPrintData::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsSavedView::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsViewsSaveInput::export_all(&cfg).unwrap();
+    // Run B, plan 22 (append-only block).
+    mandi_backup::day_settings::DaySettings::export_all(&cfg).unwrap();
+    mandi_reports::audit::AuditListInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::AuditPage::export_all(&cfg).unwrap();
+    mandi_reports::audit::AuditOptions::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::health::DailyHealth::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::settings_day::SetNumberGroupingInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::settings_day::SetOwnerSignInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::support::SupportInfoInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::support::SupportInfoSaved::export_all(&cfg).unwrap();
+    mandi_app_lib::updates::UpdateCheck::export_all(&cfg).unwrap();
+    mandi_app_lib::updates::UpdateInstallInput::export_all(&cfg).unwrap();
+    mandi_app_lib::updates::UpdateInstalled::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::ReportsExportRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::AnalyticsExportRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::TableExportSource::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::TablesExportRequest::export_all(&cfg).unwrap();
+    paging::PageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::assist::OpenBillsPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::assist::OpenPayablesPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::assist::AssistAdvancesPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::bikri::BikriFindPageInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::vouchers::VouchersPreviewRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::ExportProgressEvent::export_all(&cfg).unwrap();
+    mandi_reports::export::ExcelExported::export_all(&cfg).unwrap();
+    mandi_services::month::MonthInput::export_all(&cfg).unwrap();
+    mandi_services::month::MonthReverseInput::export_all(&cfg).unwrap();
+    mandi_services::month::MonthPreview::export_all(&cfg).unwrap();
+    mandi_services::month::MonthClosed::export_all(&cfg).unwrap();
+    mandi_services::month::MonthReversed::export_all(&cfg).unwrap();
+    mandi_services::month::MonthList::export_all(&cfg).unwrap();
+    // Run B, plan 19 (append-only block).
+    mandi_reports::dashboard::Dashboard::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::AttentionList::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::screen_prefs::ScreenStateGetInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::screen_prefs::ScreenStateSetInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::screen_prefs::ScreenState::export_all(&cfg).unwrap();
+    // Run B, D5 round 12 (append-only block).
+    mandi_reports::reports::BuyerBillsPrintData::export_all(&cfg).unwrap();
+    // Run B, D5 round 14 (append-only block).
+    mandi_app_lib::print_report::PrintReportInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintAnalyticsViewInput::export_all(&cfg).unwrap();
+    // Plan 44 (append-only block).
+    partners::PartnersList::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EntryFlags::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EditPreview::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EntryEdited::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EditReview::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EditEntity::export_all(&cfg).unwrap();
+    mandi_services::core::edit::PurchaseEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::TripCostEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::TripOtherSaleEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::GardenEntryEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::GardenArrivalEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::TripHeaderEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::GardenHeaderEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixOpenInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixOpened::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixCloseInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixClosed::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeStatus::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeSetInput::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeChangeInput::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeUnlockInput::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeResetInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditStampInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditStampRow::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditHistoryInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditHistory::export_all(&cfg).unwrap();
+    // Plan 48, ask the app (append-only block).
+    mandi_assistant::ask::AskReply::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantAskInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantQuickInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantPickInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantRerunInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantNewConversationInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::ConversationStarted::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantStatus::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantSettingsSetInput::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantKeySaveInput::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantKeyRemoveInput::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantTestResult::export_all(&cfg).unwrap();
+    mandi_assistant::log::AssistantLogListInput::export_all(&cfg).unwrap();
+    mandi_assistant::log::AssistantLogPage::export_all(&cfg).unwrap();
+    mandi_assistant::step::AssistantStep::export_all(&cfg).unwrap();
+    // Plan 74 (append-only block).
+    party_ledgers::PartyLedgerGoToInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgerGoTo::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementPrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementDay::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementItem::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementEntry::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementBalance::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementSide::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementKind::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintStatementInput::export_all(&cfg).unwrap();
+    // Plan 77 (append-only block).
+    mandi_reports::dashboard::CommissionPeriod::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPeriodKind::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPeriodShown::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionParty::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionPartyShown::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CommissionSide::export_all(&cfg).unwrap();
 
+    // Plan 78 (append-only block).
+    mandi_reports::reports::AdhariSheetInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheetPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheetRow::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheetTotals::export_all(&cfg).unwrap();
+    mandi_reports::reports::AdhariSheet::export_all(&cfg).unwrap();
+    mandi_reports::reports::SalePrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRowsInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementShortItem::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementEdited::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRowsRow::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRows::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementRowsPrintInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintSlipsInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintAdhariInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCollectionSheetInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintStatementRowsInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintBuyerDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintSellerDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintTotalDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintLentOpenInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintAdvancesOpenInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCashSalesMonthInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCashSalesDayInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCommissionInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintPartnerMonthInput::export_all(&cfg).unwrap();
     for file in EXPECTED_FILES {
         assert!(
             dir.join(file).is_file(),
@@ -545,6 +1885,8 @@ fn plan_04_contract_shapes() {
             "mandi_en: string",
             "address: string",
             "phone: string",
+            "firm_contacts: Array<FirmContact>",
+            "trade_mark: string",
             "confirmed_rules_words: Array<string>",
         ],
     );
@@ -582,4 +1924,88 @@ fn plan_04_contract_shapes() {
         grouping.contains("international") && grouping.contains("lakh"),
         "{grouping}"
     );
+}
+
+#[test]
+fn plan_44_edit_and_partner_code_types_have_the_contract_shape() {
+    use mandi_services::core::edit;
+    use mandi_services::core::partner_code;
+    let cfg = Config::new();
+    let has = |decl: String, parts: &[&str]| {
+        for part in parts {
+            assert!(decl.contains(part), "{part} missing in {decl}");
+        }
+    };
+    has(
+        edit::EditStamp::decl(&cfg),
+        &[
+            "at: string",
+            "local_date: string",
+            "local_time: string",
+            "by: string",
+            "count: number",
+            "reason: string | null",
+        ],
+    );
+    has(
+        edit::EntryFlags::decl(&cfg),
+        &[
+            "can_edit: boolean",
+            "can_cancel: boolean",
+            "locked_reason: LockedReason | null",
+            "needs_reopen: boolean",
+            "edited: EditStamp | null",
+        ],
+    );
+    has(
+        edit::EditReview::decl(&cfg),
+        &[
+            "entry_date: string",
+            "changes: Array<EditChange>",
+            "effect: EditEffect",
+            "reason_required: boolean",
+            "needs_reopen: boolean",
+        ],
+    );
+    has(
+        edit::EditEffect::decl(&cfg),
+        &[
+            "parties: Array<EffectParty>",
+            "cash: EffectCash | null",
+            "partners: Array<EffectPartner>",
+            "partners_locked: boolean",
+        ],
+    );
+    has(
+        edit::PurchaseEditInput::decl(&cfg),
+        &[
+            "id: number",
+            "version: number",
+            "purchase: PurchaseInput",
+            "reason: string",
+        ],
+    );
+    has(
+        partner_code::PartnerCodeStatus::decl(&cfg),
+        &[
+            "is_set: boolean",
+            "unlocked: boolean",
+            "wait_seconds: number",
+        ],
+    );
+    has(
+        partners::PartnersList::decl(&cfg),
+        &["partners: Array<PartnerRow>", "partners_locked: boolean"],
+    );
+    let reasons = edit::LockedReason::decl(&cfg);
+    for word in [
+        "goods_moved",
+        "lot_seller_locked",
+        "garden_closed",
+        "month_closed",
+        "cancelled",
+        "returns_stand",
+    ] {
+        assert!(reasons.contains(word), "{reasons}");
+    }
 }

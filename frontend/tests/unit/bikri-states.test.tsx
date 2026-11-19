@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as appApi from '../../src/app/api';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
-import * as bikriApi from '../../src/features/bikri/api';
+import * as settingsApi from '../../src/features/settings/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { money } from '../helpers/accounts';
@@ -22,11 +22,13 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
 } from '../helpers/bikri-screen';
 import {
   DAY,
+  OVERRIDES_ON,
   fail,
   healthyBackend,
   leaveAppWindow,
@@ -36,6 +38,8 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { IDS } from '../helpers/bikri-data';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -50,7 +54,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -98,9 +102,17 @@ describe.each(LANGUAGES)('the four states (%s)', (language) => {
     const { user } = await openBook(language, (draft) =>
       failing ? Promise.reject(fail({ code: 'ERR_NOT_IMPLEMENTED' })) : previewFor(draft),
     );
-    await user.keyboard('LES-1234');
+    // Typing begins with the seller of the first lot: the date alone is not typed work.
+    await user.keyboard('{Enter}');
+    await typeCodeAndEnter(user, '0');
     expect(
-      await screen.findByText(textMatching(message(language, 'bikri-preview-failed'))),
+      // The preview waits 50 ms after the last key and the full suite loads the machine, so this
+      // waits longer than the default for the real condition: the words on screen.
+      await screen.findByText(
+        textMatching(message(language, 'bikri-preview-failed')),
+        {},
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
     expect(pageText()).toContain(message(language, 'err-not-implemented'));
     expect(pageText()).not.toContain('ERR_');
@@ -150,7 +162,7 @@ describe.each(LANGUAGES)('an answer that arrives late (%s)', (language) => {
     });
     await typeHeaderAndLot(user, language);
     const sales = salesGrid(language);
-    await user.keyboard('1{Enter}20{Enter}');
+    await user.keyboard('0{Enter}20{Enter}');
     await waitFor(() => {
       expect(backend.previews.some((draft) => draft.lots[0]?.sales[0]?.qty === '20')).toBe(true);
     });
@@ -248,10 +260,12 @@ describe.each(LANGUAGES)('a commission typed on the line (%s)', (language) => {
   });
 
   it('is read-only with a note when the Owner switched the setting off', async () => {
-    const { user } = await openBook(language, (draft) => ({
-      ...previewFor(draft),
+    // The switch is the Owner's setting (plan 46), not a field of the preview.
+    vi.mocked(settingsApi.settingsGetOverrides).mockResolvedValue({
+      ...OVERRIDES_ON,
       allow_line_override: false,
-    }));
+    });
+    const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
     await waitForNumbers();
@@ -283,7 +297,7 @@ describe.each(LANGUAGES)('the cash note (%s)', (language) => {
     }));
     await typeHeaderAndLot(user, language);
     await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'bikri-cash-note'));
+      expect(pageText()).toContain(message(language, 'common-cash-confirm-title'));
     });
     expect(pageText()).toMatch(/5,000/);
   });
@@ -292,7 +306,7 @@ describe.each(LANGUAGES)('the cash note (%s)', (language) => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await screen.findByRole('heading', { name: named(message(language, 'bikri-summary-title')) });
-    expect(pageText()).not.toContain(message(language, 'bikri-cash-note'));
+    expect(pageText()).not.toContain(message(language, 'common-cash-confirm-title'));
   });
 });
 
@@ -302,7 +316,7 @@ describe.each(LANGUAGES)('problems at their cells (%s)', (language) => {
     signedIn(sessionUser({ language }));
   });
 
-  it('an error on the quantity turns that cell red and is written in words; a warning turns the buyer amber', async () => {
+  it('an error on the quantity turns that cell red and is written in words; a credit-limit warning is only an amber mark on the buyer', async () => {
     const { user } = await openBook(language, (draft) => ({
       ...previewFor(draft),
       errors: [
@@ -327,11 +341,14 @@ describe.each(LANGUAGES)('problems at their cells (%s)', (language) => {
       expect(cellOf(sales, 1, 'qty')).toHaveClass('cell-error');
     });
     expect(cellOf(sales, 0, 'buyer')).toHaveClass('cell-warn');
-    // Colour is never the only signal: both are written, with the lot and line they are about.
+    // The quantity error is written in words; the credit limit is a mark on its cell, never a line of words.
     const text = pageText();
-    expect(text).toContain(message(language, 'bikri-where-line', { lot: 1, line: 2 }));
+    // The quantity is told under the sale lines of the lot, with the line only (PRD FR-12.6).
+    expect(text).toContain(message(language, 'bikri-qty-note-line', { line: 2 }));
     expect(text).toContain(message(language, 'err-qty-exceeds-lot', { available: 30 }));
-    expect(text).toContain(
+    // The credit limit is a small amber mark on the buyer cell, with the figures on hover: no line of words
+    // under the lines (PRD FR-12.6, plan 79 item 4).
+    expect(text).not.toContain(
       message(language, 'err-credit-limit-exceeded', { would_owe: '12,880', limit: '10,000' }),
     );
   });
@@ -362,7 +379,7 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await user.click(
-      screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+      screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
     );
     const lots = lotsGrid(language);
     await waitFor(() => {
@@ -375,35 +392,105 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
     });
   });
 
-  it('the one-time buyer account sends Enter to the name fields of the line', async () => {
-    const { user } = await openBook(language);
-    await typeHeaderAndLot(user, language);
-    await user.keyboard('03049999{Enter}');
-    await waitFor(() => {
-      const active = document.activeElement;
-      expect(active?.closest('[data-pukhta-for]')).not.toBeNull();
-    });
-  });
+  // Plan 43: every row of the grids has a visible button to take it away, so the mouse is enough.
+  describe('the remove button of a lot and of a sale line', () => {
+    const buttonsOf = (grid: HTMLElement) =>
+      Array.from(grid.querySelectorAll<HTMLElement>('.row-remove-button'));
+    const buttonAt = (grid: HTMLElement, index: number): HTMLElement => {
+      const button = buttonsOf(grid)[index];
+      if (button === undefined) throw new Error(`no remove button at ${String(index)}`);
+      return button;
+    };
 
-  it('"split" puts the backend’s part of the total freight into the freight cell of the lot', async () => {
-    const { user } = await openBook(language);
-    vi.mocked(bikriApi.bikriSplitFreight).mockImplementation((_total, lots) =>
-      Promise.resolve(lots.map((lot) => ({ key: lot.key, freight_paisa: money(4000) }))),
-    );
-    await typeHeaderAndLot(user, language);
-    const total = screen.getByRole('textbox', {
-      name: named(message(language, 'bikri-header-total-freight')),
+    it('takes a sale line away with the mouse, and the lot stays', async () => {
+      const { user } = await openBook(language);
+      await typeHeaderAndLot(user, language);
+      await typeTwoLines(user, language);
+      const sales = salesGrid(language);
+      await waitFor(() => {
+        expect(buttonsOf(sales).length).toBeGreaterThanOrEqual(2);
+      });
+      expect(buttonsOf(sales)[0]).toHaveAccessibleName(message(language, 'common-remove-line'));
+      await user.click(buttonAt(sales, 0));
+      // No question for a line: it goes at once, and the second line is now the first.
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      // The second line (580) is the first now. Its quantity is the one the screen fills in from
+      // what is left of the lot, so it is the rate that says which line it is.
+      await waitFor(() => {
+        expect(textOf(salesGrid(language), 0, 'rate')).toBe('580');
+      });
+      expect(buttonsOf(lotsGrid(language))).toHaveLength(1);
     });
-    await user.click(total);
-    await user.keyboard('4000');
-    await user.click(
-      screen.getByRole('button', { name: named(message(language, 'bikri-header-split-freight')) }),
-    );
-    await waitFor(() => {
-      expect(bikriApi.bikriSplitFreight).toHaveBeenCalledWith('4000', expect.any(Array));
+
+    it('asks before a lot with sale lines goes, in one sentence, and goes only when told to', async () => {
+      const { user } = await openBook(language);
+      await typeHeaderAndLot(user, language);
+      await typeTwoLines(user, language);
+      await user.click(
+        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
+      );
+      const lots = lotsGrid(language);
+      await waitFor(() => {
+        expect(buttonsOf(lots)).toHaveLength(2);
+      });
+      await user.click(buttonAt(lots, 0));
+      const dialog = await screen.findByRole('alertdialog', undefined, { timeout: 8_000 });
+      expect(visible(dialog.textContent)).toContain(
+        message(language, 'bikri-lot-remove-question', { count: 2 }),
+      );
+      expect(visible(dialog.textContent)).toContain(message(language, 'bikri-lot-remove-title'));
+      // Going back keeps the lot and its lines.
+      await user.click(
+        within(dialog).getByRole('button', {
+          name: (name) => visible(name).startsWith(message(language, 'common-back')),
+        }),
+      );
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+      });
+      expect(buttonsOf(lotsGrid(language))).toHaveLength(2);
+      // The key asks the same question; the answer "remove" takes the lot with its lines. The page is
+      // clickable again once the dialog has finished closing.
+      await waitFor(() => {
+        expect(document.body.style.pointerEvents).not.toBe('none');
+      });
+      // Selecting another lot draws the grid of its lines again, which takes the focus back to the cell
+      // that had it (FR-7.33); the second click then keeps the focus on the lot.
+      await user.click(cellOf(lotsGrid(language), 0, 'qty'));
+      await waitFor(() => {
+        expect(textOf(salesGrid(language), 0, 'rate')).toBe('600');
+      });
+      await user.click(cellOf(lotsGrid(language), 0, 'qty'));
+      await waitFor(() => {
+        expect(focusedIn(lotsGrid(language))).toBe('0:qty');
+      });
+      await user.keyboard('{Control>}{Delete}{/Control}');
+      const again = await screen.findByRole('alertdialog', undefined, { timeout: 8_000 });
+      await user.click(
+        within(again).getByRole('button', {
+          name: message(language, 'common-remove-line-confirm'),
+        }),
+      );
+      await waitFor(() => {
+        expect(buttonsOf(lotsGrid(language))).toHaveLength(1);
+      });
     });
-    await waitFor(() => {
-      expect(textOf(lotsGrid(language), 0, 'freight')).toMatch(/^4,?000$/);
+
+    it('takes a lot with no lines away without asking', async () => {
+      const { user } = await openBook(language);
+      await typeHeaderAndLot(user, language);
+      await user.click(
+        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
+      );
+      const lots = lotsGrid(language);
+      await waitFor(() => {
+        expect(buttonsOf(lots)).toHaveLength(2);
+      });
+      await user.click(buttonAt(lots, 1));
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      await waitFor(() => {
+        expect(buttonsOf(lotsGrid(language))).toHaveLength(1);
+      });
     });
   });
 });
@@ -417,7 +504,7 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
   it('keeps every value, the focused cell and the numbers, redraws the names, and typing goes on', async () => {
     const { backend, user } = await openBook(language);
     await typeHeaderAndLot(user, language);
-    await user.keyboard('1{Enter}20{Enter}');
+    await user.keyboard('0{Enter}20{Enter}');
     await waitFor(() => {
       expect(focusedIn(salesGrid(language))).toBe('0:rate');
     });
@@ -437,9 +524,6 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
     });
     expect(textOf(salesGrid(next), 0, 'buyer')).toBe(names(next).akram);
     expect(textOf(lotsGrid(next), 0, 'item')).toBe(names(next).banana);
-    expect(
-      screen.getByRole('combobox', { name: named(message(next, 'glossary-zamindar')) }),
-    ).toHaveValue(names(next).rahim);
     // Nothing typed was lost, and the numbers are the same.
     expect(textOf(lotsGrid(next), 0, 'qty')).toBe('50');
     expect(textOf(salesGrid(next), 0, 'qty')).toBe('20');
@@ -449,11 +533,11 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
       expect(focusedIn(salesGrid(next))).toBe('0:rate');
     });
     // And the entry goes on: the rate, then the second line.
-    await user.keyboard('600{Enter}2{Enter}');
+    await user.keyboard('600{Enter}{Enter}1{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales.slice(0, 2)).toMatchObject([
-        { buyer_account_id: 19, qty: '20', seller_rate: '600' },
-        { buyer_account_id: 20 },
+        { buyer_account_id: IDS.akram, qty: '20', seller_rate: '600' },
+        { buyer_account_id: IDS.arshad },
       ]);
     });
     expect(backend.lastDraft().header).toEqual(before?.header);

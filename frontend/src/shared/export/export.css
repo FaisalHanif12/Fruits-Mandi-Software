@@ -1,0 +1,29 @@
+/* The progress bar of an Excel export (D5-Q1): the browser's own element, drawn with the app's
+   colours, so it reads the same in both languages (the fill grows from the start edge in both
+   directions). While the total is not known yet (reading) it is the empty track; the words above it
+   say what is happening. */
+.export-progress {
+  appearance: none;
+  block-size: var(--space-2);
+  inline-size: 100%;
+  border: 0;
+  border-radius: var(--radius-1);
+  background-color: var(--color-border);
+  accent-color: var(--color-primary);
+  overflow: hidden;
+}
+
+.export-progress::-webkit-progress-bar {
+  background-color: var(--color-border);
+  border-radius: var(--radius-1);
+}
+
+.export-progress::-webkit-progress-value {
+  background-color: var(--color-primary);
+  border-radius: var(--radius-1);
+}
+
+.export-progress::-moz-progress-bar {
+  background-color: var(--color-primary);
+  border-radius: var(--radius-1);
+}

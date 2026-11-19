@@ -16,11 +16,17 @@ export function sideMessageId(side: BalanceValue['side']): string | null {
   return null;
 }
 
-export function Balance({ balance }: { balance: BalanceValue }) {
+interface BalanceProps {
+  balance: BalanceValue;
+  /** Written at the size of the text around it, for a balance that stands as a figure (`Num inherit`). */
+  inherit?: boolean;
+}
+
+export function Balance({ balance, inherit = false }: BalanceProps) {
   const id = sideMessageId(balance.side);
   return (
     <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
-      <Num paisa={balance.amount_paisa} />
+      <Num paisa={balance.amount_paisa} inherit={inherit} />
       {id === null ? null : <Localized id={id} />}
     </span>
   );

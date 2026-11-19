@@ -6,15 +6,18 @@
 //! not at all. The search index is updated after the commit (Code Standards B27). Nothing is
 //! ever deleted (PRD FR-10.6).
 
+mod link_check;
 mod openings;
 
 use mandi_db::accounts as repo;
+use mandi_db::codes::CodeTable;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
     AccountInput, AccountRow, AccountType, AccountsList, AccountsListInput, AccountsSimilarInput,
-    ControlRule, OpeningRequest, SimilarAccount, account_code_for, can_take_opening,
+    ControlRule, OpeningDay, OpeningRequest, SimilarAccount, account_code_for, can_take_opening,
     prepare_account,
 };
+use mandi_domain::core::codes::{build_code, check_typed_code};
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::text;
@@ -22,8 +25,10 @@ use mandi_domain::core::translit::Kind;
 use mandi_domain::core::validate;
 use serde_json::{Map, Value, json};
 
-pub(crate) use openings::apply as apply_opening;
-pub use openings::{openings_preview, openings_save};
+pub(crate) use openings::{OpeningCounter, apply_with as apply_opening_with};
+pub use openings::{
+    openings_preview, openings_preview_with_confirm, openings_save, openings_save_with_confirm,
+};
 
 use crate::audit::Event;
 use crate::auth::Actor;
@@ -98,12 +103,28 @@ pub fn list(ctx: &Context, input: &AccountsListInput) -> Result<AccountsList, Se
         n => n.min(MAX_PAGE),
     };
     let typed = input.filter.text.trim();
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| {
+            sort.order_by(&repo::SORT_COLUMNS).map(|order| {
+                if sort.column == "code" {
+                    mandi_db::codes::order_by_code_dir("a.code", sort.direction.sql())
+                } else {
+                    order
+                }
+            })
+        })
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
     ctx.db.read(|conn| {
         let (mut rows, totals) = repo::list(
             conn,
             &input.filter,
             &text::search_ur(typed),
             &text::search_en(typed),
+            order_by.as_deref(),
             input.offset,
             limit,
         )?;
@@ -144,17 +165,31 @@ fn resolve_control(
     }
 }
 
-/// The next free code for a kind of account: the control code plus the next free serial (PRD
-/// FR-10.3).
+/// The next free running number of a code type for an account.
+fn next_running_for(
+    conn: &Connection,
+    code_type: mandi_domain::core::codes::CodeType,
+) -> Result<(u64, String), ServiceError> {
+    mandi_db::codes::next_code(conn, CodeTable::Accounts, code_type)?
+        .ok_or_else(|| series_full(code_type.number()))
+}
+
+/// The next free code for a kind of account. A seller gets `001` plus the next running number, a
+/// buyer `002` plus the next running number (`0010`, `0011` ...; plan 32 R2, never a code used
+/// before). Every other kind keeps the control code plus the next free serial (PRD FR-10.3).
 ///
 /// # Errors
-/// `ERR_REQUIRED` or `ERR_NOT_FOUND` on `control_id`; `ERR_SERIES_FULL` when 8999 is used.
+/// `ERR_REQUIRED` or `ERR_NOT_FOUND` on `control_id`; `ERR_SERIES_FULL` when the numbers are used up.
 pub fn next_code(
     ctx: &Context,
     account_type: AccountType,
     control_id: Option<i64>,
 ) -> Result<String, ServiceError> {
     ctx.db.read(|conn| {
+        if let Some(code_type) = account_type.code_type() {
+            let (_, code) = next_running_for(conn, code_type)?;
+            return Ok(code);
+        }
         let control = resolve_control(conn, account_type, control_id)?;
         let serial =
             repo::next_serial(conn, control.id)?.ok_or_else(|| series_full(&control.code))?;
@@ -164,6 +199,11 @@ pub fn next_code(
 
 /// Accounts that look like the one being typed: names in either script (mistakes forgiven) and
 /// the same phone (PRD FR-10.7, FR-7.63). Only reads.
+///
+/// An account is marked `is_duplicate` when its name (in either script typed), its tag and its
+/// phone all match what was typed (PRD FR-10.7, E38). The same name and phone with another tag,
+/// or one with a tag and one without, is another person and is only listed as similar: `اسلم BA`
+/// and `اسلم` are two different people. A tag or a phone that is not valid yet marks nothing.
 ///
 /// # Errors
 /// `ServiceError::Db`.
@@ -189,16 +229,48 @@ pub fn similar(
         }
     }
     ids.truncate(MAX_SIMILAR);
-    ctx.db
-        .read(|conn| repo::similar_by_ids(conn, &ids).map_err(ServiceError::from))
+    let mut found = ctx
+        .db
+        .read(|conn| repo::similar_by_ids(conn, &ids).map_err(ServiceError::from))?;
+    mark_duplicates(&mut found, input);
+    // A duplicate is listed first; the rest keep their order.
+    found.sort_by_key(|account| !account.is_duplicate);
+    Ok(found)
+}
+
+/// Sets `is_duplicate` where the typed name, tag and phone all equal the account's (PRD FR-10.7).
+/// Names are compared by their search keys, so look-alike letters and capitals do not matter.
+fn mark_duplicates(found: &mut [SimilarAccount], input: &AccountsSimilarInput) {
+    let (Ok(tag), Ok(phone)) = (
+        validate::tag("tag", &input.tag),
+        validate::phone_optional("phone", &input.phone),
+    ) else {
+        return;
+    };
+    let phone = phone.unwrap_or_default();
+    let typed_ur = text::search_ur(&input.name_ur);
+    let typed_en = text::search_en(&input.name_en);
+    if typed_ur.is_empty() && typed_en.is_empty() {
+        return;
+    }
+    for account in found {
+        let name_matches = (!typed_ur.is_empty() && text::search_ur(&account.name_ur) == typed_ur)
+            || (!typed_en.is_empty() && text::search_en(&account.name_en) == typed_en);
+        account.is_duplicate = name_matches && account.tag == tag && account.phone1.trim() == phone;
+    }
 }
 
 /// Why an opening cannot be put on an account (PRD FR-6.5, FR-10.9, FR-13.5, FR-12.4): income and
 /// shop expense accounts would need partner share rows, ابتدائی فرق would be posted against
-/// itself, a پختہ کھاتہ account has no person to hold the balance, and نقدی منڈی pays at once.
+/// itself, a چکتا کھاتہ account has no person to hold the balance, and نقدی منڈی pays at once.
 /// The documents do not say what to do about these; they are refused until Umar decides.
 pub(crate) fn opening_allowed(facts: &repo::AccountFacts) -> bool {
-    can_take_opening(&facts.head_code, &facts.code, facts.is_pukhta_khata)
+    can_take_opening(
+        &facts.head_code,
+        &facts.control_code,
+        &facts.code,
+        facts.is_chukta_khata,
+    )
 }
 
 /// Checks the name and the father or firm name together, so both fields come back at once.
@@ -271,6 +343,22 @@ pub fn save(
     actor: &Actor,
     input: &AccountInput,
 ) -> Result<AccountRow, ServiceError> {
+    save_with_confirm(ctx, actor, input, false)
+}
+
+/// [`save`] with the answer of the cash box (PRD FR-6.7, plan 80 gate R4-4): with
+/// `confirm_cash_below_zero` true, a change of an opening that is in روکڑ may take cash in hand
+/// below 0. Without it that change is refused with `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value
+/// `cash_after_paisa`), the signal for the screen to ask.
+///
+/// # Errors
+/// As [`save`].
+pub fn save_with_confirm(
+    ctx: &Context,
+    actor: &Actor,
+    input: &AccountInput,
+    confirm_cash_below_zero: bool,
+) -> Result<AccountRow, ServiceError> {
     let (closed, today) = day::window(ctx)?;
     // An edit that leaves the opening as it is must not trip over a closed opening day.
     let stored = match input.id {
@@ -286,8 +374,21 @@ pub fn save(
             "is_active",
         ));
     }
+    // A person in the dead amount is made active again only by "دوبارہ فعال کریں" with a reason
+    // (PRD FR-10.10), never by the box on this form.
+    if input.is_active
+        && stored.as_ref().is_some_and(|facts| !facts.is_active)
+        && let Some(id) = input.id
+        && ctx.db.read(|conn| crate::dead::is_dead(conn, id))?
+    {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrAlreadyDead,
+            "is_active",
+        ));
+    }
     let in_force = stored.as_ref().map(current_opening).transpose()?;
-    let prepared = prepare_account(input, closed, today, in_force.as_ref())?;
+    let mut prepared = prepare_account(input, closed, today, in_force.as_ref())?;
+    prepared.confirm_cash_below_zero = confirm_cash_below_zero;
     let checks = spelling_checks(ctx, &prepared)?;
     let (id, learned) = ctx
         .db
@@ -297,6 +398,53 @@ pub fn save(
     }
     search::refresh_account(ctx, id);
     get(ctx, id)
+}
+
+/// Makes a new account inside the caller's transaction, with the same checks as [`save`] (used by
+/// the staff loan person of plan 22). The caller refreshes the search index and runs the returned
+/// learning steps after the commit.
+///
+/// # Errors
+/// As [`save`] for a new account.
+pub(crate) fn create_in(
+    ctx: &Context,
+    actor: &Actor,
+    tx: &Connection,
+    input: &AccountInput,
+    window: (
+        Option<mandi_domain::core::dates::BusinessDate>,
+        mandi_domain::core::dates::BusinessDate,
+    ),
+) -> Result<(i64, Vec<crate::spelling::Learned>), ServiceError> {
+    let prepared = prepare_account(input, window.0, window.1, None)?;
+    let checks = spelling_checks(ctx, &prepared)?;
+    write(ctx, actor, tx, &prepared, &checks)
+}
+
+/// The code and the serial of a new account. A seller or a buyer: the typed code, which must be a
+/// full code of its type, or the next running number; the serial is the running number (plan 32
+/// R2). Any other account: the control code plus a 4-digit serial (PRD FR-10.3).
+fn new_code(
+    tx: &Connection,
+    prepared: &mandi_domain::core::accounts::PreparedAccount,
+    control: &repo::ControlRow,
+) -> Result<(String, u32), ServiceError> {
+    if let Some(code_type) = prepared.account_type.code_type() {
+        let running = match &prepared.typed_code {
+            Some(typed) => check_typed_code("code", typed, code_type)?,
+            None => next_running_for(tx, code_type)?.0,
+        };
+        let code = build_code(code_type, running)
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrSeriesFull, "code"))?;
+        let serial = u32::try_from(running)
+            .map_err(|_| ServiceError::reject_field(ErrorCode::ErrSeriesFull, "code"))?;
+        return Ok((code, serial));
+    }
+    let serial = match &prepared.typed_code {
+        Some(typed) => account_code_for("code", &control.code, typed)?,
+        None => repo::next_serial(tx, control.id)?.ok_or_else(|| series_full(&control.code))?,
+    };
+    Ok((format!("{}{serial:04}", control.code), serial))
 }
 
 fn write(
@@ -332,17 +480,13 @@ fn write(
         }
         None => None,
     };
+    // The link must be one clean pair of a seller and a buyer (PRD E10, FR-10.2).
+    link_check::check(tx, prepared)?;
 
     let id = match &old {
         None => {
             let control = resolve_control(tx, prepared.account_type, prepared.control_id)?;
-            let serial = match &prepared.typed_code {
-                Some(typed) => account_code_for("code", &control.code, typed)?,
-                None => {
-                    repo::next_serial(tx, control.id)?.ok_or_else(|| series_full(&control.code))?
-                }
-            };
-            let code = format!("{}{serial:04}", control.code);
+            let (code, serial) = new_code(tx, prepared, &control)?;
             if repo::code_taken(tx, &code, None)? {
                 return Err(ServiceError::reject_field(ErrorCode::ErrCodeTaken, "code"));
             }
@@ -390,6 +534,13 @@ fn write(
         &facts,
         &prepared.opening,
         "opening_dr",
+        // A new account is dated on any day up to today; an edit needs an open day (plan 53 T1).
+        if old.is_none() {
+            OpeningDay::NewAccount
+        } else {
+            OpeningDay::Open
+        },
+        prepared.confirm_cash_below_zero,
     )?;
 
     let learned = checks
@@ -416,10 +567,10 @@ fn write(
 /// Makes an account active or inactive (an account is never deleted, PRD FR-10.6). Asking for
 /// the state it already has changes nothing.
 ///
-/// A system account (PRD FR-10.4: روکڑ, ابتدائی فرق, the income accounts, نقدی منڈی, the two
-/// پختہ کھاتہ accounts ...) cannot be made inactive, because the app posts to it by itself and a
-/// picker would no longer offer it. Making one active again is allowed, so a file where the
-/// state was changed some other way can be put right.
+/// A system account (PRD FR-10.4: روکڑ, ابتدائی فرق, the income accounts, نقدی منڈی, چکتا کھاتہ ...)
+/// cannot be made inactive, because the app posts to it by itself and a picker would no longer offer
+/// it. Making one active again is allowed, so a file where the state was changed some other way can
+/// be put right. The one exception is the old closed account 0031 (PRD FR-13.9): it stays closed.
 ///
 /// # Errors
 /// `ERR_NOT_FOUND` on `id`; `ERR_SYSTEM_ACCOUNT` on `id` when a system account is made inactive.
@@ -438,8 +589,20 @@ pub fn set_active(
                 "id",
             ));
         }
+        // The old closed account stays closed: nothing posts to it any more (PRD FR-13.9).
+        if is_active && old.code == mandi_domain::core::codes::OLD_CLOSED_ACCOUNT_CODE {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrSystemAccount,
+                "id",
+            ));
+        }
         if old.is_active == is_active {
             return Ok::<_, ServiceError>(false);
+        }
+        // A person in the dead amount is made active again only by "دوبارہ فعال کریں" (PRD
+        // FR-10.10).
+        if is_active && crate::dead::is_dead(tx, id)? {
+            return Err(ServiceError::reject_field(ErrorCode::ErrAlreadyDead, "id"));
         }
         repo::set_active(tx, id, is_active, actor.user_id, &ctx.now_text())?;
         ctx.db.auditor().write(

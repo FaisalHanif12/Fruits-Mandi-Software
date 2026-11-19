@@ -7,7 +7,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
-import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { E2E26_REQUEST, EVENT1_REQUEST } from '../helpers/bikri-data';
@@ -16,9 +15,11 @@ import {
   focusedIn,
   lotsGrid,
   named,
+  names,
   openBook,
   salesGrid,
   textOf,
+  tickAdvance,
   typeEvent1Lot,
 } from '../helpers/bikri-screen';
 import {
@@ -29,6 +30,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -43,7 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -82,27 +84,26 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
 
   async function open() {
     const book = await openBook(language);
-    // No truck memory: the backend's files have no اڈا and no filled fields.
-    vi.mocked(bikriApi.assistTruckMemory).mockResolvedValue({
-      last: null,
-      same_day: null,
-      suggestions: [],
-    });
     return book;
   }
 
   it('Event 1: header, lot and the two sale lines are the same as bikri_preview_event1_request.json', async () => {
     const { backend, user } = await open();
     await typeEvent1Lot(user, language);
-    await user.keyboard('1{Enter}20{Enter}600{Enter}');
+    await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}');
     // The second line starts at 30 before the buyer is chosen; the munshi sees it, then goes on.
     await waitFor(() => {
       expect(textOf(salesGrid(language), 1, 'qty')).toBe('30');
     });
-    await user.keyboard('2{Enter}{Enter}580{Enter}');
+    await user.keyboard('1{Enter}{Enter}580{Enter}{Enter}');
     await waitFor(() => {
       const sent = backend.previews.at(-1)?.lots[0]?.sales[1]?.seller_rate;
       expect(sent).toBe('580');
+    });
+    // Event 1 takes the advance off this sale: the tick is off when a بکری opens, so the munshi ticks it (C3).
+    await tickAdvance(user, language, names(language).rahim);
+    await waitFor(() => {
+      expect(backend.previews.at(-1)?.lots[0]?.adjust_advance).toBe(true);
     });
     const sent = normalized(backend.lastDraft()) as BikriDraft;
     const file = wanted(EVENT1_REQUEST) as BikriDraft;
@@ -119,7 +120,7 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
   it('E2E-26: one finished line and a blank line that already starts at 30 are the same as bikri_preview_e2e26_request.json', async () => {
     const { backend, user } = await open();
     await typeEvent1Lot(user, language);
-    await user.keyboard('1{Enter}20{Enter}600{Enter}');
+    await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}');
     const sales = salesGrid(language);
     // The blank second line starts at what the lot has left, before any buyer is chosen.
     await waitFor(() => {
@@ -127,6 +128,10 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
     });
     await waitFor(() => {
       expect(backend.previews.at(-1)?.lots[0]?.sales[1]?.qty).toBe('30');
+    });
+    await tickAdvance(user, language, names(language).rahim);
+    await waitFor(() => {
+      expect(backend.previews.at(-1)?.lots[0]?.adjust_advance).toBe(true);
     });
     expect(normalized(backend.lastDraft())).toEqual(wanted(E2E26_REQUEST));
   });
@@ -140,35 +145,30 @@ describe.each(LANGUAGES)('E2E-26 on the screen, from the backend’s answer (%s)
 
   it('line 2 starts at 30, the rate is empty with 600 as grey text, Ctrl+D copies 600, ⓘ shows 12,000 × 6 ÷ 100 = 720', async () => {
     const { user } = await openBook(language);
-    vi.mocked(bikriApi.assistTruckMemory).mockResolvedValue({
-      last: null,
-      same_day: null,
-      suggestions: [],
-    });
     await typeEvent1Lot(user, language);
-    await user.keyboard('1{Enter}20{Enter}600{Enter}');
+    await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}');
     const sales = salesGrid(language);
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:buyer');
     });
-    // The blank second line: 30 in the quantity, the rate empty, the last rate as grey text.
+    // The blank second line: 30 in the quantity, the rate empty with no hint and no placeholder number
+    // (PRD FR-7.53 retired, plan 79 item 5).
     await waitFor(() => {
       expect(textOf(sales, 1, 'qty')).toBe('30');
     });
     const rate = cellOf(sales, 1, 'rate');
+    expect(rate).not.toHaveClass('cell-hint');
+    expect(visible(rate.textContent).trim()).toBe('');
+    // 30 of the 50 are not sold yet. That is information, not a warning (plan 79 item 4): the lot's cell
+    // is not amber and no line of words says it; the lot row shows what is left once.
     await waitFor(() => {
-      expect(rate).toHaveClass('cell-hint');
+      expect(cellOf(lotsGrid(language), 0, 'qty')).not.toHaveClass('cell-warn');
     });
-    expect(visible(rate.textContent).trim()).toBe('600');
-    // 30 of the 50 are not sold yet: the backend says so, and the lot's quantity cell shows it.
-    await waitFor(() => {
-      expect(cellOf(lotsGrid(language), 0, 'qty')).toHaveClass('cell-warn');
-    });
-    expect(visible(document.body.textContent)).toContain(
+    expect(visible(document.body.textContent)).not.toContain(
       message(language, 'err-qty-left-unsold', { left: 30 }),
     );
     // Buyer, Enter takes the 30, then Ctrl+D copies the rate of the line above.
-    await user.keyboard('2{Enter}{Enter}');
+    await user.keyboard('1{Enter}{Enter}');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:rate');
     });

@@ -13,4 +13,12 @@ export type AccountsRecentInput = {
    * The control, for scope `control`. Each control has its own recent list.
    */
   control_id: number | null;
+  /**
+   * As on `SearchAccountsInput`: true in the field of a وصولی and of an ادھار رقم واپسی.
+   */
+  include_dead?: boolean;
+  /**
+   * As on `SearchAccountsInput`: true only in the buyer field of a بکری line.
+   */
+  with_chukta?: boolean;
 };

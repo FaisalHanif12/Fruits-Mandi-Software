@@ -1,12 +1,25 @@
 // Typed wrappers around the rules commands (plan 09; module `rules`, Tech Stack 5.2). Components
 // never call invoke() (Code Standards F4). The only file that knows the wire shape.
 
+import type { RulesList } from '../../bindings/RulesList';
+import type { SortInput } from '../../bindings/SortInput';
 import type { RuleTestInput } from '../../bindings/RuleTestInput';
 import { callCommand } from '../../shared/api';
 import type { RuleDraft, RuleFilter, RuleRow, RuleSaved, RuleTest } from './types';
 
-export function rulesList(filter: RuleFilter): Promise<RuleRow[]> {
-  return callCommand<RuleRow[]>('rules_list', { input: { filter } });
+/**
+ * One page of the rules for the filter, with the count and the totals of the whole filter (PRD 11,
+ * FR-19.11). Inactive rules are in it only when the filter asks for them.
+ */
+export function rulesList(
+  filter: RuleFilter,
+  offset: number,
+  limit: number,
+  view: { search: string | null; sort: SortInput | null } = { search: null, sort: null },
+): Promise<RulesList> {
+  return callCommand<RulesList>('rules_list', {
+    input: { filter, offset, limit, search: view.search, sort: view.sort },
+  });
 }
 
 /** One rule by id, for the form that edits it. */

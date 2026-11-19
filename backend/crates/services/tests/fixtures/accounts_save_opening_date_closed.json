@@ -1,0 +1,15 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DATE_CLOSED",
+      "field": "opening_date",
+      "values": {
+        "closed_up_to": "30-10-2026",
+        "today": "31-10-2026",
+        "today_open": 1
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

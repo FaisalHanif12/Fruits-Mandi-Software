@@ -4,6 +4,7 @@
 #   services -> domain, db
 #   reports -> db, core
 #   backup -> db, core
+#   assistant -> services, reports (plan 48, D6)
 #   domain -> core
 #   db -> core
 # The test app/tests/workspace_rules.rs checks this list.
@@ -18,6 +19,7 @@ members = [
     "crates/services",
     "crates/reports",
     "crates/backup",
+    "crates/assistant",
 ]
 
 [workspace.package]
@@ -34,6 +36,7 @@ mandi-db = { path = "crates/db" }
 mandi-services = { path = "crates/services" }
 mandi-reports = { path = "crates/reports" }
 mandi-backup = { path = "crates/backup" }
+mandi-assistant = { path = "crates/assistant" }
 
 # Tauri 2 and the five plugins of Tech Stack 2. No other plugin.
 tauri = { version = "2.12.2", features = [] }
@@ -59,7 +62,7 @@ icu_locale_core = "2.3.0"
 proptest = { version = "1.11.0", default-features = false, features = ["std", "bit-set"] }
 
 # Database (Tech Stack 2): SQLite built in, with the online backup API and custom collations.
-rusqlite = { version = "0.40.2", features = ["bundled", "backup", "collation"] }
+rusqlite = { version = "0.40.2", features = ["bundled", "backup", "collation", "functions"] }
 rusqlite_migration = "2.6.0"
 # Hash chain over audit entries (NFR-SEC-6). Plan 03 4.5.
 blake3 = "1.8.7"
@@ -78,8 +81,39 @@ getrandom = "0.4.3"
 fs4 = "1.1.0"
 tempfile = "3.27.0"
 
+# Snapshot tests of print data and reports (Tech Stack 2, plan 14). A dev-dependency only; JSON
+# snapshots of serde values, no console colours.
+insta = { version = "1.49.0", default-features = false, features = ["json"] }
+
 # Benchmarks for the NFR speed targets (Code Standards B25). No HTML or plot output.
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+
+# Backup (Tech Stack 2, plan 18, run B). age encrypts, zstd compresses, object_store talks S3
+# (Cloudflare R2). zstd stays on the 0.13 line the tree already has (one libzstd, `links`).
+# tokio is only what object_store needs: a small runtime to call its async API from a worker thread.
+age = "0.12.1"
+zstd = "0.13.3"
+object_store = { version = "0.14.2", default-features = false, features = ["aws"] }
+tokio = { version = "1.53.2", default-features = false, features = ["rt"] }
+
+# Excel export and the readable pack (Tech Stack 2, plan 22 round 10, D5-Q1). rust_xlsxwriter
+# writes the sheets; fluent-bundle gives them the same words as the screens, from the same
+# .ftl files embedded at build time. Money reaches a sheet only through rupees_as_f64 (M13).
+rust_xlsxwriter = "0.99.1"
+fluent-bundle = "0.16.0"
+unic-langid = "0.9.6"
+# Test only: reads the sheets the export wrote, to check every number (MIT, already in the tree
+# as the library under rust_xlsxwriter). No xlsx reader is part of the app.
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+
+# Ask the app (plan 48, D6): the one HTTPS call to OpenRouter. rustls only, no default features, the
+# blocking client (the call runs on a worker thread, never on the screen's thread). It is already
+# in the tree through object_store, so no new crate family comes in.
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "blocking"] }
+
+# Test only (plan 48, P1): counts the tokens of the fixed prompt with the `o200k_base` tokenizer.
+# MIT licence; the tokenizer file is inside the crate, so the test needs no network.
+tiktoken-rs = "0.12.1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -103,6 +137,14 @@ print_stderr = "forbid"
 [profile.dev.package.argon2]
 opt-level = 3
 [profile.dev.package.blake2]
+opt-level = 3
+# The backup key is stretched with scrypt on every encrypted copy and every restore. Optimised, a
+# copy in a test takes milliseconds, not a second.
+[profile.dev.package.scrypt]
+opt-level = 3
+[profile.dev.package.salsa20]
+opt-level = 3
+[profile.dev.package.zstd-sys]
 opt-level = 3
 # The transliteration engine trains on 4,500 word pairs on first use and searches many
 # spellings per key press. Unoptimised it is about 30 times slower, which makes tests crawl.

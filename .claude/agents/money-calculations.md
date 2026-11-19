@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
+Version 1.13, 17 November 2026 (PRD v1.43, plan 78: advances to sellers lower and restore the partners' totals at read time, Section 8.2c; the third split function `split_by_open_parts`, PRD C28). Earlier, version 1.12, 12 November 2026 (PRD v1.34, plan 71: the header freight split, C17, is retired; freight is typed on each lot, Section 5.3). Earlier, version 1.11, 10 November 2026 (PRD v1.33: in an edit, a change of only one party re-reads only that side's rules, checklist. Version 1.10, 9 November 2026: PRD v1.32, approved by Umar through D8: money paid on the spot in the cash part and in matching, Sections 7 and 8.1; چکتا کھاتہ in place of the old one-time accounts). Earlier, version 1.9, 3 November 2026 (what-if estimates scale the same-pace month by a factor in basis points with one `apply_bps`, and an estimate to the end of the year adds the books' months so far to the months left, Section 9.1; PRD v1.20 FR-7.86. Earlier, version 1.8, 2 November 2026: the question panel's calculator and estimator, display only, Section 9.1; PRD v1.16 FR-7.75 and FR-7.86; amended the same day: a target is reached at the target, counting from the current month, with the same-growth example. Earlier, version 1.7, 23 October 2026: Excel export: one approved exception to the no-float rule, the functions `rupees_as_f64` and `count_as_f64` in one file at the export boundary, rule 4 and the forbidden-pattern search below; Umar's answers of 23-10-2026. Earlier, version 1.5, 19 October 2026: PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -16,8 +16,8 @@ Work slowly and carefully. Prove every number. When in doubt, stop and ask rathe
 
 Source documents (read the relevant parts before you start; the PRD is the master and wins any conflict):
 
-- `docs/PRD_Mandi_Software_v1.md` (v1.1): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 13 (پختہ کھاتہ), 15 (vouchers and matching), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C19), 23 (edge cases), 27 (end-to-end tests)
-- `docs/Code_Standards_v1.md`: Section 3 (money rules M1 to M12), Section 4 (validation), Section 5.3 (database), Section 5.5 (B29 hints, B30 working records), Section 9 (tests)
+- `docs/PRD_Mandi_Software_v1.md` (v1.32): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 7.7 (the question panel's calculator and estimates: FR-7.75, FR-7.86), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 12.10 and 12.11 (market trips and gardens), 12.12 (party ledgers), 13 (چکتا کھاتہ), 15 (vouchers and matching), 16.7 (fruit taken), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C27), 23 (edge cases), 27 (end-to-end tests)
+- `docs/Code_Standards_v1.md`: Section 3 (money rules M1 to M14), Section 4 (validation), Section 5.3 (database), Section 5.5 (B29 hints, B30 working records), Section 9 (tests)
 - `docs/Architecture_v1.md`: Diagrams 7 to 12 and the data dictionary in Section 15
 
 ---
@@ -29,6 +29,7 @@ Source documents (read the relevant parts before you start; the PRD is the maste
 3. **Percent is basis points in an integer.** Type `Bps(i32)`. 1% = 100 bps. 6% = `Bps(600)`. 2.5% = `Bps(250)`. 100% = `Bps(10000)`.
 4. **Never use floating point** for money, rates, percentages, weights or quantities. No `f32`, `f64`, no JavaScript arithmetic on money, no `parseFloat`, `Number()` on money text, `toFixed`, `Math.round`, no SQL `REAL`, `FLOAT`, `total()` or `avg()`.
    - Why, with an example: in floating point, 0.1 + 0.2 = 0.30000000000000004. Repeat that over 5,000 sale lines a day and rupees go missing.
+   - **One approved exception (Umar, 23-10-2026, D5-Q1):** Excel stores every number as floating point, so the Excel export calls ONE function, `rupees_as_f64`, in one file (`numbers.rs`) of `mandi-reports`. A whole-number quantity (a نگ count) uses its twin `count_as_f64` in the same file (Umar, second answer, 23-10-2026); a percent is written as text from the integer formatter. It divides whole paisa by 100 with integer division first, refuses a value of 2^53 or more (the conversion is then exact; the code uses the stricter 10^15 rupees because Excel shows 15 digits), and only then converts. A unit test covers the largest allowed amount. An Excel value is never read back. Any other `f64` on money is still a bug. Review it like any money code: it must be the only place, and the test must exist.
 5. **Multiply first, divide last, in `i128`, then round once** with `core::money::round_to_rupee`. It is the only rounding function. Only `apply_bps`, `weight_value` and `avg_rate` call it.
 6. **Round once, use the same number everywhere.** The commission on a buyer's bill, in the journal, in the partner split and in analytics is the same stored value. Never recalculate it in a second place.
 7. **All arithmetic is checked.** `checked_add`, `checked_sub`, `checked_mul`. Overflow returns `MoneyError::Overflow`. Never wrap, never saturate silently.
@@ -38,7 +39,7 @@ Source documents (read the relevant parts before you start; the PRD is the maste
 11. **Preview and save use the same function.** The live summary and the saved data come from one calculation path.
 12. **The frontend never calculates money.** It formats `Paisa` from the backend for display. That is all.
 13. **Snapshots.** Each sale line and lot stores the method, value, rule ID and amount used. Later rule or share changes never alter saved results, and an unchanged line inside an edit keeps them too. Reports and analytics read stored values, never recalculate.
-14. **Income and expenses always have owners.** Every posting that touches an income account or an expense account (head 05: دکان خرچہ 0501 and اپنا مال لاگت 0502) writes partner share rows in the same save (PRD FR-6.5), so Σ shares = income − shop expenses for any period.
+14. **Income and expenses always have owners.** Every posting that touches an income account or an expense account (head 05: the دکان خرچہ heads 0501; from v1.6 there is no 0502) writes partner share rows in the same save (PRD FR-6.5), so Σ shares = income − shop expenses for any period.
 
 If any task seems to need breaking one of these rules, stop and explain why to the user. Do not break it.
 
@@ -63,7 +64,8 @@ Functions (and no other money arithmetic):
 | `apply_bps(base: Paisa, bps: Bps)` | `Paisa` | percent charge, rounded (Section 4.2) |
 | `per_unit(qty: Qty, value: Paisa)` | `Paisa` | exact |
 | `split_by_bps(amount: Paisa, shares: &[(PartnerId, Bps)])` | `Vec<(PartnerId, Paisa)>` | Section 5.1 and 5.2 |
-| `split_by_qty(amount: Paisa, parts: &[(LotNo, Qty)])` | `Vec<(LotNo, Paisa)>` | Section 5.3 |
+| `split_by_qty<K>(amount: Paisa, parts: &[(K, Qty)])` | `Vec<(K, Paisa)>` | Sections 5.4 and 5.5; the key is a purchase or a partner (a lot only in the retired 5.3) |
+| `split_by_open_parts<K>(amount: Paisa, open: &[(K, Paisa)])` | `Vec<(K, Paisa)>` | Section 8.2c (PRD C28): amount ≤ Σ open; each part = floor(amount × open_i ÷ Σ open), then the leftover one rupee each from the largest open part (tie: lower key); no part above its open; amount = Σ open gives exactly the open parts |
 | `avg_rate(total: Paisa, qty: Qty)` | `Paisa` | display only (Section 4.4) |
 | `round_to_rupee(numerator: i128, denominator: i128)` | `Paisa` | the one rounding function (Section 4.1); private to `core::money` |
 
@@ -135,7 +137,7 @@ These four rows MUST be unit tests, plus every boundary (99, 100, 999, 1,000, 99
 ### 3.4 Working records, hints and filled amounts (PRD 7.6)
 
 - **Working (FR-7.43, Code Standards B30).** The `working` record for an amount is produced inside the same domain function that calculates it, from the same values. Example for PRD 4.4: inputs 12,000 and 6%, formula "12,000 × 6 ÷ 100", result 720, rule "default seller commission 6%". The result in the working MUST equal the stored amount. A test checks this for every amount in the golden day.
-- **Rate hint (FR-7.53).** The last rate is returned as a `RateHint`, a different type from an input rate, so it cannot be saved by mistake. It is never put into the rate field. `Ctrl+D` copies the previous line's rate text into the field, and it is then parsed like typed text.
+- **Rate hint (FR-7.53, retired for the sale line in PRD v1.44; the پھل screen keeps it).** The last rate is returned as a `RateHint`, a different type from an input rate, so it cannot be saved by mistake. It is never put into the rate field. `Ctrl+D` copies the previous line's rate text into the field, and it is then parsed like typed text.
 - **Full-balance buttons (FR-7.58, FR-7.59).** "پورا بقایا" and "پرانا بل" put the backend's open amount into the amount field as text. On save it is parsed and checked again like any typed amount, against the balance at the moment of saving.
 - **Party card balances (FR-7.38)** are read from `journal_lines` and the matching tables, never from the search index or a cache.
 - **Undo (FR-7.47)** is a normal cancel by reversal (Section 7). It never deletes.
@@ -244,16 +246,11 @@ Split the **absolute** amount with Section 5.1, then make every part negative. N
 | Negative income (a negative ریٹ فرق of −100) | split 100 → 40 / 30 / 30, negate | −40 / −30 / −30 |
 | Wrong method, for contrast | floor(−1,353.6) = −1,354, floor(−1,015.2) = −1,016, twice: sum −3,386, leftover +2 → −1,352 / −1,016 / −1,016 | must NOT happen |
 
-### 5.3 Header freight split across lots (`split_by_qty`, PRD C17)
+### 5.3 Header freight split across lots (retired in v1.12, PRD C17)
 
-```
-part_i = (total_rupees × qty_i) ÷ Σ qty      // floor, whole rupees
-leftover → the lot with the largest qty; tie → lowest lot number
-```
+Retired by PRD v1.34: the بکری header has no total freight, so freight is typed on each lot. Old lots keep the freight stored on them; nothing splits it again.
 
-Examples: 1,000 over lots of 30 and 20 نگ → 600 and 400. 1,000 over 3 lots of 1 نگ each → 333 / 333 / 333, leftover 1 → lot 1 → 334 / 333 / 333.
-
-### 5.4 Cost of own goods sold or written off (`split_by_qty`, PRD C21, 12.10)
+### 5.4 Cost of trip goods sold or written off (`split_by_qty`, PRD C21, 12.10)
 
 ```
 cost_left = total_cost − cost_released            // from the purchase row
@@ -263,11 +260,49 @@ qty_left  = qty − qty_sold − qty_written_off
 if qty_taken == qty_left: cost_taken = cost_left   // the last نگ takes all the cost left
 ```
 
+A purchase's total cost = paid now (value + freight + labour + other cost) + its part of the trip costs. A trip cost is spread, when it is saved, over the trip's purchases that still have goods left, with `split_by_qty(cost, [نگ bought of each])` (C24); tie → the earlier purchase. Each part is added to that purchase's total cost and cost left, so Σ cost released still equals total cost once nothing is left. Example E2E-41: truck 4,000 over one purchase of 80 نگ → 4,000; total cost 96,000 + 4,000 = 100,000.
+
+The cost taken (C21) is **stored and shown, never posted** (v1.6). It is written on the sale line (`cost_paisa`), on the purchase (`cost_released_paisa`) and on the other-shop sale, so the trip's result can be shown. No journal line ever carries it. There is no stock account, no trading sales account and no cost of goods sold account.
+
 Golden (E2E-34, 34b): purchase 20 × 500 + 400 freight = 10,400. Sell 15: split_by_qty(10,400, [15, 5]) = 7,800 / 2,600 → cost 7,800. Write off the last 5: cost 2,600. Σ cost released = 10,400 exactly. Property: for any sequence of sales and write-offs of one purchase, Σ cost released = total cost once qty left is 0, and never more before that.
 
-Posting of an own lot (FR-12.26): the seller credit (C8) is a جمع on تجارتی فروخت 04010006, never on a seller account (the اپنا مال account 030119998 never holds a balance); cost of goods sold is اپنا مال لاگت 05020001 بنام, اپنا مال سٹاک 01040001 جمع, in the same entry. Both lines take part in the partner split (income rows and expense rows, C10 and C11), so the net share rows equal the profit or loss split. Golden E2E-34: income 540 + 540 + 120 + 8,460 = 9,660 → 3,864 / 2,898 / 2,898; cost 7,800 → −3,120 / −2,340 / −2,340; entry 17,460 = 17,460.
+### 5.5 Gardens, trips and fruit (PRD 12.10, 12.11, 16.7, C23 to C27)
 
-Purchase (FR-12.24): اپنا مال سٹاک بنام total cost; supplier جمع value (credit) or cash or bank جمع value; cash or bank جمع freight, labour and other cost. Partner capital (FR-17.7): cash بنام, capital 0602 جمع (or the reverse); never split.
+These amounts belong to some partners only. They never go through `partner_share_rows` and never through the firm's shares. Each partner has one account for them, 0604 "باغ، سفر اور پھل". It is in head 06, so it counts in his کل رقم (C22).
+
+| Event | Formula | Posting |
+|---|---|---|
+| A payment (purchase, trip cost, garden installment or cost) | `split_by_bps(amount, venture shares)` (C23) | Each shop part: his 0604 بنام, روکڑ جمع. A pocket part: no line. All parts from pockets: no entry. |
+| Seller credit of a trip's own lot (C8) | `split_by_bps(credit, trip shares)` (C25) | In the بکری entry: each trip partner's 0604 جمع his part (بنام if negative) |
+| Sale of trip goods in another shop | `split_by_bps(money, trip shares)` (C25) | روکڑ بنام money; each trip partner's 0604 جمع his part |
+| Seller credit of a garden lot (C8) | none | The garden's account (0306) جمع |
+| Sale of garden goods in another shop | none | روکڑ بنام, the garden's account جمع |
+| Garden closing | `split_by_bps(garden balance, garden shares)` (C26); a بنام balance is split as positive and negated (C11) | Garden account بنام, each partner's 0604 جمع (the reverse for a بنام balance). The garden account ends at 0. |
+| Fruit for one partner | none | His 0604 بنام value |
+| Fruit for the shop's guests | `split_by_qty(value, [1 for each active partner])` (C27), partners in creation order, so the leftover goes to the first created | Each partner's 0604 بنام his part |
+| Fruit source | none | The lot's seller (or garden), or the other agent, جمع value. No commission. A payable posting; never adjusts an advance. |
+
+Rules:
+
+- The commission on trip and garden lots is firm income like any lot. It is split by the firm's shares (C10). A partner not in the trip still gets his share of it.
+- `venture_entry_parts` holds one row per partner for every payment, with its source and amount. Σ parts = amount. The journal holds only the shop parts. So Σ shop parts of an entry = the entry's روکڑ جمع.
+- Trip result per purchase = Σ seller credits + Σ other-shop money − Σ cost taken (sold and written off). It is display only. Each trip partner's کل رقم already holds his money: Σ his C25 parts − Σ his shop parts.
+- Garden running balance = Σ money in (seller credits + other-shop money) − Σ payments (shop and pocket). Display only, read at time of view.
+- Write-off of trip goods posts nothing (FR-12.28). It changes only the purchase's qty and cost released.
+- Fruit from our shop: the lot's `qty_taken` goes up; C16 = received − sold − written off − taken.
+
+Golden (all in `golden_day.rs`, numbers from `worked_day.py`):
+
+| Test | Key numbers |
+|---|---|
+| E2E-34 | Shop parts 4,160 / 3,120 / 3,120; cash 39,600; اکرم 9,660; commission 1,200 → 480 / 360 / 360; trip credit 8,460 → 3,384 / 2,538 / 2,538; cost shown 7,800, result 660; totals −296 / −222 / −222 |
+| E2E-34b | Write-off posts nothing; result −1,940 → −776 / −582 / −582; totals unchanged; Σ −740 + 65,000 = 64,260 = equity; trial balance 66,200 |
+| E2E-40 | Parts 18,000 / 12,000, 12,000 / 8,000, 3,000 / 2,000; الف shop 33,000; cash 17,000 then 27,000; garden credit 56,400; commission 8,000 → 3,200 / 2,400 / 2,400; closing 66,400 → 39,840 / 26,560; totals 10,040 / 28,960 / 2,400; trial balance 106,400 |
+| E2E-40b | Closing 10,000 → 6,000 / 4,000; الف −27,000; ب +4,000; cash 27,000 |
+| E2E-41 | Parts 48,000 / 48,000, truck 2,000 / 2,000; cash 0; cost 100,000; ارشد 119,360; commission 14,080 → 5,632 / 4,224 / 4,224; trip credit 105,280 → 52,640 / 52,640; result 5,280; totals 8,272 / 56,864 / 4,224; trial balance 134,360 |
+| E2E-42 | Home fruit 1,160; guest 3,000 → 1,000 each; رحیم payable 2,750; lot balance 3; agent 3,000; cash 45,000; totals −736 / 68 / 68; trial balance 77,610 |
+
+Partner capital (FR-17.7): روکڑ بنام, capital 0602 جمع (or the reverse); never split.
 
 ---
 
@@ -331,7 +366,7 @@ PRD 4.4 (بکری 1):
 | Shared income | 1,764 + 1,764 + 400 + 20 | 3,948 |
 | Split | Section 5.1 | 1,580 / 1,184 / 1,184 |
 
-PRD 4.5 (پختہ کھاتہ buyer, charged like any buyer): value 12,000; seller comm 720; buyer comm 12,000 × 6% = 720; لاگا 10 × 8 = 80; buyer total 12,800; deductions 1,000 + 720 + 50 + 50 + 0 + 0 + 20 = 1,840; net 10,160; shared income 720 + 720 + 80 + 20 = 1,540; split 616 / 462 / 462.
+PRD 4.5 (چکتا buyer, charged like any buyer, pays all of it on the spot): value 12,000; seller comm 720; buyer comm 12,000 × 6% = 720; لاگا 10 × 8 = 80; buyer total 12,800; deductions 1,000 + 720 + 50 + 50 + 0 + 0 + 20 = 1,840; net 10,160; shared income 720 + 720 + 80 + 20 = 1,540; split 616 / 462 / 462.
 
 PRD E2E-13 (edit اکرم's rate to 610): line 12,200; buyer comm 12,200 × 6% = 732; buyer total 12,200 + 732 + 160 = 13,092; seller comm 732 + 1,044 = 1,776; deductions 10,096; net 19,504; shared income 1,776 + 1,776 + 400 + 20 = 3,972; split 1,590 / 1,191 / 1,191.
 
@@ -343,9 +378,10 @@ PRD E2E-16 and 16b (partial sale, then later sale): first posting 45 sold, خا�
 
 ## 7. Journal (PRD FR-12.9, FR-6.2, FR-6.3)
 
-- One posting = one journal entry. A بکری posting has a sale part and a cash part (نقد lines; settlement lines for نقدی sale lines). Build the whole entry in `domain::ledger`.
+- One posting = one journal entry. A بکری posting has a sale part and a cash part (نقد lines; settlement lines for money paid on the spot). Build the whole entry in `domain::ledger`.
 - Each line has `dr` or `cr`, never both, never negative. A negative amount is written on the opposite side.
-- A نقدی sale line debits the line's own buyer account (named buyer, نقدی منڈی, or پختہ کھاتہ with the person key), then the cash part debits روکڑ and credits that same account.
+- Every sale line debits its own buyer account for its buyer total (named buyer, نقدی منڈی, or چکتا کھاتہ with the person key). For each line with paid above 0, the cash part debits روکڑ and credits that same account for paid (PRD FR-12.44). A line paid in full posts exactly what a نقدی line posted before v1.32; a line paid 0 posts exactly what an ادھاری line posted.
+- Paid is whole rupees, from 0 to the buyer total; above it is `ERR_PAID_EXCEEDS_TOTAL`. A buyer who may not take credit, نقدی منڈی and a چکتا buyer always pay in full: the backend sets paid = buyer total. Left on account = buyer total − paid, worked out by the backend only. The credit limit check uses what is left. Example: 48,100, paid 10,000: روکڑ بنام 10,000, انس جمع 10,000, left 38,100.
 - Check Σ dr == Σ cr before returning. If not, return `LedgerError::Unbalanced { dr, cr }`. This is a bug signal: log it with full detail.
 - Writing: insert the entry as `draft`, insert its lines, then set it to `posted`; the database trigger checks the balance on that update.
 - Never edit or delete posted lines. An edit = reversal entry (same date, every line's sides swapped) + new entry. A cancel = reversal entries only.
@@ -359,7 +395,7 @@ PRD E2E-16 and 16b (partial sale, then later sale): first posting 45 sold, خا�
 ### 8.1 Bills and receipts (oldest first)
 
 ```
-key = account_id, plus pukhta_person_key when the account is a پختہ کھاتہ
+key = account_id, plus chukta_person_key on the account 0030
 bills    = debit journal lines on that key (sale line totals, opening debits, جنرل debits, cash lent by ادائیگی, PRD FR-15.11), oldest first by (entry_date, entry id, line no)
 credits  = credit journal lines on that key (receipts, جنرل credits, reversal credits)
 for each credit, oldest first:
@@ -369,6 +405,8 @@ for each credit, oldest first:
     any remaining = unmatched credit on that key, used first against the next bill
 assert Σ allocations of a credit + its unmatched part == credit amount
 ```
+
+Money paid on the spot (PRD FR-12.44, v1.32): the paid credit line settles that line's own bill first, written as a `bill_allocation` at save, as a نقدی line was pinned before v1.32. What is left of the bill is a normal open bill, matched oldest first against the buyer's unmatched credits. Example: ہارون has 10,000 جمع and buys 125,060 paying 0: his credit settles 10,000 of the new bill, and 115,060 stays open.
 
 Example: bills 12,880 (09-10) and 5,000 (10-10); receipt 15,000 → 12,880 to the first, 2,120 to the second; second still open 2,880.
 
@@ -380,7 +418,7 @@ Golden: E2E-28 (tick off): رحیم credit 24,316 adjusts nothing; advance open 
 
 ### 8.2a Seller payable working (display only, PRD FR-7.59)
 
-For one seller key, at read time: take his credit lines from بکری postings, his opening credit (PRD FR-10.9, the oldest, v1.5), his جنرل credit lines (PRD 16.4, v1.5), a supplier's credit from a purchase on credit (PRD FR-12.24), plus the part of any seller receipt not used against advances, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open minus Σ open advances MUST equal his balance (جمع minus بنام) whenever Σ still open is more than 0; test it. Example E2E-28: 19,316 − 15,000 = 4,316 جمع.
+For one seller key, at read time: take his credit lines from بکری postings, his opening credit (PRD FR-10.9, the oldest, v1.5), his جنرل credit lines (PRD 16.4, v1.5), his credits for fruit taken (PRD FR-16.11, v1.6), plus the part of any seller receipt not used against advances, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open minus Σ open advances MUST equal his balance (جمع minus بنام) whenever Σ still open is more than 0; test it. Example E2E-28: 19,316 − 15,000 = 4,316 جمع.
 
 Unit test (v1.5): کریم with an opening credit of 10,160 and an ادائیگی of 4,000: credit 10,160, paid 4,000, still open 6,160; balance 6,160 جمع.
 
@@ -388,15 +426,19 @@ Golden: after PRD Event 2, کریم: credit 10,160 (بکری 2), adjusted 0, pai
 
 ### 8.2b Money lent and partner money (display only, PRD FR-16.2, FR-16.5)
 
-Same integer algorithm as 8.1, at read time, nothing stored. For an ادھار رقم account: "bills" are its debit lines (money lent), "credits" are its credit lines (returns in cash or bank, and salary deductions). For a partner's drawings account: "bills" are money taken, "credits" are money returned. The result per bill: amount, returned, still open, days past `return_by_date`. Σ still open MUST equal the account's بنام balance. A return more than the open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`), so an open amount is never negative.
+Same integer algorithm as 8.1, at read time, nothing stored. For an ادھار رقم account: "bills" are its debit lines (money lent), "credits" are its credit lines (returns in cash, and salary deductions). For a partner's drawings account: "bills" are money taken, "credits" are money returned. The result per bill: amount, returned, still open, days past `return_by_date`. Σ still open MUST equal the account's بنام balance. A return more than the open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`), so an open amount is never negative.
 
 A salary deduction posts the salary head بنام and the person جمع. It is a shop expense, so it is split with C11 like any دکان خرچہ. Partner خالص (C20) = profit share − (taken − returned).
 
 الگ کھاتہ (PRD 16.6, FR-16.7): paid out = khata بنام, cash جمع; received = cash بنام, khata جمع; a lot with a separate khata as seller credits its seller credit (C8) to the khata, with seller-side defaults 0. It is never income or expense, never split, never in C22. Golden E2E-38: −10,000, −6,000, then +9,000 from the sale = +3,000; buyer side 540 + 80 = 620 split 248 / 186 / 186.
 
-Partner کل رقم (C22, PRD FR-17.9): opening capital + invested − taken back + Σ income shares − Σ expense shares − money taken + returned. Read from posted records only; month close never changes it. Property: Σ کل رقم of all partners + ابتدائی سرمایہ = equity (capital + income − expenses − drawings) after any sequence of postings. Golden E2E-37: −1,004 / 50,746 / 746; Σ 50,488 + 65,000 = 115,488.
+Partner کل رقم (C22, PRD FR-17.9): opening capital + invested − taken back + Σ income shares − Σ expense shares − money taken + returned + his 0604 account (جمع − بنام, v1.6). Read from posted records only; month close never changes it. Property: Σ کل رقم of all partners + ابتدائی سرمایہ = equity (capital + income − expenses − drawings, with the 0604 accounts in capital) after any sequence of postings. Golden E2E-37: −1,004 / 50,746 / 746; Σ 50,488 + 65,000 = 115,488.
 
 Golden: E2E-30: lent 5,000, returned 3,000 cash, 2,000 by salary, open 0; salary split −800 / −600 / −600. E2E-29: الف خالص 996 − 2,000 = −1,004; after returning 2,000, net taken 0. E2E-32: اکرم's 3,000 cash loan is a bill; dues 5,880.
+
+### 8.2c Advances in the partners' totals (display only, PRD FR-17.13, v1.43)
+
+Read time, nothing posted. Out: each advance line (پیشگی voucher, opening debit marked as an advance) is split with `split_by_bps` and the shares on its date (an opening advance with no shares yet: the first shares ever set [A]); each part lowers that partner's کل رقم. Back: each active `advance_allocations` row settles part of an advance; it comes back with `split_by_open_parts` over that advance's parts still open, oldest allocation first, so a partner never gets back more or less than his part. Edits and cancels re-run matching (8.3), so the back lines follow it. C22 gains "− his part of the open advances"; FR-17.9 becomes Σ کل رقم + 06010001 + Σ open advances = equity, and the property tests say so. One function computes this for R31, the month statement, the overview, the strip and the assistant (B5). Golden (approved by Umar, 17-11-2026): E2E-37 ب lines 01-09 −4,500, 10-10 +4,500, closing 50,746; E2E-34 −6,296 / −4,722 / −4,722; E2E-40 4,040 / 24,460 / −2,100; E2E-40b −33,000 / −500 / −4,500; E2E-41 2,272 / 52,364 / −276. E2E-31: back 10,000 → 4,000 / 3,000 / 3,000, then 5,000 → 2,000 / 1,500 / 1,500.
 
 ### 8.3 Undo and re-match
 
@@ -411,6 +453,27 @@ On edit or cancel of anything that took part in matching: set its allocation row
 - Sales analytics: `SUM(sign × value)` from `analytics_facts` (reversal rows have sign −1). Expense and profit analytics: from `journal_lines` and `partner_share_rows`.
 - A report total MUST equal the matching ledger balance. Add tests, for example: analytics total seller commission for a day = net جمع of کمیشن آمدن (بیوپاری) in the journal for that day.
 - "% of all commission" in analytics is display only: `(part × 10,000 + total ÷ 2) ÷ total` in hundredths of a percent, shown with 2 decimals. Example: 3,928 of 5,448 → (39,280,000 + 2,724) ÷ 5,448 = 7,210 → 72.10%. Never posted.
+
+### 9.1 The question panel's calculator and estimator (PRD FR-7.75, FR-7.86; Code Standards M14)
+
+The model in the question panel never does arithmetic. It asks `calculate` and `estimate`, which call `domain::figures` and `domain::forecast`. Both are display only, like `avg_rate`: their results are never posted, saved, or added to a report or a tile. Review both, with the same care as posting code.
+
+- **Signed balances.** A balance is passed as signed paisa: بنام positive, جمع negative. The result's side comes from its sign. Example: اکرم 2,880 بنام and کریم 10,160 جمع: 288,000 + (−1,016,000) = −728,000 paisa = 7,280 جمع.
+- **Sum and difference:** `checked_add`, `checked_sub`; overflow is an error. Example (E2E-61): 2,880 + 18,684 = 21,564.
+- **Average:** `avg_rate(total, count)`. A negative total is averaged as positive, then negated (as splits, Section 5).
+- **Percent of:** the "% of all" formula above. A base of 0 gives no percent (`ERR_NO_BASE`), never a division by zero.
+- **Change in percent:** `((new − old) × 10,000 + |old| ÷ 2) ÷ |old|` on absolute values, with the sign of `new − old`. Example: 48,000 to 51,000: (3,000 × 10,000 + 24,000) ÷ 48,000 = 625 → 6.25%.
+- **Estimates** (`domain::forecast`), on whole calendar months, the current month left out:
+  - Same pace: per month = `avg_rate(sum of the last 3 months, 3)`; total = per month × months ahead, with `checked_mul`. The per-month figure is rounded once and the total is built from it, so the shown figures always agree. Example: 43,000, 47,000, 49,000 → 139,000 ÷ 3 = 46,333.33 → 46,333 a month; 6 months: 277,998 (not 278,000).
+  - Same growth: change per month = `avg_rate(|last − first|, months − 1)` with the sign of `last − first`, over the last 6 months; month k ahead = last + k × change, never below 0; total = the sum of the months. Example (E2E-59): 36,000 to 51,000 over 6 months: 15,000 ÷ 5 = 3,000; 54,000 + 57,000 + 60,000 + 63,000 + 66,000 + 69,000 = 369,000.
+  - Same season: the same months of last year, as stored. No arithmetic.
+  - Too few months (fewer than 3, or 6 for same growth): no estimate, `ERR_TOO_LITTLE_HISTORY` with the months there are.
+  - At most 12 months ahead, or to the end of the year.
+  - What-if (v1.9): the same-pace month × factor, the factor in basis points (double 20,000; half 5,000; up 10% 11,000): `pace × whole` exact, plus `apply_bps(pace, rest)`, one rounding, half up; total = that month × the months, `checked_mul`. A negative pace or a factor out of range is refused. Example: 48,333 up 10% = 53,166 a month, 159,498 in 3 months.
+  - Year end (v1.9): the months of this year so far are read from the books (view G months), never estimated; the months left are estimated; the whole-year total = so far + estimate, `checked_add`. Example (E2E-59 data, 10-10-26): 261,000 + 48,000 × 3 = 405,000.
+  - Target month: the months ahead start with the current month (k = 1). The target month is the first month ahead whose running total of a method's months is at least the target (`>=`, so reaching it exactly counts); none within 12 months says so. Examples (E2E-59, target 3,00,000): same pace 48,000 × 6 = 288,000 is short, 48,000 × 7 = 336,000 reaches it, so the 7th month (April 2027); same growth 54,000 + 57,000 + 60,000 + 63,000 + 66,000 = 300,000 reaches it exactly, so the 5th month (February 2027).
+- **Numbers read from the question** (`question_numbers`): digits as typed, and lakh, hazar (ہزار) and crore after a number multiply it with `checked_mul`. Example: "3 lakh" = 3 × 1,00,000 = 3,00,000. A percent ("10%") becomes `Bps(1000)`. Each number also gets a unit: months, days or years when one of those words follows it ("agle 6 mahine" is 6 months), percent, amount (with lakh, hazar or crore), or plain. Nothing else is read as a number.
+- **Tests:** E2E-59 and E2E-61 numbers; property tests: equal months give that same figure by every method; no projected month below 0; a sum equals its parts; nothing overflows silently.
 
 ---
 
@@ -433,27 +496,29 @@ Every row in the tables of Sections 3, 4, 5 and 6.5 is a unit test.
 
 1. `split_by_bps`: Σ parts == amount; for positive amounts every part ≥ 0; for negative amounts every part ≤ 0.
 2. `split_by_qty`: Σ parts == total.
+2a. `split_by_open_parts`: Σ parts == amount; 0 ≤ part ≤ open for every part; amount = Σ open gives each open part exactly; any sequence of partial settlements adding to Σ open returns each open part exactly.
 3. Any journal entry built by `domain::ledger` balances.
 4. Entry + reversal = 0 for every account.
 5. `parse_rupees(format_paisa(x)) == x` for all valid whole-rupee `x` (with grouping commas).
 6. Percent charge ≤ base for bps ≤ 10,000; the charge never decreases when the base grows.
-7. Matching: Σ allocations + unmatched == credit; no bill allocated beyond its open amount; keys never mix (one پختہ person never pays another's bill).
-8. For any random sequence of postings (sales, later sales, edits, cancels, expenses, جنرل on income accounts): Σ partner share rows = income − expenses (head 05, including اپنا مال لاگت).
+7. Matching: Σ allocations + unmatched == credit; no bill allocated beyond its open amount; keys never mix (one چکتا person never pays another's bill).
+8. For any random sequence of postings (sales, later sales, edits, cancels, expenses, جنرل on income accounts): Σ partner share rows = income − expenses (head 05).
 9. Every stored money value is a multiple of 100 paisa.
+10. Ventures (v1.6): for any garden or trip and any sequence of its entries, Σ parts of each payment = its amount; Σ shop parts = its روکڑ جمع; a closed garden's account is 0; once a garden or a trip is closed, Σ over its partners of (money credited to 0604 − shop parts − pocket parts) = its result. Guest fruit parts (C27) add up to the value.
 
 ### 11.3 Golden end-to-end tests
 
-`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37 and E2E-38. E2E-33 (ledger with items) and E2E-36 (day summary and filtered print) are in `backend/crates/reports/tests/ledger_items.rs`. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
+`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, E2E-40, E2E-40b, E2E-41 and E2E-42. E2E-33 (ledger with items), E2E-36 (day summary and filtered print) and E2E-43 (party day sheet) are in `backend/crates/reports/tests/ledger_items.rs`. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
 
 ### 11.4 Edge cases
 
-Decimals rejected; zero quantities rejected; largest allowed values do not overflow; overflow beyond returns an error; half-rupee cases round up; per-lot charges appear once and never in a later sale; lot net negative is allowed and flagged; shares not totalling 100% blocked; rule changed after save does not change stored values, including unchanged lines in an edit; two پختہ persons never mix.
+Decimals rejected; zero quantities rejected; largest allowed values do not overflow; overflow beyond returns an error; half-rupee cases round up; per-lot charges appear once and never in a later sale; lot net negative is allowed and flagged; shares not totalling 100% blocked; rule changed after save does not change stored values, including unchanged lines in an edit; two چکتا persons never mix.
 
 ---
 
 ## 12. How you work on a task
 
-1. **Find the requirement.** Name the PRD IDs and formula IDs (C1 to C19) involved.
+1. **Find the requirement.** Name the PRD IDs and formula IDs (C1 to C27) involved.
 2. **Write the worked numbers first.** Before any code, write a small table of inputs and expected outputs, using PRD numbers where they exist. Show the arithmetic.
 3. **Write the tests** from that table.
 4. **Implement** in `core::money` or `domain`, following Sections 1 to 9. Add `// PRD <ID>` comments.
@@ -461,7 +526,7 @@ Decimals rejected; zero quantities rejected; largest allowed values do not overf
 6. **Search for forbidden patterns** before finishing:
 
 ```bash
-rg -n "\bf32\b|\bf64\b|as f64|as f32" backend/crates --glob '!**/tests/**'
+rg -n "\bf32\b|\bf64\b|as f64|as f32" backend/crates --glob '!**/tests/**'   # the only allowed hits are `rupees_as_f64` and `count_as_f64` in `numbers.rs` of the Excel export (Code Standards M13)
 rg -n "\bREAL\b|\bFLOAT\b|\bDOUBLE\b|total\(|avg\(" backend/crates/db/migrations backend/crates/db/src backend/crates/reports/src
 rg -n "parseFloat|toFixed\(|Math\.round" frontend/src/features frontend/src/shared/format
 rg -n "Number\(.*(paisa|amount|rate|qty|total)" -i frontend/src
@@ -486,14 +551,15 @@ rg -n "unwrap\(\)|expect\(" backend/crates/core/src backend/crates/domain/src
 - [ ] Lot charges only in the first posting; later sales post only new lines
 - [ ] Journal balances before write; draft then posted; reversal pattern for changes
 - [ ] Preview and save share the same function
-- [ ] Snapshot of method, value, rule ID and amount stored; unchanged lines keep it in edits
+- [ ] Snapshot of method, value, rule ID and amount stored; unchanged lines keep it in edits; a change of only the buyer re-reads only the buyer side, a change of only the seller re-reads only the seller side and keeps the buyer side and paid (PRD FR-12.20, v1.33)
 - [ ] Partner share rows written for every posting touching income or shop expense accounts
-- [ ] Matching keyed by account and پختہ person; undo by `is_active`, never delete
+- [ ] Matching keyed by account and چکتا person; undo by `is_active`, never delete
 - [ ] Reports and analytics read stored values only
 - [ ] Unit, property and golden tests added or still passing
 - [ ] Forbidden-pattern search clean
 - [ ] Hints and filled amounts are parsed and checked again on save; working results equal stored amounts
 - [ ] Amounts in words tested in Urdu and English at every boundary
+- [ ] The panel's calculator and estimator are display only, use `avg_rate` for every average, and never post or save (9.1)
 
 ---
 

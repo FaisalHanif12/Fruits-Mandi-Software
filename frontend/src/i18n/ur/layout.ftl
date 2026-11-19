@@ -12,6 +12,10 @@ layout-nav-bikri = { -bikri }
 # review: pending
 layout-nav-rokar = { -rokar }
 # review: pending
+layout-nav-gardens = { -baghat }
+# review: pending
+layout-nav-trips = { -market-safar }
+# review: pending
 layout-nav-partners = { -shirakat-dar }
 # review: pending
 layout-nav-analytics = { -tajziat }
@@ -35,9 +39,9 @@ layout-module-payment = { -adaigi }
 # review: pending
 layout-module-advance = { -peshgi-khata }
 # review: pending
-layout-module-pukhta = { -pukhta-khata }
+layout-module-today = پچھلی { -bikri }
 # review: pending
-layout-module-today = آج کی { -bikri }
+layout-module-party-ledgers = { party-ledgers-title }
 # review: pending
 layout-module-stock = { -baqi-maal }
 
@@ -46,11 +50,7 @@ layout-module-stock = { -baqi-maal }
 # review: pending
 layout-search-label = تلاش
 # review: pending
-layout-search-placeholder = کوڈ، نام، { -bikri } نمبر یا ٹرک تلاش کریں
-# review: pending
-layout-coming-soon = یہ سہولت جلد آ رہی ہے۔
-# review: pending
-layout-attention-label = توجہ طلب
+layout-search-placeholder = کوڈ، نام، { -bikri } نمبر تلاش کریں
 # review: pending
 layout-user-menu = صارف کا مینو
 
@@ -111,3 +111,71 @@ layout-search-searching = تلاش جاری ہے…
 layout-search-none = کوئی کھاتہ نہیں ملا۔
 # review: pending
 layout-search-failed = تلاش نہیں ہو سکی۔
+
+## The side menu of the { -rokar } area (PRD 5, plan 17).
+
+# review: pending
+layout-rokar-label = { -rokar } کا مینو
+# review: pending
+layout-rokar-cashbook = { -rokar }
+# review: pending
+layout-rokar-expense = { -kharcha }
+# review: pending
+layout-rokar-lent = { -adhar-raqam }
+# review: pending
+layout-rokar-khata = { -alag-khata }
+# review: pending
+layout-rokar-voucher = { -wasooli } / { -adaigi } / { -peshgi-khata }
+
+# review: pending
+layout-rokar-general = { -general }
+
+# review: pending
+layout-user-guide = رہنمائی دوبارہ دیکھیں
+
+## The first-run guide (plan 19, PRD FR-7.12).
+
+# review: pending
+guide-progress = مرحلہ <num>{ $step }</num> از <num>{ $total }</num>
+
+# review: pending
+guide-next = آگے
+
+# review: pending
+guide-back = پیچھے
+
+# review: pending
+guide-skip = رہنمائی چھوڑیں
+
+# review: pending
+guide-done = مکمل
+
+# review: pending
+guide-step-dashboard-title = ڈیش بورڈ
+
+# review: pending
+guide-step-dashboard-body = آج کی تصویر ایک نظر میں: بکری، روکڑ، گاہکوں اور بیوپاریوں کے ذمے، شراکت دار اور توجہ طلب کام۔ کسی بھی خانے کو دبائیں تو اس کے پیچھے کی اسکرین کھل جائے گی۔
+
+# review: pending
+guide-step-index-title = { -index }
+
+# review: pending
+guide-step-index-body = یہاں اپنے بیوپاری، گاہک، قسم مال اور شہر لکھیں۔ ہر کھاتے کا ایک کوڈ ہوتا ہے۔ کہیں بھی کوڈ، یا نام کے چند حروف لکھیں تو پارٹی سامنے آ جاتی ہے۔
+
+# review: pending
+guide-step-bikri-title = { -bikri-book }
+
+# review: pending
+guide-step-bikri-body = ایک ٹرک لکھیں: اس کے لاٹ، پھر ہر گاہک، تعداد اور ریٹ۔ خلاصہ اور شراکت داروں کے حصے لکھتے ہی بدلتے جاتے ہیں۔ محفوظ کرنے کے لیے <key>{ $key }</key> دبائیں۔
+
+# review: pending
+guide-step-receipt-title = { -wasooli }
+
+# review: pending
+guide-step-receipt-body = گاہک کی دی ہوئی رقم لکھیں۔ اس کے کھلے بل سب سے پرانے سے شروع ہو کر دکھائے جاتے ہیں اور رقم پہلے سب سے پرانے بل میں لگتی ہے۔
+
+# review: pending
+guide-step-reports-title = رپورٹ
+
+# review: pending
+guide-step-reports-body = ہر رپورٹ میں تاریخ اور پارٹی کے فلٹر ہوتے ہیں، اور اسے پرنٹ یا ایکسل میں محفوظ کیا جا سکتا ہے۔

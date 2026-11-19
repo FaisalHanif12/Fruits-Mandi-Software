@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-chukta-search"
+description = "Enables the chukta_search command without any pre-configured scope."
+commands.allow = ["chukta_search"]
+
+[[permission]]
+identifier = "deny-chukta-search"
+description = "Denies the chukta_search command without any pre-configured scope."
+commands.deny = ["chukta_search"]

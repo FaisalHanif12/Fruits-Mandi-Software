@@ -1,0 +1,624 @@
+//! Goods left to sell, later sales, edit, cancel, undo and write-off (plan 16 contract; PRD 12.8,
+//! 12.9, FR-7.47). Money is paisa. Names are `RecordRef` with both scripts, so the screen shows
+//! them through `displayName` (Code Standards F38).
+//!
+//! The commands and what each one answers:
+//!
+//! | Command | Input | Answer |
+//! |---|---|---|
+//! | `bikri_stock_list` | `StockListInput` | `StockList` |
+//! | `bikri_later_sale_preview` | `LaterSaleInput` | `BikriPreview` |
+//! | `bikri_later_sale_save` | `LaterSaleSaveInput` | `LaterSaleSaved` |
+//! | `bikri_open_for_edit` | `EditOpenInput` | `EditableBikri` |
+//! | `bikri_edit_preview` | `EditPreviewInput` | `BikriPreview` |
+//! | `bikri_edit_save` | `EditSaveInput` | `BikriEdited` |
+//! | `bikri_cancel_preview` | `CancelPreviewInput` | `CancelPreview` |
+//! | `bikri_cancel` | `CancelInput` | `BikriCancelled` |
+//! | `bikri_undo` | `UndoInput` | `UndoResult` |
+//! | `bikri_write_off` | `WriteOffInput` | `WriteOffDone` |
+//! | `bikri_write_off_undo` | `WriteOffUndoInput` | `WriteOffUndone` |
+//!
+//! Field paths in the errors of the later sale and of an edit are the ones of the book screen
+//! (`lots[0].sales[2].qty`). In a later sale there is one lot, so the path starts `lots[0]`.
+
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+use super::input::{BikriDraft, SaleInput};
+use super::preview::BikriPreview;
+use super::saved::{BikriStatus, SavedLot, SavedPosting};
+use crate::accounts::RecordRef;
+use crate::cash::CashCheck;
+use crate::money::Paisa;
+use crate::paging::SortInput;
+use crate::ventures::{GardenRef, TripRef};
+
+/// The reason an undo (PRD FR-7.47) writes to the audit log and to `cancel_reason`. It is a Fluent
+/// message ID, not text: the screen turns it into "محفوظ کرنے کے فوراً بعد واپس" or "Undone straight
+/// after saving" (CLAUDE.md rule 7).
+pub const UNDO_REASON_ID: &str = "bikri-undo-reason";
+
+// ---- Goods left to sell (باقی مال, PRD 12.8) ----
+
+/// Input of `bikri_stock_list` (PRD FR-12.14, FR-19.10). Dates are `DD-MM-YYYY` or a shortcut;
+/// null or empty means no limit. `date` is one day and wins over `from` and `to`. They filter on
+/// the day the goods were received.
+#[derive(Debug, Clone, Default, Deserialize, TS)]
+pub struct StockListInput {
+    /// One day.
+    #[serde(default)]
+    pub date: Option<String>,
+    /// First day.
+    #[serde(default)]
+    pub from: Option<String>,
+    /// Last day.
+    #[serde(default)]
+    pub to: Option<String>,
+    /// Only lots of this seller (the party filter of PRD FR-19.10).
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub seller_id: Option<i64>,
+    /// Only lots of this item.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub item_id: Option<i64>,
+    /// Only this lot, for a screen that works on one lot (a later sale). The answer has the same
+    /// shape: its count and totals are over this one lot, and the list is empty if nothing is
+    /// left to sell of it.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub lot_id: Option<i64>,
+    /// Also list a lot that has a write-off you can undo even when nothing is left of it, so the
+    /// undo can be found. Its `balance` is then 0.
+    #[serde(default)]
+    pub include_written_off: bool,
+    /// How many rows to skip. 0 for the first page. The page runs over the lots first, then the
+    /// trip goods, then the garden arrivals (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+    /// Only rows whose party (seller, supplier, garden or trip name or code, either script), item
+    /// (code or name) or number holds this text. The totals are over these rows.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort by: `received_date`, `number`, `seller`, `item`, `packing`,
+    /// `qty_received`, `qty_sold`, `qty_written_off`, `balance` or `days_waiting`. The lots, the
+    /// trip goods and the garden arrivals are three kinds of row, so each is sorted among its
+    /// own kind and the page still runs over the lots first, then the trip goods, then the
+    /// arrivals. `seller` is the seller of a lot, the supplier of trip goods and the garden of an
+    /// arrival. `qty_received` is `qty_bought` and `qty_arrived` for the other two. Null is the
+    /// oldest day first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+}
+
+/// A write-off of a lot that has not been undone (PRD FR-12.16).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct WriteOffRow {
+    /// The stock move. `bikri_write_off_undo` takes this id.
+    #[ts(type = "number")]
+    pub move_id: i64,
+    /// The day, `YYYY-MM-DD`.
+    pub move_date: String,
+    /// How many نگ were written off (more than 0).
+    #[ts(type = "number")]
+    pub qty: i64,
+    /// The reason given. Free text.
+    pub reason: Option<String>,
+}
+
+/// One lot with goods left (PRD FR-12.14): date received, بکری number, seller, item, packing,
+/// received, sold, written off, balance, days waiting.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct StockRow {
+    /// The lot. `bikri_later_sale_*` and `bikri_write_off` take this id.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// The lot number inside its بکری, from 1.
+    #[ts(type = "number")]
+    pub lot_no: i64,
+    /// The counter of the lot's name: seller, item and this number (PRD FR-12.45).
+    #[ts(type = "number")]
+    pub lot_counter: i64,
+    /// Its بکری.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// The بکری number.
+    #[ts(type = "number")]
+    pub bikri_number: i64,
+    /// The day the goods were received (the day of the first posting), `YYYY-MM-DD`.
+    pub received_date: String,
+    /// The seller account.
+    pub seller: RecordRef,
+    /// The item.
+    pub item: RecordRef,
+    /// The packing.
+    pub packing: RecordRef,
+    /// نگ received.
+    #[ts(type = "number")]
+    pub qty_received: i64,
+    /// نگ sold, over all postings in force.
+    #[ts(type = "number")]
+    pub qty_sold: i64,
+    /// نگ written off.
+    #[ts(type = "number")]
+    pub qty_written_off: i64,
+    /// نگ taken as fruit (PRD FR-16.11, C16).
+    #[ts(type = "number")]
+    pub qty_taken: i64,
+    /// نگ left: received less sold, written off and taken (C16).
+    #[ts(type = "number")]
+    pub balance: i64,
+    /// Whole days from `received_date` to today.
+    #[ts(type = "number")]
+    pub days_waiting: i64,
+    /// The write-offs of this lot that can still be undone, oldest first.
+    pub write_offs: Vec<WriteOffRow>,
+    /// The advance tick stored on the lot (PRD FR-12.23, plan 78 C3). A later sale of the lot keeps
+    /// it, so the screen shows it on a carried lot and does not let it be changed there.
+    pub adjust_advance: bool,
+}
+
+/// One purchase of a trip with stock left, marked اپنا مال with its trip (PRD FR-12.25): bought,
+/// sold, written off, left, cost left and days waiting. It is not a lot: it has no `lot_id`, and
+/// it is sold by an own lot in a بکری or in another shop. `purchases_write_off` takes its
+/// `purchase_id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct OwnStockRow {
+    /// The purchase.
+    #[ts(type = "number")]
+    pub purchase_id: i64,
+    /// The purchase number (خ-1, PUR-1).
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The day it was bought, `YYYY-MM-DD`.
+    pub received_date: String,
+    /// The day to sell, `YYYY-MM-DD` (PRD FR-12.39). A new بکری from this day opens with a ready lot.
+    pub sell_date: String,
+    /// Its trip.
+    pub trip: TripRef,
+    /// Who it was bought from, as typed.
+    pub supplier: Option<String>,
+    /// The item.
+    pub item: RecordRef,
+    /// The packing.
+    pub packing: RecordRef,
+    /// نگ bought.
+    #[ts(type = "number")]
+    pub qty_bought: i64,
+    /// نگ sold, over the own lots in force.
+    #[ts(type = "number")]
+    pub qty_sold: i64,
+    /// نگ written off.
+    #[ts(type = "number")]
+    pub qty_written_off: i64,
+    /// نگ left: bought less sold less written off. More than 0 in this list.
+    #[ts(type = "number")]
+    pub balance: i64,
+    /// نگ left for our shop (PRD FR-12.41): the ready lots take these.
+    #[ts(type = "number")]
+    pub qty_our_left: i64,
+    /// نگ left for another shop: `qty_our_left + qty_other_left = balance`.
+    #[ts(type = "number")]
+    pub qty_other_left: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
+    /// The total cost of the purchase.
+    #[ts(type = "Paisa")]
+    pub total_cost_paisa: Paisa,
+    /// The cost of the نگ left (C21): total cost less the cost already released.
+    #[ts(type = "Paisa")]
+    pub cost_left_paisa: Paisa,
+    /// Whole days from the day to sell (`sell_date`) to today. Goods meant for a later day are not
+    /// waiting before it.
+    #[ts(type = "number")]
+    pub days_waiting: i64,
+    /// The write-offs of this purchase that can still be undone, oldest first
+    /// (`purchases_write_off_undo` takes their `move_id`).
+    pub write_offs: Vec<WriteOffRow>,
+}
+
+/// One garden arrival with goods left (PRD FR-12.40), marked with its garden: arrived, sold,
+/// written off, left and days waiting. It is not a lot: it has no `lot_id`, and it is sold by a
+/// garden lot of a بکری linked to it. `gardens_arrival_write_off` takes its `arrival_id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct GardenStockRow {
+    /// The arrival.
+    #[ts(type = "number")]
+    pub arrival_id: i64,
+    /// The arrival number, in its own series.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The day it arrived, `YYYY-MM-DD`.
+    pub received_date: String,
+    /// The day to sell, `YYYY-MM-DD`.
+    pub sell_date: String,
+    /// Its garden, with the garden's account.
+    pub garden: GardenRef,
+    /// The item.
+    pub item: RecordRef,
+    /// The packing.
+    pub packing: RecordRef,
+    /// نگ that arrived.
+    #[ts(type = "number")]
+    pub qty_arrived: i64,
+    /// نگ sold, over the garden lots in force.
+    #[ts(type = "number")]
+    pub qty_sold: i64,
+    /// نگ written off.
+    #[ts(type = "number")]
+    pub qty_written_off: i64,
+    /// نگ left: arrived less sold less written off. More than 0 in this list.
+    #[ts(type = "number")]
+    pub balance: i64,
+    /// نگ left for our shop (PRD FR-12.41): the ready lots take these.
+    #[ts(type = "number")]
+    pub qty_our_left: i64,
+    /// نگ left for another shop: `qty_our_left + qty_other_left = balance`.
+    #[ts(type = "number")]
+    pub qty_other_left: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
+    /// Whole days from the day to sell (`sell_date`) to today. Goods meant for a later day are not
+    /// waiting before it.
+    #[ts(type = "number")]
+    pub days_waiting: i64,
+    /// The write-offs of this arrival that can still be undone, oldest first
+    /// (`gardens_arrival_write_off_undo` takes their `move_id`).
+    pub write_offs: Vec<WriteOffRow>,
+}
+
+/// The answer of `bikri_stock_list`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct StockList {
+    /// How many rows match the filter: lots and trip goods together. A page holds the lots
+    /// first, then the trip goods, so `rows.len() + own_rows.len()` is at most the page size.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// Oldest received first, then by بکری number and lot number.
+    pub rows: Vec<StockRow>,
+    /// Σ of the `balance` of the rows (نگ).
+    #[ts(type = "number")]
+    pub balance_total: i64,
+    /// The trip goods with stock left (PRD FR-12.25), oldest first. The `item_id` filter matches the
+    /// item and the dates the day bought. The `seller_id` filter leaves them out unless it is the اپنا مال account.
+    pub own_rows: Vec<OwnStockRow>,
+    /// Σ of the `balance` of the own rows (نگ).
+    #[ts(type = "number")]
+    pub own_balance_total: i64,
+    /// Σ of the `cost_left_paisa` of the own rows.
+    #[ts(type = "Paisa")]
+    pub own_cost_left_paisa: Paisa,
+    /// The garden arrivals with goods left (PRD FR-12.40), oldest first, after the trip goods. The
+    /// `item_id` filter matches the item and the dates the day arrived. The `seller_id` filter
+    /// keeps the arrivals whose garden account is that seller and leaves out the rest.
+    pub garden_rows: Vec<GardenStockRow>,
+    /// Σ of the `balance` of the garden rows (نگ).
+    #[ts(type = "number")]
+    pub garden_balance_total: i64,
+}
+
+// ---- Later sale (PRD FR-12.17) ----
+
+/// Input of `bikri_later_sale_preview`: new sale lines for the goods left in one lot, dated
+/// `date`. Nothing is saved. Each line carries the screen's key, so the answer can be matched.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct LaterSaleInput {
+    /// The lot.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// The day of the sale, `DD-MM-YYYY` or a shortcut. An open day (PRD FR-6.6), not before the
+    /// goods were received.
+    pub date: String,
+    /// The new lines. A line sent with `sale_id` null is a new line.
+    #[serde(default)]
+    pub sales: Vec<SaleInput>,
+}
+
+/// Input of `bikri_later_sale_save` (PRD FR-17, FR-6.7).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct LaterSaleSaveInput {
+    /// The lot.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// The day of the sale.
+    pub date: String,
+    /// The new lines.
+    #[serde(default)]
+    pub sales: Vec<SaleInput>,
+    /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7).
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
+}
+
+/// What `bikri_later_sale_save` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LaterSaleSaved {
+    /// The بکری.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// Its number (the same as before: a later sale does not make a new number).
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The lot.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// The journal entry of the new posting.
+    #[ts(type = "number")]
+    pub entry_id: i64,
+    /// The numbers the save wrote; the same as `bikri_later_sale_preview` gave just before.
+    pub preview: BikriPreview,
+}
+
+// ---- Edit (PRD FR-12.18 to FR-12.21) ----
+
+/// Input of `bikri_open_for_edit`: one posting of a بکری, from `BikriDetail::postings`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct EditOpenInput {
+    /// The بکری.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// The posting (journal entry) to edit: a `bikri_first` or `bikri_later` one that is not
+    /// reversed.
+    #[ts(type = "number")]
+    pub entry_id: i64,
+}
+
+/// A posting loaded for editing (PRD FR-12.18). The draft is in the shape of the book screen and
+/// is built from the STORED values: a charge the user typed comes back as a typed charge, a
+/// charge a rule decided comes back empty (and `stored` holds its rule and amount).
+///
+/// - For the first posting the draft holds the header, every lot of the بکری (each with `lot_id`)
+///   and the lines of that posting (each with `sale_id`). The screen may add lines and lots and
+///   remove lines; it may not remove a lot.
+/// - For a later posting the draft has one lot and the lines of that posting. Only the lines
+///   (and the date it keeps) can be changed there.
+///
+/// Keys: a lot has the key `lot:<id>` and a line `sale:<id>`.
+#[derive(Debug, Clone, Serialize, TS)]
+pub struct EditableBikri {
+    /// The بکری.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// Its number.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its version, to send back with `bikri_edit_save`.
+    #[ts(type = "number")]
+    pub version: i64,
+    /// The posting being edited.
+    #[ts(type = "number")]
+    pub entry_id: i64,
+    /// `bikri_first` or `bikri_later`.
+    pub posting_type: String,
+    /// The day of the posting, `YYYY-MM-DD`. An edit keeps it (PRD FR-12.19).
+    pub entry_date: String,
+    /// False when the day is closed: the Owner must reopen it first (PRD FR-12.18). The draft is
+    /// still returned so the screen can show it.
+    pub editable: bool,
+    /// The draft to show and change.
+    pub draft: BikriDraft,
+    /// The stored values behind the draft: the lots of the posting, each with only the lines of
+    /// this posting in force. The screen shows the rule tags and the amounts from here and
+    /// compares typed text with the loaded text; it never adds money.
+    pub stored: Vec<SavedLot>,
+    /// Every posting of the بکری, oldest first, so the screen can offer the others.
+    pub postings: Vec<SavedPosting>,
+}
+
+/// Input of `bikri_edit_preview` (Code Standards B5: the same working as the save).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct EditPreviewInput {
+    /// The posting being edited.
+    #[ts(type = "number")]
+    pub entry_id: i64,
+    /// The edited draft, with the `lot_id` and `sale_id` it was loaded with.
+    pub draft: BikriDraft,
+}
+
+/// Input of `bikri_edit_save` (PRD FR-12.19): a reversal of the posting and a new posting on the
+/// same day, in one transaction.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct EditSaveInput {
+    /// The posting being edited.
+    #[ts(type = "number")]
+    pub entry_id: i64,
+    /// The version read with `bikri_open_for_edit`; `ERR_VERSION_CHANGED` (field `version`) if the
+    /// بکری changed since.
+    #[ts(type = "number")]
+    pub version: i64,
+    /// The edited draft.
+    pub draft: BikriDraft,
+    /// Why. Free text, written to the audit log. Optional: the screen asks for it when the day is
+    /// not today.
+    #[serde(default)]
+    pub reason: Option<String>,
+    /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7). Needed only when the
+    /// edit lowers cash and leaves it below 0.
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
+}
+
+/// What `bikri_edit_save` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct BikriEdited {
+    /// The بکری.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// Its number.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its version after the edit.
+    #[ts(type = "number")]
+    pub version: i64,
+    /// The posting that was taken back.
+    #[ts(type = "number")]
+    pub old_entry_id: i64,
+    /// The reversal of it.
+    #[ts(type = "number")]
+    pub reversal_entry_id: i64,
+    /// The new posting, to open next with `bikri_open_for_edit`.
+    #[ts(type = "number")]
+    pub entry_id: i64,
+    /// The numbers the save wrote; the same as `bikri_edit_preview` gave just before.
+    pub preview: BikriPreview,
+}
+
+// ---- Cancel and undo (PRD FR-12.22, FR-7.47) ----
+
+/// Input of `bikri_cancel_preview`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct CancelPreviewInput {
+    /// The بکری.
+    #[ts(type = "number")]
+    pub id: i64,
+}
+
+/// What a cancel would do, for the confirm box (PRD FR-7.8, FR-6.7). Read only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct CancelPreview {
+    /// The بکری.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// Its number.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its version, to send back with `bikri_cancel`.
+    #[ts(type = "number")]
+    pub version: i64,
+    /// Saved or already cancelled.
+    pub status: BikriStatus,
+    /// The postings in force that the cancel would reverse, oldest first.
+    pub postings: Vec<SavedPosting>,
+    /// What the cancel does to cash in hand (a نقدی sale cancelled takes its cash back).
+    pub cash: CashCheck,
+    /// The days of those postings that are closed (`YYYY-MM-DD`), oldest first. If there are
+    /// any, the cancel is refused with `ERR_DATE_CLOSED` until the Owner reopens the day.
+    pub closed_dates: Vec<String>,
+    /// True if the cancel can be done now: the بکری is saved and every posting day is open.
+    pub can_cancel: bool,
+}
+
+/// Input of `bikri_cancel` (PRD FR-12.22): every posting of the بکری is reversed.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct CancelInput {
+    /// The بکری.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// The version read with `bikri_get` or `bikri_cancel_preview`.
+    #[ts(type = "number")]
+    pub version: i64,
+    /// Why. Required (PRD FR-12.11): `ERR_REASON_REQUIRED` on `reason`.
+    pub reason: String,
+    /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7).
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
+}
+
+/// What `bikri_cancel` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct BikriCancelled {
+    /// The بکری. Its number is kept and never used again.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// Its number.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The reversal entries, one for each posting that was in force.
+    #[ts(type = "Array<number>")]
+    pub reversal_entry_ids: Vec<i64>,
+}
+
+/// Input of `bikri_undo` (PRD FR-7.47): a cancel straight after the save, with the reason
+/// `UNDO_REASON_ID`. The 10 seconds are the screen's; the backend only needs the day to be open.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct UndoInput {
+    /// The بکری just saved.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7).
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
+}
+
+/// What `bikri_undo` gives back: the cancelled بکری and a draft with the same values, to open as
+/// a new unsaved entry (PRD FR-7.47). The draft has no `lot_id` or `sale_id`.
+#[derive(Debug, Clone, Serialize, TS)]
+pub struct UndoResult {
+    /// The cancelled بکری.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// Its number, which is not used again.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The reversal entries.
+    #[ts(type = "Array<number>")]
+    pub reversal_entry_ids: Vec<i64>,
+    /// The values to correct and save again.
+    pub draft: BikriDraft,
+}
+
+// ---- Write-off (PRD FR-12.16) ----
+
+/// Input of `bikri_write_off`: goods that spoiled or came back are taken off the lot. A stock
+/// move only; no journal entry for consigned goods.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct WriteOffInput {
+    /// The lot.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// نگ to write off. A simple sum is taken (PRD FR-7.48).
+    pub qty: String,
+    /// Why (خراب، واپس ...). Required: `ERR_REASON_REQUIRED` on `reason`.
+    pub reason: String,
+}
+
+/// What `bikri_write_off` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct WriteOffDone {
+    /// The lot.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// The stock move, to undo it with `bikri_write_off_undo`.
+    #[ts(type = "number")]
+    pub move_id: i64,
+    /// How many نگ were written off now.
+    #[ts(type = "number")]
+    pub qty: i64,
+    /// All the نگ written off from the lot.
+    #[ts(type = "number")]
+    pub qty_written_off: i64,
+    /// نگ left.
+    #[ts(type = "number")]
+    pub balance: i64,
+}
+
+/// Input of `bikri_write_off_undo`: records the opposite stock move.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct WriteOffUndoInput {
+    /// The write-off move, from `WriteOffRow::move_id`. `ERR_NOT_FOUND` on `move_id` if it is not a
+    /// write-off, or has been undone already.
+    #[ts(type = "number")]
+    pub move_id: i64,
+    /// Why. Required: `ERR_REASON_REQUIRED` on `reason`.
+    pub reason: String,
+}
+
+/// What `bikri_write_off_undo` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct WriteOffUndone {
+    /// The lot.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// The opposite stock move that was recorded.
+    #[ts(type = "number")]
+    pub reversal_move_id: i64,
+    /// All the نگ written off from the lot after the undo.
+    #[ts(type = "number")]
+    pub qty_written_off: i64,
+    /// نگ left.
+    #[ts(type = "number")]
+    pub balance: i64,
+}

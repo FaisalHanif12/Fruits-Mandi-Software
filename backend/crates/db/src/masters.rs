@@ -6,8 +6,8 @@
 //! ever deleted here (PRD E21, Code Standards D3).
 
 use mandi_core::masters::{
-    AccountToMake, AddaRow, BankAccountRow, CityRow, ColValue, ExpenseHeadRow, ItemRow, MarkaRow,
-    MasterKind, MasterRow, NarrationRow, PackingRow, StaffRow, StoreRow, format_kg,
+    AccountToMake, AddaRow, CityRow, ColValue, ExpenseHeadRow, ItemRow, MarkaRow, MasterKind,
+    MasterRow, NarrationRow, PackingRow, StaffRow, StoreRow, format_kg,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
@@ -42,6 +42,17 @@ pub struct SearchSource {
     pub account_type: Option<mandi_core::accounts::AccountType>,
     /// For an account: the control it is under. `None` for masters.
     pub control_id: Option<i64>,
+    /// For an account: the code of that control (a garden's account has the code of its garden,
+    /// `0080`, so the control tells it apart). `None` for masters.
+    pub control_code: Option<String>,
+    /// For an account: its tag (نشان, PRD 10.2). `None` for masters and for an account with none.
+    pub tag: Option<String>,
+    /// True only for an item that is sold by weight (`items.sold_by = 'weight'`, plan 35 D3).
+    /// False for every other record.
+    pub sold_by_weight: bool,
+    /// True for an account that is in the dead amount (PRD FR-10.10, plan 40): inactive, but still
+    /// offered to the receipt picker and the ادھار رقم واپسی picker. False for every other record.
+    pub is_dead: bool,
 }
 
 fn value(v: &ColValue) -> Value {
@@ -98,12 +109,8 @@ fn select(kind: MasterKind) -> &'static str {
              FROM expense_heads m JOIN accounts a ON a.id = m.account_id"
         }
         MasterKind::Staff => {
-            "SELECT m.id, m.version, m.name_ur, m.name_en, m.role, m.phone, m.account_id, a.code, m.is_active
+            "SELECT m.id, m.version, m.code, m.name_ur, m.name_en, m.role, m.phone, m.account_id, a.code, m.is_active
              FROM staff m LEFT JOIN accounts a ON a.id = m.account_id"
-        }
-        MasterKind::BankAccount => {
-            "SELECT m.id, m.version, m.bank_name, m.title, m.number, m.account_id, a.code, a.name_ur, a.name_en, m.is_active
-             FROM bank_accounts m JOIN accounts a ON a.id = m.account_id"
         }
     }
 }
@@ -194,24 +201,13 @@ fn row_from(kind: MasterKind, r: &Row<'_>) -> rusqlite::Result<MasterRow> {
         MasterKind::Staff => MasterRow::Staff(StaffRow {
             id: r.get(0)?,
             version: r.get(1)?,
-            name_ur: r.get(2)?,
-            name_en: r.get(3)?,
-            job: r.get(4)?,
-            phone: r.get(5)?,
-            account_id: r.get(6)?,
-            account_code: r.get(7)?,
-            is_active: r.get(8)?,
-        }),
-        MasterKind::BankAccount => MasterRow::BankAccount(BankAccountRow {
-            id: r.get(0)?,
-            version: r.get(1)?,
-            bank_name: r.get(2)?,
-            title: r.get(3)?,
-            number: r.get(4)?,
-            account_id: r.get(5)?,
-            account_code: r.get(6)?,
-            name_ur: r.get(7)?,
-            name_en: r.get(8)?,
+            code: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
+            name_ur: r.get(3)?,
+            name_en: r.get(4)?,
+            job: r.get(5)?,
+            phone: r.get(6)?,
+            account_id: r.get(7)?,
+            account_code: r.get(8)?,
             is_active: r.get(9)?,
         }),
     })
@@ -240,6 +236,164 @@ pub fn list(
     let mut statement = conn.prepare(&format!("{}{filter}{order}", select(kind)))?;
     let rows = statement.query_map([], |r| row_from(kind, r))?;
     rows.collect()
+}
+
+/// The columns the list of a kind can be sorted by: the name of the field of the row and its SQL
+/// expression (`m` is the master, `p`, `c` and `a` the record it points at). `code` is sorted as a
+/// number, then as text: [`list_page`] turns it into both terms.
+pub fn sort_columns(kind: MasterKind) -> &'static [(&'static str, &'static str)] {
+    match kind {
+        MasterKind::City | MasterKind::Store => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Item => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("item_group", "m.item_group"),
+            ("default_packing_name_en", "p.name_en COLLATE NOCASE"),
+            ("sold_by", "m.sold_by"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Packing => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("approx_kg", "m.approx_grams"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Adda => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("city_name_en", "c.name_en COLLATE NOCASE"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Marka => &[
+            ("code", "m.code"),
+            ("mark_text", "m.mark_text"),
+            ("owner_account_code", "a.code"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Narration => &[
+            ("text_ur", "m.text_ur COLLATE URDU"),
+            ("text_en", "m.text_en COLLATE NOCASE"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::ExpenseHead => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("account_code", "a.code"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Staff => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("job", "m.role"),
+            ("phone", "m.phone"),
+            ("account_code", "a.code"),
+            ("is_active", "m.is_active"),
+        ],
+    }
+}
+
+/// The text columns the search of a kind looks in.
+fn search_columns(kind: MasterKind) -> &'static [&'static str] {
+    match kind {
+        MasterKind::City | MasterKind::Store | MasterKind::Packing | MasterKind::Adda => {
+            &["m.code", "m.name_ur", "m.name_en"]
+        }
+        MasterKind::Item => &["m.code", "m.name_ur", "m.name_en"],
+        MasterKind::ExpenseHead => &["m.code", "m.name_ur", "m.name_en", "a.code"],
+        MasterKind::Staff => &["m.code", "m.name_ur", "m.name_en", "m.phone"],
+        MasterKind::Marka => &["m.code", "m.mark_text", "a.code", "a.name_ur", "a.name_en"],
+        MasterKind::Narration => &["m.text_ur", "m.text_en"],
+    }
+}
+
+/// The filter of [`list_page`]: the records to read.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PageFilter<'a> {
+    /// True to include the inactive ones too.
+    pub include_inactive: bool,
+    /// Only this record.
+    pub id: Option<i64>,
+    /// Only records whose code, names or phone hold this text.
+    pub search: Option<&'a str>,
+    /// The `ORDER BY` expressions chosen by a sort from [`sort_columns`]. `None` is by code (or by
+    /// id for a kind without a code).
+    pub order_by: Option<&'a str>,
+}
+
+/// One page of the masters of a kind, in the order of the filter, with how many match and how
+/// many of those are active, counted over the whole filter in one query (PRD FR-19.11, B31).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_page(
+    conn: &Connection,
+    kind: MasterKind,
+    filter: &PageFilter<'_>,
+    offset: i64,
+    limit: i64,
+) -> rusqlite::Result<(Vec<MasterRow>, i64, i64)> {
+    // `:id` is the one record asked for, or null for no record in particular.
+    let mut where_sql = String::from(" WHERE (:id IS NULL OR m.id = :id)");
+    if !filter.include_inactive {
+        where_sql.push_str(" AND m.is_active = 1");
+    }
+    let search = filter.search.map(str::trim).filter(|t| !t.is_empty());
+    if search.is_some() {
+        let likes: Vec<String> = search_columns(kind)
+            .iter()
+            .map(|column| format!("{column} LIKE :search ESCAPE '\\'"))
+            .collect();
+        where_sql.push_str(&format!(" AND ({})", likes.join(" OR ")));
+    }
+    let pattern = search.map(crate::listing::like_contains);
+    let mut named: Vec<(&str, Value)> = vec![(":id", Value::from(filter.id))];
+    if let Some(pattern) = pattern {
+        named.push((":search", Value::Text(pattern)));
+    }
+    let args: Vec<(&str, &dyn rusqlite::ToSql)> = named
+        .iter()
+        .map(|(name, value)| (*name, value as &dyn rusqlite::ToSql))
+        .collect();
+    // `kind.table()` is one of a fixed list of names, never input. The joins are those of the
+    // row select, so a search or a sort can read the record a master points at.
+    let (count, active): (i64, i64) = conn.query_row(
+        &format!(
+            "SELECT COUNT(*), COALESCE(SUM(x.is_active), 0) FROM ({}{where_sql}) x",
+            select(kind)
+        ),
+        args.as_slice(),
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let natural = if kind.has_code() {
+        "CAST(m.code AS INTEGER), m.code, m.id"
+    } else {
+        "m.id"
+    };
+    let order = match filter.order_by {
+        Some(chosen) => format!("{chosen}, {natural}"),
+        None => natural.to_owned(),
+    };
+    let mut page = args.clone();
+    let limit_value = Value::Integer(limit);
+    let offset_value = Value::Integer(offset);
+    page.push((":limit", &limit_value));
+    page.push((":offset", &offset_value));
+    let mut statement = conn.prepare(&format!(
+        "{}{where_sql} ORDER BY {order} LIMIT :limit OFFSET :offset",
+        select(kind)
+    ))?;
+    let rows = statement.query_map(page.as_slice(), |r| row_from(kind, r))?;
+    Ok((rows.collect::<rusqlite::Result<Vec<_>>>()?, count, active))
 }
 
 /// One master by id.
@@ -294,16 +448,26 @@ pub fn code_taken(
         .is_some())
 }
 
-/// The next free code: the largest number among the codes plus one, written as wide as the
-/// widest code so far (`07` gives `08`). `1` for an empty list. Empty for kinds without a code.
-/// Only codes of digits count (the app allows nothing else). `None` if the next code would be
-/// longer than the 10 digits the app accepts (the list is full).
+/// The next free code. An item, a packing or a staff member gets the type number plus the next
+/// running number (`0040`, `0050`, `0060` for the first, plan 32 R2). Every other kind: the largest
+/// number among the codes plus one, written as wide as the widest code so far (`07` gives `08`),
+/// `1` for an empty list. Empty for kinds without a code. Only codes of digits count (the app
+/// allows nothing else). `None` if the next code would be longer than the 10 digits the app accepts
+/// (the list is full).
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn next_code(conn: &Connection, kind: MasterKind) -> rusqlite::Result<Option<String>> {
     if !kind.has_code() {
         return Ok(Some(String::new()));
+    }
+    if let Some(code_type) = kind.code_type() {
+        let table = match kind {
+            MasterKind::Item => crate::codes::CodeTable::Items,
+            MasterKind::Packing => crate::codes::CodeTable::Packings,
+            _ => crate::codes::CodeTable::Staff,
+        };
+        return Ok(crate::codes::next_code(conn, table, code_type)?.map(|(_, code)| code));
     }
     let mut statement = conn.prepare(&format!("SELECT code FROM {}", kind.table()))?;
     let codes = statement.query_map([], |r| r.get::<_, String>(0))?;
@@ -482,6 +646,23 @@ pub fn create_account(
         return Ok(None);
     };
     let code = format!("{}{serial:04}", account.control_code);
+    let id = create_account_coded(conn, account, &code, serial, user_id, now)?;
+    Ok(Some((id, code)))
+}
+
+/// Makes an account under its control with the code and the serial given. A garden's account has the
+/// code of its garden (`0080`, plan 34), which is not the control code plus a serial. Returns the id.
+///
+/// # Errors
+/// Any SQLite error (a UNIQUE clash on the code), or a control that does not exist.
+pub fn create_account_coded(
+    conn: &Connection,
+    account: &AccountToMake,
+    code: &str,
+    serial: u32,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<i64> {
     let made = conn.execute(
         "INSERT INTO accounts (created_at, created_by, updated_at, updated_by, control_id, code, serial,
              party_type, name_ur, name_en, search_ur, search_en, search_phonetic, is_system, is_active)
@@ -504,7 +685,7 @@ pub fn create_account(
     if made != 1 {
         return Err(rusqlite::Error::StatementChangedRows(made));
     }
-    Ok(Some((conn.last_insert_rowid(), code)))
+    Ok(conn.last_insert_rowid())
 }
 
 /// Gives the account of a master its new names (and search columns).
@@ -560,7 +741,6 @@ pub fn set_account_active(
 pub fn account_of(conn: &Connection, kind: MasterKind, id: i64) -> rusqlite::Result<Option<i64>> {
     let sql = match kind {
         MasterKind::ExpenseHead => "SELECT account_id FROM expense_heads WHERE id = ?1",
-        MasterKind::BankAccount => "SELECT account_id FROM bank_accounts WHERE id = ?1",
         _ => return Ok(None),
     };
     conn.query_row(sql, [id], |r| r.get(0)).optional()
@@ -581,11 +761,31 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         is_active: r.get(10)?,
         account_type: None,
         control_id: None,
+        control_code: None,
+        tag: None,
+        sold_by_weight: r.get(11)?,
+        is_dead: false,
     })
 }
 
+/// The active staff whose job is `collector`, as the search index sees them (the `collector` list
+/// of the pickers, PRD FR-15.2). The columns are those of [`search_sources`] for the staff.
+///
+/// Example: a munshi, a labourer and an inactive collector are not in it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn collector_sources(conn: &Connection) -> rusqlite::Result<Vec<SearchSource>> {
+    let mut statement = conn.prepare(
+        "SELECT m.id, m.code, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0
+         FROM staff m WHERE m.role = 'collector' AND m.is_active = 1",
+    )?;
+    let rows = statement.query_map([], source_from)?;
+    rows.collect()
+}
+
 /// The records of one kind as the search index sees them: the columns are code, both names, the
-/// two second lines, extra keys, the three search columns and the active flag. `only_id` limits
+/// two second lines, extra keys, the three search columns, the active flag and "sold by weight". `only_id` limits
 /// it to one record (after a save).
 ///
 /// # Errors
@@ -597,40 +797,35 @@ pub fn search_sources(
 ) -> rusqlite::Result<Vec<SearchSource>> {
     let select = match kind {
         MasterKind::City => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM cities m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM cities m"
         }
         MasterKind::Store => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM stores m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM stores m"
         }
         MasterKind::Item => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, p.name_ur, p.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active
+            "SELECT m.id, m.code, m.name_ur, m.name_en, p.name_ur, p.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, m.sold_by = 'weight'
              FROM items m LEFT JOIN packings p ON p.id = m.default_packing_id"
         }
         MasterKind::Packing => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM packings m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM packings m"
         }
         MasterKind::Adda => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, c.name_ur, c.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active
+            "SELECT m.id, m.code, m.name_ur, m.name_en, c.name_ur, c.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0
              FROM addas m LEFT JOIN cities c ON c.id = m.city_id"
         }
         MasterKind::Marka => {
-            "SELECT m.id, m.code, m.mark_text, m.mark_text, a.name_ur, a.name_en, NULL, NULL, NULL, NULL, m.is_active
+            "SELECT m.id, m.code, m.mark_text, m.mark_text, a.name_ur, a.name_en, NULL, NULL, NULL, NULL, m.is_active, 0
              FROM markas m LEFT JOIN accounts a ON a.id = m.owner_account_id"
         }
         MasterKind::Narration => {
-            "SELECT m.id, NULL, m.text_ur, m.text_en, NULL, NULL, NULL, NULL, NULL, NULL, m.is_active FROM narrations m"
+            "SELECT m.id, NULL, m.text_ur, m.text_en, NULL, NULL, NULL, NULL, NULL, NULL, m.is_active, 0 FROM narrations m"
         }
         MasterKind::ExpenseHead => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, a.code, a.code, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active
+            "SELECT m.id, m.code, m.name_ur, m.name_en, a.code, a.code, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0
              FROM expense_heads m JOIN accounts a ON a.id = m.account_id"
         }
         MasterKind::Staff => {
-            "SELECT m.id, NULL, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM staff m"
-        }
-        MasterKind::BankAccount => {
-            "SELECT m.id, NULL, a.name_ur, a.name_en, m.bank_name || ' - ' || m.title, m.bank_name || ' - ' || m.title,
-                    m.bank_name || ' ' || m.title || ' ' || m.number, a.search_ur, a.search_en, a.search_phonetic, m.is_active
-             FROM bank_accounts m JOIN accounts a ON a.id = m.account_id"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM staff m"
         }
     };
     let sql = if only_id.is_some() {

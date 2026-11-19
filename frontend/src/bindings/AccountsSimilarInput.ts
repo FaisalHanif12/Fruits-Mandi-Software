@@ -17,6 +17,11 @@ export type AccountsSimilarInput = {
    */
   phone: string;
   /**
+   * What was typed in the tag (نشان). Empty if none. With the names and the phone it decides
+   * which similar account is a duplicate (PRD FR-10.7, E38). Missing means none.
+   */
+  tag: string;
+  /**
    * The account being edited, which is left out of the answer.
    */
   exclude_id: number | null;

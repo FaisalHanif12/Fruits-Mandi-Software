@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-purchases-cancel"
+description = "Enables the purchases_cancel command without any pre-configured scope."
+commands.allow = ["purchases_cancel"]
+
+[[permission]]
+identifier = "deny-purchases-cancel"
+description = "Denies the purchases_cancel command without any pre-configured scope."
+commands.deny = ["purchases_cancel"]

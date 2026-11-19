@@ -3,8 +3,9 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useAllPagesQuery } from '../../shared/hooks';
 import { searchMasters } from '../../shared/search';
-import { mastersList, mastersNextCode, mastersSave, mastersSetActive } from './api';
+import { mastersGetOne, mastersList, mastersNextCode, mastersSave, mastersSetActive } from './api';
 import type { MasterDraft, MasterKind } from './types';
 
 const MASTERS_KEY = ['masters'] as const;
@@ -14,12 +15,42 @@ const FILTER_LIMIT = 500;
 /** A short pause so a burst of key presses asks once. */
 const FILTER_DELAY_MS = 150;
 
-/** Every master of a kind. The list always holds the inactive ones too, the screen hides them. */
-export function useMasterList(kind: MasterKind) {
-  return useQuery({
-    queryKey: [...MASTERS_KEY, kind, 'list'],
-    queryFn: () => mastersList(kind, true),
+/**
+ * Every master of a kind, page after page (`useLoadRest`): a master list is short, so the screen
+ * filters it and turns its pages in memory (`useClientPager`). Inactive ones are in it only when
+ * asked for (PRD FR-19.11).
+ */
+export function useMasterList(kind: MasterKind, includeInactive: boolean) {
+  return useAllPagesQuery({
+    queryKey: [...MASTERS_KEY, kind, 'list', includeInactive],
+    fetchPage: (offset, limit) => mastersList(kind, includeInactive, offset, limit),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
+}
+
+/**
+ * One master of a kind by its id, for its form: one record from the backend, never the pages of the
+ * list before it. `record` is undefined while it loads and when there is no such master.
+ */
+export function useMasterRecord(kind: MasterKind, id: string | undefined) {
+  const wanted = id === undefined ? null : Number(id);
+  // An address that is not a number names no master: nothing is asked and the form says so.
+  const valid = wanted !== null && Number.isInteger(wanted);
+  const query = useQuery({
+    queryKey: [...MASTERS_KEY, kind, 'one', wanted],
+    queryFn: () => mastersGetOne(kind, wanted ?? 0),
+    enabled: valid,
+    staleTime: 0,
+  });
+  return {
+    record: query.data ?? undefined,
+    isPending: valid && query.isPending,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  };
 }
 
 /** `value`, but only after it has stayed the same for `delayMs`. */
@@ -58,6 +89,24 @@ export function useMasterFilter(kind: MasterKind, text: string) {
     error: query.error,
     refetch: query.refetch,
   };
+}
+
+/** How many look-alikes the short form of "add it here" shows. */
+const SIMILAR_LIMIT = 5;
+
+/**
+ * Records of a kind that look like the name being typed (PRD FR-7.63, FR-10.7): the same search the
+ * pickers use, so both scripts, look-alike letters and small mistakes count. Asked after a pause,
+ * and only when something has been typed.
+ */
+export function useSimilarMasters(kind: MasterKind, text: string) {
+  const settled = useSettled(text.trim(), FILTER_DELAY_MS);
+  return useQuery({
+    queryKey: [...MASTERS_KEY, kind, 'similar', settled],
+    queryFn: () => searchMasters({ scope: kind, text: settled, limit: SIMILAR_LIMIT }),
+    enabled: settled !== '',
+    placeholderData: keepPreviousData,
+  });
 }
 
 /** The code the next new master of a kind gets, asked each time the form for a new one opens. */

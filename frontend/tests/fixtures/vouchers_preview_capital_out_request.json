@@ -1,0 +1,10 @@
+{
+  "entry": {
+    "amount": "60,000",
+    "confirm_cash_below_zero": false,
+    "date": "11-10-2026",
+    "partner_id": 2,
+    "type": "capital_out"
+  },
+  "replacing_voucher_id": null
+}

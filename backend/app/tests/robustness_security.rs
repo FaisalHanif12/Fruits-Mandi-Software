@@ -19,7 +19,16 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+use std::sync::Arc;
+
+use mandi_app_lib::backup_runtime::BackupRuntime;
 use mandi_app_lib::state::AppState;
+use mandi_backup::cloud::{FixedCloud, LocalFolderCloud};
+use mandi_backup::daily_pack::PendingPack;
+use mandi_backup::io::NoHook;
+use mandi_backup::secrets::MemorySecretStore;
+use mandi_backup::service::{BackupConfig, BackupParts, BackupService};
+use mandi_services::db::disk::FixedDiskProbe;
 use mandi_services::db::rusqlite::{Connection, types::Value as SqlValue};
 use mandi_services::testing::TestEnv;
 use serde_json::{Value, json};
@@ -31,13 +40,18 @@ use tempfile::TempDir;
 const OWNER_PASSWORD: &str = "secret1";
 
 /// The commands anyone may call before signing in (NFR-SEC-4).
-const OPEN: [&str; 6] = [
+const OPEN: [&str; 9] = [
     "app_info",
     "app_data_status",
     "auth_status",
     "setup_first_run",
     "auth_login",
     "auth_recover",
+    // Plan 56, restore on a new computer: open before sign-in, refused with ERR_ALREADY_SET_UP once
+    // an Owner exists.
+    "backup_first_run_list",
+    "backup_first_run_preview",
+    "backup_first_run_restore",
 ];
 
 struct Harness {
@@ -48,11 +62,40 @@ struct Harness {
 
 impl Harness {
     fn new() -> Self {
+        Self::build(false)
+    }
+
+    /// The same app with the backup service started (memory secrets, a folder for the cloud), as
+    /// it is in the real app. Without it every backup command says ERR_BACKUP_NOT_STARTED.
+    fn with_backup() -> Self {
+        Self::build(true)
+    }
+
+    fn build(backup: bool) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let env = TestEnv::new(dir.path()).unwrap();
         let state = AppState::with_context(env.ctx.clone());
-        let app = mock_builder()
-            .manage(state)
+        let mut builder = mock_builder().manage(state);
+        if backup {
+            let service = Arc::new(BackupService::new(
+                Arc::clone(env.ctx.db()),
+                BackupConfig {
+                    backups_dir: dir.path().join("backups"),
+                    app_version: "0.0.0-test".to_owned(),
+                },
+                BackupParts {
+                    secrets: Arc::new(MemorySecretStore::default()),
+                    cloud: Arc::new(FixedCloud(Arc::new(LocalFolderCloud::new(
+                        dir.path().join("cloud"),
+                    )))),
+                    disk: Arc::new(FixedDiskProbe(10 * 1024 * 1024 * 1024)),
+                    hook: Arc::new(NoHook),
+                    pack: Arc::new(PendingPack),
+                },
+            ));
+            builder = builder.manage(BackupRuntime::new(service));
+        }
+        let app = builder
             .invoke_handler(mandi_app_lib::handler())
             .build(mandi_app_lib::context())
             .unwrap();
@@ -211,7 +254,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "roman": "xyz", "urdu": "زیڈ", "kind": "word" } }),
             true,
         ),
-        ("translit_pairs_list", json!({}), true),
+        ("translit_pairs_list", json!({ "input": {} }), true),
         (
             "masters_list",
             json!({ "input": { "kind": "city", "include_inactive": true } }),
@@ -279,6 +322,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         ("coa_tree", json!({}), true),
+        (
+            "coa_control_accounts",
+            json!({ "input": { "control_id": 1, "offset": 0, "limit": 25 } }),
+            true,
+        ),
         ("coa_heads_list", json!({}), true),
         ("coa_controls_list", json!({}), true),
         (
@@ -350,9 +398,265 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         ("settings_get_overrides", json!({}), true),
         (
+            "purchases_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1,
+                "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null,
+                "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "purchases_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1,
+                "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null,
+                "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "purchases_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "purchases_list",
+            json!({ "input": { "trip_id": null, "from": null, "to": null, "item_id": null, "state": null,
+                "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        ("purchases_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "purchases_write_off",
+            json!({ "input": { "purchase_id": 1, "qty": "1", "reason": "x" } }),
+            true,
+        ),
+        (
+            "purchases_write_off_undo",
+            json!({ "input": { "move_id": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "purchases_set_sell_date",
+            json!({ "input": { "id": 1, "version": 1, "sell_date": "11-10-2026" } }),
+            true,
+        ),
+        (
+            "purchases_entry_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "sell_date": null,
+                "parts": [], "confirm_cash_below_zero": false, "lines": [] } }),
+            true,
+        ),
+        (
+            "purchases_entry_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "sell_date": null,
+                "parts": [], "confirm_cash_below_zero": false, "lines": [] } }),
+            true,
+        ),
+        (
+            "purchases_change_split",
+            json!({ "input": { "id": 1, "version": 1, "other_qty": "5", "shop_name": null } }),
+            true,
+        ),
+        (
+            "gardens_arrival_entry_preview",
+            json!({ "input": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "lines": [] } }),
+            true,
+        ),
+        (
+            "gardens_arrival_entry_save",
+            json!({ "input": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "lines": [] } }),
+            true,
+        ),
+        (
+            "gardens_arrival_change_split",
+            json!({ "input": { "id": 1, "version": 1, "other_qty": "5", "shop_name": null } }),
+            true,
+        ),
+        ("trips_defaults", json!({}), true),
+        (
+            "trips_create",
+            json!({ "input": { "date": "10-10-2026", "market": null, "sent_person": null, "note": null,
+                "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] } }),
+            true,
+        ),
+        (
+            "trips_set_partners",
+            json!({ "input": { "id": 1, "version": 1,
+                "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] } }),
+            true,
+        ),
+        (
+            "trips_list",
+            json!({ "input": { "from": null, "to": null, "status": null, "partner_id": null, "search": null,
+                "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "trips_get",
+            json!({ "input": { "id": 1, "entries_offset": 0, "entries_limit": 0 } }),
+            true,
+        ),
+        ("trips_summary", json!({}), true),
+        (
+            "trips_cost_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x",
+                "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "trips_cost_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x",
+                "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "trips_cost_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "trips_other_sale_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1,
+                "qty": "5", "amount": "3,000", "note": null } }),
+            true,
+        ),
+        (
+            "trips_other_sale_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1,
+                "qty": "5", "amount": "3,000", "note": null } }),
+            true,
+        ),
+        (
+            "trips_other_sale_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        ("gardens_defaults", json!({}), true),
+        (
+            "gardens_create_preview",
+            json!({ "input": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_create",
+            json!({ "input": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_set_partners",
+            json!({ "input": { "id": 1, "version": 1, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] } }),
+            true,
+        ),
+        ("gardens_list", json!({ "input": {} }), true),
+        ("gardens_get", json!({ "input": { "id": 1 } }), true),
+        ("gardens_summary", json!({}), true),
+        (
+            "gardens_entry_preview",
+            json!({ "input": { "type": "installment", "garden_id": 1, "date": "10-10-2026", "amount": "30,000", "reason": "x", "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_entry_save",
+            json!({ "input": { "type": "other_sale", "garden_id": 1, "date": "10-10-2026", "shop": null, "qty": "20", "amount": "10,000", "note": null } }),
+            true,
+        ),
+        (
+            "gardens_entry_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_close_preview",
+            json!({ "input": { "id": 1, "version": 1, "date": "13-10-2026" } }),
+            true,
+        ),
+        (
+            "gardens_close",
+            json!({ "input": { "id": 1, "version": 1, "date": "13-10-2026" } }),
+            true,
+        ),
+        (
+            "gardens_reopen",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_save",
+            json!({ "input": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "item_id": 1,
+                "packing_id": 1, "qty": "100", "weight": null, "note": null } }),
+            true,
+        ),
+        (
+            "gardens_arrival_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_set_sell_date",
+            json!({ "input": { "id": 1, "version": 1, "sell_date": "11-10-2026" } }),
+            true,
+        ),
+        (
+            "gardens_arrivals_list",
+            json!({ "input": { "garden_id": null, "from": null, "to": null, "item_id": null,
+                "state": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        ("gardens_arrival_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "gardens_arrival_write_off",
+            json!({ "input": { "arrival_id": 1, "qty": "1", "reason": "x" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_write_off_undo",
+            json!({ "input": { "move_id": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "fruit_preview",
+            json!({ "input": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } }),
+            true,
+        ),
+        (
+            "fruit_save",
+            json!({ "input": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } }),
+            true,
+        ),
+        (
+            "fruit_edit",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "entry": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } } }),
+            true,
+        ),
+        (
+            "fruit_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        ("fruit_get", json!({ "input": { "id": 1 } }), true),
+        ("fruit_list", json!({ "input": {} }), true),
+        ("fruit_lots", json!({ "input": {} }), true),
+        (
+            "masters_dead_preview",
+            json!({ "input": { "account_id": 1 } }),
+            true,
+        ),
+        (
+            "masters_dead_mark",
+            json!({ "input": { "account_id": 1, "entry_date": "11-10-2026", "reason": "died", "note": "" } }),
+            true,
+        ),
+        (
+            "masters_dead_undo",
+            json!({ "input": { "mark_id": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "reports_dead_amount",
+            json!({ "input": { "filter": "owed", "search": "", "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
             "vouchers_save_advance",
-            json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "mode": "cash",
-                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "expected_goods": "", "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "expected_goods": "", "narration": "" } }),
             true,
         ),
         (
@@ -373,6 +677,63 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "assist_advances",
             json!({ "input": { "seller_id": 1 } }),
+            true,
+        ),
+        (
+            "vouchers_save_receipt",
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } }),
+            true,
+        ),
+        (
+            "vouchers_save_payment",
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "amount": "4,316", "reason": "", "narration": "" } }),
+            true,
+        ),
+        (
+            "vouchers_preview",
+            json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
+            true,
+        ),
+        (
+            "vouchers_edit",
+            json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
+                "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
+            true,
+        ),
+        (
+            "vouchers_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        ("vouchers_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "vouchers_open_for_edit",
+            json!({ "input": { "id": 1 } }),
+            true,
+        ),
+        (
+            "vouchers_save_receipts_batch",
+            json!({ "input": { "rows": [] } }),
+            true,
+        ),
+        (
+            "advances_report",
+            json!({ "input": { "seller_id": null, "as_of": "" } }),
+            true,
+        ),
+        (
+            "assist_open_bills",
+            json!({ "input": { "account_id": 1 } }),
+            true,
+        ),
+        (
+            "assist_open_payables",
+            json!({ "input": { "seller_id": 1, "include_settled": false } }),
+            true,
+        ),
+        (
+            "assist_collection_list",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null } }),
             true,
         ),
         (
@@ -413,19 +774,120 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         ("partners_overview", json!({}), true),
         (
+            "cashbook_get",
+            json!({ "input": { "from": null, "to": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "vouchers_save_shop_expense",
+            json!({ "input": { "date": "10-10-2026", "expense_head_id": 1, "amount": "3,000", "paid_to": null, "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_personal_expense",
+            json!({ "input": { "date": "10-10-2026", "partner_id": 1, "amount": "2,000", "reason": "x", "return_by": null, "taken_by": null, "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_personal_return",
+            json!({ "input": { "date": "11-10-2026", "partner_id": 1, "amount": "2,000", "narration": null } }),
+            true,
+        ),
+        (
+            "vouchers_preview_expense",
+            json!({ "input": { "entry": { "type": "shop_expense", "date": "10-10-2026", "expense_head_id": 1, "amount": "3,000", "paid_to": null, "narration": null, "confirm_cash_below_zero": false }, "replacing_voucher_id": null } }),
+            true,
+        ),
+        (
+            "partner_takes",
+            json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "vouchers_repeat_last_month_preview",
+            json!({ "input": { "month": "2026-10" } }),
+            true,
+        ),
+        ("masters_expense_heads", json!({}), true),
+        (
+            "vouchers_save_money_lent",
+            json!({ "input": { "date": "10-10-2026", "person_account_id": 1, "amount": "5,000", "reason": "x", "return_by": null, "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_money_lent_return",
+            json!({ "input": { "date": "11-10-2026", "person_account_id": 1, "amount": "3,000", "mode": "cash", "salary_head_id": null, "narration": null } }),
+            true,
+        ),
+        (
+            "lent_person_create",
+            json!({ "input": { "name_ur": "اسلم", "name_en": "Aslam", "phone": null, "staff_id": null, "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "lent_list",
+            json!({ "input": { "person_id": 1, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "lent_report",
+            json!({ "input": { "as_of": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        ("assist_attention_overdue", json!({}), true),
+        (
+            "vouchers_save_capital_in",
+            json!({ "input": { "date": "11-10-2026", "partner_id": 1, "amount": "50,000", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_capital_out",
+            json!({ "input": { "date": "20-10-2026", "partner_id": 1, "amount": "10,000", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "capital_history",
+            json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "partners_statement",
+            json!({ "input": { "partner_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "khata_create",
+            json!({ "input": { "name_ur": "خاندانی کھاتہ", "name_en": "Family Khata", "note": null, "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "vouchers_save_khata_out",
+            json!({ "input": { "date": "10-10-2026", "khata_account_id": 1, "amount": "10,000", "reason": "x", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_khata_in",
+            json!({ "input": { "date": "11-10-2026", "khata_account_id": 1, "amount": "4,000", "reason": "x", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "khata_statement",
+            json!({ "input": { "khata_account_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "general_preview",
+            json!({ "input": { "date": "10-10-2026", "lines": [{ "account_id": 1, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "dr": "", "cr": "100", "narration": null }] } }),
+            true,
+        ),
+        (
+            "general_save",
+            json!({ "input": { "date": "10-10-2026", "narration": null, "lines": [{ "account_id": 1, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "dr": "", "cr": "100", "narration": null }], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
             "bikri_preview",
             json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] } } }),
-            true,
-        ),
-        (
-            "bikri_split_freight",
-            json!({ "input": { "total_freight": "1,000",
-                "lots": [{ "key": "a", "qty_received": "30" }, { "key": "b", "qty_received": "20" }] } }),
-            true,
-        ),
-        (
-            "assist_truck_memory",
-            json!({ "input": { "truck_no": "LES", "date": "10-10-2026" } }),
             true,
         ),
         (
@@ -436,6 +898,177 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "assist_last_rate",
             json!({ "input": { "item_id": 1, "packing_id": 1, "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "bikri_save",
+            json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] },
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        ("bikri_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "bikri_list",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        ("bikri_find", json!({ "input": { "number": 1 } }), true),
+        (
+            "bikri_navigate",
+            json!({ "input": { "current_id": null, "to": "last" } }),
+            true,
+        ),
+        (
+            "bikri_stock_list",
+            json!({ "input": { "date": null, "from": null, "to": null, "seller_id": null,
+                "item_id": null, "include_written_off": false } }),
+            true,
+        ),
+        (
+            "bikri_ready_goods",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "bikri_later_sale_preview",
+            json!({ "input": { "lot_id": 1, "date": "10-10-2026", "sales": [] } }),
+            true,
+        ),
+        (
+            "bikri_later_sale_save",
+            json!({ "input": { "lot_id": 1, "date": "10-10-2026", "sales": [],
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_mixed_preview",
+            json!({ "input": { "date": "10-10-2026", "carried": [], "new_lots": [] } }),
+            true,
+        ),
+        (
+            "bikri_mixed_save",
+            json!({ "input": { "date": "10-10-2026", "carried": [], "new_lots": [],
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_mixed_undo",
+            json!({ "input": { "later_entry_ids": [], "new_bikri_id": null,
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_open_for_edit",
+            json!({ "input": { "bikri_id": 1, "entry_id": 1 } }),
+            true,
+        ),
+        (
+            "bikri_edit_preview",
+            json!({ "input": { "entry_id": 1,
+                "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] } } }),
+            true,
+        ),
+        (
+            "bikri_edit_save",
+            json!({ "input": { "entry_id": 1, "version": 1, "reason": null,
+                "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] },
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_cancel_preview",
+            json!({ "input": { "id": 1 } }),
+            true,
+        ),
+        (
+            "bikri_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "غلط اندراج",
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_undo",
+            json!({ "input": { "id": 1, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_write_off",
+            json!({ "input": { "lot_id": 1, "qty": "1", "reason": "خراب" } }),
+            true,
+        ),
+        (
+            "bikri_write_off_undo",
+            json!({ "input": { "move_id": 1, "reason": "غلط" } }),
+            true,
+        ),
+        (
+            "chukta_search",
+            json!({ "input": { "text": "shahid" } }),
+            true,
+        ),
+        (
+            "chukta_add",
+            json!({ "input": { "name_ur": "شاہد", "name_en": "Shahid", "phone": null } }),
+            true,
+        ),
+        (
+            "party_ledgers_list",
+            json!({ "input": { "side": "buyer", "text": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement",
+            json!({ "input": { "account_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "party_ledgers_go_to_date",
+            json!({ "input": { "account_id": 1, "date": "05-10-2026" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_print_data",
+            json!({ "input": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "language": "en" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_print",
+            json!({ "input": { "statement": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "bikri_list_print_data",
+            json!({ "input": { "from": "01-10-2026", "to": "09-10-2026", "language": "en" } }),
+            true,
+        ),
+        (
+            "bikri_list_print",
+            json!({ "input": { "list": { "from": "01-10-2026", "to": "09-10-2026", "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "bikri_list_export_excel",
+            json!({ "input": { "job_id": "j1", "from": "01-10-2026", "to": "09-10-2026", "language": "en", "path": "/no-such-folder/mandi-robustness.xlsx" } }),
+            true,
+        ),
+        (
+            "tables_export_excel",
+            json!({ "input": { "job_id": "j1", "path": "/no-such-folder/mandi-robustness.xlsx", "source": { "kind": "buyer_dues", "language": "en" } } }),
+            true,
+        ),
+        (
+            "drafts_save",
+            json!({ "input": { "screen": "bikri", "payload_json": "{}" } }),
+            true,
+        ),
+        (
+            "drafts_get",
+            json!({ "input": { "screen": "bikri" } }),
+            true,
+        ),
+        (
+            "drafts_discard",
+            json!({ "input": { "screen": "bikri" } }),
             true,
         ),
         (
@@ -451,7 +1084,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "father_or_firm_en": "", "city_id": null, "adda_id": null, "phone1": "", "phone2": "",
                 "address": "", "linked_account_id": null, "opening_date": "", "opening_dr": "", "opening_cr": "",
                 "opening_is_advance": false, "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-                "collector_staff_id": null, "collection_weekday": null, "is_active": true, "note": "" } }),
+                "collector_staff_id": null, "is_active": true, "note": "" } }),
             true,
         ),
         (
@@ -468,6 +1101,636 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "settings_set_default_language",
             json!({ "input": { "language": "en" } }),
+            true,
+        ),
+        (
+            "reports_bikri_print_data",
+            json!({ "input": { "bikri_id": 1, "doc": "seller_bill", "language": "ur", "only_buyer_id": null } }),
+            true,
+        ),
+        (
+            "reports_print",
+            json!({ "input": { "bikri_id": 1, "docs": ["seller_bill"], "language": "ur", "copies": null,
+                "to": "pdf", "only_buyer_id": null } }),
+            true,
+        ),
+        (
+            "reports_voucher_print_data",
+            json!({ "input": { "voucher_id": 1, "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_print_voucher",
+            json!({ "input": { "voucher_id": 1, "language": "ur", "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_buyer_parchi_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_sale_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "partners_statement_month",
+            json!({ "input": { "partner_id": 1, "month": null } }),
+            true,
+        ),
+        (
+            "partners_statement_day",
+            json!({ "input": { "partner_id": 1, "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "partners_statement_month_print_data",
+            json!({ "input": { "partner_id": 1, "month": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "partners_open_ventures",
+            json!({ "input": { "partner_id": 1 } }),
+            true,
+        ),
+        (
+            "reports_print_header",
+            json!({ "input": { "language": "ur", "title_id": "print-collection-list-title", "facts": [] } }),
+            true,
+        ),
+        (
+            "reports_collection_print_data",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_print_collection",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur",
+                "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        ("reports_list_printers", json!({}), true),
+        ("settings_get_printing", json!({}), true),
+        (
+            "settings_set_printing",
+            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "printer": "", "copies": "1", "print_after_save": ["seller_bill"] } }),
+            true,
+        ),
+        // Run B, plan 18 (append-only block).
+        ("backup_status", json!({}), true),
+        (
+            "backup_list",
+            json!({ "input": { "kind": null, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "backup_now",
+            json!({ "input": { "local": true, "usb": false, "cloud": false } }),
+            true,
+        ),
+        (
+            "backup_restore_preview",
+            json!({ "input": { "backup": { "kind": "local", "name": "mandi-local-20200101T000000000Z.db" }, "key": null } }),
+            true,
+        ),
+        (
+            "backup_restore",
+            json!({ "input": { "backup": { "kind": "local", "name": "mandi-local-20200101T000000000Z.db" }, "key": null, "confirmed": false } }),
+            true,
+        ),
+        (
+            "backup_test_restore",
+            json!({ "input": { "backup": null, "key": null } }),
+            true,
+        ),
+        ("backup_settings_get", json!({}), true),
+        (
+            "backup_settings_set",
+            json!({ "input": { "settings": { "local_dir": "", "usb_enabled": false, "usb_folder": "", "cloud_enabled": false,
+                "cloud_endpoint": "", "cloud_bucket": "", "cloud_region": "auto", "cloud_prefix": "mandi", "closing_time": "21:00" },
+                "cloud_access_key_id": null, "cloud_secret_access_key": null } }),
+            true,
+        ),
+        ("backup_key_setup", json!({}), true),
+        (
+            "backup_key_confirm",
+            json!({ "input": { "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            true,
+        ),
+        // Plan 56, restore on a new computer: open before sign-in, refused with ERR_ALREADY_SET_UP
+        // once an Owner exists.
+        (
+            "backup_first_run_list",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" } } }),
+            false,
+        ),
+        (
+            "backup_first_run_preview",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" }, "copy": null,
+                "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            false,
+        ),
+        (
+            "backup_first_run_restore",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" },
+                "copy": "mandi-20200101T000000000Z.mbk", "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            false,
+        ),
+        // Run B, plan 20 (append-only block).
+        ("reports_catalog", json!({}), true),
+        (
+            "reports_run",
+            json!({ "input": { "id": "R18", "filters": {}, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "reports_print_data",
+            json!({ "input": { "id": "R18", "filters": {}, "language": "en" } }),
+            true,
+        ),
+        // Run B, plan 21 (append-only block).
+        ("analytics_catalog", json!({}), true),
+        (
+            "analytics_run",
+            json!({ "input": { "view": "A", "filters": {}, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "analytics_lines",
+            json!({ "input": { "view": "A", "filters": {}, "row_key": {}, "column_key": null, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "analytics_print_data",
+            json!({ "input": { "view": "A", "filters": {}, "language": "en" } }),
+            true,
+        ),
+        ("analytics_views_get", json!({}), true),
+        (
+            "analytics_views_save",
+            json!({ "input": { "views": [] } }),
+            true,
+        ), // Run B, plan 22 (append-only block).
+        ("settings_day_get", json!({}), true),
+        (
+            "settings_day_set",
+            json!({ "input": { "closing_time": "21:00", "auto_day_close": false } }),
+            true,
+        ),
+        (
+            "settings_set_number_grouping",
+            json!({ "input": { "grouping": "lakh" } }),
+            true,
+        ),
+        (
+            "audit_list",
+            json!({ "input": { "filters": {}, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        ("audit_options", json!({}), true),
+        ("health_run", json!({}), true),
+        ("health_last", json!({}), true),
+        (
+            "support_info_save",
+            json!({ "input": { "path": null } }),
+            true,
+        ),
+        ("updates_check", json!({}), true),
+        (
+            "updates_install",
+            json!({ "input": { "expected_version": "99.0.0", "confirmed": true } }),
+            true,
+        ),
+        (
+            "reports_export_excel",
+            json!({ "input": { "job_id": "j1", "id": "R18", "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
+            true,
+        ),
+        (
+            "analytics_export_excel",
+            json!({ "input": { "job_id": "j1", "view": "A", "filters": {}, "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
+            true,
+        ),
+        ("month_list", json!({}), true),
+        (
+            "month_close_preview",
+            json!({ "input": { "month": "2026-10" } }),
+            true,
+        ),
+        (
+            "month_close_save",
+            json!({ "input": { "month": "2026-10" } }),
+            true,
+        ),
+        (
+            "month_close_reverse",
+            json!({ "input": { "month": "2026-10", "reason": "check" } }),
+            true,
+        ),
+        // Run B, plan 19 (append-only block).
+        (
+            "dashboard_commission_month",
+            json!({ "input": { "month": null } }),
+            true,
+        ),
+        (
+            "dashboard_commission_day",
+            json!({ "input": { "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "dashboard_commission_print_data",
+            json!({ "input": { "month": null, "language": "ur" } }),
+            true,
+        ),
+        ("dashboard_buyer_dues", json!({ "input": {} }), true),
+        ("dashboard_seller_dues", json!({ "input": {} }), true),
+        (
+            "dashboard_seller_dues_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        ("dashboard_total_dues", json!({}), true),
+        ("dashboard_lent_open", json!({ "input": {} }), true),
+        ("dashboard_cash_sales_month", json!({ "input": {} }), true),
+        (
+            "dashboard_total_dues_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_lent_open_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_month_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_day_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "advances_report_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_day",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "dashboard_buyer_dues_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "windows_bounds",
+            json!({ "input": { "source": { "kind": "expenses" } } }),
+            true,
+        ),
+        (
+            "khata_set_link",
+            json!({ "input": { "khata_account_id": 1, "link": { "kind": "none" } } }),
+            true,
+        ),
+        (
+            "lent_person_update",
+            json!({ "input": { "person_account_id": 1 } }),
+            true,
+        ),
+        ("lent_dues", json!({ "input": {} }), true),
+        ("dashboard_get", json!({}), true),
+        ("assist_attention", json!({}), true),
+        (
+            "prefs_screen_get",
+            json!({ "input": { "screen": "report.r20" } }),
+            true,
+        ),
+        (
+            "prefs_screen_set",
+            json!({ "input": { "screen": "report.r20", "value": "{\"city_id\":3}" } }),
+            true,
+        ),
+        // Run B, D5 round 12 (append-only block).
+        (
+            "reports_buyer_bills_print_data",
+            json!({ "input": { "id": "R5", "filters": {}, "language": "en" } }),
+            true,
+        ),
+        // Run B, D5 round 14 (append-only block).
+        (
+            "reports_print_report",
+            json!({ "input": { "report": { "id": "R18", "filters": {}, "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "analytics_print_view",
+            json!({ "input": { "view": { "view": "A", "filters": {}, "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        // Plan 44 (append-only block).
+        (
+            "bikri_edit_review",
+            json!({ "input": { "entry_id": 1,
+                "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] } } }),
+            true,
+        ),
+        (
+            "vouchers_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
+                "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
+            true,
+        ),
+        (
+            "fruit_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "entry": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } } }),
+            true,
+        ),
+        (
+            "purchases_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "purchase": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1, "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null, "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "purchases_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "purchase": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1, "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null, "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_cost_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "cost": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x", "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_cost_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "cost": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x", "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_other_sale_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "sale": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1, "qty": "5", "amount": "3,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_other_sale_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "sale": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1, "qty": "5", "amount": "3,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_entry_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "entry": { "type": "other_sale", "garden_id": 1, "date": "10-10-2026", "shop": null, "qty": "20", "amount": "10,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_entry_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "entry": { "type": "other_sale", "garden_id": 1, "date": "10-10-2026", "shop": null, "qty": "20", "amount": "10,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "arrival": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "item_id": 1, "packing_id": 1, "qty": "100", "weight": null, "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "arrival": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "item_id": 1, "packing_id": 1, "qty": "100", "weight": null, "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_header_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "trip": { "date": "10-10-2026", "market": null, "sent_person": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_header_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "trip": { "date": "10-10-2026", "market": null, "sent_person": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_header_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "garden": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_header_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "garden": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "day_fix_open",
+            json!({ "input": { "date": "10-10-2026", "reason": "x", "sign": "adnan" } }),
+            true,
+        ),
+        (
+            "settings_set_owner_sign",
+            json!({ "input": { "password": "x", "sign": "sana" } }),
+            true,
+        ),
+        ("day_fix_close", json!({ "input": { "token": "x" } }), true),
+        (
+            "audit_edit_stamp",
+            json!({ "input": { "entity": "bikri", "ids": [1] } }),
+            true,
+        ),
+        (
+            "audit_edit_history",
+            json!({ "input": { "entity": "bikri", "id": 1 } }),
+            true,
+        ),
+        ("partners_code_status", json!({}), true),
+        (
+            "partners_code_set",
+            json!({ "input": { "password": "x", "code": "4826", "code_again": "4826" } }),
+            true,
+        ),
+        (
+            "partners_code_change",
+            json!({ "input": { "old_code_or_password": "x", "code": "4826", "code_again": "4826" } }),
+            true,
+        ),
+        (
+            "partners_code_unlock",
+            json!({ "input": { "code": "4826" } }),
+            true,
+        ),
+        ("partners_code_lock", json!({}), true),
+        (
+            "partners_code_reset",
+            json!({ "input": { "password_or_recovery": "x", "code": "4826", "code_again": "4826" } }),
+            true,
+        ),
+        // Plan 48, ask the app (append-only block).
+        ("assistant_status", json!({}), true),
+        (
+            "assistant_ask",
+            json!({ "input": { "text": "ikram ke total bakaya kitne hai", "conversation_id": null } }),
+            true,
+        ),
+        (
+            "assistant_quick",
+            json!({ "input": { "chip": "cash_in_hand", "party_id": null, "conversation_id": null } }),
+            true,
+        ),
+        (
+            "assistant_pick",
+            json!({ "input": { "question_id": 1, "choice": { "type": "match", "key": "a20" } } }),
+            true,
+        ),
+        (
+            "assistant_rerun",
+            json!({ "input": { "question_id": 1 } }),
+            true,
+        ),
+        (
+            "assistant_new_conversation",
+            json!({ "input": { "conversation_id": null } }),
+            true,
+        ),
+        (
+            "assistant_settings_set",
+            json!({ "input": { "enabled": false, "model": "openai/gpt-6-luna" } }),
+            true,
+        ),
+        (
+            "assistant_key_save",
+            json!({ "input": { "key": "test-key", "password": "x" } }),
+            true,
+        ),
+        (
+            "assistant_key_remove",
+            json!({ "input": { "password": "x" } }),
+            true,
+        ),
+        ("assistant_test", json!({}), true),
+        (
+            "assistant_log_list",
+            json!({ "input": { "offset": 0, "limit": 100 } }),
+            true,
+        ),
+        // Plan 78 (append-only block): the commands of the print menu, the compact statement, the
+        // load buttons and the capital card. All need the Owner; the card and the partner month print
+        // also need the partner code.
+        ("bikri_goods_sources", json!({}), true),
+        (
+            "bikri_goods_to_load",
+            json!({ "input": { "kind": "trip" } }),
+            true,
+        ),
+        ("cashbook_capital_where", json!({}), true),
+        (
+            "dashboard_buyer_dues_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_seller_dues_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_total_dues_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_lent_open_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "advances_report_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_month_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_day_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_commission_print",
+            json!({ "input": { "sheet": { "month": null, "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "partners_statement_month_print",
+            json!({ "input": { "statement": { "partner_id": 1, "month": null, "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows",
+            json!({ "input": { "account_id": 1, "from": null, "to": null, "include_history": false, "newest_first": false, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows_print_data",
+            json!({ "input": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "items": false, "include_history": false, "language": "en" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_rows_print",
+            json!({ "input": { "statement": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "items": false, "include_history": false, "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_adhari_sheet_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_buyer_parchi_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_collection_sheet_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_sale_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "reports_seller_bills_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_seller_bills_print",
+            json!({ "input": { "slips": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
             true,
         ),
     ]
@@ -718,8 +1981,10 @@ fn plugin_and_unknown_commands_the_capability_file_does_not_name_are_refused() {
         "plugin:updater|download_and_install",
         "plugin:updater|install",
         "plugin:process|exec",
-        "plugin:dialog|open",
-        "plugin:dialog|save",
+        // `plugin:dialog|open` and `plugin:dialog|save` ARE named in the capability file (plan 56 Section 8 and the
+        // Excel export), so they are not listed here; the screens' own dialogs only return a path.
+        "plugin:dialog|confirm_everything",
+        "plugin:dialog|message_and_exec",
         "plugin:clipboard-manager|read_text",
         "plugin:event|emit",
         "plugin:event|listen_to_everything",
@@ -1029,6 +2294,119 @@ fn hostile_input_to_every_command_never_ends_in_an_internal_error_or_breaks_the_
 // auth_change_password through the command (PRD FR-5.6, NFR-SEC-1, NFR-SEC-2, NFR-SEC-4).
 // ---------------------------------------------------------------------------------------------
 
+/// Plan 56: once a shop exists, the three commands of "restore on a new computer" are refused with
+/// ERR_ALREADY_SET_UP, whatever the input, whoever is signed in (nobody, the Owner, a locked
+/// screen). The refusal comes BEFORE any look at the input, so a hostile path or key tells nothing
+/// (not even whether a folder exists), reads nothing and writes nothing.
+#[test]
+fn the_restore_on_a_new_computer_is_refused_once_a_shop_exists_for_every_source_and_input() {
+    let h = Harness::with_backup();
+    h.set_up();
+    let files = |h: &Harness| {
+        let mut names: Vec<String> = files_under(h.dir.path())
+            .into_iter()
+            .map(|p| p.display().to_string())
+            .filter(|p| !p.ends_with("-wal") && !p.ends_with("-shm"))
+            .collect();
+        names.sort();
+        names
+    };
+
+    let key = "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ";
+    let cloud = json!({ "cloud": {
+        "endpoint": "https://example.invalid", "bucket": "b", "region": "auto", "prefix": "mandi",
+        "key_id": "AKIAEXAMPLE", "secret": "secret-value" } });
+    let sources: Vec<Value> = vec![
+        cloud,
+        json!({ "folder": "/mandi-test-no-such-folder" }),
+        json!({ "folder": "/" }),
+        json!({ "folder": "../../etc" }),
+        json!({ "file": "/mandi-test-no-such-file.mbk" }),
+        json!({ "file": "/etc/passwd" }),
+        json!({ "folder": "x".repeat(5_000) }),
+        json!({ "cloud": { "endpoint": "http://not-secure", "bucket": "", "region": "", "prefix": "..",
+            "key_id": "", "secret": "" } }),
+    ];
+    let payloads = |source: &Value| -> Vec<(&'static str, Value)> {
+        vec![
+            (
+                "backup_first_run_list",
+                json!({ "input": { "source": source } }),
+            ),
+            (
+                "backup_first_run_preview",
+                json!({ "input": { "source": source, "copy": null, "key": key } }),
+            ),
+            (
+                "backup_first_run_restore",
+                json!({ "input": { "source": source, "copy": "mandi-20200101T000000000Z.mbk", "key": key } }),
+            ),
+        ]
+    };
+    let mut rng = Rng(0x5E71_0056);
+    let mut problems: Vec<String> = Vec::new();
+    let mut calls = 0_u32;
+    for state in ["signed out", "signed in", "locked"] {
+        match state {
+            "signed in" => h.login(),
+            "locked" => {
+                h.ok("auth_lock", json!({}));
+            }
+            _ => {}
+        }
+        // Signing in and locking write their own audit rows; the calls below must write nothing.
+        let before = h.fingerprint();
+        let files_before = files(&h);
+        for source in &sources {
+            for (command, payload) in payloads(source) {
+                calls += 1;
+                let code = h.code(command, payload);
+                if code != "ERR_ALREADY_SET_UP" {
+                    problems.push(format!("{state}: {command} {source} gave {code}"));
+                }
+            }
+        }
+        // Hostile values in every leaf of every payload: refused by a service with
+        // ERR_ALREADY_SET_UP, or by the IPC layer before any service. Never accepted, never
+        // ERR_INTERNAL.
+        for (command, payload) in payloads(&sources[1]) {
+            let mut paths = Vec::new();
+            leaf_paths(&payload, &mut Vec::new(), &mut paths);
+            for _ in 0..40 {
+                let mut mutated = payload.clone();
+                let path = &paths[rng.below(paths.len())];
+                set_at(&mut mutated, path, hostile(&mut rng));
+                calls += 1;
+                match h.call(command, mutated.clone()) {
+                    Ok(_) => problems.push(format!(
+                        "{state}: {command} ACCEPTED {}",
+                        mutated.to_string().chars().take(200).collect::<String>()
+                    )),
+                    Err(error) => match error["errors"][0]["code"].as_str() {
+                        Some("ERR_ALREADY_SET_UP") | None => {}
+                        Some(other) => problems.push(format!(
+                            "{state}: {command} gave {other} for {}",
+                            mutated.to_string().chars().take(200).collect::<String>()
+                        )),
+                    },
+                }
+            }
+        }
+        assert_eq!(
+            h.fingerprint(),
+            before,
+            "{state}: a refused call wrote something"
+        );
+        assert_eq!(
+            files(&h),
+            files_before,
+            "{state}: a refused call made or removed a file"
+        );
+    }
+    assert!(calls >= 400);
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
 fn change(current: &str, new: &str, repeat: &str) -> Value {
     json!({ "input": { "current": current, "new": new, "repeat": repeat } })
 }
@@ -1106,7 +2484,8 @@ fn wrong_current_passwords_through_the_command_count_towards_the_lockout() {
         .unwrap();
     let typed = "not-the-right-one-77";
     let mut codes = Vec::new();
-    for _ in 0..5 {
+    // The tenth wrong try starts the wait (PRD FR-8.2 and NFR-SEC-2 of v1.35 and v1.18; the fifth before).
+    for _ in 0..10 {
         let result = h.call(
             "auth_change_password",
             change(typed, "brand-new-pass-9", "brand-new-pass-9"),
@@ -1127,16 +2506,9 @@ fn wrong_current_passwords_through_the_command_count_towards_the_lockout() {
                 .to_owned(),
         );
     }
-    assert_eq!(
-        codes,
-        [
-            "ERR_WRONG_PASSWORD",
-            "ERR_WRONG_PASSWORD",
-            "ERR_WRONG_PASSWORD",
-            "ERR_WRONG_PASSWORD",
-            "ERR_LOCKED_WAIT"
-        ]
-    );
+    let mut expected = vec!["ERR_WRONG_PASSWORD"; 9];
+    expected.push("ERR_LOCKED_WAIT");
+    assert_eq!(codes, expected);
     // During the wait the right current password is refused too, and so is the sign-in.
     assert_eq!(
         h.code(
@@ -1211,4 +2583,222 @@ fn a_changed_password_is_in_no_audit_row_no_answer_and_no_file() {
             );
         }
     }
+}
+
+// ---- plans 76 and 77: the partner code on the new commands (PRD FR-17.11, NFR-SEC-14, Code Standards S8) ----
+
+const PARTNER_CODE: &str = "4826";
+
+/// Three partners with shares, and the partner code set. The section is open after this.
+fn partners_and_code(h: &Harness) {
+    h.set_up();
+    h.login();
+    for (ur, en) in [("الف", "Partner A"), ("ب", "Partner B"), ("ج", "Partner C")] {
+        h.ok(
+            "partners_create",
+            json!({ "input": { "name_ur": ur, "name_en": en, "opening_capital": null,
+                "confirmed_rules_words": [] } }),
+        );
+    }
+    h.ok(
+        "partners_set_shares",
+        json!({ "input": { "effective_from": "10-10-2026", "shares": [
+            { "partner_id": 1, "share": "40" }, { "partner_id": 2, "share": "30" },
+            { "partner_id": 3, "share": "30" } ] } }),
+    );
+    h.ok(
+        "partners_code_set",
+        json!({ "input": { "password": OWNER_PASSWORD, "code": PARTNER_CODE,
+            "code_again": PARTNER_CODE } }),
+    );
+}
+
+#[test]
+fn the_commission_page_and_the_statement_sheet_keep_partner_figures_behind_the_code() {
+    let h = Harness::new();
+    partners_and_code(&h);
+    let month = json!({ "input": { "month": null } });
+    let print = json!({ "input": { "month": null, "language": "en" } });
+    // Open: the totals row carries the three partner shares, and the page says it is not locked.
+    let open = h.ok("dashboard_commission_month", month.clone());
+    assert_eq!(open["partners_locked"], json!(false));
+    assert_eq!(
+        open["totals"]["partner_shares"].as_array().map(Vec::len),
+        Some(3)
+    );
+    let open_print = h.ok("dashboard_commission_print_data", print.clone());
+    // Locked: no partner share anywhere in the page, the day, the print or the sheet.
+    h.ok("partners_code_lock", json!({}));
+    let locked = h.ok("dashboard_commission_month", month);
+    assert_eq!(locked["partners_locked"], json!(true));
+    assert!(
+        locked["totals"]["partner_shares"].is_null(),
+        "the totals row still has the partner shares: {}",
+        locked["totals"]
+    );
+    for row in locked["rows"].as_array().cloned().unwrap_or_default() {
+        assert!(
+            row["partner_shares"].is_null(),
+            "a day row has partner shares"
+        );
+    }
+    let day = h.ok(
+        "dashboard_commission_day",
+        json!({ "input": { "date": "10-10-2026", "offset": 0, "limit": 0 } }),
+    );
+    assert_eq!(day["partners_locked"], json!(true));
+    assert!(day["totals"]["partner_shares"].is_null());
+    let locked_print = h.ok("dashboard_commission_print_data", print);
+    assert!(
+        locked_print.to_string().len() < open_print.to_string().len(),
+        "the locked print is no smaller than the open one: it still holds the partner columns"
+    );
+    // The sheet of a partner's statement is refused, like the statement itself.
+    let before = h.fingerprint();
+    assert_eq!(
+        h.code(
+            "tables_export_excel",
+            json!({ "input": { "job_id": "j1", "path": "/no-such-folder/x.xlsx",
+                "source": { "kind": "partner_statement_month", "partner_id": 1,
+                            "month": null, "language": "en" } } })
+        ),
+        "ERR_PARTNER_LOCKED"
+    );
+    assert_eq!(h.fingerprint(), before, "a refused sheet wrote something");
+    // The unlock brings the shares back.
+    h.ok(
+        "partners_code_unlock",
+        json!({ "input": { "code": PARTNER_CODE } }),
+    );
+    let again = h.ok(
+        "dashboard_commission_month",
+        json!({ "input": { "month": null } }),
+    );
+    assert_eq!(again["partners_locked"], json!(false));
+}
+
+#[test]
+fn the_window_bounds_of_a_partner_list_are_refused_while_the_section_is_locked() {
+    // S8: partner commands check the partner unlock in the backend. The first day of a partner's
+    // statement or of his money taken is partner history (when he first had a movement).
+    let h = Harness::new();
+    partners_and_code(&h);
+    h.ok("partners_code_lock", json!({}));
+    for source in [
+        json!({ "kind": "partner_statement", "partner_id": 1 }),
+        json!({ "kind": "partner_takes", "partner_id": 1 }),
+    ] {
+        assert_eq!(
+            h.code(
+                "windows_bounds",
+                json!({ "input": { "source": source.clone() } })
+            ),
+            "ERR_PARTNER_LOCKED",
+            "windows_bounds answered for {source} while the partner section was locked"
+        );
+    }
+}
+
+#[test]
+fn the_partner_kharch_of_view_m_and_every_way_to_it_stay_behind_the_code() {
+    // Plan 77, PRD 18.2 M, FR-9.5, FR-17.11: the shop part works without the code; the partner part, its
+    // drill lines, its print and its Excel need it, and no key sent under the shop part opens it.
+    let h = Harness::new();
+    partners_and_code(&h);
+    let filters = |extra: Value| -> Value {
+        let mut base = json!({ "from": "01-10-2026", "to": "10-10-2026", "group_by": "month" });
+        if let (Some(map), Some(more)) = (base.as_object_mut(), extra.as_object()) {
+            for (key, value) in more {
+                map.insert(key.clone(), value.clone());
+            }
+        }
+        base
+    };
+    let run = |extra: Value| json!({ "input": { "view": "M", "filters": filters(extra), "offset": 0, "limit": 10 } });
+    let drill = |extra: Value, key: Value| {
+        json!({ "input": { "view": "M", "filters": filters(extra), "row_key": key,
+            "column_key": null, "offset": 0, "limit": 10 } })
+    };
+    // Open: the partner part answers, with its own-kharch column (a month with no entry has no row).
+    let open = h.ok("analytics_run", run(json!({ "expense_part": "partner" })));
+    assert!(
+        open["columns"]
+            .as_array()
+            .is_some_and(|cols| cols.iter().any(|c| c["key"] == json!("own"))),
+        "{open}"
+    );
+    // Locked.
+    h.ok("partners_code_lock", json!({}));
+    let before = h.fingerprint();
+    let refused = [
+        (
+            "run, partner part",
+            "analytics_run",
+            run(json!({ "expense_part": "partner" })),
+        ),
+        (
+            "run, one partner",
+            "analytics_run",
+            run(json!({ "partner_id": 1 })),
+        ),
+        (
+            "lines, partner part, no key",
+            "analytics_lines",
+            drill(json!({ "expense_part": "partner" }), json!({})),
+        ),
+        (
+            "lines, partner part, one partner",
+            "analytics_lines",
+            drill(
+                json!({ "expense_part": "partner" }),
+                json!({ "partner_id": 1, "money": "taken" }),
+            ),
+        ),
+        (
+            "print, partner part",
+            "analytics_print_data",
+            json!({ "input": { "view": "M", "filters": filters(json!({ "expense_part": "partner" })),
+                "language": "en" } }),
+        ),
+        (
+            "excel, partner part",
+            "analytics_export_excel",
+            json!({ "input": { "job_id": "j1", "view": "M",
+                "filters": filters(json!({ "expense_part": "partner" })), "language": "en",
+                "path": "/no-such-folder/x.xlsx" } }),
+        ),
+    ];
+    for (what, command, payload) in refused {
+        assert_eq!(
+            h.code(command, payload),
+            "ERR_PARTNER_LOCKED",
+            "{what} answered while the partner section was locked"
+        );
+    }
+    // The shop part still works, and a key for the partner's money under the shop part is no way in.
+    assert!(
+        h.call("analytics_run", run(json!({}))).is_ok(),
+        "the shop part needs the code"
+    );
+    assert!(
+        h.call("analytics_run", run(json!({ "expense_part": "shop" })))
+            .is_ok(),
+        "the shop part, spelled out, needs the code"
+    );
+    for key in [
+        json!({ "money": "taken" }),
+        json!({ "money": "taken", "partner_id": 1 }),
+        json!({ "partner_id": 1 }),
+    ] {
+        let answer = h.call("analytics_lines", drill(json!({}), key.clone()));
+        let leaked = answer.as_ref().ok().filter(|page| {
+            page["total_count"].as_i64().unwrap_or(0) > 0
+                || page["rows"].as_array().is_some_and(|rows| !rows.is_empty())
+        });
+        assert!(
+            leaked.is_none(),
+            "the key {key} under the shop part opened lines: {answer:?}"
+        );
+    }
+    assert_eq!(h.fingerprint(), before, "a refused read wrote something");
 }

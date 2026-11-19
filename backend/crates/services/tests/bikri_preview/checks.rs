@@ -3,12 +3,13 @@
 
 use mandi_services::cash;
 use mandi_services::core::accounts::AccountType;
-use mandi_services::core::bikri::BikriPreview;
+use mandi_services::core::bikri::{BikriPreview, BikriSaveInput};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::rules::{CreditLimitMode, OverridesSettings};
 use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
 use mandi_services::ledger::{self, PostingEvent};
 use mandi_services::rules;
+use mandi_services::{ServiceError, bikri};
 
 use crate::support::*;
 
@@ -153,8 +154,8 @@ fn cash_already_below_zero_does_not_ask_for_an_entry_that_puts_cash_in() {
     let mut karim = lot(&w, "lot-1", w.karim, w.apple, "10");
     karim.freight = Some("1,000".into());
     karim.cash_paid = None;
-    let mut shahid = sale("s-1", w.pukhta_buyer, "10", "1,200");
-    shahid.pukhta = Some(mandi_services::core::bikri::PukhtaInput {
+    let mut shahid = sale("s-1", w.chukta_khata, "10", "1,200");
+    shahid.chukta = Some(mandi_services::core::bikri::ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: String::new(),
@@ -338,6 +339,9 @@ fn the_rate_check_uses_the_saved_sales_of_the_last_7_days() {
             .iter()
             .any(|e| e.code == ErrorCode::ErrRateFarFromAverage)
     };
+    // PRD FR-7.55 v1.44: the rate check starts OFF, so a far rate is not warned until it is on.
+    assert!(!far(&preview(&w, &d("5,000"))));
+    set_checks(&w, false, true, 30);
     let p = preview(&w, &d("1,300"));
     assert!(!far(&p), "1,300 is exactly +30%: {:?}", p.warnings);
     let p = preview(&w, &d("1,301"));
@@ -424,4 +428,212 @@ fn a_lot_cannot_use_the_own_goods_account_or_a_buyer_as_seller() {
         ErrorCode::ErrNotABuyer,
         "lots[0].sales[0].buyer_account_id"
     ));
+}
+
+#[test]
+fn a_line_over_the_lot_gets_its_error_and_no_figures_and_the_save_refuses_it() {
+    // PRD FR-12.6 (v1.28), plan 57, Umar's own test: the lot holds 50 and the line is 70 at 1,200.
+    // Before, the screen showed 84,000 / 5,040 / 89,600 for it.
+    let w = world_with(50_000, true);
+    let mut d = draft(vec![with_sales(
+        lot(&w, "lot-1", w.rahim, w.banana, "50"),
+        vec![sale("s-1", w.akram, "70", "1200")],
+    )]);
+    let p = preview(&w, &d);
+    assert!(
+        has(
+            &p.errors,
+            ErrorCode::ErrQtyExceedsLot,
+            "lots[0].sales[0].qty"
+        ),
+        "{:?}",
+        p.errors
+    );
+    assert_eq!(
+        number(&p.errors, ErrorCode::ErrQtyExceedsLot, "available"),
+        Some(50)
+    );
+    assert!(p.lots[0].lines[0].calc.is_none(), "no figures for the line");
+    assert!(p.lots[0].totals.is_none(), "the lot waits for the quantity");
+    assert_eq!((p.lots[0].sold_qty, p.lots[0].balance_qty), (0, Some(50)));
+    assert_eq!(r(p.summary.gross), 0);
+    assert_eq!(r(p.summary.buyer_total), 0);
+    assert_eq!(r(p.summary.shared_income), 0);
+    // The save is the same function and refuses with the same error.
+    let error = bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &BikriSaveInput {
+            draft: d.clone(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap_err();
+    assert!(
+        matches!(&error, ServiceError::Rejected(items)
+            if items.iter().any(|i| i.code == ErrorCode::ErrQtyExceedsLot
+                && i.field.as_deref() == Some("lots[0].sales[0].qty"))),
+        "{error:?}"
+    );
+    // The quantity is fixed to 50 and the figures are back, with no other change: 60,000; commission
+    // 3,600 on each side; لاگا 400; the buyer pays 64,000. The save works.
+    d.lots[0].sales[0].qty = "50".into();
+    let p = preview(&w, &d);
+    assert!(
+        !p.errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsLot),
+        "{:?}",
+        p.errors
+    );
+    let c = calc(&p.lots[0], 0);
+    assert_eq!(
+        (
+            r(c.seller_amount),
+            r(c.seller_comm.amount),
+            r(c.buyer_comm.amount),
+            r(c.laga.amount),
+            r(c.buyer_total)
+        ),
+        (60_000, 3_600, 3_600, 400, 64_000)
+    );
+    assert!(p.lots[0].totals.is_some());
+    bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &BikriSaveInput {
+            draft: d,
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+}
+
+#[test]
+fn of_two_lines_the_one_that_crosses_the_lot_is_refused_and_the_totals_hold_the_other() {
+    // Plan 57 section 2: 50 in the lot, lines of 30 and 30. Line 1: 36,000; 2,160 on each side;
+    // لاگا 240; the buyer pays 38,400. Line 2 has 20 available and no figures. The lot and the
+    // whole بکری hold line 1 only.
+    let w = world_with(50_000, true);
+    let d = draft(vec![with_sales(
+        lot(&w, "lot-1", w.rahim, w.banana, "50"),
+        vec![
+            sale("s-1", w.akram, "30", "1200"),
+            sale("s-2", w.arshad, "30", "1200"),
+        ],
+    )]);
+    let p = preview(&w, &d);
+    assert_eq!(
+        number(&p.errors, ErrorCode::ErrQtyExceedsLot, "available"),
+        Some(20)
+    );
+    assert!(has(
+        &p.errors,
+        ErrorCode::ErrQtyExceedsLot,
+        "lots[0].sales[1].qty"
+    ));
+    assert!(!has(
+        &p.errors,
+        ErrorCode::ErrQtyExceedsLot,
+        "lots[0].sales[0].qty"
+    ));
+    let c = calc(&p.lots[0], 0);
+    assert_eq!(
+        (
+            r(c.seller_amount),
+            r(c.seller_comm.amount),
+            r(c.buyer_comm.amount),
+            r(c.laga.amount),
+            r(c.buyer_total)
+        ),
+        (36_000, 2_160, 2_160, 240, 38_400)
+    );
+    assert!(p.lots[0].lines[1].calc.is_none());
+    let t = p.lots[0].totals.as_ref().unwrap();
+    assert_eq!(
+        (r(t.gross), r(t.seller_comm), r(t.buyer_total)),
+        (36_000, 2_160, 38_400)
+    );
+    assert_eq!(
+        (r(p.summary.gross), r(p.summary.buyer_total)),
+        (36_000, 38_400)
+    );
+    assert_eq!((p.lots[0].sold_qty, p.lots[0].balance_qty), (30, Some(20)));
+}
+
+// ---- A lot with nothing to post (plan 61 Section 6, plan 65 T2) ----
+
+#[test]
+fn a_lot_with_only_blank_rows_and_no_charges_gives_a_preview_with_no_sale_lines() {
+    // `books_of` used to refuse this whole draft as ERR_JOURNAL_UNBALANCED (a bug signal): the lot
+    // is complete but it has no complete line and no charge, so its journal has no line at all
+    // (`LedgerError::Empty`). It is the user's mistake, not a bug: the preview comes back with
+    // `ERR_NO_SALE_LINES` on `lots`, and the save is refused with the same code.
+    let w = world();
+    let d = draft(vec![with_sales(
+        bare_lot(&w, "lot-1", w.rahim, w.banana, "50"),
+        vec![blank_sale("s-1", "50")],
+    )]);
+    let p = bikri::preview(&w.env.ctx, &d).expect("a preview, not a refusal");
+    assert!(
+        has(&p.errors, ErrorCode::ErrNoSaleLines, "lots"),
+        "{:?}",
+        p.errors
+    );
+    assert!(
+        !p.errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrJournalUnbalanced),
+        "{:?}",
+        p.errors
+    );
+    let refused = bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &BikriSaveInput {
+            draft: d,
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap_err();
+    let ServiceError::Rejected(items) = refused else {
+        panic!("not a refusal");
+    };
+    assert!(items.iter().any(|i| i.code == ErrorCode::ErrNoSaleLines));
+    assert!(
+        !items
+            .iter()
+            .any(|i| i.code == ErrorCode::ErrJournalUnbalanced)
+    );
+}
+
+#[test]
+fn a_lot_whose_only_line_is_incomplete_keeps_the_error_of_that_line() {
+    // A buyer typed but no rate: the row is not blank, so it has its own error. The journal of the
+    // lot is empty again, and the preview still comes back, with that error and no made-up
+    // `ERR_NO_SALE_LINES` over it.
+    let w = world();
+    let mut row = sale("s-1", w.akram, "20", "600");
+    row.seller_rate = String::new();
+    let d = draft(vec![with_sales(
+        bare_lot(&w, "lot-1", w.rahim, w.banana, "50"),
+        vec![row],
+    )]);
+    let p = bikri::preview(&w.env.ctx, &d).expect("a preview, not a refusal");
+    assert!(
+        has(
+            &p.errors,
+            ErrorCode::ErrRequired,
+            "lots[0].sales[0].seller_rate"
+        ),
+        "{:?}",
+        p.errors
+    );
+    assert!(
+        !p.errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrJournalUnbalanced),
+        "{:?}",
+        p.errors
+    );
 }

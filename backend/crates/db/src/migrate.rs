@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use rusqlite::backup::Backup;
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{Connection, OpenFlags, Transaction};
 use rusqlite_migration::{HookError, M, Migrations, SchemaVersion};
 
 use crate::clock::Clock;
@@ -31,6 +31,153 @@ pub const BALANCE_INDEXES_SQL: &str = include_str!("../migrations/0002_balance_i
 pub const SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL: &str =
     include_str!("../migrations/0003_system_accounts_stay_active.sql");
 
+/// The fourth migration: triggers that stop a بکری, a lot or a sale line being deleted and a
+/// بکری changing its number (plan 13). No table, column or index changes and no row is touched.
+pub const BIKRI_RECORDS_ARE_NEVER_DELETED_SQL: &str =
+    include_str!("../migrations/0004_bikri_records_are_never_deleted.sql");
+
+/// The fifth migration: a stable order key on journal entries, so an edited posting keeps its
+/// place in its day for matching, and a link from a reversal stock move to the move it reverses
+/// (plan 16). Two nullable columns and one index: no row is touched.
+pub const STABLE_POSTING_ORDER_SQL: &str =
+    include_str!("../migrations/0005_stable_posting_order.sql");
+
+/// The sixth migration (plan 16b, PRD v1.7): the tables of the market trips, the gardens and the
+/// fruit taken, the trip goods columns, the 0604 account of each partner, the tag column, and the
+/// wider checks and system accounts that trips, partner capital and the separate khata need. See
+/// the header of the file and [`trips_hook`]. No row is changed and no number moves.
+pub const TRIPS_GARDENS_FRUIT_KHATA_SQL: &str =
+    include_str!("../migrations/0006_trips_gardens_fruit_khata.sql");
+
+/// The seventh migration (plan 32, PRD 1.8): simple codes. Sellers, buyers, the two shared one-time accounts,
+/// items, packings and staff are renumbered to the type number plus a running number from 0
+/// (`0010`, `0020`, `0030`, `0040`, `0050`, `0060`), staff get a `code` column, and the upper limit of
+/// `accounts.serial` is lifted by [`codes_hook`]. No amount, journal line or id changes.
+pub const SIMPLE_PARTY_CODES_SQL: &str = include_str!("../migrations/0007_simple_party_codes.sql");
+
+/// The eighth migration (plan 34, PRD 1.8): easy codes for market trips (type 007) and gardens
+/// (type 008). The account of each garden gets the code of its garden, and the Rust hook
+/// [`trip_names_hook`] gives each trip its new name. No amount, id or chain hash changes.
+pub const TRIP_AND_GARDEN_CODES_SQL: &str =
+    include_str!("../migrations/0008_trip_and_garden_codes.sql");
+
+/// The ninth migration (plan 33 v1.1, PRD FR-12.39, FR-12.40): the date to sell on a trip purchase
+/// and the table of goods that arrived from a garden, with the columns that link a lot and a stock
+/// move to an arrival. No amount, id or chain hash changes.
+pub const DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL: &str =
+    include_str!("../migrations/0009_date_to_sell_and_garden_arrivals.sql");
+
+/// The tenth migration (plan 35, PRD FR-12.41): the split between our shop and another shop on
+/// every trip purchase and garden arrival, and the arrival a garden's sale in another shop takes
+/// its goods from. No amount, id or chain hash changes.
+pub const SHOP_SPLIT_SQL: &str = include_str!("../migrations/0010_shop_split.sql");
+
+/// The eleventh migration (plan 40, PRD FR-10.10): `dead_marks`, the people moved to the dead amount
+/// (ڈوبی رقم). A table that sorts people into a group and holds no balance: nothing posts, and no
+/// existing row, amount, id or chain hash changes.
+pub const DEAD_MARKS_SQL: &str = include_str!("../migrations/0011_dead_marks.sql");
+
+/// The twelfth migration (plan 44, PRD FR-7.70, Architecture 15.3): `edit_windows`, the one row the
+/// edit of a trip or garden entry opens inside its own transaction so the entry, its parts and its
+/// spread can be changed. Outside that window the triggers refuse every change as before. No
+/// existing row, amount, id or chain hash changes.
+pub const EDIT_WINDOWS_SQL: &str = include_str!("../migrations/0012_edit_windows.sql");
+
+/// The thirteenth migration (plan 47, Architecture 15.4): one column with its checks, a trigger and a
+/// partial index that marked an own account of a one-time party. Migration 20 renames the column to
+/// `was_one_time_party` and no code reads it again. Every existing row got 0 and no amount, id or
+/// chain hash changed.
+pub const ONE_TIME_PARTY_MARK_SQL: &str =
+    include_str!("../migrations/0013_pukhta_party_accounts.sql");
+
+/// The fourteenth migration (CLAUDE.md rule 4, PRD FR-7.70): `venture_entry_parts` and
+/// `purchase_cost_parts` become soft state. Both tables are rebuilt with `is_active` and
+/// `replaced_by` (ids and values kept, every old row active), their inline UNIQUE becomes a unique
+/// index over the active rows, an update may only retire a row inside the edit window of its entry,
+/// and a delete is never allowed. No amount, id or chain hash changes.
+pub const PARTS_ARE_SOFT_STATE_SQL: &str =
+    include_str!("../migrations/0014_parts_are_soft_state.sql");
+
+/// The fifteenth migration (plan 48, D6 ask the app, PRD FR-7.84, Architecture 15.3):
+/// `assistant_questions`, the append-only question log of the assistant. A table that holds no
+/// amount and posts nothing: no existing row, amount, id or chain hash changes.
+pub const ASSISTANT_QUESTIONS_SQL: &str =
+    include_str!("../migrations/0015_assistant_questions.sql");
+
+/// The sixteenth migration (plan 48 P48-S3, NFR-SPD-2, NFR-SPD-10, NFR-AI-3): two partial indexes,
+/// the opening entries and the active matching rows with their amount. Indexes only: no table,
+/// column, stored total, row, amount, id or chain hash changes.
+pub const SPEED_INDEXES_SQL: &str = include_str!("../migrations/0016_speed_indexes.sql");
+
+/// The seventeenth migration (plan 51 P51-B2, NFR-SPD-17): four nullable columns of
+/// `assistant_questions` for the time of a question (total, model, tools and each call). Additions
+/// only: every existing row gets NULL, and the append-only triggers of migration 15 are not touched.
+pub const ASSISTANT_TIMING_SQL: &str = include_str!("../migrations/0017_assistant_timing.sql");
+
+/// The eighteenth migration (plan 54 S5, plan 55 Section 3): the question log accepts the outcome
+/// `time_limit`. The table is made again with the longer CHECK and every row is copied as it is;
+/// the append-only triggers and the indexes are made again. No book, amount, id or chain hash
+/// changes.
+pub const ASSISTANT_TIME_LIMIT_SQL: &str =
+    include_str!("../migrations/0018_assistant_time_limit.sql");
+
+/// The nineteenth migration (plan 58, PRD FR-12.42, Architecture 15.6): the quality of a sale line,
+/// one nullable column `bikri_sales.grade` (`first`, `second`, `third`). Every old line keeps NULL:
+/// no book, amount, id or chain hash changes.
+pub const SALE_GRADE_SQL: &str = include_str!("../migrations/0019_sale_grade.sql");
+
+/// The twentieth migration (plan 64, PRD v1.32 Section 13, FR-13.9, Architecture 15.2 and 15.4): چکتا
+/// کھاتہ takes the place of the one-time accounts. Every `pukhta_*` column is renamed to `chukta_*`,
+/// the old party mark becomes `was_one_time_party`, the account 0031 is made inactive, the dead-amount
+/// marks on one-time people are ended, and `chukta_buyers` is made. The Rust hook [`chukta_hook`]
+/// then names the accounts and fills the list. No journal line, amount, id or chain hash changes.
+pub const CHUKTA_KHATA_SQL: &str = include_str!("../migrations/0020_chukta_khata.sql");
+
+/// The twenty-first migration (plan 65, PRD v1.32 FR-12.44, Architecture 15.6): money paid on the
+/// spot. One column, `bikri_sales.paid_paisa` (whole rupees, from 0 up to the buyer total). An old
+/// line saved as cash is paid in full, an old line saved as credit is paid 0, so no saved number
+/// changes, and the column is frozen in `bikri_sales_snapshot_is_final`. No journal line, allocation,
+/// amount, id or chain hash changes.
+pub const PAID_ON_THE_SPOT_SQL: &str = include_str!("../migrations/0021_paid_on_the_spot.sql");
+
+/// The twenty-second migration (plan 71, PRD v1.34 FR-12.45, Architecture 15.6 v1.22): lot names.
+/// `bikri_lots.lot_counter` numbers the lots of one seller and item for his whole life; old lots are
+/// numbered by first posting day, then row id. The new table `lot_counters` keeps the biggest number
+/// ever given to each seller and item (it only goes up), so a number is never reused, not even after
+/// an edit moves a lot away. Triggers keep a counter final except in an edit that moves the lot. No
+/// journal line, allocation, amount, id or chain hash changes.
+pub const LOT_COUNTER_SQL: &str = include_str!("../migrations/0022_lot_counter.sql");
+
+/// Migration 23 (plan 76 points 5 and 10): the link of a khata or a loaned person, the person type, and
+/// the 0605 account of each partner; the controls and accounts come from [`linked_money_hook`].
+pub const LINKED_MONEY_SQL: &str = include_str!("../migrations/0023_linked_money.sql");
+
+/// Migration 24 (plan 77, robustness findings 2 and 3): three covering indexes, `partner_share_rows`
+/// by kind and day, `analytics_facts` by day with its commission sums, and `analytics_facts` by day
+/// with its dimensions and sums for the sale views of analytics, so ten years read in seconds.
+/// Indexes only: no table, column, row, amount, id or chain hash changes.
+pub const COMMISSION_SPEED_SQL: &str = include_str!("../migrations/0024_commission_speed.sql");
+
+/// Migration 25 (plan 78 D2, PRD FR-12.11 v1.43): the table `venture_items`, the items of a garden,
+/// filled from `ventures.item_id`, which stays and holds the first item. No journal line, amount, id
+/// or chain hash changes.
+pub const GARDEN_ITEMS_SQL: &str = include_str!("../migrations/0025_garden_items.sql");
+
+/// Migration 26 (plan 80 gate Q-R4-1, PRD FR-12.29): goods arrived counts as an entry of a garden for
+/// locking its shares. Three triggers on `venture_partners`; no row, amount, id or chain hash changes.
+pub const GARDEN_SHARES_LOCK_ARRIVALS_SQL: &str =
+    include_str!("../migrations/0026_garden_shares_lock_arrivals.sql");
+
+/// Migration 27 (plan 80 gate Q-R2-1, PRD FR-7.70): a saved lot can be removed in an edit of the first
+/// posting of its بکری. One nullable column `bikri_lots.removed_at`; no row, amount, id or chain hash
+/// changes.
+pub const LOT_REMOVED_SQL: &str = include_str!("../migrations/0027_lot_removed.sql");
+
+/// Migration 28 (plan 80 gate, the speed fix loop, NFR-SPD-24): a covering index of the sale lines for
+/// the totals of the sales registers R2, R3 and R4. An index only: no table, column, row, amount, id
+/// or chain hash changes.
+pub const SPEED_GATE_SQL: &str = include_str!("../migrations/0028_speed_gate.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -46,7 +193,286 @@ pub fn migrations() -> Migrations<'static> {
         }),
         M::up(BALANCE_INDEXES_SQL),
         M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
+        M::up(ONE_TIME_PARTY_MARK_SQL),
+        M::up(PARTS_ARE_SOFT_STATE_SQL),
+        M::up(ASSISTANT_QUESTIONS_SQL),
+        M::up(SPEED_INDEXES_SQL),
+        M::up(ASSISTANT_TIMING_SQL),
+        M::up(ASSISTANT_TIME_LIMIT_SQL),
+        M::up(SALE_GRADE_SQL),
+        M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook),
+        M::up(PAID_ON_THE_SPOT_SQL),
+        M::up(LOT_COUNTER_SQL),
+        M::up_with_hook(LINKED_MONEY_SQL, linked_money_hook),
+        M::up(COMMISSION_SPEED_SQL),
+        M::up_with_hook(GARDEN_ITEMS_SQL, garden_items_hook),
+        M::up(GARDEN_SHARES_LOCK_ARRIVALS_SQL),
+        M::up(LOT_REMOVED_SQL),
+        M::up(SPEED_GATE_SQL),
     ])
+}
+
+/// One edit of a table's text in `sqlite_schema`: `from` must occur exactly once in it.
+struct Widen {
+    table: &'static str,
+    from: &'static str,
+    to: &'static str,
+}
+
+/// The CHECK lists that migration 6 widens (Architecture 15.4, 15.6 and 15.7 v1.7). Each `from` is
+/// the text of migrations 1 and 5 as released.
+const WIDEN: [Widen; 7] = [
+    // Posting types of purchases, trip costs, garden payments, sales in another shop, a garden's
+    // closing, fruit taken, partner capital and the separate khata.
+    Widen {
+        table: "journal_entries",
+        from: "'general', 'opening', 'month_close')",
+        to: "'general', 'opening', 'month_close', 'purchase', 'trip_cost', 'garden_payment', 'venture_receipt', 'garden_close', 'fruit_taken', 'capital_in', 'capital_out', 'khata_out', 'khata_in')",
+    },
+    Widen {
+        table: "journal_entries",
+        from: "source_type IN ('bikri', 'voucher', 'account', 'month_close')",
+        to: "source_type IN ('bikri', 'voucher', 'account', 'month_close', 'purchase', 'venture', 'fruit')",
+    },
+    // The voucher types of plan 17.
+    Widen {
+        table: "vouchers",
+        from: "'money_lent_return', 'general')",
+        to: "'money_lent_return', 'general', 'capital_in', 'capital_out', 'khata_out', 'khata_in')",
+    },
+    // The party types `separate` (a separate khata) and `garden` (Architecture 15.4).
+    Widen {
+        table: "account_controls",
+        from: "party_type IN ('seller', 'buyer', 'other')",
+        to: "party_type IN ('seller', 'buyer', 'separate', 'garden', 'other')",
+    },
+    Widen {
+        table: "accounts",
+        from: "party_type IN ('seller', 'buyer', 'other')",
+        to: "party_type IN ('seller', 'buyer', 'separate', 'garden', 'other')",
+    },
+    // Fruit taken from a lot (PRD FR-16.11).
+    Widen {
+        table: "stock_moves",
+        from: "kind IN ('received', 'sold', 'written_off', 'reversal')",
+        to: "kind IN ('received', 'sold', 'written_off', 'taken', 'reversal')",
+    },
+    // A purchase move has no lot.
+    Widen {
+        table: "stock_moves",
+        from: "lot_id INTEGER NOT NULL REFERENCES",
+        to: "lot_id INTEGER REFERENCES",
+    },
+];
+
+/// Widens the CHECK lists in place (see the header of migration 6): edits the text of each table
+/// in `sqlite_schema` and raises the schema version, so this connection and every later one read
+/// the new text. Each edit must find its text exactly once, or the migration fails and the copy
+/// taken before it is put back.
+fn widen_checks(tx: &Connection) -> Result<(), HookError> {
+    edit_table_text(tx, &WIDEN, "migration 6")
+}
+
+/// Edits the text of tables in `sqlite_schema`, as [`widen_checks`] does. `label` names the migration
+/// in the error text.
+fn edit_table_text(tx: &Connection, edits: &[Widen], label: &str) -> Result<(), HookError> {
+    let version: i64 = tx.query_row("PRAGMA schema_version", [], |row| row.get(0))?;
+    tx.execute_batch("PRAGMA writable_schema = ON")?;
+    for edit in edits {
+        let sql: String = tx.query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?1",
+            [edit.table],
+            |row| row.get(0),
+        )?;
+        if sql.matches(edit.from).count() != 1 {
+            return Err(HookError::Hook(format!(
+                "{label}: the text to widen was not found exactly once in {}",
+                edit.table
+            )));
+        }
+        tx.execute(
+            "UPDATE sqlite_master SET sql = ?1 WHERE type = 'table' AND name = ?2",
+            rusqlite::params![sql.replacen(edit.from, edit.to, 1), edit.table],
+        )?;
+    }
+    let next = version
+        .checked_add(1)
+        .ok_or_else(|| HookError::Hook(format!("{label}: the schema version is too big")))?;
+    tx.execute_batch(&format!("PRAGMA schema_version = {next}"))?;
+    tx.execute_batch("PRAGMA writable_schema = OFF")?;
+    Ok(())
+}
+
+/// After the SQL of migration 6: widen the checks, then seed the new controls and the system
+/// account (the `separate` and `garden` controls need the wider party type check), rename the cash
+/// account in English, and make the 0604 account of every partner that exists. Public so the tests
+/// of migration 7 can build the file as it was released at version 6.
+pub fn trips_hook(tx: &Transaction) -> Result<(), HookError> {
+    widen_checks(tx)?;
+    crate::seed::trip_accounts(tx)?;
+    crate::seed::partner_venture_accounts(tx)?;
+    Ok(())
+}
+
+/// After the SQL of migration 23: the controls 0307 and 0605, the system account 03070001 and the 0605
+/// account of every partner that exists. Public so the tests can build the file as it was at version 22.
+pub fn linked_money_hook(tx: &Transaction) -> Result<(), HookError> {
+    crate::seed::linked_accounts(tx)?;
+    crate::seed::partner_linked_accounts(tx)?;
+    Ok(())
+}
+
+/// The CHECK that migration 25 widens (plan 78 D3): a garden entry can be a `refund` (PRD FR-12.51).
+const WIDEN_REFUND: [Widen; 1] = [Widen {
+    table: "venture_entries",
+    from: "'other_sale', 'close')",
+    to: "'other_sale', 'close', 'refund')",
+}];
+
+/// After the SQL of migration 25: allow the entry kind `refund` in `venture_entries`.
+pub fn garden_items_hook(tx: &Transaction) -> Result<(), HookError> {
+    edit_table_text(tx, &WIDEN_REFUND, "migration 25")
+}
+
+/// The one CHECK that migration 7 widens: `accounts.serial` was limited to 0 to 9999 for the old
+/// 4-digit serial. A running number has no upper limit (plan 32 R2), so only the lower limit stays.
+const WIDEN_SERIAL: [Widen; 1] = [Widen {
+    table: "accounts",
+    from: "serial BETWEEN 0 AND 9999",
+    to: "serial >= 0",
+}];
+
+/// After the SQL of migration 7: lift the upper limit of `accounts.serial` (see [`WIDEN_SERIAL`]).
+/// Public so the tests of migration 8 can build the file as it was released at version 7.
+pub fn codes_hook(tx: &Transaction) -> Result<(), HookError> {
+    edit_table_text(tx, &WIDEN_SERIAL, "migration 7")
+}
+
+/// The English name of the account 0030 from migration 20 (PRD FR-10.4).
+const CHUKTA_KHATA_NAME_EN: &str = "Chukta Khata";
+/// The Urdu name of the account 0030 from migration 20 (PRD FR-10.4).
+const CHUKTA_KHATA_NAME_UR: &str = "چکتا کھاتہ";
+/// The names of the old closed account 0031 from migration 20 (PRD FR-10.4).
+const OLD_CLOSED_NAME_UR: &str = "پرانا بند کھاتہ";
+const OLD_CLOSED_NAME_EN: &str = "Old Closed Account";
+
+/// After the SQL of migration 20 (plan 64, PRD FR-13.9): gives the accounts 0030 and 0031 their new
+/// names with their search keys (built only by `mandi_core::text`, Code Standards B26), and fills
+/// `chukta_buyers` from the distinct people of the old lines on 0030, each as he was last typed. A
+/// person with no Urdu or English name is left out, because the list has no row for a nameless
+/// person. Public so the tests of migration 20 can build the file as it was released at version 19.
+pub fn chukta_hook(tx: &Transaction) -> Result<(), HookError> {
+    for (code, name_ur, name_en) in [
+        ("0030", CHUKTA_KHATA_NAME_UR, CHUKTA_KHATA_NAME_EN),
+        ("0031", OLD_CLOSED_NAME_UR, OLD_CLOSED_NAME_EN),
+    ] {
+        tx.execute(
+            "UPDATE accounts SET name_ur = ?1, name_en = ?2, search_ur = ?3, search_en = ?4,
+                 search_phonetic = ?5
+             WHERE code = ?6 AND is_chukta_khata = 1",
+            rusqlite::params![
+                name_ur,
+                name_en,
+                mandi_core::text::search_ur(name_ur),
+                mandi_core::text::search_en(name_en),
+                mandi_core::text::search_phonetic(name_en),
+                code
+            ],
+        )?;
+    }
+    // The lines are read in id order, so a later line of the same person wins: his names and phone
+    // are as he was last typed.
+    let lines: Vec<(String, String, String, Option<String>)> = {
+        let mut statement = tx.prepare(
+            "SELECT s.chukta_person_key, s.chukta_name_ur, s.chukta_name_en, s.chukta_phone
+             FROM bikri_sales s JOIN accounts a ON a.id = s.buyer_account_id
+             WHERE a.code = '0030' AND s.chukta_person_key IS NOT NULL
+             ORDER BY s.id",
+        )?;
+        statement
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let mut order: Vec<String> = Vec::new();
+    let mut last: std::collections::HashMap<String, (String, String, Option<String>)> =
+        std::collections::HashMap::new();
+    for (key, name_ur, name_en, phone) in lines {
+        if !last.contains_key(&key) {
+            order.push(key.clone());
+        }
+        last.insert(key, (name_ur, name_en, phone));
+    }
+    for key in order {
+        let Some((name_ur, name_en, phone)) = last.get(&key) else {
+            continue;
+        };
+        if name_ur.trim().is_empty() || name_en.trim().is_empty() {
+            continue;
+        }
+        let phone = phone.as_deref().map(str::trim).filter(|p| !p.is_empty());
+        tx.execute(
+            "INSERT INTO chukta_buyers (person_key, name_ur, name_en, search_ur, search_en,
+                 search_phonetic, phone)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(person_key) DO NOTHING",
+            rusqlite::params![
+                key,
+                name_ur.trim(),
+                name_en.trim(),
+                mandi_core::text::search_ur(name_ur),
+                mandi_core::text::search_en(name_en),
+                mandi_core::text::search_phonetic(name_en),
+                phone
+            ],
+        )?;
+    }
+    Ok(())
+}
+
+/// After the SQL of migration 8: every trip is named by its code and its day, in both scripts
+/// (`0070 10-10-2026`), and its three search columns are made again from the new names by
+/// `mandi_core::text`, as every save of a named record does (Code Standards B26). Public so the tests
+/// of migration 8 can build the file as it was released at version 7.
+pub fn trip_names_hook(tx: &Transaction) -> Result<(), HookError> {
+    use mandi_core::codes::{CodeType, number_code};
+    use mandi_core::dates::{BusinessDate, format_ddmmyyyy};
+    let trips: Vec<(i64, i64, String)> = {
+        let mut statement = tx.prepare(
+            "SELECT id, number, entry_date FROM ventures WHERE kind = 'trip' ORDER BY number",
+        )?;
+        statement
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    for (id, number, entry_date) in trips {
+        let day = BusinessDate::parse_iso(&entry_date)
+            .map(format_ddmmyyyy)
+            .ok_or_else(|| {
+                HookError::Hook(format!("migration 8: trip {id} has the date {entry_date}"))
+            })?;
+        let name = format!("{} {day}", number_code(CodeType::Trip, number));
+        tx.execute(
+            "UPDATE ventures SET name_ur = ?1, name_en = ?1, search_ur = ?2, search_en = ?3,
+                 search_phonetic = ?4 WHERE id = ?5",
+            rusqlite::params![
+                name,
+                mandi_core::text::search_ur(&name),
+                mandi_core::text::search_en(&name),
+                mandi_core::text::search_phonetic(&name),
+                id
+            ],
+        )?;
+    }
+    Ok(())
 }
 
 /// What a call to [`migrate`] did.
@@ -139,6 +565,41 @@ pub fn migrate_with(
             Err(error)
         }
     }
+}
+
+/// Checks that a file has exactly this app's schema, and changes nothing. A snapshot opened for
+/// reading only (the readable pack) must not be upgraded, and cannot be read right if it is
+/// older.
+///
+/// # Errors
+/// `DbError::MigrationFailed` when the file has no schema, an older one (migrations are
+/// pending) or a newer one than this app.
+pub fn ensure_current(conn: &Connection) -> Result<usize, DbError> {
+    let failed = |what: &str, error: &dyn std::fmt::Display| {
+        DbError::MigrationFailed(format!("{what}: {error}"))
+    };
+    let migrations = migrations();
+    let version = match migrations
+        .current_version(conn)
+        .map_err(|e| failed("cannot read the schema version", &e))?
+    {
+        SchemaVersion::NoneSet => 0,
+        SchemaVersion::Inside(v) => v.get(),
+        SchemaVersion::Outside(v) => {
+            return Err(DbError::MigrationFailed(format!(
+                "the file has schema version {v}, newer than this app"
+            )));
+        }
+    };
+    let pending = migrations
+        .pending_migrations(conn)
+        .map_err(|e| failed("cannot count pending migrations", &e))?;
+    if version == 0 || pending > 0 {
+        return Err(DbError::MigrationFailed(format!(
+            "the file has schema version {version}, older than this app"
+        )));
+    }
+    Ok(version)
 }
 
 /// Foreign keys and the page structure must be sound after an upgrade.

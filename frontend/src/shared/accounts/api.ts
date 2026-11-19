@@ -1,7 +1,9 @@
 // Typed wrappers around the account and chart commands (plan 07 contract; `accounts_*`, `coa_*`).
 // Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
 
+import type { SortInput } from '../../bindings/SortInput';
 import { callCommand } from '../api';
+import { accountInputOf } from './account-input';
 import type {
   AccountHit,
   AccountScope,
@@ -23,6 +25,12 @@ import type {
 } from './types';
 import type { AccountBalance } from '../../bindings/AccountBalance';
 import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
+import type { AccountSaveRequest } from '../../bindings/AccountSaveRequest';
+import type { OpeningsRequest } from '../../bindings/OpeningsRequest';
+import type { ChuktaAddInput } from '../../bindings/ChuktaAddInput';
+import type { ChuktaBuyer } from '../../bindings/ChuktaBuyer';
+import type { ChuktaSearchInput } from '../../bindings/ChuktaSearchInput';
+import type { CoaControlAccounts } from '../../bindings/CoaControlAccounts';
 import type { CoaTree } from '../../bindings/CoaTree';
 import type { GlobalHit as GlobalHitBinding } from '../../bindings/GlobalHit';
 import type { ResolvedCode as ResolvedCodeBinding } from '../../bindings/ResolvedCode';
@@ -31,6 +39,20 @@ import type { ResolvedCode as ResolvedCodeBinding } from '../../bindings/Resolve
 export async function coaTree(): Promise<ChartHead[]> {
   const tree = await callCommand<CoaTree>('coa_tree');
   return tree.heads;
+}
+
+/**
+ * One page of the accounts of one control, with the control's own balance over all of them (plan 38
+ * B1, Code Standards B31). A control can hold thousands of accounts, so the tree asks when it opens.
+ */
+export function coaControlAccounts(
+  controlId: number,
+  offset: number,
+  limit: number,
+): Promise<CoaControlAccounts> {
+  return callCommand<CoaControlAccounts>('coa_control_accounts', {
+    input: { control_id: controlId, offset, limit },
+  });
 }
 
 export function coaHeadsList(): Promise<HeadItem[]> {
@@ -48,15 +70,17 @@ export function accountsGet(id: number): Promise<AccountRow> {
 }
 
 /**
- * 0 asks for every matching account: the backend returns up to 50,000 (2.5 times the 20,000
- * accounts of NFR-SCL-1), and the grid draws only the rows in view. The screen sets no cap.
+ * One page of the accounts for the filter, with the count of the whole filter and the opening
+ * totals over all of it (PRD FR-10.5, FR-19.11, Code Standards B31). A page is `limit` rows from
+ * `offset`; 0 means the default page of 100.
  */
-const LIST_PAGE_LIMIT = 0;
-
-export function accountsList(filter: AccountFilter, offset = 0): Promise<AccountList> {
-  return callCommand<AccountList>('accounts_list', {
-    input: { filter, offset, limit: LIST_PAGE_LIMIT },
-  });
+export function accountsList(
+  filter: AccountFilter,
+  offset: number,
+  limit: number,
+  sort: SortInput | null = null,
+): Promise<AccountList> {
+  return callCommand<AccountList>('accounts_list', { input: { filter, offset, limit, sort } });
 }
 
 /** The next free code for a type (and a control, for "other"), to fill the code field. */
@@ -74,6 +98,8 @@ export function accountsSimilar(input: {
   name_ur: string;
   name_en: string;
   phone: string;
+  /** The tag typed (empty if none): with the names and the phone it decides what is a duplicate. */
+  tag: string;
   exclude_id: number | null;
 }): Promise<AccountMatch[]> {
   return callCommand<AccountMatch[]>('accounts_similar', { input });
@@ -86,38 +112,16 @@ export function accountsSimilar(input: {
 export function accountsSave(
   draft: AccountDraft,
   confirmedRulesWords: readonly string[],
+  confirmCashBelowZero = false,
 ): Promise<AccountRow> {
-  return callCommand<AccountRow>('accounts_save', {
-    input: {
-      id: draft.id,
-      version: draft.version,
-      account_type: draft.account_type,
-      control_id: draft.control_id,
-      code: draft.code,
-      name_ur: draft.names.urdu,
-      name_en: draft.names.english,
-      father_or_firm_ur: draft.father.urdu,
-      father_or_firm_en: draft.father.english,
-      confirmed_rules_words: confirmedRulesWords,
-      city_id: draft.city?.id ?? null,
-      adda_id: draft.adda?.id ?? null,
-      phone1: draft.phone1,
-      phone2: draft.phone2,
-      address: draft.address,
-      linked_account_id: draft.linked_account?.id ?? null,
-      opening_date: draft.opening_date,
-      opening_dr: draft.opening_dr,
-      opening_cr: draft.opening_cr,
-      opening_is_advance: draft.opening_is_advance,
-      credit_allowed: draft.credit_allowed,
-      credit_limit: draft.credit_limit,
-      default_marka_id: draft.default_marka?.id ?? null,
-      collector_staff_id: draft.collector?.id ?? null,
-      collection_weekday: draft.collection_weekday,
-      is_active: draft.is_active,
-      note: draft.note,
-    },
-  });
+  // Changing an opening that is in روکڑ takes cash out: when cash would end below 0 the backend answers
+  // `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`) until `confirm_cash_below_zero` is true,
+  // the yes of the cash box (PRD FR-6.7, plan 80 R4-4).
+  const input: AccountSaveRequest = {
+    ...accountInputOf(draft, confirmedRulesWords),
+    confirm_cash_below_zero: confirmCashBelowZero,
+  };
+  return callCommand<AccountRow>('accounts_save', { input });
 }
 
 /** Makes an account inactive or active again. An account is never deleted (PRD FR-10.6). */
@@ -125,14 +129,26 @@ export function accountsSetActive(id: number, isActive: boolean): Promise<Accoun
   return callCommand<AccountRow>('accounts_set_active', { input: { id, is_active: isActive } });
 }
 
-/** Checks the openings grid and says what ابتدائی فرق would be. Nothing is saved. */
-export function accountsOpeningsPreview(input: OpeningsInput): Promise<OpeningsPreview> {
-  return callCommand<OpeningsPreview>('accounts_openings_preview', { input });
+/**
+ * Checks the openings grid and says what ابتدائی فرق would be. Nothing is saved. A line that changes an opening
+ * in روکڑ and would take cash below 0 has `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`) until
+ * `confirmCashBelowZero` is true (PRD FR-6.7, plan 80 R4-4).
+ */
+export function accountsOpeningsPreview(
+  input: OpeningsInput,
+  confirmCashBelowZero = false,
+): Promise<OpeningsPreview> {
+  const body: OpeningsRequest = { ...input, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<OpeningsPreview>('accounts_openings_preview', { input: body });
 }
 
 /** Saves the openings grid in one transaction. Errors point to `lines[i].<field>`. */
-export function accountsOpeningsSave(input: OpeningsInput): Promise<OpeningsSaved> {
-  return callCommand<OpeningsSaved>('accounts_openings_save', { input });
+export function accountsOpeningsSave(
+  input: OpeningsInput,
+  confirmCashBelowZero = false,
+): Promise<OpeningsSaved> {
+  const body: OpeningsRequest = { ...input, confirm_cash_below_zero: confirmCashBelowZero };
+  return callCommand<OpeningsSaved>('accounts_openings_save', { input: body });
 }
 
 // ---- Plan 08: short codes, the party card, search (PRD FR-7.38 to FR-7.42).
@@ -148,33 +164,53 @@ export function accountsBalances(ids: readonly number[]): Promise<AccountBalance
  */
 async function withBalances(hits: readonly AccountHitBinding[]): Promise<AccountHit[]> {
   if (hits.length === 0) return [];
+  // A چکتا buyer has no balance (PRD FR-13.6): his hit carries the id of the account چکتا کھاتہ, and
+  // that account's balance is not his, so it is never asked for.
+  const accounts = hits.filter((hit) => hit.kind !== 'chukta');
   const balances = new Map<number, AccountBalance['balance']>();
-  try {
-    for (const row of await accountsBalances(hits.map((hit) => hit.id))) {
-      balances.set(row.id, row.balance);
+  if (accounts.length > 0) {
+    try {
+      for (const row of await accountsBalances(accounts.map((hit) => hit.id))) {
+        balances.set(row.id, row.balance);
+      }
+    } catch {
+      // The picker works without balances.
     }
-  } catch {
-    // The picker works without balances.
   }
-  return hits.map((hit) => ({ ...hit, balance: balances.get(hit.id) ?? null }));
+  return hits.map((hit) => ({
+    ...hit,
+    balance: hit.kind === 'chukta' ? null : (balances.get(hit.id) ?? null),
+  }));
 }
 
 /**
- * Accounts for a picker: exact code first, then the exact serial, then names, then close
- * spellings (PRD FR-7.40). `controlId` is for a field that takes the accounts of one control.
+ * Accounts for a picker: exact code first, then the running number (a short code), then names,
+ * then close spellings (PRD FR-7.40). Empty text is every account of the field, the last chosen
+ * first, then by code (plan 32, R7). `offset` and `limit` cut out one page. `controlId` is for a
+ * field that takes the accounts of one control.
  */
 export async function searchAccounts(input: {
   scope: AccountScope;
   controlId: number | null;
   text: string;
+  offset?: number;
   limit: number;
+  /** A person in the dead amount may be offered (PRD FR-10.10): the receipt and ادھار رقم واپسی fields only. */
+  includeDead?: boolean;
+  /** The buyer box of a بکری line lists چکتا buyers too (PRD FR-7.29). Every other box leaves it out. */
+  withChukta?: boolean;
 }): Promise<AccountHit[]> {
   const hits = await callCommand<AccountHitBinding[]>('search_accounts', {
     input: {
       scope: input.scope,
       control_id: input.controlId,
       text: input.text,
+      offset: input.offset ?? 0,
       limit: input.limit,
+      // Sent only when it is true: a missing key is "no dead people" (plan 40).
+      ...(input.includeDead === true ? { include_dead: true } : {}),
+      // Sent only when it is true: a missing key is "no چکتا buyers" (plan 64).
+      ...(input.withChukta === true ? { with_chukta: true } : {}),
     },
   });
   return withBalances(hits);
@@ -187,9 +223,16 @@ export async function searchAccounts(input: {
 export async function searchAccountsRecent(
   scope: AccountScope,
   controlId: number | null,
+  includeDead = false,
+  withChukta = false,
 ): Promise<AccountHit[]> {
   const hits = await callCommand<AccountHitBinding[]>('search_accounts_recent', {
-    input: { scope, control_id: controlId },
+    input: {
+      scope,
+      control_id: controlId,
+      ...(includeDead ? { include_dead: true } : {}),
+      ...(withChukta ? { with_chukta: true } : {}),
+    },
   });
   return withBalances(hits);
 }
@@ -223,26 +266,81 @@ export async function accountsResolveCode(
   };
 }
 
-/** The party card of an account, read from the books (PRD FR-7.38). */
-export function assistPartyCard(accountId: number): Promise<PartyCardData> {
-  return callCommand<PartyCardData>('assist_party_card', { input: { account_id: accountId } });
+/**
+ * The party card of an account, read from the books (PRD FR-7.38). With `chuktaId` the account is
+ * چکتا کھاتہ and the card is that walk-in buyer's own: his name and phone, no balance (PRD FR-13.6).
+ */
+export function assistPartyCard(
+  accountId: number,
+  chuktaId: number | null = null,
+): Promise<PartyCardData> {
+  return callCommand<PartyCardData>('assist_party_card', {
+    // A missing key is "not a چکتا buyer", as the backend leaves it out when it is none.
+    input: { account_id: accountId, ...(chuktaId === null ? {} : { chukta_id: chuktaId }) },
+  });
+}
+
+// ---- چکتا buyers (PRD Section 13, plan 64).
+
+/**
+ * The چکتا buyers already recorded, newest first, matched by the text in either name or the phone
+ * (PRD FR-7.29). The text is searched as typed and never converted (F41). Empty text lists the
+ * newest ten.
+ */
+export function chuktaSearch(text: string): Promise<ChuktaBuyer[]> {
+  const input: ChuktaSearchInput = { text };
+  return callCommand<ChuktaBuyer[]>('chukta_search', { input });
+}
+
+/**
+ * Adds a چکتا buyer from the picker (PRD FR-7.69, FR-13.3). A person with the same names and phone
+ * is returned, not doubled. Both names are required (PRD FR-7.24); the phone is optional.
+ */
+export function chuktaAdd(input: ChuktaAddInput): Promise<ChuktaBuyer> {
+  return callCommand<ChuktaBuyer>('chukta_add', { input });
 }
 
 /** The most results of the global search the box shows. */
 const GLOBAL_SEARCH_LIMIT = 20;
 
-/** The global search (Ctrl+K): accounts for now. */
+/** The global search (Ctrl+K): accounts, and a بکری by number or truck (plan 13). */
 export async function searchGlobal(text: string): Promise<GlobalHit[]> {
   const hits = await callCommand<GlobalHitBinding[]>('search_global', {
     input: { text, limit: GLOBAL_SEARCH_LIMIT },
   });
-  return hits.map((item) => ({
-    kind: item.kind,
-    id: item.hit.id,
-    code: item.hit.code,
-    name_ur: item.hit.name_ur,
-    name_en: item.hit.name_en,
-    extra_ur: item.hit.extra_ur,
-    extra_en: item.hit.extra_en,
-  }));
+  return hits.map((item): GlobalHit => {
+    if (item.kind === 'bikri') {
+      return {
+        kind: 'bikri',
+        id: item.hit.id,
+        number: item.hit.number,
+        entry_date: item.hit.entry_date,
+        truck_no: item.hit.truck_no,
+        status: item.hit.status,
+        matched: item.hit.matched,
+      };
+    }
+    if (item.kind === 'voucher') {
+      return {
+        kind: 'voucher',
+        id: item.hit.id,
+        voucher_type: item.hit.voucher_type,
+        number: item.hit.number,
+        entry_date: item.hit.entry_date,
+        account: item.hit.account,
+        amount_paisa: item.hit.amount_paisa,
+        status: item.hit.status,
+      };
+    }
+    return {
+      kind: 'account',
+      id: item.hit.id,
+      code: item.hit.code,
+      name_ur: item.hit.name_ur,
+      name_en: item.hit.name_en,
+      ...(item.hit.tag === undefined ? {} : { tag: item.hit.tag }),
+      extra_ur: item.hit.extra_ur,
+      extra_en: item.hit.extra_en,
+    };
+  });
 }

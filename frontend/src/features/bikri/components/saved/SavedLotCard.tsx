@@ -1,0 +1,312 @@
+// One lot of a saved بکری, read-only (plan 13): what the lot was and its sale lines. Every number
+// is the value stored when the بکری was saved (PRD FR-11.6, Code Standards B20): nothing is worked
+// out again with today's rules, and nothing is added up here (CLAUDE.md rule 1). The sums of the
+// lot are in the summary under the lots (SavedSummary). Lines replaced by an edit (plan 16) are
+// not shown. A lot of a trip's goods is marked, names its purchase and trip (a link to the trip),
+// shows the cost of the goods sold on each line in a wide window, and gives the seller credit,
+// the cost and the result with each trip partner's part (plan 16b, PRD FR-12.26, C25). The saved
+// numbers are shown as stored; nothing is worked out again.
+
+import { Localized } from '@fluent/react';
+import type { SavedLot } from '../../../../bindings/SavedLot';
+import type { SavedSale } from '../../../../bindings/SavedSale';
+import { isFromStep, useLayoutStep } from '../../../../shared/hooks';
+import { displayName, useLanguage } from '../../../../shared/i18n';
+import { useNavigate } from '@tanstack/react-router';
+import { Card, Fact, LinkButton, Num, Table, type TableColumn } from '../../../../shared/ui';
+import { isNegativePaisa } from '../../../../shared/format';
+import { purchaseNumberText } from '../../../purchases';
+import { GRADE_WORD_ID } from '../../grade';
+import { useSavedLotWho } from '../../lot-name';
+import { useLocalization } from '@fluent/react';
+
+/** The buyer of a line: a چکتا buyer by his own name, else the account (PRD FR-13.2, FR-13.5). */
+function buyerName(sale: SavedSale, language: Parameters<typeof displayName>[1]): string {
+  return displayName(sale.chukta ?? sale.buyer, language);
+}
+
+function lineColumns(
+  language: Parameters<typeof displayName>[1],
+  say: (id: string) => string,
+  step: ReturnType<typeof useLayoutStep>,
+  own: boolean,
+  graded: boolean,
+): readonly TableColumn<SavedSale>[] {
+  return [
+    {
+      id: 'buyer',
+      header: say('glossary-gahak'),
+      cell: (sale) => buyerName(sale, language),
+    },
+    // The quality of the goods of a line (PRD FR-12.42). The column is there only when a line of the
+    // lot has one, so a lot with none reads exactly as before.
+    ...(graded
+      ? ([
+          {
+            id: 'grade',
+            header: say('glossary-darja'),
+            kind: 'centre',
+            size: 'status',
+            cell: (sale) => (sale.grade === undefined ? '' : say(GRADE_WORD_ID[sale.grade])),
+          },
+        ] satisfies readonly TableColumn<SavedSale>[])
+      : []),
+    {
+      id: 'qty',
+      header: say('bikri-col-qty'),
+      kind: 'number',
+      size: 'qty',
+      cell: (sale) => <Num>{String(sale.qty)}</Num>,
+    },
+    {
+      id: 'rate',
+      header: say('bikri-col-rate'),
+      kind: 'number',
+      size: 'money',
+      cell: (sale) => <Num paisa={sale.seller_rate} />,
+    },
+    ...(isFromStep(step, 'normal')
+      ? ([
+          {
+            id: 'amount',
+            header: say('bikri-col-seller-amount'),
+            kind: 'number',
+            size: 'money',
+            cell: (sale) => <Num paisa={sale.seller_amount} />,
+          },
+          {
+            id: 'seller-comm',
+            header: say('bikri-col-seller-comm'),
+            kind: 'number',
+            size: 'money',
+            cell: (sale) => <Num paisa={sale.seller_comm.amount} />,
+          },
+          {
+            id: 'buyer-comm',
+            header: say('bikri-col-buyer-comm'),
+            kind: 'number',
+            size: 'money',
+            cell: (sale) => <Num paisa={sale.buyer_comm.amount} />,
+          },
+        ] satisfies readonly TableColumn<SavedSale>[])
+      : []),
+    ...(isFromStep(step, 'wide')
+      ? ([
+          {
+            id: 'laga',
+            header: say('glossary-laga'),
+            kind: 'number',
+            size: 'money',
+            cell: (sale) => <Num paisa={sale.laga.amount} />,
+          },
+        ] satisfies readonly TableColumn<SavedSale>[])
+      : []),
+    {
+      id: 'buyer-total',
+      header: say('bikri-col-buyer-total'),
+      kind: 'number',
+      size: 'money',
+      cell: (sale) => <Num paisa={sale.buyer_total} />,
+    },
+    ...(own && isFromStep(step, 'wide')
+      ? ([
+          {
+            id: 'cost',
+            header: say('bikri-saved-cost'),
+            kind: 'number',
+            size: 'money',
+            cell: (sale) => <Num paisa={sale.cost_paisa} />,
+          },
+        ] satisfies readonly TableColumn<SavedSale>[])
+      : []),
+    // The money the buyer paid on the spot and what stayed on his account, as stored with the line
+    // (PRD FR-12.44). Both are the backend's numbers; nothing is worked out here.
+    {
+      id: 'paid',
+      header: say('bikri-col-paid-on-spot'),
+      kind: 'number',
+      size: 'money',
+      cell: (sale) => <Num paisa={sale.paid_paisa} />,
+    },
+    {
+      id: 'left',
+      header: say('bikri-line-left'),
+      kind: 'number',
+      size: 'money',
+      cell: (sale) => <Num paisa={sale.left_paisa} />,
+    },
+  ];
+}
+
+interface SavedLotCardProps {
+  lot: SavedLot;
+}
+
+export function SavedLotCard({ lot }: SavedLotCardProps) {
+  const language = useLanguage();
+  const step = useLayoutStep();
+  const { l10n } = useLocalization();
+  const say = (id: string) => l10n.getString(id);
+  const navigate = useNavigate();
+  const purchase = lot.purchase;
+  const lotWho = useSavedLotWho();
+  const lines = lot.sales.filter((sale) => sale.is_active);
+  return (
+    <Card
+      compact
+      title={
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <Localized
+            id="bikri-saved-lot-title"
+            vars={{ lot: String(lot.lot_no), who: lotWho(lot) }}
+          >
+            <span />
+          </Localized>
+          {purchase === null ? null : (
+            <Localized id="glossary-apna-maal">
+              <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
+            </Localized>
+          )}
+        </span>
+      }
+    >
+      <div className="@container min-w-0">
+        <dl className="grid grid-cols-3 gap-x-4 gap-y-3 @form3:grid-cols-4">
+          <Fact label={<Localized id="glossary-qism-maal" />}>
+            {displayName(lot.item, language)}
+          </Fact>
+          <Fact label={<Localized id="glossary-packing" />}>
+            {displayName(lot.packing, language)}
+          </Fact>
+          <Fact label={<Localized id="bikri-col-qty-received" />}>
+            <Num>{String(lot.qty_received)}</Num>
+          </Fact>
+          <Fact label={<Localized id="bikri-saved-qty-sold" />}>
+            <Num>{String(lot.qty_sold)}</Num>
+          </Fact>
+          {lot.qty_written_off === 0 ? null : (
+            <Fact label={<Localized id="bikri-saved-qty-written-off" />}>
+              <Num>{String(lot.qty_written_off)}</Num>
+            </Fact>
+          )}
+          {lot.qty_taken === 0 ? null : (
+            <Fact label={<Localized id="bikri-saved-qty-taken" />}>
+              <Num>{String(lot.qty_taken)}</Num>
+            </Fact>
+          )}
+          {purchase === null ? null : (
+            <Fact label={<Localized id="bikri-saved-purchase" />}>
+              <LinkButton
+                onClick={() => {
+                  void navigate({
+                    to: '/trips/$id',
+                    params: { id: String(purchase.trip_id) },
+                    search: { purchase: purchase.id },
+                  });
+                }}
+              >
+                <Localized
+                  id="bikri-saved-purchase-open"
+                  vars={{
+                    number: purchaseNumberText(purchase.number, (id, vars) =>
+                      l10n.getString(id, vars),
+                    ),
+                    trip: purchase.trip_code,
+                  }}
+                />
+              </LinkButton>
+            </Fact>
+          )}
+          {lot.arrival === null ? null : (
+            <Fact label={<Localized id="glossary-maal-aaya" />}>
+              <LinkButton
+                onClick={() => {
+                  // The garden screen: the entry sits in its list.
+                  void navigate({
+                    to: '/gardens/$id',
+                    params: { id: String(lot.arrival?.garden_id ?? 0) },
+                  });
+                }}
+              >
+                <Localized
+                  id="bikri-saved-arrival-open"
+                  vars={{ number: lot.arrival.number, garden: lot.arrival.garden_code }}
+                />
+              </LinkButton>
+            </Fact>
+          )}
+          {lot.marka_text === null ? null : (
+            <Fact label={<Localized id="glossary-marka" />}>{lot.marka_text}</Fact>
+          )}
+        </dl>
+      </div>
+      {lot.own === null ? null : (
+        <div className="flex flex-col gap-1">
+          <Localized id="bikri-saved-own-title">
+            <h3 className="type-label text-ink-muted" />
+          </Localized>
+          <dl className="flex flex-col">
+            <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink">
+              <Localized id="bikri-own-credit">
+                <dt />
+              </Localized>
+              <dd className="value-col">
+                <Num paisa={lot.own.credit_paisa} />
+              </dd>
+            </div>
+            {lot.own.credits.map((credit) => (
+              <div
+                key={credit.partner.id}
+                className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink"
+              >
+                <dt lang={language}>{displayName(credit.partner, language)}</dt>
+                <dd className="value-col">
+                  <Num paisa={credit.amount_paisa} />
+                </dd>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink">
+              <Localized id="purchases-detail-cost-sold">
+                <dt />
+              </Localized>
+              <dd className="value-col">
+                <Num paisa={lot.own.cost_paisa} />
+              </dd>
+            </div>
+            <div
+              className={`flex items-center justify-between gap-3 border-b border-border py-1 type-label ${isNegativePaisa(lot.own.result_paisa) ? 'text-due' : 'text-ink'}`}
+            >
+              <Localized
+                id={
+                  isNegativePaisa(lot.own.result_paisa)
+                    ? 'glossary-tijarati-nuqsan'
+                    : 'glossary-tijarati-munafa'
+                }
+              >
+                <dt />
+              </Localized>
+              <dd className="value-col">
+                <Num paisa={lot.own.result_paisa} />
+              </dd>
+            </div>
+          </dl>
+        </div>
+      )}
+      <Table
+        label={l10n.getString('bikri-sales-label')}
+        columns={lineColumns(
+          language,
+          say,
+          step,
+          purchase !== null,
+          lines.some((sale) => sale.grade !== undefined),
+        )}
+        rows={lines}
+        rowKey={(sale) => String(sale.id)}
+        // The normal step shows the whole line, nine columns in 852 px; the dense table keeps every heading
+        // on two lines (plan 75, alignment R4). The other steps have the room, or fewer columns.
+        dense={step === 'normal'}
+      />
+    </Card>
+  );
+}

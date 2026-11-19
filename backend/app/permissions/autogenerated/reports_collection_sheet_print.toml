@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reports-collection-sheet-print"
+description = "Enables the reports_collection_sheet_print command without any pre-configured scope."
+commands.allow = ["reports_collection_sheet_print"]
+
+[[permission]]
+identifier = "deny-reports-collection-sheet-print"
+description = "Denies the reports_collection_sheet_print command without any pre-configured scope."
+commands.deny = ["reports_collection_sheet_print"]

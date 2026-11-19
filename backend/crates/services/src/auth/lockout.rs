@@ -44,6 +44,22 @@ pub(crate) fn remaining_seconds(
     key: &str,
     user: Option<&UserRecord>,
 ) -> Option<u64> {
+    remaining_from(
+        ctx,
+        key,
+        user.and_then(|u| u.locked_until_at.as_deref()),
+        user.map_or(0, |u| u.failed_attempts),
+    )
+}
+
+/// The same for any lock kept by a key: the stored end time (wall clock, from the database) and
+/// the count of wrong tries it belongs to. Used by the partner code (PRD FR-17.11).
+pub(crate) fn remaining_from(
+    ctx: &Context,
+    key: &str,
+    stored_until: Option<&str>,
+    failed_attempts: u32,
+) -> Option<u64> {
     let now = ctx.monotonic.elapsed();
     let mut lockouts = ctx.lockouts_lock();
     if let Some(lock) = lockouts.locks.get(key) {
@@ -51,12 +67,11 @@ pub(crate) fn remaining_seconds(
         return (lock.until > now).then(|| ceil_seconds(lock.until.saturating_sub(now)));
     }
     // Only the stored end time is left (a restart). Use it, but never for longer than the step.
-    let user = user?;
-    let until: DateTime<Utc> = DateTime::parse_from_rfc3339(user.locked_until_at.as_deref()?)
+    let until: DateTime<Utc> = DateTime::parse_from_rfc3339(stored_until?)
         .ok()?
         .with_timezone(&Utc);
     let wall_left = (until - ctx.now_utc()).to_std().ok()?;
-    let cap = Duration::from_secs(current_step_seconds(user.failed_attempts));
+    let cap = Duration::from_secs(current_step_seconds(failed_attempts));
     let left = wall_left.min(cap);
     if left.is_zero() {
         return None;

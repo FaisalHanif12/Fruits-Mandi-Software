@@ -1,0 +1,372 @@
+//! R24 ادائیگی باقی (seller payables) (PRD 19.2, FR-7.59, FR-15.9, FR-19.10).
+//!
+//! One row for each seller (and each چکتا buyer inside the چکتا کھاتہ seller account): what
+//! is still payable to him, his open advances, what he owes the firm beyond his advances, his
+//! ledger balance and the date of his last بکری. The three amounts are the read-time working of
+//! PRD FR-7.59 (`workings::payable_totals_from` over sums of his live lines, the same
+//! numbers the voucher screen and the dashboard tile show). The ledger balance is the posted
+//! `Σ جمع − Σ بنام` and equals `payable − open advance − owed beyond advances`.
+//!
+//! The rows are in two lists (PRD 19.2): the sellers the firm owes or has advanced to, and, below
+//! them, "بیوپاری کے ذمے", the sellers who owe the firm beyond their advances (PRD FR-15.9). Each
+//! list has a heading row with its totals. The total row adds both lists.
+//!
+//! The advance and payment rows are kept as they stand now and are not dated, so the three
+//! workings can only be given for a report as of today or later. For an earlier day only the
+//! ledger balance is given (one flat list, the other cells empty): nothing is guessed.
+//!
+//! Example (after Event 2, PRD 4.9): کریم payable 10,160, advance 0, balance 10,160 جمع; رحیم is
+//! not listed (everything adjusted and paid). After E2E-28 رحیم shows payable 19,316, advance
+//! 15,000 and balance 4,316 جمع.
+
+use std::collections::{HashMap, HashSet};
+
+use mandi_core::accounts::{Balance, BalanceSide, SELLER_CONTROL};
+use mandi_core::money::Paisa;
+use mandi_db::ledger::{Totals, account_totals_in_controls, totals_of};
+use mandi_db::rusqlite::{Connection, params};
+use mandi_db::vouchers::advance_totals;
+
+use super::super::PageSpec;
+use super::grouped::{SellerSums, payable_sums};
+use crate::error::ReportsError;
+use crate::reports::common::{
+    add, amount_or_empty, balance_cell, col, count_of, date_cell, load_parties, paisa,
+};
+use crate::reports::filters::Typed;
+use crate::reports::ids;
+use crate::reports::model::{
+    Cell, Column, ColumnKind, PartyRef, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+};
+use crate::reports::workings::payable_totals_from;
+
+/// The seller accounts. Parameter: account.
+fn sellers_sql() -> String {
+    format!(
+        "SELECT a.id
+    FROM accounts a JOIN account_controls k ON k.id = a.control_id
+    -- The old closed account (the old shared seller account) has no payables (PRD FR-13.9).
+    WHERE k.code = '03011' AND a.is_chukta_khata = 0 AND (?1 IS NULL OR a.id = ?1)
+    ORDER BY {}",
+        mandi_db::codes::order_by_code("a.code")
+    )
+}
+
+/// The date of the last saved بکری of each seller key.
+const LAST_DATE_SQL: &str = "SELECT l.seller_account_id, l.chukta_person_key, MAX(b.entry_date)
+    FROM bikri_lots l JOIN bikri_entries b ON b.id = l.bikri_id
+    WHERE b.status = 'saved' AND l.removed_at IS NULL GROUP BY l.seller_account_id, l.chukta_person_key";
+
+/// What the working gives for one seller key.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Working {
+    /// What is payable to him (PRD FR-7.59).
+    pub(crate) open: Paisa,
+    /// His open advances (PRD FR-15.8).
+    pub(crate) advances_open: Paisa,
+    /// What he owes the firm beyond his advances (PRD FR-15.9).
+    pub(crate) owes_firm: Paisa,
+}
+
+/// One seller (an account).
+pub(crate) struct Seller {
+    pub(crate) party: PartyRef,
+    pub(crate) balance: Balance,
+    pub(crate) working: Option<Working>,
+    pub(crate) last_date: Option<String>,
+}
+
+impl Seller {
+    /// True for a seller who owes the firm beyond his advances (PRD FR-15.9).
+    fn owes_firm(&self) -> bool {
+        self.working.is_some_and(|w| w.owes_firm > Paisa::ZERO)
+    }
+}
+
+/// The sellers worth a row: a balance, or an advance, or something payable or owed.
+pub(crate) fn candidates(
+    conn: &Connection,
+    typed: &Typed,
+    today_iso: &str,
+    current: bool,
+) -> Result<(Vec<Seller>, Option<SellerSums>), ReportsError> {
+    let as_of = typed.as_of.as_deref();
+    let accounts = {
+        let mut statement = conn.prepare(&sellers_sql())?;
+        statement
+            .query_map(params![typed.party_id], |r| r.get::<_, i64>(0))?
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let ids: Vec<i64> = accounts.clone();
+    let parties = load_parties(conn, &ids)?;
+    // The payable sums of every seller, from a few grouped queries and not one set of queries for
+    // each seller (Code Standards B22).
+    let sums = if current {
+        Some(crate::prof::timed("cand.payable_sums", || payable_sums(conn, typed.party_id))?)
+    } else {
+        None
+    };
+    // The sellers only (plan 48 P48-S3): a third of the journal, not all of it.
+    let totals: HashMap<i64, Totals> = if typed.party_id.is_some() {
+        HashMap::new()
+    } else {
+        crate::prof::timed("cand.totals", || account_totals_in_controls(conn, &[SELLER_CONTROL], as_of))?
+            .into_iter()
+            .collect()
+    };
+    let with_advance: HashSet<i64> = if current {
+        crate::prof::timed("cand.advance_totals", || advance_totals(conn, as_of.unwrap_or(today_iso), typed.party_id))?
+            .into_iter()
+            .map(|a| a.account_id)
+            .collect()
+    } else {
+        HashSet::new()
+    };
+    let last_dates = crate::prof::timed("cand.last_dates", || -> Result<_, ReportsError> {
+        let mut statement = conn.prepare(LAST_DATE_SQL)?;
+        Ok(statement
+            .query_map([], |r| {
+                Ok((
+                    (r.get::<_, i64>(0)?, r.get::<_, Option<String>>(1)?),
+                    r.get::<_, String>(2)?,
+                ))
+            })?
+            .collect::<Result<HashMap<_, _>, _>>()?)
+    })?;
+
+    // People in the dead amount are not in the payables or the sellers' dues: their whole balance
+    // is in R38 and the tile ڈوبی رقم (PRD FR-10.10, A66).
+    let dead = mandi_db::dead::dead_set(conn, as_of)?;
+    let mut found = Vec::new();
+    for id in accounts {
+        let party = parties
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| ReportsError::Data(format!("seller account {id} is missing")))?;
+        if dead.has_account(id) {
+            continue;
+        }
+        let own = if typed.party_id.is_some() {
+            totals_of(conn, id, None, as_of)?
+        } else {
+            totals.get(&id).copied().unwrap_or(Totals {
+                dr_paisa: 0,
+                cr_paisa: 0,
+            })
+        };
+        let balance = Balance::from_totals(paisa(own.dr_paisa)?, paisa(own.cr_paisa)?)?;
+        let has_advance = with_advance.contains(&id);
+        if balance.side == BalanceSide::Zero && !has_advance {
+            continue;
+        }
+        let working = sums.as_ref().map(|s| working_of(s, id, None)).transpose()?;
+        if !worth_a_row(balance, working) {
+            continue;
+        }
+        found.push(Seller {
+            party,
+            balance,
+            working,
+            last_date: last_dates.get(&(id, None)).cloned(),
+        });
+    }
+    Ok((found, sums))
+}
+
+fn worth_a_row(balance: Balance, working: Option<Working>) -> bool {
+    if balance.side != BalanceSide::Zero {
+        return true;
+    }
+    working.is_some_and(|w| {
+        w.open > Paisa::ZERO || w.advances_open > Paisa::ZERO || w.owes_firm > Paisa::ZERO
+    })
+}
+
+/// The payable working of one seller key from the grouped sums of his live lines (PRD FR-7.59).
+fn working_of(
+    sums: &SellerSums,
+    account_id: i64,
+    person_key: Option<&str>,
+) -> Result<Working, ReportsError> {
+    let t = sums.of(account_id, person_key);
+    let totals = payable_totals_from(
+        paisa(t.credit)?,
+        paisa(t.payments)?,
+        paisa(t.advances_given)?,
+        paisa(t.adjusted_on_credits)?,
+        paisa(t.adjusted_on_advances)?,
+    )?;
+    Ok(Working {
+        open: totals.open,
+        advances_open: totals.advances_open,
+        owes_firm: totals.excess_paid,
+    })
+}
+
+fn seller_row(seller: &Seller) -> Row {
+    let (open, advance, owes) = match seller.working {
+        Some(w) => (
+            amount_or_empty(w.open),
+            amount_or_empty(w.advances_open),
+            amount_or_empty(w.owes_firm),
+        ),
+        None => (Cell::Empty, Cell::Empty, Cell::Empty),
+    };
+    Row {
+        cells: vec![
+            Cell::Empty,
+            Cell::Party {
+                party: seller.party.clone(),
+            },
+            open,
+            advance,
+            owes,
+            balance_cell(seller.balance),
+            date_cell(seller.last_date.clone()),
+        ],
+        source: Some(RowSource {
+            kind: SourceKind::Account,
+            id: seller.party.account_id,
+        }),
+        kind: RowKind::Normal,
+    }
+}
+
+/// A heading row with the totals of a list.
+fn heading(label: &str, sellers: &[&Seller]) -> Result<Row, ReportsError> {
+    let (mut open, mut advance, mut owes) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+    for seller in sellers {
+        if let Some(w) = seller.working {
+            add(&mut open, w.open)?;
+            add(&mut advance, w.advances_open)?;
+            add(&mut owes, w.owes_firm)?;
+        }
+    }
+    Ok(Row {
+        cells: vec![
+            Cell::Label {
+                id: label.to_owned(),
+            },
+            Cell::Empty,
+            amount_or_empty(open),
+            amount_or_empty(advance),
+            amount_or_empty(owes),
+            Cell::Empty,
+            Cell::Empty,
+        ],
+        source: None,
+        kind: RowKind::Group,
+    })
+}
+
+/// The columns of R24, the one definition: [`run`] and the catalogue both use it (plan 75 T1).
+pub(crate) fn columns() -> Vec<Column> {
+    vec![
+        col("section", ids::COL_SECTION, ColumnKind::Label),
+        col("seller", ids::COL_SELLER, ColumnKind::Party),
+        col("payable", ids::COL_PAYABLE, ColumnKind::Money),
+        col("advance_open", ids::COL_ADVANCE_OPEN, ColumnKind::Money),
+        col("owes_firm", ids::COL_OWES_FIRM, ColumnKind::Money),
+        col("balance", ids::COL_BALANCE, ColumnKind::Balance),
+        col("last_date", ids::COL_LAST_DATE, ColumnKind::Date),
+    ]
+}
+
+/// Builds R24.
+///
+/// # Errors
+/// A database error; `ReportsError::Money` if a stored amount is not whole rupees, a total does
+/// not fit, or more is matched than a side holds (a bug signal).
+pub(crate) fn run(
+    conn: &Connection,
+    typed: &Typed,
+    spec: PageSpec,
+) -> Result<ReportPage, ReportsError> {
+    let today = typed
+        .today
+        .ok_or_else(|| ReportsError::Data("the report has no today".to_owned()))?;
+    let today_iso = today.to_iso();
+    let current = typed
+        .as_of
+        .as_deref()
+        .is_none_or(|as_of| as_of >= today_iso.as_str());
+    // The sellers with their workings are the same for every page of the report, so the first page
+    // reads them and the next pages take them from memory while the books are as they were
+    // (`result_cache`, plan 80 gate, NFR-SPD-24).
+    let what = format!(
+        "sellers_payable|{:?}|{:?}|{today_iso}|{current}",
+        typed.as_of, typed.party_id
+    );
+    let loaded = crate::result_cache::remembered(conn, &what, || {
+        Ok(candidates(conn, typed, &today_iso, current)?.0)
+    })?;
+    let sellers: &[Seller] = &loaded;
+
+    // Totals over the whole filter.
+    let (mut open, mut advance, mut owes) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+    let (mut sum_dr, mut sum_cr) = (Paisa::ZERO, Paisa::ZERO);
+    for seller in sellers {
+        if let Some(w) = seller.working {
+            add(&mut open, w.open)?;
+            add(&mut advance, w.advances_open)?;
+            add(&mut owes, w.owes_firm)?;
+        }
+        match seller.balance.side {
+            BalanceSide::Dr => add(&mut sum_dr, seller.balance.amount_paisa)?,
+            BalanceSide::Cr => add(&mut sum_cr, seller.balance.amount_paisa)?,
+            BalanceSide::Zero => {}
+        }
+    }
+
+    let mut all_rows = Vec::new();
+    if current {
+        let (owing, payable): (Vec<&Seller>, Vec<&Seller>) =
+            sellers.iter().partition(|s| s.owes_firm());
+        if !payable.is_empty() {
+            all_rows.push(heading(ids::SECTION_PAYABLE, &payable)?);
+            all_rows.extend(payable.iter().map(|s| seller_row(s)));
+        }
+        if !owing.is_empty() {
+            all_rows.push(heading(ids::SECTION_OWES_FIRM, &owing)?);
+            all_rows.extend(owing.iter().map(|s| seller_row(s)));
+        }
+    } else {
+        all_rows.extend(sellers.iter().map(seller_row));
+    }
+
+    Ok(ReportPage {
+        group_above: None,
+        tables: Vec::new(),
+        id: ReportId::R24,
+        title_id: ids::title_id("R24"),
+        filters: typed.resolved.clone(),
+        columns: columns(),
+        rows: spec.slice(&all_rows),
+        offset: spec.offset,
+        limit: spec.reported_limit(),
+        total_count: count_of(all_rows.len()),
+        totals_label_id: ids::TOTAL.to_owned(),
+        totals: vec![
+            Cell::Empty,
+            Cell::Empty,
+            if current {
+                Cell::Money { paisa: open }
+            } else {
+                Cell::Empty
+            },
+            if current {
+                Cell::Money { paisa: advance }
+            } else {
+                Cell::Empty
+            },
+            if current {
+                Cell::Money { paisa: owes }
+            } else {
+                Cell::Empty
+            },
+            balance_cell(Balance::from_totals(sum_dr, sum_cr)?),
+            Cell::Empty,
+        ],
+        summary: Vec::new(),
+    })
+}

@@ -1,0 +1,66 @@
+{
+  "steps": [
+    {
+      "expected": "10,000 سے زیادہ بقایا والے گاہک 1 ہیں، مل کر 18,684۔",
+      "outcome": "answered",
+      "question": "kis kis ke zimme 10,000 se zyada hai",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R20\", \"from\": null, \"to\": null, \"as_of\": null, \"party\": null, \"item\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"group_by\": null, \"where\": {\"column\": \"balance\", \"op\": \"gt\", \"value\": \"q.n1\"}, \"sort\": [{\"column\": \"balance\", \"order\": \"desc\"}], \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"{{q.n1}} سے زیادہ بقایا والے گاہک {{r1.matched.count}} ہیں، مل کر {{r1.matched.totals.balance}}۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 5900,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day"
+}

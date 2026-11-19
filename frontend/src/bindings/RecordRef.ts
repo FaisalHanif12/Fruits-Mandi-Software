@@ -20,4 +20,10 @@ export type RecordRef = {
    * English name.
    */
   name_en: string;
+  /**
+   * The tag (نشان) of an account, shown after its name through `displayName` (PRD 10.2,
+   * Code Standards F38). Null when the account has none, and always null for a record that is
+   * not an account (a city, an item, a packing, a staff member).
+   */
+  tag?: string;
 };

@@ -1,14 +1,33 @@
-// Development page /dev/bikri (plan 12): the real بکری بک screen inside the app shell, answered by
-// a stand-in for the backend with the numbers of Event 1 (PRD 4.4), so it can be opened in a plain
-// browser tab and photographed in both languages and at every window size. Never shipped: the route
-// exists only when import.meta.env.DEV is true (app/router.tsx).
+// Development page /dev/bikri (plans 12 and 13): the real بکری screens inside the app shell,
+// answered by a stand-in for the backend with the numbers of Event 1 (PRD 4.4), so they can be
+// opened in a plain browser tab and photographed in both languages and at every window size. The
+// flags in the hash choose the screen: none is the sale book; `?id=41` a saved بکری; `?id=41&edit=7`
+// its first entry open for edit; `?today` the list; `?stock` the goods left;
+// `?over` Umar's case of plan 57 (50 in the lot, one line; type 70 over its quantity); `?umar` Umar's case of D8 plan 61 (a lot of 200, type three lines, the third with the rate 900); `?thousand` 1,000 sale lines in one lot, to time typing, moving and the summary; `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer; `?own` the
+// lot of trip goods of E2E-34 (with `?stock`, `?id=1` and `?id=1&edit=4` the same lot saved, in
+// the goods left list and open for edit), answered with the backend's real files; `?tripday` a new
+// بکری with two purchases of today already in it as lots (plan 33). Never shipped: the route exists
+// only when import.meta.env.DEV is true (app/router.tsx).
 
 import { Localized } from '@fluent/react';
 import { useState } from 'react';
-import { devFlag, installDevBridge, seedEvent1 } from '../../../tests/helpers/dev-bridge';
+import {
+  devFlag,
+  installDevBridge,
+  seedEvent1,
+  seedOver,
+  seedOwn,
+} from '../../../tests/helpers/dev-bridge';
+import { fillThousandLines } from '../../../tests/helpers/bikri-thousand';
+import { fillUmarsLot } from '../../../tests/helpers/bikri-umar-data';
 import { paisaForTest } from '../../../tests/helpers/paisa';
+import { BikriDraftOffer } from '../../features/bikri/draft-offer';
 import { BikriBookPage } from '../../features/bikri/pages/BikriBookPage';
+import { StockPage } from '../../features/bikri/pages/StockPage';
+import { TodayBikriPage } from '../../features/bikri/pages/TodayBikriPage';
+import { PrintingTab } from '../../features/settings/components/PrintingTab';
 import { useLanguage } from '../../shared/i18n';
+import { useEscapeDispatcher } from '../../shared/keyboard';
 import { Button, CashConfirmDialog } from '../../shared/ui';
 import { AppShell } from '../layout/AppShell';
 import { MainNav } from '../layout/MainNav';
@@ -28,14 +47,29 @@ export function BikriPage() {
   });
   const [cashBox, setCashBox] = useState(false);
   const language = useLanguage();
+  // The key listeners the shell mounts once (Esc order, Backspace outside a text field).
+  useEscapeDispatcher();
   return (
     <AppShell
-      nav={<MainNav current="bikri" onSelect={() => undefined} />}
-      moduleMenu={<ModuleMenu current="bikri-book" onSelect={() => undefined} />}
+      nav={<MainNav current="bikri" onSelect={() => undefined} onSignOut={() => undefined} />}
+      moduleMenu={
+        <ModuleMenu
+          current={
+            devFlag('today')
+              ? 'today'
+              : devFlag('stock') || devFlag('later')
+                ? 'stock'
+                : 'bikri-book'
+          }
+          onSelect={() => undefined}
+        />
+      }
       userName={SAMPLE_USER}
       onLock={() => undefined}
-      onSignOut={() => undefined}
+      onGuide={() => undefined}
       onOpenAccount={() => undefined}
+      onOpenBikri={() => undefined}
+      onOpenVoucher={() => undefined}
       date={SAMPLE_DATE}
       day="open"
     >
@@ -60,7 +94,30 @@ export function BikriPage() {
           />
         </div>
       ) : null}
-      <BikriBookPage initialDraft={devFlag('empty') ? undefined : seedEvent1} />
+      {devFlag('offer') ? <BikriDraftOffer /> : null}
+      {devFlag('printing') ? (
+        <PrintingTab />
+      ) : devFlag('today') ? (
+        <TodayBikriPage />
+      ) : devFlag('stock') ? (
+        <StockPage />
+      ) : (
+        <BikriBookPage
+          initialDraft={
+            devFlag('empty') || devFlag('tripday')
+              ? undefined
+              : devFlag('own')
+                ? seedOwn
+                : devFlag('over')
+                  ? seedOver
+                  : devFlag('umar')
+                    ? fillUmarsLot
+                    : devFlag('thousand')
+                      ? fillThousandLines
+                      : seedEvent1
+          }
+        />
+      )}
     </AppShell>
   );
 }

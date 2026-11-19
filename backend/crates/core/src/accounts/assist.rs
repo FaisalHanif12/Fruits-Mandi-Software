@@ -12,13 +12,19 @@ use crate::money::Paisa;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountScope {
-    /// A seller field (control 03011). A short code is a seller serial.
+    /// A seller field (control 03011). A short code is the running number of a seller's code
+    /// (`0` finds `0010`). The اپنا مال account is not offered here (PRD FR-12.26).
     Seller,
-    /// A buyer field (control 0304), including نقدی منڈی and پختہ کھاتہ. A short code is a buyer
-    /// serial.
+    /// The seller field of a lot: the same as `seller`, and also the اپنا مال account (030119998),
+    /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase.
+    LotSeller,
+    /// A buyer field (control 0304), including نقدی منڈی and the چکتا buyers (each hit marked with
+    /// `kind` `chukta`, PRD FR-7.29, FR-13.4). The account چکتا کھاتہ itself is never offered. A short
+    /// code is the running number of a buyer's code (`1` finds `0021`); a چکتا buyer has no short
+    /// code.
     Buyer,
     /// A field that takes any account. A short code lists the seller and the buyer with that
-    /// serial, each with its type (PRD FR-7.39).
+    /// running number, each with its type (PRD 1.8 R5): `1` lists `0011` and `0021`.
     Any,
     /// The accounts of one control (`control_id` names it). Short codes do not apply: other
     /// accounts are found by full code or name (PRD FR-7.39).
@@ -34,10 +40,28 @@ pub struct SearchAccountsInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
-    /// What was typed. Raw: never converted to Urdu (PRD FR-7.22).
+    /// What was typed. Raw: never converted to Urdu (PRD FR-7.22). **Empty text gives the whole
+    /// list of the field** (plan 32 R7): the accounts this user chose last first (latest first), then
+    /// every other active account by code. A click on the picker opens this list.
     pub text: String,
-    /// The most hits, at most 50.
+    /// The most hits in this page, at most 50.
     pub limit: u32,
+    /// How many hits to skip, for the next page of a long list. 0 for the first page. A page with
+    /// fewer than `limit` hits is the last one. Missing means 0.
+    #[serde(default)]
+    pub offset: u32,
+    /// True only in the field of a وصولی and of an ادھار رقم واپسی: a person in the dead amount is
+    /// listed too (marked `is_dead`), because a recovery from him is still allowed (PRD FR-10.10).
+    /// Missing or false leaves him out, like any inactive account.
+    #[serde(default)]
+    #[ts(optional)]
+    pub include_dead: Option<bool>,
+    /// True only in the buyer field of a بکری line: scope `buyer` then lists the چکتا buyers beside the
+    /// buyers (PRD FR-7.29, decision C4 of plan 60). Missing or false leaves them out, so every other
+    /// buyer picker, filter and list pages exactly as before.
+    #[serde(default)]
+    #[ts(optional)]
+    pub with_chukta: Option<bool>,
 }
 
 /// The last accounts used in a field, then the rest (`Alt+Down`, PRD FR-7.41).
@@ -49,6 +73,14 @@ pub struct AccountsRecentInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
+    /// As on `SearchAccountsInput`: true in the field of a وصولی and of an ادھار رقم واپسی.
+    #[serde(default)]
+    #[ts(optional)]
+    pub include_dead: Option<bool>,
+    /// As on `SearchAccountsInput`: true only in the buyer field of a بکری line.
+    #[serde(default)]
+    #[ts(optional)]
+    pub with_chukta: Option<bool>,
 }
 
 /// Tell the app that an account was chosen in a field, so it comes first next time (PRD
@@ -66,6 +98,16 @@ pub struct AccountsTouchInput {
     pub id: i64,
 }
 
+/// What a picker hit is: an account, or a چکتا buyer (plan 64, PRD FR-7.29).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum HitKind {
+    /// An account of the books.
+    Account,
+    /// A چکتا buyer: a walk-in buyer who pays the whole bill on the spot.
+    Chukta,
+}
+
 /// One account a picker offers (PRD FR-7.40). The balance is not here: it is read from the
 /// journal on demand with `accounts_balances`, so the search stays fast.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -79,17 +121,34 @@ pub struct AccountHit {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2, FR-7.40).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Second line in Urdu: father or firm and city.
     pub extra_ur: String,
     /// Second line in English.
     pub extra_en: String,
     /// The kind of account, so a list of seller and buyer shows "بیوپاری" or "گاہک".
     pub account_type: AccountType,
+    /// `account` for a normal account; `chukta` for a چکتا buyer (plan 64, PRD FR-7.29): the row is
+    /// marked "چکتا". A `chukta` hit has the id of the account چکتا کھاتہ (`0030`) in `id`, which a
+    /// sale line takes as its `buyer_account_id`, and his own record in `chukta_id`.
+    pub kind: HitKind,
+    /// The record of a چکتا buyer in `chukta_buyers`. Null for an account.
+    #[ts(type = "number | null")]
+    pub chukta_id: Option<i64>,
+    /// His phone, for a `chukta` hit that has one, so the line can carry it. Null otherwise.
+    pub phone: Option<String>,
     /// The control it is under.
     #[ts(type = "number")]
     pub control_id: i64,
     /// False for an account hidden from pickers.
     pub is_active: bool,
+    /// True when the person is in the dead amount (PRD FR-10.10): the account is inactive and the
+    /// picker marks it "ڈوبی". Only the receipt picker and the ادھار رقم واپسی picker return such an
+    /// account; every other picker leaves it out (plan 40).
+    pub is_dead: bool,
 }
 
 /// A code typed in an account field, to be taken on `Enter` or on leaving the field (never
@@ -102,7 +161,9 @@ pub struct ResolveCodeInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
-    /// What was typed: 1 to 4 digits are a short code, 8 or 9 digits a full code.
+    /// What was typed. A running number (`0`, `11`: digits with no leading zero, at most 7) is a
+    /// short code; a full code (`0010`, `00111`, or any other account's code) is looked up as it
+    /// is (plan 32 R5).
     pub text: String,
 }
 
@@ -112,14 +173,16 @@ pub struct ResolveCodeInput {
 pub enum ResolveStatus {
     /// Exactly one active account. It is in `account`.
     Found,
-    /// A field that takes any account, and both a seller and a buyer have this serial. They
-    /// are in `candidates`.
+    /// More than one active account has this running number: in a field that takes any account, a
+    /// seller and a buyer. They are in `candidates`, so the user picks.
     Several,
     /// No account has this code. `suggested_code` is the full code an `F4` add would use, if
     /// the field has one series.
     Unknown,
-    /// The serial belongs to the system (0000 and 9000 to 9999), so it is never a short code
-    /// for a normal account (PRD FR-10.3).
+    /// Only for the field of one control (other accounts keep the control code plus a 4-digit
+    /// serial): the serial belongs to the system (0000 and 9000 to 9999), so such a code cannot
+    /// be added (PRD FR-10.3). Never returned for sellers and buyers from plan 32: every running
+    /// number from 0 is a normal short code, and the چکتا کھاتہ accounts have no short code.
     Reserved,
     /// The account exists but is hidden from pickers; a new posting cannot use it. It is in
     /// `account`.
@@ -163,6 +226,11 @@ pub struct PartyCardInput {
     /// The account.
     #[ts(type = "number")]
     pub account_id: i64,
+    /// A چکتا buyer (plan 64): with the account چکتا کھاتہ in `account_id` the card is his own, his
+    /// name and phone with no balance (PRD FR-7.38). Missing means none.
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub chukta_id: Option<i64>,
 }
 
 /// Why a card shows a warning. The screen shows a word as well as a colour (NFR-USE-12).
@@ -188,6 +256,36 @@ pub struct CardWarning {
     pub amount_paisa: Option<Paisa>,
 }
 
+/// The other account of one person who is both a seller and a buyer, and the two balances added
+/// together (PRD E10, FR-10.2, gate finding T4-2). Read only: worked out in Rust from both ledgers,
+/// never by the screen, and nothing is posted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LinkedBalance {
+    /// The other account (the one this card's account is linked to, or the one linked to it).
+    #[ts(type = "number")]
+    pub account_id: i64,
+    /// Its full code.
+    pub code: String,
+    /// What kind of account it is (a seller or a buyer).
+    pub account_type: AccountType,
+    /// Its Urdu name.
+    pub name_ur: String,
+    /// Its English name.
+    pub name_en: String,
+    /// Its tag (نشان), or absent if none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
+    /// False when the other account is hidden from pickers. Its balance is still counted.
+    pub is_active: bool,
+    /// The balance of the other account now, with its side.
+    pub balance: Balance,
+    /// This account's balance and the other's added together as signed amounts (debit minus
+    /// credit), with the side it ends on. Example: a buyer account 2,880 بنام and a seller account
+    /// 10,160 جمع give 7,280 جمع.
+    pub combined: Balance,
+}
+
 /// Everything the card next to an account field shows (PRD FR-7.38). Read only. Balances come
 /// from the posted journal, never from the search index (Code Standards B27).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -199,10 +297,20 @@ pub struct PartyCard {
     pub code: String,
     /// The kind of account.
     pub account_type: AccountType,
+    /// True for a چکتا buyer's card (PRD FR-7.38, v1.32): only his name and phone, no balance, and
+    /// the screen adds the words "چکتا: پورا نقد". Left out when false; the TypeScript field is
+    /// optional.
+    #[serde(default, skip_serializing_if = "super::is_false")]
+    #[ts(optional = nullable)]
+    pub is_chukta: bool,
     /// Urdu name.
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2, FR-7.38).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Father or firm in Urdu. Empty if none.
     pub father_or_firm_ur: String,
     /// Father or firm in English. Empty if none.
@@ -215,6 +323,9 @@ pub struct PartyCard {
     pub phone: String,
     /// False when hidden from pickers.
     pub is_active: bool,
+    /// The move to the dead amount, if the person is in it (PRD FR-7.38, FR-10.10): the card says
+    /// ڈوبی رقم with its date and reason. Null otherwise.
+    pub dead: Option<crate::dead::DeadInfo>,
     /// The balance now, with its side (بنام or جمع).
     pub balance: Balance,
     /// The date of the last posted entry on this account, `YYYY-MM-DD`, or null if none.
@@ -231,6 +342,11 @@ pub struct PartyCard {
     pub advance_open: Option<Paisa>,
     /// Warnings, each shown with a word and a colour.
     pub warnings: Vec<CardWarning>,
+    /// The other account of the same person (a seller who is also a buyer) with the combined
+    /// balance (PRD E10). Left out when the account has no link; the TypeScript field is optional.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub linked: Option<LinkedBalance>,
 }
 
 /// Global search (`Ctrl+K`, PRD FR-5.4).
@@ -242,7 +358,9 @@ pub struct SearchGlobalInput {
     pub limit: u32,
 }
 
-/// One result of the global search. Accounts now; later deliverables add their own kinds.
+/// One result of the global search. Each result has a `kind`: accounts, and (plan 13) a بکری
+/// found by its number or by the start of its truck number. Later deliverables add voucher
+/// numbers and screens as more kinds.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GlobalHit {
@@ -250,5 +368,18 @@ pub enum GlobalHit {
     Account {
         /// The account.
         hit: AccountHit,
+    },
+    /// A بکری (PRD FR-5.4). The accounts come first, then the بکری with this number, then the
+    /// newest بکری whose truck number starts with the text.
+    Bikri {
+        /// The بکری.
+        hit: crate::bikri::BikriHit,
+    },
+    /// A voucher found by its number (PRD FR-5.4, plan 15): the digits alone find the voucher
+    /// with that number in each series, `R-12`, `P-12` and `A-12` (or `و-12`, `ا-12`, `پ-12`)
+    /// find one series. They come after the بکری.
+    Voucher {
+        /// The voucher.
+        hit: crate::vouchers::VoucherHit,
     },
 }

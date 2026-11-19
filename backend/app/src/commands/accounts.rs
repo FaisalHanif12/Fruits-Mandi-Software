@@ -3,10 +3,11 @@
 //! No delete command exists: an account with postings can only be made inactive (PRD FR-10.6).
 
 use mandi_services::core::accounts::{
-    AccountBalance, AccountInput, AccountRow, AccountsBalancesInput, AccountsGetInput,
+    AccountBalance, AccountRow, AccountSaveRequest, AccountsBalancesInput, AccountsGetInput,
     AccountsList, AccountsListInput, AccountsNextCodeInput, AccountsSetActiveInput,
-    AccountsSimilarInput, CoaControl, CoaHead, CoaTree, OpeningsInput, OpeningsPreview,
-    OpeningsSaved, ResolveCodeInput, ResolvedCode, SimilarAccount,
+    AccountsSimilarInput, CoaControl, CoaControlAccounts, CoaControlAccountsInput, CoaHead,
+    CoaTree, OpeningsPreview, OpeningsRequest, OpeningsSaved, ResolveCodeInput, ResolvedCode,
+    SimilarAccount,
 };
 use mandi_services::{accounts, auth, coa, search};
 
@@ -18,15 +19,17 @@ use crate::error::UiError;
 /// Errors: the validate codes with field paths, `ERR_CODE_TAKEN`, `ERR_CODE_RESERVED`,
 /// `ERR_SERIES_FULL` (`code`), `ERR_OPENING_BOTH_SIDES`, `ERR_ADVANCE_NOT_SELLER`,
 /// `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE` (`opening_date`), `ERR_NOT_FOUND`,
-/// `ERR_VERSION_CHANGED`, `ERR_SPELLING_UNCONFIRMED`.
+/// `ERR_VERSION_CHANGED`, `ERR_SPELLING_UNCONFIRMED`, `ERR_TAG_INVALID` (`tag`, value `max` 4: the
+/// tag is empty or 1 to 4 English capital letters and dots with a letter; `k` is saved as `K`).
+/// The tag is stored once, in its own column, and is one more word of the three search keys.
 #[tauri::command]
 pub async fn accounts_save<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: AccountInput,
+    input: AccountSaveRequest,
 ) -> Result<AccountRow, UiError> {
     run(app, "accounts_save", move |ctx| {
         let actor = auth::require(ctx)?;
-        accounts::save(ctx, &actor, &input)
+        accounts::save_with_confirm(ctx, &actor, &input.base, input.confirm_cash_below_zero)
     })
     .await
 }
@@ -44,7 +47,9 @@ pub async fn accounts_get<R: tauri::Runtime>(
     .await
 }
 
-/// The account list with the columns of PRD FR-10.5 and its footer totals.
+/// The account list with the columns of PRD FR-10.5 and its footer totals. It shows only sellers and
+/// buyers, filtered by `kind` (`all`, `seller`, `buyer`; plan 32 R6, v1.32). The totals are over the
+/// same rows. A چکتا buyer is no account and is not listed (PRD FR-10.5).
 #[tauri::command]
 pub async fn accounts_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -70,7 +75,9 @@ pub async fn accounts_set_active<R: tauri::Runtime>(
     .await
 }
 
-/// The next free code for a kind of account. Errors: `ERR_SERIES_FULL`, `ERR_NOT_FOUND`
+/// The next free code for a kind of account: `0010`, `0011` ... for sellers and `0020` ... for buyers
+/// (the type number and the next running number, never a code used before, plan 32 R2); the other
+/// types keep the control code plus a 4-digit serial. Errors: `ERR_SERIES_FULL`, `ERR_NOT_FOUND`
 /// (`control_id`), `ERR_REQUIRED` (`control_id` for type `other`).
 #[tauri::command]
 pub async fn accounts_next_code<R: tauri::Runtime>(
@@ -85,7 +92,9 @@ pub async fn accounts_next_code<R: tauri::Runtime>(
 }
 
 /// Accounts that look like the one being typed, by name in either script and by phone
-/// (PRD FR-10.7, FR-7.63). Read only.
+/// (PRD FR-10.7, FR-7.63). An account is marked `is_duplicate` when its name, its tag and its phone
+/// all equal what was typed; the same name and phone with another tag is only similar (PRD E38).
+/// Duplicates come first. Read only.
 #[tauri::command]
 pub async fn accounts_similar<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -102,11 +111,11 @@ pub async fn accounts_similar<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn accounts_openings_preview<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: OpeningsInput,
+    input: OpeningsRequest,
 ) -> Result<OpeningsPreview, UiError> {
     run(app, "accounts_openings_preview", move |ctx| {
         auth::require(ctx)?;
-        accounts::openings_preview(ctx, &input)
+        accounts::openings_preview_with_confirm(ctx, &input.base, input.confirm_cash_below_zero)
     })
     .await
 }
@@ -116,11 +125,16 @@ pub async fn accounts_openings_preview<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn accounts_openings_save<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: OpeningsInput,
+    input: OpeningsRequest,
 ) -> Result<OpeningsSaved, UiError> {
     run(app, "accounts_openings_save", move |ctx| {
         let actor = auth::require(ctx)?;
-        accounts::openings_save(ctx, &actor, &input)
+        accounts::openings_save_with_confirm(
+            ctx,
+            &actor,
+            &input.base,
+            input.confirm_cash_below_zero,
+        )
     })
     .await
 }
@@ -131,6 +145,20 @@ pub async fn coa_tree<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<Coa
     run(app, "coa_tree", |ctx| {
         auth::require(ctx)?;
         coa::tree(ctx)
+    })
+    .await
+}
+
+/// One page of the accounts of one control with the control's own balance (plan 38 B1, Code
+/// Standards B31). Errors: `ERR_NOT_FOUND` (`control_id`), `ERR_OUT_OF_RANGE` (`limit` above 500).
+#[tauri::command]
+pub async fn coa_control_accounts<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CoaControlAccountsInput,
+) -> Result<CoaControlAccounts, UiError> {
+    run(app, "coa_control_accounts", move |ctx| {
+        auth::require(ctx)?;
+        coa::control_accounts(ctx, &input)
     })
     .await
 }
@@ -160,9 +188,10 @@ pub async fn coa_controls_list<R: tauri::Runtime>(
 }
 
 /// Takes a code typed in an account field, on `Enter` or on leaving the field only (PRD
-/// FR-7.38, FR-7.39, FR-7.42). Status `found`, `several` (a field that takes any account),
-/// `unknown` (with the code an `F4` add would use), `reserved` (serial 0000 or 9000 to 9999) or
-/// `inactive`. Read only.
+/// FR-7.38, FR-7.42, PRD 1.8 R5). A full code is looked up as typed; a running number (`0`, `11`)
+/// is a short code. Status `found`, `several` (a field that takes any account), `unknown` (with
+/// the code an `F4` add would use), `inactive`, or `reserved` (only in the field of one control,
+/// for a system serial such as 01019999). Read only.
 #[tauri::command]
 pub async fn accounts_resolve_code<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

@@ -1,0 +1,49 @@
+{
+  "rows": [],
+  "total_count": 0,
+  "totals": {
+    "qty_received": 0,
+    "qty_sold": 0,
+    "gross": 0,
+    "net": 0,
+    "buyer_total": 0
+  },
+  "months": [],
+  "days": [
+    {
+      "date": "2026-10-19",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-10-18",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-10-17",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-10-16",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-10-15",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-10-14",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-10-13",
+      "count": 0,
+      "gross_paisa": 0
+    }
+  ]
+}

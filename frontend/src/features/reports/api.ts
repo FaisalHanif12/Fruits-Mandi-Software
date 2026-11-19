@@ -1,0 +1,261 @@
+// Typed wrappers around the commands of the `reports` module: the print commands of plan 14 and the
+// report engine of plan 20 (`reports_catalog`, `reports_run`, `reports_print_data`). Components
+// never call invoke() (Code Standards F4). Every command takes one `{ input }` object, except
+// `reports_catalog`, which takes none. All of them need the signed-in Owner (NFR-SEC-13), except
+// that the hidden print window may call only `reports_bikri_print_data`,
+// `reports_voucher_print_data` and `reports_print_data` (its capability allows nothing else).
+
+import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
+import type { BuyerBillsPrintData } from '../../bindings/BuyerBillsPrintData';
+import type { CollectionPrintData } from '../../bindings/CollectionPrintData';
+import type { CollectionSheet } from '../../bindings/CollectionSheet';
+import type { CollectionSheetInput } from '../../bindings/CollectionSheetInput';
+import type { CollectionSheetPrintInput } from '../../bindings/CollectionSheetPrintInput';
+import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
+import type { DaySlipsInput } from '../../bindings/DaySlipsInput';
+import type { AdhariSheet } from '../../bindings/AdhariSheet';
+import type { AdhariSheetInput } from '../../bindings/AdhariSheetInput';
+import type { AdhariSheetPrintInput } from '../../bindings/AdhariSheetPrintInput';
+import type { DaySlipsPrintData } from '../../bindings/DaySlipsPrintData';
+import type { DeadAmountInput } from '../../bindings/DeadAmountInput';
+import type { DeadAmountPage } from '../../bindings/DeadAmountPage';
+import type { PrintAdhariInput } from '../../bindings/PrintAdhariInput';
+import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
+import type { PrintSlipsInput } from '../../bindings/PrintSlipsInput';
+import type { PrintData } from '../../bindings/PrintData';
+import type { PrintFrame } from '../../bindings/PrintFrame';
+import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
+import type { PrintInput } from '../../bindings/PrintInput';
+import type { PrintOutcome } from '../../bindings/PrintOutcome';
+import type { PrintTo } from '../../bindings/PrintTo';
+import type { PrintReportInput } from '../../bindings/PrintReportInput';
+import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
+import type { TableExportSource } from '../../bindings/TableExportSource';
+import type { TablePrintData } from '../../bindings/TablePrintData';
+import type { TablesExportRequest } from '../../bindings/TablesExportRequest';
+import type { ExcelExported } from '../../bindings/ExcelExported';
+import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
+import type { ReportPage } from '../../bindings/ReportPage';
+import type { ReportPrintData } from '../../bindings/ReportPrintData';
+import type { ReportPrintInput } from '../../bindings/ReportPrintInput';
+import type { ReportRunInput } from '../../bindings/ReportRunInput';
+import type { ReportsExportRequest } from '../../bindings/ReportsExportRequest';
+import type { SalePrintData } from '../../bindings/SalePrintData';
+import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput';
+import { callCommand } from '../../shared/api';
+
+/**
+ * Everything a template needs to print one document of one saved بکری, in the print language.
+ * Every value is already formatted by the backend; the template adds up nothing (CLAUDE.md rule 1).
+ */
+export function reportsBikriPrintData(input: BikriPrintDataInput): Promise<PrintData> {
+  return callCommand<PrintData>('reports_bikri_print_data', { input });
+}
+
+/**
+ * Everything the receipt slip of one saved voucher needs, in the print language (PRD FR-15.2): the
+ * party, one total, the amount in words and the facts. The template adds up nothing.
+ */
+export function reportsVoucherPrintData(input: VoucherPrintDataInput): Promise<PrintData> {
+  return callCommand<PrintData>('reports_voucher_print_data', { input });
+}
+
+/** Prints the receipt slip of a saved voucher on the printer, or saves it as a PDF. Windows and Mac (a Mac opens the system print window). */
+export function reportsPrintVoucher(input: PrintVoucherInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_print_voucher', { input });
+}
+
+/**
+ * Prints the documents on the printer or saves them as PDF files. Windows and Mac (plan 69: a Mac
+ * opens the system print window). On any other computer the backend answers
+ * `ERR_PRINT_WINDOWS_ONLY` and the screen offers the preview instead.
+ */
+export function reportsPrint(input: PrintInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_print', { input });
+}
+
+/** The names of the printers of this computer. Empty when the list is not available. */
+export function reportsListPrinters(): Promise<string[]> {
+  return callCommand<string[]>('reports_list_printers');
+}
+
+// ---- Plan 20: the report engine (PRD 19, Code Standards B31). Run B, D5 early track. ----
+
+/** Every report that is built, with its group and the filter boxes it takes (PRD 19.2). */
+export function reportsCatalog(): Promise<ReportCatalogEntry[]> {
+  return callCommand<ReportCatalogEntry[]>('reports_catalog');
+}
+
+/**
+ * One page of a report, with the totals over the whole filter (PRD FR-19.11). Send every key of
+ * the filters; the backend refuses a filter the report does not take, if it is filled.
+ */
+export function reportsRun(input: ReportRunInput): Promise<ReportPage> {
+  return callCommand<ReportPage>('reports_run', { input });
+}
+
+/** Everything a print of a report needs, with every row, in the print language (PRD FR-19.3). */
+export function reportsPrintData(input: ReportPrintInput): Promise<ReportPrintData> {
+  return callCommand<ReportPrintData>('reports_print_data', { input });
+}
+
+/**
+ * Everything a print of ALL the credit buyers' slips of R5 needs, one slip for each buyer, with every
+ * row (PRD 19.2 R5, "Print All"). The input is the one of the R5 print; any other report is refused.
+ */
+export function reportsBuyerBillsPrintData(input: ReportPrintInput): Promise<BuyerBillsPrintData> {
+  return callCommand<BuyerBillsPrintData>('reports_buyer_bills_print_data', { input });
+}
+
+/**
+ * Sends a report to the printer or saves it as a PDF (PRD FR-19.3): the request is checked first, so a
+ * bad filter is refused at its own field before any paper is used. `slips` is R5 "Print All", one
+ * slip for each credit buyer. On a computer that is neither Windows nor a Mac a valid request answers `ERR_PRINT_WINDOWS_ONLY`.
+ */
+export function reportsPrintReport(input: PrintReportInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_print_report', { input });
+}
+
+/**
+ * Saves EVERY row of a report as an Excel file at `path` (D5-Q1), with the sheet in `language`. The
+ * progress comes by the event `export-progress` for `job_id`. The file is never opened or read back.
+ */
+export function reportsExportExcel(input: ReportsExportRequest): Promise<ExcelExported> {
+  return callCommand<ExcelExported>('reports_export_excel', { input });
+}
+
+/**
+ * The collection list of one day (اگراہی فہرست, PRD FR-15.6) for print, in the print language:
+ * the buyers by collector and city, with the totals of each group and of the list. Every value is
+ * formatted by the backend; the template adds up nothing (CLAUDE.md rule 1).
+ */
+export function reportsCollectionPrintData(
+  input: CollectionPrintDataInput,
+): Promise<CollectionPrintData> {
+  return callCommand<CollectionPrintData>('reports_collection_print_data', { input });
+}
+
+/** Prints the collection list of one day on the printer, or saves it as a PDF. Windows and Mac. */
+export function reportsPrintCollection(input: PrintCollectionInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_print_collection', { input });
+}
+
+/**
+ * The shared header and footer of a print that is not a document of a بکری or a voucher (PRD
+ * FR-19.13): the firm, contacts, trade mark, the title and facts, and the print time. The one
+ * command every report print asks for its frame.
+ */
+export function reportsPrintHeader(input: PrintFrameInput): Promise<PrintFrame> {
+  return callCommand<PrintFrame>('reports_print_header', { input });
+}
+
+/**
+ * One page of R38, the dead amount (PRD FR-10.10, R38): everyone moved to ڈوبی رقم, with what he
+ * owed then, what was recovered since and what he still owes. The count and the totals are over the
+ * whole filter (PRD FR-19.11), never a sum of the page.
+ */
+export function reportsDeadAmount(input: DeadAmountInput): Promise<DeadAmountPage> {
+  return callCommand<DeadAmountPage>('reports_dead_amount', { input });
+}
+
+/**
+ * The اگراہی sheet of one day (R5, PRD R5, FR-19.11, plan 76 point 2): one row for each buyer who owes or
+ * bought that day, a page at a time, with the totals over the whole filter and the dead amount apart.
+ */
+export function reportsCollectionSheet(input: CollectionSheetInput): Promise<CollectionSheet> {
+  return callCommand<CollectionSheet>('reports_collection_sheet', { input });
+}
+
+/**
+ * ادھاری تفصیل of one day on screen (R5, PRD R5 v1.43, FR-19.11, plan 80 Q-R5-2): one row for each buyer who bought
+ * that day, a page at a time, with today's total, the buyers who did not buy today, the total credit of all
+ * buyers, and the dead amount and the credit-side buyers apart. Every figure is the backend's.
+ */
+export function reportsAdhariSheet(input: AdhariSheetInput): Promise<AdhariSheet> {
+  return callCommand<AdhariSheet>('reports_adhari_sheet', { input });
+}
+
+/**
+ * The buyer parchi of a day (PRD FR-19.15, plan 76 point 3): the R35 slip of each buyer who bought, sorted by
+ * name, for the template that lays several on one A4. `buyer_ids` null is every buyer of the day.
+ */
+export function reportsBuyerParchiPrintData(input: DaySlipsInput): Promise<DaySlipsPrintData> {
+  return callCommand<DaySlipsPrintData>('reports_buyer_parchi_print_data', { input });
+}
+
+/** Prints the parchi, or saves it as a PDF: the same slips, language and paper as the preview. */
+export function reportsBuyerParchiPrint(input: PrintSlipsInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_buyer_parchi_print', { input });
+}
+
+/**
+ * The seller bills of a day or of one بکری (PRD FR-19.15, plan 78 A1, A3): the R35 slip of each seller, sorted by
+ * name, each titled "<name> کا بل". Only `sellers` is filled.
+ */
+export function reportsSellerBillsPrintData(input: DaySlipsInput): Promise<DaySlipsPrintData> {
+  return callCommand<DaySlipsPrintData>('reports_seller_bills_print_data', { input });
+}
+
+/** Prints the seller bills, or saves them as a PDF: the same slips, language and paper as the preview. */
+export function reportsSellerBillsPrint(input: PrintSlipsInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_seller_bills_print', { input });
+}
+
+/**
+ * The whole sale print of one بکری or of a whole day (PRD FR-19.15, plan 78 A4): the sellers table, then the
+ * buyers table, on one or two pages. `bikri_id` null is the whole day.
+ */
+export function reportsSalePrintData(input: DaySlipsInput): Promise<SalePrintData> {
+  return callCommand<SalePrintData>('reports_sale_print_data', { input });
+}
+
+/** Prints the whole sale print, or saves it as a PDF: the same scope, language and paper as the preview. */
+export function reportsSalePrint(input: PrintSlipsInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_sale_print', { input });
+}
+
+/**
+ * ادھاری تفصیل of a day for print (PRD R5, plan 78 A5): today's buyers one row each, then the totals of the
+ * others and of everyone who owes. Always the whole day.
+ */
+export function reportsAdhariSheetPrintData(input: AdhariSheetPrintInput): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('reports_adhari_sheet_print_data', { input });
+}
+
+/** Prints ادھاری تفصیل, or saves it as a PDF: the same day, language and paper as the preview. */
+export function reportsAdhariSheetPrint(input: PrintAdhariInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_adhari_sheet_print', { input });
+}
+
+/**
+ * Prints the sheet, or saves it as a PDF (PRD FR-19.3): the filter of the screen, the print language and the
+ * paper. The job opens the hidden print window like the other prints. `copies` null is one.
+ */
+export function reportsCollectionSheetPrint(input: {
+  sheet: CollectionSheetPrintInput;
+  to: PrintTo;
+  copies: string | null;
+}): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_collection_sheet_print', { input });
+}
+
+/** Every row of the sheet written in the print language, for the preview and the print (FR-19.13). */
+export function reportsCollectionSheetPrintData(
+  input: CollectionSheetPrintInput,
+): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('reports_collection_sheet_print_data', { input });
+}
+
+/**
+ * Saves every row of one of the table pages of plan 76 as an Excel file at `path`: the commission month, the buyer
+ * dues, the اگراہی sheet or a month of a partner's statement (PRD FR-19.3). The progress comes by the event
+ * `export-progress` for `job_id`. The partner parts stay out while the partner section is locked.
+ */
+export function tablesExportExcel(input: {
+  job_id: string;
+  path: string;
+  source: TableExportSource;
+}): Promise<ExcelExported> {
+  const request: TablesExportRequest = input;
+  return callCommand<ExcelExported>('tables_export_excel', { input: request });
+}

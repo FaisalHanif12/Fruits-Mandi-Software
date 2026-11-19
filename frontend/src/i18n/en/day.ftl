@@ -75,13 +75,19 @@ day-closed = Days up to { $date } are closed
 day-reopen-title = Reopen a day
 
 # review: pending
-day-reopen-help = Reopening a date reopens every later date too. A reason is required and is written to the audit log.
+day-reopen-help = Reopening a date reopens every later date too. A reason and the Owner's { -dastakhat } are required, and the reason is written to the audit log.
 
 # review: pending
 day-reopen-date = Date to reopen
 
 # review: pending
 day-reopen-reason = Reason
+
+# review: pending
+day-reopen-sign = { -dastakhat }
+
+# review: pending
+day-reopen-sign-hint = Only the Owner's { -dastakhat } opens a closed day.
 
 # review: pending
 day-reopen-button = Reopen
@@ -100,3 +106,51 @@ day-reopen-none-title = No day is closed yet
 
 # review: pending
 day-reopen-none-help = When you close a day, you can reopen it here.
+
+## The full summary of the days to close (PRD FR-21.1, 4.9).
+
+# review: pending
+day-summary-title = What these days came to
+
+# review: pending
+day-summary-bikri-count = Number of { -bikri }
+
+# review: pending
+day-summary-gross = { -kham-bikri }
+
+# review: pending
+day-summary-commission = { -commission } and { -laga }, both sides
+
+# review: pending
+day-summary-shared-income = Shared income
+
+# review: pending
+day-summary-open-lots = Lots in { -baqi-maal }
+
+# review: pending
+day-summary-open-qty = { -nag } in { -baqi-maal }
+
+# $lots: lots with a balance left. $qty: their nag. A reminder only: the day can still be closed.
+# review: pending
+day-summary-stock-left-note = { $lots ->
+    [one] <num>{ $lots }</num> lot with <num>{ $qty }</num> { -nag } is still in { -baqi-maal }. The day can still be closed; the goods can be sold later.
+   *[other] <num>{ $lots }</num> lots with <num>{ $qty }</num> { -nag } are still in { -baqi-maal }. The day can still be closed; the goods can be sold later.
+}
+
+# review: pending
+day-summary-no-partners = There are no partner shares to show.
+
+# review: pending
+day-summary-partners-label = Each partner's share of these days
+
+# review: pending
+day-summary-col-partner = { -shirakat-dar }
+
+# review: pending
+day-summary-col-income = Income { -hissa }
+
+# review: pending
+day-summary-col-expense = { -kharcha } { -hissa }
+
+# review: pending
+day-summary-col-profit = Profit { -hissa }

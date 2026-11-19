@@ -2,7 +2,7 @@
 //! functions. No database, no clock.
 //!
 //! One posting is one journal entry. Its lines on income accounts (head 04) make ONE income base
-//! and its lines on shop expense accounts (head 05, which includes the cost of own goods) make
+//! and its lines on shop expense accounts (head 05, the دکان خرچہ heads) make
 //! ONE expense base. Each base is split on its own between the partners by their shares on the
 //! posting date, with `split_by_bps` and nothing else (money agent Section 5):
 //!
@@ -45,9 +45,9 @@ use crate::ledger::{BalancedEntry, Side};
 /// expense). Every other head is [`Nature::Other`]: its lines never make share rows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Nature {
-    /// Head 04: commission, لاگا, فون, ریٹ فرق, تجارتی فروخت.
+    /// Head 04: commission, لاگا, فون, ریٹ فرق.
     Income,
-    /// Head 05: the دکان خرچہ heads and اپنا مال لاگت.
+    /// Head 05: the دکان خرچہ heads.
     Expense,
     /// Anything else.
     Other,

@@ -1,0 +1,108 @@
+{
+  "view": "M",
+  "title_id": "analytics-lines-title",
+  "filters": {
+    "period": null,
+    "from": "2026-10-01",
+    "to": "2026-10-31",
+    "group_by": "month",
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "garden": null,
+    "goods": "all",
+    "trip_view": null,
+    "expense_part": "shop"
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "name",
+      "title_id": "analytics-col-name",
+      "kind": "names"
+    },
+    {
+      "key": "reason",
+      "title_id": "dead-col-reason",
+      "kind": "text"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-expense",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-shop-expense",
+          "number": 1
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "بجلی",
+            "en": "Electricity"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 4
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 300000
+    }
+  ]
+}

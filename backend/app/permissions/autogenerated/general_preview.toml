@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-general-preview"
+description = "Enables the general_preview command without any pre-configured scope."
+commands.allow = ["general_preview"]
+
+[[permission]]
+identifier = "deny-general-preview"
+description = "Denies the general_preview command without any pre-configured scope."
+commands.deny = ["general_preview"]

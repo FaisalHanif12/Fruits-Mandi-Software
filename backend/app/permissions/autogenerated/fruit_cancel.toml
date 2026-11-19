@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fruit-cancel"
+description = "Enables the fruit_cancel command without any pre-configured scope."
+commands.allow = ["fruit_cancel"]
+
+[[permission]]
+identifier = "deny-fruit-cancel"
+description = "Denies the fruit_cancel command without any pre-configured scope."
+commands.deny = ["fruit_cancel"]

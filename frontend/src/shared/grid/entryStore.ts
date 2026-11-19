@@ -77,11 +77,18 @@ export function createEntryStore(initial: readonly Record<string, string>[] = []
       return row.rowId;
     },
     updateTyped: (rowId, field, text) => {
-      set((state) => ({
-        rows: state.rows.map((row) =>
-          row.rowId === rowId ? { ...row, typed: { ...row.typed, [field]: text } } : row,
-        ),
-      }));
+      set((state) => {
+        const at = state.rows.findIndex((row) => row.rowId === rowId);
+        const row = state.rows[at];
+        // The same text again changes nothing: no new rows, so no draft is built, no preview asked and
+        // nothing is saved again (D8 plan 61).
+        if (row === undefined || row.typed[field] === text) return state;
+        return {
+          rows: state.rows.map((candidate, index) =>
+            index === at ? { ...row, typed: { ...row.typed, [field]: text } } : candidate,
+          ),
+        };
+      });
     },
     updatePicked: (rowId, field, record) => {
       set((state) => ({
@@ -132,3 +139,15 @@ export function createEntryStore(initial: readonly Record<string, string>[] = []
 }
 
 export type EntryStore = ReturnType<typeof createEntryStore>;
+
+/**
+ * Adds a row at the end and puts the cursor on its `field`, once it is drawn. This is the one way a
+ * grid gets a new row: `↓` on the last row, `Enter` on the last cell, and the "+" button under the
+ * grid all come here, so the rows, the cursor and the keyboard rules are the same whichever was used.
+ * Returns the ID of the new row.
+ */
+export function addRowAndFocus(store: EntryStore, field: string): string {
+  const rowId = store.getState().addRow();
+  store.getState().setPendingFocus({ rowIndex: 'last', field });
+  return rowId;
+}

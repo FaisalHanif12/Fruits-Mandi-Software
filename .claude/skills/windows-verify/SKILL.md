@@ -50,7 +50,7 @@ Open the screenshots and PDFs and look at them yourself. Use this checklist:
 
 - [ ] **Urdu text** is joined Nastaliq. No broken letters, no boxes, no `?`. Tall letters are not clipped in grid rows or printed tables.
 - [ ] **Direction:** the Urdu screens are right-to-left and the English screens left-to-right. Nothing overlaps or is cut off.
-- [ ] **Numbers** keep their order inside Urdu text, for example `(16 @ 900)`. Money columns line up on the physical right edge.
+- [ ] **Numbers** keep their order inside Urdu text, for example `(16 @ 900)`. Number columns are centred under their headings.
 - [ ] **Window sizes:** no sideways scroll at 1024 × 600, 1366 × 768 or 1920 × 1080, at each supported scaling.
 - [ ] **Prints and PDFs:** the right paper size, headers repeated on every page, no row split across pages, "Page x of y" correct, amounts in words correct in the print language.
 - [ ] **Tests:** every end-to-end test passed. Read the report, not just the green tick.

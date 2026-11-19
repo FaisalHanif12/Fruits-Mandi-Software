@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-open-for-edit"
+description = "Enables the vouchers_open_for_edit command without any pre-configured scope."
+commands.allow = ["vouchers_open_for_edit"]
+
+[[permission]]
+identifier = "deny-vouchers-open-for-edit"
+description = "Denies the vouchers_open_for_edit command without any pre-configured scope."
+commands.deny = ["vouchers_open_for_edit"]

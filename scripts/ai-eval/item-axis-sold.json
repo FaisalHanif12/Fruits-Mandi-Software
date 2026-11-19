@@ -1,0 +1,175 @@
+{
+  "periods": {
+    "today": ["banana"],
+    "yesterday": ["apple"],
+    "d2026_11_03": ["apple", "potato"],
+    "d2026_10_14": ["banana", "apple", "potato"],
+    "week": ["banana", "apple", "potato"],
+    "last_week": ["apple"],
+    "month": ["banana", "apple", "potato"],
+    "last_month": ["banana", "apple", "mosambi", "grapes", "potato", "radish", "tomato", "onion"],
+    "m2026_09": ["banana", "apple", "grapes", "potato", "tomato", "onion"],
+    "m2026_08": ["banana", "apple", "mosambi", "mango", "grapes", "potato", "tomato", "onion"],
+    "year": [
+      "banana",
+      "apple",
+      "mosambi",
+      "mango",
+      "grapes",
+      "potato",
+      "radish",
+      "tomato",
+      "onion",
+      "saag"
+    ],
+    "last_year": ["banana", "apple", "mosambi", "potato", "radish", "tomato", "onion", "saag"],
+    "r2026_10_01_2026_10_15": [
+      "banana",
+      "apple",
+      "mosambi",
+      "grapes",
+      "potato",
+      "radish",
+      "tomato",
+      "onion"
+    ],
+    "up_to_now": [
+      "banana",
+      "apple",
+      "mosambi",
+      "mango",
+      "grapes",
+      "potato",
+      "radish",
+      "tomato",
+      "onion",
+      "saag"
+    ],
+    "d2026_10_13": ["banana"],
+    "last_week2": ["banana", "apple", "mosambi", "potato", "radish", "tomato", "onion"],
+    "last_year2": [],
+    "r2026_09_16_2026_09_30": ["banana", "apple", "grapes", "potato", "tomato", "onion"]
+  },
+  "party": {
+    "today": ["banana"],
+    "yesterday": [],
+    "d2026_11_03": [],
+    "d2026_10_14": [],
+    "week": ["banana"],
+    "last_week": [],
+    "month": ["banana"],
+    "last_month": ["banana"],
+    "m2026_09": ["banana", "potato"],
+    "m2026_08": ["banana", "potato"],
+    "year": ["banana", "potato"],
+    "last_year": ["banana", "potato"],
+    "r2026_10_01_2026_10_15": ["banana"],
+    "up_to_now": ["banana", "potato"],
+    "d2026_10_13": [],
+    "last_week2": ["banana"],
+    "last_year2": [],
+    "r2026_09_16_2026_09_30": ["banana", "potato"]
+  },
+  "quality": {
+    "today": {
+      "banana": ["first", "second", "third"]
+    },
+    "yesterday": {
+      "apple": ["first", "second", "third"]
+    },
+    "d2026_11_03": {
+      "apple": ["first", "second", "third"],
+      "potato": ["first", "second", "third"]
+    },
+    "d2026_10_14": {},
+    "week": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "potato": ["first", "second", "third"]
+    },
+    "last_week": {
+      "apple": ["first", "second", "third"]
+    },
+    "month": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "potato": ["first", "second", "third"]
+    },
+    "last_month": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "potato": ["first", "second"],
+      "radish": ["first", "second"],
+      "onion": ["first", "second", "third"]
+    },
+    "m2026_09": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "grapes": ["first", "second", "third"],
+      "potato": ["first", "second", "third"],
+      "onion": ["first", "second", "third"]
+    },
+    "m2026_08": {
+      "banana": ["first", "second", "third"],
+      "mango": ["first", "second", "third"],
+      "grapes": ["first", "second", "third"],
+      "potato": ["first", "second", "third"],
+      "tomato": ["first", "second", "third"],
+      "onion": ["first", "second", "third"]
+    },
+    "year": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "mosambi": ["first", "second", "third"],
+      "mango": ["first", "second", "third"],
+      "grapes": ["first", "second", "third"],
+      "potato": ["first", "second", "third"],
+      "radish": ["first", "second", "third"],
+      "tomato": ["first", "second", "third"],
+      "onion": ["first", "second", "third"],
+      "saag": ["first", "second", "third"]
+    },
+    "last_year": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "mosambi": ["first", "second", "third"],
+      "potato": ["first", "second", "third"],
+      "radish": ["first", "second", "third"],
+      "tomato": ["first", "second", "third"],
+      "onion": ["first", "second", "third"],
+      "saag": ["first", "second", "third"]
+    },
+    "r2026_10_01_2026_10_15": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "potato": ["first", "second"],
+      "onion": ["first", "second", "third"]
+    },
+    "up_to_now": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "mosambi": ["first", "second", "third"],
+      "mango": ["first", "second", "third"],
+      "grapes": ["first", "second", "third"],
+      "potato": ["first", "second", "third"],
+      "radish": ["first", "second", "third"],
+      "tomato": ["first", "second", "third"],
+      "onion": ["first", "second", "third"],
+      "saag": ["first", "second", "third"]
+    },
+    "d2026_10_13": {},
+    "last_week2": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "radish": ["first", "second"]
+    },
+    "last_year2": {},
+    "r2026_09_16_2026_09_30": {
+      "banana": ["first", "second", "third"],
+      "apple": ["first", "second", "third"],
+      "grapes": ["first", "second", "third"],
+      "potato": ["first", "second", "third"]
+    }
+  },
+  "stock0": ["grapes", "radish", "onion", "saag"]
+}

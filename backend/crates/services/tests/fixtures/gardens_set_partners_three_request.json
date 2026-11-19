@@ -1,0 +1,21 @@
+{
+  "id": 1,
+  "partners": [
+    {
+      "partner_id": 1,
+      "share": "50",
+      "source": "shop"
+    },
+    {
+      "partner_id": 2,
+      "share": "30",
+      "source": "pocket"
+    },
+    {
+      "partner_id": 3,
+      "share": "20",
+      "source": "shop"
+    }
+  ],
+  "version": 1
+}

@@ -3,8 +3,10 @@
 //! (PRD FR-10.6). Balances are not here: they come from the journal (`crate::ledger`).
 
 use mandi_core::accounts::{
-    AccountFilter, AccountRow, AccountType, Balance, CoaControl, CoaHead, RecordRef,
-    SimilarAccount, can_take_opening,
+    AccountFilter, AccountListKind, AccountRow, AccountType, BANK_ACCOUNT_CODE, BUYER_CONTROL,
+    Balance, CoaControl, CoaHead, EXPENSE_HEAD, GARDEN_CONTROL_CODE, INCOME_HEAD, NAQDI_MANDI_CODE,
+    OPENING_DIFFERENCE_CODE, OWN_GOODS_CODE, RecordRef, SELLER_CONTROL, SimilarAccount,
+    VENTURE_CONTROL_CODE, can_take_opening,
 };
 use mandi_core::masters::ColValue;
 use mandi_core::money::Paisa;
@@ -47,8 +49,8 @@ pub struct AccountFacts {
     pub head_code: String,
     /// A system account.
     pub is_system: bool,
-    /// The پختہ کھاتہ account.
-    pub is_pukhta_khata: bool,
+    /// The چکتا کھاتہ account or the old closed one (person typed on the line).
+    pub is_chukta_khata: bool,
     /// Active.
     pub is_active: bool,
     /// The opening entry now in force.
@@ -128,7 +130,7 @@ pub fn inactive_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i6
 /// Any SQLite error.
 pub fn facts(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountFacts>> {
     conn.query_row(
-        "SELECT a.id, a.version, a.code, c.code, h.code, a.is_system, a.is_pukhta_khata, a.is_active,
+        "SELECT a.id, a.version, a.code, c.code, h.code, a.is_system, a.is_chukta_khata, a.is_active,
                 a.opening_entry_id, a.opening_date, a.opening_dr_paisa, a.opening_cr_paisa, a.opening_is_advance
          FROM accounts a JOIN account_controls c ON c.id = a.control_id JOIN account_heads h ON h.id = c.head_id
          WHERE a.id = ?1",
@@ -141,7 +143,7 @@ pub fn facts(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountFacts
                 control_code: r.get(3)?,
                 head_code: r.get(4)?,
                 is_system: r.get(5)?,
-                is_pukhta_khata: r.get(6)?,
+                is_chukta_khata: r.get(6)?,
                 is_active: r.get(7)?,
                 opening_entry_id: r.get(8)?,
                 opening_date: r.get(9)?,
@@ -163,6 +165,40 @@ pub fn id_by_code(conn: &Connection, code: &str) -> rusqlite::Result<Option<i64>
         r.get(0)
     })
     .optional()
+}
+
+/// The account this one is linked to (PRD E10: the same person as a seller and as a buyer), if
+/// any. The link is stored on one of the two accounts, so the account it points at counts as
+/// linked too: this account's own `linked_account_id` first, else the lowest id of an account whose
+/// `linked_account_id` is this one. One query.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn linked_account_of(conn: &Connection, id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT COALESCE(
+             (SELECT linked_account_id FROM accounts WHERE id = ?1),
+             (SELECT MIN(id) FROM accounts WHERE linked_account_id = ?1))",
+        [id],
+        |r| r.get(0),
+    )
+}
+
+/// The ids of the accounts, other than `except`, whose `linked_account_id` is `id`: who points at
+/// this account (PRD E10). Used to keep a link one clean pair.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn accounts_linking_to(
+    conn: &Connection,
+    id: i64,
+    except: Option<i64>,
+) -> rusqlite::Result<Vec<i64>> {
+    let mut statement = conn.prepare(
+        "SELECT id FROM accounts WHERE linked_account_id = ?1 AND id IS NOT ?2 ORDER BY id",
+    )?;
+    let rows = statement.query_map(params![id, except], |r| r.get(0))?;
+    rows.collect()
 }
 
 /// True if another account (not `except_id`) already has this code.
@@ -213,7 +249,7 @@ const ROW_SELECT: &str = "SELECT a.id, a.version, a.code, a.serial,
         a.credit_allowed, a.credit_limit_paisa,
         mk.id, mk.code, mk.mark_text,
         st.id, st.name_ur, st.name_en,
-        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code
+        a.is_system, a.is_chukta_khata, a.is_active, a.note, h.code, a.tag, l.tag
      FROM accounts a
      JOIN account_controls c ON c.id = a.control_id
      JOIN account_heads h ON h.id = c.head_id
@@ -240,12 +276,14 @@ fn optional_ref(
             code: r.get(first + 1)?,
             name_ur: r.get(first + 2)?,
             name_en: r.get(first + 3)?,
+            tag: None,
         },
         None => RecordRef {
             id,
             code: String::new(),
             name_ur: r.get(first + 1)?,
             name_en: r.get(first + 2)?,
+            tag: None,
         },
     }))
 }
@@ -276,6 +314,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
             code: control_code,
             name_ur: r.get(6)?,
             name_en: r.get(7)?,
+            tag: None,
         },
         name_ur: r.get(8)?,
         name_en: r.get(9)?,
@@ -286,7 +325,14 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         phone1: r.get::<_, Option<String>>(20)?.unwrap_or_default(),
         phone2: r.get::<_, Option<String>>(21)?.unwrap_or_default(),
         address: r.get::<_, Option<String>>(22)?.unwrap_or_default(),
-        linked_account: optional_ref(r, 23, Some(24))?,
+        linked_account: {
+            // The linked account is an account too, so it carries its tag (PRD 10.2).
+            let mut linked = optional_ref(r, 23, Some(24))?;
+            if let Some(linked) = linked.as_mut() {
+                linked.tag = r.get(45)?;
+            }
+            linked
+        },
         opening_date: r.get(27)?,
         opening_dr_paisa: paisa(r.get(28)?)?,
         opening_cr_paisa: paisa(r.get(29)?)?,
@@ -295,17 +341,18 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         credit_limit_paisa: credit_limit.map(paisa).transpose()?,
         default_marka: marka_ref(r)?,
         collector: optional_ref(r, 36, None)?,
-        collection_weekday: r.get(39)?,
-        is_system: r.get(40)?,
+        is_system: r.get(39)?,
         can_take_opening: can_take_opening(
-            &r.get::<_, String>(44)?,
+            &r.get::<_, String>(43)?,
+            &r.get::<_, String>(4)?,
             &r.get::<_, String>(2)?,
-            r.get(41)?,
+            r.get(40)?,
         ),
-        is_pukhta_khata: r.get(41)?,
-        is_active: r.get(42)?,
-        note: r.get::<_, Option<String>>(43)?.unwrap_or_default(),
+        is_chukta_khata: r.get(40)?,
+        is_active: r.get(41)?,
+        note: r.get::<_, Option<String>>(42)?.unwrap_or_default(),
         balance: Balance::ZERO,
+        tag: r.get(44)?,
     })
 }
 
@@ -321,6 +368,7 @@ fn marka_ref(r: &Row<'_>) -> rusqlite::Result<Option<RecordRef>> {
         code: r.get(34)?,
         name_ur: text.clone(),
         name_en: text,
+        tag: None,
     }))
 }
 
@@ -334,6 +382,38 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountRow>> {
         .optional()
 }
 
+/// The condition of an account list kind, or `None` for `every` (no condition: every account, as the
+/// list was before plan 32, decision D4).
+fn kind_condition(kind: AccountListKind) -> Option<String> {
+    match kind {
+        AccountListKind::Every => None,
+        // Sellers and buyers only (PRD FR-10.5, v1.32): چکتا کھاتہ is not an account of a person.
+        AccountListKind::All => Some(format!(
+            "(c.code IN ('{SELLER_CONTROL}', '{BUYER_CONTROL}') AND a.is_system = 0)"
+        )),
+        AccountListKind::Seller => {
+            Some(format!("(c.code = '{SELLER_CONTROL}' AND a.is_system = 0)"))
+        }
+        AccountListKind::Buyer => Some(format!("(c.code = '{BUYER_CONTROL}' AND a.is_system = 0)")),
+    }
+}
+
+/// The condition of the opening filter (PRD FR-10.9). `Some(true)`: the account has an opening, a
+/// debit or a credit. `Some(false)`: it has none and CAN take one, by the same list as
+/// `core::accounts::can_take_opening` (a test holds the two together). `None`: no condition.
+fn opening_condition(has_opening: Option<bool>) -> Option<String> {
+    match has_opening {
+        None => None,
+        Some(true) => Some("(a.opening_dr_paisa > 0 OR a.opening_cr_paisa > 0)".to_owned()),
+        Some(false) => Some(format!(
+            "(a.opening_dr_paisa = 0 AND a.opening_cr_paisa = 0 AND a.is_chukta_khata = 0 \
+             AND c.head_id NOT IN (SELECT id FROM account_heads WHERE code IN ('{INCOME_HEAD}', '{EXPENSE_HEAD}')) \
+             AND a.code NOT IN ('{OPENING_DIFFERENCE_CODE}', '{NAQDI_MANDI_CODE}', '{OWN_GOODS_CODE}', '{BANK_ACCOUNT_CODE}') \
+             AND c.code NOT IN ('{VENTURE_CONTROL_CODE}', '{GARDEN_CONTROL_CODE}', '0605', '0307'))"
+        )),
+    }
+}
+
 /// The WHERE part and its parameters for a filter. `text_ur` and `text_en` are search keys made
 /// by `core::text`. Parameters are numbered from 1 in the order of the returned values.
 fn filter_sql(filter: &AccountFilter, text_ur: &str, text_en: &str) -> (String, Vec<Value>) {
@@ -342,9 +422,15 @@ fn filter_sql(filter: &AccountFilter, text_ur: &str, text_en: &str) -> (String, 
     if !filter.include_inactive {
         conditions.push("a.is_active = 1".to_owned());
     }
-    if let Some(kind) = filter.account_type {
-        values.push(Value::Text(kind.as_str().to_owned()));
-        conditions.push(format!("{TYPE_SQL} = ?{}", values.len()));
+    // Plan 32 R6, PRD FR-10.5 v1.32: the list shows only sellers and buyers. A regular seller or buyer
+    // is an account under its control that is not a system account (which leaves out اپنا مال,
+    // نقدی منڈی and چکتا کھاتہ); everything else (cash, payables, income, capital, money-lent people,
+    // khatas, gardens) is under another control.
+    if let Some(condition) = kind_condition(filter.kind) {
+        conditions.push(condition);
+    }
+    if let Some(condition) = opening_condition(filter.has_opening) {
+        conditions.push(condition);
     }
     if !text_ur.is_empty() || !text_en.is_empty() {
         values.push(Value::Text(text_ur.to_owned()));
@@ -374,6 +460,22 @@ pub struct ListTotals {
     pub opening_cr_paisa: i64,
 }
 
+/// The columns a list can be sorted by: the name of the field of the row and its SQL expression.
+/// `code` is sorted by the chart-of-accounts order (`codes::order_by_code_dir`). There is no sort by
+/// balance: it would read every journal line (NFR-SPD-24); report R20 ranks the dues.
+pub const SORT_COLUMNS: [(&str, &str); 10] = [
+    ("code", "a.code"),
+    ("serial", "a.serial"),
+    ("name_ur", "a.name_ur COLLATE URDU"),
+    ("name_en", "a.name_en COLLATE NOCASE"),
+    ("phone1", "a.phone1"),
+    ("city", "ci.code"),
+    ("opening_date", "a.opening_date"),
+    ("opening_dr_paisa", "a.opening_dr_paisa"),
+    ("opening_cr_paisa", "a.opening_cr_paisa"),
+    ("credit_allowed", "a.credit_allowed"),
+];
+
 /// One page of accounts by code, and the totals of all that match (PRD FR-10.5).
 ///
 /// # Errors
@@ -383,6 +485,7 @@ pub fn list(
     filter: &AccountFilter,
     text_ur: &str,
     text_en: &str,
+    order_by: Option<&str>,
     offset: u32,
     limit: u32,
 ) -> rusqlite::Result<(Vec<AccountRow>, ListTotals)> {
@@ -406,8 +509,20 @@ pub fn list(
     let limit_mark = page.len();
     page.push(Value::Integer(i64::from(offset)));
     let offset_mark = page.len();
+    // `every` is in chart order (by control, then by code), as the full list always was; the
+    // other kinds are by type number and running number.
+    let natural = if filter.kind == AccountListKind::Every {
+        format!("c.code, {}", crate::codes::order_by_code("a.code"))
+    } else {
+        crate::codes::order_by_code("a.code")
+    };
+    // A chosen sort puts its column first; ties keep the natural order, so pages are stable.
+    let order = match order_by {
+        Some(chosen) => format!("{chosen}, {natural}"),
+        None => natural,
+    };
     let mut statement = conn.prepare(&format!(
-        "{ROW_SELECT}{where_sql} ORDER BY a.code, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
+        "{ROW_SELECT}{where_sql} ORDER BY {order}, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
     ))?;
     let rows = statement
         .query_map(params_from_iter(page.iter()), row_from)?
@@ -605,6 +720,8 @@ pub fn similar_by_ids(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<Si
                     .unwrap_or_default(),
                 phone1: row.phone1,
                 account_type: row.account_type,
+                tag: row.tag,
+                is_duplicate: false,
             });
         }
     }
@@ -662,6 +779,8 @@ pub fn controls(conn: &Connection) -> rusqlite::Result<Vec<CoaControl>> {
 pub struct TreeAccount {
     /// Row id.
     pub id: i64,
+    /// The tag (نشان), if any (PRD 10.2).
+    pub tag: Option<String>,
     /// The control it is under.
     pub control_id: i64,
     /// Code.
@@ -676,14 +795,19 @@ pub struct TreeAccount {
     pub is_system: bool,
 }
 
-/// Every account for the chart, by code.
+/// Every account for the trial balance and the like, by control and code.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn tree_accounts(conn: &Connection) -> rusqlite::Result<Vec<TreeAccount>> {
-    let mut statement = conn.prepare(
-        "SELECT id, control_id, code, name_ur, name_en, is_active, is_system FROM accounts ORDER BY code, id",
-    )?;
+    // The chart order: by control (cash, payables, sellers, buyers, income ...), then by code
+    // within it, so the numbers of sellers and buyers (0010, 00110) run in order (plan 32 R7).
+    let mut statement = conn.prepare(&format!(
+        "SELECT a.id, a.control_id, a.code, a.name_ur, a.name_en, a.is_active, a.is_system, a.tag
+         FROM accounts a JOIN account_controls k ON k.id = a.control_id
+         ORDER BY k.code, {}, a.id",
+        crate::codes::order_by_code("a.code")
+    ))?;
     let rows = statement.query_map([], |r| {
         Ok(TreeAccount {
             id: r.get(0)?,
@@ -693,6 +817,62 @@ pub fn tree_accounts(conn: &Connection) -> rusqlite::Result<Vec<TreeAccount>> {
             name_en: r.get(4)?,
             is_active: r.get(5)?,
             is_system: r.get(6)?,
+            tag: r.get(7)?,
+        })
+    })?;
+    rows.collect()
+}
+
+/// The control of every account, as `(account id, control id)`: the chart counts accounts and adds
+/// balances by control from this, without reading any account row (plan 38 B1).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn account_control_ids(conn: &Connection) -> rusqlite::Result<Vec<(i64, i64)>> {
+    let mut statement = conn.prepare("SELECT id, control_id FROM accounts")?;
+    let rows = statement.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    rows.collect()
+}
+
+/// How many accounts a control has.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn control_account_count(conn: &Connection, control_id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM accounts WHERE control_id = ?1",
+        [control_id],
+        |r| r.get(0),
+    )
+}
+
+/// One page of the accounts of ONE control for the chart, in the chart order (by code, so the
+/// numbers of sellers and buyers run in order, plan 32 R7). Found through `idx_accounts_control`.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn control_accounts_page(
+    conn: &Connection,
+    control_id: i64,
+    offset: i64,
+    limit: i64,
+) -> rusqlite::Result<Vec<TreeAccount>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT a.id, a.control_id, a.code, a.name_ur, a.name_en, a.is_active, a.is_system, a.tag
+         FROM accounts a WHERE a.control_id = ?1
+         ORDER BY {}, a.id LIMIT ?2 OFFSET ?3",
+        crate::codes::order_by_code("a.code")
+    ))?;
+    let rows = statement.query_map(params![control_id, limit, offset], |r| {
+        Ok(TreeAccount {
+            id: r.get(0)?,
+            control_id: r.get(1)?,
+            code: r.get(2)?,
+            name_ur: r.get(3)?,
+            name_en: r.get(4)?,
+            is_active: r.get(5)?,
+            is_system: r.get(6)?,
+            tag: r.get(7)?,
         })
     })?;
     rows.collect()
@@ -715,35 +895,100 @@ pub fn search_sources(
                 TRIM(COALESCE(a.father_or_firm_ur, '') || ' ' || COALESCE(a.father_or_firm_en, '') || ' ' ||
                      COALESCE(ci.name_ur, '') || ' ' || COALESCE(ci.name_en, '') || ' ' ||
                      COALESCE(a.phone1, '') || ' ' || COALESCE(a.phone2, '')),
-                a.search_ur, a.search_en, a.search_phonetic, a.is_active, {TYPE_SQL}, a.control_id
+                a.search_ur, a.search_en, a.search_phonetic,
+                -- The account of a closed garden is offered in no picker and no search (PRD FR-12.38).
+                (a.is_active = 1 AND NOT EXISTS (SELECT 1 FROM ventures g WHERE g.account_id = a.id
+                                                 AND g.kind = 'garden' AND g.status = 'closed')),
+                {TYPE_SQL}, a.control_id, a.tag, c.code,
+                -- A person moved to the dead amount (PRD FR-10.10).
+                EXISTS (SELECT 1 FROM dead_marks d WHERE d.account_id = a.id AND d.is_active = 1)
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
-         WHERE ?1 IS NULL OR a.id = ?1"
+         WHERE (?1 IS NULL OR a.id = ?1) AND a.code <> ?2 AND a.is_chukta_khata = 0"
     );
     let mut statement = conn.prepare(&sql)?;
-    let rows = statement.query_map([only_id], |r| {
-        let kind: String = r.get(11)?;
-        Ok(SearchSource {
-            id: r.get(0)?,
-            code: r.get(1)?,
-            name_ur: r.get(2)?,
-            name_en: r.get(3)?,
-            extra_ur: r.get(4)?,
-            extra_en: r.get(5)?,
-            more_keys: r.get(6)?,
-            search_ur: r.get(7)?,
-            search_en: r.get(8)?,
-            search_phonetic: r.get(9)?,
-            is_active: r.get(10)?,
-            account_type: Some(match kind.as_str() {
-                "seller" => AccountType::Seller,
-                "buyer" => AccountType::Buyer,
-                "money_lent" => AccountType::MoneyLent,
-                _ => AccountType::Other,
-            }),
-            control_id: Some(r.get(12)?),
-        })
-    })?;
+    // بینک is never offered in a picker or a search: all money is روکڑ (PRD FR-10.4, v1.6). Nor is
+    // چکتا کھاتہ or the old closed account: a چکتا buyer is offered by name (plan 64, PRD FR-13.4).
+    let rows = statement.query_map(
+        params![only_id, mandi_core::accounts::BANK_ACCOUNT_CODE],
+        |r| {
+            let kind: String = r.get(11)?;
+            Ok(SearchSource {
+                id: r.get(0)?,
+                code: r.get(1)?,
+                name_ur: r.get(2)?,
+                name_en: r.get(3)?,
+                extra_ur: r.get(4)?,
+                extra_en: r.get(5)?,
+                more_keys: r.get(6)?,
+                search_ur: r.get(7)?,
+                search_en: r.get(8)?,
+                search_phonetic: r.get(9)?,
+                is_active: r.get(10)?,
+                account_type: Some(match kind.as_str() {
+                    "seller" => AccountType::Seller,
+                    "buyer" => AccountType::Buyer,
+                    "money_lent" => AccountType::MoneyLent,
+                    _ => AccountType::Other,
+                }),
+                control_id: Some(r.get(12)?),
+                tag: r.get(13)?,
+                control_code: Some(r.get(14)?),
+                sold_by_weight: false,
+                is_dead: r.get(15)?,
+            })
+        },
+    )?;
     rows.collect()
+}
+
+/// The accounts the seller field of a lot must leave out right now (PRD 12.3 "Seller code",
+/// FR-12.26, FR-12.36, plan 46 B1). The search index only holds the accounts; whether اپنا مال has
+/// goods to sell and whether a garden is open changes with every sale, so it is read here, at query
+/// time, and the index is a speed aid only (Code Standards B27).
+///
+/// - اپنا مال (030119998) is left out unless a saved purchase of an open trip has نگ left for our
+///   shop. The test is the one a lot takes from (`our_left`, PRD FR-12.41) and the one the ready
+///   goods use (`purchases::ready_by`): `qty - other_qty - (qty_sold - qty_sold_other) -
+///   qty_written_off > 0`.
+/// - The account of a garden that is not open (closed) is left out.
+///
+/// The sellers and the separate khatas are never in the answer.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn lot_seller_unusable(conn: &Connection) -> rusqlite::Result<Vec<i64>> {
+    let mut statement = conn.prepare(
+        "SELECT a.id FROM accounts a
+         WHERE a.code = ?1
+           AND NOT EXISTS (SELECT 1 FROM ventures v JOIN purchases p ON p.venture_id = v.id
+                           WHERE v.kind = 'trip' AND v.status = 'open' AND p.status = 'saved'
+                             AND p.qty - p.other_qty - (p.qty_sold - p.qty_sold_other)
+                                 - p.qty_written_off > 0)
+         UNION ALL
+         SELECT g.account_id FROM ventures g
+         WHERE g.kind = 'garden' AND g.status <> 'open' AND g.account_id IS NOT NULL",
+    )?;
+    let rows = statement.query_map(params![OWN_GOODS_CODE], |r| r.get(0))?;
+    rows.collect()
+}
+
+/// Gives an account its note (the note of a separate khata).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn set_account_note(
+    conn: &Connection,
+    account_id: i64,
+    note: &str,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE accounts SET note = ?2, updated_at = ?3, updated_by = ?4, version = version + 1
+         WHERE id = ?1",
+        params![account_id, note, now, user_id],
+    )?;
+    Ok(())
 }

@@ -8,6 +8,19 @@ publish.workspace = true
 [dependencies]
 mandi-db.workspace = true
 mandi-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ts-rs.workspace = true
+chrono.workspace = true
+rust_xlsxwriter.workspace = true
+fluent-bundle.workspace = true
+unic-langid.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+proptest.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

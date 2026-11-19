@@ -1,5 +1,5 @@
 //! The ten master lists of PRD 10.3 (plan 06): city, item, packing, truck stand (اڈا), mark,
-//! store, standard narration, expense head, staff and bank account.
+//! store, standard narration, expense head and staff.
 //!
 //! This module holds what is shared by the screens, the services and the database layer and has
 //! no business rules of its own: the kinds, the input a screen sends (all text), the row a
@@ -16,16 +16,18 @@ mod rows;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::paging::SortInput;
+
 pub use prepare::{
     AccountToMake, ColValue, MAX_CODE_DIGITS, NameTexts, Prepared, Reference, prepare,
 };
 pub use rows::{
-    AddaRow, BankAccountRow, CityRow, ExpenseHeadRow, ItemRow, MarkaRow, MasterRow, NarrationRow,
-    PackingRow, StaffRow, StoreRow, format_kg,
+    AddaRow, CityRow, ExpenseHeadRow, ItemRow, MarkaRow, MasterRow, NarrationRow, PackingRow,
+    StaffRow, StoreRow, format_kg,
 };
 
 /// The kind of a master list. Serialised as `city`, `item`, `packing`, `adda`, `marka`, `store`,
-/// `narration`, `expense_head`, `staff`, `bank_account` (also the audit entity names).
+/// `narration`, `expense_head`, `staff` (also the audit entity names).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum MasterKind {
@@ -47,13 +49,11 @@ pub enum MasterKind {
     ExpenseHead,
     /// عملہ.
     Staff,
-    /// بینک; makes an account under control 0102.
-    BankAccount,
 }
 
 impl MasterKind {
     /// Every kind, in the order of PRD 10.3.
-    pub const ALL: [MasterKind; 10] = [
+    pub const ALL: [MasterKind; 9] = [
         MasterKind::City,
         MasterKind::Item,
         MasterKind::Packing,
@@ -63,7 +63,6 @@ impl MasterKind {
         MasterKind::Narration,
         MasterKind::ExpenseHead,
         MasterKind::Staff,
-        MasterKind::BankAccount,
     ];
 
     /// The storage and wire form, for example `expense_head`.
@@ -78,7 +77,6 @@ impl MasterKind {
             MasterKind::Narration => "narration",
             MasterKind::ExpenseHead => "expense_head",
             MasterKind::Staff => "staff",
-            MasterKind::BankAccount => "bank_account",
         }
     }
 
@@ -99,16 +97,24 @@ impl MasterKind {
             MasterKind::Narration => "narrations",
             MasterKind::ExpenseHead => "expense_heads",
             MasterKind::Staff => "staff",
-            MasterKind::BankAccount => "bank_accounts",
         }
     }
 
-    /// True if the table has a `code` column (staff, narrations and bank accounts do not).
+    /// True if the table has a `code` column (narrations do not; staff have one from plan 32).
     pub const fn has_code(self) -> bool {
-        !matches!(
-            self,
-            MasterKind::Narration | MasterKind::Staff | MasterKind::BankAccount
-        )
+        !matches!(self, MasterKind::Narration)
+    }
+
+    /// The code type of an item, a packing or a staff member: their codes are the type number plus
+    /// a running number (`0040`, `0050`, `0060`, plan 32 R2). `None` for every other kind, which
+    /// keeps a plain number (PRD 1.8 R4).
+    pub const fn code_type(self) -> Option<crate::codes::CodeType> {
+        match self {
+            MasterKind::Item => Some(crate::codes::CodeType::Item),
+            MasterKind::Packing => Some(crate::codes::CodeType::Packing),
+            MasterKind::Staff => Some(crate::codes::CodeType::Staff),
+            _ => None,
+        }
     }
 }
 
@@ -136,8 +142,6 @@ pub enum MasterInput {
     ExpenseHead(ExpenseHeadInput),
     /// عملہ.
     Staff(StaffInput),
-    /// بینک.
-    BankAccount(BankAccountInput),
 }
 
 impl MasterInput {
@@ -153,7 +157,6 @@ impl MasterInput {
             MasterInput::Narration(_) => MasterKind::Narration,
             MasterInput::ExpenseHead(_) => MasterKind::ExpenseHead,
             MasterInput::Staff(_) => MasterKind::Staff,
-            MasterInput::BankAccount(_) => MasterKind::BankAccount,
         }
     }
 }
@@ -363,37 +366,14 @@ pub struct StaffInput {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// Unique code `006` plus a running number (`0060`, `0061` ...). Empty gives the next free code
+    /// (plan 32 R2).
+    #[serde(default)]
+    pub code: String,
     /// The job: `munshi`, `collector` or `labour`. Not a login role.
     pub job: String,
     /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`. Empty if not known.
     pub phone: String,
-    /// Words the user confirmed in the spelling check.
-    #[serde(default)]
-    pub confirmed_rules_words: Vec<String>,
-}
-
-/// A bank account (بینک). Saving it also makes its account under control 0102, named
-/// `name_ur` and `name_en`.
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct BankAccountInput {
-    /// Null to add, the row id to edit.
-    #[serde(default)]
-    #[ts(type = "number | null")]
-    pub id: Option<i64>,
-    /// The `version` read with the row, for an edit.
-    #[serde(default)]
-    #[ts(type = "number | null")]
-    pub version: Option<i64>,
-    /// The bank, as typed (PRD FR-7.25).
-    pub bank_name: String,
-    /// The account title, as typed.
-    pub title: String,
-    /// The account number, as typed: letters, digits and hyphens, up to 34.
-    pub number: String,
-    /// Urdu name of the account it makes, suggested from the bank name.
-    pub name_ur: String,
-    /// English name of the account it makes.
-    pub name_en: String,
     /// Words the user confirmed in the spelling check.
     #[serde(default)]
     pub confirmed_rules_words: Vec<String>,
@@ -406,6 +386,50 @@ pub struct MastersListInput {
     pub kind: MasterKind,
     /// True to include the inactive ones too.
     pub include_inactive: bool,
+    /// Only this record, for a form that edits one. The answer has the same shape: its count and
+    /// totals are over this one record (none if it is inactive and `include_inactive` is false).
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub id: Option<i64>,
+    /// How many rows to skip. 0 for the first page (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+    /// Only records whose code, name (either script), mark text or phone holds this text. For a
+    /// marka also its owner's code and name; for an expense head or staff member also the account
+    /// code.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole list by, a field of the row of the kind: `code`, `name_ur`,
+    /// `name_en` and `is_active` for most kinds; items also `item_group`, `default_packing_name_en`
+    /// and `sold_by`; packings `approx_kg`; addas `city_name_en`; markas `mark_text` and
+    /// `owner_account_code`; narrations `text_ur` and `text_en`; expense heads `account_code`;
+    /// staff `job`, `phone` and `account_code`. Null is by code (plan 38 R4). Inactive records are
+    /// left out unless `include_inactive` is true.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+}
+
+/// One page of a master list with the totals over the whole list (PRD FR-19.11, B31).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct MastersList {
+    /// This page, by code (by name for the kinds without a code).
+    pub rows: Vec<MasterRow>,
+    /// How many records match: active ones, and the inactive ones when they were asked for.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The counts over every matching record.
+    pub totals: MastersTotals,
+}
+
+/// The totals of a master list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct MastersTotals {
+    /// How many of the matching records are active.
+    #[ts(type = "number")]
+    pub active_count: i64,
 }
 
 /// What a screen sends to make a master active or inactive.
@@ -423,6 +447,6 @@ pub struct MastersSetActiveInput {
 /// What a screen sends to get the next free code.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct MastersNextCodeInput {
-    /// Which master. Kinds without a code (narration, staff, bank account) give an empty text.
+    /// Which master. A narration has no code and gives an empty text.
     pub kind: MasterKind,
 }

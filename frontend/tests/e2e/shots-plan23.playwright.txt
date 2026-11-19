@@ -1,0 +1,94 @@
+// Screenshots of the Excel export of plan 20 and 21 (the button beside Print preview, the progress
+// notice, the result, the refusals, the print preview with its own button) in both languages at the
+// three window sizes, taken from the development pages /dev/reports/R18 and /dev/analytics/A with the
+// Playwright tool. It is a developer tool: run it with the Vite dev server up on a free port
+// (`pnpm --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`), once for all sizes. The
+// development bridges answer the save box, the event listeners and the two export commands themselves
+// (tests/helpers/dev-bridge-export.ts), so the real progress events reach the real screen. It also
+// measures sideways overflow (NFR-USE-15) and that every Excel button is inside the window. The tool's
+// own screenshot action may only write inside the folder it was started in, and a relative path there
+// can land in another team's folder, so this snippet writes with an absolute path from inside the page
+// code. Paste it into `browser_run_code_unsafe`. (It is a snippet for that tool, not a module, so it is
+// kept as .txt and the linter does not read it. The Windows check is the spec 45.)
+//
+// Flags in the hash: `exporting` (the export stops at 500 of 1,200 rows and never answers),
+// `exportfail=path|rows|disk|job` (the backend refuses), `cancelbox` (the save box is closed).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan23';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const LANGS = ['ur', 'en'];
+  // [name, hash, action]: a number is the milliseconds to wait after pressing Excel.
+  const SCEN = [
+    ['reports-idle', '#/dev/reports/R18', null],
+    ['reports-progress', '#/dev/reports/R18?exporting', 1300],
+    ['reports-done', '#/dev/reports/R18', 1900],
+    ['reports-fail-rows', '#/dev/reports/R18?exportfail=rows', 900],
+    ['reports-fail-path', '#/dev/reports/R18?exportfail=path', 900],
+    ['reports-preview', '#/dev/reports/R18', 'preview'],
+    ['analytics-idle', '#/dev/analytics/A', null],
+    ['analytics-progress', '#/dev/analytics/A?exporting', 1300],
+  ];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [name, hash, act] of SCEN) {
+      for (const lang of LANGS) {
+        try {
+          await page.goto('http://127.0.0.1:5188/' + hash);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1', { timeout: 45000 });
+          for (let s = 0; s < 2; s++) {
+            if ((await page.evaluate(() => document.documentElement.lang)) === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          await page.waitForSelector('.ag-row', { timeout: 30000 });
+          await page.waitForTimeout(500);
+          const excel = page.locator('main button').filter({ hasText: /^(Excel|ایکسل)$/ });
+          if (act === 'preview') {
+            await page.keyboard.press('F9');
+            await page.waitForTimeout(1400);
+          } else if (typeof act === 'number') {
+            await excel.first().click();
+            await page.waitForTimeout(act);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const main = document.querySelector('main');
+            const buttons = Array.from(document.querySelectorAll('main button')).filter((b) =>
+              /^(Excel|ایکسل)$/.test((b.textContent || '').trim()),
+            );
+            const inView = buttons.every((b) => {
+              const r = b.getBoundingClientRect();
+              return r.left >= 0 && r.right <= window.innerWidth;
+            });
+            const bars = Array.from(document.querySelectorAll('progress')).map(
+              (p) => `${p.getAttribute('value')}/${p.getAttribute('max')}`,
+            );
+            return {
+              pageX: root.scrollWidth - window.innerWidth,
+              mainX: main ? main.scrollWidth - main.clientWidth : 0,
+              buttons: buttons.length,
+              inView,
+              bars: bars.join(','),
+              host: location.host,
+            };
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push({ key: `${name} ${lang} ${width}`, ...o });
+        } catch (e) {
+          results.push({ key: `${name} ${lang} ${width}`, failed: String(e).slice(0, 120) });
+        }
+      }
+    }
+  }
+  const bad = results.filter(
+    (r) => r.failed || r.pageX !== 0 || r.mainX !== 0 || !r.inView || r.host !== '127.0.0.1:5188',
+  );
+  return JSON.stringify({ checked: results.length, bad });
+};

@@ -4,7 +4,7 @@
 // work out yet (`calc` is null) has no number: its cells stay empty, never a guess.
 
 import type { Working } from '../../bindings/Working';
-import { formatBps, formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
+import { formatBps, formatPaisa, type Grouping } from '../../shared/format';
 import type { Language } from '../../i18n';
 import { displayName, levelMessageId } from '../../shared/i18n';
 import type { PickedRecord } from '../../shared/grid';
@@ -20,12 +20,19 @@ type Workings = Record<string, Working>;
 export interface RowView {
   calc: Cells;
   workings: Workings;
+  /**
+   * The cells whose figure rests on a charge the user typed by hand, with the word for it ("Manual"). A
+   * mark only; the backend said which charges are typed (plan 72 P13).
+   */
+  manual: Cells;
 }
 
-const NOTHING: RowView = { calc: {}, workings: {} };
+const NOTHING: RowView = { calc: {}, workings: {}, manual: {} };
 
-/** The message of the working of نقد when the backend filled it for a one-time seller. */
-const CASH_PUKHTA = 'working-cash-pukhta';
+/** A charge the user typed on the line: the backend says so with its source or its method (FR-11.10). */
+export function isTypedCharge(charge: LineCharge): boolean {
+  return charge.source === 'typed' || charge.method === 'manual';
+}
 
 /**
  * The calculated cells of a lot row. The charges (مزدوری, منشیانہ) show the value the rules
@@ -41,38 +48,20 @@ export function lotView(lot: LotPreview | undefined, grouping: Grouping): RowVie
   if (lot.totals !== null) {
     calc[LOT.net] = money(lot.totals.net);
     workings[LOT.net] = lot.totals.workings.net;
-    // A one-time seller is paid his whole net on the spot while نقد is empty (PRD FR-13.10): the
-    // backend says so by the message of the working. The number is shown in the نقد cell like a
-    // typed one, and a value typed there is kept as typed.
-    if (lot.totals.workings.cash_paid.message_id === CASH_PUKHTA) {
-      calc[LOT.cash] = money(lot.totals.cash_paid);
-      workings[LOT.cash] = lot.totals.workings.cash_paid;
-    }
   }
   if (lot.balance_qty !== null) calc[LOT.balance] = String(lot.balance_qty);
-  return { calc, workings };
-}
-
-/** The words of a rate hint: where the rate came from (PRD FR-7.53). */
-function hintWords(hint: NonNullable<LinePreview['rate_hint']>, say: Say, grouping: Grouping) {
-  return say(`bikri-rate-hint-${hint.source.replaceAll('_', '-')}`, {
-    rate: formatPaisa(hint.rate_paisa, { grouping }),
-    date: isoToDisplayDate(hint.date),
-  });
+  return { calc, workings, manual: {} };
 }
 
 /**
- * The cells of a sale line. The rate hint is grey text in the empty rate cell and its words are
- * the tooltip; it is never typed into the cell (PRD FR-7.53, Code Standards F43).
+ * The cells of a sale line. The rate cell has no hint and no placeholder number (PRD FR-7.53 retired in
+ * v1.44, plan 79 item 5): each buyer gets his own rate, so a hint looked like a real rate.
  */
 export function lineView(line: LinePreview | undefined, grouping: Grouping, say: Say): RowView {
   if (line === undefined) return NOTHING;
   const calc: Cells = {};
   const workings: Workings = {};
-  if (line.rate_hint !== null) {
-    calc[SALE.rate] = formatPaisa(line.rate_hint.rate_paisa, { grouping });
-    calc[`${SALE.rate}Tip`] = hintWords(line.rate_hint, say, grouping);
-  }
+  const manual: Cells = {};
   const done = line.calc;
   if (done !== null) {
     const money = (paisa: LineCalc['buyer_total']) => formatPaisa(paisa, { grouping });
@@ -86,9 +75,30 @@ export function lineView(line: LinePreview | undefined, grouping: Grouping, say:
     workings[SALE.laga] = done.laga.working;
     calc[SALE.buyerTotal] = money(done.buyer_total);
     workings[SALE.buyerTotal] = done.workings.buyer_total;
-    calc[SALE.payment] = done.payment_type;
+    // What stays on the buyer's account (PRD FR-12.44): shown in the details of the line. The backend
+    // worked it out; nothing is subtracted here.
+    calc[SALE.leftOnAccount] = money(done.left_paisa);
+    workings[SALE.leftOnAccount] = done.workings.left;
+    // A charge typed on the line (PRD FR-11.10): the commission cell of that side says so, and the buyer
+    // total, the one figure every window shows, says so when any charge of the line is typed (the لاگا has
+    // no column). The word is "Manual", as in the details of the line. The backend said which are typed.
+    const sellerTyped = isTypedCharge(done.seller_comm);
+    const buyerTyped = isTypedCharge(done.buyer_comm);
+    const word = say('bikri-tag-manual');
+    if (sellerTyped) manual[SALE.sellerComm] = word;
+    if (buyerTyped) manual[SALE.buyerComm] = word;
+    if (sellerTyped || buyerTyped || isTypedCharge(done.laga)) manual[SALE.buyerTotal] = word;
+    // A buyer who must pay in full: the backend decided the amount, so the paid cell shows it and is
+    // closed (PRD FR-12.44, P3). Its working is the ⓘ of the cell. An amount typed above the buyer total
+    // keeps its working too, so the cell says why it counts as 0 (the refusal itself is on the cell).
+    if (done.paid_fixed) {
+      calc[SALE.paidFixed] = money(done.paid_paisa);
+      workings[SALE.paid] = done.workings.paid;
+    } else if (done.workings.paid.message_id === 'working-paid-over') {
+      workings[SALE.paid] = done.workings.paid;
+    }
   }
-  return { calc, workings };
+  return { calc, workings, manual };
 }
 
 /** The number of a line charge as a person types it: "6" for 6%, "8" for 8 for each نگ. */
@@ -119,7 +129,7 @@ export function ruleTag(
   say: Say,
 ): string {
   const value = chargeValueText(charge, grouping, say);
-  if (charge.source === 'typed' || charge.method === 'manual') {
+  if (isTypedCharge(charge)) {
     return [say('bikri-tag-manual'), value].filter((part) => part !== '').join(' ');
   }
   const level = charge.rule_label?.level ?? 'default';

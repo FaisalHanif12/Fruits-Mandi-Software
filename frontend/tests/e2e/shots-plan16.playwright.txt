@@ -1,0 +1,149 @@
+// Screenshots of the screens of plan 16 (goods left, later sale, edit, cancel) in both languages at
+// the three window sizes, taken from the development page /dev/bikri with the Playwright tool. It
+// is a developer tool: run it with the Vite dev server up (`pnpm --filter frontend dev`). It also
+// measures sideways overflow (NFR-USE-15): the screen area, and every table or grid inside it,
+// must not scroll sideways. Usage with the Playwright MCP tool: browser_run_code_unsafe with
+// `filename` set to this file. (It is a snippet for that tool, not a module, so it is kept as .txt
+// and the linter does not read it. The Windows check is the specs 18 to 21.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/plan16';
+  const BASE = 'http://localhost:5173/#/dev/bikri';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const ONLY = null;
+  const settle = (ms) => page.waitForTimeout(ms);
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type !== 'beforeunload') add(type, ...rest);
+    };
+  });
+  const rateCell = () =>
+    page.locator('[role="group"] .ag-row[row-index="0"] [col-id="rate"]').first();
+  const SCENARIOS = {
+    stock: { query: '?stock', run: async () => settle(800) },
+    'stock-empty': { query: '?stock&empty', run: async () => settle(800) },
+    'stock-write-off': {
+      query: '?stock',
+      run: async () => {
+        await settle(800);
+        await page.locator('main button:has(svg.lucide-ban)').first().click();
+        await settle(400);
+      },
+    },
+    later: { query: '?later&lot=40', run: async () => settle(1000) },
+    'later-typed': {
+      query: '?later&lot=40',
+      run: async () => {
+        await settle(1000);
+        await page.locator('[role="group"] .ag-row[row-index="0"] [col-id="buyer"]').first().click();
+        await page.keyboard.type('1');
+        await settle(500);
+        await page.keyboard.press('Enter');
+        await settle(300);
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('560');
+        await page.keyboard.press('Enter');
+        await settle(600);
+      },
+    },
+    saved: { query: '?id=41', run: async () => settle(900) },
+    'edit-loaded': { query: '?id=41&edit=7', run: async () => settle(1200) },
+    'edit-changed': {
+      query: '?id=41&edit=7',
+      run: async () => {
+        await settle(1200);
+        await rateCell().click();
+        await page.keyboard.type('610');
+        await page.keyboard.press('Enter');
+        await settle(600);
+      },
+    },
+    'edit-closed': { query: '?id=41&edit=7&closed', run: async () => settle(1200) },
+    // The backend refuses the edit by one rule (ERR_EDIT_NOT_ALLOWED): the words are at the lot
+    // or under the day field, and what was typed stays.
+    'edit-rule-item': {
+      query: '?id=41&edit=7&rule=lot_item_locked',
+      run: async () => {
+        await settle(1200);
+        await rateCell().click();
+        await page.keyboard.type('610');
+        await page.keyboard.press('Enter');
+        await settle(400);
+        await page.keyboard.press('F10');
+        await settle(800);
+      },
+    },
+    'edit-rule-day': {
+      query: '?id=41&edit=7&rule=day_changed',
+      run: async () => {
+        await settle(1200);
+        await rateCell().click();
+        await page.keyboard.type('610');
+        await page.keyboard.press('Enter');
+        await settle(400);
+        await page.keyboard.press('F10');
+        await settle(800);
+      },
+    },
+    'cancel-box': {
+      query: '?id=41',
+      run: async () => {
+        await settle(900);
+        await page.locator('main button.text-due').first().click();
+        await settle(600);
+      },
+    },
+    'cancel-closed': {
+      query: '?id=41&closed',
+      run: async () => {
+        await settle(900);
+        await page.locator('main button.text-due').first().click();
+        await settle(600);
+      },
+    },
+  };
+  const report = [];
+  for (const [name, scenario] of Object.entries(SCENARIOS)) {
+    if (ONLY !== null && !ONLY.includes(name)) continue;
+    for (const language of ['ur', 'en']) {
+      for (const [w, h] of SIZES) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto(`${BASE}${scenario.query}`);
+        await page.reload();
+        await settle(700);
+        if (language === 'en') await page.keyboard.press('Alt+L');
+        await settle(300);
+        try {
+          await scenario.run();
+        } catch (failure) {
+          report.push(`${name} ${language} ${w}x${h} FAILED ${String(failure).slice(0, 120)}`);
+        }
+        const overflow = await page.evaluate(() => {
+          const found = [];
+          const main = document.querySelector('main');
+          if (main && main.scrollWidth > main.clientWidth + 1)
+            found.push(`main ${main.scrollWidth}>${main.clientWidth}`);
+          for (const el of document.querySelectorAll(
+            'main .overflow-x-auto, main .ag-body-viewport, main .ag-center-cols-viewport, main .ag-body-horizontal-scroll-viewport',
+          )) {
+            if (el.scrollWidth > el.clientWidth + 1)
+              found.push(
+                `${el.className.toString().slice(0, 40)} ${el.scrollWidth}>${el.clientWidth}`,
+              );
+          }
+          return found;
+        });
+        await page.screenshot({ path: `${OUT}/${name}__${language}__${w}x${h}.png` });
+        report.push(
+          `${name} ${language} ${w}x${h}${overflow.length ? ' OVERFLOW ' + overflow.join('; ') : ''}`,
+        );
+      }
+    }
+  }
+  return report.join('\n');
+}

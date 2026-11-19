@@ -3,11 +3,12 @@
 use serde::Serialize;
 use ts_rs::TS;
 
-use super::input::{ChargeSource, FreightPaidBy, LotChargeMethod, PaymentType, StoredMethod};
+use super::input::{ChargeSource, FreightPaidBy, LotChargeMethod, StoredMethod};
 use crate::cash::CashCheck;
 use crate::error::FieldError;
 use crate::money::Paisa;
 use crate::rules::{RuleLevel, Working};
+use crate::ventures::{GardenRef, ShareAmount, TripRef};
 
 /// Where a rate hint came from (PRD FR-7.53).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
@@ -107,6 +108,17 @@ pub struct LineWorkings {
     pub buyer_total: Working,
     /// C19.
     pub rate_diff: Working,
+    /// C21: the cost of the trip goods this line sells. A plain line has 0 and a "none" working.
+    pub cost_of_goods: Working,
+    /// موقع پر جمع (PRD FR-12.44): what the buyer paid on the spot. Message `working-paid-typed` (typed
+    /// or empty: arg `result`), `working-paid-full` (a buyer who must pay in full: args `total`,
+    /// `result`), `working-paid-kept` (an unchanged line of an edit keeps what it was saved with:
+    /// arg `result`) or `working-paid-over` (typed above the buyer total, counted as 0: args
+    /// `total`, `typed`, `result`).
+    pub paid: Working,
+    /// کھاتے میں باقی (PRD FR-12.44): the buyer total less what was paid. Message `working-left`
+    /// (args `total`, `paid`, `result`).
+    pub left: Working,
 }
 
 /// The numbers of one sale line that has everything it needs.
@@ -142,9 +154,24 @@ pub struct LineCalc {
     /// C19: the buyer value less the seller amount. Can be negative.
     #[ts(type = "Paisa")]
     pub rate_diff: Paisa,
-    /// How the buyer pays.
-    pub payment_type: PaymentType,
-    /// The working of the four amounts above.
+    /// C21: the cost of the trip goods this line sells (PRD FR-12.26), 0 on a line of any other
+    /// lot. Stored on the saved line (`cost_paisa`), shown with the result, never posted.
+    #[ts(type = "Paisa")]
+    pub cost_of_goods: Paisa,
+    /// موقع پر جمع: what the buyer paid on the spot (PRD FR-12.44). For a buyer who must pay in full
+    /// it is the buyer total. When the typed amount is more than the buyer total it is 0 here and
+    /// `ERR_PAID_EXCEEDS_TOTAL` is on `.paid`, so no cash is counted twice.
+    #[ts(type = "Paisa")]
+    pub paid_paisa: Paisa,
+    /// کھاتے میں باقی: `buyer_total - paid_paisa` (PRD FR-12.44). Stays on the buyer's account.
+    #[ts(type = "Paisa")]
+    pub left_paisa: Paisa,
+    /// True when the backend decided the paid amount: the buyer must pay in full (نقدی منڈی, a
+    /// چکتا buyer, or a buyer who may not take credit), or the line is an unchanged line of an
+    /// edit that keeps what it was saved with. The cell shows `paid_paisa` and cannot be typed in
+    /// (PRD FR-12.44, plan 65 P3 and point 10a).
+    pub paid_fixed: bool,
+    /// The working of the amounts above.
     pub workings: LineWorkings,
 }
 
@@ -162,9 +189,9 @@ pub struct LinePreview {
     /// quantity of the rows before it (PRD FR-7.52).
     #[ts(type = "number")]
     pub remaining_qty: i64,
-    /// The last rate of this item and packing, as grey text only (PRD FR-7.53).
-    pub rate_hint: Option<RateHint>,
-    /// The numbers, or null while the row is not complete.
+    /// The numbers, or null while the row is not complete. Also null for a row refused because it
+    /// takes the lot over the quantity it has left (`ERR_QTY_EXCEEDS_LOT` on its quantity, PRD
+    /// FR-12.6): it has no amount, commission or total, and the lot and the whole بکری leave it out.
     pub calc: Option<LineCalc>,
     /// Warnings of this row (also in the list of the whole preview).
     pub warnings: Vec<FieldError>,
@@ -266,11 +293,65 @@ pub struct SummaryTotals {
     /// All buyer bills together.
     #[ts(type = "Paisa")]
     pub buyer_total: Paisa,
-    /// The income shared between the partners (C9).
+    /// The income shared between the partners (C9). It is the commission, لاگا and فون only, also
+    /// for a trip lot: the seller credit of a trip lot goes to the trip's partners, not to the firm
+    /// (PRD FR-12.26). E2E-34 shares 1,200 = 540 + 540 + 120.
     #[ts(type = "Paisa")]
     pub shared_income: Paisa,
     /// The working of each amount.
     pub workings: SummaryWorkings,
+}
+
+/// What a lot of trip goods shows besides its lines (PRD FR-12.26, FR-12.27). Worked out by the same
+/// domain function as the posting, so the screen and the saved entry cannot differ.
+///
+/// Example (E2E-34): 15 of 20 sold at 600. Seller credit (C8) 8,460 goes to the trip's partners as
+/// 3,384 / 2,538 / 2,538 (C25). The cost is 10,400 × 15 ÷ 20 = 7,800 (C21), shown and never posted,
+/// and the result is 8,460 − 7,800 = 660.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct OwnLotPreview {
+    /// The purchase the lot takes its goods from.
+    #[ts(type = "number")]
+    pub purchase_id: i64,
+    /// Its number (خ-1, PUR-1).
+    #[ts(type = "number")]
+    pub purchase_number: i64,
+    /// Its trip.
+    pub trip: TripRef,
+    /// C21: the cost of the goods the lines sell. Stored on the lines, never posted.
+    #[ts(type = "Paisa")]
+    pub cost_paisa: Paisa,
+    /// How the cost was worked out.
+    pub cost_working: Working,
+    /// The seller credit of the lot (C8): the money that goes to the trip's partners.
+    #[ts(type = "Paisa")]
+    pub credit_paisa: Paisa,
+    /// The result of the lot: the seller credit less the cost. Negative is a loss, shown in red.
+    #[ts(type = "Paisa")]
+    pub result_paisa: Paisa,
+    /// How the result was worked out.
+    pub result_working: Working,
+    /// Each trip partner's part of the seller credit (C25): his 0604 account is credited with it
+    /// (debited if the credit is negative).
+    pub credits: Vec<ShareAmount>,
+}
+
+/// What a garden lot shows about the arrival it takes its goods from (PRD FR-12.40, plan 33 v1.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ArrivalLotPreview {
+    /// The arrival.
+    #[ts(type = "number")]
+    pub arrival_id: i64,
+    /// Its number in its own series.
+    #[ts(type = "number")]
+    pub arrival_number: i64,
+    /// Its garden.
+    pub garden: GardenRef,
+    /// نگ the arrival has left for this lot: what it had before this بکری (the lots this
+    /// بکری replaces in an edit are given back), less the lots above this one that use the same
+    /// arrival. The lot's `qty_received` cannot be more.
+    #[ts(type = "number")]
+    pub qty_left: i64,
 }
 
 /// One lot of the preview.
@@ -281,6 +362,13 @@ pub struct LotPreview {
     /// The lot number, from 1, in the order sent.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name, with its seller and item: "احسان، آم-2" (PRD FR-12.45). For
+    /// a saved lot of an edit or a later sale it is the number it has; for a new lot it is the
+    /// number the lot will get when it is saved, worked out from the saved lots of its seller and
+    /// item and the lots above it in this draft. Null while the seller or the item is not
+    /// picked. The number shown here is the number the save writes.
+    #[ts(type = "number | null")]
+    pub lot_counter: Option<i64>,
     /// The freight typed on the lot, even if the seller paid it.
     #[ts(type = "Paisa")]
     pub freight: Paisa,
@@ -289,18 +377,31 @@ pub struct LotPreview {
     /// True once the picked item is sold by weight: the lot and its rows then take a weight
     /// (PRD E23). False if no item is picked yet or it is sold by نگ.
     pub sold_by_weight: bool,
+    /// True for a lot of trip goods (seller اپنا مال, PRD FR-12.26): the lot hides نقد and the
+    /// advance tick, and starts freight at 0 with a warning if typed.
+    pub is_own: bool,
+    /// What a trip lot shows besides its sale lines (PRD FR-12.26, FR-12.27): the trip, the cost of
+    /// the goods (C21), the result, and each trip partner's part of the seller credit (C25), each with
+    /// its working. Null for any other lot, and while the purchase is not picked or the lot cannot
+    /// work its numbers out.
+    pub own: Option<OwnLotPreview>,
+    /// The arrival a garden lot takes its goods from (PRD FR-12.40). Null for any other lot, and
+    /// while the arrival is not picked or cannot be found.
+    pub arrival: Option<ArrivalLotPreview>,
     /// مزدوری as it will be charged, or null while the lot cannot work it out.
     pub labour: Option<LotCharge>,
     /// منشیانہ as it will be charged.
     pub munshiana: Option<LotCharge>,
     /// فون as it will be charged.
     pub phone: Option<LotCharge>,
-    /// Quantity of the rows that have a valid quantity (blank rows left out). The same sum as the
-    /// `remaining_qty` of the rows and the warning `ERR_QTY_LEFT_UNSOLD` use.
+    /// Quantity of the rows that stand (blank rows and rows refused for being over the lot are left
+    /// out, PRD FR-12.6). The same sum as the `remaining_qty` of the rows and the warning
+    /// `ERR_QTY_LEFT_UNSOLD` use.
     #[ts(type = "number")]
     pub sold_qty: i64,
-    /// Quantity received less quantity sold, 0 if more was sold (that row has
-    /// `ERR_QTY_EXCEEDS_LOT`). Null while the quantity received is not valid.
+    /// Quantity received less the quantity of the rows that stand, never below 0. A row over the
+    /// lot is refused (`ERR_QTY_EXCEEDS_LOT`) and takes nothing. Null while the quantity received
+    /// is not valid.
     #[ts(type = "number | null")]
     pub balance_qty: Option<i64>,
     /// True if the net is below 0: the seller owes the firm (PRD FR-12.7).
@@ -326,7 +427,7 @@ pub struct SplitPart {
     /// His part of the shared income.
     #[ts(type = "Paisa")]
     pub income_paisa: Paisa,
-    /// How it was worked out.
+    /// How the income part was worked out.
     pub working: Working,
 }
 
@@ -348,54 +449,6 @@ pub struct BikriPreview {
     pub errors: Vec<FieldError>,
     /// What only warns. A save is allowed.
     pub warnings: Vec<FieldError>,
-}
-
-/// The truck's earlier بکری (PRD FR-7.49).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckLast {
-    /// Its بکری number.
-    #[ts(type = "number")]
-    pub bikri_number: i64,
-    /// Its day, `YYYY-MM-DD`.
-    pub date: String,
-    /// The truck stand.
-    #[ts(type = "number | null")]
-    pub adda_id: Option<i64>,
-    /// The زمیندار.
-    #[ts(type = "number | null")]
-    pub zamindar_account_id: Option<i64>,
-    /// The driver's name.
-    pub driver_name: Option<String>,
-    /// The driver's phone.
-    pub driver_phone: Option<String>,
-}
-
-/// A بکری of this truck on the posting day (PRD FR-7.50).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckSameDay {
-    /// Its بکری number.
-    #[ts(type = "number")]
-    pub bikri_number: i64,
-}
-
-/// A truck number used before, for the list under the field.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckSuggestion {
-    /// The truck number as saved.
-    pub truck_no: String,
-    /// The day of its last بکری, `YYYY-MM-DD`.
-    pub date: String,
-}
-
-/// What the app remembers about a truck (PRD FR-7.49, FR-7.50). Read from saved بکری.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckMemory {
-    /// The last بکری of exactly this truck number (ignoring letter case), if any.
-    pub last: Option<TruckLast>,
-    /// A saved, not cancelled بکری of this truck on the posting day, if any.
-    pub same_day: Option<TruckSameDay>,
-    /// Truck numbers that start with the typed text, newest first, at most 8.
-    pub suggestions: Vec<TruckSuggestion>,
 }
 
 /// What the app remembers about a seller (PRD FR-7.51). Every value is put into the visible

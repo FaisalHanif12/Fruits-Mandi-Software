@@ -1,6 +1,8 @@
 //! Guards `tauri.conf.json` and the capability file against
 //! Release_Pipeline 3.3, Tech Stack 5.5 and 7, NFR-USE-16, NFR-SEC-9 and NFR-SEC-10.
 #![cfg(test)]
+// The permission list below is one `json!` of more than 200 names.
+#![recursion_limit = "512"]
 
 use serde_json::{Value, json};
 
@@ -159,9 +161,20 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-accounts-openings-preview",
             "allow-accounts-openings-save",
             "allow-coa-tree",
+            "allow-coa-control-accounts",
             "allow-coa-heads-list",
             "allow-coa-controls-list",
             "allow-search-accounts",
+            "allow-chukta-search",
+            "allow-chukta-add",
+            "allow-party-ledgers-list",
+            "allow-party-ledgers-statement",
+            "allow-party-ledgers-go-to-date",
+            "allow-party-ledgers-statement-print-data",
+            "allow-party-ledgers-statement-rows",
+            "allow-party-ledgers-statement-rows-print-data",
+            "allow-party-ledgers-statement-rows-print",
+            "allow-party-ledgers-statement-print",
             "allow-search-global",
             "allow-search-accounts-recent",
             "allow-search-accounts-touch",
@@ -178,10 +191,79 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-settings-get-overrides",
             "allow-settings-set-overrides",
             "allow-vouchers-save-advance",
+            "allow-purchases-preview",
+            "allow-purchases-save",
+            "allow-purchases-cancel",
+            "allow-purchases-list",
+            "allow-purchases-get",
+            "allow-purchases-write-off",
+            "allow-purchases-write-off-undo",
+            "allow-purchases-set-sell-date",
+            "allow-purchases-entry-preview",
+            "allow-purchases-entry-save",
+            "allow-purchases-change-split",
+            "allow-trips-defaults",
+            "allow-trips-create",
+            "allow-trips-set-partners",
+            "allow-trips-list",
+            "allow-trips-get",
+            "allow-trips-summary",
+            "allow-trips-cost-preview",
+            "allow-trips-cost-save",
+            "allow-trips-cost-cancel",
+            "allow-trips-other-sale-preview",
+            "allow-trips-other-sale-save",
+            "allow-trips-other-sale-cancel",
+            "allow-fruit-preview",
+            "allow-fruit-save",
+            "allow-fruit-edit",
+            "allow-fruit-cancel",
+            "allow-fruit-get",
+            "allow-fruit-list",
+            "allow-fruit-lots",
+            "allow-masters-dead-preview",
+            "allow-masters-dead-mark",
+            "allow-masters-dead-undo",
+            "allow-reports-dead-amount",
+            "allow-gardens-defaults",
+            "allow-gardens-create-preview",
+            "allow-gardens-create",
+            "allow-gardens-set-partners",
+            "allow-gardens-list",
+            "allow-gardens-get",
+            "allow-gardens-summary",
+            "allow-gardens-entry-preview",
+            "allow-gardens-entry-save",
+            "allow-gardens-entry-cancel",
+            "allow-gardens-close-preview",
+            "allow-gardens-close",
+            "allow-gardens-reopen",
+            "allow-gardens-arrival-save",
+            "allow-gardens-arrival-cancel",
+            "allow-gardens-arrival-set-sell-date",
+            "allow-gardens-arrivals-list",
+            "allow-gardens-arrival-get",
+            "allow-gardens-arrival-write-off",
+            "allow-gardens-arrival-write-off-undo",
+            "allow-gardens-arrival-entry-preview",
+            "allow-gardens-arrival-entry-save",
+            "allow-gardens-arrival-change-split",
             "allow-vouchers-preview-advances",
             "allow-vouchers-save-advances",
             "allow-vouchers-list",
+            "allow-vouchers-save-receipt",
+            "allow-vouchers-save-payment",
+            "allow-vouchers-preview",
+            "allow-vouchers-edit",
+            "allow-vouchers-cancel",
+            "allow-vouchers-get",
+            "allow-vouchers-open-for-edit",
+            "allow-vouchers-save-receipts-batch",
+            "allow-advances-report",
             "allow-assist-advances",
+            "allow-assist-open-bills",
+            "allow-assist-open-payables",
+            "allow-assist-collection-list",
             "allow-day-close-preview",
             "allow-day-close",
             "allow-day-reopen",
@@ -192,11 +274,206 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-partners-set-shares",
             "allow-partners-check-shares",
             "allow-partners-overview",
+            "allow-cashbook-get",
+            "allow-cashbook-capital-where",
+            "allow-vouchers-save-shop-expense",
+            "allow-vouchers-save-personal-expense",
+            "allow-vouchers-save-personal-return",
+            "allow-vouchers-preview-expense",
+            "allow-partner-takes",
+            "allow-vouchers-repeat-last-month-preview",
+            "allow-masters-expense-heads",
+            "allow-vouchers-save-money-lent",
+            "allow-vouchers-save-money-lent-return",
+            "allow-lent-person-create",
+            "allow-lent-list",
+            "allow-lent-report",
+            "allow-lent-person-update",
+            "allow-lent-dues",
+            "allow-partners-open-ventures",
+            "allow-partners-statement-month-print-data",
+            "allow-partners-statement-day",
+            "allow-partners-statement-month",
+            "allow-khata-set-link",
+            "allow-bikri-mixed-preview",
+            "allow-bikri-mixed-save",
+            "allow-bikri-mixed-undo",
+            "allow-reports-sale-print-data",
+            "allow-reports-buyer-parchi-print-data",
+            "allow-reports-seller-bills-print-data",
+            "allow-reports-adhari-sheet",
+            "allow-reports-adhari-sheet-print-data",
+            "allow-reports-buyer-parchi-print",
+            "allow-reports-seller-bills-print",
+            "allow-reports-sale-print",
+            "allow-reports-adhari-sheet-print",
+            "allow-reports-collection-sheet-print",
+            "allow-dashboard-buyer-dues-print",
+            "allow-dashboard-commission-print",
+            "allow-dashboard-seller-dues-print",
+            "allow-dashboard-total-dues-print",
+            "allow-dashboard-lent-open-print",
+            "allow-advances-report-print",
+            "allow-dashboard-cash-sales-month-print",
+            "allow-dashboard-cash-sales-day-print",
+            "allow-partners-statement-month-print",
+            "allow-reports-collection-sheet-print-data",
+            "allow-reports-collection-sheet",
+            "allow-windows-bounds",
+            "allow-tables-export-excel",
+            "allow-dashboard-buyer-dues-print-data",
+            "allow-dashboard-buyer-dues",
+            "allow-dashboard-commission-print-data",
+            "allow-dashboard-commission-day",
+            "allow-dashboard-commission-month",
+            "allow-dashboard-seller-dues",
+            "allow-dashboard-seller-dues-print-data",
+            "allow-dashboard-total-dues",
+            "allow-dashboard-lent-open",
+            "allow-dashboard-cash-sales-month",
+            "allow-dashboard-cash-sales-day",
+            "allow-dashboard-total-dues-print-data",
+            "allow-dashboard-lent-open-print-data",
+            "allow-dashboard-cash-sales-month-print-data",
+            "allow-dashboard-cash-sales-day-print-data",
+            "allow-advances-report-print-data",
+            "allow-assist-attention-overdue",
+            "allow-vouchers-save-capital-in",
+            "allow-vouchers-save-capital-out",
+            "allow-capital-history",
+            "allow-partners-statement",
+            "allow-khata-create",
+            "allow-vouchers-save-khata-out",
+            "allow-vouchers-save-khata-in",
+            "allow-khata-statement",
+            "allow-general-preview",
+            "allow-general-save",
             "allow-bikri-preview",
-            "allow-bikri-split-freight",
-            "allow-assist-truck-memory",
             "allow-assist-seller-memory",
             "allow-assist-last-rate",
+            "allow-bikri-save",
+            "allow-bikri-get",
+            "allow-bikri-list",
+            "allow-bikri-list-print-data",
+            "allow-bikri-list-print",
+            "allow-bikri-find",
+            "allow-bikri-navigate",
+            "allow-bikri-stock-list",
+            "allow-bikri-ready-goods",
+            "allow-bikri-goods-sources",
+            "allow-bikri-goods-to-load",
+            "allow-bikri-later-sale-preview",
+            "allow-bikri-later-sale-save",
+            "allow-bikri-open-for-edit",
+            "allow-bikri-edit-preview",
+            "allow-bikri-edit-save",
+            "allow-bikri-cancel-preview",
+            "allow-bikri-cancel",
+            "allow-bikri-undo",
+            "allow-bikri-write-off",
+            "allow-bikri-write-off-undo",
+            "allow-drafts-save",
+            "allow-drafts-get",
+            "allow-drafts-discard",
+            "allow-reports-bikri-print-data",
+            "allow-reports-print",
+            "allow-reports-voucher-print-data",
+            "allow-reports-print-voucher",
+            "allow-reports-print-header",
+            "allow-reports-collection-print-data",
+            "allow-reports-print-collection",
+            "allow-reports-list-printers",
+            "allow-settings-get-printing",
+            "allow-settings-set-printing",
+            // Run B, plan 18 (append-only block).
+            "allow-backup-status",
+            "allow-backup-list",
+            "allow-backup-now",
+            "allow-backup-restore-preview",
+            "allow-backup-restore",
+            "allow-backup-test-restore",
+            "allow-backup-settings-get",
+            "allow-backup-settings-set",
+            "allow-backup-key-setup",
+            "allow-backup-key-confirm",
+            "allow-backup-first-run-list",
+            "allow-backup-first-run-preview",
+            "allow-backup-first-run-restore",
+            // Run B, plan 20 (append-only block).
+            "allow-reports-catalog",
+            "allow-reports-run",
+            "allow-reports-print-data",
+            // Run B, plan 21 (append-only block).
+            "allow-analytics-catalog",
+            "allow-analytics-run",
+            "allow-analytics-lines",
+            "allow-analytics-print-data",
+            "allow-analytics-views-get",
+            "allow-analytics-views-save",
+            // Run B, plan 22 (append-only block).
+            "allow-settings-day-get",
+            "allow-settings-day-set",
+            "allow-settings-set-number-grouping",
+            "allow-settings-set-owner-sign",
+            "allow-audit-list",
+            "allow-audit-options",
+            "allow-health-run",
+            "allow-health-last",
+            "allow-support-info-save",
+            "allow-updates-check",
+            "allow-updates-install",
+            "allow-reports-export-excel",
+            "allow-analytics-export-excel",
+            "allow-bikri-list-export-excel",
+            "allow-month-list",
+            "allow-month-close-preview",
+            "allow-month-close-save",
+            "allow-month-close-reverse",
+            "allow-dashboard-get",
+            "allow-assist-attention",
+            "allow-prefs-screen-get",
+            "allow-prefs-screen-set",
+            "allow-reports-buyer-bills-print-data",
+            "allow-reports-print-report",
+            "allow-analytics-print-view",
+            "allow-bikri-edit-review",
+            "allow-vouchers-edit-preview",
+            "allow-fruit-edit-preview",
+            "allow-purchases-edit-preview",
+            "allow-purchases-edit-save",
+            "allow-trips-cost-edit-preview",
+            "allow-trips-cost-edit-save",
+            "allow-trips-other-sale-edit-preview",
+            "allow-trips-other-sale-edit-save",
+            "allow-gardens-entry-edit-preview",
+            "allow-gardens-entry-edit-save",
+            "allow-gardens-arrival-edit-preview",
+            "allow-gardens-arrival-edit-save",
+            "allow-trips-header-edit-preview",
+            "allow-trips-header-edit-save",
+            "allow-gardens-header-edit-preview",
+            "allow-gardens-header-edit-save",
+            "allow-day-fix-open",
+            "allow-day-fix-close",
+            "allow-audit-edit-stamp",
+            "allow-audit-edit-history",
+            "allow-partners-code-status",
+            "allow-partners-code-set",
+            "allow-partners-code-change",
+            "allow-partners-code-unlock",
+            "allow-partners-code-lock",
+            "allow-partners-code-reset",
+            "allow-assistant-status",
+            "allow-assistant-ask",
+            "allow-assistant-quick",
+            "allow-assistant-pick",
+            "allow-assistant-rerun",
+            "allow-assistant-new-conversation",
+            "allow-assistant-settings-set",
+            "allow-assistant-key-save",
+            "allow-assistant-key-remove",
+            "allow-assistant-test",
+            "allow-assistant-log-list",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",
@@ -204,11 +481,177 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "process:allow-exit",
             "dialog:allow-message",
             "dialog:allow-ask",
-            "dialog:allow-confirm"
+            "dialog:allow-confirm",
+            "dialog:allow-save",
+            "dialog:allow-open"
         ])
     );
     assert_eq!(
         conf()["app"]["security"]["capabilities"],
-        json!(["default"])
+        json!(["default", "print"])
     );
+}
+
+/// The hidden print windows (plan 14) may only read the print data of a document, check the
+/// sign-in state, and use events to say the page is ready (NFR-SEC-10).
+#[test]
+fn print_capability_is_small_and_only_for_print_windows() {
+    let cap: Value = serde_json::from_str(include_str!("../capabilities/print.json")).unwrap();
+    assert_eq!(cap["identifier"], "print");
+    assert_eq!(cap["windows"], json!(["print-*"]));
+    assert_eq!(
+        cap["permissions"],
+        json!([
+            "allow-app-data-status",
+            "allow-auth-status",
+            "allow-reports-bikri-print-data",
+            "allow-reports-collection-print-data",
+            "allow-reports-voucher-print-data",
+            "allow-reports-print-data",
+            "allow-reports-buyer-bills-print-data",
+            "allow-analytics-print-data",
+            "allow-bikri-list-print-data",
+            "allow-party-ledgers-statement-print-data",
+            "allow-party-ledgers-statement-rows-print-data",
+            "allow-reports-buyer-parchi-print-data",
+            "allow-reports-seller-bills-print-data",
+            "allow-reports-sale-print-data",
+            "allow-reports-adhari-sheet-print-data",
+            "allow-reports-collection-sheet-print-data",
+            "allow-dashboard-buyer-dues-print-data",
+            "allow-dashboard-commission-print-data",
+            "allow-dashboard-seller-dues-print-data",
+            "allow-dashboard-total-dues-print-data",
+            "allow-dashboard-lent-open-print-data",
+            "allow-dashboard-cash-sales-month-print-data",
+            "allow-dashboard-cash-sales-day-print-data",
+            "allow-advances-report-print-data",
+            "allow-partners-statement-month-print-data",
+            "allow-reports-print-header",
+            "core:event:default"
+        ])
+    );
+    // The hidden window reads the print data of exactly these documents and calls no command that
+    // writes or prints: the بکری documents, the voucher slip and the collection list (plan 17e), and
+    // the report, the slips of R5 and the analytics view (plan d5-late). It asks the shared header
+    // and footer from `reports_print_header`.
+    let print_data: Vec<&str> = cap["permissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|p| p.ends_with("-print-data"))
+        .collect();
+    assert_eq!(
+        print_data,
+        [
+            "allow-reports-bikri-print-data",
+            "allow-reports-collection-print-data",
+            "allow-reports-voucher-print-data",
+            "allow-reports-print-data",
+            "allow-reports-buyer-bills-print-data",
+            "allow-analytics-print-data",
+            "allow-bikri-list-print-data",
+            "allow-party-ledgers-statement-print-data",
+            "allow-party-ledgers-statement-rows-print-data",
+            "allow-reports-buyer-parchi-print-data",
+            "allow-reports-seller-bills-print-data",
+            "allow-reports-sale-print-data",
+            "allow-reports-adhari-sheet-print-data",
+            "allow-reports-collection-sheet-print-data",
+            "allow-dashboard-buyer-dues-print-data",
+            "allow-dashboard-commission-print-data",
+            "allow-dashboard-seller-dues-print-data",
+            "allow-dashboard-total-dues-print-data",
+            "allow-dashboard-lent-open-print-data",
+            "allow-dashboard-cash-sales-month-print-data",
+            "allow-dashboard-cash-sales-day-print-data",
+            "allow-advances-report-print-data",
+            "allow-partners-statement-month-print-data"
+        ]
+    );
+    let others: Vec<&str> = cap["permissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|p| p.starts_with("allow-") && !p.ends_with("-print-data"))
+        .collect();
+    assert_eq!(
+        others,
+        [
+            "allow-app-data-status",
+            "allow-auth-status",
+            "allow-reports-print-header"
+        ]
+    );
+}
+
+/// NFR-INS-5 (plan 22 early): uninstall never deletes the data folder or the backups.
+///
+/// The data file is in the app data folder of the identifier (`%APPDATA%\pk.mandisoftware.app\`
+/// on Windows, Tech Stack 7) and the backups are next to it. The installers are the two
+/// standard ones of the Release Pipeline, with no custom template and no hook, so the standard
+/// behaviour stays: the program files are removed, and the data folder is only removed if the
+/// Owner himself ticks "delete the application data" in the NSIS uninstaller (unticked by
+/// default, and not offered in a silent or update run). Any custom NSIS or WiX file in the
+/// project would need the same check, so this test fails if one appears.
+#[test]
+fn the_installer_config_never_removes_the_data_folder_or_the_backups() {
+    let conf = conf();
+    assert_eq!(conf["identifier"], "pk.mandisoftware.app");
+    let bundle = &conf["bundle"];
+    assert_eq!(bundle["targets"], json!(["nsis", "msi"]));
+    let windows = &bundle["windows"];
+    // No custom installer template or hook, in either installer.
+    for (installer, keys) in [
+        (
+            "nsis",
+            ["template", "installerHooks", "customLanguageFiles"],
+        ),
+        ("wix", ["template", "fragmentPaths", "componentRefs"]),
+    ] {
+        for key in keys {
+            assert!(
+                windows[installer].get(key).is_none(),
+                "bundle.windows.{installer}.{key} would change what an uninstall removes"
+            );
+        }
+    }
+    // No resource of the bundle lands in the data folder.
+    assert!(
+        bundle.get("resources").is_none(),
+        "bundle resources need the same check"
+    );
+    // The updater runs the installer in its update mode (a passive install), which keeps the
+    // data folder and the backups.
+    assert_eq!(
+        conf["plugins"]["updater"]["windows"]["installMode"],
+        "passive"
+    );
+    // The app's own folder holds no installer script that could remove data.
+    let app_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut stack = vec![app_dir.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if path.is_dir() {
+                if name != "target" && name != "gen" {
+                    stack.push(path);
+                }
+                continue;
+            }
+            let extension = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            assert!(
+                !["nsi", "nsh", "wxs", "wxi"].contains(&extension.as_str()),
+                "{} is an installer script: check what an uninstall removes",
+                path.display()
+            );
+        }
+    }
 }

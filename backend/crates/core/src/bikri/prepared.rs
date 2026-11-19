@@ -1,15 +1,16 @@
 //! A typed draft after it has been read into numbers (Code Standards 4.1 layer 2).
 
-use super::input::{FreightPaidBy, LotChargeMethod, PaymentType};
+use super::grade::SaleGrade;
+use super::input::{FreightPaidBy, LotChargeMethod};
 use crate::dates::BusinessDate;
 use crate::error::FieldError;
 use crate::money::{Grams, Paisa, Qty};
 use crate::rules::ChargeValue;
 
-/// A person of the پختہ کھاتہ accounts, trimmed. Checked by the domain, which knows whether the
-/// account is a پختہ کھاتہ account.
+/// A چکتا buyer, trimmed. Checked by the domain, which knows whether the account is the چکتا کھاتہ
+/// account.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct PreparedPukhta {
+pub struct PreparedChukta {
     /// Urdu name, trimmed.
     pub name_ur: String,
     /// English name, trimmed.
@@ -18,7 +19,7 @@ pub struct PreparedPukhta {
     pub phone: String,
 }
 
-impl PreparedPukhta {
+impl PreparedChukta {
     /// True if nothing was typed.
     pub fn is_empty(&self) -> bool {
         self.name_ur.is_empty() && self.name_en.is_empty() && self.phone.is_empty()
@@ -34,23 +35,14 @@ pub struct TypedLotCharge {
     pub value: Paisa,
 }
 
-/// The header, read.
+/// The header, read. From v1.34 it holds only the posting day (PRD plan 71 H1): a new بکری's bill
+/// day is its posting day.
 #[derive(Debug, Clone, Default)]
 pub struct PreparedHeader {
     /// The posting day, if it was valid.
     pub entry_date: Option<BusinessDate>,
-    /// The bill day (the posting day when empty).
+    /// The bill day: the posting day.
     pub bill_date: Option<BusinessDate>,
-    /// The truck number, trimmed. None if empty.
-    pub truck_no: Option<String>,
-    /// The زمیندار.
-    pub zamindar_account_id: Option<i64>,
-    /// The truck stand.
-    pub adda_id: Option<i64>,
-    /// The default store.
-    pub store_id: Option<i64>,
-    /// The total freight, if typed.
-    pub total_freight: Option<Paisa>,
 }
 
 /// A sale line, read. A field that could not be read is `None` and its error is in
@@ -59,14 +51,16 @@ pub struct PreparedHeader {
 pub struct PreparedSale {
     /// The screen's key.
     pub key: String,
+    /// The saved line this row is, in an edit (plan 16). `None` for a new line.
+    pub sale_id: Option<i64>,
     /// True for a row with no buyer and no rate (PRD FR-7.52).
     pub is_blank: bool,
     /// True if any value of the row could not be read.
     pub has_errors: bool,
     /// The buyer.
     pub buyer_account_id: Option<i64>,
-    /// The one-time buyer.
-    pub pukhta: PreparedPukhta,
+    /// The چکتا buyer.
+    pub chukta: PreparedChukta,
     /// Quantity in نگ.
     pub qty: Option<Qty>,
     /// Weight sold, if typed.
@@ -77,14 +71,19 @@ pub struct PreparedSale {
     pub buyer_rate: Option<Paisa>,
     /// True if the buyer rate differs.
     pub rate_differs: bool,
-    /// How the buyer pays, if chosen.
-    pub payment_type: Option<PaymentType>,
+    /// Money paid on the spot as typed (PRD FR-12.44). Empty is 0. A buyer who must pay in full
+    /// ignores it (the domain sets paid to the buyer total).
+    pub paid: Paisa,
     /// A seller commission typed on the line.
     pub seller_comm: Option<ChargeValue>,
     /// A buyer commission typed on the line.
     pub buyer_comm: Option<ChargeValue>,
     /// A لاگا typed on the line.
     pub laga: Option<ChargeValue>,
+    /// The quality of the goods of this line (PRD FR-12.42). Not used by the maths.
+    pub grade: Option<SaleGrade>,
+    /// A note, trimmed. None if empty.
+    pub note: Option<String>,
 }
 
 /// A lot, read.
@@ -92,12 +91,16 @@ pub struct PreparedSale {
 pub struct PreparedLot {
     /// The screen's key.
     pub key: String,
+    /// The saved lot this row is, in an edit of the first posting (plan 16). `None` for a new lot.
+    pub lot_id: Option<i64>,
     /// True if a value of the lot itself could not be read.
     pub has_errors: bool,
     /// The seller.
     pub seller_account_id: Option<i64>,
-    /// The one-time seller.
-    pub pukhta: PreparedPukhta,
+    /// The purchase an own lot takes its goods from (PRD FR-12.26).
+    pub purchase_id: Option<i64>,
+    /// The garden arrival a garden lot takes its goods from (PRD FR-12.40).
+    pub arrival_id: Option<i64>,
     /// The item.
     pub item_id: Option<i64>,
     /// The packing.
@@ -120,8 +123,7 @@ pub struct PreparedLot {
     pub munshiana: Option<TypedLotCharge>,
     /// فون typed by hand, if any.
     pub phone: Option<TypedLotCharge>,
-    /// نقد as typed. `None` if empty: 0 for an ordinary seller, and the seller credit for a one-time
-    /// seller (PRD FR-13.10).
+    /// نقد as typed. `None` if empty, which is 0.
     pub cash_paid: Option<Paisa>,
     /// کرایہ سٹور, 0 if empty.
     pub store_rent: Paisa,

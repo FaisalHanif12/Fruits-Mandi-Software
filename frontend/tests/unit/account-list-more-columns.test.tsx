@@ -32,11 +32,11 @@ vi.mock('../../src/shared/urdu/api');
 
 const STORAGE_KEY = 'mandi.filters.accounts.more_columns';
 
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   city: ref(1, '0001', 'کوٹ رادھا کشن', 'Kot Radha Kishan'),
   balance: balance(2880, 'dr'),
 });
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   opening_dr_paisa: money(15000),
   opening_is_advance: true,
 });

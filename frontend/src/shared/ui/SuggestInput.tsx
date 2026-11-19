@@ -13,7 +13,7 @@
 // - Codes are Latin and written left to right in both languages (F25).
 
 import { useCombobox } from 'downshift';
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { focusNextField, keepKeyForApp } from '../keyboard';
 import { Code } from './Code';
 import { controlClasses } from './control-classes';
@@ -24,6 +24,16 @@ export interface Suggestion {
   value: string;
   /** A short note beside it, for example the date of its last use. Already formatted. */
   note?: string | undefined;
+  /**
+   * What the row shows instead of the value and the note, for a row that stands for a record with
+   * several fields (a one-time person, PRD FR-7.29).
+   */
+  content?: ReactNode;
+  /**
+   * The row was taken. Without it the value goes into the field; with it the screen fills what
+   * the row stands for, and the field is not changed by the list itself.
+   */
+  onPick?: (() => void) | undefined;
 }
 
 interface SuggestInputProps extends FieldControlProps {
@@ -32,6 +42,12 @@ interface SuggestInputProps extends FieldControlProps {
   suggestions: readonly Suggestion[];
   onCommit?: ((text: string) => void) | undefined;
   placeholder?: string | undefined;
+  /**
+   * The first suggestion is highlighted as soon as the list opens, so Enter takes it. For a field
+   * that must end with one of the suggestions (a known one-time person, PRD FR-13.7), where a
+   * typed name that is not taken means nothing. Default: none highlighted, Enter keeps the text.
+   */
+  highlightFirst?: boolean | undefined;
 }
 
 /**
@@ -61,6 +77,7 @@ export function SuggestInput({
   suggestions,
   onCommit,
   placeholder,
+  highlightFirst = false,
 }: SuggestInputProps) {
   const [open, setOpen] = useState(false);
   const { commit, forget } = useCommitOnce(onCommit);
@@ -72,7 +89,7 @@ export function SuggestInput({
     selectedItem: null,
     inputValue: value,
     isOpen: open && suggestions.length > 0,
-    defaultHighlightedIndex: -1,
+    defaultHighlightedIndex: highlightFirst ? 0 : -1,
     scrollIntoView: () => undefined,
     stateReducer: (state, { type, changes }) => {
       // Leaving the field keeps the text; only a suggestion taken on purpose changes it.
@@ -86,8 +103,12 @@ export function SuggestInput({
     },
     onSelectedItemChange: ({ selectedItem }) => {
       if (selectedItem === null) return;
-      onChange(selectedItem.value);
       setOpen(false);
+      if (selectedItem.onPick !== undefined) {
+        selectedItem.onPick();
+        return;
+      }
+      onChange(selectedItem.value);
       commit(selectedItem.value);
     },
   });
@@ -162,13 +183,19 @@ export function SuggestInput({
                 <li
                   key={suggestion.value}
                   {...getItemProps({ item: suggestion, index })}
-                  className={`flex h-control cursor-pointer items-center justify-between gap-4 whitespace-nowrap rounded-1 px-3 ${index === highlightedIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
+                  className={`flex cursor-pointer items-center justify-between gap-4 rounded-1 px-3 ${suggestion.content === undefined ? 'h-control whitespace-nowrap' : 'min-h-control py-1'} ${index === highlightedIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
                 >
-                  <Code>{suggestion.value}</Code>
-                  {suggestion.note === undefined ? null : (
-                    <span className="type-body text-ink-muted">
-                      <Code>{suggestion.note}</Code>
-                    </span>
+                  {suggestion.content !== undefined ? (
+                    suggestion.content
+                  ) : (
+                    <>
+                      <Code>{suggestion.value}</Code>
+                      {suggestion.note === undefined ? null : (
+                        <span className="type-body text-ink-muted">
+                          <Code>{suggestion.note}</Code>
+                        </span>
+                      )}
+                    </>
                   )}
                 </li>
               ))

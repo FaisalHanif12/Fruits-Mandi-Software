@@ -1,0 +1,95 @@
+{
+  "steps": [
+    {
+      "outcome": "outside_books",
+      "question": "kal lahore mein kele ka rate kya tha",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"outside_books\", \"text\": \"\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": {\"source\": \"A\", \"party\": null}}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 5600,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ],
+      "source": "analytics:A"
+    },
+    {
+      "outcome": "outside_books",
+      "question": "akram ka phone number",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"text\": \"akram\", \"role\": \"buyer\"}",
+                      "name": "find"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"outside_books\", \"text\": \"\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": {\"source\": \"party_card\", \"party\": \"r1.matches.0\"}}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 5900,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ],
+      "source": "party_card"
+    }
+  ],
+  "world": "day"
+}

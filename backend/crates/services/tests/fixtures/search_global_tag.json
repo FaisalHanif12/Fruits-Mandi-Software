@@ -1,0 +1,21 @@
+[
+  {
+    "kind": "account",
+    "hit": {
+      "id": 21,
+      "code": "0020",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": "K",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "buyer",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
+      "control_id": 6,
+      "is_active": true,
+      "is_dead": false
+    }
+  }
+]

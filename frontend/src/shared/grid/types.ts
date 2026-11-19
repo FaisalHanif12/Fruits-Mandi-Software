@@ -1,7 +1,7 @@
 // What a screen tells the shared grid (entry-grid skill, Code Standards F27). A screen declares
 // its columns and keeps its rows in a store. It never writes key handlers.
 
-import type { AccountScope } from '../accounts';
+import type { AccountScope, PickedChukta } from '../accounts';
 import type { SearchScope } from '../search';
 
 /** The column types of the shared setup. Each has one fixed width (Code Standards F18). */
@@ -9,6 +9,8 @@ export type EntryColumnType =
   | 'account'
   | 'money'
   | 'qty'
+  // Kilograms with up to 3 decimals, as typed (PRD E23): a number cell that is never grouped.
+  | 'weight'
   | 'rate'
   | 'date'
   | 'text'
@@ -17,7 +19,10 @@ export type EntryColumnType =
   // A record chosen from a list in the cell: an account, or an item, packing and the like.
   | 'picker'
   // One of a few fixed words (ادھاری / نقدی), changed with Space or a click.
-  | 'choice';
+  | 'choice'
+  // One of a few fixed words that is optional, chosen from a small list in a popup under the cell
+  // (the quality of a sale line: اول, دوم, سوم, or nothing). Space, Alt+↓ or a click opens it.
+  | 'select';
 
 /**
  * The types the user never types in: `calc` (a number from the backend) and `label` (words the
@@ -36,11 +41,31 @@ export interface PickedRecord {
   readonly code: string;
   readonly name_ur: string;
   readonly name_en: string;
+  /** The tag (نشان) after the name, shown by `displayName`. Absent when there is none. */
+  readonly tag?: string | undefined;
+  /**
+   * An item sold by weight, as its search hit said when it was chosen. Absent for every other
+   * record. The item lines of an entry stop Enter at the weight of such a row (plan 35, D3).
+   */
+  readonly soldByWeight?: boolean | undefined;
+  /**
+   * Present only for a چکتا buyer (PRD FR-7.29, FR-13.5): the line is on the account چکتا کھاتہ, and
+   * this holds his phone and his own record when the picker knew it. Names are his own.
+   */
+  readonly chukta?: PickedChukta | undefined;
 }
 
 /** Which records a picker column offers. */
 export type PickerSpec =
-  | { readonly kind: 'account'; readonly scope: AccountScope }
+  | {
+      readonly kind: 'account';
+      readonly scope: AccountScope;
+      /**
+       * The buyer box of a بکری line: it lists چکتا buyers beside ordinary buyers and ends its list
+       * with the second add row, a new چکتا buyer (PRD FR-7.29, FR-7.69, FR-13.3). No other box does.
+       */
+      readonly withChukta?: boolean;
+    }
   | { readonly kind: 'master'; readonly scope: SearchScope };
 
 /** One of the words of a `choice` column. `value` is what is kept; the words come from Fluent. */
@@ -77,19 +102,20 @@ export interface EntryColumn {
   readonly editable?: (row: EntryRow) => boolean;
   /**
    * Does Enter stop here? Default: yes for every typed column, no for `calc`. Cells such as a
-   * payment-type toggle can be editable but not an Enter stop (entry-grid skill).
+   * payment-type toggle can be editable but not an Enter stop (entry-grid skill). A function
+   * decides per row: the weight of a line stops Enter only when its item is sold by weight
+   * (plan 35, PRD FR-12.41).
    */
-  readonly enterStop?: boolean;
+  readonly enterStop?: boolean | ((row: EntryRow) => boolean);
   /** In a grid that must fit its room (`fit`): the least width of this column, if not the type's. */
   readonly minWidth?: number;
   /** Grey hint inside an empty cell, for example the last rate. Never saved (PRD FR-7.53). */
   readonly placeholder?: (row: EntryRow) => string | undefined;
-  /** The hint is a number: it stays on the physical right edge like the figures (NFR-USE-19). */
-  readonly hintIsNumber?: boolean;
   /**
-   * The grey hint of an empty cell is the text the backend sent for this field (the grid's
-   * `calc`), for example the last rate. It is never typed into the cell and never sent (PRD
-   * FR-7.53, Code Standards F43).
+   * The grey hint of an empty cell is the text the screen made from what the backend sent for this
+   * field (the grid's `calc`), for example "Last 900" for the last rate. It is words in grey italic,
+   * laid out as text and never as a figure, so it is not taken for a typed value. It is never typed
+   * into the cell and never sent (PRD FR-7.53, Code Standards F43, D8 Bug 1).
    */
   readonly hintFromCalc?: boolean;
   /** The `calc` field that holds the words of the hint, shown as a tooltip when the cell is narrow. */
@@ -101,9 +127,21 @@ export interface EntryColumn {
    * cell (NFR-USE-27, Code Standards F43). Nothing is sent for the shown value.
    */
   readonly showsCalc?: boolean;
+  /**
+   * The backend can close this cell on a row and decide its amount (the paid amount of a buyer who must
+   * pay in full, PRD FR-12.44). This names the `calc` field that holds the amount as text; while it is
+   * not empty the cell shows it as a calculated cell, whatever is typed in it. The screen closes the cell
+   * with `editable` from the same answer, so Enter skips it. If the answer closes the cell while the
+   * cursor is on it, the cursor goes on as an Enter would, so a line takes the same Enters as the
+   * answer says (NFR-USE-6). The grid only shows what the backend said; it works out nothing.
+   */
+  readonly fixedFromCalc?: string;
   /** For a `picker` column: which records it offers. */
   readonly picker?: PickerSpec;
-  /** For a `choice` column: its words. Space or a click changes to the next one. */
+  /**
+   * For a `choice` column: its words. Space or a click changes to the next one. For a `select`
+   * column: the words of its list, in order; the one with the value '' is the empty choice.
+   */
   readonly choices?: readonly ChoiceSpec[];
   /** A calculated cell of this column has the ⓘ with the backend's working (PRD FR-7.43). */
   readonly explain?: boolean;
@@ -120,6 +158,17 @@ export interface PendingFocus {
   /** A row index, or 'last' for the row just added. Clamped to the rows that exist. */
   readonly rowIndex: number | 'last';
   readonly field: string;
+  /**
+   * Start typing in the cell once it has the focus, with its text selected, so the next key replaces it
+   * (a screen that sends the cursor back to a cell that must be fixed, D8 Bug 1).
+   */
+  readonly edit?: boolean;
+}
+
+/** What the grid tells the screen about an Enter. */
+export interface EnterInfo {
+  /** The Enter finished a cell and changed its text (the typed text differs from what it was). */
+  readonly changed: boolean;
 }
 
 /** What a screen can add to the keys of a grid (Code Standards F27). */
@@ -128,7 +177,14 @@ export interface GridInterceptors {
    * Enter was pressed on this cell. Return true if the screen took it (it moved focus somewhere
    * else, for example from the last lot cell into the sale lines); the grid then does nothing.
    */
-  readonly onEnter?: (cell: CellRef) => boolean;
+  readonly onEnter?: (cell: CellRef, enter?: EnterInfo) => boolean;
   /** ↑ was pressed on the first row. Return true if the screen took it. */
   readonly onAboveFirst?: (cell: CellRef) => boolean;
+  /**
+   * The cell this row is held on, or null. While a row is held (the backend refused its quantity), the
+   * cursor stays on that cell: arrows, Tab and Enter do not leave it, and no other cell of the row can
+   * be typed in. Esc and Ctrl+Delete keep their meaning (PRD FR-7.18). The screen only reads what the
+   * backend said; it judges nothing (D8 Bug 1, B2).
+   */
+  readonly heldField?: (rowId: string) => string | null;
 }

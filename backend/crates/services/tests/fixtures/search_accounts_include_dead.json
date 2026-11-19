@@ -1,0 +1,17 @@
+[
+  {
+    "id": 22,
+    "code": "0021",
+    "name_ur": "ارشد ملتانی",
+    "name_en": "Arshad Multani",
+    "extra_ur": "",
+    "extra_en": "",
+    "account_type": "buyer",
+    "kind": "account",
+    "chukta_id": null,
+    "phone": null,
+    "control_id": 6,
+    "is_active": false,
+    "is_dead": true
+  }
+]

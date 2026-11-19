@@ -2,11 +2,13 @@
 //! `mandi_core::rules` and `mandi_services::rules`, and the choosing of the winning rule is in
 //! `mandi_domain::rules`. A rule is never deleted; it is made inactive (Code Standards D3).
 
+use std::collections::HashMap;
+
 use mandi_core::accounts::RecordRef;
 use mandi_core::money::{Bps, Paisa};
 use mandi_core::rules::{
-    ChargeMethod, ChargeSide, ChargeType, ItemGroup, RuleOverlap, RuleRow, RulesFilter, level_of,
-    percent_text,
+    ChargeMethod, ChargeSide, ChargeType, ItemGroup, RuleLevel, RuleOverlap, RuleRow, RulesFilter,
+    level_of, percent_text,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
@@ -18,7 +20,13 @@ pub const DEFAULT_RULES_FROM: &str = "1000-01-01";
 const ROW_SELECT: &str = "SELECT r.id, r.version, r.side, r.charge_type,
         r.account_id, a.code, a.name_ur, a.name_en,
         r.item_id, i.code, i.name_ur, i.name_en,
-        r.item_group, r.method, r.value_bps, r.value_paisa, r.from_date, r.to_date, r.is_active, r.note
+        r.item_group, r.method, r.value_bps, r.value_paisa, r.from_date, r.to_date, r.is_active, r.note, a.tag,
+        (EXISTS (SELECT 1 FROM bikri_sales s WHERE s.seller_comm_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_sales s WHERE s.buyer_comm_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_sales s WHERE s.laga_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.labour_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.munshiana_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.phone_rule_id = r.id)) AS used
     FROM charge_rules r
     LEFT JOIN accounts a ON a.id = r.account_id
     LEFT JOIN items i ON i.id = r.item_id";
@@ -42,6 +50,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
             code: r.get::<_, Option<String>>(5)?.unwrap_or_default(),
             name_ur: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
             name_en: r.get::<_, Option<String>>(7)?.unwrap_or_default(),
+            tag: r.get(20)?,
         }),
         None => None,
     };
@@ -52,6 +61,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
             code: r.get::<_, Option<String>>(9)?.unwrap_or_default(),
             name_ur: r.get::<_, Option<String>>(10)?.unwrap_or_default(),
             name_en: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
+            tag: None,
         }),
         None => None,
     };
@@ -91,8 +101,28 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
         from_date: r.get(16)?,
         to_date: r.get(17)?,
         is_active: r.get(18)?,
+        used: r.get(21)?,
         note: r.get::<_, Option<String>>(19)?.unwrap_or_default(),
     })
+}
+
+/// How many lines in force and lots took their rate from this rule (PRD FR-11.6): the sale lines
+/// whose seller commission, buyer commission or لاگا and the lots whose labour, munshiana or phone
+/// charge came from it. Lines an edit replaced are history and are not counted here (the row is
+/// still "used" because of them).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn saved_lines_using(conn: &Connection, id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT (SELECT COUNT(*) FROM bikri_sales
+                 WHERE is_active = 1
+                   AND (seller_comm_rule_id = ?1 OR buyer_comm_rule_id = ?1 OR laga_rule_id = ?1))
+              + (SELECT COUNT(*) FROM bikri_lots
+                 WHERE labour_rule_id = ?1 OR munshiana_rule_id = ?1 OR phone_rule_id = ?1)",
+        [id],
+        |r| r.get(0),
+    )
 }
 
 /// One rule. `is_default` is left false: the services know which rows are the defaults.
@@ -102,6 +132,42 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
 pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<RuleRow>> {
     conn.query_row(&format!("{ROW_SELECT} WHERE r.id = ?1"), [id], row_from)
         .optional()
+}
+
+/// The level of each of these rules, in one query (Code Standards B22). A rule that does not exist
+/// is left out. It reads only the three columns that make the level, never the "used" test of
+/// `get`, which looks into the saved lines.
+///
+/// Example: the ids of the rules a saved بکری took its charges from give each rule's level (party
+/// and item, party, item, group or default) for the lines of an edit.
+///
+/// # Errors
+/// Any SQLite error, or a row with a group and a party together.
+pub fn levels_of(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i64, RuleLevel>> {
+    // A saved بکری uses a few rules, so this is one short query; the chunks only keep a
+    // very long list under SQLite's limit on bound values.
+    const CHUNK: usize = 500;
+    let mut levels = HashMap::with_capacity(ids.len());
+    for chunk in ids.chunks(CHUNK) {
+        let marks = vec!["?"; chunk.len()].join(", ");
+        let mut statement = conn.prepare(&format!(
+            "SELECT id, account_id, item_id, item_group FROM charge_rules WHERE id IN ({marks})"
+        ))?;
+        let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
+            let item_group = match r.get::<_, Option<String>>(3)? {
+                Some(text) => Some(ItemGroup::parse(&text).ok_or_else(|| bad(3, "item_group"))?),
+                None => None,
+            };
+            let level = level_of(r.get(1)?, r.get(2)?, item_group)
+                .ok_or_else(|| bad(3, "a group together with a party"))?;
+            Ok((r.get::<_, i64>(0)?, level))
+        })?;
+        for row in rows {
+            let (id, level) = row?;
+            levels.insert(id, level);
+        }
+    }
+    Ok(levels)
 }
 
 /// The rules that match a filter: by side, charge, level (most specific first), then newest
@@ -142,7 +208,7 @@ pub fn list(conn: &Connection, filter: &RulesFilter) -> rusqlite::Result<Vec<Rul
                 WHEN r.account_id IS NOT NULL THEN 3
                 WHEN r.item_id IS NOT NULL THEN 4
                 WHEN r.item_group IS NOT NULL THEN 5 ELSE 6 END,
-           r.from_date DESC, r.id DESC"
+           r.from_date DESC, r.updated_at DESC, r.id DESC"
     );
     let mut statement = conn.prepare(&sql)?;
     let rows = statement.query_map(params_from_iter(values), row_from)?;
@@ -302,7 +368,7 @@ pub fn overlaps(
            AND (?6 IS NULL OR id <> ?6)
            AND from_date <= COALESCE(?8, '9999-12-31')
            AND COALESCE(to_date, '9999-12-31') >= ?7
-         ORDER BY from_date DESC, id DESC",
+         ORDER BY from_date DESC, updated_at DESC, id DESC",
     )?;
     let rows = statement.query_map(
         params![
@@ -351,6 +417,9 @@ pub struct RuleRecord {
     pub from_date: String,
     /// The last day, or none.
     pub to_date: Option<String>,
+    /// When the row was last saved (`updated_at`, UTC text). Of two rules at one level that start
+    /// on the same day, the one saved last wins (PRD FR-11.5).
+    pub saved_at: String,
 }
 
 /// Every active rule (in one query, B22).
@@ -360,7 +429,7 @@ pub struct RuleRecord {
 pub fn load_active(conn: &Connection) -> rusqlite::Result<Vec<RuleRecord>> {
     let mut statement = conn.prepare(
         "SELECT id, side, charge_type, account_id, item_id, item_group, method, value_bps,
-                value_paisa, from_date, to_date
+                value_paisa, from_date, to_date, updated_at
          FROM charge_rules WHERE is_active = 1 ORDER BY id",
     )?;
     let rows = statement.query_map([], |r| {
@@ -379,6 +448,7 @@ pub fn load_active(conn: &Connection) -> rusqlite::Result<Vec<RuleRecord>> {
             value_paisa: r.get(8)?,
             from_date: r.get(9)?,
             to_date: r.get(10)?,
+            saved_at: r.get(11)?,
         })
     })?;
     rows.collect()
@@ -417,7 +487,7 @@ pub fn default_in_force(
             "{ROW_SELECT} WHERE r.is_active = 1 AND r.side = ?1 AND r.charge_type = ?2
                AND r.account_id IS NULL AND r.item_id IS NULL AND r.item_group IS ?3
                AND r.from_date <= ?4 AND (r.to_date IS NULL OR r.to_date >= ?4)
-             ORDER BY r.from_date DESC, r.id DESC LIMIT 1"
+             ORDER BY r.from_date DESC, r.updated_at DESC, r.id DESC LIMIT 1"
         ),
         params![
             side.as_str(),

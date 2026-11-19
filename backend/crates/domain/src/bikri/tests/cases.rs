@@ -1,8 +1,7 @@
 //! The cases the money agent required for plan 12 (design review, section c).
 
 use mandi_core::bikri::{
-    ChargeInput, ChargeSource, LineChargeInput, LineChargeMethod, LotChargeMethod, PaymentType,
-    PukhtaInput, RateHint, RateHintSource,
+    ChargeInput, ChargeSource, ChuktaInput, LineChargeInput, LineChargeMethod, LotChargeMethod,
 };
 use mandi_core::error::{ErrorCode, ErrorValue};
 use mandi_core::money::Paisa;
@@ -123,14 +122,17 @@ fn a_later_posting_charges_no_lot_charge_and_no_per_lot_commission() {
     // first posting. Only the sale itself, its commissions and لاگا are posted again.
     let mut event = lot(RAHIM, BANANA, "50");
     event.store_rent = Some("700".into());
+    // نقد is a lot charge too: the screen of a later sale has none, and the lot is built with 0.
+    event.cash_paid = None;
     event.sales = vec![sale(AKRAM, "20", "600"), sale(ARSHAD, "30", "580")];
     let prepared = mandi_core::bikri::prepare_draft(&draft(vec![event]), today(), None);
     let calc = calc_posting(
-        PostingKind::Later,
+        PostingTarget::LaterSale { lot_id: 1 },
         &prepared,
         &lookups(),
         &RuleSet::build(per_lot_rule()),
         switches(),
+        &StoredPosting::none(),
     )
     .unwrap();
     assert_no_errors(&calc);
@@ -147,12 +149,12 @@ fn a_later_posting_charges_no_lot_charge_and_no_per_lot_commission() {
         (0, 0, 0, 0, 0),
         "no lot charge in a later sale"
     );
-    // Gross 29,400, nothing taken off but نقد as typed; the buyers' commissions and لاگا stay.
+    // Gross 29,400 and nothing taken off at all; the buyers' commissions and لاگا stay.
     assert_eq!(r(t.seller_credit), 29_400);
-    assert_eq!(r(t.net), 24_400);
+    assert_eq!(r(t.net), 29_400);
     assert_eq!(r(t.shared_income), 1_764 + 400);
-    // The entry still balances: 31,564 of buyer bills = 29,400 + 1,764 + 400.
-    assert_eq!(entry_of(&calc).total(), p(31_564 + 5_000));
+    // The entry still balances: 31,564 of buyer bills = 29,400 + 1,764 + 400, and no cash part.
+    assert_eq!(entry_of(&calc).total(), p(31_564));
 }
 
 #[test]
@@ -221,6 +223,7 @@ fn bare_lot_with_freight_and_cash(
     qty: &str,
 ) -> mandi_core::bikri::LotInput {
     mandi_core::bikri::LotInput {
+        lot_id: None,
         labour: None,
         munshiana: None,
         phone: None,
@@ -391,8 +394,8 @@ fn e6_freight_paid_by_the_seller_is_shown_but_not_deducted() {
 fn cash_change_of_event_2_with_cash_paid_is_plus_7_800() {
     let mut karim = lot(KARIM, APPLE, "10");
     karim.freight = Some("1,000".into());
-    let mut shahid = sale(PUKHTA_BUYER, "10", "1,200");
-    shahid.pukhta = Some(PukhtaInput {
+    let mut shahid = sale(CHUKTA_BUYER, "10", "1,200");
+    shahid.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: String::new(),
@@ -404,10 +407,10 @@ fn cash_change_of_event_2_with_cash_paid_is_plus_7_800() {
     assert!(!cash::check(p(0), change).unwrap().needs_confirm);
 }
 
-// ---- Rate hint and remaining quantity (PRD FR-7.52, FR-7.53, E2E-26) ----
+// ---- Remaining quantity (PRD FR-7.52, E2E-26). The rate hint is retired (FR-7.53, v1.44). ----
 
 #[test]
-fn a_new_row_starts_at_the_remaining_quantity_with_the_rate_of_the_line_above() {
+fn a_new_row_starts_at_the_remaining_quantity() {
     let calc = run(&draft(vec![with(
         lot(RAHIM, BANANA, "50"),
         vec![sale(AKRAM, "20", "600"), blank("30")],
@@ -415,50 +418,6 @@ fn a_new_row_starts_at_the_remaining_quantity_with_the_rate_of_the_line_above() 
     let rows = &calc.lots[0].lines;
     assert_eq!(rows[0].remaining_qty, 50);
     assert_eq!(rows[1].remaining_qty, 30);
-    let hint = rows[1].rate_hint.as_ref().unwrap();
-    assert_eq!(
-        (r(hint.rate_paisa), hint.source),
-        (600, RateHintSource::ThisBikri)
-    );
-    // The first row has no earlier line to take a hint from.
-    assert!(rows[0].rate_hint.is_none());
-}
-
-#[test]
-fn a_saved_rate_is_the_hint_until_an_earlier_line_has_one() {
-    let mut lookups = lookups();
-    lookups.saved_hints.insert(
-        (BANANA, BOX),
-        RateHint {
-            rate_paisa: p(590),
-            source: RateHintSource::LastDay,
-            date: "2026-10-08".into(),
-        },
-    );
-    let calc = run_with(
-        &draft(vec![with(
-            lot(RAHIM, BANANA, "50"),
-            vec![blank("50"), sale(AKRAM, "20", "600"), blank("30")],
-        )]),
-        &lookups,
-        default_rules(),
-        switches(),
-    );
-    let rows = &calc.lots[0].lines;
-    assert_eq!(
-        rows[0]
-            .rate_hint
-            .as_ref()
-            .map(|h| (r(h.rate_paisa), h.source)),
-        Some((590, RateHintSource::LastDay))
-    );
-    assert_eq!(
-        rows[2]
-            .rate_hint
-            .as_ref()
-            .map(|h| (r(h.rate_paisa), h.source)),
-        Some((600, RateHintSource::ThisBikri))
-    );
 }
 
 #[test]
@@ -578,61 +537,266 @@ fn typed_lot_charges_per_lot_and_manual() {
     assert_every_working_matches(&calc);
 }
 
-// ---- Payment type, credit limit (points 5 and 8) ----
+// ---- Money paid on the spot, credit limit (PRD FR-12.44, plan 65) ----
 
-#[test]
-fn credit_is_refused_for_the_cash_buyer_and_a_cash_only_buyer() {
-    let credit = |buyer| {
-        let mut row = sale(buyer, "20", "600");
-        row.payment_type = Some(PaymentType::Credit);
-        run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]))
-    };
-    for buyer in [NAQDI, CASH_ONLY_BUYER] {
-        let calc = credit(buyer);
-        assert!(
-            has(
-                &calc.errors,
-                ErrorCode::ErrCreditNotAllowed,
-                "lots[0].sales[0].payment_type"
-            ),
-            "{buyer}"
-        );
-        assert!(calc.lots[0].lines[0].calc.is_none());
+/// The lot of D8 image 1 (E2E-64): 200 of 200 sold at 1,000 / 900 / 900, so the buyer totals are
+/// 21,360 / 48,100 / 125,060 (value + 6% + 8 per نگ لاگا). The buyers and what each paid on the
+/// spot are the arguments; an empty text is "nothing typed".
+fn d8_lot(buyers: [i64; 3], paid: [&str; 3]) -> BikriDraft {
+    let mut rows = vec![
+        sale(buyers[0], "20", "1,000"),
+        sale(buyers[1], "50", "900"),
+        sale(buyers[2], "130", "900"),
+    ];
+    for (row, paid) in rows.iter_mut().zip(paid) {
+        row.paid = (!paid.is_empty()).then(|| paid.to_owned());
     }
-    // Their default is cash.
-    for buyer in [NAQDI, CASH_ONLY_BUYER] {
-        let calc = run(&draft(vec![with(
-            lot(RAHIM, BANANA, "50"),
-            vec![sale(buyer, "20", "600")],
-        )]));
-        assert_no_errors(&calc);
-        assert_eq!(line(&calc, 0, 0).payment_type, PaymentType::Cash);
-    }
-    // A regular buyer defaults to credit and may pay cash if the line says so.
-    let calc = run(&event1());
-    assert_eq!(line(&calc, 0, 0).payment_type, PaymentType::Credit);
+    draft(vec![with(lot(RAHIM, BANANA, "200"), rows)])
 }
 
 #[test]
-fn a_one_time_credit_buyer_needs_a_phone_and_a_name() {
-    let mut row = sale(PUKHTA_BUYER, "20", "600");
-    row.payment_type = Some(PaymentType::Credit);
+fn money_paid_on_the_spot_in_the_d8_example() {
+    // مانی pays all 21,360, انس pays 10,000 of 48,100, ہارون pays nothing (E2E-65).
+    let calc = run(&d8_lot([AKRAM, ARSHAD, AKRAM], ["21,360", "10,000", ""]));
+    assert_no_errors(&calc);
+    let got: Vec<(i64, i64, i64)> = (0..3)
+        .map(|j| {
+            let l = line(&calc, 0, j);
+            (r(l.buyer_total), r(l.paid_paisa), r(l.left_paisa))
+        })
+        .collect();
+    assert_eq!(
+        got,
+        [
+            (21_360, 21_360, 0),
+            (48_100, 10_000, 38_100),
+            (125_060, 0, 125_060)
+        ]
+    );
+    // The lines were typed, so the backend did not decide them.
+    assert!(
+        calc.lots[0]
+            .lines
+            .iter()
+            .all(|l| !l.calc.as_ref().unwrap().paid_fixed)
+    );
+    let t = single_lot_totals(&calc);
+    assert_eq!(
+        (r(t.buyer_total), r(t.buyer_cash), r(t.buyer_credit)),
+        (194_520, 31_360, 163_160)
+    );
+    // The cash part of the journal is 21,360 + 10,000 from the buyers, and the test lot also gives
+    // the seller 5,000 نقد: the whole entry is 194,520 + 5,000 + 31,360 = 230,880. (The golden
+    // E2E-65 has no نقد and reads 225,880.)
+    let entry = entry_of(&calc);
+    assert_eq!(entry.total(), p(230_880));
+    assert_eq!(
+        entry
+            .lines()
+            .iter()
+            .filter(|l| l.side == crate::ledger::Side::Cr
+                && [AKRAM, ARSHAD].contains(&l.account_id.get()))
+            .fold(Paisa::ZERO, |s, l| s.checked_add(l.amount).unwrap()),
+        p(31_360)
+    );
+    assert_every_working_matches(&calc);
+    // The workings say how each figure was made.
+    let l = line(&calc, 0, 1);
+    assert_eq!(l.workings.paid.message_id, "working-paid-typed");
+    assert_eq!(l.workings.left.message_id, "working-left");
+}
+
+#[test]
+fn an_empty_paid_is_zero_and_a_sum_is_taken() {
+    // PRD FR-12.44 and FR-7.48: empty means 0; `5,000+5,000` is 10,000.
+    let calc = run(&d8_lot([AKRAM, ARSHAD, AKRAM], ["", "5,000+5,000", "0"]));
+    assert_no_errors(&calc);
+    assert_eq!(r(line(&calc, 0, 0).paid_paisa), 0);
+    assert_eq!(r(line(&calc, 0, 1).paid_paisa), 10_000);
+    assert_eq!(r(line(&calc, 0, 2).paid_paisa), 0);
+}
+
+#[test]
+fn a_buyer_who_must_pay_in_full_pays_the_whole_total_whatever_is_typed() {
+    // The نقدی منڈی account and a buyer with credit off pay the whole buyer total, and so does a
+    // چکتا buyer. A typed 5,000 is ignored (plan 60 P3).
+    for buyer in [NAQDI, CASH_ONLY_BUYER] {
+        for typed in ["", "5,000", "1"] {
+            let mut row = sale(buyer, "20", "600");
+            row.paid = (!typed.is_empty()).then(|| typed.to_owned());
+            let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
+            assert_no_errors(&calc);
+            let l = line(&calc, 0, 0);
+            assert_eq!(
+                (
+                    r(l.buyer_total),
+                    r(l.paid_paisa),
+                    r(l.left_paisa),
+                    l.paid_fixed
+                ),
+                (12_880, 12_880, 0, true),
+                "{buyer} typed {typed:?}"
+            );
+            assert_eq!(l.workings.paid.message_id, "working-paid-full");
+        }
+    }
+    // A چکتا buyer with both names pays the whole total too (PRD FR-13.5, FR-12.44).
+    for typed in ["", "5,000"] {
+        let mut row = sale(CHUKTA_BUYER, "20", "600");
+        row.chukta = Some(ChuktaInput {
+            name_ur: "شاہد".into(),
+            name_en: "Shahid".into(),
+            phone: "0300-0000000".into(),
+        });
+        row.paid = (!typed.is_empty()).then(|| typed.to_owned());
+        let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
+        assert_no_errors(&calc);
+        let l = line(&calc, 0, 0);
+        assert_eq!(
+            (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+            (12_880, 0, true),
+            "چکتا typed {typed:?}"
+        );
+    }
+    // A regular buyer with nothing typed has paid nothing.
+    let calc = run(&event1());
+    assert_eq!(
+        (
+            r(line(&calc, 0, 0).paid_paisa),
+            r(line(&calc, 0, 0).left_paisa)
+        ),
+        (0, 12_880)
+    );
+}
+
+#[test]
+fn paid_above_the_buyer_total_is_refused_with_the_most_allowed() {
+    // 12,880 + 1 is refused at the paid field, with `max` in rupees (PRD FR-12.44, P4). The line
+    // keeps its figures and counts as paid 0, so no cash is counted twice.
+    let mut row = sale(AKRAM, "20", "600");
+    row.paid = Some("12,881".into());
+    let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
+    let field = "lots[0].sales[0].paid";
+    assert!(has(&calc.errors, ErrorCode::ErrPaidExceedsTotal, field));
+    assert_eq!(
+        number(&calc.errors, ErrorCode::ErrPaidExceedsTotal, "max"),
+        Some(12_880)
+    );
+    let l = line(&calc, 0, 0);
+    assert_eq!(
+        (r(l.buyer_total), r(l.paid_paisa), r(l.left_paisa)),
+        (12_880, 0, 12_880)
+    );
+    assert_eq!(l.workings.paid.message_id, "working-paid-over");
+    assert_every_working_matches(&calc);
+    // Exactly the total is fine, and so is one rupee less.
+    for paid in ["12,880", "12,879"] {
+        let mut row = sale(AKRAM, "20", "600");
+        row.paid = Some(paid.into());
+        let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
+        assert_no_errors(&calc);
+    }
+    // A negative or a decimal amount is refused like any money input.
+    for (typed, code) in [
+        ("-5", ErrorCode::ErrNegativeNotAllowed),
+        ("5.5", ErrorCode::ErrDecimalsNotAllowed),
+        ("abc", ErrorCode::ErrNotANumber),
+    ] {
+        let mut row = sale(AKRAM, "20", "600");
+        row.paid = Some(typed.into());
+        let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
+        assert!(has(&calc.errors, code, field), "{typed}: {:?}", calc.errors);
+    }
+}
+
+#[test]
+fn a_row_with_only_paid_typed_stays_blank() {
+    // PRD FR-7.52: a row with no buyer and no rate is a blank row, whatever else is in it.
+    let mut row = blank("");
+    row.paid = Some("5,000".into());
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "50"),
+        vec![sale(AKRAM, "20", "600"), row],
+    )]));
+    assert_no_errors(&calc);
+    assert!(calc.lots[0].lines[1].is_blank);
+}
+
+#[test]
+fn a_chukta_buyer_needs_both_names_and_no_phone() {
+    // PRD FR-13.2: the names are required, his phone is optional.
+    let row = sale(CHUKTA_BUYER, "20", "600");
     let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
     for field in [
-        "lots[0].sales[0].pukhta.name_ur",
-        "lots[0].sales[0].pukhta.name_en",
+        "lots[0].sales[0].chukta.name_ur",
+        "lots[0].sales[0].chukta.name_en",
     ] {
         assert!(
-            has(&calc.errors, ErrorCode::ErrPukhtaNameRequired, field),
+            has(&calc.errors, ErrorCode::ErrChuktaNameRequired, field),
             "{field}"
         );
     }
+    assert!(calc.lots[0].lines[0].calc.is_none());
+    // A name in the wrong script is the script error of the name; a bad phone is refused.
+    let mut row = sale(CHUKTA_BUYER, "20", "600");
+    row.chukta = Some(ChuktaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: "123".into(),
+    });
+    let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
     assert!(has(
         &calc.errors,
-        ErrorCode::ErrPukhtaPhoneRequired,
-        "lots[0].sales[0].pukhta.phone"
+        ErrorCode::ErrPhoneInvalid,
+        "lots[0].sales[0].chukta.phone"
     ));
-    assert!(calc.lots[0].lines[0].calc.is_none());
+    // With both names and no phone the line is worked out.
+    let mut row = sale(CHUKTA_BUYER, "20", "600");
+    row.chukta = Some(ChuktaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: String::new(),
+    });
+    let calc = run(&draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]));
+    assert_no_errors(&calc);
+}
+
+#[test]
+fn the_person_key_is_on_every_journal_line_of_a_chukta_buyer() {
+    // PRD FR-13.5: the journal of the preview and of the save carries the key of the چکتا buyer on
+    // his debit and his cash credit. An ordinary buyer has no key.
+    let mut shahid = sale(CHUKTA_BUYER, "10", "1,000");
+    shahid.chukta = Some(ChuktaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: "0300-0000000".into(),
+    });
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "20"),
+        vec![shahid, sale(AKRAM, "10", "1,200")],
+    )]));
+    assert_no_errors(&calc);
+    let sales = &calc.journal.lots[0].sales;
+    assert_eq!(sales[0].person_key.as_deref(), Some("شاہد|03000000000"));
+    assert_eq!(sales[1].person_key, None, "an ordinary buyer has no key");
+    let entry = entry_of(&calc);
+    let keyed = |account: i64, side: crate::ledger::Side| -> Vec<Option<String>> {
+        entry
+            .lines()
+            .iter()
+            .filter(|l| l.account_id == AccountId::new(account) && l.side == side)
+            .map(|l| l.person_key.clone())
+            .collect()
+    };
+    use crate::ledger::Side::{Cr, Dr};
+    assert_eq!(
+        keyed(CHUKTA_BUYER, Dr),
+        [Some("شاہد|03000000000".to_owned())]
+    );
+    assert_eq!(
+        keyed(CHUKTA_BUYER, Cr),
+        [Some("شاہد|03000000000".to_owned())]
+    );
 }
 
 fn with_limit(limit: i64, balance: i64) -> Lookups {
@@ -710,7 +874,9 @@ fn the_credit_limit_warns_only_above_the_limit() {
 fn the_credit_limit_adds_up_across_lots_and_ignores_cash_rows() {
     let lookups = with_limit(20_000, 0);
     let mut cash_row = sale(AKRAM, "10", "1,000");
-    cash_row.payment_type = Some(PaymentType::Cash);
+    // 10 x 1,000 + 6% + 8 per نگ = 10,680, all of it paid on the spot, so nothing is left on his
+    // account and the row is not counted (PRD FR-12.44).
+    cash_row.paid = Some("10,680".into());
     // Lot 1: 12,880 on credit. Lot 2: a cash row (not counted) and 10 x 1,000 on credit.
     let calc = run_with(
         &draft(vec![
@@ -732,6 +898,75 @@ fn the_credit_limit_adds_up_across_lots_and_ignores_cash_rows() {
         .collect();
     // 12,880 + 10,680 = 23,560 is above 20,000 only at the last row.
     assert_eq!(warned, vec!["lots[1].sales[1].buyer_account_id"]);
+}
+
+#[test]
+fn the_credit_limit_counts_only_what_is_left_after_the_paid_amount() {
+    // Limit 40,000 and a bill of 48,100: paid 10,000 leaves 38,100, which is fine; paid 5,000 leaves
+    // 43,100, which warns, and the warning says what he would owe (PRD FR-12.4, FR-12.44).
+    let one = |paid: &str, limit: i64, balance: i64| {
+        let mut row = sale(AKRAM, "50", "900");
+        row.paid = (!paid.is_empty()).then(|| paid.to_owned());
+        run_with(
+            &draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]),
+            &with_limit(limit, balance),
+            default_rules(),
+            switches(),
+        )
+    };
+    let warns = |calc: &PostingCalc| {
+        calc.warnings
+            .iter()
+            .any(|w| w.code == ErrorCode::ErrCreditLimitExceeded)
+    };
+    assert!(!warns(&one("10,000", 40_000, 0)));
+    let calc = one("5,000", 40_000, 0);
+    assert!(warns(&calc));
+    assert_eq!(
+        number(
+            &calc.warnings,
+            ErrorCode::ErrCreditLimitExceeded,
+            "would_owe_paisa"
+        ),
+        Some(4_310_000)
+    );
+    // A line paid in full never warns, whatever his limit.
+    assert!(!warns(&one("48,100", 1_000, 0)));
+    // A credit balance of 10,000 counts for him: 115,060 is under a limit of 120,000 (E2E-65).
+    let mut haroon = sale(AKRAM, "130", "900");
+    haroon.paid = None;
+    let calc = run_with(
+        &draft(vec![with(lot(RAHIM, BANANA, "130"), vec![haroon])]),
+        &with_limit(120_000, -10_000),
+        default_rules(),
+        switches(),
+    );
+    assert!(!warns(&calc));
+    assert_eq!(r(line(&calc, 0, 0).left_paisa), 125_060);
+}
+
+#[test]
+fn two_lines_of_one_buyer_add_what_is_left_on_each() {
+    // Two lines of 12,880 each, the first paid 5,000: 7,880 + 12,880 = 20,760 against a limit of
+    // 20,000. Only the second line takes him over it.
+    let mut first = sale(AKRAM, "20", "600");
+    first.paid = Some("5,000".into());
+    let calc = run_with(
+        &draft(vec![with(
+            lot(RAHIM, BANANA, "50"),
+            vec![first, sale(AKRAM, "20", "600")],
+        )]),
+        &with_limit(20_000, 0),
+        default_rules(),
+        switches(),
+    );
+    let warned: Vec<&str> = calc
+        .warnings
+        .iter()
+        .filter(|w| w.code == ErrorCode::ErrCreditLimitExceeded)
+        .map(|w| w.field.as_str())
+        .collect();
+    assert_eq!(warned, vec!["lots[0].sales[1].buyer_account_id"]);
 }
 
 // ---- Rate check (PRD FR-7.55, E8; money agent points 9, cases 1 to 3) ----
@@ -886,7 +1121,7 @@ fn the_rate_check_is_off_when_switched_off_and_skips_weight_items() {
     );
 }
 
-// ---- Limits, required fields, one-time seller ----
+// ---- Limits, required fields, old one-time seller ----
 
 #[test]
 fn an_amount_above_what_a_line_can_hold_is_refused_at_the_rate() {
@@ -987,7 +1222,7 @@ fn the_screen_is_told_which_lots_take_a_weight() {
 #[test]
 fn accounts_must_be_the_right_kind_and_active() {
     let calc = run(&draft(vec![with(
-        lot(OWN_GOODS, BANANA, "50"),
+        lot(AKRAM, BANANA, "50"),
         vec![sale(RAHIM, "20", "600")],
     )]));
     assert!(has(
@@ -999,6 +1234,25 @@ fn accounts_must_be_the_right_kind_and_active() {
         &calc.errors,
         ErrorCode::ErrNotABuyer,
         "lots[0].sales[0].buyer_account_id"
+    ));
+    // اپنا مال is the seller of a trip's lot only (it then needs its purchase): never a buyer.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "50"),
+        vec![sale(OWN_GOODS, "20", "600")],
+    )]));
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrOwnGoodsAccountRestricted,
+        "lots[0].sales[0].buyer_account_id"
+    ));
+    let calc = run(&draft(vec![with(
+        lot(OWN_GOODS, BANANA, "50"),
+        vec![sale(AKRAM, "20", "600")],
+    )]));
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrRequired,
+        "lots[0].purchase_id"
     ));
     let mut missing_seller = lot(RAHIM, BANANA, "50");
     missing_seller.seller_account_id = None;
@@ -1036,49 +1290,6 @@ fn accounts_must_be_the_right_kind_and_active() {
     ));
 }
 
-fn pukhta_seller_lot(cash: Option<&str>, phone: &str) -> mandi_core::bikri::LotInput {
-    let mut l = lot(PUKHTA_SELLER, APPLE, "10");
-    l.freight = Some("1,000".into());
-    l.cash_paid = cash.map(str::to_owned);
-    l.pukhta = Some(PukhtaInput {
-        name_ur: "ناصر".into(),
-        name_en: "Nasir".into(),
-        phone: phone.into(),
-    });
-    l
-}
-
-#[test]
-fn a_one_time_seller_is_paid_his_whole_net_on_the_spot() {
-    // PRD FR-13.10: gross 12,000, deductions before نقد 1,840: نقد starts at 10,160.
-    let calc = run(&draft(vec![with(
-        pukhta_seller_lot(None, "0300-0000000"),
-        vec![sale(AKRAM, "10", "1,200")],
-    )]));
-    assert_no_errors(&calc);
-    let t = single_lot_totals(&calc);
-    assert_eq!((r(t.cash_paid), r(t.net)), (10_160, 0));
-    assert_eq!(t.workings.cash_paid.message_id, "working-cash-pukhta");
-    assert!(calc.warnings.is_empty());
-    // He is paid what the screen shows; a typed نقد is kept as typed.
-    let calc = run(&draft(vec![with(
-        pukhta_seller_lot(Some("4,000"), "0300-0000000"),
-        vec![sale(AKRAM, "10", "1,200")],
-    )]));
-    let t = single_lot_totals(&calc);
-    assert_eq!((r(t.cash_paid), r(t.net)), (4_000, 6_160));
-    // His phone is required.
-    let calc = run(&draft(vec![with(
-        pukhta_seller_lot(None, ""),
-        vec![sale(AKRAM, "10", "1,200")],
-    )]));
-    assert!(has(
-        &calc.errors,
-        ErrorCode::ErrPukhtaPhoneRequired,
-        "lots[0].pukhta.phone"
-    ));
-}
-
 #[test]
 fn the_same_draft_gives_the_same_answer() {
     let draft = event1();
@@ -1100,4 +1311,232 @@ fn an_incomplete_lot_works_out_no_rows() {
     assert!(calc.lots[0].totals.is_none());
     assert!(calc.journal.lots.is_empty());
     assert_eq!(calc.summary.gross, Paisa::ZERO);
+}
+
+#[test]
+fn a_separate_khata_can_sell_its_goods_with_seller_defaults_of_zero() {
+    // PRD FR-16.7, E2E-38: a lot of the family khata sells 10 at 900. The seller-side defaults
+    // are 0, so no seller commission; the buyer pays commission and لاگا as usual.
+    let calc = run(&draft(vec![with(
+        lot(KHATA, BANANA, "10"),
+        vec![sale(ARSHAD, "10", "900")],
+    )]));
+    assert_no_errors(&calc);
+    let l = line(&calc, 0, 0);
+    assert_eq!(r(l.seller_comm.amount), 0);
+    assert_eq!(r(l.buyer_comm.amount), 540);
+    assert_eq!(r(l.laga.amount), 80);
+    assert_eq!(r(l.buyer_total), 9_620);
+    // An ordinary seller of the same goods still pays the default 6%.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "10"),
+        vec![sale(ARSHAD, "10", "900")],
+    )]));
+    assert_eq!(r(line(&calc, 0, 0).seller_comm.amount), 540);
+    // A khata is a seller of lots only: as a buyer it is refused.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "10"),
+        vec![sale(KHATA, "10", "900")],
+    )]));
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrNotABuyer,
+        "lots[0].sales[0].buyer_account_id"
+    ));
+}
+
+// ---- A line over the lot is refused and not worked out (PRD FR-12.6 v1.28, plan 57) ----
+
+/// The quantity the lot still has, as the error of `field` says it.
+fn refused_available(calc: &PostingCalc, field: &str) -> Option<i64> {
+    calc.errors
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrQtyExceedsLot && e.field == field)
+        .and_then(|e| match e.values.get("available") {
+            Some(ErrorValue::Number(n)) => Some(*n),
+            _ => None,
+        })
+}
+
+#[test]
+fn a_line_over_the_lot_has_no_figures_and_the_lot_waits_for_the_quantity() {
+    // Plan 57 section 2: the lot holds 50 apples and line 1 is 70 at 1,200. Before the change the
+    // screen showed 84,000 / 5,040 / 89,600 for it.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "70", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), Some(50));
+    let l = lot_of(&calc, 0);
+    assert!(l.lines[0].calc.is_none(), "no figures for the refused line");
+    assert_eq!(l.lines[0].remaining_qty, 50);
+    assert!(l.totals.is_none(), "the lot waits for the quantity");
+    assert_eq!((l.sold_qty, l.balance_qty), (0, Some(50)));
+    // The whole بکری and its journal leave the line out.
+    assert_eq!(r(calc.summary.gross), 0);
+    assert_eq!(r(calc.summary.buyer_total), 0);
+    assert_eq!(r(calc.summary.shared_income), 0);
+    assert!(calc.journal.lots.is_empty());
+    // The save refuses with the same error: it is the same function (Code Standards B5).
+    assert!(!calc.errors.is_empty());
+}
+
+#[test]
+fn the_figures_come_back_when_the_quantity_is_fixed() {
+    // 70 -> 50 on the same lot: 50 x 1,200 = 60,000; seller and buyer commission 6% = 3,600 each;
+    // لاگا 50 x 8 = 400; the buyer pays 60,000 + 3,600 + 400 = 64,000.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "50", "1200")],
+    )]));
+    assert!(
+        !calc
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsLot),
+        "{:?}",
+        calc.errors
+    );
+    let l = line(&calc, 0, 0);
+    assert_eq!(r(l.seller_amount), 60_000);
+    assert_eq!(r(l.seller_comm.amount), 3_600);
+    assert_eq!(r(l.buyer_comm.amount), 3_600);
+    assert_eq!(r(l.laga.amount), 400);
+    assert_eq!(r(l.buyer_total), 64_000);
+    assert_eq!(r(single_lot_totals(&calc).gross), 60_000);
+    assert_eq!(lot_of(&calc, 0).sold_qty, 50);
+}
+
+#[test]
+fn two_lines_on_a_lot_the_one_that_crosses_is_refused_and_the_totals_hold_the_other() {
+    // 50 apples; lines of 30 and 30. Line 1 is worked out: 30 x 1,200 = 36,000; commissions
+    // 2,160 each; لاگا 240; the buyer pays 38,400. Line 2 takes the lot over by 10: refused, with
+    // 20 available, and no figures. The lot and the whole بکری hold line 1 only.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "30", "1200"), sale(ARSHAD, "30", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), Some(20));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), None);
+    let first = line(&calc, 0, 0);
+    assert_eq!(r(first.seller_amount), 36_000);
+    assert_eq!(r(first.seller_comm.amount), 2_160);
+    assert_eq!(r(first.buyer_comm.amount), 2_160);
+    assert_eq!(r(first.laga.amount), 240);
+    assert_eq!(r(first.buyer_total), 38_400);
+    let l = lot_of(&calc, 0);
+    assert!(l.lines[1].calc.is_none());
+    assert_eq!((l.sold_qty, l.balance_qty), (30, Some(20)));
+    let t = single_lot_totals(&calc);
+    assert_eq!(r(t.gross), 36_000);
+    assert_eq!(r(t.seller_comm), 2_160);
+    assert_eq!(r(t.buyer_total), 38_400);
+    assert_eq!(r(calc.summary.gross), 36_000);
+    assert_eq!(r(calc.summary.buyer_total), 38_400);
+    // 2,160 + 2,160 + 240 = 4,560, and the lot's phone charge of 20 (a lot charge of this fixture).
+    assert_eq!(r(calc.summary.shared_income), 2_160 + 2_160 + 240 + 20);
+    assert_eq!(
+        calc.journal.lots[0].sales.len(),
+        1,
+        "one sale in the journal"
+    );
+}
+
+#[test]
+fn a_refused_line_takes_no_quantity_so_the_line_after_it_is_worked_out() {
+    // 50 apples; lines of 70 and 20. Line 1 is refused (50 available); line 2 starts from the full
+    // 50 and is worked out: 20 x 1,200 = 24,000.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "70", "1200"), sale(ARSHAD, "20", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), Some(50));
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), None);
+    let l = lot_of(&calc, 0);
+    assert!(l.lines[0].calc.is_none());
+    assert_eq!(l.lines[1].remaining_qty, 50);
+    assert_eq!(r(line(&calc, 0, 1).seller_amount), 24_000);
+    assert_eq!((l.sold_qty, l.balance_qty), (20, Some(30)));
+    // Line 1 is fixed to 50: now it fits, and line 2 is the one that crosses (nothing left).
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "50", "1200"), sale(ARSHAD, "20", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), None);
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), Some(0));
+    assert_eq!(r(line(&calc, 0, 0).buyer_total), 64_000);
+    assert!(lot_of(&calc, 0).lines[1].calc.is_none());
+    assert_eq!(r(calc.summary.gross), 60_000);
+}
+
+#[test]
+fn the_per_lot_commission_lands_once_on_the_line_that_stands() {
+    // PRD FR-11.9: a per-lot commission of 500 is charged on the first worked line of the lot.
+    // Line 1 is refused (over the lot), so line 2 carries it, once.
+    let calc = run_per_lot(&draft(vec![with(
+        lot(RAHIM, BANANA, "50"),
+        vec![sale(AKRAM, "70", "600"), sale(ARSHAD, "30", "580")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), Some(50));
+    assert!(lot_of(&calc, 0).lines[0].calc.is_none());
+    let second = line(&calc, 0, 1);
+    assert_eq!(r(second.seller_comm.amount), 500);
+    assert_eq!(second.seller_comm.working.message_id, "working-per-lot");
+    assert_eq!(r(single_lot_totals(&calc).seller_comm), 500);
+}
+
+#[test]
+fn a_blank_row_or_a_row_with_no_quantity_is_never_refused() {
+    // A row with no buyer and no rate is blank and ignored; a row with a bad quantity has its own
+    // error, not this one.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "50", "1200"), blank("99")],
+    )]));
+    assert!(
+        !calc
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsLot),
+        "{:?}",
+        calc.errors
+    );
+}
+
+#[test]
+fn a_third_line_that_fits_after_a_refused_one_is_worked_out_and_no_unsold_note_shows() {
+    // 50 apples; lines 30, 30, 10. Line 2 is refused (20 available); line 3 (10) fits in what the
+    // standing lines leave (30 + 10 <= 50) and is worked out: 10 x 1,200 = 12,000. The lot gives no
+    // "left unsold" warning while a line is refused (the refusal already says what is left).
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![
+            sale(AKRAM, "30", "1200"),
+            sale(ARSHAD, "30", "1200"),
+            sale(AKRAM, "10", "1200"),
+        ],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), Some(20));
+    assert_eq!(refused_available(&calc, "lots[0].sales[2].qty"), None);
+    assert_eq!(r(line(&calc, 0, 2).seller_amount), 12_000);
+    let l = lot_of(&calc, 0);
+    assert_eq!((l.sold_qty, l.balance_qty), (40, Some(10)));
+    assert_eq!(r(single_lot_totals(&calc).gross), 48_000);
+    assert!(
+        !calc
+            .warnings
+            .iter()
+            .any(|w| w.code == ErrorCode::ErrQtyLeftUnsold),
+        "{:?}",
+        calc.warnings
+    );
+    // With no line refused the note is back: lines 30 and 10 leave 10 unsold.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "30", "1200"), sale(AKRAM, "10", "1200")],
+    )]));
+    assert_eq!(
+        number(&calc.warnings, ErrorCode::ErrQtyLeftUnsold, "left"),
+        Some(10)
+    );
 }

@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DECIMALS_NOT_ALLOWED",
+      "field": "amount",
+      "values": {}
+    },
+    {
+      "code": "ERR_EXPENSE_HEAD_REQUIRED",
+      "field": "expense_head_id",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

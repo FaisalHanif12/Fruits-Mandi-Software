@@ -1,0 +1,14 @@
+{
+  "errors": [
+    {
+      "code": "ERR_OUT_OF_RANGE",
+      "field": "closing_time",
+      "values": {
+        "max": "23:59",
+        "min": "00:00"
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-00000000-0000"
+}

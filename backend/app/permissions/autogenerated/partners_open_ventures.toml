@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-open-ventures"
+description = "Enables the partners_open_ventures command without any pre-configured scope."
+commands.allow = ["partners_open_ventures"]
+
+[[permission]]
+identifier = "deny-partners-open-ventures"
+description = "Denies the partners_open_ventures command without any pre-configured scope."
+commands.deny = ["partners_open_ventures"]

@@ -123,20 +123,42 @@ fn dates_and_open_days() {
 #[test]
 fn account_codes() {
     assert_eq!(
-        validate::account_code("buyer", "03040001"),
-        Ok(AccountCodeInput::Full("03040001".to_owned()))
+        validate::account_code("buyer", "0020"),
+        Ok(AccountCodeInput::Full("0020".to_owned()))
     );
     assert_eq!(
-        validate::account_code("seller", " 030110001 "),
-        Ok(AccountCodeInput::Full("030110001".to_owned()))
+        validate::account_code("seller", " 0010 "),
+        Ok(AccountCodeInput::Full("0010".to_owned()))
     );
-    for (text, serial) in [("1", 1), ("0001", 1), ("7", 7), ("9999", 9_999), ("۱", 1)] {
+    for (text, serial) in [
+        ("0", 0),
+        ("1", 1),
+        ("7", 7),
+        ("9999", 9_999),
+        ("1234567", 1_234_567),
+        ("۱", 1),
+    ] {
         match validate::account_code("buyer", text).unwrap() {
             AccountCodeInput::Short(s) => assert_eq!(s.serial(), serial, "{text}"),
             other => panic!("{text} gave {other:?}"),
         }
     }
-    for text in ["12345", "1234567", "0304000100", "12a", "-1", "1 2"] {
+    // A full code of the scheme (up to 10 digits) is a full code; a short code has no padding.
+    assert_eq!(
+        validate::account_code("c", "0029999999"),
+        Ok(AccountCodeInput::Full("0029999999".to_owned()))
+    );
+    for text in [
+        "0001",
+        "01",
+        "00",
+        "0304000100",
+        "1234567890",
+        "12a",
+        "-1",
+        "1 2",
+        "00212345678",
+    ] {
         assert_eq!(
             code(validate::account_code("buyer", text)),
             ErrorCode::ErrCodeInvalid,
@@ -358,11 +380,11 @@ fn fields_refuse_arabic_indic_sums() {
 /// bidi controls still make it invalid, and a code of only marks is required.
 #[test]
 fn account_codes_ignore_pasted_invisible_marks() {
-    let full = Ok(AccountCodeInput::Full("03040001".to_owned()));
+    let full = Ok(AccountCodeInput::Full("0020".to_owned()));
     for mark in [
         '\u{200B}', '\u{200C}', '\u{200D}', '\u{200E}', '\u{2060}', '\u{FEFF}',
     ] {
-        let text = format!("{mark}0304{mark}0001{mark}");
+        let text = format!("{mark}00{mark}20{mark}");
         assert_eq!(
             validate::account_code("c", &text),
             full,
@@ -376,7 +398,7 @@ fn account_codes_ignore_pasted_invisible_marks() {
         Ok(true)
     );
     for mark in ['\u{200F}', '\u{061C}', '\u{202E}', '\u{2066}'] {
-        let text = format!("0304{mark}0001");
+        let text = format!("00{mark}20");
         assert_eq!(
             code(validate::account_code("c", &text)),
             ErrorCode::ErrCodeInvalid,
@@ -435,6 +457,49 @@ fn free_text_refuses_bidi_controls() {
     // LRM, RLM and a plain mixed-script note are allowed.
     assert!(validate::free_text("note", "رقم 1200 \u{200F}ok").is_ok());
     assert!(validate::free_text("note", "Akram اکرم 12-3").is_ok());
+}
+
+/// Gate finding Q-T4-3 (plan 80, Code Standards 4.2): a note loses the zero-width characters and the
+/// direction marks, as a name does, and a note of only such marks is empty. So a required reason of
+/// a pasted zero-width space is not a reason.
+#[test]
+fn free_text_drops_zero_width_and_direction_marks_and_invisible_only_text_is_empty() {
+    for mark in [
+        '\u{200B}', '\u{200C}', '\u{200D}', '\u{2060}', '\u{FEFF}', '\u{200E}', '\u{200F}',
+        '\u{061C}',
+    ] {
+        let label = format!("U+{:04X}", u32::from(mark));
+        // Inside, at the start and at the end of the text.
+        assert_eq!(
+            validate::free_text("note", &format!("{mark}رقم{mark} 12{mark}")),
+            Ok("رقم 12".to_owned()),
+            "{label}"
+        );
+        // Only such marks, with spaces round them: empty, like text of only spaces.
+        assert_eq!(
+            validate::free_text("note", &format!(" {mark}{mark} {mark}")),
+            Ok(String::new()),
+            "{label}"
+        );
+    }
+    // The 500 characters are counted after the marks are gone.
+    let padded = format!("{}{}", "x".repeat(500), "\u{200B}".repeat(20));
+    assert_eq!(validate::free_text("note", &padded), Ok("x".repeat(500)));
+    let too_long = format!("{}{}", "x".repeat(501), "\u{200B}");
+    assert_eq!(
+        code(validate::free_text("note", &too_long)),
+        ErrorCode::ErrTextTooLong
+    );
+    // The bidi embeddings, overrides and isolates are still refused, even with marks round them.
+    assert_eq!(
+        code(validate::free_text("note", "\u{200B}\u{202E}0021")),
+        ErrorCode::ErrControlChars
+    );
+    // A name and a note are cleaned the same way.
+    assert_eq!(
+        validate::name_en("name_en", "\u{FEFF}Akram\u{200B}"),
+        Ok("Akram".to_owned())
+    );
 }
 
 #[test]

@@ -18,19 +18,36 @@
 //! Example: the third line of the first lot has `"abc"` as qty, so the preview returns
 //! `FieldError { code: ErrNotANumber, field: "lots[0].sales[2].qty", .. }`.
 
+mod edit;
+mod grade;
 mod input;
+mod list_whole;
+mod lot_name;
+mod mixed;
 mod prepare;
 mod prepared;
 mod preview;
+mod ready;
+mod saved;
 #[cfg(test)]
 mod tests;
 
+pub use edit::*;
+pub use grade::SaleGrade;
 pub use input::*;
-pub use prepare::{prepare_draft, split_freight};
+pub use list_whole::{BikriListWhole, BikriListWholeInput};
+pub use lot_name::{LotOrderKey, lot_label, sort_lots};
+pub use mixed::*;
+pub use prepare::{is_blank_sale, prepare_draft};
 pub use prepared::*;
 pub use preview::*;
+pub use ready::*;
+pub use saved::*;
 
 /// The most lots in one بکری (NFR-SCL-3).
 pub const MAX_LOTS: usize = 50;
-/// The most sale lines in one بکری, over all its lots (NFR-SCL-3).
-pub const MAX_SALE_LINES: usize = 500;
+/// The most sale lines in one بکری, over all its lots (NFR-SCL-3 v1.17: 1,000, plan 61 T4).
+pub const MAX_SALE_LINES: usize = 1_000;
+/// The most blank rows (no buyer, no rate) a draft may carry besides its lines. The screen keeps
+/// one at the end of each lot; the rest is room for rows left empty on the way (PRD FR-7.52).
+pub const MAX_BLANK_ROWS: usize = 100;

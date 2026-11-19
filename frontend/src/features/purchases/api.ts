@@ -1,0 +1,117 @@
+// Typed wrappers around the خریداری commands (plan 16b; module `purchases`, Tech Stack 5.2).
+// Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
+// Every command takes one `{ input }` object.
+
+import { callCommand } from '../../shared/api';
+import type { EditPreview } from '../../bindings/EditPreview';
+import type { EntryEdited } from '../../bindings/EntryEdited';
+import type { PurchaseEditInput } from '../../bindings/PurchaseEditInput';
+import type { PurchaseGetInput } from '../../bindings/PurchaseGetInput';
+import type { PurchaseWriteOffInput } from '../../bindings/PurchaseWriteOffInput';
+import type { SellDateInput } from '../../bindings/SellDateInput';
+import type { SellDateSet } from '../../bindings/SellDateSet';
+import type { PurchaseWriteOffUndoInput } from '../../bindings/PurchaseWriteOffUndoInput';
+import type {
+  PurchaseCancelInput,
+  PurchaseCancelled,
+  PurchaseEntryInput,
+  PurchaseEntryPreview,
+  PurchaseEntrySaved,
+  PurchaseInput,
+  PurchasePreview,
+  PurchaseRow,
+  PurchaseSaved,
+  PurchaseWriteOffDone,
+  PurchaseWriteOffUndone,
+  PurchasesList,
+  PurchasesListInput,
+  SplitInput,
+  SplitSet,
+} from './types';
+
+/**
+ * Works out a purchase as typed: its cost lines with their workings, each partner's part and the
+ * cash after it. Saves nothing. The same function as the save (Code Standards B5).
+ */
+export function purchasesPreview(input: PurchaseInput): Promise<PurchasePreview> {
+  return callCommand<PurchasePreview>('purchases_preview', { input });
+}
+
+/** Saves one purchase: one posting event, one transaction (PRD FR-12.24). */
+export function purchasesSave(input: PurchaseInput): Promise<PurchaseSaved> {
+  return callCommand<PurchaseSaved>('purchases_save', { input });
+}
+
+/**
+ * Works out a purchase entry with many item lines (PRD FR-12.41): each line's numbers, the money
+ * of the whole entry and its cash. Saves nothing. The same function as the save (B5).
+ */
+export function purchasesEntryPreview(input: PurchaseEntryInput): Promise<PurchaseEntryPreview> {
+  return callCommand<PurchaseEntryPreview>('purchases_entry_preview', { input });
+}
+
+/** Saves a purchase entry: every line is its own purchase, in one transaction (PRD FR-12.41). */
+export function purchasesEntrySave(input: PurchaseEntryInput): Promise<PurchaseEntrySaved> {
+  return callCommand<PurchaseEntrySaved>('purchases_entry_save', { input });
+}
+
+/**
+ * Changes the split of a purchase with goods left: the نگ for another shop and its name (PRD
+ * FR-12.41). Nothing is posted.
+ */
+export function purchasesChangeSplit(input: SplitInput): Promise<SplitSet> {
+  return callCommand<SplitSet>('purchases_change_split', { input });
+}
+
+/** Cancels a purchase with a reason, by reversal, while nothing of it was sold or written off. */
+export function purchasesCancel(input: PurchaseCancelInput): Promise<PurchaseCancelled> {
+  return callCommand<PurchaseCancelled>('purchases_cancel', { input });
+}
+
+/** One page of purchases and the totals over the whole filter (PRD FR-19.10, FR-19.11). */
+export function purchasesList(input: PurchasesListInput): Promise<PurchasesList> {
+  return callCommand<PurchasesList>('purchases_list', { input });
+}
+
+/** One purchase, with the lots that sold it and its write-offs (PRD FR-12.25, FR-12.27). */
+export function purchasesGet(id: number): Promise<PurchaseRow> {
+  const input: PurchaseGetInput = { id };
+  return callCommand<PurchaseRow>('purchases_get', { input });
+}
+
+/**
+ * Changes the date to sell of a purchase that still has goods left (PRD FR-12.39). Nothing is
+ * posted. `sell_date` is `DD-MM-YYYY`.
+ */
+export function purchasesSetSellDate(input: SellDateInput): Promise<SellDateSet> {
+  return callCommand<SellDateSet>('purchases_set_sell_date', { input });
+}
+
+/** Writes trip goods off with a reason; nothing is posted (PRD FR-12.28). */
+export function purchasesWriteOff(
+  purchaseId: number,
+  qty: string,
+  reason: string,
+): Promise<PurchaseWriteOffDone> {
+  const input: PurchaseWriteOffInput = { purchase_id: purchaseId, qty, reason };
+  return callCommand<PurchaseWriteOffDone>('purchases_write_off', { input });
+}
+
+/** Undoes one write-off of trip goods with a reason (PRD FR-12.28). */
+export function purchasesWriteOffUndo(
+  moveId: number,
+  reason: string,
+): Promise<PurchaseWriteOffUndone> {
+  const input: PurchaseWriteOffUndoInput = { move_id: moveId, reason };
+  return callCommand<PurchaseWriteOffUndone>('purchases_write_off_undo', { input });
+}
+
+/** The review of an edit of a trip purchase: what changes and what it does (PRD FR-7.70). Read only. */
+export function purchasesEditPreview(input: PurchaseEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('purchases_edit_preview', { input });
+}
+
+/** Saves the edit of a trip purchase: the old posting is reversed and the new one posted, same day. */
+export function purchasesEditSave(input: PurchaseEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('purchases_edit_save', { input });
+}

@@ -30,7 +30,7 @@ Related skills: `entry-grid` for grids where the user types data, `urdu-english-
 3. **Text.** Every word comes from Fluent (`urdu-english-text` skill). Use `<Localized id="...">` or `useLocalization().l10n.getString(...)`. There are no string literals in components.
 4. **Names.** Always `displayName(record, language)`. Never read `name_ur` or `name_en` in a component (F38). Free text such as notes and مارکہ is shown exactly as typed (PRD FR-7.25).
 5. **Numbers, codes, phones, truck numbers.** Always through `<Num>` or `<Code>`, which isolate their direction, so `(16 @ 900)` never flips inside Urdu (F25). Money only through `formatPaisa` (inside `<Num>`).
-6. **Typography.** Use the type tokens only. Urdu Nastaliq is at least 18 px with line height at least 1.8. Numbers and Latin text are at least 14 px in grids and 16 px elsewhere (NFR-USE-20, NFR-URD-11). Number columns use tabular digits on the physical right edge (F17).
+6. **Typography.** Use the type tokens only. Urdu Nastaliq is at least 18 px with line height at least 1.8. Numbers and Latin text are at least 14 px in grids and 16 px elsewhere (NFR-USE-20, NFR-URD-11). Number columns use tabular digits, centred under their heading (F17).
 7. **Icons.** Icons that point a direction (arrows, chevrons, "back", "next") mirror in right-to-left using the `rtl:` variant. Other icons never mirror (F26).
 8. **Popovers, tooltips and menus.** Place them with logical sides through the shared helper (for example "end" side), not a fixed "right". Radix gets the direction from `DirectionProvider`.
 9. **Charts.** Only through the shared chart wrapper, which places axes and legends for the current direction.
@@ -78,7 +78,7 @@ Open the screen in both languages and go through this list:
 
 - [ ] Everything mirrors correctly. Nothing overlaps or gets cut off at 1024 × 600 or at 150% text size.
 - [ ] No English word in the Urdu screen and no Urdu word in the English screen, except names and free text exactly as typed.
-- [ ] Every number, code and phone keeps its order. Money columns line up on the physical right.
+- [ ] Every number, code and phone keeps its order. Number columns are centred under their headings, with the total centred under them (F17).
 - [ ] Urdu letters are never broken or boxed, and tall letters are not clipped in rows.
 - [ ] Loading, empty, error and data all look designed.
 - [ ] The main task can be done with keys only, and with the mouse only.

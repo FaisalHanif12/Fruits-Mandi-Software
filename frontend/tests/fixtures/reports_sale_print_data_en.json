@@ -1,0 +1,522 @@
+{
+  "frame": {
+    "language": "en",
+    "dir": "ltr",
+    "header": {
+      "firm": {
+        "name": "Maher Adnan and Brothers",
+        "mandi": "New Sabzi Mandi Kot Radha Kishan",
+        "address": "Kot Radha Kishan",
+        "phone": "0300-1234567"
+      },
+      "contacts": [],
+      "trade_mark": null,
+      "title_id": "print-sale-title",
+      "facts": [
+        {
+          "label_id": "print-fact-date",
+          "value": "10-10-2026"
+        }
+      ]
+    },
+    "footer": {
+      "printed_label_id": "print-printed-at",
+      "printed_at": "10-10-2026 14:00",
+      "page_label_id": "print-page-label",
+      "of_label_id": "print-page-of"
+    }
+  },
+  "paper": "a4",
+  "date": "2026-10-10",
+  "sellers": {
+    "report": "R6",
+    "language": "en",
+    "dir": "ltr",
+    "paper": "a4",
+    "title_id": "report-r6-title",
+    "party": null,
+    "named_title_id": null,
+    "filters": [
+      {
+        "label_id": "report-filter-from",
+        "value": "10-10-2026"
+      },
+      {
+        "label_id": "report-filter-to",
+        "value": "10-10-2026"
+      }
+    ],
+    "columns": [
+      {
+        "key": "date",
+        "title_id": "report-col-date",
+        "kind": "date"
+      },
+      {
+        "key": "doc",
+        "title_id": "report-col-doc",
+        "kind": "doc"
+      },
+      {
+        "key": "seller",
+        "title_id": "report-col-seller",
+        "kind": "party"
+      },
+      {
+        "key": "item",
+        "title_id": "report-col-item",
+        "kind": "names"
+      },
+      {
+        "key": "qty",
+        "title_id": "report-col-qty",
+        "kind": "number"
+      },
+      {
+        "key": "gross",
+        "title_id": "report-col-gross",
+        "kind": "money"
+      },
+      {
+        "key": "freight",
+        "title_id": "report-col-freight",
+        "kind": "money"
+      },
+      {
+        "key": "commission",
+        "title_id": "report-col-commission",
+        "kind": "money"
+      },
+      {
+        "key": "labour",
+        "title_id": "report-col-labour",
+        "kind": "money"
+      },
+      {
+        "key": "munshiana",
+        "title_id": "report-col-munshiana",
+        "kind": "money"
+      },
+      {
+        "key": "cash_paid",
+        "title_id": "report-col-cash-paid",
+        "kind": "money"
+      },
+      {
+        "key": "store_rent",
+        "title_id": "report-col-store-rent",
+        "kind": "money"
+      },
+      {
+        "key": "phone_charge",
+        "title_id": "report-col-phone-charge",
+        "kind": "money"
+      },
+      {
+        "key": "deductions",
+        "title_id": "report-col-deductions",
+        "kind": "money"
+      },
+      {
+        "key": "net",
+        "title_id": "report-col-net",
+        "kind": "money"
+      }
+    ],
+    "summary": [],
+    "rows": [
+      {
+        "cells": [
+          {
+            "type": "date",
+            "text": "10-10-2026"
+          },
+          {
+            "type": "doc",
+            "type_id": "report-doc-bikri-first",
+            "number": "1"
+          },
+          {
+            "type": "party",
+            "party": {
+              "short_code": "0",
+              "code": "0010",
+              "name": "Rahim",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          {
+            "type": "names",
+            "text": "Banana-1"
+          },
+          {
+            "type": "number",
+            "text": "50"
+          },
+          {
+            "type": "money",
+            "text": "29,400"
+          },
+          {
+            "type": "money",
+            "text": "3,000"
+          },
+          {
+            "type": "money",
+            "text": "1,764"
+          },
+          {
+            "type": "money",
+            "text": "250"
+          },
+          {
+            "type": "money",
+            "text": "50"
+          },
+          {
+            "type": "money",
+            "text": "5,000"
+          },
+          {
+            "type": "money",
+            "text": "0"
+          },
+          {
+            "type": "money",
+            "text": "20"
+          },
+          {
+            "type": "money",
+            "text": "10,084"
+          },
+          {
+            "type": "money",
+            "text": "19,316"
+          }
+        ],
+        "kind": "normal"
+      },
+      {
+        "cells": [
+          {
+            "type": "date",
+            "text": "10-10-2026"
+          },
+          {
+            "type": "doc",
+            "type_id": "report-doc-bikri-first",
+            "number": "2"
+          },
+          {
+            "type": "party",
+            "party": {
+              "short_code": "1",
+              "code": "0011",
+              "name": "Karim",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          {
+            "type": "names",
+            "text": "Apple-1"
+          },
+          {
+            "type": "number",
+            "text": "10"
+          },
+          {
+            "type": "money",
+            "text": "12,000"
+          },
+          {
+            "type": "money",
+            "text": "1,000"
+          },
+          {
+            "type": "money",
+            "text": "720"
+          },
+          {
+            "type": "money",
+            "text": "50"
+          },
+          {
+            "type": "money",
+            "text": "50"
+          },
+          {
+            "type": "money",
+            "text": "0"
+          },
+          {
+            "type": "money",
+            "text": "0"
+          },
+          {
+            "type": "money",
+            "text": "20"
+          },
+          {
+            "type": "money",
+            "text": "1,840"
+          },
+          {
+            "type": "money",
+            "text": "10,160"
+          }
+        ],
+        "kind": "normal"
+      }
+    ],
+    "tables": [],
+    "row_count": "2",
+    "totals_label_id": "report-total",
+    "totals": [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "number",
+        "text": "60"
+      },
+      {
+        "type": "money",
+        "text": "41,400"
+      },
+      {
+        "type": "money",
+        "text": "4,000"
+      },
+      {
+        "type": "money",
+        "text": "2,484"
+      },
+      {
+        "type": "money",
+        "text": "300"
+      },
+      {
+        "type": "money",
+        "text": "100"
+      },
+      {
+        "type": "money",
+        "text": "5,000"
+      },
+      {
+        "type": "money",
+        "text": "0"
+      },
+      {
+        "type": "money",
+        "text": "40"
+      },
+      {
+        "type": "money",
+        "text": "11,924"
+      },
+      {
+        "type": "money",
+        "text": "29,476"
+      }
+    ],
+    "words": null
+  },
+  "buyers": {
+    "key": "buyers",
+    "day": "10-10-2026",
+    "day_iso": "2026-10-10",
+    "title_id": "print-sale-buyers-title",
+    "columns": [
+      {
+        "key": "party",
+        "title_id": "print-sale-col-buyer",
+        "kind": "party"
+      },
+      {
+        "key": "detail",
+        "title_id": "print-sale-col-bought",
+        "kind": "detail"
+      },
+      {
+        "key": "bill",
+        "title_id": "print-sale-col-bill",
+        "kind": "money"
+      },
+      {
+        "key": "cash",
+        "title_id": "print-sale-col-cash",
+        "kind": "money"
+      },
+      {
+        "key": "credit",
+        "title_id": "print-sale-col-credit",
+        "kind": "money"
+      }
+    ],
+    "rows": [
+      {
+        "cells": [
+          {
+            "type": "party",
+            "party": {
+              "short_code": "1",
+              "code": "0021",
+              "name": "Arshad Multani",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          {
+            "type": "detail",
+            "parts": [
+              {
+                "kind": "sale",
+                "bikri_number": "1",
+                "item": "Banana",
+                "packing": "Box",
+                "qty": "30",
+                "rate": "580",
+                "value": "17,400",
+                "commission": "1,044",
+                "laga": "240"
+              }
+            ]
+          },
+          {
+            "type": "money",
+            "text": "18,684"
+          },
+          {
+            "type": "money",
+            "text": "0"
+          },
+          {
+            "type": "money",
+            "text": "18,684"
+          }
+        ],
+        "kind": "normal"
+      },
+      {
+        "cells": [
+          {
+            "type": "party",
+            "party": {
+              "short_code": "0",
+              "code": "0020",
+              "name": "Akram Toll Tax",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          {
+            "type": "detail",
+            "parts": [
+              {
+                "kind": "sale",
+                "bikri_number": "1",
+                "item": "Banana",
+                "packing": "Box",
+                "qty": "20",
+                "rate": "600",
+                "value": "12,000",
+                "commission": "720",
+                "laga": "160"
+              }
+            ]
+          },
+          {
+            "type": "money",
+            "text": "12,880"
+          },
+          {
+            "type": "money",
+            "text": "0"
+          },
+          {
+            "type": "money",
+            "text": "12,880"
+          }
+        ],
+        "kind": "normal"
+      },
+      {
+        "cells": [
+          {
+            "type": "party",
+            "party": {
+              "short_code": null,
+              "code": "0030",
+              "name": "Shahid",
+              "tag": null,
+              "person_key": "شاہد|03000000000",
+              "phone": "0300-0000000"
+            }
+          },
+          {
+            "type": "detail",
+            "parts": [
+              {
+                "kind": "sale",
+                "bikri_number": "2",
+                "item": "Apple",
+                "packing": "Box",
+                "qty": "10",
+                "rate": "1,200",
+                "value": "12,000",
+                "commission": "720",
+                "laga": "80"
+              }
+            ]
+          },
+          {
+            "type": "money",
+            "text": "12,800"
+          },
+          {
+            "type": "money",
+            "text": "12,800"
+          },
+          {
+            "type": "money",
+            "text": "0"
+          }
+        ],
+        "kind": "normal"
+      }
+    ],
+    "totals_label_id": "print-sale-buyers-total",
+    "totals": [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "money",
+        "text": "44,364"
+      },
+      {
+        "type": "money",
+        "text": "12,800"
+      },
+      {
+        "type": "money",
+        "text": "31,564"
+      }
+    ]
+  }
+}

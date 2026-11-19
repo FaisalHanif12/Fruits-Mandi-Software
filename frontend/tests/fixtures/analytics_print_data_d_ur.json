@@ -1,0 +1,130 @@
+{
+  "view": "D",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "title_id": "analytics-view-d-title",
+  "filters": [
+    {
+      "label_id": "report-filter-by-month",
+      "value": ""
+    }
+  ],
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names",
+      "heading": null
+    },
+    {
+      "key": "p_2026_10",
+      "title_id": "analytics-col-period",
+      "kind": "money",
+      "heading": {
+        "kind": "month",
+        "year": "2026",
+        "month": 10
+      }
+    },
+    {
+      "key": "total_comm",
+      "title_id": "analytics-col-row-total",
+      "kind": "money",
+      "heading": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "کیلا"
+        },
+        {
+          "type": "money",
+          "text": "3,928"
+        },
+        {
+          "type": "money",
+          "text": "3,928"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "سیب"
+        },
+        {
+          "type": "money",
+          "text": "1,520"
+        },
+        {
+          "type": "money",
+          "text": "1,520"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "5,448"
+    },
+    {
+      "type": "money",
+      "text": "5,448"
+    }
+  ],
+  "charts": [
+    {
+      "kind": "trend",
+      "title": null,
+      "series": [
+        {
+          "key": "total_comm",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "month",
+            "year": 2026,
+            "month": 10
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": "2026-10-01",
+            "to": "2026-10-31",
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 544800
+            }
+          ],
+          "is_others": false,
+          "compare": null
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
+  ]
+}

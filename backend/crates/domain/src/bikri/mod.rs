@@ -13,10 +13,10 @@
 //! | no lot / no sale line in the whole بکری | `ERR_NO_LOTS`, `ERR_NO_SALE_LINES` | `lots` |
 //! | seller / buyer missing, wrong kind, inactive | `ERR_SELLER_REQUIRED`, `ERR_BUYER_REQUIRED`, `ERR_NOT_A_SELLER`, `ERR_NOT_A_BUYER`, `ERR_ACCOUNT_INACTIVE` | the account field |
 //! | sold more than received | `ERR_QTY_EXCEEDS_LOT` (`available`) | `lots[i].sales[j].qty` |
-//! | one-time person | `ERR_PUKHTA_NAME_REQUIRED`, `ERR_PUKHTA_PHONE_REQUIRED` | `...pukhta.*` |
-//! | credit on a cash-only buyer | `ERR_CREDIT_NOT_ALLOWED` | `...payment_type` |
+//! | چکتا buyer | `ERR_CHUKTA_NAME_REQUIRED` | `...chukta.*` |
+//! | money paid on the spot above the buyer total | `ERR_PAID_EXCEEDS_TOTAL` (`max`) | `...paid` |
 //! | typed commission or لاگا while off | `ERR_OVERRIDE_NOT_ALLOWED` | `...seller_comm` etc. |
-//! | credit limit | `ERR_CREDIT_LIMIT_EXCEEDED` (warning, or error when blocking) | `...buyer_account_id` |
+//! | credit limit (on what is left after the paid amount) | `ERR_CREDIT_LIMIT_EXCEEDED` (warning, or error when blocking) | `...buyer_account_id` |
 //! | rate far from the average | `ERR_RATE_FAR_FROM_AVERAGE` (warning) | `...seller_rate` |
 //! | lot not fully sold / net below 0 | `ERR_QTY_LEFT_UNSOLD`, `ERR_LOT_NET_NEGATIVE` (warnings) | `lots[i].qty_received`, `lots[i].seller_account_id` |
 //!
@@ -25,7 +25,7 @@
 //! point 4).
 //!
 //! ```
-//! use mandi_domain::bikri::{Lookups, PostingKind, Switches, calc_posting};
+//! use mandi_domain::bikri::{Lookups, PostingTarget, StoredPosting, Switches, calc_posting};
 //! use mandi_domain::core::bikri::{BikriDraft, HeaderInput, prepare_draft};
 //! use mandi_domain::core::dates::BusinessDate;
 //! use mandi_domain::rules::RuleSet;
@@ -47,16 +47,22 @@
 //!     rate_check_percent: Some(30),
 //! };
 //! let calc = calc_posting(
-//!     PostingKind::First, &prepared, &Lookups::default(), &RuleSet::default(), switches,
+//!     PostingTarget::New, &prepared, &Lookups::default(), &RuleSet::default(), switches,
+//!     &StoredPosting::none(),
 //! ).unwrap();
 //! assert_eq!(calc.errors.len(), 1);
 //! ```
 
 mod checks;
+mod counter;
 mod line;
 mod lookups;
 mod lot;
+mod merge;
+mod own;
+mod person;
 mod process;
+mod stored;
 mod working;
 
 use std::collections::HashMap;
@@ -68,17 +74,28 @@ use mandi_core::money::MoneyError;
 use mandi_core::rules::{ChargeSide, ChargeType};
 use thiserror::Error;
 
-use self::checks::{Issues, Wanted};
+use self::checks::Issues;
 use self::lot::{Acc, Scope};
+use self::own::OwnRun;
 use self::process::{Run, process_lot};
 use crate::ledger::bikri::JournalSource;
 use crate::rules::RuleSet;
 
-pub use self::lookups::{AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, Switches};
+pub use self::lookups::{
+    AccountFacts, ArrivalCarried, ArrivalFacts, EntryLot, ItemFacts, ItemSales, Lookups, PartyKind,
+    PurchaseFacts, Switches, TripPartnerFacts,
+};
+pub use self::merge::{merge_splits, merge_summaries, sum_changes};
+pub use self::own::own_cost;
+pub use self::person::{CleanPerson, clean_person};
+pub use self::stored::{
+    PostingTarget, StoredCarrier, StoredCharge, StoredIdentity, StoredLot, StoredLotCharge,
+    StoredPosting, StoredSale,
+};
 pub use self::working::partner_share;
 
 /// Which posting of a بکری this is (PRD FR-12.17). A later sale charges no lot charges and no
-/// per-lot commission; plan 16 passes `Later`.
+/// per-lot commission. [`PostingTarget`] says which one a call works out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PostingKind {
     /// The first posting of a بکری.
@@ -114,6 +131,8 @@ pub(crate) struct Env<'a> {
     pub lookups: &'a Lookups,
     pub rules: &'a RuleSet,
     pub switches: Switches,
+    /// What is stored about the posting being edited (empty for a new one).
+    pub stored: &'a StoredPosting,
 }
 
 /// The result of working out a draft.
@@ -131,35 +150,112 @@ pub struct PostingCalc {
     pub journal: JournalSource,
 }
 
-fn header_checks(issues: &mut Issues, draft: &PreparedDraft, lookups: &Lookups) {
-    let h = &draft.header;
-    checks::account(
-        issues,
-        lookups,
-        h.zamindar_account_id,
-        Wanted::Seller,
-        "header.zamindar_account_id",
-        None,
-    );
-    checks::master_exists(issues, &lookups.addas, h.adda_id, "header.adda_id");
-    checks::master_exists(issues, &lookups.stores, h.store_id, "header.store_id");
-}
-
-/// Works out a draft: the one function of the preview and (plan 13) the save.
+/// Works out a draft: the one function of the preview and the save of a new بکری, a later sale
+/// and an edit (Code Standards B5, plan 16).
+///
+/// - `PostingTarget::New`: the first posting; `stored` is empty.
+/// - `PostingTarget::LaterSale`: the draft has one lot, whose `lot_id` is in `stored.lots`; no lot
+///   charge, freight, store rent or per-lot commission is charged again.
+/// - `PostingTarget::Edit`: a line with a `sale_id` in `stored.sales` that the user did not change
+///   keeps its stored charges exactly (PRD FR-12.20); a lot charge the user did not change keeps
+///   its stored method and value. When the edited line carrying a per-lot seller commission is
+///   removed, the charge moves, with its stored method and value, to the first remaining line of
+///   the lot that follows the rule (PRD FR-11.9). A line whose only change is its buyer keeps its
+///   seller commission and reads the buyer commission and لاگا again; a lot whose only change is
+///   its seller keeps the buyer side and the paid amount of every line and reads the seller
+///   commission and the lot charges again (PRD FR-12.20, Umar 10-11-2026).
 ///
 /// # Errors
 /// [`CalcError`] only for overflow or broken data; every mistake of the user comes back in
 /// `PostingCalc::errors` with its field.
 pub fn calc_posting(
-    kind: PostingKind,
+    target: PostingTarget,
     draft: &PreparedDraft,
     lookups: &Lookups,
     rules: &RuleSet,
     switches: Switches,
+    stored: &StoredPosting,
 ) -> Result<PostingCalc, CalcError> {
+    // A per-lot charge is taken once per goods-arrived entry, on its first active lot (PRD FR-12.40,
+    // plan 37). A lot looks at what the entry's other lots carry: the lots listed before it by
+    // their real result in this pass, the lots listed after it by what they were saved with (a
+    // new lot is always after the saved ones, so the lots after a lot are saved lots that keep
+    // their stored charge, FR-12.20). A hand-typed per-lot amount counts as carrying too (lead
+    // decision D1), but only for the lots after it.
+    let kind = target.kind(stored);
+    let guess = initial_guess(kind, draft, stored);
+    calc_pass(target, draft, lookups, rules, switches, stored, &guess)
+}
+
+/// What each lot of an edit still carries of its entry's per-lot charges, from what was stored: a lot whose seller, item and entry are as stored, and whose charge the user
+/// did not change, keeps it (PRD FR-12.20). Nothing for a new draft or a later sale.
+fn initial_guess(
+    kind: PostingKind,
+    draft: &PreparedDraft,
+    stored: &StoredPosting,
+) -> Vec<ArrivalCarried> {
+    draft
+        .lots
+        .iter()
+        .enumerate()
+        .map(|(index, lot)| {
+            // This draft's lot number `index + 1` (bikri number 0).
+            let here = EntryLot {
+                bikri_number: 0,
+                lot_no: i64::try_from(index).unwrap_or(i64::MAX).saturating_add(1),
+            };
+            let found = lot
+                .lot_id
+                .and_then(|id| stored.lots.get(&id))
+                .filter(|_| kind == PostingKind::First && lot.arrival_id.is_some());
+            let Some(sl) = found else {
+                return ArrivalCarried::default();
+            };
+            let same_identity = sl.identity.as_ref().is_some_and(|i| {
+                Some(i.seller_account_id) == lot.seller_account_id
+                    && Some(i.item_id) == lot.item_id
+                    && i.purchase_id == lot.purchase_id
+                    && i.arrival_id == lot.arrival_id
+            });
+            if !same_identity {
+                return ArrivalCarried::default();
+            }
+            let kept = |charge: &Option<StoredLotCharge>, typed| {
+                charge
+                    .as_ref()
+                    .filter(|c| c.typed() == typed)
+                    .is_some_and(StoredLotCharge::carries_per_lot)
+                    .then_some(here)
+            };
+            ArrivalCarried {
+                seller_commission: sl
+                    .carrier
+                    .as_ref()
+                    .is_some_and(|c| c.charge.carries_per_lot())
+                    .then_some(here),
+                labour: kept(&sl.labour, lot.labour),
+                munshiana: kept(&sl.munshiana, lot.munshiana),
+                phone: kept(&sl.phone, lot.phone),
+            }
+        })
+        .collect()
+}
+
+/// The work of [`calc_posting`]: every lot in order, with what the lots after the first one carry
+/// taken from what was stored (`guess`).
+fn calc_pass(
+    target: PostingTarget,
+    draft: &PreparedDraft,
+    lookups: &Lookups,
+    rules: &RuleSet,
+    switches: Switches,
+    stored: &StoredPosting,
+    guess: &[ArrivalCarried],
+) -> Result<PostingCalc, CalcError> {
+    let kind = target.kind(stored);
     let mut issues = Issues::default();
     issues.errors.extend(draft.issues.iter().cloned());
-    header_checks(&mut issues, draft, lookups);
+    // The header has only the day (PRD v1.34): nothing else in it is checked.
     if draft.lots.is_empty() {
         issues.error(ErrorCode::ErrNoLots, "lots");
     } else if draft
@@ -177,6 +273,7 @@ pub fn calc_posting(
         lookups,
         rules,
         switches,
+        stored,
     });
     let date_iso = draft
         .header
@@ -185,13 +282,26 @@ pub fn calc_posting(
         .unwrap_or_default();
     let mut run = Run {
         owed: HashMap::new(),
-        last_rates: HashMap::new(),
+        own: OwnRun::new(lookups),
+        arrivals: lookups
+            .arrivals
+            .iter()
+            .map(|(id, a)| (*id, a.qty_left))
+            .collect(),
+        lot_arrivals: draft.lots.iter().map(|lot| lot.arrival_id).collect(),
+        carried: guess.to_vec(),
     };
+    // The lines of an edit that keep their stored cost are taken out of the purchases first.
+    if let Some(env) = &env {
+        run.own.reserve_kept(env, draft)?;
+    }
     let mut whole = Acc::default();
     let mut previews = Vec::with_capacity(draft.lots.len());
     let mut journal = JournalSource::default();
+    // The counter of each lot's name: the one function of the preview and the save (PRD FR-12.45).
+    let counters = counter::assign(draft, lookups, stored);
     for (index, lot) in draft.lots.iter().enumerate() {
-        let done = process_lot(
+        let mut done = process_lot(
             env.as_ref(),
             lookups,
             &mut run,
@@ -200,6 +310,7 @@ pub fn calc_posting(
             lot,
             &mut issues,
         )?;
+        done.preview.lot_counter = counters.get(index).copied().flatten();
         if let Some(acc) = &done.acc {
             whole.merge(acc)?;
         }

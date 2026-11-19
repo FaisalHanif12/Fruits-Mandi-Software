@@ -3,6 +3,8 @@ import type { Paisa } from '../shared/format/money';
 import type { AccountType } from './AccountType';
 import type { Balance } from './Balance';
 import type { CardWarning } from './CardWarning';
+import type { DeadInfo } from './DeadInfo';
+import type { LinkedBalance } from './LinkedBalance';
 
 /**
  * Everything the card next to an account field shows (PRD FR-7.38). Read only. Balances come
@@ -22,6 +24,12 @@ export type PartyCard = {
    */
   account_type: AccountType;
   /**
+   * True for a چکتا buyer's card (PRD FR-7.38, v1.32): only his name and phone, no balance, and
+   * the screen adds the words "چکتا: پورا نقد". Left out when false; the TypeScript field is
+   * optional.
+   */
+  is_chukta?: boolean;
+  /**
    * Urdu name.
    */
   name_ur: string;
@@ -29,6 +37,10 @@ export type PartyCard = {
    * English name.
    */
   name_en: string;
+  /**
+   * The tag (نشان), or absent if none (PRD 10.2, FR-7.38).
+   */
+  tag?: string;
   /**
    * Father or firm in Urdu. Empty if none.
    */
@@ -54,6 +66,11 @@ export type PartyCard = {
    */
   is_active: boolean;
   /**
+   * The move to the dead amount, if the person is in it (PRD FR-7.38, FR-10.10): the card says
+   * ڈوبی رقم with its date and reason. Null otherwise.
+   */
+  dead: DeadInfo | null;
+  /**
    * The balance now, with its side (بنام or جمع).
    */
   balance: Balance;
@@ -78,4 +95,9 @@ export type PartyCard = {
    * Warnings, each shown with a word and a colour.
    */
   warnings: Array<CardWarning>;
+  /**
+   * The other account of the same person (a seller who is also a buyer) with the combined
+   * balance (PRD E10). Left out when the account has no link; the TypeScript field is optional.
+   */
+  linked?: LinkedBalance;
 };

@@ -7,6 +7,8 @@ publish.workspace = true
 
 [dependencies]
 serde.workspace = true
+# The values of the removed voucher fields are read as they come, to be refused (PRD 15.1).
+serde_json.workspace = true
 thiserror.workspace = true
 ts-rs.workspace = true
 chrono.workspace = true
@@ -17,7 +19,6 @@ icu_locale_core.workspace = true
 [dev-dependencies]
 criterion.workspace = true
 proptest.workspace = true
-serde_json.workspace = true
 
 # Owned by robustness: the speed harness calibration (plan 01 T5).
 [[bench]]

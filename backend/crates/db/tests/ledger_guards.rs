@@ -265,6 +265,53 @@ fn sale_values_follow_the_prd_formulas_c1_and_c3() {
 }
 
 #[test]
+fn money_paid_on_the_spot_is_whole_rupees_never_negative_and_never_above_the_buyer_total() {
+    // PRD FR-12.44, plan 65 migration 21: `paid_paisa` has three CHECKs. A saved line is frozen
+    // (the test below), so the trigger is dropped in this scratch database to reach the CHECKs.
+    let (_dir, conn) = setup();
+    let f = fixture(&conn);
+    insert_sale(&conn, &f, 1, &Sale::prd()).unwrap();
+    let total: i64 = conn
+        .query_row(
+            "SELECT buyer_total_paisa FROM bikri_sales WHERE id = ?1",
+            [f.sale],
+            |r| r.get(0),
+        )
+        .unwrap();
+    // A new line has paid 0 until the writer says otherwise.
+    let paid_of = |id: i64| -> i64 {
+        conn.query_row(
+            "SELECT paid_paisa FROM bikri_sales WHERE id = ?1",
+            [id],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(paid_of(f.sale), 0);
+    conn.execute_batch("DROP TRIGGER bikri_sales_snapshot_is_final")
+        .unwrap();
+    let set = |paid: i64| {
+        conn.execute(
+            "UPDATE bikri_sales SET paid_paisa = ?2 WHERE id = ?1",
+            params![f.sale, paid],
+        )
+    };
+    assert!(set(total).is_ok(), "paid in full is allowed");
+    assert!(set(0).is_ok());
+    assert!(set(total - 10_000).is_ok(), "part paid is allowed");
+    for (paid, check) in [
+        (total + 10_000, "paid_paisa <= buyer_total_paisa"),
+        (-10_000, "paid_paisa >= 0"),
+        (150, "paid_paisa % 100 = 0"),
+    ] {
+        assert!(
+            check_failed(set(paid).unwrap_err(), check),
+            "{paid} must fail {check}"
+        );
+    }
+}
+
+#[test]
 fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
     let (_dir, conn) = setup();
     let f = fixture(&conn);
@@ -276,6 +323,7 @@ fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
         .unwrap();
     let allowed = [
         "is_active",
+        "ended",
         "replaced_by_sale_id",
         "note",
         "created_at",
@@ -296,8 +344,10 @@ fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
         .filter(|c| !allowed.contains(&c.as_str()))
         .collect();
     // 34 business columns of Architecture 15.6 (the 37 listed minus is_active,
-    // replaced_by_sale_id and note) plus the id.
-    assert_eq!(frozen.len(), 35, "{frozen:?}");
+    // replaced_by_sale_id and note), the id, `cost_paisa` of migration 6 (plan 16b), `grade` of
+    // migration 19 (plan 58) and `paid_paisa` of migration 21 (plan 65): the quality of a saved line
+    // and the money paid on the spot are frozen like the rest of it.
+    assert_eq!(frozen.len(), 38, "{frozen:?}");
     for column in frozen {
         // Any change is refused by the trigger, which runs before the checks.
         // A different value for every column (the id gets a free number: it cannot be NULL).
@@ -315,7 +365,7 @@ fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
     }
     // An edit replaces the line: the old one becomes inactive and points at the new one.
     conn.execute(
-        "UPDATE bikri_sales SET is_active = 0, replaced_by_sale_id = ?2, note = 'edited', version = 2, updated_at = '2026-10-10T08:00:00.000Z' WHERE id = ?1",
+        "UPDATE bikri_sales SET is_active = 0, ended = 'replaced', replaced_by_sale_id = ?2, note = 'edited', version = 2, updated_at = '2026-10-10T08:00:00.000Z' WHERE id = ?1",
         params![f.sale, second],
     )
     .unwrap();
@@ -353,7 +403,7 @@ fn a_matching_row_never_passes_the_line_it_matches() {
     let (bill, payment, buyer, _seller) = bill_and_payment(&conn);
     // A second receipt of 5,000 for the same buyer (PRD 4.6 bill 12,880, first receipt 10,000).
     let more_entry = draft_entry(&conn, 500_000);
-    let more = line(&conn, more_entry, 1, "03040001", 0, 500_000).unwrap();
+    let more = line(&conn, more_entry, 1, "0020", 0, 500_000).unwrap();
     let alloc = |bill_line: i64, payment_line: i64, amount: i64| {
         conn.execute(
             "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, amount_paisa) VALUES (?1, ?2, ?3, ?4)",
@@ -404,7 +454,7 @@ fn an_advance_matching_row_never_passes_the_advance() {
     let small = advance_line(1_500_000);
     let big = advance_line(3_000_000);
     let credit_entry = common::draft_entry_of(&conn, "bikri_first", 2_431_600);
-    let credit = line(&conn, credit_entry, 1, "030110001", 0, 2_431_600).unwrap();
+    let credit = line(&conn, credit_entry, 1, "0010", 0, 2_431_600).unwrap();
     let alloc = |advance: i64, amount: i64| {
         conn.execute(
             "INSERT INTO advance_allocations (advance_line_id, credit_line_id, account_id, amount_paisa) VALUES (?1, ?2, ?3, ?4)",
@@ -444,13 +494,13 @@ fn an_advance_matching_row_never_passes_the_advance() {
 #[test]
 fn a_person_key_must_match_on_both_lines() {
     let (_dir, conn) = setup();
-    let pukhta = common::account_id(&conn, "03049999");
+    let chukta = common::account_id(&conn, "0030");
     let entry_a = draft_entry(&conn, 100_000);
     let entry_b = draft_entry(&conn, 100_000);
     let make = |entry: i64, dr: i64, cr: i64, key: &str| {
         conn.execute(
-            "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
-            params![entry, pukhta, key, dr, cr],
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
+            params![entry, chukta, key, dr, cr],
         )
         .unwrap();
         conn.last_insert_rowid()
@@ -464,8 +514,8 @@ fn a_person_key_must_match_on_both_lines() {
     };
     let alloc = |bill: i64, pay: i64, key: &str| {
         conn.execute(
-            "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, pukhta_person_key, amount_paisa) VALUES (?1, ?2, ?3, ?4, 100000)",
-            params![bill, pay, pukhta, key],
+            "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, chukta_person_key, amount_paisa) VALUES (?1, ?2, ?3, ?4, 100000)",
+            params![bill, pay, chukta, key],
         )
     };
     assert!(alloc(shahid_bill, nasir_pay, "shahid|03000000000").is_err());
@@ -483,8 +533,8 @@ fn mirror(conn: &Connection, original: i64) -> i64 {
     .unwrap();
     let reversal = conn.last_insert_rowid();
     conn.execute(
-        "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa)
-         SELECT ?1, line_no, account_id, pukhta_person_key, cr_paisa, dr_paisa FROM journal_lines WHERE entry_id = ?2",
+        "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa)
+         SELECT ?1, line_no, account_id, chukta_person_key, cr_paisa, dr_paisa FROM journal_lines WHERE entry_id = ?2",
         params![reversal, original],
     )
     .unwrap();
@@ -532,9 +582,9 @@ fn a_reversal_must_mirror_a_posted_entry() {
 #[test]
 fn a_reversal_must_mirror_the_person_key_too() {
     let (_dir, conn) = setup();
-    let pukhta = common::account_id(&conn, "03049999");
+    let chukta = common::account_id(&conn, "0030");
     let cash = common::account_id(&conn, "01010001");
-    // Shahid, a one-time buyer, owes 1,000 (PRD E2E-21).
+    // Shahid, a چکتا buyer, owes 1,000 (PRD E2E-21).
     let entry_with = |reverses: Option<i64>, key: &str, first_debit: bool| {
         conn.execute(
             "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, reverses_entry_id, total_paisa)
@@ -549,8 +599,8 @@ fn a_reversal_must_mirror_the_person_key_too() {
             (0, 100_000)
         };
         conn.execute(
-            "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
-            params![id, pukhta, key, dr, cr],
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
+            params![id, chukta, key, dr, cr],
         )
         .unwrap();
         conn.execute(
@@ -651,14 +701,14 @@ fn replace_is_refused_on_the_other_append_only_tables_too() {
     )
     .unwrap();
     let bill_entry = draft_entry(&conn, 1_288_000);
-    let bill = line(&conn, bill_entry, 1, "03040001", 1_288_000, 0).unwrap();
+    let bill = line(&conn, bill_entry, 1, "0020", 1_288_000, 0).unwrap();
     let pay_entry = draft_entry(&conn, 1_000_000);
-    let payment = line(&conn, pay_entry, 1, "03040001", 0, 1_000_000).unwrap();
+    let payment = line(&conn, pay_entry, 1, "0020", 0, 1_000_000).unwrap();
     conn.execute("INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, amount_paisa) VALUES (?1, ?2, ?3, 1000000)", params![bill, payment, f.buyer]).unwrap();
     // A replace of the allocation that already exists, with real lines and an amount that fits,
     // so only the replace guard can refuse it.
     let more_entry = draft_entry(&conn, 500_000);
-    let more = line(&conn, more_entry, 1, "03040001", 0, 500_000).unwrap();
+    let more = line(&conn, more_entry, 1, "0020", 0, 500_000).unwrap();
     let replace_allocation = format!(
         "INSERT OR REPLACE INTO bill_allocations (id, bill_line_id, payment_line_id, account_id, amount_paisa) VALUES (1, {bill}, {more}, {}, 100)",
         f.buyer

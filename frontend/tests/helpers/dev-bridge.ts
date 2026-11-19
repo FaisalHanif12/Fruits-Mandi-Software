@@ -5,10 +5,71 @@
 // any other command is refused with ERR_NOT_IMPLEMENTED, like a stub. Never part of a build: only
 // the development route imports it.
 
-import { EVENT1, IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
+import { IDS, SELLER_MEMORY, previewFor, previewWithOverLine } from './bikri-data';
+import {
+  cancelPreview,
+  editable,
+  laterSaleAnswer,
+  stockList,
+  stockRow,
+  undoResult,
+} from './bikri-plan16-data';
+import { fillThousandLines, thousandAnswer } from './bikri-thousand';
+import { fillUmarsLot, umarAnswer } from './bikri-umar-data';
+import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
+import { account as accountRow } from './accounts';
+import { answerWithTyped } from './bikri-typed';
+import { ensurePaid } from './paid-fields';
 import { paisaForTest } from './paisa';
+import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
+import { printDataFor, voucherPrintData } from './print-data';
+import { pastPrintDataFor } from './past-print';
+import type { BikriListPrintInput } from '../../src/bindings/BikriListPrintInput';
+import {
+  createTripBooks,
+  e34Trip,
+  tripRow,
+  TRIP_REF,
+  purchaseEntry,
+  costEntry,
+} from './trips-data';
+import { printingSettings } from './print-settings';
+import { printFrameFor } from './print-frame-real';
+import { BUYER_BILLS_EN, BUYER_BILLS_UR } from './reports-sales-real';
+import type { PrintFrameInput } from '../../src/bindings/PrintFrameInput';
+import { editHandlers } from './dev-bridge-edit';
+import { AUDIT_EDIT_STAMP_BIKRI } from './edit-real';
+import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
+import { indexHandlers, isIndexPage } from './dev-bridge-index';
+import { isListsPage, listsHandlers } from './dev-bridge-lists';
+import * as tagReal from './tag-real';
+import { HEADS } from './cashbook-books';
+import { suggestionsFor } from './translit';
+import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
+import * as ownReal from './bikri-own-real';
+import * as tripsReal from './trips-real';
+import { EMPTY_PAIRS } from './paged';
+import { devPastList } from './past-dev';
+import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
+import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
+import type { PurchaseEntryInput } from '../../src/bindings/PurchaseEntryInput';
+import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
+import type { SplitInput } from '../../src/bindings/SplitInput';
+import type { PurchasesListInput } from '../../src/bindings/PurchasesListInput';
+import type { TripCostInput } from '../../src/bindings/TripCostInput';
+import type { TripGetInput } from '../../src/bindings/TripGetInput';
+import type { TripInput } from '../../src/bindings/TripInput';
+import type { TripsListInput } from '../../src/bindings/TripsListInput';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
-import type { BikriDraftStores } from '../../src/features/bikri/draft-store';
+import type { AdvanceInput } from '../../src/bindings/AdvanceInput';
+import type { SaleInput } from '../../src/bindings/SaleInput';
+import type { PaymentInput } from '../../src/bindings/PaymentInput';
+import type { ReceiptInput } from '../../src/bindings/ReceiptInput';
+import type { VoucherEntry } from '../../src/features/vouchers/types';
+import * as arrivalsReal from './arrivals-real';
+import * as plan78Real from './plan78-real';
+import { createBikriDraft, type BikriDraftStores } from '../../src/features/bikri/draft-store';
+import { serialiseDraft } from '../../src/features/bikri/draft-snapshot';
 
 interface Party {
   id: number;
@@ -21,10 +82,13 @@ interface Party {
   side: 'dr' | 'cr' | 'zero';
 }
 
-const PARTIES: readonly Party[] = [
+const OWN_ID = 17;
+const OWN_CODE = '030119998';
+
+const BIKRI_PARTIES: readonly Party[] = [
   {
     id: IDS.rahim,
-    code: '030110001',
+    code: '0010',
     type: 'seller',
     ur: 'رحیم',
     en: 'Rahim',
@@ -33,25 +97,26 @@ const PARTIES: readonly Party[] = [
   },
   {
     id: IDS.karim,
-    code: '030110002',
+    code: '0011',
     type: 'seller',
     ur: 'کریم',
     en: 'Karim',
     paisa: 0,
     side: 'zero',
   },
+  // اپنا مال: offered only in the seller field of a lot (scope lot_seller, PRD FR-12.26).
   {
-    id: IDS.pukhtaSeller,
-    code: '030119999',
+    id: OWN_ID,
+    code: OWN_CODE,
     type: 'seller',
-    ur: 'پختہ کھاتہ (بیوپاری)',
-    en: 'Pukhta Khata (Seller)',
+    ur: 'اپنا مال',
+    en: 'Own Goods (Trips)',
     paisa: 0,
     side: 'zero',
   },
   {
     id: IDS.akram,
-    code: '03040001',
+    code: '0020',
     type: 'buyer',
     ur: 'اکرم ٹول ٹیکس',
     en: 'Akram Toll Tax',
@@ -60,7 +125,7 @@ const PARTIES: readonly Party[] = [
   },
   {
     id: IDS.arshad,
-    code: '03040002',
+    code: '0021',
     type: 'buyer',
     ur: 'ارشد ملتانی',
     en: 'Arshad Multani',
@@ -68,15 +133,45 @@ const PARTIES: readonly Party[] = [
     side: 'dr',
   },
   {
-    id: IDS.pukhtaBuyer,
-    code: '03049999',
+    id: IDS.chuktaKhata,
+    code: '0030',
     type: 'buyer',
-    ur: 'پختہ کھاتہ (خریدار)',
-    en: 'Pukhta Khata (Buyer)',
+    ur: 'چکتا کھاتہ',
+    en: 'Chukta Khata',
     paisa: 0,
     side: 'zero',
   },
 ];
+
+// The parties of the voucher pages are the ones of the worked day's books (voucher-books.ts), with
+// their own ids, so the pickers and the helper panels agree.
+const VOUCHER_BALANCE: Record<number, { paisa: number; side: Party['side'] }> = {
+  21: { paisa: 1288000, side: 'dr' },
+  22: { paisa: 1868400, side: 'dr' },
+  31: { paisa: 431600, side: 'cr' },
+  32: { paisa: 1016000, side: 'cr' },
+};
+const VOUCHER_PARTIES: readonly Party[] = BOOK_PARTIES.filter(
+  (party) => party.type !== 'other',
+).map((party) => ({
+  id: party.id,
+  code: party.code,
+  type: party.type === 'seller' ? 'seller' : 'buyer',
+  ur: party.name_ur,
+  en: party.name_en,
+  paisa: VOUCHER_BALANCE[party.id]?.paisa ?? 0,
+  side: VOUCHER_BALANCE[party.id]?.side ?? 'zero',
+}));
+
+/** The parties the pickers offer: the worked day's books on the voucher pages, else the sale book's. */
+function parties(): readonly Party[] {
+  const base = window.location.hash.startsWith('#/dev/vouchers') ? VOUCHER_PARTIES : BIKRI_PARTIES;
+  return [...base, ...ADDED_PARTIES];
+}
+
+/** Accounts made in the Index form that a picker's "add" button opens (plan 32, R8). */
+const ADDED_PARTIES: Party[] = [];
+const NEXT_ID = { value: 9000 };
 
 interface Master {
   id: number;
@@ -85,6 +180,9 @@ interface Master {
   ur: string;
   en: string;
 }
+
+/** Records made on the page with the short form of "add it here" (plan 41), found from then on. */
+const ADDED_MASTERS: Master[] = [];
 
 const MASTERS: readonly Master[] = [
   { id: IDS.banana, scope: 'item', code: '0001', ur: 'کیلا', en: 'Banana' },
@@ -108,17 +206,74 @@ function accountHit(party: Party) {
     extra_ur: '',
     extra_en: '',
     account_type: party.type,
+    kind: 'account' as const,
+    chukta_id: null,
+    phone: null,
     control_id: party.type === 'seller' ? 11 : 4,
     is_active: true,
   };
 }
 
+/** The running number of a seller or a buyer: his code without the 3-digit type number. */
+function runningOfParty(party: Party): number | null {
+  const prefix = party.type === 'seller' ? '001' : '002';
+  const rest = party.code.startsWith(prefix) ? party.code.slice(prefix.length) : '';
+  return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
+}
+
+/**
+ * The چکتا buyers the buyer picker lists beside the buyers (PRD FR-7.29): each is the account چکتا
+ * کھاتہ with his own names and phone, marked `chukta`. Only the buyer field has them; digits are a
+ * code, and a code finds an account.
+ */
+function chuktaHits(scope: string, text: string, withChukta: boolean) {
+  const khata = BIKRI_PARTIES.find((party) => party.id === IDS.chuktaKhata);
+  const wanted = text.trim().toLowerCase();
+  if (!withChukta || scope !== 'buyer' || khata === undefined || /^\d+$/.test(wanted)) return [];
+  return [SHAHID, NASIR, ...ADDED_CHUKTA]
+    .filter((person) =>
+      [person.name_ur, person.name_en, person.phone ?? ''].some((part) =>
+        part.toLowerCase().includes(wanted),
+      ),
+    )
+    .map((person) => ({
+      ...accountHit(khata),
+      name_ur: person.name_ur,
+      name_en: person.name_en,
+      extra_ur: person.phone ?? '',
+      extra_en: person.phone ?? '',
+      balance: undefined,
+      kind: 'chukta' as const,
+      chukta_id: person.id,
+      phone: person.phone,
+    }));
+}
+
+/** The چکتا buyers added on the dev page with the second add row (PRD FR-13.3), kept until reload. */
+const ADDED_CHUKTA: (typeof SHAHID)[] = [];
+
 function partyMatches(party: Party, scope: string, text: string): boolean {
-  if (scope !== 'any' && party.type !== scope) return false;
+  // The account چکتا کھاتہ is never offered; his buyers are (PRD FR-13.4).
+  if (party.id === IDS.chuktaKhata) return false;
+  // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
+  if (scope === 'lot_seller') {
+    if (party.type !== 'seller') return false;
+    // Only usable entries (plan 46, PRD FR-12.26): اپنا مال only while a trip has goods left, which
+    // the stand-in has for the `?own` page only.
+    if (party.code === OWN_CODE && !devFlag('own')) return false;
+  } else if (scope === 'seller' && party.code === OWN_CODE) {
+    return false;
+  } else if (scope !== 'any' && party.type !== scope) {
+    return false;
+  }
   const wanted = text.trim().toLowerCase();
   if (wanted === '') return true;
   if (/^\d+$/.test(wanted)) {
-    return party.code === wanted || Number(party.code.slice(-4)) === Number(wanted);
+    // A full code, or the running number of a seller or a buyer: the short code (plan 32, R5).
+    return (
+      party.code === wanted ||
+      (/^(0|[1-9]\d*)$/.test(wanted) && runningOfParty(party) === Number(wanted))
+    );
   }
   return [party.code, party.ur, party.en].some((part) => part.toLowerCase().includes(wanted));
 }
@@ -126,6 +281,28 @@ function partyMatches(party: Party, scope: string, text: string): boolean {
 /** The flags in the hash of the development page, for example `#/dev/bikri?cash`. */
 export function devFlag(name: string): boolean {
   return new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
+}
+
+/** The stamp of an edited بکری; with `?signed` it carries the sign given when the day was reopened (plan 73). */
+function editedStampOf<T extends object>(stamp: T | null): (T & { sign?: string }) | null {
+  if (stamp === null) return null;
+  return devFlag('signed') ? { ...stamp, sign: 'adnan' } : stamp;
+}
+
+// The question panel listens for Tauri events, and Tauri's own `unlisten` calls
+// `__TAURI_EVENT_PLUGIN_INTERNALS__.unregisterListener` when the panel's effect ends. A plain browser tab has no
+// such object, so the end of that effect threw and the whole page went blank (seen in the plan 76 window check).
+// This stand-in does nothing, which is all the pictures need.
+if (typeof window !== 'undefined' && !('__TAURI_EVENT_PLUGIN_INTERNALS__' in window)) {
+  Object.defineProperty(window, '__TAURI_EVENT_PLUGIN_INTERNALS__', {
+    configurable: true,
+    value: { unregisterListener: () => undefined },
+  });
+}
+
+/** The value of a flag in the hash, for example `type` in `#/dev/vouchers?type=payment`. */
+export function devValue(name: string): string | null {
+  return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(name);
 }
 
 const CASH_BELOW_ZERO = {
@@ -137,41 +314,293 @@ const CASH_BELOW_ZERO = {
   needs_confirm: true,
 };
 
+// The books of the worked day for the voucher pages. A few saved vouchers are in the list so it is
+// not empty (`?empty` starts with none).
+const books = createBooks();
+if (!new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('empty')) {
+  books.store.rows.push(
+    voucherRow({ id: 501, number: 1 }),
+    voucherRow({
+      id: 503,
+      number: 3,
+      status: 'cancelled',
+      can_edit: false,
+      can_cancel: false,
+      cancel_reason: 'wrong buyer',
+    }),
+    voucherRow({ id: 504, number: 4, can_edit: false, can_cancel: false }),
+    voucherRow({
+      id: 502,
+      number: 2,
+      voucher_type: 'payment',
+      account: books.preview({
+        type: 'payment',
+        date: '10-10-2026',
+        account_id: 31,
+        amount: '1',
+        reason: '',
+        narration: '',
+        confirm_cash_below_zero: false,
+      }).account,
+    }),
+  );
+}
+
+// The trips of the development page /dev/trips: the worked trip of E2E-34 (a purchase of 20 for
+// 10,400, 15 sold) with one cost; `&closed` shows it closed, `&empty` a list with no trip.
+const tripBooks = createTripBooks({
+  trips: devFlag('empty')
+    ? []
+    : [
+        e34Trip({ id: TRIP_REF.id, status: devFlag('closed') ? 'closed' : 'open' }),
+        tripRow({ id: 2, number: 2 }),
+      ],
+  entries: [costEntry(), purchaseEntry()],
+  cashBefore: devFlag('cash') ? 5_000 : 50_000,
+});
+const tripsDefaults = tripBooks.defaults();
+
+// `#/dev/bikri?tripday`: goods that wait to be loaded into a new بکری by hand (PRD FR-12.50, plan 78 C1): two trip
+// purchases, one of them left over from yesterday, a garden's goods arrived, and a lot with goods left from an
+// earlier بکری, so all three load buttons show. The rows are the backend's real ones (bikri_goods_to_load) with the
+// days set.
+const READY_TRIP = plan78Real.GOODS_TO_LOAD_TRIP.rows[0];
+const READY_GARDEN = plan78Real.GOODS_TO_LOAD_GARDEN.rows[0];
+const READY_TODAY: ReadyGoods = {
+  // The card has these three rows in all (PRD FR-19.11); none when the real rows are not there.
+  total_count: READY_TRIP === undefined || READY_GARDEN === undefined ? 0 : 3,
+  rows:
+    READY_TRIP === undefined || READY_GARDEN === undefined
+      ? []
+      : [
+          // A purchase of yesterday that was not sold: it comes again today, first.
+          {
+            ...structuredClone(READY_TRIP),
+            id: 2,
+            number: 2,
+            sell_date: '2026-10-09',
+            entry_date: '2026-10-09',
+            item: { id: 6, code: '0045', name_ur: 'کیلا', name_en: 'Banana' },
+            qty: 30,
+            qty_left: 30,
+          },
+          { ...structuredClone(READY_TRIP), sell_date: '2026-10-10', entry_date: '2026-10-10' },
+          {
+            ...structuredClone(READY_GARDEN),
+            sell_date: '2026-10-10',
+            entry_date: '2026-10-09',
+            qty: 100,
+            qty_left: 100,
+          },
+        ],
+};
+
+/** The share text of one row sent to partners_check_shares, or an empty text. */
+function shareTextOf(row: unknown): string {
+  if (typeof row !== 'object' || row === null) return '';
+  const share: unknown = Reflect.get(row, 'share');
+  return typeof share === 'string' ? share : '';
+}
+
+/** The running total of the shares (partners_check_shares), read from the typed texts. */
+function sharesCheck(input: Input) {
+  const rows: unknown[] = Array.isArray(input['shares']) ? input['shares'] : [];
+  let total = 0;
+  for (const row of rows) {
+    total += Math.round(Number(shareTextOf(row).replace(',', '.')) * 100) || 0;
+  }
+  return { total_bps: total, is_100: total === 10_000, errors: [] };
+}
+
 const handlers: Record<string, Handler> = {
+  partners_check_shares: (input) => sharesCheck(input),
+  trips_defaults: () => tripsDefaults,
+  trips_list: (input) => tripBooks.list(input as TripsListInput),
+  trips_get: (input) => tripBooks.get(input as TripGetInput),
+  trips_create: (input) => tripBooks.create(input as TripInput),
+  trips_cost_preview: (input) => tripBooks.costPreview(input as TripCostInput),
+  trips_cost_save: (input) => tripBooks.costSave(input as TripCostInput),
+  trips_cost_cancel: () => tripBooks.costCancel(),
+  trips_other_sale_preview: (input) => tripBooks.salePreview(input as OtherSaleInput),
+  trips_other_sale_save: (input) => tripBooks.saleSave(input as OtherSaleInput),
+  trips_other_sale_cancel: () => tripBooks.saleCancel(),
+  purchases_preview: (input) => tripBooks.purchasePreview(input as PurchaseInput),
+  purchases_save: (input) => tripBooks.purchaseSave(input as PurchaseInput),
+  purchases_entry_preview: (input) => tripBooks.purchaseEntryPreview(input as PurchaseEntryInput),
+  purchases_entry_save: (input) => tripBooks.purchaseEntrySave(input as PurchaseEntryInput),
+  purchases_change_split: (input) => tripBooks.splitChange(input as SplitInput),
+  // `?own` answers with the backend's real purchase (id 1) instead of the canned one (id 7).
+  purchases_get: (input) =>
+    devFlag('own')
+      ? tripsReal.PURCHASE_GET_AFTER_SALES
+      : tripBooks.purchaseGet(asNumber(input['id'])),
+  purchases_list: (input) =>
+    devFlag('own')
+      ? { ...tripsReal.PURCHASES_LIST_ALL, rows: [tripsReal.PURCHASE_GET_AFTER_SALES] }
+      : tripBooks.purchaseList(input as PurchasesListInput),
+  // The goods a new بکری can load by hand (plan 78 C1): the counts of the three load buttons, and the rows of the
+  // card of one kind. `?tripday` has goods of every kind; otherwise there are none, so no button shows.
+  bikri_goods_sources: () => ({
+    stock_lots: devFlag('tripday') ? 1 : 0,
+    trip_rows: devFlag('tripday')
+      ? READY_TODAY.rows.filter((row) => row.kind === 'trip').length
+      : 0,
+    garden_rows: devFlag('tripday')
+      ? READY_TODAY.rows.filter((row) => row.kind === 'garden').length
+      : 0,
+  }),
+  bikri_goods_to_load: (input) => ({
+    rows: devFlag('tripday') ? READY_TODAY.rows.filter((row) => row.kind === input['kind']) : [],
+  }),
+  purchases_set_sell_date: (input) => ({
+    id: asNumber(input['id']),
+    version: asNumber(input['version']) + 1,
+    sell_date: '2026-10-13',
+  }),
+  purchases_cancel: () => tripBooks.purchaseCancel(),
+  purchases_write_off: () => tripBooks.writeOff(),
+  purchases_write_off_undo: () => tripBooks.writeOffUndo(),
   day_status: () => ({ today: '2026-10-10', closed_up_to: null, today_open: true }),
-  search_accounts: (input) =>
-    PARTIES.filter((party) =>
-      partyMatches(party, asText(input['scope']), asText(input['text'])),
-    ).map(accountHit),
-  search_accounts_recent: (input) =>
-    PARTIES.filter((party) => partyMatches(party, asText(input['scope']), '')).map(accountHit),
+  // The Index form a picker's "add" button opens (plan 32, R8): the next code of a type, no
+  // look-alikes, and a save that makes the account findable by the pickers.
+  accounts_next_code: (input) => (asText(input['account_type']) === 'seller' ? '0013' : '0023'),
+  // `&similar`: one seller who looks like the name typed, to photograph the short form's warning.
+  accounts_similar: () =>
+    hasFlag('similar')
+      ? [
+          {
+            id: IDS.rahim,
+            code: '0010',
+            name_ur: 'رحیم',
+            name_en: 'Rahim',
+            father_or_firm_ur: 'اللہ دتہ',
+            father_or_firm_en: 'Allah Ditta',
+            city_ur: 'کوٹ رادھا کشن',
+            city_en: 'Kot Radha Kishan',
+            phone1: '03001234567',
+            account_type: 'seller',
+            is_duplicate: false,
+          },
+        ]
+      : [],
+  coa_controls_list: () => [],
+  accounts_save: (input) => {
+    NEXT_ID.value += 1;
+    const type = asText(input['account_type']) === 'seller' ? 'seller' : 'buyer';
+    const ur = asText(input['name_ur']);
+    const en = asText(input['name_en']);
+    ADDED_PARTIES.push({
+      id: NEXT_ID.value,
+      code: asText(input['code']),
+      type,
+      ur,
+      en,
+      paisa: 0,
+      side: 'zero',
+    });
+    return accountRow(NEXT_ID.value, type, asText(input['code']), ur, en);
+  },
+  search_accounts: (input) => [
+    ...parties()
+      .filter((party) => partyMatches(party, asText(input['scope']), asText(input['text'])))
+      .map(accountHit),
+    ...chuktaHits(asText(input['scope']), asText(input['text']), input['with_chukta'] === true),
+  ],
+  search_accounts_recent: (input) => [
+    ...parties()
+      .filter((party) => partyMatches(party, asText(input['scope']), ''))
+      .map(accountHit),
+    ...chuktaHits(asText(input['scope']), '', input['with_chukta'] === true),
+  ],
   search_accounts_touch: () => null,
   accounts_balances: (input) => {
     const ids = Array.isArray(input['ids']) ? input['ids'] : [];
-    return PARTIES.filter((party) => ids.includes(party.id)).map((party) => ({
-      id: party.id,
-      balance: { amount_paisa: party.paisa, side: party.side },
-    }));
+    return parties()
+      .filter((party) => ids.includes(party.id))
+      .map((party) => ({
+        id: party.id,
+        balance: { amount_paisa: party.paisa, side: party.side },
+      }));
   },
   accounts_resolve_code: (input) => {
-    const found = PARTIES.filter(
+    const found = parties().filter(
       (party) =>
         partyMatches(party, asText(input['scope']), asText(input['text'])) &&
         /^\d+$/.test(asText(input['text']).trim()),
     );
     const only = found[0];
-    return only !== undefined && found.length === 1
+    // A running number that two accounts share (a seller and a buyer) is "several" (PRD FR-7.39).
+    if (found.length > 1) {
+      return {
+        status: 'several',
+        account: null,
+        candidates: found.map(accountHit),
+        suggested_code: null,
+      };
+    }
+    return only !== undefined
       ? { status: 'found', account: accountHit(only), candidates: [], suggested_code: null }
       : { status: 'unknown', account: null, candidates: [], suggested_code: null };
   },
   accounts_get: (input) => {
-    const party = PARTIES.find((candidate) => candidate.id === asNumber(input['id']));
+    const party = parties().find((candidate) => candidate.id === asNumber(input['id']));
     return party === undefined
       ? null
       : { id: party.id, code: party.code, name_ur: party.ur, name_en: party.en };
   },
   assist_party_card: (input) => {
-    const party = PARTIES.find((candidate) => candidate.id === asNumber(input['account_id']));
+    // A چکتا buyer's own card (PRD FR-13.6): his names and phone, no balance, "pays in cash".
+    const chuktaId = input['chukta_id'];
+    if (typeof chuktaId === 'number') {
+      const person = [SHAHID, NASIR, ...ADDED_CHUKTA].find((one) => one.id === chuktaId);
+      const khata = parties().find((candidate) => candidate.id === asNumber(input['account_id']));
+      if (person === undefined || khata === undefined) return null;
+      return {
+        id: khata.id,
+        code: khata.code,
+        account_type: 'buyer',
+        is_chukta: true,
+        name_ur: person.name_ur,
+        name_en: person.name_en,
+        father_or_firm_ur: '',
+        father_or_firm_en: '',
+        city_ur: '',
+        city_en: '',
+        phone: person.phone ?? '',
+        is_active: true,
+        dead: null,
+        balance: { amount_paisa: 0, side: 'zero' },
+        last_entry_date: null,
+        credit_limit: null,
+        credit_used: null,
+        advance_open: null,
+        warnings: [],
+      };
+    }
+    // A garden's account (0080, plan 34): the card of an account that is neither a seller nor a buyer.
+    if (asNumber(input['account_id']) === 31) {
+      return {
+        id: 31,
+        code: '0080',
+        account_type: 'other',
+        name_ur: 'شاہ پور باغ',
+        name_en: 'Shahpur Garden',
+        father_or_firm_ur: '',
+        father_or_firm_en: '',
+        city_ur: '',
+        city_en: '',
+        phone: '',
+        is_active: true,
+        balance: { amount_paisa: 0, side: 'zero' },
+        last_entry_date: '2026-10-09',
+        credit_limit: null,
+        credit_used: null,
+        advance_open: null,
+        warnings: [],
+        dead: null,
+      };
+    }
+    const party = parties().find((candidate) => candidate.id === asNumber(input['account_id']));
     if (party === undefined) return null;
     const buyer = party.type === 'buyer';
     return {
@@ -192,39 +621,346 @@ const handlers: Record<string, Handler> = {
       credit_used: buyer ? party.paisa : null,
       advance_open: buyer ? null : 1500000,
       warnings: [],
+      dead: null,
     };
   },
   search_masters: (input) =>
-    MASTERS.filter(
-      (master) =>
-        master.scope === asText(input['scope']) &&
-        [master.code, master.ur, master.en].some((part) =>
-          part.toLowerCase().includes(asText(input['text']).trim().toLowerCase()),
-        ),
-    ).map(masterHit),
+    allMasters()
+      .filter(
+        (master) =>
+          master.scope === asText(input['scope']) &&
+          [master.code, master.ur, master.en].some((part) =>
+            part.toLowerCase().includes(asText(input['text']).trim().toLowerCase()),
+          ),
+      )
+      .map(masterHit),
   search_recent: (input) =>
-    MASTERS.filter((master) => master.scope === asText(input['scope'])).map(masterHit),
+    allMasters()
+      .filter((master) => master.scope === asText(input['scope']))
+      .map(masterHit),
   search_touch: () => null,
-  translit_suggest: () => ({ items: [] }),
-  translit_pairs_list: () => [],
+  // The short form of "add it here" (plan 41): the record is kept on the page, in memory, and the
+  // backend's habit of giving the next code for an empty one is kept.
+  masters_next_code: (input) => nextMasterCode(asText(input['kind'])),
+  masters_save: (input) => saveMaster(input),
+  // A few words in both scripts, so the other name of a pair fills by itself on the pages (FR-7.24).
+  // "nadeem" has only a rule-made spelling, so its mark "check the spelling" can be photographed.
+  translit_suggest: (input) =>
+    suggestionsFor(
+      {
+        toUrdu: {
+          electricity: ['بجلی'],
+          mango: ['آم'],
+          nadeem: ['ندیم'],
+          khan: ['خان'],
+        },
+        toEnglish: { بجلی: 'Bijli', آم: 'Aam', ندیم: 'Nadeem', خان: 'Khan' },
+        rulesOnly: ['nadeem', 'ندیم'],
+      },
+      asText(input['text']),
+      asText(input['direction']) === 'to_english' ? 'to_english' : 'to_urdu',
+    ),
+  translit_pairs_list: () => EMPTY_PAIRS,
   bikri_preview: (input) => {
-    const preview = previewFor(draftOf(input));
+    // `?own` is the lot of trip goods of E2E-34, the backend's real answer.
+    if (devFlag('own')) return ensurePaid(fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input)));
+    // `#/dev/bikri?offer&over` is Umar's case (plan 57): 50 in the lot and 70 typed on the line.
+    if (devFlag('over')) return ensurePaid(previewWithOverLine(draftOf(input)));
+    // `#/dev/bikri?offer&umar` is Umar's case of D8 (plan 61): 200 in the lot and three lines.
+    if (devFlag('umar')) return umarAnswer(draftOf(input));
+    // `#/dev/bikri?thousand` is 1,000 sale lines in one lot (D8 plan 61, NFR-SCL-3).
+    if (devFlag('thousand')) return thousandAnswer(draftOf(input));
+    // The stand-in gives each lot the counter of its name (PRD FR-12.45), as the backend does: the
+    // first lot of a seller and an item is 1.
+    // `#/dev/bikri?typed` answers like the real backend for a percent typed on the seller commission
+    // of the first line (plan 72 P13).
+    const answered = ensurePaid(
+      devFlag('typed') ? answerWithTyped(draftOf(input)) : previewFor(draftOf(input)),
+    );
+    const preview = {
+      ...answered,
+      lots: answered.lots.map((lot, index) => ({
+        ...lot,
+        lot_counter: lot.lot_counter ?? index + 1,
+      })),
+    };
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
     return devFlag('cash') ? { ...preview, cash: CASH_BELOW_ZERO } : preview;
   },
-  bikri_split_freight: (input) => {
-    const lots = Array.isArray(input['lots']) ? input['lots'] : [];
-    const first: unknown = lots[0];
-    const key =
-      typeof first === 'object' && first !== null && 'key' in first ? asText(first.key) : '';
-    return [{ key, freight_paisa: EVENT1.lots[0]?.freight ?? 0 }];
-  },
-  assist_truck_memory: (input) =>
-    asText(input['truck_no']).toUpperCase().startsWith('LES')
-      ? TRUCK_MEMORY
-      : { last: null, same_day: null, suggestions: [] },
   assist_seller_memory: () => SELLER_MEMORY,
+  // Plan 13: the saved بکری, the lists, drafts and the one-time people.
+  bikri_save: (input) => ({
+    bikri_id: 41,
+    number: 1,
+    entry_id: 7,
+    preview: previewFor(draftOf(input)),
+  }),
+  bikri_get: () =>
+    devFlag('own')
+      ? devValue('own') === '41'
+        ? ownReal.OWN_GET_E41
+        : ownReal.OWN_GET_E34
+      : savedEvent1({
+          // `?id=41&grade` shows the quality of the lines in the saved view (plan 58).
+          ...(devFlag('grade') ? { lots: savedWithGrades() } : {}),
+          status: devFlag('cancelled') ? 'cancelled' : 'saved',
+          cancel_reason: devFlag('cancelled') ? 'wrong truck' : null,
+          // Plan 44: the story of the edit kit. A closed day asks to be reopened first; an edited
+          // entry shows its stamp.
+          ...(devFlag('closedday') ? { needs_reopen: true } : {}),
+          ...(devFlag('edited')
+            ? {
+                edited: editedStampOf(AUDIT_EDIT_STAMP_BIKRI[0]?.stamp ?? null),
+              }
+            : {}),
+        }),
+  // Plan 72: today's section and the window of earlier days, with a heading for each day.
+  bikri_list: (input) => devPastList(input, devFlag('empty'), devFlag('many')),
+  // Plan 72 P8: the print data of پچھلی بکری, from the same double the tests use (tests/helpers/past-print.ts).
+  bikri_list_print_data: (input) => pastPrintDataFor(input as unknown as BikriListPrintInput),
+  bikri_find: () => [listRow(), listRow({ id: 42, number: 2, truck_no: 'LHR-0077' })],
+  bikri_navigate: () => 41,
+  // `#/dev/bikri?offer` shows the start-up offer of an unfinished بکری (PRD FR-12.10).
+  drafts_get: () => {
+    if (!devFlag('offer')) return null;
+    const stores = createBikriDraft('10-10-2026');
+    if (devFlag('over')) seedOver(stores);
+    else if (devFlag('umar')) fillUmarsLot(stores);
+    else if (devFlag('thousand')) fillThousandLines(stores);
+    else seedEvent1(stores);
+    return { payload_json: serialiseDraft(stores), saved_at: '2026-10-10T07:30:00Z' };
+  },
+  drafts_save: () => ({ saved_at: '2026-10-10T07:30:00Z' }),
+  drafts_discard: () => null,
+  // Plan 64: the چکتا buyers of the buyer picker (the dev page has two: Shahid and Nasir).
+  chukta_search: () => [SHAHID, NASIR, ...ADDED_CHUKTA],
+  // The short form of a new چکتا buyer saves him at once (PRD FR-13.3); the phone comes back as 11 digits.
+  chukta_add: (input) => {
+    const phone = asText(input['phone']).replace(/\D/g, '');
+    const person = {
+      id: 10 + ADDED_CHUKTA.length,
+      account_id: IDS.chuktaKhata,
+      name_ur: asText(input['name_ur']),
+      name_en: asText(input['name_en']),
+      phone: phone === '' ? null : phone,
+      last_date: null,
+    };
+    ADDED_CHUKTA.push(person);
+    return person;
+  },
+  // Plan 14: the print box, the preview and the Printing settings. `#/dev/bikri?id=41&windows`
+  // pretends the computer is Windows (the print goes through); without it the answer is the one a
+  // Mac gives, ERR_PRINT_WINDOWS_ONLY, so the preview offer can be photographed.
+  // The Owner's switches start on (PRD FR-11.10): a line may change its commission and لاگا.
+  settings_get_overrides: () => ({
+    allow_line_override: true,
+    credit_limit_mode: 'warn',
+    rate_check_enabled: true,
+    rate_check_percent: 30,
+  }),
+  settings_get_printing: () => printingSettings(),
+  settings_set_printing: (input) => ({
+    ...printingSettings(),
+    ...input,
+    copies: Number(input['copies']),
+  }),
+  reports_list_printers: () => (devFlag('noprinters') ? [] : ['HP LaserJet Pro', 'Epson TM-T20']),
+  // Plan 68: the print of ادھاری تفصیل (R5), opened by the second print button, with the backend's own
+  // slips and shared header. `windows` lets Print and Save PDF answer like a computer that prints.
+  reports_buyer_bills_print_data: (input) =>
+    input['language'] === 'en' ? BUYER_BILLS_EN : BUYER_BILLS_UR,
+  reports_print_header: (input) => printFrameFor(input as unknown as PrintFrameInput),
+  reports_print_report: (input) => {
+    if (!devFlag('windows')) throw windowsOnly();
+    return {
+      printed: ['buyer_slips'],
+      pdf_paths: input['to'] === 'pdf' ? ['prints/report-r5-slips.pdf'] : null,
+    };
+  },
+  reports_bikri_print_data: (input) =>
+    printDataFor(input['doc'] as 'seller_bill', {
+      language: input['language'] === 'en' ? 'en' : 'ur',
+    }),
+  reports_print: (input) => {
+    if (!devFlag('windows')) throw windowsOnly();
+    const docs = Array.isArray(input['docs']) ? (input['docs'] as string[]) : [];
+    return {
+      printed: docs,
+      pdf_paths: input['to'] === 'pdf' ? docs.map((doc) => `prints/${doc}-1.pdf`) : null,
+    };
+  },
+  // Plan 16: goods left, later sale, edit, cancel and undo (bikri-plan16-data.ts). `#/dev/bikri?
+  // closed` is a closed day (the edit and the cancel are refused); `empty` is nothing left.
+  bikri_stock_list: () =>
+    devFlag('garden')
+      ? arrivalsReal.STOCK_WITH_GARDEN_ROWS
+      : devFlag('own')
+        ? ownReal.STOCK_OWN_ROWS
+        : devFlag('empty')
+          ? stockList([])
+          : stockList([
+              stockRow(),
+              stockRow({
+                lot_id: 41,
+                bikri_id: 43,
+                bikri_number: 3,
+                received_date: '2026-10-08',
+                qty_received: 30,
+                qty_sold: 20,
+                balance: 10,
+                days_waiting: 2,
+              }),
+            ]),
+  bikri_later_sale_preview: (input) =>
+    laterSaleAnswer(Array.isArray(input['sales']) ? (input['sales'] as SaleInput[]) : [], 5),
+  bikri_later_sale_save: (input) => ({
+    bikri_id: 41,
+    number: 1,
+    lot_id: asNumber(input['lot_id']),
+    entry_id: 9,
+    preview: laterSaleAnswer([], 5),
+  }),
+  bikri_open_for_edit: () =>
+    devFlag('own') ? ownReal.OWN_OPEN_FOR_EDIT : editable({ editable: !devFlag('closed') }),
+  bikri_edit_preview: (input) =>
+    devFlag('own')
+      ? fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input))
+      : previewFor(draftOf(input)),
+  bikri_edit_save: (input) => {
+    // `#/dev/bikri?id=41&edit=7&rule=lot_item_locked` is the backend refusing the edit by that rule.
+    const rule = devValue('rule');
+    if (rule !== null) throw editNotAllowed(rule);
+    return {
+      bikri_id: 41,
+      number: 1,
+      version: 4,
+      old_entry_id: 7,
+      reversal_entry_id: 10,
+      entry_id: 11,
+      preview: previewFor(draftOf(input)),
+    };
+  },
+  bikri_cancel_preview: () =>
+    cancelPreview(devFlag('closed') ? { closed_dates: ['2026-10-10'], can_cancel: false } : {}),
+  bikri_cancel: () => ({ bikri_id: 41, number: 1, reversal_entry_ids: [10] }),
+  bikri_undo: () => undoResult(),
+  bikri_write_off: (input) => ({
+    lot_id: asNumber(input['lot_id']),
+    move_id: 70,
+    qty: 5,
+    qty_written_off: 5,
+    balance: 0,
+  }),
+  bikri_write_off_undo: () => ({
+    lot_id: 40,
+    reversal_move_id: 71,
+    qty_written_off: 0,
+    balance: 5,
+  }),
+  // Plan 15: the vouchers, answered from the books of the worked day (voucher-books.ts).
+  vouchers_preview: (input) => books.preview(input['entry'] as VoucherEntry),
+  vouchers_save_receipt: (input) => books.save({ type: 'receipt', input: input as ReceiptInput }),
+  vouchers_save_payment: (input) => books.save({ type: 'payment', input: input as PaymentInput }),
+  vouchers_save_advance: (input) => books.save({ type: 'advance', input: input as AdvanceInput }),
+  vouchers_edit: (input) => books.edit(input as never),
+  vouchers_cancel: (input) => books.cancel(input as never),
+  vouchers_get: (input) => {
+    const row = books.get(asNumber(input['id']));
+    return devFlag('closedday') ? { ...row, needs_reopen: true } : row;
+  },
+  vouchers_list: (input) => books.list(input as never),
+  assist_open_bills: (input) => books.openBills({ account_id: asNumber(input['account_id']) }),
+  assist_open_payables: (input) => books.openPayables({ seller_id: asNumber(input['seller_id']) }),
+  assist_advances: (input) => books.advances(asNumber(input['seller_id'])),
+  assist_collection_list: () => collectionList(devFlag('empty') ? 'none' : 'two'),
+  vouchers_save_receipts_batch: (input) => {
+    const rows = Array.isArray(input['rows']) ? (input['rows'] as ReceiptInput[]) : [];
+    return {
+      rows: rows.map((row) => ({
+        saved: books.save({ type: 'receipt', input: row }),
+        skipped: false,
+        errors: [],
+      })),
+      saved_paisa: paisaForTest(0),
+    };
+  },
+  // The collection list on paper (plan 17e): the backend's own real answers, in the language asked;
+  // `?empty` is a day with nobody on the list. Printing itself is refused, as on a Mac.
+  reports_collection_print_data: (input) =>
+    devFlag('empty')
+      ? tagReal.COLLECTION_EMPTY
+      : input['language'] === 'en'
+        ? tagReal.COLLECTION_EN
+        : tagReal.COLLECTION_UR,
+  reports_print_collection: () => {
+    if (!devFlag('windows')) throw windowsOnly();
+    return { printed: ['collection_list'], pdf_paths: null };
+  },
+  reports_voucher_print_data: (input) =>
+    voucherPrintData('receipt', { language: input['language'] === 'en' ? 'en' : 'ur' }),
 };
+
+const hasFlag = (name: string): boolean =>
+  new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
+
+/**
+ * Every master the page knows: the few of Event 1, the expense heads of the worked day (none with
+ * the flag `noheads`, so the empty list of Umar's picture can be photographed), and what was made
+ * on the page.
+ */
+function allMasters(): readonly Master[] {
+  const heads: Master[] = hasFlag('noheads')
+    ? []
+    : HEADS.map((head) => ({
+        id: head.id,
+        scope: 'expense_head',
+        code: head.code,
+        ur: head.name_ur,
+        en: head.name_en,
+      }));
+  return [...MASTERS, ...heads, ...ADDED_MASTERS];
+}
+
+function nextMasterCode(kind: string): string {
+  const highest = Math.max(
+    0,
+    ...allMasters()
+      .filter((master) => master.scope === kind)
+      .map((master) => Number(master.code) || 0),
+  );
+  return String(highest + 1).padStart(4, '0');
+}
+
+/** Saves a master the way the backend answers: the row, with the next code if none was typed. */
+function saveMaster(input: Input): unknown {
+  const kind = asText(input['kind']);
+  const code = asText(input['code']).trim() === '' ? nextMasterCode(kind) : asText(input['code']);
+  const ur = asText(input['name_ur']) || asText(input['text_ur']);
+  const en = asText(input['name_en']) || asText(input['text_en']);
+  NEXT_ID.value += 1;
+  ADDED_MASTERS.push({ id: NEXT_ID.value, scope: kind, code, ur, en });
+  // One row with the fields of every kind: the screen reads the ones its kind has.
+  return {
+    kind,
+    id: NEXT_ID.value,
+    version: 1,
+    code,
+    name_ur: ur,
+    name_en: en,
+    is_active: true,
+    account_id: 0,
+    account_code: '',
+    item_group: asText(input['item_group']),
+    sold_by: asText(input['sold_by']),
+    default_packing_id: null,
+    default_packing_name_ur: null,
+    default_packing_name_en: null,
+    approx_kg: null,
+    city_id: null,
+    city_name_ur: null,
+    city_name_en: null,
+  };
+}
 
 function masterHit(master: Master) {
   return {
@@ -237,6 +973,34 @@ function masterHit(master: Master) {
     extra_en: '',
     is_active: true,
   };
+}
+
+/**
+ * The backend's real preview of the own lot, with the keys of the draft it is asked about (the real
+ * preview echoes the key of each lot and line it was given).
+ */
+function fitOwnPreview(real: typeof ownReal.OWN_PREVIEW_E34, draft: BikriDraft) {
+  const preview = structuredClone(real);
+  preview.lots.forEach((lot, lotIndex) => {
+    lot.key = draft.lots[lotIndex]?.key ?? lot.key;
+    lot.lines.forEach((line, lineIndex) => {
+      line.key = draft.lots[lotIndex]?.sales[lineIndex]?.key ?? line.key;
+    });
+  });
+  return preview;
+}
+
+/** Event 1's lot with a quality on its two lines: First and Second (plan 58). */
+function savedWithGrades() {
+  return savedEvent1().lots.map((lot) => ({
+    ...lot,
+    sales: lot.sales.map(
+      (sale, index) =>
+        ({ ...sale, grade: index === 0 ? 'first' : 'second' }) as const satisfies Partial<
+          typeof sale
+        >,
+    ),
+  }));
 }
 
 /** The draft inside the input of `bikri_preview`. The screen sends it in the shape of the contract. */
@@ -260,18 +1024,74 @@ function refusal(): Error {
   });
 }
 
+/** The field each edit rule points to, as the backend sends it (plan 16, ERR_EDIT_NOT_ALLOWED). */
+const EDIT_RULE_FIELDS: Readonly<Record<string, string>> = {
+  day_changed: 'header.entry_date',
+  lot_removed: 'lots',
+  lot_not_in_posting: 'lots[0].lot_id',
+  lot_order_changed: 'lots[0].lot_id',
+  lot_seller_locked: 'lots[0].seller_account_id',
+  lot_item_locked: 'lots[0].item_id',
+  line_not_in_posting: 'lots[0].sales[0].sale_id',
+  posting_lots_locked: 'lots',
+};
+
+/** The backend's refusal of an edit by one rule. */
+function editNotAllowed(rule: string): Error {
+  return Object.assign(new Error('ERR_EDIT_NOT_ALLOWED'), {
+    ok: false,
+    errors: [
+      { code: 'ERR_EDIT_NOT_ALLOWED', field: EDIT_RULE_FIELDS[rule] ?? null, values: { rule } },
+    ],
+    ref: '',
+  });
+}
+
+/** What a computer that is not Windows answers to a print (plan 14 contract 8). */
+function windowsOnly(): Error {
+  return Object.assign(new Error('ERR_PRINT_WINDOWS_ONLY'), {
+    ok: false,
+    errors: [{ code: 'ERR_PRINT_WINDOWS_ONLY', field: null, values: {} }],
+    ref: '',
+  });
+}
+
+/** The commands a page asked that the stand-in has no answer for (development only). */
+const missingCommands: string[] = [];
+
 /** Puts the stand-in where Tauri's `invoke` looks for the bridge. */
 export function installDevBridge(): void {
   Object.defineProperty(window, '__TAURI_INTERNALS__', {
     configurable: true,
     value: {
       invoke: (command: string, args: unknown): Promise<unknown> => {
-        const handler = handlers[command];
+        // The pages of the روکڑ area and of the gardens answer their own commands first.
+        const own = isRokarPage()
+          ? rokarHandlers[command]
+          : isGardensPage()
+            ? gardensHandlers[command]
+            : isIndexPage()
+              ? indexHandlers[command]
+              : isListsPage()
+                ? listsHandlers[command]
+                : undefined;
+        const handler = own ?? editHandlers[command] ?? handlers[command];
         // The delay is the answer time of a real command, so the screen's waiting looks real.
         return new Promise((resolve, reject) => {
           window.setTimeout(() => {
-            if (handler === undefined) reject(refusal());
-            else resolve(handler(command === 'day_status' ? {} : inputOf(args)));
+            if (handler === undefined) {
+              // Development only: a page that asked a command no answer exists for is named on
+              // `window.devBridgeMissing`, for the screenshot script to read.
+              missingCommands.push(command);
+              Object.assign(window, { devBridgeMissing: [...missingCommands] });
+              reject(refusal());
+              return;
+            }
+            try {
+              resolve(handler(command === 'day_status' ? {} : inputOf(args)));
+            } catch (failure: unknown) {
+              reject(failure instanceof Error ? failure : refusal());
+            }
           }, 20);
         });
       },
@@ -281,14 +1101,8 @@ export function installDevBridge(): void {
 
 /** The draft of Event 1 (PRD 4.4) typed into the stores, for the sample page. */
 export function seedEvent1(stores: BikriDraftStores): void {
-  const { header, lots } = stores;
-  const rahim = { id: IDS.rahim, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
-  header.getState().patch({
-    truckNo: 'LES-1234',
-    zamindar: rahim,
-    adda: { id: IDS.swat, code: '0001', name_ur: 'سوات اڈا', name_en: 'Swat Adda' },
-    totalFreight: '3000',
-  });
+  const { lots } = stores;
+  const rahim = { id: IDS.rahim, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
   const lot = lots.getState().rows[0];
   if (lot === undefined) return;
   lots.getState().patchRow(lot.rowId, {
@@ -313,13 +1127,13 @@ export function seedEvent1(stores: BikriDraftStores): void {
   if (first === undefined) return;
   const akram = {
     id: IDS.akram,
-    code: '03040001',
+    code: '0020',
     name_ur: 'اکرم ٹول ٹیکس',
     name_en: 'Akram Toll Tax',
   };
   const arshad = {
     id: IDS.arshad,
-    code: '03040002',
+    code: '0021',
     name_ur: 'ارشد ملتانی',
     name_en: 'Arshad Multani',
   };
@@ -328,4 +1142,48 @@ export function seedEvent1(stores: BikriDraftStores): void {
     typed: { qty: '20', rate: '600', qtyFilled: '1' },
   });
   sales.getState().addRow({ qty: '30', rate: '580', qtyFilled: '1' }, { buyer: arshad });
+}
+
+/**
+ * Umar's case (plan 57) typed into the stores, for the sample page `#/dev/bikri?offer&over`: Rahim's
+ * lot of 50 bananas with one line, Akram, 50 at 1,200. The photograph types 70 over the 50.
+ */
+export function seedOver(stores: BikriDraftStores): void {
+  seedEvent1(stores);
+  const lot = stores.lots.getState().rows[0];
+  if (lot === undefined) return;
+  const sales = stores.salesFor(lot.rowId);
+  const [first, second] = sales.getState().rows;
+  if (first === undefined) return;
+  sales.getState().patchRow(first.rowId, { typed: { qty: '50', rate: '1200', qtyFilled: '1' } });
+  if (second !== undefined) sales.getState().removeRow(second.rowId);
+}
+
+/** The own lot of E2E-34 typed into the stores, for the sample page `#/dev/bikri?own`. */
+export function seedOwn(stores: BikriDraftStores): void {
+  const { lots } = stores;
+  const lot = lots.getState().rows[0];
+  if (lot === undefined) return;
+  lots.getState().patchRow(lot.rowId, {
+    picked: {
+      seller: { id: OWN_ID, code: OWN_CODE, name_ur: 'اپنا مال', name_en: 'Own Goods (Trips)' },
+      item: { id: 5, code: '5', name_ur: 'مالٹا', name_en: 'Orange' },
+      packing: { id: 1, code: '1', name_ur: 'پیٹی', name_en: 'Box' },
+    },
+    typed: { qty: '15', purchase: '1', sellerFilled: '1' },
+  });
+  const sales = stores.salesFor(lot.rowId);
+  const first = sales.getState().rows[0];
+  if (first === undefined) return;
+  sales.getState().patchRow(first.rowId, {
+    picked: {
+      buyer: {
+        id: IDS.akram,
+        code: '0020',
+        name_ur: 'اکرم ٹول ٹیکس',
+        name_en: 'Akram Toll Tax',
+      },
+    },
+    typed: { qty: '15', rate: '600', qtyFilled: '1' },
+  });
 }

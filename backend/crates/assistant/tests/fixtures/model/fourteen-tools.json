@@ -1,0 +1,160 @@
+[
+  {
+    "model": "openai/gpt-6-luna",
+    "choices": [
+      {
+        "finish_reason": "tool_calls",
+        "message": {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_0_0",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_1",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_2",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_3",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_4",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_5",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_6",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_7",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_8",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_0_9",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_11",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_12",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_13",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            },
+            {
+              "id": "call_14",
+              "type": "function",
+              "function": {
+                "name": "tiles",
+                "arguments": "{}"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 5200,
+      "completion_tokens": 60,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 20
+      }
+    }
+  },
+  {
+    "model": "openai/gpt-6-luna",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"kind\": \"answer\", \"text\": \"آج کا کمیشن {{r1.today_commission.amount}} بنا۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 5900,
+      "completion_tokens": 180,
+      "prompt_tokens_details": {
+        "cached_tokens": 5000
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 60
+      }
+    }
+  }
+]

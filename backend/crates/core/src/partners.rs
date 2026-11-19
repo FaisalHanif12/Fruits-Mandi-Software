@@ -11,7 +11,10 @@ use ts_rs::TS;
 
 use crate::accounts::LineError;
 use crate::error::{ErrorCode, ErrorValue, FieldError};
+use crate::masters::AccountToMake;
 use crate::money::{BPS_FULL, Bps, Paisa, parse_bps};
+use crate::text;
+use crate::ventures::VentureKind;
 
 /// The most partners the firm can have (NFR-SCL-5).
 pub const MAX_PARTNERS: usize = 10;
@@ -20,6 +23,59 @@ pub const MAX_PARTNERS: usize = 10;
 pub const CAPITAL_CONTROL: &str = "0602";
 /// The control under which the drawings account (ذاتی خرچہ) of a partner goes (0603xxxx).
 pub const DRAWINGS_CONTROL: &str = "0603";
+/// The control under which the gardens, trips and fruit account (باغ، سفر اور پھل) of a partner goes
+/// (0604xxxx, PRD FR-10.4 v1.6, C22).
+pub const VENTURE_CONTROL: &str = "0604";
+/// The words of the name of a partner's 0604 account: `<word> - <name>`, as for his capital and
+/// drawings accounts. No comma, because a comma is not allowed in a name (PRD FR-7.28).
+pub const VENTURE_WORD_UR: &str = "باغ سفر اور پھل";
+/// English word of the name of a partner's 0604 account.
+pub const VENTURE_WORD_EN: &str = "Gardens Trips and Fruit";
+
+/// The 0604 account that a partner's names make, with its search keys. The partner save (plan 11)
+/// and migration 6 (for the partners that exist) both use it, so every partner's account is named
+/// the same way.
+///
+/// Example: partner "Alif" gets "Gardens Trips and Fruit - Alif".
+pub fn venture_account(name_ur: &str, name_en: &str) -> AccountToMake {
+    let ur = format!("{VENTURE_WORD_UR} - {name_ur}");
+    let en = format!("{VENTURE_WORD_EN} - {name_en}");
+    AccountToMake {
+        control_code: VENTURE_CONTROL,
+        search_ur: text::search_ur(&ur),
+        search_en: text::search_en(&en),
+        search_phonetic: text::search_phonetic(&en),
+        name_ur: ur,
+        name_en: en,
+    }
+}
+
+/// The control of the account that holds the money reaching a partner through a linked khata or
+/// loan (plan 76, PRD FR-17.9 v1.41).
+pub const LINKED_CONTROL: &str = "0605";
+/// The contra account of every linked line (plan 76).
+pub const LINKED_OFFSET_CODE: &str = "03070001";
+/// The Urdu word of the 0605 account's name.
+pub const LINKED_WORD_UR: &str = "الگ کھاتہ اور ادھار رقم";
+/// The English word of the 0605 account's name.
+pub const LINKED_WORD_EN: &str = "Linked Khata and Loans";
+
+/// The 0605 account that a partner's names make, with its search keys. The partner save and
+/// migration 23 (for the partners that exist) both use it.
+///
+/// Example: partner "Alif" gets "Linked Khata and Loans - Alif".
+pub fn linked_account(name_ur: &str, name_en: &str) -> AccountToMake {
+    let ur = format!("{LINKED_WORD_UR} - {name_ur}");
+    let en = format!("{LINKED_WORD_EN} - {name_en}");
+    AccountToMake {
+        control_code: LINKED_CONTROL,
+        search_ur: text::search_ur(&ur),
+        search_en: text::search_en(&en),
+        search_phonetic: text::search_phonetic(&en),
+        name_ur: ur,
+        name_en: en,
+    }
+}
 
 /// One partner as the lists show him (PRD 17.1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -41,6 +97,12 @@ pub struct PartnerRow {
     pub drawings_account_id: i64,
     /// Its code, for example `06030001`.
     pub drawings_account_code: String,
+    /// His gardens, trips and fruit account (control 0604, PRD FR-10.4 v1.6). It holds the money of
+    /// the gardens and trips he is in and the fruit he took; it counts in his کل رقم (C22).
+    #[ts(type = "number")]
+    pub venture_account_id: i64,
+    /// Its code, for example `06040001`.
+    pub venture_account_code: String,
     /// His share on today's date in bps (4000 = 40%). 0 until shares are set.
     pub share_bps: i32,
     /// False once he is made inactive. Inactive partners keep their history.
@@ -48,6 +110,17 @@ pub struct PartnerRow {
     /// The version to send back with an edit.
     #[ts(type = "number")]
     pub version: i64,
+}
+
+/// The answer of `partners_list`: the partners by name, for the pickers (plan 44, PRD FR-17.11).
+/// While the partner section is locked it still names them, but every `share_bps` is 0 and
+/// `partners_locked` is true.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartnersList {
+    /// The partners, in the order they were created.
+    pub partners: Vec<PartnerRow>,
+    /// True while the partner section is locked: the shares are left out.
+    pub partners_locked: bool,
 }
 
 /// One entry of a partner's share history (PRD FR-17.2).
@@ -76,6 +149,28 @@ pub struct PartnersGetInput {
     pub id: i64,
 }
 
+/// Input of `partners_open_ventures` (plan 76 point 11).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PartnersOpenVenturesInput {
+    /// The partner.
+    #[ts(type = "number")]
+    pub partner_id: i64,
+}
+
+/// Where a partner's opening capital is (PRD 17.1 v1.43, plan 78 E): in the shop's cash, or already
+/// counted in other openings.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum OpeningCapitalWhere {
+    /// In روکڑ (the default): the opening posts روکڑ بنام and his capital account جمع, so cash in hand
+    /// shows the money. Example: 50,000 makes cash 50,000 higher.
+    #[default]
+    Cash,
+    /// Already counted in other openings (پہلے سے درج): the opening posts against ابتدائی فرق, as
+    /// before v1.43 (PRD FR-10.9), so cash does not change.
+    CountedElsewhere,
+}
+
 /// A new partner (PRD 17.1). He has no share until shares are set.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct PartnerCreateInput {
@@ -87,6 +182,11 @@ pub struct PartnerCreateInput {
     /// account dated today (PRD FR-10.9). Empty or null for none.
     #[serde(default)]
     pub opening_capital: Option<String>,
+    /// Where that money is (plan 78 E, PRD 17.1 v1.43). Missing means `cash`. Used only when
+    /// `opening_capital` is typed.
+    #[serde(default)]
+    #[ts(optional)]
+    pub opening_capital_where: Option<OpeningCapitalWhere>,
     /// Words the user confirmed in the spelling check (PRD FR-7.66).
     #[serde(default)]
     pub confirmed_rules_words: Vec<String>,
@@ -150,8 +250,44 @@ pub struct SharesCheck {
     pub errors: Vec<LineError>,
 }
 
-/// One partner on the overview (PRD 17.3). The returned, خالص, capital invested and کل رقم
-/// columns come in plan 17.
+/// An open garden or trip the partner is in, shown under his card (PRD 17.3, Umar 18-10-2026): his
+/// %, his money in so far (from the shop and from his pocket), his money back so far, and the
+/// running balance of the garden or the result of the trip.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartnerVentureCard {
+    /// The garden or the trip (`ventures.id`).
+    #[ts(type = "number")]
+    pub venture_id: i64,
+    /// A garden or a trip. `gardens_get` or `trips_get` opens it.
+    pub kind: VentureKind,
+    /// Its number in the series of its kind, from 1.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its code (plan 34): `0080` for the first garden, `0070` for the first trip.
+    pub code: String,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// His share in it, in bps.
+    pub share_bps: i32,
+    /// What he paid from the shop's cash so far.
+    #[ts(type = "Paisa")]
+    pub paid_shop_paisa: Paisa,
+    /// What he paid from his own pocket so far.
+    #[ts(type = "Paisa")]
+    pub paid_pocket_paisa: Paisa,
+    /// What he got back so far: his parts of a trip's seller credits and other-shop money (C25).
+    /// 0 for a garden, which pays its partners only when it is closed (C26).
+    #[ts(type = "Paisa")]
+    pub money_back_paisa: Paisa,
+    /// A garden's running balance (FR-12.37), or a trip's result so far (FR-12.27). Signed.
+    #[ts(type = "Paisa")]
+    pub balance_paisa: Paisa,
+}
+
+/// One partner on the overview (PRD 17.3). The returned, خالص, capital invested, ventures and
+/// کل رقم columns are new in plan 17; in T1 they are 0 and T2b fills them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PartnerOverviewRow {
     /// The partner.
@@ -185,6 +321,35 @@ pub struct PartnerOverviewRow {
     /// debit side.
     #[ts(type = "Paisa")]
     pub capital_balance_paisa: Paisa,
+    /// Money he returned this month (واپسی): the credits of his drawings account from ذاتی خرچہ
+    /// returns (PRD FR-16.2).
+    #[ts(type = "Paisa")]
+    pub month_returned_paisa: Paisa,
+    /// His خالص this month: `month_profit_paisa` less (taken less returned), PRD C20. Can be
+    /// negative.
+    #[ts(type = "Paisa")]
+    pub month_net_paisa: Paisa,
+    /// Capital put in this month, less capital taken back (سرمایہ لگایا, PRD FR-17.7). Can be
+    /// negative.
+    #[ts(type = "Paisa")]
+    pub month_capital_in_paisa: Paisa,
+    /// This month's net change of his gardens, trips and fruit account (باغ، سفر اور پھل, PRD
+    /// FR-17.10). Can be negative.
+    #[ts(type = "Paisa")]
+    pub month_ventures_paisa: Paisa,
+    /// His کل رقم now (PRD C22, FR-17.9): everything he has in the firm. Can be negative.
+    #[ts(type = "Paisa")]
+    pub total_paisa: Paisa,
+    /// The open gardens and trips he is in, with his %, his money in and back and the running
+    /// balance or result of each (plan 17c). Gardens first, then trips, by number. Empty if none.
+    pub open_ventures: Vec<PartnerVentureCard>,
+    /// How many open gardens he is in. The page shows "کھلے: 1 سفر، 0 باغ" from the two counts and
+    /// opens the list with `partners_open_ventures` on demand (plan 76 point 11).
+    #[ts(type = "number")]
+    pub open_gardens_count: i64,
+    /// How many open trips he is in.
+    #[ts(type = "number")]
+    pub open_trips_count: i64,
 }
 
 /// The shares as typed, read one by one (PRD FR-17.1). Rows that cannot be read are left out of

@@ -1,25 +1,38 @@
 //! One lot (PRD 12.3, 12.5, money agent 6.2 and 6.3): its charges, and the totals of C6 to C9
 //! for a lot or for the whole بکری.
 
+use mandi_core::bikri::LineCalc;
 use mandi_core::bikri::{
     ChargeSource, LotCharge, LotChargeMethod, RuleLabel, SummaryTotals, SummaryWorkings,
     TypedLotCharge,
 };
-use mandi_core::bikri::{LineCalc, PaymentType};
 use mandi_core::money::{MoneyError, Paisa, Qty};
 use mandi_core::rules::{ChargeSide, ChargeType, ChargeValue, RuleLevel, Working};
 
-use super::lookups::ItemFacts;
+use super::lookups::{EntryLot, ItemFacts};
+use super::stored::StoredLotCharge;
 use super::working;
 use super::{CalcError, Env, PostingKind};
-use crate::rules::{Query, Winner, charge_amount, resolve};
+use crate::rules::{Charged, Query, Winner, charge_amount, resolve};
 
 /// What a lot charge is looked up for.
 pub(super) struct LotKey {
     pub seller_id: i64,
+    /// True if the seller is a separate khata: no default applies (PRD FR-16.7).
+    pub seller_is_khata: bool,
     pub item_id: i64,
     pub item: ItemFacts,
     pub qty_received: Qty,
+}
+
+/// The goods-arrived entry a garden lot belongs to, for one kind of lot charge (PRD FR-12.40, plan
+/// 37).
+#[derive(Debug, Clone, Copy)]
+pub(super) struct EntryCharge {
+    /// The number of the entry (for the working).
+    pub number: i64,
+    /// The lot of the entry that has already taken this kind of per-lot charge, if any.
+    pub taken: Option<EntryLot>,
 }
 
 /// A lot charge that is not charged in this posting (a later sale charges none, PRD FR-12.17).
@@ -39,10 +52,105 @@ fn not_charged() -> LotCharge {
     }
 }
 
+/// A lot charge the user did not change, as the lot stored it (PRD FR-12.20, FR-11.6): its method,
+/// value and rule stay. A per-نگ charge is worked out again from its stored value and the
+/// quantity received now (C3), which only differs from the stored amount when that quantity was
+/// corrected; a per-lot or typed amount stays as it was.
+fn from_stored(
+    key: &LotKey,
+    kind: ChargeType,
+    stored: &StoredLotCharge,
+    entry: Option<EntryCharge>,
+) -> Result<LotCharge, CalcError> {
+    let typed_by_hand = stored.rule_id.is_none();
+    let value = match stored.method {
+        LotChargeMethod::Manual => {
+            // Nothing applied, or an amount typed by hand: the amount stays.
+            return Ok(LotCharge {
+                method: LotChargeMethod::Manual,
+                value_paisa: stored.amount,
+                amount: stored.amount,
+                rule_id: None,
+                rule_label: None,
+                source: if stored.amount > Paisa::ZERO {
+                    ChargeSource::Typed
+                } else {
+                    ChargeSource::None
+                },
+                working: working::typed(stored.amount),
+            });
+        }
+        LotChargeMethod::PerUnit => ChargeValue::PerUnit(stored.value),
+        LotChargeMethod::PerLot => ChargeValue::PerLot(stored.value),
+    };
+    // A per-lot rule charge saved as 0 on a lot of a goods-arrived entry was taken by the entry's
+    // first lot (plan 37): it stays 0, it is not worked out again (PRD FR-12.20). It is stored
+    // with value 0 and amount 0, because the table requires a per-lot charge's amount to be its
+    // value.
+    if let Some(entry) = entry
+        && stored.method == LotChargeMethod::PerLot
+        && stored.rule_id.is_some()
+        && stored.amount == Paisa::ZERO
+    {
+        let level = stored.level.unwrap_or(RuleLevel::Default);
+        return Ok(LotCharge {
+            method: LotChargeMethod::PerLot,
+            value_paisa: Paisa::ZERO,
+            amount: Paisa::ZERO,
+            rule_id: stored.rule_id,
+            rule_label: Some(RuleLabel {
+                level,
+                rule_id: stored.rule_id,
+            }),
+            source: if level == RuleLevel::Default {
+                ChargeSource::Default
+            } else {
+                ChargeSource::Rule
+            },
+            working: working::per_lot_on_entry(entry.number, stored.value, stored.rule_id),
+        });
+    }
+    let level = if typed_by_hand {
+        RuleLevel::LineOverride
+    } else {
+        stored.level.unwrap_or(RuleLevel::Default)
+    };
+    let winner = Winner {
+        level,
+        rule_id: stored.rule_id,
+        value,
+        manual: typed_by_hand,
+    };
+    let charged = charge_amount(Some(&winner), kind, Paisa::ZERO, key.qty_received, true)?;
+    Ok(LotCharge {
+        method: stored.method,
+        value_paisa: stored.value,
+        amount: charged.amount,
+        rule_id: stored.rule_id,
+        rule_label: (!typed_by_hand).then_some(RuleLabel {
+            level,
+            rule_id: stored.rule_id,
+        }),
+        source: if typed_by_hand {
+            ChargeSource::Typed
+        } else if level == RuleLevel::Default {
+            ChargeSource::Default
+        } else {
+            ChargeSource::Rule
+        },
+        working: charged.working,
+    })
+}
+
 /// The charge of a lot for مزدوری, منشیانہ or فون (PRD 11.2): the value typed on the lot, else
-/// the rule that wins for the lot's seller and item, else nothing. A typed lot charge is always
+/// the rule that wins for the lot's seller and item, else nothing. In an edit, a charge whose
+/// typed value equals what was stored (or both are empty) is the stored charge (PRD FR-12.20). A typed lot charge is always
 /// allowed (PRD FR-11.10 limits only commission and لاگا on a line). A per-نگ charge counts the
 /// نگ received, not the نگ sold (PRD E2E-16).
+///
+/// A garden lot linked to a goods-arrived entry takes a charge a rule works out per lot only if no
+/// other active lot of the entry has taken it: `entry.taken` is then true and the lot carries 0
+/// for it (PRD FR-12.40, plan 37). A per-نگ charge and a typed amount are not affected.
 ///
 /// Example (PRD 4.4): 5 per نگ on 50 نگ received is 250.
 pub(super) fn lot_charge(
@@ -50,9 +158,14 @@ pub(super) fn lot_charge(
     key: &LotKey,
     kind: ChargeType,
     typed: Option<TypedLotCharge>,
+    stored: Option<&StoredLotCharge>,
+    entry: Option<EntryCharge>,
 ) -> Result<LotCharge, CalcError> {
     if env.kind == PostingKind::Later {
         return Ok(not_charged());
+    }
+    if let Some(stored) = stored.filter(|s| s.typed() == typed) {
+        return from_stored(key, kind, stored, entry);
     }
     if let Some(typed) = typed {
         return Ok(match typed.method {
@@ -103,7 +216,12 @@ pub(super) fn lot_charge(
             line_override: None,
         },
     );
-    let Some(winner) = found.winner else {
+    // PRD FR-16.7: for the goods of a separate khata every seller-side default is 0; only a rule
+    // on the khata itself (or on its item) can set a charge.
+    let winner = found
+        .winner
+        .filter(|w| !(key.seller_is_khata && w.level == RuleLevel::Default));
+    let Some(winner) = winner else {
         let charged = charge_amount(None, kind, Paisa::ZERO, key.qty_received, true)?;
         return Ok(LotCharge {
             method: LotChargeMethod::Manual,
@@ -123,11 +241,23 @@ pub(super) fn lot_charge(
             return Err(CalcError::Inconsistent("a percent rule for a lot charge"));
         }
     };
-    let charged = charge_amount(Some(&winner), kind, Paisa::ZERO, key.qty_received, true)?;
+    let mut charged = charge_amount(Some(&winner), kind, Paisa::ZERO, key.qty_received, true)?;
     let value = match winner.value {
         ChargeValue::PerUnit(v) | ChargeValue::PerLot(v) => v,
         ChargeValue::Percent(_) => Paisa::ZERO,
     };
+    // The entry's first lot has taken this per-lot charge: this lot carries 0 (plan 37).
+    let mut value = value;
+    if let (ChargeValue::PerLot(_), Some(entry)) = (&winner.value, entry)
+        && entry.taken.is_some()
+    {
+        charged = Charged {
+            amount: Paisa::ZERO,
+            working: working::per_lot_on_entry(entry.number, value, winner.rule_id),
+        };
+        // Stored as 0 and 0: the table needs a per-lot charge's amount to equal its value.
+        value = Paisa::ZERO;
+    }
     Ok(LotCharge {
         method,
         value_paisa: value,
@@ -148,13 +278,11 @@ pub(super) fn lot_charge(
 
 /// How the workings of a total are worded.
 pub(super) enum Scope<'a> {
-    /// One lot: lot charges have their own working; `cash_is_default` for a one-time seller's
-    /// نقد (PRD FR-13.10).
+    /// One lot: lot charges have their own working.
     Lot {
         labour: &'a Working,
         munshiana: &'a Working,
         phone: &'a Working,
-        cash_is_default: bool,
     },
     /// The whole بکری: every row is a sum of lots.
     Whole,
@@ -180,6 +308,9 @@ pub(super) struct Acc {
     pub buyer_credit: Paisa,
     pub buyer_cash: Paisa,
     pub buyer_total: Paisa,
+    /// C21: the cost of the trip goods sold (sum of the line costs). 0 without trip lots. Shown with
+    /// the result of the lot and never posted (PRD FR-12.26).
+    pub cost: Paisa,
 }
 
 impl Acc {
@@ -191,15 +322,11 @@ impl Acc {
         self.buyer_comm = self.buyer_comm.checked_add(line.buyer_comm.amount)?;
         self.laga = self.laga.checked_add(line.laga.amount)?;
         self.rate_diff = self.rate_diff.checked_add(line.rate_diff)?;
-        match line.payment_type {
-            PaymentType::Credit => {
-                self.buyer_credit = self.buyer_credit.checked_add(line.buyer_total)?;
-            }
-            PaymentType::Cash => {
-                self.buyer_cash = self.buyer_cash.checked_add(line.buyer_total)?;
-            }
-        }
+        // PRD FR-12.44: ادھاری is what is left on the accounts, نقدی what was paid on the spot.
+        self.buyer_credit = self.buyer_credit.checked_add(line.left_paisa)?;
+        self.buyer_cash = self.buyer_cash.checked_add(line.paid_paisa)?;
         self.buyer_total = self.buyer_total.checked_add(line.buyer_total)?;
+        self.cost = self.cost.checked_add(line.cost_of_goods)?;
         Ok(())
     }
 
@@ -220,6 +347,7 @@ impl Acc {
         self.buyer_credit = self.buyer_credit.checked_add(lot.buyer_credit)?;
         self.buyer_cash = self.buyer_cash.checked_add(lot.buyer_cash)?;
         self.buyer_total = self.buyer_total.checked_add(lot.buyer_total)?;
+        self.cost = self.cost.checked_add(lot.cost)?;
         Ok(())
     }
 
@@ -252,7 +380,8 @@ impl Acc {
         self.gross.checked_sub(self.deductions()?)
     }
 
-    /// C9: `seller commission + buyer commission + لاگا + فون + rate difference`.
+    /// C9: `seller commission + buyer commission + لاگا + فون + rate difference`. The seller credit
+    /// of a trip lot is not income: it goes to the trip's partners (PRD FR-12.26, E2E-34).
     pub(super) fn shared_income(&self) -> Result<Paisa, MoneyError> {
         self.seller_comm
             .checked_add(self.buyer_comm)?
@@ -287,13 +416,7 @@ impl Acc {
                 working::sum(self.count, self.phone),
             ),
         };
-        let cash = match scope {
-            Scope::Lot {
-                cash_is_default: true,
-                ..
-            } => working::pukhta_cash(self.cash_paid),
-            _ => typed(self.cash_paid),
-        };
+        let cash = typed(self.cash_paid);
         Ok(SummaryTotals {
             gross: self.gross,
             freight: self.freight,

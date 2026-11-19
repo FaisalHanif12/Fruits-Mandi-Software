@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_QTY_EXCEEDS_LOT",
+      "field": "qty",
+      "values": {
+        "available": 55
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261011-0001"
+}

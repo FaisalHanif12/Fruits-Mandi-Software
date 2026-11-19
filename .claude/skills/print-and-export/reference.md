@@ -64,7 +64,7 @@ Page counters in `@page` margin boxes need a recent Chromium-based WebView2. Con
   "number": "1",
   "date": "10-10-2026",
   "printedAt": "10-10-2026 17:40",
-  "seller": { "code": "030110001", "name": "رحیم" },
+  "seller": { "code": "0010", "name": "رحیم" },
   "rows": [
     { "buyer": "اکرم ٹول ٹیکس", "qty": "20", "rate": "600", "amount": "12,000" },
     { "buyer": "ارشد ملتانی", "qty": "30", "rate": "580", "amount": "17,400" }
@@ -98,6 +98,6 @@ sheet.write_string_with_format(0, 0, &l10n.get("reports-filters"), &head)?;
 sheet.write_number_with_format(row, col, rupees_as_f64(amount_paisa)?, &money)?;
 ```
 
-**Status: needs Umar's approval.** Code Standards M3 and the money agent forbid `f64` for money, and the money agent's forbidden-pattern search will flag this function. Excel stores every number as a floating-point value, so the only alternatives are this exception or exporting money as text (which Excel cannot add up). Until Umar approves the exception and it is recorded in Code Standards and the money agent, do not build it.
+**Status: approved by Umar on 23-10-2026 (D5-Q1), recorded in Code Standards M13 and the money agent.** Excel stores every number as a floating-point value, so `rupees_as_f64` is the one allowed exception; the money agent's forbidden-pattern search flags it, and that one hit is expected.
 
-If approved, `rupees_as_f64` is the one place where money becomes a floating-point number. It divides whole paisa by 100 with integer division first, checks the value is below 2^53 (so the conversion is exact), and only then converts. A unit test covers the maximum amount. Never read an Excel value back into the app.
+`rupees_as_f64` is the one place where money becomes a floating-point number. It divides whole paisa by 100 with integer division first, checks the value is below 2^53 (so the conversion is exact), and only then converts. A unit test covers the maximum amount. Never read an Excel value back into the app.

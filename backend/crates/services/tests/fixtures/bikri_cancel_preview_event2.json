@@ -1,0 +1,26 @@
+{
+  "bikri_id": 2,
+  "number": 2,
+  "version": 1,
+  "status": "saved",
+  "postings": [
+    {
+      "entry_id": 4,
+      "posting_type": "bikri_first",
+      "entry_date": "2026-10-10",
+      "total": 2560000,
+      "reversed": false,
+      "editable": true
+    }
+  ],
+  "cash": {
+    "cash_before_paisa": 5780000,
+    "change_paisa": -1280000,
+    "cash_after_paisa": 4500000,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "closed_dates": [],
+  "can_cancel": true
+}

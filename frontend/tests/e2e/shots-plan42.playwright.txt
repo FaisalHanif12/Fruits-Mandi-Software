@@ -1,0 +1,125 @@
+// Screenshots of plan 42 (PRD v1.12, FR-19.12, FR-19.13, R34, Section 21 Firm): the buyer's and the
+// seller's day slip and the day total sheet R34, on screen and as the print preview, and the Settings
+// Firm editor with the people of the header, in both languages. It is a developer tool: run it with the
+// Vite dev server up (`pnpm --filter frontend dev`) in a headless Chrome with a throwaway profile, as a
+// snippet for `playwright-core` (a snippet for that tool, not a module, so it is kept as .txt and the
+// linter does not read it). The pages are the development pages /dev/reports/R35, /dev/reports/R34 and
+// /dev/index?screen=firm&contacts, answered by the stand-in of tests/helpers/dev-bridge-reports.ts with
+// the backend's REAL answers (tests/fixtures/report_r3*.json). It measures sideways overflow of the page
+// (NFR-USE-15) and of every print sheet. The Windows check of WebView2 is spec 53 (LOCAL-ONLY here).
+//
+// PARTS says what to take: 'previews' (print previews on A4, A5 and the 80 mm roll), 'screens' (the
+// screens at 1024 x 600, 1366 x 768 and 1920 x 1080) and 'blank' (a slip with nothing paid yet).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan42';
+  const HOST = 'http://localhost:5173/#/dev/';
+  const PARTS = ['previews', 'screens', 'blank'];
+  const report = [];
+  const overflow = () =>
+    page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  const language = async (l) => {
+    await page.getByRole('button', { name: l === 'ur' ? 'اردو' : 'English', exact: true }).first().click();
+    await page.waitForTimeout(500);
+  };
+  const PAPERS = { a4: /A4 کاغذ/, a5: /A5 کاغذ/, mm80: /80 ملی میٹر/ };
+  const PARTIES = [
+    ['buyer', 'اکرم ٹول ٹیکس', 'Akram Toll Tax'],
+    ['seller', 'رحیم', 'Rahim'],
+  ];
+  async function openSlip(who, l, hash = '') {
+    await page.goto(HOST + 'reports/R35' + hash);
+    await page.reload();
+    await page.waitForTimeout(900);
+    if (l === 'en') await language('en');
+    const party = PARTIES.find((one) => one[0] === who);
+    await page.getByText(l === 'ur' ? party[1] : party[2]).first().dblclick();
+    await page.waitForTimeout(900);
+  }
+  async function sheetShot(name) {
+    const sheet = page.locator('.print-sheet').first();
+    await sheet.screenshot({ path: `${OUT}/${name}.png` });
+    report.push([
+      name,
+      await sheet.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return [Math.round(r.width), Math.round(r.height), el.scrollWidth > el.clientWidth + 1];
+      }),
+    ]);
+  }
+  if (PARTS.includes('previews')) {
+    await page.setViewportSize({ width: 1366, height: 2400 });
+    for (const [who] of PARTIES) {
+      await openSlip(who, 'ur');
+      await page.getByRole('button', { name: /پرنٹ پر نظر/ }).click();
+      await page.waitForTimeout(1200);
+      for (const lang of ['ur', 'en']) {
+        await page.getByRole('group', { name: /پرنٹ کی زبان/ }).getByRole('button', { name: lang === 'ur' ? 'اردو' : 'English' }).click();
+        await page.waitForTimeout(900);
+        for (const paper of ['a4', 'a5', 'mm80']) {
+          await page.getByRole('group', { name: /کاغذ/ }).getByRole('button', { name: PAPERS[paper] }).click();
+          await page.waitForTimeout(1000);
+          await sheetShot(`print-slip-${who}-${lang}-${paper}`);
+        }
+      }
+    }
+    await page.goto(HOST + 'reports/R34');
+    await page.reload();
+    await page.waitForTimeout(1200);
+    await page.getByRole('button', { name: /پرنٹ پر نظر/ }).click();
+    await page.waitForTimeout(1500);
+    for (const lang of ['ur', 'en']) {
+      await page.getByRole('group', { name: /پرنٹ کی زبان/ }).getByRole('button', { name: lang === 'ur' ? 'اردو' : 'English' }).click();
+      await page.waitForTimeout(900);
+      for (const paper of ['a4', 'a5']) {
+        await page.getByRole('group', { name: /کاغذ/ }).getByRole('button', { name: PAPERS[paper] }).click();
+        await page.waitForTimeout(1200);
+        await sheetShot(`print-r34-${lang}-${paper}`);
+      }
+    }
+  }
+  if (PARTS.includes('blank')) {
+    await page.setViewportSize({ width: 1366, height: 2400 });
+    for (const lang of ['ur', 'en']) {
+      await openSlip('buyer', 'ur', '?blank');
+      await page.getByRole('button', { name: /پرنٹ پر نظر/ }).click();
+      await page.waitForTimeout(1200);
+      await page.getByRole('group', { name: /پرنٹ کی زبان/ }).getByRole('button', { name: lang === 'ur' ? 'اردو' : 'English' }).click();
+      await page.waitForTimeout(900);
+      await sheetShot(`print-slip-buyer-blank-paid-${lang}-a4`);
+    }
+  }
+  if (PARTS.includes('screens')) {
+    for (const [w, h] of [[1024, 600], [1366, 768], [1920, 1080]]) {
+      await page.setViewportSize({ width: w, height: h });
+      for (const l of ['ur', 'en']) {
+        for (const [who] of PARTIES) {
+          await openSlip(who, l);
+          const name = `screen-slip-${who}-${l}-${w}x${h}`;
+          await page.screenshot({ path: `${OUT}/${name}.png` });
+          report.push([name, await overflow()]);
+        }
+        await page.goto(HOST + 'reports/R34');
+        await page.reload();
+        await page.waitForTimeout(1000);
+        if (l === 'en') await language('en');
+        await page.evaluate(() => {
+          const c = [...document.querySelectorAll('div.overflow-auto')].find((el) => el.scrollHeight > el.clientHeight + 5);
+          if (c) c.scrollTop = c.scrollHeight;
+        });
+        await page.waitForTimeout(400);
+        const n34 = `screen-r34-${l}-${w}x${h}`;
+        await page.screenshot({ path: `${OUT}/${n34}.png` });
+        report.push([n34, await overflow()]);
+        await page.goto(HOST + 'index?screen=firm&contacts');
+        await page.reload();
+        await page.waitForTimeout(1200);
+        if (l === 'en') await language('en');
+        const nf = `screen-firm-people-${l}-${w}x${h}`;
+        await page.screenshot({ path: `${OUT}/${nf}.png` });
+        report.push([nf, await overflow()]);
+      }
+    }
+  }
+  return report;
+};

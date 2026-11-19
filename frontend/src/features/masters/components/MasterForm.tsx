@@ -13,12 +13,17 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField, useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
+import {
+  focusFirstEmptyField,
+  useFocusFirstField,
+  useSingleFlight,
+  useSpellingFlow,
+} from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
-  AccountPicker,
   Button,
   Checkbox,
   CodeInput,
@@ -26,19 +31,33 @@ import {
   ErrorNotice,
   Field,
   NamePair,
-  Picker,
-  Select,
+  SaveChangesPrompt,
   TextInput,
   fieldError,
   showToast,
+  type AddedRecord,
   type PickerValue,
 } from '../../../shared/ui';
 import type { SearchHit } from '../../../shared/search';
 import type { FieldSpec, MasterConfig } from '../configs';
+import { MasterFieldInput, fieldPath } from './MasterFieldInput';
 import { labelOf, newValues, sameValues, valuesOf, type FormValues } from '../draft';
+import { ActiveSwitch, useActiveChange } from '../active';
 import { useSaveMaster, useSetMasterActive } from '../hooks';
 import { useMasterFocus } from '../store';
 import type { MasterRecord } from '../types';
+
+/**
+ * The form opened above another screen by the "add" button of a picker (plan 32, R8). It is the
+ * same form; only the way in and out is different. What was typed in the picker starts the name
+ * (or the mark text of a مارکہ).
+ */
+export interface EmbeddedMaster {
+  /** What was typed in the picker. */
+  text: string;
+  /** The form closed: with the record that was saved, or null if it was left. */
+  onDone: (saved: AddedRecord | null) => void;
+}
 
 interface MasterFormProps {
   config: MasterConfig;
@@ -46,39 +65,51 @@ interface MasterFormProps {
   record: MasterRecord | null;
   /** The suggested code for a new master. */
   suggestedCode: string;
+  /** Set when the form is opened above another screen instead of being a screen of its own. */
+  embedded?: EmbeddedMaster | undefined;
 }
 
-/** The path the backend names a field by when it refuses it. */
-function fieldPath(spec: FieldSpec): string {
-  switch (spec.control.type) {
-    case 'picker':
-      return `${spec.key}_id`;
-    case 'account':
-      return `${spec.key}_account_id`;
-    default:
-      return spec.key;
-  }
-}
+const URDU_LETTER = /[؀-ۿ]/;
 
 function toPickerValue(hit: Pick<SearchHit, 'id' | 'code' | 'name_ur' | 'name_en'>): PickerValue {
-  return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+  return pickedOf(hit);
 }
 
-export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
+export function MasterForm({ config, record, suggestedCode, embedded }: MasterFormProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const navigate = useNavigate();
-  const initial = useMemo(
-    () => (record === null ? newValues(config, suggestedCode) : valuesOf(config, record)),
-    [config, record, suggestedCode],
-  );
+  const typedText = embedded?.text.trim() ?? '';
+  const initial = useMemo(() => {
+    if (record !== null) return valuesOf(config, record);
+    const fresh = newValues(config, suggestedCode);
+    if (typedText === '') return fresh;
+    // What was typed in the picker starts the name, or the mark text of a مارکہ, which has no name.
+    if (config.names === null) {
+      return config.kind === 'marka'
+        ? { ...fresh, text: { ...fresh.text, mark_text: typedText } }
+        : fresh;
+    }
+    return {
+      ...fresh,
+      names: URDU_LETTER.test(typedText)
+        ? { urdu: typedText, english: '' }
+        : { urdu: '', english: typedText },
+    };
+  }, [config, record, suggestedCode, typedText]);
   const [values, setValues] = useState<FormValues>(initial);
   // What was last saved (or opened), to know whether anything changed.
   const [baseline, setBaseline] = useState<FormValues>(initial);
   const [leaving, setLeaving] = useState(false);
   const [confirmInactive, setConfirmInactive] = useState(false);
+  // The question "save changes?" of Esc above another screen (the route guard cannot ask it there).
+  const [askLeave, setAskLeave] = useState(false);
   const save = useSaveMaster(config.kind);
   const setActive = useSetMasterActive(config.kind);
+  // Staff have the فعال / غیر فعال switch in the form (PRD v1.23); it changes the person at once and the
+  // form stays, so the Owner sees the new state. The other masters keep the button and its question.
+  const activeChange = useActiveChange(config.kind);
+  const hasSwitch = config.activeSwitch === true && record !== null;
   const remember = useMasterFocus((state) => state.remember);
   const containerRef = useFocusFirstField<HTMLFormElement>();
   const nameRef = useRef<HTMLFormElement>(null);
@@ -100,10 +131,24 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
   // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
   const flight = useSingleFlight();
 
+  // The host's way out, kept in a ref: the form leaves once, whichever object the host passes.
+  // Above another screen the cursor goes to the first box still empty (the code is already filled).
+  const isEmbedded = embedded !== undefined;
+  useEffect(() => {
+    if (isEmbedded) focusFirstEmptyField(nameRef.current);
+  }, [isEmbedded]);
+  // The record the last save made, handed back when the form closes.
+  const savedRef = useRef<AddedRecord | null>(null);
+  const doneRef = useRef(embedded?.onDone);
+  useEffect(() => {
+    doneRef.current = embedded?.onDone;
+  });
   // Go back to the list once a save or a change of state is finished and the form is clean.
   useEffect(() => {
-    if (leaving) void navigate({ to: listPath });
-  }, [leaving, listPath, navigate]);
+    if (!leaving) return;
+    if (isEmbedded) doneRef.current?.(savedRef.current);
+    else void navigate({ to: listPath });
+  }, [leaving, isEmbedded, listPath, navigate]);
 
   const persistOnce = async (): Promise<boolean> => {
     try {
@@ -116,6 +161,7 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
       );
       if (saved === undefined) return false;
       remember(config.kind, saved.id);
+      savedRef.current = { id: saved.id, code: saved.code };
       setBaseline(valuesOf(config, saved));
       showToast('success', l10n.getString('masters-saved'));
       return true;
@@ -132,10 +178,13 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
   const navigation = useFormNavigation(saveAndClose);
   useShortcut(SHORTCUTS.save, saveAndClose);
 
+  // See AccountForm: only the embedded form has a Back of its own (plan 78 F1).
   const goBack = () => {
-    void navigate({ to: listPath });
+    if (embedded === undefined) return;
+    if (dirty) setAskLeave(true);
+    else embedded.onDone(null);
   };
-  useEscape('leave', goBack);
+  useEscape('leave', goBack, embedded !== undefined && !askLeave);
 
   const changeActive = (isActive: boolean) => {
     if (record === null) return;
@@ -204,64 +253,18 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
       );
     }
     return (
-      <Field
+      <MasterFieldInput
         key={spec.key}
-        label={<Localized id={spec.labelId} />}
-        hint={spec.hintId === undefined ? undefined : <Localized id={spec.hintId} />}
-        error={fieldError(error, fieldPath(spec))}
-      >
-        {(props) => {
-          switch (kind.type) {
-            case 'text':
-              return (
-                <TextInput
-                  {...props}
-                  value={values.text[spec.key] ?? ''}
-                  onChange={setText(spec.key)}
-                />
-              );
-            case 'latin':
-              return (
-                <TextInput
-                  {...props}
-                  value={values.text[spec.key] ?? ''}
-                  onChange={setText(spec.key)}
-                  lang="en"
-                />
-              );
-            case 'select':
-              return (
-                <Select
-                  {...props}
-                  value={values.text[spec.key]}
-                  onChange={setText(spec.key)}
-                  options={kind.options.map((option) => ({
-                    value: option.value,
-                    label: <Localized id={option.labelId} />,
-                  }))}
-                />
-              );
-            case 'picker':
-              return (
-                <Picker
-                  {...props}
-                  scope={kind.scope}
-                  value={values.refs[spec.key] ?? null}
-                  onChange={setRef(spec.key)}
-                />
-              );
-            case 'account':
-              return (
-                <AccountPicker
-                  {...props}
-                  scope={kind.scope}
-                  value={values.refs[spec.key] ?? null}
-                  onChange={setRef(spec.key)}
-                />
-              );
-          }
+        spec={spec}
+        values={values}
+        error={error}
+        onText={(key, text) => {
+          setText(key)(text);
         }}
-      </Field>
+        onRef={(key, hit) => {
+          setRef(key)(hit);
+        }}
+      />
     );
   };
 
@@ -278,13 +281,25 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
   return (
     <div className="flex max-w-form flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
-        {heading}
-        {record !== null && !record.is_active ? (
+        {embedded === undefined ? heading : null}
+        {record !== null && !record.is_active && !hasSwitch ? (
           <Localized id="masters-status-inactive">
             <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
           </Localized>
         ) : null}
+        {hasSwitch ? (
+          <ActiveSwitch
+            record={record}
+            onChange={activeChange.change}
+            busy={activeChange.isPending}
+          />
+        ) : null}
       </div>
+      {hasSwitch ? (
+        <Localized id="masters-staff-active-note">
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      ) : null}
       {record !== null && !record.is_active ? (
         <Localized id="masters-inactive-note">
           <p className="type-body text-ink-muted" />
@@ -301,7 +316,7 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
         }}
         className="flex flex-col gap-4"
       >
-        <LeaveGuard dirty={dirty} onSave={persist} />
+        {embedded === undefined ? <LeaveGuard dirty={dirty} onSave={persist} /> : null}
         {error === null ? null : <ErrorNotice error={error} fieldsShown={fieldsShown} />}
         {config.hasCode ? (
           <div className="max-w-field">
@@ -334,6 +349,12 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
               urduError={fieldError(error, 'name_ur')}
               englishError={fieldError(error, 'name_en')}
               checkSpelling={config.names.spelling}
+              fillOnOpen={embedded !== undefined}
+              // What the pair writes on open is the form's starting point, not a change of the user's.
+              onFilledOnOpen={(names) => {
+                setValues((current) => ({ ...current, names }));
+                setBaseline((current) => ({ ...current, names }));
+              }}
             />
           </div>
         )}
@@ -359,7 +380,7 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            {record === null ? null : record.is_active ? (
+            {record === null || hasSwitch ? null : record.is_active ? (
               <Button
                 variant="danger"
                 busy={setActive.isPending}
@@ -381,9 +402,11 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button shortcut={SHORTCUTS.back} onClick={goBack}>
-              <Localized id="common-back" />
-            </Button>
+            {embedded === undefined ? null : (
+              <Button shortcut={SHORTCUTS.back} onClick={goBack}>
+                <Localized id="common-back" />
+              </Button>
+            )}
             <Button
               variant="primary"
               shortcut={SHORTCUTS.save}
@@ -396,6 +419,20 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
         </div>
       </form>
       {spelling.dialog}
+      {embedded === undefined ? null : (
+        <SaveChangesPrompt
+          open={askLeave}
+          onOpenChange={setAskLeave}
+          onSave={() => {
+            setAskLeave(false);
+            saveAndClose();
+          }}
+          onLeave={() => {
+            setAskLeave(false);
+            embedded.onDone(null);
+          }}
+        />
+      )}
       {record === null ? null : (
         <ConfirmDialog
           open={confirmInactive}

@@ -3,7 +3,9 @@
 import type { FirmSettings } from '../../bindings/FirmSettings';
 import type { PrefsSetInput } from '../../bindings/PrefsSetInput';
 import type { SetDefaultLanguageInput } from '../../bindings/SetDefaultLanguageInput';
+import type { PrintingSettings } from '../../bindings/PrintingSettings';
 import type { SetFirmInput } from '../../bindings/SetFirmInput';
+import type { SetPrintingInput } from '../../bindings/SetPrintingInput';
 import type { SetSecurityInput } from '../../bindings/SetSecurityInput';
 import type { Settings } from '../../bindings/Settings';
 import { callCommand } from '../../shared/api';
@@ -20,6 +22,16 @@ export function settingsSetFirm(input: SetFirmInput): Promise<FirmSettings> {
 
 export function settingsSetSecurity(input: SetSecurityInput): Promise<null> {
   return callCommand<null>('settings_set_security', { input });
+}
+
+/**
+ * Changes the Owner's sign, the word that opens a closed day to fix an entry (PRD FR-21.4, plan 73), with
+ * the Owner's password. Both go as typed. A wrong password is refused with the existing code on `password`;
+ * a sign that is empty or longer than 40 characters on `sign`. Nothing is answered back: the sign is never
+ * shown again, only checked by the backend when a day is reopened.
+ */
+export function settingsSetOwnerSign(input: { password: string; sign: string }): Promise<null> {
+  return callCommand<null>('settings_set_owner_sign', { input });
 }
 
 export function settingsSetDefaultLanguage(input: SetDefaultLanguageInput): Promise<null> {
@@ -47,4 +59,14 @@ export function settingsGetOverrides(): Promise<OverridesSettings> {
 
 export function settingsSetOverrides(input: OverridesSettings): Promise<OverridesSettings> {
   return callCommand<OverridesSettings>('settings_set_overrides', { input });
+}
+
+/** The Printing settings: paper per document, printer, copies, print after save. */
+export function settingsGetPrinting(): Promise<PrintingSettings> {
+  return callCommand<PrintingSettings>('settings_get_printing');
+}
+
+/** Saves the Printing settings. Copies go as typed; the backend checks 1 to 99 (field `copies`). */
+export function settingsSetPrinting(input: SetPrintingInput): Promise<PrintingSettings> {
+  return callCommand<PrintingSettings>('settings_set_printing', { input });
 }

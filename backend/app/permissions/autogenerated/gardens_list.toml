@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-list"
+description = "Enables the gardens_list command without any pre-configured scope."
+commands.allow = ["gardens_list"]
+
+[[permission]]
+identifier = "deny-gardens-list"
+description = "Denies the gardens_list command without any pre-configured scope."
+commands.deny = ["gardens_list"]

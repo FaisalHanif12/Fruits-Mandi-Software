@@ -612,7 +612,7 @@ fn only_an_advance_voucher_or_a_seller_opening_debit_can_carry_the_advance_flag(
     }
     // The plain payment debit is fine without the flag.
     let entry = draft_entry_of(&conn, "payment", 1_931_600);
-    assert!(line(&conn, entry, 1, "030110001", 1_931_600, 0).is_ok());
+    assert!(line(&conn, entry, 1, "0010", 1_931_600, 0).is_ok());
 }
 
 #[test]
@@ -712,7 +712,7 @@ fn a_payment_to_a_buyer_needs_a_reason_but_a_payment_to_a_seller_does_not() {
     // PRD FR-15.11, E2E-32: 3,000 cash to اکرم, reason "نقد ادھار". A payment to رحیم (E2E, 4,316) has none.
     let (_dir, conn) = setup();
     let f = fixture(&conn);
-    let pukhta_buyer = account_id(&conn, "03049999");
+    let chukta_khata = account_id(&conn, "0030");
     let n = Cell::new(0);
     let payment = |account: i64, reason: Option<&str>| {
         n.set(n.get() + 1);
@@ -722,7 +722,7 @@ fn a_payment_to_a_buyer_needs_a_reason_but_a_payment_to_a_seller_does_not() {
         )
     };
     let refused = |e: Error| matches!(classify(e), DbError::Constraint(m) if m.contains("ERR_REASON_REQUIRED"));
-    for account in [f.buyer, pukhta_buyer] {
+    for account in [f.buyer, chukta_khata] {
         for reason in [None, Some(""), Some("  ")] {
             assert!(
                 refused(payment(account, reason).unwrap_err()),

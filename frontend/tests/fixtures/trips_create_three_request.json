@@ -1,0 +1,23 @@
+{
+  "date": "10-10-2026",
+  "market": "Lahore",
+  "note": null,
+  "partners": [
+    {
+      "partner_id": 1,
+      "share": "40",
+      "source": "shop"
+    },
+    {
+      "partner_id": 2,
+      "share": "30",
+      "source": "shop"
+    },
+    {
+      "partner_id": 3,
+      "share": "30",
+      "source": "shop"
+    }
+  ],
+  "sent_person": "Aslam"
+}

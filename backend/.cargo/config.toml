@@ -1,0 +1,6 @@
+# macOS only (the Mac phase): run the app binary through a script that signs it with the stable
+# dev identity "Mandi Dev" when that identity exists, so the Keychain keeps its "Always Allow"
+# across rebuilds (plan 75 Section 7.8). With no identity the script runs the binary as before.
+# The path is relative to the folder that holds this `.cargo` folder (backend/).
+[target.'cfg(target_os = "macos")']
+runner = ["../scripts/dev/run-signed.sh"]

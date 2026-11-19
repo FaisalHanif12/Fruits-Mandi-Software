@@ -6,16 +6,14 @@ use mandi_db::bikri as bikri_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::vouchers as voucher_repo;
 use mandi_domain::core::accounts::{
-    AccountRow, AccountType, Balance, BalanceSide, CardWarning, CardWarningKind, PartyCard,
-    SELLER_CONTROL,
+    AccountRow, AccountType, Balance, BalanceSide, CardWarning, CardWarningKind, LinkedBalance,
+    PartyCard, SELLER_CONTROL,
 };
-use mandi_domain::core::bikri::{
-    LastRateInput, RateHint, RateHintSource, SellerMemory, TruckLast, TruckMemory,
-    TruckMemoryInput, TruckSameDay, TruckSuggestion,
-};
+use mandi_domain::core::bikri::{LastRateInput, RateHint, RateHintSource, SellerMemory};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::PageInput;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{AdvancesInfo, OpenAdvance};
 
@@ -109,13 +107,15 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
     ctx.db.read(|conn| {
         let row = account_repo::get(conn, account_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "account_id"))?;
+        // چکتا کھاتہ has no ledger (PRD FR-13.6): the card of the account is a چکتا card with no
+        // balance, no credit and no warning. The card of one چکتا buyer is [`chukta_card`].
+        if row.is_chukta_khata {
+            return Ok(chukta_card_of(&row, None));
+        }
         let balance = ledger::balance_in(conn, account_id, None, None)?;
         let last_entry_date = ledger_repo::last_entry_date(conn, account_id)?;
-        // The پختہ کھاتہ accounts hold many people, each with his own balance (PRD FR-13.5): the
-        // card shows the account's balance, but no credit or advance figure that would net one
-        // person against another. A per-person card comes with the person picker.
-        let is_buyer = row.account_type == AccountType::Buyer && !row.is_pukhta_khata;
-        let is_seller = row.account_type == AccountType::Seller && !row.is_pukhta_khata;
+        let is_buyer = row.account_type == AccountType::Buyer;
+        let is_seller = row.account_type == AccountType::Seller;
         let credit_used = is_buyer.then(|| owed(balance));
         let advance_open = if is_seller {
             Some(open_advance(conn, account_id)?)
@@ -123,6 +123,7 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             None
         };
         let warnings = warnings(&row, credit_used, advance_open, balance)?;
+        let linked = linked_balance(conn, account_id, balance)?;
         let (city_ur, city_en) = row
             .city
             .as_ref()
@@ -132,14 +133,18 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             id: row.id,
             code: row.code.clone(),
             account_type: row.account_type,
+            is_chukta: false,
             name_ur: row.name_ur.clone(),
             name_en: row.name_en.clone(),
+            tag: row.tag.clone(),
             father_or_firm_ur: row.father_or_firm_ur.clone(),
             father_or_firm_en: row.father_or_firm_en.clone(),
             city_ur,
             city_en,
             phone: row.phone1.clone(),
             is_active: row.is_active,
+            // The move to the dead amount (PRD FR-7.38, FR-10.10), if he is in it.
+            dead: crate::dead::info_of(conn, account_id)?,
             balance,
             last_entry_date,
             credit_limit: if is_buyer {
@@ -150,8 +155,94 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             credit_used,
             advance_open,
             warnings,
+            linked,
         })
     })
+}
+
+/// The other account of the same person and the two balances added (PRD E10, FR-10.2, gate finding
+/// T4-2). The link is read from the account or from the account that points at it; the combined
+/// balance adds the signed balances of both ledgers (each one a `SUM()` of paisa columns, Code
+/// Standards M1) and is only shown, never posted. `None` when there is no link, when the other
+/// account is missing or when it is چکتا کھاتہ, which has no ledger (PRD FR-13.6). An inactive
+/// account is still shown, with its flag, because its balance is real.
+fn linked_balance(
+    conn: &mandi_db::rusqlite::Connection,
+    account_id: i64,
+    own: Balance,
+) -> Result<Option<LinkedBalance>, ServiceError> {
+    let Some(other_id) = account_repo::linked_account_of(conn, account_id)? else {
+        return Ok(None);
+    };
+    let Some(other) = account_repo::get(conn, other_id)? else {
+        return Ok(None);
+    };
+    if other.id == account_id || other.is_chukta_khata {
+        return Ok(None);
+    }
+    let balance = ledger::balance_in(conn, other.id, None, None)?;
+    let combined = own.combined_with(balance).map_err(money_error)?;
+    Ok(Some(LinkedBalance {
+        account_id: other.id,
+        code: other.code,
+        account_type: other.account_type,
+        name_ur: other.name_ur,
+        name_en: other.name_en,
+        tag: other.tag,
+        is_active: other.is_active,
+        balance,
+        combined,
+    }))
+}
+
+/// The card of one چکتا buyer (PRD FR-7.38, v1.32): his name and phone, no balance, no credit, no
+/// warning. The screen adds the words "چکتا: پورا نقد". Only reads.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `chukta_id`; `ServiceError::Db`.
+pub fn chukta_card(ctx: &Context, chukta_id: i64) -> Result<PartyCard, ServiceError> {
+    ctx.db.read(|conn| {
+        let buyer = mandi_db::chukta::get(conn, chukta_id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "chukta_id"))?;
+        let account_id =
+            account_repo::id_by_code(conn, mandi_domain::core::codes::CHUKTA_KHATA_CODE)?
+                .ok_or_else(|| {
+                    ServiceError::Data("the account چکتا کھاتہ is missing".to_owned())
+                })?;
+        let row = account_repo::get(conn, account_id)?
+            .ok_or_else(|| ServiceError::Data("the account چکتا کھاتہ is missing".to_owned()))?;
+        Ok(chukta_card_of(&row, Some(&buyer)))
+    })
+}
+
+/// The card of چکتا کھاتہ: the account's own names, or the names of one buyer of the list.
+fn chukta_card_of(
+    row: &AccountRow,
+    buyer: Option<&mandi_domain::core::chukta::ChuktaBuyer>,
+) -> PartyCard {
+    PartyCard {
+        id: row.id,
+        code: row.code.clone(),
+        account_type: AccountType::Buyer,
+        is_chukta: true,
+        name_ur: buyer.map_or_else(|| row.name_ur.clone(), |b| b.name_ur.clone()),
+        name_en: buyer.map_or_else(|| row.name_en.clone(), |b| b.name_en.clone()),
+        tag: None,
+        father_or_firm_ur: String::new(),
+        father_or_firm_en: String::new(),
+        city_ur: String::new(),
+        city_en: String::new(),
+        phone: buyer.and_then(|b| b.phone.clone()).unwrap_or_default(),
+        is_active: row.is_active,
+        dead: None,
+        balance: Balance::ZERO,
+        last_entry_date: buyer.and_then(|b| b.last_date.clone()),
+        credit_limit: None,
+        credit_used: None,
+        advance_open: None,
+        warnings: Vec::new(),
+        linked: None,
+    }
 }
 
 /// A seller's open advances and his last پیشگی voucher, for the card in the پیشگی screen (PRD
@@ -165,10 +256,31 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
 /// `ERR_NOT_FOUND` and `ERR_NOT_A_SELLER` on `seller_id`; `ServiceError::Data` if more was
 /// adjusted against an advance than was given.
 pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceError> {
+    advances_page(ctx, seller_id, PageInput::default())
+}
+
+/// The most open advances one page of the card holds; also what a `limit` of 0 gives.
+const MAX_ADVANCE_ROWS: usize = 200;
+
+/// One page of a seller's open advances, oldest first (plan 76 point 8). The count and the total
+/// are of all his open advances, whatever the page.
+///
+/// # Errors
+/// As [`advances`].
+pub fn advances_page(
+    ctx: &Context,
+    seller_id: i64,
+    page: PageInput,
+) -> Result<AdvancesInfo, ServiceError> {
+    let offset = usize::try_from(page.offset).unwrap_or(usize::MAX);
+    let limit = match usize::try_from(page.limit) {
+        Ok(0) | Err(_) => MAX_ADVANCE_ROWS,
+        Ok(n) => n.min(MAX_ADVANCE_ROWS),
+    };
     ctx.db.read(|conn| {
         let facts = account_repo::facts(conn, seller_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "seller_id"))?;
-        if facts.control_code != SELLER_CONTROL || facts.is_pukhta_khata {
+        if facts.control_code != SELLER_CONTROL || facts.is_chukta_khata {
             return Err(ServiceError::reject_field(
                 ErrorCode::ErrNotASeller,
                 "seller_id",
@@ -176,6 +288,7 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
         }
         let mut open = Vec::new();
         let mut total = Paisa::ZERO;
+        let mut count = 0_usize;
         for line in voucher_repo::advance_lines(conn, seller_id)? {
             let given = paisa(line.given_paisa)?;
             let adjusted = paisa(line.adjusted_paisa)?;
@@ -193,6 +306,10 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
                 continue;
             }
             total = total.checked_add(left).map_err(money_error)?;
+            count = count.saturating_add(1);
+            if count <= offset || open.len() >= limit {
+                continue;
+            }
             open.push(OpenAdvance {
                 // Only a پیشگی voucher or an opening debit makes an advance line.
                 source: if line.voucher_number.is_some() {
@@ -207,7 +324,11 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
                 open_paisa: left,
             });
         }
+        let shown_to = offset.saturating_add(open.len());
         Ok(AdvancesInfo {
+            truncated: count > shown_to,
+            total_count: i64::try_from(count)
+                .map_err(|_| ServiceError::reject(ErrorCode::ErrOverflow))?,
             open,
             open_paisa: total,
             last: voucher_repo::last_advance(conn, seller_id)?,
@@ -215,59 +336,8 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
     })
 }
 
-/// Truck numbers offered under the truck field at most (PRD FR-7.49).
-const TRUCK_SUGGESTIONS: i64 = 8;
-
-/// What the app remembers about a truck number: its last بکری, a بکری of it on the posting day,
-/// and the truck numbers that start with the typed text (PRD FR-7.49, FR-7.50). Only reads.
-///
-/// Example: `LES-1234` was used in بکری 1 on 10-10-2026 for زمیندار رحیم. Typing `les-1234` for a
-/// new بکری of 10-10-2026 gives `last` (بکری 1, with its اڈا, زمیندار and driver) and `same_day`
-/// (بکری 1), so the screen shows "اس ٹرک کی آج بکری نمبر 1 پہلے سے موجود ہے".
-///
-/// # Errors
-/// The date codes on `date`; `ERR_CONTROL_CHARS` or `ERR_TEXT_TOO_LONG` on `truck_no`;
-/// `ServiceError::Db`.
-pub fn truck_memory(ctx: &Context, input: &TruckMemoryInput) -> Result<TruckMemory, ServiceError> {
-    let (_, today) = crate::day::window(ctx)?;
-    let date = validate::date("date", &input.date, today)?;
-    let truck_no = validate::free_text("truck_no", &input.truck_no)?;
-    if truck_no.is_empty() {
-        return Ok(TruckMemory {
-            last: None,
-            same_day: None,
-            suggestions: Vec::new(),
-        });
-    }
-    ctx.db.read(|conn| {
-        let last = bikri_repo::truck_last(conn, &truck_no)?.map(|b| TruckLast {
-            bikri_number: b.number,
-            date: b.entry_date,
-            adda_id: b.adda_id,
-            zamindar_account_id: b.zamindar_account_id,
-            driver_name: b.driver_name,
-            driver_phone: b.driver_phone,
-        });
-        let same_day = bikri_repo::truck_same_day(conn, &truck_no, &date.to_iso())?
-            .map(|bikri_number| TruckSameDay { bikri_number });
-        let suggestions =
-            bikri_repo::truck_numbers_starting_with(conn, &truck_no, TRUCK_SUGGESTIONS)?
-                .into_iter()
-                .map(|t| TruckSuggestion {
-                    truck_no: t.truck_no,
-                    date: t.last_date,
-                })
-                .collect();
-        Ok(TruckMemory {
-            last,
-            same_day,
-            suggestions,
-        })
-    })
-}
-
 /// What the app remembers about a seller: the item and packing of his last lot, and his default
-/// مارکہ, else the مارکہ of his last lot (PRD FR-7.51). The one-time seller account has no
+/// مارکہ, else the مارکہ of his last lot (PRD FR-7.51). The old one-time seller account has no
 /// memory (it holds many people). Only reads.
 ///
 /// # Errors
@@ -283,7 +353,7 @@ pub fn seller_memory(ctx: &Context, seller_account_id: i64) -> Result<SellerMemo
                 "seller_account_id",
             ));
         }
-        if facts.is_pukhta_khata {
+        if facts.is_chukta_khata {
             return Ok(SellerMemory {
                 item_id: None,
                 packing_id: None,
@@ -318,8 +388,24 @@ pub(crate) fn saved_rate_hint(
     packing_id: i64,
     date: BusinessDate,
 ) -> Result<Option<RateHint>, ServiceError> {
+    saved_rate_hint_except(conn, item_id, packing_id, date, None)
+}
+
+/// [`saved_rate_hint`] without the lines of one posting: an edit does not take its own old lines
+/// as the last rate (plan 16).
+///
+/// # Errors
+/// As [`saved_rate_hint`].
+pub(crate) fn saved_rate_hint_except(
+    conn: &mandi_db::rusqlite::Connection,
+    item_id: i64,
+    packing_id: i64,
+    date: BusinessDate,
+    except_entry: Option<i64>,
+) -> Result<Option<RateHint>, ServiceError> {
     let day = date.to_iso();
-    let Some(saved) = bikri_repo::last_rate(conn, item_id, packing_id, &day)? else {
+    let Some(saved) = bikri_repo::last_rate_except(conn, item_id, packing_id, &day, except_entry)?
+    else {
         return Ok(None);
     };
     let source = if saved.entry_date == day {

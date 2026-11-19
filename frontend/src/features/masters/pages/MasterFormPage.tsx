@@ -9,7 +9,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { MasterForm } from '../components/MasterForm';
 import { configOfPath } from '../configs';
-import { useMasterList, useNextCode } from '../hooks';
+import { useMasterRecord, useNextCode } from '../hooks';
 import { UnknownMasterPage } from './UnknownMasterPage';
 
 export function MasterFormPage() {
@@ -30,7 +30,7 @@ function MasterFormLoader({
 }) {
   const navigate = useNavigate();
   const isNew = id === undefined;
-  const list = useMasterList(config.kind);
+  const list = useMasterRecord(config.kind, id);
   const nextCode = useNextCode(config.kind, isNew && config.hasCode);
 
   const back = () => {
@@ -56,7 +56,7 @@ function MasterFormLoader({
   if (isNew) {
     return <MasterForm config={config} record={null} suggestedCode={nextCode.data ?? ''} />;
   }
-  const record = list.data?.find((candidate) => String(candidate.id) === id);
+  const record = list.record;
   if (record === undefined) {
     return (
       <EmptyState

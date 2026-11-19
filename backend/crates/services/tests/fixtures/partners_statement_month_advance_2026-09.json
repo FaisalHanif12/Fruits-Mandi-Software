@@ -1,0 +1,40 @@
+{
+  "partner": {
+    "id": 2,
+    "code": "",
+    "name_ur": "ب",
+    "name_en": "Partner B"
+  },
+  "month": "2026-09",
+  "first_month": "2026-09",
+  "current_month": "2026-10",
+  "opening_total_paisa": 0,
+  "days": [
+    {
+      "date": "2026-09-01",
+      "columns": {
+        "commission_paisa": 0,
+        "expense_paisa": 0,
+        "gardens_trips_paisa": 0,
+        "fruit_paisa": 0,
+        "taken_returned_paisa": 0,
+        "capital_paisa": 0,
+        "advances_paisa": -450000,
+        "net_paisa": -450000
+      },
+      "running_paisa": -450000,
+      "has_notes": false
+    }
+  ],
+  "totals": {
+    "commission_paisa": 0,
+    "expense_paisa": 0,
+    "gardens_trips_paisa": 0,
+    "fruit_paisa": 0,
+    "taken_returned_paisa": 0,
+    "capital_paisa": 0,
+    "advances_paisa": -450000,
+    "net_paisa": -450000
+  },
+  "closing_total_paisa": -450000
+}

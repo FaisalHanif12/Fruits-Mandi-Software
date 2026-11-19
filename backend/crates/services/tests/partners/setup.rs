@@ -185,6 +185,7 @@ fn both_names_are_checked_in_their_own_script_and_the_errors_come_together() {
             name_ur: "Akram".to_owned(),
             name_en: "اکرم".to_owned(),
             opening_capital: None,
+            opening_capital_where: None,
             confirmed_rules_words: Vec::new(),
         },
     )
@@ -210,6 +211,7 @@ fn a_word_made_by_spelling_rules_alone_needs_the_owner_to_confirm_it() {
             name_ur: "علی قزکس".to_owned(),
             name_en: "Ali Qzxwv".to_owned(),
             opening_capital: None,
+            opening_capital_where: None,
             confirmed_rules_words: Vec::new(),
         },
     )

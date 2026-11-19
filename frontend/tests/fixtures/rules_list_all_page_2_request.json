@@ -1,0 +1,11 @@
+{
+  "filter": {
+    "account_id": null,
+    "charge_type": null,
+    "include_inactive": true,
+    "item_id": null,
+    "side": null
+  },
+  "limit": 3,
+  "offset": 3
+}

@@ -1,0 +1,24 @@
+{
+  "rows": [
+    {
+      "id": 3,
+      "kind": "name",
+      "last_used_at": "2026-10-10T09:00:00.000Z",
+      "roman": "bilal",
+      "urdu": "بلال",
+      "use_count": 1
+    },
+    {
+      "id": 4,
+      "kind": "name",
+      "last_used_at": "2026-10-10T09:00:00.000Z",
+      "roman": "chand",
+      "urdu": "چاند",
+      "use_count": 1
+    }
+  ],
+  "total_count": 5,
+  "totals": {
+    "use_count": 6
+  }
+}

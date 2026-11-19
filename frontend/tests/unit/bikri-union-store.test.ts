@@ -63,7 +63,7 @@ describe('the sale lines of all lots as one list', () => {
 
   it('hands picked records, patches, removals and "set where" to the owners', () => {
     const { stores, lotA, lotB, linesA, linesB } = twoLots();
-    const buyer = { id: 19, code: '03040001', name_ur: 'اکرم', name_en: 'Akram' };
+    const buyer = { id: 19, code: '0020', name_ur: 'اکرم', name_en: 'Akram' };
     const a1 = first(linesA);
     const b1 = first(linesB);
     stores.all.getState().updatePicked(a1, 'buyer', buyer);
@@ -124,7 +124,7 @@ describe('the sale lines of all lots as one list', () => {
   it('does not redraw for a change that is not in a line (a key in the header)', () => {
     const { stores } = twoLots();
     const before = stores.all.getState().rows;
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    stores.header.getState().patch({ entryDate: '11-10-2026' });
     expect(stores.all.getState().rows).toBe(before);
   });
 });

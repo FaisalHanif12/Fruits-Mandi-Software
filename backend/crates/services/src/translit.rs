@@ -287,6 +287,73 @@ pub fn list(ctx: &Context) -> Result<Vec<LearnedRow>, ServiceError> {
     ctx.db.read(load_all)
 }
 
+/// One page of the learned pairs, the most used first, with how many there are and how many times
+/// they were all used (PRD FR-19.11, B31).
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn list_page(
+    ctx: &Context,
+    offset: u32,
+    limit: u32,
+) -> Result<(Vec<LearnedRow>, i64, i64), ServiceError> {
+    list_page_with(ctx, offset, limit, None, None)
+}
+
+/// The columns the list of learned pairs can be sorted by: the names of the fields of the row.
+const PAIR_COLUMNS: [&str; 5] = ["roman", "urdu", "kind", "use_count", "last_used_at"];
+
+/// Like [`list_page`], with a search and a sort over the whole list (plan 38 R4). The search keeps
+/// the pairs whose English or Urdu spelling holds the text (letter variants unified), and the
+/// count and the uses are over those pairs. A sort is `roman`, `urdu`, `kind`, `use_count` or
+/// `last_used_at`; without one the most used pair is first.
+///
+/// # Errors
+/// `ERR_OUT_OF_RANGE` on `sort.column`; `ServiceError::Db`.
+pub fn list_page_with(
+    ctx: &Context,
+    offset: u32,
+    limit: u32,
+    search: Option<&str>,
+    sort: Option<&mandi_domain::core::paging::SortInput>,
+) -> Result<(Vec<LearnedRow>, i64, i64), ServiceError> {
+    if let Some(sort) = sort {
+        sort.check(&PAIR_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
+    let mut all = list(ctx)?;
+    if let Some(typed) = search.map(str::trim).filter(|t| !t.is_empty()) {
+        let lower = typed.to_lowercase();
+        let urdu = mandi_domain::core::text::search_ur(typed);
+        all.retain(|row| {
+            row.roman.contains(&lower)
+                || (!urdu.is_empty()
+                    && mandi_domain::core::text::search_ur(&row.urdu).contains(&urdu))
+        });
+    }
+    if let Some(sort) = sort {
+        use std::cmp::Ordering;
+        let cmp: fn(&LearnedRow, &LearnedRow) -> Ordering = match sort.column.as_str() {
+            "roman" => |a, b| a.roman.cmp(&b.roman),
+            "urdu" => |a, b| crate::page::urdu_compare(&a.urdu, &b.urdu),
+            "kind" => |a, b| (a.kind as u8).cmp(&(b.kind as u8)),
+            "use_count" => |a, b| a.use_count.cmp(&b.use_count),
+            "last_used_at" => |a, b| a.last_used_at.cmp(&b.last_used_at),
+            _ => |_, _| Ordering::Equal,
+        };
+        all.sort_by(|a, b| sort.direction.apply(cmp(a, b)));
+    }
+    let total_count =
+        i64::try_from(all.len()).map_err(|_| ServiceError::Data("too many rows".to_owned()))?;
+    let mut uses = 0_i64;
+    for row in &all {
+        uses = uses
+            .checked_add(i64::from(row.use_count))
+            .ok_or_else(|| ServiceError::reject(ErrorCode::ErrOverflow))?;
+    }
+    Ok((crate::page::slice(all, offset, limit), total_count, uses))
+}
+
 /// Removes one learned pair (PRD FR-7.26, Owner). Names already saved are not touched.
 ///
 /// # Errors

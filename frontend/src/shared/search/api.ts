@@ -11,9 +11,17 @@ import type {
   SearchTouchInput,
 } from './types';
 
-/** Records whose code or name (either script, small mistakes forgiven) matches the text. */
-export function searchMasters(input: SearchInput): Promise<SearchHit[]> {
-  return callCommand<SearchHit[]>('search_masters', { input });
+/**
+ * Records whose code or name (either script, small mistakes forgiven) matches the text. Empty text
+ * is every record of the list, the last chosen first, then by code (plan 32, R7). `offset` and
+ * `limit` cut out one page; a page shorter than `limit` is the last.
+ */
+export function searchMasters(
+  input: Omit<SearchInput, 'offset'> & { offset?: number },
+): Promise<SearchHit[]> {
+  return callCommand<SearchHit[]>('search_masters', {
+    input: { ...input, offset: input.offset ?? 0 },
+  });
 }
 
 /** The last 10 records used on this screen, then the rest (PRD FR-7.41). */

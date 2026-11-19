@@ -23,6 +23,7 @@ import {
   useState,
   type ChangeEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import type { Kind } from '../../bindings/Kind';
 import { SHORTCUTS, focusNextField, matchesShortcut, useEscape } from '../keyboard';
@@ -44,6 +45,21 @@ export interface ConvertedWord {
   urdu: string;
   /** Where the spelling came from. `rules` is a spelling to check (PRD FR-7.66). */
   source: Source;
+}
+
+/**
+ * A row that comes before the Urdu spellings in the one list of the field (PRD FR-7.29: the
+ * one-time people already recorded). It is not a spelling: it is never taken by Space or by
+ * leaving the field, only by Enter or a click on it, and it is not highlighted until an arrow
+ * moves onto it, so Enter on a new name still moves on.
+ */
+export interface ListExtra {
+  /** Unique among the rows. */
+  key: string;
+  /** What the row shows. */
+  content: ReactNode;
+  /** The row was taken. The screen fills the fields it stands for. */
+  onPick: () => void;
 }
 
 interface RomanUrduInputProps extends FieldControlProps {
@@ -72,6 +88,8 @@ interface RomanUrduInputProps extends FieldControlProps {
    * (FreeTextInput).
    */
   direction?: 'rtl' | 'ltr' | undefined;
+  /** Rows shown at the head of the list, before the spellings (see ListExtra). */
+  extras?: readonly ListExtra[] | undefined;
 }
 
 interface Conversion {
@@ -96,6 +114,7 @@ export function RomanUrduInput({
   onPendingChange,
   marked,
   direction = 'rtl',
+  extras,
 }: RomanUrduInputProps) {
   const { l10n } = useLocalization();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,24 +123,47 @@ export function RomanUrduInput({
   const mode = modeProp ?? ownMode;
   const [focused, setFocused] = useState(false);
   const [dismissedFor, setDismissedFor] = useState('');
-  const [highlight, setHighlight] = useState(0);
+  // null: nothing was moved to yet, so the first spelling (if any) is the one that counts.
+  const [highlight, setHighlight] = useState<number | null>(null);
   const [keyMapOpen, setKeyMapOpen] = useState(false);
   const [conversion, setConversion] = useState<Conversion | null>(null);
   const caretAfterInsert = useRef<number | null>(null);
+  // A row of the screen was taken: the English word left in the field is not turned into a
+  // spelling when the field is left, because the screen has put the record's own name in.
+  const tookRow = useRef(false);
   // The words turned into Urdu in this field, in order, so a later correction can be learned.
   const converted = useRef<{ roman: string; urdu: string }[]>([]);
 
   // The English word at the end of the text, while the field has focus in رومن mode.
   const token = mode === 'roman' && focused && readOnly !== true ? trailingLatinRun(value) : '';
-  const suggestions = useSuggestions(token, dismissedFor !== token);
-  const open = token !== '' && dismissedFor !== token && suggestions.length > 0;
-  const activeIndex = Math.min(highlight, Math.max(suggestions.length - 1, 0));
+  // What Esc closed: the English word, or (no word) the text itself.
+  const listKey = token !== '' ? token : `\u0000${value}`;
+  const suggestions = useSuggestions(token, dismissedFor !== listKey);
+  const extraRows = focused && readOnly !== true && dismissedFor !== listKey ? (extras ?? []) : [];
+  const extraCount = extraRows.length;
+  const spellingsOpen = token !== '' && dismissedFor !== token && suggestions.length > 0;
+  const open = spellingsOpen || extraCount > 0;
+  const total = extraCount + (spellingsOpen ? suggestions.length : 0);
+  // The row that counts: the one moved to, else the first spelling. -1: none (only rows of the
+  // screen are listed, and none was moved to).
+  const activeIndex =
+    highlight === null
+      ? spellingsOpen
+        ? extraCount
+        : -1
+      : Math.min(highlight, Math.max(total - 1, 0));
+  // The spelling Space, Tab and leaving the field take: the highlighted one, else the first.
+  const spellingIndex = !spellingsOpen
+    ? -1
+    : activeIndex >= extraCount
+      ? activeIndex - extraCount
+      : 0;
 
   // Esc closes the list and keeps the English letters (PRD FR-7.18, FR-7.22).
   useEscape(
     'overlay',
     () => {
-      setDismissedFor(token);
+      setDismissedFor(listKey);
     },
     open,
   );
@@ -219,30 +261,42 @@ export function RomanUrduInput({
         return;
       }
     }
-    if (!open) return;
+    if (!open || total === 0) return;
     switch (event.key) {
       case 'ArrowDown':
       case 'ArrowUp': {
         event.preventDefault();
         event.stopPropagation();
         const step = event.key === 'ArrowDown' ? 1 : -1;
-        setHighlight((activeIndex + step + suggestions.length) % suggestions.length);
+        const first = step === 1 ? 0 : total - 1;
+        setHighlight(activeIndex < 0 ? first : (activeIndex + step + total) % total);
         break;
       }
       case ' ':
         // Space takes the word and stays in the field for the next one.
+        if (spellingIndex < 0) break;
         event.preventDefault();
-        accept(activeIndex, ' ');
+        accept(spellingIndex, ' ');
         break;
-      case 'Enter':
-        // Enter takes the word, then moves on as it always does.
+      case 'Enter': {
+        // Enter takes the row of the screen it is on, or the word, then moves on as it always
+        // does. With nothing to take it is a plain Enter and the form moves on.
+        const extra =
+          activeIndex >= 0 && activeIndex < extraCount ? extraRows[activeIndex] : undefined;
+        // The list owns Enter while it is open, so with nothing to take it moves on itself.
         event.preventDefault();
         event.stopPropagation();
-        accept(activeIndex, '');
+        if (extra !== undefined) {
+          tookRow.current = true;
+          extra.onPick();
+        } else if (spellingIndex >= 0) {
+          accept(spellingIndex, '');
+        }
         focusNextField(input);
         break;
+      }
       case 'Tab':
-        accept(activeIndex, '');
+        if (spellingIndex >= 0) accept(spellingIndex, '');
         break;
       default:
         break;
@@ -251,7 +305,8 @@ export function RomanUrduInput({
 
   const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     setConversion(null);
-    setHighlight(0);
+    setHighlight(null);
+    tookRow.current = false;
     onChange(event.target.value);
   };
 
@@ -276,7 +331,9 @@ export function RomanUrduInput({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={open ? `${listId}-${String(activeIndex)}` : undefined}
+          aria-activedescendant={
+            open && activeIndex >= 0 ? `${listId}-${String(activeIndex)}` : undefined
+          }
           autoComplete="off"
           spellCheck={false}
           onChange={onInputChange}
@@ -285,8 +342,10 @@ export function RomanUrduInput({
             setFocused(true);
           }}
           onBlur={() => {
-            // Leaving the field takes the highlighted spelling (PRD FR-7.22).
-            if (open) accept(activeIndex, '');
+            // Leaving the field takes the highlighted spelling (PRD FR-7.22), unless a row of the
+            // screen was taken: its name is in the field now.
+            if (tookRow.current) tookRow.current = false;
+            else if (spellingsOpen) accept(spellingIndex, '');
             else learnCorrections();
             setFocused(false);
           }}
@@ -337,23 +396,43 @@ export function RomanUrduInput({
             aria-label={l10n.getString('translit-suggestions-label')}
             className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col gap-1 rounded-2 border border-border bg-surface p-1 shadow-overlay"
           >
-            {suggestions.map((item, index) => (
+            {extraRows.map((row, index) => (
               <li
-                key={item.text}
+                key={row.key}
                 id={`${listId}-${String(index)}`}
                 role="option"
                 aria-selected={index === activeIndex}
-                lang="ur"
                 onMouseDown={(event) => {
-                  // Taking a spelling with the mouse keeps the focus in the field.
+                  // Taking a row with the mouse keeps the focus in the field.
                   event.preventDefault();
-                  accept(index, '');
+                  tookRow.current = true;
+                  row.onPick();
                 }}
-                className={`type-field cursor-pointer rounded-1 px-3 ${index === activeIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
+                className={`cursor-pointer rounded-1 px-3 py-1 ${index === activeIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
               >
-                {item.text}
+                {row.content}
               </li>
             ))}
+            {(spellingsOpen ? suggestions : []).map((item, offset) => {
+              const index = extraCount + offset;
+              return (
+                <li
+                  key={item.text}
+                  id={`${listId}-${String(index)}`}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  lang="ur"
+                  onMouseDown={(event) => {
+                    // Taking a spelling with the mouse keeps the focus in the field.
+                    event.preventDefault();
+                    accept(offset, '');
+                  }}
+                  className={`type-field cursor-pointer rounded-1 px-3 ${index === activeIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
+                >
+                  {item.text}
+                </li>
+              );
+            })}
           </ul>
         ) : null}
         {keyMapOpen && mode === 'keyboard' ? (

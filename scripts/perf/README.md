@@ -203,12 +203,12 @@ What is in it:
 
 | Part | Count |
 |---|---|
-| Accounts | 20,000: 8,999 sellers (03011), 8,999 buyers (0304), 2,002 others (0103) |
+| Accounts | 20,000: 8,999 sellers (0010 to 0018998), 8,999 buyers (0020 to 0028998), 2,002 others (0103) |
 | Masters | 2,000: 400 cities, 500 items, 100 packings, 300 addas, 100 stores, 200 expense heads, 400 staff |
 | Posted journal entries | 1,030,000, dated 11-10-2016 to 10-10-2026 (10 years) |
 | Journal lines | 3,503,940 |
 | Data file | about 670 MB |
-| Skewed accounts | the cash account has about 514,000 lines; the busiest buyer (03040001) about 55,000; the busiest seller (030110001) about 49,000; an ordinary buyer (03044500) about 90 |
+| Skewed accounts | the cash account has about 514,000 lines; the busiest buyer (0020) about 55,000; the busiest seller (0010) about 49,000; an ordinary buyer (0024499) about 90 |
 
 The skew is on purpose. A shop has a few parties that trade every day and the cash account is touched by every cash sale, so the worst case of a balance, a party card and a ledger is a busy account, not an average one. Benchmarks report the busiest and an ordinary account side by side.
 
@@ -381,4 +381,50 @@ Run 1 and run 2 differ because the Mac was shared. Other builds and test runs we
 
 What the NFR says: NFR-SPD-21 (party card under 100 ms with 10 years of data), NFR-SPD-3 (a screen opens under 300 ms), NFR-SPD-9 (a voucher saves under 150 ms), NFR-SPD-13 (trial balance under 2 s). NFR-SPD-2 (login to dashboard under 1 s) is not measured yet, but the dashboard's cash tile reads the balance of the cash account, which costs 360 ms to 530 ms here.
 
-A way to fix it, for `backend` to decide: keep a running balance per account (and per پختہ کھاتہ person) in a table that the posting writes in the same transaction (Code Standards B20), so a balance, a card, a list page, the tree and the trial balance read one row each. The books stay the source of truth: the daily check (NFR-REL-8) compares the table with the sum of the lines.
+A way to fix it, for `backend` to decide: keep a running balance per account in a table that the posting writes in the same transaction (Code Standards B20), so a balance, a card, a list page, the tree and the trial balance read one row each. The books stay the source of truth: the daily check (NFR-REL-8) compares the table with the sum of the lines.
+
+## 9. The assistant benchmarks (D6, plan 50 R4)
+
+NFR-AI-3: a quick question answers under 300 ms, and the app's own part in each round of a model question (running the tools and the checks) is under 300 ms. The model's own time is not in these numbers: its replies are recorded and return at once. Live timings, with the real model, come from `scripts/ai-eval/run.mjs` (D6-A17).
+
+File: `backend/crates/assistant/benches/assistant.rs`, one `[[bench]]` named `assistant`. It uses the shared NFR-SCL-1 volume of Section 7.2 (`services/benches/support`), on a private copy, because every question writes a row to the question log. Each counted question moves the clock of the copy one day forward, so the limit of 20 a day never stops a sample.
+
+| Benchmark id | What it measures | Target (p95) |
+|---|---|---|
+| `assistant/quick_cash_in_hand` | The chip موجود روکڑ: read, checked in its second place, logged | 300 ms |
+| `assistant/quick_today_sales` | The chip for today's sales | 300 ms |
+| `assistant/quick_total_dues` | The chip for the total dues, checked through R20, R24 and R38 | 300 ms |
+| `assistant/quick_sellers_payable` | The chip for what the shop owes sellers | 300 ms |
+| `assistant/quick_party_busiest_buyer` | The party chip for the buyer with about 55,000 lines | 300 ms |
+| `assistant/quick_today_commission` | The chip for today's commission | 300 ms |
+| `assistant/quick_buyers_dues` | The chip for what buyers owe | 300 ms |
+| `assistant/quick_dead_amount` | The chip for the dead amount | 300 ms |
+| `assistant/quick_advances_open` | The chip for the advances still open | 300 ms |
+| `assistant/quick_stock_left` | The chip for the goods not sold | 300 ms |
+| `assistant/round_ledger_busiest_buyer` | The D6 worked question over recorded replies: find by code, party card and R13 together, the checked answer, the log | 300 ms |
+| `assistant/round_advice_dues_r20` | The advice question over recorded replies: R20 over every buyer, the checked answer, the log | 300 ms |
+| `dashboard/get_full_volume` | The dashboard tiles (NFR-SPD-2) | 1,000 ms |
+| `reports/r34_one_day_full_volume` | R34 day summary for one day (NFR-SPD-10) | 1,000 ms |
+
+The last two rows are not assistant code. The quick questions and two tools read the same tiles and R34, and the assistant benchmarks found them slow (about 6 s and 9 s) on this volume, so they are held here at their own NFR targets and fail until fixed.
+
+`assistant/round_advice_dues_r20` was found on 02-11-2026 to end as an error after 64 s instead of as advice (the prompt's own example, R20 sorted on two keys). The cause was in the `report` tool: a `where` or two sort keys made it read every row of the report in pages of 1,000, and each page worked the whole report out again (R20 has 8,998 rows on this volume; the first page took 4.1 s and the second 8.1 s; the probe, `MANDI_AI_PROBE=1`, prints lines "R20 page at ..."). Plan 48 step P48-S2 made it read the report once, so the question now ends as advice and the bench has a result: mean 3,498 ms, p95 3,643 ms on 02-11-2026. That is one build of R20 with ages. It is still over its 300 ms target and fails until the dues report is faster (the speed plan); the target is not loosened.
+
+The volume used is the plain NFR-SCL-1 volume plus the matching rows of every buyer and seller (`matched_volume` in the bench file, written once into `target/perf/nfr_scl1_matched`). The generator makes the plain volume with SQL, so its old lines have no matching rows, and the dues report, the day summary and the dashboard then work every match out again at each read. A real file keeps the matching, so the benchmarks use it. To see where one quick question spends its time: `cd backend && MANDI_AI_PROBE=1 cargo bench -p mandi-assistant --bench assistant` (it prints the time of the snapshot, the tiles and each report behind them, and stops).
+
+A whole question is two rounds of tools plus the checks, so holding the whole question under 300 ms holds each round under 300 ms. The threshold is the target times the runner factor (Section 2), like every other row.
+
+Not measured, and why: the analytics tool and the estimate tool for sales, commission and expenses. The volume of Section 7.2 has no sale lines and no analytics facts (its header says so), so those would read empty tables and give a number that means nothing. They are measured when the D3 volume with 1.2 million sale lines exists.
+
+Measured (06-11-2026, the lead's K8, PRD FR-7.86): the estimate tool for a BALANCE, called directly through `tools::call` with no model. A balance reads journal lines, which the volume has. Mac, release build, 10 samples (`assistant/estimate_party_balance`, `assistant/estimate_buyers_dues`, target 1,000 ms for the tool so a figure stays under 2 s and a model answer under 8 s):
+
+| Bench | Median | p95 | Target | Result |
+|---|---|---|---|---|
+| `estimate_party_balance` (busiest buyer, 55,658 lines) | 64.5 ms | 72.1 ms | 1,000 ms | OK |
+| `estimate_buyers_dues` (all buyers, one level for each owner at 13 month ends) | 7,966 ms | 9,623 ms | 1,000 ms | OVER (a finding for backend3) |
+
+The dues estimate on this volume also ends refused with `ERR_OVERFLOW` after those 8 seconds: the generated buyers owe 3,432 crore in all, more than the largest allowed amount (1,000 crore), so the refusal is right for this data. The time is the series, not the arithmetic, and it does not depend on the size of the amounts, only on the 3.5 million lines it scans 13 times. A likely cure: one pass that groups the lines by owner and month, then running balances in Rust. (A single `GROUP BY` over all buyer lines takes about 0.9 s on this file with the sqlite3 shell.)
+
+**K8 is fixed (backend, 06-11-2026).** The dues estimate reads its series in one pass now: about 0.45 s on this volume (measured once with a throwaway example that bypasses the refusal), down from about 11.6 s, with identical numbers (12 months equal on this volume; equal to the oracle's `est_balance.dues.*` facts on the rich year). **What the bench `assistant/estimate_buyers_dues` measures today is the REFUSAL, not the series.** The generated buyers owe 3,432 crore, over the 1,000 crore limit, so the tool refuses with `ERR_OVERFLOW` at once, before it reads the series: median 131.6 ms (126 to 137 ms), of which the tile's R20 total (`now`) is about 100 ms. That is the lead's wish (a refusal must be quick), and it is a real number, but it is not the cost of the series. To time the series itself the synthetic dues must stay under 1,000 crore (cap the generated opening or the sale rates in `scripts/perf/`); until then the 0.45 s above is the figure for the series. The old 7,966 ms row above is kept as the record of the finding.
+
+To run only these benchmarks: `cd backend && cargo bench -p mandi-assistant --bench assistant`. The whole `pnpm perf` runs them with the others (`cargo bench --workspace --bench '*'`).

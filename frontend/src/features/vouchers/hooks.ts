@@ -1,16 +1,56 @@
-// The voucher commands as hooks (Code Standards F6). A saved advance refreshes the lists, the
-// chart, the party cards and the advances of the seller, so every screen shows the new balance.
+// The voucher commands as hooks (Code Standards F6). A saved voucher refreshes everything that
+// shows what it wrote (PRD 6.2): the party cards, the open bills and payables, the lists and the
+// chart, so every screen shows the new balance.
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { useDebouncedValue } from '../../shared/hooks';
-import { assistAdvances, vouchersPreviewAdvances, vouchersSaveAdvance } from './api';
-import { hasSeller } from './draft';
-import type { AdvanceDraft, ReadyAdvance } from './types';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  PAGE_SIZE,
+  nextOffset,
+  useDebouncedValue,
+  useLoadRest,
+  usePagedQuery,
+} from '../../shared/hooks';
+import { joinCollectionPages } from './collection-pages';
+import {
+  assistAdvances,
+  assistCollectionList,
+  assistOpenBills,
+  assistOpenPayables,
+  vouchersCancel,
+  vouchersEdit,
+  vouchersGet,
+  vouchersOpenForEdit,
+  vouchersList,
+  vouchersPreview,
+  vouchersSave,
+  vouchersSaveReceiptsBatch,
+} from './api';
+import type { BuiltVoucher } from './draft';
+import type { CollectionListInput } from '../../bindings/CollectionListInput';
+import type { VouchersListInput } from '../../bindings/VouchersListInput';
+import type { ReceiptInput, VoucherEntry, VoucherPreview } from './types';
 
-const VOUCHERS_KEY = ['vouchers'] as const;
+export const VOUCHERS_KEY = ['vouchers'] as const;
 /** The preview waits this long after the last key press, and the one before it is dropped (F35). */
 const PREVIEW_DELAY_MS = 50;
+
+/** Everything a saved voucher changes, to read again (PRD 6.2). */
+const READ_AGAIN: readonly (readonly string[])[] = [
+  VOUCHERS_KEY,
+  ['accounts'],
+  ['coa'],
+  ['partners'],
+  ['search'],
+  ['bikri'],
+  ['day_status'],
+];
 
 /** A seller's open advances and last advance (PRD FR-7.60). Never kept: they change with a save. */
 export function useAdvances(sellerId: number | null) {
@@ -22,40 +62,200 @@ export function useAdvances(sellerId: number | null) {
   });
 }
 
+/** The open bills of a buyer, oldest first (PRD FR-7.58). */
+export function useOpenBills(accountId: number | null) {
+  return useQuery({
+    queryKey: [...VOUCHERS_KEY, 'open-bills', accountId],
+    queryFn: () => assistOpenBills({ account_id: accountId ?? 0 }),
+    enabled: accountId !== null,
+    staleTime: 0,
+  });
+}
+
+/** The payable postings of a seller, oldest first (PRD FR-7.59). */
+export function useOpenPayables(sellerId: number | null) {
+  return useQuery({
+    queryKey: [...VOUCHERS_KEY, 'open-payables', sellerId],
+    queryFn: () => assistOpenPayables({ seller_id: sellerId ?? 0, include_settled: false }),
+    enabled: sellerId !== null,
+    staleTime: 0,
+  });
+}
+
 /**
- * The preview of the vouchers on screen: the balance before and after each, what is wrong with
- * each, and the total. Asked 50 ms after the last key, only for vouchers that have a seller and
- * an amount, so an empty form asks nothing.
+ * The preview of the entry on the form: the balance before and after, the bills it settles, the
+ * warnings and the cash after. Asked 50 ms after the last key, only once there is an account and
+ * an amount, so an empty form asks nothing. `replacing` is the voucher an edit takes back.
  */
-export function useAdvancePreview(drafts: readonly AdvanceDraft[]) {
-  const ready = useMemo(
-    () => drafts.filter(hasSeller).filter((draft) => draft.amount.trim() !== ''),
-    [drafts],
-  );
-  const settled = useDebouncedValue(ready, PREVIEW_DELAY_MS);
-  return {
-    settled,
-    query: useQuery({
-      queryKey: [...VOUCHERS_KEY, 'preview', settled],
-      queryFn: () => vouchersPreviewAdvances(settled),
-      enabled: settled.length > 0,
-      placeholderData: keepPreviousData,
+export function useVoucherPreview(entry: VoucherEntry | null, replacing: number | null) {
+  const settled = useDebouncedValue(entry, PREVIEW_DELAY_MS);
+  const query = useQuery({
+    queryKey: [...VOUCHERS_KEY, 'preview', settled, replacing],
+    // The answer carries the type it was asked for, so an older answer kept on screen while a new
+    // one is on its way is never taken for the answer of another type of voucher.
+    queryFn: async (): Promise<TaggedPreview> => {
+      if (settled === null) throw new Error('no entry');
+      return { type: settled.type, preview: await vouchersPreview(settled, replacing) };
+    },
+    enabled: settled !== null,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  // The answer is for what is on screen only when the entry has stayed as it was asked about.
+  const current = settled === entry && !query.isPlaceholderData && query.isSuccess;
+  return { settled, query, current };
+}
+
+/**
+ * The preview of each voucher waiting in the list (PRD FR-15.1): its amount and the balance after,
+ * as the backend works them out now. A row is asked once, and again after any save, because a save
+ * changes cash and balances (the same preview as the form's, Code Standards B5).
+ */
+export function useRowPreviews(
+  rows: readonly { id: string; entry: VoucherEntry | null }[],
+): ReadonlyMap<string, VoucherPreview> {
+  const answers = useQueries({
+    queries: rows.map(({ entry }) => ({
+      queryKey: [...VOUCHERS_KEY, 'row-preview', entry],
+      queryFn: () => {
+        if (entry === null) throw new Error('no entry');
+        return vouchersPreview(entry, null);
+      },
+      enabled: entry !== null,
       staleTime: 0,
       gcTime: 0,
-    }),
+    })),
+  });
+  const previews = new Map<string, VoucherPreview>();
+  rows.forEach(({ id }, index) => {
+    const data = answers[index]?.data;
+    if (data !== undefined) previews.set(id, data);
+  });
+  return previews;
+}
+
+/** A preview and the type of voucher it is the answer for. */
+interface TaggedPreview {
+  type: VoucherEntry['type'];
+  preview: VoucherPreview;
+}
+
+/** One saved voucher, with its version and whether it can still be edited. */
+export function useVoucher(id: number | null) {
+  return useQuery({
+    queryKey: [...VOUCHERS_KEY, 'one', id],
+    queryFn: () => vouchersGet(id ?? 0),
+    enabled: id !== null,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+/**
+ * The vouchers of a kind in a date range (the list under the form), page by page, with the count
+ * and the totals of the whole filter (PRD FR-19.11).
+ */
+export function useVouchersList(
+  input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'>,
+  enabled = true,
+) {
+  return usePagedQuery({
+    screen: 'vouchers.list',
+    queryKey: [...VOUCHERS_KEY, 'list', input],
+    enabled,
+    fetchPage: (offset, limit, sort) => vouchersList({ ...input, offset, limit, sort }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
+  });
+}
+
+/**
+ * The اگراہی فہرست of a day (PRD FR-15.6): every buyer of the filter. The backend answers a page at
+ * a time, so the pages are read one after the other and joined; `data` is there only when the last
+ * page has come, because the round is built from the whole list.
+ */
+export function useCollectionList(input: Omit<CollectionListInput, 'offset' | 'limit'> | null) {
+  const query = useInfiniteQuery({
+    queryKey: [...VOUCHERS_KEY, 'collection', input],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => {
+      if (input === null) throw new Error('no list');
+      return assistCollectionList({ ...input, offset: pageParam, limit: PAGE_SIZE });
+    },
+    getNextPageParam: (last, pages) =>
+      nextOffset(
+        pages.reduce((sum, page) => sum + buyersOf(page.groups), 0),
+        last.total_count,
+        buyersOf(last.groups),
+      ),
+    enabled: input !== null,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  useLoadRest(query, true);
+  const complete = !query.hasNextPage;
+  return {
+    data: complete && query.data !== undefined ? joinCollectionPages(query.data.pages) : undefined,
+    isPending: query.isPending || query.hasNextPage,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
   };
 }
 
-export function useSaveAdvance() {
+function buyersOf(groups: readonly { buyers: readonly unknown[] }[]): number {
+  return groups.reduce((count, group) => count + group.buyers.length, 0);
+}
+
+function useReadAgain() {
   const queryClient = useQueryClient();
+  return () =>
+    Promise.all(
+      READ_AGAIN.map((queryKey) => queryClient.invalidateQueries({ queryKey: [...queryKey] })),
+    );
+}
+
+export function useSaveVoucher() {
+  const readAgain = useReadAgain();
   return useMutation({
-    mutationFn: (draft: ReadyAdvance) => vouchersSaveAdvance(draft),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: VOUCHERS_KEY }),
-        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
-        queryClient.invalidateQueries({ queryKey: ['coa'] }),
-      ]);
-    },
+    mutationFn: (built: BuiltVoucher) => vouchersSave(built),
+    onSuccess: readAgain,
+  });
+}
+
+export function useEditVoucher() {
+  const readAgain = useReadAgain();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof vouchersEdit>[0]) => vouchersEdit(input),
+    onSuccess: readAgain,
+  });
+}
+
+export function useCancelVoucher() {
+  const readAgain = useReadAgain();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof vouchersCancel>[0]) => vouchersCancel(input),
+    onSuccess: readAgain,
+  });
+}
+
+export function useSaveReceiptsBatch() {
+  const readAgain = useReadAgain();
+  return useMutation({
+    mutationFn: (rows: readonly ReceiptInput[]) => vouchersSaveReceiptsBatch(rows),
+    onSuccess: readAgain,
+  });
+}
+
+/** A saved voucher as the typed entry an edit sends back (plan 44). Read again each time. */
+export function useVoucherEditable(id: number | null) {
+  return useQuery({
+    queryKey: [...VOUCHERS_KEY, 'editable', id],
+    queryFn: () => vouchersOpenForEdit(id ?? 0),
+    enabled: id !== null,
+    staleTime: 0,
+    gcTime: 0,
   });
 }

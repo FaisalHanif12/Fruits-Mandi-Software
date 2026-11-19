@@ -9,6 +9,7 @@ use mandi_core::masters::{AccountToMake, ColValue, MasterKind};
 use mandi_core::text;
 use mandi_db::DbError;
 use mandi_db::masters as repo;
+use mandi_db::rusqlite;
 
 fn fields(ur: &str, en: &str) -> Vec<(&'static str, ColValue)> {
     vec![
@@ -140,11 +141,51 @@ fn the_next_code_is_the_largest_number_plus_one_as_wide_as_the_widest_code() {
     // The code after it would have 11 digits, which the app refuses to take: the list is full.
     assert_eq!(next(&conn), "FULL");
     assert_eq!(
-        repo::next_code(&conn, MasterKind::Staff)
+        repo::next_code(&conn, MasterKind::Narration)
             .unwrap()
             .as_deref(),
         Some("")
     );
+}
+
+#[test]
+fn items_packings_and_staff_take_the_type_number_and_the_next_running_number() {
+    // Plan 32 R2: the first code is 0040 / 0050 / 0060, the next is the largest running number + 1
+    // (so 0049 is followed by 00410, never by a reused code).
+    let (_dir, conn) = setup();
+    let staff_fields = || {
+        let mut f = fields("اسلم", "Aslam");
+        f.push(("role", ColValue::Text("munshi".into())));
+        f
+    };
+    for (kind, type_number) in [
+        (MasterKind::Item, "004"),
+        (MasterKind::Packing, "005"),
+        (MasterKind::Staff, "006"),
+    ] {
+        let next = |conn: &rusqlite::Connection| repo::next_code(conn, kind).unwrap().unwrap();
+        assert_eq!(next(&conn), format!("{type_number}0"), "{kind:?} first");
+        let insert = |code: &str| {
+            let f = match kind {
+                MasterKind::Staff => staff_fields(),
+                MasterKind::Item => {
+                    let mut f = fields("کیلا", "Banana");
+                    f.push(("item_group", ColValue::Text("fruit".into())));
+                    f
+                }
+                _ => fields("پیٹی", "Box"),
+            };
+            repo::insert(&conn, kind, Some(code), None, &f, 1, NOW).unwrap();
+        };
+        insert(&format!("{type_number}0"));
+        assert_eq!(next(&conn), format!("{type_number}1"));
+        insert(&format!("{type_number}9"));
+        assert_eq!(next(&conn), format!("{type_number}10"), "{kind:?} after 9");
+        insert(&format!("{type_number}10"));
+        assert_eq!(next(&conn), format!("{type_number}11"));
+        // A code of another type in the same table does not count.
+        assert!(repo::code_taken(&conn, kind, &format!("{type_number}9"), None).unwrap());
+    }
 }
 
 #[test]

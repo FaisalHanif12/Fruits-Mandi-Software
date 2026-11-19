@@ -1,0 +1,744 @@
+Q431 [E] year MISS (safe end)
+  question  what did buyer Karim buy yesterday
+  expected  not_found: apple_qty=87;apple_amount=335850;total=335850
+  got       time_limit; figure apple_qty=87 missing; figure apple_amount=335850 missing; figure total=335850 missing; after the click: outcome time_limit, wanted answered (his figures)
+  first     not_found; asked_role buyer; found_as seller Karim (the answer below is after the click)
+  answer    [time_limit] [جدول: 0 قطاریں]
+  tools     find({"role":"buyer","text":"karim"})  find({"role":"seller","text":"karim"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-11-04","garden":null,"group_b)
+  calls     6742 ms tool_calls +1t | 10352 ms stop +0t   25184 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6742,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":12195,"tokens_out":125,"tokens_reasoning":0,"tools":[{"ms":2,"name":"report","ok":true}]},{"failed":false,"model_ms":10352,"n":2,"rewrite":false,"tokens_cached":12192,"tokens_in":12505,"tokens_out":238,"tokens_reasoning":180,"tools":[]},{"check_failed":["reference"],"check_paths":["r3.filters.from"],"error":"timeout","failed":true,"model_ms":7878,"n":3,"rewrite":true,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q1009 [A] year MISS (safe end)
+  question  faisal ke udhari bills dikhao
+  expected  answered: bill=6035551|5682950
+  got       time_limit; outcome time_limit, wanted answered; figure bill=6035551 or 5682950 missing
+  answer    [time_limit] [جدول: 7، 1 قطاریں]
+  tools     find({"role":"buyer","text":"faisal"})  party_card({"party":"r1.matches.0"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)
+  calls     4867 ms tool_calls +1t | 6072 ms tool_calls +1t | 7780 ms tool_calls +1t   25074 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":4867,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":11847,"tokens_out":150,"tokens_reasoning":125,"tools":[{"ms":3,"name":"find","ok":true},{"ms":2,"name":"party_card","ok":true,"prefetch":true},{"ms":4,"name":"report","ok":true,"prefetch":true}]},{"failed":false,"model_ms":6072,"n":2,"rewrite":false,"tokens_cached":11844,"tokens_in":15040,"tokens_out":188,"tokens_reasoning":68,"tools":[{"ms":3,"name":"report","ok":true}]},{"failed":false,"model_ms":7780,"n":3,"rewrite":false,"tokens_cached":15037,"tokens_in":15347,"tokens_out":383,"tokens_reasoning":243,"tools
+
+Q1021 [A] year MISS (REVIEW: figure, party, period or source)
+  question  kal kitne trak aaye
+  expected  answered: trucks=1;gross=335850
+  got       answered; figure gross=335850 missing
+  answer    کل 1 ٹرک آئے۔
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)
+  calls     6794 ms tool_calls +1t | 4065 ms tool_calls +1t | 3915 ms stop +0t   14962 ms, 3 calls, finish stop
+  calls_json [{"failed":false,"model_ms":6794,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11843,"tokens_out":108,"tokens_reasoning":68,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":4065,"n":2,"rewrite":false,"tokens_cached":11840,"tokens_in":11999,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":1,"name":"report","ok":true}]},{"failed":false,"model_ms":3915,"n":3,"rewrite":false,"tokens_cached":11996,"tokens_in":12272,"tokens_out":146,"tokens_reasoning":96,"tools":[]}]
+
+Q1040 [A] year MISS (safe end)
+  question  madon ke balance ka total kitna hai
+  expected  answered: total=15835918
+  got       not_found; outcome not_found, wanted answered; figure total=15835918 missing
+  answer    [not_found]
+  tools     find({"role":"any","text":"madon"})
+  calls        46 ms, 0 calls, finish local
+  calls_json []
+
+Q1041 [A] year MISS (safe end)
+  question  مدوں کے بیلنس کا ٹوٹل کتنا ہے
+  expected  answered: total=15835918
+  got       not_found; outcome not_found, wanted answered; figure total=15835918 missing
+  answer    [not_found]
+  tools     find({"role":"any","text":"مدوں"})
+  calls        39 ms, 0 calls, finish local
+  calls_json []
+
+Q1159 [A] year MISS (REVIEW: figure, party, period or source)
+  question  pukhta khata register mein kya kya hai, list do
+  expected  answered: count=0
+  got       answered; figure count=0 missing
+  answer    پختہ کھاتہ اس گاہک یا بیوپاری کے لیے ہے جو ایک بار یا کبھی کبھار آتا ہے اور جس کا اپنا کھاتہ نہیں۔ اس پر باقی سب جیسے ہی خرچ لگتے ہیں اور اس کی لائنیں اس کے نام اور فون سے رکھی جاتی ہیں۔ • بکری لائن میں گاہک کے طور پر، یا لاٹ کے بیوپاری کے طور پر، پختہ کھاتہ چنیں۔ • اس کا نام اور فون لکھیں۔ ادھاری گاہک اور ہر بیوپاری کا فون ضروری ہے۔ پہلے سے لکھے نام پہلے دکھتے ہیں۔ • بکری عام طرح محفوظ کریں۔ ایک بار والے بیوپاری کو عام طور پر موقع پر ہی ادائیگی ہو جاتی ہے۔ • بکری میں پختہ کھاتہ کھول کر ایسی ہر لائن نام اور فون سے دیکھیں، ادا یا باقی۔ جو شخص بار بار آنے لگے اسے مستقل کھاتہ بنایا جا سکتا ہے۔ • نام کے خانے میں لکھیں: فہرست پہلے لکھے ہوئے لوگ دکھاتی ہے، پھر آپ کے لکھے کے اردو ہجے۔
+  tools     app_help({"topic":"pukhta_khata"})
+  calls     5039 ms stop +0t   5101 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":5039,"n":1,"repaired":["help"],"rewrite":false,"tokens_cached":11809,"tokens_in":12208,"tokens_out":226,"tokens_reasoning":0,"tools":[]}]
+
+Q1171 [A] year MISS (REVIEW: figure, party, period or source)
+  question  فیصل کا کھاتہ کل کا کیا رہا
+  expected  answered: balance=1597371 Dr
+  got       answered; figure balance=1597371 Dr missing
+  answer    کل فیصل کا کوئی اندراج نہیں تھا۔ کل کے آغاز پر ان کے ذمے 1,563,646 بنام باقی تھے۔ [اگلے سوال: فیصل کا آج کا حساب؟ | فیصل کا پورا کھاتہ دکھائیں؟]
+  tools     find({"role":"buyer","text":"فیصل"})  report({"adda":null,"as_of":"2026-11-04","bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_b)
+  calls     4699 ms stop +0t   4765 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4699,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12321,"tokens_out":82,"tokens_reasoning":0,"tools":[]}]
+
+Q1187 [A] year MISS (safe end)
+  question  madon ka balance kal ka kya raha
+  expected  answered: total=15835918
+  got       not_found; outcome not_found, wanted answered; figure total=15835918 missing
+  answer    [not_found]
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  find({"role":"any_party","text":"madon"})
+  calls     7946 ms tool_calls +1t | 4846 ms stop +0t   12854 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":7946,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11932,"tokens_out":23,"tokens_reasoning":0,"tools":[{"ms":6,"name":"find","ok":true}]},{"failed":false,"model_ms":4846,"n":2,"rewrite":false,"tokens_cached":11929,"tokens_in":11992,"tokens_out":85,"tokens_reasoning":47,"tools":[]}]
+
+Q1190 [A] year MISS (REVIEW: figure, party, period or source)
+  question  trial balace: show only yesterday's
+  expected  answered: total=36227231
+  got       answered; figure total=36227231 missing
+  answer    کل کے ٹرائل بیلنس میں بنام اور جمع برابر ہیں: دونوں 36,032,888۔ [جدول: 7 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  report({"adda":null,"as_of":"r1.to","bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":nu)
+  calls     7990 ms tool_calls +1t | 5382 ms tool_calls +1t | 9250 ms stop +0t   22710 ms, 3 calls, finish stop
+  calls_json [{"failed":false,"model_ms":7990,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11932,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":0,"name":"report","ok":false}]},{"failed":false,"model_ms":5382,"n":2,"rewrite":false,"tokens_cached":11929,"tokens_in":12097,"tokens_out":178,"tokens_reasoning":60,"tools":[{"ms":8,"name":"report","ok":true}]},{"failed":false,"model_ms":9250,"n":3,"rewrite":false,"tokens_cached":12094,"tokens_in":14349,"tokens_out":426,"tokens_reasoning":344,"tools":[]}]
+
+Q1234 [A] year MISS (safe end)
+  question  منافع اور شراکت دار حصہ، صرف کل کا دکھائیں
+  expected  answered: profit=41018
+  got       time_limit; outcome time_limit, wanted answered; figure profit=41018 missing
+  answer    [time_limit] [جدول: 3 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)
+  calls     6134 ms tool_calls +1t   25055 ms, 1 calls, finish time_limit
+  calls_json [{"error":"timeout","failed":true,"model_ms":12002,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":6134,"n":2,"rewrite":false,"tokens_cached":11936,"tokens_in":11939,"tokens_out":202,"tokens_reasoning":86,"tools":[{"ms":8,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":5323,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q1236 [A] year MISS (safe end)
+  question  who is the biggest in the Partner A's statement
+  expected  answered: facet=CAP
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 7 قطاریں]
+  tools     find({"role":"partner","text":"Partner A"})  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)
+  calls     8962 ms tool_calls +1t | 6452 ms tool_calls +1t | 5980 ms tool_calls +1t   25047 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":8962,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11848,"tokens_out":357,"tokens_reasoning":333,"tools":[{"ms":0,"name":"find","ok":true}]},{"failed":false,"model_ms":6452,"n":2,"rewrite":false,"tokens_cached":11845,"tokens_in":12266,"tokens_out":299,"tokens_reasoning":174,"tools":[{"ms":5,"name":"report","ok":false}]},{"failed":false,"model_ms":5981,"n":3,"rewrite":false,"tokens_cached":12263,"tokens_in":12599,"tokens_out":134,"tokens_reasoning":17,"tools":[{"ms":16,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":3552,"n":4,"rewr
+
+Q1237 [A] year MISS (safe end)
+  question  Partner A ka statement kal ka kya raha
+  expected  answered: a=3205867
+  got       time_limit; outcome time_limit, wanted answered; figure a=3205867 missing
+  answer    [time_limit] [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  find({"role":"partner","text":"A"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  find({"role":"partner","text":"A"})
+  calls     8999 ms tool_calls +1t | 5842 ms tool_calls +1t   25045 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":8999,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11932,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":3,"name":"report","ok":true}]},{"failed":false,"model_ms":5842,"n":2,"rewrite":false,"tokens_cached":11929,"tokens_in":12292,"tokens_out":147,"tokens_reasoning":124,"tools":[{"ms":0,"name":"find","ok":true}]},{"error":"timeout","failed":true,"model_ms":10137,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q1239 [B] year MISS (safe end)
+  question  Partner A ka statement ke hisab se agla qadam kya ho
+  expected  advice: facet=CAP
+  got       time_limit; outcome time_limit, wanted advice
+  answer    [time_limit] [جدول: 7 قطاریں]
+  tools     find({"role":"partner","text":"Partner A"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)
+  calls     10932 ms tool_calls +1t | 4168 ms tool_calls +1t | 6924 ms tool_calls +1t   25079 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":10932,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11852,"tokens_out":278,"tokens_reasoning":254,"tools":[{"ms":0,"name":"find","ok":true}]},{"failed":false,"model_ms":4168,"n":2,"rewrite":false,"tokens_cached":11849,"tokens_in":12191,"tokens_out":115,"tokens_reasoning":0,"tools":[{"ms":18,"name":"report","ok":true}]},{"failed":false,"model_ms":6924,"n":3,"rewrite":false,"tokens_cached":12188,"tokens_in":14136,"tokens_out":205,"tokens_reasoning":88,"tools":[{"ms":0,"name":"report","ok":false}]},{"error":"timeout","failed":true,"model_ms":2920,"n":4,"rewri
+
+Q1254 [A] year MISS (REVIEW: figure, party, period or source)
+  question  باغات کی رپورٹ، صرف کل کا دکھائیں
+  expected  answered: balance=1737824
+  got       answered; figure balance=1737824 missing
+  answer    رپورٹ دکان کے چھپے اور اسکرین پر دکھنے والے ریکارڈ ہیں: بکری، کھاتے، وصولیاں اور ادائیگیاں، خرچے، منافع، شراکت دار، باغات اور سفر۔ ہر رپورٹ چھاپی جا سکتی ہے، پی ڈی ایف یا ایکسل فائل میں محفوظ ہو سکتی ہے۔
+  tools     app_help({"topic":"reports"})  report({"from":"2026-11-04","id":"R36","to":"2026-11-04"})
+  calls        42 ms, 0 calls, finish local
+  calls_json []
+
+Q1256 [C] year MISS (REVIEW: figure, party, period or source)
+  question  estimate the gardens sales for the next 3 months
+  expected  estimate: est=0|0
+  got       estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  answer    باغات کی بکری کا اندازہ نومبر 2026 سے جنوری 2027 تک تقریباً 214,509 ہے۔ • یہ پچھلے 3 مکمل مہینوں کی اوسط رفتار پر ہے؛ ہر مہینے تقریباً 71,503۔ [اندازہ، یقینی نہیں]
+  tools     estimate({"ahead":3,"buyer":null,"garden":null,"head":null,"item":null,"measure":"garden_sales","partner":null,"party":)
+  calls     4170 ms tool_calls +1t | 9148 ms stop +0t   13383 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4170,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11862,"tokens_out":72,"tokens_reasoning":0,"tools":[{"ms":1,"name":"estimate","ok":true}]},{"failed":false,"model_ms":9148,"n":2,"rewrite":false,"tokens_cached":11859,"tokens_in":12274,"tokens_out":272,"tokens_reasoning":146,"tools":[]}]
+
+Q1296 [A] year MISS (safe end)
+  question  gardens analysis: show the full list for this year
+  expected  answered: facet=CAP
+  got       not_found; outcome not_found, wanted answered
+  answer    [not_found]
+  tools     find({"role":"any","text":"analysis"})
+  calls        54 ms, 0 calls, finish local
+  calls_json []
+
+Q1301 [C] year MISS (REVIEW: figure, party, period or source)
+  question  تجزیات کے باغات والے حساب میں اگلے 3 مہینوں کی بکری کا اندازہ
+  expected  estimate: est=0|0
+  got       estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  answer    باغات کی بکری کا اندازہ نومبر 2026 سے جنوری 2027 تک تقریباً 214,509 ہے۔ • یہ گزشتہ 3 مکمل مہینوں کی اوسط رفتار پر ہے۔ [اندازہ، یقینی نہیں]
+  tools     estimate({"ahead":3,"buyer":null,"garden":null,"head":null,"item":null,"measure":"garden_sales","partner":null,"party":)
+  calls     6667 ms tool_calls +1t | 6233 ms stop +0t   12963 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":6667,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11875,"tokens_out":72,"tokens_reasoning":0,"tools":[{"ms":1,"name":"estimate","ok":true}]},{"failed":false,"model_ms":6233,"n":2,"rewrite":false,"tokens_cached":11872,"tokens_in":12287,"tokens_out":227,"tokens_reasoning":119,"tools":[]}]
+
+Q1329 [C] year MISS (REVIEW: figure, party, period or source)
+  question  baghat ki agle 3 mahine ki aamdan ka andaza
+  expected  estimate: est=0|0
+  got       estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  answer    پچھلے 3 مکمل مہینوں کی رفتار سے نومبر 2026 سے جنوری 2027 تک باغات کی متوقع آمدن تقریباً 214,509 ہے۔ • اوسط ماہانہ آمدن 71,503 بنتی ہے۔ [اندازہ، یقینی نہیں] [اگلے سوال: باغات کی آمدن پچھلے مہینے سے ملا کر؟ | باغات کی آمدن کا سال کے آخر تک اندازہ؟]
+  tools     estimate({"ahead":3,"buyer":null,"garden":null,"head":null,"item":null,"measure":"garden_sales","partner":null,"party":)
+  calls     3753 ms tool_calls +1t | 6984 ms stop +0t   10809 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3753,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11867,"tokens_out":72,"tokens_reasoning":0,"tools":[{"ms":1,"name":"estimate","ok":true}]},{"failed":false,"model_ms":6984,"n":2,"rewrite":false,"tokens_cached":11864,"tokens_in":12279,"tokens_out":271,"tokens_reasoning":117,"tools":[]}]
+
+Q1382 [A] year MISS (safe end)
+  question  Partner A ka hissa is saal picle saal se kitna zyada hai
+  expected  answered: facet=CAP
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 3، 3 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"this_year","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  period({"day":null,"from":"2025-01-01","kind":"range","month":null,"n":null,"to":"2025-11-05"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)
+  calls     7788 ms tool_calls +1t | 8635 ms tool_calls +1t | 3906 ms tool_calls +1t   25082 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":7788,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11943,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":8,"name":"report","ok":true}]},{"failed":false,"model_ms":8635,"n":2,"rewrite":false,"tokens_cached":11940,"tokens_in":12449,"tokens_out":349,"tokens_reasoning":300,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":3906,"n":3,"rewrite":false,"tokens_cached":12446,"tokens_in":12846,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":3,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":4617,"n":4,"rewrite
+
+Q1461 [C] year MISS (network)
+  question  Partner A ka aaj ka hissa kitna hai aur agle 3 mahne ka andaza
+  expected  estimate: real_share=9148;est=916938|1136178
+  got       error (timeout); outcome error, wanted estimate; figure real_share=9148 missing; figure est=916938 or 1136178 missing
+  answer    [error]
+  tools     period({"day":null,"from":null,"kind":"today","month":null,"n":null,"to":null})
+  calls     8396 ms tool_calls +1t   25063 ms, 1 calls, finish -
+  calls_json [{"error":"timeout","failed":true,"model_ms":12005,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":8396,"n":2,"rewrite":false,"tokens_cached":11870,"tokens_in":11873,"tokens_out":37,"tokens_reasoning":0,"tools":[{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":3079,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q1472 [C] year MISS (REVIEW: figure, party, period or source)
+  question  estimate the garden's takings for the next 3 months so I can see the balance
+  expected  estimate: est=0|0
+  got       estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  answer    اگلے 3 مہینوں میں باغات کی فروخت کا اندازہ تقریباً 214,509 ہے، نومبر 2026 سے جنوری 2027 تک۔ • یہ پچھلے 3 مکمل مہینوں کی اوسط رفتار پر مبنی ہے؛ باغ کا بقایا بیلنس اس میں شامل نہیں۔ [اندازہ، یقینی نہیں]
+  tools     estimate({"ahead":3,"buyer":null,"garden":null,"head":null,"item":null,"measure":"garden_sales","partner":null,"party":)
+  calls     11728 ms tool_calls +1t | 10286 ms stop +0t   22101 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":11728,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11870,"tokens_out":139,"tokens_reasoning":65,"tools":[{"ms":1,"name":"estimate","ok":true}]},{"failed":false,"model_ms":10286,"n":2,"rewrite":false,"tokens_cached":11867,"tokens_in":12349,"tokens_out":429,"tokens_reasoning":287,"tools":[]}]
+
+Q1479 [C] year MISS (REVIEW: figure, party, period or source)
+  question  what is the garden's commission so far and the sales estimate for the next 3 months
+  expected  estimate: real_comm=256604;est=0|0
+  got       estimate; button: 1 figure(s) of the answer are not in what the button opens (view I, R36): 214508
+  answer    شاہ پور باغ کا اب تک کمیشن 256,604 ہے۔ • باغات کی فروخت کا اگلے 3 مہینوں کا اندازہ تقریباً 214,509 ہے، نومبر 2026 سے جنوری 2027 تک۔ یہ پچھلے 3 مکمل مہینوں کی رفتار پر مبنی ہے۔ [جدول: 1 قطاریں] [اندازہ، یقینی نہیں]
+  tools     period({"day":null,"from":null,"kind":"up_to_now","month":null,"n":null,"to":null})  estimate({"ahead":3,"buyer":null,"garden":null,"head":null,"item":null,"measure":"garden_sales","partner":null,"party":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)
+  calls     8453 ms tool_calls +2t | 5294 ms tool_calls +1t | 5763 ms stop +0t   19590 ms, 3 calls, finish stop
+  calls_json [{"failed":false,"model_ms":8453,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11870,"tokens_out":432,"tokens_reasoning":307,"tools":[{"ms":0,"name":"period","ok":true},{"ms":0,"name":"estimate","ok":true}]},{"failed":false,"model_ms":5294,"n":2,"rewrite":false,"tokens_cached":11867,"tokens_in":12712,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":4,"name":"report","ok":true}]},{"failed":false,"model_ms":5763,"n":3,"rewrite":false,"tokens_cached":12709,"tokens_in":13200,"tokens_out":346,"tokens_reasoning":188,"tools":[]}]
+
+Q1523 [A] year MISS (REVIEW: figure, party, period or source)
+  question  what commission does Karim pay on banana
+  expected  answered: rate=4.00%
+  got       answered; figure rate=400 missing
+  answer    کیلے پر کریم کی کوئی کمیشن والی فروخت نہیں ملی۔
+  tools     find({"role":"seller","text":"karim"})  find({"role":"item","text":"Banana"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":null,"garden":null,"goods":null,"grade":null,"grou)
+  calls     7279 ms stop +0t   7340 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":7279,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12369,"tokens_out":48,"tokens_reasoning":0,"tools":[]}]
+
+Q1598 [A] year MISS (REVIEW: figure, party, period or source)
+  question  tamatar ka aaj ka rate kya hai
+  expected  answered: last=1490
+  got       answered; figure last=1490 missing
+  answer    آج ٹماٹر کی کوئی بکری درج نہیں، اس لیے آج کا اوسط فروخت ریٹ دستیاب نہیں۔
+  tools     period({"day":null,"from":null,"kind":"today","month":null,"n":null,"to":null})  find({"role":"item","text":"Tomato"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"2026-11-05","garden":null,"goods":null,"grade":nu)
+  calls     3437 ms stop +0t   3497 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3437,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12340,"tokens_out":59,"tokens_reasoning":0,"tools":[]}]
+
+Q1600 [A] year MISS (REVIEW: figure, party, period or source)
+  question  what is today's rate of tomato
+  expected  answered: last=1490
+  got       answered; figure last=1490 missing
+  answer    آج ٹماٹر کی کوئی بکری درج نہیں، اس لیے آج کا ریٹ دستیاب نہیں۔
+  tools     period({"day":null,"from":null,"kind":"today","month":null,"n":null,"to":null})  find({"role":"item","text":"Tomato"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"2026-11-05","garden":null,"goods":null,"grade":nu)
+  calls     3999 ms stop +0t   4053 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3999,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12337,"tokens_out":55,"tokens_reasoning":0,"tools":[]}]
+
+Q1602 [A] year MISS (REVIEW: figure, party, period or source)
+  question  پیاز کا آخری ریٹ کتنا تھا
+  expected  answered: rate=1880
+  got       answered; figure rate=1880 missing
+  answer    پیاز کا آخری درج شدہ ریٹ 1,920 تھا، تاریخ ۔ [جدول: 1 قطاریں]
+  tools     find({"role":"item","text":"Onion"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":null,"garden":null,"group_by":null,)
+  calls     3286 ms stop +0t   3355 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3286,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12289,"tokens_out":77,"tokens_reasoning":0,"tools":[]}]
+
+Q1880 [A] year MISS (safe end)
+  question  is hafte aloo par bepari ka commission kitna bana
+  expected  answered: comm=6663#seller
+  got       not_found; outcome not_found, wanted answered; figure comm=6663 missing
+  answer    [not_found]
+  tools     period({"day":null,"from":null,"kind":"this_week","month":null,"n":null,"to":null})  find({"role":"seller","text":"bepari"})  find({"role":"item","text":"Potato"})
+  calls     3013 ms stop +0t | 8188 ms stop +0t   11263 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3013,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":12085,"tokens_out":35,"tokens_reasoning":0,"tools":[]},{"check_at":["choose:a find result of this question"],"check_failed":["choose"],"failed":false,"model_ms":8188,"n":2,"rewrite":true,"tokens_cached":12010,"tokens_in":12142,"tokens_out":96,"tokens_reasoning":58,"tools":[]}]
+
+Q1980 [A] year MISS (safe end)
+  question  pichle mahine saag par bepari ka commission kitna bana
+  expected  answered: comm=0#seller
+  got       time_limit; outcome time_limit, wanted answered; figure comm=0 missing
+  answer    [time_limit] [جدول: 0 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"last_month","month":null,"n":null,"to":null})  find({"role":"seller","text":"bepari"})  find({"role":"item","text":"Saag"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"grade":null,)
+  calls     11936 ms tool_calls +1t | 6587 ms stop +0t   25075 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":11936,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":12097,"tokens_out":149,"tokens_reasoning":48,"tools":[{"ms":0,"name":"analytics","ok":true}]},{"failed":false,"model_ms":6588,"n":2,"repaired":["name"],"rewrite":false,"tokens_cached":12094,"tokens_in":12448,"tokens_out":62,"tokens_reasoning":0,"tools":[]},{"check_failed":["scope"],"error":"timeout","failed":true,"model_ms":6428,"n":3,"rewrite":true,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q1992 [A] year MISS (safe end)
+  question  pichle mahine musami par gahak se kitna commission mila
+  expected  answered: comm=36101
+  got       which_one; outcome which_one, wanted answered; figure comm=36101 missing
+  answer    [which_one]
+  tools     period({"day":null,"from":null,"kind":"last_month","month":null,"n":null,"to":null})  find({"role":"item","text":"musami"})  analytics!({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"grade":null,)
+  calls     2525 ms tool_calls +1t   2580 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":2525,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11950,"tokens_out":96,"tokens_reasoning":0,"tools":[{"ms":0,"name":"analytics","ok":false}]}]
+
+Q1996 [A] year MISS (safe end)
+  question  مسمی پر پچھلے سال buyer سے کتنا کمیشن ملا
+  expected  answered: comm=135757
+  got       which_one; outcome which_one, wanted answered; figure comm=135757 missing
+  answer    [which_one]
+  tools     period({"day":null,"from":null,"kind":"last_year","month":null,"n":null,"to":null})  find({"role":"item","text":"مسمی"})  analytics!({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"grade":null,)
+  calls     7207 ms tool_calls +1t   7262 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":7207,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11940,"tokens_out":97,"tokens_reasoning":0,"tools":[{"ms":1,"name":"analytics","ok":false}]}]
+
+Q2000 [A] year MISS (safe end)
+  question  kal sag par buyer se kitna commission mila
+  expected  answered: comm=0
+  got       which_one; outcome which_one, wanted answered; figure comm=0 missing
+  answer    [which_one]
+  tools     period({"day":"04-11","from":null,"kind":"day","month":null,"n":null,"to":null})  find({"role":"item","text":"sag"})  analytics!({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"grade":null,)
+  calls     3209 ms tool_calls +1t | 2653 ms tool_calls +1t   5919 ms, 2 calls, finish -
+  calls_json [{"failed":false,"model_ms":3209,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11847,"tokens_out":39,"tokens_reasoning":0,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":2653,"n":2,"rewrite":false,"tokens_cached":11844,"tokens_in":11934,"tokens_out":96,"tokens_reasoning":0,"tools":[{"ms":0,"name":"analytics","ok":false}]}]
+
+Q2028 [A] year MISS (safe end)
+  question  سبجی کا کل بائر کمیشن کتنا ہے
+  expected  answered: comm=0
+  got       not_found; outcome not_found, wanted answered; figure comm=0 missing
+  answer    [not_found]
+  tools     find({"role":"item","text":"سبزی"})  analytics!({"adda":null,"buyer":null,"city":null,"compare":null,"from":null,"garden":null,"goods":null,"grade":null,"grou)
+  calls     4517 ms tool_calls +1t   4566 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":4517,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11849,"tokens_out":196,"tokens_reasoning":101,"tools":[{"ms":0,"name":"analytics","ok":false}]}]
+
+Q2061 [A] year MISS (safe end)
+  question  فیصل سے اس مہینے آلو پر buyer کمیشن کتنا لگا
+  expected  answered: comm=0
+  got       checks_failed; outcome checks_failed, wanted answered
+  answer    [checks_failed] [جدول: 0 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"this_month","month":null,"n":null,"to":null})  find({"role":"buyer","text":"فیصل"})  party_card({"party":"r2.matches.0"})  find({"role":"item","text":"آلو"})  analytics({"adda":null,"buyer":"r2.matches.0","city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"gr)
+  calls     2638 ms tool_calls +1t | 2778 ms tool_calls +1t | 4632 ms stop +0t | 4846 ms stop +0t   14990 ms, 4 calls, finish stop
+  calls_json [{"failed":false,"model_ms":2638,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11951,"tokens_out":22,"tokens_reasoning":0,"tools":[{"ms":2,"name":"find","ok":true},{"ms":4,"name":"party_card","ok":true,"prefetch":true}]},{"failed":false,"model_ms":2778,"n":2,"rewrite":false,"tokens_cached":11948,"tokens_in":12269,"tokens_out":100,"tokens_reasoning":0,"tools":[{"ms":3,"name":"analytics","ok":true}]},{"failed":false,"model_ms":4632,"n":3,"repaired":["name"],"rewrite":false,"tokens_cached":12266,"tokens_in":12605,"tokens_out":50,"tokens_reasoning":0,"tools":[]},{"check_at":["number_word
+
+Q2062 [A] year MISS (REVIEW: figure, party, period or source)
+  question  pichle mahine Faisal se kele par kitna commission liya
+  expected  answered: comm=7586
+  got       answered; figure comm=7586 missing
+  answer    پچھلے مہینے کیلے پر کمیشن 15,716 تھا۔
+  tools     period({"day":null,"from":null,"kind":"last_month","month":null,"n":null,"to":null})  find({"role":"buyer","text":"faisal"})  find({"role":"item","text":"Banana"})  analytics({"adda":null,"buyer":"a31","city":null,"compare":null,"from":"2026-10-01","garden":null,"goods":null,"grade":n)
+  calls     4020 ms stop +0t   4082 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4020,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":12584,"tokens_out":55,"tokens_reasoning":0,"tools":[]}]
+
+Q2063 [A] year MISS (REVIEW: figure, party, period or source)
+  question  ستمبر میں فیصل سے آلو پر کتنا کمیشن لیا
+  expected  answered: comm=2527
+  got       answered; figure comm=2527 missing
+  answer    ستمبر 2026 میں آلو پر کمیشن 5,054 رہا۔
+  tools     period({"day":null,"from":"2026-09-01","kind":"range","month":null,"n":null,"to":"2026-09-30"})  find({"role":"buyer","text":"فیصل"})  find({"role":"item","text":"Potato"})  analytics({"adda":null,"buyer":"a31","city":null,"compare":null,"from":"2026-09-01","garden":null,"goods":null,"grade":n)
+  calls     4077 ms stop +0t   4151 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4077,"n":1,"repaired":["name","month"],"rewrite":false,"tokens_cached":11809,"tokens_in":12588,"tokens_out":115,"tokens_reasoning":61,"tools":[]}]
+
+Q2302 [A] year MISS (REVIEW: figure, party, period or source)
+  question  کل فیصل کے کیلہ سے کل کمیشن کتنا بنا
+  expected  answered: comm=0
+  got       answered; outcome not_found, wanted answered
+  first     not_found; asked_role seller; found_as buyer Faisal (the answer below is after the click)
+  answer    کل، کو، فیصل کی کیلے کی خریداری پر کمیشن 0 رہا۔
+  tools     find({"role":"seller","text":"فیصل"})  find({"role":"item","text":"کیلہ"})  period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  find({"role":"buyer","text":"فیصل"})  analytics({"adda":null,"buyer":"r4.matches.0","city":null,"compare":null,"from":"r3.from","garden":null,"goods":null,"gr)
+  calls     4205 ms tool_calls +3t | 3891 ms stop +0t | 6624 ms tool_calls +1t | 5485 ms stop +0t   20363 ms, 4 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4205,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11850,"tokens_out":205,"tokens_reasoning":113,"tools":[{"ms":7,"name":"find","ok":true},{"ms":0,"name":"find","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":3891,"n":2,"rewrite":false,"tokens_cached":11847,"tokens_in":12315,"tokens_out":111,"tokens_reasoning":73,"tools":[]},{"failed":false,"model_ms":6624,"n":1,"rewrite":false,"tokens_cached":12312,"tokens_in":12534,"tokens_out":390,"tokens_reasoning":288,"tools":[{"ms":3,"name":"analytics","ok":true}]},{"failed":false,"model_ms
+
+Q2392 [A] year MISS (network)
+  question  فیصل کو اب تک آلو کا average ریٹ کیا لگا
+  expected  answered: rate=1143
+  got       error (timeout); outcome not_found, wanted answered; figure rate=1143 missing
+  first     not_found; asked_role seller; found_as buyer Faisal (the answer below is after the click)
+  answer    [error]
+  tools     find({"role":"seller","text":"فیصل"})  find({"role":"buyer","text":"فیصل"})  period({"day":null,"from":null,"kind":"up_to_now","month":null,"n":null,"to":null})
+  calls     3848 ms tool_calls +1t | 6632 ms stop +0t | 7843 ms tool_calls +1t   35637 ms, 3 calls, finish -
+  calls_json [{"failed":false,"model_ms":3848,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11851,"tokens_out":22,"tokens_reasoning":0,"tools":[{"ms":7,"name":"find","ok":true}]},{"failed":false,"model_ms":6632,"n":2,"rewrite":false,"tokens_cached":11848,"tokens_in":12022,"tokens_out":163,"tokens_reasoning":125,"tools":[]},{"error":"timeout","failed":true,"model_ms":12005,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":7844,"n":2,"rewrite":false,"tokens_cached":12238,"tokens_in":12241,"tokens_out":110,"tokens_reasoni
+
+Q2433 [A] year MISS (safe end)
+  question  kal seb ka last rate kya tha
+  expected  answered: last=3940
+  got       checks_failed; outcome checks_failed, wanted answered; figure last=3940 missing
+  answer    [checks_failed] [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  find({"role":"item","text":"Apple"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-11-04","garden":null,"group_b)
+  calls     2976 ms stop +0t | 11044 ms stop +0t   14108 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":2976,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12395,"tokens_out":66,"tokens_reasoning":0,"tools":[]},{"check_failed":["reference"],"check_paths":["c1.result"],"failed":false,"model_ms":11044,"n":2,"rewrite":true,"tokens_cached":12411,"tokens_in":12486,"tokens_out":67,"tokens_reasoning":0,"tools":[]}]
+
+Q2436 [A] year MISS (REVIEW: figure, party, period or source)
+  question  سیب کا اس ہفتے کا آخری ریٹ کیا تھا
+  expected  answered: last=3940
+  got       answered; figure last=3940 missing
+  answer    اس ہفتے سیب کا آخری درج شدہ ریٹ 3,830 ہے، مورخہ ۔ [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"this_week","month":null,"n":null,"to":null})  find({"role":"item","text":"Apple"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-11-02","garden":null,"group_b)
+  calls     3017 ms stop +0t   3074 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3017,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12402,"tokens_out":82,"tokens_reasoning":0,"tools":[]}]
+
+Q2444 [A] year MISS (REVIEW: figure, party, period or source)
+  question  انگور کا 1 سے 15 اکتوبر تک last ریٹ کیا تھا
+  expected  answered: last=3340
+  got       answered; figure last=3340 missing
+  answer    اس عرصے میں انگور کی تازہ ترین بکری کا ریٹ 3,510 تھا۔ [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":"2026-10-01","kind":"range","month":null,"n":null,"to":"2026-10-15"})  find({"role":"item","text":"Grapes"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-10-01","garden":null,"group_b)
+  calls     3410 ms stop +0t   3472 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3410,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12452,"tokens_out":72,"tokens_reasoning":0,"tools":[]}]
+
+Q2447 [A] year MISS (REVIEW: figure, party, period or source)
+  question  last rate of potatoe on 14 October
+  expected  answered: last=1060
+  got       answered; figure last=1060 missing
+  answer    کو آلو کا آخری درج شدہ ریٹ 1,130 تھا۔
+  tools     period({"day":null,"from":"2026-10-14","kind":"range","month":null,"n":null,"to":"2026-10-14"})  find({"role":"item","text":"Potato"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-10-14","garden":null,"group_b)
+  calls     11716 ms stop +0t | 4584 ms stop +0t   16370 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":11716,"n":1,"repaired":["name","digit"],"rewrite":false,"tokens_cached":11809,"tokens_in":12415,"tokens_out":58,"tokens_reasoning":0,"tools":[]},{"check_at":["month:اکتوبر"],"check_failed":["month"],"failed":false,"model_ms":4584,"n":2,"rewrite":true,"tokens_cached":12340,"tokens_in":12502,"tokens_out":65,"tokens_reasoning":0,"tools":[]}]
+
+Q2449 [A] year MISS (REVIEW: figure, party, period or source)
+  question  آلو کا اس مہینے last ریٹ کیا تھا
+  expected  answered: last=1100
+  got       answered; figure last=1100 missing
+  answer    اس مہینے آلو کا آخری درج شدہ ریٹ 1,160 تھا، بکری میں۔
+  tools     period({"day":null,"from":null,"kind":"this_month","month":null,"n":null,"to":null})  find({"role":"item","text":"Potato"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-11-01","garden":null,"group_b)
+  calls     4116 ms stop +0t   4173 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4116,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12413,"tokens_out":69,"tokens_reasoning":0,"tools":[]}]
+
+Q2455 [A] year MISS (REVIEW: figure, party, period or source)
+  question  pyaz ka 1 se 15 October tak ka aakhri rate kya tha
+  expected  answered: last=1830
+  got       answered; figure last=1830 missing
+  answer    اس مدت میں آخری درج شدہ پیاز کا ریٹ 1,810 تھا، تاریخ ۔ [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":"2026-10-01","kind":"range","month":null,"n":null,"to":"2026-10-15"})  find({"role":"item","text":"Onion"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-10-01","garden":null,"group_b)
+  calls     4071 ms stop +0t   4137 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4071,"n":1,"repaired":["name"],"rewrite":false,"tokens_cached":11809,"tokens_in":12444,"tokens_out":80,"tokens_reasoning":0,"tools":[]}]
+
+Q2580 [A] year MISS (safe end)
+  question  pichle mahine soyam kele kitne buyers ne khareeda
+  expected  answered: count=7
+  got       time_limit; outcome time_limit, wanted answered; figure count=7 missing
+  answer    [time_limit] [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"last_month","month":null,"n":null,"to":null})  find({"role":"item","text":"kela"})  analytics!({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"grade":"thir)  find({"role":"item","text":"kela"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"grade":null,)
+  calls     2775 ms tool_calls +1t | 4178 ms tool_calls +1t   25052 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":2775,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11950,"tokens_out":96,"tokens_reasoning":0,"tools":[{"ms":1,"name":"analytics","ok":false}]},{"error":"timeout","failed":true,"model_ms":12005,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":4178,"n":3,"rewrite":false,"tokens_cached":12089,"tokens_in":12092,"tokens_out":96,"tokens_reasoning":0,"tools":[{"ms":3,"name":"analytics","ok":true}]},{"error":"timeout","failed":true,"model_ms":4501,"n":4,"rewrite":false,"tokens_cached"
+
+Q2678 [A] year MISS (safe end)
+  question  فیصل نے کل کیلا کتنے sellers سے لیا
+  expected  answered: count=0
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 0 قطاریں]
+  tools     find({"role":"buyer","text":"فیصل"})  period({"day":"04-11","from":null,"kind":"day","month":null,"n":null,"to":null})  find({"role":"item","text":"کیلا"})  analytics({"adda":null,"buyer":"r1.matches.0","city":null,"compare":null,"from":"r2.from","garden":null,"goods":null,"gr)
+  calls     4830 ms tool_calls +2t | 4317 ms tool_calls +1t   25058 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":4830,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11849,"tokens_out":268,"tokens_reasoning":193,"tools":[{"ms":7,"name":"find","ok":true},{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":12001,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":4317,"n":3,"rewrite":false,"tokens_cached":12283,"tokens_in":12286,"tokens_out":139,"tokens_reasoning":37,"tools":[{"ms":1,"name":"analytics","ok":true}]},{"error":"timeout","failed":true,"model_ms":2319,"n"
+
+Q2701 [A] year MISS (safe end)
+  question  number of sellers of third quality onion last year
+  expected  answered: count=1
+  got       time_limit; outcome time_limit, wanted answered; figure count=1 missing
+  answer    [time_limit] [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"last_year","month":null,"n":null,"to":null})  find({"role":"item","text":"Onion"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"2025-01-01","garden":null,"goods":null,"grade":"t)
+  calls        25054 ms, 0 calls, finish time_limit
+  calls_json [{"error":"timeout","failed":true,"model_ms":12002,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"error":"timeout","failed":true,"model_ms":11486,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q2751 [A] year MISS (safe end)
+  question  اس سال آلو سب سے زیادہ کس گاہک نے خریدا
+  expected  answered: top!=Rizwan Butt
+  got       time_limit; outcome time_limit, wanted answered; name rizwan butt (top) missing
+  answer    [time_limit] [جدول: 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"this_year","month":null,"n":null,"to":null})  find({"role":"item","text":"آلو"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":null,"grade":null,)
+  calls     6788 ms tool_calls +1t | 7450 ms tool_calls +1t   25071 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6789,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11940,"tokens_out":22,"tokens_reasoning":0,"tools":[{"ms":0,"name":"find","ok":true}]},{"failed":false,"model_ms":7450,"n":2,"rewrite":false,"tokens_cached":11937,"tokens_in":12029,"tokens_out":104,"tokens_reasoning":0,"tools":[{"ms":2,"name":"analytics","ok":true}]},{"error":"timeout","failed":true,"model_ms":10741,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q2904 [A] year MISS (safe end)
+  question  which seller gave Faisal the most bananna last month
+  expected  answered: top!=Rahim
+  got       time_limit; outcome not_found, wanted answered
+  first     not_found; asked_role seller; found_as buyer Faisal (the answer below is after the click)
+  answer    [time_limit] [جدول: 3 قطاریں]
+  tools     find({"role":"seller","text":"faisal"})  find({"role":"buyer","text":"faisal"})  period({"day":null,"from":null,"kind":"last_month","month":null,"n":null,"to":null})  find({"role":"item","text":"banana"})  analytics({"adda":null,"buyer":"a31","city":null,"compare":null,"from":"r3.from","garden":null,"goods":null,"grade":null)
+  calls     8580 ms tool_calls +1t | 10752 ms tool_calls +1t   25101 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":8580,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":12208,"tokens_out":383,"tokens_reasoning":343,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":10752,"n":2,"rewrite":false,"tokens_cached":12647,"tokens_in":12650,"tokens_out":104,"tokens_reasoning":0,"tools":[{"ms":1,"name":"analytics","ok":true}]},{"error":"timeout","failed":true,"model_ms":5631,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q2909 [A] year MISS (network)
+  question  which seller gave Faisal the most potato from 1 to 15 October
+  expected  safe: facet=ITEM;measure=top_seller;subject=party;when=r2026_10_01_2026_10_15;zero=1;thing=Potato
+  got       error (timeout); outcome error
+  first     not_found; asked_role seller; found_as buyer Faisal (the answer below is after the click)
+  answer    [error]
+  tools     find({"role":"seller","text":"faisal"})  find({"role":"buyer","text":"faisal"})  period({"day":null,"from":"2026-10-01","kind":"range","month":null,"n":null,"to":"2026-10-15"})
+  calls     8804 ms tool_calls +1t   25137 ms, 1 calls, finish -
+  calls_json [{"error":"timeout","failed":true,"model_ms":12010,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":8804,"n":2,"rewrite":false,"tokens_cached":12239,"tokens_in":12242,"tokens_out":203,"tokens_reasoning":154,"tools":[{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":2662,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q2916 [A] year MISS (network)
+  question  اس مہینے سووم الو سب سے زیادہ کس seller کا آیا
+  expected  answered: top!=Saleem
+  got       error (timeout); outcome error, wanted answered; name saleem (top) missing
+  answer    [error]
+  tools     period({"day":null,"from":null,"kind":"this_month","month":null,"n":null,"to":null})  find({"role":"item","text":"سووم الو"})  find({"role":"item","text":"الو"})
+  calls     8070 ms tool_calls +1t | 9060 ms tool_calls +1t   25053 ms, 2 calls, finish -
+  calls_json [{"failed":false,"model_ms":8070,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11949,"tokens_out":103,"tokens_reasoning":78,"tools":[{"ms":1,"name":"find","ok":true}]},{"failed":false,"model_ms":9060,"n":2,"rewrite":false,"tokens_cached":11946,"tokens_in":12089,"tokens_out":278,"tokens_reasoning":255,"tools":[{"ms":0,"name":"find","ok":true}]},{"error":"timeout","failed":true,"model_ms":7841,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q2970 [A] year MISS (REVIEW: figure, party, period or source)
+  question  where did potato rank among the items by sales in August
+  expected  answered: rank=2
+  got       answered; figure rank=2 missing
+  answer    بکری بک میں ایک ٹرک کا مال بیچا جاتا ہے۔ آپ ٹرک، ہر بیوپاری کا لاٹ اور ہر گاہک کی لائن لکھتے ہیں، اور ہر رقم لکھتے ہی خود نکل آتی ہے۔ 1. بکری میں بکری بک کھولیں، یا Alt+B دبائیں۔ ٹرک نمبر لکھیں: اڈا، زمیندار اور ڈرائیور اس کی پچھلی بکری سے بھر جاتے ہیں۔ 2. ہر بیوپاری اور قسم مال کا لاٹ بنائیں: بیوپاری، قسم مال، پیکنگ اور آنے والی تعداد۔ کرایہ، مزدوری وغیرہ مزید کے نیچے ہیں۔ 3. ہر بکری لائن میں گاہک کا کوڈ، تعداد اور ریٹ لکھیں، ہر ایک کے بعد Enter دبائیں۔ کمیشن اور لاگا اصولوں سے خود بھر جاتے ہیں۔ 4. خلاصہ اور شراکت داروں کا حصہ دیکھیں، پھر محفوظ کریں۔ F10 یا Ctrl+S محفوظ کرتا ہے۔ Ctrl+Enter محفوظ کر کے نشان زدہ پرچیاں چھاپتا ہے اور نئی بکری کھولتا ہے۔ Ctrl+Delete لائن ہٹاتا ہے۔ ٹرک LES-1234: رحیم کی کیلے کی 50 پیٹیاں۔ اکرم 20 پیٹی 600 پر اور ارشد 30 پیٹی 580 پر لیتے ہیں۔ رحیم کی صافی بکری 19,316 بنتی ہے۔
+  tools     app_help({"topic":"bikri_book"})
+  calls        55 ms, 0 calls, finish local
+  calls_json []
+
+Q3051 [A] year MISS (safe end)
+  question  kal alu ki bikri parson se kitni zyada ya kam rahi
+  expected  answered: diff=111060 down
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 0، 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  period({"day":null,"from":"2026-11-03","kind":"range","month":null,"n":null,"to":"2026-11-03"})  find({"role":"item","text":"Potato"})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"2026-11-04","garden":null,"goods":null,"grade":nu)  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"2026-11-03","garden":null,"goods":null,"grade":nu)  calculate({"inputs":["r4.totals.gross","r5.totals.gross"],"op":"difference"})
+  calls     3042 ms tool_calls +1t   25046 ms, 1 calls, finish time_limit
+  calls_json [{"error":"timeout","failed":true,"model_ms":12008,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":3042,"n":2,"rewrite":false,"tokens_cached":12836,"tokens_in":12839,"tokens_out":36,"tokens_reasoning":0,"tools":[{"ms":1,"name":"calculate","ok":true}]},{"error":"timeout","failed":true,"model_ms":8410,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3052 [A] year MISS (safe end)
+  question  14 اکتوبر کو آلو کی بکری 13 اکتوبر سے کتنی زیادہ یا کم رہی
+  expected  answered: diff=149640 up
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 4، 0 قطاریں]
+  tools     period({"day":"14-10","from":null,"kind":"day","month":null,"n":null,"to":null})  period({"day":"13-10","from":null,"kind":"day","month":null,"n":null,"to":null})  find({"role":"item","text":"آلو"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  find({"role":"item","text":"آلو"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  calculate({"inputs":["r3.totals.value","r4.totals.value"],"op":"difference"})
+  calls     7749 ms tool_calls +2t | 5186 ms tool_calls +2t | 10724 ms tool_calls +1t   25058 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":7749,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11890,"tokens_out":302,"tokens_reasoning":210,"tools":[{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":5186,"n":2,"rewrite":false,"tokens_cached":11887,"tokens_in":12286,"tokens_out":267,"tokens_reasoning":15,"tools":[{"ms":5,"name":"report","ok":true},{"ms":2,"name":"report","ok":true}]},{"failed":false,"model_ms":10724,"n":3,"rewrite":false,"tokens_cached":12283,"tokens_in":13359,"tokens_out":69,"tokens_reasoning":33,"tools":[{"ms":0,"name":"calculate","
+
+Q3412 [A] year MISS (safe end)
+  question  کل روکڑ سے نکلی رقم پرسوں سے کتنی زیادہ یا کم رہی
+  expected  answered: diff=32200 down
+  got       time_limit; outcome time_limit, wanted answered; figure diff=32200 down missing
+  answer    [time_limit] [جدول: 1، 3 قطاریں]
+  tools     period({"day":"04-11","from":null,"kind":"day","month":null,"n":null,"to":null})  period({"day":"03-11","from":null,"kind":"day","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  calculate({"inputs":["r3.totals.cash_out","r4.totals.cash_out"],"op":"difference"})
+  calls     11321 ms tool_calls +2t | 5510 ms tool_calls +2t | 5567 ms tool_calls +1t   25069 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":11321,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11854,"tokens_out":236,"tokens_reasoning":144,"tools":[{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":5510,"n":2,"rewrite":false,"tokens_cached":11851,"tokens_in":12184,"tokens_out":285,"tokens_reasoning":35,"tools":[{"ms":2,"name":"report","ok":true},{"ms":2,"name":"report","ok":true}]},{"failed":false,"model_ms":5567,"n":3,"rewrite":false,"tokens_cached":12181,"tokens_in":13051,"tokens_out":69,"tokens_reasoning":31,"tools":[{"ms":0,"name":"calculate","
+
+Q3491 [A] year MISS (REVIEW: figure, party, period or source)
+  question  14 October ko shirakat daaron ne zati kharcha ke liye kitna liya
+  expected  answered: amt=0
+  got       answered; figure amt=0 missing
+  answer    14 تاریخ کو شراکت داروں نے ذاتی خرچے کے لیے کچھ نہیں لیا۔
+  tools     period({"day":null,"from":"2026-10-14","kind":"range","month":null,"n":null,"to":"2026-10-14"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-10-14","garden":null,"group_b)
+  calls     3414 ms stop +0t | 9958 ms stop +0t   13449 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3414,"n":1,"repaired":["digit"],"rewrite":false,"tokens_cached":11809,"tokens_in":12199,"tokens_out":54,"tokens_reasoning":0,"tools":[]},{"check_at":["month:اکتوبر"],"check_failed":["month"],"failed":false,"model_ms":9958,"n":2,"rewrite":true,"tokens_cached":12124,"tokens_in":12276,"tokens_out":56,"tokens_reasoning":0,"tools":[]}]
+
+Q3653 [A] year MISS (network)
+  question  payments received from Faisal last week against the week before
+  expected  answered: diff=61669 up
+  got       error (timeout); outcome error, wanted answered; figure diff=61669 up missing
+  answer    [error]
+  tools     find({"role":"any_party","text":"Faisal"})  period({"day":null,"from":null,"kind":"last_week","month":null,"n":null,"to":null})  period({"day":null,"from":null,"kind":"this_week","month":null,"n":null,"to":null})
+  calls     11623 ms tool_calls +3t   23788 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":11623,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11849,"tokens_out":177,"tokens_reasoning":67,"tools":[{"ms":5,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":12009,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3675 [A] year MISS (network)
+  question  Faisal ki khareedari kal parson se kitni zyada ya kam rahi
+  expected  answered: diff=51240 down
+  got       error (timeout); outcome error, wanted answered; figure diff=51240 down missing
+  answer    [error]
+  tools     find({"role":"buyer","text":"Faisal"})  period({"day":"04-11","from":null,"kind":"day","month":null,"n":null,"to":null})  period({"day":"03-11","from":null,"kind":"day","month":null,"n":null,"to":null})
+  calls     7031 ms tool_calls +3t   25081 ms, 1 calls, finish -
+  calls_json [{"error":"timeout","failed":true,"model_ms":12010,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":7031,"n":2,"rewrite":false,"tokens_cached":11855,"tokens_in":11858,"tokens_out":251,"tokens_reasoning":140,"tools":[{"ms":6,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":4422,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3715 [A] year MISS (safe end)
+  question  payments to Karim on 14 October against 13 October
+  expected  answered: diff=0
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 0، 0 قطاریں]
+  tools     find({"role":"any_party","text":"Karim"})  period({"day":null,"from":"2026-10-14","kind":"range","month":null,"n":null,"to":"2026-10-14"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  period({"day":null,"from":"2026-10-13","kind":"range","month":null,"n":null,"to":"2026-10-14"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"2026-10-13","garden":null,"group_b)
+  calls     5181 ms tool_calls +2t | 10561 ms tool_calls +1t | 8000 ms tool_calls +2t   25085 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":5181,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11879,"tokens_out":167,"tokens_reasoning":83,"tools":[{"ms":2,"name":"find","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":10561,"n":2,"rewrite":false,"tokens_cached":11876,"tokens_in":12214,"tokens_out":309,"tokens_reasoning":185,"tools":[{"ms":0,"name":"report","ok":true}]},{"failed":false,"model_ms":8000,"n":3,"rewrite":false,"tokens_cached":12211,"tokens_in":12647,"tokens_out":392,"tokens_reasoning":206,"tools":[{"ms":0,"name":"period","ok":true},{"ms":1,"name":"report","ok"
+
+Q3717 [A] year MISS (safe end)
+  question  کریم کو ادائیگی پچھلے ہفتے اس سے پچھلے ہفتے سے کتنی زیادہ یا کم رہی
+  expected  answered: diff=95766 down
+  got       time_limit; outcome time_limit, wanted answered; figure diff=95766 down missing
+  answer    کریم1,536,029
+  tools     find({"role":"seller","text":"کریم"})  party_card({"party":"r1.matches.0"})  period({"day":null,"from":null,"kind":"last_week","month":null,"n":null,"to":null})  period!({"day":null,"from":null,"kind":"range","month":null,"n":null,"to":null})
+  calls     2345 ms tool_calls +1t | 2903 ms tool_calls +1t | 7910 ms tool_calls +1t   25053 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":2345,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11863,"tokens_out":22,"tokens_reasoning":0,"tools":[{"ms":6,"name":"find","ok":true},{"ms":5,"name":"party_card","ok":true,"prefetch":true}]},{"failed":false,"model_ms":2903,"n":2,"rewrite":false,"tokens_cached":11860,"tokens_in":12158,"tokens_out":38,"tokens_reasoning":0,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":7911,"n":3,"rewrite":false,"tokens_cached":12155,"tokens_in":12245,"tokens_out":37,"tokens_reasoning":0,"tools":[{"ms":0,"name":"period","ok":false}]},{"error":"time
+
+Q3739 [A] year MISS (safe end)
+  question  the sales of Karim yesterday against the day before
+  expected  answered: diff=335850 up
+  got       time_limit; outcome not_found, wanted answered
+  first     not_found; asked_role buyer; found_as seller Karim (the answer below is after the click)
+  answer    [time_limit] [جدول: 1، 1 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})  find({"role":"buyer","text":"کریم"})  analytics!({"adda":null,"buyer":"کریم","city":null,"compare":"previous","from":"r1.from","garden":null,"goods":null,"grad)  find({"role":"seller","text":"کریم"})  analytics({"adda":null,"buyer":null,"city":null,"compare":"previous","from":"r1.from","garden":null,"goods":null,"grade")  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.compare.from","garden":null,"gr)
+  calls     4361 ms tool_calls +1t | 5281 ms tool_calls +1t | 5410 ms tool_calls +1t   27287 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":4361,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11933,"tokens_out":96,"tokens_reasoning":0,"tools":[{"ms":5,"name":"analytics","ok":false}]},{"failed":false,"model_ms":5281,"n":1,"rewrite":false,"tokens_cached":11930,"tokens_in":12275,"tokens_out":143,"tokens_reasoning":45,"tools":[{"ms":4,"name":"analytics","ok":true}]},{"failed":false,"model_ms":5410,"n":2,"rewrite":false,"tokens_cached":12272,"tokens_in":12738,"tokens_out":272,"tokens_reasoning":142,"tools":[{"ms":3,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":12007,"n":3,
+
+Q3781 [A] year MISS (network)
+  question  رشید کی اگراہی پچھلے ہفتے اس سے پچھلے ہفتے سے کتنی زیادہ یا کم رہی
+  expected  answered: diff=0
+  got       error (timeout); outcome error, wanted answered; figure diff=0 missing
+  answer    [error]
+  tools     
+  calls        25072 ms, 0 calls, finish -
+  calls_json [{"error":"timeout","failed":true,"model_ms":12010,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"error":"timeout","failed":true,"model_ms":11476,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3802 [A] year MISS (network)
+  question  Alif ka munafa hissa aaj kal se kitna zyada ya kam raha
+  expected  answered: diff=7260 down
+  got       error (timeout); outcome error, wanted answered; figure diff=7260 down missing
+  answer    [error]
+  tools     find({"role":"partner","text":"Alif"})  period({"day":null,"from":null,"kind":"today","month":null,"n":null,"to":null})  period({"day":null,"from":null,"kind":"yesterday","month":null,"n":null,"to":null})
+  calls     9526 ms tool_calls +3t   21619 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":9526,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11856,"tokens_out":198,"tokens_reasoning":91,"tools":[{"ms":0,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":12009,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3810 [A] year MISS (safe end)
+  question  الف کا منافع حصہ اس سال پچھلے سال سے کتنا زیادہ یا کم رہا
+  expected  answered: diff=2411508 up
+  got       time_limit; outcome time_limit, wanted answered; figure diff=2411508 up missing
+  answer    [time_limit] [جدول: 3، 3 قطاریں]
+  tools     find({"role":"partner","text":"الف"})  period({"day":null,"from":null,"kind":"this_year","month":null,"n":null,"to":null})  period({"day":null,"from":null,"kind":"last_year","month":null,"n":null,"to":null})  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)
+  calls     6959 ms tool_calls +3t | 9744 ms tool_calls +2t | 5227 ms tool_calls +2t   25068 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6959,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11856,"tokens_out":284,"tokens_reasoning":177,"tools":[{"ms":2,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":9744,"n":2,"rewrite":false,"tokens_cached":11853,"tokens_in":12294,"tokens_out":288,"tokens_reasoning":30,"tools":[{"ms":0,"name":"report","ok":false},{"ms":0,"name":"report","ok":false}]},{"failed":false,"model_ms":5227,"n":3,"rewrite":false,"tokens_cached":12291,"tokens_in":12676,"tokens_out":278,"tokens_reasoning":28,"t
+
+Q3841 [A] year MISS (safe end)
+  question  Alif ka liya hua kal parson se kitna zyada ya kam raha
+  expected  answered: diff=0
+  got       time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  answer    [time_limit] [جدول: 1، 1 قطاریں]
+  tools     find({"role":"buyer","text":"Alif"})  period({"day":"04-11","from":null,"kind":"day","month":null,"n":null,"to":null})  period({"day":"03-11","from":null,"kind":"day","month":null,"n":null,"to":null})  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)
+  calls     5505 ms tool_calls +3t | 5623 ms tool_calls +2t | 9556 ms tool_calls +2t   25063 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":5505,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11855,"tokens_out":217,"tokens_reasoning":107,"tools":[{"ms":7,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":5623,"n":2,"rewrite":false,"tokens_cached":11852,"tokens_in":12290,"tokens_out":294,"tokens_reasoning":36,"tools":[{"ms":0,"name":"report","ok":false},{"ms":0,"name":"report","ok":false}]},{"failed":false,"model_ms":9556,"n":3,"rewrite":false,"tokens_cached":12287,"tokens_in":12716,"tokens_out":270,"tokens_reasoning":12,"t
+
+Q3847 [A] year MISS (safe end)
+  question  الفف کا لیا ہوا ستمبر میں اگست سے کتنا زیادہ یا کم رہا
+  expected  answered: diff=0
+  got       not_found; outcome not_found, wanted answered; figure diff=0 missing
+  answer    [not_found]
+  tools     find({"role":"partner","text":"الفف"})  period({"day":null,"from":null,"kind":"month","month":9,"n":null,"to":null})  period({"day":null,"from":null,"kind":"month","month":8,"n":null,"to":null})
+  calls     9618 ms tool_calls +3t | 5969 ms stop +0t   15650 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":9618,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11855,"tokens_out":367,"tokens_reasoning":261,"tools":[{"ms":1,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":5969,"n":2,"rewrite":false,"tokens_cached":11852,"tokens_in":12370,"tokens_out":143,"tokens_reasoning":105,"tools":[]}]
+
+Q3850 [A] year MISS (network)
+  question  الف کا لیا ہوا 1 سے 15 اکتوبر تک 16 سے 30 ستمبر سے کتنا زیادہ یا کم رہا
+  expected  answered: diff=25000 up
+  got       error (timeout); outcome error, wanted answered; figure diff=25000 up missing
+  answer    [error]
+  tools     find({"role":"buyer","text":"الف"})  period({"day":null,"from":"2026-10-01","kind":"range","month":null,"n":null,"to":"2026-10-15"})  period({"day":null,"from":"2026-09-16","kind":"range","month":null,"n":null,"to":"2026-09-30"})
+  calls     7821 ms tool_calls +3t   19897 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":7821,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11927,"tokens_out":367,"tokens_reasoning":242,"tools":[{"ms":2,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":12010,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3868 [A] year MISS (network)
+  question  is hafte lagaya hua capitl invested pichle hafte se kitna zyada ya kam raha
+  expected  answered: diff=0
+  got       error (timeout); outcome error, wanted answered; figure diff=0 missing
+  answer    [error]
+  tools     period({"day":null,"from":null,"kind":"this_week","month":null,"n":null,"to":null})  period({"day":null,"from":null,"kind":"last_week","month":null,"n":null,"to":null})
+  calls     6446 ms tool_calls +2t   25074 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":6446,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11860,"tokens_out":183,"tokens_reasoning":93,"tools":[{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":12010,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"error":"timeout","failed":true,"model_ms":5005,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3869 [A] year MISS (safe end)
+  question  پچھلے ہفتے لگایا ہوا capital invested اس سے پچھلے ہفتے سے کتنا زیادہ یا کم رہا
+  expected  answered: diff=0
+  got       time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  answer    [time_limit] [جدول: 3 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"last_week","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)
+  calls     8172 ms tool_calls +1t | 10537 ms tool_calls +1t   25061 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":8172,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11862,"tokens_out":298,"tokens_reasoning":258,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":10537,"n":2,"rewrite":false,"tokens_cached":11859,"tokens_in":12209,"tokens_out":510,"tokens_reasoning":390,"tools":[{"ms":21,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":6246,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3872 [A] year MISS (safe end)
+  question  capitl invested in September against August
+  expected  answered: diff=0
+  got       time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  answer    [time_limit] [جدول: 3، 3 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"month","month":9,"n":null,"to":null})  period({"day":null,"from":null,"kind":"month","month":8,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)
+  calls     6106 ms tool_calls +2t | 8651 ms tool_calls +2t   25075 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6106,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11845,"tokens_out":229,"tokens_reasoning":141,"tools":[{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":8651,"n":2,"rewrite":false,"tokens_cached":11842,"tokens_in":12188,"tokens_out":383,"tokens_reasoning":133,"tools":[{"ms":25,"name":"report","ok":true},{"ms":13,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":10157,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3892 [A] year MISS (safe end)
+  question  14 October ko capital taken back 13 October se kitni zyada ya kam rahi
+  expected  answered: diff=0
+  got       time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  answer    [time_limit] [جدول: 3، 3 قطاریں]
+  tools     period({"day":"14-10","from":null,"kind":"day","month":null,"n":null,"to":null})  period({"day":"13-10","from":null,"kind":"day","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)
+  calls     6673 ms tool_calls +2t | 6234 ms tool_calls +2t   25031 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6673,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11886,"tokens_out":282,"tokens_reasoning":190,"tools":[{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":6234,"n":2,"rewrite":false,"tokens_cached":11883,"tokens_in":12262,"tokens_out":266,"tokens_reasoning":16,"tools":[{"ms":13,"name":"report","ok":true},{"ms":10,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":12006,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3894 [A] year MISS (network)
+  question  pichle hafte sarmaya wapsi us se pichle hafte se kitni zyada ya kam rahi
+  expected  answered: diff=0
+  got       error (timeout); outcome error, wanted answered; figure diff=0 missing
+  answer    [error]
+  tools     period({"day":null,"from":null,"kind":"last_week","month":null,"n":null,"to":null})
+  calls     9509 ms tool_calls +1t   25058 ms, 1 calls, finish -
+  calls_json [{"error":"timeout","failed":true,"model_ms":12010,"n":1,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]},{"failed":false,"model_ms":9509,"n":2,"rewrite":false,"tokens_cached":11862,"tokens_in":11865,"tokens_out":369,"tokens_reasoning":329,"tools":[{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":1956,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3898 [A] year MISS (safe end)
+  question  اس سال capital taken back پچھلے سال سے کتنی زیادہ یا کم رہی
+  expected  answered: diff=100000 up
+  got       time_limit; outcome time_limit, wanted answered; figure diff=100000 up missing
+  answer    [time_limit] [جدول: 7، 7 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"this_year","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  period({"day":null,"from":null,"kind":"last_year","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)
+  calls     4856 ms tool_calls +1t | 3440 ms tool_calls +1t | 7510 ms tool_calls +1t | 4718 ms tool_calls +1t   25072 ms, 4 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":4856,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11854,"tokens_out":38,"tokens_reasoning":0,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":3440,"n":2,"rewrite":false,"tokens_cached":11851,"tokens_in":11941,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":10,"name":"report","ok":true}]},{"failed":false,"model_ms":7510,"n":3,"rewrite":false,"tokens_cached":11938,"tokens_in":12636,"tokens_out":311,"tokens_reasoning":271,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":4718,"n":4,"rewrite":false,"tokens_c
+
+Q3903 [A] year MISS (safe end)
+  question  ب نے 3 نومبر کو کتنا سرمایہ لگایا
+  expected  answered: amt=0
+  got       time_limit; outcome time_limit, wanted answered; figure amt=0 missing
+  answer    [time_limit] [جدول: 2 قطاریں]
+  tools     find({"role":"partner","text":"ب"})  period({"day":"03-11","from":null,"kind":"day","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)
+  calls     6899 ms tool_calls +2t | 9404 ms tool_calls +1t   25052 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6899,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11864,"tokens_out":183,"tokens_reasoning":109,"tools":[{"ms":0,"name":"find","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":9404,"n":2,"rewrite":false,"tokens_cached":11861,"tokens_in":12153,"tokens_out":135,"tokens_reasoning":11,"tools":[{"ms":6,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":8674,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3916 [A] year MISS (network)
+  question  Be ka sarmaya kal parson se kitna zyada ya kam raha
+  expected  answered: diff=0
+  got       error (timeout); outcome error, wanted answered; figure diff=0 missing
+  answer    [error]
+  tools     find({"role":"partner","text":"Be"})
+  calls     11034 ms tool_calls +1t   23113 ms, 1 calls, finish -
+  calls_json [{"failed":false,"model_ms":11035,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11854,"tokens_out":539,"tokens_reasoning":516,"tools":[{"ms":2,"name":"find","ok":true}]},{"error":"timeout","failed":true,"model_ms":12010,"n":2,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q3920 [A] year MISS (safe end)
+  question  Partner B's capital this month against last month
+  expected  answered: diff=0
+  got       time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  answer    [time_limit] [جدول: 7، 7 قطاریں]
+  tools     find({"role":"partner","text":"Partner B"})  period({"day":null,"from":null,"kind":"this_month","month":null,"n":null,"to":null})  period({"day":null,"from":null,"kind":"last_month","month":null,"n":null,"to":null})  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  report!({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r3.from","garden":null,"group_by":)
+  calls     4182 ms tool_calls +3t | 8250 ms tool_calls +2t | 9045 ms tool_calls +2t   25084 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":4182,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11847,"tokens_out":155,"tokens_reasoning":47,"tools":[{"ms":1,"name":"find","ok":true},{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":8250,"n":2,"rewrite":false,"tokens_cached":11844,"tokens_in":12177,"tokens_out":303,"tokens_reasoning":45,"tools":[{"ms":0,"name":"report","ok":false},{"ms":0,"name":"report","ok":false}]},{"failed":false,"model_ms":9045,"n":3,"rewrite":false,"tokens_cached":12174,"tokens_in":12544,"tokens_out":285,"tokens_reasoning":27,"to
+
+Q3935 [A] year MISS (safe end)
+  question  how much money came in from the gardens in August
+  expected  answered: amt=0
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 1، 0 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"month","month":8,"n":null,"to":null})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":"garden","grade":n)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)
+  calls     6178 ms tool_calls +1t | 3949 ms tool_calls +1t | 7314 ms tool_calls +1t | 3793 ms stop +0t   25074 ms, 4 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6178,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11848,"tokens_out":37,"tokens_reasoning":0,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":3949,"n":2,"rewrite":false,"tokens_cached":11845,"tokens_in":11943,"tokens_out":95,"tokens_reasoning":0,"tools":[{"ms":3,"name":"analytics","ok":true}]},{"failed":false,"model_ms":7314,"n":3,"rewrite":false,"tokens_cached":11940,"tokens_in":12276,"tokens_out":310,"tokens_reasoning":190,"tools":[{"ms":1,"name":"report","ok":true}]},{"failed":false,"model_ms":3794,"n":4,"repaired":["month"],"re
+
+Q3998 [A] year MISS (safe end)
+  question  3 November ko market trips ke maal ki kitni sale hui
+  expected  answered: amt=0
+  got       not_found; outcome not_found, wanted answered; figure amt=0 missing
+  answer    [not_found]
+  tools     find({"role":"any","text":"market trips"})
+  calls        42 ms, 0 calls, finish local
+  calls_json []
+
+Q4006 [A] year MISS (REVIEW: figure, party, period or source)
+  question  اس سال مارکیٹ سفر کے مال کی کتنی بکری ہوئی
+  expected  answered: amt=339450
+  got       answered; figure amt=339450 missing
+  answer    اس سال مارکیٹ سفر کے مال کی خام بکری 317,500 ہوئی۔
+  tools     period({"day":null,"from":null,"kind":"this_year","month":null,"n":null,"to":null})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"r1.from","garden":null,"goods":"trip","grade":nul)
+  calls     4423 ms tool_calls +1t | 5138 ms stop +0t   9632 ms, 2 calls, finish stop
+  calls_json [{"failed":false,"model_ms":4423,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11938,"tokens_out":95,"tokens_reasoning":0,"tools":[{"ms":2,"name":"analytics","ok":true}]},{"failed":false,"model_ms":5138,"n":2,"rewrite":false,"tokens_cached":11935,"tokens_in":12671,"tokens_out":149,"tokens_reasoning":92,"tools":[]}]
+
+Q4022 [A] year MISS (safe end)
+  question  1 سے 15 اکتوبر تک market trips کا کتنا profit یا loss رہا
+  expected  answered: amt=0
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 0 قطاریں]
+  tools     period({"day":null,"from":"2026-10-01","kind":"range","month":null,"n":null,"to":"2026-10-15"})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)
+  calls     6499 ms tool_calls +1t | 7059 ms tool_calls +1t   25060 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":6499,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11885,"tokens_out":88,"tokens_reasoning":39,"tools":[{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":7059,"n":2,"rewrite":false,"tokens_cached":11882,"tokens_in":12021,"tokens_out":118,"tokens_reasoning":0,"tools":[{"ms":0,"name":"report","ok":true}]},{"error":"timeout","failed":true,"model_ms":11414,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q4053 [A] year MISS (safe end)
+  question  کل fruit taken پرسوں سے کتنا زیادہ یا کم رہا
+  expected  answered: diff=0
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 0، 0 قطاریں]
+  tools     period({"day":"04-11","from":null,"kind":"day","month":null,"n":null,"to":null})  period({"day":"03-11","from":null,"kind":"day","month":null,"n":null,"to":null})  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r2.from","garden":null,"group_by":)  calculate({"inputs":["r3.totals.qty.n","r4.totals.qty.n"],"op":"difference"})
+  calls     11697 ms tool_calls +2t | 4865 ms tool_calls +2t | 6407 ms tool_calls +1t   25050 ms, 3 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":11697,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":11850,"tokens_out":272,"tokens_reasoning":180,"tools":[{"ms":0,"name":"period","ok":true},{"ms":0,"name":"period","ok":true}]},{"failed":false,"model_ms":4865,"n":2,"rewrite":false,"tokens_cached":11847,"tokens_in":12216,"tokens_out":248,"tokens_reasoning":0,"tools":[{"ms":4,"name":"report","ok":true},{"ms":2,"name":"report","ok":true}]},{"failed":false,"model_ms":6407,"n":3,"rewrite":false,"tokens_cached":12213,"tokens_in":12842,"tokens_out":120,"tokens_reasoning":82,"tools":[{"ms":0,"name":"calculate","
+
+Q4061 [A] year MISS (safe end)
+  question  the fruit taken last year against the year before
+  expected  answered: diff=24000 up
+  got       time_limit; outcome time_limit, wanted answered
+  answer    [time_limit] [جدول: 2 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"last_year","month":null,"n":null,"to":null})  analytics!({"adda":null,"buyer":null,"city":null,"compare":"last_year","from":"r1.from","garden":null,"goods":null,"grade)  report({"adda":null,"as_of":null,"bikri":null,"city":null,"collector":null,"from":"r1.from","garden":null,"group_by":)  period({"day":null,"from":"2024-01-01","kind":"range","month":null,"n":null,"to":"2024-12-31"})
+  calls     10894 ms tool_calls +1t | 10320 ms tool_calls +2t   25103 ms, 2 calls, finish time_limit
+  calls_json [{"failed":false,"model_ms":10894,"n":1,"rewrite":false,"tokens_cached":11931,"tokens_in":11934,"tokens_out":96,"tokens_reasoning":0,"tools":[{"ms":0,"name":"analytics","ok":false}]},{"failed":false,"model_ms":10320,"n":2,"rewrite":false,"tokens_cached":11931,"tokens_in":12086,"tokens_out":343,"tokens_reasoning":164,"tools":[{"ms":1,"name":"report","ok":true},{"ms":0,"name":"period","ok":true}]},{"error":"timeout","failed":true,"model_ms":3735,"n":3,"rewrite":false,"tokens_cached":0,"tokens_in":0,"tokens_out":0,"tokens_reasoning":0,"tools":[]}]
+
+Q4069 [A] year MISS (REVIEW: figure, party, period or source)
+  question  is mahine kitne nag phal ka nag gaya
+  expected  answered: qty=0
+  got       answered; figure qty=0 missing
+  answer    اس مہینے پھل کے 305 نگ گئے۔ [جدول: 2 قطاریں]
+  tools     period({"day":null,"from":null,"kind":"this_month","month":null,"n":null,"to":null})  analytics({"adda":null,"buyer":null,"city":null,"compare":null,"from":"2026-11-01","garden":null,"goods":null,"grade":nu)
+  calls     3964 ms stop +0t   4025 ms, 1 calls, finish stop
+  calls_json [{"failed":false,"model_ms":3964,"n":1,"rewrite":false,"tokens_cached":11809,"tokens_in":12440,"tokens_out":66,"tokens_reasoning":0,"tools":[]}]
+

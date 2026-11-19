@@ -1,23 +1,37 @@
 //! Partners and their shares (PRD 17.1 to 17.3, plan 11). Every command needs the signed-in
 //! Owner. Partners do not log in (PRD FR-2.4), so no user is made for a partner.
+//!
+//! Once a partner code is set (PRD FR-17.11), every command here except `partners_list` also needs
+//! the partner section to be open and answers `ERR_PARTNER_LOCKED` when it is not. `partners_list`
+//! gives the names only while it is locked (`partners_locked`, every `share_bps` 0).
 
+use mandi_reports::reports::{TablePrintData, partner_statement_month_print_data};
 use mandi_services::core::partners::{
     PartnerCreateInput, PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput,
-    PartnersCheckSharesInput, PartnersGetInput, PartnersSetSharesInput, SharesCheck,
+    PartnersCheckSharesInput, PartnersGetInput, PartnersList, PartnersSetSharesInput, SharesCheck,
 };
+use mandi_services::core::partners::{PartnerVentureCard, PartnersOpenVenturesInput};
+use mandi_services::core::statement::{
+    PartnerStatement, PartnerStatementDay, PartnerStatementMonth, PartnersStatementDayInput,
+    PartnersStatementInput, PartnersStatementMonthInput, PartnersStatementMonthPrintInput,
+};
+use mandi_services::partner_code;
 use mandi_services::{auth, partners};
 
+use super::reports_engine::engine_error;
 use super::run;
 use crate::error::UiError;
 
-/// Every partner, active ones first, then by id. `share_bps` is the share on today's date.
+/// Every partner, active ones first, then by id. `share_bps` is the share on today's date. While
+/// the partner section is locked (PRD FR-17.11) it names them only: every `share_bps` is 0 and
+/// `partners_locked` is true.
 #[tauri::command]
 pub async fn partners_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-) -> Result<Vec<PartnerRow>, UiError> {
+) -> Result<PartnersList, UiError> {
     run(app, "partners_list", move |ctx| {
         auth::require(ctx)?;
-        partners::list(ctx)
+        partners::list_view(ctx)
     })
     .await
 }
@@ -30,6 +44,7 @@ pub async fn partners_get<R: tauri::Runtime>(
 ) -> Result<PartnerDetail, UiError> {
     run(app, "partners_get", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::get(ctx, input.id)
     })
     .await
@@ -46,6 +61,7 @@ pub async fn partners_create<R: tauri::Runtime>(
 ) -> Result<PartnerRow, UiError> {
     run(app, "partners_create", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::create(ctx, &actor, &input)
     })
     .await
@@ -60,6 +76,7 @@ pub async fn partners_update<R: tauri::Runtime>(
 ) -> Result<PartnerRow, UiError> {
     run(app, "partners_update", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::update(ctx, &actor, &input)
     })
     .await
@@ -75,6 +92,7 @@ pub async fn partners_set_shares<R: tauri::Runtime>(
 ) -> Result<Vec<PartnerRow>, UiError> {
     run(app, "partners_set_shares", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::set_shares(ctx, &actor, &input)
     })
     .await
@@ -88,6 +106,7 @@ pub async fn partners_check_shares<R: tauri::Runtime>(
 ) -> Result<SharesCheck, UiError> {
     run(app, "partners_check_shares", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::check(ctx, &input)
     })
     .await
@@ -101,7 +120,93 @@ pub async fn partners_overview<R: tauri::Runtime>(
 ) -> Result<Vec<PartnerOverviewRow>, UiError> {
     run(app, "partners_overview", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::overview(ctx)
+    })
+    .await
+}
+
+/// A partner's statement (PRD FR-17.9, FR-17.10): one dated line for every amount that reaches him,
+/// with the running کل رقم, one page. Read only. Errors: `ERR_NOT_FOUND` on `partner_id`; the date
+/// codes on `from` and `to`.
+#[tauri::command]
+pub async fn partners_statement<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PartnersStatementInput,
+) -> Result<PartnerStatement, UiError> {
+    run(app, "partners_statement", move |ctx| {
+        auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
+        partners::statement(ctx, &input)
+    })
+    .await
+}
+
+/// A partner's statement for one month: his کل رقم at the start, a row for each day with a
+/// movement by what it was, the month's totals and his کل رقم at the end (plan 76 point 11). Read
+/// only, behind the partner code (PRD FR-17.11).
+#[tauri::command]
+pub async fn partners_statement_month<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PartnersStatementMonthInput,
+) -> Result<PartnerStatementMonth, UiError> {
+    run(app, "partners_statement_month", move |ctx| {
+        auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
+        partners::statement_month(ctx, &input)
+    })
+    .await
+}
+
+/// Every movement of one day of a partner's statement, with its source and his کل رقم after the
+/// day (plan 76 point 11). Behind the partner code.
+#[tauri::command]
+pub async fn partners_statement_day<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PartnersStatementDayInput,
+) -> Result<PartnerStatementDay, UiError> {
+    run(app, "partners_statement_day", move |ctx| {
+        auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
+        partners::statement_day(ctx, &input)
+    })
+    .await
+}
+
+/// The print of one month of a partner's statement in the print language, with the closing in
+/// words (plan 76 point 11). Behind the partner code.
+#[tauri::command]
+pub async fn partners_statement_month_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PartnersStatementMonthPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "partners_statement_month_print_data", move |ctx| {
+        auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
+        let month = partners::statement_month(
+            ctx,
+            &PartnersStatementMonthInput {
+                partner_id: input.partner_id,
+                month: input.month.clone(),
+            },
+        )?;
+        partner_statement_month_print_data(ctx.db(), &month, input.language, input.paper)
+            .map_err(engine_error)
+    })
+    .await
+}
+
+/// The open gardens and trips a partner is in, listed on demand (plan 76 point 11). Behind the
+/// partner code.
+#[tauri::command]
+pub async fn partners_open_ventures<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PartnersOpenVenturesInput,
+) -> Result<Vec<PartnerVentureCard>, UiError> {
+    run(app, "partners_open_ventures", move |ctx| {
+        auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
+        partners::open_ventures(ctx, input.partner_id)
     })
     .await
 }

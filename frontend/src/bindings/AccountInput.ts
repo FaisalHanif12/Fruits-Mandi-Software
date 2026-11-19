@@ -23,7 +23,9 @@ export type AccountInput = {
    */
   control_id: number | null;
   /**
-   * The full code (control code plus 4 digits). Empty gives the next free code.
+   * The full code. A seller: `001` plus a running number (`0010`, `00110`); a buyer: `002` plus a
+   * running number; any other account: the control code plus 4 digits. Empty gives the next free code. A code of the wrong type is
+   * `ERR_CODE_INVALID` on `code`; a used one (`0030` and `0031` too) `ERR_CODE_TAKEN`.
    */
   code: string;
   /**
@@ -34,6 +36,13 @@ export type AccountInput = {
    * English name.
    */
   name_en: string;
+  /**
+   * The tag (نشان, PRD 10.2): empty, or 1 to 4 English capital letters and dots with at least
+   * one letter, for example `K`, `BA`, `D.P`. A lower-case letter is made capital (`k` is
+   * saved as `K`). Never converted to Urdu (PRD FR-7.25). Missing means no tag. Errors:
+   * `ERR_TAG_INVALID` on `tag`.
+   */
+  tag: string;
   /**
    * Words the user confirmed in the spelling check (PRD FR-7.66). The father or firm name is
    * checked with the names.
@@ -103,10 +112,6 @@ export type AccountInput = {
    * The collector of a buyer's dues.
    */
   collector_staff_id: number | null;
-  /**
-   * The collection day, 0 (Monday) to 6 (Sunday). Null if none.
-   */
-  collection_weekday: number | null;
   /**
    * False hides the account from pickers; reports keep it.
    */

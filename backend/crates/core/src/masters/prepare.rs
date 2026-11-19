@@ -6,8 +6,8 @@
 //! spelling is confirmed are checked by `services::masters` with these results.
 
 use super::{
-    AddaInput, BankAccountInput, ExpenseHeadInput, ItemInput, MarkaInput, MasterInput, MasterKind,
-    NarrationInput, PackingInput, StaffInput,
+    AddaInput, ExpenseHeadInput, ItemInput, MarkaInput, MasterInput, MasterKind, NarrationInput,
+    PackingInput, StaffInput,
 };
 use crate::error::{ErrorCode, FieldError};
 use crate::text;
@@ -15,8 +15,6 @@ use crate::validate::{self, FieldErrors};
 
 /// The longest master code, in digits.
 pub const MAX_CODE_DIGITS: usize = 10;
-/// The longest bank account number, in characters (an IBAN has up to 34).
-pub const MAX_BANK_NUMBER_CHARS: usize = 34;
 /// The voucher types a standard narration can be offered in (Architecture 15.7 `vouchers.type`).
 pub const NARRATION_USED_IN: [&str; 9] = [
     "receipt",
@@ -31,8 +29,6 @@ pub const NARRATION_USED_IN: [&str; 9] = [
 ];
 /// The control under which expense heads make their accounts (PRD FR-10.4, 0501xxxx).
 pub const EXPENSE_CONTROL: &str = "0501";
-/// The control under which bank accounts make their accounts (PRD FR-10.4, 0102xxxx).
-pub const BANK_CONTROL: &str = "0102";
 
 /// One value to write to a column.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -143,8 +139,10 @@ fn error(code: ErrorCode, field: &str) -> FieldError {
     FieldError::new(code, field)
 }
 
-/// The code typed by the user: 1 to 10 digits. Empty gives `None`.
-fn master_code(errors: &mut FieldErrors, input: &str) -> Option<String> {
+/// The code typed by the user: 1 to 10 digits. Empty gives `None`. An item, a packing or a staff
+/// member must have a full code of its own type (`0040`, `0050`, `0060`; plan 32 R2): otherwise
+/// `ERR_CODE_INVALID` on `code`.
+fn master_code(errors: &mut FieldErrors, kind: MasterKind, input: &str) -> Option<String> {
     let cleaned: String = input
         .trim()
         .chars()
@@ -155,6 +153,13 @@ fn master_code(errors: &mut FieldErrors, input: &str) -> Option<String> {
     }
     if cleaned.chars().count() > MAX_CODE_DIGITS || !cleaned.chars().all(|c| c.is_ascii_digit()) {
         errors.push(error(ErrorCode::ErrFormatInvalid, "code"));
+        return None;
+    }
+    if let Some(code_type) = kind.code_type()
+        && errors
+            .take(crate::codes::check_typed_code("code", &cleaned, code_type))
+            .is_none()
+    {
         return None;
     }
     Some(cleaned)
@@ -218,29 +223,6 @@ fn narration_text(
         Some(cleaned)
     } else {
         errors.push(error(code, field));
-        None
-    }
-}
-
-/// The bank account number: letters, digits and hyphens, no spaces, up to 34.
-fn bank_number(errors: &mut FieldErrors, input: &str) -> Option<String> {
-    let cleaned: String = input
-        .trim()
-        .chars()
-        .filter(|c| !text::is_invisible(*c))
-        .collect();
-    if cleaned.is_empty() {
-        errors.push(error(ErrorCode::ErrRequired, "number"));
-        return None;
-    }
-    let ok = cleaned.chars().count() <= MAX_BANK_NUMBER_CHARS
-        && cleaned
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-');
-    if ok {
-        Some(cleaned)
-    } else {
-        errors.push(error(ErrorCode::ErrFormatInvalid, "number"));
         None
     }
 }
@@ -309,7 +291,6 @@ pub fn prepare(input: &MasterInput) -> Result<Prepared, Vec<FieldError>> {
         MasterInput::Narration(i) => narration(&mut errors, i),
         MasterInput::ExpenseHead(i) => expense_head(&mut errors, i),
         MasterInput::Staff(i) => staff(&mut errors, i),
-        MasterInput::BankAccount(i) => bank_account(&mut errors, i),
     };
     errors.finish()?;
     prepared.ok_or_else(|| vec![error(ErrorCode::ErrInternal, "kind")])
@@ -328,7 +309,7 @@ fn simple_named(
     confirmed: &[String],
 ) -> Option<Prepared> {
     let version = edit_version(errors, id, version);
-    let code = master_code(errors, code);
+    let code = master_code(errors, kind, code);
     let (ur, en) = names(errors, name_ur, name_en)?;
     Some(Prepared {
         kind,
@@ -432,7 +413,7 @@ fn adda(errors: &mut FieldErrors, i: &AddaInput) -> Option<Prepared> {
 
 fn marka(errors: &mut FieldErrors, i: &MarkaInput) -> Option<Prepared> {
     let version = edit_version(errors, i.id, i.version);
-    let code = master_code(errors, &i.code);
+    let code = master_code(errors, MasterKind::Marka, &i.code);
     let mark = errors.take(validate::person_name("mark_text", &i.mark_text));
     let mut references = Vec::new();
     reference(
@@ -526,6 +507,7 @@ fn expense_head(errors: &mut FieldErrors, i: &ExpenseHeadInput) -> Option<Prepar
 
 fn staff(errors: &mut FieldErrors, i: &StaffInput) -> Option<Prepared> {
     let version = edit_version(errors, i.id, i.version);
+    let code = master_code(errors, MasterKind::Staff, &i.code);
     let job = choice(errors, "job", &i.job, &["munshi", "collector", "labour"]);
     let phone = errors.take(validate::phone_optional("phone", &i.phone));
     let (ur, en) = names(errors, &i.name_ur, &i.name_en)?;
@@ -536,7 +518,7 @@ fn staff(errors: &mut FieldErrors, i: &StaffInput) -> Option<Prepared> {
         kind: MasterKind::Staff,
         id: i.id,
         version,
-        code: None,
+        code,
         fields,
         names: Some(NameTexts {
             field_ur: "name_ur",
@@ -547,34 +529,6 @@ fn staff(errors: &mut FieldErrors, i: &StaffInput) -> Option<Prepared> {
         confirmed_rules_words: i.confirmed_rules_words.clone(),
         references: Vec::new(),
         account: None,
-    })
-}
-
-fn bank_account(errors: &mut FieldErrors, i: &BankAccountInput) -> Option<Prepared> {
-    let version = edit_version(errors, i.id, i.version);
-    let bank = errors.take(validate::person_name("bank_name", &i.bank_name));
-    let title = errors.take(validate::person_name("title", &i.title));
-    let number = bank_number(errors, &i.number);
-    let (ur, en) = names(errors, &i.name_ur, &i.name_en)?;
-    Some(Prepared {
-        kind: MasterKind::BankAccount,
-        id: i.id,
-        version,
-        code: None,
-        fields: vec![
-            ("bank_name", ColValue::Text(bank?)),
-            ("title", ColValue::Text(title?)),
-            ("number", ColValue::Text(number?)),
-        ],
-        names: Some(NameTexts {
-            field_ur: "name_ur",
-            name_ur: ur.clone(),
-            field_en: "name_en",
-            name_en: en.clone(),
-        }),
-        confirmed_rules_words: i.confirmed_rules_words.clone(),
-        references: Vec::new(),
-        account: Some(AccountToMake::new(BANK_CONTROL, &ur, &en)),
     })
 }
 
@@ -658,7 +612,7 @@ mod tests {
             MasterInput::Item(ItemInput {
                 id: None,
                 version: None,
-                code: "1".into(),
+                code: "0041".into(),
                 name_ur: "کیلا".into(),
                 name_en: "Banana".into(),
                 item_group: group.into(),
@@ -690,12 +644,55 @@ mod tests {
     }
 
     #[test]
+    fn an_item_packing_or_staff_code_is_a_full_code_of_its_type() {
+        // Plan 32 R2: 004, 005, 006 and a running number with no padding.
+        let item = |code: &str| {
+            MasterInput::Item(ItemInput {
+                id: None,
+                version: None,
+                code: code.into(),
+                name_ur: "کیلا".into(),
+                name_en: "Banana".into(),
+                item_group: "fruit".into(),
+                default_packing_id: None,
+                sold_by: "unit".into(),
+                confirmed_rules_words: Vec::new(),
+            })
+        };
+        assert_eq!(
+            prepare(&item("0040")).unwrap().code.as_deref(),
+            Some("0040")
+        );
+        assert_eq!(
+            prepare(&item("00410")).unwrap().code.as_deref(),
+            Some("00410")
+        );
+        assert_eq!(
+            prepare(&item("")).unwrap().code,
+            None,
+            "empty asks for the next one"
+        );
+        for bad in ["0050", "0060", "40", "004", "00401", "0040a"] {
+            let errors = prepare(&item(bad)).unwrap_err();
+            assert_eq!(errors[0].field, "code", "{bad}");
+            assert!(
+                matches!(
+                    errors[0].code,
+                    ErrorCode::ErrCodeInvalid | ErrorCode::ErrFormatInvalid
+                ),
+                "{bad}: {:?}",
+                errors[0].code
+            );
+        }
+    }
+
+    #[test]
     fn packing_weight_is_kg_with_up_to_three_decimals() {
         let input = |kg: &str| {
             MasterInput::Packing(PackingInput {
                 id: None,
                 version: None,
-                code: "1".into(),
+                code: "0051".into(),
                 name_ur: "پیٹی".into(),
                 name_en: "Box".into(),
                 approx_kg: kg.into(),
@@ -789,28 +786,6 @@ mod tests {
     }
 
     #[test]
-    fn a_bank_account_keeps_its_text_as_typed_and_names_the_account_under_0102() {
-        let input = |number: &str| {
-            MasterInput::BankAccount(BankAccountInput {
-                id: None,
-                version: None,
-                bank_name: "HBL".into(),
-                title: "Maher Adnan and Brothers".into(),
-                number: number.into(),
-                name_ur: "ایچ بی ایل".into(),
-                name_en: "HBL".into(),
-                confirmed_rules_words: Vec::new(),
-            })
-        };
-        let p = prepare(&input("PK36-SCBL-0000001123456702")).unwrap();
-        assert_eq!(p.account.as_ref().unwrap().control_code, "0102");
-        assert!(fields(&p).contains(&("number", &ColValue::text("PK36-SCBL-0000001123456702"))));
-        assert!(prepare(&input("0001 0002")).is_err(), "no spaces");
-        assert!(prepare(&input(&"1".repeat(35))).is_err());
-        assert!(prepare(&input("")).is_err());
-    }
-
-    #[test]
     fn staff_have_a_job_and_an_optional_phone() {
         let input = |job: &str, phone: &str| {
             MasterInput::Staff(StaffInput {
@@ -818,6 +793,7 @@ mod tests {
                 version: None,
                 name_ur: "اسلم".into(),
                 name_en: "Aslam".into(),
+                code: String::new(),
                 job: job.into(),
                 phone: phone.into(),
                 confirmed_rules_words: Vec::new(),

@@ -13,9 +13,11 @@ use mandi_services::{auth, search};
 use super::run;
 use crate::error::UiError;
 
-/// The active records of a list that match the typed text, best first: exact code, then names
-/// that start with the text, then records used before, then close spellings. Both scripts are
-/// searched; the text is never converted (PRD FR-7.40).
+/// The active records of a list that match the typed text, best first: exact code, then the running
+/// number (a short code), then names that start with the text, then records used before, then close
+/// spellings. Both scripts are searched; the text is never converted (PRD FR-7.40). Empty text gives
+/// the whole list, the last chosen first and then by code, one page (`offset`, `limit`) at a time
+/// (plan 32 R7).
 #[tauri::command]
 pub async fn search_masters<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -23,7 +25,14 @@ pub async fn search_masters<R: tauri::Runtime>(
 ) -> Result<Vec<SearchHit>, UiError> {
     run(app, "search_masters", move |ctx| {
         let actor = auth::require(ctx)?;
-        search::search(ctx, &actor, input.scope, &input.text, input.limit)
+        search::search_page(
+            ctx,
+            &actor,
+            input.scope,
+            &input.text,
+            input.offset,
+            input.limit,
+        )
     })
     .await
 }
@@ -54,9 +63,11 @@ pub async fn search_touch<R: tauri::Runtime>(
     .await
 }
 
-/// The accounts of a field that match the typed text (plan 08): exact full code, exact serial
-/// (a short code, PRD FR-7.39), names that start with the text, accounts used before, close
-/// spellings. Read only; the text is never converted (PRD FR-7.22).
+/// The accounts of a field that match the typed text (plan 08): exact full code, running number
+/// (a short code, PRD 1.8 R5), names that start with the text, accounts used before, close
+/// spellings. Empty text gives the whole list of the field, the last chosen first and then by code,
+/// one page (`offset`, `limit`) at a time (plan 32 R7). Read only; the text is never converted (PRD
+/// FR-7.22).
 #[tauri::command]
 pub async fn search_accounts<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

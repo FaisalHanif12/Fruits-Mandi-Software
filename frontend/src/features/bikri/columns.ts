@@ -1,50 +1,110 @@
-// The columns of the two grids (PRD 12.3, 12.4; plan 12). Enter stops are the cells of the PRD 7.2
-// example: a sale line takes buyer, qty and rate, three fields and three Enters (NFR-USE-6, D3-Q1).
-// The payment type is reached with the arrow keys, Space or a click.
+// The columns of the two grids (PRD 12.3, 12.4; plan 12). Enter stops of a sale line are buyer, qty,
+// rate and paid on the spot: four fields and four Enters when the buyer may take credit, three when he
+// must pay in full and the backend closes the paid cell (NFR-USE-6, D8 Q2, PRD FR-12.44, plan 65).
+// The money paid on the spot (موقع پر جمع) is the last money cell of the line, after the buyer total.
+// What is left on the buyer's account is in the details of the line under the grid.
 //
 // The windows are narrow: with the main menu and the side menu open, a 1024 px window leaves about
 // 680 px for the screen (NFR-USE-15). So the grids hold the cells typed on most lots and lines,
 // and the amounts the user checks; the rest sits in the "more" panel of the lot and in the details
 // of the line (PRD FR-12.2, Code Standards F22). Wider windows add amounts: the net and the balance
-// to the lots, the two commissions to the lines from 1366 px, and the لاگا from 1920 px.
+// to the lots; to the lines the seller commission and the buyer commission from 1366 px (the two
+// rates the user types in the details of the line, FR-11.10, so what he types moves a figure he sees,
+// plan 72 P13), and the seller amount as well from 1920 px. The paid cell is one more column, so in
+// every window the seller amount (below 1920 px) and the لاگا are in the details of the line instead,
+// where every amount of the line stands with its working (NFR-USE-27). bikri-column-widths.test.ts
+// keeps the sums inside the room of each window.
 
 import { FIT_MIN, type EntryColumn } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks';
+import { isArrivalLot, isCarriedLot, isGardenLot, isOwnLot } from './draft';
 import { LOT, SALE } from './types';
+
+/**
+ * The least widths of the lots grid. Its eight cells and the remove column (44 px) must fit the 631 px a
+ * 1024 px window leaves with a Windows scrollbar (675 less 44), so each cell asks for what its heading or its
+ * figures need and no more. A heading that is one word cannot wrap, so a least width below the word cuts it
+ * ("Munshian a"): the munshiana keeps `longHeading`. Found by the core sweep of plan 72, which measured the
+ * lots grid 14 to 16 px over its room at 1366 and 1024 px (bikri-column-widths.test.ts keeps the sums).
+ */
+const LOT_MIN = {
+  /** A seller's name, cut at the end when it is long; the grid gives it more when there is room. */
+  seller: 92,
+  /** "Received" in English, one word. */
+  qty: 80,
+} as const;
 
 export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
   return [
     {
       field: LOT.seller,
       type: 'picker',
-      picker: { kind: 'account', scope: 'seller' },
+      // The only account field that offers اپنا مال, the trips' goods (PRD FR-12.26): scope
+      // `lot_seller` is `seller` plus that account, and the backend decides what is offered.
+      picker: { kind: 'account', scope: 'lot_seller' },
       headerId: 'bikri-col-seller',
-      minWidth: FIT_MIN.name,
+      minWidth: LOT_MIN.seller,
+      // A lot carried over from an earlier بکری is shown, not typed: it is a saved lot (plan 76 point 1).
+      editable: (row) => !isCarriedLot(row),
     },
+    // The item and packing of an own goods lot come from its purchase and follow it (PRD FR-12.26),
+    // so on that lot they are shown and not typed.
     {
       field: LOT.item,
       type: 'picker',
       picker: { kind: 'master', scope: 'item' },
       headerId: 'glossary-qism-maal',
+      // A short name (Banana, کیلا): the least width keeps the lots grid inside its room with the remove column.
+      minWidth: FIT_MIN.figure,
+      editable: (row) => !isOwnLot(row) && !isArrivalLot(row) && !isCarriedLot(row),
     },
     {
       field: LOT.packing,
       type: 'picker',
       picker: { kind: 'master', scope: 'packing' },
       headerId: 'glossary-packing',
+      minWidth: FIT_MIN.figure,
+      editable: (row) => !isOwnLot(row) && !isArrivalLot(row) && !isCarriedLot(row),
     },
-    { field: LOT.qty, type: 'qty', headerId: 'bikri-col-qty-received', minWidth: FIT_MIN.heading },
-    { field: LOT.freight, type: 'money', headerId: 'glossary-kiraya' },
-    { field: LOT.labour, type: 'money', headerId: 'glossary-mazdoori', showsCalc: true },
+    {
+      field: LOT.qty,
+      type: 'qty',
+      headerId: 'bikri-col-qty-received',
+      minWidth: LOT_MIN.qty,
+      editable: (row) => !isCarriedLot(row),
+    },
+    {
+      field: LOT.freight,
+      type: 'money',
+      headerId: 'glossary-kiraya',
+      editable: (row) => !isCarriedLot(row),
+    },
+    {
+      field: LOT.labour,
+      type: 'money',
+      headerId: 'glossary-mazdoori',
+      showsCalc: true,
+      editable: (row) => !isCarriedLot(row),
+    },
     {
       field: LOT.munshiana,
       type: 'money',
       headerId: 'glossary-munshiana',
       showsCalc: true,
       minWidth: FIT_MIN.longHeading,
+      editable: (row) => !isCarriedLot(row),
     },
     // A one-time seller's نقد is filled by the backend while empty (FR-13.10), with its working.
-    { field: LOT.cash, type: 'money', headerId: 'glossary-naqd', showsCalc: true, explain: true },
+    // An own goods lot has no نقد: the firm does not give cash to itself (PRD FR-12.26). A garden's
+    // lot has none either (PRD FR-12.36).
+    {
+      field: LOT.cash,
+      type: 'money',
+      headerId: 'glossary-naqd',
+      showsCalc: true,
+      explain: true,
+      editable: (row) => !isOwnLot(row) && !isGardenLot(row) && !isCarriedLot(row),
+    },
     ...(isFromStep(step, 'normal')
       ? ([
           { field: LOT.net, type: 'calc', headerId: 'glossary-safi-bikri', explain: true },
@@ -64,7 +124,8 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
     {
       field: SALE.buyer,
       type: 'picker',
-      picker: { kind: 'account', scope: 'buyer' },
+      // The buyer box lists چکتا buyers and adds a new one (PRD FR-7.29, FR-13.3).
+      picker: { kind: 'account', scope: 'buyer', withChukta: true },
       headerId: 'glossary-gahak',
       // A buyer's name needs room: a name cut short does not tell two buyers apart.
       minWidth: FIT_MIN.longName,
@@ -74,12 +135,36 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       field: SALE.rate,
       type: 'rate',
       headerId: 'bikri-col-rate',
-      // The last rate is grey text only; it is never typed into the cell (PRD FR-7.53).
-      hintFromCalc: true,
-      hintIsNumber: true,
-      hintTooltipField: `${SALE.rate}Tip`,
+      // A rate is a few digits: the least width as a plain figure. The cell is empty until it is
+      // typed: no hint, no placeholder number (PRD FR-7.53 retired, plan 79 item 5).
+      minWidth: FIT_MIN.figure,
     },
-    { field: SALE.amount, type: 'calc', headerId: 'bikri-col-seller-amount', explain: true },
+    {
+      field: SALE.grade,
+      type: 'select',
+      headerId: 'glossary-darja',
+      // One short word (اول, First) and the arrow.
+      minWidth: FIT_MIN.figure,
+      // Optional and never an Enter stop: a line stays buyer, qty, rate (PRD FR-12.42, NFR-USE-6). It is
+      // reached with the arrow keys or a click, and Space or Alt+↓ opens its list.
+      enterStop: false,
+      choices: [
+        { value: '', labelId: 'bikri-grade-none' },
+        { value: 'first', labelId: 'glossary-darja-awwal' },
+        { value: 'second', labelId: 'glossary-darja-doyam' },
+        { value: 'third', labelId: 'glossary-darja-soyam' },
+      ],
+    },
+    // The amounts the user checks, by room (plan 65, plan 72 P13): the paid cell is one more column, so
+    // the least used amounts are in the details of the line, where every amount of the line stands with
+    // its working. The seller commission and the buyer commission come from 1366 px, the seller amount
+    // as well from 1920 px; the لاگا is in the details in every window. The commission rates are typed
+    // in those details, so their amounts are in the grid from 1366 px, where the user sees them move.
+    ...(isFromStep(step, 'wide')
+      ? ([
+          { field: SALE.amount, type: 'calc', headerId: 'bikri-col-seller-amount', explain: true },
+        ] satisfies readonly EntryColumn[])
+      : []),
     ...(isFromStep(step, 'normal')
       ? ([
           {
@@ -91,21 +176,17 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
           { field: SALE.buyerComm, type: 'calc', headerId: 'bikri-col-buyer-comm', explain: true },
         ] satisfies readonly EntryColumn[])
       : []),
-    ...(isFromStep(step, 'wide')
-      ? ([
-          { field: SALE.laga, type: 'calc', headerId: 'glossary-laga', explain: true },
-        ] satisfies readonly EntryColumn[])
-      : []),
     { field: SALE.buyerTotal, type: 'calc', headerId: 'bikri-col-buyer-total', explain: true },
     {
-      field: SALE.payment,
-      type: 'choice',
-      headerId: 'bikri-col-payment',
-      enterStop: false,
-      choices: [
-        { value: 'credit', labelId: 'glossary-udhari' },
-        { value: 'cash', labelId: 'glossary-naqdi' },
-      ],
+      field: SALE.paid,
+      type: 'money',
+      headerId: 'bikri-col-paid-on-spot',
+      // The backend decides the amount of a buyer who must pay in full: the cell then shows it, with
+      // its working, and is closed (PRD FR-12.44). The screen closes it with `editable`.
+      fixedFromCalc: SALE.paidFixed,
+      explain: true,
+      // The heading is two or three words ("موقع پر جمع", "Paid on the Spot"); it wraps to a second line.
+      minWidth: FIT_MIN.heading,
     },
   ];
 }
@@ -113,11 +194,11 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
 /**
  * The columns of the whole-sale view (PRD FR-12.1): the lot of each line first, then the columns
  * of the grid of one lot that fit beside it. The grid has the width of the grid of one lot, so the
- * lot column takes the room of the columns of the next step up (the commissions, the لاگا) and,
- * in the narrowest window, of the payment column: nothing may scroll sideways, not even inside the
- * grid (NFR-USE-15). The commissions and the payment type of the line that has focus are in the
- * line details under the grid, and every figure is in the summary. A seller's name is cut in the
- * lot column and read in full in the tooltip.
+ * lot column takes the room of the columns of the next step up (the commissions, the لاگا) and, in the
+ * narrowest window, of the quality column: nothing
+ * may scroll sideways, not even inside the grid (NFR-USE-15). The commissions and what is left on the
+ * account of the line that has focus are in the line details under the grid, and every figure is in
+ * the summary. A seller's name is cut in the lot column and read in full in the tooltip.
  */
 export function allLinesColumns(step: LayoutStep): readonly EntryColumn[] {
   const lot: EntryColumn = {
@@ -127,8 +208,10 @@ export function allLinesColumns(step: LayoutStep): readonly EntryColumn[] {
     minWidth: isFromStep(step, 'wide') ? FIT_MIN.figure : FIT_MIN.name,
   };
   const beside = saleColumns(isFromStep(step, 'wide') ? 'normal' : 'compact');
+  // In the narrowest window the quality (درجہ) is left to the grid of one lot, as the room is short;
+  // the lot column and the buyer, qty and rate stops come first (plan 58, option C).
   return [
     lot,
-    ...(isFromStep(step, 'normal') ? beside : beside.filter((c) => c.field !== SALE.payment)),
+    ...(isFromStep(step, 'normal') ? beside : beside.filter((c) => c.field !== SALE.grade)),
   ];
 }

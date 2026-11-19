@@ -1,4 +1,4 @@
-// The ten master lists (plan 06, PRD 10.3, FR-7.17, FR-7.24, FR-7.66): the انڈکس menu, one list,
+// The nine master lists (plan 06, PRD 10.3, FR-7.17, FR-7.24, FR-7.66): the انڈکس menu, one list,
 // and the form to add, change and make inactive, in the Urdu and in the English app, by keyboard,
 // against a fake backend. One generic screen, so city, item, packing, expense head and the rest
 // share these flows.
@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as mastersApi from '../../src/features/masters/api';
 import { MASTER_CONFIGS } from '../../src/features/masters/configs';
+import { useMasterFocus } from '../../src/features/masters/store';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as searchApi from '../../src/shared/search/api';
@@ -24,6 +25,7 @@ import {
 } from '../helpers/app';
 import { account, fakeAccountSearch } from '../helpers/accounts';
 import { fakeMasters, record } from '../helpers/masters';
+import { pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
 
@@ -80,6 +82,12 @@ function cellElement(rowId: number, colId: string): HTMLElement {
 const rowIds = () =>
   Array.from(document.querySelectorAll('.ag-row[row-id]')).map((row) => row.getAttribute('row-id'));
 
+/** The ids of the rows drawn, by their place in the list (the grid keeps elements of rows that stay). */
+const sortedRowIds = () =>
+  Array.from(document.querySelectorAll('.ag-row[row-id]'))
+    .sort((a, b) => Number(a.getAttribute('row-index')) - Number(b.getAttribute('row-index')))
+    .map((row) => row.getAttribute('row-id'));
+
 /** Matches an accessible name or a label without Fluent's isolation marks. */
 const named = (text: string) => (name: string) => visible(name) === text;
 
@@ -100,7 +108,7 @@ describe.each(LANGUAGES)('the انڈکس menu (%s)', (language) => {
     fakeMasters();
   });
 
-  it('lists the accounts, the chart, the rules and the ten lists in order, and ↓ then Enter opens one', async () => {
+  it('lists the accounts, the chart, the rules and the nine lists in order, and ↓ then Enter opens one', async () => {
     const { router } = await renderApp('/index');
     const heading = await screen.findByRole('heading', {
       level: 1,
@@ -129,7 +137,7 @@ describe.each(LANGUAGES)('the انڈکس menu (%s)', (language) => {
     });
   });
 
-  it('an address that is not one of the ten lists says so, with the way back', async () => {
+  it('an address that is not one of the nine lists says so, with the way back', async () => {
     const { router } = await renderApp('/index/nothing');
     expect(
       await screen.findByRole('heading', { name: message(language, 'masters-unknown-title') }),
@@ -206,6 +214,105 @@ describe.each(LANGUAGES)('a master list (%s)', (language) => {
     await waitFor(() => {
       expect(rowIds()).toEqual(['1', '2']);
     });
+  });
+
+  it('150 cities are read in full (100 a request) and shown 25 at a time, with the page buttons', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    fakeMasters({ city: cities });
+    await renderApp('/index/cities');
+    await screen.findByRole('heading', { level: 1, name: message(language, 'masters-city-title') });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
+    });
+    // A master list is short: every page is read, and the page buttons cut it in memory.
+    expect(mastersApi.mastersList).toHaveBeenCalledTimes(2);
+    expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 100, 100);
+    await waitFor(() => {
+      expect(sortedRowIds()[0]).toBe('1');
+    });
+    await userEvent.setup().click(await pagerButton(language, 'next'));
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
+    });
+    await waitFor(() => {
+      expect(sortedRowIds()[0]).toBe('26');
+    });
+    // Nothing more was asked of the backend.
+    expect(mastersApi.mastersList).toHaveBeenCalledTimes(2);
+  });
+
+  it('the list comes back to the page it was on after a row was opened, with that row focused', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    fakeMasters({ city: cities });
+    useMasterFocus.setState({ rows: {} });
+    const { router } = await renderApp('/index/cities');
+    const user = userEvent.setup();
+    await user.click(await pagerButton(language, 'next'));
+    await waitFor(() => {
+      expect(sortedRowIds()[0]).toBe('26');
+    });
+    await user.click(cellElement(28, 'code'));
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/index/cities/28');
+    });
+    act(() => {
+      router.history.back();
+    });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/index/cities');
+    });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
+    });
+    await waitFor(() => {
+      expect(
+        document.querySelector('.ag-cell-focus')?.closest('.ag-row')?.getAttribute('row-id'),
+      ).toBe('28');
+    });
+  });
+
+  it('a search finds a city that is on a later page: the rest of the pages load for it', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    cities[139] = record('city', 140, '0140', 'ظفروال', 'Zafarwal');
+    // The list remembers the row it last focused; a run before this one may have left one.
+    useMasterFocus.setState({ rows: {} });
+    fakeMasters({ city: cities });
+    await renderApp('/index/cities');
+    const box = await screen.findByLabelText(message(language, 'masters-filter-label'));
+    await userEvent.setup().type(box, 'zafar');
+    await waitFor(
+      () => {
+        expect(rowIds()).toEqual(['140']);
+      },
+      { timeout: 15_000 },
+    );
+    // Both pages were read: the match was on the second.
+    expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 100, 100);
   });
 
   it('with nothing in it, says why and offers the key for a new one', async () => {
@@ -422,6 +529,24 @@ describe.each(LANGUAGES)('adding and changing a master (%s)', (language) => {
     });
   });
 
+  it('the form asks for the one master by its id, so a city far down a long list opens at once', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    fakeMasters({ city: cities });
+    await renderApp('/index/cities/140');
+    expect(await screen.findByDisplayValue('City 140')).toBeInTheDocument();
+    expect(mastersApi.mastersGetOne).toHaveBeenCalledWith('city', 140);
+    // No page of the list was read to find it.
+    expect(mastersApi.mastersList).not.toHaveBeenCalled();
+  });
+
   it('a master that is gone says so instead of showing an empty form', async () => {
     fakeMasters({ city: [KOT] });
     await renderApp('/index/cities/99');
@@ -620,14 +745,177 @@ describe.each(LANGUAGES)('masters with their own fields (%s)', (language) => {
     expect(visible(document.body.textContent)).toContain(
       message(language, 'masters-staff-account-hint'),
     );
-    // A master with no code of its own has no code field.
-    expect(
-      screen.queryByLabelText(message(language, 'masters-field-code')),
-    ).not.toBeInTheDocument();
+    // Staff have a code of their own since plan 32.
+    expect(screen.getByLabelText(message(language, 'masters-field-code'))).toBeInTheDocument();
+  });
+
+  describe('the فعال / غیر فعال switch of the staff (PRD v1.23)', () => {
+    const ASIF = record('staff', 31, '0060', 'آصف', 'Asif', {
+      text: { job: 'munshi', phone: '03004058860' },
+    });
+    const ASLAM = record('staff', 32, '0061', 'اسلم', 'Aslam', {
+      text: { job: 'collector', phone: '' },
+      is_active: false,
+    });
+    const switchOf = (rowId: number) => {
+      const found = document.querySelector<HTMLElement>(
+        `.ag-row[row-id="${String(rowId)}"] [data-cell-control]`,
+      );
+      if (found === null) throw new Error(`no switch in row ${String(rowId)}`);
+      return found;
+    };
+    const wordOf = (id: string) => named(message(language, id));
+
+    it('every row has the two words as a switch, the inactive ones are shown, and the page says so', async () => {
+      fakeMasters({ staff: [ASIF, ASLAM] });
+      await renderApp('/index/staff');
+      expect(
+        await screen.findByText(visible(message(language, 'masters-staff-title')), {
+          selector: 'h1',
+        }),
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31', '32']);
+      });
+      // Asif is active, Aslam is not; each row carries both words, the pressed one marked.
+      const asif = within(switchOf(31)).getAllByRole('button');
+      expect(asif.map((button) => visible(button.textContent))).toEqual([
+        message(language, 'masters-status-active'),
+        message(language, 'masters-status-inactive'),
+      ]);
+      expect(asif.map((button) => button.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+      const aslam = within(switchOf(32)).getAllByRole('button');
+      expect(aslam.map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+      // "Show the inactive ones too" is already ticked here.
+      expect(screen.getByRole('checkbox', { name: wordOf('masters-show-inactive') })).toBeChecked();
+    });
+
+    it('a click on the other word makes him inactive through the ordinary master save, and does not open the row', async () => {
+      const store = fakeMasters({ staff: [ASIF, ASLAM] });
+      const { router } = await renderApp('/index/staff');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31', '32']);
+      });
+      const user = userEvent.setup();
+      await user.click(
+        within(switchOf(31)).getByRole('button', { name: wordOf('masters-status-inactive') }),
+      );
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 31, false);
+      });
+      expect(store.rows.staff.find((row) => row.id === 31)?.is_active).toBe(false);
+      expect(
+        await screen.findByText(message(language, 'masters-made-inactive')),
+      ).toBeInTheDocument();
+      // He stays in the list, now marked inactive, and the screen is still the list.
+      await waitFor(() => {
+        const buttons = within(switchOf(31)).getAllByRole('button');
+        expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([
+          'false',
+          'true',
+        ]);
+      });
+      expect(router.state.location.pathname).toBe('/index/staff');
+      // And one who was inactive is made active again the same way.
+      await user.click(
+        within(switchOf(32)).getByRole('button', { name: wordOf('masters-status-active') }),
+      );
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 32, true);
+      });
+    });
+
+    it('Space on the focused row changes the switch, and Enter still opens the row', async () => {
+      fakeMasters({ staff: [ASIF, ASLAM] });
+      const { router } = await renderApp('/index/staff');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31', '32']);
+      });
+      const user = userEvent.setup();
+      await user.click(cellElement(31, 'status'));
+      await user.keyboard(' ');
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 31, false);
+      });
+      expect(router.state.location.pathname).toBe('/index/staff');
+      await user.click(cellElement(31, 'code'));
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/index/staff/31');
+      });
+    });
+
+    it('a failed change says so, and the row keeps its word', async () => {
+      fakeMasters({ staff: [ASIF] });
+      vi.mocked(mastersApi.mastersSetActive).mockRejectedValueOnce(new Error('down'));
+      await renderApp('/index/staff');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31']);
+      });
+      const user = userEvent.setup();
+      await user.click(
+        within(switchOf(31)).getByRole('button', { name: wordOf('masters-status-inactive') }),
+      );
+      expect(
+        await screen.findByText(message(language, 'masters-active-failed')),
+      ).toBeInTheDocument();
+      const buttons = within(switchOf(31)).getAllByRole('button');
+      expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([
+        'true',
+        'false',
+      ]);
+    });
+
+    it('the form has the same switch, with the note, and it changes him without leaving the form', async () => {
+      fakeMasters({ staff: [ASIF] });
+      const { router } = await renderApp('/index/staff/31');
+      const group = await screen.findByRole('group', {
+        name: wordOf('masters-active-switch-label'),
+      });
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'masters-staff-active-note'),
+      );
+      // The old "make inactive" button is not there: the switch is the way.
+      expect(
+        screen.queryByRole('button', {
+          name: new RegExp(message(language, 'masters-make-inactive')),
+        }),
+      ).not.toBeInTheDocument();
+      const user = userEvent.setup();
+      await user.click(
+        within(group).getByRole('button', { name: wordOf('masters-status-inactive') }),
+      );
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 31, false);
+      });
+      expect(router.state.location.pathname).toBe('/index/staff/31');
+    });
+
+    it('a new staff member has no switch, and the other lists keep their own button and tick', async () => {
+      fakeMasters({ city: [KOT] });
+      await renderApp('/index/staff/new');
+      await screen.findByLabelText(named(message(language, 'masters-staff-job')));
+      expect(
+        screen.queryByRole('group', { name: wordOf('masters-active-switch-label') }),
+      ).not.toBeInTheDocument();
+      leaveAppWindow();
+      resetClientState(language);
+      signedIn(sessionUser({ language }));
+      fakeMasters({ city: [KOT] });
+      await renderApp('/index/cities');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['1']);
+      });
+      // A city list: no switch in a row, and the inactive ones are hidden until the tick.
+      expect(document.querySelector('[data-cell-control]')).toBeNull();
+      expect(
+        screen.getByRole('checkbox', { name: wordOf('masters-show-inactive') }),
+      ).not.toBeChecked();
+    });
   });
 
   it('a mark has an owner seller, found with the account picker and sent back as chosen', async () => {
-    const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim');
+    const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim');
     fakeAccountSearch([RAHIM]);
     fakeMasters();
     await renderApp('/index/markas/new');
@@ -651,7 +939,7 @@ describe.each(LANGUAGES)('masters with their own fields (%s)', (language) => {
     const [kind, draft] = vi.mocked(mastersApi.mastersSave).mock.calls[0] ?? [];
     expect(kind).toBe('marka');
     expect(draft?.text).toMatchObject({ mark_text: 'AR' });
-    expect(draft?.refs['owner']).toMatchObject({ id: 31, code: '030110001' });
+    expect(draft?.refs['owner']).toMatchObject({ id: 31, code: '0010' });
   });
 
   it('a narration is offered in the voucher types that are ticked, and in all when none is', async () => {

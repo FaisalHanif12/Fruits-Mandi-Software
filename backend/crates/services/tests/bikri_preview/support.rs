@@ -16,27 +16,25 @@ use mandi_services::testing::TestEnv;
 use mandi_services::{ServiceError, accounts, masters, partners};
 use tempfile::TempDir;
 
-use crate::common::{env, login_owner, set_up};
+use crate::common::{env, login_owner, raw, set_up};
 
 /// The worked day's world: parties, items, partners 40 / 30 / 30 and today 10-10-2026.
 pub struct World {
     pub dir: TempDir,
     pub env: TestEnv,
     pub owner: Actor,
-    /// رحیم, seller 030110001.
+    /// رحیم, seller 0010.
     pub rahim: i64,
-    /// کریم, seller 030110002.
+    /// کریم, seller 0011.
     pub karim: i64,
-    /// اکرم ٹول ٹیکس, buyer 03040001.
+    /// اکرم ٹول ٹیکس, buyer 0020.
     pub akram: i64,
-    /// ارشد ملتانی, buyer 03040002.
+    /// ارشد ملتانی, buyer 0021.
     pub arshad: i64,
     /// نقدی منڈی, 03040000.
     pub naqdi: i64,
-    /// پختہ کھاتہ (خریدار), 03049999.
-    pub pukhta_buyer: i64,
-    /// پختہ کھاتہ (بیوپاری), 030119999.
-    pub pukhta_seller: i64,
+    /// چکتا کھاتہ, 0030.
+    pub chukta_khata: i64,
     /// کیلا, fruit.
     pub banana: i64,
     /// سیب, fruit.
@@ -90,6 +88,25 @@ pub fn add_account(
     credit_allowed: bool,
     credit_limit: &str,
 ) -> i64 {
+    add_account_tagged(
+        env,
+        owner,
+        kind,
+        (ur, en),
+        (credit_allowed, credit_limit),
+        "",
+    )
+}
+
+/// An account with a tag (نشان), for example `K` (PRD 10.2).
+pub fn add_account_tagged(
+    env: &TestEnv,
+    owner: &Actor,
+    kind: AccountType,
+    (ur, en): (&str, &str),
+    (credit_allowed, credit_limit): (bool, &str),
+    tag: &str,
+) -> i64 {
     let mut input = AccountInput {
         id: None,
         version: None,
@@ -115,9 +132,9 @@ pub fn add_account(
         credit_limit: credit_limit.into(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: tag.into(),
     };
     loop {
         match accounts::save(&env.ctx, owner, &input) {
@@ -164,7 +181,7 @@ pub fn add_item(
     }
 }
 
-fn add_packing(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
+pub fn add_packing(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
     let mut input = PackingInput {
         id: None,
         version: None,
@@ -187,13 +204,14 @@ fn add_packing(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
     }
 }
 
-fn new_partner(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
+pub fn new_partner(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
     let mut words: Vec<String> = Vec::new();
     loop {
         let input = PartnerCreateInput {
             name_ur: ur.to_owned(),
             name_en: en.to_owned(),
             opening_capital: None,
+            opening_capital_where: None,
             confirmed_rules_words: words.clone(),
         };
         match partners::create(&env.ctx, owner, &input) {
@@ -219,6 +237,18 @@ pub fn world_with(cash: i64, shares: bool) -> World {
     login_owner(&env);
     let owner = auth::require(&env.ctx).unwrap();
     let rahim = add_account(&env, &owner, AccountType::Seller, "رحیم", "Rahim", true, "");
+    let w = finish_world(dir, env, owner, rahim, shares);
+    if cash != 0 {
+        set_cash(&w, cash);
+    }
+    w
+}
+
+/// The rest of the worked day's world after seller رحیم (0010) exists and today is
+/// 10-10-2026: the other parties, the items, the packing and the partners with their shares
+/// (effective 10-10-2026). The golden day builds رحیم and the opening position itself and then
+/// calls this.
+pub fn finish_world(dir: TempDir, env: TestEnv, owner: Actor, rahim: i64, shares: bool) -> World {
     let karim = add_account(&env, &owner, AccountType::Seller, "کریم", "Karim", true, "");
     let akram = add_account(
         &env,
@@ -264,9 +294,8 @@ pub fn world_with(cash: i64, shares: bool) -> World {
         .unwrap();
     }
     let naqdi = id_of(&env, "03040000");
-    let pukhta_buyer = id_of(&env, "03049999");
-    let pukhta_seller = id_of(&env, "030119999");
-    let w = World {
+    let chukta_khata = id_of(&env, "0030");
+    World {
         dir,
         env,
         owner,
@@ -275,19 +304,14 @@ pub fn world_with(cash: i64, shares: bool) -> World {
         akram,
         arshad,
         naqdi,
-        pukhta_buyer,
-        pukhta_seller,
+        chukta_khata,
         banana,
         apple,
         mooli,
         weight_fruit,
         box_,
         partners: [a, b, c],
-    };
-    if cash != 0 {
-        set_cash(&w, cash);
     }
-    w
 }
 
 /// Puts cash in hand at `amount` rupees with an opening dated today (PRD FR-10.9). Call it once.
@@ -320,7 +344,7 @@ pub fn header() -> HeaderInput {
         entry_date: "10-10-2026".into(),
         bill_date: String::new(),
         book: None,
-        truck_no: Some("LES-1234".into()),
+        truck_no: None,
         zamindar_account_id: None,
         adda_id: None,
         driver_name: None,
@@ -329,6 +353,42 @@ pub fn header() -> HeaderInput {
         store_id: None,
         note: None,
     }
+}
+
+/// Saves a draft through the real save and, when the draft still carries a truck number in its retired
+/// header field, writes that number on the saved بکری as OLD data (a new بکری has none, PRD v1.34).
+/// For the tests that read, list, sort or print an old بکری that has a truck.
+#[allow(dead_code)]
+pub fn save_old(
+    w: &World,
+    draft: &BikriDraft,
+    confirm: bool,
+) -> mandi_services::core::bikri::BikriSaved {
+    let saved = bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: draft.clone(),
+            confirm_cash_below_zero: confirm,
+        },
+    )
+    .unwrap();
+    if let Some(truck) = &draft.header.truck_no {
+        give_truck(w, saved.number, truck);
+    }
+    saved
+}
+
+/// Gives a saved بکری the truck number an OLD بکری has. A new بکری has none: the header holds only the
+/// day (PRD v1.34, plan 71 H1 to H3), so the tests that read an old truck write it as old data.
+#[allow(dead_code)]
+pub fn give_truck(w: &World, number: i64, truck: &str) {
+    raw(&w.dir)
+        .execute(
+            "UPDATE bikri_entries SET truck_no = ?1 WHERE number = ?2",
+            mandi_services::db::rusqlite::params![truck, number],
+        )
+        .unwrap();
 }
 
 pub fn manual(value: &str) -> Option<ChargeInput> {
@@ -349,9 +409,11 @@ pub fn per_unit(value: &str) -> Option<ChargeInput> {
 /// نقد 5,000. Lines are added with [`with_sales`].
 pub fn lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        arrival_id: None,
         key: key.into(),
+        lot_id: None,
         seller_account_id: Some(seller),
-        pukhta: None,
+        purchase_id: None,
         item_id: Some(item),
         packing_id: Some(w.box_),
         marka_id: None,
@@ -373,6 +435,7 @@ pub fn lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> 
 /// A lot with no charges at all: every charge empty, so the rules decide.
 pub fn bare_lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        lot_id: None,
         freight: None,
         labour: None,
         munshiana: None,
@@ -385,17 +448,19 @@ pub fn bare_lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str
 pub fn sale(key: &str, buyer: i64, qty: &str, rate: &str) -> SaleInput {
     SaleInput {
         key: key.into(),
+        sale_id: None,
         buyer_account_id: Some(buyer),
-        pukhta: None,
+        chukta: None,
         qty: qty.into(),
         weight: None,
         seller_rate: rate.into(),
         rate_differs: false,
         buyer_rate: None,
-        payment_type: None,
+        paid: None,
         seller_comm: None,
         buyer_comm: None,
         laga: None,
+        grade: None,
         note: None,
     }
 }
@@ -403,6 +468,7 @@ pub fn sale(key: &str, buyer: i64, qty: &str, rate: &str) -> SaleInput {
 /// A row with only the quantity the screen filled in: no buyer, no rate.
 pub fn blank_sale(key: &str, qty: &str) -> SaleInput {
     SaleInput {
+        sale_id: None,
         buyer_account_id: None,
         ..sale(key, 0, qty, "")
     }
@@ -455,6 +521,40 @@ pub fn calc(lot: &LotPreview, line: usize) -> &LineCalc {
 /// Rupees of a money value.
 pub fn r(value: Paisa) -> i64 {
     value.rupees()
+}
+
+/// The stored totals of a saved بکری or lot (`bikri_get`) are the totals the preview showed, field
+/// by field (PRD 12.5, Code Standards B20): the screen of a saved بکری never adds money. Used by
+/// the save tests, not by the preview tests that share this file.
+#[allow(dead_code)]
+pub fn assert_totals_equal(
+    stored: &mandi_services::core::bikri::SavedTotals,
+    shown: &mandi_services::core::bikri::SummaryTotals,
+    what: &str,
+) {
+    let pairs = [
+        ("gross", stored.gross, shown.gross),
+        ("freight", stored.freight, shown.freight),
+        ("seller_comm", stored.seller_comm, shown.seller_comm),
+        ("labour", stored.labour, shown.labour),
+        ("munshiana", stored.munshiana, shown.munshiana),
+        ("cash_paid", stored.cash_paid, shown.cash_paid),
+        ("store_rent", stored.store_rent, shown.store_rent),
+        ("phone", stored.phone, shown.phone),
+        ("deductions", stored.deductions, shown.deductions),
+        ("net", stored.net, shown.net),
+        ("seller_credit", stored.seller_credit, shown.seller_credit),
+        ("buyer_comm", stored.buyer_comm, shown.buyer_comm),
+        ("laga", stored.laga, shown.laga),
+        ("rate_diff", stored.rate_diff, shown.rate_diff),
+        ("buyer_credit", stored.buyer_credit, shown.buyer_credit),
+        ("buyer_cash", stored.buyer_cash, shown.buyer_cash),
+        ("buyer_total", stored.buyer_total, shown.buyer_total),
+        ("shared_income", stored.shared_income, shown.shared_income),
+    ];
+    for (name, a, b) in pairs {
+        assert_eq!(a, b, "{what}: stored {name} differs from the previewed one");
+    }
 }
 
 pub fn has(list: &[FieldError], code: ErrorCode, field: &str) -> bool {

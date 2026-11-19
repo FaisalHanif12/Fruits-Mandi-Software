@@ -2,23 +2,24 @@
 //! changes a saved sale line (PRD FR-11.6). Nothing is ever deleted; a rule is made inactive.
 
 use mandi_services::core::rules::{
-    RuleInput, RuleRow, RuleSaved, RuleTest, RuleTestInput, RulesGetInput, RulesListInput,
-    RulesSetActiveInput,
+    RuleInput, RuleRow, RuleSaved, RuleTest, RuleTestInput, RulesGetInput, RulesList,
+    RulesListInput, RulesSetActiveInput,
 };
 use mandi_services::{auth, rules};
 
 use super::run;
 use crate::error::UiError;
 
-/// The rules that match a filter. Each row says the level it decides at (2 to 6).
+/// One page of the rules that match a filter with the counts over every match (PRD FR-19.11).
+/// Each row says the level it decides at (2 to 6).
 #[tauri::command]
 pub async fn rules_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: RulesListInput,
-) -> Result<Vec<RuleRow>, UiError> {
+) -> Result<RulesList, UiError> {
     run(app, "rules_list", move |ctx| {
         auth::require(ctx)?;
-        rules::list(ctx, &input.filter)
+        rules::list_page(ctx, &input)
     })
     .await
 }

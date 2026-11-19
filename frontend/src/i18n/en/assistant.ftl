@@ -1,0 +1,915 @@
+### Ask the app: the chat window above a round button at the end of every screen (plans 49 and 51, PRD 7.7, FR-7.72 to FR-7.88).
+### Every Urdu line says what its English line says (NFR-URD-29). The words of an ANSWER are written by the
+### model under the checks of FR-7.76; only the panel's own fixed words are here. Business words come from
+### glossary.ftl.
+
+## The chat window, its launcher and the status bar button (FR-5.5, FR-7.73).
+
+# review: pending
+assistant-button = Ask the app
+# review: pending
+assistant-button-count = Today <num>{ $used }</num> / <num>{ $limit }</num>
+# review: pending
+assistant-dock-label = Ask the app
+# review: pending
+assistant-dock-title = Adnan Assistant
+# review: pending
+assistant-close = Close the chat window
+# review: pending
+assistant-larger = Make the window larger
+# review: pending
+assistant-smaller = Make the window smaller
+# review: pending
+assistant-state-ready = Ready
+# review: pending
+assistant-state-working = Preparing an answer
+# review: pending
+assistant-state-offline = No internet
+# review: pending
+assistant-state-off = Switched off
+# review: pending
+assistant-new-conversation = New question
+# review: pending
+assistant-conversation-label = Questions and answers
+# review: pending
+assistant-box-label = Type your question
+# review: pending
+assistant-box-placeholder = Type your question and press { $key }
+# review: pending
+assistant-send = Send
+# review: pending
+assistant-empty-title = Hello! Ask me anything about your books.
+# review: pending
+assistant-empty-help = For example: how much does Akram owe? How much { -commission } today? You can also start from the quick questions below.
+# review: pending
+assistant-off = Asking questions is off. You can turn it on in Settings. The quick questions work.
+# review: pending
+assistant-no-key = The OpenRouter key is not saved yet, so questions cannot be asked. Add the key in Settings. The quick questions work.
+# review: pending
+assistant-open-settings = Open Settings
+# review: pending
+assistant-status-failed = The state of asking questions could not be read
+# review: pending
+assistant-count-label = Questions asked today
+
+## The working state: the first line at once, then one line per step (NFR-AI-3).
+
+# review: pending
+assistant-understanding = Understanding the question…
+# review: pending
+assistant-working-label = The answer is being prepared
+# review: pending
+assistant-step-generic = Preparing the answer…
+# review: pending
+assistant-step-finding = Looking for { $text }…
+# review: pending
+assistant-step-reading-card = Reading the card of { $name }…
+# review: pending
+assistant-step-reading-ledger = Reading the { -khata } of { $name }…
+# review: pending
+assistant-step-reading-report = Reading report { $report }…
+# review: pending
+assistant-step-reading-analytics = Reading { -tajziat }…
+# review: pending
+assistant-step-reading-tiles = Reading the dashboard figures…
+# review: pending
+assistant-step-period = Working out the dates of the period…
+# review: pending
+assistant-step-calculating = Calculating…
+# review: pending
+assistant-step-estimating = Working out the estimate…
+# review: pending
+assistant-step-checking = Checking the figures…
+# review: pending
+assistant-step-rewriting = Writing the answer again…
+# review: pending
+assistant-step-understood = { $kind ->
+    [list] Understood: you want a list from the books.
+    [print] Understood: you want to print something.
+    [help] Understood: you want to know how to do something in the app.
+    [advice] Understood: you want advice.
+   *[figure] Understood: you want a figure from the books.
+}
+# review: pending
+assistant-step-writing = Writing the answer…
+# review: pending
+assistant-step-retrying = This is taking longer than usual. Trying again…
+# review: pending
+assistant-step-tools-off = Still slow. I will stop reading and write the answer from what I have already read…
+# review: pending
+assistant-waited = Waited { $seconds } s
+
+## The quick questions (FR-7.80). They need no internet and no model, and they are not counted.
+
+# review: pending
+assistant-chips-label = Quick questions
+# review: pending
+assistant-chip-sales = Today's { -bikri }
+# review: pending
+assistant-chip-commission = Today's { -commission }
+# review: pending
+assistant-chip-cash = Cash in hand
+# review: pending
+assistant-chip-dues = Buyers' dues
+# review: pending
+assistant-chip-total-dues = { -kul-agrahi }
+# review: pending
+assistant-chip-dead = { -doobi-raqam }
+# review: pending
+assistant-chip-payable = Sellers payable
+# review: pending
+assistant-chip-advances = Advances open
+# review: pending
+assistant-chip-stock = { -baqi-maal }
+# review: pending
+assistant-chip-party = A party's { -khata }
+# review: pending
+assistant-party-pick-label = Choose a party
+# review: pending
+assistant-party-pick-hint = Type the party's code or name
+# review: pending
+assistant-party-cancel = Never mind
+
+## The answer block (FR-7.74, FR-7.75, FR-7.76).
+
+# review: pending
+assistant-you-asked = Your question
+# review: pending
+assistant-answer-label = Answer
+# review: pending
+assistant-checked = Checked
+# review: pending
+assistant-direction-more = more
+# review: pending
+assistant-direction-less = less
+# review: pending
+assistant-direction-same = the same
+# review: pending
+assistant-table-label = Rows of { $source }
+# review: pending
+assistant-table-more = First { $shown } of { $count } rows shown; the rest are in the full report
+# review: pending
+assistant-table-totals = { -meezan }
+# review: pending
+assistant-chart-label = Chart of the monthly amounts
+# review: pending
+assistant-chart-past = Past months
+# review: pending
+assistant-chart-ahead = Months ahead (estimate)
+# review: pending
+assistant-sources-line = Source: { $sources }, { $time }
+# review: pending
+assistant-open-report = Open the full report
+# review: pending
+assistant-open-report-of = { $source }: open the full report
+# review: pending
+assistant-print = Print
+# review: pending
+assistant-print-of = Print { $source }
+# review: pending
+assistant-next-label = Next questions
+# review: pending
+assistant-rerun-note = This old question was run again on today's books. The figures may have changed since then.
+
+## The two bands (FR-7.74, FR-7.86, FR-7.88).
+
+# review: pending
+assistant-band-estimate = Estimate, not certain
+# review: pending
+assistant-band-advice = Advice: the decision is yours
+# review: pending
+assistant-band-general = General advice
+# review: pending
+assistant-band-general-note = Practical advice for the shop, not from your books
+# review: pending
+assistant-estimate-same-pace = Same pace
+# review: pending
+assistant-estimate-same-growth = Same growth
+# review: pending
+assistant-estimate-same-season = Same season as last year
+# review: pending
+assistant-estimate-what-if = If the pace is <num>{ $factor }</num>
+# review: pending
+assistant-estimate-what-if-any = If the pace changes
+# review: pending
+assistant-chart-what-if = If the pace is { $factor }
+# review: pending
+assistant-estimate-year-so-far = So far this year (from your books)
+# review: pending
+assistant-estimate-year-months = <num>{ $count }</num> months of the books, { $from } to { $to }
+# review: pending
+assistant-estimate-year-month = One month of the books: { $from }
+# review: pending
+assistant-estimate-year-left = Estimate for the months left
+# review: pending
+assistant-estimate-year-total = Whole year
+# review: pending
+assistant-estimate-year-note = The current month is counted as a whole estimated month; its days so far are not added.
+# review: pending
+assistant-estimate-months = Based on <num>{ $count }</num> months, { $from } to { $to }
+# review: pending
+assistant-estimate-ahead = Months estimated: { $from } to { $to }
+# review: pending
+assistant-estimate-few-months = The books hold only <num>{ $count }</num> full months, so no estimate could be made.
+
+## The states that are not an answer (FR-7.77, FR-7.79, FR-7.81, FR-7.82).
+
+# review: pending
+assistant-which-one = Which one?
+# review: pending
+assistant-which-one-more = There are more, type the code
+# review: pending
+assistant-not-found = Name not found
+# review: pending
+assistant-not-found-closest = The closest names:
+# The name asked about is in no list of the role that was asked (plan 52 8.2). The role words are the glossary's.
+# review: pending
+assistant-not-found-role = { $role ->
+    [seller] There is no { -beopari } by the name you asked about.
+    [buyer] There is no { -gahak } by the name you asked about.
+    [item] There is no { -qism-maal } by the name you asked about.
+    [partner] There is no { -shirakat-dar } by the name you asked about.
+    [garden] There is no { -bagh } by the name you asked about.
+    [trip] There is no { -market-safar } by the name you asked about.
+   *[any] There is no name like the one you asked about.
+}
+# The name exists in another role: "This name is a Buyer, not a Seller." The role words carry their article.
+# review: pending
+assistant-found-as-other = This name is { $found }, not { $asked }.
+# review: pending
+assistant-role-seller = a { -beopari }
+# review: pending
+assistant-role-buyer = a { -gahak }
+# review: pending
+assistant-role-item = an { -qism-maal }
+# review: pending
+assistant-role-partner = a { -shirakat-dar }
+# review: pending
+assistant-role-garden = a { -bagh }
+# review: pending
+assistant-role-trip = a { -market-safar }
+# review: pending
+assistant-role-any = any list
+# The button under it: the follow-up question for the role the name was found in, sent as a new question.
+# review: pending
+assistant-found-as-ask = { $found ->
+    [seller] Show the { -bikri } of { $name }
+    [buyer] Show the { -khareedari } of { $name }
+    [item] Show the { -bikri } of { $name }
+    [partner] Show the { -hissa } of { $name }
+    [garden] Show the { -khata } of { $name }
+    [trip] Show the { -khata } of { $name }
+   *[other] Show { $name }
+}
+# review: pending
+assistant-option-balance-label = Balance
+# The day a lot came and how many { -nag } it had, on the button of a lot that "which one?" offers (PRD FR-12.45, plan 71 L9).
+# review: pending
+assistant-option-lot-day = Came <date>{ $date }</date>
+# review: pending
+assistant-option-lot-qty = Received <num>{ $qty }</num> { -nag }
+# review: pending
+assistant-need-dates = The period is not clear. Ask again with the first and last date, for example from 01-10-2026 to 15-10-2026.
+# review: pending
+assistant-need-party = Whose? Type the name or the code.
+# review: pending
+assistant-outside-books = This question is outside the books
+# review: pending
+assistant-outside-books-nearest = The nearest report:
+# review: pending
+assistant-outside-weather = This app does not keep the weather. It keeps only your shop's books.
+# review: pending
+assistant-outside-tax = This app does not work out GST or any tax. It keeps your sales, commission and expenses.
+# review: pending
+assistant-outside-bank = This app does not keep a bank balance. All your money is in one cash account.
+# review: pending
+assistant-outside-market-rate = This app does not know today's rate in another market. It keeps the rates of your own sales.
+# review: pending
+assistant-outside-prices = This app does not keep prices outside your shop, such as the dollar, gold or petrol.
+# review: pending
+assistant-outside-other = This app does not keep this. It keeps your shop's books: sales, parties, cash, expenses and partners.
+# review: pending
+assistant-outside-future = That month has not come yet, so the books hold nothing for it. An estimate goes at most 12 months ahead.
+# review: pending
+assistant-change-refused = I can only tell, not write
+# review: pending
+assistant-change-refused-help = The button below opens the entry screen. The amount stays empty; you write it yourself.
+# review: pending
+assistant-open-entry = Open the entry screen
+# review: pending
+assistant-open-screen = Open the screen
+# review: pending
+assistant-open-commission = Open the { -commission } page
+# review: pending
+assistant-open-screen-of = { $source }: open the screen
+# review: pending
+assistant-entry-neutral = The amount stays empty; you write it yourself
+# review: pending
+assistant-not-understood = I did not understand; please ask in other words
+# review: pending
+assistant-stopped-calls = I could not finish reading the books. Please ask in smaller parts, for example one party or one month.
+# review: pending
+assistant-stopped-tokens = The books I read were too large for one answer. Please ask in smaller parts, for example a shorter period.
+# review: pending
+assistant-time-limit = The answer is taking too long. This is the record I have read.
+# review: pending
+assistant-stopped-tables = The records I did read are below.
+
+## The how-to steps under an answer that shows how to print or find something (plan 54 S2). The
+## backend sends the step ids and their values; the dates are shown as DD-MM-YYYY.
+
+# review: pending
+assistant-how-label = Steps
+# review: pending
+assistant-how-open-report = Open report { $report }
+# review: pending
+assistant-how-role = { $role ->
+    [seller] { -beopari }
+    [partner] { -shirakat-dar }
+    [garden] { -bagh }
+    [trip] { -market-safar }
+    [khata] { -alag-khata }
+    [staff] staff member
+    [city] city
+    [adda] { -adda }
+    [head] expense head
+    [item] { -qism-maal }
+   *[buyer] { -gahak }
+}
+# review: pending
+assistant-how-set-party = Choose the { assistant-how-role }: { $party } ({ $code })
+# review: pending
+assistant-how-set-record = Choose the { assistant-how-role }: { $name }
+# review: pending
+assistant-how-find-row = Look at the row for { $name }
+# review: pending
+assistant-how-open-analytics = Open { -tajziat }, view { $view }
+# The item group of a report on the sales of fruit or of vegetables (plan 55): `fruit` or `vegetable`.
+# review: pending
+assistant-how-set-group = { $group ->
+    [vegetable] Choose the { masters-item-group }: { masters-item-group-vegetable }
+   *[fruit] Choose the { masters-item-group }: { masters-item-group-fruit }
+}
+# review: pending
+assistant-how-set-guests = Choose: only the shop's { -mehman }
+# review: pending
+assistant-how-set-bikri = Choose the { -bikri } number { $number }
+# No day was named for a report of one day, so today is taken; the step after this one says how to change it.
+# review: pending
+assistant-how-assumed-day = No day was named, so today ({ $day }) is taken
+# review: pending
+assistant-how-set-day = Set the date to { $day }
+# review: pending
+assistant-how-set-dates = Set the dates from { $from } to { $to }
+# review: pending
+assistant-how-press-print = Press F9 to print
+# review: pending
+assistant-checks-failed = I could not write a checked answer; the records are below
+# review: pending
+assistant-records-differ = A difference was found in the records; open the report
+# review: pending
+assistant-limit-reached = Today's <num>{ $limit }</num> questions are used up; ask again tomorrow
+# review: pending
+assistant-limit-chips = The quick questions still work.
+# review: pending
+assistant-offline = Questions need the internet; the quick questions below still work
+# review: pending
+assistant-error = No answer came; try again
+# review: pending
+assistant-error-retry = Ask again
+# review: pending
+assistant-quick-failed = The quick question could not be answered; try again
+
+## Settings, the group "Ask the app" (FR-7.85).
+
+# review: pending
+assistant-settings-title = Ask the app
+# review: pending
+assistant-settings-help = Ask questions about your books. The question and the records needed to answer it go to OpenRouter. Phone numbers, addresses, notes and reasons never go.
+# review: pending
+assistant-settings-enabled = Asking questions is on
+# review: pending
+assistant-settings-enabled-needs-key = Save the key first, then turn it on.
+# review: pending
+assistant-settings-key = OpenRouter key
+# review: pending
+assistant-settings-key-paste = Paste the key here
+# review: pending
+assistant-settings-key-save = Save the key
+# review: pending
+assistant-settings-key-saved = Key saved: <num>••••{ $last4 }</num>
+# review: pending
+assistant-settings-key-none = No key is saved yet
+# review: pending
+assistant-settings-key-replace = Replace
+# review: pending
+assistant-settings-key-remove = Remove
+# review: pending
+assistant-settings-key-password = Type your password
+# review: pending
+assistant-settings-key-password-help = Your password is needed to save, replace or remove the key.
+# review: pending
+assistant-settings-key-confirm-replace = Replace
+# review: pending
+assistant-settings-key-confirm-remove = Remove
+# review: pending
+assistant-settings-key-cancel = Never mind
+# review: pending
+assistant-settings-model = Model
+# review: pending
+assistant-settings-model-help = A new model must be checked before it is used, and it must have an Azure endpoint that keeps no data.
+# review: pending
+assistant-settings-model-save = Save the model
+# review: pending
+assistant-settings-test = Test the connection
+# review: pending
+assistant-settings-test-help = Sends one fixed question to see whether it works. It also counts as a question.
+# review: pending
+assistant-settings-test-needs-key = Save the key first to test the connection.
+# review: pending
+assistant-settings-test-working = Testing…
+# review: pending
+assistant-settings-test-ok = The connection works: <num>{ $ms }</num> ms
+# review: pending
+assistant-settings-test-failed = The connection could not be made: { $error }
+# review: pending
+assistant-settings-count = Today's count: <num>{ $used }</num> / <num>{ $limit }</num>
+# review: pending
+assistant-settings-limit-fixed = The daily limit is fixed; it is not a setting.
+# review: pending
+assistant-settings-failed = The settings for asking questions could not be read
+# review: pending
+assistant-settings-save-failed = This change could not be saved
+
+## The question log in Settings (FR-7.84).
+
+# review: pending
+assistant-log-title = Question log
+# review: pending
+assistant-log-help = Every question is listed here. Press a question to run it again on today's books. The log cannot be changed or cleared.
+# review: pending
+assistant-log-empty = No question has been asked yet
+# review: pending
+assistant-log-empty-help = When you ask a question it will show here.
+# review: pending
+assistant-log-failed = The question log could not be opened
+# review: pending
+assistant-log-col-time = Time
+# review: pending
+assistant-log-col-question = Question
+# review: pending
+assistant-log-col-kind = Kind
+# review: pending
+assistant-log-col-outcome = Outcome
+# review: pending
+assistant-log-col-tools = Tools used
+# review: pending
+assistant-log-col-counted = In the count
+# review: pending
+assistant-log-kind-model = Model question
+# review: pending
+assistant-log-kind-quick = Quick question
+# review: pending
+assistant-log-kind-pick = After a choice
+# review: pending
+assistant-log-kind-rerun = Read again
+# review: pending
+assistant-log-kind-test = Connection test
+# review: pending
+assistant-log-counted-yes = Counted
+# review: pending
+assistant-log-counted-no = Not counted
+# review: pending
+assistant-log-open = Read again
+# review: pending
+assistant-log-open-row = Read again: { $question }
+# review: pending
+assistant-log-no-tools = No tools
+# review: pending
+assistant-log-col-took = How long
+# review: pending
+assistant-log-took = <num>{ $total }</num> { $total_unit } (model <num>{ $model }</num> { $model_unit }, tools <num>{ $tools }</num> { $tools_unit })
+# review: pending
+assistant-log-took-total = <num>{ $total }</num> { $total_unit }
+# review: pending
+assistant-log-took-none = Not recorded
+# review: pending
+assistant-unit-s = s
+# review: pending
+assistant-unit-ms = ms
+
+## The outcome of a question, in the log (FR-7.84).
+
+# review: pending
+assistant-outcome-answered = Answered
+# review: pending
+assistant-outcome-estimate = Estimate given
+# review: pending
+assistant-outcome-advice = Advice given
+# review: pending
+assistant-outcome-which-one = Asked which one
+# review: pending
+assistant-outcome-need-dates = Asked for dates
+# review: pending
+assistant-outcome-need-party = Asked for a party
+# review: pending
+assistant-outcome-not-found = Name not found
+# review: pending
+assistant-outcome-outside-books = Outside the books
+# review: pending
+assistant-outcome-change-refused = Change refused
+# review: pending
+assistant-outcome-not-understood = Not understood
+# review: pending
+assistant-outcome-checks-failed = Checks failed
+# review: pending
+assistant-outcome-records-differ = Records differ
+# review: pending
+assistant-outcome-locked = Behind the code
+# review: pending
+assistant-outcome-limit-reached = Limit reached
+# review: pending
+assistant-outcome-offline = No internet
+# review: pending
+assistant-outcome-error = Error
+# review: pending
+assistant-outcome-time-limit = Out of time, the records read were shown
+
+## Sources, buttons and the estimate band (FR-7.74, FR-7.86).
+
+# review: pending
+assistant-source-party-card = Party card
+# review: pending
+assistant-source-commission = { -commission }
+# review: pending
+assistant-source-analytics = { -tajziat } { $title }
+# review: pending
+assistant-sources-separator = , 
+# review: pending
+assistant-open-dashboard = Open the dashboard
+# review: pending
+assistant-open-entry-party = Open the entry screen for { $name }
+# review: pending
+assistant-estimate-per-month = Each month
+# review: pending
+assistant-estimate-step = Change each month
+# review: pending
+assistant-estimate-total = Total
+# review: pending
+assistant-estimate-target = Target
+# review: pending
+assistant-estimate-target-reached = The target is reached in { $month }
+# review: pending
+assistant-estimate-target-not = The target is not reached in these months
+
+## The working under ⓘ (FR-7.43, FR-7.75). The titles are the ones the backend names.
+
+# review: pending
+assistant-working-average-of = Average of
+# review: pending
+assistant-working-sum = Sum of the amounts
+# review: pending
+assistant-working-difference = Difference of the amounts
+# review: pending
+assistant-working-average = Average of the amounts
+# review: pending
+assistant-working-percent-of = Percent
+# review: pending
+assistant-working-change-percent = Change in percent
+# review: pending
+assistant-working-percent-more = An amount and a percent more: the amount times (100% + the percent)
+# review: pending
+assistant-working-percent-less = An amount and a percent less: the amount times (100% − the percent)
+# review: pending
+assistant-working-same-pace = Same pace: the average of the past months, times the months ahead
+# review: pending
+assistant-working-year-parts = The last line: the months of the books so far + the estimate for the months left
+# review: pending
+assistant-working-what-if-pace = Same pace, changed by the factor
+# review: pending
+assistant-working-same-growth = Same growth: the average change each month, added for each month ahead
+# review: pending
+assistant-working-balance-pace = Same pace: the balance now, plus the average change of a month, times the months ahead
+# review: pending
+assistant-working-balance-pace-cash = Same pace: the cash in hand now, plus the average change of a month, times the months ahead
+# review: pending
+assistant-working-balance-pace-dues = Same pace: the buyers' dues now, plus the average change of a month, times the months ahead
+# review: pending
+assistant-working-same-season = Same season as last year: the same months of last year
+
+## What an estimate is about, what a figure is, and where its two places are (FR-7.75, FR-7.76).
+
+# review: pending
+assistant-measure-sales = { -kham-bikri }
+# review: pending
+assistant-measure-commission-seller = Seller { -commission }
+# review: pending
+assistant-measure-commission-buyer = Buyer { -commission }
+# review: pending
+assistant-measure-commission-laga = { -laga }
+# review: pending
+assistant-measure-commission-all = Total { -commission } (including { -laga })
+# review: pending
+assistant-measure-expenses = { -dukan-kharcha }
+# review: pending
+assistant-measure-profit = Profit
+# review: pending
+assistant-measure-receipts = { -wasooli }
+# review: pending
+assistant-measure-garden-sales = { -bagh } sales
+# review: pending
+assistant-measure-trip-sales = { -safar } sales
+# review: pending
+assistant-measure-balance-change = Change in the { -baqaya } each month
+# What a balance estimate is about (PRD FR-7.86): a party's balance, the cash in hand, what the buyers owe;
+# and a partner's profit.
+# review: pending
+assistant-measure-party-balance = The party's { -baqaya }
+# review: pending
+assistant-measure-cash-balance = Cash in hand
+# review: pending
+assistant-measure-buyers-dues = Buyers' dues
+# review: pending
+assistant-measure-partner-profit = The { -shirakat-dar }'s profit
+# review: pending
+assistant-figure-party-balance = The party's balance
+# review: pending
+assistant-figure-buyers-dues = Buyers' dues
+# review: pending
+assistant-figure-sellers-dues = Sellers' dues
+# review: pending
+assistant-figure-dead-amount = { -doobi-raqam }
+# review: pending
+assistant-figure-total-dues = { -kul-agrahi }
+# review: pending
+assistant-figure-cash = Cash in hand
+# review: pending
+assistant-figure-day-sales = The day's { -bikri }
+# review: pending
+assistant-figure-day-commission = The day's { -commission }
+# review: pending
+assistant-figure-partner-total = The partner's { -kul-raqam }
+# A partner's capital, read from his capital history (plan 59 D331). It is not his { -kul-raqam }.
+# review: pending
+assistant-figure-partner-capital = The partner's { -sarmaya }
+# review: pending
+assistant-place-party-card = Party card
+# review: pending
+assistant-place-r13-closing = Closing balance of R13
+# review: pending
+assistant-place-tile-buyers-dues = Dashboard: buyers' dues
+# review: pending
+assistant-place-r20-total = Total of R20
+# review: pending
+assistant-place-tile-sellers-dues = Dashboard: sellers' dues
+# review: pending
+assistant-place-r24-total = Total of R24
+# review: pending
+assistant-place-tile-dead-amount = Dashboard: { -doobi-raqam }
+# review: pending
+assistant-place-r38-total = Total of R38
+# review: pending
+assistant-place-tile-total-dues = Dashboard: { -kul-agrahi }
+# review: pending
+assistant-place-tile-cash = Dashboard: cash in hand
+# review: pending
+assistant-place-r12-closing = Closing balance of R12
+# review: pending
+assistant-place-tile-day = Dashboard: today's figures
+# review: pending
+assistant-place-r34 = R34 day summary
+# review: pending
+assistant-place-view-a-total = Total of { -tajziat } A
+# review: pending
+assistant-place-partner-overview = Partner overview
+# The balance at the end of one partner's capital history (PRD 17.4), as the capital screen shows it.
+# review: pending
+assistant-place-capital-history = Closing balance of the { -sarmaya } history
+# review: pending
+assistant-place-r31-closing = Closing total of R31
+
+## Why a model call failed (D6 Section 2, FailureKind). One reviewed message for each.
+
+# review: pending
+assistant-failure-offline = No internet connection was found.
+# review: pending
+assistant-failure-dropped = The connection dropped. Please ask again.
+# review: pending
+assistant-failure-timeout = The answer took too long. Please ask again.
+# review: pending
+assistant-failure-bad-key = OpenRouter did not accept the key. Check the key in Settings.
+# review: pending
+assistant-failure-no-credit = The OpenRouter account has no credit left.
+# review: pending
+assistant-failure-no-endpoint = No Azure server that keeps no data accepted this request. Check that the model has Azure servers on OpenRouter, and that the app sends no setting Azure does not take. The model is in Settings.
+# review: pending
+assistant-failure-busy = OpenRouter is busy. Try again in a little while.
+# review: pending
+assistant-failure-server = OpenRouter had an error.
+# review: pending
+assistant-failure-bad-reply = The model's reply could not be read.
+# review: pending
+assistant-failure-other = An unknown error.
+
+# Instant answers, no model call (PRD FR-7.90, plan 55 Section 10). The backend writes the sentence from
+# these messages and fills the arguments itself. $name, $figure, $day, $from, $to, $qty and $lots arrive as
+# references that the app replaces by a checked figure, a name or a date, so no digit, month name or number
+# word is written here. $period is the message assistant-instant-period, already formatted. The selector
+# values ($shape, $role, $kind) are plain English words, written exactly as below.
+# review: pending
+assistant-instant-period = { $shape ->
+    [day] on { $day }
+    [range] from { $from } to { $to }
+    [all] so far
+   *[today] today
+}
+# review: pending
+assistant-instant-sale = { $role ->
+    [item] { $name } { -bikri } { $period }: { $figure }
+    [seller] { -bikri } of { -beopari } { $name } { $period }: { $figure }
+    [buyer] { -gahak } { $name } bought { $period }: { $figure }
+   *[shop] { -bikri } { $period }: { $figure }
+}
+# How many sales, as a count.
+# review: pending
+assistant-instant-sale-count = { $role ->
+    [seller] Number of { -bikri } entries of { -beopari } { $name } { $period }: { $figure }
+   *[shop] Number of { -bikri } entries { $period }: { $figure }
+}
+# The total commission for the shop or an item is the seller side, the buyer side and Laga together (the
+# figure of the dashboard tile), and the sentence says so. For a buyer it is only the commission charged
+# to him, with no Laga. A seller's commission is two lines: `seller-own` is the commission charged to him
+# (the seller side, no Laga), `seller` the total on his goods (both sides and Laga).
+# review: pending
+assistant-instant-commission = { $role ->
+    [item] { -commission } (with { -laga }) on { $name } { $period }: { $figure }
+    [seller-own] { -commission } charged to { -beopari } { $name } { $period }: { $figure }
+    [seller] Total { -commission } on the goods of { -beopari } { $name } { $period } (both sides and { -laga }, including the line above): { $figure }
+    [buyer] { -commission } charged to { -gahak } { $name } { $period }: { $figure }
+    [buyer-total] { -commission } and { -laga } together, charged to { -gahak } { $name } { $period }: { $figure }
+   *[shop] { -commission } (with { -laga }) { $period }: { $figure }
+}
+# review: pending
+assistant-instant-laga = { $role ->
+    [item] { -laga } on { $name } { $period }: { $figure }
+    [buyer] { -laga } charged to { -gahak } { $name } { $period }: { $figure }
+   *[shop] { -laga } { $period }: { $figure }
+}
+# review: pending
+assistant-instant-commission-buyer-item = { -commission } charged to { -gahak } { $name } on { $item } { $period }: { $figure }
+# review: pending
+assistant-instant-commission-seller-item-own = { -commission } charged to { -beopari } { $name } on { $item } { $period }: { $figure }
+# review: pending
+assistant-instant-commission-seller-item = Total { -commission } on the goods of { -beopari } { $name } in { $item } { $period } (both sides and { -laga }, including the line above): { $figure }
+# review: pending
+assistant-instant-laga-buyer-item = { -laga } charged to { -gahak } { $name } on { $item } { $period }: { $figure }
+# review: pending
+assistant-instant-last-rate-item = Last rate of { $item } { $period }: { $figure }, on { $date }
+# review: pending
+assistant-instant-last-rate-buyer-item = Last rate of { $item } to { -gahak } { $name } { $period }: { $figure }, on { $date }
+# The figure carries its own side word and the tick, so no side word is written here.
+# review: pending
+assistant-instant-party = { $kind ->
+    [payable] Payable to { $name }: { $figure }
+    [advance] { $name }'s open { -peshgi }: { $figure }
+   *[balance] { $name }'s { -baqaya }: { $figure }
+}
+# The words of the quick-question chips, plus the figure.
+# review: pending
+assistant-instant-shop = { $kind ->
+    [buyers-dues] Buyers' dues: { $figure }
+    [total-dues] { -kul-agrahi }: { $figure }
+    [payable] Sellers payable: { $figure }
+    [advances] Advances open: { $figure }
+    [dead] { -doobi-raqam }: { $figure }
+    [lent] { -adhar-raqam }, open: { $figure }
+   *[cash] Cash in hand: { $figure }
+}
+# $qty is a count of { -nag }, $lots a count of lots. $lots is a reference, so the word for lot is not made plural.
+# review: pending
+assistant-instant-stock = { $role ->
+    [item] { $name } { -baqi-maal }: { $qty } { -nag } ({ -lot }: { $lots })
+   *[shop] { -baqi-maal }: { $qty } { -nag } ({ -lot }: { $lots })
+}
+# review: pending
+assistant-instant-partner-total = { $name }'s { -kul-raqam }: { $figure }
+# review: pending
+assistant-instant-partner-capital = { $name }'s { -sarmaya }: { $figure }
+
+# Instant answers, plan 59 F3 batch 1. The same arguments and rules as above: every argument arrives as text,
+# $name, $item, $date and $figure are references the app replaces, and each selector has a default branch.
+# How many { -nag } were sold or bought: $figure is a count of { -nag }.
+# review: pending
+assistant-instant-qty = { $role ->
+    [item] { -nag } of { $name } sold { $period }: { $figure }
+    [seller] { -nag } of { -beopari } { $name } sold { $period }: { $figure }
+    [buyer] { -nag } bought by { -gahak } { $name } { $period }: { $figure }
+    [seller-item] { -nag } of { $item } from { -beopari } { $name } sold { $period }: { $figure }
+    [buyer-item] { -nag } of { $item } bought by { -gahak } { $name } { $period }: { $figure }
+   *[shop] { -nag } sold { $period }: { $figure }
+}
+# The average rate, not the last one: the gross sale divided by the { -nag }, at the seller's rate.
+# review: pending
+assistant-instant-rate-average = { $role ->
+    [seller-item] Average rate of { $item } from { -beopari } { $name } { $period }: { $figure }
+   *[item] Average rate of { $item } { $period }: { $figure }
+}
+# Shop expenses only, never a partner's personal spending.
+# review: pending
+assistant-instant-expense = { $kind ->
+    [head] { -dukan-kharcha } on { $name } { $period }: { $figure }
+   *[shop] { -dukan-kharcha } { $period }: { $figure }
+}
+# Money received, as { -wasooli } vouchers.
+# review: pending
+assistant-instant-receipts = { $role ->
+    [collector] Money received ({ -wasooli }) through collector { $name } { $period }: { $figure }
+   *[shop] Money received ({ -wasooli }) { $period }: { $figure }
+}
+# The { -rokar } over the period: the balance at its end, the cash received and the cash paid out.
+# review: pending
+assistant-instant-cash-book = { $kind ->
+    [in] Cash received in the { -rokar } { $period }: { $figure }
+    [out] Cash paid out in the { -rokar } { $period }: { $figure }
+   *[closing] Closing balance of the { -rokar } { $period }: { $figure }
+}
+# Sales by the way they were paid for.
+# review: pending
+assistant-instant-sale-kind = { $kind ->
+    [credit] { -udhari } { -bikri } { $period }: { $figure }
+   *[cash] { -naqdi } { -bikri } { $period }: { $figure }
+}
+# The seller's { -safi-bikri } for the period: his gross sale less his deductions. It is not what the shop still owes him.
+# review: pending
+assistant-instant-sale-net = { -safi-bikri } of { -beopari } { $name } { $period }: { $figure }
+# The value of { -phal }: for the shop, for one partner or for the shop's guests.
+# review: pending
+assistant-instant-fruit = { $role ->
+    [partner] { -phal } by { $name }, value { $period }: { $figure }
+    [guests] { -phal } for the shop's { -mehman }, value { $period }: { $figure }
+   *[shop] { -phal }, value { $period }: { $figure }
+}
+# Capital vouchers: money the partners put in and money they take back.
+# review: pending
+assistant-instant-capital-flow = { $kind ->
+    [out] { -sarmaya } taken back { $period }: { $figure }
+   *[in] { -sarmaya } put in { $period }: { $figure }
+}
+
+# Instant answers, plan 59 F3 batch 2. The same arguments and rules as above. $group is `fruit` or `vegetable`, written
+# with the item group words of the item list (masters-item-group-*): the glossary word { -phal } is Fruit Taken, which
+# is something else. `commission` is the total with { -laga }, like the shop's; `qty` is a count of { -nag }.
+# review: pending
+assistant-instant-group = { $kind ->
+    [commission] { -commission } (with { -laga }) on { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items { $period }: { $figure }
+    [laga] { -laga } on { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items { $period }: { $figure }
+    [qty] { -nag } of { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items sold { $period }: { $figure }
+   *[sale] { -bikri } of { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items { $period }: { $figure }
+}
+# A party's { -baqaya } at the end of a past day. The figure carries its own side word.
+# review: pending
+assistant-instant-party-asof = { $name }'s { -baqaya } as of { $date }: { $figure }
+
+# Instant answers, plan 59 F3 batch 3: a seller with an open { -peshgi }. The { -khata } { -baqaya } already includes the
+# open { -peshgi }, so two bare lines would read as two debts: one sentence says how they relate. The figures come in
+# this order: payable (only for `payable`, where $payable is given), the open { -peshgi }, the { -khata } { -baqaya }.
+# The { -baqaya } carries its own side word, so no side word is written here.
+# review: pending
+assistant-instant-seller-advance = { $kind ->
+    [payable] { -beopari } { $name }: payable now { $payable }; open { -peshgi } { $advance }; { -khata } { -baqaya } { $balance } (it includes the open { -peshgi })
+   *[none] { -beopari } { $name }: open { -peshgi } { $advance }; { -khata } { -baqaya } { $balance } (it includes the open { -peshgi }); nothing payable now
+}
+
+# Instant answers, plan 59 F3b: the item had no sale in the period, so the answer says so first and then gives the last
+# rate before it, with its date. The rate is the seller rate for an item and the rate charged for a named buyer, as in
+# assistant-instant-last-rate-item and assistant-instant-last-rate-buyer-item.
+# review: pending
+assistant-instant-last-rate-item-no-sale = No { -bikri } of { $item } { $period }. The last rate before that was { $figure }, on { $date }.
+# review: pending
+assistant-instant-last-rate-buyer-item-no-sale = No { -bikri } of { $item } to { -gahak } { $name } { $period }. The last rate before that was { $figure }, on { $date }.
+
+# Instant answers, plan 59 F3b: the trial balance read as of now (so no period), and the dues of the buyers of one city
+# (report R21 for the city, as of now, leaving out anyone in the dead amount). The figures carry no side word of their own.
+# review: pending
+assistant-instant-trial-total = { $kind ->
+    [debit] { -trial-balance }, { -meezan } { -banaam }: { $figure }
+   *[credit] { -trial-balance }, { -meezan } { -jama }: { $figure }
+}
+# review: pending
+assistant-instant-city-dues = Buyers' dues of { $name }: { $figure }
+
+# The last button of a list of lots: every lot of that seller and item (key `l*`).
+# review: pending
+assistant-option-all-lots = All { -lot }s

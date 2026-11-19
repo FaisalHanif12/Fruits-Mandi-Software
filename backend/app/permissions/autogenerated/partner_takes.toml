@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partner-takes"
+description = "Enables the partner_takes command without any pre-configured scope."
+commands.allow = ["partner_takes"]
+
+[[permission]]
+identifier = "deny-partner-takes"
+description = "Denies the partner_takes command without any pre-configured scope."
+commands.deny = ["partner_takes"]

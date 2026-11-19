@@ -19,6 +19,8 @@ use crate::text;
 pub const MAX_NAME_CHARS: usize = 100;
 /// The longest free text, in characters (Code Standards 4.2).
 pub const MAX_TEXT_CHARS: usize = 500;
+/// The longest tag (نشان) of an account, in characters (PRD 10.2, Code Standards 4.2).
+pub const MAX_TAG_CHARS: usize = 4;
 /// Decimals a percent may have.
 const PERCENT_DECIMALS: i64 = 2;
 /// Decimals a weight may have.
@@ -40,6 +42,7 @@ fn error(code: ErrorCode, field: &str) -> FieldError {
         ErrorCode::ErrTooManyDecimals => Some(PERCENT_DECIMALS),
         ErrorCode::ErrNameTooLong => i64::try_from(MAX_NAME_CHARS).ok(),
         ErrorCode::ErrTextTooLong => i64::try_from(MAX_TEXT_CHARS).ok(),
+        ErrorCode::ErrTagInvalid => i64::try_from(MAX_TAG_CHARS).ok(),
         _ => None,
     };
     let e = FieldError::new(code, field);
@@ -105,8 +108,25 @@ pub fn date(field: &str, input: &str, today: BusinessDate) -> Result<BusinessDat
     dates::parse_ddmmyyyy(input, today).map_err(|c| error(c, field))
 }
 
+/// The two values every `ERR_DATE_CLOSED` carries besides the closed date, so a screen never asks
+/// for "a date after X" when X is today (plan 53): `today` (`DD-MM-YYYY`) and `today_open`
+/// (1 when today is an open day, else 0).
+///
+/// Example: days up to 31-10-2026 closed, today 31-10-2026: `today` "31-10-2026", `today_open` 0.
+pub fn closed_day_values(
+    closed_up_to: Option<BusinessDate>,
+    today: BusinessDate,
+) -> [(&'static str, ErrorValue); 2] {
+    let today_open = closed_up_to.is_none_or(|closed| today > closed);
+    [
+        ("today", ErrorValue::Text(dates::format_ddmmyyyy(today))),
+        ("today_open", ErrorValue::Number(i64::from(today_open))),
+    ]
+}
+
 /// A posting date: a valid date after the "closed up to" date and not after today
-/// (PRD FR-6.6). The error carries the date that limits it, as `DD-MM-YYYY`.
+/// (PRD FR-6.6). The error carries the date that limits it, as `DD-MM-YYYY`; `ERR_DATE_CLOSED` also
+/// carries `today` and `today_open` ([`closed_day_values`]).
 pub fn posting_date(
     field: &str,
     input: &str,
@@ -119,36 +139,45 @@ pub fn posting_date(
             (ErrorCode::ErrDateClosed, Some(closed)) => ("closed_up_to", closed),
             _ => ("today", today),
         };
-        FieldError::new(code, field)
-            .with(limit.0, ErrorValue::Text(dates::format_ddmmyyyy(limit.1)))
+        let mut error = FieldError::new(code, field)
+            .with(limit.0, ErrorValue::Text(dates::format_ddmmyyyy(limit.1)));
+        if code == ErrorCode::ErrDateClosed {
+            for (key, value) in closed_day_values(closed_up_to, today) {
+                error = error.with(key, value);
+            }
+        }
+        error
     })?;
     Ok(value)
 }
 
-/// What the user typed in an account code field (Code Standards 4.2, PRD FR-7.39).
+/// What the user typed in an account code field (Code Standards 4.2, PRD 1.8 R5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AccountCodeInput {
-    /// A full code: control code + 4-digit serial, 8 digits (9 for sellers).
+    /// A full code: a code of the scheme of plan 32 (`0010`, `00111`: the type number and a running
+    /// number, 4 to 10 digits, starting with `00`), or the 8 or 9 digits of any other account
+    /// (control code + 4-digit serial).
     Full(String),
-    /// A short code: the serial alone, 1 to 4 digits. Services resolve it by field type.
+    /// A short code: the running number alone, digits with no leading zero, up to 7 digits. Services
+    /// resolve it by field type.
     Short(ShortCode),
 }
 
-/// A serial typed as a short code, 0 to 9999. `"1"` and `"0001"` are both serial 1.
+/// A running number typed as a short code, 0 to 9,999,999. `"0"` is the first account of its type
+/// (`0010` in a seller field) and `"11"` is `00111`. There is no padding: `"011"` is not a short
+/// code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ShortCode(u16);
+pub struct ShortCode(u32);
 
 impl ShortCode {
-    /// The serial.
-    pub fn serial(self) -> u16 {
+    /// The running number.
+    pub fn serial(self) -> u32 {
         self.0
     }
 }
 
-/// Lengths of a full account code.
+/// Lengths of a full code of an account that is not a seller or a buyer.
 const FULL_CODE_LENGTHS: [usize; 2] = [8, 9];
-/// The longest short code.
-const MAX_SHORT_CODE_LEN: usize = 4;
 
 /// An account code. Whether it exists and is active is checked by the service.
 pub fn account_code(field: &str, input: &str) -> Result<AccountCodeInput, FieldError> {
@@ -159,15 +188,17 @@ pub fn account_code(field: &str, input: &str) -> Result<AccountCodeInput, FieldE
     if !digits.bytes().all(|b| b.is_ascii_digit()) {
         return Err(error(ErrorCode::ErrCodeInvalid, field));
     }
-    if FULL_CODE_LENGTHS.contains(&digits.len()) {
+    // A running number never starts with 0 (except `0` itself) and a code of the scheme starts with
+    // 00, so the two can never be mixed up.
+    if let Some(running) = crate::codes::parse_running(&digits)
+        && let Ok(serial) = u32::try_from(running)
+    {
+        return Ok(AccountCodeInput::Short(ShortCode(serial)));
+    }
+    if crate::codes::parse_code(&digits).is_some() || FULL_CODE_LENGTHS.contains(&digits.len()) {
         return Ok(AccountCodeInput::Full(digits));
     }
-    match digits.parse::<u16>() {
-        Ok(serial) if digits.len() <= MAX_SHORT_CODE_LEN => {
-            Ok(AccountCodeInput::Short(ShortCode(serial)))
-        }
-        _ => Err(error(ErrorCode::ErrCodeInvalid, field)),
-    }
+    Err(error(ErrorCode::ErrCodeInvalid, field))
 }
 
 /// Urdu (۰-۹) and Arabic-Indic (٠-٩) digits to 0-9; other characters unchanged.
@@ -192,8 +223,10 @@ fn digit_text(input: &str) -> String {
     visible.trim().chars().map(ascii_digit).collect()
 }
 
-/// Trims, applies NFC and removes zero-width characters, as for every name.
-fn clean_name(input: &str) -> String {
+/// Trims, applies NFC and removes the zero-width characters and the direction marks (LRM, RLM, ALM),
+/// as for every name and every free text (Code Standards 4.2). Text of only such marks is empty
+/// afterwards.
+fn clean_visible_text(input: &str) -> String {
     input
         .trim()
         .nfc()
@@ -210,7 +243,7 @@ fn name(
     script_ok: fn(&str) -> bool,
     script_error: ErrorCode,
 ) -> Result<String, FieldError> {
-    let cleaned = clean_name(input);
+    let cleaned = clean_visible_text(input);
     if cleaned.is_empty() {
         return Err(error(ErrorCode::ErrRequired, field));
     }
@@ -241,6 +274,40 @@ pub fn name_en(field: &str, input: &str) -> Result<String, FieldError> {
         text::is_english_name,
         ErrorCode::ErrNameEnScript,
     )
+}
+
+/// The tag (نشان) of an account: empty, or 1 to 4 characters, English capital letters A to Z and
+/// `.`, with at least one letter (PRD 10.2, FR-7.28, Code Standards 4.2). A lower-case English
+/// letter is made capital. Returns `None` for an empty tag, else the tag to store in
+/// `accounts.tag`. It is never inside a name and never converted to Urdu (PRD FR-7.25).
+///
+/// # Errors
+/// `ERR_TAG_INVALID` (value `max` 4) for a digit, a space, an Urdu letter, any other sign,
+/// more than 4 characters, or dots only.
+///
+/// ```
+/// use mandi_core::validate::tag;
+/// assert_eq!(tag("tag", "k").unwrap(), Some("K".to_owned()));
+/// assert_eq!(tag("tag", " D.P ").unwrap(), Some("D.P".to_owned()));
+/// assert_eq!(tag("tag", "").unwrap(), None);
+/// for bad in ["1A", "ABCDE", "ب", "K-", "..", "K A"] {
+///     assert!(tag("tag", bad).is_err(), "{bad}");
+/// }
+/// ```
+pub fn tag(field: &str, input: &str) -> Result<Option<String>, FieldError> {
+    let typed = input.trim();
+    if typed.is_empty() {
+        return Ok(None);
+    }
+    // Only ASCII letters change case; anything else stays as it is and is refused below.
+    let capital = typed.to_ascii_uppercase();
+    let letters_and_dots = capital.chars().all(|c| c.is_ascii_uppercase() || c == '.');
+    let has_letter = capital.chars().any(|c| c.is_ascii_uppercase());
+    if letters_and_dots && has_letter && capital.chars().count() <= MAX_TAG_CHARS {
+        Ok(Some(capital))
+    } else {
+        Err(error(ErrorCode::ErrTagInvalid, field))
+    }
 }
 
 /// The name of a person as shown in the top bar: 1 to 100 characters in any script, with at
@@ -292,15 +359,20 @@ pub fn phone_optional(field: &str, input: &str) -> Result<Option<String>, FieldE
     phone(field, input).map(Some)
 }
 
-/// Free text such as a note or a narration: trimmed, NFC, up to 500 characters,
-/// no control characters. Empty text is allowed and returned as "".
+/// Free text such as a note or a narration: trimmed, NFC, up to 500 characters, no control
+/// characters. Empty text is allowed and returned as "".
+///
+/// The zero-width characters and the direction marks (LRM, RLM, ALM) are removed, as in a name
+/// (Code Standards 4.2, gate finding Q-T4-3), and text that holds only such marks is empty: a
+/// required reason of only a pasted zero-width space is `ERR_REASON_REQUIRED`, not a saved reason
+/// nobody can see.
 ///
 /// The bidi embeddings, overrides and isolates (U+202A to U+202E, U+2066 to U+2069) are
 /// refused as `ERR_CONTROL_CHARS`: they change the order text is shown and printed in, so
 /// a note could show digits that differ from the digits saved (Trojan Source, PRD FR-19.6,
 /// finding R02-3).
 pub fn free_text(field: &str, input: &str) -> Result<String, FieldError> {
-    let cleaned: String = input.trim().nfc().collect();
+    let cleaned = clean_visible_text(input);
     if cleaned.chars().count() > MAX_TEXT_CHARS {
         return Err(error(ErrorCode::ErrTextTooLong, field));
     }
@@ -357,5 +429,107 @@ impl FieldErrors {
         } else {
             Err(self.0)
         }
+    }
+}
+
+#[cfg(test)]
+mod tag_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    #[test]
+    fn the_tag_rules_of_code_standards_4_2() {
+        for (typed, saved) in [
+            ("K", "K"),
+            ("BA", "BA"),
+            ("D.P", "D.P"),
+            ("k", "K"),
+            ("d.p", "D.P"),
+            ("  gm  ", "GM"),
+            ("A.B.", "A.B."),
+        ] {
+            assert_eq!(
+                tag("tag", typed).unwrap().as_deref(),
+                Some(saved),
+                "{typed}"
+            );
+        }
+        for empty in ["", "   ", "\t"] {
+            assert_eq!(tag("tag", empty).unwrap(), None, "{empty:?}");
+        }
+        for bad in [
+            "1A",
+            "ABCDE",
+            "ب",
+            "K-",
+            ".",
+            "...",
+            "K A",
+            "K1",
+            "K_",
+            "ÄB",
+            "ＫＡ",
+            "K\u{200b}",
+        ] {
+            let error = tag("tag", bad).unwrap_err();
+            assert_eq!(error.code, ErrorCode::ErrTagInvalid, "{bad}");
+            assert_eq!(error.field, "tag");
+        }
+    }
+
+    #[test]
+    fn four_characters_fit_and_five_do_not() {
+        assert!(tag("tag", "A.B.").is_ok());
+        assert!(tag("tag", "A.B.C").is_err());
+    }
+
+    proptest! {
+        #[test]
+        fn a_saved_tag_always_follows_the_rule(input in ".{0,12}") {
+            if let Ok(Some(saved)) = tag("tag", &input) {
+                prop_assert!((1..=MAX_TAG_CHARS).contains(&saved.chars().count()));
+                prop_assert!(saved.chars().all(|c| c.is_ascii_uppercase() || c == '.'));
+                prop_assert!(saved.chars().any(|c| c.is_ascii_uppercase()));
+                // Saving a saved tag again changes nothing.
+                prop_assert_eq!(tag("tag", &saved).unwrap(), Some(saved.clone()));
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod closed_day_tests {
+    use super::*;
+
+    fn day(d: u32) -> BusinessDate {
+        BusinessDate::from_ymd(2026, 10, d).unwrap()
+    }
+
+    #[test]
+    fn a_closed_date_error_carries_today_and_whether_it_is_open() {
+        // Days up to 30-10 closed, today 31-10: today is open.
+        let error = posting_date("date", "30-10-2026", Some(day(30)), day(31)).unwrap_err();
+        assert_eq!(error.code, ErrorCode::ErrDateClosed);
+        assert_eq!(
+            error.values.get("closed_up_to"),
+            Some(&ErrorValue::Text("30-10-2026".into()))
+        );
+        assert_eq!(
+            error.values.get("today"),
+            Some(&ErrorValue::Text("31-10-2026".into()))
+        );
+        assert_eq!(error.values.get("today_open"), Some(&ErrorValue::Number(1)));
+        // Closed at night: today is closed too.
+        let error = posting_date("date", "31-10-2026", Some(day(31)), day(31)).unwrap_err();
+        assert_eq!(error.values.get("today_open"), Some(&ErrorValue::Number(0)));
+        // A future date is another code and carries no such values.
+        let error = posting_date("date", "01-11-2026", Some(day(30)), day(31)).unwrap_err();
+        assert_eq!(error.code, ErrorCode::ErrDateInFuture);
+        assert!(!error.values.contains_key("today_open"));
+        // Nothing closed yet: today is open.
+        assert_eq!(
+            closed_day_values(None, day(31))[1],
+            ("today_open", ErrorValue::Number(1))
+        );
     }
 }

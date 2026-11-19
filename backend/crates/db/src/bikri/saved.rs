@@ -1,0 +1,1165 @@
+//! Reads of saved بکری (PRD FR-12.7, FR-12.13, FR-5.4, plan 13): one بکری with its stored values, the
+//! list and the find, first / previous / next / last. Everything here only reads (Code Standards
+//! B29), and every number is a stored value: nothing is worked out again (Code Standards B20).
+//!
+//! A sum of money is a `SUM()` on `INTEGER` columns only (money agent Section 9).
+
+use std::collections::HashMap;
+
+use mandi_core::accounts::RecordRef;
+use mandi_core::bikri::{
+    BikriDetail, BikriHit, BikriListRow, BikriMatch, BikriStatus, FreightPaidBy, LotChargeMethod,
+    NavigateTo, SaleGrade, SaleState, SavedCharge, SavedChukta, SavedCredit, SavedLot,
+    SavedLotCharge, SavedOwnLot, SavedPosting, SavedPurchaseRef, SavedSale, SavedSplit,
+    SavedTotals, StoredMethod,
+};
+use mandi_core::edit::EntryFlags;
+use mandi_core::money::Paisa;
+use rusqlite::types::{FromSql, Value};
+use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
+
+/// Reads the columns of a row one after the other, so a long SELECT has no index to count.
+pub(super) struct Cols<'a> {
+    row: &'a Row<'a>,
+    at: usize,
+}
+
+fn bad(column: usize, what: &str) -> rusqlite::Error {
+    rusqlite::Error::FromSqlConversionFailure(
+        column,
+        rusqlite::types::Type::Text,
+        format!("bikri: {what}").into(),
+    )
+}
+
+impl<'a> Cols<'a> {
+    pub(super) fn new(row: &'a Row<'a>) -> Self {
+        Self { row, at: 0 }
+    }
+
+    pub(super) fn get<T: FromSql>(&mut self) -> rusqlite::Result<T> {
+        let value = self.row.get(self.at)?;
+        self.at = self.at.saturating_add(1);
+        Ok(value)
+    }
+
+    pub(super) fn paisa(&mut self) -> rusqlite::Result<Paisa> {
+        let at = self.at;
+        let value: i64 = self.get()?;
+        Paisa::try_from_paisa(value).map_err(|_| bad(at, "an amount that is not a whole rupee"))
+    }
+
+    fn opt_paisa(&mut self) -> rusqlite::Result<Option<Paisa>> {
+        let at = self.at;
+        let value: Option<i64> = self.get()?;
+        value
+            .map(|v| {
+                Paisa::try_from_paisa(v).map_err(|_| bad(at, "an amount that is not a whole rupee"))
+            })
+            .transpose()
+    }
+
+    fn record(&mut self) -> rusqlite::Result<RecordRef> {
+        Ok(RecordRef {
+            id: self.get()?,
+            code: self.get()?,
+            name_ur: self.get()?,
+            name_en: self.get()?,
+            tag: None,
+        })
+    }
+
+    /// An account: id, code, both names and the tag (نشان, PRD 10.2).
+    fn account(&mut self) -> rusqlite::Result<RecordRef> {
+        Ok(RecordRef {
+            id: self.get()?,
+            code: self.get()?,
+            name_ur: self.get()?,
+            name_en: self.get()?,
+            tag: self.get()?,
+        })
+    }
+
+    /// Four columns that are all NULL when a LEFT JOIN found nothing.
+    fn opt_record(&mut self) -> rusqlite::Result<Option<RecordRef>> {
+        let id: Option<i64> = self.get()?;
+        let code: Option<String> = self.get()?;
+        let name_ur: Option<String> = self.get()?;
+        let name_en: Option<String> = self.get()?;
+        Ok(id.map(|id| RecordRef {
+            id,
+            code: code.unwrap_or_default(),
+            name_ur: name_ur.unwrap_or_default(),
+            name_en: name_en.unwrap_or_default(),
+            tag: None,
+        }))
+    }
+
+    /// The four columns of a چکتا buyer; `None` when there is no person key.
+    fn chukta(&mut self) -> rusqlite::Result<Option<SavedChukta>> {
+        let name_ur: Option<String> = self.get()?;
+        let name_en: Option<String> = self.get()?;
+        let phone: Option<String> = self.get()?;
+        let key: Option<String> = self.get()?;
+        Ok(key.map(|person_key| SavedChukta {
+            name_ur: name_ur.unwrap_or_default(),
+            name_en: name_en.unwrap_or_default(),
+            phone: phone.unwrap_or_default(),
+            person_key,
+        }))
+    }
+
+    pub(super) fn status(&mut self) -> rusqlite::Result<BikriStatus> {
+        let at = self.at;
+        let text: String = self.get()?;
+        BikriStatus::parse(&text).ok_or_else(|| bad(at, "a status that is not saved or cancelled"))
+    }
+}
+
+fn sale_charge(c: &mut Cols<'_>) -> rusqlite::Result<SavedCharge> {
+    let at = c.at;
+    let method: String = c.get()?;
+    let value_bps: Option<i32> = c.get()?;
+    let value_paisa = c.opt_paisa()?;
+    let rule_id: Option<i64> = c.get()?;
+    let amount = c.paisa()?;
+    Ok(SavedCharge {
+        method: StoredMethod::parse(&method).ok_or_else(|| bad(at, "a charge method"))?,
+        value_bps,
+        value_paisa,
+        amount,
+        rule_id,
+    })
+}
+
+fn lot_charge(c: &mut Cols<'_>) -> rusqlite::Result<SavedLotCharge> {
+    let amount = c.paisa()?;
+    let at = c.at;
+    let method: String = c.get()?;
+    let value_paisa = c.paisa()?;
+    let rule_id: Option<i64> = c.get()?;
+    Ok(SavedLotCharge {
+        method: LotChargeMethod::parse(&method).ok_or_else(|| bad(at, "a lot charge method"))?,
+        value_paisa,
+        amount,
+        rule_id,
+    })
+}
+
+fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
+    let lot_id: i64 = c.get()?;
+    let id: i64 = c.get()?;
+    let line_no: i64 = c.get()?;
+    let journal_entry_id: i64 = c.get()?;
+    let entry_date: String = c.get()?;
+    let buyer = c.account()?;
+    let chukta = c.chukta()?;
+    let qty: i64 = c.get()?;
+    let weight_grams: Option<i64> = c.get()?;
+    let seller_rate = c.paisa()?;
+    let seller_amount = c.paisa()?;
+    let seller_comm = sale_charge(c)?;
+    let buyer_rate = c.paisa()?;
+    let buyer_value = c.paisa()?;
+    let buyer_comm = sale_charge(c)?;
+    let laga = sale_charge(c)?;
+    let buyer_total = c.paisa()?;
+    let rate_diff = c.paisa()?;
+    let at = c.at;
+    let paid = c.paisa()?;
+    let is_active: bool = c.get()?;
+    let ended_at = c.at;
+    let ended: Option<String> = c.get()?;
+    let note: Option<String> = c.get()?;
+    let cost_paisa = c.paisa()?;
+    let grade_at = c.at;
+    let grade: Option<String> = c.get()?;
+    Ok((
+        lot_id,
+        SavedSale {
+            id,
+            line_no,
+            journal_entry_id,
+            entry_date,
+            buyer,
+            chukta,
+            qty,
+            weight_grams,
+            seller_rate,
+            seller_amount,
+            seller_comm,
+            buyer_rate,
+            buyer_value,
+            buyer_comm,
+            laga,
+            buyer_total,
+            rate_diff,
+            cost_paisa,
+            paid_paisa: paid,
+            left_paisa: {
+                // A stored paid is never above its total (the CHECK of migration 21), so a negative
+                // left is a bug signal and is refused, not shown.
+                let left = buyer_total
+                    .checked_sub(paid)
+                    .map_err(|_| bad(at, "a paid amount that does not fit"))?;
+                if left.is_negative() {
+                    return Err(bad(at, "a paid amount above the buyer total"));
+                }
+                left
+            },
+            is_active,
+            state: SaleState::parse(ended.as_deref())
+                .ok_or_else(|| bad(ended_at, "a sale line state"))?,
+            grade: grade
+                .as_deref()
+                .map(|g| SaleGrade::parse(g).ok_or_else(|| bad(grade_at, "a sale line quality")))
+                .transpose()?,
+            note,
+        },
+    ))
+}
+
+const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.entry_date,
+    ba.id, ba.code, ba.name_ur, ba.name_en, ba.tag,
+    s.chukta_name_ur, s.chukta_name_en, s.chukta_phone, s.chukta_person_key,
+    s.qty, s.weight_grams, s.seller_rate_paisa, s.seller_amount_paisa,
+    s.seller_comm_method, s.seller_comm_value_bps, s.seller_comm_value_paisa, s.seller_comm_rule_id, s.seller_comm_paisa,
+    s.buyer_rate_paisa, s.buyer_value_paisa,
+    s.buyer_comm_method, s.buyer_comm_value_bps, s.buyer_comm_value_paisa, s.buyer_comm_rule_id, s.buyer_comm_paisa,
+    s.laga_method, s.laga_value_bps, s.laga_value_paisa, s.laga_rule_id, s.laga_paisa,
+    s.buyer_total_paisa, s.rate_diff_paisa, s.paid_paisa, s.is_active, s.ended, s.note, s.cost_paisa,
+    s.grade";
+
+fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
+    let id: i64 = c.get()?;
+    let lot_no: i64 = c.get()?;
+    let lot_counter: i64 = c.get()?;
+    let seller = c.account()?;
+    let item = c.record()?;
+    let packing = c.record()?;
+    let marka_id: Option<i64> = c.get()?;
+    let marka_text: Option<String> = c.get()?;
+    let store_id: Option<i64> = c.get()?;
+    let qty_received: i64 = c.get()?;
+    let qty_sold: i64 = c.get()?;
+    let qty_written_off: i64 = c.get()?;
+    let qty_taken: i64 = c.get()?;
+    let weight_received_grams: Option<i64> = c.get()?;
+    let freight = c.paisa()?;
+    let at = c.at;
+    let paid_by: String = c.get()?;
+    let labour = lot_charge(c)?;
+    let munshiana = lot_charge(c)?;
+    let phone = lot_charge(c)?;
+    let cash_paid = c.paisa()?;
+    let store_rent = c.paisa()?;
+    let adjust_advance: bool = c.get()?;
+    let first_entry_id: Option<i64> = c.get()?;
+    let gross = c.paisa()?;
+    let seller_comm = c.paisa()?;
+    let deductions = c.paisa()?;
+    let net = c.paisa()?;
+    let purchase_id: Option<i64> = c.get()?;
+    let purchase_number: Option<i64> = c.get()?;
+    let trip_id: Option<i64> = c.get()?;
+    let trip_number: Option<i64> = c.get()?;
+    let arrival_id: Option<i64> = c.get()?;
+    let arrival_number: Option<i64> = c.get()?;
+    let garden_id: Option<i64> = c.get()?;
+    let garden_number: Option<i64> = c.get()?;
+    Ok(SavedLot {
+        id,
+        lot_no,
+        lot_counter,
+        seller,
+        purchase: match (purchase_id, purchase_number, trip_id, trip_number) {
+            (Some(id), Some(number), Some(trip_id), Some(trip_number)) => Some(SavedPurchaseRef {
+                id,
+                number,
+                trip_id,
+                trip_number,
+                trip_code: mandi_core::codes::number_code(
+                    mandi_core::codes::CodeType::Trip,
+                    trip_number,
+                ),
+            }),
+            _ => None,
+        },
+        // Filled by `fill_own_lots` after the lines are read (PRD FR-12.27).
+        own: None,
+        arrival: match (arrival_id, arrival_number, garden_id, garden_number) {
+            (Some(id), Some(number), Some(garden_id), Some(garden_number)) => {
+                Some(mandi_core::bikri::SavedArrivalRef {
+                    id,
+                    number,
+                    garden_id,
+                    garden_number,
+                    garden_code: mandi_core::codes::number_code(
+                        mandi_core::codes::CodeType::Garden,
+                        garden_number,
+                    ),
+                })
+            }
+            _ => None,
+        },
+        item,
+        packing,
+        marka_id,
+        marka_text,
+        store_id,
+        qty_received,
+        qty_sold,
+        qty_written_off,
+        qty_taken,
+        weight_received_grams,
+        freight,
+        freight_paid_by: FreightPaidBy::parse(&paid_by)
+            .ok_or_else(|| bad(at, "who paid freight"))?,
+        labour,
+        munshiana,
+        phone,
+        cash_paid,
+        store_rent,
+        adjust_advance,
+        first_entry_id,
+        gross,
+        seller_comm,
+        deductions,
+        net,
+        sales: Vec::new(),
+        totals: SavedTotals::default(),
+    })
+}
+
+/// Fills what a trip lot shows besides its lines (PRD FR-12.26, FR-12.27): the cost of the goods
+/// its lines in force sold, the seller credit that stands, the result, and each trip partner's part.
+/// Every number is a stored value: the lines' `cost_paisa` and the rows of `lot_credit_parts` (a
+/// reversal's rows are the opposite, so the sums are what stands now).
+fn fill_own_lots(conn: &Connection, lots: &mut [SavedLot]) -> rusqlite::Result<()> {
+    let total_error = |_| bad(0, "a total that does not fit");
+    for lot in lots.iter_mut().filter(|l| l.purchase.is_some()) {
+        let cost: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(cost_paisa), 0) FROM bikri_sales WHERE lot_id = ?1 AND is_active = 1",
+            [lot.id],
+            |r| r.get(0),
+        )?;
+        let mut statement = conn.prepare(
+            "SELECT p.id, p.name_ur, p.name_en, p.venture_account_id, MAX(c.share_bps), SUM(c.amount_paisa)
+             FROM lot_credit_parts c JOIN partners p ON p.id = c.partner_id
+             WHERE c.lot_id = ?1
+             GROUP BY p.id, p.name_ur, p.name_en, p.venture_account_id ORDER BY p.id",
+        )?;
+        let rows = statement.query_map([lot.id], |row| {
+            let mut c = Cols::new(row);
+            let id: i64 = c.get()?;
+            let name_ur: String = c.get()?;
+            let name_en: String = c.get()?;
+            let account_id: Option<i64> = c.get()?;
+            let share_bps: i32 = c.get()?;
+            Ok(SavedCredit {
+                partner: RecordRef {
+                    id,
+                    code: String::new(),
+                    name_ur,
+                    name_en,
+                    tag: None,
+                },
+                account_id: account_id.unwrap_or_default(),
+                share_bps,
+                amount_paisa: c.paisa()?,
+            })
+        })?;
+        let credits = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut credit = Paisa::ZERO;
+        for part in &credits {
+            credit = credit.checked_add(part.amount_paisa).map_err(total_error)?;
+        }
+        let cost = Paisa::try_from_paisa(cost).map_err(total_error)?;
+        lot.own = Some(SavedOwnLot {
+            cost_paisa: cost,
+            credit_paisa: credit,
+            result_paisa: credit.checked_sub(cost).map_err(total_error)?,
+            credits,
+        });
+    }
+    Ok(())
+}
+
+/// One saved بکری with its lots, lines, postings and partner split, or `None`.
+///
+/// # Errors
+/// Any SQLite error, or a stored value that is not in the form this code wrote.
+pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> {
+    let head = conn
+        .query_row(
+            "SELECT e.id, e.version, e.number, e.book, e.entry_date, e.bill_date, e.truck_no, e.adda_id, e.driver_name,
+                    e.driver_phone, e.total_freight_paisa, e.store_id, e.note, e.status, e.cancel_reason,
+                    e.print_count, e.created_at, z.id, z.code, z.name_ur, z.name_en
+             FROM bikri_entries e LEFT JOIN accounts z ON z.id = e.zamindar_account_id
+             WHERE e.id = ?1",
+            [id],
+            |row| {
+                let mut c = Cols::new(row);
+                Ok(BikriDetail {
+                    id: c.get()?,
+                    version: c.get()?,
+                    number: c.get()?,
+                    book: c.get()?,
+                    entry_date: c.get()?,
+                    bill_date: c.get()?,
+                    truck_no: c.get()?,
+                    adda_id: c.get()?,
+                    driver_name: c.get()?,
+                    driver_phone: c.get()?,
+                    total_freight: c.opt_paisa()?,
+                    store_id: c.get()?,
+                    note: c.get()?,
+                    status: c.status()?,
+                    cancel_reason: c.get()?,
+                    print_count: c.get()?,
+                    created_at: c.get()?,
+                    zamindar: c.opt_record()?,
+                    lots: Vec::new(),
+                    postings: Vec::new(),
+                    split: Vec::new(),
+                    totals: SavedTotals::default(),
+                    // Set by the service, which knows the closed-up-to day and the audit stamp.
+                    flags: EntryFlags::unmarked(),
+                })
+            },
+        )
+        .optional()?;
+    let Some(mut detail) = head else {
+        return Ok(None);
+    };
+
+    let mut statement = conn.prepare(
+        "SELECT l.id, l.lot_no, l.lot_counter, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
+                it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
+                l.marka_id, mk.mark_text, l.store_id, l.qty_received, l.qty_sold, l.qty_written_off,
+                l.qty_taken, l.weight_received_grams, l.freight_paisa, l.freight_paid_by,
+                l.labour_paisa, l.labour_method, l.labour_value_paisa, l.labour_rule_id,
+                l.munshiana_paisa, l.munshiana_method, l.munshiana_value_paisa, l.munshiana_rule_id,
+                l.phone_paisa, l.phone_method, l.phone_value_paisa, l.phone_rule_id,
+                l.cash_paid_paisa, l.store_rent_paisa, l.adjust_advance, l.first_entry_id,
+                l.gross_paisa, l.seller_comm_paisa, l.deductions_paisa, l.net_paisa,
+                l.purchase_id, pu.number, pu.venture_id, tr.number,
+                l.arrival_id, ga.number, ga.venture_id, gd.number
+         FROM bikri_lots l
+         LEFT JOIN purchases pu ON pu.id = l.purchase_id
+         LEFT JOIN ventures tr ON tr.id = pu.venture_id
+         LEFT JOIN garden_arrivals ga ON ga.id = l.arrival_id
+         LEFT JOIN ventures gd ON gd.id = ga.venture_id
+         JOIN accounts sa ON sa.id = l.seller_account_id
+         JOIN items it ON it.id = l.item_id
+         JOIN packings pk ON pk.id = l.packing_id
+         LEFT JOIN markas mk ON mk.id = l.marka_id
+         WHERE l.bikri_id = ?1 AND l.removed_at IS NULL ORDER BY l.lot_no",
+    )?;
+    let lots = statement.query_map([id], |row| read_lot(&mut Cols::new(row)))?;
+    detail.lots = lots.collect::<rusqlite::Result<Vec<_>>>()?;
+
+    let mut statement = conn.prepare(&format!(
+        "SELECT {SALE_COLUMNS} FROM bikri_sales s JOIN accounts ba ON ba.id = s.buyer_account_id
+         WHERE s.bikri_id = ?1 ORDER BY s.lot_id, s.line_no, s.id"
+    ))?;
+    let sales = statement.query_map([id], |row| read_sale(&mut Cols::new(row)))?;
+    for sale in sales {
+        let (lot_id, sale) = sale?;
+        if let Some(lot) = detail.lots.iter_mut().find(|l| l.id == lot_id) {
+            lot.sales.push(sale);
+        }
+    }
+
+    fill_own_lots(conn, &mut detail.lots)?;
+
+    // The totals of each lot and of the whole بکری: sums of the stored values (Code Standards B20).
+    let total_error = |_| bad(0, "a total that does not fit");
+    let mut whole = SavedTotals::default();
+    for lot in &mut detail.lots {
+        lot.totals = SavedTotals::of_lot(lot).map_err(total_error)?;
+        whole = whole.plus(&lot.totals).map_err(total_error)?;
+    }
+    detail.totals = whole;
+
+    let mut statement = conn.prepare(
+        "SELECT e.id, e.posting_type, e.entry_date, e.total_paisa,
+                EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
+         FROM journal_entries e
+         WHERE e.source_type = 'bikri' AND e.source_id = ?1 AND e.status = 'posted' ORDER BY e.id",
+    )?;
+    let postings = statement.query_map([id], |row| {
+        let mut c = Cols::new(row);
+        Ok(SavedPosting {
+            entry_id: c.get()?,
+            posting_type: c.get()?,
+            entry_date: c.get()?,
+            total: c.paisa()?,
+            reversed: c.get()?,
+            // Set by the service, which knows the closed-up-to day.
+            editable: false,
+        })
+    })?;
+    detail.postings = postings.collect::<rusqlite::Result<Vec<_>>>()?;
+
+    let mut statement = conn.prepare(
+        "SELECT p.id, p.name_ur, p.name_en, SUM(r.amount_paisa)
+         FROM partner_share_rows r
+         JOIN journal_entries e ON e.id = r.journal_entry_id
+         JOIN partners p ON p.id = r.partner_id
+         WHERE e.source_type = 'bikri' AND e.source_id = ?1 AND r.kind = 'income'
+         GROUP BY p.id, p.name_ur, p.name_en ORDER BY p.id",
+    )?;
+    let split = statement.query_map([id], |row| {
+        let mut c = Cols::new(row);
+        Ok(SavedSplit {
+            partner_id: c.get()?,
+            name_ur: c.get()?,
+            name_en: c.get()?,
+            income_paisa: c.paisa()?,
+        })
+    })?;
+    detail.split = split.collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(Some(detail))
+}
+
+/// What the list and the find ask for. A field that is `None` is not a filter.
+#[derive(Debug, Clone, Default)]
+pub struct ListFilter {
+    /// First day, `YYYY-MM-DD`.
+    pub from: Option<String>,
+    /// Last day, `YYYY-MM-DD`.
+    pub to: Option<String>,
+    /// A seller of one of its lots.
+    pub seller_id: Option<i64>,
+    /// An item of one of its lots.
+    pub item_id: Option<i64>,
+    /// A buyer (an account) on one of its live sale lines (plan 67).
+    pub buyer_id: Option<i64>,
+    /// Part of the normalised Urdu name (`core::text::search_ur`) of a چکتا buyer on one of its live
+    /// sale lines (plan 67). Matches anywhere in the name.
+    pub chukta_name_ur: Option<String>,
+    /// The same, for the lower-case English name (`core::text::search_en`). A line matches when
+    /// either name matches.
+    pub chukta_name_en: Option<String>,
+    /// `saved` or `cancelled`.
+    pub status: Option<BikriStatus>,
+    /// The بکری number.
+    pub number: Option<i64>,
+    /// The start of the truck number (letter case ignored).
+    pub truck_prefix: Option<String>,
+    /// A search text: the بکری with this number, or the trucks that start with it (plan 38 R4).
+    pub search: Option<String>,
+    /// The `ORDER BY` expressions chosen by a sort, from [`SORT_COLUMNS`]. `None` is newest first.
+    pub order_by: Option<String>,
+    /// The most rows.
+    pub limit: i64,
+    /// How many rows to skip (0 for the first page).
+    pub offset: i64,
+}
+
+/// Escapes `%`, `_` and `\` so typed text is taken as plain characters in a `LIKE`.
+fn like_prefix(text: &str) -> String {
+    let mut out = String::with_capacity(text.len().saturating_add(1));
+    for c in text.chars() {
+        if matches!(c, '%' | '_' | '\\') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('%');
+    out
+}
+
+/// Escapes `%`, `_` and `\` and puts `%` on both sides, so typed text is found anywhere in a name.
+fn like_contains(text: &str) -> String {
+    let mut out = String::with_capacity(text.len().saturating_add(2));
+    out.push('%');
+    for c in text.chars() {
+        if matches!(c, '%' | '_' | '\\') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('%');
+    out
+}
+
+/// The `WHERE` of the list of بکری and the values it binds, in order. Only the conditions the
+/// filter really sets are written, so SQLite can search `idx_bikri_entries_date` instead of
+/// reading every بکری (Code Standards B18, NFR-SPD-24). The text is empty for no condition.
+fn list_where(filter: &ListFilter) -> (String, Vec<Value>) {
+    where_of(filter, true)
+}
+
+/// [`list_where`] with or without the two conditions on the day of the بکری. The list of what was
+/// posted on a day (`posted`) puts the dates on the postings instead.
+pub(super) fn where_of(filter: &ListFilter, with_dates: bool) -> (String, Vec<Value>) {
+    let mut conditions: Vec<&str> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
+    if let (true, Some(from)) = (with_dates, &filter.from) {
+        conditions.push("e.entry_date >= ?");
+        binds.push(Value::Text(from.clone()));
+    }
+    if let (true, Some(to)) = (with_dates, &filter.to) {
+        conditions.push("e.entry_date <= ?");
+        binds.push(Value::Text(to.clone()));
+    }
+    if let Some(seller) = filter.seller_id {
+        conditions.push(
+            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.removed_at IS NULL AND l2.seller_account_id = ?)",
+        );
+        binds.push(Value::Integer(seller));
+    }
+    if let Some(item) = filter.item_id {
+        conditions.push(
+            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.removed_at IS NULL AND l2.item_id = ?)",
+        );
+        binds.push(Value::Integer(item));
+    }
+    if let Some(buyer) = filter.buyer_id {
+        // One search on `idx_bikri_sales_buyer_date`, not a look at every بکری (B18, plan 67).
+        conditions.push(
+            "e.id IN (SELECT s2.bikri_id FROM bikri_sales s2 WHERE s2.buyer_account_id = ? AND s2.is_active = 1)",
+        );
+        binds.push(Value::Integer(buyer));
+    }
+    // A چکتا buyer has no account: his name is on the line and in the list of چکتا buyers, whose
+    // search keys are the ones that are searched. Either name may match; a name that was not given
+    // is a NULL pattern, which matches nothing. Only the lines of the shared account 0030 are looked
+    // at (its buyer index), not every line (B18); the small list of چکتا buyers is read whole.
+    let name_pattern = |key: &Option<String>| match key.as_deref().filter(|t| !t.is_empty()) {
+        Some(text) => Value::Text(like_contains(text)),
+        None => Value::Null,
+    };
+    let (ur, en) = (
+        name_pattern(&filter.chukta_name_ur),
+        name_pattern(&filter.chukta_name_en),
+    );
+    if ur != Value::Null || en != Value::Null {
+        conditions.push(
+            "e.id IN (SELECT s2.bikri_id FROM bikri_sales s2
+                WHERE s2.buyer_account_id = (SELECT id FROM accounts WHERE code = '0030')
+                  AND s2.is_active = 1
+                  AND s2.chukta_person_key IN (SELECT b.person_key FROM chukta_buyers b
+                       WHERE b.search_ur LIKE ? ESCAPE '\\' OR b.search_en LIKE ? ESCAPE '\\'))",
+        );
+        binds.push(ur);
+        binds.push(en);
+    }
+    if let Some(status) = filter.status {
+        conditions.push("e.status = ?");
+        binds.push(Value::Text(status.as_str().to_owned()));
+    }
+    if let Some(number) = filter.number {
+        conditions.push("e.number = ?");
+        binds.push(Value::Integer(number));
+    }
+    if let Some(prefix) = &filter.truck_prefix {
+        conditions.push("e.truck_no LIKE ? ESCAPE '\\'");
+        binds.push(Value::Text(like_prefix(prefix)));
+    }
+    if let Some(text) = &filter.search {
+        // A number finds that بکری or the trucks that start with the same digits.
+        match text.parse::<i64>() {
+            Ok(number) => {
+                conditions.push("(e.number = ? OR e.truck_no LIKE ? ESCAPE '\\')");
+                binds.push(Value::Integer(number));
+            }
+            Err(_) => conditions.push("e.truck_no LIKE ? ESCAPE '\\'"),
+        }
+        binds.push(Value::Text(like_prefix(text)));
+    }
+    if conditions.is_empty() {
+        (String::new(), binds)
+    } else {
+        (format!(" WHERE {}", conditions.join(" AND ")), binds)
+    }
+}
+
+/// The page query of [`list`] and the values it binds, so a test can read its plan (Code
+/// Standards B18). Newest first: the day, then the number.
+pub fn list_query(filter: &ListFilter) -> (String, Vec<Value>) {
+    let (condition, mut binds) = list_where(filter);
+    binds.push(Value::Integer(filter.limit));
+    binds.push(Value::Integer(filter.offset));
+    (
+        format!(
+            "SELECT e.id, e.number, e.entry_date, e.created_at, e.truck_no, e.status,
+                (SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
+                (SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
+                (SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
+                (SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL),
+                (SELECT COALESCE(SUM(s.buyer_total_paisa), 0) FROM bikri_sales s
+                   WHERE s.bikri_id = e.id AND s.is_active = 1)
+             FROM bikri_entries e{condition}
+             ORDER BY {order}
+             LIMIT ? OFFSET ?",
+            order = filter.order_by.as_deref().map_or_else(
+                || "e.entry_date DESC, e.number DESC".to_owned(),
+                |o| format!("{o}, e.entry_date DESC, e.number DESC"),
+            )
+        ),
+        binds,
+    )
+}
+
+/// The columns a list of بکری can be sorted by: the field of the row and its SQL. The sums are the
+/// same `SUM()` of stored columns the row shows.
+pub const SORT_COLUMNS: [(&str, &str); 9] = [
+    ("number", "e.number"),
+    ("entry_date", "e.entry_date"),
+    ("truck_no", "e.truck_no"),
+    ("status", "e.status"),
+    (
+        "qty_received",
+        "(SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
+    ),
+    (
+        "qty_sold",
+        "(SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
+    ),
+    (
+        "gross",
+        "(SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
+    ),
+    (
+        "net",
+        "(SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id AND l.removed_at IS NULL)",
+    ),
+    (
+        "buyer_total",
+        "(SELECT COALESCE(SUM(s.buyer_total_paisa), 0) FROM bikri_sales s WHERE s.bikri_id = e.id AND s.is_active = 1)",
+    ),
+];
+
+/// The rows of the list of بکری (PRD FR-12.7), newest first (day, then number). Sums are
+/// `SUM()` of stored columns. The sellers and items are read with one more statement for all
+/// the rows (Code Standards B22).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<BikriListRow>> {
+    let (sql, binds) = list_query(filter);
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |row| {
+        let mut c = Cols::new(row);
+        Ok(BikriListRow {
+            id: c.get()?,
+            number: c.get()?,
+            entry_date: c.get()?,
+            created_at: c.get()?,
+            truck_no: c.get()?,
+            status: c.status()?,
+            qty_received: c.get()?,
+            qty_sold: c.get()?,
+            gross: c.paisa()?,
+            net: c.paisa()?,
+            buyer_total: c.paisa()?,
+            sellers: Vec::new(),
+            items: Vec::new(),
+            lots: Vec::new(),
+            // Set by the service, which knows the closed-up-to day and the audit stamp.
+            flags: EntryFlags::unmarked(),
+        })
+    })?;
+    let mut out = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    fill_sellers_and_items(conn, &mut out)?;
+    Ok(out)
+}
+
+/// The count and the sums over every بکری a filter matches, not only one page (PRD FR-19.11,
+/// B31). The sums leave out cancelled بکری, like the totals of the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ListTotals {
+    /// How many بکری match, cancelled ones too.
+    pub count: i64,
+    /// `SUM(qty_received)` of the saved ones.
+    pub qty_received: i64,
+    /// `SUM(qty_sold)`.
+    pub qty_sold: i64,
+    /// `SUM(gross_paisa)`.
+    pub gross_paisa: i64,
+    /// `SUM(net_paisa)`.
+    pub net_paisa: i64,
+    /// `SUM(buyer_total_paisa)` of the live sale lines.
+    pub buyer_total_paisa: i64,
+}
+
+/// The three totals queries of [`list_totals`] (the count, the lot sums and the sale sums), each
+/// with the values it binds, so a test can read their plans (Code Standards B18).
+pub fn list_totals_queries(filter: &ListFilter) -> [(String, Vec<Value>); 3] {
+    let (condition, binds) = list_where(filter);
+    // The same conditions after `AND`, for the queries that already have a `WHERE`.
+    let and = condition.replacen(" WHERE ", " AND ", 1);
+    [
+        (
+            format!("SELECT COUNT(*) FROM bikri_entries e{condition}"),
+            binds.clone(),
+        ),
+        (
+            format!(
+                "SELECT COALESCE(SUM(l.qty_received), 0), COALESCE(SUM(l.qty_sold), 0),
+                        COALESCE(SUM(l.gross_paisa), 0), COALESCE(SUM(l.net_paisa), 0)
+                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id AND l.removed_at IS NULL
+                 WHERE e.status = 'saved'{and}"
+            ),
+            binds.clone(),
+        ),
+        (
+            format!(
+                "SELECT COALESCE(SUM(s.buyer_total_paisa), 0)
+                 FROM bikri_entries e JOIN bikri_sales s ON s.bikri_id = e.id
+                 WHERE e.status = 'saved' AND s.is_active = 1{and}"
+            ),
+            binds,
+        ),
+    ]
+}
+
+/// The totals of [`list`]'s filter, from three queries on indexed columns. Only `SUM()` on INTEGER
+/// columns is used.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<ListTotals> {
+    let [
+        (count_sql, count_binds),
+        (lots_sql, lots_binds),
+        (sales_sql, sales_binds),
+    ] = list_totals_queries(filter);
+    let count: i64 = conn.query_row(&count_sql, params_from_iter(count_binds.iter()), |r| {
+        r.get(0)
+    })?;
+    let (qty_received, qty_sold, gross_paisa, net_paisa): (i64, i64, i64, i64) =
+        conn.query_row(&lots_sql, params_from_iter(lots_binds.iter()), |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })?;
+    let buyer_total_paisa: i64 =
+        conn.query_row(&sales_sql, params_from_iter(sales_binds.iter()), |r| {
+            r.get(0)
+        })?;
+    Ok(ListTotals {
+        count,
+        qty_received,
+        qty_sold,
+        gross_paisa,
+        net_paisa,
+        buyer_total_paisa,
+    })
+}
+
+/// One month of the list: the count and the sums of its rows, over the whole filter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MonthRec {
+    /// `YYYY-MM`.
+    pub month: String,
+    /// How many بکری are in the month.
+    pub count: i64,
+    /// `SUM(qty_received)` of the saved ones.
+    pub qty_received: i64,
+    /// `SUM(qty_sold)`.
+    pub qty_sold: i64,
+    /// `SUM(gross_paisa)`.
+    pub gross_paisa: i64,
+    /// `SUM(net_paisa)`.
+    pub net_paisa: i64,
+    /// `SUM(buyer_total_paisa)` of the live sale lines.
+    pub buyer_total_paisa: i64,
+}
+
+/// The same totals as [`list_totals`], one row for each month of the filter, oldest month first.
+/// Three grouped queries on the indexed day (plan 38 R4). Only `SUM()` on INTEGER columns.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_months(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<MonthRec>> {
+    let (condition, binds) = list_where(filter);
+    let and = condition.replacen(" WHERE ", " AND ", 1);
+    let mut months: std::collections::BTreeMap<String, MonthRec> =
+        std::collections::BTreeMap::new();
+    let slot = |months: &mut std::collections::BTreeMap<String, MonthRec>, month: String| {
+        months
+            .entry(month.clone())
+            .or_insert(MonthRec {
+                month,
+                count: 0,
+                qty_received: 0,
+                qty_sold: 0,
+                gross_paisa: 0,
+                net_paisa: 0,
+                buyer_total_paisa: 0,
+            })
+            .clone()
+    };
+    let put = |months: &mut std::collections::BTreeMap<String, MonthRec>, rec: MonthRec| {
+        months.insert(rec.month.clone(), rec);
+    };
+    let mut statement = conn.prepare(&format!(
+        "SELECT substr(e.entry_date, 1, 7), COUNT(*) FROM bikri_entries e{condition} GROUP BY 1"
+    ))?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (month, count) = row?;
+        let mut rec = slot(&mut months, month);
+        rec.count = count;
+        put(&mut months, rec);
+    }
+    let mut statement = conn.prepare(&format!(
+        "SELECT substr(e.entry_date, 1, 7), COALESCE(SUM(l.qty_received), 0),
+                COALESCE(SUM(l.qty_sold), 0), COALESCE(SUM(l.gross_paisa), 0),
+                COALESCE(SUM(l.net_paisa), 0)
+         FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id AND l.removed_at IS NULL
+         WHERE e.status = 'saved'{and} GROUP BY 1"
+    ))?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, i64>(1)?,
+            r.get::<_, i64>(2)?,
+            r.get::<_, i64>(3)?,
+            r.get::<_, i64>(4)?,
+        ))
+    })?;
+    for row in rows {
+        let (month, qty_received, qty_sold, gross_paisa, net_paisa) = row?;
+        let mut rec = slot(&mut months, month);
+        rec.qty_received = qty_received;
+        rec.qty_sold = qty_sold;
+        rec.gross_paisa = gross_paisa;
+        rec.net_paisa = net_paisa;
+        put(&mut months, rec);
+    }
+    let mut statement = conn.prepare(&format!(
+        "SELECT substr(e.entry_date, 1, 7), COALESCE(SUM(s.buyer_total_paisa), 0)
+         FROM bikri_entries e JOIN bikri_sales s ON s.bikri_id = e.id
+         WHERE e.status = 'saved' AND s.is_active = 1{and} GROUP BY 1"
+    ))?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (month, buyer_total_paisa) = row?;
+        let mut rec = slot(&mut months, month);
+        rec.buyer_total_paisa = buyer_total_paisa;
+        put(&mut months, rec);
+    }
+    Ok(months.into_values().collect())
+}
+
+/// One day of a window: the بکری of the day under the filter and their خام بکری (plan 72 P4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DayRec {
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    /// How many بکری the day has under the filter, cancelled ones too.
+    pub count: i64,
+    /// `SUM(gross_paisa)` of the saved ones.
+    pub gross_paisa: i64,
+}
+
+/// The two grouped queries of [`list_days`] (the count and the lot sums), each with the values it
+/// binds, so a test can read their plans (Code Standards B18). Both group on the indexed day.
+pub fn list_days_queries(filter: &ListFilter) -> [(String, Vec<Value>); 2] {
+    let (condition, binds) = list_where(filter);
+    let and = condition.replacen(" WHERE ", " AND ", 1);
+    [
+        (
+            format!(
+                "SELECT e.entry_date, COUNT(*) FROM bikri_entries e{condition}
+                 GROUP BY e.entry_date ORDER BY e.entry_date"
+            ),
+            binds.clone(),
+        ),
+        (
+            format!(
+                "SELECT e.entry_date, COALESCE(SUM(l.gross_paisa), 0)
+                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id AND l.removed_at IS NULL
+                 WHERE e.status = 'saved'{and}
+                 GROUP BY e.entry_date ORDER BY e.entry_date"
+            ),
+            binds,
+        ),
+    ]
+}
+
+/// The days of a filter that have at least one بکری, oldest first, with their count and خام بکری:
+/// two grouped queries on the indexed day (plan 72 P11). Only `SUM()` on an INTEGER column. A day
+/// with no بکری is not in the answer; the service adds it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_days(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<DayRec>> {
+    let [(count_sql, count_binds), (gross_sql, gross_binds)] = list_days_queries(filter);
+    let mut days: std::collections::BTreeMap<String, DayRec> = std::collections::BTreeMap::new();
+    let mut statement = conn.prepare(&count_sql)?;
+    let rows = statement.query_map(params_from_iter(count_binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (date, count) = row?;
+        days.insert(
+            date.clone(),
+            DayRec {
+                date,
+                count,
+                gross_paisa: 0,
+            },
+        );
+    }
+    let mut statement = conn.prepare(&gross_sql)?;
+    let rows = statement.query_map(params_from_iter(gross_binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (date, gross_paisa) = row?;
+        if let Some(day) = days.get_mut(&date) {
+            day.gross_paisa = gross_paisa;
+        }
+    }
+    Ok(days.into_values().collect())
+}
+
+/// Adds the sellers (each once, in lot order) and the items of each row, from one statement.
+pub(super) fn fill_sellers_and_items(
+    conn: &Connection,
+    rows: &mut [BikriListRow],
+) -> rusqlite::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+    let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
+    let marks = vec!["?"; ids.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT l.bikri_id, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
+                it.id, it.code, it.name_ur, it.name_en, l.id, l.lot_counter
+         FROM bikri_lots l JOIN accounts sa ON sa.id = l.seller_account_id JOIN items it ON it.id = l.item_id
+         WHERE l.bikri_id IN ({marks}) AND l.removed_at IS NULL ORDER BY l.bikri_id, l.lot_no"
+    ))?;
+    let lots = statement.query_map(rusqlite::params_from_iter(&ids), |row| {
+        let mut c = Cols::new(row);
+        let bikri_id: i64 = c.get()?;
+        let seller = c.account()?;
+        let item = c.record()?;
+        let lot_id: i64 = c.get()?;
+        let counter: i64 = c.get()?;
+        Ok((bikri_id, seller, item, lot_id, counter))
+    })?;
+    let mut by_id: HashMap<i64, usize> = HashMap::with_capacity(rows.len());
+    for (index, row) in rows.iter().enumerate() {
+        by_id.insert(row.id, index);
+    }
+    for lot in lots {
+        let (bikri_id, seller, item, lot_id, counter) = lot?;
+        let Some(row) = by_id.get(&bikri_id).and_then(|i| rows.get_mut(*i)) else {
+            continue;
+        };
+        row.lots.push(mandi_core::bikri::LotName {
+            lot_id,
+            seller: seller.clone(),
+            item: item.clone(),
+            counter,
+        });
+        if !row.sellers.iter().any(|s| s.id == seller.id) {
+            row.sellers.push(seller);
+        }
+        if !row.items.iter().any(|i| i.id == item.id) {
+            row.items.push(item);
+        }
+    }
+    Ok(())
+}
+
+/// The number of a بکری, or `None` if there is none with this id.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn number_of(conn: &Connection, id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT number FROM bikri_entries WHERE id = ?1",
+        [id],
+        |r| r.get(0),
+    )
+    .optional()
+}
+
+/// The id of the first, previous, next or last بکری by number. `current_number` is the number
+/// of the بکری on the screen, if any: previous of none is the last, next of none is the first.
+/// `None` when there is nothing in that direction.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn neighbour(
+    conn: &Connection,
+    current_number: Option<i64>,
+    to: NavigateTo,
+) -> rusqlite::Result<Option<i64>> {
+    let sql = match (to, current_number) {
+        (NavigateTo::First, _) | (NavigateTo::Next, None) => {
+            "SELECT id FROM bikri_entries ORDER BY number ASC LIMIT 1"
+        }
+        (NavigateTo::Last, _) | (NavigateTo::Previous, None) => {
+            "SELECT id FROM bikri_entries ORDER BY number DESC LIMIT 1"
+        }
+        (NavigateTo::Previous, Some(_)) => {
+            "SELECT id FROM bikri_entries WHERE number < ?1 ORDER BY number DESC LIMIT 1"
+        }
+        (NavigateTo::Next, Some(_)) => {
+            "SELECT id FROM bikri_entries WHERE number > ?1 ORDER BY number ASC LIMIT 1"
+        }
+    };
+    match current_number {
+        Some(number) if matches!(to, NavigateTo::Previous | NavigateTo::Next) => {
+            conn.query_row(sql, [number], |r| r.get(0)).optional()
+        }
+        _ => conn.query_row(sql, [], |r| r.get(0)).optional(),
+    }
+}
+
+fn hit(row: &Row<'_>, matched: BikriMatch) -> rusqlite::Result<BikriHit> {
+    let mut c = Cols::new(row);
+    Ok(BikriHit {
+        id: c.get()?,
+        number: c.get()?,
+        entry_date: c.get()?,
+        truck_no: c.get()?,
+        status: c.status()?,
+        matched,
+    })
+}
+
+/// The بکری with exactly this number, for the global search (PRD FR-5.4).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn hit_by_number(conn: &Connection, number: i64) -> rusqlite::Result<Option<BikriHit>> {
+    conn.query_row(
+        "SELECT id, number, entry_date, truck_no, status FROM bikri_entries WHERE number = ?1",
+        [number],
+        |r| hit(r, BikriMatch::Number),
+    )
+    .optional()
+}
+
+/// The newest بکری whose truck number starts with the text (letter case ignored), for the global
+/// search (PRD FR-5.4).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn hits_by_truck(
+    conn: &Connection,
+    prefix: &str,
+    limit: i64,
+) -> rusqlite::Result<Vec<BikriHit>> {
+    let mut statement = conn.prepare(
+        "SELECT id, number, entry_date, truck_no, status FROM bikri_entries
+         WHERE truck_no LIKE ?1 ESCAPE '\\'
+         ORDER BY entry_date DESC, number DESC LIMIT ?2",
+    )?;
+    let rows = statement.query_map(params![like_prefix(prefix), limit], |r| {
+        hit(r, BikriMatch::Truck)
+    })?;
+    rows.collect()
+}

@@ -10,7 +10,7 @@ use mandi_services::core::accounts::{
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
-    AdvanceInput, DayCloseInput, DayClosePreviewInput, DayReopenInput, VoucherMode,
+    AdvanceInput, DayCloseInput, DayClosePreviewInput, DayReopenInput,
 };
 use mandi_services::testing::TestEnv;
 use mandi_services::{ServiceError, accounts, auth, day, vouchers};
@@ -88,9 +88,9 @@ fn seller(env: &TestEnv, owner: &auth::Actor) -> i64 {
             credit_limit: String::new(),
             default_marka_id: None,
             collector_staff_id: None,
-            collection_weekday: None,
             is_active: true,
             note: String::new(),
+            tag: String::new(),
         },
     )
     .unwrap()
@@ -108,13 +108,11 @@ fn give(
         &env.ctx,
         owner,
         &AdvanceInput {
+            confirm_cash_below_zero: true,
             date: date.into(),
             seller_account_id: rahim,
             amount: amount.into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },
@@ -160,6 +158,7 @@ fn reopen(
         &DayReopenInput {
             date: date.into(),
             reason: reason.into(),
+            sign: "adnan".into(),
         },
     )
 }
@@ -783,4 +782,69 @@ fn ten_years_closed_in_one_step_write_a_row_for_each_day_and_stay_fast() {
     );
     eprintln!("3,653 days closed in {took:?} (debug build)");
     assert!(took.as_millis() < 5_000, "{took:?}");
+}
+
+/// The first day of the books (plan 52 item 2): the oldest posted entry, or an older trip that
+/// posted nothing yet. `up_to_now` of the assistant starts here, so it must not start too late.
+#[test]
+fn the_first_book_day_counts_a_trip_that_posted_nothing() {
+    let (dir, env, owner) = ready();
+    assert_eq!(day::first_book_day(&env.ctx).unwrap(), None);
+
+    open_books(&env, &owner, "31-08-2026", (2026, 8, 31));
+    let posted = day::first_book_day(&env.ctx).unwrap().unwrap();
+    assert_eq!(posted.to_iso(), "2026-08-31");
+
+    // A trip made on 15-08-26 whose payment was wholly from a pocket posts no entry (PRD FR-12.30).
+    raw(&dir)
+        .execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES ('trip', 1, '2026-08-15', 'سفر', 'Trip', 'سفر', 'trip', 'trp')",
+            [],
+        )
+        .unwrap();
+    let first = day::first_book_day(&env.ctx).unwrap().unwrap();
+    assert_eq!(first.to_iso(), "2026-08-15");
+}
+
+#[test]
+fn every_closed_day_refusal_says_what_today_is_and_whether_it_is_open() {
+    // Plan 53: ERR_DATE_CLOSED carries `today` (DD-MM-YYYY) and `today_open`, so no screen asks for
+    // "a date after X" when X is today.
+    let (dir, env, owner) = ready();
+    open_books(&env, &owner, "31-08-2026", (2026, 8, 31));
+    let rahim = seller(&env, &owner);
+    set_today(&env, 2026, 10, 10);
+    close(&env, &owner, "09-10-2026").unwrap();
+    let values = |error: ServiceError| {
+        let ServiceError::Rejected(items) = error else {
+            panic!("not a refusal: {error:?}");
+        };
+        assert_eq!(items[0].code, ErrorCode::ErrDateClosed);
+        items[0].values.clone()
+    };
+    // Today (10-10-26) is open.
+    let open = values(give(&env, &owner, rahim, "05-10-2026", "100").unwrap_err());
+    assert_eq!(
+        open.get("closed_up_to"),
+        Some(&ErrorValue::Text("09-10-2026".into()))
+    );
+    assert_eq!(
+        open.get("today"),
+        Some(&ErrorValue::Text("10-10-2026".into()))
+    );
+    assert_eq!(open.get("today_open"), Some(&ErrorValue::Number(1)));
+    // Closed at night: today is closed too.
+    raw(&dir)
+        .execute(
+            "UPDATE day_state SET closed_up_to_date = '2026-10-10' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+    let shut = values(give(&env, &owner, rahim, "10-10-2026", "100").unwrap_err());
+    assert_eq!(
+        shut.get("today"),
+        Some(&ErrorValue::Text("10-10-2026".into()))
+    );
+    assert_eq!(shut.get("today_open"), Some(&ErrorValue::Number(0)));
 }

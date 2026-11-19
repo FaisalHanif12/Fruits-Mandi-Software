@@ -2,7 +2,23 @@
 // finding 2). Error values are display units, never paisa.
 
 import { describe, expect, it } from 'vitest';
-import { messageVars } from '../../src/shared/api';
+import { messageVars as messageVarsWithReason } from '../../src/shared/api';
+
+type Vars = ReturnType<typeof messageVarsWithReason>;
+
+/**
+ * The variables a message reads, without `reason`. Every error has `reason`, empty when the backend
+ * sends none, so the out-of-range message reads its plain range and Fluent never reports a missing
+ * variable; each test below checks that default, and the `reason` tests at the end check the rest.
+ */
+function messageVars(
+  values: Parameters<typeof messageVarsWithReason>[0],
+  grouping: Parameters<typeof messageVarsWithReason>[1],
+): Vars {
+  const { reason, ...rest } = messageVarsWithReason(values, grouping);
+  expect(reason).toBe('');
+  return rest;
+}
 
 describe('messageVars', () => {
   it('groups the money limit, 10,00,00,00,000 rupees, in both groupings', () => {
@@ -34,6 +50,49 @@ describe('messageVars', () => {
       today: '10-10-2026',
       max: '100,000',
     });
+  });
+
+  it('shows a value that is exactly a real day, YYYY-MM-DD, as DD-MM-YYYY (the garden codes)', () => {
+    // ERR_CLOSE_BEFORE_LAST_ENTRY sends last_date, ERR_DATE_BEFORE_GARDEN sends garden_date.
+    expect(messageVars({ last_date: '2026-10-12', garden_date: '2026-10-10' }, 'lakh')).toEqual({
+      last_date: '12-10-2026',
+      garden_date: '10-10-2026',
+    });
+    // A leap day is a real day.
+    expect(messageVars({ date: '2028-02-29' }, 'international')).toEqual({ date: '29-02-2028' });
+  });
+
+  it('leaves every other value alone: other text, a day that does not exist, a number', () => {
+    expect(
+      messageVars(
+        {
+          word: 'abc',
+          month_only: '2026-10',
+          reference: 'E-20261010-0001',
+          padded: ' 2026-10-12',
+          later: '2026-10-12 and more',
+          no_month: '2026-13-01',
+          no_day: '2026-02-30',
+          no_leap_day: '2027-02-29',
+          zero_day: '2026-10-00',
+          shown_already: '12-10-2026',
+        },
+        'lakh',
+      ),
+    ).toEqual({
+      word: 'abc',
+      month_only: '2026-10',
+      reference: 'E-20261010-0001',
+      padded: ' 2026-10-12',
+      later: '2026-10-12 and more',
+      no_month: '2026-13-01',
+      no_day: '2026-02-30',
+      no_leap_day: '2027-02-29',
+      zero_day: '2026-10-00',
+      shown_already: '12-10-2026',
+    });
+    // A number that has the digits of a date is still a number.
+    expect(messageVars({ count: 20261012 }, 'international')).toEqual({ count: '20,261,012' });
   });
 
   it('also gives a rate in basis points as the percent a person reads, from its digits', () => {
@@ -72,5 +131,25 @@ describe('messageVars', () => {
 
   it('a name that merely ends like paisa but holds text is passed as sent', () => {
     expect(messageVars({ note_paisa: 'x' }, 'lakh')).toEqual({ note_paisa: 'x' });
+  });
+
+  it('tells whether a record number is 0 ("none"), for a message that must choose (plan 37)', () => {
+    expect(messageVars({ bikri_number: 0, lot_no: 2 }, 'lakh')).toEqual({
+      bikri_number: '0',
+      bikri_number_zero: 'yes',
+      lot_no: '2',
+    });
+    expect(messageVars({ bikri_number: 7 }, 'lakh')).toEqual({
+      bikri_number: '7',
+      bikri_number_zero: 'no',
+    });
+  });
+  it('passes the reason the backend sends (the cloud address) as it is, and is empty with none', () => {
+    expect(messageVarsWithReason({ reason: 'https' }, 'lakh')).toEqual({ reason: 'https' });
+    expect(messageVarsWithReason({ reason: 'https', max: 5 }, 'international')).toEqual({
+      reason: 'https',
+      max: '5',
+    });
+    expect(messageVarsWithReason({}, 'international')).toEqual({ reason: '' });
   });
 });

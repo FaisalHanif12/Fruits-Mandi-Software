@@ -27,7 +27,7 @@ frontend/src/i18n/
 |---|---|---|
 | Label, button, hint | `<module>-<area>-<thing>` | `bikri-header-truck-no`, `bikri-action-save-new` |
 | Error | `err-` + the code in kebab case | `ERR_QTY_EXCEEDS_LOT` becomes `err-qty-exceeds-lot` |
-| Glossary term | `-` + the code name of the term | `-bikri`, `-laga`, `-pukhta-khata` |
+| Glossary term | `-` + the code name of the term | `-bikri`, `-laga`, `-chukta-khata` |
 | Shared word | `common-<thing>` | `common-save`, `common-cancel` |
 
 The same ID must exist in `ur/` and `en/`. `pnpm i18n:check` fails otherwise (NFR-URD-22).
@@ -41,8 +41,8 @@ The same ID must exist in `ur/` and `en/`. `pnpm i18n:check` fails otherwise (NF
    - short, natural mandi Urdu, never word-by-word translation;
    - Urdu punctuation (`۔` `،` `؟`) and English digits.
 3. **Write the English message** for the same ID:
-   - plain, professional English with British spelling as used in Pakistan (Labour, Cheque);
-   - the glossary's English words (Sale, Receipt, Laga, Munshiana, Pukhta Khata, Nag);
+   - plain, professional English with British spelling as used in Pakistan (Labour, Colour);
+   - the glossary's English words (Sale, Receipt, Laga, Munshiana, Chukta Khata, Nag);
    - sentence case for messages, and the glossary's capitals for business words.
 4. **Values go in as variables, already formatted.** Pass money and numbers as text already made by `formatPaisa` or the number formatter, so both languages show the same digits and grouping (PRD FR-7.32). Pass a raw number only for a plural choice.
 5. **Mark the review state.** Put a comment above each new or changed message: `# review: pending`. The Urdu reviewer and the munshi replace it with `# review: ur=<name> <date>`, and the English reviewer adds `en=<name> <date>` (NFR-URD-4, NFR-URD-21). A release check fails on any `pending`.

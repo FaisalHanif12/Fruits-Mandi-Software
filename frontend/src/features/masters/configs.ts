@@ -1,4 +1,4 @@
-// The ten masters of PRD 10.3 as configuration for one generic screen (plan 06). A master adds
+// The nine masters of PRD 10.3 as configuration for one generic screen (plan 06). A master adds
 // only what is special about it: which extra fields its form has and which extra columns its list
 // has. The code, the names, the four states, the keys and the leave guard are the screen's. Words
 // are Fluent message IDs (masters.ftl), never text. Names go through `displayName` (F38).
@@ -7,7 +7,6 @@ import {
   Apple,
   Boxes,
   Container,
-  Landmark,
   MapPin,
   MessageSquareText,
   Receipt,
@@ -31,7 +30,7 @@ export interface ChoiceOption {
 /** What a form field is. Everything is text, as typed (CLAUDE.md rule 1). */
 export type FieldControl =
   | { type: 'text' }
-  /** Latin letters and digits written left to right: a phone, a bank account number, a weight. */
+  /** Latin letters and digits written left to right: a phone, a weight. */
   | { type: 'latin' }
   | { type: 'select'; options: readonly ChoiceOption[] }
   /** A record of another master, found by a Picker. */
@@ -72,7 +71,7 @@ export interface MasterConfig {
   newId: string;
   /** The empty state: "No cities yet". */
   emptyId: string;
-  /** Does this master have a code of its own? Narration, staff and bank account do not. */
+  /** Does this master have a code of its own? Only a narration does not. */
   hasCode: boolean;
   /** The two names, or null for a master with none (mark). */
   names: { urduLabelId: string; englishLabelId: string; spelling: boolean } | null;
@@ -81,6 +80,12 @@ export interface MasterConfig {
   shown: readonly ShownSpec[];
   /** Columns after the code and the names. */
   extraColumns: readonly ListColumn<MasterRecord>[];
+  /**
+   * The list has a فعال / غیر فعال switch on each row and the form has one too (staff, PRD v1.23): an
+   * active munshi prints in every header. Such a list shows the inactive ones too, so a person made
+   * inactive stays in sight to be made active again.
+   */
+  activeSwitch?: boolean;
 }
 
 const choice = (prefix: string, values: readonly string[]): ChoiceOption[] =>
@@ -345,7 +350,8 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     helpId: 'masters-staff-help',
     newId: 'masters-staff-new',
     emptyId: 'masters-staff-empty',
-    hasCode: false,
+    // Staff have a code since plan 32: 006 plus a running number (0060, 0061 ...).
+    hasCode: true,
     names: NAMES,
     fields: [
       {
@@ -367,38 +373,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
       latinColumn('phone', 'masters-staff-phone'),
       shownColumn('account_code', 'masters-staff-account'),
     ],
-  },
-  {
-    kind: 'bank_account',
-    path: 'bank-accounts',
-    icon: Landmark,
-    titleId: 'masters-bank-title',
-    helpId: 'masters-bank-help',
-    newId: 'masters-bank-new',
-    emptyId: 'masters-bank-empty',
-    hasCode: false,
-    names: {
-      urduLabelId: 'masters-bank-name-ur',
-      englishLabelId: 'masters-bank-name-en',
-      spelling: true,
-    },
-    fields: [
-      { key: 'bank_name', labelId: 'masters-bank-bank', control: { type: 'text' } },
-      { key: 'title', labelId: 'masters-bank-title-field', control: { type: 'text' } },
-      { key: 'number', labelId: 'masters-bank-number', control: { type: 'latin' } },
-    ],
-    shown: [
-      {
-        key: 'account_code',
-        labelId: 'masters-account-code',
-        emptyHintId: 'masters-account-code-hint',
-      },
-    ],
-    extraColumns: [
-      textColumn('bank_name', 'masters-bank-bank'),
-      latinColumn('number', 'masters-bank-number'),
-      shownColumn('account_code', 'masters-account-code'),
-    ],
+    activeSwitch: true,
   },
 ];
 
@@ -413,8 +388,14 @@ export function configOfPath(path: string): MasterConfig | undefined {
   return MASTER_CONFIGS.find((config) => config.path === path);
 }
 
-/** The columns of a master's list: code, name, the other script's name, its own, then the state. */
-export function columnsOf(config: MasterConfig): ListColumn<MasterRecord>[] {
+/**
+ * The columns of a master's list: code, name, the other script's name, its own, then the state. A list
+ * with `activeSwitch` gets the switch column from the screen (`activeColumn`), which can change a master.
+ */
+export function columnsOf(
+  config: MasterConfig,
+  statusColumn?: ListColumn<MasterRecord>,
+): ListColumn<MasterRecord>[] {
   const columns: ListColumn<MasterRecord>[] = [];
   if (config.hasCode) {
     columns.push({
@@ -446,12 +427,15 @@ export function columnsOf(config: MasterConfig): ListColumn<MasterRecord>[] {
       },
     );
   }
-  columns.push(...config.extraColumns, {
-    field: 'status',
-    type: 'status',
-    headerId: 'masters-col-status',
-    value: (row, { text }) =>
-      text(row.is_active ? 'masters-status-active' : 'masters-status-inactive'),
-  });
+  columns.push(
+    ...config.extraColumns,
+    statusColumn ?? {
+      field: 'status',
+      type: 'status',
+      headerId: 'masters-col-status',
+      value: (row, { text }) =>
+        text(row.is_active ? 'masters-status-active' : 'masters-status-inactive'),
+    },
+  );
   return columns;
 }

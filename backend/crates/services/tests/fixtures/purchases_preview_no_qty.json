@@ -1,0 +1,19 @@
+{
+  "numbers": null,
+  "cash": {
+    "cash_before_paisa": 5000000,
+    "change_paisa": 0,
+    "cash_after_paisa": 5000000,
+    "below_zero": false,
+    "lowers_cash": false,
+    "needs_confirm": false
+  },
+  "errors": [
+    {
+      "code": "ERR_REQUIRED",
+      "field": "qty",
+      "values": {}
+    }
+  ],
+  "warnings": []
+}

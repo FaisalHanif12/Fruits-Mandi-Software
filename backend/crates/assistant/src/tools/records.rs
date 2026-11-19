@@ -1,0 +1,187 @@
+//! Whole records from the keys the model was shown (lead decision, plan 48 T1).
+//!
+//! A button under an answer opens a report with its filters as picker values: id, code, both names
+//! and the tag. The model only passes keys (`a20`, `i41`); the names are read back from the results
+//! that showed those keys, so nothing is looked up twice and nothing is typed by the model.
+
+use mandi_services::assist;
+use mandi_services::core::accounts::AccountType;
+use mandi_services::core::dates::BusinessDate;
+
+use super::party::type_word;
+use super::{Env, State, ToolError, parse_key, record};
+use crate::results::{NameVal, Node, Val};
+use crate::source::AnswerRecord;
+
+/// The first name found inside a node: a field called `name`, else any name.
+fn first_name(node: &Node) -> Option<&NameVal> {
+    match node {
+        Node::Val(Val::Name(name)) => Some(name),
+        Node::Obj(fields) => fields
+            .iter()
+            .find(|(k, _)| k == "name")
+            .and_then(|(_, v)| first_name(v))
+            .or_else(|| fields.iter().find_map(|(_, v)| first_name(v))),
+        Node::List(items) => items.iter().find_map(first_name),
+        Node::Keyed(rows) => rows.iter().find_map(|(_, v)| first_name(v)),
+        _ => None,
+    }
+}
+
+/// The node of a record: an object with this `key`, or a keyed row.
+fn node_of<'n>(node: &'n Node, key: &str) -> Option<&'n Node> {
+    match node {
+        Node::Obj(fields) => {
+            let own = fields
+                .iter()
+                .any(|(k, v)| k == "key" && matches!(v, Node::Str(s) if s == key));
+            if own {
+                return Some(node);
+            }
+            fields.iter().find_map(|(_, v)| node_of(v, key))
+        }
+        Node::List(items) => items.iter().find_map(|n| node_of(n, key)),
+        Node::Keyed(rows) => {
+            let own = rows.iter().find(|(k, _)| k == key).map(|(_, v)| v);
+            own.or_else(|| rows.iter().find_map(|(_, v)| node_of(v, key)))
+        }
+        _ => None,
+    }
+}
+
+/// The whole record of a key the conversation showed.
+pub fn answer_record(state: &State, key: &str) -> Option<AnswerRecord> {
+    let id = parse_key(key)?.id;
+    state.results.iter().find_map(|result| {
+        let node = node_of(&result.node, key)?;
+        let name = first_name(node)?;
+        Some(AnswerRecord {
+            id,
+            code: name.code.clone(),
+            name_ur: name.name_ur.clone(),
+            name_en: name.name_en.clone(),
+            tag: name.tag.clone(),
+        })
+    })
+}
+
+/// A record the model names (a find match or a key), with the key prefixes it may have, and its
+/// whole record.
+///
+/// # Errors
+/// `ERR_UNKNOWN_REFERENCE` for a record never shown; `ERR_FORMAT_INVALID` for another kind of
+/// record than the field takes (an item where a party goes).
+pub fn named(
+    env: &Env<'_>,
+    state: &State,
+    text: &str,
+    field: &str,
+    prefixes: &[&str],
+) -> Result<(i64, AnswerRecord), ToolError> {
+    let rec = record(env, state, text, field)?;
+    if !prefixes.contains(&rec.prefix.as_str()) {
+        return Err(ToolError::new(
+            "ERR_FORMAT_INVALID",
+            field,
+            "this key is another kind of record",
+        ));
+    }
+    let key = format!("{}{}", rec.prefix, rec.id);
+    let whole = answer_record(state, &key)
+        .ok_or_else(|| ToolError::new("ERR_UNKNOWN_REFERENCE", field, text))?;
+    Ok((rec.id, whole))
+}
+
+/// The word that stands for every walk-in buyer together in a `buyer` filter: the shared account چکتا
+/// کھاتہ (code `0030`), with no person (PRD Section 13, D8 H3). The walk-in buyers have no account of
+/// their own and cannot be found as one, so the filter is named by this word, and it is the same
+/// filter the analytics screen takes: the buyer is the account 0030 and the person is left open.
+pub const CHUKTA_ALL: &str = "chukta";
+
+/// The account چکتا کھاتہ as a whole record, with its id: what the word [`CHUKTA_ALL`] stands for.
+///
+/// # Errors
+/// `ERR_INTERNAL` when the account cannot be read (it is a system account and always there).
+pub fn chukta_account(env: &Env<'_>) -> Result<(i64, AnswerRecord), ToolError> {
+    let code = mandi_services::core::codes::CHUKTA_KHATA_CODE;
+    let list = mandi_services::accounts::list(
+        env.ctx,
+        &mandi_services::core::accounts::AccountsListInput {
+            filter: mandi_services::core::accounts::AccountFilter {
+                kind: mandi_services::core::accounts::AccountListKind::Every,
+                text: code.to_owned(),
+                include_inactive: true,
+                has_opening: None,
+            },
+            offset: 0,
+            // 0 is the most: the text "0030" is also inside other codes (00110030), so a short page could
+            // leave the account out.
+            limit: 0,
+            sort: None,
+        },
+    )
+    .map_err(|_| {
+        ToolError::new(
+            "ERR_INTERNAL",
+            "buyer",
+            "the walk-in account could not be read",
+        )
+    })?;
+    let row = list
+        .rows
+        .into_iter()
+        .find(|r| r.code == code)
+        .ok_or_else(|| {
+            ToolError::new(
+                "ERR_INTERNAL",
+                "buyer",
+                "the walk-in account is not in the books",
+            )
+        })?;
+    Ok((
+        row.id,
+        AnswerRecord {
+            id: row.id,
+            code: Some(row.code),
+            name_ur: row.name_ur,
+            name_en: row.name_en,
+            tag: row.tag,
+        },
+    ))
+}
+
+/// A date as `YYYY-MM-DD` text, for the filters of a source.
+pub fn iso(date: BusinessDate) -> String {
+    date.to_iso()
+}
+
+/// Refuses an account of another type than the field takes: a buyer's key in a `seller` field and
+/// the reverse. A key says only that it is an account (`a20`), so a buyer found in place of a seller
+/// (a `find` that was widened to the other role) would otherwise give a seller's report of nothing,
+/// with every check passing (money review, plan 52 P52-S1).
+///
+/// # Errors
+/// `ERR_FORMAT_INVALID` when the account is of another type; `ERR_INTERNAL` when it cannot be read.
+pub fn require_type(
+    env: &Env<'_>,
+    id: i64,
+    field: &str,
+    want: AccountType,
+) -> Result<(), ToolError> {
+    let card = assist::party_card(env.ctx, id)
+        .map_err(|_| ToolError::new("ERR_INTERNAL", field, "the account could not be read"))?;
+    if card.account_type == want {
+        return Ok(());
+    }
+    Err(ToolError::new(
+        "ERR_FORMAT_INVALID",
+        field,
+        &format!(
+            "this account is a {} and not a {}; use the {} field, or find the {} again",
+            type_word(card.account_type),
+            type_word(want),
+            type_word(card.account_type),
+            type_word(want)
+        ),
+    ))
+}

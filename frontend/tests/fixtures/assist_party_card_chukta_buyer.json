@@ -1,0 +1,24 @@
+{
+  "id": 9,
+  "code": "0030",
+  "account_type": "buyer",
+  "is_chukta": true,
+  "name_ur": "شاہد",
+  "name_en": "Shahid",
+  "father_or_firm_ur": "",
+  "father_or_firm_en": "",
+  "city_ur": "",
+  "city_en": "",
+  "phone": "03000000000",
+  "is_active": true,
+  "dead": null,
+  "balance": {
+    "amount_paisa": 0,
+    "side": "zero"
+  },
+  "last_entry_date": "2026-10-10",
+  "credit_limit": null,
+  "credit_used": null,
+  "advance_open": null,
+  "warnings": []
+}

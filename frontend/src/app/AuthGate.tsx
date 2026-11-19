@@ -3,27 +3,48 @@
 // app stays on screen under the lock, so nothing typed is lost (PRD FR-8.4). Language and text
 // size of the signed-in user are applied at sign-in and saved when he changes them.
 
+import { PartnerCodeHost } from '../features/partners';
+import { FixDayHost } from './FixDayHost';
 import { Localized } from '@fluent/react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef } from 'react';
 import type { AuthStatus } from '../bindings/AuthStatus';
 import type { SessionUser } from '../bindings/SessionUser';
 import { LockOverlay } from '../features/auth/components/LockOverlay';
+import { BackupStatusItem } from '../features/backup';
+import { BikriDraftOffer } from '../features/bikri/draft-offer';
+import { UndoHost } from '../features/bikri/undo';
 import { useAuthStatus, useLock, useLogout, useSavePreferences } from '../features/auth/hooks';
 import { LoginPage } from '../features/auth/pages/LoginPage';
-import { WizardPage } from '../features/auth/pages/WizardPage';
+import { AfterRestoreCard, useRestoreStore } from '../features/restore';
 import { useSettings } from '../features/settings/hooks';
+import { useApplyNumberGrouping } from '../features/settings/maintenance-hooks';
+import { asScreenType, screenTypeOf, type ScreenType } from '../features/vouchers/screen-type';
 import { uiErrorOf } from '../shared/api';
 import { isoToDisplayDate } from '../shared/format';
 import { useLanguageStore } from '../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../shared/keyboard';
-import { ErrorState, LoadingState } from '../shared/ui';
+import { promiseNavigation, useBack, usePageTrail } from '../shared/navigation';
+import { BackButton, ErrorState, LoadingState } from '../shared/ui';
+import { FirstRunGate } from './FirstRunGate';
+import { confirmLeaveAll } from './leave-guards';
 import { AppShell } from './layout/AppShell';
 import { MainNav } from './layout/MainNav';
-import { ModuleMenu } from './layout/ModuleMenu';
-import { MAIN_ROUTES, MODULE_ROUTES, mainNavOf, moduleMenuOf } from './nav-routes';
+import { ModuleMenu, RokarMenu } from './layout/ModuleMenu';
+import {
+  MAIN_ROUTES,
+  MODULE_ROUTES,
+  ROKAR_ROUTES,
+  mainNavOf,
+  moduleMenuOf,
+  rokarAddressOf,
+  rokarMenuOf,
+} from './nav-routes';
 import { useDayStatus } from './use-day-status';
 import { useIdleLock } from './use-idle-lock';
+import { GuideCard } from './guide/GuideCard';
+import { useGuide } from './guide/use-guide';
+import { useLastScreen } from './use-last-screen';
 
 /** Before anyone has signed in, the screen is in the language last used on this computer. */
 function useLoginLanguage(status: AuthStatus | undefined) {
@@ -38,11 +59,21 @@ function useLoginLanguage(status: AuthStatus | undefined) {
 function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const search = useRouterState({ select: (state) => state.location.search });
   const settings = useSettings();
+  // The saved number grouping (PRD 21, Language) is the one every amount follows from the first screen.
+  useApplyNumberGrouping(settings.data?.number_grouping);
   const day = useDayStatus();
   const lock = useLock();
   const logout = useLogout();
   useSavePreferences(user);
+  // The pages he opens one from another, so Back and Esc can take him back (plan 78 F1, PRD FR-7.18).
+  usePageTrail();
+  const back = useBack();
+  // Start where he left off (PRD FR-7.45), and keep the screen that is open.
+  useLastScreen(!locked);
+  // The first-run guide opens once; the user menu opens it again (PRD FR-7.12).
+  const guide = useGuide(!locked);
 
   const { mutate: lockApp } = lock;
   const lockNow = useCallback(() => {
@@ -50,30 +81,52 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   }, [lockApp]);
   useIdleLock(settings.data?.idle_lock_minutes, !locked, lockNow);
 
+  // Log out asks first when a screen has unsaved work (PRD FR-5.6, FR-7.9): the screen's own "Save
+  // changes?" box. The idle lock does not come through here and never asks (FR-8.4).
+  const { mutate: logoutNow, isPending: loggingOut } = logout;
+  const signOut = () => {
+    if (loggingOut) return;
+    void confirmLeaveAll().then((go) => {
+      if (go) logoutNow();
+    });
+  };
+
+  // A way in from a menu, a key or the status bar starts the trail of pages again: it is not "another
+  // page" the user can go back to (plan 78 F1).
   const goTo = (to: string) => {
+    promiseNavigation('fresh', to);
     void navigate({ to });
+  };
+  // وصولی, ادائیگی and پیشگی are one screen with the type chosen (PRD FR-7.67, FR-15.10). Going to a
+  // type from the voucher screen keeps what was typed, so it is one address with another `type`.
+  const goToVoucher = (type: ScreenType) => {
+    promiseNavigation('fresh', '/bikri/voucher');
+    void navigate({ to: '/bikri/voucher', search: { type } });
   };
   // A key from anywhere (PRD 7.3, NFR-USE-9).
   useShortcut(SHORTCUTS.newBikri, () => {
     goTo(MODULE_ROUTES['bikri-book']);
   });
   useShortcut(SHORTCUTS.newReceipt, () => {
-    goTo(MODULE_ROUTES.receipt);
+    goToVoucher('receipt');
   });
   useShortcut(SHORTCUTS.newPayment, () => {
-    goTo(MODULE_ROUTES.payment);
+    goToVoucher('payment');
   });
   useShortcut(SHORTCUTS.newAdvance, () => {
-    goTo(MODULE_ROUTES.advance);
+    goToVoucher('advance');
   });
+  // Alt+K opens the خرچہ screen as دکان خرچہ (PRD 7.3, 16.2).
   useShortcut(SHORTCUTS.newExpense, () => {
-    goTo(MAIN_ROUTES.rokar);
+    promiseNavigation('fresh', '/rokar/expense');
+    void navigate({ to: '/rokar/expense', search: { type: 'shop_expense' } });
   });
-  // Esc, when nothing else wants it, leaves the screen for the dashboard (PRD FR-7.18).
+  // Esc, when nothing else wants it, goes back to the page the user came from, else to the parent of
+  // this page, else to the dashboard (PRD FR-7.18, plan 78 F1). The Back button does the same.
   useEscape(
     'leave',
     () => {
-      goTo(MAIN_ROUTES.dashboard);
+      if (!back.go()) goTo(MAIN_ROUTES.dashboard);
     },
     pathname !== '/' && !locked,
   );
@@ -81,6 +134,10 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const main = mainNavOf(pathname);
   return (
     <>
+      {/* Plan 44: closes the days reopened for a fix (FR-21.4) when the user leaves the screen of
+          the fix, and asks for the partner code (FR-17.11) and locks it when the user moves away. */}
+      <FixDayHost />
+      <PartnerCodeHost />
       <AppShell
         nav={
           <MainNav
@@ -88,25 +145,54 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
             onSelect={(id) => {
               goTo(MAIN_ROUTES[id]);
             }}
+            onSignOut={signOut}
           />
         }
         moduleMenu={
           main === 'bikri' ? (
             <ModuleMenu
-              current={moduleMenuOf(pathname)}
+              current={moduleMenuOf(pathname, search)}
               onSelect={(id) => {
-                goTo(MODULE_ROUTES[id]);
+                const type = asScreenType(id);
+                if (type === null) goTo(MODULE_ROUTES[id]);
+                else goToVoucher(type);
+              }}
+            />
+          ) : main === 'rokar' ? (
+            <RokarMenu
+              current={rokarMenuOf(pathname)}
+              onSelect={(id) => {
+                // The last item is the voucher screen of the بکری area (PRD FR-15.10).
+                if (id === 'voucher') goToVoucher('receipt');
+                else goTo(ROKAR_ROUTES[id]);
               }}
             />
           ) : null
         }
         userName={user.display_name}
+        back={
+          back.available ? (
+            <BackButton
+              onClick={() => {
+                back.go();
+              }}
+            />
+          ) : null
+        }
         onLock={lockNow}
+        onGuide={guide.replay}
         onOpenAccount={(id) => {
           void navigate({ to: '/index/accounts/$id', params: { id: String(id) } });
         }}
-        onSignOut={() => {
-          logout.mutate();
+        onOpenBikri={(id) => {
+          void navigate({ to: '/bikri/book', search: { id } });
+        }}
+        onOpenVoucher={(hit) => {
+          // A voucher of the three kinds opens on the voucher screen; any other kind belongs to
+          // the screen of its own in the روکڑ area (plan 17).
+          const type = screenTypeOf(hit.voucher_type);
+          if (type !== null) void navigate({ to: '/bikri/voucher', search: { type, id: hit.id } });
+          else goTo(rokarAddressOf(hit.voucher_type));
         }}
         date={day.data === undefined ? '' : isoToDisplayDate(day.data.today)}
         day={day.data === undefined ? null : day.data.today_open ? 'open' : 'closed'}
@@ -114,9 +200,24 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         onOpenDay={() => {
           goTo('/day');
         }}
+        backup={
+          <BackupStatusItem
+            onOpen={() => {
+              goTo(MAIN_ROUTES.backup);
+            }}
+          />
+        }
       >
         <Outlet />
       </AppShell>
+      {/* A بکری that was being typed when the app closed is offered back once (PRD FR-12.10). */}
+      {locked ? null : <BikriDraftOffer />}
+      {/* Undo straight after a save works from any screen (PRD FR-7.47, plan 16). */}
+      {locked ? null : <UndoHost />}
+      {locked ? null : <GuideCard />}
+      {/* After the first sign-in on a restored computer: make a new backup, retype the OpenRouter
+          key (plan 56). */}
+      {locked ? null : <AfterRestoreCard />}
       {locked ? <LockOverlay userName={user.display_name} /> : null}
     </>
   );
@@ -124,6 +225,9 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
 
 export function AuthGate() {
   const status = useAuthStatus();
+  // The restore pages stay on screen until the Owner presses "sign in", even though the computer
+  // has a data file as soon as the books are in place (plan 56).
+  const restoring = useRestoreStore((state) => state.active);
   useLoginLanguage(status.data);
   if (status.isPending) {
     return (
@@ -146,7 +250,7 @@ export function AuthGate() {
     );
   }
   const current = status.data;
-  if (current.first_run) return <WizardPage />;
+  if (current.first_run || restoring) return <FirstRunGate />;
   if (current.session === null) return <LoginPage status={current} />;
   return <SignedIn user={current.session} locked={current.locked} />;
 }

@@ -1,0 +1,240 @@
+// The screens of plan 17c (gardens, باغات) in both languages at the three window sizes, taken from
+// the development page /dev/gardens with the Playwright tool: the list (and an empty one), the new
+// garden form filled with the garden of E2E-40, one garden (open, with an installment typed, with a
+// sale in another shop typed, with little cash, with nothing paid yet, closed), the closing card and
+// its confirm box, and the partners overview with the open gardens under each card. It is a
+// developer tool: run it with a Vite dev server up on its OWN port (`pnpm --filter frontend exec
+// vite --port 5273 --strictPort`; change BASE if you use another port). It checks the address
+// before each shot and returns, for each shot, the sideways overflow (NFR-USE-15): the screen area,
+// the whole page, and every inner box must not scroll sideways. Set ONLY below to a list of
+// scenario names to run a part. (It is a snippet for that tool, not a module, so it is kept as .txt
+// and the linter does not read it. The Windows check is spec 29.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/plan17c';
+  const BASE = 'http://localhost:5273';
+  const PAGE = `${BASE}/#/dev/gardens`;
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const settle = (ms) => page.waitForTimeout(ms);
+  page.setDefaultTimeout(15000);
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type !== 'beforeunload') add(type, ...rest);
+    };
+  });
+
+  // Pieces of the labels the scenarios type into, in both languages (from gardens.ftl). A label that
+  // holds a glossary word has invisible marks around it in the page, so only a piece of the plain
+  // words is matched. The partner shares are found by the partner's name.
+  const W = {
+    ur: {
+      nameUr: /اردو نام/,
+      nameEn: /انگریزی نام/,
+      rent: /پورا/,
+      paidNow: /پہلی/,
+      amount: /کی رقم/,
+      reason: /^وجہ$/,
+      typeSale: /دوسری دکان میں فروخت/,
+      shop: /^دکان$/,
+      qty: /بکے ہوئے/,
+      saleAmount: /ملنے والی رقم/,
+      close: /^باغ بند کریں$/,
+      pocket: /اپنی جیب سے/,
+      reasonText: 'پہلی قسط',
+      shopText: 'حاجی دکان',
+      partners: [/الف/, /ب[\u2069 ]/, /ج[\u2069 ]/],
+    },
+    en: {
+      nameUr: /Urdu name/,
+      nameEn: /English name/,
+      rent: /Full/,
+      paidNow: /First/,
+      amount: /amount/,
+      reason: /^Why$/,
+      typeSale: /Sale in another shop/,
+      shop: /^Shop$/,
+      qty: /sold/,
+      saleAmount: /Money received/,
+      close: /^Close the garden$/,
+      pocket: /Own Pocket/,
+      reasonText: 'First installment',
+      shopText: 'Haji Shop',
+      partners: [/Partner A/, /Partner B/, /Partner C/],
+    },
+  };
+  // Types like a person: a click, the old text selected, then the keys. (An Urdu text field turns the
+  // letters into Urdu as they are typed, so the text is never set in one go.)
+  const typeInto = async (box, text) => {
+    await box.click();
+    if (text === '') {
+      await box.fill('');
+    } else {
+      await box.selectText().catch(() => undefined);
+      await box.pressSequentially(text, { delay: 25 });
+    }
+    await settle(200);
+  };
+  const fill = async (language, key, text) => {
+    await typeInto(page.getByLabel(W[language][key]).first(), text);
+  };
+  // The share box of the partner at this place (0 = الف, 1 = ب, 2 = ج).
+  const fillShare = async (language, place, text) => {
+    await typeInto(page.getByRole('textbox', { name: W[language].partners[place] }).first(), text);
+  };
+  const scrollEnd = () =>
+    page.evaluate(() => {
+      const main = document.querySelector('main');
+      if (main) main.scrollTop = main.scrollHeight;
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+  const scrollTop = () =>
+    page.evaluate(() => {
+      const main = document.querySelector('main');
+      if (main) main.scrollTop = 0;
+      window.scrollTo(0, 0);
+    });
+
+  const SCENARIOS = {
+    list: { query: '?list', run: async () => settle(500) },
+    'list-empty': { query: '?list&empty', run: async () => settle(500) },
+    new: {
+      query: '?new',
+      run: async (language) => {
+        await fillShare(language, 0, '60');
+        await fillShare(language, 1, '40');
+        await fillShare(language, 2, '');
+        await page
+          .locator('main ul[aria-label] > li')
+          .nth(1)
+          .getByRole('button', { name: W[language].pocket })
+          .click();
+        await fill(language, 'nameUr', 'شاہ پور باغ');
+        await fill(language, 'nameEn', 'Shahpur Garden');
+        await fill(language, 'rent', '50000');
+        await fill(language, 'paidNow', '30000');
+        await settle(700);
+      },
+      bottom: true,
+    },
+    'new-cash': {
+      query: '?new&cash',
+      run: async (language) => {
+        await fill(language, 'rent', '50000');
+        await fill(language, 'paidNow', '30000');
+        await settle(700);
+      },
+      bottom: true,
+    },
+    garden: { query: '', run: async () => settle(700), bottom: true },
+    'garden-installment': {
+      query: '',
+      run: async (language) => {
+        await fill(language, 'amount', '30000');
+        await fill(language, 'reason', W[language].reasonText);
+        await settle(700);
+      },
+    },
+    'garden-cash': {
+      query: '?cash',
+      run: async (language) => {
+        await fill(language, 'amount', '30000');
+        await fill(language, 'reason', W[language].reasonText);
+        await settle(700);
+      },
+    },
+    'garden-sale': {
+      query: '',
+      run: async (language) => {
+        await page.getByRole('button', { name: W[language].typeSale }).first().click();
+        await fill(language, 'shop', W[language].shopText);
+        await fill(language, 'qty', '20');
+        await fill(language, 'saleAmount', '10000');
+        await settle(700);
+      },
+    },
+    'garden-fresh': { query: '?fresh', run: async () => settle(700), bottom: true },
+    'garden-closed': { query: '?closed', run: async () => settle(700), bottom: true },
+    'garden-close': {
+      query: '',
+      run: async (language) => {
+        await scrollEnd();
+        await settle(500);
+        await page.screenshot({
+          path: `${OUT}/garden-close-card-${language}-${page.viewportSize().width}x${page.viewportSize().height}.png`,
+        });
+        await page.getByRole('button', { name: W[language].close }).click();
+        await settle(500);
+      },
+    },
+    overview: { query: '?overview', run: async () => settle(700), bottom: true },
+  };
+
+  const ONLY = null;
+  const only = ONLY ?? Object.keys(SCENARIOS);
+  const result = [];
+  for (const name of only) {
+    const scenario = SCENARIOS[name];
+    if (scenario === undefined) {
+      result.push(`${name}: no such scenario`);
+      continue;
+    }
+    for (const language of ['ur', 'en']) {
+      for (const [width, height] of SIZES) {
+        await page.setViewportSize({ width, height });
+        await page.goto('about:blank');
+        await page.goto(`${PAGE}${scenario.query}`);
+        await page.reload();
+        await settle(900);
+        if (language === 'en') {
+          await page.keyboard.press('Alt+KeyL');
+          await settle(500);
+        }
+        const here = page.url();
+        if (!here.startsWith(PAGE)) {
+          result.push(`${name} ${language} ${width}x${height} WRONG ADDRESS ${here}`);
+          continue;
+        }
+        let failed = '';
+        try {
+          await scenario.run(language);
+        } catch (error) {
+          failed = ` RUN FAILED: ${String(error).slice(0, 160)}`;
+        }
+        const overflow = await page.evaluate(() => {
+          const main = document.querySelector('main');
+          const wide = [...document.querySelectorAll('main *')].filter(
+            (el) =>
+              el.scrollWidth > el.clientWidth + 1 &&
+              getComputedStyle(el).overflowX === 'visible' &&
+              el.clientWidth > 0,
+          );
+          return {
+            main: main ? main.scrollWidth - main.clientWidth : -1,
+            page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            wide: wide.length,
+          };
+        });
+        const lang = await page.evaluate(
+          () => `${document.documentElement.lang}/${document.documentElement.dir}`,
+        );
+        const file = `${OUT}/${name}-${language}-${width}x${height}.png`;
+        await page.screenshot({ path: file, fullPage: false });
+        if (scenario.bottom === true) {
+          await scrollEnd();
+          await settle(300);
+          await page.screenshot({ path: `${OUT}/${name}-${language}-${width}x${height}-bottom.png` });
+          await scrollTop();
+        }
+        result.push(
+          `${name} ${language} ${width}x${height} [${lang}] overflow main=${overflow.main} page=${overflow.page} wide=${overflow.wide}${failed}`,
+        );
+      }
+    }
+  }
+  return result.join('\n');
+}

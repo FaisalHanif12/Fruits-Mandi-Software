@@ -8,8 +8,16 @@ export {
   type ShortcutKey,
   type ShortcutScope,
 } from './shortcuts';
+export { guardBackspace, takesTyping, useBackspaceGuard } from './backspace';
 export { keepKeyForApp } from './downshiftKeys';
 export { useShortcut } from './useShortcut';
+export {
+  ModalLayerContext,
+  heldBackByDialog,
+  topLayer,
+  useModalLayer,
+  useOwnLayer,
+} from './modalLayer';
 export {
   registerEscape,
   runEscape,
@@ -17,10 +25,23 @@ export {
   useEscapeDispatcher,
   type EscapeLevel,
 } from './escape';
-export { arrowSide, elementDirection, intoScreenSide, menuSide, type Side } from './direction';
+export {
+  arrowSide,
+  elementDirection,
+  intoScreenSide,
+  menuSide,
+  readingStep,
+  type Side,
+} from './direction';
 export { focusRegion, registerFocusRegion, useFocusRegion, type FocusRegion } from './focusRegions';
+export { tabbableIn, trapTab } from './focusTrap';
 export { pickNeighbour, shouldLeaveField, type Box, type Move } from './fieldNavigation';
-export { focusNextField, formNavigationProps, useFormNavigation } from './formNavigation';
+export {
+  focusNextField,
+  formNavigationProps,
+  passEnterToForm,
+  useFormNavigation,
+} from './formNavigation';
 export { treeKeyHandler, type TreeKeyOptions } from './treeKeys';
 export {
   DEFAULT_PAGE_SIZE,

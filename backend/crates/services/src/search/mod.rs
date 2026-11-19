@@ -9,23 +9,23 @@
 
 mod index;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use mandi_db::masters as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
-    AccountBalance, AccountHit, AccountScope, BUYER_CONTROL, Balance, GlobalHit, ResolveCodeInput,
-    ResolveStatus, ResolvedCode, SELLER_CONTROL, SearchAccountsInput, SearchGlobalInput,
+    AccountBalance, AccountHit, AccountScope, Balance, GlobalHit, ResolveCodeInput, ResolveStatus,
+    ResolvedCode, SearchAccountsInput, SearchGlobalInput,
 };
 use mandi_domain::core::accounts::{AccountsRecentInput, AccountsTouchInput};
+use mandi_domain::core::codes::{self, CodeType};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
 use serde_json::{Value, json};
 
-pub use index::{
-    Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, SHORT_CODE_DIGITS, Usage, short_serial,
-};
+pub use index::{AccountPage, Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, Usage, short_running};
 
 use crate::auth::Actor;
 use crate::context::Context;
@@ -42,6 +42,8 @@ fn build(conn: &Connection) -> Result<Index, ServiceError> {
         index.set_scope(kind, repo::search_sources(conn, kind, None)?);
     }
     index.set_accounts(mandi_db::accounts::search_sources(conn, None)?);
+    // The چکتا buyers are listed beside the buyers of a بکری line (plan 64, PRD FR-7.29).
+    index.set_chukta(mandi_db::chukta::search_sources(conn, None)?);
     Ok(index)
 }
 
@@ -56,6 +58,35 @@ fn current(ctx: &Context) -> Result<Arc<Index>, ServiceError> {
     Ok(index)
 }
 
+/// The index a scope searches. The accounts and the masters are in the long-lived index; the open
+/// trips and gardens (plan 34) are few and change with every sale, so they are read for the call.
+/// So are the collectors (active staff whose job is `collector`): a change of a person's job shows
+/// in the next search, with nothing to keep in step.
+fn index_for(ctx: &Context, scope: SearchScope) -> Result<Arc<Index>, ServiceError> {
+    if scope == SearchScope::Collector {
+        let sources = ctx
+            .db
+            .read(|conn| mandi_db::masters::collector_sources(conn).map_err(ServiceError::from))?;
+        let mut index = Index::empty();
+        index.set_ventures(scope, sources);
+        return Ok(Arc::new(index));
+    }
+    let (kind, include_closed) = match scope {
+        SearchScope::Trip => ("trip", false),
+        SearchScope::Garden => ("garden", false),
+        // A filter field also offers the closed ones (a past trip, a closed garden).
+        SearchScope::TripAll => ("trip", true),
+        SearchScope::GardenAll => ("garden", true),
+        _ => return current(ctx),
+    };
+    let sources = ctx.db.read(|conn| {
+        mandi_db::ventures::search_sources(conn, kind, include_closed).map_err(ServiceError::from)
+    })?;
+    let mut index = Index::empty();
+    index.set_ventures(scope, sources);
+    Ok(Arc::new(index))
+}
+
 /// Builds the index again from the database. The restore of a backup calls this (the whole
 /// data is replaced). Searches give the same answers as before a restore that changed nothing.
 ///
@@ -65,6 +96,15 @@ pub fn rebuild(ctx: &Context) -> Result<(), ServiceError> {
     let index = Arc::new(ctx.db.read(build)?);
     *ctx.search_lock() = Some(index);
     Ok(())
+}
+
+/// The names of every account (Urdu, English, tag) from the index in memory, for the name check of
+/// the assistant's answers. Read only (Code Standards B29).
+///
+/// # Errors
+/// `ServiceError::Db` when the index has to be built and the database cannot be read.
+pub fn account_names(ctx: &Context) -> Result<Vec<(String, String, Option<String>)>, ServiceError> {
+    Ok(current(ctx)?.account_names())
 }
 
 /// Gets the index built, so the first key press is not the slow one (NFR-SPD-6). Failures are
@@ -90,6 +130,35 @@ pub fn refresh(ctx: &Context, kind: MasterKind, id: i64) {
     }
 }
 
+/// Updates what shows a city's name after the city was saved or made active or inactive (gate
+/// finding R3-2, Tech Stack 4.7, Code Standards B27). An account and an اڈا keep the name of their
+/// city in their search text (PRD FR-7.40: city is searched), so a renamed city leaves them stale
+/// until the next start. They are read again in three indexed queries, the same ones the start-up
+/// build runs. Any failure throws the index away so it is built again on the next use.
+pub fn refresh_city_dependents(ctx: &Context) {
+    let mut slot = ctx.search_lock();
+    let Some(index) = slot.as_mut() else {
+        return;
+    };
+    let sources = ctx.db.read(|conn| {
+        Ok::<_, mandi_db::rusqlite::Error>((
+            repo::search_sources(conn, MasterKind::Adda, None)?,
+            mandi_db::accounts::search_sources(conn, None)?,
+            mandi_db::chukta::search_sources(conn, None)?,
+        ))
+    });
+    match sources {
+        Ok((addas, accounts, chukta)) => {
+            let index = Arc::make_mut(index);
+            index.set_scope(MasterKind::Adda, addas);
+            // `set_accounts` makes the buyer list again, so the چکتا buyers go in after it.
+            index.set_accounts(accounts);
+            index.set_chukta(chukta);
+        }
+        Err(_) => *slot = None,
+    }
+}
+
 /// Updates the index for one account after the save that changed it has committed (plan 07).
 /// Like [`refresh`], any failure throws the index away so it is built again on the next use.
 pub fn refresh_account(ctx: &Context, id: i64) {
@@ -102,6 +171,38 @@ pub fn refresh_account(ctx: &Context, id: i64) {
         .read(|conn| mandi_db::accounts::search_sources(conn, Some(id)));
     match source {
         Ok(mut found) => Arc::make_mut(index).put_account(id, found.pop()),
+        Err(_) => *slot = None,
+    }
+}
+
+/// Updates the index for one چکتا buyer after the save that added him has committed (plan 64).
+/// Like [`refresh_account`], any failure throws the index away so it is built again on the next use.
+pub fn refresh_chukta(ctx: &Context, chukta_id: i64) {
+    let mut slot = ctx.search_lock();
+    let Some(index) = slot.as_mut() else {
+        return;
+    };
+    let source = ctx
+        .db
+        .read(|conn| mandi_db::chukta::search_sources(conn, Some(chukta_id)));
+    match source {
+        Ok(mut found) => Arc::make_mut(index).put_chukta(chukta_id, found.pop()),
+        Err(_) => *slot = None,
+    }
+}
+
+/// Updates the chukta part of the index after a بکری save that named a چکتا buyer on a line (plan
+/// 64): the list is small, so all of it is read again. Any failure throws the index away.
+pub fn refresh_chukta_all(ctx: &Context) {
+    let mut slot = ctx.search_lock();
+    let Some(index) = slot.as_mut() else {
+        return;
+    };
+    match ctx
+        .db
+        .read(|conn| mandi_db::chukta::search_sources(conn, None))
+    {
+        Ok(sources) => Arc::make_mut(index).set_chukta(sources),
         Err(_) => *slot = None,
     }
 }
@@ -166,8 +267,9 @@ fn usage_json(usage: &Usage) -> Value {
     json!({ "recent": usage.recent, "counts": counts })
 }
 
-/// The active records of a list that match `text`, best first (see [`Index::search`]). Empty
-/// text gives nothing. Only reads.
+/// The active records of a list that match `text`, best first (see [`Index::search_page`]). Empty
+/// text gives the whole list: the records chosen last first, then the rest by code (plan 32 R7).
+/// This is the first page; [`search_page`] takes an offset. Only reads.
 ///
 /// # Errors
 /// `ERR_TEXT_TOO_LONG` (`text`, value `max`) for more than [`MAX_QUERY_CHARS`] characters;
@@ -179,12 +281,29 @@ pub fn search(
     text: &str,
     limit: u32,
 ) -> Result<Vec<SearchHit>, ServiceError> {
+    search_page(ctx, actor, scope, text, 0, limit)
+}
+
+/// One page of [`search`]: `limit` hits after skipping `offset`. A page shorter than `limit` is the
+/// last one. Only reads.
+///
+/// # Errors
+/// As [`search`].
+pub fn search_page(
+    ctx: &Context,
+    actor: &Actor,
+    scope: SearchScope,
+    text: &str,
+    offset: u32,
+    limit: u32,
+) -> Result<Vec<SearchHit>, ServiceError> {
     // A huge paste is refused before it is turned into search keys, like the account search.
     check_text(text)?;
-    let index = current(ctx)?;
+    let index = index_for(ctx, scope)?;
     let usage = usage_of(ctx, actor, scope)?;
     let limit = usize::try_from(limit).unwrap_or(MAX_HITS);
-    Ok(index.search(scope, text, limit, &usage))
+    let offset = usize::try_from(offset).unwrap_or(0);
+    Ok(index.search_page(scope, text, offset, limit, &usage))
 }
 
 /// The list for `Alt+Down`: the last 10 chosen, then the rest (see [`Index::recent`]). Only
@@ -197,7 +316,7 @@ pub fn recent(
     actor: &Actor,
     scope: SearchScope,
 ) -> Result<Vec<SearchHit>, ServiceError> {
-    let index = current(ctx)?;
+    let index = index_for(ctx, scope)?;
     let usage = usage_of(ctx, actor, scope)?;
     Ok(index.recent(scope, &usage))
 }
@@ -213,7 +332,7 @@ pub fn touch(
     scope: SearchScope,
     id: i64,
 ) -> Result<(), ServiceError> {
-    let index = current(ctx)?;
+    let index = index_for(ctx, scope)?;
     if index.active_hit(scope, id).is_none() {
         return Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "id"));
     }
@@ -264,11 +383,26 @@ fn check_scope(scope: AccountScope, control_id: Option<i64>) -> Result<(), Servi
 /// fields have their own, and each control has its own (`recent.control_<id>`).
 fn account_usage_key(scope: AccountScope, control_id: Option<i64>) -> String {
     match (scope, control_id) {
-        (AccountScope::Seller, _) => pref_key(SearchScope::Seller),
+        (AccountScope::Seller | AccountScope::LotSeller, _) => pref_key(SearchScope::Seller),
         (AccountScope::Buyer, _) => pref_key(SearchScope::Buyer),
         (AccountScope::Control, Some(id)) => format!("recent.control_{id}"),
         (AccountScope::Any | AccountScope::Control, _) => pref_key(SearchScope::AnyAccount),
     }
+}
+
+/// The accounts the lot seller list leaves out right now (PRD 12.3 "Seller code", FR-12.26,
+/// FR-12.36, plan 46 B1): اپنا مال while no open trip has a purchase with goods left, and the
+/// account of a garden that is not open. Read from the database for each call, because it changes
+/// with every sale (the index is a speed aid only, Code Standards B27). Other scopes leave nothing
+/// out, so they pay no extra read.
+fn hidden_for(ctx: &Context, scope: AccountScope) -> Result<Option<HashSet<i64>>, ServiceError> {
+    if scope != AccountScope::LotSeller {
+        return Ok(None);
+    }
+    let ids = ctx
+        .db
+        .read(|conn| mandi_db::accounts::lot_seller_unusable(conn).map_err(ServiceError::from))?;
+    Ok(Some(ids.into_iter().collect()))
 }
 
 fn usage_by_key(ctx: &Context, actor: &Actor, key: &str) -> Result<Usage, ServiceError> {
@@ -293,7 +427,15 @@ pub fn recent_accounts(
         actor,
         &account_usage_key(input.scope, input.control_id),
     )?;
-    Ok(index.recent_accounts(input.scope, input.control_id, &usage))
+    let hidden = hidden_for(ctx, input.scope)?;
+    Ok(index.recent_accounts(
+        input.scope,
+        input.control_id,
+        &usage,
+        input.include_dead.unwrap_or(false),
+        input.with_chukta.unwrap_or(false),
+        hidden.as_ref(),
+    ))
 }
 
 /// Records that an account was chosen in a field, so it comes first next time (PRD FR-7.41).
@@ -327,10 +469,18 @@ pub fn touch_account(
     })
 }
 
-/// The accounts of a field that match the typed text, best first: exact full code, exact serial
-/// (a short code, PRD FR-7.39), names that start with the text, accounts used before, close
-/// spellings. Only reads. A short code needs no `Enter` here: the list previews the top match
-/// while the user types, and the code is only taken by [`resolve_code`] (PRD FR-7.38).
+/// The accounts of a field that match the typed text, best first: exact full code, running number
+/// (a short code, PRD 1.8 R5), names that start with the text, accounts used before, close
+/// spellings. Empty text gives the whole list of the field: the accounts chosen last first, then
+/// the rest by code, one page at a time (plan 32 R7). Only reads. A short code needs no `Enter`
+/// here: the list previews the top match while the user types, and the code is only taken by
+/// [`resolve_code`] (PRD FR-7.38).
+///
+/// The lot seller scope lists only what a lot can use now (PRD 12.3, FR-12.26, plan 46 B1): the
+/// sellers always, the separate khatas that exist, اپنا مال only while an
+/// open trip has a purchase with goods left, and a garden only while it is open. That is read from
+/// the database for each call. A full code typed in the field is still taken by [`resolve_code`]
+/// as before; the preview and the save then refuse an account that cannot be used.
 ///
 /// # Errors
 /// `ERR_REQUIRED` on `control_id` for scope `control`; `ERR_TEXT_TOO_LONG` on `text`;
@@ -349,26 +499,43 @@ pub fn search_accounts(
         &account_usage_key(input.scope, input.control_id),
     )?;
     let limit = usize::try_from(input.limit).unwrap_or(MAX_HITS);
-    Ok(index.search_accounts(input.scope, input.control_id, &input.text, limit, &usage))
+    let offset = usize::try_from(input.offset).unwrap_or(0);
+    let hidden = hidden_for(ctx, input.scope)?;
+    Ok(index.search_accounts_page(
+        input.scope,
+        input.control_id,
+        &input.text,
+        AccountPage {
+            offset,
+            limit,
+            include_dead: input.include_dead.unwrap_or(false),
+            with_chukta: input.with_chukta.unwrap_or(false),
+            hidden: hidden.as_ref(),
+        },
+        &usage,
+    ))
 }
 
-/// The full code a new account would get, if the typed digits are a well-formed code of the
-/// field's series and the serial is a normal one (PRD FR-10.3).
-fn well_formed(control_code: &str, digits: &str) -> Option<u32> {
-    let serial = digits.strip_prefix(control_code)?;
-    if serial.len() != 4 {
-        return None;
+/// The code type of the sellers or the buyers of a field, if the field has one series.
+fn series_type(scope: AccountScope) -> Option<CodeType> {
+    match scope {
+        AccountScope::Seller | AccountScope::LotSeller => Some(CodeType::Seller),
+        AccountScope::Buyer => Some(CodeType::Buyer),
+        AccountScope::Any | AccountScope::Control => None,
     }
-    serial.parse().ok()
 }
 
-/// Takes a typed code on `Enter` or on leaving the field (PRD FR-7.38, FR-7.39, FR-7.42).
+/// Takes a typed code on `Enter` or on leaving the field (PRD FR-7.38, FR-7.39, FR-7.42, PRD 1.8
+/// R5).
 ///
-/// - 1 to 4 digits are a short code: the serial in a seller or buyer field, the seller and the
-///   buyer with that serial in a field that takes any account. Serial 0 and 9000 and up are
-///   `reserved`. Other accounts have no short code.
-/// - More digits are a full code, which must be in the field's series.
+/// - A full code is looked up as it is, in the field's list: `0010` or `00111` in a seller field,
+///   or the code of any account in a field that takes any account.
+/// - A running number (`0`, `11`: digits with no leading zero, at most 7) is a short code: the
+///   account with that running number in a seller or buyer field, and the seller and the buyer with
+///   it in a field that takes any account. Other accounts have no short code.
 /// - Anything that is not digits is a name, not a code: `unknown`, nothing suggested.
+/// - `unknown` carries `suggested_code` when the field has one series and the typed text is a short
+///   code or a full code of that series (the code an `F4` add would take).
 ///
 /// # Errors
 /// `ERR_REQUIRED` on `control_id` (scope `control`) or on `text` (empty); `ERR_TEXT_TOO_LONG`.
@@ -391,23 +558,25 @@ pub fn resolve_code(ctx: &Context, input: &ResolveCodeInput) -> Result<ResolvedC
     if !text.bytes().all(|b| b.is_ascii_digit()) {
         return Ok(unknown(None));
     }
-    let series = |scope: AccountScope| match scope {
-        AccountScope::Seller => Some(SELLER_CONTROL.to_owned()),
-        AccountScope::Buyer => Some(BUYER_CONTROL.to_owned()),
-        _ => None,
-    };
-    if text.len() <= SHORT_CODE_DIGITS {
+    // A full code first: a code of the scheme never looks like a running number (it starts with 00).
+    if let Some(hit) = index.account_with_code(input.scope, input.control_id, text) {
+        let status = if hit.is_active {
+            ResolveStatus::Found
+        } else {
+            ResolveStatus::Inactive
+        };
+        return Ok(answer(status, Some(hit), Vec::new(), None));
+    }
+    let series = series_type(input.scope);
+    if let Some(running) = short_running(text) {
         if input.scope == AccountScope::Control {
             return Ok(unknown(None));
         }
-        let Some(serial) = short_serial(text) else {
-            return Ok(answer(ResolveStatus::Reserved, None, Vec::new(), None));
-        };
-        let all = index.accounts_with_serial(input.scope, serial);
+        let all = index.accounts_with_running(input.scope, running);
         let mut active: Vec<AccountHit> = all.iter().filter(|a| a.is_active).cloned().collect();
         return Ok(match (active.len(), all.first()) {
             (1, _) => answer(ResolveStatus::Found, active.pop(), Vec::new(), None),
-            (0, None) => unknown(series(input.scope).map(|code| format!("{code}{serial:04}"))),
+            (0, None) => unknown(series.and_then(|t| codes::build_code(t, running))),
             (0, Some(first)) => answer(
                 ResolveStatus::Inactive,
                 Some(first.clone()),
@@ -417,36 +586,38 @@ pub fn resolve_code(ctx: &Context, input: &ResolveCodeInput) -> Result<ResolvedC
             _ => answer(ResolveStatus::Several, None, active, None),
         });
     }
-    if let Some(hit) = index.account_with_code(input.scope, input.control_id, text) {
-        let status = if hit.is_active {
-            ResolveStatus::Found
-        } else {
-            ResolveStatus::Inactive
+    // Not found. In the field of one control (other accounts keep the control code plus a 4-digit
+    // serial, PRD FR-10.3), a well-formed code of that control is what an add would use; a system
+    // serial (0000 and 9000 to 9999) can never be added.
+    if input.scope == AccountScope::Control {
+        let Some(id) = input.control_id else {
+            return Ok(unknown(None));
         };
-        return Ok(answer(status, Some(hit), Vec::new(), None));
+        let control = ctx
+            .db
+            .read(|conn| mandi_db::accounts::control_by_id(conn, id))?;
+        let serial = control
+            .and_then(|c| text.strip_prefix(c.code.as_str()).map(str::to_owned))
+            .filter(|rest| rest.len() == 4)
+            .and_then(|rest| rest.parse::<u32>().ok());
+        return Ok(match serial {
+            Some(serial)
+                if (mandi_domain::core::accounts::FIRST_SERIAL
+                    ..=mandi_domain::core::accounts::LAST_SERIAL)
+                    .contains(&serial) =>
+            {
+                unknown(Some(text.to_owned()))
+            }
+            Some(_) => answer(ResolveStatus::Reserved, None, Vec::new(), None),
+            None => unknown(None),
+        });
     }
-    // Not found: if the digits are a well-formed code of the field's series, say which add
-    // would make it, or that its serial is the system's.
-    let control_code = match input.scope {
-        AccountScope::Control => match input.control_id {
-            Some(id) => ctx
-                .db
-                .read(|conn| mandi_db::accounts::control_by_id(conn, id))?
-                .map(|c| c.code),
-            None => None,
-        },
-        other => series(other),
-    };
-    let serial = control_code
-        .as_deref()
-        .and_then(|code| well_formed(code, text));
-    Ok(match serial {
-        Some(serial) if short_serial(&serial.to_string()).is_some() => {
-            unknown(Some(text.to_owned()))
-        }
-        Some(_) => answer(ResolveStatus::Reserved, None, Vec::new(), None),
-        None => unknown(None),
-    })
+    // A well-formed full code of the field's series is what an add would use.
+    Ok(unknown(
+        series
+            .filter(|t| codes::running_of(text, *t).is_some())
+            .map(|_| text.to_owned()),
+    ))
 }
 
 /// The balances of some accounts, read from the posted journal (PRD FR-6.1). An account with no
@@ -472,8 +643,105 @@ pub fn balances(ctx: &Context, ids: &[i64]) -> Result<Vec<AccountBalance>, Servi
         .collect()
 }
 
-/// Global search (`Ctrl+K`, PRD FR-5.4): accounts now, searched like a field that takes any
-/// account. Only reads.
+/// The most truck-number results of the global search (PRD FR-5.4).
+const GLOBAL_TRUCK_HITS: i64 = 5;
+/// A truck number is looked up from this many typed characters, so one letter does not list
+/// every truck.
+const GLOBAL_TRUCK_MIN_CHARS: usize = 2;
+
+/// The بکری that the typed text names (PRD FR-5.4): the one whose number is the typed digits,
+/// then the newest ones whose truck number starts with the text.
+fn bikri_hits(ctx: &Context, text: &str) -> Result<Vec<GlobalHit>, ServiceError> {
+    let typed = text.trim();
+    if typed.is_empty() {
+        return Ok(Vec::new());
+    }
+    ctx.db.read(|conn| {
+        let mut hits: Vec<mandi_domain::core::bikri::BikriHit> = Vec::new();
+        if typed.chars().all(|c| c.is_ascii_digit())
+            && let Ok(number) = typed.parse::<i64>()
+            && let Some(hit) = mandi_db::bikri::saved::hit_by_number(conn, number)?
+        {
+            hits.push(hit);
+        }
+        if typed.chars().count() >= GLOBAL_TRUCK_MIN_CHARS {
+            for hit in mandi_db::bikri::saved::hits_by_truck(conn, typed, GLOBAL_TRUCK_HITS)? {
+                if !hits.iter().any(|h| h.id == hit.id) {
+                    hits.push(hit);
+                }
+            }
+        }
+        Ok(hits
+            .into_iter()
+            .map(|hit| GlobalHit::Bikri { hit })
+            .collect())
+    })
+}
+
+/// The series letters of the voucher kinds, Urdu and English (the same letters as the Fluent
+/// messages `vouchers-number-<kind>`), for the search by number.
+const SERIES_LETTERS: [(&str, &str, mandi_domain::core::vouchers::VoucherType); 13] = {
+    use mandi_domain::core::vouchers::VoucherType as T;
+    [
+        ("و", "R", T::Receipt),
+        ("ا", "P", T::Payment),
+        ("پ", "A", T::Advance),
+        ("خ", "E", T::ShopExpense),
+        ("ذ", "D", T::PersonalExpense),
+        ("ذو", "DR", T::PersonalReturn),
+        ("ر", "L", T::MoneyLent),
+        ("رو", "LR", T::MoneyLentReturn),
+        ("س", "CI", T::CapitalIn),
+        ("سو", "CO", T::CapitalOut),
+        ("کد", "KO", T::KhataOut),
+        ("کا", "KI", T::KhataIn),
+        ("ج", "G", T::General),
+    ]
+};
+
+/// Reads a voucher number the way it is typed (PRD FR-5.4, plans 15 and 17): the digits alone find
+/// the voucher with that number in every series; the series letters first (`R-12`, `DR-3`, `و-12`,
+/// `ذو-3`, with or without the dash and spaces) find one series.
+fn voucher_query(typed: &str) -> Option<(i64, Option<mandi_domain::core::vouchers::VoucherType>)> {
+    let text = typed.trim();
+    let first = text.chars().next()?;
+    let (series, digits) = if first.is_ascii_digit() {
+        (None, text)
+    } else {
+        let letters_end = text
+            .find(|c: char| c.is_ascii_digit() || c == '-' || c.is_whitespace())
+            .unwrap_or(text.len());
+        let letters = text.get(..letters_end)?;
+        let kind = SERIES_LETTERS
+            .iter()
+            .find(|(ur, en, _)| letters == *ur || letters.eq_ignore_ascii_case(en))
+            .map(|(_, _, kind)| *kind)?;
+        let rest = text.get(letters_end..)?;
+        (Some(kind), rest.trim_start_matches(['-', ' ']).trim())
+    };
+    if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    Some((digits.parse::<i64>().ok()?, series))
+}
+
+/// The vouchers that the typed text names by their number (PRD FR-5.4).
+fn voucher_hits(ctx: &Context, text: &str) -> Result<Vec<GlobalHit>, ServiceError> {
+    let Some((number, series)) = voucher_query(text) else {
+        return Ok(Vec::new());
+    };
+    ctx.db.read(|conn| {
+        Ok(mandi_db::vouchers::hits_by_number(conn, number, series)?
+            .into_iter()
+            .map(|hit| GlobalHit::Voucher { hit })
+            .collect())
+    })
+}
+
+/// Global search (`Ctrl+K`, PRD FR-5.4): accounts, searched like a field that takes any
+/// account, then the بکری whose number is the typed digits, then the newest بکری whose truck
+/// number starts with the text, then the vouchers with that number. The whole answer stays
+/// within `limit`. Only reads.
 ///
 /// # Errors
 /// As [`search_accounts`].
@@ -482,6 +750,19 @@ pub fn global(
     actor: &Actor,
     input: &SearchGlobalInput,
 ) -> Result<Vec<GlobalHit>, ServiceError> {
+    check_text(&input.text)?;
+    // Global search needs a word: empty text is not "the whole list" here (that is for pickers).
+    if input.text.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    let limit = usize::try_from(input.limit)
+        .unwrap_or(MAX_HITS)
+        .min(MAX_HITS);
+    let mut bikri = bikri_hits(ctx, &input.text)?;
+    bikri.extend(voucher_hits(ctx, &input.text)?);
+    // The accounts keep at least one place.
+    bikri.truncate(limit.saturating_sub(1));
+    let account_limit = limit.saturating_sub(bikri.len());
     let hits = search_accounts(
         ctx,
         actor,
@@ -489,11 +770,16 @@ pub fn global(
             scope: AccountScope::Any,
             control_id: None,
             text: input.text.clone(),
-            limit: input.limit,
+            limit: u32::try_from(account_limit).unwrap_or(input.limit),
+            offset: 0,
+            include_dead: None,
+            with_chukta: None,
         },
     )?;
-    Ok(hits
+    let mut out: Vec<GlobalHit> = hits
         .into_iter()
         .map(|hit| GlobalHit::Account { hit })
-        .collect())
+        .collect();
+    out.extend(bikri);
+    Ok(out)
 }

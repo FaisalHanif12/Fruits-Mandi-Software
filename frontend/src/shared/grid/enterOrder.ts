@@ -13,9 +13,11 @@ export function isEditable(column: EntryColumn, row: EntryRow): boolean {
   return column.editable?.(row) ?? true;
 }
 
-/** Does Enter stop at this column, when the cell is editable? */
-export function isEnterStop(column: EntryColumn): boolean {
-  return column.enterStop ?? !isReadOnlyType(column.type);
+/** Does Enter stop at this column on this row, when the cell is editable? */
+export function isEnterStop(column: EntryColumn, row: EntryRow): boolean {
+  const stop = column.enterStop;
+  if (typeof stop === 'function') return stop(row);
+  return stop ?? !isReadOnlyType(column.type);
 }
 
 export type EnterStep =
@@ -24,7 +26,9 @@ export type EnterStep =
 const BLANK_ROW: EntryRow = { rowId: '', typed: {} };
 
 function firstStop(columns: readonly EntryColumn[], row: EntryRow): string | null {
-  const column = columns.find((candidate) => isEnterStop(candidate) && isEditable(candidate, row));
+  const column = columns.find(
+    (candidate) => isEnterStop(candidate, row) && isEditable(candidate, row),
+  );
   return column?.field ?? null;
 }
 
@@ -42,7 +46,7 @@ export function nextEnterStop(
   if (current !== undefined) {
     const after = columns
       .slice(here + 1)
-      .find((column) => isEnterStop(column) && isEditable(column, current));
+      .find((column) => isEnterStop(column, current) && isEditable(column, current));
     if (after !== undefined) return { kind: 'cell', rowIndex: from.rowIndex, field: after.field };
   }
   for (let rowIndex = from.rowIndex + 1; rowIndex < rows.length; rowIndex += 1) {

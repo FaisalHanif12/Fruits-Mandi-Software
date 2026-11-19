@@ -1,0 +1,106 @@
+// Screenshots of the screens of plan 27 (round 11): the party day sheet R35 (the table of every party
+// and the slip of one party) and the analytics views F, G and J, in both languages at the three window
+// sizes, taken from the development pages /dev/reports/R35 and /dev/analytics/F, G, J with a headless
+// browser. It is a developer tool: run it with the Vite dev server up on a free port
+// (`pnpm --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`), once with each size
+// in SIZES. It also measures sideways overflow (NFR-USE-15): the page and every grid inside it must
+// not scroll sideways, and no cell may be cut. The snippet writes with an absolute path from inside
+// the page code, because the tool's own screenshot action may only write inside the folder it was
+// started in. (It is a snippet for the tool, not a module, so it is kept as .txt and the linter does
+// not read it. The Windows check is the spec 49.)
+//
+// The dev pages take flags in the hash: `?empty`, `?many`, `?down`. R35 shows the table of every
+// party; Enter on a party (or a click on a row and Enter) opens his slip, like the real screen.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan27';
+  const REPORTS = 'http://127.0.0.1:5188/#/dev/reports/';
+  const ANALYTICS = 'http://127.0.0.1:5188/#/dev/analytics/';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  // [base, id, hash flags, name, what to do after the page has loaded].
+  const SHOTS = [
+    [REPORTS, 'R35', '', 'r35-table', 'none'],
+    [REPORTS, 'R35', '', 'r35-slip-buyer', 'slip:2'],
+    [REPORTS, 'R35', '', 'r35-slip-seller', 'slip:5'],
+    [REPORTS, 'R35', '?empty', 'r35-empty', 'none'],
+    [ANALYTICS, 'F', '', 'F', 'none'],
+    [ANALYTICS, 'G', '', 'G', 'none'],
+    [ANALYTICS, 'J', '', 'J', 'none'],
+    [ANALYTICS, 'J', '', 'J-other-columns', 'other'],
+    [ANALYTICS, 'F', '?empty', 'F-empty', 'none'],
+  ];
+  const LANGS = ['ur', 'en'];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [base, id, flags, name, action] of SHOTS) {
+      for (const lang of LANGS) {
+        try {
+          await page.goto(`${base}${id}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          if (flags === '?empty') await page.waitForTimeout(1500);
+          else
+            await page.waitForSelector('.ag-row, [role="status"], [role="alert"]', {
+              timeout: 45000,
+            });
+          await page.waitForTimeout(700);
+          if (action.startsWith('slip:')) {
+            const row = action.slice(5);
+            await page.click(`.ag-row[row-id="${row}"] [col-id="party"]`);
+            await page.keyboard.press('Enter');
+            await page.waitForSelector('.ag-header-cell[col-id="qty"]', { timeout: 20000 });
+            await page.waitForTimeout(900);
+          }
+          if (action === 'other') {
+            await page
+              .locator('button', { hasText: /Show the other columns|باقی کالم دکھائیں/ })
+              .first()
+              .click();
+            await page.waitForTimeout(700);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
+            const main = document.querySelector('main');
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            const raw = /report-col-|analytics-col-|report-r35-|analytics-view-|ERR_|<num>|<name>/.test(
+              document.body.innerText,
+            );
+            return [
+              root.lang,
+              root.dir,
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'clipped=' + clipped,
+              'cols=' + document.querySelectorAll('.ag-header-cell').length,
+              'charts=' + document.querySelectorAll('[data-chart="bar"] svg').length,
+              'raw=' + raw,
+              location.hash.slice(0, 30),
+            ].join(' | ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 120)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

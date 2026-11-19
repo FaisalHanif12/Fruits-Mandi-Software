@@ -1,0 +1,483 @@
+// The entry form of one garden (PRD FR-7.67, FR-12.35, FR-12.36): a type list at the top, قسط,
+// باغ خرچ and دوسری دکان میں فروخت, and under it only the fields of that type, always in the same
+// places: the day first, then the fields of the type, then where each partner's money comes from.
+// Changing the type keeps the day, the amount and the note, and clears the rest. Each type has its
+// own number series, its own posting and its own checks.
+//
+// - Keys: F10 or Ctrl+S saves, F2 starts a new entry (asking first if there is typed work). The
+//   form gets its Enter and arrow keys from shared/keyboard (F27).
+// - Everything typed is text in this screen's state, so a language switch loses nothing (F39).
+// - The frontend works out no money: every amount, each partner's part, the running balance after
+//   the entry, the cash after it and every warning come from the backend preview, which is the
+//   same function as the save (Code Standards B5).
+// - The sources default to the garden's and can be changed on the entry (PRD A54). A shop part
+//   comes off the partner's total and out of روکڑ; a pocket part is only recorded (FR-12.30), and
+//   the form says so in words.
+// - Goods arrived hold many item lines in a grid (PRD FR-12.41), with one day and one day to
+//   sell. The lines live in a row store above the grid (F39). One save writes every line, each as
+//   its own arrival, and a mistake on a line shows on its cell.
+// - Four states: the form (empty), the preview loading or failed (an error with a retry), and the
+//   numbers. The garden's own loading and error states are on the page.
+
+import { Localized, useLocalization } from '@fluent/react';
+import { useNavigate } from '@tanstack/react-router';
+import { Plus, TriangleAlert } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { LeaveGuard } from '../../../app/LeaveGuard';
+import type { UiError } from '../../../bindings/UiError';
+import { uiErrorOf } from '../../../shared/api';
+import { isZeroPaisa } from '../../../shared/format';
+import { createEntryStore } from '../../../shared/grid';
+import {
+  useEntrySaveFlow,
+  useFocusFirstField,
+  useLatest,
+  useRefusalIntoView,
+} from '../../../shared/hooks';
+import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
+import {
+  Button,
+  CashConfirmDialog,
+  CashNote,
+  DateInput,
+  EntryPartsCard,
+  EntrySources,
+  ErrorNotice,
+  ErrorState,
+  Field,
+  Notice,
+  SaveChangesPrompt,
+  SegmentedControl,
+  fieldError,
+  showToast,
+  useErrorText,
+  FormAside,
+  InfoHint,
+} from '../../../shared/ui';
+import {
+  GoodsLinesGrid,
+  LINE,
+  filledLines,
+  lineCellErrors,
+  linesText,
+  weightRowIds,
+  resetLines,
+} from '../../purchases';
+import { gardensEntryPreview } from '../api';
+import {
+  ENTRY_FIELD_PATHS,
+  buildArrivalEntry,
+  buildEntry,
+  changeType,
+  entryIsFilled,
+  newEntryDraft,
+  nextEntryDraft,
+} from '../draft';
+import {
+  useArrivalEntryPreview,
+  useArrivalsList,
+  useGardenEntryPreview,
+  useSaveArrivalEntry,
+  useSaveGardenEntry,
+} from '../hooks';
+import { arrivalNumberText } from '../list-columns';
+import {
+  ENTRY_TYPES,
+  type EntryDraft,
+  type EntryType,
+  type GardenEntryInput,
+  type GardenEntrySaved,
+  type GardenRow,
+} from '../types';
+import { GardenEntryFieldsForm } from './GardenEntryFieldsForm';
+import { GardenEntryNumbersCard } from './GardenEntryNumbersCard';
+
+/** Codes that only say a field is empty. Held back until the user tries to save. */
+const INCOMPLETE: ReadonlySet<string> = new Set(['ERR_REQUIRED', 'ERR_REASON_REQUIRED']);
+
+interface GardenEntryEditorProps {
+  garden: GardenRow;
+  /** Today, `YYYY-MM-DD`. */
+  today: string;
+  /** The type the form starts on, when the address names one (PRD FR-7.79); else the first. */
+  initialType?: EntryType | undefined;
+}
+
+export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEditorProps) {
+  const { l10n } = useLocalization();
+  const navigate = useNavigate();
+  const errorText = useErrorText();
+  const [draft, setDraft] = useState<EntryDraft>(() =>
+    newEntryDraft(initialType ?? 'installment', today),
+  );
+  // The item lines of a goods arrived entry, kept above the grid so a language switch loses
+  // nothing.
+  const [lines] = useState(() => createEntryStore());
+  const rows = lines((state) => state.rows);
+  // The garden's goods arrived: a sale in another shop takes its نگ from one of them (FR-12.41).
+  const arrivalList = useArrivalsList(garden.id);
+  const arrivals = useMemo(
+    () => arrivalList.data?.pages.flatMap((page) => page.rows) ?? [],
+    [arrivalList.data],
+  );
+  const [tried, setTried] = useState(false);
+  // Goods arrived have no cash: they are saved by their own command, and what the backend refuses
+  // is kept here.
+  const [arrivalRefusal, setArrivalRefusal] = useState<UiError | null>(null);
+  const [askNew, setAskNew] = useState(false);
+  const formRef = useFocusFirstField<HTMLFormElement>();
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const change = (patch: Partial<EntryDraft>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    setTried(false);
+    setArrivalRefusal(null);
+  };
+  const filled = entryIsFilled(draft, rows);
+
+  // Nothing is asked for an empty form; the preview is one function for every type.
+  const arrival = draft.type === 'arrival';
+  const input: GardenEntryInput | null = useMemo(
+    () => (filled && !arrival ? buildEntry(draft, garden.id, garden.partners, false) : null),
+    [arrival, draft, filled, garden.id, garden.partners],
+  );
+  const view = useGardenEntryPreview(input);
+  const preview = input === null ? undefined : view.query.data;
+  const previewFailed = input !== null && view.query.isError;
+  // The check of the goods arrived lines: the same kind of answer, with no numbers.
+  const arrivalInput = useMemo(
+    () => (filled && arrival ? buildArrivalEntry(draft, rows, garden.id) : null),
+    [arrival, draft, filled, garden.id, rows],
+  );
+  const arrivalView = useArrivalEntryPreview(arrivalInput);
+  const arrivalPreview = arrivalInput === null ? undefined : arrivalView.query.data;
+  const payment = draft.type === 'installment' || draft.type === 'cost';
+
+  // What the preview found, in the shape of a refused save, so the fields can show it. Problems
+  // that only say "this is empty" wait until the user tries to save, so a field does not turn red
+  // before he has reached it.
+  const previewError: UiError | null = useMemo(() => {
+    const found = arrival ? (arrivalPreview?.errors ?? []) : (preview?.errors ?? []);
+    const shown = found.filter((item) => tried || !INCOMPLETE.has(item.code));
+    return shown.length === 0
+      ? null
+      : {
+          ok: false,
+          errors: shown.map((item) => ({
+            code: item.code,
+            field: item.field,
+            values: item.values,
+          })),
+          ref: '',
+        };
+  }, [arrival, arrivalPreview?.errors, preview?.errors, tried]);
+
+  const draftText = useMemo(() => JSON.stringify({ draft, lines: linesText(rows) }), [draft, rows]);
+  const afterSave = () => {
+    setDraft((previous) => nextEntryDraft(previous));
+    resetLines(lines);
+    setTried(false);
+    setArrivalRefusal(null);
+    window.requestAnimationFrame(() => {
+      formRef.current?.querySelector<HTMLElement>('input')?.focus();
+    });
+  };
+
+  const saveEntry = useSaveGardenEntry();
+  const saveArrival = useSaveArrivalEntry();
+  const flow = useEntrySaveFlow<GardenEntryInput, GardenEntrySaved>({
+    draftText,
+    build: (confirm) =>
+      buildEntry(
+        // The flow is only used for a money entry; goods arrived never reach it.
+        arrival ? newEntryDraft('installment', today) : draft,
+        garden.id,
+        garden.partners,
+        confirm,
+      ),
+    save: (built) => saveEntry.mutateAsync(built),
+    freshCash: (built) => gardensEntryPreview(built).then((answer) => answer.cash),
+    cash: preview?.cash,
+    current: view.current,
+    onSaved: (saved) => {
+      showToast(
+        'success',
+        l10n.getString(`gardens-saved-${draft.type.replaceAll('_', '-')}`, {
+          number: String(saved.number),
+        }),
+      );
+      afterSave();
+    },
+  });
+
+  const error = arrival ? (arrivalRefusal ?? previewError) : (flow.refusal ?? previewError);
+  useRefusalIntoView(rootRef, arrival ? arrivalRefusal : flow.refusal);
+
+  // The lines the entry sends, in order: the backend counts these, so its problems for line i
+  // belong to the i-th filled row (PRD FR-12.41).
+  const sent = useMemo(() => filledLines(rows), [rows]);
+  // The نگ left for our shop of each line are the backend's, found by the key of the row.
+  const calc = useMemo(() => {
+    const cells: Record<string, Record<string, string>> = {};
+    const byKey = new Map((arrivalPreview?.lines ?? []).map((line) => [line.key, line]));
+    for (const row of sent) {
+      const our = byKey.get(row.rowId)?.qty_our ?? null;
+      if (our !== null) cells[row.rowId] = { [LINE.ourQty]: String(our) };
+    }
+    return cells;
+  }, [arrivalPreview?.lines, sent]);
+  // The rows whose item is sold by weight: Enter stops at the weight of those rows (plan 35, D3).
+  const weightRows = useMemo(
+    () => weightRowIds(arrivalPreview?.errors ?? [], sent),
+    [arrivalPreview?.errors, sent],
+  );
+  const weightRowsNow = useLatest(weightRows);
+  const cellErrors = useMemo(
+    () => lineCellErrors(error?.errors ?? [], sent, errorText),
+    [error, errorText, sent],
+  );
+  // The words of a mistake on a line stay in the list under the form too: the cell is marked, and
+  // colour is never the only signal (NFR-USE-12).
+  const fieldsShown = ENTRY_FIELD_PATHS[draft.type];
+
+  const save = async (): Promise<boolean> => {
+    setTried(true);
+    if (!arrival) return flow.save();
+    setArrivalRefusal(null);
+    try {
+      const saved = await saveArrival.mutateAsync(buildArrivalEntry(draft, rows, garden.id));
+      const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
+      const first = saved.rows[0];
+      const last = saved.rows[saved.rows.length - 1];
+      if (first !== undefined && last !== undefined) {
+        showToast(
+          'success',
+          saved.rows.length === 1
+            ? l10n.getString('gardens-saved-arrival', {
+                number: arrivalNumberText(first.number, say),
+              })
+            : l10n.getString('gardens-saved-arrivals', {
+                count: String(saved.rows.length),
+                first: arrivalNumberText(first.number, say),
+                last: arrivalNumberText(last.number, say),
+              }),
+        );
+      }
+      afterSave();
+      return true;
+    } catch (failure: unknown) {
+      setArrivalRefusal(uiErrorOf(failure));
+      return false;
+    }
+  };
+  const saveNow = () => {
+    void save();
+  };
+  const navigation = useFormNavigation(saveNow);
+  useShortcut(SHORTCUTS.save, saveNow);
+
+  const startNew = () => {
+    setDraft((previous) => newEntryDraft(previous.type, today));
+    resetLines(lines);
+    setTried(false);
+    window.requestAnimationFrame(() => {
+      formRef.current?.querySelector<HTMLElement>('input')?.focus();
+    });
+  };
+  const requestNew = () => {
+    if (filled) setAskNew(true);
+    else startNew();
+  };
+  useShortcut(SHORTCUTS.newEntry, requestNew, { enabled: !askNew });
+  useEscape('leave', () => {
+    void navigate({ to: '/gardens' });
+  });
+
+  // The refund type is offered only while the owner owes the garden money after a relief (plan 78 D3), or while
+  // the entry on screen is one (an old refund open for edit keeps its own type).
+  const ownerOwes = !isZeroPaisa(garden.owner_owes_paisa);
+  const typeOptions = ENTRY_TYPES.filter(
+    (type) => type !== 'refund' || ownerOwes || draft.type === 'refund',
+  ).map((type) => ({
+    value: type,
+    label: l10n.getString(`gardens-type-${type.replaceAll('_', '-')}`),
+  }));
+  const warnings = preview?.warnings ?? [];
+  const parts = preview?.numbers?.parts ?? null;
+
+  return (
+    <div ref={rootRef} className="flex flex-col gap-3">
+      <LeaveGuard dirty={filled} onSave={save} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SegmentedControl<EntryType>
+          groupLabel={l10n.getString('gardens-type-label')}
+          options={typeOptions}
+          value={draft.type}
+          onChange={(type) => {
+            setDraft((current) => changeType(current, type));
+            resetLines(lines);
+            setTried(false);
+            setArrivalRefusal(null);
+          }}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button shortcut={SHORTCUTS.newEntry} onClick={requestNew}>
+            <Plus aria-hidden="true" className="size-icon-md" />
+            <Localized id="gardens-entry-new" />
+          </Button>
+          <Button
+            variant="primary"
+            shortcut={SHORTCUTS.save}
+            busy={arrival ? saveArrival.isPending : flow.busy}
+            disabled={!filled}
+            onClick={saveNow}
+          >
+            <Localized id="layout-save-save" />
+          </Button>
+        </div>
+      </div>
+      <form
+        ref={formRef}
+        {...navigation}
+        onSubmit={(event) => {
+          event.preventDefault();
+        }}
+        className="flex flex-col gap-4"
+      >
+        {error === null ? null : <ErrorNotice error={error} fieldsShown={fieldsShown} />}
+        <FormAside
+          form={
+            <div className="grid grid-cols-2 gap-4 rounded-3 border border-border bg-surface p-3">
+              <Field
+                label={<Localized id="gardens-field-date" />}
+                error={fieldError(error, 'date')}
+              >
+                {(props) => (
+                  <DateInput
+                    {...props}
+                    value={draft.date}
+                    onChange={(date) => {
+                      change({ date });
+                    }}
+                  />
+                )}
+              </Field>
+              <div />
+              <GardenEntryFieldsForm
+                draft={draft}
+                onChange={change}
+                error={error}
+                arrivals={arrivals}
+              />
+              {payment ? (
+                <div className="col-span-2 flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <Localized id="gardens-sources-title">
+                      <h3 className="type-label text-ink-muted" />
+                    </Localized>
+                    <InfoHint>
+                      <Localized id="gardens-sources-hint">
+                        <p />
+                      </Localized>
+                    </InfoHint>
+                  </div>
+                  <EntrySources
+                    partners={garden.partners}
+                    value={draft.sources}
+                    onChange={(partnerId, source) => {
+                      change({ sources: { ...draft.sources, [partnerId]: source } });
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          }
+          aside={
+            <>
+              {arrival ? (
+                <Notice tone="info">
+                  <Localized id="gardens-arrival-posts-nothing" />
+                </Notice>
+              ) : (
+                <GardenEntryNumbersCard numbers={preview?.numbers ?? null} empty={!filled} />
+              )}
+              {payment ? (
+                <EntryPartsCard parts={parts} title={l10n.getString('gardens-parts-title')} />
+              ) : null}
+              {preview === undefined || arrival ? null : <CashNote cash={preview.cash} />}
+              {warnings.length === 0 ? null : (
+                <ul className="flex flex-col gap-1">
+                  {warnings.map((item) => (
+                    <li
+                      key={`${item.code}-${item.field}`}
+                      role="status"
+                      className="flex items-start gap-2 type-body text-warn"
+                    >
+                      <TriangleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
+                      <span>{errorText(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {previewFailed ? (
+                <ErrorState
+                  title={<Localized id="gardens-preview-failed" />}
+                  error={uiErrorOf(view.query.error)}
+                  onRetry={() => {
+                    void view.query.refetch();
+                  }}
+                />
+              ) : null}
+            </>
+          }
+        />
+        {arrival ? (
+          // The grid owns its keys (PRD 7.2); the form's own Enter and arrows leave it alone.
+          <div data-nav-owns-keys>
+            <GoodsLinesGrid
+              kind="arrival"
+              store={lines}
+              calc={calc}
+              cellErrors={cellErrors}
+              weightRows={weightRowsNow}
+            />
+          </div>
+        ) : null}
+      </form>
+      {flow.cashAfter === null ? null : (
+        <CashConfirmDialog
+          open={flow.ask}
+          onOpenChange={(open) => {
+            if (flow.onCashOpenChange(open)) {
+              // After a "no" the cursor is on the first money field (PRD FR-6.7).
+              window.requestAnimationFrame(() => {
+                formRef.current
+                  ?.querySelector<HTMLInputElement>('input[inputmode="numeric"]')
+                  ?.focus();
+              });
+            }
+          }}
+          cashAfter={flow.cashAfter}
+          onConfirm={flow.confirmCash}
+          onCloseFocus={(event) => {
+            // Focus goes where the screen puts it, not back to the button.
+            event.preventDefault();
+          }}
+        />
+      )}
+      <SaveChangesPrompt
+        open={askNew}
+        onOpenChange={setAskNew}
+        onSave={() => {
+          void save().then((saved) => {
+            if (saved) setAskNew(false);
+          });
+        }}
+        onLeave={() => {
+          setAskNew(false);
+          startNew();
+        }}
+      />
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 // The app after the window opens (plan 04): the start-up checks, the shell with its menus and the
-// dashboard, the بکری area with its "coming soon" items, the keys from anywhere, the idle lock that
+// dashboard, the بکری area with its items, a "coming soon" page for a main item not built yet, the keys from anywhere, the idle lock that
 // keeps unsaved work, signing out, and saving the user's language and text size. Urdu and English,
 // by keyboard, against a fake backend.
 
@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as appApi from '../../src/app/api';
 import * as authApi from '../../src/features/auth/api';
+import * as ledgersApi from '../../src/features/party_ledgers/api';
 import * as settingsApi from '../../src/features/settings/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -25,15 +26,22 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { fakeDashboard } from '../helpers/dashboard';
+import * as real from '../helpers/tag-real';
+import { LEDGER_BUYERS } from '../helpers/party-ledgers-real';
 import { at } from '../helpers/sample';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
+vi.mock('../../src/features/dashboard/api');
+vi.mock('../../src/features/party_ledgers/api');
 vi.mock('../../src/features/settings/api');
 
 beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
+  fakeDashboard();
+  vi.mocked(ledgersApi.partyLedgersList).mockResolvedValue(LEDGER_BUYERS);
 });
 
 afterEach(() => {
@@ -90,7 +98,8 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await renderApp();
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
-    expect(within(nav).getAllByRole('button')).toHaveLength(9);
+    // The eleven screens, and Log out at the bottom (plan 75 T3).
+    expect(within(nav).getAllByRole('button')).toHaveLength(12);
     expect(within(nav).getAllByRole('button')[0]).toHaveAttribute('aria-current', 'page');
     await waitFor(() => {
       expect(visible(screen.getByRole('contentinfo').textContent)).toContain('10-10-2026');
@@ -99,12 +108,24 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       message(language, 'layout-status-day-open'),
     );
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    // The empty dashboard says why and what to do (PRD FR-7.46).
+    // The dashboard shows what the backend sent: today's sales and the cash of the worked day, and
+    // the quick actions, each with its key (PRD Section 9, FR-9.1).
     expect(
-      screen.getByRole('heading', {
-        name: (name) => visible(name) === message(language, 'dashboard-empty-title'),
-      }),
+      await screen.findByRole('group', { name: message(language, 'dashboard-quick-title') }),
     ).toBeInTheDocument();
+    expect(await screen.findByText('41,400')).toBeInTheDocument();
+    expect(screen.getByText('58,484')).toBeInTheDocument();
+  });
+
+  it('runs the screen down to the status bar: no band under it, and a bottom padding as tall as the round launcher with its gaps', async () => {
+    await renderApp();
+    const main = await screen.findByRole('main');
+    // Nothing is kept under the screen: the next element is not an empty band.
+    const next = main.nextElementSibling;
+    expect(next?.getAttribute('aria-hidden')).not.toBe('true');
+    // The padding is inside the scroll area, so a long screen scrolls clear of the launcher.
+    expect(main.className).toMatch(/(^|\s)pb-corner(\s|$)/);
+    expect(main.className).toContain('overflow-auto');
   });
 
   it('a closed day is said in words', async () => {
@@ -117,8 +138,8 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     });
   });
 
-  it('Alt+B opens the بکری area on the sale book with its seven items; the ones not built yet are "coming soon" pages, not made-up data', async () => {
-    await renderApp();
+  it('Alt+B opens the بکری area on the sale book with its seven items, each a real screen; a main item built later opens its own screen, not made-up data', async () => {
+    const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
     await user.keyboard('{Alt>}b{/Alt}');
@@ -144,14 +165,79 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       }),
     ).toBeInTheDocument();
     expect(within(side).getAllByRole('button')[3]).toHaveAttribute('aria-current', 'page');
-    // The others still say "coming soon".
+    // Today's بکری is a real screen since plan 13.
     await user.click(at(items, 4));
+    // (The first open of a screen loads its code, which can take a moment on a busy machine.)
     expect(
-      await screen.findByRole('heading', { name: message(language, 'soon-title') }),
+      await screen.findByRole(
+        'heading',
+        {
+          level: 1,
+          name: (name) => visible(name) === message(language, 'layout-module-today'),
+        },
+        { timeout: 8_000 },
+      ),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[4]).toHaveAttribute('aria-current', 'page');
-    // The way back is a button, and Esc does the same.
-    await user.keyboard('{Escape}');
+    // وصولی and ادائیگی are the same voucher screen with their type chosen (plan 15).
+    await user.click(at(items, 1));
+    expect(
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: message(language, 'vouchers-receipt-title') },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[1]).toHaveAttribute('aria-current', 'page');
+    await user.click(at(items, 2));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: message(language, 'vouchers-payment-title'),
+      }),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[2]).toHaveAttribute('aria-current', 'page');
+    // پارٹی کھاتے (plan 66, PRD FR-12.43) sits above the goods left, and opens the list of buyers.
+    await user.click(at(items, 5));
+    expect(
+      await screen.findByRole(
+        'heading',
+        {
+          level: 1,
+          name: (name) => visible(name) === message(language, 'layout-module-party-ledgers'),
+        },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[5]).toHaveAttribute('aria-current', 'page');
+    // The goods left (باقی مال) is a real screen since plan 16; a later sale starts from it. Every
+    // item of the area is built now (own goods, خریداری, joins in plan 16b).
+    await user.click(at(items, 6));
+    expect(
+      await screen.findByRole(
+        'heading',
+        {
+          level: 1,
+          name: (name) => visible(name) === message(language, 'layout-module-stock'),
+        },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
+    // A main item built later (تجزیات, plan 21) opens its own screen, never a made-up page.
+    const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
+    await user.click(
+      within(nav).getByRole('button', { name: message(language, 'layout-nav-analytics') }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/analytics');
+    });
+    expect(
+      screen.queryByRole('heading', { name: message(language, 'soon-title') }),
+    ).not.toBeInTheDocument();
+    // The way back is the dashboard item of the main bar.
+    await user.click(
+      within(nav).getByRole('button', { name: message(language, 'layout-nav-dashboard') }),
+    );
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
     expect(
       screen.queryByRole('navigation', {
@@ -164,30 +250,33 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
-    for (const [key, path] of [
-      ['v', '/bikri/receipt'],
-      ['a', '/bikri/payment'],
-      ['p', '/bikri/advance'],
-      ['k', '/rokar'],
+    // وصولی, ادائیگی and پیشگی are one screen with the type chosen (plan 15); Alt+K is plan 17's: the خرچہ screen as دکان خرچہ.
+    for (const [key, path, type] of [
+      ['v', '/bikri/voucher', 'receipt'],
+      ['a', '/bikri/voucher', 'payment'],
+      ['p', '/bikri/voucher', 'advance'],
+      ['k', '/rokar/expense', 'shop_expense'],
     ] as const) {
       await user.keyboard(`{Alt>}${key}{/Alt}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe(path);
       });
+      expect(router.state.location.search).toMatchObject({ type });
     }
   });
 
-  it('the dashboard buttons lead to the Index and to a new بکری', async () => {
+  it("the dashboard buttons lead to a new بکری and to a tile's report", async () => {
     const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
+    // The buyers' dues tile opens the buyer dues page (FR-9.1, FR-9.4).
     await user.click(
-      screen.getByRole('button', {
-        name: (name) => visible(name) === message(language, 'dashboard-open-index'),
+      await screen.findByRole('button', {
+        name: (name) => visible(name).startsWith(message(language, 'dashboard-tile-dues')),
       }),
     );
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/index');
+      expect(router.state.location.pathname).toBe('/dues');
     });
   });
 
@@ -214,25 +303,40 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
-    expect(within(nav).getAllByRole('button')).toHaveLength(9);
+    // The eleven screens, and Log out at the bottom (plan 75 T3).
+    expect(within(nav).getAllByRole('button')).toHaveLength(12);
     expect(
       within(nav).getByRole('button', { name: message(language, 'layout-nav-settings') }),
     ).toBeInTheDocument();
   });
 
-  it('signs out from the user menu and shows the sign-in screen', async () => {
+  it('signs out from the bottom of the main menu and shows the sign-in screen', async () => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: message(language, 'layout-user-menu') }));
+    const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
     await user.click(
-      await screen.findByRole('menuitem', { name: message(language, 'layout-user-signout') }),
+      within(nav).getByRole('button', { name: message(language, 'layout-user-signout') }),
     );
     expect(authApi.authLogout).toHaveBeenCalledTimes(1);
     expect(
       await screen.findByRole('heading', { name: message(language, 'auth-login-title') }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps change password, the guide and lock in the user menu, and no Log out', async () => {
+    await renderApp();
+    await screen.findByRole('heading', { level: 1, name: /Adnan/ });
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: message(language, 'layout-user-menu') }));
+    const items = await screen.findAllByRole('menuitem');
+    expect(items.map((item) => visible(item.textContent))).toEqual([
+      message(language, 'layout-user-change-password'),
+      message(language, 'layout-user-guide'),
+      message(language, 'layout-user-lock'),
+    ]);
   });
 
   it('saves the language he switches to, and the text size, but not the values he arrived with', async () => {
@@ -251,6 +355,141 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await waitFor(() => {
       expect(settingsApi.prefsSet).toHaveBeenCalledWith({ key: 'text_size', value: '110' });
     });
+  });
+});
+
+describe.each(LANGUAGES)('Log out asks first about unsaved work (%s)', (language) => {
+  beforeEach(() => {
+    resetClientState(language);
+    signedIn(sessionUser({ language }));
+    vi.mocked(settingsApi.settingsSetFirm).mockResolvedValue(real.SETTINGS_SET_FIRM_CONTACTS);
+  });
+
+  /** The settings screen with his own change typed into the firm name, which the screen has not saved. */
+  async function openDirtySettings() {
+    await renderApp('/settings');
+    const user = userEvent.setup();
+    const firmName = await screen.findByLabelText<HTMLInputElement>(
+      (text) => visible(text) === message(language, 'settings-firm-name-en'),
+    );
+    await user.clear(firmName);
+    await user.type(firmName, 'Half typed firm');
+    return { user, firmName };
+  }
+
+  const logOutButton = () =>
+    within(
+      screen.getByRole('navigation', { name: message(language, 'layout-nav-label') }),
+    ).getByRole('button', { name: message(language, 'layout-user-signout') });
+
+  const boxButton = (id: string) =>
+    within(screen.getByRole('alertdialog')).getByRole('button', {
+      name: new RegExp(`^${message(language, id)}`),
+    });
+
+  it('a screen with unsaved work shows the same "Save changes?" box, and nothing is logged out yet', async () => {
+    const { user, firmName } = await openDirtySettings();
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await user.click(logOutButton());
+    const box = await screen.findByRole('alertdialog');
+    expect(visible(box.textContent)).toContain(message(language, 'layout-save-title'));
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+    expect(firmName).toBeInTheDocument();
+  });
+
+  it('"back" keeps him in the app with what he typed', async () => {
+    const { user, firmName } = await openDirtySettings();
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('common-back'));
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+    expect(firmName.value).toBe('Half typed firm');
+    // Esc says "back" too.
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+  });
+
+  it('"leave without saving" logs out and saves nothing', async () => {
+    const { user } = await openDirtySettings();
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('layout-save-leave'));
+    await waitFor(() => {
+      expect(authApi.authLogout).toHaveBeenCalledTimes(1);
+    });
+    expect(settingsApi.settingsSetFirm).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole('heading', { name: message(language, 'auth-login-title') }),
+    ).toBeInTheDocument();
+  });
+
+  it('"save" saves the screen first and then logs out', async () => {
+    const { user } = await openDirtySettings();
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('layout-save-save'));
+    await waitFor(() => {
+      expect(authApi.authLogout).toHaveBeenCalledTimes(1);
+    });
+    expect(settingsApi.settingsSetFirm).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(settingsApi.settingsSetFirm).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(authApi.authLogout).mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('"save" that is refused keeps him in the app and does not log out', async () => {
+    const { user } = await openDirtySettings();
+    vi.mocked(settingsApi.settingsSetFirm).mockRejectedValue(fail({ code: 'ERR_NOT_IMPLEMENTED' }));
+    await user.click(logOutButton());
+    await screen.findByRole('alertdialog');
+    await user.click(boxButton('layout-save-save'));
+    await waitFor(() => {
+      expect(settingsApi.settingsSetFirm).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+  });
+
+  it('a screen with nothing unsaved logs out at once, with no box', async () => {
+    await renderApp('/settings');
+    await screen.findByLabelText(
+      (text) => visible(text) === message(language, 'settings-firm-name-en'),
+    );
+    vi.mocked(authApi.authStatus).mockResolvedValue(authState({ login_language: language }));
+    await userEvent.setup().click(logOutButton());
+    await waitFor(() => {
+      expect(authApi.authLogout).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('the idle lock keeps unsaved work and never asks', async () => {
+    vi.mocked(settingsApi.settingsGet).mockResolvedValue(settings({ idle_lock_minutes: 1 }));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await renderApp('/settings');
+    const firmName = await screen.findByLabelText<HTMLInputElement>(
+      (text) => visible(text) === message(language, 'settings-firm-name-en'),
+    );
+    fireEvent.change(firmName, { target: { value: 'Half typed firm' } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(70_000);
+    });
+    expect(authApi.authLock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(authApi.authLogout).not.toHaveBeenCalled();
+    expect(firmName.value).toBe('Half typed firm');
   });
 });
 

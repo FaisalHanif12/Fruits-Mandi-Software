@@ -27,6 +27,7 @@ import { fakeMasters } from '../helpers/masters';
 import { fakePartners, overviewRow, partnerRow, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { at } from '../helpers/sample';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -78,11 +79,13 @@ function stackFields(language: Language) {
 const totalBox = () => visible(screen.getByRole('status').textContent);
 
 beforeEach(() => {
+  // "More columns" is kept on this computer; a test starts with it off.
+  window.localStorage.clear();
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   fakeAccounts([]);
   fakeAccountSearch([]);
   fakeMasters({});
@@ -125,27 +128,56 @@ describe.each(LANGUAGES)('the partner overview (%s)', (language) => {
     return { ...app, store, user: userEvent.setup() };
   }
 
-  it("shows one card per partner with his share and the backend's numbers, signs included", async () => {
-    await open();
-    const first = await screen.findByRole('heading', {
-      level: 2,
-      name: (name) => visible(name).startsWith(NAMES[language][0] ?? ''),
+  /** The table of the partners, with the rest of the figures shown under each row ("More columns"). */
+  async function tableWithMore(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: named(message(language, 'common-more-columns')),
+      }),
+    );
+    return screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
     });
-    const card = visible(first.closest('section')?.textContent);
-    expect(card).toContain(message(language, 'partners-metric-today'));
-    expect(card).toContain('40%');
-    expect(card).toContain('1,580');
-    expect(card).toContain('996');
-    expect(card).toContain('2,000');
+  }
+
+  it("shows one row per partner with his share and the backend's numbers, signs included", async () => {
+    const { user } = await open();
+    const table = await tableWithMore(user);
+    const text = visible(table.textContent);
+    expect(text).toContain(message(language, 'partners-metric-today'));
+    expect(text).toContain('40%');
+    expect(text).toContain('1,580');
+    expect(text).toContain('996');
+    expect(text).toContain('2,000');
     // A capital on the debit side is shown with its minus sign (PartnerOverviewRow).
-    expect(card).toContain('-4,000');
-    // The other partners have their own cards.
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3);
+    expect(text).toContain('-4,000');
+    // One row for each partner: the name is the heading of its row.
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(3);
+  });
+
+  it('the other figures wait behind "More columns", and the table keeps the کل رقم first', async () => {
+    const { user } = await open();
+    const table = await screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
+    });
+    // Without the tick: the کل رقم comes first among the figures, the rest is not drawn.
+    const heads = within(table)
+      .getAllByRole('columnheader')
+      .map((head) => visible(head.textContent));
+    expect(heads[1]).toBe(message(language, 'partners-metric-total'));
+    expect(visible(table.textContent)).not.toContain(message(language, 'partners-metric-today'));
+    await user.click(
+      screen.getByRole('checkbox', { name: named(message(language, 'common-more-columns')) }),
+    );
+    expect(visible(table.textContent)).toContain(message(language, 'partners-metric-today'));
   });
 
   it('shows the name of the language of the app first and the other script as a second line', async () => {
     await open();
-    const first = at(await screen.findAllByRole('heading', { level: 2 }), 0);
+    const table = await screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
+    });
+    const first = at(within(table).getAllByRole('rowheader'), 0);
     const [primary, secondary] = Array.from(first.querySelectorAll('span[lang]'));
     expect(primary?.textContent).toBe(NAMES[language][0]);
     expect(primary?.getAttribute('lang')).toBe(language);
@@ -238,8 +270,9 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
     expect(totalBox()).toContain('100%');
     expect(saveButton(language)).toBeEnabled();
     // The first field has focus, and today is the default start day.
-    expect(await shareBox(language, 0)).toHaveFocus();
-    expect((await field(language, 'partners-field-from')).value).toBe('10-10-2026');
+    const from = await field(language, 'partners-field-from');
+    expect(from).toHaveFocus();
+    expect(from.value).toBe('10-10-2026');
   });
 
   it("sends each share as typed and shows the backend's total: red at 90, green again at 100", async () => {
@@ -265,9 +298,42 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
     expect(saveButton(language)).toBeEnabled();
   });
 
+  it('Enter flows from the start day to each share and the last Enter saves', async () => {
+    const { user, store } = await open();
+    expect(await field(language, 'partners-field-from')).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(await shareBox(language, 0)).toHaveFocus();
+    await user.keyboard('50{Enter}');
+    expect(await shareBox(language, 1)).toHaveFocus();
+    await user.keyboard('30{Enter}');
+    expect(await shareBox(language, 2)).toHaveFocus();
+    await user.keyboard('20');
+    // The backend's check of the total (100) has to come back before the screen may save.
+    await waitFor(() => {
+      expect(totalBox()).toContain(message(language, 'partners-total-ok'));
+    });
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(partnersApi.partnersSetShares).toHaveBeenCalledTimes(1);
+    });
+    expect(store.setShares).toEqual([
+      {
+        effective_from: '10-10-2026',
+        shares: [
+          { partner_id: 1, share: '50' },
+          { partner_id: 2, share: '30' },
+          { partner_id: 3, share: '20' },
+        ],
+      },
+    ]);
+  });
+
   it('by keyboard only: arrows between the boxes, a new split, F10 saves, and the list shows what was saved', async () => {
     const { user, store } = await open();
     const first = await shareBox(language, 0);
+    // The start day has focus; Enter accepts it and goes to the first share.
+    expect(await field(language, 'partners-field-from')).toHaveFocus();
+    await user.keyboard('{Enter}');
     expect(first).toHaveFocus();
     await waitFor(() => {
       expect(totalBox()).toContain(message(language, 'partners-total-ok'));
@@ -455,6 +521,8 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
       name_ur: 'د',
       name_en: 'Partner D',
       opening_capital: '50000',
+      // Where that money is: in the shop's cash unless the Owner says otherwise (plan 78 E).
+      opening_capital_where: 'cash',
       confirmed_rules_words: [],
     });
     expect(store.rows).toHaveLength(4);
@@ -477,6 +545,97 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
         ),
       ).toHaveFocus();
     });
+  });
+
+  it('plan 78 E: the question "where is this money?" shows only once a capital is typed, starts on cash, and the other choice is sent as typed', async () => {
+    const { user } = await open();
+    press('F2');
+    const dialog = await screen.findByRole('dialog', {
+      name: named(message(language, 'partners-add-title')),
+    });
+    const where = () =>
+      within(dialog).queryByRole('group', {
+        name: named(message(language, 'partners-field-capital-where')),
+      });
+    // No capital, no question.
+    expect(where()).toBeNull();
+    const urdu = await within(dialog).findByLabelText<HTMLInputElement>(
+      named(message(language, 'partners-field-name-ur')),
+    );
+    await user.click(urdu);
+    await user.keyboard('د');
+    await user.click(
+      within(dialog).getByLabelText<HTMLInputElement>(
+        named(message(language, 'partners-field-capital')),
+      ),
+    );
+    await user.keyboard('50000');
+    const group = await waitFor(() => {
+      const found = where();
+      if (found === null) throw new Error('no question yet');
+      return found;
+    });
+    const cash = within(group).getByRole('button', {
+      name: named(message(language, 'partners-capital-where-cash')),
+    });
+    const counted = within(group).getByRole('button', {
+      name: named(message(language, 'partners-capital-where-counted')),
+    });
+    expect(cash.getAttribute('aria-pressed')).toBe('true');
+    expect(visible(dialog.textContent)).toContain(
+      message(language, 'partners-capital-where-cash-help'),
+    );
+    await user.click(counted);
+    expect(counted.getAttribute('aria-pressed')).toBe('true');
+    expect(visible(dialog.textContent)).toContain(
+      message(language, 'partners-capital-where-counted-help'),
+    );
+    press('F10');
+    await waitFor(() => {
+      expect(partnersApi.partnersCreate).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(partnersApi.partnersCreate).mock.calls[0]?.[0]).toMatchObject({
+      opening_capital: '50000',
+      opening_capital_where: 'counted_elsewhere',
+    });
+  });
+
+  it('plan 78 E: no capital typed, no "where" is sent, and the next partner of "save and add another" starts on cash again', async () => {
+    const { user } = await open([]);
+    press('F2');
+    const dialog = await screen.findByRole('dialog', {
+      name: named(message(language, 'partners-add-title')),
+    });
+    const urdu = await within(dialog).findByLabelText<HTMLInputElement>(
+      named(message(language, 'partners-field-name-ur')),
+    );
+    await user.click(urdu);
+    await user.keyboard('الف');
+    press('Enter', { ctrlKey: true });
+    await waitFor(() => {
+      expect(partnersApi.partnersCreate).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(partnersApi.partnersCreate).mock.calls[0]?.[0]).not.toHaveProperty(
+      'opening_capital_where',
+    );
+    // The next partner: a capital typed shows the question again, on cash.
+    const again = await screen.findByRole('dialog', {
+      name: named(message(language, 'partners-add-title')),
+    });
+    await user.click(
+      within(again).getByLabelText<HTMLInputElement>(
+        named(message(language, 'partners-field-capital')),
+      ),
+    );
+    await user.keyboard('1000');
+    const group = await within(again).findByRole('group', {
+      name: named(message(language, 'partners-field-capital-where')),
+    });
+    expect(
+      within(group)
+        .getByRole('button', { name: named(message(language, 'partners-capital-where-cash')) })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   it('Ctrl+Enter saves and keeps the dialog open and empty for the next partner', async () => {

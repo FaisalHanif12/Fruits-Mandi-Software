@@ -20,6 +20,18 @@ export function arrowSide(key: string): Side | null {
 }
 
 /**
+ * Which way an arrow key goes along the reading direction (PRD FR-7.13, plan 72 P5): `toEnd` is the
+ * way the text reads on (right in English, left in Urdu), `toStart` the way back. Null for any
+ * other key. Example: in Urdu the left arrow reads on, so it is `toEnd`.
+ */
+export function readingStep(key: string, direction: Direction): 'toStart' | 'toEnd' | null {
+  const side = arrowSide(key);
+  if (side === null) return null;
+  const endSide: Side = direction === 'rtl' ? 'left' : 'right';
+  return side === endSide ? 'toEnd' : 'toStart';
+}
+
+/**
  * The side of the screen where the main menu sits: the start side, so the right in Urdu and the
  * left in English (PRD FR-5.2).
  */

@@ -1,0 +1,9 @@
+rerun.txt: 1,125 question ids, one comma list, in bank order.
+  921 misses of the final report (after the monthly-change scorer rule)
+  157 not asked (Q3920 to Q4076)
+   47 more whose wording I changed (66 reworded in all; 19 of them are already misses)
+Run it with, from the repo root (d5), after the key limit is raised:
+  node scripts/ai-eval/run.mjs --only $(cat <this folder>/rerun.txt) --merge --threads 4
+Cost estimate: the two phases made 7,686 model calls for the $3.00 of the key (about $0.0004 a call, an upper bound that
+also holds hiddentester's calls). The rerun needs about 2,740 model calls (976 questions need the model), about $0.65 to $1.10.
+Ask for a key limit of at least $2 to be safe. Commit 831a43e makes fewer calls a question (one-call fix), so it may cost less.

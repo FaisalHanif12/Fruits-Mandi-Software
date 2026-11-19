@@ -1,0 +1,653 @@
+//! The worked day of the PRD (Section 4, Events 1 to 5), built through the real services the way
+//! `golden_day.rs` builds it, and the small helpers the report tests share (plan 20). Read the
+//! numbers in the PRD, not here: this file only makes the data.
+#![allow(dead_code)]
+
+use crate::common::*;
+use crate::support;
+use mandi_reports::reports::{
+    Cell, PartyFilter, ReportFilters, ReportId, ReportPage, ReportRunInput, run,
+};
+use mandi_services::core::accounts::{BalanceSide, OpeningLineInput, OpeningsInput};
+use mandi_services::core::bikri::{BikriDraft, ChuktaInput, HeaderInput};
+use mandi_services::core::error::ErrorCode;
+use mandi_services::core::money::Paisa;
+use mandi_services::core::vouchers::{AdvanceInput, DayCloseInput, PaymentInput, ReceiptInput};
+use mandi_services::{accounts, day, ledger, vouchers};
+
+pub fn rupees(value: i64) -> Paisa {
+    Paisa::from_rupees(value).unwrap()
+}
+
+/// The opening position, the days up to 09-10-26 closed, and today 10-10-26 (as `golden_day`).
+pub fn worked_day() -> support::World {
+    let (dir, env) = env();
+    set_up(&env);
+    login_owner(&env);
+    let owner = mandi_services::auth::require(&env.ctx).unwrap();
+    let rahim = support::add_account(
+        &env,
+        &owner,
+        mandi_services::core::accounts::AccountType::Seller,
+        "رحیم",
+        "Rahim",
+        true,
+        "",
+    );
+    let cash = support::id_of(&env, "01010001");
+    let capital = support::id_of(&env, "06010001");
+    set_today(&env, 2026, 8, 31);
+    let line = |id: i64, dr: &str, cr: &str| OpeningLineInput {
+        account_id: id,
+        version: accounts::get(&env.ctx, id).unwrap().version,
+        opening_date: "31-08-2026".into(),
+        opening_dr: dr.into(),
+        opening_cr: cr.into(),
+        opening_is_advance: false,
+    };
+    accounts::openings_save(
+        &env.ctx,
+        &owner,
+        &OpeningsInput {
+            lines: vec![line(cash, "65,000", ""), line(capital, "", "65,000")],
+        },
+    )
+    .unwrap();
+    set_today(&env, 2026, 9, 1);
+    vouchers::save_advance(
+        &env.ctx,
+        &owner,
+        &AdvanceInput {
+            confirm_cash_below_zero: false,
+            date: "01-09-2026".into(),
+            seller_account_id: rahim,
+            amount: "15,000".into(),
+            removed: Default::default(),
+            expected_goods: String::new(),
+            narration: String::new(),
+        },
+    )
+    .unwrap();
+    set_today(&env, 2026, 10, 10);
+    day::close(
+        &env.ctx,
+        &owner,
+        &DayCloseInput {
+            up_to: "09-10-2026".into(),
+        },
+    )
+    .unwrap();
+    support::finish_world(dir, env, owner, rahim, true)
+}
+
+pub fn save(w: &support::World, draft: &BikriDraft) -> mandi_services::core::bikri::BikriSaved {
+    // A draft that names a truck (event 2) has it written as old data: a new بکری has none (v1.34).
+    support::save_old(w, draft, false)
+}
+
+/// The D8 example of money paid on the spot (E2E-65, PRD FR-12.44) on the worked day's opening
+/// position: 200 آم from احسان, کرایہ 10,000 and مزدوری 1,000, sold to مانی (21,360, paid all),
+/// انس (48,100, paid 10,000, 38,100 left) and ہارون (125,060, paid nothing). ہارون held 10,000 جمع
+/// before the sale. Returns the world and the id of the بکری.
+pub fn d8_paid_world() -> (support::World, i64) {
+    use mandi_services::core::accounts::AccountType;
+    let w = worked_day();
+    let seller = support::add_account(
+        &w.env,
+        &w.owner,
+        AccountType::Seller,
+        "احسان",
+        "Ehsan",
+        true,
+        "",
+    );
+    let buyer = |ur: &str, en: &str| {
+        support::add_account(&w.env, &w.owner, AccountType::Buyer, ur, en, true, "")
+    };
+    let (mani, anas, haroon) = (
+        buyer("مانی", "Mani"),
+        buyer("انس", "Anas"),
+        buyer("ہارون", "Haroon"),
+    );
+    let mango = support::add_item(&w.env, &w.owner, "آم", "Mango", "fruit", "unit");
+    accounts::openings_save(
+        &w.env.ctx,
+        &w.owner,
+        &OpeningsInput {
+            lines: vec![OpeningLineInput {
+                account_id: haroon,
+                version: accounts::get(&w.env.ctx, haroon).unwrap().version,
+                opening_date: "10-10-2026".into(),
+                opening_dr: String::new(),
+                opening_cr: "10,000".into(),
+                opening_is_advance: false,
+            }],
+        },
+    )
+    .unwrap();
+    let mut lot = support::bare_lot(&w, "lot-1", seller, mango, "200");
+    lot.freight = Some("10,000".into());
+    lot.labour = support::manual("1,000");
+    let mut rows = vec![
+        support::sale("line-1", mani, "20", "1000"),
+        support::sale("line-2", anas, "50", "900"),
+        support::sale("line-3", haroon, "130", "900"),
+    ];
+    rows[0].paid = Some("21,360".into());
+    rows[1].paid = Some("10,000".into());
+    lot.sales = rows;
+    let saved = save(&w, &support::draft(vec![lot]));
+    (w, saved.bikri_id)
+}
+
+pub fn event2(w: &support::World) -> BikriDraft {
+    let mut line = support::sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = Some(ChuktaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: "0300-0000000".into(),
+    });
+    let mut lot = support::lot(w, "lot-2", w.karim, w.apple, "10");
+    lot.freight = Some("1,000".into());
+    lot.cash_paid = None;
+    lot.sales = vec![line];
+    BikriDraft {
+        header: HeaderInput {
+            truck_no: Some("LHR-0077".into()),
+            ..support::header()
+        },
+        lots: vec![lot],
+    }
+}
+
+pub fn receipt(account: i64, amount: &str) -> ReceiptInput {
+    ReceiptInput {
+        date: "10-10-2026".into(),
+        account_id: account,
+        amount: amount.into(),
+        removed: Default::default(),
+        collector_staff_id: None,
+        narration: String::new(),
+    }
+}
+
+pub fn payment(account: i64, amount: &str) -> PaymentInput {
+    PaymentInput {
+        date: "10-10-2026".into(),
+        account_id: account,
+        amount: amount.into(),
+        removed: Default::default(),
+        reason: String::new(),
+        narration: String::new(),
+        confirm_cash_below_zero: false,
+    }
+}
+
+/// Event 5 of PRD 4.8 as plain journal postings, as `golden_day` does it (the خرچہ screen is
+/// plan 17): electricity 3,000 as دکان خرچہ and الف's 2,000 as ذاتی خرچہ.
+pub fn event5(w: &support::World) {
+    use mandi_services::core::ids::AccountId;
+    use mandi_services::core::masters::{ExpenseHeadInput, MasterInput};
+    use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
+    use mandi_services::ledger::PostingEvent;
+    let mut words: Vec<String> = Vec::new();
+    loop {
+        let input = ExpenseHeadInput {
+            id: None,
+            version: None,
+            code: String::new(),
+            name_ur: "بجلی".into(),
+            name_en: "Electricity".into(),
+            confirmed_rules_words: words.clone(),
+        };
+        match mandi_services::masters::save(&w.env.ctx, &w.owner, &MasterInput::ExpenseHead(input))
+        {
+            Ok(_) => break,
+            Err(mandi_services::ServiceError::Rejected(items))
+                if items
+                    .iter()
+                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
+            {
+                for item in items {
+                    if let Some(mandi_services::core::error::ErrorValue::Text(text)) =
+                        item.values.get("words")
+                    {
+                        words.extend(text.split(' ').map(str::to_owned));
+                    }
+                }
+            }
+            Err(other) => panic!("{other:?}"),
+        }
+    }
+    let expense = support::id_of(&w.env, "05010001");
+    let drawings = support::id_of(&w.env, "06030001");
+    let cash = support::id_of(&w.env, "01010001");
+    let date = mandi_services::core::dates::BusinessDate::from_ymd(2026, 10, 10).unwrap();
+    let post = |posting_type: PostingType, debit: i64, amount: i64, source_id: i64| {
+        let entry = build_entry(vec![
+            LedgerLine::new(AccountId::new(debit), Side::Dr, rupees(amount)),
+            LedgerLine::new(AccountId::new(cash), Side::Cr, rupees(amount)),
+        ])
+        .unwrap();
+        w.env
+            .ctx
+            .db()
+            .write(|tx| {
+                ledger::post(
+                    &w.env.ctx,
+                    tx,
+                    w.owner.user_id,
+                    &PostingEvent {
+                        date,
+                        posting_type,
+                        source_type: SourceType::Voucher,
+                        source_id,
+                        narration: None,
+                        reverses: None,
+                        entry,
+                    },
+                )
+            })
+            .unwrap();
+    };
+    post(PostingType::ShopExpense, expense, 3_000, 9_001);
+    post(PostingType::PersonalExpense, drawings, 2_000, 9_002);
+}
+
+/// Events 1 to 5 of the worked day.
+pub fn full_day() -> support::World {
+    let w = worked_day();
+    save(&w, &support::event1(&w));
+    save(&w, &event2(&w));
+    vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.akram, "10,000")).unwrap();
+    vouchers::save_payment(&w.env.ctx, &w.owner, &payment(w.rahim, "4,316")).unwrap();
+    event5(&w);
+    w
+}
+
+pub fn report(
+    w: &support::World,
+    id: ReportId,
+    filters: ReportFilters,
+    offset: i64,
+    limit: i64,
+) -> ReportPage {
+    run(
+        w.env.ctx.db(),
+        &ReportRunInput {
+            group_by_month: false,
+            sort: None,
+            id,
+            filters,
+            offset,
+            limit,
+        },
+    )
+    .unwrap()
+}
+
+pub fn rejected(
+    w: &support::World,
+    id: ReportId,
+    filters: ReportFilters,
+    offset: i64,
+    limit: i64,
+) -> Vec<(ErrorCode, String)> {
+    match run(
+        w.env.ctx.db(),
+        &ReportRunInput {
+            group_by_month: false,
+            sort: None,
+            id,
+            filters,
+            offset,
+            limit,
+        },
+    ) {
+        Err(mandi_reports::ReportsError::Rejected(items)) => {
+            items.into_iter().map(|e| (e.code, e.field)).collect()
+        }
+        other => panic!("expected a rejection, got {other:?}"),
+    }
+}
+
+pub fn party(account_id: i64) -> ReportFilters {
+    ReportFilters {
+        party: Some(PartyFilter {
+            account_id,
+            person_key: None,
+        }),
+        ..ReportFilters::default()
+    }
+}
+
+/// Whole rupees of a money cell, or 0 for an empty one.
+pub fn money(cell: &Cell) -> i64 {
+    match cell {
+        Cell::Money { paisa } => paisa.rupees(),
+        Cell::Empty => 0,
+        other => panic!("not money: {other:?}"),
+    }
+}
+
+pub fn balance(cell: &Cell) -> (BalanceSide, i64) {
+    match cell {
+        Cell::Balance { paisa, side } => (*side, paisa.rupees()),
+        other => panic!("not a balance: {other:?}"),
+    }
+}
+
+pub fn code_of(cell: &Cell) -> String {
+    match cell {
+        Cell::Party { party } => party.code.clone(),
+        other => panic!("not a party: {other:?}"),
+    }
+}
+
+/// E2E-34: a trip of the three partners at 40 / 30 / 30 paying from the shop's cash; 20 پیٹی
+/// مالٹا at 500 with freight 400; an own lot sells 15 of them to اکرم at 600 on credit. Returns
+/// the world, the trip, the purchase and the id of the بکری of the sale. Used by the fixtures of
+/// the trip views, so the frontend sees real answers for a trip.
+pub fn trip_34_world() -> (support::World, i64, i64, i64) {
+    use mandi_services::core::purchases::PurchaseInput;
+    use mandi_services::core::trips::TripInput;
+    use mandi_services::core::ventures::{EntryPartInput, MoneySource, VenturePartnerInput};
+    let w = worked_day();
+    let item = support::add_item(&w.env, &w.owner, "مالٹا", "Orange", "fruit", "unit");
+    let [a, b, c] = w.partners;
+    let shop = |partner_id: i64, share: &str| VenturePartnerInput {
+        partner_id,
+        share: share.into(),
+        source: MoneySource::Shop,
+    };
+    let trip = mandi_services::trips::create(
+        &w.env.ctx,
+        &w.owner,
+        &TripInput {
+            date: "10-10-2026".into(),
+            market: Some("Lahore".into()),
+            sent_person: None,
+            note: None,
+            partners: vec![shop(a, "40"), shop(b, "30"), shop(c, "30")],
+        },
+    )
+    .unwrap()
+    .id;
+    let purchase = mandi_services::purchases::save(
+        &w.env.ctx,
+        &w.owner,
+        &PurchaseInput {
+            other_qty: None,
+            shop_name: None,
+            sell_date: None,
+            trip_id: Some(trip),
+            date: "10-10-2026".into(),
+            supplier: Some("Orange Traders".into()),
+            item_id: Some(item),
+            packing_id: Some(w.box_),
+            qty: "20".into(),
+            weight: None,
+            rate: "500".into(),
+            freight: Some("400".into()),
+            labour: None,
+            other_cost: None,
+            note: None,
+            parts: Vec::<EntryPartInput>::new(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap()
+    .id;
+    let lot = mandi_services::core::bikri::LotInput {
+        seller_account_id: Some(support::id_of(&w.env, "030119998")),
+        purchase_id: Some(purchase),
+        item_id: None,
+        packing_id: None,
+        adjust_advance: false,
+        ..support::bare_lot(&w, "own-1", w.rahim, w.banana, "15")
+    };
+    let draft = support::draft(vec![support::with_sales(
+        lot,
+        vec![support::sale("s-1", w.akram, "15", "600")],
+    )]);
+    let sale = save(&w, &draft).bikri_id;
+    (w, trip, purchase, sale)
+}
+
+// ---- The garden of E2E-40 and E2E-40b (plan 17c) --------------------------------------------------
+
+/// The garden شاہ پور باغ of the worked check: الف 60% from the shop, ب 40% from his pocket, ج not
+/// in it; rent 50,000. Made on 10-10-26 with the first installment of 30,000.
+pub fn garden_made(w: &support::World) -> mandi_services::core::gardens::GardenRow {
+    garden_made_with(w, "50,000", "30,000")
+}
+
+/// The same garden with another rent and first installment.
+pub fn garden_made_with(
+    w: &support::World,
+    rent: &str,
+    paid_now: &str,
+) -> mandi_services::core::gardens::GardenRow {
+    use mandi_services::core::gardens::GardenInput;
+    use mandi_services::core::ventures::{MoneySource, VenturePartnerInput};
+    let [a, b, _] = w.partners;
+    let input = GardenInput {
+        name_ur: "شاہ پور باغ".into(),
+        name_en: "Shahpur Garden".into(),
+        confirmed_rules_words: vec![
+            "شاہ".into(),
+            "پور".into(),
+            "باغ".into(),
+            "Shahpur".into(),
+            "Garden".into(),
+        ],
+        date: "10-10-2026".into(),
+        item_id: Some(w.banana),
+        item_ids: Vec::new(),
+        rent: rent.into(),
+        season_end: None,
+        note: None,
+        partners: vec![
+            VenturePartnerInput {
+                partner_id: a,
+                share: "60".into(),
+                source: MoneySource::Shop,
+            },
+            VenturePartnerInput {
+                partner_id: b,
+                share: "40".into(),
+                source: MoneySource::Pocket,
+            },
+        ],
+        paid_now: Some(paid_now.into()),
+        paid_now_reason: Some("first installment".into()),
+        parts: Vec::new(),
+        confirm_cash_below_zero: false,
+    };
+    mandi_services::gardens::create(&w.env.ctx, &w.owner, &input)
+        .unwrap()
+        .row
+}
+
+/// An installment or a running cost of a garden.
+pub fn garden_pay(
+    w: &support::World,
+    garden: i64,
+    cost: bool,
+    date: &str,
+    amount: &str,
+    reason: &str,
+) {
+    use mandi_services::core::gardens::{GardenEntryInput, GardenPaymentInput};
+    let payment = GardenPaymentInput {
+        garden_id: Some(garden),
+        date: date.into(),
+        amount: amount.into(),
+        reason: reason.into(),
+        parts: Vec::new(),
+        confirm_cash_below_zero: false,
+    };
+    let entry = if cost {
+        GardenEntryInput::Cost(payment)
+    } else {
+        GardenEntryInput::Installment(payment)
+    };
+    mandi_services::gardens::entry_save(&w.env.ctx, &w.owner, &entry).unwrap();
+}
+
+/// A sale in another shop: the money comes into the cash book and the garden's account.
+pub fn garden_other_sale(w: &support::World, garden: i64, date: &str, qty: &str, amount: &str) {
+    use mandi_services::core::gardens::{GardenEntryInput, GardenOtherSaleInput};
+    mandi_services::gardens::entry_save(
+        &w.env.ctx,
+        &w.owner,
+        &GardenEntryInput::OtherSale(GardenOtherSaleInput {
+            arrival_id: None,
+            garden_id: Some(garden),
+            date: date.into(),
+            shop: Some("Haji Traders".into()),
+            qty: qty.into(),
+            amount: amount.into(),
+            note: None,
+        }),
+    )
+    .unwrap();
+}
+
+/// A sale in our shop: a lot of the garden sold to a buyer on credit, no lot charges.
+pub fn garden_lot_sale(
+    w: &support::World,
+    garden_account: i64,
+    date: &str,
+    qty: &str,
+    buyer: i64,
+    rate: &str,
+) -> mandi_services::core::bikri::BikriSaved {
+    let mut lot = support::with_sales(
+        support::bare_lot(w, "garden-1", garden_account, w.banana, qty),
+        vec![support::sale("s-1", buyer, qty, rate)],
+    );
+    lot.adjust_advance = false;
+    let mut draft = support::draft(vec![lot]);
+    draft.header.entry_date = date.into();
+    save(w, &draft)
+}
+
+/// Closes a garden on a day.
+pub fn garden_close(w: &support::World, garden: i64, date: &str) {
+    use mandi_services::core::gardens::{GardenCloseInput, GardenGetInput};
+    let version = mandi_services::gardens::get(
+        &w.env.ctx,
+        &GardenGetInput {
+            id: garden,
+            history_offset: 0,
+            history_limit: 0,
+        },
+    )
+    .unwrap()
+    .row
+    .version;
+    mandi_services::gardens::close(
+        &w.env.ctx,
+        &w.owner,
+        &GardenCloseInput {
+            id: garden,
+            version,
+            date: date.into(),
+        },
+    )
+    .unwrap();
+}
+
+/// E2E-40 up to the day before the closing: payments of 10-10 (30,000) and 11-10 (20,000 and the
+/// labour 5,000), the sale of 100 at 600 to ارشد in our shop and 10,000 from another shop on 12-10.
+/// Returns the world and the garden.
+pub fn garden_40() -> (support::World, mandi_services::core::gardens::GardenRow) {
+    let w = worked_day();
+    let garden = garden_made(&w);
+    set_today(&w.env, 2026, 10, 11);
+    garden_pay(&w, garden.id, false, "11-10-2026", "20,000", "installment");
+    garden_pay(&w, garden.id, true, "11-10-2026", "5,000", "labour");
+    set_today(&w.env, 2026, 10, 12);
+    garden_lot_sale(&w, garden.account.id, "12-10-2026", "100", w.arshad, "600");
+    garden_other_sale(&w, garden.id, "12-10-2026", "20", "10,000");
+    (w, garden)
+}
+
+/// E2E-40b up to the day before the closing: the payments and only the other shop's 10,000.
+pub fn garden_40b() -> (support::World, mandi_services::core::gardens::GardenRow) {
+    let w = worked_day();
+    let garden = garden_made(&w);
+    set_today(&w.env, 2026, 10, 11);
+    garden_pay(&w, garden.id, false, "11-10-2026", "20,000", "installment");
+    garden_pay(&w, garden.id, true, "11-10-2026", "5,000", "labour");
+    set_today(&w.env, 2026, 10, 12);
+    garden_other_sale(&w, garden.id, "12-10-2026", "20", "10,000");
+    (w, garden)
+}
+
+/// A garden (شاہ پور باغ, 0080) of the three partners at 40 / 30 / 30 and an arrival of `qty`
+/// پیٹی کیلا on 10-10-26 with the given day to sell (`DD-MM-YYYY`), nothing sold yet (plan 33 v1.1,
+/// R10). Returns the garden's account id and the arrival.
+pub fn garden_with_arrival(
+    w: &support::World,
+    qty: &str,
+    sell_date: &str,
+) -> (i64, mandi_services::core::arrivals::ArrivalRow) {
+    use mandi_services::core::arrivals::ArrivalInput;
+    use mandi_services::core::gardens::GardenInput;
+    use mandi_services::core::ventures::{MoneySource, VenturePartnerInput};
+    let [a, b, c] = w.partners;
+    let garden = mandi_services::gardens::create(
+        &w.env.ctx,
+        &w.owner,
+        &GardenInput {
+            name_ur: "شاہ پور باغ".into(),
+            name_en: "Shahpur Garden".into(),
+            confirmed_rules_words: vec![
+                "شاہ".into(),
+                "پور".into(),
+                "باغ".into(),
+                "Shahpur".into(),
+                "Garden".into(),
+            ],
+            date: "10-10-2026".into(),
+            item_id: Some(w.banana),
+            item_ids: Vec::new(),
+            rent: "50,000".into(),
+            season_end: None,
+            note: None,
+            partners: [(a, "40"), (b, "30"), (c, "30")]
+                .into_iter()
+                .map(|(partner_id, share)| VenturePartnerInput {
+                    partner_id,
+                    share: share.into(),
+                    source: MoneySource::Shop,
+                })
+                .collect(),
+            paid_now: None,
+            paid_now_reason: None,
+            parts: Vec::new(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap()
+    .row;
+    let arrival = mandi_services::gardens::arrivals::save(
+        &w.env.ctx,
+        &w.owner,
+        &ArrivalInput {
+            garden_id: Some(garden.id),
+            date: "10-10-2026".into(),
+            sell_date: Some(sell_date.into()),
+            item_id: Some(w.banana),
+            packing_id: Some(w.box_),
+            qty: qty.into(),
+            weight: None,
+            note: None,
+        },
+    )
+    .unwrap()
+    .row;
+    (garden.account.id, arrival)
+}

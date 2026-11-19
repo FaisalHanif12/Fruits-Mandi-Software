@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-analytics-export-excel"
+description = "Enables the analytics_export_excel command without any pre-configured scope."
+commands.allow = ["analytics_export_excel"]
+
+[[permission]]
+identifier = "deny-analytics-export-excel"
+description = "Denies the analytics_export_excel command without any pre-configured scope."
+commands.deny = ["analytics_export_excel"]

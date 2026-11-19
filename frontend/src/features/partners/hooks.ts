@@ -9,6 +9,7 @@ import {
   partnersCreate,
   partnersGet,
   partnersList,
+  partnersOpenVentures,
   partnersOverview,
   partnersSetShares,
   partnersUpdate,
@@ -30,6 +31,19 @@ export function usePartnerList() {
 
 export function usePartnerOverview() {
   return useQuery({ queryKey: [...PARTNERS_KEY, 'overview'], queryFn: partnersOverview });
+}
+
+/**
+ * The open gardens and trips one partner is in, read when his compact line is opened (plan 76 point
+ * 11). Never kept: what he paid and got back changes with every entry.
+ */
+export function usePartnerOpenVentures(partnerId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: [...PARTNERS_KEY, 'open-ventures', partnerId],
+    queryFn: () => partnersOpenVentures(partnerId),
+    enabled,
+    staleTime: 0,
+  });
 }
 
 /** One partner with his share history, for the details dialog. Never kept: shares change. */

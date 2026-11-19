@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_GARDEN_HAS_STOCK",
+      "field": "id",
+      "values": {
+        "qty_left": 100
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261011-0001"
+}

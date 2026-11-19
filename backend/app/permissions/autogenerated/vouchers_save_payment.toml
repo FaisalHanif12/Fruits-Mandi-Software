@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-save-payment"
+description = "Enables the vouchers_save_payment command without any pre-configured scope."
+commands.allow = ["vouchers_save_payment"]
+
+[[permission]]
+identifier = "deny-vouchers-save-payment"
+description = "Denies the vouchers_save_payment command without any pre-configured scope."
+commands.deny = ["vouchers_save_payment"]

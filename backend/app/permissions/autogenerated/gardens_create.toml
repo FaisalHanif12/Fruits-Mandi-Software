@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-create"
+description = "Enables the gardens_create command without any pre-configured scope."
+commands.allow = ["gardens_create"]
+
+[[permission]]
+identifier = "deny-gardens-create"
+description = "Denies the gardens_create command without any pre-configured scope."
+commands.deny = ["gardens_create"]

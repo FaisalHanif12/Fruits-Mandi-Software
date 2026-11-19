@@ -3,10 +3,13 @@
 // the way a healthy backend answers. Money is built the way a reply arrives (paisaForTest).
 
 import { vi } from 'vitest';
+import type { AccountNode } from '../../src/bindings/AccountNode';
+import type { ChuktaBuyer } from '../../src/bindings/ChuktaBuyer';
 import * as accountApi from '../../src/shared/accounts/api';
 import type {
   AccountHit,
   AccountScope,
+  ChartAccountsPage,
   PartyCardData,
   ResolvedCode,
   AccountRef,
@@ -17,6 +20,7 @@ import type {
 } from '../../src/shared/accounts';
 import { formatPaisa } from '../../src/shared/format';
 import { paisaForTest } from './paisa';
+import { sliceOf } from './paged';
 
 export const ZERO: Balance = { amount_paisa: paisaForTest(0), side: 'zero' };
 
@@ -42,6 +46,19 @@ const CONTROL_OF: Record<AccountType, AccountRef> = {
   other: ref(1, '0101', 'نقد', 'Cash'),
 };
 
+/**
+ * The running number of a seller or a buyer: the code without its 3-digit type number and without
+ * padding (plan 32, R2), so `0010` is 0 and `00110` is 10. Null for every other account, and for
+ * the account چکتا کھاتہ (`0030`), which has no short code (R5).
+ */
+export function runningOf(type: AccountType, code: string): number | null {
+  if (type !== 'seller' && type !== 'buyer') return null;
+  const prefix = type === 'seller' ? '001' : '002';
+  if (!code.startsWith(prefix) || code.length > 10) return null;
+  const rest = code.slice(prefix.length);
+  return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
+}
+
 export function account(
   id: number,
   type: AccountType,
@@ -55,7 +72,7 @@ export function account(
     id,
     version: 1,
     code,
-    serial: Number(code.slice(-4)),
+    serial: runningOf(type, code) ?? Number(code.slice(-4)),
     account_type: type,
     control,
     name_ur: ur,
@@ -76,10 +93,9 @@ export function account(
     credit_limit_paisa: null,
     default_marka: null,
     collector: null,
-    collection_weekday: null,
     is_system: false,
     can_take_opening: true,
-    is_pukhta_khata: false,
+    is_chukta_khata: false,
     is_active: true,
     note: '',
     balance: ZERO,
@@ -87,9 +103,82 @@ export function account(
   };
 }
 
+/**
+ * Which accounts the Accounts list shows for a kind (plan 32, R6, plan 64): "all" is the sellers
+ * and the buyers; cash, payables, capital, نقدی منڈی, اپنا مال, چکتا کھاتہ, people who borrow, khatas
+ * and gardens are never in it. "every" is for the openings grid only.
+ */
+export function inListKind(row: AccountRow, kind: string): boolean {
+  if (kind === 'every') return true;
+  const party = (row.account_type === 'seller' || row.account_type === 'buyer') && !row.is_system;
+  if (kind === 'seller') return party && row.account_type === 'seller';
+  if (kind === 'buyer') return party && row.account_type === 'buyer';
+  return party;
+}
+
 export interface FakeAccounts {
   rows: AccountRow[];
   tree: ChartHead[];
+}
+
+/** The accounts of each control of the chart in miniature (what `coa_control_accounts` answers). */
+export const SAMPLE_CONTROL_ACCOUNTS: Record<number, AccountNode[]> = {
+  101: [
+    {
+      id: 1010001,
+      code: '01010001',
+      name_ur: 'روکڑ',
+      name_en: 'Cash in Hand',
+      is_active: true,
+      is_system: true,
+      balance: balance(58484, 'dr'),
+    },
+  ],
+  4: [
+    {
+      id: 21,
+      code: '0020',
+      name_ur: 'اکرم ٹول ٹیکس',
+      name_en: 'Akram Toll Tax',
+      is_active: true,
+      is_system: false,
+      balance: balance(2880, 'dr'),
+    },
+    {
+      id: 22,
+      code: '0021',
+      name_ur: 'ارشد ملتانی',
+      name_en: 'Arshad Multani',
+      is_active: true,
+      is_system: false,
+      balance: balance(18684, 'dr'),
+    },
+  ],
+  11: [],
+};
+
+/**
+ * One page of the accounts of a control, as `coa_control_accounts` answers: the rows from `offset`,
+ * how many the control has, and the control's own balance (the tree's, over all of them).
+ */
+export function controlAccountsPage(
+  tree: readonly ChartHead[],
+  all: Record<number, AccountNode[]>,
+  controlId: number,
+  offset: number,
+  limit: number,
+): ChartAccountsPage {
+  const accounts = all[controlId] ?? [];
+  const control = tree.flatMap((head) => head.controls).find((node) => node.id === controlId);
+  const size = limit === 0 ? 100 : limit;
+  return {
+    control_id: controlId,
+    rows: accounts.slice(offset, offset + size),
+    total_count: accounts.length,
+    offset,
+    limit: size,
+    balance: control?.balance ?? ZERO,
+  };
 }
 
 /** The chart of PRD 10.1 in miniature, with balances as the backend would send them. */
@@ -110,17 +199,7 @@ export function sampleTree(): ChartHead[] {
           name_en: 'Cash',
           party_type: 'other',
           balance: balance(58484, 'dr'),
-          accounts: [
-            {
-              id: 1010001,
-              code: '01010001',
-              name_ur: 'روکڑ',
-              name_en: 'Cash in Hand',
-              is_active: true,
-              is_system: true,
-              balance: balance(58484, 'dr'),
-            },
-          ],
+          account_count: 1,
         },
       ],
     },
@@ -139,26 +218,7 @@ export function sampleTree(): ChartHead[] {
           name_en: 'Buyers',
           party_type: 'buyer',
           balance: balance(21564, 'dr'),
-          accounts: [
-            {
-              id: 21,
-              code: '03040001',
-              name_ur: 'اکرم ٹول ٹیکس',
-              name_en: 'Akram Toll Tax',
-              is_active: true,
-              is_system: false,
-              balance: balance(2880, 'dr'),
-            },
-            {
-              id: 22,
-              code: '03040002',
-              name_ur: 'ارشد ملتانی',
-              name_en: 'Arshad Multani',
-              is_active: true,
-              is_system: false,
-              balance: balance(18684, 'dr'),
-            },
-          ],
+          account_count: 2,
         },
         {
           id: 11,
@@ -167,7 +227,7 @@ export function sampleTree(): ChartHead[] {
           name_en: 'Sellers',
           party_type: 'seller',
           balance: ZERO,
-          accounts: [],
+          account_count: 0,
         },
       ],
     },
@@ -186,6 +246,9 @@ export function fakeAccounts(
   let nextId = 5000;
 
   vi.mocked(accountApi.coaTree).mockResolvedValue(tree);
+  vi.mocked(accountApi.coaControlAccounts).mockImplementation((controlId, offset, limit) =>
+    Promise.resolve(controlAccountsPage(tree, SAMPLE_CONTROL_ACCOUNTS, controlId, offset, limit)),
+  );
   vi.mocked(accountApi.coaHeadsList).mockResolvedValue(
     tree.map((head) => ({
       id: head.id,
@@ -208,17 +271,18 @@ export function fakeAccounts(
       })),
     ),
   );
-  vi.mocked(accountApi.accountsList).mockImplementation((filter) => {
+  vi.mocked(accountApi.accountsList).mockImplementation((filter, offset, limit) => {
     const wanted = filter.text.toLowerCase();
     const found = store.rows.filter(
       (row) =>
         (filter.include_inactive || row.is_active) &&
-        (filter.account_type === null || row.account_type === filter.account_type) &&
+        inListKind(row, filter.kind) &&
         (wanted === '' ||
           [row.code, row.name_ur, row.name_en].some((part) => part.toLowerCase().includes(wanted))),
     );
+    // A page of the rows, with the count and the opening totals of the whole filter.
     return Promise.resolve({
-      rows: found,
+      rows: sliceOf(found, offset, limit),
       count: found.length,
       total_dr_paisa: money(65000),
       total_cr_paisa: money(65000),
@@ -229,6 +293,13 @@ export function fakeAccounts(
     return found === undefined ? Promise.reject(new Error('not found')) : Promise.resolve(found);
   });
   vi.mocked(accountApi.accountsNextCode).mockImplementation((type) => {
+    if (type === 'seller' || type === 'buyer') {
+      const prefix = type === 'seller' ? '001' : '002';
+      const used = store.rows
+        .filter((row) => row.account_type === type)
+        .map((row) => runningOf(type, row.code) ?? -1);
+      return Promise.resolve(`${prefix}${String(Math.max(-1, ...used) + 1)}`);
+    }
     const control = CONTROL_OF[type];
     const highest = Math.max(
       0,
@@ -246,7 +317,14 @@ export function fakeAccounts(
       draft.code,
       draft.names.urdu,
       draft.names.english,
-      { version: (draft.version ?? 0) + 1, city: draft.city, phone1: draft.phone1 },
+      {
+        version: (draft.version ?? 0) + 1,
+        city: draft.city,
+        phone1: draft.phone1,
+        credit_allowed: draft.credit_allowed,
+        // The backend makes the tag capital and keeps none when it is empty (PRD 10.2).
+        ...(draft.tag.trim() === '' ? {} : { tag: draft.tag.trim().toUpperCase() }),
+      },
     );
     const index = store.rows.findIndex((row) => row.id === saved.id);
     if (index >= 0) store.rows[index] = saved;
@@ -264,77 +342,163 @@ export function fakeAccounts(
   return store;
 }
 
-const SERIAL_LENGTH = 4;
-const RESERVED_SERIAL = (serial: number) => serial === 0 || serial >= 9000;
-
 function hitOf(row: AccountRow): AccountHit {
   return {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
+    kind: 'account',
+    chukta_id: null,
+    phone: null,
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
+    ...(row.tag === undefined ? {} : { tag: row.tag }),
     extra_ur: row.city?.name_ur ?? '',
     extra_en: row.city?.name_en ?? '',
     is_active: row.is_active,
+    is_dead: false,
     balance: row.balance,
   };
 }
 
+/** The اپنا مال account: offered only in the seller field of a lot (PRD FR-12.26). */
+const OWN_GOODS_CODE = '030119998';
+
+/** A الگ کھاتہ (control 0305): the seller of a lot may be one (PRD FR-16.7), but no other field. */
+const isKhata = (row: AccountRow) => row.account_type === 'other' && row.code.startsWith('0305');
+/**
+ * A garden's account (control 0306, PRD 12.11): offered like a khata, only as the seller of a lot.
+ * Its code is the garden's: type 008 and a running number (plan 34), `0080`.
+ */
+const isGarden = (row: AccountRow) =>
+  row.account_type === 'other' && /^008(0|[1-9]\d*)$/.test(row.code);
+
 function inScope(row: AccountRow, scope: AccountScope): boolean {
-  return scope === 'any' || scope === 'control' ? true : row.account_type === scope;
+  if (scope === 'any' || scope === 'control') return true;
+  // The seller of a lot may be any seller, اپنا مال, a separate khata and an open garden; every
+  // other seller field, and every buyer field, leaves اپنا مال, the khatas and the gardens out.
+  if (scope === 'lot_seller') return row.account_type === 'seller' || isKhata(row) || isGarden(row);
+  if (scope === 'seller') return row.account_type === 'seller' && row.code !== OWN_GOODS_CODE;
+  return row.account_type === scope;
 }
 
-/** The serial of an account: the last four digits of its code (PRD FR-10.3). */
-const serialOf = (row: AccountRow) => Number(row.code.slice(-SERIAL_LENGTH));
+/** A typed number that can be a running number: `0`, or digits with no leading zero (plan 32, R5). */
+const SHORT_CODE = /^(0|[1-9]\d{0,6})$/;
+
+/** The English name without vowels and doubled letters, as the backend keeps it (Tech Stack 4.7). */
+function phoneticKey(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+    .replace(/[aeiou]/g, '')
+    .replace(/(.)\1+/g, '$1');
+}
 
 /**
- * Search, short codes and the party card as the backend answers them (plan 08 Section 3): an exact
- * code first, then the exact serial within the scope, then names in either script. A code typed
- * alone is resolved on its own.
+ * The row of a چکتا buyer in the buyer box, as the backend lists him (PRD FR-7.29): the account
+ * چکتا کھاتہ's id and code, his own names and record, his phone as the second line, no balance.
+ */
+function chuktaRowOf(khata: AccountRow, person: ChuktaBuyer): AccountHit {
+  return {
+    ...hitOf(khata),
+    name_ur: person.name_ur,
+    name_en: person.name_en,
+    extra_ur: person.phone ?? '',
+    extra_en: person.phone ?? '',
+    kind: 'chukta',
+    chukta_id: person.id,
+    phone: person.phone,
+    balance: null,
+  };
+}
+
+/**
+ * Search, short codes and the party card as the backend answers them (plan 32): an exact full code
+ * first, then the running number (a short code) within the scope, then the code or the names with
+ * the text in them. Empty text is every account of the scope, a page at a time.
  */
 export function fakeAccountSearch(
   rows: AccountRow[],
   cards: Partial<Record<number, PartyCardData>> = {},
+  chuktaBuyers: readonly ChuktaBuyer[] = [],
 ) {
   const find = (scope: AccountScope, text: string, withInactive = false): AccountRow[] => {
     const wanted = text.trim().toLowerCase();
     const digits = /^\d+$/.test(wanted);
     // Only active accounts are offered; resolving a code also sees the inactive ones.
-    const scoped = rows.filter((row) => inScope(row, scope) && (withInactive || row.is_active));
+    // The account چکتا کھاتہ is never a hit: his buyers are (PRD FR-13.4).
+    const scoped = rows.filter(
+      (row) => inScope(row, scope) && (withInactive || row.is_active) && !row.is_chukta_khata,
+    );
     if (digits) {
       const exact = scoped.filter((row) => row.code === wanted);
       if (exact.length > 0) return exact;
-      if (wanted.length <= SERIAL_LENGTH) {
-        const bySerial = scoped.filter((row) => serialOf(row) === Number(wanted));
-        if (bySerial.length > 0) return bySerial;
+      if (SHORT_CODE.test(wanted)) {
+        // A khata, a garden and the account چکتا کھاتہ have no short code: their full code works.
+        const byRunning = scoped.filter(
+          (row) => runningOf(row.account_type, row.code) === Number(wanted),
+        );
+        if (byRunning.length > 0) return byRunning;
       }
     }
-    return scoped.filter((row) =>
+    // The backend also forgives a near spelling (PRD FR-7.40): "nazir" finds "Nazeer". Its phonetic
+    // key is the English name without vowels and doubled letters (Tech Stack 4.7). Close matches
+    // come after the exact ones, so they are only looked for when nothing matches the letters as
+    // typed, and only from three letters of key, so one typed letter never matches everything.
+    const literal = scoped.filter((row) =>
       [row.code, row.name_ur, row.name_en].some((part) => part.toLowerCase().includes(wanted)),
     );
+    if (literal.length > 0) return literal;
+    const wantedKey = phoneticKey(wanted);
+    return wantedKey.length < 3
+      ? []
+      : scoped.filter((row) => phoneticKey(row.name_en).includes(wantedKey));
   };
-  vi.mocked(accountApi.searchAccounts).mockImplementation(({ scope, text }) =>
-    Promise.resolve(find(scope, text).map(hitOf)),
+  // The چکتا buyers of the buyer box of a بکری line: each hit is the account چکتا کھاتہ with his own
+  // names and phone, marked `chukta` (PRD FR-7.29). The backend lists them only when the box asks
+  // (`withChukta`); no other buyer box gets them.
+  const chuktaHits = (scope: AccountScope, text: string, withChukta = false): AccountHit[] => {
+    const khata = rows.find((row) => row.is_chukta_khata);
+    if (!withChukta || scope !== 'buyer' || khata === undefined || /^\d+$/.test(text.trim())) {
+      return [];
+    }
+    const wanted = text.trim().toLowerCase();
+    return chuktaBuyers
+      .filter((person) =>
+        [person.name_ur, person.name_en, person.phone ?? ''].some((part) =>
+          part.toLowerCase().includes(wanted),
+        ),
+      )
+      .map((person) => chuktaRowOf(khata, person));
+  };
+  vi.mocked(accountApi.searchAccounts).mockImplementation(
+    ({ scope, text, offset = 0, limit, withChukta }) => {
+      const accounts = find(scope, text).map(hitOf);
+      const people = chuktaHits(scope, text, withChukta);
+      // Typed text: a چکتا buyer whose name has it in is a literal match, listed before the near
+      // spellings of accounts, as the backend ranks them. The full list (no text) is by code.
+      const ordered = text.trim() === '' ? [...accounts, ...people] : [...people, ...accounts];
+      return Promise.resolve(ordered.slice(offset, offset + limit));
+    },
   );
-  vi.mocked(accountApi.searchAccountsRecent).mockImplementation((scope) =>
-    Promise.resolve(rows.filter((row) => inScope(row, scope)).map(hitOf)),
+  vi.mocked(accountApi.searchAccountsRecent).mockImplementation(
+    (scope, _controlId, _includeDead, withChukta) =>
+      Promise.resolve([
+        ...rows.filter((row) => inScope(row, scope) && !row.is_chukta_khata).map(hitOf),
+        ...chuktaHits(scope, '', withChukta),
+      ]),
   );
   vi.mocked(accountApi.searchAccountsTouch).mockResolvedValue(null);
   vi.mocked(accountApi.accountsResolveCode).mockImplementation((scope, _controlId, text) => {
     const digits = /^\d+$/.test(text.trim());
-    const serial = Number(text.trim());
-    if (digits && text.trim().length <= SERIAL_LENGTH && RESERVED_SERIAL(serial)) {
-      return Promise.resolve<ResolvedCode>({
-        status: 'reserved',
-        account: null,
-        candidates: [],
-        suggested_code: null,
-      });
-    }
     const found = find(scope, text, true).filter(() => digits);
     const first = found[0];
+    const type = scope === 'buyer' ? 'buyer' : 'seller';
+    const used = rows
+      .filter((row) => row.account_type === type)
+      .map((row) => runningOf(type, row.code) ?? -1);
+    const next = `${type === 'buyer' ? '002' : '001'}${String(Math.max(-1, ...used) + 1)}`;
     const result: ResolvedCode =
       found.length === 1 && first !== undefined
         ? {
@@ -349,11 +513,26 @@ export function fakeAccountSearch(
               status: 'unknown',
               account: null,
               candidates: [],
-              suggested_code: digits && text.trim().length > SERIAL_LENGTH ? text.trim() : null,
+              // An F4 add would take the next code of the field's type (plan 32, R2).
+              suggested_code: digits && (scope === 'seller' || scope === 'buyer') ? next : null,
             };
     return Promise.resolve(result);
   });
-  vi.mocked(accountApi.assistPartyCard).mockImplementation((id) => {
+  vi.mocked(accountApi.assistPartyCard).mockImplementation((id, chuktaId = null) => {
+    const person = chuktaId === null ? undefined : chuktaBuyers.find((one) => one.id === chuktaId);
+    const khata = rows.find((candidate) => candidate.id === id);
+    if (person !== undefined && khata !== undefined) {
+      // A چکتا buyer's own card: his names and phone, no balance (PRD FR-13.6).
+      return Promise.resolve(
+        cardOf(khata, {
+          is_chukta: true,
+          name_ur: person.name_ur,
+          name_en: person.name_en,
+          phone: person.phone ?? '',
+          last_entry_date: null,
+        }),
+      );
+    }
     const card = cards[id];
     if (card !== undefined) return Promise.resolve(card);
     const row = rows.find((candidate) => candidate.id === id);
@@ -371,11 +550,13 @@ export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): Par
     is_active: row.is_active,
     name_ur: row.name_ur,
     name_en: row.name_en,
+    ...(row.tag === undefined ? {} : { tag: row.tag }),
     father_or_firm_ur: row.father_or_firm_ur,
     father_or_firm_en: row.father_or_firm_en,
     city_ur: row.city?.name_ur ?? '',
     city_en: row.city?.name_en ?? '',
     phone: row.phone1,
+    dead: null,
     balance: row.balance,
     last_entry_date: '2026-10-10',
     credit_limit: row.account_type === 'buyer' ? row.credit_limit_paisa : null,

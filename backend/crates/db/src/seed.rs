@@ -39,7 +39,7 @@ struct Account {
     name_ur: &'static str,
     name_en: &'static str,
     party_type: &'static str,
-    is_pukhta_khata: bool,
+    is_shared_khata: bool,
     credit_allowed: bool,
 }
 
@@ -175,7 +175,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "روکڑ",
         name_en: "Cash in Hand",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -184,7 +184,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "بینک",
         name_en: "Bank",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -193,7 +193,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "مزدوری کھاتہ",
         name_en: "Labour Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -202,7 +202,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کرایہ کھاتہ",
         name_en: "Freight Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -211,7 +211,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کرایہ سٹور کھاتہ",
         name_en: "Store Rent Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -220,16 +220,18 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "منشیانہ کھاتہ",
         name_en: "Munshiana Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
+    // The two shared accounts as migration 1 made them. Migration 20 (plan 64) gives 0030 its new
+    // name چکتا کھاتہ and closes 0031 as the old closed account; this seed is history and stays.
     Account {
         control_code: "03011",
         serial: 9999,
         name_ur: "پختہ کھاتہ (بیوپاری)",
         name_en: "Pukhta Khata (Seller)",
         party_type: "seller",
-        is_pukhta_khata: true,
+        is_shared_khata: true,
         credit_allowed: true,
     },
     // The cash buyer with no name always pays at once (PRD 12.4).
@@ -239,7 +241,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "نقدی منڈی",
         name_en: "Naqdi Mandi (Cash Buyer)",
         party_type: "buyer",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: false,
     },
     Account {
@@ -248,7 +250,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "پختہ کھاتہ (خریدار)",
         name_en: "Pukhta Khata (Buyer)",
         party_type: "buyer",
-        is_pukhta_khata: true,
+        is_shared_khata: true,
         credit_allowed: true,
     },
     Account {
@@ -257,7 +259,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کمیشن آمدن (بیوپاری)",
         name_en: "Commission Income (Seller)",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -266,7 +268,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کمیشن آمدن (گاہک)",
         name_en: "Commission Income (Buyer)",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -275,7 +277,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "لاگا آمدن",
         name_en: "Laga Income",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -284,7 +286,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "فون آمدن",
         name_en: "Phone Charge Income",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -293,7 +295,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "ریٹ فرق",
         name_en: "Rate Difference",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -302,7 +304,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "ابتدائی سرمایہ",
         name_en: "Opening Capital",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -311,7 +313,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "ابتدائی فرق",
         name_en: "Opening Difference",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
 ];
@@ -323,6 +325,7 @@ const ACCOUNTS: [Account; 16] = [
 /// # Errors
 /// Any SQLite error, for example a UNIQUE clash with a hand-made account of the same code.
 pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let khata = khata_column(conn)?;
     let mut added = 0;
     for head in &HEADS {
         added += conn.execute(
@@ -349,11 +352,17 @@ pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
         // PRD FR-10.2: the code is the control code plus the 4-digit serial.
         let code = format!("{}{:04}", account.control_code, account.serial);
         added += conn.execute(
-            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
-                 search_ur, search_en, search_phonetic, is_system, is_pukhta_khata, credit_allowed)
-             SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
-             FROM account_controls WHERE code = ?1
-             ON CONFLICT(code) DO NOTHING",
+            &format!(
+                "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
+                     search_ur, search_en, search_phonetic, is_system, {khata}, credit_allowed)
+                 SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
+                 FROM account_controls WHERE code = ?1
+                   -- Migration 7 renumbers the two shared accounts (0030, 0031), so a second run must
+                   -- find them by what they are, not by their old code (plan 32).
+                   AND NOT (?10 = 1 AND EXISTS (SELECT 1 FROM accounts x
+                                                WHERE x.{khata} = 1 AND x.party_type = ?4))
+                 ON CONFLICT(code) DO NOTHING"
+            ),
             params![
                 account.control_code,
                 code,
@@ -364,12 +373,259 @@ pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
                 text::search_ur(account.name_ur),
                 text::search_en(account.name_en),
                 text::search_phonetic(account.name_en),
-                account.is_pukhta_khata,
+                account.is_shared_khata,
                 account.credit_allowed,
             ],
         )?;
     }
     Ok(added)
+}
+
+/// The controls added by migration 6 (plan 16b, PRD FR-10.4 v1.6): the separate khatas (0305, party
+/// type `separate`, for plan 17), the gardens (0306, party type `garden`, for D4R plan 17c) and the
+/// gardens, trips and fruit accounts of the partners (0604, one account for each partner).
+/// provisional, needs Urdu reviewer (NFR-URD-4): FR-10.4 gives only the English names.
+const TRIP_CONTROLS: [Control; 3] = [
+    Control {
+        head_code: "03",
+        code: "0305",
+        name_ur: "الگ کھاتہ",
+        name_en: "Separate Khatas",
+        party_type: "separate",
+    },
+    Control {
+        head_code: "03",
+        code: "0306",
+        name_ur: "باغات",
+        name_en: "Gardens",
+        party_type: "garden",
+    },
+    Control {
+        head_code: "06",
+        code: "0604",
+        name_ur: "باغ سفر اور پھل",
+        name_en: "Gardens Trips and Fruit",
+        party_type: "other",
+    },
+];
+
+/// The system account of migration 6 (PRD FR-10.4, FR-12.26): the seller of a trip's goods, a
+/// reserved serial. It never holds a balance. The gardens' accounts and the 0604 accounts of the
+/// partners are made by the garden and partner saves, not seeded.
+const TRIP_ACCOUNTS: [Account; 1] = [Account {
+    control_code: "03011",
+    serial: 9998,
+    name_ur: "اپنا مال",
+    name_en: "Own Goods (Trips)",
+    party_type: "seller",
+    is_shared_khata: false,
+    credit_allowed: true,
+}];
+
+/// The controls of migration 23 (plan 76): the contra account of every linked khata and loan (0307, head
+/// 03, so outside the equity of FR-17.9) and the 0605 account of each partner (head 06).
+/// provisional, needs Urdu reviewer (NFR-URD-4).
+const LINKED_CONTROLS: [Control; 2] = [
+    Control {
+        head_code: "03",
+        code: "0307",
+        name_ur: "الگ کھاتہ اور ادھار رقم کا عوض",
+        name_en: "Linked Khata and Loans Offset",
+        party_type: "other",
+    },
+    Control {
+        head_code: "06",
+        code: "0605",
+        name_ur: "الگ کھاتہ اور ادھار رقم",
+        name_en: "Linked Khata and Loans",
+        party_type: "other",
+    },
+];
+
+/// The contra account of migration 23 (03070001): every line a linked khata or a partner-linked loan
+/// takes has its mirror pair, partner parts against this account, so the books balance and FR-17.9
+/// holds. Its جمع less بنام equals the بنام balance of the linked khatas plus what partner-linked loans
+/// have still open. It is a system account and takes no opening.
+const LINKED_ACCOUNTS: [Account; 1] = [Account {
+    control_code: "0307",
+    serial: 1,
+    name_ur: "الگ کھاتہ اور ادھار رقم: شراکت داروں کا عوض",
+    name_en: "Linked Khata and Loans: Partner Offset",
+    party_type: "other",
+    is_shared_khata: false,
+    credit_allowed: true,
+}];
+
+/// The code of the seller of a trip's goods, اپنا مال (PRD FR-12.26).
+pub const OWN_GOODS_ACCOUNT_CODE: &str = "030119998";
+/// The code of the cash account, روکڑ (PRD FR-10.4).
+pub const CASH_ACCOUNT_CODE: &str = "01010001";
+/// The English name of the cash account from v1.6 (PRD FR-10.4).
+const CASH_NAME_EN: &str = "Cash";
+
+fn insert_controls(conn: &Connection, controls: &[Control]) -> rusqlite::Result<usize> {
+    let mut added = 0;
+    for control in controls {
+        added += conn.execute(
+            "INSERT INTO account_controls (head_id, code, name_ur, name_en, party_type)
+             SELECT id, ?2, ?3, ?4, ?5 FROM account_heads WHERE code = ?1
+             ON CONFLICT(code) DO NOTHING",
+            params![
+                control.head_code,
+                control.code,
+                control.name_ur,
+                control.name_en,
+                control.party_type
+            ],
+        )?;
+    }
+    Ok(added)
+}
+
+/// The name of the column that marks the shared accounts: `is_pukhta_khata` in the schema of
+/// migrations 1 to 19, `is_chukta_khata` from migration 20 (plan 64). Migration 1 and migration 6 run
+/// this seed on the old schema; a second run on the latest schema must change nothing, so the seed
+/// reads the name from the table. The two words are constants, never typed input (Code Standards B14).
+fn khata_column(conn: &Connection) -> rusqlite::Result<&'static str> {
+    let renamed: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('accounts') WHERE name = 'is_chukta_khata'",
+        [],
+        |r| r.get(0),
+    )?;
+    Ok(if renamed == 1 {
+        "is_chukta_khata"
+    } else {
+        "is_pukhta_khata"
+    })
+}
+
+fn insert_accounts(conn: &Connection, accounts: &[Account]) -> rusqlite::Result<usize> {
+    let khata = khata_column(conn)?;
+    let mut added = 0;
+    for account in accounts {
+        // PRD FR-10.2: the code is the control code plus the 4-digit serial.
+        let code = format!("{}{:04}", account.control_code, account.serial);
+        added += conn.execute(
+            &format!(
+                "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
+                     search_ur, search_en, search_phonetic, is_system, {khata}, credit_allowed)
+                 SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
+                 FROM account_controls WHERE code = ?1
+                 ON CONFLICT(code) DO NOTHING"
+            ),
+            params![
+                account.control_code,
+                code,
+                account.serial,
+                account.party_type,
+                account.name_ur,
+                account.name_en,
+                text::search_ur(account.name_ur),
+                text::search_en(account.name_en),
+                text::search_phonetic(account.name_en),
+                account.is_shared_khata,
+                account.credit_allowed,
+            ],
+        )?;
+    }
+    Ok(added)
+}
+
+/// Inserts the controls and the system account of migration 6 that are not there yet, gives the cash
+/// account its v1.6 English name ("Cash") with its search keys, and returns how many rows it added
+/// (0 on a second run). Migration 6 calls it after it has widened the party type checks to accept
+/// `separate` and `garden`. [`system_accounts`] is the seed of migration 1 and stays as it was
+/// released.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn trip_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let controls = insert_controls(conn, &TRIP_CONTROLS)?;
+    let accounts = insert_accounts(conn, &TRIP_ACCOUNTS)?;
+    conn.execute(
+        "UPDATE accounts SET name_en = ?2, search_en = ?3, search_phonetic = ?4,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), version = version + 1
+         WHERE code = ?1 AND name_en <> ?2",
+        params![
+            CASH_ACCOUNT_CODE,
+            CASH_NAME_EN,
+            text::search_en(CASH_NAME_EN),
+            text::search_phonetic(CASH_NAME_EN),
+        ],
+    )?;
+    Ok(controls + accounts)
+}
+
+/// Inserts the controls and the system account of migration 23 that are not there yet. Returns how
+/// many rows it added (0 on a second run).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn linked_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    Ok(insert_controls(conn, &LINKED_CONTROLS)? + insert_accounts(conn, &LINKED_ACCOUNTS)?)
+}
+
+/// Makes the 0605 account of every partner that has none and names it in
+/// `partners.linked_account_id`. Migration 23 calls it for the partners that exist; the partner save
+/// makes the account of each new partner with [`mandi_core::partners::linked_account`].
+///
+/// # Errors
+/// Any SQLite error, or `StatementChangedRows` if the 0605 series is full.
+pub fn partner_linked_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let mut statement = conn.prepare(
+        "SELECT id, name_ur, name_en FROM partners WHERE linked_account_id IS NULL ORDER BY id",
+    )?;
+    let partners: Vec<(i64, String, String)> = statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let now: String = conn.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |r| {
+        r.get(0)
+    })?;
+    let owner: i64 = conn.query_row("SELECT COALESCE(MIN(id), 0) FROM users", [], |r| r.get(0))?;
+    let mut made = 0;
+    for (partner_id, name_ur, name_en) in partners {
+        let account = mandi_core::partners::linked_account(&name_ur, &name_en);
+        let (account_id, _) = crate::masters::create_account(conn, &account, owner, &now)?
+            .ok_or(rusqlite::Error::StatementChangedRows(0))?;
+        conn.execute(
+            "UPDATE partners SET linked_account_id = ?2 WHERE id = ?1",
+            params![partner_id, account_id],
+        )?;
+        made += 1;
+    }
+    Ok(made)
+}
+
+/// Makes the 0604 account (gardens, trips and fruit) of every partner that has none, and names it in
+/// `partners.venture_account_id`. Migration 6 calls it for the partners that exist; the partner save
+/// (plan 11) makes the account of each new partner with [`mandi_core::partners::venture_account`].
+/// Returns how many accounts it made.
+///
+/// # Errors
+/// Any SQLite error, or `StatementChangedRows` if the 0604 series is full.
+pub fn partner_venture_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let mut statement = conn.prepare(
+        "SELECT id, name_ur, name_en FROM partners WHERE venture_account_id IS NULL ORDER BY id",
+    )?;
+    let partners: Vec<(i64, String, String)> = statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let now: String = conn.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |r| {
+        r.get(0)
+    })?;
+    let owner: i64 = conn.query_row("SELECT COALESCE(MIN(id), 0) FROM users", [], |r| r.get(0))?;
+    let mut made = 0;
+    for (partner_id, name_ur, name_en) in partners {
+        let account = mandi_core::partners::venture_account(&name_ur, &name_en);
+        let (account_id, _) = crate::masters::create_account(conn, &account, owner, &now)?
+            .ok_or(rusqlite::Error::StatementChangedRows(0))?;
+        conn.execute(
+            "UPDATE partners SET venture_account_id = ?2 WHERE id = ?1",
+            params![partner_id, account_id],
+        )?;
+        made += 1;
+    }
+    Ok(made)
 }
 
 /// How many heads, controls and accounts a data file holds. `pnpm seed` prints it.

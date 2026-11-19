@@ -14,7 +14,11 @@ export type SearchScope =
   | 'narration'
   | 'expense_head'
   | 'staff'
-  | 'bank_account'
+  | 'collector'
   | 'seller'
   | 'buyer'
-  | 'any_account';
+  | 'any_account'
+  | 'trip'
+  | 'garden'
+  | 'trip_all'
+  | 'garden_all';

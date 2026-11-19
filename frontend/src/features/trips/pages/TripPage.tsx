@@ -1,0 +1,192 @@
+// One trip (route /trips/$id; PRD 12.10, FR-7.67, FR-12.25, FR-12.27, FR-12.33): the facts of the
+// trip, the entry form with its type list (خریداری, سفر خرچ, دوسری دکان میں فروخت), the trip's
+// purchases with their stock and result, each partner's money in and back, and the history of
+// the trip. `?purchase=7` shows purchase 7 in the card under the list.
+//
+// A trip closes by itself when it has a purchase and nothing is left, and opens again if a sale
+// or a write-off of it is reversed (FR-12.33). A closed trip takes no new entry: the form is
+// replaced by a note that says so. Everything else stays readable.
+//
+// Four states: loading, an error with a retry (also for a trip that does not exist), the trip.
+
+import { Localized } from '@fluent/react';
+import { useParams, useSearch } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useDayStatus } from '../../../app/use-day-status';
+import { uiErrorOf } from '../../../shared/api';
+import { ErrorState, LoadingState, Notice, PartnerLockedBox } from '../../../shared/ui';
+import type { PagerState } from '../../../shared/hooks';
+import { TripEntriesSection } from '../components/TripEntriesSection';
+import { TripEntryEdit } from '../components/TripEntryEdit';
+import { TripHeaderEdit } from '../components/TripHeaderEdit';
+import { TripPurchaseEdit } from '../components/TripPurchaseEdit';
+import { TripEntryEditor } from '../components/TripEntryEditor';
+import { TripFiguresCard, TripHeaderCard } from '../components/TripHeaderCard';
+import { TripPartnersCard } from '../components/TripPartnersCard';
+import { TripPurchasesSection } from '../components/TripPurchasesSection';
+import { useTrip, type TripView } from '../hooks';
+import { parseTripSearch, type TripOpenType } from '../screen-type';
+import type { TripEntryRow } from '../types';
+
+/** A positive whole number from the address, or nothing. */
+function positiveId(value: unknown): number | null {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function TripBody({
+  view,
+  today,
+  initialPurchase,
+  initialType,
+  pager,
+}: {
+  view: TripView;
+  today: string;
+  initialPurchase: number | null;
+  /** The type of the entry form the address asks for (PRD FR-7.79), or none. */
+  initialType: TripOpenType | undefined;
+  pager: PagerState;
+}) {
+  const { detail } = view;
+  const trip = detail.row;
+  const [selectedPurchase, setSelectedPurchase] = useState<number | null>(initialPurchase);
+  // The entry open for edit (plan 44): the form of a new entry gives way to its edit form.
+  const [editing, setEditing] = useState<TripEntryRow | null>(null);
+  // The facts of the trip open for edit (market, who was sent, note).
+  const [editingHeader, setEditingHeader] = useState(false);
+  // A purchase is edited with its own row; one that is not in the trip's list cannot be.
+  const editingPurchase =
+    editing?.kind === 'purchase'
+      ? (detail.purchases.find((one) => one.id === editing.purchase_id) ?? null)
+      : null;
+  return (
+    <div className="flex max-w-page flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Localized id="trips-title">
+          <h1 className="sr-only normal:not-sr-only normal:type-title" />
+        </Localized>
+      </div>
+      <TripHeaderCard
+        trip={trip}
+        onEdit={() => {
+          setEditing(null);
+          setEditingHeader(true);
+        }}
+      />
+      {editingHeader ? (
+        <TripHeaderEdit
+          key={String(trip.version)}
+          trip={trip}
+          onDone={() => {
+            setEditingHeader(false);
+          }}
+        />
+      ) : editing !== null && (editing.kind !== 'purchase' || editingPurchase !== null) ? (
+        editingPurchase !== null ? (
+          <TripPurchaseEdit
+            key={`purchase-${String(editingPurchase.id)}-${String(editingPurchase.version)}`}
+            trip={trip}
+            purchase={editingPurchase}
+            entry={editing}
+            onDone={() => {
+              setEditing(null);
+            }}
+          />
+        ) : (
+          <TripEntryEdit
+            key={`${editing.kind}-${String(editing.id)}-${String(editing.version)}`}
+            trip={trip}
+            entry={editing}
+            purchases={detail.purchases}
+            onDone={() => {
+              setEditing(null);
+            }}
+          />
+        )
+      ) : trip.status === 'open' ? (
+        <TripEntryEditor
+          trip={trip}
+          purchases={detail.purchases}
+          today={today}
+          onPurchaseSaved={setSelectedPurchase}
+          initialType={initialType}
+        />
+      ) : (
+        <Notice tone="info">
+          <Localized id="trips-closed-notice" />
+        </Notice>
+      )}
+      <TripFiguresCard trip={trip} />
+      <TripPurchasesSection
+        purchases={detail.purchases}
+        selectedId={selectedPurchase}
+        onSelect={setSelectedPurchase}
+      />
+      {detail.partners_locked ? (
+        <PartnerLockedBox />
+      ) : (
+        <TripPartnersCard results={detail.partner_results} />
+      )}
+      <TripEntriesSection
+        entries={view.entries}
+        count={view.entriesCount}
+        pager={pager}
+        purchases={detail.purchases}
+        onEdit={(entry) => {
+          setEditingHeader(false);
+          setEditing(entry);
+        }}
+      />
+    </div>
+  );
+}
+
+/** The route of one trip: the trip and the chosen purchase come from the address. */
+export function TripPage() {
+  const { id: rawId } = useParams({ strict: false });
+  const rawSearch: Record<string, unknown> = useSearch({ strict: false });
+  const search = parseTripSearch(rawSearch);
+  return (
+    <TripScreen id={positiveId(rawId)} purchase={search.purchase ?? null} entryType={search.type} />
+  );
+}
+
+/** One trip by its id, with its four states. The development page shows it without a route. */
+export function TripScreen({
+  id,
+  purchase,
+  entryType,
+}: {
+  id: number | null;
+  purchase: number | null;
+  entryType?: TripOpenType | undefined;
+}) {
+  const day = useDayStatus();
+  const trip = useTrip(id);
+  if (trip.isPending || day.isPending) return <LoadingState />;
+  if (trip.isError || day.isError || trip.data === undefined) {
+    const failure: unknown = trip.isError ? trip.error : day.error;
+    return (
+      <ErrorState
+        title={<Localized id="trips-detail-failed" />}
+        error={uiErrorOf(failure)}
+        onRetry={() => {
+          void trip.refetch();
+          void day.refetch();
+        }}
+      />
+    );
+  }
+  // A new key for each trip of the address, so the screen starts on the one it names.
+  return (
+    <TripBody
+      key={id ?? 'none'}
+      view={trip.data}
+      today={day.data.today}
+      initialPurchase={purchase}
+      initialType={entryType}
+      pager={trip.pager}
+    />
+  );
+}

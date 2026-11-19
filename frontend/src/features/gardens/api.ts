@@ -1,0 +1,210 @@
+// Typed wrappers around the باغات commands (plan 17c; module `gardens`, Tech Stack 5.2).
+// Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
+// Every command takes one `{ input }` object, except the two that take nothing.
+
+import { callCommand } from '../../shared/api';
+import type { EditPreview } from '../../bindings/EditPreview';
+import type { EntryEdited } from '../../bindings/EntryEdited';
+import type { GardenArrivalEditInput } from '../../bindings/GardenArrivalEditInput';
+import type { GardenCloseRequest } from '../../bindings/GardenCloseRequest';
+import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
+import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput';
+import type {
+  ArrivalCancelInput,
+  ArrivalCancelled,
+  ArrivalEntryInput,
+  ArrivalEntryPreview,
+  ArrivalEntrySaved,
+  ArrivalInput,
+  ArrivalRow,
+  ArrivalSaved,
+  ArrivalsList,
+  ArrivalsListInput,
+  ArrivalWriteOffDone,
+  ArrivalWriteOffInput,
+  ArrivalWriteOffUndoInput,
+  ArrivalWriteOffUndone,
+  SellDateInput,
+  SellDateSet,
+  SplitInput,
+  SplitSet,
+  GardenCloseInput,
+  GardenClosePreview,
+  GardenClosed,
+  GardenCreatePreview,
+  GardenCreated,
+  GardenDefaults,
+  GardenDetail,
+  GardenEntryCancelInput,
+  GardenEntryCancelled,
+  GardenEntryInput,
+  GardenEntryPreview,
+  GardenEntrySaved,
+  GardenGetInput,
+  GardenInput,
+  GardenReopenInput,
+  GardenReopened,
+  GardenRow,
+  GardenSetPartnersInput,
+  GardensList,
+  GardensListInput,
+  GardensSummary,
+} from './types';
+
+/** The form of a new garden, filled from the firm's shares or the last garden (PRD A56). */
+export function gardensDefaults(): Promise<GardenDefaults> {
+  return callCommand<GardenDefaults>('gardens_defaults');
+}
+
+/** What making the garden would do: the first installment's parts and the cash after (C23). */
+export function gardensCreatePreview(input: GardenInput): Promise<GardenCreatePreview> {
+  return callCommand<GardenCreatePreview>('gardens_create_preview', { input });
+}
+
+/** Makes a garden: the shares total 100% and each partner has a source (PRD FR-12.29). */
+export function gardensCreate(input: GardenInput): Promise<GardenCreated> {
+  return callCommand<GardenCreated>('gardens_create', { input });
+}
+
+/** New shares for a garden that has no entry yet. */
+export function gardensSetPartners(input: GardenSetPartnersInput): Promise<GardenRow> {
+  return callCommand<GardenRow>('gardens_set_partners', { input });
+}
+
+/** One page of gardens and the totals over the whole filter (PRD FR-19.11). */
+export function gardensList(input: GardensListInput): Promise<GardensList> {
+  return callCommand<GardensList>('gardens_list', { input });
+}
+
+/** One garden with a page of its history and each partner's money. */
+export function gardensGet(input: GardenGetInput): Promise<GardenDetail> {
+  return callCommand<GardenDetail>('gardens_get', { input });
+}
+
+/** The data of the dashboard tile باغات (PRD 9.1). */
+export function gardensSummary(): Promise<GardensSummary> {
+  return callCommand<GardensSummary>('gardens_summary');
+}
+
+/** Works out an installment, a cost or a sale in another shop as typed (C23, FR-12.37). */
+export function gardensEntryPreview(input: GardenEntryInput): Promise<GardenEntryPreview> {
+  return callCommand<GardenEntryPreview>('gardens_entry_preview', { input });
+}
+
+export function gardensEntrySave(input: GardenEntryInput): Promise<GardenEntrySaved> {
+  return callCommand<GardenEntrySaved>('gardens_entry_save', { input });
+}
+
+export function gardensEntryCancel(input: GardenEntryCancelInput): Promise<GardenEntryCancelled> {
+  return callCommand<GardenEntryCancelled>('gardens_entry_cancel', { input });
+}
+
+/** What closing the garden would do: each partner's money back (C26). */
+export function gardensClosePreview(input: GardenCloseInput): Promise<GardenClosePreview> {
+  return callCommand<GardenClosePreview>('gardens_close_preview', { input });
+}
+
+/**
+ * Closes the garden. While the owner still owes money back (the installments paid are above the rent, PRD
+ * FR-12.51) the backend answers `ERR_OWNER_OWES_NOT_CONFIRMED` (value `owes_paisa`) until `confirmOwnerOwes` is
+ * true, the yes of the box that shows the amount (plan 80 Q-R4-2).
+ */
+export function gardensClose(
+  input: GardenCloseInput,
+  confirmOwnerOwes = false,
+): Promise<GardenClosed> {
+  const body: GardenCloseRequest = { ...input, confirm_owner_owes: confirmOwnerOwes };
+  return callCommand<GardenClosed>('gardens_close', { input: body });
+}
+
+/** Undoes the closing by reversal while its day is open (PRD FR-12.38). */
+export function gardensReopen(input: GardenReopenInput): Promise<GardenReopened> {
+  return callCommand<GardenReopened>('gardens_reopen', { input });
+}
+
+// Goods arrived (مال آیا): a garden's stock, with no money (PRD FR-12.40, plan 33 version 1.1).
+
+/** Saves a goods arrived entry: the garden's goods that came to the shop. Posts no money. */
+export function gardensArrivalSave(input: ArrivalInput): Promise<ArrivalSaved> {
+  return callCommand<ArrivalSaved>('gardens_arrival_save', { input });
+}
+
+/**
+ * Checks a goods arrived entry with many item lines (PRD FR-12.41): the mistakes of each line and
+ * of the shared fields. Saves nothing.
+ */
+export function gardensArrivalEntryPreview(input: ArrivalEntryInput): Promise<ArrivalEntryPreview> {
+  return callCommand<ArrivalEntryPreview>('gardens_arrival_entry_preview', { input });
+}
+
+/** Saves a goods arrived entry: every line is its own arrival, in one transaction. No money. */
+export function gardensArrivalEntrySave(input: ArrivalEntryInput): Promise<ArrivalEntrySaved> {
+  return callCommand<ArrivalEntrySaved>('gardens_arrival_entry_save', { input });
+}
+
+/** Changes the split of an arrival with goods left: the نگ for another shop and its name. */
+export function gardensArrivalChangeSplit(input: SplitInput): Promise<SplitSet> {
+  return callCommand<SplitSet>('gardens_arrival_change_split', { input });
+}
+
+/** One page of the garden's goods arrived entries and the totals over the whole filter (FR-19.11). */
+export function gardensArrivalsList(input: ArrivalsListInput): Promise<ArrivalsList> {
+  return callCommand<ArrivalsList>('gardens_arrivals_list', { input });
+}
+
+/** One entry with the lots that sold it and its write-offs. */
+export function gardensArrivalGet(id: number): Promise<ArrivalRow> {
+  return callCommand<ArrivalRow>('gardens_arrival_get', { input: { id } });
+}
+
+/** Cancels an entry with a reason, while nothing of it is sold or written off. */
+export function gardensArrivalCancel(input: ArrivalCancelInput): Promise<ArrivalCancelled> {
+  return callCommand<ArrivalCancelled>('gardens_arrival_cancel', { input });
+}
+
+/** Changes the date to sell of an entry that still has goods left. Nothing is posted. */
+export function gardensArrivalSetSellDate(input: SellDateInput): Promise<SellDateSet> {
+  return callCommand<SellDateSet>('gardens_arrival_set_sell_date', { input });
+}
+
+/** Writes goods off with a reason; nothing is posted. */
+export function gardensArrivalWriteOff(input: ArrivalWriteOffInput): Promise<ArrivalWriteOffDone> {
+  return callCommand<ArrivalWriteOffDone>('gardens_arrival_write_off', { input });
+}
+
+/** Undoes a write-off. */
+export function gardensArrivalWriteOffUndo(
+  input: ArrivalWriteOffUndoInput,
+): Promise<ArrivalWriteOffUndone> {
+  return callCommand<ArrivalWriteOffUndone>('gardens_arrival_write_off_undo', { input });
+}
+
+/** The review of an edit of a garden entry (installment, cost or sale in another shop). Read only. */
+export function gardensEntryEditPreview(input: GardenEntryEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('gardens_entry_edit_preview', { input });
+}
+
+/** Saves the edit of a garden entry: the old posting is reversed and the new one posted, same day. */
+export function gardensEntryEditSave(input: GardenEntryEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('gardens_entry_edit_save', { input });
+}
+
+/** The review of an edit of a garden's goods arrived. Read only. */
+export function gardensArrivalEditPreview(input: GardenArrivalEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('gardens_arrival_edit_preview', { input });
+}
+
+/** Saves the edit of a garden's goods arrived. */
+export function gardensArrivalEditSave(input: GardenArrivalEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('gardens_arrival_edit_save', { input });
+}
+
+/** The review of an edit of the header of a garden: the names, the item, the rent, the season end. */
+export function gardensHeaderEditPreview(input: GardenHeaderEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('gardens_header_edit_preview', { input });
+}
+
+/** Saves the edit of the header of a garden. */
+export function gardensHeaderEditSave(input: GardenHeaderEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('gardens_header_edit_save', { input });
+}

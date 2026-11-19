@@ -70,7 +70,7 @@ auth-wizard-step-partners = { -shirakat-dar }
 auth-wizard-partners-title = { -shirakat-dar } شامل کریں
 
 # review: pending
-auth-wizard-partners-help = ہر { -shirakat-dar } کا نام اور { -hissa } لکھیں۔ یہ کام بعد میں بھی ہو سکتا ہے، مگر جب تک { -hissa } پورے 100 فیصد نہ ہوں، { -bikri } محفوظ نہیں ہو گی۔
+auth-wizard-partners-help = ہر { -shirakat-dar } کا نام اور { -hissa } لکھیں۔ یہ کام بعد میں بھی ہو سکتا ہے، مگر جب تک کل { -hissa } ٹھیک 100 فیصد نہ ہو، { -bikri } محفوظ نہیں ہو گی۔
 
 # review: pending
 auth-wizard-partners-save = محفوظ کر کے مکمل کریں
@@ -177,3 +177,14 @@ auth-change-wrong-current = موجودہ پاس ورڈ غلط ہے۔ باقی ک
 
 # review: pending
 auth-change-saved = پاس ورڈ بدل دیا گیا۔
+
+## The brand panel beside the sign-in form (plan 75 T2).
+
+# review: pending
+auth-brand-books = حساب ہمیشہ برابر رہتا ہے
+
+# review: pending
+auth-brand-offline = انٹرنیٹ کے بغیر بھی چلتا ہے
+
+# review: pending
+auth-brand-backup = روزانہ خودکار بیک اپ

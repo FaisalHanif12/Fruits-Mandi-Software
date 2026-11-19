@@ -4,7 +4,7 @@
 
 import { formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
 import type { NamePairValue } from '../../shared/ui';
-import type { AccountDraft, AccountRow, AccountType } from '../../shared/accounts';
+import { type AccountDraft, type AccountRow, type AccountType } from '../../shared/accounts';
 
 /** The form with the spelling marks of its two name pairs next to the names. */
 export interface AccountFormValues extends Omit<AccountDraft, 'names' | 'father'> {
@@ -12,7 +12,7 @@ export interface AccountFormValues extends Omit<AccountDraft, 'names' | 'father'
   father: NamePairValue;
 }
 
-/** A new account: the suggested code, ticked "credit allowed" (PRD 10.2), today as opening date. */
+/** A new account: the suggested code, today as opening date, and "credit allowed" ticked (PRD 10.2). */
 export function newAccountValues(
   accountType: AccountType,
   controlId: number | null,
@@ -26,6 +26,7 @@ export function newAccountValues(
     control_id: controlId,
     code,
     names: { urdu: '', english: '' },
+    tag: '',
     father: { urdu: '', english: '' },
     city: null,
     adda: null,
@@ -41,7 +42,6 @@ export function newAccountValues(
     credit_limit: '',
     default_marka: null,
     collector: null,
-    collection_weekday: null,
     is_active: true,
     note: '',
   };
@@ -63,6 +63,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     control_id: row.control.id,
     code: row.code,
     names: { urdu: row.name_ur, english: row.name_en },
+    tag: row.tag ?? '',
     father: { urdu: row.father_or_firm_ur, english: row.father_or_firm_en },
     city: row.city,
     adda: row.adda,
@@ -78,7 +79,6 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     credit_limit: openingText(row.credit_limit_paisa, grouping),
     default_marka: row.default_marka,
     collector: row.collector,
-    collection_weekday: row.collection_weekday,
     is_active: row.is_active,
     note: row.note,
   };
@@ -86,6 +86,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
 
 const TEXT_FIELDS = [
   'code',
+  'tag',
   'phone1',
   'phone2',
   'address',
@@ -93,7 +94,6 @@ const TEXT_FIELDS = [
   'opening_dr',
   'opening_cr',
   'credit_limit',
-  'collection_weekday',
   'note',
 ] as const;
 const FLAG_FIELDS = ['opening_is_advance', 'credit_allowed', 'is_active'] as const;

@@ -6,7 +6,7 @@
 accounts-title = کھاتے
 
 # review: pending
-accounts-help = { -beopari }، { -gahak }، { -adhar-raqam } لینے والے اور باقی کھاتے۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
+accounts-help = { -beopari } اور { -gahak }۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
 
 # review: pending
 accounts-new = نیا کھاتہ
@@ -37,7 +37,7 @@ accounts-make-inactive = غیر فعال کریں
 accounts-system-stays-active = یہ نظام کا کھاتہ ہے۔ حساب کتاب میں اس کا استعمال ہوتا ہے، اس لیے اسے غیر فعال نہیں کیا جا سکتا۔
 
 # review: pending
-accounts-inactive-title = غیر فعال کریں؟
+accounts-inactive-title = اسے غیر فعال کریں؟
 
 # review: pending
 accounts-inactive-description = { $name } نئے اندراج میں نہیں دکھایا جائے گا، لیکن اس کا پرانا حساب اور رپورٹیں ویسی ہی رہیں گی۔ جب چاہیں دوبارہ فعال کر سکتے ہیں۔
@@ -85,7 +85,7 @@ accounts-show-inactive = غیر فعال بھی دکھائیں
 # review: pending
 accounts-more-columns = مزید کالم
 
-## Types and weekdays.
+## Types.
 
 # review: pending
 accounts-type-all = سب
@@ -96,32 +96,15 @@ accounts-type-seller = { -beopari }
 # review: pending
 accounts-type-buyer = { -gahak }
 
+# The mark of a walk-in buyer in the buyer list of a sale line and on his card (PRD FR-7.29, FR-13.6).
+# review: pending
+accounts-type-chukta = { -chukta }
+
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
 
 # review: pending
 accounts-type-other = دیگر
-
-# review: pending
-accounts-weekday-sat = ہفتہ
-
-# review: pending
-accounts-weekday-sun = اتوار
-
-# review: pending
-accounts-weekday-mon = پیر
-
-# review: pending
-accounts-weekday-tue = منگل
-
-# review: pending
-accounts-weekday-wed = بدھ
-
-# review: pending
-accounts-weekday-thu = جمعرات
-
-# review: pending
-accounts-weekday-fri = جمعہ
 
 ## List columns and totals (PRD FR-10.5).
 
@@ -184,6 +167,10 @@ accounts-section-more = مزید
 # review: pending
 accounts-field-type = کھاتے کی قسم
 
+# PRD 13, FR-13.5, FR-7.29, FR-13.11. Shown on the new account form only (plans 45 and 47).
+# review: pending
+accounts-field-type-hint = جس { -beopari } یا { -gahak } کا کھاتہ چلتا ہے اس کا کھاتہ یہاں بنائیں۔ پوری رقم اسی وقت دے کر جانے والا { -gahak } { -bikri } کی لائن کے { -gahak } خانے سے { -chukta-khata } میں شامل کیا جاتا ہے۔
+
 # review: pending
 accounts-field-control = کنٹرول
 
@@ -198,6 +185,13 @@ accounts-field-name-ur = اردو نام
 
 # review: pending
 accounts-field-name-en = انگریزی نام
+
+# PRD 10.2, FR-7.25: English capital letters, never converted to Urdu.
+# review: pending
+accounts-field-tag = { -nishan }
+
+# review: pending
+accounts-field-tag-hint = اختیاری۔ 1 سے 4 انگریزی بڑے حروف، مثلاً K یا BA۔ یہ نام کے بعد دکھایا جاتا ہے اور ایک جیسے نام والے دو لوگوں میں فرق بتاتا ہے۔
 
 # review: pending
 accounts-field-father-ur = ولدیت یا فرم، اردو
@@ -230,7 +224,7 @@ accounts-field-opening-dr = ابتدائی { -banaam }
 accounts-field-opening-cr = ابتدائی { -jama }
 
 # review: pending
-accounts-field-opening-advance = یہ ابتدائی رقم { -peshgi-khata } ہے
+accounts-field-opening-advance = یہ ابتدائی رقم { -peshgi } ہے
 
 # review: pending
 accounts-field-credit-allowed = ادھار کی اجازت ہے
@@ -240,9 +234,6 @@ accounts-field-credit-limit = ادھار کی حد
 
 # review: pending
 accounts-field-collector = { -agrahi } والا
-
-# review: pending
-accounts-field-weekday = { -agrahi } کا دن
 
 # review: pending
 accounts-field-linked = منسلک کھاتہ
@@ -259,10 +250,14 @@ accounts-field-note = نوٹ
 # review: pending
 accounts-similar-title = ملتے جلتے کھاتے پہلے سے موجود ہیں
 
+# PRD FR-10.7, E38.
+# review: pending
+accounts-similar-tag-help = ایک ہی نام کے دو لوگوں میں فرق نشان سے ہوتا ہے، مثلاً اسلم BA اور اسلم۔ صرف وہی نام، نشان اور فون ایک ہوں تو نیا کھاتہ دہرا مانا جاتا ہے۔
+
 ## The chart of accounts (PRD FR-10.1).
 
 # review: pending
-accounts-tree-label = کھاتوں کا درخت
+accounts-tree-label = کھاتوں کی ترتیب کا درخت
 
 # review: pending
 chart-title = کھاتوں کی ترتیب
@@ -289,7 +284,7 @@ chart-load-failed = کھاتوں کی ترتیب نہیں کھل سکی
 masters-accounts-title = کھاتے
 
 # review: pending
-masters-accounts-help = { -beopari }، { -gahak } اور باقی کھاتے۔
+masters-accounts-help = { -beopari } اور { -gahak }۔
 
 # review: pending
 masters-chart-title = کھاتوں کی ترتیب
@@ -306,7 +301,7 @@ openings-open = ابتدائی بقایا لکھیں
 openings-title = ابتدائی بقایا
 
 # review: pending
-openings-help = ہر کھاتے کے سامنے اس کا ابتدائی { -banaam } یا { -jama } لکھیں۔ جن کھاتوں کا کچھ نہیں، انہیں خالی چھوڑ دیں۔
+openings-help = ہر کھاتے کے سامنے اس کا ابتدائی { -banaam } یا { -jama } لکھیں۔ جن کھاتوں کا ابتدائی بقایا نہیں ہے، انہیں خالی چھوڑ دیں۔
 
 # review: pending
 openings-grid-label = ابتدائی بقایا کی فہرست
@@ -360,4 +355,56 @@ openings-locked-help = جن کھاتوں کے خانے بند ہیں، ان کا
 
 # The name of a seller whose opening debit is an advance, in the opening balances grid.
 # review: pending
-openings-name-advance = { $name } ({ -peshgi-khata })
+openings-name-advance = { $name } ({ -peshgi })
+
+# The title of the warning when an account with the same name, tag and phone already exists.
+# review: pending
+accounts-similar-duplicate-title = یہ کھاتہ پہلے سے موجود ہو سکتا ہے
+
+# A word on the row of that account, so colour is never the only signal.
+# review: pending
+accounts-similar-duplicate-chip = نام، نشان اور فون ایک جیسے ہیں
+
+# What the opening balances list shows: the accounts that still need one, those that have one, or all.
+# review: pending
+openings-show-label = دکھائیں
+
+# review: pending
+openings-show-without = ابھی ابتدائی بقایا نہیں
+
+# review: pending
+openings-show-with = ابتدائی بقایا والے
+
+# review: pending
+openings-show-all = تمام کھاتے
+
+# review: pending
+openings-none-without = کوئی کھاتہ ابتدائی بقایا کے انتظار میں نہیں
+
+# review: pending
+openings-none-without-help = یا تو ہر کھاتے کا ابتدائی بقایا لکھا جا چکا ہے یا ابھی کوئی کھاتہ نہیں بنا۔ انہیں دیکھنے کے لیے «تمام کھاتے» چنیں۔
+
+# review: pending
+openings-none-with = کسی کھاتے کا ابتدائی بقایا ابھی نہیں لکھا گیا
+
+# review: pending
+openings-none-with-help = پہلے بقایا لکھنے کے لیے «ابھی ابتدائی بقایا نہیں» چنیں۔
+
+# review: pending
+openings-show-all-button = تمام کھاتے دکھائیں
+
+## بدلی ہوئی ابتدائی رقم کے لیے کھلا دن چاہیے (منصوبہ 44، 53)۔ نیا کھاتہ اپنی ابتدائی رقم کسی بھی دن لگا سکتا ہے،
+## اس لیے یہ پیغام صرف تب آتا ہے جب پہلے سے موجود کھاتے کی ابتدائی رقم بدلی جائے۔
+
+# review: pending
+accounts-opening-closed-today-open = اس ابتدائی رقم کی تاریخ بند دن کی ہے، اس لیے وہاں اسے بدلا نہیں جا سکتا۔ آج کی تاریخ لگائیں، جو کھلی ہے، یا دن دوبارہ کھولیں۔
+
+# review: pending
+accounts-opening-closed-today-closed = یہ دن بند ہے، اس لیے یہ ابتدائی رقم ابھی بدلی نہیں جا سکتی۔ بدلنے کے لیے دن دوبارہ کھولیں۔
+
+# review: pending
+accounts-opening-closed-short = یہ تاریخ بند ہے۔
+
+# $today: today's date, DD-MM-YYYY.
+# review: pending
+accounts-opening-closed-use-today = آج کی تاریخ ({ $today }) لگائیں

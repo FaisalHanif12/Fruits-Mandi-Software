@@ -1,0 +1,1442 @@
+{
+  "example": {
+    "ur": {
+      "days": [
+        {
+          "date": "05-11-2026",
+          "items": [
+            {
+              "name": "آم",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            },
+            {
+              "name": "سیب",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "400",
+              "amount": "8,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,680",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "30,000",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "30,000",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "06-11-2026",
+          "items": [
+            {
+              "name": "آم",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,200",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "160",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "21,360",
+            "role": "line"
+          },
+          "paid_on_spot": "21,360",
+          "entries": [],
+          "closing": {
+            "amount": "30,000",
+            "side": "debit"
+          }
+        }
+      ],
+      "totals": [
+        {
+          "label_id": "print-statement-total-bought",
+          "amount": "51,360",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-charges",
+          "amount": "3,360",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-paid-on-spot",
+          "amount": "21,360",
+          "role": "line"
+        }
+      ],
+      "closing": 30000
+    },
+    "en": {
+      "days": [
+        {
+          "date": "05-11-2026",
+          "items": [
+            {
+              "name": "Mango",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            },
+            {
+              "name": "Apple",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "400",
+              "amount": "8,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,680",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "30,000",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "30,000",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "06-11-2026",
+          "items": [
+            {
+              "name": "Mango",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,200",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "160",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "21,360",
+            "role": "line"
+          },
+          "paid_on_spot": "21,360",
+          "entries": [],
+          "closing": {
+            "amount": "30,000",
+            "side": "debit"
+          }
+        }
+      ],
+      "totals": [
+        {
+          "label_id": "print-statement-total-bought",
+          "amount": "51,360",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-charges",
+          "amount": "3,360",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-paid-on-spot",
+          "amount": "21,360",
+          "role": "line"
+        }
+      ],
+      "closing": 30000
+    }
+  },
+  "thirty": {
+    "ur": {
+      "days": [
+        {
+          "date": "15-10-2026",
+          "items": [
+            {
+              "name": "آم",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            },
+            {
+              "name": "سیب",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "400",
+              "amount": "8,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,680",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "30,000",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "42,500",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "16-10-2026",
+          "items": [
+            {
+              "name": "کیلا",
+              "grade": null,
+              "qty": "30",
+              "weight_kg": null,
+              "rate": "600",
+              "amount": "18,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,080",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "240",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "19,320",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "10,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "51,820",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "19-10-2026",
+          "items": [
+            {
+              "name": "سیب",
+              "grade": "first",
+              "qty": "25",
+              "weight_kg": null,
+              "rate": "900",
+              "amount": "22,500"
+            },
+            {
+              "name": "سیب",
+              "grade": "second",
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "700",
+              "amount": "7,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,770",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "280",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "31,550",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "83,370",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "21-10-2026",
+          "items": [
+            {
+              "name": "آم",
+              "grade": null,
+              "qty": "40",
+              "weight_kg": null,
+              "rate": "1,100",
+              "amount": "44,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "2,640",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "46,960",
+            "role": "line"
+          },
+          "paid_on_spot": "20,000",
+          "entries": [],
+          "closing": {
+            "amount": "110,330",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "23-10-2026",
+          "items": [
+            {
+              "name": "امرود",
+              "grade": null,
+              "qty": "15",
+              "weight_kg": null,
+              "rate": "500",
+              "amount": "7,500"
+            },
+            {
+              "name": "کیلا",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "550",
+              "amount": "11,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,110",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "280",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "19,890",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "15,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "115,220",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "26-10-2026",
+          "items": [
+            {
+              "name": "انگور",
+              "grade": null,
+              "qty": "12",
+              "weight_kg": null,
+              "rate": "1,500",
+              "amount": "18,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,080",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "96",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "19,176",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "134,396",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "28-10-2026",
+          "items": [
+            {
+              "name": "آم",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,200",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "160",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "21,360",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "20,000",
+              "note": "Aslam"
+            }
+          ],
+          "closing": {
+            "amount": "135,756",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "30-10-2026",
+          "items": [
+            {
+              "name": "سیب",
+              "grade": null,
+              "qty": "30",
+              "weight_kg": null,
+              "rate": "800",
+              "amount": "24,000"
+            },
+            {
+              "name": "کیلا",
+              "grade": null,
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "600",
+              "amount": "6,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,800",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "32,120",
+            "role": "line"
+          },
+          "paid_on_spot": "5,000",
+          "entries": [],
+          "closing": {
+            "amount": "162,876",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "02-11-2026",
+          "items": [
+            {
+              "name": "آم",
+              "grade": null,
+              "qty": "25",
+              "weight_kg": null,
+              "rate": "1,200",
+              "amount": "30,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,800",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "200",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "32,000",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "12,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "182,876",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "04-11-2026",
+          "items": [
+            {
+              "name": "انگور",
+              "grade": "first",
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "1,600",
+              "amount": "16,000"
+            },
+            {
+              "name": "امرود",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "450",
+              "amount": "9,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,500",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "240",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "26,740",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "209,616",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "07-11-2026",
+          "items": [
+            {
+              "name": "کیلا",
+              "grade": null,
+              "qty": "40",
+              "weight_kg": null,
+              "rate": "500",
+              "amount": "20,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,200",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "21,520",
+            "role": "line"
+          },
+          "paid_on_spot": "10,000",
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "8,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "213,136",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "09-11-2026",
+          "items": [
+            {
+              "name": "آم",
+              "grade": null,
+              "qty": "30",
+              "weight_kg": null,
+              "rate": "1,100",
+              "amount": "33,000"
+            },
+            {
+              "name": "سیب",
+              "grade": null,
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "10,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "2,580",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "45,900",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "259,036",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "11-11-2026",
+          "items": [
+            {
+              "name": "سیب",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "850",
+              "amount": "17,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,020",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "160",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "18,180",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "25,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "252,216",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "12-11-2026",
+          "items": [
+            {
+              "name": "امرود",
+              "grade": null,
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "500",
+              "amount": "5,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "300",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "80",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "5,380",
+            "role": "line"
+          },
+          "paid_on_spot": "5,380",
+          "entries": [],
+          "closing": {
+            "amount": "252,216",
+            "side": "debit"
+          }
+        }
+      ],
+      "totals": [
+        {
+          "label_id": "print-statement-total-bought",
+          "amount": "370,096",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-charges",
+          "amount": "24,096",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-paid-on-spot",
+          "amount": "40,380",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-received",
+          "amount": "90,000",
+          "role": "line"
+        }
+      ],
+      "closing": 252216,
+      "opening": 12500
+    },
+    "en": {
+      "days": [
+        {
+          "date": "15-10-2026",
+          "items": [
+            {
+              "name": "Mango",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            },
+            {
+              "name": "Apple",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "400",
+              "amount": "8,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,680",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "30,000",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "42,500",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "16-10-2026",
+          "items": [
+            {
+              "name": "Banana",
+              "grade": null,
+              "qty": "30",
+              "weight_kg": null,
+              "rate": "600",
+              "amount": "18,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,080",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "240",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "19,320",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "10,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "51,820",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "19-10-2026",
+          "items": [
+            {
+              "name": "Apple",
+              "grade": "first",
+              "qty": "25",
+              "weight_kg": null,
+              "rate": "900",
+              "amount": "22,500"
+            },
+            {
+              "name": "Apple",
+              "grade": "second",
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "700",
+              "amount": "7,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,770",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "280",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "31,550",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "83,370",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "21-10-2026",
+          "items": [
+            {
+              "name": "Mango",
+              "grade": null,
+              "qty": "40",
+              "weight_kg": null,
+              "rate": "1,100",
+              "amount": "44,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "2,640",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "46,960",
+            "role": "line"
+          },
+          "paid_on_spot": "20,000",
+          "entries": [],
+          "closing": {
+            "amount": "110,330",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "23-10-2026",
+          "items": [
+            {
+              "name": "Guava",
+              "grade": null,
+              "qty": "15",
+              "weight_kg": null,
+              "rate": "500",
+              "amount": "7,500"
+            },
+            {
+              "name": "Banana",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "550",
+              "amount": "11,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,110",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "280",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "19,890",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "15,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "115,220",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "26-10-2026",
+          "items": [
+            {
+              "name": "Grapes",
+              "grade": null,
+              "qty": "12",
+              "weight_kg": null,
+              "rate": "1,500",
+              "amount": "18,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,080",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "96",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "19,176",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "134,396",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "28-10-2026",
+          "items": [
+            {
+              "name": "Mango",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "20,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,200",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "160",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "21,360",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "20,000",
+              "note": "Aslam"
+            }
+          ],
+          "closing": {
+            "amount": "135,756",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "30-10-2026",
+          "items": [
+            {
+              "name": "Apple",
+              "grade": null,
+              "qty": "30",
+              "weight_kg": null,
+              "rate": "800",
+              "amount": "24,000"
+            },
+            {
+              "name": "Banana",
+              "grade": null,
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "600",
+              "amount": "6,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,800",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "32,120",
+            "role": "line"
+          },
+          "paid_on_spot": "5,000",
+          "entries": [],
+          "closing": {
+            "amount": "162,876",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "02-11-2026",
+          "items": [
+            {
+              "name": "Mango",
+              "grade": null,
+              "qty": "25",
+              "weight_kg": null,
+              "rate": "1,200",
+              "amount": "30,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,800",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "200",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "32,000",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "12,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "182,876",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "04-11-2026",
+          "items": [
+            {
+              "name": "Grapes",
+              "grade": "first",
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "1,600",
+              "amount": "16,000"
+            },
+            {
+              "name": "Guava",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "450",
+              "amount": "9,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,500",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "240",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "26,740",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "209,616",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "07-11-2026",
+          "items": [
+            {
+              "name": "Banana",
+              "grade": null,
+              "qty": "40",
+              "weight_kg": null,
+              "rate": "500",
+              "amount": "20,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,200",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "21,520",
+            "role": "line"
+          },
+          "paid_on_spot": "10,000",
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "8,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "213,136",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "09-11-2026",
+          "items": [
+            {
+              "name": "Mango",
+              "grade": null,
+              "qty": "30",
+              "weight_kg": null,
+              "rate": "1,100",
+              "amount": "33,000"
+            },
+            {
+              "name": "Apple",
+              "grade": null,
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "1,000",
+              "amount": "10,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "2,580",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "320",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "45,900",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [],
+          "closing": {
+            "amount": "259,036",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "11-11-2026",
+          "items": [
+            {
+              "name": "Apple",
+              "grade": null,
+              "qty": "20",
+              "weight_kg": null,
+              "rate": "850",
+              "amount": "17,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "1,020",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "160",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "18,180",
+            "role": "line"
+          },
+          "paid_on_spot": null,
+          "entries": [
+            {
+              "label_id": "print-statement-entry-receipt",
+              "amount": "25,000",
+              "note": null
+            }
+          ],
+          "closing": {
+            "amount": "252,216",
+            "side": "debit"
+          }
+        },
+        {
+          "date": "12-11-2026",
+          "items": [
+            {
+              "name": "Guava",
+              "grade": null,
+              "qty": "10",
+              "weight_kg": null,
+              "rate": "500",
+              "amount": "5,000"
+            }
+          ],
+          "charges": [
+            {
+              "label_id": "print-commission",
+              "amount": "300",
+              "role": "line"
+            },
+            {
+              "label_id": "print-laga",
+              "amount": "80",
+              "role": "line"
+            }
+          ],
+          "bill": {
+            "label_id": "print-statement-bill-buyer",
+            "amount": "5,380",
+            "role": "line"
+          },
+          "paid_on_spot": "5,380",
+          "entries": [],
+          "closing": {
+            "amount": "252,216",
+            "side": "debit"
+          }
+        }
+      ],
+      "totals": [
+        {
+          "label_id": "print-statement-total-bought",
+          "amount": "370,096",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-charges",
+          "amount": "24,096",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-paid-on-spot",
+          "amount": "40,380",
+          "role": "line"
+        },
+        {
+          "label_id": "print-statement-total-received",
+          "amount": "90,000",
+          "role": "line"
+        }
+      ],
+      "closing": 252216,
+      "opening": 12500
+    }
+  }
+}

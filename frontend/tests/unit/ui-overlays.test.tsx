@@ -1,12 +1,13 @@
 // Select, Toast and ConfirmDialog in Urdu and English (plan 02 T3, design system 6,
 // PRD FR-7.7 and FR-7.8). These render in a portal, so they set lang and dir themselves.
 
-import { act, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { directionOf } from '../../src/shared/i18n';
+import { SHORTCUTS } from '../../src/shared/keyboard';
 import {
   ConfirmDialog,
   Field,
@@ -86,6 +87,38 @@ describe.each(LANGUAGES)('overlays (%s)', (language) => {
     expect(onChange).toHaveBeenCalledWith('bank');
   });
 
+  it('Select with afterChoose: a choice calls it and focus does not go back to the field; Esc still does', async () => {
+    const afterChoose = vi.fn();
+    const options = [
+      { value: 'cash' as Mode, label: message(language, 'common-back') },
+      { value: 'bank' as Mode, label: message(language, 'common-retry') },
+    ];
+    renderIn(
+      language,
+      <Select value={undefined} onChange={vi.fn()} afterChoose={afterChoose} options={options} />,
+    );
+    const trigger = screen.getByRole('combobox');
+    const user = userEvent.setup();
+    // Closing without a choice gives focus back to the field and does not call it.
+    await user.click(trigger);
+    await screen.findByRole('listbox');
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox')).toBeNull();
+    });
+    expect(trigger).toHaveFocus();
+    expect(afterChoose).not.toHaveBeenCalled();
+    // A choice calls it once the list is closed, and the field does not take focus back.
+    await user.click(trigger);
+    await user.click(
+      await screen.findByRole('option', { name: message(language, 'common-retry') }),
+    );
+    await waitFor(() => {
+      expect(afterChoose).toHaveBeenCalledTimes(1);
+    });
+    expect(trigger).not.toHaveFocus();
+  });
+
   it('Select read-only cannot open', () => {
     renderIn(
       language,
@@ -116,6 +149,60 @@ describe.each(LANGUAGES)('overlays (%s)', (language) => {
     });
     expect(screen.queryByText(message(language, 'common-back'))).toBeNull();
     expect(useToastStore.getState().toasts).toHaveLength(0);
+  });
+
+  it('a toast with a button: the button and its key run the action once and close it (FR-7.47)', () => {
+    const onAction = vi.fn();
+    renderIn(language, <Toaster />);
+    act(() => {
+      showToast('success', message(language, 'common-back'), {
+        durationMs: 10_000,
+        action: {
+          label: message(language, 'common-retry'),
+          altText: message(language, 'common-retry'),
+          shortcut: SHORTCUTS.undoSave,
+          onAction,
+        },
+      });
+    });
+    const button = screen.getByRole('button', {
+      name: (name) => name.startsWith(message(language, 'common-retry')),
+    });
+    expect(button).toHaveTextContent('Alt+Z');
+    // The key works while the message is on screen, runs the action once and closes the message.
+    act(() => {
+      fireEvent.keyDown(document.body, { code: 'KeyZ', key: 'z', altKey: true });
+    });
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(message(language, 'common-back'))).toBeNull();
+    // Gone with the message: the key does nothing any more.
+    act(() => {
+      fireEvent.keyDown(document.body, { code: 'KeyZ', key: 'z', altKey: true });
+    });
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('a toast with a button stays for the time it asks, not the usual 5 seconds', () => {
+    vi.useFakeTimers();
+    renderIn(language, <Toaster />);
+    act(() => {
+      showToast('success', message(language, 'common-back'), {
+        durationMs: 10_000,
+        action: {
+          label: message(language, 'common-retry'),
+          altText: message(language, 'common-retry'),
+          onAction: vi.fn(),
+        },
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(TOAST_DURATION_MS + 500);
+    });
+    expect(screen.queryByText(message(language, 'common-back'))).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TOAST_DURATION_MS + 500);
+    });
+    expect(screen.queryByText(message(language, 'common-back'))).toBeNull();
   });
 
   it('an error toast has the error icon and is announced at once', () => {

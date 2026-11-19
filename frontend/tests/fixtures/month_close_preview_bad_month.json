@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "ERR_FORMAT_INVALID",
+      "field": "month",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261102-0001"
+}

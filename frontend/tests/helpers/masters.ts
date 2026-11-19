@@ -9,6 +9,7 @@ import * as mastersApi from '../../src/features/masters/api';
 import type { MasterKind, MasterRecord } from '../../src/features/masters/types';
 import * as searchApi from '../../src/shared/search/api';
 import type { SearchHit } from '../../src/shared/search';
+import { mastersPageOf } from './paged';
 
 export interface FakeMasters {
   /** The rows of every kind now, as the backend would list them. */
@@ -25,7 +26,6 @@ const KINDS: readonly MasterKind[] = [
   'narration',
   'expense_head',
   'staff',
-  'bank_account',
 ];
 
 export function record(
@@ -61,6 +61,7 @@ function hitOf(row: MasterRecord): SearchHit {
     extra_ur: '',
     extra_en: '',
     is_active: row.is_active,
+    sold_by_weight: false,
   };
 }
 
@@ -86,20 +87,33 @@ export function fakeMasters(
   };
   let nextId = 1000;
 
-  vi.mocked(mastersApi.mastersList).mockImplementation((kind, includeInactive) =>
-    Promise.resolve(store.rows[kind].filter((row) => includeInactive || row.is_active)),
+  vi.mocked(mastersApi.mastersList).mockImplementation((kind, includeInactive, offset, limit) =>
+    Promise.resolve(
+      mastersPageOf(
+        store.rows[kind].filter((row) => includeInactive || row.is_active),
+        offset,
+        limit,
+      ),
+    ),
   );
-  vi.mocked(mastersApi.mastersNextCode).mockImplementation((kind) => {
+  vi.mocked(mastersApi.mastersGetOne).mockImplementation((kind, id) =>
+    Promise.resolve(store.rows[kind].find((row) => row.id === id) ?? null),
+  );
+  const nextCodeOf = (kind: MasterKind) => {
     const highest = Math.max(0, ...store.rows[kind].map((row) => Number(row.code) || 0));
-    return Promise.resolve(String(highest + 1).padStart(4, '0'));
-  });
+    return String(highest + 1).padStart(4, '0');
+  };
+  vi.mocked(mastersApi.mastersNextCode).mockImplementation((kind) =>
+    Promise.resolve(nextCodeOf(kind)),
+  );
   vi.mocked(mastersApi.mastersSave).mockImplementation((kind, draft) => {
     const names = { name_ur: draft.names.urdu, name_en: draft.names.english };
     const saved: MasterRecord = {
       kind,
       id: draft.id ?? (nextId += 1),
       version: (draft.version ?? 0) + 1,
-      code: draft.code,
+      // An empty code asks for the next one, as the backend does (PRD FR-10.3); a narration has none.
+      code: draft.code === '' && kind !== 'narration' ? nextCodeOf(kind) : draft.code,
       is_active: true,
       names: kind === 'marka' ? null : names,
       text: draft.text,
@@ -127,8 +141,14 @@ export function fakeMasters(
     return Promise.resolve(changed);
   });
   // The account scopes (seller, buyer, any account) belong to plan 08; a master list has no rows there.
+  // The collectors are the active staff whose job is `collector` (plan 55 Section 11.1): their own list,
+  // not a filter the screen puts on the staff, and read on every call, as the backend does.
   const rowsOf = (scope: string): MasterRecord[] =>
-    KINDS.find((kind) => kind === scope) === undefined ? [] : store.rows[scope as MasterKind];
+    scope === 'collector'
+      ? store.rows.staff.filter((row) => row.is_active && row.text['job'] === 'collector')
+      : KINDS.find((kind) => kind === scope) === undefined
+        ? []
+        : store.rows[scope as MasterKind];
   vi.mocked(searchApi.searchMasters).mockImplementation(({ scope, text }) =>
     Promise.resolve(
       rowsOf(scope)
@@ -139,6 +159,23 @@ export function fakeMasters(
   vi.mocked(searchApi.searchRecent).mockImplementation(({ scope }) =>
     Promise.resolve(rowsOf(scope).map(hitOf)),
   );
+  vi.mocked(searchApi.findMaster).mockImplementation((scope, id) =>
+    Promise.resolve(
+      rowsOf(scope)
+        .map(hitOf)
+        .find((found) => found.id === id) ?? null,
+    ),
+  );
   vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
   return store;
 }
+
+/**
+ * The staff of a shop for a collector box (plan 55 Section 11.1): a collector, a munshi who is not one,
+ * and a collector who has left (inactive). Only the first is ever offered by the collector scope.
+ */
+export const STAFF_ROSTER: MasterRecord[] = [
+  record('staff', 81, '0001', 'اسلم', 'Aslam', { text: { job: 'collector' } }),
+  record('staff', 82, '0002', 'رفیق', 'Rafiq', { text: { job: 'munshi' } }),
+  record('staff', 83, '0003', 'زاہد', 'Zahid', { text: { job: 'collector' }, is_active: false }),
+];

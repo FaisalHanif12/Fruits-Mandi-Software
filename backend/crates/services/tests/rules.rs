@@ -65,9 +65,9 @@ fn add_account(env: &TestEnv, owner: &auth::Actor, kind: AccountType, ur: &str, 
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     };
     loop {
         match accounts::save(&env.ctx, owner, &input) {
@@ -477,6 +477,57 @@ fn the_levels_of_prd_11_3_through_the_real_commands() {
 }
 
 #[test]
+fn the_levels_of_many_rules_are_read_in_one_query() {
+    // Code Standards B22: an edit of 1,000 lines reads the level of each rule its charges came from
+    // in one query, not once for every charge. Each level is the one the rule's own row gives.
+    let f = fixture();
+    let rule_id = |input: &RuleInput| save(&f, input).row.id;
+    let party_item = rule_id(&seller_commission(&f, Some(f.rahim), Some(f.banana), "5"));
+    let party = rule_id(&seller_commission(&f, Some(f.rahim), None, "4"));
+    let item = rule_id(&seller_commission(&f, None, Some(f.japani), "3"));
+    let group = rule_id(&RuleInput {
+        item_group: Some(ItemGroup::Vegetable),
+        ..form(
+            ChargeSide::Buyer,
+            ChargeType::Laga,
+            ChargeMethod::PerUnit,
+            "3",
+        )
+    });
+    let default = count(
+        &f.dir,
+        "SELECT id FROM charge_rules WHERE side = 'seller' AND charge_type = 'commission'
+           AND account_id IS NULL AND item_id IS NULL AND item_group IS NULL",
+    );
+    let read = |ids: &[i64]| {
+        f.env
+            .ctx
+            .db()
+            .read(|c| mandi_services::db::rules::levels_of(c, ids))
+            .unwrap()
+    };
+    let levels = read(&[party_item, party, item, group, default, 999_999]);
+    assert_eq!(levels.len(), 5, "a rule that does not exist is left out");
+    assert_eq!(levels.get(&party_item), Some(&RuleLevel::PartyItem));
+    assert_eq!(levels.get(&party), Some(&RuleLevel::Party));
+    assert_eq!(levels.get(&item), Some(&RuleLevel::Item));
+    assert_eq!(levels.get(&group), Some(&RuleLevel::ItemGroup));
+    assert_eq!(levels.get(&default), Some(&RuleLevel::Default));
+    assert!(read(&[]).is_empty());
+    // A list longer than one chunk of bound values still gives every level once.
+    let many: Vec<i64> = (0..1_200)
+        .map(|i| [party_item, party, item, group, default][i % 5])
+        .collect();
+    assert_eq!(
+        read(&many),
+        levels
+            .into_iter()
+            .filter(|(id, _)| *id != 999_999)
+            .collect()
+    );
+}
+
+#[test]
 fn a_changed_rule_is_used_at_once_and_an_inactive_rule_is_not() {
     let f = fixture();
     let saved = save(&f, &seller_commission(&f, Some(f.rahim), None, "4"));
@@ -812,18 +863,18 @@ fn the_rule_form_refuses_what_prd_11_2_and_11_3_do_not_allow() {
             "0",
         ),
     );
-    // The پختہ کھاتہ accounts take rules like any party (PRD FR-11.7).
-    let pukhta_buyer = f
+    // The چکتا کھاتہ accounts take rules like any party (PRD FR-11.7).
+    let chukta_khata = f
         .env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "03049999"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0030"))
         .unwrap()
         .unwrap();
     save(
         &f,
         &RuleInput {
-            account_id: Some(pukhta_buyer),
+            account_id: Some(chukta_khata),
             ..form(
                 ChargeSide::Buyer,
                 ChargeType::Commission,
@@ -1349,10 +1400,10 @@ fn the_overrides_start_on_and_are_kept_with_an_audit_row() {
         (start.allow_line_override, start.credit_limit_mode),
         (true, CreditLimitMode::Warn)
     );
-    // Plan 12: the rate check starts on at 30% (PRD FR-7.55, E8).
+    // The rate check starts OFF, at 30% when it is turned on (PRD FR-7.55 v1.44, plan 79 U4, E8).
     assert_eq!(
         (start.rate_check_enabled, start.rate_check_percent),
-        (true, 30)
+        (false, 30)
     );
     let audits = audit_total(&f.dir);
     let want = OverridesSettings {
@@ -1395,10 +1446,11 @@ fn the_overrides_start_on_and_are_kept_with_an_audit_row() {
         (kept.allow_line_override, kept.credit_limit_mode),
         (false, CreditLimitMode::Warn)
     );
-    // A row saved before plan 12 has no rate check keys: they read as the starting position.
+    // A row saved before plan 12 has no rate check keys: they read as the starting position (off at
+    // 30%, PRD FR-7.55 v1.44).
     assert_eq!(
         (kept.rate_check_enabled, kept.rate_check_percent),
-        (true, 30)
+        (false, 30)
     );
     // A stored `false` and a stored percent are kept as stored.
     raw(&f.dir)
@@ -2007,4 +2059,81 @@ fn e2e_13b_numbers_through_the_default_in_force_on_the_day() {
         732,
         "the day before keeps 6%"
     );
+}
+
+/// Plan 80 gate Q-R3-1 (PRD FR-11.5): of two rules at one level that start on the same day, the one
+/// saved last wins, and an edit counts as a save. Before the fix the bigger id won, so editing the
+/// older rule A after B was made changed nothing.
+#[test]
+fn on_the_same_start_day_the_rule_saved_last_wins_and_an_edit_counts_as_a_save() {
+    let f = fixture();
+    let start = "01-11-2026";
+    let make = |value: &str| RuleInput {
+        from_date: start.into(),
+        ..seller_commission(&f, Some(f.rahim), None, value)
+    };
+    let winner = || {
+        rules::test(
+            &f.env.ctx,
+            &RuleTestInput {
+                seller_id: f.rahim,
+                buyer_id: f.akram,
+                item_id: f.apple,
+                date: "15-11-2026".into(),
+                qty: "20".into(),
+                rate: "600".into(),
+            },
+        )
+        .unwrap()
+        .charges[0]
+            .winner
+            .and_then(|w| w.rule_id)
+    };
+    let a = save(&f, &make("4"));
+    f.env.clock.advance_seconds(5);
+    let b = save(&f, &make("5"));
+    assert!(b.row.id > a.row.id);
+    // Both start on 01-11 and B was saved last.
+    assert_eq!(winner(), Some(b.row.id));
+    // A is edited after B was made: A was saved last now (the PRD's example: A id 5, B id 6).
+    f.env.clock.advance_seconds(5);
+    let edited_a = save(
+        &f,
+        &RuleInput {
+            id: Some(a.row.id),
+            version: Some(a.row.version),
+            ..make("4.5")
+        },
+    );
+    assert_eq!(winner(), Some(a.row.id), "A was edited after B was saved");
+    // B edited again after that: B wins once more.
+    f.env.clock.advance_seconds(5);
+    save(
+        &f,
+        &RuleInput {
+            id: Some(b.row.id),
+            version: Some(b.row.version),
+            ..make("5.5")
+        },
+    );
+    assert_eq!(winner(), Some(b.row.id));
+    // The rule list shows the same order as the lookup: the later start first, then the one saved
+    // last (B), then A.
+    let listed = rules::list(
+        &f.env.ctx,
+        &RulesFilter {
+            side: None,
+            charge_type: None,
+            account_id: Some(f.rahim),
+            item_id: None,
+            include_inactive: false,
+        },
+    )
+    .unwrap();
+    let order: Vec<i64> = listed
+        .iter()
+        .filter(|r| r.account.as_ref().is_some_and(|a| a.id == f.rahim))
+        .map(|r| r.id)
+        .collect();
+    assert_eq!(order, vec![b.row.id, edited_a.row.id]);
 }

@@ -1,7 +1,7 @@
 ### Locked business words (PRD Section 3, NFR-URD-2). The only source of these words.
 ### Other files use the terms ({ -bikri }); the app shows a single word with glossary-<id>.
 ### .gender drives agreement in Urdu (style guide). It follows the style guide list, or the
-### head noun of a compound (پختہ کھاتہ follows کھاتہ). Words with no .gender wait for the
+### head noun of a compound (چکتا کھاتہ follows کھاتہ). Words with no .gender wait for the
 ### Urdu reviewer.
 ### Changing a word here needs a PRD change (CLAUDE.md, Source of truth).
 
@@ -19,6 +19,10 @@
 -beopari = بیوپاری
     .gender = masculine
 
+# Sellers, as in "sellers' bills" (plan 78)
+# review: pending
+-beopariyon = بیوپاریوں
+
 # Seller side: landowner
 # review: pending
 -zamindar = زمیندار
@@ -34,15 +38,23 @@
 -gahak = گاہک
     .gender = masculine
 
+# Buyers, as in "buyers' slips" (plan 78)
+# review: pending
+-gahakon = گاہکوں
+
 # Buyer
 # review: pending
 -kharidar = خریدار
     .gender = masculine
 
-# Shared account for one-time or rare parties
+# Walk-in buyers who pay the whole bill on the spot and leave (PRD Section 13)
 # review: pending
--pukhta-khata = پختہ کھاتہ
+-chukta-khata = چکتا کھاتہ
     .gender = masculine
+
+# The short mark of a walk-in buyer in a list and on his card (PRD FR-7.29)
+# review: pending
+-chukta = چکتا
 
 # One unit or package (پیٹی، کریٹ، بوری، دانہ)
 # review: pending
@@ -146,6 +158,14 @@
 # review: pending
 -naqdi = نقدی
 
+# Money a buyer pays at the time of the sale, typed at the end of his sale line (PRD FR-12.44)
+# review: pending
+-mauqa-par-jama = موقع پر جمع
+
+# What is left of a buyer's bill after the money paid on the spot; it stays on his account (PRD FR-12.44)
+# review: pending
+-khate-mein-baqi = کھاتے میں باقی
+
 # Cash book
 # review: pending
 -rokar = روکڑ
@@ -215,6 +235,11 @@
 -zati-kharcha = ذاتی خرچہ
     .gender = masculine
 
+# An account kept apart from the partners, commission and profit (PRD Section 3, 16.6)
+# review: pending
+-alag-khata = الگ کھاتہ
+    .gender = masculine
+
 # Goods received but not yet sold
 # review: pending
 -stock = سٹاک
@@ -272,7 +297,140 @@
 -trial-balance = ٹرائل بیلنس
     .gender = masculine
 
+# Goods the firm buys itself and sells for its own profit or loss (PRD Section 3)
+# review: pending
+-apna-maal = اپنا مال
+
+# The firm buying its own goods (PRD Section 3)
+# review: pending
+-khareedari = خریداری
+
+# Profit of a market trip or of one of its purchases (PRD Section 3)
+# review: pending
+-tijarati-munafa = تجارتی منافع
+
+# Loss of a market trip or of one of its purchases (PRD Section 3)
+# review: pending
+-tijarati-nuqsan = تجارتی نقصان
+
+# A day trip to a bigger market to buy goods for some partners (PRD Section 3, 12.10)
+# review: pending
+-market-safar = مارکیٹ سفر
+
+# The day a purchase or a garden's goods are meant to be sold; the goods come into a new sale from
+# that day (PRD FR-12.39)
+# review: pending
+-sell-date = تاریخ فروخت
+
+# A garden's goods that have come to the shop, to be sold (PRD FR-12.40)
+# review: pending
+-maal-aaya = مال آیا
+    .gender = masculine
+
+# Where a partner's part of a payment comes from: the shop's cash (PRD Section 3, FR-12.29)
+# review: pending
+-dukan-se = دکان سے
+
+# Where a partner's part of a payment comes from: his own money (PRD Section 3, FR-12.29)
+# review: pending
+-apni-jeb-se = اپنی جیب سے
+
+# What a party was charged on one day, on his day slip (PRD Section 3, FR-19.12)
+# review: pending
+-taza-banam = تازہ بنام
+
+# A party's balance at the start of the day (PRD Section 3, FR-19.12)
+# review: pending
+-sabiqa-raqam = پچھلا بقایا
+
+# The balance an account was made with: the first line of every statement and history (PRD Section 3, FR-19.16, plan 78)
+# review: pending
+-ibtidai-baqaya = ابتدائی بقایا
+
+# Previous balance plus today's bill less what was paid (PRD Section 3, FR-19.12)
+# review: pending
+-total-raqam = ٹوٹل رقم
+
+# What is still owed after the day (PRD Section 3, FR-19.12)
+# review: pending
+-baqaya = بقایا
+
+# Everything people owe the shop: buyers' dues + sellers' dues + the dead amount (PRD Section 3, 9.1)
+# review: pending
+-kul-agrahi = کل اگراہی
+    .gender = feminine
+
+# What a person still owes after he has died or left the business (PRD Section 3, FR-10.10)
+# review: pending
+-doobi-raqam = ڈوبی رقم
+    .gender = feminine
+
 ## The words on their own, for labels that show only the word.
+
+# A partner's total in the firm: his investment plus his share of commission and profit, less what he took (PRD Section 3, C22)
+# review: pending
+-kul-raqam = کل رقم
+
+# A garden rented by some partners for a season (PRD Section 3, 12.11)
+# review: pending
+-bagh = باغ
+
+# A market trip, by its number (PRD Section 3, 12.10)
+# review: pending
+-safar = سفر
+
+# Fruit a partner takes home, or fruit for the shop's guests (PRD Section 3, 16.7)
+# review: pending
+-phal = پھل
+
+# The gardens as one word: the main bar item and the list title (PRD FR-5.2, 12.11)
+# review: pending
+-baghat = باغات
+
+# The price of a garden for the season, paid in installments (PRD Section 3, 12.11)
+# review: pending
+-thaika = ٹھیکہ
+
+# One part of a garden's rent, paid on a date (PRD Section 3, 12.11)
+# review: pending
+-qist = قسط
+
+# Where fruit comes from: a lot of our own shop, in باقی مال (PRD 16.7)
+# review: pending
+-apni-dukan = اپنی دکان
+
+# Where fruit comes from: another commission agent's shop (PRD 16.7)
+# review: pending
+-dusri-dukan = دوسری دکان
+
+# The shop's guests, who share the fruit served to them equally (PRD 16.7, C27)
+# review: pending
+-mehman = مہمان
+
+# A short tag after a name, in English capital letters, that tells two people with the same name apart (PRD Section 3, 10.2)
+# review: pending
+-nishan = نشان
+
+# The firm's trade mark, printed in a box in every print header (PRD Section 21, FR-19.13)
+# review: pending
+-trade-mark = ٹریڈ مارک
+
+# The quality of the goods on one sale line, and its three names (PRD Section 3, FR-12.42)
+# review: pending
+-darja = درجہ
+
+# review: pending
+-darja-awwal = اول
+
+# review: pending
+-darja-doyam = دوم
+
+# review: pending
+-darja-soyam = سوم
+
+# The Owner's sign: what he writes to reopen a closed day (PRD FR-21.4, v1.36)
+# review: pending
+-dastakhat = دستخط
 
 glossary-arhti = { -arhti }
 glossary-index = { -index }
@@ -281,7 +439,7 @@ glossary-zamindar = { -zamindar }
 glossary-buzgar = { -buzgar }
 glossary-gahak = { -gahak }
 glossary-kharidar = { -kharidar }
-glossary-pukhta-khata = { -pukhta-khata }
+glossary-chukta-khata = { -chukta-khata }
 glossary-nag = { -nag }
 glossary-bikri = { -bikri }
 glossary-bikri-book = { -bikri-book }
@@ -304,6 +462,8 @@ glossary-naqdi-mandi = { -naqdi-mandi }
 glossary-rate-farq = { -rate-farq }
 glossary-udhari = { -udhari }
 glossary-naqdi = { -naqdi }
+glossary-mauqa-par-jama = { -mauqa-par-jama }
+glossary-khate-mein-baqi = { -khate-mein-baqi }
 glossary-rokar = { -rokar }
 glossary-wasooli = { -wasooli }
 glossary-agrahi = { -agrahi }
@@ -318,6 +478,7 @@ glossary-general = { -general }
 glossary-kharcha = { -kharcha }
 glossary-dukan-kharcha = { -dukan-kharcha }
 glossary-zati-kharcha = { -zati-kharcha }
+glossary-alag-khata = { -alag-khata }
 glossary-stock = { -stock }
 glossary-baqi-maal = { -baqi-maal }
 glossary-shirakat-dar = { -shirakat-dar }
@@ -331,3 +492,38 @@ glossary-banaam = { -banaam }
 glossary-jama = { -jama }
 glossary-meezan = { -meezan }
 glossary-trial-balance = { -trial-balance }
+glossary-apna-maal = { -apna-maal }
+glossary-khareedari = { -khareedari }
+glossary-tijarati-munafa = { -tijarati-munafa }
+glossary-tijarati-nuqsan = { -tijarati-nuqsan }
+glossary-market-safar = { -market-safar }
+glossary-sell-date = { -sell-date }
+glossary-maal-aaya = { -maal-aaya }
+glossary-dukan-se = { -dukan-se }
+glossary-apni-jeb-se = { -apni-jeb-se }
+glossary-kul-raqam = { -kul-raqam }
+glossary-bagh = { -bagh }
+glossary-safar = { -safar }
+glossary-phal = { -phal }
+glossary-taza-banam = { -taza-banam }
+glossary-sabiqa-raqam = { -sabiqa-raqam }
+
+glossary-ibtidai-baqaya = { -ibtidai-baqaya }
+glossary-total-raqam = { -total-raqam }
+glossary-baqaya = { -baqaya }
+glossary-kul-agrahi = { -kul-agrahi }
+glossary-doobi-raqam = { -doobi-raqam }
+
+glossary-baghat = { -baghat }
+glossary-thaika = { -thaika }
+glossary-qist = { -qist }
+glossary-apni-dukan = { -apni-dukan }
+glossary-dusri-dukan = { -dusri-dukan }
+glossary-mehman = { -mehman }
+glossary-nishan = { -nishan }
+glossary-trade-mark = { -trade-mark }
+glossary-darja = { -darja }
+glossary-dastakhat = { -dastakhat }
+glossary-darja-awwal = { -darja-awwal }
+glossary-darja-doyam = { -darja-doyam }
+glossary-darja-soyam = { -darja-soyam }

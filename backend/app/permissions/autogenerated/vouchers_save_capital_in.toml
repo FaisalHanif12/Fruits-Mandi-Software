@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-save-capital-in"
+description = "Enables the vouchers_save_capital_in command without any pre-configured scope."
+commands.allow = ["vouchers_save_capital_in"]
+
+[[permission]]
+identifier = "deny-vouchers-save-capital-in"
+description = "Denies the vouchers_save_capital_in command without any pre-configured scope."
+commands.deny = ["vouchers_save_capital_in"]

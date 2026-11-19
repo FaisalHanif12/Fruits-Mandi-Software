@@ -709,6 +709,7 @@ bayazid	بایزید	name	100	pending	team
 bazaar	بازار	place	100	pending	team
 bazgar	بزگر	name	100	pending	team
 bazid	بایزید	name	98	pending	team
+be	ب	name	92	pending	team
 bean	پھلی	item	98	pending	team
 beans	پھلیاں	item	96	pending	team
 bedian road	بیدیاں روڈ	place	100	pending	team
@@ -3151,7 +3152,6 @@ pakhtunkhwa	پختونخوا	word	100	pending	team
 pakistan	پاکستان	word	100	pending	team
 pakistan fruit	پاکستان فروٹ	word	100	pending	team
 pakka	پختہ	word	98	pending	team
-pakka khata	پختہ کھاتہ	word	98	pending	team
 pakpattan	پاکپتن	place	100	pending	team
 pakpattani	پاکپتنی	name	100	pending	team
 palak	پالک	item	98	pending	team
@@ -3252,7 +3252,6 @@ prof	پروفیسر	name	98	pending	team
 professor	پروفیسر	name	100	pending	team
 pudina	پودینہ	item	96	pending	team
 pukhta	پختہ	word	100	pending	team
-pukhta khata	پختہ کھاتہ	word	100	pending	team
 pul	پل	place	100	pending	team
 pumpkin	کدو	item	96	pending	team
 punjab	پنجاب	word	100	pending	team
@@ -3758,6 +3757,7 @@ sayed	سید	name	96	pending	team
 sayeed	سعید	name	98	pending	team
 sayyed	سید	name	98	pending	team
 sayyid	سید	name	94	pending	team
+seb	سیب	item	98	pending	team
 seemab	سیماب	name	100	pending	team
 seer	سیر	item	98	pending	team
 sehar	سحر	name	100	pending	team
@@ -7833,6 +7833,7 @@ jazib	جاذب	name	100	pending	wikidata
 jean	ژان	name	100	pending	wikidata
 jeelani	جیلانی	name	50	pending	wikidata
 jeem	جیم	place	100	pending	wikidata
+jeem	ج	name	94	pending	team
 jeewan	جیون	name	50	pending	wikidata
 jeewna	جیونا	place	100	pending	wikidata
 jeewna	جیونہ	place	60	pending	wikidata

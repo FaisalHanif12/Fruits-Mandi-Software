@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trips-set-partners"
+description = "Enables the trips_set_partners command without any pre-configured scope."
+commands.allow = ["trips_set_partners"]
+
+[[permission]]
+identifier = "deny-trips-set-partners"
+description = "Denies the trips_set_partners command without any pre-configured scope."
+commands.deny = ["trips_set_partners"]

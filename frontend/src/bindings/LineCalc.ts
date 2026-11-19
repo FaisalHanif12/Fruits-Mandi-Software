@@ -2,7 +2,6 @@
 import type { Paisa } from '../shared/format/money';
 import type { LineCharge } from './LineCharge';
 import type { LineWorkings } from './LineWorkings';
-import type { PaymentType } from './PaymentType';
 
 /**
  * The numbers of one sale line that has everything it needs.
@@ -53,11 +52,29 @@ export type LineCalc = {
    */
   rate_diff: Paisa;
   /**
-   * How the buyer pays.
+   * C21: the cost of the trip goods this line sells (PRD FR-12.26), 0 on a line of any other
+   * lot. Stored on the saved line (`cost_paisa`), shown with the result, never posted.
    */
-  payment_type: PaymentType;
+  cost_of_goods: Paisa;
   /**
-   * The working of the four amounts above.
+   * موقع پر جمع: what the buyer paid on the spot (PRD FR-12.44). For a buyer who must pay in full
+   * it is the buyer total. When the typed amount is more than the buyer total it is 0 here and
+   * `ERR_PAID_EXCEEDS_TOTAL` is on `.paid`, so no cash is counted twice.
+   */
+  paid_paisa: Paisa;
+  /**
+   * کھاتے میں باقی: `buyer_total - paid_paisa` (PRD FR-12.44). Stays on the buyer's account.
+   */
+  left_paisa: Paisa;
+  /**
+   * True when the backend decided the paid amount: the buyer must pay in full (نقدی منڈی, a
+   * چکتا buyer, or a buyer who may not take credit), or the line is an unchanged line of an
+   * edit that keeps what it was saved with. The cell shows `paid_paisa` and cannot be typed in
+   * (PRD FR-12.44, plan 65 P3 and point 10a).
+   */
+  paid_fixed: boolean;
+  /**
+   * The working of the amounts above.
    */
   workings: LineWorkings;
 };

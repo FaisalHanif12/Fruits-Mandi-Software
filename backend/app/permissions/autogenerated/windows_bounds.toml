@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-windows-bounds"
+description = "Enables the windows_bounds command without any pre-configured scope."
+commands.allow = ["windows_bounds"]
+
+[[permission]]
+identifier = "deny-windows-bounds"
+description = "Denies the windows_bounds command without any pre-configured scope."
+commands.deny = ["windows_bounds"]

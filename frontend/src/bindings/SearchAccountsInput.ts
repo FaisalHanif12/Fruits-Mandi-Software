@@ -14,11 +14,30 @@ export type SearchAccountsInput = {
    */
   control_id: number | null;
   /**
-   * What was typed. Raw: never converted to Urdu (PRD FR-7.22).
+   * What was typed. Raw: never converted to Urdu (PRD FR-7.22). **Empty text gives the whole
+   * list of the field** (plan 32 R7): the accounts this user chose last first (latest first), then
+   * every other active account by code. A click on the picker opens this list.
    */
   text: string;
   /**
-   * The most hits, at most 50.
+   * The most hits in this page, at most 50.
    */
   limit: number;
+  /**
+   * How many hits to skip, for the next page of a long list. 0 for the first page. A page with
+   * fewer than `limit` hits is the last one. Missing means 0.
+   */
+  offset: number;
+  /**
+   * True only in the field of a وصولی and of an ادھار رقم واپسی: a person in the dead amount is
+   * listed too (marked `is_dead`), because a recovery from him is still allowed (PRD FR-10.10).
+   * Missing or false leaves him out, like any inactive account.
+   */
+  include_dead?: boolean;
+  /**
+   * True only in the buyer field of a بکری line: scope `buyer` then lists the چکتا buyers beside the
+   * buyers (PRD FR-7.29, decision C4 of plan 60). Missing or false leaves them out, so every other
+   * buyer picker, filter and list pages exactly as before.
+   */
+  with_chukta?: boolean;
 };

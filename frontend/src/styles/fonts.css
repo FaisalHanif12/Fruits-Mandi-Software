@@ -34,3 +34,19 @@
   font-style: normal;
   font-display: block;
 }
+
+/*
+ * The ASCII digits 0 to 9 are always Inter, in every language (PRD FR-7.32, NFR-URD-14, Tech Stack
+ * 4.1). `Mandi Digits` is Inter with a `unicode-range` of the ten digits only, put FIRST in the font
+ * stack of a printed page: a digit that is not inside <Num> or <Code> (a page counter, a number in a
+ * Fluent sentence) can then never take the digit shapes of an Urdu font. Letters and every other sign
+ * fall through to the font of the language.
+ */
+@font-face {
+  font-family: 'Mandi Digits';
+  src: url('/fonts/Inter-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+0030-0039;
+}

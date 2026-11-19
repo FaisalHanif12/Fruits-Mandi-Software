@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_BACKUP_CLOUD_FAILED",
+      "field": "source.cloud.endpoint",
+      "values": {
+        "reason": "offline"
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-00000000-0000"
+}

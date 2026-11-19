@@ -7,6 +7,12 @@
 import { describe, expect, it } from 'vitest';
 import { ACCOUNT_COLUMNS, accountColumns } from '../../src/features/masters/account-columns';
 import { MASTER_CONFIGS, columnsOf } from '../../src/features/masters/configs';
+import { BIKRI_LIST_COLUMNS, bikriListColumns } from '../../src/features/bikri/list-columns';
+import { OWN_STOCK_COLUMNS } from '../../src/features/bikri/own-stock-columns';
+import { STOCK_COLUMNS } from '../../src/features/bikri/stock-columns';
+import { TRIP_PURCHASE_COLUMNS } from '../../src/features/purchases/list-columns';
+import { ENTRY_COLUMNS, TRIP_COLUMNS } from '../../src/features/trips/list-columns';
+import { VOUCHER_COLUMNS } from '../../src/features/vouchers/list-columns';
 import { RULE_COLUMNS } from '../../src/features/rules/columns';
 import type { ListColumn } from '../../src/shared/grid';
 import { LIST_COLUMN_WIDTHS, LIST_GROW_MIN_WIDTH } from '../../src/shared/grid/columnTypes';
@@ -56,5 +62,72 @@ describe('lists fit the content area', () => {
 
   it.each(STEPS)('rule list at the %s step', (step) => {
     expect(leastWidth(RULE_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step]);
+  });
+
+  // The market trips have no side menu (PRD FR-5.2): the list of trips, the history of one trip and
+  // the purchases of one trip (plan 16b).
+  it.each(STEPS)('list of market trips at the %s step', (step) => {
+    expect(leastWidth(TRIP_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step]);
+  });
+  it.each(STEPS)('history of one market trip at the %s step', (step) => {
+    expect(leastWidth(ENTRY_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step]);
+  });
+  it.each(STEPS)('purchases of one market trip at the %s step', (step) => {
+    expect(leastWidth(TRIP_PURCHASE_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step]);
+  });
+
+  // The بکری area has its 200 px side menu beside the screen (design system 6), which the lists of
+  // انڈکس do not (plan 13): the list of بکری has that much less.
+  describe('lists beside the side menu of the بکری area', () => {
+    const SIDE_MENU = 200;
+    it.each(STEPS)('list of بکری at the %s step', (step) => {
+      expect(leastWidth(BIKRI_LIST_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
+    });
+
+    it.each(STEPS)('list of goods left (باقی مال) at the %s step', (step) => {
+      expect(leastWidth(STOCK_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
+    });
+
+    it.each(STEPS)('list of trip goods left (باقی مال) at the %s step', (step) => {
+      expect(leastWidth(OWN_STOCK_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
+    });
+
+    it.each(STEPS)('list of vouchers under the voucher form at the %s step', (step) => {
+      expect(leastWidth(VOUCHER_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
+    });
+
+    // "More columns" adds the نگ column of FR-12.7 and FR-13.6, which fits at no step beside the
+    // others. A column steps aside where the room is short, so nothing scrolls sideways.
+    it.each(STEPS)('list of بکری with More columns at the %s step', (step) => {
+      expect(leastWidth(bikriListColumns(step, true), step)).toBeLessThanOrEqual(
+        ROOM[step] - SIDE_MENU,
+      );
+    });
+
+    it('the نگ column is in neither list without the tick, at any step', () => {
+      for (const step of STEPS) {
+        expect(bikriListColumns(step, false).map((column) => column.field)).not.toContain('qty');
+      }
+    });
+
+    it('with the tick the نگ column is shown at every step', () => {
+      for (const step of STEPS) {
+        for (const columns of [bikriListColumns(step, true)]) {
+          const shown = columns
+            .filter((column) => isFromStep(step, column.from ?? 'compact'))
+            .map((column) => column.field);
+          expect(shown).toContain('qty');
+        }
+      }
+    });
+
+    it('with the tick the amounts and the status of a بکری stay at every step', () => {
+      for (const step of STEPS) {
+        const shown = bikriListColumns(step, true)
+          .filter((column) => isFromStep(step, column.from ?? 'compact'))
+          .map((column) => column.field);
+        expect(shown).toEqual(expect.arrayContaining(['number', 'sellers', 'net', 'status']));
+      }
+    });
   });
 });

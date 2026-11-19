@@ -9,14 +9,22 @@ use std::path::PathBuf;
 use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
-use mandi_db::migrate::{self, BALANCE_INDEXES_SQL, INIT_SQL, MigrationOutcome};
+use mandi_db::migrate::{
+    self, ASSISTANT_QUESTIONS_SQL, ASSISTANT_TIME_LIMIT_SQL, ASSISTANT_TIMING_SQL,
+    BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, CHUKTA_KHATA_SQL,
+    DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
+    LOT_COUNTER_SQL, MigrationOutcome, ONE_TIME_PARTY_MARK_SQL, PAID_ON_THE_SPOT_SQL,
+    PARTS_ARE_SOFT_STATE_SQL, SALE_GRADE_SQL, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL,
+    SPEED_INDEXES_SQL, STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
+    TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL, chukta_hook,
+};
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
 use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 3;
+const LATEST: usize = 26;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -44,6 +52,418 @@ fn version_2(second: &'static str) -> Migrations<'static> {
 /// The schema as it was released at version 2: migrations 0001 and 0002.
 fn released_version_2() -> Migrations<'static> {
     version_2(BALANCE_INDEXES_SQL)
+}
+
+/// The schema as it was released at version 3: migrations 0001 to 0003.
+fn released_version_3() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+    ])
+}
+
+/// The schema as it was released at version 4: migrations 0001 to 0004.
+fn released_version_4() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+    ])
+}
+
+/// The schema as it was released at version 5: migrations 0001 to 0005.
+fn released_version_5() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+    ])
+}
+
+/// The schema as it was released at version 6: migrations 0001 to 0006.
+fn released_version_6() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+    ])
+}
+
+/// The schema as it was released at version 7: migrations 0001 to 0007.
+fn released_version_7() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+    ])
+}
+
+/// The schema as it was released at version 8: migrations 0001 to 0008.
+fn released_version_8() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+    ])
+}
+
+/// The schema as it was released at version 9: migrations 0001 to 0009.
+fn released_version_9() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+    ])
+}
+
+/// The schema as it was released at version 10: migrations 0001 to 0010.
+fn released_version_10() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+    ])
+}
+
+/// The schema as it was released at version 11: migrations 0001 to 0011.
+fn released_version_11() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+    ])
+}
+
+/// The schema as it was released at version 12: migrations 0001 to 0012.
+fn released_version_12() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
+    ])
+}
+
+/// The schema as it was released at version 13: migrations 0001 to 0013.
+fn released_version_13() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
+        M::up(ONE_TIME_PARTY_MARK_SQL),
+    ])
+}
+
+/// The schema as it was released at version 14: migrations 0001 to 0014.
+fn released_version_14() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
+        M::up(ONE_TIME_PARTY_MARK_SQL),
+        M::up(PARTS_ARE_SOFT_STATE_SQL),
+    ])
+}
+
+fn version_15_list() -> Vec<M<'static>> {
+    vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
+        M::up(ONE_TIME_PARTY_MARK_SQL),
+        M::up(PARTS_ARE_SOFT_STATE_SQL),
+        M::up(ASSISTANT_QUESTIONS_SQL),
+    ]
+}
+
+fn released_version_15() -> Migrations<'static> {
+    Migrations::new(version_15_list())
+}
+
+/// The file as released with migration 16 (the two speed indexes).
+fn released_version_16() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    Migrations::new(all)
+}
+
+/// The file as released with migration 17 (the time of a question).
+fn released_version_17() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    Migrations::new(all)
+}
+
+/// The file as released with migration 18 (the time limit among the outcomes).
+fn released_version_18() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    all.push(M::up(ASSISTANT_TIME_LIMIT_SQL));
+    Migrations::new(all)
+}
+
+/// The file as released with migration 19 (the quality of a sale line).
+fn released_version_19() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    all.push(M::up(ASSISTANT_TIME_LIMIT_SQL));
+    all.push(M::up(SALE_GRADE_SQL));
+    Migrations::new(all)
+}
+
+/// The file as released with migration 20 (چکتا کھاتہ).
+fn released_version_20() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    all.push(M::up(ASSISTANT_TIME_LIMIT_SQL));
+    all.push(M::up(SALE_GRADE_SQL));
+    all.push(M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook));
+    Migrations::new(all)
+}
+
+/// The file as released with migration 21 (money paid on the spot).
+fn released_version_21() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    all.push(M::up(ASSISTANT_TIME_LIMIT_SQL));
+    all.push(M::up(SALE_GRADE_SQL));
+    all.push(M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook));
+    all.push(M::up(PAID_ON_THE_SPOT_SQL));
+    Migrations::new(all)
+}
+
+/// The file as released with migration 22 (lot names).
+fn released_version_22() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    all.push(M::up(ASSISTANT_TIME_LIMIT_SQL));
+    all.push(M::up(SALE_GRADE_SQL));
+    all.push(M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook));
+    all.push(M::up(PAID_ON_THE_SPOT_SQL));
+    all.push(M::up(LOT_COUNTER_SQL));
+    Migrations::new(all)
+}
+
+/// The ledger code of today names the person column `chukta_person_key` (migration 20). A file of an
+/// older version still calls it `pukhta_person_key`. This runs `work` with the column under its new
+/// name and puts the old name back after, so the released schema is what the test goes on to compare
+/// (SQLite gives the same text back when a column is renamed and renamed again).
+fn with_current_person_column<T>(conn: &Connection, work: impl FnOnce() -> T) -> T {
+    let old = conn
+        .query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('journal_lines') WHERE name = 'pukhta_person_key'",
+            [],
+            |r| r.get::<_, i64>(0),
+        )
+        .unwrap()
+        == 1;
+    if old {
+        conn.execute_batch(
+            "ALTER TABLE journal_lines RENAME COLUMN pukhta_person_key TO chukta_person_key",
+        )
+        .unwrap();
+    }
+    let out = work();
+    if old {
+        conn.execute_batch(
+            "ALTER TABLE journal_lines RENAME COLUMN chukta_person_key TO pukhta_person_key",
+        )
+        .unwrap();
+    }
+    out
+}
+
+/// Verifies the journal chain with the code of today on a file of any version.
+fn verify_chain(conn: &Connection) -> Result<(), mandi_db::ledger::JournalVerifyError> {
+    with_current_person_column(conn, || {
+        mandi_db::ledger::verify_journal_chain(conn, &common::test_key())
+    })
+}
+
+/// The name and SQL of every object of one kind (`table`, `index`, `trigger`), by name.
+fn schema(conn: &Connection, kind: &str) -> Vec<String> {
+    conn.prepare(
+        "SELECT name || ':' || COALESCE(sql, '') FROM sqlite_master WHERE type = ?1 ORDER BY name",
+    )
+    .unwrap()
+    .query_map([kind], |r| r.get(0))
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+/// Every row of every table, as text, in a fixed order.
+fn all_rows(conn: &Connection) -> Vec<(String, String)> {
+    all_rows_without(conn, &[])
+}
+
+/// [`all_rows`] without some columns, as `(table, column)`: the columns a migration added.
+fn all_rows_without(conn: &Connection, skip: &[(&str, &str)]) -> Vec<(String, String)> {
+    let names: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    names
+        .into_iter()
+        .map(|name| {
+            let columns: Vec<String> = conn
+                .prepare(&format!(
+                    "SELECT name FROM pragma_table_info('{name}') ORDER BY cid"
+                ))
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .map(Result::unwrap)
+                .filter(|c: &String| !skip.iter().any(|(t, s)| *t == name && s == c))
+                .collect();
+            let joined = columns
+                .iter()
+                .map(|c| format!("quote(\"{c}\")"))
+                .collect::<Vec<_>>()
+                .join(" || '|' || ");
+            let rows: Vec<String> = conn
+                .prepare(&format!("SELECT {joined} FROM \"{name}\" ORDER BY rowid"))
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            (name, rows.join("\n"))
+        })
+        .collect()
 }
 
 fn connection(path: &std::path::Path) -> Connection {
@@ -86,9 +506,12 @@ fn an_empty_file_gets_the_whole_design_and_the_seed_without_a_copy() {
     assert_eq!(user_version(&conn), LATEST as i64);
     assert!(!backups.exists(), "nothing to copy from an empty file");
     let counts = seed::counts(&conn).unwrap();
+    // The seed of migration 1 (6 heads, 11 controls, 16 accounts), that of migration 6 (3
+    // controls, 1 account: the seller of trip goods) and that of migration 23 (2 controls, 0307 and
+    // 0605, and 1 account: the contra 03070001).
     assert_eq!(
         (counts.heads, counts.controls, counts.accounts),
-        (6, 11, 16)
+        (6, 16, 18)
     );
 }
 
@@ -262,10 +685,11 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 7).unwrap();
+    let newer = LATEST as i64 + 1;
+    conn.pragma_update(None, "user_version", newer).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 7);
+    assert_eq!(user_version(&conn), newer);
     assert!(!backups.exists());
 }
 
@@ -352,10 +776,11 @@ fn migration_2_adds_only_indexes_and_keeps_every_number() {
     let before = mandi_db::ledger::account_totals(&conn, None).unwrap();
     assert_eq!(before.len(), 2);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((outcome.from, outcome.to), (1, LATEST));
+    let outcome =
+        migrate::migrate_with(&released_version_2(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (1, 2));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
-    assert_eq!(user_version(&conn), LATEST as i64);
+    assert_eq!(user_version(&conn), 2);
     // Only indexes were added.
     assert_eq!(tables(&conn), before_tables);
     let added: Vec<String> = index_names(&conn)
@@ -422,7 +847,7 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
     // An ordinary account, to make inactive and active again after the upgrade.
     conn.execute(
         "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
-         SELECT id, '03040001', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
+         SELECT id, '0020', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
         [],
     )
     .unwrap();
@@ -438,51 +863,6 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
     )
     .unwrap();
 
-    let schema = |conn: &Connection, kind: &str| -> Vec<String> {
-        conn.prepare("SELECT name || ':' || COALESCE(sql, '') FROM sqlite_master WHERE type = ?1 ORDER BY name")
-            .unwrap()
-            .query_map([kind], |r| r.get(0))
-            .unwrap()
-            .map(Result::unwrap)
-            .collect()
-    };
-    // Every row of every table, as text, in a fixed order.
-    let all_rows = |conn: &Connection| -> Vec<(String, String)> {
-        let names: Vec<String> = conn
-            .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-            .unwrap()
-            .query_map([], |r| r.get(0))
-            .unwrap()
-            .map(Result::unwrap)
-            .collect();
-        names
-            .into_iter()
-            .map(|name| {
-                let columns: Vec<String> = conn
-                    .prepare(&format!(
-                        "SELECT name FROM pragma_table_info('{name}') ORDER BY cid"
-                    ))
-                    .unwrap()
-                    .query_map([], |r| r.get(0))
-                    .unwrap()
-                    .map(Result::unwrap)
-                    .collect();
-                let joined = columns
-                    .iter()
-                    .map(|c| format!("quote(\"{c}\")"))
-                    .collect::<Vec<_>>()
-                    .join(" || '|' || ");
-                let rows: Vec<String> = conn
-                    .prepare(&format!("SELECT {joined} FROM \"{name}\" ORDER BY rowid"))
-                    .unwrap()
-                    .query_map([], |r| r.get(0))
-                    .unwrap()
-                    .map(Result::unwrap)
-                    .collect();
-                (name, rows.join("\n"))
-            })
-            .collect()
-    };
     let before_tables = schema(&conn, "table");
     let before_indexes = schema(&conn, "index");
     let before_triggers = schema(&conn, "trigger");
@@ -490,7 +870,8 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
     let before = mandi_db::ledger::account_totals(&conn, None).unwrap();
     assert_eq!(before.len(), 2);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_3(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (2, 3));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 3);
@@ -579,14 +960,4122 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
         [],
     )
     .unwrap();
+    conn.execute("UPDATE accounts SET is_active = 0 WHERE code = '0020'", [])
+        .unwrap();
+    conn.execute("UPDATE accounts SET is_active = 1 WHERE code = '0020'", [])
+        .unwrap();
+}
+
+#[test]
+fn migration_4_adds_only_triggers_and_keeps_every_row_number_and_balance() {
+    // Plan 13: a file made at version 3 with a بکری, its lot and its line is upgraded: a copy is
+    // taken, seven triggers appear (no table, column or index changes), no row changes, every
+    // بکری keeps its number, and from then on a raw DELETE or a change of a number is refused
+    // while the updates of editing and cancelling (plan 16) still work.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_3(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 3);
+    let f = common::fixture(&conn);
+    // A second بکری, number 2, cancelled later.
     conn.execute(
-        "UPDATE accounts SET is_active = 0 WHERE code = '03040001'",
+        "INSERT INTO bikri_entries (number, entry_date, bill_date, truck_no) VALUES (2, '2026-10-10', '2026-10-10', 'LHR-0077')",
+        [],
+    )
+    .unwrap();
+    // What version 3 allowed and the new triggers must not take away: a raw delete of a row that
+    // nothing points at.
+    conn.execute("DELETE FROM bikri_entries WHERE number = 2", [])
+        .unwrap();
+    conn.execute(
+        "INSERT INTO bikri_entries (number, entry_date, bill_date, truck_no) VALUES (2, '2026-10-10', '2026-10-10', 'LHR-0077')",
+        [],
+    )
+    .unwrap();
+
+    let before_tables = schema(&conn, "table");
+    let before_indexes = schema(&conn, "index");
+    let before_triggers = schema(&conn, "trigger");
+    let before_rows = all_rows(&conn);
+
+    let outcome =
+        migrate::migrate_with(&released_version_4(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (3, 4));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 4);
+    assert_eq!(schema(&conn, "table"), before_tables);
+    assert_eq!(schema(&conn, "index"), before_indexes);
+    let after_triggers = schema(&conn, "trigger");
+    let mut added: Vec<&str> = after_triggers
+        .iter()
+        .filter(|t| !before_triggers.contains(t))
+        .map(|t| t.split(':').next().unwrap_or(""))
+        .collect();
+    added.sort_unstable();
+    assert_eq!(
+        added,
+        [
+            "bikri_entries_no_delete",
+            "bikri_entries_no_replace",
+            "bikri_entries_number_is_final",
+            "bikri_lots_no_delete",
+            "bikri_lots_no_replace",
+            "bikri_sales_no_delete",
+            "bikri_sales_no_replace",
+        ]
+    );
+    // Every row is what it was, and every بکری keeps its number.
+    assert_eq!(all_rows(&conn), before_rows);
+    let numbers: Vec<i64> = conn
+        .prepare("SELECT number FROM bikri_entries ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(numbers, [1, 2]);
+
+    // The migration also works on the copy: version 3, the old behaviour (a delete still goes).
+    let copy_conn = Connection::open(outcome.copy.unwrap()).unwrap();
+    assert_eq!(user_version(&copy_conn), 3);
+    copy_conn
+        .execute("DELETE FROM bikri_entries WHERE number = 2", [])
+        .unwrap();
+
+    // Now nothing of a بکری can be deleted, and the number is final.
+    let refused = |sql: &str| -> DbError { common::classify(conn.execute(sql, []).unwrap_err()) };
+    for sql in [
+        "DELETE FROM bikri_sales".to_owned(),
+        "DELETE FROM bikri_lots".to_owned(),
+        "DELETE FROM bikri_entries".to_owned(),
+        "DELETE FROM bikri_entries WHERE number = 2".to_owned(),
+        "UPDATE bikri_entries SET number = 9 WHERE number = 2".to_owned(),
+        "UPDATE bikri_entries SET number = number + 10".to_owned(),
+        // INSERT OR REPLACE would delete the old row first.
+        "INSERT OR REPLACE INTO bikri_entries (number, entry_date, bill_date) VALUES (1, '2026-10-10', '2026-10-10')".to_owned(),
+        format!("INSERT OR REPLACE INTO bikri_entries (id, number, entry_date, bill_date) VALUES ({}, 77, '2026-10-10', '2026-10-10')", f.bikri),
+        format!("INSERT OR REPLACE INTO bikri_lots (id, bikri_id, lot_no, seller_account_id, item_id, packing_id, qty_received) VALUES ({}, {}, 5, {}, {}, 1, 5)", f.lot, f.bikri, f.seller, f.item),
+        // A number given twice.
+        "INSERT INTO bikri_entries (number, entry_date, bill_date) VALUES (2, '2026-10-10', '2026-10-10')".to_owned(),
+    ] {
+        assert!(
+            matches!(refused(&sql), DbError::AppendOnly),
+            "not refused as append-only: {sql}"
+        );
+    }
+    assert_eq!(
+        all_rows(&conn),
+        before_rows,
+        "a refused statement changed a row"
+    );
+
+    // What editing and cancelling need still works: the status and its reason, the print count,
+    // the running totals and the written-off quantity of a lot, and the switch-off of a line.
+    conn.execute(
+        "UPDATE bikri_entries SET number = number WHERE number = 2",
         [],
     )
     .unwrap();
     conn.execute(
-        "UPDATE accounts SET is_active = 1 WHERE code = '03040001'",
+        "UPDATE bikri_entries SET status = 'cancelled', cancel_reason = 'غلط اندراج',
+             cancelled_at = '2026-10-10T09:00:00Z', print_count = print_count + 1, version = version + 1
+         WHERE number = 2",
         [],
     )
     .unwrap();
+    conn.execute(
+        "UPDATE bikri_entries SET note = 'x', print_count = 2 WHERE number = 1",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_lots SET qty_sold = 45, qty_written_off = 5 WHERE id = ?1",
+        [f.lot],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_lots SET gross_paisa = 1_000_000, freight_paisa = 1_100_000, deductions_paisa = 1_100_000, net_paisa = -100_000, version = version + 1 WHERE id = ?1",
+        [f.lot],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_sales SET is_active = 0 WHERE id = ?1",
+        [f.sale],
+    )
+    .unwrap();
+    // A new بکری still takes the next number.
+    conn.execute(
+        "INSERT INTO bikri_entries (number, entry_date, bill_date) VALUES (3, '2026-10-10', '2026-10-10')",
+        [],
+    )
+    .unwrap();
+}
+
+/// Appends bytes the way the hash chain writes a text or a number (type byte, length, bytes).
+fn put(out: &mut Vec<u8>, text: Option<&str>) {
+    match text {
+        None => out.push(0),
+        Some(text) => {
+            out.push(1);
+            out.extend_from_slice(&(text.len() as u64).to_le_bytes());
+            out.extend_from_slice(text.as_bytes());
+        }
+    }
+}
+
+/// Posts a general entry of `rupees` between two accounts on a file of version 4, the way the app
+/// of version 4 did: raw rows, then ONE update that sets the status, the total and the keyed hash
+/// of the chain, and the head record. The bytes that are hashed are copied from the code of
+/// version 4, so a hash that still verifies after the upgrade proves the chain format is the same.
+///
+/// With `existing`, the lines go into that draft entry (its day and total are already set);
+/// otherwise a new entry is made.
+fn legacy_post(
+    conn: &Connection,
+    existing: Option<i64>,
+    day: &str,
+    from: &str,
+    to: &str,
+    rupees: i64,
+) -> i64 {
+    legacy_post_with(conn, existing, day, from, to, rupees, None)
+}
+
+/// [`legacy_post`] with a person key on the line of the shared account (0030 or 0031), the way a
+/// file of version 19 holds it in `journal_lines.pukhta_person_key`. The key is part of the hash.
+fn legacy_post_with(
+    conn: &Connection,
+    existing: Option<i64>,
+    day: &str,
+    from: &str,
+    to: &str,
+    rupees: i64,
+    person: Option<&str>,
+) -> i64 {
+    let person_of = |code: &str| -> Option<&str> {
+        if code == "0030" || code == "0031" {
+            person
+        } else {
+            None
+        }
+    };
+    let account = |code: &str| -> i64 {
+        conn.query_row("SELECT id FROM accounts WHERE code = ?1", [code], |r| {
+            r.get(0)
+        })
+        .unwrap()
+    };
+    let entry = match existing {
+        Some(entry) => entry,
+        None => {
+            conn.execute(
+                "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, status, total_paisa)
+                 VALUES (?1, 'general', 'voucher', 1, 'draft', 0)",
+                [day],
+            )
+            .unwrap();
+            conn.last_insert_rowid()
+        }
+    };
+    let lines = [(from, rupees * 100, 0_i64), (to, 0, rupees * 100)];
+    for (index, (code, dr, cr)) in lines.iter().enumerate() {
+        match person_of(code) {
+            None => conn.execute(
+                "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa) VALUES (?1, ?2, ?3, ?4, ?5)",
+                (entry, i64::try_from(index).unwrap() + 1, account(code), dr, cr),
+            ),
+            Some(key) => conn.execute(
+                "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                (entry, i64::try_from(index).unwrap() + 1, account(code), key, dr, cr),
+            ),
+        }
+        .unwrap();
+    }
+    let (previous, last): (String, i64) = conn
+        .query_row(
+            "SELECT COALESCE((SELECT chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id DESC LIMIT 1), ?1),
+                    COALESCE((SELECT id FROM journal_entries WHERE status = 'posted' ORDER BY id DESC LIMIT 1), 0)",
+            [mandi_db::audit::GENESIS_HASH],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(last < entry);
+    let mut bytes = Vec::new();
+    put(&mut bytes, Some(&previous));
+    put(&mut bytes, Some(&entry.to_string()));
+    put(&mut bytes, Some(day));
+    put(&mut bytes, Some("general"));
+    put(&mut bytes, Some("voucher"));
+    put(&mut bytes, Some("1"));
+    put(&mut bytes, None);
+    put(&mut bytes, None);
+    put(&mut bytes, Some(&(rupees * 100).to_string()));
+    put(&mut bytes, Some("2"));
+    for (index, (code, dr, cr)) in lines.iter().enumerate() {
+        put(&mut bytes, Some(&(index + 1).to_string()));
+        put(&mut bytes, Some(&account(code).to_string()));
+        put(&mut bytes, person_of(code));
+        put(&mut bytes, Some(&dr.to_string()));
+        put(&mut bytes, Some(&cr.to_string()));
+        put(&mut bytes, Some("0"));
+        put(&mut bytes, None);
+    }
+    // The test key of `common::test_key()` is 32 bytes of 7.
+    let hash = blake3::keyed_hash(&[7_u8; 32], &bytes).to_hex().to_string();
+    conn.execute(
+        "UPDATE journal_entries SET status = 'posted', total_paisa = ?1, chain_hash = ?2 WHERE id = ?3",
+        (rupees * 100, &hash, entry),
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO settings (key, value_json) VALUES ('journal_head', ?1)
+         ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+        [format!("{{\"id\":{entry},\"hash\":\"{hash}\"}}")],
+    )
+    .unwrap();
+    entry
+}
+
+/// Posts a general entry on a file of version 5 through the one function the app uses, with an
+/// order key if one is given.
+fn post_chained(
+    conn: &Connection,
+    day: &str,
+    from: &str,
+    to: &str,
+    rupees: i64,
+    key: Option<i64>,
+) -> i64 {
+    with_current_person_column(conn, || post_chained_now(conn, day, from, to, rupees, key))
+}
+
+fn post_chained_now(
+    conn: &Connection,
+    day: &str,
+    from: &str,
+    to: &str,
+    rupees: i64,
+    key: Option<i64>,
+) -> i64 {
+    let account = |code: &str| -> i64 {
+        conn.query_row("SELECT id FROM accounts WHERE code = ?1", [code], |r| {
+            r.get(0)
+        })
+        .unwrap()
+    };
+    let header = mandi_db::ledger::EntryHeader {
+        entry_date: day,
+        posting_type: "general",
+        source_type: "voucher",
+        source_id: 1,
+        reverses_entry_id: None,
+        narration: None,
+    };
+    let entry =
+        mandi_db::ledger::insert_draft_ordered(conn, &header, key, 1, "2026-10-10T07:30:12.000Z")
+            .unwrap();
+    for (line_no, (code, dr, cr)) in [(from, rupees * 100, 0), (to, 0, rupees * 100)]
+        .into_iter()
+        .enumerate()
+    {
+        mandi_db::ledger::insert_line(
+            conn,
+            entry,
+            &mandi_db::ledger::NewLine {
+                line_no: i64::try_from(line_no).unwrap() + 1,
+                account_id: account(code),
+                person_key: None,
+                dr_paisa: dr,
+                cr_paisa: cr,
+                is_advance: false,
+                narration: None,
+            },
+            1,
+            "2026-10-10T07:30:12.000Z",
+        )
+        .unwrap();
+    }
+    mandi_db::ledger::post(
+        conn,
+        &common::test_key(),
+        entry,
+        rupees * 100,
+        1,
+        "2026-10-10T07:30:12.000Z",
+    )
+    .unwrap();
+    entry
+}
+
+#[test]
+fn migration_5_adds_three_columns_and_keeps_every_row_number_and_hash() {
+    // Plan 16: a populated file made at version 4 (posted entries with their hash chain, a بکری
+    // with a lot, a sale line and stock moves) is upgraded: a copy is taken, `order_key`,
+    // `reverses_move_id` and `ended` appear as empty columns, one index and one trigger are added, no row
+    // changes, every balance and every chain hash is what it was, and the chain still verifies.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_4(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 4);
+    let f = common::fixture(&conn);
+    let cash = common::account_id(&conn, "01010001");
+    // The fixture's draft entry is the posting of its sale line: give it its body and post it first.
+    let first = legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "01010001",
+        "04010001",
+        12_880,
+    );
+    let second = legacy_post(&conn, None, "2026-10-10", "01010001", "04010002", 10_000);
+    let third = legacy_post(&conn, None, "2026-10-10", "01010001", "04010003", 160);
+    for (kind, qty, entry) in [("received", 50_i64, first), ("sold", -20, second)] {
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, journal_entry_id, move_date, kind, qty) VALUES (?1, ?2, '2026-10-10', ?3, ?4)",
+            (f.lot, entry, kind, qty),
+        )
+        .unwrap();
+    }
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 3);
+    let before_tables = schema(&conn, "table");
+    let before_indexes = schema(&conn, "index");
+    let before_triggers = schema(&conn, "trigger");
+    let before_rows = all_rows(&conn);
+    let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
+
+    let outcome =
+        migrate::migrate_with(&released_version_5(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (4, 5));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 5);
+
+    // Only these two tables changed, and only by one column each.
+    let after_tables = schema(&conn, "table");
+    let changed: Vec<&str> = after_tables
+        .iter()
+        .filter(|t| !before_tables.contains(t))
+        .map(|t| t.split(':').next().unwrap_or(""))
+        .collect();
+    assert_eq!(changed, ["bikri_sales", "journal_entries", "stock_moves"]);
+    let columns = |table: &str| -> Vec<String> {
+        conn.prepare(&format!(
+            "SELECT name FROM pragma_table_info('{table}') ORDER BY cid"
+        ))
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    assert_eq!(
+        columns("journal_entries").last().map(String::as_str),
+        Some("order_key")
+    );
+    assert_eq!(
+        columns("stock_moves").last().map(String::as_str),
+        Some("reverses_move_id")
+    );
+    assert_eq!(
+        columns("bikri_sales").last().map(String::as_str),
+        Some("ended")
+    );
+    let added_indexes: Vec<String> = schema(&conn, "index")
+        .into_iter()
+        .filter(|i| !before_indexes.contains(i))
+        .map(|i| i.split(':').next().unwrap_or("").to_owned())
+        .collect();
+    assert_eq!(added_indexes, ["idx_stock_moves_reverses"]);
+    let added_triggers: Vec<String> = schema(&conn, "trigger")
+        .into_iter()
+        .filter(|t| !before_triggers.contains(t))
+        .map(|t| t.split(':').next().unwrap_or("").to_owned())
+        .collect();
+    assert_eq!(added_triggers, ["stock_moves_reversal_mirrors"]);
+
+    // Every row is what it was; the new columns are empty; every hash and balance is the same.
+    assert_eq!(
+        all_rows_without(
+            &conn,
+            &[
+                ("journal_entries", "order_key"),
+                ("stock_moves", "reverses_move_id"),
+                ("bikri_sales", "ended")
+            ]
+        ),
+        before_rows
+    );
+    let set: i64 = conn
+        .query_row(
+            "SELECT (SELECT COUNT(*) FROM journal_entries WHERE order_key IS NOT NULL)
+                  + (SELECT COUNT(*) FROM stock_moves WHERE reverses_move_id IS NOT NULL)
+                  + (SELECT COUNT(*) FROM bikri_sales WHERE ended IS NOT NULL)",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(set, 0);
+    assert_eq!(hashes(&conn), before_hashes);
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before_totals
+    );
+    let totals = mandi_db::ledger::totals_of(&conn, cash, None, None).unwrap();
+    assert_eq!((totals.dr_paisa, totals.cr_paisa), (2_304_000, 0));
+
+    // The copy is the version-4 file as it was.
+    let copy_conn = Connection::open(outcome.copy.unwrap()).unwrap();
+    assert_eq!(user_version(&copy_conn), 4);
+    assert!(
+        copy_conn
+            .prepare("SELECT order_key FROM journal_entries")
+            .is_err(),
+        "the copy has no order key"
+    );
+
+    // The key is placed when the entry is a draft, is covered by the hash, and is final once
+    // posted. An entry without a key hashes as before.
+    let replaced = post_chained(
+        &conn,
+        "2026-10-10",
+        "01010001",
+        "04010004",
+        20,
+        Some(second),
+    );
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        mandi_db::ledger::order_key_of(&conn, replaced).unwrap(),
+        Some(second)
+    );
+    assert_eq!(
+        mandi_db::ledger::order_key_of(&conn, third).unwrap(),
+        Some(third)
+    );
+    let refused = |sql: &str| -> DbError { common::classify(conn.execute(sql, []).unwrap_err()) };
+    assert!(matches!(
+        refused(&format!(
+            "UPDATE journal_entries SET order_key = 1 WHERE id = {replaced}"
+        )),
+        DbError::JournalPosted
+    ));
+    assert!(
+        conn.execute(
+            "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, order_key)
+             VALUES ('2026-10-10', 'general', 'voucher', 1, 0)",
+            [],
+        )
+        .is_err(),
+        "a key must be more than 0"
+    );
+    // A changed key breaks the chain (someone edited the file outside the app).
+    conn.execute_batch("DROP TRIGGER journal_entries_posted_is_final;")
+        .unwrap();
+    conn.execute(
+        "UPDATE journal_entries SET order_key = ?1 WHERE id = ?2",
+        (first, replaced),
+    )
+    .unwrap();
+    assert!(verify_chain(&conn).is_err());
+
+    // A stock move reversal names the move it reverses, once, as its exact opposite.
+    let sold: i64 = conn
+        .query_row("SELECT id FROM stock_moves WHERE kind = 'sold'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    let reversal = |qty: i64, kind: &str, of: i64| {
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, journal_entry_id, move_date, kind, qty, reverses_move_id)
+             VALUES (?1, NULL, '2026-10-10', ?2, ?3, ?4)",
+            (f.lot, kind, qty, of),
+        )
+    };
+    assert!(
+        reversal(19, "reversal", sold).is_err(),
+        "not the opposite quantity"
+    );
+    assert!(reversal(20, "sold", sold).is_err(), "not a reversal");
+    reversal(20, "reversal", sold).unwrap();
+    assert!(
+        reversal(20, "reversal", sold).is_err(),
+        "a move is reversed once"
+    );
+    let reversed_reversal: i64 = conn.last_insert_rowid();
+    assert!(
+        reversal(-20, "reversal", reversed_reversal).is_err(),
+        "a reversal is not reversed again"
+    );
+}
+
+/// The rows of the two account tables of a file, without the columns migration 6 added or changed
+/// and without the cash account, whose English name migration 6 changes (PRD FR-10.4 v1.6).
+fn old_account_rows(conn: &Connection) -> Vec<String> {
+    conn.prepare(
+        "SELECT quote(id) || '|' || quote(control_id) || '|' || quote(code) || '|' || quote(serial) || '|' ||
+                quote(party_type) || '|' || quote(name_ur) || '|' || quote(search_ur) || '|' ||
+                quote(opening_dr_paisa) || '|' || quote(opening_cr_paisa) || '|' || quote(is_system)
+         FROM accounts WHERE code <> '01010001' ORDER BY id",
+    )
+    .unwrap()
+    .query_map([], |r| r.get(0))
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+#[test]
+fn migration_6_keeps_every_row_number_and_hash_and_widens_the_checks() {
+    // Plan 16b (PRD v1.7): a populated file made at version 5 (posted entries with their hash chain,
+    // a بکری with a lot, a sale line, stock moves and two partners) is upgraded: a copy is taken, the
+    // tables of trips, gardens and fruit appear, the new columns are added, the system accounts and
+    // controls of v1.6 are seeded, each partner gets his 0604 account, and the CHECK lists of six
+    // tables take the new words. No existing row changes, every balance and every chain hash is what
+    // it was, and the chain still verifies on this very connection (D4-A32).
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_5(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 5);
+    let f = common::fixture(&conn);
+    let cash = common::account_id(&conn, "01010001");
+    let first = legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "01010001",
+        "04010001",
+        12_880,
+    );
+    let second = legacy_post(&conn, None, "2026-10-10", "01010001", "04010002", 10_000);
+    for (kind, qty, entry) in [("received", 50_i64, first), ("sold", -20, second)] {
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, journal_entry_id, move_date, kind, qty) VALUES (?1, ?2, '2026-10-10', ?3, ?4)",
+            (f.lot, entry, kind, qty),
+        )
+        .unwrap();
+    }
+    // Two partners, each with a capital and a drawings account, as plan 11 made them.
+    for (n, (ur, en)) in [("الف", "Alif"), ("ب", "Bay")].into_iter().enumerate() {
+        let n = i64::try_from(n).unwrap() + 1;
+        let mut ids = Vec::new();
+        for control in ["0602", "0603"] {
+            conn.execute(
+                "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                     search_en, search_phonetic)
+                 SELECT id, ?2, ?3, 'other', ?4, ?5, ?4, lower(?5), lower(?5)
+                 FROM account_controls WHERE code = ?1",
+                (control, format!("{control}{n:04}"), n, ur, en),
+            )
+            .unwrap();
+            ids.push(conn.last_insert_rowid());
+        }
+        conn.execute(
+            "INSERT INTO partners (name_ur, name_en, capital_account_id, drawings_account_id)
+             VALUES (?1, ?2, ?3, ?4)",
+            (ur, en, ids[0], ids[1]),
+        )
+        .unwrap();
+    }
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 2);
+    let before_tables = schema(&conn, "table");
+    let before_indexes = schema(&conn, "index");
+    let before_triggers = schema(&conn, "trigger");
+    let before_rows = all_rows(&conn);
+    let before_accounts = old_account_rows(&conn);
+    let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
+    let accounts_before = seed::counts(&conn).unwrap().accounts;
+
+    let outcome =
+        migrate::migrate_with(&released_version_6(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (5, 6));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 6);
+
+    // The tables whose text changed or that are new, by name.
+    let name_of = |text: &String| text.split(':').next().unwrap_or("").to_owned();
+    let changed: Vec<String> = schema(&conn, "table")
+        .iter()
+        .filter(|t| !before_tables.contains(t))
+        .map(name_of)
+        .collect();
+    assert_eq!(
+        changed,
+        [
+            "account_controls",
+            "accounts",
+            "analytics_facts",
+            "bikri_lots",
+            "bikri_sales",
+            "fruit_takes",
+            "journal_entries",
+            "lot_credit_parts",
+            "partners",
+            "purchase_cost_parts",
+            "purchases",
+            "stock_moves",
+            "venture_entries",
+            "venture_entry_parts",
+            "venture_partners",
+            "ventures",
+            "vouchers"
+        ]
+    );
+    // No index is lost, and the new ones are there.
+    let index_names: Vec<String> = schema(&conn, "index").iter().map(name_of).collect();
+    for old in before_indexes.iter().map(name_of) {
+        assert!(index_names.contains(&old), "index {old} was lost");
+    }
+    for new in [
+        "idx_analytics_facts_purchase",
+        "idx_analytics_facts_venture",
+        "idx_bikri_lots_purchase",
+        "idx_fruit_takes_date",
+        "idx_lot_credit_parts_lot",
+        "idx_partners_venture_account",
+        "idx_purchase_cost_parts_purchase",
+        "idx_purchases_venture",
+        "idx_purchases_date",
+        "idx_stock_moves_purchase",
+        "idx_venture_entries_venture",
+        "idx_venture_entry_parts_partner",
+        "idx_venture_partners_partner",
+        "idx_ventures_kind_status",
+        "idx_ventures_search_en",
+    ] {
+        assert!(
+            index_names.contains(&new.to_owned()),
+            "index {new} is missing"
+        );
+    }
+    // No trigger is lost; two were made again, and the new ones are there.
+    let trigger_names: Vec<String> = schema(&conn, "trigger").iter().map(name_of).collect();
+    for old in before_triggers.iter().map(name_of) {
+        assert!(trigger_names.contains(&old), "trigger {old} was lost");
+    }
+    let changed_triggers: Vec<String> = schema(&conn, "trigger")
+        .iter()
+        .filter(|t| !before_triggers.contains(t))
+        .map(name_of)
+        .collect();
+    assert_eq!(
+        changed_triggers,
+        [
+            "bikri_sales_snapshot_is_final",
+            "purchase_cost_parts_no_delete",
+            "purchase_cost_parts_no_update",
+            "purchases_no_delete",
+            "purchases_record_is_final",
+            "stock_moves_has_an_owner",
+            "stock_moves_reversal_mirrors",
+            "venture_entries_no_delete",
+            "venture_entries_record_is_final",
+            "venture_entry_parts_no_delete",
+            "venture_entry_parts_no_update",
+            "venture_partners_shares_locked_delete",
+            "venture_partners_shares_locked_insert",
+            "venture_partners_shares_locked_update",
+            "ventures_identity_is_final",
+            "ventures_no_delete",
+            "fruit_takes_no_delete",
+            "lot_credit_parts_no_delete",
+            "lot_credit_parts_no_update"
+        ]
+        .map(str::to_owned)
+        .into_iter()
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>()
+    );
+
+    // Every old row is what it was. The new columns are left out of the comparison, the new tables
+    // are not in the old file, and the accounts are compared by `old_account_rows`.
+    let skip = [
+        ("analytics_facts", "purchase_id"),
+        ("analytics_facts", "venture_id"),
+        ("analytics_facts", "cost_paisa"),
+        ("bikri_lots", "purchase_id"),
+        ("bikri_lots", "qty_taken"),
+        ("bikri_sales", "cost_paisa"),
+        ("stock_moves", "purchase_id"),
+        ("stock_moves", "cost_paisa"),
+        ("partners", "venture_account_id"),
+        ("accounts", "tag"),
+    ];
+    let new_tables = [
+        "fruit_takes",
+        "lot_credit_parts",
+        "purchase_cost_parts",
+        "purchases",
+        "venture_entries",
+        "venture_entry_parts",
+        "venture_partners",
+        "ventures",
+    ];
+    let after_rows: Vec<(String, String)> = all_rows_without(&conn, &skip)
+        .into_iter()
+        .filter(|(table, _)| !new_tables.contains(&table.as_str()))
+        .collect();
+    assert_eq!(before_rows.len(), after_rows.len());
+    for ((table, before), (after_table, after)) in before_rows.iter().zip(&after_rows) {
+        assert_eq!(table, after_table);
+        if table == "accounts" {
+            // The cash account's English name changes and new accounts follow the old ones.
+            assert!(after.lines().count() > before.lines().count());
+        } else if table == "account_controls" {
+            assert!(
+                after.starts_with(before.as_str()),
+                "{table}: old rows unchanged and new rows after them"
+            );
+        } else {
+            assert_eq!(before, after, "{table}");
+        }
+    }
+    assert_eq!(
+        old_account_rows(&conn)[..before_accounts.len()],
+        before_accounts[..],
+        "every old account is what it was, apart from the English name of the cash account"
+    );
+    assert_eq!(hashes(&conn), before_hashes);
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before_totals
+    );
+    let totals = mandi_db::ledger::totals_of(&conn, cash, None, None).unwrap();
+    assert_eq!((totals.dr_paisa, totals.cr_paisa), (2_288_000, 0));
+    let bad_keys: i64 = conn
+        .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(bad_keys, 0);
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+
+    // The seed: the seller of trip goods, the cash name, the controls, a 0604 account per partner.
+    let one = |sql: &str| -> String { conn.query_row(sql, [], |r| r.get::<_, String>(0)).unwrap() };
+    let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+    assert_eq!(
+        one(
+            "SELECT party_type || '|' || is_system || '|' || name_en || '|' || search_en FROM accounts WHERE code = '030119998'"
+        ),
+        "seller|1|Own Goods (Trips)|own goods (trips)"
+    );
+    assert_eq!(
+        one(
+            "SELECT name_en || '|' || search_en || '|' || search_phonetic FROM accounts WHERE code = '01010001'"
+        ),
+        format!(
+            "Cash|{}|{}",
+            mandi_core::text::search_en("Cash"),
+            mandi_core::text::search_phonetic("Cash")
+        )
+    );
+    assert_eq!(
+        count("SELECT COUNT(*) FROM accounts WHERE code IN ('01040001', '04010006', '05020001')"),
+        0,
+        "the accounts of the firm's own goods are not made"
+    );
+    assert_eq!(
+        count("SELECT COUNT(*) FROM account_controls WHERE code IN ('0104', '0502')"),
+        0
+    );
+    for (code, party) in [("0305", "separate"), ("0306", "garden"), ("0604", "other")] {
+        assert_eq!(
+            one(&format!(
+                "SELECT party_type FROM account_controls WHERE code = '{code}'"
+            )),
+            party
+        );
+    }
+    assert_eq!(
+        one(
+            "SELECT h.code FROM account_controls c JOIN account_heads h ON h.id = c.head_id WHERE c.code = '0604'"
+        ),
+        "06"
+    );
+    let ventures_of_partners: Vec<(String, String)> = conn
+        .prepare(
+            "SELECT a.code, a.name_en FROM partners p JOIN accounts a ON a.id = p.venture_account_id ORDER BY p.id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        ventures_of_partners,
+        [
+            (
+                "06040001".to_owned(),
+                "Gardens Trips and Fruit - Alif".to_owned()
+            ),
+            (
+                "06040002".to_owned(),
+                "Gardens Trips and Fruit - Bay".to_owned()
+            ),
+        ]
+    );
+    assert_eq!(
+        seed::counts(&conn).unwrap().accounts,
+        accounts_before + 3,
+        "the seller of trip goods and one 0604 account for each of the two partners"
+    );
+    // The tag exists and is empty on every migrated account (D4-A32).
+    assert_eq!(
+        count("SELECT COUNT(*) FROM pragma_table_info('accounts') WHERE name = 'tag'"),
+        1
+    );
+    assert_eq!(
+        count("SELECT COUNT(*) FROM accounts WHERE tag IS NOT NULL"),
+        0
+    );
+    let tag = |value: &str| {
+        conn.execute(
+            "UPDATE accounts SET tag = ?1 WHERE id = ?2",
+            (value, f.buyer),
+        )
+    };
+    tag("K").unwrap();
+    tag("D.P").unwrap();
+    tag("ABCD").unwrap();
+    for bad in ["k", "ABCDE", ".", "1", "A B", "ا"] {
+        assert!(tag(bad).is_err(), "tag {bad:?} must be refused");
+    }
+    conn.execute("UPDATE accounts SET tag = NULL WHERE id = ?1", [f.buyer])
+        .unwrap();
+
+    // The widened lists accept the new words on this same connection, and still refuse others.
+    let entry_with = |posting: &str, source: &str| {
+        conn.execute(
+            "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id)
+             VALUES ('2026-10-10', ?1, ?2, 1)",
+            (posting, source),
+        )
+    };
+    for (posting, source) in [
+        ("purchase", "purchase"),
+        ("trip_cost", "venture"),
+        ("garden_payment", "venture"),
+        ("venture_receipt", "venture"),
+        ("garden_close", "venture"),
+        ("fruit_taken", "fruit"),
+        ("capital_in", "voucher"),
+        ("capital_out", "voucher"),
+        ("khata_out", "voucher"),
+        ("khata_in", "voucher"),
+    ] {
+        entry_with(posting, source).unwrap();
+    }
+    assert!(
+        entry_with("own_write_off", "purchase").is_err(),
+        "own_write_off is gone"
+    );
+    assert!(entry_with("sale", "purchase").is_err());
+    assert!(entry_with("purchase", "elsewhere").is_err());
+    for kind in ["capital_in", "capital_out", "khata_out", "khata_in"] {
+        conn.execute(
+            "INSERT INTO vouchers (type, number, entry_date, amount_paisa, partner_id)
+             VALUES (?1, 1, '2026-10-10', 100, NULL)",
+            [kind],
+        )
+        .unwrap();
+    }
+    assert!(
+        conn.execute(
+            "INSERT INTO vouchers (type, number, entry_date, amount_paisa) VALUES ('nonsense', 1, '2026-10-10', 100)",
+            [],
+        )
+        .is_err()
+    );
+    let control = |party: &str| {
+        conn.execute(
+            "INSERT INTO account_controls (head_id, code, name_ur, name_en, party_type)
+             VALUES (1, ?1, 'x', 'x', ?2)",
+            (format!("t{party}"), party),
+        )
+    };
+    control("separate").unwrap();
+    control("garden").unwrap();
+    assert!(control("stranger").is_err());
+
+    // A trip with two partners, its first purchase and its first entry (PRD FR-12.29).
+    let partner_ids: Vec<i64> = conn
+        .prepare("SELECT id FROM partners ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('trip', 1, '2026-10-10', 'سفر-1', 'TRP-1', 'سفر-1', 'trp-1', 'trp')",
+        [],
+    )
+    .unwrap();
+    let trip = conn.last_insert_rowid();
+    assert!(
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES ('trip', 1, '2026-10-10', 'x', 'x', 'x', 'x', 'x')",
+            [],
+        )
+        .is_err(),
+        "a trip number is used once"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, rent_paisa)
+             VALUES ('trip', 2, '2026-10-10', 'x', 'x', 'x', 'x', 'x', 100)",
+            [],
+        )
+        .is_err(),
+        "a trip has no rent"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES ('garden', 1, '2026-10-10', 'x', 'x', 'x', 'x', 'x')",
+            [],
+        )
+        .is_err(),
+        "a garden has its account"
+    );
+    for (partner, share, source) in [
+        (partner_ids[0], 6_000, "shop"),
+        (partner_ids[1], 4_000, "pocket"),
+    ] {
+        conn.execute(
+            "INSERT INTO venture_partners (venture_id, partner_id, share_bps, source) VALUES (?1, ?2, ?3, ?4)",
+            (trip, partner, share, source),
+        )
+        .unwrap();
+    }
+    assert!(
+        conn.execute(
+            "INSERT INTO venture_partners (venture_id, partner_id, share_bps, source) VALUES (?1, ?2, 0, 'shop')",
+            (trip, partner_ids[0]),
+        )
+        .is_err(),
+        "a partner is in a venture once, with a share above 0"
+    );
+    // The purchase: 20 at 500 = 10,000 and freight 400, paid now 10,400 (E2E-34).
+    conn.execute(
+        "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa, value_paisa,
+             freight_paisa, paid_now_paisa, total_cost_paisa)
+         SELECT 1, ?1, '2026-10-10', item_id, packing_id, 20, 50_000, 1_000_000, 40_000, 1_040_000, 1_040_000
+         FROM bikri_lots LIMIT 1",
+        [trip],
+    )
+    .unwrap();
+    let purchase_id = conn.last_insert_rowid();
+    let bad_purchase = |paid: i64, total: i64, extra: &str| {
+        conn.execute(
+            &format!(
+                "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa,
+                     value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa {extra})
+                 SELECT 9, ?1, '2026-10-10', item_id, packing_id, 20, 50_000, 1_000_000, 40_000, ?2, ?3
+                 FROM bikri_lots LIMIT 1"
+            ),
+            (trip, paid, total),
+        )
+    };
+    assert!(
+        bad_purchase(1_000_000, 1_000_000, "").is_err(),
+        "paid now is the value plus freight, labour and other cost"
+    );
+    assert!(
+        bad_purchase(1_040_000, 1_000_000, "").is_err(),
+        "the total cost is paid now plus the trip costs"
+    );
+    // The first entry of the trip: its payment, with the partners' parts (C23: 6,240 and 4,160).
+    conn.execute(
+        "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, purchase_id)
+         VALUES (?1, 'purchase', 1, '2026-10-10', 1_040_000, ?2)",
+        (trip, purchase_id),
+    )
+    .unwrap();
+    let entry = conn.last_insert_rowid();
+    for (partner, share, source, amount) in [
+        (partner_ids[0], 6_000, "shop", 624_000),
+        (partner_ids[1], 4_000, "pocket", 416_000),
+    ] {
+        conn.execute(
+            "INSERT INTO venture_entry_parts (entry_id, partner_id, share_bps, source, amount_paisa)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            (entry, partner, share, source, amount),
+        )
+        .unwrap();
+    }
+    assert!(
+        conn.execute(
+            "UPDATE venture_entry_parts SET amount_paisa = 100 WHERE entry_id = ?1",
+            [entry]
+        )
+        .is_err(),
+        "the parts of an entry are final"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa)
+             VALUES (?1, 'cost', 1, '2026-10-11', 100)",
+            [trip],
+        )
+        .is_err(),
+        "a trip cost says why"
+    );
+    // Shares are locked after the first entry (PRD FR-12.29).
+    assert!(
+        conn.execute(
+            "UPDATE venture_partners SET share_bps = 5_000 WHERE venture_id = ?1 AND partner_id = ?2",
+            (trip, partner_ids[0]),
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute("DELETE FROM venture_partners WHERE venture_id = ?1", [trip])
+            .is_err()
+    );
+    conn.execute(
+        "UPDATE venture_partners SET source = 'shop' WHERE venture_id = ?1 AND partner_id = ?2",
+        (trip, partner_ids[1]),
+    )
+    .unwrap();
+    // A trip cost spread over the purchase (C24); the purchase's total moves with its part.
+    conn.execute(
+        "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, reason)
+         VALUES (?1, 'cost', 1, '2026-10-11', 40_000, 'truck')",
+        [trip],
+    )
+    .unwrap();
+    let cost_entry = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO purchase_cost_parts (entry_id, purchase_id, amount_paisa) VALUES (?1, ?2, 40_000)",
+        (cost_entry, purchase_id),
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE purchases SET trip_cost_paisa = 40_000, total_cost_paisa = 1_080_000 WHERE id = ?1",
+        [purchase_id],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET trip_cost_paisa = 0 WHERE id = ?1",
+            [purchase_id]
+        )
+        .is_err(),
+        "the total cost is paid now plus the trip costs"
+    );
+    assert!(
+        conn.execute("DELETE FROM purchase_cost_parts", []).is_err(),
+        "the spread of a cost is final"
+    );
+    // The partner of an open trip is found (PRD A63), and a venture is never deleted.
+    assert_eq!(
+        count(&format!(
+            "SELECT EXISTS (SELECT 1 FROM venture_partners vp JOIN ventures v ON v.id = vp.venture_id
+                            WHERE vp.partner_id = {} AND v.status = 'open')",
+            partner_ids[0]
+        )),
+        1
+    );
+    assert!(matches!(
+        common::classify(
+            conn.execute("DELETE FROM ventures WHERE id = ?1", [trip])
+                .unwrap_err()
+        ),
+        DbError::AppendOnly
+    ));
+    conn.execute(
+        "UPDATE ventures SET status = 'closed', closed_date = '2026-10-12' WHERE id = ?1",
+        [trip],
+    )
+    .unwrap();
+    assert!(
+        conn.execute("UPDATE ventures SET number = 9 WHERE id = ?1", [trip])
+            .is_err(),
+        "the identity of a venture is final"
+    );
+
+    // A purchase move has no lot; a move with neither a lot nor a purchase is refused. A reversal
+    // names the same lot, purchase and cost as the move it reverses, with the opposite sign.
+    let move_of = |lot: Option<i64>, purchase: Option<i64>, kind: &str, qty: i64, cost: i64| {
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, purchase_id, journal_entry_id, move_date, kind, qty, cost_paisa)
+             VALUES (?1, ?2, NULL, '2026-10-10', ?3, ?4, ?5)",
+            (lot, purchase, kind, qty, cost),
+        )
+    };
+    move_of(None, None, "received", 20, 0).unwrap_err();
+    move_of(None, Some(purchase_id), "received", 20, 0).unwrap();
+    move_of(Some(f.lot), Some(purchase_id), "sold", -15, 0).unwrap();
+    move_of(None, Some(purchase_id), "written_off", -5, 260_000).unwrap();
+    let off = conn.last_insert_rowid();
+    move_of(Some(f.lot), None, "taken", -1, 0).unwrap();
+    let reversal = |cost: i64, qty: i64| {
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, purchase_id, move_date, kind, qty, cost_paisa, reverses_move_id)
+             VALUES (NULL, ?1, '2026-10-10', 'reversal', ?2, ?3, ?4)",
+            (purchase_id, qty, cost, off),
+        )
+    };
+    assert!(
+        reversal(260_000, 5).is_err(),
+        "the cost of a reversal is the opposite of the move's"
+    );
+    assert!(
+        reversal(-260_000, 4).is_err(),
+        "the qty of a reversal is the opposite of the move's"
+    );
+    reversal(-260_000, 5).unwrap();
+    assert!(
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, purchase_id, move_date, kind, qty, cost_paisa, reverses_move_id)
+             VALUES (?1, ?2, '2026-10-10', 'reversal', 5, -260000, ?3)",
+            (f.lot, purchase_id, off),
+        )
+        .is_err(),
+        "a reversal names the same lot and purchase as the move it reverses"
+    );
+    // A lot cannot give more than it received, counting the fruit taken from it.
+    conn.execute(
+        "UPDATE bikri_lots SET qty_taken = 30, qty_sold = 20 WHERE id = ?1",
+        [f.lot],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE bikri_lots SET qty_taken = 31 WHERE id = ?1",
+            [f.lot]
+        )
+        .is_err()
+    );
+
+    // A purchase is never deleted; its record is final; the running figures can move.
+    assert!(matches!(
+        common::classify(
+            conn.execute("DELETE FROM purchases WHERE id = ?1", [purchase_id])
+                .unwrap_err()
+        ),
+        DbError::AppendOnly
+    ));
+    assert!(
+        conn.execute("UPDATE purchases SET qty = 21 WHERE id = ?1", [purchase_id])
+            .is_err()
+    );
+    conn.execute(
+        "UPDATE purchases SET qty_sold = 15, cost_released_paisa = 810_000 WHERE id = ?1",
+        [purchase_id],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET qty_sold = 21 WHERE id = ?1",
+            [purchase_id]
+        )
+        .is_err(),
+        "sold is never more than bought"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET cost_released_paisa = 1_080_100 WHERE id = ?1",
+            [purchase_id],
+        )
+        .is_err(),
+        "the cost released is never more than the cost"
+    );
+
+    // The partners' parts of a trip lot's seller credit (C25): E2E-34's 8,460 at 60 / 40 is 5,076 and
+    // 3,384 here, one row for each (posting, lot, partner); a row is never changed.
+    for (partner, share, amount) in [
+        (partner_ids[0], 6_000, 507_600),
+        (partner_ids[1], 4_000, 338_400),
+    ] {
+        conn.execute(
+            "INSERT INTO lot_credit_parts (lot_id, journal_entry_id, partner_id, share_bps, amount_paisa)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            (f.lot, f.entry, partner, share, amount),
+        )
+        .unwrap();
+    }
+    assert!(
+        conn.execute(
+            "INSERT INTO lot_credit_parts (lot_id, journal_entry_id, partner_id, share_bps, amount_paisa)
+             VALUES (?1, ?2, ?3, 6000, 100)",
+            (f.lot, f.entry, partner_ids[0]),
+        )
+        .is_err(),
+        "one row for each posting, lot and partner"
+    );
+    assert!(
+        conn.execute("UPDATE lot_credit_parts SET amount_paisa = 100", [])
+            .is_err()
+    );
+    assert!(conn.execute("DELETE FROM lot_credit_parts", []).is_err());
+
+    // Fruit taken: the table accepts a take for one partner and for the guests; a take from our shop
+    // names its lot.
+    let take = |partner: Option<i64>, source: &str, lot: Option<i64>, number: i64| {
+        conn.execute(
+            "INSERT INTO fruit_takes (number, entry_date, partner_id, source, lot_id, credit_account_id, item_id,
+                 packing_id, qty, rate_paisa, value_paisa)
+             SELECT ?1, '2026-10-10', ?2, ?3, ?4, ?5, item_id, packing_id, 2, 58_000, 116_000
+             FROM bikri_lots LIMIT 1",
+            (number, partner, source, lot, f.seller),
+        )
+    };
+    take(Some(partner_ids[0]), "shop", Some(f.lot), 1).unwrap();
+    take(None, "other_shop", None, 2).unwrap();
+    take(None, "shop", None, 3).unwrap_err();
+
+    // The copy is the version-5 file as it was.
+    let copy_conn = Connection::open(outcome.copy.unwrap()).unwrap();
+    assert_eq!(user_version(&copy_conn), 5);
+    assert!(!table_exists(&copy_conn, "purchases"));
+    assert!(!table_exists(&copy_conn, "ventures"));
+    assert_eq!(seed::counts(&copy_conn).unwrap().accounts, accounts_before);
+}
+
+/// Adds an account with an old-style code straight into a file of version 6.
+fn add_old_account(
+    conn: &Connection,
+    control: &str,
+    code: &str,
+    serial: i64,
+    party: &str,
+    name: &str,
+) -> i64 {
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+             search_en, search_phonetic)
+         SELECT id, ?2, ?3, ?4, ?5, ?5, ?5, lower(?5), lower(?5) FROM account_controls WHERE code = ?1",
+        (control, code, serial, party, name),
+    )
+    .unwrap();
+    conn.last_insert_rowid()
+}
+
+#[test]
+fn migration_7_renumbers_the_codes_and_changes_nothing_else() {
+    // Plan 32 (PRD 1.8): a populated file made at version 6 (old codes, posted entries with their
+    // hash chain, items, packings and staff) is upgraded: a copy is taken, sellers, buyers, the two
+    // پختہ کھاتہ accounts, items, packings and staff get the new codes in the order they have, staff
+    // get a code column, the upper limit of `accounts.serial` is gone. Every other code, every id,
+    // every amount, every balance and every chain hash is what it was.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_6(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 6);
+
+    // Sellers with a gap in their serials, buyers, a khata and a person who borrows.
+    let ids: Vec<i64> = [
+        ("03011", "030110001", 1, "seller", "Rahim"),
+        ("03011", "030110002", 2, "seller", "Karim"),
+        ("03011", "030110005", 5, "seller", "Nazir"),
+        ("0304", "03040001", 1, "buyer", "Akram"),
+        ("0304", "03040002", 2, "buyer", "Arshad"),
+        ("0304", "03040010", 10, "buyer", "Tariq"),
+        ("0305", "03050001", 1, "separate", "Family"),
+        ("0103", "01030001", 1, "other", "Aslam Lent"),
+    ]
+    .into_iter()
+    .map(|(control, code, serial, party, name)| {
+        add_old_account(&conn, control, code, serial, party, name)
+    })
+    .collect();
+    // Items and packings with codes typed by hand, out of order.
+    for (code, name) in [("2", "Mango"), ("1", "Banana"), ("12", "Apple")] {
+        conn.execute(
+            "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+             VALUES (?1, ?2, ?2, ?2, lower(?2), lower(?2), 'fruit')",
+            (code, name),
+        )
+        .unwrap();
+    }
+    for (code, name) in [("3", "Box"), ("1", "Bag")] {
+        conn.execute(
+            "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES (?1, ?2, ?2, ?2, lower(?2), lower(?2))",
+            (code, name),
+        )
+        .unwrap();
+    }
+    for name in ["Aslam", "Bilal"] {
+        conn.execute(
+            "INSERT INTO staff (name_ur, name_en, search_ur, search_en, search_phonetic, role)
+             VALUES (?1, ?1, ?1, lower(?1), lower(?1), 'munshi')",
+            [name],
+        )
+        .unwrap();
+    }
+    post_chained(&conn, "2026-10-10", "03040001", "04010001", 12_880, None);
+    post_chained(&conn, "2026-10-10", "01010001", "03040001", 10_000, None);
+    post_chained(&conn, "2026-10-10", "030110002", "01010001", 4_316, None);
+
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 3);
+    let skip_codes = [
+        ("accounts", "code"),
+        ("accounts", "serial"),
+        ("items", "code"),
+        ("packings", "code"),
+        ("staff", "code"),
+    ];
+    let before_rows = all_rows_without(&conn, &skip_codes);
+    let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
+    let before_triggers: Vec<String> = schema(&conn, "trigger");
+
+    let outcome =
+        migrate::migrate_with(&released_version_7(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (6, 7));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 7);
+
+    // The new codes, in the order the records have.
+    let code_of = |id: i64| -> (String, i64) {
+        conn.query_row(
+            "SELECT code, serial FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap()
+    };
+    let got: Vec<(String, i64)> = ids.iter().map(|id| code_of(*id)).collect();
+    let want = [
+        ("0010", 0),
+        ("0011", 1),
+        ("0012", 2),
+        ("0020", 0),
+        ("0021", 1),
+        ("0022", 2),
+        ("03050001", 1),
+        ("01030001", 1),
+    ];
+    assert_eq!(
+        got,
+        want.map(|(c, n)| (c.to_owned(), n)).to_vec(),
+        "sellers and buyers are numbered from 0 in their old order; the khata and the lent person keep theirs"
+    );
+    let one = |sql: &str| -> (String, i64) {
+        conn.query_row(sql, [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+    };
+    assert_eq!(
+        one("SELECT code, serial FROM accounts WHERE is_pukhta_khata = 1 AND party_type = 'buyer'"),
+        ("0030".to_owned(), 0)
+    );
+    assert_eq!(
+        one(
+            "SELECT code, serial FROM accounts WHERE is_pukhta_khata = 1 AND party_type = 'seller'"
+        ),
+        ("0031".to_owned(), 1)
+    );
+    for kept in [
+        "01010001",
+        "01020001",
+        "02010001",
+        "03040000",
+        "030119998",
+        "04010001",
+        "06010001",
+        "06019999",
+    ] {
+        let found: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM accounts WHERE code = ?1",
+                [kept],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(found, 1, "{kept} keeps its code");
+    }
+    let list = |sql: &str| -> Vec<String> {
+        conn.prepare(sql)
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    assert_eq!(
+        list("SELECT code || ' ' || name_en FROM items ORDER BY code"),
+        ["0040 Banana", "0041 Mango", "0042 Apple"],
+        "items follow the order of their old codes as numbers: 1, 2, 12"
+    );
+    assert_eq!(
+        list("SELECT code || ' ' || name_en FROM packings ORDER BY code"),
+        ["0050 Bag", "0051 Box"]
+    );
+    assert_eq!(
+        list("SELECT code || ' ' || name_en FROM staff ORDER BY code"),
+        ["0060 Aslam", "0061 Bilal"]
+    );
+
+    // The staff code is unique; the serial of an account has no upper limit any more, but is not
+    // negative; a system account still cannot change its code.
+    assert!(
+        conn.execute(
+            "INSERT INTO staff (name_ur, name_en, search_ur, search_en, search_phonetic, role, code)
+             VALUES ('x', 'x', 'x', 'x', 'x', 'munshi', '0060')",
+            [],
+        )
+        .is_err()
+    );
+    add_old_account(&conn, "03011", "0019999999", 9_999_999, "seller", "Last");
+    assert_eq!(
+        one("SELECT code, serial FROM accounts WHERE name_en = 'Last'"),
+        ("0019999999".to_owned(), 9_999_999)
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                 search_en, search_phonetic)
+             SELECT id, '0019', -1, 'seller', 'n', 'n', 'n', 'n', 'n' FROM account_controls WHERE code = '03011'",
+            [],
+        )
+        .is_err(),
+        "a negative serial is still refused"
+    );
+    let changed = conn.execute("UPDATE accounts SET code = '9' WHERE code = '0030'", []);
+    assert!(changed.is_err(), "a system account keeps its code");
+    assert_eq!(
+        schema(&conn, "trigger"),
+        before_triggers,
+        "no trigger is lost or changed"
+    );
+    let temp: i64 = conn
+        .query_row("SELECT COUNT(*) FROM sqlite_temp_master", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(temp, 0, "the working table of the migration is gone");
+
+    // Nothing else moved: every other column of every row, every hash, every balance.
+    // The account added above is left out of the comparison.
+    conn.execute("DELETE FROM accounts WHERE name_en = 'Last'", [])
+        .unwrap();
+    assert_eq!(all_rows_without(&conn, &skip_codes), before_rows);
+    assert_eq!(hashes(&conn), before_hashes);
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before_totals
+    );
+    let bad_keys: i64 = conn
+        .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(bad_keys, 0);
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+}
+
+#[test]
+fn migration_8_gives_trips_and_gardens_their_codes_and_changes_nothing_else() {
+    // Plan 34: a populated file made at version 7 (three trips named the old way, two gardens with
+    // their accounts under control 0306, posted entries with their hash chain) is upgraded: a copy
+    // is taken, each garden's account gets the code of its garden, each trip gets the name "0070
+    // 10-10-2026" in both scripts with its search keys made again. Nothing else moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_7(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 7);
+
+    let garden_one = add_old_account(&conn, "0306", "03060001", 1, "garden", "Shahpur");
+    let garden_two = add_old_account(&conn, "0306", "03060002", 2, "garden", "Multan Bagh");
+    for (kind, number, day, name_ur, name_en, account) in [
+        (
+            "trip",
+            1,
+            "2026-10-10",
+            "سفر-1 10-10-2026",
+            "TRP-1 10-10-2026",
+            None,
+        ),
+        (
+            "trip",
+            2,
+            "2026-10-11",
+            "سفر-2 11-10-2026",
+            "TRP-2 11-10-2026",
+            None,
+        ),
+        (
+            "garden",
+            1,
+            "2026-10-10",
+            "شاہ پور",
+            "Shahpur",
+            Some(garden_one),
+        ),
+        (
+            "garden",
+            2,
+            "2026-10-12",
+            "ملتان باغ",
+            "Multan Bagh",
+            Some(garden_two),
+        ),
+        (
+            "trip",
+            3,
+            "2026-10-12",
+            "سفر-3 12-10-2026",
+            "TRP-3 12-10-2026",
+            None,
+        ),
+    ] {
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en,
+                 search_phonetic, account_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?4, lower(?5), lower(?5), ?6)",
+            (kind, number, day, name_ur, name_en, account),
+        )
+        .unwrap();
+    }
+    post_chained(&conn, "2026-10-10", "01010001", "03060001", 5_000, None);
+    post_chained(&conn, "2026-10-12", "03060002", "01010001", 1_000, None);
+
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 2);
+    let skip = [
+        ("accounts", "code"),
+        ("accounts", "serial"),
+        ("ventures", "name_ur"),
+        ("ventures", "name_en"),
+        ("ventures", "search_ur"),
+        ("ventures", "search_en"),
+        ("ventures", "search_phonetic"),
+    ];
+    let before_rows = all_rows_without(&conn, &skip);
+    let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
+
+    let outcome =
+        migrate::migrate_with(&released_version_8(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (7, 8));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 8);
+
+    // The gardens' accounts have the code of their garden, and the serial is the running number.
+    let account_of = |id: i64| -> (String, i64) {
+        conn.query_row(
+            "SELECT code, serial FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap()
+    };
+    assert_eq!(account_of(garden_one), ("0080".to_owned(), 0));
+    assert_eq!(account_of(garden_two), ("0081".to_owned(), 1));
+    // The trips are named by their code and day, the same in both scripts, with new search keys.
+    let trips: Vec<(i64, String, String, String)> = conn
+        .prepare("SELECT number, name_ur, name_en, search_en FROM ventures WHERE kind = 'trip' ORDER BY number")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let want = [
+        (1, "0070 10-10-2026"),
+        (2, "0071 11-10-2026"),
+        (3, "0072 12-10-2026"),
+    ];
+    for ((number, ur, en, key), (want_number, want_name)) in trips.iter().zip(want) {
+        assert_eq!(*number, want_number);
+        assert_eq!((ur.as_str(), en.as_str()), (want_name, want_name));
+        assert_eq!(key, &mandi_core::text::search_en(want_name));
+    }
+    // The gardens keep the names they were typed with.
+    let garden_names: Vec<String> = conn
+        .prepare("SELECT name_en FROM ventures WHERE kind = 'garden' ORDER BY number")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(garden_names, ["Shahpur", "Multan Bagh"]);
+
+    // Nothing else moved: every other column of every row, every hash, every balance.
+    assert_eq!(all_rows_without(&conn, &skip), before_rows);
+    assert_eq!(hashes(&conn), before_hashes);
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before_totals
+    );
+    let bad_keys: i64 = conn
+        .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(bad_keys, 0);
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+}
+
+#[test]
+fn migration_9_adds_the_date_to_sell_and_the_arrivals_and_changes_nothing_else() {
+    // Plan 33 v1.1: a file at version 8 with a trip and two purchases is upgraded. Each purchase gets
+    // its own entry date as its date to sell; the table of garden arrivals, the two link columns and
+    // the triggers exist; no other row or number changes.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_8(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 8);
+    conn.execute(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('0040', 'x', 'x', 'x', 'x', 'x', 'fruit')",
+        [],
+    )
+    .unwrap();
+    let item = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('0050', 'x', 'x', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let packing = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('trip', 1, '2026-10-10', '0070 10-10-2026', '0070 10-10-2026', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let trip = conn.last_insert_rowid();
+    for (number, day) in [(1, "2026-10-10"), (2, "2026-10-12")] {
+        conn.execute(
+            "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa,
+                 value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa)
+             VALUES (?1, ?2, ?3, ?4, ?5, 20, 50_000, 1_000_000, 40_000, 1_040_000, 1_040_000)",
+            (number, trip, day, item, packing),
+        )
+        .unwrap();
+    }
+    let skip = [("purchases", "sell_date")];
+    let before_rows = all_rows_without(&conn, &skip);
+
+    let outcome =
+        migrate::migrate_with(&released_version_9(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (8, 9));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 9);
+
+    // Nothing else moved: every other column of every other table reads as before.
+    let mut after_rows = all_rows_without(&conn, &skip);
+    after_rows.retain(|(table, _)| table != "garden_arrivals");
+    let mut before_rows = before_rows;
+    before_rows.retain(|(table, _)| table != "garden_arrivals");
+    assert_eq!(after_rows, before_rows);
+
+    // Each purchase starts with its own entry date as its date to sell.
+    let sell: Vec<(String, String)> = conn
+        .prepare("SELECT entry_date, sell_date FROM purchases ORDER BY number")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        sell,
+        [
+            ("2026-10-10".into(), "2026-10-10".into()),
+            ("2026-10-12".into(), "2026-10-12".into())
+        ]
+    );
+    // A date to sell later than the purchase day is allowed; an earlier one is refused.
+    conn.execute(
+        "UPDATE purchases SET sell_date = '2026-10-15' WHERE number = 1",
+        [],
+    )
+    .unwrap();
+    let early = conn.execute(
+        "UPDATE purchases SET sell_date = '2026-10-09' WHERE number = 1",
+        [],
+    );
+    assert!(early.is_err(), "a date to sell before the purchase day");
+    let new_early = conn.execute(
+        "INSERT INTO purchases (number, venture_id, entry_date, sell_date, item_id, packing_id, qty,
+             rate_paisa, value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa)
+         VALUES (9, ?1, '2026-10-12', '2026-10-11', ?2, ?3, 20, 50_000, 1_000_000, 0, 1_000_000, 1_000_000)",
+        (trip, item, packing),
+    );
+    assert!(
+        new_early.is_err(),
+        "a new purchase with an early date to sell"
+    );
+
+    // The arrivals table: empty, with its checks and triggers.
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM garden_arrivals"),
+        0,
+        "no arrival yet"
+    );
+    let account: i64 = conn
+        .query_row("SELECT id FROM accounts LIMIT 1", [], |r| r.get(0))
+        .unwrap();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, account_id)
+         VALUES ('garden', 1, '2026-10-10', 'g', 'g', 'g', 'g', 'g', ?1)",
+        [account],
+    )
+    .unwrap();
+    let garden = conn.last_insert_rowid();
+    let arrival = |number: i64, day: &str, sell: &str, qty: i64| {
+        conn.execute(
+            "INSERT INTO garden_arrivals (number, venture_id, entry_date, sell_date, item_id, packing_id, qty)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            (number, garden, day, sell, item, packing, qty),
+        )
+    };
+    arrival(1, "2026-10-10", "2026-10-11", 100).unwrap();
+    assert!(
+        arrival(2, "2026-10-10", "2026-10-09", 100).is_err(),
+        "sell date before arrival"
+    );
+    assert!(
+        arrival(1, "2026-10-10", "2026-10-10", 100).is_err(),
+        "number used once"
+    );
+    assert!(
+        arrival(3, "2026-10-10", "2026-10-10", 0).is_err(),
+        "qty above 0"
+    );
+    let arrival_id: i64 = conn
+        .query_row("SELECT id FROM garden_arrivals WHERE number = 1", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET qty_sold = 101 WHERE id = ?1",
+            [arrival_id]
+        )
+        .is_err(),
+        "sold plus written off is never more than arrived"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET qty = 50 WHERE id = ?1",
+            [arrival_id]
+        )
+        .is_err(),
+        "what arrived never changes"
+    );
+    conn.execute(
+        "UPDATE garden_arrivals SET qty_sold = 60, sell_date = '2026-10-12' WHERE id = ?1",
+        [arrival_id],
+    )
+    .unwrap();
+    assert!(
+        conn.execute("DELETE FROM garden_arrivals WHERE id = ?1", [arrival_id])
+            .is_err(),
+        "an arrival is never deleted"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET status = 'cancelled' WHERE id = ?1",
+            [arrival_id]
+        )
+        .is_err(),
+        "a cancel needs a reason"
+    );
+    // A stock move may belong to an arrival, and a reversal must mirror it.
+    conn.execute(
+        "INSERT INTO stock_moves (arrival_id, move_date, kind, qty) VALUES (?1, '2026-10-11', 'written_off', -5)",
+        [arrival_id],
+    )
+    .unwrap();
+    let move_id = conn.last_insert_rowid();
+    assert!(
+        conn.execute(
+            "INSERT INTO stock_moves (move_date, kind, qty) VALUES ('2026-10-11', 'written_off', -5)",
+            [],
+        )
+        .is_err(),
+        "a move has an owner"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO stock_moves (arrival_id, move_date, kind, qty, reverses_move_id)
+             VALUES (?1, '2026-10-11', 'reversal', 4, ?2)",
+            (arrival_id, move_id),
+        )
+        .is_err(),
+        "a reversal is the exact opposite"
+    );
+    conn.execute(
+        "INSERT INTO stock_moves (arrival_id, move_date, kind, qty, reverses_move_id)
+         VALUES (?1, '2026-10-11', 'reversal', 5, ?2)",
+        (arrival_id, move_id),
+    )
+    .unwrap();
+}
+
+fn count(conn: &Connection, sql: &str) -> i64 {
+    conn.query_row(sql, [], |r| r.get(0)).unwrap()
+}
+
+#[test]
+fn migration_10_splits_the_goods_and_keeps_every_old_number_true() {
+    // Plan 35: a file at version 9 with a trip, a purchase of 20 that our shop sold 5 of and
+    // other shops 6 of (one saved and one cancelled sale of 3 in another shop), and a
+    // garden arrival, is upgraded. The purchase gets other_qty = qty_sold_other = the qty of its
+    // SAVED sales in other shops; the arrival starts as all for our shop; nothing else moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_9(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 9);
+    conn.execute(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('0040', 'x', 'x', 'x', 'x', 'x', 'fruit')",
+        [],
+    )
+    .unwrap();
+    let item = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('0050', 'x', 'x', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let packing = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('trip', 1, '2026-10-10', '0070', '0070', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let trip = conn.last_insert_rowid();
+    // 20 bought; qty_sold = 11 in all, of which the saved sales in other shops are 6 (so our shop
+    // sold 5).
+    conn.execute(
+        "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa,
+             value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa, qty_sold)
+         VALUES (1, ?1, '2026-10-10', ?2, ?3, 20, 50_000, 1_000_000, 0, 1_000_000, 1_000_000, 11)",
+        (trip, item, packing),
+    )
+    .unwrap();
+    let purchase = conn.last_insert_rowid();
+    for (number, qty, status, reason) in [(1, 6, "saved", None), (2, 3, "cancelled", Some("x"))] {
+        conn.execute(
+            "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, purchase_id,
+                 qty, status, cancel_reason)
+             VALUES (?1, 'other_sale', ?2, '2026-10-10', 100_000, ?3, ?4, ?5, ?6)",
+            (trip, number, purchase, qty, status, reason),
+        )
+        .unwrap();
+    }
+    let account: i64 = conn
+        .query_row("SELECT id FROM accounts LIMIT 1", [], |r| r.get(0))
+        .unwrap();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, account_id)
+         VALUES ('garden', 1, '2026-10-10', 'g', 'g', 'g', 'g', 'g', ?1)",
+        [account],
+    )
+    .unwrap();
+    let garden = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO garden_arrivals (number, venture_id, entry_date, sell_date, item_id, packing_id, qty, qty_sold)
+         VALUES (1, ?1, '2026-10-10', '2026-10-10', ?2, ?3, 100, 40)",
+        (garden, item, packing),
+    )
+    .unwrap();
+    let skip = [
+        ("purchases", "other_qty"),
+        ("purchases", "qty_sold_other"),
+        ("purchases", "shop_name"),
+        ("garden_arrivals", "other_qty"),
+        ("garden_arrivals", "qty_sold_other"),
+        ("garden_arrivals", "shop_name"),
+        ("venture_entries", "arrival_id"),
+        ("venture_entries", "moved_qty"),
+    ];
+    let before = all_rows_without(&conn, &skip);
+
+    let outcome =
+        migrate::migrate_with(&released_version_10(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (9, 10));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 10);
+    assert_eq!(all_rows_without(&conn, &skip), before, "nothing else moved");
+
+    let split = |table: &str, id: i64| -> (i64, i64, Option<String>) {
+        conn.query_row(
+            &format!("SELECT other_qty, qty_sold_other, shop_name FROM {table} WHERE id = ?1"),
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap()
+    };
+    // The saved sale of 6 in another shop is the purchase's part for another shop, all sold.
+    assert_eq!(split("purchases", purchase), (6, 6, None));
+    let arrival: i64 = conn
+        .query_row("SELECT id FROM garden_arrivals", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(split("garden_arrivals", arrival), (0, 0, None));
+
+    // The triggers keep the split true.
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET other_qty = 21 WHERE id = ?1",
+            [purchase]
+        )
+        .is_err(),
+        "the part for another shop is not above the qty"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET other_qty = 5 WHERE id = ?1",
+            [purchase]
+        )
+        .is_err(),
+        "other shops sold 6, so their part is not below 6"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET other_qty = 16 WHERE id = ?1",
+            [purchase]
+        )
+        .is_err(),
+        "our shop sold 5, so its part (20 - 16 = 4) is not below 5"
+    );
+    conn.execute(
+        "UPDATE purchases SET other_qty = 15 WHERE id = ?1",
+        [purchase],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET other_qty = 101 WHERE id = ?1",
+            [arrival]
+        )
+        .is_err()
+    );
+    conn.execute(
+        "UPDATE garden_arrivals SET other_qty = 60 WHERE id = ?1",
+        [arrival],
+    )
+    .unwrap();
+    // Our part is now 40 and our shop sold 40: one more for another shop is refused.
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET other_qty = 61 WHERE id = ?1",
+            [arrival]
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn migration_11_adds_the_dead_marks_table_and_changes_nothing_else() {
+    // Plan 40: a file at version 10 is upgraded. The new table is empty, no other row moves, and
+    // a copy is taken before the upgrade.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_10(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 10);
+    let before = all_rows_without(&conn, &[]);
+
+    let outcome =
+        migrate::migrate_with(&released_version_11(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (10, 11));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 11);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM dead_marks"), 0);
+    let after: Vec<(String, String)> = all_rows_without(&conn, &[])
+        .into_iter()
+        .filter(|(table, _)| table != "dead_marks")
+        .collect();
+    assert_eq!(after, before, "nothing else moved");
+    assert_eq!(DEAD_MARKS_SQL.matches("CREATE TABLE").count(), 1);
+}
+
+#[test]
+fn migration_12_adds_the_edit_windows_table_and_changes_nothing_else() {
+    // Plan 44: a file at version 11 is upgraded. The new table is empty, no other row moves, the
+    // triggers of the trip and garden entries are replaced (and still refuse a change outside a
+    // window), and a copy is taken before the upgrade.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_11(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 11);
+    let before = all_rows_without(&conn, &[]);
+
+    let outcome =
+        migrate::migrate_with(&released_version_12(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (11, 12));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 12);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM edit_windows"), 0);
+    let after: Vec<(String, String)> = all_rows_without(&conn, &[])
+        .into_iter()
+        .filter(|(table, _)| table != "edit_windows")
+        .collect();
+    assert_eq!(after, before, "nothing else moved");
+    assert_eq!(EDIT_WINDOWS_SQL.matches("CREATE TABLE").count(), 1);
+    // The seven triggers named in the file were replaced, none was lost.
+    for name in [
+        "purchases_record_is_final",
+        "venture_entries_record_is_final",
+        "venture_entry_parts_no_update",
+        "venture_entry_parts_no_delete",
+        "purchase_cost_parts_no_update",
+        "purchase_cost_parts_no_delete",
+        "garden_arrivals_record_is_final",
+        "ventures_identity_is_final",
+    ] {
+        assert_eq!(
+            count(
+                &conn,
+                &format!(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name = '{name}'"
+                )
+            ),
+            1,
+            "{name}"
+        );
+    }
+}
+
+/// Adds an account straight into the table with the given `is_pukhta_party` value.
+fn insert_account(
+    conn: &Connection,
+    control: &str,
+    code: &str,
+    party_type: &str,
+    mark: i64,
+) -> rusqlite::Result<usize> {
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                               search_en, search_phonetic, is_pukhta_party)
+         VALUES ((SELECT id FROM account_controls WHERE code = ?1), ?2, 99, ?3, 'نذیر', 'Nazir',
+                 'نذیر', 'nazir', 'nzr', ?4)",
+        (control, code, party_type, mark),
+    )
+}
+
+#[test]
+fn migration_13_adds_the_pukhta_party_mark_and_changes_nothing_else() {
+    // Plan 47 (PRD FR-13.11): a file at version 12 with the worked day's accounts is upgraded. Every
+    // account gets the mark 0, the two shared accounts keep is_pukhta_khata = 1, no other value moves,
+    // a copy is taken first, and a party's own account can then be made (and only a seller or a buyer).
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_12(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 12);
+    common::fixture(&conn);
+    let before = all_rows_without(&conn, &[]);
+    let accounts_before = count(&conn, "SELECT COUNT(*) FROM accounts");
+
+    let outcome =
+        migrate::migrate_with(&released_version_13(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (12, 13));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 13);
+    let after = all_rows_without(&conn, &[("accounts", "is_pukhta_party")]);
+    assert_eq!(after, before, "nothing else moved");
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM accounts"),
+        accounts_before
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE is_pukhta_party <> 0"
+        ),
+        0,
+        "every old account is not a party"
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE is_pukhta_khata = 1 AND code IN ('0030', '0031')"
+        ),
+        2,
+        "the shared accounts keep their own mark"
+    );
+    assert_eq!(ONE_TIME_PARTY_MARK_SQL.matches("ALTER TABLE").count(), 1);
+
+    // A buyer's own account in the پختہ series, and a seller's.
+    insert_account(&conn, "0304", "0032", "buyer", 1).unwrap();
+    insert_account(&conn, "03011", "0033", "seller", 1).unwrap();
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE is_pukhta_party = 1"
+        ),
+        2
+    );
+    // The mark is an 0/1 flag.
+    assert!(insert_account(&conn, "0304", "0034", "buyer", 2).is_err());
+    // A party is never the shared account, never a system account and never a kind other than a
+    // seller or a buyer.
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                                   search_en, search_phonetic, is_pukhta_party, is_pukhta_khata)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0304'), '0035', 5, 'buyer', 'ن',
+                     'N', 'ن', 'n', 'n', 1, 1)",
+            [],
+        )
+        .is_err(),
+        "a party is not the shared account"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                                   search_en, search_phonetic, is_pukhta_party, is_system)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0304'), '0036', 6, 'buyer', 'ن',
+                     'N', 'ن', 'n', 'n', 1, 1)",
+            [],
+        )
+        .is_err(),
+        "a party is not a system account"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                                   search_en, search_phonetic, is_pukhta_party)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0103'), '0037', 7, 'other', 'ن',
+                     'N', 'ن', 'n', 'n', 1)",
+            [],
+        )
+        .is_err(),
+        "only a seller or a buyer can be a party"
+    );
+    // The mark cannot change after the account is made, in either direction.
+    assert!(
+        conn.execute(
+            "UPDATE accounts SET is_pukhta_party = 0 WHERE code = '0032'",
+            []
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute(
+            "UPDATE accounts SET is_pukhta_party = 1 WHERE code = '0020'",
+            []
+        )
+        .is_err()
+    );
+    // Saving the same value is not a change.
+    conn.execute(
+        "UPDATE accounts SET is_pukhta_party = 1, note = 'x' WHERE code = '0032'",
+        [],
+    )
+    .unwrap();
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM sqlite_master WHERE name IN ('accounts_pukhta_party_fixed', 'idx_accounts_pukhta_party')"
+        ),
+        2
+    );
+}
+
+/// A v13 file with a trip, a purchase with two partners' parts, and a trip cost with its spread.
+fn trip_with_parts(conn: &Connection) {
+    let accounts: Vec<i64> = conn
+        .prepare("SELECT id FROM accounts ORDER BY id LIMIT 2")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let mut partners = Vec::new();
+    for (ur, en) in [("الف", "A"), ("ب", "B")] {
+        conn.execute(
+            "INSERT INTO partners (name_ur, name_en, capital_account_id, drawings_account_id)
+             VALUES (?1, ?2, ?3, ?4)",
+            (ur, en, accounts[0], accounts[1]),
+        )
+        .unwrap();
+        partners.push(conn.last_insert_rowid());
+    }
+    conn.execute(
+        "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('1', 'پیٹی', 'Box', 'p', 'box', 'bx')",
+        [],
+    )
+    .unwrap();
+    let packing = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('1', 'مالٹا', 'Orange', 'm', 'orange', 'rng', 'fruit')",
+        [],
+    )
+    .unwrap();
+    let item = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('trip', 1, '2026-10-10', 't', 't', 't', 't', 't')",
+        [],
+    )
+    .unwrap();
+    let trip = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa,
+             value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa)
+         VALUES (1, ?1, '2026-10-10', ?2, ?3, 20, 50_000, 1_000_000, 0, 1_000_000, 1_000_000)",
+        (trip, item, packing),
+    )
+    .unwrap();
+    let purchase = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, purchase_id)
+         VALUES (?1, 'purchase', 1, '2026-10-10', 1_000_000, ?2)",
+        (trip, purchase),
+    )
+    .unwrap();
+    let entry = conn.last_insert_rowid();
+    for (partner, share, amount) in [(partners[0], 6_000, 600_000), (partners[1], 4_000, 400_000)] {
+        conn.execute(
+            "INSERT INTO venture_entry_parts (entry_id, partner_id, share_bps, source, amount_paisa)
+             VALUES (?1, ?2, ?3, 'shop', ?4)",
+            (entry, partner, share, amount),
+        )
+        .unwrap();
+    }
+    conn.execute(
+        "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, reason)
+         VALUES (?1, 'cost', 1, '2026-10-11', 40_000, 'truck')",
+        [trip],
+    )
+    .unwrap();
+    let cost_entry = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO purchase_cost_parts (entry_id, purchase_id, amount_paisa) VALUES (?1, ?2, 40_000)",
+        (cost_entry, purchase),
+    )
+    .unwrap();
+}
+
+#[test]
+fn migration_14_makes_the_parts_soft_state_and_changes_nothing_else() {
+    // CLAUDE.md rule 4: a file at version 13 with the parts of a purchase and the spread of a trip cost
+    // is upgraded. Every row keeps its id and values and is active, nothing is linked, the inline
+    // UNIQUE is now a unique index over the active rows, a copy is taken first, and nothing is left
+    // of the old tables.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_13(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 13);
+    trip_with_parts(&conn);
+    let before = all_rows_without(&conn, &[]);
+    let part_ids: Vec<i64> = conn
+        .prepare("SELECT id FROM venture_entry_parts ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(part_ids.len(), 2);
+
+    let outcome =
+        migrate::migrate_with(&released_version_14(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (13, 14));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 14);
+    let after = all_rows_without(
+        &conn,
+        &[
+            ("venture_entry_parts", "is_active"),
+            ("venture_entry_parts", "replaced_by"),
+            ("purchase_cost_parts", "is_active"),
+            ("purchase_cost_parts", "replaced_by"),
+        ],
+    );
+    assert_eq!(after, before, "every row, id and value is as it was");
+    for table in ["venture_entry_parts", "purchase_cost_parts"] {
+        assert_eq!(
+            count(&conn, &format!("SELECT COUNT(*) FROM {table}")),
+            count(
+                &conn,
+                &format!(
+                    "SELECT COUNT(*) FROM {table} WHERE is_active = 1 AND replaced_by IS NULL"
+                )
+            ),
+            "{table}: every old row is active and unlinked"
+        );
+    }
+    // The unique rule now lives in an index over the active rows only, as a partial index.
+    for name in [
+        "uq_venture_entry_parts_active",
+        "uq_purchase_cost_parts_active",
+    ] {
+        let sql: String = conn
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?1",
+                [name],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(
+            sql.contains("UNIQUE") && sql.contains("WHERE is_active = 1"),
+            "{sql}"
+        );
+    }
+    // Nothing of the rebuild is left, and the foreign keys and the file check out.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM sqlite_master WHERE sql LIKE '%_parts_old%' OR name LIKE '%_parts_old%'"
+        ),
+        0
+    );
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM pragma_foreign_key_check"),
+        0
+    );
+    let fks: Vec<String> = conn
+        .prepare("SELECT \"table\" FROM pragma_foreign_key_list('venture_entry_parts')")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(
+        fks.iter().any(|t| t == "venture_entry_parts"),
+        "the link to the replacing row points at its own table: {fks:?}"
+    );
+    // The inline UNIQUE is gone: a retired and an active row for one partner can live together
+    // (inside the window, which the services open), the other way round is still refused.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND tbl_name = 'venture_entry_parts' AND name LIKE 'sqlite_autoindex%'"
+        ),
+        0
+    );
+    assert_eq!(
+        PARTS_ARE_SOFT_STATE_SQL.matches("DROP TABLE").count(),
+        2,
+        "the two old tables are dropped, nothing else"
+    );
+    assert_eq!(
+        PARTS_ARE_SOFT_STATE_SQL.matches("DELETE FROM").count(),
+        0,
+        "the file deletes no row (its triggers only refuse a delete)"
+    );
+}
+
+#[test]
+fn migration_15_adds_the_assistant_questions_table_and_changes_nothing_else() {
+    // Plan 48 (PRD FR-7.84): a file at version 14 is upgraded. The new table is empty, no other row
+    // moves, and a copy is taken before the upgrade.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_14(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 14);
+    let before = all_rows_without(&conn, &[]);
+
+    let outcome =
+        migrate::migrate_with(&released_version_15(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (14, 15));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 15);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM assistant_questions"), 0);
+    let after: Vec<(String, String)> = all_rows_without(&conn, &[])
+        .into_iter()
+        .filter(|(table, _)| table != "assistant_questions")
+        .collect();
+    assert_eq!(after, before, "nothing else moved");
+    assert_eq!(ASSISTANT_QUESTIONS_SQL.matches("CREATE TABLE").count(), 1);
+    assert_eq!(
+        ASSISTANT_QUESTIONS_SQL.matches("DELETE FROM").count(),
+        0,
+        "the file deletes no row (its trigger only refuses a delete)"
+    );
+}
+
+#[test]
+fn migration_16_adds_two_partial_indexes_and_changes_nothing_else() {
+    // Plan 48 P48-S3: a file at version 15 with entries, lines and matching rows is upgraded. Two
+    // indexes are added; no row, amount, id or chain hash moves; a copy is taken first.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_15(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 15);
+    let before = all_rows_without(&conn, &[]);
+    let tables_before = schema(&conn, "table");
+    let triggers_before = schema(&conn, "trigger");
+    let indexes_before = schema(&conn, "index");
+
+    let outcome =
+        migrate::migrate_with(&released_version_16(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (15, 16));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 16);
+    assert_eq!(
+        all_rows_without(&conn, &[]),
+        before,
+        "every row is as it was"
+    );
+    assert_eq!(schema(&conn, "table"), tables_before, "no table changed");
+    assert_eq!(
+        schema(&conn, "trigger"),
+        triggers_before,
+        "no trigger changed"
+    );
+    let added: Vec<String> = schema(&conn, "index")
+        .into_iter()
+        .filter(|i| !indexes_before.contains(i))
+        .collect();
+    assert_eq!(added.len(), 2, "{added:?}");
+    assert!(
+        added
+            .iter()
+            .any(|i| i.starts_with("idx_journal_entries_opening:")
+                && i.contains("WHERE posting_type = 'opening'")),
+        "{added:?}"
+    );
+    assert!(
+        added
+            .iter()
+            .any(|i| i.starts_with("idx_bill_allocations_open_sum:")
+                && i.contains("(bill_line_id, amount_paisa) WHERE is_active = 1")),
+        "{added:?}"
+    );
+    assert_eq!(SPEED_INDEXES_SQL.matches("CREATE INDEX").count(), 2);
+    for word in [
+        "CREATE TABLE",
+        "ALTER TABLE",
+        "DROP",
+        "DELETE FROM",
+        "INSERT",
+        "UPDATE",
+    ] {
+        assert_eq!(SPEED_INDEXES_SQL.matches(word).count(), 0, "{word}");
+    }
+}
+
+#[test]
+fn migration_17_adds_four_nullable_columns_and_keeps_every_question_as_it_was() {
+    // Plan 51 P51-B2 (NFR-SPD-17): a file at version 16 with questions in the log is upgraded. The
+    // log keeps every row and value, the new columns are NULL for them, the append-only triggers
+    // are the same and still hold, and a copy is taken first.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_16(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 16);
+    for (source, outcome, text) in [
+        ("model", "answered", "ikram ke total bakaya kitne hai"),
+        (
+            "model",
+            "not_understood",
+            "apni sale ko ziyada kaise karain ?",
+        ),
+        ("chip", "answered", "cash_in_hand"),
+    ] {
+        conn.execute(
+            "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+             conversation_id, source, counted, outcome, tool_calls_json, model_calls) \
+             VALUES ('2026-11-02T14:46:44.402Z', '2026-11-02', ?1, 'ur', 'c-1', ?2, 0, ?3, \
+             '[{\"tool\":\"period\"}]', 4)",
+            (text, source, outcome),
+        )
+        .unwrap();
+    }
+    let before = all_rows_without(&conn, &[]);
+    let triggers_before = schema(&conn, "trigger");
+    let indexes_before = schema(&conn, "index");
+    let tables_before: Vec<String> = schema(&conn, "table")
+        .into_iter()
+        .filter(|t| !t.starts_with("assistant_questions:"))
+        .collect();
+
+    let outcome =
+        migrate::migrate_with(&released_version_17(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (16, 17));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 17);
+    // Every row and every old value is as it was; the new columns are NULL.
+    let skip = [
+        ("assistant_questions", "total_millis"),
+        ("assistant_questions", "model_millis"),
+        ("assistant_questions", "tool_millis"),
+        ("assistant_questions", "calls_json"),
+    ];
+    assert_eq!(
+        all_rows_without(&conn, &skip),
+        before,
+        "every row is as it was"
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM assistant_questions WHERE total_millis IS NULL \
+             AND model_millis IS NULL AND tool_millis IS NULL AND calls_json IS NULL"
+        ),
+        3
+    );
+    // Only that one table changed, and only by those four columns.
+    let tables_after: Vec<String> = schema(&conn, "table")
+        .into_iter()
+        .filter(|t| !t.starts_with("assistant_questions:"))
+        .collect();
+    assert_eq!(tables_after, tables_before, "no other table changed");
+    let sql: String = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE name = 'assistant_questions'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    for column in ["total_millis", "model_millis", "tool_millis", "calls_json"] {
+        assert!(sql.contains(column), "{column}");
+    }
+    assert_eq!(
+        schema(&conn, "trigger"),
+        triggers_before,
+        "no trigger changed"
+    );
+    assert_eq!(schema(&conn, "index"), indexes_before, "no index changed");
+    // The log is still append-only, for the old columns and the new ones.
+    for sql in [
+        "UPDATE assistant_questions SET outcome = 'answered'",
+        "UPDATE assistant_questions SET total_millis = 5",
+        "DELETE FROM assistant_questions",
+    ] {
+        let error = conn.execute(sql, []).unwrap_err();
+        assert!(
+            error.to_string().contains("ERR_APPEND_ONLY"),
+            "{sql}: {error}"
+        );
+    }
+    assert_eq!(ASSISTANT_TIMING_SQL.matches("ADD COLUMN").count(), 4);
+    for word in [
+        "CREATE",
+        "DROP",
+        "DELETE FROM",
+        "INSERT",
+        "UPDATE",
+        "NOT NULL",
+    ] {
+        assert_eq!(ASSISTANT_TIMING_SQL.matches(word).count(), 0, "{word}");
+    }
+}
+
+#[test]
+fn migration_18_widens_the_outcomes_of_the_question_log_and_keeps_every_question_as_it_was() {
+    // Plan 54 S5 (plan 55 Section 3): a file at version 17 with questions in the log, a continuation
+    // among them, is upgraded. The table is made again with `time_limit` among its outcomes; every
+    // row keeps its id, its values and its link to its parent, the append-only triggers and the
+    // indexes are the same and still hold, and a copy is taken first.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_17(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 17);
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome, tool_calls_json, model_calls, total_millis, \
+         calls_json) VALUES ('2026-11-02T14:46:44.402Z', '2026-11-02', 'ikram ke bakaya', 'ur', \
+         'c-1', 'model', 1, 'which_one', '[{\"tool\":\"find\"}]', 2, 8123, '[{\"ms\":4000}]')",
+        [],
+    )
+    .unwrap();
+    // A continuation of it (after "کون سا؟"), and a chip.
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, parent_id, source, counted, outcome, model_calls) \
+         VALUES ('2026-11-02T14:47:10.000Z', '2026-11-02', 'a20', 'ur', 'c-1', 1, 'continue', 0, \
+         'answered', 1)",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome) \
+         VALUES ('2026-11-02T14:50:00.000Z', '2026-11-02', 'cash_in_hand', 'ur', 'c-2', 'chip', 0, \
+         'answered')",
+        [],
+    )
+    .unwrap();
+    // The old CHECK refuses the new outcome.
+    assert!(
+        conn.execute(
+            "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+             conversation_id, source, counted, outcome) VALUES ('2026-11-02T15:00:00.000Z', \
+             '2026-11-02', 'x', 'ur', 'c-3', 'model', 0, 'time_limit')",
+            [],
+        )
+        .is_err()
+    );
+    let before = all_rows_without(&conn, &[]);
+    let indexes_before = schema(&conn, "index");
+    // The upgrade stops at migration 18 (`released_version_18`): the later ones are tested on their own.
+    let triggers_of = |conn: &Connection| -> Vec<String> {
+        schema(conn, "trigger")
+            .into_iter()
+            .filter(|t| !t.starts_with("bikri_sales_snapshot_is_final:"))
+            .collect()
+    };
+    let tables_of = |conn: &Connection| -> Vec<String> {
+        schema(conn, "table")
+            .into_iter()
+            .filter(|t| !t.starts_with("assistant_questions:") && !t.starts_with("bikri_sales:"))
+            .collect()
+    };
+    let triggers_before = triggers_of(&conn);
+    let tables_before = tables_of(&conn);
+
+    let outcome =
+        migrate::migrate_with(&released_version_18(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (17, 18));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 18);
+    // Every row, id, value and link is as it was.
+    assert_eq!(
+        all_rows_without(&conn, &[]),
+        before,
+        "every row is as it was"
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM assistant_questions WHERE parent_id = 1 AND id = 2"
+        ),
+        1
+    );
+    let broken = conn
+        .prepare("PRAGMA foreign_key_check")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .count();
+    assert_eq!(broken, 0, "no link is broken");
+    // No other table, no index and no trigger changed (the same names and the same rules).
+    assert_eq!(tables_of(&conn), tables_before, "no other table changed");
+    assert_eq!(schema(&conn, "index"), indexes_before, "no index changed");
+    assert_eq!(triggers_of(&conn), triggers_before, "no trigger changed");
+    // The new outcome is accepted and the others still are; a word that is not one is not.
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome, finish_reason) VALUES \
+         ('2026-11-02T15:00:00.000Z', '2026-11-02', 'x', 'ur', 'c-3', 'model', 0, 'time_limit', \
+         'time_limit')",
+        [],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+             conversation_id, source, counted, outcome) VALUES ('2026-11-02T15:01:00.000Z', \
+             '2026-11-02', 'x', 'ur', 'c-3', 'model', 0, 'slow')",
+            [],
+        )
+        .is_err()
+    );
+    // The log is still append-only, and a row cannot be replaced.
+    for sql in [
+        "UPDATE assistant_questions SET outcome = 'answered'",
+        "DELETE FROM assistant_questions",
+        "INSERT OR REPLACE INTO assistant_questions (id, asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome) VALUES (1, '2026-11-02T15:02:00.000Z', \
+         '2026-11-02', 'x', 'ur', 'c-4', 'model', 0, 'answered')",
+    ] {
+        let error = conn.execute(sql, []).unwrap_err();
+        assert!(
+            error.to_string().contains("ERR_APPEND_ONLY"),
+            "{sql}: {error}"
+        );
+    }
+    // The migration deletes and updates no row: it only copies them.
+    assert_eq!(ASSISTANT_TIME_LIMIT_SQL.matches("DELETE FROM").count(), 0);
+    assert_eq!(
+        ASSISTANT_TIME_LIMIT_SQL.matches("UPDATE assistant").count(),
+        0
+    );
+}
+
+#[test]
+fn migration_20_makes_chukta_khata_and_touches_no_number_row_or_hash() {
+    // Plan 64 (PRD FR-13.9, Architecture 15.2, decisions C1, C2, C9 and C11 of plan 60): a file at
+    // version 19 holds posted entries with person keys on 0030 and 0031, sale lines with the names of
+    // one-time people, and dead-amount marks. It is upgraded: a copy is taken first, the columns are
+    // renamed, 0030 becomes چکتا کھاتہ and 0031 the old closed account, the people of the lines on 0030
+    // are listed in `chukta_buyers`, the marks on people end, and not one amount, row value or chain
+    // hash moves. The triggers still fire on the renamed columns.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_19(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 19);
+    let f = common::fixture(&conn);
+    let khata = common::account_id(&conn, "0030");
+    let old_seller = common::account_id(&conn, "0031");
+    let akram = common::account_id(&conn, "0020");
+    // The fixture's draft entry is the posting of its sale line; then two people on 0030 (شاہد pays
+    // in cash, ناصر owes) and one on 0031.
+    legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "01010001",
+        "04010001",
+        12_880,
+    );
+    let shahid_key = "شاہد|03000000000";
+    let nasir_key = "ناصر|03001111111";
+    let shahid_entry = legacy_post_with(
+        &conn,
+        None,
+        "2026-10-10",
+        "0030",
+        "01010001",
+        12_800,
+        Some(shahid_key),
+    );
+    let nasir_entry = legacy_post_with(
+        &conn,
+        None,
+        "2026-10-11",
+        "0030",
+        "01010001",
+        2_000,
+        Some(nasir_key),
+    );
+    legacy_post_with(
+        &conn,
+        None,
+        "2026-10-11",
+        "01010001",
+        "0031",
+        3_000,
+        Some("بشیر|03002222222"),
+    );
+    // Their sale lines, with the names typed on the line (version 19 columns).
+    for (entry, ur, en, phone, key, total) in [
+        (
+            shahid_entry,
+            "شاہد",
+            "Shahid",
+            "03000000000",
+            shahid_key,
+            1_280_000_i64,
+        ),
+        (
+            nasir_entry,
+            "ناصر",
+            "Nasir",
+            "03001111111",
+            nasir_key,
+            200_000,
+        ),
+    ] {
+        conn.execute(
+            "INSERT INTO bikri_sales (bikri_id, lot_id, line_no, journal_entry_id, entry_date, buyer_account_id, qty,
+                seller_rate_paisa, seller_amount_paisa, seller_comm_method, seller_comm_value_bps, seller_comm_paisa,
+                buyer_rate_paisa, buyer_value_paisa, buyer_comm_method, buyer_comm_value_bps, buyer_comm_paisa,
+                laga_method, laga_value_paisa, laga_paisa, buyer_total_paisa, payment_type,
+                pukhta_name_ur, pukhta_name_en, pukhta_phone, pukhta_person_key)
+             VALUES (?1, ?2, ?3, ?4, '2026-10-10', ?5, 1, ?6, ?6, 'percent', 0, 0, ?6, ?6, 'percent', 0, 0,
+                'per_unit', 0, 0, ?6, 'cash', ?7, ?8, ?9, ?10)",
+            mandi_db::rusqlite::params![f.bikri, f.lot, 10 + total / 100_000, entry, khata, total, ur, en, phone, key],
+        )
+        .unwrap();
+    }
+    // Marks: one on a person of 0030 (ends here) and one on an ordinary buyer (stays).
+    conn.execute(
+        "INSERT INTO dead_marks (account_id, pukhta_person_key, entry_date, reason, owed_paisa, after_entry_id)
+         VALUES (?1, ?2, '2026-10-12', 'died', 200000, ?3)",
+        mandi_db::rusqlite::params![khata, nasir_key, nasir_entry],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO dead_marks (account_id, entry_date, reason, owed_paisa, after_entry_id)
+         VALUES (?1, '2026-10-12', 'left', 128800, ?2)",
+        mandi_db::rusqlite::params![akram, nasir_entry],
+    )
+    .unwrap();
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    verify_chain(&conn).unwrap();
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 4);
+    // Every row of every table but the three that change on purpose, by position (the names of the
+    // columns differ after the rename, the values must not).
+    let untouched = |conn: &Connection| -> Vec<(String, String)> {
+        all_rows(conn)
+            .into_iter()
+            .filter(|(table, _)| {
+                !["accounts", "dead_marks", "chukta_buyers"].contains(&table.as_str())
+            })
+            .collect()
+    };
+    let other_accounts = |conn: &Connection| -> Vec<String> {
+        conn.prepare(
+            "SELECT quote(id) || quote(code) || quote(name_ur) || quote(name_en) || quote(search_ur) || quote(is_active)
+                    || quote(opening_dr_paisa) || quote(opening_cr_paisa) || quote(is_system)
+             FROM accounts WHERE code NOT IN ('0030', '0031') ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let rows_before = untouched(&conn);
+    let accounts_before = other_accounts(&conn);
+    let marks_before = count(&conn, "SELECT COUNT(*) FROM dead_marks");
+    let tables_before = schema(&conn, "table").len();
+
+    // Only migration 20 is applied here: the file of the next release is in its own test.
+    let outcome =
+        migrate::migrate_with(&released_version_20(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (19, 20));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 20);
+
+    // No number, row value or chain hash moved, and the chain still verifies.
+    assert_eq!(
+        hashes(&conn),
+        before_hashes,
+        "every chain hash is as it was"
+    );
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        untouched(&conn),
+        rows_before,
+        "every other row is as it was"
+    );
+    assert_eq!(other_accounts(&conn), accounts_before);
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM dead_marks"),
+        marks_before
+    );
+    assert_eq!(
+        schema(&conn, "table").len(),
+        tables_before + 1,
+        "one new table"
+    );
+
+    // The columns are renamed, and the values are in them.
+    let has_column = |table: &str, column: &str| -> bool {
+        count(
+            &conn,
+            &format!("SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = '{column}'"),
+        ) == 1
+    };
+    for table in [
+        "bikri_lots",
+        "bikri_sales",
+        "analytics_facts",
+        "vouchers",
+        "fruit_takes",
+        "journal_lines",
+        "bill_allocations",
+        "advance_allocations",
+        "dead_marks",
+    ] {
+        assert!(has_column(table, "chukta_person_key"), "{table}");
+        assert!(!has_column(table, "pukhta_person_key"), "{table}");
+    }
+    assert!(
+        has_column("bikri_sales", "chukta_name_en") && !has_column("bikri_sales", "pukhta_name_en")
+    );
+    assert!(
+        has_column("accounts", "is_chukta_khata") && !has_column("accounts", "is_pukhta_khata")
+    );
+    assert!(
+        has_column("accounts", "was_one_time_party") && !has_column("accounts", "is_pukhta_party")
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!("SELECT COUNT(*) FROM journal_lines WHERE chukta_person_key = '{shahid_key}'")
+        ),
+        1
+    );
+
+    // 0030 is چکتا کھاتہ, active, with its search keys; 0031 is the old closed account, inactive.
+    let account = |code: &str| -> (String, String, String, i64, i64) {
+        conn.query_row(
+            "SELECT name_ur, name_en, search_en, is_active, is_chukta_khata FROM accounts WHERE code = ?1",
+            [code],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .unwrap()
+    };
+    assert_eq!(
+        account("0030"),
+        (
+            "چکتا کھاتہ".to_owned(),
+            "Chukta Khata".to_owned(),
+            "chukta khata".to_owned(),
+            1,
+            1
+        )
+    );
+    assert_eq!(
+        account("0031"),
+        (
+            "پرانا بند کھاتہ".to_owned(),
+            "Old Closed Account".to_owned(),
+            "old closed account".to_owned(),
+            0,
+            1
+        )
+    );
+    // Its balance stays in the books: the old open lines are untouched.
+    assert_eq!(
+        count(
+            &conn,
+            &format!("SELECT COUNT(*) FROM journal_lines WHERE account_id = {old_seller}")
+        ),
+        1
+    );
+
+    // The people of the lines on 0030 are listed, with the names and phone typed on the line.
+    let list: Vec<(String, String, String, Option<String>, i64)> = conn
+        .prepare(
+            "SELECT person_key, name_ur, name_en, phone, is_active FROM chukta_buyers ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        })
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        list,
+        vec![
+            (
+                shahid_key.to_owned(),
+                "شاہد".to_owned(),
+                "Shahid".to_owned(),
+                Some("03000000000".to_owned()),
+                1
+            ),
+            (
+                nasir_key.to_owned(),
+                "ناصر".to_owned(),
+                "Nasir".to_owned(),
+                Some("03001111111".to_owned()),
+                1
+            ),
+        ]
+    );
+    // A row is never deleted and its key never changes; one person is one row.
+    for sql in [
+        "DELETE FROM chukta_buyers",
+        "UPDATE chukta_buyers SET person_key = 'x|' WHERE id = 1",
+    ] {
+        let error = conn.execute(sql, []).unwrap_err();
+        assert!(
+            error.to_string().contains("ERR_APPEND_ONLY"),
+            "{sql}: {error}"
+        );
+    }
+    assert!(
+        conn.execute(
+            "INSERT INTO chukta_buyers (person_key, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES (?1, 'x', 'x', 'x', 'x', 'x')",
+            [shahid_key],
+        )
+        .is_err(),
+        "the key is unique"
+    );
+
+    // The mark on a person ends, with its row kept as history; the mark on a buyer stays.
+    let person_mark: (i64, Option<String>) = conn
+        .query_row(
+            "SELECT is_active, undo_reason FROM dead_marks WHERE chukta_person_key IS NOT NULL",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        person_mark,
+        (0, Some("one-time accounts removed".to_owned()))
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM dead_marks WHERE account_id = {akram} AND is_active = 1"
+            )
+        ),
+        1
+    );
+
+    // The triggers still fire on the renamed columns and names.
+    for sql in [
+        "UPDATE journal_lines SET chukta_person_key = 'x|1'",
+        "DELETE FROM journal_lines",
+        "UPDATE bikri_sales SET buyer_total_paisa = buyer_total_paisa + 100 WHERE id = 1",
+        "UPDATE bikri_sales SET chukta_name_en = 'Other' WHERE id = 1",
+        "UPDATE accounts SET is_active = 0 WHERE code = '0030'",
+        "UPDATE accounts SET was_one_time_party = 1 WHERE code = '0020'",
+    ] {
+        assert!(
+            conn.execute(sql, []).is_err(),
+            "{sql} must still be refused"
+        );
+    }
+
+    // The migration deletes nothing and updates only the two places it names.
+    assert_eq!(CHUKTA_KHATA_SQL.matches("DELETE FROM").count(), 0);
+    assert_eq!(CHUKTA_KHATA_SQL.matches("UPDATE accounts").count(), 1);
+    assert_eq!(CHUKTA_KHATA_SQL.matches("UPDATE dead_marks").count(), 1);
+}
+
+#[test]
+fn migration_21_gives_old_lines_the_paid_amount_they_had_and_touches_no_number_row_or_hash() {
+    // Plan 65 (PRD FR-12.44, E2E-66, D8 Feature 4, decision P9): a file at version 20 holds sale lines
+    // saved as `cash` and as `credit`, one of each replaced by an edit. It is upgraded: a copy is taken
+    // first, a cash line is paid in full (its buyer total), a credit line is paid 0 (replaced lines
+    // too), the new column is frozen, and not one amount, row value or chain hash moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_20(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 20);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM pragma_table_info('bikri_sales') WHERE name = 'paid_paisa'"
+        ),
+        0,
+        "the column is new in migration 21"
+    );
+    let f = common::fixture(&conn);
+    let akram = common::account_id(&conn, "0020");
+    // The fixture's line is a credit line of 12,880 in its draft entry; post that entry and add a
+    // cash line (12,800), a second credit line (2,000) and a replaced cash line (5,000) and a
+    // replaced credit line (3,000), each in a posted entry of its own.
+    legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "0020",
+        "04010001",
+        12_880,
+    );
+    let mut totals_by_line = vec![(f.sale, 1_288_000_i64, "credit")];
+    for (line_no, day, total, payment, active) in [
+        (2, "2026-10-10", 1_280_000_i64, "cash", 1),
+        (3, "2026-10-11", 200_000, "credit", 1),
+        (4, "2026-10-11", 500_000, "cash", 0),
+        (5, "2026-10-12", 300_000, "credit", 0),
+    ] {
+        let entry = legacy_post(&conn, None, day, "0020", "04010001", total / 100);
+        conn.execute(
+            "INSERT INTO bikri_sales (bikri_id, lot_id, line_no, journal_entry_id, entry_date, buyer_account_id, qty,
+                seller_rate_paisa, seller_amount_paisa, seller_comm_method, seller_comm_value_bps, seller_comm_paisa,
+                buyer_rate_paisa, buyer_value_paisa, buyer_comm_method, buyer_comm_value_bps, buyer_comm_paisa,
+                laga_method, laga_value_paisa, laga_paisa, buyer_total_paisa, payment_type, is_active, ended)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?7, 'percent', 0, 0, ?7, ?7, 'percent', 0, 0,
+                'per_unit', 0, 0, ?7, ?8, ?9, CASE WHEN ?9 = 1 THEN NULL ELSE 'replaced' END)",
+            mandi_db::rusqlite::params![f.bikri, f.lot, line_no, entry, day, akram, total, payment, active],
+        )
+        .unwrap();
+        totals_by_line.push((conn.last_insert_rowid(), total, payment));
+    }
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    verify_chain(&conn).unwrap();
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 5);
+    // Every row of every table but `bikri_sales`, which gains a column, and every balance.
+    let untouched = |conn: &Connection| -> Vec<(String, String)> {
+        all_rows(conn)
+            .into_iter()
+            .filter(|(table, _)| table != "bikri_sales")
+            .collect()
+    };
+    let balances = |conn: &Connection| -> Vec<(i64, i64, i64)> {
+        conn.prepare(
+            "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+             FROM journal_lines GROUP BY account_id ORDER BY account_id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let sales_before = conn
+        .prepare("SELECT id, buyer_total_paisa, payment_type, is_active, version, updated_at FROM bikri_sales ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?, r.get::<_, String>(5)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    let rows_before = untouched(&conn);
+    let balances_before = balances(&conn);
+
+    let outcome =
+        migrate::migrate_with(&released_version_21(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (20, 21));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 21);
+
+    // No number, row value or chain hash moved, and the chain still verifies.
+    assert_eq!(
+        hashes(&conn),
+        before_hashes,
+        "every chain hash is as it was"
+    );
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        untouched(&conn),
+        rows_before,
+        "every other row is as it was"
+    );
+    assert_eq!(
+        balances(&conn),
+        balances_before,
+        "every balance is as it was"
+    );
+    // The lines keep their stored total, word, state, version and update time; only `paid_paisa` is new.
+    let sales_after = conn
+        .prepare("SELECT id, buyer_total_paisa, payment_type, is_active, version, updated_at FROM bikri_sales ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?, r.get::<_, String>(5)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    assert_eq!(sales_after, sales_before);
+    // E2E-66: a cash line is paid in full, a credit line is paid 0, and a replaced line says the same.
+    let cash_line = totals_by_line[1].0;
+    for (id, total, payment) in totals_by_line {
+        let paid: i64 = conn
+            .query_row(
+                "SELECT paid_paisa FROM bikri_sales WHERE id = ?1",
+                [id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            paid,
+            if payment == "cash" { total } else { 0 },
+            "line {id} ({payment})"
+        );
+    }
+    assert_eq!(
+        count(&conn, "SELECT SUM(paid_paisa) FROM bikri_sales"),
+        1_280_000 + 500_000,
+        "128 and 50 rupees of cash lines: 12,800 + 5,000"
+    );
+
+    // The new column is frozen like the rest of the line, and its CHECKs hold for a new line.
+    let error = conn
+        .execute(
+            "UPDATE bikri_sales SET paid_paisa = 0 WHERE id = ?1",
+            [cash_line],
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
+    let error = conn
+        .execute(
+            "INSERT INTO bikri_sales (bikri_id, lot_id, line_no, journal_entry_id, entry_date, buyer_account_id, qty,
+                seller_rate_paisa, seller_amount_paisa, seller_comm_method, seller_comm_value_bps, seller_comm_paisa,
+                buyer_rate_paisa, buyer_value_paisa, buyer_comm_method, buyer_comm_value_bps, buyer_comm_paisa,
+                laga_method, laga_value_paisa, laga_paisa, buyer_total_paisa, payment_type, paid_paisa)
+             VALUES (?1, ?2, 9, ?3, '2026-10-10', ?4, 1, 100000, 100000, 'percent', 0, 0, 100000, 100000, 'percent', 0, 0,
+                'per_unit', 0, 0, 100000, 'credit', 110000)",
+            mandi_db::rusqlite::params![f.bikri, f.lot, f.entry, akram],
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("CHECK constraint failed"),
+        "{error}"
+    );
+}
+
+#[test]
+fn migration_22_numbers_old_lots_by_seller_item_first_posting_day_then_id_and_touches_nothing_else()
+{
+    // Plan 71 (PRD FR-12.45, E2E-70, L2, L5, L6). A file at version 21 holds lots of one seller and one
+    // item on several days, in one بکری that was cancelled, and lots of another item and another
+    // seller. It is upgraded: a copy is taken first, each lot gets its counter in the order of the day
+    // of its بکری and then its id, `lot_counters` holds the biggest number of each seller and item, and
+    // not one amount, row value or chain hash moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_21(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 21);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM pragma_table_info('bikri_lots') WHERE name = 'lot_counter'"
+        ),
+        0,
+        "the column is new in migration 22"
+    );
+    let f = common::fixture(&conn);
+    let one = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+    let packing = one("SELECT id FROM packings LIMIT 1");
+    conn.execute_batch(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('2', 'آم', 'Mango', 'آم', 'mango', 'mn', 'fruit')",
+    )
+    .unwrap();
+    let mango = one("SELECT id FROM items WHERE code = '2'");
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ((SELECT id FROM account_controls WHERE code = '03011'), '0011', 2, 'seller', 'کریم', 'Karim', 'کریم', 'karim', 'krm')",
+        [],
+    )
+    .unwrap();
+    let karim = one("SELECT id FROM accounts WHERE code = '0011'");
+    // (number, day, status): بکری 1 is the fixture's (2026-10-10).
+    for (number, day, status) in [
+        (2_i64, "2026-10-09", "saved"),
+        (3, "2026-10-10", "saved"),
+        (4, "2026-10-12", "cancelled"),
+    ] {
+        conn.execute(
+            "INSERT INTO bikri_entries (number, entry_date, bill_date, status, cancel_reason)
+             VALUES (?1, ?2, ?2, ?3, CASE WHEN ?3 = 'cancelled' THEN 'wrong' END)",
+            mandi_db::rusqlite::params![number, day, status],
+        )
+        .unwrap();
+    }
+    let entry_of = |number: i64| -> i64 {
+        conn.query_row(
+            "SELECT id FROM bikri_entries WHERE number = ?1",
+            [number],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    let add_lot = |number: i64, seller: i64, item: i64| -> i64 {
+        conn.execute(
+            "INSERT INTO bikri_lots (bikri_id, lot_no, seller_account_id, item_id, packing_id, qty_received)
+             VALUES (?1, (SELECT COALESCE(MAX(lot_no), 0) + 1 FROM bikri_lots WHERE bikri_id = ?1), ?2, ?3, ?4, 10)",
+            mandi_db::rusqlite::params![entry_of(number), seller, item, packing],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    // Inserted out of day order on purpose: ids do not follow the days.
+    let later_same_day = add_lot(3, f.seller, f.item); // 2026-10-10, after the fixture's lot (same day)
+    let earlier_day = add_lot(2, f.seller, f.item); // 2026-10-09: the first mango... banana of Rahim
+    let cancelled_one = add_lot(4, f.seller, f.item); // a cancelled بکری: still numbered, never freed
+    let rahim_mango = add_lot(3, f.seller, mango);
+    let karim_banana = add_lot(2, karim, f.item);
+    let entry3 = entry_of(3);
+    // The chain, the balances and every row, before.
+    legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "0020",
+        "04010001",
+        12_880,
+    );
+    verify_chain(&conn).unwrap();
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    let rows_before = all_rows(&conn);
+
+    let outcome =
+        migrate::migrate_with(&released_version_22(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (21, 22));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 22);
+
+    // E2E-70: Rahim's banana lots in the order of the day of their بکری, then id.
+    let counter = |lot: i64| -> i64 {
+        conn.query_row(
+            "SELECT lot_counter FROM bikri_lots WHERE id = ?1",
+            [lot],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(counter(earlier_day), 1, "10-10-09 is the first");
+    assert_eq!(
+        counter(f.lot),
+        2,
+        "the fixture's lot, 10-10-10, the smaller id"
+    );
+    assert_eq!(counter(later_same_day), 3, "the same day, the bigger id");
+    assert_eq!(
+        counter(cancelled_one),
+        4,
+        "a cancelled بکری's lot is numbered too"
+    );
+    assert_eq!(counter(rahim_mango), 1, "another item starts at 1");
+    assert_eq!(counter(karim_banana), 1, "another seller starts at 1");
+    // The biggest number ever given to each seller and item.
+    let counters: Vec<(i64, i64, i64)> = conn
+        .prepare("SELECT seller_account_id, item_id, last_counter FROM lot_counters ORDER BY seller_account_id, item_id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        counters,
+        vec![
+            (f.seller, f.item, 4),
+            (f.seller, mango, 1),
+            (karim, f.item, 1)
+        ]
+    );
+
+    // No number, row value or chain hash moved. `bikri_lots` gained a column and the new table is new.
+    assert_eq!(
+        hashes(&conn),
+        before_hashes,
+        "every chain hash is as it was"
+    );
+    verify_chain(&conn).unwrap();
+    let skip = [("bikri_lots", "lot_counter")];
+    let after: Vec<(String, String)> = all_rows_without(&conn, &skip)
+        .into_iter()
+        .filter(|(table, _)| table != "lot_counters")
+        .collect();
+    assert_eq!(
+        after, rows_before,
+        "every other row and column is as it was"
+    );
+
+    // The triggers (L2, L5). A new lot carries a number above every number ever given.
+    let insert = |counter: i64| {
+        conn.execute(
+            "INSERT INTO bikri_lots (bikri_id, lot_no, seller_account_id, item_id, packing_id, qty_received, lot_counter)
+             VALUES (?1, (SELECT COALESCE(MAX(lot_no), 0) + 1 FROM bikri_lots WHERE bikri_id = ?1), ?2, ?3, ?4, 10, ?5)",
+            mandi_db::rusqlite::params![entry3, f.seller, f.item, packing, counter],
+        )
+    };
+    let error = insert(4).unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LOT_COUNTER_USED"),
+        "{error}"
+    );
+    let error = insert(2).unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LOT_COUNTER_USED"),
+        "{error}"
+    );
+    insert(5).unwrap();
+    let fifth = conn.last_insert_rowid();
+    // An insert that forgets the number gets the next one by itself.
+    insert(0).unwrap();
+    let sixth = conn.last_insert_rowid();
+    assert_eq!(counter(sixth), 6);
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT last_counter FROM lot_counters WHERE seller_account_id = {} AND item_id = {}",
+                f.seller, f.item
+            )
+        ),
+        6
+    );
+    // The counter of a saved lot is final while its seller and item stay.
+    let error = conn
+        .execute(
+            "UPDATE bikri_lots SET lot_counter = 9 WHERE id = ?1",
+            [fifth],
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
+    // A move to another seller takes a number above every number ever given to the new seller and
+    // item (Karim's banana lot has 1) ...
+    let error = conn
+        .execute(
+            "UPDATE bikri_lots SET seller_account_id = ?2, lot_counter = 1 WHERE id = ?1",
+            [fifth, karim],
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LOT_COUNTER_USED"),
+        "{error}"
+    );
+    // ... and then it takes it. The old number stays unused: Rahim's banana count still says 6.
+    conn.execute(
+        "UPDATE bikri_lots SET seller_account_id = ?2, lot_counter = 2 WHERE id = ?1",
+        [fifth, karim],
+    )
+    .unwrap();
+    assert_eq!(counter(fifth), 2);
+    let after_move = |seller: i64, item: i64| -> i64 {
+        conn.query_row(
+            "SELECT last_counter FROM lot_counters WHERE seller_account_id = ?1 AND item_id = ?2",
+            [seller, item],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(
+        after_move(f.seller, f.item),
+        6,
+        "Rahim's numbers are never given back"
+    );
+    assert_eq!(after_move(karim, f.item), 2);
+    insert(0).unwrap();
+    assert_eq!(
+        counter(conn.last_insert_rowid()),
+        7,
+        "number 5 is not used again"
+    );
+    // lot_counters itself only goes up and is never deleted from.
+    let error = conn.execute("DELETE FROM lot_counters", []).unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
+    let error = conn
+        .execute(
+            "UPDATE lot_counters SET last_counter = 1 WHERE last_counter > 1",
+            [],
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
+}
+
+#[test]
+fn migration_23_adds_the_link_columns_and_the_0605_accounts_and_touches_no_number_row_or_hash() {
+    // Plan 76 points 5 and 10 (PRD FR-16.4, FR-16.6, FR-17.9 v1.41, Architecture 15.4 v1.26). A file at
+    // version 22 holds a khata, a staff member with a loan account, another person with a loan account,
+    // two partners and a posted entry. It is upgraded: a copy is taken first, every account is
+    // unlinked, a person is `staff` when a staff record names him and `other` otherwise, the controls
+    // 0307 and 0605 and the account 03070001 are made, each partner gets his 0605 account, and not one
+    // amount, row value or chain hash moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_22(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 22);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM pragma_table_info('accounts') WHERE name IN ('link_kind', 'link_partner_id', 'link_since_entry_id', 'person_type')"
+        ),
+        0,
+        "the columns are new in migration 23"
+    );
+    let f = common::fixture(&conn);
+    let account = |control: &str,
+                   code: &str,
+                   serial: i64,
+                   party: &str,
+                   ur: &str,
+                   en: &str|
+     -> i64 {
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES ((SELECT id FROM account_controls WHERE code = ?1), ?2, ?3, ?4, ?5, ?6, ?5, lower(?6), lower(?6))",
+            mandi_db::rusqlite::params![control, code, serial, party, ur, en],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let khata = account(
+        "0305",
+        "03050001",
+        1,
+        "separate",
+        "خاندانی کھاتہ",
+        "Family Khata",
+    );
+    let aslam = account("0103", "01030001", 1, "other", "اسلم", "Aslam");
+    let nawaz = account("0103", "01030002", 2, "other", "نواز", "Nawaz");
+    conn.execute(
+        "INSERT INTO staff (name_ur, name_en, search_ur, search_en, search_phonetic, role, code, account_id)
+         VALUES ('اسلم', 'Aslam', 'اسلم', 'aslam', 'slm', 'munshi', '0060', ?1)",
+        [aslam],
+    )
+    .unwrap();
+    let mut partners = Vec::new();
+    for (ur, en) in [("الف", "A"), ("ب", "B")] {
+        let ids: Vec<i64> = ["06", "06"]
+            .iter()
+            .enumerate()
+            .map(|(i, _)| {
+                account(
+                    if i == 0 { "0602" } else { "0603" },
+                    &format!("0602{}{}", i, en),
+                    9,
+                    "other",
+                    ur,
+                    en,
+                )
+            })
+            .collect();
+        conn.execute(
+            "INSERT INTO partners (name_ur, name_en, capital_account_id, drawings_account_id)
+             VALUES (?1, ?2, ?3, ?4)",
+            (ur, en, ids[0], ids[1]),
+        )
+        .unwrap();
+        partners.push(conn.last_insert_rowid());
+    }
+    legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "0020",
+        "04010001",
+        12_880,
+    );
+    verify_chain(&conn).unwrap();
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    let rows_before = all_rows(&conn);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (22, LATEST));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), LATEST as i64);
+
+    // Every old account is unlinked and posts as before.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE link_kind <> 'none' OR link_partner_id IS NOT NULL"
+        ),
+        0
+    );
+    // A person is staff when a staff record names his account, else other; nobody else has a type.
+    let type_of = |id: i64| -> Option<String> {
+        conn.query_row(
+            "SELECT person_type FROM accounts WHERE id = ?1",
+            [id],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(type_of(aslam).as_deref(), Some("staff"));
+    assert_eq!(type_of(nawaz).as_deref(), Some("other"));
+    assert_eq!(type_of(khata), None);
+    assert_eq!(type_of(f.seller), None);
+    // The controls, the contra account and one 0605 account for each partner.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM account_controls WHERE code IN ('0307', '0605')"
+        ),
+        2
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts a JOIN account_controls c ON c.id = a.control_id
+             JOIN account_heads h ON h.id = c.head_id
+             WHERE a.code = '03070001' AND c.code = '0307' AND h.code = '03' AND a.is_system = 1"
+        ),
+        1,
+        "the contra account is a system account in head 03, outside the partners' equity"
+    );
+    let linked: Vec<(i64, String)> = conn
+        .prepare(
+            "SELECT p.id, a.code FROM partners p JOIN accounts a ON a.id = p.linked_account_id ORDER BY p.id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        linked,
+        vec![
+            (partners[0], "06050001".to_owned()),
+            (partners[1], "06050002".to_owned())
+        ]
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM journal_lines l JOIN accounts a ON a.id = l.account_id
+             WHERE a.code = '03070001' OR a.code LIKE '0605%'"
+        ),
+        0,
+        "no line is on the new accounts: nothing is linked yet"
+    );
+
+    // No amount, row value or chain hash moved. `accounts` and `partners` gained columns, and the
+    // controls and accounts made by the migration are new.
+    assert_eq!(
+        hashes(&conn),
+        before_hashes,
+        "every chain hash is as it was"
+    );
+    verify_chain(&conn).unwrap();
+    let skip = [
+        ("accounts", "link_kind"),
+        ("accounts", "link_partner_id"),
+        ("accounts", "link_since_entry_id"),
+        ("accounts", "person_type"),
+        ("partners", "linked_account_id"),
+        // Migration 25 (plan 78): the original rent of a garden is new.
+        ("ventures", "rent_original_paisa"),
+    ];
+    // A table is one text of all its rows; the rows the migration made are taken out of it by line.
+    // `venture_items` is the table of migration 25.
+    let after: Vec<(String, String)> = all_rows_without(&conn, &skip)
+        .into_iter()
+        .filter(|(table, _)| table != "venture_items")
+        .map(|(table, rows)| {
+            let kept: Vec<&str> = rows
+                .lines()
+                .filter(|row| match table.as_str() {
+                    "account_controls" => !row.contains("'0307'") && !row.contains("'0605'"),
+                    "accounts" => !row.contains("'03070001'") && !row.contains("'0605"),
+                    _ => true,
+                })
+                .collect();
+            (table, kept.join("\n"))
+        })
+        .collect();
+    assert_eq!(
+        after, rows_before,
+        "every other row and column is as it was"
+    );
+
+    // A partner link must name its partner, and only a partner link may.
+    let error = conn
+        .execute(
+            "UPDATE accounts SET link_kind = 'partner' WHERE id = ?1",
+            [khata],
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LINK_PARTNER_REQUIRED"),
+        "{error}"
+    );
+    let error = conn
+        .execute(
+            "UPDATE accounts SET link_kind = 'shop', link_partner_id = ?2 WHERE id = ?1",
+            [khata, partners[0]],
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LINK_PARTNER_REQUIRED"),
+        "{error}"
+    );
+    conn.execute(
+        "UPDATE accounts SET link_kind = 'partner', link_partner_id = ?2 WHERE id = ?1",
+        [khata, partners[0]],
+    )
+    .unwrap();
+}
+
+/// Migration 24 (plan 77, robustness finding 3): the two covering indexes of the commission page.
+/// They add no table, column or row, and a day's figures are read from them alone, in day order.
+#[test]
+fn migration_24_adds_the_two_covering_indexes_of_the_commission_page() {
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let columns = |index: &str| -> Vec<String> {
+        conn.prepare(&format!("PRAGMA index_info({index})"))
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(2))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    assert_eq!(
+        columns("idx_partner_share_rows_kind_date"),
+        ["kind", "entry_date", "partner_id", "amount_paisa"]
+    );
+    assert_eq!(
+        columns("idx_analytics_facts_date_sums"),
+        [
+            "entry_date",
+            "sign",
+            "seller_comm_paisa",
+            "buyer_comm_paisa",
+            "laga_paisa"
+        ]
+    );
+    assert_eq!(
+        columns("idx_analytics_facts_views"),
+        [
+            "entry_date",
+            "item_id",
+            "seller_account_id",
+            "buyer_account_id",
+            "chukta_person_key",
+            "bikri_id",
+            "sign",
+            "qty",
+            "seller_amount_paisa",
+            "seller_comm_paisa",
+            "buyer_value_paisa",
+            "buyer_comm_paisa",
+            "laga_paisa"
+        ]
+    );
+    // The date queries that need no sums keep their small index.
+    assert!(!columns("idx_analytics_facts_date").is_empty());
+    // A day grouping of each is read from its index alone, with no sort and no scan of the table.
+    for (sql, index) in [
+        (
+            "SELECT entry_date, partner_id, SUM(amount_paisa) FROM partner_share_rows
+             WHERE kind = 'income' AND entry_date >= '2026-10-01' AND entry_date <= '2026-10-31'
+             GROUP BY entry_date, partner_id",
+            "idx_partner_share_rows_kind_date",
+        ),
+        (
+            "SELECT entry_date, SUM(sign * seller_comm_paisa), SUM(sign * buyer_comm_paisa),
+                    SUM(sign * laga_paisa)
+             FROM analytics_facts WHERE entry_date >= '2026-10-01' AND entry_date <= '2026-10-31'
+             GROUP BY entry_date",
+            "idx_analytics_facts_date_sums",
+        ),
+    ] {
+        let plan: Vec<String> = conn
+            .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(3))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        let text = plan.join(" | ");
+        assert!(text.contains(&format!("COVERING INDEX {index}")), "{text}");
+        assert!(!text.contains("TEMP B-TREE"), "{text}");
+    }
+}
+
+#[test]
+fn migration_25_makes_venture_items_and_fills_it_from_the_item_of_each_garden() {
+    // Plan 78 D2 (PRD FR-12.11 v1.43, Architecture 15.5 v1.28). A file at version 24 holds a garden with
+    // its item, a garden with no item and a trip with an item. The upgrade makes `venture_items`, one
+    // row for the garden that has an item, none for the others, keeps `ventures.item_id`, and moves
+    // no amount, row value or chain hash.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrations().to_version(&mut conn, 24).unwrap();
+    assert_eq!(user_version(&conn), 24);
+    assert!(!table_exists(&conn, "venture_items"));
+    let f = common::fixture(&conn);
+    let garden_account = |code: &str, serial: i64| -> i64 {
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0306'), ?1, ?2, 'garden', 'x', 'x', 'x', 'x', 'x')",
+            mandi_db::rusqlite::params![code, serial],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let insert = |kind: &str, number: i64, item: Option<i64>, account: Option<i64>| -> i64 {
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, item_id, account_id)
+             VALUES (?1, ?2, '2026-10-10', 'x', 'x', 'x', 'x', 'x', ?3, ?4)",
+            mandi_db::rusqlite::params![kind, number, item, account],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let with_item = insert("garden", 1, Some(f.item), Some(garden_account("0080", 1)));
+    let without_item = insert("garden", 2, None, Some(garden_account("0081", 2)));
+    let trip = insert("trip", 1, Some(f.item), None);
+    let rows_before = count(&conn, "SELECT COUNT(*) FROM journal_lines");
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (24, LATEST));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), LATEST as i64);
+
+    let items_of = |venture: i64| -> Vec<(i64, i64)> {
+        conn.prepare("SELECT item_id, is_active FROM venture_items WHERE venture_id = ?1")
+            .unwrap()
+            .query_map([venture], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    let index_columns: Vec<String> = conn
+        .prepare("PRAGMA index_info(idx_analytics_facts_goods_sums)")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(2))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        index_columns,
+        [
+            "entry_date",
+            "venture_id",
+            "seller_account_id",
+            "sign",
+            "seller_comm_paisa",
+            "buyer_comm_paisa",
+            "laga_paisa"
+        ]
+    );
+    assert_eq!(items_of(with_item), vec![(f.item, 1)]);
+    assert!(items_of(without_item).is_empty());
+    assert!(
+        items_of(trip).is_empty(),
+        "a trip has no item list: only gardens do"
+    );
+    // `ventures.item_id` stays and holds the first item.
+    let kept: Option<i64> = conn
+        .query_row(
+            "SELECT item_id FROM ventures WHERE id = ?1",
+            [with_item],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(kept, Some(f.item));
+    // An item is listed once per garden, and a row is switched off, never deleted.
+    assert!(
+        conn.execute(
+            "INSERT INTO venture_items (venture_id, item_id) VALUES (?1, ?2)",
+            [with_item, f.item],
+        )
+        .is_err(),
+        "the same item twice in one garden"
+    );
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM journal_lines"),
+        rows_before
+    );
+    let again = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((again.from, again.to), (LATEST, LATEST));
+}
+
+#[test]
+fn migration_26_locks_the_shares_of_a_garden_after_goods_arrived() {
+    // Plan 80 gate Q-R4-1 (PRD FR-12.29, Architecture 15.5 v1.29). Migration 6 locks the rows of
+    // `venture_partners` once the venture has an entry. Goods arrived (`garden_arrivals`) is not an
+    // entry and posts nothing, so a garden with goods arrived and nothing sold could still change its
+    // shares. Migration 26 adds three triggers that refuse an insert, a change of a share and a delete
+    // once the garden has a `garden_arrivals` row. A garden with no arrival, and every trip, are as
+    // before, and no row, amount or chain hash moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrations().to_version(&mut conn, 25).unwrap();
+    assert_eq!(user_version(&conn), 25);
+    let f = common::fixture(&conn);
+    let packing: i64 = conn
+        .query_row("SELECT id FROM packings LIMIT 1", [], |r| r.get(0))
+        .unwrap();
+    let account_ids: Vec<i64> = conn
+        .prepare("SELECT id FROM accounts ORDER BY id LIMIT 4")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let mut partners = Vec::new();
+    for (pair, (ur, en)) in [("الف", "A"), ("ب", "B")].iter().enumerate() {
+        conn.execute(
+            "INSERT INTO partners (name_ur, name_en, capital_account_id, drawings_account_id)
+             VALUES (?1, ?2, ?3, ?4)",
+            (ur, en, account_ids[pair * 2], account_ids[pair * 2 + 1]),
+        )
+        .unwrap();
+        partners.push(conn.last_insert_rowid());
+    }
+    let garden = |number: i64, account: i64| -> i64 {
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, account_id)
+             VALUES ('garden', ?1, '2026-10-10', 'g', 'g', 'g', 'g', 'g', ?2)",
+            (number, account),
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let with_goods = garden(1, account_ids[0]);
+    let without_goods = garden(2, account_ids[1]);
+    let set_shares = |conn: &Connection, venture: i64| {
+        for (partner, share, source) in
+            [(partners[0], 6_000, "shop"), (partners[1], 4_000, "pocket")]
+        {
+            conn.execute(
+                "INSERT INTO venture_partners (venture_id, partner_id, share_bps, source) VALUES (?1, ?2, ?3, ?4)",
+                (venture, partner, share, source),
+            )
+            .unwrap();
+        }
+    };
+    set_shares(&conn, with_goods);
+    set_shares(&conn, without_goods);
+    conn.execute(
+        "INSERT INTO garden_arrivals (number, venture_id, entry_date, sell_date, item_id, packing_id, qty)
+         VALUES (1, ?1, '2026-10-10', '2026-10-10', ?2, ?3, 100)",
+        (with_goods, f.item, packing),
+    )
+    .unwrap();
+    // Before the migration the shares of the garden with goods arrived can still be changed: this is
+    // the gap. The change is put back at once.
+    conn.execute(
+        "UPDATE venture_partners SET share_bps = 5_000 WHERE venture_id = ?1 AND partner_id = ?2",
+        (with_goods, partners[0]),
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE venture_partners SET share_bps = 6_000 WHERE venture_id = ?1 AND partner_id = ?2",
+        (with_goods, partners[0]),
+    )
+    .unwrap();
+    let rows_before = count(&conn, "SELECT COUNT(*) FROM journal_lines");
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (25, LATEST));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 26);
+
+    // The garden with goods arrived: no change of a share, no new row, no delete.
+    let refused = |sql: &str, args: &[&dyn mandi_db::rusqlite::ToSql]| -> String {
+        conn.execute(sql, args)
+            .expect_err("the trigger of migration 26 must refuse this")
+            .to_string()
+    };
+    assert!(
+        refused(
+            "UPDATE venture_partners SET share_bps = 5_000 WHERE venture_id = ?1 AND partner_id = ?2",
+            &[&with_goods, &partners[0]],
+        )
+        .contains("ERR_VENTURE_SHARES_LOCKED")
+    );
+    assert!(
+        refused(
+            "DELETE FROM venture_partners WHERE venture_id = ?1",
+            &[&with_goods],
+        )
+        .contains("ERR_VENTURE_SHARES_LOCKED")
+    );
+    // The source of a partner is only the default for the next entry: it may still change.
+    conn.execute(
+        "UPDATE venture_partners SET source = 'shop' WHERE venture_id = ?1 AND partner_id = ?2",
+        (with_goods, partners[1]),
+    )
+    .unwrap();
+    // The garden with no goods arrived and no entry is as before: its shares can be set again.
+    conn.execute(
+        "DELETE FROM venture_partners WHERE venture_id = ?1",
+        [without_goods],
+    )
+    .unwrap();
+    set_shares(&conn, without_goods);
+    // A cancelled arrival counts too, like a cancelled entry: the rows stay locked.
+    conn.execute(
+        "UPDATE garden_arrivals SET status = 'cancelled', cancel_reason = 'x' WHERE venture_id = ?1",
+        [with_goods],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "DELETE FROM venture_partners WHERE venture_id = ?1",
+            [with_goods]
+        )
+        .is_err()
+    );
+    // Nothing else moved.
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM journal_lines"),
+        rows_before
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM venture_partners WHERE venture_id = {with_goods} AND share_bps = 6000"
+            ),
+        ),
+        1
+    );
 }

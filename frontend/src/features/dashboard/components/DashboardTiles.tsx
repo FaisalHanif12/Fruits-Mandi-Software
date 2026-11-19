@@ -1,0 +1,304 @@
+// The tiles of the dashboard (PRD 9.1, FR-9.1): today's sales and commission, cash in hand, the four
+// dues tiles (buyers' dues, sellers' dues, total dues, dead amount, plan 40), the payables and
+// advances, stock, market trips, gardens, money lent, the dues of garden owners and others (plan 76 point 10,
+// it replaced the last backup tile), today's expenses and today's نقدی (plan 79 item 2c, it replaced the books
+// check tile). Every tile is one button that opens its own page, and that page shows what the tile counts
+// and ends in the tile's figure (plan 79 item 3). The figures are the backend's, shown
+// by `Num` and `formatPaisa`; nothing is added up here (CLAUDE.md rule 1). A figure that is below
+// zero or past its date also says so in words, never by colour alone (NFR-USE-12). ↑ ↓ ← → move
+// between tiles the way the user sees them (PRD FR-7.13).
+//
+// The gardens tile (PRD 9.1, FR-12.37) shows the running balance of the open gardens, from the same
+// call as the other tiles (`dashboard_get`).
+
+import { Localized } from '@fluent/react';
+import {
+  HandCoins,
+  Handshake,
+  Banknote,
+  Package,
+  PiggyBank,
+  Receipt,
+  Route,
+  Scale,
+  Sprout,
+  Trees,
+  TrendingUp,
+  UserRound,
+  UserX,
+  Users,
+  Wallet,
+  Percent,
+} from 'lucide-react';
+import type { DashboardTiles as DashboardTilesData } from '../../../bindings/DashboardTiles';
+import { isNegativePaisa, isPositivePaisa } from '../../../shared/format';
+import { formNavigationProps } from '../../../shared/keyboard';
+import { Num, Tile } from '../../../shared/ui';
+import { useOpenDestination } from '../destinations';
+
+interface DashboardTilesProps {
+  tiles: DashboardTilesData;
+}
+
+export function DashboardTiles({ tiles }: DashboardTilesProps) {
+  const open = useOpenDestination();
+  const cashBelowZero = isNegativePaisa(tiles.cash_in_hand_paisa);
+  const lentOverdue = isPositivePaisa(tiles.lent_overdue_paisa);
+  // Someone is in the dead amount: the tile is amber, with the count in words (NFR-USE-12).
+  const deadAmount = isPositivePaisa(tiles.dead_amount_paisa);
+  return (
+    <div
+      {...formNavigationProps}
+      role="group"
+      aria-labelledby="dashboard-tiles-title"
+      className="grid grid-cols-4 gap-3 wide:grid-cols-5"
+    >
+      <Tile
+        label={<Localized id="dashboard-tile-sales" />}
+        icon={TrendingUp}
+        note={
+          <Localized
+            id="dashboard-tile-sales-count"
+            vars={{ count: tiles.sales_count }}
+            elems={{ num: <Num /> }}
+          >
+            <span />
+          </Localized>
+        }
+        onOpen={() => {
+          open({ kind: 'bikri-today' });
+        }}
+      >
+        <Num inherit paisa={tiles.sales_gross_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-commission" />}
+        icon={Percent}
+        onOpen={() => {
+          open({ kind: 'commission' });
+        }}
+      >
+        <Num inherit paisa={tiles.commission_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-cash" />}
+        icon={Wallet}
+        tone={cashBelowZero ? 'bad' : 'neutral'}
+        note={cashBelowZero ? <Localized id="dashboard-tile-cash-below" /> : undefined}
+        onOpen={() => {
+          open({ kind: 'cashbook' });
+        }}
+      >
+        <Num inherit paisa={tiles.cash_in_hand_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-dues" />}
+        icon={Users}
+        onOpen={() => {
+          open({ kind: 'buyer-dues' });
+        }}
+      >
+        <Num inherit paisa={tiles.buyers_dues_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-dues-sellers" />}
+        icon={UserRound}
+        onOpen={() => {
+          open({ kind: 'seller-dues', side: 'seller_owes' });
+        }}
+      >
+        <Num inherit paisa={tiles.sellers_dues_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-dues-total" />}
+        icon={Scale}
+        note={<Localized id="dashboard-tile-dues-total-note" />}
+        onOpen={() => {
+          open({ kind: 'total-dues' });
+        }}
+      >
+        <Num inherit paisa={tiles.total_dues_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-dead" />}
+        icon={UserX}
+        tone={deadAmount ? 'warn' : 'neutral'}
+        note={
+          deadAmount ? (
+            <Localized
+              id="dashboard-tile-dead-note"
+              vars={{ count: tiles.dead_count }}
+              elems={{ num: <Num /> }}
+            >
+              <span />
+            </Localized>
+          ) : (
+            <Localized id="dashboard-tile-dead-none" />
+          )
+        }
+        onOpen={() => {
+          open({ kind: 'dead-amount' });
+        }}
+      >
+        <Num inherit paisa={tiles.dead_amount_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-payable" />}
+        icon={HandCoins}
+        onOpen={() => {
+          open({ kind: 'seller-dues', side: 'shop_owes' });
+        }}
+      >
+        <Num inherit paisa={tiles.sellers_payable_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-advances" />}
+        icon={PiggyBank}
+        onOpen={() => {
+          open({ kind: 'advances-open' });
+        }}
+      >
+        <Num inherit paisa={tiles.advances_open_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-lent" />}
+        icon={Handshake}
+        tone={lentOverdue ? 'warn' : 'neutral'}
+        note={
+          lentOverdue ? (
+            <Localized
+              id="dashboard-tile-lent-overdue"
+              elems={{ money: <Num paisa={tiles.lent_overdue_paisa} /> }}
+            >
+              <span />
+            </Localized>
+          ) : undefined
+        }
+        onOpen={() => {
+          open({ kind: 'lent-open' });
+        }}
+      >
+        <Num inherit paisa={tiles.lent_open_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-others" />}
+        icon={Sprout}
+        note={
+          tiles.others_people_count > 0 ? (
+            <Localized
+              id="dashboard-tile-others-note"
+              vars={{ count: tiles.others_people_count }}
+              elems={{ num: <Num /> }}
+            >
+              <span />
+            </Localized>
+          ) : (
+            <Localized id="dashboard-tile-dead-none" />
+          )
+        }
+        onOpen={() => {
+          open({ kind: 'others-dues' });
+        }}
+      >
+        <Num inherit paisa={tiles.others_dues_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-expenses" />}
+        icon={Receipt}
+        onOpen={() => {
+          open({ kind: 'kharch' });
+        }}
+      >
+        <Num inherit paisa={tiles.expenses_today_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-stock" />}
+        icon={Package}
+        note={
+          <Localized
+            id="dashboard-tile-stock-note"
+            vars={{ lots: tiles.stock_lots }}
+            elems={{ num: <Num /> }}
+          >
+            <span />
+          </Localized>
+        }
+        onOpen={() => {
+          open({ kind: 'stock' });
+        }}
+      >
+        <Localized
+          id="dashboard-figure-nag"
+          vars={{ qty: tiles.stock_qty }}
+          elems={{ num: <Num /> }}
+        >
+          <span />
+        </Localized>
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-trips" />}
+        icon={Route}
+        note={
+          <Localized
+            id="dashboard-tile-trips-note"
+            vars={{ open: tiles.trips_open }}
+            elems={{ num: <Num />, money: <Num paisa={tiles.trips_cost_left_paisa} /> }}
+          >
+            <span />
+          </Localized>
+        }
+        onOpen={() => {
+          open({ kind: 'trips' });
+        }}
+      >
+        <Localized
+          id="dashboard-figure-nag"
+          vars={{ qty: tiles.trips_qty_left }}
+          elems={{ num: <Num inherit />, unit: <span className="type-body text-ink-muted" /> }}
+        >
+          <span />
+        </Localized>
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-gardens" />}
+        icon={Trees}
+        note={
+          tiles.gardens_open === 0 ? (
+            <Localized id="dashboard-tile-gardens-none" />
+          ) : (
+            <Localized
+              id="dashboard-tile-gardens-note"
+              vars={{ open: tiles.gardens_open }}
+              elems={{ num: <Num /> }}
+            >
+              <span />
+            </Localized>
+          )
+        }
+        onOpen={() => {
+          open({ kind: 'gardens' });
+        }}
+      >
+        <Num inherit paisa={tiles.gardens_balance_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-cash-sales" />}
+        icon={Banknote}
+        note={
+          <Localized
+            id="dashboard-tile-cash-sales-note"
+            vars={{ count: tiles.cash_sales_today_buyers }}
+            elems={{ num: <Num /> }}
+          >
+            <span />
+          </Localized>
+        }
+        onOpen={() => {
+          open({ kind: 'cash-sales' });
+        }}
+      >
+        <Num inherit paisa={tiles.cash_sales_today_paisa} />
+      </Tile>
+    </div>
+  );
+}

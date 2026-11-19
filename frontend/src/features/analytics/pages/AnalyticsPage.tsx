@@ -1,0 +1,413 @@
+// The تجزیات area (routes /analytics and /analytics/$view; PRD 18, FR-18.1 to FR-18.8): the views A to
+// E and H on one screen, in tabs. Each view has its filter boxes (the catalogue says which), a chart,
+// a table page by page with the backend's totals, drill-down on any figure, saved views, a print
+// preview and the Excel export (every row of the filters, with its progress under the title). It works out nothing (CLAUDE.md rule 1) and writes nothing but the saved views (FR-18.8).
+//
+// - The filters are kept above the screen (store.ts), so they stay between views and through a
+//   language switch (which builds the grid and the chart again), and the focused row is focused again
+//   (Code Standards F39).
+// - A filter change asks the backend once, 250 ms after the last key (F35). A refusal that points at a
+//   filter box is shown under that box and the rows already on screen stay.
+// - Enter on a figure opens the lines behind it, Esc returns; F9 shows the print preview, Esc leaves it.
+//
+// Four states: loading, an error with a retry (also for a view that does not exist), nothing found
+// (with a way out), and the data.
+
+import { Localized, useLocalization } from '@fluent/react';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { BarChart3, FileX, Printer, Rows3 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { AnalyticsCatalogEntry } from '../../../bindings/AnalyticsCatalogEntry';
+import type { AnalyticsPage as AnalyticsPageData } from '../../../bindings/AnalyticsPage';
+import type { UiError } from '../../../bindings/UiError';
+import { uiErrorOf } from '../../../shared/api';
+import {
+  ExcelExportButton,
+  ExcelExportNotices,
+  exportFileName,
+  useExcelExport,
+} from '../../../shared/export';
+import { useDebouncedValue } from '../../../shared/hooks';
+import { useLanguage } from '../../../shared/i18n';
+import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
+import { useScreenMemory } from '../../../shared/screen-state';
+import type { PickerValue } from '../../../shared/ui';
+import { Button, EmptyState, ErrorState, ListPage, LoadingState, Tabs } from '../../../shared/ui';
+import { AnalyticsFilterBar } from '../components/AnalyticsFilterBar';
+import { AnalyticsLines } from '../components/AnalyticsLines';
+import { AnalyticsPreview } from '../components/AnalyticsPreview';
+import { AnalyticsResults, WHOLE_FILTER_KEY } from '../components/AnalyticsResults';
+import { KharchBoard } from '../components/KharchBoard';
+import { SavedViews } from '../components/SavedViews';
+import {
+  EMPTY_ANALYTICS_FILTERS,
+  filtersToWire,
+  isUnfiltered,
+  stateFromWire,
+  type AnalyticsFilterState,
+} from '../filters';
+import { analyticsExportExcel } from '../api';
+import { useAnalyticsCatalog, useAnalyticsPages, type LinesRequest } from '../hooks';
+import { ANALYTICS_SCREEN, analyticsFromRemembered, rememberedAnalytics } from '../remember';
+import { filtersFromSearch, hasAnalyticsSearch, parseAnalyticsSearch } from '../search';
+import { useAnalyticsStore } from '../store';
+import type { AnalyticsKey, AnalyticsSavedView, AnalyticsView } from '../types';
+
+/** How long the filters rest before the backend is asked (Code Standards F35). */
+const FILTER_SETTLE_MS = 250;
+
+/** The view the area opens on. */
+const DEFAULT_VIEW: AnalyticsView = 'A';
+
+/** True when the refusal points at a filter box: the box shows it and the rows stay. */
+function isFilterRefusal(error: UiError): boolean {
+  return (
+    error.errors.length > 0 &&
+    error.errors.every(
+      (item) => typeof item.field === 'string' && item.field.startsWith('filters.'),
+    )
+  );
+}
+
+/** A picker value whose names were not known yet (a saved view), filled from the answer's echo. */
+function named(
+  value: PickerValue | null,
+  echo: { ur: string; en: string; code?: string | undefined } | null,
+): PickerValue | null {
+  if (value === null || echo === null || value.name_ur !== '') return value;
+  return { id: value.id, name_ur: echo.ur, name_en: echo.en, code: echo.code ?? value.code };
+}
+
+interface Drill {
+  request: LinesRequest;
+  about: string;
+}
+
+function AnalyticsBody({
+  entry,
+  catalog,
+}: {
+  entry: AnalyticsCatalogEntry;
+  catalog: readonly AnalyticsCatalogEntry[];
+}) {
+  const { l10n } = useLocalization();
+  const navigate = useNavigate();
+  const filters = useAnalyticsStore((now) => now.filters);
+  const windowStart = useAnalyticsStore((now) => now.windowStart);
+  const otherColumns = useAnalyticsStore((now) => now.otherColumns);
+  const savedName = useAnalyticsStore((now) => now.savedName);
+  const { change, replace, setWindowStart, setOtherColumns, setSavedName } =
+    useAnalyticsStore.getState();
+  const [mode, setMode] = useState<'table' | 'preview'>('table');
+  const [drill, setDrill] = useState<Drill | null>(null);
+  const [focusRowId, setFocusRowId] = useState<string | null>(null);
+  const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
+  const wire = useMemo(() => filtersToWire(settled, entry.filters, entry.id), [settled, entry]);
+  // View M is the two parts of the kharch board (PRD FR-9.5, plan 77): the board reads them itself and has its own
+  // entries, print preview (F9) and Excel for each part, so the screen's own read and buttons are off for it.
+  const kharch = entry.id === 'M';
+  const query = useAnalyticsPages(entry.id, kharch ? null : wire);
+  const language = useLanguage();
+  // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
+  const exporter = useExcelExport({
+    defaultName: () => exportFileName(`analytics-${entry.id}`, new Date()),
+    run: ({ path, jobId, language: sheet }) =>
+      analyticsExportExcel({
+        job_id: jobId,
+        view: entry.id,
+        filters: filtersToWire(filters, entry.filters, entry.id),
+        language: sheet,
+        path,
+        // The sheet has the order that is on screen (plan 38 R4).
+        sort: query.sort,
+      }),
+  });
+
+  // The pages last shown, kept while a half-typed filter is refused (they stay under the box). They
+  // are state set while rendering, which React allows when the value really changed.
+  const [kept, setKept] = useState<{ pages: AnalyticsPageData[] } | null>(null);
+  if (query.data !== undefined && !query.isPlaceholderData && query.data !== kept) {
+    setKept(query.data);
+  }
+  const refusal = query.isError ? uiErrorOf(query.error) : null;
+  const filterRefusal = refusal !== null && isFilterRefusal(refusal) ? refusal : null;
+
+  // A record opened from a saved view has no names until the answer names it.
+  const echo = (query.data ?? kept)?.pages[0]?.filters ?? null;
+  const shown: AnalyticsFilterState = {
+    ...filters,
+    item: named(filters.item, echo?.item ?? null),
+    seller: named(
+      filters.seller,
+      echo?.seller == null
+        ? null
+        : { ur: echo.seller.name_ur, en: echo.seller.name_en, code: echo.seller.code },
+    ),
+    buyer: named(
+      filters.buyer,
+      echo?.buyer == null
+        ? null
+        : { ur: echo.buyer.name_ur, en: echo.buyer.name_en, code: echo.buyer.code },
+    ),
+    city: named(filters.city, echo?.city ?? null),
+    adda: named(filters.adda, echo?.adda ?? null),
+  };
+
+  // The first box has focus when the area opens, so the user can start at once (PRD FR-7.1,
+  // NFR-USE-7). A drop-down is a button, which the shared first-field hook does not look for. Nothing is
+  // taken from where focus already is: moving between the tabs with the arrow keys keeps focus on them.
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (document.activeElement !== document.body) return;
+    containerRef.current
+      ?.querySelector<HTMLElement>('[role="combobox"], input:not([type="hidden"])')
+      ?.focus({ preventScroll: true });
+  }, []);
+  useEscape(
+    'leave',
+    () => {
+      if (mode === 'preview') setMode('table');
+      else setDrill(null);
+    },
+    mode === 'preview' || drill !== null,
+  );
+  useShortcut(
+    SHORTCUTS.print,
+    () => {
+      if (drill === null) setMode('preview');
+    },
+    { enabled: !kharch },
+  );
+
+  const filtering = !isUnfiltered(filters, entry.filters, entry.id);
+  const openDrill = (rowKey: AnalyticsKey, columnKey: AnalyticsKey | null, about: string) => {
+    setDrill({ request: { view: entry.id, filters: wire, rowKey, columnKey }, about });
+  };
+  const openSaved = (saved: AnalyticsSavedView) => {
+    replace(stateFromWire(saved.filters), saved.name);
+    setDrill(null);
+    setMode('table');
+    if (saved.view !== entry.id) {
+      void navigate({ to: '/analytics/$view', params: { view: saved.view } });
+    }
+  };
+
+  let body;
+  if (kharch) {
+    body = <KharchBoard filters={wire} />;
+  } else if (drill !== null) {
+    body = (
+      <AnalyticsLines
+        request={drill.request}
+        about={drill.about}
+        onBack={() => {
+          setDrill(null);
+        }}
+      />
+    );
+  } else if (mode === 'preview') {
+    body = (
+      <AnalyticsPreview
+        view={entry.id}
+        filters={wire}
+        sort={query.sort}
+        onBack={() => {
+          setMode('table');
+        }}
+        exporter={exporter}
+      />
+    );
+  } else {
+    body = (
+      <AnalyticsResults
+        view={entry.id}
+        query={query}
+        kept={filterRefusal === null ? null : kept}
+        filtering={filtering}
+        onClear={() => {
+          replace(EMPTY_ANALYTICS_FILTERS);
+        }}
+        windowStart={windowStart}
+        onWindow={setWindowStart}
+        otherColumns={otherColumns}
+        onOtherColumns={setOtherColumns}
+        onDrill={openDrill}
+        focusRowId={focusRowId}
+        onFocusRow={setFocusRowId}
+      />
+    );
+  }
+
+  const table = drill === null && mode === 'table';
+  return (
+    <ListPage
+      icon={BarChart3}
+      titleId={entry.title_id}
+      help={
+        <>
+          <Localized id={entry.title_id.replace(/-title$/, '-help')}>
+            <p />
+          </Localized>
+          <Localized id="analytics-open-hint">
+            <p className="text-ink-muted" />
+          </Localized>
+        </>
+      }
+      actions={
+        <>
+          <SavedViews
+            current={{ view: entry.id, filters: filtersToWire(filters, entry.filters, entry.id) }}
+            savedName={savedName}
+            onOpen={openSaved}
+            onSaved={setSavedName}
+          />
+          {/* View M: the two parts of the board each have their own entries, print and Excel. */}
+          {kharch ? null : (
+            <>
+              <Button
+                disabled={drill !== null || mode === 'preview'}
+                onClick={() => {
+                  openDrill(WHOLE_FILTER_KEY, null, l10n.getString('analytics-drill-all'));
+                }}
+              >
+                <Rows3 aria-hidden="true" className="size-icon-md" />
+                <Localized id="analytics-all-lines" />
+              </Button>
+              <Button
+                shortcut={SHORTCUTS.print}
+                disabled={drill !== null || mode === 'preview'}
+                onClick={() => {
+                  setMode('preview');
+                }}
+              >
+                <Printer aria-hidden="true" className="size-icon-md" />
+                <Localized id="report-preview" />
+              </Button>
+              {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
+              {mode === 'preview' ? null : (
+                <ExcelExportButton
+                  exporter={exporter}
+                  language={language}
+                  disabled={drill !== null}
+                />
+              )}
+            </>
+          )}
+        </>
+      }
+      filters={
+        <div className="flex flex-col gap-3">
+          <ExcelExportNotices exporter={exporter} />
+          {/* The eleven views are ONE row of tabs; the ones that do not fit are in its More menu. */}
+          <Tabs
+            overflow
+            label={l10n.getString('analytics-views-label')}
+            value={entry.id}
+            onValueChange={(view) => {
+              setDrill(null);
+              setMode('table');
+              void navigate({ to: '/analytics/$view', params: { view } });
+            }}
+            items={catalog.map((candidate) => ({
+              id: candidate.id,
+              label: l10n.getString(candidate.title_id),
+              content: null,
+            }))}
+          />
+          {table ? (
+            <AnalyticsFilterBar
+              view={entry.id}
+              takes={entry.filters}
+              state={shown}
+              onChange={change}
+              error={filterRefusal}
+              containerRef={containerRef}
+            />
+          ) : null}
+        </div>
+      }
+    >
+      {table ? body : <div className="min-h-0 flex-1 overflow-auto">{body}</div>}
+    </ListPage>
+  );
+}
+
+/**
+ * The filters the Owner last used are put back once when the area first opens, and each change is
+ * kept (PRD FR-7.45). The area is drawn once they are back, so it never flashes empty boxes and then
+ * jumps. The filters stay in the store between views, so this runs once for the whole run.
+ */
+function RememberedFilters({ children }: { children: ReactNode }) {
+  const memory = useScreenMemory(ANALYTICS_SCREEN);
+  const hydrated = useAnalyticsStore((now) => now.hydrated);
+  const filters = useAnalyticsStore((now) => now.filters);
+  const { ready, saved, remember } = memory;
+  // Plan 49: an address with filters in it (a button under an answer of the question panel) wins
+  // over the remembered ones, once per address. With no filter in the address nothing changes.
+  const search = useSearch({ strict: false });
+  const appliedAddress = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    const store = useAnalyticsStore.getState();
+    store.hydrate(analyticsFromRemembered(saved));
+    const address = parseAnalyticsSearch(search);
+    const key = JSON.stringify(address);
+    if (!hasAnalyticsSearch(address)) {
+      appliedAddress.current = null;
+    } else if (appliedAddress.current !== key) {
+      // The same address is applied once: the Owner's own changes to the boxes after it stay.
+      appliedAddress.current = key;
+      store.replace(filtersFromSearch(address));
+    }
+  }, [ready, saved, search]);
+  useEffect(() => {
+    if (hydrated) remember(rememberedAnalytics(filters));
+  }, [hydrated, filters, remember]);
+  if (!hydrated) return <LoadingState />;
+  return <>{children}</>;
+}
+
+export function AnalyticsPage() {
+  const { view } = useParams({ strict: false });
+  const catalog = useAnalyticsCatalog();
+  const navigate = useNavigate();
+  if (catalog.isPending) return <LoadingState />;
+  if (catalog.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="analytics-catalog-failed" />}
+        error={uiErrorOf(catalog.error)}
+        onRetry={() => {
+          void catalog.refetch();
+        }}
+      />
+    );
+  }
+  const wanted = (view ?? DEFAULT_VIEW).toUpperCase();
+  const entry = catalog.data.find((candidate) => candidate.id === wanted);
+  if (entry === undefined) {
+    return (
+      <EmptyState
+        icon={FileX}
+        title={<Localized id="analytics-view-unknown" />}
+        help={<Localized id="analytics-view-unknown-help" />}
+        action={
+          <Button
+            variant="primary"
+            onClick={() => {
+              void navigate({ to: '/analytics/$view', params: { view: DEFAULT_VIEW } });
+            }}
+          >
+            <Localized id="analytics-back-to-views" />
+          </Button>
+        }
+      />
+    );
+  }
+  // A key per view: moving from one view to another starts with its own table (the filters stay).
+  return (
+    <RememberedFilters>
+      <AnalyticsBody key={entry.id} entry={entry} catalog={catalog.data} />
+    </RememberedFilters>
+  );
+}

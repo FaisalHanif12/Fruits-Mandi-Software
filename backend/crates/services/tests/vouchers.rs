@@ -11,15 +11,14 @@ use common::*;
 use mandi_services::core::accounts::{AccountInput, AccountType, Balance, BalanceSide};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::ids::AccountId;
-use mandi_services::core::masters::{BankAccountInput, MasterInput};
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
-    AdvanceInput, AdvancesInput, VoucherMode, VoucherType, VouchersListInput,
+    AdvanceInput, AdvancesInput, RemovedPaymentFields, VoucherMode, VoucherType, VouchersListInput,
 };
 use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
 use mandi_services::ledger::{self, PostingEvent};
 use mandi_services::testing::TestEnv;
-use mandi_services::{ServiceError, accounts, assist, auth, masters, vouchers};
+use mandi_services::{ServiceError, accounts, assist, auth, vouchers};
 use tempfile::TempDir;
 
 struct Fixture {
@@ -61,9 +60,9 @@ fn account_input(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -128,13 +127,11 @@ fn set_opening(env: &TestEnv, owner: &auth::Actor, id: i64, dr: &str, cr: &str, 
 
 fn advance(seller: i64, amount: &str) -> AdvanceInput {
     AdvanceInput {
+        confirm_cash_below_zero: false,
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
     }
@@ -244,7 +241,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         count(&f.dir, "SELECT COUNT(*) FROM journal_entries"),
         audit_total(&f.dir),
     );
-    let pukhta = id_of(&f.env, "030119999");
+    let old_closed = id_of(&f.env, "0031");
     let buyer = accounts::save(
         &f.env.ctx,
         &f.owner,
@@ -284,6 +281,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         ),
         (
             AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "31-02-2026".into(),
                 ..advance(f.rahim, "100")
             },
@@ -292,6 +290,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         ),
         (
             AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "11-10-2026".into(),
                 ..advance(f.rahim, "100")
             },
@@ -304,7 +303,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
             "seller_account_id",
         ),
         (
-            advance(pukhta, "100"),
+            advance(old_closed, "100"),
             ErrorCode::ErrNotASeller,
             "seller_account_id",
         ),
@@ -317,32 +316,6 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
             advance(999_999, "100"),
             ErrorCode::ErrNotFound,
             "seller_account_id",
-        ),
-        // Cash with a bank account; bank with none; a bank that does not exist.
-        (
-            AdvanceInput {
-                bank_account_id: Some(1),
-                ..advance(f.rahim, "100")
-            },
-            ErrorCode::ErrFormatInvalid,
-            "bank_account_id",
-        ),
-        (
-            AdvanceInput {
-                mode: VoucherMode::Bank,
-                ..advance(f.rahim, "100")
-            },
-            ErrorCode::ErrRequired,
-            "bank_account_id",
-        ),
-        (
-            AdvanceInput {
-                mode: VoucherMode::Bank,
-                bank_account_id: Some(999),
-                ..advance(f.rahim, "100")
-            },
-            ErrorCode::ErrNotFound,
-            "bank_account_id",
         ),
     ];
     for (input, code, field) in cases {
@@ -371,6 +344,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         &f.env.ctx,
         &f.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "x".into(),
             ..advance(buyer, "")
         },
@@ -395,6 +369,7 @@ fn a_closed_day_refuses_a_voucher_until_it_is_reopened() {
             &f.env.ctx,
             &f.owner,
             &AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "09-10-2026".into(),
                 ..advance(f.rahim, "100")
             },
@@ -408,148 +383,145 @@ fn a_closed_day_refuses_a_voucher_until_it_is_reopened() {
     vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "100")).unwrap();
 }
 
+/// The removed fields as an old client sends them.
+fn old_fields(json: serde_json::Value) -> RemovedPaymentFields {
+    serde_json::from_value(json).unwrap()
+}
+
 #[test]
-fn bank_and_cheque_post_to_the_bank_account() {
-    // PRD 15.1: bank money posts to the bank account at once; a cheque needs its number and date.
+fn an_old_client_that_sends_a_mode_a_bank_or_a_cheque_is_refused_and_nothing_is_posted() {
+    // PRD 15.1 (v1.6): all money is روکڑ. A field that no longer exists is a field error at the
+    // name that was sent, and nothing is saved, numbered or posted (D4R-A1).
     let f = fixture();
-    let bank = masters::save(
-        &f.env.ctx,
-        &f.owner,
-        &MasterInput::BankAccount(BankAccountInput {
-            id: None,
-            version: None,
-            bank_name: "HBL".into(),
-            title: "Maher Adnan".into(),
-            number: "1234-5678".into(),
-            name_ur: "ایچ بی ایل".into(),
-            name_en: "HBL Bank".into(),
-            confirmed_rules_words: vec!["hbl".into(), "ایچ".into(), "بی".into(), "ایل".into()],
-        }),
-    );
-    let bank = match bank {
-        Ok(row) => row,
-        Err(ServiceError::Rejected(items)) => {
-            // The names may ask for the spelling check; confirm every word asked about.
-            let words: Vec<String> = items
-                .iter()
-                .filter_map(|i| match i.values.get("words") {
-                    Some(mandi_services::core::error::ErrorValue::Text(w)) => Some(w.clone()),
-                    _ => None,
-                })
-                .flat_map(|w| w.split(' ').map(str::to_owned).collect::<Vec<_>>())
-                .collect();
-            masters::save(
-                &f.env.ctx,
-                &f.owner,
-                &MasterInput::BankAccount(BankAccountInput {
-                    id: None,
-                    version: None,
-                    bank_name: "HBL".into(),
-                    title: "Maher Adnan".into(),
-                    number: "1234-5678".into(),
-                    name_ur: "ایچ بی ایل".into(),
-                    name_en: "HBL Bank".into(),
-                    confirmed_rules_words: words,
-                }),
-            )
+    let entries = |f: &Fixture| -> i64 {
+        raw(&f.dir)
+            .query_row("SELECT COUNT(*) FROM journal_entries", [], |r| r.get(0))
             .unwrap()
-        }
-        Err(other) => panic!("{other:?}"),
     };
-    let bank_row = bank.id();
-    let bank_ledger: i64 = raw(&f.dir)
-        .query_row(
-            "SELECT account_id FROM bank_accounts WHERE id = ?1",
-            [bank_row],
-            |r| r.get(0),
-        )
-        .unwrap();
-    set_opening(&f.env, &f.owner, bank_ledger, "20,000", "", false);
-    let by_bank = AdvanceInput {
-        mode: VoucherMode::Bank,
-        bank_account_id: Some(bank_row),
-        ..advance(f.rahim, "5,000")
+    let vouchers_count = |f: &Fixture| -> i64 {
+        raw(&f.dir)
+            .query_row("SELECT COUNT(*) FROM vouchers", [], |r| r.get(0))
+            .unwrap()
     };
-    let saved = vouchers::save_advance(&f.env.ctx, &f.owner, &by_bank).unwrap();
-    assert_eq!(balance(&f.env, bank_ledger), (BalanceSide::Dr, 15_000));
-    assert_eq!(
-        balance(&f.env, f.cash),
-        (BalanceSide::Dr, 50_000),
-        "cash is not touched"
-    );
-    let (mode, bank_id): (String, Option<i64>) = raw(&f.dir)
-        .query_row(
-            "SELECT mode, bank_account_id FROM vouchers WHERE id = ?1",
-            [saved.voucher_id],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )
-        .unwrap();
-    assert_eq!((mode.as_str(), bank_id), ("bank", Some(bank_row)));
-    // A cheque needs its number and its date.
-    let cheque = AdvanceInput {
-        mode: VoucherMode::Cheque,
-        ..by_bank.clone()
-    };
-    let (code, field) =
-        first_error(vouchers::save_advance(&f.env.ctx, &f.owner, &cheque).unwrap_err());
-    assert_eq!(
-        (code, field.as_deref()),
-        (ErrorCode::ErrRequired, Some("cheque_no"))
-    );
-    let (code, field) = first_error(
-        vouchers::save_advance(
-            &f.env.ctx,
-            &f.owner,
-            &AdvanceInput {
-                cheque_no: "000123".into(),
-                ..cheque.clone()
-            },
-        )
-        .unwrap_err(),
-    );
-    assert_eq!(
-        (code, field.as_deref()),
-        (ErrorCode::ErrRequired, Some("cheque_date"))
-    );
-    let ok = vouchers::save_advance(
+    let (entries_before, vouchers_before) = (entries(&f), vouchers_count(&f));
+    for (sent, names) in [
+        (serde_json::json!({ "mode": "cash" }), vec!["mode"]),
+        (
+            serde_json::json!({ "mode": "bank", "bank_account_id": 2 }),
+            vec!["mode", "bank_account_id"],
+        ),
+        (
+            serde_json::json!({ "mode": "cheque", "bank_account_id": 2, "cheque_no": "000123",
+                "cheque_date": "12-10-2026" }),
+            vec!["mode", "bank_account_id", "cheque_no", "cheque_date"],
+        ),
+        (
+            serde_json::json!({ "cheque_no": "000123" }),
+            vec!["cheque_no"],
+        ),
+    ] {
+        let input = AdvanceInput {
+            removed: old_fields(sent),
+            ..advance(f.rahim, "5,000")
+        };
+        let ServiceError::Rejected(items) =
+            vouchers::save_advance(&f.env.ctx, &f.owner, &input).unwrap_err()
+        else {
+            panic!("a refusal of the user's entry");
+        };
+        assert!(
+            items
+                .iter()
+                .all(|i| i.code == ErrorCode::ErrFieldNotAllowed),
+            "{items:?}"
+        );
+        assert_eq!(
+            items
+                .iter()
+                .map(|i| i.field.as_deref().unwrap_or(""))
+                .collect::<Vec<_>>(),
+            names
+        );
+    }
+    // The preview and the running list refuse them the same way.
+    let sent = old_fields(serde_json::json!({ "mode": "bank" }));
+    let preview = vouchers::preview_advances(
         &f.env.ctx,
-        &f.owner,
-        &AdvanceInput {
-            cheque_no: "000123".into(),
-            cheque_date: "12-10-2026".into(),
-            ..cheque
+        &AdvancesInput {
+            lines: vec![AdvanceInput {
+                removed: sent,
+                ..advance(f.rahim, "5,000")
+            }],
         },
     )
     .unwrap();
-    assert_eq!(ok.number, 2);
-    assert_eq!(
-        balance(&f.env, bank_ledger),
-        (BalanceSide::Dr, 10_000),
-        "a cheque posts to the bank at once"
+    assert!(
+        !preview.rows[0].errors.is_empty()
+            && preview.rows[0]
+                .errors
+                .iter()
+                .all(|e| e.code == ErrorCode::ErrFieldNotAllowed && e.field.ends_with("mode")),
+        "{:?}",
+        preview.rows[0].errors
     );
-    let (no, date): (String, String) = raw(&f.dir)
+    assert_eq!(
+        (entries(&f), vouchers_count(&f)),
+        (entries_before, vouchers_before),
+        "nothing was posted and no number was taken"
+    );
+    // The fields the old screens left empty are not a mistake: a null bank, no cheque.
+    let quiet = AdvanceInput {
+        removed: old_fields(
+            serde_json::json!({ "bank_account_id": null, "cheque_no": "", "cheque_date": "" }),
+        ),
+        ..advance(f.rahim, "5,000")
+    };
+    let saved = vouchers::save_advance(&f.env.ctx, &f.owner, &quiet).unwrap();
+    assert_eq!(saved.number, 1, "the refusals took no number");
+}
+
+#[test]
+fn every_voucher_posts_cash_and_an_old_row_still_shows_as_it_was_saved() {
+    // PRD 15.1, FR-10.4 (v1.6): the money moves through روکڑ and never through the bank, and the
+    // columns of an old row are read as they were saved.
+    let f = fixture();
+    let saved = vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "5,000")).unwrap();
+    assert_eq!(balance(&f.env, f.cash), (BalanceSide::Dr, 45_000));
+    let (mode, bank_id, cheque_no): (String, Option<i64>, Option<String>) = raw(&f.dir)
         .query_row(
-            "SELECT cheque_no, cheque_date FROM vouchers WHERE id = ?1",
-            [ok.voucher_id],
-            |r| Ok((r.get(0)?, r.get(1)?)),
+            "SELECT mode, bank_account_id, cheque_no FROM vouchers WHERE id = ?1",
+            [saved.voucher_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )
         .unwrap();
-    assert_eq!((no.as_str(), date.as_str()), ("000123", "2026-10-12"));
-    // A bank that is switched off cannot be used.
-    masters::set_active(
-        &f.env.ctx,
-        &f.owner,
-        mandi_services::core::masters::MasterKind::BankAccount,
-        bank_row,
-        false,
-    )
-    .unwrap();
-    let (code, field) =
-        first_error(vouchers::save_advance(&f.env.ctx, &f.owner, &by_bank).unwrap_err());
+    assert_eq!((mode.as_str(), bank_id, cheque_no), ("cash", None, None));
     assert_eq!(
-        (code, field.as_deref()),
-        (ErrorCode::ErrAccountInactive, Some("bank_account_id"))
+        balance(&f.env, id_of(&f.env, "01020001")),
+        (BalanceSide::Zero, 0),
+        "nothing is posted to the bank"
     );
+    // A row saved before v1.6 with a cheque: its columns show as saved.
+    // A bank row of the old days: the table stays, nothing writes to it any more.
+    raw(&f.dir)
+        .execute(
+            "INSERT INTO bank_accounts (bank_name, title, number, account_id)
+             SELECT 'HBL', 'Maher Adnan', '0001', id FROM accounts WHERE code = '01020001'",
+            [],
+        )
+        .unwrap();
+    raw(&f.dir)
+        .execute(
+            "UPDATE vouchers SET mode = 'cheque', cheque_no = '000123', cheque_date = '2026-10-12',
+                    bank_account_id = (SELECT id FROM bank_accounts)
+             WHERE id = ?1",
+            [saved.voucher_id],
+        )
+        .unwrap();
+    let old = vouchers::get(&f.env.ctx, saved.voucher_id).unwrap();
+    assert_eq!(old.mode, VoucherMode::Cheque);
+    assert_eq!(old.cheque_no, "000123");
+    assert_eq!(old.cheque_date.as_deref(), Some("2026-10-12"));
+    assert_eq!(old.amount_paisa, rupees(5_000));
 }
 
 #[test]
@@ -599,7 +571,7 @@ fn the_running_list_shows_balances_and_saves_each_voucher_alone() {
     );
     assert_eq!(
         preview.rows[0].account.as_ref().map(|a| a.code.as_str()),
-        Some("030110001")
+        Some("0010")
     );
     assert_eq!(
         preview.total_paisa,
@@ -687,12 +659,27 @@ fn a_seller_with_a_credit_balance_gets_the_right_side_and_amount() {
     );
 }
 
+/// The same advance, with the user's "yes" to the cash question of PRD FR-6.7.
+fn confirmed(input: AdvanceInput) -> AdvanceInput {
+    AdvanceInput {
+        confirm_cash_below_zero: true,
+        ..input
+    }
+}
+
 #[test]
-fn an_advance_bigger_than_the_cash_in_hand_is_allowed() {
-    // No PRD rule refuses it (FR-15.7 warns only on a payment over the payable): cash 50,000,
-    // advance 60,000 leaves cash 10,000 جمع and the books still balance.
+fn an_advance_bigger_than_the_cash_in_hand_asks_and_is_then_allowed() {
+    // PRD FR-6.7 (v1.5): cash can really go below zero, but the user must confirm it. Cash 50,000,
+    // advance 60,000 leaves cash 10,000 جمع (-10,000); the books still balance.
     let f = fixture();
-    vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "60,000")).unwrap();
+    let refused =
+        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "60,000")).unwrap_err();
+    assert_eq!(
+        code_and_value(&refused, "cash_after_paisa"),
+        (ErrorCode::ErrCashBelowZeroNotConfirmed, Some(-1_000_000))
+    );
+    assert_eq!(balance(&f.env, f.cash), (BalanceSide::Dr, 50_000));
+    vouchers::save_advance(&f.env.ctx, &f.owner, &confirmed(advance(f.rahim, "60,000"))).unwrap();
     assert_eq!(balance(&f.env, f.cash), (BalanceSide::Cr, 10_000));
     let trial = ledger::trial_balance(&f.env.ctx, None).unwrap();
     assert_eq!(trial.total_dr, trial.total_cr);
@@ -703,20 +690,33 @@ fn the_amount_limits() {
     let f = fixture();
     // 10,00,00,00,000 rupees (ten billion, 1,000 crore) is the largest one value (Code Standards
     // 4.2); one more is refused (see the mistakes test). Urdu digits and a simple sum work.
-    let big =
-        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "10,000,000,000")).unwrap();
+    let big = vouchers::save_advance(
+        &f.env.ctx,
+        &f.owner,
+        &confirmed(advance(f.rahim, "10,000,000,000")),
+    )
+    .unwrap();
     assert_eq!(big.new_balance.amount_paisa, rupees(10_000_000_000));
-    let second =
-        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "10,000,000,000")).unwrap();
+    let second = vouchers::save_advance(
+        &f.env.ctx,
+        &f.owner,
+        &confirmed(advance(f.rahim, "10,000,000,000")),
+    )
+    .unwrap();
     assert_eq!(
         second.new_balance.amount_paisa,
         rupees(20_000_000_000),
         "sums are checked, not capped"
     );
-    let urdu = vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.karim, "۱۵۰۰۰")).unwrap();
+    let urdu = vouchers::save_advance(&f.env.ctx, &f.owner, &confirmed(advance(f.karim, "۱۵۰۰۰")))
+        .unwrap();
     assert_eq!(urdu.new_balance.amount_paisa, rupees(15_000));
-    let sum =
-        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.karim, "10000+5000")).unwrap();
+    let sum = vouchers::save_advance(
+        &f.env.ctx,
+        &f.owner,
+        &confirmed(advance(f.karim, "10000+5000")),
+    )
+    .unwrap();
     assert_eq!(sum.new_balance.amount_paisa, rupees(30_000));
 }
 
@@ -928,6 +928,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
         &f.env.ctx,
         &f.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "01-10-2026".into(),
             ..advance(f.rahim, "1,000")
         },
@@ -938,12 +939,20 @@ fn the_voucher_list_filters_by_kind_and_date() {
         vouchers::list(
             &f.env.ctx,
             &VouchersListInput {
+                sort: None,
+                group_by_month: false,
+                search: None,
+                show_finished: true,
+                account_id: None,
                 voucher_type: kind,
                 from: from.into(),
                 to: to.into(),
+                offset: 0,
+                limit: 0,
             },
         )
         .unwrap()
+        .rows
     };
     assert_eq!(ask(None, "", "").len(), 2);
     assert_eq!(ask(Some(VoucherType::Receipt), "", "").len(), 0);
@@ -956,7 +965,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
     );
     assert_eq!(
         mid[0].account.as_ref().map(|a| a.code.as_str()),
-        Some("030110002")
+        Some("0011")
     );
     let early = ask(None, "", "01-10-2026");
     assert_eq!(early.iter().map(|v| v.number).collect::<Vec<_>>(), [1]);
@@ -965,9 +974,16 @@ fn the_voucher_list_filters_by_kind_and_date() {
             vouchers::list(
                 &f.env.ctx,
                 &VouchersListInput {
+                    sort: None,
+                    group_by_month: false,
+                    search: None,
+                    show_finished: true,
+                    account_id: None,
                     voucher_type: None,
                     from: "99-99-2026".into(),
-                    to: String::new()
+                    to: String::new(),
+                    offset: 0,
+                    limit: 0,
                 }
             )
             .unwrap_err()
@@ -1036,7 +1052,7 @@ fn random_advances_and_reversals_keep_the_books_exact() {
             let saved = vouchers::save_advance(
                 &f.env.ctx,
                 &f.owner,
-                &advance(sellers[who], &amount.to_string()),
+                &confirmed(advance(sellers[who], &amount.to_string())),
             )
             .unwrap();
             saved_numbers += 1;
@@ -1105,6 +1121,7 @@ fn a_refused_line_shows_no_new_balance() {
         lines: vec![
             advance(f.rahim, "1,000"),
             AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "03-10-2026".into(),
                 ..advance(f.rahim, "2,000")
             },

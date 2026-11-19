@@ -16,4 +16,10 @@ export type DayStatus = {
    * True when today is after the closed-up-to date, so entries can be posted.
    */
   today_open: boolean;
+  /**
+   * The first day of the books (the oldest date of a posted entry, a trip, a garden, a purchase
+   * or a stock move), `YYYY-MM-DD`. Null until there is one. The windows of the list screens
+   * stop here when they go back (plan 76 point 8).
+   */
+  first_entry_date: string | null;
 };

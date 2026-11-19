@@ -1,0 +1,437 @@
+//! The types of the dashboard and the attention list (PRD 9, FR-7.44). Every name is a Rust name
+//! with a `Dashboard` or `Attention` prefix, so the generated TypeScript files do not clash with
+//! the report types.
+//!
+//! Money is `Paisa` (whole rupees, exported to TypeScript as `Paisa`), counts and ids are `i64`
+//! (exported as `number`). Nothing here is text for the screen: the screen turns each kind into a
+//! Fluent message (Code Standards F31).
+
+use mandi_core::money::Paisa;
+use serde::Serialize;
+use ts_rs::TS;
+
+use crate::reports::{Names, PartyRef};
+
+/// Most rows of today's بکری list (PRD 9.3). The count of all of them is given as well.
+pub const MAX_TODAY_ROWS: usize = 100;
+/// How many of the oldest buyer dues the dashboard lists (PRD 9.3).
+pub const OLDEST_DUES: usize = 10;
+/// How many days the first chart shows, today included (PRD 9.4).
+pub const CHART_DAYS: i64 = 30;
+/// How many items the second chart shows (PRD 9.4).
+pub const TOP_ITEMS: usize = 5;
+/// A lot waits in باقی مال for more than this many days before it is on the attention list
+/// (PRD FR-7.44, assumption A40).
+pub const STOCK_WAIT_DAYS: i64 = 2;
+/// A buyer's oldest open bill is on the attention list when it is older than this many days.
+pub const DUES_OLD_DAYS: i64 = 30;
+/// A seller's open payable is on the attention list when part of it is older than this many days.
+pub const PAYABLES_OLD_DAYS: i64 = 7;
+/// The cloud copy is on the attention list when it is older than this many hours (NFR-BAK-10).
+pub const BACKUP_OLD_HOURS: i64 = 24;
+/// A question of the assistant that ended with a difference between the two places of a figure is
+/// on the attention list for this many days, counting back from today (PRD FR-7.76 point 2). A
+/// question asked exactly this many days ago is still listed.
+pub const RECORDS_DIFFER_DAYS: i64 = 7;
+
+/// What the command layer knows about the backups and the database does not: the backup state is
+/// kept by the backup service. Passed in, never read from a file here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BackupFacts {
+    /// True when the cloud copy is switched on. If it is off, an old copy is not a problem.
+    pub cloud_on: bool,
+    /// Whole hours since the last good cloud copy. `None` when there is none.
+    pub cloud_age_hours: Option<i64>,
+}
+
+/// The tiles of PRD 9.1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardTiles {
+    /// آج کی بکری: Σ خام بکری of today's postings (reversals take out cancelled ones).
+    #[ts(type = "Paisa")]
+    pub sales_gross_paisa: Paisa,
+    /// How many بکری have sales today. A later sale today of an older بکری counts here, but that
+    /// بکری is not in today's list, which holds the بکری dated today. The two can differ on
+    /// purpose; do not make one match the other.
+    #[ts(type = "number")]
+    pub sales_count: i64,
+    /// آج کا کمیشن: seller + buyer commission + لاگا today.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+    /// روکڑ بقایا: the balance of the cash account now.
+    #[ts(type = "Paisa")]
+    pub cash_in_hand_paisa: Paisa,
+    /// گاہکوں کے ذمے: what buyers owe, leaving out anyone in the dead amount. The total row of R20
+    /// (PRD 9.1, FR-19.9, FR-10.10).
+    #[ts(type = "Paisa")]
+    pub buyers_dues_paisa: Paisa,
+    /// بیوپاریوں کے ذمے: what sellers owe beyond their open advances, leaving out anyone in the dead
+    /// amount. The "بیوپاری کے ذمے" total of R24 (PRD 9.1, FR-15.9).
+    #[ts(type = "Paisa")]
+    pub sellers_dues_paisa: Paisa,
+    /// کل اگراہی: buyers' dues + sellers' dues + the dead amount + open money lent, everything people
+    /// owe the shop (PRD 9.1 v1.44, FR-19.9, FR-9.7). Open advances have their own tile.
+    #[ts(type = "Paisa")]
+    pub total_dues_paisa: Paisa,
+    /// ڈوبی رقم: what the people moved to the dead amount still owe (PRD FR-10.10). The total of R38
+    /// with the filter "owed". It opens R38.
+    #[ts(type = "Paisa")]
+    pub dead_amount_paisa: Paisa,
+    /// ڈوبی رقم: how many people still owe something in it.
+    #[ts(type = "number")]
+    pub dead_count: i64,
+    /// بیوپاریوں کو ادائیگی باقی: Σ of each seller's open payable (FR-7.59), the payable total of R24,
+    /// leaving out anyone in the dead amount.
+    #[ts(type = "Paisa")]
+    pub sellers_payable_paisa: Paisa,
+    /// پیشگی باقی: Σ of the advances not yet adjusted (FR-15.8), the open total of R26.
+    #[ts(type = "Paisa")]
+    pub advances_open_paisa: Paisa,
+    /// باقی مال: lots of saved بکری with goods left.
+    #[ts(type = "number")]
+    pub stock_lots: i64,
+    /// باقی مال: their نگ in all.
+    #[ts(type = "number")]
+    pub stock_qty: i64,
+    /// مارکیٹ سفر: open trips.
+    #[ts(type = "number")]
+    pub trips_open: i64,
+    /// مارکیٹ سفر: saved purchases that still have stock.
+    #[ts(type = "number")]
+    pub trips_purchases_with_stock: i64,
+    /// مارکیٹ سفر: نگ left over all of them.
+    #[ts(type = "number")]
+    pub trips_qty_left: i64,
+    /// مارکیٹ سفر: their cost left (C21).
+    #[ts(type = "Paisa")]
+    pub trips_cost_left_paisa: Paisa,
+    /// باغات: open gardens (PRD 9.1, FR-12.37).
+    #[ts(type = "number")]
+    pub gardens_open: i64,
+    /// باغات: the total of their running balances (money in less everything paid, each as on the
+    /// garden screen). Can be below 0.
+    #[ts(type = "Paisa")]
+    pub gardens_balance_paisa: Paisa,
+    /// ادھار رقم باقی: Σ of the open money lent (FR-16.5).
+    #[ts(type = "Paisa")]
+    pub lent_open_paisa: Paisa,
+    /// How much of it is past its return-by day.
+    #[ts(type = "Paisa")]
+    pub lent_overdue_paisa: Paisa,
+    /// باغوں کے مالکوں / دوسروں کے ذمے: Σ open of the money lent to persons who are not staff,
+    /// leaving out the dead amount (PRD 9.1, FR-16.13, plan 76 point 10). Part of
+    /// `lent_open_paisa`.
+    #[ts(type = "Paisa")]
+    pub others_dues_paisa: Paisa,
+    /// How many of those people have something open.
+    #[ts(type = "number")]
+    pub others_people_count: i64,
+    /// آج کا خرچہ: دکان خرچہ today (the 0501 heads only).
+    #[ts(type = "Paisa")]
+    pub expenses_today_paisa: Paisa,
+    /// آج کی نقدی: the money buyers paid on the spot today (موقع پر جمع, PRD FR-12.44, FR-9.8),
+    /// چکتا buyers included. It replaces the health check tile (plan 79 item 2c).
+    #[ts(type = "Paisa")]
+    pub cash_sales_today_paisa: Paisa,
+    /// آج کی نقدی: how many buyers paid something on the spot today.
+    #[ts(type = "number")]
+    pub cash_sales_today_buyers: i64,
+}
+
+/// One partner of the strip (PRD 9.2).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardPartner {
+    /// The partner.
+    #[ts(type = "number")]
+    pub partner_id: i64,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// Today's profit share: income shares less expense shares (C12).
+    #[ts(type = "Paisa")]
+    pub today_paisa: Paisa,
+    /// This calendar month's profit share up to today.
+    #[ts(type = "Paisa")]
+    pub month_paisa: Paisa,
+    /// This calendar year's profit share up to today.
+    #[ts(type = "Paisa")]
+    pub year_paisa: Paisa,
+    /// کل رقم: everything he has in the firm (C22).
+    #[ts(type = "Paisa")]
+    pub total_paisa: Paisa,
+}
+
+/// One row of today's بکری list (PRD 9.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardBikri {
+    /// The بکری, to open it.
+    #[ts(type = "number")]
+    pub bikri_id: i64,
+    /// Its number.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The truck number as typed. Null for none.
+    pub truck_no: Option<String>,
+    /// The seller of its first lot (the چکتا buyer's name for a چکتا کھاتہ lot).
+    pub seller: Option<Names>,
+    /// The tag (نشان) of that seller's account, shown after his name. Missing when he has none and
+    /// for a چکتا buyer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub seller_tag: Option<String>,
+    /// How many sellers it has. 1 for a truck with one seller.
+    #[ts(type = "number")]
+    pub seller_count: i64,
+    /// خام بکری of all its lots.
+    #[ts(type = "Paisa")]
+    pub gross_paisa: Paisa,
+    /// صافی بکری of all its lots.
+    #[ts(type = "Paisa")]
+    pub net_paisa: Paisa,
+    /// True when it was cancelled (منسوخ).
+    pub cancelled: bool,
+}
+
+/// One of the oldest buyer dues (PRD 9.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardDue {
+    /// The buyer (and the چکتا buyer inside a چکتا کھاتہ account).
+    pub party: PartyRef,
+    /// His city.
+    pub city: Option<Names>,
+    /// What he owes.
+    #[ts(type = "Paisa")]
+    pub balance_paisa: Paisa,
+    /// The day of his oldest open bill, `YYYY-MM-DD`.
+    pub oldest_date: Option<String>,
+    /// How many days old that bill is.
+    #[ts(type = "number | null")]
+    pub days: Option<i64>,
+}
+
+/// One day of the first chart: خام بکری and commission (PRD 9.4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardChartDay {
+    /// The day, `YYYY-MM-DD`.
+    pub date: String,
+    /// خام بکری of the day.
+    #[ts(type = "Paisa")]
+    pub gross_paisa: Paisa,
+    /// Seller + buyer commission + لاگا of the day.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+}
+
+/// One item of the second chart: this month's commission by item (PRD 9.4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardChartItem {
+    /// The item.
+    #[ts(type = "number")]
+    pub item_id: i64,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// Its commission this month.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+}
+
+/// What needs attention (PRD FR-7.44), one kind for each line of the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AttentionKind {
+    /// Unsaved drafts.
+    Drafts,
+    /// Earlier days that are not closed.
+    OpenDays,
+    /// Lots waiting in باقی مال for more than 2 days.
+    StockWaiting,
+    /// Buyers over their credit limit.
+    OverCreditLimit,
+    /// Buyer dues older than 30 days.
+    DuesOld,
+    /// Seller payables older than 7 days.
+    PayablesOld,
+    /// The last cloud backup is older than 24 hours, or there is none.
+    BackupOld,
+    /// Money lent past its return-by day.
+    LoansOverdue,
+    /// Money a partner took past its return-by day.
+    TakesOverdue,
+    /// Records with a missing Urdu or English name.
+    NamesMissing,
+    /// The daily check of the books failed: the books do not balance, a hash chain does not match or
+    /// the data file is damaged (PRD FR-7.44, NFR-OBS-5; it replaced the dashboard tile in
+    /// v1.44, plan 79 item 2c). One item when the last stored result is not good.
+    HealthCheck,
+    /// A question to the assistant ended because the two places of a figure differed, in the last
+    /// [`RECORDS_DIFFER_DAYS`] days (PRD FR-7.76 point 2, FR-7.44; plan 80 R6-3). The Owner opens the
+    /// question log in Settings and the report, to see which figure.
+    RecordsDiffer,
+}
+
+impl AttentionKind {
+    /// Every kind, in the order of the list on the screen.
+    pub const ALL: [AttentionKind; 12] = [
+        AttentionKind::Drafts,
+        AttentionKind::OpenDays,
+        AttentionKind::StockWaiting,
+        AttentionKind::OverCreditLimit,
+        AttentionKind::DuesOld,
+        AttentionKind::PayablesOld,
+        AttentionKind::BackupOld,
+        AttentionKind::LoansOverdue,
+        AttentionKind::TakesOverdue,
+        AttentionKind::NamesMissing,
+        AttentionKind::HealthCheck,
+        AttentionKind::RecordsDiffer,
+    ];
+}
+
+/// What the screen opens for the first record of an item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AttentionTarget {
+    /// An account (a buyer or a seller): its ledger. With a person key for a چکتا buyer.
+    Account,
+    /// A partner.
+    Partner,
+    /// A بکری.
+    Bikri,
+    /// A trip purchase.
+    Purchase,
+    /// A garden arrival (مال آیا, PRD FR-12.40): the id is the arrival's.
+    Arrival,
+}
+
+/// The most urgent record of an item, to open straight from the list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AttentionFirst {
+    /// What kind of record it is.
+    pub target: AttentionTarget,
+    /// Its id.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// The person inside a چکتا کھاتہ account.
+    pub person_key: Option<String>,
+    /// Urdu name.
+    pub name_ur: Option<String>,
+    /// English name.
+    pub name_en: Option<String>,
+    /// The tag (نشان) of the account, shown after the name (PRD 10.2). Missing when it has none,
+    /// and for a record that is not an account.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
+}
+
+/// One line of the attention list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AttentionItem {
+    /// What it is.
+    pub kind: AttentionKind,
+    /// How many there are. Always more than 0: a kind with nothing to do is not listed.
+    #[ts(type = "number")]
+    pub count: i64,
+    /// The money involved, where there is some.
+    #[ts(type = "Paisa | null")]
+    pub amount_paisa: Option<Paisa>,
+    /// The نگ involved, where there are some.
+    #[ts(type = "number | null")]
+    pub qty: Option<i64>,
+    /// The most days past (or old), where that means something.
+    #[ts(type = "number | null")]
+    pub days: Option<i64>,
+    /// The most urgent record.
+    pub first: Option<AttentionFirst>,
+}
+
+/// The attention list and its count (PRD FR-7.44). Read only (Code Standards B29).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AttentionList {
+    /// The lines, in the order of [`AttentionKind::ALL`], only those with something to do.
+    pub items: Vec<AttentionItem>,
+    /// The number on the bell: Σ of the counts.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl AttentionList {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): the amount of the money partners
+    /// took past its return-by day. The count stays.
+    pub fn hide_partners(&mut self) {
+        for item in &mut self.items {
+            if item.kind == AttentionKind::TakesOverdue {
+                item.amount_paisa = None;
+            }
+        }
+        self.partners_locked = true;
+    }
+}
+
+/// One open garden of the garden tile (PRD 9.1): its running balance and the rent still to pay.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardGarden {
+    /// The garden.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// Its number in the series of gardens.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its code (plan 34): `0080` for the first garden.
+    pub code: String,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// The running balance: money in less everything paid.
+    #[ts(type = "Paisa")]
+    pub balance_paisa: Paisa,
+    /// The rent still to pay (signed).
+    #[ts(type = "Paisa")]
+    pub rent_due_paisa: Paisa,
+}
+
+/// Everything the dashboard shows (PRD 9). Read only; one signed-in call.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct Dashboard {
+    /// Today, `YYYY-MM-DD`.
+    pub today: String,
+    /// The tiles.
+    pub tiles: DashboardTiles,
+    /// The partner strip, in the order the partners were made.
+    pub partners: Vec<DashboardPartner>,
+    /// The open gardens, in the order they were made, each with its running balance.
+    pub gardens: Vec<DashboardGarden>,
+    /// Today's بکری, oldest first, at most [`MAX_TODAY_ROWS`].
+    pub bikri_today: Vec<DashboardBikri>,
+    /// How many بکری there are today in all.
+    #[ts(type = "number")]
+    pub bikri_today_count: i64,
+    /// The oldest buyer dues, at most [`OLDEST_DUES`].
+    pub oldest_dues: Vec<DashboardDue>,
+    /// The last [`CHART_DAYS`] days, oldest first, today last.
+    pub chart_days: Vec<DashboardChartDay>,
+    /// This month's commission by item, the biggest first, at most [`TOP_ITEMS`].
+    pub chart_items: Vec<DashboardChartItem>,
+    /// The attention list (آج کے کام).
+    pub attention: AttentionList,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl Dashboard {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): the partner strip. The amount of
+    /// the money partners took past its day goes with it (see [`AttentionList::hide_partners`]).
+    pub fn hide_partners(&mut self) {
+        self.partners.clear();
+        self.partners_locked = true;
+        self.attention.hide_partners();
+    }
+}

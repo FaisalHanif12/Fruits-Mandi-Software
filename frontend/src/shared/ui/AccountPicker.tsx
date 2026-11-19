@@ -1,14 +1,16 @@
 // The picker for every account field of the app (PRD FR-7.38 to FR-7.42, FR-10.8, Code Standards
 // F40): sellers, buyers, or any account. It is the shared picker with three things added:
 //
-// - Short codes. A code typed in a seller or buyer field can be just the serial: `1` is 03040001
-//   in a buyer field. It is taken on Enter or on leaving the field, never while typing, because `1`
+// - Short codes. A code typed in a seller or buyer field can be just the running number: `1` is
+//   0021 in a buyer field (plan 32, R5). It is taken on Enter or on leaving the field, never while typing, because `1`
 //   may be the start of `12`. While typing, the list shows the matches and the party card previews
-//   the top one. The backend resolves the code (found, several, unknown, reserved).
+//   the top one. The backend resolves the code (found, several, unknown, reserved). A code has no
+//   fixed length (plan 32), so any run of digits is sent.
 // - The party card under the field as soon as an account is known, or highlighted (FR-7.38).
-// - Adding an account on the spot: `F4`, or the button of the unknown-code message, opens the
-//   quick add over the screen with the typed code filled in (FR-7.42, FR-10.8). The new account
-//   comes back into the field.
+// - Adding an account on the spot (plan 41, PRD FR-7.69): the add row that ends the open list, `F4`,
+//   Enter on a name that matches nothing, or the button of the unknown-code message open the quick
+//   add over the screen with what was typed filled in (FR-7.42, FR-10.8). The new account is put in
+//   the field. The quick add has a link to the full Index form for fields it does not ask.
 //
 // Pickers never convert English letters to Urdu (F41): the text is searched as typed.
 
@@ -17,19 +19,26 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   accountSource,
   accountsResolveCode,
+  cardChuktaOf,
+  chuktaHitOf,
+  typeMessageId,
+  type CardChukta,
   type AccountHit,
+  type AccountKind,
   type AccountRow,
   type AccountScope,
   type ResolvedCode,
 } from '../accounts';
 import { SHORTCUTS, useShortcut } from '../keyboard';
 import { displayName, useLanguage } from '../i18n';
+import { useAddRecord, type AddRecordKind } from './add-record';
 import { Balance } from './Balance';
 import { Button } from './Button';
 import type { FieldControlProps } from './Field';
 import { PartyCard } from './PartyCard';
 import { PickerBase, type PickerValue } from './PickerBase';
 import { QuickAddAccount } from './QuickAddAccount';
+import { QuickAddChukta } from './QuickAddChukta';
 
 interface AccountPickerProps extends FieldControlProps {
   /** Which accounts the field takes: sellers, buyers, or every account. */
@@ -47,11 +56,30 @@ interface AccountPickerProps extends FieldControlProps {
    * one. A screen that draws the card itself (the sale lines grid, where the picker is a cell)
    * turns `showCard` off and reads this.
    */
-  onCardAccount?: ((accountId: number | null) => void) | undefined;
+  onCardAccount?: ((accountId: number | null, chukta?: CardChukta | null) => void) | undefined;
+  /** False where adding an account from the field would not make sense, for example a filter. */
+  canAdd?: boolean | undefined;
+  /** A filter box: "All" is its first choice and its empty state (PRD FR-19.1, see PickerBase). */
+  allChoice?: boolean | undefined;
   /** For a picker in a grid cell (see PickerBase). */
   initialText?: string | undefined;
   startOpen?: boolean | undefined;
+  /** The list opens above the field instead of under it (see PickerBase). */
+  listAbove?: boolean | undefined;
   onEnterPicked?: (() => void) | undefined;
+  /** The text in the field after each key (see PickerBase). */
+  onTyped?: ((text: string) => void) | undefined;
+  /**
+   * A person in the dead amount may be offered and picked (PRD FR-10.10): only the receipt field and
+   * the ادھار رقم واپسی field say yes. He shows with the tag "ڈوبی".
+   */
+  includeDead?: boolean | undefined;
+  /**
+   * The buyer box of a بکری line (PRD FR-7.29, FR-13.3): it lists چکتا buyers beside ordinary
+   * buyers, each marked چکتا with his phone, and its list ends with two add rows, a new buyer and
+   * a new چکتا buyer. Only scope `buyer` can say yes; no other box lists a چکتا buyer.
+   */
+  withChukta?: boolean | undefined;
 }
 
 /** What the screen says about a code that did not give one account. */
@@ -66,9 +94,13 @@ function hitOfRow(row: AccountRow): AccountHit {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
+    kind: 'account',
+    chukta_id: null,
+    phone: null,
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
+    ...(row.tag === undefined ? {} : { tag: row.tag }),
     extra_ur: [row.father_or_firm_ur, row.city?.name_ur ?? '']
       .filter((part) => part !== '')
       .join('، '),
@@ -76,15 +108,28 @@ function hitOfRow(row: AccountRow): AccountHit {
       .filter((part) => part !== '')
       .join(', '),
     is_active: row.is_active,
+    is_dead: false,
     balance: row.balance,
   };
 }
 
-/** Only digits, up to the length of a full code, can be a code (PRD FR-7.39). */
-const CODE_TEXT = /^\d{1,9}$/;
+/** Only digits can be a code (PRD FR-7.39). Codes grow without a limit (plan 32, R2). */
+const CODE_TEXT = /^\d{1,18}$/;
+
+/** The word of each kind of field in the add row's and the empty list's messages, and its form. */
+const ADD: Record<AccountScope, { noun: string; kind: AddRecordKind | null }> = {
+  seller: { noun: 'seller', kind: 'seller' },
+  lot_seller: { noun: 'seller', kind: 'seller' },
+  buyer: { noun: 'buyer', kind: 'buyer' },
+  any: { noun: 'account', kind: 'any' },
+  // The accounts of one control have their own forms (money lent, separate khata).
+  control: { noun: 'account', kind: null },
+};
 
 const UNKNOWN_ID: Record<AccountScope, string> = {
   seller: 'accountpicker-unknown-seller',
+  // The seller field of a lot also offers اپنا مال; an unknown code is still an unknown seller.
+  lot_seller: 'accountpicker-unknown-seller',
   buyer: 'accountpicker-unknown-buyer',
   any: 'accountpicker-unknown-any',
   control: 'accountpicker-unknown-any',
@@ -98,13 +143,29 @@ export function AccountPicker({
   controlId,
   onCardAccount,
   onEnterPicked,
+  onTyped,
+  canAdd = true,
+  includeDead = false,
+  withChukta: withChuktaProp = false,
   ...field
 }: AccountPickerProps) {
   const language = useLanguage();
-  const source = useMemo(() => accountSource(scope, controlId ?? null), [scope, controlId]);
+  const withChukta = withChuktaProp && scope === 'buyer';
+  const source = useMemo(
+    () => accountSource(scope, controlId ?? null, includeDead, withChukta),
+    [scope, controlId, includeDead, withChukta],
+  );
   const [note, setNote] = useState<CodeNote | null>(null);
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
+  // The quick add that is open: the text it starts with. Who is waiting for the new account is kept
+  // in a ref, so the form closing after a save calls it once.
   const [adding, setAdding] = useState<string | null>(null);
+  const waiting = useRef<((added: AccountHit | null) => void) | null>(null);
+  // The short form of a new چکتا buyer (the second add row): the text it starts with, and who waits.
+  const [addingChukta, setAddingChukta] = useState<string | null>(null);
+  const chuktaWaiting = useRef<((added: AccountHit | null) => void) | null>(null);
+  const addRecord = useAddRecord();
+  const add = ADD[scope];
   // True while a code that Enter sent to the backend is being answered: when it is found, the
   // grid cell goes on to the next cell as it does after any pick by Enter (PRD FR-7.14).
   const enterPending = useRef(false);
@@ -119,7 +180,11 @@ export function AccountPicker({
       .then((result) => {
         const byEnter = enterPending.current;
         enterPending.current = false;
-        if (result.status === 'found' && result.account !== null) {
+        // A person in the dead amount comes back as "inactive" with his account; only the fields that
+        // take him (the receipt, the ادھار رقم واپسی) pick him by his code (PRD FR-10.10).
+        const deadPick =
+          includeDead && result.status === 'inactive' && result.account?.is_dead === true;
+        if ((result.status === 'found' || deadPick) && result.account !== null) {
           setNote(null);
           onChange(result.account);
           if (byEnter) onEnterPicked?.();
@@ -132,24 +197,104 @@ export function AccountPicker({
       });
   };
 
+  // Opens the quick add. `done` is told which account was saved, or null when the form closed
+  // without one (Esc). The message path (`null`) puts a saved account in the field itself.
+  function openQuickAdd(text: string, done: ((added: AccountHit | null) => void) | null) {
+    waiting.current =
+      done ??
+      ((hit) => {
+        if (hit === null) return;
+        setNote(null);
+        onChange(hit);
+      });
+    setAdding(text);
+  }
+  function finishQuickAdd(hit: AccountHit | null) {
+    const done = waiting.current;
+    waiting.current = null;
+    setAdding(null);
+    done?.(hit);
+  }
+
+  // The full Index form, for fields the quick add does not ask (plan 41, R3). The quick add closes
+  // and the picker waits for the Index form instead.
+  const fullForm =
+    addRecord !== null && add.kind !== null
+      ? (text: string, accountKind: AccountKind) => {
+          const done = waiting.current;
+          waiting.current = null;
+          setAdding(null);
+          const kind = add.kind;
+          if (kind === null) return;
+          addRecord({
+            kind,
+            text,
+            form: 'full',
+            accountKind,
+            onClosed: (added) => {
+              if (added === null) {
+                done?.(null);
+                return;
+              }
+              // The account the form saved, as the list shows it.
+              accountsResolveCode(scope, controlId ?? null, added.code).then(
+                (result) => {
+                  done?.(result.status === 'found' ? result.account : null);
+                },
+                () => {
+                  done?.(null);
+                },
+              );
+            },
+          });
+        }
+      : undefined;
+
   const unknown = note?.result.status === 'unknown';
   // F4 works from the message too, after the field has been left.
   useShortcut(
     SHORTCUTS.addAccount,
     () => {
-      if (note !== null) setAdding(note.text);
+      if (note !== null) openQuickAdd(note.text, null);
     },
     { enabled: unknown && adding === null },
   );
 
+  // The party card follows the row the list highlights, else the chosen record. A چکتا buyer has
+  // the shared account's id, so his own names and phone say who the card is for (PRD FR-13.6).
   const cardId = highlight?.id ?? value?.id ?? null;
+  const chuktaCard: CardChukta | null =
+    highlight !== null
+      ? highlight.kind === 'chukta'
+        ? {
+            id: highlight.chukta_id,
+            name_ur: highlight.name_ur,
+            name_en: highlight.name_en,
+            phone: highlight.phone ?? '',
+          }
+        : null
+      : cardChuktaOf(value);
+  // The screen is told when who the card is for changes, not on every render.
+  const chuktaKey =
+    chuktaCard === null
+      ? ''
+      : `${String(chuktaCard.id)}|${chuktaCard.name_ur}|${chuktaCard.name_en}|${chuktaCard.phone}`;
+  const chuktaRef = useRef(chuktaCard);
   const cardRef = useRef(onCardAccount);
   useEffect(() => {
+    chuktaRef.current = chuktaCard;
     cardRef.current = onCardAccount;
   });
   useEffect(() => {
-    cardRef.current?.(cardId);
-  }, [cardId]);
+    cardRef.current?.(cardId, chuktaRef.current);
+  }, [cardId, chuktaKey]);
+
+  // The second add row: a new چکتا buyer. The short form saves him through `chukta_add`; the box
+  // takes his row (the account چکتا کھاتہ with his own record) when the form closes.
+  function openChuktaAdd(text: string, done: (added: AccountHit | null) => void) {
+    chuktaWaiting.current = done;
+    setAddingChukta(text);
+  }
   return (
     <div className="flex flex-col gap-2">
       <PickerBase<AccountHit>
@@ -177,7 +322,21 @@ export function AccountPicker({
         onTyping={() => {
           setNote(null);
         }}
-        onAddNew={setAdding}
+        onTyped={onTyped}
+        addNoun={canAdd ? add.noun : undefined}
+        onAddRecord={(text, done) => {
+          openQuickAdd(text, done);
+        }}
+        extraAdd={canAdd && withChukta ? { noun: 'chukta', onAdd: openChuktaAdd } : undefined}
+        // A چکتا buyer is marked next to his name in the buyer box, so he is told apart from an
+        // ordinary buyer; his phone is the second line of his row (PRD FR-7.29).
+        renderMark={(hit) =>
+          hit.kind === 'chukta' ? (
+            <Localized id="accounts-type-chukta">
+              <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
+            </Localized>
+          ) : null
+        }
         renderEnd={(hit) => (
           <span className="flex items-baseline gap-3">
             {scope === 'any' ? (
@@ -205,7 +364,7 @@ export function AccountPicker({
                         onChange(candidate);
                       }}
                     >
-                      <Localized id={`accounts-type-${candidate.account_type}`} />
+                      <Localized id={typeMessageId(candidate.account_type)} />
                       <bdi dir="ltr">{candidate.code}</bdi>
                       {displayName(candidate, language)}
                     </Button>
@@ -237,7 +396,7 @@ export function AccountPicker({
               <Button
                 shortcut={SHORTCUTS.addAccount}
                 onClick={() => {
-                  setAdding(note.text);
+                  openQuickAdd(note.text, null);
                 }}
               >
                 <Localized id="accountpicker-add" />
@@ -246,18 +405,46 @@ export function AccountPicker({
           )}
         </div>
       )}
-      {showCard ? <PartyCard accountId={cardId} /> : null}
+      {showCard ? <PartyCard accountId={cardId} chukta={chuktaCard} /> : null}
+      {withChukta ? (
+        <QuickAddChukta
+          open={addingChukta !== null}
+          onOpenChange={(open) => {
+            if (open) return;
+            // The form closed without a save (Esc, Back): the box is as it was.
+            const done = chuktaWaiting.current;
+            chuktaWaiting.current = null;
+            setAddingChukta(null);
+            done?.(null);
+          }}
+          typed={addingChukta ?? ''}
+          onSaved={(buyer) => {
+            // Saved: the box takes him at once, and the form closes (PRD FR-7.69).
+            const done = chuktaWaiting.current;
+            chuktaWaiting.current = null;
+            setAddingChukta(null);
+            setNote(null);
+            done?.(chuktaHitOf(buyer));
+          }}
+        />
+      ) : null}
       <QuickAddAccount
         open={adding !== null}
         onOpenChange={(open) => {
-          if (!open) setAdding(null);
+          if (!open) finishQuickAdd(null);
         }}
         scope={scope}
         typed={adding ?? ''}
         suggestedCode={note?.result.suggested_code ?? null}
         onSaved={(row) => {
-          setNote(null);
-          onChange(hitOfRow(row));
+          finishQuickAdd(hitOfRow(row));
+        }}
+        onFullForm={fullForm}
+        onPickExisting={(match) => {
+          // A look-alike that is already there is the one he means: take it, save nothing.
+          void accountsResolveCode(scope, controlId ?? null, match.code).then((result) => {
+            if (result.status === 'found') finishQuickAdd(result.account);
+          });
         }}
       />
     </div>

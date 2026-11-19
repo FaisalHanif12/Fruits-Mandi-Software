@@ -1,11 +1,13 @@
 // The top bar on every screen (PRD FR-5.6, design system 6): the search box with its Ctrl+K chip
-// (it finds accounts, GlobalSearch), the attention bell, the language switch and the user. The
-// bell is a placeholder for now: it says "coming soon" (D5 builds it).
+// (it finds accounts, بکری and vouchers, GlobalSearch), the attention bell (AttentionBell), the
+// language switch and the user. The bell and the user are quiet buttons with no box until the pointer
+// is on them (plan 75, item 9), so the bar shows two boxes, the search and the language switch, and the
+// pressed language is the one strong colour in it.
 
-import { useLocalization } from '@fluent/react';
-import { Bell } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { ChangePasswordDialog } from '../../features/auth/components/ChangePasswordDialog';
+import type { VoucherSearchHit } from '../../shared/accounts';
+import { AttentionBell } from './AttentionBell';
 import { GlobalSearch } from './GlobalSearch';
 import { LanguageSwitch } from './LanguageSwitch';
 import { UserMenu } from './UserMenu';
@@ -14,29 +16,43 @@ interface TopBarProps {
   /** The signed-in user's name, shown as typed (a name is not translated, PRD FR-7.25). */
   userName: string;
   onLock: () => void;
-  onSignOut: () => void;
+  /** The user menu's "show the guide": opens the first-run guide again (PRD FR-7.12). */
+  onGuide: () => void;
   /** A search result was chosen: open that account. */
   onOpenAccount: (id: number) => void;
+  /** A search result was chosen: open that بکری. */
+  onOpenBikri: (id: number) => void;
+  /** A search result was chosen: open that voucher. */
+  onOpenVoucher: (hit: VoucherSearchHit) => void;
+  /**
+   * The Back button of a page that was opened from another page (plan 78 F1), or nothing. It stands at the
+   * start of the bar, so it is in the same place on every page.
+   */
+  back?: ReactNode;
 }
 
-export function TopBar({ userName, onLock, onSignOut, onOpenAccount }: TopBarProps) {
-  const { l10n } = useLocalization();
-  const comingSoon = l10n.getString('layout-coming-soon');
+export function TopBar({
+  userName,
+  onLock,
+  onGuide,
+  onOpenAccount,
+  onOpenBikri,
+  onOpenVoucher,
+  back,
+}: TopBarProps) {
   const [changingPassword, setChangingPassword] = useState(false);
   const userButton = useRef<HTMLButtonElement>(null);
   return (
     <header className="flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-5">
-      <GlobalSearch onOpenAccount={onOpenAccount} />
+      {back}
+      <GlobalSearch
+        onOpenAccount={onOpenAccount}
+        onOpenBikri={onOpenBikri}
+        onOpenVoucher={onOpenVoucher}
+      />
       {/* The search box takes the room it can, up to its widest; the rest of the bar goes to the end
           with the bell. A spacer that shared the room cut the placeholder short (finding 35). */}
-      <button
-        type="button"
-        aria-label={l10n.getString('layout-attention-label')}
-        title={comingSoon}
-        className="ms-auto flex size-control-compact items-center justify-center rounded-2 border border-border bg-surface text-ink"
-      >
-        <Bell aria-hidden="true" className="size-icon-md" />
-      </button>
+      <AttentionBell />
       <LanguageSwitch />
       <UserMenu
         userName={userName}
@@ -44,8 +60,8 @@ export function TopBar({ userName, onLock, onSignOut, onOpenAccount }: TopBarPro
         onChangePassword={() => {
           setChangingPassword(true);
         }}
+        onGuide={onGuide}
         onLock={onLock}
-        onSignOut={onSignOut}
       />
       <ChangePasswordDialog
         open={changingPassword}

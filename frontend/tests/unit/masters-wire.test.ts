@@ -1,5 +1,5 @@
 // The masters commands' own row and input types against the screens' shape (plan 06 T4): each of
-// the ten kinds in and out, and what the form does not edit travels back unchanged.
+// the nine kinds in and out, and what the form does not edit travels back unchanged.
 
 import { describe, expect, it } from 'vitest';
 import type { MasterRow } from '../../src/bindings/MasterRow';
@@ -45,7 +45,7 @@ const ROWS: MasterRow[] = [
     is_active: true,
     mark_text: 'AR',
     owner_account_id: 31,
-    owner_account_code: '030110001',
+    owner_account_code: '0010',
     owner_name_ur: 'رحیم',
     owner_name_en: 'Rahim',
   },
@@ -75,22 +75,12 @@ const ROWS: MasterRow[] = [
     version: 1,
     is_active: true,
     ...names,
+    // Staff have a code of their own since plan 32: 006 and a running number.
+    code: '0060',
     job: 'munshi',
     phone: null,
     account_id: null,
     account_code: null,
-  },
-  {
-    kind: 'bank_account',
-    id: 10,
-    version: 1,
-    is_active: true,
-    bank_name: 'HBL',
-    title: 'Maher Adnan',
-    number: '0123456789',
-    account_id: 100,
-    account_code: '01020002',
-    ...names,
   },
 ];
 
@@ -131,11 +121,6 @@ describe('rowToRecord', () => {
     expect(rowToRecord(at(ROWS, 8))).toMatchObject({
       text: { job: 'munshi', phone: '' },
       shown: { account_code: '' },
-    });
-    expect(rowToRecord(at(ROWS, 9)).text).toEqual({
-      bank_name: 'HBL',
-      title: 'Maher Adnan',
-      number: '0123456789',
     });
   });
 
@@ -223,17 +208,13 @@ describe('draftToInput', () => {
     });
   });
 
-  it('a staff member sends his job and phone; a bank account its three texts and its names', () => {
+  it('a staff member sends his job and phone and his names', () => {
     expect(draftToInput('staff', draftOf(at(ROWS, 8)), [])).toMatchObject({
+      code: '0060',
       job: 'munshi',
       phone: '',
     });
-    expect(draftToInput('bank_account', draftOf(at(ROWS, 9)), [])).toMatchObject({
-      bank_name: 'HBL',
-      title: 'Maher Adnan',
-      number: '0123456789',
-      name_ur: 'کوٹ',
-    });
+    expect(draftToInput('staff', draftOf(at(ROWS, 8)), [])).toMatchObject({ name_ur: 'کوٹ' });
   });
 
   it('a packing sends its weight as the text typed', () => {

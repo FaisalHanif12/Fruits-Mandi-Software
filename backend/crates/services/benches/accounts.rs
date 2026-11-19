@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use criterion::{Criterion, SamplingMode, criterion_group, criterion_main};
 use mandi_services::core::accounts::{AccountFilter, AccountsListInput};
-use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
+use mandi_services::core::vouchers::AdvanceInput;
 use mandi_services::{assist, coa, ledger, vouchers};
 use support::{Rng, ensure_volume, fail, open};
 
@@ -39,10 +39,12 @@ fn flat<'a>(
 
 fn list_input(text: &str, limit: u32) -> AccountsListInput {
     AccountsListInput {
+        sort: None,
         filter: AccountFilter {
-            account_type: None,
+            kind: mandi_services::core::accounts::AccountListKind::All,
             text: text.to_owned(),
             include_inactive: true,
+            has_opening: None,
         },
         offset: 0,
         limit,
@@ -198,13 +200,11 @@ fn voucher_speed(c: &mut Criterion) {
     let (env, actor) = open(copy.path());
     let seller = volume.busy_seller;
     let input = AdvanceInput {
+        confirm_cash_below_zero: false,
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: "1,000".into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
     };
@@ -221,11 +221,12 @@ fn voucher_speed(c: &mut Criterion) {
     let ordinary = env
         .ctx
         .db()
-        .read(|conn| mandi_services::db::accounts::id_by_code(conn, "030114500"))
+        .read(|conn| mandi_services::db::accounts::id_by_code(conn, "0014499"))
         .ok()
         .flatten()
         .unwrap_or(seller);
     let ordinary_input = AdvanceInput {
+        confirm_cash_below_zero: false,
         seller_account_id: ordinary,
         ..input.clone()
     };

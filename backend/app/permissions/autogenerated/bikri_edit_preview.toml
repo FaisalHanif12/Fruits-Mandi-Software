@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-edit-preview"
+description = "Enables the bikri_edit_preview command without any pre-configured scope."
+commands.allow = ["bikri_edit_preview"]
+
+[[permission]]
+identifier = "deny-bikri-edit-preview"
+description = "Denies the bikri_edit_preview command without any pre-configured scope."
+commands.deny = ["bikri_edit_preview"]

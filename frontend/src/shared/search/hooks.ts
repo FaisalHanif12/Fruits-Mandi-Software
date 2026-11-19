@@ -2,13 +2,26 @@
 // when a newer one has been asked, so a slow answer never shows under the wrong text, and the
 // list keeps the last answer while the next one is on its way, so it never flashes empty.
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { searchMasters, searchRecent, searchTouch } from './api';
 import type { SearchHit, SearchScope } from './types';
 
 /** How many matches a typed search asks for. The list is short on purpose: type more to narrow. */
 export const PICKER_RESULT_LIMIT = 50;
+/**
+ * How many records one page of a picker list holds (plan 32, R7). A picker opened by a click lists
+ * every record of its kind; it asks for one page, and the next page when the user scrolls near
+ * the end (Code Standards B31, F34).
+ */
+export const PICKER_PAGE_SIZE = 50;
+/** The rows left below the view when the next page is asked for. */
+export const PICKER_LOAD_AHEAD_ROWS = 15;
 /** A short pause so a burst of key presses asks once (NFR-SPD-6 allows 50 ms in all). */
 export const PICKER_SEARCH_DELAY_MS = 30;
 
@@ -36,6 +49,12 @@ export interface PickerSource<H> {
   search: (text: string, limit: number) => Promise<H[]>;
   /** The last 10 records used, then the rest (PRD FR-7.41). */
   recent: () => Promise<H[]>;
+  /**
+   * One page of the list for `text` ("" is every record of the kind: recent first, then by code),
+   * `limit` records from `offset`. A source that has it is read page by page as the list scrolls
+   * (plan 32, R7); one that has not is read once, by `search` and `recent`.
+   */
+  page?: ((text: string, offset: number, limit: number) => Promise<H[]>) | undefined;
   /** Remembers that a record was chosen, so it comes first next time. */
   touch: (id: number) => Promise<unknown>;
 }
@@ -46,14 +65,17 @@ export function masterSource(scope: SearchScope): PickerSource<SearchHit> {
     key: [...SEARCH_KEY, scope],
     search: (text, limit) => searchMasters({ scope, text, limit }),
     recent: () => searchRecent({ scope }),
+    // The click-open list and every typed search are read a page at a time (plan 32, R7).
+    page: (text, offset, limit) => searchMasters({ scope, text, limit, offset }),
     touch: (id) => searchTouch({ scope, id }),
   };
 }
 
 /**
- * The records a picker shows. Typed text searches; empty text (the user pressed Alt+↓, or
- * emptied the field) gives the recent records first, then the rest (PRD FR-7.41). Nothing is
- * asked while the list is closed.
+ * The records a picker shows. Typed text searches; empty text (a click, `Alt+↓`, or the field
+ * emptied) lists every record of the kind, recent first, then by code (PRD FR-7.41, plan 32 R7).
+ * Nothing is asked while the list is closed. A source with pages is read one page at a time:
+ * `loadMore` asks for the next one when the user scrolls near the end.
  *
  * `current` says whether the list answers the text in the field right now. It is false while the
  * list is an older answer kept on screen (the search waits a moment after the last key, and keeps
@@ -64,21 +86,44 @@ export function masterSource(scope: SearchScope): PickerSource<SearchHit> {
 export function usePickerHits<H>(source: PickerSource<H>, text: string, open: boolean) {
   const wanted = text.trim();
   const typed = useSettled(wanted, PICKER_SEARCH_DELAY_MS);
-  // Emptying the field must not wait: the recent list is the answer at once.
+  // Emptying the field must not wait: the full list is the answer at once.
   const asked = wanted === '' ? '' : typed;
-  const query = useQuery({
+  const paged = source.page;
+  const query = useInfiniteQuery({
     queryKey: [...source.key, asked],
-    queryFn: () => (asked === '' ? source.recent() : source.search(asked, PICKER_RESULT_LIMIT)),
+    queryFn: ({ pageParam }) => {
+      if (paged !== undefined) return paged(asked, pageParam, PICKER_PAGE_SIZE);
+      return asked === '' ? source.recent() : source.search(asked, PICKER_RESULT_LIMIT);
+    },
+    initialPageParam: 0,
+    // A page that is full may have another after it; a short page is the end of the list.
+    getNextPageParam: (last, all) =>
+      paged === undefined || last.length < PICKER_PAGE_SIZE
+        ? undefined
+        : all.reduce((count, page) => count + page.length, 0),
     enabled: open,
     placeholderData: keepPreviousData,
     // The same text can give a different answer after a save, so an answer is never reused.
     staleTime: 0,
     gcTime: 0,
   });
+  const rows = useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
   // A failed answer is final too: there is nothing more to wait for.
   const current =
     asked === wanted && !query.isPlaceholderData && (query.isSuccess || query.isError);
-  return { query, current };
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  return {
+    rows,
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+    current,
+    hasMore: hasNextPage,
+    loadMore,
+  };
 }
 
 /** Tells the backend a record was chosen, so it comes first next time (PRD FR-7.41). */
@@ -100,7 +145,8 @@ export function useFetchHits<H>(source: PickerSource<H>) {
   return useCallback(
     (text: string) =>
       queryClient.query({
-        queryKey: [...source.key, text],
+        // Its own key: the list of a picker is cached as pages, this answer is one array.
+        queryKey: [...source.key, 'whole', text],
         queryFn: () => source.search(text, PICKER_RESULT_LIMIT),
         staleTime: 0,
       }),

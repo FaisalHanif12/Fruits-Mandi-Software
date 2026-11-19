@@ -13,4 +13,8 @@ export type VoucherType =
   | 'personal_return'
   | 'money_lent'
   | 'money_lent_return'
-  | 'general';
+  | 'general'
+  | 'capital_in'
+  | 'capital_out'
+  | 'khata_out'
+  | 'khata_in';

@@ -10,11 +10,19 @@ export type SearchMastersInput = {
    */
   scope: SearchScope;
   /**
-   * What was typed. Raw: never converted to Urdu (PRD FR-7.22, F41).
+   * What was typed. Raw: never converted to Urdu (PRD FR-7.22, F41). **Empty text gives the
+   * whole list** (plan 32 R7): the records last chosen by this user first (latest first), then
+   * every other active record by code. A click on a picker opens this list.
    */
   text: string;
   /**
-   * The most hits to return. At most 50.
+   * The most hits to return in this page. At most 50.
    */
   limit: number;
+  /**
+   * How many hits to skip, for the next page of a long list (the picker loads more when the user
+   * scrolls). 0 for the first page. A page with fewer than `limit` hits is the last one. Missing
+   * means 0.
+   */
+  offset: number;
 };

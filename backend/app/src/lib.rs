@@ -1,11 +1,24 @@
 //! The Mandi Software Tauri app: window, plugins and thin commands (Tech Stack 5.4).
 
+pub mod backup_runtime;
 pub mod commands;
+pub mod day_auto;
 pub mod error;
 pub mod logging;
+pub mod print_job;
+#[cfg(target_os = "macos")]
+mod print_mac;
+pub mod print_report;
+pub mod print_types;
+#[cfg(windows)]
+mod print_windows;
+pub mod profile;
 pub mod refs;
 pub mod runner;
+pub mod sheet_pack;
 pub mod state;
+pub mod support_info;
+pub mod updates;
 #[cfg(windows)]
 mod webview2;
 
@@ -19,11 +32,21 @@ pub const MAIN_WINDOW: &str = "main";
 /// Plugins are only the five of Tech Stack 2. Single instance comes first, so a
 /// second launch only brings the first window to the front (NFR-REL-9).
 pub fn run() -> tauri::Result<()> {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    // The developer profile (plan 56 R5): a bad MANDI_PROFILE name stops the app here, before
+    // anything is opened. It never falls back to the real data.
+    let profile = profile::current()?;
+    let mut builder = tauri::Builder::default();
+    if profile::uses_single_instance(profile.as_deref()) {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             focus_main_window(app);
-        }))
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+        }));
+    }
+    builder
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_filename(profile::window_state_file(profile.as_deref()))
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
@@ -32,11 +55,18 @@ pub fn run() -> tauri::Result<()> {
             if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
                 webview2::apply(&window)?;
             }
-            let data_dir = app.path().app_data_dir()?;
+            let data_dir = profile::app_data_dir(app.handle())?;
             start_logging(app, &data_dir);
             // Never fails: a damaged or unupgradable data file is kept in the state, and the
             // screen learns of it through app_data_status (NFR-REL-6, NFR-REL-7).
             app.manage(state::AppState::start(&data_dir));
+            // Run B, plan 18 (append-only block): the backup service, its scheduler and the copy
+            // at exit.
+            start_backup(app);
+            // Run B, plan 22 (append-only block): the daily health check.
+            commands::health::start_daily(app.handle());
+            // Run B, plan 19 (append-only block): the automatic day close at the closing time.
+            day_auto::start(app.handle());
             Ok(())
         })
         .invoke_handler(handler())
@@ -103,9 +133,20 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::accounts::accounts_openings_preview,
         commands::accounts::accounts_openings_save,
         commands::accounts::coa_tree,
+        commands::accounts::coa_control_accounts,
         commands::accounts::coa_heads_list,
         commands::accounts::coa_controls_list,
         commands::search::search_accounts,
+        commands::chukta::chukta_search,
+        commands::chukta::chukta_add,
+        commands::party_ledgers::party_ledgers_list,
+        commands::party_ledgers::party_ledgers_statement,
+        commands::party_ledgers::party_ledgers_go_to_date,
+        commands::party_ledgers::party_ledgers_statement_print_data,
+        commands::party_ledgers::party_ledgers_statement_rows,
+        commands::party_ledgers::party_ledgers_statement_rows_print_data,
+        commands::report_print::party_ledgers_statement_rows_print,
+        commands::report_print::party_ledgers_statement_print,
         commands::search::search_global,
         commands::search::search_accounts_recent,
         commands::search::search_accounts_touch,
@@ -122,10 +163,79 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::settings::settings_get_overrides,
         commands::settings::settings_set_overrides,
         commands::vouchers::vouchers_save_advance,
+        commands::purchases::purchases_preview,
+        commands::purchases::purchases_save,
+        commands::purchases::purchases_cancel,
+        commands::purchases::purchases_list,
+        commands::purchases::purchases_get,
+        commands::purchases::purchases_write_off,
+        commands::purchases::purchases_write_off_undo,
+        commands::purchases::purchases_set_sell_date,
+        commands::purchases::purchases_entry_preview,
+        commands::purchases::purchases_entry_save,
+        commands::purchases::purchases_change_split,
+        commands::trips::trips_defaults,
+        commands::trips::trips_create,
+        commands::trips::trips_set_partners,
+        commands::trips::trips_list,
+        commands::trips::trips_get,
+        commands::trips::trips_summary,
+        commands::trips::trips_cost_preview,
+        commands::trips::trips_cost_save,
+        commands::trips::trips_cost_cancel,
+        commands::trips::trips_other_sale_preview,
+        commands::trips::trips_other_sale_save,
+        commands::trips::trips_other_sale_cancel,
+        commands::fruit::fruit_preview,
+        commands::fruit::fruit_save,
+        commands::fruit::fruit_edit,
+        commands::fruit::fruit_cancel,
+        commands::fruit::fruit_get,
+        commands::fruit::fruit_list,
+        commands::fruit::fruit_lots,
+        commands::dead::masters_dead_preview,
+        commands::dead::masters_dead_mark,
+        commands::dead::masters_dead_undo,
+        commands::dead::reports_dead_amount,
+        commands::gardens::gardens_defaults,
+        commands::gardens::gardens_create_preview,
+        commands::gardens::gardens_create,
+        commands::gardens::gardens_set_partners,
+        commands::gardens::gardens_list,
+        commands::gardens::gardens_get,
+        commands::gardens::gardens_summary,
+        commands::gardens::gardens_entry_preview,
+        commands::gardens::gardens_entry_save,
+        commands::gardens::gardens_entry_cancel,
+        commands::gardens::gardens_close_preview,
+        commands::gardens::gardens_close,
+        commands::gardens::gardens_reopen,
+        commands::gardens::gardens_arrival_save,
+        commands::gardens::gardens_arrival_cancel,
+        commands::gardens::gardens_arrival_set_sell_date,
+        commands::gardens::gardens_arrivals_list,
+        commands::gardens::gardens_arrival_get,
+        commands::gardens::gardens_arrival_write_off,
+        commands::gardens::gardens_arrival_write_off_undo,
+        commands::gardens::gardens_arrival_entry_preview,
+        commands::gardens::gardens_arrival_entry_save,
+        commands::gardens::gardens_arrival_change_split,
         commands::vouchers::vouchers_preview_advances,
         commands::vouchers::vouchers_save_advances,
         commands::vouchers::vouchers_list,
+        commands::vouchers::vouchers_save_receipt,
+        commands::vouchers::vouchers_save_payment,
+        commands::vouchers::vouchers_preview,
+        commands::vouchers::vouchers_edit,
+        commands::vouchers::vouchers_cancel,
+        commands::vouchers::vouchers_get,
+        commands::vouchers::vouchers_open_for_edit,
+        commands::vouchers::vouchers_save_receipts_batch,
+        commands::vouchers::advances_report,
         commands::assist::assist_advances,
+        commands::assist::assist_open_bills,
+        commands::assist::assist_open_payables,
+        commands::assist::assist_collection_list,
         commands::day::day_close_preview,
         commands::day::day_close,
         commands::day::day_reopen,
@@ -136,12 +246,235 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::partners::partners_set_shares,
         commands::partners::partners_check_shares,
         commands::partners::partners_overview,
+        commands::cashbook::cashbook_get,
+        commands::cashbook::cashbook_capital_where,
+        commands::expenses::vouchers_save_shop_expense,
+        commands::expenses::vouchers_save_personal_expense,
+        commands::expenses::vouchers_save_personal_return,
+        commands::expenses::vouchers_preview_expense,
+        commands::expenses::partner_takes,
+        commands::expenses::vouchers_repeat_last_month_preview,
+        commands::expenses::masters_expense_heads,
+        commands::lent::vouchers_save_money_lent,
+        commands::lent::vouchers_save_money_lent_return,
+        commands::lent::lent_person_create,
+        commands::lent::lent_person_update,
+        commands::lent::lent_list,
+        commands::lent::lent_dues,
+        commands::lent::lent_report,
+        commands::lent::assist_attention_overdue,
+        commands::capital::vouchers_save_capital_in,
+        commands::capital::vouchers_save_capital_out,
+        commands::capital::capital_history,
+        commands::partners::partners_statement,
+        commands::partners::partners_open_ventures,
+        commands::partners::partners_statement_month_print_data,
+        commands::partners::partners_statement_day,
+        commands::partners::partners_statement_month,
+        commands::khata::khata_create,
+        commands::khata::khata_set_link,
+        commands::khata::vouchers_save_khata_out,
+        commands::khata::vouchers_save_khata_in,
+        commands::khata::khata_statement,
+        commands::general::general_preview,
+        commands::general::general_save,
         commands::bikri::bikri_preview,
-        commands::bikri::bikri_split_freight,
-        commands::assist::assist_truck_memory,
         commands::assist::assist_seller_memory,
         commands::assist::assist_last_rate,
+        commands::bikri::bikri_save,
+        commands::bikri::bikri_get,
+        commands::bikri::bikri_list,
+        commands::bikri::bikri_list_print_data,
+        commands::bikri::bikri_find,
+        commands::bikri::bikri_navigate,
+        commands::bikri::bikri_stock_list,
+        commands::bikri::bikri_ready_goods,
+        commands::bikri::bikri_goods_sources,
+        commands::bikri::bikri_goods_to_load,
+        commands::bikri::bikri_later_sale_preview,
+        commands::bikri::bikri_later_sale_save,
+        commands::bikri::bikri_mixed_preview,
+        commands::bikri::bikri_mixed_save,
+        commands::bikri::bikri_mixed_undo,
+        commands::bikri::bikri_open_for_edit,
+        commands::bikri::bikri_edit_preview,
+        commands::bikri::bikri_edit_save,
+        commands::bikri::bikri_cancel_preview,
+        commands::bikri::bikri_cancel,
+        commands::bikri::bikri_undo,
+        commands::bikri::bikri_write_off,
+        commands::bikri::bikri_write_off_undo,
+        commands::drafts::drafts_save,
+        commands::drafts::drafts_get,
+        commands::drafts::drafts_discard,
+        commands::reports::reports_bikri_print_data,
+        commands::reports::reports_print,
+        commands::reports::reports_voucher_print_data,
+        commands::reports::reports_print_voucher,
+        commands::reports::reports_print_header,
+        commands::reports::reports_sale_print_data,
+        commands::reports::reports_buyer_parchi_print_data,
+        commands::reports::reports_seller_bills_print_data,
+        commands::reports::reports_adhari_sheet,
+        commands::reports::reports_adhari_sheet_print_data,
+        commands::report_print::reports_buyer_parchi_print,
+        commands::report_print::reports_seller_bills_print,
+        commands::report_print::reports_sale_print,
+        commands::report_print::reports_adhari_sheet_print,
+        commands::report_print::reports_collection_sheet_print,
+        commands::report_print::dashboard_buyer_dues_print,
+        commands::report_print::dashboard_seller_dues_print,
+        commands::report_print::dashboard_total_dues_print,
+        commands::report_print::dashboard_lent_open_print,
+        commands::report_print::advances_report_print,
+        commands::report_print::dashboard_cash_sales_month_print,
+        commands::report_print::dashboard_cash_sales_day_print,
+        commands::report_print::dashboard_commission_print,
+        commands::report_print::partners_statement_month_print,
+        commands::reports::reports_collection_sheet_print_data,
+        commands::reports::reports_collection_sheet,
+        commands::reports::reports_collection_print_data,
+        commands::reports::reports_print_collection,
+        commands::reports::reports_list_printers,
+        commands::settings::settings_get_printing,
+        commands::settings::settings_set_printing,
+        // Run B, plan 18 (append-only block).
+        commands::backup::backup_status,
+        commands::backup::backup_list,
+        commands::backup::backup_now,
+        commands::backup::backup_restore_preview,
+        commands::backup::backup_restore,
+        commands::backup::backup_test_restore,
+        commands::backup::backup_settings_get,
+        commands::backup::backup_settings_set,
+        commands::backup::backup_key_setup,
+        commands::backup::backup_key_confirm,
+        // Plan 56, restore on a new computer (append-only block).
+        commands::backup_first_run::backup_first_run_list,
+        commands::backup_first_run::backup_first_run_preview,
+        commands::backup_first_run::backup_first_run_restore,
+        // Run B, plan 20 (append-only block).
+        commands::reports_engine::reports_catalog,
+        commands::reports_engine::reports_run,
+        commands::reports_engine::reports_print_data,
+        // Run B, plan 20, step B3 (append-only block).
+        // Run B, plan 21 (append-only block).
+        commands::analytics::analytics_catalog,
+        commands::analytics::analytics_run,
+        commands::analytics::analytics_lines,
+        commands::analytics::analytics_print_data,
+        commands::analytics::analytics_views_get,
+        commands::analytics::analytics_views_save,
+        // Run B, plan 22 (append-only block).
+        commands::settings_day::settings_day_get,
+        commands::settings_day::settings_day_set,
+        commands::settings_day::settings_set_number_grouping,
+        commands::settings_day::settings_set_owner_sign,
+        commands::audit::audit_list,
+        commands::audit::audit_options,
+        commands::health::health_run,
+        commands::health::health_last,
+        commands::support::support_info_save,
+        commands::updates::updates_check,
+        commands::updates::updates_install,
+        commands::export::reports_export_excel,
+        commands::export::analytics_export_excel,
+        commands::export::bikri_list_export_excel,
+        commands::export::tables_export_excel,
+        commands::report_print::bikri_list_print,
+        commands::month::month_list,
+        commands::month::month_close_preview,
+        commands::month::month_close_save,
+        commands::month::month_close_reverse,
+        // Run B, plan 19 (append-only block).
+        commands::dashboard::dashboard_get,
+        commands::windows::windows_bounds,
+        commands::dashboard::dashboard_buyer_dues_print_data,
+        commands::dashboard::dashboard_buyer_dues,
+        commands::dashboard::dashboard_commission_print_data,
+        commands::dashboard::dashboard_commission_day,
+        commands::dashboard::dashboard_commission_month,
+        commands::dashboard::dashboard_seller_dues,
+        commands::dashboard::dashboard_seller_dues_print_data,
+        commands::dashboard::dashboard_total_dues,
+        commands::dashboard::dashboard_lent_open,
+        commands::dashboard::dashboard_cash_sales_month,
+        commands::dashboard::dashboard_cash_sales_day,
+        commands::dashboard::dashboard_total_dues_print_data,
+        commands::dashboard::dashboard_lent_open_print_data,
+        commands::dashboard::dashboard_cash_sales_month_print_data,
+        commands::dashboard::dashboard_cash_sales_day_print_data,
+        commands::vouchers::advances_report_print_data,
+        commands::dashboard::assist_attention,
+        commands::screen_prefs::prefs_screen_get,
+        commands::screen_prefs::prefs_screen_set,
+        // Run B, D5 round 12 (append-only block).
+        commands::reports_engine::reports_buyer_bills_print_data,
+        // Run B, D5 round 14 (append-only block).
+        commands::report_print::reports_print_report,
+        commands::report_print::analytics_print_view,
+        // Plan 44 (append-only block).
+        commands::edit::bikri_edit_review,
+        commands::edit::vouchers_edit_preview,
+        commands::edit::fruit_edit_preview,
+        commands::edit::purchases_edit_preview,
+        commands::edit::purchases_edit_save,
+        commands::edit::trips_cost_edit_preview,
+        commands::edit::trips_cost_edit_save,
+        commands::edit::trips_other_sale_edit_preview,
+        commands::edit::trips_other_sale_edit_save,
+        commands::edit::gardens_entry_edit_preview,
+        commands::edit::gardens_entry_edit_save,
+        commands::edit::gardens_arrival_edit_preview,
+        commands::edit::gardens_arrival_edit_save,
+        commands::edit::trips_header_edit_preview,
+        commands::edit::trips_header_edit_save,
+        commands::edit::gardens_header_edit_preview,
+        commands::edit::gardens_header_edit_save,
+        commands::day::day_fix_open,
+        commands::day::day_fix_close,
+        commands::audit::audit_edit_stamp,
+        commands::audit::audit_edit_history,
+        commands::partner_code::partners_code_status,
+        commands::partner_code::partners_code_set,
+        commands::partner_code::partners_code_change,
+        commands::partner_code::partners_code_unlock,
+        commands::partner_code::partners_code_lock,
+        commands::partner_code::partners_code_reset,
+        // Plan 48, ask the app (append-only block).
+        commands::assistant::assistant_status,
+        commands::assistant::assistant_ask,
+        commands::assistant::assistant_quick,
+        commands::assistant::assistant_pick,
+        commands::assistant::assistant_rerun,
+        commands::assistant::assistant_new_conversation,
+        commands::assistant::assistant_settings_set,
+        commands::assistant::assistant_key_save,
+        commands::assistant::assistant_key_remove,
+        commands::assistant::assistant_test,
+        commands::assistant::assistant_log_list,
     ]
+}
+
+/// Starts the backup service when the data file opened: the scheduler thread (15-minute and daily
+/// copies, retry of the cloud queue) and the copy at exit (plan 18, PRD FR-20.2 to FR-20.6). If the
+/// data file did not open there is nothing to back up and the backup commands answer
+/// `ERR_INTERNAL`.
+fn start_backup<R: tauri::Runtime>(app: &tauri::App<R>) {
+    let Ok(state) = state::AppState::of(app.handle()) else {
+        return;
+    };
+    let version = app.package_info().version.to_string();
+    match backup_runtime::BackupRuntime::real(&state, &version) {
+        Ok(runtime) => {
+            runtime.start_scheduler();
+            app.manage(runtime);
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+                backup_runtime::hold_close_for_backup(app.handle(), &window);
+            }
+        }
+        Err(error) => tracing::warn!("the backup is not started: {error:?}"),
+    }
 }
 
 /// Shows, restores and focuses the main window. Used when a second copy of the

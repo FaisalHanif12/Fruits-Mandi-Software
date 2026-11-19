@@ -44,6 +44,8 @@ export function partnerRow(
     capital_account_code: `0602${code}`,
     drawings_account_id: 200 + id,
     drawings_account_code: `0603${code}`,
+    venture_account_id: 300 + id,
+    venture_account_code: `0604${code}`,
     share_bps,
     is_active: true,
     version: 1,
@@ -74,6 +76,18 @@ export function overviewRow(
     month_profit_paisa: money(0),
     month_taken_paisa: money(0),
     capital_balance_paisa: money(0),
+    // The columns of plan 17 (returned, خالص, capital in, trips and fruit, کل رقم): zero until T2b.
+    month_returned_paisa: money(0),
+    month_net_paisa: money(0),
+    month_capital_in_paisa: money(0),
+    month_ventures_paisa: money(0),
+    total_paisa: money(0),
+    // The open gardens and trips he is in (plan 17c): none until a test gives some. The two counts
+    // are what the backend counts from them (plan 76 point 11).
+    open_ventures: [],
+    open_gardens_count: (numbers.open_ventures ?? []).filter((card) => card.kind === 'garden')
+      .length,
+    open_trips_count: (numbers.open_ventures ?? []).filter((card) => card.kind === 'trip').length,
     ...numbers,
   };
 }
@@ -132,10 +146,24 @@ export function fakePartners(
   };
   const activeIds = () => store.rows.filter((row) => row.is_active).map((row) => row.id);
 
+  // The partner code is made and the section is open: the screens show (plan 44, PRD FR-17.11).
+  // A test about the code sets its own answers.
+  vi.mocked(partnersApi.partnersCodeStatus).mockResolvedValue({
+    is_set: true,
+    unlocked: true,
+    wait_seconds: 0,
+  });
+
   vi.mocked(partnersApi.partnersList).mockImplementation(() =>
     Promise.resolve(store.rows.map((row) => ({ ...row }))),
   );
   vi.mocked(partnersApi.partnersOverview).mockImplementation(() => Promise.resolve(store.overview));
+  // The list behind the compact line of the overview, read when it is opened (plan 76 point 11).
+  vi.mocked(partnersApi.partnersOpenVentures).mockImplementation((partnerId) =>
+    Promise.resolve(
+      store.overview.find((row) => row.partner_id === partnerId)?.open_ventures ?? [],
+    ),
+  );
   vi.mocked(partnersApi.partnersGet).mockImplementation((id) => {
     const row = store.rows.find((one) => one.id === id);
     if (row === undefined) return Promise.reject(fail({ code: 'ERR_NOT_FOUND', field: 'id' }));

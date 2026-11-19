@@ -5,9 +5,9 @@ import {
   formatPaisa,
   formatPaisaValue,
   groupDigits,
+  paisaOfErrorValue,
   type Grouping,
 } from '../../src/shared/format/money';
-import { printDigits, toUrduDigits } from '../../src/shared/format/digits';
 import { paisaForTest } from '../helpers/paisa';
 
 const cases: readonly (readonly [paisa: number, international: string, lakh: string])[] = [
@@ -78,23 +78,56 @@ describe('groupDigits', () => {
   });
 });
 
-describe('print digits (NFR-URD-14)', () => {
-  it('turns English digits into Urdu digits and keeps the separators', () => {
-    expect(toUrduDigits('13,16,040')).toBe('۱۳,۱۶,۰۴۰');
-    expect(toUrduDigits('0123456789')).toBe('۰۱۲۳۴۵۶۷۸۹');
-  });
-
-  it('is off by default', () => {
-    expect(printDigits('12,000')).toBe('12,000');
-    expect(printDigits('12,000', 'latin')).toBe('12,000');
-    expect(printDigits('12,000', 'urdu')).toBe('۱۲,۰۰۰');
-  });
-});
-
 describe('formatPaisaValue', () => {
   // The amounts inside the values of a backend error arrive as plain numbers (plan 12 contract 4).
   it.each(cases)('%d paisa gives the same text as formatPaisa', (paisa, international, lakh) => {
     expect(formatPaisaValue(paisa, { grouping: 'international' })).toBe(international);
     expect(formatPaisaValue(paisa, { grouping: 'lakh' })).toBe(lakh);
+  });
+});
+
+describe('paisaOfErrorValue', () => {
+  // The cash after of ERR_CASH_BELOW_ZERO_NOT_CONFIRMED is a plain number in the values of the refusal. The cash
+  // box takes it as the same Paisa the backend sent: it shows the same text as the number does (plan 80 R2-1).
+  it.each(cases)('%d paisa is an amount that shows as formatPaisaValue shows it', (paisa) => {
+    const amount = paisaOfErrorValue(paisa);
+    if (amount === null) throw new Error('a whole number of rupees is an amount');
+    expect(formatPaisa(amount, { grouping: 'international' })).toBe(
+      formatPaisaValue(paisa, { grouping: 'international' }),
+    );
+  });
+
+  it('a negative cash after is an amount', () => {
+    const amount = paisaOfErrorValue(-200_000);
+    if (amount === null) throw new Error('a negative amount is an amount');
+    expect(formatPaisa(amount, { grouping: 'international' })).toBe('-2,000');
+  });
+
+  it.each([undefined, 'x', 12.5, 150, Number.NaN, Number.MAX_SAFE_INTEGER + 2])(
+    '%s is not an amount',
+    (value) => {
+      expect(paisaOfErrorValue(value)).toBeNull();
+    },
+  );
+});
+
+describe('formatPaisa with plain', () => {
+  // A rate inside a line of words has no separators, as on the client's own print (PRD 19.2 R5).
+  it.each([
+    [0, '0'],
+    [4_500_00, '4500'],
+    [260_000, '2600'],
+    [131_604_000, '1316040'],
+    [-260_000, '-2600'],
+  ])('%d paisa is %s', (paisa, text) => {
+    expect(formatPaisa(paisaForTest(paisa), { grouping: 'international', plain: true })).toBe(text);
+    expect(formatPaisa(paisaForTest(paisa), { grouping: 'lakh', plain: true })).toBe(text);
+  });
+
+  it('leaves the usual grouping alone when plain is off', () => {
+    expect(formatPaisa(paisaForTest(260_000), { grouping: 'international' })).toBe('2,600');
+    expect(formatPaisa(paisaForTest(260_000), { grouping: 'international', plain: false })).toBe(
+      '2,600',
+    );
   });
 });

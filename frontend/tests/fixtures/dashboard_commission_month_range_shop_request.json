@@ -1,0 +1,11 @@
+{
+  "limit": 25,
+  "month": null,
+  "offset": 0,
+  "party": null,
+  "period": {
+    "from": "01-10-2026",
+    "kind": "range",
+    "to": "10-10-2026"
+  }
+}

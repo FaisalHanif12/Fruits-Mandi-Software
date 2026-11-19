@@ -1,0 +1,89 @@
+// The list under the سرمایہ form (PRD 17.4, FR-19.11): the chosen partner's capital history,
+// oldest first, page by page, with his capital balance now and the backend's totals of what he put
+// in and took back. Four states: loading, an error with a retry, nothing yet, and the rows. Without
+// a partner it says to choose one.
+
+import { Localized } from '@fluent/react';
+import { History, Landmark } from 'lucide-react';
+import { uiErrorOf } from '../../../shared/api';
+import { useListWindow } from '../../../shared/hooks';
+import { Card, EmptyState, Fact, ListWindowBar, Num } from '../../../shared/ui';
+import { useDayStatus } from '../../../app/use-day-status';
+import { SignedNum } from '../../cashbook';
+import { PagedList } from '../../../shared/grid';
+import { CAPITAL_COLUMNS } from '../capital-columns';
+import { useCapitalHistory } from '../money-hooks';
+
+export function CapitalHistorySection({ partnerId }: { partnerId: number | null }) {
+  const dayStatus = useDayStatus();
+  // The capital history shows one month at a time, the latest first (PRD FR-19.11, plan 76 point 8). Without
+  // the day (its read failed) the list asks for the whole history, as before the window.
+  const listWindow = useListWindow({
+    kind: 'month',
+    source: { kind: 'capital' },
+    today: dayStatus.data?.today,
+  });
+  const windowed = !dayStatus.isError;
+  const history = useCapitalHistory(
+    partnerId,
+    true,
+    windowed ? { from: listWindow.range.from, to: listWindow.range.to } : { from: null, to: null },
+    listWindow.ready || !windowed,
+  );
+  const first = history.data?.pages[0];
+  const rows = history.data?.pages.flatMap((page) => page.rows);
+  return (
+    <Card compact icon={History} title={<Localized id="partners-capital-history-title" />}>
+      {partnerId === null ? (
+        <EmptyState
+          icon={Landmark}
+          title={<Localized id="partners-capital-pick" />}
+          help={<Localized id="partners-capital-pick-help" />}
+        />
+      ) : (
+        <>
+          {first === undefined ? null : (
+            <dl className="grid grid-cols-3 gap-3">
+              <Fact label={<Localized id="partners-capital-balance" />}>
+                <SignedNum paisa={first.balance_paisa} />
+              </Fact>
+              <Fact label={<Localized id="partners-capital-invested" />}>
+                <Num paisa={first.totals.invested_paisa} />
+              </Fact>
+              <Fact label={<Localized id="partners-capital-taken-back" />}>
+                <Num paisa={first.totals.taken_back_paisa} />
+              </Fact>
+            </dl>
+          )}
+          <PagedList
+            columns={CAPITAL_COLUMNS}
+            rows={rows}
+            getRowId={(row) => [row.kind, row.voucher_id ?? 0, row.entry_date].join('-')}
+            labelId="partners-capital-label"
+            failedId="partners-capital-failed"
+            error={history.isError ? uiErrorOf(history.error) : null}
+            onRetry={() => {
+              void history.refetch();
+            }}
+            pager={history.pager}
+            onPageKey={listWindow.onPageKey}
+            sort={{ value: history.sort, onChange: history.setSort }}
+            months={
+              first === undefined || first.months.length === 0
+                ? undefined
+                : { months: first.months, monthOf: (row) => row.entry_date.slice(0, 7) }
+            }
+            empty={
+              <EmptyState
+                icon={Landmark}
+                title={<Localized id="partners-capital-empty" />}
+                help={<Localized id="partners-capital-empty-help" />}
+              />
+            }
+          />
+          {windowed ? <ListWindowBar window={listWindow} /> : null}
+        </>
+      )}
+    </Card>
+  );
+}

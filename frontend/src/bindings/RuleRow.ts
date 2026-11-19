@@ -78,6 +78,12 @@ export type RuleRow = {
    */
   is_active: boolean;
   /**
+   * True once any saved line or lot took its rate from this rule (PRD FR-11.6). A used rule may
+   * change only its end date and its active flag; any other change is `ERR_RULE_USED` and the
+   * screen offers "add a newer rule from a date" (plan 44).
+   */
+  used: boolean;
+  /**
    * The note. Empty if none.
    */
   note: string;

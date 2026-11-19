@@ -16,14 +16,57 @@ pub enum FreightPaidBy {
     Seller,
 }
 
-/// How a buyer pays for a line (PRD 12.4 "ادھاری / نقدی").
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
-#[serde(rename_all = "snake_case")]
+impl FreightPaidBy {
+    /// The stored form (`bikri_lots.freight_paid_by`).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            FreightPaidBy::Firm => "firm",
+            FreightPaidBy::Seller => "seller",
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "firm" => Some(FreightPaidBy::Firm),
+            "seller" => Some(FreightPaidBy::Seller),
+            _ => None,
+        }
+    }
+}
+
+/// The word stored in `bikri_sales.payment_type` (PRD v1.32, D8 decision P10). The column stays in
+/// the table and is still written, but nothing decides money from it any more: the amount paid on
+/// the spot is `bikri_sales.paid_paisa` (PRD FR-12.44). It is not part of the contract with the
+/// screens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PaymentType {
-    /// ادھاری: the buyer owes it.
+    /// Something is left on the buyer's account.
     Credit,
-    /// نقدی: paid at once.
+    /// The buyer paid the whole bill on the spot.
     Cash,
+}
+
+impl PaymentType {
+    /// The word for a line: `cash` only when the buyer paid exactly the whole buyer total, else
+    /// `credit` (PRD v1.32, D8 P10).
+    ///
+    /// Example: total 21,360 paid 21,360 is `cash`; total 48,100 paid 10,000 is `credit`.
+    pub fn of(paid: Paisa, buyer_total: Paisa) -> Self {
+        if paid == buyer_total {
+            PaymentType::Cash
+        } else {
+            PaymentType::Credit
+        }
+    }
+
+    /// The stored form (`bikri_sales.payment_type`).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            PaymentType::Credit => "credit",
+            PaymentType::Cash => "cash",
+        }
+    }
 }
 
 /// How a lot charge (مزدوری, منشیانہ, فون) is typed or worked out.
@@ -38,6 +81,27 @@ pub enum LotChargeMethod {
     Manual,
 }
 
+impl LotChargeMethod {
+    /// The stored form (`bikri_lots.labour_method` and the like).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            LotChargeMethod::PerUnit => "per_unit",
+            LotChargeMethod::PerLot => "per_lot",
+            LotChargeMethod::Manual => "manual",
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "per_unit" => Some(LotChargeMethod::PerUnit),
+            "per_lot" => Some(LotChargeMethod::PerLot),
+            "manual" => Some(LotChargeMethod::Manual),
+            _ => None,
+        }
+    }
+}
+
 /// How a commission or لاگا typed on a line is meant (PRD FR-11.10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -50,7 +114,7 @@ pub enum LineChargeMethod {
 
 /// The method kept with a line charge (`bikri_sales.*_method`, Architecture 15.6). A value typed
 /// on the line is `manual` (دستی) and keeps the percent or the amount per نگ that was typed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum StoredMethod {
     /// فیصد.
@@ -61,6 +125,29 @@ pub enum StoredMethod {
     PerLot,
     /// دستی: typed on the line.
     Manual,
+}
+
+impl StoredMethod {
+    /// The stored form (`bikri_sales.seller_comm_method` and the like).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            StoredMethod::Percent => "percent",
+            StoredMethod::PerUnit => "per_unit",
+            StoredMethod::PerLot => "per_lot",
+            StoredMethod::Manual => "manual",
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "percent" => Some(StoredMethod::Percent),
+            "per_unit" => Some(StoredMethod::PerUnit),
+            "per_lot" => Some(StoredMethod::PerLot),
+            "manual" => Some(StoredMethod::Manual),
+            _ => None,
+        }
+    }
 }
 
 /// Where a charge came from (plan 12 contract).
@@ -77,10 +164,11 @@ pub enum ChargeSource {
     None,
 }
 
-/// A one-time person of the پختہ کھاتہ accounts (PRD FR-13.2). Both names are required (PRD
-/// FR-7.24); the phone is required for a credit buyer and for a seller.
-#[derive(Debug, Clone, Default, Deserialize, TS)]
-pub struct PukhtaInput {
+/// A چکتا buyer on a sale line (PRD FR-13.2, FR-13.5). Both names are required (PRD FR-7.24); the
+/// phone is optional. A person already in the list is picked by his exact names and phone, so his
+/// lines keep one person key.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+pub struct ChuktaInput {
     /// Urdu name.
     #[serde(default)]
     pub name_ur: String,
@@ -94,7 +182,7 @@ pub struct PukhtaInput {
 
 /// A lot charge typed by hand (PRD 12.3). Empty `value` means nothing was typed, and the rules
 /// may suggest the charge.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct ChargeInput {
     /// What `value` means.
     pub method: LotChargeMethod,
@@ -104,7 +192,7 @@ pub struct ChargeInput {
 
 /// A commission or لاگا typed on a sale line (PRD FR-11.10). Empty `value` means nothing was
 /// typed, and the rule decides.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct LineChargeInput {
     /// What `value` means.
     pub method: LineChargeMethod,
@@ -113,58 +201,80 @@ pub struct LineChargeInput {
 }
 
 /// The header of a بکری (PRD 12.2). Everything is text; the backend checks every value.
-#[derive(Debug, Clone, Deserialize, TS)]
+///
+/// From v1.34 (plan 71 H1 to H3) a new بکری has only the date and the بکری number. The other fields
+/// of the old header are retired: they are not in the generated TypeScript type, an old saved draft
+/// that still holds them is read without a refusal, and the backend ignores them. They are never sent
+/// back (`skip_serializing`), so a draft opened for an edit has only the day. An old saved بکری keeps
+/// its truck number, اڈا and the rest in the database and its edit never overwrites them.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct HeaderInput {
-    /// The posting day, `DD-MM-YYYY` or a shortcut. Must be an open day (PRD FR-6.6).
+    /// The posting day, `DD-MM-YYYY` or a shortcut. Must be an open day (PRD FR-6.6). A new
+    /// بکری's bill day is this day (PRD A13, v1.34).
     pub entry_date: String,
-    /// The seller's bill day. Empty means the same as `entry_date`.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub bill_date: String,
-    /// The optional second number (PRD 12.2 "بک").
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub book: Option<String>,
-    /// The truck number.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub truck_no: Option<String>,
-    /// The زمیندار, the default seller of new lots.
-    #[serde(default)]
-    #[ts(type = "number | null")]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub zamindar_account_id: Option<i64>,
-    /// The truck stand (اڈا).
-    #[serde(default)]
-    #[ts(type = "number | null")]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub adda_id: Option<i64>,
-    /// The driver's name.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub driver_name: Option<String>,
-    /// The driver's phone.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub driver_phone: Option<String>,
-    /// The total truck freight in whole rupees. `bikri_split_freight` splits it over the lots.
-    #[serde(default)]
+    /// Retired (PRD v1.34, C17). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub total_freight: Option<String>,
-    /// The default store.
-    #[serde(default)]
-    #[ts(type = "number | null")]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub store_id: Option<i64>,
-    /// A note.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub note: Option<String>,
 }
 
 /// One sale line (PRD 12.4).
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct SaleInput {
     /// The screen's own key for this row. Echoed back so the screen can match its rows.
     pub key: String,
-    /// The buyer. The پختہ کھاتہ (خریدار) account for a one-time buyer, the نقدی منڈی account for
-    /// a nameless cash buyer.
+    /// The saved line this row is, when the draft is an edit of a posting (plan 16). `null` for a
+    /// new line. A line sent with its `sale_id` is "unchanged" when its buyer, person, quantity,
+    /// weight, rates and typed charges equal the stored ones (the amount paid is not part of the test), and then keeps its
+    /// stored charges exactly (PRD FR-12.20, FR-11.6).
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub sale_id: Option<i64>,
+    /// The buyer. The چکتا کھاتہ account (0030) for a چکتا buyer, the نقدی منڈی account for a
+    /// nameless cash buyer.
     #[serde(default)]
     #[ts(type = "number | null")]
     pub buyer_account_id: Option<i64>,
-    /// The one-time buyer, for the پختہ کھاتہ (خریدار) account.
+    /// The چکتا buyer, for the چکتا کھاتہ account. Required (both names) when `buyer_account_id` is
+    /// that account, and refused for any other account (PRD FR-12.5).
     #[serde(default)]
-    pub pukhta: Option<PukhtaInput>,
+    pub chukta: Option<ChuktaInput>,
     /// Quantity in نگ. A simple sum such as `20+25` is taken (PRD FR-7.48).
     #[serde(default)]
     pub qty: String,
@@ -180,9 +290,15 @@ pub struct SaleInput {
     /// The buyer's rate. Used only when `rate_differs` is true.
     #[serde(default)]
     pub buyer_rate: Option<String>,
-    /// How the buyer pays. Empty means the default of the buyer (PRD 12.4).
+    /// Money the buyer paid on the spot (موقع پر جمع, PRD FR-12.44): whole rupees, from 0 up to the
+    /// line's buyer total. Empty means 0. A buyer who must pay in full (نقدی منڈی, a چکتا buyer, a
+    /// buyer whose "ادھار کی اجازت" is off) always pays the whole buyer total: the backend sets it
+    /// and ignores what is sent here (it is kept as stored when the line is an unchanged line of
+    /// an edit, plan 65 point 10a). More than the buyer total is `ERR_PAID_EXCEEDS_TOTAL` on
+    /// `lots[i].sales[j].paid`, with `max` (rupees). A sum such as `5000+5000` is taken (PRD
+    /// FR-7.48).
     #[serde(default)]
-    pub payment_type: Option<PaymentType>,
+    pub paid: Option<String>,
     /// A seller commission typed on the line.
     #[serde(default)]
     pub seller_comm: Option<LineChargeInput>,
@@ -192,23 +308,56 @@ pub struct SaleInput {
     /// A لاگا typed on the line.
     #[serde(default)]
     pub laga: Option<LineChargeInput>,
+    /// The quality of the goods of this line (PRD FR-12.42): `"first"`, `"second"`, `"third"`, or
+    /// `null` (an empty text is the same). It changes no figure. Any other text is
+    /// `ERR_OUT_OF_RANGE` on `lots[i].sales[j].grade` (so the screen's dropdown, which has only
+    /// the three words, can never send one).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(type = "\"first\" | \"second\" | \"third\" | null", optional)]
+    pub grade: Option<String>,
     /// A note.
     #[serde(default)]
     pub note: Option<String>,
 }
 
 /// One lot (PRD 12.3): one seller's goods of one item.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct LotInput {
     /// The screen's own key for this row. Echoed back.
     pub key: String,
-    /// The seller. The پختہ کھاتہ (بیوپاری) account for a one-time seller.
+    /// The saved lot this row is, when the draft is an edit of the first posting (plan 16).
+    /// `null` for a new lot, which an edit adds after the saved ones. A lot sent with its `lot_id`
+    /// keeps its stored lot charges unless they are typed again (PRD FR-12.20).
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub lot_id: Option<i64>,
+    /// The seller. The اپنا مال account (030119998) is for a lot of the firm's own goods (PRD
+    /// FR-12.26).
     #[serde(default)]
     #[ts(type = "number | null")]
     pub seller_account_id: Option<i64>,
-    /// The one-time seller, for the پختہ کھاتہ (بیوپاری) account.
+    /// The purchase an own lot takes its goods from (PRD FR-12.26). Required when the seller is
+    /// اپنا مال, and refused (`ERR_FORMAT_INVALID` on `lots[i].purchase_id`) for any other seller.
+    /// Item and packing come from the purchase: an empty item or packing is filled from it, and a
+    /// different one is refused. The lot's `qty_received` is the نگ taken from the purchase, and
+    /// the lines must sell exactly that many (`ERR_OWN_LOT_NOT_FULLY_SOLD`); more than the stock
+    /// left is `ERR_QTY_EXCEEDS_LOT`. نقد and the advance tick stay 0 on an own lot.
     #[serde(default)]
-    pub pukhta: Option<PukhtaInput>,
+    #[ts(type = "number | null", optional)]
+    pub purchase_id: Option<i64>,
+    /// The garden arrival a garden lot takes its goods from (PRD FR-12.40, plan 33 v1.1). Optional
+    /// and allowed only when the seller is a garden's account (`ERR_FORMAT_INVALID` on
+    /// `lots[i].arrival_id` for any other seller). The arrival must belong to that garden, which
+    /// must be open, and must not be cancelled (`ERR_ARRIVAL_CANCELLED`). Item and packing come
+    /// from the arrival: an empty one is filled, a different one is refused. The lot's
+    /// `qty_received` is the نگ taken from the arrival; more than it has left is
+    /// `ERR_QTY_EXCEEDS_LOT`, and the lines must sell exactly that many
+    /// (`ERR_ARRIVAL_LOT_NOT_FULLY_SOLD`): what is not sold stays in the arrival. Such a lot has no
+    /// later sale. Its money is the garden lot of PRD FR-12.36, unchanged. A garden lot with no
+    /// `arrival_id` works as before.
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub arrival_id: Option<i64>,
     /// The item.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -259,7 +408,7 @@ pub struct LotInput {
 }
 
 /// A whole بکری as typed.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct BikriDraft {
     /// The header.
     pub header: HeaderInput,
@@ -273,44 +422,6 @@ pub struct BikriDraft {
 pub struct BikriPreviewInput {
     /// The draft to work out. Nothing is saved.
     pub draft: BikriDraft,
-}
-
-/// One lot for the freight split.
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct FreightLotInput {
-    /// The screen's key for the lot. Echoed back.
-    pub key: String,
-    /// Quantity received, in نگ.
-    pub qty_received: String,
-}
-
-/// Input of `bikri_split_freight` (PRD C17).
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct SplitFreightInput {
-    /// The header's total freight, whole rupees.
-    pub total_freight: String,
-    /// The lots, in lot order. The lot with the most نگ gets the leftover rupees; on a tie, the
-    /// first lot.
-    pub lots: Vec<FreightLotInput>,
-}
-
-/// One lot's part of the freight.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct FreightPart {
-    /// The key sent with the lot.
-    pub key: String,
-    /// The lot's freight.
-    #[ts(type = "Paisa")]
-    pub freight_paisa: Paisa,
-}
-
-/// Input of `assist_truck_memory` (PRD FR-7.49, FR-7.50).
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct TruckMemoryInput {
-    /// The truck number as typed so far.
-    pub truck_no: String,
-    /// The posting day of the new بکری, `DD-MM-YYYY`. The same-day notice looks at this day.
-    pub date: String,
 }
 
 /// Input of `assist_seller_memory` (PRD FR-7.51).

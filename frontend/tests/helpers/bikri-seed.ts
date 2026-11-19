@@ -1,0 +1,74 @@
+// Test helper: a بکری screen that opens on a draft that is already typed, the way it opens after the
+// user chose "finish the last بکری" (plan 13, draft-offer.tsx). Typing a lot and a code into the
+// cells of two grids takes many keys, and a busy computer can drop some, so the tests about the
+// چکتا buyer start from the draft and type only what they are about.
+
+import { createBikriDraft } from '../../src/features/bikri/draft-store';
+import { usePendingRestore } from '../../src/features/bikri/draft-offer';
+import { parseSnapshot, serialiseDraft } from '../../src/features/bikri/draft-snapshot';
+import { LOT, ON, SALE } from '../../src/features/bikri/types';
+import { IDS } from './bikri-data';
+
+const RAHIM = { id: IDS.rahim, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
+const KARIM = { id: IDS.karim, code: '0011', name_ur: 'کریم', name_en: 'Karim' };
+const BANANA = { id: IDS.banana, code: '0001', name_ur: 'کیلا', name_en: 'Banana' };
+const APPLE = { id: IDS.apple, code: '0002', name_ur: 'سیب', name_en: 'Apple' };
+const BOX = { id: IDS.box, code: '0001', name_ur: 'پیٹی', name_en: 'Box' };
+/** Shahid, the چکتا buyer of Event 2 (PRD 4.5), as the buyer picker keeps him: the account چکتا کھاتہ with his names and phone. */
+const SHAHID_PICKED = {
+  id: IDS.chuktaKhata,
+  code: '0030',
+  name_ur: 'شاہد',
+  name_en: 'Shahid',
+  chukta: { id: 1, phone: '03000000000' },
+};
+
+interface Seed {
+  /** The lot: Rahim's bananas (default) or Karim's apples (Event 2). */
+  lot?: 'rahim' | 'karim';
+  /** The first sale line goes to Shahid, a چکتا buyer. */
+  chuktaBuyer?: boolean;
+  /** Text typed on the first line. */
+  line?: { qty?: string; rate?: string };
+}
+
+/** Makes the next screen the sale book opens as one holding this draft. Call before opening it. */
+export function seedBikriDraft(seed: Seed = {}): void {
+  const stores = createBikriDraft('10-10-2026');
+  const lot = stores.lots.getState().rows[0];
+  if (lot === undefined) throw new Error('no lot row');
+  const kind = seed.lot ?? 'rahim';
+  const seller = kind === 'rahim' ? RAHIM : KARIM;
+  stores.lots.getState().patchRow(lot.rowId, {
+    typed: {
+      [LOT.qty]: kind === 'rahim' ? '50' : '10',
+      // Event 2's lot (PRD 4.5): freight 1,000, labour 50 and munshiana 50 typed as amounts.
+      ...(kind === 'karim'
+        ? { [LOT.freight]: '1000', [LOT.labour]: '50', [LOT.munshiana]: '50' }
+        : {}),
+      [LOT.sellerFilled]: ON,
+      [LOT.memoryFilledFor]: String(seller.id),
+    },
+    picked: {
+      [LOT.seller]: seller,
+      [LOT.item]: kind === 'karim' ? APPLE : BANANA,
+      [LOT.packing]: BOX,
+    },
+  });
+  const line = stores.salesFor(lot.rowId).getState().rows[0];
+  if (line === undefined) throw new Error('no line row');
+  stores
+    .salesFor(lot.rowId)
+    .getState()
+    .patchRow(line.rowId, {
+      typed: {
+        [SALE.qty]: seed.line?.qty ?? '',
+        [SALE.rate]: seed.line?.rate ?? '',
+        [SALE.qtyFilled]: ON,
+      },
+      ...(seed.chuktaBuyer === true ? { picked: { [SALE.buyer]: SHAHID_PICKED } } : {}),
+    });
+  const snapshot = parseSnapshot(serialiseDraft(stores));
+  if (snapshot === null) throw new Error('the seeded draft is not a snapshot');
+  usePendingRestore.getState().offer(snapshot);
+}

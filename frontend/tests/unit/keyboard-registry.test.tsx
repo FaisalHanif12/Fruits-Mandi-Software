@@ -24,12 +24,18 @@ const PRD_KEYS: readonly (readonly [keyof typeof SHORTCUTS, string])[] = [
   ['find', 'F3'],
   ['addAccount', 'F4'],
   ['print', 'F9'],
+  // The second print button of the sale book, ادھاری تفصیل (R5), PRD FR-12.12 (v1.32, plan 68).
+  ['printAdhari', 'Shift+F9'],
   ['save', 'F10'],
   ['saveAndNext', 'Ctrl+Enter'],
   ['removeRow', 'Ctrl+Delete'],
   ['typingMode', 'Alt+U'],
   ['languageToggle', 'Alt+L'],
   ['globalSearch', 'Ctrl+K'],
+  // PRD 7.3 `F1` (v1.16), and the two heights of the question panel (FR-7.73).
+  ['askApp', 'F1'],
+  ['dockTaller', 'Ctrl+↑'],
+  ['dockShorter', 'Ctrl+↓'],
   ['explain', 'Ctrl+I'],
   ['copyAbove', 'Ctrl+D'],
   ['undoSave', 'Alt+Z'],
@@ -44,6 +50,9 @@ const PRD_KEYS: readonly (readonly [keyof typeof SHORTCUTS, string])[] = [
   ['confirm', 'Enter'],
   ['back', 'Esc'],
   ['openList', 'Alt+↓'],
+  // The window of earlier days of پچھلی بکری moves by 7 days (PRD 12.7, plan 72 P5).
+  ['pastEarlier', 'Page Up'],
+  ['pastLater', 'Page Down'],
   ['dateNextDay', '+'],
   ['datePreviousDay', '−'],
 ];

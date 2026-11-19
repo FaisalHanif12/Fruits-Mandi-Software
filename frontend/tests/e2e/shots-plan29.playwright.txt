@@ -1,0 +1,100 @@
+// Screenshots of round 13 (plan 29, the fruit slice of D5): the fruit register R37 (all lines, the
+// guests only, nothing found), the stock R10 and the day summary R34 with their fruit column and row,
+// the analytics view K (fruit taken) and view F with its fruit column, in both languages at the three
+// window sizes, taken from the development pages /dev/reports/R37, /dev/reports/R10, /dev/reports/R34,
+// /dev/analytics/K and /dev/analytics/F. It is a developer tool: run it with the Vite dev server up on
+// a free port (`pnpm --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`) in its own
+// headless Chrome with a throwaway profile (a small Node runner that evaluates this text with
+// playwright-core). It measures sideways overflow (NFR-USE-15): the page, the main area and every grid
+// must not scroll sideways, no cell may cut its words, and no raw markup, message ID or error code may
+// show. The snippet writes with an absolute path from inside the page code. (A snippet for that tool,
+// not a module, so it is kept as .txt and the linter does not read it. The Windows check is spec 52.)
+//
+// The flags in the hash: `fruit` shows the fruit world of E2E-42 on R10, R34 and view F, `empty`
+// shows nothing found. The action `guests` picks "guests" in the "Partner or guests" box of R37.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan29';
+  const HOST = 'http://127.0.0.1:5188/#/dev/';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  // [route, flags in the hash, name of the shot, act (or null), what to wait for].
+  const SHOTS = [
+    ['reports/R37', '', 'r37-fruit', null, '.ag-row'],
+    ['reports/R37', '', 'r37-guests', 'guests', '.ag-row'],
+    ['reports/R37', '?empty', 'r37-empty', null, 'h1'],
+    ['reports/R10', '?fruit', 'r10-fruit', null, '.ag-row'],
+    ['reports/R34', '?fruit', 'r34-fruit', null, '.ag-row'],
+    ['analytics/K', '', 'K', null, '.ag-row'],
+    ['analytics/K', '?empty', 'K-empty', null, 'h1'],
+    ['analytics/F', '?fruit', 'F-fruit', null, '.ag-row'],
+  ];
+  const LANGS = ['ur', 'en'];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [route, flags, name, act, ready] of SHOTS) {
+      for (const lang of LANGS) {
+        try {
+          await page.goto(`${HOST}${route}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1, [role="alert"]', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          if (flags.includes('empty')) await page.waitForTimeout(1500);
+          else await page.waitForSelector(ready, { timeout: 45000 });
+          await page.waitForTimeout(900);
+          if (act === 'guests') {
+            await page
+              .locator('[role="combobox"]')
+              .filter({ hasText: /All partners|تمام شراکت دار/ })
+              .first()
+              .click();
+            await page
+              .locator('[role="option"]')
+              .filter({ hasText: /^(Guests|مہمان)$/ })
+              .click();
+            await page.waitForTimeout(1200);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
+            const main = document.querySelector('main');
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            const raw =
+              /report-col-|analytics-col-|report-r3\d-|analytics-view-|fruit-|report-filter-|ERR_|<num>|<name>/.test(
+                document.body.innerText,
+              );
+            return [
+              root.lang,
+              root.dir,
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'clipped=' + clipped,
+              'cols=' + document.querySelectorAll('.ag-header-cell').length,
+              'charts=' + document.querySelectorAll('[data-chart="bar"] svg').length,
+              'raw=' + raw,
+            ].join(' | ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 120)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

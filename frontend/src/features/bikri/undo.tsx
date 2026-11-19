@@ -1,0 +1,250 @@
+// Undo straight after a save (PRD FR-7.47, plan 16). The message after a save of a new بکری has a
+// button "واپس لیں" (Alt+Z) for 10 seconds. Pressing it asks for the undo (`requestUndo`); the
+// `UndoHost`, mounted once in the app shell, does it, so it works from any screen, also after the
+// user has left the sale book:
+//
+// 1. It asks the backend what taking the بکری back would do to cash (`bikri_cancel_preview`). If
+//    it would take cash in hand below zero, the box "is this entry correct?" opens first (PRD
+//    FR-6.7), on whatever screen he is on.
+// 2. It sends `bikri_undo`: a cancel with the reason "bikri-undo-reason", by reversal, which gives
+//    the values back as a draft.
+// 3. It opens the sale book on a NEW unsaved entry with those values, to correct and save again.
+//    The cancelled number is not used again. The draft goes through the same door as a draft
+//    restored at start-up (`usePendingRestore`), so it works from any screen and replaces the
+//    empty entry that was opened after the save.
+//
+// The undo of a mixed save (carried lots and a new بکری) has no preview: the backend asks the cash
+// question inside `bikri_mixed_undo`, over everything it takes back together. A refusal for cash
+// carries the cash after (`cash_after_paisa`), and the same box opens with that figure; the yes sends
+// the undo again with the confirmation (PRD FR-6.7, FR-7.47).
+//
+// A refusal (the day was closed meanwhile, the بکری changed) is told in a message with the
+// backend's words. Nothing ever ends in silence.
+
+import { Localized } from '@fluent/react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { create } from 'zustand';
+import { cashAfterOfRefusal, uiErrorOf } from '../../shared/api';
+import type { Paisa } from '../../shared/format';
+import { useLatest } from '../../shared/hooks';
+import { CashConfirmDialog, ErrorMessage, showToast } from '../../shared/ui';
+import type { MixedSaleSaved } from '../../bindings/MixedSaleSaved';
+import { bikriCancelPreview, bikriMixedUndo } from './api';
+import { applyBackendDraft, resolveDraftRecords } from './draft-load';
+import { usePendingRestore } from './draft-offer';
+import { createBikriDraft } from './draft-store';
+import { snapshotOfMixedUndo } from './mixed-undo';
+import { parseSnapshot, serialiseDraft } from './draft-snapshot';
+import { useUndoBikri } from './hooks/useStockActions';
+import { readAgainAfterPosting } from './hooks/useSaveBikri';
+import type { BikriDraft } from './types';
+
+/** How long the undo button stays on the message (PRD FR-7.47). */
+export const UNDO_WINDOW_MS = 10_000;
+
+/** The backend's refusal when the cash question was not answered yes (PRD FR-6.7). */
+const CASH_REFUSAL = 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED';
+
+/** The بکری whose save the user wants to take back. */
+export interface UndoTarget {
+  id: number;
+  number: number;
+}
+
+/**
+ * What the undo takes back: a بکری (a plain save), or everything a mixed save wrote (the carried lots'
+ * postings and the new بکری, plan 76 point 1), given back by the backend as it saved them.
+ */
+export type UndoRequest = UndoTarget | { mixed: MixedSaleSaved };
+
+interface UndoRequests {
+  request: { target: UndoRequest; serial: number } | null;
+  ask: (target: UndoRequest) => void;
+  take: () => void;
+}
+
+const useUndoRequests = create<UndoRequests>()((set) => ({
+  request: null,
+  ask: (target) => {
+    set((state) => ({ request: { target, serial: (state.request?.serial ?? 0) + 1 } }));
+  },
+  take: () => {
+    set({ request: null });
+  },
+}));
+
+/** The undo button or Alt+Z of the message after a save. Works from any screen. */
+export function requestUndo(target: UndoRequest): void {
+  useUndoRequests.getState().ask(target);
+}
+
+/** The values of the undone بکری as a snapshot of the sale book, or null if it cannot be made. */
+async function snapshotOf(draft: BikriDraft) {
+  const records = await resolveDraftRecords(draft, { accounts: [], masters: new Map() });
+  const stores = createBikriDraft(draft.header.entry_date);
+  applyBackendDraft(stores, draft, records);
+  return parseSnapshot(serialiseDraft(stores));
+}
+
+/** A refusal as a message in words (the first problem of it), or a general one. */
+function failureToast(failure: unknown) {
+  const first = uiErrorOf(failure).errors[0];
+  // A later sale or an edit since the save: the backend refuses the undo (ERR_VERSION_CHANGED, plan 80 R2-2,
+  // FR-7.47). "Open it again" would send him nowhere, so the toast says what happened and where to correct it.
+  if (first?.code === 'ERR_VERSION_CHANGED') {
+    showToast(
+      'error',
+      <Localized id="bikri-undo-changed">
+        <span />
+      </Localized>,
+    );
+    return;
+  }
+  showToast(
+    'error',
+    first === undefined ? (
+      <Localized id="bikri-undo-failed">
+        <span />
+      </Localized>
+    ) : (
+      <ErrorMessage item={first}>
+        <span />
+      </ErrorMessage>
+    ),
+  );
+}
+
+export function UndoHost() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const undo = useUndoBikri();
+  // The box that asks about cash below zero: the cash after the undo, and what the yes does.
+  const [ask, setAsk] = useState<{ cashAfter: Paisa; confirm: () => void } | null>(null);
+
+  /**
+   * Takes back a mixed save. The backend asks the cash question inside the undo (there is no preview of it),
+   * and its refusal carries the cash after: the box opens with it, and the yes sends the undo again confirmed.
+   */
+  const runMixed = async (saved: MixedSaleSaved, confirm: boolean) => {
+    try {
+      const result = await bikriMixedUndo({
+        later_entry_ids: saved.carried.map((one) => one.entry_id),
+        new_bikri_id: saved.new_bikri_id,
+        confirm_cash_below_zero: confirm,
+      });
+      const snapshot = await snapshotOfMixedUndo(result.draft);
+      if (snapshot === null) throw new Error('the draft cannot be shown');
+      usePendingRestore.getState().offer(snapshot);
+      await readAgainAfterPosting(queryClient);
+      showToast(
+        'success',
+        <Localized
+          id="bikri-undo-done"
+          vars={{ number: String(saved.new_bikri_number ?? saved.carried[0]?.old_number ?? 0) }}
+        >
+          <span />
+        </Localized>,
+      );
+      void navigate({ to: '/bikri/book', search: {} });
+    } catch (failure: unknown) {
+      const cashAfter = confirm ? null : cashAfterOfRefusal(failure);
+      if (cashAfter !== null) {
+        setAsk({
+          cashAfter,
+          confirm: () => {
+            void runMixed(saved, true);
+          },
+        });
+        return;
+      }
+      failureToast(failure);
+    }
+  };
+
+  const run = async (target: UndoTarget, confirm: boolean) => {
+    try {
+      const result = await undo.mutateAsync({ id: target.id, confirm });
+      const snapshot = await snapshotOf(result.draft);
+      if (snapshot === null) throw new Error('the draft cannot be shown');
+      usePendingRestore.getState().offer(snapshot);
+      showToast(
+        'success',
+        <Localized id="bikri-undo-done" vars={{ number: String(result.number) }}>
+          <span />
+        </Localized>,
+      );
+      void navigate({ to: '/bikri/book', search: {} });
+    } catch (failure: unknown) {
+      // The cash changed since the question was last asked (a voucher saved meanwhile). Ask it
+      // again with the numbers as they are now, like the save does. If it cannot be asked, he is
+      // told the refusal in words, with the cash after: never nothing (plan 16, PRD FR-6.7).
+      if (uiErrorOf(failure).errors.some((item) => item.code === CASH_REFUSAL)) {
+        const fresh = await bikriCancelPreview(target.id).catch(() => null);
+        if (fresh?.cash.needs_confirm === true) {
+          setAsk({
+            cashAfter: fresh.cash.cash_after_paisa,
+            confirm: () => {
+              void run(target, true);
+            },
+          });
+          return;
+        }
+      }
+      failureToast(failure);
+    }
+  };
+
+  const start = async (request: UndoRequest) => {
+    if ('mixed' in request) {
+      await runMixed(request.mixed, false);
+      return;
+    }
+    const target = request;
+    try {
+      const preview = await bikriCancelPreview(target.id);
+      if (preview.cash.needs_confirm) {
+        setAsk({
+          cashAfter: preview.cash.cash_after_paisa,
+          confirm: () => {
+            void run(target, true);
+          },
+        });
+        return;
+      }
+    } catch (failure: unknown) {
+      failureToast(failure);
+      return;
+    }
+    await run(target, false);
+  };
+
+  // A request from the message after a save, from any screen.
+  const startNow = useLatest(start);
+  useEffect(
+    () =>
+      useUndoRequests.subscribe((state) => {
+        if (state.request === null) return;
+        const { target } = state.request;
+        state.take();
+        void startNow()(target);
+      }),
+    [startNow],
+  );
+
+  return ask === null ? null : (
+    <CashConfirmDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) setAsk(null);
+      }}
+      cashAfter={ask.cashAfter}
+      onConfirm={() => {
+        const confirmed = ask.confirm;
+        setAsk(null);
+        confirmed();
+      }}
+    />
+  );
+}

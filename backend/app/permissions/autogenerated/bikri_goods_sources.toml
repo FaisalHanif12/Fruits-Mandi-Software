@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-goods-sources"
+description = "Enables the bikri_goods_sources command without any pre-configured scope."
+commands.allow = ["bikri_goods_sources"]
+
+[[permission]]
+identifier = "deny-bikri-goods-sources"
+description = "Denies the bikri_goods_sources command without any pre-configured scope."
+commands.deny = ["bikri_goods_sources"]

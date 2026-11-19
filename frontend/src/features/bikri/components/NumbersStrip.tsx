@@ -1,12 +1,12 @@
-// The key numbers pinned to the bottom of the screen in compact and normal windows, so the munshi
-// sees them while he types in the grids above (the summary is under the grids there). It shows
-// the selected lot and the whole بکری: خام بکری, کل اخراجات, صافی بکری and the buyers' bills, and
-// the cash note when cash would go below zero. Every number is the backend's, taken straight from
-// the preview with formatPaisa; nothing is added up here (CLAUDE.md rule 1).
+// The key numbers of the sale, docked under the grids in compact and normal windows (plan 38, sale
+// book), so the munshi sees them while he types in the grids above: the lot on screen, or the whole
+// sale when the summary's switch says so. They are خام بکری, کل اخراجات, صافی بکری and the buyers'
+// bills, on one line, and the cash note when cash would go below zero. Every number is the
+// backend's, taken straight from the preview with formatPaisa; nothing is added up here
+// (CLAUDE.md rule 1).
 //
-// It is pinned 24 px into the bottom padding of the scrolled area (the padding is 32 px), so it sits
-// just above the status bar with a gap of 8 px. `main` keeps a clearance under a focused cell
-// (`scroll-pb-strip`, token --strip-clearance), so the strip never covers the cell being typed in.
+// It sits under the scrolling area of the screen, not over it, so it can never cover a grid or the
+// cell being typed in.
 //
 // It holds no button, link or field, so the Tab key and the arrow keys pass over it (it is not a
 // tab stop). It is a region with a name, not a live region, so a screen reader does not read it
@@ -18,19 +18,28 @@ import type { ReactNode } from 'react';
 import type { CashCheck } from '../../../bindings/CashCheck';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { Num } from '../../../shared/ui';
+import { lotLabelVars } from '../lot-name';
 import type { SummaryTotals } from '../types';
 
 interface Group {
-  /** The words in front of the numbers: the lot, or the whole sale. */
+  /** The words in front of the numbers: the lot, or the whole sale. Null: one lot, no words. */
   label: ReactNode;
   /** Null: the backend could not work this out yet (nothing finished in it). */
   totals: SummaryTotals | null;
   /** The net is below zero: the seller owes it (PRD FR-12.7). */
   netIsNegative: boolean;
+  /** How many lines the numbers leave out, their quantity being wrong (PRD FR-12.6). */
+  leftOut: number;
 }
 
 interface NumbersStripProps {
   lotNumber: number;
+  /** The lot's seller and item, said after its number (PRD FR-12.6). Empty: the number alone. */
+  lotWho?: string | undefined;
+  /** How many lots the sale has. With one lot the lot is the whole sale, so no name is needed. */
+  lotCount: number;
+  /** The whole sale is on screen (the lot / whole switch of the summary): its numbers are shown. */
+  showWhole: boolean;
   lot: Omit<Group, 'label'>;
   whole: Omit<Group, 'label'>;
   cash: CashCheck;
@@ -52,12 +61,12 @@ const NUMBERS = [
   },
 ] as const;
 
-function StripRow({ label, totals, netIsNegative }: Group) {
+function StripRow({ label, totals, netIsNegative, leftOut }: Group) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-4">
-      <span className="type-label text-ink">{label}</span>
+      {label === null ? null : <span className="type-label text-ink">{label}</span>}
       {totals === null ? (
-        <Localized id="bikri-strip-incomplete">
+        <Localized id={leftOut > 0 ? 'bikri-strip-waits-qty' : 'bikri-strip-incomplete'}>
           <span className="type-body text-ink-muted" />
         </Localized>
       ) : (
@@ -73,28 +82,51 @@ function StripRow({ label, totals, netIsNegative }: Group) {
           </span>
         ))
       )}
+      {totals !== null && leftOut > 0 ? (
+        <Localized id="bikri-strip-left-out" vars={{ count: leftOut }}>
+          <span className="type-body text-warn" />
+        </Localized>
+      ) : null}
     </div>
   );
 }
 
-export function NumbersStrip({ lotNumber, lot, whole, cash }: NumbersStripProps) {
+export function NumbersStrip({
+  lotNumber,
+  lotWho,
+  lotCount,
+  showWhole,
+  lot,
+  whole,
+  cash,
+}: NumbersStripProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   return (
     <section
       aria-label={l10n.getString('bikri-strip-label')}
-      className="sticky -bottom-5 z-10 flex flex-col gap-1 rounded-3 border border-border bg-surface p-2 shadow-overlay"
+      className="flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 rounded-3 border border-border bg-surface px-3 py-1"
     >
-      <StripRow
-        label={<Localized id="bikri-summary-lot" vars={{ lot: String(lotNumber) }} />}
-        {...lot}
-      />
-      <StripRow label={<Localized id="bikri-summary-whole" />} {...whole} />
+      {showWhole ? (
+        <StripRow label={lotCount > 1 ? <Localized id="bikri-summary-whole" /> : null} {...whole} />
+      ) : (
+        <StripRow
+          label={
+            lotCount > 1 ? (
+              <Localized
+                id="bikri-summary-lot"
+                vars={{ ...lotLabelVars(lotNumber, lotWho ?? '') }}
+              />
+            ) : null
+          }
+          {...lot}
+        />
+      )}
       {cash.needs_confirm ? (
         <p className="flex items-center gap-2 type-body text-warn">
           <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
           <Localized
-            id="bikri-cash-after"
+            id="common-cash-after"
             vars={{ amount: formatPaisa(cash.cash_after_paisa, { grouping }) }}
             elems={{ num: <Num /> }}
           >

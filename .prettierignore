@@ -12,3 +12,8 @@ frontend/public/fonts/
 pnpm-lock.yaml
 *.md
 *.ftl
+# Fixtures are machine output copied from backend/crates/services/tests/fixtures. Never reformat them.
+frontend/tests/fixtures/
+
+# Fixtures are byte copies of the backend files (frontend/tests/fixtures): their layout is the backend writer's.
+frontend/tests/fixtures/

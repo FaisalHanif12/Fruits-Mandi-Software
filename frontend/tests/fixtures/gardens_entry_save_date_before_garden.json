@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DATE_BEFORE_GARDEN",
+      "field": "date",
+      "values": {
+        "garden_date": "2026-10-10"
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

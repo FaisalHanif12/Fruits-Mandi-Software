@@ -157,6 +157,9 @@ impl Shelf {
 pub struct RuleSet {
     rules: Vec<Rule>,
     shelves: HashMap<(ChargeSide, ChargeType), Shelf>,
+    /// The place of a rule in the order it was last saved (a smaller place was saved earlier),
+    /// by rule id. Empty means the order of the ids (see [`RuleSet::with_saved_order`]).
+    saved_place: HashMap<i64, i64>,
 }
 
 impl RuleSet {
@@ -175,7 +178,35 @@ impl RuleSet {
                 .or_default()
                 .file(rule, index);
         }
-        RuleSet { rules, shelves }
+        RuleSet {
+            rules,
+            shelves,
+            saved_place: HashMap::new(),
+        }
+    }
+
+    /// Tells the set when each rule was last saved: `ids` are the ids of the rules, the one saved
+    /// longest ago first (an edit counts as a save; the id breaks a tie). Of two rules at one level
+    /// that start on the same day, the one saved last then wins (PRD FR-11.5, plan 80 gate
+    /// Q-R3-1). A rule not named here falls back to its id.
+    ///
+    /// Example: rule A (id 5) and rule B (id 6) both start on 01-11, and A is edited after B was
+    /// made. With `with_saved_order(&[6, 5])` A wins; without it B (the bigger id) wins.
+    #[must_use]
+    pub fn with_saved_order(mut self, ids: &[i64]) -> RuleSet {
+        self.saved_place = ids
+            .iter()
+            .enumerate()
+            .map(|(place, id)| (*id, i64::try_from(place).unwrap_or(i64::MAX)))
+            .collect();
+        self
+    }
+
+    /// The order key of a rule in this set: the day it starts, then when it was saved (see
+    /// [`newer_key`] for the order without a saved order).
+    fn newer_key_of(&self, rule: &Rule) -> (BusinessDate, i64) {
+        let place = self.saved_place.get(&rule.id).copied().unwrap_or(rule.id);
+        (rule.from_date, place)
     }
 
     /// How many active rules are filed.
@@ -194,7 +225,7 @@ impl RuleSet {
             .iter()
             .filter_map(|i| self.rules.get(*i))
             .filter(|r| r.applies_on(date))
-            .max_by_key(|r| newer_key(r))
+            .max_by_key(|r| self.newer_key_of(r))
     }
 }
 
@@ -208,9 +239,11 @@ fn value_is_sound(value: ChargeValue) -> bool {
 }
 
 /// Which of two rules at one level is the newer (PRD FR-11.5): the one that starts later; if
-/// they start on the same day, the one made last (the bigger id). So a planned change ("7% from
-/// 01-11") is not cancelled by a later entry that starts earlier. This is the one place that
-/// decides "newer"; the rule screen's overlap warning uses the same order.
+/// they start on the same day, the one saved last. So a planned change ("7% from 01-11") is not
+/// cancelled by a later entry that starts earlier. A set built with [`RuleSet::with_saved_order`]
+/// knows when each rule was last saved (an edit counts, the id breaks a tie); this function is the
+/// order of a set without it, where the bigger id (made last) is the newer. The rule lists and the
+/// overlap warning in `mandi_db::rules` order the same way in SQL (`from_date`, `updated_at`, `id`).
 pub fn newer_key(rule: &Rule) -> (BusinessDate, i64) {
     (rule.from_date, rule.id)
 }

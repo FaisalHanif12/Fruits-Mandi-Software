@@ -20,6 +20,19 @@ const require = createRequire(import.meta.url);
 /** Class names that are not Tailwind's: set by other libraries or by plain CSS we do not compile. */
 const FOREIGN_PREFIXES = ['ag-'];
 
+/**
+ * Marker classes: set on purpose with no rule of their own. A test, a measuring tool or a selector
+ * looks for them (tests/e2e/alignment), so a class here styles nothing and needs no CSS.
+ */
+const MARKER_CLASSES: ReadonlySet<string> = new Set([
+  // A list cell that holds a name (the measuring tool finds the name columns by it).
+  'cell-name',
+  // A list cell that holds a control (a switch or a button), so the grid tells a click on it from a click on the row.
+  'cell-control',
+  // A list whose rows grow with a long column: the tests and the measuring tool tell it from a fixed-height list.
+  'list-grid-wrap',
+]);
+
 export interface ClassUse {
   /** The class as written, for example `pe-12` or `normal:flex`. */
   name: string;
@@ -147,6 +160,7 @@ export async function classesWithNoCss(uses: ClassUse[] = classesInSource()): Pr
   const bad: ClassUse[] = [];
   for (const use of uses) {
     if (FOREIGN_PREFIXES.some((prefix) => use.name.startsWith(prefix))) continue;
+    if (MARKER_CLASSES.has(use.name)) continue;
     if (defined.has(use.name)) continue;
     const built = (await newCompiler()).build([use.name]);
     if (built === empty || usesUndefinedToken(built)) bad.push(use);

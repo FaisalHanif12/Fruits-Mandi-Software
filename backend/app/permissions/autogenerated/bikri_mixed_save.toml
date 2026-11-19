@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-mixed-save"
+description = "Enables the bikri_mixed_save command without any pre-configured scope."
+commands.allow = ["bikri_mixed_save"]
+
+[[permission]]
+identifier = "deny-bikri-mixed-save"
+description = "Denies the bikri_mixed_save command without any pre-configured scope."
+commands.deny = ["bikri_mixed_save"]

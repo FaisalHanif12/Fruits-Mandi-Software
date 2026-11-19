@@ -1,0 +1,109 @@
+# shared/print (plan 14)
+
+The one layout of every printed page of the app: the seller bill, the buyer slips,
+later the receipt slip (plan 15) and the reports (D5). PRD FR-19.3 to FR-19.7, FR-7.36, NFR-URD-11
+to NFR-URD-16, NFR-URD-28, NFR-SPD-14. Read the `print-and-export` skill first.
+
+## The rule
+
+The backend sends ONE shape, `PrintData` (plan 14 contract 5): every value is text already made
+by the backend, every label is a Fluent message id, the amount in words is a sentence. **The layout
+lays out what it gets and calculates nothing** (CLAUDE.md rule 1). There is no `+`, `*`, rounding or
+summing in this folder or in `features/bikri/print/`.
+
+## What is here
+
+| File                                                         | What it is                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print.css`                                                  | All print styles. ONE literal `@page` rule per paper class (`a4`, `a5`, `r80`), with the paper size, the margins and the page footer. Table header repeats, rows never split, numbers on the physical right edge, a new sheet for each party |
+| `PrintRoot.tsx`                                              | The root of EVERY print (plan 17e): print language (`lang`, `dir`), paper class, the footer in the hidden window. Gives the children a Fluent bundle of the PRINT language. Given the frame the backend built (`language`, `dir`, `footer`)  |
+| `PrintDocument.tsx`                                          | The sheets of a بکری or a voucher inside a `PrintRoot`                                                                                                                                                                                       |
+| `PrintProvider.tsx`                                          | A Fluent bundle of the print language that leaves the app language alone (PRD FR-7.36)                                                                                                                                                       |
+| `PrintSheet.tsx`                                             | One party: header, who it is for, goods, amounts, how he pays, amount in words                                                                                                                                                               |
+| `PrintGoods.tsx`                                             | The goods: a table, or two rows of text for each line on the 80 mm roll                                                                                                                                                                      |
+| `PrintSummary.tsx`, `PrintHeader.tsx`, `PrintPartyBlock.tsx` | The parts of a sheet                                                                                                                                                                                                                         |
+| `footer.ts`                                                  | The page footer: "Printed 10-10-2026 17:40 · Page 1 of 2", as a CSS `content` value                                                                                                                                                          |
+| `wait-ready.ts`                                              | Waits for the fonts and the layout, and gives the page height for the 80 mm roll                                                                                                                                                             |
+| `docs.ts`, `types.ts`                                        | The documents (seller bill, buyer slips, receipt slip) and their names; the types from the generated bindings                                                                                                                                |
+
+## Things that were found the hard way
+
+- **The footer is set through the CSS object model.** The production Content Security Policy
+  (`style-src 'self'`) refuses an inline `<style>`, so the text of the page margin box is the
+  custom property `--print-footer` set on the root element (`footer.ts`). `print.css` reads it with
+  `content: var(--print-footer, "")`. The page and the page count are CSS counters
+  (`counter(page)`, `counter(pages)`), so "Page 2 of 4" is right on every sheet.
+- **The `page` property is on `html`, not on the document.** A box whose page name differs from the
+  box beside it forces a page break, and the empty toast area beside the document made a blank
+  second sheet.
+- **The date in the footer is wrapped in a left-to-right isolate.** A page margin box has no
+  `<bdi>`, so "10-10-2026" is otherwise written "2026-10-10" inside an Urdu line.
+- **Numbers take the LATIN print size of the text around them** (`--print-num-size`), also in an
+  Urdu print: Inter at step 3 is 10 pt beside Gulzar at 12 pt, and they look alike.
+- **Paper is white.** `html` and `body` get a white ground and no minimum height in print (the app
+  page ground would print tinted, and a body as tall as the window made a blank second sheet).
+- **The 80 mm roll is one tall page.** All slips of "print all" are on it, with a dashed cut line
+  between them and no page break; `height_px` (from the print route) is the height of all of them.
+  Its footer is the print time only. A4 and A5 start each party on a new sheet.
+- **`height_px` is the height of the document, not `scrollHeight`**, which is never less than the
+  height of the hidden window. The window (`data-window`) lays the page out at the width of the text
+  of the paper with no padding or frame, so the height is the height it prints at (checked in Chrome
+  by `print-shots.mjs`: the same number on screen and in print).
+- Chrome shows what WebView2 shows for all of the above, but Urdu shaping and printing must still
+  be checked on Windows (CLAUDE.md, Gotchas): the spec `tests/e2e/specs/15-bikri-print.e2e.mjs`.
+
+## Looking at it
+
+`pnpm --filter frontend dev`, then `node frontend/tests/e2e/print-shots.mjs`. It writes the PDF and
+the PNG of every document in both languages on A4, A5 and the roll to
+`tests/e2e/output/screenshots/plan14/`, and tells the page counts. The page `#/dev/print?doc=
+seller_bill&language=ur&paper=a4` (dev only) shows one document in the browser; `&cancelled`,
+`&long=15` and `&lines=60` show the other cases.
+
+## The receipt slip (plan 15)
+
+The fourth document, `receipt_slip` (PRD FR-15.2), is one voucher on one page: the same sheet, with
+the voucher number (`print-fact-voucher-number`), the party, the amount and the amount in words.
+There is no line about how it was paid: all money is روکڑ (PRD 15.1). The template is
+`features/vouchers/print/ReceiptSlipTemplate.tsx`, the hidden route is
+`?voucher=<id>&doc=receipt_slip&language=..&job=..`, and its paper is `paper_receipt_slip` in the
+Printing tab. The data is `reports_voucher_print_data`; the layout still calculates nothing.
+
+## The shared header and footer, R5, and the collection list (plan 17e)
+
+- **One header for every print** (PRD FR-19.13, Section 21): `PrintHeader` is given the `header` the
+  backend built (`PrintHeader` of the bindings: the firm, up to three contact persons with phones, the
+  trade mark, the title id and the facts). A contact or a trade mark that is not set is not drawn: no
+  empty line, no empty box. The footer is the `footer` of the same shape (`printed_label_id`,
+  `printed_at`, `page_label_id`, `of_label_id`), read by `PrintRoot`. A report print (D5) asks
+  `reports_print_header { language, title_id, facts }` (`usePrintFrame`), gets a `PrintFrame`, and
+  draws `PrintHeader` and `PrintRoot` with it. It never builds a header of its own.
+- **Names with tags.** A party or a line name is drawn by `PrintName`: the name, then the tag (نشان)
+  in its own isolated element. The tag comes from the backend (`PrintParty.tag`, `PrintLine.name_tag`).
+- **R5** (`PrintR5.tsx`): the client's own layout of the buyer's bill. One row: serial, party, تفصیل,
+  رقم, رقم بعد لاگا. The lines of تفصیل are the backend's `PrintLine.detail`, shown as they are (the
+  spaces round the dot stay, `white-space: nowrap`, no isolate round the whole text). A line of an
+  item sold by weight shows its weight in kg (`print-r5-line-weight`), because its نگ count next to a
+  rate per kilo invites a wrong reading. The two amounts are picked from `page.amounts` by their
+  labels (`R5_AMOUNT_IDS`), never added up.
+- **Collection list** (`features/vouchers/print/CollectionListTemplate.tsx`, the 5th document): its
+  data is `CollectionPrintData`, not `PrintData`, but it sits in the same `PrintRoot` with the same
+  `PrintHeader`. `PrintView` is generic: the module gives the `describe` function that says whether the
+  document is empty and gives a sample for the fonts. The total of the list is the total OF THIS LIST.
+
+## The digits of a print (plan 17e, PRD FR-7.32, NFR-URD-14)
+
+Every number of a print is written with the digits 0-9 in both languages, grouped (2026, 10,000). There
+is no Urdu digit setting and no Urdu digit style: Umar's decision of 09-11-2026 (plan 60 D1, plan 63)
+removed it. Inside the page the ten ASCII digits are Inter first (`--font-digits`, the `Mandi Digits`
+face of `fonts.css`), so a digit that is not in `<Num>` or `<Code>` never takes an Urdu digit shape.
+`tests/unit/print-digits.test.tsx` walks every template and the backend's real answers, and
+`tests/unit/print-ascii-digits.test.tsx` checks the seller bill, R5 and an R35 slip in Urdu, also when
+an old answer still carries the flag of the removed setting. Amounts in words stay Urdu words.
+
+## The people of the header (plan 42, PRD Section 21, FR-19.13, v1.12)
+
+`PrintHeader` draws up to six people from `header.contacts`: the backend sends them already in print
+order (the owners first, then the munshi), each with `role` (`owner` or `munshi`) and a `phone` that
+may be empty. The role word is ours (`print-role-owner`, `print-role-munshi`); a person with no phone is
+his role and name only. Settings → Firm (`features/settings/components/FirmTab.tsx`) edits the list.

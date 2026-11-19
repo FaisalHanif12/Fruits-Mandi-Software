@@ -1,4 +1,4 @@
-//! Reading the text of a draft and splitting the freight (PRD 12.3 to 12.4, C17).
+//! Reading the text of a draft (PRD 12.3 to 12.4).
 
 use super::*;
 use crate::dates::BusinessDate;
@@ -12,26 +12,30 @@ fn today() -> BusinessDate {
 fn sale(buyer: Option<i64>, qty: &str, rate: &str) -> SaleInput {
     SaleInput {
         key: "s".to_owned(),
+        sale_id: None,
         buyer_account_id: buyer,
-        pukhta: None,
+        chukta: None,
         qty: qty.to_owned(),
         weight: None,
         seller_rate: rate.to_owned(),
         rate_differs: false,
         buyer_rate: None,
-        payment_type: None,
+        paid: None,
         seller_comm: None,
         buyer_comm: None,
         laga: None,
+        grade: None,
         note: None,
     }
 }
 
 fn lot(sales: Vec<SaleInput>) -> LotInput {
     LotInput {
+        arrival_id: None,
         key: "l".to_owned(),
+        lot_id: None,
         seller_account_id: Some(1),
-        pukhta: None,
+        purchase_id: None,
         item_id: Some(1),
         packing_id: Some(1),
         marka_id: None,
@@ -77,7 +81,6 @@ fn reads_the_text_of_event_1() {
     };
     let prepared = prepare_draft(&draft, today(), None);
     assert!(prepared.issues.is_empty(), "{:?}", prepared.issues);
-    assert_eq!(prepared.header.truck_no.as_deref(), Some("LES-1234"));
     assert_eq!(prepared.header.bill_date, prepared.header.entry_date);
     let lot = &prepared.lots[0];
     assert_eq!(lot.qty_received.map(Qty::get), Some(50));
@@ -180,79 +183,86 @@ fn too_many_lots_and_lines_are_cut_off() {
     };
     let prepared = prepare_draft(&draft, today(), None);
     assert_eq!(prepared.lots[0].sales.len(), MAX_SALE_LINES);
+    let issue = prepared
+        .issues
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrOutOfRange && e.field == "lots[0].sales")
+        .unwrap();
+    assert_eq!(
+        issue.values.get("max"),
+        Some(&crate::error::ErrorValue::Number(
+            i64::try_from(MAX_SALE_LINES).unwrap()
+        ))
+    );
+}
+
+#[test]
+fn the_empty_row_the_screen_keeps_is_not_a_line_of_the_limit() {
+    // Plan 61 T4 (money review): the screen sends every row, with an empty one at the end, so
+    // exactly MAX_SALE_LINES lines and that row must not be refused (NFR-SCL-3).
+    let mut rows: Vec<SaleInput> = (0..MAX_SALE_LINES)
+        .map(|_| sale(Some(7), "1", "600"))
+        .collect();
+    rows.push(sale(None, "0", ""));
+    let draft = BikriDraft {
+        header: header(),
+        lots: vec![lot(rows)],
+    };
+    let prepared = prepare_draft(&draft, today(), None);
     assert!(
         prepared
             .issues
             .iter()
-            .any(|e| e.code == ErrorCode::ErrOutOfRange && e.field == "lots[0].sales")
+            .all(|e| e.code != ErrorCode::ErrOutOfRange),
+        "{:?}",
+        prepared.issues
+    );
+    assert_eq!(prepared.lots[0].sales.len(), MAX_SALE_LINES + 1);
+    assert!(prepared.lots[0].sales.last().is_some_and(|s| s.is_blank));
+}
+
+#[test]
+fn a_draft_filled_with_blank_rows_is_cut_off() {
+    // Blank rows have their own small limit, so a draft cannot be filled with empty rows.
+    let rows: Vec<SaleInput> = (0..MAX_BLANK_ROWS + 5)
+        .map(|_| sale(None, "0", ""))
+        .collect();
+    let draft = BikriDraft {
+        header: header(),
+        lots: vec![lot(rows)],
+    };
+    let prepared = prepare_draft(&draft, today(), None);
+    assert_eq!(prepared.lots[0].sales.len(), MAX_BLANK_ROWS);
+    let issue = prepared
+        .issues
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrOutOfRange && e.field == "lots[0].sales")
+        .unwrap();
+    // The limit named is the one of blank rows, not the one of lines.
+    assert_eq!(
+        issue.values.get("max"),
+        Some(&crate::error::ErrorValue::Number(
+            i64::try_from(MAX_BLANK_ROWS).unwrap()
+        ))
     );
 }
 
 #[test]
-fn the_freight_split_follows_c17() {
-    // PRD C17: 1,000 over lots of 30 and 20 نگ gives 600 and 400.
-    let input = SplitFreightInput {
-        total_freight: "1,000".to_owned(),
-        lots: vec![
-            FreightLotInput {
-                key: "a".to_owned(),
-                qty_received: "30".to_owned(),
-            },
-            FreightLotInput {
-                key: "b".to_owned(),
-                qty_received: "20".to_owned(),
-            },
-        ],
+fn the_retired_header_fields_are_ignored_not_refused() {
+    // PRD v1.34 (plan 71 H3): an old draft may still carry a truck number, a driver phone that is not
+    // a phone and a bill day that is not a day. A new بکری ignores all of them: no error, and its
+    // bill day is its entry day.
+    let mut header = header();
+    header.truck_no = Some("LES-1234".to_owned());
+    header.driver_phone = Some("not a phone".to_owned());
+    header.bill_date = "99-99-9999".to_owned();
+    header.total_freight = Some("10.5".to_owned());
+    header.zamindar_account_id = Some(77);
+    let draft = BikriDraft {
+        header,
+        lots: vec![lot(vec![sale(Some(2), "20", "600")])],
     };
-    let parts = split_freight(&input).unwrap();
-    let rupees: Vec<(&str, i64)> = parts
-        .iter()
-        .map(|p| (p.key.as_str(), p.freight_paisa.rupees()))
-        .collect();
-    assert_eq!(rupees, vec![("a", 600), ("b", 400)]);
-    // 1,000 over three lots of 1 نگ: the leftover rupee goes to the first lot.
-    let three = SplitFreightInput {
-        total_freight: "1000".to_owned(),
-        lots: ["a", "b", "c"]
-            .iter()
-            .map(|k| FreightLotInput {
-                key: (*k).to_owned(),
-                qty_received: "1".to_owned(),
-            })
-            .collect(),
-    };
-    let rupees: Vec<i64> = split_freight(&three)
-        .unwrap()
-        .iter()
-        .map(|p| p.freight_paisa.rupees())
-        .collect();
-    assert_eq!(rupees, vec![334, 333, 333]);
-}
-
-#[test]
-fn the_freight_split_names_the_bad_fields() {
-    let input = SplitFreightInput {
-        total_freight: "10.5".to_owned(),
-        lots: vec![FreightLotInput {
-            key: "a".to_owned(),
-            qty_received: "0".to_owned(),
-        }],
-    };
-    let errors = split_freight(&input).unwrap_err();
-    let found: Vec<(ErrorCode, &str)> = errors.iter().map(|e| (e.code, e.field.as_str())).collect();
-    assert_eq!(
-        found,
-        vec![
-            (ErrorCode::ErrDecimalsNotAllowed, "total_freight"),
-            (ErrorCode::ErrMustBeMoreThanZero, "lots[0].qty_received"),
-        ]
-    );
-    let none = SplitFreightInput {
-        total_freight: "100".to_owned(),
-        lots: vec![],
-    };
-    assert_eq!(
-        split_freight(&none).unwrap_err()[0].code,
-        ErrorCode::ErrNoLots
-    );
+    let prepared = prepare_draft(&draft, today(), None);
+    assert!(prepared.issues.is_empty(), "{:?}", prepared.issues);
+    assert_eq!(prepared.header.bill_date, prepared.header.entry_date);
 }

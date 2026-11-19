@@ -1,0 +1,88 @@
+{
+  "where_lines": [
+    {
+      "kind": "cash",
+      "amount_paisa": 5848400
+    },
+    {
+      "kind": "buyers_owe",
+      "amount_paisa": 2156400
+    },
+    {
+      "kind": "seller_advances",
+      "amount_paisa": 0
+    },
+    {
+      "kind": "sellers_owe_beyond",
+      "amount_paisa": 0
+    },
+    {
+      "kind": "sellers_payable",
+      "amount_paisa": -1016000
+    },
+    {
+      "kind": "money_lent",
+      "amount_paisa": 0
+    },
+    {
+      "kind": "owed_for_charges",
+      "amount_paisa": -440000
+    },
+    {
+      "kind": "separate_khatas",
+      "amount_paisa": 0
+    },
+    {
+      "kind": "gardens_held",
+      "amount_paisa": 0
+    },
+    {
+      "kind": "linked_in_partner_totals",
+      "amount_paisa": 0
+    }
+  ],
+  "where_total_paisa": 6548800,
+  "whose_lines": [
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "amount_paisa": -100400
+    },
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "ب",
+        "name_en": "Partner B"
+      },
+      "amount_paisa": 74600
+    },
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 3,
+        "code": "",
+        "name_ur": "ج",
+        "name_en": "Partner C"
+      },
+      "amount_paisa": 74600
+    },
+    {
+      "kind": "opening_capital",
+      "partner": null,
+      "amount_paisa": 6500000
+    },
+    {
+      "kind": "advances_open",
+      "partner": null,
+      "amount_paisa": 0
+    }
+  ],
+  "whose_total_paisa": 6548800
+}

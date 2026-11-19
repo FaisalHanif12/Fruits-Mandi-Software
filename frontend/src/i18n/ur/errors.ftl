@@ -30,7 +30,7 @@ err-amount-too-large = رقم بہت زیادہ ہے۔ زیادہ سے زیاد�
 # A journal entry: one line, or the total of the entry, is over the largest amount allowed.
 # $max: the largest amount in rupees.
 # review: pending
-err-entry-too-large = یہ اندراج بہت بڑا ہے۔ ایک سطر، یا پورے اندراج کا { -meezan }، زیادہ سے زیادہ { $max } روپے ہو سکتا ہے۔
+err-entry-too-large = یہ اندراج بہت بڑا ہے۔ ایک لائن، یا پورے اندراج کا { -meezan }، زیادہ سے زیادہ { $max } روپے ہو سکتا ہے۔
 # PRD E24.
 # review: pending
 err-must-be-more-than-zero = صفر سے بڑا نمبر لکھیں۔
@@ -46,9 +46,12 @@ err-qty-too-large = تعداد بہت زیادہ ہے۔ زیادہ سے زیاد
 err-weight-too-large = وزن بہت زیادہ ہے۔ زیادہ سے زیادہ { $max } کلو لکھ سکتے ہیں۔
 # review: pending
 err-date-invalid = یہ تاریخ درست نہیں۔ دن، مہینہ اور سال درست لکھیں۔
-# PRD FR-6.6. $closed_up_to: DD-MM-YYYY.
 # review: pending
-err-date-closed = یہ دن بند ہو چکا ہے۔ { $closed_up_to } کے بعد کی تاریخ لکھیں، یا مالک سے دن کھلوائیں۔
+err-date-closed = { $today_state ->
+    [open] یہ دن بند ہو چکا ہے۔ آج کی تاریخ ({ $today }) لکھیں، یا مالک سے دن کھلوائیں۔
+    [closed] یہ دن بند ہے اور آج کا دن بھی بند ہے۔ مالک سے دن کھلوائیں۔
+   *[other] یہ دن بند ہو چکا ہے۔ مالک سے دن کھلوائیں۔
+}
 # PRD FR-6.6. $today: DD-MM-YYYY.
 # review: pending
 err-date-in-future = آگے کی تاریخ نہیں لکھ سکتے۔ آج ({ $today }) یا اس سے پہلے کی تاریخ لکھیں۔
@@ -61,6 +64,13 @@ err-name-ur-script = اردو نام اردو حروف میں لکھیں۔
 # PRD FR-7.28.
 # review: pending
 err-name-en-script = انگریزی نام انگریزی حروف میں لکھیں۔
+# PRD FR-7.24, FR-13.2. A walk-in buyer needs both names; the phone is optional.
+# review: pending
+err-chukta-name-required = { -chukta } { -gahak } کا نام اردو اور انگریزی دونوں میں لکھیں۔
+# PRD 10.2, Code Standards 4.2 (Tag). The code name is the backend's (plan 17e T1).
+# review: pending
+err-tag-invalid = نشان 1 سے 4 انگریزی بڑے حروف یا نقطوں کا ہونا چاہیے، جن میں کم از کم ایک حرف ہو۔ مثلاً K، BA یا D.P۔
+
 # review: pending
 err-name-too-long = نام بہت لمبا ہے۔ زیادہ سے زیادہ { $max } حروف لکھیں۔
 # review: pending
@@ -79,7 +89,7 @@ err-shares-not-100 = تمام { -shirakat-dar } کا کل { -hissa } { $total } 
 
 # PRD FR-17.2, E18, A31. $today: today, DD-MM-YYYY.
 # review: pending
-err-share-backdated = { -hissa } کی نئی تاریخ پرانی نہیں ہو سکتی۔ آج ({ $today }) یا اس کے بعد کی تاریخ لکھیں۔
+err-share-backdated = نیا { -hissa } پچھلی تاریخ سے شروع نہیں ہو سکتا۔ آج ({ $today }) یا اس کے بعد کی تاریخ لکھیں۔
 
 # PRD FR-17.1. A partner with a share cannot be made inactive.
 # review: pending
@@ -127,7 +137,7 @@ err-wrong-password = صارف کا نام یا پاس ورڈ غلط ہے۔ با�
 # review: pending
 err-locked-wait = بہت زیادہ غلط کوششیں ہو گئیں۔ { $seconds } سیکنڈ رک کر دوبارہ کوشش کریں۔
 # review: pending
-err-user-inactive = اس کھاتے سے لاگ ان نہیں ہو سکتا۔ ریکوری کوڈ استعمال کریں۔
+err-user-inactive = اس صارف سے لاگ ان نہیں ہو سکتا۔ ریکوری کوڈ استعمال کریں۔
 # review: pending
 err-already-signed-in = آپ پہلے ہی لاگ ان ہیں۔
 # review: pending
@@ -136,16 +146,25 @@ err-not-locked = ایپ لاک نہیں ہے۔
 err-recovery-code-wrong = صارف کا نام یا ریکوری کوڈ غلط ہے۔ دیکھ کر دوبارہ لکھیں۔
 # review: pending
 err-already-set-up = پہلی ترتیب پہلے ہی مکمل ہو چکی ہے۔ لاگ ان کریں۔
-# $min and $max: the allowed range.
+# $min and $max: the allowed range. `$reason` (the cloud address, backup and first start): https means it
+# does not start with https:// or is not one word. (An address with a path after the host is its own
+# refusal, ERR_BACKUP_CLOUD_ADDRESS_PATH.)
 # review: pending
-err-out-of-range = یہ قیمت { $min } سے { $max } کے درمیان ہونی چاہیے۔
+err-out-of-range = { $reason ->
+    [https] کلاؤڈ کا پتہ https سے شروع ہونا چاہیے اور ایک ہی لفظ ہونا چاہیے، مثلاً https://your-account.r2.cloudflarestorage.com۔
+   *[other] یہ قیمت { $min } سے { $max } کے درمیان ہونی چاہیے۔
+}
 # review: pending
 err-not-logged-in = پہلے لاگ ان کریں۔
+# The Mac asked for the password to open the app's key in Mac Keychain and was refused or left unanswered.
+# Only on a Mac (plan 75 7.8). It says what to do, so it has no reference number.
+# review: pending
+err-keystore-denied = Mac Keychain نے ایپ کو اجازت نہیں دی۔ Keychain کے باکس میں اپنے Mac کا پاس ورڈ لکھیں اور Always Allow چنیں، پھر دوبارہ لاگ ان کریں۔
 # PRD FR-8.4.
 # review: pending
 err-session-locked = ایپ لاک ہے۔ پاس ورڈ لکھ کر کھولیں۔
 # review: pending
-err-not-found = یہ چیز نہیں ملی۔ فہرست دوبارہ کھولیں۔
+err-not-found = یہ نہیں ملا۔ صفحہ دوبارہ کھولیں اور دوبارہ چنیں۔
 # PRD FR-7.66, E49.
 # review: pending
 err-spelling-unconfirmed = ان لفظوں کے ہجے کی تصدیق نہیں ہوئی: { $words }۔ ہجے دیکھیں، پھر تصدیق کریں یا درست کریں۔
@@ -155,7 +174,7 @@ err-spelling-unconfirmed = ان لفظوں کے ہجے کی تصدیق نہیں 
 # review: pending
 err-code-taken = یہ کوڈ کسی اور کے پاس ہے۔ کوئی دوسرا کوڈ لکھیں۔
 # review: pending
-err-version-changed = آپ کے کھولنے کے بعد یہ اندراج بدل چکا ہے۔ اسے دوبارہ کھولیں۔
+err-version-changed = آپ کے کھولنے کے بعد یہ بدل چکا ہے۔ اسے دوبارہ کھولیں۔
 # review: pending
 err-format-invalid = یہاں لکھی ہوئی بات درست شکل میں نہیں۔ دیکھ کر دوبارہ لکھیں۔
 # review: pending
@@ -176,15 +195,19 @@ err-opening-both-sides = ابتدائی { -banaam } یا ابتدائی { -jama 
 # review: pending
 err-advance-not-seller = ابتدائی { -peshgi } صرف { -beopari } کے ابتدائی { -banaam } پر لگ سکتی ہے۔
 
-# PRD FR-10.9, FR-6.5, FR-13.5. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one.
+# plan 17b: an old client sent a mode, a bank or a cheque; the screens never do (PRD 15.1).
 # review: pending
-err-opening-not-allowed = اس کھاتے میں ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -pukhta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔
+err-field-not-allowed = یہ خانہ اب استعمال نہیں ہوتا۔ اسے چھوڑ دیں۔
+
+# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Chukta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
+# review: pending
+err-opening-not-allowed = اس کھاتے میں یہ ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -chukta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔ { -shirakat-dar } کے { -zati-kharcha } کھاتے اور { -adhar-raqam } کے کھاتے میں صرف ابتدائی { -banaam } لگ سکتا ہے۔
 
 ## Advances and closing days (plan 10).
 
-# PRD FR-15.4. An advance goes to a seller, never to Pukhta Khata.
+# PRD FR-15.4. An advance goes to a seller, never to Chukta Khata.
 # review: pending
-err-not-a-seller = یہ { -beopari } کا کھاتہ نہیں۔ { -peshgi } صرف { -beopari } کو دی جا سکتی ہے، { -pukhta-khata } کو نہیں۔
+err-not-a-seller = یہ { -beopari } کا کھاتہ نہیں۔ { -peshgi } صرف { -beopari } کو دی جا سکتی ہے، { -chukta-khata } کو نہیں۔
 # PRD FR-10.2. Hidden from pickers.
 # review: pending
 err-account-inactive = یہ کھاتہ غیر فعال ہے اور نئے اندراج میں استعمال نہیں ہو سکتا۔ کوئی دوسرا کھاتہ چنیں۔
@@ -194,6 +217,12 @@ err-system-account = یہ نظام کا کھاتہ ہے۔ حساب کتاب می
 # PRD FR-21.2.
 # review: pending
 err-reason-required = وجہ لکھنا ضروری ہے۔
+# PRD FR-21.4 (plan 73). Nothing was opened.
+# review: pending
+err-sign-required = { -dastakhat } لکھنا ضروری ہے۔
+# PRD FR-21.4 (plan 73). Only the Owner's sign opens a closed day. Nothing was opened.
+# review: pending
+err-sign-wrong = { -dastakhat } درست نہیں۔
 # NFR-REL-8. Nothing was closed.
 # review: pending
 err-trial-not-balanced = { -trial-balance } میں فرق ہے، اس لیے دن بند نہیں ہو سکتا۔ پہلے { -trial-balance } دیکھ کر فرق ٹھیک کریں۔
@@ -212,7 +241,7 @@ err-nothing-to-close = آج تک کے سب دن پہلے ہی بند ہیں، ا
 
 # PRD 11.2, 11.3. The field says which part.
 # review: pending
-err-rule-not-allowed = اصول کی یہ ترتیب درست نہیں۔ چارج اور طریقہ فہرست میں سے چنیں، اور گروپ صرف اسی وقت چنیں جب کوئی کھاتہ یا { -qism-maal } نہ چنا ہو۔ عام شرحیں ترتیبات کے چارجز میں بدلتی ہیں۔
+err-rule-not-allowed = اصول کی یہ ترتیب درست نہیں۔ چارج اور طریقہ فہرست میں سے چنیں، اور گروپ صرف اسی وقت چنیں جب کوئی کھاتہ یا { -qism-maal } نہ چنا ہو۔ عام شرحیں ترتیبات کے چارجز میں بدلی جاتی ہیں۔
 # review: pending
 err-date-range = آخری تاریخ پہلی تاریخ سے پہلے ہے۔ آخری تاریخ پہلی تاریخ کے دن یا اس کے بعد کی لکھیں۔
 
@@ -220,7 +249,7 @@ err-date-range = آخری تاریخ پہلی تاریخ سے پہلے ہے۔ آ
 
 # PRD FR-12.6. A line sells more than the lot has left.
 # review: pending
-err-qty-exceeds-lot = تعداد { -lot } کی باقی تعداد سے زیادہ ہے۔ صرف { $available } { -nag } باقی ہیں۔
+err-qty-exceeds-lot = اتنی تعداد دستیاب نہیں: صرف { $available } { -nag } باقی ہیں۔
 # PRD FR-11.10. The setting is off.
 # review: pending
 err-override-not-allowed = لائن پر { -commission } یا { -laga } بدلنا بند ہے۔ مالک اسے ترتیبات میں چالو کر سکتا ہے۔
@@ -231,12 +260,6 @@ err-credit-limit-exceeded = اس { -bikri } سے { -gahak } کا بقایا { $w
 err-seller-required = اس { -lot } کا { -beopari } چنیں۔
 # review: pending
 err-buyer-required = اس لائن کا { -gahak } چنیں۔
-# PRD FR-13.2.
-# review: pending
-err-pukhta-name-required = { -pukhta-khata } میں نام لکھنا ضروری ہے۔
-# PRD FR-13.2.
-# review: pending
-err-pukhta-phone-required = اس { -pukhta-khata } والے کا فون نمبر لکھنا ضروری ہے۔
 # PRD FR-12.8.
 # review: pending
 err-no-lots = کم از کم ایک { -lot } لکھیں۔
@@ -248,12 +271,13 @@ err-no-sale-lines = کم از کم { -bikri } کی ایک لائن لکھیں۔
 err-weight-required = وزن کلو میں لکھیں۔ یہ مال وزن کے حساب سے بکتا ہے۔
 # PRD FR-6.7. $cash_after is cash in hand after the entry, in rupees.
 # review: pending
-err-cash-below-zero-not-confirmed = اس اندراج کے بعد { -rokar } { $cash_after } ہو جائے گی۔ محفوظ کرنے کے لیے اندراج کی تصدیق کریں۔
+err-cash-below-zero-not-confirmed = اس اندراج کے بعد موجود { -rokar } { $cash_after } ہو جائے گی۔ محفوظ کرنے کے لیے اندراج کی تصدیق کریں۔
 # review: pending
 err-not-a-buyer = یہ { -gahak } کا کھاتہ نہیں۔ کوئی { -gahak } چنیں۔
-# PRD 12.4, 10.2. The buyer's credit is off, or he is the nameless cash buyer.
+# PRD FR-12.44. The money paid on the spot is more than the line's buyer total. $max is the most
+# allowed, in rupees.
 # review: pending
-err-credit-not-allowed = اس { -gahak } کے لیے ادھار کی اجازت نہیں۔ لائن کو { -naqdi } کر دیں۔
+err-paid-exceeds-total = { -mauqa-par-jama } اس لائن کی { -gahak } کی رقم سے زیادہ نہیں ہو سکتی۔ زیادہ سے زیادہ { $max } روپے۔
 # A warning (PRD FR-12.8): the rest goes to باقی مال.
 # review: pending
 err-qty-left-unsold = { $left } { -nag } باقی ہیں۔ یہ { -baqi-maal } میں رہیں گے۔
@@ -263,3 +287,461 @@ err-lot-net-negative = اس { -lot } کی { -safi-bikri } صفر سے کم ({ $n
 # A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
 # review: pending
 err-rate-far-from-average = یہ ریٹ پچھلے 7 دن کی اوسط ({ $average }) سے { $percent } فیصد سے زیادہ مختلف ہے۔ اسے دیکھ لیں۔
+
+## Drafts (plan 13, PRD FR-12.10).
+
+# $max_bytes: the most the app keeps for one unfinished entry. The word is not shown.
+# review: pending
+err-draft-invalid = لکھا ہوا کام عارضی طور پر محفوظ نہیں ہو سکا۔ اندراج ابھی محفوظ کر لیں۔ بار بار ہو تو مدد کے لیے بتائیں۔
+
+## Printing (plan 14).
+
+# PRD FR-12.12. Printing works on Windows and on a Mac (plan 69); on any other computer the preview
+# shows how it will print.
+# review: pending
+err-print-windows-only = پرنٹنگ صرف ونڈوز اور میک پر ہو سکتی ہے۔ اس کمپیوٹر پر پیش منظر میں دیکھ لیں کہ دستاویز کیسے چھپے گی۔
+
+# $printer is the printer name in Settings.
+# review: pending
+err-printer-not-found = پرنٹر { $printer } نہیں ملا۔ دیکھیں کہ وہ آن ہے اور جڑا ہوا ہے، یا ترتیبات میں دوسرا پرنٹر چنیں۔
+
+# review: pending
+err-print-failed = دستاویز پرنٹ نہیں ہو سکی۔ پرنٹر دیکھ لیں اور دوبارہ کوشش کریں۔ بار بار ہو تو مدد کے لیے بتائیں۔
+
+## Vouchers (plan 15, PRD 15.1 to 15.4).
+
+# PRD FR-15.11. Money paid to a buyer is cash lent to him.
+# review: pending
+err-payment-to-buyer-needs-reason = { -gahak } کو رقم دینا { -naqd-udhar } ہے۔ اس کی وجہ لکھیں۔
+
+# PRD FR-15.12, FR-16.2. $open is the most that can be returned, in rupees.
+# review: pending
+err-return-exceeds-open = یہ رقم واپس ہونے والی رقم سے زیادہ ہے۔ زیادہ سے زیادہ { $open } واپس ہو سکتے ہیں۔
+
+# PRD FR-15.3.
+# review: pending
+err-voucher-cancelled = یہ واؤچر منسوخ ہو چکا ہے، اس میں تبدیلی نہیں ہو سکتی۔
+
+# A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
+# amount is more than it, both in rupees.
+# review: pending
+err-payment-above-payable = { -beopari } کو جو رقم دینی ہے ({ $payable }) یہ اس سے { $over } زیادہ ہے۔ آپ پھر بھی محفوظ کر سکتے ہیں۔ زیادہ رقم { -beopari } کے ذمے دکھائی جائے گی، یہ { -peshgi } نہیں ہوگی۔
+
+## بعد کی فروخت، ترمیم، منسوخی اور ضائع مال (پلان 16)۔
+
+# review: pending
+err-bikri-cancelled = یہ { -bikri } منسوخ ہو چکی ہے اور بدلی نہیں جا سکتی۔
+
+# review: pending
+err-lot-not-found = یہ { -lot } نہیں ملا۔ { -baqi-maal } کی فہرست کھول کر دوبارہ چنیں۔
+
+# review: pending
+err-nothing-to-sell = اس { -lot } میں بیچنے کے لیے کچھ باقی نہیں۔
+
+# $available: { -lot } میں کتنے { -nag } باقی ہیں۔
+# review: pending
+err-write-off-exceeds-balance = جتنا مال باقی ہے اس سے زیادہ ضائع نہیں کیا جا سکتا۔ صرف { $available } { -nag } باقی ہیں۔
+
+# review: pending
+err-date-before-received = دن مال وصول ہونے کے دن سے پہلے کا نہیں ہو سکتا۔
+
+# review: pending
+err-qty-below-sold = وصول شدہ تعداد اس { -lot } سے پہلے بکی ہوئی تعداد سے کم نہیں ہو سکتی۔
+
+# PRD FR-12.18 to FR-12.20. The edit rules of a saved { -bikri }. $rule is a fixed name from the
+# backend, one case each: the day, a lot, its order, its seller or item, a line, a later sale's lot.
+# Every case says what to do. The field points at the lot or the line.
+# review: pending
+err-edit-not-allowed = { $rule ->
+    [day_changed] محفوظ شدہ اندراج کا دن ترمیم میں بدلا نہیں جا سکتا۔ پرانا دن واپس لکھیں۔
+    [lot_removed] محفوظ شدہ { -lot } ہٹایا نہیں جا سکتا، کیونکہ اس کی فروخت اور مال اس پر قائم ہیں۔ { -lot } واپس رکھیں۔ پوری { -bikri } واپس لینی ہو تو اسے منسوخ کریں۔
+    [lot_has_later_sale] اس { -lot } پر بعد کی فروخت قائم ہو چکی ہے، اس لیے اسے ہٹایا نہیں جا سکتا۔ { -lot } واپس رکھیں۔ پوری { -bikri } واپس لینی ہو تو اسے منسوخ کریں۔
+    [lot_has_write_off] اس { -lot } کا مال ضائع لکھا جا چکا ہے، اس لیے اسے ہٹایا نہیں جا سکتا۔ پہلے ضائع کرنا واپس کریں، یا { -lot } واپس رکھیں۔
+    [lot_has_fruit] اس { -lot } سے { -phal } لیا جا چکا ہے، اس لیے اسے ہٹایا نہیں جا سکتا۔ پہلے { -phal } کا اندراج منسوخ کریں، یا { -lot } واپس رکھیں۔
+    [lot_not_in_posting] یہ { -lot } اس اندراج کا حصہ نہیں جس کی ترمیم ہو رہی ہے۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
+    [lot_order_changed] محفوظ شدہ { -lot } اپنی ترتیب میں رہتے ہیں اور نئے { -lot } ان کے بعد آتے ہیں۔ نئے { -lot } کو آخر میں رکھیں۔
+    [lot_seller_locked] اس { -lot } پر بعد کا اندراج یا فروخت قائم ہو چکی ہے، اس لیے { -beopari } نہیں بدلا جا سکتا۔ پرانا { -beopari } واپس چنیں۔
+    [lot_item_locked] اس { -lot } پر بعد کا اندراج یا فروخت قائم ہو چکی ہے، اس لیے { -qism-maal } نہیں بدلی جا سکتی۔ پرانی { -qism-maal } واپس چنیں۔
+    [line_not_in_posting] یہ لائن اس اندراج کا حصہ نہیں جس کی ترمیم ہو رہی ہے۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
+    [posting_lots_locked] بعد کی فروخت میں صرف اس کی اپنی لائنیں بدلی جا سکتی ہیں، { -lot } نہیں۔ { -lot } کی تبدیلی پہلے اندراج میں کریں۔
+    [goods_moved] اس کا مال آگے بک چکا ہے یا ضائع ہو چکا ہے، اس لیے یہ اندراج بدلا نہیں جا سکتا۔
+    [month_closed] اس اندراج کا مہینہ بند ہو چکا ہے۔ پہلے مہینے کی بندش ختم کریں۔
+    [garden_closed] { -bagh } بند ہو چکا ہے، اس لیے اس کا اندراج بدلا نہیں جا سکتا۔
+    [returns_stand] اس کی واپسیاں درج ہیں، اس لیے یہ اندراج بدلا نہیں جا سکتا۔
+    [cancelled] یہ اندراج منسوخ ہو چکا ہے، اسے بدلا نہیں جا سکتا۔
+   *[other] اس اندراج میں یہ تبدیلی نہیں ہو سکتی۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
+}
+
+## Trip goods and trips (plan 16b, PRD 12.10, FR-12.24, FR-12.26, FR-12.29, FR-12.31).
+
+# PRD FR-12.26. $qty_left: how many { -nag } of the quantity taken are not sold on the lines.
+# review: pending
+err-own-lot-not-fully-sold = { -apna-maal } کا یہ { -lot } اسی { -bikri } میں پورا بکنا چاہیے۔ لائنوں میں ابھی { $qty_left } { -nag } نہیں بکے۔ انہیں لائنوں میں بیچیں، یا خریداری سے کم { -nag } لیں۔ جو نہ لیں وہ خریداری میں رہتا ہے۔
+
+# PRD FR-12.26. The account offered only as the seller of a lot.
+# review: pending
+err-own-goods-account-restricted = { -apna-maal } صرف { -bikri } کے { -lot } کا { -beopari } ہو سکتا ہے۔ کوئی اور کھاتہ چنیں۔
+
+# PRD FR-12.24. $qty_sold and $qty_written_off: how many { -nag }.
+# review: pending
+err-purchase-has-sales = یہ خریداری منسوخ نہیں ہو سکتی، کیونکہ { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس کریں۔
+
+# review: pending
+err-purchase-cancelled = یہ خریداری منسوخ ہو چکی ہے۔ کوئی اور خریداری چنیں۔
+
+# A warning, not a refusal (PRD FR-12.26).
+# review: pending
+err-own-lot-freight-in-cost = خریداری کا { -kiraya } اس کی لاگت میں پہلے سے شامل ہے۔ یہاں لکھا ہوا { -kiraya } دوبارہ گنا جائے گا۔ جب تک یہی مقصد نہ ہو، اسے خالی رہنے دیں۔
+
+# A warning (plan 37, PRD FR-11.9): the save is allowed and the typed amount is kept. $lot_no is the
+# earlier lot that took the charge, $bikri_number its sale (0 means a lot of this same sale; the
+# message chooses by $bikri_number_zero) and $entry the goods-arrived entry.
+# review: pending
+err-entry-charge-already-taken = { $bikri_number_zero ->
+    [yes] یہ چارج { -maal-aaya } اندراج { $entry } کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
+   *[no] یہ چارج { -bikri } { $bikri_number } ({ -maal-aaya } اندراج { $entry }) کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
+}
+
+# PRD FR-12.31, FR-12.33: a closed trip takes no new purchase or cost.
+# review: pending
+err-trip-closed = یہ { -market-safar } بند ہو چکا ہے۔ اس میں نئی خریداری یا نیا خرچ نہیں ہو سکتا۔
+
+# PRD FR-12.31: a trip cost is spread over the purchases that still have goods left.
+# review: pending
+err-trip-no-stock = اس { -market-safar } کی کسی خریداری میں مال باقی نہیں، اس لیے خرچ بانٹنے کو کچھ نہیں۔ پہلے خریداری درج کریں۔
+
+# PRD FR-12.29: the shares are fixed after the first entry.
+# review: pending
+err-venture-shares-locked = اس { -market-safar } میں اندراج ہو چکا ہے، اس لیے شراکت داروں کا { -hissa } اب نہیں بدل سکتا۔
+
+# PRD FR-12.24. $trip_date: the day of the trip.
+# review: pending
+err-purchase-before-trip = تاریخ { -market-safar } کی تاریخ ({ $trip_date }) سے پہلے کی ہے۔ سفر کی تاریخ یا اس کے بعد کی تاریخ چنیں۔
+
+# PRD FR-12.31. $qty_sold and $qty_written_off: how many { -nag } of the purchases it was spread over.
+# review: pending
+err-trip-cost-has-sales = یہ خرچ منسوخ نہیں ہو سکتا، کیونکہ جن خریداریوں پر یہ بانٹا گیا ان کے { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس کریں۔
+
+# PRD A63: a partner cannot be made inactive while he is in an open trip.
+# review: pending
+err-partner-in-open-venture = یہ { -shirakat-dar } ابھی کھلے { -market-safar } میں ہے، اس لیے اسے غیر فعال نہیں کیا جا سکتا۔ پہلے { -market-safar } بند ہونے دیں۔
+
+# PRD FR-12.31: cancel the cost first.
+# review: pending
+err-purchase-carries-trip-cost = اس خریداری میں { -market-safar } کے خرچ کا حصہ شامل ہے، اس لیے یہ منسوخ نہیں ہو سکتی۔ پہلے وہ خرچ منسوخ کریں۔
+
+# review: pending
+err-trip-entry-cancelled = یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔
+
+## بیک اپ اور بحالی (plan 18, PRD Section 20)۔ `BackupCode` کے وہ کوڈ جو core میں ابھی نہیں ہیں۔
+## جو سات core میں پہلے سے ہیں (ڈسک بھر گئی، اندرونی، ڈیٹا کی جانچ، مصروف، ضروری، حد سے باہر،
+## ڈیٹا اپ ڈیٹ) ان کے الفاظ اوپر والے ہی ہیں۔
+
+# review: pending
+err-backup-not-found = یہ کاپی نہیں ملی۔ ہو سکتا ہے ہٹا دی گئی ہو۔ کاپیاں دوبارہ تلاش کریں اور پھر کوشش کریں۔
+
+# review: pending
+err-backup-key-not-set = اس کمپیوٹر پر ابھی بیک اپ کی چابی نہیں ہے۔ پہلے چابی بنائیں۔
+
+# review: pending
+err-backup-key-already-set = بیک اپ کی چابی پہلے سے استعمال میں ہے، اس لیے نئی نہیں بن سکتی۔
+
+# review: pending
+err-backup-key-format = چابی صحیح طرح نہیں لکھی گئی۔ اس میں چار چار حرفوں اور ہندسوں کے چھ حصے ہوتے ہیں، جن کے درمیان ڈیش ہوتی ہے۔
+
+# review: pending
+err-backup-key-wrong = یہ درست چابی نہیں ہے۔ پرنٹ کی ہوئی پرچی دیکھیں اور دوبارہ کوشش کریں۔ کچھ نہیں بدلا۔
+
+# review: pending
+err-backup-key-required = یہ کاپی بیک اپ کی چابی سے بند ہے۔ پرنٹ کی ہوئی پرچی سے چابی لکھیں۔
+
+# review: pending
+err-backup-corrupt = یہ کاپی خراب ہے اور استعمال نہیں ہو سکتی۔ کچھ نہیں بدلا۔ کوئی اور کاپی استعمال کریں۔
+
+# review: pending
+err-backup-check-failed = کاپی بن گئی لیکن جانچ میں پوری نہیں اتری، اس لیے اس پر بھروسا نہیں کیا جا سکتا۔ نئی کاپی بنائیں۔
+
+# review: pending
+err-backup-cloud-not-configured = کلاؤڈ کاپی ابھی ترتیب نہیں دی گئی۔ بیک اپ کی ترتیبات میں کلاؤڈ کی تفصیل بھریں۔
+
+# $reason: offline، refused یا not_found۔
+# review: pending
+err-backup-cloud-failed =
+    { $reason ->
+        [offline] کلاؤڈ تک رسائی نہیں ہو سکی۔ انٹرنیٹ اور کلاؤڈ کا پتہ دیکھیں۔ جو کاپی بن رہی تھی وہ انتظار میں رہتی ہے اور خود بخود دوبارہ بھیجی جاتی ہے۔
+        [refused] کلاؤڈ نے چابیاں قبول نہیں کیں۔ کلاؤڈ کی رسائی کی چابی اور خفیہ چابی دیکھیں۔
+        [not_found] کلاؤڈ کا بکٹ یا کاپی نہیں ملی۔ بکٹ کا نام اور فولڈر کا نام دیکھیں۔
+       *[other] کلاؤڈ کاپی نہیں بن سکی۔ کچھ دیر بعد دوبارہ کوشش کریں۔
+    }
+
+# review: pending
+err-backup-usb-not-present = یو ایس بی ڈرائیو، فولڈر یا فائل نہیں ملی۔ ڈرائیو لگائیں اور راستہ دیکھ لیں۔ یو ایس بی کاپیاں روکنی ہوں تو بیک اپ کی ترتیبات میں انہیں بند کر دیں۔
+
+# review: pending
+err-backup-usb-failed = یو ایس بی ڈرائیو پر کاپی نہیں بن سکی۔ ڈرائیو اور فولڈر دیکھیں۔
+
+# review: pending
+err-backup-local-failed = اس کمپیوٹر پر کاپی نہیں بن سکی۔ بیک اپ کی ترتیبات میں فولڈر اور ڈسک کی خالی جگہ دیکھیں۔
+
+# review: pending
+err-backup-busy = بیک اپ یا بحالی پہلے سے چل رہی ہے۔ اس کے مکمل ہونے تک انتظار کریں۔
+
+# review: pending
+err-backup-not-confirmed = بحالی شروع ہونے سے پہلے تصدیق کریں۔ کچھ نہیں بدلا۔
+
+# review: pending
+err-backup-newer-than-app = یہ کاپی اس کمپیوٹر کی ایپ سے نئے ورژن کی ہے۔ پہلے ایپ اپ ڈیٹ کریں۔
+
+# review: pending
+err-backup-chain-key-missing = اس کاپی میں چھیڑ چھاڑ کی جانچ کی چابی نہیں ہے، اس لیے نئے کمپیوٹر پر اس پر بھروسا نہیں کیا جا سکتا۔ دوسری کاپی استعمال کریں، یا مدد کے لیے رابطہ کریں۔
+
+# review: pending
+err-backup-cloud-address-path = کلاؤڈ کا پتہ صرف ہوسٹ تک ہونا چاہیے، اس کے بعد کچھ نہیں۔ { $path } پتے کا حصہ نہیں ہے۔ { $address } لکھیں، اور بکٹ کا نام { backup-set-bucket } کے خانے میں لکھیں۔
+# review: pending
+err-backup-no-owner = جس کمپیوٹر نے یہ کاپی بنائی اس کی پہلی ترتیب کبھی مکمل نہیں ہوئی تھی، اس لیے بحال کرنے کے بعد کوئی لاگ ان نہیں کر سکے گا۔ کچھ نہیں بدلا۔ کوئی اور کاپی استعمال کریں۔
+
+# review: pending
+err-backup-not-started = بیک اپ کی سروس ابھی چل نہیں رہی۔ ذرا انتظار کریں اور دوبارہ کوشش کریں۔
+
+# review: pending
+err-backup-restore-failed = بحالی مکمل نہیں ہو سکی۔ ایپ بند کر کے دوبارہ کھولیں۔ اگر کھاتے غلط لگیں تو مدد کے لیے رابطہ کریں: اس کمپیوٹر پر پہلے سے حساب ہو تو بحالی سے پہلے حفاظتی کاپی بنائی گئی تھی۔
+
+## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
+
+# PRD FR-16.9. The same day is allowed.
+# review: pending
+err-return-by-before-entry = واپسی کی تاریخ اندراج کی تاریخ سے پہلے نہیں ہو سکتی۔
+
+# review: pending
+err-partner-required = { -shirakat-dar } چنیں۔
+
+# review: pending
+err-expense-head-required = خرچہ مد چنیں۔
+
+# review: pending
+err-lent-person-required = شخص چنیں۔
+
+# review: pending
+err-khata-required = { -alag-khata } چنیں۔
+
+# PRD 16.4. Nothing is saved. $dr and $cr are the two totals in rupees.
+# review: pending
+err-general-not-balanced = { -banaam } کا میزان { $dr } اور { -jama } کا میزان { $cr } ہے۔ اندراج محفوظ کرنے سے پہلے دونوں برابر ہونے چاہییں۔
+
+# review: pending
+err-general-too-few-lines = { -general } اندراج میں کم از کم دو لائنیں ہونی چاہییں۔
+
+# PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
+# review: pending
+err-capital-exceeds-balance = یہ شراکت دار کے { -sarmaya } بقایا { $balance } سے { $over } زیادہ ہے۔ پھر بھی محفوظ کیا جا سکتا ہے۔
+
+## Plan 22: updates and the support file (PRD NFR-INS-3, NFR-INS-4, NFR-SEC-11, NFR-OBS-4).
+
+# review: pending
+err-update-check-failed = ایپ نیا ورژن نہیں دیکھ سکی۔ انٹرنیٹ دیکھیں اور دوبارہ کوشش کریں۔ آپ کا کام محفوظ ہے۔
+
+# review: pending
+err-update-not-signed = یہ اپڈیٹ ہماری طرف سے دستخط شدہ نہیں، اس لیے انسٹال نہیں ہوئی۔ کچھ نہیں بدلا اور کوئی کاپی نہیں بنی۔ یہ اپڈیٹ استعمال نہ کریں۔
+
+# $drafts is the number of unsaved entries.
+# review: pending
+err-update-during-work = غیر محفوظ اندراجات ہیں ({ $drafts })۔ انہیں محفوظ کریں یا چھوڑ دیں، پھر اپڈیٹ کریں۔ کچھ انسٹال نہیں ہوا۔
+
+# review: pending
+err-update-not-confirmed = اپڈیٹ کی تصدیق نہیں ہوئی، اس لیے کچھ انسٹال نہیں ہوا۔ اپڈیٹ کا بٹن دبائیں اور سوال کا جواب دیں۔
+
+# review: pending
+err-update-backup-failed = اپڈیٹ سے پہلے حفاظتی کاپی نہیں بن سکی، اس لیے کچھ انسٹال نہیں ہوا۔ بیک اپ کی اسکرین دیکھیں اور دوبارہ کوشش کریں۔
+
+# review: pending
+err-update-changed = اب کوئی اور ورژن دستیاب ہے۔ نیا ورژن دوبارہ دیکھیں اور اپڈیٹ سے پہلے نیا کیا ہے پڑھ لیں۔
+
+# review: pending
+err-update-none = کوئی نیا ورژن نہیں ہے۔ ایپ تازہ ترین ہے۔
+
+## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
+
+# PRD FR-16.12: the fruit entry was cancelled already (it cannot be changed or cancelled again).
+# review: pending
+err-fruit-cancelled = یہ { -phal } کا اندراج پہلے ہی منسوخ ہو چکا ہے، اس لیے اس میں تبدیلی نہیں ہو سکتی۔
+
+# PRD 16.11, FR-12.22: fruit was taken from a lot of this sale, so the sale cannot be cancelled or undone.
+# $qty_taken: the نگ taken from its lots.
+# review: pending
+err-bikri-has-fruit = اس { -bikri } کے { -lot } سے { $qty_taken } { -nag } { -phal } لیا گیا ہے، اس لیے یہ منسوخ نہیں ہو سکتی۔ پہلے { -phal } کا اندراج منسوخ کریں۔
+
+# PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
+# review: pending
+err-garden-closed = یہ { -bagh } بند ہے، اس لیے اس میں نیا اندراج، نیا لاٹ یا پھل نہیں لیا جا سکتا۔ پہلے اس کی بندش واپس لیں۔
+
+# PRD FR-12.38. The garden is open, so there is no closing to undo.
+# review: pending
+err-garden-not-closed = یہ { -bagh } کھلا ہے، اس لیے واپس لینے کے لیے کوئی بندش نہیں۔
+
+# PRD FR-12.34. $garden_date: the day of the garden.
+# review: pending
+err-date-before-garden = تاریخ { -bagh } کی تاریخ ({ $garden_date }) سے پہلے کی ہے۔ باغ کی تاریخ یا اس کے بعد کی تاریخ چنیں۔
+
+# Plan 17c. $last_date: the day of the latest entry or lot of the garden.
+# review: pending
+err-close-before-last-entry = { -bagh } اپنے آخری اندراج یا لاٹ ({ $last_date }) سے پہلے بند نہیں ہو سکتا۔ وہی دن یا اس کے بعد کا دن چنیں۔
+
+# Plan 17c. The entry of the garden was cancelled already.
+# review: pending
+err-garden-entry-cancelled = { -bagh } کا یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔
+
+## Plan 33 version 1.1: the date to sell, the goods that arrived at a garden.
+
+# PRD FR-12.39. $entry_date: the day of the purchase or arrival.
+# review: pending
+err-sell-date-before-entry = { -sell-date } اس دن سے پہلے نہیں ہو سکتی جب مال آیا ({ $entry_date })۔ وہی دن یا اس کے بعد کا دن چنیں۔
+
+# PRD FR-12.40. The goods arrived entry was cancelled already.
+# review: pending
+err-arrival-cancelled = یہ { -maal-aaya } کا اندراج پہلے ہی منسوخ ہو چکا ہے۔
+
+# PRD FR-12.40. $qty_sold, $qty_written_off: what has been sold and written off from it.
+# review: pending
+err-arrival-has-sales = { -maal-aaya } کا یہ اندراج منسوخ نہیں ہو سکتا: { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } ضائع ہو چکے ہیں۔
+
+# PRD FR-12.40. $qty_left: how many { -nag } of the arrival are not sold on the lines.
+# review: pending
+err-arrival-lot-not-fully-sold = { -bagh } کے مال کا یہ { -lot } اسی { -bikri } میں پورا بکنا چاہیے۔ لائنوں میں ابھی { $qty_left } { -nag } نہیں بکے۔ انہیں لائنوں میں بیچیں، یا کم { -nag } لیں۔ جو نہ لیں وہ { -maal-aaya } میں رہتا ہے۔
+
+# PRD FR-12.40. $qty_left: how many { -nag } of garden goods are still left.
+# review: pending
+err-garden-has-stock = اس { -bagh } میں ابھی ایسا مال ہے جو بکا نہیں ({ $qty_left } { -nag })۔ بند کرنے سے پہلے اسے بیچیں یا ضائع کریں۔
+
+# PRD FR-12.41. $min_other: the most that other shops have sold; $max_other: the { -nag } less what { -apni-dukan } has sold.
+# review: pending
+err-split-below-sold = { -dusri-dukan } کے { -nag } { $min_other } اور { $max_other } کے درمیان ہونے چاہییں۔ جو مال بک چکا وہ دوسرے حصے میں نہیں جا سکتا۔
+
+# PRD FR-12.41. $qty: how many { -nag } the entry has in all.
+# review: pending
+err-split-above-qty = { -dusri-dukan } کے { -nag } اس اندراج کے کل { $qty } { -nag } سے زیادہ نہیں ہو سکتے۔
+
+# PRD FR-12.41. $max: the most lines an entry can have.
+# review: pending
+err-too-many-lines = ایک اندراج میں زیادہ سے زیادہ { $max } لائنیں ہو سکتی ہیں۔
+
+# PRD FR-10.10, plan 40. The person owes nothing, so there is nothing to move.
+# review: pending
+err-nothing-owed = اس کے ذمے کچھ نہیں، اس لیے ڈالنے کے لیے کچھ نہیں۔ اگر وہ جا چکا ہے تو صرف کھاتہ غیر فعال کر دیں۔
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-dead-not-allowed = شراکت دار، { -alag-khata }، { -bagh } اور نظام کے کھاتے کو { -doobi-raqam } میں نہیں ڈالا جا سکتا۔
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-already-dead = وہ پہلے ہی { -doobi-raqam } میں ہے۔ اسے فعال کرنے کے لیے «دوبارہ فعال کریں» استعمال کریں۔
+
+# PRD FR-10.10, plan 40. The reason Other needs a note.
+# review: pending
+err-note-required = وجہ دیگر ہو تو نوٹ لکھنا ضروری ہے۔
+
+# PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
+# review: pending
+err-date-before-last-posting = تاریخ اس کے آخری اندراج ({ $last_posting_date }) سے پہلے کی نہیں ہو سکتی۔
+
+## Edit everywhere and the partner code (plan 44, PRD FR-7.70, FR-21.4, FR-17.11).
+
+# review: pending
+err-edit-date-fixed = اندراج کا دن نہیں بدل سکتا۔ دن بدلنا ہو تو اسے منسوخ کر کے صحیح دن پر دوبارہ لکھیں۔
+
+# $saved_lines: how many saved lines were charged by this rule.
+# review: pending
+err-rule-used = اس قاعدے سے { $saved_lines } محفوظ لائنیں لگ چکی ہیں، اس لیے صرف آخری تاریخ اور فعال بدلا جا سکتا ہے۔ نئی شرح چاہیے تو نئی تاریخ سے نیا قاعدہ لکھیں۔
+
+# review: pending
+err-fix-token-invalid = یہ درستی اب جاری نہیں۔ دن بند کرنے کے لیے دن کی اسکرین کھولیں۔
+
+# review: pending
+err-partner-locked = شراکت داروں کی رقمیں کوڈ کے بغیر نہیں کھلتیں۔ پہلے کوڈ درج کریں۔
+
+# review: pending
+err-partner-code-not-set = ابھی شراکت دار کوڈ نہیں بنا۔ پہلے کوڈ بنائیں۔
+
+# review: pending
+err-partner-code-already-set = شراکت دار کوڈ پہلے سے بنا ہوا ہے۔ بدلنا ہو تو ترتیبات میں کوڈ بدلیں۔
+
+# $tries_left: tries left before the wait.
+# review: pending
+err-partner-code-wrong = کوڈ غلط ہے۔ { $tries_left } کوششیں باقی ہیں۔
+
+# review: pending
+err-partner-code-invalid = کوڈ چار ہندسوں کا ہونا چاہیے۔
+
+# review: pending
+err-partner-codes-differ = دونوں کوڈ ایک جیسے نہیں ہیں۔ دونوں بار وہی کوڈ لکھیں۔
+
+## Ask the app (plan 49, PRD FR-7.81, FR-7.85)
+
+# review: pending
+err-assistant-off = سوال پوچھنا بند ہے۔ ترتیبات میں اسے چالو کریں۔
+
+# review: pending
+err-assistant-key-missing = OpenRouter کی کلید ابھی محفوظ نہیں۔ ترتیبات میں کلید لگائیں۔
+
+# review: pending
+err-assistant-busy = ایک سوال ابھی چل رہا ہے۔ اس کا جواب آنے دیں۔
+
+# review: pending
+err-assistant-not-waiting = یہ سوال اب کسی انتخاب کا منتظر نہیں۔ نیا سوال پوچھیں۔
+
+# review: pending
+err-no-base = فیصد نکالنے کے لیے بنیادی رقم صفر نہیں ہو سکتی۔
+
+# review: pending
+err-too-little-history = اندازے کے لیے پورے مہینوں کا ریکارڈ کافی نہیں۔
+
+# review: pending
+err-month-invalid = یہ مہینہ درست نہیں۔ مہینہ اور سال درست لکھیں، جیسے 10-2026۔
+
+# review: pending
+err-month-in-future = آگے کا مہینہ نہیں لکھ سکتے۔ یہ مہینہ ({ $month }) یا اس سے پہلے کا مہینہ لکھیں۔
+
+# review: pending
+err-month-before-first = { $month } سے پہلے کوئی اندراج نہیں۔ وہ مہینہ یا اس کے بعد کا مہینہ لکھیں۔
+
+# review: pending
+err-year-invalid = یہ سال درست نہیں۔ چار ہندسے لکھیں، جیسے 2026۔
+
+# review: pending
+err-year-in-future = آگے کا سال نہیں لکھ سکتے۔ یہ سال ({ $year }) یا اس سے پہلے کا سال لکھیں۔
+
+# review: pending
+err-year-before-first = { $year } سے پہلے کوئی { -commission } نہیں۔ وہ سال یا اس کے بعد کا سال لکھیں۔
+
+
+# review: pending
+err-wrong-party-type = یہ پارٹی آپ کی چنی ہوئی طرف کی نہیں۔ { -gahak } چنا ہے تو { -gahak } ہی چنیں، { -beopari } چنا ہے تو { -beopari } ہی۔
+
+
+# review: pending
+err-duplicate-lot = یہ لاٹ سکرین پر دو بار ہے۔ ایک بار ہٹا دیں۔
+
+# review: pending
+err-link-partner-required = جس { -shirakat-dar } سے جوڑنا ہے اسے چنیں۔
+
+# review: pending
+err-partner-inactive = یہ { -shirakat-dar } اب فعال نہیں۔ دوسرا { -shirakat-dar } چنیں۔
+
+# review: pending
+err-link-locked = جب تک بقایا صفر نہیں ہوتا، جوڑ بدلا نہیں جا سکتا۔ پہلے بقایا پورا کریں۔
+
+# review: pending
+err-link-fixed-while-owed = اس شخص کے ذمے ابھی رقم ہے، اس لیے اس کا جوڑ نہیں بدل سکتا۔ رقم پوری ہو جائے تو بدلا جا سکتا ہے۔
+
+# review: pending
+err-salary-not-allowed-for-linked = { -shirakat-dar } سے جڑا ہوا ادھار صرف نقد میں واپس ہوتا ہے۔ اسے تنخواہ سے نہیں کاٹا جا سکتا۔
+
+# review: pending
+err-link-changed-for-entry = یہ اندراج اس وقت بنا تھا جب اس { -alag-khata } یا شخص کا جوڑ کچھ اور تھا، اس لیے اس میں تبدیلی نہیں ہو سکتی۔ اسے منسوخ کر کے دوبارہ لکھیں۔
+
+# review: pending
+err-linked-account-restricted = یہ کھاتہ ایپ خود لکھتی ہے۔ اسے { -general } اندراج میں ہاتھ سے نہیں لکھا جا سکتا۔
+
+# review: pending
+err-partner-has-linked-balance = جب تک اس { -shirakat-dar } سے جڑے { -alag-khata } یا ادھار پر بقایا ہے، اسے غیر فعال نہیں کر سکتے۔ پہلے بقایا پورا کریں۔
+

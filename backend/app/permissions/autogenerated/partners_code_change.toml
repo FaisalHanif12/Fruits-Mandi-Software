@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-code-change"
+description = "Enables the partners_code_change command without any pre-configured scope."
+commands.allow = ["partners_code_change"]
+
+[[permission]]
+identifier = "deny-partners-code-change"
+description = "Denies the partners_code_change command without any pre-configured scope."
+commands.deny = ["partners_code_change"]

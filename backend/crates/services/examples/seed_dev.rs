@@ -38,9 +38,7 @@ use mandi_services::core::masters::{
     AddaInput, CityInput, ExpenseHeadInput, ItemInput, MasterInput, PackingInput,
 };
 use mandi_services::core::partners::{PartnerCreateInput, PartnersSetSharesInput, ShareInput};
-use mandi_services::core::vouchers::{
-    AdvanceInput, DayCloseInput, DayClosePreviewInput, VoucherMode,
-};
+use mandi_services::core::vouchers::{AdvanceInput, DayCloseInput, DayClosePreviewInput};
 use mandi_services::db::audit::{AuditKey, MemoryKeyStore};
 use mandi_services::db::clock::ManualClock;
 use mandi_services::db::{Db, DbOptions};
@@ -272,9 +270,9 @@ fn run(path: &Path) -> Result<(), ServiceError> {
                     credit_limit: String::new(),
                     default_marka_id: None,
                     collector_staff_id: None,
-                    collection_weekday: None,
                     is_active: true,
                     note: String::new(),
+                    tag: String::new(),
                 },
             )
         })
@@ -299,6 +297,7 @@ fn run(path: &Path) -> Result<(), ServiceError> {
                     name_ur: ur.into(),
                     name_en: en.into(),
                     opening_capital: None,
+                    opening_capital_where: None,
                     confirmed_rules_words: words.to_vec(),
                 },
             )
@@ -350,13 +349,11 @@ fn run(path: &Path) -> Result<(), ServiceError> {
         &ctx,
         &owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "01-09-2026".into(),
             seller_account_id: rahim,
             amount: "15,000".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },
@@ -398,7 +395,7 @@ fn report(ctx: &Context) -> Result<(), ServiceError> {
     let trial = ledger::trial_balance(ctx, None)?;
     let cash = ledger::account_balance(ctx, code_id(ctx, "01010001")?)?;
     let difference = ledger::account_balance(ctx, code_id(ctx, "06019999")?)?;
-    let rahim = code_id(ctx, "030110001")?;
+    let rahim = code_id(ctx, "0010")?;
     let advances = assist::advances(ctx, rahim)?;
     let status = day::status(ctx)?;
     let shares: Vec<i32> = partners::list(ctx)?.iter().map(|p| p.share_bps).collect();

@@ -7,15 +7,22 @@
 //   ↑ ↓         move up or down; finish the typing first; ↓ on the last row adds a row
 //               (not in a grid with fixed rows)
 //   ← →         move to the neighbouring cell as the user sees it; while typing, move the text
-//               cursor, and at the edge of the text finish and move (PRD FR-7.14)
+//               cursor, and at the edge of the text finish and move (PRD FR-7.14). From the last cell of a
+//               row the arrow that reads on goes to the remove (trash) cell of the row, when the row has
+//               one; from the trash cell the other arrow goes back. Both follow the reading direction.
+//   ↑ ↓ on the trash cell  to the trash cell of the row above or below; ↓ on the last row's trash cell
+//               goes to the "+" button under the grid (addLink.ts), and ↑ on the button comes back
 //   F2          never starts editing (F2 is "New", PRD 7.3)
 //   Esc         while typing, left to the Esc order (escape.ts); the grid does not cancel itself
-//   Ctrl+Delete remove the current row
+//   Ctrl+Delete remove the current row (the same way as the remove button, removeRow.tsx)
 //   Ctrl+D      copy the cell from the line above (opt in)
 //   Ctrl+I      explain a calculated cell (opt in)
 //   + and -     in a date cell: next and previous day (PRD FR-7.19)
-//   Space       in a choice cell (ادھاری / نقدی): the next word
-//   Alt+↓       in a picker cell: start typing with the full list open (PRD FR-7.16)
+//   Space       in a choice cell (ادھاری / نقدی): the next word; in a select cell (درجہ): the list opens
+//   Alt+↓       in a picker cell: start typing with the full list open (PRD FR-7.16); in a select
+//               cell: the list opens
+//   Backspace and Delete  on a cell that is not being typed in: the cell is cleared (an editable one),
+//               and the key never leaves the screen (PRD FR-7.91); in a select cell the word is taken away
 // Any other letter or digit starts typing in an editable cell, as AG Grid does.
 
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
@@ -25,12 +32,14 @@ import {
   arrowSide,
   elementDirection,
   matchesShortcut,
+  readingStep,
   shouldLeaveField,
   type Side,
 } from '../keyboard';
 import { isNumberLike } from './columnTypes';
 import { isEditable, nextEnterStop } from './enterOrder';
-import type { EntryStore } from './entryStore';
+import { addRowAndFocus, type EntryStore } from './entryStore';
+import { REMOVE_COLUMN_ID } from './removeRow';
 import type { CellRef, EntryColumn, EntryRow, GridInterceptors } from './types';
 
 export interface GridKeyEnv {
@@ -47,10 +56,22 @@ export interface GridKeyEnv {
    * row. ↓ on the last row and Enter on the last stop stay where they are.
    */
   fixedRows?: boolean;
+  /** Can Ctrl+Delete remove this row? A row that cannot be removed swallows the key. */
+  canRemoveRow?: (row: EntryRow) => boolean;
+  /**
+   * Removes the row the way the remove button does (plan 43): it may ask first what will go, and it puts
+   * the focus on the row that takes its place. Without it the key removes the row at once.
+   */
+  requestRemove?: (rowId: string, field?: string) => void;
   /** What the screen adds to Enter and ↑ (moving between grids and panels). */
   interceptors?: GridInterceptors;
   /** Space or a click on a choice cell: move to the next word. */
   cycleChoice?: (cell: CellRef) => void;
+  /**
+   * Puts the focus on the "+" button under this grid (addLink.ts) and says whether it did. Not given:
+   * the grid has no such button, and `↓` on the last row's trash cell adds a row like `↓` on any cell.
+   */
+  focusAdd?: () => boolean;
 }
 
 type KeyParams = SuppressKeyboardEventParams<EntryRow>;
@@ -79,6 +100,14 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     params.api.ensureIndexVisible(rowIndex);
   };
 
+  /** Has this row a trash cell with a button in it? The same rule as the button and Ctrl+Delete. */
+  const hasTrash = (row: EntryRow | undefined): boolean =>
+    row !== undefined &&
+    env.fixedRows !== true &&
+    (env.canRemoveRow === undefined || env.canRemoveRow(row));
+  /** The last cell of a row in reading order: where the arrow back from the trash cell lands. */
+  const lastField = columns[columns.length - 1]?.field;
+
   const moveVertically = (params: KeyParams, rowIndex: number, field: string, step: 1 | -1) => {
     const target = rowIndex + step;
     if (target < 0) {
@@ -88,8 +117,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     }
     if (target >= store.getState().rows.length) {
       if (env.fixedRows === true) return;
-      store.getState().addRow();
-      store.getState().setPendingFocus({ rowIndex: 'last', field });
+      addRowAndFocus(store, field);
       return;
     }
     focusCell(params, target, field);
@@ -100,7 +128,11 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     const above = rows[rowIndex - 1];
     const here = rows[rowIndex];
     if (above === undefined || here === undefined) return;
-    if (columns.find((column) => column.field === field)?.type === 'picker') {
+    // A cell that cannot be typed in on this row (the paid cell the backend closed, PRD FR-12.44) is not
+    // written to: what it shows is the backend's.
+    const target = columns.find((column) => column.field === field);
+    if (target !== undefined && !isEditable(target, here)) return;
+    if (target?.type === 'picker') {
       // A picker cell holds a record: the line above's record is chosen again.
       patchRow(here.rowId, { picked: { [field]: above.picked?.[field] ?? null } });
       return;
@@ -118,12 +150,59 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     if (event.type !== 'keydown') return false;
     const rowIndex = params.node.rowIndex;
     const field = params.column.getColId();
+    // The cell of the remove button (plan 43): Enter or Space on it is a press of the button, and Tab
+    // reaches it like any cell. It is not one of the grid's columns, so the Enter order never stops there.
+    // The arrows reach it too: the one that reads on from the last cell of the row lands here, and from
+    // here the other one goes back; ↑ and ↓ go to the trash cell of the row above or below, and ↓ on the
+    // last row's goes to the "+" button under the grid (Umar, plan 71 follow-up).
+    if (field === REMOVE_COLUMN_ID && rowIndex !== null) {
+      const rows = store.getState().rows;
+      const removable = rows[rowIndex];
+      if (NO_MODIFIER(event) && removable !== undefined) {
+        const step = readingStep(event.key, direction);
+        if (step !== null) {
+          event.preventDefault();
+          if (step === 'toStart' && lastField !== undefined) focusCell(params, rowIndex, lastField);
+          return true;
+        }
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          const target = rowIndex + (event.key === 'ArrowDown' ? 1 : -1);
+          if (target < 0) {
+            if (lastField !== undefined) {
+              env.interceptors?.onAboveFirst?.({ rowId: removable.rowId, field: lastField });
+            }
+          } else if (target >= rows.length) {
+            // Under the last row: the "+" button. Without one, a row is added as ↓ does on any cell.
+            if (env.focusAdd !== undefined) env.focusAdd();
+            else if (env.fixedRows !== true && lastField !== undefined) {
+              addRowAndFocus(store, lastField);
+            }
+          } else if (hasTrash(rows[target])) {
+            focusCell(params, target, REMOVE_COLUMN_ID);
+          } else if (lastField !== undefined) {
+            focusCell(params, target, lastField);
+          }
+          return true;
+        }
+      }
+      const pressed = (event.key === 'Enter' || event.key === ' ') && NO_MODIFIER(event);
+      if (removable === undefined || !(pressed || matchesShortcut(event, SHORTCUTS.removeRow))) {
+        return false;
+      }
+      event.preventDefault();
+      env.requestRemove?.(removable.rowId);
+      return true;
+    }
     const column = columns.find((candidate) => candidate.field === field);
     if (rowIndex === null || column === undefined) return false;
     const { rows } = store.getState();
     const row = rows[rowIndex];
     if (row === undefined) return false;
-    if (params.editing && column.type === 'picker' && !fromEditor) return true;
+    // The editor of a picker or select cell answers its own keys; the grid leaves them alone.
+    if (params.editing && (column.type === 'picker' || column.type === 'select') && !fromEditor) {
+      return true;
+    }
 
     // F2 is "New", never "edit".
     if (event.key === 'F2') return true;
@@ -133,6 +212,11 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     if (matchesShortcut(event, SHORTCUTS.removeRow)) {
       event.preventDefault();
       if (env.fixedRows === true) return true;
+      if (env.canRemoveRow !== undefined && !env.canRemoveRow(row)) return true;
+      if (env.requestRemove !== undefined) {
+        env.requestRemove(row.rowId, field);
+        return true;
+      }
       params.api.stopEditing(true);
       const remaining = rows.length - 1;
       store.getState().removeRow(row.rowId);
@@ -157,20 +241,46 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       return true;
     }
 
+    // A row the screen holds on one cell: no other cell of the row takes any key, and the cursor does not
+    // leave the cell it is held on by Tab or the up and down arrows (D8 Bug 1, B2). Enter and the side
+    // arrows are decided below, because a text that was just changed is free to go on.
+    const heldField = env.interceptors?.heldField?.(row.rowId) ?? null;
+    if (heldField !== null && NO_MODIFIER(event)) {
+      const leaves = event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown';
+      if (field !== heldField || leaves) {
+        event.preventDefault();
+        return true;
+      }
+    }
+
     if (event.key === 'Enter') {
       // Ctrl+Enter is the screen's "save and next": the grid leaves it alone.
       if (!NO_MODIFIER(event)) return false;
       event.preventDefault();
+      const before = row.typed[field] ?? '';
       params.api.stopEditing();
-      if (env.interceptors?.onEnter?.({ rowId: row.rowId, field }) === true) return true;
+      // The screen is told whether this Enter changed the text of the cell: a verdict the backend gave
+      // on the old text says nothing about the new one (D8 Bug 1, B2).
+      const after = store.getState().rows[rowIndex]?.typed[field] ?? '';
+      const changed = after !== before;
+      if (env.interceptors?.onEnter?.({ rowId: row.rowId, field }, { changed }) === true) {
+        return true;
+      }
       const step = nextEnterStop(columns, store.getState().rows, { rowIndex, field });
       if (step === null) return true;
       if (step.kind === 'cell') {
         focusCell(params, step.rowIndex, step.field);
       } else if (env.fixedRows !== true) {
-        store.getState().addRow();
-        store.getState().setPendingFocus({ rowIndex: 'last', field: step.field });
+        addRowAndFocus(store, step.field);
       }
+      return true;
+    }
+
+    // Alt+↓ on a select cell: its short list opens.
+    if (column.type === 'select' && matchesShortcut(event, SHORTCUTS.openList)) {
+      if (params.editing) return false;
+      event.preventDefault();
+      if (isEditable(column, row)) params.api.startEditingCell({ rowIndex, colKey: field });
       return true;
     }
 
@@ -184,6 +294,29 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     }
 
     if (!NO_MODIFIER(event)) return false;
+
+    // A select cell holds fixed words, so nothing is typed into it. Space opens its list, and any other
+    // letter or digit is left alone (not a start of typing). Delete and Backspace clear it, below.
+    if (column.type === 'select' && !params.editing) {
+      if (event.key === ' ') {
+        event.preventDefault();
+        if (isEditable(column, row)) params.api.startEditingCell({ rowIndex, colKey: field });
+        return true;
+      }
+      if (event.key.length === 1) return true;
+    }
+
+    // Backspace and Delete on a cell that is not being typed in clear it, like a spreadsheet; on a cell
+    // that cannot be typed in (a calculated cell, a choice) they do nothing. They never leave the
+    // screen (PRD FR-7.91, D8 Bug 2): the key is answered here and not left to the web view.
+    if (!params.editing && (event.key === 'Backspace' || event.key === 'Delete')) {
+      event.preventDefault();
+      if (isEditable(column, row)) {
+        if (column.type === 'picker') store.getState().updatePicked(row.rowId, field, null);
+        else store.getState().updateTyped(row.rowId, field, '');
+      }
+      return true;
+    }
 
     // Space on a choice cell that is not being typed in: the next word.
     if (column.type === 'choice' && event.key === ' ' && !params.editing) {
@@ -216,9 +349,21 @@ export function createGridKeyHandler(env: GridKeyEnv) {
         const inputDirection = isNumberLike(column.type) ? 'ltr' : elementDirection(target);
         if (!shouldLeaveField(target, side, inputDirection)) return true;
       }
+      // The cell the row is held on is not left by a side arrow either.
+      if (heldField !== null) {
+        event.preventDefault();
+        return true;
+      }
       const neighbour = neighbourField(columns, field, side, direction);
       event.preventDefault();
-      if (neighbour === undefined) return true;
+      if (neighbour === undefined) {
+        // Past the last cell, in the way the text reads on: the trash cell of the row, if it has one.
+        if (readingStep(event.key, direction) === 'toEnd' && hasTrash(row)) {
+          params.api.stopEditing();
+          focusCell(params, rowIndex, REMOVE_COLUMN_ID);
+        }
+        return true;
+      }
       params.api.stopEditing();
       focusCell(params, rowIndex, neighbour);
       return true;

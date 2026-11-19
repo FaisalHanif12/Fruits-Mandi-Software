@@ -305,8 +305,8 @@ describe.each(LANGUAGES)('number fields (%s)', (language) => {
     const onValue = vi.fn();
     renderIn(language, <Harness control={CodeInput} onValue={onValue} />);
     const input = screen.getByRole('textbox');
-    await userEvent.type(input, '030110001');
-    expect(input).toHaveValue('030110001');
+    await userEvent.type(input, '0010');
+    expect(input).toHaveValue('0010');
     expect(input).toHaveAttribute('inputmode', 'numeric');
   });
 

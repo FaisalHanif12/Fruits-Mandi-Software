@@ -21,12 +21,12 @@ All requirements live in `docs/`. These six files are final for build.
 | `docs/Architecture_v1.md` | Diagrams and the full data dictionary (Section 15) |
 | `.claude/agents/money-calculations.md` | The specialist for every piece of money code |
 
-- The PRD is about 1,800 lines. Do not read it whole. Read the sections for the task (map below).
+- The PRD is about 2,200 lines. Do not read it whole. Read the sections for the task (map below).
 - Requirement IDs look like `FR-12.8`, `NFR-SPD-7`, `E2E-4`, `C10`, `A27`. Put them in code comments (`// PRD FR-12.8`) and in PR descriptions.
 - If two documents disagree, or a needed rule is missing, stop and ask Umar. Do not pick one yourself.
 - Items tagged `[A]` in the PRD are assumptions. Build the stated default and make it easy to change. Do not invent other behaviour.
 - Never change an expected number in a golden test. If the code and the test disagree, the code is wrong until Umar changes the PRD.
-- The documents are at versions 1.3 to 1.5 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
+- The documents are at versions 1.7 to 1.16 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
 
 ### Where to read before you start
 
@@ -34,17 +34,18 @@ All requirements live in `docs/`. These six files are final for build.
 |---|---|
 | Any money: commission, charges, rounding, splits, journal, matching | The money-calculations agent, PRD 22 and 6, Code Standards 3 |
 | بکری screen or service | PRD 12, 11 and 4.4 to 4.5; Architecture 7, 9 and 12 |
-| وصولی, ادائیگی, پیشگی, پختہ کھاتہ | PRD 15 and 13; Architecture 11; agent Section 8 |
+| وصولی, ادائیگی, پیشگی, چکتا کھاتہ | PRD 15 and 13; Architecture 11; agent Section 8 |
 | Partners and the income split | PRD 17; Architecture 10 |
 | Expenses (one خرچہ screen), partner money taken and returned, ادھار رقم, الگ کھاتہ | PRD 16.2, 16.3, 16.5 and 16.6; FR-7.67; agent Section 8.2b |
-| Own goods (خریداری) and partner capital | PRD 12.10 and 17.4; agent Section 5.4 |
+| Market trips (خریداری), gardens, fruit taken and partner capital | PRD 12.10, 12.11, 16.7 and 17.4; agent Sections 5.4 and 5.5 |
 | Accounts, codes, masters | PRD 10; Architecture 15.4 |
 | Keyboard, ease of use, language switch, typing names, smart assistance | PRD 7; Tech Stack 4; Code Standards 6.7 and 6.10 |
-| Reports and analytics | PRD 18 and 19 |
+| Reports and analytics, lists page by page | PRD 18 and 19 (FR-19.11); Code Standards B31 |
 | Backup and restore | PRD 20; NFR 4; Architecture 14 |
 | Database tables and migrations | Architecture 15; Code Standards 7 |
 | Tests | PRD 27; Code Standards 9 |
 | Speed targets | NFR 2 |
+| Ask the app (the question panel, its tools, OpenRouter, the question log) | PRD 7.7; NFR 10a, NFR-SEC-9, NFR-SEC-15; Tech Stack 4.8; Code Standards 5.7 and M14; Architecture 21; money agent 9.1 (the calculator and estimator); `docs/deliverables/D6-ai-assistant.md`; the model's exact instructions, tools and answer schema in `docs/deliverables/D6-system-prompt.md` (copied word for word, never edited in code alone) |
 
 ## Commands
 
@@ -78,7 +79,7 @@ Prefer running one test file while you work. Run the full set before you say a t
 ## Rules that are never broken
 
 1. **The backend owns all money.** The frontend sends what the user typed, as text, and shows what the backend returns. It never adds, multiplies, rounds or splits money.
-2. **IMPORTANT: Money is whole rupees, stored as `Paisa(i64)`, always a multiple of 100.** No floats anywhere in the money path. Rounding only through `core::money::round_to_rupee`. Splits only through `split_by_bps` and `split_by_qty`. Use the money-calculations agent before writing money code and again to review it.
+2. **IMPORTANT: Money is whole rupees, stored as `Paisa(i64)`, always a multiple of 100.** No floats anywhere in the money path (one approved exception: `rupees_as_f64` and `count_as_f64` at the Excel export boundary, Code Standards M13). Rounding only through `core::money::round_to_rupee`. Splits only through `split_by_bps`, `split_by_qty` and `split_by_open_parts` (an advance coming back to the partners, PRD C28). Use the money-calculations agent before writing money code and again to review it.
 3. **One user action = one service function = one database transaction.** The live preview and the save call the same domain function.
 4. **Books always balance.** A journal entry is saved as draft, checked, then posted. Posted rows are never changed or deleted. Corrections are reversals. Business records are never `DELETE`d.
 5. **No `unwrap`, `expect`, `panic!` or `unsafe` outside tests.** Integer maths on money uses checked operations.
@@ -105,6 +106,7 @@ backend/crates/db/           SQLite, migrations, repositories
 backend/crates/services/     one transaction per user action; golden tests in tests/
 backend/crates/reports/      report queries, print data, Excel
 backend/crates/backup/       local, USB and cloud backup, restore, verification
+backend/crates/assistant/    ask the app: read-only tools, answer checks, OpenRouter client, prompt/ (no money maths)
 ```
 
 Module names are the same everywhere (Tech Stack 5.2). Searching `bikri` finds the screen, the crate folder, the commands, the tables and the Fluent file.
@@ -124,7 +126,7 @@ Build order for the MVP (each step ends green before the next starts):
 3. Database: first migration from Architecture Section 15. Seed accounts from PRD FR-10.4.
 4. Masters, accounts, search index, party card, short codes, names in two scripts.
 5. Commission rules, بکری preview and save, journal, partner split. Golden tests E2E-1 to E2E-5 pass.
-6. Vouchers and matching, پختہ کھاتہ, later sales, edit and cancel. All golden tests pass.
+6. Vouchers and matching, چکتا کھاتہ, later sales, edit and cancel. All golden tests pass.
 7. Dashboard, reports, analytics, day close.
 8. Backup and restore.
 9. Language switch and smart assistance polish. Windows end-to-end tests E2E-17 and E2E-22 to E2E-27.
@@ -141,7 +143,8 @@ Build order for the MVP (each step ends green before the next starts):
 - **Pickers never convert English letters to Urdu.** Only Urdu text fields do. Search takes raw text.
 - **Released migrations are never edited.** Add a new numbered file.
 - **Folder names can contain spaces** (Umar's project folder is `Fruit Mandi ` with a trailing space). Always quote paths in scripts.
-- **No network in the running app** except the cloud backup upload and the update check (NFR-SEC-9). No remote fonts or scripts (Content Security Policy).
+- **No network in the running app** except the cloud backup upload, the update check and the assistant's OpenRouter calls for a question, made by the backend (NFR-SEC-9). No remote fonts or scripts (Content Security Policy).
+- **The assistant's model thinks; the app reads, works out and checks.** The model reaches the books only through read-only tools. It never shows a number it typed: every figure in its answer is a reference the app fills from a tool result, `domain::figures` or `domain::forecast`, and `check.rs` refuses anything else (Code Standards Q2, Q4, Q5, M14). Tool results and the resent conversation never hold the fields PRD FR-7.83 keeps back, such as phones, notes and keys (Q7). Tests use recorded model transcripts: no commit test calls the network.
 
 ## Agent team
 

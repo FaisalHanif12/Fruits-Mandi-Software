@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-month-close-preview"
+description = "Enables the month_close_preview command without any pre-configured scope."
+commands.allow = ["month_close_preview"]
+
+[[permission]]
+identifier = "deny-month-close-preview"
+description = "Denies the month_close_preview command without any pre-configured scope."
+commands.deny = ["month_close_preview"]

@@ -38,11 +38,38 @@ export function comparePaisa(a: Paisa, b: Paisa): number {
   return 0;
 }
 
+/**
+ * True when the amount is more than zero. A question about an amount the backend sent (does this
+ * receipt settle anything of this bill?), never arithmetic: the screen marks a row in words and
+ * works nothing out.
+ */
+export function isPositivePaisa(amount: Paisa): boolean {
+  return paisaNumber(amount) > 0;
+}
+
+/**
+ * True when the amount is below zero. A question about an amount the backend sent (is this trip
+ * making a loss?), never arithmetic: the screen colours it red and also says so in words.
+ */
+export function isNegativePaisa(amount: Paisa): boolean {
+  return paisaNumber(amount) < 0;
+}
+
+/** True when the amount is exactly zero: a row or a note that has nothing to say is left out. */
+export function isZeroPaisa(amount: Paisa): boolean {
+  return paisaNumber(amount) === 0;
+}
+
 /** Number grouping on screen (PRD Section 21): 1,316,040 or 13,16,040. */
 export type Grouping = 'international' | 'lakh';
 
 export interface FormatPaisaOptions {
   grouping: Grouping;
+  /**
+   * No group separators: 2,600 paisa-rupees written "2600". For a rate inside a line of words, the way
+   * the client's own print writes it, "(سیب 8 . 2600)" (PRD 19.2 R5). Display only, like every option.
+   */
+  plain?: boolean;
 }
 
 /** Shown in place of an amount the backend should never send (production only). */
@@ -85,7 +112,8 @@ function invalidAmount(amount: number): string {
  * The text of an amount, in whole rupees with group separators (Code Standards M12).
  * Examples: 1,200,000 paisa -> "12,000"; 131,604,000 paisa -> "1,316,040", or "13,16,040" with
  * lakh grouping; 4,500 paisa -> "45"; 0 -> "0". A negative amount gets a minus sign, for
- * technical views only (business screens show the بنام or جمع word instead).
+ * technical views only (business screens show the بنام or جمع word instead). With `plain` the
+ * separators are left out: 131,604,000 paisa -> "1316040".
  */
 export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string {
   const value = paisaNumber(amount);
@@ -95,7 +123,7 @@ export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string 
   const negative = text.startsWith('-');
   const digits = negative ? text.slice(1) : text;
   const rupees = digits === '0' ? '0' : digits.slice(0, -PAISA_DIGITS);
-  const grouped = groupDigits(rupees, options.grouping);
+  const grouped = options.plain === true ? rupees : groupDigits(rupees, options.grouping);
   return negative ? `-${grouped}` : grouped;
 }
 
@@ -107,4 +135,25 @@ export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string 
  */
 export function formatPaisaValue(value: number, options: FormatPaisaOptions): string {
   return formatPaisa(value as unknown as Paisa, options);
+}
+
+/**
+ * An amount that arrived as a plain JSON number inside the values of a backend error (`cash_after_paisa`
+ * of `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`) as a `Paisa`, for a component that shows money (the cash box).
+ * It is the amount the backend sent, never worked out here. Null when the value is missing, is text, or is
+ * not a whole number of rupees, so a malformed value is never shown as money. It lives here because this
+ * file is the only one that looks inside a Paisa (Code Standards F3).
+ */
+export function paisaOfErrorValue(value: string | number | undefined): Paisa | null {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value % 100 !== 0) return null;
+  return value as unknown as Paisa;
+}
+
+/**
+ * The height of a bar in a chart (plan 21, PRD FR-18.3): a number for the drawing only. It is never
+ * added, shown or sent anywhere; every label on a chart is the text of `formatPaisa`. It lives here
+ * because this file is the only one that looks inside a Paisa (Code Standards F3).
+ */
+export function chartValueOfPaisa(amount: Paisa): number {
+  return paisaNumber(amount);
 }

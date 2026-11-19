@@ -2,7 +2,8 @@
 // (the days, the entries in them, whether the books balance, the cash in hand), and a confirm box
 // that says exactly what will happen (FR-7.8). The numbers are the backend's. A day is closed in
 // order, so the backend refuses a date that is closed already, a date after today and a trial
-// balance that does not balance; each problem shows next to the date or as a notice.
+// balance that does not balance; each problem shows next to the date or as a notice. The full
+// summary of the days (PRD FR-21.1, 4.9) is DaySummary.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
@@ -24,6 +25,7 @@ import {
   showToast,
 } from '../../../shared/ui';
 import { useCloseDays, useDayClosePreview } from '../hooks';
+import { DaySummary } from './DaySummary';
 
 const FIELD_PATHS = ['up_to'];
 
@@ -70,7 +72,7 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
 
   if (!todayOpen) {
     return (
-      <Card title={<Localized id="day-close-title" />}>
+      <Card compact>
         <Localized id="day-close-nothing">
           <p className="type-body text-ink-muted" />
         </Localized>
@@ -79,15 +81,34 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
   }
 
   return (
-    <Card title={<Localized id="day-close-title" />}>
-      <Localized id="day-close-help">
-        <p className="type-body text-ink-muted" />
-      </Localized>
+    <Card compact>
       {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
-      <div className="max-w-field">
-        <Field label={<Localized id="day-close-up-to" />} error={fieldError(error, 'up_to')}>
-          {(props) => <DateInput {...props} value={upTo} onChange={setTypedUpTo} />}
-        </Field>
+      {/* The date and the button that closes up to it are side by side, so the button is always in
+          view with the date (plan 38). The help of the card is behind the ⓘ of the date. */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <div className="w-date shrink-0">
+          <Field
+            label={<Localized id="day-close-up-to" />}
+            info={
+              <Localized id="day-close-help">
+                <p />
+              </Localized>
+            }
+            error={fieldError(error, 'up_to')}
+          >
+            {(props) => <DateInput {...props} value={upTo} onChange={setTypedUpTo} />}
+          </Field>
+        </div>
+        <Button
+          variant="primary"
+          busy={flight.busy || close.isPending}
+          disabled={data === undefined || preview.isError || upTo === '' || nothingToClose}
+          onClick={() => {
+            setConfirming(true);
+          }}
+        >
+          <Localized id="day-close-button" />
+        </Button>
       </div>
       {preview.isPending && preview.fetchStatus !== 'idle' ? <LoadingState /> : null}
       {preview.isError && !previewIsAboutDate ? (
@@ -100,82 +121,75 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
         />
       ) : null}
       {data === undefined || preview.isError ? null : (
-        <dl className="flex max-w-dialog flex-col gap-2 type-body">
-          <div className="grid grid-cols-2 items-baseline gap-x-4">
-            <Localized id="day-close-from">
-              <dt className="text-ink-muted" />
-            </Localized>
-            <dd dir="ltr" className="text-end">
-              <Num>{isoToDisplayDate(data.from_date)}</Num>
-            </dd>
-          </div>
-          <div className="grid grid-cols-2 items-baseline gap-x-4">
-            <Localized id="day-close-days">
-              <dt className="text-ink-muted" />
-            </Localized>
-            <dd dir="ltr" className="text-end">
-              <Num>{String(data.days)}</Num>
-            </dd>
-          </div>
-          <div className="grid grid-cols-2 items-baseline gap-x-4">
-            <Localized id="day-close-entries">
-              <dt className="text-ink-muted" />
-            </Localized>
-            <dd dir="ltr" className="text-end">
-              <Num>{String(data.entries)}</Num>
-            </dd>
-          </div>
-          <div className="grid grid-cols-2 items-baseline gap-x-4">
-            <Localized id="day-close-trial-dr">
-              <dt className="text-ink-muted" />
-            </Localized>
-            <dd dir="ltr" className="text-end">
-              <Num paisa={data.trial_dr_paisa} />
-            </dd>
-          </div>
-          <div className="grid grid-cols-2 items-baseline gap-x-4">
-            <Localized id="day-close-trial-cr">
-              <dt className="text-ink-muted" />
-            </Localized>
-            <dd dir="ltr" className="text-end">
-              <Num paisa={data.trial_cr_paisa} />
-            </dd>
-          </div>
-          <div className="grid grid-cols-2 items-baseline gap-x-4">
-            <Localized id="day-close-trial">
-              <dt className="text-ink-muted" />
-            </Localized>
-            <dd dir="ltr" className="text-end">
-              <Balance balance={data.trial_difference} />
-            </dd>
-          </div>
-          <div className="grid grid-cols-2 items-baseline gap-x-4">
-            <Localized id="day-close-cash">
-              <dt className="text-ink-muted" />
-            </Localized>
-            <dd dir="ltr" className="text-end">
-              <Balance balance={data.cash_in_hand} />
-            </dd>
-          </div>
-        </dl>
+        <div className="@container min-w-0">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 type-body @form2:grid-cols-2">
+            <div className="grid grid-cols-2 items-baseline gap-x-4">
+              <Localized id="day-close-from">
+                <dt className="text-ink-muted" />
+              </Localized>
+              <dd dir="ltr" className="text-end">
+                <Num>{isoToDisplayDate(data.from_date)}</Num>
+              </dd>
+            </div>
+            <div className="grid grid-cols-2 items-baseline gap-x-4">
+              <Localized id="day-close-days">
+                <dt className="text-ink-muted" />
+              </Localized>
+              <dd dir="ltr" className="text-end">
+                <Num>{String(data.days)}</Num>
+              </dd>
+            </div>
+            <div className="grid grid-cols-2 items-baseline gap-x-4">
+              <Localized id="day-close-entries">
+                <dt className="text-ink-muted" />
+              </Localized>
+              <dd dir="ltr" className="text-end">
+                <Num>{String(data.entries)}</Num>
+              </dd>
+            </div>
+            <div className="grid grid-cols-2 items-baseline gap-x-4">
+              <Localized id="day-close-trial-dr">
+                <dt className="text-ink-muted" />
+              </Localized>
+              <dd dir="ltr" className="text-end">
+                <Num paisa={data.trial_dr_paisa} />
+              </dd>
+            </div>
+            <div className="grid grid-cols-2 items-baseline gap-x-4">
+              <Localized id="day-close-trial-cr">
+                <dt className="text-ink-muted" />
+              </Localized>
+              <dd dir="ltr" className="text-end">
+                <Num paisa={data.trial_cr_paisa} />
+              </dd>
+            </div>
+            <div className="grid grid-cols-2 items-baseline gap-x-4">
+              <Localized id="day-close-trial">
+                <dt className="text-ink-muted" />
+              </Localized>
+              <dd dir="ltr" className="text-end">
+                <Balance balance={data.trial_difference} />
+              </dd>
+            </div>
+            <div className="grid grid-cols-2 items-baseline gap-x-4">
+              <Localized id="day-close-cash">
+                <dt className="text-ink-muted" />
+              </Localized>
+              <dd dir="ltr" className="text-end">
+                <Balance balance={data.cash_in_hand} />
+              </dd>
+            </div>
+          </dl>
+        </div>
+      )}
+      {data === undefined || preview.isError || nothingToClose ? null : (
+        <DaySummary summary={data.summary} />
       )}
       {nothingToClose ? (
         <Localized id="day-close-nothing">
           <p className="type-body text-ink-muted" />
         </Localized>
       ) : null}
-      <div>
-        <Button
-          variant="primary"
-          busy={flight.busy || close.isPending}
-          disabled={data === undefined || preview.isError || upTo === '' || nothingToClose}
-          onClick={() => {
-            setConfirming(true);
-          }}
-        >
-          <Localized id="day-close-button" />
-        </Button>
-      </div>
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}

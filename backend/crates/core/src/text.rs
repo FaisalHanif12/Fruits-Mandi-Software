@@ -156,6 +156,88 @@ pub fn search_phonetic(name_en: &str) -> String {
     key
 }
 
+/// A phone as every print shows it: `03XX-XXXXXXX` (Umar's own print shows `0300-4058860`). The
+/// phone is stored as 11 plain digits (Code Standards 4.2); only the print adds the dash. The
+/// digits stay the plain digits 0-9 whatever the print language or the Urdu digits setting (PRD
+/// FR-7.21, FR-7.32). Text that is not exactly 11 ASCII digits starting with `03` (an empty phone,
+/// an old value typed with a dash) is returned as it is.
+///
+/// ```
+/// use mandi_core::text::phone_display;
+/// assert_eq!(phone_display("03004058860"), "0300-4058860");
+/// assert_eq!(phone_display("0300-4058860"), "0300-4058860");
+/// assert_eq!(phone_display(""), "");
+/// ```
+pub fn phone_display(phone: &str) -> String {
+    let digits = phone.trim();
+    let is_mobile = digits.len() == 11
+        && digits.starts_with("03")
+        && digits.bytes().all(|b| b.is_ascii_digit());
+    match (is_mobile, digits.get(..4), digits.get(4..)) {
+        (true, Some(prefix), Some(number)) => format!("{prefix}-{number}"),
+        _ => phone.trim().to_owned(),
+    }
+}
+
+/// `search_ur` of an account with a tag (نشان, PRD 10.2, FR-7.40): the Urdu key and the tag as one
+/// more lower-case word, so `عاشق k` finds `عاشق ظفر K`. With no tag it is exactly `search_ur`, so an
+/// account without a tag keeps the key it had.
+///
+/// `search_ur_tagged("عاشق ظفر", Some("K")) == "عاشق ظفر k"`.
+pub fn search_ur_tagged(name_ur: &str, tag: Option<&str>) -> String {
+    with_tag_word(search_ur(name_ur), tag)
+}
+
+/// `search_en` of an account with a tag (PRD 10.2, FR-7.40): the English key and the tag as one
+/// more lower-case word, so `ashiq k` finds `Ashiq Zafar K`. With no tag it is exactly
+/// `search_en`.
+///
+/// `search_en_tagged("Ashiq Zafar", Some("K")) == "ashiq zafar k"`.
+pub fn search_en_tagged(name_en: &str, tag: Option<&str>) -> String {
+    with_tag_word(search_en(name_en), tag)
+}
+
+/// `search_phonetic` of an account with a tag (PRD 10.2): the letters of the tag come after the
+/// letters of the name. With no tag it is exactly `search_phonetic`.
+///
+/// `search_phonetic_tagged("Ashiq Zafar", Some("K")) == "ashqzfrk"`.
+pub fn search_phonetic_tagged(name_en: &str, tag: Option<&str>) -> String {
+    match tag.map(str::trim).filter(|t| !t.is_empty()) {
+        Some(tag) => search_phonetic(&format!("{name_en} {tag}")),
+        None => search_phonetic(name_en),
+    }
+}
+
+/// A key and the tag as one more word. A tag that is empty adds nothing.
+fn with_tag_word(key: String, tag: Option<&str>) -> String {
+    match tag.map(str::trim).filter(|t| !t.is_empty()) {
+        Some(tag) => {
+            let word = search_en(tag);
+            if key.is_empty() {
+                word
+            } else {
+                format!("{key} {word}")
+            }
+        }
+        None => key,
+    }
+}
+
+/// The key of a چکتا buyer (PRD FR-13.5): the Urdu name after
+/// Urdu normalisation, a `|`, and the phone digits (empty if there is none). Balances, matching
+/// and aging are kept per key, so one person's payment never settles another's bill.
+///
+/// A name never holds `|` (the name check allows only letters, digits, spaces and `. - ' ( ) / &`),
+/// so the two parts cannot run into each other. The same name with another phone is another
+/// person; the same name and phone with other spelling variants (ي and ی) is the same person.
+///
+/// Example: `person_key("شاہد", "03000000000")` is `"شاہد|03000000000"`;
+/// `person_key(" شاه ", "03000000000")` is the same key as `person_key("شاہ", "03000000000")`.
+pub fn person_key(name_ur: &str, phone: &str) -> String {
+    let digits: String = phone.chars().filter(char::is_ascii_digit).collect();
+    format!("{}|{digits}", normalize_urdu(name_ur))
+}
+
 /// True for a letter of the Urdu (Arabic) script.
 pub fn is_urdu_letter(c: char) -> bool {
     matches!(c, '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' | '\u{FB50}'..='\u{FDFF}' | '\u{FE70}'..='\u{FEFF}')
@@ -287,6 +369,24 @@ mod tests {
         assert_eq!(normalize_urdu("  ارشد \t  ملتانی  "), "ارشد ملتانی");
         // NFC: alef + hamza above becomes one letter and the hamza is kept
         assert_eq!(normalize_urdu("\u{0627}\u{0654}"), "\u{0623}");
+    }
+
+    #[test]
+    fn a_person_key_joins_the_normalised_urdu_name_and_the_phone_digits() {
+        assert_eq!(person_key("شاہد", "03000000000"), "شاہد|03000000000");
+        // Letter variants and spaces do not make another person.
+        assert_eq!(
+            person_key(" شاه ", "03000000000"),
+            person_key("شاہ", "03000000000")
+        );
+        assert_eq!(
+            person_key("اكرم  خان", "0300-0000000"),
+            "اکرم خان|03000000000"
+        );
+        // No phone: the key still names the person.
+        assert_eq!(person_key("ناصر", ""), "ناصر|");
+        // The same name with another phone is another person.
+        assert_ne!(person_key("ناصر", ""), person_key("ناصر", "03001111111"));
     }
 
     #[test]
@@ -432,5 +532,97 @@ mod tests {
         assert_eq!(shuffled, expected);
         assert_eq!(collator.compare("ب", "پ"), Ordering::Less);
         assert_eq!(collator.compare("ت", "ٹ"), Ordering::Less);
+    }
+}
+
+#[cfg(test)]
+mod tagged_key_tests {
+    use super::*;
+
+    #[test]
+    fn a_tag_is_one_more_word_in_the_three_keys() {
+        assert_eq!(search_ur_tagged("عاشق ظفر", Some("K")), "عاشق ظفر k");
+        assert_eq!(search_en_tagged("Ashiq Zafar", Some("K")), "ashiq zafar k");
+        assert_eq!(
+            search_en_tagged("Ashiq Zafar", Some("D.P")),
+            "ashiq zafar d.p"
+        );
+        assert_eq!(search_phonetic_tagged("Ashiq Zafar", Some("K")), "ashqzfrk");
+    }
+
+    #[test]
+    fn no_tag_keeps_exactly_the_old_keys() {
+        for name in ["Akram Toll Tax", "  Arshad  Multani ", "", "Ali"] {
+            for none in [None, Some(""), Some("  ")] {
+                assert_eq!(search_en_tagged(name, none), search_en(name), "{name:?}");
+                assert_eq!(
+                    search_phonetic_tagged(name, none),
+                    search_phonetic(name),
+                    "{name:?}"
+                );
+            }
+        }
+        for name in ["اکرم ٹول ٹیکس", "اكرم", ""] {
+            assert_eq!(search_ur_tagged(name, None), search_ur(name));
+        }
+    }
+
+    #[test]
+    fn two_people_with_one_name_get_different_keys() {
+        // اسلم BA and اسلم are two people (PRD E38): the keys tell them apart.
+        assert_ne!(
+            search_en_tagged("Aslam", Some("BA")),
+            search_en_tagged("Aslam", None)
+        );
+        assert_eq!(search_en_tagged("Aslam", Some("BA")), "aslam ba");
+    }
+
+    #[test]
+    fn an_empty_name_with_a_tag_is_just_the_tag() {
+        assert_eq!(search_en_tagged("", Some("K")), "k");
+        assert_eq!(search_ur_tagged("", Some("K")), "k");
+    }
+}
+
+#[cfg(test)]
+mod phone_display_tests {
+    use super::*;
+
+    #[test]
+    fn eleven_digits_get_the_dash_after_the_operator_code() {
+        assert_eq!(phone_display("03004058860"), "0300-4058860");
+        assert_eq!(phone_display(" 03211234567 "), "0321-1234567");
+        assert_eq!(phone_display("03000000000"), "0300-0000000");
+    }
+
+    #[test]
+    fn anything_else_is_left_as_it_is() {
+        for same in [
+            "",
+            "0300-4058860",
+            "3004058860",
+            "030040588601",
+            "04004058860",
+            "0300405886a",
+            "۰۳۰۰۴۰۵۸۸۶۰",
+        ] {
+            assert_eq!(phone_display(same), same, "{same}");
+        }
+    }
+
+    #[test]
+    fn the_result_is_ascii_digits_and_one_dash_and_never_panics() {
+        for text in [
+            "03004058860",
+            "٠٣٠٠٤٠٥٨٨٦٠",
+            "0300😀405886",
+            "０３００４０５８８６０",
+        ] {
+            let shown = phone_display(text);
+            if shown != text {
+                assert!(shown.chars().all(|c| c.is_ascii_digit() || c == '-'));
+                assert_eq!(shown.matches('-').count(), 1);
+            }
+        }
     }
 }

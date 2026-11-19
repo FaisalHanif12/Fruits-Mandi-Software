@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-entry-edit-save"
+description = "Enables the gardens_entry_edit_save command without any pre-configured scope."
+commands.allow = ["gardens_entry_edit_save"]
+
+[[permission]]
+identifier = "deny-gardens-entry-edit-save"
+description = "Denies the gardens_entry_edit_save command without any pre-configured scope."
+commands.deny = ["gardens_entry_edit_save"]

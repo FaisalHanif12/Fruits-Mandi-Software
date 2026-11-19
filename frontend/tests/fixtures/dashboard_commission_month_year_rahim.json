@@ -1,0 +1,53 @@
+{
+  "month": "2026-01",
+  "year": 2026,
+  "period": {
+    "kind": "year",
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "party": {
+    "side": "seller",
+    "party": {
+      "account_id": 19,
+      "code": "0010",
+      "short_code": "0",
+      "name_ur": "رحیم",
+      "name_en": "Rahim",
+      "tag": null,
+      "person_key": null
+    }
+  },
+  "goods": "all",
+  "first_month": "2026-10",
+  "current_month": "2026-10",
+  "partners": [],
+  "rows": [
+    {
+      "date": "2026-10",
+      "seller_comm_paisa": 176400,
+      "buyer_comm_paisa": 176400,
+      "laga_paisa": 40000,
+      "total_comm_paisa": 392800,
+      "shared_income_paisa": 0,
+      "partner_shares": null,
+      "sale_paisa": 2940000,
+      "goods_comm_paisa": 392800
+    }
+  ],
+  "total_count": 1,
+  "offset": 0,
+  "limit": 0,
+  "totals": {
+    "date": "",
+    "seller_comm_paisa": 176400,
+    "buyer_comm_paisa": 176400,
+    "laga_paisa": 40000,
+    "total_comm_paisa": 392800,
+    "shared_income_paisa": 0,
+    "partner_shares": null,
+    "sale_paisa": 2940000,
+    "goods_comm_paisa": 392800
+  },
+  "partners_locked": false
+}

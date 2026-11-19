@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tables-export-excel"
+description = "Enables the tables_export_excel command without any pre-configured scope."
+commands.allow = ["tables_export_excel"]
+
+[[permission]]
+identifier = "deny-tables-export-excel"
+description = "Denies the tables_export_excel command without any pre-configured scope."
+commands.deny = ["tables_export_excel"]

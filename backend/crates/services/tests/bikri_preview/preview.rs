@@ -4,9 +4,7 @@
 use std::path::Path;
 
 use mandi_services::bikri;
-use mandi_services::core::bikri::{
-    ChargeSource, LineChargeMethod, PaymentType, PukhtaInput, RateHintSource, StoredMethod,
-};
+use mandi_services::core::bikri::{ChargeSource, ChuktaInput, LineChargeMethod, StoredMethod};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::rules::{CreditLimitMode, OverridesSettings, WorkingValue};
 use mandi_services::rules;
@@ -114,9 +112,9 @@ fn event_1_gives_every_number_of_prd_4_4() {
 }
 
 #[test]
-fn e2e_26_the_next_row_starts_at_30_with_the_hint_600_and_the_working_of_720() {
-    // E2E-26, backend part: after Akram's line (20 of 50) a new row starts at 30 with the rate
-    // hint 600, and the commission of line 1 shows "12,000 x 6 / 100 = 720".
+fn e2e_26_the_next_row_starts_at_30_and_the_working_of_720() {
+    // E2E-26, backend part (PRD v1.44, no rate hint): after Akram's line (20 of 50) a new row
+    // starts at 30, and the commission of line 1 shows "12,000 x 6 / 100 = 720".
     let w = world();
     let draft = draft(vec![with_sales(
         lot(&w, "lot-1", w.rahim, w.banana, "50"),
@@ -125,12 +123,6 @@ fn e2e_26_the_next_row_starts_at_30_with_the_hint_600_and_the_working_of_720() {
     let p = preview(&w, &draft);
     let rows = &p.lots[0].lines;
     assert_eq!(rows[1].remaining_qty, 30);
-    let hint = rows[1].rate_hint.as_ref().expect("a rate hint");
-    assert_eq!(
-        (r(hint.rate_paisa), hint.source),
-        (600, RateHintSource::ThisBikri)
-    );
-    assert_eq!(hint.date, "2026-10-10");
     let working = &calc(&p.lots[0], 0).seller_comm.working;
     assert_eq!(working.message_id, "working-percent");
     let values: Vec<(String, WorkingValue)> = working
@@ -149,14 +141,14 @@ fn e2e_26_the_next_row_starts_at_30_with_the_hint_600_and_the_working_of_720() {
 }
 
 #[test]
-fn event_2_one_time_buyer_through_the_pukhta_account() {
-    // PRD 4.5.
+fn event_2_chukta_buyer_pays_in_full_on_the_spot() {
+    // PRD 4.5 (v1.32): شاہد is a چکتا buyer; he pays the whole bill on the spot.
     let w = world();
     let mut karim = lot(&w, "lot-1", w.karim, w.apple, "10");
     karim.freight = Some("1,000".into());
     karim.cash_paid = None;
-    let mut shahid = sale("s-1", w.pukhta_buyer, "10", "1,200");
-    shahid.pukhta = Some(PukhtaInput {
+    let mut shahid = sale("s-1", w.chukta_khata, "10", "1,200");
+    shahid.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -168,7 +160,10 @@ fn event_2_one_time_buyer_through_the_pukhta_account() {
         (r(l.buyer_comm.amount), r(l.laga.amount), r(l.buyer_total)),
         (720, 80, 12_800)
     );
-    assert_eq!(l.payment_type, PaymentType::Cash);
+    assert_eq!(
+        (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+        (12_800, 0, true)
+    );
     let t = p.lots[0].totals.as_ref().unwrap();
     assert_eq!(
         (r(t.deductions), r(t.net), r(t.shared_income)),
@@ -364,8 +359,8 @@ fn a_draft_with_no_lot_says_so_and_returns_zero_totals() {
 
 /// The JSON of one sale row as the screen sends it.
 fn row_json(key: &str, buyer: Option<i64>, qty: &str, rate: &str) -> serde_json::Value {
-    json!({ "key": key, "buyer_account_id": buyer, "pukhta": null, "qty": qty, "weight": null,
-        "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
+    json!({ "key": key, "buyer_account_id": buyer, "chukta": null, "qty": qty, "weight": null,
+        "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "paid": null,
         "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
 }
 
@@ -373,14 +368,9 @@ fn row_json(key: &str, buyer: Option<i64>, qty: &str, rate: &str) -> serde_json:
 fn request_json(w: &World, rows: Vec<serde_json::Value>) -> serde_json::Value {
     json!({
         "draft": {
-            "header": {
-                "entry_date": "10-10-2026", "bill_date": "", "book": null, "truck_no": "LES-1234",
-                "zamindar_account_id": w.rahim, "adda_id": null, "driver_name": null,
-                "driver_phone": null, "total_freight": null, "store_id": null, "note": null
-            },
+            "header": { "entry_date": "10-10-2026" },
             "lots": [{
-                "key": "lot-1", "seller_account_id": w.rahim, "pukhta": null,
-                "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
+                "key": "lot-1", "seller_account_id": w.rahim, "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
                 "qty_received": "50", "weight_received": null, "freight": "3,000",
                 "freight_paid_by": "firm",
                 "labour": { "method": "per_unit", "value": "5" },
@@ -439,6 +429,60 @@ fn writes_the_fixtures_the_frontend_copies() {
     );
     write_fixture("bikri_preview_e2e26", &e2e_26, &w);
 
+    // Plan 57 (PRD FR-12.6 v1.28): a line over the quantity of the lot. The lot holds 50. Typed 70
+    // at 1,200, the line is refused (`calc` null, `ERR_QTY_EXCEEDS_LOT` with `available` 50 on
+    // `lots[0].sales[0].qty`) and the lot totals are null.
+    let over = request_json(&w, vec![row_json("line-1", Some(w.akram), "70", "1200")]);
+    write_fixture("bikri_preview_over_qty", &over, &w);
+    // The same line fixed to 50: 60,000, commissions 3,600 and 3,600, لاگا 400, the buyer pays
+    // 64,000.
+    let fixed = request_json(&w, vec![row_json("line-1", Some(w.akram), "50", "1200")]);
+    write_fixture("bikri_preview_over_qty_fixed", &fixed, &w);
+    // Lines of 30 and 30: line 1 is worked out, line 2 takes the lot over by 10 and is refused with
+    // 20 available. The lot totals hold line 1 only.
+    let two = request_json(
+        &w,
+        vec![
+            row_json("line-1", Some(w.akram), "30", "600"),
+            row_json("line-2", Some(w.arshad), "30", "580"),
+        ],
+    );
+    write_fixture("bikri_preview_over_qty_two_lines", &two, &w);
+    let ask = |request: &serde_json::Value| {
+        let input: mandi_services::core::bikri::BikriPreviewInput =
+            serde_json::from_value(request.clone()).unwrap();
+        bikri::preview(&w.env.ctx, &input.draft).unwrap()
+    };
+    let p = ask(&over);
+    assert!(p.lots[0].lines[0].calc.is_none());
+    assert!(p.lots[0].totals.is_none());
+    assert!(has(
+        &p.errors,
+        ErrorCode::ErrQtyExceedsLot,
+        "lots[0].sales[0].qty"
+    ));
+    let p = ask(&fixed);
+    let c = calc(&p.lots[0], 0);
+    assert_eq!(
+        (
+            r(c.seller_amount),
+            r(c.seller_comm.amount),
+            r(c.buyer_comm.amount),
+            r(c.laga.amount),
+            r(c.buyer_total)
+        ),
+        (60_000, 3_600, 3_600, 400, 64_000)
+    );
+    let p = ask(&two);
+    assert!(has(
+        &p.errors,
+        ErrorCode::ErrQtyExceedsLot,
+        "lots[0].sales[1].qty"
+    ));
+    assert!(p.lots[0].lines[1].calc.is_none());
+    assert_eq!(r(calc(&p.lots[0], 0).seller_amount), 18_000);
+    assert_eq!(r(p.lots[0].totals.as_ref().unwrap().gross), 18_000);
+
     // Spot checks on what was written.
     let input: mandi_services::core::bikri::BikriPreviewInput =
         serde_json::from_value(event1).unwrap();
@@ -446,12 +490,15 @@ fn writes_the_fixtures_the_frontend_copies() {
     assert!(p.errors.is_empty(), "{:?}", p.errors);
     let remaining: Vec<i64> = p.lots[0].lines.iter().map(|l| l.remaining_qty).collect();
     assert_eq!(remaining, [50, 30, 0]);
-    let hints: Vec<Option<i64>> = p.lots[0]
-        .lines
-        .iter()
-        .map(|l| l.rate_hint.as_ref().map(|h| r(h.rate_paisa)))
-        .collect();
-    assert_eq!(hints, [None, Some(600), Some(580)]);
+    // The retired rate hint is not in a line at all (PRD FR-7.53, v1.44; plan 80 R2-6).
+    let lines = serde_json::to_value(&p.lots[0].lines).unwrap();
+    assert!(
+        lines
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|l| l.get("rate_hint").is_none())
+    );
     // The answer holds numbers (paisa), never text amounts.
     assert!(
         serde_json::to_string(&p)
@@ -480,25 +527,71 @@ fn a_vegetable_has_no_laga_and_says_so() {
 }
 
 #[test]
-fn the_cash_buyer_pays_cash_and_credit_is_refused_for_him() {
+fn the_cash_buyer_pays_the_whole_bill_whatever_is_typed() {
+    // PRD FR-12.44, plan 60 P3: the نقدی منڈی account always pays the buyer total, and a typed
+    // paid amount is ignored. There is no refusal any more.
     let w = world();
-    let d = |payment| {
+    let d = |paid: Option<&str>| {
         let mut row = sale("s-1", w.naqdi, "20", "600");
-        row.payment_type = payment;
+        row.paid = paid.map(str::to_owned);
         draft(vec![with_sales(
             lot(&w, "lot-1", w.rahim, w.banana, "50"),
             vec![row],
         )])
     };
-    let p = preview(&w, &d(None));
+    for paid in [None, Some("1"), Some("5,000")] {
+        let p = preview(&w, &d(paid));
+        assert!(p.errors.is_empty(), "{:?}", p.errors);
+        let l = calc(&p.lots[0], 0);
+        assert_eq!(
+            (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+            (12_880, 0, true),
+            "typed {paid:?}"
+        );
+        // His 12,880 comes in at once: cash change +12,880 - 5,000.
+        assert_eq!(r(p.cash.change_paisa), 7_880);
+    }
+}
+
+#[test]
+fn money_paid_on_the_spot_comes_into_cash_and_the_rest_stays_on_the_account() {
+    // PRD FR-12.44 (D8): اکرم's bill is 12,880; he pays 3,000 on the spot. 3,000 comes into روکڑ
+    // (3,000 - 5,000 نقد = -2,000) and 9,880 stays on his account.
+    let w = world();
+    let mut row = sale("s-1", w.akram, "20", "600");
+    row.paid = Some("3,000".into());
+    let p = preview(
+        &w,
+        &draft(vec![with_sales(
+            lot(&w, "lot-1", w.rahim, w.banana, "50"),
+            vec![row],
+        )]),
+    );
     assert!(p.errors.is_empty(), "{:?}", p.errors);
-    assert_eq!(calc(&p.lots[0], 0).payment_type, PaymentType::Cash);
-    // His 12,880 comes in at once: cash change +12,880 - 5,000.
-    assert_eq!(r(p.cash.change_paisa), 7_880);
-    let p = preview(&w, &d(Some(PaymentType::Credit)));
+    let l = calc(&p.lots[0], 0);
+    assert_eq!(
+        (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+        (3_000, 9_880, false)
+    );
+    assert_eq!(r(p.cash.change_paisa), -2_000);
+    let t = p.lots[0].totals.as_ref().unwrap();
+    assert_eq!(
+        (r(t.buyer_cash), r(t.buyer_credit), r(t.buyer_total)),
+        (3_000, 9_880, 12_880)
+    );
+    // One rupee over the buyer total is refused at the paid field, with the most allowed.
+    let mut over = sale("s-1", w.akram, "20", "600");
+    over.paid = Some("12,881".into());
+    let p = preview(
+        &w,
+        &draft(vec![with_sales(
+            lot(&w, "lot-1", w.rahim, w.banana, "50"),
+            vec![over],
+        )]),
+    );
     assert!(has(
         &p.errors,
-        ErrorCode::ErrCreditNotAllowed,
-        "lots[0].sales[0].payment_type"
+        ErrorCode::ErrPaidExceedsTotal,
+        "lots[0].sales[0].paid"
     ));
 }

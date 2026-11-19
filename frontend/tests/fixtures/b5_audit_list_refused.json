@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "code": "ERR_NOT_FOUND",
+      "field": "filters.user_id",
+      "values": {}
+    },
+    {
+      "code": "ERR_DATE_INVALID",
+      "field": "filters.from",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-00000000-0000"
+}

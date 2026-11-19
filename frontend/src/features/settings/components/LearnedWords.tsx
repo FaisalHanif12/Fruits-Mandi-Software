@@ -9,6 +9,7 @@ import { useState } from 'react';
 import type { PairRow } from '../../../bindings/PairRow';
 import { uiErrorOf } from '../../../shared/api';
 import { utcToLocalDisplay } from '../../../shared/format';
+import { Pager } from '../../../shared/grid';
 import {
   Button,
   Code,
@@ -38,7 +39,6 @@ export function LearnedWords() {
   const [asking, setAsking] = useState<PairRow | null>(null);
 
   const body = () => {
-    if (pairs.isPending) return <LoadingState />;
     if (pairs.isError) {
       return (
         <ErrorState
@@ -50,7 +50,9 @@ export function LearnedWords() {
         />
       );
     }
-    if (pairs.data.length === 0) {
+    if (pairs.isPending || pairs.data === undefined) return <LoadingState />;
+    const rows = pairs.data.pages.flatMap((page) => page.rows);
+    if (rows.length === 0) {
       return (
         <EmptyState
           icon={Languages}
@@ -79,6 +81,7 @@ export function LearnedWords() {
         id: 'count',
         header: <Localized id="translit-words-col-count" />,
         kind: 'number',
+        size: 'qty',
         cell: (pair) => <Num>{String(pair.use_count)}</Num>,
       },
       {
@@ -103,14 +106,17 @@ export function LearnedWords() {
       },
     ];
     return (
-      <div className="rounded-3 border border-border bg-surface">
-        <Table
-          label={l10n.getString('translit-words-table')}
-          columns={columns}
-          rows={pairs.data}
-          rowKey={(pair) => String(pair.id)}
-        />
-      </div>
+      <>
+        <div className="rounded-3 border border-border bg-surface">
+          <Table
+            label={l10n.getString('translit-words-table')}
+            columns={columns}
+            rows={rows}
+            rowKey={(pair) => String(pair.id)}
+          />
+        </div>
+        <Pager pager={pairs.pager} />
+      </>
     );
   };
 

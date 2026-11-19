@@ -1,0 +1,346 @@
+/* The printed report (plan 20, PRD FR-19.13). It builds on print.css: the sheet, the header and the
+   table are the shared ones. Only what a report adds is here: the totals row at the end of the
+   table, a head that heads a group, and the side word of a balance in a slot after its figure. */
+
+/* The heading of a figure column may wrap onto two lines ("Seller Commission"): only the figures
+   below it never wrap. Without this a report of nine columns is wider than the sheet. */
+.print-report .print-table th.print-num {
+  white-space: normal;
+}
+
+/* A report of many columns (analytics views of partners and trips have up to eighteen) is set in the
+   smaller print size with tighter cells, so that as many columns as possible fit the sheet. */
+.print-report .print-table-dense th,
+.print-report .print-table-dense td {
+  --print-num-size: var(--print-latin-1);
+
+  padding-inline: var(--print-gap-1);
+  font-size: var(--print-text-1);
+}
+
+/* The totals row is drawn once, under the last row, not repeated at the foot of every page. */
+.print-report .print-table tfoot {
+  display: table-row-group;
+}
+
+.print-report .print-table tfoot td {
+  border-block-start: var(--print-rule-strong) solid var(--color-ink);
+  font-weight: var(--weight-strong);
+}
+
+/* A text cell of a dense table (the name of a trip, the word "Total") keeps a width a word fits in:
+   without it the browser squeezes the column to a letter and the name falls apart. The table is then
+   zoomed down to the sheet (fit.ts). */
+.print-report .print-table-dense td:not(.print-num),
+.print-report .print-table-dense th:not(.print-num) {
+  min-inline-size: 18mm;
+}
+
+/* The short tables of a day share a narrow sheet (A5): a name or a phone breaks only between words,
+   never in the middle of one. */
+.print-report .print-day-table td:not(.print-num) {
+  overflow-wrap: break-word;
+}
+
+.print-report .print-table tr[data-row='group'] td {
+  background-color: var(--color-surface-sunken);
+  font-weight: var(--weight-strong);
+}
+
+/* A balance: the figure CENTRED in its column, under the middle of its heading (plan 39 R1), and its
+   side word after it in a slot of fixed width. The same slot is kept before the figure, so the figure
+   is in the middle of the cell whatever the word is (NFR-USE-19). The cell is left to right, so the
+   word is on the physical right in both languages. */
+.print-report .print-balance {
+  display: inline-grid;
+  grid-template-columns: var(--print-unit-slot) auto var(--print-unit-slot);
+  align-items: baseline;
+  column-gap: var(--print-gap-2);
+}
+
+.print-report .print-balance > :first-child {
+  grid-column: 2;
+}
+
+.print-report .print-balance-side {
+  grid-column: 3;
+  text-align: start;
+}
+
+/* In a dense table the words of a cell are one step smaller, the side word of a balance too. */
+.print-report .print-table-dense .print-balance-side {
+  font-size: var(--print-text-1);
+}
+
+/* In the short tables of a day the side word of a balance has a narrower slot. */
+.print-report .print-day-table .print-balance {
+  grid-template-columns: var(--print-unit-slot-narrow) auto var(--print-unit-slot-narrow);
+}
+
+.print-report .print-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-1);
+}
+
+.print-report .print-summary-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--print-gap-3) var(--print-gap-5);
+}
+
+/* A date and the kind of an entry ("Receipt 1") are short and are never broken across two lines. */
+.print-report .print-table td.print-nowrap,
+.print-report .print-table p.print-nowrap {
+  white-space: nowrap;
+}
+
+/* The row after an item that has more than one line on a party's day slip (plan 42): "Banana total",
+   with the quantity and the amount of that item, set apart by a rule above it and the strong weight. */
+.print-report .print-table tr[data-row='item_total'] td {
+  border-block-start: var(--print-rule) solid var(--color-ink);
+  font-weight: var(--weight-strong);
+}
+
+/* The labelled lines of a slip: a card whose figures stand in ONE column on the physical right edge.
+   A figure is followed by a slot for the side word of a balance (بنام, جمع); a plain amount keeps the
+   empty slot, so the figures of all the lines are under one another (NFR-USE-19, plan 39 R8). */
+.print-report .print-slip-lines .print-num {
+  inline-size: 46mm;
+}
+
+.print-report .print-slip-value {
+  display: inline-grid;
+  grid-template-columns: auto var(--print-slip-side-slot);
+  align-items: baseline;
+  column-gap: var(--print-gap-2);
+}
+
+/* A seller's bill has a whole page: the longer side word stays on one line. */
+.print-report[data-variant='seller-bills'] .print-slip-lines {
+  max-inline-size: 115mm;
+}
+
+.print-report[data-variant='seller-bills'] .print-slip-lines .print-num {
+  inline-size: 68mm;
+}
+
+.print-report[data-variant='seller-bills'] .print-slip-value {
+  grid-template-columns: auto var(--print-slip-side-slot-wide);
+}
+
+.print-report .print-slip-value > :first-child {
+  text-align: end;
+}
+
+.print-report .print-slip-value .print-balance-side {
+  grid-column: 2;
+  text-align: start;
+}
+
+/* Paid today with nothing paid yet: a line to write the amount on, not a zero. */
+.print-report .print-write-line {
+  display: inline-block;
+  inline-size: 28mm;
+  block-size: var(--print-gap-5);
+  vertical-align: bottom;
+  border-block-end: var(--print-rule) dotted var(--color-ink);
+}
+
+/* The buyer parchi and the overall sale print (plan 76 point 3, PRD FR-19.15): party slips side by side, each
+   in a box with dashed cut lines and never cut across a page. A4 has two columns (about six parchis a page),
+   A5 one. The overall sale print is one slip under another, so a seller's deductions have room. */
+.print-report .print-parchi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--print-gap-4);
+  margin-block-start: var(--print-gap-3);
+}
+
+.print-doc[data-paper='a5'] .print-parchi-grid,
+.print-doc[data-paper='mm80'] .print-parchi-grid,
+.print-report.print-parchi-page[data-variant='sale'] .print-parchi-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.print-report .print-parchi-slip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-2);
+  padding: var(--print-gap-3);
+  border: var(--print-rule) dashed var(--color-ink);
+  break-inside: avoid;
+}
+
+.print-report .print-parchi-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--print-gap-2) var(--print-gap-4);
+}
+
+.print-report .print-parchi-collect {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--print-gap-3);
+  margin-block-start: var(--print-gap-3);
+}
+
+.print-report .print-parchi-part {
+  margin-block-start: var(--print-gap-5);
+}
+
+/* A parchi is short, so about six stand on an A4 page: tighter lines in the labelled card under the goods,
+   the card as wide as the slip, the words one step smaller. The firm's name heads each slip. */
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts {
+  max-inline-size: none;
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts th,
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts td {
+  /* A hair of space above and below (a quarter of a millimetre): the tall letters of Nastaliq do not touch the line next to them. */
+  padding-block: var(--print-rule);
+  font-size: var(--print-text-1);
+}
+
+/* A parchi is about 80 mm wide: the figures and the side word take a narrower column so the label of a line
+   ("مال کی رقم", "نقد جمع کروایا") has room and stays on one line, never over the line under it (plan 78 A2). */
+.print-report.print-parchi-page[data-variant='parchi'] .print-slip-lines {
+  --print-slip-side-slot: 16mm;
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-slip-lines .print-num {
+  inline-size: 38mm;
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-amounts th {
+  white-space: nowrap;
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-table-dense td,
+.print-report.print-parchi-page[data-variant='parchi'] .print-table-dense th {
+  padding-block: 0;
+}
+
+/* The top band of a parchi: the fruit picture, the firm name and the people of the firm, small, in the same
+   three zones as the header of every print. It is no taller than the picture, so the slip keeps its size
+   and about four stand on an A4 page as before (PRD FR-19.15, plan 79 item 7). The people are one short line
+   each, never broken between a name and a phone. */
+.print-report .print-slip-band {
+  align-items: center;
+  gap: var(--print-gap-2);
+}
+
+.print-report .print-slip-band .print-mark {
+  inline-size: 9mm;
+  block-size: 10mm;
+}
+
+.print-report .print-slip-band .print-firm-name {
+  --print-num-size: var(--print-latin-2);
+
+  font-size: var(--print-text-1);
+  line-height: var(--leading-latin);
+}
+
+.print-report .print-slip-band .print-contacts {
+  max-inline-size: 58%;
+}
+
+.print-report .print-slip-band .print-contacts .print-firm-line {
+  --print-num-size: var(--print-latin-1);
+
+  font-size: var(--print-text-1);
+  line-height: var(--leading-latin);
+  white-space: nowrap;
+}
+
+/* The band takes a little room, so the parts of a parchi stand a hair closer: the slip keeps its size and
+   three still fit one A4 page (plan 79 item 7). */
+.print-report.print-parchi-page[data-variant='parchi'] .print-parchi-slip {
+  gap: var(--print-gap-1);
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-parchi-collect {
+  margin-block-start: var(--print-gap-1);
+}
+
+/* The new balance ends a parchi: one rule above it and no double rule under it. */
+.print-report.print-parchi-page[data-variant='parchi'] .print-amount-total th,
+.print-report.print-parchi-page[data-variant='parchi'] .print-amount-total td {
+  border-block-end: 0;
+}
+
+/* The title of one party's slip, "اکرم ٹول ٹیکس کی روزانہ پرچی": his name in the words (plan 78 A2, A6). */
+.print-report .print-slip-title {
+  margin: 0;
+
+  /* Room under the line for the tails of Nastaliq letters, and a long name with its tag wraps between words
+     (balanced) and never runs past the slip (plan 78 A2). */
+  padding-block-end: var(--print-gap-1);
+  font-size: var(--print-text-2);
+  font-weight: var(--weight-strong);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  break-after: avoid;
+}
+
+/* The two short tables of a day of the day total sheet (R34): the buyers' and the sellers', one under
+   the other, each in one piece with its title. */
+.print-report .print-day-tables {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-4);
+  margin-block: var(--print-gap-3);
+}
+
+.print-report .print-day-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-2);
+  break-inside: avoid;
+}
+
+.print-report .print-day-table-title {
+  --print-num-size: var(--print-latin-3);
+
+  margin: 0;
+  font-size: var(--print-text-3);
+  font-weight: var(--weight-strong);
+  break-after: avoid;
+}
+
+/* The labelled lines of a party's day slip on screen (plan 42): a balance has its side word in a slot
+   after the figure, and a plain amount keeps the empty slot, so every figure of the card stands under
+   the one above it, at the physical right edge (NFR-USE-19, plan 39 R8). */
+.slip-side {
+  display: inline-block;
+  min-inline-size: var(--unit-slot);
+  text-align: start;
+}
+
+/* Paid today with nothing paid yet: a line to write the amount on. */
+.slip-write-line {
+  display: inline-block;
+  inline-size: var(--value-col-w);
+  block-size: var(--space-5);
+  border-block-end: var(--border-w) dotted var(--color-ink);
+}
+
+/* The lines of a day of the day total sheet on A4 stand in two columns side by side (plan 42): the first
+   half of the lines in the first column, the rest in the second. A line never splits across pages. */
+.print-report .print-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: var(--print-gap-5);
+}
+
+.print-report .print-two-columns .print-table {
+  inline-size: 100%;
+}
+
+/* In a column of half the sheet the date needs no more than its own figures, so the words of a line have
+   the room left (a long label wraps between words, never inside one). */
+.print-report .print-two-columns .print-table .print-col-date {
+  inline-size: 21mm;
+}

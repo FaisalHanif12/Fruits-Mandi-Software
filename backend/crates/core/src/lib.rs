@@ -9,23 +9,53 @@
 #![cfg_attr(test, allow(clippy::arithmetic_side_effects))]
 
 pub mod accounts;
+pub mod advances;
+pub mod arrivals;
 pub mod auth;
 pub mod bikri;
+pub mod capital;
 pub mod cash;
+pub mod cashbook;
+pub mod chukta;
+pub mod codes;
 pub mod dates;
+pub mod dead;
+pub mod drafts;
+pub mod edit;
 pub mod english_words;
 pub mod error;
+pub mod expenses;
+pub mod firm;
+pub mod fruit;
+pub mod gardens;
+pub mod general;
 pub mod ids;
+pub mod khata;
+pub mod lent;
+pub mod links;
 pub mod masters;
 pub mod money;
+pub mod months;
+pub mod paging;
+pub mod partner_code;
 pub mod partners;
+pub mod party_ledgers;
+pub mod printing;
+pub mod profile;
+pub mod purchases;
+pub mod row_source;
 pub mod rules;
 pub mod search;
+pub mod split;
+pub mod statement;
 pub mod text;
 pub mod translit;
+pub mod trips;
 pub mod urdu_words;
 pub mod validate;
+pub mod ventures;
 pub mod vouchers;
+pub mod windows;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

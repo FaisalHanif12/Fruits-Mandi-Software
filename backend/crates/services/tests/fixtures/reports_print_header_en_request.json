@@ -1,0 +1,10 @@
+{
+  "facts": [
+    {
+      "label_id": "print-fact-date",
+      "value": "10-10-2026"
+    }
+  ],
+  "language": "en",
+  "title_id": "print-collection-list-title"
+}

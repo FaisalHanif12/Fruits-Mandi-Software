@@ -1,0 +1,13 @@
+{
+  "language": "en",
+  "month": null,
+  "paper": null,
+  "party": {
+    "account_id": 19,
+    "side": "seller"
+  },
+  "period": {
+    "kind": "month",
+    "month": "2026-10"
+  }
+}

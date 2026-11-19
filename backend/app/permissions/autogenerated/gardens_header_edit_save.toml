@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-header-edit-save"
+description = "Enables the gardens_header_edit_save command without any pre-configured scope."
+commands.allow = ["gardens_header_edit_save"]
+
+[[permission]]
+identifier = "deny-gardens-header-edit-save"
+description = "Denies the gardens_header_edit_save command without any pre-configured scope."
+commands.deny = ["gardens_header_edit_save"]

@@ -3,24 +3,28 @@
 // is an Enter stop. A fill happens once: the row remembers it, so a cell the user empties is not
 // filled again.
 //
-// - A new lot's seller is the previous lot's seller, or the header زمیندار for the first lot.
+// - A new lot's seller is the previous lot's seller. The first lot has none: the header has no
+//   زمیندار any more (plan 71 H2), so the first seller is typed.
 // - Choosing a seller fills the item, packing and مارکہ of his last lot, into empty cells.
 // - A new sale line's quantity is what the lot has left, from the backend (`remaining_qty`), filled
 //   at once, before the buyer is chosen: the line is still blank (no buyer, no rate) until he
 //   types, so the backend and the save ignore it. The screen never works it out.
 // - The rate is never filled. The last rate is grey text in the cell (FR-7.53).
+// - A lot of the firm's own goods (the seller is اپنا مال, PRD FR-12.26) takes its item, packing and
+//   quantity from its purchase, not from a seller's memory, and has no نقد: what the row held from
+//   an earlier seller is cleared once, so no cell is left that cannot be changed.
 
 import { useEffect } from 'react';
+import { isOwnGoods, pickedOf } from '../../../shared/accounts';
 import { findMaster, type SearchHit } from '../../../shared/search';
 import type { PickedRecord } from '../../../shared/grid';
 import { assistSellerMemory } from '../api';
+import { isArrivalLot, isCarriedLot, isGardenLot, isOwnLot } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, ON, SALE, type BikriPreview } from '../types';
 
-function pickedOf(hit: SearchHit | null): PickedRecord | null {
-  return hit === null
-    ? null
-    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+function pickedOrNull(hit: SearchHit | null): PickedRecord | null {
+  return hit === null ? null : pickedOf(hit);
 }
 
 /** Fills item, packing and مارکہ from the seller's memory into the cells that are still empty. */
@@ -46,7 +50,7 @@ async function fillFromSellerMemory(
       [LOT.marka, marka],
     ];
     for (const [field, hit] of fills) {
-      if (row.picked[field] === undefined && hit !== null) picked[field] = pickedOf(hit);
+      if (row.picked[field] === undefined && hit !== null) picked[field] = pickedOrNull(hit);
     }
     stores.lots.getState().patchRow(rowId, { picked });
   } catch {
@@ -61,26 +65,35 @@ export function useDraftFills(
   stale: boolean,
 ): void {
   const lotRows = stores.lots((state) => state.rows);
-  const zamindar = stores.header((state) => state.zamindar);
 
-  // A lot with no seller yet gets the previous lot's seller, or the زمیندار for the first lot.
+  // A lot with no seller yet gets the previous lot's seller.
   useEffect(() => {
     lotRows.forEach((row, index) => {
       if (row.picked?.[LOT.seller] !== undefined || row.typed[LOT.sellerFilled] === ON) return;
-      const candidate = index === 0 ? zamindar : lotRows[index - 1]?.picked?.[LOT.seller];
-      if (candidate === null || candidate === undefined) return;
+      // A lot carried over from an earlier بکری is not a lot typed on this screen: its seller is not carried
+      // to the new lot after it (plan 76 point 1).
+      const previous = index === 0 ? undefined : lotRows[index - 1];
+      // A lot loaded from a garden's goods is bound to its entry: its seller is not carried to the next lot either
+      // (plan 78 C1), so the row that waits after it stays empty.
+      const candidate =
+        previous === undefined || isCarriedLot(previous) || isArrivalLot(previous)
+          ? null
+          : previous.picked?.[LOT.seller];
+      // The firm's own goods are sold lot by lot from a purchase, never carried to the next lot.
+      if (candidate === null || candidate === undefined || isOwnGoods(candidate)) return;
       stores.lots.getState().patchRow(row.rowId, {
         picked: { [LOT.seller]: candidate },
         typed: { [LOT.sellerFilled]: ON },
       });
     });
-  }, [lotRows, zamindar, stores]);
+  }, [lotRows, stores]);
 
   // A seller was chosen: ask what he sent last time, once for each seller on a row.
   useEffect(() => {
     for (const row of lotRows) {
       const seller = row.picked?.[LOT.seller];
-      if (seller === undefined || row.typed[LOT.memoryFilledFor] === String(seller.id)) continue;
+      if (seller === undefined || isOwnLot(row) || isArrivalLot(row)) continue;
+      if (row.typed[LOT.memoryFilledFor] === String(seller.id)) continue;
       stores.lots
         .getState()
         .patchRow(row.rowId, { typed: { [LOT.memoryFilledFor]: String(seller.id) } });
@@ -88,19 +101,75 @@ export function useDraftFills(
     }
   }, [lotRows, stores]);
 
+  // A lot that is not a garden's any more drops the goods arrived entry it had (PRD FR-12.40).
+  useEffect(() => {
+    for (const row of lotRows) {
+      if (!isGardenLot(row) && (row.typed[LOT.arrival] ?? '') !== '') {
+        stores.lots.getState().patchRow(row.rowId, { typed: { [LOT.arrival]: '' } });
+      }
+    }
+  }, [lotRows, stores]);
+
+  // A lot became a garden's: the نقد goes (PRD FR-12.36). A saved lot keeps what it came with.
+  useEffect(() => {
+    for (const row of lotRows) {
+      if (!isGardenLot(row)) continue;
+      const saved = (row.typed[LOT.lotId] ?? '') !== '';
+      if (!saved && (row.typed[LOT.cash] ?? '') !== '') {
+        stores.lots.getState().patchRow(row.rowId, { typed: { [LOT.cash]: '' } });
+      }
+    }
+  }, [lotRows, stores]);
+
+  // A lot became own goods: the item and packing of the seller before him go, the نقد goes. A lot
+  // that is not own goods any more drops the purchase it had. A saved lot of own goods (an edit)
+  // keeps everything it came with, so an edit that changes nothing sends the draft back as it came.
+  useEffect(() => {
+    for (const row of lotRows) {
+      const purchase = row.typed[LOT.purchase] ?? '';
+      if (!isOwnLot(row)) {
+        if (purchase !== '') {
+          stores.lots.getState().patchRow(row.rowId, { typed: { [LOT.purchase]: '' } });
+        }
+        continue;
+      }
+      const typed: Record<string, string> = {};
+      const picked: Record<string, PickedRecord | null> = {};
+      const saved = (row.typed[LOT.lotId] ?? '') !== '';
+      if (!saved && (row.typed[LOT.cash] ?? '') !== '') typed[LOT.cash] = '';
+      if (purchase === '' && !saved) {
+        if (row.picked?.[LOT.item] !== undefined) picked[LOT.item] = null;
+        if (row.picked?.[LOT.packing] !== undefined) picked[LOT.packing] = null;
+      }
+      if (Object.keys(typed).length > 0 || Object.keys(picked).length > 0) {
+        stores.lots.getState().patchRow(row.rowId, { typed, picked });
+      }
+    }
+  }, [lotRows, stores]);
+
   // A new sale line starts with the quantity the lot has left (PRD FR-7.52). A line with no buyer
   // and no rate is a blank row, so filling its quantity does not make it a sale.
+  // The rows are read once and the lines of the answer are looked up by key, so an answer of 1,000
+  // lines costs 1,000 steps and not a million (D8 plan 61, NFR-SCL-3).
   useEffect(() => {
     if (preview === undefined || stale) return;
     for (const lot of preview.lots) {
       const store = stores.salesFor(lot.key);
+      const wanted = new Map<string, number>();
+      for (const row of store.getState().rows) {
+        if ((row.typed[SALE.qty] ?? '') === '' && row.typed[SALE.qtyFilled] !== ON) {
+          wanted.set(row.rowId, 0);
+        }
+      }
+      if (wanted.size === 0) continue;
       for (const line of lot.lines) {
-        const row = store.getState().rows.find((candidate) => candidate.rowId === line.key);
-        if (row === undefined) continue;
-        const empty = (row.typed[SALE.qty] ?? '') === '';
-        if (!empty || row.typed[SALE.qtyFilled] === ON || line.remaining_qty <= 0) continue;
-        store.getState().patchRow(row.rowId, {
-          typed: { [SALE.qty]: String(line.remaining_qty), [SALE.qtyFilled]: ON },
+        if (wanted.has(line.key) && line.remaining_qty > 0)
+          wanted.set(line.key, line.remaining_qty);
+      }
+      for (const [rowId, remaining] of wanted) {
+        if (remaining <= 0) continue;
+        store.getState().patchRow(rowId, {
+          typed: { [SALE.qty]: String(remaining), [SALE.qtyFilled]: ON },
         });
       }
     }

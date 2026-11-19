@@ -75,6 +75,9 @@ pub struct Context {
     pub(crate) random: Arc<dyn RandomSource>,
     pub(crate) session: Mutex<Option<Session>>,
     pub(crate) lockouts: Mutex<Lockouts>,
+    /// True while the partner section is open (PRD FR-17.11). Memory only, like the sign-in: it is
+    /// closed by leaving the section, the idle lock, a logout, a restore and the end of the app.
+    pub(crate) partner_unlocked: Mutex<bool>,
     /// The learned word pairs, kept in memory (Tech Stack 4.4). `None` until first needed.
     pub(crate) learned: Mutex<Option<Arc<Vec<LearnedPair>>>>,
     /// The search index (Tech Stack 4.7), kept in memory. `None` until first needed.
@@ -106,11 +109,39 @@ impl Context {
             random: parts.random,
             session: Mutex::new(None),
             lockouts: Mutex::new(Lockouts::default()),
+            partner_unlocked: Mutex::new(false),
             learned: Mutex::new(None),
             search: Mutex::new(None),
             rules: Mutex::new(None),
             dummy_hash: OnceLock::new(),
         }
+    }
+
+    /// A copy of this context whose database is one moment of the books (see
+    /// [`mandi_db::Db::open_snapshot`]): every read through it sees the same data, whatever is saved
+    /// meanwhile. It shares the sign-in, the partner section's state (as it is now), the search index
+    /// and the learned pairs; it is for reading only. The ask-the-app assistant runs all the tools of
+    /// a question on one of these (NFR-AI-6).
+    ///
+    /// # Errors
+    /// `ServiceError::Db` when the data file cannot be read.
+    pub fn snapshot(&self) -> Result<Context, ServiceError> {
+        // The index is built first, so the copy shares it and never builds its own.
+        crate::search::warm_up(self);
+        let db = Arc::new(self.db.open_snapshot()?);
+        Ok(Context {
+            db,
+            monotonic: Arc::clone(&self.monotonic),
+            hasher: Arc::clone(&self.hasher),
+            random: Arc::clone(&self.random),
+            session: Mutex::new(self.session_snapshot()),
+            lockouts: Mutex::new(Lockouts::default()),
+            partner_unlocked: Mutex::new(self.partner_open()),
+            learned: Mutex::new(self.learned_lock().clone()),
+            search: Mutex::new(self.search_lock().clone()),
+            rules: Mutex::new(None),
+            dummy_hash: OnceLock::new(),
+        })
     }
 
     /// The database.
@@ -148,6 +179,10 @@ impl Context {
         *self.rules_lock() = None;
         *self.search_lock() = None;
         *self.learned_lock() = None;
+        // The restored data may hold another partner code: the section asks for it again.
+        self.set_partner_open(false);
+        // The kept ledger and cash sums belong to the data that was replaced.
+        mandi_db::memo::clear();
     }
 
     pub(crate) fn rules_lock(&self) -> MutexGuard<'_, Option<Arc<mandi_domain::rules::RuleSet>>> {
@@ -156,6 +191,22 @@ impl Context {
 
     pub(crate) fn learned_lock(&self) -> MutexGuard<'_, Option<Arc<Vec<LearnedPair>>>> {
         self.learned.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// True while the partner section is open.
+    pub(crate) fn partner_open(&self) -> bool {
+        *self
+            .partner_unlocked
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Opens or closes the partner section (PRD FR-17.11).
+    pub(crate) fn set_partner_open(&self, open: bool) {
+        *self
+            .partner_unlocked
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = open;
     }
 
     pub(crate) fn lockouts_lock(&self) -> MutexGuard<'_, Lockouts> {

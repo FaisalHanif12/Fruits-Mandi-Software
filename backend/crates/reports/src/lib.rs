@@ -1,5 +1,31 @@
 //! `mandi-reports`: report queries, print data and Excel export (PRD 19).
 //! Depends on `mandi-db` and `mandi-core`.
+//!
+//! - [`reports`]: the report engine (catalogue, filters, pages with totals, print data) and the
+//!   Accounts group R11, R13, R14, R16 to R19 (plan 20, PRD 19).
+//! - [`analytics`]: the analytics views A to E and H over the sale facts (plan 21, PRD 18).
+//! - [`audit`]: the audit viewer, a read-only paged list of the audit log (plan 22, PRD FR-21.3).
+//! - [`dashboard`]: the dashboard tiles, lists, charts and the attention list (plan 19, PRD 9,
+//!   FR-7.44).
+//! - [`print`]: the print data of a saved بکری: the seller bill, the buyer slips, a
+//!   چکتا buyer's slip included (plan 14, plan 64, PRD FR-12.12, FR-19.3 to FR-19.7). Read only; every number is a stored
+//!   value, never worked out again (Code Standards B20).
+
+pub mod analytics;
+pub mod audit;
+pub mod dashboard;
+pub mod dead;
+pub mod error;
+pub mod export;
+mod gardens;
+pub mod pack;
+mod prof;
+pub mod partner_guard;
+pub mod print;
+pub mod reports;
+pub mod result_cache;
+
+pub use error::ReportsError;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

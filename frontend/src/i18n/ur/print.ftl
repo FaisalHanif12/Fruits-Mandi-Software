@@ -1,0 +1,847 @@
+### Prints (plan 14, PRD FR-12.12, FR-7.36, FR-19.3 to FR-19.7): the seller bill, the buyer slips,
+### the print box and the Printing settings. The backend sends the ids of titles,
+### facts, roles and amounts (plan 14 contract 6) and the template resolves them in the PRINT
+### language, which can differ from the app language.
+
+## Titles
+
+# The title of the sale book's seller bill (R1), as it was: the seller's word and "bill".
+# review: pending
+print-seller-bill-title = { -beopari } کا بل
+
+# The title of one seller's bill when it names him (plan 78 A3). $name: the seller, with his tag.
+# review: pending
+print-seller-bill-named-title = { $name } کا بل
+
+# review: pending
+print-buyer-slip-title = { -gahak } کی پرچی
+
+## Facts under the title
+
+# review: pending
+print-fact-number = { -bikri } نمبر
+
+# review: pending
+print-fact-date = تاریخ
+
+# review: pending
+print-fact-bill-date = تاریخ بل
+
+# review: pending
+print-fact-truck = ٹرک نمبر
+
+## Who the page is for
+
+# review: pending
+print-party-seller = { -beopari }
+
+# review: pending
+print-party-buyer = { -gahak }
+
+# review: pending
+print-party-code = کوڈ
+
+# review: pending
+print-party-phone = فون نمبر
+
+## The amounts of the seller bill (PRD 4.4)
+
+# review: pending
+print-gross-sale = { -kham-bikri }
+
+# review: pending
+print-freight = { -kiraya }
+
+# review: pending
+print-commission = { -commission }
+
+# review: pending
+print-labour = { -mazdoori }
+
+# review: pending
+print-munshiana = { -munshiana }
+
+# review: pending
+print-cash-paid = { -naqd }
+
+# review: pending
+print-store-rent = { -kiraya-store }
+
+# review: pending
+print-phone-charge = { -phone }
+
+# review: pending
+print-total-deductions = کل کٹوتی
+
+# review: pending
+print-net-sale = { -safi-bikri }
+
+# The net is below zero (PRD FR-12.7): the amount is printed without a minus sign.
+# review: pending
+print-seller-owes = { -beopari } کے ذمے
+
+## The amounts of a buyer slip
+
+# review: pending
+print-items-value = مال کی قیمت
+
+# review: pending
+print-buyer-commission = { -commission }
+
+# review: pending
+print-laga = { -laga }
+
+# review: pending
+print-buyer-pays = کل رقم
+
+# review: pending
+print-in-words = رقم حروف میں
+
+# review: pending
+print-payment-cash = { -naqdi } بکری: رقم ادا ہو چکی ہے
+
+# review: pending
+print-payment-credit = { -udhari } بکری: رقم باقی ہے
+
+# The two lines of a buyer slip when he paid part of the bill on the spot (PRD FR-12.44).
+# review: pending
+print-paid-on-spot = نقد
+
+# review: pending
+print-left-on-account = ادھار
+
+## Column heads of the goods table
+
+# review: pending
+print-col-date = تاریخ
+
+# review: pending
+print-col-buyer = { -gahak }
+
+# review: pending
+print-col-item = { -qism-maal }
+
+# review: pending
+print-col-packing = { -packing }
+
+# review: pending
+print-col-qty = تعداد
+
+# review: pending
+print-col-weight = وزن (کلو)
+
+# review: pending
+print-col-rate = ریٹ
+
+# review: pending
+print-col-amount = رقم
+
+## The page footer and the stamp
+
+# review: pending
+print-printed-at = پرنٹ کا وقت
+
+# review: pending
+print-page-label = صفحہ
+
+# review: pending
+print-page-of = از
+
+# review: pending
+print-cancelled-stamp = منسوخ
+
+# review: pending
+print-preview-empty = اس دستاویز میں پرنٹ کرنے کے لیے کچھ نہیں۔
+
+## The documents of a بکری (the names in the print box and in the Printing settings)
+
+# review: pending
+print-doc-seller-bill = { -beopari } کا بل
+
+# review: pending
+print-doc-buyer-slips = { -gahak } کی پرچیاں
+
+## The print box (opened with F9 on the sale book)
+
+# review: pending
+print-box-title = { -bikri } { $number } پرنٹ کریں
+
+# $key is the key that saves and prints, for example Ctrl+Enter.
+# review: pending
+print-box-help = یہاں جو دستاویزیں چنیں گے، وہی { -bikri } محفوظ کرتے وقت { $key } سے بھی پرنٹ ہوں گی۔
+
+# review: pending
+print-box-language = پرنٹ کی زبان
+
+# review: pending
+print-box-docs = دستاویزیں
+
+# review: pending
+print-box-none-ticked = کم از کم ایک دستاویز چنیں۔
+
+# review: pending
+print-box-only-buyer = کس { -gahak } کی پرچی
+
+# review: pending
+print-box-all-buyers = سب { -gahak }
+
+# review: pending
+print-box-copies = کاپیاں
+
+# review: pending
+print-box-copies-hint = خالی چھوڑیں تو ترتیبات والی تعداد استعمال ہوگی۔
+
+# review: pending
+print-box-to = کہاں بھیجنا ہے
+
+# review: pending
+print-box-to-printer = پرنٹر
+
+# review: pending
+print-box-to-pdf = PDF فائل
+
+# review: pending
+print-box-print = پرنٹ کریں
+
+# review: pending
+print-box-save-pdf = PDF محفوظ کریں
+
+# review: pending
+print-box-preview = پیش منظر
+
+# review: pending
+print-box-close = بند کریں
+
+# $docs are the printed documents, for example "بیوپاری کا بل اور گاہک کی پرچیاں".
+# review: pending
+print-box-done-printed = پرنٹر کو بھیج دیا گیا: { $docs }
+
+# review: pending
+print-box-done-pdf = PDF فائلیں محفوظ ہو گئیں:
+
+# $docs are the printed documents. On a Mac Print and Save PDF both open the system print window.
+# review: pending
+print-box-done-dialog = پرنٹ کی کھڑکی کھل گئی: { $docs }
+
+# Shown on a Mac under the print choices (plan 69). The words PDF and Save as PDF are the Mac's own.
+# review: pending
+print-dialog-hint = میک پر پرنٹ کی کھڑکی کھلتی ہے۔ PDF بنانے کے لیے اس میں PDF چنیں، پھر Save as PDF چنیں۔
+
+# review: pending
+print-box-nothing-printed = پرنٹ کرنے کے لیے کچھ نہیں تھا۔
+
+# review: pending
+print-save-first = پرنٹ کرنے کے لیے پہلے { -bikri } محفوظ کریں۔
+
+# Shown after Ctrl+Enter when the documents went to the printer.
+# review: pending
+print-toast-printed = پرنٹر کو بھیج دیا گیا
+
+# Shown after Ctrl+Enter on a Mac, where the system print window opens instead (plan 69).
+# review: pending
+print-toast-dialog = پرنٹ کی کھڑکی کھل گئی
+
+## The second print button of the sale book: ادھاری تفصیل (R5, plan 68)
+
+# review: pending
+print-adhari-title = { report-r5-title } پرنٹ کریں
+
+# review: pending
+print-menu-help = ہر پرنٹ کا ایک ہی کام ہے۔ ایک چنیں، پھر نیچے پرنٹ کا صفحہ دیکھ لیں۔
+
+# review: pending
+print-menu-scope = کون سی قطاریں
+
+# $date is the day of the { -bikri } on screen.
+# review: pending
+print-menu-whole-day = پورا دن (<num>{ $date }</num>)
+
+# review: pending
+print-menu-this-bikri = صرف یہ { -bikri } (<num>{ $number }</num>)
+
+# The save had carried lots: the new { -bikri } and the old { -bikri } of each carried lot. $numbers: their numbers, new first.
+# review: pending
+print-menu-this-save = صرف یہ محفوظ کردہ ({ -bikri } <num>{ $numbers }</num>)
+
+## The preview
+
+# review: pending
+print-preview-title = پیش منظر
+
+# review: pending
+print-preview-help = کاغذ پر دستاویز ایسے ہی پرنٹ ہو گی۔
+
+# review: pending
+print-preview-failed = پیش منظر نہیں کھل سکا
+
+## Settings, tab Printing (PRD Section 21)
+
+# review: pending
+print-settings-paper = کاغذ کا سائز
+
+# review: pending
+print-settings-paper-help = ہر دستاویز کے لیے کاغذ چنیں۔ پرنٹ اسی سائز پر ہوگا۔
+
+# review: pending
+print-paper-a4 = A4 کاغذ
+
+# review: pending
+print-paper-a5 = A5 کاغذ
+
+# review: pending
+print-paper-mm80 = 80 ملی میٹر رول
+
+# review: pending
+print-settings-printer = پرنٹر
+
+# review: pending
+print-settings-printer-default = طے شدہ پرنٹر
+
+# review: pending
+print-settings-printers-failed = پرنٹروں کی فہرست نہیں کھل سکی
+
+# review: pending
+print-settings-copies = کاپیاں
+
+# review: pending
+print-settings-copies-hint = 1 سے 99 تک کی تعداد۔
+
+# review: pending
+print-settings-after-save = محفوظ کرنے کے بعد پرنٹ
+
+# $key is the key that saves and prints, for example Ctrl+Enter.
+# review: pending
+print-settings-after-save-hint = { $key } دبانے پر { -bikri } یا واؤچر محفوظ ہو کر یہ دستاویزیں پرنٹ ہوں گی۔
+
+# review: pending
+print-settings-load-failed = پرنٹنگ کی ترتیبات نہیں کھل سکیں
+
+## The receipt slip of a voucher (plan 15, PRD FR-15.2). The backend sends these ids (contract 9).
+
+# review: pending
+print-receipt-slip-title = { -wasooli } کی رسید
+
+# review: pending
+print-payment-slip-title = { -adaigi } کی رسید
+
+# review: pending
+print-advance-slip-title = { -peshgi-khata } کی رسید
+
+# review: pending
+print-fact-voucher-number = نمبر
+
+# review: pending
+print-fact-reason = وجہ
+
+# review: pending
+print-fact-collector = اگراہی والا
+
+# review: pending
+print-fact-narration = تفصیل
+
+# review: pending
+print-party-account = کھاتہ
+
+# review: pending
+print-slip-amount-received = وصول شدہ رقم
+
+# review: pending
+print-slip-amount-paid = ادا کی گئی رقم
+
+# review: pending
+print-slip-amount-advance = دی گئی { -peshgi }
+
+# review: pending
+print-doc-receipt-slip = رقم کی رسید
+
+## R5 and the buyer slips in the client's layout; the header of every print (plan 17e, PRD R5, FR-19.13).
+
+# Read by a screen reader: the name of the box in the header.
+# review: pending
+print-header-trade-mark = { -trade-mark }
+
+# R5 (PRD 19.2), in the client's layout.
+# review: pending
+print-r5-title = { -udhari } تفصیل
+
+# review: pending
+print-r5-col-serial = نمبر
+
+# review: pending
+print-r5-col-party = پارٹی
+
+# review: pending
+print-r5-col-details = تفصیل
+
+# review: pending
+print-r5-col-value = رقم
+
+# Value + buyer commission + لاگا (PRD C5).
+# review: pending
+print-r5-col-total = رقم بعد { -laga }
+
+# A line of an item sold by weight in the buyer's bill (R5): the weight in kilograms and the rate for each
+# kilo, written the client's way. A line of a نگ item is written by the backend ("(کیلا 20 . 600)").
+# $item: the item in the print language; $weight: kilograms; $rate: the rate for each kilo.
+# review: pending
+print-r5-line-weight = ({ $item } { $weight } کلو . { $rate })
+
+## The collection list on paper (plan 17e, PRD FR-15.6, FR-7.61).
+
+# The name of the document in the Printing settings and in the print box.
+# review: pending
+print-doc-collection-list = { -agrahi } فہرست
+
+# The title in the header of the collection list.
+# review: pending
+print-collection-list-title = { -agrahi } فہرست
+
+# A fact under the title: the city the list is filtered by.
+# review: pending
+print-fact-city = شہر
+
+# The heading of a group with no collector, and of one with no city.
+# review: pending
+print-collection-no-collector = { -agrahi } والا مقرر نہیں
+
+# review: pending
+print-collection-no-city = شہر درج نہیں
+
+# review: pending
+print-collection-col-serial = نمبر
+
+# The short code of the buyer.
+# review: pending
+print-collection-col-code = کوڈ
+
+# review: pending
+print-collection-col-party = { -gahak }
+
+# review: pending
+print-collection-col-dues = ادھار
+
+# The date of the oldest bill still open, and how many days old it is.
+# review: pending
+print-collection-col-oldest = پرانا بل
+
+# review: pending
+print-collection-col-days = دن
+
+# Left empty, for the collector to write in.
+# review: pending
+print-collection-col-note = نوٹ
+
+# The total of one collector and city.
+# review: pending
+print-collection-group-total = میزان
+
+# The number of buyers on the list.
+# review: pending
+print-collection-buyers = اس فہرست میں { -gahak }
+
+# The total of THIS list only: the buyers planned for this day, not every buyer who owes.
+# review: pending
+print-collection-total = اس فہرست کا میزان
+
+# The role word before a person's name in the print header (PRD Section 21, FR-19.13, v1.12): the
+# owners print first, then the munshi.
+# review: pending
+print-role-owner = مالک
+
+# review: pending
+print-role-munshi = منشی
+
+# A line of an item sold by weight on a party's day slip on the 80 mm roll (PRD A73): the kilos and the
+# rate per kilo, then the kilos of an item total.
+# review: pending
+print-slip-weight-line = { $weight } کلو @ { $rate }
+
+# review: pending
+print-slip-weight-kg = { $weight } کلو
+
+# The print and the Excel of پچھلی بکری (plan 72 P8, PRD 12.7). The ids are the ones the backend sends
+# (`bikri_list_print_data`, `bikri_list_export_excel`): the title, the facts of the header, the column
+# of the time, the status of an edited بکری, and the heading of today's section and of each day.
+# review: pending
+bikri-list-print-title = پچھلی { -bikri }
+
+# review: pending
+bikri-list-print-all = پوری { -bikri } دکھائی گئی
+
+# review: pending
+bikri-list-print-search = تلاش
+
+# review: pending
+bikri-list-col-time = وقت
+
+# The status of a بکری that was edited: its status, then the mark (PRD FR-7.71). `$status` is a message.
+# review: pending
+bikri-list-status-edited = { $status } · { edit-mark }
+
+# review: pending
+bikri-list-today-heading = آج کی { -bikri }، { $date }: { $count }
+
+# review: pending
+bikri-list-day-heading = { $date }: { -bikri } { $count }
+
+# review: pending
+bikri-list-day-heading-empty = { $date }: کوئی { -bikri } نہیں
+
+## The buyer parchi and the overall sale print (plan 76 point 3, PRD FR-19.15, FR-12.12).
+
+# The title of the buyer parchi print (the backend sends it in the header).
+# review: pending
+print-parchi-title = { -gahak } کی پرچیاں
+
+# The title of the overall sale print: the seller slips and the buyer slips of one { -bikri } or of the day.
+# review: pending
+print-sale-title = پوری { -bikri }
+
+# The heading of the sellers' part and of the buyers' part of the overall sale print.
+# review: pending
+print-sale-sellers = { -beopari }
+
+# review: pending
+print-sale-buyers = { -gahak }
+
+# The empty line at the foot of a parchi, for the collector to write what he got.
+# review: pending
+print-parchi-collect = { -wasooli }
+
+# review: pending
+print-parchi-empty = اس دن کسی { -gahak } کی پرچی نہیں
+
+# review: pending
+print-parchi-label = { -gahakon } کی پرچیاں، ہر { -gahak } کی ایک
+
+# review: pending
+print-sale-label = پوری { -bikri }، { -beopari } اور { -gahak }
+
+# review: pending
+print-menu-kind = کیا پرنٹ کرنا ہے
+
+# review: pending
+print-menu-buyers = { -gahakon } کی پرچیاں
+
+# review: pending
+print-menu-sale = پوری { -bikri }
+
+## The titles, facts, totals and column heads of the table prints of plan 76 (the backend writes their ids into the print data).
+
+# review: pending
+print-commission-title = { -commission } کا مہینہ
+
+# review: pending
+print-buyer-dues-title = { -gahak } کے ذمے رقم
+
+# review: pending
+print-collection-sheet-title = { report-r5-title }
+
+# review: pending
+print-partner-month-title = { -shirakat-dar } کھاتہ، مہینہ وار
+
+# review: pending
+print-fact-month = مہینہ
+
+# review: pending
+print-fact-search = تلاش
+
+# review: pending
+print-fact-partner = { -shirakat-dar }
+
+# review: pending
+print-commission-total = { -meezan }
+
+# review: pending
+print-buyer-dues-total = { -meezan }
+
+# review: pending
+print-collection-sheet-total = { -meezan }
+
+# review: pending
+print-collection-sheet-dead-total = { -doobi-raqam }، الگ شمار
+
+# review: pending
+print-collection-sheet-credit-total = { -jama } والے { -gahak }، الگ شمار
+
+# review: pending
+print-partner-month-total = { -meezan }
+
+# review: pending
+print-partner-month-opening = ابتدائی { -kul-raqam }
+
+# review: pending
+print-commission-col-date = تاریخ
+
+# review: pending
+print-commission-col-seller = { -beopari } { -commission }
+
+# review: pending
+print-commission-col-buyer = { -gahak } { -commission }
+
+# review: pending
+print-commission-col-laga = { -laga }
+
+# review: pending
+print-commission-col-total = کل { -commission }
+
+# review: pending
+print-commission-col-shared = مشترکہ آمدن
+
+# review: pending
+print-commission-col-partner = { -shirakat-dar }
+
+# review: pending
+print-commission-title-period = { -commission } کی مدت
+
+# review: pending
+print-fact-year = سال
+
+# review: pending
+print-fact-from = از
+
+# review: pending
+print-fact-to = تا
+
+# review: pending
+print-fact-seller = { -beopari }
+
+# review: pending
+print-fact-buyer = { -gahak }
+
+# review: pending
+print-commission-col-sale = { -kham-bikri }
+
+# review: pending
+print-commission-col-purchase = خریداری کی رقم
+
+# review: pending
+print-commission-col-goods = اس کے مال پر { -commission }
+
+
+# review: pending
+print-buyer-dues-col-party = { -gahak }
+
+# review: pending
+print-buyer-dues-col-city = شہر
+
+# review: pending
+print-buyer-dues-col-balance = بقایا
+
+# review: pending
+print-buyer-dues-col-last = آخری تبدیلی
+
+# review: pending
+print-collection-sheet-col-code = کوڈ
+
+# review: pending
+print-collection-sheet-col-party = { -gahak }
+
+# review: pending
+print-collection-sheet-col-detail = مال
+
+# review: pending
+print-collection-sheet-col-previous = { -sabiqa-raqam }
+
+# review: pending
+print-collection-sheet-col-bill = آج کا بل
+
+# review: pending
+print-collection-sheet-col-paid = نقد
+
+# review: pending
+print-collection-sheet-col-due = کل ادھار
+
+# review: pending
+print-partner-month-col-date = تاریخ
+
+# review: pending
+print-partner-month-col-commission = { -commission }
+
+# review: pending
+print-partner-month-col-expense = { -kharcha }
+
+# review: pending
+print-partner-month-col-gardens-trips = { -bagh } / { -safar }
+
+# review: pending
+print-partner-month-col-fruit = { -phal }
+
+# review: pending
+print-partner-month-col-taken-returned = لیا اور لوٹایا
+
+# review: pending
+print-partner-month-col-capital = { -sarmaya }
+
+# review: pending
+print-partner-month-col-net = دن کا خالص
+
+# review: pending
+print-partner-month-col-running = { -kul-raqam }
+
+## Plan 78: the prints that each do one job, with the party's name in the title (PRD FR-19.15, FR-12.12, plan 78 A2 to A6).
+
+# The title of a buyer's day slip and of a seller's day slip: the party's name, then the words.
+# $name: the name of the party in the print language, with his tag.
+# review: pending
+print-buyer-day-slip-title = { $name } کی روزانہ پرچی
+
+# review: pending
+print-seller-day-slip-title = { $name } کی روزانہ پرچی
+
+# The title of the print of every seller's bill (the frame of the job).
+# review: pending
+print-seller-bills-title = { -beopari } کی پرچیاں
+
+# The side of a balance on a slip, written for the party who reads it (the party's own words, not the books').
+# review: pending
+print-slip-side-dr = آپ کے ذمے
+
+# review: pending
+print-slip-side-cr = دکان کے ذمے
+
+## The whole sale print: the sellers table, then the buyers table (PRD FR-19.15).
+
+# review: pending
+print-sale-buyers-title = { -gahak }
+
+# review: pending
+print-sale-buyers-total = { -meezan }
+
+# review: pending
+print-sale-col-buyer = { -gahak }
+
+# What the buyer bought, in short: (item quantity . rate).
+# review: pending
+print-sale-col-bought = مال
+
+# review: pending
+print-sale-col-bill = بل
+
+# review: pending
+print-sale-col-cash = نقد
+
+# review: pending
+print-sale-col-credit = ادھار
+
+## ادھاری تفصیل: how much the shop has to take from its buyers (PRD R5, FR-19.15).
+
+# review: pending
+print-adhari-sheet-title = { report-r5-title }
+
+# The totals row of today's buyers.
+# review: pending
+print-adhari-sheet-total = آج کے { -gahak }
+
+# The buyers who owed at the start of the day and bought nothing today, as one total.
+# review: pending
+print-adhari-sheet-others = دوسرے { -gahak } جنہوں نے آج نہیں خریدا
+
+# Everything every buyer owes the shop.
+# review: pending
+print-adhari-sheet-all = کل ادھار، سب { -gahak }
+
+# review: pending
+print-adhari-sheet-col-party = { -gahak }
+
+# review: pending
+print-adhari-sheet-col-detail = آج کا مال
+
+# review: pending
+print-adhari-sheet-col-bill = آج کا بل
+
+# review: pending
+print-adhari-sheet-col-cash = نقد
+
+# review: pending
+print-adhari-sheet-col-today-credit = آج کا ادھار
+
+# review: pending
+print-adhari-sheet-col-previous = { -sabiqa-raqam }
+
+# review: pending
+print-adhari-sheet-col-total = کل ادھار
+
+## The print menu of the sale book, F9 (PRD FR-12.12, plan 78 A1): three prints, each with one purpose.
+
+# review: pending
+print-menu-sellers = { -beopariyon } کی پرچیاں
+
+# What each print is for, one line, shown under the choice (plan 78 A0).
+# review: pending
+print-menu-buyers-purpose = ہر { -gahak } نے آج کیا خریدا اور اس کے ذمے کتنا ہے۔ ایک صفحے پر کئی پرچیاں، کاٹنے کی لکیروں کے ساتھ۔
+
+# review: pending
+print-menu-sellers-purpose = ہر { -beopari } نے آج کیا بیچا، اس کی کٹوتیاں اور دکان کے ذمے کتنا ہے۔ ہر { -beopari } کا الگ بل۔
+
+# review: pending
+print-menu-sale-purpose = آج کی پوری { -bikri } ایک جگہ: سب { -beopari } اور سب { -gahak }، ایک یا دو صفحوں پر۔
+
+# review: pending
+print-seller-bills-label = { -beopariyon } کے بل، ہر { -beopari } کا ایک
+
+# review: pending
+print-seller-bills-empty = اس دن کسی { -beopari } کا بل نہیں
+
+# review: pending
+print-sale-empty = اس دن کوئی { -bikri } نہیں
+
+# What ادھاری تفصیل is for, one line (plan 78 A0, A5).
+# review: pending
+print-adhari-box-help = آج کے ہر { -gahak } کی ایک قطار: کتنا بل، کتنا نقد، آج کا ادھار، پہلے کا بقایا اور کل ادھار۔ آخر میں سب { -gahakon } کا کل ادھار۔
+
+## The prints of the dashboard pages: sellers, total dues, money lent, advances and cash sales (plan 79, PRD FR-19.10).
+
+# review: pending
+print-seller-dues-title = بیوپاریوں کا بقایا
+
+# review: pending
+print-total-dues-title = { -kul-agrahi }
+
+# review: pending
+print-total-dues-col-section = حصہ
+
+# review: pending
+print-total-dues-col-count = افراد
+
+# review: pending
+print-total-dues-col-total = رقم
+
+# review: pending
+print-total-dues-buyers = گاہکوں کے ذمے
+
+# review: pending
+print-total-dues-sellers = بیوپاریوں کے ذمے
+
+# review: pending
+print-total-dues-dead = { -doobi-raqam }
+
+# review: pending
+print-total-dues-others = { -adhar-raqam }
+
+# review: pending
+print-lent-open-title = { -adhar-raqam } باقی
+
+# review: pending
+print-lent-open-col-type = قسم
+
+# review: pending
+print-lent-open-col-overdue = واپسی کی تاریخ گزر چکی
+
+# review: pending
+print-cash-sales-month-title = مہینے کی { -naqdi }
+
+# review: pending
+print-cash-sales-day-title = ایک دن کی { -naqdi }
+
+# review: pending
+print-cash-sales-col-buyers = گاہک
+
+# review: pending
+print-cash-sales-col-cash = { -naqdi }
+
+# review: pending
+print-cash-sales-col-bikri = { -bikri }
+
+# review: pending
+print-cash-sales-col-bill = بل

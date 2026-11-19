@@ -4,6 +4,7 @@
 import { Suspense, lazy } from 'react';
 import { hasAppBridge } from '../shared/api';
 import { useEscapeDispatcher } from '../shared/keyboard';
+import { BackupExitOverlay } from '../features/backup';
 import { AuthGate } from './AuthGate';
 import { DataCheckGate } from './data-check/DataCheckGate';
 
@@ -27,6 +28,8 @@ export function AppFrame() {
   return (
     <DataCheckGate>
       <AuthGate />
+      {/* The copy at exit (PRD FR-20.3, plan 18): shown over any screen while the window waits. */}
+      <BackupExitOverlay />
     </DataCheckGate>
   );
 }

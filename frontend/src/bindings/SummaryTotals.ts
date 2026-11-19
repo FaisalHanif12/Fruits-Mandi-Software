@@ -76,7 +76,9 @@ export type SummaryTotals = {
    */
   buyer_total: Paisa;
   /**
-   * The income shared between the partners (C9).
+   * The income shared between the partners (C9). It is the commission, لاگا and فون only, also
+   * for a trip lot: the seller credit of a trip lot goes to the trip's partners, not to the firm
+   * (PRD FR-12.26). E2E-34 shares 1,200 = 540 + 540 + 120.
    */
   shared_income: Paisa;
   /**

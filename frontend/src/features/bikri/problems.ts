@@ -18,11 +18,27 @@ const INCOMPLETE: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
   'ERR_REQUIRED',
   'ERR_SELLER_REQUIRED',
   'ERR_BUYER_REQUIRED',
-  'ERR_PUKHTA_NAME_REQUIRED',
-  'ERR_PUKHTA_PHONE_REQUIRED',
+  // A چکتا buyer's name that is still empty (PRD FR-13.5); his phone is optional.
+  'ERR_CHUKTA_NAME_REQUIRED',
   'ERR_NO_LOTS',
   'ERR_NO_SALE_LINES',
 ]);
+
+/** Does this code only say that a field is empty? */
+export function saysEmpty(code: ErrorCode): boolean {
+  return INCOMPLETE.has(code);
+}
+
+/**
+ * The three cells a sale line needs before it can be worked out, by the end of the field path the
+ * backend gives, and the words that name what is missing (`bikri-line-missing-<word>`). The buyer, the
+ * quantity and the rate: the line shows no figures until all three are in (D8 Bug 1).
+ */
+export const LINE_NEEDS: Readonly<Record<string, 'buyer' | 'qty' | 'rate'>> = {
+  buyer_account_id: 'buyer',
+  qty: 'qty',
+  seller_rate: 'rate',
+};
 
 /** Where a field path points. */
 export type Where =
@@ -71,6 +87,13 @@ export function problemsOf(
   ];
 }
 
+/**
+ * Parts of a lot or a line that no field on the screen shows: the ids an edit sends back (plan
+ * 16). A problem on one of them, such as `lots[0].lot_id` ("this lot is not part of the entry"),
+ * is always told in the list, with the lot and line it is about, never left unseen.
+ */
+export const SUB_WITHOUT_FIELD: ReadonlySet<string> = new Set(['lot_id', 'sale_id']);
+
 /** The column of the lots grid a lot field belongs to. Fields not listed are in the "more" panel. */
 export const LOT_GRID_FIELD: Readonly<Record<string, string>> = {
   seller_account_id: 'seller',
@@ -83,10 +106,24 @@ export const LOT_GRID_FIELD: Readonly<Record<string, string>> = {
   cash_paid: 'cash',
 };
 
+/**
+ * The fields of a lot that the panel of an own goods lot shows (OwnLotPanel), so the "more" panel
+ * does not open for them and the list does not tell them twice (PRD FR-12.26).
+ */
+export const LOT_OWN_FIELD: ReadonlySet<string> = new Set(['purchase_id', 'arrival_id']);
+
 /** The column of the sale lines grid a line field belongs to. Others are in the line details. */
 export const LINE_GRID_FIELD: Readonly<Record<string, string>> = {
   buyer_account_id: 'buyer',
+  // A چکتا buyer is one chosen record of the buyer cell, so a refusal about his names or phone is
+  // shown on that cell (PRD FR-13.5): the line has no other cells for them.
+  'chukta.name_ur': 'buyer',
+  'chukta.name_en': 'buyer',
+  'chukta.phone': 'buyer',
   qty: 'qty',
   seller_rate: 'rate',
-  payment_type: 'payment',
+  // The quality is a grid cell too (PRD FR-12.42), and so is the money paid on the spot (FR-12.44): a
+  // refusal of it (more than the buyer total) shows on that cell.
+  grade: 'grade',
+  paid: 'paid',
 };

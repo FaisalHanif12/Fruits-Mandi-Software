@@ -1,0 +1,10 @@
+{
+  "entry": {
+    "amount": "2,000",
+    "date": "10-10-2026",
+    "partner_id": 1,
+    "reason": "گھر کا خرچ",
+    "type": "personal_expense"
+  },
+  "replacing_voucher_id": null
+}

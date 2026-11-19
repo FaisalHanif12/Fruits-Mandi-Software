@@ -1,0 +1,333 @@
+//! The attention items that count things and need no money: unsaved drafts, earlier days that are
+//! not closed, lots waiting in باقی مال, the cloud backup and the records with a missing name
+//! (PRD FR-7.44). Each function gives its item or `None` when there is nothing to do, and
+//! nothing is written (Code Standards B29).
+//!
+//! Example (PRD 4.9, today 10-10-26, closed up to 09-10-26, nothing waiting): no item at all.
+//! The same book on 20-10-26 with nothing closed since: 10 earlier days are not closed.
+
+use mandi_core::dates::BusinessDate;
+use mandi_db::purchases::{ListFilter, StateFilter};
+use mandi_db::rusqlite::{Connection, OptionalExtension};
+
+use super::charts::days_before;
+use super::model::{
+    AttentionFirst, AttentionItem, AttentionKind, AttentionTarget, BACKUP_OLD_HOURS, BackupFacts,
+    RECORDS_DIFFER_DAYS, STOCK_WAIT_DAYS,
+};
+use crate::error::ReportsError;
+
+/// An item that only counts.
+pub(super) fn counted(kind: AttentionKind, count: i64) -> AttentionItem {
+    AttentionItem {
+        kind,
+        count,
+        amount_paisa: None,
+        qty: None,
+        days: None,
+        first: None,
+    }
+}
+
+/// Unsaved drafts (PRD FR-12.10).
+pub(crate) fn drafts(conn: &Connection) -> Result<Option<AttentionItem>, ReportsError> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM drafts", [], |r| r.get(0))?;
+    Ok((count > 0).then(|| counted(AttentionKind::Drafts, count)))
+}
+
+/// Earlier days that are not closed: the calendar days after the "closed up to" day and before
+/// today. If no day was ever closed, they start on the first day with any posted entry, an
+/// opening balance included: that is the rule of the day close, so the bell and the day close
+/// always agree (`mandi_db::vouchers::first_posting_date`). `days` is the age of the oldest.
+pub(crate) fn open_days(
+    conn: &Connection,
+    today: BusinessDate,
+) -> Result<Option<AttentionItem>, ReportsError> {
+    let closed: Option<String> = conn
+        .query_row(
+            "SELECT closed_up_to_date FROM day_state WHERE id = 1",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?
+        .flatten();
+    let first_open = match closed {
+        Some(text) => BusinessDate::parse_iso(&text)
+            .ok_or_else(|| ReportsError::Data(format!("closed_up_to_date {text}")))?
+            .next_day(),
+        None => match mandi_db::vouchers::first_posting_date(conn)? {
+            Some(text) => BusinessDate::parse_iso(&text),
+            None => return Ok(None),
+        },
+    };
+    let Some(first_open) = first_open else {
+        return Ok(None);
+    };
+    let days = today.days_after(first_open);
+    if days <= 0 {
+        return Ok(None);
+    }
+    let mut item = counted(AttentionKind::OpenDays, days);
+    item.days = Some(days);
+    Ok(Some(item))
+}
+
+/// Lots waiting in باقی مال for more than [`STOCK_WAIT_DAYS`] days, the lots of بکری, the
+/// purchases of trips and the garden arrivals all, as the باقی مال screen lists them (PRD FR-12.14,
+/// FR-12.25, FR-12.40). The lots are worked from the stock moves, like the tile. A purchase or an
+/// arrival waits from its day to sell, not from the day it came: goods meant for a later day are
+/// not late before it (PRD FR-12.39; for goods without a changed day the two days are the same).
+/// `qty` is their نگ left, `days` the age of the oldest, `first` the oldest one.
+pub(crate) fn stock_waiting(
+    conn: &Connection,
+    today: BusinessDate,
+) -> Result<Option<AttentionItem>, ReportsError> {
+    // (days waiting, balance, record to open)
+    let mut waiting: Vec<(i64, i64, AttentionFirst)> = Vec::new();
+    let age = |received: &str| -> i64 {
+        BusinessDate::parse_iso(received).map_or(0, |day| today.days_after(day).max(0))
+    };
+    // The lots of saved بکری with goods left, from the stock moves up to today, the same method as
+    // the goods-not-sold tile and the day close (C16): a fruit take is a `taken` move, so a lot
+    // that fruit emptied is not listed. The day a lot was received is its بکری's day.
+    let mut statement = conn.prepare(
+        "SELECT e.id, e.entry_date, COALESCE(l.chukta_name_ur, a.name_ur),
+                COALESCE(l.chukta_name_en, a.name_en), SUM(m.qty),
+                CASE WHEN l.chukta_name_ur IS NULL THEN a.tag END
+         FROM stock_moves m
+         JOIN bikri_lots l ON l.id = m.lot_id
+         JOIN bikri_entries e ON e.id = l.bikri_id
+         JOIN accounts a ON a.id = l.seller_account_id
+         WHERE m.move_date <= ?1 AND e.status = 'saved'
+         GROUP BY m.lot_id, e.id, e.entry_date, l.chukta_name_ur, l.chukta_name_en, a.name_ur,
+                  a.name_en, a.tag
+         HAVING SUM(m.qty) > 0",
+    )?;
+    let lots = statement
+        .query_map([today.to_iso()], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, i64>(4)?,
+                r.get::<_, Option<String>>(5)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (bikri_id, received, name_ur, name_en, balance, tag) in lots {
+        let days = age(&received);
+        if days > STOCK_WAIT_DAYS {
+            waiting.push((
+                days,
+                balance,
+                AttentionFirst {
+                    target: AttentionTarget::Bikri,
+                    id: bikri_id,
+                    person_key: None,
+                    name_ur: Some(name_ur),
+                    name_en: Some(name_en),
+                    tag,
+                },
+            ));
+        }
+    }
+    let purchases = mandi_db::purchases::list(
+        conn,
+        &ListFilter {
+            hide_cancelled: false,
+            order_by: None,
+            search: None,
+            trip_id: None,
+            from: None,
+            to: None,
+            item_id: None,
+            state: Some(StateFilter::InStock),
+        },
+        0,
+        -1,
+    )?;
+    for purchase in purchases {
+        // Only the goods for our shop wait: the part for another shop waits for its sale entry
+        // there (PRD FR-12.41, plan 35 D2).
+        let balance = mandi_core::split::StockParts::of(
+            purchase.qty,
+            purchase.other_qty,
+            purchase.qty_sold,
+            purchase.qty_sold_other,
+            purchase.qty_written_off,
+        )
+        .ok_or_else(|| ReportsError::Data("the split of a purchase does not fit".to_owned()))?
+        .our_left;
+        let days = age(&purchase.sell_date);
+        if balance > 0 && days > STOCK_WAIT_DAYS {
+            waiting.push((
+                days,
+                balance,
+                AttentionFirst {
+                    target: AttentionTarget::Purchase,
+                    id: purchase.id,
+                    person_key: None,
+                    name_ur: Some(purchase.item.name_ur.clone()),
+                    name_en: Some(purchase.item.name_en.clone()),
+                    tag: None,
+                },
+            ));
+        }
+    }
+    // The garden arrivals with goods left (PRD FR-12.40), waiting from their day to sell.
+    for arrival in mandi_db::arrivals::with_stock(conn, None, None, None, None)? {
+        let balance = mandi_core::split::StockParts::of(
+            arrival.qty,
+            arrival.other_qty,
+            arrival.qty_sold,
+            arrival.qty_sold_other,
+            arrival.qty_written_off,
+        )
+        .ok_or_else(|| ReportsError::Data("the split of an arrival does not fit".to_owned()))?
+        .our_left;
+        let days = age(&arrival.sell_date);
+        if balance > 0 && days > STOCK_WAIT_DAYS {
+            waiting.push((
+                days,
+                balance,
+                AttentionFirst {
+                    target: AttentionTarget::Arrival,
+                    id: arrival.id,
+                    person_key: None,
+                    name_ur: Some(arrival.item.name_ur.clone()),
+                    name_en: Some(arrival.item.name_en.clone()),
+                    tag: None,
+                },
+            ));
+        }
+    }
+    // The oldest first; on a tie the biggest balance.
+    waiting.sort_by(|a, b| b.0.cmp(&a.0).then(b.1.cmp(&a.1)));
+    let mut qty = 0_i64;
+    for (_, balance, _) in &waiting {
+        qty = qty
+            .checked_add(*balance)
+            .ok_or_else(|| ReportsError::Data("the waiting stock does not fit".to_owned()))?;
+    }
+    let Some((days, _, first)) = waiting.first().cloned() else {
+        return Ok(None);
+    };
+    let count = i64::try_from(waiting.len())
+        .map_err(|_| ReportsError::Data("the waiting lots do not fit".to_owned()))?;
+    let mut item = counted(AttentionKind::StockWaiting, count);
+    item.qty = Some(qty);
+    item.days = Some(days);
+    item.first = Some(first);
+    Ok(Some(item))
+}
+
+/// The cloud copy is older than [`BACKUP_OLD_HOURS`] hours, or there is none, while the cloud copy
+/// is switched on (PRD FR-7.44, NFR-BAK-10). `days` is the age in whole days; none for no copy.
+pub(crate) fn backup_old(backup: BackupFacts) -> Option<AttentionItem> {
+    if !backup.cloud_on {
+        return None;
+    }
+    match backup.cloud_age_hours {
+        Some(hours) if hours <= BACKUP_OLD_HOURS => None,
+        Some(hours) => {
+            let mut item = counted(AttentionKind::BackupOld, 1);
+            item.days = Some(hours / 24);
+            Some(item)
+        }
+        None => Some(counted(AttentionKind::BackupOld, 1)),
+    }
+}
+
+/// Records with a missing Urdu or English name: the rows whose name is empty after trimming
+/// (possible only after the Phase 2 import of old data, PRD FR-7.44, E41).
+pub(crate) fn names_missing(conn: &Connection) -> Result<Option<AttentionItem>, ReportsError> {
+    const TABLES: [&str; 9] = [
+        "accounts",
+        "cities",
+        "items",
+        "packings",
+        "addas",
+        "stores",
+        "expense_heads",
+        "staff",
+        "partners",
+    ];
+    let mut count = 0_i64;
+    for table in TABLES {
+        // The table name is one of the constants above (Code Standards B14).
+        let found: i64 = conn.query_row(
+            &format!("SELECT COUNT(*) FROM {table} WHERE trim(name_ur) = '' OR trim(name_en) = ''"),
+            [],
+            |r| r.get(0),
+        )?;
+        count = count
+            .checked_add(found)
+            .ok_or_else(|| ReportsError::Data("the records do not fit".to_owned()))?;
+    }
+    Ok((count > 0).then(|| counted(AttentionKind::NamesMissing, count)))
+}
+
+/// The daily check failed (PRD FR-7.44, NFR-OBS-5): read from the stored result `health_last`.
+/// It is on the list when the books do not balance, a hash chain does not match, a money table
+/// differs from the journal (`books.tables.ok` false, plan 80 Q-T3-3; a result stored before that
+/// check has no `tables` and is not held against the books), the check could not run, or the data
+/// file failed its check. An old cloud copy is the item `BackupOld`, not this
+/// one. No result yet, or a good one, is no item.
+pub(crate) fn health_check(conn: &Connection) -> Result<Option<AttentionItem>, ReportsError> {
+    let text: Option<String> = conn
+        .query_row(
+            "SELECT value_json FROM settings WHERE key = 'health_last'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let Some(text) = text else {
+        return Ok(None);
+    };
+    let value: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| ReportsError::Data(format!("the stored health result: {e}")))?;
+    let flag = |path: &[&str]| -> Option<bool> {
+        let mut at = &value;
+        for key in path {
+            at = at.get(key)?;
+        }
+        at.as_bool()
+    };
+    let books_good = flag(&["books", "ran"]) == Some(true)
+        && flag(&["books", "balanced"]) == Some(true)
+        && flag(&["books", "journal_chain", "ok"]) == Some(true)
+        && flag(&["books", "audit_chain", "ok"]) == Some(true)
+        && flag(&["books", "tables", "ok"]) != Some(false);
+    let data_failed = value
+        .get("data")
+        .and_then(|d| d.get("state"))
+        .and_then(serde_json::Value::as_str)
+        == Some("failed");
+    Ok((!books_good || data_failed).then(|| counted(AttentionKind::HealthCheck, 1)))
+}
+
+/// Questions of the assistant that ended with a difference between the two places of a figure, in
+/// the last [`RECORDS_DIFFER_DAYS`] days (PRD FR-7.76 point 2, FR-7.44). `count` is how many
+/// questions, `days` the age of the newest. No record to open: the screen links to the question log
+/// in Settings. A question asked exactly [`RECORDS_DIFFER_DAYS`] days ago is still listed.
+///
+/// Example: one question on 12-11-26 that ended `records_differ`: on 19-11-26 the item is listed
+/// (7 days); on 20-11-26 it is not.
+pub(crate) fn records_differ(
+    conn: &Connection,
+    today: BusinessDate,
+) -> Result<Option<AttentionItem>, ReportsError> {
+    let since = days_before(today, RECORDS_DIFFER_DAYS)?;
+    let (count, newest) = mandi_db::assistant::records_differ_since(conn, &since.to_iso())?;
+    if count <= 0 {
+        return Ok(None);
+    }
+    let mut item = counted(AttentionKind::RecordsDiffer, count);
+    // The question log keeps the day as a plain date; a day that does not read gives no age.
+    item.days = newest
+        .as_deref()
+        .and_then(BusinessDate::parse_iso)
+        .map(|day| today.days_after(day).max(0));
+    Ok(Some(item))
+}

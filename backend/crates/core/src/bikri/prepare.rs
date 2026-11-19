@@ -1,12 +1,13 @@
 //! Reading the typed text of a draft: every value that cannot be read is left `None` and its
 //! mistake goes to the issues with its field.
 
+use super::grade::SaleGrade;
 use super::input::*;
 use super::prepared::*;
-use super::{MAX_LOTS, MAX_SALE_LINES};
+use super::{MAX_BLANK_ROWS, MAX_LOTS, MAX_SALE_LINES};
 use crate::dates::BusinessDate;
 use crate::error::{ErrorCode, ErrorValue, FieldError};
-use crate::money::{Paisa, Qty};
+use crate::money::Paisa;
 use crate::rules::ChargeValue;
 use crate::validate;
 
@@ -38,19 +39,6 @@ fn is_blank(text: &str) -> bool {
     text.trim().is_empty()
 }
 
-/// Optional text: trimmed, `None` if empty, checked like a note.
-fn optional_text(
-    issues: &mut Vec<FieldError>,
-    field: &str,
-    text: Option<&String>,
-) -> Option<String> {
-    let text = text?;
-    if is_blank(text) {
-        return None;
-    }
-    take(issues, validate::free_text(field, text)).filter(|t| !t.is_empty())
-}
-
 /// An optional whole-rupee amount. Empty is 0. A bad value is `None` and an error.
 fn optional_money(
     issues: &mut Vec<FieldError>,
@@ -64,8 +52,51 @@ fn optional_money(
     }
 }
 
-fn pukhta_of(input: Option<&PukhtaInput>) -> PreparedPukhta {
-    input.map_or_else(PreparedPukhta::default, |p| PreparedPukhta {
+/// Reads the optional quality of a sale line (PRD FR-12.42) into `slot`: nothing or an empty text
+/// is no quality, the three words are one, and any other text is `ERR_OUT_OF_RANGE` on the field
+/// (false is returned, so the row is not worked out until it is fixed).
+fn optional_grade(
+    issues: &mut Vec<FieldError>,
+    field: &str,
+    text: Option<&str>,
+    slot: &mut Option<SaleGrade>,
+) -> bool {
+    let Some(text) = text.map(str::trim).filter(|t| !t.is_empty()) else {
+        return true;
+    };
+    match SaleGrade::parse(text) {
+        Some(grade) => {
+            *slot = Some(grade);
+            true
+        }
+        None => {
+            issues.push(FieldError::new(ErrorCode::ErrOutOfRange, field));
+            false
+        }
+    }
+}
+
+/// Reads an optional note into `slot`. False if the note is not clean.
+fn optional_note(
+    issues: &mut Vec<FieldError>,
+    field: &str,
+    text: Option<&String>,
+    slot: &mut Option<String>,
+) -> bool {
+    let Some(text) = text.filter(|t| !is_blank(t)) else {
+        return true;
+    };
+    match take(issues, validate::free_text(field, text)) {
+        Some(clean) => {
+            *slot = Some(clean).filter(|c| !c.is_empty());
+            true
+        }
+        None => false,
+    }
+}
+
+fn chukta_of(input: Option<&ChuktaInput>) -> PreparedChukta {
+    input.map_or_else(PreparedChukta::default, |p| PreparedChukta {
         name_ur: p.name_ur.trim().to_owned(),
         name_en: p.name_en.trim().to_owned(),
         phone: p.phone.trim().to_owned(),
@@ -120,32 +151,42 @@ fn typed_line_charge(
     (value, ok)
 }
 
+/// A row with no buyer and no seller rate is a blank row (PRD FR-7.52). Its quantity may be the
+/// quantity the screen filled in, so nothing else in it is read.
+pub fn is_blank_sale(input: &SaleInput) -> bool {
+    input.buyer_account_id.is_none()
+        && input.chukta.as_ref().is_none_or(|p| {
+            p.name_ur.trim().is_empty() && p.name_en.trim().is_empty() && p.phone.trim().is_empty()
+        })
+        && is_blank(&input.seller_rate)
+}
+
 fn prepare_sale(
     issues: &mut Vec<FieldError>,
     lot: usize,
     index: usize,
     input: &SaleInput,
 ) -> PreparedSale {
-    let pukhta = pukhta_of(input.pukhta.as_ref());
-    // A row with no buyer and no seller rate is a blank row (PRD FR-7.52). Its quantity may be
-    // the quantity the screen filled in, so nothing else in it is read.
-    let is_blank_row =
-        input.buyer_account_id.is_none() && pukhta.is_empty() && is_blank(&input.seller_rate);
+    let chukta = chukta_of(input.chukta.as_ref());
+    let is_blank_row = is_blank_sale(input);
     let mut sale = PreparedSale {
         key: input.key.clone(),
+        sale_id: input.sale_id,
         is_blank: is_blank_row,
         has_errors: false,
         buyer_account_id: input.buyer_account_id,
-        pukhta,
+        chukta,
         qty: None,
         weight: None,
         seller_rate: None,
         buyer_rate: None,
         rate_differs: input.rate_differs,
-        payment_type: input.payment_type,
+        paid: Paisa::ZERO,
         seller_comm: None,
         buyer_comm: None,
         laga: None,
+        grade: None,
+        note: None,
     };
     if is_blank_row {
         return sale;
@@ -190,23 +231,43 @@ fn prepare_sale(
     sale.buyer_comm = buyer_comm;
     sale.laga = laga;
     ok &= ok_a && ok_b && ok_c;
-    // A note is not used by the maths, but it must be a clean note (PRD Section 4.2).
-    ok &= input.note.as_ref().is_none_or(|note| {
-        take(
-            issues,
-            validate::free_text(&sale_field(lot, index, "note"), note),
-        )
-        .is_some()
-    });
+    // Money paid on the spot (PRD FR-12.44): whole rupees, empty is 0, a sum is taken like any
+    // money field (PRD FR-7.48). A row with only this typed is still a blank row (PRD FR-7.52).
+    let paid = optional_money(issues, &sale_field(lot, index, "paid"), input.paid.as_ref());
+    ok &= paid.is_some();
+    sale.paid = paid.unwrap_or(Paisa::ZERO);
+    // The quality is not used by the maths either (PRD FR-12.42). Only the three words count.
+    ok &= optional_grade(
+        issues,
+        &sale_field(lot, index, "grade"),
+        input.grade.as_deref(),
+        &mut sale.grade,
+    );
+    // A note is not used by the maths, but it must be a clean note (PRD Section 4.2). The save
+    // keeps it.
+    ok &= optional_note(
+        issues,
+        &sale_field(lot, index, "note"),
+        input.note.as_ref(),
+        &mut sale.note,
+    );
     sale.has_errors = !ok;
     sale
+}
+
+/// How many more rows of each kind a draft may take (see [`MAX_SALE_LINES`], [`MAX_BLANK_ROWS`]).
+struct RowBudget {
+    /// Lines that stand: a row with a buyer or a rate.
+    lines: usize,
+    /// Blank rows.
+    blanks: usize,
 }
 
 fn prepare_lot(
     issues: &mut Vec<FieldError>,
     index: usize,
     input: &LotInput,
-    lines_left: &mut usize,
+    budget: &mut RowBudget,
 ) -> PreparedLot {
     let mut ok = true;
     let qty_received = take(
@@ -226,8 +287,7 @@ fn prepare_lot(
         None => None,
     };
     let freight = optional_money(issues, &lot_field(index, "freight"), input.freight.as_ref());
-    // Empty نقد is "not typed" (None), not 0: a one-time seller's نقد then starts as his net
-    // (PRD FR-13.10).
+    // Empty نقد is "not typed" (None), which is 0 (PRD 12.3).
     let cash_paid = match input.cash_paid.as_ref().filter(|t| !is_blank(t)) {
         Some(text) => {
             let value = take(
@@ -257,23 +317,35 @@ fn prepare_lot(
 
     let mut sales = Vec::new();
     for (sale_index, sale) in input.sales.iter().enumerate() {
-        if *lines_left == 0 {
+        // The limit counts the lines that stand. A blank row (the empty row the screen keeps at
+        // the end) is not a line, so 1,000 lines and that row are not refused (NFR-SCL-3). Blank
+        // rows have their own small limit, so a draft cannot be filled with empty rows.
+        let (spent, max) = if is_blank_sale(sale) {
+            (&mut budget.blanks, MAX_BLANK_ROWS)
+        } else {
+            (&mut budget.lines, MAX_SALE_LINES)
+        };
+        if *spent == 0 {
+            // The message names the limit that ran out, so too many empty rows does not say
+            // "at most 1,000 lines".
             issues.push(
                 FieldError::new(ErrorCode::ErrOutOfRange, &lot_field(index, "sales")).with(
                     "max",
-                    ErrorValue::Number(i64::try_from(MAX_SALE_LINES).unwrap_or(i64::MAX)),
+                    ErrorValue::Number(i64::try_from(max).unwrap_or(i64::MAX)),
                 ),
             );
             break;
         }
-        *lines_left = lines_left.saturating_sub(1);
+        *spent = spent.saturating_sub(1);
         sales.push(prepare_sale(issues, index, sale_index, sale));
     }
     PreparedLot {
         key: input.key.clone(),
+        lot_id: input.lot_id,
         has_errors: !ok,
         seller_account_id: input.seller_account_id,
-        pukhta: pukhta_of(input.pukhta.as_ref()),
+        purchase_id: input.purchase_id,
+        arrival_id: input.arrival_id,
         item_id: input.item_id,
         packing_id: input.packing_id,
         marka_id: input.marka_id,
@@ -307,47 +379,18 @@ fn prepare_header(
             today,
         ),
     );
-    let bill_date = if is_blank(&input.bill_date) {
-        entry_date
-    } else {
-        take(
-            issues,
-            validate::date(&header_field("bill_date"), &input.bill_date, today),
-        )
-    };
-    // These fields are checked now and kept by the save (plan 13).
-    optional_text(issues, &header_field("book"), input.book.as_ref());
-    let truck_no = optional_text(issues, &header_field("truck_no"), input.truck_no.as_ref());
-    optional_text(
-        issues,
-        &header_field("driver_name"),
-        input.driver_name.as_ref(),
-    );
-    if let Some(phone) = input.driver_phone.as_ref().filter(|p| !is_blank(p)) {
-        take(
-            issues,
-            validate::phone(&header_field("driver_phone"), phone),
-        );
-    }
-    optional_text(issues, &header_field("note"), input.note.as_ref());
-    let total_freight = match input.total_freight.as_ref().filter(|t| !is_blank(t)) {
-        Some(t) => take(issues, validate::money(&header_field("total_freight"), t)),
-        None => None,
-    };
+    // The other header fields are retired (PRD v1.34, plan 71 H1 to H3): whatever an old draft still
+    // holds in them is ignored, never refused. A new بکری's bill day is its entry day.
+    let bill_date = entry_date;
     PreparedHeader {
         entry_date,
         bill_date,
-        truck_no,
-        zamindar_account_id: input.zamindar_account_id,
-        adda_id: input.adda_id,
-        store_id: input.store_id,
-        total_freight,
     }
 }
 
 /// Reads a typed draft (Code Standards 4.1 layer 2). Every value that cannot be read is left
 /// `None` and its mistake goes to `issues` with its field, so the user fixes them all at once.
-/// More than 50 lots or 500 lines is cut off with `ERR_OUT_OF_RANGE` (NFR-SCL-3).
+/// More than 50 lots or 1,000 lines is cut off with `ERR_OUT_OF_RANGE` (NFR-SCL-3).
 ///
 /// Example: a line with qty `20+5` and rate `600` is read as qty 25 and rate 600 rupees; a line
 /// with qty `abc` has no qty and an `ERR_NOT_A_NUMBER` on `lots[0].sales[0].qty`.
@@ -364,66 +407,20 @@ pub fn prepare_draft(
             ErrorValue::Number(i64::try_from(MAX_LOTS).unwrap_or(i64::MAX)),
         ));
     }
-    let mut lines_left = MAX_SALE_LINES;
+    let mut budget = RowBudget {
+        lines: MAX_SALE_LINES,
+        blanks: MAX_BLANK_ROWS,
+    };
     let lots = draft
         .lots
         .iter()
         .take(MAX_LOTS)
         .enumerate()
-        .map(|(index, lot)| prepare_lot(&mut issues, index, lot, &mut lines_left))
+        .map(|(index, lot)| prepare_lot(&mut issues, index, lot, &mut budget))
         .collect();
     PreparedDraft {
         header,
         lots,
         issues,
     }
-}
-
-/// Splits a header freight total over lots (PRD C17), reading the text first.
-///
-/// Example (C17): 1,000 over lots of 30 and 20 نگ gives 600 and 400.
-///
-/// # Errors
-/// The money and quantity codes on `total_freight` and `lots[i].qty_received`, all together.
-pub fn split_freight(input: &SplitFreightInput) -> Result<Vec<FreightPart>, Vec<FieldError>> {
-    let mut issues = Vec::new();
-    let total = take(
-        &mut issues,
-        validate::money("total_freight", &input.total_freight),
-    );
-    let mut parts: Vec<(usize, Qty)> = Vec::with_capacity(input.lots.len());
-    if input.lots.len() > MAX_LOTS {
-        issues.push(FieldError::new(ErrorCode::ErrOutOfRange, "lots").with(
-            "max",
-            ErrorValue::Number(i64::try_from(MAX_LOTS).unwrap_or(i64::MAX)),
-        ));
-    }
-    if input.lots.is_empty() {
-        issues.push(FieldError::new(ErrorCode::ErrNoLots, "lots"));
-    }
-    for (index, lot) in input.lots.iter().enumerate() {
-        let field = format!("lots[{index}].qty_received");
-        if let Some(qty) = take(&mut issues, validate::qty(&field, &lot.qty_received)) {
-            parts.push((index, qty));
-        }
-    }
-    let Some(total) = total else {
-        return Err(issues);
-    };
-    if !issues.is_empty() {
-        return Err(issues);
-    }
-    // The lot number is the position, so on a tie in نگ the first lot takes the leftover.
-    let split = crate::money::split_by_qty(total, &parts)
-        .map_err(|e| vec![FieldError::new(e.code(), "total_freight")])?;
-    let mut out = Vec::with_capacity(split.len());
-    for (index, freight_paisa) in split {
-        let key = input
-            .lots
-            .get(index)
-            .map(|lot| lot.key.clone())
-            .unwrap_or_default();
-        out.push(FreightPart { key, freight_paisa });
-    }
-    Ok(out)
 }

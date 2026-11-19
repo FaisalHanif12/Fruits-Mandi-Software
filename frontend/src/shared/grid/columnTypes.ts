@@ -1,21 +1,38 @@
 // Fixed widths and looks per column type (Code Standards F17, F18): the same type has the same
-// width on every screen. Number-like cells sit on the physical right edge in both languages
-// (NFR-USE-19); the CSS class `cell-num` does that in grid.css.
+// width on every screen. Number-like cells, their heading and their total are centred in the column,
+// written left to right, in both languages (NFR-USE-19 v1.6, plan 39 R1); the CSS classes `cell-num`
+// and `header-num` do that in grid.css.
 
 import type { EntryColumnType } from './types';
+
+/**
+ * The widths that are the same in every grid and table (plan 39 R5, F18): a money column, a quantity
+ * column, a date column and a code column. `styles/tokens.css` has the same numbers as `--col-*-w`
+ * for the plain tables; tests/unit/column-width-tokens.test.ts keeps the two lists equal.
+ */
+export const SHARED_COLUMN_WIDTHS = {
+  code: 120,
+  money: 140,
+  qty: 100,
+  date: 140,
+  datetime: 170,
+  status: 120,
+} as const;
 
 /** Column width in pixels, one per type (F18). */
 export const COLUMN_WIDTHS: Record<EntryColumnType, number> = {
   account: 280,
-  money: 140,
-  qty: 100,
+  money: SHARED_COLUMN_WIDTHS.money,
+  qty: SHARED_COLUMN_WIDTHS.qty,
+  weight: 120,
   rate: 160,
-  date: 140,
+  date: SHARED_COLUMN_WIDTHS.date,
   text: 240,
-  calc: 140,
+  calc: SHARED_COLUMN_WIDTHS.money,
   label: 280,
   picker: 200,
   choice: 120,
+  select: 110,
 };
 
 /**
@@ -26,6 +43,7 @@ export const FIT_WEIGHTS: Record<EntryColumnType, number> = {
   account: 300,
   money: 100,
   qty: 80,
+  weight: 90,
   rate: 100,
   date: 100,
   text: 240,
@@ -33,6 +51,7 @@ export const FIT_WEIGHTS: Record<EntryColumnType, number> = {
   label: 200,
   picker: 300,
   choice: 100,
+  select: 90,
 };
 
 /**
@@ -50,6 +69,8 @@ export const FIT_MIN = {
   heading: 84,
   /** A plain figure with no icon. */
   figure: 72,
+  /** A choice column whose heading is two short words ("ادھاری / نقدی"). */
+  choiceHeading: 108,
 } as const;
 
 /**
@@ -61,6 +82,7 @@ export const FIT_MIN_WIDTHS: Record<EntryColumnType, number> = {
   account: 150,
   money: 72,
   qty: 64,
+  weight: 72,
   rate: 80,
   date: 104,
   text: 120,
@@ -70,10 +92,19 @@ export const FIT_MIN_WIDTHS: Record<EntryColumnType, number> = {
   picker: 84,
   // One short word (ادھاری, Credit) with its padding; the heading may wrap to a second line.
   choice: 84,
+  // One short word (اول, First) with its padding and the arrow; the heading may wrap.
+  select: 80,
 };
 
 /** The types whose cells are numbers, codes or dates: Latin digits, left to right, tabular. */
-const NUMBER_LIKE: ReadonlySet<EntryColumnType> = new Set(['money', 'qty', 'rate', 'date', 'calc']);
+const NUMBER_LIKE: ReadonlySet<EntryColumnType> = new Set([
+  'money',
+  'qty',
+  'weight',
+  'rate',
+  'date',
+  'calc',
+]);
 
 export function isNumberLike(type: EntryColumnType): boolean {
   return NUMBER_LIKE.has(type);
@@ -84,18 +115,41 @@ export function isNumberLike(type: EntryColumnType): boolean {
  * `name` column is wide enough for a Nastaliq name and the other script's name beside it.
  */
 export type ListColumnType =
-  'code' | 'name' | 'text' | 'choice' | 'number' | 'money' | 'date' | 'status';
+  | 'code'
+  | 'name'
+  | 'text'
+  | 'choice'
+  | 'number'
+  | 'money'
+  | 'date'
+  // A day and a time, DD-MM-YYYY HH:MM (the list of بکری, the audit log).
+  | 'datetime'
+  | 'status'
+  // A whole number such as a quantity, a count of days or of trucks (reports, dense tables).
+  | 'count'
+  // An amount in a dense table, such as a report with many money columns (up to 9 digits).
+  | 'figure'
+  // A short text such as a phone number (11 digits), an item or a city in a dense table.
+  | 'short'
+  // A balance: a figure and the side word in a slot after it (reports, `unit` of ListColumn).
+  | 'balance';
 
 export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
-  code: 120,
+  code: SHARED_COLUMN_WIDTHS.code,
   name: 260,
   text: 200,
   // A phrase from a short fixed list, such as "sold by weight" (Urdu needs about 135 px for it).
   choice: 160,
-  number: 140,
-  money: 140,
-  date: 140,
-  status: 120,
+  number: SHARED_COLUMN_WIDTHS.money,
+  money: SHARED_COLUMN_WIDTHS.money,
+  date: SHARED_COLUMN_WIDTHS.date,
+  datetime: SHARED_COLUMN_WIDTHS.datetime,
+  status: SHARED_COLUMN_WIDTHS.status,
+  count: SHARED_COLUMN_WIDTHS.qty,
+  figure: 120,
+  short: 140,
+  // The figure keeps the width of a money column and the side word has its own slot after it.
+  balance: 180,
 };
 
 /**
@@ -105,7 +159,16 @@ export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
  */
 export const LIST_GROW_MIN_WIDTH = 160;
 
-/** Codes and numbers are Latin digits, written left to right and set against the right edge. */
+/** Codes and numbers are Latin digits, written left to right and centred in their column (R1). */
 export function isListNumberLike(type: ListColumnType): boolean {
-  return type === 'code' || type === 'number' || type === 'money' || type === 'date';
+  return (
+    type === 'code' ||
+    type === 'number' ||
+    type === 'count' ||
+    type === 'figure' ||
+    type === 'money' ||
+    type === 'date' ||
+    type === 'datetime' ||
+    type === 'balance'
+  );
 }

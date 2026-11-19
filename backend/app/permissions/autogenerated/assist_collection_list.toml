@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assist-collection-list"
+description = "Enables the assist_collection_list command without any pre-configured scope."
+commands.allow = ["assist_collection_list"]
+
+[[permission]]
+identifier = "deny-assist-collection-list"
+description = "Denies the assist_collection_list command without any pre-configured scope."
+commands.deny = ["assist_collection_list"]

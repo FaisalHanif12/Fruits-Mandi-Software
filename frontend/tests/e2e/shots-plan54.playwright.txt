@@ -1,0 +1,76 @@
+// Screenshots of plan 54 S2 and S6 and plan 55: the answer to "how do I print this?" (numbered steps and a
+// button, with its print, for each report), the lines of a slow question (understood, trying again, still
+// slow, writing, and the seconds waited), the answer that ran out of time, and the "outside the books"
+// line. Both languages, at 1366 x 768 and 1024 x 600. A developer tool: run it with the Vite dev server up,
+// as a snippet for `playwright-core` (kept as .txt so the linter does not read it). The page is
+// /dev/assistant with the flags of tests/helpers/dev-bridge-assistant.ts.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan54';
+  const BASE = 'http://localhost:5199/#/dev/assistant?open&tall';
+  const context = page.context();
+  const report = [];
+  const LANG_BUTTON = { ur: 'اردو', en: 'English' };
+  const SCENES = [
+    // name, flags, wait before the picture (ms)
+    ['how-r5-range', '&ask=print&reply=print', 2500],
+    ['how-r35-day', '&ask=print&reply=print_day', 2500],
+    ['slow-steps', '&ask=ikram&reply=answered&slow=16&steps=slow', 9500],
+    ['time-limit', '&ask=ikram&reply=time_limit', 2500],
+    ['outside-books', '&ask=gst&reply=outside', 2500],
+    ['timeout-line', '&ask=ikram&reply=timeout', 2500],
+    ['dropped-line', '&ask=ikram&reply=dropped', 2500],
+  ];
+  for (const [w, h] of [
+    [1366, 768],
+    [1024, 600],
+  ]) {
+    for (const lang of ['ur', 'en']) {
+      for (const [name, flags, wait] of SCENES) {
+        const p = await context.newPage();
+        p.setDefaultTimeout(8000);
+        p.on('dialog', (d) => d.accept().catch(() => undefined));
+        await p.setViewportSize({ width: w, height: h });
+        try {
+          // The first load after a Vite change can stay blank while it optimises: wait for the switch, and
+          // load again up to three times.
+          let ready = false;
+          for (let attempt = 0; attempt < 3 && !ready; attempt += 1) {
+            if (attempt === 0) await p.goto(BASE + flags);
+            else await p.reload();
+            ready = await p
+              .waitForFunction(
+                (label) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').trim() === label),
+                LANG_BUTTON[lang],
+                { timeout: 12000 },
+              )
+              .then(() => true)
+              .catch(() => false);
+          }
+          await p.waitForTimeout(800);
+          // The panel hides the rest of the page from role queries, so the switch is pressed in the page.
+          await p.evaluate((label) => {
+            const button = [...document.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === label);
+            if (button === undefined) throw new Error('no language button ' + label);
+            button.click();
+          }, LANG_BUTTON[lang]);
+          await p.waitForTimeout(wait);
+          const file = `${OUT}/${name}-${lang}-${w}x${h}.png`;
+          await p.screenshot({ path: file });
+          report.push({
+            name,
+            lang,
+            size: `${w}x${h}`,
+            sideways: await p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1),
+            steps: await p.evaluate(() => [...document.querySelectorAll('[role="status"] li, ol[aria-label] li')].map((el) => (el.textContent ?? '').trim().slice(0, 90))),
+          });
+        } catch (e) {
+          report.push({ name, lang, size: `${w}x${h}`, error: String(e).slice(0, 200) });
+        } finally {
+          await p.close({ runBeforeUnload: false }).catch(() => undefined);
+        }
+      }
+    }
+  }
+  return report;
+}

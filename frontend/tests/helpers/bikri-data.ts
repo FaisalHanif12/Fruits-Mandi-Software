@@ -15,7 +15,7 @@ import type { LinePreview } from '../../src/bindings/LinePreview';
 import type { LotPreview } from '../../src/bindings/LotPreview';
 import type { SaleInput } from '../../src/bindings/SaleInput';
 import type { SellerMemory } from '../../src/bindings/SellerMemory';
-import type { TruckMemory } from '../../src/bindings/TruckMemory';
+import { OVER_FIXED_PREVIEW, OVER_PREVIEW, withKeysOf } from './bikri-over-qty-real';
 
 /** The fixture files are the backend's own JSON; their text is read as the generated types. */
 function previewOf(value: unknown): BikriPreview {
@@ -35,12 +35,11 @@ export const E2E26_REQUEST: BikriPreviewInput = requestOf(e2e26Request);
 
 /** The ids of Event 1 in the backend's test (the request files above). */
 export const IDS = {
-  rahim: 17,
-  karim: 18,
-  akram: 19,
-  arshad: 20,
-  pukhtaBuyer: 21,
-  pukhtaSeller: 22,
+  rahim: 19,
+  karim: 20,
+  akram: 21,
+  arshad: 22,
+  chuktaKhata: 23,
   banana: 1,
   apple: 2,
   box: 1,
@@ -51,14 +50,13 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-/** A row the backend ignores: no buyer and no rate. It still gets the quantity left and the hint. */
+/** A row the backend ignores: no buyer and no rate. It still gets the quantity left (no rate hint, FR-7.53). */
 export function blankLine(key: string, lineNo: number, remaining: number): LinePreview {
   return {
     key,
     line_no: lineNo,
     is_blank: true,
     remaining_qty: remaining,
-    rate_hint: null,
     calc: null,
     warnings: [],
   };
@@ -76,10 +74,7 @@ function lineFor(base: LotPreview, index: number, sale: SaleInput): LinePreview 
   if (at?.is_blank === true) return { ...clone(at), key: sale.key, line_no: index + 1 };
   // A row that is finished in the file but empty here: what the backend says for a blank row.
   const source = at ?? base.lines.at(-1);
-  return {
-    ...blankLine(sale.key, index + 1, source?.remaining_qty ?? 0),
-    rate_hint: source?.rate_hint ?? null,
-  };
+  return blankLine(sale.key, index + 1, source?.remaining_qty ?? 0);
 }
 
 /**
@@ -104,19 +99,20 @@ export function previewFor(draft: BikriDraft): BikriPreview {
   return { ...base, lots };
 }
 
-/** What the backend remembers about the truck LES-1234 (PRD FR-7.49, FR-7.50). */
-export const TRUCK_MEMORY: TruckMemory = {
-  last: {
-    bikri_number: 1,
-    date: '2026-10-09',
-    adda_id: IDS.swat,
-    zamindar_account_id: IDS.rahim,
-    driver_name: 'Aslam',
-    driver_phone: '03001234567',
-  },
-  same_day: { bikri_number: 1 },
-  suggestions: [{ truck_no: 'LES-1234', date: '2026-10-09' }],
-};
+/**
+ * Umar's case as the backend answers it (plan 57 Section 7), from its own files: the lot has 50 and
+ * the first line is typed as 70. That line has no `calc`, the lot has no totals (no line is worked
+ * out) and the error points at the quantity. The same line fixed to 50 gets the full answer. With
+ * any other draft it is the ordinary answer. A test double that holds the backend's real replies.
+ */
+export function previewWithOverLine(draft: BikriDraft): BikriPreview {
+  const qty = draft.lots[0]?.sales[0]?.qty ?? '';
+  if (qty === '70') return withKeysOf(OVER_PREVIEW, draft);
+  if (qty === '50' && draft.lots[0]?.sales.length === 1) {
+    return withKeysOf(OVER_FIXED_PREVIEW, draft);
+  }
+  return previewFor(draft);
+}
 
 /** What the backend remembers about Rahim's last lot (PRD FR-7.51). */
 export const SELLER_MEMORY: SellerMemory = {

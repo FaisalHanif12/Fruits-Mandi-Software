@@ -3,7 +3,11 @@
 // the menu and the screen for the arrow keys (PRD FR-7.17), and mounts the text size keys once.
 
 import type { ReactNode } from 'react';
+import { AssistantButton, AssistantDock } from '../../features/assistant';
+import { PartyReportLinks } from '../../features/reports';
+import type { VoucherSearchHit } from '../../shared/accounts';
 import { useFocusRegion } from '../../shared/keyboard';
+import { useWorkAreaStore } from '../../shared/ui';
 import { StatusBar, type DayState } from './StatusBar';
 import { TopBar } from './TopBar';
 import { useTextSize } from './text-size';
@@ -15,15 +19,24 @@ interface AppShellProps {
   moduleMenu?: ReactNode;
   userName: string;
   onLock: () => void;
-  onSignOut: () => void;
+  /** The user menu's "show the guide" (PRD FR-7.12). */
+  onGuide: () => void;
   /** A result of the top bar's search was chosen: open that account. */
   onOpenAccount: (id: number) => void;
+  /** A result of the top bar's search was chosen: open that بکری. */
+  onOpenBikri: (id: number) => void;
+  /** A result of the top bar's search was chosen: open that voucher. */
+  onOpenVoucher: (hit: VoucherSearchHit) => void;
   date: string;
   day: DayState | null;
   /** The last closed day as DD-MM-YYYY, or null (PRD FR-21.1). */
   closedUpTo?: string | null;
   /** The state of the day opens the screen where days are closed and reopened. */
   onOpenDay?: () => void;
+  /** The last good cloud backup for the status bar (PRD NFR-BAK-10). */
+  backup?: ReactNode;
+  /** The Back button for a page that was opened from another page (plan 78 F1); the top bar shows it. */
+  back?: ReactNode;
   children: ReactNode;
 }
 
@@ -32,16 +45,22 @@ export function AppShell({
   moduleMenu,
   userName,
   onLock,
-  onSignOut,
+  onGuide,
   onOpenAccount,
+  onOpenBikri,
+  onOpenVoucher,
   date,
   day,
   closedUpTo = null,
   onOpenDay,
+  backup,
+  back,
   children,
 }: AppShellProps) {
   useTextSize();
   const screen = useFocusRegion<HTMLElement>('screen');
+  // The Index form a picker opens is drawn over the screen, in this slot (shared/ui/work-area.ts).
+  const setSlot = useWorkAreaStore((state) => state.setSlot);
   // The shell is exactly as tall as the window and never scrolls itself; each screen scrolls in
   // its own area. Without the clip, Gulzar's tall letter metrics in the status bar pushed the page
   // 8 px past the window (D1+D2 review, finding 29).
@@ -54,19 +73,39 @@ export function AppShell({
           <TopBar
             userName={userName}
             onLock={onLock}
-            onSignOut={onSignOut}
+            onGuide={onGuide}
             onOpenAccount={onOpenAccount}
+            onOpenBikri={onOpenBikri}
+            onOpenVoucher={onOpenVoucher}
+            back={back}
           />
-          {/* `relative` makes the screen the containing block of the hidden native <select> that
-              Radix Select keeps beside each drop-down. Without it that element sits against the
-              window, outside this scroll area, and the whole page scrolled (finding 29). */}
-          <main
-            ref={screen}
-            className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 wide:mx-auto wide:w-full wide:max-w-page"
-          >
-            {children}
-          </main>
+          {/* The Index form of a picker's "add" button is drawn over the screen, in the slot below
+              (shared/ui/work-area.ts). */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {/* The screen runs down to the status bar. The round launcher floats over its end corner, so the
+                bottom padding of the screen is as tall as the launcher and its gaps (`pb-corner`): the last
+                row of any screen can scroll clear of it and nothing is left under it (plan 52, changed
+                after Umar's own test: no empty band under the content). */}
+            {/* `relative` makes the screen the containing block of the hidden native <select> that
+                Radix Select keeps beside each drop-down. Without it that element sits against the
+                window, outside this scroll area, and the whole page scrolled (finding 29). */}
+            <main
+              ref={screen}
+              className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto px-6 pt-6 pb-corner short:pt-2 wide:mx-auto wide:w-full wide:max-w-page"
+            >
+              {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
+              <PartyReportLinks>{children}</PartyReportLinks>
+            </main>
+            <div ref={setSlot} className="pointer-events-none absolute inset-0 z-40" />
+          </div>
         </div>
+      </div>
+      {/* Plans 49 and 51 (ask the app): the round launcher and its chat window. This wrapper is as tall as
+          nothing and sits on the top edge of the status bar; the launcher and the window are placed
+          from that edge at the end side and grow upward over the screen. They are mounted once so they
+          stay across screens (PRD FR-7.73). */}
+      <div className="relative z-20 h-0 shrink-0">
+        <AssistantDock />
       </div>
       <StatusBar
         userName={userName}
@@ -74,6 +113,8 @@ export function AppShell({
         day={day}
         closedUpTo={closedUpTo}
         {...(onOpenDay === undefined ? {} : { onOpenDay })}
+        backup={backup}
+        assistant={<AssistantButton />}
       />
     </div>
   );

@@ -1,0 +1,10 @@
+{
+  "voucher_id": 3,
+  "voucher_type": "capital_in",
+  "number": 1,
+  "entry_id": 6,
+  "new_balance": {
+    "amount_paisa": 5000000,
+    "side": "cr"
+  }
+}

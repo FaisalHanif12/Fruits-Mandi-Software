@@ -9,9 +9,10 @@
 //! - [`Db::read`] uses the second connection, so reads never wait for a save.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use rusqlite::{Connection, OpenFlags, Transaction, TransactionBehavior};
 
@@ -23,8 +24,13 @@ use crate::migrate::{self, MigrationOutcome};
 
 /// How long SQLite waits for another process that holds the file (B13).
 pub const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
-/// How long a save waits for the start-up check before it gives up with `ERR_DB_BUSY`.
+/// How long a save waits for a start-up check to START before it gives up with `ERR_DB_BUSY`. Once
+/// the check is running a save waits for its end, however long it takes (NFR-REL-7).
 pub const CHECK_WAIT: Duration = Duration::from_secs(30);
+
+/// How often a save that waits for the running check looks at the state again, in case a wake-up
+/// was missed.
+const RUNNING_RECHECK: Duration = Duration::from_millis(250);
 
 /// Where the start-up check of the data file stands (NFR-REL-7).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,7 +56,7 @@ pub struct DbOptions {
     pub key_store: Arc<dyn KeyStore>,
     /// SQLite busy timeout.
     pub busy_timeout: Duration,
-    /// How long a save waits for the start-up check.
+    /// How long a save waits for a start-up check to start (once it runs, a save waits for its end).
     pub check_wait: Duration,
 }
 
@@ -71,6 +77,62 @@ impl DbOptions {
 struct Health {
     state: Mutex<(DataState, Option<String>)>,
     changed: Condvar,
+    /// True while a start-up check is running (NFR-REL-7). A save that arrives while this is true
+    /// waits for the check to end, however long it takes: on the 10-year volume the check takes
+    /// 16 to 23 seconds, and a save is held, never refused for time.
+    running: AtomicBool,
+}
+
+impl Health {
+    fn new(state: DataState) -> Self {
+        Self {
+            state: Mutex::new((state, None)),
+            changed: Condvar::new(),
+            running: AtomicBool::new(false),
+        }
+    }
+}
+
+/// Marks the check as running for as long as it lives. If the check thread stops without an answer
+/// (a panic), the data is not known to be sound, so the state becomes `Failed` and every waiting
+/// save is let go with `ERR_DATA_CHECK_FAILED` instead of waiting for ever.
+struct CheckRun<'a> {
+    health: &'a Health,
+}
+
+impl<'a> CheckRun<'a> {
+    fn start(health: &'a Health) -> Self {
+        health.running.store(true, Ordering::SeqCst);
+        health.changed.notify_all();
+        Self { health }
+    }
+}
+
+impl Drop for CheckRun<'_> {
+    fn drop(&mut self) {
+        let mut state = lock(&self.health.state);
+        if state.0 == DataState::Checking {
+            *state = (
+                DataState::Failed,
+                Some("the start-up data check stopped without an answer".to_owned()),
+            );
+        }
+        self.health.running.store(false, Ordering::SeqCst);
+        drop(state);
+        self.health.changed.notify_all();
+    }
+}
+
+/// The key store of a snapshot ([`Db::open_snapshot`]): a snapshot writes nothing, so it has no
+/// audit key and asking for one is an error.
+struct NoKeyStore;
+
+impl crate::audit::KeyStore for NoKeyStore {
+    fn audit_key(&self) -> Result<crate::audit::AuditKey, DbError> {
+        Err(DbError::KeyStore(
+            "a snapshot of the books is read only".to_owned(),
+        ))
+    }
 }
 
 /// The open data file.
@@ -101,6 +163,21 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+/// The name of the Urdu collation (NFR-URD-19, Tech Stack 4.3): `ORDER BY name_ur COLLATE URDU`
+/// puts ا ب پ ت ٹ in the order of the Urdu alphabet, not in the order of the Unicode code points.
+/// It is made on every connection from the ICU4X data compiled into the app. It is used in
+/// queries only: no index and no table definition names it, so a file opened without it still
+/// reads.
+pub const URDU_COLLATION: &str = "URDU";
+
+/// Makes the Urdu collation on a connection.
+fn register_collations(conn: &Connection) -> Result<(), DbError> {
+    let collator = mandi_core::text::UrduCollator::new()
+        .map_err(|e| DbError::DataCheckFailed(e.to_string()))?;
+    conn.create_collation(URDU_COLLATION, move |a, b| collator.compare(a, b))?;
+    Ok(())
+}
+
 /// Opens a connection and sets the pragmas of B13. The first statement that touches the
 /// file fails with `DataCheckFailed` if the file is not a database.
 fn open_connection(
@@ -115,6 +192,9 @@ fn open_connection(
             | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )?;
     conn.busy_timeout(busy_timeout)?;
+    register_collations(&conn)?;
+    // A data file was opened (a restore opens it again): forget the kept sums.
+    crate::memo::clear();
     if !read_only {
         let mode: String =
             conn.pragma_update_and_check(None, "journal_mode", "WAL", |row| row.get(0))?;
@@ -129,6 +209,10 @@ fn open_connection(
     conn.pragma_update(None, "synchronous", "FULL")?;
     if read_only {
         conn.pragma_update(None, "query_only", "ON")?;
+        // TEMP PROFILE: a cache size for the read connection, to see what it buys.
+        if let Some(kib) = std::env::var("MANDI_READ_CACHE_KIB").ok().and_then(|v| v.parse::<i64>().ok()) {
+            conn.pragma_update(None, "cache_size", -kib)?;
+        }
     }
     Ok(conn)
 }
@@ -152,16 +236,104 @@ impl Db {
             path: path.to_owned(),
             writer: Mutex::new(writer),
             reader: Mutex::new(reader),
-            health: Health {
-                state: Mutex::new((DataState::Checking, None)),
-                changed: Condvar::new(),
-            },
+            health: Health::new(DataState::Checking),
             disk_probe: options.disk_probe,
             auditor: Auditor::new(options.key_store, Arc::clone(&options.clock)),
             clock: options.clock,
             migration,
             busy_timeout: options.busy_timeout,
             check_wait: options.check_wait,
+        })
+    }
+
+    /// Opens a data file for READING ONLY: a snapshot taken by the backup, for the readable pack
+    /// (PRD FR-20.5). Nothing is created, upgraded or written: both connections are read-only,
+    /// every save fails, and the journal mode is left as it is. The file must already have this
+    /// app's schema (a snapshot made by this version does).
+    ///
+    /// # Errors
+    /// `DataCheckFailed` when the file is not a database; `MigrationFailed` when its schema is
+    /// not this app's; an I/O error.
+    pub fn open_read_only(path: &Path, options: DbOptions) -> Result<Db, DbError> {
+        let open = || -> Result<Connection, DbError> {
+            let conn = Connection::open_with_flags(
+                path,
+                OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
+            conn.busy_timeout(options.busy_timeout)?;
+            register_collations(&conn)?;
+            crate::memo::clear();
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+            conn.pragma_update(None, "query_only", "ON")?;
+            Ok(conn)
+        };
+        let reader = open()?;
+        let version = migrate::ensure_current(&reader)?;
+        let writer = open()?;
+        Ok(Db {
+            path: path.to_owned(),
+            writer: Mutex::new(writer),
+            reader: Mutex::new(reader),
+            health: Health::new(DataState::Ok),
+            disk_probe: options.disk_probe,
+            auditor: Auditor::new(options.key_store, Arc::clone(&options.clock)),
+            clock: options.clock,
+            migration: MigrationOutcome {
+                from: version,
+                to: version,
+                copy: None,
+            },
+            busy_timeout: options.busy_timeout,
+            check_wait: options.check_wait,
+        })
+    }
+
+    /// A view of this data file at ONE moment, for a reader that must see the books as they are
+    /// now from its first statement to its last, whatever is saved meanwhile (the assistant, NFR-AI-6).
+    ///
+    /// It opens a connection of its own, begins a read transaction and reads once so the moment is
+    /// fixed. SQLite is in WAL mode: this reader sees nothing that commits after this call, blocks no
+    /// writer and no other reader, and every `read` and `read_snapshot` on the returned `Db` runs
+    /// inside that one transaction. The transaction ends when the returned `Db` is dropped. Both
+    /// connections are read-only (`query_only`), so a write on it fails and nothing is ever saved
+    /// through it. The kept sums of [`crate::memo`] are not emptied: they are kept with the journal
+    /// version they were made at, which is read inside this moment, so they stay correct.
+    ///
+    /// Keep it short: an open read transaction holds back the clean-up of the WAL file.
+    ///
+    /// # Errors
+    /// A database error when the file cannot be opened or read.
+    pub fn open_snapshot(&self) -> Result<Db, DbError> {
+        let open = || -> Result<Connection, DbError> {
+            let conn = Connection::open_with_flags(
+                &self.path,
+                OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
+            conn.busy_timeout(self.busy_timeout)?;
+            register_collations(&conn)?;
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+            conn.pragma_update(None, "recursive_triggers", "ON")?;
+            conn.pragma_update(None, "query_only", "ON")?;
+            Ok(conn)
+        };
+        let reader = open()?;
+        reader.execute_batch("BEGIN")?;
+        // The moment is fixed by the first read, not by BEGIN.
+        reader.query_row("SELECT COUNT(*) FROM sqlite_master", [], |row| {
+            row.get::<_, i64>(0)
+        })?;
+        let writer = open()?;
+        Ok(Db {
+            path: self.path.clone(),
+            writer: Mutex::new(writer),
+            reader: Mutex::new(reader),
+            health: Health::new(DataState::Ok),
+            disk_probe: Arc::clone(&self.disk_probe),
+            auditor: Auditor::new(Arc::new(NoKeyStore), Arc::clone(&self.clock)),
+            clock: Arc::clone(&self.clock),
+            migration: self.migration.clone(),
+            busy_timeout: self.busy_timeout,
+            check_wait: self.check_wait,
         })
     }
 
@@ -213,7 +385,15 @@ impl Db {
     /// Runs `PRAGMA quick_check` on its own connection (reads and the check do not block each
     /// other), sets the state and returns it (NFR-REL-7).
     pub fn run_quick_check(&self) -> DataState {
-        match self.quick_check() {
+        self.run_check_with(|| self.quick_check())
+    }
+
+    /// [`Db::run_quick_check`] with the check itself given, so a test can make it slow, fail or
+    /// stop. Saves wait for it exactly as for the real check.
+    #[doc(hidden)]
+    pub fn run_check_with(&self, check: impl FnOnce() -> Result<(), String>) -> DataState {
+        let _run = CheckRun::start(&self.health);
+        match check() {
             Ok(()) => {
                 self.set_state(DataState::Ok, None);
                 DataState::Ok
@@ -260,22 +440,44 @@ impl Db {
         }
     }
 
-    /// Waits for the start-up check, then says whether saving is allowed.
+    /// Waits for the start-up check, then says whether saving is allowed (NFR-REL-7: saving is
+    /// held until the check passes).
+    ///
+    /// A save that arrives while the check is RUNNING waits until it ends, however long that takes:
+    /// it is never refused for time (plan 80, the 10-year volume takes 16 to 23 seconds). If no
+    /// check has been started at all, the save waits at most `check_wait` for one to start and then
+    /// gives up with `ERR_DB_BUSY`, because nothing would ever let it go (a data file opened and
+    /// never checked).
     fn wait_until_writable(&self) -> Result<(), DbError> {
-        let guard = lock(&self.health.state);
-        let (guard, _timeout) = self
-            .health
-            .changed
-            .wait_timeout_while(guard, self.check_wait, |(state, _)| {
-                *state == DataState::Checking
-            })
-            .unwrap_or_else(PoisonError::into_inner);
-        match guard.0 {
-            DataState::Ok => Ok(()),
-            DataState::Failed => Err(DbError::DataCheckFailed(
-                guard.1.clone().unwrap_or_default(),
-            )),
-            DataState::Checking => Err(DbError::Busy),
+        let start_by = Instant::now() + self.check_wait;
+        let mut guard = lock(&self.health.state);
+        loop {
+            match guard.0 {
+                DataState::Ok => return Ok(()),
+                DataState::Failed => {
+                    return Err(DbError::DataCheckFailed(
+                        guard.1.clone().unwrap_or_default(),
+                    ));
+                }
+                DataState::Checking => {}
+            }
+            let slice = if self.health.running.load(Ordering::SeqCst) {
+                // The check is running: its end wakes this wait. The slice only guards against a
+                // missed wake-up.
+                RUNNING_RECHECK
+            } else {
+                let now = Instant::now();
+                if now >= start_by {
+                    return Err(DbError::Busy);
+                }
+                start_by.saturating_duration_since(now).min(RUNNING_RECHECK)
+            };
+            guard = self
+                .health
+                .changed
+                .wait_timeout(guard, slice)
+                .unwrap_or_else(PoisonError::into_inner)
+                .0;
         }
     }
 
@@ -325,5 +527,104 @@ impl Db {
     pub fn read<T, E>(&self, action: impl FnOnce(&Connection) -> Result<T, E>) -> Result<T, E> {
         let conn = lock(&self.reader);
         action(&conn)
+    }
+
+    /// Like [`Db::read`], but all the statements of `action` see the same moment of the data
+    /// (one read transaction). Use it for any read that adds up figures with several statements,
+    /// such as a running balance, a page and its totals: a save that commits in between must not
+    /// show in some of them and not in others (PRD FR-6.1).
+    ///
+    /// # Errors
+    /// Whatever `action` returns; a database error when the transaction cannot start.
+    pub fn read_snapshot<T, E: From<rusqlite::Error>>(
+        &self,
+        action: impl FnOnce(&Connection) -> Result<T, E>,
+    ) -> Result<T, E> {
+        let conn = lock(&self.reader);
+        if !conn.is_autocommit() {
+            return action(&conn);
+        }
+        let tx = conn.unchecked_transaction()?;
+        let result = action(&tx);
+        // Nothing was written, so ending the transaction is a rollback.
+        drop(tx);
+        result
+    }
+
+    /// Replaces the whole content of the data file with the content of `source`, a complete and
+    /// already checked SQLite file, while the app keeps its connections (PRD FR-20.9, plan 18).
+    ///
+    /// The copy is the SQLite online backup API run in one step into the write connection, so
+    /// it is all or nothing: if it fails, the data file is as it was. Both connections are held
+    /// for the time of the copy, so no save and no read sees half of it. The data file stays in
+    /// WAL mode. The caller checks and upgrades `source` first, and throws away what the
+    /// services keep in memory afterwards (`Context::invalidate_caches`).
+    ///
+    /// # Errors
+    /// `DataCheckFailed` when `source` is not a database or the file fails its check after the
+    /// copy; `Busy`; an I/O error; any other SQLite error.
+    pub fn replace_contents_from(&self, source: &Path) -> Result<(), DbError> {
+        self.replace_contents_if(source, |_| Ok(()))
+    }
+
+    /// Like [`Db::replace_contents_from`], and runs `guard` on the write connection once both
+    /// connections are held and before the first page is copied. If `guard` returns an error, the
+    /// data file is not touched and the error is returned. Because the guard runs under the same
+    /// lock as the copy, what it saw cannot change before the copy: a restore on a new computer
+    /// uses it to be sure that no Owner was set up meanwhile (PRD FR-20.11), and to save the key
+    /// of the copy's hash chains at the same moment.
+    ///
+    /// # Errors
+    /// The error of `guard`; those of [`Db::replace_contents_from`].
+    pub fn replace_contents_if<E: From<DbError>>(
+        &self,
+        source: &Path,
+        guard: impl FnOnce(&Connection) -> Result<(), E>,
+    ) -> Result<(), E> {
+        let from = Connection::open_with_flags(
+            source,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )
+        .map_err(DbError::from)?;
+        {
+            let mut writer = lock(&self.writer);
+            let _reader = lock(&self.reader);
+            guard(&writer)?;
+            let copy = rusqlite::backup::Backup::new(&from, &mut writer).map_err(DbError::from)?;
+            // One step with every page (-1): the data file changes in one transaction. A step
+            // that finds a lock is tried again a moment later.
+            let mut tries = 0_u32;
+            loop {
+                match copy.step(-1).map_err(DbError::from)? {
+                    rusqlite::backup::StepResult::Done => break,
+                    rusqlite::backup::StepResult::More => {}
+                    _ => {
+                        tries += 1;
+                        if tries > 400 {
+                            return Err(DbError::Busy.into());
+                        }
+                        std::thread::sleep(Duration::from_millis(25));
+                    }
+                }
+            }
+            // The kept sums belong to the file that was replaced. Forget them while both
+            // connections are still held, so no read can use one against the new content.
+            crate::memo::clear();
+        }
+        match self.run_quick_check() {
+            DataState::Ok => Ok(()),
+            _ => Err(DbError::DataCheckFailed(self.failure_detail().unwrap_or_default()).into()),
+        }
+    }
+
+    /// The data version of the file as the read connection sees it. It changes whenever the
+    /// write connection (or another process) commits, so a scheduler can tell that the data
+    /// changed without reading any table.
+    ///
+    /// # Errors
+    /// Any SQLite error.
+    pub fn data_version(&self) -> Result<i64, DbError> {
+        let conn = lock(&self.reader);
+        Ok(conn.query_row("PRAGMA data_version", [], |row| row.get(0))?)
     }
 }

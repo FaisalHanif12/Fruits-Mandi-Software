@@ -6,7 +6,7 @@
 accounts-title = Accounts
 
 # review: pending
-accounts-help = Sellers, buyers, people who borrow money and the other accounts. Open an account to see or change it, or make a new one.
+accounts-help = Sellers and buyers. Open an account to see or change it, or make a new one.
 
 # review: pending
 accounts-new = New account
@@ -85,7 +85,7 @@ accounts-show-inactive = Show the inactive ones too
 # review: pending
 accounts-more-columns = More columns
 
-## Types and weekdays.
+## Types.
 
 # review: pending
 accounts-type-all = All
@@ -96,32 +96,15 @@ accounts-type-seller = { -beopari }
 # review: pending
 accounts-type-buyer = { -gahak }
 
+# The mark of a walk-in buyer in the buyer list of a sale line and on his card (PRD FR-7.29, FR-13.6).
+# review: pending
+accounts-type-chukta = { -chukta }
+
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
 
 # review: pending
 accounts-type-other = Other
-
-# review: pending
-accounts-weekday-sat = Saturday
-
-# review: pending
-accounts-weekday-sun = Sunday
-
-# review: pending
-accounts-weekday-mon = Monday
-
-# review: pending
-accounts-weekday-tue = Tuesday
-
-# review: pending
-accounts-weekday-wed = Wednesday
-
-# review: pending
-accounts-weekday-thu = Thursday
-
-# review: pending
-accounts-weekday-fri = Friday
 
 ## List columns and totals (PRD FR-10.5).
 
@@ -184,6 +167,10 @@ accounts-section-more = More
 # review: pending
 accounts-field-type = Account type
 
+# PRD 13, FR-13.5, FR-7.29, FR-13.11. Shown on the new account form only (plans 45 and 47).
+# review: pending
+accounts-field-type-hint = Make an account here for a seller or buyer who keeps an account. A walk-in buyer who pays the whole bill on the spot is added from the buyer box of a sale line, as { -chukta-khata }.
+
 # review: pending
 accounts-field-control = Control
 
@@ -198,6 +185,13 @@ accounts-field-name-ur = Urdu name
 
 # review: pending
 accounts-field-name-en = English name
+
+# PRD 10.2, FR-7.25: English capital letters, never converted to Urdu.
+# review: pending
+accounts-field-tag = { -nishan }
+
+# review: pending
+accounts-field-tag-hint = Optional. 1 to 4 English capital letters, for example K or BA. It is shown after the name and tells two people with the same name apart.
 
 # review: pending
 accounts-field-father-ur = Father or firm name, Urdu
@@ -242,9 +236,6 @@ accounts-field-credit-limit = Credit limit
 accounts-field-collector = Collector
 
 # review: pending
-accounts-field-weekday = Collection day
-
-# review: pending
 accounts-field-linked = Linked account
 
 # review: pending
@@ -258,6 +249,10 @@ accounts-field-note = Note
 
 # review: pending
 accounts-similar-title = Similar accounts already exist
+
+# PRD FR-10.7, E38.
+# review: pending
+accounts-similar-tag-help = Two people with the same name are told apart by the tag, for example Aslam BA and Aslam. Only the same name, tag and phone is a duplicate.
 
 ## The chart of accounts (PRD FR-10.1).
 
@@ -289,7 +284,7 @@ chart-load-failed = The chart of accounts could not be opened
 masters-accounts-title = Accounts
 
 # review: pending
-masters-accounts-help = Sellers, buyers and the other accounts.
+masters-accounts-help = Sellers and buyers.
 
 # review: pending
 masters-chart-title = Chart of accounts
@@ -361,3 +356,56 @@ openings-locked-help = An account whose cells are locked cannot have an opening 
 # The name of a seller whose opening debit is an advance, in the opening balances grid.
 # review: pending
 openings-name-advance = { $name } ({ -peshgi-khata })
+
+# The title of the warning when an account with the same name, tag and phone already exists.
+# review: pending
+accounts-similar-duplicate-title = This account may already exist
+
+# A word on the row of that account, so colour is never the only signal.
+# review: pending
+accounts-similar-duplicate-chip = Same name, tag and phone
+
+# What the opening balances list shows: the accounts that still need one, those that have one, or all.
+# review: pending
+openings-show-label = Show
+
+# review: pending
+openings-show-without = No opening balance yet
+
+# review: pending
+openings-show-with = With an opening balance
+
+# review: pending
+openings-show-all = All accounts
+
+# review: pending
+openings-none-without = No account is waiting for an opening balance
+
+# review: pending
+openings-none-without-help = Every account already has one, or there are no accounts yet. Choose "All accounts" to see them.
+
+# review: pending
+openings-none-with = No account has an opening balance yet
+
+# review: pending
+openings-none-with-help = Choose "No opening balance yet" to write the first ones.
+
+# review: pending
+openings-show-all-button = Show all accounts
+
+## A changed opening balance needs an open day (plan 44, plan 53, PRD FR-10.11). A new account saves its
+## opening on any day, so this appears only when the opening of an existing account is changed.
+
+# review: pending
+accounts-opening-closed-today-open = The date of this opening balance is a closed day, so it cannot be changed there. Use today's date, which is open, or reopen the day.
+
+# review: pending
+accounts-opening-closed-today-closed = This day is closed, so this opening balance cannot be changed now. Reopen the day to change it.
+
+# The line under the opening date field itself.
+# review: pending
+accounts-opening-closed-short = This date is closed.
+
+# $today: today's date, DD-MM-YYYY.
+# review: pending
+accounts-opening-closed-use-today = Use today's date ({ $today })

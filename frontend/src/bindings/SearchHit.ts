@@ -38,4 +38,9 @@ export type SearchHit = {
    * True for an active record. Always true in search results.
    */
   is_active: boolean;
+  /**
+   * True only for an item that is sold by weight (plan 35 D3): the screen then asks for the
+   * kilograms. False for a unit item and for every other kind of hit.
+   */
+  sold_by_weight: boolean;
 };

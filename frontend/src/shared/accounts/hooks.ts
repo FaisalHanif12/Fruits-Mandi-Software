@@ -1,8 +1,16 @@
 // The accounts and the chart as hooks (Code Standards F6). A save or a change of active state
 // refreshes the lists, the chart and every picker, so a new account is found at once everywhere.
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { SortInput } from '../../bindings/SortInput';
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useAllPagesQuery, usePagedQuery } from '../hooks';
 import {
   accountsGet,
   assistPartyCard,
@@ -17,6 +25,8 @@ import {
   accountsSave,
   accountsSetActive,
   accountsSimilar,
+  chuktaAdd,
+  coaControlAccounts,
   coaControlsList,
   coaTree,
 } from './api';
@@ -35,12 +45,32 @@ const COA_KEY = ['coa'] as const;
 /** A short pause so a burst of key presses asks once. */
 const SIMILAR_DELAY_MS = 300;
 
-export function useAccountList(filter: AccountFilter) {
-  return useQuery({
+/** What the account list asks the backend, for the page buttons and for the whole list alike. */
+function accountListQuery(filter: AccountFilter) {
+  return {
     queryKey: [...ACCOUNTS_KEY, 'list', filter],
-    queryFn: () => accountsList(filter),
-    placeholderData: keepPreviousData,
-  });
+    // The order is sent only when one is chosen, so the list in its own order asks as before.
+    fetchPage: (offset: number, limit: number, sort: SortInput | null = null) =>
+      sort === null
+        ? accountsList(filter, offset, limit)
+        : accountsList(filter, offset, limit, sort),
+    rowsIn: (page: { rows: readonly unknown[] }) => page.rows.length,
+    totalOf: (page: { count: number }) => page.count,
+    keepPrevious: true,
+  };
+}
+
+/**
+ * The accounts for the filter, one page at a time, with the count of the whole filter and the
+ * opening totals over all of it (PRD FR-10.5, FR-19.11).
+ */
+export function useAccountList(filter: AccountFilter, screen = 'accounts.list') {
+  return usePagedQuery({ screen, ...accountListQuery(filter) });
+}
+
+/** Every account of the filter, page after page (the opening balances, `useLoadRest`). */
+export function useAllAccounts(filter: AccountFilter) {
+  return useAllPagesQuery(accountListQuery(filter));
 }
 
 /** One account for its form. */
@@ -52,11 +82,26 @@ export function useCoaTree() {
   return useQuery({ queryKey: [...COA_KEY, 'tree'], queryFn: coaTree });
 }
 
+/** The accounts of an opened control of the chart, one page at a time (plan 38 B1). */
+export function useControlAccountPages(
+  wanted: readonly { controlId: number; page: number; pageSize: number }[],
+) {
+  return useQueries({
+    queries: wanted.map(({ controlId, page, pageSize }) => ({
+      queryKey: [...COA_KEY, 'control', controlId, page, pageSize],
+      queryFn: () => coaControlAccounts(controlId, (page - 1) * pageSize, pageSize),
+      placeholderData: keepPreviousData,
+    })),
+  });
+}
+
 export function useCoaControls() {
   return useQuery({ queryKey: [...COA_KEY, 'controls'], queryFn: coaControlsList });
 }
 
-/** The code the next new account of a type gets. Asked again each time the form for a new one opens. */
+/**
+ * The code the next new account of a type gets. Asked again each time the form for a new one opens.
+ */
 export function useAccountNextCode(
   accountType: AccountType,
   controlId: number | null,
@@ -73,31 +118,43 @@ export function useAccountNextCode(
 
 /**
  * Accounts that look like the one being typed (PRD FR-7.63). Asked after a pause, and only when
- * a name or a phone has been typed.
+ * a name or a phone has been typed. The tag typed goes with the question, and the backend marks
+ * the account whose name, tag and phone all match as a duplicate (PRD FR-10.7, E38).
  */
 export function useSimilarAccounts(
   nameUr: string,
   nameEn: string,
   phone: string,
+  tag: string,
   excludeId: number | null,
 ) {
-  const [settled, setSettled] = useState({ ur: '', en: '', phone: '' });
+  const [settled, setSettled] = useState({ ur: '', en: '', phone: '', tag: '' });
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setSettled({ ur: nameUr.trim(), en: nameEn.trim(), phone: phone.trim() });
+      setSettled({ ur: nameUr.trim(), en: nameEn.trim(), phone: phone.trim(), tag: tag.trim() });
     }, SIMILAR_DELAY_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [nameUr, nameEn, phone]);
+  }, [nameUr, nameEn, phone, tag]);
+  // The tag alone does not start a search: it only tells a duplicate from a look-alike (E38).
   const typed = settled.ur !== '' || settled.en !== '' || settled.phone !== '';
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'similar', settled.ur, settled.en, settled.phone, excludeId],
+    queryKey: [
+      ...ACCOUNTS_KEY,
+      'similar',
+      settled.ur,
+      settled.en,
+      settled.phone,
+      settled.tag,
+      excludeId,
+    ],
     queryFn: () =>
       accountsSimilar({
         name_ur: settled.ur,
         name_en: settled.en,
         phone: settled.phone,
+        tag: settled.tag,
         exclude_id: excludeId,
       }),
     enabled: typed,
@@ -122,11 +179,26 @@ export function useSaveAccount() {
     mutationFn: ({
       draft,
       confirmedWords,
+      confirmCashBelowZero = false,
     }: {
       draft: AccountDraft;
       confirmedWords: readonly string[];
-    }) => accountsSave(draft, confirmedWords),
+      /** The yes of the cash box: the change of an opening in روکڑ may take cash below 0 (PRD FR-6.7). */
+      confirmCashBelowZero?: boolean;
+    }) => accountsSave(draft, confirmedWords, confirmCashBelowZero),
     onSuccess: refresh,
+  });
+}
+
+/**
+ * Adds a چکتا buyer from the picker (PRD FR-7.69, FR-13.3). The list of the picker is read again,
+ * so he is found by name from now on. Nothing is kept about him but his names and phone.
+ */
+export function useChuktaAdd() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: chuktaAdd,
+    onSuccess: () => client.invalidateQueries({ queryKey: ['search'] }),
   });
 }
 
@@ -143,20 +215,57 @@ export function useSetAccountActive() {
 export function accountSource(
   scope: AccountScope,
   controlId: number | null = null,
+  includeDead = false,
+  withChukta = false,
 ): PickerSource<AccountHit> {
+  // `includeDead` and `withChukta` are passed only where they are true: the receipt and ادھار رقم
+  // واپسی fields take the dead; the buyer box of a بکری line takes the چکتا buyers (PRD FR-7.29).
+  const flags = {
+    ...(includeDead ? { includeDead } : {}),
+    ...(withChukta ? { withChukta } : {}),
+  };
   return {
-    key: ['search', 'accounts', scope, String(controlId)],
-    search: (text, limit) => searchAccounts({ scope, controlId, text, limit }),
-    recent: () => searchAccountsRecent(scope, controlId),
+    key: [
+      'search',
+      'accounts',
+      scope,
+      String(controlId),
+      ...(includeDead ? ['dead'] : []),
+      ...(withChukta ? ['chukta'] : []),
+    ],
+    search: (text, limit) => searchAccounts({ scope, controlId, text, limit, ...flags }),
+    recent: () => searchAccountsRecent(scope, controlId, includeDead, withChukta),
+    // The click-open list and every typed search are read a page at a time (plan 32, R7).
+    page: (text, offset, limit) =>
+      searchAccounts({
+        scope,
+        controlId,
+        text,
+        offset,
+        limit,
+        ...flags,
+      }),
     touch: (id) => searchAccountsTouch(scope, controlId, id),
   };
 }
 
-/** The party card of an account (PRD FR-7.38). Nothing is asked while there is no account. */
-export function usePartyCard(accountId: number | null) {
+/**
+ * The party card of an account (PRD FR-7.38). Nothing is asked while there is no account. With
+ * `chuktaId` the card is a چکتا buyer's own (PRD FR-13.6): the same account id, a different card.
+ */
+export function usePartyCard(accountId: number | null, chuktaId: number | null = null) {
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'card', accountId],
-    queryFn: () => assistPartyCard(accountId ?? 0),
+    queryKey: [
+      ...ACCOUNTS_KEY,
+      'card',
+      accountId,
+      ...(chuktaId === null ? [] : ['chukta', chuktaId]),
+    ],
+    // An ordinary account is asked as it always was, with the account only.
+    queryFn: () =>
+      chuktaId === null
+        ? assistPartyCard(accountId ?? 0)
+        : assistPartyCard(accountId ?? 0, chuktaId),
     enabled: accountId !== null,
     // A balance changes with every posting, so a card is never reused from the cache.
     staleTime: 0,
@@ -189,10 +298,13 @@ export function useGlobalSearch(text: string) {
  * lines and what ابتدائی فرق would be. The same backend function as the save (Code Standards B5).
  * Never kept: a balance changes with every posting.
  */
-export function useOpeningsPreview(lines: readonly OpeningLineInput[]) {
+export function useOpeningsPreview(
+  lines: readonly OpeningLineInput[],
+  confirmCashBelowZero = false,
+) {
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'openings-preview', lines],
-    queryFn: () => accountsOpeningsPreview({ lines: [...lines] }),
+    queryKey: [...ACCOUNTS_KEY, 'openings-preview', lines, confirmCashBelowZero],
+    queryFn: () => accountsOpeningsPreview({ lines: [...lines] }, confirmCashBelowZero),
     placeholderData: keepPreviousData,
     staleTime: 0,
     gcTime: 0,
@@ -203,7 +315,14 @@ export function useOpeningsPreview(lines: readonly OpeningLineInput[]) {
 export function useSaveOpenings() {
   const refresh = useRefreshAfterChange();
   return useMutation({
-    mutationFn: (lines: readonly OpeningLineInput[]) => accountsOpeningsSave({ lines: [...lines] }),
+    mutationFn: ({
+      lines,
+      confirmCashBelowZero = false,
+    }: {
+      lines: readonly OpeningLineInput[];
+      /** The yes of the cash box: a change of an opening in روکڑ may take cash below 0 (PRD FR-6.7). */
+      confirmCashBelowZero?: boolean;
+    }) => accountsOpeningsSave({ lines: [...lines] }, confirmCashBelowZero),
     onSuccess: refresh,
   });
 }

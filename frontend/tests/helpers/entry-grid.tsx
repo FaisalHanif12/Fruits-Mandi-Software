@@ -5,10 +5,15 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useMemo } from 'react';
 import {
+  AddRowButton,
   EntryGrid,
+  addRowAndFocus,
   createEntryStore,
+  useAddRowLink,
   type EntryColumn,
+  type EntryRow,
   type EntryStore,
+  type RemoveQuestion,
 } from '../../src/shared/grid';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { useEscapeDispatcher } from '../../src/shared/keyboard';
@@ -38,6 +43,29 @@ export const COLUMNS: readonly EntryColumn[] = [
   { field: 'line', type: 'calc', headerId: 'glossary-meezan' },
 ];
 
+/**
+ * The quality of a sale line (PRD FR-12.42): a list of fixed words that is optional, reached with the
+ * arrow keys or a click, never an Enter stop. A test asks for it with `withSelect`; it sits after the
+ * rate, where the sale-lines grid puts it.
+ */
+export const SELECT_COLUMN: EntryColumn = {
+  field: 'grade',
+  type: 'select',
+  headerId: 'glossary-darja',
+  enterStop: false,
+  choices: [
+    { value: '', labelId: 'bikri-grade-none' },
+    { value: 'first', labelId: 'glossary-darja-awwal' },
+    { value: 'second', labelId: 'glossary-darja-doyam' },
+    { value: 'third', labelId: 'glossary-darja-soyam' },
+  ],
+};
+
+function withSelectColumn(columns: readonly EntryColumn[]): readonly EntryColumn[] {
+  const at = columns.findIndex((column) => column.field === 'rate');
+  return [...columns.slice(0, at + 1), SELECT_COLUMN, ...columns.slice(at + 1)];
+}
+
 /** A read-only words column, added to the grid when a test asks for it. */
 const LABEL_COLUMN: EntryColumn = { field: 'name', type: 'label', headerId: 'glossary-bikri' };
 
@@ -48,8 +76,17 @@ function Harness({
   fixedRows,
   cellErrors,
   withLabel,
+  withSelect,
+  canRemoveRow,
+  removeQuestion,
+  withAddButton,
 }: {
+  /** A "+" button under the grid, linked to it, as the sale book has (the arrows come and go). */
+  withAddButton?: boolean;
   withLabel?: boolean;
+  withSelect?: boolean;
+  canRemoveRow?: (row: EntryRow) => boolean;
+  removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
   store: EntryStore;
   copyAbove?: boolean;
   onExplain?: (cell: { rowId: string; field: string }) => void;
@@ -57,6 +94,7 @@ function Harness({
   cellErrors?: Record<string, Record<string, string>>;
 }) {
   useEscapeDispatcher();
+  const addLink = useAddRowLink();
   const rows = store((state) => state.rows);
   const calc = useMemo(
     () =>
@@ -68,9 +106,12 @@ function Harness({
       ),
     [rows],
   );
-  return (
+  const grid = (
     <EntryGrid
-      columns={withLabel === true ? [...COLUMNS, LABEL_COLUMN] : COLUMNS}
+      columns={(() => {
+        const base = withLabel === true ? [...COLUMNS, LABEL_COLUMN] : COLUMNS;
+        return withSelect === true ? withSelectColumn(base) : base;
+      })()}
       store={store}
       labelId="glossary-bikri"
       calc={calc}
@@ -78,8 +119,24 @@ function Harness({
       {...(onExplain === undefined ? {} : { onExplain })}
       {...(fixedRows === undefined ? {} : { fixedRows })}
       {...(cellErrors === undefined ? {} : { cellErrors })}
+      {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
+      {...(removeQuestion === undefined ? {} : { removeQuestion })}
+      {...(withAddButton === true ? { addLink } : {})}
       heightMode="auto"
     />
+  );
+  if (withAddButton !== true) return grid;
+  return (
+    <div>
+      {grid}
+      <AddRowButton
+        labelId="bikri-sales-add-row"
+        onAdd={() => {
+          addRowAndFocus(store, 'buyer');
+        }}
+        link={addLink}
+      />
+    </div>
   );
 }
 
@@ -104,8 +161,16 @@ export async function renderGrid(
     fixedRows?: boolean;
     /** Adds a read-only words column called `name`, which shows the typed `buyer`. */
     withLabel?: boolean;
+    /** Adds the quality list column `grade` after the rate (PRD FR-12.42). */
+    withSelect?: boolean;
     /** Built from the rows that exist: row index, then field, then the words. */
     cellErrors?: (rowIds: readonly string[]) => Record<string, Record<string, string>>;
+    /** Which rows the remove key and the remove button may take away (plan 43). */
+    canRemoveRow?: (row: EntryRow) => boolean;
+    /** What is under a row about to go: the sentence the user is asked before it goes (plan 43). */
+    removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
+    /** A "+" button under the grid, linked to it. */
+    withAddButton?: boolean;
   } = {},
 ): Promise<GridRig> {
   act(() => {
@@ -119,7 +184,11 @@ export async function renderGrid(
       store={store}
       {...(options.fixedRows === undefined ? {} : { fixedRows: options.fixedRows })}
       {...(options.withLabel === undefined ? {} : { withLabel: options.withLabel })}
+      {...(options.withSelect === undefined ? {} : { withSelect: options.withSelect })}
       {...(cellErrors === undefined ? {} : { cellErrors })}
+      {...(options.canRemoveRow === undefined ? {} : { canRemoveRow: options.canRemoveRow })}
+      {...(options.removeQuestion === undefined ? {} : { removeQuestion: options.removeQuestion })}
+      {...(options.withAddButton === undefined ? {} : { withAddButton: options.withAddButton })}
       {...(options.copyAbove === undefined ? {} : { copyAbove: options.copyAbove })}
       {...(options.onExplain === undefined ? {} : { onExplain: options.onExplain })}
     />,

@@ -19,9 +19,11 @@ const SUGGESTIONS: readonly Suggestion[] = [
 function Rig({
   suggestions = SUGGESTIONS,
   onCommit,
+  highlightFirst = false,
 }: {
   suggestions?: readonly Suggestion[];
   onCommit: (text: string) => void;
+  highlightFirst?: boolean;
 }) {
   const [value, setValue] = useState('');
   return (
@@ -32,6 +34,7 @@ function Rig({
         onChange={setValue}
         suggestions={suggestions}
         onCommit={onCommit}
+        highlightFirst={highlightFirst}
       />
       <input data-testid="next" />
     </div>
@@ -51,6 +54,21 @@ describe.each(LANGUAGES)('SuggestInput (%s)', (language) => {
     expect(screen.getByText('09-10-2026')).toBeInTheDocument();
     expect(field().value).toBe('LES');
     expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('with highlightFirst, Enter takes the first suggestion without an arrow (PRD FR-13.7)', async () => {
+    const onCommit = vi.fn();
+    renderIn(language, <Rig onCommit={onCommit} highlightFirst />);
+    const user = userEvent.setup();
+    await user.click(field());
+    await user.keyboard('LES');
+    expect(await screen.findAllByRole('option')).toHaveLength(2);
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(field().value).toBe('LES-1234');
+    });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith('LES-1234');
   });
 
   it('↓ then Enter takes the highlighted suggestion, commits it once, and moves on', async () => {

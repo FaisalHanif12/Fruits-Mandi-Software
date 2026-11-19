@@ -1,0 +1,15 @@
+{
+  "agent_account_id": null,
+  "date": "10-10-2026",
+  "editing_id": null,
+  "for_guests": false,
+  "item_id": null,
+  "lot_id": 2,
+  "note": null,
+  "packing_id": null,
+  "partner_id": 1,
+  "qty": "1",
+  "rate": "1,200",
+  "source": "shop",
+  "weight": null
+}

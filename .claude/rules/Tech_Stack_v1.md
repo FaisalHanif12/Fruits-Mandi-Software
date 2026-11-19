@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.3 (Umar's changes of 11-10-2026 and 15-10-2026) |
-| Date | 15 October 2026 |
+| Version | 1.12 (the plan 80 gate of 19-11-2026; Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 01-11-2026, 09-11-2026, 12-11-2026 and 18-11-2026) |
+| Date | 12 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.5 (the master), NFR v1.3 |
+| Depends on | PRD v1.34 (the master), NFR v1.17 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---
@@ -88,6 +88,7 @@ Example: the user types rate 600 and qty 20. The frontend sends `{"qty":"20","ra
 | Encryption | `age` | Backups (cloud and USB) |
 | Cloud upload | `object_store` (S3 mode) | Works with R2 and B2 |
 | Checksums | `blake3` | Backup verification; keyed hash chain over journal and audit entries (`blake3::keyed_hash`, key in Credential Manager, NFR-SEC-6) |
+| HTTP client for the assistant | `reqwest` (rustls TLS, JSON; no default features) | Already in the build through `object_store` and the updater, so no new code is downloaded. Used only by `mandi-assistant`, for its OpenRouter calls (Section 4.8, NFR-SEC-9). |
 | Excel export | `rust_xlsxwriter` | Urdu text supported. Column headings come from the same Fluent files as the screens (see 4.2). |
 | Urdu and English text in the backend | `fluent-bundle` | Reads the same `.ftl` files as the frontend, embedded at build time, for Excel headings and the backup pack, in the language asked for |
 | English-to-Urdu typing | **Own module `translit`** in the `core` crate | Word list + learned pairs + spelling rules, fully offline (Section 4.4) |
@@ -136,14 +137,14 @@ Professional Urdu, a complete English app, and typing names in two scripts need 
 | Labels, headings, menus, printed bills | **Gulzar** (Nastaliq) | SIL Open Font License | Modern, readable Nastaliq, designed for screens |
 | Fallback Nastaliq | Noto Nastaliq Urdu | SIL Open Font License | Very complete character coverage |
 | Dense grids (optional, user setting) | Noto Naskh Arabic | SIL Open Font License | Shorter line height, more rows fit on screen |
-| Numbers, Latin text and the whole English app | Inter, with tabular figures | SIL Open Font License | Digits all the same width, so money columns line up. When the optional Urdu digits (۰-۹) are used on prints, Noto Naskh Arabic supplies them. |
+| Numbers, Latin text and the whole English app | Inter, with tabular figures | SIL Open Font License | Digits all the same width, so money columns line up. |
 
 Fonts are loaded from the app's own files with `font-display: block`, so text never flashes in a wrong font.
 
 ### 4.2 Translation system
 
 - Project Fluent `.ftl` files: `frontend/src/i18n/ur/*.ftl` and `en/*.ftl`, one file per module (`bikri.ftl`, `vouchers.ftl` ...).
-- Message IDs are English, kebab-case, prefixed with the module: `bikri-header-truck-no = ٹرک نمبر`.
+- Message IDs are English, kebab-case, prefixed with the module: `bikri-header-date = تاریخ`.
 - Grammar is handled inside the message, not in code. Example:
 
 ```ftl
@@ -165,7 +166,7 @@ common-saved-toast = { $kind ->
 | Direction follows the language | One `language` value in the app store drives everything: `<html dir lang>` (`rtl`/`ur` or `ltr`/`en`), Radix `DirectionProvider`, the Fluent bundle, the chart wrapper and the grids. Styles use only logical properties (`ps-`, `me-`, `start`, `end`), so one stylesheet serves both directions. |
 | Switching without losing work | Unsaved entry data lives in Zustand stores and React Hook Form state that sit above the screens, never inside a grid. On a switch, AG Grid instances are re-created (`enableRtl` is fixed at creation) from that data, and the focused row and column are restored. Target: NFR-SPD-19. |
 | Numbers and codes inside Urdu text never flip | Every number, code, phone and truck number is wrapped in `<bdi>` (or `unicode-bidi: isolate`). Shared `<Num>` and `<Code>` components do this, so nobody forgets. |
-| Money and number columns | `font-variant-numeric: tabular-nums`; each number cell is set to `direction: ltr; text-align: end`, which puts numbers on the cell's physical right edge so units line up (NFR-USE-19). Shared grid column types and the `<Num>` component do this. |
+| Money and number columns | `font-variant-numeric: tabular-nums`; in a table, grid or print column each number cell, its heading and its total are centred (`direction: ltr; text-align: center`, NFR-USE-19, v1.7); in a label and value card the value is on the physical right edge (`text-align: end`). Shared grid column types, `shared/ui/Table`, the print tables and the `<Num>` component do this. |
 | Urdu letter variants | Search keys are normalised in Rust before saving and before searching: ي→ی, ى→ی, ك→ک, ه (Arabic heh)→ہ, ۃ→ہ, while ھ (do-chashmi heh) stays as it is, remove diacritics (zabar, zer, pesh, shadd), unify spaces and zero-width joiners. Example: "اكرم" and "اکرم" both match. |
 | Sorting | ICU4X collator with the Urdu (`ur`) locale in Rust |
 | Search in both scripts | Every named record has a required English name. Each record keeps three search keys, built in Rust on save: the normalised Urdu name, the lower-case English name, and a phonetic key (the English name with vowels and doubled letters removed, so "arshd" and "arshad" give the same key). Details in Section 4.7. |
@@ -201,7 +202,7 @@ Candidates from the three sources are merged in that order (learned pairs first)
 - Amount in Urdu words: our own Rust module `urdu_words` in the `core` crate, using Pakistani grouping (ہزار، لاکھ، کروڑ، ارب). Covers every whole-rupee amount from 0 to the largest allowed amount, 10,00,00,00,000 (دس ارب), tested with known samples and boundaries. Example: 1,316,040 → "تیرہ لاکھ سولہ ہزار چالیس روپے".
 - Amount in English words: our own module `english_words` in the `core` crate, with two groupings (thousand, million, billion; or thousand, lakh, crore), chosen by the number grouping setting (PRD FR-19.7). Same range and the same kind of tests. Example: 19,316 → "Nineteen thousand three hundred sixteen rupees only".
 - Dates: stored as `YYYY-MM-DD`, shown as `DD-MM-YYYY` in both languages. Month names come from Fluent in the current or print language.
-- Digits are English digits (0-9) in both languages. Optional Urdu digits (۰-۹) for Urdu prints only, by setting.
+- Digits are 0 to 9 in both languages, on screens and on every print and PDF. Urdu digits (۰ to ۹) are never used (PRD v1.32).
 
 ### 4.6 Machine translation (drafts only)
 
@@ -212,11 +213,40 @@ If long help text is needed, IndicTrans2 (MIT licence, supports Urdu) can produc
 | Piece | Where | How |
 |---|---|---|
 | Party card | Command `assist_party_card(account_id)`; component `shared/ui/PartyCard` | One query on indexed balances and the matching tables; target NFR-SPD-21 |
-| Short codes and smart search | Command `search_accounts(text, scope)`; component `shared/ui/AccountPicker` | Rust index in memory: code, serial, three name keys, father or firm, city, phone. Order: exact code, exact serial (in a seller or buyer field, that type only; in an any-account field, the seller and the buyer with that serial), starts-with, recent and frequent (from `user_prefs`), then close matches by `strsim` Damerau-Levenshtein (at most 1 mistake up to 5 letters, 2 above). Target NFR-SPD-6. |
+| Short codes and smart search | Command `search_accounts(text, scope)`; component `shared/ui/AccountPicker` | Rust index in memory: code, serial, three name keys (the tag included), father or firm, city, phone. Order: exact code, exact running number (the short code, PRD FR-7.39; in a seller or buyer field, that type only; in an any-account field, the seller and the buyer with that running number), code starts-with, name starts-with, recent and frequent (from `user_prefs`), then close matches by `strsim` Damerau-Levenshtein (at most 1 mistake up to 5 letters, 2 above). Target NFR-SPD-6. With empty text (a click on the picker, PRD FR-7.10) it returns every record of the field's type, recent first, then by code, a page at a time. |
 | How was this worked out | Every preview result from the backend carries a `working` object for each calculated amount (formula, inputs, rule ID); component `shared/ui/CalcInfo` | The frontend never rebuilds the working; it only shows what the backend sent |
 | Attention list | Command `assist_attention()`; components `AttentionBell` (top bar) and the dashboard list | Counts from indexed queries, refreshed after each save event |
-| Memories and hints | Commands `assist_truck_memory`, `assist_seller_memory`, `assist_last_rate`, `assist_open_bills`, `assist_open_payables` | Read-only queries; nothing is saved by them. The rate hint for a lot is returned by `bikri_preview`, which sees the unsaved lines of the screen, and falls back to `assist_last_rate` for saved data (PRD FR-7.53). Open payables use the read-time oldest-first working of PRD FR-7.59 (Money agent 8.2). |
+| Memories and hints | Commands `assist_seller_memory`, `assist_last_rate`, `assist_open_bills`, `assist_open_payables` | Read-only queries; nothing is saved by them. `assist_truck_memory` is retired in v1.10 (PRD v1.34: the بکری header has no truck number). From v1.11 (PRD v1.44) the sale line shows no rate hint (PRD FR-7.53 retired); `assist_last_rate` stays only for the hint of the پھل screen. Open payables use the read-time oldest-first working of PRD FR-7.59 (Money agent 8.2). |
 | User preferences | Table `user_prefs`; commands `settings_get_prefs`, `settings_set_pref` | Language, text size, last screen, filters, print-after-save list, recent records |
+
+### 4.8 Ask the app (PRD Section 7.7)
+
+The model is the brain: it understands the question, decides which tools to call, reads the results, asks for sums and estimates, and writes the answer. The app is its arms and its auditor: every tool is our own read-only Rust code calling the same functions the screens call, and no answer is shown until our code has checked it. So the assistant adds no new way to compute a figure on the books, and the model never types a number that reaches the screen.
+
+**The flow, for one question:**
+
+1. The frontend sends the typed text and the panel's conversation id to the command `assistant_ask`.
+2. `mandi-assistant` checks sign-in, the setting, the key and the daily count (PRD FR-7.81), and opens one read snapshot for the whole question (NFR-AI-6).
+3. It sends the first model call: the fixed instructions (first, so they are cached), the last 3 questions of the conversation with their tool results and answers, today's date, the app language and the question, with the tools of PRD FR-7.87.
+4. The model replies with tool calls. For each one the app checks the inputs like a command input (Code Standards Q1), runs the tool, builds its result with `tool_result_json()` (Q7) and gives it an id (`r1`, `r2` ..., running on through the conversation). A call to a partner source while the section is locked pauses the question at once, with no model call (PRD FR-7.82); after the code the paused calls run and their results are sent. The panel shows a step line for each tool in the app's own words. The results go back to the model in the next call.
+5. Steps 3 and 4 repeat until the model gives its final answer, at most 4 calls and 8 tool calls in all (NFR-AI-5). A continuation after "کون سا؟" or the partner code goes on with what is left of these limits.
+6. The app checks the final answer (`check.rs`, PRD FR-7.76). If a check fails, it sends the model one more call with the reasons, and checks again. If that fails too, the panel shows the tool results as plain tables.
+7. It fills every reference with the exact value (money with its side when it has one, a difference with its direction word), builds the tables, charts, buttons and source line, and returns the answer to the panel.
+8. It writes the question log row in its own save, after the answer (PRD FR-7.84).
+
+| Piece | Where | How |
+|---|---|---|
+| Model and request | `crates/assistant/src/client.rs` | `POST https://openrouter.ai/api/v1/chat/completions`. The model comes from the setting, `openai/gpt-6-luna` by default. Every call sends only the body keys the Azure endpoints take (the list `BODY_KEYS_ALLOWED` in `request.rs`; a key outside it drops every Azure endpoint and gives HTTP 404, plan 51; `stream` is never sent and its default false is what is wanted), with the `tools` of PRD FR-7.87 as strict function schemas, `tool_choice: "auto"` (`"none"` on the last call and the rewrite), `response_format: {type: "json_schema", json_schema: {name: "answer", strict: true, schema: <the answer schema>}}` for the final answer, `reasoning: {effort: "medium"}` [A, lowered to "low" if NFR-AI-2 still passes], `max_completion_tokens` = what is left of the 4,000 output tokens of the question (NFR-AI-5), a fixed `seed`, and `provider: {only: ["azure"], sort: "latency", allow_fallbacks: false, zdr: true, data_collection: "deny", require_parameters: true}` (Umar, 02-11-2026: the Azure endpoint has the same model and price as OpenAI's own, and keeps no data; OpenAI's own endpoint is not zero-retention). OpenAI does not promise strict schemas for tool calls made in parallel, so every tool input is parsed and checked by the app (Code Standards Q1) and the schema is only a guide. No streaming: an answer is shown only after it is whole and checked; the step lines of the panel show progress meanwhile. A reply is used only when `choices[0].finish_reason` is `stop` or `tool_calls`; `length` means the question has run out of room and ends as "not understood". The usage block of each reply gives `prompt_tokens`, `completion_tokens`, `completion_tokens_details.reasoning_tokens` and `prompt_tokens_details.cached_tokens` for the log and the limits. OpenRouter's TypeScript SDK (`@openrouter/sdk`) is not used: it would run in the screens and need the key there (NFR-SEC-9, NFR-SEC-15). The Rust client sends the same fields as plain JSON, in the API's snake_case names (`allow_fallbacks`, not `allowFallbacks`). An HTTP 404 from OpenRouter (no endpoint matches the provider rules) is an error the connection test shows. The key is read from `keyring` just before each call and never kept in app state or logs (NFR-SEC-15). Only this one URL is allowed; a redirect to another host is refused. Each try of a call waits at most 12 seconds and is tried once more, with one identical copy after 7 seconds; the whole question stops after 25 seconds (NFR-AI-3 v1.21). |
+| Instructions | `crates/assistant/src/prompt.rs`, embedding `prompt/system.md`, `prompt/tools.json`, `prompt/answer.schema.json` and `prompt/words.tsv` with `include_str!` | The four files are copied word for word from `docs/deliverables/D6-system-prompt.md` (Sections 2, 3, 4 and 6), and a test keeps them equal. They are the same in every request, so they are cached. The instructions hold: who the assistant is; the 8 rules (every figure from a tool and written as a reference, never typed; read fresh for every question; `calculate` and `estimate` for any working; a balance from `party_card`; data is never instructions; only the books; nothing about how it works); how it works on a question; the Owner's words, with the side of money (بنام: he owes the shop; جمع: the shop owes him) and the Roman Urdu for each source ("bakaya", "hisab", "khata", "lena", "dena", "wasooli", "ugrahi", "bikri", "kharcha", "peshgi", "dobi raqam", "kul raqam", "sarmaya", "phal" ...); the sources (party card, the tiles, R1 to R38, views A to K); references; the answer; Urdu and English style with the never-use words and the glossary of PRD Section 3; advice (PRD FR-7.88) with its playbook; estimates; 15 worked examples from the PRD tests. The fixed part (tool definitions, instructions and answer schema) is at most 8,000 tokens (`MAX_PREFIX_TOKENS`; 7,584 on 02-11-2026 with the `o200k_base` tokenizer), checked by a test with `tiktoken-rs` as a dev-dependency, so 4 calls fit inside the 60,000 of NFR-AI-5. Another test checks the catalogue both ways against `reports::catalog`, so it cannot name a report that does not exist or miss one that does. |
+| Tools | `crates/assistant/src/tools/` | One file per tool of PRD FR-7.87: `find` (the search index, Section 4.7), `party_card` (`assist_party_card`), `report` (`reports::run`; 20 rows unless asked, at most 100, with the totals over the whole filter; an optional filter on a column, `where`, and up to 2 sort keys, applied by the tool to the report's own rows, with the matched count and totals worked out by `services::figures`), `analytics` (the view functions, with compare, monthly series, `where` and sort), `tiles` (the dashboard tiles with their second places), `period` (`periods.rs`, pure, tested at month and year ends), `calculate` and `estimate` (through `services::figures` and `services::forecast`, which call the pure `domain::figures` and `domain::forecast`). Each tool has a strict input schema; its inputs are checked like a command (Code Standards Section 4) before it runs. Partner tools check the partner unlock first (S8). The operands of `calculate` are references to values already read for this question, or numbers that appear in the typed question; never other numbers. |
+| Tool results | `crates/assistant/src/results.rs` | `tool_result_json()` is the only function that turns a tool's output into what is sent. It gives the result an id, keeps its source and filters, and gives each row the stable key of its record (for example `je4521` for a journal line), so a reference never depends on a row's place in the list. Every figure that has a second place (PRD FR-7.76) carries both places and its checked status wherever it appears: a balance in `find` is read through `assist_party_card` on the same read snapshot, not from the search index. It leaves out every field PRD FR-7.83 says never goes. `request_body()` does the same to the conversation it resends, and drops an earlier partner result when the section is locked. Money goes as whole rupees with its side (بنام or جمع), never as paisa. Every value is a small typed object (money with its side, checked status and both places; a difference with its direction; a percent; a count; a date; a month; a name; a label), so a reference always ends on a value the app can fill (`D6-system-prompt.md` Section 5). A result is at most 16,000 bytes (rows dropped from the end, `rows_cut` set, totals unchanged); R11 to R13 give their latest rows first. In the conversation it resends, `request_body()` cuts an earlier question's results down to their totals, summary and the rows its answer referred to. |
+| The answer | `crates/assistant/src/answer.rs` | The strict answer type (`prompt/answer.schema.json`): `kind` (answer, estimate, advice, which_one, need_dates, need_party, not_found, outside_books, change_request, not_understood); `text` (the answer, only for answer, estimate and advice, empty for the other kinds, whose words the panel has; with references written as `{{r2.balance}}`, `{{r1.matches.0.name}}`, `{{r3.rows.je4521.debit}}`, `{{c1.result}}`, `{{e1.ahead.ah2.same_growth}}`, `{{q.n1}}` for a number the app read from the question); `show` (up to 3 tables or charts, each naming a tool result); `next` (up to 3 suggested questions, checked like the text); `entry` (for a change request: the entry screen and the party reference); `choose` (for which_one and not_found: the `find` result); `nearest` (for outside_books: the closest source and party). The log's outcome adds what the app decides: change_refused, checks_failed, records_differ, locked, limit_reached, offline, error. |
+| Checks | `crates/assistant/src/check.rs` | Runs every rule of PRD FR-7.76 on the text and the next questions, and returns each failure with its reason, for the one rewrite (a figure whose two places differ is final, with no rewrite): every reference resolves; no character of the Unicode digit class (Nd) outside a reference; no word of the number-word list (`NUMBER_WORDS`, Urdu and English) and no month name outside a reference; no name of a party, partner, item, garden, trip, city, اڈا or staff member returned by this question's tools outside a reference (glossary words and seeded system accounts are not checked); no ✓ typed; no reference to a result of an earlier question; no reference to a figure whose two places differ; around each balance, up to the nearest punctuation mark, new line, point mark or other money figure on each side (a name or date never ends it), none of the other side's words (`words.tsv`); a reference to an estimate needs `kind` estimate or advice; the script of the app language; no word of the never-use list; at most 130 words (`MAX_ANSWER_WORDS`), counted after filling, each reference as one word; every table and chart names a tool result of this question. Then it fills each reference: money through the shared formatter with its side when it has one, a difference or change with its direction word (زیادہ or کم), names through `displayName` (with the tag), dates in DD-MM-YY, numbers from the question in a plain style with no ✓. The numbers of the question are read by `domain::figures::question_numbers` (digits, and lakh, hazar and crore after a number: "3 lakh" is 3,00,000), each with its unit (months, days, years, percent, amount or plain), and a number the model passes for months ahead, last N or a بکری number must match one with the right unit. |
+| Calculator and estimator | `domain/src/figures.rs`, `domain/src/forecast.rs`, wrapped by `services/src/figures.rs` and `services/src/forecast.rs` | Pure functions with checked integer maths on `Paisa` (Code Standards M14), reviewed by the money-calculations agent. `figures`: sum, difference, average, percent of (in bps), change in percent, and the numbers read from a question. `forecast`: the three methods of PRD FR-7.86 and the month a target is reached, up to 12 months ahead, on a monthly series read by `services::forecast` through the analytics view functions. `mandi-assistant` itself does no arithmetic on money (clippy `arithmetic_side_effects` denied in the crate). |
+| Quick questions | `crates/assistant/src/quick.rs` | The chips of PRD FR-7.80: fixed tool calls and fixed Fluent words, with no model. |
+| Question log | `db/src/assistant.rs`, table `assistant_questions` (Architecture 15.3) | Append-only. It is the source of the daily count. |
+| Screens | `frontend/src/features/assistant/` | `AssistantDock` sits in the app shell above the status bar. It holds the question box (raw text, no Roman-to-Urdu conversion, like global search), the quick-question chips, the step lines while the model works (the first, "سوال سمجھ رہا ہوں…", shown by the panel the moment a question is sent), and `AnswerBlock`: the answer text with each filled figure drawn by `<Num>` and its ✓ and ⓘ, the tables (the report screens' own cell renderer), the charts (the shared chart wrapper), the estimate band and the advice band, the buttons, the source line and the next-question chips; plus the "کون سا؟" buttons and `PartnerLockedBox` (already shared). The key `F1` is registered in `shared/keyboard/shortcuts.ts`. |
+| Tests | `crates/assistant/tests/golden_questions.rs` with `tests/fixtures/model/*.json` | Each golden question has a recorded transcript: the model's reply to each call (tool calls, then the answer). No commit test calls the network. Live check before a release: `scripts/ai-eval/` with the question list `questions.tsv` (NFR-AI-2). |
 
 ---
 
@@ -250,10 +280,15 @@ Each business module has **one name**, used unchanged in the frontend folder, th
 | masters | 10 | `features/masters` | `domain/src/masters`, `services/src/masters`, `db/src/masters` | `masters_` | `masters.ftl` |
 | rules | 11 | `features/rules` | `domain/src/rules`, ... | `rules_` | `rules.ftl` |
 | bikri | 12 | `features/bikri` | `domain/src/bikri`, ... | `bikri_` | `bikri.ftl` |
-| pukhta_khata | 13 | `features/pukhta_khata` | ... | `pukhta_khata_` | `pukhta_khata.ftl` |
+| party_ledgers | 12.12 | `features/party_ledgers` | `services/src/party_ledgers`, `db/src/party_ledgers` | `party_ledgers_` | `party_ledgers.ftl` |
 | vouchers | 15, 16 | `features/vouchers` | ... | `vouchers_` | `vouchers.ftl` |
 | cashbook | 16 | `features/cashbook` | ... | `cashbook_` | `cashbook.ftl` |
 | partners | 17 | `features/partners` | ... | `partners_` | `partners.ftl` |
+| trips | 12.10 | `features/trips` | `services/src/trips`, `db/src/trips` | `trips_` | `trips.ftl` |
+| purchases | 12.10 | `features/purchases` (inside the مارکیٹ سفر section) | `core/src/purchases`, `services/src/purchases`, `db/src/purchases` | `purchases_` | `purchases.ftl` |
+| gardens | 12.11 | `features/gardens` | `services/src/gardens`, `db/src/gardens` | `gardens_` | `gardens.ftl` |
+| ventures | 12.10, 12.11 | (no screen of its own: the shares, sources and splits that gardens and trips share) | `domain/src/ventures`, `services/src/ventures`, `db/src/ventures` | `ventures_` | `ventures.ftl` |
+| fruit | 16.7 | `features/fruit` (a tab of the خرچہ area) | `services/src/fruit`, `db/src/fruit` | `fruit_` | `fruit.ftl` |
 | analytics | 18 | `features/analytics` | ... | `analytics_` | `analytics.ftl` |
 | reports | 19 | `features/reports` | `reports/src/...` | `reports_` | `reports.ftl` |
 | backup | 20 | `features/backup` | `backup/src` | `backup_` | `backup.ftl` |
@@ -263,6 +298,7 @@ Each business module has **one name**, used unchanged in the frontend folder, th
 | translit | 7.4 | `shared/urdu` (no screen of its own) | `core/src/translit`, `services/src/translit`, `db/src/translit` | `translit_` | `translit.ftl` |
 | search | 5.4, 7.6 | `shared/ui/AccountPicker`, global search in `app/layout` | `services/src/search` | `search_` | `search.ftl` |
 | assist | 7.6 | `shared/ui` (PartyCard, CalcInfo, AttentionBell) | `services/src/assist`, `db/src/assist` | `assist_` | `assist.ftl` |
+| assistant | 7.7 | `features/assistant` (the question panel, drawn by the app shell) | `crates/assistant` (`mandi-assistant`), `db/src/assistant` | `assistant_` | `assistant.ftl` |
 
 Example: everything about بکری is found by searching for `bikri`: `frontend/src/features/bikri/`, `backend/crates/domain/src/bikri/`, command `bikri_save`, table `bikri_lots`, file `bikri.ftl`.
 
@@ -362,12 +398,13 @@ backend/
     │   ├── src/              One folder per module: bikri::save(), vouchers::save_receipt() ...
     │   └── tests/            Golden end-to-end tests (PRD Section 27)
     ├── reports/              Report queries, print data, Excel export
-    └── backup/               Local, USB and cloud backup, restore, verification
+    ├── backup/               Local, USB and cloud backup, restore, verification
+    └── assistant/            Ask the app (Section 4.8): tools, results, checks, run loop, OpenRouter client
 ```
 
-Crate names: `mandi-app`, `mandi-core`, `mandi-domain`, `mandi-db`, `mandi-services`, `mandi-reports`, `mandi-backup`.
+Crate names: `mandi-app`, `mandi-core`, `mandi-domain`, `mandi-db`, `mandi-services`, `mandi-reports`, `mandi-backup`, `mandi-assistant`.
 
-Dependency direction (never the other way): `app` → `services` → `domain` + `db` → `core`. `domain` never depends on `db`. This keeps business rules testable without a database.
+Dependency direction (never the other way): `app` → `services` → `domain` + `db` → `core`. `domain` never depends on `db`. `mandi-assistant` sits between `app` and the rest: `app` → `assistant` → `services` + `reports`; nothing depends on `assistant` except `app` (v1.8). This keeps business rules testable without a database.
 
 ### 5.5 Tauri setup notes
 
@@ -381,7 +418,7 @@ Dependency direction (never the other way): `app` → `services` → `domain` + 
 
 | Thing | Convention | Example |
 |---|---|---|
-| Module names | lower snake_case, English transliteration, same everywhere | `bikri`, `pukhta_khata` |
+| Module names | lower snake_case, English transliteration, same everywhere | `bikri`, `party_ledgers` |
 | Rust files and modules | snake_case | `partner_split.rs` |
 | Rust types, enums, traits | PascalCase | `BikriLot`, `ChargeMethod` |
 | Rust functions and variables | snake_case, verb first for functions | `calculate_lot_net()`, `seller_comm` |
@@ -402,7 +439,7 @@ Dependency direction (never the other way): `app` → `services` → `domain` + 
 | Git branches | `feature/<module>-<short>`, `fix/<module>-<short>` | `feature/bikri-lots-grid` |
 | Commits | Conventional Commits | `feat(bikri): add live summary` |
 
-Urdu words in code: we use simple English transliteration for business terms that have no exact English word (`bikri`, `laga`, `munshiana`, `pukhta_khata`, `peshgi`), and English for general terms (`seller`, `buyer`, `commission`, `freight`). A table of these lives in `docs/` and the glossary.
+Urdu words in code: we use simple English transliteration for business terms that have no exact English word (`bikri`, `laga`, `munshiana`, `chukta`, `peshgi`), and English for general terms (`seller`, `buyer`, `commission`, `freight`). A table of these lives in `docs/` and the glossary.
 
 ---
 
@@ -410,7 +447,7 @@ Urdu words in code: we use simple English transliteration for business terms tha
 
 | Topic | Choice |
 |---|---|
-| Developer machine | Umar's Mac works for writing code and running the app. Important: on a Mac, Tauri uses Apple's WebKit, not Windows' WebView2, so Urdu rendering and printing must be checked on Windows. Use a Windows PC or a Windows virtual machine for UI checks. |
+| Developer machine | Umar's Mac works for writing code and running the app. Important: on a Mac, Tauri uses Apple's WebKit, not Windows' WebView2, so Urdu rendering and printing must be checked on Windows. Use a Windows PC or a Windows virtual machine for UI checks. In the Mac phase, Print and PDF go through the native print dialog of the web view, with the same templates (PRD FR-19.3). |
 | Windows builds | GitHub Actions on a Windows runner builds the installer (MSI and NSIS). Building a Windows installer directly on a Mac is not reliable. |
 | Tests in CI | Every push: Rust format, clippy, all Rust tests (including golden money tests), frontend lint, type check, component tests. Before release: Windows end-to-end tests and speed tests. |
 | WebView2 settings | On start, through `with_webview`: browser accelerator keys off (`AreBrowserAcceleratorKeysEnabled = false`), browser zoom off (`IsZoomControlEnabled = false`), default context menu off. Our own keys from PRD Section 7.3 replace them. |
@@ -431,3 +468,12 @@ Urdu words in code: we use simple English transliteration for business terms tha
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
 | 1.2 | 12-10-2026 | PRD v1.2: sign-in check instead of roles (5.4); word list of at least 15,000 entries and suggestion source for the spelling check (4.4). |
 | 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list file has six columns (4.4) and its open sources are named and credited (4.4). |
+| 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): module names trips, purchases, gardens, ventures and fruit (5.2). |
+| 1.5 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag is in the search index (4.7). |
+| 1.6 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type, short code = running number, empty-text search for a click (4.7). |
+| 1.7 | 30-10-2026 | Approved by Umar (PRD v1.9): numbers centred under their column heading (4.3). |
+| 1.8 | 01-11-2026 | Approved by Umar (PRD v1.16): ask the app (4.8), the `reqwest` client for its one OpenRouter call (2), the module and crate `assistant` (5.2, 5.4). Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint of the model, with no fallback (4.8). Further amended 02-11-2026 (Umar): the instructions, tools and answer schema are four fixed files copied from `D6-system-prompt.md`, measured at 7,584 tokens; advice; `where` and sort on reports and views; typed result values; the partner pause (4.8). |
+| 1.9 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the module `pukhta_khata` is out and `party_ledgers` is in (5.2, 6); digits 0 to 9 only (4.1, 4.5); the Mac print path (7). |
+| 1.12 | 19-11-2026 | The plan 80 gate: the request fields and time limits of 4.8 follow the code (plan 51 body keys, plan 55 limits; NFR-AI-3 v1.21). |
+| 1.11 | 18-11-2026 | PRD v1.44, approved by Umar (plan 79): the sale line rate hint is retired (4.7). |
+| 1.10 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): `assist_truck_memory` retired (4.7); the example message ID of 4.2. |

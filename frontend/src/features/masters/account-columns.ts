@@ -11,21 +11,27 @@ import type { ListColumn } from '../../shared/grid';
 import { sideMessageId } from '../../shared/ui';
 import type { AccountRow } from '../../shared/accounts';
 
-const nameOf = (row: AccountRow) => ({ name_ur: row.name_ur, name_en: row.name_en });
-
 export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
-  { field: 'code', type: 'code', headerId: 'accounts-col-code', value: (row) => row.code },
+  {
+    field: 'code',
+    type: 'code',
+    headerId: 'accounts-col-code',
+    sortKey: 'code',
+    value: (row) => row.code,
+  },
   {
     field: 'name',
     type: 'name',
     headerId: 'accounts-col-name',
+    sortKey: (language) => (language === 'ur' ? 'name_ur' : 'name_en'),
     grow: true,
     // An inactive account is dimmed and says so in words, because colour is never the only signal
-    // (NFR-USE-12). The word comes with the name, so it takes no column of its own.
-    value: (row, { language, text }) =>
-      row.is_active
-        ? displayName(nameOf(row), language)
-        : `${displayName(nameOf(row), language)} (${text('masters-status-inactive')})`,
+    // (NFR-USE-12). The word comes with the name, so it takes no column of its own: the list has
+    // no room for one (list-widths.test.ts).
+    value: (row, { language, text }) => {
+      const named = displayName(row, language);
+      return row.is_active ? named : `${named} (${text('masters-status-inactive')})`;
+    },
   },
   {
     field: 'other_name',
@@ -34,12 +40,13 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     from: 'wide',
     grow: true,
     script: (language: Language) => (language === 'ur' ? 'en' : 'ur'),
-    value: (row, { language }) => otherScriptName(nameOf(row), language),
+    value: (row, { language }) => otherScriptName(row, language),
   },
   {
     field: 'city',
     type: 'text',
     headerId: 'accounts-col-city',
+    sortKey: 'city',
     from: 'normal',
     value: (row, { language }) => (row.city === null ? '' : displayName(row.city, language)),
   },
@@ -47,6 +54,7 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     field: 'opening_date',
     type: 'date',
     headerId: 'accounts-col-opening-date',
+    sortKey: 'opening_date',
     from: 'normal',
     value: (row) => (row.opening_date === null ? '' : isoToDisplayDate(row.opening_date)),
   },
@@ -54,6 +62,7 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     field: 'opening_dr',
     type: 'money',
     headerId: 'accounts-col-opening-dr',
+    sortKey: 'opening_dr_paisa',
     from: 'wide',
     value: (row, { money }) => money(row.opening_dr_paisa),
   },
@@ -61,6 +70,7 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     field: 'opening_cr',
     type: 'money',
     headerId: 'accounts-col-opening-cr',
+    sortKey: 'opening_cr_paisa',
     from: 'wide',
     value: (row, { money }) => money(row.opening_cr_paisa),
   },
@@ -68,6 +78,7 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     field: 'credit_allowed',
     type: 'status',
     headerId: 'accounts-col-credit',
+    sortKey: 'credit_allowed',
     from: 'normal',
     value: (row, { text }) => text(row.credit_allowed ? 'common-yes' : 'common-no'),
   },

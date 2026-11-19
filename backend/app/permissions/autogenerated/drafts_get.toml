@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-drafts-get"
+description = "Enables the drafts_get command without any pre-configured scope."
+commands.allow = ["drafts_get"]
+
+[[permission]]
+identifier = "deny-drafts-get"
+description = "Denies the drafts_get command without any pre-configured scope."
+commands.deny = ["drafts_get"]

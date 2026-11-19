@@ -10,7 +10,7 @@ import * as appApi from '../../src/app/api';
 import * as dayApi from '../../src/features/day/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
-import { balance } from '../helpers/accounts';
+import { balance, money } from '../helpers/accounts';
 import {
   fail,
   healthyBackend,
@@ -123,6 +123,60 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     expect(words).toContain('12');
   });
 
+  it("shows the full summary of the days (PRD 4.9, FR-21.1): the numbers are the backend's", async () => {
+    await open();
+    const heading = await screen.findByRole('heading', {
+      name: named(message(language, 'day-summary-title')),
+    });
+    const section = heading.closest('section');
+    if (!(section instanceof HTMLElement)) throw new Error('no summary');
+    const list = visible(section.querySelector('dl')?.textContent);
+    // 2 بکری, خام 41,400, commission 5,448, shared income 5,488, no lots left (PRD 4.9).
+    for (const figure of ['2', '41,400', '5,448', '5,488']) expect(list).toContain(figure);
+    for (const id of [
+      'day-summary-bikri-count',
+      'day-summary-gross',
+      'day-summary-commission',
+      'day-summary-shared-income',
+      'day-summary-open-lots',
+      'day-summary-open-qty',
+    ]) {
+      expect(list).toContain(message(language, id));
+    }
+    // Each partner's share: 996 / 746 / 746, with income and expense beside the profit.
+    const table = within(section).getByRole('table', {
+      name: named(message(language, 'day-summary-partners-label')),
+    });
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(4);
+    expect(visible(rows[1]?.textContent)).toContain('2,196');
+    expect(visible(rows[1]?.textContent)).toContain('1,200');
+    expect(visible(rows[1]?.textContent)).toContain('996');
+    expect(visible(rows[2]?.textContent)).toContain('746');
+    expect(visible(rows[3]?.textContent)).toContain('746');
+    // The trial difference and the cash in hand beside it are there too.
+    expect(visible(document.body.textContent)).toContain(message(language, 'day-close-trial'));
+    expect(visible(document.body.textContent)).toContain('58,484');
+  });
+
+  it('a summary with no partners says so instead of an empty table', async () => {
+    await open({
+      summary: {
+        partners_locked: false,
+        bikri_count: 0,
+        gross_paisa: money(0),
+        commission_paisa: money(0),
+        shared_income_paisa: money(0),
+        partners: [],
+        open_lots: 0,
+        open_qty: 0,
+      },
+    });
+    expect(
+      await screen.findByText(named(message(language, 'day-summary-no-partners'))),
+    ).toBeInTheDocument();
+  });
+
   it('a backend that finds no open day says so at the date field and the button stays off', async () => {
     fakeDay();
     vi.mocked(dayApi.dayClosePreview).mockRejectedValueOnce(
@@ -140,7 +194,14 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
   });
 
   it('with every day up to today closed there is nothing to ask or close', async () => {
-    await open({ status: { today: '2026-10-10', closed_up_to: '2026-10-10', today_open: false } });
+    await open({
+      status: {
+        today: '2026-10-10',
+        closed_up_to: '2026-10-10',
+        today_open: false,
+        first_entry_date: null,
+      },
+    });
     expect(await screen.findByText(message(language, 'day-close-nothing'))).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: named(message(language, 'day-close-button')) }),
@@ -291,6 +352,9 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     expect((await labelled(language, 'day-reopen-date')).value).toBe('30-09-2026');
     await user.click(await labelled(language, 'day-reopen-reason'));
     await user.keyboard('Wrong rate');
+    // The plain reopen asks the Owner's sign too, like the reopen to fix an entry (plan 80 Q-R2-2, FR-21.4).
+    await user.click(await labelled(language, 'day-reopen-sign'));
+    await user.keyboard('adnan');
     await user.click(
       screen.getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
     );
@@ -302,7 +366,7 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
       within(dialog).getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
     );
     await waitFor(() => {
-      expect(dayApi.dayReopen).toHaveBeenCalledWith('30-09-2026', 'Wrong rate');
+      expect(dayApi.dayReopen).toHaveBeenCalledWith('30-09-2026', 'Wrong rate', 'adnan');
     });
     expect(
       (
@@ -314,6 +378,34 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     await waitFor(() => {
       expect(statusBar()).toContain(closedUpTo(language, '29-09-2026'));
     });
+  });
+
+  it('a reopen with a wrong or missing sign is refused at the sign field, nothing reopens and nothing typed is lost (plan 80 Q-R2-2)', async () => {
+    const { user } = await open();
+    vi.mocked(dayApi.dayReopen).mockRejectedValueOnce(
+      fail({ code: 'ERR_SIGN_WRONG', field: 'sign' }),
+    );
+    await user.click(await labelled(language, 'day-reopen-reason'));
+    await user.keyboard('Wrong rate');
+    await user.click(await labelled(language, 'day-reopen-sign'));
+    await user.keyboard('munshi');
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(
+      within(dialog).getByRole('button', { name: named(message(language, 'day-reopen-button')) }),
+    );
+    const sign = await labelled(language, 'day-reopen-sign');
+    await waitFor(() => {
+      expect(sign).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(
+      await screen.findByText((text) => visible(text).includes(message(language, 'err-sign-wrong'))),
+    ).toBeInTheDocument();
+    expect(sign.value).toBe('munshi');
+    expect((await labelled(language, 'day-reopen-reason')).value).toBe('Wrong rate');
+    expect(statusBar()).toContain(closedUpTo(language, '30-09-2026'));
   });
 
   it('a reopen without a reason is refused at the reason field, and nothing typed is lost', async () => {
@@ -340,7 +432,9 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
   });
 
   it('with no closed day there is nothing to reopen, and the status bar shows no closed-up-to date', async () => {
-    fakeDay({ status: { today: '2026-10-10', closed_up_to: null, today_open: true } });
+    fakeDay({
+      status: { today: '2026-10-10', closed_up_to: null, today_open: true, first_entry_date: null },
+    });
     await renderApp('/day');
     // The words are the same on the top line and on the reopen card: both are there.
     expect((await screen.findAllByText(message(language, 'day-reopen-none-title'))).length).toBe(2);

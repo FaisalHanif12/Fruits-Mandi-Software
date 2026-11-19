@@ -36,6 +36,22 @@ impl BusinessDate {
         self.0.succ_opt().map(BusinessDate)
     }
 
+    /// The date `days` days after this one (before it when `days` is negative), or `None` past the
+    /// ends of the calendar. Used for the 30-day windows of a party's statement (PRD FR-12.47).
+    ///
+    /// ```
+    /// use mandi_core::dates::BusinessDate;
+    /// let day = BusinessDate::from_ymd(2026, 10, 11).unwrap();
+    /// assert_eq!(day.plus_days(15), BusinessDate::from_ymd(2026, 10, 26));
+    /// assert_eq!(day.plus_days(-14), BusinessDate::from_ymd(2026, 9, 27));
+    /// ```
+    pub fn plus_days(self, days: i64) -> Option<BusinessDate> {
+        chrono::Duration::try_days(days)
+            .and_then(|d| self.0.checked_add_signed(d))
+            .filter(|d| (1000..=9999).contains(&d.year()))
+            .map(BusinessDate)
+    }
+
     /// The storage form `YYYY-MM-DD`.
     pub fn to_iso(self) -> String {
         self.0.format("%Y-%m-%d").to_string()
@@ -54,6 +70,33 @@ impl BusinessDate {
     /// Day of the month, 1 to 31.
     pub fn day(self) -> u32 {
         self.0.day()
+    }
+
+    /// The weekday: 0 is Monday, 6 is Sunday (for the start of a week).
+    ///
+    /// ```
+    /// use mandi_core::dates::BusinessDate;
+    /// // 12-10-2026 is a Monday and 18-10-2026 a Sunday.
+    /// assert_eq!(BusinessDate::from_ymd(2026, 10, 12).unwrap().weekday_from_monday(), 0);
+    /// assert_eq!(BusinessDate::from_ymd(2026, 10, 18).unwrap().weekday_from_monday(), 6);
+    /// ```
+    pub fn weekday_from_monday(self) -> u32 {
+        self.0.weekday().num_days_from_monday()
+    }
+
+    /// How many days `self` is after `earlier`: 0 for the same day, negative if `self` is before
+    /// it. Used for the age of a bill or a payable (PRD C14: today less the bill's day).
+    ///
+    /// ```
+    /// use mandi_core::dates::BusinessDate;
+    /// let bill = BusinessDate::from_ymd(2026, 10, 10).unwrap();
+    /// let today = BusinessDate::from_ymd(2026, 10, 17).unwrap();
+    /// assert_eq!(today.days_after(bill), 7);
+    /// assert_eq!(bill.days_after(bill), 0);
+    /// assert_eq!(bill.days_after(today), -7);
+    /// ```
+    pub fn days_after(self, earlier: BusinessDate) -> i64 {
+        self.0.signed_duration_since(earlier.0).num_days()
     }
 }
 

@@ -1,0 +1,15 @@
+{
+  "arrival": {
+    "date": "10-10-2026",
+    "garden_id": 1,
+    "item_id": 1,
+    "note": "بارش میں آئے",
+    "packing_id": 1,
+    "qty": "120",
+    "sell_date": null,
+    "weight": null
+  },
+  "id": 1,
+  "reason": "",
+  "version": 1
+}

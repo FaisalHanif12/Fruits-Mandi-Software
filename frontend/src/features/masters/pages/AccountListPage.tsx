@@ -7,50 +7,73 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { Landmark, Plus, SearchX } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, type ListContext } from '../../../shared/grid';
+import {
+  ListGrid,
+  ListRegion,
+  Pager,
+  listHeightMode,
+  useListPaging,
+  type ListContext,
+} from '../../../shared/grid';
 import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
+import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
   Checkbox,
   EmptyState,
   ErrorState,
   Field,
+  FilterBar,
+  FilterCard,
+  ListPage,
   LoadingState,
   Num,
   Select,
-  TextInput,
 } from '../../../shared/ui';
 import { accountColumns, hasMoreColumns, showsOpeningColumns } from '../account-columns';
 import { useAccountList } from '../../../shared/accounts';
-import type { AccountFilter, AccountRow, AccountType } from '../../../shared/accounts';
+import type { AccountFilter, AccountListKind, AccountRow } from '../../../shared/accounts';
+import { ACCOUNTS_SCREEN, accountChoicesFrom, accountChoicesText } from '../remember';
 import { useMasterFocus } from '../store';
 
-/** A list of this many rows or fewer is as tall as its rows; a longer one fills the screen. */
-const SHORT_LIST_ROWS = 30;
 const ALL = 'all';
-const TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
+/** The kinds the list can show besides "all": sellers and buyers (plan 32, R6, plan 64). */
+const KINDS: readonly AccountListKind[] = ['seller', 'buyer'];
 
+/** The account list starts as the Owner left it: the kind and the inactive tick (PRD FR-7.45). */
 export function AccountListPage() {
+  return (
+    <Remembered screen={ACCOUNTS_SCREEN}>{(memory) => <AccountListBody {...memory} />}</Remembered>
+  );
+}
+
+function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
   const navigate = useNavigate();
-  const [type, setType] = useState<AccountType | typeof ALL>(ALL);
+  const start = useMemo(() => accountChoicesFrom(saved), [saved]);
+  const [type, setType] = useState<AccountListKind>(start.type);
   const [text, setText] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [showInactive, setShowInactive] = useState(start.showInactive);
+  useEffect(() => {
+    keepChoices(accountChoicesText({ type, showInactive }));
+  }, [type, showInactive, keepChoices]);
   // The tick that adds the opening debit and credit below the wide step. It is kept for next time.
   const [moreColumns, setMoreColumns] = useRememberedFlag('accounts.more_columns', false);
   const step = useLayoutStep();
   const columns = useMemo(() => accountColumns(step, moreColumns), [step, moreColumns]);
   const filter = useMemo<AccountFilter>(
     () => ({
-      account_type: type === ALL ? null : type,
+      kind: type,
       text: text.trim(),
       include_inactive: showInactive,
+      has_opening: null,
     }),
     [type, text, showInactive],
   );
   const list = useAccountList(filter);
+  const paging = useListPaging(list.pager);
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const remember = useMasterFocus((state) => state.remember);
   const focusRowId = useMasterFocus((state) => state.rows.account);
@@ -73,8 +96,12 @@ export function AccountListPage() {
       <Localized id="accounts-new" />
     </Button>
   );
-  const filtering = filter.text !== '' || filter.account_type !== null || filter.include_inactive;
-  const data = list.data;
+  const filtering = filter.text !== '' || filter.kind !== ALL || filter.include_inactive;
+  // The page on screen. It carries the count and the opening totals of the whole filter, which are
+  // the ones shown (PRD FR-19.11). The grid puts the focus back on the account last opened or saved
+  // when it is on this page; the list comes back to the page it was on (`usePagedQuery`).
+  const first = list.data?.pages[0];
+  const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
   // The opening debit and credit columns come with the wide layout, or with "More columns"; the
   // totals stand under them there (Code Standards F19), and as a line under the list where the
   // columns are not shown.
@@ -86,19 +113,19 @@ export function AccountListPage() {
       labelField: 'name',
       values: {
         name: context.text('glossary-meezan'),
-        ...(data === undefined
+        ...(first === undefined
           ? {}
           : {
-              opening_dr: context.money(data.total_dr_paisa),
-              opening_cr: context.money(data.total_cr_paisa),
+              opening_dr: context.money(first.total_dr_paisa),
+              opening_cr: context.money(first.total_cr_paisa),
             }),
       },
     }),
-    [data],
+    [first],
   );
 
   let body;
-  if (data === undefined && list.isPending) {
+  if (rows === undefined && list.isPending) {
     body = <LoadingState />;
   } else if (list.isError) {
     body = (
@@ -110,7 +137,7 @@ export function AccountListPage() {
         }}
       />
     );
-  } else if (data?.rows.length === 0) {
+  } else if (rows?.length === 0) {
     body = filtering ? (
       <EmptyState
         icon={SearchX}
@@ -136,54 +163,56 @@ export function AccountListPage() {
         action={newButton}
       />
     );
-  } else if (data !== undefined) {
+  } else if (rows !== undefined && first !== undefined) {
     body = (
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <div className={data.rows.length <= SHORT_LIST_ROWS ? '' : 'min-h-0 flex-1'}>
+        <ListRegion rowCount={rows.length}>
           <ListGrid<AccountRow>
             columns={columns}
-            rows={data.rows}
+            rows={rows}
             getRowId={(row) => String(row.id)}
             labelId="accounts-title"
             onOpen={open}
-            heightMode={data.rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
+            heightMode={listHeightMode(rows.length)}
             isInactive={(row) => !row.is_active}
             totals={totalsUnderColumns ? totals : undefined}
+            paging={paging}
+            sort={{ value: list.sort, onChange: list.setSort }}
             focusRowId={focusRowId === undefined ? null : String(focusRowId)}
             onFocusRow={(rowId) => {
               remember('account', Number(rowId));
             }}
           />
-        </div>
+        </ListRegion>
         {totalsUnderColumns ? null : (
           <div className="flex flex-wrap gap-x-6 gap-y-1 type-body text-ink">
             <span className="flex items-baseline gap-2">
               <Localized id="accounts-total-dr" />
-              <Num paisa={data.total_dr_paisa} />
+              <Num paisa={first.total_dr_paisa} />
             </span>
             <span className="flex items-baseline gap-2">
               <Localized id="accounts-total-cr" />
-              <Num paisa={data.total_cr_paisa} />
+              <Num paisa={first.total_cr_paisa} />
             </span>
           </div>
         )}
+        <Pager pager={list.pager} />
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="accounts-title">
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id="accounts-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        </div>
-        {data === undefined || data.rows.length === 0 ? null : (
-          <div className="flex flex-wrap gap-2">
+    <ListPage
+      titleId="accounts-title"
+      icon={Landmark}
+      help={
+        <Localized id="accounts-help">
+          <p />
+        </Localized>
+      }
+      actions={
+        rows === undefined || rows.length === 0 ? undefined : (
+          <>
             <Button
               onClick={() => {
                 void navigate({ to: '/index/openings' });
@@ -192,47 +221,52 @@ export function AccountListPage() {
               <Localized id="openings-open" />
             </Button>
             {newButton}
-          </div>
-        )}
-      </div>
-      <div ref={containerRef} {...formNavigationProps} className="flex flex-wrap items-end gap-4">
-        <div className="w-field">
-          <Field label={<Localized id="accounts-filter-type" />}>
-            {(props) => (
-              <Select
-                {...props}
-                value={type}
-                onChange={setType}
-                options={[
-                  { value: ALL, label: <Localized id="accounts-type-all" /> },
-                  ...TYPES.map((option) => ({
-                    value: option,
-                    label: <Localized id={`accounts-type-${option}`} />,
-                  })),
-                ]}
-              />
-            )}
-          </Field>
-        </div>
-        <div className="min-w-0 flex-1 basis-field">
-          <Field label={<Localized id="accounts-filter-label" />}>
-            {(props) => <TextInput {...props} value={text} onChange={setText} />}
-          </Field>
-        </div>
-        <Checkbox
-          checked={showInactive}
-          onChange={setShowInactive}
-          label={<Localized id="accounts-show-inactive" />}
-        />
-        {hasMoreColumns(step) ? (
-          <Checkbox
-            checked={moreColumns}
-            onChange={setMoreColumns}
-            label={<Localized id="accounts-more-columns" />}
-          />
-        ) : null}
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col">{body}</div>
-    </div>
+          </>
+        )
+      }
+      filters={
+        <FilterCard ref={containerRef} {...formNavigationProps}>
+          <FilterBar
+            screen="accounts"
+            search={{ value: text, onChange: setText, labelId: 'accounts-filter-label' }}
+            extra={
+              <>
+                <Checkbox
+                  checked={showInactive}
+                  onChange={setShowInactive}
+                  label={<Localized id="accounts-show-inactive" />}
+                />
+                {hasMoreColumns(step) ? (
+                  <Checkbox
+                    checked={moreColumns}
+                    onChange={setMoreColumns}
+                    label={<Localized id="accounts-more-columns" />}
+                  />
+                ) : null}
+              </>
+            }
+          >
+            <Field label={<Localized id="accounts-filter-type" />}>
+              {(props) => (
+                <Select
+                  {...props}
+                  value={type}
+                  onChange={setType}
+                  options={[
+                    { value: ALL, label: <Localized id="accounts-type-all" /> },
+                    ...KINDS.map((option) => ({
+                      value: option,
+                      label: <Localized id={`accounts-type-${option}`} />,
+                    })),
+                  ]}
+                />
+              )}
+            </Field>
+          </FilterBar>
+        </FilterCard>
+      }
+    >
+      {body}
+    </ListPage>
   );
 }

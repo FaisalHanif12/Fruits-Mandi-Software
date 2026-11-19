@@ -1,0 +1,21 @@
+{
+  "id": 1,
+  "purchase": {
+    "confirm_cash_below_zero": false,
+    "date": "09-10-2026",
+    "freight": "400",
+    "item_id": 1,
+    "labour": null,
+    "note": null,
+    "other_cost": null,
+    "packing_id": 1,
+    "parts": [],
+    "qty": "20",
+    "rate": "520",
+    "supplier": "Orange Traders",
+    "trip_id": 1,
+    "weight": null
+  },
+  "reason": "",
+  "version": 2
+}

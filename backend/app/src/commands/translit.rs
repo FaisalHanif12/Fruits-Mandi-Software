@@ -7,6 +7,7 @@ use ts_rs::TS;
 
 use super::run;
 use crate::error::UiError;
+use mandi_services::core::paging::SortInput;
 use mandi_services::core::translit::{Direction, Kind, Suggestion};
 use mandi_services::{auth, translit};
 
@@ -57,6 +58,45 @@ pub struct PairRow {
     pub use_count: u32,
     /// UTC time it was last chosen. Null if never.
     pub last_used_at: Option<String>,
+}
+
+/// The page of learned pairs to list.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PairsListInput {
+    /// How many rows to skip. 0 for the first page.
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+    /// Only pairs whose English or Urdu spelling holds this text. The count and the uses are over
+    /// these pairs.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole list by: `roman`, `urdu`, `kind`, `use_count` or
+    /// `last_used_at`. Null is the most used first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+}
+
+/// One page of learned pairs with the totals over every pair.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PairsList {
+    /// This page, most used first.
+    pub rows: Vec<PairRow>,
+    /// How many pairs there are.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The totals over every pair.
+    pub totals: PairsTotals,
+}
+
+/// The totals of the learned pairs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PairsTotals {
+    /// How many times all the pairs were chosen.
+    #[ts(type = "number")]
+    pub use_count: i64,
 }
 
 /// Which learned pair to remove.
@@ -114,17 +154,27 @@ pub async fn translit_learn<R: tauri::Runtime>(
     .await
 }
 
-/// All learned pairs, most used first.
+/// One page of the learned pairs, most used first, with how many there are and how many times
+/// they were all used (PRD FR-19.11).
 #[tauri::command]
 pub async fn translit_pairs_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-) -> Result<Vec<PairRow>, UiError> {
-    run(app, "translit_pairs_list", |ctx| {
+    input: PairsListInput,
+) -> Result<PairsList, UiError> {
+    run(app, "translit_pairs_list", move |ctx| {
         auth::require(ctx)?;
-        Ok(translit::list(ctx)?
-            .into_iter()
-            .map(PairRow::from)
-            .collect())
+        let (rows, total_count, use_count) = translit::list_page_with(
+            ctx,
+            input.offset,
+            input.limit,
+            input.search.as_deref(),
+            input.sort.as_ref(),
+        )?;
+        Ok(PairsList {
+            rows: rows.into_iter().map(PairRow::from).collect(),
+            total_count,
+            totals: PairsTotals { use_count },
+        })
     })
     .await
 }

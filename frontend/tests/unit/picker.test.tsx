@@ -3,7 +3,7 @@
 // picker never converts English letters to Urdu (Code Standards F41).
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +11,7 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { formNavigationProps, useEscapeDispatcher } from '../../src/shared/keyboard';
 import * as searchApi from '../../src/shared/search/api';
-import type { SearchHit } from '../../src/shared/search';
+import type { SearchHit, SearchScope } from '../../src/shared/search';
 import { Field, Picker, type PickerValue } from '../../src/shared/ui';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fail } from '../helpers/app';
@@ -30,6 +30,7 @@ function hit(id: number, code: string, ur: string, en: string, active = true): S
     extra_ur: '',
     extra_en: '',
     is_active: active,
+    sold_by_weight: false,
   };
 }
 
@@ -59,11 +60,14 @@ function fakeSearch(rows: SearchHit[] = ALL) {
 
 interface HarnessProps {
   initial?: PickerValue | null;
-  onAddNew?: (text: string) => void;
   onValue?: (value: PickerValue | null) => void;
+  /** The list opens above the field (plan 51, the chat window's party box). */
+  above?: boolean;
+  /** The list the box searches; the cities by default. */
+  scope?: SearchScope;
 }
 
-function Harness({ initial = null, onAddNew, onValue }: HarnessProps) {
+function Harness({ initial = null, onValue, above = false, scope = 'city' }: HarnessProps) {
   const [value, setValue] = useState<PickerValue | null>(initial);
   useEscapeDispatcher();
   return (
@@ -73,7 +77,8 @@ function Harness({ initial = null, onAddNew, onValue }: HarnessProps) {
         {(control) => (
           <Picker
             {...control}
-            scope="city"
+            scope={scope}
+            listAbove={above}
             value={value}
             onChange={(next) => {
               const chosen =
@@ -83,7 +88,6 @@ function Harness({ initial = null, onAddNew, onValue }: HarnessProps) {
               setValue(chosen);
               onValue?.(chosen);
             }}
-            onAddNew={onAddNew}
           />
         )}
       </Field>
@@ -127,11 +131,27 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     expect(searchApi.searchMasters).toHaveBeenLastCalledWith({
       scope: 'city',
       text: 'ar',
+      offset: 0,
       limit: 50,
     });
     // Never converted to Urdu: pickers search raw text (F41).
     expect(urduApi.translitSuggest).not.toHaveBeenCalled();
     expect(input).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('opens its list above the field when asked, and under it otherwise (plan 51)', async () => {
+    for (const above of [false, true]) {
+      const { input, user } = setup(language, { above });
+      await user.click(input);
+      await user.keyboard('ar');
+      await waitFor(() => {
+        expect(options()).toHaveLength(1);
+      });
+      const popup = screen.getByRole('listbox').parentElement;
+      expect(popup).toHaveClass(above ? 'bottom-full' : 'top-full');
+      expect(popup).not.toHaveClass(above ? 'top-full' : 'bottom-full');
+      cleanup();
+    }
   });
 
   it('finds by the name in either script, by code, and forgives a small mistake', async () => {
@@ -171,8 +191,17 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     const { input, user } = setup(language, { onValue });
     await user.click(input);
     await user.keyboard('a');
+    // The list kept from the click has the same three rows: wait for the answer to the text.
+    await waitFor(() => {
+      expect(searchApi.searchMasters).toHaveBeenLastCalledWith(
+        expect.objectContaining({ text: 'a' }),
+      );
+    });
     await waitFor(() => {
       expect(options()).toHaveLength(3);
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
     await user.keyboard('{ArrowDown}');
     expect(options()[1]).toHaveAttribute('aria-selected', 'true');
@@ -235,8 +264,9 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
 
   it('with the list closed ↑ ↓ move between fields like in any other field', async () => {
     const { input, user } = setup(language);
-    // Tab into the field: arriving by keyboard opens nothing (a mouse click shows the recent ones).
-    // jsdom has no layout: give the three fields the boxes of a column, one under the other.
+    // Tab into the field opens its list at once (PRD FR-7.16, plan 46); Esc closes it, and then ↑ ↓
+    // move between fields again. jsdom has no layout: give the three fields the boxes of a column,
+    // one under the other.
     [screen.getByTestId('before'), input, screen.getByTestId('after')].forEach((field, row) => {
       field.getBoundingClientRect = () =>
         ({
@@ -254,11 +284,16 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     await user.tab();
     await user.tab();
     expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard('{Escape}');
     expect(input).toHaveAttribute('aria-expanded', 'false');
     await user.keyboard('{ArrowDown}');
     expect(screen.getByTestId('after')).toHaveFocus();
     await user.keyboard('{ArrowUp}');
     expect(input).toHaveFocus();
+    // The focus came back to the field, so its list is open again: Esc closes it, then ↑ moves.
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard('{Escape}');
     await user.keyboard('{ArrowUp}');
     expect(screen.getByTestId('before')).toHaveFocus();
   });
@@ -270,46 +305,18 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     await waitFor(() => {
       expect(options().length).toBeGreaterThan(0);
     });
-    expect(searchApi.searchRecent).toHaveBeenCalledWith({ scope: 'city' });
-    expect(searchApi.searchMasters).not.toHaveBeenCalled();
+    // Empty text is the whole list, the last chosen first, then by code (plan 32, R7).
+    expect(searchApi.searchMasters).toHaveBeenCalledWith({
+      scope: 'city',
+      text: '',
+      offset: 0,
+      limit: 50,
+    });
     // The inactive one is still not offered.
     expect(options()).toHaveLength(3);
   });
 
-  it('F4 adds a new one with the typed text; an empty result offers the same by button', async () => {
-    const onAddNew = vi.fn();
-    const { input, user } = setup(language, { onAddNew });
-    await user.click(input);
-    await user.keyboard('zzz');
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
-    });
-    await user.click(
-      screen.getByRole('button', { name: new RegExp(message(language, 'search-add-new')) }),
-    );
-    expect(onAddNew).toHaveBeenLastCalledWith('zzz');
-    await user.click(input);
-    await user.keyboard('{F4}');
-    // user-event does not know F4 by code, so press it the way the window gets it.
-    act(() => {
-      input.dispatchEvent(new KeyboardEvent('keydown', { code: 'F4', key: 'F4', bubbles: true }));
-    });
-    expect(onAddNew).toHaveBeenCalledTimes(2);
-  });
-
-  it('without an add action there is no add button and F4 does nothing', async () => {
-    const { input, user } = setup(language);
-    await user.click(input);
-    await user.keyboard('zzz');
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
-    });
-    expect(
-      screen.queryByRole('button', { name: new RegExp(message(language, 'search-add-new')) }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('emptying the field and leaving clears the value; other typing is dropped on leaving', async () => {
+  it('emptying the field and leaving clears the value; text that is not a short code is dropped on leaving', async () => {
     const onValue = vi.fn();
     const { input, user } = setup(language, { initial: AKRAM, onValue });
     await user.click(input);
@@ -389,5 +396,315 @@ describe('Picker with a long list', () => {
     // The list holds 5,000 records but the page holds a few dozen rows at most (NFR-SPD-18).
     expect(options().length).toBeLessThan(40);
     expect(options()[0]).toHaveAttribute('aria-setsize', '5000');
+  });
+});
+
+/** jsdom has no layout: give fields the boxes of a row, one beside the other. */
+function layInRow(fields: HTMLElement[]) {
+  fields.forEach((field, column) => {
+    field.getBoundingClientRect = () =>
+      ({
+        left: column * 120,
+        right: column * 120 + 100,
+        top: 0,
+        bottom: 40,
+        x: column * 120,
+        y: 0,
+        width: 100,
+        height: 40,
+        toJSON: () => ({}),
+      }) satisfies DOMRect;
+  });
+}
+
+// Plan 46, PRD FR-7.16 of v1.14: the list opens as soon as the field has the focus.
+describe.each(LANGUAGES)('Picker, opened by the focus (%s)', (language) => {
+  it('opens on a Tab into the field and again each time the focus comes back; Tab leaves and closes it', async () => {
+    const { input, user } = setup(language);
+    await user.tab();
+    await user.tab();
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(0);
+    });
+    await user.tab();
+    expect(screen.getByTestId('after')).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(options()).toHaveLength(0);
+    await user.tab({ shift: true });
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('highlights the record the field has; Enter keeps it and moves on to the next field', async () => {
+    const onValue = vi.fn();
+    const { input, user } = setup(language, { initial: ARSHAD, onValue });
+    await user.tab();
+    await user.tab();
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(1);
+    });
+    await waitFor(() => {
+      expect(
+        options().filter((option) => option.getAttribute('aria-selected') === 'true'),
+      ).toHaveLength(1);
+    });
+    expect(
+      visible(options().find((o) => o.getAttribute('aria-selected') === 'true')?.textContent),
+    ).toContain(language === 'ur' ? ARSHAD.name_ur : ARSHAD.name_en);
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('after')).toHaveFocus();
+    // It was not swapped for the first row, and nothing was asked to change.
+    expect(onValue).not.toHaveBeenCalled();
+    expect(input.value).toBe(language === 'ur' ? ARSHAD.name_ur : ARSHAD.name_en);
+  });
+
+  it('a record that is not among the rows read is kept by Enter too: nothing is highlighted', async () => {
+    const onValue = vi.fn();
+    const missing: PickerValue = { id: 99, code: '0099', name_ur: 'گمشدہ', name_en: 'Missing' };
+    const { user } = setup(language, { initial: missing, onValue });
+    await user.tab();
+    await user.tab();
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(1);
+    });
+    expect(
+      options().filter((option) => option.getAttribute('aria-selected') === 'true'),
+    ).toHaveLength(0);
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('after')).toHaveFocus();
+    expect(onValue).not.toHaveBeenCalled();
+  });
+
+  it('Enter before the list has answered keeps the record and moves on; it never picks a row unseen', async () => {
+    vi.mocked(searchApi.searchMasters).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(searchApi.searchRecent).mockReturnValue(new Promise(() => undefined));
+    const onValue = vi.fn();
+    const { user } = setup(language, { initial: ARSHAD, onValue });
+    await user.tab();
+    await user.tab();
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('after')).toHaveFocus();
+    expect(onValue).not.toHaveBeenCalled();
+  });
+
+  it('an empty field highlights nothing: Enter leaves it empty and moves on; ↓ then Enter picks', async () => {
+    const onValue = vi.fn();
+    const { user } = setup(language, { onValue });
+    await user.tab();
+    await user.tab();
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(1);
+    });
+    expect(
+      options().filter((option) => option.getAttribute('aria-selected') === 'true'),
+    ).toHaveLength(0);
+    // An optional field is skipped with Enter and stays empty (the اڈا of a بکری).
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('after')).toHaveFocus();
+    expect(onValue).not.toHaveBeenCalled();
+    // Back in the field, ↓ points at the first row and the next ↓ at the second; Enter picks it.
+    await user.tab({ shift: true });
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(1);
+    });
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
+    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: ARSHAD.id }));
+    expect(screen.getByTestId('after')).toHaveFocus();
+  });
+
+  it('← and → leave the open list for the field on that side, like in any text field', async () => {
+    const { input, user } = setup(language);
+    layInRow([screen.getByTestId('before'), input, screen.getByTestId('after')]);
+    await user.tab();
+    await user.tab();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByTestId('after')).toHaveFocus();
+    expect(options()).toHaveLength(0);
+    await user.keyboard('{ArrowLeft}');
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByTestId('before')).toHaveFocus();
+  });
+
+  it('once he has typed, ← and → move the cursor inside the text first', async () => {
+    const { input, user } = setup(language);
+    layInRow([screen.getByTestId('before'), input, screen.getByTestId('after')]);
+    await user.tab();
+    await user.tab();
+    await user.keyboard('ar');
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
+    });
+    // The arrow toward the start of the text: ← in English, → in Urdu (the text runs the other way).
+    await user.keyboard(language === 'ur' ? '{ArrowRight}' : '{ArrowLeft}');
+    // The cursor moved inside "ar"; the focus stayed and the list is still open.
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('Esc closes the list and then ↓ is a key of the form again; the chosen name stays', async () => {
+    const { input, user } = setup(language, { initial: AKRAM });
+    [screen.getByTestId('before'), input, screen.getByTestId('after')].forEach((field, row) => {
+      field.getBoundingClientRect = () =>
+        ({
+          left: 0,
+          right: 100,
+          top: row * 60,
+          bottom: row * 60 + 40,
+          x: 0,
+          y: row * 60,
+          width: 100,
+          height: 40,
+          toJSON: () => ({}),
+        }) satisfies DOMRect;
+    });
+    await user.tab();
+    await user.tab();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard('{ArrowDown}');
+    // Open: ↓ chose a row, the focus did not move.
+    expect(input).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByTestId('after')).toHaveFocus();
+    expect(input.value).toBe(language === 'ur' ? AKRAM.name_ur : AKRAM.name_en);
+  });
+
+  it('a click opens it at once, and the language can change with the list open', async () => {
+    const { input, user } = setup(language, { initial: AKRAM });
+    await user.click(input);
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(1);
+    });
+    const other: Language = language === 'ur' ? 'en' : 'ur';
+    act(() => {
+      useLanguageStore.setState({ language: other });
+    });
+    // The list stays open and the same rows read in the other language; the value is kept.
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(() => {
+      expect(
+        optionTexts().some((text) => text.includes(other === 'ur' ? AKRAM.name_ur : AKRAM.name_en)),
+      ).toBe(true);
+    });
+    expect(input.value).toBe(other === 'ur' ? AKRAM.name_ur : AKRAM.name_en);
+  });
+});
+
+// A short code is the running number of a code (PRD FR-10.2, FR-7.39). In a seller, buyer, item, packing or
+// staff field it is taken on Enter or on leaving the field (Code Standards 4.2, PRD FR-7.38): Tab and a click
+// away take it as Enter does. Plan 80 R3-3.
+const SHORT_CODE_LISTS: readonly (readonly [SearchScope, string])[] = [
+  ['item', '004'],
+  ['packing', '005'],
+  ['staff', '006'],
+];
+
+function codeHit(kind: SearchScope, id: number, code: string, name: string): SearchHit {
+  return { ...hit(id, code, name, name), kind };
+}
+
+/** The backend's order for digits: the exact code, the running number the digits name, then the rest that start with them. */
+function fakeCodes(rows: readonly SearchHit[], type: string) {
+  const running = (row: SearchHit) => row.code.slice(type.length);
+  vi.mocked(searchApi.searchMasters).mockImplementation(({ text }) => {
+    const wanted = text.trim();
+    if (wanted === '') return Promise.resolve([...rows]);
+    const exact = rows.filter((row) => row.code === wanted || running(row) === wanted);
+    const starts = rows.filter((row) => !exact.includes(row) && running(row).startsWith(wanted));
+    return Promise.resolve([...exact, ...starts]);
+  });
+  vi.mocked(searchApi.searchRecent).mockResolvedValue([...rows]);
+  vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
+}
+
+describe.each(LANGUAGES)('Picker, a short code left with Tab (%s)', (language) => {
+  describe.each(SHORT_CODE_LISTS)('the %s box', (scope, type) => {
+    const zero = codeHit(scope, 1, `${type}0`, 'Zero');
+    const one = codeHit(scope, 2, `${type}1`, 'One');
+    const ten = codeHit(scope, 3, `${type}10`, 'Ten');
+
+    it('digits typed and Tab take the record with that running number, and no other that starts with them', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('1');
+      await user.tab();
+      await waitFor(() => {
+        expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 2, code: `${type}1` }));
+      });
+      expect(onValue).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(input.value).toBe('One');
+      });
+    });
+
+    it('a full code typed and Tab takes that record too', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard(`${type}10`);
+      await user.tab();
+      await waitFor(() => {
+        expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
+      });
+    });
+
+    it('a running number nobody has is dropped, even when other codes start with it', async () => {
+      // No record has the running number 1: only 10 starts with it, and it is not the short code 1.
+      fakeCodes([zero, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('1');
+      await user.tab();
+      // Give an answer that came late the time to arrive: nothing is taken.
+      await waitFor(() => {
+        expect(searchApi.searchMasters).toHaveBeenCalled();
+      });
+      expect(onValue).not.toHaveBeenCalled();
+      expect(input.value).toBe('');
+    });
+
+    it('a name typed and Tab is dropped, as before', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('On');
+      await user.tab();
+      expect(onValue).not.toHaveBeenCalled();
+      expect(input.value).toBe('');
+    });
+
+    it('Enter takes the short code as it always did, and goes on to the next field', async () => {
+      fakeCodes([zero, one, ten], type);
+      const onValue = vi.fn();
+      const { input, user } = setup(language, { scope, onValue });
+      await user.click(input);
+      await user.keyboard('1{Enter}');
+      await waitFor(() => {
+        expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+      });
+      expect(screen.getByTestId('after')).toHaveFocus();
+    });
+  });
+
+  it('a list with no short codes (the cities) drops digits on leaving, whatever its codes are', async () => {
+    // AKRAM's code ends in 1, but a city has no running number: nothing is taken.
+    const onValue = vi.fn();
+    const { input, user } = setup(language, { onValue });
+    await user.click(input);
+    await user.keyboard('1');
+    await user.tab();
+    expect(onValue).not.toHaveBeenCalled();
+    expect(input.value).toBe('');
   });
 });

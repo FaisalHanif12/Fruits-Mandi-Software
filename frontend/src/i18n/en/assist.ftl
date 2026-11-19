@@ -10,6 +10,9 @@ assist-card-balance = Balance
 assist-card-last-entry = Last entry
 # review: pending
 assist-card-never = No entry yet
+# The card of a walk-in buyer (PRD FR-7.38, FR-13.6): he has no balance, he pays the whole bill on the spot.
+# review: pending
+assist-card-chukta-cash = { -chukta }: pays everything in cash
 # review: pending
 assist-card-credit-limit = Credit limit
 # review: pending
@@ -43,6 +46,13 @@ accountpicker-add = Add a new account
 accountpicker-add-title = New account
 # review: pending
 accountpicker-add-help = Write only what tells this account apart. You can fill in the rest later from the { -index }.
+# The short form of a new walk-in buyer, from the buyer box of a sale line (PRD FR-7.69, FR-13.3).
+# review: pending
+chukta-add-title = New { -chukta } { -gahak }
+# review: pending
+chukta-add-help = Write his name and, if you have it, his phone. He pays the whole bill on the spot and has no account.
+# review: pending
+chukta-saved = { -chukta } { -gahak } added
 
 ## How was this worked out? (PRD FR-7.43). The backend names the message and gives its values.
 
@@ -80,6 +90,9 @@ working-manual-per-unit-received = Typed by hand: <num>{ $qty_received }</num> {
 working-manual-per-lot = Typed by hand: <num>{ $value }</num> per { -lot } = <num>{ $result }</num>
 # review: pending
 working-per-lot-already-charged = This charge is made once per { -lot } and was made in the first { -bikri }, so nothing is added now.
+# PRD FR-12.41, plan 37: a charge a rule works out for each lot is made once for each goods-arrived entry, on its first lot. $entry: the number of the entry; $value: the amount the rule gives for a lot; $result: what is charged on this lot (0).
+# review: pending
+working-per-lot-charged-on-entry = This charge is made once for each { -maal-aaya } entry, and was made on the first { -lot } of entry <num>{ $entry }</num> (<num>{ $value }</num>), so nothing is added now: <num>{ $result }</num>
 
 ## How the amounts of the sale screen were worked out (plan 12, PRD 22). The backend names the message and gives its values.
 
@@ -92,6 +105,21 @@ working-weight-value = <num>{ $grams }</num> g × <num>{ $rate }</num> per kg ÷
 # C5: what the buyer pays for a line.
 # review: pending
 working-buyer-total = Value <num>{ $value }</num> + { -commission } <num>{ $comm }</num> + { -laga } <num>{ $laga }</num> = <num>{ $result }</num>
+# PRD FR-12.44: the money a buyer paid on the spot, as typed (or none).
+# review: pending
+working-paid-typed = { -mauqa-par-jama } (as typed): <num>{ $result }</num>
+# PRD FR-12.44: a buyer who must pay in full pays the whole buyer total.
+# review: pending
+working-paid-full = This buyer pays the whole bill: buyer total <num>{ $total }</num>, so { -mauqa-par-jama } is <num>{ $result }</num>
+# PRD FR-12.44, plan 65 point 10a: an unchanged line of an edit keeps what it was saved with.
+# review: pending
+working-paid-kept = { -mauqa-par-jama } is kept as it was saved: <num>{ $result }</num>
+# PRD FR-12.44: what was typed is more than the buyer total, so it is counted as 0 until it is fixed.
+# review: pending
+working-paid-over = The amount typed, <num>{ $typed }</num>, is more than the buyer total <num>{ $total }</num>, so { -mauqa-par-jama } is counted as <num>{ $result }</num>
+# PRD FR-12.44: what stays on the buyer's account.
+# review: pending
+working-left = Buyer total <num>{ $total }</num> − { -mauqa-par-jama } <num>{ $paid }</num> = <num>{ $result }</num>
 # C19: the rate difference of a line.
 # review: pending
 working-rate-diff = Buyer value <num>{ $buyer_value }</num> − seller amount <num>{ $seller_amount }</num> = <num>{ $result }</num>
@@ -114,9 +142,249 @@ working-shared-income = <num>{ $seller_comm }</num> + <num>{ $buyer_comm }</num>
 # The largest share also gets the rupees left over, so this is not base × percent ÷ 100.
 # review: pending
 working-partner-share = { -hissa } <num>{ $bps }</num>% of <num>{ $base }</num> = <num>{ $result }</num>
+# C11: one partner's part of a shop expense (PRD 16.2, FR-16.8). $bps is a percent: 40 is 40%.
+# The rupees left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-expense-share = { -dukan-kharcha } <num>{ $amount }</num>, { -hissa } <num>{ $bps }</num>% (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
+# C22: the partner total before and after one entry of the { -zati-kharcha } screen (PRD FR-16.8).
+# The same message is used for money taken and for money returned, so it does not say plus or minus.
+# review: pending
+working-partner-total = { -kul-raqam } before <num>{ $before }</num>, this entry <num>{ $amount }</num>, after <num>{ $after }</num>
+# C10, C11: one partner's part of the income and shop expense lines of a { -general } entry (PRD FR-6.5, 16.4).
+# The part is the net of all such lines: expense is positive, income is negative. The rupees left over go to the largest share.
+# review: pending
+working-general-share = Net of the income and { -dukan-kharcha } lines of this entry, { -hissa } <num>{ $bps }</num>% (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
 # A charge of a line that no rule applies to, for example { -laga } on a vegetable (PRD 11.3).
 # review: pending
 working-none-line = No rule applies to this line, so the amount is <num>{ $result }</num>.
-# A one-time seller is paid his whole net at once while { -naqd } is empty (PRD FR-13.10).
+
+## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
+## The backend names the message and gives its values.
+
+# C21: the cost of the trip goods sold or written off, a part of the cost left (the cost of one
+# { -nag } is the average of the purchase, PRD A45). The leftover rupees of the split go to the
+# larger part, so the message does not claim an exact equation (money review of plan 16b).
 # review: pending
-working-cash-pukhta = A { -pukhta-khata } seller is paid his whole { -safi-bikri } on the spot: <num>{ $result }</num>.
+working-cost-of-goods = Cost left <num>{ $cost_left }</num>, the part for <num>{ $qty }</num> of <num>{ $qty_left }</num> { -nag } (each part is rounded down and the rupees left over go to the larger part): <num>{ $result }</num>
+# C21 when the last { -nag } are taken: all the cost left goes with them.
+# review: pending
+working-cost-of-goods-last = The last <num>{ $qty }</num> { -nag } take all the cost left: <num>{ $result }</num>
+# FR-12.20: a line an edit left as it was keeps the cost it had.
+# review: pending
+working-cost-of-goods-kept = This line was left as it was, so it keeps the cost it had: <num>{ $result }</num>
+# C23: a partner's part of a payment of a trip. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-part = Payment <num>{ $amount }</num>, <num>{ $bps }</num> ÷ 10,000 of it (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
+# C25: a partner's part of money that comes in. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-credit = Money in <num>{ $amount }</num>, <num>{ $bps }</num> ÷ 10,000 of it (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
+# PRD 16.7, C1: the value of the fruit taken (qty × rate).
+# review: pending
+working-fruit-value = <num>{ $qty }</num> × <num>{ $rate }</num> = <num>{ $result }</num>
+# PRD 16.7, C1 for fruit of an item sold by weight: the weight is in grams, the rate is for each kilo.
+# review: pending
+working-fruit-value-weight = <num>{ $grams }</num> g × <num>{ $rate }</num> per kg ÷ <num>1,000</num> = <num>{ $result }</num> (to the nearest rupee)
+# PRD 16.7, C27: fruit for the shop's guests is shared equally between the partners who have a share
+# on the day. Each part is rounded down and the rupees left over go to the partner made first, so
+# $result is the first partner's part and the message does not claim an exact equation.
+# review: pending
+working-fruit-guests = Value <num>{ $value }</num> shared equally between <num>{ $count }</num> partners (each part is rounded down and the rupees left over go to the partner made first): the first part <num>{ $result }</num>
+# C24: the part of a trip cost that one purchase carries, by the { -nag } bought. The rupees left
+# over go to the larger part, so the message does not claim an exact equation.
+# review: pending
+working-trip-cost-spread = Cost <num>{ $cost }</num>, the part for <num>{ $qty }</num> of <num>{ $total_qty }</num> { -nag } (each part is rounded down and the rupees left over go to the larger part): <num>{ $result }</num>
+# FR-12.27: the result of a trip (sales money and money from other shops, less the cost sold and written off).
+# review: pending
+working-trip-result = Sales money <num>{ $sales }</num> + money from other shops <num>{ $other_shop }</num> − cost of goods sold <num>{ $cost_sold }</num> − cost written off <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.27: what a partner has so far: money back less money in from the shop and from his pocket.
+# review: pending
+working-trip-partner-net = Money back <num>{ $back }</num> − paid from the shop <num>{ $in_shop }</num> − paid from his pocket <num>{ $in_pocket }</num> = <num>{ $result }</num>
+# FR-12.37: the running balance of a garden: its money in less everything paid in (installments and
+# costs, from the shop and from pockets). It starts in minus.
+# review: pending
+working-garden-balance = Money in <num>{ $money_in }</num> − everything paid (installments and costs, from the shop and from pockets) <num>{ $paid }</num> = <num>{ $result }</num>
+# FR-12.27: the result of one purchase.
+# review: pending
+working-purchase-result = Sales money <num>{ $sales }</num> + money from other shops <num>{ $other_shop }</num> − cost of goods sold <num>{ $cost_sold }</num> − cost written off <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.32: the result of one sale in another shop.
+# review: pending
+working-other-sale-result = Money received <num>{ $amount }</num> − cost of goods sold <num>{ $cost }</num> = <num>{ $result }</num>
+# C21 for a whole lot of trip goods: the cost of the goods its lines took (the sum of the lines).
+# review: pending
+working-own-lot-cost = Cost of the <num>{ $qty }</num> { -nag } sold in this lot, taken from the purchase: <num>{ $result }</num>
+# FR-12.27: the result of a lot of trip goods (the seller credit less the cost of the goods sold).
+# review: pending
+working-own-lot-result = Seller credit <num>{ $credit }</num> − cost of goods sold <num>{ $cost }</num> = <num>{ $result }</num>
+# FR-12.24: the total cost of a purchase: what was paid now and its part of the trip costs.
+# review: pending
+working-purchase-total-cost = Paid now <num>{ $paid_now }</num> + part of the { -market-safar } costs <num>{ $trip_cost }</num> = <num>{ $result }</num>
+# PRD A45: the cost of one { -nag }, worked out for the whole purchase.
+# review: pending
+working-purchase-avg-cost = <num>{ $total }</num> ÷ <num>{ $qty }</num> = <num>{ $result }</num> (to the nearest rupee)
+# FR-12.24: what is paid now. Freight, labour and other cost are always paid at once.
+# review: pending
+working-purchase-paid-now = <num>{ $value }</num> + <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $other_cost }</num> = <num>{ $result }</num>
+# FR-12.41: a partner's part of a purchase entry with many lines. $lines: how many lines; $amount: his parts of all of them added together.
+# review: pending
+working-entry-part-sum = His part of each of the <num>{ $lines }</num> lines, added together: <num>{ $amount }</num>
+# PRD FR-12.27, FR-12.37: the shop's commission on the goods sold in our shop. $seller: the seller commission; $buyer: the buyer commission; $laga: the Laga; $total: all three.
+# review: pending
+working-goods-commission = Commission: seller <num>{ $seller }</num> + buyer <num>{ $buyer }</num> + { -laga } <num>{ $laga }</num> = <num>{ $total }</num>
+
+## The attention list and the bell (plan 19, PRD FR-7.44). Every Urdu line says what its English line says (NFR-URD-29).
+
+# review: pending
+attention-bell-label = Needs attention: { $count }
+
+# review: pending
+attention-title = Needs your attention
+
+# review: pending
+attention-empty-title = Nothing needs your attention
+
+# review: pending
+attention-empty-help = When something needs doing, it shows here.
+
+# review: pending
+attention-load-failed = The list could not be opened
+
+# review: pending
+attention-update = A new version <num>{ $version }</num> is ready. Install it from Settings when the day is done.
+
+# review: pending
+attention-open-first = Most urgent: <name>{ $name }</name>
+
+# review: pending
+attention-drafts = { $count ->
+    [one] <num>{ $count }</num> unsaved draft
+   *[other] <num>{ $count }</num> unsaved drafts
+}
+
+# review: pending
+attention-open-days = { $count ->
+    [one] <num>{ $count }</num> earlier day is not closed
+   *[other] <num>{ $count }</num> earlier days are not closed
+}
+
+# review: pending
+attention-stock-waiting = { $count ->
+    [one] <num>{ $count }</num> { -lot } is waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all
+   *[other] <num>{ $count }</num> { -lot }s are waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all
+}
+
+# review: pending
+attention-stock-waiting-aged = { $count ->
+    [one] <num>{ $count }</num> { -lot } is waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all, the oldest for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+   *[other] <num>{ $count }</num> { -lot }s are waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all, the oldest for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+}
+
+# review: pending
+attention-over-credit-limit = { $count ->
+    [one] <num>{ $count }</num> { -gahak } is over the credit limit
+   *[other] <num>{ $count }</num> { -gahak }s are over the credit limit
+}
+
+# review: pending
+attention-dues-old = { $count ->
+    [one] <num>{ $count }</num> { -gahak } has an old due: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -gahak }s have old dues: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-dues-old-aged = { $count ->
+    [one] <num>{ $count }</num> { -gahak } has an old due: <num>{ $amount }</num>, the bill is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } old
+   *[other] <num>{ $count }</num> { -gahak }s have old dues: <num>{ $amount }</num>, the oldest bill is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } old
+}
+
+# review: pending
+attention-payables-old = { $count ->
+    [one] <num>{ $count }</num> { -beopari } has waited for payment: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -beopari }s have waited for payment: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-payables-old-aged = { $count ->
+    [one] <num>{ $count }</num> { -beopari } has waited for payment: <num>{ $amount }</num>, for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+   *[other] <num>{ $count }</num> { -beopari }s have waited for payment: <num>{ $amount }</num>, the longest for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+}
+
+# review: pending
+attention-backup-old = The last cloud backup is <num>{ $days }</num> { $days ->
+        [one] day
+       *[other] days
+    } old
+
+# review: pending
+attention-backup-never = No cloud backup has been made yet
+
+# review: pending
+attention-loans-overdue = { $count ->
+    [one] <num>{ $count }</num> { -adhar-raqam } entry is past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -adhar-raqam } entries are past their return-by date: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-loans-overdue-aged = { $count ->
+    [one] <num>{ $count }</num> { -adhar-raqam } entry is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -adhar-raqam } entries are past their return-by date, up to <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-takes-overdue = { $count ->
+    [one] <num>{ $count }</num> amount taken by a partner is past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> amounts taken by partners are past their return-by date: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-takes-overdue-aged = { $count ->
+    [one] <num>{ $count }</num> amount taken by a partner is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> amounts taken by partners are past their return-by date, up to <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-names-missing = { $count ->
+    [one] <num>{ $count }</num> record has only one of its two names
+   *[other] <num>{ $count }</num> records have only one of their two names
+}
+
+# review: pending
+attention-health-check = The books check found a problem. See it in Settings.
+
+# A question of the last week whose two places of a figure differed (PRD FR-7.76 point 2): no answer was shown. The row is in the question log.
+# review: pending
+attention-records-differ = { $count ->
+    [one] <num>{ $count }</num> question in the past week had a figure that did not agree with the records. See the question log in Settings.
+   *[other] <num>{ $count }</num> questions in the past week had a figure that did not agree with the records. See the question log in Settings.
+}

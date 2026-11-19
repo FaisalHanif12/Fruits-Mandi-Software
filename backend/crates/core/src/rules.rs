@@ -9,6 +9,7 @@ use ts_rs::TS;
 
 use crate::accounts::RecordRef;
 use crate::money::{Bps, Paisa};
+use crate::paging::SortInput;
 
 /// Whose side a charge is on (PRD 11.1 "جانب").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, TS)]
@@ -511,6 +512,10 @@ pub struct RuleRow {
     pub to_date: Option<String>,
     /// False when hidden from resolution.
     pub is_active: bool,
+    /// True once any saved line or lot took its rate from this rule (PRD FR-11.6). A used rule may
+    /// change only its end date and its active flag; any other change is `ERR_RULE_USED` and the
+    /// screen offers "add a newer rule from a date" (plan 44).
+    pub used: bool,
     /// The note. Empty if none.
     pub note: String,
 }
@@ -541,6 +546,42 @@ pub struct RulesFilter {
 pub struct RulesListInput {
     /// The filter.
     pub filter: RulesFilter,
+    /// How many rows to skip. 0 for the first page (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+    /// Only rules whose party or item (code or name) or note holds this text. The counts are over
+    /// these rules.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole filter by: `side`, `charge_type`, `account`, `item`,
+    /// `item_group`, `level`, `method`, `from_date`, `to_date`, `is_active` or `note`. Null is the
+    /// order of the rule list: by side and charge, then most specific level, then newest (plan 38
+    /// R4). Inactive rules are left out unless `filter.include_inactive` is true.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+}
+
+/// One page of the rule list with the counts over the whole filter (PRD FR-19.11, B31).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct RulesList {
+    /// This page, in the order the rules are listed.
+    pub rows: Vec<RuleRow>,
+    /// How many rules match the filter.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The counts over every matching rule.
+    pub totals: RulesTotals,
+}
+
+/// The counts of the rule list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct RulesTotals {
+    /// How many of the matching rules are active.
+    #[ts(type = "number")]
+    pub active_count: i64,
 }
 
 /// Ask for one rule.
@@ -709,7 +750,7 @@ pub struct OverridesSettings {
     /// Warn or block when a buyer is over his credit limit.
     pub credit_limit_mode: CreditLimitMode,
     /// Warn when a rate is far from the item's average of the last 7 days (PRD FR-7.55). Starts
-    /// on. The warning never blocks a save.
+    /// OFF (v1.44, plan 79); the Owner can turn it on. The warning never blocks a save.
     pub rate_check_enabled: bool,
     /// How far, in percent, a rate may be above or below the average before the warning shows
     /// (1 to 1,000; starts at 30).

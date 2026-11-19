@@ -1,0 +1,20 @@
+{
+  "status": "found",
+  "account": {
+    "id": 36,
+    "code": "0013",
+    "name_ur": "کمال",
+    "name_en": "Kamal",
+    "extra_ur": "",
+    "extra_en": "",
+    "account_type": "seller",
+    "kind": "account",
+    "chukta_id": null,
+    "phone": null,
+    "control_id": 5,
+    "is_active": true,
+    "is_dead": false
+  },
+  "candidates": [],
+  "suggested_code": null
+}

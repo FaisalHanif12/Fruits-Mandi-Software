@@ -7,16 +7,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
+import { IDS } from '../helpers/bikri-data';
 import {
   cellOf,
-  combo,
+  chooseInSummary,
   focusedIn,
   lotsGrid,
   named,
   names,
   openBook,
   salesGrid,
+  summaryChoice,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
 } from '../helpers/bikri-screen';
@@ -28,6 +31,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -42,7 +46,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -65,74 +69,91 @@ describe.each(LANGUAGES)('the sale book screen (%s)', (language) => {
     signedIn(sessionUser({ language }));
   });
 
-  it('opens with the truck number ready to type and nothing asked of the backend', async () => {
+  const dateBox = () =>
+    screen.getByRole('textbox', { name: named(message(language, 'bikri-header-date')) });
+
+  it('opens with the date ready to type and nothing asked of the backend', async () => {
     const { backend } = await openBook(language);
-    expect(await combo(language, 'bikri-header-truck')).toHaveFocus();
+    expect(dateBox()).toHaveFocus();
     expect(backend.previews).toHaveLength(0);
     expect(bikriApi.bikriPreview).not.toHaveBeenCalled();
     // The empty state says what to do, with a button.
     expect(await screen.findByText(message(language, 'bikri-empty-title'))).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: message(language, 'bikri-empty-action') }),
+      screen.getByRole('button', { name: named(message(language, 'bikri-empty-action')) }),
     ).toBeInTheDocument();
   });
 
-  it('a known truck number fills the adda, the zamindar and the driver, and the lot starts from them', async () => {
-    const { backend, user } = await openBook(language);
-    await user.keyboard('LES-1234{Enter}');
-    await waitFor(() => {
-      expect(
-        screen.getByRole('combobox', { name: named(message(language, 'glossary-adda')) }),
-      ).toHaveValue(names(language).swat);
-    });
+  // Plan 71 H1, H4: the header card is gone. The date and the number are in the top row with the
+  // buttons; the truck, the زمیندار, the اڈا and everything behind "More" are not on the screen.
+  it('has only the date and the number in the top row, and none of the old header fields', async () => {
+    await openBook(language);
+    const row = dateBox().closest('form')?.parentElement?.parentElement;
+    if (row == null) throw new Error('no top row');
+    // The date, the number ("New" until saved) and the buttons of the row are one row.
+    const inRow = (id: string) =>
+      within(row).getByText((text) => visible(text) === visible(message(language, id)));
+    expect(inRow('bikri-head-number')).toBeInTheDocument();
+    expect(inRow('bikri-head-number-new')).toBeInTheDocument();
     expect(
-      screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
-    ).toHaveValue(names(language).rahim);
-    // The note says where the values came from, so nothing is filled without being seen.
-    expect(pageText()).toContain(
-      message(language, 'bikri-header-filled-from', { number: 1, date: '09-10-2026' }),
-    );
-    // His item and packing, and the seller of the lot, are in the cells as Enter stops.
-    await user.keyboard('{Enter}{Enter}{Enter}');
+      within(row).getByRole('button', {
+        name: (label) => visible(label).startsWith(visible(message(language, 'bikri-save'))),
+      }),
+    ).toBeInTheDocument();
+    // The store is a field of each lot and the note a field of each line, so they are not in this list.
+    for (const id of [
+      'bikri-header-truck',
+      'bikri-header-bill-date',
+      'bikri-header-total-freight',
+      'bikri-header-book',
+      'bikri-header-driver',
+      'bikri-header-driver-phone',
+    ]) {
+      expect(
+        screen.queryByRole('textbox', { name: named(message(language, id)) }),
+        id,
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('combobox', { name: named(message(language, id)) }),
+        id,
+      ).not.toBeInTheDocument();
+    }
+    for (const id of ['glossary-zamindar', 'glossary-adda']) {
+      expect(
+        screen.queryByRole('combobox', { name: named(message(language, id)) }),
+        id,
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('Enter on the date goes to the first lot, whose seller is empty: nothing is filled from a header', async () => {
+    const { backend, user } = await openBook(language);
+    await user.keyboard('{Enter}');
     const lots = lotsGrid(language);
+    await waitFor(() => {
+      expect(focusedIn(lots)).toBe('0:seller');
+    });
+    expect(textOf(lots, 0, 'seller')).toBe('');
+    // Rahim's code is the first thing typed; his item and packing come from his last lot.
+    await typeCodeAndEnter(user, '0');
     await waitFor(() => {
       expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
       expect(textOf(lots, 0, 'item')).toBe(names(language).banana);
       expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
     });
+    // The header sent is the date alone: the backend takes nothing else (plan 71 H1).
     await waitFor(() => {
-      expect(backend.lastDraft().header).toMatchObject({
-        truck_no: 'LES-1234',
-        zamindar_account_id: 17,
-        adda_id: 1,
-      });
+      expect(backend.lastDraft().header).toEqual({ entry_date: '10-10-2026' });
     });
   });
 
-  it('a truck with a sale on this day shows the notice with its two buttons; "continue" takes it away', async () => {
+  it('the empty state button puts the cursor on the seller of the first lot', async () => {
     const { user } = await openBook(language);
-    await user.keyboard('LES-1234');
-    const sentence = message(language, 'bikri-truck-same-day', { number: 1, date: '10-10-2026' });
-    const notice = async () =>
-      screen
-        .findAllByRole('status')
-        .then((all) => all.find((box) => visible(box.textContent).includes(sentence)));
-    await waitFor(async () => {
-      expect(await notice()).toBeDefined();
-    });
-    const box = await notice();
-    if (box === undefined) throw new Error('no notice');
-    // Opening the saved sale comes with plan 13: its button waits, dimmed.
-    expect(
-      within(box).getByRole('button', { name: named(message(language, 'bikri-truck-open')) }),
-    ).toBeDisabled();
     await user.click(
-      within(box).getByRole('button', {
-        name: named(message(language, 'bikri-truck-continue')),
-      }),
+      screen.getByRole('button', { name: named(message(language, 'bikri-empty-action')) }),
     );
     await waitFor(() => {
-      expect(pageText()).not.toContain(sentence);
+      expect(focusedIn(lotsGrid(language))).toBe('0:seller');
     });
   });
 });
@@ -160,38 +181,39 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
     // started at what the lot has left, and Enter took it.
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales.slice(0, 2)).toMatchObject([
-        { buyer_account_id: 19, qty: '20', seller_rate: '600' },
-        { buyer_account_id: 20, qty: '30', seller_rate: '580' },
+        { buyer_account_id: IDS.akram, qty: '20', seller_rate: '600' },
+        { buyer_account_id: IDS.arshad, qty: '30', seller_rate: '580' },
       ]);
     });
     const sales = salesGrid(language);
+    // Every number comes with one answer of the backend for both lines. The answer for the first
+    // line alone arrives earlier, so nothing is read until the answer for both lines is on screen.
     await waitFor(() => {
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
+      // From 1366 px the grid has the seller and the buyer commission of each line (plan 72 P13).
+      expect(textOf(sales, 0, 'sellerComm')).toBe('720');
+      expect(textOf(sales, 0, 'buyerComm')).toBe('720');
+      expect(textOf(sales, 1, 'sellerComm')).toBe('1,044');
+      expect(textOf(sales, 1, 'buyerComm')).toBe('1,044');
+      expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
+      expect(textOf(lotsGrid(language), 0, 'net')).toBe('19,316');
+      const summary = screen
+        .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
+        .closest('section');
+      if (summary === null) throw new Error('no summary');
+      expect(rowText(summary, language, 'glossary-kham-bikri')).toContain('29,400');
+      expect(rowText(summary, language, 'bikri-summary-deductions')).toContain('10,084');
+      expect(rowText(summary, language, 'glossary-safi-bikri')).toContain('19,316');
+      expect(rowText(summary, language, 'bikri-summary-buyer-total')).toContain('31,564');
+      const split = screen
+        .getByRole('heading', { name: named(message(language, 'bikri-split-title')) })
+        .closest('section');
+      if (split === null) throw new Error('no split');
+      expect(rowText(split, language, 'bikri-split-shared')).toContain('3,948');
+      const splitText = visible(split.textContent);
+      expect(splitText).toContain('1,580');
+      expect(splitText).toContain('1,184');
     });
-    expect(textOf(sales, 0, 'amount')).toBe('12,000');
-    expect(textOf(sales, 0, 'sellerComm')).toBe('720');
-    expect(textOf(sales, 1, 'amount')).toBe('17,400');
-    expect(textOf(sales, 1, 'buyerComm')).toBe('1,044');
-    expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
-    expect(textOf(lotsGrid(language), 0, 'net')).toBe('19,316');
-
-    const summary = screen
-      .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
-      .closest('section');
-    if (summary === null) throw new Error('no summary');
-    expect(rowText(summary, language, 'glossary-kham-bikri')).toContain('29,400');
-    expect(rowText(summary, language, 'bikri-summary-deductions')).toContain('10,084');
-    expect(rowText(summary, language, 'glossary-safi-bikri')).toContain('19,316');
-    expect(rowText(summary, language, 'bikri-summary-buyer-total')).toContain('31,564');
-
-    const split = screen
-      .getByRole('heading', { name: named(message(language, 'bikri-split-title')) })
-      .closest('section');
-    if (split === null) throw new Error('no split');
-    expect(rowText(split, language, 'bikri-split-shared')).toContain('3,948');
-    const splitText = visible(split.textContent);
-    expect(splitText).toContain('1,580');
-    expect(splitText).toContain('1,184');
   });
 
   it('ⓘ on the seller commission of line 1 shows 12,000 × 6 ÷ 100 = 720, by click and by Ctrl+I', async () => {
@@ -235,7 +257,7 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
     await waitFor(() => {
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
     });
-    for (const field of ['amount', 'sellerComm', 'buyerComm', 'buyerTotal']) {
+    for (const field of ['sellerComm', 'buyerComm', 'buyerTotal']) {
       expect(
         within(cellOf(sales, 0, field)).getByRole('button', {
           name: message(language, 'calc-info-label'),
@@ -272,11 +294,11 @@ describe.each(LANGUAGES)(
       const { user } = await openBook(language);
       await typeHeaderAndLot(user, language);
       const sales = salesGrid(language);
-      await user.keyboard('1{Enter}20{Enter}600{Enter}');
+      await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}');
       await waitFor(() => {
         expect(focusedIn(sales)).toBe('1:buyer');
       });
-      await user.keyboard('2{Enter}');
+      await user.keyboard('1{Enter}');
       await waitFor(() => {
         expect(focusedIn(sales)).toBe('1:qty');
       });
@@ -285,14 +307,14 @@ describe.each(LANGUAGES)(
       await waitFor(() => {
         expect(textOf(sales, 1, 'qty')).toBe('30');
       });
-      // The rate stays empty. The last rate is grey text in the cell and never part of the draft.
+      // The rate stays empty: no hint and no placeholder number (PRD FR-7.53 retired, plan 79 item 5).
       const rate = cellOf(sales, 1, 'rate');
-      await waitFor(() => {
-        expect(rate).toHaveClass('cell-hint');
-      });
-      expect(visible(rate.textContent).trim()).toBe('600');
+      expect(rate).not.toHaveClass('cell-hint');
+      expect(visible(rate.textContent).trim()).toBe('');
       await user.keyboard('{Enter}');
-      expect(focusedIn(sales)).toBe('1:rate');
+      await waitFor(() => {
+        expect(focusedIn(sales)).toBe('1:rate');
+      });
       await user.keyboard('{Control>}d{/Control}');
       await waitFor(() => {
         expect(rate).not.toHaveClass('cell-hint');
@@ -303,10 +325,10 @@ describe.each(LANGUAGES)(
     it('never fills the rate by itself: without a typed rate the draft has an empty rate', async () => {
       const { backend, user } = await openBook(language);
       await typeHeaderAndLot(user, language);
-      await user.keyboard('1{Enter}20{Enter}600{Enter}2{Enter}{Enter}');
+      await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}1{Enter}{Enter}');
       await waitFor(() => {
         expect(backend.lastDraft().lots[0]?.sales[1]).toMatchObject({
-          buyer_account_id: 20,
+          buyer_account_id: IDS.arshad,
           qty: '30',
           seller_rate: '',
         });
@@ -316,7 +338,7 @@ describe.each(LANGUAGES)(
     it('a sum such as 20+5 is sent as typed text', async () => {
       const { backend, user } = await openBook(language);
       await typeHeaderAndLot(user, language);
-      await user.keyboard('1{Enter}20+5{Enter}');
+      await user.keyboard('0{Enter}20+5{Enter}');
       await waitFor(() => {
         expect(backend.lastDraft().lots[0]?.sales[0]?.qty).toBe('20+5');
       });
@@ -333,9 +355,22 @@ describe.each(LANGUAGES)('keys of the grids (%s)', (language) => {
   it('↑ on the first line goes back up to the lot, and Alt+↓ opens the list of a picker cell', async () => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
+    // The buyer cell's list is open (plan 46, PRD FR-7.16), and an open list keeps ↑ ↓ for choosing.
+    // Esc closes it, and then ↑ goes back up to the lot, whose seller list opens in its turn.
+    expect(await screen.findAllByRole('option')).not.toHaveLength(0);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('option')).not.toBeInTheDocument();
+    });
     await user.keyboard('{ArrowUp}');
     await waitFor(() => {
       expect(focusedIn(lotsGrid(language))).not.toBeNull();
+    });
+    expect(await screen.findAllByRole('option')).not.toHaveLength(0);
+    // Esc closes it; Alt+↓ opens the full list again without typing; Esc closes it once more.
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('option')).not.toBeInTheDocument();
     });
     await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
     expect(await screen.findAllByRole('option')).not.toHaveLength(0);
@@ -345,31 +380,35 @@ describe.each(LANGUAGES)('keys of the grids (%s)', (language) => {
     });
   });
 
-  it('a click or Space changes ادھاری to نقدی and back, and the backend is told each time', async () => {
+  it('the paid cell is the last cell of the line: what is typed goes to the backend as typed, and what is left shows in the details', async () => {
     const { backend, user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
-    const sales = salesGrid(language);
-    // The backend says first: the buyer has credit, so the line is ادھاری.
+    // The grid has the paid column after the buyer total, and no payment column (PRD FR-12.44).
+    const ids = Array.from(
+      salesGrid(language).querySelectorAll('.ag-header-cell'),
+      (cell) => cell.getAttribute('col-id') ?? '',
+    );
+    expect(ids.at(-2)).toBe('paid');
+    expect(ids).not.toContain('payment');
+    // Nothing typed: the line is sent with no paid amount (the backend takes it as 0).
     await waitFor(() => {
-      expect(textOf(sales, 0, 'payment')).toBe(message(language, 'glossary-udhari'));
+      expect(backend.lastDraft().lots[0]?.sales[0]?.paid).toBeNull();
     });
-    // A click on the cell moves to the next word.
-    await user.click(cellOf(sales, 0, 'payment'));
+    expect('payment_type' in (backend.lastDraft().lots[0]?.sales[0] ?? {})).toBe(false);
+    // Typing in the paid cell: the text is sent as typed.
+    await user.click(cellOf(salesGrid(language), 0, 'paid'));
+    await user.keyboard('5000{Enter}');
     await waitFor(() => {
-      expect(textOf(sales, 0, 'payment')).toBe(message(language, 'glossary-naqdi'));
+      expect(backend.lastDraft().lots[0]?.sales[0]?.paid).toBe('5000');
     });
-    await waitFor(() => {
-      expect(backend.lastDraft().lots[0]?.sales[0]?.payment_type).toBe('cash');
-    });
-    // Space moves on again, back to ادھاری.
-    await user.keyboard(' ');
-    await waitFor(() => {
-      expect(textOf(sales, 0, 'payment')).toBe(message(language, 'glossary-udhari'));
-    });
-    await waitFor(() => {
-      expect(backend.lastDraft().lots[0]?.sales[0]?.payment_type).toBe('credit');
-    });
+    // The details of the line show what is left on the account: the backend's number, with its working.
+    await user.click(cellOf(salesGrid(language), 0, 'rate'));
+    const details = document.querySelector<HTMLElement>(
+      'section[aria-labelledby^="line-details-"]',
+    );
+    if (details === null) throw new Error('no details of the line');
+    expect(within(details).getByText(message(language, 'bikri-line-left'))).toBeInTheDocument();
   });
 });
 
@@ -383,19 +422,22 @@ describe.each(LANGUAGES)('the summary of a lot and of the whole sale (%s)', (lan
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
+    // Both lines are answered: the whole sale says 29,400 only from then on. The first line alone
+    // is answered earlier, with 12,000.
     await waitFor(() => {
-      expect(textOf(salesGrid(language), 0, 'buyerTotal')).toBe('12,880');
+      expect(textOf(salesGrid(language), 1, 'buyerTotal')).toBe('18,684');
     });
     const summary = screen
       .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
       .closest('section');
     if (summary === null) throw new Error('no summary');
-    const whole = within(summary).getByRole('button', {
-      name: named(message(language, 'bikri-summary-whole')),
+    // The dropdown of the summary shows the lot; choosing the whole sale shows the figures of all lots
+    // (plan 78 C2).
+    expect(summaryChoice(summary)).not.toBe(message(language, 'bikri-summary-whole'));
+    await chooseInSummary(user, summary, message(language, 'bikri-summary-whole'));
+    await waitFor(() => {
+      expect(summaryChoice(summary)).toBe(message(language, 'bikri-summary-whole'));
+      expect(visible(summary.textContent)).toContain('29,400');
     });
-    expect(whole).toHaveAttribute('aria-pressed', 'false');
-    await user.click(whole);
-    expect(whole).toHaveAttribute('aria-pressed', 'true');
-    expect(visible(summary.textContent)).toContain('29,400');
   });
 });

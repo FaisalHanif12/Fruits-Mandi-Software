@@ -1,0 +1,187 @@
+// روکڑ بک, the cash book (route /rokar; PRD 16.1, FR-16.1, FR-19.10, FR-19.11, NFR-SPD-24): the
+// shop's one cash account. For a range of days it shows the opening cash, every cash movement of
+// every module (date, what it was, the account, in, out and the running cash) and the closing
+// cash. It loads page by page; the opening and closing cash and the totals under the columns are
+// the backend's over the whole range, never a sum of the rows on screen. There is no box to type
+// the counted cash (FR-16.1). The day starts as today; clearing a date widens the range.
+//
+// Four states: loading, an error with a retry, nothing in the range (a helpful message with a
+// button to the خرچہ screen), and the rows. A language switch loses nothing: the dates are text in
+// this screen's state (F39).
+
+import { Localized } from '@fluent/react';
+import { useNavigate } from '@tanstack/react-router';
+import { Landmark } from 'lucide-react';
+import { useCallback, useMemo } from 'react';
+import { useDayStatus } from '../../../app/use-day-status';
+import type { CashbookRow } from '../../../bindings/CashbookRow';
+import { uiErrorOf } from '../../../shared/api';
+import { PagedList, type ListContext } from '../../../shared/grid';
+import { useListWindow } from '../../../shared/hooks';
+import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  Fact,
+  FilterBar,
+  ListPage,
+  LoadingState,
+  ListWindowBar,
+  FilterCard,
+} from '../../../shared/ui';
+import { useOpenRowSource } from '../../reports';
+import { CapitalWhereCard } from '../components/CapitalWhereCard';
+import { SignedNum } from '../components/SignedNum';
+import { useCashbook } from '../hooks';
+import { CASHBOOK_COLUMNS } from '../list-columns';
+
+/** Text or nothing: an empty date is sent as no limit. */
+function textOrNull(text: string): string | null {
+  const trimmed = text.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+/** The month of a cash book line, `YYYY-MM`: the book is in date order. */
+const CASH_MONTH_OF = (row: CashbookRow) => row.entry_date.slice(0, 7);
+/** The backend names the subtotal of a month like its totals; the columns have short names. */
+const CASH_MONTH_COLUMNS = { in_paisa: 'in', out_paisa: 'out', running_paisa: 'running' } as const;
+
+function CashbookScreen({ today }: { today: string }) {
+  const navigate = useNavigate();
+  const openSource = useOpenRowSource();
+  // The book shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8).
+  const listWindow = useListWindow({ kind: 'days', source: { kind: 'cashbook' }, today });
+  const range = useMemo(
+    () => ({ from: textOrNull(listWindow.range.from), to: textOrNull(listWindow.range.to) }),
+    [listWindow.range.from, listWindow.range.to],
+  );
+  const book = useCashbook(range, true);
+  const first = book.data?.pages[0];
+  const rows = book.isError ? undefined : book.data?.pages.flatMap((page) => page.rows);
+  // The totals under the columns are the backend's, over the whole range. The callback depends on the
+  // loaded page, not on an amount: a Paisa value must not go into a dependency list (F3).
+  const totals = useCallback(
+    (context: ListContext) => ({
+      labelField: 'kind',
+      values:
+        first === undefined
+          ? {}
+          : {
+              kind: context.text('glossary-meezan'),
+              in: context.money(first.totals.in_paisa),
+              out: context.money(first.totals.out_paisa),
+            },
+    }),
+    [first],
+  );
+  const newExpense = () => {
+    void navigate({ to: '/rokar/expense', search: { type: 'shop_expense' } });
+  };
+
+  return (
+    <ListPage
+      icon={Landmark}
+      titleId="cashbook-title"
+      help={
+        <Localized id="cashbook-help">
+          <p />
+        </Localized>
+      }
+      actions={
+        <Button variant="primary" shortcut={SHORTCUTS.newExpense} onClick={newExpense}>
+          <Localized id="cashbook-new-expense" />
+        </Button>
+      }
+      filters={
+        <FilterCard {...formNavigationProps}>
+          <FilterBar screen="cashbook.book">
+            {/* The cash at the start and at the end of the range sit in the same row as the period
+                (the backend's figures over the whole range). */}
+            {first === undefined ? null : (
+              <>
+                <dl>
+                  <Fact stat label={<Localized id="cashbook-opening" />}>
+                    <SignedNum inherit paisa={first.opening_paisa} />
+                  </Fact>
+                </dl>
+                <dl>
+                  <Fact stat label={<Localized id="cashbook-closing" />}>
+                    <SignedNum inherit paisa={first.closing_paisa} />
+                  </Fact>
+                </dl>
+              </>
+            )}
+          </FilterBar>
+        </FilterCard>
+      }
+    >
+      {/* A list sorted by anything but the day has no running cash: the backend sends none. */}
+      {book.sort !== null && book.sort.column !== 'entry_date' ? (
+        <Localized id="cashbook-running-date-only">
+          <p className="shrink-0 type-body text-ink-muted" />
+        </Localized>
+      ) : null}
+      {/* Where the partners' money is, behind the partner code; shut until it is opened (plan 78 E). */}
+      <div className="shrink-0">
+        <CapitalWhereCard />
+      </div>
+      <PagedList<CashbookRow>
+        columns={CASHBOOK_COLUMNS}
+        rows={rows}
+        getRowId={(row) => `${String(row.entry_id)}-${row.posting_type}`}
+        // A row opens the entry behind it (PRD FR-19.4): a sale, a voucher, a trip purchase, a trip
+        // or a garden, fruit taken or an account; an entry with no screen of its own opens nothing.
+        onOpen={(row) => {
+          openSource(row.source);
+        }}
+        labelId="cashbook-list-label"
+        failedId="cashbook-load-failed"
+        error={book.isError ? uiErrorOf(book.error) : null}
+        onRetry={() => {
+          void book.refetch();
+        }}
+        pager={book.pager}
+        onPageKey={listWindow.onPageKey}
+        sort={{ value: book.sort, onChange: book.setSort }}
+        months={
+          first === undefined
+            ? undefined
+            : { months: first.months, monthOf: CASH_MONTH_OF, columnOf: CASH_MONTH_COLUMNS }
+        }
+        empty={
+          <EmptyState
+            icon={Landmark}
+            title={<Localized id="cashbook-empty" />}
+            help={<Localized id="cashbook-empty-help" />}
+            action={
+              <Button variant="primary" onClick={newExpense}>
+                <Localized id="cashbook-new-expense" />
+              </Button>
+            }
+          />
+        }
+        totals={totals}
+      />
+      <ListWindowBar window={listWindow} />
+    </ListPage>
+  );
+}
+
+/** The route's page: it waits for today, then opens the book on that day. */
+export function CashbookPage() {
+  const day = useDayStatus();
+  if (day.isPending) return <LoadingState />;
+  if (day.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="cashbook-load-failed" />}
+        error={uiErrorOf(day.error)}
+        onRetry={() => {
+          void day.refetch();
+        }}
+      />
+    );
+  }
+  return <CashbookScreen today={day.data.today} />;
+}

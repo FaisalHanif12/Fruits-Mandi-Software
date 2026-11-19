@@ -1,0 +1,17 @@
+{
+  "date": null,
+  "lines": [
+    {
+      "account_id": 21,
+      "cr": "",
+      "dr": "1,000",
+      "narration": null
+    },
+    {
+      "account_id": 1,
+      "cr": "900",
+      "dr": "",
+      "narration": null
+    }
+  ]
+}

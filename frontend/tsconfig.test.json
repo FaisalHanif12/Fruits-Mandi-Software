@@ -5,6 +5,13 @@
     "types": ["vite/client", "node"],
     "allowJs": true
   },
-  "include": ["src", "tests/unit", "tests/robustness", "tests/helpers", "tests/setup.ts"],
+  "include": [
+    "src",
+    "tests/unit",
+    "tests/robustness",
+    "tests/helpers",
+    "tests/setup.ts",
+    "tests/setup-sensitive.ts"
+  ],
   "exclude": ["tests/unit/fixtures"]
 }

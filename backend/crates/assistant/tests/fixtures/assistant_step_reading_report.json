@@ -1,0 +1,22 @@
+{
+  "id": "assistant-step-reading-report",
+  "args": [
+    {
+      "name": "report",
+      "value": {
+        "type": "text",
+        "text": "R13"
+      }
+    },
+    {
+      "name": "party",
+      "value": {
+        "type": "names",
+        "names": {
+          "ur": "اکرم ٹول ٹیکس",
+          "en": "Akram Toll Tax"
+        }
+      }
+    }
+  ]
+}

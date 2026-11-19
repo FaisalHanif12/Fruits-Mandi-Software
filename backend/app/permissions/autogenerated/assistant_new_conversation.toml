@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assistant-new-conversation"
+description = "Enables the assistant_new_conversation command without any pre-configured scope."
+commands.allow = ["assistant_new_conversation"]
+
+[[permission]]
+identifier = "deny-assistant-new-conversation"
+description = "Denies the assistant_new_conversation command without any pre-configured scope."
+commands.deny = ["assistant_new_conversation"]

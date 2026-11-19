@@ -1,25 +1,41 @@
 // The party card (PRD FR-7.38, NFR-USE-27, Code Standards F40): everything about a party, shown
 // next to an account field as soon as the account is known. Name with father or firm, city,
 // phone, current balance with its side as a word, last entry date; for a buyer his credit limit
-// and how much of it is used; for a seller his open advance. Warnings come with a word and an icon
+// and how much of it is used; for a seller his open advance; for one person who is both a seller and a
+// buyer, his other account and both balances together (PRD E10). Warnings come with a word and an icon
 // as well as a colour (NFR-USE-12). Every figure is read from the books by the backend; nothing is
 // worked out here, and a card is never reused from an earlier look (balances change with every
 // posting).
+//
+// A چکتا buyer (PRD FR-13.6) has no balance, no dues and no ledger: his card is his name, his
+// phone and the words "چکتا: پورا نقد", and it has no ledger buttons.
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
-import { usePartyCard, type CardWarningKind, type PartyCardData } from '../accounts';
+import {
+  typeMessageId,
+  usePartyCard,
+  type CardChukta,
+  type CardWarningKind,
+  type PartyCardData,
+} from '../accounts';
 import { uiErrorOf } from '../api';
 import { isoToDisplayDate } from '../format';
 import { displayName, useLanguage } from '../i18n';
 import { Balance } from './Balance';
 import { Code } from './Code';
+import { useDeadAmountActions } from './dead-amount';
+import { DeadInfoLine } from './DeadInfoLine';
 import { ErrorMessage } from './ErrorMessage';
+import { LinkButton } from './LinkButton';
 import { Num } from './Num';
+import { usePartyCardLinks } from './party-card-links';
 
 interface PartyCardProps {
   /** The account to show, or null for nothing. */
   accountId: number | null;
+  /** The چکتا buyer chosen on the account چکتا کھاتہ: his own card, with no balance. */
+  chukta?: CardChukta | null | undefined;
 }
 
 /** An inactive account is a warning (amber); the others are about money (red). */
@@ -46,6 +62,141 @@ function Fact({ labelId, children }: { labelId: string; children: React.ReactNod
   );
 }
 
+/**
+ * The ledger and the statement of this account, one press away (PRD FR-7.65). The range is filled
+ * by the report that opens: the whole history, from the first day of data. Shown only where the app
+ * frame can open a report.
+ */
+function ReportButtons({ accountId }: { accountId: number }) {
+  const open = usePartyCardLinks();
+  const { l10n } = useLocalization();
+  if (open === null) return null;
+  return (
+    <div
+      role="group"
+      aria-label={l10n.getString('report-card-reports-label')}
+      className="flex flex-wrap items-center gap-x-5"
+    >
+      <LinkButton
+        onClick={() => {
+          open('R13', accountId);
+        }}
+      >
+        <Localized id="report-card-ledger" />
+      </LinkButton>
+      <LinkButton
+        onClick={() => {
+          open('R14', accountId);
+        }}
+      >
+        <Localized id="report-card-statement" />
+      </LinkButton>
+    </div>
+  );
+}
+
+/**
+ * The two actions of the dead amount (PRD FR-10.10): move a person who owes the shop and is gone,
+ * or make him active again. A person can be moved when he is active, is a seller, a buyer or
+ * someone with money lent, and his balance is بنام; the backend still decides when the dialog asks
+ * (`masters_dead_preview`). Shown only where the app frame can open the dialogs.
+ */
+function DeadButtons({ card }: { card: PartyCardData }) {
+  const actions = useDeadAmountActions();
+  if (actions === null) return null;
+  const names = { name_ur: card.name_ur, name_en: card.name_en, tag: card.tag ?? null };
+  if (card.dead !== null) {
+    const markId = card.dead.mark_id;
+    return (
+      <div className="flex flex-wrap items-center gap-x-5">
+        <LinkButton
+          onClick={() => {
+            actions.undo({ markId, names });
+          }}
+        >
+          <Localized id="dead-undo-button" />
+        </LinkButton>
+      </div>
+    );
+  }
+  const movable = card.is_active && card.account_type !== 'other' && card.balance.side === 'dr';
+  if (!movable) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-5">
+      <LinkButton
+        onClick={() => {
+          actions.move({ accountId: card.id, names });
+        }}
+      >
+        <Localized id="dead-move-button" />
+      </LinkButton>
+    </div>
+  );
+}
+
+/** A چکتا buyer's card: his name and phone, and that he pays the whole bill on the spot. */
+function ChuktaBody({ person }: { person: { name_ur: string; name_en: string; phone: string } }) {
+  const language = useLanguage();
+  return (
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="type-section text-ink">{displayName(person, language)}</span>
+        <Localized id="accounts-type-chukta">
+          <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
+        </Localized>
+        {person.phone === '' ? null : <Code>{person.phone}</Code>}
+      </div>
+      <Localized id="assist-card-chukta-cash">
+        <p className="type-body text-ink" />
+      </Localized>
+    </>
+  );
+}
+
+/**
+ * The other account of one person who is both a seller and a buyer, with its balance and both balances
+ * added together (PRD E10, FR-10.2). The backend worked it out from both ledgers; nothing is added here.
+ * An inactive other account is shown too, marked inactive: its balance is real and is in the combined one.
+ */
+function LinkedAccount({ linked }: { linked: NonNullable<PartyCardData['linked']> }) {
+  const language = useLanguage();
+  return (
+    <div
+      data-linked-account=""
+      className="flex flex-col gap-1 rounded-1 border border-border bg-surface-sunken px-3 py-2 type-body text-ink"
+    >
+      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Localized id="party-card-linked-heading">
+          <span className="text-ink-muted" />
+        </Localized>
+        <span className="type-field text-ink">{displayName(linked, language)}</span>
+        <Code>{linked.code}</Code>
+        <Localized id={typeMessageId(linked.account_type)}>
+          <span className="type-chip rounded-1 bg-surface px-2 text-ink-muted" />
+        </Localized>
+        {linked.is_active ? null : (
+          <span
+            className={`flex items-center gap-2 rounded-1 border px-3 type-body ${WARNING_STYLE.inactive}`}
+          >
+            <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+            <Localized id={WARNING_ID.inactive} />
+          </span>
+        )}
+      </p>
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+        <Fact labelId="assist-card-balance">
+          <Balance balance={linked.balance} />
+        </Fact>
+        <Fact labelId="party-card-linked-both">
+          <span className="type-field">
+            <Balance balance={linked.combined} />
+          </span>
+        </Fact>
+      </div>
+    </div>
+  );
+}
+
 function CardBody({ card }: { card: PartyCardData }) {
   const language = useLanguage();
   const father = displayName(
@@ -56,11 +207,9 @@ function CardBody({ card }: { card: PartyCardData }) {
   return (
     <>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="type-section text-ink">
-          {displayName({ name_ur: card.name_ur, name_en: card.name_en }, language)}
-        </span>
+        <span className="type-section text-ink">{displayName(card, language)}</span>
         <Code>{card.code}</Code>
-        <Localized id={`accounts-type-${card.account_type}`}>
+        <Localized id={typeMessageId(card.account_type)}>
           <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
         </Localized>
       </div>
@@ -96,6 +245,7 @@ function CardBody({ card }: { card: PartyCardData }) {
           </Fact>
         )}
       </div>
+      {card.linked === undefined ? null : <LinkedAccount linked={card.linked} />}
       {card.warnings.length === 0 ? null : (
         <ul className="flex flex-wrap gap-2">
           {card.warnings.map((warning) => (
@@ -114,12 +264,18 @@ function CardBody({ card }: { card: PartyCardData }) {
           ))}
         </ul>
       )}
+      {card.dead === null ? null : <DeadInfoLine info={card.dead} />}
+      <ReportButtons accountId={card.id} />
+      <DeadButtons card={card} />
     </>
   );
 }
 
-export function PartyCard({ accountId }: PartyCardProps) {
-  const query = usePartyCard(accountId);
+export function PartyCard({ accountId, chukta = null }: PartyCardProps) {
+  // A چکتا buyer with his record id is asked of the backend; one read back from a saved line has
+  // no id, so his card is drawn from the names and phone the line holds.
+  const local = chukta !== null && chukta.id === null;
+  const query = usePartyCard(local ? null : accountId, chukta?.id ?? null);
   if (accountId === null) return null;
   return (
     <section
@@ -127,7 +283,9 @@ export function PartyCard({ accountId }: PartyCardProps) {
       aria-busy={query.isPending}
       className="flex flex-col gap-2 rounded-2 border border-border bg-surface p-3"
     >
-      {query.isPending ? (
+      {local ? (
+        <ChuktaBody person={chukta} />
+      ) : query.isPending ? (
         <Localized id="assist-card-loading">
           <p className="type-body text-ink-muted" />
         </Localized>
@@ -142,6 +300,8 @@ export function PartyCard({ accountId }: PartyCardProps) {
             </ErrorMessage>
           ))}
         </div>
+      ) : query.data.is_chukta === true ? (
+        <ChuktaBody person={query.data} />
       ) : (
         <CardBody card={query.data} />
       )}

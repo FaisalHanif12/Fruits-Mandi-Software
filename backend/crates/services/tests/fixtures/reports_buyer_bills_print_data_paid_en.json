@@ -1,0 +1,320 @@
+{
+  "report": "R5",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "title_id": "report-r5-title",
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-bikri",
+      "value": "1"
+    }
+  ],
+  "columns": [
+    {
+      "key": "serial",
+      "title_id": "report-col-serial",
+      "kind": "number"
+    },
+    {
+      "key": "detail",
+      "title_id": "report-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_total",
+      "title_id": "report-col-buyer-total",
+      "kind": "money"
+    },
+    {
+      "key": "paid",
+      "title_id": "report-col-paid-on-spot",
+      "kind": "money"
+    },
+    {
+      "key": "left",
+      "title_id": "report-col-left-on-account",
+      "kind": "money"
+    }
+  ],
+  "slips": [
+    {
+      "serial": "1",
+      "party": {
+        "short_code": "3",
+        "code": "0023",
+        "name": "Anas",
+        "tag": null,
+        "person_key": null
+      },
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "number",
+              "text": "1"
+            },
+            {
+              "type": "detail",
+              "parts": [
+                {
+                  "kind": "sale",
+                  "bikri_number": "1",
+                  "item": "Mango",
+                  "packing": "Box",
+                  "qty": "50",
+                  "rate": "900",
+                  "value": "45,000",
+                  "commission": "2,700",
+                  "laga": "400"
+                }
+              ]
+            },
+            {
+              "type": "money",
+              "text": "45,000"
+            },
+            {
+              "type": "money",
+              "text": "48,100"
+            },
+            {
+              "type": "money",
+              "text": "10,000"
+            },
+            {
+              "type": "money",
+              "text": "38,100"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "row_count": "1",
+      "qty": "50",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "45,000"
+        },
+        {
+          "type": "money",
+          "text": "48,100"
+        },
+        {
+          "type": "money",
+          "text": "10,000"
+        },
+        {
+          "type": "money",
+          "text": "38,100"
+        }
+      ]
+    },
+    {
+      "serial": "2",
+      "party": {
+        "short_code": "2",
+        "code": "0022",
+        "name": "Mani",
+        "tag": null,
+        "person_key": null
+      },
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "number",
+              "text": "1"
+            },
+            {
+              "type": "detail",
+              "parts": [
+                {
+                  "kind": "sale",
+                  "bikri_number": "1",
+                  "item": "Mango",
+                  "packing": "Box",
+                  "qty": "20",
+                  "rate": "1000",
+                  "value": "20,000",
+                  "commission": "1,200",
+                  "laga": "160"
+                }
+              ]
+            },
+            {
+              "type": "money",
+              "text": "20,000"
+            },
+            {
+              "type": "money",
+              "text": "21,360"
+            },
+            {
+              "type": "money",
+              "text": "21,360"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "row_count": "1",
+      "qty": "20",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "20,000"
+        },
+        {
+          "type": "money",
+          "text": "21,360"
+        },
+        {
+          "type": "money",
+          "text": "21,360"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ]
+    },
+    {
+      "serial": "3",
+      "party": {
+        "short_code": "4",
+        "code": "0024",
+        "name": "Haroon",
+        "tag": null,
+        "person_key": null
+      },
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "number",
+              "text": "1"
+            },
+            {
+              "type": "detail",
+              "parts": [
+                {
+                  "kind": "sale",
+                  "bikri_number": "1",
+                  "item": "Mango",
+                  "packing": "Box",
+                  "qty": "130",
+                  "rate": "900",
+                  "value": "117,000",
+                  "commission": "7,020",
+                  "laga": "1,040"
+                }
+              ]
+            },
+            {
+              "type": "money",
+              "text": "117,000"
+            },
+            {
+              "type": "money",
+              "text": "125,060"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            },
+            {
+              "type": "money",
+              "text": "125,060"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "row_count": "1",
+      "qty": "130",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "117,000"
+        },
+        {
+          "type": "money",
+          "text": "125,060"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "125,060"
+        }
+      ]
+    }
+  ],
+  "slip_count": "3",
+  "qty": "200",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "182,000"
+    },
+    {
+      "type": "money",
+      "text": "194,520"
+    },
+    {
+      "type": "money",
+      "text": "31,360"
+    },
+    {
+      "type": "money",
+      "text": "163,160"
+    }
+  ],
+  "qty_label_id": "report-r35-total-qty"
+}

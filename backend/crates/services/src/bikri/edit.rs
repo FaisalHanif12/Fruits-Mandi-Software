@@ -1,0 +1,883 @@
+//! Edit of one posting of a بکری (PRD FR-12.18 to FR-12.21, FR-11.9, FR-11.6, plan 16).
+//!
+//! An edit is a reversal of the posting plus a new posting on the SAME day, in one transaction
+//! (PRD FR-12.19):
+//!
+//! 1. the draft is checked against the stored rows and worked out by the same function as the
+//!    preview (`work_out`, Code Standards B5), with the stored lines and lot charges, so a line the
+//!    user did not change keeps its stored values exactly (PRD FR-12.20);
+//! 2. the old posting is taken back (`ledger::reverse`: the journal, and through the hook the
+//!    partner share rows), its stock moves and analytics facts get opposite rows, and the matching
+//!    that rested on its lines is switched off;
+//! 3. the new posting is posted with the order key of the old one, so it keeps its place in the day
+//!    for matching; the partner split is the one of the posting date (PRD FR-12.21);
+//! 4. new sale lines are written, the old ones end (`replaced` or `removed`), the lots are written
+//!    in ONE update each, and `first_entry_id` points at the new first posting;
+//! 5. every buyer key and every seller the two postings touch is matched again from the start,
+//!    never by the fast paths (Architecture 12); the pinned pair of each نقدی line is written first;
+//! 6. the audit row holds the old and the new lines and the reason.
+//!
+//! A posting of a cancelled بکری cannot be edited. A closed day needs the Owner to reopen it first
+//! (PRD FR-12.18).
+//!
+//! Example (PRD E2E-13): Event 1, اکرم's rate 600 → 610. His line is 20 × 610 = 12,200, buyer
+//! commission 732, he pays 13,092; خام 29,600, seller commission 1,776, صافی 19,504; the shared
+//! income is 3,972, split 1,590 / 1,191 / 1,191.
+
+use std::collections::{BTreeSet, HashSet};
+
+use mandi_db::bikri::edit::{self as edit_repo, Ended, PostingRef};
+use mandi_db::bikri::write::{self as repo};
+use mandi_db::ledger as ledger_repo;
+use mandi_db::rusqlite::Connection;
+use mandi_domain::bikri::{PostingKind, PostingTarget, Switches};
+use mandi_domain::core::bikri::{
+    BikriDetail, BikriDraft, BikriEdited, BikriPreview, BikriStatus, EditOpenInput,
+    EditPreviewInput, EditSaveInput, EditableBikri, PreparedDraft, SavedCharge, SavedLot,
+    SavedLotCharge, prepare_draft,
+};
+use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
+use mandi_domain::core::money::Paisa;
+use mandi_domain::core::validate;
+use mandi_domain::ledger::{PostingType, SourceType};
+use serde_json::{Value, json};
+
+use super::load::{
+    detail_of, draft_of, later_header, later_lot_input, posting_lots, stored_posting,
+};
+use super::rows::{
+    LotCharges, Posting, check_shares, insert_sales_and_facts, lot_columns, lot_running_totals,
+    pin_cash_sales, posting_sums, shape, stored_line_ids,
+};
+use super::shared::{Basis, Replaced, Worked, data, refresh_chukta_index, switches, work_out};
+use crate::audit::Event;
+use crate::auth::Actor;
+use crate::cash;
+use crate::context::Context;
+use crate::day;
+use crate::error::ServiceError;
+use crate::ledger::{self, PostingEvent};
+use crate::rules;
+use crate::vouchers::{rematch_party, role_of_account, stored_cash_change};
+
+/// Everything an edit works from, read once.
+struct EditPlan {
+    detail: BikriDetail,
+    posting: PostingRef,
+    kind: PostingKind,
+    date: BusinessDate,
+    prepared: PreparedDraft,
+    basis: Basis,
+    /// Mistakes of the draft against the stored rows (a lot or line that is not the posting's).
+    extra: Vec<FieldError>,
+}
+
+fn not_found(field: &str) -> ServiceError {
+    ServiceError::reject_field(ErrorCode::ErrNotFound, field)
+}
+
+/// An edit the rules do not allow (NFR-USE-13). `rule` is a short fixed name the screen turns
+/// into words: `lot_removed`, `lot_not_in_posting`, `lot_order_changed`,
+/// `lot_seller_locked`, `lot_item_locked`, `lot_purchase_locked`, `line_not_in_posting`, `posting_lots_locked`.
+fn not_allowed(field: &str, rule: &str) -> FieldError {
+    FieldError::new(ErrorCode::ErrEditNotAllowed, field)
+        .with("rule", ErrorValue::Text(rule.to_owned()))
+}
+
+fn kind_of(posting: &PostingRef) -> PostingKind {
+    if posting.posting_type == "bikri_first" {
+        PostingKind::First
+    } else {
+        PostingKind::Later
+    }
+}
+
+/// The بکری and the posting an edit is about, read and checked.
+fn load_posting(
+    conn: &Connection,
+    entry_id: i64,
+) -> Result<(BikriDetail, PostingRef), ServiceError> {
+    let bikri_id =
+        edit_repo::bikri_of_entry(conn, entry_id)?.ok_or_else(|| not_found("entry_id"))?;
+    let detail = detail_of(conn, bikri_id, "entry_id")?;
+    if detail.status == BikriStatus::Cancelled {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrBikriCancelled,
+            "entry_id",
+        ));
+    }
+    // PRD FR-12.38: a بکری that sold the goods of a closed garden is not edited until the closing is
+    // undone. Changing a lot's seller here would take the money back from the garden's account
+    // after it was paid out to the partners.
+    if mandi_db::gardens::bikri_has_closed_garden_lot(conn, bikri_id)? {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrGardenClosed,
+            "entry_id",
+        ));
+    }
+    let posting = edit_repo::posting_in_force(conn, bikri_id, entry_id)?
+        .ok_or_else(|| not_found("entry_id"))?;
+    Ok((detail, posting))
+}
+
+/// Loads one posting as a draft with its stored values (PRD FR-12.18). Read only.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `bikri_id` or `entry_id`; `ERR_BIKRI_CANCELLED` on `entry_id`.
+pub fn open_for_edit(ctx: &Context, input: &EditOpenInput) -> Result<EditableBikri, ServiceError> {
+    let (closed_up_to, _) = day::window(ctx)?;
+    ctx.db.read(|conn| {
+        let (detail, posting) = load_posting(conn, input.entry_id)?;
+        if detail.id != input.bikri_id {
+            return Err(not_found("entry_id"));
+        }
+        let kind = kind_of(&posting);
+        let date = BusinessDate::parse_iso(&posting.entry_date)
+            .ok_or_else(|| data("the date of a posting is not a date"))?;
+        let draft = draft_of(&detail, posting.entry_id, date, kind, true);
+        let stored = posting_lots(&detail, posting.entry_id, kind);
+        let mut shown = detail.clone();
+        super::read::mark_editable(&mut shown, closed_up_to);
+        let editable = shown
+            .postings
+            .iter()
+            .any(|p| p.entry_id == posting.entry_id && p.editable);
+        Ok(EditableBikri {
+            bikri_id: detail.id,
+            number: detail.number,
+            version: detail.version,
+            entry_id: posting.entry_id,
+            posting_type: posting.posting_type,
+            entry_date: posting.entry_date,
+            editable,
+            draft,
+            stored,
+            postings: shown.postings,
+        })
+    })
+}
+
+/// Checks the draft of the FIRST posting against the stored rows: the day, the lots, their order
+/// and the lines (PRD FR-12.18, FR-12.20). Every mistake comes back with its field.
+fn check_first(
+    detail: &BikriDetail,
+    entry_id: i64,
+    date: BusinessDate,
+    prepared: &PreparedDraft,
+) -> Vec<FieldError> {
+    let mut errors = Vec::new();
+    if prepared.header.entry_date.is_some_and(|d| d != date) {
+        // An edit keeps the day of the posting (PRD FR-12.19).
+        errors.push(crate::edit::date_fixed_error("header.entry_date", date));
+    }
+    let stored: Vec<&SavedLot> = detail.lots.iter().collect();
+    let mut seen_lots: HashSet<i64> = HashSet::new();
+    let mut seen_sales: HashSet<i64> = HashSet::new();
+    let mut last_lot_no = 0_i64;
+    let mut new_lot_started = false;
+    for (index, lot) in prepared.lots.iter().enumerate() {
+        match lot.lot_id {
+            None => new_lot_started = true,
+            Some(id) => {
+                let Some(found) = stored.iter().find(|l| l.id == id) else {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].lot_id"),
+                        "lot_not_in_posting",
+                    ));
+                    continue;
+                };
+                // The saved lots keep their order, and new lots come after them: lines of the
+                // journal are paired with lots by position.
+                if !seen_lots.insert(id) {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].lot_id"),
+                        "lot_not_in_posting",
+                    ));
+                } else if new_lot_started || found.lot_no < last_lot_no {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].lot_id"),
+                        "lot_order_changed",
+                    ));
+                }
+                last_lot_no = found.lot_no;
+                // A lot that other postings or write-offs rest on keeps its seller and item.
+                let others = found.qty_written_off > 0
+                    || found.qty_taken > 0
+                    || found
+                        .sales
+                        .iter()
+                        .any(|s| s.is_active && s.journal_entry_id != entry_id);
+                if others && lot.seller_account_id != Some(found.seller.id) {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].seller_account_id"),
+                        "lot_seller_locked",
+                    ));
+                }
+                // The purchase of an own lot never changes: its stock and cost rest on it.
+                if lot.purchase_id != found.purchase.as_ref().map(|p| p.id) {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].purchase_id"),
+                        "lot_purchase_locked",
+                    ));
+                }
+                // The arrival of a garden lot never changes either (PRD FR-12.40).
+                if lot.arrival_id != found.arrival.as_ref().map(|a| a.id) {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].arrival_id"),
+                        "lot_arrival_locked",
+                    ));
+                }
+                if others && lot.item_id != Some(found.item.id) {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].item_id"),
+                        "lot_item_locked",
+                    ));
+                }
+                for (j, sale) in lot.sales.iter().enumerate() {
+                    if let Some(sale_id) = sale.sale_id {
+                        let ours = found.sales.iter().any(|s| {
+                            s.id == sale_id && s.is_active && s.journal_entry_id == entry_id
+                        });
+                        if !ours || !seen_sales.insert(sale_id) {
+                            errors.push(not_allowed(
+                                &format!("lots[{index}].sales[{j}].sale_id"),
+                                "line_not_in_posting",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        if lot.lot_id.is_none() {
+            for (j, sale) in lot.sales.iter().enumerate() {
+                if sale.sale_id.is_some() {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].sales[{j}].sale_id"),
+                        "line_not_in_posting",
+                    ));
+                }
+            }
+        }
+    }
+    // A saved lot the draft leaves out is removed (PRD FR-7.70, plan 80 Q-R2-1), unless a later sale, a
+    // write-off or fruit taken rests on it: then the edit is refused at `lots`, as A74 does for the
+    // seller, with the lot id and the reason as the rule.
+    for found in stored.iter().filter(|l| !seen_lots.contains(&l.id)) {
+        let rule = if found
+            .sales
+            .iter()
+            .any(|s| s.is_active && s.journal_entry_id != entry_id)
+        {
+            Some("lot_has_later_sale")
+        } else if found.qty_written_off > 0 {
+            Some("lot_has_write_off")
+        } else if found.qty_taken > 0 {
+            Some("lot_has_fruit")
+        } else {
+            None
+        };
+        if let Some(rule) = rule {
+            errors.push(not_allowed("lots", rule).with("lot_id", ErrorValue::Number(found.id)));
+        }
+    }
+    errors
+}
+
+/// Reads and checks everything an edit works from. Nothing is written.
+fn plan_edit(
+    conn: &Connection,
+    entry_id: i64,
+    draft: &BikriDraft,
+    window: (Option<BusinessDate>, BusinessDate),
+) -> Result<EditPlan, ServiceError> {
+    let (detail, posting) = load_posting(conn, entry_id)?;
+    let kind = kind_of(&posting);
+    let date = BusinessDate::parse_iso(&posting.entry_date)
+        .ok_or_else(|| data("the date of a posting is not a date"))?;
+    let (closed_up_to, today) = window;
+    let mut extra = Vec::new();
+    let effective = match kind {
+        PostingKind::First => draft.clone(),
+        PostingKind::Later => {
+            // Only the lines of a later posting are the user's; the lot comes from the database.
+            let lots = posting_lots(&detail, entry_id, PostingKind::Later);
+            let lot = lots
+                .first()
+                .ok_or_else(|| data("a later posting has no lot"))?;
+            let sent = match draft.lots.as_slice() {
+                [only] if only.lot_id == Some(lot.id) => only,
+                _ => {
+                    extra.push(not_allowed("lots", "posting_lots_locked"));
+                    draft.lots.first().ok_or_else(|| not_found("lots"))?
+                }
+            };
+            let valid: HashSet<i64> = lot
+                .sales
+                .iter()
+                .filter(|s| s.is_active && s.journal_entry_id == entry_id)
+                .map(|s| s.id)
+                .collect();
+            let mut seen = HashSet::new();
+            for (j, sale) in sent.sales.iter().enumerate() {
+                if let Some(id) = sale.sale_id
+                    && (!valid.contains(&id) || !seen.insert(id))
+                {
+                    extra.push(not_allowed(
+                        &format!("lots[0].sales[{j}].sale_id"),
+                        "line_not_in_posting",
+                    ));
+                }
+            }
+            let state = edit_repo::lot_state(conn, lot.id)?.ok_or_else(|| not_found("lots"))?;
+            let mut header = later_header(date);
+            // The day cannot change in an edit (PRD FR-12.19).
+            if validate::date("header.entry_date", &draft.header.entry_date, today)
+                .is_ok_and(|d| d != date)
+            {
+                extra.push(crate::edit::date_fixed_error("header.entry_date", date));
+            }
+            header.entry_date = mandi_domain::core::dates::format_ddmmyyyy(date);
+            BikriDraft {
+                header,
+                lots: vec![later_lot_input(&state, sent.sales.clone())],
+            }
+        }
+    };
+    let prepared = prepare_draft(&effective, today, closed_up_to);
+    if kind == PostingKind::First {
+        extra.extend(check_first(&detail, entry_id, date, &prepared));
+    }
+    let old_entry = ledger_repo::get_entry(conn, entry_id)?
+        .ok_or_else(|| data("the posting of a بکری cannot be read"))?;
+    let stored = stored_posting(conn, &detail, entry_id, kind)?;
+    let basis = Basis {
+        target: PostingTarget::Edit { entry_id },
+        stored,
+        replaces: Some(Replaced {
+            entry_id,
+            cash_change: stored_cash_change(conn, &old_entry)?,
+        }),
+    };
+    Ok(EditPlan {
+        detail,
+        posting,
+        kind,
+        date,
+        prepared,
+        basis,
+        extra,
+    })
+}
+
+/// Works out an edited posting for the live summary (PRD FR-12.20). Nothing is saved.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `entry_id`; `ERR_BIKRI_CANCELLED` on `entry_id`. The mistakes in the draft
+/// come back inside the preview (`errors`).
+pub fn edit_preview(ctx: &Context, input: &EditPreviewInput) -> Result<BikriPreview, ServiceError> {
+    let window = day::window(ctx)?;
+    // Fetched before the read below: the read connection is not re-entrant.
+    let rule_set = rules::rule_set(ctx)?;
+    let settings = rules::overrides(ctx)?;
+    let switches = switches(&settings);
+    ctx.db.read(|conn| {
+        let plan = plan_edit(conn, input.entry_id, &input.draft, window)?;
+        let mut worked = work_out(conn, plan.prepared, &rule_set, switches, &plan.basis)?;
+        worked.errors.extend(plan.extra);
+        Ok(worked.preview())
+    })
+}
+
+/// A stored charge for the audit log.
+fn charge_json(charge: &SavedCharge) -> Value {
+    json!({
+        "method": serde_json::to_value(charge.method).unwrap_or(Value::Null),
+        "value_bps": charge.value_bps,
+        "value_paisa": charge.value_paisa.map(Paisa::as_paisa),
+        "amount_paisa": charge.amount.as_paisa(),
+    })
+}
+
+/// A lot charge (labour, munshiana, phone) for the audit log.
+fn lot_charge_json(charge: &SavedLotCharge) -> Value {
+    json!({
+        "method": serde_json::to_value(charge.method).unwrap_or(Value::Null),
+        "value_paisa": charge.value_paisa.as_paisa(),
+        "amount_paisa": charge.amount.as_paisa(),
+    })
+}
+
+/// A posting of a بکری for the audit log (plan 44 Section 9.11): the header, then each lot with all
+/// its typed fields and charges, and under it the lines of this posting in order. The same function
+/// writes the old and the new side, so a line nobody changed shows no difference. Row ids are left
+/// out of the lines, because an edit writes its lines as new rows.
+fn posting_json(detail: &BikriDetail, entry_id: i64, kind: PostingKind) -> Value {
+    let lots: Vec<Value> = posting_lots(detail, entry_id, kind)
+        .iter()
+        .map(|lot| {
+            let sales: Vec<Value> = lot
+                .sales
+                .iter()
+                .enumerate()
+                .map(|(index, s)| {
+                    let mut line = json!({
+                        "line": index + 1,
+                        "buyer_account_id": s.buyer.id,
+                        "chukta_name_ur": s.chukta.as_ref().map(|p| p.name_ur.clone()),
+                        "chukta_name_en": s.chukta.as_ref().map(|p| p.name_en.clone()),
+                        "qty": s.qty,
+                        "weight_grams": s.weight_grams,
+                        "seller_rate_paisa": s.seller_rate.as_paisa(),
+                        "seller_amount_paisa": s.seller_amount.as_paisa(),
+                        "seller_comm": charge_json(&s.seller_comm),
+                        "buyer_rate_paisa": s.buyer_rate.as_paisa(),
+                        "buyer_value_paisa": s.buyer_value.as_paisa(),
+                        "buyer_comm": charge_json(&s.buyer_comm),
+                        "laga": charge_json(&s.laga),
+                        "buyer_total_paisa": s.buyer_total.as_paisa(),
+                        "rate_diff_paisa": s.rate_diff.as_paisa(),
+                        "paid_paisa": s.paid_paisa.as_paisa(),
+                        "note": s.note,
+                    });
+                    // The quality of the line (PRD FR-12.42): a quality-only edit shows in the
+                    // audit log. A line with none has no key, so older entries read as before.
+                    if let (Value::Object(map), Some(grade)) = (&mut line, s.grade) {
+                        map.insert("grade".to_owned(), Value::from(grade.as_str()));
+                    }
+                    line
+                })
+                .collect();
+            json!({
+                "lot_no": lot.lot_no,
+                "seller_account_id": lot.seller.id,
+                "item_id": lot.item.id,
+                "packing_id": lot.packing.id,
+                "marka_text": lot.marka_text,
+                "qty_received": lot.qty_received,
+                "weight_received_grams": lot.weight_received_grams,
+                "freight_paisa": lot.freight.as_paisa(),
+                "freight_paid_by": serde_json::to_value(lot.freight_paid_by).unwrap_or(Value::Null),
+                "labour": lot_charge_json(&lot.labour),
+                "munshiana": lot_charge_json(&lot.munshiana),
+                "phone": lot_charge_json(&lot.phone),
+                "cash_paid_paisa": lot.cash_paid.as_paisa(),
+                "store_rent_paisa": lot.store_rent.as_paisa(),
+                "adjust_advance": lot.adjust_advance,
+                "sales": sales,
+            })
+        })
+        .collect();
+    json!({
+        "book": detail.book,
+        "bill_date": detail.bill_date,
+        "truck_no": detail.truck_no,
+        "zamindar_account_id": detail.zamindar.as_ref().map(|z| z.id),
+        "adda_id": detail.adda_id,
+        "driver_name": detail.driver_name,
+        "driver_phone": detail.driver_phone,
+        "total_freight_paisa": detail.total_freight.map(Paisa::as_paisa),
+        "store_id": detail.store_id,
+        "note": detail.note,
+        "lots": lots,
+    })
+}
+
+/// The buyer keys and sellers that two postings touch: each is matched again from the start.
+fn touched_keys(
+    old: &ledger_repo::StoredEntry,
+    new: &ledger_repo::StoredEntry,
+) -> BTreeSet<(i64, Option<String>)> {
+    old.lines
+        .iter()
+        .chain(&new.lines)
+        .map(|l| (l.account_id, l.person_key.clone()))
+        .collect()
+}
+
+/// Saves an edit (PRD FR-12.19): see the module text.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` and `ERR_BIKRI_CANCELLED` on `entry_id`; `ERR_VERSION_CHANGED` on `version`;
+/// every error of the book screen at its field, `ERR_FORMAT_INVALID` for a lot or line that is not
+/// the posting's; `ERR_DATE_CLOSED`; `ERR_QTY_BELOW_SOLD`; `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`
+/// (value `cash_after_paisa`). Nothing is written when any of them is returned.
+#[allow(clippy::too_many_lines)]
+pub fn edit_save(
+    ctx: &Context,
+    actor: &Actor,
+    input: &EditSaveInput,
+) -> Result<BikriEdited, ServiceError> {
+    let window = day::window(ctx)?;
+    let rule_set = rules::rule_set(ctx)?;
+    let settings = rules::overrides(ctx)?;
+    let switches = switches(&settings);
+    let saved = ctx
+        .db
+        .write(|tx| edit_in(ctx, actor, tx, window, &rule_set, switches, input))?;
+    refresh_chukta_index(ctx, &input.draft);
+    Ok(saved)
+}
+
+/// The edit inside the transaction of the caller: the save and the rehearsal of the preview
+/// (`crate::edit`) are this one function (Code Standards B5). The reason is needed when the posting
+/// is not of today (`ERR_REASON_REQUIRED` on `reason`, PRD FR-7.70).
+#[allow(clippy::too_many_lines)]
+pub(crate) fn edit_in(
+    ctx: &Context,
+    actor: &Actor,
+    tx: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    rule_set: &mandi_domain::rules::RuleSet,
+    switches: Switches,
+    input: &EditSaveInput,
+) -> Result<BikriEdited, ServiceError> {
+    {
+        let plan = plan_edit(tx, input.entry_id, &input.draft, window)?;
+        if plan.detail.version != input.version {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrVersionChanged,
+                "version",
+            ));
+        }
+        // The reason is judged after the other mistakes, so a changed date is named before a missing
+        // reason (PRD FR-7.70).
+        let reason =
+            crate::edit::reason_for(window.1, plan.date, input.reason.as_deref().unwrap_or(""));
+        let EditPlan {
+            detail,
+            posting,
+            kind,
+            date,
+            prepared,
+            basis,
+            extra,
+        } = plan;
+        let worked = work_out(tx, prepared, rule_set, switches, &basis)?;
+        let mut errors = worked.errors.clone();
+        errors.extend(extra);
+        if !errors.is_empty() {
+            return Err(ServiceError::from(errors));
+        }
+        let reason = reason?;
+        cash::require_confirmed(&worked.cash, input.confirm_cash_below_zero)?;
+        write_edit(
+            ctx,
+            tx,
+            actor,
+            &Edit {
+                detail: &detail,
+                posting: &posting,
+                kind,
+                date,
+                worked: &worked,
+                reason: reason.as_deref(),
+            },
+        )
+    }
+}
+
+/// The switches of the settings, for the edit and its rehearsal.
+pub(crate) fn switches_of(ctx: &Context) -> Result<Switches, ServiceError> {
+    let settings = rules::overrides(ctx)?;
+    Ok(switches(&settings))
+}
+
+/// What `write_edit` is told.
+struct Edit<'a> {
+    detail: &'a BikriDetail,
+    posting: &'a PostingRef,
+    kind: PostingKind,
+    date: BusinessDate,
+    worked: &'a Worked,
+    reason: Option<&'a str>,
+}
+
+#[allow(clippy::too_many_lines)]
+fn write_edit(
+    ctx: &Context,
+    tx: &Connection,
+    actor: &Actor,
+    edit: &Edit<'_>,
+) -> Result<BikriEdited, ServiceError> {
+    let Edit {
+        detail,
+        posting: old_posting,
+        kind,
+        date,
+        worked,
+        reason,
+    } = *edit;
+    let now = ctx.now_text();
+    let user = actor.user_id;
+    let old_entry_id = old_posting.entry_id;
+    let (entry, layout) = worked
+        .entry
+        .as_ref()
+        .ok_or_else(|| data("an edit without errors has no journal entry"))?;
+    let lots = shape(worked)?;
+    let first = kind == PostingKind::First;
+
+    // 1. Take the old posting back, on its own day (ERR_DATE_CLOSED if it is closed).
+    let old_key = ledger::order_key_of(tx, old_entry_id)?;
+    let old_entry = ledger_repo::get_entry(tx, old_entry_id)?
+        .ok_or_else(|| data("the posting of a بکری cannot be read"))?;
+    let reversal = ledger::reverse(ctx, tx, user, old_entry_id, reason.unwrap_or(""))?;
+    edit_repo::reverse_moves(tx, old_entry_id, reversal.entry_id, user, &now)?;
+    edit_repo::reverse_facts(tx, old_entry_id, reversal.entry_id, user, &now)?;
+    // The trip partners' parts of the seller credit are taken back (PRD FR-12.26, C25).
+    edit_repo::reverse_credit_parts(tx, old_entry_id, reversal.entry_id, user, &now)?;
+    // The own goods the old lines took go back to their purchases, exactly (PRD FR-12.20).
+    crate::purchases::give_back_entry(tx, old_entry_id, user, &now)?;
+    // The garden goods the old lines took go back to their arrivals, exactly (PRD FR-12.40).
+    crate::gardens::arrivals::give_back_entry(tx, old_entry_id, user, &now)?;
+
+    // 2. The new posting, with the place of the old one.
+    let posted = ledger::post_ordered(
+        ctx,
+        tx,
+        user,
+        &PostingEvent {
+            date,
+            posting_type: if first {
+                PostingType::BikriFirst
+            } else {
+                PostingType::BikriLater
+            },
+            source_type: SourceType::Bikri,
+            source_id: detail.id,
+            narration: None,
+            reverses: None,
+            entry: entry.clone(),
+        },
+        Some(old_key),
+    )?;
+    let line_ids = stored_line_ids(tx, posted.entry_id, entry.lines().len())?;
+
+    // 3. New lots (first posting only), then the new sale lines of every lot.
+    let mut lot_ids = Vec::with_capacity(lots.len());
+    // A removed lot keeps its number, so a new lot goes after it.
+    let mut next_lot_no = edit_repo::max_lot_no(tx, detail.id)?
+        .checked_add(1)
+        .ok_or_else(|| data("too many lots"))?;
+    for shaped in &lots {
+        match shaped.lot.lot_id {
+            Some(id) => {
+                lot_ids.push(id);
+                // An edit that moves a saved lot to another seller or item gives it the next number
+                // of the new pair now, in the order of the draft, so that it and the new lots are
+                // written in the order of their numbers (PRD FR-12.45, plan 71 L5).
+                if first {
+                    let saved = detail
+                        .lots
+                        .iter()
+                        .find(|l| l.id == id)
+                        .ok_or_else(|| data("a lot of an edit is not in its بکری"))?;
+                    let counter = shaped
+                        .preview
+                        .lot_counter
+                        .ok_or_else(|| data("a lot without errors has no counter"))?;
+                    let item_id = shaped
+                        .lot
+                        .item_id
+                        .ok_or_else(|| data("a lot without errors has no item"))?;
+                    let seller_id = shaped.journal.seller_account_id.get();
+                    // The number of the new seller and item may be the same figure as the old one
+                    // (1 of one seller and item is not 1 of another): the pair decides.
+                    if counter != saved.lot_counter
+                        || seller_id != saved.seller.id
+                        || item_id != saved.item.id
+                    {
+                        edit_repo::move_lot_counter(
+                            tx, id, seller_id, item_id, counter, user, &now,
+                        )?;
+                    }
+                }
+            }
+            None => {
+                let running = lot_running_totals(
+                    &LotCharges::of_totals(shaped.totals),
+                    posting_sums(shaped)?,
+                )?;
+                let columns = lot_columns(tx, detail.id, next_lot_no, shaped, &running)?;
+                lot_ids.push(repo::insert_lot(tx, &columns, user, &now)?);
+                next_lot_no = next_lot_no
+                    .checked_add(1)
+                    .ok_or_else(|| data("too many lots"))?;
+            }
+        }
+    }
+    let new_entry_id = posted.entry_id;
+    let post = Posting {
+        user_id: user,
+        now: &now,
+        bikri_id: detail.id,
+        entry_id: new_entry_id,
+        date_iso: &old_posting.entry_date,
+        year: date.year(),
+        month: date.month(),
+        // The facts carry the truck stand of an old بکری; a new one has none (PRD v1.34 H3).
+        adda_id: detail.adda_id,
+    };
+    let new_ids = insert_sales_and_facts(tx, &post, &lots, &lot_ids, first)?;
+
+    // 4. The old lines end: replaced by the new line that carries their id, or removed.
+    let mut replacements = std::collections::HashMap::new();
+    for (shaped, ids) in lots.iter().zip(&new_ids) {
+        for (row, new_id) in shaped.rows.iter().zip(ids) {
+            if let Some(old_id) = row.row.sale_id {
+                replacements.insert(old_id, *new_id);
+            }
+        }
+    }
+    let old_sales = edit_repo::active_sales_of_entry(tx, old_entry_id)?;
+    for old in &old_sales {
+        let (ended, by) = match replacements.get(&old.id) {
+            Some(new_id) => (Ended::Replaced, Some(*new_id)),
+            None => (Ended::Removed, None),
+        };
+        edit_repo::end_sale(tx, old.id, ended, by, user, &now)?;
+    }
+
+    // 4b. A saved lot the draft leaves out is removed (first posting only, PRD FR-7.70, plan 80 Q-R2-1).
+    // Its posting is reversed and its lines ended above, so only its row is left: marked, never deleted.
+    // A removed lot keeps `first_entry_id` on the posting that was reversed: it is not pointed at the
+    // new posting (the matching of advances pairs credit lines with lots through it).
+    let mut removed_lots: Vec<Value> = Vec::new();
+    if first {
+        for lot in &detail.lots {
+            if !lots.iter().any(|s| s.lot.lot_id == Some(lot.id)) {
+                edit_repo::mark_lot_removed(tx, lot.id, user, &now)?;
+                removed_lots.push(json!({
+                    "lot_id": lot.id,
+                    "lot_no": lot.lot_no,
+                    "lot_counter": lot.lot_counter,
+                    "seller_account_id": lot.seller.id,
+                    "item_id": lot.item.id,
+                }));
+            }
+        }
+    }
+
+    // 5. The lots: ONE update each, with the first posting pointing at the new entry.
+    for (shaped, lot_id) in lots.iter().zip(&lot_ids) {
+        let sums = edit_repo::lot_sums(tx, *lot_id, None)?;
+        // The rows of this posting in the database are the rows the calculation worked out.
+        if edit_repo::lot_sums_of_entry(tx, *lot_id, new_entry_id)? != posting_sums(shaped)? {
+            return Err(data("the saved lines of a lot differ from the preview"));
+        }
+        if first {
+            let running = lot_running_totals(&LotCharges::of_totals(shaped.totals), sums)?;
+            if shaped.lot.lot_id.is_some() {
+                let lot_no = detail
+                    .lots
+                    .iter()
+                    .find(|l| Some(l.id) == shaped.lot.lot_id)
+                    .map(|l| l.lot_no)
+                    .ok_or_else(|| data("a lot of an edit is not in its بکری"))?;
+                let columns = lot_columns(tx, detail.id, lot_no, shaped, &running)?;
+                edit_repo::update_lot(tx, *lot_id, &columns, user, &now)?;
+            }
+            repo::set_lot_first_entry(tx, *lot_id, new_entry_id, user, &now)?;
+        } else {
+            let state = edit_repo::lot_state(tx, *lot_id)?
+                .ok_or_else(|| data("the lot of a later posting is missing"))?;
+            let running = lot_running_totals(&super::later::lot_charges_of(&state)?, sums)?;
+            edit_repo::update_lot_totals(tx, *lot_id, &running, user, &now)?;
+        }
+    }
+
+    // 6. The version. The header is never rewritten: the day never changes, and an old بکری keeps its
+    // truck number and the rest as they were (PRD v1.34 H3).
+    edit_repo::bump_version(tx, detail.id, user, &now)?;
+
+    // 7. Matching, from the start for every key the two postings touch (Architecture 12).
+    pin_cash_sales(tx, &post, &lots, layout, &line_ids)?;
+    let new_stored = ledger_repo::get_entry(tx, new_entry_id)?
+        .ok_or_else(|| data("the new posting cannot be read back"))?;
+    for (account_id, person_key) in touched_keys(&old_entry, &new_stored) {
+        if let Some(role) = role_of_account(tx, account_id)? {
+            rematch_party(tx, user, &now, account_id, person_key.as_deref(), role)?;
+        }
+    }
+    check_shares(tx, new_entry_id, worked.calc.summary.shared_income)?;
+
+    // A trip closes when this took its last goods and opens again when the old posting had (PRD
+    // FR-12.33). The old and the new posting may name different trips.
+    for entry in [old_entry_id, new_entry_id] {
+        crate::purchases::refresh_trips_of_entry(tx, entry, &old_posting.entry_date, user, &now)?;
+    }
+
+    // 8. Audit: the whole posting before and after (header, lots with their charges, lines), and why.
+    let (new_detail, _) = load_posting(tx, new_entry_id)?;
+    let mut old_value = posting_json(detail, old_entry_id, kind);
+    let mut new_value = posting_json(&new_detail, new_entry_id, kind);
+    let date = json!(old_posting.entry_date);
+    if let Some(object) = old_value.as_object_mut() {
+        object.insert("number".to_owned(), json!(detail.number));
+        object.insert("entry_id".to_owned(), json!(old_entry_id));
+        object.insert("entry_date".to_owned(), date.clone());
+    }
+    if let Some(object) = new_value.as_object_mut() {
+        object.insert("number".to_owned(), json!(detail.number));
+        object.insert("entry_id".to_owned(), json!(new_entry_id));
+        object.insert("entry_date".to_owned(), date);
+    }
+    if let Some(object) = new_value.as_object_mut() {
+        // The lots this edit removed, named (the posting above no longer has them).
+        if !removed_lots.is_empty() {
+            object.insert("removed_lots".to_owned(), Value::Array(removed_lots));
+        }
+        object.insert("reversal_entry_id".to_owned(), json!(reversal.entry_id));
+        object.insert(
+            "gross_paisa".to_owned(),
+            json!(worked.calc.summary.gross.as_paisa()),
+        );
+        object.insert(
+            "deductions_paisa".to_owned(),
+            json!(worked.calc.summary.deductions.as_paisa()),
+        );
+        object.insert(
+            "net_paisa".to_owned(),
+            json!(worked.calc.summary.net.as_paisa()),
+        );
+        object.insert(
+            "buyer_total_paisa".to_owned(),
+            json!(worked.calc.summary.buyer_total.as_paisa()),
+        );
+        object.insert(
+            "shared_income_paisa".to_owned(),
+            json!(worked.calc.summary.shared_income.as_paisa()),
+        );
+        object.insert(
+            "cash_after_paisa".to_owned(),
+            json!(worked.cash.cash_after_paisa.as_paisa()),
+        );
+        object.insert(
+            "cash_below_zero_confirmed".to_owned(),
+            json!(worked.cash.needs_confirm),
+        );
+    }
+    let mut event = Event::new(Some(user), "edit", "bikri")
+        .entity_id(detail.id)
+        .old(old_value)
+        .new_value(new_value);
+    if let Some(reason) = reason {
+        event = event.reason(reason);
+    }
+    event = event.sign(crate::day::fix_sign(tx, &old_posting.entry_date)?.as_deref());
+    ctx.db.auditor().write(tx, &event.into_entry())?;
+
+    let version = edit_repo::entry_state(tx, detail.id)?
+        .map(|(_, _, version)| version)
+        .ok_or_else(|| data("the بکری is missing after its edit"))?;
+    Ok(BikriEdited {
+        bikri_id: detail.id,
+        number: detail.number,
+        version,
+        old_entry_id,
+        reversal_entry_id: reversal.entry_id,
+        entry_id: new_entry_id,
+        preview: worked.preview(),
+    })
+}

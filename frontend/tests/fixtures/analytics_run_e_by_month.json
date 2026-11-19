@@ -1,0 +1,208 @@
+{
+  "view": "E",
+  "title_id": "analytics-view-e-title",
+  "filters": {
+    "period": null,
+    "from": "2026-10-01",
+    "to": "2026-10-31",
+    "group_by": "month",
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "garden": null,
+    "goods": "all",
+    "trip_view": null
+  },
+  "columns": [
+    {
+      "key": "period",
+      "title_id": "analytics-col-period",
+      "kind": "month",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "i_1",
+      "title_id": "analytics-col-item-column",
+      "kind": "money",
+      "heading": {
+        "kind": "item",
+        "names": {
+          "ur": "کیلا",
+          "en": "Banana"
+        }
+      },
+      "drill": {
+        "item_id": 1,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
+      }
+    },
+    {
+      "key": "i_2",
+      "title_id": "analytics-col-item-column",
+      "kind": "money",
+      "heading": {
+        "kind": "item",
+        "names": {
+          "ur": "سیب",
+          "en": "Apple"
+        }
+      },
+      "drill": {
+        "item_id": 2,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
+      }
+    },
+    {
+      "key": "total_comm",
+      "title_id": "analytics-col-row-total",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "month",
+          "year": 2026,
+          "month": 10
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "0010",
+            "short_code": "0",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 19,
+        "buyer_id": null,
+        "person_key": null,
+        "from": "2026-10-01",
+        "to": "2026-10-31",
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "month",
+          "year": 2026,
+          "month": 10
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "0011",
+            "short_code": "1",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 20,
+        "buyer_id": null,
+        "person_key": null,
+        "from": "2026-10-01",
+        "to": "2026-10-31",
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 392800
+    },
+    {
+      "type": "money",
+      "paisa": 152000
+    },
+    {
+      "type": "money",
+      "paisa": 544800
+    }
+  ],
+  "charts": []
+}

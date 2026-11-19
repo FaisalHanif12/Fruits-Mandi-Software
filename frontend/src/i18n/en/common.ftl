@@ -68,7 +68,222 @@ common-percent-sign = %
 common-cash-confirm-title = Cash in hand will go below zero
 # review: pending
 common-cash-confirm-text = After this entry cash in hand will be <num>{ $amount }</num>. Is this entry correct?
+# The amber note under an entry that would take cash below zero (PRD FR-6.7).
+# review: pending
+common-cash-after = After this entry cash in hand will be <num>{ $amount }</num>.
 # review: pending
 common-cash-confirm-yes = Yes, save
 # review: pending
 common-cash-confirm-no = No, go back
+
+# The tick of a list that adds the columns that do not fit beside the others (Code Standards F22).
+# review: pending
+common-more-columns = More columns
+
+## The pager under every list that loads page by page (PRD FR-19.11, plan 38 R1).
+
+# The name of the page buttons, read by screen readers.
+# review: pending
+common-pager-label = Pages
+
+# $from, $to: the first and the last row on this page; $total: how many rows the whole filter has.
+# review: pending
+common-pager-range = <num>{ $from }</num> to <num>{ $to }</num> of <num>{ $total }</num>
+
+# $page: the page on screen; $pages: how many pages the whole filter has.
+# review: pending
+common-pager-page = Page <num>{ $page }</num> of <num>{ $pages }</num>
+
+# The choice of how many rows a page has (25, 50 or 100).
+# review: pending
+common-pager-size = Rows per page
+
+# review: pending
+common-pager-first = First page
+
+# review: pending
+common-pager-previous = Previous page
+
+# review: pending
+common-pager-next = Next page
+
+# review: pending
+common-pager-last = Last page
+
+## Lists that load page by page (PRD FR-19.11, Code Standards F34).
+
+# The save button of a small box.
+# review: pending
+common-save = Save
+
+## Shared list pieces (plan 38): the period box, the filter bar, the search box, the tick for closed
+## records and the small info button.
+
+# review: pending
+common-period-label = Period
+
+# review: pending
+common-period-today = Today
+
+# review: pending
+common-period-week = This week
+
+# review: pending
+common-period-month = This month
+
+# review: pending
+common-period-last-month = Last month
+
+# review: pending
+common-period-year = This year
+
+# review: pending
+common-period-last-year = Last year
+
+# One click to every date from the first one on.
+# review: pending
+common-period-all = From the first date
+
+# review: pending
+common-period-custom = Choose the dates
+
+# review: pending
+common-period-from = From
+
+# review: pending
+common-period-to = To
+
+# The item group box of the sales reports and the analytics views A, D and G (plan 55): fruit, vegetables, or both.
+# review: pending
+common-item-group = { masters-item-group }
+# review: pending
+common-item-group-all = Fruit and vegetables
+# The quality box of the sales registers R2, R3 and R4 and the analytics view A (PRD FR-12.42): one quality, or all.
+# review: pending
+common-grade = { -darja }
+# review: pending
+common-grade-all = All qualities
+# review: pending
+common-filters-more = More filters
+
+# review: pending
+common-filters-less = Fewer filters
+
+# $count: how many of the filters behind "More filters" are set.
+# review: pending
+common-filters-set = <num>{ $count }</num> in use
+
+# review: pending
+common-search-label = Search
+
+# review: pending
+common-search-placeholder = Type a code, a name or a number
+
+# review: pending
+common-show-closed = Show closed and cancelled too
+
+# review: pending
+common-info-label = About this field
+
+# A screen could not be drawn: the answer it got was not what it expects.
+# review: pending
+common-screen-failed = This screen could not be opened
+
+# $count: how many rows the filter has in one month, on the heading row of that month.
+# review: pending
+common-month-count = { $count } entries
+
+# The button at the end of a row of tabs that opens the tabs that did not fit.
+# review: pending
+common-tabs-more = More
+
+# The remove button at the end of a row of an entry grid (plan 43, PRD FR-7.3): its name, its tooltip and
+# the heading of its column. The key Ctrl+Delete is added after it in the tooltip.
+# review: pending
+common-remove-line = Remove this line
+
+# The question before a line goes that has more under it than itself (a lot with sale lines).
+# review: pending
+common-remove-line-title = Remove the line?
+
+# review: pending
+common-remove-line-confirm = Remove
+
+# An item with its quality after it: "Apple First", "سیب اول" (PRD FR-12.42). $item: the item's name.
+# $grade: the quality word (glossary-darja-awwal, -doyam or -soyam).
+# review: pending
+common-item-grade = { $item } { $grade }
+
+### A screen that shows one month at a time (PRD FR-19.11, FR-17.12, plan 76).
+
+# review: pending
+common-month-nav-label = Move by month
+
+# review: pending
+common-month-earlier = Previous month
+
+# review: pending
+common-month-later = Next month
+
+# review: pending
+common-month-latest-note = This is the current month
+
+# review: pending
+common-month-first-note = This is the first month with entries
+
+# review: pending
+common-month-latest-button = This month
+
+# $month: the name of the month. $year: the year in digits.
+# review: pending
+common-month-title = { $month } <num>{ $year }</num>
+
+# review: pending
+common-goto-month = Go to month
+
+# review: pending
+common-goto-month-hint = Type a month, for example 10-2026. A short form works too: 10 is October of this year.
+
+# review: pending
+common-goto-month-placeholder = MM-YYYY
+
+## The 7-day window of a list that shows many rows a day (PRD FR-19.11, plan 76 point 8).
+
+# review: pending
+common-days-nav-label = Move by 7 days
+
+# review: pending
+common-days-earlier = Earlier <num>{ $days }</num> days
+
+# review: pending
+common-days-later = Later <num>{ $days }</num> days
+
+# review: pending
+common-days-range = <num>{ $from }</num> to <num>{ $to }</num>
+
+# review: pending
+common-days-latest-note = The window ends today
+
+# review: pending
+common-days-first-note = This is the first window with entries
+
+# review: pending
+common-days-latest-button = Back to today
+
+# review: pending
+common-goto-day = Go to day
+
+# review: pending
+common-goto-day-hint = Type a day, for example 10-10-2026. The 7 days that end on it open. A short form works too: 10 is the 10th of this month.
+
+# review: pending
+common-goto-day-placeholder = DD-MM-YYYY
+
+## A field of several records (plan 78 D2).
+
+# $name: the record that is taken off the list.
+# review: pending
+ui-multi-remove = Remove { $name }
+
+# review: pending
+ui-multi-hint = You can choose more than one. Each one you choose is added to the list.

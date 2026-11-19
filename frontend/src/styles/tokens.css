@@ -40,6 +40,11 @@
   --topbar-h: 60px;
   --statusbar-h: 32px;
 
+  /* The brand panel of the sign-in screen (plan 75 T2): wide enough for the app name on one line at the
+     title size in both languages, and wider again in a wide window, where the form has room to spare. */
+  --auth-panel-w: 340px;
+  --auth-panel-w-wide: 420px;
+
   /* Room inside an Urdu typing field for the mode badge, and for the badge plus the key-map
      button (plan 05). The badge sits at the start of the field, the text after it. */
   --field-badge-w: 80px;
@@ -52,14 +57,79 @@
   /* The popup of a picker in a grid cell (plan 12): wide enough for a name and its code. */
   --picker-cell-w: 280px;
 
+  /* The "rows per page" choice of the pager under a list (plan 38): room for 100 and its arrow. */
+  --pager-size-w: 112px;
+
   /* Room kept under a focused cell so the numbers strip pinned to the bottom never covers it. The
      strip is about 90 px in Urdu and 115 px in English at 1024 px, and a line taller with the
      cash note. */
   --strip-clearance: 160px;
 
+  /* The least a list grid is given: its header and five rows. A list on a screen with a fixed height
+     takes all the room the screen leaves, and the rows scroll inside it with only the rows in view
+     drawn (plan 38 G2, Code Standards F34). */
+  --list-region-h: 264px;
+
+  /* A row of a read-only list: tight enough for 25 rows to fit a window with the page buttons. */
+  --list-row-h: 40px;
+
+  /* A heading with nothing under it (a day with no بکری, plan 72): one compact line, not a full row. */
+  --list-quiet-h: 32px;
+
+  /* One width for each kind of column, in every grid, table and print (plan 39 R5, Code Standards
+     F18): a money column, a quantity column, a date column and a code column are the same width in
+     today's sales, the ledger and the cash book. The grids read the same numbers from
+     shared/grid/columnTypes.ts; a test keeps the two lists equal. A name column takes the room left. */
+  --col-code-w: 120px;
+  --col-money-w: 140px;
+  --col-qty-w: 100px;
+  --col-date-w: 140px;
+  --col-datetime-w: 170px;
+  --col-status-w: 120px;
+
+  /* A dense table (plan 75): many figure columns in a narrow card, such as the lines of a saved lot with
+     nine columns in 852 px. Its cells keep 8 px at each side, the names keep 160 px instead of 180, a
+     quantity column is 56 px and a figure column 88 px: the widest heading of the English app,
+     "Paid on / the Spot", needs 79 px on two balanced lines, and the nine columns then fit with room
+     to spare, in English and in Urdu. */
+  --col-dense-count-w: 56px;
+  --col-dense-figure-w: 88px;
+  --col-dense-name-min-w: 160px;
+
+  /* The least a column of names keeps in a plain table, so a name is not broken over three lines when
+     the figure columns around it share a narrow card (plan 39 R5). */
+  --col-name-min-w: 180px;
+
+  /* The column of figures in a card of labels and values (plan 39 R8): wide enough for a figure of
+     nine digits and its ⓘ, so every figure of the card ends on the same right edge. */
+  --value-col-w: 144px;
+
+  /* The height of the chart above an analytics table (plan 21). */
+  --chart-h: 224px;
+
+  /* The slot after a figure that holds its short word (a balance's side): figures keep one right
+     edge whatever the word is (plan 20, NFR-USE-19). */
+  --unit-slot: 56px;
+
   /* The chart tree always shows at least eight rows (plan 07). */
   --tree-min-h: 360px;
   --tree-view-h: 60vh;
+
+  /* Ask the app (plan 51, PRD FR-7.73): a round button floats at the end of the screen, just above the
+     status bar, and the chat window opens above it. The window is as wide as half the window and never
+     under 560 px, because answers carry tables; the large size is nearly the whole window. The
+     normal height is most of the room above the launcher (80% of the window height, or the whole room
+     when the window is short, so at 1024 x 600 both sizes fill it). */
+  --chat-launcher: 60px;
+  --chat-edge: var(--space-4);
+  --chat-gap: var(--space-3);
+
+  /* The corner the shut launcher keeps clear (plan 52 item 7): its edge, its own size and the gap above
+     it, as a band kept under every screen in the app shell, so the last row of a screen, a pager or a
+     save button is never under the round button. */
+  --chat-corner: calc(var(--chat-edge) + var(--chat-launcher) + var(--chat-gap));
+  --chat-min-w: 560px;
+  --chat-normal-share: 80vh;
 
   /* Focus outline, always visible (design system 5, NFR-USE-22). */
   --focus-width: 3px;
@@ -75,6 +145,21 @@
   /* The width of a form screen (a master's form) and of a short field in it, such as a code. */
   --form-max-w: 960px;
   --field-short-w: 320px;
+
+  /* Fields of a one-row form (plan 38 G1): a date or a truck number, and a picker of a name. The row
+     keeps the words of its buttons from 760 px of free width and only their icons below it
+     (`@row-roomy:`, set below). A screen puts its preview beside the form from 820 px of free
+     width: the form takes two thirds and the preview one third (`@beside:`, set below). */
+  --field-date-w: 128px;
+  --field-mid-w: 168px;
+
+  /* A filter of a filter bar (a period, a side, a status): wide enough for "From the first date". */
+  --field-filter-w: 192px;
+
+  /* The narrowest box of a report or analytics filter bar (`filter-grid`): a select must hold its longest
+     value on one line, "Fruit and vegetables" (152 px of text, 24 of padding, 8 of gap, 20 of arrow, 2 of
+     border). At 1024 px the bar has 4 columns of 212 px. */
+  --field-filter-grid-min-w: 208px;
 
   /* Toast and dialog sizes (UsersEn, FormEn boards). */
   --toast-max-w: 480px;
@@ -97,6 +182,72 @@
   --text-urdu-3: 24px;
   --text-urdu-4: 28px;
   --text-urdu-5: 34px;
+
+  /* Print type scale (plan 14, design system 8 item 17). Paper is read at arm's length, so it
+     has its own five steps per script, in points: Latin 8, 9, 10, 12, 16; Urdu 10, 11, 12, 15,
+     20. Gulzar at 11 pt is as easy to read as Inter at 9 pt. The screen scale above never
+     applies to a printed page. */
+  --print-latin-1: 8pt;
+  --print-latin-2: 9pt;
+  --print-latin-3: 10pt;
+  --print-latin-4: 12pt;
+  --print-latin-5: 16pt;
+  --print-urdu-1: 10pt;
+  --print-urdu-2: 11pt;
+  --print-urdu-3: 12pt;
+  --print-urdu-4: 15pt;
+  --print-urdu-5: 20pt;
+
+  /* Print widths. A sheet on screen (the in-app preview) is as wide as its paper; the 80 mm roll
+     prints 72 mm wide (3 mm margins at 80). */
+  --print-w-a4: 210mm;
+  --print-w-a5: 148mm;
+  --print-w-mm80: 80mm;
+
+  /* The width of the text on each paper: the paper less its side margins (A4 10 mm, A5 8 mm, roll
+     3 mm). The hidden print window lays a sheet out at exactly this width, so the page height it
+     reports for the 80 mm roll is the height the page prints at. */
+  --print-content-w-a4: 190mm;
+  --print-content-w-a5: 132mm;
+  --print-content-w-mm80: 74mm;
+
+  /* Spacing on paper, in millimetres, so a gap is the same on every printer. */
+  --print-gap-1: 1mm;
+  --print-gap-2: 2mm;
+  --print-gap-3: 3mm;
+  --print-gap-4: 5mm;
+  --print-gap-5: 8mm;
+
+  /* The thin rule of a bill (a ledger line) and the heavier rule under a total. */
+  --print-rule: 0.25mm;
+  --print-rule-strong: 0.5mm;
+
+  /* The slot after a printed figure that holds the side word of a balance (plan 20). */
+  --print-unit-slot: 12mm;
+
+  /* The same slot in a short table that shares a narrow sheet (the buyers' and sellers' list of a day). */
+  --print-unit-slot-narrow: 9mm;
+
+  /* The slot after a figure on a party's slip: the side word is written for the reader, "You owe" or "The
+     shop owes you" (plan 78 A6), so it is longer than بنام and جمع. A buyer's slip shares a narrow page and lets
+     the word turn to two lines; a seller's bill has a whole page and keeps it in one. */
+  --print-slip-side-slot: 20mm;
+  --print-slip-side-slot-wide: 34mm;
+}
+
+/* A window that is short (the `short:` variant of globals.css, 800 px high, so 1366 x 768 and 1024 x 600):
+   the round launcher is smaller and nearer the corner, so the band kept under every screen takes 64 px
+   and not 88 px (plan 52). Still well over the 32 px of a click target (NFR-USE-23). */
+@media (height <= 800px) {
+  :root {
+    --chat-launcher: 48px;
+    --chat-edge: var(--space-2);
+    --chat-gap: var(--space-2);
+
+    /* The chart above an analytics table stays shown here (plan 76, PRD FR-18.3): it is lower, so the
+       table keeps its rows at 1366 x 768. */
+    --chart-h: 160px;
+  }
 }
 
 @theme {
@@ -120,6 +271,10 @@
   --color-nav: #16263f;
   --color-nav-ink: #d6dde8;
   --color-nav-active: #24406b;
+
+  /* A quieter line on the nav ground (plan 75 T2): the version and the short lines about the app.
+     6.9 : 1 on --color-nav, so it passes the 4.5 : 1 of NFR-USE-21. */
+  --color-nav-ink-muted: #9fb0c8;
   --color-focus: #2563c9;
   --color-money-in: #17703f;
   --color-money-in-soft: #e5f3ea;
@@ -140,6 +295,16 @@
   --color-skeleton: #ece8e0;
   --color-money-in-on-nav: #5fbf8a;
   --color-due-on-nav: #f2a29b;
+
+  /* Container widths for forms and filter bars (plan 38 G1). They follow the free width of the
+     screen, not the window: a form has 2 columns from 480 px, 3 from 640 px and 4 from 900 px.
+     Tailwind variants `@form2:`, `@form3:`, `@form4:`. */
+  --container-form2: 480px;
+  --container-form3: 640px;
+  --container-form4: 900px;
+
+  /* A filter bar has its search box, its fields and its button in one row from here. */
+  --container-filter-wide: 880px;
 
   /* Layout steps as Tailwind variants: `normal:` and `wide:` (compact is the default). */
   --breakpoint-normal: 1366px;
@@ -162,6 +327,8 @@
   --spacing-nav: var(--nav-w);
   --spacing-rail: var(--rail-w);
   --spacing-module-menu: var(--module-menu-w);
+  --spacing-auth-panel: var(--auth-panel-w);
+  --spacing-auth-panel-wide: var(--auth-panel-w-wide);
   --spacing-topbar: var(--topbar-h);
   --spacing-statusbar: var(--statusbar-h);
   --spacing-field-badge: var(--field-badge-w);
@@ -169,9 +336,29 @@
   --spacing-picker-row: var(--picker-row-h);
   --spacing-picker-list: var(--picker-list-h);
   --spacing-picker-cell: var(--picker-cell-w);
+  --spacing-pager-size: var(--pager-size-w);
+
+  /* The card of labelled lines beside the goods of a party's day slip (plan 42): a label and a figure with
+     its side word, in 360 px. */
+  --spacing-slip-card: 360px;
   --spacing-strip: var(--strip-clearance);
+  --spacing-list-region: var(--list-region-h);
+  --spacing-col-code: var(--col-code-w);
+  --spacing-col-money: var(--col-money-w);
+  --spacing-col-qty: var(--col-qty-w);
+  --spacing-col-date: var(--col-date-w);
+  --spacing-col-datetime: var(--col-datetime-w);
+  --spacing-col-status: var(--col-status-w);
+  --spacing-col-dense-count: var(--col-dense-count-w);
+  --spacing-col-dense-figure: var(--col-dense-figure-w);
+  --spacing-col-dense-name: var(--col-dense-name-min-w);
+  --spacing-col-name: var(--col-name-min-w);
+  --spacing-value-col: var(--value-col-w);
   --spacing-tree: var(--tree-min-h);
   --spacing-tree-view: var(--tree-view-h);
+  --spacing-launcher: var(--chat-launcher);
+  --spacing-corner: var(--chat-corner);
+  --spacing-chat-edge: var(--chat-edge);
 
   /* Icon sizes (Code Standards F13): 16 in grids and field messages, 20 in buttons and
      toasts, 26 inside the round badge of the empty and error states, badge 56. */
@@ -206,9 +393,17 @@
   --font-urdu-dense: 'Noto Naskh Arabic', serif;
   --font-latin: 'Inter', sans-serif;
 
+  /* Inter for the ten digits 0 to 9 only (fonts.css). First in the stack of a printed page, so no
+     digit is ever drawn with the digit shapes of an Urdu font (PRD FR-7.32, NFR-URD-14). */
+  --font-digits: 'Mandi Digits';
+
   --radius-1: 4px;
   --radius-2: 8px;
   --radius-3: 12px;
+
+  /* The chat window of Ask the app and its bubbles (plan 51): large soft corners. */
+  --radius-4: 20px;
+  --radius-5: 28px;
 
   /* Widest reading column of the start screen. */
   --container-reading: 720px;
@@ -217,6 +412,13 @@
   --container-toast: var(--toast-max-w);
   --container-form: var(--form-max-w);
   --container-field: var(--field-short-w);
+  --container-date: var(--field-date-w);
+  --container-mid: var(--field-mid-w);
+  --container-filter: var(--field-filter-w);
+
+  /* A container query needs a plain length, never var(): these two are written out. */
+  --container-row-roomy: 760px;
+  --container-beside: 820px;
 }
 
 /*
@@ -235,9 +437,17 @@
   --text-5: var(--text-latin-5);
   --text-body: var(--text-latin-2);
   --text-field: var(--text-latin-2);
+  --print-text-1: var(--print-latin-1);
+  --print-text-2: var(--print-latin-2);
+  --print-text-3: var(--print-latin-3);
+  --print-text-4: var(--print-latin-4);
+  --print-text-5: var(--print-latin-5);
   --font-text: var(--font-latin);
   --leading-text: var(--leading-latin);
   --weight-strong: var(--font-weight-semibold);
+
+  /* Inter's own space is wide enough around a number inside words. */
+  --number-gap: 0px;
 }
 
 :lang(ur) {
@@ -247,6 +457,11 @@
   --text-4: var(--text-urdu-4);
   --text-5: var(--text-urdu-5);
   --text-body: var(--text-urdu-1);
+  --print-text-1: var(--print-urdu-1);
+  --print-text-2: var(--print-urdu-2);
+  --print-text-3: var(--print-urdu-3);
+  --print-text-4: var(--print-urdu-4);
+  --print-text-5: var(--print-urdu-5);
 
   /* Text typed into a field. 18 px, as the boards draw it: at 20 px (design system 3, step 2)
      Gulzar's tall letters reach the border of a 44 px field. Reported to tech-lead. */
@@ -256,4 +471,41 @@
 
   /* Gulzar has one weight. */
   --weight-strong: var(--font-weight-normal);
+
+  /* Gulzar's space is almost nothing next to the wide digits of Inter, so "03-10-2026 تا 09-10-2026"
+     read as one run. A number inside words keeps this much room on each side. */
+  --number-gap: var(--space-1);
+}
+
+/* Run B, plan 21 (analytics): the chart above each table. One height (`--chart-h`, in the first :root
+   block), and a palette for the series.
+   The hues keep clear of the meanings of green, red and amber (NFR-USE-12); a chart is never read by
+   colour alone: every bar has its figure and every series its name. A chart reads its colours from
+   the page at run time, not through a class, so they are `static`: always written out. */
+@theme static {
+  --spacing-chart: var(--chart-h);
+
+  --color-chart-1: #1d3d6e;
+  --color-chart-2: #2a8c82;
+  --color-chart-3: #b8860b;
+  --color-chart-4: #7a4b8f;
+  --color-chart-5: #5d6b7a;
+  --color-chart-6: #a0522d;
+}
+
+/* Plan 75 (the app mark): the colours of the logo, a gold mandi crate with an orange, a green apple and a
+   leaf on the deep navy of the menu (frontend/brand/app-icon.svg). Only `BrandMark` draws them. They are
+   `static` because the mark reads them with `var()` for its gradients, not through a class. */
+@theme static {
+  --color-brand-ground-top: #1f3659;
+  --color-brand-ground-bottom: #14233b;
+  --color-brand-gold: #eab44b;
+  --color-brand-gold-light: #f7d07a;
+  --color-brand-gold-dark: #c98f2a;
+  --color-brand-orange-light: #ffd684;
+  --color-brand-orange: #f08b1e;
+  --color-brand-apple-light: #b6e58b;
+  --color-brand-apple: #46a64b;
+  --color-brand-leaf: #5cc06a;
+  --color-brand-leaf-vein: #2e8f4e;
 }

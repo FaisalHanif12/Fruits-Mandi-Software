@@ -1,0 +1,17 @@
+[
+  {
+    "id": 9,
+    "code": "0030",
+    "name_ur": "شاہد",
+    "name_en": "Shahid",
+    "extra_ur": "03000000000",
+    "extra_en": "03000000000",
+    "account_type": "buyer",
+    "kind": "chukta",
+    "chukta_id": 1,
+    "phone": "03000000000",
+    "control_id": 6,
+    "is_active": true,
+    "is_dead": false
+  }
+]

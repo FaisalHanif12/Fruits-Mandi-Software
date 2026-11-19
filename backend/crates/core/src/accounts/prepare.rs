@@ -12,9 +12,6 @@ use crate::money::Paisa;
 use crate::text;
 use crate::validate::{self, FieldErrors};
 
-/// The largest collection weekday (0 = Monday, 6 = Sunday).
-pub const MAX_WEEKDAY: i64 = 6;
-
 /// An opening amount typed on an account form or a line of the openings grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OpeningRequest {
@@ -69,6 +66,9 @@ pub struct PreparedAccount {
     pub references: Vec<Reference>,
     /// The opening that was typed.
     pub opening: OpeningRequest,
+    /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7): a change of an
+    /// opening that is in روکڑ may take cash in hand below 0. Set by the caller (`false` here).
+    pub confirm_cash_below_zero: bool,
 }
 
 fn error(code: ErrorCode, field: &str) -> FieldError {
@@ -160,6 +160,49 @@ pub fn opening_request_in_force(
     window: (Option<BusinessDate>, BusinessDate),
     in_force: Option<&OpeningRequest>,
 ) -> Result<OpeningRequest, Vec<FieldError>> {
+    opening_request_on(
+        prefix,
+        opening_date,
+        opening_dr,
+        opening_cr,
+        is_advance,
+        is_seller,
+        window,
+        in_force,
+        OpeningDay::Open,
+    )
+}
+
+/// Which days an opening may be dated on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpeningDay {
+    /// An open day: after the "closed up to" date and not after today (PRD FR-6.6). A new or a
+    /// changed opening of an existing account.
+    Open,
+    /// A new account: any day up to today, even a closed one (PRD FR-10.11, plan 53 T1). The
+    /// account has no opening yet, so nothing is reversed and no closed entry is touched; the
+    /// service writes an audit row for it.
+    NewAccount,
+}
+
+/// [`opening_request_in_force`] with the days the opening may be dated on.
+///
+/// # Errors
+/// As [`opening_request`]. For [`OpeningDay::NewAccount`] only a date after today is refused
+/// (`ERR_DATE_IN_FUTURE`).
+// Nine plain arguments: the ones above and the rule.
+#[allow(clippy::too_many_arguments)]
+pub fn opening_request_on(
+    prefix: &str,
+    opening_date: &str,
+    opening_dr: &str,
+    opening_cr: &str,
+    is_advance: bool,
+    is_seller: bool,
+    window: (Option<BusinessDate>, BusinessDate),
+    in_force: Option<&OpeningRequest>,
+    day: OpeningDay,
+) -> Result<OpeningRequest, Vec<FieldError>> {
     let (closed_up_to, today) = window;
     let mut errors = FieldErrors::default();
     let f = |name: &str| format!("{prefix}{name}");
@@ -197,12 +240,18 @@ pub fn opening_request_in_force(
                 if unchanged {
                     Some(date)
                 } else {
-                    errors.take(validate::posting_date(
-                        &field,
-                        opening_date,
-                        closed_up_to,
-                        today,
-                    ))
+                    // A new account may be dated on a closed day: only a future date is refused.
+                    let limit = match day {
+                        OpeningDay::Open => closed_up_to,
+                        OpeningDay::NewAccount => None,
+                    };
+                    match validate::posting_date(&field, opening_date, limit, today) {
+                        Ok(date) => Some(date),
+                        Err(error) => {
+                            errors.push(error);
+                            None
+                        }
+                    }
                 }
             })
         }
@@ -218,7 +267,9 @@ pub fn opening_request_in_force(
     })
 }
 
-/// The serial inside a full account code, if the code is the control code plus 4 digits.
+/// The serial inside a full account code of the old scheme (control code plus 4 digits), used for
+/// the accounts that are not sellers or buyers (PRD 1.8 R4). Sellers and buyers use
+/// `codes::check_typed_code`.
 ///
 /// - `ERR_CODE_INVALID` if it is not digits, or does not start with the control code, or has
 ///   the wrong length (PRD FR-10.2).
@@ -227,9 +278,9 @@ pub fn opening_request_in_force(
 ///
 /// ```
 /// use mandi_core::accounts::account_code_for;
-/// assert_eq!(account_code_for("code", "0304", "03040003").unwrap(), 3);
-/// assert!(account_code_for("code", "0304", "03049999").is_err());
-/// assert!(account_code_for("code", "0304", "03110003").is_err());
+/// assert_eq!(account_code_for("code", "0103", "01030003").unwrap(), 3);
+/// assert!(account_code_for("code", "0103", "01039999").is_err());
+/// assert!(account_code_for("code", "0103", "03110003").is_err());
 /// ```
 pub fn account_code_for(field: &str, control_code: &str, typed: &str) -> Result<u32, FieldError> {
     let digits: String = typed.trim().chars().collect();
@@ -282,6 +333,14 @@ pub fn prepare_account(
         if digits.is_empty() {
             None
         } else if digits.bytes().all(|b| b.is_ascii_digit()) && digits.len() <= 12 {
+            // A new seller's or buyer's code must be a full code of its own type (plan 32 R2):
+            // `0013` on a seller form, never `0023` or `0013` padded. An edit never changes the code; the
+            // service compares it with the saved one.
+            if input.id.is_none()
+                && let Some(code_type) = input.account_type.code_type()
+            {
+                errors.take(crate::codes::check_typed_code("code", digits, code_type));
+            }
             Some(digits.to_owned())
         } else {
             errors.push(error(ErrorCode::ErrCodeInvalid, "code"));
@@ -302,6 +361,9 @@ pub fn prepare_account(
         &input.father_or_firm_en,
         validate::name_en,
     );
+    // The tag (نشان, PRD 10.2): empty or 1 to 4 English capital letters and dots. Stored once, in
+    // its own column, and one more word in the three search keys (Code Standards B26).
+    let tag = errors.take(validate::tag("tag", &input.tag));
     let phone1 = errors.take(validate::phone_optional("phone1", &input.phone1));
     let phone2 = errors.take(validate::phone_optional("phone2", &input.phone2));
     let address = errors.take(validate::free_text("address", &input.address));
@@ -310,15 +372,6 @@ pub fn prepare_account(
         "credit_limit",
         &input.credit_limit,
     ));
-    if let Some(day) = input.collection_weekday
-        && !(0..=MAX_WEEKDAY).contains(&day)
-    {
-        errors.push(
-            error(ErrorCode::ErrOutOfRange, "collection_weekday")
-                .with("min", crate::error::ErrorValue::Number(0))
-                .with("max", crate::error::ErrorValue::Number(MAX_WEEKDAY)),
-        );
-    }
     let mut references = Vec::new();
     reference(
         &mut errors,
@@ -358,7 +411,7 @@ pub fn prepare_account(
     if input.id.is_some() && input.linked_account_id == input.id {
         errors.push(error(ErrorCode::ErrNotFound, "linked_account_id"));
     }
-    let opening = match opening_request_in_force(
+    let opening = match opening_request_on(
         "",
         &input.opening_date,
         &input.opening_dr,
@@ -367,6 +420,12 @@ pub fn prepare_account(
         input.account_type == AccountType::Seller,
         (closed_up_to, today),
         opening_in_force,
+        // A new account (no id) is dated on any day up to today (PRD FR-10.11).
+        if input.id.is_none() {
+            OpeningDay::NewAccount
+        } else {
+            OpeningDay::Open
+        },
     ) {
         Ok(opening) => opening,
         Err(found) => {
@@ -380,23 +439,31 @@ pub fn prepare_account(
     let (
         Some(ur),
         Some(en),
+        Some(tag),
         Some(phone1),
         Some(phone2),
         Some(address),
         Some(note),
         Some(credit_limit),
-    ) = (ur, en, phone1, phone2, address, note, credit_limit)
+    ) = (ur, en, tag, phone1, phone2, address, note, credit_limit)
     else {
         return Err(vec![error(ErrorCode::ErrInternal, "account")]);
     };
     let mut fields: Vec<(&'static str, ColValue)> = vec![
         ("name_ur", ColValue::Text(ur.clone())),
         ("name_en", ColValue::Text(en.clone())),
-        ("search_ur", ColValue::Text(text::search_ur(&ur))),
-        ("search_en", ColValue::Text(text::search_en(&en))),
+        ("tag", optional(tag.as_deref().unwrap_or_default())),
+        (
+            "search_ur",
+            ColValue::Text(text::search_ur_tagged(&ur, tag.as_deref())),
+        ),
+        (
+            "search_en",
+            ColValue::Text(text::search_en_tagged(&en, tag.as_deref())),
+        ),
         (
             "search_phonetic",
-            ColValue::Text(text::search_phonetic(&en)),
+            ColValue::Text(text::search_phonetic_tagged(&en, tag.as_deref())),
         ),
         ("father_or_firm_ur", optional(&father_ur)),
         ("father_or_firm_en", optional(&father_en)),
@@ -418,7 +485,6 @@ pub fn prepare_account(
         ),
         ("default_marka_id", id_or_null(input.default_marka_id)),
         ("collector_staff_id", id_or_null(input.collector_staff_id)),
-        ("collection_weekday", id_or_null(input.collection_weekday)),
         ("is_active", ColValue::Int(i64::from(input.is_active))),
         ("note", optional(&note)),
     ];
@@ -441,6 +507,7 @@ pub fn prepare_account(
         confirmed_rules_words: input.confirmed_rules_words.clone(),
         references,
         opening,
+        confirm_cash_below_zero: false,
     })
 }
 

@@ -41,7 +41,7 @@ pub struct NewLine<'a> {
     pub line_no: i64,
     /// The account.
     pub account_id: i64,
-    /// The person inside a پختہ کھاتہ account.
+    /// The person inside a چکتا کھاتہ account.
     pub person_key: Option<&'a str>,
     /// Debit in paisa.
     pub dr_paisa: i64,
@@ -89,6 +89,9 @@ pub struct StoredEntry {
     pub source_id: i64,
     /// The reversed entry, if any.
     pub reverses_entry_id: Option<i64>,
+    /// The key that keeps an edited posting in its place for matching (migration 0005). `None`
+    /// means the entry's own id.
+    pub order_key: Option<i64>,
     /// Note.
     pub narration: Option<String>,
     /// `draft` or `posted`.
@@ -101,7 +104,7 @@ pub struct StoredEntry {
     pub lines: Vec<StoredLine>,
 }
 
-/// Inserts an entry as a draft and returns its id.
+/// Inserts an entry as a draft and returns its id. Its order key is its own id.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -111,10 +114,26 @@ pub fn insert_draft(
     user_id: i64,
     now: &str,
 ) -> rusqlite::Result<i64> {
+    insert_draft_ordered(conn, header, None, user_id, now)
+}
+
+/// [`insert_draft`] with an order key (migration 0005): an edit's new posting passes the key of the
+/// posting it replaces, and a reversal passes its original's, so the edited posting keeps its place
+/// in the day for matching. `None` means the entry's own id.
+///
+/// # Errors
+/// Any SQLite error (the key must be more than 0).
+pub fn insert_draft_ordered(
+    conn: &Connection,
+    header: &EntryHeader<'_>,
+    order_key: Option<i64>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO journal_entries (created_at, created_by, updated_at, updated_by, entry_date, posting_type,
-             source_type, source_id, reverses_entry_id, narration, status, total_paisa)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'draft', 0)",
+             source_type, source_id, reverses_entry_id, narration, status, total_paisa, order_key)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'draft', 0, ?9)",
         params![
             now,
             user_id,
@@ -123,10 +142,44 @@ pub fn insert_draft(
             header.source_type,
             header.source_id,
             header.reverses_entry_id,
-            header.narration
+            header.narration,
+            order_key
         ],
     )?;
     Ok(conn.last_insert_rowid())
+}
+
+/// The (account, person key) pairs that the entries with this order key have lines on. An edit
+/// posts a new entry with the order key of the entry it replaces, so these are the accounts and
+/// people that the replaced posting had (the original, its reversal and earlier versions).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn lines_with_order_key(
+    conn: &Connection,
+    order_key: i64,
+) -> rusqlite::Result<Vec<(i64, Option<String>)>> {
+    let mut statement = conn.prepare(
+        "SELECT DISTINCT l.account_id, l.chukta_person_key
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE COALESCE(e.order_key, e.id) = ?1",
+    )?;
+    let rows = statement.query_map([order_key], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    rows.collect()
+}
+
+/// The key that places an entry among the others of its day for matching: its order key, or its
+/// own id when it has none. An edit gives this to the posting that replaces it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn order_key_of(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT COALESCE(order_key, id) FROM journal_entries WHERE id = ?1",
+        [entry_id],
+        |r| r.get(0),
+    )
+    .optional()
 }
 
 /// Inserts one line into a draft entry.
@@ -142,7 +195,7 @@ pub fn insert_line(
 ) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO journal_lines (created_at, created_by, updated_at, updated_by, entry_id, line_no, account_id,
-             pukhta_person_key, dr_paisa, cr_paisa, is_advance, narration)
+             chukta_person_key, dr_paisa, cr_paisa, is_advance, narration)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             now,
@@ -168,7 +221,7 @@ pub fn get_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<St
     let head = conn
         .query_row(
             "SELECT id, entry_date, posting_type, source_type, source_id, reverses_entry_id, narration, status,
-                    total_paisa, chain_hash
+                    total_paisa, chain_hash, order_key
              FROM journal_entries WHERE id = ?1",
             [entry_id],
             |r| {
@@ -183,6 +236,7 @@ pub fn get_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<St
                     status: r.get(7)?,
                     total_paisa: r.get(8)?,
                     chain_hash: r.get(9)?,
+                    order_key: r.get(10)?,
                     lines: Vec::new(),
                 })
             },
@@ -192,7 +246,7 @@ pub fn get_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<St
         return Ok(None);
     };
     let mut statement = conn.prepare(
-        "SELECT id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa, is_advance, narration
+        "SELECT id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa, is_advance, narration
          FROM journal_lines WHERE entry_id = ?1 ORDER BY line_no",
     )?;
     let lines = statement.query_map([entry_id], |r| {
@@ -239,6 +293,12 @@ fn canonical_bytes(previous: &str, entry: &StoredEntry, total_paisa: i64) -> Vec
     put_number(&mut out, entry.reverses_entry_id);
     put_text(&mut out, entry.narration.as_deref());
     put_number(&mut out, Some(total_paisa));
+    // The order key is covered only when it is set (migration 0005), so the hash of every entry
+    // written before that migration, and of every entry without a key, is what it always was.
+    if let Some(key) = entry.order_key {
+        out.push(2);
+        put_number(&mut out, Some(key));
+    }
     put_number(&mut out, i64::try_from(entry.lines.len()).ok());
     for line in &entry.lines {
         put_number(&mut out, Some(line.line_no));
@@ -501,6 +561,34 @@ pub fn account_totals(
     conn: &Connection,
     as_of: Option<&str>,
 ) -> rusqlite::Result<Vec<(i64, Totals)>> {
+    // The answer is the same for every page of the account index and the trial balance, and for every
+    // screen that asks again, until a journal line is written, so it is kept (the memory of
+    // `crate::memo`, plan 80 gate, NFR-SPD-24): the first page pays for the pass over the 5.5
+    // million lines, the next pages do not.
+    //
+    // Only while no entry is waiting as a draft: the kept answer is valid while no line is written, and
+    // posting a draft writes no line, so with a draft in the file the sums are read again each time.
+    if unposted_entries_exist(conn)? {
+        return read_account_totals(conn, as_of);
+    }
+    let what = format!("account_totals:{}", as_of.unwrap_or("-"));
+    let rows = crate::memo::account_rows(conn, &what, || {
+        Ok(read_account_totals(conn, as_of)?
+            .into_iter()
+            .map(|(id, t)| (id, t.dr_paisa, t.cr_paisa))
+            .collect())
+    })?;
+    Ok(rows
+        .iter()
+        .map(|&(id, dr_paisa, cr_paisa)| (id, Totals { dr_paisa, cr_paisa }))
+        .collect())
+}
+
+/// The query behind [`account_totals`].
+fn read_account_totals(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
     let all_posted = as_of.is_none() && !unposted_entries_exist(conn)?;
     let sql = if all_posted {
         ACCOUNT_TOTALS_ALL_POSTED_SQL.to_owned()
@@ -518,6 +606,158 @@ pub fn account_totals(
         ))
     })?;
     rows.collect()
+}
+
+/// The SQL of [`account_totals_in_controls`]: `marks` are the marks of the control codes. Public so
+/// a test can check its query plan (Code Standards B18).
+#[doc(hidden)]
+pub fn account_totals_in_controls_text(
+    marks: &[String],
+    all_posted: bool,
+    as_of_mark: Option<&str>,
+) -> String {
+    let accounts = format!(
+        "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
+         WHERE k.code IN ({})",
+        marks.join(", ")
+    );
+    let check = if all_posted {
+        String::new()
+    } else {
+        format!(" AND entry_id NOT IN ({})", left_out(as_of_mark))
+    };
+    format!(
+        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE account_id IN ({accounts}){check}
+         GROUP BY account_id ORDER BY account_id"
+    )
+}
+
+/// [`account_totals`] for the accounts of these controls only (`03011` sellers, `0304` buyers):
+/// the same rows, the same sums, in the same order, but only the accounts of the controls are
+/// read. The buyers' dues and the sellers' payables read the buyers or the sellers, a third of the
+/// journal each, not all 3.5 million lines (plan 48 P48-S3: 0.2 s down to 0.06 s). Both branches
+/// of [`account_totals`] are kept: for all time with no draft anywhere the lines need no check,
+/// else the lines of the entries not posted (and, for a day, dated after it) are left out.
+///
+/// # Errors
+/// Any SQLite error (a `SUM` that overflows is an error, never a float).
+pub fn account_totals_in_controls(
+    conn: &Connection,
+    controls: &[&str],
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
+    if controls.is_empty() {
+        return Ok(Vec::new());
+    }
+    // The answer is the same for every page of a list and for every screen that asks again, until
+    // a journal line is written, so it is kept (the memory of `crate::memo`, plan 76, NFR-SPD-24).
+    let what = format!(
+        "totals_in_controls:{}:{}",
+        controls.join(","),
+        as_of.unwrap_or("-")
+    );
+    let rows = crate::memo::account_rows(conn, &what, || {
+        Ok(read_totals_in_controls(conn, controls, as_of)?
+            .into_iter()
+            .map(|(id, t)| (id, t.dr_paisa, t.cr_paisa))
+            .collect())
+    })?;
+    Ok(rows
+        .iter()
+        .map(|&(id, dr_paisa, cr_paisa)| (id, Totals { dr_paisa, cr_paisa }))
+        .collect())
+}
+
+/// The query behind [`account_totals_in_controls`].
+fn read_totals_in_controls(
+    conn: &Connection,
+    controls: &[&str],
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
+    let all_posted = as_of.is_none() && !unposted_entries_exist(conn)?;
+    let mut args: Vec<String> = Vec::new();
+    let as_of_mark = as_of.map(|day| {
+        args.push(day.to_owned());
+        format!("?{}", args.len())
+    });
+    let marks: Vec<String> = controls
+        .iter()
+        .map(|code| {
+            args.push((*code).to_owned());
+            format!("?{}", args.len())
+        })
+        .collect();
+    let sql = account_totals_in_controls_text(&marks, all_posted, as_of_mark.as_deref());
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
+        Ok((
+            r.get(0)?,
+            Totals {
+                dr_paisa: r.get(1)?,
+                cr_paisa: r.get(2)?,
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
+/// Which end of an account's days to find.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DayEdge {
+    /// The first day with a posted line.
+    First,
+    /// The last day with a posted line.
+    Last,
+}
+
+/// An account with more lines than this is read by walking the days (see [`edge_day_of_account`]).
+const MANY_LINES: i64 = 20_000;
+
+/// The first or last day with a posted line on an account, or `None` when it has none
+/// (NFR-SPD-24).
+///
+/// A small account is read line by line: one lookup of the entry for each of its lines. A big one
+/// (the cash account, the busiest buyer: tens of thousands of lines over ten years) walks the
+/// entries by day, from the end asked for, and stops at the first entry that has a line of the
+/// account, so a day is found without reading every line. `INDEXED BY` makes SQLite walk the date
+/// index instead of sorting every entry. An account with no line answers at once.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn edge_day_of_account(
+    conn: &Connection,
+    account_id: i64,
+    edge: DayEdge,
+) -> rusqlite::Result<Option<String>> {
+    // Counts at most MANY_LINES + 1 lines on the covering index, so it is cheap for any account.
+    let lines: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines WHERE account_id = ?1 LIMIT ?2)",
+        [account_id, MANY_LINES + 1],
+        |r| r.get(0),
+    )?;
+    if lines == 0 {
+        return Ok(None);
+    }
+    let (aggregate, order) = match edge {
+        DayEdge::First => ("MIN", "ASC"),
+        DayEdge::Last => ("MAX", "DESC"),
+    };
+    if lines <= MANY_LINES {
+        let sql = format!(
+            "SELECT {aggregate}(e.entry_date) FROM journal_lines l
+             JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'
+             WHERE l.account_id = ?1"
+        );
+        return conn.query_row(&sql, [account_id], |r| r.get(0));
+    }
+    let sql = format!(
+        "SELECT e.entry_date FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         WHERE e.status = 'posted'
+           AND EXISTS (SELECT 1 FROM journal_lines l WHERE l.entry_id = e.id AND l.account_id = ?1)
+         ORDER BY e.entry_date {order} LIMIT 1"
+    );
+    conn.query_row(&sql, [account_id], |r| r.get(0)).optional()
 }
 
 /// The SQL of [`totals_for_accounts`] for this many accounts.
@@ -547,6 +787,64 @@ pub fn totals_for_accounts(
     }
     let mut statement = conn.prepare(&totals_for_accounts_sql(ids.len()))?;
     let rows = statement.query_map(rusqlite::params_from_iter(ids.iter()), |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            Totals {
+                dr_paisa: r.get(1)?,
+                cr_paisa: r.get(2)?,
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
+/// The posted debit and credit totals of ALL the accounts of one control: one query through
+/// `idx_accounts_control` and the journal index (plan 38 B1).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn totals_for_control(conn: &Connection, control_id: i64) -> rusqlite::Result<Totals> {
+    conn.query_row(
+        &format!(
+            "SELECT COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+             FROM journal_lines
+             WHERE account_id IN (SELECT id FROM accounts WHERE control_id = ?1)
+               AND entry_id NOT IN ({})",
+            left_out(None)
+        ),
+        [control_id],
+        |r| {
+            Ok(Totals {
+                dr_paisa: r.get(0)?,
+                cr_paisa: r.get(1)?,
+            })
+        },
+    )
+}
+
+/// The debit and credit totals that ONE entry has on each of these accounts, in paisa. An account
+/// the entry has no line on is not in the answer. An edit uses it to take its own old posting out
+/// of a balance (the credit limit check, plan 16).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn entry_totals_for_accounts(
+    conn: &Connection,
+    entry_id: i64,
+    ids: &[i64],
+) -> rusqlite::Result<std::collections::HashMap<i64, Totals>> {
+    if ids.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
+    let marks = vec!["?"; ids.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE entry_id = ? AND account_id IN ({marks}) GROUP BY account_id"
+    ))?;
+    let mut args: Vec<i64> = Vec::with_capacity(ids.len().saturating_add(1));
+    args.push(entry_id);
+    args.extend_from_slice(ids);
+    let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
         Ok((
             r.get::<_, i64>(0)?,
             Totals {
@@ -696,7 +994,7 @@ pub fn advance_adjusted(conn: &Connection, account_id: i64) -> rusqlite::Result<
 #[doc(hidden)]
 pub fn totals_of_sql(with_person: bool, with_date: bool) -> String {
     let person = if with_person {
-        " AND pukhta_person_key = :person"
+        " AND chukta_person_key = :person"
     } else {
         ""
     };
@@ -712,7 +1010,7 @@ pub fn totals_of_sql(with_person: bool, with_date: bool) -> String {
 #[doc(hidden)]
 pub fn totals_of_per_line_sql(with_person: bool) -> String {
     let person = if with_person {
-        " AND l.pukhta_person_key = :person"
+        " AND l.chukta_person_key = :person"
     } else {
         ""
     };
@@ -758,7 +1056,7 @@ fn has_more_lines_than(
     let counted: i64 = match person {
         Some(person) => conn.query_row(
             "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines
-               WHERE account_id = ?1 AND pukhta_person_key = ?2 LIMIT ?3)",
+               WHERE account_id = ?1 AND chukta_person_key = ?2 LIMIT ?3)",
             params![account_id, person, limit.saturating_add(1)],
             |r| r.get(0),
         )?,
@@ -805,7 +1103,7 @@ pub fn day_method_with(
 }
 
 /// The posted totals of one account. `person` is `None` for the whole account (all persons of a
-/// پختہ کھاتہ account together), `Some(key)` for one person. [`day_method`] picks the way of
+/// چکتا کھاتہ account together), `Some(key)` for one person. [`day_method`] picks the way of
 /// working it out; the answer is the same either way.
 ///
 /// # Errors
@@ -853,6 +1151,45 @@ pub fn totals_of_by(
     })
 }
 
+/// The posted debits and credits of one account on one day (see [`day_totals`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DayTotals {
+    /// The day, `YYYY-MM-DD`.
+    pub day: String,
+    /// `SUM(dr_paisa)` of the posted lines of that day.
+    pub dr_paisa: i64,
+    /// `SUM(cr_paisa)` of the posted lines of that day.
+    pub cr_paisa: i64,
+}
+
+/// The posted debits and credits of one account for each day it has lines on, oldest day first.
+/// Only `SUM()` on INTEGER columns is used; the running balance is worked out by the caller with
+/// checked maths. A reversal carries the date of the entry it takes back, so a taken-back posting
+/// leaves no trace on any day.
+///
+/// It is used for money taken by a partner and money lent (PRD FR-16.2, FR-16.5): returns must
+/// never be more than what was taken or lent, on any day (money agent, plan 17). Those accounts
+/// have few lines, so the whole history is read.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn day_totals(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<DayTotals>> {
+    let mut statement = conn.prepare(
+        "SELECT e.entry_date, SUM(l.dr_paisa), SUM(l.cr_paisa)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE e.status = 'posted' AND l.account_id = ?1
+         GROUP BY e.entry_date ORDER BY e.entry_date",
+    )?;
+    let rows = statement.query_map([account_id], |r| {
+        Ok(DayTotals {
+            day: r.get(0)?,
+            dr_paisa: r.get(1)?,
+            cr_paisa: r.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
 /// One posted line of an account's ledger.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LedgerRow {
@@ -888,9 +1225,9 @@ pub fn ledger_rows(
 ) -> rusqlite::Result<Vec<LedgerRow>> {
     let mut statement = conn.prepare(
         "SELECT e.id, e.entry_date, l.line_no, e.posting_type, COALESCE(l.narration, e.narration),
-                l.pukhta_person_key, l.dr_paisa, l.cr_paisa
+                l.chukta_person_key, l.dr_paisa, l.cr_paisa
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE e.status = 'posted' AND l.account_id = ?1 AND (?2 IS NULL OR l.pukhta_person_key = ?2)
+         WHERE e.status = 'posted' AND l.account_id = ?1 AND (?2 IS NULL OR l.chukta_person_key = ?2)
            AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)
          ORDER BY e.entry_date, e.id, l.line_no",
     )?;
@@ -909,13 +1246,13 @@ pub fn ledger_rows(
     rows.collect()
 }
 
-/// The ids of the پختہ کھاتہ accounts, whose lines carry a person key (PRD FR-13.5). There are
+/// The ids of the چکتا کھاتہ accounts, whose lines carry a person key (PRD FR-13.5). There are
 /// only the two system accounts, so this is one small query.
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn pukhta_khata_ids(conn: &Connection) -> rusqlite::Result<std::collections::HashSet<i64>> {
-    let mut statement = conn.prepare("SELECT id FROM accounts WHERE is_pukhta_khata = 1")?;
+pub fn chukta_khata_ids(conn: &Connection) -> rusqlite::Result<std::collections::HashSet<i64>> {
+    let mut statement = conn.prepare("SELECT id FROM accounts WHERE is_chukta_khata = 1")?;
     let rows = statement.query_map([], |r| r.get(0))?;
     rows.collect()
 }

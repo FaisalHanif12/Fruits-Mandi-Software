@@ -192,6 +192,22 @@ describe.each(LANGUAGES)('sign in (%s)', (language) => {
     expect(alert.querySelector('bdi[dir="ltr"]')).toHaveTextContent(TEST_REFERENCE);
   });
 
+  it('a refusal by the Mac key store is told with what to do, without a reference number, and the typing stays (plan 75 7.8)', async () => {
+    vi.mocked(authApi.authLogin).mockRejectedValue(fail({ code: 'ERR_KEYSTORE_DENIED' }));
+    await renderApp();
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: message(language, 'auth-login-title') });
+    await user.keyboard(`${USERNAME}{Enter}${PASSWORD}{Enter}`);
+    const alert = await screen.findByRole('alert');
+    expect(visible(alert.textContent)).toContain(message(language, 'err-keystore-denied'));
+    // Not the "something went wrong" of an unknown error, and no reference line.
+    expect(visible(alert.textContent)).not.toContain(message(language, 'err-internal'));
+    expect(alert.querySelector('bdi[dir="ltr"]')).toBeNull();
+    // What was typed is still there, so he signs in again after the Keychain box.
+    expect(field(language, 'auth-login-username')).toHaveValue(USERNAME);
+    expect(field(language, 'auth-login-password')).toHaveValue(PASSWORD);
+  });
+
   it('a command that is not ready shows its message as an error, never as made-up data', async () => {
     vi.mocked(authApi.authLogin).mockRejectedValue(fail({ code: 'ERR_NOT_IMPLEMENTED' }));
     await renderApp();

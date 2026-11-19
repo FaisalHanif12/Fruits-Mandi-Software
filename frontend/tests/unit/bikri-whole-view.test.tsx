@@ -9,12 +9,15 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import { previewFor } from '../helpers/bikri-data';
 import {
   cellOf,
+  chooseInSummary,
   focusedIn,
   lotsGrid,
   named,
   names,
   openBook,
   salesGrid,
+  summaryChoice,
+  summaryDropdown,
   textOf,
   typeHeaderAndLot,
   typeTwoLines,
@@ -29,6 +32,8 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { IDS } from '../helpers/bikri-data';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -43,23 +48,39 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
   leaveAppWindow();
 });
 
+/**
+ * What names a lot (PRD FR-12.6, FR-12.45): its seller, its item and the counter the backend gives it.
+ * Lot 1 is Event 1's, Rahim's bananas, and a lot added after it starts with the same seller and item.
+ * The stand-in backend of these tests answers every lot with the counter 1 (the real one counts up).
+ */
+const lotWho = (language: Language) =>
+  message(language, 'bikri-lot-name', {
+    seller: names(language).rahim,
+    item: names(language).banana,
+    counter: '1',
+  });
+
+/** The values of the label of a lot: with its name, or (an untouched lot, nothing chosen) without. */
+const lotNamed = (language: Language, lot: number, hasName = true) =>
+  hasName ? { lot, who: lotWho(language), named: 'yes' } : { lot, who: '', named: 'no' };
+
 const lotLabel = (language: Language, lot: number) =>
-  message(language, 'bikri-all-lot', { lot, seller: names(language).rahim });
+  message(language, 'bikri-all-lot', { lot, who: lotWho(language) });
 
 /** The section of the lines area (its heading is the one of the lot, or of all the lines). */
-function linesArea(language: Language, whole: boolean, lot = 2): HTMLElement {
+function linesArea(language: Language, whole: boolean, lot = 2, hasName = true): HTMLElement {
   const heading = screen.getByRole('heading', {
     name: named(
       whole
         ? message(language, 'bikri-sales-title-all')
-        : message(language, 'bikri-sales-title', { lot }),
+        : message(language, 'bikri-sales-title', lotNamed(language, lot, hasName)),
     ),
   });
   const section = heading.closest('section');
@@ -75,12 +96,12 @@ function summaryArea(language: Language): HTMLElement {
   return section;
 }
 
-const switchTo = (area: HTMLElement, language: Language, whole: boolean, lot = 2) =>
+const switchTo = (area: HTMLElement, language: Language, whole: boolean, lot = 2, hasName = true) =>
   within(area).getByRole('button', {
     name: named(
       whole
         ? message(language, 'bikri-summary-whole')
-        : message(language, 'bikri-summary-lot', { lot }),
+        : message(language, 'bikri-summary-lot', lotNamed(language, lot, hasName)),
     ),
   });
 
@@ -92,13 +113,13 @@ async function twoLots(user: User, language: Language) {
     expect(textOf(salesGrid(language), 1, 'buyerTotal')).toBe('18,684');
   });
   await user.click(
-    screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+    screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
   );
   await waitFor(() => {
     expect(textOf(lotsGrid(language), 1, 'seller')).toBe(names(language).rahim);
   });
   await screen.findByRole('heading', {
-    name: named(message(language, 'bikri-sales-title', { lot: 2 })),
+    name: named(message(language, 'bikri-sales-title', lotNamed(language, 2))),
   });
 }
 
@@ -115,18 +136,83 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     const summary = summaryArea(language);
     expect(switchTo(lines, language, true)).toHaveAttribute('aria-pressed', 'false');
     await user.click(switchTo(lines, language, true));
-    expect(switchTo(summary, language, true)).toHaveAttribute('aria-pressed', 'true');
+    // The summary's dropdown follows: it shows the whole sale (plan 78 C2).
+    expect(summaryChoice(summary)).toBe(message(language, 'bikri-summary-whole'));
     expect(switchTo(linesArea(language, true), language, true)).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    await user.click(switchTo(summary, language, false));
+    await chooseInSummary(
+      user,
+      summary,
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+    );
     await screen.findByRole('heading', {
-      name: named(message(language, 'bikri-sales-title', { lot: 2 })),
+      name: named(message(language, 'bikri-sales-title', lotNamed(language, 2))),
     });
     expect(switchTo(linesArea(language, false), language, true)).toHaveAttribute(
       'aria-pressed',
       'false',
+    );
+  });
+
+  it('the summary dropdown lists every lot and the whole sale; choosing one shows it at once (plan 78 C2)', async () => {
+    const { user } = await openBook(language);
+    await twoLots(user, language);
+    const summary = summaryArea(language);
+    // Lot 2 is the one on screen after adding it; the dropdown names it.
+    expect(summaryChoice(summary)).toBe(
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+    );
+    // It lists lot 1, lot 2 and the whole sale, in that order.
+    await user.click(summaryDropdown(summary));
+    const options = (await screen.findAllByRole('option')).map((option) =>
+      visible(option.textContent),
+    );
+    expect(options).toEqual([
+      message(language, 'bikri-summary-lot', lotNamed(language, 1)),
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+      message(language, 'bikri-summary-whole'),
+    ]);
+    await user.keyboard('{Escape}');
+    // Lot 1 by the keyboard alone: open with Enter, move up, choose with Enter. The lines area follows.
+    summaryDropdown(summary).focus();
+    await user.keyboard('{Enter}{ArrowUp}{Enter}');
+    await screen.findByRole('heading', {
+      name: named(message(language, 'bikri-sales-title', lotNamed(language, 1))),
+    });
+    expect(summaryChoice(summary)).toBe(
+      message(language, 'bikri-summary-lot', lotNamed(language, 1)),
+    );
+    // And back to lot 2 with the pointer.
+    await chooseInSummary(
+      user,
+      summary,
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+    );
+    await screen.findByRole('heading', {
+      name: named(message(language, 'bikri-sales-title', lotNamed(language, 2))),
+    });
+  });
+
+  it('the docked strip names the lot on screen, and the whole sale when the switch says so (plan 38)', async () => {
+    const { user } = await openBook(language);
+    await twoLots(user, language);
+    const strip = () =>
+      screen.getByRole('region', { name: named(message(language, 'bikri-strip-label')) });
+    // Two lots: the one line names the lot it shows, so the numbers are not taken for the sale's.
+    // The strip fills in when the preview answers, so a busy machine needs the wait.
+    await waitFor(() => {
+      expect(visible(strip().textContent)).toContain(
+        message(language, 'bikri-summary-lot', lotNamed(language, 2)),
+      );
+    });
+    await user.click(switchTo(linesArea(language, false), language, true));
+    await waitFor(() => {
+      expect(visible(strip().textContent)).toContain(message(language, 'bikri-summary-whole'));
+    });
+    expect(visible(strip().textContent)).not.toContain(
+      message(language, 'bikri-summary-lot', lotNamed(language, 2)),
     );
   });
 
@@ -138,13 +224,13 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     // Lot 1: Akram, Arshad and the blank line the Enter made; lot 2: its own blank line.
     await waitFor(() => {
       expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(textOf(sales, 0, 'buyer')).toBe(names(language).akram);
+      expect(textOf(sales, 1, 'buyer')).toBe(names(language).arshad);
+      expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
+      expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
+      for (const row of [0, 1, 2]) expect(textOf(sales, row, 'lot')).toBe(lotLabel(language, 1));
+      expect(textOf(sales, 3, 'lot')).toBe(lotLabel(language, 2));
     });
-    expect(textOf(sales, 0, 'buyer')).toBe(names(language).akram);
-    expect(textOf(sales, 1, 'buyer')).toBe(names(language).arshad);
-    expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
-    expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
-    for (const row of [0, 1, 2]) expect(textOf(sales, row, 'lot')).toBe(lotLabel(language, 1));
-    expect(textOf(sales, 3, 'lot')).toBe(lotLabel(language, 2));
   });
 
   it('a line typed in the whole view goes to the lot that owns it, and the view of that lot shows it', async () => {
@@ -157,13 +243,13 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     });
     // The buyer of the line of lot 2 (the fourth line), by short code 2, then Enter.
     await user.click(cellOf(sales, 3, 'buyer'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('1{Enter}');
     await waitFor(() => {
-      expect(backend.lastDraft().lots[1]?.sales[0]?.buyer_account_id).toBe(20);
+      expect(backend.lastDraft().lots[1]?.sales[0]?.buyer_account_id).toBe(IDS.arshad);
     });
     // Lot 1 is as it was.
-    expect(backend.lastDraft().lots[0]?.sales[0]?.buyer_account_id).toBe(19);
-    expect(backend.lastDraft().lots[0]?.sales[1]?.buyer_account_id).toBe(20);
+    expect(backend.lastDraft().lots[0]?.sales[0]?.buyer_account_id).toBe(IDS.akram);
+    expect(backend.lastDraft().lots[0]?.sales[1]?.buyer_account_id).toBe(IDS.arshad);
     // The cursor moved on to the quantity of that line, and the details are those of lot 2.
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('3:qty');
@@ -174,11 +260,11 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     // Back to one lot: lot 2 is selected, with the buyer in its own first line, cursor kept.
     await user.click(switchTo(linesArea(language, true), language, false));
     await screen.findByRole('heading', {
-      name: named(message(language, 'bikri-sales-title', { lot: 2 })),
+      name: named(message(language, 'bikri-sales-title', lotNamed(language, 2))),
     });
     const one = salesGrid(language);
-    expect(textOf(one, 0, 'buyer')).toBe(names(language).arshad);
     await waitFor(() => {
+      expect(textOf(one, 0, 'buyer')).toBe(names(language).arshad);
       expect(focusedIn(one)).toBe('0:qty');
     });
   });
@@ -191,7 +277,8 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await waitFor(() => {
       expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
     });
-    await user.click(cellOf(sales, 2, 'rate'));
+    // The last stop of a line is its paid cell (PRD FR-12.44).
+    await user.click(cellOf(sales, 2, 'paid'));
     await user.keyboard('{Enter}');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('3:buyer');
@@ -213,9 +300,9 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
       expect(textOf(salesGrid(next), 3, 'lot')).toBe(lotLabel(next, 2));
     });
     const sales = salesGrid(next);
-    expect(textOf(sales, 0, 'buyer')).toBe(names(next).akram);
-    expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
     await waitFor(() => {
+      expect(textOf(sales, 0, 'buyer')).toBe(names(next).akram);
+      expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
       expect(focusedIn(sales)).toBe('1:qty');
     });
   });
@@ -223,7 +310,7 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
   it('empty: on an untouched screen the whole view is one blank line of lot 1, ready to type in', async () => {
     const { backend, user } = await openBook(language);
     // Lot 1 is selected: the switch on the lines area is "Lot 1 | Whole sale".
-    await user.click(switchTo(linesArea(language, false, 1), language, true, 1));
+    await user.click(switchTo(linesArea(language, false, 1, false), language, true, 1, false));
     const sales = salesGrid(language);
     await waitFor(() => {
       expect(sales.querySelectorAll('.ag-row')).toHaveLength(1);
@@ -244,7 +331,7 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     });
     failing = true;
     await user.click(cellOf(salesGrid(language), 3, 'buyer'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('1{Enter}');
     expect(
       await screen.findByText(
         (text) => visible(text) === message(language, 'bikri-preview-failed'),
@@ -270,10 +357,10 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     });
     await waitFor(() => {
       expect(cellOf(sales, 3, 'qty')).toHaveClass('cell-error');
+      expect(cellOf(sales, 0, 'qty')).not.toHaveClass('cell-error');
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'bikri-where-line', { lot: 2, line: 1 }),
+      );
     });
-    expect(cellOf(sales, 0, 'qty')).not.toHaveClass('cell-error');
-    expect(visible(document.body.textContent)).toContain(
-      message(language, 'bikri-where-line', { lot: 2, line: 1 }),
-    );
   });
 });

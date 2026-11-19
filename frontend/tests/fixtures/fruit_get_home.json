@@ -1,0 +1,62 @@
+{
+  "id": 1,
+  "version": 2,
+  "number": 1,
+  "entry_date": "2026-10-10",
+  "partner": {
+    "id": 1,
+    "code": "",
+    "name_ur": "الف",
+    "name_en": "Partner A"
+  },
+  "source": "shop",
+  "lot": {
+    "lot_id": 1,
+    "lot_no": 1,
+    "lot_counter": 1,
+    "bikri_id": 1,
+    "bikri_number": 1
+  },
+  "credit_account": {
+    "id": 19,
+    "code": "0010",
+    "name_ur": "رحیم",
+    "name_en": "Rahim"
+  },
+  "item": {
+    "id": 1,
+    "code": "0040",
+    "name_ur": "کیلا",
+    "name_en": "Banana"
+  },
+  "packing": {
+    "id": 1,
+    "code": "0050",
+    "name_ur": "پیٹی",
+    "name_en": "Box"
+  },
+  "qty": 2,
+  "weight_grams": null,
+  "rate_paisa": 58000,
+  "value_paisa": 116000,
+  "note": null,
+  "status": "saved",
+  "cancel_reason": null,
+  "parts": [
+    {
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "amount_paisa": 116000
+    }
+  ],
+  "journal_entry_id": 4,
+  "can_edit": true,
+  "can_cancel": true,
+  "locked_reason": null,
+  "needs_reopen": false,
+  "edited": null
+}

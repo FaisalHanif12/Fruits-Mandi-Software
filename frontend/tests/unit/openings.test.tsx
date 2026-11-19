@@ -23,6 +23,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -36,13 +37,13 @@ const CASH = account(51, 'other', '01010001', 'روکڑ', 'Cash in Hand', {
   opening_date: '2026-08-31',
   opening_dr_paisa: money(65000),
 });
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   opening_date: null,
 });
-const ARSHAD = account(22, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+const ARSHAD = account(22, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   opening_date: null,
 });
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   opening_date: '2026-08-31',
   opening_dr_paisa: money(15000),
   opening_is_advance: true,
@@ -74,7 +75,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(searchApi.searchMasters).mockResolvedValue([]);
   vi.mocked(searchApi.searchRecent).mockResolvedValue([]);
   vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
@@ -152,35 +153,36 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
     await user.click(cell(22, 'opening_cr'));
     await user.keyboard('2,500{Enter}');
     await waitFor(() => {
-      expect(accountApi.accountsOpeningsPreview).toHaveBeenLastCalledWith({
-        lines: [
-          {
-            account_id: 21,
-            version: 1,
-            opening_date: '10-10-2026',
-            opening_dr: '5000',
-            opening_cr: '',
-            opening_is_advance: false,
-          },
-          {
-            account_id: 22,
-            version: 1,
-            opening_date: '10-10-2026',
-            opening_dr: '',
-            opening_cr: '2,500',
-            opening_is_advance: false,
-          },
-        ],
-      });
+      expect(accountApi.accountsOpeningsPreview).toHaveBeenLastCalledWith(
+        {
+          lines: [
+            {
+              account_id: 21,
+              version: 1,
+              opening_date: '10-10-2026',
+              opening_dr: '5000',
+              opening_cr: '',
+              opening_is_advance: false,
+            },
+            {
+              account_id: 22,
+              version: 1,
+              opening_date: '10-10-2026',
+              opening_dr: '',
+              opening_cr: '2,500',
+              opening_is_advance: false,
+            },
+          ],
+        },
+        // The cash question is asked later, only when the preview says cash would go below zero.
+        false,
+      );
     });
-    const summary = await screen.findByRole('heading', {
-      name: named(message(language, 'openings-summary-title')),
-    });
-    const panel = summary.closest('section');
+    // The one line under the filters holds what will be saved and the backend's figures.
     await waitFor(() => {
-      expect(visible(panel?.textContent)).toContain('5,000');
+      expect(visible(document.body.textContent)).toContain('5,000');
     });
-    const words = visible(panel?.textContent);
+    const words = visible(document.body.textContent);
     expect(words).toContain('2,500');
     expect(words).toContain(message(language, 'openings-changed', { count: '2' }));
     // Debit 65,000 + 15,000 + 5,000 and credit 2,500: the difference is the backend's, 82,500 credit.
@@ -214,6 +216,90 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
       ).toBeDisabled();
     });
     expect(text(21, 'opening_dr')).toBe('5,000');
+  });
+
+  // Changing an opening that is in روکڑ takes cash out. When cash would end below zero the preview and the save
+  // answer ERR_CASH_BELOW_ZERO_NOT_CONFIRMED with `cash_after_paisa` at that line; F10 asks the question of PRD
+  // FR-6.7 with that figure, and the yes sends the save again with `confirm_cash_below_zero` (plan 80 R4-4).
+  describe('a change of the cash opening that takes cash below zero', () => {
+    /** The cash line is refused with the cash after (−5,000) until the answer was yes. */
+    async function openCashLow() {
+      const view = await open();
+      const preview = vi.mocked(accountApi.accountsOpeningsPreview).getMockImplementation();
+      const save = vi.mocked(accountApi.accountsOpeningsSave).getMockImplementation();
+      if (preview === undefined || save === undefined) throw new Error('no fake openings');
+      const cashRefusal = {
+        code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED' as const,
+        field: 'opening_dr',
+        values: { cash_after_paisa: -500_000 },
+      };
+      vi.mocked(accountApi.accountsOpeningsPreview).mockImplementation(async (input, confirm) => {
+        const answer = await preview(input, confirm);
+        if (confirm === true) return answer;
+        return {
+          ...answer,
+          rows: answer.rows.map((row) =>
+            row.account?.id === 51 ? { ...row, errors: [cashRefusal] } : row,
+          ),
+        };
+      });
+      vi.mocked(accountApi.accountsOpeningsSave).mockImplementation((input, confirm) =>
+        confirm === true
+          ? save(input, confirm)
+          : Promise.reject(
+              fail({
+                code: cashRefusal.code,
+                field: 'lines[0].opening_dr',
+                values: cashRefusal.values,
+              }),
+            ),
+      );
+      await view.user.click(cell(51, 'opening_dr'));
+      await view.user.keyboard('{Control>}a{/Control}10{Enter}');
+      // The line says why, at its cell, with the cash after.
+      await waitFor(() => {
+        expect(cell(51, 'opening_dr')).toHaveClass('cell-error');
+      });
+      return view;
+    }
+
+    it('F10 asks with the cash after before it saves; the yes saves with the confirmation', async () => {
+      const { user, store } = await openCashLow();
+      press('F10');
+      const box = await screen.findByRole('alertdialog');
+      expect(visible(box.textContent)).toContain(message(language, 'common-cash-confirm-title'));
+      expect(visible(box.textContent)).toContain('-5,000');
+      // Nothing is sent while the question is open, and the focus is on No.
+      expect(accountApi.accountsOpeningsSave).not.toHaveBeenCalled();
+      expect(
+        within(box).getByRole('button', {
+          name: (label) => visible(label).startsWith(message(language, 'common-cash-confirm-no')),
+        }),
+      ).toHaveFocus();
+      await user.click(
+        within(box).getByRole('button', { name: message(language, 'common-cash-confirm-yes') }),
+      );
+      await waitFor(() => {
+        expect(accountApi.accountsOpeningsSave).toHaveBeenCalledTimes(1);
+      });
+      expect(vi.mocked(accountApi.accountsOpeningsSave).mock.calls[0]?.[1]).toBe(true);
+      expect(
+        (await screen.findAllByText(message(language, 'openings-saved'))).length,
+      ).toBeGreaterThan(0);
+      expect(store.rows.find((row) => row.id === 51)?.version).toBe(2);
+    });
+
+    it('No saves nothing and keeps what was typed', async () => {
+      const { user } = await openCashLow();
+      press('F10');
+      await screen.findByRole('alertdialog');
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+      });
+      expect(accountApi.accountsOpeningsSave).not.toHaveBeenCalled();
+      expect(text(51, 'opening_dr')).toBe('10');
+    });
   });
 
   it('a date changed for all follows only the accounts with no opening', async () => {
@@ -252,10 +338,15 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
       const { user } = await open([...ROWS]);
       expect(text(61, 'opening_date')).toBe('');
       expect(cell(61, 'opening_dr').getAttribute('aria-readonly') ?? '').not.toBe('false');
-      // The help line says why a row is locked.
-      expect(visible(document.body.textContent)).toContain(
-        message(language, 'openings-locked-help'),
+      // The help behind the ⓘ of the title says why a row is locked.
+      await user.click(
+        screen.getAllByRole('button', { name: named(message(language, 'common-info-label')) })[0] ??
+          document.body,
       );
+      expect(
+        await screen.findByText(named(message(language, 'openings-locked-help'))),
+      ).toBeVisible();
+      await user.keyboard('{Escape}');
       // Typing on a locked cell changes nothing.
       await user.click(cell(61, 'opening_dr'));
       await user.keyboard('5000');
@@ -366,10 +457,29 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('with no accounts it says why and offers to make one', async () => {
+  it('opens on the accounts without an opening balance, and says so when none is waiting', async () => {
     fakeAccounts([]);
     await renderApp('/index/openings');
+    expect(await screen.findByText(message(language, 'openings-none-without'))).toBeInTheDocument();
+    // The first asking carries the filter: only accounts that can take an opening and have none.
+    expect(vi.mocked(accountApi.accountsList).mock.calls[0]?.[0]).toMatchObject({
+      kind: 'every',
+      has_opening: false,
+    });
+  });
+
+  it('with no accounts at all it says why and offers to make one, once all accounts are chosen', async () => {
+    fakeAccounts([]);
+    await renderApp('/index/openings');
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole('button', { name: message(language, 'openings-show-all-button') }),
+      );
     expect(await screen.findByText(message(language, 'openings-empty'))).toBeInTheDocument();
+    expect(vi.mocked(accountApi.accountsList).mock.calls.at(-1)?.[0]).toMatchObject({
+      has_opening: null,
+    });
     expect(
       within(document.body).getByRole('button', {
         name: new RegExp(message(language, 'accounts-new')),

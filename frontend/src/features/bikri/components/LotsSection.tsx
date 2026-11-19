@@ -3,42 +3,98 @@
 // freight, labour, munshiana, نقد. The rest of the lot is behind "مزید" (LotMore).
 //
 // - Enter on the last cell goes on to the sale lines of that lot (PRD FR-12.1); ↓ on the last lot
-//   adds a lot; "لاٹ شامل کریں" does the same with the mouse. Ctrl+Delete removes a lot.
+//   adds a lot; the round "+" under the grid does the same (it is reached by ↓ from the last row's trash
+//   cell, and stops at 50 lots, NFR-SCL-3). Ctrl+Delete, or the button at the end
+//   of its row, removes a lot, after asking when it has sale lines (plan 43).
 // - The lot that has focus is the selected lot: its sale lines are below.
 // - The seller of a new lot, and the item, packing and مارکہ of a seller, are filled by the app
 //   and are Enter stops like the rest (useDraftFills).
 
 import { Localized } from '@fluent/react';
-import { Plus } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
-import { EntryGrid, type GridInterceptors } from '../../../shared/grid';
+import { PackagePlus, Route, Sprout } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { groupDigits, useGrouping } from '../../../shared/format';
+import {
+  AddRowButton,
+  EntryGrid,
+  addRowAndFocus,
+  useAddRowLink,
+  type EntryRow,
+  type GridInterceptors,
+  type RemoveQuestion,
+} from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
-import { isPukhtaSeller } from '../draft';
+import { addCarriedLots, carriedLotIds } from '../carried-lots';
+import { addGoodsLot, goodsLotIds, goodsLotRow, useOwnGoodsAccount } from '../goods-lots';
+import { isCarriedLot, isGardenLot, isOwnLot } from '../draft';
 import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
+import { MAX_LOTS } from '../limits';
 import { LOT, SALE } from '../types';
+import { useGoodsSources } from '../hooks/useGoodsSources';
+import type { ReadyStock } from '../ready-stock';
+import { CarriedLotPicker } from './CarriedLotPicker';
+import { GoodsLoadPicker } from './GoodsLoadPicker';
 import { LotMoreToggle } from './LotMore';
-import { focusPukhtaFields } from './PukhtaFields';
+import { focusOwnPurchaseSoon } from './OwnLotPanel';
 
-/** The last cell of a lot row that Enter stops at. */
-const LAST_STOP = LOT.cash;
+/**
+ * The last cell of a lot row that Enter stops at. An own goods lot and a garden's lot have no نقد
+ * cell to type in.
+ */
+function lastStopOf(row: EntryRow | undefined): string {
+  return row !== undefined && (isOwnLot(row) || isGardenLot(row)) ? LOT.munshiana : LOT.cash;
+}
 
 interface LotsSectionProps {
   view: GridView;
   onCardAccount: (accountId: number | null) => void;
   /** The "more" panel of the selected lot cannot be closed now (a problem is on it). */
   moreForced: boolean;
+  /** Cells the user changed in a posting open for edit (plan 16), marked in the grid. */
+  cellChanged?: Record<string, Record<string, string>> | undefined;
+  /** The cells an earlier edit changed, with the words of that edit as their tip (plan 44). */
+  cellMarks?: Record<string, Record<string, string>> | undefined;
+  /** Can Ctrl+Delete remove this lot? A saved lot of an edit cannot be removed. */
+  canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
+  /** A note between the title and the grid, for example where some of the lots came from. */
+  note?: ReactNode;
+  /**
+   * Offer the three load buttons: "From باقی مال" (a lot with goods left from an earlier بکری, plan 76 point 1),
+   * "Market trip goods" and "Garden goods" (plan 78 C1). Each shows only when it has goods to load. Only the new
+   * بکری has them; an edit of a saved posting does not.
+   */
+  allowCarried?: boolean | undefined;
 }
 
-export function LotsSection({ view, onCardAccount, moreForced }: LotsSectionProps) {
+export function LotsSection({
+  view,
+  onCardAccount,
+  moreForced,
+  cellChanged,
+  cellMarks,
+  canRemoveRow,
+  note,
+  allowCarried = false,
+}: LotsSectionProps) {
   const stores = useBikriDraft();
   const step = useLayoutStep();
+  // The arrows reach the trash cell of each lot, and from the last one the "+" under the grid.
+  const addLink = useAddRowLink();
   const columns = useMemo(() => lotColumns(step), [step]);
   const rows = stores.lots((state) => state.rows);
   const focus = stores.lots((state) => state.focus);
   const selected = stores.view((state) => state.selectedLot);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  // The card of trip goods or of garden goods that is open, if any (plan 78 C1).
+  const [goodsOpen, setGoodsOpen] = useState<'trip' | 'garden' | null>(null);
+  // What each button has to list: a button shows only when its count is above 0.
+  const sources = useGoodsSources(allowCarried);
+  const own = useOwnGoodsAccount(allowCarried && (sources?.trip_rows ?? 0) > 0);
+  // A lot carried over has no "more" panel: its charges were taken with its first posting.
+  const selectedRow = rows.find((row) => row.rowId === selected);
 
   // The lot that has focus is the selected lot.
   useEffect(() => {
@@ -51,20 +107,48 @@ export function LotsSection({ view, onCardAccount, moreForced }: LotsSectionProp
     }
   }, [rows, selected, stores]);
 
+  // A lot with sale lines takes them with it: the user is asked first, in one sentence (plan 43 R3). A
+  // blank line (no buyer and no rate) is not counted: it is only an empty row (PRD FR-7.52).
+  const removeQuestion = useMemo(
+    () =>
+      (row: EntryRow): RemoveQuestion | null => {
+        const count = stores
+          .salesFor(row.rowId)
+          .getState()
+          .rows.filter(
+            (line) =>
+              line.picked?.[SALE.buyer] !== undefined ||
+              (line.typed[SALE.rate] ?? '').trim() !== '',
+          ).length;
+        return count === 0
+          ? null
+          : {
+              messageId: 'bikri-lot-remove-question',
+              titleId: 'bikri-lot-remove-title',
+              vars: { count },
+            };
+      },
+    [stores],
+  );
+
   const interceptors = useMemo<GridInterceptors>(
     () => ({
       // Enter on the last cell of a lot goes on to its sale lines (PRD FR-12.1).
       onEnter: (cell) => {
-        // A one-time seller: Enter goes on to his name and phone first (PRD FR-13.2).
         const row = stores.lots.getState().rows.find((candidate) => candidate.rowId === cell.rowId);
-        if (cell.field === LOT.seller && row !== undefined && isPukhtaSeller(row)) {
+        // An own goods lot: Enter goes on to the choice of its purchase until it has one (FR-12.26).
+        if (
+          cell.field === LOT.seller &&
+          row !== undefined &&
+          isOwnLot(row) &&
+          (row.typed[LOT.purchase] ?? '') === '' &&
+          (row.typed[LOT.lotId] ?? '') === ''
+        ) {
           stores.view.getState().select(cell.rowId);
-          window.setTimeout(() => {
-            focusPukhtaFields(cell.rowId);
-          }, 0);
+          focusOwnPurchaseSoon(cell.rowId);
           return true;
         }
-        if (cell.field !== LAST_STOP) return false;
+        if (cell.field !== lastStopOf(row)) return false;
         stores.view.getState().select(cell.rowId);
         stores.focusSaleLine(cell.rowId, 0, SALE.buyer);
         return true;
@@ -73,10 +157,19 @@ export function LotsSection({ view, onCardAccount, moreForced }: LotsSectionProp
     [stores],
   );
 
+  // A new lot goes through the grid's one new-row path, the same as ↓ on the last lot (PRD FR-7.17).
   const addLot = () => {
-    stores.lots.getState().addRow();
-    stores.lots.getState().setPendingFocus({ rowIndex: 'last', field: LOT.seller });
+    addRowAndFocus(stores.lots, LOT.seller);
   };
+  // At the limit of lots in one بکری (NFR-SCL-3) no lot is offered, and the words say why.
+  const grouping = useGrouping();
+  const lotsFull = rows.length >= MAX_LOTS;
+  const limit = lotsFull
+    ? {
+        messageId: 'bikri-lots-limit',
+        vars: { max: groupDigits(String(MAX_LOTS), grouping) },
+      }
+    : undefined;
 
   return (
     <section aria-labelledby="bikri-lots-heading" className="flex flex-col gap-2">
@@ -85,32 +178,98 @@ export function LotsSection({ view, onCardAccount, moreForced }: LotsSectionProp
           <h2 id="bikri-lots-heading" className="type-section text-ink" />
         </Localized>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={addLot}>
-            <Plus aria-hidden="true" className="size-icon-md" />
-            <Localized id="bikri-lots-add" />
-          </Button>
-          <LotMoreToggle
-            lotIndex={Math.max(
-              rows.findIndex((row) => row.rowId === selected),
-              0,
-            )}
-            forced={moreForced}
-          />
+          {selectedRow !== undefined && isCarriedLot(selectedRow) ? null : (
+            <LotMoreToggle
+              lotIndex={Math.max(
+                rows.findIndex((row) => row.rowId === selected),
+                0,
+              )}
+              forced={moreForced}
+            />
+          )}
         </div>
       </div>
-      <EntryGrid
-        columns={columns}
-        store={stores.lots}
-        labelId="bikri-lots-label"
-        calc={view.calc}
-        workings={view.workings}
-        cellErrors={view.errors}
-        cellWarnings={view.warnings}
-        interceptors={interceptors}
-        onCardAccount={onCardAccount}
-        fit
-        heightMode="auto"
-      />
+      {note}
+      <div className="flex flex-col gap-1">
+        <EntryGrid
+          columns={columns}
+          store={stores.lots}
+          labelId="bikri-lots-label"
+          calc={view.calc}
+          workings={view.workings}
+          cellErrors={view.errors}
+          cellWarnings={view.warnings}
+          {...(cellChanged === undefined ? {} : { cellChanged })}
+          {...(cellMarks === undefined ? {} : { cellMarks })}
+          {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
+          removeQuestion={removeQuestion}
+          interceptors={interceptors}
+          onCardAccount={onCardAccount}
+          addLink={addLink}
+          fit
+          heightMode="auto"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <AddRowButton labelId="bikri-lots-add-row" onAdd={addLot} limit={limit} link={addLink} />
+          {allowCarried && (sources?.stock_lots ?? 0) > 0 ? (
+            <Button
+              onClick={() => {
+                setPickerOpen(true);
+              }}
+              disabled={lotsFull}
+            >
+              <PackagePlus aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-carried-add" />
+            </Button>
+          ) : null}
+          {allowCarried && (sources?.trip_rows ?? 0) > 0 ? (
+            <Button
+              onClick={() => {
+                setGoodsOpen('trip');
+              }}
+              disabled={lotsFull}
+            >
+              <Route aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-goods-trip-add" />
+            </Button>
+          ) : null}
+          {allowCarried && (sources?.garden_rows ?? 0) > 0 ? (
+            <Button
+              onClick={() => {
+                setGoodsOpen('garden');
+              }}
+              disabled={lotsFull}
+            >
+              <Sprout aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-goods-garden-add" />
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      {allowCarried && goodsOpen !== null ? (
+        <GoodsLoadPicker
+          kind={goodsOpen}
+          open
+          onOpenChange={(next) => {
+            if (!next) setGoodsOpen(null);
+          }}
+          taken={goodsLotIds(rows, goodsOpen)}
+          onPick={(stock: ReadyStock) => {
+            const row = goodsLotRow(stock, own.data ?? null);
+            if (row !== null) addGoodsLot(stores, row);
+          }}
+        />
+      ) : null}
+      {allowCarried ? (
+        <CarriedLotPicker
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          taken={carriedLotIds(stores)}
+          onPick={(stock) => {
+            addCarriedLots(stores, [stock]);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trips-other-sale-cancel"
+description = "Enables the trips_other_sale_cancel command without any pre-configured scope."
+commands.allow = ["trips_other_sale_cancel"]
+
+[[permission]]
+identifier = "deny-trips-other-sale-cancel"
+description = "Denies the trips_other_sale_cancel command without any pre-configured scope."
+commands.deny = ["trips_other_sale_cancel"]

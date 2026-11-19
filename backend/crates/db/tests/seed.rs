@@ -1,4 +1,6 @@
-//! The seeded rows equal PRD FR-10.4, row for row (plan 03 Section 6, item 3).
+//! The seeded rows equal PRD FR-10.4, row for row (plan 03 Section 6, item 3). They are the rows of
+//! migration 1 and of migration 6 (the seller of trip goods, the cash name "Cash" and the controls of
+//! v1.6); the 0604 account of each partner is made with the partner (plan 11), so none exists here.
 //!
 //! `ACCOUNTS` is typed from the FR-10.4 table, not taken from the seed code.
 #![cfg(test)]
@@ -9,26 +11,38 @@ use mandi_core::text;
 use mandi_db::seed;
 use tempfile::tempdir;
 
-/// (code, Urdu name, English name, party type, is Pukhta Khata), FR-10.4 table order.
-const ACCOUNTS: [(&str, &str, &str, &str, i64); 16] = [
-    ("01010001", "روکڑ", "Cash in Hand", "other", 0),
-    ("01020001", "بینک", "Bank", "other", 0),
-    ("02010001", "مزدوری کھاتہ", "Labour Payable", "other", 0),
-    ("02010002", "کرایہ کھاتہ", "Freight Payable", "other", 0),
+/// (code, Urdu name, English name, party type, is a shared khata, active), FR-10.4 table order, as the
+/// latest schema holds them: migration 20 (plan 64) named 0030 چکتا کھاتہ and closed 0031 as the old
+/// closed account.
+const ACCOUNTS: [(&str, &str, &str, &str, i64, i64); 18] = [
+    ("01010001", "روکڑ", "Cash", "other", 0, 1),
+    ("01020001", "بینک", "Bank", "other", 0, 1),
+    ("02010001", "مزدوری کھاتہ", "Labour Payable", "other", 0, 1),
+    ("02010002", "کرایہ کھاتہ", "Freight Payable", "other", 0, 1),
     (
         "02010003",
         "کرایہ سٹور کھاتہ",
         "Store Rent Payable",
         "other",
         0,
+        1,
     ),
-    ("02010004", "منشیانہ کھاتہ", "Munshiana Payable", "other", 0),
     (
-        "030119999",
-        "پختہ کھاتہ (بیوپاری)",
-        "Pukhta Khata (Seller)",
+        "02010004",
+        "منشیانہ کھاتہ",
+        "Munshiana Payable",
+        "other",
+        0,
+        1,
+    ),
+    ("030119998", "اپنا مال", "Own Goods (Trips)", "seller", 0, 1),
+    (
+        "0031",
+        "پرانا بند کھاتہ",
+        "Old Closed Account",
         "seller",
         1,
+        0,
     ),
     (
         "03040000",
@@ -36,12 +50,16 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 16] = [
         "Naqdi Mandi (Cash Buyer)",
         "buyer",
         0,
+        1,
     ),
+    ("0030", "چکتا کھاتہ", "Chukta Khata", "buyer", 1, 1),
+    // Migration 0023 (plan 76): the contra of every linked khata and loan line (head 03).
     (
-        "03049999",
-        "پختہ کھاتہ (خریدار)",
-        "Pukhta Khata (Buyer)",
-        "buyer",
+        "03070001",
+        "الگ کھاتہ اور ادھار رقم: شراکت داروں کا عوض",
+        "Linked Khata and Loans: Partner Offset",
+        "other",
+        0,
         1,
     ),
     (
@@ -50,6 +68,7 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 16] = [
         "Commission Income (Seller)",
         "other",
         0,
+        1,
     ),
     (
         "04010002",
@@ -57,12 +76,27 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 16] = [
         "Commission Income (Buyer)",
         "other",
         0,
+        1,
     ),
-    ("04010003", "لاگا آمدن", "Laga Income", "other", 0),
-    ("04010004", "فون آمدن", "Phone Charge Income", "other", 0),
-    ("04010005", "ریٹ فرق", "Rate Difference", "other", 0),
-    ("06010001", "ابتدائی سرمایہ", "Opening Capital", "other", 0),
-    ("06019999", "ابتدائی فرق", "Opening Difference", "other", 0),
+    ("04010003", "لاگا آمدن", "Laga Income", "other", 0, 1),
+    ("04010004", "فون آمدن", "Phone Charge Income", "other", 0, 1),
+    ("04010005", "ریٹ فرق", "Rate Difference", "other", 0, 1),
+    (
+        "06010001",
+        "ابتدائی سرمایہ",
+        "Opening Capital",
+        "other",
+        0,
+        1,
+    ),
+    (
+        "06019999",
+        "ابتدائی فرق",
+        "Opening Difference",
+        "other",
+        0,
+        1,
+    ),
 ];
 
 /// One row of `accounts` as the test reads it.
@@ -71,7 +105,7 @@ struct Row {
     name_ur: String,
     name_en: String,
     party_type: String,
-    pukhta: i64,
+    shared: i64, // the shared-khata mark (is_chukta_khata)
     system: i64,
     active: i64,
     serial: i64,
@@ -81,12 +115,12 @@ struct Row {
 }
 
 #[test]
-fn the_16_fixed_accounts_match_fr_10_4() {
+fn the_fixed_accounts_match_fr_10_4() {
     let dir = tempdir().unwrap();
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let mut statement = conn
-        .prepare("SELECT code, name_ur, name_en, party_type, is_pukhta_khata, is_system, is_active, serial, search_ur, search_en, search_phonetic FROM accounts ORDER BY code")
+        .prepare("SELECT code, name_ur, name_en, party_type, is_chukta_khata, is_system, is_active, serial, search_ur, search_en, search_phonetic FROM accounts ORDER BY code")
         .unwrap();
     let rows: Vec<Row> = statement
         .query_map([], |r| {
@@ -95,7 +129,7 @@ fn the_16_fixed_accounts_match_fr_10_4() {
                 name_ur: r.get(1)?,
                 name_en: r.get(2)?,
                 party_type: r.get(3)?,
-                pukhta: r.get(4)?,
+                shared: r.get(4)?,
                 system: r.get(5)?,
                 active: r.get(6)?,
                 serial: r.get(7)?,
@@ -109,29 +143,34 @@ fn the_16_fixed_accounts_match_fr_10_4() {
         .collect();
     let mut want = ACCOUNTS.to_vec();
     want.sort_by_key(|row| row.0);
-    assert_eq!(rows.len(), 16);
-    for (row, (code, ur, en, party, pukhta)) in rows.iter().zip(want) {
+    assert_eq!(rows.len(), 18);
+    for (row, (code, ur, en, party, shared, active)) in rows.iter().zip(want) {
         assert_eq!(
             (
                 row.code.as_str(),
                 row.name_ur.as_str(),
                 row.name_en.as_str(),
                 row.party_type.as_str(),
-                row.pukhta
+                row.shared
             ),
-            (code, ur, en, party, pukhta)
+            (code, ur, en, party, shared)
         );
         assert_eq!(
             (row.system, row.active),
-            (1, 1),
-            "{code} is a system account and active"
+            (1, active),
+            "{code} is a system account; 0031 is the one closed since migration 20"
         );
-        // The code is the control code plus the 4-digit serial (FR-10.2).
-        assert!(
-            code.ends_with(&format!("{:04}", row.serial)),
-            "{code} serial {}",
-            row.serial
-        );
+        // The code is the control code plus the 4-digit serial (FR-10.2). The two shared accounts
+        // are the exception since migration 7: the type number 003 plus the running number (plan 32).
+        if row.shared == 1 {
+            assert_eq!(code, format!("003{}", row.serial), "{code}");
+        } else {
+            assert!(
+                code.ends_with(&format!("{:04}", row.serial)),
+                "{code} serial {}",
+                row.serial
+            );
+        }
         // Search keys come from core::text only (B26).
         assert_eq!(row.search_ur, text::search_ur(ur));
         assert_eq!(row.search_en, text::search_en(en));
@@ -177,13 +216,20 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
         ("0201", "Payables", "other", "02"),
         ("03011", "Sellers", "seller", "03"),
         ("0304", "Buyers", "buyer", "03"),
+        ("0305", "Separate Khatas", "separate", "03"),
+        ("0306", "Gardens", "garden", "03"),
+        // Migration 0023 (plan 76): the contra of linked money, in head 03, outside equity.
+        ("0307", "Linked Khata and Loans Offset", "other", "03"),
         ("0401", "Income", "other", "04"),
         ("0501", "Shop Expenses", "other", "05"),
         ("0601", "Capital", "other", "06"),
         ("0602", "Partner Capital", "other", "06"),
         ("0603", "Drawings", "other", "06"),
+        ("0604", "Gardens Trips and Fruit", "other", "06"),
+        // Migration 0023 (plan 76): one account of linked money for each partner.
+        ("0605", "Linked Khata and Loans", "other", "06"),
     ];
-    assert_eq!(controls.len(), 11);
+    assert_eq!(controls.len(), 16);
     for (have, want) in controls.iter().zip(want_controls) {
         assert_eq!(
             (
@@ -195,10 +241,13 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
             want
         );
     }
-    // Every account sits under the control its code starts with.
+    // Every account sits under the control its code starts with, except the two shared accounts (0030, 0031),
+    // whose code is the type number and a running number (plan 32).
     let misplaced: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM accounts a JOIN account_controls c ON c.id = a.control_id WHERE substr(a.code, 1, length(c.code)) <> c.code OR length(a.code) <> length(c.code) + 4",
+            "SELECT COUNT(*) FROM accounts a JOIN account_controls c ON c.id = a.control_id
+             WHERE a.is_chukta_khata = 0
+               AND (substr(a.code, 1, length(c.code)) <> c.code OR length(a.code) <> length(c.code) + 4)",
             [],
             |r| r.get(0),
         )
@@ -214,10 +263,11 @@ fn a_second_run_changes_nothing() {
     let before = seed::counts(&conn).unwrap();
     assert_eq!(
         (before.heads, before.controls, before.accounts),
-        (6, 11, 16)
+        (6, 16, 18)
     );
     let changes_before = conn.total_changes();
     assert_eq!(seed::system_accounts(&conn).unwrap(), 0);
+    assert_eq!(seed::trip_accounts(&conn).unwrap(), 0);
     assert_eq!(conn.total_changes(), changes_before);
     assert_eq!(seed::counts(&conn).unwrap(), before);
 }

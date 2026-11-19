@@ -1,0 +1,10 @@
+{
+  "voucher_id": 6,
+  "voucher_type": "receipt",
+  "number": 2,
+  "entry_id": 9,
+  "new_balance": {
+    "amount_paisa": 1368400,
+    "side": "dr"
+  }
+}

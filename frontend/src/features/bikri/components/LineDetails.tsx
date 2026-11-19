@@ -29,10 +29,8 @@ import {
   SegmentedControl,
   fieldError,
 } from '../../../shared/ui';
-import { isPukhtaBuyer } from '../draft';
 import { chargeNumber, ruleTag, type Say } from '../preview-view';
 import { ON, SALE, type LinePreview } from '../types';
-import { PukhtaFields } from './PukhtaFields';
 
 type Method = 'percent' | 'per_unit';
 
@@ -89,8 +87,11 @@ interface LineDetailsProps {
   lotIndex: number;
   lineIndex: number;
   line: LinePreview | undefined;
-  /** May a commission or لاگا be typed on a line? (the setting, PRD FR-11.10) */
-  allowOverride: boolean;
+  /**
+   * May a commission or لاگا be typed on a line? (the setting, PRD FR-11.10). Null while the
+   * setting is not known yet: the fields look as they do when it is on, and the note is hidden.
+   */
+  allowOverride: boolean | null;
   /** Show the weight field: the item is sold by weight. */
   usesWeight: boolean;
   error: UiError | null;
@@ -124,6 +125,8 @@ export function LineDetails({
   const calc = line?.calc ?? null;
   const buyer = row.picked?.[SALE.buyer];
   const differs = typed(SALE.differs) === ON;
+  // Only a setting that is really off switches the fields off (PRD FR-11.10).
+  const off = allowOverride === false;
 
   return (
     <section
@@ -157,7 +160,7 @@ export function LineDetails({
                 <div className="flex flex-col gap-2">
                   <Input
                     {...control}
-                    readOnly={!allowOverride}
+                    readOnly={off}
                     value={typed(spec.value)}
                     placeholder={charge === null ? '' : chargeNumber(charge, grouping)}
                     onChange={(text) => {
@@ -165,7 +168,7 @@ export function LineDetails({
                     }}
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    {allowOverride ? (
+                    {off ? null : (
                       <SegmentedControl
                         groupLabel={l10n.getString(spec.titleId)}
                         value={method}
@@ -180,7 +183,7 @@ export function LineDetails({
                           },
                         ]}
                       />
-                    ) : null}
+                    )}
                     {charge === null ? null : (
                       <span className="inline-flex items-center gap-1">
                         <Num paisa={charge.amount} />
@@ -194,11 +197,11 @@ export function LineDetails({
           );
         })}
       </div>
-      {allowOverride ? null : (
+      {off ? (
         <Localized id="bikri-line-override-off">
           <p className="type-body text-ink-muted" />
         </Localized>
-      )}
+      ) : null}
       <div className="grid grid-cols-3 gap-x-3 gap-y-2">
         <div className="flex flex-col gap-2">
           <Checkbox
@@ -234,6 +237,50 @@ export function LineDetails({
             </Field>
           ) : null}
         </div>
+        {/* The seller amount of the line: in the grid from the wide window up (1920 px), here in every window. */}
+        <Field label={<Localized id="bikri-col-seller-amount" />} readOnly>
+          {(control) => (
+            <output id={control.id} className="inline-flex items-center gap-1 type-body text-ink">
+              {calc === null ? null : (
+                <>
+                  <Num paisa={calc.seller_amount} />
+                  <CalcInfo working={calc.workings.seller_amount} />
+                </>
+              )}
+            </output>
+          )}
+        </Field>
+        {/* What is left on the buyer's account (PRD FR-12.44): the backend worked it out. A buyer who must
+            pay in full has his paid cell closed, and the note says why. A refusal of the paid amount shows here
+            too, as it does on the cell. */}
+        <Field
+          label={<Localized id="bikri-line-left" />}
+          readOnly
+          hint={
+            calc?.paid_fixed === true ? (
+              // The backend's working says why: the buyer pays in full, or the saved line is kept.
+              <Localized
+                id={
+                  calc.workings.paid.message_id === 'working-paid-kept'
+                    ? 'bikri-paid-kept-note'
+                    : 'bikri-paid-fixed-note'
+                }
+              />
+            ) : undefined
+          }
+          error={fieldError(error, path('paid'))}
+        >
+          {(control) => (
+            <output id={control.id} className="inline-flex items-center gap-1 type-body text-ink">
+              {calc === null ? null : (
+                <>
+                  <Num paisa={calc.left_paisa} />
+                  <CalcInfo working={calc.workings.left} />
+                </>
+              )}
+            </output>
+          )}
+        </Field>
         {usesWeight ? (
           <Field
             label={<Localized id="bikri-line-weight" />}
@@ -262,25 +309,6 @@ export function LineDetails({
           )}
         </Field>
       </div>
-      {isPukhtaBuyer(row) ? (
-        <PukhtaFields
-          store={store}
-          row={row}
-          keys={{
-            ur: SALE.pukhtaUr,
-            en: SALE.pukhtaEn,
-            phone: SALE.pukhtaPhone,
-            marks: `${SALE.pukhtaUr}Marks`,
-          }}
-          paths={{
-            ur: path('pukhta.name_ur'),
-            en: path('pukhta.name_en'),
-            phone: path('pukhta.phone'),
-          }}
-          error={error}
-          onDone={onDone}
-        />
-      ) : null}
     </section>
   );
 }

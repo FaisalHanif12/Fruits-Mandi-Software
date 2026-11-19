@@ -3,18 +3,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SetDefaultLanguageInput } from '../../bindings/SetDefaultLanguageInput';
 import type { SetFirmInput } from '../../bindings/SetFirmInput';
+import type { SetPrintingInput } from '../../bindings/SetPrintingInput';
 import type { SetSecurityInput } from '../../bindings/SetSecurityInput';
 import type { RemovePairInput } from '../../bindings/RemovePairInput';
+import { usePagedQuery } from '../../shared/hooks';
 import { translitPairsList, translitPairsRemove } from '../../shared/urdu/api';
 import type { ChargesInput, OverridesSettings } from './types';
 import {
   settingsGet,
   settingsGetCharges,
   settingsGetOverrides,
+  settingsGetPrinting,
   settingsSetCharges,
   settingsSetDefaultLanguage,
   settingsSetFirm,
   settingsSetOverrides,
+  settingsSetOwnerSign,
+  settingsSetPrinting,
   settingsSetSecurity,
 } from './api';
 
@@ -42,6 +47,13 @@ export function useSetSecurity() {
   });
 }
 
+/** Changes the Owner's sign (PRD FR-21.4, plan 73). Nothing in the settings read changes, so nothing is read again. */
+export function useSetOwnerSign() {
+  return useMutation({
+    mutationFn: (input: { password: string; sign: string }) => settingsSetOwnerSign(input),
+  });
+}
+
 export function useSetDefaultLanguage() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -54,7 +66,13 @@ export const TRANSLIT_PAIRS_KEY = ['translit_pairs'] as const;
 
 /** The words the app has learned (PRD FR-7.26). Owner only. */
 export function useLearnedPairs() {
-  return useQuery({ queryKey: TRANSLIT_PAIRS_KEY, queryFn: translitPairsList });
+  return usePagedQuery({
+    screen: 'settings.learned',
+    queryKey: [...TRANSLIT_PAIRS_KEY, 'list'],
+    fetchPage: (offset, limit) => translitPairsList(offset, limit),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+  });
 }
 
 export function useRemoveLearnedPair() {
@@ -96,5 +114,24 @@ export function useSetOverrideSettings() {
   return useMutation({
     mutationFn: (input: OverridesSettings) => settingsSetOverrides(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: OVERRIDES_KEY }),
+  });
+}
+
+export const PRINTING_KEY = ['settings', 'printing'] as const;
+
+/** The Printing settings (PRD Section 21), also the list "print after save" of the user. */
+export function usePrintingSettings() {
+  return useQuery({ queryKey: PRINTING_KEY, queryFn: settingsGetPrinting, staleTime: Infinity });
+}
+
+export function useSetPrintingSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SetPrintingInput) => settingsSetPrinting(input),
+    // The answer is the saved settings: they replace what is cached, so the print box and
+    // Ctrl+Enter see the new list at once.
+    onSuccess: (saved) => {
+      queryClient.setQueryData(PRINTING_KEY, saved);
+    },
   });
 }

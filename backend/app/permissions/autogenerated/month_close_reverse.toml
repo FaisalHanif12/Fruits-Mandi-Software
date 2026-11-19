@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-month-close-reverse"
+description = "Enables the month_close_reverse command without any pre-configured scope."
+commands.allow = ["month_close_reverse"]
+
+[[permission]]
+identifier = "deny-month-close-reverse"
+description = "Denies the month_close_reverse command without any pre-configured scope."
+commands.deny = ["month_close_reverse"]

@@ -24,8 +24,9 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { fakeMasters, record } from '../helpers/masters';
+import { fakeMasters } from '../helpers/masters';
 import { fakeAdvances } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -36,8 +37,7 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', { balance: balance(4316, 'cr') });
-const BANK = record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah');
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', { balance: balance(4316, 'cr') });
 
 const named = (text: string) => (name: string) => visible(name) === text;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,10 +46,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   fakeAccounts([RAHIM]);
   fakeAccountSearch([RAHIM]);
-  fakeMasters({ bank_account: [BANK] });
+  fakeMasters({});
   resetClientState('ur');
   signedIn(sessionUser({ language: 'ur' }));
 });
@@ -62,8 +62,8 @@ describe('the advance screen when save is pressed again and again', () => {
   async function fillOneVoucher() {
     const store = fakeAdvances();
     // The first call takes 400 ms; every call is counted by the mock.
-    const real = vi.mocked(vouchersApi.vouchersSaveAdvance).getMockImplementation();
-    vi.mocked(vouchersApi.vouchersSaveAdvance).mockImplementation(async (draft) => {
+    const real = vi.mocked(vouchersApi.vouchersSave).getMockImplementation();
+    vi.mocked(vouchersApi.vouchersSave).mockImplementation(async (draft) => {
       await wait(400);
       if (real === undefined) throw new Error('no fake save');
       return real(draft);
@@ -95,7 +95,7 @@ describe('the advance screen when save is pressed again and again', () => {
     press('F10');
     press('F10');
     await wait(900);
-    expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+    expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     expect(store.saved).toHaveLength(1);
   });
 
@@ -109,7 +109,7 @@ describe('the advance screen when save is pressed again and again', () => {
     await user.click(button);
     press('F10');
     await wait(900);
-    expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+    expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     expect(store.saved).toHaveLength(1);
   });
 
@@ -124,7 +124,7 @@ describe('the advance screen when save is pressed again and again', () => {
       }
     });
     await wait(900);
-    expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+    expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     expect(store.saved).toHaveLength(1);
   });
 });

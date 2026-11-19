@@ -1,21 +1,62 @@
 // Design system (Tech Stack 5.3, docs/design/design-system.md). Screens build only from these
 // (Code Standards F7).
 export { AccountPicker } from './AccountPicker';
+export { useWorkAreaStore } from './work-area';
+export {
+  AddRecordContext,
+  useAddRecord,
+  type AddedRecord,
+  type AddRecord,
+  type AddRecordKind,
+  type AddRecordRequest,
+  type MasterAddKind,
+} from './add-record';
 export { Balance, sideMessageId, type BalanceValue } from './Balance';
+export { BackButton } from './BackButton';
 export { Button, type ButtonVariant } from './Button';
 export { CalcInfo, CalcInfoAt, type Working } from './CalcInfo';
 export { Card } from './Card';
 export { CashConfirmDialog } from './CashConfirmDialog';
+export { CashNote } from './CashNote';
 export { Checkbox } from './Checkbox';
 export { Code } from './Code';
+export { ControlAccountPicker } from './ControlAccountPicker';
 export { CodeInput } from './CodeInput';
 export { ConfirmDialog, type ConfirmTone } from './ConfirmDialog';
+export { SellDateDialog } from './SellDateDialog';
+export { SplitDialog } from './SplitDialog';
 export { DataCheckFailedState } from './DataCheckFailedState';
 export { DateInput } from './DateInput';
+export { GoToDate } from './GoToDate';
+export { WindowNav } from './WindowNav';
+export { GoToMonth } from './GoToMonth';
+export { ListWindowBar } from './ListWindowBar';
+export { MonthNav, MonthTitle } from './MonthNav';
 export { EmptyState } from './EmptyState';
-export { ErrorMessage, useErrorText } from './ErrorMessage';
+export { EntryPartsCard, EntryPartsList } from './EntryPartsCard';
+export { EntrySources, sourceOf } from './EntrySources';
+export { ErrorMessage, useErrorText, type ErrorLike } from './ErrorMessage';
+export { ChoiceCard } from './ChoiceCard';
 export { ErrorNotice } from './ErrorNotice';
 export { ErrorState } from './ErrorState';
+export { BrandMark, type BrandMarkSize } from './BrandMark';
+export { Fact } from './Fact';
+export { IconChip, type IconChipTone } from './IconChip';
+export { FigureCell } from './FigureCell';
+export { FilterBar } from './FilterBar';
+export { FilterCard } from './FilterCard';
+export { ActionBar } from './ActionBar';
+export { FoldSection } from './FoldSection';
+export { FormAside } from './FormAside';
+export { FormCard } from './FormCard';
+export { FormGrid, FormSpan } from './FormGrid';
+export { HoverDetails, focusQuietly } from './HoverDetails';
+export { InfoHint } from './InfoHint';
+export { ListPage } from './ListPage';
+export { PeriodBox } from './PeriodBox';
+export { ShowClosedTick } from './ShowClosedTick';
+export { StatusChip, type StatusChipLook, type StatusChipTone } from './StatusChip';
+export { STATUS_CANCELLED, STATUS_CLOSED, STATUS_OPEN, STATUS_SAVED } from './status-looks';
 export { Field, type FieldControlProps } from './Field';
 export { fieldError } from './field-error';
 export { FormDialog } from './FormDialog';
@@ -23,27 +64,68 @@ export { LinkButton } from './LinkButton';
 export { KeyChip, type KeyChipTone } from './KeyChip';
 export { LOADING_SKELETON_DELAY_MS, LoadingState } from './LoadingState';
 export { MoneyInput } from './MoneyInput';
+export { Notice, type NoticeTone } from './Notice';
 export { NamePair, type NamePairValue } from './NamePair';
-export { Num } from './Num';
+export { Num, RUNNING_NUMBER } from './Num';
+export { MultiPicker } from './MultiPicker';
+export { PartnerSharesEditor, isOutOfVenture, type VentureShareRow } from './PartnerSharesEditor';
+export { ShareModeChoice, type ShareMode } from './ShareModeChoice';
 export { PartyCard } from './PartyCard';
 export { PercentInput } from './PercentInput';
 export { PasswordInput } from './PasswordInput';
 export { Picker, type PickerValue } from './Picker';
 export { PickerBase, type PickerBaseProps, type PickerHit } from './PickerBase';
 export { QtyInput } from './QtyInput';
+export { ReasonDialog } from './ReasonDialog';
 export { QuickAddAccount } from './QuickAddAccount';
-export { RomanUrduInput, type ConvertedWord } from './RomanUrduInput';
+export { QuickAddChukta } from './QuickAddChukta';
+export { SimilarAccounts } from './SimilarAccounts';
+export { RomanUrduInput, type ConvertedWord, type ListExtra } from './RomanUrduInput';
 export { FreeTextInput } from './FreeTextInput';
-export { SaveChangesPrompt } from './SaveChangesPrompt';
+export { SaveChangesPrompt, type PromptWords } from './SaveChangesPrompt';
 export { ScriptText } from './ScriptText';
 export { SegmentedControl, type SegmentedOption } from './SegmentedControl';
+export { ShareAmounts } from './ShareAmounts';
 export { Select, type SelectOption } from './Select';
+export { GradeSelect } from './GradeSelect';
+export { ITEM_GROUP_CHOICES, ItemGroupSelect, type ItemGroupChoice } from './ItemGroupSelect';
 export { Stepper, type Step } from './Stepper';
 export { SuggestInput, type Suggestion } from './SuggestInput';
-export { Table, type TableColumn, type TableColumnKind } from './Table';
+export { Table, type TableColumn, type TableColumnKind, type TableColumnSize } from './Table';
 export { Tabs, type TabItem } from './Tabs';
+export { TagInput } from './TagInput';
+export { Tile, type TileTone } from './Tile';
+export {
+  DeadAmountContext,
+  useDeadAmountActions,
+  type DeadAmountActions,
+  type DeadMoveRequest,
+  type DeadPartyNames,
+  type DeadUndoRequest,
+} from './dead-amount';
+export { DeadInfoLine } from './DeadInfoLine';
 export { TextInput } from './TextInput';
 export { TOAST_DURATION_MS, Toaster } from './Toaster';
-export { showToast, useToastStore, type ToastItem, type ToastTone } from './toast-store';
+export {
+  showToast,
+  useToastStore,
+  type ToastAction,
+  type ToastItem,
+  type ToastOptions,
+  type ToastTone,
+} from './toast-store';
 export { SpellingConfirmDialog, type SpellingName } from './SpellingConfirmDialog';
 export { SpellingMark } from './SpellingMark';
+export { EditBand, type EditBandKind } from './EditBand';
+export { EditedMark } from './EditedMark';
+export { EditHistoryDialog } from './EditHistoryDialog';
+export { EditFormBar } from './EditFormBar';
+export { FieldMark, fieldMark } from './FieldMark';
+export { EditReasonDialog } from './EditReasonDialog';
+export { EditSaveBoxes } from './EditSaveBoxes';
+export { EditReviewCard } from './EditReviewCard';
+export { EditStampLine, stampTimeText, stampTipText } from './EditStampLine';
+export { EntryActions } from './EntryActions';
+export { FixDayDialog } from './FixDayDialog';
+export { PartnerLockedBox } from './PartnerLockedBox';
+export { openPartnerCode, usePartnerCodeDialog } from './partner-code-store';

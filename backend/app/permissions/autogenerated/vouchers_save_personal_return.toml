@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-save-personal-return"
+description = "Enables the vouchers_save_personal_return command without any pre-configured scope."
+commands.allow = ["vouchers_save_personal_return"]
+
+[[permission]]
+identifier = "deny-vouchers-save-personal-return"
+description = "Denies the vouchers_save_personal_return command without any pre-configured scope."
+commands.deny = ["vouchers_save_personal_return"]

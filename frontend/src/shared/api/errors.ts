@@ -1,15 +1,25 @@
 // Turns backend error codes into Fluent message IDs (Code Standards 4.3, NFR-USE-14).
 // ERR_QTY_EXCEEDS_LOT becomes err-qty-exceeds-lot. The message lives in i18n/<lang>/errors.ftl.
 
-import type { ErrorCode } from '../../bindings/ErrorCode';
+import type { WireCode } from '../../bindings/WireCode';
 import type { UiError } from '../../bindings/UiError';
 import type { UiErrorItem } from '../../bindings/UiErrorItem';
-import { formatPaisaValue, groupDigits, type Grouping } from '../format/money';
+import { isoDayToDisplay } from '../format/dates';
+import {
+  formatPaisaValue,
+  groupDigits,
+  paisaOfErrorValue,
+  type Grouping,
+  type Paisa,
+} from '../format/money';
 import { formatBps } from '../format/percent';
 import { CommandError, toUiError } from './invoke';
 
-/** The Fluent message ID for an error code. */
-export function errorMessageId(code: ErrorCode): string {
+/**
+ * The Fluent message ID for an error code. A backup command may also send a code of its own
+ * (`BackupCode`, plan 18); both kinds are the text `ERR_...` and are read the same way.
+ */
+export function errorMessageId(code: WireCode): string {
   return `err-${code.replace(/^ERR_/, '').toLowerCase().replaceAll('_', '-')}`;
 }
 
@@ -22,6 +32,19 @@ export const FALLBACK_ERROR_MESSAGE_ID = errorMessageId('ERR_INTERNAL');
 /** The UiError inside anything a query or mutation failed with. */
 export function uiErrorOf(error: unknown): UiError {
   return error instanceof CommandError ? error.uiError : toUiError(error);
+}
+
+/**
+ * The cash in hand after the entry that the backend names when it refuses a save for the cash question
+ * (`ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`, value `cash_after_paisa`, PRD FR-6.7), or null when the failure is not
+ * that refusal or carries no amount. A screen then opens the cash box with this figure and sends the save again
+ * with the answer; with null it shows the refusal in words, as any other.
+ */
+export function cashAfterOfRefusal(failure: unknown): Paisa | null {
+  const item = uiErrorOf(failure).errors.find(
+    (one) => one.code === 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED',
+  );
+  return item === undefined ? null : paisaOfErrorValue(item.values['cash_after_paisa']);
 }
 
 /** True when the problem points at one field or grid cell, not at the whole form. */
@@ -72,6 +95,8 @@ export function errorsOutsideFields(error: UiError, fields: readonly string[]): 
 }
 
 const BPS_SUFFIX = '_bps';
+/** The names of values that count records: a sale number, a lot number. */
+const NUMBER_SUFFIX = '_number';
 const PAISA_SUFFIX = '_paisa';
 
 /** A whole number as grouped digits, with a minus sign when it is below zero. */
@@ -86,17 +111,22 @@ function groupedNumber(value: number, grouping: Grouping): string {
  * نگ, kg, characters), never paisa (plan 02 contract 4.6). Whole numbers are grouped with the
  * app's grouping, so 10000000000 reads "10,000,000,000" or "10,00,00,00,000" in both languages
  * and Fluent never formats a number by locale (PRD FR-7.32). Text values, such as a date,
- * pass as they are. A rate in basis points (`total_bps`, 9000) also arrives as the percent a
+ * pass as they are, except a date written YYYY-MM-DD, which is shown as DD-MM-YYYY. A rate in basis points (`total_bps`, 9000) also arrives as the percent a
  * person reads, under the same name without `_bps` (`total`, "90"), written from its digits.
  * An amount whose name ends in `_paisa` (`cash_after_paisa`, 500000) is money: it is written with
  * formatPaisa ("5,000"), under its own name and under the name without `_paisa`
- * (`cash_after`), so a message never shows raw paisa (plan 12 contract 4).
+ * (`cash_after`), so a message never shows raw paisa (plan 12 contract 4). A number that names a
+ * record (`bikri_number`) also comes as `<name>_zero`, `yes` or `no`, because 0 means "none" there
+ * and Fluent matches a number key only against a number, never against the text "0" (plan 37).
+ * `today_open` (1 or 0, with a closed-day error, plan 53) also comes as `today_state`, `open` or
+ * `closed`, so the message can offer today's date when today is open and the reopening when it is not.
  */
 export function messageVars(
   values: UiErrorItem['values'],
   grouping: Grouping,
 ): Record<string, string> {
-  const vars: Record<string, string> = {};
+  // `reason` selects the words of a refusal that has several (the cloud address); with none, the plain words.
+  const vars: Record<string, string> = { reason: '' };
   for (const [key, value] of Object.entries(values)) {
     if (typeof value === 'number' && key.endsWith(PAISA_SUFFIX) && Number.isSafeInteger(value)) {
       const money = formatPaisaValue(value, { grouping });
@@ -104,7 +134,15 @@ export function messageVars(
       vars[key.slice(0, -PAISA_SUFFIX.length)] = money;
       continue;
     }
-    vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : value;
+    // A value that is exactly a real day, YYYY-MM-DD, is shown as DD-MM-YYYY (Code Standards G9);
+    // any other text passes as it is.
+    vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : isoDayToDisplay(value);
+    if (typeof value === 'number' && key === 'today_open') {
+      vars['today_state'] = value === 1 ? 'open' : 'closed';
+    }
+    if (typeof value === 'number' && key.endsWith(NUMBER_SUFFIX)) {
+      vars[`${key}_zero`] = value === 0 ? 'yes' : 'no';
+    }
     if (typeof value === 'number' && key.endsWith(BPS_SUFFIX) && Number.isSafeInteger(value)) {
       vars[key.slice(0, -BPS_SUFFIX.length)] = formatBps(value);
     }

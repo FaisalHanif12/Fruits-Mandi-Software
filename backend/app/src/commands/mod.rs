@@ -6,14 +6,58 @@ pub mod app;
 pub mod assist;
 pub mod auth;
 pub mod bikri;
+pub mod capital;
+pub mod cashbook;
+pub mod chukta;
 pub mod day;
+pub mod dead;
+pub mod drafts;
+pub mod expenses;
+pub mod fruit;
+pub mod gardens;
+pub mod general;
+pub mod khata;
+pub mod lent;
 pub mod masters;
 pub mod partners;
+pub mod party_ledgers;
+pub mod purchases;
+pub mod reports;
 pub mod rules;
 pub mod search;
 pub mod settings;
 pub mod translit;
+pub mod trips;
 pub mod vouchers;
+pub mod windows;
+// Run B, plan 18 (append-only block).
+pub mod backup;
+// Run B, plan 20 (append-only block).
+pub mod reports_engine;
+// Run B, plan 20, step B3 (append-only block).
+// Run B, plan 21 (append-only block).
+pub mod analytics;
+// Run B, plan 22 (append-only block).
+pub mod audit;
+pub mod export;
+pub mod health;
+pub mod month;
+pub mod settings_day;
+pub mod support;
+pub mod updates;
+// Run B, plan 19 (append-only block).
+pub mod dashboard;
+pub mod screen_prefs;
+// Run B, D5 round 14 (append-only block).
+pub mod report_print;
+// Plan 44 (append-only block).
+pub mod edit;
+pub mod partner_code;
+pub(crate) mod partner_gate;
+// Plan 48, ask the app (append-only block).
+pub mod assistant;
+// Plan 56, restore on a new computer (append-only block).
+pub mod backup_first_run;
 
 use std::fmt;
 

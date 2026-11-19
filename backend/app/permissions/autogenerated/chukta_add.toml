@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-chukta-add"
+description = "Enables the chukta_add command without any pre-configured scope."
+commands.allow = ["chukta_add"]
+
+[[permission]]
+identifier = "deny-chukta-add"
+description = "Denies the chukta_add command without any pre-configured scope."
+commands.deny = ["chukta_add"]

@@ -1,0 +1,13 @@
+{
+  "numbers": null,
+  "errors": [
+    {
+      "code": "ERR_WEIGHT_REQUIRED",
+      "field": "weight",
+      "values": {}
+    }
+  ],
+  "warnings": [],
+  "rate_hint": null,
+  "partners_locked": false
+}

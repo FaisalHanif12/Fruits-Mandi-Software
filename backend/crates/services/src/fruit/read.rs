@@ -1,0 +1,258 @@
+//! Reading fruit entries (PRD FR-16.12, FR-19.11, plan 17d): one entry, one page of entries with
+//! the totals over the whole filter, and the lots fruit can be taken from. Read only.
+
+use mandi_db::fruit::{self as frepo, FruitRec, ListFilter};
+use mandi_db::rusqlite::Connection;
+use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
+use mandi_domain::core::error::ErrorCode;
+use mandi_domain::core::fruit::{
+    FruitGetInput, FruitList, FruitListInput, FruitLotRef, FruitLotRow, FruitLots, FruitLotsInput,
+    FruitPartRow, FruitRow, FruitSource, FruitStatus, FruitTotals,
+};
+use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
+use mandi_domain::core::validate::{self, FieldErrors};
+
+use super::act::lot_of_closed_garden;
+use crate::context::Context;
+use crate::day;
+use crate::error::{ServiceError, money_error};
+use crate::flags::Marker;
+use crate::page::limit_of;
+use crate::ventures::not_found;
+
+fn data(message: &str) -> ServiceError {
+    ServiceError::Data(message.to_owned())
+}
+
+fn paisa(value: i64) -> Result<Paisa, ServiceError> {
+    Paisa::try_from_paisa(value).map_err(money_error)
+}
+
+/// One row as stored. The flags say what the entry itself allows; the day rules and the edit stamp
+/// are added by [`mark_rows`].
+pub(super) fn row_of(conn: &Connection, rec: &FruitRec) -> Result<FruitRow, ServiceError> {
+    // The parts of the posting in force (a cancelled entry shows the posting it had).
+    let parts = match rec.current_entry_id {
+        Some(entry) => frepo::parts_of_entry(conn, entry)?,
+        None => Vec::new(),
+    };
+    let mut part_rows = Vec::with_capacity(parts.len());
+    for part in parts {
+        part_rows.push(FruitPartRow {
+            partner: part.partner,
+            amount_paisa: paisa(part.amount_paisa)?,
+        });
+    }
+    if BusinessDate::parse_iso(&rec.entry_date).is_none() {
+        return Err(data("the date of a fruit entry is not a date"));
+    }
+    let status = FruitStatus::parse(&rec.status)
+        .ok_or_else(|| data("a fruit entry has a status that is not saved or cancelled"))?;
+    let source = FruitSource::parse(&rec.source)
+        .ok_or_else(|| data("a fruit entry has a source that is not shop or other_shop"))?;
+    // A lot of a closed garden takes no change (PRD FR-12.38); the day rules come in `mark_rows`.
+    let flags = if status == FruitStatus::Saved && lot_of_closed_garden(conn, rec)? {
+        EntryFlags::locked(LockedReason::GardenClosed)
+    } else {
+        EntryFlags::open()
+    };
+    Ok(FruitRow {
+        id: rec.id,
+        version: rec.version,
+        number: rec.number,
+        entry_date: rec.entry_date.clone(),
+        partner: rec.partner.clone(),
+        source,
+        lot: rec.lot.map(
+            |(lot_id, lot_no, bikri_id, bikri_number, lot_counter)| FruitLotRef {
+                lot_id,
+                lot_no,
+                lot_counter,
+                bikri_id,
+                bikri_number,
+            },
+        ),
+        credit_account: rec.credit.clone(),
+        item: rec.item.clone(),
+        packing: rec.packing.clone(),
+        qty: rec.qty,
+        weight_grams: rec.weight_grams,
+        rate_paisa: paisa(rec.rate_paisa)?,
+        value_paisa: paisa(rec.value_paisa)?,
+        note: rec.note.clone(),
+        status,
+        cancel_reason: rec.cancel_reason.clone(),
+        parts: part_rows,
+        journal_entry_id: if status == FruitStatus::Saved {
+            rec.current_entry_id
+        } else {
+            None
+        },
+        flags,
+    })
+}
+
+/// Adds the day rules and the edit stamp to the flags of rows (PRD FR-7.70, FR-7.71, FR-21.4).
+fn mark_rows(conn: &Connection, rows: &mut [FruitRow]) -> Result<(), ServiceError> {
+    let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
+    let marker = Marker::load(conn, EditEntity::FruitTake, &ids)?;
+    for row in rows {
+        marker.mark(
+            row.id,
+            &row.entry_date,
+            row.status == FruitStatus::Saved,
+            &mut row.flags,
+        );
+    }
+    Ok(())
+}
+
+/// One entry. Read only.
+pub(super) fn get(ctx: &Context, input: &FruitGetInput) -> Result<FruitRow, ServiceError> {
+    ctx.db.read(|conn| {
+        let rec = frepo::get(conn, input.id)?.ok_or_else(|| not_found("id"))?;
+        let mut rows = [row_of(conn, &rec)?];
+        mark_rows(conn, &mut rows)?;
+        let [row] = rows;
+        Ok(row)
+    })
+}
+
+fn optional_date(
+    errors: &mut FieldErrors,
+    field: &str,
+    text: Option<&String>,
+    today: BusinessDate,
+) -> Option<String> {
+    let text = text.map(|t| t.trim()).filter(|t| !t.is_empty())?;
+    errors
+        .take(validate::date(field, text, today))
+        .map(BusinessDate::to_iso)
+}
+
+/// One page of entries with the totals over the whole filter (B31). Read only.
+///
+/// While the partner section is locked (PRD FR-17.11, NFR-SEC-14, Code Standards S8) the list is
+/// the one of report R37: a request for one partner's fruit is refused with `ERR_PARTNER_LOCKED`,
+/// and a request for everyone lists the shop's guests' fruit only, with `partners_locked` true.
+pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, ServiceError> {
+    let locked = crate::partner_code::is_locked(ctx)?;
+    if locked && input.partner_id.is_some() {
+        return Err(ServiceError::reject(ErrorCode::ErrPartnerLocked));
+    }
+    let (_, today) = day::window(ctx)?;
+    let mut errors = FieldErrors::default();
+    let from = optional_date(&mut errors, "from", input.from.as_ref(), today);
+    let to = optional_date(&mut errors, "to", input.to.as_ref(), today);
+    if input.guests_only && input.partner_id.is_some() {
+        errors.push(mandi_domain::core::error::FieldError::new(
+            ErrorCode::ErrFormatInvalid,
+            "partner_id",
+        ));
+    }
+    errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| sort.order_by(&frepo::SORT_COLUMNS))
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_none_or(|s| s.direction == SortDirection::Desc);
+    let filter = ListFilter {
+        partner_id: input.partner_id,
+        // While the partner section is locked only the guests' fruit is listed (PRD FR-17.11, as R37).
+        guests_only: input.guests_only || locked,
+        item_id: input.item_id,
+        source: input.source.map(|s| s.as_str().to_owned()),
+        from,
+        to,
+        status: input.status.map(|s| s.as_str().to_owned()),
+        search: input
+            .search
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_owned),
+        order_by,
+        hide_cancelled: !input.show_finished,
+    };
+    ctx.db.read(|conn| {
+        let (count, qty, value) = frepo::totals(conn, &filter)?;
+        let recs = frepo::list(
+            conn,
+            &filter,
+            i64::from(input.offset),
+            limit_of(input.limit),
+        )?;
+        let mut rows = Vec::with_capacity(recs.len());
+        for rec in &recs {
+            rows.push(row_of(conn, rec)?);
+        }
+        mark_rows(conn, &mut rows)?;
+        // Month headings with their subtotals, over the whole filter (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            crate::page::month_subtotals(
+                frepo::list_months(conn, &filter)?,
+                &[("qty", false), ("value_paisa", true)],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
+        Ok(FruitList {
+            rows,
+            total_count: count,
+            totals: FruitTotals {
+                qty,
+                value_paisa: paisa(value)?,
+            },
+            months,
+            partners_locked: locked,
+        })
+    })
+}
+
+/// The lots fruit can be taken from. Read only.
+pub(super) fn lots(ctx: &Context, input: &FruitLotsInput) -> Result<FruitLots, ServiceError> {
+    let search = input
+        .search
+        .as_ref()
+        .map(|t| t.trim().to_lowercase())
+        .filter(|t| !t.is_empty());
+    ctx.db.read(|conn| {
+        let (recs, total) = frepo::lots(
+            conn,
+            search.as_deref(),
+            i64::from(input.offset),
+            limit_of(input.limit),
+        )?;
+        Ok(FruitLots {
+            rows: recs
+                .into_iter()
+                .map(|rec| FruitLotRow {
+                    lot_id: rec.lot_id,
+                    lot_no: rec.lot_no,
+                    lot_counter: rec.lot_counter,
+                    bikri_id: rec.bikri_id,
+                    bikri_number: rec.bikri_number,
+                    received_date: rec.received_date,
+                    seller: rec.seller,
+                    item: rec.item,
+                    packing: rec.packing,
+                    sold_by_weight: rec.sold_by_weight,
+                    balance: rec.balance,
+                })
+                .collect(),
+            total_count: total,
+            offset: input.offset,
+            limit: u32::try_from(limit_of(input.limit)).unwrap_or(u32::MAX),
+        })
+    })
+}

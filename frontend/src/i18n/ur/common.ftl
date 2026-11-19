@@ -68,7 +68,221 @@ common-percent-sign = %
 common-cash-confirm-title = { -rokar } صفر سے کم ہو جائے گی
 # review: pending
 common-cash-confirm-text = اس اندراج کے بعد { -rokar } <num>{ $amount }</num> ہو جائے گی۔ کیا یہ اندراج درست ہے؟
+# The amber note under an entry that would take cash below zero (PRD FR-6.7).
+# review: pending
+common-cash-after = اس اندراج کے بعد { -rokar } <num>{ $amount }</num> ہو جائے گی۔
 # review: pending
 common-cash-confirm-yes = ہاں، محفوظ کریں
 # review: pending
 common-cash-confirm-no = نہیں، واپس جائیں
+
+# The tick of a list that adds the columns that do not fit beside the others (Code Standards F22).
+# review: pending
+common-more-columns = مزید کالم
+
+## The pager under every list that loads page by page (PRD FR-19.11, plan 38 R1).
+
+# The name of the page buttons, read by screen readers.
+# review: pending
+common-pager-label = صفحات
+
+# $from, $to: the first and the last row on this page; $total: how many rows the whole filter has.
+# review: pending
+common-pager-range = <num>{ $total }</num> میں سے <num>{ $from }</num> تا <num>{ $to }</num>
+
+# $page: the page on screen; $pages: how many pages the whole filter has.
+# review: pending
+common-pager-page = صفحہ <num>{ $page }</num> از <num>{ $pages }</num>
+
+# The choice of how many rows a page has (25, 50 or 100).
+# review: pending
+common-pager-size = ایک صفحے میں قطاریں
+
+# review: pending
+common-pager-first = پہلا صفحہ
+
+# review: pending
+common-pager-previous = پچھلا صفحہ
+
+# review: pending
+common-pager-next = اگلا صفحہ
+
+# review: pending
+common-pager-last = آخری صفحہ
+
+## Lists that load page by page (PRD FR-19.11, Code Standards F34).
+
+# The save button of a small box.
+# review: pending
+common-save = محفوظ کریں
+
+## Shared list pieces (plan 38): the period box, the filter bar, the search box, the tick for closed
+## records and the small info button.
+
+# review: pending
+common-period-label = مدت
+
+# review: pending
+common-period-today = آج
+
+# review: pending
+common-period-week = یہ ہفتہ
+
+# review: pending
+common-period-month = یہ مہینہ
+
+# review: pending
+common-period-last-month = پچھلا مہینہ
+
+# review: pending
+common-period-year = یہ سال
+
+# review: pending
+common-period-last-year = پچھلا سال
+
+# One click to every date from the first one on.
+# review: pending
+common-period-all = پہلی تاریخ سے
+
+# review: pending
+common-period-custom = تاریخیں چنیں
+
+# review: pending
+common-period-from = از
+
+# review: pending
+common-period-to = تا
+
+# review: pending
+common-item-group = { masters-item-group }
+# review: pending
+common-item-group-all = پھل اور سبزی
+# The quality box of the sales registers R2, R3 and R4 and the analytics view A (PRD FR-12.42): one quality, or all.
+# review: pending
+common-grade = { -darja }
+# review: pending
+common-grade-all = تمام درجے
+# review: pending
+common-filters-more = مزید فلٹر
+
+# review: pending
+common-filters-less = کم فلٹر
+
+# $count: how many of the filters behind "More filters" are set.
+# review: pending
+common-filters-set = <num>{ $count }</num> لگے ہیں
+
+# review: pending
+common-search-label = تلاش
+
+# review: pending
+common-search-placeholder = کوڈ، نام یا نمبر لکھیں
+
+# review: pending
+common-show-closed = بند / منسوخ بھی دکھائیں
+
+# review: pending
+common-info-label = اس خانے کے بارے میں
+
+# A screen could not be drawn: the answer it got was not what it expects.
+# review: pending
+common-screen-failed = یہ اسکرین نہیں کھل سکی
+
+# $count: how many rows the filter has in one month, on the heading row of that month.
+# review: pending
+common-month-count = { $count } اندراجات
+
+# The button at the end of a row of tabs that opens the tabs that did not fit.
+# review: pending
+common-tabs-more = مزید
+
+# The remove button at the end of a row of an entry grid (plan 43, PRD FR-7.3): its name, its tooltip and
+# the heading of its column. The key Ctrl+Delete is added after it in the tooltip.
+# review: pending
+common-remove-line = یہ لائن ہٹائیں
+
+# The question before a line goes that has more under it than itself (a lot with sale lines).
+# review: pending
+common-remove-line-title = لائن ہٹائیں؟
+
+# review: pending
+common-remove-line-confirm = ہٹائیں
+
+# An item with its quality after it: "Apple First", "سیب اول" (PRD FR-12.42). $item: the item's name.
+# $grade: the quality word (glossary-darja-awwal, -doyam or -soyam).
+# review: pending
+common-item-grade = { $item } { $grade }
+
+### A screen that shows one month at a time (PRD FR-19.11, FR-17.12, plan 76).
+
+# review: pending
+common-month-nav-label = مہینے کے حساب سے آگے پیچھے جائیں
+
+# review: pending
+common-month-earlier = پچھلا مہینہ
+
+# review: pending
+common-month-later = اگلا مہینہ
+
+# review: pending
+common-month-latest-note = یہ موجودہ مہینہ ہے
+
+# review: pending
+common-month-first-note = یہ پہلا مہینہ ہے جس میں اندراج ہیں
+
+# review: pending
+common-month-latest-button = یہ مہینہ
+
+# $month: the name of the month. $year: the year in digits.
+# review: pending
+common-month-title = { $month } <num>{ $year }</num>
+
+# review: pending
+common-goto-month = مہینے پر جائیں
+
+# review: pending
+common-goto-month-hint = مہینہ لکھیں، جیسے 10-2026۔ مختصر شکل بھی چلتی ہے: 10 یعنی اس سال کا اکتوبر۔
+
+# review: pending
+common-goto-month-placeholder = مہینہ-سال
+
+## The 7-day window of a list that shows many rows a day (PRD FR-19.11, plan 76 point 8).
+
+# review: pending
+common-days-nav-label = 7 دن کے حساب سے آگے پیچھے جائیں
+
+# review: pending
+common-days-earlier = پچھلے <num>{ $days }</num> دن
+
+# review: pending
+common-days-later = اگلے <num>{ $days }</num> دن
+
+# review: pending
+common-days-range = <num>{ $from }</num> تا <num>{ $to }</num>
+
+# review: pending
+common-days-latest-note = یہ آج پر ختم ہونے والے دن ہیں
+
+# review: pending
+common-days-first-note = یہ اندراج والے پہلے دن ہیں
+
+# review: pending
+common-days-latest-button = آج پر واپس
+
+# review: pending
+common-goto-day = دن پر جائیں
+
+# review: pending
+common-goto-day-hint = دن لکھیں، مثلاً 10-10-2026۔ اس دن پر ختم ہونے والے 7 دن کھل جاتے ہیں۔ مختصر شکل بھی چلتی ہے: 10 اس مہینے کی 10 تاریخ ہے۔
+
+# review: pending
+common-goto-day-placeholder = دن-مہینہ-سال
+
+## A field of several records (plan 78 D2).
+
+# $name: the record that is taken off the list.
+# review: pending
+ui-multi-remove = { $name } ہٹائیں
+
+# review: pending
+ui-multi-hint = ایک سے زیادہ چنے جا سکتے ہیں۔ ہر چناؤ فہرست میں شامل ہو جاتا ہے۔

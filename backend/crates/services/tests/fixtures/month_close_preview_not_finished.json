@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DATE_IN_FUTURE",
+      "field": "month",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261102-0001"
+}

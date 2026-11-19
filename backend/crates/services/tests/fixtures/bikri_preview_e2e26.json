@@ -3,9 +3,13 @@
     {
       "key": "lot-1",
       "lot_no": 1,
+      "lot_counter": 1,
       "freight": 300000,
       "freight_paid_by": "firm",
       "sold_by_weight": false,
+      "is_own": false,
+      "own": null,
+      "arrival": null,
       "labour": {
         "method": "per_unit",
         "value_paisa": 500,
@@ -579,7 +583,6 @@
           "line_no": 1,
           "is_blank": false,
           "remaining_qty": 50,
-          "rate_hint": null,
           "calc": {
             "qty": 20,
             "weight_grams": null,
@@ -727,7 +730,10 @@
             },
             "buyer_total": 1288000,
             "rate_diff": 0,
-            "payment_type": "credit",
+            "cost_of_goods": 0,
+            "paid_paisa": 0,
+            "left_paisa": 1288000,
+            "paid_fixed": false,
             "workings": {
               "seller_amount": {
                 "message_id": "working-line-value",
@@ -843,6 +849,59 @@
                   }
                 ],
                 "rule_id": null
+              },
+              "cost_of_goods": {
+                "message_id": "working-none-line",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "paid": {
+                "message_id": "working-paid-typed",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "left": {
+                "message_id": "working-left",
+                "args": [
+                  {
+                    "name": "total",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 1288000
+                    }
+                  },
+                  {
+                    "name": "paid",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 1288000
+                    }
+                  }
+                ],
+                "rule_id": null
               }
             }
           },
@@ -853,11 +912,6 @@
           "line_no": 2,
           "is_blank": true,
           "remaining_qty": 30,
-          "rate_hint": {
-            "rate_paisa": 60000,
-            "source": "this_bikri",
-            "date": "2026-10-10"
-          },
           "calc": null,
           "warnings": []
         }

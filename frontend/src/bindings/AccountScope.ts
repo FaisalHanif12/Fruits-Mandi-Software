@@ -3,4 +3,4 @@
 /**
  * Which accounts an account field takes.
  */
-export type AccountScope = 'seller' | 'buyer' | 'any' | 'control';
+export type AccountScope = 'seller' | 'lot_seller' | 'buyer' | 'any' | 'control';

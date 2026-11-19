@@ -20,3 +20,29 @@ The partners and their shares (PRD 17.1 to 17.3): the overview at `/partners` an
   and the partners are set up later.
 - `api.ts` is the only file that knows the command shapes. Tests mock `api.ts`
   (`tests/helpers/partners.ts` is the fake backend).
+- The overview has a "Month Close" button that opens the month close screen (`features/month`, route
+  `/month`; PRD FR-17.6). A close and a reversal ask the partner queries again (`PARTNERS_KEY`).
+
+## The partner code (plan 44, PRD FR-17.11)
+
+The screens of شراکت دار open only with a 4-digit code.
+
+- `PartnerGate` wraps the four screens (overview, setup, capital, statement). No code yet: it asks to make one (the Owner's password, the code twice), with no way round. A code that is set: it asks for it every time.
+- `PartnerCodeHost` (mounted once, in `AuthGate`) shows the code box when a locked card or a refused report asks for it (`openPartnerCode`), and closes the section again when the user moves to a screen of another group (`partner-areas.ts`).
+- Wherever the backend sends `partners_locked: true`, or answers `ERR_PARTNER_LOCKED`, a `PartnerLockedBox` stands in the place of the figures ("کوڈ درج کریں"). A hidden figure is never shown as 0.
+- `ChangeCodeCard` is in Settings, on the lock tab.
+- The partner list used by pickers (`partners_list`) is open: names only.
+
+## Plan 76: the partner statement by month (FR-17.12) and the compact open-ventures line
+
+- `/partners/statement` shows one partner's کل رقم one month at a time (`pages/StatementPage.tsx`): his opening کل
+  رقم on top, a row for each day with a movement (commission, expense share, gardens and trips, fruit, money
+  taken and returned, capital, the day's net, the کل رقم at the end of the day), the month totals and the closing
+  (`components/StatementMonthDays.tsx`, on the shared `DayTable`). A click or Enter on a day opens every movement of
+  it in place with its source (`components/PartnerDayCard.tsx`). The month is in the address; the screen is behind
+  the partner code. Commands: `partners_statement_month`, `partners_statement_day`,
+  `partners_statement_month_print_data`. The old range statement list is gone.
+- The overview shows one compact line for each partner's open trips and gardens (`OpenVenturesLine.tsx`); the list
+  is read on demand (`partners_open_ventures`).
+- Tests: `partner-statement.test.tsx` (E2E-37, D4-A33), `fruit-statement.test.tsx`, `gardens-statement.test.tsx`
+  (the real lines in the opened day), `partners-overview-ventures.test.tsx`.

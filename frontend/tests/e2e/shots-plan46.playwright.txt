@@ -1,0 +1,65 @@
+// Screenshots of plan 46 (PRD FR-7.16 of v1.14, FR-11.10, FR-12.3): the list of the lot seller cell open
+// at the first click, and the details of an empty sale line with the override switch on (no "switched
+// off" note), in both languages at 1366 x 900. It is a developer tool: run it with the Vite dev server
+// up (`pnpm --filter frontend dev`), as a snippet for the Playwright tool (a snippet for that tool,
+// not a module, so it is kept as .txt and the linter does not read it). The page is the development
+// page /dev/bikri (the sale book with Event 1 in it, answered by a stand-in for the backend). It also
+// reports what each list holds and the sideways overflow (NFR-USE-15).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan46';
+  const context = page.context();
+  const report = [];
+  const overflow = (p) =>
+    p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  const rows = (p) =>
+    p.evaluate(() =>
+      Array.from(document.querySelectorAll('[role="option"]')).map((o) =>
+        (o.textContent || '').replace(/\s+/g, ' ').trim(),
+      ),
+    );
+  const noteShown = (p) =>
+    p.evaluate(() => /switched off|بند ہے/.test(document.body.textContent || ''));
+  for (const l of ['ur', 'en']) {
+    const p = await context.newPage();
+    p.on('dialog', (d) => d.accept().catch(() => undefined));
+    await p.setViewportSize({ width: 1366, height: 900 });
+    await p.goto('http://localhost:5173/#/dev/bikri');
+    await p.waitForSelector('.ag-cell', { timeout: 20000 });
+    await p.waitForTimeout(1000);
+    if (l === 'en') {
+      await p.getByRole('button', { name: 'English', exact: true }).first().click();
+      await p.waitForTimeout(800);
+    }
+    // The lot seller cell: one click, and its list is open.
+    await p.locator('.ag-row[row-index="0"] .ag-cell[col-id="seller"]').first().click();
+    await p.waitForTimeout(1200);
+    await p.screenshot({ path: `${OUT}/lot-seller-list-${l}-1366x900.png` });
+    report.push([`lot-seller-list-${l}`, 'rows', await rows(p), 'overflow', await overflow(p)]);
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(300);
+    // The last sale line: its buyer cell opens its list; Esc, then down makes a new empty line.
+    await p.locator('.ag-row .ag-cell[col-id="buyer"]').last().click();
+    await p.waitForTimeout(900);
+    report.push([`buyer-list-${l}`, 'rows', await rows(p)]);
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(300);
+    await p.keyboard.press('ArrowDown');
+    await p.waitForTimeout(900);
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(400);
+    // The details of the empty line are under the summary: bring them into view.
+    await p.evaluate(() => document.querySelector('h3[id^="line-details-"]')?.scrollIntoView({ block: 'start' }));
+    await p.waitForTimeout(500);
+    const fields = await p.evaluate(() => {
+      const section = document.querySelector('h3[id^="line-details-"]')?.closest('section');
+      return section
+        ? Array.from(section.querySelectorAll('input')).slice(0, 3).map((i) => i.readOnly)
+        : null;
+    });
+    await p.screenshot({ path: `${OUT}/empty-line-details-${l}-1366x900.png` });
+    report.push([`empty-line-details-${l}`, 'switched-off note shown', await noteShown(p), 'fields read only', fields]);
+    await p.close({ runBeforeUnload: false }).catch(() => undefined);
+  }
+  return report;
+};

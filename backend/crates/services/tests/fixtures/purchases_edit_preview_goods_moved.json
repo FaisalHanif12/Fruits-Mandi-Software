@@ -1,0 +1,23 @@
+{
+  "errors": [
+    {
+      "code": "ERR_EDIT_NOT_ALLOWED",
+      "field": "id",
+      "values": {
+        "rule": "goods_moved"
+      }
+    }
+  ],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [],
+    "effect": {
+      "parties": [],
+      "cash": null,
+      "partners": [],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  }
+}

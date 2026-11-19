@@ -83,6 +83,9 @@ pub enum ErrorCode {
     /// Not a real date, or not in a form the date field takes (PRD FR-7.19).
     ErrDateInvalid,
     /// The date is on or before the "closed up to" date (PRD FR-6.6). Values: `closed_up_to`.
+    /// On `opening_date` of an account (PRD FR-10.11, plan 44) the dates are `DD-MM-YYYY` and it
+    /// also carries `today` and `today_open` (1 when today is an open day, else 0), so the form can
+    /// offer "use today", or "save without the opening", or "reopen the day".
     ErrDateClosed,
     /// The date is after today (PRD FR-6.6). Values: `today`.
     ErrDateInFuture,
@@ -122,11 +125,10 @@ pub enum ErrorCode {
     /// debit (PRD FR-15.8).
     ErrAdvanceNotSeller,
     /// This account cannot take an opening balance: an income or shop expense account (it would
-    /// need partner share rows, PRD FR-6.5), ابتدائی فرق itself, or a پختہ کھاتہ account (it has
-    /// no person to hold it). Waiting for Umar's decision.
+    /// need partner share rows, PRD FR-6.5), ابتدائی فرق itself, or a چکتا کھاتہ account (it holds
+    /// no balance). Waiting for Umar's decision.
     ErrOpeningNotAllowed,
-    /// The account is not a seller (a پیشگی goes to a seller only), or is the پختہ کھاتہ account,
-    /// which has no person to hold the advance.
+    /// The account is not a seller (a پیشگی goes to a seller only), or is the old closed account.
     ErrNotASeller,
     /// The account is hidden from pickers, so a new posting cannot use it (PRD FR-10.2).
     ErrAccountInactive,
@@ -159,7 +161,7 @@ pub enum ErrorCode {
     /// (10^12 rupees). A single typed amount is held to a lower limit by `ErrAmountTooLarge`, so
     /// this means the amounts of several lines add up past the limit. Values: `max` (rupees).
     ErrEntryTooLarge,
-    /// A system account (روکڑ, ابتدائی فرق, commission income, نقدی منڈی, the two پختہ کھاتہ
+    /// A system account (روکڑ, ابتدائی فرق, commission income, نقدی منڈی, the چکتا کھاتہ
     /// accounts ...) cannot be made inactive: the app posts to it by itself (PRD FR-10.4).
     /// Field `id`. The Active box of such an account is shown ticked and cannot be changed.
     ErrSystemAccount,
@@ -184,12 +186,10 @@ pub enum ErrorCode {
     ErrSellerRequired,
     /// A sale line has no buyer (PRD FR-12.4). Field `lots[i].sales[j].buyer_account_id`.
     ErrBuyerRequired,
-    /// A پختہ کھاتہ line or lot needs the one-time person's name (PRD FR-13.2, FR-12.5). Field
-    /// `...pukhta.name_ur` or `...pukhta.name_en`.
-    ErrPukhtaNameRequired,
-    /// A پختہ کھاتہ credit buyer or a پختہ کھاتہ seller needs a phone (PRD FR-13.2). Field
-    /// `...pukhta.phone`.
-    ErrPukhtaPhoneRequired,
+    /// A چکتا line needs the buyer's name (PRD FR-13.2, FR-12.5). His phone is optional. Field
+    /// `lots[i].sales[j].chukta.name_ur` or `...chukta.name_en`; also `name_ur` or `name_en` of
+    /// `chukta_add`.
+    ErrChuktaNameRequired,
     /// A بکری with no lot (PRD FR-12.8 check 1). Field `lots`.
     ErrNoLots,
     /// A بکری with no sale line (PRD FR-12.8 check 1). Field `lots`.
@@ -201,11 +201,11 @@ pub enum ErrorCode {
     /// Shared by every cash-out save. Values: `cash_after_paisa`.
     ErrCashBelowZeroNotConfirmed,
     /// The account is not a buyer (a sale line goes to a buyer, the نقدی منڈی or the
-    /// پختہ کھاتہ buyer account). Field `lots[i].sales[j].buyer_account_id`.
+    /// چکتا کھاتہ account). Field `lots[i].sales[j].buyer_account_id`.
     ErrNotABuyer,
-    /// A credit sale to a buyer who may only pay cash: the نقدی منڈی account, or a buyer whose
-    /// "ادھار کی اجازت" is off (PRD 12.4, 10.2). Field `lots[i].sales[j].payment_type`.
-    ErrCreditNotAllowed,
+    /// Money paid on the spot is more than the line's buyer total (PRD FR-12.44, v1.32). Field
+    /// `lots[i].sales[j].paid`. Values: `max` (whole rupees, the buyer total).
+    ErrPaidExceedsTotal,
     /// Warning only: a lot is not fully sold (PRD FR-12.8 check 4). Values: `left` (نگ). Field
     /// `lots[i].qty_received`.
     ErrQtyLeftUnsold,
@@ -215,11 +215,291 @@ pub enum ErrorCode {
     /// Warning only: a rate is far from the item's average of the last 7 days (PRD FR-7.55, E8).
     /// Values: `average_paisa`, `percent`. Field `lots[i].sales[j].seller_rate`.
     ErrRateFarFromAverage,
+    /// A draft payload that is not valid JSON, or is over 1 MB (PRD FR-12.10, NFR-REL-2). Field
+    /// `payload_json`. Values: `max_bytes`.
+    ErrDraftInvalid,
+    /// Printing and saving a PDF need Windows (WebView2). On any other computer the screen
+    /// offers the PDF preview in the app instead (plan 14, the Mac phase).
+    ErrPrintWindowsOnly,
+    /// The printer in Settings, or the default printer, was not found or is offline (plan 14).
+    /// Values: `printer` (the name looked for, empty for the default printer).
+    ErrPrinterNotFound,
+    /// The print or the PDF failed after it started: the page did not get ready, or the print
+    /// system refused the job. The cause is in the log with the reference number (plan 14).
+    ErrPrintFailed,
+    /// A payment to a buyer is cash lent to him and needs a reason (PRD FR-15.11). Field `reason`.
+    ErrPaymentToBuyerNeedsReason,
+    /// A seller's receipt (or a return of money lent) is more than what is open to return: his
+    /// open advances plus what he owes the firm beyond them (PRD FR-15.12). Values: `open_paisa`.
+    ErrReturnExceedsOpen,
+    /// The voucher was cancelled, so it cannot be edited or cancelled again (PRD FR-15.3).
+    ErrVoucherCancelled,
+    /// Warning only: a payment is more than the seller's open payable, so the extra shows as the
+    /// seller owing the firm (PRD FR-15.7). Values: `payable_paisa`, `over_paisa`. Field `amount`.
+    ErrPaymentAbovePayable,
+    /// The بکری was cancelled, so it cannot be edited, cancelled again, sold from or written off
+    /// (PRD FR-12.22). Field `id` or `entry_id` or `lot_id`.
+    ErrBikriCancelled,
+    /// The lot asked for does not exist, or does not belong to a بکری that can be sold from.
+    /// Field `lot_id`.
+    ErrLotNotFound,
+    /// A later sale of a lot that has nothing left to sell (PRD FR-12.17). Field `lot_id`.
+    ErrNothingToSell,
+    /// The same carried lot is on the screen twice (plan 76 point 1). Field `carried[i].lot_id`.
+    ErrDuplicateLot,
+    /// A partner link without a partner (plan 76 points 5 and 10). Field `link.partner_id`.
+    ErrLinkPartnerRequired,
+    /// The partner a khata or loan is linked to is not an active partner (plan 76 points 5 and 10).
+    /// Field `link.partner_id`.
+    ErrPartnerInactive,
+    /// The link of a khata cannot change while its balance is not 0 (PRD FR-16.6). Field `link`.
+    ErrLinkLocked,
+    /// An entry that was made under another link of its khata or person cannot be edited: cancel it
+    /// and enter it again (plan 76 points 5 and 10, PRD FR-7.70). Field `link`.
+    ErrLinkChangedForEntry,
+    /// A typed line on the contra account 03070001 or on a partner's 0605 account: the app writes
+    /// those lines by itself (plan 76 points 5 and 10, PRD FR-17.9).
+    ErrLinkedAccountRestricted,
+    /// A partner cannot be made inactive while a khata or loan linked to him has a balance (PRD
+    /// FR-16.6, FR-16.13; compare E69). Field `is_active`.
+    ErrPartnerHasLinkedBalance,
+    /// The link of a person who still owes cannot change (PRD FR-16.4). Field `link`.
+    ErrLinkFixedWhileOwed,
+    /// A salary deduction on a loan linked to a partner is refused: return it in cash (PRD FR-16.4).
+    /// Field `mode`.
+    ErrSalaryNotAllowedForLinked,
+    /// A write-off of more نگ than the lot has left (PRD FR-12.16). Field `qty`. Values:
+    /// `available` (نگ left).
+    ErrWriteOffExceedsBalance,
+    /// A later sale dated before the goods were received (PRD FR-12.17). Field `date`. Values:
+    /// `received_date` (`YYYY-MM-DD`). Also a sale in another shop dated before its purchase
+    /// (FR-12.32, field `date`), and a بکری with an own lot dated before its purchase (FR-12.26,
+    /// field `lots[i].purchase_id`).
+    ErrDateBeforeReceived,
+    /// An edit lowers the quantity received of a lot below what a later sale or a write-off has
+    /// already taken (PRD FR-12.20). Field `lots[i].qty_received`. Values: `sold` (نگ).
+    ErrQtyBelowSold,
+    /// An edit of a بکری posting that the rules do not allow (PRD FR-12.18, FR-12.19, FR-12.20,
+    /// NFR-USE-13). The field is the path of the lot or line concerned. Values: `rule`, a short
+    /// fixed name, one of `lot_removed` (`lots`: a lot cannot be taken out), `lot_not_in_posting` (`lots[i].lot_id`:
+    /// not a lot of this بکری, or sent twice), `lot_order_changed` (`lots[i].lot_id`: saved lots
+    /// keep their order and new lots come last), `lot_seller_locked` and `lot_item_locked`
+    /// (`lots[i].seller_account_id`, `lots[i].item_id`: other postings or write-offs rest on the
+    /// lot), `line_not_in_posting` (`lots[i].sales[j].sale_id`: not a line of this posting, or sent
+    /// twice), `posting_lots_locked` (`lots`: a later posting has only its own lot) and
+    /// `lot_purchase_locked` (`lots[i].purchase_id`: the purchase of an own lot cannot change) and
+    /// `goods_moved` (field `id`: a trip purchase, trip cost, sale in another shop or garden entry
+    /// or arrival whose goods were sold or written off cannot be edited, PRD FR-7.70; plan 44).
+    ErrEditNotAllowed,
+    /// A lot of the firm's own goods (seller اپنا مال) was not sold in full in its بکری (PRD
+    /// FR-12.26). The goods that are not sold stay in the purchase, so the lot takes from the
+    /// purchase only what its lines sell. Field `lots[i].qty_received`. Values: `qty_left` (نگ).
+    ErrOwnLotNotFullySold,
+    /// The اپنا مال account (030119998) is offered only as the seller of a lot. A voucher, a
+    /// جنرل entry, a زمیندار, a purchase supplier or any other posting to it is refused (PRD
+    /// FR-12.26, FR-10.4). Field: the account field.
+    ErrOwnGoodsAccountRestricted,
+    /// A purchase cannot be cancelled once any of it was sold or written off (PRD FR-12.24).
+    /// Field `id`. Values: `qty_sold`, `qty_written_off` (نگ).
+    ErrPurchaseHasSales,
+    /// The purchase is cancelled already (PRD FR-12.24). Field `id`, or `purchase_id`, or the
+    /// `lots[i].purchase_id` of a lot that names it.
+    ErrPurchaseCancelled,
+    /// Warning only: freight typed on a lot of own goods. The purchase freight is already in the
+    /// cost, so a freight typed here is a second cost (PRD FR-12.26). Field
+    /// `lots[i].freight`.
+    ErrOwnLotFreightInCost,
+    /// The trip is closed: it takes no new purchase or cost (PRD FR-12.31, FR-12.33, E65). Field
+    /// `trip_id`.
+    ErrTripClosed,
+    /// A trip cost is spread over the purchases that still have goods left, and the trip has none
+    /// (PRD FR-12.31, A64). Field `trip_id`.
+    ErrTripNoStock,
+    /// The shares of a trip or a garden cannot change after its first entry (PRD FR-12.29, E66).
+    /// Field `partners`.
+    ErrVentureSharesLocked,
+    /// A purchase is dated before its trip (PRD FR-12.24 "not before the trip's date"). Field
+    /// `date`. Values: `trip_date` (`YYYY-MM-DD`).
+    ErrPurchaseBeforeTrip,
+    /// A trip cost cannot be cancelled once any of the purchases it was spread over was sold or
+    /// written off (PRD FR-12.31). Field `id`. Values: `qty_sold`, `qty_written_off` (نگ, over those
+    /// purchases).
+    ErrTripCostHasSales,
+    /// A partner cannot be made inactive while he is in an open garden or trip (PRD A63, E69).
+    /// Field `is_active`.
+    ErrPartnerInOpenVenture,
+    /// A purchase that carries a part of a trip cost cannot be cancelled until that cost is
+    /// cancelled (PRD FR-12.31). Field `id`.
+    ErrPurchaseCarriesTripCost,
+    /// The trip cost or the sale in another shop is cancelled already. Field `id`.
+    ErrTripEntryCancelled,
+    /// A return-by day is before the entry's day (PRD FR-16.9). Field `return_by`.
+    ErrReturnByBeforeEntry,
+    /// A ذاتی خرچہ, its return or a سرمایہ entry has no partner (plan 17). Field `partner_id`.
+    ErrPartnerRequired,
+    /// A دکان خرچہ has no expense head (PRD 16.2). Field `expense_head_id`.
+    ErrExpenseHeadRequired,
+    /// An ادھار رقم entry has no person (PRD 16.5). Field `person_account_id`.
+    ErrLentPersonRequired,
+    /// An الگ کھاتہ entry has no khata (PRD 16.6). Field `khata_account_id`.
+    ErrKhataRequired,
+    /// A جنرل entry whose بنام total is not its جمع total; nothing is written (PRD FR-6.2, 16.4).
+    /// Field `lines`. Values: `dr_paisa`, `cr_paisa`.
+    ErrGeneralNotBalanced,
+    /// A جنرل entry with fewer than two lines (PRD 16.4). Field `lines`.
+    ErrGeneralTooFewLines,
+    /// Warning only: capital taken back is more than the partner's capital balance; the save is
+    /// still allowed (PRD FR-17.8). Field `amount`. Values: `balance_paisa`, `over_paisa`.
+    ErrCapitalExceedsBalance,
+    /// A field that no longer exists was sent: the payment mode, the bank account or a cheque of a
+    /// voucher (PRD 15.1, v1.6: all money is روکڑ). Nothing is posted. The field is the name sent
+    /// (`mode`, `bank_account_id`, `cheque_no` or `cheque_date`).
+    ErrFieldNotAllowed,
+    /// The garden is closed, so it takes no entry, no lot, no later sale and no fruit (PRD
+    /// FR-12.38, E65, A62). Also refused while it is closed: cancelling one of its entries, and
+    /// editing or cancelling a بکری posting that has a lot of the garden. Undo the closing first.
+    /// Field `garden_id`, or `lots[i].seller_account_id` in a بکری.
+    ErrGardenClosed,
+    /// The garden is open, so there is no closing to undo (PRD FR-12.38). Field `id`.
+    ErrGardenNotClosed,
+    /// An entry of a garden is dated before the garden itself (PRD FR-12.34). Field `date`. Value
+    /// `garden_date`.
+    ErrDateBeforeGarden,
+    /// A garden cannot be closed on a day before its latest entry or lot posting (plan 17c Q1).
+    /// Field `date`. Value `last_date`.
+    ErrCloseBeforeLastEntry,
+    /// The entry of the garden was cancelled already (plan 17c). Field `id`.
+    ErrGardenEntryCancelled,
+    /// The fruit entry was cancelled already (plan 17d). Field `id`.
+    ErrFruitCancelled,
+    /// A بکری cannot be cancelled while fruit taken from one of its lots is in force: cancel those
+    /// entries first (plan 17d). Field `id`. Values: `qty_taken` (نگ).
+    ErrBikriHasFruit,
+    /// The tag (نشان) of an account is not 1 to 4 English capital letters and dots with at least
+    /// one letter (PRD 10.2, FR-7.28, Code Standards 4.2; plan 17e). Field `tag`.
+    ErrTagInvalid,
+    /// The date to sell is before the day the goods were bought or arrived (PRD FR-12.39,
+    /// FR-12.40). Field `sell_date`. Value `entry_date` (`YYYY-MM-DD`).
+    ErrSellDateBeforeEntry,
+    /// The garden arrival is cancelled already (PRD FR-12.40). Field `id`, or `arrival_id`, or the
+    /// `lots[i].arrival_id` of a lot that names it.
+    ErrArrivalCancelled,
+    /// A garden arrival cannot be cancelled once any of it was sold or written off (PRD FR-12.40).
+    /// Field `id`. Values: `qty_sold`, `qty_written_off` (نگ).
+    ErrArrivalHasSales,
+    /// A garden lot linked to an arrival was not sold in full in its بکری (PRD FR-12.40). The goods
+    /// not sold stay in the arrival, so the lot takes from it only what its lines sell. Field
+    /// `lots[i].qty_received`. Values: `qty_left` (نگ).
+    ErrArrivalLotNotFullySold,
+    /// A garden cannot be closed while its arrivals still have goods left: sell them or write them
+    /// off first (PRD FR-12.40). Field `id`. Values: `qty_left` (نگ).
+    ErrGardenHasStock,
+    /// The part of a line for another shop is more than the line's qty (PRD FR-12.41). Field
+    /// `lines[i].other_qty` or `other_qty`. Value: `qty`.
+    ErrSplitAboveQty,
+    /// The split cannot go below what a part has already sold (PRD FR-12.41). Field `other_qty`.
+    /// Values: `min_other` (the most other shops have sold) and `max_other` (the qty less what
+    /// our shop has sold): the part for another shop must be between them.
+    ErrSplitBelowSold,
+    /// An entry has more item lines than it may (PRD FR-12.41). Field `lines`. Value: `max`.
+    ErrTooManyLines,
+    /// A warning (plan 37, PRD FR-12.40): a per-lot amount is typed on a lot of a goods-arrived
+    /// entry that already took that charge on an earlier lot, so the entry would pay it twice. The
+    /// save is allowed and the typed amount is kept. Field `lots[i].labour`, `.munshiana` or
+    /// `.phone`. Values: `lot_no` (that earlier lot), `bikri_number` (its بکری, 0 when it is in
+    /// this same بکری) and `entry` (the number of the goods-arrived entry).
+    ErrEntryChargeAlreadyTaken,
+    /// The person owes the shop nothing, so he cannot be moved to the dead amount; an account
+    /// is simply made inactive (PRD FR-10.10). Field `account_id`.
+    ErrNothingOwed,
+    /// This kind of account is never moved to the dead amount: a partner, a الگ کھاتہ, a garden or
+    /// a system account (PRD FR-10.10). Field `account_id`.
+    ErrDeadNotAllowed,
+    /// The person is in the dead amount already (PRD FR-10.10). Field `account_id`.
+    ErrAlreadyDead,
+    /// A note is needed (the reason دیگر of a move to the dead amount, PRD FR-10.10). Field `note`.
+    ErrNoteRequired,
+    /// The move to the dead amount is dated before the person's last posting (PRD FR-10.10, plan 40
+    /// D6). Field `entry_date`. Value `last_posting_date` (`YYYY-MM-DD`).
+    ErrDateBeforeLastPosting,
+    /// An edit tried to change the date of a saved entry; the date is fixed, so the entry is
+    /// cancelled and entered again on the right day (PRD FR-7.70, E76; plan 44). Field: the date
+    /// field of the edit (`date`, or `header.entry_date` in a بکری). Value `entry_date`
+    /// (`YYYY-MM-DD`): the date the entry keeps.
+    ErrEditDateFixed,
+    /// A commission rule that saved lines were worked out with can change only its end date and its
+    /// active flag; anything else is refused and a newer rule from a date is added instead (PRD
+    /// FR-7.70, FR-11.6; plan 44 D5). Field: the first field that was changed. Value `saved_lines`
+    /// (how many saved lines used the rule).
+    ErrRuleUsed,
+    /// The partner section is locked: the 4-digit partner code was not given since the user
+    /// entered it (PRD FR-17.11, NFR-SEC-14; plan 44). No field.
+    ErrPartnerLocked,
+    /// The partner code was asked for but none is set yet (PRD FR-17.11). No field.
+    ErrPartnerCodeNotSet,
+    /// A partner code is set already, so it is changed or reset, not set again (PRD FR-17.11).
+    ErrPartnerCodeAlreadySet,
+    /// Wrong partner code (PRD FR-17.11). Field `code` (`old_code_or_password` in a change).
+    /// Values: `tries_left`. After 5 wrong tries
+    /// `ERR_LOCKED_WAIT` is returned instead, with the seconds to wait (as FR-8.2).
+    ErrPartnerCodeWrong,
+    /// The partner code is not exactly 4 digits (PRD FR-17.11). Field `code` or `code_again`.
+    ErrPartnerCodeInvalid,
+    /// The partner code typed twice differs (PRD FR-17.11). Field `code_again`.
+    ErrPartnerCodesDiffer,
+    /// The token of `day_fix_close` is not the one `day_fix_open` gave, or the days were closed or
+    /// opened some other way since (PRD FR-21.4; plan 44). Field `token`.
+    ErrFixTokenInvalid,
+    /// Ask the app (PRD FR-7.81, plan 48): the assistant is switched off, so a question to the
+    /// model and a continuation are refused. The quick questions, reading an answer again and the
+    /// connection test still work. No field.
+    ErrAssistantOff,
+    /// Ask the app (PRD FR-7.81, FR-7.85, plan 48): no OpenRouter key is saved. Refuses a question,
+    /// a continuation and the connection test (no field), and switching the assistant on (field
+    /// `enabled`). The quick questions and reading an answer again work with no key.
+    ErrAssistantKeyMissing,
+    /// Ask the app (plan 48): a question is running already, so a second one is refused and only
+    /// one is sent when `Enter` is pressed twice. No field.
+    ErrAssistantBusy,
+    /// Ask the app (plan 48): the question is not waiting for this choice (it was answered, or it
+    /// never asked "کون سا؟" or for the partner code). Field `question_id`.
+    ErrAssistantNotWaiting,
+    /// Ask the app (PRD FR-7.75, money agent 9.1): a percent of 0 or a change from 0 has no base.
+    /// Returned to the model by the tool `calculate`; never shown to the Owner. No field.
+    ErrNoBase,
+    /// Ask the app (PRD FR-7.86): an estimate needs at least 3 full months in the books. Returned
+    /// to the model by the tool `estimate` as a "too short" result; never shown to the Owner as an
+    /// error. Value `months`.
+    ErrTooLittleHistory,
+    /// The reopen box was sent with no sign (PRD FR-21.4, plan 73). Field `sign`.
+    ErrSignRequired,
+    /// The sign is not the Owner's: nothing was opened (PRD FR-21.4, plan 73). Field `sign`.
+    ErrSignWrong,
+    /// The system key store (the Mac Keychain in development) did not let the app read the audit
+    /// chain key: the box was dismissed, closed or its password was wrong. Nothing was saved. Sign
+    /// in again and allow the app (plan 75 Section 7.8, NFR-SEC-6). No field.
+    ErrKeystoreDenied,
+    /// The account is not of the side asked for: a seller was sent as a buyer or the other way
+    /// round (the commission page party filter, PRD FR-9.3, plan 77). Field `party.account_id`.
+    ErrWrongPartyType,
+    /// Closing a garden while the owner still owes (مالک کے ذمے, PRD FR-12.51): the installments paid
+    /// are above the rent, so the owner owes money back, and a closed garden takes no refund. The
+    /// closing needs the answer "yes" of a confirm box (plan 80 gate Q-R4-2). Field `id`. Value
+    /// `owes_paisa`: what he still owes.
+    ErrOwnerOwesNotConfirmed,
+    /// The link of an account (PRD E10, FR-10.2) joins a seller and a buyer. A link to an account of
+    /// the same kind, to a money-lent or other account, or to چکتا کھاتہ or another system account is
+    /// refused (gate finding T4-2, plan 80). Field `linked_account_id`.
+    ErrLinkNotSellerBuyer,
+    /// The link of an account (PRD E10) must be one clean pair: the other account is already linked
+    /// to a third account, or a third account already points at it or at this account (so a chain
+    /// A to B to C is refused too). Field `linked_account_id`.
+    ErrLinkAlreadyLinked,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 84] = [
+    pub const ALL: [ErrorCode; 173] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -293,17 +573,106 @@ impl ErrorCode {
         ErrorCode::ErrCreditLimitExceeded,
         ErrorCode::ErrSellerRequired,
         ErrorCode::ErrBuyerRequired,
-        ErrorCode::ErrPukhtaNameRequired,
-        ErrorCode::ErrPukhtaPhoneRequired,
+        ErrorCode::ErrChuktaNameRequired,
         ErrorCode::ErrNoLots,
         ErrorCode::ErrNoSaleLines,
         ErrorCode::ErrWeightRequired,
         ErrorCode::ErrCashBelowZeroNotConfirmed,
         ErrorCode::ErrNotABuyer,
-        ErrorCode::ErrCreditNotAllowed,
+        ErrorCode::ErrPaidExceedsTotal,
         ErrorCode::ErrQtyLeftUnsold,
         ErrorCode::ErrLotNetNegative,
         ErrorCode::ErrRateFarFromAverage,
+        ErrorCode::ErrDraftInvalid,
+        ErrorCode::ErrPrintWindowsOnly,
+        ErrorCode::ErrPrinterNotFound,
+        ErrorCode::ErrPrintFailed,
+        ErrorCode::ErrPaymentToBuyerNeedsReason,
+        ErrorCode::ErrReturnExceedsOpen,
+        ErrorCode::ErrVoucherCancelled,
+        ErrorCode::ErrPaymentAbovePayable,
+        ErrorCode::ErrBikriCancelled,
+        ErrorCode::ErrLotNotFound,
+        ErrorCode::ErrNothingToSell,
+        ErrorCode::ErrDuplicateLot,
+        ErrorCode::ErrLinkPartnerRequired,
+        ErrorCode::ErrPartnerInactive,
+        ErrorCode::ErrLinkLocked,
+        ErrorCode::ErrLinkChangedForEntry,
+        ErrorCode::ErrLinkedAccountRestricted,
+        ErrorCode::ErrPartnerHasLinkedBalance,
+        ErrorCode::ErrLinkFixedWhileOwed,
+        ErrorCode::ErrSalaryNotAllowedForLinked,
+        ErrorCode::ErrWriteOffExceedsBalance,
+        ErrorCode::ErrDateBeforeReceived,
+        ErrorCode::ErrQtyBelowSold,
+        ErrorCode::ErrEditNotAllowed,
+        ErrorCode::ErrOwnLotNotFullySold,
+        ErrorCode::ErrOwnGoodsAccountRestricted,
+        ErrorCode::ErrPurchaseHasSales,
+        ErrorCode::ErrPurchaseCancelled,
+        ErrorCode::ErrOwnLotFreightInCost,
+        ErrorCode::ErrTripClosed,
+        ErrorCode::ErrTripNoStock,
+        ErrorCode::ErrVentureSharesLocked,
+        ErrorCode::ErrPurchaseBeforeTrip,
+        ErrorCode::ErrTripCostHasSales,
+        ErrorCode::ErrPartnerInOpenVenture,
+        ErrorCode::ErrPurchaseCarriesTripCost,
+        ErrorCode::ErrTripEntryCancelled,
+        ErrorCode::ErrReturnByBeforeEntry,
+        ErrorCode::ErrPartnerRequired,
+        ErrorCode::ErrExpenseHeadRequired,
+        ErrorCode::ErrLentPersonRequired,
+        ErrorCode::ErrKhataRequired,
+        ErrorCode::ErrGeneralNotBalanced,
+        ErrorCode::ErrGeneralTooFewLines,
+        ErrorCode::ErrCapitalExceedsBalance,
+        ErrorCode::ErrFieldNotAllowed,
+        ErrorCode::ErrGardenClosed,
+        ErrorCode::ErrGardenNotClosed,
+        ErrorCode::ErrDateBeforeGarden,
+        ErrorCode::ErrCloseBeforeLastEntry,
+        ErrorCode::ErrGardenEntryCancelled,
+        ErrorCode::ErrFruitCancelled,
+        ErrorCode::ErrBikriHasFruit,
+        ErrorCode::ErrTagInvalid,
+        ErrorCode::ErrSellDateBeforeEntry,
+        ErrorCode::ErrArrivalCancelled,
+        ErrorCode::ErrArrivalHasSales,
+        ErrorCode::ErrArrivalLotNotFullySold,
+        ErrorCode::ErrGardenHasStock,
+        ErrorCode::ErrSplitAboveQty,
+        ErrorCode::ErrSplitBelowSold,
+        ErrorCode::ErrTooManyLines,
+        ErrorCode::ErrEntryChargeAlreadyTaken,
+        ErrorCode::ErrNothingOwed,
+        ErrorCode::ErrDeadNotAllowed,
+        ErrorCode::ErrAlreadyDead,
+        ErrorCode::ErrNoteRequired,
+        ErrorCode::ErrDateBeforeLastPosting,
+        ErrorCode::ErrEditDateFixed,
+        ErrorCode::ErrRuleUsed,
+        ErrorCode::ErrPartnerLocked,
+        ErrorCode::ErrPartnerCodeNotSet,
+        ErrorCode::ErrPartnerCodeAlreadySet,
+        ErrorCode::ErrPartnerCodeWrong,
+        ErrorCode::ErrPartnerCodeInvalid,
+        ErrorCode::ErrPartnerCodesDiffer,
+        ErrorCode::ErrFixTokenInvalid,
+        ErrorCode::ErrAssistantOff,
+        ErrorCode::ErrAssistantKeyMissing,
+        ErrorCode::ErrAssistantBusy,
+        ErrorCode::ErrAssistantNotWaiting,
+        ErrorCode::ErrNoBase,
+        ErrorCode::ErrTooLittleHistory,
+        ErrorCode::ErrSignRequired,
+        ErrorCode::ErrSignWrong,
+        ErrorCode::ErrKeystoreDenied,
+        ErrorCode::ErrWrongPartyType,
+        ErrorCode::ErrOwnerOwesNotConfirmed,
+        ErrorCode::ErrLinkNotSellerBuyer,
+        ErrorCode::ErrLinkAlreadyLinked,
     ];
 }
 

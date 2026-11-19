@@ -7,34 +7,89 @@ import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { ErrorMessage, LinkButton } from '../../../shared/ui';
-import { LINE_GRID_FIELD, LOT_GRID_FIELD, type Problem } from '../problems';
+import {
+  LINE_GRID_FIELD,
+  LINE_NEEDS,
+  LOT_GRID_FIELD,
+  SUB_WITHOUT_FIELD,
+  saysEmpty,
+  type Problem,
+} from '../problems';
 
 interface ProblemListProps {
   problems: readonly Problem[];
   /** The lot whose "more" panel is open, and the line whose details are open (indexes). */
   selectedLot: number;
   activeLine: number;
+  /** False on a screen that has no header fields (a later sale), so header problems are listed. */
+  headerShown?: boolean;
+  /** The whole-sale view is on: the notes under the lines grid tell the quantity problems of every lot. */
+  whole?: boolean;
 }
 
 /** Is the problem shown by a field with words under it? Then the list leaves it out. */
-function shownByField(problem: Problem, selectedLot: number, activeLine: number): boolean {
+function shownByField(
+  problem: Problem,
+  selectedLot: number,
+  activeLine: number,
+  headerShown: boolean,
+  whole: boolean,
+): boolean {
   const { where } = problem;
-  if (where.kind === 'header') return true;
-  if (where.kind === 'lot')
-    return where.lot === selectedLot && LOT_GRID_FIELD[where.sub] === undefined;
+  // Information is not a warning, and a warning of one line is a small mark on its cell with the
+  // figures on hover: neither is a line of words, so a بکری of hundreds of lines stays calm (PRD
+  // FR-12.6, plan 79 item 4). The goods left show once, in the lot row.
+  if (problem.item.code === 'ERR_QTY_LEFT_UNSOLD') return true;
+  if (problem.severity === 'warning' && where.kind === 'line') return true;
+  if (where.kind === 'header') return headerShown;
+  // The day of a later sale is a field of its own with its words under it (plan 16).
+  if (where.kind === 'lots' && where.sub === 'date') return true;
+  if (where.kind === 'lot') {
+    return (
+      where.lot === selectedLot &&
+      LOT_GRID_FIELD[where.sub] === undefined &&
+      !SUB_WITHOUT_FIELD.has(where.sub)
+    );
+  }
   if (where.kind === 'line') {
+    // A problem of a quantity is written under the lines grid, for the lines that grid shows.
+    if (
+      where.sub === 'qty' &&
+      problem.severity === 'error' &&
+      (whole || where.lot === selectedLot)
+    ) {
+      return true;
+    }
+    // What an incomplete line still needs (the buyer, the rate) is written under the lines grid as
+    // soon as it is known, for the lines that grid shows (D8 Bug 1).
+    if (
+      saysEmpty(problem.item.code) &&
+      LINE_NEEDS[where.sub] !== undefined &&
+      (whole || where.lot === selectedLot)
+    ) {
+      return true;
+    }
     return (
       where.lot === selectedLot &&
       where.line === activeLine &&
-      LINE_GRID_FIELD[where.sub] === undefined
+      LINE_GRID_FIELD[where.sub] === undefined &&
+      !SUB_WITHOUT_FIELD.has(where.sub)
     );
   }
   return false;
 }
 
-export function ProblemList({ problems, selectedLot, activeLine }: ProblemListProps) {
+export function ProblemList({
+  problems,
+  selectedLot,
+  activeLine,
+  headerShown = true,
+  whole = false,
+}: ProblemListProps) {
   const navigate = useNavigate();
-  const listed = problems.filter((problem) => !shownByField(problem, selectedLot, activeLine));
+  const listed = problems.filter(
+    (problem) => !shownByField(problem, selectedLot, activeLine, headerShown, whole),
+  );
   if (listed.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1">

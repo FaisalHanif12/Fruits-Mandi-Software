@@ -4,8 +4,7 @@
 use std::collections::HashMap;
 
 use mandi_core::bikri::{
-    ChargeSource, LineCalc, LineCharge, LineWorkings, PaymentType, PreparedSale, RuleLabel,
-    StoredMethod,
+    ChargeSource, LineCalc, LineCharge, LineWorkings, PreparedSale, RuleLabel, StoredMethod,
 };
 use mandi_core::error::ErrorCode;
 use mandi_core::money::{Grams, Paisa, Qty, line_value, weight_value};
@@ -13,6 +12,8 @@ use mandi_core::rules::{ChargeSide, ChargeType, ChargeValue, RuleLevel};
 
 use super::checks::{self, Issues};
 use super::lookups::{AccountFacts, ItemFacts};
+use super::person::clean_person;
+use super::stored::{StoredCharge, StoredSale};
 use super::working;
 use super::{CalcError, Env, PostingKind};
 use crate::ledger::MAX_LINE_PAISA;
@@ -20,12 +21,65 @@ use crate::rules::{LineOverride, Query, Winner, charge_amount, resolve};
 
 /// The lot a line belongs to, as the line maths needs it.
 pub(super) struct LotRef {
+    /// The saved lot, in an edit or a later sale.
+    pub lot_id: Option<i64>,
     /// The seller (the party of the seller-side charges).
     pub seller_id: i64,
+    /// True if the seller is a separate khata: its seller-side defaults are 0 (PRD FR-16.7).
+    pub seller_is_khata: bool,
     /// The item.
     pub item_id: i64,
     /// The item's facts.
     pub item: ItemFacts,
+    /// True if an edit changed the seller of this lot: the seller side of every line (the seller
+    /// commission) is read from the rules again, and the buyer side is kept as stored (PRD
+    /// FR-12.20, Umar 10-11-2026).
+    pub seller_changed: bool,
+    /// True if an edit changed the item, the purchase or the arrival of this lot: nothing stored
+    /// for the old lot is kept, on either side (money agent review of plan 16).
+    pub goods_changed: bool,
+}
+
+impl LotRef {
+    /// True if an edit changed anything that says what the lot is: the seller, the item, the
+    /// purchase or the arrival.
+    pub(super) fn any_changed(&self) -> bool {
+        self.seller_changed || self.goods_changed
+    }
+}
+
+/// How much of a stored line an edit keeps (PRD FR-12.20, Umar 10-11-2026).
+///
+/// A line the user did not change keeps both sides. A line whose only change is its buyer keeps the
+/// seller side (the seller commission) and reads the buyer side (buyer commission and لاگا) from
+/// the rules again. A line whose only change is the seller of its lot keeps the buyer side and its
+/// money paid on the spot, and reads the seller commission again. A line with any other change, or
+/// both identities changed, keeps nothing.
+///
+/// Example: the buyer default goes to 7% after the save and only the seller is corrected: the
+/// buyer's bill stays 12,880. The seller default goes to 7% and only the buyer is corrected: the
+/// seller commission of the line stays 720.
+#[derive(Clone, Copy)]
+pub(super) struct Kept<'a> {
+    /// The stored line.
+    pub sale: &'a StoredSale,
+    /// The seller commission is kept as stored (the lot's seller did not change).
+    pub seller_side: bool,
+    /// The buyer commission, لاگا and, for a buyer who must pay in full, the paid amount are kept as
+    /// stored (the buyer of the line did not change).
+    pub buyer_side: bool,
+}
+
+impl<'a> Kept<'a> {
+    /// The stored line when its seller side is kept.
+    pub(super) fn seller(&self) -> Option<&'a StoredSale> {
+        self.seller_side.then_some(self.sale)
+    }
+
+    /// The stored line when its buyer side is kept.
+    pub(super) fn buyer(&self) -> Option<&'a StoredSale> {
+        self.buyer_side.then_some(self.sale)
+    }
 }
 
 /// Everything one line needs.
@@ -34,12 +88,79 @@ pub(super) struct LineArgs<'a> {
     pub lot: &'a LotRef,
     /// True once the lot's per-lot seller commission has been charged on an earlier line.
     pub per_lot_charged: &'a mut bool,
+    /// `Some(number of the goods-arrived entry)` when the entry's first lot has taken the per-lot
+    /// seller commission, so this lot carries 0 for it (PRD FR-12.40, plan 37).
+    pub entry_spent: Option<i64>,
     /// The running amounts buyers owe, for the credit limit (see [`checks::credit_limit`]).
     pub owed: &'a mut HashMap<i64, Paisa>,
     pub row: &'a PreparedSale,
     pub buyer_id: i64,
     pub buyer: &'a AccountFacts,
-    pub payment: PaymentType,
+    /// The stored line and the sides of it that an edit keeps (PRD FR-12.20): the commissions and
+    /// لاگا of a kept side are exactly what was stored.
+    pub kept: Option<Kept<'a>>,
+    /// The per-lot seller commission of a line that an edit removed, waiting for the first line
+    /// that takes it (PRD FR-11.9).
+    pub pending_move: &'a mut Option<StoredCharge>,
+    /// C21: the cost of the own goods this line sells and how it was worked out, for a line of an
+    /// own lot (PRD FR-12.26). `None` for a line of any other lot: its cost is 0.
+    pub cost: Option<(Paisa, mandi_core::rules::Working)>,
+}
+
+/// The sides of the stored line of a row that an edit keeps (PRD FR-12.20).
+///
+/// The quantity, the weight, both rates and the commissions and لاگا typed on the line must be what
+/// was stored, or the line is a changed line and keeps nothing. The money paid on the spot is not
+/// part of the test (PRD FR-12.44, plan 60 P11): a line whose only change is its paid amount, or
+/// its quality, keeps its stored rules and amounts.
+///
+/// Given that, the identities decide (Umar, 10-11-2026): the same buyer and the same seller keep
+/// both sides; only the buyer changed keeps the seller side; only the seller changed keeps the
+/// buyer side; both changed keeps nothing. A change of the item, the purchase or the arrival of the
+/// lot keeps nothing. A row with no `sale_id`, or whose `sale_id` is not stored in this posting, is a
+/// new line.
+pub(super) fn kept_stored<'a>(env: &Env<'a>, lot: &LotRef, row: &PreparedSale) -> Option<Kept<'a>> {
+    let stored = env.stored.sales.get(&row.sale_id?)?;
+    if lot.goods_changed || lot.lot_id != Some(stored.lot_id) {
+        return None;
+    }
+    let buyer_id = row.buyer_account_id?;
+    let buyer = env.lookups.accounts.get(&buyer_id)?;
+    let person_key = if buyer.is_chukta {
+        Some(clean_person(&row.chukta)?.key)
+    } else {
+        None
+    };
+    let buyer_same = buyer_id == stored.buyer_account_id && person_key == stored.person_key;
+    let seller_same = !lot.seller_changed;
+    if !buyer_same && !seller_same {
+        return None;
+    }
+    let qty = row.qty?;
+    let seller_rate = row.seller_rate?;
+    let buyer_rate = if row.rate_differs {
+        row.buyer_rate?
+    } else {
+        seller_rate
+    };
+    // A weight typed for an item sold by نگ is ignored (calc_line does the same).
+    let weight = if lot.item.by_weight {
+        row.weight.map(Grams::get)
+    } else {
+        None
+    };
+    let same = qty.get() == stored.qty
+        && weight == stored.weight_grams
+        && seller_rate == stored.seller_rate
+        && buyer_rate == stored.buyer_rate
+        && row.seller_comm == stored.seller_comm.typed()
+        && row.buyer_comm == stored.buyer_comm.typed()
+        && row.laga == stored.laga.typed();
+    same.then_some(Kept {
+        sale: stored,
+        seller_side: seller_same,
+        buyer_side: buyer_same,
+    })
 }
 
 fn too_large(amount: Paisa) -> bool {
@@ -106,8 +227,17 @@ fn charge(
             line_override,
         },
     );
-    let Some(winner) = found.winner else {
-        if kind == ChargeType::Commission {
+    // PRD FR-16.7: for the goods of a separate khata every seller-side default is 0, so a seller
+    // commission with no rule of the khata's own is 0, not broken data.
+    let khata_default = side == ChargeSide::Seller
+        && args.lot.seller_is_khata
+        && found
+            .winner
+            .as_ref()
+            .is_some_and(|w| w.level == RuleLevel::Default);
+    let winner = found.winner.filter(|_| !khata_default);
+    let Some(winner) = winner else {
+        if kind == ChargeType::Commission && !khata_default {
             return Err(CalcError::NoRule { side, charge: kind });
         }
         return Ok(no_charge());
@@ -122,7 +252,70 @@ fn charge(
     if per_lot_due {
         *args.per_lot_charged = true;
     }
-    let charged = charge_amount(Some(&winner), kind, base, qty, per_lot_due)?;
+    let mut charged = charge_amount(Some(&winner), kind, base, qty, per_lot_due)?;
+    if let (ChargeValue::PerLot(value), Some(entry), ChargeSide::Seller, false) =
+        (&winner.value, args.entry_spent, side, per_lot_due)
+    {
+        charged.working = working::per_lot_on_entry(entry, *value, winner.rule_id);
+    }
+    line_charge_of(&winner, charged.amount, charged.working)
+}
+
+/// A charge of a line the user did not change (PRD FR-12.20, FR-11.6): its stored method, value
+/// and rule, worked out again only to make its working, and checked to give the stored amount. A
+/// per-lot commission keeps what it had: the carrier its amount, the other lines 0.
+fn stored_charge(
+    args: &mut LineArgs<'_>,
+    side: ChargeSide,
+    kind: ChargeType,
+    stored: &StoredCharge,
+    base: Paisa,
+    qty: Qty,
+) -> Result<LineCharge, CalcError> {
+    let Some(winner) = stored.winner() else {
+        // Nothing applied when it was saved, so it is still 0.
+        if stored.amount != Paisa::ZERO {
+            return Err(CalcError::Inconsistent(
+                "a stored charge has an amount but no value",
+            ));
+        }
+        return Ok(no_charge());
+    };
+    let carries = stored.carries_per_lot()
+        && side == ChargeSide::Seller
+        && args.env.kind == PostingKind::First;
+    if carries {
+        *args.per_lot_charged = true;
+    }
+    let mut charged = charge_amount(Some(&winner), kind, base, qty, carries)?;
+    if charged.amount != stored.amount {
+        return Err(CalcError::Inconsistent(
+            "a stored charge does not match its method and value",
+        ));
+    }
+    // A line of a lot that the entry's first lot spared this charge says so (plan 37).
+    if let (ChargeValue::PerLot(value), Some(entry), ChargeSide::Seller, false) =
+        (&winner.value, args.entry_spent, side, carries)
+    {
+        charged.working = working::per_lot_on_entry(entry, *value, winner.rule_id);
+    }
+    line_charge_of(&winner, charged.amount, charged.working)
+}
+
+/// The per-lot seller commission of a line that an edit removed, now carried by this line (PRD
+/// FR-11.9): its stored method, value and rule, with no new rule lookup, so the lot is still
+/// charged exactly once.
+fn moved_charge(
+    args: &mut LineArgs<'_>,
+    moved: &StoredCharge,
+    base: Paisa,
+    qty: Qty,
+) -> Result<LineCharge, CalcError> {
+    let winner = moved.winner().ok_or(CalcError::Inconsistent(
+        "the per-lot commission to move has no value",
+    ))?;
+    *args.per_lot_charged = true;
+    let charged = charge_amount(Some(&winner), ChargeType::Commission, base, qty, true)?;
     line_charge_of(&winner, charged.amount, charged.working)
 }
 
@@ -180,8 +373,8 @@ fn line_charge_of(
     })
 }
 
-/// Works out one line: the amounts C1, the three charges, C5 and C19, and the payment type. The
-/// caller has checked the buyer, the payment type and the one-time person. Returns `None` (with
+/// Works out one line: the amounts C1, the three charges, C5 and C19, and the money paid on the
+/// spot and what is left (PRD FR-12.44). The caller has checked the buyer and the چکتا buyer. Returns `None` (with
 /// the error pushed) when a number cannot be worked out.
 ///
 /// Example (PRD 4.4): 20 × 600 for Akram gives value 12,000, seller commission 720, buyer
@@ -239,40 +432,93 @@ pub(super) fn calc_line(
     // The per-lot commission is spent only if this line is worked out; if the line is refused
     // below, the next line carries it (money agent review, F2).
     let per_lot_before = *args.per_lot_charged;
+    let pending_before = args.pending_move.clone();
     let (lot_seller, buyer_id) = (args.lot.seller_id, args.buyer_id);
-    let seller_comm = charge(
-        &mut args,
-        ChargeSide::Seller,
-        ChargeType::Commission,
-        lot_seller,
-        seller_amount,
-        qty,
-        row.seller_comm,
-        &format!("{prefix}.seller_comm"),
-        issues,
-    )?;
-    let buyer_comm = charge(
-        &mut args,
-        ChargeSide::Buyer,
-        ChargeType::Commission,
-        buyer_id,
-        buyer_value,
-        qty,
-        row.buyer_comm,
-        &format!("{prefix}.buyer_comm"),
-        issues,
-    )?;
-    let laga = charge(
-        &mut args,
-        ChargeSide::Buyer,
-        ChargeType::Laga,
-        buyer_id,
-        buyer_value,
-        qty,
-        row.laga,
-        &format!("{prefix}.laga"),
-        issues,
-    )?;
+    // A removed carrier's per-lot commission goes to the first line the user did not edit that was
+    // saved with the per-lot method (PRD FR-11.9, FR-12.20: the one change allowed on an unedited
+    // line). A line the user typed a commission on cannot carry it, and neither can an unchanged
+    // line whose own stored commission is a percent or a per-نگ amount: that amount would be
+    // thrown away (money agent review of plan 16, finding 1). A changed or new line looks its rules
+    // up again. Nothing takes the charge twice: once any line carries it, it is spent.
+    let kept_seller = args.kept.as_ref().and_then(Kept::seller);
+    let kept_buyer = args.kept.as_ref().and_then(Kept::buyer);
+    let takes_move = !*args.per_lot_charged
+        && kept_seller.is_some_and(|s| s.seller_comm.method == StoredMethod::PerLot);
+    let moved = if row.seller_comm.is_none() && args.env.kind == PostingKind::First && takes_move {
+        args.pending_move.take()
+    } else {
+        None
+    };
+    let seller_comm = if let Some(moved) = &moved {
+        moved_charge(&mut args, moved, seller_amount, qty)?
+    } else if let Some(stored) = kept_seller {
+        // A line whose seller side is kept keeps what it had (PRD FR-12.20).
+        stored_charge(
+            &mut args,
+            ChargeSide::Seller,
+            ChargeType::Commission,
+            &stored.seller_comm,
+            seller_amount,
+            qty,
+        )?
+    } else {
+        charge(
+            &mut args,
+            ChargeSide::Seller,
+            ChargeType::Commission,
+            lot_seller,
+            seller_amount,
+            qty,
+            row.seller_comm,
+            &format!("{prefix}.seller_comm"),
+            issues,
+        )?
+    };
+    let (buyer_comm, laga) = if let Some(stored) = kept_buyer {
+        (
+            stored_charge(
+                &mut args,
+                ChargeSide::Buyer,
+                ChargeType::Commission,
+                &stored.buyer_comm,
+                buyer_value,
+                qty,
+            )?,
+            stored_charge(
+                &mut args,
+                ChargeSide::Buyer,
+                ChargeType::Laga,
+                &stored.laga,
+                buyer_value,
+                qty,
+            )?,
+        )
+    } else {
+        (
+            charge(
+                &mut args,
+                ChargeSide::Buyer,
+                ChargeType::Commission,
+                buyer_id,
+                buyer_value,
+                qty,
+                row.buyer_comm,
+                &format!("{prefix}.buyer_comm"),
+                issues,
+            )?,
+            charge(
+                &mut args,
+                ChargeSide::Buyer,
+                ChargeType::Laga,
+                buyer_id,
+                buyer_value,
+                qty,
+                row.laga,
+                &format!("{prefix}.laga"),
+                issues,
+            )?,
+        )
+    };
 
     // C5 and C19.
     let buyer_total = buyer_value
@@ -281,6 +527,7 @@ pub(super) fn calc_line(
     let rate_diff = buyer_value.checked_sub(seller_amount)?;
     if too_large(buyer_total) {
         *args.per_lot_charged = per_lot_before;
+        *args.pending_move = pending_before;
         issues.error_with(
             ErrorCode::ErrAmountTooLarge,
             &format!("{prefix}.seller_rate"),
@@ -288,21 +535,32 @@ pub(super) fn calc_line(
         );
         return Ok(None);
     }
+    // موقع پر جمع (PRD FR-12.44) and what is left on the buyer's account.
+    let money = paid_money(&args, kept_buyer, issues, prefix, buyer_total)?;
+    let left = buyer_total.checked_sub(money.paid)?;
+    let (cost_of_goods, cost_working) = args
+        .cost
+        .clone()
+        .unwrap_or_else(|| (Paisa::ZERO, working::none_line()));
     let workings = LineWorkings {
         seller_amount: seller_amount_working,
         buyer_value: buyer_value_working,
         buyer_total: working::buyer_total(buyer_value, buyer_comm.amount, laga.amount, buyer_total),
         rate_diff: working::rate_diff(buyer_value, seller_amount, rate_diff),
+        cost_of_goods: cost_working,
+        paid: money.working.clone(),
+        left: working::left(buyer_total, money.paid, left),
     };
 
-    // The checks that need the numbers: credit limit (PRD FR-12.4) and rate check (FR-7.55).
-    if args.payment == PaymentType::Credit {
+    // The checks that need the numbers: credit limit (PRD FR-12.4, FR-12.44: only what is left on
+    // the account counts) and rate check (FR-7.55).
+    if left > Paisa::ZERO {
         checks::credit_limit(
             issues,
             args.owed,
             buyer_id,
             args.buyer,
-            buyer_total,
+            left,
             args.env.switches.credit_limit_blocks,
             &format!("{prefix}.buyer_account_id"),
         )?;
@@ -321,9 +579,88 @@ pub(super) fn calc_line(
         laga,
         buyer_total,
         rate_diff,
-        payment_type: args.payment,
+        cost_of_goods,
+        paid_paisa: money.paid,
+        left_paisa: left,
+        paid_fixed: money.fixed,
         workings,
     }))
+}
+
+/// What the buyer paid on the spot, and whether the backend decided it.
+struct PaidMoney {
+    paid: Paisa,
+    fixed: bool,
+    working: mandi_core::rules::Working,
+}
+
+/// موقع پر جمع of one line (PRD FR-12.44, plan 60 P2 to P4, plan 65 point 10a). One function for the
+/// preview and the save (Code Standards B5).
+///
+/// - A buyer who must pay in full (نقدی منڈی, a چکتا buyer, no credit allowed) pays the whole buyer
+///   total, and anything typed is ignored. The one exception is an unchanged line of an edit: it
+///   keeps what it was saved with, so an old credit line whose buyer has since lost credit does
+///   not turn into cash by itself. That holds when the buyer side of the line is kept (the buyer
+///   did not change; a correction of the lot's seller alone keeps it, Umar 10-11-2026). A line
+///   whose buyer changed, whose item changed, or that has any other change, follows the rule of a
+///   buyer who must pay in full.
+/// - Any other buyer pays what was typed; empty is 0.
+/// - More than the buyer total is `ERR_PAID_EXCEEDS_TOTAL` at `.paid` with `max` in rupees. The
+///   line keeps its figures and counts as paid 0, so no cash is posted twice.
+///
+/// Example (D8): buyer total 48,100 and 10,000 typed gives paid 10,000 and 38,100 left. A چکتا
+/// buyer with 12,800 pays 12,800.
+fn paid_money(
+    args: &LineArgs<'_>,
+    kept_buyer: Option<&StoredSale>,
+    issues: &mut Issues,
+    prefix: &str,
+    buyer_total: Paisa,
+) -> Result<PaidMoney, CalcError> {
+    if checks::must_pay_in_full(args.buyer) {
+        if let Some(stored) = kept_buyer {
+            if stored.paid > buyer_total {
+                return Err(CalcError::Inconsistent(
+                    "a stored line was paid more than its buyer total",
+                ));
+            }
+            // Nothing was typed: the line keeps what it was saved with. In full, it is the total of a
+            // buyer who must pay in full; less than that, it is the old amount, kept.
+            let working = if stored.paid == buyer_total {
+                working::paid_full(buyer_total, stored.paid)
+            } else {
+                working::paid_kept(stored.paid)
+            };
+            return Ok(PaidMoney {
+                paid: stored.paid,
+                fixed: true,
+                working,
+            });
+        }
+        return Ok(PaidMoney {
+            paid: buyer_total,
+            fixed: true,
+            working: working::paid_full(buyer_total, buyer_total),
+        });
+    }
+    let typed = args.row.paid;
+    if typed > buyer_total {
+        issues.error_with(
+            ErrorCode::ErrPaidExceedsTotal,
+            &format!("{prefix}.paid"),
+            &[("max", buyer_total.as_paisa().checked_div(100).unwrap_or(0))],
+        );
+        return Ok(PaidMoney {
+            paid: Paisa::ZERO,
+            fixed: false,
+            working: working::paid_over(buyer_total, typed, Paisa::ZERO),
+        });
+    }
+    Ok(PaidMoney {
+        paid: typed,
+        fixed: false,
+        working: working::paid_typed(typed),
+    })
 }
 
 /// Warns when the seller rate, or the buyer rate if it differs, is far from the item's average

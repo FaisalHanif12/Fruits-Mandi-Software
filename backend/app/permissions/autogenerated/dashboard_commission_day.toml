@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-commission-day"
+description = "Enables the dashboard_commission_day command without any pre-configured scope."
+commands.allow = ["dashboard_commission_day"]
+
+[[permission]]
+identifier = "deny-dashboard-commission-day"
+description = "Denies the dashboard_commission_day command without any pre-configured scope."
+commands.deny = ["dashboard_commission_day"]

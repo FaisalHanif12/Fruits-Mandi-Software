@@ -1,0 +1,98 @@
+{
+  "steps": [
+    {
+      "expected": "کریم کو 10,160 جمع ✓ دینے ہیں۔",
+      "outcome": "answered",
+      "question": "karim ko kitne paise dene hain",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"text\": \"karim\", \"role\": \"seller\"}",
+                      "name": "find"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"party\": \"r1.matches.0\"}",
+                      "name": "party_card"
+                    },
+                    "id": "call_1_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5600,
+            "prompt_tokens_details": {
+              "cached_tokens": 4800
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"{{r1.matches.0.name}} کو {{r2.balance}} دینے ہیں۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 6200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day"
+}

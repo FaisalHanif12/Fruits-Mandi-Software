@@ -42,7 +42,7 @@ partners-load-failed = { -shirakat-dar } کی معلومات نہیں کھل س�
 partners-overview-empty = ابھی کوئی { -shirakat-dar } نہیں
 
 # review: pending
-partners-overview-empty-help = { -shirakat-dar } شامل کریں اور ان کے { -hissa } لکھیں، تب ہر { -bikri } کی آمدن ان میں بٹے گی۔
+partners-overview-empty-help = { -shirakat-dar } شامل کریں اور ان کے حصے لکھیں، تب ہر { -bikri } کی آمدن ان میں بٹے گی۔
 
 # review: pending
 partners-overview-empty-action = { -shirakat-dar } شامل کریں
@@ -56,7 +56,7 @@ partners-setup-title = { -shirakat-dar } کی ترتیب
 partners-setup-help = ہر { -shirakat-dar } کا { -hissa } فیصد میں لکھیں۔ کل ٹھیک 100 فیصد ہونا چاہیے۔
 
 # review: pending
-partners-list-label = { -shirakat-dar } اور ان کے { -hissa }
+partners-list-label = { -shirakat-dar } اور ان کے حصے
 
 # review: pending
 partners-column-partner = { -shirakat-dar }
@@ -88,7 +88,7 @@ partners-inactive-title = غیر فعال { -shirakat-dar }
 partners-badge-inactive = غیر فعال
 
 # review: pending
-partners-field-from = { -hissa } کب سے لاگو ہوں
+partners-field-from = حصے کب سے لاگو ہوں
 
 # review: pending
 partners-field-from-hint = آج یا اس کے بعد کی تاریخ لکھیں۔ پرانی تاریخ نہیں چلتی۔ پہلے سے محفوظ { -bikri } کا بٹوارہ نہیں بدلتا۔
@@ -106,11 +106,11 @@ partners-total-bad = کل ٹھیک 100 فیصد ہونا چاہیے
 partners-total-checking = جانچ ہو رہی ہے…
 
 # review: pending
-partners-save = { -hissa } محفوظ کریں
+partners-save = حصے محفوظ کریں
 
 # $date: the day the shares start, DD-MM-YYYY.
 # review: pending
-partners-saved = { -hissa } محفوظ ہو گئے۔ یہ <num>{ $date }</num> سے لاگو ہیں۔
+partners-saved = حصے محفوظ ہو گئے۔ یہ <num>{ $date }</num> سے لاگو ہیں۔
 
 # $name: the partner's name.
 # review: pending
@@ -162,7 +162,7 @@ partners-field-active = فعال
 partners-field-active-hint = غیر فعال { -shirakat-dar } کا ریکارڈ رہتا ہے، مگر پہلے اس کا { -hissa } 0 ہونا چاہیے۔
 
 # review: pending
-partners-history-title = { -hissa } کی تاریخ
+partners-history-title = { -hissa } کا تاریخچہ
 
 # $date: the first day the share applies, DD-MM-YYYY. $share: the percent.
 # review: pending
@@ -170,3 +170,502 @@ partners-history-row = <num>{ $date }</num> سے <num>{ $share }</num> فیصد
 
 # review: pending
 partners-history-empty = ابھی کوئی { -hissa } مقرر نہیں ہوا۔
+
+## Plan 17: the extra columns of the overview, the capital screen and the statement.
+
+# review: pending
+partners-metric-returned = { -wapsi }، اس مہینے
+
+# review: pending
+partners-metric-net = { -khalis }، اس مہینے
+
+# review: pending
+partners-metric-capital-in = { -sarmaya } لگایا، اس مہینے
+
+# review: pending
+partners-metric-ventures = { -bagh }، { -safar } اور { -phal }، اس مہینے
+
+# review: pending
+partners-metric-total = { -kul-raqam }
+
+# review: pending
+partners-open-statement = { -fard-hisab }
+
+# $name: the partner's name.
+# review: pending
+partners-open-statement-of = { $name } کی { -fard-hisab }
+
+# review: pending
+partners-open-capital = { -sarmaya }
+
+# $name: the partner's name.
+# review: pending
+partners-open-capital-of = { $name } کا { -sarmaya }
+
+# review: pending
+partners-capital-open = { -sarmaya }
+
+## The capital screen (route /partners/capital, PRD 17.4).
+
+# review: pending
+partners-capital-screen-title = { -sarmaya }
+
+# review: pending
+partners-capital-screen-help = { -shirakat-dar } جو رقم دکان میں لگاتا ہے اور جو واپس لیتا ہے۔ یہ نہ آمدن ہے نہ خرچہ، اور کبھی تقسیم نہیں ہوتی۔
+
+# review: pending
+partners-capital-type = { -sarmaya } اندراج کی قسم
+
+# review: pending
+partners-capital-history-title = { -sarmaya } کا تاریخچہ
+
+# review: pending
+partners-capital-pick = { -shirakat-dar } چنیں
+
+# review: pending
+partners-capital-pick-help = اس کے { -sarmaya } کا تاریخچہ اور بقایا یہاں نظر آئیں گے۔
+
+# review: pending
+partners-capital-balance = { -sarmaya } بقایا
+
+# review: pending
+partners-capital-invested = کل { -sarmaya } جمع
+
+# review: pending
+partners-capital-taken-back = کل { -sarmaya } واپسی
+
+# review: pending
+partners-capital-label = { -shirakat-dar } کے { -sarmaya } کا تاریخچہ
+
+# review: pending
+partners-capital-failed = { -sarmaya } کا تاریخچہ نہیں کھل سکا
+
+# review: pending
+partners-capital-empty = ابھی کوئی { -sarmaya } اندراج نہیں
+
+# review: pending
+partners-capital-empty-help = اوپر پہلی رقم لکھیں اور محفوظ کریں۔
+
+# review: pending
+partners-capital-col-balance = { -sarmaya } بقایا
+
+# review: pending
+partners-capital-kind-opening = ابتدائی { -sarmaya }
+
+# review: pending
+partners-capital-kind-invested = { -sarmaya } جمع
+
+# review: pending
+partners-capital-kind-taken-back = { -sarmaya } واپسی
+
+# review: pending
+partners-capital-kind-month-close = مہینہ بند: منافع { -sarmaya } میں منتقل ہوا
+
+## The partner statement (route /partners/statement, PRD FR-17.9, FR-17.10).
+
+# review: pending
+partners-statement-title = { -shirakat-dar } { -khata }
+
+# review: pending
+partners-statement-help = { -shirakat-dar } تک پہنچنے والی ہر رقم، تاریخ وار، چلتے ہوئے { -kul-raqam } کے ساتھ۔
+
+# review: pending
+partners-statement-opening = شروع میں { -kul-raqam }
+
+# review: pending
+partners-statement-closing = آخر میں { -kul-raqam }
+
+# review: pending
+partners-statement-plus = اضافہ
+
+# review: pending
+partners-statement-minus = کمی
+
+# review: pending
+partners-statement-pick = { -shirakat-dar } چنیں
+
+# review: pending
+partners-statement-pick-help = اس کا { -fard-hisab } یہاں نظر آئے گا۔
+
+# review: pending
+partners-statement-empty = ان دنوں میں کچھ نہیں
+
+# review: pending
+partners-statement-empty-help = دوسرے دن چنیں، یا تاریخیں مٹا دیں۔
+
+# review: pending
+partners-statement-label = { -shirakat-dar } { -khata } کی سطریں
+
+# review: pending
+partners-statement-failed = { -khata } نہیں کھل سکا
+
+# review: pending
+partners-statement-col-heading = ذریعہ
+
+# review: pending
+partners-statement-col-detail = کیا تھا
+
+# review: pending
+partners-statement-col-running = { -kul-raqam }
+
+# review: pending
+partners-statement-heading-bikri = { -bikri }
+
+# review: pending
+partners-statement-heading-expense = { -kharcha }
+
+# review: pending
+partners-statement-heading-capital = { -sarmaya }
+
+# review: pending
+partners-statement-heading-drawings = { -kharcha }
+
+# review: pending
+partners-statement-heading-trip = { -market-safar }
+
+# review: pending
+partners-statement-heading-other = دیگر
+
+# $number: the number of the sale.
+# review: pending
+partners-statement-detail-income-share = { -bikri } { $number }: { -commission }، { -laga } اور { -phone }
+
+# The same line when the backend sends the base and the share of the posting.
+# $number: the number of the sale. $base: the income of the posting. $share: his percent.
+# review: pending
+partners-statement-detail-income-share-part = { -bikri } { $number }: { $base } میں سے ان کا { $share }%
+
+# $voucher: the number of the expense; $subject: the expense head.
+# review: pending
+partners-statement-detail-expense-share = { -dukan-kharcha } { $voucher }: { $subject }
+
+# review: pending
+partners-statement-detail-capital-opening = ابتدائی { -sarmaya }
+
+# review: pending
+partners-statement-detail-capital-in = { -sarmaya } لگایا { $voucher }
+
+# review: pending
+partners-statement-detail-capital-out = { -sarmaya } واپس لیا { $voucher }
+
+# review: pending
+partners-statement-detail-month-close = مہینہ بند: منافع { -sarmaya } میں منتقل ہوا۔ { -kul-raqam } وہی رہتا ہے۔
+
+# $reason: why the money was taken, as typed.
+# review: pending
+partners-statement-detail-taken = { -zati-kharcha } { $voucher }: { $reason }
+
+# review: pending
+partners-statement-detail-returned = { -zati-kharcha } { -wapsi } { $voucher }
+
+# review: pending
+partners-statement-detail-drawings-opening = ابتدائی لی ہوئی رقم
+
+# $trip: the trip number; $secondary: the purchase or cost number; $kind: purchase, cost or other.
+# review: pending
+partners-statement-detail-trip-paid = { $kind ->
+    [purchase] { -market-safar } { $trip }: { -khareedari } { $secondary }، { -dukan-se }
+    [cost] { -market-safar } { $trip }: سفر کا خرچ { $secondary }، { -dukan-se }
+   *[other] { -market-safar } { $trip }: { $secondary }، { -dukan-se }
+}
+
+# $source: bikri for a sale in the sale book, other for a sale in another shop.
+# review: pending
+partners-statement-detail-trip-credit = { $source ->
+    [bikri] { -market-safar } { $trip }، { -bikri } { $secondary }: { $subject } { $qty }، فروخت { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد
+   *[other] { -market-safar } { $trip }، دوسری دکان میں فروخت: { $subject } { $qty }، رقم { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد
+}
+
+# The same, when the backend sends his part of the result ($part, PRD FR-17.12).
+# review: pending
+partners-statement-detail-trip-credit-part = { $source ->
+    [bikri] { -market-safar } { $trip }، { -bikri } { $secondary }: { $subject } { $qty }، فروخت { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }
+   *[other] { -market-safar } { $trip }، دوسری دکان میں فروخت: { $subject } { $qty }، رقم { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }
+}
+
+# review: pending
+partners-statement-detail-trip-write-off = { -market-safar } { $trip }: سفر کا مال ضائع کیا گیا۔ کچھ پوسٹ نہیں ہوتا؛ نقصان سفر کے نتیجے میں نظر آتا ہے۔
+
+# review: pending
+partners-statement-detail-trip-closed = { -market-safar } { $trip } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد، آپ کا { -khalis } { $net }
+
+# A garden's line in a partner's statement (PRD FR-17.10, plan 17c).
+# review: pending
+partners-statement-heading-garden = { -bagh }
+
+# $garden: the garden number; $reason: why it was paid, as typed.
+# review: pending
+partners-statement-detail-garden-paid = { $garden }: { $reason }، { -dukan-se }
+
+# $garden: the garden number; $cost, $sales, $result: the garden's figures; $share: his %; $part: his part of the result; $back: his money back.
+# review: pending
+partners-statement-detail-garden-closed = { $garden } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }، { -wapsi } { $back }
+
+# A garden's closing line when the owner gave relief (PRD FR-12.51): the same as the closing line, with the rent now, the rent it was made with and the relief.
+# $garden: the garden number; $cost, $sales, $result: the garden's figures; $share: his %; $part: his part of the result; $back: his money back; $rent: the rent now; $rent_original: the rent when it was made; $relief: what the owner took off.
+# review: pending
+partners-statement-detail-garden-closed-relief = { $garden } بند: { -thaika } { $rent } (پہلے { $rent_original }، رعایت { $relief })، لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }، { -wapsi } { $back }
+
+# A fruit line in a partner's statement (PRD FR-17.10, plan 17d): the fruit he took home, or his
+# equal part of the fruit served to the shop's guests (C27).
+# review: pending
+partners-statement-heading-fruit = { -phal }
+
+# $for: home or guests; $subject: the item; $qty, $packing, $rate: what was taken; $value: the whole
+# value (the amount of the line is his part).
+# review: pending
+partners-statement-detail-fruit-taken = { $for ->
+    [guests] { -mehman } کے لیے { -phal }: { $subject } { $qty } { $packing } @ { $rate } = { $value }، آپ کا برابر حصہ
+   *[home] گھر کے لیے { -phal }: { $subject } { $qty } { $packing } @ { $rate } = { $value }
+}
+
+# $fruit: the entry's number. The details of an entry are shown only for the posting in force.
+# review: pending
+partners-statement-detail-fruit-earlier = { -phal } { $fruit }: ایسے اندراج کی پرانی پوسٹنگ جو بعد میں بدلا گیا، یا اسے الٹنے والی پوسٹنگ
+
+# review: pending
+partners-statement-detail-other = { $reason }
+
+## The open gardens and trips under a partner's card (PRD 17.3, plan 17c).
+
+# review: pending
+partners-ventures-title = کھلے { -bagh } / { -safar }
+
+# $name: the partner's name.
+# review: pending
+partners-ventures-label = { $name } کے کھلے { -bagh } / { -safar }
+
+# review: pending
+partners-ventures-col-venture = { -bagh } / { -safar }
+
+# review: pending
+partners-ventures-col-kind = قسم
+
+# review: pending
+partners-ventures-col-shop = دکان سے ادا
+
+# review: pending
+partners-ventures-col-pocket = اپنی جیب سے ادا
+
+# review: pending
+partners-ventures-col-back = واپس ملی رقم
+
+# The running balance of a garden, or the result of a trip.
+# review: pending
+partners-ventures-col-balance = بقایا یا نتیجہ
+
+# The name of the table of partners on the overview, read by a screen reader (plan 38).
+# review: pending
+partners-overview-label = شراکت دار اور ان کے اعداد
+
+## The partner code (plan 44, PRD FR-17.11): the section opens only with a 4-digit code.
+
+# review: pending
+partners-code-title = شراکت دار کوڈ
+
+# review: pending
+partners-code-failed = شراکت دار کوڈ کی حالت نہیں پڑھی جا سکی
+
+# review: pending
+partners-code-locked-title = شراکت دار کا حصہ کوڈ سے کھلتا ہے
+
+# review: pending
+partners-code-locked-help = چار ہندسوں کا کوڈ لکھیں۔ اس حصے سے باہر جاتے ہی یہ دوبارہ بند ہو جاتا ہے۔
+
+# review: pending
+partners-code-field = کوڈ
+
+# review: pending
+partners-code-open = کھولیں
+
+# review: pending
+partners-code-forgot = کوڈ بھول گئے
+
+# $seconds: seconds left to wait.
+# review: pending
+partners-code-wait = غلط کوڈ بہت بار لکھا گیا۔ { $seconds } سیکنڈ بعد دوبارہ کوشش کریں۔
+
+# review: pending
+partners-code-set-title = شراکت دار کوڈ بنائیں
+
+# review: pending
+partners-code-set-help = شراکت داروں کی رقمیں بہت خاص ہیں، اس لیے یہ حصہ چار ہندسوں کے کوڈ سے کھلے گا۔ کوڈ بنانے کے لیے مالک کا پاس ورڈ چاہیے۔ کوڈ بنائے بغیر آگے نہیں جا سکتے۔
+
+# review: pending
+partners-code-password = مالک کا پاس ورڈ
+
+# review: pending
+partners-code-new = نیا کوڈ (چار ہندسے)
+
+# review: pending
+partners-code-again = کوڈ دوبارہ لکھیں
+
+# review: pending
+partners-code-set-button = کوڈ بنائیں
+
+# review: pending
+partners-code-set-done = شراکت دار کوڈ بن گیا
+
+# review: pending
+partners-code-reset-title = کوڈ بھول گئے؟
+
+# review: pending
+partners-code-reset-help = مالک کا پاس ورڈ یا چھپا ہوا بازیابی کوڈ لکھ کر نیا کوڈ بنائیں۔
+
+# review: pending
+partners-code-reset-secret = پاس ورڈ یا بازیابی کوڈ
+
+# review: pending
+partners-code-reset-button = نیا کوڈ بنائیں
+
+# review: pending
+partners-code-reset-done = نیا شراکت دار کوڈ بن گیا
+
+# review: pending
+partners-code-change-title = شراکت دار کوڈ بدلیں
+
+# review: pending
+partners-code-change-old = پرانا کوڈ یا مالک کا پاس ورڈ
+
+# review: pending
+partners-code-change-button = کوڈ بدلیں
+
+# review: pending
+partners-code-change-done = شراکت دار کوڈ بدل گیا
+
+# The box that stands where partner figures would be.
+# review: pending
+partners-code-box-text = شراکت داروں کی رقمیں کوڈ کے بغیر نہیں دکھائی جاتیں۔
+
+# review: pending
+partners-code-enter = کوڈ درج کریں
+
+# review: pending
+partners-code-lock-now = ابھی بند کریں
+
+# One compact line for each partner under the overview: how many trips and gardens he is in that are
+# still open, with a button that opens the list (PRD 17.3, plan 76 point 11).
+# review: pending
+partners-ventures-line = کھلے: { -safar } <num>{ $trips }</num>، { -bagh } <num>{ $gardens }</num>
+
+# review: pending
+partners-ventures-show = فہرست دکھائیں
+
+# review: pending
+partners-ventures-hide = فہرست چھپائیں
+
+# review: pending
+partners-ventures-failed = کھلے { -bagh } اور { -safar } پڑھے نہیں جا سکے
+
+## The partner statement, one month at a time (plan 76 point 11, PRD FR-17.12).
+
+# review: pending
+partners-month-label = دن کے حساب سے کھاتہ
+
+# review: pending
+partners-month-col-date = تاریخ
+
+# review: pending
+partners-month-col-commission = { -commission }
+
+# review: pending
+partners-month-col-expense = { -kharcha }
+
+# review: pending
+partners-month-col-ventures = { -bagh } / { -safar }
+
+# review: pending
+partners-month-col-fruit = { -phal }
+
+# review: pending
+partners-month-col-taken = لیا اور واپس
+
+# review: pending
+partners-month-col-capital = { -sarmaya }
+
+# review: pending
+partners-month-col-net = دن کا خالص
+
+# review: pending
+partners-month-col-total = { -kul-raqam }
+
+# review: pending
+partners-month-opening = ابتدائی
+
+# review: pending
+partners-month-empty = اس مہینے میں کوئی حرکت نہیں
+
+# review: pending
+partners-month-empty-help = دوسرے مہینے کے لیے نیچے کے بٹن استعمال کریں۔
+
+# review: pending
+partners-day-failed = اس دن کی حرکتیں پڑھی نہیں جا سکیں
+
+# review: pending
+partners-day-before = اس دن سے پہلے { -kul-raqam }
+
+# review: pending
+partners-day-after = اس دن کے بعد { -kul-raqam }
+
+## Statement lines of a linked { -alag-khata } and of a loan that is linked (plan 76 points 5 and 10, PRD FR-16.6, FR-16.13)
+
+# review: pending
+partners-statement-heading-linked = { -alag-khata } اور { -adhar-raqam }
+
+# $subject: the khata. $voucher: its entry number. $reason: why.
+# review: pending
+partners-statement-detail-khata-paid = { -alag-khata } { $subject }، { $voucher }: رقم دی گئی، { $reason }
+
+# review: pending
+partners-statement-detail-khata-received = { -alag-khata } { $subject }، { $voucher }: رقم آئی، { $reason }
+
+# $subject: the person. $voucher: its entry number. $reason: why.
+# review: pending
+partners-statement-detail-lent-given = { -adhar-raqam } { $voucher }: { $subject } کو دی گئی، { $reason }
+
+# review: pending
+partners-statement-detail-lent-returned = { -adhar-raqam } { -wapsi } { $voucher }: { $subject }
+
+# The other entries of a linked khata: its goods sold, fruit and { -general } lines.
+# review: pending
+partners-statement-detail-linked-other = { -alag-khata } { $subject }، اندراج { $voucher }
+
+# A loan that is the shop's: a note with no amount. $amount: what was given or returned. $part: his part of it.
+# review: pending
+partners-statement-detail-lent-share-note = دکان کی { -adhar-raqam } { $voucher }: { $kind ->
+    [given] { $subject } کو { $amount } دی گئی
+   *[other] { $subject } نے { $amount } واپس کی
+}۔ آپ کا حصہ { $part } ہے۔ رقم دکان کو ہی واپس کرنی ہے، اس لیے آپ کی { -kul-raqam } نہیں بدلتی۔
+
+## Where the opening capital is (plan 78 E, PRD 17.1).
+
+# review: pending
+partners-field-capital-where = یہ رقم کہاں ہے؟
+
+# review: pending
+partners-capital-where-cash = موجود { -rokar }
+
+# review: pending
+partners-capital-where-counted = پہلے سے درج
+
+# review: pending
+partners-capital-where-cash-help = یہ رقم { -rokar } میں آ جاتی ہے، یعنی موجود { -rokar } اتنی بڑھ جاتی ہے۔
+
+# review: pending
+partners-capital-where-counted-help = یہ رقم کسی اور ابتدائی رقم میں پہلے سے گنی جا چکی ہے۔ موجود { -rokar } نہیں بدلتی۔
+
+## Advances to sellers in the partner statement (plan 78 B4, PRD FR-17.13). The words are for the lines of `advance_out` and `advance_back`.
+
+# review: pending
+partners-month-col-advances = { -peshgi }
+
+# review: pending
+partners-statement-heading-advance = { -peshgi }
+
+# $subject: the seller. $amount: the advance. $share: his percent on that day.
+# review: pending
+partners-statement-detail-advance-out = { -peshgi } { $subject } { $amount }، آپ کا { $share } فیصد
+
+# $subject: the seller. $amount: what was settled. $share: his percent.
+# review: pending
+partners-statement-detail-advance-back = { -peshgi } واپس { $subject } { $amount }، آپ کا { $share } فیصد

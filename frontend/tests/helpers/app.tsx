@@ -4,11 +4,13 @@
 // with, the same as it would with the real commands.
 
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import type { AuthStatus } from '../../src/bindings/AuthStatus';
 import type { DayStatus } from '../../src/bindings/DayStatus';
 import type { FirmDisplay } from '../../src/bindings/FirmDisplay';
+import type { OverridesSettings } from '../../src/bindings/OverridesSettings';
 import type { SessionUser } from '../../src/bindings/SessionUser';
 import type { Settings } from '../../src/bindings/Settings';
 import * as appApi from '../../src/app/api';
@@ -18,8 +20,12 @@ import * as authApi from '../../src/features/auth/api';
 import * as settingsApi from '../../src/features/settings/api';
 import type { Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
+import { useToastStore } from '../../src/shared/ui';
 import { useTextSizeStore } from '../../src/app/layout/text-size';
 import { useWizardStore } from '../../src/features/auth/wizard-store';
+import { useAfterRestoreStore } from '../../src/features/restore/after-restore-store';
+import { useRestoreStore } from '../../src/features/restore/store';
+import { message } from './render';
 import { refusal, type RefusalItem } from './ui-error';
 import { CommandError } from '../../src/shared/api';
 
@@ -28,6 +34,14 @@ export const FIRM: FirmDisplay = {
   name_en: 'Maher Adnan and Brothers',
   mandi_ur: 'نئی سبزی منڈی، کوٹ رادھا کشن',
   mandi_en: 'New Sabzi Mandi, Kot Radha Kishan',
+};
+
+/** The Overrides and Checks settings as they start (PRD FR-11.10, FR-12.4, FR-7.55). */
+export const OVERRIDES_ON: OverridesSettings = {
+  allow_line_override: true,
+  credit_limit_mode: 'warn',
+  rate_check_enabled: true,
+  rate_check_percent: 30,
 };
 
 export function sessionUser(overrides: Partial<SessionUser> = {}): SessionUser {
@@ -62,6 +76,8 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
       mandi_en: FIRM.mandi_en,
       address: 'Shop 1',
       phone: '0300-0000000',
+      firm_contacts: [],
+      trade_mark: '',
     },
     idle_lock_minutes: 15,
     default_language: 'ur',
@@ -70,7 +86,12 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
-export const DAY: DayStatus = { today: '2026-10-10', closed_up_to: null, today_open: true };
+export const DAY: DayStatus = {
+  today: '2026-10-10',
+  closed_up_to: null,
+  today_open: true,
+  first_entry_date: null,
+};
 
 /** A backend refusal, the way a command fails. */
 export function fail(...items: RefusalItem[]): CommandError {
@@ -89,6 +110,8 @@ export function healthyBackend() {
   vi.mocked(authApi.authLock).mockResolvedValue(null);
   vi.mocked(authApi.authLogout).mockResolvedValue(null);
   vi.mocked(settingsApi.settingsGet).mockResolvedValue(settings());
+  // The Owner's switches start as in PRD Section 21: a line may change its commission and لاگا.
+  vi.mocked(settingsApi.settingsGetOverrides).mockResolvedValue(OVERRIDES_ON);
   vi.mocked(settingsApi.prefsSet).mockResolvedValue(null);
 }
 
@@ -103,8 +126,19 @@ export function resetClientState(language: Language = 'ur') {
     useLanguageStore.setState({ language });
     useTextSizeStore.setState({ chosen: 100 });
     useWizardStore.getState().reset();
+    // The first screen of a new install (plan 56) starts as it does on a new computer.
+    useRestoreStore.getState().reset();
+    useAfterRestoreStore.getState().clear();
+    // A message of an earlier test must not be on the screen of the next one.
+    useToastStore.setState({ toasts: [] });
   });
   document.documentElement.style.zoom = '';
+  try {
+    // What a screen keeps on this computer ("More filters" open, "More columns" ticked) starts fresh.
+    window.localStorage.clear();
+  } catch {
+    // Storage can be blocked; nothing is kept then either.
+  }
 }
 
 /** Renders the whole app on a path, as the window does after the start-up check. */
@@ -125,6 +159,16 @@ export async function renderApp(path = '/') {
 
 function expectSomethingShown() {
   if (document.body.textContent === '') throw new Error('nothing on screen yet');
+}
+
+/**
+ * On a new install the first screen comes first (plan 56, PRD FR-20.11). A test of the first-run
+ * wizard goes through it the way the Owner does: the first choice, a new shop, has focus, so Enter
+ * opens the wizard.
+ */
+export async function startNewShop(language: Language) {
+  await screen.findByRole('heading', { name: message(language, 'restore-start-title') });
+  await userEvent.setup().keyboard('{Enter}');
 }
 
 export function leaveAppWindow() {

@@ -1,0 +1,50 @@
+{
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "title_id": "print-statement-title",
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "20-11-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "30-11-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "0 Akram Toll Tax"
+    }
+  ],
+  "kind": "buyer",
+  "party": {
+    "role_id": "print-party-buyer",
+    "code": "0020",
+    "short_code": "0",
+    "name": "Akram Toll Tax",
+    "phone": null
+  },
+  "period_from": "20-11-2026",
+  "period_to": "30-11-2026",
+  "opening": {
+    "amount": "1,000",
+    "side": "debit"
+  },
+  "days": [],
+  "totals": [
+    {
+      "label_id": "print-statement-total-bought",
+      "amount": "0",
+      "role": "line"
+    }
+  ],
+  "closing": {
+    "amount": "1,000",
+    "side": "debit"
+  },
+  "words": {
+    "label_id": "print-in-words",
+    "text": "One thousand rupees only"
+  }
+}

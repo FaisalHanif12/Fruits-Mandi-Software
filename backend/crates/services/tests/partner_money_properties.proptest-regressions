@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc c61fe5e6064a7391e86606b9e76f681485215dc77cd083c0ad0f227ffa91387e # shrinks to case = Case { weights: [1], pockets: [false, false, false], trip: None, steps: [(Lend { amount: 1 }, 0), (Edit { pick: 0, partner: 0, amount: 1 }, 0)] }

@@ -11,12 +11,14 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
+import { useEntryStamp } from '../../../shared/edit';
 import { TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { useFocusFirstField, useSingleFlight } from '../../../shared/hooks';
-import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   AccountPicker,
   Button,
@@ -25,6 +27,7 @@ import {
   ConfirmDialog,
   DateInput,
   ErrorNotice,
+  Notice,
   Field,
   fieldError,
   FreeTextInput,
@@ -32,6 +35,7 @@ import {
   Select,
   showToast,
   TextInput,
+  EditStampLine,
 } from '../../../shared/ui';
 import { chargesOf, methodsOf, SIDES } from '../allowed';
 import { newRuleDraft, ruleDraftOf, sameRuleDraft, withCharge, withSide } from '../draft';
@@ -65,6 +69,10 @@ export function RuleForm({ rule, today }: RuleFormProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const isNew = rule === null;
+  // When and by whom the rule was last changed (plan 44, PRD FR-7.71).
+  const stamp = useEntryStamp('charge_rule', rule?.id ?? null);
+  // A rule that saved lines were charged by is shut but for its end date and active switch.
+  const locked = rule?.used === true;
   const [initial] = useState(() => (rule === null ? newRuleDraft(today) : ruleDraftOf(rule)));
   const [values, setValues] = useState<RuleDraft>(initial);
   const [baseline, setBaseline] = useState<RuleDraft>(initial);
@@ -114,10 +122,6 @@ export function RuleForm({ rule, today }: RuleFormProps) {
   const submit = overlaps.length > 0 ? finish : saveAndClose;
   const navigation = useFormNavigation(submit);
   useShortcut(SHORTCUTS.save, submit);
-  const goBack = () => {
-    void navigate({ to: '/index/rules' });
-  };
-  useEscape('leave', goBack);
 
   const changeActive = (isActive: boolean) => {
     if (rule === null) return;
@@ -142,10 +146,7 @@ export function RuleForm({ rule, today }: RuleFormProps) {
   };
   const pickerValue = (
     hit: { id: number; code: string; name_ur: string; name_en: string } | null,
-  ) =>
-    hit === null
-      ? null
-      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+  ) => (hit === null ? null : pickedOf(hit));
 
   const methods = methodsOf(values.side, values.charge_type);
 
@@ -154,6 +155,9 @@ export function RuleForm({ rule, today }: RuleFormProps) {
       <Localized id={isNew ? 'rules-new-title' : 'rules-edit-title'}>
         <h1 className="type-title" />
       </Localized>
+      {stamp === null || rule === null ? null : (
+        <EditStampLine stamp={stamp} history={{ entity: 'charge_rule', id: rule.id }} />
+      )}
       <form
         ref={containerRef}
         {...navigation}
@@ -185,153 +189,178 @@ export function RuleForm({ rule, today }: RuleFormProps) {
             </ul>
           </section>
         )}
+        {locked ? (
+          <Notice
+            tone="info"
+            action={
+              <Button
+                onClick={() => {
+                  void navigate({ to: '/index/rules/new' });
+                }}
+              >
+                <Localized id="rules-used-new" />
+              </Button>
+            }
+          >
+            <Localized id="rules-used-note" />
+          </Notice>
+        ) : null}
         <Card>
           <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
-            <Field label={<Localized id="rules-field-side" />} error={fieldError(error, 'side')}>
-              {(props) => (
-                <Select
-                  {...props}
-                  value={values.side}
-                  onChange={(side) => {
-                    setValues((current) => withSide(current, side));
-                  }}
-                  options={SIDES.map((option) => ({
-                    value: option,
-                    label: <Localized id={`rules-side-${option}`} />,
-                  }))}
-                />
-              )}
-            </Field>
-            <Field
-              label={<Localized id="rules-field-charge" />}
-              error={fieldError(error, 'charge_type')}
-            >
-              {(props) => (
-                <Select
-                  {...props}
-                  value={values.charge_type}
-                  onChange={(charge) => {
-                    setValues((current) => withCharge(current, charge));
-                  }}
-                  options={chargesOf(values.side).map((option) => ({
-                    value: option,
-                    label: <Localized id={`rules-charge-${option}`} />,
-                  }))}
-                />
-              )}
-            </Field>
-            <Field
-              label={<Localized id="rules-field-party" />}
-              hint={<Localized id="rules-field-party-hint" />}
-              error={fieldError(error, 'account_id')}
-            >
-              {(props) => (
-                <AccountPicker
-                  {...props}
-                  scope={values.side}
-                  value={values.account}
-                  onChange={(hit) => {
-                    // A party is more specific than a group: choosing one clears the group.
-                    change({
-                      account: pickerValue(hit),
-                      ...(hit === null ? {} : { item_group: '' }),
-                    });
-                  }}
-                />
-              )}
-            </Field>
-            <Field
-              label={<Localized id="rules-field-item" />}
-              hint={<Localized id="rules-field-item-hint" />}
-              error={fieldError(error, 'item_id')}
-            >
-              {(props) => (
-                <Picker
-                  {...props}
-                  scope="item"
-                  value={values.item}
-                  onChange={(hit) => {
-                    // An item is more specific than a group: choosing one clears the group.
-                    change({ item: pickerValue(hit), ...(hit === null ? {} : { item_group: '' }) });
-                  }}
-                />
-              )}
-            </Field>
-            <Field
-              label={<Localized id="rules-field-group" />}
-              hint={<Localized id="rules-field-group-hint" />}
-              error={fieldError(error, 'item_group')}
-              readOnly={values.item !== null || values.account !== null}
-            >
-              {(props) => (
-                <Select
-                  {...props}
-                  value={values.item_group === '' ? NO_GROUP : values.item_group}
-                  onChange={(next) => {
-                    change({ item_group: next === NO_GROUP ? '' : next });
-                  }}
-                  options={[
-                    { value: NO_GROUP, label: <Localized id="rules-group-none" /> },
-                    ...GROUPS.map((group) => ({
-                      value: group,
-                      label: <Localized id={`rules-group-${group}`} />,
-                    })),
-                  ]}
-                />
-              )}
-            </Field>
+            {/* A rule that saved lines were charged by changes only its end date and its active
+                switch (PRD FR-7.70, FR-11.6): the other fields are shut, not hidden. */}
+            <fieldset disabled={locked} className="contents">
+              <Field label={<Localized id="rules-field-side" />} error={fieldError(error, 'side')}>
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={values.side}
+                    onChange={(side) => {
+                      setValues((current) => withSide(current, side));
+                    }}
+                    options={SIDES.map((option) => ({
+                      value: option,
+                      label: <Localized id={`rules-side-${option}`} />,
+                    }))}
+                  />
+                )}
+              </Field>
+              <Field
+                label={<Localized id="rules-field-charge" />}
+                error={fieldError(error, 'charge_type')}
+              >
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={values.charge_type}
+                    onChange={(charge) => {
+                      setValues((current) => withCharge(current, charge));
+                    }}
+                    options={chargesOf(values.side).map((option) => ({
+                      value: option,
+                      label: <Localized id={`rules-charge-${option}`} />,
+                    }))}
+                  />
+                )}
+              </Field>
+              <Field
+                label={<Localized id="rules-field-party" />}
+                hint={<Localized id="rules-field-party-hint" />}
+                error={fieldError(error, 'account_id')}
+              >
+                {(props) => (
+                  <AccountPicker
+                    {...props}
+                    scope={values.side}
+                    value={values.account}
+                    onChange={(hit) => {
+                      // A party is more specific than a group: choosing one clears the group.
+                      change({
+                        account: pickerValue(hit),
+                        ...(hit === null ? {} : { item_group: '' }),
+                      });
+                    }}
+                  />
+                )}
+              </Field>
+              <Field
+                label={<Localized id="rules-field-item" />}
+                hint={<Localized id="rules-field-item-hint" />}
+                error={fieldError(error, 'item_id')}
+              >
+                {(props) => (
+                  <Picker
+                    {...props}
+                    scope="item"
+                    value={values.item}
+                    onChange={(hit) => {
+                      // An item is more specific than a group: choosing one clears the group.
+                      change({
+                        item: pickerValue(hit),
+                        ...(hit === null ? {} : { item_group: '' }),
+                      });
+                    }}
+                  />
+                )}
+              </Field>
+              <Field
+                label={<Localized id="rules-field-group" />}
+                hint={<Localized id="rules-field-group-hint" />}
+                error={fieldError(error, 'item_group')}
+                readOnly={values.item !== null || values.account !== null}
+              >
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={values.item_group === '' ? NO_GROUP : values.item_group}
+                    onChange={(next) => {
+                      change({ item_group: next === NO_GROUP ? '' : next });
+                    }}
+                    options={[
+                      { value: NO_GROUP, label: <Localized id="rules-group-none" /> },
+                      ...GROUPS.map((group) => ({
+                        value: group,
+                        label: <Localized id={`rules-group-${group}`} />,
+                      })),
+                    ]}
+                  />
+                )}
+              </Field>
+            </fieldset>
           </div>
         </Card>
         <Card>
           <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
-            <Field
-              label={<Localized id="rules-field-method" />}
-              error={fieldError(error, 'method')}
-            >
-              {(props) => (
-                <Select
-                  {...props}
-                  value={values.method}
-                  onChange={(method) => {
-                    change({ method });
-                  }}
-                  options={methods.map((option) => ({
-                    value: option,
-                    label: <Localized id={`rules-method-${option}`} />,
-                  }))}
-                />
-              )}
-            </Field>
-            <Field
-              label={<Localized id="rules-field-value" />}
-              hint={<Localized id={`rules-value-hint-${values.method}`} />}
-              error={fieldError(error, 'value')}
-            >
-              {(props) => (
-                <TextInput
-                  {...props}
-                  value={values.value}
-                  onChange={(value) => {
-                    change({ value });
-                  }}
-                  lang="en"
-                />
-              )}
-            </Field>
-            <Field
-              label={<Localized id="rules-field-from" />}
-              error={fieldError(error, 'from_date')}
-            >
-              {(props) => (
-                <DateInput
-                  {...props}
-                  value={values.from_date}
-                  onChange={(from_date) => {
-                    change({ from_date });
-                  }}
-                />
-              )}
-            </Field>
+            <fieldset disabled={locked} className="contents">
+              <Field
+                label={<Localized id="rules-field-method" />}
+                error={fieldError(error, 'method')}
+              >
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={values.method}
+                    onChange={(method) => {
+                      change({ method });
+                    }}
+                    options={methods.map((option) => ({
+                      value: option,
+                      label: <Localized id={`rules-method-${option}`} />,
+                    }))}
+                  />
+                )}
+              </Field>
+              <Field
+                label={<Localized id="rules-field-value" />}
+                hint={<Localized id={`rules-value-hint-${values.method}`} />}
+                error={fieldError(error, 'value')}
+              >
+                {(props) => (
+                  <TextInput
+                    {...props}
+                    value={values.value}
+                    onChange={(value) => {
+                      change({ value });
+                    }}
+                    lang="en"
+                  />
+                )}
+              </Field>
+              <Field
+                label={<Localized id="rules-field-from" />}
+                error={fieldError(error, 'from_date')}
+              >
+                {(props) => (
+                  <DateInput
+                    {...props}
+                    value={values.from_date}
+                    onChange={(from_date) => {
+                      change({ from_date });
+                    }}
+                  />
+                )}
+              </Field>
+            </fieldset>
             <Field
               label={<Localized id="rules-field-to" />}
               hint={<Localized id="rules-field-to-hint" />}
@@ -348,17 +377,19 @@ export function RuleForm({ rule, today }: RuleFormProps) {
               )}
             </Field>
           </div>
-          <Field label={<Localized id="rules-field-note" />} error={fieldError(error, 'note')}>
-            {(props) => (
-              <FreeTextInput
-                {...props}
-                value={values.note}
-                onChange={(note) => {
-                  change({ note });
-                }}
-              />
-            )}
-          </Field>
+          <fieldset disabled={locked}>
+            <Field label={<Localized id="rules-field-note" />} error={fieldError(error, 'note')}>
+              {(props) => (
+                <FreeTextInput
+                  {...props}
+                  value={values.note}
+                  onChange={(note) => {
+                    change({ note });
+                  }}
+                />
+              )}
+            </Field>
+          </fieldset>
           {isNew ? null : (
             <Checkbox
               checked={values.is_active}
@@ -393,9 +424,6 @@ export function RuleForm({ rule, today }: RuleFormProps) {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button shortcut={SHORTCUTS.back} onClick={goBack}>
-              <Localized id="common-back" />
-            </Button>
             {overlaps.length > 0 ? (
               <Button variant="primary" onClick={finish}>
                 <Localized id="rules-overlap-done" />

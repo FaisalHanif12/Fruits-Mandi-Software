@@ -1,0 +1,10 @@
+{
+  "entry": {
+    "amount": "3,000",
+    "date": "10-10-2026",
+    "expense_head_id": 1,
+    "paid_to": "Partner A",
+    "type": "shop_expense"
+  },
+  "replacing_voucher_id": null
+}

@@ -1,0 +1,235 @@
+// Where a tile, a line of the attention list or a name on the dashboard leads (PRD FR-9.1,
+// FR-7.44). A destination is plain data, so a test can say where a click goes; `useOpenDestination`
+// is the one place that turns it into a navigation (Code Standards F27: no screen writes its own).
+
+import { useRouter } from '@tanstack/react-router';
+import type { AttentionFirst } from '../../bindings/AttentionFirst';
+import type { AttentionKind } from '../../bindings/AttentionKind';
+import type { ReportId } from '../../bindings/ReportId';
+import type { SellerDuesSide } from '../../bindings/SellerDuesSide';
+import { useOpenArrival } from '../gardens';
+
+export type Destination =
+  | { kind: 'day' }
+  | { kind: 'bikri-book'; id?: number }
+  | { kind: 'bikri-today' }
+  | { kind: 'stock' }
+  | { kind: 'cashbook' }
+  | { kind: 'trips' }
+  | { kind: 'gardens' }
+  | { kind: 'garden'; id: number }
+  /** The garden screen of a goods arrived entry, found by the entry's id (PRD FR-12.40). */
+  | { kind: 'arrival'; id: number }
+  | { kind: 'backup' }
+  /** The dead amount (R38, PRD FR-10.10): everyone moved to ڈوبی رقم. */
+  | { kind: 'dead-amount' }
+  | { kind: 'index' }
+  | { kind: 'analytics' }
+  /** The buyer dues page (PRD FR-9.4, plan 76 point 9). */
+  | { kind: 'buyer-dues' }
+  /** The seller dues page on one side: the shop owes the seller, the seller owes the shop, or both (PRD FR-9.6, plan 79). */
+  | { kind: 'seller-dues'; side: SellerDuesSide }
+  /** کل اگراہی with its four sections: buyers, sellers, the dead amount and the people who borrowed (PRD FR-9.7). */
+  | { kind: 'total-dues' }
+  /** Every person who borrowed and still owes (the tile ادھار رقم باقی, PRD FR-9.1). */
+  | { kind: 'lent-open' }
+  /** Every seller with an open advance (the tile پیشگی باقی, PRD FR-9.1). */
+  | { kind: 'advances-open' }
+  /** نقدی day by day (the tile آج کی نقدی, PRD FR-9.8). */
+  | { kind: 'cash-sales' }
+  /** The commission page: one month, a row for each day (PRD FR-9.3, plan 76 point 7). */
+  | { kind: 'commission' }
+  /** The kharch page: the shop's kharch per head and each partner's own, for a period (PRD FR-9.5, plan 77). */
+  | { kind: 'kharch' }
+  /** Garden owners' and others' dues: money given to people who are not staff (PRD FR-16.13, plan 76 point 10). */
+  | { kind: 'others-dues' }
+  | { kind: 'personal-drawings' }
+  | { kind: 'money-lent' }
+  | { kind: 'shop-expenses' }
+  | { kind: 'settings-day' }
+  | { kind: 'settings-app' }
+  /** The question log of the assistant, in Settings (PRD FR-7.84, FR-7.76 point 2, plan 80 R6-3). */
+  | { kind: 'settings-assistant' }
+  | { kind: 'receipt' }
+  | { kind: 'payment' }
+  | { kind: 'advance' }
+  | { kind: 'report'; id: ReportId; party?: number; partner?: number };
+
+/** The screen behind each kind of the attention list (PRD FR-7.44). */
+export function destinationOfKind(kind: AttentionKind): Destination {
+  switch (kind) {
+    case 'drafts':
+      return { kind: 'bikri-book' };
+    case 'open_days':
+      return { kind: 'day' };
+    case 'stock_waiting':
+      return { kind: 'stock' };
+    case 'over_credit_limit':
+    case 'dues_old':
+      return { kind: 'report', id: 'R20' };
+    case 'payables_old':
+      return { kind: 'report', id: 'R24' };
+    case 'backup_old':
+      return { kind: 'backup' };
+    case 'loans_overdue':
+      return { kind: 'report', id: 'R32' };
+    case 'takes_overdue':
+      return { kind: 'personal-drawings' };
+    case 'names_missing':
+      return { kind: 'index' };
+    // The books check found a problem: its result is a line of the Day tab of Settings (PRD FR-7.44, NFR-OBS-5, plan 79 item 2c).
+    case 'health_check':
+      return { kind: 'settings-day' };
+    // A question whose two places of a figure differed: its row is in the question log in Settings (PRD FR-7.76 point 2).
+    case 'records_differ':
+      return { kind: 'settings-assistant' };
+  }
+}
+
+/** The ledger of an account (R13). A چکتا buyer has none (PRD FR-13.6), so this is always an account. */
+export function ledgerOf(accountId: number): Destination {
+  return { kind: 'report', id: 'R13', party: accountId };
+}
+
+/**
+ * The record the most urgent line of an item leads to: an account opens its ledger, a partner his
+ * statement, a بکری itself, a trip purchase the trips, garden goods the list of goods left. The backend names the record; the screen only
+ * opens it.
+ */
+export function destinationOfFirst(first: AttentionFirst): Destination {
+  switch (first.target) {
+    case 'account':
+      return ledgerOf(first.id);
+    case 'partner':
+      return { kind: 'report', id: 'R31', partner: first.id };
+    case 'bikri':
+      return { kind: 'bikri-book', id: first.id };
+    case 'purchase':
+      return { kind: 'trips' };
+    // Garden goods waiting: the entry opens its garden (PRD FR-12.40).
+    case 'arrival':
+      return { kind: 'arrival', id: first.id };
+  }
+}
+
+/**
+ * Opens a destination. Where no router is around (a component test, a gallery page) nothing opens
+ * and nothing fails, the way the party card's report buttons behave.
+ */
+export function useOpenDestination(): (destination: Destination) => void {
+  const router = useRouter({ warn: false }) as ReturnType<typeof useRouter> | undefined;
+  const navigate: ReturnType<typeof useRouter>['navigate'] = (options) =>
+    router === undefined ? Promise.resolve() : router.navigate(options);
+  const openArrival = useOpenArrival();
+  return (destination) => {
+    switch (destination.kind) {
+      case 'day':
+        void navigate({ to: '/day' });
+        return;
+      case 'bikri-book':
+        if (destination.id === undefined) void navigate({ to: '/bikri/book' });
+        else void navigate({ to: '/bikri/book', search: { id: destination.id } });
+        return;
+      case 'bikri-today':
+        void navigate({ to: '/bikri/today' });
+        return;
+      case 'stock':
+        void navigate({ to: '/bikri/stock' });
+        return;
+      case 'cashbook':
+        void navigate({ to: '/rokar' });
+        return;
+      case 'trips':
+        void navigate({ to: '/trips' });
+        return;
+      case 'gardens':
+        void navigate({ to: '/gardens' });
+        return;
+      case 'garden':
+        void navigate({ to: '/gardens/$id', params: { id: String(destination.id) } });
+        return;
+      case 'arrival':
+        openArrival(destination.id);
+        return;
+      case 'backup':
+        void navigate({ to: '/backup' });
+        return;
+      case 'dead-amount':
+        void navigate({ to: '/reports/dead-amount' });
+        return;
+      case 'index':
+        void navigate({ to: '/index' });
+        return;
+      case 'analytics':
+        void navigate({ to: '/analytics' });
+        return;
+      case 'buyer-dues':
+        void navigate({ to: '/dues' });
+        return;
+      case 'seller-dues':
+        void navigate({
+          to: '/dues/sellers',
+          search: destination.side === 'all' ? {} : { side: destination.side },
+        });
+        return;
+      case 'total-dues':
+        void navigate({ to: '/dues/total' });
+        return;
+      case 'lent-open':
+        void navigate({ to: '/dues/lent' });
+        return;
+      case 'advances-open':
+        void navigate({ to: '/dues/advances' });
+        return;
+      case 'cash-sales':
+        void navigate({ to: '/cash-sales' });
+        return;
+      case 'commission':
+        void navigate({ to: '/commission' });
+        return;
+      case 'kharch':
+        void navigate({ to: '/kharch' });
+        return;
+      case 'others-dues':
+        void navigate({ to: '/others-dues' });
+        return;
+      case 'personal-drawings':
+        void navigate({ to: '/rokar/expense', search: { type: 'personal_expense' } });
+        return;
+      case 'money-lent':
+        void navigate({ to: '/rokar/lent' });
+        return;
+      case 'shop-expenses':
+        void navigate({ to: '/rokar/expense', search: { type: 'shop_expense' } });
+        return;
+      case 'settings-day':
+        void navigate({ to: '/settings', search: { tab: 'day' } });
+        return;
+      case 'settings-app':
+        void navigate({ to: '/settings', search: { tab: 'app' } });
+        return;
+      case 'settings-assistant':
+        void navigate({ to: '/settings', search: { tab: 'assistant' } });
+        return;
+      case 'receipt':
+        void navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });
+        return;
+      case 'payment':
+        void navigate({ to: '/bikri/voucher', search: { type: 'payment' } });
+        return;
+      case 'advance':
+        void navigate({ to: '/bikri/voucher', search: { type: 'advance' } });
+        return;
+      case 'report':
+        void navigate({
+          to: '/reports/$id',
+          params: { id: destination.id },
+          search: {
+            ...(destination.party === undefined ? {} : { party: destination.party }),
+            ...(destination.partner === undefined ? {} : { partner: destination.partner }),
+          },
+        });
+        return;
+    }
+  };
+}

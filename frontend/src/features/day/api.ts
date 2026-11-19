@@ -22,8 +22,9 @@ export function dayClose(upTo: string): Promise<DayStatus> {
 
 /**
  * Reopens a date and every later date (PRD FR-21.2). The reason is required and goes to the audit
- * log. Answers with the new closed-up-to date.
+ * log, and so is the Owner's sign, as when a day is reopened to fix an entry (FR-21.4; plan 80
+ * Q-R2-2): ERR_SIGN_REQUIRED and ERR_SIGN_WRONG on `sign`. Answers with the new closed-up-to date.
  */
-export function dayReopen(date: string, reason: string): Promise<DayStatus> {
-  return callCommand<DayStatus>('day_reopen', { input: { date, reason } });
+export function dayReopen(date: string, reason: string, sign: string): Promise<DayStatus> {
+  return callCommand<DayStatus>('day_reopen', { input: { date, reason, sign } });
 }

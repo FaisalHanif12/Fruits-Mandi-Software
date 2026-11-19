@@ -427,3 +427,15 @@ settings-overrides-rate-check-hint = A warning shows on the line when a rate is 
 settings-overrides-rate-check-percent = How far apart, in percent
 # review: pending
 settings-overrides-rate-check-percent-hint = Enter a whole number from 1 to 1,000, for example 30.
+
+# The hint inside the search box of the rule list (the party, the item or the note).
+# review: pending
+rules-search-placeholder = Party, item or note
+
+## A rule that saved lines were charged by (plan 44, PRD FR-7.70, FR-11.6).
+
+# review: pending
+rules-used-note = Saved lines were charged by this rule, so only its last date and its active switch can be changed. For a new rate, write a new rule from a new date.
+
+# review: pending
+rules-used-new = Write a new rule

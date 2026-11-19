@@ -1,0 +1,52 @@
+// The lots of our shop that have goods left, as a source for the shared picker (PRD FR-16.11):
+// typing searches them, an empty field lists them. Trip goods and the lots of a closed garden are
+// never in the answer; the backend decides, the screen filters nothing.
+
+import { PICKER_RESULT_LIMIT, type PickerSource } from '../../shared/search';
+import type { PickerHit } from '../../shared/ui';
+import { fruitLots } from './api';
+import type { FruitLotRow } from './types';
+
+/** A lot in the picker: the hit the picker needs, with the row the screen needs. */
+export interface LotHit extends PickerHit {
+  row: FruitLotRow;
+}
+
+/** The code of a lot is the بکری number and the lot number: "1-2". */
+export function lotCode(row: Pick<FruitLotRow, 'bikri_number' | 'lot_no'>): string {
+  return `${String(row.bikri_number)}-${String(row.lot_no)}`;
+}
+
+/**
+ * The goods of a lot named for a picker row, in one script: the item with the counter of the lot and
+ * the packing, "Banana-2 Box" (PRD FR-12.45). The seller is the row's second line.
+ */
+export function lotGoodsName(item: string, counter: number, packing: string): string {
+  return `${item}-${String(counter)} ${packing}`;
+}
+
+function hitOf(row: FruitLotRow): LotHit {
+  const seller = row.seller;
+  return {
+    id: row.lot_id,
+    code: lotCode(row),
+    name_ur: lotGoodsName(row.item.name_ur, row.lot_counter, row.packing.name_ur),
+    name_en: lotGoodsName(row.item.name_en, row.lot_counter, row.packing.name_en),
+    extra_ur: seller.name_ur,
+    extra_en: seller.name_en,
+    is_active: true,
+    row,
+  };
+}
+
+/** The picker source of the lots with goods left. A lot is not "remembered" when chosen. */
+export const LOT_SOURCE: PickerSource<LotHit> = {
+  key: ['fruit', 'lots'],
+  search: (text, limit) =>
+    fruitLots({ search: text, offset: 0, limit }).then((answer) => answer.rows.map(hitOf)),
+  recent: () =>
+    fruitLots({ search: null, offset: 0, limit: PICKER_RESULT_LIMIT }).then((answer) =>
+      answer.rows.map(hitOf),
+    ),
+  touch: () => Promise.resolve(null),
+};

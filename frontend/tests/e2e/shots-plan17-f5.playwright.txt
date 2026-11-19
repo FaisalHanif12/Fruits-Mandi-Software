@@ -1,0 +1,294 @@
+// The final keyboard run and screenshots of the whole worked day of plan 17 (F5): the روکڑ بک,
+// خرچہ (the three types), ادھار رقم (lent and returned), الگ کھاتہ, سرمایہ, جنرل, the partner
+// overview and statement, and the day close summary, in both languages at the three window sizes,
+// taken from the development page /dev/rokar with the Playwright tool. It is a developer tool: run
+// it with a Vite dev server up on its OWN port (`pnpm --filter frontend exec vite --port 5273
+// --strictPort`; change BASE if you use another port). It checks the address before each shot.
+//
+// Keyboard only: every field is reached with Tab (from the first field of the screen), a list is
+// opened with Enter and chosen with the arrow keys and Enter, text and amounts are typed, and an
+// entry is saved with F10. The mouse is never used after the page opens. Per scenario it returns the
+// trail of fields the Tab key stopped on, whether F10 showed a message, and the sideways overflow
+// (NFR-USE-15): the screen area, the whole page, and every inner box must not scroll sideways.
+//
+// Usage with the Playwright MCP tool: browser_run_code_unsafe with `filename` set to this file.
+// Set ONLY below to a list of scenario names to run a part. (It is a
+// snippet for that tool, not a module, so it is kept as .txt and the linter does not read it. The
+// Windows check is specs 24 to 28.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/plan17-f5';
+  const BASE = 'http://localhost:5273';
+  const PAGE = `${BASE}/#/dev/rokar`;
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const settle = (ms) => page.waitForTimeout(ms);
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type !== 'beforeunload') add(type, ...rest);
+    };
+  });
+
+  // What has the focus now, in a few words.
+  const active = () =>
+    page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return 'none';
+      const role = el.getAttribute('role') ?? '';
+      const kind =
+        el.tagName === 'INPUT' && el.getAttribute('inputmode') === 'numeric'
+          ? 'amount'
+          : el.tagName === 'INPUT' && role === 'combobox'
+            ? 'picker'
+            : el.tagName === 'BUTTON' && role === 'combobox'
+              ? 'select'
+              : el.tagName === 'INPUT'
+                ? 'text'
+                : el.tagName === 'BUTTON'
+                  ? 'button'
+                  : el.className.includes?.('ag-cell')
+                    ? 'cell'
+                    : el.tagName.toLowerCase();
+      return kind;
+    });
+
+  // Tab until the focus is on a field of this kind. Returns false if it never gets there.
+  const trail = [];
+  const tabTo = async (kind, max = 14) => {
+    // Enter on a picker already moves the focus on (PRD 7.2): if the focus is on the next field
+    // of this kind, no Tab is pressed (the trail shows it with a star).
+    if ((await active()) === kind && trail.length > 0) {
+      trail.push(`${kind}*`);
+      return true;
+    }
+    for (let i = 0; i < max; i += 1) {
+      await page.keyboard.press('Tab');
+      const now = await active();
+      if (now === kind) {
+        trail.push(kind);
+        return true;
+      }
+    }
+    trail.push(`!${kind}`);
+    return false;
+  };
+  const startAtFirstField = async () => {
+    await page.evaluate(() => {
+      const first = document.querySelector('main input');
+      if (first) first.focus();
+    });
+  };
+  // A list (a drop-down): Enter opens it, the arrow keys move, Enter chooses.
+  const chooseWithKeys = async (downs) => {
+    await page.keyboard.press('Enter');
+    await settle(200);
+    for (let i = 0; i < downs; i += 1) await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await settle(200);
+  };
+  const typeText = async (text) => {
+    await page.keyboard.type(text, { delay: 20 });
+    await settle(250);
+  };
+  const pickWithKeys = async (text) => {
+    await page.keyboard.type(text, { delay: 20 });
+    await settle(350);
+    await page.keyboard.press('Enter');
+    await settle(350);
+  };
+  const toastText = () =>
+    page.evaluate(() => {
+      const bits = [...document.querySelectorAll('[role="status"], [role="alert"], li[data-state="open"]')];
+      return bits.map((b) => (b.textContent ?? '').trim()).filter(Boolean).join(' | ').slice(0, 120);
+    });
+
+  // The Urdu word or the English word for a typed reason.
+  const REASON = { ur: 'گھر کا خرچ', en: 'home' };
+
+  const SCENARIOS = {
+    'book': { query: '?screen=book', run: async () => {} },
+    'expense-shop': {
+      query: '?screen=expense&type=shop_expense',
+      run: async () => {
+        await startAtFirstField();
+        if (await tabTo('select')) await chooseWithKeys(0);
+        if (await tabTo('amount')) await typeText('3000');
+        await settle(500);
+      },
+      save: true,
+    },
+    'expense-personal': {
+      query: '?screen=expense&type=personal_expense',
+      run: async (language) => {
+        await startAtFirstField();
+        if (await tabTo('select')) await chooseWithKeys(0);
+        if (await tabTo('amount')) await typeText('2000');
+        if (await tabTo('picker')) await typeText(REASON[language]);
+        await settle(500);
+      },
+      save: true,
+    },
+    'expense-return': {
+      query: '?screen=expense&type=personal_return',
+      run: async () => {
+        await startAtFirstField();
+        if (await tabTo('select')) await chooseWithKeys(0);
+        if (await tabTo('amount')) await typeText('1000');
+        await settle(500);
+      },
+    },
+    'lent': {
+      query: '?screen=lent&type=money_lent',
+      run: async (language) => {
+        await startAtFirstField();
+        if (await tabTo('picker')) await pickWithKeys('aslam');
+        if (await tabTo('amount')) await typeText('5000');
+        if (await tabTo('picker')) await typeText(REASON[language]);
+        await settle(500);
+      },
+      save: true,
+    },
+    'lent-return-salary': {
+      query: '?screen=lent&type=money_lent_return',
+      run: async () => {
+        await startAtFirstField();
+        if (await tabTo('picker')) await pickWithKeys('aslam');
+        if (await tabTo('amount')) await typeText('2000');
+        if (await tabTo('select')) await chooseWithKeys(1);
+        await settle(500);
+      },
+    },
+    'khata': {
+      query: '?screen=khata&type=khata_out',
+      run: async (language) => {
+        await startAtFirstField();
+        if (await tabTo('picker')) await pickWithKeys('family');
+        if (await tabTo('amount')) await typeText('10000');
+        if (await tabTo('picker')) await typeText(REASON[language]);
+        await settle(500);
+      },
+      save: true,
+    },
+    'capital-in': {
+      query: '?screen=capital&type=capital_in',
+      run: async () => {
+        await startAtFirstField();
+        if (await tabTo('select')) await chooseWithKeys(1);
+        if (await tabTo('amount')) await typeText('50000');
+        await settle(500);
+      },
+      save: true,
+    },
+    'general': {
+      query: '?screen=general',
+      run: async () => {
+        // The grid, as in PRD 7.2: typing replaces a cell, Enter moves to the next editable cell.
+        // Electricity 3,000 on the بنام side, cash 3,000 on the جمع side (the correction of Event 5).
+        await page.evaluate(() => {
+          const cell = document.querySelector('main .ag-row[row-index="0"] .ag-cell[col-id="account"]');
+          if (cell) cell.focus();
+        });
+        await typeText('elec');
+        await page.keyboard.press('Enter');
+        await settle(300);
+        await typeText('3000');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+        await settle(200);
+        await typeText('cash');
+        await page.keyboard.press('Enter');
+        await settle(300);
+        await page.keyboard.press('Enter');
+        await typeText('3000');
+        await page.keyboard.press('Enter');
+        await settle(700);
+        trail.push('grid');
+      },
+      save: true,
+    },
+    'statement': {
+      query: '?screen=statement&partner=2',
+      run: async () => {
+        await startAtFirstField();
+        await settle(500);
+      },
+    },
+    'overview': { query: '?screen=overview', run: async () => { await settle(500); } },
+    'day-summary': {
+      query: '?screen=day',
+      run: async () => {
+        await startAtFirstField();
+        await settle(700);
+        // The close button is reached with Tab; Enter opens the confirm box that says what happens.
+        if (await tabTo('button')) {
+          await page.keyboard.press('Enter');
+          await settle(500);
+        }
+      },
+    },
+  };
+
+  const ONLY = null;
+  const only = ONLY ?? Object.keys(SCENARIOS);
+  const result = [];
+  for (const name of only) {
+    const scenario = SCENARIOS[name];
+    if (scenario === undefined) {
+      result.push(`${name}: no such scenario`);
+      continue;
+    }
+    for (const language of ['ur', 'en']) {
+      for (const [width, height] of SIZES) {
+        trail.length = 0;
+        await page.setViewportSize({ width, height });
+        await page.goto('about:blank');
+        await page.goto(`${PAGE}${scenario.query}`);
+        await page.reload();
+        await settle(900);
+        if (language === 'en') {
+          await page.keyboard.press('Alt+KeyL');
+          await settle(500);
+        }
+        // The address must be ours before anything is typed or photographed.
+        const here = page.url();
+        if (!here.startsWith(PAGE)) {
+          result.push(`${name} ${language} ${width}x${height} WRONG ADDRESS ${here}`);
+          continue;
+        }
+        await scenario.run(language);
+        const overflow = await page.evaluate(() => {
+          const main = document.querySelector('main');
+          const wide = [...document.querySelectorAll('main *')].filter(
+            (el) =>
+              el.scrollWidth > el.clientWidth + 1 &&
+              getComputedStyle(el).overflowX === 'visible' &&
+              el.clientWidth > 0,
+          );
+          return {
+            main: main ? main.scrollWidth - main.clientWidth : -1,
+            page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            wide: wide.length,
+          };
+        });
+        const lang = await page.evaluate(() => `${document.documentElement.lang}/${document.documentElement.dir}`);
+        const file = `${OUT}/${name}-${language}-${width}x${height}.png`;
+        await page.screenshot({ path: file, fullPage: false });
+        let saved = '';
+        if (scenario.save === true && width === 1366) {
+          await page.keyboard.press('F10');
+          await settle(700);
+          saved = ` F10 says: ${await toastText()}`;
+        }
+        result.push(
+          `${name} ${language} ${width}x${height} [${lang}] overflow main=${overflow.main} page=${overflow.page} wide=${overflow.wide} trail=${trail.join('>')}${saved}`,
+        );
+      }
+    }
+  }
+  return result.join('\n');
+}

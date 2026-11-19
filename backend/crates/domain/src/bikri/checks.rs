@@ -1,9 +1,9 @@
 //! The checks of a بکری draft that need the world outside it (PRD FR-12.4 to FR-12.7, FR-13.2,
-//! FR-7.55): accounts, one-time people, payment type, credit limit and the rate check.
+//! FR-7.55): accounts, چکتا buyers, who must pay in full, credit limit and the rate check.
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::{PaymentType, PreparedPukhta};
+use mandi_core::bikri::PreparedChukta;
 use mandi_core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_core::money::{MoneyError, Paisa, Qty, avg_rate};
 use mandi_core::validate;
@@ -42,17 +42,23 @@ fn with_values(code: ErrorCode, field: &str, values: &[(&str, i64)]) -> FieldErr
 /// What kind of party a field wants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Wanted {
-    Seller,
+    /// The seller of a lot: a seller, or the اپنا مال account for a lot of own goods.
+    LotSeller,
+    /// A buyer.
     Buyer,
 }
 
 /// Looks an account up for a field and checks that it is the right kind and active (PRD FR-10.2).
-/// `required` is the code for an empty field.
+/// `required` is the code for an empty field. `stored_here` is true when the caller says the
+/// account is the one a stored line or lot already has in the posting an edit replaces: a person in
+/// the dead amount (inactive) who still has money in that posting then counts as active, for that
+/// line or lot only (PRD A67, FR-10.10). A new line, or a line moved onto him, is refused.
 pub(super) fn account<'a>(
     issues: &mut Issues,
     lookups: &'a Lookups,
     id: Option<i64>,
     wanted: Wanted,
+    stored_here: bool,
     field: &str,
     required: Option<ErrorCode>,
 ) -> Option<&'a AccountFacts> {
@@ -66,19 +72,33 @@ pub(super) fn account<'a>(
         issues.error(ErrorCode::ErrNotFound, field);
         return None;
     };
+    // The اپنا مال account is offered only as the seller of a lot (PRD FR-12.26, FR-10.4).
+    if facts.is_own_goods && wanted != Wanted::LotSeller {
+        issues.error(ErrorCode::ErrOwnGoodsAccountRestricted, field);
+        return None;
+    }
     let kind_ok = match wanted {
-        Wanted::Seller => facts.kind == PartyKind::Seller && !facts.is_own_goods,
+        // A separate khata can sell its goods through a lot (PRD FR-16.7).
+        // A garden sells its goods through a lot too (PRD FR-12.36).
+        Wanted::LotSeller => matches!(
+            facts.kind,
+            PartyKind::Seller | PartyKind::Khata | PartyKind::Garden
+        ),
         Wanted::Buyer => facts.kind == PartyKind::Buyer,
     };
     if !kind_ok {
         let code = match wanted {
-            Wanted::Seller => ErrorCode::ErrNotASeller,
+            Wanted::LotSeller => ErrorCode::ErrNotASeller,
             Wanted::Buyer => ErrorCode::ErrNotABuyer,
         };
         issues.error(code, field);
         return None;
     }
-    if !facts.is_active {
+    if facts.kind == PartyKind::Garden && facts.garden_closed {
+        issues.error(ErrorCode::ErrGardenClosed, field);
+        return None;
+    }
+    if !facts.is_active && !(stored_here && facts.in_edited_posting) {
         issues.error(ErrorCode::ErrAccountInactive, field);
         return None;
     }
@@ -101,91 +121,73 @@ pub(super) fn master_exists(
     }
 }
 
-/// The one-time person of a پختہ کھاتہ account (PRD FR-13.2): both names, each in its own
-/// script (PRD FR-7.28), and a phone when `need_phone`. A phone that is typed must be valid.
-/// `prefix` is the path of the lot or line, for example `lots[0].sales[1]`.
-pub(super) fn pukhta(
-    issues: &mut Issues,
-    prefix: &str,
-    person: &PreparedPukhta,
-    need_phone: bool,
-) -> bool {
+/// The چکتا buyer of a line on the چکتا کھاتہ account (PRD FR-13.2): both names, each in its own
+/// script (PRD FR-7.28). His phone is optional, but a typed one must be valid. `prefix` is the path
+/// of the line, for example `lots[0].sales[1]`.
+pub(super) fn chukta(issues: &mut Issues, prefix: &str, person: &PreparedChukta) -> bool {
     let mut ok = true;
-    let name_ur = format!("{prefix}.pukhta.name_ur");
-    let name_en = format!("{prefix}.pukhta.name_en");
-    let phone = format!("{prefix}.pukhta.phone");
+    let name_ur = format!("{prefix}.chukta.name_ur");
+    let name_en = format!("{prefix}.chukta.name_en");
+    let phone = format!("{prefix}.chukta.phone");
     if person.name_ur.is_empty() {
-        issues.error(ErrorCode::ErrPukhtaNameRequired, &name_ur);
+        issues.error(ErrorCode::ErrChuktaNameRequired, &name_ur);
         ok = false;
     } else if let Err(e) = validate::name_ur(&name_ur, &person.name_ur) {
         issues.errors.push(e);
         ok = false;
     }
     if person.name_en.is_empty() {
-        issues.error(ErrorCode::ErrPukhtaNameRequired, &name_en);
+        issues.error(ErrorCode::ErrChuktaNameRequired, &name_en);
         ok = false;
     } else if let Err(e) = validate::name_en(&name_en, &person.name_en) {
         issues.errors.push(e);
         ok = false;
     }
-    if person.phone.is_empty() {
-        if need_phone {
-            issues.error(ErrorCode::ErrPukhtaPhoneRequired, &phone);
-            ok = false;
-        }
-    } else if let Err(e) = validate::phone(&phone, &person.phone) {
+    if !person.phone.is_empty()
+        && let Err(e) = validate::phone(&phone, &person.phone)
+    {
         issues.errors.push(e);
         ok = false;
     }
     ok
 }
 
-/// How the buyer of a line pays (PRD 12.4, FR-13.4). Typed credit is refused for the نقدی منڈی
-/// account (always cash) and for a buyer whose "ادھار کی اجازت" is off (PRD 10.2: cash only).
-/// With nothing chosen: credit if the buyer may have credit, else cash; the one-time buyer
-/// defaults to cash. A one-time buyer may take credit (with a phone, checked by [`pukhta`]).
-pub(super) fn payment_type(
-    issues: &mut Issues,
-    buyer: &AccountFacts,
-    chosen: Option<PaymentType>,
-    field: &str,
-) -> Option<PaymentType> {
-    let may_credit = !buyer.is_naqdi_mandi && (buyer.is_pukhta || buyer.credit_allowed);
-    match chosen {
-        Some(PaymentType::Credit) if !may_credit => {
-            issues.error(ErrorCode::ErrCreditNotAllowed, field);
-            None
-        }
-        Some(kind) => Some(kind),
-        None if buyer.is_pukhta || !may_credit => Some(PaymentType::Cash),
-        None => Some(PaymentType::Credit),
-    }
+/// True for a buyer who always pays the whole buyer total on the spot (PRD FR-12.44, plan 60 P3):
+/// the نقدی منڈی account, a چکتا buyer, or a buyer whose "ادھار کی اجازت" is off (PRD 10.2). The
+/// backend sets his paid amount; the screen shows it and cannot type in it.
+///
+/// Example: a چکتا buyer with a buyer total of 12,800 pays 12,800.
+pub(super) fn must_pay_in_full(buyer: &AccountFacts) -> bool {
+    buyer.is_naqdi_mandi || buyer.is_chukta || !buyer.credit_allowed
 }
 
-/// The credit limit check (PRD FR-12.4, FR-7.56). `owed` is a running map: the buyer's signed
-/// balance now plus the buyer totals of his credit rows in this draft, in the order of the
-/// draft (lot order, then line order). Only a named buyer with a limit is checked, and only when
-/// what he would owe is MORE than the limit (exactly at the limit is fine).
+/// The credit limit check (PRD FR-12.4, FR-7.56, FR-12.44). `owed` is a running map: the buyer's
+/// signed balance now plus what is left on his account from the rows of this draft (the buyer
+/// total less what he paid on the spot), in the order of the draft (lot order, then line order).
+/// A row that leaves nothing on his account is not checked and adds nothing. Only a named buyer
+/// with a limit is checked, and only when what he would owe is MORE than the limit (exactly at the
+/// limit is fine).
 ///
-/// Example: balance 0 and limit 12,879: the first credit row of 12,880 takes him to 12,880,
-/// which is above the limit, so it warns (or is an error when the setting is block).
+/// Example: balance 0 and limit 12,879: the first row, with 12,880 left on his account, takes him
+/// to 12,880, which is above the limit, so it warns (or is an error when the setting is block).
+/// With 3,000 of it paid on the spot only 9,880 is left, and it does not warn.
 pub(super) fn credit_limit(
     issues: &mut Issues,
     owed: &mut HashMap<i64, Paisa>,
     buyer_id: i64,
     buyer: &AccountFacts,
-    buyer_total: Paisa,
+    left: Paisa,
     blocks: bool,
     field: &str,
 ) -> Result<(), MoneyError> {
     let Some(limit) = buyer.credit_limit else {
         return Ok(());
     };
-    if buyer.is_pukhta || buyer.is_naqdi_mandi {
+    if buyer.is_chukta || buyer.is_naqdi_mandi {
         return Ok(());
     }
     let before = *owed.entry(buyer_id).or_insert(buyer.balance);
-    let would_owe = before.checked_add(buyer_total)?;
+    let would_owe = before.checked_add(left)?;
     owed.insert(buyer_id, would_owe);
     if would_owe > limit {
         let values = [

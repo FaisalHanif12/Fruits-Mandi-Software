@@ -1,0 +1,32 @@
+{
+  "backup": {
+    "cloud_age_hours": null,
+    "cloud_level": "off",
+    "errors": 0,
+    "last_cloud_at": null,
+    "last_local_at": null,
+    "last_usb_at": null,
+    "queue_len": 0
+  },
+  "books": {
+    "audit_chain": {
+      "at": null,
+      "ok": true
+    },
+    "audit_rows": 3,
+    "balanced": true,
+    "difference_paisa": 0,
+    "journal_chain": {
+      "at": null,
+      "ok": true
+    },
+    "journal_entries": 0,
+    "ran": true
+  },
+  "checked_at": "<time>",
+  "data": {
+    "reference": null,
+    "state": "ok"
+  },
+  "ok": true
+}

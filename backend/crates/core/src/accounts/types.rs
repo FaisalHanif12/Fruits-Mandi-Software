@@ -5,8 +5,9 @@ use ts_rs::TS;
 
 use crate::error::ErrorCode;
 use crate::money::Paisa;
+use crate::paging::SortInput;
 
-/// The four kinds of account a user can make (PRD 10.2 "قسم کھاتہ").
+/// The four kinds of account a user can make (PRD 10.2 "قسم کھاتہ"). This is the SIDE of a party.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountType {
@@ -31,6 +32,17 @@ impl AccountType {
         }
     }
 
+    /// The code type of a seller or a buyer (plan 32): their codes are the type number plus a
+    /// running number. `None` for the other types, which keep the control code plus a 4-digit
+    /// serial (PRD 1.8 R4).
+    pub const fn code_type(self) -> Option<crate::codes::CodeType> {
+        match self {
+            AccountType::Seller => Some(crate::codes::CodeType::Seller),
+            AccountType::Buyer => Some(crate::codes::CodeType::Buyer),
+            AccountType::MoneyLent | AccountType::Other => None,
+        }
+    }
+
     /// The control a type always goes under, or `None` for `Other` (the user chooses).
     pub const fn fixed_control(self) -> Option<&'static str> {
         match self {
@@ -42,10 +54,20 @@ impl AccountType {
     }
 }
 
+/// Serde helper: leave a `false` flag out of the JSON, so a flag that was added later does not change
+/// any existing answer. The TypeScript field is optional and a missing field means `false` (the same
+/// way a missing `tag` means no tag).
+pub fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 /// The control of sellers (PRD FR-10.2).
 pub const SELLER_CONTROL: &str = "03011";
 /// The control of buyers (PRD FR-10.2).
 pub const BUYER_CONTROL: &str = "0304";
+/// The control of separate khatas (PRD FR-10.4, 16.6). A khata is never income or expense and is
+/// never in a partner's total; it can be the seller of a lot (PRD FR-16.7).
+pub const KHATA_CONTROL: &str = "0305";
 /// The control of people who borrow money (PRD FR-10.4 v1.2).
 pub const MONEY_LENT_CONTROL: &str = "0103";
 /// The system account that takes the other side of every opening (PRD FR-10.9).
@@ -57,6 +79,16 @@ pub const EXPENSE_HEAD: &str = "05";
 /// نقدی منڈی, the cash buyer with no name (PRD FR-10.4): he pays at once, so he never holds a
 /// balance.
 pub const NAQDI_MANDI_CODE: &str = "03040000";
+/// اپنا مال, the seller of a trip's goods (PRD FR-10.4, FR-12.26). It never holds a balance.
+pub const OWN_GOODS_CODE: &str = "030119998";
+/// The control of a partner's gardens, trips and fruit account (PRD FR-10.4 v1.6). A code starts with
+/// it. These accounts are made with the partner and never take an opening balance (PRD FR-10.9).
+pub const VENTURE_CONTROL_CODE: &str = "0604";
+/// The control of a garden's account (PRD FR-10.4 v1.6). The account is made with the garden and
+/// never takes an opening balance (PRD FR-10.9).
+pub const GARDEN_CONTROL_CODE: &str = "0306";
+/// بینک: not used from v1.6, because all money is روکڑ (PRD FR-10.4). Nothing opens on it.
+pub const BANK_ACCOUNT_CODE: &str = "01020001";
 /// Whether an account can take an opening balance (PRD FR-10.9). This is the one named place for
 /// the list, used by the save (`ERR_OPENING_NOT_ALLOWED`) and by `AccountRow::can_take_opening`
 /// for the openings grid. The documents do not say which accounts are left out; the list is the
@@ -66,23 +98,41 @@ pub const NAQDI_MANDI_CODE: &str = "03040000";
 ///   share rows (PRD FR-6.5);
 /// - ابتدائی فرق itself, which is the other side of every opening;
 /// - نقدی منڈی, who pays at once and never holds a balance (PRD FR-12.4);
-/// - the پختہ کھاتہ accounts, which hold many people, each with his own balance (PRD FR-13.5).
+/// - the چکتا کھاتہ accounts, which hold no balance: every line on them is paid in full (PRD FR-13.1).
 ///
 /// ```
 /// use mandi_core::accounts::can_take_opening;
-/// assert!(can_take_opening("01", "01010001", false)); // روکڑ
-/// assert!(can_take_opening("03", "030110001", false)); // a seller
-/// assert!(!can_take_opening("04", "04010001", false)); // income
-/// assert!(!can_take_opening("06", "06019999", false)); // ابتدائی فرق
-/// assert!(!can_take_opening("03", "03040000", false)); // نقدی منڈی
-/// assert!(!can_take_opening("03", "03049999", true)); // پختہ کھاتہ
+/// assert!(can_take_opening("01", "0101", "01010001", false)); // روکڑ
+/// assert!(can_take_opening("03", "03011", "0010", false)); // a seller
+/// assert!(!can_take_opening("04", "0401", "04010001", false)); // income
+/// assert!(!can_take_opening("06", "0601", "06019999", false)); // ابتدائی فرق
+/// assert!(!can_take_opening("03", "0304", "03040000", false)); // نقدی منڈی
+/// assert!(!can_take_opening("03", "0304", "0030", true)); // چکتا کھاتہ
+/// assert!(!can_take_opening("03", "0306", "0080", false)); // a garden (code 0080, control 0306)
 /// ```
-pub fn can_take_opening(head_code: &str, code: &str, is_pukhta_khata: bool) -> bool {
+pub fn can_take_opening(
+    head_code: &str,
+    control_code: &str,
+    code: &str,
+    is_chukta_khata: bool,
+) -> bool {
     head_code != INCOME_HEAD
         && head_code != EXPENSE_HEAD
         && code != OPENING_DIFFERENCE_CODE
         && code != NAQDI_MANDI_CODE
-        && !is_pukhta_khata
+        // اپنا مال never holds a balance (PRD FR-12.26). The 0604 and 0306 accounts hold only the
+        // money of gardens, trips and fruit, which comes from their own entries, and بینک is not
+        // used (PRD FR-10.9 v1.6, D4-A31, D4-A32).
+        && code != OWN_GOODS_CODE
+        && code != BANK_ACCOUNT_CODE
+        // A garden's account has the code of its garden (0080), so it is told by its control.
+        && control_code != VENTURE_CONTROL_CODE
+        && control_code != GARDEN_CONTROL_CODE
+        // The 0605 accounts and the contra account 0307 hold only the mirror lines of linked
+        // khatas and loans (plan 76).
+        && control_code != "0605"
+        && control_code != "0307"
+        && !is_chukta_khata
 }
 
 /// Which controls an account of type `other` may go under.
@@ -91,10 +141,27 @@ pub struct ControlRule;
 impl ControlRule {
     /// True for a control with party type `other` that is not one of the controls that have
     /// their own way in: 0103 is the type ادھار رقم, 0501 is filled by expense heads and 0102 by
-    /// bank accounts (plan 06).
+    /// bank accounts (plan 06). 0604 (gardens, trips and fruit) is made with each partner (plan 11).
     pub fn allows_other(code: &str, party_type: &str) -> bool {
-        party_type == "other" && !matches!(code, "0103" | "0501" | "0102")
+        party_type == "other"
+            && !matches!(code, "0103" | "0501" | "0102" | "0604" | "0605" | "0307")
     }
+}
+
+/// The short code of a seller or buyer account (PRD 1.8 R5): the running number of its code, which
+/// is the code without its 3-digit type number and without padding. `None` for every other account
+/// (other accounts have no short code), and for the چکتا کھاتہ accounts.
+///
+/// ```
+/// use mandi_core::accounts::short_code_of;
+/// assert_eq!(short_code_of("0021").as_deref(), Some("1"));
+/// assert_eq!(short_code_of("00112").as_deref(), Some("12"));
+/// assert_eq!(short_code_of("0010").as_deref(), Some("0"));
+/// assert_eq!(short_code_of("0030"), None); // چکتا کھاتہ
+/// assert_eq!(short_code_of("01010001"), None); // cash: not a seller or a buyer
+/// ```
+pub fn short_code_of(code: &str) -> Option<String> {
+    crate::codes::short_code_of_party(code)
 }
 
 /// The first normal serial (PRD FR-10.3).
@@ -120,12 +187,20 @@ pub struct AccountInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
-    /// The full code (control code plus 4 digits). Empty gives the next free code.
+    /// The full code. A seller: `001` plus a running number (`0010`, `00110`); a buyer: `002` plus a
+    /// running number; any other account: the control code plus 4 digits. Empty gives the next free code. A code of the wrong type is
+    /// `ERR_CODE_INVALID` on `code`; a used one (`0030` and `0031` too) `ERR_CODE_TAKEN`.
     pub code: String,
     /// Urdu name (PRD FR-7.28).
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان, PRD 10.2): empty, or 1 to 4 English capital letters and dots with at least
+    /// one letter, for example `K`, `BA`, `D.P`. A lower-case letter is made capital (`k` is
+    /// saved as `K`). Never converted to Urdu (PRD FR-7.25). Missing means no tag. Errors:
+    /// `ERR_TAG_INVALID` on `tag`.
+    #[serde(default)]
+    pub tag: String,
     /// Words the user confirmed in the spelling check (PRD FR-7.66). The father or firm name is
     /// checked with the names.
     #[serde(default)]
@@ -172,18 +247,32 @@ pub struct AccountInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub collector_staff_id: Option<i64>,
-    /// The collection day, 0 (Monday) to 6 (Sunday). Null if none.
-    #[serde(default)]
-    #[ts(type = "number | null")]
-    pub collection_weekday: Option<i64>,
     /// False hides the account from pickers; reports keep it.
     pub is_active: bool,
     /// A note, up to 500 characters.
     pub note: String,
 }
 
+/// Input of `accounts_save`: the account form and the answer of the cash box (PRD FR-6.7, plan 80
+/// gate R4-4).
+///
+/// Changing the opening of an account whose opening is in روکڑ (a partner's opening capital put
+/// into cash, PRD 17.1 v1.43) takes cash out. When cash would end below 0 the save answers
+/// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` with the value `cash_after_paisa`; the screen shows the
+/// box of FR-6.7 with that value and sends the form again with `confirm_cash_below_zero` true.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct AccountSaveRequest {
+    /// The account as before.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: AccountInput,
+    /// True after the user said yes to the cash box. Missing means false.
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
+}
+
 /// A small pointer to another record, for the lists and the form.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct RecordRef {
     /// Row id.
     #[ts(type = "number")]
@@ -194,6 +283,12 @@ pub struct RecordRef {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان) of an account, shown after its name through `displayName` (PRD 10.2,
+    /// Code Standards F38). Null when the account has none, and always null for a record that is
+    /// not an account (a city, an item, a packing, a staff member).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
 }
 
 /// Which side a balance stands on.
@@ -244,6 +339,38 @@ impl Balance {
         Balance::from_net(net)
     }
 
+    /// The balance as a signed amount: debit positive, credit negative (debit minus credit).
+    ///
+    /// # Errors
+    /// `MoneyError` if the amount cannot be negated.
+    pub fn signed(self) -> Result<Paisa, crate::money::MoneyError> {
+        match self.side {
+            BalanceSide::Dr => Ok(self.amount_paisa),
+            BalanceSide::Cr => self.amount_paisa.checked_neg(),
+            BalanceSide::Zero => Ok(Paisa::ZERO),
+        }
+    }
+
+    /// This balance and another added together as signed amounts: the combined balance of two
+    /// linked accounts (PRD E10, FR-10.2). Checked arithmetic.
+    ///
+    /// ```
+    /// use mandi_core::accounts::{Balance, BalanceSide};
+    /// use mandi_core::money::Paisa;
+    /// let rupees = |n| Paisa::from_rupees(n).unwrap();
+    /// // He owes 2,880 as a buyer and is owed 10,160 as a seller: the shop owes him 7,280.
+    /// let buyer = Balance::from_totals(rupees(2_880), rupees(0)).unwrap();
+    /// let seller = Balance::from_totals(rupees(0), rupees(10_160)).unwrap();
+    /// let both = buyer.combined_with(seller).unwrap();
+    /// assert_eq!((both.amount_paisa, both.side), (rupees(7_280), BalanceSide::Cr));
+    /// ```
+    ///
+    /// # Errors
+    /// `MoneyError` on overflow.
+    pub fn combined_with(self, other: Balance) -> Result<Balance, crate::money::MoneyError> {
+        Balance::from_net(self.signed()?.checked_add(other.signed()?)?)
+    }
+
     /// The balance from a signed net (debit minus credit).
     pub fn from_net(net: Paisa) -> Result<Balance, crate::money::MoneyError> {
         if net == Paisa::ZERO {
@@ -273,7 +400,8 @@ pub struct AccountRow {
     pub version: i64,
     /// The full code.
     pub code: String,
-    /// The 4-digit serial as a number.
+    /// The serial as a number: the running number of a seller's or buyer's code (`0` for `0010`),
+    /// the 4-digit serial of every other account.
     pub serial: u32,
     /// The kind of account (an account under another control is `other`).
     pub account_type: AccountType,
@@ -283,6 +411,10 @@ pub struct AccountRow {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Father or firm name in Urdu. Empty if none.
     pub father_or_firm_ur: String,
     /// Father or firm name in English. Empty if none.
@@ -318,16 +450,14 @@ pub struct AccountRow {
     pub default_marka: Option<RecordRef>,
     /// The collector, if any.
     pub collector: Option<RecordRef>,
-    /// The collection day, 0 (Monday) to 6 (Sunday), or null.
-    #[ts(type = "number | null")]
-    pub collection_weekday: Option<i64>,
     /// A system account of PRD FR-10.4: its code cannot change and it cannot be deleted.
     pub is_system: bool,
     /// False for the accounts that cannot take an opening balance (see `can_take_opening`), so
     /// the openings grid can leave them out.
     pub can_take_opening: bool,
-    /// The پختہ کھاتہ account of one-time people (PRD Section 13).
-    pub is_pukhta_khata: bool,
+    /// The چکتا کھاتہ account of walk-in buyers, whose person is typed on the line (PRD Section 13,
+    /// account `0030`), and the old closed account `0031`.
+    pub is_chukta_khata: bool,
     /// False when hidden from pickers.
     pub is_active: bool,
     /// The note. Empty if none.
@@ -336,16 +466,45 @@ pub struct AccountRow {
     pub balance: Balance,
 }
 
+/// Which accounts the Accounts list shows (plan 32 R6, PRD FR-10.5 v1.32). `all` shows only sellers
+/// and buyers; cash, bank, payables, income, capital, نقدی منڈی, چکتا کھاتہ, اپنا مال, money-lent
+/// people, khatas and gardens are not in it (the chart of accounts still shows every account, and
+/// so does `every`, for the Opening balances screen).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AccountListKind {
+    /// Sellers and buyers.
+    #[default]
+    All,
+    /// بیوپاری: the accounts under control 03011 that are not system accounts (not اپنا مال).
+    Seller,
+    /// گاہک: the accounts under control 0304 that are not system accounts (not نقدی منڈی, not چکتا
+    /// کھاتہ).
+    Buyer,
+    /// Every account, as the list showed before plan 32 (decision D4): cash, bank, payables, income,
+    /// capital, drawings, money-lent people, khatas, gardens and all the others as well. Only the
+    /// Index → Opening balances screen asks for it, because cash and the capital accounts take
+    /// openings there. The rows come in chart order (by control, then by code) and the footer
+    /// totals are over these rows.
+    Every,
+}
+
 /// What the account list is filtered by.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct AccountFilter {
-    /// Only this kind of account, or null for all.
+    /// Which accounts to list. Missing means `all`.
     #[serde(default)]
-    pub account_type: Option<AccountType>,
-    /// Part of the code, or part of a name in either script. Empty for all.
+    pub kind: AccountListKind,
+    /// Part of the code, the running number, or part of a name in either script. Empty for all.
     pub text: String,
     /// True to list the inactive accounts too.
     pub include_inactive: bool,
+    /// Whether the account has an opening balance (PRD FR-10.9): `false` lists the accounts that
+    /// can take an opening (`can_take_opening`) and have none yet, `true` the accounts with an
+    /// opening (a debit or a credit), null all. The Opening balances screen opens on `false`
+    /// (plan 38). Missing means null.
+    #[serde(default)]
+    pub has_opening: Option<bool>,
 }
 
 /// The account list with its footer (PRD FR-10.5).
@@ -360,6 +519,11 @@ pub struct AccountsListInput {
     /// gives the most, so a list with no limit returns every matching account.
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole filter by: `code`, `serial`, `name_ur`, `name_en`, `phone1`,
+    /// `city`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa` or `credit_allowed`. There is no
+    /// sort by balance (R20 ranks the dues). Null is by code (plan 38 R4). Inactive accounts are left out unless `filter.include_inactive` is true.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
 }
 
 /// The rows of the list and the totals of all rows that match (not only this page).
@@ -395,7 +559,8 @@ pub struct AccountsSetActiveInput {
     pub is_active: bool,
 }
 
-/// The next free code for a kind of account.
+/// The next free code for a kind of account: for a seller or a buyer the type number plus the next
+/// running number (`0010` for the first seller), never a code used before (plan 32 R2).
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct AccountsNextCodeInput {
     /// The kind.
@@ -415,6 +580,10 @@ pub struct AccountsSimilarInput {
     pub name_en: String,
     /// What was typed in the phone. Empty if nothing yet.
     pub phone: String,
+    /// What was typed in the tag (نشان). Empty if none. With the names and the phone it decides
+    /// which similar account is a duplicate (PRD FR-10.7, E38). Missing means none.
+    #[serde(default)]
+    pub tag: String,
     /// The account being edited, which is left out of the answer.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -433,6 +602,10 @@ pub struct SimilarAccount {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2, E38).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Father or firm name in Urdu.
     pub father_or_firm_ur: String,
     /// Father or firm name in English.
@@ -445,6 +618,9 @@ pub struct SimilarAccount {
     pub phone1: String,
     /// The kind of account.
     pub account_type: AccountType,
+    /// True when its name, its tag and its phone all equal what was typed: the duplicate warning
+    /// of PRD FR-10.7. The same name and phone with another tag is not a duplicate (PRD E38).
+    pub is_duplicate: bool,
 }
 
 /// One line of the openings grid.
@@ -471,6 +647,21 @@ pub struct OpeningLineInput {
 pub struct OpeningsInput {
     /// The lines, in the order of the grid.
     pub lines: Vec<OpeningLineInput>,
+}
+
+/// Input of `accounts_openings_preview` and `accounts_openings_save`: the grid and the answer of
+/// the cash box (PRD FR-6.7, plan 80 gate R4-4). A line that changes an opening that is in روکڑ and
+/// would take cash below 0 has `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`) until
+/// `confirm_cash_below_zero` is true.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct OpeningsRequest {
+    /// The grid as before.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub base: OpeningsInput,
+    /// True after the user said yes to the cash box. Missing means false.
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
 }
 
 /// A problem on one line of the grid.
@@ -568,8 +759,43 @@ pub struct ControlNode {
     pub party_type: String,
     /// The balance of everything under it.
     pub balance: Balance,
-    /// Its accounts, by code.
-    pub accounts: Vec<AccountNode>,
+    /// How many accounts it has. They load when the control is opened, a page at a time, with
+    /// `coa_control_accounts` (plan 38 B1).
+    #[ts(type = "number")]
+    pub account_count: i64,
+}
+
+/// Input of `coa_control_accounts`: one page of the accounts of one control (plan 38 B1, Code
+/// Standards B31).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct CoaControlAccountsInput {
+    /// The control. `ERR_NOT_FOUND` on `control_id`.
+    #[ts(type = "number")]
+    pub control_id: i64,
+    /// How many accounts to skip. 0 for the first page.
+    #[serde(default)]
+    pub offset: u32,
+    /// The page size: 25, 50 or 100. 0 gives 100.
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One page of the accounts of one control, with the control's own balance over all of them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct CoaControlAccounts {
+    /// The control.
+    #[ts(type = "number")]
+    pub control_id: i64,
+    /// The accounts of this page, by code, each with its balance now.
+    pub rows: Vec<AccountNode>,
+    /// How many accounts the control has in all.
+    pub total_count: u32,
+    /// The offset that was asked.
+    pub offset: u32,
+    /// The page size used.
+    pub limit: u32,
+    /// The balance of everything under the control (all its accounts, not only this page).
+    pub balance: Balance,
 }
 
 /// An account in the tree.
@@ -584,6 +810,10 @@ pub struct AccountNode {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// The balance now.
     pub balance: Balance,
     /// False when hidden from pickers.
