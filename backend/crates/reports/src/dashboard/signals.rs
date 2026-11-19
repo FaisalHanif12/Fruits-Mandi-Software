@@ -266,3 +266,39 @@ pub(crate) fn names_missing(conn: &Connection) -> Result<Option<AttentionItem>, 
     }
     Ok((count > 0).then(|| counted(AttentionKind::NamesMissing, count)))
 }
+
+/// The daily check failed (PRD FR-7.44, NFR-OBS-5): read from the stored result `health_last`.
+/// It is on the list when the books do not balance, a hash chain does not match, the check could not
+/// run, or the data file failed its check. An old cloud copy is the item `BackupOld`, not this
+/// one. No result yet, or a good one, is no item.
+pub(crate) fn health_check(conn: &Connection) -> Result<Option<AttentionItem>, ReportsError> {
+    let text: Option<String> = conn
+        .query_row(
+            "SELECT value_json FROM settings WHERE key = 'health_last'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let Some(text) = text else {
+        return Ok(None);
+    };
+    let value: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| ReportsError::Data(format!("the stored health result: {e}")))?;
+    let flag = |path: &[&str]| -> Option<bool> {
+        let mut at = &value;
+        for key in path {
+            at = at.get(key)?;
+        }
+        at.as_bool()
+    };
+    let books_good = flag(&["books", "ran"]) == Some(true)
+        && flag(&["books", "balanced"]) == Some(true)
+        && flag(&["books", "journal_chain", "ok"]) == Some(true)
+        && flag(&["books", "audit_chain", "ok"]) == Some(true);
+    let data_failed = value
+        .get("data")
+        .and_then(|d| d.get("state"))
+        .and_then(serde_json::Value::as_str)
+        == Some("failed");
+    Ok((!books_good || data_failed).then(|| counted(AttentionKind::HealthCheck, 1)))
+}

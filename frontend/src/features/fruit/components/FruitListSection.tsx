@@ -177,6 +177,7 @@ export function FruitListSection({
                   <Picker
                     {...control}
                     canAdd={false}
+                    allChoice
                     scope="item"
                     value={item}
                     placeholder={l10n.getString('fruit-filter-item-all')}

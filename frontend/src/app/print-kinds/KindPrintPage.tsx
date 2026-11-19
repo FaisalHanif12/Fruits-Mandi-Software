@@ -23,8 +23,14 @@ import {
 } from '../../shared/print';
 import { ErrorState } from '../../shared/ui';
 import {
+  dashboardAdvancesOpenPrintData,
   dashboardBuyerDuesPrintData,
+  dashboardCashSalesDayPrintData,
+  dashboardCashSalesMonthPrintData,
   dashboardCommissionPrintData,
+  dashboardLentOpenPrintData,
+  dashboardSellerDuesPrintData,
+  dashboardTotalDuesPrintData,
 } from '../../features/dashboard';
 import { partnersStatementMonthPrintData } from '../../features/partners';
 import { partyLedgersStatementRowsPrintData } from '../../features/party_ledgers';
@@ -206,6 +212,54 @@ function Body({ params, callbacks }: { params: KindPrintParams; callbacks: Windo
           params={params}
           callbacks={callbacks}
           read={() => partnersStatementMonthPrintData(params.input)}
+        />
+      );
+    case 'seller-dues':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardSellerDuesPrintData(params.input)}
+        />
+      );
+    case 'total-dues':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardTotalDuesPrintData(params.input)}
+        />
+      );
+    case 'lent-open':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardLentOpenPrintData(params.input)}
+        />
+      );
+    case 'advances-open':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardAdvancesOpenPrintData(params.input)}
+        />
+      );
+    case 'cash-sales-month':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardCashSalesMonthPrintData(params.input)}
+        />
+      );
+    case 'cash-sales-day':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardCashSalesDayPrintData(params.input)}
         />
       );
   }

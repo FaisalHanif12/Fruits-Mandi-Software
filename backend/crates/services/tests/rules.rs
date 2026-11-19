@@ -1400,10 +1400,10 @@ fn the_overrides_start_on_and_are_kept_with_an_audit_row() {
         (start.allow_line_override, start.credit_limit_mode),
         (true, CreditLimitMode::Warn)
     );
-    // Plan 12: the rate check starts on at 30% (PRD FR-7.55, E8).
+    // The rate check starts OFF, at 30% when it is turned on (PRD FR-7.55 v1.44, plan 79 U4, E8).
     assert_eq!(
         (start.rate_check_enabled, start.rate_check_percent),
-        (true, 30)
+        (false, 30)
     );
     let audits = audit_total(&f.dir);
     let want = OverridesSettings {
@@ -1446,10 +1446,11 @@ fn the_overrides_start_on_and_are_kept_with_an_audit_row() {
         (kept.allow_line_override, kept.credit_limit_mode),
         (false, CreditLimitMode::Warn)
     );
-    // A row saved before plan 12 has no rate check keys: they read as the starting position.
+    // A row saved before plan 12 has no rate check keys: they read as the starting position (off at
+    // 30%, PRD FR-7.55 v1.44).
     assert_eq!(
         (kept.rate_check_enabled, kept.rate_check_percent),
-        (true, 30)
+        (false, 30)
     );
     // A stored `false` and a stored percent are kept as stored.
     raw(&f.dir)

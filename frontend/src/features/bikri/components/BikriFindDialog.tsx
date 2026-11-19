@@ -167,6 +167,7 @@ export function BikriFindDialog({ open, onOpenChange, onOpen }: BikriFindDialogP
               <AccountPicker
                 {...control}
                 canAdd={false}
+                allChoice
                 scope="seller"
                 showCard={false}
                 value={seller}
@@ -179,6 +180,7 @@ export function BikriFindDialog({ open, onOpenChange, onOpen }: BikriFindDialogP
               <AccountPicker
                 {...control}
                 canAdd={false}
+                allChoice
                 scope="buyer"
                 showCard={false}
                 value={buyer}
@@ -197,6 +199,7 @@ export function BikriFindDialog({ open, onOpenChange, onOpen }: BikriFindDialogP
               <Picker
                 {...control}
                 canAdd={false}
+                allChoice
                 scope="item"
                 value={item}
                 onChange={(hit) => {

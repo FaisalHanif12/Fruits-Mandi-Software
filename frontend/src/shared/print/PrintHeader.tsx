@@ -39,6 +39,47 @@ export const NAMED_TITLE_IDS: ReadonlySet<string> = new Set([
   'print-statement-named-title',
 ]);
 
+/** The people of the firm, the owners first and then the munshi, each with his role word and his phone (Section 21). */
+export function PrintContacts({ contacts }: { contacts: PrintHeaderData['contacts'] }) {
+  const { l10n } = useLocalization();
+  if (contacts.length === 0) return null;
+  return (
+    <ul className="print-contacts">
+      {contacts.map((person, index) => (
+        <li key={index} className="print-firm-line">
+          {/* The backend sends the owners first, then the munshi; the word of the role is ours. */}
+          <span className="print-contact-role">{l10n.getString(ROLE_ID[person.role])}</span>{' '}
+          <PrintText text={person.name} />
+          {/* A person with no phone is the name only: no empty gap, no dash. */}
+          {person.phone === '' ? null : (
+            <>
+              {' '}
+              <Code>{person.phone}</Code>
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The top band of a buyer slip (PRD FR-19.15, plan 79 item 7): the fruit picture on one side, the firm name,
+ * and the owners' and the munshis' names with their phones, small, on the other side. The same three zones
+ * and the same edges as the header of every print (`print-zones`), only smaller, so a slip keeps its size.
+ */
+export function PrintSlipBand({ header }: { header: PrintHeaderData }) {
+  return (
+    <div className="print-zones print-slip-band">
+      <PrintFruitMark />
+      <div className="print-firm">
+        <p className="print-firm-name">{header.firm.name}</p>
+      </div>
+      <PrintContacts contacts={header.contacts} />
+    </div>
+  );
+}
+
 export function PrintHeader({ header, title }: PrintHeaderProps) {
   const { l10n } = useLocalization();
   const { firm } = header;
@@ -78,24 +119,7 @@ export function PrintHeader({ header, title }: PrintHeaderProps) {
               </p>
             )}
           </div>
-          {header.contacts.length === 0 ? null : (
-            <ul className="print-contacts">
-              {header.contacts.map((person, index) => (
-                <li key={index} className="print-firm-line">
-                  {/* The backend sends the owners first, then the munshi; the word of the role is ours. */}
-                  <span className="print-contact-role">{l10n.getString(ROLE_ID[person.role])}</span>{' '}
-                  <PrintText text={person.name} />
-                  {/* A person with no phone is the name only: no empty gap, no dash. */}
-                  {person.phone === '' ? null : (
-                    <>
-                      {' '}
-                      <Code>{person.phone}</Code>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
+          <PrintContacts contacts={header.contacts} />
         </div>
         <h1 className="print-title">
           {title === undefined ? l10n.getString(header.title_id) : <PrintText text={title} />}

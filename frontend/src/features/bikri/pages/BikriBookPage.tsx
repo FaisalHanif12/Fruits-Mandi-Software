@@ -391,6 +391,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     lotWho,
     errorText,
     current: preview !== undefined && !stale,
+    tried: flow.tried,
   });
 
   // What the user changed in a posting open for edit: marked in the grids and listed (plan 16).

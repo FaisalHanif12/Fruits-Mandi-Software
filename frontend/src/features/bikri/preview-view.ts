@@ -4,7 +4,7 @@
 // work out yet (`calc` is null) has no number: its cells stay empty, never a guess.
 
 import type { Working } from '../../bindings/Working';
-import { formatBps, formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
+import { formatBps, formatPaisa, type Grouping } from '../../shared/format';
 import type { Language } from '../../i18n';
 import { displayName, levelMessageId } from '../../shared/i18n';
 import type { PickedRecord } from '../../shared/grid';
@@ -53,31 +53,15 @@ export function lotView(lot: LotPreview | undefined, grouping: Grouping): RowVie
   return { calc, workings, manual: {} };
 }
 
-/** The words of a rate hint: where the rate came from (PRD FR-7.53). */
-function hintWords(hint: NonNullable<LinePreview['rate_hint']>, say: Say, grouping: Grouping) {
-  return say(`bikri-rate-hint-${hint.source.replaceAll('_', '-')}`, {
-    rate: formatPaisa(hint.rate_paisa, { grouping }),
-    date: isoToDisplayDate(hint.date),
-  });
-}
-
 /**
- * The cells of a sale line. The rate hint is grey, italic words in the empty rate cell ("Last 900") and
- * where it came from is the tooltip; it is never typed into the cell (PRD FR-7.53, Code Standards F43).
+ * The cells of a sale line. The rate cell has no hint and no placeholder number (PRD FR-7.53 retired in
+ * v1.44, plan 79 item 5): each buyer gets his own rate, so a hint looked like a real rate.
  */
 export function lineView(line: LinePreview | undefined, grouping: Grouping, say: Say): RowView {
   if (line === undefined) return NOTHING;
   const calc: Cells = {};
   const workings: Workings = {};
   const manual: Cells = {};
-  if (line.rate_hint !== null) {
-    // The cell says "Last 900", not a bare 900, so it is never taken for a rate that was typed
-    // (D8 Bug 1, PRD FR-7.53). The tooltip tells where the rate came from.
-    calc[SALE.rate] = say('bikri-rate-hint-cell', {
-      rate: formatPaisa(line.rate_hint.rate_paisa, { grouping }),
-    });
-    calc[`${SALE.rate}Tip`] = hintWords(line.rate_hint, say, grouping);
-  }
   const done = line.calc;
   if (done !== null) {
     const money = (paisa: LineCalc['buyer_total']) => formatPaisa(paisa, { grouping });

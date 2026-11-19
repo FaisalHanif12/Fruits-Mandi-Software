@@ -750,7 +750,7 @@ pub struct OverridesSettings {
     /// Warn or block when a buyer is over his credit limit.
     pub credit_limit_mode: CreditLimitMode,
     /// Warn when a rate is far from the item's average of the last 7 days (PRD FR-7.55). Starts
-    /// on. The warning never blocks a save.
+    /// OFF (v1.44, plan 79); the Owner can turn it on. The warning never blocks a save.
     pub rate_check_enabled: bool,
     /// How far, in percent, a rate may be above or below the average before the warning shows
     /// (1 to 1,000; starts at 30).

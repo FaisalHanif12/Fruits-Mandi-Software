@@ -173,6 +173,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
                       {...props}
                       // A filter looks for what is already there; it has nothing to add (plan 32, R8).
                       canAdd={false}
+                      allChoice
                       scope="any"
                       value={party}
                       onChange={(hit) => {
@@ -187,6 +188,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
                       {...props}
                       // A filter looks for what is already there; it has nothing to add (plan 32, R8).
                       canAdd={false}
+                      allChoice
                       scope="item"
                       value={item}
                       onChange={(hit) => {

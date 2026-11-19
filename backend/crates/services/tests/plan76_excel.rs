@@ -104,6 +104,7 @@ fn the_buyer_dues_sheet_has_every_buyer_and_the_total() {
         w.env.ctx.db(),
         &BuyerDuesPrintInput {
             search: None,
+            party_id: None,
             sort: None,
             language: Language::En,
             paper: None,

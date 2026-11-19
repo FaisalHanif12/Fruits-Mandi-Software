@@ -65,6 +65,9 @@ function entryId(row: LentDuesRow): string {
   return `${row.kind}-${String(row.voucher_id ?? `opening-${String(row.person.id)}`)}-${row.entry_date}`;
 }
 
+/** The value of the "All" choice of the partner box; a partner's own value is his id as text. */
+const ALL_PARTNERS = 'all';
+
 export function OthersDuesPage() {
   const navigate = useNavigate();
   const language = useLanguage();
@@ -139,6 +142,10 @@ export function OthersDuesPage() {
     })),
   ];
 
+  // "All" is the start of the partner box: the box value is the choice, the state keeps no id for it.
+  let partnerValue = partnerId;
+  if (partnerId === '') partnerValue = ALL_PARTNERS;
+
   const filters = (
     <div {...formNavigationProps} className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3 normal:grid-cols-3">
@@ -179,14 +186,20 @@ export function OthersDuesPage() {
               <Select
                 {...props}
                 readOnly={props.readOnly === true || partners.isPending}
-                value={partnerId === '' ? undefined : partnerId}
-                onChange={setPartnerId}
-                options={(partners.data ?? [])
-                  .filter((partner) => partner.is_active)
-                  .map((partner) => ({
-                    value: String(partner.id),
-                    label: displayName(partner, language),
-                  }))}
+                // "All" is the first choice and the start: every partner's people (PRD FR-19.1).
+                value={partnerValue}
+                onChange={(next) => {
+                  setPartnerId(next === ALL_PARTNERS ? '' : next);
+                }}
+                options={[
+                  { value: ALL_PARTNERS, label: <Localized id="search-all-choice" /> },
+                  ...(partners.data ?? [])
+                    .filter((partner) => partner.is_active)
+                    .map((partner) => ({
+                      value: String(partner.id),
+                      label: displayName(partner, language),
+                    })),
+                ]}
               />
             )}
           </Field>

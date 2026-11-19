@@ -162,10 +162,11 @@ describe.each(LANGUAGES)('the dues tiles (%s)', (language: Language) => {
   const OPENS: readonly [string, string][] = [
     // The buyers' dues tile opens its own page, a simple list with the tile's total (PRD FR-9.4, v1.41).
     ['dashboard-tile-dues', '/dues'],
-    ['dashboard-tile-dues-sellers', '/reports/R24'],
-    ['dashboard-tile-dues-total', '/reports/R20'],
+    // Every dues tile opens its own page that does its job (plan 79 items 2 and 3, PRD FR-9.6, FR-9.7).
+    ['dashboard-tile-dues-sellers', '/dues/sellers'],
+    ['dashboard-tile-dues-total', '/dues/total'],
     ['dashboard-tile-dead', '/reports/dead-amount'],
-    ['dashboard-tile-payable', '/reports/R24'],
+    ['dashboard-tile-payable', '/dues/sellers'],
   ];
   it.each(OPENS)('the tile %s opens %s', async (labelId, path) => {
     const { router } = await open();

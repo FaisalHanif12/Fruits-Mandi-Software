@@ -567,6 +567,29 @@ const EXPECTED_FILES: &[&str] = &[
     "BuyerDuesRow.ts",
     "BuyerDuesPage.ts",
     "BuyerDuesInput.ts",
+    // Plan 79 (append-only block).
+    "SellerDuesSide.ts",
+    "SellerDuesInput.ts",
+    "SellerDuesRow.ts",
+    "SellerDuesPage.ts",
+    "SellerDuesPrintInput.ts",
+    "TotalDuesSection.ts",
+    "TotalDuesPart.ts",
+    "TotalDues.ts",
+    "LentOpenInput.ts",
+    "LentOpenRow.ts",
+    "LentOpenPage.ts",
+    "CashSalesMonthInput.ts",
+    "CashSalesDayRow.ts",
+    "CashSalesMonth.ts",
+    "CashSalesDayInput.ts",
+    "CashSalesBuyerRow.ts",
+    "CashSalesDay.ts",
+    "TotalDuesPrintInput.ts",
+    "LentOpenPrintInput.ts",
+    "CashSalesMonthPrintInput.ts",
+    "CashSalesDayPrintInput.ts",
+    "AdvancesReportPrintInput.ts",
     "CommissionPrintInput.ts",
     "CommissionEntry.ts",
     "CommissionDay.ts",
@@ -948,6 +971,12 @@ const EXPECTED_FILES: &[&str] = &[
     "PrintCollectionSheetInput.ts",
     "PrintStatementRowsInput.ts",
     "PrintBuyerDuesInput.ts",
+    "PrintSellerDuesInput.ts",
+    "PrintTotalDuesInput.ts",
+    "PrintLentOpenInput.ts",
+    "PrintAdvancesOpenInput.ts",
+    "PrintCashSalesMonthInput.ts",
+    "PrintCashSalesDayInput.ts",
     "PrintCommissionInput.ts",
     "PrintPartnerMonthInput.ts",
 ];
@@ -1407,6 +1436,28 @@ fn export_bindings() {
     mandi_reports::dashboard::BuyerDuesPrintInput::export_all(&cfg).unwrap();
     mandi_reports::dashboard::BuyerDuesPage::export_all(&cfg).unwrap();
     mandi_reports::dashboard::BuyerDuesInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesSide::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesPage::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SellerDuesPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDuesSection::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDuesPart::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDues::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenPage::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesMonthInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDayRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesMonth::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDayInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesBuyerRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDay::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalDuesPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::LentOpenPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesMonthPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::CashSalesDayPrintInput::export_all(&cfg).unwrap();
+    vouchers::AdvancesReportPrintInput::export_all(&cfg).unwrap();
     mandi_reports::dashboard::CommissionPrintInput::export_all(&cfg).unwrap();
     mandi_reports::dashboard::CommissionDay::export_all(&cfg).unwrap();
     mandi_reports::dashboard::CommissionDayInput::export_all(&cfg).unwrap();
@@ -1627,6 +1678,12 @@ fn export_bindings() {
     mandi_app_lib::print_report::PrintCollectionSheetInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintStatementRowsInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintBuyerDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintSellerDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintTotalDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintLentOpenInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintAdvancesOpenInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCashSalesMonthInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCashSalesDayInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintCommissionInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintPartnerMonthInput::export_all(&cfg).unwrap();
     for file in EXPECTED_FILES {

@@ -10,6 +10,7 @@ use ts_rs::TS;
 
 use super::{AdvanceInput, OpenAdvance, RemovedPaymentFields, VoucherSaved, VoucherType};
 use crate::accounts::{Balance, LineError, RecordRef};
+use crate::auth::Language;
 use crate::capital::CapitalInput;
 use crate::cash::CashCheck;
 use crate::error::FieldError;
@@ -18,6 +19,7 @@ use crate::general::GeneralInput;
 use crate::khata::{KhataInInput, KhataOutInput};
 use crate::lent::{MoneyLentInput, MoneyLentReturnInput};
 use crate::money::Paisa;
+use crate::printing::Paper;
 
 /// A وصولی as typed (PRD 15.2, FR-15.12): money from a buyer, or a seller returning advance
 /// money.
@@ -509,6 +511,35 @@ pub struct AdvancesReportInput {
     /// these sellers.
     #[serde(default)]
     pub search: Option<String>,
+    /// True lists only the sellers with something still open (the page of the tile پیشگی باقی,
+    /// plan 79 item 3). The totals are over those sellers. When no seller is picked, people in
+    /// the dead amount are left out, as in R26 (PRD FR-10.10).
+    #[serde(default)]
+    pub only_open: bool,
+}
+
+/// Input of `advances_report_print_data`: the filter of the page and the print language. Every
+/// seller of the filter is printed (PRD FR-19.10, FR-19.11).
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
+pub struct AdvancesReportPrintInput {
+    /// One seller, or null for all.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub seller_id: Option<i64>,
+    /// The "as of" day, `DD-MM-YYYY` or a shortcut. Empty means today.
+    #[serde(default)]
+    pub as_of: String,
+    /// Only sellers whose code or name holds this text.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// Only the sellers with something still open.
+    #[serde(default)]
+    pub only_open: bool,
+    /// The print language (PRD FR-7.36).
+    pub language: Language,
+    /// The paper; A4 when missing.
+    #[serde(default)]
+    pub paper: Option<Paper>,
 }
 
 /// One seller's advances (PRD R26): given, returned, adjusted and open.

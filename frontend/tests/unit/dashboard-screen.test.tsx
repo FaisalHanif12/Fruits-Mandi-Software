@@ -203,12 +203,18 @@ describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (la
     ['dashboard-tile-commission', '/commission'],
     ['dashboard-tile-cash', '/rokar'],
     ['dashboard-tile-dues', '/dues'],
-    ['dashboard-tile-payable', '/reports/R24'],
-    ['dashboard-tile-advances', '/reports/R26'],
+    // Every tile opens its own page that does its job (plan 79 item 3, PRD FR-9.1).
+    ['dashboard-tile-dues-sellers', '/dues/sellers'],
+    ['dashboard-tile-payable', '/dues/sellers'],
+    ['dashboard-tile-dues-total', '/dues/total'],
+    ['dashboard-tile-dead', '/reports/dead-amount'],
+    ['dashboard-tile-advances', '/dues/advances'],
     ['dashboard-tile-stock', '/bikri/stock'],
     ['dashboard-tile-trips', '/trips'],
     ['dashboard-tile-gardens', '/gardens'],
-    ['dashboard-tile-lent', '/reports/R32'],
+    ['dashboard-tile-lent', '/dues/lent'],
+    // The tile of today's cash sales replaced the books check tile (plan 79 item 2c).
+    ['dashboard-tile-cash-sales', '/cash-sales'],
     // The kharch page: the shop's kharch per head and each partner's own (PRD FR-9.5, plan 77).
     ['dashboard-tile-expenses', '/kharch'],
     // The tile of garden owners' and others' dues replaced the last backup tile (plan 76 point 10).
@@ -224,14 +230,14 @@ describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (la
     });
   });
 
-  it('the books check tile opens the Day tab of the settings', async () => {
+  it('the two seller tiles open the seller page, each on its own side (plan 79 item 2a)', async () => {
     const { router } = await openDashboard(language);
     await whenLoaded(language);
-    await userEvent.setup().click(tile(language, 'dashboard-tile-health'));
+    await userEvent.setup().click(tile(language, 'dashboard-tile-payable'));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/settings');
+      expect(router.state.location.pathname).toBe('/dues/sellers');
     });
-    expect(router.state.location.search).toMatchObject({ tab: 'day' });
+    expect(router.state.location.search).toMatchObject({ side: 'shop_owes' });
   });
 
   it('a partner card opens his statement, R31, with the partner in the address', async () => {
@@ -307,17 +313,11 @@ describe.each(LANGUAGES)('the states of the dashboard (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('when the backend fails (one error for the whole dashboard): the error with a retry that works, and the books check tile still shows', async () => {
+  it('when the backend fails (one error for the whole dashboard): the error with a retry that works', async () => {
     fakeDashboard({ dashboard: new CommandError(refusal([{ code: 'ERR_INTERNAL' }])) });
     await openDashboard(language);
     const alert = await screen.findByRole('alert');
     expect(visible(alert.textContent)).toContain(message(language, 'dashboard-load-failed'));
-    // The books check tile asks for itself, so one failed part does not blank the page.
-    await waitFor(() => {
-      expect(tileText(language, 'dashboard-tile-health')).toContain(
-        message(language, 'dashboard-health-ok'),
-      );
-    });
     expect(() => tile(language, 'dashboard-tile-sales')).toThrow();
     fakeDashboard();
     await userEvent
@@ -490,41 +490,19 @@ describe.each(LANGUAGES)('the states of the dashboard (%s)', (language) => {
   });
 });
 
-describe.each(LANGUAGES)('the books check and the new version (%s)', (language) => {
-  it('the books check says its result and time', async () => {
+describe.each(LANGUAGES)('today’s cash sales tile and the new version (%s)', (language) => {
+  it('the tile of today’s cash sales shows the backend’s figure and how many buyers paid; the books check tile is gone', async () => {
     await openDashboard(language);
     await whenLoaded(language);
-    await waitFor(() => {
-      expect(tileText(language, 'dashboard-tile-health')).toContain(
-        message(language, 'dashboard-health-ok'),
-      );
-    });
-    expect(tileText(language, 'dashboard-tile-health')).toContain('2026');
+    expect(tileText(language, 'dashboard-tile-cash-sales')).toContain(
+      message(language, 'dashboard-tile-cash-sales-note', {
+        count: DASHBOARD_WORKED_DAY.tiles.cash_sales_today_buyers,
+      }),
+    );
+    expect(() => tile(language, 'dashboard-tile-health')).toThrow();
     // The tile of garden owners' and others' dues stands where the last backup tile was; the backup state is
     // in the status bar and the attention list (plan 76 point 10).
     expect(tile(language, 'dashboard-tile-others')).toBeInTheDocument();
-  });
-
-  it('a books check that found a problem says so in words', async () => {
-    vi.mocked(maintenanceApi.healthLast).mockResolvedValue({ ...HEALTH, ok: false });
-    await openDashboard(language);
-    await whenLoaded(language);
-    await waitFor(() => {
-      expect(tileText(language, 'dashboard-tile-health')).toContain(
-        message(language, 'dashboard-health-bad'),
-      );
-    });
-  });
-
-  it('no check yet says so', async () => {
-    vi.mocked(maintenanceApi.healthLast).mockResolvedValue(null);
-    await openDashboard(language);
-    await whenLoaded(language);
-    await waitFor(() => {
-      expect(tileText(language, 'dashboard-tile-health')).toContain(
-        message(language, 'dashboard-health-never'),
-      );
-    });
   });
 
   it('a new version is a note with a button to the settings; the app does not install it', async () => {
@@ -589,13 +567,14 @@ describe.each(LANGUAGES)('by keyboard, and across a language switch (%s)', (lang
     await user.keyboard(language === 'ur' ? '{ArrowRight}' : '{ArrowLeft}');
     expect(first).toHaveFocus();
     // Down moves to the tile below it (a row has four tiles at the normal width): the sellers' dues
-    // (plan 40), which opens R24 like the payable tile.
+    // (plan 40), which opens the seller page on its side like the payable tile (plan 79 item 2a).
     await user.keyboard('{ArrowDown}');
     expect(tile(language, 'dashboard-tile-dues-sellers')).toHaveFocus();
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/reports/R24');
+      expect(router.state.location.pathname).toBe('/dues/sellers');
     });
+    expect(router.state.location.search).toMatchObject({ side: 'seller_owes' });
   });
 
   it('switching language keeps the figures and the data, changes the words and the names, and asks nothing again', async () => {

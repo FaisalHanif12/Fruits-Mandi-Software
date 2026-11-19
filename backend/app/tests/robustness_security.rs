@@ -1355,6 +1355,45 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         ("dashboard_buyer_dues", json!({ "input": {} }), true),
+        ("dashboard_seller_dues", json!({ "input": {} }), true),
+        (
+            "dashboard_seller_dues_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        ("dashboard_total_dues", json!({}), true),
+        ("dashboard_lent_open", json!({ "input": {} }), true),
+        ("dashboard_cash_sales_month", json!({ "input": {} }), true),
+        (
+            "dashboard_total_dues_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_lent_open_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_month_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_day_print_data",
+            json!({ "input": { "date": "10-10-2026", "language": "ur" } }),
+            true,
+        ),
+        (
+            "advances_report_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_day",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
         (
             "dashboard_buyer_dues_print_data",
             json!({ "input": { "language": "ur" } }),
@@ -1597,6 +1636,36 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "dashboard_buyer_dues_print",
             json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_seller_dues_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_total_dues_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_lent_open_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "advances_report_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_month_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_cash_sales_day_print",
+            json!({ "input": { "sheet": { "date": "10-10-2026", "language": "ur" }, "to": "pdf" } }),
             true,
         ),
         (

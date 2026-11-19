@@ -28,11 +28,13 @@ interface GridViewsInput {
   errorText: (item: Problem['item']) => string;
   /** The answer is for the draft on screen now, not an older one still shown (D8 Bug 1, B2). */
   current: boolean;
+  /** The user tried to save: what an incomplete line needs is told now (PRD FR-12.6, plan 79 item 4). */
+  tried: boolean;
 }
 
 export function useGridViews(input: GridViewsInput) {
   const { stores, preview, problems, lotRows, allRows, lotKey, whole, grouping } = input;
-  const { say, lotWho, errorText, current } = input;
+  const { say, lotWho, errorText, current, tried } = input;
   // The keys of the lines of each lot. `allRows` is a new list whenever a line of any lot changed.
   const lineKeysByLot = useMemo(() => {
     const counts = lotRows.map((row) => stores.salesFor(row.rowId).getState().rows.length);
@@ -71,6 +73,7 @@ export function useGridViews(input: GridViewsInput) {
         say,
         words: (problem) => errorText(problem.item),
         current,
+        showMissing: tried,
         buyerLeft,
       }),
     [
@@ -85,6 +88,7 @@ export function useGridViews(input: GridViewsInput) {
       lotWho,
       errorText,
       current,
+      tried,
       buyerLeft,
     ],
   );

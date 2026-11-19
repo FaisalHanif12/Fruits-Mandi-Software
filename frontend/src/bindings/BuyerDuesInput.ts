@@ -11,6 +11,11 @@ export type BuyerDuesInput = {
    */
   search: string | null;
   /**
+   * One buyer. Null means سب (all buyers; plan 79 item 1). A name or a code typed in `search`
+   * narrows the same way.
+   */
+  party_id: number | null;
+  /**
    * The column to sort the whole filter by: `party`, `balance`, `city` or `last_change_date`.
    * Null is by name, in the Urdu order.
    */

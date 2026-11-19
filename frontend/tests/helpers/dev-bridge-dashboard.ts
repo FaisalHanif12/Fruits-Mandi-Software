@@ -57,6 +57,8 @@ const EMPTY_TILES = {
   others_dues_paisa: paisaForTest(0),
   others_people_count: 0,
   expenses_today_paisa: paisaForTest(0),
+  cash_sales_today_paisa: paisaForTest(0),
+  cash_sales_today_buyers: 0,
 } as const;
 
 /** Every kind of the attention list once, with figures like a busy book (for the `many` flag). */
@@ -126,6 +128,7 @@ function manyTasks(): AttentionList {
       first: { target: 'partner', id: 1, person_key: null, name_ur: 'الف', name_en: 'Partner A' },
     },
     { kind: 'names_missing', count: 4, amount_paisa: null, qty: null, days: null, first: null },
+    { kind: 'health_check', count: 1, amount_paisa: null, qty: null, days: null, first: null },
   ];
   return {
     items,

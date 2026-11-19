@@ -45,7 +45,7 @@ export const BUYER_DUES_COLUMNS: readonly ListColumn<BuyerDuesRow>[] = [
   },
   {
     field: 'balance',
-    type: 'money',
+    type: 'balance',
     headerId: 'dashboard-dues-col-balance',
     sortKey: 'balance',
     value: (row, { money }) => money(row.balance.amount_paisa),

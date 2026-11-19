@@ -48,6 +48,11 @@ pub struct BuyerDuesInput {
     /// buyer who owes.
     #[serde(default)]
     pub search: Option<String>,
+    /// One buyer. Null means سب (all buyers; plan 79 item 1). A name or a code typed in `search`
+    /// narrows the same way.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub party_id: Option<i64>,
     /// The column to sort the whole filter by: `party`, `balance`, `city` or `last_change_date`.
     /// Null is by name, in the Urdu order.
     #[serde(default)]
@@ -87,7 +92,7 @@ pub struct BuyerDuesPage {
 }
 
 /// The cities by id.
-fn cities(conn: &Connection) -> Result<HashMap<i64, Names>, ReportsError> {
+pub(super) fn cities(conn: &Connection) -> Result<HashMap<i64, Names>, ReportsError> {
     let mut statement = conn.prepare("SELECT id, name_ur, name_en FROM cities")?;
     let rows = statement
         .query_map([], |r| {
@@ -124,7 +129,10 @@ fn last_changes(conn: &Connection) -> Result<HashMap<i64, String>, ReportsError>
 /// by its lines, a big one by walking the days from the newest, see
 /// `mandi_db::ledger::edge_day_of_account`). A page reads its own 100, not the books of every buyer
 /// (NFR-SPD-24).
-fn last_changes_of(conn: &Connection, ids: &[i64]) -> Result<HashMap<i64, String>, ReportsError> {
+pub(super) fn last_changes_of(
+    conn: &Connection,
+    ids: &[i64],
+) -> Result<HashMap<i64, String>, ReportsError> {
     let mut out = HashMap::new();
     for id in ids {
         let day =
@@ -137,7 +145,7 @@ fn last_changes_of(conn: &Connection, ids: &[i64]) -> Result<HashMap<i64, String
 }
 
 /// True when the typed text is in the buyer's code, running number or either name.
-fn matches(party: &PartyRef, text: &str, text_ur: &str, text_en: &str) -> bool {
+pub(super) fn matches(party: &PartyRef, text: &str, text_ur: &str, text_en: &str) -> bool {
     party.code.contains(text)
         || party.short_code.as_deref() == Some(text)
         || search_ur(&party.name_ur).contains(text_ur)
@@ -177,6 +185,7 @@ fn load_all(db: &Db, input: &BuyerDuesInput, changes_for: Changes) -> Result<Loa
             let (text_ur, text_en) = (search_ur(typed), search_en(typed));
             let buyers: Vec<Buyer> = buyers_balances_now(conn, today)?
                 .into_iter()
+                .filter(|b| input.party_id.is_none_or(|id| b.party.account_id == id))
                 .filter(|b| typed.is_empty() || matches(&b.party, typed, &text_ur, &text_en))
                 .collect();
             let cities = cities(conn)?;
@@ -294,6 +303,10 @@ pub struct BuyerDuesPrintInput {
     /// The search of the screen.
     #[serde(default)]
     pub search: Option<String>,
+    /// One buyer, or null for all (plan 79 item 1).
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub party_id: Option<i64>,
     /// The sort of the screen.
     #[serde(default)]
     pub sort: Option<SortInput>,
@@ -325,6 +338,7 @@ pub fn buyer_dues_spec(db: &Db, input: &BuyerDuesPrintInput) -> Result<TableSpec
         db,
         &BuyerDuesInput {
             search: input.search.clone(),
+            party_id: input.party_id,
             sort: input.sort.clone(),
             offset: 0,
             limit: 0,

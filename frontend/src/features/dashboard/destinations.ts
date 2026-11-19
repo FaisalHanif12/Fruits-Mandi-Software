@@ -6,6 +6,7 @@ import { useRouter } from '@tanstack/react-router';
 import type { AttentionFirst } from '../../bindings/AttentionFirst';
 import type { AttentionKind } from '../../bindings/AttentionKind';
 import type { ReportId } from '../../bindings/ReportId';
+import type { SellerDuesSide } from '../../bindings/SellerDuesSide';
 import { useOpenArrival } from '../gardens';
 
 export type Destination =
@@ -26,6 +27,16 @@ export type Destination =
   | { kind: 'analytics' }
   /** The buyer dues page (PRD FR-9.4, plan 76 point 9). */
   | { kind: 'buyer-dues' }
+  /** The seller dues page on one side: the shop owes the seller, the seller owes the shop, or both (PRD FR-9.6, plan 79). */
+  | { kind: 'seller-dues'; side: SellerDuesSide }
+  /** کل اگراہی with its four sections: buyers, sellers, the dead amount and the people who borrowed (PRD FR-9.7). */
+  | { kind: 'total-dues' }
+  /** Every person who borrowed and still owes (the tile ادھار رقم باقی, PRD FR-9.1). */
+  | { kind: 'lent-open' }
+  /** Every seller with an open advance (the tile پیشگی باقی, PRD FR-9.1). */
+  | { kind: 'advances-open' }
+  /** نقدی day by day (the tile آج کی نقدی, PRD FR-9.8). */
+  | { kind: 'cash-sales' }
   /** The commission page: one month, a row for each day (PRD FR-9.3, plan 76 point 7). */
   | { kind: 'commission' }
   /** The kharch page: the shop's kharch per head and each partner's own, for a period (PRD FR-9.5, plan 77). */
@@ -64,6 +75,9 @@ export function destinationOfKind(kind: AttentionKind): Destination {
       return { kind: 'personal-drawings' };
     case 'names_missing':
       return { kind: 'index' };
+    // The books check found a problem: its result is a line of the Day tab of Settings (PRD FR-7.44, NFR-OBS-5, plan 79 item 2c).
+    case 'health_check':
+      return { kind: 'settings-day' };
   }
 }
 
@@ -146,6 +160,24 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'buyer-dues':
         void navigate({ to: '/dues' });
+        return;
+      case 'seller-dues':
+        void navigate({
+          to: '/dues/sellers',
+          search: destination.side === 'all' ? {} : { side: destination.side },
+        });
+        return;
+      case 'total-dues':
+        void navigate({ to: '/dues/total' });
+        return;
+      case 'lent-open':
+        void navigate({ to: '/dues/lent' });
+        return;
+      case 'advances-open':
+        void navigate({ to: '/dues/advances' });
+        return;
+      case 'cash-sales':
+        void navigate({ to: '/cash-sales' });
         return;
       case 'commission':
         void navigate({ to: '/commission' });

@@ -1135,6 +1135,7 @@ fn buyer_dues_and_the_collection_sheet_refuse_bad_input_and_cap_their_pages() {
         let page = buyer_dues(
             db,
             &BuyerDuesInput {
+                party_id: None,
                 search: Some(search.into()),
                 sort: None,
                 offset: 0,
@@ -1160,6 +1161,7 @@ fn buyer_dues_and_the_collection_sheet_refuse_bad_input_and_cap_their_pages() {
     let refused = buyer_dues(
         db,
         &BuyerDuesInput {
+            party_id: None,
             search: None,
             sort: bad_sort.clone(),
             offset: 0,
@@ -1173,6 +1175,7 @@ fn buyer_dues_and_the_collection_sheet_refuse_bad_input_and_cap_their_pages() {
     let huge = buyer_dues(
         db,
         &BuyerDuesInput {
+            party_id: None,
             search: None,
             sort: None,
             offset: u32::MAX,
@@ -1184,6 +1187,7 @@ fn buyer_dues_and_the_collection_sheet_refuse_bad_input_and_cap_their_pages() {
     let wide = buyer_dues(
         db,
         &BuyerDuesInput {
+            party_id: None,
             search: None,
             sort: None,
             offset: 0,
@@ -2155,6 +2159,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
     let first = buyer_dues(
         db,
         &BuyerDuesInput {
+            party_id: None,
             search: None,
             sort: None,
             offset: 0,
@@ -2183,6 +2188,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         (
             "buyer dues page 1 (by name)",
             BuyerDuesInput {
+                party_id: None,
                 search: None,
                 sort: None,
                 offset: 0,
@@ -2193,6 +2199,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         (
             "buyer dues next page (offset 100)",
             BuyerDuesInput {
+                party_id: None,
                 search: None,
                 sort: None,
                 offset: 100,
@@ -2203,6 +2210,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         (
             "buyer dues deep page (offset 8000)",
             BuyerDuesInput {
+                party_id: None,
                 search: None,
                 sort: None,
                 offset: 8_000,
@@ -2213,6 +2221,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         (
             "buyer dues sorted by balance",
             BuyerDuesInput {
+                party_id: None,
                 search: None,
                 sort: by("balance"),
                 offset: 0,
@@ -2223,6 +2232,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         (
             "buyer dues search",
             BuyerDuesInput {
+                party_id: None,
                 search: Some("akram".into()),
                 sort: None,
                 offset: 0,

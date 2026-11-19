@@ -322,6 +322,7 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
                   <AccountPicker
                     {...control}
                     canAdd={false}
+                    allChoice
                     scope="seller"
                     showCard={false}
                     value={seller}
@@ -334,6 +335,7 @@ function PastBikriBody({ saved, remember }: MemoryProps) {
                   <Picker
                     {...control}
                     canAdd={false}
+                    allChoice
                     scope="item"
                     value={item}
                     onChange={(hit) => {

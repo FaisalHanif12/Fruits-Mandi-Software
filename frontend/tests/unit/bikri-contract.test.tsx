@@ -151,22 +151,20 @@ describe.each(LANGUAGES)('E2E-26 on the screen, from the backend’s answer (%s)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:buyer');
     });
-    // The blank second line: 30 in the quantity, the rate empty, the last rate as grey words ("Last 600", D8 Bug 1).
+    // The blank second line: 30 in the quantity, the rate empty with no hint and no placeholder number
+    // (PRD FR-7.53 retired, plan 79 item 5).
     await waitFor(() => {
       expect(textOf(sales, 1, 'qty')).toBe('30');
     });
     const rate = cellOf(sales, 1, 'rate');
+    expect(rate).not.toHaveClass('cell-hint');
+    expect(visible(rate.textContent).trim()).toBe('');
+    // 30 of the 50 are not sold yet. That is information, not a warning (plan 79 item 4): the lot's cell
+    // is not amber and no line of words says it; the lot row shows what is left once.
     await waitFor(() => {
-      expect(rate).toHaveClass('cell-hint');
+      expect(cellOf(lotsGrid(language), 0, 'qty')).not.toHaveClass('cell-warn');
     });
-    expect(visible(rate.textContent).trim()).toBe(
-      message(language, 'bikri-rate-hint-cell', { rate: '600' }),
-    );
-    // 30 of the 50 are not sold yet: the backend says so, and the lot's quantity cell shows it.
-    await waitFor(() => {
-      expect(cellOf(lotsGrid(language), 0, 'qty')).toHaveClass('cell-warn');
-    });
-    expect(visible(document.body.textContent)).toContain(
+    expect(visible(document.body.textContent)).not.toContain(
       message(language, 'err-qty-left-unsold', { left: 30 }),
     );
     // Buyer, Enter takes the 30, then Ctrl+D copies the rate of the line above.

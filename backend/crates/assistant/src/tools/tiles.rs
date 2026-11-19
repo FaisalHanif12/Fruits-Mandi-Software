@@ -15,7 +15,7 @@
 //! | `buyers_dues` | R20 as of today (without the ages of the bills), its total |
 //! | `sellers_dues` | R24, the "بیوپاری کے ذمے" total |
 //! | `dead_amount` | R38, the amount still owed |
-//! | `total_dues` | each of its three parts checked as above |
+//! | `total_dues` | each of its four parts checked as above (the open money lent against the total of R32) |
 //!
 //! The other tiles have no second place and carry no check mark. `last_backup` is what the backup
 //! service says (passed in by the app): whether the cloud copy is on and how many hours old it is.
@@ -150,12 +150,14 @@ fn run_balance_report(
     .map_err(reports_stop)
 }
 
-/// The second places of the dues tiles: R20 total, the "بیوپاری کے ذمے" total of R24, and the total
+/// The second places of the dues tiles: R20 total, the "بیوپاری کے ذمے" total of R24, the total of R32 (open money lent), and the total
 /// of R38 (PRD FR-7.76).
 struct Dues {
     buyers: Option<Paisa>,
     sellers: Option<Paisa>,
     dead: Option<Paisa>,
+    /// The open money lent: the total of R32 (PRD FR-7.76 v1.44).
+    lent: Option<Paisa>,
 }
 
 /// The R20 total as of today, read without the ages of the bills (they do not change a balance,
@@ -196,21 +198,36 @@ fn place_dead(env: &Env<'_>) -> Result<Option<Paisa>, Stop> {
     Ok(column_total(&r38, "still_owed"))
 }
 
+/// The total of R32 as of today: the open money lent, the fourth part of the total dues.
+fn place_lent(env: &Env<'_>, today: &str) -> Result<Option<Paisa>, Stop> {
+    let r32 = run_balance_report(
+        env,
+        ReportId::R32,
+        ReportFilters {
+            as_of: today.to_owned(),
+            ..ReportFilters::default()
+        },
+    )?;
+    Ok(column_total(&r32, "open"))
+}
+
 fn dues_places(env: &Env<'_>, today: &str) -> Result<Dues, Stop> {
     Ok(Dues {
         buyers: place_buyers(env, today)?,
         sellers: place_sellers(env, today)?,
         dead: place_dead(env)?,
+        lent: place_lent(env, today)?,
     })
 }
 
-/// The tile of the total dues: checked when each of its three parts is, with the sum of their
+/// The tile of the total dues: checked when each of its four parts is, with the sum of their
 /// second places as its own.
 fn total_dues_node(t: &DuesParts, d: &Dues) -> Node {
     let parts = [
         (t.buyers_paisa, d.buyers),
         (t.sellers_paisa, d.sellers),
         (t.dead_paisa, d.dead),
+        (t.lent_paisa, d.lent),
     ];
     let all_agree = parts.iter().all(|(tile, other)| *other == Some(*tile));
     let sum = parts
@@ -235,7 +252,7 @@ fn total_dues_node(t: &DuesParts, d: &Dues) -> Node {
 
 /// The tile of the total dues as the model reads it: its amount and what it holds. It IS the shop's
 /// کل اگراہی ("kul ugrahi", "total dues": PRD Section 3, 9.1, FR-19.9, FR-7.76): the buyers' dues, what
-/// the sellers owe the firm and the dead amount. The buyers' dues alone (the tile `buyers_dues`) are the
+/// the sellers owe the firm, the dead amount and the open money lent. The buyers' dues alone (the tile `buyers_dues`) are the
 /// total of R20 to R22, the lists by collector and by city: a question about those is NOT answered with
 /// this tile (live run 2: 21,751,319 = 20,324,367 + 0 + 1,426,952, quoted for the collectors' dues).
 fn total_dues_tile(amount: Node) -> Node {
@@ -244,7 +261,7 @@ fn total_dues_tile(amount: Node) -> Node {
         (
             "holds",
             Node::List(
-                ["buyers_dues", "sellers_dues", "dead_amount"]
+                ["buyers_dues", "sellers_dues", "dead_amount", "money_lent_open"]
                     .iter()
                     .map(|part| Node::Str((*part).to_owned()))
                     .collect(),
@@ -254,7 +271,7 @@ fn total_dues_tile(amount: Node) -> Node {
             "note",
             Node::Str(
                 "total_dues is the shop's total ugrahi (kul ugrahi, total dues, کل اگراہی): \
-                 buyers_dues plus sellers_dues plus dead_amount. buyers_dues alone is the dues of \
+                 buyers_dues plus sellers_dues plus dead_amount plus money_lent_open. buyers_dues alone is the dues of \
                  the buyers, the total of the lists by collector and by city (R20 to R22)."
                     .to_owned(),
             ),
@@ -262,12 +279,13 @@ fn total_dues_tile(amount: Node) -> Node {
     ])
 }
 
-/// The three parts of the total dues as the tiles hold them.
+/// The four parts of the total dues as the tiles hold them.
 fn dues_parts(t: &DashboardTiles) -> DuesParts {
     DuesParts {
         buyers_paisa: t.buyers_dues_paisa,
         sellers_paisa: t.sellers_dues_paisa,
         dead_paisa: t.dead_amount_paisa,
+        lent_paisa: t.lent_open_paisa,
         total_paisa: t.total_dues_paisa,
     }
 }
@@ -388,7 +406,7 @@ pub fn run(env: &Env<'_>, _state: &State, args: &Json) -> Result<Draft, Stop> {
     let today = now.today.clone();
     let sales = view_a_today(env, &today).map_err(|_| internal("view A"))?;
     let cash = cash_closing(env, &today).map_err(|_| internal("R12"))?;
-    let dues = dues_places(env, &today).map_err(|_| internal("R20, R24 or R38"))?;
+    let dues = dues_places(env, &today).map_err(|_| internal("R20, R24, R32 or R38"))?;
     let mut node = tiles_node(&now.tiles, sales, cash, &dues);
     if let Node::Obj(fields) = &mut node {
         fields.push(("last_backup".to_owned(), last_backup_node(env.backup)));
@@ -475,7 +493,7 @@ pub fn run_one(env: &Env<'_>, tile: Tile) -> Result<Draft, Stop> {
         }
         Tile::TotalDues => {
             let parts = narrow::total_dues(db, env.today).map_err(reports_stop)?;
-            let places = dues_places(env, &today).map_err(fail("R20, R24 or R38"))?;
+            let places = dues_places(env, &today).map_err(fail("R20, R24, R32 or R38"))?;
             Node::obj(vec![(
                 "total_dues",
                 total_dues_tile(total_dues_node(&parts, &places)),

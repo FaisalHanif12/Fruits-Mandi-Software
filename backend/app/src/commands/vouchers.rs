@@ -241,3 +241,41 @@ pub async fn advances_report<R: tauri::Runtime>(
     })
     .await
 }
+
+/// The table of the advances page: every seller of the filter, with the totals of the whole filter
+/// (plan 79 item 3, PRD FR-19.10). The print, the PDF and the Excel sheet are made from it.
+pub(crate) fn advances_table(
+    ctx: &mandi_services::Context,
+    input: &mandi_services::core::vouchers::AdvancesReportPrintInput,
+) -> Result<mandi_reports::reports::TableSpec, mandi_services::ServiceError> {
+    let report = vouchers::advances_report(
+        ctx,
+        &AdvancesReportInput {
+            seller_id: input.seller_id,
+            as_of: input.as_of.clone(),
+            // Every seller of the filter, not a page.
+            offset: 0,
+            limit: u32::MAX,
+            search: input.search.clone(),
+            only_open: input.only_open,
+        },
+    )?;
+    mandi_reports::dashboard::advances_spec(ctx.db(), &report, input.search.as_deref())
+        .map_err(super::reports_engine::engine_error)
+}
+
+/// The print of the advances page: every seller of the filter with the totals of the whole filter
+/// (plan 79 item 3, PRD FR-19.10). Errors as `advances_report`.
+#[tauri::command]
+pub async fn advances_report_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: mandi_services::core::vouchers::AdvancesReportPrintInput,
+) -> Result<mandi_reports::reports::TablePrintData, UiError> {
+    run(app, "advances_report_print_data", move |ctx| {
+        auth::require(ctx)?;
+        let spec = advances_table(ctx, &input)?;
+        mandi_reports::reports::table_print_data(ctx.db(), input.language, input.paper, spec)
+            .map_err(super::reports_engine::engine_error)
+    })
+    .await
+}

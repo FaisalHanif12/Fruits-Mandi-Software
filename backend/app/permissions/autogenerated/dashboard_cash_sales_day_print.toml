@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-cash-sales-day-print"
+description = "Enables the dashboard_cash_sales_day_print command without any pre-configured scope."
+commands.allow = ["dashboard_cash_sales_day_print"]
+
+[[permission]]
+identifier = "deny-dashboard-cash-sales-day-print"
+description = "Denies the dashboard_cash_sales_day_print command without any pre-configured scope."
+commands.deny = ["dashboard_cash_sales_day_print"]

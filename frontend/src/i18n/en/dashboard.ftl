@@ -284,7 +284,7 @@ dashboard-tile-dues-sellers = Sellers' dues
 dashboard-tile-dues-total = { -kul-agrahi }
 
 # review: pending
-dashboard-tile-dues-total-note = Buyers + sellers + { -doobi-raqam }
+dashboard-tile-dues-total-note = Buyers + sellers + { -doobi-raqam } + { -adhar-raqam }
 
 # review: pending
 dashboard-tile-dead = { -doobi-raqam }
@@ -564,4 +564,15 @@ dashboard-tile-others = Garden owners' and others' dues
 dashboard-tile-others-note = { $count ->
     [one] <num>{ $count }</num> person
    *[other] <num>{ $count }</num> people
+}
+
+## The tile Today's cash sales (plan 79 item 2c, PRD FR-9.8): it replaces the books check tile.
+
+# review: pending
+dashboard-tile-cash-sales = Today's cash sales
+
+# review: pending
+dashboard-tile-cash-sales-note = <num>{ $count }</num> { $count ->
+    [one] buyer
+   *[other] buyers
 }

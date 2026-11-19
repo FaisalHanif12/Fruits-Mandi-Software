@@ -4,9 +4,7 @@
 use std::path::Path;
 
 use mandi_services::bikri;
-use mandi_services::core::bikri::{
-    ChargeSource, ChuktaInput, LineChargeMethod, RateHintSource, StoredMethod,
-};
+use mandi_services::core::bikri::{ChargeSource, ChuktaInput, LineChargeMethod, StoredMethod};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::rules::{CreditLimitMode, OverridesSettings, WorkingValue};
 use mandi_services::rules;
@@ -114,9 +112,9 @@ fn event_1_gives_every_number_of_prd_4_4() {
 }
 
 #[test]
-fn e2e_26_the_next_row_starts_at_30_with_the_hint_600_and_the_working_of_720() {
-    // E2E-26, backend part: after Akram's line (20 of 50) a new row starts at 30 with the rate
-    // hint 600, and the commission of line 1 shows "12,000 x 6 / 100 = 720".
+fn e2e_26_the_next_row_starts_at_30_and_the_working_of_720() {
+    // E2E-26, backend part (PRD v1.44, no rate hint): after Akram's line (20 of 50) a new row
+    // starts at 30, and the commission of line 1 shows "12,000 x 6 / 100 = 720".
     let w = world();
     let draft = draft(vec![with_sales(
         lot(&w, "lot-1", w.rahim, w.banana, "50"),
@@ -125,12 +123,6 @@ fn e2e_26_the_next_row_starts_at_30_with_the_hint_600_and_the_working_of_720() {
     let p = preview(&w, &draft);
     let rows = &p.lots[0].lines;
     assert_eq!(rows[1].remaining_qty, 30);
-    let hint = rows[1].rate_hint.as_ref().expect("a rate hint");
-    assert_eq!(
-        (r(hint.rate_paisa), hint.source),
-        (600, RateHintSource::ThisBikri)
-    );
-    assert_eq!(hint.date, "2026-10-10");
     let working = &calc(&p.lots[0], 0).seller_comm.working;
     assert_eq!(working.message_id, "working-percent");
     let values: Vec<(String, WorkingValue)> = working

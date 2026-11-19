@@ -1,20 +1,21 @@
 // The tiles of the dashboard (PRD 9.1, FR-9.1): today's sales and commission, cash in hand, the four
 // dues tiles (buyers' dues, sellers' dues, total dues, dead amount, plan 40), the payables and
 // advances, stock, market trips, gardens, money lent, the dues of garden owners and others (plan 76 point 10,
-// it replaced the last backup tile) and today's expenses. Every
-// tile is one button that opens the screen or report behind it. The figures are the backend's, shown
+// it replaced the last backup tile), today's expenses and today's نقدی (plan 79 item 2c, it replaced the books
+// check tile). Every tile is one button that opens its own page, and that page shows what the tile counts
+// and ends in the tile's figure (plan 79 item 3). The figures are the backend's, shown
 // by `Num` and `formatPaisa`; nothing is added up here (CLAUDE.md rule 1). A figure that is below
 // zero or past its date also says so in words, never by colour alone (NFR-USE-12). ↑ ↓ ← → move
 // between tiles the way the user sees them (PRD FR-7.13).
 //
 // The gardens tile (PRD 9.1, FR-12.37) shows the running balance of the open gardens, from the same
-// call as the other tiles (`dashboard_get`). The books check tile is drawn by
-// `StatusTiles` and comes in as `children`, so one tile that cannot be read never hides the others.
+// call as the other tiles (`dashboard_get`).
 
 import { Localized } from '@fluent/react';
 import {
   HandCoins,
   Handshake,
+  Banknote,
   Package,
   PiggyBank,
   Receipt,
@@ -29,7 +30,6 @@ import {
   Wallet,
   Percent,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
 import type { DashboardTiles as DashboardTilesData } from '../../../bindings/DashboardTiles';
 import { isNegativePaisa, isPositivePaisa } from '../../../shared/format';
 import { formNavigationProps } from '../../../shared/keyboard';
@@ -38,11 +38,9 @@ import { useOpenDestination } from '../destinations';
 
 interface DashboardTilesProps {
   tiles: DashboardTilesData;
-  /** More tiles at the end of the grid: the books check. */
-  children?: ReactNode;
 }
 
-export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
+export function DashboardTiles({ tiles }: DashboardTilesProps) {
   const open = useOpenDestination();
   const cashBelowZero = isNegativePaisa(tiles.cash_in_hand_paisa);
   const lentOverdue = isPositivePaisa(tiles.lent_overdue_paisa);
@@ -106,7 +104,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
         label={<Localized id="dashboard-tile-dues-sellers" />}
         icon={UserRound}
         onOpen={() => {
-          open({ kind: 'report', id: 'R24' });
+          open({ kind: 'seller-dues', side: 'seller_owes' });
         }}
       >
         <Num inherit paisa={tiles.sellers_dues_paisa} />
@@ -116,7 +114,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
         icon={Scale}
         note={<Localized id="dashboard-tile-dues-total-note" />}
         onOpen={() => {
-          open({ kind: 'report', id: 'R20' });
+          open({ kind: 'total-dues' });
         }}
       >
         <Num inherit paisa={tiles.total_dues_paisa} />
@@ -148,7 +146,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
         label={<Localized id="dashboard-tile-payable" />}
         icon={HandCoins}
         onOpen={() => {
-          open({ kind: 'report', id: 'R24' });
+          open({ kind: 'seller-dues', side: 'shop_owes' });
         }}
       >
         <Num inherit paisa={tiles.sellers_payable_paisa} />
@@ -157,7 +155,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
         label={<Localized id="dashboard-tile-advances" />}
         icon={PiggyBank}
         onOpen={() => {
-          open({ kind: 'report', id: 'R26' });
+          open({ kind: 'advances-open' });
         }}
       >
         <Num inherit paisa={tiles.advances_open_paisa} />
@@ -177,7 +175,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
           ) : undefined
         }
         onOpen={() => {
-          open({ kind: 'report', id: 'R32' });
+          open({ kind: 'lent-open' });
         }}
       >
         <Num inherit paisa={tiles.lent_open_paisa} />
@@ -283,7 +281,24 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       >
         <Num inherit paisa={tiles.gardens_balance_paisa} />
       </Tile>
-      {children}
+      <Tile
+        label={<Localized id="dashboard-tile-cash-sales" />}
+        icon={Banknote}
+        note={
+          <Localized
+            id="dashboard-tile-cash-sales-note"
+            vars={{ count: tiles.cash_sales_today_buyers }}
+            elems={{ num: <Num /> }}
+          >
+            <span />
+          </Localized>
+        }
+        onOpen={() => {
+          open({ kind: 'cash-sales' });
+        }}
+      >
+        <Num inherit paisa={tiles.cash_sales_today_paisa} />
+      </Tile>
     </div>
   );
 }

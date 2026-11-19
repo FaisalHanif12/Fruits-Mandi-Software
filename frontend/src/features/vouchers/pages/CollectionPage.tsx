@@ -394,6 +394,7 @@ export function CollectionPage() {
                     <Picker
                       {...control}
                       canAdd={false}
+                      allChoice
                       scope="collector"
                       value={collector}
                       onChange={(hit) => {
@@ -407,6 +408,7 @@ export function CollectionPage() {
                     <Picker
                       {...control}
                       canAdd={false}
+                      allChoice
                       scope="city"
                       value={city}
                       onChange={(hit) => {

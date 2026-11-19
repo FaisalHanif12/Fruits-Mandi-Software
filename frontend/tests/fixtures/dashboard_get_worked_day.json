@@ -24,7 +24,9 @@
     "lent_overdue_paisa": 0,
     "others_dues_paisa": 0,
     "others_people_count": 0,
-    "expenses_today_paisa": 300000
+    "expenses_today_paisa": 300000,
+    "cash_sales_today_paisa": 1280000,
+    "cash_sales_today_buyers": 1
   },
   "partners": [
     {

@@ -378,3 +378,6 @@ attention-names-missing = { $count ->
     [one] <num>{ $count }</num> record has only one of its two names
    *[other] <num>{ $count }</num> records have only one of their two names
 }
+
+# review: pending
+attention-health-check = The books check found a problem. See it in Settings.

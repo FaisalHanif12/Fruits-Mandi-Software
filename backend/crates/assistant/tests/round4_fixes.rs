@@ -929,7 +929,8 @@ fn the_guide_is_the_answer_to_a_how_to_question_even_when_a_report_was_read() {
 fn the_total_dues_tile_says_what_it_holds_and_that_the_collectors_total_is_buyers_dues() {
     // Q1052 and Q1054 ("total dues by collector") quoted 21,751,319, the tile total_dues, for the
     // collectors' total 20,324,367 (R20/R22). The tile is the buyers' dues plus the sellers who owe
-    // the firm plus the dead amount (here 20,324,367 + 0 + 1,426,952): it says so in its result.
+    // the firm plus the dead amount plus the open money lent (PRD 9.1 v1.44; here 20,324,367 + 0 +
+    // 1,426,952 + 0): it says so in its result.
     let h = Harness::day();
     let (_, requests) = h.ask(
         "total dues by collector",
@@ -944,7 +945,12 @@ fn the_total_dues_tile_says_what_it_holds_and_that_the_collectors_total_is_buyer
     let total = &tiles["total_dues"];
     assert_eq!(
         total["holds"],
-        json!(["buyers_dues", "sellers_dues", "dead_amount"])
+        json!([
+            "buyers_dues",
+            "sellers_dues",
+            "dead_amount",
+            "money_lent_open"
+        ])
     );
     assert!(total["note"].as_str().unwrap().contains("buyers_dues"));
     // The worked day has no seller owing the firm and no dead person: the parts are the buyers'.

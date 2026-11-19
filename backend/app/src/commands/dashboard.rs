@@ -7,8 +7,11 @@
 
 use mandi_reports::dashboard::{
     self, AttentionList, BackupFacts, BuyerDuesInput, BuyerDuesPage, BuyerDuesPrintInput,
-    CommissionDay, CommissionDayInput, CommissionMonth, CommissionMonthInput, CommissionPrintInput,
-    Dashboard,
+    CashSalesDay, CashSalesDayInput, CashSalesDayPrintInput, CashSalesMonth, CashSalesMonthInput,
+    CashSalesMonthPrintInput, CommissionDay, CommissionDayInput, CommissionMonth,
+    CommissionMonthInput, CommissionPrintInput, Dashboard, LentOpenInput, LentOpenPage,
+    LentOpenPrintInput, SellerDuesInput, SellerDuesPage, SellerDuesPrintInput, TotalDues,
+    TotalDuesPrintInput,
 };
 use mandi_reports::reports::TablePrintData;
 use mandi_services::auth;
@@ -147,6 +150,144 @@ pub async fn dashboard_buyer_dues_print_data<R: tauri::Runtime>(
     run(app, "dashboard_buyer_dues_print_data", move |ctx| {
         auth::require(ctx)?;
         dashboard::buyer_dues_print_data(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// A page of the sellers, with the totals of both sides (plan 79 item 2a, PRD FR-9.6). Both seller
+/// tiles open it: `side` `shop_owes` for بیوپاریوں کو ادائیگی باقی, `seller_owes` for بیوپاریوں کے ذمے.
+/// A seller's history opens with `party_ledgers_statement_rows`. Read only. Errors:
+/// `ERR_OUT_OF_RANGE` on `sort.column`.
+#[tauri::command]
+pub async fn dashboard_seller_dues<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SellerDuesInput,
+) -> Result<SellerDuesPage, UiError> {
+    run(app, "dashboard_seller_dues", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::seller_dues(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of the seller dues, every seller of the filter (plan 79 item 2a).
+#[tauri::command]
+pub async fn dashboard_seller_dues_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SellerDuesPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "dashboard_seller_dues_print_data", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::seller_dues_print_data(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The four parts of کل اگراہی (buyers, sellers, dead amount, others) with their totals and the
+/// grand total, which is the tile (plan 79 item 2b, PRD FR-9.7). The rows of each part come from
+/// that part's page. Read only.
+#[tauri::command]
+pub async fn dashboard_total_dues<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<TotalDues, UiError> {
+    run(app, "dashboard_total_dues", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::total_dues_parts(ctx.db()).map_err(engine_error)
+    })
+    .await
+}
+
+/// A page of the people who borrowed and still owe (ادھار رقم باقی, the others part of کل اگراہی),
+/// with the total of all that match (plan 79 items 2b and 3). A person's loans open with `lent_list`.
+/// Read only. Errors: `ERR_OUT_OF_RANGE` on `sort.column`.
+#[tauri::command]
+pub async fn dashboard_lent_open<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: LentOpenInput,
+) -> Result<LentOpenPage, UiError> {
+    run(app, "dashboard_lent_open", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::lent_open(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// One month of days with money paid on the spot, the tile آج کی نقدی page (plan 79 item 2c, PRD
+/// FR-9.8). Read only. Errors: `ERR_FORMAT_INVALID` and `ERR_DATE_IN_FUTURE` on `month`.
+#[tauri::command]
+pub async fn dashboard_cash_sales_month<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CashSalesMonthInput,
+) -> Result<CashSalesMonth, UiError> {
+    run(app, "dashboard_cash_sales_month", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::cash_sales_month(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// One day's buyers who paid on the spot (plan 79 item 2c). Read only. The date codes on `date`.
+#[tauri::command]
+pub async fn dashboard_cash_sales_day<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CashSalesDayInput,
+) -> Result<CashSalesDay, UiError> {
+    run(app, "dashboard_cash_sales_day", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::cash_sales_day(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of the four parts of کل اگراہی with the grand total (plan 79 item 2b, FR-19.10).
+#[tauri::command]
+pub async fn dashboard_total_dues_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: TotalDuesPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "dashboard_total_dues_print_data", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::total_dues_print_data(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of the people who borrowed and still owe, every person of the filter (plan 79 item 3).
+#[tauri::command]
+pub async fn dashboard_lent_open_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: LentOpenPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "dashboard_lent_open_print_data", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::lent_open_print_data(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of one month of cash sales (plan 79 item 2c). Errors as `dashboard_cash_sales_month`.
+#[tauri::command]
+pub async fn dashboard_cash_sales_month_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CashSalesMonthPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "dashboard_cash_sales_month_print_data", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::cash_sales_month_print_data(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of one day's cash sales, every buyer who paid (plan 79 item 2c). Errors as
+/// `dashboard_cash_sales_day`.
+#[tauri::command]
+pub async fn dashboard_cash_sales_day_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CashSalesDayPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "dashboard_cash_sales_day_print_data", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::cash_sales_day_print_data(ctx.db(), &input).map_err(engine_error)
     })
     .await
 }

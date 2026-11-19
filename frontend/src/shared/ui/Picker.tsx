@@ -24,6 +24,8 @@ interface PickerProps extends FieldControlProps {
    * add row when the app can open the short form.
    */
   canAdd?: boolean | undefined;
+  /** A filter box: "All" is its first choice and its empty state (PRD FR-19.1, see PickerBase). */
+  allChoice?: boolean | undefined;
   /** For a مارکہ added from a lot: the lot's seller, who becomes its owner (plan 41, R3). */
   addOwner?: PickerValue | null | undefined;
   /** For a picker in a grid cell (see PickerBase). */

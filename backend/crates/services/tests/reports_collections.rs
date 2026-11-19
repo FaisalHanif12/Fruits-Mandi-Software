@@ -565,6 +565,7 @@ fn r26_shows_rahims_advance_fully_adjusted_e2e_7() {
     let screen = vouchers::advances_report(
         &w.env.ctx,
         &mandi_services::core::vouchers::AdvancesReportInput {
+            only_open: false,
             search: None,
             as_of: String::new(),
             offset: 0,

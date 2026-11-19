@@ -178,6 +178,7 @@ export function ReportFilterBar({
               {...control}
               controlCode={LENT_CONTROL_CODE}
               showCard={false}
+              allChoice={!entry.party_required}
               value={state.party}
               onChange={(hit) => {
                 onChange({ party: valueOf(hit), partyPersonKey: null });
@@ -187,6 +188,8 @@ export function ReportFilterBar({
             <AccountPicker
               {...control}
               canAdd={false}
+              // A report that cannot run without a party has no "All" (R13, R14, PRD FR-19.1).
+              allChoice={!entry.party_required}
               scope={box}
               showCard={false}
               value={state.party}
@@ -211,6 +214,7 @@ export function ReportFilterBar({
           <AccountPicker
             {...control}
             canAdd={false}
+            allChoice
             scope="seller"
             showCard={false}
             value={state[kind]}
@@ -234,6 +238,7 @@ export function ReportFilterBar({
           <Picker
             {...control}
             canAdd={false}
+            allChoice
             scope={kind}
             value={state[kind]}
             onChange={(hit) => {
@@ -257,6 +262,7 @@ export function ReportFilterBar({
           <Picker
             {...control}
             canAdd={false}
+            allChoice
             scope="collector"
             value={state.collector}
             onChange={(hit) => {

@@ -34,8 +34,8 @@ export type DashboardTiles = {
    */
   sellers_dues_paisa: Paisa;
   /**
-   * کل اگراہی: buyers' dues + sellers' dues + the dead amount, everything people owe the shop
-   * (PRD 9.1, FR-19.9). Open advances and money lent have their own tiles.
+   * کل اگراہی: buyers' dues + sellers' dues + the dead amount + open money lent, everything people
+   * owe the shop (PRD 9.1 v1.44, FR-19.9, FR-9.7). Open advances have their own tile.
    */
   total_dues_paisa: Paisa;
   /**
@@ -111,4 +111,13 @@ export type DashboardTiles = {
    * آج کا خرچہ: دکان خرچہ today (the 0501 heads only).
    */
   expenses_today_paisa: Paisa;
+  /**
+   * آج کی نقدی: the money buyers paid on the spot today (موقع پر جمع, PRD FR-12.44, FR-9.8),
+   * چکتا buyers included. It replaces the health check tile (plan 79 item 2c).
+   */
+  cash_sales_today_paisa: Paisa;
+  /**
+   * آج کی نقدی: how many buyers paid something on the spot today.
+   */
+  cash_sales_today_buyers: number;
 };

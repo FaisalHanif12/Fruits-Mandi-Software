@@ -737,6 +737,12 @@ pub(crate) fn run(
         }
         None => None,
     };
+    // The open money lent is the fourth part of the total dues (PRD 9.1 v1.44): it has the same
+    // read-time working, so it is given for today or later only.
+    let lent_open_now = match typed.today {
+        Some(today) => Some(crate::dashboard::lent_open_now(conn, today)?),
+        None => None,
+    };
     let (stock_before, stock_during) = stock_moves(conn, &from, &to)?;
     let mut stock = Stock::new(stock_before, stock_during)?;
 
@@ -775,16 +781,21 @@ pub(crate) fn run(
         let dues_all = dues.at_end_of(day)?;
         let (open_lots, open_qty) = stock.at_end_of(day)?;
         // PRD FR-10.10: the buyers' dues leave out the people in the dead amount, whose balances
-        // are in the dead amount; the total dues are the three together (FR-19.9).
+        // are in the dead amount; the total dues are the three and the open money lent together (FR-19.9, PRD 9.1 v1.44).
         let dead = dead_on(conn, &dead_marks, &buyer_accounts, day)?;
         let dues_now = dues_all.checked_sub(dead.buyers)?;
         let sellers_now = match (&sellers_dues_now, &today_iso) {
             (Some(total), Some(today)) if day.as_str() >= today.as_str() => Some(*total),
             _ => None,
         };
-        let total_dues = match sellers_now {
-            Some(sellers) => Some(dues_now.checked_add(sellers)?.checked_add(dead.amount)?),
-            None => None,
+        let total_dues = match (sellers_now, lent_open_now) {
+            (Some(sellers), Some(lent)) => Some(
+                dues_now
+                    .checked_add(sellers)?
+                    .checked_add(dead.amount)?
+                    .checked_add(lent)?,
+            ),
+            _ => None,
         };
 
         let amount = |p: Paisa| Some(p);

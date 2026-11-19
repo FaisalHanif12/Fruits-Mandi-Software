@@ -176,6 +176,38 @@ for (const extra of [
   });
 }
 
+// The buyer slips (the parchi, plan 79 item 7, PRD FR-19.15), in Urdu and in English: each slip has the top band
+// with the fruit picture, the firm name and the owners' and munshis' names with their phones, and ends on the
+// line for the وصولی, with no total نگ and no double rule. The header's people come from Settings, so the sample
+// puts two owners and a munshi into the header of the fixture.
+const SAMPLE_CONTACTS = {
+  ur: [
+    { role: 'owner', name: 'عدنان', phone: '0300-1111111' },
+    { role: 'owner', name: 'عثمان', phone: '0300-2222222' },
+    { role: 'munshi', name: 'آصف', phone: '0300-4058860' },
+  ],
+  en: [
+    { role: 'owner', name: 'Adnan', phone: '0300-1111111' },
+    { role: 'owner', name: 'Usman', phone: '0300-2222222' },
+    { role: 'munshi', name: 'Asif', phone: '0300-4058860' },
+  ],
+};
+for (const language of ['ur', 'en']) {
+  const data = /** @type {{ frame: { header: { contacts: unknown } } }} */ (
+    fixture(`reports_buyer_parchi_print_data_${language}.json`)
+  );
+  data.frame.header.contacts = SAMPLE_CONTACTS[language];
+  const request = fixture(`reports_buyer_parchi_print_data_${language}_request.json`);
+  const job = `pdfparchi${language}`;
+  CASES.push({
+    name: `parchi-${language}`,
+    label: `Buyer slips (parchi), ${language === 'ur' ? 'Urdu' : 'English'}`,
+    address: `#/print?print=parchi&input=${encodeURIComponent(JSON.stringify(request))}&job=${job}`,
+    answers: { reports_buyer_parchi_print_data: data },
+    must: ['12,880', '18,684', '10-10-2026'],
+  });
+}
+
 /** The shared header and footer of every report print (`reports_print_header`). */
 const HEADER_BASE = fixture('reports_print_header_ur.json');
 

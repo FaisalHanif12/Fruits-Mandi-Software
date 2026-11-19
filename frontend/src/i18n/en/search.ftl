@@ -76,3 +76,5 @@ search-quick-full-form = Full form
 search-quick-pick = Use this one
 # review: pending
 search-quick-similar-title = Similar records already exist
+# review: pending
+search-all-choice = All

@@ -6,7 +6,7 @@ The screen after sign-in, and the attention list that the bell and the dashboard
 
 - `pages/DashboardPage.tsx`: greeting, a note when a new version is ready, quick actions, the tiles,
   the partner strip, today's بکری, the oldest buyer dues, today's tasks, the two mini charts.
-- `components/`: one file for each part (`DashboardTiles`, `StatusTiles`, `PartnerStrip`,
+- `components/`: one file for each part (`DashboardTiles`, `PartnerStrip`,
   `TodayBikriList`, `OldestDues`, `QuickActions`, `DashboardCharts`, `AttentionLines`, `KindIcon`,
   `UpdateNote`). Every part opens the screen behind it (FR-9.1).
 - `api.ts`: `dashboard_get` and `assist_attention`, both read only. `hooks.ts`: the two queries.
@@ -19,9 +19,8 @@ The screen after sign-in, and the attention list that the bell and the dashboard
 
 - Every figure is the backend's. The dashboard adds up nothing: the tiles, the lists and the charts
   are written with `Num` and `formatPaisa`. Heights in a chart are numbers for the drawing only.
-- One call (`dashboard_get`) fills everything but the greeting and the two status tiles. When it
-  fails the page shows one error with a retry; the greeting, the quick actions and the backup and
-  books check tiles (they ask for themselves) are still there.
+- One call (`dashboard_get`) fills everything but the greeting. When it
+  fails the page shows one error with a retry; the greeting and the quick actions are still there.
 - A tile or a figure that is below zero, or past its date, also says so in words (NFR-USE-12).
 - The dashboard and the bell are read again after every save: `app/refresh-after-save.ts` watches
   the mutation cache (300 ms after the last save), and the bell also asks once a minute (NFR-SPD-22).
@@ -95,5 +94,37 @@ screenshot snippet `tests/e2e/shots-plan26.playwright.txt` on the development pa
 
 The tile "Garden owners' and others' dues" (`dashboard_get`: `others_dues_paisa`, `others_people_count`) replaced the
 last backup tile. It opens `/others-dues` (`features/cashbook/pages/OthersDuesPage.tsx`). The backup state is in the
-status bar and the attention list (NFR-BAK-10), so nothing about the backup is lost. `StatusTiles` keeps the books
-check tile only.
+status bar and the attention list (NFR-BAK-10), so nothing about the backup is lost.
+
+## Plan 79: every tile opens its own page (PRD FR-9.1, FR-9.6 to FR-9.8, FR-19.1)
+
+Each tile opens a page that shows exactly what the tile counts, and the total under its columns is the tile's
+figure, the backend's (CLAUDE.md rule 1). The pages load one page of rows at a time with the totals of the whole
+filter (FR-19.11). The party filter of every page starts at سب (`allChoice` of the shared picker). Each row opens
+that person's history (the opening balance first, FR-19.16).
+
+| Tile                                        | Page (route)                                    | Backend read                                             | A row opens                                               |
+| ------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------- |
+| بیوپاریوں کو ادائیگی باقی, بیوپاریوں کے ذمے | `SellerDuesPage` (`/dues/sellers?side=shop_owes | seller_owes`)                                            | `dashboard_seller_dues`                                   | party ledgers, side seller |
+| کل اگراہی                                   | `TotalDuesPage` (`/dues/total`), four sections  | `dashboard_total_dues` + the four lists                  | party ledgers, R13, or the ادھار رقم screen               |
+| ادھار رقم باقی                              | `LentOpenPage` (`/dues/lent`)                   | `dashboard_lent_open`                                    | the ادھار رقم screen, his name chosen                     |
+| پیشگی باقی                                  | `AdvancesOpenPage` (`/dues/advances`)           | `advances_report` with `only_open`                       | the پیشگی screen, his name chosen                         |
+| آج کی نقدی                                  | `CashSalesPage` (`/cash-sales?month=YYYY-MM`)   | `dashboard_cash_sales_month`, `dashboard_cash_sales_day` | a day opens its buyers in place; the بکری number opens it |
+
+The other tiles keep the pages of plans 76 to 78 (`/bikri/today`, `/commission`, `/rokar`, `/dues`, R38, `/others-dues`,
+`/kharch`, `/bikri/stock`, `/trips`, `/gardens`). The books check tile is gone: its result is the line of the Day tab
+of Settings (`BooksCheck`) and an item of the attention list when the last check found a problem. Files:
+`seller-dues-*`, `other-dues-columns.ts`, `dues-hooks.ts`, `dues-links.ts`, `components/TotalDuesSections.tsx`,
+`components/CashSalesDay.tsx`. Words: `i18n/*/dues.ftl` and `cash_sales.ftl`. Tests: `seller-dues-page`,
+`total-dues-page`, `lent-advances-open-pages`, `cash-sales-page`, `dashboard-screen`. Development pages:
+`#/dev/dues/sellers|total|lent|advances|cash` (flags `?empty`, `?down`, `?full`).
+
+### Print, PDF and Excel of these pages (PRD FR-19.10, FR-19.3)
+
+Every page has a Print button (`F9`) and an Excel button (`print-view.tsx`: `usePrintView`, `PrintButtons`). Print shows the
+preview in place of the table (`TablePrintPreview`): every row of the filter on screen, read from the backend in the print
+language by `dashboard_*_print_data`, printed or saved as a PDF by `dashboard_*_print`, and made into a sheet by
+`tables_export_excel` (kinds `seller_dues`, `total_dues`, `lent_open`, `advances_open`, `cash_sales_month`,
+`cash_sales_day`). `Esc` leaves the preview first. The hidden print window knows the kinds `seller-dues`, `total-dues`,
+`lent-open`, `advances-open`, `cash-sales-month` and `cash-sales-day` (`app/print-kinds`). The cash sales page prints its
+month, and one day from the Print button inside the open row. Tests: `dues-pages-print.test.tsx`, `print-kinds.test.tsx`.

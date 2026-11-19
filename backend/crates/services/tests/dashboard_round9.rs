@@ -1077,6 +1077,21 @@ fn every_kind_of_the_bell_appears_once_the_count_is_the_list_and_the_overdue_agr
             .map_err(mandi_services::db::DbError::from)
         })
         .unwrap();
+    // The daily check failed (plan 79, NFR-OBS-5): the books do not balance.
+    w.env
+        .ctx
+        .db()
+        .write(|tx| {
+            tx.execute(
+                "INSERT INTO settings (key, value_json, created_by, updated_by, version)
+                 VALUES ('health_last', ?1, 1, 1, 1)",
+                [r#"{"ok":false,"books":{"ran":true,"balanced":false,
+                    "journal_chain":{"ok":true},"audit_chain":{"ok":true}},
+                    "data":{"state":"ok"}}"#],
+            )
+            .map_err(mandi_services::db::DbError::from)
+        })
+        .unwrap();
     set_today(&w.env, 2026, 11, 15);
     let backup = BackupFacts {
         cloud_on: true,

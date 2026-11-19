@@ -221,9 +221,53 @@
   padding-block: 0;
 }
 
-.print-report .print-parchi-firm {
+/* The top band of a parchi: the fruit picture, the firm name and the people of the firm, small, in the same
+   three zones as the header of every print. It is no taller than the picture, so the slip keeps its size
+   and about four stand on an A4 page as before (PRD FR-19.15, plan 79 item 7). The people are one short line
+   each, never broken between a name and a phone. */
+.print-report .print-slip-band {
+  align-items: center;
+  gap: var(--print-gap-2);
+}
+
+.print-report .print-slip-band .print-mark {
+  inline-size: 9mm;
+  block-size: 10mm;
+}
+
+.print-report .print-slip-band .print-firm-name {
+  --print-num-size: var(--print-latin-2);
+
   font-size: var(--print-text-1);
-  font-weight: var(--weight-strong);
+  line-height: var(--leading-latin);
+}
+
+.print-report .print-slip-band .print-contacts {
+  max-inline-size: 58%;
+}
+
+.print-report .print-slip-band .print-contacts .print-firm-line {
+  --print-num-size: var(--print-latin-1);
+
+  font-size: var(--print-text-1);
+  line-height: var(--leading-latin);
+  white-space: nowrap;
+}
+
+/* The band takes a little room, so the parts of a parchi stand a hair closer: the slip keeps its size and
+   three still fit one A4 page (plan 79 item 7). */
+.print-report.print-parchi-page[data-variant='parchi'] .print-parchi-slip {
+  gap: var(--print-gap-1);
+}
+
+.print-report.print-parchi-page[data-variant='parchi'] .print-parchi-collect {
+  margin-block-start: var(--print-gap-1);
+}
+
+/* The new balance ends a parchi: one rule above it and no double rule under it. */
+.print-report.print-parchi-page[data-variant='parchi'] .print-amount-total th,
+.print-report.print-parchi-page[data-variant='parchi'] .print-amount-total td {
+  border-block-end: 0;
 }
 
 /* The title of one party's slip, "اکرم ٹول ٹیکس کی روزانہ پرچی": his name in the words (plan 78 A2, A6). */

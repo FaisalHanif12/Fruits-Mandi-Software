@@ -420,12 +420,24 @@ pub fn advances_report(
         let mut rows = Vec::new();
         let (mut given, mut returned, mut adjusted, mut open) =
             (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+        // A list of all sellers leaves out the people in the dead amount (R26, PRD FR-10.10).
+        let dead = if input.seller_id.is_none() {
+            Some(mandi_db::dead::dead_set(conn, Some(&as_of_iso))?)
+        } else {
+            None
+        };
         let search = input
             .search
             .as_deref()
             .map(str::trim)
             .filter(|t| !t.is_empty());
         for totals in repo::advance_totals(conn, &as_of_iso, input.seller_id)? {
+            if dead
+                .as_ref()
+                .is_some_and(|d| d.has_account(totals.account_id))
+            {
+                continue;
+            }
             let account = account_repo::get(conn, totals.account_id)?
                 .map(|row| RecordRef {
                     id: row.id,
@@ -457,6 +469,10 @@ pub fn advances_report(
                     "account {}: more returned and adjusted than given as advance",
                     totals.account_id
                 )));
+            }
+            // The page of the tile پیشگی باقی lists the sellers with something open only.
+            if input.only_open && left == Paisa::ZERO {
+                continue;
             }
             given = given.checked_add(g).map_err(money_error)?;
             returned = returned.checked_add(r).map_err(money_error)?;

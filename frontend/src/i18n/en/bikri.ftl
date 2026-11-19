@@ -167,11 +167,6 @@ bikri-rate-hint-today = Today's last rate: { $rate }
 # review: pending
 bikri-rate-hint-last-day = Last rate on { $date }: { $rate }
 
-# The words in the empty rate cell (D8 Bug 1, PRD FR-7.53): they say it is the last rate and not a value
-# that was typed. $rate: the rate.
-# review: pending
-bikri-rate-hint-cell = Last { $rate }
-
 ## The rest of a lot, behind "more" (PRD FR-12.2, 12.3).
 
 # review: pending

@@ -36,6 +36,11 @@ function shownByField(
   whole: boolean,
 ): boolean {
   const { where } = problem;
+  // Information is not a warning, and a warning of one line is a small mark on its cell with the
+  // figures on hover: neither is a line of words, so a بکری of hundreds of lines stays calm (PRD
+  // FR-12.6, plan 79 item 4). The goods left show once, in the lot row.
+  if (problem.item.code === 'ERR_QTY_LEFT_UNSOLD') return true;
+  if (problem.severity === 'warning' && where.kind === 'line') return true;
   if (where.kind === 'header') return headerShown;
   // The day of a later sale is a field of its own with its words under it (plan 16).
   if (where.kind === 'lots' && where.sub === 'date') return true;

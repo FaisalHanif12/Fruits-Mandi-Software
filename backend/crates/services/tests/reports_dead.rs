@@ -778,11 +778,12 @@ fn a_dead_person_with_a_loan_leaves_the_lent_lists_and_can_still_return() {
     .unwrap();
     assert_eq!(preview.owed_paisa.rupees(), 5_000);
     mark(&w, person, "11-10-2026", DeadReason::Left);
-    // ادھار رقم باقی goes down by his loan and کل اگراہی goes up by it (A66).
+    // ادھار رقم باقی goes down by his loan and ڈوبی رقم goes up by it (A66). Open money lent is a part
+    // of کل اگراہی since PRD v1.44, so the total does not move: what leaves one part joins the other.
     let t = tiles(&w);
     assert_eq!(t.lent_open_paisa.rupees(), 0);
     assert_eq!(t.dead_amount_paisa.rupees(), 5_000);
-    assert_eq!(t.total_dues_paisa.rupees(), total_before + 5_000);
+    assert_eq!(t.total_dues_paisa.rupees(), total_before);
     assert_eq!(r32_rows(&w), 0);
     // A new loan to him is refused; a return is allowed up to what he owes.
     let lend = |amount: &str| {

@@ -316,7 +316,7 @@ describe.each(LANGUAGES)('problems at their cells (%s)', (language) => {
     signedIn(sessionUser({ language }));
   });
 
-  it('an error on the quantity turns that cell red and is written in words; a warning turns the buyer amber', async () => {
+  it('an error on the quantity turns that cell red and is written in words; a credit-limit warning is only an amber mark on the buyer', async () => {
     const { user } = await openBook(language, (draft) => ({
       ...previewFor(draft),
       errors: [
@@ -341,12 +341,14 @@ describe.each(LANGUAGES)('problems at their cells (%s)', (language) => {
       expect(cellOf(sales, 1, 'qty')).toHaveClass('cell-error');
     });
     expect(cellOf(sales, 0, 'buyer')).toHaveClass('cell-warn');
-    // Colour is never the only signal: both are written, with the lot and line they are about.
+    // The quantity error is written in words; the credit limit is a mark on its cell, never a line of words.
     const text = pageText();
     // The quantity is told under the sale lines of the lot, with the line only (PRD FR-12.6).
     expect(text).toContain(message(language, 'bikri-qty-note-line', { line: 2 }));
     expect(text).toContain(message(language, 'err-qty-exceeds-lot', { available: 30 }));
-    expect(text).toContain(
+    // The credit limit is a small amber mark on the buyer cell, with the figures on hover: no line of words
+    // under the lines (PRD FR-12.6, plan 79 item 4).
+    expect(text).not.toContain(
       message(language, 'err-credit-limit-exceeded', { would_owe: '12,880', limit: '10,000' }),
     );
   });

@@ -28,6 +28,7 @@ const KINDS: readonly AttentionKind[] = [
   'loans_overdue',
   'takes_overdue',
   'names_missing',
+  'health_check',
 ];
 
 function bundleOf(language: 'ur' | 'en'): FluentBundle {
@@ -113,6 +114,7 @@ describe('the words only name a message the wrapper makes', () => {
   it('the id of a kind is attention-<kind with dashes>', () => {
     expect(messageOfKind('over_credit_limit')).toBe('attention-over-credit-limit');
     expect(messageOfKind('names_missing')).toBe('attention-names-missing');
+    expect(messageOfKind('health_check')).toBe('attention-health-check');
   });
 
   it('the aged message is chosen only when the backend names an age', () => {
@@ -132,6 +134,8 @@ describe('where a line leads', () => {
     expect(destinationOfKind('loans_overdue')).toEqual({ kind: 'report', id: 'R32' });
     expect(destinationOfKind('backup_old')).toEqual({ kind: 'backup' });
     expect(destinationOfKind('names_missing')).toEqual({ kind: 'index' });
+    // The books check that found a problem: its result is a line of the Day tab of Settings (plan 79 item 2c).
+    expect(destinationOfKind('health_check')).toEqual({ kind: 'settings-day' });
     expect(destinationOfKind('takes_overdue')).toEqual({ kind: 'personal-drawings' });
   });
 

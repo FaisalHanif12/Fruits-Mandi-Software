@@ -34,9 +34,27 @@ pub(crate) struct Overdue {
     pub(crate) days_past: i64,
 }
 
+/// One person who borrowed and still owes (plan 79 item 2b): the row of the page ادھار رقم باقی.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PersonOpen {
+    /// The person's ادھار رقم account.
+    pub(crate) account_id: i64,
+    /// His type word as stored (`staff`, `garden_owner`, `trip_person`, `other`).
+    pub(crate) person_type: String,
+    /// What he still owes: Σ open of his loans. More than 0.
+    pub(crate) open: Paisa,
+    /// The day of his oldest loan that still has something open, `YYYY-MM-DD`.
+    pub(crate) oldest_open_date: Option<String>,
+    /// How much of it is past its return-by day.
+    pub(crate) overdue: Paisa,
+}
+
 /// What is lent and what is overdue.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct LentFacts {
+    /// Every person with something open, in the order of his account id. Their opens add up to
+    /// `open`, and the people not in the dead amount only.
+    pub(crate) people: Vec<PersonOpen>,
     /// Σ open of the money lent to persons (control 0103). Partner takes are not in it.
     pub(crate) open: Paisa,
     /// Σ open of the loans past their return-by day.
@@ -76,6 +94,28 @@ pub(crate) fn facts(conn: &Connection, today: BusinessDate) -> Result<LentFacts,
     for (account, Loans { loans, .. }) in &grouped {
         let person = persons.get(account);
         let take = by_drawings.get(account);
+        if let Some(p) = person {
+            let (mut open, mut overdue) = (Paisa::ZERO, Paisa::ZERO);
+            let mut oldest: Option<&str> = None;
+            for loan in loans {
+                add(&mut open, loan.figures.open)?;
+                if loan.figures.open > Paisa::ZERO {
+                    oldest = oldest.or(Some(loan.line.entry_date.as_str()));
+                    if days_past_return_by(loan.figures.open, loan.return_by, today).is_some() {
+                        add(&mut overdue, loan.figures.open)?;
+                    }
+                }
+            }
+            if open > Paisa::ZERO {
+                out.people.push(PersonOpen {
+                    account_id: *account,
+                    person_type: p.person_type.clone(),
+                    open,
+                    oldest_open_date: oldest.map(str::to_owned),
+                    overdue,
+                });
+            }
+        }
         if person.is_some_and(|p| p.person_type != "staff") {
             let mut open = Paisa::ZERO;
             for loan in loans {
@@ -83,7 +123,9 @@ pub(crate) fn facts(conn: &Connection, today: BusinessDate) -> Result<LentFacts,
             }
             if open > Paisa::ZERO {
                 add(&mut out.others_open, open)?;
-                out.others_people += 1;
+                out.others_people = out.others_people.checked_add(1).ok_or_else(|| {
+                    ReportsError::Data("the number of people does not fit".to_owned())
+                })?;
             }
         }
         for loan in loans {
@@ -131,7 +173,17 @@ pub(crate) fn facts(conn: &Connection, today: BusinessDate) -> Result<LentFacts,
             .then(b.open.cmp(&a.open))
             .then(a.who_id.cmp(&b.who_id))
     };
+    out.people.sort_by_key(|p| p.account_id);
     out.loans.sort_by(by_age);
     out.takes.sort_by(by_age);
     Ok(out)
+}
+
+/// The open money lent to people not in the dead amount as of today: the tile ادھار رقم باقی and
+/// the fourth part of کل اگراہی.
+///
+/// # Errors
+/// As [`facts`].
+pub(crate) fn open_now(conn: &Connection, today: BusinessDate) -> Result<Paisa, ReportsError> {
+    Ok(facts(conn, today)?.open)
 }

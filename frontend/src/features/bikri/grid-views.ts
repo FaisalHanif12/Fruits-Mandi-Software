@@ -106,6 +106,13 @@ interface GridViewInput {
   /** The answer is for the draft on screen now (not an older one still shown). Default: yes. */
   current?: boolean;
   /**
+   * Tell what a half-typed line still needs (the buyer, the quantity or the rate). Only after the user tried
+   * to save (PRD FR-12.6, plan 79 item 4): while he types, a half-typed line is not a warning. Default: no. A
+   * line that looks whole but has no figures, and a buyer typed and never chosen, are always told at once
+   * (D8 Bug 1): the user would otherwise see nothing at all.
+   */
+  showMissing?: boolean;
+  /**
    * Buyer text typed on a line and never chosen, by the row of the line (shared/grid leftText.ts). Only
    * rows that have no buyer chosen are in it. The line says so in words (D8 Bug 1).
    */
@@ -140,6 +147,8 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
   }
   const selectedIndex = selectedLot === null ? -1 : lotKeys.indexOf(selectedLot);
   for (const problem of problems) {
+    // The goods left in a lot are information, not a warning: the lot row shows them once (plan 79 item 4).
+    if (problem.item.code === 'ERR_QTY_LEFT_UNSOLD') continue;
     const into = problem.severity === 'error' ? 'errors' : 'warnings';
     const { where } = problem;
     if (where.kind === 'lot') {
@@ -182,6 +191,7 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
       lineAt.set(key, { lot, line });
     });
   });
+  const showMissing = input.showMissing === true;
   const note = (rowId: string, text: string, column?: string) => {
     const at = lineAt.get(rowId);
     if (at === undefined) return;
@@ -196,7 +206,10 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
       const need = LINE_NEEDS[problem.where.sub];
       if (need === 'buyer' && buyerLeft[rowId] !== undefined) continue;
       if (need !== undefined) {
-        note(rowId, say(`bikri-line-missing-${need}`), LINE_GRID_FIELD[problem.where.sub]);
+        // A half-typed line is no warning while he types; it is told after a save try (plan 79 item 4).
+        if (showMissing) {
+          note(rowId, say(`bikri-line-missing-${need}`), LINE_GRID_FIELD[problem.where.sub]);
+        }
       } else {
         // An "empty" answer for a part of the line that has no cell of its own (a walk-in buyer's name):
         // the backend's own words, at once, not held back until the save.

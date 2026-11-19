@@ -72,7 +72,7 @@ pub struct SellersNow {
     pub dues_paisa: Paisa,
 }
 
-/// The three parts of کل اگراہی and their sum.
+/// The four parts of کل اگراہی and their sum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DuesParts {
     /// What buyers owe (the total row of R20).
@@ -81,7 +81,9 @@ pub struct DuesParts {
     pub sellers_paisa: Paisa,
     /// The dead amount (R38).
     pub dead_paisa: Paisa,
-    /// The three added: کل اگراہی.
+    /// Open money lent to people not in the dead amount (R32), the fourth part (PRD 9.1 v1.44).
+    pub lent_paisa: Paisa,
+    /// The four added: کل اگراہی.
     pub total_paisa: Paisa,
 }
 
@@ -149,13 +151,16 @@ fn dues_of(conn: &Connection, today: BusinessDate) -> Result<DuesParts, ReportsE
     let buyers = buyers_of(conn, today)?;
     let sellers = sellers_of(conn, today)?.dues_paisa;
     let (dead, _) = crate::dead::tile(conn)?;
+    let lent = lent::facts(conn, today)?.open;
     let mut total = buyers;
     add(&mut total, sellers)?;
     add(&mut total, dead)?;
+    add(&mut total, lent)?;
     Ok(DuesParts {
         buyers_paisa: buyers,
         sellers_paisa: sellers,
         dead_paisa: dead,
+        lent_paisa: lent,
         total_paisa: total,
     })
 }
@@ -215,8 +220,8 @@ pub fn dead(db: &Db) -> Result<(Paisa, i64), ReportsError> {
     in_one_moment(db, |conn, _| crate::dead::tile(conn))
 }
 
-/// کل اگراہی: the buyers' dues, the sellers' dues and the dead amount, each read once in the same
-/// moment, and their sum.
+/// کل اگراہی: the buyers' dues, the sellers' dues, the dead amount and the open money lent, each read
+/// once in the same moment, and their sum.
 ///
 /// # Errors
 /// As [`buyers_dues`].

@@ -118,6 +118,19 @@ describe.each(LANGUAGES)('the buyer dues page (%s)', (language) => {
     expect(visible(document.body.textContent)).not.toContain(m('report-col-age-0-7'));
   });
 
+  it('the buyer filter starts at سب: no buyer is sent, and the box says All (plan 79 item 1)', async () => {
+    await open();
+    await waitFor(() => {
+      expect(rowOf(20)).not.toBeNull();
+    });
+    expect(vi.mocked(dashboardApi.dashboardBuyerDues).mock.calls[0]?.[0]).toMatchObject({
+      party_id: null,
+      search: null,
+      offset: 0,
+    });
+    expect(screen.getByPlaceholderText(m('search-all-choice'))).toBeInTheDocument();
+  });
+
   it('the search goes to the backend with its words, and a clear brings the list back', async () => {
     const user = userEvent.setup();
     await open();
@@ -172,6 +185,7 @@ describe.each(LANGUAGES)('the buyer dues page (%s)', (language) => {
     );
     await waitFor(() => {
       expect(vi.mocked(dashboardApi.dashboardBuyerDuesPrintData).mock.calls[0]?.[0]).toEqual({
+        party_id: null,
         search: 'a',
         sort: null,
         language,

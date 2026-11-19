@@ -26,7 +26,10 @@ use std::path::PathBuf;
 
 use mandi_reports::analytics::{AnalyticsPrintInput, print_data as analytics_print_data};
 use mandi_reports::dashboard::{
-    BuyerDuesPrintInput, CommissionPrintInput, buyer_dues_print_data, commission_month_print_data,
+    BuyerDuesPrintInput, CashSalesDayPrintInput, CashSalesMonthPrintInput, CommissionPrintInput,
+    LentOpenPrintInput, SellerDuesPrintInput, TotalDuesPrintInput, buyer_dues_print_data,
+    cash_sales_day_print_data, cash_sales_month_print_data, commission_month_print_data,
+    lent_open_print_data, seller_dues_print_data, total_dues_print_data,
 };
 use mandi_reports::reports::{
     AdhariSheetPrintInput, BikriListPrintInput, CollectionSheetPrintInput, DaySlipsInput, ReportId,
@@ -42,6 +45,7 @@ use mandi_services::core::paging::SortInput;
 use mandi_services::core::printing::{Paper, PrintOutcome, PrintTo, parse_copies};
 use mandi_services::core::statement::PartnersStatementMonthInput;
 use mandi_services::core::statement::PartnersStatementMonthPrintInput;
+use mandi_services::core::vouchers::AdvancesReportPrintInput;
 use mandi_services::db::audit::AuditEntry;
 use mandi_services::{Context, ServiceError, bikri, party_ledgers, printing};
 use serde::Deserialize;
@@ -173,6 +177,78 @@ pub struct PrintStatementRowsInput {
 pub struct PrintBuyerDuesInput {
     /// The search, the sort, the print language and the paper.
     pub sheet: BuyerDuesPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_seller_dues_print`: the seller dues page to the printer or to a PDF (plan 79, PRD FR-19.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintSellerDuesInput {
+    /// The filter of the page, the print language and the paper.
+    pub sheet: SellerDuesPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_total_dues_print`: the total dues page to the printer or to a PDF (plan 79, PRD FR-19.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintTotalDuesInput {
+    /// The filter of the page, the print language and the paper.
+    pub sheet: TotalDuesPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_lent_open_print`: the page of money lent that is still open to the printer or to a PDF (plan 79, PRD FR-19.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintLentOpenInput {
+    /// The filter of the page, the print language and the paper.
+    pub sheet: LentOpenPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `advances_report_print`: the advances page to the printer or to a PDF (plan 79, PRD FR-19.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintAdvancesOpenInput {
+    /// The filter of the page, the print language and the paper.
+    pub sheet: AdvancesReportPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_cash_sales_month_print`: one month of cash sales to the printer or to a PDF (plan 79, PRD FR-19.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintCashSalesMonthInput {
+    /// The filter of the page, the print language and the paper.
+    pub sheet: CashSalesMonthPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_cash_sales_day_print`: one day of cash sales to the printer or to a PDF (plan 79, PRD FR-19.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintCashSalesDayInput {
+    /// The filter of the page, the print language and the paper.
+    pub sheet: CashSalesDayPrintInput,
     /// The printer of the Printing settings, or a PDF.
     pub to: PrintTo,
     /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
@@ -1018,6 +1094,206 @@ pub async fn run_buyer_dues<R: tauri::Runtime>(
                 .map(drop)
                 .map_err(engine_error)
         })
+    })
+    .await
+}
+
+/// What one table page is printed from (plan 79).
+struct TablePage {
+    command: &'static str,
+    kind: &'static str,
+    entity: &'static str,
+    /// The input of the print data command, as JSON.
+    sheet: Value,
+    language: Language,
+    paper: Option<Paper>,
+    to: PrintTo,
+    copies: Option<String>,
+}
+
+/// Prepares and runs the print of one table page (plan 79): the same checks and job for each page.
+async fn run_table_page<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    page: TablePage,
+    check: impl FnOnce(&Context) -> Result<(), ServiceError> + Send + 'static,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, page.command, move |state, dir| {
+        let request = DataPrint {
+            kind: page.kind,
+            entity: page.entity,
+            input: page.sheet,
+            language: page.language,
+            paper: page.paper,
+            to: page.to,
+            copies: page.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, check)
+    })
+    .await
+}
+
+/// Runs the print of the seller dues page (plan 79 item 2a).
+///
+/// # Errors
+/// As `dashboard_seller_dues_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_seller_dues<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintSellerDuesInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "dashboard_seller_dues_print",
+        kind: "seller-dues",
+        entity: "seller_dues",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        seller_dues_print_data(ctx.db(), &sheet)
+            .map(drop)
+            .map_err(engine_error)
+    })
+    .await
+}
+
+/// Runs the print of the total dues page (plan 79 item 2b).
+///
+/// # Errors
+/// As `dashboard_total_dues_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_total_dues<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintTotalDuesInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "dashboard_total_dues_print",
+        kind: "total-dues",
+        entity: "total_dues",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        total_dues_print_data(ctx.db(), &sheet)
+            .map(drop)
+            .map_err(engine_error)
+    })
+    .await
+}
+
+/// Runs the print of the page of money lent that is still open (plan 79 item 3).
+///
+/// # Errors
+/// As `dashboard_lent_open_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_lent_open<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintLentOpenInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "dashboard_lent_open_print",
+        kind: "lent-open",
+        entity: "lent_open",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        lent_open_print_data(ctx.db(), &sheet)
+            .map(drop)
+            .map_err(engine_error)
+    })
+    .await
+}
+
+/// Runs the print of the advances page (plan 79 item 3).
+///
+/// # Errors
+/// As `advances_report_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_advances_open<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintAdvancesOpenInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "advances_report_print",
+        kind: "advances-open",
+        entity: "advances_open",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        crate::commands::vouchers::advances_table(ctx, &sheet).map(drop)
+    })
+    .await
+}
+
+/// Runs the print of one month of cash sales (plan 79 item 2c).
+///
+/// # Errors
+/// As `dashboard_cash_sales_month_print_data`, the copies codes on `copies`,
+/// `ERR_PRINT_WINDOWS_ONLY`, `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_cash_sales_month<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCashSalesMonthInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "dashboard_cash_sales_month_print",
+        kind: "cash-sales-month",
+        entity: "cash_sales_month",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        cash_sales_month_print_data(ctx.db(), &sheet)
+            .map(drop)
+            .map_err(engine_error)
+    })
+    .await
+}
+
+/// Runs the print of one day of cash sales (plan 79 item 2c).
+///
+/// # Errors
+/// As `dashboard_cash_sales_day_print_data`, the copies codes on `copies`,
+/// `ERR_PRINT_WINDOWS_ONLY`, `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_cash_sales_day<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCashSalesDayInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "dashboard_cash_sales_day_print",
+        kind: "cash-sales-day",
+        entity: "cash_sales_day",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        cash_sales_day_print_data(ctx.db(), &sheet)
+            .map(drop)
+            .map_err(engine_error)
     })
     .await
 }

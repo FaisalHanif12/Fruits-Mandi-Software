@@ -22,6 +22,12 @@
     "allow-reports-collection-sheet-print-data",
     "allow-dashboard-buyer-dues-print-data",
     "allow-dashboard-commission-print-data",
+    "allow-dashboard-seller-dues-print-data",
+    "allow-dashboard-total-dues-print-data",
+    "allow-dashboard-lent-open-print-data",
+    "allow-dashboard-cash-sales-month-print-data",
+    "allow-dashboard-cash-sales-day-print-data",
+    "allow-advances-report-print-data",
     "allow-partners-statement-month-print-data",
     "allow-reports-print-header",
     "core:event:default"

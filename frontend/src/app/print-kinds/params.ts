@@ -7,12 +7,18 @@
 
 import { z } from 'zod';
 import type { AdhariSheetPrintInput } from '../../bindings/AdhariSheetPrintInput';
+import type { AdvancesReportPrintInput } from '../../bindings/AdvancesReportPrintInput';
 import type { BuyerDuesPrintInput } from '../../bindings/BuyerDuesPrintInput';
+import type { CashSalesDayPrintInput } from '../../bindings/CashSalesDayPrintInput';
+import type { CashSalesMonthPrintInput } from '../../bindings/CashSalesMonthPrintInput';
 import type { CollectionSheetPrintInput } from '../../bindings/CollectionSheetPrintInput';
 import type { CommissionPrintInput } from '../../bindings/CommissionPrintInput';
 import type { DaySlipsInput } from '../../bindings/DaySlipsInput';
+import type { LentOpenPrintInput } from '../../bindings/LentOpenPrintInput';
 import type { PartnersStatementMonthPrintInput } from '../../bindings/PartnersStatementMonthPrintInput';
+import type { SellerDuesPrintInput } from '../../bindings/SellerDuesPrintInput';
 import type { StatementRowsPrintInput } from '../../bindings/StatementRowsPrintInput';
+import type { TotalDuesPrintInput } from '../../bindings/TotalDuesPrintInput';
 import { jobOf } from '../../shared/print';
 
 /** The kinds of print the window knows, each with its own print-data command (the table in KindPrintPage). */
@@ -26,6 +32,13 @@ export const PRINT_KINDS = [
   'buyer-dues',
   'commission',
   'partner-month',
+  // Plan 79: the pages behind the dashboard tiles.
+  'seller-dues',
+  'total-dues',
+  'lent-open',
+  'advances-open',
+  'cash-sales-month',
+  'cash-sales-day',
 ] as const;
 
 export type PrintKind = (typeof PRINT_KINDS)[number];
@@ -42,6 +55,12 @@ const statementRowsInput = z.custom<StatementRowsPrintInput>(isObject);
 const buyerDuesInput = z.custom<BuyerDuesPrintInput>(isObject);
 const commissionInput = z.custom<CommissionPrintInput>(isObject);
 const partnerMonthInput = z.custom<PartnersStatementMonthPrintInput>(isObject);
+const sellerDuesInput = z.custom<SellerDuesPrintInput>(isObject);
+const totalDuesInput = z.custom<TotalDuesPrintInput>(isObject);
+const lentOpenInput = z.custom<LentOpenPrintInput>(isObject);
+const advancesOpenInput = z.custom<AdvancesReportPrintInput>(isObject);
+const cashSalesMonthInput = z.custom<CashSalesMonthPrintInput>(isObject);
+const cashSalesDayInput = z.custom<CashSalesDayPrintInput>(isObject);
 
 /** The parameters of the print window: the kind and the input of its command, typed. */
 export type KindPrintParams = {
@@ -55,6 +74,12 @@ export type KindPrintParams = {
   | { kind: 'buyer-dues'; input: BuyerDuesPrintInput }
   | { kind: 'commission'; input: CommissionPrintInput }
   | { kind: 'partner-month'; input: PartnersStatementMonthPrintInput }
+  | { kind: 'seller-dues'; input: SellerDuesPrintInput }
+  | { kind: 'total-dues'; input: TotalDuesPrintInput }
+  | { kind: 'lent-open'; input: LentOpenPrintInput }
+  | { kind: 'advances-open'; input: AdvancesReportPrintInput }
+  | { kind: 'cash-sales-month'; input: CashSalesMonthPrintInput }
+  | { kind: 'cash-sales-day'; input: CashSalesDayPrintInput }
 );
 
 /** True when the address is for one of these prints (it has a `print` value), even if the rest is wrong. */
@@ -104,6 +129,30 @@ export function parseKindPrintParams(searchStr: string): KindPrintParams | null 
     }
     case 'partner-month': {
       const input = partnerMonthInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'seller-dues': {
+      const input = sellerDuesInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'total-dues': {
+      const input = totalDuesInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'lent-open': {
+      const input = lentOpenInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'advances-open': {
+      const input = advancesOpenInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'cash-sales-month': {
+      const input = cashSalesMonthInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'cash-sales-day': {
+      const input = cashSalesDayInput.safeParse(json);
       return input.success ? { job, kind, input: input.data } : null;
     }
   }

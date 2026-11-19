@@ -65,8 +65,8 @@ pub struct DashboardTiles {
     /// amount. The "بیوپاری کے ذمے" total of R24 (PRD 9.1, FR-15.9).
     #[ts(type = "Paisa")]
     pub sellers_dues_paisa: Paisa,
-    /// کل اگراہی: buyers' dues + sellers' dues + the dead amount, everything people owe the shop
-    /// (PRD 9.1, FR-19.9). Open advances and money lent have their own tiles.
+    /// کل اگراہی: buyers' dues + sellers' dues + the dead amount + open money lent, everything people
+    /// owe the shop (PRD 9.1 v1.44, FR-19.9, FR-9.7). Open advances have their own tile.
     #[ts(type = "Paisa")]
     pub total_dues_paisa: Paisa,
     /// ڈوبی رقم: what the people moved to the dead amount still owe (PRD FR-10.10). The total of R38
@@ -125,6 +125,13 @@ pub struct DashboardTiles {
     /// آج کا خرچہ: دکان خرچہ today (the 0501 heads only).
     #[ts(type = "Paisa")]
     pub expenses_today_paisa: Paisa,
+    /// آج کی نقدی: the money buyers paid on the spot today (موقع پر جمع, PRD FR-12.44, FR-9.8),
+    /// چکتا buyers included. It replaces the health check tile (plan 79 item 2c).
+    #[ts(type = "Paisa")]
+    pub cash_sales_today_paisa: Paisa,
+    /// آج کی نقدی: how many buyers paid something on the spot today.
+    #[ts(type = "number")]
+    pub cash_sales_today_buyers: i64,
 }
 
 /// One partner of the strip (PRD 9.2).
@@ -251,11 +258,15 @@ pub enum AttentionKind {
     TakesOverdue,
     /// Records with a missing Urdu or English name.
     NamesMissing,
+    /// The daily check of the books failed: the books do not balance, a hash chain does not match or
+    /// the data file is damaged (PRD FR-7.44, NFR-OBS-5; it replaced the dashboard tile in
+    /// v1.44, plan 79 item 2c). One item when the last stored result is not good.
+    HealthCheck,
 }
 
 impl AttentionKind {
     /// Every kind, in the order of the list on the screen.
-    pub const ALL: [AttentionKind; 10] = [
+    pub const ALL: [AttentionKind; 11] = [
         AttentionKind::Drafts,
         AttentionKind::OpenDays,
         AttentionKind::StockWaiting,
@@ -266,6 +277,7 @@ impl AttentionKind {
         AttentionKind::LoansOverdue,
         AttentionKind::TakesOverdue,
         AttentionKind::NamesMissing,
+        AttentionKind::HealthCheck,
     ];
 }
 

@@ -76,3 +76,5 @@ search-quick-full-form = مکمل فارم
 search-quick-pick = یہی چنیں
 # review: pending
 search-quick-similar-title = ملتے جلتے اندراج پہلے سے موجود ہیں
+# review: pending
+search-all-choice = سب

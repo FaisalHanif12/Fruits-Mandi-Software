@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-seller-dues-print-data"
+description = "Enables the dashboard_seller_dues_print_data command without any pre-configured scope."
+commands.allow = ["dashboard_seller_dues_print_data"]
+
+[[permission]]
+identifier = "deny-dashboard-seller-dues-print-data"
+description = "Denies the dashboard_seller_dues_print_data command without any pre-configured scope."
+commands.deny = ["dashboard_seller_dues_print_data"]

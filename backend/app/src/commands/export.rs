@@ -13,7 +13,10 @@
 //! `reading`, `writing` (0 of 17), `writing` (17 of 17) and `done`.
 
 use mandi_reports::dashboard::{
-    BuyerDuesPrintInput, CommissionPrintInput, buyer_dues_spec, commission_month_spec,
+    BuyerDuesPrintInput, CashSalesDayPrintInput, CashSalesMonthPrintInput, CommissionPrintInput,
+    LentOpenPrintInput, SellerDuesPrintInput, TotalDuesPrintInput, buyer_dues_spec,
+    cash_sales_day_spec, cash_sales_month_spec, commission_month_spec, lent_open_spec,
+    seller_dues_spec, total_dues_spec,
 };
 use mandi_reports::export::{
     AnalyticsExportInput, BikriListExportInput, ExcelExported, ExportProgress, ExportStage,
@@ -87,6 +90,18 @@ pub enum TableExportSource {
     CommissionMonth(CommissionPrintInput),
     /// The buyers who owe (point 9).
     BuyerDues(BuyerDuesPrintInput),
+    /// The sellers with a balance (plan 79 item 2a).
+    SellerDues(SellerDuesPrintInput),
+    /// The four parts of کل اگراہی (plan 79 item 2b).
+    TotalDues(TotalDuesPrintInput),
+    /// The people who borrowed and still owe (plan 79 item 3).
+    LentOpen(LentOpenPrintInput),
+    /// The sellers with an open advance (plan 79 item 3).
+    AdvancesOpen(mandi_services::core::vouchers::AdvancesReportPrintInput),
+    /// One month of cash sales (plan 79 item 2c).
+    CashSalesMonth(CashSalesMonthPrintInput),
+    /// One day of cash sales (plan 79 item 2c).
+    CashSalesDay(CashSalesDayPrintInput),
     /// The اگراہی sheet of a day (point 2).
     CollectionSheet(CollectionSheetPrintInput),
     /// One month of a partner's statement (point 11). Behind the partner code.
@@ -200,6 +215,29 @@ pub async fn tables_export_excel<R: tauri::Runtime>(
             }
             TableExportSource::BuyerDues(i) => (
                 buyer_dues_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::SellerDues(i) => (
+                seller_dues_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::TotalDues(i) => (
+                total_dues_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::LentOpen(i) => (
+                lent_open_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::AdvancesOpen(i) => {
+                (super::vouchers::advances_table(ctx, i)?, i.language)
+            }
+            TableExportSource::CashSalesMonth(i) => (
+                cash_sales_month_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::CashSalesDay(i) => (
+                cash_sales_day_spec(ctx.db(), i).map_err(engine_error)?,
                 i.language,
             ),
             TableExportSource::CollectionSheet(i) => (

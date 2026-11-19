@@ -781,17 +781,18 @@ pub fn set_charges(
 // ---- Settings: overrides and checks ----
 
 /// Reads the stored switches. A missing value means the starting position of PRD FR-11.10 v1.5
-/// and FR-7.55: a typed commission or لاگا is allowed, a credit limit warns, and the rate check
-/// is on at 30%. A value stored as `false` stays `false` (the Owner turned it off), and a stored
-/// percent in range is kept as stored.
+/// and FR-7.55 (v1.44, plan 79): a typed commission or لاگا is allowed, a credit limit warns, and
+/// the rate check is OFF (at 30% when the Owner turns it on). A value stored as `true` or `false`
+/// stays as stored (the Owner chose it), and a stored percent in range is kept as stored.
 fn overrides_from(value: Option<Value>) -> OverridesSettings {
-    let flag = |key: &str| {
+    let stored = |key: &str, default: bool| {
         value
             .as_ref()
             .and_then(|v| v.get(key))
             .and_then(Value::as_bool)
-            .unwrap_or(true)
+            .unwrap_or(default)
     };
+    let flag = |key: &str| stored(key, true);
     let mode = match value
         .as_ref()
         .and_then(|v| v.get("credit_limit_mode"))
@@ -812,7 +813,7 @@ fn overrides_from(value: Option<Value>) -> OverridesSettings {
     OverridesSettings {
         allow_line_override: flag("allow_line_override"),
         credit_limit_mode: mode,
-        rate_check_enabled: flag("rate_check_enabled"),
+        rate_check_enabled: stored("rate_check_enabled", false),
         rate_check_percent: percent,
     }
 }

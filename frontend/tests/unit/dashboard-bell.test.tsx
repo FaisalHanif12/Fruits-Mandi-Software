@@ -258,8 +258,9 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
         first: null,
       },
       { kind: 'names_missing', count: 4, amount_paisa: null, qty: null, days: null, first: null },
+      { kind: 'health_check', count: 1, amount_paisa: null, qty: null, days: null, first: null },
     ],
-    total_count: 22,
+    total_count: 23,
   };
 
   it.each([
@@ -273,6 +274,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
     ['loans_overdue', '/reports/R32'],
     ['takes_overdue', '/rokar/expense'],
     ['names_missing', '/index'],
+    ['health_check', '/settings'],
   ] as const)('the %s line says its words and opens %s', async (kind, path) => {
     fakeDashboard({ attention: ALL_KINDS });
     const { router } = await openApp(language);

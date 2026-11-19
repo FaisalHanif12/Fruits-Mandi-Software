@@ -11,6 +11,7 @@ import {
   FileClock,
   HandCoins,
   PackageOpen,
+  ShieldAlert,
   Tag,
   WalletCards,
 } from 'lucide-react';
@@ -40,5 +41,7 @@ export function KindIcon({ kind }: { kind: AttentionKind }) {
       return <ArchiveRestore aria-hidden="true" className={CLASSES} />;
     case 'names_missing':
       return <Tag aria-hidden="true" className={CLASSES} />;
+    case 'health_check':
+      return <ShieldAlert aria-hidden="true" className={CLASSES} />;
   }
 }

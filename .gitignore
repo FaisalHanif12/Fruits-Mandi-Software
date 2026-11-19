@@ -127,3 +127,7 @@ $RECYCLE.BIN/
 
 # Local development database (pnpm seed)
 dev-data/
+
+# Python byte code
+__pycache__/
+*.pyc

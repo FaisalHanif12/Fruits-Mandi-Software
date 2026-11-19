@@ -8,12 +8,13 @@
 mod entry;
 
 pub use entry::{
-    AdvanceEffect, AdvancesReport, AdvancesReportInput, AdvancesReportRow, BillEffect,
-    CollectionBuyer, CollectionGroup, CollectionGroupTotal, CollectionList, CollectionListInput,
-    LineSource, LinkedPart, MAX_OPEN_ROWS, OpenBill, OpenBills, OpenBillsInput, OpenPayables,
-    OpenPayablesInput, PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult, ReceiptsInput,
-    ReceiptsSaved, VoucherCancelInput, VoucherCancelled, VoucherEditInput, VoucherEditable,
-    VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview, VoucherPreviewInput,
+    AdvanceEffect, AdvancesReport, AdvancesReportInput, AdvancesReportPrintInput,
+    AdvancesReportRow, BillEffect, CollectionBuyer, CollectionGroup, CollectionGroupTotal,
+    CollectionList, CollectionListInput, LineSource, LinkedPart, MAX_OPEN_ROWS, OpenBill,
+    OpenBills, OpenBillsInput, OpenPayables, OpenPayablesInput, PayablePosting, PaymentInput,
+    ReceiptInput, ReceiptRowResult, ReceiptsInput, ReceiptsSaved, VoucherCancelInput,
+    VoucherCancelled, VoucherEditInput, VoucherEditable, VoucherEntry, VoucherGetInput, VoucherHit,
+    VoucherPreview, VoucherPreviewInput,
 };
 
 use serde::{Deserialize, Serialize};

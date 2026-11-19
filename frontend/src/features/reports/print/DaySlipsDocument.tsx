@@ -25,7 +25,14 @@ import type { DaySlipsPrintData } from '../../../bindings/DaySlipsPrintData';
 import type { PrintReportParty } from '../../../bindings/PrintReportParty';
 import type { ReportColumnKind } from '../../../bindings/ReportColumnKind';
 import type { ReportPrintData } from '../../../bindings/ReportPrintData';
-import { PrintHeader, PrintRoot, PrintScreenFooter, PrintText } from '../../../shared/print';
+import {
+  PrintHeader,
+  PrintRoot,
+  PrintScreenFooter,
+  PrintSlipBand,
+  PrintText,
+  type PrintHeaderData,
+} from '../../../shared/print';
 import { Code } from '../../../shared/ui/Code';
 import { Cell, alignOf, cellClass } from './PrintCell';
 import { SlipLines } from './SlipLines';
@@ -46,6 +53,9 @@ function columnClass(columns: ReportPrintData['columns'], position: number): str
 function nameOf(party: PrintReportParty): string {
   return party.tag === null ? party.name : `${party.name} ${party.tag}`;
 }
+
+/** The line of the total نگ at the end of a day slip: the parchi leaves it out (PRD FR-19.15). */
+const TOTAL_QTY_ID = 'report-r35-total-qty';
 
 /** The id of the fact that holds the party (his code and name); a titled slip keeps only his code there. */
 const PARTY_FACT_ID = 'report-filter-party';
@@ -88,13 +98,13 @@ function SlipFacts({ slip }: { slip: ReportPrintData }) {
 function PartySlip({
   slip,
   parchi,
-  firm,
+  header,
   showTitle = true,
 }: {
   slip: ReportPrintData;
   parchi: boolean;
-  /** The firm's name: it heads a parchi, which stands alone on a page with other slips. */
-  firm: string;
+  /** The firm's header: its picture, name and people head a parchi, which stands on a page with other slips. */
+  header: PrintHeaderData;
   /** False when the page already has the title in its header (a seller bill). */
   showTitle?: boolean;
 }) {
@@ -102,7 +112,7 @@ function PartySlip({
   const title = slipTitle(slip, (id, vars) => l10n.getString(id, vars));
   return (
     <article className="print-parchi-slip" data-slip="">
-      {parchi ? <p className="print-parchi-firm">{firm}</p> : null}
+      {parchi ? <PrintSlipBand header={header} /> : null}
       {showTitle && title !== null ? (
         <h2 className="print-slip-title">
           <PrintText text={title} />
@@ -140,7 +150,12 @@ function PartySlip({
           ))}
         </tbody>
       </table>
-      <SlipLines lines={slip.summary} />
+      {/* Each figure shows once on a parchi: it has no total of the نگ under the new balance (plan 79 item 7). */}
+      <SlipLines
+        lines={
+          parchi ? slip.summary.filter((line) => line.label_id !== TOTAL_QTY_ID) : slip.summary
+        }
+      />
       {parchi ? (
         <p className="print-parchi-collect">
           {l10n.getString('print-parchi-collect')} <span className="print-write-line" />
@@ -169,7 +184,7 @@ function DaySlipsBody({ data, variant }: Pick<DaySlipsDocumentProps, 'data' | 'v
       <div className="print-report print-parchi-page" data-variant="parchi">
         <div className="print-parchi-grid">
           {data.buyers.map((slip, index) => (
-            <PartySlip key={index} slip={slip} parchi firm={frame.header.firm.name} />
+            <PartySlip key={index} slip={slip} parchi header={frame.header} />
           ))}
         </div>
         <PrintScreenFooter footer={frame.footer} />
@@ -185,7 +200,7 @@ function DaySlipsBody({ data, variant }: Pick<DaySlipsDocumentProps, 'data' | 'v
             header={frame.header}
             title={slipTitle(slip, (id, vars) => l10n.getString(id, vars)) ?? undefined}
           />
-          <PartySlip slip={slip} parchi={false} firm={frame.header.firm.name} showTitle={false} />
+          <PartySlip slip={slip} parchi={false} header={frame.header} showTitle={false} />
           <PrintScreenFooter footer={frame.footer} />
         </section>
       ))}

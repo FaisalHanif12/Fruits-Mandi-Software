@@ -956,6 +956,7 @@ fn e2e_7_event_4_rahim_is_paid_4316() {
     let report = vouchers::advances_report(
         &w.env.ctx,
         &AdvancesReportInput {
+            only_open: false,
             search: None,
             seller_id: Some(w.rahim),
             as_of: String::new(),
@@ -1336,6 +1337,7 @@ fn e2e_31_a_seller_returns_10000_of_his_advance() {
     let report = vouchers::advances_report(
         &w.env.ctx,
         &AdvancesReportInput {
+            only_open: false,
             search: None,
             seller_id: None,
             as_of: String::new(),
@@ -1378,6 +1380,7 @@ fn e2e_31_a_seller_returns_10000_of_his_advance() {
     let earlier = vouchers::advances_report(
         &w.env.ctx,
         &AdvancesReportInput {
+            only_open: false,
             search: None,
             seller_id: Some(w.rahim),
             as_of: "09-10-2026".into(),

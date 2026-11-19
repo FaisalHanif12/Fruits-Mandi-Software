@@ -278,7 +278,7 @@ dashboard-tile-dues-sellers = بیوپاریوں کے ذمے
 dashboard-tile-dues-total = { -kul-agrahi }
 
 # review: pending
-dashboard-tile-dues-total-note = گاہک + بیوپاری + { -doobi-raqam }
+dashboard-tile-dues-total-note = گاہک + بیوپاری + { -doobi-raqam } + { -adhar-raqam }
 
 # review: pending
 dashboard-tile-dead = { -doobi-raqam }
@@ -559,3 +559,11 @@ dashboard-tile-others-note = { $count ->
     [one] <num>{ $count }</num> شخص
    *[other] <num>{ $count }</num> افراد
 }
+
+## The tile Today's cash sales (plan 79 item 2c, PRD FR-9.8): it replaces the books check tile.
+
+# review: pending
+dashboard-tile-cash-sales = آج کی { -naqdi }
+
+# review: pending
+dashboard-tile-cash-sales-note = <num>{ $count }</num> گاہک

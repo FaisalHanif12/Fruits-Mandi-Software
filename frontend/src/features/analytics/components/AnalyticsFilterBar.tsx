@@ -282,6 +282,7 @@ export function AnalyticsFilterBar({
           <Picker
             {...control}
             canAdd={false}
+            allChoice
             scope="item"
             value={state.item}
             onChange={(hit) => {
@@ -330,6 +331,7 @@ export function AnalyticsFilterBar({
           <AccountPicker
             {...control}
             canAdd={false}
+            allChoice
             scope="seller"
             showCard={false}
             value={state.seller}
@@ -354,6 +356,7 @@ export function AnalyticsFilterBar({
           <AccountPicker
             {...control}
             canAdd={false}
+            allChoice
             scope="buyer"
             showCard={false}
             value={state.buyer}
@@ -376,6 +379,7 @@ export function AnalyticsFilterBar({
           <Picker
             {...control}
             canAdd={false}
+            allChoice
             scope="city"
             value={state.city}
             onChange={(hit) => {
@@ -397,6 +401,7 @@ export function AnalyticsFilterBar({
           <Picker
             {...control}
             canAdd={false}
+            allChoice
             scope="adda"
             value={state.adda}
             onChange={(hit) => {

@@ -332,7 +332,7 @@ pub(crate) fn list(
 ) -> Result<AttentionList, ReportsError> {
     let today: BusinessDate = facts.today;
     // In the order of `AttentionKind::ALL`.
-    let found: [Option<AttentionItem>; 10] = [
+    let found: [Option<AttentionItem>; 11] = [
         signals::drafts(conn)?,
         signals::open_days(conn, today)?,
         signals::stock_waiting(conn, today)?,
@@ -351,6 +351,7 @@ pub(crate) fn list(
             &lent.takes,
         )?,
         signals::names_missing(conn)?,
+        signals::health_check(conn)?,
     ];
     let items: Vec<AttentionItem> = found.into_iter().flatten().collect();
     let mut total_count = 0_i64;

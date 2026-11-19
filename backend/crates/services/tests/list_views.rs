@@ -2775,6 +2775,7 @@ fn the_advances_report_searches_and_its_totals_follow() {
         vouchers::advances_report(
             &w.env.ctx,
             &AdvancesReportInput {
+                only_open: false,
                 seller_id: None,
                 as_of: String::new(),
                 offset: 0,

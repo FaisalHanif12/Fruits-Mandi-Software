@@ -201,6 +201,7 @@ fn kind_key(kind: AttentionKind) -> &'static str {
         AttentionKind::LoansOverdue => "loans_overdue",
         AttentionKind::TakesOverdue => "takes_overdue",
         AttentionKind::NamesMissing => "names_missing",
+        AttentionKind::HealthCheck => "health_check",
     }
 }
 

@@ -339,6 +339,9 @@ fn the_rate_check_uses_the_saved_sales_of_the_last_7_days() {
             .iter()
             .any(|e| e.code == ErrorCode::ErrRateFarFromAverage)
     };
+    // PRD FR-7.55 v1.44: the rate check starts OFF, so a far rate is not warned until it is on.
+    assert!(!far(&preview(&w, &d("5,000"))));
+    set_checks(&w, false, true, 30);
     let p = preview(&w, &d("1,300"));
     assert!(!far(&p), "1,300 is exactly +30%: {:?}", p.warnings);
     let p = preview(&w, &d("1,301"));

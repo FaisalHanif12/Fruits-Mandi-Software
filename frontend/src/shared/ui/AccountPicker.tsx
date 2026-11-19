@@ -59,6 +59,8 @@ interface AccountPickerProps extends FieldControlProps {
   onCardAccount?: ((accountId: number | null, chukta?: CardChukta | null) => void) | undefined;
   /** False where adding an account from the field would not make sense, for example a filter. */
   canAdd?: boolean | undefined;
+  /** A filter box: "All" is its first choice and its empty state (PRD FR-19.1, see PickerBase). */
+  allChoice?: boolean | undefined;
   /** For a picker in a grid cell (see PickerBase). */
   initialText?: string | undefined;
   startOpen?: boolean | undefined;

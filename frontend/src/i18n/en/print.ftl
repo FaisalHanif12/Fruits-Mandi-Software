@@ -789,3 +789,59 @@ print-sale-empty = Nothing was sold on this day
 # What ادھاری تفصیل is for, one line (plan 78 A0, A5).
 # review: pending
 print-adhari-box-help = One row for each of today's buyers: the bill, the cash, today's credit, the balance before and the total credit. At the end, the total credit of all buyers.
+
+## The prints of the dashboard pages: sellers, total dues, money lent, advances and cash sales (plan 79, PRD FR-19.10).
+
+# review: pending
+print-seller-dues-title = Sellers' balances
+
+# review: pending
+print-total-dues-title = { -kul-agrahi }
+
+# review: pending
+print-total-dues-col-section = Part
+
+# review: pending
+print-total-dues-col-count = People
+
+# review: pending
+print-total-dues-col-total = Amount
+
+# review: pending
+print-total-dues-buyers = Buyers' dues
+
+# review: pending
+print-total-dues-sellers = Sellers' dues
+
+# review: pending
+print-total-dues-dead = { -doobi-raqam }
+
+# review: pending
+print-total-dues-others = { -adhar-raqam }
+
+# review: pending
+print-lent-open-title = { -adhar-raqam } open
+
+# review: pending
+print-lent-open-col-type = Type
+
+# review: pending
+print-lent-open-col-overdue = Past its return date
+
+# review: pending
+print-cash-sales-month-title = Cash sales of the month
+
+# review: pending
+print-cash-sales-day-title = Cash sales of one day
+
+# review: pending
+print-cash-sales-col-buyers = Buyers
+
+# review: pending
+print-cash-sales-col-cash = Cash
+
+# review: pending
+print-cash-sales-col-bikri = { -bikri }
+
+# review: pending
+print-cash-sales-col-bill = Bill

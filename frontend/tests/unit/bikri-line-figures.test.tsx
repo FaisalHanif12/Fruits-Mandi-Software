@@ -8,6 +8,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LANGUAGES } from '../../src/i18n';
+import * as bikriApi from '../../src/features/bikri/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { realAnswer } from '../helpers/bikri-d8-real';
 import { openUmarsBook, seedUmarsLot, umarAnswer } from '../helpers/bikri-umar';
@@ -21,7 +22,9 @@ import {
 } from '../helpers/bikri-screen';
 import {
   healthyBackend,
+  fail,
   leaveAppWindow,
+  press,
   resetClientState,
   sessionUser,
   signedIn,
@@ -131,14 +134,12 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('2:qty');
     }, SLOW_MS);
-    // The quantity starts as what the lot has left, and the rate cell shows the hint as grey text.
+    // The quantity starts as what the lot has left, and the rate cell is empty: no hint (plan 79 item 5).
     await waitFor(() => {
       expect(textOf(sales, 2, 'qty')).toBe('130');
     }, SLOW_MS);
-    await waitFor(() => {
-      expect(cellOf(sales, 2, 'rate')).toHaveClass('cell-hint');
-      expect(textOf(sales, 2, 'rate')).toContain('900');
-    }, SLOW_MS);
+    expect(cellOf(sales, 2, 'rate')).not.toHaveClass('cell-hint');
+    expect(textOf(sales, 2, 'rate')).toBe('');
     await user.keyboard('{Enter}900{Enter}');
 
     // The typed rate reaches the draft the backend is asked about.
@@ -212,20 +213,16 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
   const notesWith = (text: string) =>
     screen.queryAllByRole('alert').filter((note) => visible(note.textContent).includes(text));
 
-  it('the hint under the empty rate is words that say it is the last rate, never a bare number (B1)', async () => {
+  it('the rate cell is empty: no hint and no placeholder number (PRD FR-7.53 retired, plan 79 item 5)', async () => {
     const { sales } = await stopOnLine3WithoutRate();
-    await waitFor(() => {
-      expect(cellOf(sales, 2, 'rate')).toHaveClass('cell-hint');
-    }, SLOW_MS);
-    // "Last 900" (words and the figure), not the figure alone, and not laid out like a figure.
-    expect(textOf(sales, 2, 'rate')).toBe(say('bikri-rate-hint-cell', { rate: '900' }));
-    expect(cellOf(sales, 2, 'rate')).not.toHaveClass('cell-hint-number');
+    const rate = cellOf(sales, 2, 'rate');
+    expect(rate).not.toHaveClass('cell-hint');
+    expect(textOf(sales, 2, 'rate')).toBe('');
   });
 
-  it('a line with a buyer and no rate says in words what is missing; a blank row says nothing (B3)', async () => {
+  it('a half-typed line is no warning while he types; after a save try it says in words what is missing (B3, plan 79 item 4)', async () => {
     const { user, sales } = await typeFirstTwoLines();
-    // Line 3 is a blank row now (no buyer, no rate): silent. The note of line 2 (its rate was
-    // empty a moment ago) goes when the answer for the typed rate arrives.
+    // Line 3 is a blank row (no buyer, no rate): silent.
     await waitFor(() => {
       expect(screen.queryAllByRole('alert')).toHaveLength(0);
     }, SLOW_MS);
@@ -233,23 +230,40 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('2:qty');
     }, SLOW_MS);
+    await waitFor(() => {
+      expect(textOf(sales, 2, 'qty')).toBe('130');
+    }, SLOW_MS);
+    // Buyer and quantity are in and the rate is not: while he types that is no warning.
+    expect(notesWith(say('bikri-line-missing-rate'))).toHaveLength(0);
+    // He tries to save: the backend refuses the line that is not whole, and now the line says what it still
+    // needs, and names no other line.
+    vi.mocked(bikriApi.bikriSave).mockRejectedValueOnce(
+      fail({ code: 'ERR_REQUIRED', field: 'lots[0].sales[2].seller_rate', values: {} }),
+    );
+    press('F10');
     const words = `${say('bikri-qty-note-line', { line: 3 })} ${say('bikri-line-missing-rate')}`;
     await waitFor(() => {
       expect(notesWith(say('bikri-line-missing-rate'))).toHaveLength(1);
     }, SLOW_MS);
     expect(visible(notesWith(say('bikri-line-missing-rate'))[0]?.textContent)).toBe(words);
-    // The note names no other line, and goes away when the rate is typed.
-    await user.keyboard('{Enter}900{Enter}');
+    // The note goes away when the rate is typed.
+    await user.click(cellOf(sales, 2, 'rate'));
+    await user.keyboard('900{Enter}');
     await waitFor(() => {
       expect(notesWith(say('bikri-line-missing-rate'))).toHaveLength(0);
       expect(textOf(sales, 2, 'buyerTotal')).toBe('125,060');
     }, SLOW_MS);
   });
 
-  it('a line with no buyer but a rate says the buyer is missing (B3)', async () => {
+  it('a line with no buyer but a rate says the buyer is missing, after a save try (B3)', async () => {
     const { user, sales } = await typeFirstTwoLines();
     await user.click(cellOf(sales, 2, 'rate'));
     await user.keyboard('900{Enter}');
+    expect(notesWith(say('bikri-line-missing-buyer'))).toHaveLength(0);
+    vi.mocked(bikriApi.bikriSave).mockRejectedValueOnce(
+      fail({ code: 'ERR_BUYER_REQUIRED', field: 'lots[0].sales[2].buyer_account_id', values: {} }),
+    );
+    press('F10');
     await waitFor(() => {
       expect(notesWith(say('bikri-line-missing-buyer'))).toHaveLength(1);
     }, SLOW_MS);
@@ -421,12 +435,13 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('2:qty');
     }, SLOW_MS);
-    // The backend's answer for the line with no rate: the hint 900, no figures, the lot counts 130 as
-    // sold (باقی 0), and the line says what it needs.
+    // The backend's answer for the line with no rate: the rate cell is empty with no hint, no figures, the lot
+    // counts 130 as sold (باقی 0), and the half-typed line is no warning while he types (plan 79 item 4).
     await waitFor(() => {
-      expect(textOf(sales, 2, 'rate')).toBe(say('bikri-rate-hint-cell', { rate: '900' }));
-      expect(notesWith(say('bikri-line-missing-rate'))).toHaveLength(1);
+      expect(textOf(sales, 2, 'qty')).toBe('130');
     }, SLOW_MS);
+    expect(textOf(sales, 2, 'rate')).toBe('');
+    expect(notesWith(say('bikri-line-missing-rate'))).toHaveLength(0);
     expect(textOf(sales, 2, 'buyerTotal')).toBe('');
     await user.keyboard('{Enter}900{Enter}');
     await waitFor(() => {

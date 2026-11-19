@@ -18,6 +18,10 @@
 //   that kind over the screen (shared/ui/add-record.ts). The record that is saved is put in the
 //   field at once. An empty list says so in words ("No expense heads yet"), above the row. A
 //   filter box has no such row.
+// - A filter box takes `allChoice` (PRD FR-19.1, plan 79 item 1): its empty state is the first choice,
+//   "All", drawn as the field's value and as the first row of the open list, pinned above the
+//   matches. Picking it (a click, or ↑ from the first match and Enter) empties the filter, so the page
+//   shows every record again. Nothing else in the picker changes.
 // - Keys (PRD FR-7.16): with the list open ↑ ↓ move through the matches, Enter picks the
 //   highlighted one (the best match is highlighted at once) and moves on, ← → and Tab leave the
 //   field (form navigation and the grid do that), Esc closes the list.
@@ -115,6 +119,11 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   /** The record chosen, or null when the field was emptied. */
   onChange: (hit: H | null) => void;
   placeholder?: string | undefined;
+  /**
+   * A filter box: "All" is its first choice and its empty state (PRD FR-19.1, plan 79). The row is
+   * pinned above the matches; the field shows "All" while nothing is picked.
+   */
+  allChoice?: boolean | undefined;
   /**
    * The word for the kind of record this field takes, the key of the add row's and the empty
    * list's Fluent messages (`search-add-row`, `search-empty-kind`), for example `expense-head`.
@@ -223,6 +232,7 @@ export function PickerBase<H extends PickerHit>({
   value,
   onChange,
   placeholder,
+  allChoice,
   addNoun,
   onAddRecord,
   onAddNew,
@@ -279,6 +289,8 @@ export function PickerBase<H extends PickerHit>({
   // The add row is the last stop of the list: ↓ on the last match moves to it (plan 41, R1). It is
   // not one of the matches, so Downshift does not know it and the matches keep their old meaning.
   const [addActive, setAddActive] = useState(false);
+  // The "All" row is the first stop of a filter's list: ↑ on the first match moves to it.
+  const [allActive, setAllActive] = useState(false);
   // The second add row is the stop after the first (a new چکتا buyer, PRD FR-13.3).
   const [extraActive, setExtraActive] = useState(false);
   const addRowId = `${listId}-add`;
@@ -291,6 +303,9 @@ export function PickerBase<H extends PickerHit>({
   // be empty, and for the last page, so it is the end of the list (plan 41, R1).
   const addShown = open && canAdd && !isPending && !isError && !hasMore;
   const extraShown = addShown && extraAdd !== undefined;
+  // The "All" row shows while nothing is typed: typed text is a search among records.
+  const allShown = open && allChoice === true && readOnly !== true && (typed ?? '').trim() === '';
+  const allRowId = `${listId}-all`;
 
   const shown = typed ?? (value === null ? '' : displayName(value, language));
 
@@ -300,6 +315,7 @@ export function PickerBase<H extends PickerHit>({
     pointed.set(false);
     setAddActive(false);
     setExtraActive(false);
+    setAllActive(false);
     // A closed list forgets how far it was scrolled; the next one opens at the top.
     setScrollTop(0);
   };
@@ -308,6 +324,14 @@ export function PickerBase<H extends PickerHit>({
     onChange(hit);
     // A چکتا buyer is not remembered as a recent account: his id is the shared account's.
     if (hit.kind !== 'chukta') touch.mutate(hit.id);
+    setTypedNow(null);
+    justPicked.set(true);
+    closeList();
+  };
+
+  // "All" was chosen: the filter is emptied. Nothing is told when it was empty already.
+  const pickAll = () => {
+    if (value !== null) onChange(null);
     setTypedNow(null);
     justPicked.set(true);
     closeList();
@@ -453,6 +477,37 @@ export function PickerBase<H extends PickerHit>({
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     // A key that moves the highlight is the user pointing at a row (plan 61).
     if (open && POINTING_KEYS.has(event.key)) pointed.set(true);
+    if (allShown && allActive) {
+      // On the "All" row: ↓ goes back to the first match, Enter takes "All" and moves on.
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        keepKeyForApp(event);
+        setAllActive(false);
+        setHighlightedIndex(hits.length > 0 ? 0 : -1);
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        keepKeyForApp(event);
+        pickAll();
+        advance(event.currentTarget, event);
+        return;
+      }
+    }
+    if (
+      allShown &&
+      event.key === 'ArrowUp' &&
+      !addActive &&
+      !extraActive &&
+      highlightedIndex <= 0
+    ) {
+      // ↑ on the first match (or from nothing pointed at) moves to the "All" row, and stays there.
+      event.preventDefault();
+      keepKeyForApp(event);
+      setHighlightedIndex(-1);
+      setAllActive(true);
+      return;
+    }
     if (open && extraShown && event.key === 'ArrowDown' && (addActive || extraActive)) {
       // ↓ from the add row moves to the second add row, and stays there (PRD FR-13.3).
       event.preventDefault();
@@ -668,10 +723,12 @@ export function PickerBase<H extends PickerHit>({
   // What the add row names: the text typed, trimmed. Empty while the field is not being typed in.
   const addTyped = (typed ?? '').trim();
 
+  // A filter with nothing picked says "All" in the box, in ink and not in the muted placeholder look.
+  const showsAll = allChoice === true && readOnly !== true && value === null;
   const inputProps = getInputProps({
     type: 'text',
     readOnly,
-    placeholder,
+    placeholder: showsAll ? l10n.getString('search-all-choice') : placeholder,
     'aria-invalid': invalid,
     'aria-describedby': describedBy,
     autoComplete: 'off',
@@ -690,6 +747,7 @@ export function PickerBase<H extends PickerHit>({
         pointed.set(false);
         setAddActive(false);
         setExtraActive(false);
+        setAllActive(false);
         onTyping?.();
         onTyped?.(event.currentTarget.value);
       }
@@ -703,13 +761,15 @@ export function PickerBase<H extends PickerHit>({
         {...inputProps}
         // Form navigation lets ← and → leave this field while its list is open (plan 46).
         data-picker-field=""
-        {...(addActive
-          ? { 'aria-activedescendant': addRowId }
-          : extraActive
-            ? { 'aria-activedescendant': extraRowId }
-            : {})}
+        {...(allActive
+          ? { 'aria-activedescendant': allRowId }
+          : addActive
+            ? { 'aria-activedescendant': addRowId }
+            : extraActive
+              ? { 'aria-activedescendant': extraRowId }
+              : {})}
         title={typeof inputProps.value === 'string' ? inputProps.value : undefined}
-        className={`${controlClasses({ invalid, readOnly })} type-field pe-control text-ellipsis`}
+        className={`${controlClasses({ invalid, readOnly })} type-field pe-control text-ellipsis ${showsAll ? 'placeholder:text-ink!' : ''}`}
       />
       {readOnly === true ? null : (
         <button
@@ -733,6 +793,33 @@ export function PickerBase<H extends PickerHit>({
             : 'hidden'
         }
       >
+        {allShown ? (
+          <div
+            className="mb-1 border-b border-border pb-1"
+            // A press on the row must not take focus from the field, or the list would close first.
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+          >
+            <button
+              type="button"
+              id={allRowId}
+              tabIndex={-1}
+              aria-current={allActive || value === null}
+              onClick={pickAll}
+              onMouseMove={() => {
+                if (allActive) return;
+                setHighlightedIndex(-1);
+                setAddActive(false);
+                setExtraActive(false);
+                setAllActive(true);
+              }}
+              className={`flex min-h-control w-full items-center rounded-1 px-3 py-1 text-start type-field ${allActive ? 'bg-primary-soft text-primary' : value === null ? 'font-semibold text-ink' : 'text-ink'}`}
+            >
+              <Localized id="search-all-choice" />
+            </button>
+          </div>
+        ) : null}
         <ul
           {...getMenuProps({
             ref: setListEl,
@@ -762,6 +849,7 @@ export function PickerBase<H extends PickerHit>({
                         pointed.set(true);
                         setAddActive(false);
                         setExtraActive(false);
+                        setAllActive(false);
                       },
                     })}
                     aria-setsize={hits.length}

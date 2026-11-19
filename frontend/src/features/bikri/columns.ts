@@ -135,12 +135,9 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       field: SALE.rate,
       type: 'rate',
       headerId: 'bikri-col-rate',
-      // A rate is a few digits, and the hint "Last 900" is short: the least width as a plain figure.
+      // A rate is a few digits: the least width as a plain figure. The cell is empty until it is
+      // typed: no hint, no placeholder number (PRD FR-7.53 retired, plan 79 item 5).
       minWidth: FIT_MIN.figure,
-      // The last rate is grey, italic words ("Last 900"), laid out as text and not as a figure, so it
-      // is never taken for a typed rate. It is never typed into the cell (PRD FR-7.53, D8 Bug 1).
-      hintFromCalc: true,
-      hintTooltipField: `${SALE.rate}Tip`,
     },
     {
       field: SALE.grade,

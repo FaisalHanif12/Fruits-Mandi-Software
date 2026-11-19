@@ -101,6 +101,7 @@ export function CommissionFilterBar({ filters, onChange, today, error }: Commiss
             <AccountPicker
               {...control}
               canAdd={false}
+              allChoice
               scope={side}
               showCard={false}
               value={filters.party}

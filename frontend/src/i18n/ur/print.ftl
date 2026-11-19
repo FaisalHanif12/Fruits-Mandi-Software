@@ -789,3 +789,59 @@ print-sale-empty = اس دن کوئی { -bikri } نہیں
 # What ادھاری تفصیل is for, one line (plan 78 A0, A5).
 # review: pending
 print-adhari-box-help = آج کے ہر { -gahak } کی ایک قطار: کتنا بل، کتنا نقد، آج کا ادھار، پہلے کا بقایا اور کل ادھار۔ آخر میں سب { -gahakon } کا کل ادھار۔
+
+## The prints of the dashboard pages: sellers, total dues, money lent, advances and cash sales (plan 79, PRD FR-19.10).
+
+# review: pending
+print-seller-dues-title = بیوپاریوں کا بقایا
+
+# review: pending
+print-total-dues-title = { -kul-agrahi }
+
+# review: pending
+print-total-dues-col-section = حصہ
+
+# review: pending
+print-total-dues-col-count = افراد
+
+# review: pending
+print-total-dues-col-total = رقم
+
+# review: pending
+print-total-dues-buyers = گاہکوں کے ذمے
+
+# review: pending
+print-total-dues-sellers = بیوپاریوں کے ذمے
+
+# review: pending
+print-total-dues-dead = { -doobi-raqam }
+
+# review: pending
+print-total-dues-others = { -adhar-raqam }
+
+# review: pending
+print-lent-open-title = { -adhar-raqam } باقی
+
+# review: pending
+print-lent-open-col-type = قسم
+
+# review: pending
+print-lent-open-col-overdue = واپسی کی تاریخ گزر چکی
+
+# review: pending
+print-cash-sales-month-title = مہینے کی { -naqdi }
+
+# review: pending
+print-cash-sales-day-title = ایک دن کی { -naqdi }
+
+# review: pending
+print-cash-sales-col-buyers = گاہک
+
+# review: pending
+print-cash-sales-col-cash = { -naqdi }
+
+# review: pending
+print-cash-sales-col-bikri = { -bikri }
+
+# review: pending
+print-cash-sales-col-bill = بل

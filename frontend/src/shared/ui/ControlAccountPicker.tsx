@@ -28,6 +28,8 @@ interface ControlAccountPickerProps extends FieldControlProps {
   showCard?: boolean | undefined;
   /** A person in the dead amount may be offered (the ادھار رقم واپسی field, PRD FR-10.10). */
   includeDead?: boolean | undefined;
+  /** A filter box: "All" is its first choice and its empty state (PRD FR-19.1, see PickerBase). */
+  allChoice?: boolean | undefined;
 }
 
 /** The word of each control's accounts in the add row's and the empty list's messages (plan 41). */

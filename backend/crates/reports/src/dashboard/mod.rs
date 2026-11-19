@@ -11,17 +11,21 @@
 //! Example (PRD 4.9, after Events 1 to 5): 41,400 in 2 بکری, cash 58,484, dues 21,564, payable
 //! 10,160, nothing in stock; the partner strip 996 / 746 / 746; the bell is empty.
 
+mod advances_print;
 mod attention;
 mod buyer_dues;
+mod cash_sales;
 mod charts;
 mod commission;
 mod lent;
 mod lists;
 mod model;
 pub(crate) mod narrow;
+mod seller_dues;
 mod signals;
 mod strip;
 mod tiles;
+mod total_dues;
 
 use mandi_core::dates::BusinessDate;
 use mandi_db::Db;
@@ -34,9 +38,17 @@ use crate::reports::common::{in_snapshot, today as today_of};
 use crate::reports::filters::Typed;
 use crate::reports::grouped_sums::SellerSums;
 
+pub use advances_print::{advances_print_data, advances_spec};
 pub use buyer_dues::{
     BuyerDuesInput, BuyerDuesPage, BuyerDuesPrintInput, BuyerDuesRow, buyer_dues,
     buyer_dues_print_data, buyer_dues_spec,
+};
+pub use cash_sales::plans as cash_sales_plans;
+pub use cash_sales::{
+    CashSalesBuyerRow, CashSalesDay, CashSalesDayInput, CashSalesDayPrintInput, CashSalesDayRow,
+    CashSalesMonth, CashSalesMonthInput, CashSalesMonthPrintInput, cash_sales_day,
+    cash_sales_day_print_data, cash_sales_day_spec, cash_sales_month, cash_sales_month_print_data,
+    cash_sales_month_spec,
 };
 pub use commission::plans as commission_plans;
 pub use commission::{
@@ -46,6 +58,7 @@ pub use commission::{
     CommissionSide, PartnerShare, commission_day, commission_month, commission_month_print_data,
     commission_month_spec,
 };
+pub(crate) use lent::open_now as lent_open_now;
 pub use model::{
     AttentionFirst, AttentionItem, AttentionKind, AttentionList, AttentionTarget, BACKUP_OLD_HOURS,
     BackupFacts, CHART_DAYS, DUES_OLD_DAYS, Dashboard, DashboardBikri, DashboardChartDay,
@@ -55,6 +68,15 @@ pub use model::{
 pub use narrow::{
     DuesParts, SalesToday, SellersNow, TilesNow, buyers_dues, cash_in_hand, dead, sales_today,
     sellers, stock, tiles_now, total_dues,
+};
+pub use seller_dues::{
+    SellerDuesInput, SellerDuesPage, SellerDuesPrintInput, SellerDuesRow, SellerDuesSide,
+    seller_dues, seller_dues_print_data, seller_dues_spec,
+};
+pub use total_dues::{
+    LentOpenInput, LentOpenPage, LentOpenPrintInput, LentOpenRow, TotalDues, TotalDuesPart,
+    TotalDuesPrintInput, TotalDuesSection, lent_open, lent_open_print_data, lent_open_spec,
+    total_dues as total_dues_parts, total_dues_print_data, total_dues_spec,
 };
 
 /// What the tiles and the attention list both read, loaded once.

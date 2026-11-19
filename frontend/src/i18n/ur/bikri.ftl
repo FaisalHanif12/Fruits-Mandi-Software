@@ -166,11 +166,6 @@ bikri-rate-hint-today = آج کا آخری ریٹ { $rate }
 # review: pending
 bikri-rate-hint-last-day = { $date } کا آخری ریٹ { $rate }
 
-# The words in the empty rate cell (D8 Bug 1, PRD FR-7.53): they say it is the last rate and not a value
-# that was typed. $rate: the rate.
-# review: pending
-bikri-rate-hint-cell = پچھلا { $rate }
-
 ## The rest of a lot, behind "more" (PRD FR-12.2, 12.3).
 
 # review: pending

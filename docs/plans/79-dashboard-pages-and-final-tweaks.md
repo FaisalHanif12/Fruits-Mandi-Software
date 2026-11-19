@@ -229,14 +229,22 @@ The team checks each tile and fills this table in Section 8 before coding:
 
 ## 8. Design notes (filled by the team before code)
 
-- Pages and reports that had no "سب" filter, now fixed:
+- Pages and reports that had no "سب" filter, now fixed (frontend-2, 18-11-2026): the shared picker has a سب first row and shows سب as its value. Applied to the report pickers (party, seller, zamindar, item, city, adda, collector, lent person), analytics, the commission page, پچھلی بکری, باقی مال, rules, the voucher list, the fruit list, the collection page, the find dialog and the partner box of the others' dues page. Not on R13, R14 and R31, which need one party. The new pages of items 2 and 3 open on سب.
 - Dashboard tile table (item 3) with status:
 - Seller page and history (2a):
 - Total dues page (2b) and the PRD 9.1 change:
 - آج کی نقدی tile and page (2c):
 - Warnings kept and removed on the بکری screen (item 4):
 - Statements checked for the opening line (item 6):
-- Contracts (command names and types):
+- Contracts (command names and types), from `backend-2`, 18-11-2026. All read-only, sign-in checked, money as Paisa numbers:
+  1. `dashboard_seller_dues(SellerDuesInput{side: all|shop_owes|seller_owes, party_id: null = سب, search?, sort?, offset, limit<=100}) -> SellerDuesPage{rows[{party, city, balance (with side), payable_paisa, advance_open_paisa, owes_paisa, last_change_date}], total_count, shop_owes_paisa (= tile بیوپاریوں کو ادائیگی باقی), seller_owes_paisa (= tile بیوپاریوں کے ذمے), advances_open_paisa (= tile پیشگی باقی), total}`. Side totals are over the party and search match, not cut by side. `ERR_OUT_OF_RANGE` on sort. Print: `dashboard_seller_dues_print_data`. Seller history: existing `party_ledgers_statement_rows(account_id)` (opening first, one row per بکری).
+  2. `dashboard_total_dues() -> TotalDues{parts: buyers, sellers, dead, others (always 4, in that order; count, total_paisa), grand_total_paisa (= tile کل اگراہی)}`. Section rows: `dashboard_buyer_dues`; `dashboard_seller_dues{side: seller_owes}`; `reports_dead_amount{filter: owed}`; `dashboard_lent_open`.
+  3. `dashboard_lent_open(LentOpenInput{search?, sort?, offset, limit}) -> LentOpenPage{rows[{party, person_type, open_paisa, oldest_open_date, overdue_paisa}], total_count, total_paisa (= tile ادھار رقم باقی), overdue_paisa}`. A person's loans: existing `lent_list(person_id)`.
+  4. `dashboard_cash_sales_month({month: YYYY-MM|null}) -> CashSalesMonth{month, rows[{date, buyer_count, cash_paisa}], buyer_days_total, total_paisa}`; errors `ERR_FORMAT_INVALID`, `ERR_DATE_IN_FUTURE` on month. `dashboard_cash_sales_day({date, offset, limit}) -> CashSalesDay{date, rows[{party, is_chukta, bikri_id, bikri_number, bill_paisa, cash_paisa}], total_count, bill_total_paisa, cash_total_paisa}`.
+  5. `DashboardTiles` gains `cash_sales_today_paisa` and `cash_sales_today_buyers`. The حساب کی جانچ tile was frontend only (`health_last`); `health_last` and `health_run` stay for the Settings line. New attention kind `health_check` when the last stored result is not ok.
+  6. `total_dues_paisa` = buyers + sellers + dead + open money lent (dead left out). The assistant's tiles check gets a fourth part against the R32 total. No D6 prompt file changes (prompt/ names total_dues only as a tile key).
+  7. Lead decision: `dashboard_buyer_dues` also takes `party_id` (null = سب), like the seller page (item 1). `advances_report` takes an optional `only_open` flag for the پیشگی باقی page.
+- Dashboard tile table (item 3), page command per tile: آج کی بکری `bikri_list`; آج کا کمیشن `dashboard_commission_month`; موجود روکڑ `cashbook_get`; گاہکوں کے ذمے `dashboard_buyer_dues`; بیوپاریوں کے ذمے and بیوپاریوں کو ادائیگی باقی `dashboard_seller_dues` on their side; کل اگراہی `dashboard_total_dues` and its four section reads; ڈوبی رقم `reports_dead_amount`; پیشگی باقی `advances_report(only_open)`; ادھار رقم باقی `dashboard_lent_open`; باغوں کے مالکوں / دوسروں کے ذمے `lent_dues`; آج کا خرچہ view M (kharch page); باقی مال `bikri_stock_list`; مارکیٹ سفر `trips_summary`; باغات `gardens_summary`; آج کی نقدی the two cash sales commands. Each has a T2 test: page total = tile.
 
 ## 9. Screenshot index
 

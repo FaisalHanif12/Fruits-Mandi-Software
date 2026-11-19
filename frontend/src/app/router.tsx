@@ -14,6 +14,7 @@ import {
 import { parseAnalyticsSearch } from '../features/analytics/search';
 import { parseCommissionSearch } from '../features/dashboard/commission-search';
 import { parseKharchSearch } from '../features/dashboard/kharch-search';
+import { parseSellerDuesSearch } from '../features/dashboard/seller-dues-search';
 import { parseReportSearch } from '../features/reports/search';
 import { parseMonthSearch } from '../features/month';
 import { parseLedgerSearch } from '../features/party_ledgers';
@@ -211,6 +212,55 @@ const buyerDuesRoute = createRoute({
   component: lazyRouteComponent(
     () => import('../features/dashboard/pages/BuyerDuesPage'),
     'BuyerDuesPage',
+  ),
+});
+
+// The pages behind the other dashboard tiles (plan 79, PRD FR-9.1): the sellers (`?side=shop_owes|seller_owes`),
+// کل اگراہی with its four sections, the people who borrowed and still owe, the sellers with an open advance, and
+// the نقدی of each day (`?month=2026-10`). Each shows what its tile counts, and its total is the tile's.
+const sellerDuesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/dues/sellers',
+  validateSearch: (search: Record<string, unknown>) => parseSellerDuesSearch(search),
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/SellerDuesPage'),
+    'SellerDuesPage',
+  ),
+});
+
+const totalDuesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/dues/total',
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/TotalDuesPage'),
+    'TotalDuesPage',
+  ),
+});
+
+const lentOpenRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/dues/lent',
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/LentOpenPage'),
+    'LentOpenPage',
+  ),
+});
+
+const advancesOpenRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/dues/advances',
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/AdvancesOpenPage'),
+    'AdvancesOpenPage',
+  ),
+});
+
+const cashSalesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/cash-sales',
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/CashSalesPage'),
+    'CashSalesPage',
   ),
 });
 
@@ -653,6 +703,11 @@ const appRoutes = [
   partyLedgersRoute,
   stockRoute,
   buyerDuesRoute,
+  sellerDuesRoute,
+  totalDuesRoute,
+  lentOpenRoute,
+  advancesOpenRoute,
+  cashSalesRoute,
   commissionRoute,
   kharchRoute,
   othersDuesRoute,
@@ -879,6 +934,13 @@ const dashboardDevRoutes = import.meta.env.DEV
         path: '/dev/kharch',
         validateSearch: (search: Record<string, unknown>) => parseKharchSearch(search),
         component: lazyRouteComponent(() => import('./dev/KharchDevPage'), 'KharchDevPage'),
+      }),
+      // Plan 79: the pages behind the dashboard tiles (sellers, total dues, money lent, advances, cash sales) with the numbers of the plan.
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/dues/$page',
+        validateSearch: (search: Record<string, unknown>) => parseSellerDuesSearch(search),
+        component: lazyRouteComponent(() => import('./dev/DuesDevPage'), 'DuesDevPage'),
       }),
       // Plan 77: the commission page with a period and a party, with the numbers of the plan.
       createRoute({

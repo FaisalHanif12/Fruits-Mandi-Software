@@ -26,7 +26,6 @@ import type { ReactNode } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { formNavigationProps } from '../../../shared/keyboard';
 import {
   EmptyState,
   ErrorState,
@@ -43,7 +42,6 @@ import { OpenGardens } from '../components/OpenGardens';
 import { OldestDues } from '../components/OldestDues';
 import { PartnerStrip } from '../components/PartnerStrip';
 import { DayBookButton, QuickActions } from '../components/QuickActions';
-import { HealthTile } from '../components/StatusTiles';
 import { TodayBikriList } from '../components/TodayBikriList';
 import { UpdateNote } from '../components/UpdateNote';
 import { useOpenDestination } from '../destinations';
@@ -91,10 +89,6 @@ export function DashboardPage() {
   const name = status.data?.session?.display_name ?? '';
   const today = day.data?.today ?? '';
   const dayOpen = day.data?.today_open ?? true;
-  // The last backup is in the status bar and the attention list (NFR-BAK-10); its tile is the dues of garden
-  // owners and others now (plan 76 point 10).
-  const statusTiles = <HealthTile />;
-
   let body: ReactNode;
   if (dashboard.isPending) {
     body = <LoadingState rows={6} />;
@@ -108,9 +102,6 @@ export function DashboardPage() {
             void dashboard.refetch();
           }}
         />
-        <div {...formNavigationProps} className="grid grid-cols-4 gap-3 wide:grid-cols-5">
-          {statusTiles}
-        </div>
       </>
     );
   } else {
@@ -122,7 +113,7 @@ export function DashboardPage() {
           icon={LayoutGrid}
           title={<Localized id="dashboard-tiles-title" />}
         >
-          <DashboardTiles tiles={data.tiles}>{statusTiles}</DashboardTiles>
+          <DashboardTiles tiles={data.tiles} />
         </Section>
         <Section
           id="dashboard-partners-title"

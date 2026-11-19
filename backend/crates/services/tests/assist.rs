@@ -1334,12 +1334,11 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
 // ---- Plan 12: E2E-26, the backend part ----
 
 #[test]
-fn e2e_26_a_new_row_starts_at_the_remaining_qty_with_the_last_rate_as_a_hint() {
-    // PRD E2E-26: in بکری 1, after اکرم's line (20 of 50), ارشد's line starts at 30, the rate
-    // field is empty with the hint 600, and the commission of line 1 works out as
+fn e2e_26_a_new_row_starts_at_the_remaining_qty_and_shows_the_working_of_720() {
+    // PRD E2E-26 (v1.44, the rate hint is retired): in بکری 1, after اکرم's line (20 of 50), ارشد's
+    // line starts at 30, the rate field is empty, and the commission of line 1 works out as
     // "12,000 x 6 / 100 = 720". `Ctrl+D` and the keys are the frontend's part.
     use bikri_support::*;
-    use mandi_services::core::bikri::RateHintSource;
     use mandi_services::core::rules::WorkingValue;
     let w = world();
     let d = draft(vec![with_sales(
@@ -1350,11 +1349,6 @@ fn e2e_26_a_new_row_starts_at_the_remaining_qty_with_the_last_rate_as_a_hint() {
     assert!(p.errors.is_empty(), "{:?}", p.errors);
     let next = &p.lots[0].lines[1];
     assert_eq!(next.remaining_qty, 30, "ارشد's line starts at 30");
-    let hint = next.rate_hint.as_ref().expect("the hint");
-    assert_eq!(
-        (r(hint.rate_paisa), hint.source),
-        (600, RateHintSource::ThisBikri)
-    );
     assert!(
         next.calc.is_none(),
         "the rate is empty, so nothing is worked out for it"
@@ -1476,14 +1470,9 @@ fn e2e_26_on_saved_data_the_hint_is_the_last_rate_saved_today() {
     let p = preview(&w, &d);
     let row = &p.lots[0].lines[0];
     assert_eq!(row.remaining_qty, 40);
-    let shown = row.rate_hint.as_ref().expect("the hint");
-    assert_eq!(
-        (r(shown.rate_paisa), shown.source),
-        (580, RateHintSource::Today)
-    );
     assert!(
         row.calc.is_none(),
-        "the hint is never a rate: nothing is worked out"
+        "the rate is empty: nothing is worked out"
     );
     // The rate check now has data: 580 and 600 of 50 نگ are near an average of 588.
     assert!(

@@ -13,4 +13,5 @@ export type AttentionKind =
   | 'backup_old'
   | 'loans_overdue'
   | 'takes_overdue'
-  | 'names_missing';
+  | 'names_missing'
+  | 'health_check';

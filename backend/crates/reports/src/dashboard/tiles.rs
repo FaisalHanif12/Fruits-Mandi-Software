@@ -6,7 +6,7 @@
 //! * cash in hand: Σ debit − Σ credit of 01010001, as R12 (it can be below 0, FR-6.7);
 //! * buyers' dues: Σ of the R20 rows, so it equals the R20 total (FR-19.9); sellers' dues: Σ of the
 //!   "بیوپاری کے ذمے" column of R24; the dead amount: the R38 total (FR-10.10); کل اگراہی is the three
-//!   added;
+//!   and the open money lent (R32, people not in the dead amount) added (PRD 9.1 v1.44);
 //! * sellers payable and advances open: Σ of the R24 workings (`open` and `advances_open`,
 //!   FR-7.59, FR-15.8); advances are not taken off the payable;
 //! * goods not sold: lots of saved بکری with goods left, from the stock moves up to today (a
@@ -86,6 +86,8 @@ pub(crate) fn build(
     let mut total_dues = buyers_dues;
     add(&mut total_dues, sellers_dues)?;
     add(&mut total_dues, dead_amount)?;
+    // Open money lent is the fourth part of کل اگراہی (PRD 9.1 v1.44, plan 79 Q1).
+    add(&mut total_dues, lent.open)?;
 
     let (stock_lots, stock_qty) = mandi_db::vouchers::open_stock(conn, today)?;
     let (trips_open, trips_purchases, trips_qty, trips_cost) =
@@ -95,6 +97,9 @@ pub(crate) fn build(
     for garden in gardens {
         add(&mut gardens_balance, garden.balance)?;
     }
+
+    // آج کی نقدی: the money buyers paid on the spot today (PRD FR-9.8).
+    let (cash_today, cash_buyers) = super::cash_sales::of_day(conn, today)?;
 
     let (expense_dr, expense_cr) = pair(&expenses_by_day(conn, today, today)?, today)?;
 
@@ -124,5 +129,7 @@ pub(crate) fn build(
         others_dues_paisa: lent.others_open,
         others_people_count: lent.others_people,
         expenses_today_paisa: expense_dr.checked_sub(expense_cr)?,
+        cash_sales_today_paisa: cash_today,
+        cash_sales_today_buyers: cash_buyers,
     })
 }

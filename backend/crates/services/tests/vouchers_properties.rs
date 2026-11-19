@@ -233,6 +233,7 @@ fn check_seller(w: &World) {
     let report = vouchers::advances_report(
         &w.env.ctx,
         &AdvancesReportInput {
+            only_open: false,
             search: None,
             seller_id: Some(w.rahim),
             as_of: String::new(),

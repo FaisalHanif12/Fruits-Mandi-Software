@@ -6,11 +6,14 @@ use mandi_services::core::printing::PrintOutcome;
 
 use crate::error::UiError;
 use crate::print_report::{
-    PrintAdhariInput, PrintAnalyticsViewInput, PrintBikriListInput, PrintBuyerDuesInput,
-    PrintCollectionSheetInput, PrintCommissionInput, PrintPartnerMonthInput, PrintReportInput,
-    PrintSlipsInput, PrintStatementInput, PrintStatementRowsInput, run_adhari, run_analytics,
-    run_bikri_list, run_buyer_dues, run_collection_sheet, run_commission, run_parchi,
-    run_partner_month, run_report, run_sale, run_seller_bills, run_statement, run_statement_rows,
+    PrintAdhariInput, PrintAdvancesOpenInput, PrintAnalyticsViewInput, PrintBikriListInput,
+    PrintBuyerDuesInput, PrintCashSalesDayInput, PrintCashSalesMonthInput,
+    PrintCollectionSheetInput, PrintCommissionInput, PrintLentOpenInput, PrintPartnerMonthInput,
+    PrintReportInput, PrintSellerDuesInput, PrintSlipsInput, PrintStatementInput,
+    PrintStatementRowsInput, PrintTotalDuesInput, run_adhari, run_advances_open, run_analytics,
+    run_bikri_list, run_buyer_dues, run_cash_sales_day, run_cash_sales_month, run_collection_sheet,
+    run_commission, run_lent_open, run_parchi, run_partner_month, run_report, run_sale,
+    run_seller_bills, run_seller_dues, run_statement, run_statement_rows, run_total_dues,
 };
 
 /// Prints a report on the printer of Settings, or saves it as a PDF named
@@ -162,4 +165,67 @@ pub async fn partners_statement_month_print<R: tauri::Runtime>(
     input: PrintPartnerMonthInput,
 ) -> Result<PrintOutcome, UiError> {
     run_partner_month(app, input).await
+}
+
+/// Prints the seller dues page, or saves it as `seller-dues-<YYYYMMDD>-<language>.pdf` (plan 79
+/// item 2a). The data is `dashboard_seller_dues_print_data`. Errors as `reports_buyer_parchi_print`.
+#[tauri::command]
+pub async fn dashboard_seller_dues_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintSellerDuesInput,
+) -> Result<PrintOutcome, UiError> {
+    run_seller_dues(app, input).await
+}
+
+/// Prints the total dues page, or saves it as `total-dues-<YYYYMMDD>-<language>.pdf` (plan 79 item
+/// 2b). The data is `dashboard_total_dues_print_data`. Errors as `reports_buyer_parchi_print`.
+#[tauri::command]
+pub async fn dashboard_total_dues_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintTotalDuesInput,
+) -> Result<PrintOutcome, UiError> {
+    run_total_dues(app, input).await
+}
+
+/// Prints the page of money lent that is still open, or saves it as
+/// `lent-open-<YYYYMMDD>-<language>.pdf` (plan 79 item 3). The data is
+/// `dashboard_lent_open_print_data`. Errors as `reports_buyer_parchi_print`.
+#[tauri::command]
+pub async fn dashboard_lent_open_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintLentOpenInput,
+) -> Result<PrintOutcome, UiError> {
+    run_lent_open(app, input).await
+}
+
+/// Prints the advances page, or saves it as `advances-open-<YYYYMMDD>-<language>.pdf` (plan 79
+/// item 3). The data is `advances_report_print_data`. Errors as `reports_buyer_parchi_print`.
+#[tauri::command]
+pub async fn advances_report_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintAdvancesOpenInput,
+) -> Result<PrintOutcome, UiError> {
+    run_advances_open(app, input).await
+}
+
+/// Prints one month of cash sales, or saves it as `cash-sales-month-<YYYYMMDD>-<language>.pdf`
+/// (plan 79 item 2c). The data is `dashboard_cash_sales_month_print_data`. Errors as
+/// `reports_buyer_parchi_print`.
+#[tauri::command]
+pub async fn dashboard_cash_sales_month_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCashSalesMonthInput,
+) -> Result<PrintOutcome, UiError> {
+    run_cash_sales_month(app, input).await
+}
+
+/// Prints one day of cash sales, or saves it as `cash-sales-day-<YYYYMMDD>-<language>.pdf` (plan
+/// 79 item 2c). The data is `dashboard_cash_sales_day_print_data`. Errors as
+/// `reports_buyer_parchi_print`.
+#[tauri::command]
+pub async fn dashboard_cash_sales_day_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCashSalesDayInput,
+) -> Result<PrintOutcome, UiError> {
+    run_cash_sales_day(app, input).await
 }

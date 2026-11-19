@@ -110,6 +110,63 @@ const CASES = [
     answer: () => statementRowsPrintAnswer(STATEMENT_INPUT),
     sees: '.print-doc table',
   },
+  // Plan 79: the pages behind the dashboard tiles, each with its own print-data command.
+  {
+    kind: 'seller-dues',
+    command: 'dashboard_seller_dues_print_data',
+    input: {
+      side: 'shop_owes',
+      party_id: null,
+      search: null,
+      sort: null,
+      language: 'en',
+      paper: 'a4',
+    },
+    answer: () => collectionPrintData('en'),
+    sees: '.print-doc table',
+  },
+  {
+    kind: 'total-dues',
+    command: 'dashboard_total_dues_print_data',
+    input: { language: 'en', paper: 'a4' },
+    answer: () => collectionPrintData('en'),
+    sees: '.print-doc table',
+  },
+  {
+    kind: 'lent-open',
+    command: 'dashboard_lent_open_print_data',
+    input: { search: null, sort: null, language: 'en', paper: 'a4' },
+    answer: () => collectionPrintData('en'),
+    sees: '.print-doc table',
+  },
+  {
+    kind: 'advances-open',
+    command: 'advances_report_print_data',
+    input: {
+      seller_id: null,
+      as_of: '',
+      search: null,
+      only_open: true,
+      language: 'en',
+      paper: 'a4',
+    },
+    answer: () => collectionPrintData('en'),
+    sees: '.print-doc table',
+  },
+  {
+    kind: 'cash-sales-month',
+    command: 'dashboard_cash_sales_month_print_data',
+    input: { month: '2026-10', language: 'en', paper: 'a4' },
+    answer: () => collectionPrintData('en'),
+    sees: '.print-doc table',
+  },
+  {
+    kind: 'cash-sales-day',
+    command: 'dashboard_cash_sales_day_print_data',
+    input: { date: '2026-10-10', language: 'en', paper: 'a4' },
+    answer: () => collectionPrintData('en'),
+    sees: '.print-doc table',
+  },
 ] as const;
 
 describe('the address of a print', () => {
@@ -124,6 +181,12 @@ describe('the address of a print', () => {
       'buyer-dues',
       'commission',
       'partner-month',
+      'seller-dues',
+      'total-dues',
+      'lent-open',
+      'advances-open',
+      'cash-sales-month',
+      'cash-sales-day',
     ]);
     expect(isKindAddress('print=parchi&job=a')).toBe(true);
     expect(isKindAddress('print=nothing&job=a')).toBe(true);

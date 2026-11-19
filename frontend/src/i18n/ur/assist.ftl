@@ -321,3 +321,6 @@ attention-takes-overdue-aged = { $count ->
 
 # review: pending
 attention-names-missing = <num>{ $count }</num> ریکارڈ میں دو ناموں میں سے ایک ہی نام ہے
+
+# review: pending
+attention-health-check = حساب کی جانچ میں مسئلہ ملا ہے، ترتیبات میں دیکھیں

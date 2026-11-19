@@ -234,8 +234,9 @@ export function LinesForm<R extends { number: number }>({
         say,
         words: (problem) => errorText(problem.item),
         current: preview !== undefined && !stale,
+        showMissing: flow.tried,
       }),
-    [preview, problems, lotKey, salesRows, grouping, say, errorText, stale],
+    [preview, problems, lotKey, salesRows, grouping, say, errorText, stale, flow.tried],
   );
 
   // The party card follows the line the cursor is on.

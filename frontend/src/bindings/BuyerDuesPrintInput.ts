@@ -12,6 +12,10 @@ export type BuyerDuesPrintInput = {
    */
   search: string | null;
   /**
+   * One buyer, or null for all (plan 79 item 1).
+   */
+  party_id: number | null;
+  /**
    * The sort of the screen.
    */
   sort: SortInput | null;

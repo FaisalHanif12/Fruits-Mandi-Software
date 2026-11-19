@@ -5,8 +5,9 @@
 // whole filter (the total is the tile's number and the R20 total); the rows on screen are never added up
 // (CLAUDE.md rule 1).
 //
-// - One search box (code, running number, name in either script). The filter lives here, above the
-//   table, so a language switch loses nothing.
+// - One search box (code, running number, name in either script) and the buyer filter, which starts at سب
+//   (PRD FR-19.1, plan 79 item 1): every buyer and the full total; picking one buyer narrows the page to him.
+//   The filters live here, above the table, so a language switch loses nothing.
 // - ↑ ↓ choose a buyer; Enter opens his history: the party ledgers statement, one row for each entry with the
 //   opening balance first (plan 78 B1, B2, FR-19.16). Page Up and Page Down turn the pages.
 // - Four states: loading, an error with a retry, nobody owes anything (or nothing matches the
@@ -21,7 +22,15 @@ import { uiErrorOf } from '../../../shared/api';
 import { PagedList, type ListContext } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
-import { Button, EmptyState, FilterBar, ListPage } from '../../../shared/ui';
+import {
+  AccountPicker,
+  Button,
+  EmptyState,
+  Field,
+  FilterBar,
+  ListPage,
+  type PickerValue,
+} from '../../../shared/ui';
 import { ExcelExportButton, ExcelExportNotices } from '../../../shared/export';
 import { useLanguage } from '../../../shared/i18n';
 import { TablePrintPreview, useTableExcel } from '../../reports';
@@ -41,14 +50,16 @@ function rowId(row: BuyerDuesRow): string {
 export function BuyerDuesPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [party, setParty] = useState<PickerValue | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [view, setView] = useState<'table' | 'preview'>('table');
-  const list = useBuyerDues({ search: search.trim() });
+  const list = useBuyerDues({ search: search.trim(), partyId: party === null ? null : party.id });
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const language = useLanguage();
   // Excel: every buyer of the search on screen, sorted as the list is.
   const exporter = useTableExcel('buyer-dues', (sheet) => ({
     kind: 'buyer_dues',
+    party_id: party === null ? null : party.id,
     search: search.trim() === '' ? null : search.trim(),
     sort: list.sort,
     language: sheet,
@@ -68,7 +79,7 @@ export function BuyerDuesPage() {
   const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the search before it.
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
-  const filtering = search.trim() !== '';
+  const filtering = search.trim() !== '' || party !== null;
 
   const openLedger = useCallback(
     (row: BuyerDuesRow) => {
@@ -111,6 +122,7 @@ export function BuyerDuesPage() {
             <Button
               onClick={() => {
                 setSearch('');
+                setParty(null);
               }}
             >
               <Localized id="dues-clear" />
@@ -130,6 +142,7 @@ export function BuyerDuesPage() {
   if (view === 'preview') {
     // The print is for the search and the order on screen, every buyer of them, not one page.
     const printInput = (printLanguage: 'ur' | 'en', paper: 'a4' | 'a5' | 'mm80') => ({
+      party_id: party === null ? null : party.id,
       search: search.trim() === '' ? null : search.trim(),
       sort: list.sort,
       language: printLanguage,
@@ -139,7 +152,7 @@ export function BuyerDuesPage() {
       <ListPage icon={Users} titleId="dues-title">
         <TablePrintPreview
           exporter={exporter}
-          scope={['buyer_dues', search.trim(), list.sort]}
+          scope={['buyer_dues', party?.id ?? null, search.trim(), list.sort]}
           read={(printLanguage, paper) =>
             dashboardBuyerDuesPrintData(printInput(printLanguage, paper))
           }
@@ -182,7 +195,32 @@ export function BuyerDuesPage() {
           <FilterBar
             screen="dashboard.buyer_dues"
             search={{ value: search, onChange: setSearch, placeholderId: 'dues-search' }}
-          />
+          >
+            <Field label={<Localized id="dashboard-dues-col-party" />}>
+              {(control) => (
+                <AccountPicker
+                  {...control}
+                  canAdd={false}
+                  allChoice
+                  scope="buyer"
+                  showCard={false}
+                  value={party}
+                  onChange={(hit) => {
+                    setParty(
+                      hit === null
+                        ? null
+                        : {
+                            id: hit.id,
+                            name_ur: hit.name_ur,
+                            name_en: hit.name_en,
+                            code: hit.code,
+                          },
+                    );
+                  }}
+                />
+              )}
+            </Field>
+          </FilterBar>
         </div>
       }
     >
