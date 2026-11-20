@@ -40,6 +40,8 @@ export function resetAssistantFakes(): void {
   vi.mocked(assistantApi.assistantAsk).mockReturnValue(new Promise(() => undefined));
   vi.mocked(assistantApi.listenSteps).mockResolvedValue(() => undefined);
   vi.mocked(assistantApi.assistantNewConversation).mockResolvedValue(NEW_CONVERSATION);
+  // The warm-up of the model connection answers nothing (plan 82).
+  vi.mocked(assistantApi.assistantWarm).mockResolvedValue(null);
   useAssistantStore.getState().reset();
 }
 

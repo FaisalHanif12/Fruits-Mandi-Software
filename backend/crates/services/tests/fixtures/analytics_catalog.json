@@ -16,7 +16,8 @@
       "garden",
       "compare",
       "grade",
-      "group_by"
+      "group_by",
+      "measure"
     ]
   },
   {
@@ -35,7 +36,8 @@
       "goods",
       "garden",
       "compare",
-      "group_by"
+      "group_by",
+      "measure"
     ]
   },
   {
@@ -54,7 +56,8 @@
       "goods",
       "garden",
       "compare",
-      "group_by"
+      "group_by",
+      "measure"
     ]
   },
   {
@@ -73,7 +76,8 @@
       "goods",
       "garden",
       "compare",
-      "group_by"
+      "group_by",
+      "measure"
     ]
   },
   {
@@ -91,7 +95,8 @@
       "goods",
       "garden",
       "compare",
-      "group_by"
+      "group_by",
+      "measure"
     ]
   },
   {
@@ -119,7 +124,8 @@
       "goods",
       "garden",
       "group_by",
-      "partner"
+      "partner",
+      "measure"
     ]
   },
   {
@@ -137,7 +143,8 @@
       "trip",
       "goods",
       "garden",
-      "compare"
+      "compare",
+      "measure"
     ]
   },
   {
@@ -197,7 +204,8 @@
       "goods",
       "garden",
       "compare",
-      "group_by"
+      "group_by",
+      "measure"
     ]
   },
   {

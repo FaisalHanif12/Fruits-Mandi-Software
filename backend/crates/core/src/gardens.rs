@@ -60,6 +60,11 @@ use crate::ventures::{
 
 // ---- The garden itself ----
 
+/// The reason a first installment of a new garden is saved with when none is sent (PRD FR-12.35,
+/// plan 81). It is a Fluent message ID, not text: the screen turns it into "پہلی قسط" or "First
+/// installment" (CLAUDE.md rule 7), the way `bikri::UNDO_REASON_ID` is shown.
+pub const FIRST_INSTALLMENT_REASON_ID: &str = "gardens-first-installment-reason";
+
 /// A new garden (PRD FR-12.29, 12.11). Shares and sources first, then the details. Saving makes its
 /// own account under control 0306 with both names (FR-12.34), and the first installment if one is
 /// typed.
@@ -105,9 +110,9 @@ pub struct GardenInput {
     /// (FR-12.35). Null or empty if none.
     #[serde(default)]
     pub paid_now: Option<String>,
-    /// Why the first installment was paid. Required when `paid_now` is typed
-    /// (`ERR_REASON_REQUIRED` on `paid_now_reason`). The screen fills it with the word "first
-    /// installment" like a typed value (Code Standards F43), and the Owner can change it.
+    /// Why the first installment was paid. Optional (plan 81): the new garden form has no field for
+    /// it. With `paid_now` typed and no reason sent, the installment is saved with
+    /// [`FIRST_INSTALLMENT_REASON_ID`]. A reason an older caller sends is kept as it is.
     #[serde(default)]
     pub paid_now_reason: Option<String>,
     /// The source of each partner for the first installment. Empty takes the default sources.

@@ -363,7 +363,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     });
     // The seller, the amount and the date stay.
     expect((await labelled(language, 'vouchers-field-amount')).value).toBe('3,000');
-    expect((await dropdown(language, 'vouchers-field-seller')) as HTMLInputElement).toHaveValue(
+    expect((await dropdown(language, 'vouchers-field-party')) as HTMLInputElement).toHaveValue(
       language === 'ur' ? 'کریم' : 'Karim',
     );
     expect(pageText()).not.toContain(hint);
@@ -415,7 +415,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
   it('an advance goes with the expected goods; cash below zero shows the note and asks before saving', async () => {
     store = fakeVouchers({ cash: 20000 });
     const { user } = await open('advance');
-    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
+    await pick(user, language, 'vouchers-field-party', 'rahim', '0010');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('25000');
     await user.click(await labelled(language, 'vouchers-field-expected'));
@@ -483,7 +483,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('an advance goes to the backend with its date, amount and seller only, and Enter walks the fields', async () => {
     const { user } = await open('advance');
-    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
+    await pick(user, language, 'vouchers-field-party', 'rahim', '0010');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('100');
     press('F10');
@@ -502,7 +502,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('a refused field shows at the field, and nothing typed is lost', async () => {
     const { user } = await open('advance');
-    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
+    await pick(user, language, 'vouchers-field-party', 'rahim', '0010');
     const amount = await labelled(language, 'vouchers-field-amount');
     await user.click(amount);
     await user.keyboard('5000');

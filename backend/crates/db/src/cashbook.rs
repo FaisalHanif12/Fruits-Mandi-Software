@@ -742,7 +742,39 @@ pub fn account_nets(conn: &Connection) -> rusqlite::Result<Vec<AccountNet>> {
         let rows = statement.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
         rows.collect()
     })?;
-    let by_account: HashMap<i64, (i64, i64)> = sums.iter().map(|&(id, dr, cr)| (id, (dr, cr))).collect();
+    let by_account: HashMap<i64, (i64, i64)> =
+        sums.iter().map(|&(id, dr, cr)| (id, (dr, cr))).collect();
+    nets_with_chart(conn, &by_account)
+}
+
+/// [`account_nets`] at the end of a day: only posted entries dated on or before `as_of`
+/// (`YYYY-MM-DD`, included) count (plan 87, the card "where the capital is" for a past day). The
+/// dated sums are not kept in `memo`: they are read on demand, one pass over the lines.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn account_nets_as_of(conn: &Connection, as_of: &str) -> rusqlite::Result<Vec<AccountNet>> {
+    let mut statement = conn.prepare(
+        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE e.status = 'posted' AND e.entry_date <= ?1
+         GROUP BY l.account_id",
+    )?;
+    let rows = statement.query_map([as_of], |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            (r.get::<_, i64>(1)?, r.get::<_, i64>(2)?),
+        ))
+    })?;
+    let by_account: HashMap<i64, (i64, i64)> = rows.collect::<rusqlite::Result<_>>()?;
+    nets_with_chart(conn, &by_account)
+}
+
+/// Every account with its place in the chart and the sums given for it (0 and 0 when it has none).
+fn nets_with_chart(
+    conn: &Connection,
+    by_account: &HashMap<i64, (i64, i64)>,
+) -> rusqlite::Result<Vec<AccountNet>> {
     let mut statement = conn.prepare(
         "SELECT a.id, a.code, k.code, h.code
          FROM accounts a
@@ -772,16 +804,37 @@ pub fn account_nets(conn: &Connection) -> rusqlite::Result<Vec<AccountNet>> {
 /// # Errors
 /// Any SQLite error; an amount that does not fit.
 pub fn open_advances_by_seller(conn: &Connection) -> rusqlite::Result<Vec<(i64, i64)>> {
+    open_advances_by_seller_at(conn, None)
+}
+
+/// [`open_advances_by_seller`] at the end of a day (plan 87): an advance counts when its entry is
+/// dated on or before `as_of`, and a matching row settles it only when its credit is dated on or
+/// before `as_of` too. A credit older than its advance comes back on the day of the advance
+/// (`core::advances`), so the two dates are both needed. `None` is now.
+///
+/// # Errors
+/// Any SQLite error; an amount that does not fit.
+pub fn open_advances_by_seller_at(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, i64)>> {
     let mut given: HashMap<i64, i64> = HashMap::new();
     {
+        let dated = if as_of.is_some() {
+            "AND e.entry_date <= ?1"
+        } else {
+            ""
+        };
         let mut statement = conn.prepare(&format!(
             "SELECT l.account_id, SUM(l.dr_paisa)
              FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-             WHERE l.is_advance = 1 AND l.dr_paisa > 0 AND {live}
+             WHERE l.is_advance = 1 AND l.dr_paisa > 0 AND {live} {dated}
              GROUP BY l.account_id",
             live = crate::matching::LIVE
         ))?;
-        let rows = statement.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))?;
+        let rows = statement.query_map(params_from_iter(as_of), |r| {
+            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
+        })?;
         for row in rows {
             let (account, sum) = row?;
             given.insert(account, sum);
@@ -789,16 +842,28 @@ pub fn open_advances_by_seller(conn: &Connection) -> rusqlite::Result<Vec<(i64, 
     }
     let mut settled: HashMap<i64, i64> = HashMap::new();
     {
+        let (credit_join, dated) = if as_of.is_some() {
+            (
+                "JOIN journal_lines cl ON cl.id = a.credit_line_id
+                 JOIN journal_entries ce ON ce.id = cl.entry_id",
+                "AND e.entry_date <= ?1 AND ce.entry_date <= ?1",
+            )
+        } else {
+            ("", "")
+        };
         let mut statement = conn.prepare(&format!(
             "SELECT l.account_id, SUM(a.amount_paisa)
              FROM advance_allocations a
              JOIN journal_lines l ON l.id = a.advance_line_id
              JOIN journal_entries e ON e.id = l.entry_id
-             WHERE a.is_active = 1 AND l.is_advance = 1 AND l.dr_paisa > 0 AND {live}
+             {credit_join}
+             WHERE a.is_active = 1 AND l.is_advance = 1 AND l.dr_paisa > 0 AND {live} {dated}
              GROUP BY l.account_id",
             live = crate::matching::LIVE
         ))?;
-        let rows = statement.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))?;
+        let rows = statement.query_map(params_from_iter(as_of), |r| {
+            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
+        })?;
         for row in rows {
             let (account, sum) = row?;
             settled.insert(account, sum);
@@ -815,4 +880,96 @@ pub fn open_advances_by_seller(conn: &Connection) -> rusqlite::Result<Vec<(i64, 
     }
     out.sort_unstable();
     Ok(out)
+}
+
+/// One live entry's line on ابتدائی فرق, with the account it belongs to when the entry is an opening
+/// (plan 87, the breakdown of the warning on the card "where the capital is").
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DifferenceLine {
+    /// The journal entry.
+    pub entry_id: i64,
+    /// Its day, `YYYY-MM-DD`.
+    pub entry_date: String,
+    /// Its posting type in the stored form (`opening`, `general`, ...).
+    pub posting_type: String,
+    /// The debit of the line, paisa (0 when it is a credit).
+    pub dr_paisa: i64,
+    /// The credit of the line, paisa (0 when it is a debit).
+    pub cr_paisa: i64,
+    /// The account of the entry's source (`source_type` `account`), if any.
+    pub account: Option<DifferenceAccount>,
+}
+
+/// The account whose opening a [`DifferenceLine`] is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DifferenceAccount {
+    /// Row id.
+    pub id: i64,
+    /// Its code.
+    pub code: String,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// Its tag, if any.
+    pub tag: Option<String>,
+    /// The code of its control (`0602` for a partner's capital account).
+    pub control_code: String,
+    /// The opening entry now in force on the account.
+    pub opening_entry_id: Option<i64>,
+    /// The partner whose capital account it is: `(id, name_ur, name_en)`.
+    pub partner: Option<(i64, String, String)>,
+}
+
+/// The lines of the live entries on the account `difference_id` (ابتدائی فرق), oldest first, each with
+/// the account of its source. A reversed entry and its reversal are both left out, so the lines add up
+/// to the account's net. `as_of` (`YYYY-MM-DD`, included) limits them to a day; `None` is now.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn difference_lines(
+    conn: &Connection,
+    difference_id: i64,
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<DifferenceLine>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT e.id, e.entry_date, e.posting_type, l.dr_paisa, l.cr_paisa,
+                a.id, a.code, a.name_ur, a.name_en, a.tag, k.code, a.opening_entry_id,
+                p.id, p.name_ur, p.name_en
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         LEFT JOIN accounts a ON e.source_type = 'account' AND a.id = e.source_id
+         LEFT JOIN account_controls k ON k.id = a.control_id
+         LEFT JOIN partners p ON p.capital_account_id = a.id
+         WHERE l.account_id = ?1 AND {live} AND (?2 IS NULL OR e.entry_date <= ?2)
+         ORDER BY e.entry_date, e.id, l.line_no",
+        live = crate::matching::LIVE
+    ))?;
+    let rows = statement.query_map(rusqlite::params![difference_id, as_of], |r| {
+        let account = match r.get::<_, Option<i64>>(5)? {
+            Some(id) => Some(DifferenceAccount {
+                id,
+                code: r.get(6)?,
+                name_ur: r.get(7)?,
+                name_en: r.get(8)?,
+                tag: r.get(9)?,
+                control_code: r.get(10)?,
+                opening_entry_id: r.get(11)?,
+                partner: match r.get::<_, Option<i64>>(12)? {
+                    Some(pid) => Some((pid, r.get(13)?, r.get(14)?)),
+                    None => None,
+                },
+            }),
+            None => None,
+        };
+        Ok(DifferenceLine {
+            entry_id: r.get(0)?,
+            entry_date: r.get(1)?,
+            posting_type: r.get(2)?,
+            dr_paisa: r.get(3)?,
+            cr_paisa: r.get(4)?,
+            account,
+        })
+    })?;
+    rows.collect()
 }

@@ -4,6 +4,9 @@
 //! and buyer commission, لاگا, the total commission and its share of all commission. The
 //! figures are the stored values of the sale lines, summed from `analytics_facts`.
 //!
+//! The table keeps every column whatever the measure is (PRD FR-18.10, plan 84); with a measure the
+//! chart is of that measure (see `chart`).
+//!
 //! Example (PRD 18.4, the worked day): کیلا 50 نگ, 29,400, average 588, 1,764, 1,764, 400, total
 //! 3,928, 72.10%; سیب 10 نگ, 12,000, average 1,200, total 1,520, 27.90%; the total row 60, 41,400,
 //! 2,484, 2,484, 480, 5,448, 100.00%.
@@ -13,9 +16,11 @@ use std::collections::HashMap;
 use mandi_core::money::{Paisa, Qty, avg_rate};
 use mandi_db::rusqlite::Connection;
 
+use super::chart::{self, RankedEntry};
 use super::facts::{self, Group, Sums, compare_range, run_range};
 use super::filters::Typed;
 use super::ids;
+use super::measure::sums_by_id;
 use super::model::AnalyticsKey;
 use super::table::{
     ItemRow, Part, Table, col, compare_cells, compare_columns, count_of, item_rows, part_cell,
@@ -68,18 +73,16 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         &facts::conds(typed, run_range(typed), &none),
         &["f.item_id"],
     )?;
-    let compared = if typed.compare.is_some() {
-        totals_by_id(
-            &facts::groups(
-                conn,
-                &facts::conds(typed, compare_range(typed), &none),
-                &["f.item_id"],
-            )?,
-            typed,
+    let compared_groups = if typed.compare.is_some() {
+        facts::groups(
+            conn,
+            &facts::conds(typed, compare_range(typed), &none),
+            &["f.item_id"],
         )?
     } else {
-        HashMap::new()
+        Vec::new()
     };
+    let compared = totals_by_id(&compared_groups, typed)?;
 
     let mut ids: Vec<i64> = current.iter().filter_map(|g| g.int(0)).collect();
     ids.extend(compared.keys().copied());
@@ -189,8 +192,42 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         *cell = Cell::Empty;
     }
 
+    // With a measure the chart is made here from the sums of every row, with the same figure of
+    // the compared period (the compare columns of the table are the total commission).
+    let charts = match typed.measure {
+        Some(measure) => {
+            let compared_sums = sums_by_id(&compared_groups);
+            let mut ranked = Vec::with_capacity(entries.len());
+            for entry in &entries {
+                ranked.push(RankedEntry {
+                    label: items.get(&entry.id).map_or(Cell::Empty, |i| Cell::Names {
+                        names: i.names.clone(),
+                    }),
+                    key: AnalyticsKey {
+                        item_id: Some(entry.id),
+                        ..AnalyticsKey::default()
+                    },
+                    value: entry.sums.figure(measure, typed.side)?,
+                    compared: if with_compare {
+                        Some(
+                            compared_sums
+                                .get(&entry.id)
+                                .copied()
+                                .unwrap_or_default()
+                                .figure(measure, typed.side)?,
+                        )
+                    } else {
+                        None
+                    },
+                });
+            }
+            chart::ranked_chart(measure, ranked)?
+        }
+        None => Vec::new(),
+    };
+
     Ok(Table {
-        charts: Vec::new(),
+        charts,
         columns,
         total_count: count_of(all_rows.len()),
         rows: spec.slice(&all_rows),

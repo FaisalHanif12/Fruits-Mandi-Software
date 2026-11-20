@@ -54,7 +54,10 @@ fn the_sale_registers_add_up_a_long_range_from_the_covering_index() {
             plan.contains("SEARCH l USING INTEGER PRIMARY KEY"),
             "{name}: {plan}"
         );
-        assert!(!plan.contains("SCAN je") && !plan.contains("SCAN l "), "{name}: {plan}");
+        assert!(
+            !plan.contains("SCAN je") && !plan.contains("SCAN l "),
+            "{name}: {plan}"
+        );
     }
 }
 
@@ -62,15 +65,27 @@ fn the_sale_registers_add_up_a_long_range_from_the_covering_index() {
 fn the_income_report_reads_a_long_range_from_the_income_accounts() {
     let w = full_day();
     let conn = raw(&w.dir);
-    let long = plan_of(&conn, r28_groups(Some("2016-10-11"), Some("2026-10-10"), true));
+    let long = plan_of(
+        &conn,
+        r28_groups(Some("2016-10-11"), Some("2026-10-10"), true),
+    );
     assert!(
         long.contains("COVERING INDEX idx_journal_lines_account_amounts (account_id=?)"),
         "{long}"
     );
-    assert!(long.contains("SEARCH e USING INTEGER PRIMARY KEY"), "{long}");
-    assert!(!long.contains("SCAN l") && !long.contains("SCAN e"), "{long}");
+    assert!(
+        long.contains("SEARCH e USING INTEGER PRIMARY KEY"),
+        "{long}"
+    );
+    assert!(
+        !long.contains("SCAN l") && !long.contains("SCAN e"),
+        "{long}"
+    );
     // A short range is still found through the date index of the entries.
-    let short = plan_of(&conn, r28_groups(Some("2026-10-10"), Some("2026-10-10"), false));
+    let short = plan_of(
+        &conn,
+        r28_groups(Some("2026-10-10"), Some("2026-10-10"), false),
+    );
     assert!(short.contains("idx_journal_entries_entry_date"), "{short}");
     assert!(!short.contains("SCAN "), "{short}");
 }
@@ -85,7 +100,10 @@ fn the_statement_of_a_party_reads_its_entries_by_the_account_index() {
         sums.contains("COVERING INDEX idx_journal_lines_account_amounts (account_id=?)"),
         "{sums}"
     );
-    assert!(sums.contains("SEARCH e USING INTEGER PRIMARY KEY"), "{sums}");
+    assert!(
+        sums.contains("SEARCH e USING INTEGER PRIMARY KEY"),
+        "{sums}"
+    );
     assert!(!sums.contains("SCAN "), "{sums}");
     let lines = plan_of(&conn, statement_lines_of_entries(account, &[1, 2, 3]));
     assert!(
@@ -104,7 +122,10 @@ fn the_statement_of_a_party_reads_its_entries_by_the_account_index() {
 fn the_party_day_sheet_reads_the_lines_of_the_entries_of_the_day() {
     let w = full_day();
     let conn = raw(&w.dir);
-    let plan = plan_of(&conn, (r35_day_lines(), vec![Value::Null, Value::Null, Value::Null]));
+    let plan = plan_of(
+        &conn,
+        (r35_day_lines(), vec![Value::Null, Value::Null, Value::Null]),
+    );
     assert!(
         plan.contains("SEARCH e USING INDEX idx_journal_entries_entry_date (entry_date=?)"),
         "{plan}"

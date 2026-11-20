@@ -1,8 +1,8 @@
 //! The limits of one question, as named constants (Code Standards Q9, G8, NFR-AI-5).
 //!
 //! Example: a question may use 6 model calls and 1 rewrite, 12 tool calls, 4,000 output tokens
-//! (1,500 a call) and 90,000 input tokens, within 30 seconds a call and 90 seconds in all. The
-//! last call always answers: it goes out with the tools switched off (plan 52 item 1).
+//! (1,500 a call) and 90,000 input tokens, within 20 seconds a try and 45 seconds in all (plan 82).
+//! The last call always answers: it goes out with the tools switched off (plan 52 item 1).
 
 /// Counted questions a day, a hard stop (PRD FR-7.81). The day starts at midnight, Pakistan time.
 pub const DAILY_LIMIT: i64 = 20;
@@ -20,38 +20,65 @@ pub const MAX_CALL_OUTPUT_TOKENS: u32 = 1_500;
 /// Input tokens of one question, cached tokens included (90,000 since plan 52).
 pub const MAX_INPUT_TOKENS: u32 = 90_000;
 /// The fixed part of a request (tools, instructions, answer schema), in tokens, as the `o200k_base`
-/// tokenizer counts it (the model counts about 3.4% more). 11,600 since NFR v1.16 NFR-AI-5 and Code
-/// Standards v1.20 Q9 (Umar, 06-11-2026): the item group filter of the report and view tools. It was
-/// 11,500 since NFR v1.15 and Code Standards v1.19 (D6-system-prompt v1.5: the tenth tool
+/// tokenizer counts it (the model counts about 3.4% more). 11,800 since NFR v1.23 NFR-AI-5 and Code
+/// Standards v1.29 Q9 (Umar, 20-11-2026, plan 82): the three lines of D6-system-prompt v1.13 (zero is
+/// cited or said as none, a typed day is `{{q.n1}}`, `not_found` only for a name with no match; the
+/// fixed part measured 11,695). It was 11,600 since NFR v1.16 and Code Standards v1.20 Q9 (Umar,
+/// 06-11-2026): the item group filter of the report and view tools. It was 11,500 since NFR v1.15 and Code Standards v1.19 (D6-system-prompt v1.5: the tenth tool
 /// `app_state`, the estimate with `head`, `partner` and `party`, ten more entry screens and the
 /// `audit` topic; 11,494 measured). It was 11,000 in v1.3 (Umar, 02-11-2026, plan 52): 6 calls and
 /// 12 tools, forgiving tools, typed names, general advice, one-call help and the whole-year
 /// estimate. It was 9,500 in v1.2: the tools list the sort and where words of every report and
 /// view, and the tool `app_help` comes with the help button.
-pub const MAX_PREFIX_TOKENS: u32 = 11_600;
-/// Seconds one try of a model call may wait for the reply (plan 54 S5, plan 55 §3): the first try
-/// is cut at 12 s, as the model takes 4 to 9 s a call on a good line, and it is tried once more.
-/// The reply of the model comes whole, so this is the wait for the first byte of it.
-pub const FIRST_BYTE_SECS: u64 = 12;
+pub const MAX_PREFIX_TOKENS: u32 = 11_800;
+/// Seconds one try of a model call may wait for the reply (plan 82, lead decision 20-11-2026; it
+/// was 12 in plan 55): the model takes 4 to 10 s a call on a good line, and a call that carries tool
+/// results was cut at 12 s four times in a row in the question log (ids 42 to 45). The first try is
+/// cut at 20 s and is tried once more. The reply of the model comes whole, so this is the wait for
+/// the first byte of it.
+pub const FIRST_BYTE_SECS: u64 = 20;
 /// Seconds after which the last call of a question goes out with the tools off, and answers from
-/// what has been read (plan 55 §3).
-pub const TOOLS_OFF_AT_SECS: u64 = 20;
-/// Seconds one whole question may take (plan 55 §3: 25; it was 90, NFR-AI-3). At 25 s the panel
-/// shows what was read as plain tables (outcome `time_limit`), and no model call is made.
-pub const QUESTION_TIMEOUT_SECS: u64 = 25;
+/// what has been read (plan 82; it was 20 when the question had 25). It leaves 15 s of the 45 for
+/// that last call, which takes 4 to 10 s.
+pub const TOOLS_OFF_AT_SECS: u64 = 30;
+/// Seconds one whole question may take (plan 82: 45; it was 25, plan 55, and 90 before it,
+/// NFR-AI-3). At 45 s the panel shows what was read as plain tables (outcome `time_limit`), and no
+/// model call is made.
+pub const QUESTION_TIMEOUT_SECS: u64 = 45;
 /// Milliseconds to wait before the one retry of a call that failed on the network, on 429 or on a
 /// 5xx (plan 52 item 6). The client may say another time (the tests say none).
 pub const RETRY_WAIT_MILLIS: u64 = 1_500;
+/// Milliseconds to wait before the one retry of a call that only ran out of time or lost its line
+/// (plan 82). A busy (429) or failing (5xx) server is given [`RETRY_WAIT_MILLIS`] instead.
+pub const RETRY_QUICK_MILLIS: u64 = 250;
 /// Seconds of the question that must be left for a retry to be tried. A retry that cannot finish
 /// is not started.
 pub const RETRY_MIN_LEFT_SECS: u64 = 6;
 
 /// When no reply has come by now, a second identical request is sent and the first reply to come
 /// is used (the hedge, plan 55 Section 3; live run 1: 90% of short calls end in 6 s, 94% in 8 s).
-pub const HEDGE_AFTER_SECS: u64 = 7;
+/// 10 s since plan 82 (it was 7): a call that carries tool results takes up to 10 s, and a copy sent
+/// before that only doubles the cost of a call that was about to answer.
+pub const HEDGE_AFTER_SECS: u64 = 10;
 
 /// The copy is sent only when at least this long is left for it.
 pub const HEDGE_MIN_COPY_SECS: u64 = 3;
+
+/// Seconds a connection (TCP and TLS together) may take to be made. A handshake that is not done by
+/// then is stuck: on the shop's line it took 0.5 s most times, up to 4 s now and then, and once did
+/// not finish in 21 s (measured 20-11-2026). The request is sent once more on a new connection at
+/// once, and nothing of it went out, so nothing is billed twice (`client::retry_connect`).
+pub const CONNECT_TIMEOUT_SECS: u64 = 5;
+/// The second try of a stuck connection is made only when at least this long is left of the call.
+pub const CONNECT_RETRY_MIN_LEFT_SECS: u64 = 4;
+/// Seconds a connection to the model may stay open and unused before it is closed. Calls inside a
+/// question, and questions asked one after another, reuse it and skip the handshake (on the shop's
+/// line the first call of a question took 14 to 32 s when it had to make a new one, and 3 to 5 s
+/// when the connection was open). The keep-alive probes of [`TCP_KEEPALIVE_SECS`] keep it alive
+/// and show a dead one; a request that fails on a dead one is tried again by the loop.
+pub const POOL_IDLE_SECS: u64 = 120;
+/// Seconds between the keep-alive probes of an open connection.
+pub const TCP_KEEPALIVE_SECS: u64 = 15;
 /// Bytes of JSON of one tool result; rows are dropped from the end to fit.
 pub const MAX_RESULT_BYTES: usize = 16_000;
 /// Words of an answer, counted after the references are filled, each reference as one word.

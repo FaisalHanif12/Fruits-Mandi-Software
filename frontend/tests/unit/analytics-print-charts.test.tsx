@@ -6,16 +6,20 @@
 
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type { AnalyticsMeasure } from '../../src/bindings/AnalyticsMeasure';
 import type { AnalyticsPrintData } from '../../src/bindings/AnalyticsPrintData';
 import { AnalyticsPrintCharts } from '../../src/features/analytics/print/AnalyticsPrintCharts';
 import { PrintProvider } from '../../src/shared/print';
 import { ANALYTICS_PRINT_DATA_A_EN, ANALYTICS_PRINT_DATA_D_UR } from '../helpers/analytics-real';
 import { message, visible } from '../helpers/render';
 
+/** The recorded prints are of before the measure (plan 84): they hold the total commission. */
+const RECORDED_MEASURE: AnalyticsMeasure = 'total_comm';
+
 function draw(data: AnalyticsPrintData) {
   return render(
     <PrintProvider language={data.language}>
-      <AnalyticsPrintCharts data={data} />
+      <AnalyticsPrintCharts data={data} measure={RECORDED_MEASURE} />
     </PrintProvider>,
   );
 }

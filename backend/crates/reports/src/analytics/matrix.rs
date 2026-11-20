@@ -1,10 +1,12 @@
 //! View D, item by period (قسم مال × مہینہ), and view E, seller by item (بیوپاری × قسم مال)
 //! (PRD 18.2, FR-18.1).
 //!
-//! Both are matrices of the total commission (seller commission + buyer commission + لاگا, or the
-//! side asked for). A row has one cell for each column and a row total; the totals row adds each
-//! column. Every cell opens the lines behind it: the key of the row and the `drill` of the
-//! column together (FR-18.2).
+//! Both are matrices of one measure (PRD FR-18.10, plan 84): the total commission (seller
+//! commission + buyer commission + لاگا, or the side asked for) when none is asked for, or the
+//! sales, the buyers' bills, the quantity or one commission. A row has one cell for each column and
+//! a row total; the totals row adds each column, and the row total column is named by the measure
+//! (`total_comm`, `gross`, `qty` ...). Every cell opens the lines behind it: the key of the row
+//! and the `drill` of the column together (FR-18.2).
 //!
 //! - **D** has one column for each day, month or year that has sales (`group_by`, month when
 //!   left out), at most 144 (twelve years by month, plan 80 gate: it was 36, which refused 5 years).
@@ -13,28 +15,30 @@
 //!   "other items" column.
 //!
 //! Example (PRD 18.4, October 2026): D has the column 2026-10 with کیلا 3,928 and سیب 1,520, total
-//! 5,448; E has رحیم × کیلا 3,928 and کریم × سیب 1,520.
+//! 5,448; E has رحیم × کیلا 3,928 and کریم × سیب 1,520. By خام بکری D has کیلا 29,400 and سیب
+//! 12,000, total 41,400; by نگ 50, 10 and 60.
 
 use std::collections::{BTreeMap, HashMap};
 
 use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
-use mandi_core::money::Paisa;
 use mandi_db::rusqlite::Connection;
 
 use super::facts::{self, Group, compare_range, run_range};
 use super::filters::Typed;
 use super::ids;
-use super::item::totals_by_id;
+use super::measure::{
+    Figure, add, compare_columns_of, compare_figure_cells, figures_by_id, measure_of,
+    row_total_column,
+};
 use super::model::{
-    AnalyticsColumn, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey, AnalyticsRow,
+    AnalyticsColumn, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey, AnalyticsMeasure,
+    AnalyticsRow,
 };
-use super::table::{
-    Table, col, compare_cells, compare_columns, count_of, dynamic_col, item_rows, page_window, row,
-};
+use super::table::{Table, col, count_of, dynamic_col, item_rows, page_window, row};
 use crate::error::ReportsError;
 use crate::reports::PageSpec;
-use crate::reports::common::{add, amount_or_empty, load_parties};
+use crate::reports::common::load_parties;
 use crate::reports::{Cell, ColumnKind, Names};
 
 /// Most columns of view D: 144 periods, twelve years by month (PRD 18.2: one column for each month; the
@@ -125,16 +129,12 @@ pub(super) fn period_column(
     ))
 }
 
-/// A total commission as a cell: money, or empty when it is 0.
-fn cell(amount: Paisa) -> Cell {
-    amount_or_empty(amount)
+/// A column of a matrix, of the kind of the measure: money, or a whole number for the quantity.
+fn of_kind(mut column: AnalyticsColumn, measure: AnalyticsMeasure) -> AnalyticsColumn {
+    column.kind = measure.kind();
+    column
 }
 
-/// Builds view D.
-///
-/// # Errors
-/// `ReportsError::Rejected` (`ERR_OUT_OF_RANGE`, `filters.group_by`) when there would be more
-/// than 144 columns; a database error; `ReportsError::Data` for a fact net below 0.
 /// The number of days, months or years a closed range spans, by the grouping of view D. `None` when
 /// the range has no first or no last day (then only the facts can say how many periods there are).
 fn periods_in_range(typed: &Typed) -> Option<usize> {
@@ -155,11 +155,17 @@ fn periods_in_range(typed: &Typed) -> Option<usize> {
     usize::try_from(count).ok()
 }
 
+/// Builds view D.
+///
+/// # Errors
+/// `ReportsError::Rejected` (`ERR_OUT_OF_RANGE`, `filters.group_by`) when there would be more
+/// than 144 columns; a database error; `ReportsError::Data` for a fact net below 0.
 pub(crate) fn run_d(
     conn: &Connection,
     typed: &Typed,
     spec: PageSpec,
 ) -> Result<Table, ReportsError> {
+    let measure = measure_of(typed);
     // A closed range of more than 144 periods is refused from the dates, before any fact is read
     // (ten years by month used to be read in full and refused after, two seconds later).
     if periods_in_range(typed).is_some_and(|n| n > MAX_PERIOD_COLUMNS) {
@@ -175,27 +181,28 @@ pub(crate) fn run_d(
         &["f.item_id", bucket_sql(typed.group_by)],
     )?;
     let compared = if typed.compare.is_some() {
-        totals_by_id(
+        figures_by_id(
             &facts::groups(
                 conn,
                 &facts::conds(typed, compare_range(typed), &none),
                 &["f.item_id"],
             )?,
-            typed,
+            measure,
+            typed.side,
         )?
     } else {
         HashMap::new()
     };
 
-    // Buckets in date order; amounts by (item, bucket).
+    // Buckets in date order; figures by (item, bucket).
     let mut buckets: BTreeMap<String, ()> = BTreeMap::new();
-    let mut cells: HashMap<(i64, String), Paisa> = HashMap::new();
+    let mut cells: HashMap<(i64, String), Figure> = HashMap::new();
     for group in &current {
         let (Some(item), Some(bucket)) = (group.int(0), group.text(1)) else {
             continue;
         };
         buckets.insert(bucket.clone(), ());
-        cells.insert((item, bucket), group.sums.total_comm(typed.side)?);
+        cells.insert((item, bucket), group.sums.figure(measure, typed.side)?);
     }
     if buckets.len() > MAX_PERIOD_COLUMNS {
         return Err(ReportsError::Rejected(vec![FieldError::new(
@@ -213,14 +220,15 @@ pub(crate) fn run_d(
     all_ids.extend(compared.keys().copied());
     let items = item_rows(conn, &all_ids)?;
 
+    let zero = Figure::zero(measure);
     struct Entry {
         id: i64,
-        total: Paisa,
-        compared: Paisa,
+        total: Figure,
+        compared: Figure,
     }
     let mut entries: Vec<Entry> = Vec::new();
     for id in &item_ids {
-        let mut total = Paisa::ZERO;
+        let mut total = zero;
         for bucket in &bucket_list {
             if let Some(amount) = cells.get(&(*id, bucket.clone())) {
                 add(&mut total, *amount)?;
@@ -229,14 +237,14 @@ pub(crate) fn run_d(
         entries.push(Entry {
             id: *id,
             total,
-            compared: compared.get(id).copied().unwrap_or(Paisa::ZERO),
+            compared: compared.get(id).copied().unwrap_or(zero),
         });
     }
     for (id, amount) in &compared {
         if !item_ids.contains(id) {
             entries.push(Entry {
                 id: *id,
-                total: Paisa::ZERO,
+                total: zero,
                 compared: *amount,
             });
         }
@@ -251,18 +259,18 @@ pub(crate) fn run_d(
 
     let mut columns = vec![col("item", ids::COL_ITEM, ColumnKind::Names)];
     for bucket in &bucket_list {
-        columns.push(period_column(typed.group_by, bucket)?);
+        columns.push(of_kind(period_column(typed.group_by, bucket)?, measure));
     }
-    columns.push(col("total_comm", ids::COL_ROW_TOTAL, ColumnKind::Money));
+    columns.push(row_total_column(measure));
     let with_compare = typed.compare.is_some();
     if with_compare {
-        columns.extend(compare_columns());
+        columns.extend(compare_columns_of(measure));
     }
 
     let mut all_rows: Vec<AnalyticsRow> = Vec::with_capacity(entries.len());
-    let mut column_totals = vec![Paisa::ZERO; bucket_list.len()];
-    let mut grand = Paisa::ZERO;
-    let mut grand_compared = Paisa::ZERO;
+    let mut column_totals = vec![zero; bucket_list.len()];
+    let mut grand = zero;
+    let mut grand_compared = zero;
     for entry in &entries {
         let mut out = vec![items.get(&entry.id).map_or(Cell::Empty, |i| Cell::Names {
             names: i.names.clone(),
@@ -271,15 +279,15 @@ pub(crate) fn run_d(
             let amount = cells
                 .get(&(entry.id, bucket.clone()))
                 .copied()
-                .unwrap_or(Paisa::ZERO);
+                .unwrap_or(zero);
             if let Some(slot) = column_totals.get_mut(index) {
                 add(slot, amount)?;
             }
-            out.push(cell(amount));
+            out.push(amount.cell_or_empty());
         }
-        out.push(Cell::Money { paisa: entry.total });
+        out.push(entry.total.cell());
         if with_compare {
-            out.extend(compare_cells(entry.total, entry.compared)?);
+            out.extend(compare_figure_cells(entry.total, entry.compared)?);
         }
         add(&mut grand, entry.total)?;
         add(&mut grand_compared, entry.compared)?;
@@ -292,10 +300,10 @@ pub(crate) fn run_d(
         ));
     }
     let mut totals = vec![Cell::Empty];
-    totals.extend(column_totals.into_iter().map(cell));
-    totals.push(Cell::Money { paisa: grand });
+    totals.extend(column_totals.into_iter().map(Figure::cell_or_empty));
+    totals.push(grand.cell());
     if with_compare {
-        totals.extend(compare_cells(grand, grand_compared)?);
+        totals.extend(compare_figure_cells(grand, grand_compared)?);
     }
 
     Ok(Table {
@@ -316,6 +324,8 @@ pub(crate) fn run_e(
     typed: &Typed,
     spec: PageSpec,
 ) -> Result<Table, ReportsError> {
+    let measure = measure_of(typed);
+    let zero = Figure::zero(measure);
     let none = AnalyticsKey::default();
     let current: Vec<Group> = facts::groups(
         conn,
@@ -323,29 +333,30 @@ pub(crate) fn run_e(
         &["f.seller_account_id", "f.item_id"],
     )?;
     let compared = if typed.compare.is_some() {
-        totals_by_id(
+        figures_by_id(
             &facts::groups(
                 conn,
                 &facts::conds(typed, compare_range(typed), &none),
                 &["f.seller_account_id"],
             )?,
-            typed,
+            measure,
+            typed.side,
         )?
     } else {
         HashMap::new()
     };
 
-    let mut amounts: HashMap<(i64, i64), Paisa> = HashMap::new();
-    let mut by_item: HashMap<i64, Paisa> = HashMap::new();
-    let mut by_seller: HashMap<i64, Paisa> = HashMap::new();
+    let mut amounts: HashMap<(i64, i64), Figure> = HashMap::new();
+    let mut by_item: HashMap<i64, Figure> = HashMap::new();
+    let mut by_seller: HashMap<i64, Figure> = HashMap::new();
     for group in &current {
         let (Some(seller), Some(item)) = (group.int(0), group.int(1)) else {
             continue;
         };
-        let amount = group.sums.total_comm(typed.side)?;
+        let amount = group.sums.figure(measure, typed.side)?;
         amounts.insert((seller, item), amount);
-        add(by_item.entry(item).or_insert(Paisa::ZERO), amount)?;
-        add(by_seller.entry(seller).or_insert(Paisa::ZERO), amount)?;
+        add(by_item.entry(item).or_insert(zero), amount)?;
+        add(by_seller.entry(seller).or_insert(zero), amount)?;
     }
     let mut sellers: Vec<i64> = by_seller.keys().copied().collect();
     sellers.sort_unstable();
@@ -385,22 +396,22 @@ pub(crate) fn run_e(
 
     struct Entry {
         id: i64,
-        total: Paisa,
-        compared: Paisa,
+        total: Figure,
+        compared: Figure,
     }
     let mut entries: Vec<Entry> = Vec::new();
     for seller in &sellers {
         entries.push(Entry {
             id: *seller,
-            total: by_seller.get(seller).copied().unwrap_or(Paisa::ZERO),
-            compared: compared.get(seller).copied().unwrap_or(Paisa::ZERO),
+            total: by_seller.get(seller).copied().unwrap_or(zero),
+            compared: compared.get(seller).copied().unwrap_or(zero),
         });
     }
     for (id, amount) in &compared {
         if !sellers.contains(id) {
             entries.push(Entry {
                 id: *id,
-                total: Paisa::ZERO,
+                total: zero,
                 compared: *amount,
             });
         }
@@ -422,42 +433,45 @@ pub(crate) fn run_e(
             },
             |i| i.names.clone(),
         );
-        columns.push(dynamic_col(
-            format!("i_{item}"),
-            ids::COL_ITEM_COLUMN,
-            AnalyticsHeading::Item { names },
-            AnalyticsKey {
-                item_id: Some(*item),
-                ..AnalyticsKey::default()
-            },
+        columns.push(of_kind(
+            dynamic_col(
+                format!("i_{item}"),
+                ids::COL_ITEM_COLUMN,
+                AnalyticsHeading::Item { names },
+                AnalyticsKey {
+                    item_id: Some(*item),
+                    ..AnalyticsKey::default()
+                },
+            ),
+            measure,
         ));
     }
     if overflow {
-        columns.push(dynamic_col(
-            "i_other".to_owned(),
-            ids::COL_ITEM_COLUMN,
-            AnalyticsHeading::OtherItems,
-            AnalyticsKey {
-                not_item_ids: shown_sorted.clone(),
-                ..AnalyticsKey::default()
-            },
+        columns.push(of_kind(
+            dynamic_col(
+                "i_other".to_owned(),
+                ids::COL_ITEM_COLUMN,
+                AnalyticsHeading::OtherItems,
+                AnalyticsKey {
+                    not_item_ids: shown_sorted.clone(),
+                    ..AnalyticsKey::default()
+                },
+            ),
+            measure,
         ));
     }
-    columns.push(col("total_comm", ids::COL_ROW_TOTAL, ColumnKind::Money));
+    columns.push(row_total_column(measure));
     let with_compare = typed.compare.is_some();
     if with_compare {
-        columns.extend(compare_columns());
+        columns.extend(compare_columns_of(measure));
     }
 
     // What each seller has in the items without a column of their own.
-    let mut rest_by_seller: HashMap<i64, Paisa> = HashMap::new();
+    let mut rest_by_seller: HashMap<i64, Figure> = HashMap::new();
     if overflow {
         for ((seller, item), amount) in &amounts {
             if !shown_sorted.contains(item) {
-                add(
-                    rest_by_seller.entry(*seller).or_insert(Paisa::ZERO),
-                    *amount,
-                )?;
+                add(rest_by_seller.entry(*seller).or_insert(zero), *amount)?;
             }
         }
     }
@@ -465,7 +479,7 @@ pub(crate) fn run_e(
     // The totals row is over every seller, read from the sums themselves: one pass over them, not one
     // lookup for each seller and item. The rows are built for the page only (a ten-year view has
     // thousands of sellers and a page has a hundred).
-    let mut column_totals = vec![Paisa::ZERO; width];
+    let mut column_totals = vec![zero; width];
     let position: HashMap<i64, usize> = shown_sorted
         .iter()
         .enumerate()
@@ -480,8 +494,8 @@ pub(crate) fn run_e(
             add(slot, *amount)?;
         }
     }
-    let mut grand = Paisa::ZERO;
-    let mut grand_compared = Paisa::ZERO;
+    let mut grand = zero;
+    let mut grand_compared = zero;
     for entry in &entries {
         add(&mut grand, entry.total)?;
         add(&mut grand_compared, entry.compared)?;
@@ -495,22 +509,16 @@ pub(crate) fn run_e(
                 .map_or(Cell::Empty, |p| Cell::Party { party: p.clone() }),
         ];
         for item in &shown_sorted {
-            let amount = amounts
-                .get(&(entry.id, *item))
-                .copied()
-                .unwrap_or(Paisa::ZERO);
-            out.push(cell(amount));
+            let amount = amounts.get(&(entry.id, *item)).copied().unwrap_or(zero);
+            out.push(amount.cell_or_empty());
         }
         if overflow {
-            let rest = rest_by_seller
-                .get(&entry.id)
-                .copied()
-                .unwrap_or(Paisa::ZERO);
-            out.push(cell(rest));
+            let rest = rest_by_seller.get(&entry.id).copied().unwrap_or(zero);
+            out.push(rest.cell_or_empty());
         }
-        out.push(Cell::Money { paisa: entry.total });
+        out.push(entry.total.cell());
         if with_compare {
-            out.extend(compare_cells(entry.total, entry.compared)?);
+            out.extend(compare_figure_cells(entry.total, entry.compared)?);
         }
         all_rows.push(row(
             out,
@@ -521,10 +529,10 @@ pub(crate) fn run_e(
         ));
     }
     let mut totals = vec![Cell::Empty];
-    totals.extend(column_totals.into_iter().map(cell));
-    totals.push(Cell::Money { paisa: grand });
+    totals.extend(column_totals.into_iter().map(Figure::cell_or_empty));
+    totals.push(grand.cell());
     if with_compare {
-        totals.extend(compare_cells(grand, grand_compared)?);
+        totals.extend(compare_figure_cells(grand, grand_compared)?);
     }
 
     Ok(Table {

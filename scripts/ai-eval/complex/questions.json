@@ -1,0 +1,4268 @@
+[
+ {
+  "id": "D01",
+  "world": "dev",
+  "lang": "roman",
+  "question": "mani, haroon aur ans ne abhi tak shop ko kitni commission di ?",
+  "follow_of": null,
+  "group": "several-buyers",
+  "kind": "commission",
+  "period": "up to now",
+  "source": "commission page / view C (buyer commission + laga)",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "mani": [
+      2640
+     ],
+     "haroon": [
+      11070
+     ],
+     "ans": [
+      10140
+     ]
+    },
+    "opt": {
+     "total": [
+      23850
+     ]
+    }
+   },
+   {
+    "req": {
+     "mani": [
+      2160
+     ],
+     "haroon": [
+      9150
+     ],
+     "ans": [
+      8940
+     ]
+    },
+    "opt": {
+     "total": [
+      20250
+     ]
+    }
+   }
+  ],
+  "names": [
+   "Mani",
+   "Haroon",
+   "Ans"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Mani": "buyer",
+   "Haroon": "buyer",
+   "Ans": "buyer"
+  }
+ },
+ {
+  "id": "D02",
+  "world": "dev",
+  "lang": "roman",
+  "question": "mani ne pichle mahine kitni khareedari ki aur kitni commission di ?",
+  "follow_of": null,
+  "group": "empty-period",
+  "kind": "zero",
+  "period": "2026-10-01 to 2026-10-31",
+  "source": "view C",
+  "note": "October has only opening balances: an honest 0",
+  "readings": [],
+  "names": [
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": true,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "D03",
+  "world": "dev",
+  "lang": "roman",
+  "question": "is mahine har gahaq ne alag alag kitni bikri li aur kitni commission di ?",
+  "follow_of": null,
+  "group": "buyers-list",
+  "kind": "sale+commission",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "mani.value": [
+      36000
+     ],
+     "mani.comm": [
+      2640
+     ],
+     "haroon.value": [
+      172000
+     ],
+     "haroon.comm": [
+      11070
+     ],
+     "ans.value": [
+      149000
+     ],
+     "ans.comm": [
+      10140
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "mani.value": [
+      36000
+     ],
+     "mani.comm": [
+      2160
+     ],
+     "haroon.value": [
+      172000
+     ],
+     "haroon.comm": [
+      9150
+     ],
+     "ans.value": [
+      149000
+     ],
+     "ans.comm": [
+      8940
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Mani",
+   "Haroon",
+   "Ans"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Mani": "buyer",
+   "Haroon": "buyer",
+   "Ans": "buyer"
+  }
+ },
+ {
+  "id": "D04",
+  "world": "dev",
+  "lang": "roman",
+  "question": "is mahine sab se zyada commission kis gahaq ne di ?",
+  "follow_of": null,
+  "group": "ranked-buyers",
+  "kind": "top-1",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "view C ranked by commission",
+  "note": "the seller's commission on his lines is not commission HE gave",
+  "readings": [
+   {
+    "req": {
+     "haroon": [
+      11070
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "haroon": [
+      9150
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Haroon"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "commission_on_his_lines_both_sides": 21390
+  },
+  "roles": {
+   "Haroon": "buyer"
+  }
+ },
+ {
+  "id": "D05",
+  "world": "dev",
+  "lang": "roman",
+  "question": "faisal, ehsan aur adnan beopariyon ki abhi tak ki bikri kitni hui ?",
+  "follow_of": null,
+  "group": "several-sellers",
+  "kind": "sale",
+  "period": "up to now",
+  "source": "view B (gross sale)",
+  "note": "adnan is also a partner: asking which one is honest only if no sale figure is shown",
+  "readings": [
+   {
+    "req": {
+     "faisal": [
+      71000
+     ],
+     "ehsan": [
+      232000
+     ],
+     "adnan": [
+      79000
+     ]
+    },
+    "opt": {
+     "total": [
+      382000
+     ]
+    }
+   }
+  ],
+  "names": [
+   "Faisal",
+   "Ehsan",
+   "adnan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Faisal": "seller",
+   "Ehsan": "seller",
+   "adnan": "seller"
+  }
+ },
+ {
+  "id": "D06",
+  "world": "dev",
+  "lang": "roman",
+  "question": "ehsan ke maal se shop ko abhi tak kitni commission mili ?",
+  "follow_of": null,
+  "group": "seller-commission",
+  "kind": "commission",
+  "period": "up to now",
+  "source": "view B / commission page seller filter",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "comm_on_goods": [
+      28870
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "seller_comm": [
+      13720
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "D07",
+  "world": "dev",
+  "lang": "roman",
+  "question": "is hafte ki bikri aur pichle hafte ki bikri ka farq batao",
+  "follow_of": null,
+  "group": "compare-periods",
+  "kind": "sale",
+  "period": "2026-11-16 to 2026-11-22 vs 2026-11-09 to 2026-11-15",
+  "source": "view A compare",
+  "note": "direction: this week more",
+  "readings": [
+   {
+    "req": {
+     "this_week": [
+      200000
+     ],
+     "diff": [
+      200000
+     ]
+    },
+    "opt": {
+     "last_week": [
+      0
+     ]
+    }
+   },
+   {
+    "req": {
+     "this_week": [
+      214400
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D08",
+  "world": "dev",
+  "lang": "roman",
+  "question": "pichle 7 din mein shop ko kitni commission mili ?",
+  "follow_of": null,
+  "group": "last-n-days",
+  "kind": "commission",
+  "period": "2026-11-13 to 2026-11-20",
+  "source": "view A",
+  "note": "last 7 days = 13-11 to 20-11",
+  "readings": [
+   {
+    "req": {
+     "commission": [
+      26400
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D09",
+  "world": "dev",
+  "lang": "roman",
+  "question": "6 november aur 16 november ki commission alag alag batao",
+  "follow_of": null,
+  "group": "named-days",
+  "kind": "commission",
+  "period": "06-11 and 16-11",
+  "source": "view A by day",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "6 nov": [
+      22070
+     ],
+     "16 nov": [
+      26400
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D10",
+  "world": "dev",
+  "lang": "roman",
+  "question": "is saal mahine ke hisab se kitni commission bani ?",
+  "follow_of": null,
+  "group": "month-by-month",
+  "kind": "commission",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view G / A grouped by month",
+  "note": "only November has sales; October may show 0",
+  "readings": [
+   {
+    "req": {
+     "2026-11": [
+      48470
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D11",
+  "world": "dev",
+  "lang": "roman",
+  "question": "pump wala bagh mein abhi tak kitna paisa laga aur partner ke hisab se kitna ?",
+  "follow_of": null,
+  "group": "garden",
+  "kind": "garden-paid",
+  "period": "up to now",
+  "source": "R36 garden",
+  "note": "partner code is set: the partner parts (100,000 each) must stay behind it",
+  "readings": [
+   {
+    "req": {
+     "paid": [
+      200000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered",
+   "locked"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [
+   100000
+  ],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D12",
+  "world": "dev",
+  "lang": "roman",
+  "question": "bagh ka hisab batao: kitna paisa diya, kitni bikri aayi aur ab balance kya hai ?",
+  "follow_of": null,
+  "group": "garden",
+  "kind": "garden-balance",
+  "period": "up to now",
+  "source": "R36 garden",
+  "note": "running balance is -200000 (money in 0 less paid 200000)",
+  "readings": [
+   {
+    "req": {
+     "paid": [
+      200000
+     ]
+    },
+    "opt": {
+     "rent": [
+      1450000
+     ],
+     "rent_due": [
+      1250000
+     ],
+     "money_in": [
+      0
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D13",
+  "world": "dev",
+  "lang": "roman",
+  "question": "pehle safar ka nateeja kya raha, kitna nafa ya nuksan ?",
+  "follow_of": null,
+  "group": "trip",
+  "kind": "trip-result",
+  "period": "up to now",
+  "source": "R33 trips",
+  "note": "the one trip has no purchase: an honest 0 or 'nothing bought'",
+  "readings": [],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": true,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D14",
+  "world": "dev",
+  "lang": "roman",
+  "question": "pichle saal se is mahine tak shop ne kharche par kitna paisa lagaya ?",
+  "follow_of": null,
+  "group": "expenses",
+  "kind": "zero",
+  "period": "2025-01-01 to 2026-11-30",
+  "source": "R29",
+  "note": "shop expenses in the books: 0",
+  "readings": [],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": true,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D15",
+  "world": "dev",
+  "lang": "roman",
+  "question": "bijli ka kharcha is mahine kitna hua aur pichle mahine kitna ?",
+  "follow_of": null,
+  "group": "expenses",
+  "kind": "zero",
+  "period": "this and last month",
+  "source": "R29 head",
+  "note": "",
+  "readings": [],
+  "names": [
+   "Bijli"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": true,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D16",
+  "world": "dev",
+  "lang": "roman",
+  "question": "is mahine shop ka nafa kitna hai ?",
+  "follow_of": null,
+  "group": "profit",
+  "kind": "profit",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "R30 (income less shop expenses)",
+  "note": "expenses 0",
+  "readings": [
+   {
+    "req": {
+     "profit": [
+      48470
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D17",
+  "world": "dev",
+  "lang": "roman",
+  "question": "mani ka kitna bakaya hai aur is mahine usne kitna maal liya ?",
+  "follow_of": null,
+  "group": "balance+sale",
+  "kind": "balance+sale",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "party card / R13 and view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "balance": [
+      47280
+     ],
+     "purchase": [
+      36000
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "balance": [
+      47280
+     ],
+     "purchase": [
+      38640
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "D18",
+  "world": "dev",
+  "lang": "roman",
+  "question": "kin gahakon ke zimme sab se zyada paisa hai, top 3 batao",
+  "follow_of": null,
+  "group": "ranked-dues",
+  "kind": "top-3 dues",
+  "period": "today",
+  "source": "R20",
+  "note": "order: haroon 173070 > ans 74140 > mani 47280",
+  "readings": [
+   {
+    "req": {
+     "haroon": [
+      173070
+     ],
+     "ans": [
+      74140
+     ],
+     "mani": [
+      47280
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Haroon",
+   "Ans",
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Haroon": "buyer",
+   "Ans": "buyer",
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "D19",
+  "world": "dev",
+  "lang": "roman",
+  "question": "ans ne pichle 3 mahine mein kitna maal liya aur kitni commission di ?",
+  "follow_of": null,
+  "group": "last-n-months",
+  "kind": "sale+commission",
+  "period": "2026-08-20 to 2026-11-20",
+  "source": "view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "purchase": [
+      149000
+     ],
+     "comm": [
+      10140
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "purchase": [
+      149000
+     ],
+     "comm": [
+      8940
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ans"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Ans": "buyer"
+  }
+ },
+ {
+  "id": "D20",
+  "world": "dev",
+  "lang": "urdu",
+  "question": "مانی نے اب تک دکان کو کتنا کمیشن دیا ہے؟",
+  "follow_of": null,
+  "group": "one-buyer",
+  "kind": "commission",
+  "period": "up to now",
+  "source": "commission page / view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "comm": [
+      2640
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "comm": [
+      2160
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "D21",
+  "world": "dev",
+  "lang": "urdu",
+  "question": "ہارون اور انس نے اس مہینے کتنی خریداری کی اور کتنا کمیشن دیا؟",
+  "follow_of": null,
+  "group": "several-buyers",
+  "kind": "sale+commission",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "haroon.value": [
+      172000
+     ],
+     "haroon.comm": [
+      11070
+     ],
+     "ans.value": [
+      149000
+     ],
+     "ans.comm": [
+      10140
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "haroon.value": [
+      172000
+     ],
+     "haroon.comm": [
+      9150
+     ],
+     "ans.value": [
+      149000
+     ],
+     "ans.comm": [
+      8940
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Haroon",
+   "Ans"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Haroon": "buyer",
+   "Ans": "buyer"
+  }
+ },
+ {
+  "id": "D22",
+  "world": "dev",
+  "lang": "english",
+  "question": "How much commission did the shop earn from Haroon and Ans together this month?",
+  "follow_of": null,
+  "group": "several-buyers",
+  "kind": "commission-sum",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "view C + calculator",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "together": [
+      21210
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "together": [
+      18090
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D23",
+  "world": "dev",
+  "lang": "english",
+  "question": "Which seller sent the most goods this month and how much commission did the shop get on his goods?",
+  "follow_of": null,
+  "group": "ranked-sellers",
+  "kind": "top-1",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "view B",
+  "note": "'most goods' may mean quantity (nag) or sale: both are honest",
+  "readings": [
+   {
+    "req": {
+     "gross": [
+      232000
+     ],
+     "comm": [
+      28870
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "gross": [
+      232000
+     ],
+     "comm": [
+      13720
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "qty": [
+      300
+     ],
+     "comm": [
+      28870
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "qty": [
+      300
+     ],
+     "comm": [
+      13720
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "D24",
+  "world": "dev",
+  "lang": "english",
+  "question": "Compare this month's commission with last month and tell me the difference",
+  "follow_of": null,
+  "group": "compare-periods",
+  "kind": "commission",
+  "period": "2026-11-01 to 2026-11-30 vs 2026-10-01 to 2026-10-31",
+  "source": "view A compare",
+  "note": "last month has none: the difference is the whole figure, direction up",
+  "readings": [
+   {
+    "req": {
+     "this": [
+      48470
+     ],
+     "last": [
+      0
+     ],
+     "diff": [
+      48470
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D25",
+  "world": "dev",
+  "lang": "english",
+  "question": "What share of the shop's total commission came from Mani this month, in percent?",
+  "follow_of": null,
+  "group": "percent",
+  "kind": "calc-percent",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "calculator",
+  "note": "three honest readings: his buyer commission+laga, commission only, or all commission on his lines",
+  "readings": [
+   {
+    "req": {
+     "pct": [
+      5.45
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "pct": [
+      4.46
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "pct": [
+      9.49
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "D26a",
+  "world": "dev",
+  "lang": "roman",
+  "question": "faisal ki abhi tak ki bikri kitni hai ?",
+  "follow_of": null,
+  "group": "follow-up",
+  "kind": "sale",
+  "period": "up to now",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "faisal": [
+      71000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Faisal"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Faisal": "seller"
+  }
+ },
+ {
+  "id": "D26b",
+  "world": "dev",
+  "lang": "roman",
+  "question": "aur ehsan ki ?",
+  "follow_of": "D26a",
+  "group": "follow-up",
+  "kind": "sale",
+  "period": "up to now",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "ehsan": [
+      232000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "D26c",
+  "world": "dev",
+  "lang": "roman",
+  "question": "dono ki mila kar kitni hui ?",
+  "follow_of": "D26b",
+  "group": "follow-up",
+  "kind": "calc-sum",
+  "period": "up to now",
+  "source": "calculator",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "sum": [
+      303000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D27",
+  "world": "dev",
+  "lang": "roman",
+  "question": "mani aur ans se is mahine aur pichle mahine kitni commission mili ?",
+  "follow_of": null,
+  "group": "two-parties-two-periods",
+  "kind": "commission",
+  "period": "2026-11-01 to 2026-11-30 and 2026-10-01 to 2026-10-31",
+  "source": "view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "this_month": [
+      12780
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "this_month": [
+      11100
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "mani": [
+      2640
+     ],
+     "ans": [
+      10140
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "mani": [
+      2160
+     ],
+     "ans": [
+      8940
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D28",
+  "world": "dev",
+  "lang": "roman",
+  "question": "chukta khate walon ne is mahine kitna maal khareeda ?",
+  "follow_of": null,
+  "group": "chukta",
+  "kind": "sale",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "view C (chukta rows)",
+  "note": "chukta buyers have no ledger; a figure or an honest 'no ledger' are both fine",
+  "readings": [
+   {
+    "req": {
+     "purchase": [
+      25000
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "purchase": [
+      26900
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D29",
+  "world": "dev",
+  "lang": "roman",
+  "question": "6 november ko ehsan ne kitna maal bheja aur kis kis gahaq ne kitna liya ?",
+  "follow_of": null,
+  "group": "seller-day",
+  "kind": "sale",
+  "period": "2026-11-06",
+  "source": "R35 / view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "ehsan.gross": [
+      182000
+     ],
+     "mani": [
+      20000
+     ],
+     "ans": [
+      45000
+     ],
+     "haroon": [
+      117000
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "ehsan.gross": [
+      182000
+     ],
+     "mani.qty": [
+      20
+     ],
+     "ans.qty": [
+      50
+     ],
+     "haroon.qty": [
+      130
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan",
+   "Mani",
+   "Ans",
+   "Haroon"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Ehsan": "seller",
+   "Mani": "buyer",
+   "Ans": "buyer",
+   "Haroon": "buyer"
+  }
+ },
+ {
+  "id": "D30",
+  "world": "dev",
+  "lang": "roman",
+  "question": "malta ki abhi tak ki bikri aur commission kitni hai ?",
+  "follow_of": null,
+  "group": "item",
+  "kind": "sale+commission",
+  "period": "up to now",
+  "source": "view A",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "gross": [
+      50000
+     ],
+     "comm": [
+      6800
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "gross": [
+      50000
+     ],
+     "comm": [
+      3800
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [
+   "Malta"
+  ],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "D31",
+  "world": "dev",
+  "lang": "roman",
+  "question": "ehsan ko abhi tak kitna paisa dena hai aur ans se kitna lena hai ?",
+  "follow_of": null,
+  "group": "balances",
+  "kind": "balance",
+  "period": "today",
+  "source": "party card / R13",
+  "note": "Ehsan: the shop owes him (جمع); Ans owes the shop (بنام)",
+  "readings": [
+   {
+    "req": {
+     "ehsan_payable": [
+      120780
+     ],
+     "ans_due": [
+      74140
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan",
+   "Ans"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Ehsan": "seller",
+   "Ans": "buyer"
+  }
+ },
+ {
+  "id": "D32",
+  "world": "dev",
+  "lang": "roman",
+  "question": "pichle saal se is mahine tak shop ki bikri, commission aur kharcha teeno batao",
+  "follow_of": null,
+  "group": "sale+commission+expense",
+  "kind": "three-figures",
+  "period": "2025-01-01 to 2026-11-30",
+  "source": "view A/G + R29",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "sale": [
+      382000
+     ],
+     "commission": [
+      48470
+     ]
+    },
+    "opt": {
+     "expense": [
+      0
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "M01",
+  "world": "dev",
+  "lang": "roman",
+  "question": "abhi tak ki safi bikri kitni hai ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "net-sale",
+  "period": "up to now",
+  "source": "R6 total / lot net (صافی بکری)",
+  "note": "net = gross less commission, freight, labour, munshiana, phone, cash paid",
+  "readings": [
+   {
+    "req": {
+     "net_sale": [
+      332780
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 382000,
+   "buyer_total": 407750
+  },
+  "roles": {}
+ },
+ {
+  "id": "M02",
+  "world": "dev",
+  "lang": "roman",
+  "question": "abhi tak ki khaam bikri kitni hui ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "gross-sale",
+  "period": "up to now",
+  "source": "view A / R2",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "gross_sale": [
+      382000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "net": 332780,
+   "buyer_total": 407750
+  },
+  "roles": {}
+ },
+ {
+  "id": "M03",
+  "world": "dev",
+  "lang": "roman",
+  "question": "abhi tak gahakon ko kul kitne ke bill bane (commission aur laga mila kar) ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "buyer-total",
+  "period": "up to now",
+  "source": "R4/R5 (رقم گاہک)",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "buyer_bills": [
+      407750
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 382000,
+   "net": 332780,
+   "commission_and_laga": 25750,
+   "dues_outstanding": 294490
+  },
+  "roles": {}
+ },
+ {
+  "id": "M04",
+  "world": "dev",
+  "lang": "urdu",
+  "question": "اب تک کی صافی بکری کتنی ہے؟",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "net-sale",
+  "period": "up to now",
+  "source": "R6 total",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "net_sale": [
+      332780
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 382000,
+   "buyer_total": 407750
+  },
+  "roles": {}
+ },
+ {
+  "id": "M05",
+  "world": "dev",
+  "lang": "urdu",
+  "question": "اب تک کی خام بکری کتنی ہوئی؟",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "gross-sale",
+  "period": "up to now",
+  "source": "view A",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "gross_sale": [
+      382000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "net": 332780,
+   "buyer_total": 407750
+  },
+  "roles": {}
+ },
+ {
+  "id": "M06",
+  "world": "dev",
+  "lang": "english",
+  "question": "What is the net sale so far?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "net-sale",
+  "period": "up to now",
+  "source": "R6 total",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "net_sale": [
+      332780
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 382000,
+   "buyer_total": 407750
+  },
+  "roles": {}
+ },
+ {
+  "id": "M07",
+  "world": "dev",
+  "lang": "english",
+  "question": "What is the total gross sale so far?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "gross-sale",
+  "period": "up to now",
+  "source": "view A",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "gross_sale": [
+      382000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "net": 332780,
+   "buyer_total": 407750
+  },
+  "roles": {}
+ },
+ {
+  "id": "M08",
+  "world": "dev",
+  "lang": "english",
+  "question": "What is the total of all buyer bills so far?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "buyer-total",
+  "period": "up to now",
+  "source": "R4/R5",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "buyer_bills": [
+      407750
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 382000,
+   "net": 332780,
+   "commission_and_laga": 25750,
+   "dues_outstanding": 294490
+  },
+  "roles": {}
+ },
+ {
+  "id": "M09",
+  "world": "dev",
+  "lang": "roman",
+  "question": "ehsan ki safi bikri kitni hai ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "net-sale",
+  "period": "up to now",
+  "source": "R6 / lot net",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "net_sale": [
+      200780
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 232000,
+   "buyer_total": 247150
+  },
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "M10",
+  "world": "dev",
+  "lang": "roman",
+  "question": "ehsan ki khaam bikri kitni hai ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "gross-sale",
+  "period": "up to now",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "gross_sale": [
+      232000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "net": 200780,
+   "buyer_total": 247150
+  },
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "M11",
+  "world": "dev",
+  "lang": "roman",
+  "question": "mani ke bill ki kul raqam kitni hai (commission aur laga samet) ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "buyer-total",
+  "period": "up to now",
+  "source": "R13 / R4",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "buyer_bill": [
+      38640
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "value": 36000,
+   "commission+laga": 2640,
+   "balance_outstanding": 47280
+  },
+  "roles": {
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "M12",
+  "world": "dev",
+  "lang": "roman",
+  "question": "mani ne kitne ke maal ki khareedari ki (commission aur laga ke baghair) ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "buyer-value",
+  "period": "up to now",
+  "source": "view C purchase value",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "purchase_value": [
+      36000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "buyer_total": 38640,
+   "commission+laga": 2640
+  },
+  "roles": {
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "M13",
+  "world": "dev",
+  "lang": "roman",
+  "question": "mani ne commission aur laga alag alag kitna diya ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "commission-and-laga",
+  "period": "up to now",
+  "source": "view C columns",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "commission": [
+      2160
+     ],
+     "laga": [
+      480
+     ]
+    },
+    "opt": {
+     "together": [
+      2640
+     ]
+    }
+   }
+  ],
+  "names": [
+   "Mani"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "value": 36000,
+   "buyer_total": 38640
+  },
+  "roles": {
+   "Mani": "buyer"
+  }
+ },
+ {
+  "id": "M14",
+  "world": "dev",
+  "lang": "roman",
+  "question": "shop ne abhi tak sirf laga kitna kamaya ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "laga-only",
+  "period": "up to now",
+  "source": "view A laga column",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "laga": [
+      4000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "all_commission": 48470,
+   "buyer_side": 25750,
+   "commission_without_laga": 44470
+  },
+  "roles": {}
+ },
+ {
+  "id": "M15",
+  "world": "dev",
+  "lang": "english",
+  "question": "How much commission, not counting laga, has the shop earned so far?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "commission-without-laga",
+  "period": "up to now",
+  "source": "view A seller + buyer commission",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "commission_without_laga": [
+      44470
+     ]
+    },
+    "opt": {
+     "laga": [
+      4000
+     ]
+    }
+   },
+   {
+    "req": {
+     "seller_commission": [
+      22720
+     ],
+     "buyer_commission": [
+      21750
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "all_commission": 48470
+  },
+  "roles": {}
+ },
+ {
+  "id": "M16",
+  "world": "dev",
+  "lang": "roman",
+  "question": "ehsan ne shop ko kitni commission di aur shop ne uske maal par kul kitna kamaya ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "commission-given-vs-earned",
+  "period": "up to now",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "given_by_seller": [
+      13720
+     ],
+     "earned_on_goods": [
+      28870
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 232000,
+   "net": 200780,
+   "buyer_total": 247150
+  },
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "M21",
+  "world": "dev",
+  "lang": "urdu",
+  "question": "احسان کی صافی بکری کتنی ہے؟",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "net-sale",
+  "period": "up to now",
+  "source": "R6 / lot net",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "net_sale": [
+      200780
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 232000,
+   "buyer_total": 247150
+  },
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "M22",
+  "world": "dev",
+  "lang": "english",
+  "question": "How much commission, not counting laga, did the shop earn from Haroon so far?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "commission-without-laga",
+  "period": "up to now",
+  "source": "view C buyer commission column",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "commission_without_laga": [
+      9150
+     ]
+    },
+    "opt": {
+     "laga": [
+      1920
+     ]
+    }
+   }
+  ],
+  "names": [
+   "Haroon"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "commission+laga": 11070,
+   "value": 172000,
+   "buyer_total": 183070
+  },
+  "roles": {
+   "Haroon": "buyer"
+  }
+ },
+ {
+  "id": "M23",
+  "world": "dev",
+  "lang": "english",
+  "question": "How much commission did Ehsan give the shop, and how much did the shop earn in all on his goods?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "commission-given-vs-earned",
+  "period": "up to now",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "given_by_seller": [
+      13720
+     ],
+     "earned_on_goods": [
+      28870
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Ehsan"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 232000,
+   "net": 200780,
+   "buyer_total": 247150
+  },
+  "roles": {
+   "Ehsan": "seller"
+  }
+ },
+ {
+  "id": "M24",
+  "world": "dev",
+  "lang": "urdu",
+  "question": "ہارون کے بلوں کی کل رقم کتنی ہے؟",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "buyer-total",
+  "period": "up to now",
+  "source": "R13 / R4",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "buyer_bill": [
+      183070
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Haroon"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "value": 172000,
+   "commission+laga": 11070,
+   "balance_outstanding": 173070
+  },
+  "roles": {
+   "Haroon": "buyer"
+  }
+ },
+ {
+  "id": "M25",
+  "world": "dev",
+  "lang": "roman",
+  "question": "gahakon se hum ne abhi tak kitna commission aur kitna laga alag alag liya ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "commission-and-laga",
+  "period": "up to now",
+  "source": "view A buyer side",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "buyer_commission": [
+      21750
+     ],
+     "laga": [
+      4000
+     ]
+    },
+    "opt": {
+     "together": [
+      25750
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "seller_commission": 22720,
+   "all_commission": 48470,
+   "gross": 382000
+  },
+  "roles": {}
+ },
+ {
+  "id": "Y01",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle saal se is mahine tak shop ne kharche par kitna paisa lagaya ?",
+  "follow_of": null,
+  "group": "expenses",
+  "kind": "expense-range",
+  "period": "2025-01-01 to 2026-11-30",
+  "source": "R29 / view M",
+  "note": "Umar's own example. The voucher-only reading is 2,091,500: a salary deduction of 2,000 is also a shop expense",
+  "readings": [
+   {
+    "req": {
+     "total": [
+      2093500
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y02",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle 6 mahine ka kharcha head ke hisab se alag alag batao",
+  "follow_of": null,
+  "group": "expenses",
+  "kind": "expense-by-head",
+  "period": "2026-05-05 to 2026-11-05",
+  "source": "R29 by head / view M",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "shop rent": [
+      240000
+     ],
+     "electricity": [
+      151000
+     ],
+     "salaries": [
+      542000
+     ],
+     "tea": [
+      60900
+     ],
+     "guests food and drinks": [
+      38000
+     ]
+    },
+    "opt": {
+     "total": [
+      1031900
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y03",
+  "world": "year",
+  "lang": "roman",
+  "question": "bijli ka kharcha mahine ke hisab se pichle saal se ab tak kitna raha ?",
+  "follow_of": null,
+  "group": "expenses",
+  "kind": "head-by-month",
+  "period": "2025-11 to 2026-11",
+  "source": "view M by month",
+  "note": "12 months; a month with 0 may be left out",
+  "readings": [
+   {
+    "req": {
+     "2025-11": [
+      24000
+     ],
+     "2025-12": [
+      20000
+     ],
+     "2026-01": [
+      45000
+     ],
+     "2026-02": [
+      20000
+     ],
+     "2026-03": [
+      34000
+     ],
+     "2026-04": [
+      45000
+     ],
+     "2026-05": [
+      26000
+     ],
+     "2026-06": [
+      25000
+     ],
+     "2026-07": [
+      20000
+     ],
+     "2026-08": [
+      22000
+     ],
+     "2026-09": [
+      35000
+     ],
+     "2026-10": [
+      23000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y04",
+  "world": "year",
+  "lang": "english",
+  "question": "How much did the shop spend on salaries and tea last month and this month so far?",
+  "follow_of": null,
+  "group": "expenses",
+  "kind": "two-heads-two-periods",
+  "period": "2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30",
+  "source": "R29 by head",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "salaries_last": [
+      90000
+     ],
+     "tea_last": [
+      10700
+     ],
+     "salaries_this": [
+      90000
+     ],
+     "tea_this": [
+      2600
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y05",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle mahine kul commission kitni bani aur is mahine ab tak kitni ?",
+  "follow_of": null,
+  "group": "compare-periods",
+  "kind": "commission",
+  "period": "2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30",
+  "source": "view A",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "last": [
+      1117002
+     ],
+     "this": [
+      181892
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y06",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle 3 mahine mein sab se zyada commission dene wale 3 gahaq kaun se hain ?",
+  "follow_of": null,
+  "group": "ranked-buyers",
+  "kind": "top-3",
+  "period": "2026-08-05 to 2026-11-05",
+  "source": "view C ranked",
+  "note": "order: Rizwan Butt 148843 > Tariq Mehmood 132813 > Kashif Ali 128314",
+  "readings": [
+   {
+    "req": {
+     "Rizwan Butt": [
+      148843
+     ],
+     "Tariq Mehmood": [
+      132813
+     ],
+     "Kashif Ali": [
+      128314
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "Rizwan Butt": [
+      144779
+     ],
+     "Tariq Mehmood": [
+      129101
+     ],
+     "Kashif Ali": [
+      124978
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Rizwan Butt",
+   "Tariq Mehmood",
+   "Kashif Ali"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Rizwan Butt": "buyer",
+   "Tariq Mehmood": "buyer",
+   "Kashif Ali": "buyer"
+  }
+ },
+ {
+  "id": "Y07",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle saal se is mahine tak sab se zyada bikri karne wale 5 beopari kaun hain ?",
+  "follow_of": null,
+  "group": "ranked-sellers",
+  "kind": "top-5",
+  "period": "up to now",
+  "source": "view B ranked",
+  "note": "order: Sarfraz 11635380 > Haji Nazeer 11349390 > Rahim 10859310 > Saleem 10186530 > Karim 10179170",
+  "readings": [
+   {
+    "req": {
+     "Sarfraz": [
+      11635380
+     ],
+     "Haji Nazeer": [
+      11349390
+     ],
+     "Rahim": [
+      10859310
+     ],
+     "Saleem": [
+      10186530
+     ],
+     "Karim": [
+      10179170
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Sarfraz",
+   "Haji Nazeer",
+   "Rahim",
+   "Saleem",
+   "Karim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Sarfraz": "seller",
+   "Haji Nazeer": "seller",
+   "Rahim": "seller",
+   "Saleem": "seller",
+   "Karim": "seller"
+  }
+ },
+ {
+  "id": "Y08",
+  "world": "year",
+  "lang": "roman",
+  "question": "rahim aur karim ne is saal shop ko kitni commission di aur kitni bikri ki ?",
+  "follow_of": null,
+  "group": "several-sellers",
+  "kind": "sale+commission",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view B",
+  "note": "commission given by the seller, or the shop's commission on his goods",
+  "readings": [
+   {
+    "req": {
+     "rahim.sale": [
+      9683650
+     ],
+     "rahim.comm": [
+      581015
+     ],
+     "karim.sale": [
+      7330660
+     ],
+     "karim.comm": [
+      439841
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "rahim.sale": [
+      9683650
+     ],
+     "rahim.comm": [
+      1186254
+     ],
+     "karim.sale": [
+      7330660
+     ],
+     "karim.comm": [
+      893974
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Rahim",
+   "Karim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Rahim": "seller",
+   "Karim": "seller"
+  }
+ },
+ {
+  "id": "Y09",
+  "world": "year",
+  "lang": "roman",
+  "question": "akram baloch ne pichle 3 mahine mein kitna maal liya aur kitni commission di ?",
+  "follow_of": null,
+  "group": "one-buyer",
+  "kind": "sale+commission",
+  "period": "2026-08-05 to 2026-11-05",
+  "source": "view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "purchase": [
+      1773150
+     ],
+     "comm": [
+      109980
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "purchase": [
+      1773150
+     ],
+     "comm": [
+      106388
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Akram Baloch"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Akram Baloch": "buyer"
+  }
+ },
+ {
+  "id": "Y10",
+  "world": "year",
+  "lang": "roman",
+  "question": "akram ne is mahine kitni commission di ?",
+  "follow_of": null,
+  "group": "ambiguous-name",
+  "kind": "which-one",
+  "period": "2026-11-01 to 2026-11-30",
+  "source": "find",
+  "note": "two buyers are called Akram: asking 'which one' is right; a figure for one of them without asking is a wrong guess",
+  "readings": [
+   {
+    "req": {
+     "toll_tax": [
+      0
+     ],
+     "baloch": [
+      11769
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [
+   "Akram Toll Tax",
+   "Akram Baloch"
+  ],
+  "outcomes": [
+   "which_one",
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": true,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Akram Toll Tax": "buyer",
+   "Akram Baloch": "buyer"
+  }
+ },
+ {
+  "id": "Y11",
+  "world": "year",
+  "lang": "roman",
+  "question": "faisal gahaq ne is saal mahine ke hisab se kitna maal liya ?",
+  "follow_of": null,
+  "group": "month-by-month",
+  "kind": "buyer-purchase",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view C by month",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "2026-01": [
+      509380
+     ],
+     "2026-02": [
+      538590
+     ],
+     "2026-03": [
+      476270
+     ],
+     "2026-04": [
+      530030
+     ],
+     "2026-05": [
+      344470
+     ],
+     "2026-06": [
+      776470
+     ],
+     "2026-07": [
+      432790
+     ],
+     "2026-08": [
+      889880
+     ],
+     "2026-09": [
+      533050
+     ],
+     "2026-10": [
+      466350
+     ],
+     "2026-11": [
+      185670
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Faisal"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Faisal": "buyer"
+  }
+ },
+ {
+  "id": "Y12",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle mahine aur is mahine ki bikri ka farq batao",
+  "follow_of": null,
+  "group": "compare-periods",
+  "kind": "sale",
+  "period": "2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30",
+  "source": "view A compare",
+  "note": "direction: less",
+  "readings": [
+   {
+    "req": {
+     "last": [
+      9154800
+     ],
+     "this": [
+      1490500
+     ],
+     "diff": [
+      7664300
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y13",
+  "world": "year",
+  "lang": "roman",
+  "question": "pehle safar ka nateeja kya raha, kitna nafa ya nuksan hua ?",
+  "follow_of": null,
+  "group": "trip",
+  "kind": "trip-result",
+  "period": "up to now",
+  "source": "R33 trips",
+  "note": "money back 288690 less paid 287000; closed",
+  "readings": [
+   {
+    "req": {
+     "result": [
+      1690
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y14",
+  "world": "year",
+  "lang": "roman",
+  "question": "pehle safar mein kitna paisa laga, kitna wapas aya aur har partner ka hissa kitna raha ?",
+  "follow_of": null,
+  "group": "trip",
+  "kind": "trip-partners",
+  "period": "up to now",
+  "source": "R33 trips + partner statement",
+  "note": "two partners at 50 / 50: each ~half the result (a rupee may move)",
+  "readings": [
+   {
+    "req": {
+     "paid": [
+      287000
+     ],
+     "money_in": [
+      288690
+     ],
+     "result": [
+      1690
+     ]
+    },
+    "opt": {
+     "each_partner": [
+      [
+       "~",
+       845,
+       3
+      ]
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y15",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle saal se is mahine tak shop ka nafa nuksan kitna raha ?",
+  "follow_of": null,
+  "group": "profit",
+  "kind": "profit",
+  "period": "2025-01-01 to 2026-11-30",
+  "source": "R30",
+  "note": "income less shop expenses; commission-only reading would be 9605760",
+  "readings": [
+   {
+    "req": {
+     "profit": [
+      9617660
+     ]
+    },
+    "opt": {
+     "income": [
+      11711160
+     ],
+     "expense": [
+      2093500
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y16",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle mahine ka nafa batao aur har partner ka hissa kitna bana ?",
+  "follow_of": null,
+  "group": "profit",
+  "kind": "profit-partners",
+  "period": "2026-10-01 to 2026-10-31",
+  "source": "R30 / R31",
+  "note": "no partner code is set in the year books",
+  "readings": [
+   {
+    "req": {
+     "profit": [
+      948102
+     ]
+    },
+    "opt": {
+     "Partner A": [
+      379274
+     ],
+     "Partner B": [
+      284414
+     ],
+     "Usman": [
+      284414
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y17",
+  "world": "year",
+  "lang": "roman",
+  "question": "is saal partnaron ne zaati kharche mein kitna kitna paisa liya ?",
+  "follow_of": null,
+  "group": "partner-kharch",
+  "kind": "partner-kharch",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "R29 partner part / view M",
+  "note": "taken (the kharch he spent), or net of what he returned",
+  "readings": [
+   {
+    "req": {
+     "partner a": [
+      250000
+     ],
+     "partner b": [
+      75000
+     ],
+     "usman": [
+      16000
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "partner a": [
+      220000
+     ],
+     "partner b": [
+      75000
+     ],
+     "usman": [
+      16000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y18",
+  "world": "year",
+  "lang": "roman",
+  "question": "is mahine aur pichle mahine ka kharcha compare karo",
+  "follow_of": null,
+  "group": "compare-periods",
+  "kind": "expense",
+  "period": "2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30",
+  "source": "R29 / view M compare",
+  "note": "direction: less",
+  "readings": [
+   {
+    "req": {
+     "last": [
+      170600
+     ],
+     "this": [
+      132600
+     ],
+     "diff": [
+      38000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y19",
+  "world": "year",
+  "lang": "roman",
+  "question": "agar commission isi raftar se chalta raha to agle 3 mahine mein kitna hoga ?",
+  "follow_of": null,
+  "group": "estimate",
+  "kind": "estimate",
+  "period": "Nov 2026 to Jan 2027",
+  "source": "estimator, same pace",
+  "note": "average of August, September, October commission, rounded once, times 3",
+  "readings": [
+   {
+    "req": {
+     "per_month": [
+      958313
+     ],
+     "three_months": [
+      2874939
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "estimate",
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y20",
+  "world": "year",
+  "lang": "roman",
+  "question": "rahim ne kele ki bikri pichle 6 mahine mein kitni ki ?",
+  "follow_of": null,
+  "group": "seller-item",
+  "kind": "sale",
+  "period": "2026-05-05 to 2026-11-05",
+  "source": "view B/A with item",
+  "note": "37 lines",
+  "readings": [
+   {
+    "req": {
+     "sale": [
+      2319980
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Rahim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Rahim": "seller"
+  }
+ },
+ {
+  "id": "Y21a",
+  "world": "year",
+  "lang": "roman",
+  "question": "rahim ki is saal ki bikri kitni hai ?",
+  "follow_of": null,
+  "group": "follow-up",
+  "kind": "sale",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "rahim": [
+      9683650
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Rahim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Rahim": "seller"
+  }
+ },
+ {
+  "id": "Y21b",
+  "world": "year",
+  "lang": "roman",
+  "question": "aur karim ki ?",
+  "follow_of": "Y21a",
+  "group": "follow-up",
+  "kind": "sale",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "karim": [
+      7330660
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Karim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Karim": "seller"
+  }
+ },
+ {
+  "id": "Y21c",
+  "world": "year",
+  "lang": "roman",
+  "question": "dono ki commission mila kar kitni hai ?",
+  "follow_of": "Y21b",
+  "group": "follow-up",
+  "kind": "calc-sum",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "calculator",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "sum": [
+      2080228
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "sum": [
+      1020856
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y22",
+  "world": "year",
+  "lang": "english",
+  "question": "How much commission did the shop earn in each month from May to October 2026?",
+  "follow_of": null,
+  "group": "month-by-month",
+  "kind": "commission",
+  "period": "2026-05 to 2026-10",
+  "source": "view A by month",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "2026-05": [
+      900722
+     ],
+     "2026-06": [
+      1218672
+     ],
+     "2026-07": [
+      1056324
+     ],
+     "2026-08": [
+      877780
+     ],
+     "2026-09": [
+      880156
+     ],
+     "2026-10": [
+      1117002
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y23",
+  "world": "year",
+  "lang": "urdu",
+  "question": "پچھلے مہینے دکان کا خرچہ مدوں کے حساب سے کتنا ہوا؟",
+  "follow_of": null,
+  "group": "expenses",
+  "kind": "expense-by-head",
+  "period": "2026-10-01 to 2026-10-31",
+  "source": "R29 by head",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "shop rent": [
+      40000
+     ],
+     "electricity": [
+      23000
+     ],
+     "salaries": [
+      90000
+     ],
+     "tea": [
+      10700
+     ],
+     "guests food and drinks": [
+      6900
+     ]
+    },
+    "opt": {
+     "total": [
+      170600
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y24",
+  "world": "year",
+  "lang": "urdu",
+  "question": "رحیم نے اس سال دکان کو کتنا کمیشن دیا؟",
+  "follow_of": null,
+  "group": "one-seller",
+  "kind": "commission",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view B / commission page",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "comm": [
+      581015
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "comm": [
+      1186254
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Rahim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Rahim": "seller"
+  }
+ },
+ {
+  "id": "Y25",
+  "world": "year",
+  "lang": "roman",
+  "question": "10 october se 20 october ke beech shop ki bikri aur commission kitni rahi ?",
+  "follow_of": null,
+  "group": "range",
+  "kind": "sale+commission",
+  "period": "2026-10-10 to 2026-10-20",
+  "source": "view A",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "sale": [
+      3320730
+     ],
+     "commission": [
+      405410
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y26",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle saal se is mahine tak kis mahine mein sab se zyada commission aaya ?",
+  "follow_of": null,
+  "group": "best-month",
+  "kind": "top-month",
+  "period": "2025-01-01 to 2026-11-30",
+  "source": "view A by month",
+  "note": "2026-06",
+  "readings": [
+   {
+    "req": {
+     "best_month_commission": [
+      1218672
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y27",
+  "world": "year",
+  "lang": "roman",
+  "question": "doosre safar mein abhi tak kitna maal khareeda aur kitna bik chuka ?",
+  "follow_of": null,
+  "group": "trip",
+  "kind": "trip-so-far",
+  "period": "up to now",
+  "source": "R33 trips",
+  "note": "open trip: money back so far 50760",
+  "readings": [
+   {
+    "req": {
+     "paid": [
+      117500
+     ],
+     "bought_qty": [
+      50
+     ],
+     "sold_qty": [
+      20
+     ]
+    },
+    "opt": {
+     "money_in": [
+      50760
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y28",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle mahine commission bikri walon se kitni li aur khareedaron se kitni ?",
+  "follow_of": null,
+  "group": "commission-sides",
+  "kind": "commission",
+  "period": "2026-10-01 to 2026-10-31",
+  "source": "view A (seller / buyer)",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "from_sellers": [
+      549287
+     ],
+     "from_buyers": [
+      567715
+     ]
+    },
+    "opt": {
+     "total": [
+      1117002
+     ]
+    }
+   },
+   {
+    "req": {
+     "from_sellers": [
+      549287
+     ],
+     "from_buyers": [
+      549323
+     ]
+    },
+    "opt": {
+     "laga": [
+      18392
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y29",
+  "world": "year",
+  "lang": "roman",
+  "question": "is saal shop ki commission, kharcha aur nafa teeno batao",
+  "follow_of": null,
+  "group": "sale+commission+expense",
+  "kind": "three-figures",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "R29/R30/view A",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "commission": [
+      9752880
+     ],
+     "expense": [
+      1886100
+     ],
+     "profit": [
+      7876720
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y30",
+  "world": "year",
+  "lang": "english",
+  "question": "How much did Karim sell last month and how many boxes was that?",
+  "follow_of": null,
+  "group": "one-seller",
+  "kind": "sale+qty",
+  "period": "2026-10-01 to 2026-10-31",
+  "source": "view B",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "sale": [
+      1162160
+     ],
+     "boxes": [
+      377
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Karim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Karim": "seller"
+  }
+ },
+ {
+  "id": "Y31a",
+  "world": "year",
+  "lang": "english",
+  "question": "How much did the shop spend on electricity this year?",
+  "follow_of": null,
+  "group": "follow-up",
+  "kind": "expense-head",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "R29 head",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "electricity": [
+      295000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y31b",
+  "world": "year",
+  "lang": "english",
+  "question": "and on tea?",
+  "follow_of": "Y31a",
+  "group": "follow-up",
+  "kind": "expense-head",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "R29 head",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "tea": [
+      98000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y31c",
+  "world": "year",
+  "lang": "english",
+  "question": "what is the total of both?",
+  "follow_of": "Y31b",
+  "group": "follow-up",
+  "kind": "calc-sum",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "calculator",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "sum": [
+      393000
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y32",
+  "world": "year",
+  "lang": "roman",
+  "question": "shahpur bagh ka hisab batao: kitna paisa lagaya, kitni bikri aayi aur ab balance kya hai ?",
+  "follow_of": null,
+  "group": "garden",
+  "kind": "garden-balance",
+  "period": "up to now",
+  "source": "R36 garden",
+  "note": "installments 350000 + costs 20000; money in 2107824 (after commission)",
+  "readings": [
+   {
+    "req": {
+     "paid": [
+      370000
+     ],
+     "balance": [
+      1737824
+     ]
+    },
+    "opt": {
+     "money_in": [
+      2107824
+     ],
+     "rent": [
+      400000
+     ],
+     "rent_due": [
+      50000
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {}
+ },
+ {
+  "id": "Y33",
+  "world": "year",
+  "lang": "roman",
+  "question": "is saal sab se zyada commission dene wale 5 gahaq kaun hain aur kitni kitni ?",
+  "follow_of": null,
+  "group": "ranked-buyers",
+  "kind": "top-5",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view C ranked",
+  "note": "order: Akram Baloch 392332 > Tariq Mehmood 392027 > Rizwan Butt 384849 > Kashif Ali 376336 > Nadeem Traders 373370",
+  "readings": [
+   {
+    "req": {
+     "Akram Baloch": [
+      392332
+     ],
+     "Tariq Mehmood": [
+      392027
+     ],
+     "Rizwan Butt": [
+      384849
+     ],
+     "Kashif Ali": [
+      376336
+     ],
+     "Nadeem Traders": [
+      373370
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Akram Baloch",
+   "Tariq Mehmood",
+   "Rizwan Butt",
+   "Kashif Ali",
+   "Nadeem Traders"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Akram Baloch": "buyer",
+   "Tariq Mehmood": "buyer",
+   "Rizwan Butt": "buyer",
+   "Kashif Ali": "buyer",
+   "Nadeem Traders": "buyer"
+  }
+ },
+ {
+  "id": "Y34",
+  "world": "year",
+  "lang": "roman",
+  "question": "rahim ki bikri is saal pichle saal ke muqable mein kitni zyada ya kam hai ?",
+  "follow_of": null,
+  "group": "compare-periods",
+  "kind": "sale",
+  "period": "2026-01-01 to 2026-12-31 / 2025-01-01 to 2025-12-31",
+  "source": "view B compare",
+  "note": "the books start on 06-11-2025: last year is only 6 Nov to 31 Dec",
+  "readings": [
+   {
+    "req": {
+     "this_year": [
+      9683650
+     ],
+     "last_year": [
+      1175660
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Rahim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Rahim": "seller"
+  }
+ },
+ {
+  "id": "Y35",
+  "world": "year",
+  "lang": "roman",
+  "question": "faisal gahaq ne pichle 3 mahine mein kitni commission di aur kitna maal liya ?",
+  "follow_of": null,
+  "group": "one-buyer",
+  "kind": "sale+commission",
+  "period": "2026-08-05 to 2026-11-05",
+  "source": "view C",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "purchase": [
+      1952280
+     ],
+     "comm": [
+      121552
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "purchase": [
+      1952280
+     ],
+     "comm": [
+      117136
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Faisal"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {},
+  "roles": {
+   "Faisal": "buyer"
+  }
+ },
+ {
+  "id": "M17",
+  "world": "year",
+  "lang": "roman",
+  "question": "rahim ki safi bikri abhi tak kitni hai ?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "net-sale",
+  "period": "up to now",
+  "source": "R6 / lot net",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "net_sale": [
+      9916553
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [
+   "Rahim"
+  ],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 10859310,
+   "buyer_total": 11537582
+  },
+  "roles": {
+   "Rahim": "seller"
+  }
+ },
+ {
+  "id": "M18",
+  "world": "year",
+  "lang": "roman",
+  "question": "pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag batao",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "gross-and-bills",
+  "period": "2026-10-01 to 2026-10-31",
+  "source": "view A / R4",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "gross_sale": [
+      9154800
+     ],
+     "buyer_bills": [
+      9723115
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "all_commission": 1117002
+  },
+  "roles": {}
+ },
+ {
+  "id": "M19",
+  "world": "year",
+  "lang": "urdu",
+  "question": "اس سال کمیشن اور لاگا الگ الگ بتاؤ",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "commission-and-laga",
+  "period": "2026-01-01 to 2026-12-31",
+  "source": "view A columns",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "commission_without_laga": [
+      9592152
+     ],
+     "laga": [
+      160728
+     ]
+    },
+    "opt": {
+     "together": [
+      9752880
+     ]
+    }
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 79934420
+  },
+  "roles": {}
+ },
+ {
+  "id": "M20",
+  "world": "year",
+  "lang": "english",
+  "question": "What is the total of all buyer bills last month, with commission and laga included?",
+  "follow_of": null,
+  "group": "measure-words",
+  "kind": "buyer-total",
+  "period": "2026-10-01 to 2026-10-31",
+  "source": "R4",
+  "note": "",
+  "readings": [
+   {
+    "req": {
+     "buyer_bills": [
+      9723115
+     ]
+    },
+    "opt": {}
+   }
+  ],
+  "names": [],
+  "names_any": [],
+  "outcomes": [
+   "answered"
+  ],
+  "zero": false,
+  "ambiguous": false,
+  "must_not_show": [],
+  "fast": false,
+  "wrong_columns": {
+   "gross": 9154800,
+   "all_commission": 1117002
+  },
+  "roles": {}
+ }
+]

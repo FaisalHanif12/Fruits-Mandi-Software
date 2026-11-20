@@ -143,13 +143,14 @@ fn the_books_as_a_whole_are_read_from_the_tiles() {
 }
 
 #[test]
-fn a_question_the_app_is_not_sure_of_reads_nothing_first_and_thinks_medium() {
+fn a_question_the_app_is_not_sure_of_reads_nothing_first_and_still_thinks_low() {
+    // Plan 82: every call but the rewrite thinks low, whether or not the app read first.
     let h = day();
     let client = RecordedClient::new(vec![answer_reply("x")]);
     h.ask_with("akram ke kharche kam karne ke tareeke batao", None, &client);
     let first = &client.requests()[0];
     assert!(results_in(first).is_empty());
-    assert_eq!(effort(first), "medium");
+    assert_eq!(effort(first), "low");
 }
 
 #[test]
@@ -161,7 +162,7 @@ fn the_switches_turn_the_reads_and_the_low_effort_off() {
     h.ask_with("akram ka bakaya kitna hai", None, &client);
     let first = &client.requests()[0];
     assert!(results_in(first).is_empty(), "nothing read first");
-    assert_eq!(effort(first), "medium");
+    assert_eq!(effort(first), "low", "plan 82: low whether or not the data was read");
     // The reads on, the low effort off: the data is read and the model still thinks medium.
     let h = Harness::day();
     h.runtime.set_read_first(true);

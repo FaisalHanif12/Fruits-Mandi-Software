@@ -65,6 +65,7 @@ pub fn worked_day() -> support::World {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

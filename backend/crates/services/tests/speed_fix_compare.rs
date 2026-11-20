@@ -289,11 +289,15 @@ fn fix_f_02_dashboard() {
         cloud_age_hours: None,
     };
     dump("dashboard_get", || dashboard::get(&db, backup()));
-    dump("dashboard_attention", || dashboard::attention(&db, backup()));
+    dump("dashboard_attention", || {
+        dashboard::attention(&db, backup())
+    });
     dump("dashboard_total_dues", || dashboard::total_dues_parts(&db));
     let today = mandi_services::core::dates::BusinessDate::from_ymd(2026, 10, 10).expect("a date");
     dump_debug("dashboard_tiles_now", || dashboard::tiles_now(&db));
-    dump_debug("dashboard_buyers_dues", || dashboard::buyers_dues(&db, today));
+    dump_debug("dashboard_buyers_dues", || {
+        dashboard::buyers_dues(&db, today)
+    });
     dump_debug("dashboard_sellers", || dashboard::sellers(&db, today));
 }
 

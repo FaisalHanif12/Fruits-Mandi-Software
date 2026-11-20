@@ -7,7 +7,6 @@
 #![cfg(test)]
 
 #[path = "../benches/bikri_draft/mod.rs"]
-#[allow(dead_code)]
 mod bikri_draft;
 #[allow(dead_code)]
 #[path = "robustness_gate_t2/harness.rs"]
@@ -264,7 +263,8 @@ fn t2_10_search_and_translit() {
     let texts = |kind: &str, rng: &mut support::Rng| -> Vec<String> {
         (0..64)
             .map(|_| {
-                let (ur, en) = support::account_names(u32::try_from(rng.below(20_000)).unwrap_or(0));
+                let (ur, en) =
+                    support::account_names(u32::try_from(rng.below(20_000)).unwrap_or(0));
                 match kind {
                     "en_start" => en.chars().take(6).collect(),
                     "en_typo" => {
@@ -289,7 +289,14 @@ fn t2_10_search_and_translit() {
             .collect()
     };
     let mut rows: Vec<Row> = Vec::new();
-    for kind in ["en_start", "en_typo", "ur_start", "ur_typo", "one_letter", "no_match"] {
+    for kind in [
+        "en_start",
+        "en_typo",
+        "ur_start",
+        "ur_typo",
+        "one_letter",
+        "no_match",
+    ] {
         let list = texts(kind, &mut rng);
         let next = Cell::new(0_usize);
         rows.push(measure(
@@ -318,13 +325,31 @@ fn t2_10_search_and_translit() {
             },
         ));
     }
-    let words = ["arshad", "arshad multani", "akram toll tax", "muhammad", "shahid", "ch", "sheikh"];
+    let words = [
+        "arshad",
+        "arshad multani",
+        "akram toll tax",
+        "muhammad",
+        "shahid",
+        "ch",
+        "sheikh",
+    ];
     let next = Cell::new(0_usize);
-    rows.push(measure("translit.to_urdu", "NFR-SPD-20", "translit_suggest, English letters to Urdu, one key press", 50.0, || {
-        let i = next.get();
-        next.set(i + 1);
-        translit::suggest(ctx, words.get(i % words.len()).copied().unwrap_or("ali"), Direction::ToUrdu)
+    rows.push(measure(
+        "translit.to_urdu",
+        "NFR-SPD-20",
+        "translit_suggest, English letters to Urdu, one key press",
+        50.0,
+        || {
+            let i = next.get();
+            next.set(i + 1);
+            translit::suggest(
+                ctx,
+                words.get(i % words.len()).copied().unwrap_or("ali"),
+                Direction::ToUrdu,
+            )
             .expect("suggestions")
-    }));
+        },
+    ));
     finish(&rows);
 }

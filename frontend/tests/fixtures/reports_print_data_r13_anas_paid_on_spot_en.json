@@ -57,7 +57,7 @@
   ],
   "summary": [
     {
-      "label_id": "report-opening-balance",
+      "label_id": "report-period-start-balance",
       "cell": {
         "type": "balance",
         "text": "0",

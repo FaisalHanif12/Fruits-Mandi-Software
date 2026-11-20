@@ -38,6 +38,7 @@ import type { ReadyStock } from '../ready-stock';
 import { CarriedLotPicker } from './CarriedLotPicker';
 import { GoodsLoadPicker } from './GoodsLoadPicker';
 import { LotMoreToggle } from './LotMore';
+import { LotNotes } from './QtyNotes';
 import { focusOwnPurchaseSoon } from './OwnLotPanel';
 
 /**
@@ -209,6 +210,7 @@ export function LotsSection({
           fit
           heightMode="auto"
         />
+        <LotNotes notes={view.lotNotes} />
         <div className="flex flex-wrap items-center gap-2">
           <AddRowButton labelId="bikri-lots-add-row" onAdd={addLot} limit={limit} link={addLink} />
           {allowCarried && (sources?.stock_lots ?? 0) > 0 ? (

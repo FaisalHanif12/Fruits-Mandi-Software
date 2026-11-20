@@ -238,8 +238,17 @@ const EXPECTED_FILES: &[&str] = &[
     "CashbookInput.ts",
     "Cashbook.ts",
     "CapitalWhere.ts",
+    "CapitalWhereInput.ts",
+    "CapitalPrintInput.ts",
     "CapitalWhereKind.ts",
     "CapitalWhereLine.ts",
+    "CapitalSide.ts",
+    "CapitalLink.ts",
+    "CapitalDifference.ts",
+    "CapitalDifferenceGroup.ts",
+    "CapitalDifferenceKind.ts",
+    "CapitalDifferencePart.ts",
+    "CapitalDifferenceSide.ts",
     "CapitalWhoseKind.ts",
     "CapitalWhoseLine.ts",
     "CashbookKind.ts",
@@ -548,6 +557,9 @@ const EXPECTED_FILES: &[&str] = &[
     "WindowSource.ts",
     "WindowsBoundsInput.ts",
     "PartnersOpenVenturesInput.ts",
+    "PartnersPlaceOpeningCapitalInput.ts",
+    "PartnersOpeningCapitalPlaced.ts",
+    "PlacedOpeningCapital.ts",
     "PartnersStatementMonthPrintInput.ts",
     "PartnerStatementDay.ts",
     "PartnersStatementDayInput.ts",
@@ -608,6 +620,13 @@ const EXPECTED_FILES: &[&str] = &[
     "CommissionParty.ts",
     "CommissionPartyShown.ts",
     "CommissionSide.ts",
+    "SalesPeriodInput.ts",
+    "SalesPeriodRow.ts",
+    "SalesPeriod.ts",
+    "SalesDayInput.ts",
+    "SalesDayRow.ts",
+    "SalesDay.ts",
+    "SalesPrintInput.ts",
     "CarriedLotInput.ts",
     "CarriedSaved.ts",
     "MixedPart.ts",
@@ -759,6 +778,8 @@ const EXPECTED_FILES: &[&str] = &[
     "AnalyticsPeriod.ts",
     "AnalyticsGroupBy.ts",
     "AnalyticsSide.ts",
+    // Plan 84: what a view counts (the measure).
+    "AnalyticsMeasure.ts",
     "AnalyticsCompare.ts",
     "AnalyticsFilterKind.ts",
     "AnalyticsCatalogEntry.ts",
@@ -976,11 +997,13 @@ const EXPECTED_FILES: &[&str] = &[
     "PrintBuyerDuesInput.ts",
     "PrintSellerDuesInput.ts",
     "PrintTotalDuesInput.ts",
+    "PrintCapitalInput.ts",
     "PrintLentOpenInput.ts",
     "PrintAdvancesOpenInput.ts",
     "PrintCashSalesMonthInput.ts",
     "PrintCashSalesDayInput.ts",
     "PrintCommissionInput.ts",
+    "PrintSalesInput.ts",
     "PrintPartnerMonthInput.ts",
 ];
 
@@ -1146,6 +1169,15 @@ fn export_bindings() {
     partners::PartnerOverviewRow::export_all(&cfg).unwrap();
     cashbook::CashbookInput::export_all(&cfg).unwrap();
     cashbook::CapitalWhere::export_all(&cfg).unwrap();
+    cashbook::CapitalWhereInput::export_all(&cfg).unwrap();
+    cashbook::CapitalPrintInput::export_all(&cfg).unwrap();
+    cashbook::CapitalSide::export_all(&cfg).unwrap();
+    cashbook::CapitalLink::export_all(&cfg).unwrap();
+    cashbook::CapitalDifference::export_all(&cfg).unwrap();
+    cashbook::CapitalDifferenceGroup::export_all(&cfg).unwrap();
+    cashbook::CapitalDifferenceKind::export_all(&cfg).unwrap();
+    cashbook::CapitalDifferencePart::export_all(&cfg).unwrap();
+    cashbook::CapitalDifferenceSide::export_all(&cfg).unwrap();
     cashbook::CapitalWhereKind::export_all(&cfg).unwrap();
     cashbook::CapitalWhereLine::export_all(&cfg).unwrap();
     cashbook::CapitalWhoseKind::export_all(&cfg).unwrap();
@@ -1427,6 +1459,9 @@ fn export_bindings() {
     mandi_services::core::windows::WindowsBounds::export_all(&cfg).unwrap();
     mandi_services::core::windows::WindowsBoundsInput::export_all(&cfg).unwrap();
     mandi_services::core::partners::PartnersOpenVenturesInput::export_all(&cfg).unwrap();
+    mandi_services::core::partners::PartnersPlaceOpeningCapitalInput::export_all(&cfg).unwrap();
+    mandi_services::core::partners::PartnersOpeningCapitalPlaced::export_all(&cfg).unwrap();
+    mandi_services::core::partners::PlacedOpeningCapital::export_all(&cfg).unwrap();
     mandi_services::core::statement::PartnersStatementMonthPrintInput::export_all(&cfg).unwrap();
     mandi_services::core::statement::PartnerStatementDay::export_all(&cfg).unwrap();
     mandi_services::core::statement::PartnersStatementDayInput::export_all(&cfg).unwrap();
@@ -1469,6 +1504,13 @@ fn export_bindings() {
     mandi_reports::dashboard::CommissionDayInput::export_all(&cfg).unwrap();
     mandi_reports::dashboard::CommissionMonth::export_all(&cfg).unwrap();
     mandi_reports::dashboard::CommissionMonthInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SalesPeriodInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SalesPeriodRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SalesPeriod::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SalesDayInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SalesDayRow::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SalesDay::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::SalesPrintInput::export_all(&cfg).unwrap();
     bikri::MixedSaleInput::export_all(&cfg).unwrap();
     bikri::MixedSaleSaveInput::export_all(&cfg).unwrap();
     bikri::MixedSalePreview::export_all(&cfg).unwrap();
@@ -1686,11 +1728,13 @@ fn export_bindings() {
     mandi_app_lib::print_report::PrintBuyerDuesInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintSellerDuesInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintTotalDuesInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintCapitalInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintLentOpenInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintAdvancesOpenInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintCashSalesMonthInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintCashSalesDayInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintCommissionInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintSalesInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintPartnerMonthInput::export_all(&cfg).unwrap();
     for file in EXPECTED_FILES {
         assert!(

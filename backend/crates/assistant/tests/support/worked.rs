@@ -102,6 +102,7 @@ pub fn worked_day() -> world::World {
             removed: RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

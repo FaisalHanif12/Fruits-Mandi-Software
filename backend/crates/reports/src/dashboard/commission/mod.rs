@@ -37,7 +37,9 @@ pub use model::{
     CommissionSide, PartnerShare,
 };
 pub use print::{commission_month_print_data, commission_month_spec};
+pub(in crate::dashboard) use period::{Resolved, resolve as resolve_period};
 pub use read::{commission_day, commission_month};
+pub(in crate::dashboard) use read::{narrowed, resolve_party};
 
 /// The SQL of the commission page for the query plan test (Code Standards B18): the sums of each
 /// day of a range for the whole shop, with the values to bind.

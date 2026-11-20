@@ -222,6 +222,29 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     );
   });
 
+  it('plan 81: the first installment made with the garden is stored as the message id of the standard words, and the history writes them in the app language', async () => {
+    fakeGardens({
+      history: e40History().map((row) =>
+        row.entry_id === 11 ? { ...row, reason: 'gardens-first-installment-reason' } : row,
+      ),
+    });
+    await open();
+    const cellOf = (rowId: string, colId: string) => {
+      const row = document.querySelector(`.ag-row[row-id="${rowId}"]`);
+      return visible(row?.querySelector(`[col-id="${colId}"]`)?.textContent);
+    };
+    await waitFor(() => {
+      expect(cellOf('e11', 'entry')).toBe(
+        message(language, 'gardens-history-entry', {
+          kind: message(language, 'gardens-kind-installment'),
+          detail: message(language, 'gardens-first-installment-reason'),
+        }),
+      );
+    });
+    // A reason a person typed is shown as typed.
+    expect(cellOf('e12', 'entry')).toContain('Second installment');
+  });
+
   it('plan 78 D3: after a relief the card shows the rent now, the rent it was made with, the relief and what the owner owes; the refund type is offered', async () => {
     fakeGardens({
       gardens: [

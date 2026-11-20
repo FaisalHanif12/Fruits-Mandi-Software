@@ -240,6 +240,57 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 31 }));
   });
 
+  it('a seller or a buyer (plan 88): the list has both kinds, each marked, and nothing else; `0` lists both with their types', async () => {
+    const onValue = vi.fn();
+    const { input, user } = setup(language, 'seller_buyer', { onValue });
+    await user.click(input);
+    await waitFor(() => {
+      expect(options()).toHaveLength(4);
+    });
+    const rows = options().map((option) => visible(option.textContent));
+    for (const row of rows) {
+      const hasSeller = row.includes(message(language, 'accounts-type-seller'));
+      const hasBuyer = row.includes(message(language, 'accounts-type-buyer'));
+      expect(hasSeller !== hasBuyer).toBe(true);
+    }
+    expect(
+      rows.filter((row) => row.includes(message(language, 'accounts-type-buyer'))),
+    ).toHaveLength(2);
+    await user.keyboard('0');
+    await waitFor(() => {
+      expect(options()).toHaveLength(2);
+    });
+    expect(accountApi.searchAccounts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scope: 'seller_buyer', text: '0' }),
+    );
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 31 }));
+  });
+
+  it('a seller or a buyer (plan 88): the add row opens the short form with the type to choose, seller or buyer', async () => {
+    const { input, user } = setup(language, 'seller_buyer');
+    await user.click(input);
+    await user.keyboard('zzz');
+    await waitFor(() => {
+      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
+    });
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { code: 'F4', key: 'F4', bubbles: true }));
+    });
+    const dialog = await screen.findByRole('dialog');
+    const type = within(dialog).getByRole('combobox', {
+      name: named(message(language, 'accounts-field-type')),
+    });
+    await user.click(type);
+    const offered = screen.getAllByRole('option').map((option) => visible(option.textContent));
+    expect(offered).toEqual(
+      expect.arrayContaining([
+        message(language, 'accounts-type-seller'),
+        message(language, 'accounts-type-buyer'),
+      ]),
+    );
+  });
+
   it('the card previews the top match while typing, and nothing is taken until Enter', async () => {
     const onValue = vi.fn();
     const { input, user } = setup(language, 'buyer', { onValue });

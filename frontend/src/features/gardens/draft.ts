@@ -44,7 +44,6 @@ export function newGardenDraft(defaults: GardenDefaults, today: string): GardenD
     items: [],
     rent: '',
     paidNow: '',
-    paidNowReason: '',
     seasonEnd: '',
     note: '',
   };
@@ -81,11 +80,24 @@ export function buildGarden(draft: GardenDraft, confirmCash: boolean): GardenInp
       source: draft.partners[index]?.source ?? 'shop',
     })),
     paid_now: textOrNull(draft.paidNow),
-    // The reason belongs to the first installment only; without an amount there is none.
-    paid_now_reason: textOrNull(draft.paidNow) === null ? null : textOrNull(draft.paidNowReason),
+    // No reason is sent (plan 81): the backend saves the first installment with the standard words.
+    paid_now_reason: null,
     parts: [],
     confirm_cash_below_zero: confirmCash,
   };
+}
+
+/**
+ * The reason the backend stores for the first installment of a new garden (plan 81): the id of the
+ * Fluent message with the standard words, so no Urdu or English text sits in the books. A reason a
+ * person typed is shown as typed.
+ */
+export const FIRST_INSTALLMENT_REASON_ID = 'gardens-first-installment-reason';
+
+/** The words of an entry's reason: the standard words in the app language, or the text as typed. */
+export function entryReasonText(reason: string | null, text: (id: string) => string): string {
+  if (reason === null) return '';
+  return reason === FIRST_INSTALLMENT_REASON_ID ? text(FIRST_INSTALLMENT_REASON_ID) : reason;
 }
 
 /** The fields of the new garden form, by the field paths the backend's problems use. */
@@ -99,7 +111,6 @@ export const GARDEN_FIELD_PATHS = [
   'season_end',
   'note',
   'paid_now',
-  'paid_now_reason',
   'partners',
 ] as const;
 

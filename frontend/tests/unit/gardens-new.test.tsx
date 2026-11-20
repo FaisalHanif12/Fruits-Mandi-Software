@@ -306,8 +306,8 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
         { partner_id: 3, share: '0', source: 'shop' },
       ],
       paid_now: '30000',
-      // Filled in with the standard words when the amount was typed (F43), in the app language.
-      paid_now_reason: message(language, 'gardens-first-installment-reason'),
+      // The screen sends no reason for the first installment: the backend saves the standard words (plan 81).
+      paid_now_reason: null,
       parts: [],
       confirm_cash_below_zero: false,
     });
@@ -432,23 +432,42 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
     expect(fake.saved.gardens[0]?.confirm_cash_below_zero).toBe(true);
   });
 
-  it('typing the first installment fills its reason with the standard words, visible and changeable', async () => {
+  it('plan 81: the first installment has no reason field: typing the amount adds none and no reason is sent', async () => {
     const fake = fakeGardens();
     const { user } = await open();
     await typeNames(user);
     await user.type(field('gardens-field-rent'), '50000');
-    // No amount, no reason field.
+    // Every box of the form: typing the amount of the first installment must not add one (the old
+    // "why was it paid" box came with the amount).
+    const boxes = () =>
+      screen.getAllByRole('textbox').length + screen.queryAllByRole('combobox').length;
+    const before = boxes();
+    await user.type(field('gardens-field-paid-now'), '300000');
+    expect(boxes()).toBe(before);
+    await waitFor(() => {
+      expect(saveButton()).toBeEnabled();
+    });
+    await user.click(saveButton());
+    await waitFor(() => {
+      expect(fake.saved.gardens).toHaveLength(1);
+    });
+    expect(fake.saved.gardens[0]).toMatchObject({ paid_now: '300000', paid_now_reason: null });
+    // No refusal about a reason was shown.
+    expect(screen.queryByText(said(message(language, 'err-reason-required')))).toBeNull();
+  });
+
+  it('plan 81: a garden is made with only the names, the day, the rent and 100% shares; the total shows 100% and the button is on', async () => {
+    const fake = fakeGardens();
+    const { user } = await open();
     expect(
-      screen.queryByRole('combobox', {
-        name: named(message(language, 'gardens-field-paid-now-reason')),
-      }),
-    ).toBeNull();
-    await user.type(field('gardens-field-paid-now'), '30000');
-    const reason = field('gardens-field-paid-now-reason');
-    expect(reason).toHaveValue(message(language, 'gardens-first-installment-reason'));
-    // The Owner can change it, and what he typed is what is sent.
-    await user.clear(reason);
-    await user.type(reason, 'Advance to the owner');
+      await screen.findByText(said(message(language, 'partners-total-ok'))),
+    ).toBeInTheDocument();
+    // Only the required fields are typed: the two names and the rent (the day starts as today).
+    await typeNames(user);
+    await user.type(field('gardens-field-rent'), '50000');
+    // End of the season, note, items and first installment are all empty.
+    expect(field('gardens-field-season-end')).toHaveValue('');
+    expect(field('gardens-field-note')).toHaveValue('');
     await waitFor(() => {
       expect(saveButton()).toBeEnabled();
     });
@@ -457,25 +476,50 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
       expect(fake.saved.gardens).toHaveLength(1);
     });
     expect(fake.saved.gardens[0]).toMatchObject({
-      paid_now: '30000',
-      paid_now_reason: 'Advance to the owner',
+      rent: '50000',
+      season_end: null,
+      note: null,
+      item_ids: [],
+      paid_now: null,
+      paid_now_reason: null,
     });
   });
 
-  it('an emptied reason is told at its field only when the save is tried, and nothing is sent', async () => {
+  it('plan 81: an end of the season in the future is sent as typed, the note is optional', async () => {
     const fake = fakeGardens();
     const { user } = await open();
     await typeNames(user);
     await user.type(field('gardens-field-rent'), '50000');
-    await user.type(field('gardens-field-paid-now'), '30000');
-    await user.clear(field('gardens-field-paid-now-reason'));
-    // Nothing is told while the field is only empty.
-    expect(screen.queryByText(said(message(language, 'err-reason-required')))).toBeNull();
+    await user.type(field('gardens-field-season-end'), '30-06-2027');
+    await waitFor(() => {
+      expect(saveButton()).toBeEnabled();
+    });
     await user.click(saveButton());
+    await waitFor(() => {
+      expect(fake.saved.gardens).toHaveLength(1);
+    });
+    expect(fake.saved.gardens[0]).toMatchObject({ season_end: '30-06-2027', note: null });
+  });
+
+  it('plan 81: when the backend cannot give the total of the shares (the partner section is locked), the box says so, not "checking" for ever, and the garden can still be saved', async () => {
+    vi.mocked(partnersApi.partnersCheckShares).mockRejectedValue(
+      new CommandError(refusal([{ code: 'ERR_PARTNER_LOCKED' }])),
+    );
+    const fake = fakeGardens();
+    const { user } = await open();
     expect(
-      (await screen.findAllByText(said(message(language, 'err-reason-required')))).length,
-    ).toBeGreaterThan(0);
-    expect(fake.saved.gardens).toHaveLength(0);
+      await screen.findByText(said(message(language, 'partners-total-failed'))),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(said(message(language, 'partners-total-checking')))).toBeNull();
+    await typeNames(user);
+    await user.type(field('gardens-field-rent'), '50000');
+    await waitFor(() => {
+      expect(saveButton()).toBeEnabled();
+    });
+    await user.click(saveButton());
+    await waitFor(() => {
+      expect(fake.saved.gardens).toHaveLength(1);
+    });
   });
 
   it('the keyboard alone does it: type the rent and F10 saves', async () => {

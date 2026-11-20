@@ -142,6 +142,7 @@ pub fn give_advance_on(w: &World, seller: i64, rupees: &str, date: &str) {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

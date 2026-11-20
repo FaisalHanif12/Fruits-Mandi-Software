@@ -354,7 +354,10 @@ fn single_key_by_subtraction(
     {
         let mut statement = conn.prepare(&sql)?;
         let rows = statement.query_map(params_from_iter(binds.values.iter()), |r| {
-            Ok((r.get::<_, i64>(0)?, (r.get::<_, i64>(1)?, r.get::<_, i64>(2)?)))
+            Ok((
+                r.get::<_, i64>(0)?,
+                (r.get::<_, i64>(1)?, r.get::<_, i64>(2)?),
+            ))
         })?;
         for row in rows {
             let (account, sums) = row?;
@@ -381,7 +384,9 @@ fn single_key_by_subtraction(
     let mut out = Vec::new();
     // One control at a time, so each is the kept answer other reads of the same control use.
     for control in controls {
-        for (account_id, totals) in crate::ledger::account_totals_in_controls(conn, &[control], None)? {
+        for (account_id, totals) in
+            crate::ledger::account_totals_in_controls(conn, &[control], None)?
+        {
             if shared.contains(&account_id) {
                 continue;
             }
@@ -904,7 +909,8 @@ fn for_each_open_bill_bulk(
 ) -> rusqlite::Result<Bulk> {
     // The accounts asked for, as a list of flags by account id (ids are small and dense).
     let max_account = ids.iter().copied().max().unwrap_or(0);
-    let wanted_size = usize::try_from(max_account.saturating_add(1)).map_err(|_| broken("account ids"))?;
+    let wanted_size =
+        usize::try_from(max_account.saturating_add(1)).map_err(|_| broken("account ids"))?;
     if max_account > MAX_DENSE_ENTRY_ID {
         return Ok(Bulk::TooManyEntries);
     }
@@ -919,11 +925,10 @@ fn for_each_open_bill_bulk(
     // What the active matching rows take from each line, once for all lines, by line id. Line ids are
     // dense too (one per journal line), so a list by id costs a few nanoseconds for each of the
     // millions of lookups where a hash map costs a few tens.
-    let max_line: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(id), 0) FROM journal_lines",
-        [],
-        |r| r.get(0),
-    )?;
+    let max_line: i64 =
+        conn.query_row("SELECT COALESCE(MAX(id), 0) FROM journal_lines", [], |r| {
+            r.get(0)
+        })?;
     if max_line > MAX_DENSE_LINE_ID {
         return Ok(Bulk::TooManyEntries);
     }
@@ -1097,10 +1102,7 @@ pub fn open_buyer_ages_bulk(
         if bill.date < slot.0 {
             slot.0 = bill.date;
         }
-        let amount = slot
-            .1
-            .get_mut(band)
-            .ok_or_else(|| broken("an age band"))?;
+        let amount = slot.1.get_mut(band).ok_or_else(|| broken("an age band"))?;
         *amount = amount
             .checked_add(bill.open)
             .ok_or_else(|| broken("the open bills of a buyer do not fit"))?;

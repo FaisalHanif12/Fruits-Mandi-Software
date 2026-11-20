@@ -20,7 +20,7 @@ pub use entry::{
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::accounts::{Balance, LineError, RecordRef};
+use crate::accounts::{AccountType, Balance, LineError, RecordRef};
 use crate::money::Paisa;
 use crate::paging::{MonthSubtotal, SortInput};
 
@@ -192,7 +192,9 @@ impl RemovedPaymentFields {
 pub struct AdvanceInput {
     /// The day, `DD-MM-YYYY` or a shortcut. Must be an open day, not after today (PRD FR-6.6).
     pub date: String,
-    /// The seller.
+    /// The account that is given the advance: a seller, or a buyer (PRD 15.4, FR-15.11, v1.51: a
+    /// buyer's advance is saved as cash lent to him, a payment voucher). The name is kept so the
+    /// contract of the seller advance does not change.
     #[ts(type = "number")]
     pub seller_account_id: i64,
     /// Whole rupees, more than 0.
@@ -212,6 +214,13 @@ pub struct AdvanceInput {
     /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` and nothing is written.
     #[serde(default)]
     pub confirm_cash_below_zero: bool,
+    /// Why. Needed only when the account is a buyer: a پیشگی to a buyer is cash lent to him and is
+    /// saved as a payment to him (PRD 15.4, FR-15.11, v1.51), which asks for a reason
+    /// (`ERR_PAYMENT_TO_BUYER_NEEDS_REASON` at `reason`). Ignored for a seller. Missing or empty
+    /// means none.
+    #[serde(default)]
+    #[ts(optional)]
+    pub reason: Option<String>,
 }
 
 /// A voucher saved.
@@ -319,6 +328,13 @@ pub struct VouchersListInput {
     /// True to give the subtotal of each month in `months`. Used only in date order.
     #[serde(default)]
     pub group_by_month: bool,
+    /// True for the پیشگی list (PRD FR-15.11, v1.51): with `voucher_type` `advance`, the rows are
+    /// the advances and also the payments to a buyer (cash lent), because a buyer's advance is saved
+    /// as that payment. Missing or false lists exactly the vouchers of the type. Ignored for any
+    /// other type.
+    #[serde(default)]
+    #[ts(optional)]
+    pub advance_view: Option<bool>,
 }
 
 /// One page of vouchers with the totals over the whole filter (PRD FR-15.1, FR-19.11, B31).
@@ -367,6 +383,13 @@ pub struct VoucherRow {
     pub entry_date: String,
     /// The account, if any.
     pub account: Option<RecordRef>,
+    /// What kind of account it is: `seller` or `buyer` when it is a party of that side, `other` for
+    /// any other account, absent when the voucher has no account. The پیشگی list shows a buyer's
+    /// cash lent (a payment voucher) next to the advances and tells them apart by this (PRD
+    /// FR-15.11, v1.51).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub account_type: Option<AccountType>,
     /// The amount.
     #[ts(type = "Paisa")]
     pub amount_paisa: Paisa,

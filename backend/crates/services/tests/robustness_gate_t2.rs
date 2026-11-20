@@ -17,7 +17,6 @@
 #![cfg(test)]
 
 #[path = "../benches/bikri_draft/mod.rs"]
-#[allow(dead_code)]
 mod bikri_draft;
 #[allow(dead_code)]
 #[path = "robustness_gate_t2/harness.rs"]
@@ -36,6 +35,8 @@ use mandi_services::testing::TestEnv;
 struct World {
     gate: volume::Gate,
     env: TestEnv,
+    /// The signed-in Owner; held so the session lives as long as the world.
+    #[allow(dead_code)]
     actor: auth::Actor,
 }
 
@@ -1428,6 +1429,7 @@ fn t2_06_start_up_preview_and_save() {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         };
         rows.push(measure(
             "save.advance",
@@ -1464,24 +1466,22 @@ fn plan_of(
 /// A step that reads a whole big table: `SCAN` of `journal_lines`, `analytics_facts` or
 /// `bikri_sales`, with or without an index (a covering index still walks every entry).
 fn big_scan(step: &str) -> Option<&'static str> {
-    for table in [
+    // The alias form `SCAN l` is matched through the table name that follows in the plan only
+    // when the planner prints it; the plans here always print the table or the alias.
+    [
         "journal_lines",
         "analytics_facts",
         "bikri_sales",
         "partner_share_rows",
-    ] {
-        // The alias form `SCAN l` is matched through the table name that follows in the plan only
-        // when the planner prints it; the plans here always print the table or the alias.
-        if step.starts_with("SCAN")
+    ]
+    .into_iter()
+    .find(|table| {
+        step.starts_with("SCAN")
             && (step.contains(table)
                 || step.starts_with("SCAN l ")
                 || step.starts_with("SCAN s ")
                 || step.starts_with("SCAN f "))
-        {
-            return Some(table);
-        }
-    }
-    None
+    })
 }
 
 #[test]

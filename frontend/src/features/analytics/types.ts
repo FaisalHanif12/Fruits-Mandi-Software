@@ -11,6 +11,7 @@ export type { AnalyticsHeading } from '../../bindings/AnalyticsHeading';
 export type { AnalyticsKey } from '../../bindings/AnalyticsKey';
 export type { AnalyticsLinesInput } from '../../bindings/AnalyticsLinesInput';
 export type { AnalyticsLinesPage } from '../../bindings/AnalyticsLinesPage';
+export type { AnalyticsMeasure } from '../../bindings/AnalyticsMeasure';
 export type { AnalyticsPage } from '../../bindings/AnalyticsPage';
 export type { AnalyticsPeriod } from '../../bindings/AnalyticsPeriod';
 export type { AnalyticsPrintData } from '../../bindings/AnalyticsPrintData';

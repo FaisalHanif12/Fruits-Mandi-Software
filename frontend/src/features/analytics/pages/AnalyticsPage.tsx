@@ -43,7 +43,9 @@ import {
   EMPTY_ANALYTICS_FILTERS,
   filtersToWire,
   isUnfiltered,
+  MEASURE_CHOICES,
   stateFromWire,
+  takesMeasure,
   type AnalyticsFilterState,
 } from '../filters';
 import { analyticsExportExcel } from '../api';
@@ -55,6 +57,14 @@ import type { AnalyticsKey, AnalyticsSavedView, AnalyticsView } from '../types';
 
 /** How long the filters rest before the backend is asked (Code Standards F35). */
 const FILTER_SETTLE_MS = 250;
+
+/** The views whose measure column has the key of the measure: an order on it does not carry over to another one. */
+const MEASURE_COLUMN_VIEWS: ReadonlySet<AnalyticsView> = new Set<AnalyticsView>([
+  'D',
+  'E',
+  'H',
+  'L',
+]);
 
 /** The view the area opens on. */
 const DEFAULT_VIEW: AnalyticsView = 'A';
@@ -179,12 +189,31 @@ function AnalyticsBody({
     { enabled: !kharch },
   );
 
+  // The matrices (D, E, L) and the top 10 (H) have a column for the measure, with its key: an order chosen on that
+  // column belongs to the measure it was chosen for, and the backend refuses the key under another (PRD FR-18.10).
+  const { sort, setSort } = query;
+  useEffect(() => {
+    if (
+      MEASURE_COLUMN_VIEWS.has(entry.id) &&
+      sort !== null &&
+      MEASURE_CHOICES.some((choice) => choice === sort.column && choice !== filters.measure)
+    ) {
+      setSort(null);
+    }
+  }, [entry.id, sort, setSort, filters.measure]);
+
   const filtering = !isUnfiltered(filters, entry.filters, entry.id);
   const openDrill = (rowKey: AnalyticsKey, columnKey: AnalyticsKey | null, about: string) => {
     setDrill({ request: { view: entry.id, filters: wire, rowKey, columnKey }, about });
   };
   const openSaved = (saved: AnalyticsSavedView) => {
-    replace(stateFromWire(saved.filters), saved.name);
+    // A saved view keeps its measure (PRD FR-18.10). One of a view that takes no measure (F, I, J, K, M) holds
+    // none, so opening it leaves the measure the Owner has chosen alone.
+    const next = stateFromWire(saved.filters);
+    const takesIt = takesMeasure(
+      catalog.find((candidate) => candidate.id === saved.view)?.filters ?? [],
+    );
+    replace(takesIt ? next : { ...next, measure: filters.measure }, saved.name);
     setDrill(null);
     setMode('table');
     if (saved.view !== entry.id) {
@@ -225,7 +254,8 @@ function AnalyticsBody({
         kept={filterRefusal === null ? null : kept}
         filtering={filtering}
         onClear={() => {
-          replace(EMPTY_ANALYTICS_FILTERS);
+          // The measure is what the page shows, not a filter: clearing the filters keeps it (PRD FR-18.10).
+          replace({ ...EMPTY_ANALYTICS_FILTERS, measure: filters.measure });
         }}
         windowStart={windowStart}
         onWindow={setWindowStart}

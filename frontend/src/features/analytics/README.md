@@ -121,3 +121,26 @@ white) makes an inline SVG, so no file and no network. Test: `analytics-print-ch
   screen's own print, Excel and all-lines buttons are off for M.
 - The catalogue lists thirteen views, A to M; the tabs follow it. Tests: `analytics-views-plan77.test.tsx` (the
   numbers of the plan are in `tests/helpers/analytics-plan77.ts`).
+
+## Plan 84: the measure "ناپ" (PRD FR-18.10)
+
+- A box "ناپ" (Measure) on the views whose catalogue entry lists `measure` (A, B, C, D, E, G, H and L; `takesMeasure` in
+  `filters.ts`). It offers خام بکری (sales, the first and the start), رقم گاہک, نگ, کل کمیشن, بیوپاری کمیشن, گاہک
+  کمیشن and لاگا (`MEASURE_CHOICES`). The words are one Fluent message, `analytics-measure-name`, which selects on
+  `$measure`. It is in view (not behind "More filters"), and F, I, J, K and M never get it.
+- The screen always sends the measure to a view that takes it (a view with none reads the classic total commission).
+  `filtersToWire` leaves it out for the other views, because the backend refuses it there. The measure is not a filter:
+  "clear filters" keeps it. It is remembered per user (`remember.ts`), comes from an address (`search.ts`), and is part of
+  every saved view; a view saved before plan 84 has none and opens as the total commission it was (`CLASSIC_MEASURE`).
+- The result names the measure it was read for in `page.filters.measure` (`measureOfFilters`). The chart title is the
+  message of the view with `{ measure }` (`analytics-chart-a` and the others), the series are named from their column
+  or, when the table has no such column (the buyer total of view A), from the measure's own words. A matrix's row total
+  (D, E, L) has the key of the measure and the heading `analytics-col-row-total-<measure>` (`measureTitleId`), on screen
+  and in the print table.
+- A quantity is a count: its cells and bars are `number` cells, written without a rupee sign. Nothing here adds up or
+  formats by the measure's name: every figure is the cell the backend sent.
+- An order chosen on the measure column of D, E, L or H belongs to its measure: another measure drops it (the backend
+  refuses the old key).
+- The print and the Excel sheet send the same filters, so the backend names the measure in their header
+  (`analytics-filter-measure-<measure>`). Tests: `analytics-measure-logic.test.ts`, `analytics-measure.test.tsx`
+  (numbers of the plan in `tests/helpers/analytics-measure.ts`).

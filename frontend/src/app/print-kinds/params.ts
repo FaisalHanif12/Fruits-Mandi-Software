@@ -8,6 +8,7 @@
 import { z } from 'zod';
 import type { AdhariSheetPrintInput } from '../../bindings/AdhariSheetPrintInput';
 import type { AdvancesReportPrintInput } from '../../bindings/AdvancesReportPrintInput';
+import type { CapitalPrintInput } from '../../bindings/CapitalPrintInput';
 import type { BuyerDuesPrintInput } from '../../bindings/BuyerDuesPrintInput';
 import type { CashSalesDayPrintInput } from '../../bindings/CashSalesDayPrintInput';
 import type { CashSalesMonthPrintInput } from '../../bindings/CashSalesMonthPrintInput';
@@ -17,6 +18,7 @@ import type { DaySlipsInput } from '../../bindings/DaySlipsInput';
 import type { LentOpenPrintInput } from '../../bindings/LentOpenPrintInput';
 import type { PartnersStatementMonthPrintInput } from '../../bindings/PartnersStatementMonthPrintInput';
 import type { SellerDuesPrintInput } from '../../bindings/SellerDuesPrintInput';
+import type { SalesPrintInput } from '../../bindings/SalesPrintInput';
 import type { StatementRowsPrintInput } from '../../bindings/StatementRowsPrintInput';
 import type { TotalDuesPrintInput } from '../../bindings/TotalDuesPrintInput';
 import { jobOf } from '../../shared/print';
@@ -39,6 +41,10 @@ export const PRINT_KINDS = [
   'advances-open',
   'cash-sales-month',
   'cash-sales-day',
+  // Plan 83: the sales page behind the tile آج کی بکری.
+  'sales',
+  // Plan 87: the capital card of the روکڑ page.
+  'capital',
 ] as const;
 
 export type PrintKind = (typeof PRINT_KINDS)[number];
@@ -61,6 +67,8 @@ const lentOpenInput = z.custom<LentOpenPrintInput>(isObject);
 const advancesOpenInput = z.custom<AdvancesReportPrintInput>(isObject);
 const cashSalesMonthInput = z.custom<CashSalesMonthPrintInput>(isObject);
 const cashSalesDayInput = z.custom<CashSalesDayPrintInput>(isObject);
+const salesPeriodInput = z.custom<SalesPrintInput>(isObject);
+const capitalInput = z.custom<CapitalPrintInput>(isObject);
 
 /** The parameters of the print window: the kind and the input of its command, typed. */
 export type KindPrintParams = {
@@ -80,6 +88,8 @@ export type KindPrintParams = {
   | { kind: 'advances-open'; input: AdvancesReportPrintInput }
   | { kind: 'cash-sales-month'; input: CashSalesMonthPrintInput }
   | { kind: 'cash-sales-day'; input: CashSalesDayPrintInput }
+  | { kind: 'sales'; input: SalesPrintInput }
+  | { kind: 'capital'; input: CapitalPrintInput }
 );
 
 /** True when the address is for one of these prints (it has a `print` value), even if the rest is wrong. */
@@ -153,6 +163,14 @@ export function parseKindPrintParams(searchStr: string): KindPrintParams | null 
     }
     case 'cash-sales-day': {
       const input = cashSalesDayInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'sales': {
+      const input = salesPeriodInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'capital': {
+      const input = capitalInput.safeParse(json);
       return input.success ? { job, kind, input: input.data } : null;
     }
   }

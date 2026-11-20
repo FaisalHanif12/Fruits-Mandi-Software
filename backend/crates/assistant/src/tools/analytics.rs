@@ -277,21 +277,34 @@ fn build_filters(
     let mut compare = AnalyticsCompare::Off;
     let mut notes: Vec<String> = Vec::new();
     if let Some(word) = &parsed.compare {
-        compare = match word.as_str() {
-            "previous" => AnalyticsCompare::Previous,
-            "last_year" => AnalyticsCompare::LastYear,
-            _ => return Err(bad("ERR_OUT_OF_RANGE", "compare", "previous or last_year")),
-        };
-        takes_or(takes, K::Compare, "compare")?;
-        // A comparison with no dates at all means this month so far against the same number of
-        // days before it, or this year so far against the same dates a year earlier when the
-        // question is about years (plan 52 item 2). The dates used are in the note.
-        if parsed.from.is_none() && parsed.to.is_none() {
-            takes_or(takes, K::Period, "from")?;
-            let by_year =
-                compare == AnalyticsCompare::LastYear || parsed.group_by.as_deref() == Some("year");
-            if let Some((from, to)) = default_window(env, by_year) {
-                notes.push(if by_year {
+        'compare: {
+            compare = match word.as_str() {
+                "previous" => AnalyticsCompare::Previous,
+                "last_year" => AnalyticsCompare::LastYear,
+                _ => return Err(bad("ERR_OUT_OF_RANGE", "compare", "previous or last_year")),
+            };
+            // A view that has no comparison (view G, the trend, is one): the model added `compare` to a
+            // period it wanted read whole ("pichle saal se is mahine tak"). The figures it asked for do
+            // not change without it, so it is left out and the model is told, instead of an error that
+            // costs a whole call (plan 82, live check D14 and D32).
+            if !takes.contains(&K::Compare) {
+                notes.push(format!(
+                    "this view has no comparison, so compare was left out; the figures are for the \
+                 dates given. The views that compare are {}. {HOW_TO_COMPARE_ANYWAY}",
+                    views_with(K::Compare).join(", ")
+                ));
+                compare = AnalyticsCompare::Off;
+                break 'compare;
+            }
+            // A comparison with no dates at all means this month so far against the same number of
+            // days before it, or this year so far against the same dates a year earlier when the
+            // question is about years (plan 52 item 2). The dates used are in the note.
+            if parsed.from.is_none() && parsed.to.is_none() {
+                takes_or(takes, K::Period, "from")?;
+                let by_year = compare == AnalyticsCompare::LastYear
+                    || parsed.group_by.as_deref() == Some("year");
+                if let Some((from, to)) = default_window(env, by_year) {
+                    notes.push(if by_year {
                     format!(
                         "no dates were given, so this year so far ({from} to {to}) is compared \
                          with the same dates one year earlier"
@@ -302,57 +315,59 @@ fn build_filters(
                          with the period just before it (its dates are in `compare`)"
                     )
                 });
-                compare = if by_year {
-                    AnalyticsCompare::LastYear
-                } else {
-                    AnalyticsCompare::Previous
-                };
-                filters.from = from.clone();
-                filters.to = to.clone();
-                source.from = from;
-                source.to = to;
+                    compare = if by_year {
+                        AnalyticsCompare::LastYear
+                    } else {
+                        AnalyticsCompare::Previous
+                    };
+                    filters.from = from.clone();
+                    filters.to = to.clone();
+                    source.from = from;
+                    source.to = to;
+                }
             }
-        }
-        // A comparison needs a closed period (PRD 18.1): the earlier period is as long as this one.
-        if filters.from.is_empty() || filters.to.is_empty() {
-            let missing = if filters.from.is_empty() {
-                "from"
-            } else {
-                "to"
-            };
-            return Err(bad(
-                "ERR_REQUIRED",
-                missing,
-                "compare needs a period with both dates, such as this_year, last_month or \
+            // A comparison needs a closed period (PRD 18.1): the earlier period is as long as this one.
+            if filters.from.is_empty() || filters.to.is_empty() {
+                let missing = if filters.from.is_empty() {
+                    "from"
+                } else {
+                    "to"
+                };
+                return Err(bad(
+                    "ERR_REQUIRED",
+                    missing,
+                    "compare needs a period with both dates, such as this_year, last_month or \
                  last_n_months. Use a closed period, or leave compare out",
-            ));
-        }
-        // An earlier period that lies wholly before the books has nothing in it: the comparison
-        // is left out and the note says so, rather than showing every figure as new. One that
-        // starts before the books is only partly covered, so the note says that too (money review,
-        // plan 52 item 2).
-        let first_day = super::period::books_start(env).map(|d| d.format("%Y-%m-%d").to_string());
-        let window = compare_window(compare, &filters.from, &filters.to);
-        match (window, first_day) {
-            (Some((_, earlier_to)), Some(first)) if earlier_to < first => {
-                notes.push(format!(
+                ));
+            }
+            // An earlier period that lies wholly before the books has nothing in it: the comparison
+            // is left out and the note says so, rather than showing every figure as new. One that
+            // starts before the books is only partly covered, so the note says that too (money review,
+            // plan 52 item 2).
+            let first_day =
+                super::period::books_start(env).map(|d| d.format("%Y-%m-%d").to_string());
+            let window = compare_window(compare, &filters.from, &filters.to);
+            match (window, first_day) {
+                (Some((_, earlier_to)), Some(first)) if earlier_to < first => {
+                    notes.push(format!(
                     "the books start on {first}, so there is no earlier period to compare with; \
                      the comparison was left out. {HOW_TO_COMPARE_ANYWAY}"
                 ));
-                compare = AnalyticsCompare::Off;
-            }
-            (Some((earlier_from, earlier_to)), Some(first)) if earlier_from < first => {
-                notes.push(format!(
-                    "the books start on {first}, so the earlier period ({earlier_from} to \
+                    compare = AnalyticsCompare::Off;
+                }
+                (Some((earlier_from, earlier_to)), Some(first)) if earlier_from < first => {
+                    notes.push(format!(
+                        "the books start on {first}, so the earlier period ({earlier_from} to \
                      {earlier_to}) is only partly covered and is not like for like. \
                      {HOW_TO_COMPARE_ANYWAY}"
-                ));
-                filters.compare = compare;
-                source.compare = compare;
-            }
-            _ => {
-                filters.compare = compare;
-                source.compare = compare;
+                    ));
+                    filters.compare = compare;
+                    source.compare = compare;
+                }
+                _ => {
+                    filters.compare = compare;
+                    source.compare = compare;
+                }
             }
         }
     }

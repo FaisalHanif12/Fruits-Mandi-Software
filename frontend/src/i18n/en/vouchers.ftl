@@ -32,7 +32,7 @@ vouchers-payment-help = Pay a { -beopari } or another account. Money paid to a {
 vouchers-advance-title = { -peshgi-khata }
 
 # review: pending
-vouchers-advance-help = Give a { -beopari } money before his goods are sold. After you save, his new balance shows.
+vouchers-advance-help = Give a { -beopari } money before his goods are sold. Money given to a { -gahak } is { -naqd-udhar }, and a reason is needed. After you save, the new balance shows.
 
 # review: pending
 vouchers-load-failed = The voucher screen could not be opened
@@ -63,13 +63,14 @@ vouchers-number-payment = P-{ $number }
 # review: pending
 vouchers-number-advance = A-{ $number }
 
-## After a save, an edit and a cancel. $kind is receipt, payment or advance; $number is the number
-## in its series.
+## After a save, an edit and a cancel. $kind is receipt, payment or advance (and, after a save only,
+## lent: an advance to a buyer, saved as cash lent); $number is the number in its series.
 
 # review: pending
 vouchers-saved = { $kind ->
     [receipt] { -wasooli } { $number } saved
     [payment] { -adaigi } { $number } saved
+    [lent] { -naqd-udhar } { $number } saved
    *[advance] { -peshgi-khata } { $number } saved
 }
 
@@ -113,6 +114,10 @@ vouchers-field-buyer = { -gahak }
 
 # review: pending
 vouchers-field-seller = { -beopari }
+
+# The account of an advance: a seller, or a buyer (PRD 15.4, FR-15.11).
+# review: pending
+vouchers-field-party = { -beopari } or { -gahak }
 
 # review: pending
 vouchers-field-paid-to = Pay to
@@ -282,6 +287,10 @@ vouchers-col-account = Account
 
 # review: pending
 vouchers-col-amount = Amount
+
+# What kind of account it is: a seller or a buyer (the advance list, PRD FR-15.11).
+# review: pending
+vouchers-col-kind = Account type
 
 # review: pending
 vouchers-col-bill = Bill

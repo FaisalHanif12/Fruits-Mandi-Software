@@ -10,7 +10,8 @@ use mandi_db::rusqlite::{Connection, OptionalExtension};
 
 use super::model::{
     AnalyticsCompare, AnalyticsExpensePart, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy,
-    AnalyticsPeriod, AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView, AnalyticsView,
+    AnalyticsMeasure, AnalyticsPeriod, AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView,
+    AnalyticsView,
 };
 use crate::error::ReportsError;
 use crate::reports::common::{MasterTable, load_party, names_of, parse_day};
@@ -51,6 +52,8 @@ pub(crate) struct Typed {
     pub(crate) adda_id: Option<i64>,
     /// Which commission is counted.
     pub(crate) side: AnalyticsSide,
+    /// What the view counts (PRD FR-18.10); `None` is the classic view.
+    pub(crate) measure: Option<AnalyticsMeasure>,
     /// The picked partner (views F, G and J).
     pub(crate) partner_id: Option<i64>,
     /// The picked market trip.
@@ -223,6 +226,23 @@ pub(crate) fn takes_item_group(view: AnalyticsView) -> bool {
     )
 }
 
+/// The views that take the measure (PRD FR-18.10, plan 84): the sale views A, B, C, D, E and L, the
+/// trend G and the top ten H. The partner, garden, trip and fruit views and the expenses do not
+/// count sales, so a measure is refused there.
+pub(crate) fn takes_measure(view: AnalyticsView) -> bool {
+    matches!(
+        view,
+        AnalyticsView::A
+            | AnalyticsView::B
+            | AnalyticsView::C
+            | AnalyticsView::D
+            | AnalyticsView::E
+            | AnalyticsView::G
+            | AnalyticsView::H
+            | AnalyticsView::L
+    )
+}
+
 pub(crate) fn resolve(
     conn: &Connection,
     today: BusinessDate,
@@ -247,6 +267,7 @@ pub(crate) fn resolve(
         city_id: None,
         adda_id: None,
         side: input.side,
+        measure: None,
         partner_id: None,
         trip_id: None,
         garden_id: None,
@@ -263,6 +284,15 @@ pub(crate) fn resolve(
         },
     };
 
+    // What the view counts (PRD FR-18.10): a view that counts no sale refuses it.
+    if let Some(measure) = input.measure {
+        if takes_measure(view) {
+            typed.measure = Some(measure);
+            typed.resolved.measure = Some(measure);
+        } else {
+            problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "filters.measure"));
+        }
+    }
     // The part of view M: the shop's kharch or the partners' (plan 77).
     if view == AnalyticsView::M {
         typed.expense_part = input.expense_part.unwrap_or_default();

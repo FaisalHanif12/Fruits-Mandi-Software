@@ -45,7 +45,14 @@ const OLD_SAME_DAY_PAIR: &str = "(e.reverses_entry_id IS NOT NULL AND EXISTS (
     OR EXISTS (SELECT 1 FROM journal_entries r
         WHERE r.reverses_entry_id = e.id AND r.status = 'posted' AND r.entry_date = e.entry_date)";
 
-type DayRow = (i64, Option<String>, bool, (i64, i64), (i64, i64), (i64, i64));
+type DayRow = (
+    i64,
+    Option<String>,
+    bool,
+    (i64, i64),
+    (i64, i64),
+    (i64, i64),
+);
 
 /// The query `activities` was before plan 80: one grouped pass over every posted line of the buyers
 /// and sellers up to the day.
@@ -72,17 +79,20 @@ fn old_activities(conn: &Connection, day: &str) -> Vec<DayRow> {
     );
     let mut statement = conn.prepare(&sql).unwrap();
     statement
-        .query_map(params![day, Option::<i64>::None, Option::<String>::None], |r| {
-            let control: String = r.get(2)?;
-            Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, Option<String>>(1)?,
-                control == "0304",
-                (r.get::<_, i64>(3)?, r.get::<_, i64>(4)?),
-                (r.get::<_, i64>(5)?, r.get::<_, i64>(6)?),
-                (r.get::<_, i64>(7)?, r.get::<_, i64>(8)?),
-            ))
-        })
+        .query_map(
+            params![day, Option::<i64>::None, Option::<String>::None],
+            |r| {
+                let control: String = r.get(2)?;
+                Ok((
+                    r.get::<_, i64>(0)?,
+                    r.get::<_, Option<String>>(1)?,
+                    control == "0304",
+                    (r.get::<_, i64>(3)?, r.get::<_, i64>(4)?),
+                    (r.get::<_, i64>(5)?, r.get::<_, i64>(6)?),
+                    (r.get::<_, i64>(7)?, r.get::<_, i64>(8)?),
+                ))
+            },
+        )
         .unwrap()
         .map(Result::unwrap)
         .collect()
@@ -155,10 +165,7 @@ fn check_statement_rows(w: &World, label: &str) {
                         match (new, old) {
                             (Ok(new), Ok(old)) => {
                                 compared += new.rows.len();
-                                assert_eq!(
-                                    new, old,
-                                    "{label}: statement of {account} {input:?}"
-                                );
+                                assert_eq!(new, old, "{label}: statement of {account} {input:?}");
                             }
                             (Err(new), Err(old)) => {
                                 assert_eq!(
@@ -261,7 +268,12 @@ fn check_kept_sums(w: &World, label: &str) {
                 .map(|(id, t)| (id, t.dr_paisa, t.cr_paisa))
                 .collect()
         };
-        for as_of in [None, Some("2026-10-10"), Some("2000-01-01"), Some("2030-01-01")] {
+        for as_of in [
+            None,
+            Some("2026-10-10"),
+            Some("2000-01-01"),
+            Some("2030-01-01"),
+        ] {
             let mut statement = conn
                 .prepare(match as_of {
                     None => {
@@ -283,7 +295,11 @@ fn check_kept_sums(w: &World, label: &str) {
                 .unwrap()
                 .map(Result::unwrap)
                 .collect();
-            assert_eq!(asked(as_of), plain, "{label}: sums of every account {as_of:?}");
+            assert_eq!(
+                asked(as_of),
+                plain,
+                "{label}: sums of every account {as_of:?}"
+            );
         }
         Ok(())
     });
@@ -292,9 +308,7 @@ fn check_kept_sums(w: &World, label: &str) {
 /// The day book (R11) for every day of the books and for all but one day: the totals row is the
 /// sums of the lines of the entries in the range, with or without the shortcut for the whole journal.
 fn check_day_book_totals(w: &World, label: &str) {
-    use mandi_reports::reports::{
-        self, Cell, ReportFilters, ReportId, ReportRunInput,
-    };
+    use mandi_reports::reports::{self, Cell, ReportFilters, ReportId, ReportRunInput};
     let db = w.env.ctx.db();
     for (from, to) in [
         ("", ""),
@@ -338,13 +352,13 @@ fn check_day_book_totals(w: &World, label: &str) {
             Ok((iso(from, "0000-01-01"), iso(to, "9999-12-31")))
         });
         let (dr, cr): (i64, i64) = read(w, |conn| {
-            Ok(conn.query_row(
+            conn.query_row(
                 "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
                  FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
                  WHERE e.status = 'posted' AND e.entry_date >= ?1 AND e.entry_date <= ?2",
                 [from_iso.as_str(), to_iso.as_str()],
                 |r| Ok((r.get(0)?, r.get(1)?)),
-            )?)
+            )
         });
         let money: Vec<i64> = page
             .totals
@@ -369,8 +383,8 @@ fn check_day_book_totals(w: &World, label: &str) {
 /// a bill dated after today, today, 7, 8, 30, 31, 90 and 91 days back. The books of this file are too
 /// small for the report to pick the bulk read by itself, so the read is called directly.
 fn check_age_bands(w: &World, label: &str) {
-    use mandi_services::core::dates::BusinessDate;
     use mandi_db::party_reads::{AgeCuts, OpenMethod, open_buyer_ages_bulk, open_buyer_bills_by};
+    use mandi_services::core::dates::BusinessDate;
     read(w, |conn| {
         let ids: Vec<i64> = {
             let mut statement = conn.prepare(
@@ -429,7 +443,12 @@ fn check_age_bands(w: &World, label: &str) {
                 .into_iter()
                 .map(|a| (a.account_id, (a.oldest, a.bands)))
                 .collect();
-            assert_eq!(got, expected, "{label}: the age bands as of {}", today.to_iso());
+            assert_eq!(
+                got,
+                expected,
+                "{label}: the age bands as of {}",
+                today.to_iso()
+            );
         }
         Ok(())
     });
@@ -462,7 +481,11 @@ use super::support;
 /// Every amount of the totals row and the summary lines of a page, paisa, in order.
 fn money_of(page: &ReportPage) -> Vec<i64> {
     let mut out: Vec<i64> = Vec::new();
-    for cell in page.totals.iter().chain(page.summary.iter().map(|s| &s.cell)) {
+    for cell in page
+        .totals
+        .iter()
+        .chain(page.summary.iter().map(|s| &s.cell))
+    {
         if let Cell::Money { paisa } = cell {
             out.push(paisa.as_paisa());
         }
@@ -540,7 +563,10 @@ fn a_receipt_changes_every_kept_page_and_sum() {
     let cash_before = cashbook::capital_where(&w.env.ctx).is_ok();
     assert!(cash_before);
     for (id, before, after) in changes {
-        assert_ne!(before, after, "{id:?} still shows the figures before the receipt");
+        assert_ne!(
+            before, after,
+            "{id:?} still shows the figures before the receipt"
+        );
     }
     // The balances list: what the buyers owe fell by exactly the receipt.
     let r20 = money_of(&read_page(&w, ReportId::R20, "", "10-10-2026"));
@@ -557,7 +583,10 @@ fn a_payment_changes_the_seller_page_and_a_sale_changes_the_registers() {
         vouchers::save_payment(&w.env.ctx, &w.owner, &payment(w.karim, "1,000")).unwrap();
     });
     for (id, before, after) in changes {
-        assert_ne!(before, after, "{id:?} still shows the figures before the payment");
+        assert_ne!(
+            before, after,
+            "{id:?} still shows the figures before the payment"
+        );
     }
     // The registers, the item sales and the income after one more sale of 10 نگ at 500.
     let reads = [
@@ -572,7 +601,10 @@ fn a_payment_changes_the_seller_page_and_a_sale_changes_the_registers() {
         save_bikri(&w, &support::draft(vec![lot]));
     });
     for (id, before, after) in changes {
-        assert_ne!(before, after, "{id:?} still shows the figures before the sale");
+        assert_ne!(
+            before, after,
+            "{id:?} still shows the figures before the sale"
+        );
     }
 }
 
@@ -654,6 +686,9 @@ fn a_sale_changes_the_cash_and_credit_registers() {
     });
     // A credit sale of 10 at 300 changes R4 (its totals); R3 (money paid on the spot) needs a line
     // with money paid, so only R4 must differ here and R3 must not have gone wrong.
-    let r4 = changes.iter().find(|(id, _, _)| *id == ReportId::R4).unwrap();
+    let r4 = changes
+        .iter()
+        .find(|(id, _, _)| *id == ReportId::R4)
+        .unwrap();
     assert_ne!(r4.1, r4.2, "R4 still shows the figures before the sale");
 }

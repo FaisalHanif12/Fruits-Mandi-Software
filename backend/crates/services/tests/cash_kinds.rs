@@ -2117,6 +2117,7 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
                 expected_goods: "سیب".into(),
                 narration: String::new(),
                 confirm_cash_below_zero: false,
+                reason: None,
             },
         ),
     );
@@ -2310,6 +2311,7 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
                 search: None,
                 sort: None,
                 group_by_month: false,
+                advance_view: None,
             },
         )
         .unwrap();
@@ -2418,6 +2420,7 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
             to: String::new(),
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap();
@@ -2452,6 +2455,7 @@ fn ids_by_type(ctx: &mandi_services::context::Context, kind: VoucherType) -> i64
             to: String::new(),
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap();

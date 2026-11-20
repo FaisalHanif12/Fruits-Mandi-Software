@@ -55,6 +55,7 @@ pub mod results;
 pub mod route;
 pub mod run;
 pub mod runtime;
+pub mod sale_guard;
 pub mod scope_guard;
 pub mod service;
 pub mod settings;
@@ -62,6 +63,7 @@ pub mod source;
 pub mod step;
 pub mod tools;
 pub mod understand;
+pub mod warm;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

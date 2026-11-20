@@ -274,3 +274,14 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
   (`print/AdhariPrintBox.tsx`, `DaySlipsPreview` of the reports module).
 - Tests: `bikri-carried-lots.test.tsx`, `bikri-plan16-contract.test.tsx` (E2E-16b on the mixed commands),
   `adhari-print.test.tsx`.
+
+## Plan 85: a new بکری on a closed day, and a lot that says what it lacks (FR-21.4 v1.49, FR-12.6)
+
+- A new بکری whose date is a closed day gets `ERR_DATE_CLOSED` on `header.entry_date` and no figures. The page shows
+  the shared `ClosedDayEntryNotice` (shared/edit) with "Reopen the day and save": the reason and the Owner's sign
+  reopen the day, the preview is asked again, the figures fill, and the save (`finishFixSession` in `onSaved`)
+  closes the days again. Test: `bikri-closed-day-new.test.tsx`.
+- A lot that misses its seller, item, packing or quantity received gives its lines no figures. When a line of that
+  lot has a quantity and a rate, `grid-views.ts` (`tellLotNeeds`, `LOT_NEEDS` in `problems.ts`) puts the specific
+  words red on the lot cell and in `LotNotes` under the lots grid, at once, not after a save try. A lot with no
+  typed line stays silent (plan 79: only critical messages). Test: `bikri-lot-missing-at-once.test.tsx`.

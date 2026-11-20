@@ -9,6 +9,7 @@ import { Select as RadixSelect } from 'radix-ui';
 import { useRef, type ReactNode } from 'react';
 import { useUiLanguage } from '../i18n';
 import { controlClasses } from './control-classes';
+import { radixCollisionPadding } from './dropdown-position';
 import type { FieldControlProps } from './Field';
 
 /** Gap between the field and its open list, in CSS pixels (Radix takes a number). */
@@ -81,6 +82,7 @@ export function Select<T extends string>({
           dir={direction}
           position="popper"
           sideOffset={LIST_GAP}
+          collisionPadding={radixCollisionPadding()}
           onCloseAutoFocus={(event) => {
             const picked = chosen.current;
             chosen.current = false;

@@ -752,3 +752,6 @@ err-linked-account-restricted = This account is written by the app itself. It ca
 # review: pending
 err-partner-has-linked-balance = This { -shirakat-dar } cannot be made inactive while a { -alag-khata } or a loan linked to him still has a balance. Settle it first.
 
+
+# review: pending
+err-nothing-to-place = None of these partners has opening { -sarmaya } standing against the opening difference. There is nothing to put in.

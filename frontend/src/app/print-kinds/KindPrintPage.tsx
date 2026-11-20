@@ -29,9 +29,11 @@ import {
   dashboardCashSalesMonthPrintData,
   dashboardCommissionPrintData,
   dashboardLentOpenPrintData,
+  dashboardSalesPrintData,
   dashboardSellerDuesPrintData,
   dashboardTotalDuesPrintData,
 } from '../../features/dashboard';
+import { cashbookCapitalPrintData } from '../../features/cashbook';
 import { partnersStatementMonthPrintData } from '../../features/partners';
 import { partyLedgersStatementRowsPrintData } from '../../features/party_ledgers';
 import {
@@ -260,6 +262,22 @@ function Body({ params, callbacks }: { params: KindPrintParams; callbacks: Windo
           params={params}
           callbacks={callbacks}
           read={() => dashboardCashSalesDayPrintData(params.input)}
+        />
+      );
+    case 'sales':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardSalesPrintData(params.input)}
+        />
+      );
+    case 'capital':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => cashbookCapitalPrintData(params.input)}
         />
       );
   }

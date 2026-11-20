@@ -282,6 +282,7 @@ function GeneralEditor({
       onNew={startNew}
       flow={flow}
       error={error}
+      closedDay={{ date, onReopened: flow.clearRefusal }}
       fieldsShown={shownPaths}
       formRef={formRef}
       below={edit === null ? <GeneralListSection today={today} /> : null}

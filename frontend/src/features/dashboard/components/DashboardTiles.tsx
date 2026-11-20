@@ -66,7 +66,8 @@ export function DashboardTiles({ tiles }: DashboardTilesProps) {
           </Localized>
         }
         onOpen={() => {
-          open({ kind: 'bikri-today' });
+          // The sales page (PRD FR-9.9, plan 83), built like the commission page; پچھلی بکری stays in the بکری menu.
+          open({ kind: 'sales' });
         }}
       >
         <Num inherit paisa={tiles.sales_gross_paisa} />

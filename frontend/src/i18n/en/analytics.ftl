@@ -45,19 +45,19 @@ analytics-view-c-help = Each { -gahak }: purchases, { -commission }, { -laga }, 
 analytics-view-d-title = Item by Period
 
 # review: pending
-analytics-view-d-help = The { -commission } of each item by day, by month or by year.
+analytics-view-d-help = Each item by day, by month or by year, in the measure you choose: { -kham-bikri }, quantity or a { -commission }.
 
 # review: pending
 analytics-view-e-title = Seller × Item
 
 # review: pending
-analytics-view-e-help = The { -commission } of each { -beopari } by item.
+analytics-view-e-help = Each { -beopari } by item, in the measure you choose: { -kham-bikri }, quantity or a { -commission }.
 
 # review: pending
 analytics-view-h-title = Top 10
 
 # review: pending
-analytics-view-h-help = The top items, sellers and buyers by { -commission }.
+analytics-view-h-help = The top items, sellers and buyers by the measure you choose: { -kham-bikri }, quantity or a { -commission }.
 
 ## The columns of these views (the others are the report columns).
 
@@ -96,6 +96,25 @@ analytics-col-item-column = { -qism-maal }
 
 # review: pending
 analytics-col-row-total = Total { -commission }
+
+# The row total of views D, E and L for the other measures: the heading names what the cells hold (PRD FR-18.10).
+# review: pending
+analytics-col-row-total-gross = Total { -kham-bikri }
+
+# review: pending
+analytics-col-row-total-buyer-total = Total Buyer Total
+
+# review: pending
+analytics-col-row-total-qty = Total quantity
+
+# review: pending
+analytics-col-row-total-seller-comm = Total seller { -commission }
+
+# review: pending
+analytics-col-row-total-buyer-comm = Total buyer { -commission }
+
+# review: pending
+analytics-col-row-total-laga = Total { -laga }
 
 # review: pending
 analytics-col-other-items = Other items
@@ -248,23 +267,25 @@ analytics-columns-main = Back to the main columns
 
 ## The chart above each table (PRD FR-18.3).
 
+# Each title names the measure the chart draws (PRD FR-18.10): a message that is shown with no measure reads
+# as total commission, the first figure the views had.
 # review: pending
-analytics-chart-a = Total { -commission } by item
+analytics-chart-a = { analytics-measure-name } by item
 
 # review: pending
-analytics-chart-b = Total { -commission } by seller
+analytics-chart-b = { analytics-measure-name } by seller
 
 # review: pending
-analytics-chart-c = Purchase value by buyer
+analytics-chart-c = { analytics-measure-name } by buyer
 
 # review: pending
-analytics-chart-d = { -commission } by period, one part for each item
+analytics-chart-d = { analytics-measure-name } by period, one part for each item
 
 # review: pending
-analytics-chart-e = { -commission } by seller, one part for each item
+analytics-chart-e = { analytics-measure-name } by seller, one part for each item
 
 # review: pending
-analytics-chart-h = Top items by { -commission }
+analytics-chart-h = Top 10 by { analytics-measure-name }
 
 # review: pending
 analytics-chart-limit = The chart shows the first { $shown } of { $total } rows.
@@ -463,6 +484,10 @@ analytics-col-gardens-result = { -baghat } Change
 # review: pending
 analytics-filter-garden = { -bagh }
 
+# View G with a measure draws that measure alone, one point for each period (PRD FR-18.10).
+# review: pending
+analytics-chart-g-measure = { analytics-measure-name } by period
+
 # review: pending
 analytics-chart-i = Sales money and result of each garden
 
@@ -495,7 +520,7 @@ analytics-view-k-help = The fruit taken for each partner (or the shop's { -mehma
 analytics-view-l-title = Buyer × Item
 
 # review: pending
-analytics-view-l-help = The { -commission } of each { -gahak } by item: his buyer { -commission } and { -laga } on each item.
+analytics-view-l-help = Each { -gahak } by item, in the measure you choose: { -kham-bikri }, quantity or a { -commission }.
 
 # review: pending
 analytics-view-m-title = Expenses
@@ -507,7 +532,7 @@ analytics-view-m-help = The { -dukan-kharcha } of each head and of the whole sho
 analytics-chart-k = Fruit taken from our shop and from other shops
 
 # review: pending
-analytics-chart-l = { -commission } by buyer, one part for each item
+analytics-chart-l = { analytics-measure-name } by buyer, one part for each item
 
 # review: pending
 analytics-chart-m = { -dukan-kharcha } of each period
@@ -538,3 +563,44 @@ analytics-chart-hide = Hide the chart
 
 # review: pending
 analytics-chart-show = Show the chart
+
+## The measure (plan 84, PRD FR-18.10): what the charts, the matrices and the lists of views A, B, C, D, E, G, H and L show.
+
+# The box that picks it.
+# review: pending
+analytics-filter-measure = Measure
+
+# The words of every measure. The message is shown with `$measure` set to the measure's key; with none it
+# reads as total commission. Other messages (the box, the chart titles, the row total) refer to it.
+# review: pending
+analytics-measure-name = { $measure ->
+    [gross] { -kham-bikri }
+    [buyer_total] Buyer Total
+    [qty] Quantity
+    [seller_comm] Seller { -commission }
+    [buyer_comm] Buyer { -commission }
+    [laga] { -laga }
+   *[total_comm] Total { -commission }
+}
+
+# The measure of a view in the header of a print and of an Excel sheet (PRD FR-18.10): a label that says it all.
+# review: pending
+analytics-filter-measure-gross = Measure: { -kham-bikri }
+
+# review: pending
+analytics-filter-measure-buyer-total = Measure: Buyer Total
+
+# review: pending
+analytics-filter-measure-qty = Measure: Quantity
+
+# review: pending
+analytics-filter-measure-total-comm = Measure: Total { -commission }
+
+# review: pending
+analytics-filter-measure-seller-comm = Measure: Seller { -commission }
+
+# review: pending
+analytics-filter-measure-buyer-comm = Measure: Buyer { -commission }
+
+# review: pending
+analytics-filter-measure-laga = Measure: { -laga }

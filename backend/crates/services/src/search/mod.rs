@@ -385,6 +385,7 @@ fn account_usage_key(scope: AccountScope, control_id: Option<i64>) -> String {
     match (scope, control_id) {
         (AccountScope::Seller | AccountScope::LotSeller, _) => pref_key(SearchScope::Seller),
         (AccountScope::Buyer, _) => pref_key(SearchScope::Buyer),
+        (AccountScope::SellerBuyer, _) => "recent.seller_buyer".to_owned(),
         (AccountScope::Control, Some(id)) => format!("recent.control_{id}"),
         (AccountScope::Any | AccountScope::Control, _) => pref_key(SearchScope::AnyAccount),
     }
@@ -521,7 +522,7 @@ fn series_type(scope: AccountScope) -> Option<CodeType> {
     match scope {
         AccountScope::Seller | AccountScope::LotSeller => Some(CodeType::Seller),
         AccountScope::Buyer => Some(CodeType::Buyer),
-        AccountScope::Any | AccountScope::Control => None,
+        AccountScope::Any | AccountScope::SellerBuyer | AccountScope::Control => None,
     }
 }
 

@@ -48,4 +48,11 @@ export type VouchersListInput = {
    * True to give the subtotal of each month in `months`. Used only in date order.
    */
   group_by_month: boolean;
+  /**
+   * True for the پیشگی list (PRD FR-15.11, v1.51): with `voucher_type` `advance`, the rows are
+   * the advances and also the payments to a buyer (cash lent), because a buyer's advance is saved
+   * as that payment. Missing or false lists exactly the vouchers of the type. Ignored for any
+   * other type.
+   */
+  advance_view?: boolean;
 };

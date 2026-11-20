@@ -745,3 +745,6 @@ err-linked-account-restricted = یہ کھاتہ ایپ خود لکھتی ہے۔ 
 # review: pending
 err-partner-has-linked-balance = جب تک اس { -shirakat-dar } سے جڑے { -alag-khata } یا ادھار پر بقایا ہے، اسے غیر فعال نہیں کر سکتے۔ پہلے بقایا پورا کریں۔
 
+
+# review: pending
+err-nothing-to-place = ان شراکت داروں میں سے کسی کا ابتدائی { -sarmaya } ابتدائی فرق کے مقابل نہیں، درج کرنے کے لیے کچھ نہیں۔

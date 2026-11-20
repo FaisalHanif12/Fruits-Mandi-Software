@@ -20,4 +20,5 @@ export type AnalyticsFilterKind =
   | 'garden'
   | 'item_group'
   | 'grade'
-  | 'expense_part';
+  | 'expense_part'
+  | 'measure';

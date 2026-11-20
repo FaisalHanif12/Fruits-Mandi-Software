@@ -121,6 +121,8 @@ fn entry_of(
             expected_goods: row.expected_goods.clone(),
             narration: row.narration.clone(),
             confirm_cash_below_zero: false,
+            // A saved پیشگی is a seller's; a buyer's is a payment and opens as one (FR-15.11).
+            reason: None,
         }),
         // A shop expense has no reason of its own: the column keeps "paid to" (PRD 16.2).
         VoucherType::ShopExpense => VoucherEntry::ShopExpense(ShopExpenseInput {

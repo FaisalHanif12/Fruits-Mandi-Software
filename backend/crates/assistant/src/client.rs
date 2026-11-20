@@ -21,14 +21,17 @@
 
 use std::collections::VecDeque;
 use std::io::Read as _;
-use std::sync::{Mutex, PoisonError};
-use std::time::Duration;
+use std::sync::{Mutex, OnceLock, PoisonError};
+use std::time::{Duration, Instant};
 
 use serde_json::Value;
 
 use crate::ask::{AssistantFailure, FailureKind};
 use crate::hedge::{Hedge, hedged_with};
-use crate::limits::{HEDGE_AFTER_SECS, HEDGE_MIN_COPY_SECS, RETRY_WAIT_MILLIS};
+use crate::limits::{
+    CONNECT_RETRY_MIN_LEFT_SECS, CONNECT_TIMEOUT_SECS, HEDGE_AFTER_SECS, HEDGE_MIN_COPY_SECS,
+    POOL_IDLE_SECS, RETRY_WAIT_MILLIS, TCP_KEEPALIVE_SECS,
+};
 use crate::provider_reason::{MAX_ERROR_BODY_BYTES, reason_of};
 
 /// The only URL the app calls for a question (NFR-SEC-9).
@@ -151,6 +154,13 @@ pub trait ModelClient: Send + Sync {
     fn retry_wait(&self) -> Duration {
         Duration::from_millis(RETRY_WAIT_MILLIS)
     }
+
+    /// Time that a fake clock says has passed in the calls so far (plan 82). The real client says
+    /// none. The loop adds it to the real time of the question, so a test can run a slow model
+    /// (each call 15 s) with no waiting and see the limits of the question work.
+    fn clock_skew(&self) -> Duration {
+        Duration::ZERO
+    }
 }
 
 /// A token count: never below 0, whatever the reply says (the log refuses a negative count).
@@ -272,6 +282,52 @@ fn read_reason(response: reqwest::blocking::Response, key: &str) -> Option<Strin
     reason_of(&body, key)
 }
 
+/// The HTTP clients of the app, made once and kept (plan 82, lead decision 20-11-2026). Before this,
+/// every call built its own client, so every call paid for DNS, TCP and TLS again. On the shop's
+/// line that handshake took 0.5 to 21 seconds (measured 20-11-2026, one sample did not finish in
+/// 21 s), against 0.4 to 0.6 s for a request on a connection that was already open: much of every
+/// call, and of the timeouts of the question log, was handshake luck and not the model. One client
+/// keeps its connections open between the calls of a question and between questions, within
+/// [`POOL_IDLE_SECS`] of idle time.
+///
+/// The production client takes `https` only and follows no redirect (Code Standards Q8). The plain
+/// one is for the tests, which call a server on this computer.
+static HTTPS_CLIENT: OnceLock<Option<reqwest::blocking::Client>> = OnceLock::new();
+static PLAIN_CLIENT: OnceLock<Option<reqwest::blocking::Client>> = OnceLock::new();
+
+fn shared_client(https_only: bool) -> Result<&'static reqwest::blocking::Client, CallError> {
+    let cell = if https_only {
+        &HTTPS_CLIENT
+    } else {
+        &PLAIN_CLIENT
+    };
+    cell.get_or_init(|| {
+        reqwest::blocking::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .https_only(https_only)
+            // A handshake that has not finished by now is stuck: the request is sent on a new
+            // connection (see `call_to`) and does not wait for the whole call to run out.
+            .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
+            .pool_idle_timeout(Duration::from_secs(POOL_IDLE_SECS))
+            // Keeps the line from being dropped by a router in the middle, and shows a dead one.
+            .tcp_keepalive(Duration::from_secs(TCP_KEEPALIVE_SECS))
+            .build()
+            .ok()
+    })
+    .as_ref()
+    .ok_or_else(|| CallError::new(FailureKind::Other))
+}
+
+/// True when a request that failed to send is worth sending once more at once: the connection
+/// stalled while it was being made (`connect` and `timeout`), so not one byte of the request went
+/// out, and enough of the call is left. Nothing was billed, and a new connection has its own luck.
+fn retry_connect(is_connect: bool, is_timeout: bool, already: u32, left: Duration) -> bool {
+    is_connect
+        && is_timeout
+        && already == 0
+        && left >= Duration::from_secs(CONNECT_RETRY_MIN_LEFT_SECS)
+}
+
 impl OpenRouterClient {
     /// One call to `url`. The app only ever calls [`API_URL`] over HTTPS (`call`); the tests call a
     /// local address over plain HTTP, so the timeouts of every stage can be tried for real.
@@ -282,19 +338,32 @@ impl OpenRouterClient {
         body: &Value,
         timeout: Duration,
     ) -> Result<Reply, CallError> {
-        let client = reqwest::blocking::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .https_only(https_only)
-            .timeout(timeout)
-            .build()
-            .map_err(|_| CallError::new(FailureKind::Other))?;
-        let response = client
-            .post(url)
-            .bearer_auth(key)
-            .header("Content-Type", "application/json")
-            .body(body.to_string())
-            .send()
-            .map_err(|e| send_failure(e.is_timeout(), e.is_connect()))?;
+        let client = shared_client(https_only)?;
+        let began = Instant::now();
+        let payload = body.to_string();
+        let mut connect_tries = 0_u32;
+        let response = loop {
+            // The timeout is the whole request: the connection, the wait and the body.
+            let left = timeout.saturating_sub(began.elapsed());
+            let sent = client
+                .post(url)
+                .bearer_auth(key)
+                .header("Content-Type", "application/json")
+                .timeout(left)
+                .body(payload.clone())
+                .send();
+            match sent {
+                Ok(response) => break response,
+                Err(e) => {
+                    let left = timeout.saturating_sub(began.elapsed());
+                    if retry_connect(e.is_connect(), e.is_timeout(), connect_tries, left) {
+                        connect_tries = connect_tries.saturating_add(1);
+                        continue;
+                    }
+                    return Err(send_failure(e.is_timeout(), e.is_connect()));
+                }
+            }
+        };
         let status = response.status().as_u16();
         if !response.status().is_success() {
             return Err(CallError {
@@ -364,6 +433,10 @@ pub struct RecordedClient {
     replies: Mutex<VecDeque<Result<Value, CallError>>>,
     seen: Mutex<Vec<Value>>,
     waits: Mutex<Vec<Duration>>,
+    /// The time each call takes on the fake clock, in order; the last one repeats.
+    latency: Vec<Duration>,
+    /// The time the fake clock has run so far.
+    skew: Mutex<Duration>,
 }
 
 impl RecordedClient {
@@ -378,7 +451,22 @@ impl RecordedClient {
             replies: Mutex::new(results.into()),
             seen: Mutex::new(Vec::new()),
             waits: Mutex::new(Vec::new()),
+            latency: Vec::new(),
+            skew: Mutex::new(Duration::ZERO),
         }
+    }
+
+    /// Every call takes this long on the fake clock (plan 82): nothing waits for real, but the loop
+    /// sees the time pass. A call given less time than this fails as a timeout after the time it
+    /// was given, and its recorded reply is kept for the next call.
+    pub fn with_latency(self, each_call: Duration) -> Self {
+        self.with_latencies(vec![each_call])
+    }
+
+    /// The time of the first call, the second ... on the fake clock; the last one repeats.
+    pub fn with_latencies(mut self, per_call: Vec<Duration>) -> Self {
+        self.latency = per_call;
+        self
     }
 
     /// The time each call was allowed to wait, in order (the `timeout` the app gave it).
@@ -403,15 +491,29 @@ impl ModelClient for RecordedClient {
         Duration::ZERO
     }
 
+    fn clock_skew(&self) -> Duration {
+        *self.skew.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     fn call(&self, _key: &str, body: &Value, timeout: Duration) -> Result<Reply, CallError> {
-        self.waits
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push(timeout);
+        let call_no = {
+            let mut waits = self.waits.lock().unwrap_or_else(PoisonError::into_inner);
+            waits.push(timeout);
+            waits.len().saturating_sub(1)
+        };
         self.seen
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .push(body.clone());
+        // The fake clock: the call takes its time, or the time it was given when that is less.
+        if let Some(each) = self.latency.get(call_no).or_else(|| self.latency.last()) {
+            let mut skew = self.skew.lock().unwrap_or_else(PoisonError::into_inner);
+            if *each > timeout {
+                *skew = skew.saturating_add(timeout);
+                return Err(CallError::new(FailureKind::Timeout));
+            }
+            *skew = skew.saturating_add(*each);
+        }
         let next = self
             .replies
             .lock()
@@ -872,6 +974,108 @@ mod tests {
             FailureKind::Timeout,
             "a timeout wins"
         );
+    }
+
+    /// A server that keeps a connection open and answers every request on it with `body`. It counts
+    /// the connections it accepted.
+    fn serve_keep_alive(
+        body: &'static str,
+    ) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        let accepted = std::sync::Arc::new(AtomicUsize::new(0));
+        let seen = std::sync::Arc::clone(&accepted);
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { return };
+                seen.fetch_add(1, Ordering::SeqCst);
+                std::thread::spawn(move || {
+                    let mut pending: Vec<u8> = Vec::new();
+                    let mut chunk = [0_u8; 4096];
+                    loop {
+                        // One request: the head, then as many body bytes as its length says.
+                        let head_end = loop {
+                            if let Some(i) = pending.windows(4).position(|w| w == b"\r\n\r\n") {
+                                break i.saturating_add(4);
+                            }
+                            match stream.read(&mut chunk) {
+                                Ok(0) | Err(_) => return,
+                                Ok(n) => pending.extend_from_slice(&chunk[..n]),
+                            }
+                        };
+                        let head = String::from_utf8_lossy(&pending[..head_end]).to_lowercase();
+                        let length = head
+                            .lines()
+                            .find_map(|l| l.strip_prefix("content-length:"))
+                            .and_then(|v| v.trim().parse::<usize>().ok())
+                            .unwrap_or(0);
+                        while pending.len() < head_end.saturating_add(length) {
+                            match stream.read(&mut chunk) {
+                                Ok(0) | Err(_) => return,
+                                Ok(n) => pending.extend_from_slice(&chunk[..n]),
+                            }
+                        }
+                        pending.drain(..head_end.saturating_add(length));
+                        let reply = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+                            body.len()
+                        );
+                        if stream.write_all(reply.as_bytes()).is_err() {
+                            return;
+                        }
+                    }
+                });
+            }
+        });
+        (url, accepted)
+    }
+
+    #[test]
+    fn calls_one_after_another_share_one_connection() {
+        // Plan 82: every call used to build its own client and make its own TCP and TLS
+        // connection. Now the calls of a question, and the next question, share one.
+        let (url, accepted) = serve_keep_alive(GOOD);
+        for n in 0..3 {
+            let result = OpenRouterClient::call_to(
+                &url,
+                false,
+                "sk-test",
+                &json!({"n": n}),
+                Duration::from_secs(5),
+            );
+            assert_eq!(result.unwrap().usage.prompt_tokens, 10, "call {n}");
+        }
+        assert_eq!(
+            accepted.load(std::sync::atomic::Ordering::SeqCst),
+            1,
+            "three calls, one connection"
+        );
+    }
+
+    #[test]
+    fn a_stuck_handshake_is_sent_again_once_and_only_when_time_is_left() {
+        let left = Duration::from_secs(10);
+        // A connect that timed out, on the first try, with time left: again, at once.
+        assert!(retry_connect(true, true, 0, left));
+        // Not twice.
+        assert!(!retry_connect(true, true, 1, left));
+        // Not when the connection was refused (no internet), when the stall was in the reply (the
+        // request went out and may be billed), or when too little of the call is left.
+        assert!(!retry_connect(true, false, 0, left));
+        assert!(!retry_connect(false, true, 0, left));
+        assert!(!retry_connect(
+            true,
+            true,
+            0,
+            Duration::from_secs(CONNECT_RETRY_MIN_LEFT_SECS - 1)
+        ));
+        assert!(retry_connect(
+            true,
+            true,
+            0,
+            Duration::from_secs(CONNECT_RETRY_MIN_LEFT_SECS)
+        ));
     }
 
     #[test]

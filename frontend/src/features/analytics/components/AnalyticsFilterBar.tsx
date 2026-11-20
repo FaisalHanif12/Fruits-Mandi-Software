@@ -1,5 +1,6 @@
 // The filter boxes of an analytics view (PRD 18.1, FR-18.1): the period with its shortcuts and the two
-// dates, the grouping of views D and G, the partner (F, G, I, J), the garden (I and others), the layout of the trips (J), the item,
+// dates, the grouping of views D and G, the measure ("ناپ": sales, quantity or a commission, on the views that
+// take it, PRD FR-18.10), the partner (F, G, I, J), the garden (I and others), the layout of the trips (J), the item,
 // seller, buyer, city, اڈا, the side (both, seller,
 // buyer), the trip, the goods (all, consigned, trip, garden) and the comparison. They combine freely. Each
 // view shows the boxes the catalogue says it takes. The boxes are plain fields of the shared kit:
@@ -38,14 +39,17 @@ import {
   COMPARE_CHOICES,
   GOODS_CHOICES,
   GROUP_BY_CHOICES,
+  MEASURE_CHOICES,
   OPTIONAL_GROUPING_VIEWS,
   PERIOD_CHOICES,
   SIDE_CHOICES,
   TRIP_VIEW_CHOICES,
   periodMessageId,
+  takesMeasure,
   tripViewMessageId,
   type AnalyticsFilterState,
   type BucketChoice,
+  type MeasureChoice,
   type PeriodChoice,
 } from '../filters';
 import type {
@@ -203,6 +207,31 @@ export function AnalyticsFilterBar({
             />
           )
         }
+      </Field>,
+    );
+  }
+  if (takesMeasure(takes)) {
+    // What the chart, the matrices and the lists show (PRD FR-18.10): in view on the views that take it,
+    // because it changes what the whole page draws. Sales is the first choice.
+    primary.push(
+      <Field
+        key="measure"
+        label={<Localized id="analytics-filter-measure" />}
+        error={fieldError(error, 'filters.measure')}
+      >
+        {(control) => (
+          <Select<MeasureChoice>
+            {...control}
+            value={state.measure}
+            onChange={(measure) => {
+              onChange({ measure });
+            }}
+            options={MEASURE_CHOICES.map((choice) => ({
+              value: choice,
+              label: l10n.getString('analytics-measure-name', { measure: choice }),
+            }))}
+          />
+        )}
       </Field>,
     );
   }

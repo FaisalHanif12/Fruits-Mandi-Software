@@ -8,6 +8,10 @@
 // A ranked chart is bars of the biggest rows with an `others` bar for the rest; a trend is one group
 // of bars for each period (many thin bars when there are many). View H has one chart for each
 // section; views F and K have none. With a compare on, a second, lighter series draws the compared period.
+//
+// The measure the result names (PRD FR-18.10, plan 84) is what the chart draws: its title and the name of its
+// series say it (sales, buyer total, quantity or a commission). A quantity is a count: its points are `number`
+// cells, written without a rupee sign, so the picture can never show a count as money.
 
 import type { AnalyticsChart } from '../../bindings/AnalyticsChart';
 import type { AnalyticsChartPoint } from '../../bindings/AnalyticsChartPoint';
@@ -19,6 +23,7 @@ import { chartValueOfPaisa } from '../../shared/format';
 import type { ListContext } from '../../shared/grid';
 import type { BarChartData, BarSeries } from '../../shared/charts';
 import { cellText, nameWithTag } from '../reports';
+import { MEASURE_CHOICES, measureOfFilters, measureTitleId, type MeasureChoice } from './filters';
 import { WHOLE_FILTER_KEY } from './keys';
 
 /** A trend with more periods than this is drawn as many thin bars, without figures on them. */
@@ -40,6 +45,8 @@ export interface ChartPlan {
   drillOf: (categoryIndex: number, seriesIndex: number | null) => ChartDrill | null;
   /** The message of what the chart shows, for a screen reader and the line above it. */
   labelId: string;
+  /** The measure the chart draws: the variable of the message above (`$measure`). */
+  measure: MeasureChoice;
   /** For a view with sections (H): the heading of the section the chart belongs to. */
   caption: string | null;
   /** How many rows the chart shows, and how many there are: it says so when it cut them. */
@@ -88,24 +95,53 @@ interface ChartColumn {
   drill?: AnalyticsKey | null;
 }
 
+/**
+ * The name of a series: the heading of its column (the row total of a matrix names the measure),
+ * else the words of the measure when the series is one (a table has no column for the buyer total of view A),
+ * else its key.
+ */
+function seriesName(
+  key: string,
+  columns: readonly ChartColumn[],
+  measure: MeasureChoice,
+  context: ListContext,
+): string {
+  const column = columns.find((candidate) => candidate.key === key);
+  if (column !== undefined) return context.text(measureTitleId(column.title_id, measure));
+  const own = MEASURE_CHOICES.find((choice) => choice === key);
+  return own === undefined ? key : context.text('analytics-measure-name', { measure: own });
+}
+
+/**
+ * The message of what a chart shows. View M has two charts; the trend G draws five figures, or, with a measure, that
+ * measure alone (its one series has the key of the measure), and then it is named for it (PRD FR-18.10).
+ */
+function labelIdOf(view: AnalyticsView, chart: AnalyticsChart, measure: MeasureChoice): string {
+  if (view === 'M' && chart.series.some((one) => one.key === 'own')) {
+    return 'analytics-chart-m-partner';
+  }
+  if (view === 'G' && chart.series.length === 1 && chart.series[0]?.key === measure) {
+    return 'analytics-chart-g-measure';
+  }
+  return `analytics-chart-${view.toLowerCase()}`;
+}
+
 function planOf(
   view: AnalyticsView,
   columns: readonly ChartColumn[],
   chart: AnalyticsChart,
   context: ListContext,
+  measure: MeasureChoice,
 ): ChartPlan | null {
   if (chart.points.length === 0 || chart.series.length === 0) return null;
-  const series: BarSeries[] = chart.series.map((one, position) => {
-    const column = columns.find((candidate) => candidate.key === one.key);
-    return {
-      name: column === undefined ? one.key : context.text(column.title_id),
-      values: chart.points.map((point) => heightOf(point.values[position])),
-      labels: chart.points.map((point) => {
-        const cell = point.values[position];
-        return cell === undefined ? '' : cellText(cell, context);
-      }),
-    };
-  });
+  const series: BarSeries[] = chart.series.map((one, position) => ({
+    name: seriesName(one.key, columns, measure, context),
+    values: chart.points.map((point) => heightOf(point.values[position])),
+    labels: chart.points.map((point) => {
+      const cell = point.values[position];
+      return cell === undefined ? '' : cellText(cell, context);
+    }),
+  }));
   // With a compare on (PRD FR-18.1, plan 76 point 4) each point also has the same figure in the compared
   // period: the lighter, dashed series next to the first measure, so it is never taken for the period.
   if (chart.points.some((point) => compareOf(point) !== null)) {
@@ -137,7 +173,8 @@ function planOf(
     if (seriesIndex !== null && seriesIndex >= chart.series.length) return null;
     const seriesKey = chart.series[seriesIndex ?? 0]?.key;
     const column = columns.find((candidate) => candidate.key === seriesKey);
-    const columnText = column === undefined ? '' : context.text(column.title_id);
+    const columnText =
+      column === undefined ? '' : context.text(measureTitleId(column.title_id, measure));
     const about = [categoryTexts[categoryIndex] ?? '', byColumn ? '' : columnText]
       .filter((part) => part !== '')
       .join(' · ');
@@ -160,10 +197,8 @@ function planOf(
       dense: chart.kind === 'trend' && chart.points.length > DENSE_AFTER,
     },
     // View M has two charts: the shop's by period, and the partners' own kharch (series `own`), each with its words.
-    labelId:
-      view === 'M' && chart.series.some((one) => one.key === 'own')
-        ? 'analytics-chart-m-partner'
-        : `analytics-chart-${view.toLowerCase()}`,
+    labelId: labelIdOf(view, chart, measure),
+    measure,
     caption: chart.title === null ? null : categoryText(chart.title, context),
     shown,
     total: shown + chart.others_count,
@@ -176,8 +211,10 @@ export function chartsOf(
   page: AnalyticsPage,
   context: ListContext,
 ): ChartPlan[] {
+  // The page echoes the measure it was read for (PRD FR-18.10).
+  const measure = measureOfFilters(page.filters);
   return page.charts.flatMap((chart) => {
-    const plan = planOf(view, page.columns, chart, context);
+    const plan = planOf(view, page.columns, chart, context, measure);
     return plan === null ? [] : [plan];
   });
 }
@@ -193,9 +230,10 @@ export function printChartsOf(
   charts: readonly AnalyticsChart[],
   columns: readonly ChartColumn[],
   context: ListContext,
+  measure: MeasureChoice,
 ): ChartPlan[] {
   return charts.flatMap((chart) => {
-    const plan = planOf(view, columns, chart, context);
+    const plan = planOf(view, columns, chart, context, measure);
     return plan === null ? [] : [plan];
   });
 }

@@ -104,9 +104,16 @@ describe.each(LANGUAGES)('the print of the dashboard pages (%s)', (language) => 
         .length,
     ).toBeGreaterThan(0);
     await user.click(await back());
+    // The preview is gone and the page is back. These pages are opened from a tile, so they keep the
+    // Back button of the top bar (PRD FR-7.92); what went is the preview's own Back button, which was
+    // inside the page area.
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: m('common-back') })).toBeNull();
+      expect(document.querySelector('.print-sheet')).toBeNull();
     });
+    expect(
+      within(screen.getByRole('main')).queryByRole('button', { name: m('common-back') }),
+    ).toBeNull();
+    expect(screen.getAllByRole('button', { name: m('common-back') })).toHaveLength(1);
   }
 
   it('the seller dues print holds the side and every seller, in the order on screen', async () => {

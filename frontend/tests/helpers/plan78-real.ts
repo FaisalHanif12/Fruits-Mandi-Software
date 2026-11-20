@@ -4,6 +4,9 @@
 // types.
 
 import type { CapitalWhere } from '../../src/bindings/CapitalWhere';
+import type { CapitalWhereInput } from '../../src/bindings/CapitalWhereInput';
+import type { PartnersOpeningCapitalPlaced } from '../../src/bindings/PartnersOpeningCapitalPlaced';
+import type { PartnersPlaceOpeningCapitalInput } from '../../src/bindings/PartnersPlaceOpeningCapitalInput';
 import type { GardenEntryInput } from '../../src/bindings/GardenEntryInput';
 import type { GardenHeaderEditInput } from '../../src/bindings/GardenHeaderEditInput';
 import type { GoodsSources } from '../../src/bindings/GoodsSources';
@@ -34,6 +37,16 @@ import goodsToLoadTrip from '../fixtures/bikri_goods_to_load_trip.json';
 import goodsToLoadTripRequest from '../fixtures/bikri_goods_to_load_trip_request.json';
 import capitalWhere from '../fixtures/cashbook_capital_where.json';
 import capitalWhereLocked from '../fixtures/cashbook_capital_where_locked.json';
+import capitalWhereAsOf from '../fixtures/cashbook_capital_where_as_of.json';
+import capitalWhereAsOfRequest from '../fixtures/cashbook_capital_where_as_of_request.json';
+import capitalWherePlaced from '../fixtures/cashbook_capital_where_placed.json';
+import capitalWhereUnplaced from '../fixtures/cashbook_capital_where_unplaced.json';
+import capitalPrintEn from '../fixtures/cashbook_capital_print_data_en.json';
+import capitalPrintUr from '../fixtures/cashbook_capital_print_data_ur.json';
+import placeOpeningCapital from '../fixtures/partners_place_opening_capital.json';
+import placeOpeningCapitalNothing from '../fixtures/partners_place_opening_capital_nothing.json';
+import placeOpeningCapitalRequest from '../fixtures/partners_place_opening_capital_request.json';
+import placeOpeningCapitalSignWrong from '../fixtures/partners_place_opening_capital_sign_wrong.json';
 import refundRequest from '../fixtures/gardens_entry_save_refund_request.json';
 import refundTooMuch from '../fixtures/gardens_entry_save_refund_too_much.json';
 import headerEditReasonRequired from '../fixtures/gardens_header_edit_save_reason_required.json';
@@ -43,6 +56,15 @@ import headerEditSignWrong from '../fixtures/gardens_header_edit_save_sign_wrong
 // A fixture file as its generated type: the JSON is what the backend wrote, and the type is what the screens read.
 function readCapitalWhere(value: unknown): CapitalWhere {
   return value as CapitalWhere;
+}
+function readCapitalWhereInput(value: unknown): CapitalWhereInput {
+  return value as CapitalWhereInput;
+}
+function readPlaceInput(value: unknown): PartnersPlaceOpeningCapitalInput {
+  return value as PartnersPlaceOpeningCapitalInput;
+}
+function readPlaced(value: unknown): PartnersOpeningCapitalPlaced {
+  return value as PartnersOpeningCapitalPlaced;
 }
 function readGardenEntryInput(value: unknown): GardenEntryInput {
   return value as GardenEntryInput;
@@ -88,6 +110,25 @@ export const GOODS_TO_LOAD_GARDEN_REQUEST = readGoodsToLoadInput(goodsToLoadGard
 export const CAPITAL_WHERE = readCapitalWhere(capitalWhere);
 /** What the backend answers while the partner section is locked. */
 export const CAPITAL_WHERE_LOCKED = readUiError(capitalWhereLocked);
+
+/**
+ * Umar-shaped data before the fix (plan 87): two partner opening capitals of 500,000 stand against the opening
+ * difference (935,000), cash is below zero (161,740, on the paying side) and the party openings make 65,000.
+ */
+export const CAPITAL_WHERE_UNPLACED = readCapitalWhere(capitalWhereUnplaced);
+/** The same books after the fix: the opening capital is in cash, the old books' difference of 65,000 is left. */
+export const CAPITAL_WHERE_PLACED = readCapitalWhere(capitalWherePlaced);
+/** The card as of 10-10-2026, asked with the request below. */
+export const CAPITAL_WHERE_AS_OF = readCapitalWhere(capitalWhereAsOf);
+export const CAPITAL_WHERE_AS_OF_REQUEST = readCapitalWhereInput(capitalWhereAsOfRequest);
+/** The print of the card (Umar-shaped data before the fix), as the backend lays it out, in each print language. */
+export const CAPITAL_PRINT_EN = readTablePrintData(capitalPrintEn);
+export const CAPITAL_PRINT_UR = readTablePrintData(capitalPrintUr);
+/** The fix: the request, the answer, and the refusals for a wrong sign and for nothing to place. */
+export const PLACE_REQUEST = readPlaceInput(placeOpeningCapitalRequest);
+export const PLACE_ANSWER = readPlaced(placeOpeningCapital);
+export const PLACE_SIGN_WRONG = readUiError(placeOpeningCapitalSignWrong);
+export const PLACE_NOTHING = readUiError(placeOpeningCapitalNothing);
 
 /** A garden's rent changed with its reason and the Owner's sign (relief from the owner, PRD FR-12.51). */
 export const HEADER_EDIT_RELIEF_REQUEST = readGardenHeaderEditInput(headerEditRelief);

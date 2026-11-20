@@ -52,7 +52,7 @@ pub(crate) fn build(
     let today = facts.today_iso.as_str();
 
     // Sales and commission: the three commission columns are summed apart and added here.
-    let sales = crate::prof::timed("tiles.sales_by_day", || sales_by_day(conn, today, today))?
+    let sales = sales_by_day(conn, today, today)?
         .remove(today)
         .unwrap_or_default();
     let mut commission = Paisa::ZERO;
@@ -62,7 +62,7 @@ pub(crate) fn build(
 
     let cash_id = account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
         .ok_or_else(|| ReportsError::Data("the cash account is missing".to_owned()))?;
-    let cash = crate::prof::timed("tiles.cash", || totals_of(conn, cash_id, None, None))?;
+    let cash = totals_of(conn, cash_id, None, None)?;
     let cash_in_hand = paisa(cash.dr_paisa)?.checked_sub(paisa(cash.cr_paisa)?)?;
 
     let mut buyers_dues = Paisa::ZERO;
@@ -82,16 +82,16 @@ pub(crate) fn build(
     }
     // The dead amount (PRD FR-10.10): what the people moved to it still owe. The rows above leave
     // them out, so nothing is counted twice, and کل اگراہی is the three together (FR-19.9).
-    let (dead_amount, dead_count) = crate::prof::timed("tiles.dead", || super::super::dead::tile(conn))?;
+    let (dead_amount, dead_count) = super::super::dead::tile(conn)?;
     let mut total_dues = buyers_dues;
     add(&mut total_dues, sellers_dues)?;
     add(&mut total_dues, dead_amount)?;
     // Open money lent is the fourth part of کل اگراہی (PRD 9.1 v1.44, plan 79 Q1).
     add(&mut total_dues, lent.open)?;
 
-    let (stock_lots, stock_qty) = crate::prof::timed("tiles.stock", || mandi_db::vouchers::open_stock(conn, today))?;
+    let (stock_lots, stock_qty) = mandi_db::vouchers::open_stock(conn, today)?;
     let (trips_open, trips_purchases, trips_qty, trips_cost) =
-        crate::prof::timed("tiles.trips", || mandi_db::ventures::tile_totals(conn))?;
+        mandi_db::ventures::tile_totals(conn)?;
 
     let mut gardens_balance = Paisa::ZERO;
     for garden in gardens {
@@ -99,9 +99,9 @@ pub(crate) fn build(
     }
 
     // آج کی نقدی: the money buyers paid on the spot today (PRD FR-9.8).
-    let (cash_today, cash_buyers) = crate::prof::timed("tiles.cash_sales", || super::cash_sales::of_day(conn, today))?;
+    let (cash_today, cash_buyers) = super::cash_sales::of_day(conn, today)?;
 
-    let (expense_dr, expense_cr) = pair(&crate::prof::timed("tiles.expenses", || expenses_by_day(conn, today, today))?, today)?;
+    let (expense_dr, expense_cr) = pair(&expenses_by_day(conn, today, today)?, today)?;
 
     Ok(DashboardTiles {
         sales_gross_paisa: paisa(sales.gross)?,

@@ -17,6 +17,7 @@ import type { LayoutStep } from '../../shared/hooks/useLayoutStep';
 import { displayName } from '../../shared/i18n';
 import { listColumnOf, monthText, type ReportRowView, type SignMode } from '../reports';
 import { columnWidth, fitColumns, STEP_ROOM, windowOf, type ColumnWindow } from './fit';
+import { measureTitleId, type MeasureChoice } from './filters';
 
 /** One row of the grid: its place in the whole view is its key. */
 export interface AnalyticsRowView {
@@ -358,6 +359,7 @@ export function analyticsColumns(
   view: AnalyticsView,
   columns: readonly AnalyticsColumn[],
   plan: ColumnPlan,
+  measure: MeasureChoice = 'total_comm',
 ): ListColumn<AnalyticsRowView>[] {
   return columns.flatMap((column, index) => {
     if (!plan.visible.has(index)) return [];
@@ -379,9 +381,15 @@ export function analyticsColumns(
         : column.key === 'avg_days'
           ? { ...base, type: 'figure' }
           : base;
+    // The row total of a matrix names the measure its cells hold (PRD FR-18.10).
+    const titleId = measureTitleId(column.title_id, measure);
+    const headed: ListColumn<AnalyticsRowView> =
+      titleId === column.title_id
+        ? named
+        : { ...named, headerText: (context: ListContext) => context.text(titleId) };
     return [
       heading === null
-        ? named
+        ? headed
         : {
             ...named,
             headerText: (context: ListContext) => headerOf(column, heading, context),

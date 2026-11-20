@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "ERR_PAYMENT_TO_BUYER_NEEDS_REASON",
+      "field": "reason",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

@@ -344,7 +344,6 @@ describe('the screens build the request the backend tested', () => {
     draft.items = [{ id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' }];
     draft.rent = request.rent;
     draft.paidNow = request.paid_now ?? '';
-    draft.paidNowReason = request.paid_now_reason ?? '';
     // The shares and sources the backend's test sent, typed into the rows as a user would.
     draft.partners = draft.partners.map((row) => {
       const sent = request.partners.find((one) => one.partner_id === row.partner.id);
@@ -362,10 +361,13 @@ describe('the screens build the request the backend tested', () => {
     ]);
     // The backend's test sent the main item as `item_id`; the screen sends the list `item_ids` and no `item_id`
     // (plan 78 D2: the list wins and its first is the main fruit).
+    // The screen sends no reason for the first installment either (plan 81): the backend saves the
+    // standard words, so it is null here whatever the recorded request carried.
     const sentByTheScreen = {
       ...request,
       item_id: null,
       item_ids: request.item_id === null ? [] : [request.item_id],
+      paid_now_reason: null,
     };
     expect(sendsTheSame({ ...built, partners: request.partners }, sentByTheScreen)).toBeNull();
   });

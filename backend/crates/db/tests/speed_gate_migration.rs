@@ -75,7 +75,10 @@ fn the_speed_gate_migration_adds_the_register_index_and_changes_no_row() {
         }
         before = fingerprint(&conn);
     }
-    assert!(step_found.is_some(), "no migration makes the register index");
+    assert!(
+        step_found.is_some(),
+        "no migration makes the register index"
+    );
     assert!(index_exists(&conn, "idx_bikri_sales_register"));
     let check: String = conn
         .query_row("PRAGMA integrity_check", [], |r| r.get(0))

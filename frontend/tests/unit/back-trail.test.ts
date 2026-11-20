@@ -98,6 +98,7 @@ describe('the parent of a page opened from another page', () => {
     ['/others-dues', '/'],
     ['/kharch', '/'],
     ['/commission', '/'],
+    ['/sales', '/'],
     ['/day', '/'],
     ['/partners/setup', '/partners'],
     ['/partners/capital', '/partners'],

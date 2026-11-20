@@ -102,8 +102,13 @@ fn refused_commands() -> Vec<(&'static str, Value)> {
                 "shares": [{ "partner_id": 1, "share": "100" }] } }),
         ),
         (
-            "partners_check_shares",
-            json!({ "input": { "shares": [{ "partner_id": 1, "share": "100" }] } }),
+            "partners_place_opening_capital",
+            json!({ "input": { "partner_ids": [1], "reason": "x", "sign": "adnan" } }),
+        ),
+        ("cashbook_capital_where", json!({})),
+        (
+            "cashbook_capital_print_data",
+            json!({ "input": { "language": "ur" } }),
         ),
         ("partners_overview", json!({})),
         (
@@ -312,6 +317,26 @@ fn every_partner_command_and_report_is_refused_while_locked() {
     }
 
     // The commands that only name a partner, and the code itself, stay open while locked.
+    // The running total of typed shares is one of them (plan 81): the new garden and trip forms
+    // are outside the section and ask for it. It answers from the typed text only, still needs the
+    // sign-in and names no stored figure. Four partners exist here (the open loop made one), and
+    // every active partner is listed.
+    let typed = h.ok(
+        "partners_check_shares",
+        json!({ "input": { "shares": [
+            { "partner_id": 1, "share": "50" }, { "partner_id": 2, "share": "50" },
+            { "partner_id": 3, "share": "0" }, { "partner_id": 4, "share": "0" } ] } }),
+    );
+    assert_eq!(typed["total_bps"], json!(10_000));
+    assert_eq!(typed["is_100"], json!(true));
+    let short = h.ok(
+        "partners_check_shares",
+        json!({ "input": { "shares": [
+            { "partner_id": 1, "share": "50" }, { "partner_id": 2, "share": "40" },
+            { "partner_id": 3, "share": "0" }, { "partner_id": 4, "share": "0" } ] } }),
+    );
+    assert_eq!(short["total_bps"], json!(9_000));
+    assert_eq!(short["errors"][0]["code"], json!("ERR_SHARES_NOT_100"));
     let list = h.ok("partners_list", json!({}));
     assert_eq!(list["partners_locked"], json!(true));
     // Three partners were set up and the open loop above made a fourth with `partners_create`.

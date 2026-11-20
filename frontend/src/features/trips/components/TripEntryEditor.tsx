@@ -28,6 +28,7 @@ import type { CashCheck } from '../../../bindings/CashCheck';
 import type { FieldError } from '../../../bindings/FieldError';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import { ClosedDayEntryNotice } from '../../../shared/edit';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { createEntryStore } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
@@ -463,6 +464,12 @@ export function TripEntryEditor({
           </Button>
         </div>
       </div>
+      {/* A new entry on a closed day: the notice with "Reopen the day and save" (PRD FR-21.4, plan 85). */}
+      <ClosedDayEntryNotice
+        errors={error?.errors}
+        date={draft.date}
+        onReopened={flow.clearRefusal}
+      />
       <form
         ref={formRef}
         {...navigation}

@@ -32,6 +32,8 @@ export function AssistantLauncher() {
       aria-controls={CHAT_WINDOW_ID}
       aria-label={name}
       title={name}
+      // A dropdown list that reaches this corner stops above the button (shared/ui/dropdown-position.ts, plan 86).
+      data-dropdown-avoid=""
       onClick={() => {
         if (open) closeDock();
         else openDock();

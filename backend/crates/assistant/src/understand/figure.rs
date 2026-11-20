@@ -425,6 +425,16 @@ impl Cx<'_> {
             (Who::Item(_) | Who::BuyerItem(..), What::LastRate) => {
                 self.last_rate(&line.who).map(|s| vec![s])
             }
+            (Who::Shop, What::Profit) => self.profit().map(|s| vec![s]),
+            // The net sale and the buyers' bills: each its own column (plan 82).
+            (Who::Shop, What::NetSale) => self.sale_net_shop().map(|s| vec![s]),
+            (Who::Shop | Who::Buyer(_), What::Bills) => self.bills(&line.who).map(|s| vec![s]),
+            // "commission, not counting laga": the two sides of the shop's commission, never added here.
+            (Who::Shop, What::Commission) if self.u.laga_view == super::LagaView::Without => {
+                self.commission_sides().map(|s| vec![s])
+            }
+            // The commission and the Laga each by itself, for the shop, is the model's.
+            (Who::Shop, What::Commission) if self.u.laga_view == super::LagaView::Apart => None,
             (Who::Shop, What::Sale | What::SaleCount | What::Commission | What::Laga)
             | (Who::Item(_), What::Sale | What::Commission | What::Laga)
             | (Who::Seller(_), What::Sale | What::SaleCount)
@@ -642,8 +652,14 @@ impl Cx<'_> {
         }
         let view = self.analytics("B", "seller", Some(key))?;
         let name = self.name_of(key)?;
-        // "kitna kamishan kata": the one taken off him, the seller side only (D7, plan 59 F3).
-        let only_own = self.u.commission_side == Some(super::CommissionSide::Seller);
+        // "kitna kamishan kata": the one taken off him, the seller side only (D7, plan 59 F3). A seller pays
+        // no Laga, so "without laga" is that same one figure, and a Laga of his is no answer (plan 82).
+        match self.u.laga_view {
+            super::LagaView::Only | super::LagaView::Apart => return None,
+            _ => {}
+        }
+        let only_own = self.u.commission_side == Some(super::CommissionSide::Seller)
+            || self.u.laga_view == super::LagaView::Without;
         ["seller_comm", "total_comm"]
             .iter()
             .zip(["seller-own", "seller"])
@@ -676,12 +692,21 @@ impl Cx<'_> {
                 && input_str(r, "side") == Some("buyer")
         })?;
         let name = self.name_of(key)?;
+        // Which of the three the question asked (plan 82): "not counting laga" is the commission alone,
+        // "commission aur laga alag alag" the commission and the Laga, and the plain question all three.
+        let wanted: &[&str] = match self.u.laga_view {
+            super::LagaView::Without => &["buyer_comm"],
+            super::LagaView::Apart => &["buyer_comm", "laga"],
+            super::LagaView::Only => &["laga"],
+            super::LagaView::Whole => &["buyer_comm", "laga", "total_comm"],
+        };
         [
             ("assistant-instant-commission", "buyer", "buyer_comm"),
             ("assistant-instant-laga", "buyer", "laga"),
             ("assistant-instant-commission", "buyer-total", "total_comm"),
         ]
         .into_iter()
+        .filter(|(_, _, column)| wanted.contains(column))
         .map(|(id, role, column)| {
             Some(Sentence {
                 id,

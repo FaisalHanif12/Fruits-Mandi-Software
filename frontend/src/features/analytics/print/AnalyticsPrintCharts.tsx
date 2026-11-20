@@ -14,12 +14,20 @@ import { formatPaisa, formatPaisaValue, useGrouping } from '../../../shared/form
 import type { ListContext } from '../../../shared/grid';
 import { directionOf } from '../../../shared/i18n';
 import { printChartsOf } from '../chart';
+import type { MeasureChoice } from '../filters';
 
 /** The size a chart is drawn at, in CSS pixels; the sheet scales it to its width. */
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 240;
 
-export function AnalyticsPrintCharts({ data }: { data: AnalyticsPrintData }) {
+export function AnalyticsPrintCharts({
+  data,
+  measure,
+}: {
+  data: AnalyticsPrintData;
+  /** What the view counted: the title of each chart and the name of its series say it (PRD FR-18.10). */
+  measure: MeasureChoice;
+}) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   const figures = useMemo(() => {
@@ -33,12 +41,12 @@ export function AnalyticsPrintCharts({ data }: { data: AnalyticsPrintData }) {
     const style = readChartStyle(directionOf(data.language));
     // A print read before the charts were added has no such field, and reads as no chart.
     const charts = (data as { charts?: AnalyticsPrintData['charts'] }).charts ?? [];
-    return printChartsOf(data.view, charts, data.columns, context).map((plan) => ({
-      label: l10n.getString(plan.labelId),
+    return printChartsOf(data.view, charts, data.columns, context, measure).map((plan) => ({
+      label: l10n.getString(plan.labelId, { measure: plan.measure }),
       caption: plan.caption,
       svg: chartToSvg(plan.data, style, { width: CHART_WIDTH, height: CHART_HEIGHT }),
     }));
-  }, [data, l10n, grouping]);
+  }, [data, measure, l10n, grouping]);
   if (figures.length === 0) return null;
   return (
     <div className="print-charts">

@@ -8,7 +8,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useCombobox } from 'downshift';
 import { Search } from 'lucide-react';
-import { useId, useState, type KeyboardEvent } from 'react';
+import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import {
   useGlobalSearch,
   type AccountSearchHit,
@@ -22,7 +22,7 @@ import { SHORTCUTS, keepKeyForApp, useEscape, useShortcut } from '../../shared/k
 import { formatPaisa, isoToDisplayDate, useGrouping } from '../../shared/format';
 import type { Language } from '../../i18n';
 import { asScreenType } from '../../features/vouchers/screen-type';
-import { Code, ErrorMessage, KeyChip, Num } from '../../shared/ui';
+import { Code, DropdownPopup, ErrorMessage, KeyChip, Num } from '../../shared/ui';
 // ---- Run B, plan 20 (FR-5.4): one-time people and screens join the list. ----
 import {
   ExtraResult,
@@ -141,6 +141,8 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
   const { l10n } = useLocalization();
   const language = useLanguage();
   const listId = useId();
+  // The box of the field: the list of results hangs from it (plan 86).
+  const boxRef = useRef<HTMLDivElement | null>(null);
   // The input element, kept in state so no ref is read while drawing.
   const [inputEl, setInputEl] = useState<HTMLInputElement | null>(null);
   const [text, setText] = useState('');
@@ -192,7 +194,7 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
 
   const error = query.isError ? uiErrorOf(query.error) : null;
   return (
-    <div className="relative min-w-0 max-w-reading flex-1">
+    <div ref={boxRef} className="relative min-w-0 max-w-reading flex-1">
       <div className="flex h-control-compact items-center gap-2 rounded-2 border border-border-control bg-bg px-3">
         <Search aria-hidden="true" className="size-icon-sm shrink-0 text-ink-muted" />
         <input
@@ -218,16 +220,10 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
         />
         <KeyChip shortcut={SHORTCUTS.globalSearch} tone="on-light" />
       </div>
-      <div
-        className={
-          open
-            ? 'absolute inset-x-0 top-full z-30 mt-1 rounded-2 border border-border bg-surface p-1 shadow-overlay'
-            : 'hidden'
-        }
-      >
+      <DropdownPopup open={open} anchorRef={boxRef}>
         <ul
           {...getMenuProps({ 'aria-label': l10n.getString('layout-search-results') })}
-          className={`max-h-picker-list overflow-y-auto ${hits.length === 0 ? 'hidden' : ''}`}
+          className={`max-h-picker-list min-h-0 overflow-y-auto ${hits.length === 0 ? 'hidden' : ''}`}
         >
           {open
             ? hits.map((hit, index) => (
@@ -271,7 +267,7 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
             <p role="status" className="px-3 py-2 type-body text-ink-muted" />
           </Localized>
         ) : null}
-      </div>
+      </DropdownPopup>
     </div>
   );
 }

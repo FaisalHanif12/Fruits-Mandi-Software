@@ -27,6 +27,16 @@ export { SellDateDialog } from './SellDateDialog';
 export { SplitDialog } from './SplitDialog';
 export { DataCheckFailedState } from './DataCheckFailedState';
 export { DateInput } from './DateInput';
+export {
+  DROPDOWN_AVOID_ATTRIBUTE,
+  DROPDOWN_EDGE_PX,
+  DROPDOWN_GAP_PX,
+  placeDropdown,
+  radixCollisionPadding,
+  type DropdownSide,
+  type Placement,
+} from './dropdown-position';
+export { DropdownPopup } from './DropdownPopup';
 export { GoToDate } from './GoToDate';
 export { WindowNav } from './WindowNav';
 export { GoToMonth } from './GoToMonth';

@@ -66,16 +66,27 @@ export function isFilled(draft: VoucherDraft): boolean {
   return draft.account !== null || draft.amount.trim() !== '';
 }
 
-/** What the account field takes, by type: a receipt takes the side the user chose (FR-15.12). */
-export function accountScope(draft: VoucherDraft): 'buyer' | 'seller' | 'any' {
-  if (draft.type === 'advance') return 'seller';
+/**
+ * What the account field takes, by type: a receipt takes the side the user chose (FR-15.12); a new
+ * advance takes a seller or a buyer, each marked (PRD 15.4, FR-15.11). A saved advance that is being
+ * changed stays a seller's: a buyer's advance is a payment voucher (cash lent) and is changed on the
+ * payment tab, so the backend keeps the type of a saved advance.
+ */
+export function accountScope(
+  draft: VoucherDraft,
+  editing = false,
+): 'buyer' | 'seller' | 'any' | 'seller_buyer' {
+  if (draft.type === 'advance') return editing ? 'seller' : 'seller_buyer';
   if (draft.type === 'receipt') return draft.from;
   return 'any';
 }
 
-/** A payment to a buyer is cash lent to him and needs a reason (PRD FR-15.11). */
+/**
+ * Money given to a buyer is cash lent to him and needs a reason (PRD FR-15.11): a payment to a buyer
+ * and an advance to a buyer are the same entry.
+ */
 export function isCashLent(draft: VoucherDraft): boolean {
-  return draft.type === 'payment' && draft.accountType === 'buyer';
+  return (draft.type === 'payment' || draft.type === 'advance') && draft.accountType === 'buyer';
 }
 
 /** The account as the picker holds it, from a search result. */
@@ -128,11 +139,23 @@ export function build(draft: VoucherDraft, confirmCash: boolean): BuiltVoucher |
         input: {
           ...common,
           seller_account_id: account.id,
-          expected_goods: draft.expected_goods,
+          // A buyer's advance is cash lent: it has a reason and no expected goods (FR-15.11).
+          expected_goods: isCashLent(draft) ? '' : draft.expected_goods,
+          // Sent for a buyer only: a seller's advance is the request it always was (plan 88).
+          ...(isCashLent(draft) ? { reason: draft.reason } : {}),
           confirm_cash_below_zero: confirmCash,
         },
       };
   }
+}
+
+/**
+ * The word that picks the message after a save: the type of the screen, except an advance to a buyer,
+ * which the backend saved as cash lent (a payment voucher), so the message says `lent` (PRD FR-15.11,
+ * plan 88). Example: a پیشگی of 3,000 to a buyer says "نقد ادھار P-3 محفوظ ہو گیا".
+ */
+export function savedKindOf(draft: VoucherDraft, saved: VoucherSaved): string {
+  return draft.type === 'advance' && saved.voucher_type !== 'advance' ? 'lent' : draft.type;
 }
 
 /** The tagged form the preview and the edit take. */
@@ -191,13 +214,18 @@ export type HelperTarget =
 
 /**
  * The panel that fits the entry: a receipt from a buyer shows his open bills (the amount settles
- * the oldest first); a receipt from a seller and an advance show his advances; a payment to a
- * seller shows what is payable; a payment to a buyer is cash lent and shows his bills.
+ * the oldest first); a receipt from a seller and an advance to a seller show his advances; a payment
+ * to a seller shows what is payable; a payment or an advance to a buyer is cash lent and shows his
+ * bills (PRD FR-7.58, FR-7.60, FR-15.11).
  */
 export function helperTarget(draft: VoucherDraft): HelperTarget {
   const { account } = draft;
   if (account === null) return { kind: 'none' };
-  if (draft.type === 'advance') return { kind: 'advances', accountId: account.id };
+  if (draft.type === 'advance') {
+    return draft.accountType === 'buyer'
+      ? { kind: 'bills', accountId: account.id }
+      : { kind: 'advances', accountId: account.id };
+  }
   if (draft.type === 'receipt') {
     return draft.from === 'seller'
       ? { kind: 'advances', accountId: account.id }

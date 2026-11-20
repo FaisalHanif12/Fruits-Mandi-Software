@@ -12,15 +12,18 @@
 //    nothing, NFR-REL-1). The entry goes as typed; the backend works every number out again.
 // 3. If the backend refuses, each problem shows at its field and the rest as words near the
 //    buttons. Nothing is lost. The refusal goes away when the user changes something.
-// 4. If it saved: a message with the number, and the screen starts the next entry.
+// 4. If it saved: a message with the number, and the screen starts the next entry. Days that were reopened
+//    for this entry (a new entry on a closed day, PRD FR-21.4, plan 85) close again at once.
 //
 // The frontend works out no money here (CLAUDE.md rule 1): the cash after the entry and every
 // number come from the backend.
 
+import { useLocalization } from '@fluent/react';
 import { useMemo, useRef, useState } from 'react';
 import type { CashCheck } from '../../bindings/CashCheck';
 import type { UiError } from '../../bindings/UiError';
 import { uiErrorOf } from '../api';
+import { finishFixSession } from '../edit/useFixDay';
 import { useSingleFlight } from './useSingleFlight';
 
 interface Refusal {
@@ -59,6 +62,7 @@ export function useEntrySaveFlow<TInput, TSaved>({
   current,
   onSaved,
 }: EntrySaveFlowOptions<TInput, TSaved>) {
+  const { l10n } = useLocalization();
   const flight = useSingleFlight();
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [ask, setAsk] = useState(false);
@@ -73,6 +77,8 @@ export function useEntrySaveFlow<TInput, TSaved>({
       try {
         const saved = await save(build(confirmCash));
         setRefusal(null);
+        // Safe with no reopened days: it finds no token and does nothing.
+        void finishFixSession(l10n);
         onSaved(saved);
         return true;
       } catch (error: unknown) {
@@ -131,6 +137,10 @@ export function useEntrySaveFlow<TInput, TSaved>({
     busy: flight.busy,
     /** The backend's refusal of the last save, until the draft changes. */
     refusal: shown,
+    /** Forgets the refusal: the day it named was reopened, so it is old (PRD FR-21.4, plan 85). */
+    clearRefusal: () => {
+      setRefusal(null);
+    },
     /** The cash box is open when this is true. */
     ask,
     /** The cash after the entry in the box, kept while it closes. */

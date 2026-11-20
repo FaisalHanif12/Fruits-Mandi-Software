@@ -1,10 +1,10 @@
 // Puts the current language on the page: Fluent messages, <html dir lang>, and Radix direction.
 // Switching changes only what is shown, never the data (PRD FR-7.32).
 
-import { LocalizationProvider, ReactLocalization } from '@fluent/react';
+import { LocalizationProvider } from '@fluent/react';
 import { Direction } from 'radix-ui';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { bundles } from '../../i18n';
+import { createLocalization } from '../../i18n/localization';
 import { directionOf, useLanguage } from './language';
 
 interface I18nProviderProps {
@@ -14,7 +14,7 @@ interface I18nProviderProps {
 export function I18nProvider({ children }: I18nProviderProps) {
   const language = useLanguage();
   const direction = directionOf(language);
-  const l10n = useMemo(() => new ReactLocalization([bundles[language]]), [language]);
+  const l10n = useMemo(() => createLocalization(language), [language]);
 
   useEffect(() => {
     document.documentElement.lang = language;

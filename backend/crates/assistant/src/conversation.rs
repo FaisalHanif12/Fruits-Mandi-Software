@@ -231,6 +231,9 @@ pub struct Turn {
     /// True when the question also asks a Laga (with a commission side): the total of both sides and
     /// Laga is never rewritten to one side's figure.
     pub commission_laga: bool,
+    /// The sale measure the words of the question name (net sale, the buyers' bills), for the guard that
+    /// keeps the answer on that column (plan 82, `sale_guard`).
+    pub sale_ask: Option<crate::understand::SaleAsk>,
     /// The one period the question names, as its first and last day, when the app reads it with
     /// certainty (plan 80, T5-2): a view or report an answer cites must be for these days.
     pub asked_days: Option<(String, String)>,
@@ -275,6 +278,33 @@ pub struct Conversation {
     pub results: Vec<ToolResult>,
     /// The question that waits, if any.
     pub waiting: Option<Waiting>,
+}
+
+/// The conversation id a command was given, checked (plan 82, Code Standards 4.1 layer 2, Q1, V0).
+/// It comes from the screen and is untrusted: when one is given it must be a short text with no
+/// control character, or the question log would refuse its row after the work was done (plan 80,
+/// T5-7). An empty or blank one is no id: a new conversation starts.
+///
+/// # Errors
+/// `ERR_FORMAT_INVALID` on `conversation_id` for an id that is too long or holds a control
+/// character (a NUL, a new line, a delete).
+///
+/// Example: `Some("c-1")` is `Ok(Some("c-1"))`; `Some("  ")` and `None` are `Ok(None)`;
+/// `Some("a\0b")` is refused.
+pub fn checked_conversation_id(
+    given: Option<&str>,
+) -> Result<Option<&str>, mandi_services::ServiceError> {
+    let given = given.map(str::trim).filter(|c| !c.is_empty());
+    if let Some(id) = given
+        && (id.chars().count() > crate::limits::MAX_CONVERSATION_ID_CHARS
+            || id.chars().any(char::is_control))
+    {
+        return Err(mandi_services::ServiceError::reject_field(
+            mandi_services::core::error::ErrorCode::ErrFormatInvalid,
+            "conversation_id",
+        ));
+    }
+    Ok(given)
 }
 
 impl Conversation {

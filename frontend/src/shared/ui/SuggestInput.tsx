@@ -17,6 +17,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { focusNextField, keepKeyForApp } from '../keyboard';
 import { Code } from './Code';
 import { controlClasses } from './control-classes';
+import { DropdownPopup } from './DropdownPopup';
 import type { FieldControlProps } from './Field';
 
 export interface Suggestion {
@@ -80,6 +81,7 @@ export function SuggestInput({
   highlightFirst = false,
 }: SuggestInputProps) {
   const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement | null>(null);
   const { commit, forget } = useCommitOnce(onCommit);
 
   const { getInputProps, getItemProps, getMenuProps, highlightedIndex } = useCombobox<Suggestion>({
@@ -143,7 +145,7 @@ export function SuggestInput({
 
   const showList = open && suggestions.length > 0;
   return (
-    <div className="relative">
+    <div ref={boxRef} className="relative">
       <input
         {...getInputProps({
           type: 'text',
@@ -170,14 +172,8 @@ export function SuggestInput({
         })}
         className={`${controlClasses({ invalid, readOnly })} type-number-field`}
       />
-      <div
-        className={
-          showList
-            ? 'absolute start-0 top-full z-20 mt-1 w-max min-w-full rounded-2 border border-border bg-surface p-1 shadow-overlay'
-            : 'hidden'
-        }
-      >
-        <ul {...getMenuProps()} className="max-h-picker-list overflow-y-auto">
+      <DropdownPopup open={showList} anchorRef={boxRef} fit="content">
+        <ul {...getMenuProps()} className="max-h-picker-list min-h-0 overflow-y-auto">
           {showList
             ? suggestions.map((suggestion, index) => (
                 <li
@@ -201,7 +197,7 @@ export function SuggestInput({
               ))
             : null}
         </ul>
-      </div>
+      </DropdownPopup>
     </div>
   );
 }

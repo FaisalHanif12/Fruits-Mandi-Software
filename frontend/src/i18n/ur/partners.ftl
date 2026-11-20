@@ -106,6 +106,9 @@ partners-total-bad = کل ٹھیک 100 فیصد ہونا چاہیے
 partners-total-checking = جانچ ہو رہی ہے…
 
 # review: pending
+partners-total-failed = کل کی جانچ نہیں ہو سکی۔ محفوظ کرتے وقت دوبارہ جانچ ہو گی۔
+
+# review: pending
 partners-save = حصے محفوظ کریں
 
 # $date: the day the shares start, DD-MM-YYYY.

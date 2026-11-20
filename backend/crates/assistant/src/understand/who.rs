@@ -19,7 +19,7 @@ use mandi_services::core::text;
 use mandi_services::core::translit::Direction;
 use mandi_services::{chukta, coa, partners, search, translit};
 
-use super::lexicon::{Cue, Hit, table};
+use super::lexicon::{Cue, Hit, key, table};
 use super::scan::{Scan, edit_distance};
 use super::{
     Confidence, Doubt, ItemRef, Outcome, PartyHit, PartyRef, PartyRole, PeriodKind, PeriodRef,
@@ -608,6 +608,19 @@ pub(super) fn is_side_word(scan: &Scan, role: &Hit) -> bool {
     })
 }
 
+/// True when a word is a known word of the app with an Urdu or Roman ending that makes it plural or oblique
+/// ("مدوں" of "مد", "madon" of "mad", "bilon" of "bil"): such a word is a business word the table lacks in
+/// that form, never a name that is missing from the books. The question then goes on as one with an unknown
+/// word (the model's), and does not end as "not found" with no model call (plan 82, Y23).
+fn inflected_known_word(word: &str) -> bool {
+    const ENDINGS: [&str; 9] = ["وں", "یں", "on", "en", "yan", "yon", "ain", "ein", "ian"];
+    let t = table();
+    ENDINGS.iter().any(|ending| {
+        word.strip_suffix(ending)
+            .is_some_and(|stem| stem.chars().count() >= 2 && t.is_known(stem))
+    })
+}
+
 /// The role the question asks the name at `span` in.
 pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
     let hard = |role| Some(Wanted { role, hard: true });
@@ -633,6 +646,15 @@ pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
         .collect();
     nouns.dedup();
     if let [only] = nouns.as_slice() {
+        // "ehsan ne kitna maal bheja aur kis kis gahaq ne kitna liya": the one role noun belongs to the
+        // second actor. With a verb of selling AND a verb of buying in the question, and the noun not beside
+        // this name, the role of the name is not known: both roles are looked up (plan 82, D29).
+        let beside_noun = scan.hits.iter().any(|h| {
+            !h.fuzzy && role_of_cue(h.cue).is_some() && (h.end == span.0 || h.start == span.1)
+        });
+        if !beside_noun && scan.has_exact(Cue::Sold) && scan.has_exact(Cue::Bought) {
+            return None;
+        }
         return hard(*only);
     }
     // A verb of trade: the one who sold is a seller, the one who bought a buyer, unless the name is
@@ -648,10 +670,15 @@ pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
     // "Alif ne zaati kharche ke liye kitna liya": "kitna liya" is "how much did he take", not a
     // purchase. The money a partner took is asked of a partner.
     let taken = scan.has(Cue::PartnerTaken);
-    match (
-        scan.has_exact(Cue::Sold) && !taken,
-        scan.has_exact(Cue::Bought) && !taken,
-    ) {
+    // "mani se kitni commission li": the bare "li" is the commission that was taken, not goods that were
+    // bought from him, so it names no role (plan 82). "khareed li", "maal liya" and "kitna liya" still do.
+    let bare_take = scan
+        .hits
+        .iter()
+        .filter(|h| h.cue == Cue::Bought && !h.fuzzy)
+        .all(|h| matches!(scan.phrase(h.start, h.end).as_str(), "li" | "lee"));
+    let bought = scan.has_exact(Cue::Bought) && !(bare_take && scan.has(Cue::Commission));
+    match (scan.has_exact(Cue::Sold) && !taken, bought && !taken) {
         (true, false) => {
             return hard(if to {
                 PartyRole::Buyer
@@ -1026,14 +1053,22 @@ pub(super) fn resolve(reader: &Reader<'_>, scan: &Scan, periods: &[PeriodRef]) -
     };
     let mut unknown: Vec<(usize, usize)> = Vec::new();
     let total = scan.words.len();
+    // The words a period took ("since last year", "10 october se 20 october ke beech") are no name.
+    let period_words: Vec<(usize, usize)> = periods
+        .iter()
+        .filter_map(|p| super::when::period_run(scan, p))
+        .collect();
+    let can_start = |at: usize| {
+        scan.can_start_name(at) && !period_words.iter().any(|(s, e)| *s <= at && at < *e)
+    };
     let mut at = 0usize;
     while at < total {
-        if !scan.can_start_name(at) {
+        if !can_start(at) {
             at = at.saturating_add(1);
             continue;
         }
         let mut end = at.saturating_add(1);
-        while end < total && end.saturating_sub(at) < MAX_RUN && scan.can_start_name(end) {
+        while end < total && end.saturating_sub(at) < MAX_RUN && can_start(end) {
             end = end.saturating_add(1);
         }
         let mut i = at;
@@ -1122,7 +1157,10 @@ pub(super) fn resolve(reader: &Reader<'_>, scan: &Scan, periods: &[PeriodRef]) -
         // "No such party" is said without the model only when the name is in no account at all
         // (inactive ones too), is no known چکتا buyer, and the partner section is open: while it
         // is locked a partner's name cannot be looked up (PRD FR-7.82).
-        let missing = !place_only && !reader.partner_locked && !look.known_elsewhere(typed);
+        let missing = !place_only
+            && !reader.partner_locked
+            && !look.known_elsewhere(typed)
+            && !typed.iter().any(|w| inflected_known_word(w));
         match not_found_confidence(scan, span).filter(|_| missing) {
             Some(confidence) => {
                 names.spans.push(span);
@@ -1337,10 +1375,16 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
         .filter(|h| h.cue == Cue::RoleTrip && !h.fuzzy)
     {
         let beside = [Some(hit.end), hit.start.checked_sub(1)];
-        let number = beside
-            .into_iter()
-            .flatten()
-            .find_map(|at| scan.digits_at(at).map(|n| (at, n)));
+        let number = beside.into_iter().flatten().find_map(|at| {
+            scan.digits_at(at)
+                // The first trip is the one whose code is 0070: its running number is 0 (PRD FR-10.2).
+                .or_else(|| {
+                    scan.word(at)
+                        .and_then(ordinal_value)
+                        .map(|n| n.saturating_sub(1))
+                })
+                .map(|n| (at, n))
+        });
         let days: Vec<String> = periods
             .iter()
             .filter(|p| p.kind == PeriodKind::Date)
@@ -1393,6 +1437,68 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
             best,
         ));
     }
+}
+
+/// The place an ordinal word names ("pehla safar", "doosre bagh", "first trip"): 1 for the first, 2 for the
+/// second (plan 82, D13: "pehle safar ka nateeja"). `None` for any other word.
+fn ordinal_value(word: &str) -> Option<i64> {
+    const ORDINALS: [(i64, &[&str]); 4] = [
+        (
+            1,
+            &[
+                "pehla", "pehle", "pehli", "pehlay", "pahla", "pahle", "pahli", "first", "پہلا",
+                "پہلے", "پہلی",
+            ],
+        ),
+        (
+            2,
+            &[
+                "doosra",
+                "doosre",
+                "doosri",
+                "dusra",
+                "dusre",
+                "dusri",
+                "dosra",
+                "dosre",
+                "second",
+                "دوسرا",
+                "دوسرے",
+                "دوسری",
+            ],
+        ),
+        (
+            3,
+            &[
+                "teesra",
+                "teesre",
+                "teesri",
+                "tisra",
+                "tisre",
+                "tisri",
+                "third",
+                "تیسرا",
+                "تیسرے",
+                "تیسری",
+            ],
+        ),
+        (
+            4,
+            &[
+                "chautha",
+                "chauthe",
+                "chauthi",
+                "fourth",
+                "چوتھا",
+                "چوتھے",
+                "چوتھی",
+            ],
+        ),
+    ];
+    ORDINALS
+        .iter()
+        .find(|(_, words)| words.iter().any(|w| key(w) == word))
+        .map(|(n, _)| *n)
 }
 
 /// A name that is a buyer's or a seller's and a partner's too ("usman": the buyer Usman Ghani and

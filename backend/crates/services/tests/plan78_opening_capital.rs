@@ -71,6 +71,7 @@ fn advance(w: &World, amount: &str) {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();
@@ -168,6 +169,7 @@ fn a_cash_opening_cannot_be_changed_when_cash_would_go_below_zero() {
         removed: Default::default(),
         expected_goods: String::new(),
         narration: String::new(),
+        reason: None,
     };
     let _ = a;
     mandi_services::vouchers::save_advance(&w.env.ctx, &w.owner, &expense).unwrap();

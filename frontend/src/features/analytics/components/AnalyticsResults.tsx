@@ -20,6 +20,7 @@ import { useRememberedFlag } from '../../../shared/hooks';
 import { isFromStep, useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, RUNNING_NUMBER } from '../../../shared/ui';
 import { cellText, totalsFor } from '../../reports';
+import { measureOfFilters } from '../filters';
 import {
   analyticsColumns,
   headingText,
@@ -99,7 +100,10 @@ export function AnalyticsResults({
     [view, last, step, windowStart, otherColumns],
   );
   const columns = useMemo(
-    () => (last === undefined || plan === null ? [] : analyticsColumns(view, last.columns, plan)),
+    () =>
+      last === undefined || plan === null
+        ? []
+        : analyticsColumns(view, last.columns, plan, measureOfFilters(last.filters)),
     [view, last, plan],
   );
 

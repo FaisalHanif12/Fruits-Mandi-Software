@@ -106,6 +106,9 @@ partners-total-bad = The total must be exactly 100%
 partners-total-checking = Checking…
 
 # review: pending
+partners-total-failed = The total could not be checked. It is checked again when you save.
+
+# review: pending
 partners-save = Save shares
 
 # $date: the day the shares start, DD-MM-YYYY.

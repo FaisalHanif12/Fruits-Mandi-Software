@@ -811,22 +811,62 @@ cashbook-row-capital-in = { -sarmaya } جمع، { $partner }
 # review: pending
 cashbook-row-capital-out = { -sarmaya } واپسی، { $partner }
 
-## Where the capital is, a card of the cash book behind the partner code (plan 78 E, PRD FR-16.14).
+## Where the capital is, a card of the cash book behind the partner code (plan 87, PRD FR-16.14). It reads like a statement:
+## a headline, two blocks (to receive and in hand, to pay), whose it is, and a warning for the opening difference.
 
 # review: pending
 cashbook-capital-title = { -sarmaya } کہاں ہے
 
 # review: pending
-cashbook-capital-help = شراکت داروں کی رقم اس وقت کہاں ہے، اور کس کی ہے۔ دونوں میزان ہمیشہ برابر ہوتے ہیں۔
+cashbook-capital-help = شراکت داروں کی رقم اس وقت کہاں ہے اور کس کی ہے۔ دونوں طرف کا میزان ہمیشہ برابر ہوتا ہے۔
 
 # review: pending
 cashbook-capital-failed = { -sarmaya } کا حساب نہیں کھل سکا
 
 # review: pending
-cashbook-capital-where-title = رقم کہاں ہے
+cashbook-capital-headline = شراکت داروں کا کل { -sarmaya }
+
+# review: pending
+cashbook-capital-equal = دونوں طرف برابر
+
+# review: pending
+cashbook-capital-unequal = دونوں طرف فرق ہے، رپورٹیں دیکھیں
+
+# review: pending
+cashbook-capital-as-of = { $date } تک
+
+# review: pending
+cashbook-capital-go-label = کس تاریخ تک دیکھنا ہے
+
+# review: pending
+cashbook-capital-go-info = ایک تاریخ لکھیں، جیسے 10-10-2026۔ { -sarmaya } کا حساب اسی تاریخ تک کا دکھایا جائے گا۔
+
+# review: pending
+cashbook-capital-go-placeholder = تاریخ لکھیں
+
+# review: pending
+cashbook-capital-go-today = آج تک
+
+# review: pending
+cashbook-capital-empty = { -sarmaya } کا ابھی کوئی اندراج نہیں
+
+# review: pending
+cashbook-capital-empty-help = پہلے کسی شراکت دار کا { -sarmaya } جمع کریں۔ پھر یہاں دکھے گا کہ رقم کہاں ہے اور کس کی ہے۔
+
+# review: pending
+cashbook-capital-empty-action = { -sarmaya } جمع کریں
+
+# review: pending
+cashbook-capital-receive-title = لینا ہے / پاس ہے
+
+# review: pending
+cashbook-capital-owe-title = دینا ہے
 
 # review: pending
 cashbook-capital-whose-title = رقم کس کی ہے
+
+# review: pending
+cashbook-capital-net-label = صافی
 
 # review: pending
 cashbook-capital-col-what = تفصیل
@@ -835,10 +875,16 @@ cashbook-capital-col-what = تفصیل
 cashbook-capital-col-amount = رقم
 
 # review: pending
+cashbook-capital-col-share = { -hissa }
+
+# review: pending
 cashbook-capital-where-cash = موجود { -rokar }
 
 # review: pending
-cashbook-capital-where-buyers-owe = { -gahakon } کے ذمے ({ -doobi-raqam } سمیت)
+cashbook-capital-where-buyers-owe = { -gahakon } کے ذمے
+
+# review: pending
+cashbook-capital-where-dead-amount = { -doobi-raqam }
 
 # review: pending
 cashbook-capital-where-seller-advances = { -beopariyon } کے پاس { -peshgi }
@@ -847,22 +893,28 @@ cashbook-capital-where-seller-advances = { -beopariyon } کے پاس { -peshgi }
 cashbook-capital-where-sellers-owe-beyond = { -beopariyon } کے ذمے ({ -peshgi } سے زیادہ)
 
 # review: pending
-cashbook-capital-where-sellers-payable = منفی: { -beopariyon } کو ادائیگی باقی
-
-# review: pending
 cashbook-capital-where-money-lent = { -adhar-raqam } باقی
-
-# review: pending
-cashbook-capital-where-owed-for-charges = منفی: { -mazdoori }، { -kiraya }، { -munshiana } اور سٹور کے واجبات
 
 # review: pending
 cashbook-capital-where-separate-khatas = { -alag-khata }
 
 # review: pending
-cashbook-capital-where-gardens-held = منفی: { -baghat } کی بند ہونے تک رکی رقم
+cashbook-capital-where-cash-short = { -rokar } کم
 
 # review: pending
-cashbook-capital-where-linked-in-partner-totals = منفی: جو منسلک رقم شراکت داروں کی { -kul-raqam } میں آ چکی ہے
+cashbook-capital-cash-short-note = دکان کی { -rokar } صفر سے کم ہے، اس لیے یہ رقم دینے والی طرف ہے۔
+
+# review: pending
+cashbook-capital-where-sellers-payable = { -beopariyon } کو ادائیگی باقی
+
+# review: pending
+cashbook-capital-where-owed-for-charges = { -mazdoori }، { -kiraya }، { -munshiana } اور سٹور کے واجبات
+
+# review: pending
+cashbook-capital-where-gardens-held = { -baghat } کی بند ہونے تک رکی رقم
+
+# review: pending
+cashbook-capital-where-linked-in-partner-totals = منسلک رقم جو شراکت داروں کی { -kul-raqam } میں آ چکی ہے
 
 # review: pending
 cashbook-capital-where-other = دیگر
@@ -871,13 +923,92 @@ cashbook-capital-where-other = دیگر
 cashbook-capital-whose-partner-total = { -kul-raqam }: { $partner }
 
 # review: pending
+cashbook-capital-whose-owes = شراکت دار کے ذمے
+
+# review: pending
 cashbook-capital-whose-opening-capital = ابتدائی { -sarmaya }
 
 # review: pending
 cashbook-capital-whose-advances-open = کھلی { -peshgi } میں شراکت داروں کا حصہ
 
 # review: pending
-cashbook-capital-whose-unrecorded-where = رقم کا مقام درج نہیں
+cashbook-capital-whose-other = دیگر
 
 # review: pending
-cashbook-capital-whose-other = دیگر فرق
+cashbook-capital-share = <num>{ $percent }</num>%
+
+## The warning of the opening difference. $amount and its side are drawn by the screen (<balance>).
+
+# review: pending
+cashbook-capital-warning-place = شراکت داروں کا ابتدائی { -sarmaya } { -rokar } میں درج نہیں ہوا
+
+# review: pending
+cashbook-capital-warning-old = پرانے کھاتوں کا فرق: <balance></balance>
+
+# review: pending
+cashbook-capital-warning-place-text = یہ رقم ابتدائی فرق میں لکھی گئی تھی، اس لیے { -rokar } اصل سے کم دکھ رہی ہے۔ نیچے والے بٹن سے اسے { -rokar } میں درج کریں۔
+
+# review: pending
+cashbook-capital-warning-old-text = کھاتے بناتے وقت لکھی گئی ابتدائی رقمیں آپس میں برابر نہیں ہیں۔ نیچے وہ کھاتے ہیں جن سے یہ فرق بنا۔
+
+# review: pending
+cashbook-capital-warning-sum-partner = شراکت داروں کا ابتدائی { -sarmaya } جو { -rokar } میں درج نہیں
+
+# review: pending
+cashbook-capital-warning-sum-party = گاہکوں اور بیوپاریوں کے ابتدائی بقایا کا فرق
+
+# review: pending
+cashbook-capital-warning-sum-other = دیگر اندراجات
+
+# review: pending
+cashbook-capital-warning-part-other = ابتدائی کے علاوہ اندراج
+
+# review: pending
+cashbook-capital-warning-part-other-entry = دیگر اندراج
+
+# review: pending
+cashbook-capital-col-date = تاریخ
+
+# review: pending
+cashbook-capital-net-owe = کمی
+
+# review: pending
+cashbook-capital-where-buyer-credits = گاہکوں کی پہلے سے جمع رقم
+
+# review: pending
+cashbook-capital-warning-parts = یہ فرق ان کھاتوں سے ہے
+
+# review: pending
+cashbook-capital-warning-part-partner = ابتدائی { -sarmaya }، { -rokar } میں درج نہیں
+
+# review: pending
+cashbook-capital-warning-part-party = { -ibtidai-baqaya }
+
+# review: pending
+cashbook-capital-col-account = کھاتہ
+
+# review: pending
+cashbook-capital-col-opening = فرق میں رقم
+
+# review: pending
+cashbook-capital-warning-place-button = { -sarmaya } { -rokar } میں درج کریں
+
+## The box that asks for the reason and the Owner's sign before the opening capital is put into cash.
+
+# review: pending
+cashbook-capital-place-title = { -sarmaya } { -rokar } میں درج کریں؟
+
+# review: pending
+cashbook-capital-place-text = ہر شراکت دار کا ابتدائی { -sarmaya } اپنی تاریخ پر الٹ کر { -rokar } کے ساتھ دوبارہ لکھا جائے گا۔ بند دن کھل کر خود دوبارہ بند ہو جائیں گے۔ { -rokar } بڑھ جائے گی، شراکت داروں کی { -kul-raqam } اور { -trial-balance } نہیں بدلیں گے۔ وجہ اور مالک کا { -dastakhat } لکھیں۔
+
+# review: pending
+cashbook-capital-place-label = وجہ
+
+# review: pending
+cashbook-capital-place-sign-hint = صرف مالک کے { -dastakhat } سے یہ درج ہوگا۔
+
+# review: pending
+cashbook-capital-place-confirm = درج کریں
+
+# review: pending
+cashbook-capital-placed-toast = { -sarmaya } { -rokar } میں درج ہو گیا

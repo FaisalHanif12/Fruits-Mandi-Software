@@ -275,6 +275,8 @@ impl SourceAnalyticsFilters {
             trip_view: self.trip_view,
             // The assistant never reads the partner part of view M.
             expense_part: None,
+            // The classic view of every source: no measure (plan 84).
+            measure: None,
             hide_partners: false,
         }
     }

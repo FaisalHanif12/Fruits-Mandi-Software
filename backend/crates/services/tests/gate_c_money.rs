@@ -453,6 +453,7 @@ fn r4_4_changing_an_opening_in_cash_asks_the_cash_box_instead_of_refusing() {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();
@@ -505,6 +506,7 @@ fn advance(w: &World, amount: &str) -> Result<(), ServiceError> {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .map(|_| ())
@@ -572,6 +574,7 @@ fn q_r1_3_before_any_partner_exists_an_advance_still_saves_as_in_the_worked_day(
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

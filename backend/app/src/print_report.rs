@@ -27,9 +27,10 @@ use std::path::PathBuf;
 use mandi_reports::analytics::{AnalyticsPrintInput, print_data as analytics_print_data};
 use mandi_reports::dashboard::{
     BuyerDuesPrintInput, CashSalesDayPrintInput, CashSalesMonthPrintInput, CommissionPrintInput,
-    LentOpenPrintInput, SellerDuesPrintInput, TotalDuesPrintInput, buyer_dues_print_data,
-    cash_sales_day_print_data, cash_sales_month_print_data, commission_month_print_data,
-    lent_open_print_data, seller_dues_print_data, total_dues_print_data,
+    LentOpenPrintInput, SalesPrintInput, SellerDuesPrintInput, TotalDuesPrintInput,
+    buyer_dues_print_data, cash_sales_day_print_data, cash_sales_month_print_data,
+    commission_month_print_data, lent_open_print_data, sales_period_print_data,
+    seller_dues_print_data, total_dues_print_data,
 };
 use mandi_reports::reports::{
     AdhariSheetPrintInput, BikriListPrintInput, CollectionSheetPrintInput, DaySlipsInput, ReportId,
@@ -40,6 +41,7 @@ use mandi_reports::reports::{
 };
 use mandi_services::auth::{self, Actor};
 use mandi_services::core::auth::Language;
+use mandi_services::core::cashbook::CapitalPrintInput;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::paging::SortInput;
 use mandi_services::core::printing::{Paper, PrintOutcome, PrintTo, parse_copies};
@@ -208,6 +210,18 @@ pub struct PrintTotalDuesInput {
     pub copies: Option<String>,
 }
 
+/// Input of `cashbook_capital_print`: the card "where the capital is" to the printer or to a PDF (plan 87, PRD FR-16.14 v1.50, FR-19.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintCapitalInput {
+    /// The day, the print language and the paper.
+    pub sheet: CapitalPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
 /// Input of `dashboard_lent_open_print`: the page of money lent that is still open to the printer or to a PDF (plan 79, PRD FR-19.10).
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct PrintLentOpenInput {
@@ -261,6 +275,18 @@ pub struct PrintCashSalesDayInput {
 pub struct PrintCommissionInput {
     /// The period, the party, the print language and the paper.
     pub sheet: CommissionPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_sales_print`: the sales page of a period to the printer or to a PDF.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintSalesInput {
+    /// The period, the filters, the print language and the paper.
+    pub sheet: SalesPrintInput,
     /// The printer of the Printing settings, or a PDF.
     pub to: PrintTo,
     /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
@@ -1188,6 +1214,32 @@ pub async fn run_total_dues<R: tauri::Runtime>(
     .await
 }
 
+/// Runs the print of the card "where the capital is" (plan 87). Behind the partner code.
+///
+/// # Errors
+/// As `cashbook_capital_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_capital<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCapitalInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "cashbook_capital_print",
+        kind: "capital",
+        entity: "capital",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        crate::commands::cashbook::capital_print_data(ctx, &sheet).map(drop)
+    })
+    .await
+}
+
 /// Runs the print of the page of money lent that is still open (plan 79 item 3).
 ///
 /// # Errors
@@ -1321,6 +1373,34 @@ pub async fn run_commission<R: tauri::Runtime>(
         prepare_data(state, &request, dir, |ctx| {
             let show_partners = !mandi_services::partner_code::is_locked(ctx)?;
             commission_month_print_data(ctx.db(), &input.sheet, show_partners)
+                .map(drop)
+                .map_err(engine_error)
+        })
+    })
+    .await
+}
+
+/// Runs the print of the sales page of a period (plan 83, PRD FR-9.9).
+///
+/// # Errors
+/// As `dashboard_sales_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_sales_period<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintSalesInput,
+) -> Result<PrintOutcome, UiError> {
+    run_data(app, "dashboard_sales_print", move |state, dir| {
+        let request = DataPrint {
+            kind: "sales",
+            entity: "sales_period",
+            input: serde_json::to_value(&input.sheet).map_err(UiError::internal)?,
+            language: input.sheet.language,
+            paper: input.sheet.paper,
+            to: input.to,
+            copies: input.copies.as_deref(),
+        };
+        prepare_data(state, &request, dir, |ctx| {
+            sales_period_print_data(ctx.db(), &input.sheet)
                 .map(drop)
                 .map_err(engine_error)
         })

@@ -1,10 +1,11 @@
 //! Plan 55 Section 3 after live run 1 (the lead's decisions of 05-11-2026): a model call has a TRUE
-//! deadline, a slow call is sent twice, and no question ever passes 25 seconds.
+//! deadline, a slow call is sent twice, and no question ever passes its time (25 seconds then, 45
+//! since plan 82).
 //!
 //! The model here is a small web server on this computer that does what Azure did in the live run:
 //! it sends the headers late and then stalls the body, or takes the request and says nothing. The
 //! client is the real combination of the app (a request with a timeout, behind `hedged_with`),
-//! pointed at that server. The tests really wait: about 25 s and about 8 s.
+//! pointed at that server. The tests really wait: about 45 s and about 12 s.
 //!
 //! The plain HTTP client restarts its timer when the headers arrive (measured: cut 1.0 s, headers
 //! at 0.7 s, call ended at 1.7 s), so before the fix the first test ended at about 26.5 s.
@@ -234,25 +235,27 @@ fn calls_of_last_question(h: &Harness) -> Vec<Value> {
 }
 
 #[test]
-fn a_call_that_sends_headers_and_then_stalls_the_body_never_takes_a_question_past_25_seconds() {
+fn a_call_that_sends_headers_and_then_stalls_the_body_never_takes_a_question_past_45_seconds() {
     // Call 1 comes back after 3 s (the model asks for a find). Call 2, every copy and the retry
-    // get the headers after 11.5 s and then nothing. The cut of call 2 is 12 s, so before the fix
-    // it ended at 3 + 11.5 + 12 = 26.5 s. Now it ends at its cut, the one retry has what is left,
-    // and the question is over at 25 s.
+    // get the headers after 19.5 s and then nothing. The cut of call 2 is 20 s, so with a timer
+    // that restarts at the headers it would end at 3 + 19.5 + 20 = 42.5 s and the retry past 45 s.
+    // Now it ends at its cut, the one retry has what is left, and the question is over at 45 s.
     let url = serve(vec![
         Plan::ReplyAfter(Duration::from_secs(3), find_reply()),
-        Plan::HeadersThenStall(Duration::from_millis(11_500)),
+        Plan::HeadersThenStall(Duration::from_millis(19_500)),
     ]);
     let h = Harness::day();
     let client = LocalClient { url };
     let (reply, took) = ask_with(&h, &client, "ikram ke total bakaya kitne hai");
+    // The model call ends at the cut; what comes after it (the card that was read, the log row) takes
+    // a moment, a second or two when the computer is busy with other work.
     assert!(
-        took < Duration::from_millis(25_600),
+        took < Duration::from_millis(47_500),
         "the question took {took:?}: {:?}",
         reply.outcome
     );
     assert!(
-        took > Duration::from_secs(24),
+        took > Duration::from_secs(44),
         "it used all its time: {took:?}"
     );
     // The read-ahead after the find had read his card, so the slow line shows his checked balance
@@ -274,8 +277,8 @@ fn a_call_that_sends_headers_and_then_stalls_the_body_never_takes_a_question_pas
 
 #[test]
 fn when_the_first_request_says_nothing_the_copy_answers_and_the_call_counts_once() {
-    // The first request is taken and never answered; at 7 s the copy goes out and is answered at
-    // once. The question is answered at about 7 s instead of waiting for the cut.
+    // The first request is taken and never answered; at 10 s the copy goes out and is answered at
+    // once. The question is answered at about 10 s instead of waiting for the cut.
     let url = serve(vec![
         Plan::Silent,
         Plan::ReplyAfter(Duration::ZERO, words_reply()),
@@ -284,7 +287,8 @@ fn when_the_first_request_says_nothing_the_copy_answers_and_the_call_counts_once
     let client = LocalClient { url };
     let (reply, took) = ask_with(&h, &client, "kya haal hai");
     assert!(
-        took >= Duration::from_secs(7) && took < Duration::from_secs(9),
+        took >= Duration::from_secs(HEDGE_AFTER_SECS)
+            && took < Duration::from_secs(HEDGE_AFTER_SECS + 5),
         "{took:?}: {:?}",
         reply.outcome
     );

@@ -57,6 +57,7 @@ fn advance(to: i64, date: &str) -> AdvanceInput {
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
+        reason: None,
     }
 }
 

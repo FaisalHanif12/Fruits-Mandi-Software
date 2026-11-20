@@ -10,7 +10,9 @@ export type AdvanceInput = {
    */
   date: string;
   /**
-   * The seller.
+   * The account that is given the advance: a seller, or a buyer (PRD 15.4, FR-15.11, v1.51: a
+   * buyer's advance is saved as cash lent to him, a payment voucher). The name is kept so the
+   * contract of the seller advance does not change.
    */
   seller_account_id: number;
   /**
@@ -31,4 +33,11 @@ export type AdvanceInput = {
    * `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` and nothing is written.
    */
   confirm_cash_below_zero: boolean;
+  /**
+   * Why. Needed only when the account is a buyer: a پیشگی to a buyer is cash lent to him and is
+   * saved as a payment to him (PRD 15.4, FR-15.11, v1.51), which asks for a reason
+   * (`ERR_PAYMENT_TO_BUYER_NEEDS_REASON` at `reason`). Ignored for a seller. Missing or empty
+   * means none.
+   */
+  reason?: string;
 };

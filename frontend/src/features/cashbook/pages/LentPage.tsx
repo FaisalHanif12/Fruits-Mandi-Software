@@ -181,6 +181,7 @@ function LentEditor({ today, urlType, editable = null, initial = null }: LentEdi
       onNew={startNew}
       flow={flow}
       error={error}
+      closedDay={{ date: draft.date, onReopened: flow.clearRefusal }}
       fieldsShown={LENT_FIELD_PATHS[draft.type]}
       formRef={formRef}
       below={<LentListSection personId={draft.person?.id ?? null} />}

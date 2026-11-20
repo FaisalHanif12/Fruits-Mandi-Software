@@ -10,11 +10,15 @@
 // - ← → and Tab leave the cell like in a picker cell: Tab keeps the word that was chosen and takes
 //   the step Enter takes. Esc closes the list and keeps the old value (the Esc order, FR-7.18).
 // - What is chosen goes straight to the row store (F39), never only inside the grid.
+// - The list is drawn by the shared dropdown box (plan 86): below the cell when it fits, above it
+//   when there is more room above, inside the window, and not cut by the grid. The grid's own popup
+//   holds only the focus; the list hangs from the cell.
 
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
 import type { CustomCellEditorProps } from 'ag-grid-react';
 import { Check } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { DropdownPopup } from '../ui/DropdownPopup';
 import type { EntryStore } from './entryStore';
 import type { EntryRow } from './types';
 
@@ -46,6 +50,8 @@ export function SelectCellEditor(props: EditorProps) {
   const { options, store, field, getKeyHandler, data, api, node, column, colDef, context } = props;
   const rowId = data.rowId;
   const list = useRef<HTMLUListElement>(null);
+  // The cell the list hangs from. A ref object of its own, for the shared dropdown box.
+  const cell = useRef<HTMLElement | null>(props.eGridCell);
   // The word the cell holds now (it is marked in the list), read from the row store.
   const kept = store((state) => state.rows.find((row) => row.rowId === rowId)?.typed[field] ?? '');
   // The list opens with the word of the cell highlighted.
@@ -141,36 +147,38 @@ export function SelectCellEditor(props: EditorProps) {
 
   const activeId = optionId(rowId, field, active);
   return (
-    // The class keeps the grid from ending the edit when the focus is in this popup.
-    <ul
-      ref={list}
-      role="listbox"
-      tabIndex={-1}
-      aria-label={colDef.headerName}
-      {...{ 'aria-activedescendant': activeId }}
-      onKeyDown={onKeyDown}
-      className="ag-custom-component-popup min-w-picker-cell rounded-2 border border-border bg-surface p-1 shadow-overlay outline-none"
-    >
-      {options.map((option, index) => (
-        <li
-          key={option.value}
-          id={optionId(rowId, field, index)}
-          role="option"
-          aria-selected={index === active}
-          onMouseEnter={() => {
-            setActive(index);
-          }}
-          onClick={() => {
-            choose(index);
-          }}
-          className={`flex h-control cursor-default items-center justify-between gap-3 rounded-1 px-3 type-field outline-none ${index === active ? 'bg-primary-soft text-primary' : 'text-ink'}`}
-        >
-          {option.label}
-          {option.value === kept ? (
-            <Check aria-hidden="true" className="size-icon-sm text-primary" />
-          ) : null}
-        </li>
-      ))}
-    </ul>
+    <DropdownPopup open anchorRef={cell} fit="content">
+      {/* The class keeps the grid from ending the edit when the focus is in this popup. */}
+      <ul
+        ref={list}
+        role="listbox"
+        tabIndex={-1}
+        aria-label={colDef.headerName}
+        {...{ 'aria-activedescendant': activeId }}
+        onKeyDown={onKeyDown}
+        className="ag-custom-component-popup min-h-0 outline-none"
+      >
+        {options.map((option, index) => (
+          <li
+            key={option.value}
+            id={optionId(rowId, field, index)}
+            role="option"
+            aria-selected={index === active}
+            onMouseEnter={() => {
+              setActive(index);
+            }}
+            onClick={() => {
+              choose(index);
+            }}
+            className={`flex h-control cursor-default items-center justify-between gap-3 rounded-1 px-3 type-field outline-none ${index === active ? 'bg-primary-soft text-primary' : 'text-ink'}`}
+          >
+            {option.label}
+            {option.value === kept ? (
+              <Check aria-hidden="true" className="size-icon-sm text-primary" />
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </DropdownPopup>
   );
 }

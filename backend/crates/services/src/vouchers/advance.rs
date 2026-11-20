@@ -12,7 +12,9 @@ use std::collections::HashMap;
 use mandi_db::accounts as account_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_db::vouchers::{self as repo, NewVoucher, VoucherExtra};
-use mandi_domain::core::accounts::{LineError, RecordRef, SELLER_CONTROL};
+use mandi_domain::core::accounts::{
+    BUYER_CONTROL, LineError, NAQDI_MANDI_CODE, RecordRef, SELLER_CONTROL,
+};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::ids::AccountId;
@@ -20,7 +22,7 @@ use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{
     AdvanceInput, AdvancePreviewRow, AdvanceRowResult, AdvancesInput, AdvancesPreview,
-    AdvancesSaved, VoucherMode, VoucherSaved, VoucherType,
+    AdvancesSaved, PaymentInput, VoucherEntry, VoucherMode, VoucherSaved, VoucherType,
 };
 use mandi_domain::ledger::{BalancedEntry, LedgerLine, PostingType, Side, build_entry};
 
@@ -173,12 +175,155 @@ pub fn save_advance(
 ) -> Result<VoucherSaved, ServiceError> {
     let window = day::window(ctx)?;
     ctx.db.write(|tx| {
+        // PRD FR-15.11 (v1.51): an advance to a buyer is cash lent to him. It is saved by the
+        // function of a payment to a buyer, in this transaction: same checks, same posting, same
+        // voucher type and number series.
+        if let Some(payment) = buyer_payment(tx, input)? {
+            return super::payment::save_payment_in(ctx, actor, tx, window, &payment)
+                .map_err(buyer_errors);
+        }
         let planned = plan_advance(tx, window, input, &mut HashMap::new())?;
         if !planned.errors.is_empty() {
             return Err(planned.errors.into());
         }
         post_advance(ctx, tx, actor, planned, input.confirm_cash_below_zero)
     })
+}
+
+/// The payment an advance to a buyer is saved as (PRD 15.4, FR-15.11, v1.51), or `None` when the
+/// account is not a buyer (a seller advance, or an account that is not found, which the advance
+/// checks report as before). Only a real buyer is routed: the چکتا کھاتہ and نقدی منڈی accounts have
+/// no ledger and keep the refusal of an advance to a non-seller (PRD FR-13.6). An inactive or dead
+/// buyer is routed too, so the payment checks refuse him with `ERR_ACCOUNT_INACTIVE` (PRD
+/// FR-10.10). `expected_goods` has no meaning for a buyer and is left out.
+///
+/// Example: a پیشگی of 3,000 to اکرم with the reason "نقد ادھار" is the payment of E2E-32.
+///
+/// # Errors
+/// `ServiceError::Db` only.
+pub(super) fn buyer_payment(
+    conn: &Connection,
+    input: &AdvanceInput,
+) -> Result<Option<PaymentInput>, ServiceError> {
+    let Some(facts) = account_repo::facts(conn, input.seller_account_id)? else {
+        return Ok(None);
+    };
+    if facts.control_code != BUYER_CONTROL
+        || facts.is_chukta_khata
+        || facts.code == NAQDI_MANDI_CODE
+    {
+        return Ok(None);
+    }
+    Ok(Some(PaymentInput {
+        date: input.date.clone(),
+        account_id: input.seller_account_id,
+        amount: input.amount.clone(),
+        removed: input.removed.clone(),
+        reason: input.reason.clone().unwrap_or_default(),
+        narration: input.narration.clone(),
+        confirm_cash_below_zero: input.confirm_cash_below_zero,
+    }))
+}
+
+/// A typed entry that the screen sent as a پیشگی, as the payment it is saved as when the account is
+/// a buyer (PRD FR-15.11, v1.51). Used by the preview of a new entry, so the screen shows what the
+/// save will post. An entry that is not a پیشگی, or whose account is a seller, comes back as `None`.
+///
+/// # Errors
+/// `ServiceError::Db` only.
+pub(super) fn route_buyer_entry(
+    conn: &Connection,
+    entry: &VoucherEntry,
+) -> Result<Option<VoucherEntry>, ServiceError> {
+    let VoucherEntry::Advance(input) = entry else {
+        return Ok(None);
+    };
+    Ok(buyer_payment(conn, input)?.map(VoucherEntry::Payment))
+}
+
+/// The field a payment names its account in, and the field an advance names it in.
+const PAYMENT_ACCOUNT_FIELD: &str = "account_id";
+const ADVANCE_ACCOUNT_FIELD: &str = "seller_account_id";
+
+/// A mistake of the payment checks, at the field names of an advance: the account of a payment is
+/// `account_id`, the account of an advance is `seller_account_id`.
+fn buyer_field(field: &str) -> &str {
+    if field == PAYMENT_ACCOUNT_FIELD {
+        ADVANCE_ACCOUNT_FIELD
+    } else {
+        field
+    }
+}
+
+fn buyer_errors(error: ServiceError) -> ServiceError {
+    match error {
+        ServiceError::Rejected(items) => ServiceError::Rejected(
+            items
+                .into_iter()
+                .map(|mut item| {
+                    if let Some(field) = item.field.as_deref() {
+                        item.field = Some(buyer_field(field).to_owned());
+                    }
+                    item
+                })
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
+/// Checks one line of the running list whose account is a buyer, with the checks of the payment it
+/// is saved as, and works out his balance before and after (cash lent adds to what he owes, PRD
+/// FR-15.11). The same shape as [`plan_advance`] gives for a seller, so the list preview treats
+/// both alike. It is never posted: the save goes through [`buyer_payment`].
+fn plan_buyer_line(
+    conn: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    payment: &PaymentInput,
+    running: &mut HashMap<i64, Paisa>,
+) -> Result<PlannedAdvance, ServiceError> {
+    let planned = super::payment::plan_payment(conn, window, payment)?;
+    let errors: Vec<FieldError> = planned
+        .errors
+        .iter()
+        .map(|e| {
+            let mut mapped = e.clone();
+            mapped.field = buyer_field(&e.field).to_owned();
+            mapped
+        })
+        .collect();
+    let account = planned.party.as_ref().map(|p| p.record.clone());
+    let (before, after) = match account.as_ref().map(|a| a.id) {
+        Some(id) => {
+            let before = match running.get(&id) {
+                Some(net) => *net,
+                None => ledger::signed(ledger::balance_in(conn, id, None, None)?)?,
+            };
+            let after = match planned.money.amount {
+                Some(a) if errors.is_empty() => before.checked_add(a).map_err(money_error)?,
+                _ => before,
+            };
+            (before, after)
+        }
+        None => (Paisa::ZERO, Paisa::ZERO),
+    };
+    let line = PlannedAdvance {
+        account,
+        errors,
+        amount: planned.money.amount.unwrap_or(Paisa::ZERO),
+        date: planned.money.date,
+        pay_account: planned.money.pay_account,
+        expected_goods: None,
+        narration: planned.money.narration.clone(),
+        before,
+        after,
+    };
+    if line.errors.is_empty()
+        && let Some(account) = &line.account
+    {
+        running.insert(account.id, line.after);
+    }
+    Ok(line)
 }
 
 /// The journal entry of an advance (PRD 15.4): the seller بنام as an advance (PRD FR-15.8), cash
@@ -347,7 +492,10 @@ pub fn preview_advances(
         let mut rows = Vec::with_capacity(input.lines.len());
         let mut total = Paisa::ZERO;
         for (index, line) in input.lines.iter().enumerate() {
-            let planned = plan_advance(conn, window, line, &mut running)?;
+            let planned = match buyer_payment(conn, line)? {
+                Some(payment) => plan_buyer_line(conn, window, &payment, &mut running)?,
+                None => plan_advance(conn, window, line, &mut running)?,
+            };
             if planned.errors.is_empty() {
                 total = total.checked_add(planned.amount).map_err(money_error)?;
             }

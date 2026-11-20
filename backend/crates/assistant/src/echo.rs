@@ -31,10 +31,27 @@ const WORDS: &[(i64, &[&str])] = &[
     (10, &["دس", "ten"]),
     (11, &["گیارہ", "eleven"]),
     (12, &["بارہ", "twelve"]),
+    // The days of a month the Owner types ("16 november", "27 october") and the other numbers up to
+    // 31: "سولہ نومبر" was refused and cost a whole model call (plan 82, live check D09).
+    (13, &["تیرہ", "thirteen"]),
+    (14, &["چودہ", "fourteen"]),
     (15, &["پندرہ", "fifteen"]),
+    (16, &["سولہ", "sixteen"]),
+    (17, &["سترہ", "seventeen"]),
+    (18, &["اٹھارہ", "eighteen"]),
+    (19, &["انیس", "nineteen"]),
     (20, &["بیس", "twenty"]),
+    (21, &["اکیس"]),
+    (22, &["بائیس"]),
+    (23, &["تئیس"]),
     (24, &["چوبیس"]),
+    (25, &["پچیس"]),
+    (26, &["چھبیس"]),
+    (27, &["ستائیس"]),
+    (28, &["اٹھائیس"]),
+    (29, &["انتیس"]),
     (30, &["تیس", "thirty"]),
+    (31, &["اکتیس"]),
     (50, &["پچاس", "fifty"]),
 ];
 
@@ -240,7 +257,8 @@ pub fn put_digits_back(text: &str, numbers: &[QuestionNumber]) -> Option<String>
 /// keyed list as a list of objects in order, each with its `key`, so "the place 0" is the first
 /// object it was shown: the same row. A place past the last row, or a key that does not exist, is
 /// never guessed: the answer then fails and the rewrite is told the keys (hidden round 4, H363 and
-/// Q924: `by_for.0.home_value`).
+/// Q924: `by_for.0.home_value`). A figure named on the result itself that only its `totals` hold is
+/// that figure in `totals` (plan 82).
 ///
 /// Example: `r2.by_for.0.home_value` with the rows `s1` and `guests` is `r2.by_for.s1.home_value`.
 fn fixed_path(path: &str, state: &State, numbers: usize) -> Option<String> {
@@ -264,6 +282,18 @@ fn fixed_path(path: &str, state: &State, numbers: usize) -> Option<String> {
                 let (key, next) = rows.get(segment.parse::<usize>().ok()?)?;
                 out.push(key.clone());
                 node = next;
+                changed = true;
+            }
+            // A figure the model named on the result itself, when the result holds it only in its
+            // `totals` (`r4.purchase_value` for `r4.totals.purchase_value`): the same figure, only
+            // the place is wrong, so it is written right (plan 82, live check M11).
+            _ if out.len() == 1
+                && node.get(&[segment]).is_none()
+                && node.get(&["totals", segment]).is_some() =>
+            {
+                node = node.get(&["totals", segment])?;
+                out.push("totals".to_owned());
+                out.push((*segment).to_owned());
                 changed = true;
             }
             _ => {
@@ -501,6 +531,32 @@ mod tests {
         assert_eq!(
             back("next 12 months", "the next twelve months").as_deref(),
             Some("the next {{q.n1}} months")
+        );
+    }
+
+    /// Plan 82, live check D09: "6 november aur 16 november" was answered "چھ نومبر ... سولہ نومبر"; the
+    /// day words were refused and a whole rewrite call was spent. A day the Owner typed is his number.
+    #[test]
+    fn the_days_of_a_month_the_owner_typed_are_put_back_as_his_numbers() {
+        assert_eq!(
+            back(
+                "6 november aur 16 november ki commission alag alag batao",
+                "چھ نومبر کی کمیشن {{r3.totals.total_comm}} تھی۔\n• سولہ نومبر کی کمیشن {{r4.totals.total_comm}} تھی۔"
+            )
+            .as_deref(),
+            Some(
+                "{{q.n1}} نومبر کی کمیشن {{r3.totals.total_comm}} تھی۔\n• {{q.n2}} نومبر کی کمیشن {{r4.totals.total_comm}} تھی۔"
+            )
+        );
+        // A word that is not the Owner's own number stays as it was, to be refused.
+        assert_eq!(
+            back("6 november ki commission", "سولہ نومبر کی کمیشن").as_deref(),
+            None
+        );
+        assert_eq!(
+            back("on 27 october", "on twenty seven october").as_deref(),
+            None,
+            "two English words are not one number word of the table"
         );
     }
 

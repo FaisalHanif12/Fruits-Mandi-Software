@@ -502,11 +502,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
       if (input.name_ur === '') errors.push(problem('ERR_REQUIRED', 'name_ur'));
       if (input.name_en === '') errors.push(problem('ERR_REQUIRED', 'name_en'));
       if (input.rent === '') errors.push(problem('ERR_REQUIRED', 'rent'));
-      // The reason of the first installment is required once its amount is typed (plan 17c).
-      const paidTyped = input.paid_now !== null && input.paid_now !== '';
-      if (paidTyped && (input.paid_now_reason ?? '').trim() === '') {
-        errors.push(problem('ERR_REASON_REQUIRED', 'paid_now_reason'));
-      }
+      // The first installment needs no reason from the screen: the backend saves the standard words (plan 81).
       const typed = input.partners.filter((row) => row.share.trim() !== '0');
       const total = typed.reduce((sum, row) => sum + Number(row.share), 0);
       if (total !== 100) errors.push(problem('ERR_SHARES_NOT_100', 'partners'));
@@ -525,13 +521,6 @@ export function createGardenBooks(options: GardensOptions = {}) {
     },
     create: (input: GardenInput): GardenCreated => {
       if (store.refuse.garden !== undefined) return refuse(store.refuse.garden);
-      if (
-        input.paid_now !== null &&
-        input.paid_now !== '' &&
-        (input.paid_now_reason ?? '').trim() === ''
-      ) {
-        return refuse([{ code: 'ERR_REASON_REQUIRED', field: 'paid_now_reason' }]);
-      }
       const sources = sourcesOf(input.partners);
       const paid = input.paid_now !== null && input.paid_now !== '';
       const { shop } = partsView(paymentParts(30_000, [18_000, 12_000], sources), [18_000, 12_000]);

@@ -128,3 +128,23 @@ language by `dashboard_*_print_data`, printed or saved as a PDF by `dashboard_*_
 `cash_sales_day`). `Esc` leaves the preview first. The hidden print window knows the kinds `seller-dues`, `total-dues`,
 `lent-open`, `advances-open`, `cash-sales-month` and `cash-sales-day` (`app/print-kinds`). The cash sales page prints its
 month, and one day from the Print button inside the open row. Tests: `dues-pages-print.test.tsx`, `print-kinds.test.tsx`.
+
+## Plan 83: the sales page (FR-9.9)
+
+- The tile آج کی بکری opens `/sales` (`pages/SalesPage.tsx`), built like the commission page, not پچھلی بکری (that stays in the
+  بکری menu, FR-12.46). One month at a time (previous and next, go to month, Page Up and Page Down), or one date, a year or
+  a range. A row for each day (a month for each row of a year): the number of بکری, نگ, خام بکری, the buyers' bill, نقدی and
+  ادھاری, with the totals row from the backend. Today's row carries the word "Today". A day opens in place
+  (`components/SalesDays.tsx`) with its بکری, their lot names and figures; the بکری number opens that بکری. A month row of a
+  year opens that month. The page adds nothing up (CLAUDE.md rule 1).
+- Filters (`components/SalesFilterBar.tsx`): the period box of the commission page, All / buyer / seller and an
+  `AccountPicker` of that side (every party box starts at All, FR-19.1), one item (`Picker`, scope item) and the goods
+  (all, consigned, trip, garden). All of it is in the address (`sales-search.ts`: `?period=year&year=2026&side=seller&party=...&item=...&goods=trip`).
+  A side with nobody picked asks for him and reads nothing. A filter at its start is asked as nothing, so the plain page sends
+  `{ period: { kind: 'month' } }`.
+- Commands: `dashboard_sales_period`, `dashboard_sales_day`, `dashboard_sales_print_data`, `dashboard_sales_print`, and the Excel kind
+  `sales_period`. The hidden print window knows the kind `sales` (`app/print-kinds`). The Back parent of `/sales` is
+  the dashboard (`shared/navigation/back-parents.ts`).
+- Files: `sales-search.ts`, `sales-hooks.ts`, `components/SalesDays.tsx`, `components/SalesFilterBar.tsx`,
+  `pages/SalesPage.tsx`. Words: `i18n/*/sales.ftl`. Tests: `sales-page.test.tsx`, `sales-search.test.ts`, `dashboard-screen`,
+  `back-pages`, `print-kinds`. Development page: `#/dev/sales` (flags `?empty`, `?down`).

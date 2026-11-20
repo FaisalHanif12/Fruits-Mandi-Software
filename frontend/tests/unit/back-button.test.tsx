@@ -30,6 +30,7 @@ const PATHS = [
   '/',
   '/dues',
   '/commission',
+  '/sales',
   '/partners',
   '/partners/capital',
   '/index/accounts',

@@ -167,6 +167,19 @@ const CASES = [
     answer: () => collectionPrintData('en'),
     sees: '.print-doc table',
   },
+  // Plan 83: the sales page behind the tile آج کی بکری.
+  {
+    kind: 'sales',
+    command: 'dashboard_sales_print_data',
+    input: {
+      period: { kind: 'month', month: '2026-10' },
+      goods: 'trip',
+      language: 'en',
+      paper: 'a4',
+    },
+    answer: () => collectionPrintData('en'),
+    sees: '.print-doc table',
+  },
 ] as const;
 
 describe('the address of a print', () => {
@@ -187,6 +200,7 @@ describe('the address of a print', () => {
       'advances-open',
       'cash-sales-month',
       'cash-sales-day',
+      'sales',
     ]);
     expect(isKindAddress('print=parchi&job=a')).toBe(true);
     expect(isKindAddress('print=nothing&job=a')).toBe(true);

@@ -226,6 +226,7 @@ function FruitEditor({ today, entry: openEntry, party }: FruitEditorProps) {
         onNew={startNew}
         flow={flow}
         error={error}
+        closedDay={{ date: draft.date, onReopened: flow.clearRefusal }}
         fieldsShown={FRUIT_FIELD_PATHS}
         formRef={formRef}
         below={

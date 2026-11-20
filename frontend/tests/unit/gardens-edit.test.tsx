@@ -143,6 +143,29 @@ describe.each(LANGUAGES)('a garden entry open for edit (%s)', (language) => {
     ).toBeNull();
   });
 
+  it('plan 81: the first installment made with the garden opens with its standard words in the app language', async () => {
+    fakeGardens({
+      history: e40History().map((row) =>
+        row.entry_id === 11 ? { ...row, reason: 'gardens-first-installment-reason' } : row,
+      ),
+    });
+    const { user } = await open();
+    await selectRow(user, 'e11');
+    await user.click(firstOf(entryEdit()));
+    await screen.findByText(
+      startsWith(
+        message(language, 'edit-band', {
+          what: message(language, 'glossary-bagh'),
+          number: `${message(language, 'gardens-kind-installment')} 1`,
+          date: '10-10-2026',
+        }),
+      ),
+    );
+    expect((field('gardens-payment-reason') as HTMLInputElement).value).toBe(
+      message(language, 'gardens-first-installment-reason'),
+    );
+  });
+
   it('saves with gardens_entry_edit_save: id, version, the entry as typed, no reason for today', async () => {
     fakeGardens();
     vi.mocked(gardensApi.gardensEntryEditSave).mockResolvedValue(EDITED);

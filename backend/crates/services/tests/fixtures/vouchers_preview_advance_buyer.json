@@ -1,0 +1,35 @@
+{
+  "account": {
+    "id": 21,
+    "code": "0020",
+    "name_ur": "اکرم ٹول ٹیکس",
+    "name_en": "Akram Toll Tax"
+  },
+  "amount_paisa": 300000,
+  "current_balance": {
+    "amount_paisa": 0,
+    "side": "zero"
+  },
+  "new_balance": {
+    "amount_paisa": 300000,
+    "side": "dr"
+  },
+  "bill_effects": [],
+  "extra_credit_paisa": 0,
+  "advance_effects": [],
+  "owes_settled_paisa": 0,
+  "return_limit_paisa": null,
+  "payable_open_paisa": null,
+  "payable_is_zero_for_seller": false,
+  "cash": {
+    "cash_before_paisa": 3500000,
+    "change_paisa": -300000,
+    "cash_after_paisa": 3200000,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "linked_parts": [],
+  "errors": [],
+  "warnings": []
+}

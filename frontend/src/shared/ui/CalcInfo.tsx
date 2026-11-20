@@ -17,6 +17,7 @@ import { formatBps, formatPaisa, useGrouping, type Grouping } from '../format';
 import { levelMessageId, useUiLanguage } from '../i18n';
 import { SHORTCUTS, matchesShortcut } from '../keyboard';
 import { Num } from './Num';
+import { radixCollisionPadding } from './dropdown-position';
 
 export type { Working };
 
@@ -120,7 +121,13 @@ export function CalcInfo({ working, inCell = false }: CalcInfoProps) {
         <Info aria-hidden="true" className="size-icon-sm" />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content lang={language} dir={direction} sideOffset={4} className={CONTENT_CLASSES}>
+        <Popover.Content
+          lang={language}
+          dir={direction}
+          sideOffset={4}
+          collisionPadding={radixCollisionPadding()}
+          className={CONTENT_CLASSES}
+        >
           <WorkingBody working={working} />
         </Popover.Content>
       </Popover.Portal>
@@ -156,6 +163,7 @@ export function CalcInfoAt({ working, anchor, onClose }: CalcInfoAtProps) {
           lang={language}
           dir={direction}
           sideOffset={4}
+          collisionPadding={radixCollisionPadding()}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             if (anchor.isConnected) anchor.focus();

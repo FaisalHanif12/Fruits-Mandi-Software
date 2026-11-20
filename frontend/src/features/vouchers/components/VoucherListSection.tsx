@@ -61,7 +61,9 @@ export function VoucherListSection({
   // (cancelled) vouchers are left out until the tick is on.
   const listWindow = useListWindow({
     kind: 'days',
-    source: { kind: 'vouchers', voucher_type: type },
+    // The پیشگی list also holds the cash lent to a buyer (a payment voucher), so its days are those of
+    // advances and of payments to buyers: the backend has its own window source for it (PRD FR-15.11).
+    source: type === 'advance' ? { kind: 'advances' } : { kind: 'vouchers', voucher_type: type },
     today,
   });
   const [account, setAccount] = useState<PickerValue | null>(null);
@@ -70,6 +72,8 @@ export function VoucherListSection({
   const searchText = useDebouncedValue(search.trim(), SEARCH_DELAY_MS);
   const input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'> = {
     voucher_type: type,
+    // The پیشگی list also holds the cash lent to a buyer, which is saved as a payment (PRD FR-15.11).
+    ...(type === 'advance' ? { advance_view: true } : {}),
     from: listWindow.range.from,
     to: listWindow.range.to,
     account_id: account?.id ?? null,
@@ -82,7 +86,13 @@ export function VoucherListSection({
   const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the filter before it.
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
-  const columns = useMemo(() => VOUCHER_COLUMNS, []);
+  // The kind of account is a column of the پیشگی list only, where a buyer's cash lent and the advances
+  // of sellers share one list (PRD FR-15.11); the other two lists keep their columns.
+  const columns = useMemo(
+    () =>
+      type === 'advance' ? VOUCHER_COLUMNS : VOUCHER_COLUMNS.filter((c) => c.field !== 'kind'),
+    [type],
+  );
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
   const onlyToday = listWindow.isLatest && account === null && searchText === '' && !showFinished;
   const months = first === undefined || first.months.length === 0 ? undefined : first.months;

@@ -3,6 +3,7 @@ import type { AnalyticsCompare } from './AnalyticsCompare';
 import type { AnalyticsExpensePart } from './AnalyticsExpensePart';
 import type { AnalyticsGoods } from './AnalyticsGoods';
 import type { AnalyticsGroupBy } from './AnalyticsGroupBy';
+import type { AnalyticsMeasure } from './AnalyticsMeasure';
 import type { AnalyticsPeriod } from './AnalyticsPeriod';
 import type { AnalyticsSide } from './AnalyticsSide';
 import type { AnalyticsTripView } from './AnalyticsTripView';
@@ -96,4 +97,12 @@ export type AnalyticsFilters = {
    * none.
    */
   expense_part?: AnalyticsExpensePart;
+  /**
+   * What the view counts (PRD FR-18.10, plan 84): views A, B, C, D, E, G, H and L; refused for the
+   * others (`ERR_OUT_OF_RANGE` on `filters.measure`). Left out means the classic view: the total
+   * commission in D, E, H and L, and in A and B; the purchase value in C; the five series of G
+   * (what the assistant and every saved view of before plan 84 read). The screens always send one.
+   * Left out of the wire form when none.
+   */
+  measure?: AnalyticsMeasure;
 };

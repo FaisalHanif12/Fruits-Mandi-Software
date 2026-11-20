@@ -35,6 +35,7 @@ fn advance(w: &World, date: &str, amount: &str) {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();
@@ -229,6 +230,7 @@ proptest! {
                     removed: Default::default(),
                     expected_goods: String::new(),
                     narration: String::new(),
+                    reason: None,
                 };
                 vouchers::save_advance(&w.env.ctx, &w.owner, &input).unwrap();
             } else if open > 0 {
@@ -237,8 +239,8 @@ proptest! {
                 vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.rahim, &amount.to_string())).unwrap();
             }
             let card = cashbook::capital_where(&w.env.ctx).unwrap();
-            prop_assert_eq!(card.where_total_paisa, card.whose_total_paisa);
-            prop_assert!(card.where_lines.iter().all(|l| l.kind != CapitalWhereKind::Other));
+            prop_assert_eq!(card.net_paisa, card.whose_total_paisa);
+            prop_assert!(card.have_lines.iter().chain(&card.owe_lines).all(|l| l.kind != CapitalWhereKind::Other));
             prop_assert!(card.whose_lines.iter().all(|l| l.kind != CapitalWhoseKind::Other));
             let parts: i64 = card
                 .whose_lines

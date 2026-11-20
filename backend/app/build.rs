@@ -152,9 +152,12 @@ const APP_COMMANDS: &[&str] = &[
     "partners_update",
     "partners_set_shares",
     "partners_check_shares",
+    "partners_place_opening_capital",
     "partners_overview",
     "cashbook_get",
     "cashbook_capital_where",
+    "cashbook_capital_print_data",
+    "cashbook_capital_print",
     "vouchers_save_shop_expense",
     "vouchers_save_personal_expense",
     "vouchers_save_personal_return",
@@ -236,6 +239,7 @@ const APP_COMMANDS: &[&str] = &[
     "dashboard_cash_sales_month_print",
     "dashboard_cash_sales_day_print",
     "dashboard_commission_print",
+    "dashboard_sales_print",
     "partners_statement_month_print",
     "reports_collection_sheet_print_data",
     "reports_collection_sheet",
@@ -297,6 +301,9 @@ const APP_COMMANDS: &[&str] = &[
     "dashboard_commission_print_data",
     "dashboard_commission_day",
     "dashboard_commission_month",
+    "dashboard_sales_period",
+    "dashboard_sales_day",
+    "dashboard_sales_print_data",
     // Plan 79 (append-only block).
     "dashboard_seller_dues",
     "dashboard_seller_dues_print_data",
@@ -361,6 +368,8 @@ const APP_COMMANDS: &[&str] = &[
     "assistant_key_remove",
     "assistant_test",
     "assistant_log_list",
+    // Plan 82: the warm-up call when the panel opens.
+    "assistant_warm",
 ];
 
 fn main() {

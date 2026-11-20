@@ -14,6 +14,7 @@ import {
 import { parseAnalyticsSearch } from '../features/analytics/search';
 import { parseCommissionSearch } from '../features/dashboard/commission-search';
 import { parseKharchSearch } from '../features/dashboard/kharch-search';
+import { parseSalesSearch } from '../features/dashboard/sales-search';
 import { parseSellerDuesSearch } from '../features/dashboard/seller-dues-search';
 import { parseReportSearch } from '../features/reports/search';
 import { parseMonthSearch } from '../features/month';
@@ -295,6 +296,15 @@ const commissionRoute = createRoute({
     () => import('../features/dashboard/pages/CommissionPage'),
     'CommissionPage',
   ),
+});
+
+// The sales page behind the dashboard tile آج کی بکری (PRD FR-9.9, plan 83), built like the commission page: a date, a
+// month, a year or a range, and a party, an item and the goods (`?period=year&year=2026&side=seller&party=...`).
+const salesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/sales',
+  validateSearch: (search: Record<string, unknown>) => parseSalesSearch(search),
+  component: lazyRouteComponent(() => import('../features/dashboard/pages/SalesPage'), 'SalesPage'),
 });
 
 // پارٹی کھاتے (PRD FR-12.43): the party ledgers in three levels. `?side=buyer|seller` is the list,
@@ -709,6 +719,7 @@ const appRoutes = [
   advancesOpenRoute,
   cashSalesRoute,
   commissionRoute,
+  salesRoute,
   kharchRoute,
   othersDuesRoute,
   laterSaleRoute,
@@ -948,6 +959,13 @@ const dashboardDevRoutes = import.meta.env.DEV
         path: '/dev/commission',
         validateSearch: (search: Record<string, unknown>) => parseCommissionSearch(search),
         component: lazyRouteComponent(() => import('./dev/CommissionDevPage'), 'CommissionDevPage'),
+      }),
+      // Plan 83: the sales page with the numbers of the plan.
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/sales',
+        validateSearch: (search: Record<string, unknown>) => parseSalesSearch(search),
+        component: lazyRouteComponent(() => import('./dev/SalesDevPage'), 'SalesDevPage'),
       }),
     ]
   : [];

@@ -356,6 +356,7 @@ fn run(path: &Path) -> Result<(), ServiceError> {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )?;
 

@@ -24,7 +24,8 @@ import { uiErrorOf } from '../../shared/api';
 import { useSingleFlight } from '../../shared/hooks';
 import { showToast } from '../../shared/ui';
 import { vouchersPreview } from './api';
-import { accountRequired, build, entryOf } from './draft';
+import { accountRequired, build, entryOf, savedKindOf } from './draft';
+import { voucherNumberText } from './list-columns';
 import { useEditVoucher, useSaveVoucher } from './hooks';
 import type { VoucherDraft, VoucherPreview, VoucherSaved } from './types';
 
@@ -103,13 +104,13 @@ export function useSaveFlow({
                 confirm: confirmCash,
               });
         setRefusal(null);
-        const number = l10n.getString(`vouchers-number-${draft.type}`, {
-          number: String(saved.number),
-        });
+        // The number is in the series of the voucher the backend saved, which is a payment's for an
+        // advance to a buyer (cash lent, PRD FR-15.11).
+        const number = voucherNumberText(saved, (id, vars) => l10n.getString(id, vars));
         showToast(
           'success',
           l10n.getString(editing === null ? 'vouchers-saved' : 'vouchers-edited', {
-            kind: draft.type,
+            kind: editing === null ? savedKindOf(draft, saved) : draft.type,
             number,
           }),
         );
@@ -175,6 +176,10 @@ export function useSaveFlow({
     busy: flight.busy,
     /** The backend's refusal of the last save, until the draft changes. */
     refusal: shown,
+    /** Forgets the refusal: the day it named was reopened, so it is old (PRD FR-21.4, plan 85). */
+    clearRefusal: () => {
+      setRefusal(null);
+    },
     /** The cash box is open when this is not null. */
     ask,
     /** The cash after the entry in the box, kept while it closes. */

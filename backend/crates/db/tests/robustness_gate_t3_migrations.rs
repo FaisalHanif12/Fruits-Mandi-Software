@@ -27,7 +27,14 @@ use mandi_db::seed;
 use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
-const LATEST: i64 = 25;
+/// The schema version of the newest migration, read from the migration list itself
+/// (`migrate::migrations()`), so it stays right after a new migration is added.
+static LATEST: std::sync::LazyLock<i64> = std::sync::LazyLock::new(|| {
+    let mut conn = Connection::open_in_memory().unwrap();
+    migrate::migrations().to_latest(&mut conn).unwrap();
+    conn.query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap()
+});
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -284,14 +291,18 @@ fn a_file_of_version_4_with_posted_entries_goes_through_every_migration_with_eve
     let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
     assert_eq!(
         (outcome.from, outcome.to),
-        (4, usize::try_from(LATEST).unwrap())
+        (4, usize::try_from(*LATEST).unwrap())
     );
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
-    assert_eq!(user_version(&conn), LATEST);
+    assert_eq!(user_version(&conn), *LATEST);
 
     let after = untouchable(&conn);
     for ((label, was), (_, now)) in before.iter().zip(after.iter()) {
-        assert_eq!(was, now, "{label} moved in the upgrade from 4 to {LATEST}");
+        assert_eq!(
+            was, now,
+            "{label} moved in the upgrade from 4 to {}",
+            *LATEST
+        );
     }
     assert_eq!(
         rows(
@@ -337,8 +348,8 @@ fn a_file_of_version_4_with_posted_entries_goes_through_every_migration_with_eve
     assert_eq!(
         (again.from, again.to),
         (
-            usize::try_from(LATEST).unwrap(),
-            usize::try_from(LATEST).unwrap()
+            usize::try_from(*LATEST).unwrap(),
+            usize::try_from(*LATEST).unwrap()
         )
     );
     assert!(again.copy.is_none());
@@ -384,11 +395,11 @@ fn an_empty_file_of_version_1_goes_to_the_latest_and_a_file_from_the_future_is_r
     let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
     assert_eq!(
         (outcome.from, outcome.to),
-        (1, usize::try_from(LATEST).unwrap())
+        (1, usize::try_from(*LATEST).unwrap())
     );
     mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
     // A file made by a newer app: refused, and not a byte of it changes.
-    conn.pragma_update(None, "user_version", LATEST + 1)
+    conn.pragma_update(None, "user_version", *LATEST + 1)
         .unwrap();
     drop(conn);
     let before = std::fs::read(&path).unwrap();

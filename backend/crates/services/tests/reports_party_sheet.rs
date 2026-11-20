@@ -898,6 +898,7 @@ fn an_advance_given_to_a_seller_is_not_a_payment() {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

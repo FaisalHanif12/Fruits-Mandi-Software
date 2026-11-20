@@ -1,10 +1,11 @@
-//! Plan 54 S1 and S5, plan 55 Section 3: the provider is asked for the fastest Azure server, a try
-//! of a call waits 12 seconds and is tried once more, and a question whose last call fails late
-//! ends with what was read (`time_limit`), never with nothing.
+//! Plan 54 S1 and S5, plan 55 Section 3, plan 82: the provider is asked for the fastest Azure
+//! server, a try of a call waits 20 seconds and is tried once more, and a question whose last call
+//! fails late ends with what was read (`time_limit`), never with nothing.
 //!
 //! The limits are checked on the wait the app gives each call (the recorded client keeps it) and on
-//! the reply, so no test waits for real. The real-time tests of the 20 and 25 second limits are
-//! robustness's (`robustness_slow_line.rs`).
+//! the reply, so no test waits for real. The real-time tests of the question limits are
+//! robustness's (`robustness_slow_line.rs`); the slow model on a fake clock is in
+//! `slow_model_clock.rs`.
 #![cfg(test)]
 
 #[path = "../../services/tests/common/mod.rs"]
@@ -99,17 +100,17 @@ fn every_request_asks_the_provider_for_the_fastest_azure_server() {
 }
 
 #[test]
-fn the_first_try_waits_twelve_seconds_and_the_one_retry_has_what_is_left() {
+fn the_first_try_waits_twenty_seconds_and_the_one_retry_has_what_is_left() {
     let client =
         RecordedClient::with_results(vec![fail(FailureKind::Timeout), fail(FailureKind::Timeout)]);
     let (h, reply) = ask(&client);
     let waits = client.waits();
     assert_eq!(waits.len(), 2, "one try and one retry, no more");
-    assert_eq!(waits[0], Duration::from_secs(12));
-    // The retry has the rest of the 25 seconds: more than the first try's share is not possible,
-    // and at least 20 seconds of it are left when the first try failed at once.
-    assert!(waits[1] <= Duration::from_secs(25), "{waits:?}");
-    assert!(waits[1] >= Duration::from_secs(20), "{waits:?}");
+    assert_eq!(waits[0], Duration::from_secs(20));
+    // The retry has the rest of the 45 seconds: more than the question's share is not possible,
+    // and at least 40 seconds of it are left when the first try failed at once.
+    assert!(waits[1] <= Duration::from_secs(45), "{waits:?}");
+    assert!(waits[1] >= Duration::from_secs(40), "{waits:?}");
     // Nothing was read: it ends as the failure it is.
     assert_eq!(reply.outcome, AskOutcome::Error, "{reply:#?}");
     assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));

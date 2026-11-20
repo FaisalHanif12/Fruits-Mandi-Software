@@ -171,7 +171,9 @@ export function createBooks(options: BooksOptions = {}) {
     const errors: FieldError[] = [];
     const warnings: FieldError[] = [];
     if (decimals) errors.push({ code: 'ERR_DECIMALS_NOT_ALLOWED', field: 'amount', values: {} });
-    if (entry.type === 'payment' && party?.type === 'buyer' && entry.reason.trim() === '') {
+    // Money given to a buyer, by a payment or by a پیشگی, is cash lent and needs a reason (plan 88,
+    // PRD FR-15.11).
+    if (entry.type !== 'receipt' && party?.type === 'buyer' && (entry.reason ?? '').trim() === '') {
       errors.push({ code: 'ERR_PAYMENT_TO_BUYER_NEEDS_REASON', field: 'reason', values: {} });
     }
     const buyer = party?.type === 'buyer';
@@ -202,7 +204,7 @@ export function createBooks(options: BooksOptions = {}) {
     const change = entry.type === 'receipt' ? amount : -amount;
     const current = buyer ? balance(due, 'dr') : seller ? balance(payable, 'cr') : ZERO;
     const after = buyer
-      ? entry.type === 'payment'
+      ? entry.type !== 'receipt'
         ? balance(due + amount, 'dr')
         : balance(
             Math.max(due - amount, 0),
@@ -254,19 +256,37 @@ export function createBooks(options: BooksOptions = {}) {
         one.open -= used;
         left -= used;
       }
+    } else if (built.type === 'advance' && partyOf(id)?.type === 'buyer') {
+      // An advance to a buyer is cash lent: one more bill of his, and no advance of a seller.
+      store.bills.set(id, [
+        ...openBillsOf(id),
+        {
+          lineId: 900 + store.rows.length,
+          date: isoOf(input.date),
+          number: 1,
+          amount,
+          open: amount,
+        },
+      ]);
+      store.saved.push({ seller: id, amount: input.amount });
     } else if (built.type === 'payment') {
       store.payable.set(id, Math.max((store.payable.get(id) ?? 0) - amount, 0));
     } else {
       store.advances.set(id, (store.advances.get(id) ?? 0) + amount);
       store.saved.push({ seller: id, amount: input.amount });
     }
-    counters[built.type] += 1;
-    const number = counters[built.type];
+    // As the backend (plan 88): an advance to a buyer is saved as cash lent, a payment voucher, so it
+    // has a number of the ادائیگی series.
+    const kind: ScreenType =
+      built.type === 'advance' && partyOf(id)?.type === 'buyer' ? 'payment' : built.type;
+    counters[kind] += 1;
+    const number = counters[kind];
     const voucherId = 500 + store.rows.length + 1;
     store.rows.push({
       id: voucherId,
-      voucher_type: built.type,
+      voucher_type: kind,
       number,
+      ...(partyOf(id) === undefined ? {} : { account_type: partyOf(id)?.type ?? 'other' }),
       entry_date: isoOf(input.date),
       account: refOf(id),
       amount_paisa: money(amount),
@@ -280,7 +300,7 @@ export function createBooks(options: BooksOptions = {}) {
       status: 'saved',
       version: 1,
       collector_staff_id: built.type === 'receipt' ? built.input.collector_staff_id : null,
-      reason: built.type === 'payment' ? built.input.reason : '',
+      reason: built.type === 'receipt' ? '' : (built.input.reason ?? ''),
       cancel_reason: '',
       entry_id: 1000 + voucherId,
       ...OPEN_ENTRY,
@@ -288,7 +308,7 @@ export function createBooks(options: BooksOptions = {}) {
     const isBuyer = partyOf(id)?.type === 'buyer';
     return {
       voucher_id: voucherId,
-      voucher_type: built.type,
+      voucher_type: kind,
       number,
       entry_id: 1000 + voucherId,
       new_balance: isBuyer ? balance(dueOf(id), 'dr') : balance(store.payable.get(id) ?? 0, 'cr'),
@@ -344,7 +364,13 @@ export function createBooks(options: BooksOptions = {}) {
     const rows = store.rows
       .filter(
         (row) =>
-          (input.voucher_type === null || row.voucher_type === input.voucher_type) &&
+          (input.voucher_type === null ||
+            row.voucher_type === input.voucher_type ||
+            // The پیشگی list also holds the cash lent to a buyer (plan 88, PRD FR-15.11).
+            (input.advance_view === true &&
+              input.voucher_type === 'advance' &&
+              row.voucher_type === 'payment' &&
+              row.account_type === 'buyer')) &&
           (input.from === '' || row.entry_date >= isoOf(input.from)) &&
           (input.to === '' || row.entry_date <= isoOf(input.to)) &&
           (input.account_id === null || row.account?.id === input.account_id),
@@ -504,12 +530,16 @@ export function collectionList(rows: 'two' | 'none' = 'two') {
 
 /** A saved voucher as the backend lists it: a receipt of 10,000 from Akram on today, still open. */
 export function voucherRow(overrides: Partial<VoucherRow> = {}): VoucherRow {
+  const account = 'account' in overrides ? overrides.account : refOf(21);
+  const party = account === null || account === undefined ? undefined : partyOf(account.id);
   return {
     id: 501,
     voucher_type: 'receipt',
     number: 1,
     entry_date: TODAY_ISO,
     account: refOf(21),
+    // What kind of account the voucher is with, as the backend sends it for every row with an account.
+    ...(party === undefined ? {} : { account_type: party.type }),
     amount_paisa: money(10000),
     mode: 'cash',
     bank_account_id: null,

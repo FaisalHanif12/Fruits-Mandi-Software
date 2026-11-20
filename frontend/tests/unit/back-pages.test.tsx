@@ -28,6 +28,7 @@ vi.mock('../../src/features/dashboard/api');
 /** A page of each kind: the dashboard's drill pages, the partners area, a report, a new record, a form. */
 const CHILD_PAGES: readonly (readonly [string, string])[] = [
   ['/commission', '/'],
+  ['/sales', '/'],
   ['/dues', '/'],
   // The five tile pages of plan 79 (FR-9.1 v1.44, FR-7.92): they have a Back fallback parent too.
   ['/dues/sellers', '/'],

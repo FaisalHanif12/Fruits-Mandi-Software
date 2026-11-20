@@ -556,7 +556,7 @@ mod tests {
                 .wrapping_add(1_442_695_040_888_963_407);
             i64::try_from((seed >> 33) % n).unwrap_or(0)
         };
-        let mut insert = |conn: &Connection, row: [Value; 13]| {
+        let insert = |conn: &Connection, row: [Value; 13]| {
             conn.execute(
                 "INSERT INTO analytics_facts (entry_date, sign, item_id, seller_account_id,
                      buyer_account_id, chukta_person_key, purchase_id, qty, seller_amount_paisa,

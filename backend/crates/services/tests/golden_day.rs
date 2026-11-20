@@ -135,6 +135,7 @@ pub fn opening_position() -> Position {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();
@@ -296,6 +297,7 @@ fn e2e_19_the_opening_position() {
             to: String::new(),
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap()
@@ -322,6 +324,7 @@ fn e2e_19_the_opening_position() {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap_err();
@@ -1541,3 +1544,7 @@ mod plan77_reads;
 
 #[path = "golden_day/linked_money.rs"]
 mod linked_money;
+
+// Plan 88: a پیشگی to a buyer is saved as cash lent to him (E2E-32 numbers).
+#[path = "golden_day/plan88_buyer_peshgi.rs"]
+mod plan88_buyer_peshgi;

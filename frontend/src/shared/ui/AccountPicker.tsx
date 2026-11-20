@@ -41,7 +41,7 @@ import { QuickAddAccount } from './QuickAddAccount';
 import { QuickAddChukta } from './QuickAddChukta';
 
 interface AccountPickerProps extends FieldControlProps {
-  /** Which accounts the field takes: sellers, buyers, or every account. */
+  /** Which accounts the field takes: sellers, buyers, a seller or a buyer (`seller_buyer`), or every account. */
   scope: AccountScope;
   value: PickerValue | null;
   /** The account chosen, or null when the field was emptied. */
@@ -122,6 +122,8 @@ const ADD: Record<AccountScope, { noun: string; kind: AddRecordKind | null }> = 
   lot_seller: { noun: 'seller', kind: 'seller' },
   buyer: { noun: 'buyer', kind: 'buyer' },
   any: { noun: 'account', kind: 'any' },
+  // A seller or a buyer (the پیشگی field): the short form lets the user choose which.
+  seller_buyer: { noun: 'account', kind: 'any' },
   // The accounts of one control have their own forms (money lent, separate khata).
   control: { noun: 'account', kind: null },
 };
@@ -132,6 +134,7 @@ const UNKNOWN_ID: Record<AccountScope, string> = {
   lot_seller: 'accountpicker-unknown-seller',
   buyer: 'accountpicker-unknown-buyer',
   any: 'accountpicker-unknown-any',
+  seller_buyer: 'accountpicker-unknown-any',
   control: 'accountpicker-unknown-any',
 };
 
@@ -339,7 +342,7 @@ export function AccountPicker({
         }
         renderEnd={(hit) => (
           <span className="flex items-baseline gap-3">
-            {scope === 'any' ? (
+            {scope === 'any' || scope === 'seller_buyer' ? (
               <Localized id={`accounts-type-${hit.account_type}`}>
                 <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
               </Localized>

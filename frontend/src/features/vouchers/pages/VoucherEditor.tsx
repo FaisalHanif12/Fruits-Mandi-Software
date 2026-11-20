@@ -42,7 +42,14 @@ import {
   type SegmentedOption,
   InfoHint,
 } from '../../../shared/ui';
-import { useEditReview, useEntryMarks, useFixDayFlow, useFixStore } from '../../../shared/edit';
+import {
+  ClosedDayEntryNotice,
+  finishFixSession,
+  useEditReview,
+  useEntryMarks,
+  useFixDayFlow,
+  useFixStore,
+} from '../../../shared/edit';
 import { vouchersEditPreview } from '../api';
 import { CancelVoucherDialog } from '../components/CancelVoucherDialog';
 import { AdvanceHistory } from '../components/AdvanceHistory';
@@ -63,6 +70,7 @@ import {
   listed,
   newDraft,
   nextDraft,
+  savedKindOf,
   type ListedOutcome,
   type ListedVoucher,
 } from '../draft';
@@ -70,10 +78,10 @@ import { useRowPreviews, useVoucherPreview } from '../hooks';
 import { voucherNumberText } from '../list-columns';
 import { VoucherPrintBox, type VoucherPrintTarget } from '../print/VoucherPrintBox';
 import { usePrintVoucherAfterSave } from '../print/usePrintVoucherAfterSave';
-import { SCREEN_TYPES, type ScreenType } from '../screen-type';
+import { SCREEN_TYPES, screenTypeOf, type ScreenType } from '../screen-type';
 import { useSaveFlow } from '../useSaveFlow';
 import { useSaveList } from '../useSaveList';
-import type { VoucherDraft, VoucherRow, VoucherSaved } from '../types';
+import type { VoucherDraft, VoucherRow, VoucherSaved, VoucherType } from '../types';
 
 /** The fields the form shows next to their inputs, so the notice never tells a problem twice. */
 const FIELD_PATHS = [
@@ -124,8 +132,10 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
   const printAfterSave = usePrintVoucherAfterSave();
   const initialText = useMemo(() => JSON.stringify(initial), [initial]);
 
-  const numberText = (type: ScreenType, number: number) =>
-    l10n.getString(`vouchers-number-${type}`, { number: String(number) });
+  // The number in the series of the voucher the backend saved: an advance to a buyer is saved as cash
+  // lent, a payment voucher, so it has a number of the ادائیگی series (PRD FR-15.11, plan 88).
+  const numberText = (type: VoucherType, number: number) =>
+    voucherNumberText({ voucher_type: type, number }, (id, vars) => l10n.getString(id, vars));
 
   // A new voucher follows the type in the address (the side menu, Alt+V, Alt+A, Alt+P). The draft
   // is adjusted while drawing, the way React advises for a value that follows a prop.
@@ -164,9 +174,11 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
   const afterSave = (saved: VoucherSaved, andNext: boolean) => {
     setPrintCandidate({
       id: saved.voucher_id,
-      numberText: numberText(draft.type, saved.number),
+      numberText: numberText(saved.voucher_type, saved.number),
     });
     if (andNext) printAfterSave(saved.voucher_id);
+    // A new voucher saved through a reopened day: the days close again, in order (PRD FR-21.4, plan 85).
+    if (editing === null) void finishFixSession(l10n);
     if (editing !== null) {
       // The screen goes back to a new voucher once it has drawn as "nothing to save": the way out
       // is then not asked about (see the effect below).
@@ -271,7 +283,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
     if (outcome.kind === 'saved') {
       setPrintCandidate({
         id: outcome.saved.voucher_id,
-        numberText: numberText(outcome.draft.type, outcome.saved.number),
+        numberText: numberText(outcome.saved.voucher_type, outcome.saved.number),
       });
     }
   };
@@ -299,13 +311,14 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
     const outcomes = await listRun.run(todo, applyOutcome);
     const savedOnes = outcomes.filter((outcome) => outcome.kind === 'saved');
     const refused = outcomes.filter((outcome) => outcome.kind === 'refused').length;
+    if (savedOnes.length > 0) void finishFixSession(l10n);
     const [only] = savedOnes;
     if (savedOnes.length === 1 && only?.kind === 'saved') {
       showToast(
         'success',
         l10n.getString('vouchers-saved', {
-          kind: only.draft.type,
-          number: numberText(only.draft.type, only.saved.number),
+          kind: savedKindOf(only.draft, only.saved),
+          number: numberText(only.saved.voucher_type, only.saved.number),
         }),
       );
     } else if (savedOnes.length > 1) {
@@ -348,7 +361,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
   const requestPrint = () => {
     const target =
       editing !== null
-        ? { id: editing.id, numberText: numberText(draft.type, editing.number) }
+        ? { id: editing.id, numberText: numberText(editing.voucher_type, editing.number) }
         : printCandidate;
     if (target === null) {
       showToast('error', l10n.getString('vouchers-print-save-first'));
@@ -478,6 +491,14 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
           </div>
         </>
       )}
+      {editing === null ? (
+        // A new voucher on a closed day: the notice with "Reopen the day and save" (PRD FR-21.4, plan 85).
+        <ClosedDayEntryNotice
+          errors={error?.errors}
+          date={draft.date}
+          onReopened={flow.clearRefusal}
+        />
+      ) : null}
       <form
         ref={formRef}
         {...navigation}
@@ -550,8 +571,10 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
           }
         }}
         onEdit={(row) => {
+          // A buyer's cash lent in the پیشگی list is a payment voucher: it opens on the ادائیگی tab.
+          const rowType = screenTypeOf(row.voucher_type) ?? draft.type;
           const open = () => {
-            void navigate({ to: '/bikri/voucher', search: { type: draft.type, id: row.id } });
+            void navigate({ to: '/bikri/voucher', search: { type: rowType, id: row.id } });
           };
           // An entry of a closed day: the days reopen first, and close again after the save.
           if (row.needs_reopen) {
@@ -559,7 +582,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
               date: row.entry_date,
               ownerHref: router.buildLocation({
                 to: '/bikri/voucher',
-                search: { type: draft.type, id: row.id },
+                search: { type: rowType, id: row.id },
               }).href,
               then: open,
             });

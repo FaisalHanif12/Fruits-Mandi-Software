@@ -164,6 +164,7 @@ fn is_total_line(what: What) -> bool {
             | What::CashSales
             | What::CreditSales
             | What::NetSale
+            | What::Bills
             | What::FruitValue
             | What::CapitalIn
             | What::CapitalOut
@@ -334,6 +335,178 @@ pub(super) fn net_sale_plan(u: &Understanding) -> Option<Planned> {
                 what: What::NetSale,
             }],
         ),
+    })
+}
+
+/// A figure for EACH buyer or EACH seller ("is mahine har gahak ne alag alag kitni bikri li aur kitni commission
+/// di"): view C (buyers) or view B (sellers) over the period, which holds one row for each of them with the
+/// sale and every commission column. The reads only: one total would be no answer to it, so no instant line is
+/// given and the model writes the rows from the view (plan 82, D03).
+///
+/// `None` unless the question is sure, asks sale, commission or Laga only, names no party, item or record,
+/// asks a breakdown and names one role (buyers or sellers).
+pub(super) fn role_breakdown_plan(u: &Understanding) -> Option<Planned> {
+    if !u.sure
+        || !matches!(u.intent.value, Intent::Figure | Intent::List)
+        || u.figures.value.is_empty()
+        || !u.figures.value.iter().all(|k| {
+            matches!(
+                k,
+                FigureKind::Sale | FigureKind::Commission | FigureKind::Laga
+            )
+        })
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.item_group.is_some()
+        || u.other_measure != Measure::Breakdown
+        || u.compare
+        || u.scoped
+        || u.periods.len() > 1
+        || u.periods.first().is_some_and(|p| p.future)
+        || u.doubts.iter().any(|d| NOT_CARRIED.contains(d))
+    {
+        return None;
+    }
+    let view = match (u.buyer_word, u.seller_word) {
+        (true, false) => "C",
+        (false, true) => "B",
+        _ => return None,
+    };
+    let period = u.periods.first();
+    let (from, to) = dates(period);
+    let mut reads = Vec::new();
+    if let Some(p) = period {
+        reads.push(period_read(p)?);
+    }
+    reads.push(analytics(
+        view,
+        An {
+            from,
+            to,
+            ..An::default()
+        },
+    ));
+    Some(Planned {
+        reads,
+        lines: Vec::new(),
+    })
+}
+
+/// The net sale or the buyers' bills of the shop or of one party (plan 82): the column the question named
+/// by its own word, never the gross.
+///
+/// - Net sale, the shop: R6 totals `net` (the sum of the lot nets, after commission and every deduction).
+///   A seller: his row of view B, `net`.
+/// - Bills, all buyers: R2 totals `buyer_total`. One buyer: R2 with him, `buyer_total`.
+///
+/// `None` unless the question is sure, a figure, one period at most, and the party (if any) is found in the
+/// role that has the figure.
+pub(super) fn measure_plan(u: &Understanding) -> Option<Planned> {
+    let measure = u.sale_measure?;
+    if !u.sure
+        || u.intent.value != Intent::Figure
+        || u.compare
+        || u.scoped
+        || u.unexplained
+        || u.periods.len() > 1
+        || u.doubts.iter().any(|d| NOT_CARRIED.contains(d))
+    {
+        return None;
+    }
+    let period = u.periods.first();
+    if period.is_some_and(|p| p.future) {
+        return None;
+    }
+    let (from, to) = dates(period);
+    let party = match u.parties.as_slice() {
+        [] => None,
+        [one] => match &one.outcome {
+            Outcome::Found(hit) => Some((one.text.as_str(), hit)),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let mut plan = Plan::default();
+    let line = match (measure, party) {
+        (crate::understand::SaleMeasure::Net, None) => {
+            plan.read(report(
+                "R6",
+                Rep {
+                    from,
+                    to,
+                    ..Rep::default()
+                },
+            ));
+            Line {
+                who: Who::Shop,
+                what: What::NetSale,
+            }
+        }
+        (crate::understand::SaleMeasure::Net, Some((text, hit)))
+            if hit.role == PartyRole::Seller =>
+        {
+            plan.find(text, "seller");
+            plan.read(analytics(
+                "B",
+                An {
+                    from,
+                    to,
+                    seller: Some(hit.key.clone()),
+                    ..An::default()
+                },
+            ));
+            Line {
+                who: Who::Seller(hit.key.clone()),
+                what: What::NetSale,
+            }
+        }
+        (crate::understand::SaleMeasure::Bills, None) => {
+            plan.read(report(
+                "R2",
+                Rep {
+                    from,
+                    to,
+                    ..Rep::default()
+                },
+            ));
+            Line {
+                who: Who::Shop,
+                what: What::Bills,
+            }
+        }
+        (crate::understand::SaleMeasure::Bills, Some((text, hit)))
+            if hit.role == PartyRole::Buyer =>
+        {
+            plan.find(text, "buyer");
+            plan.read(report(
+                "R2",
+                Rep {
+                    party: Some(hit.key.clone()),
+                    from,
+                    to,
+                    ..Rep::default()
+                },
+            ));
+            Line {
+                who: Who::Buyer(hit.key.clone()),
+                what: What::Bills,
+            }
+        }
+        _ => return None,
+    };
+    plan.dated = period.is_some();
+    let mut reads = Vec::new();
+    if plan.dated
+        && let Some(p) = period
+    {
+        reads.push(period_read(p)?);
+    }
+    reads.extend(plan.finds);
+    reads.extend(plan.reads);
+    Some(Planned {
+        reads,
+        lines: keep_lines(u, vec![line]),
     })
 }
 

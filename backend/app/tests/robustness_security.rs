@@ -772,6 +772,13 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "shares": [{ "partner_id": 1, "share": "100" }] } }),
             true,
         ),
+        // Plan 87 (PRD FR-16.14 v1.50): moves the opening capital into روکڑ. Needs the Owner and the
+        // partner code; the amount and the date come from the books, never from the input.
+        (
+            "partners_place_opening_capital",
+            json!({ "input": { "partner_ids": [1], "reason": "x", "sign": "adnan" } }),
+            true,
+        ),
         ("partners_overview", json!({}), true),
         (
             "cashbook_get",
@@ -1354,6 +1361,22 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "month": null, "language": "ur" } }),
             true,
         ),
+        // Plan 83 (PRD FR-9.9): the sales page of the tile آج کی بکری. All four need the Owner.
+        (
+            "dashboard_sales_period",
+            json!({ "input": { "period": null } }),
+            true,
+        ),
+        (
+            "dashboard_sales_day",
+            json!({ "input": { "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "dashboard_sales_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
         ("dashboard_buyer_dues", json!({ "input": {} }), true),
         ("dashboard_seller_dues", json!({ "input": {} }), true),
         (
@@ -1618,6 +1641,9 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         ("assistant_test", json!({}), true),
+        // Plan 82 (NFR-SEC-9 v1.22): the warm-up call needs the Owner like every other assistant
+        // command, and a refused one writes nothing (it is no question: no log row, no count).
+        ("assistant_warm", json!({}), true),
         (
             "assistant_log_list",
             json!({ "input": { "offset": 0, "limit": 100 } }),
@@ -1633,6 +1659,18 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         ("cashbook_capital_where", json!({}), true),
+        // Plan 87 (PRD FR-16.14 v1.50): the print of the capital card. Both need the Owner and the
+        // partner code.
+        (
+            "cashbook_capital_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "cashbook_capital_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
         (
             "dashboard_buyer_dues_print",
             json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
@@ -1671,6 +1709,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "dashboard_commission_print",
             json!({ "input": { "sheet": { "month": null, "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "dashboard_sales_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
             true,
         ),
         (
@@ -2697,6 +2740,56 @@ fn the_window_bounds_of_a_partner_list_are_refused_while_the_section_is_locked()
             "windows_bounds answered for {source} while the partner section was locked"
         );
     }
+}
+
+#[test]
+fn placing_the_opening_capital_needs_the_partner_code_and_writes_nothing_without_it() {
+    // Plan 87, S8: `partners_place_opening_capital` is a partner command. While the section is locked
+    // it is refused with ERR_PARTNER_LOCKED, with every hostile partner list, and the whole file stays
+    // as it was (no entry, no audit row, no reopened day).
+    let h = Harness::new();
+    partners_and_code(&h);
+    h.ok("partners_code_lock", json!({}));
+    let before = h.fingerprint();
+    for ids in [
+        json!([1]),
+        json!([1, 2, 3]),
+        json!([]),
+        json!([999_999]),
+        json!([-1, 0]),
+    ] {
+        assert_eq!(
+            h.code(
+                "partners_place_opening_capital",
+                json!({ "input": { "partner_ids": ids.clone(), "reason": "x", "sign": "adnan" } })
+            ),
+            "ERR_PARTNER_LOCKED",
+            "partners_place_opening_capital answered for {ids} while the partner section was locked"
+        );
+    }
+    // The capital card and its print are partner history too (plan 87, FR-16.14): refused while locked.
+    for (command, input) in [
+        ("cashbook_capital_where", json!({})),
+        (
+            "cashbook_capital_print_data",
+            json!({ "input": { "language": "ur" } }),
+        ),
+        (
+            "cashbook_capital_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+        ),
+    ] {
+        assert_eq!(
+            h.code(command, input),
+            "ERR_PARTNER_LOCKED",
+            "{command} answered while the partner section was locked"
+        );
+    }
+    assert_eq!(
+        h.fingerprint(),
+        before,
+        "a refused placing of the opening capital, or of its print, wrote something"
+    );
 }
 
 #[test]

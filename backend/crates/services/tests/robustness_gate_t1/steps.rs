@@ -643,6 +643,7 @@ fn run(u: &mut U, step: &Step) -> R {
                     expected_goods: String::new(),
                     narration: String::new(),
                     confirm_cash_below_zero: true,
+                    reason: None,
                 },
             )?;
             Ok(true)
@@ -1578,6 +1579,7 @@ fn voucher_edit(u: &mut U, p: u8, amount: u16) -> R {
             expected_goods: String::new(),
             narration: String::new(),
             confirm_cash_below_zero: true,
+            reason: None,
         }),
         "shop_expense" => VoucherEntry::ShopExpense(ShopExpenseInput {
             date,
@@ -2487,7 +2489,7 @@ fn garden_relief(u: &mut U, cut: u16) -> R {
 /// less the refunds is allowed, one rupee more is refused (PRD FR-12.51, plan 80 R4-3).
 fn garden_raise(u: &mut U, by: u16) -> R {
     let (rent, installments, refunds) = garden_sums(u, u.garden);
-    let new_rent = if refunds > 0 && by % 2 == 0 {
+    let new_rent = if refunds > 0 && by.is_multiple_of(2) {
         (installments - refunds) / 100 + i64::from(by % 3)
     } else {
         rent / 100 + 1 + i64::from(by) % 20_000

@@ -180,7 +180,9 @@ describe('the ledger of اکرم in Urdu (R13)', () => {
   it('has the closing balance above the table and the totals under it', () => {
     const { root } = show(data);
     const summary = textOf(root.querySelector('.print-summary-lines'));
-    expect(summary).toContain(message('ur', 'report-opening-balance'));
+    // The backend's R13 print now says "the balance at the start of the period" when the period starts
+    // after the account's opening (PRD FR-19.16); the opening itself is a line of the ledger.
+    expect(summary).toContain(message('ur', 'report-period-start-balance'));
     expect(summary).toContain(message('ur', 'report-closing-balance'));
     const totals = Array.from(must(root.querySelector('tfoot tr')).querySelectorAll('td')).map(
       textOf,

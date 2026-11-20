@@ -473,7 +473,7 @@ fn postings_chunk(
     }
 
     let differences = compare_postings(&PostingInputs {
-        entries: &entries,
+        entries,
         buyers: &buyers,
         sales: &sales,
         lots: &lots,

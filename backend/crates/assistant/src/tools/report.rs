@@ -223,11 +223,14 @@ fn build_filters(
     env: &Env<'_>,
     state: &State,
     input: &Input,
+    id: ReportId,
     takes: &[FilterKind],
 ) -> Result<Built, ToolError> {
     let mut filters = ReportFilters::default();
     let mut source = SourceReportFilters::default();
     let mut party_record = None;
+    // What the tool repaired or left out, in words, given back as `note` (plan 82).
+    let mut notes: Vec<String> = Vec::new();
     let date = |field: &str, text: &Option<String>| -> Result<Option<String>, ToolError> {
         // A period field with no date (the `from` of `up_to_now`) leaves the date open.
         Ok(text
@@ -341,6 +344,22 @@ fn build_filters(
             number,
         });
     }
+    // R29 is the shop's expense report by head; "shop expenses only" is what it already shows, so
+    // the voucher kind the model added is left out, and it is told (plan 82). Any other voucher
+    // kind on a report that has no such filter stays an error: the intent is not certain.
+    let voucher_type = match input.voucher_type.as_deref() {
+        Some("shop_expense")
+            if id == ReportId::R29 && !takes.contains(&FilterKind::VoucherType) =>
+        {
+            notes.push(
+                "R29 reads the shop expense heads and has no voucher_type filter, so it was left \
+                 out: the rows are the shop's expenses already"
+                    .to_owned(),
+            );
+            None
+        }
+        other => other.map(str::to_owned),
+    };
     report_extra::apply(
         env,
         state,
@@ -348,7 +367,7 @@ fn build_filters(
             seller: input.seller.as_deref(),
             zamindar: input.zamindar.as_deref(),
             status: input.status.as_deref(),
-            voucher_type: input.voucher_type.as_deref(),
+            voucher_type: voucher_type.as_deref(),
             layout: input.layout.as_deref(),
             item_group: input.item_group.as_deref(),
             grade: input.grade.as_deref(),
@@ -357,6 +376,7 @@ fn build_filters(
         takes,
         &mut filters,
         &mut source,
+        &mut notes,
     )?;
     if let Some(word) = &input.group_by {
         takes_or(takes, FilterKind::GroupBy, "group_by")?;
@@ -370,11 +390,12 @@ fn build_filters(
     }
     // The lot the Owner picked narrowed this report (plan 71 L9): the model is told, so it says
     // the figures are of that lot.
-    let notes = source
-        .lot
-        .iter()
-        .map(|lot| format!("only the lot the Owner chose is read: {}", lot.name_en))
-        .collect();
+    notes.extend(
+        source
+            .lot
+            .iter()
+            .map(|lot| format!("only the lot the Owner chose is read: {}", lot.name_en)),
+    );
     Ok(Built {
         filters,
         source,
@@ -818,7 +839,7 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
     {
         keys.truncate(1);
     }
-    let mut built = build_filters(env, state, &parsed, &entry.filters)?;
+    let mut built = build_filters(env, state, &parsed, id, &entry.filters)?;
     if entry.party_required && id != ReportId::R1 && id != ReportId::R31 && built.party.is_none() {
         return Err(bad("ERR_REQUIRED", "party", "this report is one party's").into());
     }

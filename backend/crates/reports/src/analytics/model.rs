@@ -123,6 +123,59 @@ pub enum AnalyticsSide {
     Buyer,
 }
 
+/// What a view counts (PRD FR-18.10, plan 84, the "ناپ" choice): sales, the buyers' bills, the
+/// quantity, or one of the commissions. It decides the series of a chart, the figure in each cell of
+/// the matrices D, E and L with their row and column totals, and the order of view H's rankings.
+/// The tables of A, B, C and G keep every column whatever it is.
+///
+/// Every figure is summed from the stored sale facts (FR-18.6). The side filter narrows the
+/// commission measures only: seller commission counts when the side counts the seller, buyer
+/// commission and لاگا when it counts the buyer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AnalyticsMeasure {
+    /// خام بکری: the seller amounts of the sale lines. Money.
+    Gross,
+    /// خریدار کی رقم: what the buyers were charged, the value plus the buyer commission plus
+    /// لاگا (C5). Money.
+    BuyerTotal,
+    /// نگ: the quantity sold. A count, never money.
+    Qty,
+    /// کل کمیشن: seller commission + buyer commission + لاگا, or the part on the side asked for.
+    /// Money.
+    TotalComm,
+    /// بیوپاری کمیشن. Money.
+    SellerComm,
+    /// گاہک کمیشن. Money.
+    BuyerComm,
+    /// لاگا. Money.
+    Laga,
+}
+
+impl AnalyticsMeasure {
+    /// The key of the column that holds this measure in the matrices and the rankings, and the key
+    /// of the series of a chart of it: the same as the key of the table column of the same name.
+    pub const fn key(self) -> &'static str {
+        match self {
+            AnalyticsMeasure::Gross => "gross",
+            AnalyticsMeasure::BuyerTotal => "buyer_total",
+            AnalyticsMeasure::Qty => "qty",
+            AnalyticsMeasure::TotalComm => "total_comm",
+            AnalyticsMeasure::SellerComm => "seller_comm",
+            AnalyticsMeasure::BuyerComm => "buyer_comm",
+            AnalyticsMeasure::Laga => "laga",
+        }
+    }
+
+    /// What a value of this measure is: a count for the quantity, money for the rest.
+    pub const fn kind(self) -> ColumnKind {
+        match self {
+            AnalyticsMeasure::Qty => ColumnKind::Number,
+            _ => ColumnKind::Money,
+        }
+    }
+}
+
 /// The comparison of PRD 18.1.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -232,6 +285,9 @@ pub enum AnalyticsFilterKind {
     Grade,
     /// Which part of view M: the shop's kharch or the partners' (plan 77).
     ExpensePart,
+    /// What the view counts: sales, the buyers' bills, the quantity or a commission (views A, B, C,
+    /// D, E, G, H and L; PRD FR-18.10, plan 84). Listed by the screens' catalogue only.
+    Measure,
 }
 
 /// One view in the catalogue.
@@ -306,6 +362,14 @@ pub struct AnalyticsFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub expense_part: Option<AnalyticsExpensePart>,
+    /// What the view counts (PRD FR-18.10, plan 84): views A, B, C, D, E, G, H and L; refused for the
+    /// others (`ERR_OUT_OF_RANGE` on `filters.measure`). Left out means the classic view: the total
+    /// commission in D, E, H and L, and in A and B; the purchase value in C; the five series of G
+    /// (what the assistant and every saved view of before plan 84 read). The screens always send one.
+    /// Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub measure: Option<AnalyticsMeasure>,
     /// Set by the app, never by the screen: the partner section is locked, so the partner columns
     /// of this view are left out (PRD FR-17.11). It is not read from JSON and not sent.
     #[serde(skip)]
@@ -335,6 +399,7 @@ impl Default for AnalyticsFilters {
             goods: AnalyticsGoods::All,
             trip_view: None,
             expense_part: None,
+            measure: None,
             hide_partners: false,
         }
     }
@@ -391,6 +456,11 @@ pub struct AnalyticsResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub expense_part: Option<AnalyticsExpensePart>,
+    /// What the view counted, as asked (PRD FR-18.10). The print header and the Excel facts name it.
+    /// Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub measure: Option<AnalyticsMeasure>,
 }
 
 /// Which lines a row or a column stands for. It is what the screen sends back to open the lines

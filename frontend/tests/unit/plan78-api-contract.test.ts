@@ -35,6 +35,16 @@ describe('the commands of plan 78 are the ones the backend declares', () => {
       expect.arrayContaining(['bikri_goods_sources', 'bikri_goods_to_load']),
     );
     expect(declared('cashbook.rs')).toContain('cashbook_capital_where');
+    // Plan 87: the fix of the card. A command the screen calls that the backend does not have is a failed screen,
+    // so the names are read from the backend's files here.
+    expect(declared('partners.rs')).toContain('partners_place_opening_capital');
+  });
+});
+
+describe('the print commands of the capital card (plan 87)', () => {
+  it('the backend declares them, under the names the screen calls', () => {
+    expect(declared('cashbook.rs')).toContain('cashbook_capital_print_data');
+    expect(declared('report_print.rs')).toContain('cashbook_capital_print');
   });
 });
 
@@ -56,9 +66,29 @@ describe('every wrapper of plan 78 sends its command and its input', () => {
     });
   });
 
-  it('the card of the cash book takes no input', async () => {
-    await cashbookApi.cashbookCapitalWhere();
-    expect(call).toHaveBeenLastCalledWith('cashbook_capital_where');
+  it('the card of the cash book asks as of a day as typed, or as of today with no day (plan 87)', async () => {
+    await cashbookApi.cashbookCapitalWhere({});
+    expect(call).toHaveBeenLastCalledWith('cashbook_capital_where', { input: {} });
+    await cashbookApi.cashbookCapitalWhere({ as_of: '10-10-2026' });
+    expect(call).toHaveBeenLastCalledWith('cashbook_capital_where', {
+      input: { as_of: '10-10-2026' },
+    });
+  });
+
+  it('putting the opening capital into cash sends the partners, the reason and the sign as typed (plan 87)', async () => {
+    const input = { partner_ids: [1, 2], reason: 'old books', sign: 'adnan' };
+    await cashbookApi.partnersPlaceOpeningCapital(input);
+    expect(call).toHaveBeenLastCalledWith('partners_place_opening_capital', { input });
+  });
+
+  it('the print of the card sends the day, the language and the paper, and where it goes (plan 87)', async () => {
+    const sheet = { language: 'ur', paper: 'a4' } as const;
+    await cashbookApi.cashbookCapitalPrintData(sheet);
+    expect(call).toHaveBeenLastCalledWith('cashbook_capital_print_data', { input: sheet });
+    await cashbookApi.cashbookCapitalPrint({ sheet, to: 'pdf', copies: null });
+    expect(call).toHaveBeenLastCalledWith('cashbook_capital_print', {
+      input: { sheet, to: 'pdf', copies: null },
+    });
   });
 });
 

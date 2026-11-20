@@ -15,6 +15,9 @@
 //!   average is rounded to a whole day, half up. The cell is empty when an item, seller or
 //!   اڈا filter is set (a bill cannot be split by item).
 //!
+//! The table keeps every column whatever the measure is (PRD FR-18.10, plan 84); with a measure the
+//! chart is of that measure (see `chart`).
+//!
 //! Example (PRD 18.4): ارشد 30 نگ, 17,400, 1,044, 240, dues 18,684, no average; اکرم 20, 12,000,
 //! 720, 160, dues 2,880; the چکتا buyer شاہد 10, 12,000, 720, 80, dues 0, average 0 days.
 
@@ -53,6 +56,8 @@ struct Entry {
     key: BuyerKey,
     sums: Sums,
     compared: Paisa,
+    /// The sums of the compared period (the same buyer), for a chart of a measure.
+    compared_sums: Sums,
 }
 
 /// The balances of some buyer keys today: `Σ بنام − Σ جمع` of the posted lines, one query for
@@ -194,7 +199,7 @@ fn base(conn: &Connection, typed: &Typed) -> Result<Base, ReportsError> {
     let none = AnalyticsKey::default();
     let dims = ["f.buyer_account_id", "f.chukta_person_key"];
     let current = facts::groups(conn, &facts::conds(typed, run_range(typed), &none), &dims)?;
-    let mut compared: HashMap<BuyerKey, Paisa> = HashMap::new();
+    let mut compared: HashMap<BuyerKey, Sums> = HashMap::new();
     if typed.compare.is_some() {
         for group in facts::groups(
             conn,
@@ -202,7 +207,7 @@ fn base(conn: &Connection, typed: &Typed) -> Result<Base, ReportsError> {
             &dims,
         )? {
             if let Some(id) = group.int(0) {
-                compared.insert((id, group.text(1)), group.sums.buyer_value);
+                compared.insert((id, group.text(1)), group.sums);
             }
         }
     }
@@ -211,18 +216,21 @@ fn base(conn: &Connection, typed: &Typed) -> Result<Base, ReportsError> {
     for group in &current {
         let Some(id) = group.int(0) else { continue };
         let key = (id, group.text(1));
+        let compared_sums = compared.get(&key).copied().unwrap_or_default();
         entries.push(Entry {
-            compared: compared.get(&key).copied().unwrap_or(Paisa::ZERO),
+            compared: compared_sums.buyer_value,
+            compared_sums,
             key,
             sums: group.sums,
         });
     }
-    for (key, amount) in &compared {
+    for (key, sums) in &compared {
         if !entries.iter().any(|e| &e.key == key) {
             entries.push(Entry {
                 key: key.clone(),
                 sums: Sums::default(),
-                compared: *amount,
+                compared: sums.buyer_value,
+                compared_sums: *sums,
             });
         }
     }
@@ -281,62 +289,92 @@ fn base(conn: &Connection, typed: &Typed) -> Result<Base, ReportsError> {
 
     // The chart (plan 38 R4, D1): the ten buyers who bought most, and one point for the rest,
     // from every buyer of the filter. The entries are in that order now; a sort changes the
-    // table, never the chart.
-    let charts = {
-        let mut points = Vec::new();
-        let (mut rest, mut rest_count) = (Paisa::ZERO, 0_i64);
-        // A buyer who only bought in the compared period has nothing in this one.
-        for (rank, entry) in entries
-            .iter()
-            .filter(|e| e.sums.buyer_value > Paisa::ZERO)
-            .enumerate()
-        {
-            if rank < chart::TOP {
-                points.push(AnalyticsChartPoint {
+    // table, never the chart. With a measure (PRD FR-18.10) it is the ten with most of that measure,
+    // with the same figure of the compared period.
+    let charts = match typed.measure {
+        Some(measure) => {
+            let mut ranked = Vec::with_capacity(entries.len());
+            // A buyer who only bought in the compared period has nothing in this one.
+            for entry in &entries {
+                let value = entry.sums.figure(measure, typed.side)?;
+                if !value.is_positive() {
+                    continue;
+                }
+                ranked.push(chart::RankedEntry {
                     label: party_of(&entry.key)
                         .map(|party| Cell::Party { party })
                         .unwrap_or(Cell::Empty),
-                    key: Some(AnalyticsKey {
+                    key: AnalyticsKey {
                         buyer_id: Some(entry.key.0),
                         person_key: entry.key.1.clone(),
                         ..AnalyticsKey::default()
-                    }),
-                    values: vec![Cell::Money {
-                        paisa: entry.sums.buyer_value,
-                    }],
-                    is_others: false,
+                    },
+                    value,
+                    compared: if typed.compare.is_some() {
+                        Some(entry.compared_sums.figure(measure, typed.side)?)
+                    } else {
+                        None
+                    },
+                });
+            }
+            chart::ranked_chart(measure, ranked)?
+        }
+        None => {
+            let mut points = Vec::new();
+            let (mut rest, mut rest_count) = (Paisa::ZERO, 0_i64);
+            // A buyer who only bought in the compared period has nothing in this one.
+            for (rank, entry) in entries
+                .iter()
+                .filter(|e| e.sums.buyer_value > Paisa::ZERO)
+                .enumerate()
+            {
+                if rank < chart::TOP {
+                    points.push(AnalyticsChartPoint {
+                        label: party_of(&entry.key)
+                            .map(|party| Cell::Party { party })
+                            .unwrap_or(Cell::Empty),
+                        key: Some(AnalyticsKey {
+                            buyer_id: Some(entry.key.0),
+                            person_key: entry.key.1.clone(),
+                            ..AnalyticsKey::default()
+                        }),
+                        values: vec![Cell::Money {
+                            paisa: entry.sums.buyer_value,
+                        }],
+                        is_others: false,
+                        compare: None,
+                    });
+                } else {
+                    add(&mut rest, entry.sums.buyer_value)?;
+                    rest_count = rest_count
+                        .checked_add(1)
+                        .ok_or(mandi_core::money::MoneyError::Overflow)?;
+                }
+            }
+            if rest_count > 0 {
+                points.push(AnalyticsChartPoint {
+                    label: Cell::Empty,
+                    key: None,
+                    values: vec![Cell::Money { paisa: rest }],
+                    is_others: true,
                     compare: None,
                 });
-            } else {
-                add(&mut rest, entry.sums.buyer_value)?;
-                rest_count = rest_count
-                    .checked_add(1)
-                    .ok_or(mandi_core::money::MoneyError::Overflow)?;
             }
-        }
-        if rest_count > 0 {
-            points.push(AnalyticsChartPoint {
-                label: Cell::Empty,
-                key: None,
-                values: vec![Cell::Money { paisa: rest }],
-                is_others: true,
-                compare: None,
-            });
-        }
-        if points.is_empty() {
-            Vec::new()
-        } else {
-            vec![AnalyticsChart {
-                kind: AnalyticsChartKind::Ranked,
-                title: None,
-                series: vec![AnalyticsChartSeries {
-                    key: "purchase_value".to_owned(),
-                    kind: ColumnKind::Money,
-                }],
-                points,
-                others_count: rest_count,
-                by_month: false,
-            }]
+            if points.is_empty() {
+                Vec::new()
+            } else {
+                vec![AnalyticsChart {
+                    kind: AnalyticsChartKind::Ranked,
+                    title: None,
+                    series: vec![AnalyticsChartSeries {
+                        key: "purchase_value".to_owned(),
+                        kind: ColumnKind::Money,
+                    }],
+                    points,
+                    others_count: rest_count,
+                    by_month: false,
+                }]
+            }
         }
     };
 

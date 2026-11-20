@@ -104,16 +104,22 @@ describe('nextDraft', () => {
 });
 
 describe('what the account field takes', () => {
-  it('is the chosen side for a receipt, sellers for an advance and any account for a payment', () => {
+  it('is the chosen side for a receipt, a seller or a buyer for an advance and any account for a payment', () => {
     expect(accountScope(draft('receipt'))).toBe('buyer');
     expect(accountScope(draft('receipt', { from: 'seller' }))).toBe('seller');
-    expect(accountScope(draft('advance'))).toBe('seller');
+    // Plan 88, PRD 15.4: a پیشگی can be given to a buyer too.
+    expect(accountScope(draft('advance'))).toBe('seller_buyer');
+    // A saved advance that is being changed stays a seller's (the backend keeps its type).
+    expect(accountScope(draft('advance'), true)).toBe('seller');
     expect(accountScope(draft('payment'))).toBe('any');
   });
 
-  it('calls a payment to a buyer cash lent (PRD FR-15.11)', () => {
+  it('calls a payment or an advance to a buyer cash lent (PRD FR-15.11)', () => {
     expect(isCashLent(draft('payment', { accountType: 'buyer' }))).toBe(true);
     expect(isCashLent(draft('payment', { accountType: 'seller' }))).toBe(false);
+    expect(isCashLent(draft('advance', { accountType: 'buyer' }))).toBe(true);
+    expect(isCashLent(draft('advance', { accountType: 'seller' }))).toBe(false);
+    expect(isCashLent(draft('advance'))).toBe(false);
     expect(isCashLent(draft('receipt', { accountType: 'buyer' }))).toBe(false);
   });
 
@@ -205,6 +211,45 @@ describe('build', () => {
     if (built === null) throw new Error('expected a voucher');
     expect(entryOf(built)).toMatchObject({ type: 'advance', seller_account_id: 31 });
   });
+
+  it('sends the reason and no expected goods for an advance to a buyer, and no reason for a seller (plan 88)', () => {
+    const toBuyer = build(
+      draft('advance', {
+        account: AKRAM,
+        accountType: 'buyer',
+        amount: '3000',
+        expected_goods: 'left over from a seller',
+        reason: 'urgent',
+      }),
+      false,
+    );
+    expect(toBuyer).toMatchObject({
+      type: 'advance',
+      input: {
+        seller_account_id: 21,
+        amount: '3000',
+        reason: 'urgent',
+        expected_goods: '',
+        confirm_cash_below_zero: false,
+      },
+    });
+    const toSeller = build(
+      draft('advance', {
+        account: RAHIM,
+        accountType: 'seller',
+        amount: '15000',
+        expected_goods: 'mango',
+        reason: 'left over from a buyer',
+      }),
+      false,
+    );
+    expect(toSeller).toMatchObject({
+      type: 'advance',
+      input: { seller_account_id: 31, expected_goods: 'mango' },
+    });
+    // A seller's advance is the request it always was: no reason key at all.
+    expect(toSeller?.input).not.toHaveProperty('reason');
+  });
 });
 
 describe('helperTarget (PRD FR-7.58 to FR-7.60)', () => {
@@ -218,6 +263,13 @@ describe('helperTarget (PRD FR-7.58 to FR-7.60)', () => {
       accountId: 21,
     });
     expect(helperTarget(draft('payment', { account: AKRAM, accountType: 'buyer' }))).toEqual({
+      kind: 'bills',
+      accountId: 21,
+    });
+  });
+
+  it('shows the open bills of a buyer for an advance to him (plan 88)', () => {
+    expect(helperTarget(draft('advance', { account: AKRAM, accountType: 'buyer' }))).toEqual({
       kind: 'bills',
       accountId: 21,
     });

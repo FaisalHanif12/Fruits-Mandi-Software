@@ -252,11 +252,11 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
   it('cash below zero asks for the voucher that needs it, with the cash after that entry: No keeps it and the run goes on, Yes saves it', async () => {
     store = fakeVouchers({ cash: 20000 });
     const { user } = await open('advance');
-    await typeVoucher(user, language, 'vouchers-field-seller', 'rahim', '15000', '0010');
+    await typeVoucher(user, language, 'vouchers-field-party', 'rahim', '15000', '0010');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-seller', 'karim', '10000', '0011');
+    await typeVoucher(user, language, 'vouchers-field-party', 'karim', '10000', '0011');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-seller', 'rahim', '1000', '0010');
+    await typeVoucher(user, language, 'vouchers-field-party', 'rahim', '1000', '0010');
     press('F10');
     // The first voucher is saved on its own (cash 5,000). The second would take cash to -5,000:
     // the run stops there and asks, with focus on "No".

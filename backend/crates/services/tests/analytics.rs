@@ -1987,9 +1987,10 @@ fn view_e_collapses_the_items_beyond_the_column_limit_into_one_column() {
 }
 
 #[test]
-fn view_d_refuses_more_than_36_columns_and_a_coarser_grouping_works() {
+fn view_d_refuses_more_than_144_columns_and_a_coarser_grouping_works() {
+    // The limit is 144 periods since the plan 80 gate (twelve years by month); it was 36.
     let w = full_day();
-    for n in 0..37_u32 {
+    for n in 0..145_u32 {
         let (year, month) = (2020 + n / 12, 1 + n % 12);
         copy_fact(&w, w.banana, &format!("{year}-{month:02}-15"));
     }
@@ -2005,8 +2006,8 @@ fn view_d_refuses_more_than_36_columns_and_a_coarser_grouping_works() {
             ..filters()
         },
     );
-    // 2020 to 2023 and 2026: five years.
-    assert_eq!(by_year.columns.len(), 7);
+    // 2020 to 2032 (the worked day's 2026 is one of them): thirteen years, the item and the total.
+    assert_eq!(by_year.columns.len(), 15);
     let bounded = view(&w, AnalyticsView::D, on("01-10-2026", "31-10-2026"));
     assert_eq!(bounded.columns.len(), 3);
 }

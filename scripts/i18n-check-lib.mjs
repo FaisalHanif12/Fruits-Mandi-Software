@@ -6,6 +6,8 @@
 // - a file cannot be parsed (Fluent "junk");
 // - a message or term ID exists in one language and not the other;
 // - a message or term is empty;
+// - a message or term is defined in two files of one language;
+// - a message or term refers to a message or a term that is not defined;
 // - a message has the same words in both languages, unless its ID is in IDENTICAL_ALLOWED
 //   (for example the name of each language, written in its own script). A message made only
 //   of references, such as `glossary-bikri = { -bikri }`, has no words of its own and is not
@@ -16,7 +18,15 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { Junk, Message, StringLiteral, Term, parse, serializeExpression } from '@fluent/syntax';
+import {
+  Junk,
+  Message,
+  StringLiteral,
+  Term,
+  Visitor,
+  parse,
+  serializeExpression,
+} from '@fluent/syntax';
 
 /** Message IDs that may read the same in Urdu and English. Keep this list short. */
 export const IDENTICAL_ALLOWED = new Set([
@@ -136,6 +146,60 @@ export function checkI18n(i18nDir, options = {}) {
   }
   for (const name of enFiles) {
     if (!urFiles.includes(name)) errors.push(`ur/${name}: file is missing (present in en)`);
+  }
+
+  // A message defined in two files of one language: the app fails to start with "Attempt to override
+  // an existing message" (plan 81), and pnpm i18n:check used to pass.
+  for (const language of LANGUAGES) {
+    /** @type {Map<string, string>} */
+    const firstFile = new Map();
+    for (const name of filesByLanguage[language] ?? []) {
+      const resource = parse(readFileSync(path.join(i18nDir, language, name), 'utf8'), {
+        withSpans: false,
+      });
+      for (const entry of resource.body) {
+        if (!(entry instanceof Message) && !(entry instanceof Term)) continue;
+        const id = entry instanceof Term ? `-${entry.id.name}` : entry.id.name;
+        const earlier = firstFile.get(id);
+        if (earlier !== undefined && earlier !== name) {
+          errors.push(`${language}/${name}: ${id} is also defined in ${language}/${earlier}`);
+        }
+        if (earlier === undefined) firstFile.set(id, name);
+      }
+    }
+  }
+
+  // A message that points at a message or a term nobody defines shows the name of the term in the
+  // text (`{ -gahak }` with no `-gahak` prints "-gahak"): the same kind of gap as a missing ID.
+  for (const language of LANGUAGES) {
+    /** @type {Map<string, string>} */
+    const where = new Map();
+    /** @type {Array<{ file: string, owner: string, target: string }>} */
+    const references = [];
+    for (const name of filesByLanguage[language] ?? []) {
+      const resource = parse(readFileSync(path.join(i18nDir, language, name), 'utf8'), {
+        withSpans: false,
+      });
+      for (const entry of resource.body) {
+        if (!(entry instanceof Message) && !(entry instanceof Term)) continue;
+        const owner = entry instanceof Term ? `-${entry.id.name}` : entry.id.name;
+        where.set(owner, name);
+        const finder = new (class extends Visitor {
+          visitMessageReference(node) {
+            references.push({ file: name, owner, target: node.id.name });
+          }
+          visitTermReference(node) {
+            references.push({ file: name, owner, target: `-${node.id.name}` });
+          }
+        })();
+        finder.visit(entry);
+      }
+    }
+    for (const { file, owner, target } of references) {
+      if (!where.has(target)) {
+        errors.push(`${language}/${file}: ${owner} refers to ${target}, which is not defined`);
+      }
+    }
   }
 
   for (const name of urFiles.filter((file) => enFiles.includes(file))) {

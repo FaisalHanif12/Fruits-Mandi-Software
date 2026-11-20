@@ -15,7 +15,7 @@ import type { WorkingStep } from '../../../bindings/WorkingStep';
 import type { ListContext } from '../../../shared/grid';
 import { useUiLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, matchesShortcut } from '../../../shared/keyboard';
-import { Num } from '../../../shared/ui';
+import { Num, radixCollisionPadding } from '../../../shared/ui';
 import { useListContext } from '../../analytics';
 import { cellText, sideText } from '../../reports';
 
@@ -192,7 +192,13 @@ export function WorkingInfo({
         <Info aria-hidden="true" className="size-icon-sm" />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content lang={language} dir={direction} sideOffset={4} className={WORKING_CLASSES}>
+        <Popover.Content
+          lang={language}
+          dir={direction}
+          sideOffset={4}
+          collisionPadding={radixCollisionPadding()}
+          className={WORKING_CLASSES}
+        >
           <p className="type-label">{title}</p>
           {working.steps.map((step, index) => (
             <StepLine key={`${step.op}-${String(index)}`} step={step} context={context} />

@@ -83,18 +83,23 @@ const FIELD_PATHS = [
 const URDU_LETTER = /[؀-ۿ]/;
 
 function startingType(scope: AccountScope): AccountType {
-  return scope === 'seller' || scope === 'lot_seller' ? 'seller' : 'buyer';
+  // A seller or a buyer field (the پیشگی field) starts as a seller, whom a پیشگی is mostly for.
+  return scope === 'seller' || scope === 'lot_seller' || scope === 'seller_buyer'
+    ? 'seller'
+    : 'buyer';
 }
 
 /** The kinds a field offers: a seller or buyer field its own side only (so no list), any account both. */
 function kindsOfScope(scope: AccountScope): readonly AccountKind[] {
-  return scope === 'any' ? ['seller', 'buyer'] : [startingType(scope)];
+  return scope === 'any' || scope === 'seller_buyer' ? ['seller', 'buyer'] : [startingType(scope)];
 }
 
 /** Can this look-alike be taken in this field? A seller field takes sellers, a buyer field buyers. */
 function fitsField(scope: AccountScope, match: AccountMatch): boolean {
   if (scope === 'control') return false;
-  if (scope === 'any') return match.account_type === 'seller' || match.account_type === 'buyer';
+  if (scope === 'any' || scope === 'seller_buyer') {
+    return match.account_type === 'seller' || match.account_type === 'buyer';
+  }
   return match.account_type === startingType(scope);
 }
 

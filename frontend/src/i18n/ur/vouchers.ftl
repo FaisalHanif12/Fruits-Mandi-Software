@@ -32,7 +32,7 @@ vouchers-payment-help = { -beopari } یا کسی اور کھاتے کو رقم �
 vouchers-advance-title = { -peshgi-khata }
 
 # review: pending
-vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہلے رقم دیں۔ محفوظ کرنے کے بعد اس کا نیا بقایا نظر آتا ہے۔
+vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہلے رقم دیں۔ کسی { -gahak } کو رقم دینا { -naqd-udhar } ہے، اس کی وجہ لکھنی ہوگی۔ محفوظ کرنے کے بعد نیا بقایا نظر آتا ہے۔
 
 # review: pending
 vouchers-load-failed = واؤچر کی اسکرین کھل نہیں سکی
@@ -63,13 +63,14 @@ vouchers-number-payment = ا-{ $number }
 # review: pending
 vouchers-number-advance = پ-{ $number }
 
-## After a save, an edit and a cancel. $kind is receipt, payment or advance; $number is the number
-## in its series.
+## After a save, an edit and a cancel. $kind is receipt, payment or advance (and, after a save only,
+## lent: an advance to a buyer, saved as cash lent); $number is the number in its series.
 
 # review: pending
 vouchers-saved = { $kind ->
     [receipt] { -wasooli } { $number } محفوظ ہو گئی
     [payment] { -adaigi } { $number } محفوظ ہو گئی
+    [lent] { -naqd-udhar } { $number } محفوظ ہو گیا
    *[advance] { -peshgi-khata } { $number } محفوظ ہو گیا
 }
 
@@ -113,6 +114,10 @@ vouchers-field-buyer = { -gahak }
 
 # review: pending
 vouchers-field-seller = { -beopari }
+
+# The account of an advance: a seller, or a buyer (PRD 15.4, FR-15.11).
+# review: pending
+vouchers-field-party = { -beopari } یا { -gahak }
 
 # review: pending
 vouchers-field-paid-to = کس کو ادائیگی
@@ -282,6 +287,10 @@ vouchers-col-account = کھاتہ
 
 # review: pending
 vouchers-col-amount = رقم
+
+# What kind of account it is: a seller or a buyer (the advance list, PRD FR-15.11).
+# review: pending
+vouchers-col-kind = کھاتے کی قسم
 
 # review: pending
 vouchers-col-bill = بل کی رقم

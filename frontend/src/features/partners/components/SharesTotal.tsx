@@ -1,12 +1,14 @@
 // The running total of the shares (PRD FR-17.1): green at exactly 100, red otherwise. The number
 // is the backend's total, written from its digits (partners_check_shares), never added here
 // (CLAUDE.md rule 1). Colour is never the only signal: an icon and words go with it (NFR-USE-12).
+// When the backend could not give the total, the box says so instead of "checking" for ever; the
+// save is checked by the backend anyway (plan 81).
 
 import { Localized } from '@fluent/react';
-import { Check, CircleAlert, LoaderCircle } from 'lucide-react';
+import { Check, CircleAlert, CircleHelp, LoaderCircle } from 'lucide-react';
 import { Num } from '../../../shared/ui';
 
-export type TotalState = 'ok' | 'bad' | 'checking';
+export type TotalState = 'ok' | 'bad' | 'checking' | 'failed';
 
 interface SharesTotalProps {
   state: TotalState;
@@ -20,16 +22,26 @@ const BOX: Record<TotalState, string> = {
   ok: 'bg-money-in-soft text-money-in',
   bad: 'bg-due-soft text-due',
   checking: 'bg-surface-sunken text-ink-muted',
+  failed: 'bg-warn-soft text-warn',
+};
+
+const ICON: Record<TotalState, typeof Check> = {
+  ok: Check,
+  bad: CircleAlert,
+  checking: LoaderCircle,
+  failed: CircleHelp,
+};
+
+const MESSAGE: Record<TotalState, string> = {
+  ok: 'partners-total-ok',
+  bad: 'partners-total-bad',
+  checking: 'partners-total-checking',
+  failed: 'partners-total-failed',
 };
 
 export function SharesTotal({ state, total, compact = false }: SharesTotalProps) {
-  const Icon = state === 'ok' ? Check : state === 'bad' ? CircleAlert : LoaderCircle;
-  const messageId =
-    state === 'ok'
-      ? 'partners-total-ok'
-      : state === 'bad'
-        ? 'partners-total-bad'
-        : 'partners-total-checking';
+  const Icon = ICON[state];
+  const messageId = MESSAGE[state];
   return (
     <div
       role="status"

@@ -16,6 +16,12 @@ export {
 } from './value-text';
 export { useEditReview } from './useEditReview';
 export { useFixDayFlow } from './useFixDayFlow';
+export {
+  ClosedDayEntryNotice,
+  ENTRY_DATE_FIELDS,
+  dateIsClosed,
+  type DateProblem,
+} from './ClosedDayEntryNotice';
 export { OpenOnItsScreen, useOpenVoucher, useVoucherHref } from './open-voucher';
 export { editedTip, statusWithEdited } from './list-mark';
 export { signOf, whenWhoMessage } from './sign';

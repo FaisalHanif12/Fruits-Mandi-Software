@@ -75,3 +75,33 @@ one more route; the tab strip shows itself when there are two.
   screen. Tests: `others-dues-page.test.tsx`, `khata-link.test.tsx`, `lent-link.test.tsx`.
 - The lists under the ادھار رقم, partner takes (خرچہ) and capital forms show **one month at a time**
   (`ListWindowBar`, PRD FR-19.11): the hooks take the month's `from` and `to`.
+- **The capital card (سرمایہ کہاں ہے, plan 87, PRD FR-16.14)** is a folded section of `/rokar`
+  (`components/CapitalWhereCard.tsx`, pieces in `components/capital/`). It reads nothing until it is opened and is
+  behind the partner code (`ERR_PARTNER_LOCKED` shows the code box). It reads like a statement: `CapitalHeadline`
+  (the partners' total capital, which is the backend's `net_paisa`, with ✓ "both sides are equal" and the day it is
+  as of), two `CapitalBlock` tables (`have_lines`: to receive and in hand; `owe_lines`: to pay) with the backend's
+  subtotals, `CapitalNet`, `CapitalWhose` (each partner's کل رقم, his share in basis points written as a percent and
+  a bar, the opening capital, the open advances) and `OpeningDifferenceNotice`, the amber warning for the opening
+  difference. **Every amount of the blocks and the net is unsigned; the side is the block, never a minus sign.**
+  Cash below zero comes from the backend as the cash line of the paying block and is written "cash short" with a
+  note; a net that is short (`net_side` is `owe`) carries the word "short". A line that is one account (what is owed
+  for labour, freight ...) is named by the account. A partner's total below 0 is written without its sign, in the
+  due colour, with the words "owes the firm" (`Num withoutSign`). The net, the headline and the whose total are
+  unsigned from the backend, each with its side (`net_side`, `whose_lines_side`; `owe` is written "short").
+  - The warning shows what the difference is made of (one line for each group of `difference.groups`, each with the
+    backend's net and side) and, folded, every account that makes it (each opens its ledger). The button "put the
+    capital into روکڑ" shows only when `difference.placeable_partners` is not empty. It opens `PlaceCapitalDialog`
+    (the `ReasonDialog` of the reopen-and-fix flow with its sign field) and calls `partners_place_opening_capital`
+    (`partnersPlaceOpeningCapital` in `api.ts`, kept here because only this card calls it) with those partners. A
+    wrong sign is told in the box and nothing is read again; a yes closes the box, shows a toast, and reads the card,
+    the cash book, the partners and the day again (`useReadAgain`).
+  - Every line opens the page the backend names for it (`line.link`): `capital-links.ts` maps a `CapitalLink` and the
+    record it names to a destination (`targetOfLink`, plain data, tested) and `useOpenCapitalTarget` navigates. The
+    cash line brings the cash rows into view (the card is on that page).
+  - The "show it as of" box is `GoToDate`; the card is read as of that day (`as_of` is sent as typed, `DD-MM-YYYY`,
+    null is today). Print opens the preview of the card in place of the book (`TablePrintPreview`; the hidden print
+    window has the kind `capital`, `app/print-kinds`), with the same day. Excel is not offered for this card.
+  - `capital-types.ts` re-exports the generated bindings. The print is `cashbook_capital_print_data` (the card laid out as a table by the backend, ids in `print.ftl` as `print-capital-*`) and `cashbook_capital_print`. Tests: `cashbook-capital-where.test.tsx`,
+    `cashbook-capital-links.test.ts`, `plan78-api-contract.test.ts` and `plan78-real-answers.test.tsx` (the backend's real fixtures: worked day, before and after the fix, as of a day, print data, refusals); the hand-made data of the four states is
+    `tests/helpers/capital-card.ts`; the development page `/dev/rokar?screen=book&umar` shows Umar's data before the
+    fix and the fix with the sign "adnan".

@@ -12,6 +12,7 @@ import { errorMessageId } from '../../src/shared/api';
 import type { ErrorCode } from '../../src/bindings/ErrorCode';
 
 const I18N_DIR = path.resolve(import.meta.dirname, '../../src/i18n');
+const ENTRY_TIMEOUT_MS = 240_000;
 
 const ftlSources = {
   ur: import.meta.glob<string>('../../src/i18n/ur/*.ftl', {
@@ -48,12 +49,18 @@ describe('pnpm i18n:check', () => {
     expect(checkI18n(I18N_DIR)).toEqual([]);
   });
 
-  it('the pnpm entry always runs the check and prints its result (reviewer finding 5)', () => {
-    const entry = path.resolve(import.meta.dirname, '../../../scripts/i18n-check.mjs');
-    const run = spawnSync(process.execPath, [entry], { encoding: 'utf8' });
-    expect(run.status).toBe(0);
-    expect(run.stdout).toContain('i18n:check passed');
-  });
+  // Part two reads the whole frontend with the TypeScript compiler (plan 81), so the entry takes
+  // longer than the first part alone: seconds on a quiet computer, a minute on a busy one.
+  it(
+    'the pnpm entry always runs the check and prints its result (reviewer finding 5)',
+    () => {
+      const entry = path.resolve(import.meta.dirname, '../../../scripts/i18n-check.mjs');
+      const run = spawnSync(process.execPath, [entry], { encoding: 'utf8' });
+      expect(run.status).toBe(0);
+      expect(run.stdout).toContain('i18n:check passed');
+    },
+    ENTRY_TIMEOUT_MS,
+  );
 
   it('passes on a matching pair', () => {
     const dir = fixture({

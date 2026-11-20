@@ -39,6 +39,9 @@
 // - A record that is inactive is never offered. Leaving the field never picks anything by
 //   itself. Emptying the field and leaving clears the value.
 // - Long lists are windowed: only the rows in view are drawn (NFR-SPD-18).
+// - The open list is drawn by the shared dropdown box (plan 86, shared/ui/DropdownPopup): below the field
+//   when it fits, above it when there is more room above, cut to the room on its side and scrolling
+//   inside itself, inside the window in both directions, in a portal so no card or grid cuts it.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useCombobox, type UseComboboxStateChange } from 'downshift';
@@ -77,6 +80,7 @@ import { usePickerFlag, usePickerText } from './usePickerText';
 import { Code } from './Code';
 import { KeyChip } from './KeyChip';
 import { controlClasses } from './control-classes';
+import { DropdownPopup } from './DropdownPopup';
 import { ErrorMessage } from './ErrorMessage';
 import type { FieldControlProps } from './Field';
 
@@ -194,8 +198,9 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   /** The field opens with its full list open, nothing typed (Alt+↓ on a grid cell, FR-7.16). */
   startOpen?: boolean | undefined;
   /**
-   * The list opens above the field instead of under it, for a field at the bottom of a window (the
-   * question box area of the chat window, plan 51), where the list would be cut off below.
+   * The list prefers to open above the field, for a field at the bottom of a window (the question
+   * box area of the chat window, plan 51). Every list already opens above its field when there is no
+   * room below and more above (shared/ui/DropdownPopup, plan 86); this one also does so when both fit.
    */
   listAbove?: boolean | undefined;
   /**
@@ -784,18 +789,10 @@ export function PickerBase<H extends PickerHit>({
           <ChevronDown aria-hidden="true" className="size-icon-md" />
         </button>
       )}
-      <div
-        className={
-          open
-            ? listAbove === true
-              ? 'absolute inset-x-0 bottom-full z-20 mb-1 rounded-2 border border-border bg-surface p-1 shadow-overlay'
-              : 'absolute inset-x-0 top-full z-20 mt-1 rounded-2 border border-border bg-surface p-1 shadow-overlay'
-            : 'hidden'
-        }
-      >
+      <DropdownPopup open={open} anchorRef={boxRef} prefer={listAbove === true ? 'top' : undefined}>
         {allShown ? (
           <div
-            className="mb-1 border-b border-border pb-1"
+            className="mb-1 shrink-0 border-b border-border pb-1"
             // A press on the row must not take focus from the field, or the list would close first.
             onMouseDown={(event) => {
               event.preventDefault();
@@ -826,7 +823,7 @@ export function PickerBase<H extends PickerHit>({
             'aria-label': l10n.getString('search-list-label'),
             onScroll,
           })}
-          className={`max-h-picker-list overflow-y-auto ${hits.length === 0 ? 'hidden' : ''}`}
+          className={`max-h-picker-list min-h-0 overflow-y-auto ${hits.length === 0 ? 'hidden' : ''}`}
         >
           {open && first > 0 ? (
             <li role="presentation" aria-hidden="true" style={{ height: first * rowPx }} />
@@ -892,11 +889,11 @@ export function PickerBase<H extends PickerHit>({
         </ul>
         {searching ? (
           <Localized id="search-searching">
-            <p role="status" className="px-3 py-2 type-body text-ink-muted" />
+            <p role="status" className="shrink-0 px-3 py-2 type-body text-ink-muted" />
           </Localized>
         ) : null}
         {error === null ? null : (
-          <div role="alert" className="flex flex-col gap-1 px-3 py-2 text-due">
+          <div role="alert" className="flex shrink-0 flex-col gap-1 px-3 py-2 text-due">
             <Localized id="search-error">
               <p className="type-body" />
             </Localized>
@@ -908,7 +905,7 @@ export function PickerBase<H extends PickerHit>({
           </div>
         )}
         {noMatch ? (
-          <div role="status" className="px-3 py-2">
+          <div role="status" className="shrink-0 px-3 py-2">
             {(typed ?? '').trim() !== '' ? (
               <Localized id="search-no-match">
                 <p className="type-body text-ink-muted" />
@@ -927,7 +924,7 @@ export function PickerBase<H extends PickerHit>({
         ) : null}
         {addShown ? (
           <div
-            className="mt-1 border-t border-border pt-1"
+            className="mt-1 shrink-0 border-t border-border pt-1"
             // A press on the row must not take focus from the field, or the list would close
             // before the click lands and the typed text would be lost.
             onMouseDown={(event) => {
@@ -987,8 +984,8 @@ export function PickerBase<H extends PickerHit>({
             ) : null}
           </div>
         ) : null}
-        {footer}
-      </div>
+        {footer === undefined || footer === null ? null : <div className="shrink-0">{footer}</div>}
+      </DropdownPopup>
     </div>
   );
 }

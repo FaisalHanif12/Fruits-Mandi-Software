@@ -263,6 +263,9 @@ function partyMatches(party: Party, scope: string, text: string): boolean {
     if (party.code === OWN_CODE && !devFlag('own')) return false;
   } else if (scope === 'seller' && party.code === OWN_CODE) {
     return false;
+  } else if (scope === 'seller_buyer') {
+    // A seller or a buyer, as the پیشگی field takes them (plan 88); never اپنا مال.
+    if (party.code === OWN_CODE) return false;
   } else if (scope !== 'any' && party.type !== scope) {
     return false;
   }

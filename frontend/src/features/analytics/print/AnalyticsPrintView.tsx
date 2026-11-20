@@ -6,6 +6,7 @@
 import type { AnalyticsPrintInput } from '../../../bindings/AnalyticsPrintInput';
 import { PrintView, type PrintReady } from '../../../shared/print';
 import { ReportPrintDocument } from '../../reports';
+import { measureOfFilters } from '../filters';
 import { useAnalyticsPrintBundle } from '../hooks';
 import { AnalyticsPrintCharts } from './AnalyticsPrintCharts';
 import { printTableOf } from './print-table';
@@ -18,6 +19,8 @@ interface AnalyticsPrintViewProps {
 
 export function AnalyticsPrintView({ input, onReady, onFailed }: AnalyticsPrintViewProps) {
   const query = useAnalyticsPrintBundle(input);
+  // The print data names the measure in its header facts; the chart and the row total need its key (PRD FR-18.10).
+  const measure = measureOfFilters(input.filters);
   return (
     <PrintView
       query={query}
@@ -29,10 +32,10 @@ export function AnalyticsPrintView({ input, onReady, onFailed }: AnalyticsPrintV
       {...(onFailed === undefined ? {} : { onFailed })}
       render={({ data, frame }, ref) => (
         <ReportPrintDocument
-          data={printTableOf(data)}
+          data={printTableOf(data, measure)}
           frame={frame}
           applyRoot
-          figures={<AnalyticsPrintCharts data={data} />}
+          figures={<AnalyticsPrintCharts data={data} measure={measure} />}
           ref={ref}
         />
       )}

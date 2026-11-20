@@ -59,7 +59,9 @@ export function GardenEntryEdit({ garden, row, onDone }: GardenEntryEditProps) {
   const grouping = useGrouping();
   const formRef = useFocusFirstField<HTMLFormElement>();
   const reopened = useFixStore((state) => state.session);
-  const [draft, setDraft] = useState<EntryDraft>(() => draftOfGardenEntry(row, grouping));
+  const [draft, setDraft] = useState<EntryDraft>(() =>
+    draftOfGardenEntry(row, grouping, (id) => l10n.getString(id)),
+  );
   const reason = useReasonText();
   const payment = draft.type === 'installment' || draft.type === 'cost';
   // What the entry is called in the message: "Installment", "Cost", "Sale in another shop".

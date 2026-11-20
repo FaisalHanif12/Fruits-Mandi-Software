@@ -7,6 +7,18 @@ do), and column types for money,
 quantity, account and date with fixed widths (Code Standards F17, F18, F27). Arrives in plan 04
 with the `entry-grid` skill. A grid never holds unsaved data on its own (F39).
 
+## Lists in a cell (plan 86)
+
+A picker cell and a select cell open a list. The list is the shared dropdown box
+(`shared/ui/DropdownPopup`, rules in `shared/ui/dropdown-position.ts`): below the cell when it fits, above
+it when the room below is too small and there is more above, its height the room on that side, inside the
+window in both directions, clear of the status bar, the top bar and the assistant button, and drawn on
+the page so the grid never cuts it. The grid's own popup of a picker cell holds only the field of the
+picker, drawn exactly over the cell (`cellEditorPopupPosition: 'over'`, no border or shadow of its own),
+so the user sees one box and the list starts at the cell. The select cell's list hangs from the cell
+(`eGridCell`); the grid's popup of that editor is empty. The box carries `ag-custom-component-popup`, so a
+click on a row is a click inside the cell's popup and does not end the edit.
+
 ## ListGrid (read-only lists)
 
 `ListGrid` is the one grid for reading a list. Besides the plain text, number, date and status

@@ -1,0 +1,10 @@
+{
+  "account_id": null,
+  "advance_view": true,
+  "from": "",
+  "limit": 0,
+  "offset": 0,
+  "show_finished": false,
+  "to": "",
+  "voucher_type": "advance"
+}

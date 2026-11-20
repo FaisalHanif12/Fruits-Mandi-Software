@@ -659,7 +659,13 @@ fn skeleton(
     let brought_forward = Balance::from_totals(open_dr, open_cr)?;
     let mut sums = lines::entry_sums(conn, &filter)?;
     // An opening is the first entry of its day (plan 78 B1); the rest keep the journal order.
-    sums.sort_by_key(|e| (e.entry_date.clone(), e.posting_type != "opening", e.entry_id));
+    sums.sort_by_key(|e| {
+        (
+            e.entry_date.clone(),
+            e.posting_type != "opening",
+            e.entry_id,
+        )
+    });
 
     // The pairs an edit or a cancel of the same day cancelled (the test of `replaced_ids`).
     let date_of: HashMap<i64, &str> = sums
@@ -752,7 +758,9 @@ fn paid_on_spot_all(
          GROUP BY journal_entry_id",
     )?;
     let rows = statement
-        .query_map([account_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))?
+        .query_map([account_id], |r| {
+            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
+        })?
         .collect::<Result<HashMap<_, _>, _>>()?;
     Ok(rows)
 }

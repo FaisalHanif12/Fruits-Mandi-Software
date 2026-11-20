@@ -42,7 +42,11 @@ export function StatusBar({
   assistant,
 }: StatusBarProps) {
   return (
-    <footer className="type-body flex min-h-statusbar shrink-0 items-center gap-5 border-t border-border bg-surface-sunken px-4 text-ink">
+    <footer
+      // A dropdown list never goes under the status bar (shared/ui/dropdown-position.ts, plan 86).
+      data-dropdown-avoid=""
+      className="type-body flex min-h-statusbar shrink-0 items-center gap-5 border-t border-border bg-surface-sunken px-4 text-ink"
+    >
       <Localized id="layout-status-user" vars={{ name: userName }} elems={{ name: <ScriptText /> }}>
         <span />
       </Localized>

@@ -136,15 +136,14 @@ export interface GardenDraft {
   items: PickerValue[];
   /** The full rent for the season, whole rupees as typed. */
   rent: string;
-  /** The first installment as typed, or empty. */
-  paidNow: string;
   /**
-   * Why the first installment was paid (PRD FR-12.35). The screen fills it with the standard words
-   * like a typed value when the amount is typed (Code Standards F43); the Owner can change it.
+   * The first installment as typed, or empty. It has no reason field: the backend saves it with the
+   * standard words "first installment" (plan 81, PRD FR-12.35).
    */
-  paidNowReason: string;
-  /** `DD-MM-YYYY` as typed, or empty. */
+  paidNow: string;
+  /** `DD-MM-YYYY` as typed, or empty. Optional; a future date is allowed (plan 81). */
   seasonEnd: string;
+  /** Optional. */
   note: string;
 }
 

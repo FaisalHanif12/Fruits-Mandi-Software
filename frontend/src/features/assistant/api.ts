@@ -28,6 +28,16 @@ export function assistantStatus(): Promise<AssistantStatus> {
   return callCommand<AssistantStatus>('assistant_status');
 }
 
+/**
+ * Warms up the connection to the model, so the first question of the panel does not pay for it
+ * (plan 82, NFR-SEC-9 v1.22). No input, no answer: the backend decides whether anything is sent (at
+ * most once in 5 minutes and 12 a day, only when questions are on and a key is saved, never while a
+ * question runs) and the panel shows nothing for it. It holds no books data and no question.
+ */
+export function assistantWarm(): Promise<null> {
+  return callCommand<null>('assistant_warm');
+}
+
 /** A typed question to the model. One question, one log row; it counts once in the 20 a day. */
 export function assistantAsk(input: AssistantAskInput): Promise<AskReply> {
   return callCommand<AskReply>('assistant_ask', { input });

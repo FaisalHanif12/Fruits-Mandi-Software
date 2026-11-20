@@ -993,24 +993,28 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     );
 
     it.each([
-      ['dashboard', real.REPLY_SCREEN_SOURCE, real.REPLY_SCREEN_SOURCE_REQUEST, '/', {}],
+      ['dashboard', real.REPLY_SCREEN_SOURCE, real.REPLY_SCREEN_SOURCE_REQUEST, '/', {}, true],
+      // The audit log answer says what the log is (the backend's recorded sentence has no figure in it).
       [
         'audit',
         real.REPLY_SCREEN_SOURCE_AUDIT,
         real.REPLY_SCREEN_SOURCE_AUDIT_REQUEST,
         '/settings',
         { tab: 'audit' },
+        false,
       ],
     ] as const)(
-      "the backend's own %s answer: its figure is drawn, and the button opens the screen",
-      async (route, reply, request, path, search) => {
+      "the backend's own %s answer: its text is drawn, its figure when it has one, and the button opens the screen",
+      async (route, reply, request, path, search, hasFigure) => {
         expect(reply.answer?.sources).toEqual([expect.objectContaining({ kind: 'screen', route })]);
         await renderShellRouted();
         const user = await ask(language, reply, request.text);
         const panel = panelOf(language);
-        // The answer is drawn like any answer: its figure is a number, and the source line names the screen.
+        // The answer is drawn like any answer: its figure, if it has one, is a number, and the source line names the screen.
         const answer = within(panel).getByLabelText(message(language, 'assistant-answer-label'));
-        expect(answer.querySelectorAll('bdi.number-run').length).toBeGreaterThan(0);
+        if (hasFigure) expect(answer.querySelectorAll('bdi.number-run').length).toBeGreaterThan(0);
+        else expect(answer.querySelectorAll('bdi.number-run')).toHaveLength(0);
+        expect(answer.textContent.length).toBeGreaterThan(0);
         await user.click(
           within(panel).getByRole('button', { name: message(language, 'assistant-open-screen') }),
         );

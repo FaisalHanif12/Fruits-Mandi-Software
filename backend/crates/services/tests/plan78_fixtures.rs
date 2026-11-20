@@ -292,6 +292,7 @@ fn a_partner_month_with_the_advance_lines() {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

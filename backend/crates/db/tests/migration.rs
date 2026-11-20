@@ -24,7 +24,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 26;
+const LATEST: usize = 28;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -4705,6 +4705,8 @@ fn migration_23_adds_the_link_columns_and_the_0605_accounts_and_touches_no_numbe
         ("partners", "linked_account_id"),
         // Migration 25 (plan 78): the original rent of a garden is new.
         ("ventures", "rent_original_paisa"),
+        // Migration 27 (plan 80 gate): the time a lot was removed in an edit is new.
+        ("bikri_lots", "removed_at"),
     ];
     // A table is one text of all its rows; the rows the migration made are taken out of it by line.
     // `venture_items` is the table of migration 25.
@@ -5016,7 +5018,7 @@ fn migration_26_locks_the_shares_of_a_garden_after_goods_arrived() {
     let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (25, LATEST));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
-    assert_eq!(user_version(&conn), 26);
+    assert_eq!(user_version(&conn), LATEST as i64);
 
     // The garden with goods arrived: no change of a share, no new row, no delete.
     let refused = |sql: &str, args: &[&dyn mandi_db::rusqlite::ToSql]| -> String {

@@ -1,47 +1,77 @@
 {
-  "where_lines": [
+  "as_of": "2026-10-10",
+  "have_lines": [
     {
       "kind": "cash",
-      "amount_paisa": 5848400
+      "side": "have",
+      "amount_paisa": 5848400,
+      "link": "cashbook",
+      "account": null
     },
     {
       "kind": "buyers_owe",
-      "amount_paisa": 2156400
+      "side": "have",
+      "amount_paisa": 2156400,
+      "link": "buyer_dues",
+      "account": null
     },
     {
-      "kind": "seller_advances",
-      "amount_paisa": 0
-    },
-    {
-      "kind": "sellers_owe_beyond",
-      "amount_paisa": 0
-    },
+      "kind": "dead_amount",
+      "side": "have",
+      "amount_paisa": 0,
+      "link": "dead_amount",
+      "account": null
+    }
+  ],
+  "have_total_paisa": 8004800,
+  "owe_lines": [
     {
       "kind": "sellers_payable",
-      "amount_paisa": -1016000
-    },
-    {
-      "kind": "money_lent",
-      "amount_paisa": 0
+      "side": "owe",
+      "amount_paisa": 1016000,
+      "link": "seller_dues",
+      "account": null
     },
     {
       "kind": "owed_for_charges",
-      "amount_paisa": -440000
+      "side": "owe",
+      "amount_paisa": 30000,
+      "link": "account_ledger",
+      "account": {
+        "id": 3,
+        "code": "02010001",
+        "name_ur": "مزدوری کھاتہ",
+        "name_en": "Labour Payable"
+      }
     },
     {
-      "kind": "separate_khatas",
-      "amount_paisa": 0
+      "kind": "owed_for_charges",
+      "side": "owe",
+      "amount_paisa": 400000,
+      "link": "account_ledger",
+      "account": {
+        "id": 4,
+        "code": "02010002",
+        "name_ur": "کرایہ کھاتہ",
+        "name_en": "Freight Payable"
+      }
     },
     {
-      "kind": "gardens_held",
-      "amount_paisa": 0
-    },
-    {
-      "kind": "linked_in_partner_totals",
-      "amount_paisa": 0
+      "kind": "owed_for_charges",
+      "side": "owe",
+      "amount_paisa": 10000,
+      "link": "account_ledger",
+      "account": {
+        "id": 6,
+        "code": "02010004",
+        "name_ur": "منشیانہ کھاتہ",
+        "name_en": "Munshiana Payable"
+      }
     }
   ],
-  "where_total_paisa": 6548800,
+  "owe_total_paisa": 1456000,
+  "net_paisa": 6548800,
+  "net_side": "have",
   "whose_lines": [
     {
       "kind": "partner_total",
@@ -51,7 +81,10 @@
         "name_ur": "الف",
         "name_en": "Partner A"
       },
-      "amount_paisa": -100400
+      "account": null,
+      "amount_paisa": -100400,
+      "share_bps": null,
+      "link": "partner_statement"
     },
     {
       "kind": "partner_total",
@@ -61,7 +94,10 @@
         "name_ur": "ب",
         "name_en": "Partner B"
       },
-      "amount_paisa": 74600
+      "account": null,
+      "amount_paisa": 74600,
+      "share_bps": 114,
+      "link": "partner_statement"
     },
     {
       "kind": "partner_total",
@@ -71,18 +107,36 @@
         "name_ur": "ج",
         "name_en": "Partner C"
       },
-      "amount_paisa": 74600
+      "account": null,
+      "amount_paisa": 74600,
+      "share_bps": 114,
+      "link": "partner_statement"
     },
     {
       "kind": "opening_capital",
       "partner": null,
-      "amount_paisa": 6500000
+      "account": {
+        "id": 15,
+        "code": "06010001",
+        "name_ur": "ابتدائی سرمایہ",
+        "name_en": "Opening Capital"
+      },
+      "amount_paisa": 6500000,
+      "share_bps": 9925,
+      "link": "account_ledger"
     },
     {
       "kind": "advances_open",
       "partner": null,
-      "amount_paisa": 0
+      "account": null,
+      "amount_paisa": 0,
+      "share_bps": null,
+      "link": "advances"
     }
   ],
-  "whose_total_paisa": 6548800
+  "whose_lines_total_paisa": 6548800,
+  "whose_lines_side": "have",
+  "difference": null,
+  "whose_total_paisa": 6548800,
+  "sides_equal": true
 }

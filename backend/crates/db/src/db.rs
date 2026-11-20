@@ -209,10 +209,6 @@ fn open_connection(
     conn.pragma_update(None, "synchronous", "FULL")?;
     if read_only {
         conn.pragma_update(None, "query_only", "ON")?;
-        // TEMP PROFILE: a cache size for the read connection, to see what it buys.
-        if let Some(kib) = std::env::var("MANDI_READ_CACHE_KIB").ok().and_then(|v| v.parse::<i64>().ok()) {
-            conn.pragma_update(None, "cache_size", -kib)?;
-        }
     }
     Ok(conn)
 }

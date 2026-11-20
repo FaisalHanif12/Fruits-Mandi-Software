@@ -76,7 +76,7 @@ pub(crate) struct LentFacts {
 /// A database error; `ReportsError::Money` if a stored amount is not whole rupees or a sum does
 /// not fit.
 pub(crate) fn facts(conn: &Connection, today: BusinessDate) -> Result<LentFacts, ReportsError> {
-    let mut persons = crate::prof::timed("lent.persons", || open_lines::persons(conn, &[]))?;
+    let mut persons = open_lines::persons(conn, &[])?;
     // A person in the dead amount is in R38 and the tile ڈوبی رقم, not in the money lent (PRD
     // FR-10.10, A66).
     let dead = mandi_db::dead::dead_set(conn, None)?;
@@ -84,7 +84,7 @@ pub(crate) fn facts(conn: &Connection, today: BusinessDate) -> Result<LentFacts,
     let partners = mandi_db::partners::list(conn)?;
     let mut ids: Vec<i64> = persons.keys().copied().collect();
     ids.extend(partners.iter().map(|p| p.drawings_account_id));
-    let lines = crate::prof::timed("lent.live_lines", || open_lines::live_lines(conn, &ids))?;
+    let lines = open_lines::live_lines(conn, &ids)?;
     let grouped = loans_by_person(&lines, &today.to_iso())?;
     let by_drawings: std::collections::HashMap<i64, &mandi_db::partners::PartnerRecord> = partners
         .iter()

@@ -10,6 +10,7 @@ import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 import { STATUS_CANCELLED, STATUS_CLOSED, STATUS_OPEN } from '../../shared/ui';
+import { entryReasonText } from './draft';
 import type { GardenHistoryKind, GardenHistoryRow, GardenRow } from './types';
 
 type Say = (id: string, vars?: Record<string, string>) => string;
@@ -29,8 +30,9 @@ export function historyDetailText(row: GardenHistoryRow, text: Say): string {
   switch (row.kind) {
     case 'installment':
     case 'cost':
-      // The reason is free text, shown as typed (PRD FR-7.25).
-      return row.reason ?? '';
+      // The reason is free text, shown as typed (PRD FR-7.25); the standard words of a first
+      // installment are stored as their message id and written in the app language (plan 81).
+      return entryReasonText(row.reason, text);
     case 'other_sale':
       return text('gardens-history-detail-sale-elsewhere', {
         shop: row.shop_name ?? '',

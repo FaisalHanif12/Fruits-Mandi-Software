@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 
 use crate::answer::{Answer, AnswerPart};
 use crate::ask::{AskOutcome, AskReply, AssistantQuickInput, QuickChip};
-use crate::conversation::{Conversation, Turn};
+use crate::conversation::{Conversation, Turn, checked_conversation_id};
 use crate::fill::part_of_val;
 use crate::results::{NameVal, Node, ToolResult, Val};
 use crate::run::{Deps, Finished, Run, Source};
@@ -121,14 +121,14 @@ fn answer_of(state: &State, parts: Vec<AnswerPart>, read_at: &str) -> Answer {
 /// A quick question (`assistant_quick`).
 ///
 /// # Errors
-/// `ERR_REQUIRED` on `party_id` for the party chip; `ERR_NOT_FOUND` on `party_id`.
+/// `ERR_REQUIRED` on `party_id` for the party chip; `ERR_NOT_FOUND` on `party_id`;
+/// `ERR_FORMAT_INVALID` on `conversation_id`.
 pub fn quick(d: &Deps<'_>, input: &AssistantQuickInput) -> Result<AskReply, ServiceError> {
+    // The id comes from the screen: refused up front with a field error, before anything is read or
+    // written (plan 82; a NUL or a too long id used to end in a database error).
+    let given = checked_conversation_id(input.conversation_id.as_deref())?;
     let run = Run::new(d)?;
-    let id = input
-        .conversation_id
-        .clone()
-        .filter(|c| !c.trim().is_empty())
-        .unwrap_or_else(|| d.runtime.new_conversation_id(d.ctx));
+    let id = given.map_or_else(|| d.runtime.new_conversation_id(d.ctx), str::to_owned);
     let conv = d
         .runtime
         .take(&id)

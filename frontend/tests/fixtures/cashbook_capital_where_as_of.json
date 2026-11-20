@@ -1,0 +1,294 @@
+{
+  "as_of": "2026-10-10",
+  "have_lines": [
+    {
+      "kind": "buyers_owe",
+      "side": "have",
+      "amount_paisa": 10500000,
+      "link": "buyer_dues",
+      "account": null
+    },
+    {
+      "kind": "dead_amount",
+      "side": "have",
+      "amount_paisa": 0,
+      "link": "dead_amount",
+      "account": null
+    },
+    {
+      "kind": "seller_advances",
+      "side": "have",
+      "amount_paisa": 16174000,
+      "link": "advances",
+      "account": null
+    }
+  ],
+  "have_total_paisa": 26674000,
+  "owe_lines": [
+    {
+      "kind": "cash",
+      "side": "owe",
+      "amount_paisa": 16174000,
+      "link": "cashbook",
+      "account": null
+    },
+    {
+      "kind": "sellers_payable",
+      "side": "owe",
+      "amount_paisa": 4000000,
+      "link": "seller_dues",
+      "account": null
+    }
+  ],
+  "owe_total_paisa": 20174000,
+  "net_paisa": 6500000,
+  "net_side": "have",
+  "whose_lines": [
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "account": null,
+      "amount_paisa": -6469600,
+      "share_bps": null,
+      "link": "partner_statement"
+    },
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "ب",
+        "name_en": "Partner B"
+      },
+      "account": null,
+      "amount_paisa": -4852200,
+      "share_bps": null,
+      "link": "partner_statement"
+    },
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 3,
+        "code": "",
+        "name_ur": "ج",
+        "name_en": "Partner C"
+      },
+      "account": null,
+      "amount_paisa": -4852200,
+      "share_bps": null,
+      "link": "partner_statement"
+    },
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 4,
+        "code": "",
+        "name_ur": "عدنان",
+        "name_en": "Adnan"
+      },
+      "account": null,
+      "amount_paisa": 50000000,
+      "share_bps": 5000,
+      "link": "partner_statement"
+    },
+    {
+      "kind": "partner_total",
+      "partner": {
+        "id": 5,
+        "code": "",
+        "name_ur": "عثمان",
+        "name_en": "Usman"
+      },
+      "account": null,
+      "amount_paisa": 50000000,
+      "share_bps": 5000,
+      "link": "partner_statement"
+    },
+    {
+      "kind": "opening_capital",
+      "partner": null,
+      "account": {
+        "id": 15,
+        "code": "06010001",
+        "name_ur": "ابتدائی سرمایہ",
+        "name_en": "Opening Capital"
+      },
+      "amount_paisa": 0,
+      "share_bps": null,
+      "link": "account_ledger"
+    },
+    {
+      "kind": "advances_open",
+      "partner": null,
+      "account": null,
+      "amount_paisa": 16174000,
+      "share_bps": 1617,
+      "link": "advances"
+    }
+  ],
+  "whose_lines_total_paisa": 100000000,
+  "whose_lines_side": "have",
+  "difference": {
+    "amount_paisa": 93500000,
+    "side": "dr",
+    "groups": [
+      {
+        "kind": "partner_capital",
+        "amount_paisa": 100000000,
+        "side": "dr",
+        "parts": [
+          {
+            "account": {
+              "id": 35,
+              "code": "06020004",
+              "name_ur": "سرمایہ - عدنان",
+              "name_en": "Capital - Adnan"
+            },
+            "partner": {
+              "id": 4,
+              "code": "",
+              "name_ur": "عدنان",
+              "name_en": "Adnan"
+            },
+            "date": "2026-10-10",
+            "amount_paisa": 50000000,
+            "side": "dr",
+            "can_place": true,
+            "link": "account_ledger"
+          },
+          {
+            "account": {
+              "id": 39,
+              "code": "06020005",
+              "name_ur": "سرمایہ - عثمان",
+              "name_en": "Capital - Usman"
+            },
+            "partner": {
+              "id": 5,
+              "code": "",
+              "name_ur": "عثمان",
+              "name_en": "Usman"
+            },
+            "date": "2026-10-10",
+            "amount_paisa": 50000000,
+            "side": "dr",
+            "can_place": true,
+            "link": "account_ledger"
+          }
+        ]
+      },
+      {
+        "kind": "account_opening",
+        "amount_paisa": 6500000,
+        "side": "cr",
+        "parts": [
+          {
+            "account": {
+              "id": 43,
+              "code": "0022",
+              "name_ur": "مانی",
+              "name_en": "Mani"
+            },
+            "partner": null,
+            "date": "2026-10-10",
+            "amount_paisa": 3000000,
+            "side": "cr",
+            "can_place": false,
+            "link": "account_ledger"
+          },
+          {
+            "account": {
+              "id": 44,
+              "code": "0023",
+              "name_ur": "انس",
+              "name_en": "Anas"
+            },
+            "partner": null,
+            "date": "2026-10-10",
+            "amount_paisa": 1500000,
+            "side": "cr",
+            "can_place": false,
+            "link": "account_ledger"
+          },
+          {
+            "account": {
+              "id": 45,
+              "code": "0024",
+              "name_ur": "عدنان خان",
+              "name_en": "Adnan Khan"
+            },
+            "partner": null,
+            "date": "2026-10-10",
+            "amount_paisa": 6000000,
+            "side": "cr",
+            "can_place": false,
+            "link": "account_ledger"
+          },
+          {
+            "account": {
+              "id": 46,
+              "code": "0012",
+              "name_ur": "فیصل",
+              "name_en": "Faisal"
+            },
+            "partner": null,
+            "date": "2026-10-10",
+            "amount_paisa": 1000000,
+            "side": "dr",
+            "can_place": false,
+            "link": "account_ledger"
+          },
+          {
+            "account": {
+              "id": 47,
+              "code": "0013",
+              "name_ur": "ہارون",
+              "name_en": "Haroon"
+            },
+            "partner": null,
+            "date": "2026-10-10",
+            "amount_paisa": 1000000,
+            "side": "dr",
+            "can_place": false,
+            "link": "account_ledger"
+          },
+          {
+            "account": {
+              "id": 48,
+              "code": "0014",
+              "name_ur": "احسان",
+              "name_en": "Ehsan"
+            },
+            "partner": null,
+            "date": "2026-10-10",
+            "amount_paisa": 2000000,
+            "side": "dr",
+            "can_place": false,
+            "link": "account_ledger"
+          }
+        ]
+      }
+    ],
+    "placeable_partners": [
+      {
+        "id": 4,
+        "code": "",
+        "name_ur": "عدنان",
+        "name_en": "Adnan"
+      },
+      {
+        "id": 5,
+        "code": "",
+        "name_ur": "عثمان",
+        "name_en": "Usman"
+      }
+    ]
+  },
+  "whose_total_paisa": 6500000,
+  "sides_equal": true
+}
