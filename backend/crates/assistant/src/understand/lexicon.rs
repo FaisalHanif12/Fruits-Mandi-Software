@@ -640,7 +640,7 @@ const FIGURES: &[Entry] = &[
             "baqia", "bakia", "balance", "balence", "balans", "outstanding", "owes", "owe", "owed",
             "lena hai", "lena he", "dena hai", "dena he", "kitna lena", "kitna dena", "kitna dega",
             "kitna dena hai", "kitna lena hai", "kitna deta", "kitna lete", "dega", "degi", "dene hain",
-            "dene hai", "dene he", "dene hen", "lene hain", "lene hai", "lene he", "lene hen",
+            "dene hai", "dene he", "dene hen", "dene wala tha", "lene wala tha", "lene hain", "lene hai", "lene he", "lene hen",
             "dena hain", "lena hain", "denge", "dengi", "lenge", "lengi", "دینے ہیں", "لینے ہیں",
             "دینا ہے", "لینا ہے", "دینی ہے", "لینی ہے", "دینی ہیں", "لینی ہیں", "deni hai", "deni he", "leni hai", "leni he", "due to pay", "has to pay", "have to pay", "to pay", "ow",
             "bakaye", "بقایا", "بیلنس", "بکایا", "لینا", "دینا", "کتنا دے گا", "دے گا",

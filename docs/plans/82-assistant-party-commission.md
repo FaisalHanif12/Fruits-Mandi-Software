@@ -93,3 +93,8 @@ All four use `$period` (the message `assistant-instant-period`, already formatte
 - `tests/understand.rs` `the_year_gardens_and_the_speed_of_a_full_set_of_books`: red once under machine load (56 ms against the 50 ms limit); green alone and with `--test-threads=1`.
 - Everything else of the last full run was green (79 binaries, 1132 passed).
 - Not mine, still unformatted: `tests/arm_up.rs`, `tests/robustness_complex_live.rs`.
+
+### Update after the resume (21-11-2026, `backend-ai`)
+
+Done since the note above: (1) `Understanding::instant_stop`: an unexplained word, a known word that changes the figure ("koi aur", "kam", "wapas", "nahi", "se pehle") or a net/bills word beside another figure stops every instant line (the reads are still made); (2) `tests/playbook.rs` now asserts the view F `compare` repair and its note; (3) the net sale, the buyers' bills, the shop's profit and the commission without Laga are answered by the app (the four Fluent ids are in); D28 chukta by name (views A and C read ahead); D04 reads view C sorted by `buyer_comm`. Offline sweep of the 98: 31 answered or asked by the app, all right, 0 wrong, 0 local not_found, none over 1 s; model-bound with no read ahead 20 of 67. Full `cargo test -p mandi-assistant --no-fail-fast`: 79 binaries, 1138 passed, 0 failed (before the last one-phrase lexicon edit; the 7 files that read it were re-run green).
+Still open: view C has no "commission + Laga" column, so D04 ranks by the buyer commission and the model adds the Laga (a column in `reports` would give the exact rank); ranked top-N tables and D25 not built; the 20 questions with no read ahead are follow-ups, forecasts, comparisons of two periods, expenses by head, gardens and trips results and the two-measure seller questions.

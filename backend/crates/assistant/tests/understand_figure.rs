@@ -956,7 +956,8 @@ fn what_is_not_a_simple_figure_goes_to_the_model() {
         "aaj kitna maal bika",
         "naqdi bikri aaj",
         "udhari bikri aaj",
-        "safi bikri aaj",
+        // "safi bikri aaj" is the net sale, which the app answers by itself since plan 82 (R6 `net`, test
+        // `plan82_more`): it is no longer a question for the model.
         "commission kitne percent hai",
         "بکری کی تعداد",
         "bikri ki tadad aaj",
