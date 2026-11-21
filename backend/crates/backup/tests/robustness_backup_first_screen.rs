@@ -107,7 +107,9 @@ fn untouched(new: &New, before: &std::collections::BTreeMap<String, (i64, String
 }
 
 fn key_of(new: &New) -> mandi_services::db::audit::AuditKey {
-    new.keys.current().expect("the new computer has a chain key")
+    new.keys
+        .current()
+        .expect("the new computer has a chain key")
 }
 
 fn one(path: &std::path::Path, sql: &str) -> String {
@@ -181,7 +183,10 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
         "first_run true, no Owner, the key store and the credential store are empty",
     );
     let folder = RestoreSource::Folder(old.rig.usb.display().to_string());
-    let list = n1.service.first_run_list(&list_input(folder.clone())).unwrap();
+    let list = n1
+        .service
+        .first_run_list(&list_input(folder.clone()))
+        .unwrap();
     let newest_first = list
         .rows
         .windows(2)
@@ -191,31 +196,50 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
         list.total_count == 2
             && newest_first
             && list.rows.first().map(|r| r.name.as_str()) == Some(usb_newest.as_str())
-            && list.rows.iter().all(|r| r.status == RowStatus::Good && r.encrypted),
+            && list
+                .rows
+                .iter()
+                .all(|r| r.status == RowStatus::Good && r.encrypted),
         format!(
             "{:?}",
-            list.rows.iter().map(|r| (&r.name, &r.created_at)).collect::<Vec<_>>()
+            list.rows
+                .iter()
+                .map(|r| (&r.name, &r.created_at))
+                .collect::<Vec<_>>()
         ),
     );
     let file = old.rig.usb.join(&usb_newest);
     let file_source = RestoreSource::File(file.display().to_string());
-    let one_file = n1.service.first_run_list(&list_input(file_source.clone())).unwrap();
+    let one_file = n1
+        .service
+        .first_run_list(&list_input(file_source.clone()))
+        .unwrap();
     rep.check(
         "N1-2 one picked .mbk file lists as one copy",
-        one_file.total_count == 1 && one_file.rows.first().map(|r| r.name.as_str()) == Some(usb_newest.as_str()),
-        format!("{:?}", one_file.rows.iter().map(|r| &r.name).collect::<Vec<_>>()),
+        one_file.total_count == 1
+            && one_file.rows.first().map(|r| r.name.as_str()) == Some(usb_newest.as_str()),
+        format!(
+            "{:?}",
+            one_file.rows.iter().map(|r| &r.name).collect::<Vec<_>>()
+        ),
     );
 
     // refusals that change nothing
     let wrong = BackupKey::generate().unwrap().display();
     let wrong_key = n1
         .service
-        .first_run_restore(&restore_input(file_source.clone(), &usb_newest, &wrong), &|_| {})
+        .first_run_restore(
+            &restore_input(file_source.clone(), &usb_newest, &wrong),
+            &|_| {},
+        )
         .unwrap_err();
     rep.check(
         "N1-3 a wrong key is refused, the first screen stays as it was (NFR-BAK-6)",
         wrong_key.code == BackupCode::ErrBackupKeyWrong && untouched(&n1, &fresh_n1),
-        format!("{:?}; no Owner, same rows, no key, no secret, no scratch file", wrong_key.code),
+        format!(
+            "{:?}; no Owner, same rows, no key, no secret, no scratch file",
+            wrong_key.code
+        ),
     );
     let damaged_dir = n1.root.path().join("damaged");
     std::fs::create_dir_all(&damaged_dir).unwrap();
@@ -224,7 +248,11 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     let bad = n1
         .service
         .first_run_restore(
-            &restore_input(RestoreSource::File(damaged.display().to_string()), &usb_newest, &old.printed_key),
+            &restore_input(
+                RestoreSource::File(damaged.display().to_string()),
+                &usb_newest,
+                &old.printed_key,
+            ),
             &|_| {},
         )
         .unwrap_err();
@@ -236,7 +264,10 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     n1.service_disk.set(1024);
     let full = n1
         .service
-        .first_run_restore(&restore_input(file_source.clone(), &usb_newest, &old.printed_key), &|_| {})
+        .first_run_restore(
+            &restore_input(file_source.clone(), &usb_newest, &old.printed_key),
+            &|_| {},
+        )
         .unwrap_err();
     n1.service_disk.set(10 * 1024 * 1024 * 1024);
     rep.check(
@@ -281,10 +312,16 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     );
     let done = n1
         .service
-        .first_run_restore(&restore_input(file_source.clone(), &usb_newest, &typed), &|_| {})
+        .first_run_restore(
+            &restore_input(file_source.clone(), &usb_newest, &typed),
+            &|_| {},
+        )
         .expect("restore from the file");
     let fp_n1 = fingerprint(&n1.db_path(), Some(&key_of(&n1)));
-    let extra = fp_n1.audit_chain.len().saturating_sub(fp_copy.audit_chain.len());
+    let extra = fp_n1
+        .audit_chain
+        .len()
+        .saturating_sub(fp_copy.audit_chain.len());
     let diff = differences(&fp_copy, &fp_n1, extra, NEW_COMPUTER_SETTINGS);
     rep.check(
         "N1-7 restore from a file: every table, balance, the trial balance, partner rows, both chains, settings, learned words, days and the question log equal the copy (E2E-18)",
@@ -325,12 +362,17 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     let asked = one(&n1.db_path(), "SELECT question FROM assistant_questions");
     rep.check(
         "N1-10 the closed days and the question log are back as they were",
-        closed == one(&old_db, "SELECT closed_up_to_date FROM day_state") && asked == question().question,
+        closed == one(&old_db, "SELECT closed_up_to_date FROM day_state")
+            && asked == question().question,
         format!("closed up to {closed}, question {asked:?}"),
     );
     let actor = auth::require(&n1.ctx).unwrap();
-    vouchers::save_receipt(&n1.ctx, &actor, &harness::rupees_input(old.rig.w.arshad, "500"))
-        .expect("the app works on the restored books");
+    vouchers::save_receipt(
+        &n1.ctx,
+        &actor,
+        &harness::rupees_input(old.rig.w.arshad, "500"),
+    )
+    .expect("the app works on the restored books");
     let after_new_entry = fingerprint(&n1.db_path(), Some(&key_of(&n1)));
     rep.check(
         "N1-11 a new entry on the new computer continues the same chains with the same key (NFR-SEC-6)",
@@ -352,7 +394,10 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     let fresh_n2 = n2.fingerprint();
     let account = old.account();
     let cloud_source = RestoreSource::Cloud(account.clone());
-    let cloud_list = n2.service.first_run_list(&list_input(cloud_source.clone())).unwrap();
+    let cloud_list = n2
+        .service
+        .first_run_list(&list_input(cloud_source.clone()))
+        .unwrap();
     let cloud_newest_first = cloud_list
         .rows
         .windows(2)
@@ -370,7 +415,10 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     );
     let cloud_preview = n2
         .service
-        .first_run_preview(&preview_input(cloud_source.clone(), None, &old.printed_key), &|_| {})
+        .first_run_preview(
+            &preview_input(cloud_source.clone(), None, &old.printed_key),
+            &|_| {},
+        )
         .unwrap();
     rep.check(
         "N2-2 the preview picks the newest cloud copy, shows its totals and passes every check; nothing is restored yet",
@@ -389,7 +437,10 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     flaky.fail_with(Some(CloudError::Offline("reset".into())));
     let cut = n2
         .service
-        .first_run_restore(&restore_input(cloud_source.clone(), &second, &old.printed_key), &|_| {})
+        .first_run_restore(
+            &restore_input(cloud_source.clone(), &second, &old.printed_key),
+            &|_| {},
+        )
         .unwrap_err();
     rep.check(
         "N2-3 the internet goes half way: a clear cloud error, and the first screen is ready to try again with nothing changed",
@@ -399,20 +450,28 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     flaky.fail_with(None);
     let done2 = n2
         .service
-        .first_run_restore(&restore_input(cloud_source.clone(), &second, &old.printed_key), &|_| {})
+        .first_run_restore(
+            &restore_input(cloud_source.clone(), &second, &old.printed_key),
+            &|_| {},
+        )
         .expect("the same screen works once the internet is back");
     let fp_n2 = fingerprint(&n2.db_path(), Some(&key_of(&n2)));
-    let extra2 = fp_n2.audit_chain.len().saturating_sub(fp_copy.audit_chain.len());
+    let extra2 = fp_n2
+        .audit_chain
+        .len()
+        .saturating_sub(fp_copy.audit_chain.len());
     let diff2 = differences(&fp_copy, &fp_n2, extra2, NEW_COMPUTER_SETTINGS);
     let audit_rows_added: Vec<String> = {
         let conn = robustness_backup_support::open_ro(&n2.db_path());
         let mut st = conn
             .prepare("SELECT action || ' ' || entity FROM audit_log WHERE id > ?1 ORDER BY id")
             .unwrap();
-        st.query_map([i64::try_from(fp_copy.audit_chain.len()).unwrap()], |r| r.get::<_, String>(0))
-            .unwrap()
-            .map(Result::unwrap)
-            .collect()
+        st.query_map([i64::try_from(fp_copy.audit_chain.len()).unwrap()], |r| {
+            r.get::<_, String>(0)
+        })
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
     };
     rep.check(
         "N2-4 restore from the cloud: every table, balance, the trial balance, partner rows, both chains, settings, learned words, days and the question log equal the copy (E2E-18)",
@@ -481,8 +540,12 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
 
     // the next daily copy goes to the same place and restores on a third computer
     let actor2 = auth::require(&n2.ctx).unwrap();
-    vouchers::save_receipt(&n2.ctx, &actor2, &harness::rupees_input(old.rig.w.arshad, "2,000"))
-        .expect("an entry on the new computer");
+    vouchers::save_receipt(
+        &n2.ctx,
+        &actor2,
+        &harness::rupees_input(old.rig.w.arshad, "2,000"),
+    )
+    .expect("an entry on the new computer");
     let before_objects = old.cloud.list("backups/").unwrap().len();
     let report = n2
         .service
@@ -501,7 +564,11 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
             limit: 10,
         })
         .unwrap();
-    let third_name = listed.rows.first().map(|r| r.name.clone()).unwrap_or_default();
+    let third_name = listed
+        .rows
+        .first()
+        .map(|r| r.name.clone())
+        .unwrap_or_default();
     rep.check(
         "N2-8 the next daily copy of the new computer goes to the same cloud and folder, newest first, checked",
         report.results.iter().all(|r| r.ok)
@@ -519,10 +586,16 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     let fp_copy3 = fingerprint(&plain3, Some(&old_key));
     let done3 = n3
         .service
-        .first_run_restore(&restore_input(cloud_source, &third_name, &old.printed_key), &|_| {})
+        .first_run_restore(
+            &restore_input(cloud_source, &third_name, &old.printed_key),
+            &|_| {},
+        )
         .expect("restore the copy the new computer made");
     let fp_n3 = fingerprint(&n3.db_path(), Some(&key_of(&n3)));
-    let extra3 = fp_n3.audit_chain.len().saturating_sub(fp_copy3.audit_chain.len());
+    let extra3 = fp_n3
+        .audit_chain
+        .len()
+        .saturating_sub(fp_copy3.audit_chain.len());
     let diff3 = differences(&fp_copy3, &fp_n3, extra3, NEW_COMPUTER_SETTINGS);
     rep.check(
         "N2-9 that copy restores on a third computer: the books equal it and both chains verify with the key that travelled again",
@@ -538,22 +611,38 @@ fn a_lost_laptop_comes_back_from_the_first_screen_from_a_usb_file_and_from_the_c
     let bad_cloud = memory_cloud();
     let scratch = tempfile::tempdir().unwrap();
     let good_bundle = scratch.path().join(&second);
-    old.cloud.get_file(&format!("backups/{second}"), &good_bundle).unwrap();
+    old.cloud
+        .get_file(&format!("backups/{second}"), &good_bundle)
+        .unwrap();
     let bad_bundle = scratch.path().join("flipped.mbk");
     flip_a_byte(&good_bundle, &bad_bundle);
     bad_cloud
-        .put_file(&format!("backups/{second}"), &bad_bundle, &mandi_backup::io::NoHook)
+        .put_file(
+            &format!("backups/{second}"),
+            &bad_bundle,
+            &mandi_backup::io::NoHook,
+        )
         .unwrap();
     let n4 = new_computer(bad_cloud);
     let fresh_n4 = n4.fingerprint();
     let bad_restore = n4
         .service
-        .first_run_restore(&restore_input(RestoreSource::Cloud(account), &second, &old.printed_key), &|_| {})
+        .first_run_restore(
+            &restore_input(RestoreSource::Cloud(account), &second, &old.printed_key),
+            &|_| {},
+        )
         .unwrap_err();
     let still_fresh = untouched(&n4, &fresh_n4);
     let retry = n4
         .service
-        .first_run_restore(&restore_input(RestoreSource::File(file.display().to_string()), &usb_newest, &old.printed_key), &|_| {})
+        .first_run_restore(
+            &restore_input(
+                RestoreSource::File(file.display().to_string()),
+                &usb_newest,
+                &old.printed_key,
+            ),
+            &|_| {},
+        )
         .is_ok();
     rep.check(
         "N4 a damaged cloud copy is refused and the first screen stays ready; the Owner then picks the USB file on the same screen and it works",

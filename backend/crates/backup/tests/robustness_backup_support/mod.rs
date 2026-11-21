@@ -104,7 +104,9 @@ pub fn fingerprint(path: &Path, key: Option<&AuditKey>) -> Fp {
     let mut counts = BTreeMap::new();
     for table in &tables {
         let n: i64 = conn
-            .query_row(&format!("SELECT COUNT(*) FROM \"{table}\""), [], |r| r.get(0))
+            .query_row(&format!("SELECT COUNT(*) FROM \"{table}\""), [], |r| {
+                r.get(0)
+            })
             .unwrap();
         counts.insert(table.clone(), n);
     }
@@ -138,7 +140,8 @@ pub fn fingerprint(path: &Path, key: Option<&AuditKey>) -> Fp {
             .map(Result::unwrap)
             .collect()
     };
-    let journal_chain = chain("SELECT id, COALESCE(chain_hash, '') FROM journal_entries ORDER BY id");
+    let journal_chain =
+        chain("SELECT id, COALESCE(chain_hash, '') FROM journal_entries ORDER BY id");
     let audit_chain = chain("SELECT id, COALESCE(chain_hash, '') FROM audit_log ORDER BY id");
     let settings: BTreeMap<String, String> = {
         let mut s = conn
@@ -161,9 +164,8 @@ pub fn fingerprint(path: &Path, key: Option<&AuditKey>) -> Fp {
     let mut days = rows_as_text(&conn, "day_state");
     days.extend(rows_as_text(&conn, "day_closes"));
     let questions = rows_as_text(&conn, "assistant_questions");
-    let chains_ok = key.map(|k| {
-        verify_audit_chain(&conn, k).is_ok() && verify_journal_chain(&conn, k).is_ok()
-    });
+    let chains_ok =
+        key.map(|k| verify_audit_chain(&conn, k).is_ok() && verify_journal_chain(&conn, k).is_ok());
     Fp {
         counts,
         balances,

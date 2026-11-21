@@ -2,7 +2,8 @@
 //! FR-20.11, NFR-BAK-1 to NFR-BAK-15, NFR-SEC-6, NFR-REL-4, E2E-18).
 //!
 //! It runs only when `MANDI_BACKUP_DEV_DB` names a COPY of `mandi.db` (never the file the app has
-//! open). A plain `cargo test` does nothing. The hash chains of that file were written with the
+//! open) and `MANDI_BACKUP_DEV_KEYCHAIN=1` allows the one Keychain read below. A plain `cargo test`
+//! does nothing. The hash chains of that file were written with the
 //! chain key of the computer that made it, which is in the Keychain, so the test reads that one
 //! entry (`pk.mandisoftware.app`, `audit-chain-key`) read-only, keeps it in memory and never prints
 //! or writes it. Nothing else of the Keychain is touched, and a missing entry is never created.
@@ -73,7 +74,9 @@ fn service_for(root: &Path, env: &TestEnv) -> Arc<BackupService> {
         },
         BackupParts {
             secrets: Arc::new(MemorySecretStore::default()),
-            cloud: Arc::new(FixedCloud(Arc::new(LocalFolderCloud::new(root.join("cloud"))))),
+            cloud: Arc::new(FixedCloud(Arc::new(LocalFolderCloud::new(
+                root.join("cloud"),
+            )))),
             disk: env.disk.clone(),
             hook: Arc::new(NoHook),
             pack: Arc::new(PendingPack),
@@ -91,7 +94,9 @@ fn computer(source: Option<&Path>, chain_key: Option<&AuditKey>, day: (i32, u32,
         fs::copy(source, &path).expect("copy the database");
     }
     let env = match chain_key {
-        Some(key) => TestEnv::with_key_store(root.path(), Arc::new(MemoryKeyStore::new(key.clone()))),
+        Some(key) => {
+            TestEnv::with_key_store(root.path(), Arc::new(MemoryKeyStore::new(key.clone())))
+        }
         None => TestEnv::new(root.path()),
     }
     .expect("open the data file");
@@ -105,12 +110,26 @@ fn computer(source: Option<&Path>, chain_key: Option<&AuditKey>, day: (i32, u32,
     }
 }
 
-/// The one Keychain entry the real app wrote its chain key to. Read only, never created.
+/// The one Keychain entry the real app wrote its chain key to. Read only, never created. macOS may
+/// ask the user to allow it; if nobody answers within two minutes the test stops with a clear
+/// message instead of waiting for ever.
 fn real_chain_key() -> Option<AuditKey> {
-    let entry = keyring::Entry::new(&mandi_core::profile::keyring_service(), "audit-chain-key").ok()?;
-    let bytes = entry.get_secret().ok()?;
-    let array: [u8; 32] = bytes.as_slice().try_into().ok()?;
-    Some(AuditKey::from_bytes(array))
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let key = keyring::Entry::new(&mandi_core::profile::keyring_service(), "audit-chain-key")
+            .ok()
+            .and_then(|entry| entry.get_secret().ok())
+            .and_then(|bytes| <[u8; 32]>::try_from(bytes.as_slice()).ok())
+            .map(AuditKey::from_bytes);
+        let _ = tx.send(key);
+    });
+    match rx.recv_timeout(std::time::Duration::from_secs(120)) {
+        Ok(key) => key,
+        Err(_) => panic!(
+            "no answer from the Keychain in two minutes: a macOS prompt for the entry \
+             pk.mandisoftware.app / audit-chain-key is probably waiting for a click (choose Allow)"
+        ),
+    }
 }
 
 fn code_of(result: Result<impl std::fmt::Debug, BackupError>) -> String {
@@ -126,6 +145,13 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         eprintln!("skipped: MANDI_BACKUP_DEV_DB (a COPY of mandi.db) is not set");
         return;
     };
+    if std::env::var("MANDI_BACKUP_DEV_KEYCHAIN").as_deref() != Ok("1") {
+        eprintln!(
+            "skipped: MANDI_BACKUP_DEV_KEYCHAIN=1 is needed to read the chain key of the dev \
+             database from the Keychain (read only, macOS may ask to allow it)"
+        );
+        return;
+    }
     let dev_db = PathBuf::from(dev_db);
     let mut rep = Report::default();
     let chain_key = real_chain_key().expect(
@@ -149,7 +175,11 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
             fp_start.credit
         ),
     );
-    assert_eq!(fp_start.chains_ok, Some(true), "the copy's chains must verify before the test starts");
+    assert_eq!(
+        fp_start.chains_ok,
+        Some(true),
+        "the copy's chains must verify before the test starts"
+    );
 
     let usb_dir = a.root.path().join("usb").join("MandiBackup");
     fs::create_dir_all(a.root.path().join("usb")).unwrap();
@@ -169,7 +199,9 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         )
         .expect("save the backup settings");
     let printed = a.service.key_setup(Some(1)).expect("make the key").key;
-    a.service.key_confirm(Some(1), &printed).expect("confirm the key");
+    a.service
+        .key_confirm(Some(1), &printed)
+        .expect("confirm the key");
     let fp_before = fingerprint(&a.path, Some(&chain_key));
 
     // ---- 2. local and USB (encrypted) backup ----
@@ -194,7 +226,11 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
             "snapshot {} ms, check {} ms, results {:?}",
             report.snapshot_ms,
             report.check_ms,
-            report.results.iter().map(|r| (r.kind, r.ok, r.size_bytes)).collect::<Vec<_>>()
+            report
+                .results
+                .iter()
+                .map(|r| (r.kind, r.ok, r.size_bytes))
+                .collect::<Vec<_>>()
         ),
     );
     let list = a
@@ -205,8 +241,18 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
             limit: 50,
         })
         .unwrap();
-    let local_row = list.rows.iter().find(|r| r.kind == BackupKind::Local).expect("a local copy").clone();
-    let usb_row = list.rows.iter().find(|r| r.kind == BackupKind::Usb).expect("a USB copy").clone();
+    let local_row = list
+        .rows
+        .iter()
+        .find(|r| r.kind == BackupKind::Local)
+        .expect("a local copy")
+        .clone();
+    let usb_row = list
+        .rows
+        .iter()
+        .find(|r| r.kind == BackupKind::Usb)
+        .expect("a USB copy")
+        .clone();
     rep.check(
         "B2 the list shows both copies as good, the USB one encrypted, the local one plain",
         local_row.status == RowStatus::Good
@@ -323,7 +369,10 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         )
         .expect("restore on the new computer");
     let fp_b = fingerprint(&b.path, Some(&chain_key));
-    let extra_b = fp_b.audit_chain.len().saturating_sub(fp_before.audit_chain.len());
+    let extra_b = fp_b
+        .audit_chain
+        .len()
+        .saturating_sub(fp_before.audit_chain.len());
     let diff_b = differences(&fp_before, &fp_b, extra_b, &["assistant_enabled"]);
     rep.check(
         "C4 restore on a new computer: every table's rows, trial balance, every account balance, the partner rows, both hash chains and the settings equal the copy (E2E-18, NFR-REL-4)",
@@ -354,7 +403,9 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
     fs::create_dir_all(&c_local).unwrap();
     fs::copy(&local_path, c_local.join(&local_row.name)).unwrap();
     fs::copy(
-        a.service.local_dir(&settings).join(mandi_backup::names::manifest_name(&local_row.name)),
+        a.service
+            .local_dir(&settings)
+            .join(mandi_backup::names::manifest_name(&local_row.name)),
         c_local.join(mandi_backup::names::manifest_name(&local_row.name)),
     )
     .unwrap();
@@ -381,7 +432,10 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         )
         .expect("restore the local copy into the fresh data folder");
     let fp_c = fingerprint(&c.path, Some(&chain_key));
-    let extra_c = fp_c.audit_chain.len().saturating_sub(fp_before.audit_chain.len());
+    let extra_c = fp_c
+        .audit_chain
+        .len()
+        .saturating_sub(fp_before.audit_chain.len());
     let diff_c = differences(&fp_before, &fp_c, extra_c, &[]);
     rep.check(
         "D1 the local copy restored into a fresh data folder equals the copy: all tables, balances, chains, settings",
@@ -395,7 +449,9 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
     // ---- 5. computer A moves on, then is restored over from the USB copy ----
     common::set_today(&a.env, 2026, 11, 21);
     let mani: i64 = open_ro(&a.path)
-        .query_row("SELECT id FROM accounts WHERE code = '0020'", [], |r| r.get(0))
+        .query_row("SELECT id FROM accounts WHERE code = '0020'", [], |r| {
+            r.get(0)
+        })
         .expect("the buyer 0020 of the dev copy");
     let owner = Actor {
         user_id: 1,
@@ -472,12 +528,19 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         bad_restore.starts_with("ErrBackup") && fingerprint(&a.path, Some(&chain_key)) == fp_mutated && safety_files(&a.service) == safety_before,
         format!("one byte flipped: {bad_restore}"),
     );
-    let local_plain_bad = a.service.local_dir(&settings).join("mandi-local-20261121T100000000Z.db");
+    let local_plain_bad = a
+        .service
+        .local_dir(&settings)
+        .join("mandi-local-20261121T100000000Z.db");
     flip_a_byte(&local_path, &local_plain_bad);
     // The manifest of the damaged copy is the one of the good copy: its checksum no longer fits.
     fs::copy(
-        a.service.local_dir(&settings).join(mandi_backup::names::manifest_name(&local_row.name)),
-        a.service.local_dir(&settings).join("mandi-local-20261121T100000000Z.json"),
+        a.service
+            .local_dir(&settings)
+            .join(mandi_backup::names::manifest_name(&local_row.name)),
+        a.service
+            .local_dir(&settings)
+            .join("mandi-local-20261121T100000000Z.json"),
     )
     .unwrap();
     let bad_local = code_of(a.service.restore(
@@ -493,7 +556,9 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
     ));
     rep.check(
         "E3 a damaged local copy is refused, the books are unchanged",
-        bad_local.starts_with("Err") && !bad_local.starts_with("accepted") && fingerprint(&a.path, Some(&chain_key)) == fp_mutated,
+        bad_local.starts_with("Err")
+            && !bad_local.starts_with("accepted")
+            && fingerprint(&a.path, Some(&chain_key)) == fp_mutated,
         format!("one byte flipped in the middle of the file: {bad_local}"),
     );
     let unconfirmed = code_of(a.service.restore(
@@ -506,7 +571,8 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
     ));
     rep.check(
         "E4 a restore the Owner did not confirm is refused and changes nothing (FR-20.9)",
-        unconfirmed == "ErrBackupNotConfirmed" && fingerprint(&a.path, Some(&chain_key)) == fp_mutated,
+        unconfirmed == "ErrBackupNotConfirmed"
+            && fingerprint(&a.path, Some(&chain_key)) == fp_mutated,
         unconfirmed,
     );
     let preview_a = a
@@ -553,7 +619,10 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         ),
     );
     let fp_a = fingerprint(&a.path, Some(&chain_key));
-    let extra_a = fp_a.audit_chain.len().saturating_sub(fp_before.audit_chain.len());
+    let extra_a = fp_a
+        .audit_chain
+        .len()
+        .saturating_sub(fp_before.audit_chain.len());
     let diff_a = differences(&fp_before, &fp_a, extra_a, &[]);
     rep.check(
         "E7 after the restore over the same computer every table, balance, chain and setting equals the copy, the receipt is gone (E2E-18)",
@@ -609,8 +678,16 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         format!("ok {}, checks {:?}", damaged_test.ok, damaged_test.checks),
     );
     let _ = fs::remove_file(usb_dir.join(bad_name));
-    let _ = fs::remove_file(a.service.local_dir(&settings).join("mandi-local-20261121T100000000Z.db"));
-    let _ = fs::remove_file(a.service.local_dir(&settings).join("mandi-local-20261121T100000000Z.json"));
+    let _ = fs::remove_file(
+        a.service
+            .local_dir(&settings)
+            .join("mandi-local-20261121T100000000Z.db"),
+    );
+    let _ = fs::remove_file(
+        a.service
+            .local_dir(&settings)
+            .join("mandi-local-20261121T100000000Z.json"),
+    );
     let test = a
         .service
         .test_restore(&TestRestoreInput {
