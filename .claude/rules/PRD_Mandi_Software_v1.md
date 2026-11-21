@@ -500,7 +500,7 @@ FR-6.7 [C] **Cash below zero asks, never blocks.** Umar (15-10-2026): cash in ha
 - While the entry is typed, an amber note shows: "روکڑ صفر سے کم ہو جائے گی" (Cash in hand will go below zero), with the cash in hand after the entry.
 - On save, a confirm box asks: "اس اندراج کے بعد روکڑ −5,000 ہو جائے گی۔ کیا یہ اندراج درست ہے؟" (After this entry cash in hand will be −5,000. Is this entry correct?) with two buttons: "ہاں، محفوظ کریں" (Yes, save) and "نہیں، واپس جائیں" (No, go back). The focus starts on "نہیں، واپس جائیں", so pressing `Enter` out of habit never saves a mistake. Yes saves; No returns to the entry with nothing saved and the amount field selected.
 - Where the save already asks to confirm (a cancel, FR-7.8), the same box shows the cash line. `Ctrl+Enter` (FR-7.57) asks before it saves and prints.
-- The backend works out the cash after the entry with the same function as the save, and accepts such a save only when it carries the user's confirmation. The screen only asks.
+- The backend works out the cash after the entry with the same function as the save, and accepts such a save only when it carries the user's confirmation. The screen only asks. [C] (v1.54, plan 91) On a بکری the same confirmation also covers a seller paid on the spot above today's sale (FR-12.23): one box names every reason, and the backend refuses with all of them together until it is confirmed.
 Example: روکڑ is 20,000 and a پیشگی of 25,000 is typed in cash. The note shows −5,000. On save the box asks; the munshi sees he meant 2,500, presses "نہیں", fixes it and saves with no question. If 25,000 was right, he presses "ہاں" and it saves.
 
 ---
