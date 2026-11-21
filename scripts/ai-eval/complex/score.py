@@ -19,6 +19,7 @@ The expected figures are the oracle's (`oracle.py`), never the assistant's. For 
   WRONG-ROLE a named buyer was searched as a seller (or the other way round) and the question ended
              without his figure (`not_found` with the other role, or no right figure). A wrong role
              that was corrected in a later call keeps the verdict but is noted ("role retry").
+  WRONG-DIRECTION the app's direction word on a difference (more / less) is not the true one.
   WRONG-COLUMN  the answer text shows a figure that is ANOTHER COLUMN of the same books for the same
              subject and period (the gross sale for a net sale, the buyer bill for a gross sale, the
              commission with laga for the commission without it, ...). `wrong_columns` of the question
@@ -150,7 +151,7 @@ def score_one(q, row):
     reply = row.get("reply") or {}
     outcome = row.get("outcome") or ("ask_error" if row.get("ask_error") else "none")
     parts, everything, names = extract(reply)
-    local = (row.get("finish_reason") == "local") or (row.get("model_calls") in (0, None) and outcome not in ("offline", "error"))
+    local = row.get("finish_reason") == "local"
     info = {
         "id": q["id"], "question": q["question"], "outcome": outcome, "local": bool(local),
         "calls": row.get("model_calls") or 0, "secs": (row.get("millis") or 0) / 1000.0,
@@ -212,6 +213,15 @@ def score_one(q, row):
             info["note"] = "a zero question shows a positive figure"
         return info
 
+    # the direction word the app puts on a difference must be the true one (more or less)
+    want = q.get("direction")
+    if want:
+        dirs = {p.get("dir") for p in (reply.get("answer") or {}).get("parts", []) if p.get("type") == "figure" and p.get("dir")}
+        if dirs and dirs != {want}:
+            info["verdict"] = "WRONG-DIRECTION"
+            info["missing"] = [f"direction shown {sorted(dirs)}, true direction {want} (the first period named against the second)"]
+            return info
+
     # a figure of another column of the same books, in the text of the answer
     wc = {label: v for label, v in (q.get("wrong_columns") or {}).items() if has(v, parts)}
     allowed = {a for r in q["readings"] for d in (r["req"], r["opt"]) for alts in d.values() for a in alts
@@ -247,7 +257,12 @@ def score_one(q, row):
     elif len(miss) < len(best[0]["req"]) and (everything):
         info["verdict"] = "PARTIAL"
     else:
-        info["verdict"] = "WRONG" if parts or everything else "ASKED"
+        opt_hit = [lab for lab, alts in best[0]["opt"].items() if any(not isinstance(a, list) and has(a, everything) for a in alts)]
+        if opt_hit:
+            info["verdict"] = "PARTIAL"
+            info["note"] = "only the total of the period is shown (" + ",".join(opt_hit) + ")"
+        else:
+            info["verdict"] = "WRONG" if parts or everything else "ASKED"
     return info
 
 
@@ -315,7 +330,7 @@ def main():
                   f"- over 15 s: {sum(1 for s in secs if s > 15)}; over 30 s: {sum(1 for s in secs if s > 30)}",
                   f"- model calls: " + ", ".join(f"{k} calls x{v}" for k, v in sorted(collections.Counter(r['calls'] for r in results).items())),
                   f"- cost counted: ${sum(r['cost'] for r in results):.4f}"]
-    order = {"LEAK": 0, "WRONG-COLUMN": 1, "WRONG": 2, "WRONG-ROLE": 3, "FAIL": 4, "PARTIAL": 5, "ASKED": 6}
+    order = {"LEAK": 0, "WRONG-COLUMN": 1, "WRONG-DIRECTION": 1, "WRONG": 2, "WRONG-ROLE": 3, "FAIL": 4, "PARTIAL": 5, "ASKED": 6}
     bad = sorted((r for r in results if r["verdict"] in order), key=lambda r: (order[r["verdict"]], r["id"]))
     if bad:
         lines += ["", "## Findings (worst first)", ""]
