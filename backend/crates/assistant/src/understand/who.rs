@@ -1284,7 +1284,16 @@ fn venture_and_partner_names(
 ) {
     let partner_cue = scan.has_exact(Cue::RolePartner);
     let partner_figure = scan.has_any(&[Cue::PartnerTotal, Cue::PartnerShare, Cue::Capital]);
-    if look.reader.partner_locked && (partner_cue || partner_figure) {
+    // "share of the shop's commission from Mani, in percent": "share" beside a buyer or a seller is a percent of
+    // the books, no partner's share, so the partner code is not needed (plan 82, live check D25).
+    let share_of_an_account = !partner_cue
+        && scan.has_any(&[Cue::PartnerShare])
+        && !scan.has_any(&[Cue::PartnerTotal, Cue::Capital])
+        && names.parties.iter().any(|p| {
+            matches!(&p.outcome, Outcome::Found(hit)
+                if matches!(hit.role, PartyRole::Buyer | PartyRole::Seller))
+        });
+    if look.reader.partner_locked && (partner_cue || partner_figure) && !share_of_an_account {
         names.doubts.push(Doubt::PartnerLocked);
     }
     // A partner is named after the word "partner" even when his name is one letter (A, الف).

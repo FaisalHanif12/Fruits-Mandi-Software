@@ -27,8 +27,10 @@ mod world;
 use harness::{Harness, answer_of};
 use mandi_assistant::answer::AnswerPart;
 use mandi_assistant::ask::{AskOutcome, AskReply};
+use mandi_services::core::partner_code::PartnerCodeSetInput;
 use mandi_services::core::trips::TripInput;
 use mandi_services::core::ventures::{MoneySource, VenturePartnerInput};
+use mandi_services::partner_code;
 use mandi_services::trips;
 use serde_json::{Value, json};
 
@@ -423,7 +425,19 @@ fn a_seller_and_the_buyers_of_his_goods_have_views_b_and_c_read_before_the_model
 fn the_share_of_a_buyer_in_the_shops_commission_is_no_partner_question() {
     // D25 of the live check ended as "locked": "share" was taken for a partner's share. It is a percent of the
     // shop's commission, a figure of the books that needs no partner code.
+    // The shop has a partner code and the section is locked (the live books): "share" was still taken for a
+    // partner's share, so no read was made ahead and the model's own search paused the question.
     let h = production_books();
+    partner_code::set(
+        &h.world.env.ctx,
+        &h.world.owner,
+        &PartnerCodeSetInput {
+            password: common::OWNER_PASSWORD.to_owned(),
+            code: "4826".to_owned(),
+            code_again: "4826".to_owned(),
+        },
+    )
+    .unwrap();
     let (reply, requests) = h.ask(
         "What share of the shop's total commission came from Mani this month, in percent?",
         None,
@@ -431,6 +445,9 @@ fn the_share_of_a_buyer_in_the_shops_commission_is_no_partner_question() {
     );
     assert!(!requests.is_empty(), "the model was not asked");
     assert!(!reply.locked, "{reply:#?}");
+    // Mani is read ahead as a buyer, so the model needs no partner.
+    let reads = first_reads(&requests).join(" ");
+    assert!(reads.contains("Mani"), "{reads}");
 }
 
 #[test]

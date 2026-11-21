@@ -221,17 +221,76 @@ fn the_gross_beside_the_bills_has_view_a_read_before_the_model_answers() {
 }
 
 #[test]
-fn probe_m() {
+fn one_head_for_each_month_reads_only_its_row_of_view_m() {
+    // Y03: the whole of view M (every head) was read; the head named is the only row the table needs.
     let h = Harness::day();
-    let args = serde_json::json!({
-        "view": "M", "from": "2026-09-01", "to": "2026-10-31", "group_by": "month", "item": null, "item_group": null,
-        "seller": null, "buyer": null, "city": null, "adda": null, "garden": null, "trip": null, "goods": null,
-        "partner": null, "side": null, "compare": null, "sort": null, "rows": null, "grade": null
-    });
-    let (_, requests) = h.ask("expenses", None, vec![tool_reply("analytics", &args)]);
-    for r in requests.iter().skip(1) {
-        for m in r["messages"].as_array().unwrap().iter().filter(|m| m["role"] == "tool") {
-            eprintln!("TOOLM {}", m["content"].to_string().chars().take(2500).collect::<String>());
-        }
-    }
+    h.runtime.set_local(true);
+    h.runtime.set_read_first(true);
+    h.runtime.set_instant(true);
+    h.runtime.set_low_effort(true);
+    let (_, requests) = h.ask(
+        "electricity expenses month by month this year",
+        None,
+        vec![serde_json::json!({
+            "model": "openai/gpt-6-luna",
+            "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": "{}"}}],
+            "usage": {"prompt_tokens": 7200, "completion_tokens": 60},
+        })],
+    );
+    let first = requests
+        .first()
+        .expect("a request")
+        .to_string()
+        .replace("\\\"", "\"");
+    assert!(first.contains("\"view\":\"M\""), "{first}");
+    assert!(first.contains("\"head\":\"eh"), "{first}");
+    assert!(first.contains("Electricity"), "{first}");
+}
+
+#[test]
+fn a_table_of_a_read_by_month_shows_the_months_of_a_year() {
+    use mandi_assistant::limits::{MAX_TABLE_ROWS, table_cap};
+    assert_eq!(table_cap(&serde_json::json!({"group_by": "month"})), 12);
+    assert_eq!(
+        table_cap(&serde_json::json!({"group_by": "day"})),
+        MAX_TABLE_ROWS
+    );
+    assert_eq!(
+        table_cap(&serde_json::json!({"group_by": null})),
+        MAX_TABLE_ROWS
+    );
+}
+
+#[test]
+fn the_commission_and_the_laga_of_the_shop_apart_are_the_two_sides_and_the_laga() {
+    // M19: "commission aur laga alag alag" gave one side of the commission as the commission. The app writes it:
+    // the commission of each side, and the Laga.
+    let h = production();
+    let client = NoModel::default();
+    let reply = ask_in(
+        &h,
+        &client,
+        "is saal commission aur laga alag alag batao",
+        None,
+    );
+    assert_eq!(client.calls.load(Ordering::SeqCst), 0, "no model call");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    // The two sides are what "commission without Laga" gives, and the Laga what "the Laga" gives.
+    let sides = shown(&ask_in(
+        &h,
+        &NoModel::default(),
+        "is saal ki commission laga ke bina batao",
+        None,
+    ));
+    let laga = shown(&ask_in(
+        &h,
+        &NoModel::default(),
+        "is saal ka laga kitna hai",
+        None,
+    ));
+    let got = shown(&reply);
+    assert_eq!(got.len(), 3, "{reply:#?}");
+    assert_eq!(got[..2], sides[..], "{got:?} {sides:?}");
+    assert_eq!(got[2..], laga[..], "{got:?} {laga:?}");
+    assert!(got[0] > 0 && got[2] > 0, "{got:?}");
 }

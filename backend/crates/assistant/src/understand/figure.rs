@@ -433,8 +433,13 @@ impl Cx<'_> {
             (Who::Shop, What::Commission) if self.u.laga_view == super::LagaView::Without => {
                 self.commission_sides().map(|s| vec![s])
             }
-            // The commission and the Laga each by itself, for the shop, is the model's.
-            (Who::Shop, What::Commission) if self.u.laga_view == super::LagaView::Apart => None,
+            // The commission and the Laga each by itself, for the shop: the commission of each side (never
+            // added here, the model once gave one side only: live check M19) and the Laga.
+            (Who::Shop, What::Commission) if self.u.laga_view == super::LagaView::Apart => {
+                let sides = self.commission_sides()?;
+                let laga = self.flow(&Who::Shop, What::Laga)?;
+                Some(vec![sides, laga])
+            }
             (Who::Shop, What::Sale | What::SaleCount | What::Commission | What::Laga)
             | (Who::Item(_), What::Sale | What::Commission | What::Laga)
             | (Who::Seller(_), What::Sale | What::SaleCount)
