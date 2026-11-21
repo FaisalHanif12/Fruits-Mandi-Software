@@ -693,7 +693,7 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
         .map_err(|_| bad("ERR_OUT_OF_RANGE", "view", "A to K"))?;
     // View M (the shop's expenses by head, with a column for each day, month or year) is read by the app's own
     // reads before the model answers (plan 82, Y03); the model's instructions still name A to K.
-    let entry = catalog()
+    let mut entry = catalog()
         .into_iter()
         .chain(
             mandi_reports::analytics::screen_catalog()
@@ -701,7 +701,14 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
                 .filter(|e| e.id == AnalyticsView::M),
         )
         .find(|e| e.id == view)
-        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "view", "A to K"))?;
+        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "view", "A to K, M"))?;
+    // Views A, B, C and E group their rows by day, month or year as the screens do (PRD FR-18.9, plan 82, D6
+    // v1.14): one set of rows for each bucket, each row with its period, and the totals over the whole period.
+    if matches!(view, AnalyticsView::A | AnalyticsView::B | AnalyticsView::C | AnalyticsView::E)
+        && !entry.filters.contains(&AnalyticsFilterKind::GroupBy)
+    {
+        entry.filters.push(AnalyticsFilterKind::GroupBy);
+    }
     let rows_wanted = parsed.rows.unwrap_or(DEFAULT_ROWS);
     if !(1..=MAX_ROWS).contains(&rows_wanted) {
         return Err(bad("ERR_OUT_OF_RANGE", "rows", "1 to 100").into());

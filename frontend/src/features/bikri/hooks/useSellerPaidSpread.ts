@@ -60,10 +60,9 @@ export function useSellerPaidSpread(
           seller_paid: [{ seller_account_id: sellerId, amount: text.trim() === '' ? '0' : text }],
         });
         if (latest.current.get(sellerId) !== request) return;
-        setErrors((known) => {
-          const { [sellerId]: _dropped, ...rest } = known;
-          return rest;
-        });
+        setErrors((known) =>
+          Object.fromEntries(Object.entries(known).filter(([key]) => Number(key) !== sellerId)),
+        );
         const lotsStore = stores.lots.getState();
         for (const lot of answer.lots) {
           lotsStore.patchRow(lot.key, { typed: { [LOT.cash]: cashText(lot.cash_paid_paisa) } });
