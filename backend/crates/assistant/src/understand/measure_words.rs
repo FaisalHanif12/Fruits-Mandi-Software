@@ -248,12 +248,14 @@ pub(super) fn settle(scan: &Scan, u: &mut Understanding, only_measure_words_unkn
         // A "net" that is a partner's (his khalis, "net worth") has no sale word beside it.
         clean(u, vec![FigureKind::Sale]);
         u.sale_measure = Some(SaleMeasure::Net);
+        stop_when_more_is_asked(scan, u);
         return;
     }
     // The buyers' bills: of all buyers, or of one buyer.
     if bill_word && !net_word && matches!(party, None | Some(PartyRole::Buyer)) {
         clean(u, vec![FigureKind::Sale]);
         u.sale_measure = Some(SaleMeasure::Bills);
+        stop_when_more_is_asked(scan, u);
         return;
     }
     // Where the Laga stands in a commission question.
@@ -290,6 +292,31 @@ pub(super) fn settle(scan: &Scan, u: &mut Understanding, only_measure_words_unkn
     {
         clean(u, vec![FigureKind::Commission]);
         u.laga_view = LagaView::Apart;
+    }
+}
+
+/// True when a word of the net sale or of the bills stands in a figure question that `settle` did not take
+/// ("mani ke bill aur bakaya", "safi bikri aur bakaya"): that word asks a column the instant lines do not
+/// write, so they stop (the reads are still made).
+pub(super) fn measure_word_left(scan: &Scan, u: &Understanding) -> bool {
+    u.sale_measure.is_none()
+        && matches!(u.intent.value, Intent::Figure | Intent::List)
+        && !counts_bills(u)
+        // "bijli ke bill": the electricity bill is an expense head, not a sale column.
+        && !u.figures.value.contains(&FigureKind::Expense)
+        && ((has_word(scan, NET_WORDS) && !u.figures.value.contains(&FigureKind::PartnerTotal))
+            || (has_word(scan, BILL_WORDS) && !scan.has(Cue::SalePlural)))
+}
+
+/// "khaam bikri aur gahakon ke kul bill alag alag", "mani ke bill aur bakaya": the net sale or the bills are asked
+/// BESIDE the gross, a balance or a commission, which `clean` dropped from the figures. An instant line would
+/// answer only a part of the question, so none is given; the reads are still made and the model answers (the
+/// sale guard lets it cite the other columns it was asked).
+fn stop_when_more_is_asked(scan: &Scan, u: &mut Understanding) {
+    if asked_sale_measure(&scan.raw)
+        .is_some_and(|ask| ask.gross_too || ask.balance_too || ask.commission_too)
+    {
+        u.lower_ask = true;
     }
 }
 

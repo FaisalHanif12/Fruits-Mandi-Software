@@ -15,6 +15,7 @@ export type WindowSource =
        */
       voucher_type: VoucherType | null;
     }
+  | { kind: 'advances' }
   | { kind: 'audit' }
   | { kind: 'expenses' }
   | { kind: 'fruit' }

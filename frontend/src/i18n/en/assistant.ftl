@@ -842,6 +842,21 @@ assistant-instant-sale-kind = { $kind ->
 # The seller's { -safi-bikri } for the period: his gross sale less his deductions. It is not what the shop still owes him.
 # review: pending
 assistant-instant-sale-net = { -safi-bikri } of { -beopari } { $name } { $period }: { $figure }
+# The shop's net sale for the period: the sum of the lot nets (gross less every deduction). Not the gross.
+# review: pending
+assistant-instant-sale-net-shop = { -safi-bikri } { $period }: { $figure }
+# The buyers' bills: goods, commission and Laga (the "buyer total"), for all buyers or one. Not what they still owe.
+# review: pending
+assistant-instant-bills = { $role ->
+    [buyer] Total bills of { -gahak } { $name } { $period } (goods, { -commission } and { -laga }): { $figure }
+   *[shop] Total bills of all { -gahakon } { $period } (goods, { -commission } and { -laga }): { $figure }
+}
+# The shop's profit: shared income less the shop's expenses (analytics view G).
+# review: pending
+assistant-instant-profit = Shop profit { $period } (shared income less the shop's expenses): { $figure }
+# The commission with no Laga, as its two sides. $seller is what was charged to the sellers, $buyer what was charged to the buyers.
+# review: pending
+assistant-instant-commission-sides = { -commission } { $period }, { -laga } not counted: charged to { -beopariyon } { $seller }, charged to { -gahakon } { $buyer }
 # The value of { -phal }: for the shop, for one partner or for the shop's guests.
 # review: pending
 assistant-instant-fruit = { $role ->

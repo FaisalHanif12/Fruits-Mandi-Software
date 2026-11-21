@@ -315,6 +315,21 @@ def main():
                   f"- over 15 s: {sum(1 for s in secs if s > 15)}; over 30 s: {sum(1 for s in secs if s > 30)}",
                   f"- model calls: " + ", ".join(f"{k} calls x{v}" for k, v in sorted(collections.Counter(r['calls'] for r in results).items())),
                   f"- cost counted: ${sum(r['cost'] for r in results):.4f}"]
+    order = {"LEAK": 0, "WRONG-COLUMN": 1, "WRONG": 2, "WRONG-ROLE": 3, "FAIL": 4, "PARTIAL": 5, "ASKED": 6}
+    bad = sorted((r for r in results if r["verdict"] in order), key=lambda r: (order[r["verdict"]], r["id"]))
+    if bad:
+        lines += ["", "## Findings (worst first)", ""]
+        for r in bad:
+            q = qs[r["id"]]
+            lines.append(f"- **{r['verdict']}** {r['id']} (log id {r['qid']}, {r['secs']:.1f} s, {r['calls']} calls, outcome {r['outcome']}): "
+                         f"{q['question']} | " + "; ".join(r["missing"] + ([r["note"]] if r["note"] else [])))
+    complex_secs = [r["secs"] for r in results if not r["local"] and r["verdict"] != "NEEDS-MODEL"]
+    if complex_secs:
+        lines += ["", "## Acceptance (plan 82)", "",
+                  f"- complex (model path) p95 {pct(complex_secs, .95):.1f} s (target under 15 s), longest {max(complex_secs):.1f} s (target under 30 s)",
+                  f"- no time_limit or error outcome: {'yes' if not any(r['outcome'] in ('time_limit', 'error') for r in results) else 'NO'}",
+                  f"- simple (local) under 1 s: {'yes' if all(r['secs'] < 1.0 for r in results if r['local'] and r['verdict'] != 'NEEDS-MODEL') else 'NO'}",
+                  f"- right on the list: {right} of {n} ({100 * right / max(1, n):.0f}%)"]
     text = "\n".join(lines) + "\n"
     if args.report:
         open(args.report, "w", encoding="utf-8").write(text)

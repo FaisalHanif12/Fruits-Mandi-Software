@@ -11,7 +11,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import type { UiError } from '../../../bindings/UiError';
-import { pickedOf } from '../../../shared/accounts';
+import { pickedOf, type CardChukta } from '../../../shared/accounts';
 import type { EntryMarks } from '../../../shared/edit';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import {
@@ -28,7 +28,6 @@ import {
   fieldMark,
   type SegmentedOption,
   FormGrid,
-  FormSpan,
 } from '../../../shared/ui';
 import { accountPath, accountScope, helperTarget, isCashLent, pickerValueOf } from '../draft';
 import { useOpenBills, useOpenPayables } from '../hooks';
@@ -45,6 +44,11 @@ interface VoucherFormProps {
   onEditReason: (reason: string) => void;
   /** The marks of the edits this voucher went through ("Before 600", plan 44); none when new. */
   marks?: EntryMarks | undefined;
+  /**
+   * Which account the party card is about now. The screen draws the card itself, beside the fields (plan 89), so a
+   * tall card never pushes the amount and the reason out of view; the picker only says whose card it is.
+   */
+  onCardAccount: (accountId: number | null, chukta: CardChukta | null | undefined) => void;
 }
 
 const FROM_OPTIONS: readonly SegmentedOption<FromSide>[] = [
@@ -72,6 +76,7 @@ export function VoucherForm({
   editReason,
   onEditReason,
   marks,
+  onCardAccount,
 }: VoucherFormProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
@@ -87,207 +92,246 @@ export function VoucherForm({
     onChange({ amount: formatPaisa(amount, { grouping }) });
   };
 
-  return (
-    <FormGrid columns={3}>
-      <Field label={<Localized id="vouchers-field-date" />} error={fieldError(error, 'date')}>
+  const dateField = (
+    <Field label={<Localized id="vouchers-field-date" />} error={fieldError(error, 'date')}>
+      {(props) => (
+        <DateInput
+          {...props}
+          value={draft.date}
+          onChange={(date) => {
+            onChange({ date });
+          }}
+        />
+      )}
+    </Field>
+  );
+  const fromField =
+    draft.type === 'receipt' ? (
+      <Field label={<Localized id="vouchers-field-from" />}>
+        {() => (
+          <div>
+            <SegmentedControl
+              options={FROM_OPTIONS}
+              value={draft.from}
+              groupLabel={l10n.getString('vouchers-field-from')}
+              disabled={editing}
+              onChange={(from) => {
+                if (from === draft.from) return;
+                // The other side is another kind of account: the account and the collector of
+                // this side mean nothing to it.
+                onChange({
+                  from,
+                  account: null,
+                  accountType: null,
+                  collector: null,
+                });
+              }}
+            />
+          </div>
+        )}
+      </Field>
+    ) : null;
+  const accountField = (
+    <div className="min-w-0">
+      <Field
+        label={<Localized id={accountLabelId(draft, editing)} />}
+        mark={fieldMark(marks, 'account_id')}
+        error={fieldError(error, accountPath(draft))}
+      >
         {(props) => (
-          <DateInput
+          <AccountPicker
             {...props}
-            value={draft.date}
-            onChange={(date) => {
-              onChange({ date });
+            // A new key per scope: the picker starts from its own list when the side changes.
+            key={[accountScope(draft, editing), draft.type].join('/')}
+            scope={accountScope(draft, editing)}
+            // The party card is drawn by the screen, beside the fields (plan 89).
+            showCard={false}
+            onCardAccount={onCardAccount}
+            // A person in the dead amount can still pay: a receipt offers him, tagged "ڈوبی"
+            // (PRD FR-10.10). No other entry does.
+            includeDead={draft.type === 'receipt'}
+            value={draft.account}
+            onChange={(hit) => {
+              onChange({
+                account: hit === null ? null : pickerValueOf(hit),
+                accountType: hit?.account_type ?? null,
+                reason: '',
+              });
             }}
           />
         )}
       </Field>
-      {draft.type === 'receipt' ? (
-        <Field label={<Localized id="vouchers-field-from" />}>
-          {() => (
-            <div>
-              <SegmentedControl
-                options={FROM_OPTIONS}
-                value={draft.from}
-                groupLabel={l10n.getString('vouchers-field-from')}
-                disabled={editing}
-                onChange={(from) => {
-                  if (from === draft.from) return;
-                  // The other side is another kind of account: the account and the collector of
-                  // this side mean nothing to it.
-                  onChange({
-                    from,
-                    account: null,
-                    accountType: null,
-                    collector: null,
-                  });
-                }}
-              />
-            </div>
-          )}
-        </Field>
-      ) : null}
-      <div className="min-w-0">
-        <Field
-          label={<Localized id={accountLabelId(draft, editing)} />}
-          mark={fieldMark(marks, 'account_id')}
-          error={fieldError(error, accountPath(draft))}
-        >
-          {(props) => (
-            <AccountPicker
-              {...props}
-              // A new key per scope: the picker starts from its own list when the side changes.
-              key={[accountScope(draft, editing), draft.type].join('/')}
-              scope={accountScope(draft, editing)}
-              // A person in the dead amount can still pay: a receipt offers him, tagged "ڈوبی"
-              // (PRD FR-10.10). No other entry does.
-              includeDead={draft.type === 'receipt'}
-              value={draft.account}
-              onChange={(hit) => {
-                onChange({
-                  account: hit === null ? null : pickerValueOf(hit),
-                  accountType: hit?.account_type ?? null,
-                  reason: '',
-                });
-              }}
-            />
-          )}
-        </Field>
-      </div>
-      <div className="flex flex-col gap-1">
-        <Field
-          label={<Localized id="vouchers-field-amount" />}
-          mark={fieldMark(marks, 'amount_paisa')}
-          error={fieldError(error, 'amount')}
-        >
-          {(props) => (
-            <MoneyInput
-              {...props}
-              value={draft.amount}
-              onChange={(amount) => {
-                onChange({ amount });
-              }}
-            />
-          )}
-        </Field>
-        {fillFull === null ? null : (
-          <span className="flex flex-wrap items-center gap-x-4">
+    </div>
+  );
+  const amountField = (
+    <div className="flex flex-col gap-1">
+      <Field
+        label={<Localized id="vouchers-field-amount" />}
+        mark={fieldMark(marks, 'amount_paisa')}
+        error={fieldError(error, 'amount')}
+      >
+        {(props) => (
+          <MoneyInput
+            {...props}
+            value={draft.amount}
+            onChange={(amount) => {
+              onChange({ amount });
+            }}
+          />
+        )}
+      </Field>
+      {fillFull === null ? null : (
+        <span className="flex flex-wrap items-center gap-x-4">
+          <LinkButton
+            onClick={() => {
+              fill(fillFull);
+            }}
+          >
+            <Localized id="vouchers-fill-full" />
+            &nbsp;
+            <Num paisa={fillFull} />
+          </LinkButton>
+          {oldest === null ? null : (
             <LinkButton
               onClick={() => {
-                fill(fillFull);
+                fill(oldest);
               }}
             >
-              <Localized id="vouchers-fill-full" />
+              <Localized id="vouchers-fill-oldest" />
               &nbsp;
-              <Num paisa={fillFull} />
+              <Num paisa={oldest} />
             </LinkButton>
-            {oldest === null ? null : (
-              <LinkButton
-                onClick={() => {
-                  fill(oldest);
-                }}
-              >
-                <Localized id="vouchers-fill-oldest" />
-                &nbsp;
-                <Num paisa={oldest} />
-              </LinkButton>
-            )}
-          </span>
-        )}
-      </div>
-      {draft.type === 'receipt' ? (
-        <Field
-          label={<Localized id="vouchers-field-collector" />}
-          mark={fieldMark(marks, 'collector_staff_id')}
-          error={fieldError(error, 'collector_staff_id')}
-        >
-          {(props) => (
-            <Picker
-              {...props}
-              scope="collector"
-              value={draft.collector}
-              onChange={(hit) => {
-                onChange({
-                  collector: hit === null ? null : pickedOf(hit),
-                });
-              }}
-            />
           )}
-        </Field>
-      ) : null}
-      {isCashLent(draft) ? (
-        <Field
-          label={<Localized id="vouchers-field-reason-lent" />}
-          mark={fieldMark(marks, 'reason')}
-          info={
-            <Localized id="vouchers-reason-lent-hint">
-              <p />
-            </Localized>
-          }
-          error={fieldError(error, 'reason')}
-        >
-          {(props) => (
-            <FreeTextInput
-              {...props}
-              value={draft.reason}
-              onChange={(reason) => {
-                onChange({ reason });
-              }}
-            />
-          )}
-        </Field>
-      ) : null}
-      {draft.type === 'advance' && !isCashLent(draft) ? (
-        // The goods a seller will send: a buyer's advance is cash lent and has none (PRD 15.4).
-        <Field
-          label={<Localized id="vouchers-field-expected" />}
-          mark={fieldMark(marks, 'expected_goods')}
-          info={
-            <Localized id="vouchers-field-expected-hint">
-              <p />
-            </Localized>
-          }
-          error={fieldError(error, 'expected_goods')}
-        >
-          {(props) => (
-            <FreeTextInput
-              {...props}
-              value={draft.expected_goods}
-              onChange={(expected_goods) => {
-                onChange({ expected_goods });
-              }}
-            />
-          )}
-        </Field>
-      ) : null}
+        </span>
+      )}
+    </div>
+  );
+  const collectorField =
+    draft.type === 'receipt' ? (
       <Field
-        label={<Localized id="vouchers-field-narration" />}
-        mark={fieldMark(marks, 'narration')}
-        error={fieldError(error, 'narration')}
+        label={<Localized id="vouchers-field-collector" />}
+        mark={fieldMark(marks, 'collector_staff_id')}
+        error={fieldError(error, 'collector_staff_id')}
+      >
+        {(props) => (
+          <Picker
+            {...props}
+            scope="collector"
+            value={draft.collector}
+            onChange={(hit) => {
+              onChange({
+                collector: hit === null ? null : pickedOf(hit),
+              });
+            }}
+          />
+        )}
+      </Field>
+    ) : null;
+  const reasonField = isCashLent(draft) ? (
+    <Field
+      label={<Localized id="vouchers-field-reason-lent" />}
+      mark={fieldMark(marks, 'reason')}
+      info={
+        <Localized id="vouchers-reason-lent-hint">
+          <p />
+        </Localized>
+      }
+      error={fieldError(error, 'reason')}
+    >
+      {(props) => (
+        <FreeTextInput
+          {...props}
+          value={draft.reason}
+          onChange={(reason) => {
+            onChange({ reason });
+          }}
+        />
+      )}
+    </Field>
+  ) : null;
+  // The goods a seller will send: a buyer's advance is cash lent and has none (PRD 15.4).
+  const expectedField =
+    draft.type === 'advance' && !isCashLent(draft) ? (
+      <Field
+        label={<Localized id="vouchers-field-expected" />}
+        mark={fieldMark(marks, 'expected_goods')}
+        info={
+          <Localized id="vouchers-field-expected-hint">
+            <p />
+          </Localized>
+        }
+        error={fieldError(error, 'expected_goods')}
       >
         {(props) => (
           <FreeTextInput
             {...props}
-            value={draft.narration}
-            onChange={(narration) => {
-              onChange({ narration });
+            value={draft.expected_goods}
+            onChange={(expected_goods) => {
+              onChange({ expected_goods });
             }}
           />
         )}
       </Field>
-      {editing ? (
-        <FormSpan>
-          <Field
-            label={<Localized id="vouchers-field-edit-reason" />}
-            info={
-              <Localized id="vouchers-edit-reason-hint">
-                <p />
-              </Localized>
-            }
-            error={fieldError(error, 'edit_reason')}
-          >
-            {(props) => <FreeTextInput {...props} value={editReason} onChange={onEditReason} />}
-          </Field>
-        </FormSpan>
-      ) : null}
+    ) : null;
+  const narrationField = (
+    <Field
+      label={<Localized id="vouchers-field-narration" />}
+      mark={fieldMark(marks, 'narration')}
+      error={fieldError(error, 'narration')}
+    >
+      {(props) => (
+        <FreeTextInput
+          {...props}
+          value={draft.narration}
+          onChange={(narration) => {
+            onChange({ narration });
+          }}
+        />
+      )}
+    </Field>
+  );
+  const editReasonField = (
+    <Field
+      label={<Localized id="vouchers-field-edit-reason" />}
+      info={
+        <Localized id="vouchers-edit-reason-hint">
+          <p />
+        </Localized>
+      }
+      error={fieldError(error, 'edit_reason')}
+    >
+      {(props) => <FreeTextInput {...props} value={editReason} onChange={onEditReason} />}
+    </Field>
+  );
+
+  // A saved voucher that is being changed (plan 89): the two things the Owner comes to change, the amount and the
+  // reason for the change, stand in the first two rows beside the day and the account, so they are on screen at
+  // once; the side the money moves from (fixed for a saved voucher) comes after them.
+  if (editing) {
+    return (
+      <FormGrid columns={2}>
+        {dateField}
+        {accountField}
+        {amountField}
+        {editReasonField}
+        {fromField}
+        {collectorField}
+        {reasonField}
+        {expectedField}
+        {narrationField}
+      </FormGrid>
+    );
+  }
+  return (
+    <FormGrid columns={3}>
+      {dateField}
+      {fromField}
+      {accountField}
+      {amountField}
+      {collectorField}
+      {reasonField}
+      {expectedField}
+      {narrationField}
     </FormGrid>
   );
 }

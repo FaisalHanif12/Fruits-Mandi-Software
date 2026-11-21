@@ -20,10 +20,12 @@
 //   and the list below it.
 
 import { Localized, useLocalization } from '@fluent/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import { Ban, FileText, Plus, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
+import type { CardChukta } from '../../../shared/accounts';
 import type { UiError } from '../../../bindings/UiError';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import { useFocusFirstField } from '../../../shared/hooks';
@@ -35,7 +37,9 @@ import {
   EditStampLine,
   ErrorNotice,
   Field,
+  FormAside,
   Notice,
+  PartyCard,
   SaveChangesPrompt,
   SegmentedControl,
   showToast,
@@ -44,6 +48,7 @@ import {
 } from '../../../shared/ui';
 import {
   ClosedDayEntryNotice,
+  EDIT_KEY,
   finishFixSession,
   useEditReview,
   useEntryMarks,
@@ -74,7 +79,7 @@ import {
   type ListedOutcome,
   type ListedVoucher,
 } from '../draft';
-import { useRowPreviews, useVoucherPreview } from '../hooks';
+import { VOUCHERS_KEY, useRowPreviews, useVoucherPreview } from '../hooks';
 import { voucherNumberText } from '../list-columns';
 import { VoucherPrintBox, type VoucherPrintTarget } from '../print/VoucherPrintBox';
 import { usePrintVoucherAfterSave } from '../print/usePrintVoucherAfterSave';
@@ -125,10 +130,28 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
   const [printTarget, setPrintTarget] = useState<VoucherPrintTarget | null>(null);
   const [cancelRow, setCancelRow] = useState<VoucherRow | null>(null);
   const [askNew, setAskNew] = useState(false);
+  // Whose party card is drawn beside the fields (plan 89): the picker says which account it is about.
+  const [card, setCard] = useState<{ id: number | null; chukta: CardChukta | null }>({
+    id: null,
+    chukta: null,
+  });
+  const queryClient = useQueryClient();
   // The vouchers waiting to be saved together (PRD FR-15.1). Kept in this state, never in a grid,
   // so a language switch loses nothing (F39).
   const [list, setList] = useState<ListedVoucher[]>([]);
   const formRef = useFocusFirstField<HTMLFormElement>();
+  // A saved voucher that is being changed starts with the cursor in the amount (plan 89): that is what the Owner
+  // comes to change. A new voucher starts at the first field as before.
+  const editingId = editing?.id ?? null;
+  useEffect(() => {
+    if (editingId === null) return;
+    const frame = window.requestAnimationFrame(() => {
+      formRef.current?.querySelector<HTMLInputElement>('input[inputmode="numeric"]')?.focus();
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [editingId, formRef]);
   const printAfterSave = usePrintVoucherAfterSave();
   const initialText = useMemo(() => JSON.stringify(initial), [initial]);
 
@@ -180,9 +203,16 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
     // A new voucher saved through a reopened day: the days close again, in order (PRD FR-21.4, plan 85).
     if (editing === null) void finishFixSession(l10n);
     if (editing !== null) {
-      // The screen goes back to a new voucher once it has drawn as "nothing to save": the way out
-      // is then not asked about (see the effect below).
-      setFinished(true);
+      // A saved voucher that was changed stays on the screen (plan 89, PRD FR-7.71): the row is read again, so the
+      // entry comes back with its stamp (time, Owner, the sign when the day was reopened, the reason) and the mark
+      // "Before ... now ..." on what changed. The days a fix reopened close again first (PRD FR-21.4); a voucher of
+      // a day that is closed again opens read only, with the same stamp.
+      void finishFixSession(l10n).then(() =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: VOUCHERS_KEY }),
+          queryClient.invalidateQueries({ queryKey: EDIT_KEY }),
+        ]),
+      );
       return;
     }
     setDraft(nextDraft(draft));
@@ -508,24 +538,36 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
         className="flex flex-col gap-4"
       >
         {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
-        <div className="flex flex-col gap-4 rounded-3 border border-border bg-surface p-3">
-          <VoucherForm
-            draft={draft}
-            onChange={change}
-            error={error}
-            editing={editing !== null}
-            marks={marks}
-            editReason={editReason}
-            onEditReason={setEditReason}
+        <div className="rounded-3 border border-border bg-surface p-3">
+          {/* The fields on the left, the party card beside them (plan 89): a tall card never pushes the amount
+              and the reason out of view. In a narrow window the card goes under the fields. */}
+          <FormAside
+            form={
+              <>
+                <VoucherForm
+                  draft={draft}
+                  onChange={change}
+                  error={error}
+                  editing={editing !== null}
+                  marks={marks}
+                  editReason={editReason}
+                  onEditReason={setEditReason}
+                  onCardAccount={(id, chukta) => {
+                    setCard({ id, chukta: chukta ?? null });
+                  }}
+                />
+                {preview === undefined ? null : (
+                  <VoucherNotes draft={draft} preview={preview} onMakeAdvance={makeAdvance} />
+                )}
+                {inactive ? (
+                  <Notice tone="warn">
+                    <Localized id="vouchers-inactive-hint" />
+                  </Notice>
+                ) : null}
+              </>
+            }
+            aside={<PartyCard accountId={card.id} chukta={card.chukta} />}
           />
-          {preview === undefined ? null : (
-            <VoucherNotes draft={draft} preview={preview} onMakeAdvance={makeAdvance} />
-          )}
-          {inactive ? (
-            <Notice tone="warn">
-              <Localized id="vouchers-inactive-hint" />
-            </Notice>
-          ) : null}
         </div>
       </form>
       {editing === null ? null : (

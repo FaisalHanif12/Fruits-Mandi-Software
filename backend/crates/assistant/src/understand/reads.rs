@@ -1592,8 +1592,17 @@ fn pre_reads_of_one_record(u: &Understanding, period: Option<&PeriodRef>) -> Opt
     Some(plan)
 }
 
-/// The reads of a question and the figures an instant answer gives from them.
+/// The reads of a question and the figures an instant answer gives from them. A question with a word the
+/// app did not understand keeps its reads and gives NO line (plan 82): the model answers, with the reads made.
 pub(super) fn plan(u: &Understanding) -> Option<Planned> {
+    let mut planned = plan_unstopped(u)?;
+    if u.instant_stop {
+        planned.lines.clear();
+    }
+    Some(planned)
+}
+
+fn plan_unstopped(u: &Understanding) -> Option<Planned> {
     // What a buyer paid on the spot or left on account is in no line an instant answer writes: his plain
     // balance or the cash in hand would be a real number for the wrong thing. The model answers, from the
     // register the pre-reads give it (D8 Feature 10, `paid.rs`).

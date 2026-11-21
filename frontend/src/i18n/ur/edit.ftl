@@ -37,6 +37,10 @@ edit-band = آپ { $what } { $number } ({ $date }) میں تبدیلی کر رہ
 # review: pending
 edit-band-date-fixed = اس کا دن نہیں بدلتا۔ دن بدلنا ہو تو اسے منسوخ کر کے صحیح دن پر دوبارہ لکھیں۔
 
+# What a voucher's band says can be changed (plan 89, PRD FR-7.70): everything typed, but not the day.
+# review: pending
+edit-band-can-voucher = رقم، کھاتہ اور تفصیل بدل سکتے ہیں۔ صرف دن نہیں بدلتا؛ دن بدلنا ہو تو منسوخ کر کے صحیح دن پر لکھیں۔
+
 # The days that were reopened for this fix. $days: the dates, DD-MM-YYYY, one after another.
 # review: pending
 edit-band-days = دوبارہ کھلے ہوئے دن: { $days }۔ محفوظ کرنے کے بعد یہ دوبارہ بند ہو جائیں گے۔

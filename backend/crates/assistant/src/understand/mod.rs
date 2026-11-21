@@ -896,6 +896,11 @@ pub struct Understanding {
     /// are not given by the app alone then, because the word may be a filter the reads do not have ("chai"
     /// of "chai ka kharcha").
     pub unexplained: bool,
+    /// True when the question holds a word the app did not understand ([`Understanding::unexplained`]) or a known
+    /// word that changes the figure ("koi aur", "kam", "wapas", "nahi", "pehle wali") that no plan reads: the app
+    /// writes NO instant line then, however sure the rest is (plan 82, lead decision of 21-11-2026). The reads
+    /// for the model are still made.
+    pub instant_stop: bool,
     /// True when a word for buyers or sellers stands in the question ("gahakon se wasooli", "beopariyon
     /// ko"): a report that lists every party cannot be split by it, so its total is no answer.
     pub role_word: bool,
