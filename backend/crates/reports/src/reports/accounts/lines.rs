@@ -202,7 +202,10 @@ pub(crate) fn totals(conn: &Connection, f: &LineFilter) -> Result<Sums, ReportsE
                 read_sums,
             );
         }
-        if f.account.is_none() && f.person.is_none() && covers_every_day(conn, f)? && no_drafts(conn)?
+        if f.account.is_none()
+            && f.person.is_none()
+            && covers_every_day(conn, f)?
+            && no_drafts(conn)?
         {
             // The whole journal (the day book of every day, ten years): every line is in, so the
             // covering index alone gives the sums, with no look at each line's entry (plan 80 gate:
@@ -333,7 +336,8 @@ fn raw_select(venture_kind: &str, venture_id: &str) -> String {
 }
 
 /// The joins that give a line its document number, voucher and venture.
-const RAW_JOINS: &str = "LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
+const RAW_JOINS: &str =
+    "LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
          LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id";
 
 fn read_raw(r: &mandi_db::rusqlite::Row<'_>) -> mandi_db::rusqlite::Result<RawLine> {
@@ -388,7 +392,10 @@ pub(crate) fn entry_sums_query(f: &LineFilter) -> (String, Vec<Value>) {
 ///
 /// # Errors
 /// A database error.
-pub(crate) fn entry_sums(conn: &Connection, f: &LineFilter) -> Result<Vec<EntrySums>, ReportsError> {
+pub(crate) fn entry_sums(
+    conn: &Connection,
+    f: &LineFilter,
+) -> Result<Vec<EntrySums>, ReportsError> {
     let (sql, binds) = entry_sums_query(f);
     let mut statement = conn.prepare(&sql)?;
     let rows = statement
@@ -605,11 +612,7 @@ pub mod plans {
     use mandi_db::rusqlite::Connection;
 
     /// The query of the sums of an account's lines in each of its entries.
-    pub fn entry_sums(
-        account: i64,
-        from: Option<&str>,
-        to: Option<&str>,
-    ) -> (String, Vec<Value>) {
+    pub fn entry_sums(account: i64, from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
         let f = LineFilter {
             account: Some(account),
             person: None,

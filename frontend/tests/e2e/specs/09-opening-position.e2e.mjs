@@ -99,7 +99,7 @@ describe('the opening position of the worked day (Urdu)', () => {
     await waitForHeading('ur', 'vouchers-advance-title');
     const date = await focusField('ur', 'vouchers-field-date');
     await date.setValue(ADVANCE_DATE);
-    await pick('ur', 'vouchers-field-seller', '1', 'رحیم');
+    await pick('ur', 'vouchers-field-party', '1', 'رحیم');
     const amount = await focusField('ur', 'vouchers-field-amount');
     await amount.setValue('15000');
     await type(Key.F10);

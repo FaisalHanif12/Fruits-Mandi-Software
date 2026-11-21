@@ -189,6 +189,7 @@ function CapitalEditor({
       onNew={startNew}
       flow={flow}
       error={error}
+      closedDay={{ date: draft.date, onReopened: flow.clearRefusal }}
       fieldsShown={CAPITAL_FIELD_PATHS}
       formRef={formRef}
       below={<CapitalHistorySection partnerId={partnerId} />}

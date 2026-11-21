@@ -937,6 +937,7 @@ fn the_voucher_helpers_and_the_find_take_a_page() {
                 removed: RemovedPaymentFields::default(),
                 expected_goods: String::new(),
                 narration: String::new(),
+                reason: None,
             },
         )
         .unwrap();

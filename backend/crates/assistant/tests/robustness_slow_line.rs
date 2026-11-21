@@ -1,15 +1,16 @@
 //! Plan 55 gate 6: slow and lost lines. A scripted model on a bad line: each call can be delayed or
 //! dropped. Offline: no key, no network, the model is a recorded transcript behind [`SlowLine`].
 //!
-//! The hard limits of plan 55 Section 3 (Umar: "over 30 s has no purpose"):
+//! The hard limits of plan 55 Section 3, moved by plan 82 (NFR-AI-3 v1.22: a try waits 20 s, the
+//! tools go off at 30 s, a question may take 45 s; they were 12, 20 and 25):
 //!
-//! - no question goes over 25 seconds;
-//! - at 20 seconds the last call goes out with the tools off and answers from what has been read;
-//! - at 25 seconds the panel shows what was read (the checked tables), not an error: no answer is
+//! - no question goes over 45 seconds;
+//! - at 30 seconds the last call goes out with the tools off and answers from what has been read;
+//! - at 45 seconds the panel shows what was read (the checked tables), not an error: no answer is
 //!   ever lost;
 //! - a slow line is a slow line, never an error.
 //!
-//! Three tests really wait (about 21 to 25 seconds each, side by side): the hard limits are built
+//! Three tests really wait (about 31 to 45 seconds each, side by side): the hard limits are built
 //! (backend, S1 and S5), so they run with the rest. A drop or a hang after something was read ends as
 //! `time_limit` with what was read (a report, a party card, the tiles); after a find alone it ends
 //! with the failure.
@@ -96,7 +97,9 @@ struct SlowLine {
     delays: Vec<Duration>,
     drops: Vec<Option<FailureKind>>,
     notes: Mutex<Vec<Note>>,
-    begin: Instant,
+    /// The start of the question: set by `ask_on` just before the question is asked, so a note's
+    /// `at` is the question's own clock and not the time the line was built.
+    begin: Mutex<Instant>,
 }
 
 impl SlowLine {
@@ -106,7 +109,7 @@ impl SlowLine {
             delays,
             drops,
             notes: Mutex::new(Vec::new()),
-            begin: Instant::now(),
+            begin: Mutex::new(Instant::now()),
         }
     }
 
@@ -124,7 +127,7 @@ impl ModelClient for SlowLine {
         let n = self.notes.lock().expect("the notes").len();
         let dropped = self.drops.get(n).copied().flatten();
         self.notes.lock().expect("the notes").push(Note {
-            at: self.begin.elapsed(),
+            at: self.begin.lock().expect("the clock").elapsed(),
             tool_choice: body["tool_choice"].as_str().unwrap_or("").to_owned(),
             timeout,
             dropped: dropped.is_some(),
@@ -146,6 +149,7 @@ fn ask_on(h: &Harness, line: &SlowLine, text: &str) -> (AskReply, Duration) {
     let emit = |_s: AssistantStep| {};
     let deps = h.deps(line, &emit);
     let started = Instant::now();
+    *line.begin.lock().expect("the clock") = started;
     let reply = ask(
         &deps,
         &AssistantAskInput {
@@ -189,6 +193,12 @@ fn akram_replies() -> Vec<Value> {
     ]
 }
 
+/// What a loaded computer may add to a limit that is measured with wall time: the question stops at
+/// 45 s by its own clock, and the table is drawn and the row written after that. On the shared Mac
+/// of the team (a load of 100 and more) that took up to 1.3 s; on an idle machine it takes a few
+/// milliseconds. The limits themselves are asserted exactly in `robustness_assistant.rs`.
+const LOAD_SLACK: Duration = Duration::from_millis(3_000);
+
 fn seconds(n: u64) -> Duration {
     Duration::from_secs(n)
 }
@@ -206,7 +216,7 @@ fn a_dropped_first_call_is_tried_once_more_and_the_question_is_answered() {
         let line = SlowLine::new(akram_replies(), vec![], vec![Some(kind)]);
         let (reply, took) = ask_on(&h, &line, QUESTION);
         assert_eq!(reply.outcome, AskOutcome::Answered, "{kind:?}: {reply:#?}");
-        assert!(took < seconds(25), "{kind:?}: {took:?}");
+        assert!(took < seconds(45), "{kind:?}: {took:?}");
         let notes = line.notes();
         assert_eq!(
             notes.len(),
@@ -250,7 +260,7 @@ fn a_line_that_drops_every_try_ends_with_the_reason_and_the_question_is_kept() {
         "{reply:#?}"
     );
     assert!(reply.failure.is_some(), "the reason is given: {reply:#?}");
-    assert!(took < seconds(25), "{took:?}");
+    assert!(took < seconds(45), "{took:?}");
     let logged = mandi_services::assistant::get_question(&h.world.env.ctx, reply.question_id)
         .expect("the log")
         .expect("the question is logged");
@@ -269,7 +279,7 @@ fn a_line_that_drops_after_a_report_was_read_shows_what_was_read_as_a_time_limit
         vec![None, Some(FailureKind::Dropped), Some(FailureKind::Dropped)],
     );
     let (reply, took) = ask_on(&h, &line, "gahakon ke kul bakaya");
-    assert!(took < seconds(25), "{took:?}");
+    assert!(took < seconds(45), "{took:?}");
     assert_eq!(reply.outcome, AskOutcome::TimeLimit, "{reply:#?}");
     assert!(reply.failure.is_none(), "a slow line is not a failure");
     let answer = answer_of(&reply);
@@ -293,7 +303,7 @@ fn a_line_that_drops_after_the_tiles_were_read_shows_them_as_a_time_limit() {
         vec![None, Some(FailureKind::Dropped), Some(FailureKind::Dropped)],
     );
     let (reply, took) = ask_on(&h, &line, "aaj ki bikri kitni hui");
-    assert!(took < seconds(25), "{took:?}");
+    assert!(took < seconds(45), "{took:?}");
     assert_eq!(reply.outcome, AskOutcome::TimeLimit, "{reply:#?}");
     assert!(reply.failure.is_none(), "a slow line is not a failure");
     let answer = answer_of(&reply);
@@ -320,7 +330,7 @@ fn a_line_that_drops_after_only_a_find_ends_with_the_failure_and_not_with_a_gues
         vec![None, Some(FailureKind::Dropped), Some(FailureKind::Dropped)],
     );
     let (reply, took) = ask_on(&h, &line, question);
-    assert!(took < seconds(25), "{took:?}");
+    assert!(took < seconds(45), "{took:?}");
     assert!(
         matches!(reply.outcome, AskOutcome::Error | AskOutcome::Offline),
         "{reply:#?}"
@@ -358,7 +368,7 @@ fn a_line_that_drops_after_a_party_card_was_read_still_shows_what_was_read() {
         ],
     );
     let (reply, took) = ask_on(&h, &line, QUESTION);
-    assert!(took < seconds(25), "{took:?}");
+    assert!(took < seconds(45), "{took:?}");
     let shown = reply
         .answer
         .as_ref()
@@ -373,9 +383,9 @@ fn a_line_that_drops_after_a_party_card_was_read_still_shows_what_was_read() {
 // ---- slow: really wait ------------------------------------------------------------------------
 
 #[test]
-fn at_20_seconds_the_last_call_goes_out_with_the_tools_off() {
-    // The first two calls take 10 and 11 seconds and each asks for one more read. The question has
-    // used 21 s: the third call may not read anything, and answers from what was read.
+fn at_30_seconds_the_last_call_goes_out_with_the_tools_off() {
+    // The first two calls take 15 and 16 seconds and each asks for one more read. The question has
+    // used 31 s: the third call may not read anything, and answers from what was read.
     let h = Harness::day();
     let line = SlowLine::new(
         vec![
@@ -383,26 +393,26 @@ fn at_20_seconds_the_last_call_goes_out_with_the_tools_off() {
             tool_reply(&[report("R24")]),
             final_reply("{{r1.totals.balance}}"),
         ],
-        vec![seconds(10), seconds(11)],
+        vec![seconds(15), seconds(16)],
         vec![],
     );
     let (reply, took) = ask_on(&h, &line, "gahakon ke kul bakaya");
     let notes = line.notes();
-    assert!(took <= seconds(25), "no question over 25 s: {took:?}");
+    assert!(took <= seconds(45), "no question over 45 s: {took:?}");
     assert_eq!(notes.len(), 3, "{notes:?}");
     assert_eq!(
         notes.last().map(|n| n.tool_choice.as_str()),
         Some("none"),
-        "the call after 20 s has the tools off: {notes:?}"
+        "the call after 30 s has the tools off: {notes:?}"
     );
-    assert!(notes[2].at >= seconds(20), "{notes:?}");
+    assert!(notes[2].at >= seconds(30), "{notes:?}");
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
 }
 
 #[test]
-fn at_25_seconds_the_panel_shows_what_was_read_and_not_an_error() {
+fn at_45_seconds_the_panel_shows_what_was_read_and_not_an_error() {
     // The dues report is read at once; then the model's next call never comes back (a line so slow
-    // that the call hangs, and its one retry hangs too). At 25 s the question ends with the table
+    // that the call hangs, and its one retry hangs too). At 45 s the question ends with the table
     // that was read, as a slow line.
     let h = Harness::day();
     let line = SlowLine::new(
@@ -411,7 +421,10 @@ fn at_25_seconds_the_panel_shows_what_was_read_and_not_an_error() {
         vec![],
     );
     let (reply, took) = ask_on(&h, &line, "gahakon ke kul bakaya");
-    assert!(took <= seconds(26), "no question over 25 s: {took:?}");
+    assert!(
+        took <= seconds(45) + LOAD_SLACK,
+        "no question over 45 s (plus the slack of a loaded machine): {took:?}"
+    );
     assert_eq!(
         reply.outcome,
         AskOutcome::TimeLimit,
@@ -424,34 +437,37 @@ fn at_25_seconds_the_panel_shows_what_was_read_and_not_an_error() {
     );
     for note in line.notes() {
         assert!(
-            note.at + note.timeout <= seconds(25) + Duration::from_millis(500),
-            "a call may not run past the 25 s limit: {note:?}"
+            note.at + note.timeout <= seconds(45) + LOAD_SLACK,
+            "a call may not run past the 45 s limit: {note:?}"
         );
     }
 }
 
 #[test]
-fn a_slow_first_call_never_pushes_the_question_past_25_seconds() {
+fn a_slow_first_call_never_pushes_the_question_past_45_seconds() {
     // Nothing is read yet and the first call hangs, and so does its one retry. The question ends in
-    // at most 25 s with the reason, and is kept so it can be asked again. No call is given more
+    // at most 45 s with the reason, and is kept so it can be asked again. No call is given more
     // time than the question has left.
     let h = Harness::day();
     let line = SlowLine::new(akram_replies(), vec![seconds(100), seconds(100)], vec![]);
     let (reply, took) = ask_on(&h, &line, QUESTION);
-    assert!(took <= seconds(26), "no question over 25 s: {took:?}");
+    assert!(
+        took <= seconds(45) + LOAD_SLACK,
+        "no question over 45 s (plus the slack of a loaded machine): {took:?}"
+    );
     assert!(
         reply.failure.is_some() || reply.answer.is_some(),
         "{reply:#?}"
     );
     for note in line.notes() {
         assert!(
-            note.at + note.timeout <= seconds(25) + Duration::from_millis(500),
-            "a call may not run past the 25 s limit: {note:?}"
+            note.at + note.timeout <= seconds(45) + LOAD_SLACK,
+            "a call may not run past the 45 s limit: {note:?}"
         );
     }
     assert!(
-        line.notes().iter().any(|n| n.timeout <= seconds(12)),
-        "the first try is cut at 12 s: {:?}",
+        line.notes().iter().any(|n| n.timeout <= seconds(20)),
+        "the first try is cut at 20 s: {:?}",
         line.notes()
     );
 }

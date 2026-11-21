@@ -1,41 +1,45 @@
 //! View H, top 10, سرفہرست (PRD 18.2): the ten items, the ten sellers and the ten buyers with the
-//! most total commission (seller commission + buyer commission + لاگا of their sale lines, or
-//! the side asked for), each list under its own heading row.
+//! most of one measure (PRD FR-18.10, plan 84): the total commission (seller commission + buyer
+//! commission + لاگا of their sale lines, or the side asked for) when none is asked for, or the
+//! sales, the buyers' bills, the quantity or one commission. Each list is under its own heading
+//! row, and its rows are in the order of the measure.
 //!
 //! A چکتا buyer of the چکتا کھاتہ account is one row for each person (FR-13.9). A row with
-//! no commission left is not listed. The share is the row's part of ALL the commission of the
-//! filter, not of the top ten.
+//! nothing of the measure left is not listed. The share is the row's part of ALL of the measure in
+//! the filter, not of the top ten. The columns are the rank, the name, the quantity, the measure
+//! (not repeated when it is the quantity) and the share.
 //!
 //! Example (the worked day): items کیلا 3,928, سیب 1,520; sellers رحیم 3,928, کریم 1,520; buyers
-//! ارشد 2,328, اکرم 1,600, شاہد 1,520.
+//! ارشد 2,328, اکرم 1,600, شاہد 1,520. By خام بکری: items کیلا 29,400, سیب 12,000; sellers رحیم 29,400,
+//! کریم 12,000; buyers ارشد 17,400, اکرم 12,000, شاہد 12,000.
 
 use std::collections::HashMap;
 
-use mandi_core::money::Paisa;
 use mandi_db::rusqlite::Connection;
 
 use super::facts::{self, Group, Sums, compare_range, run_range};
 use super::filters::Typed;
 use super::ids;
-use super::model::{AnalyticsKey, AnalyticsRow};
-use super::table::{
-    Table, col, compare_cells, compare_columns, count_of, item_rows, percent_cell, row,
+use super::measure::{
+    Figure, add, compare_columns_of, compare_figure_cells, measure_column, measure_of, share_cell,
 };
+use super::model::{AnalyticsKey, AnalyticsMeasure, AnalyticsRow};
+use super::table::{Table, col, count_of, item_rows, row};
 use crate::error::ReportsError;
 use crate::reports::PageSpec;
-use crate::reports::common::{add, chukta_party, load_parties};
+use crate::reports::common::{chukta_party, load_parties};
 use crate::reports::grouped_sums::chukta_names;
 use crate::reports::{Cell, ColumnKind, RowKind};
 
 /// Rows in each list.
 const TOP: usize = 10;
 
-/// A candidate row of one list: the id (and person key), its sums and its total commission.
+/// A candidate row of one list: the id (and person key), its sums and its figure of the measure.
 struct Candidate {
     id: i64,
     person: Option<String>,
     sums: Sums,
-    total: Paisa,
+    total: Figure,
 }
 
 /// The candidates of one list, biggest first, with the total of all of them.
@@ -43,14 +47,15 @@ fn candidates(
     groups: &[Group],
     typed: &Typed,
     keyed_by_person: bool,
-) -> Result<(Vec<Candidate>, Paisa), ReportsError> {
+) -> Result<(Vec<Candidate>, Figure), ReportsError> {
+    let measure = measure_of(typed);
     let mut found = Vec::new();
-    let mut grand = Paisa::ZERO;
+    let mut grand = Figure::zero(measure);
     for group in groups {
         let Some(id) = group.int(0) else { continue };
-        let total = group.sums.total_comm(typed.side)?;
+        let total = group.sums.figure(measure, typed.side)?;
         add(&mut grand, total)?;
-        if total > Paisa::ZERO {
+        if total.is_positive() {
             found.push(Candidate {
                 id,
                 person: if keyed_by_person { group.text(1) } else { None },
@@ -74,12 +79,15 @@ fn heading(label: &str, width: usize) -> AnalyticsRow {
     }
 }
 
+/// The groups of the three ways of [`three_ways`]: by item, by seller and by buyer.
+type ThreeWays = (Vec<Group>, Vec<Group>, Vec<Group>);
+
 /// The facts of a date range grouped by item, by seller and by buyer (and person): one read.
 fn three_ways(
     conn: &Connection,
     typed: &Typed,
     range: (Option<&str>, Option<&str>),
-) -> Result<(Vec<Group>, Vec<Group>, Vec<Group>), ReportsError> {
+) -> Result<ThreeWays, ReportsError> {
     let none = AnalyticsKey::default();
     let mut lists = facts::groups_multi(
         conn,
@@ -101,6 +109,8 @@ fn three_ways(
 /// # Errors
 /// A database error; `ReportsError::Data` for a fact net below 0; `ReportsError::Money`.
 pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Table, ReportsError> {
+    let measure = measure_of(typed);
+    let zero = Figure::zero(measure);
     // The three lists are the same facts grouped three ways: one read of them, not three (plan 80
     // gate: ten years of facts took 6 seconds as three `GROUP BY` passes).
     let (by_item, by_seller, by_buyer) = three_ways(conn, typed, run_range(typed))?;
@@ -139,30 +149,30 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     sellers.truncate(TOP);
     buyers.truncate(TOP);
 
-    // The compared period: the total commission of the same entities.
+    // The compared period: the same measure of the same entities.
     let with_compare = typed.compare.is_some();
-    let mut compare_item: HashMap<i64, Paisa> = HashMap::new();
-    let mut compare_seller: HashMap<i64, Paisa> = HashMap::new();
-    let mut compare_buyer: HashMap<(i64, Option<String>), Paisa> = HashMap::new();
-    let mut grand_compared = Paisa::ZERO;
+    let mut compare_item: HashMap<i64, Figure> = HashMap::new();
+    let mut compare_seller: HashMap<i64, Figure> = HashMap::new();
+    let mut compare_buyer: HashMap<(i64, Option<String>), Figure> = HashMap::new();
+    let mut grand_compared = zero;
     if with_compare {
         let range = compare_range(typed);
         let (by_item, by_seller, by_buyer) = three_ways(conn, typed, range)?;
         for group in &by_item {
             if let Some(id) = group.int(0) {
-                let total = group.sums.total_comm(typed.side)?;
+                let total = group.sums.figure(measure, typed.side)?;
                 add(&mut grand_compared, total)?;
                 compare_item.insert(id, total);
             }
         }
         for group in &by_seller {
             if let Some(id) = group.int(0) {
-                compare_seller.insert(id, group.sums.total_comm(typed.side)?);
+                compare_seller.insert(id, group.sums.figure(measure, typed.side)?);
             }
         }
         for group in &by_buyer {
             if let Some(id) = group.int(0) {
-                compare_buyer.insert((id, group.text(1)), group.sums.total_comm(typed.side)?);
+                compare_buyer.insert((id, group.text(1)), group.sums.figure(measure, typed.side)?);
             }
         }
     }
@@ -179,22 +189,26 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     };
     let names = chukta_names(conn, &chukta_ids)?;
 
+    // The quantity is always shown; the measure is a column of its own unless it is the quantity.
+    let measure_is_qty = measure == AnalyticsMeasure::Qty;
     let mut columns = vec![
         col("rank", ids::COL_RANK, ColumnKind::Number),
         col("name", ids::COL_NAME, ColumnKind::Party),
         col("qty", ids::COL_QTY, ColumnKind::Number),
-        col("total_comm", ids::COL_TOTAL_COMM, ColumnKind::Money),
-        col("share", ids::COL_SHARE, ColumnKind::Percent),
     ];
+    if !measure_is_qty {
+        columns.push(measure_column(measure));
+    }
+    columns.push(col("share", ids::COL_SHARE, ColumnKind::Percent));
     if with_compare {
-        columns.extend(compare_columns());
+        columns.extend(compare_columns_of(measure));
     }
     let width = columns.len();
 
     let one = |rank: usize,
                name: Cell,
                candidate: &Candidate,
-               compared: Paisa,
+               compared: Figure,
                key: AnalyticsKey|
      -> Result<AnalyticsRow, ReportsError> {
         let mut cells = vec![
@@ -205,13 +219,13 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             Cell::Number {
                 value: candidate.sums.qty,
             },
-            Cell::Money {
-                paisa: candidate.total,
-            },
-            percent_cell(candidate.total, grand)?,
         ];
+        if !measure_is_qty {
+            cells.push(candidate.total.cell());
+        }
+        cells.push(share_cell(candidate.total, grand)?);
         if with_compare {
-            cells.extend(compare_cells(candidate.total, compared)?);
+            cells.extend(compare_figure_cells(candidate.total, compared)?);
         }
         Ok(row(cells, key))
     };
@@ -227,10 +241,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             index.saturating_add(1),
             name,
             candidate,
-            compare_item
-                .get(&candidate.id)
-                .copied()
-                .unwrap_or(Paisa::ZERO),
+            compare_item.get(&candidate.id).copied().unwrap_or(zero),
             AnalyticsKey {
                 item_id: Some(candidate.id),
                 ..AnalyticsKey::default()
@@ -246,10 +257,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             index.saturating_add(1),
             name,
             candidate,
-            compare_seller
-                .get(&candidate.id)
-                .copied()
-                .unwrap_or(Paisa::ZERO),
+            compare_seller.get(&candidate.id).copied().unwrap_or(zero),
             AnalyticsKey {
                 seller_id: Some(candidate.id),
                 ..AnalyticsKey::default()
@@ -280,7 +288,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             compare_buyer
                 .get(&(candidate.id, candidate.person.clone()))
                 .copied()
-                .unwrap_or(Paisa::ZERO),
+                .unwrap_or(zero),
             AnalyticsKey {
                 buyer_id: Some(candidate.id),
                 person_key: candidate.person.clone(),
@@ -301,22 +309,20 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         }
     }
 
-    // The totals row: the quantity and the commission of the whole filter.
+    // The totals row: the quantity and the measure of the whole filter.
     let mut qty = 0_i64;
     for group in &by_item {
         qty = qty
             .checked_add(group.sums.qty)
             .ok_or_else(|| ReportsError::Data("the quantity total does not fit".to_owned()))?;
     }
-    let mut totals = vec![
-        Cell::Empty,
-        Cell::Empty,
-        Cell::Number { value: qty },
-        Cell::Money { paisa: grand },
-        percent_cell(grand, grand)?,
-    ];
+    let mut totals = vec![Cell::Empty, Cell::Empty, Cell::Number { value: qty }];
+    if !measure_is_qty {
+        totals.push(grand.cell());
+    }
+    totals.push(share_cell(grand, grand)?);
     if with_compare {
-        totals.extend(compare_cells(grand, grand_compared)?);
+        totals.extend(compare_figure_cells(grand, grand_compared)?);
     }
 
     Ok(Table {

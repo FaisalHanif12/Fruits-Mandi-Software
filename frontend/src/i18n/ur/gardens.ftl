@@ -138,11 +138,7 @@ gardens-field-season-end = موسم کا اختتام
 gardens-field-paid-now = پہلی { -qist }
 # review: pending
 gardens-field-paid-now-hint = آج کچھ ادا نہ ہو تو خالی چھوڑ دیں۔ یہ پہلی قسط کے طور پر محفوظ ہوگی۔
-# review: pending
-gardens-field-paid-now-reason = پہلی قسط کیوں دی گئی
-# review: pending
-gardens-field-paid-now-reason-hint = خود بھر دیا گیا ہے۔ ٹھیک نہ ہو تو بدل دیں۔
-# The words put in the reason of the first installment when its amount is typed (PRD FR-12.35). Free text: saved as shown, in the language of the screen at that moment. Plain words on purpose, with no glossary reference, so the saved text has no invisible marks in it.
+# The standard words of the reason of the first installment (PRD FR-12.35). The form has no field for it (plan 81): the backend saves these words. Plain words on purpose, with no glossary reference, so the saved text has no invisible marks in it.
 # review: pending
 gardens-first-installment-reason = پہلی قسط
 # review: pending

@@ -6,6 +6,8 @@
 export type CapitalWhereKind =
   | 'cash'
   | 'buyers_owe'
+  | 'buyer_credits'
+  | 'dead_amount'
   | 'seller_advances'
   | 'sellers_owe_beyond'
   | 'sellers_payable'

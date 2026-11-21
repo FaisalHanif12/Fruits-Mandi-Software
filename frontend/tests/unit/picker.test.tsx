@@ -15,6 +15,7 @@ import type { SearchHit, SearchScope } from '../../src/shared/search';
 import { Field, Picker, type PickerValue } from '../../src/shared/ui';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fail } from '../helpers/app';
+import { mockDropdownLayout } from '../helpers/dropdown-layout';
 import { message, renderIn, visible } from '../helpers/render';
 
 vi.mock('../../src/shared/search/api');
@@ -139,17 +140,24 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     expect(input).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('opens its list above the field when asked, and under it otherwise (plan 51)', async () => {
+  it('opens its list above the field when asked, and under it otherwise (plan 51, plan 86)', async () => {
     for (const above of [false, true]) {
+      // A field in the middle of the window, with room for a short list on both sides.
+      const layout = mockDropdownLayout({
+        window: { width: 1366, height: 768 },
+        field: () => screen.queryByRole('combobox')?.parentElement ?? null,
+        fieldRect: { top: 300, left: 300, width: 280, height: 44 },
+        list: { width: 280, height: 200 },
+      });
       const { input, user } = setup(language, { above });
       await user.click(input);
       await user.keyboard('ar');
       await waitFor(() => {
         expect(options()).toHaveLength(1);
       });
-      const popup = screen.getByRole('listbox').parentElement;
-      expect(popup).toHaveClass(above ? 'bottom-full' : 'top-full');
-      expect(popup).not.toHaveClass(above ? 'top-full' : 'bottom-full');
+      const popup = screen.getByRole('listbox').closest('[data-dropdown-popup]');
+      expect(popup).toHaveAttribute('data-side', above ? 'top' : 'bottom');
+      layout.restore();
       cleanup();
     }
   });

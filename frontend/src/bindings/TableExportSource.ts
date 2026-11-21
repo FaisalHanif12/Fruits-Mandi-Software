@@ -8,6 +8,7 @@ import type { CollectionSheetPrintInput } from './CollectionSheetPrintInput';
 import type { CommissionPrintInput } from './CommissionPrintInput';
 import type { LentOpenPrintInput } from './LentOpenPrintInput';
 import type { PartnersStatementMonthPrintInput } from './PartnersStatementMonthPrintInput';
+import type { SalesPrintInput } from './SalesPrintInput';
 import type { SellerDuesPrintInput } from './SellerDuesPrintInput';
 import type { TotalDuesPrintInput } from './TotalDuesPrintInput';
 
@@ -17,6 +18,7 @@ import type { TotalDuesPrintInput } from './TotalDuesPrintInput';
  */
 export type TableExportSource =
   | ({ kind: 'commission_month' } & CommissionPrintInput)
+  | ({ kind: 'sales_period' } & SalesPrintInput)
   | ({ kind: 'buyer_dues' } & BuyerDuesPrintInput)
   | ({ kind: 'seller_dues' } & SellerDuesPrintInput)
   | ({ kind: 'total_dues' } & TotalDuesPrintInput)

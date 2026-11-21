@@ -39,6 +39,8 @@ export type Destination =
   | { kind: 'cash-sales' }
   /** The commission page: one month, a row for each day (PRD FR-9.3, plan 76 point 7). */
   | { kind: 'commission' }
+  /** The sales page: one month, a row for each day with sales (the tile آج کی بکری, PRD FR-9.9, plan 83). */
+  | { kind: 'sales' }
   /** The kharch page: the shop's kharch per head and each partner's own, for a period (PRD FR-9.5, plan 77). */
   | { kind: 'kharch' }
   /** Garden owners' and others' dues: money given to people who are not staff (PRD FR-16.13, plan 76 point 10). */
@@ -186,6 +188,9 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'commission':
         void navigate({ to: '/commission' });
+        return;
+      case 'sales':
+        void navigate({ to: '/sales' });
         return;
       case 'kharch':
         void navigate({ to: '/kharch' });

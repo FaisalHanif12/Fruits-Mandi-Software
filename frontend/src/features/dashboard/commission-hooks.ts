@@ -11,7 +11,7 @@ import type { CommissionParty } from '../../bindings/CommissionParty';
 import type { CommissionPeriod } from '../../bindings/CommissionPeriod';
 import { monthBounds, monthOf } from '../../shared/format';
 import { dashboardCommissionDay, dashboardCommissionMonth } from './api';
-import { yearOf, type CommissionFilters } from './commission-search';
+import { yearOf, type CommissionFilters, type PeriodFilters } from './commission-search';
 
 /** One page of the postings behind a day: more than this is told as a count (a day rarely has so many). */
 const DAY_ENTRIES = 100;
@@ -27,12 +27,12 @@ export function commissionParty(filters: CommissionFilters): CommissionParty | n
 }
 
 /**
- * The period as the backend reads it. A kind with nothing chosen is the latest of its kind, which needs the
- * backend's today (the month is the one that can go without it: none is the current month). Null while
- * today is not known.
+ * The period as the backend reads it (shared with the sales page, plan 83). A kind with nothing chosen is the
+ * latest of its kind, which needs the backend's today (the month is the one that can go without it: none is
+ * the current month). Null while today is not known.
  */
 export function commissionPeriod(
-  filters: CommissionFilters,
+  filters: PeriodFilters,
   today: string | null,
 ): CommissionPeriod | null {
   switch (filters.kind) {

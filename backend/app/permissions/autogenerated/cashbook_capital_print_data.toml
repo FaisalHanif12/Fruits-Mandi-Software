@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-cashbook-capital-print-data"
+description = "Enables the cashbook_capital_print_data command without any pre-configured scope."
+commands.allow = ["cashbook_capital_print_data"]
+
+[[permission]]
+identifier = "deny-cashbook-capital-print-data"
+description = "Denies the cashbook_capital_print_data command without any pre-configured scope."
+commands.deny = ["cashbook_capital_print_data"]

@@ -12,13 +12,16 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { Landmark } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
+import type { CapitalPrintInput } from '../../../bindings/CapitalPrintInput';
 import type { CashbookRow } from '../../../bindings/CashbookRow';
+import type { Language } from '../../../bindings/Language';
+import type { Paper } from '../../../bindings/Paper';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList, type ListContext } from '../../../shared/grid';
 import { useListWindow } from '../../../shared/hooks';
-import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
+import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
 import {
   Button,
   EmptyState,
@@ -30,9 +33,10 @@ import {
   ListWindowBar,
   FilterCard,
 } from '../../../shared/ui';
-import { useOpenRowSource } from '../../reports';
+import { TablePrintPreview, useOpenRowSource } from '../../reports';
 import { CapitalWhereCard } from '../components/CapitalWhereCard';
 import { SignedNum } from '../components/SignedNum';
+import { cashbookCapitalPrint, cashbookCapitalPrintData } from '../api';
 import { useCashbook } from '../hooks';
 import { CASHBOOK_COLUMNS } from '../list-columns';
 
@@ -40,6 +44,11 @@ import { CASHBOOK_COLUMNS } from '../list-columns';
 function textOrNull(text: string): string | null {
   const trimmed = text.trim();
   return trimmed === '' ? null : trimmed;
+}
+
+/** The print input of the capital card: the day as typed (no day is today), the print language and the paper. */
+function capitalSheet(asOf: string | null, language: Language, paper: Paper): CapitalPrintInput {
+  return asOf === null ? { language, paper } : { as_of: asOf, language, paper };
 }
 
 /** The month of a cash book line, `YYYY-MM`: the book is in date order. */
@@ -78,6 +87,42 @@ function CashbookScreen({ today }: { today: string }) {
   const newExpense = () => {
     void navigate({ to: '/rokar/expense', search: { type: 'shop_expense' } });
   };
+  // The capital card's Print: the page shows the preview of the card as of the day chosen, in place of the book
+  // (PRD FR-19.3); `Esc` and the back button of the preview bring the book back (PRD FR-7.18).
+  const [printing, setPrinting] = useState<{ asOf: string | null } | null>(null);
+  useEscape(
+    'leave',
+    () => {
+      setPrinting(null);
+    },
+    printing !== null,
+  );
+  // The cash line of the card brings the cash rows into view: the page is already there.
+  const cashRows = useRef<HTMLDivElement>(null);
+
+  if (printing !== null) {
+    return (
+      <ListPage icon={Landmark} titleId="cashbook-title">
+        <TablePrintPreview
+          scope={['capital', printing.asOf]}
+          title={<Localized id="cashbook-capital-title" />}
+          read={(language, paper) =>
+            cashbookCapitalPrintData(capitalSheet(printing.asOf, language, paper))
+          }
+          send={(to, language, paper) =>
+            cashbookCapitalPrint({
+              sheet: capitalSheet(printing.asOf, language, paper),
+              to,
+              copies: null,
+            })
+          }
+          onBack={() => {
+            setPrinting(null);
+          }}
+        />
+      </ListPage>
+    );
+  }
 
   return (
     <ListPage
@@ -124,8 +169,17 @@ function CashbookScreen({ today }: { today: string }) {
       ) : null}
       {/* Where the partners' money is, behind the partner code; shut until it is opened (plan 78 E). */}
       <div className="shrink-0">
-        <CapitalWhereCard />
+        <CapitalWhereCard
+          today={today}
+          onShowCash={() => {
+            cashRows.current?.scrollIntoView({ block: 'start' });
+          }}
+          onPrint={(asOf) => {
+            setPrinting({ asOf });
+          }}
+        />
       </div>
+      <div ref={cashRows} aria-hidden="true" />
       <PagedList<CashbookRow>
         columns={CASHBOOK_COLUMNS}
         rows={rows}

@@ -12,6 +12,7 @@ export {
   dashboardCashSalesMonthPrintData,
   dashboardCommissionPrintData,
   dashboardLentOpenPrintData,
+  dashboardSalesPrintData,
   dashboardSellerDuesPrintData,
   dashboardTotalDuesPrintData,
 } from './api';

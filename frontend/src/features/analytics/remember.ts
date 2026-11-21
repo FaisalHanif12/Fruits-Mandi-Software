@@ -10,6 +10,7 @@ import {
   COMPARE_CHOICES,
   EMPTY_ANALYTICS_FILTERS,
   GOODS_CHOICES,
+  MEASURE_CHOICES,
   BUCKET_CHOICES,
   GROUP_BY_CHOICES,
   PERIOD_CHOICES,
@@ -47,6 +48,8 @@ export function rememberedAnalytics(state: AnalyticsFilterState): Record<string,
   if (state.itemGroup !== base.itemGroup) kept['itemGroup'] = state.itemGroup;
   if (state.grade !== base.grade) kept['grade'] = state.grade;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
+  // What the charts and lists show is remembered per user like a filter (PRD FR-18.10, FR-7.45).
+  if (state.measure !== base.measure) kept['measure'] = state.measure;
   return Object.keys(kept).length === 0 ? null : kept;
 }
 
@@ -75,5 +78,6 @@ export function analyticsFromRemembered(raw: unknown): AnalyticsFilterState | nu
     itemGroup: choiceOr(raw['itemGroup'], ITEM_GROUP_CHOICES, base.itemGroup),
     grade: choiceOr(raw['grade'], GRADE_CHOICES, base.grade),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
+    measure: choiceOr(raw['measure'], MEASURE_CHOICES, base.measure),
   };
 }

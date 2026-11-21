@@ -453,6 +453,7 @@ fn advance_step(w: &mut World) {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     );
     if let Ok(saved) = &result {
@@ -1189,6 +1190,7 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
                 removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
                 expected_goods: String::new(),
                 narration: String::new(),
+                reason: None,
             },
         );
         assert_eq!(
@@ -1232,6 +1234,7 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
+        reason: None,
     };
     assert_eq!(
         code_of(vouchers::save_advance(&w.env.ctx, &w.owner, &tomorrow).unwrap_err()),
@@ -1306,6 +1309,7 @@ fn the_clock_moved_back_never_opens_a_closed_day() {
                 removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
                 expected_goods: String::new(),
                 narration: String::new(),
+                reason: None,
             },
         );
         assert!(

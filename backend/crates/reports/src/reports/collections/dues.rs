@@ -288,14 +288,10 @@ fn put_ages_in_bulk(
         );
     }
     for buyer in buyers.iter_mut() {
-        buyer.ages = Some(
-            by_account
-                .remove(&buyer.party.account_id)
-                .unwrap_or(Ages {
-                    oldest: None,
-                    bands: [Paisa::ZERO; 4],
-                }),
-        );
+        buyer.ages = Some(by_account.remove(&buyer.party.account_id).unwrap_or(Ages {
+            oldest: None,
+            bands: [Paisa::ZERO; 4],
+        }));
     }
     Ok(true)
 }
@@ -510,7 +506,7 @@ pub(crate) fn run_without_ages(
 /// The buyers who owe under these filters, with their ages when the day is today or later, and
 /// whether the ages were worked out.
 fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), ReportsError> {
-    let mut buyers = crate::prof::timed("buyers.balances_owing", || balances_owing(conn, typed))?;
+    let mut buyers = balances_owing(conn, typed)?;
 
     // The ages are known only for today or later: the matching rows are not dated.
     let today = typed
@@ -521,7 +517,7 @@ fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), R
         .as_deref()
         .is_none_or(|as_of| as_of >= today.to_iso().as_str());
     if as_of_is_now {
-        crate::prof::timed("buyers.put_ages", || put_ages(conn, today, &mut buyers))?;
+        put_ages(conn, today, &mut buyers)?;
     }
     Ok((buyers, as_of_is_now))
 }

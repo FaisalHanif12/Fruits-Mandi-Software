@@ -83,6 +83,7 @@ fn advance(seller: i64, date: &str, amount: i64) -> AdvanceInput {
         expected_goods: String::new(),
         narration: String::new(),
         confirm_cash_below_zero: true,
+        reason: None,
     }
 }
 
@@ -131,6 +132,7 @@ fn live_vouchers(w: &World, kinds: &[VoucherType]) -> Vec<(i64, VoucherType)> {
             account_id: None,
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap()

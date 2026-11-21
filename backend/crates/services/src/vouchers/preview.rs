@@ -138,6 +138,18 @@ pub fn preview_with_link(
     let window = day::window(ctx)?;
     let today = window.1;
     ctx.db.read(|conn| {
+        // PRD FR-15.11 (v1.51): a پیشگی typed for a buyer is previewed as the payment to him that
+        // the save will post. Only a new entry: an edit of a saved advance keeps its type.
+        let routed = match input.replacing_voucher_id {
+            None => super::advance::route_buyer_entry(conn, &input.entry)?,
+            Some(_) => None,
+        };
+        let buyer_advance = routed.is_some();
+        let routed_input = routed.map(|entry| VoucherPreviewInput {
+            entry,
+            replacing_voucher_id: None,
+        });
+        let input = routed_input.as_ref().unwrap_or(input);
         // The voucher an edit replaces is found first, so a return is judged on the books without
         // it, as the edit does (it posts the reversal before it plans; Code Standards B5).
         let mut replacing_errors: Vec<FieldError> = Vec::new();
@@ -507,6 +519,15 @@ pub fn preview_with_link(
             }
             _ => Vec::new(),
         };
+
+        // The screen sent a پیشگی, so a mistake of the account is at its field, not the payment's.
+        if buyer_advance {
+            for item in errors.iter_mut().chain(warnings.iter_mut()) {
+                if item.field == "account_id" {
+                    item.field = "seller_account_id".to_owned();
+                }
+            }
+        }
 
         Ok(VoucherPreview {
             account,

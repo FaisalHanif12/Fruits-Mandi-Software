@@ -2,8 +2,10 @@
 // inside the cell, so every grid gets the same search, short codes, recent-first list and F4 as
 // the pickers of the forms (PRD FR-7.10, FR-7.38 to FR-7.42, Code Standards F40).
 //
-// - It opens as a popup under the cell as soon as the cell gets the focus, by a click or by a key
-//   (EntryGrid, PRD FR-7.16, plan 46). A letter, digit or code typed on the cell starts it with
+// - It opens as a popup over the cell as soon as the cell gets the focus, by a click or by a key
+//   (EntryGrid, PRD FR-7.16, plan 46). The field of the picker sits exactly on the cell, so there is
+//   one box and not a second one under it, and its list starts at the cell: below it, or above it
+//   when there is no room below (shared/ui/DropdownPopup, plan 86). A letter, digit or code typed on the cell starts it with
 //   that key already typed (PRD FR-7.14); Alt+↓ opens the full list again (FR-7.16).
 // - What is chosen goes straight to the row store (never only inside the grid, F39). The editor
 //   then closes the cell without a second save (`stopEditing(true)`, which cancels the grid's own
@@ -181,7 +183,7 @@ export function PickerCellEditor(props: EditorProps) {
     <div
       ref={wrapper}
       onKeyDown={onKeyDown}
-      className="ag-custom-component-popup min-w-picker-cell rounded-2 border border-border bg-surface p-1 shadow-overlay"
+      className="ag-custom-component-popup min-w-picker-cell"
     >
       {spec.kind === 'account' ? (
         <AccountPicker

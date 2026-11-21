@@ -3,5 +3,4 @@
 /**
  * What a line of "whose it is" (the right side of the card) is.
  */
-export type CapitalWhoseKind =
-  'partner_total' | 'opening_capital' | 'advances_open' | 'unrecorded_where' | 'other';
+export type CapitalWhoseKind = 'partner_total' | 'opening_capital' | 'advances_open' | 'other';

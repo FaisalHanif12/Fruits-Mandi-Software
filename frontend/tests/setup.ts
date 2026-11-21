@@ -1,7 +1,9 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import { takeMissingMessages } from '../src/i18n/localization';
 import { resetPagerMemory } from '../src/shared/hooks/usePager';
+import { rawIdsIn } from './helpers/raw-ids';
 
 // A test waits for what the screen shows with waitFor and findBy. The default one second is
 // enough on a quiet machine and not on a loaded one: 49 files run at the same time, and the
@@ -11,9 +13,22 @@ const ASYNC_UTIL_TIMEOUT_MS = 10_000;
 configure({ asyncUtilTimeout: ASYNC_UTIL_TIMEOUT_MS });
 
 afterEach(() => {
+  // A message ID drawn as text (a lookup that failed, or an ID written where words belong) is a bug
+  // on screen. Read before the page is taken down; only a page that is there can be read.
+  const shownIds = typeof document === 'undefined' ? [] : rawIdsIn(document.body);
   cleanup();
   // A list remembers its page while the app runs; a test never starts on the page of another.
   resetPagerMemory();
+  // A message ID that no bundle has would show as a raw ID on screen or in a print (plan 81). Any
+  // test that asked for one fails, whatever it was testing. The record is emptied first, so one
+  // missing ID fails one test and not every test after it.
+  const missing = takeMissingMessages();
+  if (missing.length > 0) {
+    throw new Error(`Messages missing from the Fluent files (ur and en): ${missing.join(', ')}`);
+  }
+  if (shownIds.length > 0) {
+    throw new Error(`A message ID is shown as text on the page: ${shownIds.join(', ')}`);
+  }
 });
 
 // What a screen remembers (PRD FR-7.45) is read from the backend when a screen opens. In a test there

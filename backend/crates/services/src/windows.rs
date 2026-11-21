@@ -90,6 +90,16 @@ pub fn bounds(ctx: &Context, input: &WindowsBoundsInput) -> Result<WindowsBounds
                 vec![],
             ),
         },
+        // The advances and the payments on a buyer account (PRD FR-15.11, v1.51).
+        WindowSource::Advances => first(
+            conn,
+            "SELECT MIN(v.entry_date) FROM vouchers v
+             WHERE v.status = 'saved'
+               AND (v.type = 'advance'
+                    OR (v.type = 'payment' AND EXISTS (SELECT 1 FROM accounts b
+                        WHERE b.id = v.account_id AND b.party_type = 'buyer')))",
+            vec![],
+        ),
         // The index on the time gives the oldest row at once; the day is its first 10 characters.
         WindowSource::Audit => first(
             conn,

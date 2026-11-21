@@ -134,6 +134,7 @@ fn advance(seller: i64, amount: &str) -> AdvanceInput {
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
+        reason: None,
     }
 }
 
@@ -297,10 +298,12 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
             ErrorCode::ErrDateInFuture,
             "date",
         ),
+        // PRD FR-15.11 (v1.51): a buyer is given the advance as cash lent, which needs a reason.
+        // The old refusal of a non-seller stays for the closed old account below.
         (
             advance(buyer, "100"),
-            ErrorCode::ErrNotASeller,
-            "seller_account_id",
+            ErrorCode::ErrPaymentToBuyerNeedsReason,
+            "reason",
         ),
         (
             advance(old_closed, "100"),
@@ -949,6 +952,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
                 to: to.into(),
                 offset: 0,
                 limit: 0,
+                advance_view: None,
             },
         )
         .unwrap()
@@ -984,6 +988,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
                     to: String::new(),
                     offset: 0,
                     limit: 0,
+                    advance_view: None,
                 }
             )
             .unwrap_err()

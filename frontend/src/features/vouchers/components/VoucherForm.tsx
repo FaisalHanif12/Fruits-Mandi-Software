@@ -53,11 +53,15 @@ const FROM_OPTIONS: readonly SegmentedOption<FromSide>[] = [
 ];
 
 /** The label of the account field: it says who the voucher is with, by type. */
-function accountLabelId(draft: VoucherDraft): string {
+function accountLabelId(draft: VoucherDraft, editing: boolean): string {
   if (draft.type === 'payment') return 'vouchers-field-paid-to';
-  return draft.type === 'receipt' && draft.from === 'buyer'
-    ? 'vouchers-field-buyer'
-    : 'vouchers-field-seller';
+  // A new advance goes to a seller or, as cash lent, to a buyer (PRD 15.4, FR-15.11); a saved one
+  // that is being changed is a seller's.
+  if (draft.type === 'advance') {
+    return editing ? 'vouchers-field-seller' : 'vouchers-field-party';
+  }
+  // What is left is a receipt, from a buyer or from a seller returning advance money.
+  return draft.from === 'buyer' ? 'vouchers-field-buyer' : 'vouchers-field-seller';
 }
 
 export function VoucherForm({
@@ -123,7 +127,7 @@ export function VoucherForm({
       ) : null}
       <div className="min-w-0">
         <Field
-          label={<Localized id={accountLabelId(draft)} />}
+          label={<Localized id={accountLabelId(draft, editing)} />}
           mark={fieldMark(marks, 'account_id')}
           error={fieldError(error, accountPath(draft))}
         >
@@ -131,8 +135,8 @@ export function VoucherForm({
             <AccountPicker
               {...props}
               // A new key per scope: the picker starts from its own list when the side changes.
-              key={`${accountScope(draft)}-${draft.type}`}
-              scope={accountScope(draft)}
+              key={[accountScope(draft, editing), draft.type].join('/')}
+              scope={accountScope(draft, editing)}
               // A person in the dead amount can still pay: a receipt offers him, tagged "ڈوبی"
               // (PRD FR-10.10). No other entry does.
               includeDead={draft.type === 'receipt'}
@@ -231,7 +235,8 @@ export function VoucherForm({
           )}
         </Field>
       ) : null}
-      {draft.type === 'advance' ? (
+      {draft.type === 'advance' && !isCashLent(draft) ? (
+        // The goods a seller will send: a buyer's advance is cash lent and has none (PRD 15.4).
         <Field
           label={<Localized id="vouchers-field-expected" />}
           mark={fieldMark(marks, 'expected_goods')}

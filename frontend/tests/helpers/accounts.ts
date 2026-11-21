@@ -380,6 +380,12 @@ function inScope(row: AccountRow, scope: AccountScope): boolean {
   // other seller field, and every buyer field, leaves اپنا مال, the khatas and the gardens out.
   if (scope === 'lot_seller') return row.account_type === 'seller' || isKhata(row) || isGarden(row);
   if (scope === 'seller') return row.account_type === 'seller' && row.code !== OWN_GOODS_CODE;
+  // A seller or a buyer, as the پیشگی field takes them (plan 88): never اپنا مال, a khata or a garden.
+  if (scope === 'seller_buyer') {
+    return (
+      (row.account_type === 'seller' && row.code !== OWN_GOODS_CODE) || row.account_type === 'buyer'
+    );
+  }
   return row.account_type === scope;
 }
 

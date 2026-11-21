@@ -135,6 +135,7 @@ fn an_edited_advance_keeps_the_adjustment_the_bikri_made() {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         })
     };
     // The advance is corrected to 30,000 after the بکری took 15,000 of it. It is still the older

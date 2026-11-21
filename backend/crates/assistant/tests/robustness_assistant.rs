@@ -1998,7 +1998,7 @@ fn attack_05_a_reply_of_a_megabyte_never_reaches_the_screen() {
     // The real client refuses a body over this size before it reads it (client.rs). So the largest
     // reply that can reach the checks is a little under it: a valid answer with a text of 100,000
     // words (about 700 KB) fails the 130-word check twice. A text twice that size was only slower
-    // to check, and on a loaded machine it ran into the 25 s hard limit (plan 55 Section 3).
+    // to check, and on a loaded machine it ran into the hard limit of a question (plan 55 Section 3).
     assert_eq!(mandi_assistant::client::MAX_REPLY_BYTES, 1_000_000);
     let h = Harness::day();
     let huge = answer("answer", &"کام ".repeat(100_000));
@@ -2276,12 +2276,12 @@ impl ModelClient for TimeoutSpy {
 }
 
 #[test]
-fn attack_06_a_try_is_given_12_seconds_and_a_question_25() {
-    // Plan 55 Section 3 (Umar: over 30 s has no purpose): one try waits 12 s for the model, the
-    // tools go off at 20 s, a whole question may take 25 s, and a retry needs 6 s left.
-    assert_eq!(limits::FIRST_BYTE_SECS, 12);
-    assert_eq!(limits::TOOLS_OFF_AT_SECS, 20);
-    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 25);
+fn attack_06_a_try_is_given_20_seconds_and_a_question_45() {
+    // Plan 82 (NFR-AI-3 v1.22; it was 12, 20 and 25 in plan 55): one try waits 20 s for the model,
+    // the tools go off at 30 s, a whole question may take 45 s, and a retry needs 6 s left.
+    assert_eq!(limits::FIRST_BYTE_SECS, 20);
+    assert_eq!(limits::TOOLS_OFF_AT_SECS, 30);
+    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 45);
     assert_eq!(limits::RETRY_MIN_LEFT_SECS, 6);
     let h = Harness::day();
     let spy = TimeoutSpy {
@@ -2291,15 +2291,15 @@ fn attack_06_a_try_is_given_12_seconds_and_a_question_25() {
     assert_eq!(reply.outcome, AskOutcome::Error);
     assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
     let asked = spy.asked.lock().unwrap().clone();
-    // A timeout is tried once more (6 s or more of the 25 are left). The first try waits 12 s at
+    // A timeout is tried once more (6 s or more of the 45 are left). The first try waits 20 s at
     // most; the retry has the time that is left, never more than the question has.
     assert_eq!(asked.len(), 2, "{asked:?}");
     assert!(
-        asked[0] <= Duration::from_secs(12) && asked[0] > Duration::from_secs(11),
+        asked[0] <= Duration::from_secs(20) && asked[0] > Duration::from_secs(19),
         "the first try: {asked:?}"
     );
     assert!(
-        asked[1] <= Duration::from_secs(25) && asked[1] >= asked[0],
+        asked[1] <= Duration::from_secs(45) && asked[1] >= asked[0],
         "the retry: {asked:?}"
     );
     assert_app_still_free(&h);
@@ -2356,14 +2356,15 @@ impl ModelClient for SlowClient {
 }
 
 #[test]
-#[ignore = "slow: it waits about 25 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_25_seconds"]
-fn attack_06_a_question_past_25_seconds_is_stopped_with_what_was_read() {
-    // Plan 55 Section 3. Every call takes 10 s and asks for one more read. The third call goes out
-    // at 20 s with the tools off and has 5 s left; it does not come back in time. At 25 s the
-    // question ends with the tables that were read, and no fourth call is made.
+#[ignore = "slow: it waits about 45 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_45_seconds"]
+fn attack_06_a_question_past_45_seconds_is_stopped_with_what_was_read() {
+    // Plan 82 (NFR-AI-3 v1.22; 25 s in plan 55 Section 3). Every call takes 20 s and asks for one
+    // more read. The third call goes out at 40 s with the tools off and has 5 s left; it does not
+    // come back in time. At 45 s the question ends with the tables that were read, and no fourth
+    // call is made.
     let h = Harness::day();
     let slow = SlowClient {
-        wait: Duration::from_secs(10),
+        wait: Duration::from_secs(20),
         calls: AtomicUsize::new(0),
     };
     let started = Instant::now();
@@ -2377,7 +2378,9 @@ fn attack_06_a_question_past_25_seconds_is_stopped_with_what_was_read() {
         3,
         "the fourth call is never made"
     );
-    assert!(took <= Duration::from_secs(26), "{took:?}");
+    // 45 s by the question's own clock, plus what a loaded computer adds to draw the tables and write
+    // the row (1.6 s measured on the team's Mac at a load of 100 and more; a few ms when idle).
+    assert!(took <= Duration::from_secs(48), "{took:?}");
     assert_app_still_free(&h);
 }
 

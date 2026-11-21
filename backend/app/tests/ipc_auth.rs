@@ -887,6 +887,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "shares": [{ "partner_id": 1, "share": "100" }] } }),
             true,
         ),
+        (
+            "partners_place_opening_capital",
+            json!({ "input": { "partner_ids": [1], "reason": "x", "sign": "adnan" } }),
+            true,
+        ),
         ("partners_overview", json!({}), true),
         (
             "cashbook_get",
@@ -894,6 +899,16 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         ("cashbook_capital_where", json!({}), true),
+        (
+            "cashbook_capital_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "cashbook_capital_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
         (
             "vouchers_save_shop_expense",
             json!({ "input": { "date": "10-10-2026", "expense_head_id": 1, "amount": "3,000", "paid_to": null, "narration": null, "confirm_cash_below_zero": false } }),
@@ -1337,6 +1352,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "dashboard_sales_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
+        (
             "partners_statement_month_print",
             json!({ "input": { "statement": { "partner_id": 1, "language": "ur" }, "to": "pdf" } }),
             true,
@@ -1579,6 +1599,21 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "dashboard_commission_print_data",
             json!({ "input": { "month": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_sales_period",
+            json!({ "input": { "period": null } }),
+            true,
+        ),
+        (
+            "dashboard_sales_day",
+            json!({ "input": { "date": "2026-10-10" } }),
+            true,
+        ),
+        (
+            "dashboard_sales_print_data",
+            json!({ "input": { "language": "ur" } }),
             true,
         ),
         ("dashboard_buyer_dues", json!({ "input": {} }), true),
@@ -1845,6 +1880,8 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "offset": 0, "limit": 100 } }),
             true,
         ),
+        // Plan 82: the warm-up call when the panel opens.
+        ("assistant_warm", json!({}), true),
     ]
 }
 

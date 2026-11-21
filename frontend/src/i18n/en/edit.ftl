@@ -13,6 +13,15 @@ edit-action-cancel = Cancel
 # review: pending
 edit-action-fix-day = Reopen the day and fix
 
+# A NEW entry (a sale, a voucher, an expense ...) whose day is closed (PRD FR-21.4, plan 85). $date: the day,
+# DD-MM-YYYY. The notice stands over the entry, and the button reopens the day with the reason and the sign.
+# review: pending
+edit-closed-entry = The day { $date } is closed, so this entry cannot be saved yet. Reopen the day, then save.
+
+# The button of that notice: it opens the box of the reason and the sign (edit-fix-title).
+# review: pending
+edit-action-fix-save = Reopen the day and save
+
 # review: pending
 edit-action-history = Edit history
 

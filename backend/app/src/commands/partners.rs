@@ -6,11 +6,15 @@
 //! gives the names only while it is locked (`partners_locked`, every `share_bps` 0).
 
 use mandi_reports::reports::{TablePrintData, partner_statement_month_print_data};
+use mandi_services::capital_place;
 use mandi_services::core::partners::{
     PartnerCreateInput, PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput,
     PartnersCheckSharesInput, PartnersGetInput, PartnersList, PartnersSetSharesInput, SharesCheck,
 };
-use mandi_services::core::partners::{PartnerVentureCard, PartnersOpenVenturesInput};
+use mandi_services::core::partners::{
+    PartnerVentureCard, PartnersOpenVenturesInput, PartnersOpeningCapitalPlaced,
+    PartnersPlaceOpeningCapitalInput,
+};
 use mandi_services::core::statement::{
     PartnerStatement, PartnerStatementDay, PartnerStatementMonth, PartnersStatementDayInput,
     PartnersStatementInput, PartnersStatementMonthInput, PartnersStatementMonthPrintInput,
@@ -99,6 +103,13 @@ pub async fn partners_set_shares<R: tauri::Runtime>(
 }
 
 /// The running total of typed shares. Read only; nothing is saved.
+///
+/// This one command is not behind the partner code (plan 81, PRD FR-17.11). It reads only the
+/// percent text the screen sends and the ids of the active partners, whose names are open in every
+/// picker, and it answers with the total of what was typed. It holds no stored partner figure. The
+/// new garden and new trip forms are outside the partner section and ask it for the share total, so
+/// a locked section must not refuse it. Setting the shares (`partners_set_shares`) stays behind the
+/// code.
 #[tauri::command]
 pub async fn partners_check_shares<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -106,8 +117,26 @@ pub async fn partners_check_shares<R: tauri::Runtime>(
 ) -> Result<SharesCheck, UiError> {
     run(app, "partners_check_shares", move |ctx| {
         auth::require(ctx)?;
-        partner_code::require_unlocked(ctx)?;
         partners::check(ctx, &input)
+    })
+    .await
+}
+
+/// Moves the opening capital of the listed partners into روکڑ (PRD FR-16.14 v1.50, FR-10.9, plan 87):
+/// each opening entry that stands against ابتدائی فرق is reversed and posted again on the same day
+/// with روکڑ on the other side. The closed days are reopened and closed again inside the same save.
+/// Behind the partner code (PRD FR-17.11). Errors: `ERR_PARTNER_LOCKED`; `ERR_REASON_REQUIRED`
+/// (`reason`); `ERR_SIGN_REQUIRED`, `ERR_SIGN_WRONG` (`sign`); `ERR_REQUIRED`, `ERR_NOT_FOUND`,
+/// `ERR_NOTHING_TO_PLACE` (`partner_ids`); `ERR_MONTH_CLOSED`; `ERR_TRIAL_NOT_BALANCED`.
+#[tauri::command]
+pub async fn partners_place_opening_capital<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PartnersPlaceOpeningCapitalInput,
+) -> Result<PartnersOpeningCapitalPlaced, UiError> {
+    run(app, "partners_place_opening_capital", move |ctx| {
+        let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
+        capital_place::place(ctx, &actor, &input)
     })
     .await
 }

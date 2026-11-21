@@ -1,0 +1,41 @@
+{
+  "rows": [
+    {
+      "account": {
+        "id": 20,
+        "code": "0011",
+        "name_ur": "کریم",
+        "name_en": "Karim"
+      },
+      "errors": [],
+      "amount_paisa": 200000,
+      "current_balance": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "new_balance": {
+        "amount_paisa": 200000,
+        "side": "dr"
+      }
+    },
+    {
+      "account": {
+        "id": 22,
+        "code": "0021",
+        "name_ur": "ارشد ملتانی",
+        "name_en": "Arshad Multani"
+      },
+      "errors": [],
+      "amount_paisa": 100000,
+      "current_balance": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "new_balance": {
+        "amount_paisa": 100000,
+        "side": "dr"
+      }
+    }
+  ],
+  "total_paisa": 300000
+}

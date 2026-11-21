@@ -401,6 +401,7 @@ fn advance(w: &World, amount: &str) -> AdvanceInput {
         removed: RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
+        reason: None,
     }
 }
 
@@ -423,6 +424,7 @@ fn voucher_page(
             account_id: None,
             offset,
             limit,
+            advance_view: None,
         },
     )
     .unwrap()

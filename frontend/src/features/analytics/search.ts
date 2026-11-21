@@ -11,13 +11,16 @@ import { pickedOrNull } from '../../shared/screen-state';
 import { ITEM_GROUP_CHOICES, type ItemGroupChoice, type PickerValue } from '../../shared/ui';
 import {
   COMPARE_CHOICES,
+  DEFAULT_MEASURE,
   EMPTY_ANALYTICS_FILTERS,
   GOODS_CHOICES,
   GROUP_BY_CHOICES,
+  MEASURE_CHOICES,
   PERIOD_CHOICES,
   SIDE_CHOICES,
   TRIP_VIEW_CHOICES,
   type AnalyticsFilterState,
+  type MeasureChoice,
   type PeriodChoice,
 } from './filters';
 import type {
@@ -48,6 +51,8 @@ export interface AnalyticsSearch {
   /** The quality of the sale lines (view A); `all` is the same as leaving it out. */
   grade?: GradeChoice;
   trip_view?: AnalyticsTripView;
+  /** What the chart and the lists show (PRD FR-18.10); sales is the same as leaving it out. */
+  measure?: MeasureChoice;
   /** A partner, a trip or a garden, by id. */
   partner?: number;
   trip?: number;
@@ -93,6 +98,7 @@ export function parseAnalyticsSearch(search: Record<string, unknown>): Analytics
   const itemGroup = oneOf(ITEM_GROUP_CHOICES, search['item_group']);
   const grade = oneOf(GRADE_CHOICES, search['grade']);
   const tripView = oneOf(TRIP_VIEW_CHOICES, search['trip_view']);
+  const measure = oneOf(MEASURE_CHOICES, search['measure']);
   const partner = positiveId(search['partner']);
   const trip = positiveId(search['trip']);
   const garden = positiveId(search['garden']);
@@ -112,6 +118,7 @@ export function parseAnalyticsSearch(search: Record<string, unknown>): Analytics
     ...(itemGroup === undefined || itemGroup === 'all' ? {} : { item_group: itemGroup }),
     ...(grade === undefined || grade === 'all' ? {} : { grade }),
     ...(tripView === undefined ? {} : { trip_view: tripView }),
+    ...(measure === undefined || measure === DEFAULT_MEASURE ? {} : { measure }),
     ...(partner === undefined ? {} : { partner }),
     ...(trip === undefined ? {} : { trip }),
     ...(garden === undefined ? {} : { garden }),
@@ -143,6 +150,7 @@ export function filtersFromSearch(search: AnalyticsSearch): AnalyticsFilterState
     itemGroup: search.item_group ?? 'all',
     grade: search.grade ?? 'all',
     tripView: search.trip_view ?? 'trip',
+    measure: search.measure ?? DEFAULT_MEASURE,
     partner: search.partner ?? null,
     trip: search.trip ?? null,
     garden: search.garden ?? null,

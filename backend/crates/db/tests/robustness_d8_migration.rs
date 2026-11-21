@@ -91,8 +91,14 @@ fn released_version_21() -> Migrations<'static> {
     Migrations::new(all)
 }
 
-/// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: i64 = 25;
+/// The schema version of the newest migration, read from the migration list itself
+/// (`migrate::migrations()`), so it stays right after a new migration is added.
+static LATEST: std::sync::LazyLock<i64> = std::sync::LazyLock::new(|| {
+    let mut conn = Connection::open_in_memory().unwrap();
+    migrate::migrations().to_latest(&mut conn).unwrap();
+    conn.query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap()
+});
 
 fn connection(path: &Path) -> Connection {
     let conn = Connection::open(path).unwrap();
@@ -1148,8 +1154,11 @@ fn a_real_backup_copy_migrates_without_moving_a_number() {
     let hashes_21 = hashes(&conn);
     let balances_21 = balances(&conn);
     let outcome = migrate::migrate(&mut conn, &dir.path().join("backups"), &clock()).unwrap();
-    assert_eq!((outcome.from, outcome.to), (21, LATEST as usize));
-    assert_eq!(user_version(&conn), LATEST);
+    assert_eq!(
+        (outcome.from, outcome.to),
+        (21, usize::try_from(*LATEST).unwrap())
+    );
+    assert_eq!(user_version(&conn), *LATEST);
     assert_eq!(
         hashes(&conn),
         hashes_21,
@@ -1162,10 +1171,11 @@ fn a_real_backup_copy_migrates_without_moving_a_number() {
     );
 }
 
-/// The lots of the file by the columns that exist at version 21 (migration 22 adds `lot_counter`).
+/// The lots of the file by the columns that exist at version 21 (migration 22 adds `lot_counter`
+/// and migration 27 adds `removed_at`).
 fn lots_without_counter(conn: &Connection) -> Vec<String> {
     let columns: Vec<String> = conn
-        .prepare("SELECT name FROM pragma_table_info('bikri_lots') WHERE name <> 'lot_counter' ORDER BY cid")
+        .prepare("SELECT name FROM pragma_table_info('bikri_lots') WHERE name NOT IN ('lot_counter', 'removed_at') ORDER BY cid")
         .unwrap()
         .query_map([], |r| r.get(0))
         .unwrap()
@@ -1219,9 +1229,12 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
     assert!(lots >= 1);
 
     let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((outcome.from, outcome.to), (19, 25));
+    assert_eq!(
+        (outcome.from, outcome.to),
+        (19, usize::try_from(*LATEST).unwrap())
+    );
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
-    assert_eq!(user_version(&conn), LATEST);
+    assert_eq!(user_version(&conn), *LATEST);
 
     assert_eq!(hashes(&conn), hashes_before, "a chain hash moved");
     mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
@@ -1336,6 +1349,7 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
         0
     );
     let again = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((again.from, again.to), (25, 25));
+    let latest = usize::try_from(*LATEST).unwrap();
+    assert_eq!((again.from, again.to), (latest, latest));
     assert!(again.copy.is_none());
 }

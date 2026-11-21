@@ -36,6 +36,7 @@ import type { Source } from '../../bindings/Source';
 import { MODE_BADGE_ID, MODE_FULL_ID, nextTypingMode, type TypingMode } from '../urdu/typing-mode';
 import { useSuggestions } from '../urdu/useSuggestions';
 import { controlClasses } from './control-classes';
+import { DropdownPopup } from './DropdownPopup';
 import type { FieldControlProps } from './Field';
 import { SpellingMark } from './SpellingMark';
 
@@ -118,6 +119,8 @@ export function RomanUrduInput({
 }: RomanUrduInputProps) {
   const { l10n } = useLocalization();
   const inputRef = useRef<HTMLInputElement>(null);
+  // The box of the field: the list and the key map hang from it (plan 86).
+  const boxRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const [ownMode, setOwnMode] = useState<TypingMode>('roman');
   const mode = modeProp ?? ownMode;
@@ -316,7 +319,7 @@ export function RomanUrduInput({
     // Urdu text is written right to left, so the badge is on the left. English free text in the
     // English app is the exception (`direction`).
     <div dir={direction}>
-      <div className="relative">
+      <div ref={boxRef} className="relative">
         <input
           ref={inputRef}
           id={id}
@@ -390,53 +393,57 @@ export function RomanUrduInput({
           </button>
         </div>
         {open ? (
-          <ul
-            id={listId}
-            role="listbox"
-            aria-label={l10n.getString('translit-suggestions-label')}
-            className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col gap-1 rounded-2 border border-border bg-surface p-1 shadow-overlay"
-          >
-            {extraRows.map((row, index) => (
-              <li
-                key={row.key}
-                id={`${listId}-${String(index)}`}
-                role="option"
-                aria-selected={index === activeIndex}
-                onMouseDown={(event) => {
-                  // Taking a row with the mouse keeps the focus in the field.
-                  event.preventDefault();
-                  tookRow.current = true;
-                  row.onPick();
-                }}
-                className={`cursor-pointer rounded-1 px-3 py-1 ${index === activeIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
-              >
-                {row.content}
-              </li>
-            ))}
-            {(spellingsOpen ? suggestions : []).map((item, offset) => {
-              const index = extraCount + offset;
-              return (
+          <DropdownPopup open anchorRef={boxRef} direction={direction} className="gap-1">
+            <ul
+              id={listId}
+              role="listbox"
+              aria-label={l10n.getString('translit-suggestions-label')}
+              className="flex min-h-0 flex-col gap-1"
+            >
+              {extraRows.map((row, index) => (
                 <li
-                  key={item.text}
+                  key={row.key}
                   id={`${listId}-${String(index)}`}
                   role="option"
                   aria-selected={index === activeIndex}
-                  lang="ur"
                   onMouseDown={(event) => {
-                    // Taking a spelling with the mouse keeps the focus in the field.
+                    // Taking a row with the mouse keeps the focus in the field.
                     event.preventDefault();
-                    accept(offset, '');
+                    tookRow.current = true;
+                    row.onPick();
                   }}
-                  className={`type-field cursor-pointer rounded-1 px-3 ${index === activeIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
+                  className={`cursor-pointer rounded-1 px-3 py-1 ${index === activeIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
                 >
-                  {item.text}
+                  {row.content}
                 </li>
-              );
-            })}
-          </ul>
+              ))}
+              {(spellingsOpen ? suggestions : []).map((item, offset) => {
+                const index = extraCount + offset;
+                return (
+                  <li
+                    key={item.text}
+                    id={`${listId}-${String(index)}`}
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    lang="ur"
+                    onMouseDown={(event) => {
+                      // Taking a spelling with the mouse keeps the focus in the field.
+                      event.preventDefault();
+                      accept(offset, '');
+                    }}
+                    className={`type-field cursor-pointer rounded-1 px-3 ${index === activeIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
+                  >
+                    {item.text}
+                  </li>
+                );
+              })}
+            </ul>
+          </DropdownPopup>
         ) : null}
         {keyMapOpen && mode === 'keyboard' ? (
           <KeyMap
+            anchorRef={boxRef}
+            direction={direction}
             onPick={(letter) => {
               insert(letter);
               inputRef.current?.focus();

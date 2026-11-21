@@ -174,6 +174,10 @@ export function useSaveFlow<R extends { number: number }>({
     busy: flight.busy,
     /** The backend's refusal of the last save, until the draft changes. */
     refusal: shown,
+    /** Forgets the refusal: the day it named was reopened, so it is old (PRD FR-21.4, plan 85). */
+    clearRefusal: () => {
+      setRefusal(null);
+    },
     /** The user has tried to save: problems that only say "empty" show now (plan 12 contract). */
     tried,
     /** The cash box is open when this is not null. */

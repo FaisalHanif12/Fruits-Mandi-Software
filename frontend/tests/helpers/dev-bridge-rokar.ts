@@ -6,8 +6,11 @@
 // `&repeat` (two regular expenses of last month). Never part of a build: only the development
 // route imports it.
 
-import type { CapitalWhere } from '../../src/bindings/CapitalWhere';
 import type { CashbookInput } from '../../src/bindings/CashbookInput';
+import type {
+  CapitalWhere,
+  PartnersPlaceOpeningCapitalInput,
+} from '../../src/features/cashbook/capital-types';
 import type { ExpenseEntry } from '../../src/bindings/ExpenseEntry';
 import type { KhataStatementInput } from '../../src/bindings/KhataStatementInput';
 import type { KhataInInput } from '../../src/bindings/KhataInInput';
@@ -45,6 +48,9 @@ import type { PartnersStatementDayInput } from '../../src/bindings/PartnersState
 import type { PartnersStatementInput } from '../../src/bindings/PartnersStatementInput';
 import type { PartnersStatementMonthInput } from '../../src/bindings/PartnersStatementMonthInput';
 import { devFlag } from './dev-bridge';
+import capitalPrintEn from '../fixtures/cashbook_capital_print_data_en.json';
+import capitalPrintUr from '../fixtures/cashbook_capital_print_data_ur.json';
+import { EMPTY_CARD, UMAR_AFTER, UMAR_BEFORE, WORKED_DAY } from './capital-card';
 import { plan76Handlers } from './dev-bridge-plan76';
 import { createFruitBooks, HAJI_NAZIR } from './fruit-data';
 import { GENERAL_ACCOUNTS, createPartnerMoneyBooks } from './partner-money-books';
@@ -213,35 +219,17 @@ if (!flag('empty')) {
   });
 }
 
-/** The card of the روکڑ page after Events 1 to 5 (PRD FR-16.14): both sides are 65,488. */
-const CAPITAL_WHERE: CapitalWhere = {
-  where_lines: [
-    { kind: 'cash', amount_paisa: money(58_484) },
-    { kind: 'buyers_owe', amount_paisa: money(21_564) },
-    { kind: 'sellers_payable', amount_paisa: money(-10_160) },
-    { kind: 'owed_for_charges', amount_paisa: money(-4_400) },
-  ],
-  where_total_paisa: money(65_488),
-  whose_lines: [
-    {
-      kind: 'partner_total',
-      partner: { id: 1, code: '', name_ur: 'الف', name_en: 'Partner A' },
-      amount_paisa: money(-1_004),
-    },
-    {
-      kind: 'partner_total',
-      partner: { id: 2, code: '', name_ur: 'ب', name_en: 'Partner B' },
-      amount_paisa: money(746),
-    },
-    {
-      kind: 'partner_total',
-      partner: { id: 3, code: '', name_ur: 'ج', name_en: 'Partner C' },
-      amount_paisa: money(746),
-    },
-    { kind: 'opening_capital', partner: null, amount_paisa: money(65_000) },
-  ],
-  whose_total_paisa: money(65_488),
-};
+/**
+ * The card of the روکڑ page (PRD FR-16.14, plan 87). By default the worked day after Events 1 to 5; `&umar` is Umar's
+ * data before the fix (a warning with the button), and the fix (`partners_place_opening_capital`, the sign "adnan")
+ * turns it into the card after it; `&umar-after` starts there; `&capital-empty` is a shop with nothing recorded.
+ */
+let umarFixed = false;
+function capitalCard(): CapitalWhere {
+  if (devFlag('capital-empty')) return EMPTY_CARD;
+  if (devFlag('umar-after') || (devFlag('umar') && umarFixed)) return UMAR_AFTER;
+  return devFlag('umar') ? UMAR_BEFORE : WORKED_DAY;
+}
 
 export const rokarHandlers: Record<string, Handler> = {
   ...plan76Handlers,
@@ -263,7 +251,29 @@ export const rokarHandlers: Record<string, Handler> = {
         ref: 'E-20261010-0001',
       });
     }
-    return CAPITAL_WHERE;
+    return capitalCard();
+  },
+  // The print of the card: the backend's own layout (its fixture, Umar-shaped data before the fix).
+  cashbook_capital_print_data: (input) =>
+    input['language'] === 'ur' ? capitalPrintUr : capitalPrintEn,
+  // The fix: only the Owner's sign puts the opening capital into روکڑ (plan 87).
+  partners_place_opening_capital: (input) => {
+    const wanted = input as unknown as PartnersPlaceOpeningCapitalInput;
+    if (wanted.sign.trim().toLowerCase() !== 'adnan') {
+      throw Object.assign(new Error('ERR_SIGN_WRONG'), {
+        ok: false,
+        errors: [{ code: 'ERR_SIGN_WRONG', field: 'sign', values: {} }],
+        ref: 'E-20261121-0001',
+      });
+    }
+    umarFixed = true;
+    return {
+      placed: [],
+      skipped: [],
+      cash_after_paisa: money(838_260),
+      reopened_from: '2026-10-29',
+      closed_up_to: '2026-11-19',
+    };
   },
   masters_expense_heads: () => books.heads(),
   vouchers_preview_expense: (input) => books.expensePreview(input['entry'] as ExpenseEntry),

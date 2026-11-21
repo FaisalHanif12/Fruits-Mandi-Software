@@ -1302,8 +1302,12 @@ fn r8_an_unsure_question_with_a_filter_gets_no_tile_read_ahead() {
     let h = production_harness(y);
     let tiles_read = |question: &str| -> bool {
         let (_, requests) = h.ask(question, None, vec![answer("x"), answer("x")]);
-        assert!(!requests.is_empty(), "{question}: the model is asked");
-        tool_results(&requests[0])
+        // A sale or a commission of a name that several accounts have is asked "کون سا؟" by the app
+        // itself, with no model call (plan 82): nothing was read ahead for the model then.
+        let Some(first) = requests.first() else {
+            return false;
+        };
+        tool_results(first)
             .iter()
             .any(|r| r["tool"].as_str() == Some("tiles"))
     };

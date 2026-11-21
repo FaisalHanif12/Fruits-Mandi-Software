@@ -8,6 +8,7 @@ import { CircleHelp, KeyRound, Lock } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
 import type { Ref } from 'react';
 import { useUiLanguage } from '../../shared/i18n';
+import { radixCollisionPadding } from '../../shared/ui';
 import { scriptOf } from '../../shared/text/scriptHint';
 
 interface UserMenuProps {
@@ -60,6 +61,7 @@ export function UserMenu({
           lang={language}
           align="end"
           sideOffset={4}
+          collisionPadding={radixCollisionPadding()}
           className="z-50 min-w-nav rounded-2 border border-border bg-surface p-1 shadow-overlay"
         >
           <DropdownMenu.Item className={ITEM_CLASSES} onSelect={onChangePassword}>

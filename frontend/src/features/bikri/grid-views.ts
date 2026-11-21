@@ -10,6 +10,7 @@ import {
   LINE_GRID_FIELD,
   LINE_NEEDS,
   LOT_GRID_FIELD,
+  LOT_NEEDS,
   saysEmpty,
   whereOf,
   type Problem,
@@ -46,6 +47,19 @@ export interface MissingNote {
   words: string;
 }
 
+/**
+ * What a lot still needs before its lines can be worked out (plan 85): the seller, the item, the packing or the
+ * quantity received. It is told in words under the lots grid as soon as a line of that lot has a quantity and a
+ * rate, never only after a save try, so a line with no figures always has a reason in view.
+ */
+export interface LotNote {
+  rowId: string;
+  /** The lot, from 0 (the screen counts from 1). */
+  lot: number;
+  /** What is missing, as words in the app language. */
+  words: string;
+}
+
 /** What one grid takes from the preview: calculated text, workings, and problems per cell. */
 export interface GridView {
   calc: PerRow<string>;
@@ -58,6 +72,8 @@ export interface GridView {
   qtyNotes: QtyNote[];
   /** What the incomplete lines this grid shows still need, in line order. */
   missingNotes: MissingNote[];
+  /** What the lots that cannot work out their lines still need, in lot order (only the lots grid has any). */
+  lotNotes: LotNote[];
   /**
    * The lines the backend refused for a quantity over what the lot has left (`ERR_QTY_EXCEEDS_LOT`), by
    * row, with the text of the quantity the answer was for. Only while the answer is for the text on
@@ -76,6 +92,7 @@ function emptyView(): GridView {
     warnings: {},
     qtyNotes: [],
     missingNotes: [],
+    lotNotes: [],
     holds: {},
   };
 }
@@ -247,6 +264,7 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
     }
   }
   sales.missingNotes.sort((a, b) => a.lot - b.lot || a.line - b.line);
+  tellLotNeeds(input, lots);
   // A line the answer refuses for a quantity over what the lot has left holds the cursor on its quantity
   // (D8 Bug 1, B2). Only the answer of the preview says so, and only while it is for the text on screen.
   if (input.current !== false) {
@@ -260,4 +278,49 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
     }
   }
   return { lots, sales };
+}
+
+/**
+ * A lot that misses its seller, item, packing or quantity received gives its lines no figures, and the backend's
+ * "this is empty" answers wait for the save (problems.ts). A line with a quantity and a rate that cannot be worked
+ * out for that reason is the one case where the wait leaves the user with nothing to read: so the lot row says
+ * what it lacks at once, red on its cell and in words under the lots grid (PRD FR-12.6 v1.49, plan 85). A lot with
+ * no such line says nothing, so a new lot is never red before it has been reached (plan 79 item 4).
+ */
+function tellLotNeeds(input: GridViewInput, lots: GridView): void {
+  const { preview, lotKeys, lineKeysByLot, say } = input;
+  if (preview === undefined || input.current === false) return;
+  // The lines that still miss a quantity or a rate: they are half typed, and told by their own row.
+  const halfTyped = new Set<string>();
+  for (const item of preview.errors) {
+    const where = whereOf(item.field);
+    if (where.kind !== 'line' || !saysEmpty(item.code)) continue;
+    const need = LINE_NEEDS[where.sub];
+    if (need !== 'qty' && need !== 'rate') continue;
+    const key = lineKeysByLot[where.lot]?.[where.line];
+    if (key !== undefined) halfTyped.add(key);
+  }
+  const hasTypedLine = new Map<string, boolean>();
+  for (const lot of preview.lots) {
+    hasTypedLine.set(
+      lot.key,
+      lot.lines.some((line) => !line.is_blank && line.calc === null && !halfTyped.has(line.key)),
+    );
+  }
+  for (const item of preview.errors) {
+    const where = whereOf(item.field);
+    if (where.kind !== 'lot' || !saysEmpty(item.code)) continue;
+    const need = LOT_NEEDS[where.sub];
+    const column = LOT_GRID_FIELD[where.sub];
+    const key = lotKeys[where.lot];
+    if (need === undefined || column === undefined || key === undefined) continue;
+    if (hasTypedLine.get(key) !== true) continue;
+    const words = say(`bikri-lot-missing-${need}`);
+    // The cell turns red with the specific words, whatever general words the backend's answer had for it.
+    (lots.errors[key] ??= {})[column] = words;
+    if (!lots.lotNotes.some((note) => note.rowId === key && note.words === words)) {
+      lots.lotNotes.push({ rowId: key, lot: where.lot, words });
+    }
+  }
+  lots.lotNotes.sort((a, b) => a.lot - b.lot);
 }

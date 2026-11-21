@@ -72,7 +72,7 @@ import { useCreateGarden, useGardenCreatePreview, useGardenDefaults } from '../h
 import type { GardenCreated, GardenDefaults, GardenDraft, GardenInput } from '../types';
 
 /** Codes that only say a field is empty. Held back until the user tries to save. */
-const INCOMPLETE: ReadonlySet<string> = new Set(['ERR_REQUIRED', 'ERR_REASON_REQUIRED']);
+const INCOMPLETE: ReadonlySet<string> = new Set(['ERR_REQUIRED']);
 /** The spelling question has its own box on save (PRD FR-7.66), so the preview never shows it. */
 const SPELLING = 'ERR_SPELLING_UNCONFIRMED';
 
@@ -117,8 +117,6 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
   // The id of the garden once it is made: the leave guard is off by then, and the garden opens.
   const [createdId, setCreatedId] = useState<number | null>(null);
   const made = useRef(false);
-  // True once the reason of the first installment was filled with the standard words.
-  const [reasonFilled, setReasonFilled] = useState(false);
   const formRef = useFocusFirstField<HTMLFormElement>();
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -126,8 +124,16 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
   const shares = useMemo(() => gardenShareInputs(draft.partners), [draft.partners]);
   const { query: sharesQuery, current: sharesCurrent } = useSharesCheck(shares);
   const check = sharesQuery.data;
+  // An answer that could not be had is said so, never "checking" for ever; the backend checks the
+  // shares again on the save and is the final word (plan 81, Code Standards 4.1).
   const totalState: TotalState =
-    check === undefined || !sharesCurrent ? 'checking' : check.is_100 ? 'ok' : 'bad';
+    sharesCurrent && sharesQuery.isError
+      ? 'failed'
+      : check === undefined || !sharesCurrent
+        ? 'checking'
+        : check.is_100
+          ? 'ok'
+          : 'bad';
 
   // The preview is asked once a rent or a first installment is typed, so an empty form asks nothing.
   const input = useMemo(
@@ -140,7 +146,9 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
   const previewFailed = input !== null && view.query.isError;
 
   const changed = gardenDraftChanged(draft, start);
-  const canSave = totalState === 'ok' && draft.date.trim() !== '';
+  // Required: the shares (totalling 100%), the names, the day and the rent. The end of the season,
+  // the note, the items and the first installment are optional and never stop the save.
+  const canSave = (totalState === 'ok' || totalState === 'failed') && draft.date.trim() !== '';
 
   const draftText = useMemo(() => JSON.stringify(draft), [draft]);
   const flow = useEntrySaveFlow<GardenInput, GardenCreated | undefined>({
@@ -430,45 +438,12 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
                     {...props}
                     value={draft.paidNow}
                     onChange={(paidNow) => {
-                      // The reason is filled with the standard words once, like a typed value, and
-                      // stays visible and changeable (Code Standards F43, NFR-USE-27).
-                      const fillReason =
-                        paidNow.trim() !== '' && !reasonFilled && draft.paidNowReason === '';
-                      if (fillReason) setReasonFilled(true);
-                      change({
-                        paidNow,
-                        ...(fillReason
-                          ? { paidNowReason: l10n.getString('gardens-first-installment-reason') }
-                          : {}),
-                      });
+                      change({ paidNow });
                     }}
                   />
                 )}
               </Field>
             </div>
-            {draft.paidNow.trim() === '' ? null : (
-              <div className="col-span-2">
-                <Field
-                  label={<Localized id="gardens-field-paid-now-reason" />}
-                  info={
-                    <Localized id="gardens-field-paid-now-reason-hint">
-                      <p />
-                    </Localized>
-                  }
-                  error={fieldError(error, 'paid_now_reason')}
-                >
-                  {(props) => (
-                    <FreeTextInput
-                      {...props}
-                      value={draft.paidNowReason}
-                      onChange={(paidNowReason) => {
-                        change({ paidNowReason });
-                      }}
-                    />
-                  )}
-                </Field>
-              </div>
-            )}
             <div className="col-span-2">
               <Field
                 label={<Localized id="gardens-field-note" />}

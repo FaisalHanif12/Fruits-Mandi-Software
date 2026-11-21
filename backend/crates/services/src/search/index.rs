@@ -254,6 +254,10 @@ pub struct Index {
     /// with goods left, an open garden) is read from the database for each search and passed in as
     /// `hidden` (plan 46 B1); the index never decides it.
     lot_sellers: Vec<Arc<Entry>>,
+    /// The sellers and the buyers together, in id order, for the پیشگی field (PRD 15.4, FR-15.11,
+    /// v1.51). The same entries as the seller and buyer lists, with no چکتا buyer. Kept in step with
+    /// them by `add_account` and `put_account`.
+    seller_buyers: Vec<Arc<Entry>>,
 }
 
 impl Index {
@@ -296,6 +300,7 @@ impl Index {
             self.scopes.insert(scope, Vec::new());
         }
         self.lot_sellers.clear();
+        self.seller_buyers.clear();
         for source in sources {
             self.add_account(source);
         }
@@ -303,6 +308,7 @@ impl Index {
             list.sort_by_key(|e| e.id);
         }
         self.lot_sellers.sort_by_key(|e| e.id);
+        self.seller_buyers.sort_by_key(|e| e.id);
     }
 
     /// Puts the چکتا buyers in the buyer list, beside the buyers (plan 64, PRD FR-7.29). Call it after
@@ -340,6 +346,7 @@ impl Index {
         if kind != SearchScope::AnyAccount {
             let entry = Arc::new(Entry::from_source(kind, source));
             self.scopes.entry(kind).or_default().push(entry.clone());
+            self.seller_buyers.push(entry.clone());
             if kind == SearchScope::Seller {
                 self.lot_sellers.push(entry);
             }
@@ -367,12 +374,16 @@ impl Index {
         if let Ok(at) = self.lot_sellers.binary_search_by_key(&id, |e| e.id) {
             self.lot_sellers.remove(at);
         }
+        if let Ok(at) = self.seller_buyers.binary_search_by_key(&id, |e| e.id) {
+            self.seller_buyers.remove(at);
+        }
         if let Some(source) = source {
             self.add_account(source);
             for list in self.scopes.values_mut() {
                 list.sort_by_key(|e| e.id);
             }
             self.lot_sellers.sort_by_key(|e| e.id);
+            self.seller_buyers.sort_by_key(|e| e.id);
         }
     }
 
@@ -944,14 +955,21 @@ impl Index {
             // the caller leaves out the unusable ones with `hidden`.
             AccountScope::LotSeller => self.lot_sellers.as_slice(),
             AccountScope::Buyer => self.entries(SearchScope::Buyer),
+            // Sellers and buyers, for the پیشگی field (PRD FR-15.11, v1.51).
+            AccountScope::SellerBuyer => self.seller_buyers.as_slice(),
             AccountScope::Any | AccountScope::Control => self.entries(SearchScope::AnyAccount),
         };
         let narrow = scope == AccountScope::Control;
         // The اپنا مال account is offered only in the seller field of a lot (PRD FR-12.26).
         let with_own = scope == AccountScope::LotSeller;
+        // The پیشگی field gives money out, so it never offers a person in the dead amount (a
+        // recovery is a وصولی, PRD FR-10.10) and never نقدی منڈی, which has no ledger.
+        let advance_field = scope == AccountScope::SellerBuyer;
+        let include_dead = include_dead && !advance_field;
         (list, move |e: &Entry| {
             (!narrow || e.account.map(|a| a.control_id) == control_id)
                 && (with_own || e.code != mandi_domain::core::accounts::OWN_GOODS_CODE)
+                && (!advance_field || e.code != mandi_domain::core::accounts::NAQDI_MANDI_CODE)
                 && (include_dead || !e.dead)
                 && (with_chukta || e.chukta.is_none())
                 && !hidden.is_some_and(|ids| ids.contains(&e.id))

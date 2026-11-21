@@ -102,7 +102,7 @@ pub(crate) fn candidates(
     // The payable sums of every seller, from a few grouped queries and not one set of queries for
     // each seller (Code Standards B22).
     let sums = if current {
-        Some(crate::prof::timed("cand.payable_sums", || payable_sums(conn, typed.party_id))?)
+        Some(payable_sums(conn, typed.party_id)?)
     } else {
         None
     };
@@ -110,29 +110,29 @@ pub(crate) fn candidates(
     let totals: HashMap<i64, Totals> = if typed.party_id.is_some() {
         HashMap::new()
     } else {
-        crate::prof::timed("cand.totals", || account_totals_in_controls(conn, &[SELLER_CONTROL], as_of))?
+        account_totals_in_controls(conn, &[SELLER_CONTROL], as_of)?
             .into_iter()
             .collect()
     };
     let with_advance: HashSet<i64> = if current {
-        crate::prof::timed("cand.advance_totals", || advance_totals(conn, as_of.unwrap_or(today_iso), typed.party_id))?
+        advance_totals(conn, as_of.unwrap_or(today_iso), typed.party_id)?
             .into_iter()
             .map(|a| a.account_id)
             .collect()
     } else {
         HashSet::new()
     };
-    let last_dates = crate::prof::timed("cand.last_dates", || -> Result<_, ReportsError> {
+    let last_dates = {
         let mut statement = conn.prepare(LAST_DATE_SQL)?;
-        Ok(statement
+        statement
             .query_map([], |r| {
                 Ok((
                     (r.get::<_, i64>(0)?, r.get::<_, Option<String>>(1)?),
                     r.get::<_, String>(2)?,
                 ))
             })?
-            .collect::<Result<HashMap<_, _>, _>>()?)
-    })?;
+            .collect::<Result<HashMap<_, _>, _>>()?
+    };
 
     // People in the dead amount are not in the payables or the sellers' dues: their whole balance
     // is in R38 and the tile ڈوبی رقم (PRD FR-10.10, A66).

@@ -728,3 +728,61 @@ fn t5_7_a_conversation_id_that_starts_with_nul_is_refused_before_the_model_call(
         ),
     }
 }
+
+/// FINDING (plan 82 robustness gate, `robustness_security` hostile input, `assistant_quick
+/// {"conversation_id":"\u0000"}` ends ERR_INTERNAL): `quick` takes the conversation id like `ask`
+/// does, but only drops an empty one. An id with a control character, or one that is too long, goes
+/// on to the question log, which refuses the row, so the Owner gets a database error (an internal
+/// error) instead of a field error. `ask` refuses such an id up front (T5-7); `quick` must do the
+/// same: a field error on `conversation_id`, nothing written, no model call (V0, Code Standards
+/// 4.1, NFR-REL-6).
+#[test]
+fn t5_7c_a_quick_question_refuses_a_bad_conversation_id_with_a_field_error_and_writes_nothing() {
+    let h = Harness::day();
+    let before: i64 = common::raw(&h.world.dir)
+        .query_row("SELECT COUNT(*) FROM assistant_questions", [], |r| r.get(0))
+        .unwrap();
+    for id in [
+        "\u{0}".to_owned(),
+        "a\u{0}b".to_owned(),
+        "a\nb".to_owned(),
+        "\u{7f}".to_owned(),
+        "a".repeat(65),
+        "ا".repeat(10_000),
+    ] {
+        let client = mandi_assistant::client::RecordedClient::new(Vec::new());
+        let emit = |_s| {};
+        let deps = h.deps(&client, &emit);
+        let result = mandi_assistant::quick::quick(
+            &deps,
+            &mandi_assistant::ask::AssistantQuickInput {
+                chip: mandi_assistant::ask::QuickChip::CashInHand,
+                party_id: None,
+                conversation_id: Some(id.clone()),
+            },
+        );
+        assert!(
+            matches!(result, Err(mandi_services::ServiceError::Rejected(_))),
+            "{:.20?} must be refused with a field error, not taken or a database error: {result:?}",
+            id
+        );
+        assert!(client.requests().is_empty(), "a chip never calls the model");
+    }
+    let after: i64 = common::raw(&h.world.dir)
+        .query_row("SELECT COUNT(*) FROM assistant_questions", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(after, before, "a refused chip wrote a log row");
+    // The longest good id still works.
+    let client = mandi_assistant::client::RecordedClient::new(Vec::new());
+    let emit = |_s| {};
+    let deps = h.deps(&client, &emit);
+    let ok = mandi_assistant::quick::quick(
+        &deps,
+        &mandi_assistant::ask::AssistantQuickInput {
+            chip: mandi_assistant::ask::QuickChip::CashInHand,
+            party_id: None,
+            conversation_id: Some("a".repeat(64)),
+        },
+    );
+    assert!(ok.is_ok(), "{ok:?}");
+}

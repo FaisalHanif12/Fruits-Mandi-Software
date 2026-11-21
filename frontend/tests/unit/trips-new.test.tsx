@@ -6,6 +6,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as partnersApi from '../../src/features/partners/api';
 import * as tripsApi from '../../src/features/trips/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { CommandError } from '../../src/shared/api';
@@ -243,6 +244,25 @@ describe.each(LANGUAGES)('a new trip (%s)', (language) => {
     });
     await waitFor(() => {
       expect(router.state.location.pathname).toMatch(/^\/trips\/\d+$/);
+    });
+  });
+
+  it('plan 81: when the backend cannot give the total of the shares (the partner section is locked), the box says so, not "checking" for ever, and the trip can still be saved', async () => {
+    vi.mocked(partnersApi.partnersCheckShares).mockRejectedValue(
+      new CommandError(refusal([{ code: 'ERR_PARTNER_LOCKED' }])),
+    );
+    const fake = fakeTrips();
+    const { user } = await open();
+    expect(
+      await screen.findByText(said(message(language, 'partners-total-failed'))),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(said(message(language, 'partners-total-checking')))).toBeNull();
+    await waitFor(() => {
+      expect(saveButton()).toBeEnabled();
+    });
+    await user.click(saveButton());
+    await waitFor(() => {
+      expect(fake.saved.trips).toHaveLength(1);
     });
   });
 

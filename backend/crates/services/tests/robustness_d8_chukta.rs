@@ -562,6 +562,7 @@ fn no_voucher_and_no_opening_and_no_edit_can_put_a_balance_on_0030_or_0031() {
                 removed: RemovedPaymentFields::default(),
                 expected_goods: String::new(),
                 narration: String::new(),
+                reason: None,
             },
         );
         assert!(advance.is_err(), "{tag}: an advance was given");

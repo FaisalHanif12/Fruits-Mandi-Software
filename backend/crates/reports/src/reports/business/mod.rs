@@ -29,8 +29,8 @@ pub(super) use income::{
 };
 pub(super) use lent::run as run_r32;
 pub(super) use profit::run as run_r30;
-pub(super) use sheet::run as run_r35;
 pub(super) use sheet::activity::day_lines_sql as r35_day_lines_sql;
+pub(super) use sheet::run as run_r35;
 pub use sheet::{
     AdhariSheet, AdhariSheetInput, AdhariSheetPrintInput, AdhariSheetRow, AdhariSheetTotals,
     CollectionLine, CollectionSheet, CollectionSheetInput, CollectionSheetPrintInput,

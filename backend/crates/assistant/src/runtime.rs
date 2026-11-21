@@ -18,6 +18,8 @@ pub struct Runtime {
     conversations: AtomicU64,
     memory: Mutex<HashMap<String, Conversation>>,
     busy: AtomicBool,
+    /// When the warm-up call may go out (plan 82, `crate::warm`).
+    warm: Mutex<crate::warm::WarmGate>,
     /// Whether the app finds the party of a plain lookup question before the first call (plan 52
     /// P52-S1, item 10). OFF in the app until the findings of the money agent's identity review
     /// are fixed (a role-only search can pre-find a near name in the wrong role, the shared چکتا
@@ -73,6 +75,7 @@ impl Runtime {
             conversations: AtomicU64::new(0),
             memory: Mutex::new(HashMap::new()),
             busy: AtomicBool::new(false),
+            warm: Mutex::new(crate::warm::WarmGate::default()),
             prefind: AtomicBool::new(false),
             local: AtomicBool::new(true),
             read_first: AtomicBool::new(true),
@@ -162,6 +165,26 @@ impl Runtime {
             .filter(char::is_ascii_digit)
             .collect();
         format!("c-{stamp}-{n}")
+    }
+
+    /// True while a question is running.
+    pub fn is_busy(&self) -> bool {
+        self.busy.load(Ordering::SeqCst)
+    }
+
+    /// Asks the gate whether a warm-up may go out now (`crate::warm`); writes it down when it may.
+    ///
+    /// # Errors
+    /// Why it may not: too soon after the last one, or the day is full.
+    pub fn allow_warm(
+        &self,
+        now: std::time::Instant,
+        day: &str,
+    ) -> Result<(), crate::warm::WarmOutcome> {
+        self.warm
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .allow(now, day)
     }
 
     /// Takes the place to run a question, or `None` when one is running.

@@ -33,10 +33,10 @@ describe('quick add on the advance screen (Urdu)', () => {
   });
 
   it('an unknown code says so, and F4 opens the form with that code', async () => {
-    const seller = await focusField('ur', 'vouchers-field-seller');
+    const seller = await focusField('ur', 'vouchers-field-party');
     await seller.setValue(UNKNOWN_CODE);
     await type(Key.Tab);
-    await waitForText(t('ur', 'accountpicker-unknown-seller'));
+    await waitForText(t('ur', 'accountpicker-unknown-any'));
     await shootScreen('advance-unknown-code', 'ur');
     await browser.keys(Key.F4);
     const dialog = await $('[role="dialog"]');
@@ -56,7 +56,7 @@ describe('quick add on the advance screen (Urdu)', () => {
     await confirmSpellingIfAsked();
     const dialog = await $('[role="dialog"]');
     await dialog.waitForDisplayed({ timeout: DIALOG_WAIT_MS, reverse: true });
-    const seller = await focusField('ur', 'vouchers-field-seller');
+    const seller = await focusField('ur', 'vouchers-field-party');
     expect((await seller.getValue()).length).toBeGreaterThan(0);
     // His card is under the field (PRD FR-7.38), and the screen is the same one.
     expect(await pageText()).toContain(UNKNOWN_CODE);
@@ -65,7 +65,7 @@ describe('quick add on the advance screen (Urdu)', () => {
   });
 
   it('F4 on text that matches nobody opens the form with the text as the name', async () => {
-    const seller = await focusField('ur', 'vouchers-field-seller');
+    const seller = await focusField('ur', 'vouchers-field-party');
     await seller.setValue('bilal');
     await waitForText(t('ur', 'search-no-match'));
     await browser.keys(Key.F4);

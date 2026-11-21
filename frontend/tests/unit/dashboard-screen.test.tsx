@@ -199,7 +199,7 @@ describe.each(LANGUAGES)('the dashboard (%s)', (language) => {
 
 describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (language) => {
   const CASES: readonly [string, string][] = [
-    ['dashboard-tile-sales', '/bikri/today'],
+    ['dashboard-tile-sales', '/sales'],
     ['dashboard-tile-commission', '/commission'],
     ['dashboard-tile-cash', '/rokar'],
     ['dashboard-tile-dues', '/dues'],

@@ -1295,6 +1295,7 @@ fn nothing_but_an_own_lot_can_use_the_own_goods_account() {
         expected_goods: String::new(),
         narration: String::new(),
         confirm_cash_below_zero: false,
+        reason: None,
     };
     let e = vouchers::save_advance(&w.env.ctx, &w.owner, &advance).unwrap_err();
     assert!(

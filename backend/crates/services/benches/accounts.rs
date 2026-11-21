@@ -207,6 +207,7 @@ fn voucher_speed(c: &mut Criterion) {
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
+        reason: None,
     };
     let mut group = flat(c, "vouchers", 50, 6);
     group.bench_function("save_advance", |b| {

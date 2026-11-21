@@ -50,6 +50,15 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     value: (row, { language }) => (row.account === null ? '' : displayName(row.account, language)),
   },
   {
+    // What kind of account it is, in words: a seller, a buyer or another account. The پیشگی list holds
+    // a buyer's cash lent beside the advances, and this tells them apart (PRD FR-15.11, plan 88).
+    field: 'kind',
+    type: 'short',
+    headerId: 'vouchers-col-kind',
+    value: (row, { text }) =>
+      row.account_type === undefined ? '' : text(`accounts-type-${row.account_type}`),
+  },
+  {
     field: 'amount',
     type: 'money',
     headerId: 'vouchers-col-amount',

@@ -58,6 +58,7 @@ fn advance(seller: i64, amount: &str) -> AdvanceInput {
         expected_goods: String::new(),
         narration: String::new(),
         confirm_cash_below_zero: false,
+        reason: None,
     }
 }
 
@@ -339,6 +340,7 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
             account_id: Some(w.akram),
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap();

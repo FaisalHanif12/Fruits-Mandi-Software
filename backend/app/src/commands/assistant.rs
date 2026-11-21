@@ -232,6 +232,28 @@ pub async fn assistant_test<R: tauri::Runtime>(
     .await
 }
 
+/// The warm-up call (plan 82, NFR-SEC-9 v1.22): the panel sends it when it opens or when its box
+/// gets the first key, so the connection and the provider's cache are ready for the question. It
+/// holds only the fixed instructions, tools and answer schema, never books data or a question. It
+/// is sent at most once in 5 minutes and 12 times a day, only when the assistant is on and a key
+/// is saved, and not while a question runs; otherwise nothing happens. It is no question: no log
+/// row, no count, no step line. It never fails the screen: the answer is always `()`. Errors:
+/// the sign-in check only.
+#[tauri::command]
+pub async fn assistant_warm<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), UiError> {
+    let runtime = AppState::of(&app)?.assistant();
+    let handle = app.clone();
+    run(app, "assistant_warm", move |ctx| {
+        let actor = auth::require(ctx)?;
+        with_deps(&handle, ctx, &actor, &runtime, |deps| {
+            // The outcome is for the tests; the panel has nothing to show for a warm-up.
+            let _ = mandi_assistant::warm::warm(deps);
+        });
+        Ok(())
+    })
+    .await
+}
+
 /// The question log, page by page, newest first, with the count over the whole log (PRD FR-7.84,
 /// Code Standards B31). Read only. Errors: `ERR_OUT_OF_RANGE` on `offset` or `limit`.
 #[tauri::command]

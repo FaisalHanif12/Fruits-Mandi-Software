@@ -16,8 +16,9 @@ use mandi_core::auth::Language;
 use super::ids;
 use super::model::{
     AnalyticsCompare, AnalyticsExpensePart, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading,
-    AnalyticsPage, AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading,
-    AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView,
+    AnalyticsMeasure, AnalyticsPage, AnalyticsPrintColumn, AnalyticsPrintData,
+    AnalyticsPrintHeading, AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsSide,
+    AnalyticsTripView,
 };
 use crate::error::ReportsError;
 use crate::print::{PrintFact, TextDir};
@@ -108,6 +109,19 @@ pub(crate) fn filter_facts(
         AnalyticsSide::Both => {}
         AnalyticsSide::Seller => facts.push(fact(ids::FILTER_SIDE_SELLER, String::new())),
         AnalyticsSide::Buyer => facts.push(fact(ids::FILTER_SIDE_BUYER, String::new())),
+    }
+    // What the view counted says it all in its label (PRD FR-18.10).
+    if let Some(measure) = filters.measure {
+        let label = match measure {
+            AnalyticsMeasure::Gross => ids::FILTER_MEASURE_GROSS,
+            AnalyticsMeasure::BuyerTotal => ids::FILTER_MEASURE_BUYER_TOTAL,
+            AnalyticsMeasure::Qty => ids::FILTER_MEASURE_QTY,
+            AnalyticsMeasure::TotalComm => ids::FILTER_MEASURE_TOTAL_COMM,
+            AnalyticsMeasure::SellerComm => ids::FILTER_MEASURE_SELLER_COMM,
+            AnalyticsMeasure::BuyerComm => ids::FILTER_MEASURE_BUYER_COMM,
+            AnalyticsMeasure::Laga => ids::FILTER_MEASURE_LAGA,
+        };
+        facts.push(fact(label, String::new()));
     }
     // The part of view M says it all in its label.
     match filters.expense_part {

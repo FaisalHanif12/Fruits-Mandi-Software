@@ -505,12 +505,15 @@ fn h3_an_ordinary_buyer_is_not_the_walk_in_buyers_and_a_named_one_is_not_scoped(
         None,
         vec![model_says_x(), model_says_x()],
     );
-    assert!(!requests.is_empty());
-    for result in pre_read(&requests[0]) {
-        assert_ne!(
-            result["filters"]["buyer"]["name"]["en"], "Chukta Khata",
-            "the walk-in group was read for a named buyer"
-        );
+    // Plan 82: what a named buyer bought and the commission he gave is a question the app answers by itself
+    // (no model request at all), from his own view A and C. Either way the walk-in group is never read.
+    for request in &requests {
+        for result in pre_read(request) {
+            assert_ne!(
+                result["filters"]["buyer"]["name"]["en"], "Chukta Khata",
+                "the walk-in group was read for a named buyer"
+            );
+        }
     }
 }
 

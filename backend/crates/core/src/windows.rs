@@ -25,6 +25,10 @@ pub enum WindowSource {
         #[serde(default)]
         voucher_type: Option<VoucherType>,
     },
+    /// The پیشگی list (PRD FR-15.11, v1.51): the advances and the payments to a buyer (his advance
+    /// is saved as cash lent, a payment voucher). Its first day is the first of either, so the back
+    /// button does not stop after a day that has only a buyer's cash lent.
+    Advances,
     /// The audit log.
     Audit,
     /// خرچہ: shop expenses, personal spending and its returns.

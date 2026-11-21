@@ -75,5 +75,6 @@
     "qty": 3,
     "value_paisa": 300000
   },
-  "months": []
+  "months": [],
+  "partners_locked": false
 }

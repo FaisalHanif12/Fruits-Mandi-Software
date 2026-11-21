@@ -346,6 +346,91 @@ impl Cx<'_> {
     }
 
     /// A seller's net sale: the `net` column of his row of view B.
+    /// The shop's profit over the period: the `profit` total of view G (the same figure as the analytics
+    /// screen: shared income less the shop's expenses). A loss is a negative figure the model words.
+    pub(super) fn profit(&self) -> Option<Sentence> {
+        let view = self.analytics("G", "", None)?;
+        if whole(view, &["totals", "profit"]).is_none_or(|p| p < 0) {
+            return None;
+        }
+        Some(Sentence {
+            id: "assistant-instant-profit",
+            args: vec![("figure", reference(view, &["totals", "profit"])?)],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The shop's net sale: the `net` total of R6 over the period of the question (the sum of the lot nets,
+    /// each its gross less commission, freight, labour, munshiana, cash paid, store rent and phone). Never the
+    /// gross, which is another column (plan 82). A negative total is the model's to word.
+    pub(super) fn sale_net_shop(&self) -> Option<Sentence> {
+        let r6 = self.open_report("R6")?;
+        if whole(r6, &["totals", "net"]).is_none_or(|n| n < 0) {
+            return None;
+        }
+        Some(Sentence {
+            id: "assistant-instant-sale-net-shop",
+            args: vec![("figure", reference(r6, &["totals", "net"])?)],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The buyers' bills: the `buyer_total` total of R2, for all buyers or for one buyer (each bill is the
+    /// goods, his commission and his Laga). Never his balance, which is what he still owes (plan 82).
+    pub(super) fn bills(&self, who: &Who) -> Option<Sentence> {
+        let (role, name, register) = match who {
+            Who::Shop => (
+                "shop",
+                None,
+                self.result("report", |r| {
+                    input_str(r, "id") == Some("R2") && input_str(r, "party").is_none()
+                })?,
+            ),
+            Who::Buyer(key) => {
+                // A record's figure needs the period the question named.
+                if self.u.periods.is_empty() {
+                    return None;
+                }
+                (
+                    "buyer",
+                    Some(self.name_of(key)?),
+                    self.result("report", |r| {
+                        input_str(r, "id") == Some("R2") && input_str(r, "party") == Some(key)
+                    })?,
+                )
+            }
+            _ => return None,
+        };
+        if register.partner_parts_locked {
+            return None;
+        }
+        let mut args = vec![("role", role.to_owned())];
+        if let Some(name) = name {
+            args.push(("name", name));
+        }
+        args.push(("figure", reference(register, &["totals", "buyer_total"])?));
+        Some(Sentence {
+            id: "assistant-instant-bills",
+            args,
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The shop's commission with no Laga, as its two sides (view A totals `seller_comm` and `buyer_comm`):
+    /// what was charged to the sellers and what was charged to the buyers. The app adds nothing (Code
+    /// Standards Q5); the two figures are both on the screen of view A.
+    pub(super) fn commission_sides(&self) -> Option<Sentence> {
+        let view = self.analytics("A", "", None)?;
+        Some(Sentence {
+            id: "assistant-instant-commission-sides",
+            args: vec![
+                ("seller", reference(view, &["totals", "seller_comm"])?),
+                ("buyer", reference(view, &["totals", "buyer_comm"])?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
     pub(super) fn sale_net(&self, key: &str) -> Option<Sentence> {
         if self.u.periods.is_empty() {
             return None;

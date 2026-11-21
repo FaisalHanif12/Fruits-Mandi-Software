@@ -13,6 +13,7 @@ use chrono::NaiveDate;
 
 use super::change;
 use super::lexicon::{Cue, Hit, key};
+use super::party_flow;
 use super::plan;
 use super::scan::Scan;
 use super::who::Names;
@@ -73,6 +74,8 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         happened: false,
         other_measure: Measure::Same,
         commission_side: None,
+        sale_measure: None,
+        laga_view: super::LagaView::Whole,
         buyer_rate: false,
         document_number: false,
         packing_filter: false,
@@ -597,6 +600,27 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, Vec<usize>, bool
         } else if scan.has_exact(Cue::Sold) {
             found.push((0, FigureKind::Sale));
         }
+    }
+    // "kitni khareedari ki aur kitni commission di": what the buyer bought is asked beside the commission he
+    // gave. A bare "li" ("commission li") is the shop taking, so only the words of buying count (plan 82, D21).
+    if !found.is_empty()
+        && found
+            .iter()
+            .all(|(_, k)| matches!(k, FigureKind::Commission | FigureKind::Laga))
+        && roles.contains(&PartyRole::Buyer)
+        && !scan.has_exact(Cue::Sold)
+        // Two asks joined by "aur": "seller commission on the banana Akram bought" is a commission only.
+        && scan.has_exact(Cue::And)
+        && !named.has_item
+        && let Some(at) = scan.hits.iter().find_map(|h| {
+            (h.cue == Cue::Bought
+                && !h.fuzzy
+                && scan.word(h.start).is_some_and(|w| !matches!(w, "li" | "lee" | "le")))
+            .then_some(h.start)
+        })
+    {
+        // At the word of buying, so a name before it is not "between" the figures.
+        found.push((at, FigureKind::Sale));
     }
     // "سبجی کی quantity کل کتنی تھی": the quantity of a group (or an item) is the nag sold.
     if found.is_empty()
@@ -1224,6 +1248,19 @@ fn unexplained_except(
     periods: &[PeriodRef],
     skip: &dyn Fn(&str) -> bool,
 ) -> bool {
+    unexplained_outside(scan, names, periods, skip, &[])
+}
+
+/// As [`unexplained_except`], and the words inside `spans` (word positions) are explained too: the measure
+/// words of [`super::measure_words`], some of which are "unread filter" words that nothing else explains.
+pub(super) fn unexplained_outside(
+    scan: &Scan,
+    names: &Names,
+    periods: &[PeriodRef],
+    skip: &dyn Fn(&str) -> bool,
+    spans: &[(usize, usize)],
+) -> bool {
+    let inside = |at: usize| spans.iter().any(|(s, e)| *s <= at && at < *e);
     let table = super::lexicon::table();
     let mut name_words: Vec<String> = Vec::new();
     // The words of a period ("so far", "ab tak") are explained by the period.
@@ -1246,15 +1283,23 @@ fn unexplained_except(
             w.chars().any(|c| c.is_ascii_digit()) || w.starts_with(super::scan::DATE_WORD)
         });
     // A word that limits, excludes, places or gives a habit is read by no plan: never explained.
+    // A word of a range a period took ("ke beech" of "10 october se 20 october ke beech") is read.
+    let period_runs: Vec<(usize, usize)> = periods
+        .iter()
+        .filter_map(|p| super::when::period_run(scan, p))
+        .collect();
+    let in_period = |at: usize| period_runs.iter().any(|(s, e)| *s <= at && at < *e);
     if scan
         .words
         .iter()
-        .any(|w| super::function_words::is_unread_filter(w))
+        .enumerate()
+        .any(|(at, w)| !inside(at) && !in_period(at) && super::function_words::is_unread_filter(w))
     {
         return true;
     }
     scan.words.iter().enumerate().any(|(at, w)| {
-        !table.is_known(w)
+        !inside(at)
+            && !table.is_known(w)
             && !skip(w)
             && !(plain_connective_ok && super::function_words::conditional(w))
             && !name_words.contains(w)
@@ -1299,7 +1344,14 @@ pub(super) fn assemble(
             find_run(&scan.words, &tokens).map(|at| (at, at.saturating_add(tokens.len())))
         })
         .collect();
-    let skip: Vec<(usize, usize)> = spans.iter().chain(period_runs.iter()).copied().collect();
+    // The measure words ("not counting laga", "laga ke baghair") hold a negation that is theirs, not an ask.
+    let measure_spans = super::measure_words::spans(scan);
+    let skip: Vec<(usize, usize)> = spans
+        .iter()
+        .chain(period_runs.iter())
+        .chain(measure_spans.iter())
+        .copied()
+        .collect();
     let stray_screen = stray_screen_word(scan, &spans, &periods);
     let ands: Vec<usize> = scan
         .hits
@@ -1319,7 +1371,20 @@ pub(super) fn assemble(
         has_period: !periods.is_empty(),
         has_unexplained_words: unexplained_words(scan, &names, &periods),
     };
-    let (kinds, figure_at, two_figures, lower_ask) = figures(scan, &named);
+    let (mut kinds, figure_at, two_figures, lower_ask) = figures(scan, &named);
+    // "pump wala bagh mein kitna paisa laga": beside a garden or a trip, "laga" is the verb (how much was
+    // spent), not the Laga charge: the question asks the garden's or the trip's result (plan 82, D11).
+    if kinds.contains(&FigureKind::Laga)
+        && roles
+            .iter()
+            .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip))
+        && !scan.has_any(&[Cue::RoleBuyer, Cue::ManyBuyers, Cue::Commission])
+    {
+        kinds.retain(|k| *k != FigureKind::Laga);
+        if kinds.is_empty() {
+            kinds.push(FigureKind::Result);
+        }
+    }
     // An advance and a payable belong to a seller: a name found only as a seller is the seller asked
     // for, though "ne ... li" reads like a buyer ("tahir ne kitni peshgi li hui hai", live run 2, Q610).
     if kinds
@@ -1400,11 +1465,14 @@ pub(super) fn assemble(
     doubts.extend(names.doubts.iter().copied());
     // A word no plan reads (an exclusion, a place, a limit, a habit) is as good as an unknown word: the model
     // answers, whatever near spelling the lexicon finds for it.
-    if scan
-        .words
+    let period_runs: Vec<(usize, usize)> = periods
         .iter()
-        .any(|w| super::function_words::is_unread_filter(w))
-        && !doubts.contains(&Doubt::UnknownWords)
+        .filter_map(|p| super::when::period_run(scan, p))
+        .collect();
+    if scan.words.iter().enumerate().any(|(at, w)| {
+        !period_runs.iter().any(|(s, e)| *s <= at && at < *e)
+            && super::function_words::is_unread_filter(w)
+    }) && !doubts.contains(&Doubt::UnknownWords)
     {
         doubts.push(Doubt::UnknownWords);
     }
@@ -1514,7 +1582,27 @@ pub(super) fn assemble(
     let grade = super::reads::grade_of(scan, has_item_found || item_group.is_some());
     // The side of the commission asked, read before the names move into the understanding (plan 59, F1).
     let commission_side = super::reads::commission_side(scan, &kinds_for_happened, &names.parties);
-    let unexplained_flag = unexplained_words(scan, &names, &periods);
+    // A party's commission or sale in everyday words ("mani ne abhi tak shop ko kitni commission banwa kr di"):
+    // the light verbs and pronouns around the figure are no doubt and no name (plan 82, `party_flow`).
+    let fillers_only = unexplained_except(scan, &names, &periods, &|w| party_flow::is_filler(w));
+    let flow_words = party_flow::settles(
+        scan,
+        &intent,
+        &kinds_for_happened,
+        &names,
+        &periods,
+        fillers_only,
+    );
+    if flow_words {
+        party_flow::drop_junk(&mut names);
+        doubts.retain(|d| *d != Doubt::UnknownWords);
+    }
+    let unexplained_flag = !flow_words && unexplained_words(scan, &names, &periods);
+    // True when the only words nothing explains are measure words ("safi", "bill", "baghair") or fillers.
+    let only_measure_words_unknown =
+        !super::measure_words::unexplained_outside(scan, &names, &periods, &|w| {
+            party_flow::is_filler(w)
+        });
     // The same, not counting the side words of the trial balance ("debit", "credit", "banaam", "jama").
     let unexplained_but_trial_words = unexplained_except(scan, &names, &periods, &|w| {
         super::reads::is_trial_side_word(w)
@@ -1586,6 +1674,8 @@ pub(super) fn assemble(
             ranking,
         ),
         commission_side,
+        sale_measure: None,
+        laga_view: super::LagaView::Whole,
         buyer_rate: super::reads::buyer_rate(scan),
         asks_count: count_asks > 0,
         count_asks,
@@ -1723,6 +1813,14 @@ pub(super) fn assemble(
         && understanding.figures.value == [FigureKind::TrialBalance]
         && !unexplained_but_trial_words
     {
+        understanding.doubts.retain(|d| *d != Doubt::UnknownWords);
+        understanding.unexplained = false;
+    }
+    // The words that name which column of a sale or a commission is asked (plan 82): net sale, the buyers'
+    // bills, the commission without its Laga. Read only for a question that is otherwise plain.
+    super::measure_words::settle(scan, &mut understanding, only_measure_words_unknown);
+    // A phrase of the measure words ("alag alag") explains its own words: they are no doubt (plan 82).
+    if only_measure_words_unknown && !measure_spans.is_empty() {
         understanding.doubts.retain(|d| *d != Doubt::UnknownWords);
         understanding.unexplained = false;
     }

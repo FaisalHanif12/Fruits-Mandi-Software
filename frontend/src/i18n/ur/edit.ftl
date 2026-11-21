@@ -13,6 +13,15 @@ edit-action-cancel = منسوخ کریں
 # review: pending
 edit-action-fix-day = دن کھولیں اور درست کریں
 
+# A NEW entry (a sale, a voucher, an expense ...) whose day is closed (PRD FR-21.4, plan 85). $date: the day,
+# DD-MM-YYYY. The notice stands over the entry, and the button reopens the day with the reason and the sign.
+# review: pending
+edit-closed-entry = { $date } کا دن بند ہے، اس لیے یہ اندراج ابھی محفوظ نہیں ہو سکتا۔ دن کھولیں، پھر محفوظ کریں۔
+
+# The button of that notice: it opens the box of the reason and the sign (edit-fix-title).
+# review: pending
+edit-action-fix-save = دن کھولیں اور محفوظ کریں
+
 # review: pending
 edit-action-history = تبدیلیوں کی تاریخ
 

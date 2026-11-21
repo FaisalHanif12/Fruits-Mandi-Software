@@ -8,6 +8,7 @@ import { Info } from 'lucide-react';
 import { Popover } from 'radix-ui';
 import type { ReactNode } from 'react';
 import { useUiLanguage } from '../i18n';
+import { radixCollisionPadding } from './dropdown-position';
 
 interface InfoHintProps {
   children: ReactNode;
@@ -29,6 +30,7 @@ export function InfoHint({ children }: InfoHintProps) {
           lang={language}
           dir={direction}
           sideOffset={4}
+          collisionPadding={radixCollisionPadding()}
           className="z-50 w-form max-w-full rounded-2 border border-border bg-surface p-3 type-body text-ink shadow-overlay"
         >
           {children}

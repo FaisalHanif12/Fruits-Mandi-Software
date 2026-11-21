@@ -619,10 +619,9 @@ fn a_filter_a_view_does_not_have_lists_the_views_that_do() {
         }
         base
     };
+    // (A `compare` on a view that has none is not refused since plan 82: it is left out and the
+    // note says so; see `a_compare_on_a_view_that_has_none_is_left_out_with_a_note`.)
     for (view, extra, field, must_have, must_not) in [
-        ("G", json!({"compare": "previous"}), "compare", "A", "G"),
-        ("F", json!({"compare": "previous"}), "compare", "D", "F"),
-        ("I", json!({"compare": "last_year"}), "compare", "H", "I"),
         ("A", json!({"group_by": "month"}), "group_by", "D", "A"),
         ("B", json!({"group_by": "month"}), "group_by", "G", "B"),
     ] {
@@ -639,6 +638,64 @@ fn a_filter_a_view_does_not_have_lists_the_views_that_do() {
             "{view}: {allowed:?}"
         );
     }
+}
+
+/// Plan 82, live check D14 and D32: the model added `compare: "last_year"` to view G for a period
+/// it wanted read whole, and the refusal cost a whole model call. The figures do not change without
+/// it, so it is left out and the note says so and names the views that do compare.
+#[test]
+fn a_compare_on_a_view_that_has_none_is_left_out_with_a_note() {
+    let w = day();
+    let mut s = Session::new(&w);
+    s.period("this_year");
+    let dated = |extra: Value| {
+        let mut base = json!({"from": "r1.from", "to": "r1.to"});
+        for (k, v) in extra.as_object().unwrap() {
+            base[k] = v.clone();
+        }
+        base
+    };
+    for (view, compare) in [
+        ("G", "last_year"),
+        ("G", "previous"),
+        ("F", "previous"),
+        ("I", "last_year"),
+    ] {
+        let with = s
+            .run(
+                "analytics",
+                analytics(view, dated(json!({"compare": compare}))),
+            )
+            .unwrap_or_else(|_| panic!("{view} with compare must be read"));
+        let without = s
+            .run("analytics", analytics(view, dated(json!({}))))
+            .unwrap();
+        let (a, b) = (s.json(&with), s.json(&without));
+        let note = a["note"].as_str().expect("a note");
+        assert!(note.contains("no comparison"), "{view}: {note}");
+        assert!(note.contains("left out"), "{view}: {note}");
+        // The views that compare are named, and this one is not among them.
+        assert!(note.contains("A, B, C"), "{view}: {note}");
+        // No comparison was made, and the figures are those of the call without it.
+        assert!(a["compare"].is_null(), "{view}: {}", a["compare"]);
+        assert_eq!(a["rows"], b["rows"], "{view}");
+        assert_eq!(a["totals"], b["totals"], "{view}");
+        assert!(
+            b.get("note").is_none_or(Value::is_null),
+            "{view}: {}",
+            b["note"]
+        );
+    }
+    // A view that does compare never says it has none (here the earlier year is before the books,
+    // so the comparison is left out for that other reason, as before).
+    let kept = s
+        .run(
+            "analytics",
+            analytics("A", dated(json!({"compare": "previous"}))),
+        )
+        .unwrap();
+    let note = s.json(&kept)["note"].as_str().unwrap_or("").to_owned();
+    assert!(!note.contains("has no comparison"), "{note}");
 }
 
 #[test]

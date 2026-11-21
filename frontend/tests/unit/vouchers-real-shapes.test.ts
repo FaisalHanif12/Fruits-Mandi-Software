@@ -163,6 +163,49 @@ describe('the canned data of the component tests has the real shape', () => {
     expect(same(real.LIST_ALL, list)).toBeNull();
   });
 
+  it('a پیشگی to a buyer (plan 88): the preview and the save have the real shape, and a payment voucher comes back', () => {
+    const books = createBooks();
+    const entry = {
+      type: 'advance' as const,
+      date: '10-10-2026',
+      seller_account_id: 21,
+      amount: '3,000',
+      expected_goods: '',
+      reason: 'نقد ادھار',
+      narration: '',
+      confirm_cash_below_zero: false,
+    };
+    expect(same(real.PREVIEW_ADVANCE_BUYER, books.preview(entry))).toBeNull();
+    expect(same(real.PREVIEW_RECEIPT_BUYER, real.PREVIEW_ADVANCE_BUYER)).toBeNull();
+    const { type: _type, ...input } = entry;
+    const saved = books.save({ type: 'advance', input });
+    expect(same(real.SAVED_ADVANCE_BUYER, saved)).toBeNull();
+    // As the backend says: a buyer's advance is a payment voucher, in the payment series.
+    expect(real.SAVED_ADVANCE_BUYER.voucher_type).toBe('payment');
+    expect(saved.voucher_type).toBe('payment');
+    // The list of the advance view: the rows have the fields of every voucher row, with the account type.
+    const list = books.list({
+      voucher_type: 'advance',
+      advance_view: true,
+      from: '',
+      to: '',
+      account_id: null,
+      offset: 0,
+      limit: 0,
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
+    });
+    expect(same(real.LIST_ADVANCES_VIEW, list)).toBeNull();
+    expect(real.LIST_ADVANCES_VIEW.rows.map((row) => [row.voucher_type, row.account_type])).toEqual(
+      [
+        ['advance', 'seller'],
+        ['payment', 'buyer'],
+      ],
+    );
+  });
+
   it('the open bills, the payables and the advances of a seller', () => {
     const books = createBooks();
     expect(same(real.OPEN_BILLS_AKRAM, books.openBills({ account_id: 21 }))).toBeNull();
@@ -272,6 +315,49 @@ describe('the screen builds the request the backend’s own test sent', () => {
       false,
     );
     expect(advance).toEqual({ type: 'advance', input: real.REQUEST_SAVE_ADVANCE });
+  });
+
+  it("a پیشگی to a buyer names him in seller_account_id and carries the reason; a seller's has no reason (plan 88)", () => {
+    const built = build(
+      draft('advance', {
+        account: buyer,
+        accountType: 'buyer',
+        amount: '3,000',
+        reason: 'نقد ادھار',
+        expected_goods: 'left over',
+      }),
+      false,
+    );
+    expect(built).toEqual({ type: 'advance', input: real.REQUEST_SAVE_ADVANCE_BUYER });
+    if (built === null) throw new Error('no voucher');
+    // The preview takes the same entry, with the type, and no voucher it replaces.
+    expect(entryOf(built)).toEqual(real.REQUEST_PREVIEW_ADVANCE_BUYER.entry);
+    expect(real.REQUEST_PREVIEW_ADVANCE_BUYER.replacing_voucher_id).toBeNull();
+    // Without a reason the backend refuses at the field `reason`, which the form shows there.
+    const bare = build(
+      draft('advance', { account: buyer, accountType: 'buyer', amount: '3,000' }),
+      false,
+    );
+    expect(bare?.input).toEqual({ ...real.REQUEST_SAVE_ADVANCE_BUYER_NEEDS_REASON, reason: '' });
+    expect(real.REFUSED_ADVANCE_BUYER_NEEDS_REASON.errors).toEqual([
+      { code: 'ERR_PAYMENT_TO_BUYER_NEEDS_REASON', field: 'reason', values: {} },
+    ]);
+    expect(real.REQUEST_SAVE_ADVANCE_BUYER_NEEDS_REASON).not.toHaveProperty('reason');
+  });
+
+  it('the picker of the پیشگی field asks the real scope and gets sellers and buyers with their type (plan 88)', () => {
+    expect(real.REQUEST_SEARCH_SELLER_BUYER['scope']).toBe('seller_buyer');
+    expect(real.SEARCH_SELLER_BUYER.map((hit) => [hit.code, hit.account_type])).toEqual([
+      ['0010', 'seller'],
+      ['0011', 'seller'],
+      ['0020', 'buyer'],
+      ['0021', 'buyer'],
+    ]);
+    // A seller's and a buyer's code each work in the field, with a short code `0` for both.
+    expect(real.REQUEST_LIST_ADVANCES_VIEW).toMatchObject({
+      voucher_type: 'advance',
+      advance_view: true,
+    });
   });
 
   it('an edit takes back the voucher it replaces, and a cancel sends the version read', () => {

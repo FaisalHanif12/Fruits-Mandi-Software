@@ -454,13 +454,15 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
         expect.objectContaining({ rent: '50000', paid_now: '30000' }),
       );
     });
-    // The reason of the first installment is the standard words, filled in for the Owner.
-    expect(field('gardens-field-paid-now-reason')).toHaveValue(
-      message(language, 'gardens-first-installment-reason'),
-    );
     press('F10');
     await waitFor(() => {
       expect(gardensApi.gardensCreate).toHaveBeenCalledTimes(1);
+    });
+    // The screen asks for no reason of the first installment and sends none (plan 81): the backend
+    // saves the standard words.
+    expect(vi.mocked(gardensApi.gardensCreate).mock.calls[0]?.[0]).toMatchObject({
+      paid_now: '30000',
+      paid_now_reason: null,
     });
     await waitFor(() => {
       expect(view.router.state.location.pathname).toBe('/gardens/1');

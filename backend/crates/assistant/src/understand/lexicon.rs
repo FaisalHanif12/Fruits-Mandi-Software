@@ -123,6 +123,9 @@ pub(super) enum Cue {
     Commission,
     /// laga.
     Laga,
+    /// "madon ke hisab se", "head wise", "mahine ke hisab se", "month wise": one figure for each head, month,
+    /// day or year, not one total (plan 82).
+    HeadsWise,
     /// dues, receivable: what buyers still owe.
     Dues,
     /// ugrahi, wasooli: collecting money (what is still to collect, or what was collected).
@@ -457,7 +460,7 @@ const ROLES: &[Entry] = &[
     (
         Cue::RoleBuyer,
         &[
-            "buyer", "buyers", "gahak", "gaahak", "gahek", "gahk", "customer", "customers",
+            "buyer", "buyers", "gahak", "gaahak", "gahaq", "gaahaq", "gahek", "gahk", "customer", "customers",
             "khareedar", "khariddar", "kharidar", "client", "bayer", "گاہک", "خریدار", "کسٹمر", "بائر", "بایر",
         ],
     ),
@@ -548,7 +551,7 @@ const ROLES: &[Entry] = &[
     (
         Cue::ManyBuyers,
         &[
-            "buyers", "gahakon", "gaahakon", "gahko", "gahkon", "customers", "khareedaron",
+            "buyers", "gahakon", "gaahakon", "gahaqon", "gahko", "gahkon", "customers", "khareedaron",
             "گاہکوں", "خریداروں", "کسٹمرز",
         ],
     ),
@@ -619,11 +622,11 @@ const ROLES: &[Entry] = &[
         Cue::Bought,
         &[
             "khareeda", "khareede", "khareedi", "khareedna", "khareeda", "kharida", "kharide",
-            "kharidi", "kharidna", "khareed", "kharid", "bought", "buy", "buys", "buying",
+            "kharidi", "kharidna", "khareed", "kharid", "khareedari", "kharidari", "kharedari", "bought", "buy", "buys", "buying",
             "purchased", "purchase", "purchases", "maal liya", "mal liya", "maal lia", "mal lia",
             "maal le gaya", "maal le gaye", "le gaya", "le gaye", "kya liya", "kya lia", "kitna liya", "li", "lee", "khareed li", "kharid li",
             "kitne ka liya", "خریدا", "خریدے", "خریدی", "خریدنا",
-            "خرید", "مال لیا", "مال لے گیا", "مال لے گئے",
+            "خرید", "مال لیا", "مال لے گیا", "مال لے گئے", "خریداری", "خریدای",
         ],
     ),
 ];
@@ -675,6 +678,19 @@ const FIGURES: &[Entry] = &[
         ],
     ),
     (Cue::Laga, &["laga", "lagga", "لاگا"]),
+    (
+        Cue::HeadsWise,
+        &[
+            "mad", "madon", "mad wise", "madon ke hisab se", "madon ke hisaab se", "head wise", "heads",
+            "by head", "مد", "مدوں", "مدیں", "مدوں کے حساب سے",
+            // The same by month, day or year: one figure for each, never one total (plan 82, Y03).
+            "mahine ke hisab se", "mahine ke hisaab se", "mahinay ke hisab se", "month wise", "monthly",
+            "har mahine", "month by month", "mahine wise", "din ke hisab se", "day wise", "daily", "har din",
+            "saal ke hisab se", "year wise", "yearly", "har saal", "by month", "by day", "by year",
+            "ماہانہ", "مہینے کے حساب سے", "ہر مہینے", "روزانہ", "ہر دن", "سالانہ", "دن کے حساب سے",
+            "سال کے حساب سے", "ہر سال",
+        ],
+    ),
     (
         Cue::Dues,
         &["dues", "receivable", "receivables", "ادھاری بقایا", "کل اگراہی"],

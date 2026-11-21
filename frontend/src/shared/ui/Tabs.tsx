@@ -12,6 +12,7 @@ import { ChevronDown } from 'lucide-react';
 import { DropdownMenu, Tabs as RadixTabs } from 'radix-ui';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useUiLanguage } from '../i18n';
+import { radixCollisionPadding } from './dropdown-position';
 
 export interface TabItem {
   id: string;
@@ -118,6 +119,7 @@ function OverflowList({ items, value, onValueChange, label }: Omit<TabsProps, 'o
               lang={language}
               align="end"
               sideOffset={4}
+              collisionPadding={radixCollisionPadding()}
               aria-label={l10n.getString('common-tabs-more')}
               className="z-50 min-w-nav rounded-2 border border-border bg-surface p-1 shadow-overlay"
             >

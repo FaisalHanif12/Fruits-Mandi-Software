@@ -536,11 +536,46 @@ fn layout_is_the_statement_detail_the_trip_view_and_the_garden_view() {
     assert_eq!(wrong.allowed, ["garden", "partner"]);
     let wrong = s.error("report", report("R33", json!({"layout": "garden"})));
     assert_eq!(wrong.allowed, ["trip", "item", "day", "month", "partner"]);
-    // A report with no layout refuses and lists the fields it does take.
-    let none = s.error("report", report("R2", json!({"layout": "detail"})));
+    // A report with no layout choice does not refuse (plan 82): how rows are laid out is not a
+    // filter, so `layout` is left out, the figures are those of the call without it, and the note
+    // says so.
+    let plain = s.ok("report", report("R2", json!({})));
+    let laid = s.ok("report", report("R2", json!({"layout": "detail"})));
+    let (plain, laid) = (s.json(&plain), s.json(&laid));
+    let note = laid["note"].as_str().expect("a note");
+    assert!(note.contains("no layout choice"), "{note}");
+    assert_eq!(laid["rows"], plain["rows"]);
+    assert_eq!(laid["totals"], plain["totals"]);
+    // A real filter the report does not have is still refused, with the ones it takes listed.
+    let none = s.error("report", report("R2", json!({"collector": "r1.matches.0"})));
     assert_eq!(none.code, "ERR_OUT_OF_RANGE");
     assert!(none.allowed.contains(&"seller".to_owned()));
     assert!(none.allowed.contains(&"zamindar".to_owned()));
+}
+
+/// Plan 82, live check D14: `voucher_type: "shop_expense"` on R29, which is the shop's expense
+/// report by head. It is left out with a note; any other kind stays refused (not certain).
+#[test]
+fn shop_expense_on_r29_is_left_out_with_a_note_and_every_other_voucher_kind_is_refused() {
+    let w = day();
+    let mut s = Session::new(&w);
+    let plain = s.ok("report", report("R29", json!({})));
+    let shop = s.ok(
+        "report",
+        report("R29", json!({"voucher_type": "shop_expense"})),
+    );
+    let (plain, shop) = (s.json(&plain), s.json(&shop));
+    let note = shop["note"].as_str().expect("a note");
+    assert!(note.contains("no voucher_type filter"), "{note}");
+    assert_eq!(shop["rows"], plain["rows"]);
+    assert_eq!(shop["totals"], plain["totals"]);
+    for kind in ["personal_expense", "receipt", "payment"] {
+        let e = s.error("report", report("R29", json!({"voucher_type": kind})));
+        assert_eq!(e.code, "ERR_OUT_OF_RANGE", "{kind}");
+    }
+    // Where the filter exists it still works as before.
+    let receipts = s.ok("report", report("R15", json!({"voucher_type": "receipt"})));
+    assert!(s.json(&receipts).get("note").is_none_or(Value::is_null));
 }
 
 #[test]
@@ -3289,11 +3324,13 @@ fn the_report_tool_reads_r10_by_item_with_layout_item() {
     assert_eq!(button_filters(&s, &by_lot).stock_view, None);
     let plain = s.ok("report", report("R10", json!({})));
     assert_eq!(s.json(&plain)["count"]["n"], 3);
-    // A word it does not take lists the words; a report with no layout refuses it.
+    // A word it does not take lists the words; a report with no layout is read without it and
+    // the note says so (plan 82).
     let wrong = s.error("report", report("R10", json!({"layout": "day"})));
     assert_eq!(wrong.allowed, ["lot", "item"]);
-    let none = s.error("report", report("R7", json!({"layout": "item"})));
-    assert_eq!(none.code, "ERR_OUT_OF_RANGE");
+    let none = s.ok("report", report("R7", json!({"layout": "item"})));
+    let note = s.json(&none)["note"].as_str().expect("a note").to_owned();
+    assert!(note.contains("no layout choice"), "{note}");
 }
 
 #[test]

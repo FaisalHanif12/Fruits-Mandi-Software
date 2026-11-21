@@ -17,6 +17,7 @@ import type { ReactNode, RefObject } from 'react';
 import { useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import type { UiError } from '../../../bindings/UiError';
+import { ClosedDayEntryNotice } from '../../../shared/edit';
 import type { Paisa } from '../../../shared/format';
 import { useRefusalIntoView } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
@@ -84,6 +85,12 @@ interface EntryFrameProps<T extends string> {
   flow: CashFlowView;
   /** What the backend refused, until the draft changes. */
   error: UiError | null;
+  /**
+   * The date of the entry and what to do when its day was reopened. A NEW entry on a closed day is refused with
+   * `ERR_DATE_CLOSED`: the frame then shows the closed-day notice with "Reopen the day and save" (PRD FR-21.4,
+   * plan 85). Left out on a screen whose entry has no date of its own to reopen.
+   */
+  closedDay?: { date: string; onReopened?: (() => void) | undefined } | undefined;
   /** The field paths the form shows next to their inputs, so no problem is told twice. */
   fieldsShown: readonly string[];
   formRef: RefObject<HTMLFormElement | null>;
@@ -119,6 +126,7 @@ export function EntryFrame<T extends string>({
   onNew,
   flow,
   error,
+  closedDay,
   fieldsShown,
   formRef,
   actions,
@@ -208,6 +216,13 @@ export function EntryFrame<T extends string>({
             </div>
           )}
         </Field>
+      )}
+      {closedDay === undefined || top !== undefined ? null : (
+        <ClosedDayEntryNotice
+          errors={error?.errors}
+          date={closedDay.date}
+          onReopened={closedDay.onReopened}
+        />
       )}
       <form
         ref={formRef}

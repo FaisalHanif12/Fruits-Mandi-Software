@@ -38,7 +38,7 @@ fn reject(code: ErrorCode, field: &str) -> ReportsError {
 /// # Errors
 /// `ERR_NOT_FOUND` (`party.account_id`), `ERR_WRONG_PARTY_TYPE` (`party.account_id`),
 /// `ERR_OUT_OF_RANGE` (`party.chukta_person_key`); a database error.
-pub(super) fn resolve_party(
+pub(in crate::dashboard) fn resolve_party(
     conn: &Connection,
     party: Option<&CommissionParty>,
 ) -> Result<Option<CommissionPartyShown>, ReportsError> {
@@ -93,7 +93,7 @@ pub(super) fn resolve_party(
 }
 
 /// The party with the person key trimmed, as the facts query reads it.
-fn narrowed(party: Option<&CommissionParty>) -> Option<CommissionParty> {
+pub(in crate::dashboard) fn narrowed(party: Option<&CommissionParty>) -> Option<CommissionParty> {
     party.map(|p| CommissionParty {
         side: p.side,
         account_id: p.account_id,

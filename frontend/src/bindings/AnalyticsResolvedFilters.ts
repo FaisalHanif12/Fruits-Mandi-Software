@@ -3,6 +3,7 @@ import type { AnalyticsCompare } from './AnalyticsCompare';
 import type { AnalyticsExpensePart } from './AnalyticsExpensePart';
 import type { AnalyticsGoods } from './AnalyticsGoods';
 import type { AnalyticsGroupBy } from './AnalyticsGroupBy';
+import type { AnalyticsMeasure } from './AnalyticsMeasure';
 import type { AnalyticsPeriod } from './AnalyticsPeriod';
 import type { AnalyticsSide } from './AnalyticsSide';
 import type { AnalyticsTripView } from './AnalyticsTripView';
@@ -99,4 +100,9 @@ export type AnalyticsResolvedFilters = {
    * Which part of view M was read. Left out of the wire form for the other views.
    */
   expense_part?: AnalyticsExpensePart;
+  /**
+   * What the view counted, as asked (PRD FR-18.10). The print header and the Excel facts name it.
+   * Left out of the wire form when none.
+   */
+  measure?: AnalyticsMeasure;
 };

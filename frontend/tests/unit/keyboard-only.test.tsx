@@ -175,7 +175,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     });
     const user = userEvent.setup();
     const seller = () =>
-      screen.getByRole('combobox', { name: named(message(language, 'vouchers-field-seller')) });
+      screen.getByRole('combobox', { name: named(message(language, 'vouchers-field-party')) });
     await tabTo(user, seller, 'the seller');
     await user.keyboard('rahim');
     await waitFor(() => {

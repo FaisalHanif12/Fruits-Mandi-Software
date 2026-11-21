@@ -43,7 +43,11 @@ export function TopBar({
   const [changingPassword, setChangingPassword] = useState(false);
   const userButton = useRef<HTMLButtonElement>(null);
   return (
-    <header className="flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-5">
+    <header
+      // A dropdown list that opens upward stops under the top bar (shared/ui/dropdown-position.ts, plan 86).
+      data-dropdown-avoid=""
+      className="flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-5"
+    >
       {back}
       <GlobalSearch
         onOpenAccount={onOpenAccount}

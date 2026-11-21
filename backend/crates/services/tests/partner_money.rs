@@ -483,6 +483,7 @@ fn the_overview_has_returned_net_and_total_and_a_return_adds_back() {
             account_id: None,
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap();
@@ -654,6 +655,7 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
             account_id: None,
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap()
@@ -967,6 +969,7 @@ fn a_general_on_a_buyer_is_a_bill_and_a_seller_advance_is_never_adjusted() {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

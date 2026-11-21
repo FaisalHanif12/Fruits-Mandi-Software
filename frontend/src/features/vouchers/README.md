@@ -11,8 +11,16 @@ only).
 
 - **Form** (`components/VoucherForm.tsx`): type list, date, account (`AccountPicker` with
   `PartyCard`), amount, collector (receipt),
-  reason (payment to a buyer is cash lent), expected goods
-  (advance), narration. Current and new balance come from the preview.
+  reason (money given to a buyer is cash lent: a payment to him, or an advance to him), expected goods
+  (an advance to a seller), narration. Current and new balance come from the preview.
+- **Advance to a buyer** (plan 88, PRD 15.4, FR-15.11): the advance tab's account field takes a seller
+  or a buyer (scope `seller_buyer`), each row marked with his kind. A seller goes on as before. A buyer
+  is cash lent: the reason is asked and required, his open bills show under the form, and the input
+  carries `reason` and no expected goods. The backend saves it as a payment to him, so the message
+  says "Cash Lent" with a number of the payment series (`savedKindOf`). The advance list is asked
+  with `advance_view` and has its own window source `{ kind: 'advances' }`; it holds the advances
+  and the cash lent, with an account type column. Opening a cash lent row from that list opens it
+  on the payment tab, which edits a payment.
 - **Waiting list** (PRD FR-15.1, `components/WaitingList.tsx`, `useSaveList.ts`): `F2` puts the form in
   the list and starts the next voucher (type and date stay); `F10` (or `Ctrl+Enter`)
   saves the list one voucher at a time, each with its own save command and its own transaction,

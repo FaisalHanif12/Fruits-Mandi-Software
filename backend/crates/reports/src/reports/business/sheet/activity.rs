@@ -127,9 +127,8 @@ pub(super) fn activities(
     let mut parts: BTreeMap<(i64, String), (String, DayParts)> = BTreeMap::new();
     // Two groups of one account that the read gives the same key (a line with no person key and a
     // line with an empty one) are never merged silently: that is an error, not a lost sum.
-    let twice = || {
-        ReportsError::Data("two groups of lines of one party have the same key".to_owned())
-    };
+    let twice =
+        || ReportsError::Data("two groups of lines of one party have the same key".to_owned());
     for before in mandi_db::party_reads::totals_before(conn, &controls, day, scope)? {
         let slot = parts
             .entry((before.account_id, before.person_key))

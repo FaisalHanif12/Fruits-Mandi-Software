@@ -75,7 +75,7 @@ describe('the advance screen when save is pressed again and again', () => {
     });
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole('combobox', { name: named(message('ur', 'vouchers-field-seller')) }),
+      await screen.findByRole('combobox', { name: named(message('ur', 'vouchers-field-party')) }),
     );
     await user.keyboard('rahim');
     await waitFor(() => {

@@ -41,7 +41,7 @@ import { useMasterFocus } from '../store';
 
 const ALL = 'all';
 /** The kinds the list can show besides "all": sellers and buyers (plan 32, R6, plan 64). */
-const KINDS: readonly AccountListKind[] = ['seller', 'buyer'];
+const KINDS = ['seller', 'buyer'] as const satisfies readonly AccountListKind[];
 
 /** The account list starts as the Owner left it: the kind and the inactive tick (PRD FR-7.45). */
 export function AccountListPage() {

@@ -138,11 +138,7 @@ gardens-field-season-end = End of the season
 gardens-field-paid-now = First { -qist }
 # review: pending
 gardens-field-paid-now-hint = Leave it empty if nothing is paid today. It is saved as the first installment.
-# review: pending
-gardens-field-paid-now-reason = Why the first installment was paid
-# review: pending
-gardens-field-paid-now-reason-hint = Filled in for you. Change it if it is not right.
-# The words put in the reason of the first installment when its amount is typed (PRD FR-12.35). Free text: saved as shown, in the language of the screen at that moment. Plain words on purpose, with no glossary reference, so the saved text has no invisible marks in it.
+# The standard words of the reason of the first installment (PRD FR-12.35). The form has no field for it (plan 81): the backend saves these words. Plain words on purpose, with no glossary reference, so the saved text has no invisible marks in it.
 # review: pending
 gardens-first-installment-reason = First installment
 # review: pending

@@ -10,6 +10,7 @@ import { usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { VOUCHERS_KEY, vouchersPreview } from '../vouchers';
 import {
   cashbookCapitalWhere,
+  partnersPlaceOpeningCapital,
   cashbookGet,
   expensePreview,
   generalPreview,
@@ -31,6 +32,7 @@ import {
   savePersonalReturn,
   saveShopExpense,
 } from './api';
+import type { PartnersPlaceOpeningCapitalInput } from './capital-types';
 import { inputOf } from './entry-support';
 import type {
   ExpenseEntry,
@@ -85,16 +87,29 @@ export function useCashbook(
 }
 
 /**
- * Where the partners' money is and whose it is (PRD FR-16.14, plan 78 E). It is read only when the card is open, and
- * read again after every save (the key starts with `cashbook`). A locked partner section is an error the card shows
- * as the code box (`ErrorState`).
+ * The capital card as of a day (PRD FR-16.14, plan 87). It is read only when the card is open, and read again after
+ * every save (the key starts with `cashbook`). A locked partner section is an error the card shows as the code box
+ * (`ErrorState`). `asOf` is the day as typed, `DD-MM-YYYY`, or null for today.
  */
-export function useCapitalWhere(enabled: boolean) {
+export function useCapitalWhere(enabled: boolean, asOf: string | null) {
   return useQuery({
-    queryKey: [...CASHBOOK_KEY, 'capital-where'],
-    queryFn: cashbookCapitalWhere,
+    queryKey: [...CASHBOOK_KEY, 'capital-where', asOf],
+    queryFn: () => cashbookCapitalWhere(asOf === null ? {} : { as_of: asOf }),
     enabled,
     staleTime: 0,
+  });
+}
+
+/**
+ * Puts the opening capital of the chosen partners into روکڑ with the reason and the Owner's sign (plan 87). When the
+ * backend says yes, the card, the cash book, the partners' totals and the day are read again (PRD 6.2). A refusal
+ * (a wrong sign, no reason) is the mutation's error and changes nothing.
+ */
+export function usePlaceOpeningCapital() {
+  const readAgain = useReadAgain();
+  return useMutation({
+    mutationFn: (input: PartnersPlaceOpeningCapitalInput) => partnersPlaceOpeningCapital(input),
+    onSuccess: readAgain,
   });
 }
 

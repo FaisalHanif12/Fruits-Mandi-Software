@@ -60,7 +60,14 @@ import {
   showToast,
   useErrorText,
 } from '../../../shared/ui';
-import { useEditReview, useEntryMarks, useFixDayFlow, useFixStore } from '../../../shared/edit';
+import {
+  ClosedDayEntryNotice,
+  finishFixSession,
+  useEditReview,
+  useEntryMarks,
+  useFixDayFlow,
+  useFixStore,
+} from '../../../shared/edit';
 import { bikriEditReview } from '../api';
 import { BikriToolbar } from '../components/BikriToolbar';
 import { SavedBikriView } from '../components/saved/SavedBikriView';
@@ -273,6 +280,8 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
         return;
       }
       autosave.stop();
+      // A new بکری saved through a reopened day: the days close again, in order (PRD FR-21.4, plan 85).
+      void finishFixSession(l10n);
       newBikri?.onSaved(saved, andNext);
     },
   });
@@ -326,6 +335,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     setAskReason(true);
   }
 
+  const entryDate = stores.header((state) => state.entryDate);
   const lotRows = stores.lots((state) => state.rows);
   const selected = stores.view((state) => state.selectedLot);
   const whole = stores.view((state) => state.wholeView);
@@ -676,6 +686,15 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           )}
           {edit !== null && !edit.editable.editable ? (
             <ClosedDayNotice date={edit.editable.entry_date} />
+          ) : null}
+          {edit === null ? (
+            // A new بکری on a closed day has no figures and cannot be saved: the notice says so and offers
+            // "Reopen the day and save" (PRD FR-21.4, FR-12.6, plan 85). The figures fill once the day is open.
+            <ClosedDayEntryNotice
+              errors={problems.map((problem) => problem.item)}
+              date={entryDate}
+              onReopened={flow.clearRefusal}
+            />
           ) : null}
           {refused === null ? null : (
             <ErrorNotice error={refused} fieldsShown={refusedItems.map((item) => item.field)} />

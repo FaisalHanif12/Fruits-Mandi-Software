@@ -302,6 +302,7 @@ fn advance(seller: i64, amount: &str) -> AdvanceInput {
         removed: Default::default(),
         expected_goods: String::new(),
         narration: String::new(),
+        reason: None,
     }
 }
 

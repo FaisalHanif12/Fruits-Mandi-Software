@@ -31,7 +31,7 @@ fn read_repo(relative: &str) -> String {
 // ---- P1 ---------------------------------------------------------------------------------------
 
 #[test]
-fn p1_the_fixed_part_is_at_most_11600_tokens() {
+fn p1_the_fixed_part_is_at_most_11800_tokens() {
     let bpe = tiktoken_rs::o200k_base().unwrap();
     let tools_min =
         serde_json::to_string(&serde_json::from_str::<Value>(TOOLS_JSON).unwrap()).unwrap();
@@ -161,7 +161,7 @@ fn terms(file: &str) -> Vec<(String, String)> {
 const GLOSSARY_GAPS: [(&str, &str); 13] = [
     (
         "-khate-mein-baqi",
-        "the prompt names the columns paid and left; no room in the prefix (11,599 of 11,600)",
+        "the prompt names the columns paid and left; no room in the prefix (11,599 of 11,600 at the time; 11,800 since plan 82, kept out for the same reason)",
     ),
     (
         "-tijarati-nuqsan",

@@ -8,9 +8,12 @@
 //! 1. the switch is on (`settings_day_get`, `auto_day_close`);
 //! 2. today is still open (the "closed up to" day is before today);
 //! 3. the shop time (Pakistan, UTC+5, like the backup scheduler) is at or after the closing time;
-//! 4. the last try for this day was more than [`RETRY_AFTER_MINUTES`] ago (a close that failed is
+//! 4. the day is not in use (plan 85, PRD FR-21.4 v1.49): no reopen to fix or to save an entry is in
+//!    progress, and the Owner has no day open that he reopened by hand and has not closed again
+//!    (`day::auto_close_hold`). The timer never closes a day under his hands;
+//! 5. the last try for this day was more than [`RETRY_AFTER_MINUTES`] ago (a close that failed is
 //!    not tried again every five minutes);
-//! 5. there are no unsaved drafts: the Owner is still typing something, so nothing is closed
+//! 6. there are no unsaved drafts: the Owner is still typing something, so nothing is closed
 //!    under his hands. This is checked again at the next tick.
 //!
 //! Before it closes, a run asks for the same preview the screen shows. A preview that fails, or a
@@ -39,6 +42,7 @@ use mandi_services::auth::Actor;
 use mandi_services::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{DayCloseInput, DayClosePreviewInput};
+use mandi_services::day::AutoCloseHold;
 use mandi_services::db::audit::AuditEntry;
 use mandi_services::{Context, ServiceError, day};
 use serde_json::json;
@@ -66,6 +70,9 @@ pub enum Outcome {
     Waiting,
     /// There are unsaved drafts; nothing was closed. Looked at again at the next tick.
     SkippedDrafts,
+    /// The day is in use (a fix in progress, or days the Owner reopened by hand); nothing was closed.
+    /// Looked at again at the next tick.
+    Held(AutoCloseHold),
     /// The days up to this day (`YYYY-MM-DD`) were closed.
     Closed(String),
     /// The close was refused or failed. The text is for the log only.
@@ -161,6 +168,11 @@ fn try_run(ctx: &Context, memory: &mut Memory) -> Result<Outcome, ServiceError> 
     if !closing_time_reached(shop_minutes(now), closing) {
         return Ok(Outcome::NotDue);
     }
+    // A day in use is never closed under the Owner's hands (plan 85). Checked before the retry
+    // wait, so a held day never counts as a failed close.
+    if let Some(hold) = day::auto_close_hold(ctx)? {
+        return Ok(Outcome::Held(hold));
+    }
     if memory.waiting(&status.today, now) {
         return Ok(Outcome::Waiting);
     }
@@ -251,6 +263,12 @@ pub fn start<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
                         }
                         Outcome::SkippedDrafts => {
                             tracing::info!("the automatic day close waits: there are drafts");
+                        }
+                        Outcome::Held(hold) => {
+                            tracing::info!(
+                                ?hold,
+                                "the automatic day close waits: the day is in use"
+                            );
                         }
                         Outcome::NotDue | Outcome::Waiting => {}
                     }

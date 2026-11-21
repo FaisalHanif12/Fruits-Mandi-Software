@@ -161,6 +161,7 @@ function KhataEditor({ today, urlType, editable = null, initial = null }: KhataE
       onNew={startNew}
       flow={flow}
       error={error}
+      closedDay={{ date: draft.date, onReopened: flow.clearRefusal }}
       fieldsShown={KHATA_FIELD_PATHS}
       formRef={formRef}
       below={<KhataListSection khataId={draft.khata?.id ?? null} />}

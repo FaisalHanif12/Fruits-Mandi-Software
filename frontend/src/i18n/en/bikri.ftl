@@ -314,6 +314,20 @@ bikri-line-buyer-left = “{ $text }” was typed, but no buyer was chosen. Pick
 # review: pending
 bikri-line-no-figures = No figures yet. Check this line and its lot.
 
+# A lot that misses something its sale lines need says so at once under the lots grid, after "Lot 2:" (PRD
+# FR-12.6 v1.49, plan 85). Shown as soon as a line of the lot has a quantity and a rate.
+# review: pending
+bikri-lot-missing-seller = Choose the seller.
+
+# review: pending
+bikri-lot-missing-item = Choose the item.
+
+# review: pending
+bikri-lot-missing-packing = Choose the packing.
+
+# review: pending
+bikri-lot-missing-qty = Enter the quantity received.
+
 # review: pending
 bikri-summary-seller-side = Seller side
 

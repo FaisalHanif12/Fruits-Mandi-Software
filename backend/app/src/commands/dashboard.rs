@@ -10,8 +10,8 @@ use mandi_reports::dashboard::{
     CashSalesDay, CashSalesDayInput, CashSalesDayPrintInput, CashSalesMonth, CashSalesMonthInput,
     CashSalesMonthPrintInput, CommissionDay, CommissionDayInput, CommissionMonth,
     CommissionMonthInput, CommissionPrintInput, Dashboard, LentOpenInput, LentOpenPage,
-    LentOpenPrintInput, SellerDuesInput, SellerDuesPage, SellerDuesPrintInput, TotalDues,
-    TotalDuesPrintInput,
+    LentOpenPrintInput, SalesDay, SalesDayInput, SalesPeriod, SalesPeriodInput, SalesPrintInput,
+    SellerDuesInput, SellerDuesPage, SellerDuesPrintInput, TotalDues, TotalDuesPrintInput,
 };
 use mandi_reports::reports::TablePrintData;
 use mandi_services::auth;
@@ -124,6 +124,52 @@ pub async fn dashboard_commission_print_data<R: tauri::Runtime>(
         let show_partners = !partner_code::is_locked(ctx)?;
         dashboard::commission_month_print_data(ctx.db(), &input, show_partners)
             .map_err(engine_error)
+    })
+    .await
+}
+
+/// The sales of a period: a row for each day (a row for each month in a year) with a sale, and the
+/// totals over the whole period (plan 83, PRD FR-9.9). The tile آج کی بکری opens it. Narrowed to one
+/// party, one item or some goods when asked. Read only. Errors: `ERR_REQUIRED`, `ERR_FORMAT_INVALID`,
+/// `ERR_DATE_INVALID`, `ERR_DATE_IN_FUTURE` and `ERR_DATE_RANGE` on `period.*`; `ERR_NOT_FOUND`,
+/// `ERR_WRONG_PARTY_TYPE` and `ERR_OUT_OF_RANGE` on `party.*`; `ERR_NOT_FOUND` on `item_id`;
+/// `ERR_OUT_OF_RANGE` on `offset` and `limit`.
+#[tauri::command]
+pub async fn dashboard_sales_period<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SalesPeriodInput,
+) -> Result<SalesPeriod, UiError> {
+    run(app, "dashboard_sales_period", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::sales_period(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The بکری sold on one day, with their figures of that day (plan 83, PRD FR-9.9). Read only.
+/// Errors: `ERR_REQUIRED`, `ERR_DATE_INVALID` and `ERR_DATE_IN_FUTURE` on `date`; the party and item
+/// errors of `dashboard_sales_period`; `ERR_OUT_OF_RANGE` on `offset` and `limit`.
+#[tauri::command]
+pub async fn dashboard_sales_day<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SalesDayInput,
+) -> Result<SalesDay, UiError> {
+    run(app, "dashboard_sales_day", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::sales_day(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of the sales page of a period, with every row, in the print language (plan 83).
+#[tauri::command]
+pub async fn dashboard_sales_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SalesPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "dashboard_sales_print_data", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::sales_period_print_data(ctx.db(), &input).map_err(engine_error)
     })
     .await
 }

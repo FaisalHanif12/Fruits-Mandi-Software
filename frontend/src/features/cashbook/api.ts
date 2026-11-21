@@ -18,13 +18,22 @@ import type { LentPersonUpdateInput } from '../../bindings/LentPersonUpdateInput
 import type { MoneyLentRequest } from '../../bindings/MoneyLentRequest';
 import type { MoneyLentReturnInput } from '../../bindings/MoneyLentReturnInput';
 import type { PartnerTakesInput } from '../../bindings/PartnerTakesInput';
+import type { PrintOutcome } from '../../bindings/PrintOutcome';
+import type { TablePrintData } from '../../bindings/TablePrintData';
 import type { PersonalExpenseInput } from '../../bindings/PersonalExpenseInput';
 import type { PersonalReturnInput } from '../../bindings/PersonalReturnInput';
 import type { RepeatLastMonthInput } from '../../bindings/RepeatLastMonthInput';
 import type { ShopExpenseInput } from '../../bindings/ShopExpenseInput';
 import { callCommand } from '../../shared/api';
 import type {
+  CapitalPrintInput,
   CapitalWhere,
+  CapitalWhereInput,
+  PartnersOpeningCapitalPlaced,
+  PartnersPlaceOpeningCapitalInput,
+  PrintCapitalInput,
+} from './capital-types';
+import type {
   Cashbook,
   CashbookInput,
   ExpenseEntry,
@@ -51,11 +60,34 @@ export function cashbookGet(input: CashbookInput): Promise<Cashbook> {
 }
 
 /**
- * Where the partners' money is now and whose it is: the card on the روکڑ page (PRD FR-16.14, plan 78 E). Behind the
- * partner code: while the section is locked the backend answers `ERR_PARTNER_LOCKED`.
+ * The capital card of the روکڑ page as of a day (`DD-MM-YYYY` as typed, or null for today): where the partners' money is, in two blocks, whose it
+ * is, and the opening difference when it is not 0 (PRD FR-16.14, plan 87). Behind the partner code: while the
+ * section is locked the backend answers `ERR_PARTNER_LOCKED`.
  */
-export function cashbookCapitalWhere(): Promise<CapitalWhere> {
-  return callCommand<CapitalWhere>('cashbook_capital_where');
+export function cashbookCapitalWhere(input: CapitalWhereInput): Promise<CapitalWhere> {
+  return callCommand<CapitalWhere>('cashbook_capital_where', { input });
+}
+
+/**
+ * Puts the opening capital of the chosen partners into روکڑ (plan 87, PRD FR-16.14, FR-21.4): each opening is
+ * reversed and posted again on its own date with روکڑ on the other side. It is a command of the partners area, kept
+ * here because only this card calls it. The reason and the Owner's sign are checked by the backend, which reopens
+ * and closes the days itself.
+ */
+export function partnersPlaceOpeningCapital(
+  input: PartnersPlaceOpeningCapitalInput,
+): Promise<PartnersOpeningCapitalPlaced> {
+  return callCommand<PartnersOpeningCapitalPlaced>('partners_place_opening_capital', { input });
+}
+
+/** The card as a print table, every line, in the print language (PRD FR-19.13). */
+export function cashbookCapitalPrintData(input: CapitalPrintInput): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('cashbook_capital_print_data', { input });
+}
+
+/** Prints the card, or saves it as a PDF: the same day, language and paper as the preview. */
+export function cashbookCapitalPrint(input: PrintCapitalInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('cashbook_capital_print', { input });
 }
 
 /** The shop expense heads, the most used first (PRD FR-7.62). */

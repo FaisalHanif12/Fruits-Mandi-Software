@@ -175,6 +175,23 @@ fn opening_is_in_cash(
     Ok(found)
 }
 
+/// True when the same opening is asked to go into روکڑ (`OpeningCounter::Cash`), the account has an
+/// opening in force and that opening does not have روکڑ on its other side yet. The cash account's own
+/// opening never moves (it is cash by its own account).
+fn moves_to_cash(
+    tx: &Connection,
+    facts: &repo::AccountFacts,
+    have: &OpeningRequest,
+    counter: OpeningCounter,
+) -> Result<bool, ServiceError> {
+    if counter != OpeningCounter::Cash || !have.has_amount() {
+        return Ok(false);
+    }
+    let cash_id = repo::id_by_code(tx, CASH_ACCOUNT_CODE)?
+        .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
+    Ok(facts.id != cash_id && !opening_is_in_cash(tx, facts, cash_id)?)
+}
+
 /// What cash gains from an opening that is in cash: a credit opening on the account puts the same
 /// amount into روکڑ (Dr روکڑ), a debit opening takes it out (Cr روکڑ).
 fn cash_effect(opening: &OpeningRequest) -> Result<Paisa, ServiceError> {
@@ -226,7 +243,10 @@ pub(crate) fn apply_with(
     confirmed: bool,
 ) -> Result<bool, ServiceError> {
     let have = current_opening(facts)?;
-    if same_opening(&have, wanted) {
+    // The same opening is not written again, except when it is asked to move into روکڑ and now stands
+    // against ابتدائی فرق (plan 87, PRD FR-16.14 v1.50): then the old entry is reversed and the same
+    // amount is posted again on the same date with روکڑ on the other side.
+    if same_opening(&have, wanted) && !moves_to_cash(tx, facts, &have, counter)? {
         return Ok(false);
     }
     if wanted.has_amount() && !opening_allowed(facts) {

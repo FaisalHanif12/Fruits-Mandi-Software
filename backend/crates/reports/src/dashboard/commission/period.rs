@@ -22,19 +22,19 @@ const FIRST_YEAR: i32 = 1;
 
 /// A period that has been read and checked.
 #[derive(Debug, Clone, Copy)]
-pub(super) struct Resolved {
+pub(in crate::dashboard) struct Resolved {
     /// What it is.
-    pub(super) kind: CommissionPeriodKind,
+    pub(in crate::dashboard) kind: CommissionPeriodKind,
     /// The first day.
-    pub(super) from: BusinessDate,
+    pub(in crate::dashboard) from: BusinessDate,
     /// The last day.
-    pub(super) to: BusinessDate,
+    pub(in crate::dashboard) to: BusinessDate,
 }
 
 impl Resolved {
     /// The length of the bucket text a row is grouped by: `YYYY-MM-DD` for a day, a month and a
     /// range, `YYYY-MM` for a year.
-    pub(super) const fn bucket_len(&self) -> usize {
+    pub(in crate::dashboard) const fn bucket_len(&self) -> usize {
         match self.kind {
             CommissionPeriodKind::Year => 7,
             _ => 10,
@@ -88,7 +88,7 @@ fn day_of(
 /// # Errors
 /// `ERR_REQUIRED`, `ERR_FORMAT_INVALID`, `ERR_DATE_INVALID`, `ERR_DATE_IN_FUTURE` or
 /// `ERR_DATE_RANGE` (a range that ends before it starts), each with its field.
-pub(super) fn resolve(
+pub(in crate::dashboard) fn resolve(
     today: BusinessDate,
     month: Option<&str>,
     period: Option<&CommissionPeriod>,

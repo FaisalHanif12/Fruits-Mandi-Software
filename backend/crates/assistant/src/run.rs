@@ -53,9 +53,9 @@ use crate::fill;
 use crate::hedge::{Attempt, End, Side};
 use crate::help_guard;
 use crate::limits::{
-    DAILY_LIMIT, FIRST_BYTE_SECS, MAX_CALL_OUTPUT_TOKENS, MAX_CONVERSATION_ID_CHARS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
+    DAILY_LIMIT, FIRST_BYTE_SECS, MAX_CALL_OUTPUT_TOKENS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
     MAX_OUTPUT_TOKENS, MAX_QUESTION_CHARS, MAX_REWRITES, MAX_TOOL_CALLS, QUESTION_TIMEOUT_SECS,
-    RETRY_MIN_LEFT_SECS, TOOLS_OFF_AT_SECS,
+    RETRY_MIN_LEFT_SECS, RETRY_QUICK_MILLIS, TOOLS_OFF_AT_SECS,
 };
 use crate::measure_guard::{self, Measure};
 use crate::model_answer::{AnswerKind, EntryScreenName, ModelAnswer, Nearest};
@@ -65,6 +65,7 @@ use crate::request::{Parts, RESULT_MARK, request_body, user_message};
 use crate::results::{Node, ToolResult, Words, fit, tool_result_json};
 use crate::route;
 use crate::runtime::Runtime;
+use crate::sale_guard;
 use crate::scope_guard::{self, AskScope};
 use crate::settings::{AssistantTestResult, DEFAULT_MODEL};
 use crate::source::{AnswerRecord, SourceParty, SourceReportFilters};
@@ -682,11 +683,19 @@ impl<'a> Run<'a> {
     /// The second value is true when the question names a filter a dashboard tile does not take,
     /// whether or not the app understood all of it: a tile read ahead for such a question would be a
     /// real figure of something wider, and the model could quote it (D7 R8, money review 10).
+    ///
+    /// The third value is the name of a party that several records have, in a commission or a sale
+    /// question the app would write by itself once the Owner picks one: the app asks "کون سا؟" with no
+    /// model call (plan 82, PRD FR-7.77, FR-7.90).
     fn understand_question(
         &self,
         text: &str,
         follow_up: bool,
-    ) -> (Option<crate::understand::Understanding>, bool) {
+    ) -> (
+        Option<crate::understand::Understanding>,
+        bool,
+        Option<String>,
+    ) {
         use crate::understand::{self, Intent};
         let reader = understand::Reader {
             ctx: &self.snap,
@@ -699,7 +708,10 @@ impl<'a> Run<'a> {
         understood.multi_measure = self.d.runtime.multi_measure();
         let narrows = narrows_the_tiles(&understood);
         if !understood.sure || (follow_up && leans_on_earlier_questions(&understood)) {
-            return (None, narrows);
+            let which = (!follow_up)
+                .then(|| understand::which_one_party(&understood))
+                .flatten();
+            return (None, narrows, which);
         }
         let kind = match understood.intent.value {
             Intent::Print => "print",
@@ -717,7 +729,7 @@ impl<'a> Run<'a> {
                 },
             }],
         });
-        (Some(understood), narrows)
+        (Some(understood), narrows, None)
     }
 
     /// Reads, before the first call, what the model would have chosen to read (plan 54 S3, plan 55
@@ -894,6 +906,40 @@ impl<'a> Run<'a> {
         Some(f)
     }
 
+    /// "کون سا؟" for the commission or the sale of a name that several records have (plan 82, PRD
+    /// FR-7.77): the app finds the name as the model would (every account, both roles), and when two or
+    /// more records come back the question ends here with a button for each, logged as local. `None`
+    /// when the search finds fewer than two, and the question goes on as before.
+    fn which_one_of(
+        &self,
+        conv: &mut Conversation,
+        turn: &mut Turn,
+        party: &str,
+    ) -> Option<Finished> {
+        let start = turn.tool_log.len();
+        let input = json!({"text": party, "role": "any_party"});
+        let find_id = self.preread_tool(conv, turn, "find", &input.to_string())?;
+        let state = State {
+            results: conv.results.clone(),
+            turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+        };
+        let found = match state.find(&find_id).and_then(|r| r.node.get(&["matches"])) {
+            Some(Node::List(items)) => items.len(),
+            _ => 0,
+        };
+        if found < 2 {
+            return None;
+        }
+        for entry in turn.tool_log.iter_mut().skip(start) {
+            if let Some(map) = entry.as_object_mut() {
+                map.insert("local".to_owned(), json!(true));
+            }
+        }
+        let mut finished = self.ask_which_one(conv, &find_id);
+        finished.finish_reason = Some("local".to_owned());
+        Some(finished)
+    }
+
     /// The guards of a continuation after "کون سا؟" (D7, plan 59 F3b): the question had several matches, so
     /// it was not understood as sure and carried no scope or side. With the record the Owner picked as the
     /// name, the question is read again; when nothing else stands in doubt, its planned reads and its
@@ -902,7 +948,11 @@ impl<'a> Run<'a> {
     ///
     /// Example: "akram ka pichle mahine ka commission", Akram Toll Tax picked: an answer that cites his
     /// commission of all time is refused for its period.
-    fn guards_for_pick(&self, turn: &mut Turn, key: &str) {
+    fn guards_for_pick(
+        &self,
+        turn: &mut Turn,
+        key: &str,
+    ) -> Option<crate::understand::Understanding> {
         use crate::understand::{self, Doubt, Outcome};
         let reader = understand::Reader {
             ctx: &self.snap,
@@ -922,19 +972,19 @@ impl<'a> Run<'a> {
             }
         }
         if !chosen {
-            return;
+            return None;
         }
         // Only when no other name of the question is still one of several.
         if u.parties
             .iter()
             .any(|p| matches!(p.outcome, Outcome::Several(_)))
         {
-            return;
+            return None;
         }
         u.doubts
             .retain(|d| !matches!(d, Doubt::SeveralMatches | Doubt::CloseSpelling));
         if !u.doubts.is_empty() {
-            return;
+            return None;
         }
         u.sure = true;
         turn.commission_side = u.commission_side;
@@ -950,6 +1000,7 @@ impl<'a> Run<'a> {
                     .collect()
             })
             .unwrap_or_default();
+        Some(u)
     }
 
     /// What was read for this question, to show when time runs out (plan 55 Section 3): the
@@ -998,6 +1049,14 @@ impl<'a> Run<'a> {
         }
     }
 
+    /// The time the question has run: the clock of the computer plus what the client's fake clock
+    /// says (a test's slow model, plan 82). The real client's fake time is always 0.
+    fn elapsed(&self) -> Duration {
+        self.started
+            .elapsed()
+            .saturating_add(self.d.client.clock_skew())
+    }
+
     /// One model call, within the limits of the question (plan 54 S5, plan 55 Section 3). The
     /// reply of the model comes whole, so a try is cut when no reply has come in
     /// [`FIRST_BYTE_SECS`]. A call that failed on the network, on 429, on a 5xx or by that cut is
@@ -1012,7 +1071,7 @@ impl<'a> Run<'a> {
         rewrite: bool,
     ) -> Result<Reply, Box<Finished>> {
         let total = Duration::from_secs(QUESTION_TIMEOUT_SECS);
-        if self.started.elapsed() >= total {
+        if self.elapsed() >= total {
             return Err(self.out_of_time(conv, turn, CallError::new(FailureKind::Timeout)));
         }
         let c = &turn.counters;
@@ -1044,12 +1103,12 @@ impl<'a> Run<'a> {
             .min(MAX_CALL_OUTPUT_TOKENS);
         let mut retried = false;
         let reply = loop {
-            let elapsed = self.started.elapsed();
+            let elapsed = self.elapsed();
             let left = total.saturating_sub(elapsed);
             if left.is_zero() {
                 return Err(self.out_of_time(conv, turn, CallError::new(FailureKind::Timeout)));
             }
-            // From 20 s the call must answer from what has been read.
+            // From TOOLS_OFF_AT_SECS the call must answer from what has been read.
             let late = elapsed >= Duration::from_secs(TOOLS_OFF_AT_SECS);
             let tools_already_off = tools_off(turn, rewrite);
             if late && !tools_already_off {
@@ -1063,7 +1122,10 @@ impl<'a> Run<'a> {
                 partner_locked: self.partner_locked,
                 max_completion_tokens,
                 tools_off: tools_already_off || late,
-                low_effort: turn.read_first && self.d.runtime.low_effort(),
+                // Every call thinks "low" but the rewrite of a refused answer (plan 82, Tech Stack
+                // 4.8 [A]): the reasoning tokens of a call were 100 to 600, a second or more each,
+                // and the data is read by the tools, not worked out by the model.
+                low_effort: !rewrite && self.d.runtime.low_effort(),
             });
             // The first try waits FIRST_BYTE_SECS; the one retry has all the time that is left.
             let first_try = Duration::from_secs(FIRST_BYTE_SECS).min(left);
@@ -1131,12 +1193,20 @@ impl<'a> Run<'a> {
                             turn.timing.calls.push(hedge_entry(copy, rewrite, true));
                         }
                     }
-                    let left = total.saturating_sub(self.started.elapsed());
+                    let left = total.saturating_sub(self.elapsed());
                     if !retried && e.retryable() && left >= Duration::from_secs(RETRY_MIN_LEFT_SECS)
                     {
                         retried = true;
                         (self.d.emit)(step("assistant-step-retrying"));
-                        std::thread::sleep(self.d.client.retry_wait());
+                        // A busy or failing server is given a moment; a call that only ran out of
+                        // time or lost its line is tried again at once (plan 82).
+                        let wait = self.d.client.retry_wait();
+                        let wait = if matches!(e.kind, FailureKind::Busy | FailureKind::Server) {
+                            wait
+                        } else {
+                            wait.min(Duration::from_millis(RETRY_QUICK_MILLIS))
+                        };
+                        std::thread::sleep(wait);
                         continue;
                     }
                     return Err(self.out_of_time(conv, turn, e));
@@ -1282,6 +1352,7 @@ impl<'a> Run<'a> {
         let mut months_fixed = false;
         let mut measure_fixed = false;
         let mut dues_fixed = false;
+        let mut sale_fixed = false;
         // What the model wrote before the app put a name back: the log keeps the model's own words
         // (the call marks `repaired`), so the next live run shows what it typed.
         let mut written_by_model: Option<String> = None;
@@ -1407,6 +1478,35 @@ impl<'a> Run<'a> {
                         continue;
                     }
                     with_failures(verdict, measure_guard::repair_failures(&repairs))
+                }
+            } else {
+                verdict
+            };
+            // "safi bikri" is the net column and "gahakon ke bill" the buyer total: a cited cell of another
+            // sale column (the gross, a balance, a commission) is a real figure of the wrong thing. It is
+            // rewritten to the right cell of the same row when that exists, else refused with the cells
+            // that hold the right column (plan 82, `sale_guard`). A repair is made once.
+            let verdict = if !swapped && matches!(verdict, Verdict::Ok | Verdict::Retry(_)) {
+                match sale_guard::plan(turn.sale_ask, &parsed.text, &state) {
+                    Measure::Fine => verdict,
+                    Measure::Repair(repairs) => {
+                        let fixed = (matches!(verdict, Verdict::Ok) && !sale_fixed)
+                            .then(|| {
+                                map_texts(&content, &|text| measure_guard::rewrite(text, &repairs))
+                            })
+                            .flatten();
+                        if let Some(fixed) = fixed {
+                            sale_fixed = true;
+                            if let Some(last) = turn.timing.calls.last_mut() {
+                                last.repaired.push("sale_measure".to_owned());
+                            }
+                            written_by_model.get_or_insert_with(|| content.clone());
+                            content = fixed;
+                            continue;
+                        }
+                        with_failures(verdict, measure_guard::repair_failures(&repairs))
+                    }
+                    Measure::Refuse(failures) => with_failures(verdict, failures),
                 }
             } else {
                 verdict
@@ -2836,20 +2936,7 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     // The conversation id comes from the screen and is untrusted (V0): when one is given it must be
     // a short text with no control character, or the log row would be refused after the model's
     // reply was paid for (plan 80, T5-7). An empty or blank one starts a new conversation.
-    let given = input
-        .conversation_id
-        .as_deref()
-        .map(str::trim)
-        .filter(|c| !c.is_empty());
-    if let Some(given) = given
-        && (given.chars().count() > MAX_CONVERSATION_ID_CHARS
-            || given.chars().any(char::is_control))
-    {
-        return Err(ServiceError::reject_field(
-            ErrorCode::ErrFormatInvalid,
-            "conversation_id",
-        ));
-    }
+    let given = crate::conversation::checked_conversation_id(input.conversation_id.as_deref())?;
     require_on(d)?;
     let _guard = d
         .runtime
@@ -2869,14 +2956,15 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     // The app writes the answer itself when it understood the whole question and the answer is
     // already in the app. It costs no model call, so it is not counted and the daily limit does
     // not stop it (FR-7.81).
-    let (understood, narrows_tiles) = if d.runtime.local() || d.runtime.read_first() {
+    let (understood, narrows_tiles, which_party) = if d.runtime.local() || d.runtime.read_first() {
         run.understand_question(text, !conv.turns.is_empty())
     } else {
-        (None, false)
+        (None, false, None)
     };
     // The side of the commission the question asks (D7, plan 59 F1): the guard keeps the answer on that
     // column.
     turn.asked_days = crate::understand::asked_days(text, run.today);
+    turn.sale_ask = crate::understand::asked_sale_measure(text);
     turn.commission_side = understood.as_ref().and_then(|u| u.commission_side);
     turn.commission_laga = understood.as_ref().is_some_and(|u| {
         u.figures
@@ -2912,6 +3000,14 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     {
         return run.conclude(conv, turn, finished, Source::Model, None);
     }
+    // The commission or the sale of a name that several records have: the Owner is asked which one at
+    // once, with no model call and no count; the click is answered the same way (plan 82).
+    if d.runtime.instant()
+        && let Some(party) = &which_party
+        && let Some(finished) = run.which_one_of(&mut conv, &mut turn, party)
+    {
+        return run.conclude(conv, turn, finished, Source::Model, None);
+    }
     if assistant::count_today(d.ctx)? >= DAILY_LIMIT {
         return run.conclude(
             conv,
@@ -2938,7 +3034,10 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     } else if help_guard::general_advice_asked(text, &numbers) && conv.turns.is_empty() {
         // How to do better at something the shop does: no tool, one call (PRD FR-7.88).
         turn.general_advice = true;
-    } else if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
+    } else if let Some(topic) = help_guard::topic_of_question(text, &numbers)
+        // "What is the net sale so far?" is a figure of the books, not the guide of a screen (plan 82).
+        && !understood.as_ref().is_some_and(|u| u.sale_measure.is_some())
+    {
         run.preread_help(&mut conv, &mut turn, topic);
         turn.read_first = true;
     } else if turn.read_first {
@@ -3009,6 +3108,8 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
     };
     // The question as it was before the click, kept for a try again if the call fails (plan 80, T5-6).
     let before_click = turn.clone();
+    // The question as understood with the record the Owner chose, when it is a figure the app writes.
+    let mut picked: Option<crate::understand::Understanding> = None;
     let outcome = match (&waiting.wait, &input.choice) {
         // "All lots" (plan 71 L9): the model reads the seller and the item together, with no lot
         // narrowing. Only a list of lots has this button.
@@ -3059,7 +3160,7 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
                     None => (find_id.clone(), None),
                 };
                 let at = match_position(&conv.results, &use_id, key).unwrap_or(0);
-                run.guards_for_pick(&mut turn, key);
+                picked = run.guards_for_pick(&mut turn, key);
                 let mut picked = json!({"picked": format!("{use_id}.matches.{at}")});
                 // A lot the Owner picked (plan 71 L9): the reports of its seller and item are
                 // narrowed to it, and the model is told so.
@@ -3120,6 +3221,15 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
     turn.timing = Timing::default();
     // A new moment: what this question read before is read again on it, so all of it is one.
     run.refresh(&mut conv, &turn);
+    // The click on one of several records of a commission or a sale question: the app writes the answer
+    // itself, as for a name that has one record, with no model call and no count (plan 82).
+    if d.runtime.instant()
+        && pending.is_empty()
+        && let Some(u) = &picked
+        && let Some(finished) = run.instant_answer(&mut conv, &mut turn, u)
+    {
+        return run.conclude(conv, turn, finished, Source::Continue, Some(row.id));
+    }
     let finished = run.drive(&mut conv, &mut turn, pending);
     let failed = finished.failure.is_some();
     let conversation_id = conv.id.clone();

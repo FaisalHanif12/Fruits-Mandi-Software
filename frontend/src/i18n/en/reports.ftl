@@ -667,6 +667,10 @@ report-col-partner-net = { -khalis }
 # review: pending
 report-col-partner = { -shirakat-dar }
 
+# The total column of the assistant's table of the partners' totals (R31): each partner's کل رقم.
+# review: pending
+report-col-total = { -kul-raqam }
+
 ## The words inside the rows and above the table.
 
 # review: pending

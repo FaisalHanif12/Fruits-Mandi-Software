@@ -12,8 +12,8 @@ use mandi_db::accounts as account_repo;
 use mandi_db::cashbook as repo;
 use mandi_domain::core::accounts::RecordRef;
 use mandi_domain::core::cashbook::{
-    CapitalWhere, CapitalWhereKind, CapitalWhereLine, CapitalWhoseKind, CapitalWhoseLine, Cashbook,
-    CashbookInput, CashbookKind, CashbookRow, CashbookTotals,
+    CapitalWhere, CapitalWhereInput, Cashbook, CashbookInput, CashbookKind, CashbookRow,
+    CashbookTotals,
 };
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::Paisa;
@@ -21,6 +21,7 @@ use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::row_source::RowSource;
 use mandi_domain::core::validate::{self, FieldErrors};
 
+use crate::capital_card;
 use crate::cash::CASH_ACCOUNT_CODE;
 use crate::context::Context;
 use crate::day;
@@ -253,159 +254,23 @@ fn counterpart(
     })
 }
 
-/// Where the partners' money is now and whose it is (PRD FR-16.14 v1.43, plan 78 E). Every figure is
-/// from the posted records, in one read snapshot, with checked maths. The caller checks the partner
-/// code (`ERR_PARTNER_LOCKED`).
-///
-/// The left side is the chart's heads 01 to 03 (what the shop has, is owed and owes), the right side
-/// heads 04 to 06 (capital, income, expenses). The books balance, so the two totals are equal. A seller
-/// is split in the three lines of PRD FR-16.14 from his ledger net `n` and his open advance `a`:
-/// advances `a`, beyond `max(0, n − a)`, payable `max(0, a − n)`, so `a + beyond − payable = n`. A
-/// difference no named line explains is an `other` line, shown only when it is not 0.
-///
-/// Example (after Events 1 to 5): 58,484 + 21,564 − 10,160 − 4,400 = 65,488 = −1,004 + 746 + 746 +
-/// 65,000.
+/// Where the partners' money is now and whose it is (PRD FR-16.14 v1.43 and v1.50): the card on the
+/// روکڑ page as of today. The caller checks the partner code (`ERR_PARTNER_LOCKED`). The work is in
+/// [`crate::capital_card`].
 ///
 /// # Errors
 /// `ServiceError::Db`; `ServiceError::Data`; `ERR_OVERFLOW`.
 pub fn capital_where(ctx: &Context) -> Result<CapitalWhere, ServiceError> {
-    ctx.db.read_snapshot(|conn| {
-        let nets = repo::account_nets(conn)?;
-        let open_adv: HashMap<i64, i64> =
-            repo::open_advances_by_seller(conn)?.into_iter().collect();
-        let net_of = |dr: i64, cr: i64| -> Result<Paisa, ServiceError> {
-            paisa(dr)?.checked_sub(paisa(cr)?).map_err(money_error)
-        };
-        let add = |sum: &mut Paisa, part: Paisa| -> Result<(), ServiceError> {
-            *sum = sum.checked_add(part).map_err(money_error)?;
-            Ok(())
-        };
-        let (mut cash, mut buyers, mut lent, mut charges) =
-            (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
-        let (mut khatas, mut gardens, mut contra) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
-        let (mut advances, mut beyond, mut payable) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
-        let (mut left_all, mut right_all) = (Paisa::ZERO, Paisa::ZERO);
-        let (mut opening_capital, mut difference) = (Paisa::ZERO, Paisa::ZERO);
-        for a in &nets {
-            let net = net_of(a.dr_paisa, a.cr_paisa)?;
-            match a.head_code.as_str() {
-                "01" | "02" | "03" => add(&mut left_all, net)?,
-                _ => add(&mut right_all, net)?,
-            }
-            if a.code == CASH_ACCOUNT_CODE {
-                add(&mut cash, net)?;
-            } else if a.code == "06010001" {
-                add(&mut opening_capital, net)?;
-            } else if a.code == mandi_domain::core::accounts::OPENING_DIFFERENCE_CODE {
-                add(&mut difference, net)?;
-            } else if a.head_code == "02" {
-                add(&mut charges, net)?;
-            } else {
-                match a.control_code.as_str() {
-                    "0304" => add(&mut buyers, net)?,
-                    "0103" => add(&mut lent, net)?,
-                    "0305" => add(&mut khatas, net)?,
-                    "0306" => add(&mut gardens, net)?,
-                    "0307" => add(&mut contra, net)?,
-                    "03011" => {
-                        let open = paisa(open_adv.get(&a.id).copied().unwrap_or(0))?;
-                        add(&mut advances, open)?;
-                        let over = net.checked_sub(open).map_err(money_error)?;
-                        if over.is_negative() {
-                            add(&mut payable, over.checked_neg().map_err(money_error)?)?;
-                        } else {
-                            add(&mut beyond, over)?;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-        let mut where_lines = vec![
-            (CapitalWhereKind::Cash, cash),
-            (CapitalWhereKind::BuyersOwe, buyers),
-            (CapitalWhereKind::SellerAdvances, advances),
-            (CapitalWhereKind::SellersOweBeyond, beyond),
-            (
-                CapitalWhereKind::SellersPayable,
-                payable.checked_neg().map_err(money_error)?,
-            ),
-            (CapitalWhereKind::MoneyLent, lent),
-            (CapitalWhereKind::OwedForCharges, charges),
-            (CapitalWhereKind::SeparateKhatas, khatas),
-            (CapitalWhereKind::GardensHeld, gardens),
-            (CapitalWhereKind::LinkedInPartnerTotals, contra),
-        ];
-        let mut listed = Paisa::ZERO;
-        for (_, amount) in &where_lines {
-            add(&mut listed, *amount)?;
-        }
-        let other = left_all.checked_sub(listed).map_err(money_error)?;
-        if other != Paisa::ZERO {
-            where_lines.push((CapitalWhereKind::Other, other));
-        }
-        // Whose it is: heads 04 to 06 are credit-side, so the right total is their net with the sign
-        // turned.
-        let right_total = right_all.checked_neg().map_err(money_error)?;
-        let mut whose_lines: Vec<CapitalWhoseLine> = Vec::new();
-        let mut listed = Paisa::ZERO;
-        // The advances to sellers are read and replayed once: for every partner's total and for
-        // the advances still open (R1-4).
-        let advances = super::partners::money::read_advances(conn)?;
-        for partner in mandi_db::partners::list(conn)? {
-            let total = super::partners::money::total_with(conn, &partner, None, &advances)?;
-            add(&mut listed, total)?;
-            whose_lines.push(CapitalWhoseLine {
-                kind: CapitalWhoseKind::PartnerTotal,
-                partner: Some(RecordRef {
-                    id: partner.id,
-                    code: String::new(),
-                    name_ur: partner.name_ur,
-                    name_en: partner.name_en,
-                    tag: None,
-                }),
-                amount_paisa: total,
-            });
-        }
-        let opening = opening_capital.checked_neg().map_err(money_error)?;
-        add(&mut listed, opening)?;
-        whose_lines.push(CapitalWhoseLine {
-            kind: CapitalWhoseKind::OpeningCapital,
-            partner: None,
-            amount_paisa: opening,
-        });
-        let open_parts = advances.open_parts_total(None).map_err(money_error)?;
-        add(&mut listed, open_parts)?;
-        whose_lines.push(CapitalWhoseLine {
-            kind: CapitalWhoseKind::AdvancesOpen,
-            partner: None,
-            amount_paisa: open_parts,
-        });
-        let unrecorded = difference.checked_neg().map_err(money_error)?;
-        if unrecorded != Paisa::ZERO {
-            add(&mut listed, unrecorded)?;
-            whose_lines.push(CapitalWhoseLine {
-                kind: CapitalWhoseKind::UnrecordedWhere,
-                partner: None,
-                amount_paisa: unrecorded,
-            });
-        }
-        let rest = right_total.checked_sub(listed).map_err(money_error)?;
-        if rest != Paisa::ZERO {
-            whose_lines.push(CapitalWhoseLine {
-                kind: CapitalWhoseKind::Other,
-                partner: None,
-                amount_paisa: rest,
-            });
-        }
-        Ok(CapitalWhere {
-            where_lines: where_lines
-                .into_iter()
-                .map(|(kind, amount_paisa)| CapitalWhereLine { kind, amount_paisa })
-                .collect(),
-            where_total_paisa: left_all,
-            whose_lines,
-            whose_total_paisa: right_total,
-        })
-    })
+    capital_card::read(ctx, &CapitalWhereInput::default())
+}
+
+/// [`capital_where`] as of a day (plan 87): every figure counts the entries dated on or before it.
+///
+/// # Errors
+/// `ERR_DATE_*` on `as_of`; as [`capital_where`].
+pub fn capital_where_at(
+    ctx: &Context,
+    input: &CapitalWhereInput,
+) -> Result<CapitalWhere, ServiceError> {
+    capital_card::read(ctx, input)
 }

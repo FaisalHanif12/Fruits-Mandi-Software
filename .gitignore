@@ -135,3 +135,4 @@ __pycache__/
 # Gate lane build folders (plan 80)
 backend/target-gate-*/
 backend/target-fix-*/
+frontend/tests/output/

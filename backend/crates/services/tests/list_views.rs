@@ -277,6 +277,7 @@ fn advance_on(w: &World, date: &str, seller: i64, amount: &str, narration: &str)
             removed: RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: narration.into(),
+            reason: None,
         },
     )
     .unwrap()
@@ -295,6 +296,7 @@ fn voucher_input(kind: Option<VoucherType>) -> VouchersListInput {
         search: None,
         sort: None,
         group_by_month: false,
+        advance_view: None,
     }
 }
 

@@ -34,6 +34,7 @@ mod ids;
 mod item;
 mod lines;
 mod matrix;
+mod measure;
 mod model;
 mod partner;
 mod partner_lines;
@@ -62,7 +63,8 @@ pub use model::{
     AnalyticsCatalogEntry, AnalyticsChart, AnalyticsChartKind, AnalyticsChartPoint,
     AnalyticsChartSeries, AnalyticsColumn, AnalyticsCompare, AnalyticsExpensePart,
     AnalyticsFilterKind, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading,
-    AnalyticsKey, AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsPage, AnalyticsPartnerMoney,
+    AnalyticsKey, AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsMeasure, AnalyticsPage,
+    AnalyticsPartnerMoney,
     AnalyticsPeriod, AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading,
     AnalyticsPrintInput, AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsRow,
     AnalyticsRunInput, AnalyticsSavedView, AnalyticsSide, AnalyticsTripView, AnalyticsView,
@@ -220,6 +222,11 @@ pub fn screen_catalog() -> Vec<AnalyticsCatalogEntry> {
                 && !filters.contains(&AnalyticsFilterKind::GroupBy)
             {
                 filters.push(AnalyticsFilterKind::GroupBy);
+            }
+            // What the view counts (PRD FR-18.10, plan 84): the screens only; the assistant's
+            // catalogue does not list it.
+            if filters::takes_measure(*view) {
+                filters.push(AnalyticsFilterKind::Measure);
             }
             AnalyticsCatalogEntry {
                 id: *view,
@@ -398,10 +405,15 @@ fn table_for(
         } else if view == AnalyticsView::M && typed.expense_part == AnalyticsExpensePart::Partner {
             // The kharch each partner spent himself, ranked (plan 77).
             chart::ranked_by(&table.columns, &table.rows, "own")?
+        } else if chart::makes_own_chart(view, typed.measure) {
+            // A, B, C and G keep every column of their tables, so with a measure they made their
+            // chart from their sums (PRD FR-18.10).
+            std::mem::take(&mut table.charts)
         } else {
             chart::build(
                 view,
                 Some(typed.trip_view),
+                typed.measure,
                 &table.columns,
                 &table.rows,
                 &table.totals,

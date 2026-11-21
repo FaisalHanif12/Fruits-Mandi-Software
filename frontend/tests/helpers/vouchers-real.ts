@@ -38,6 +38,16 @@ import previewReceiptBuyerRequest from '../fixtures/vouchers_preview_receipt_buy
 import previewReceiptEdit from '../fixtures/vouchers_preview_receipt_edit.json';
 import previewReceiptEditRequest from '../fixtures/vouchers_preview_receipt_edit_request.json';
 import previewReceiptSellerReturn from '../fixtures/vouchers_preview_receipt_seller_return.json';
+import searchSellerBuyer from '../fixtures/search_accounts_seller_buyer.json';
+import searchSellerBuyerRequest from '../fixtures/search_accounts_seller_buyer_request.json';
+import listAdvancesView from '../fixtures/vouchers_list_advances_view.json';
+import listAdvancesViewRequest from '../fixtures/vouchers_list_advances_view_request.json';
+import previewAdvanceBuyer from '../fixtures/vouchers_preview_advance_buyer.json';
+import previewAdvanceBuyerRequest from '../fixtures/vouchers_preview_advance_buyer_request.json';
+import saveAdvanceBuyer from '../fixtures/vouchers_save_advance_buyer.json';
+import saveAdvanceBuyerNeedsReason from '../fixtures/vouchers_save_advance_buyer_needs_reason.json';
+import saveAdvanceBuyerNeedsReasonRequest from '../fixtures/vouchers_save_advance_buyer_needs_reason_request.json';
+import saveAdvanceBuyerRequest from '../fixtures/vouchers_save_advance_buyer_request.json';
 import saveAdvance from '../fixtures/vouchers_save_advance.json';
 import saveAdvanceRequest from '../fixtures/vouchers_save_advance_request.json';
 import savePayment from '../fixtures/vouchers_save_payment.json';
@@ -55,6 +65,7 @@ import saveReceiptRequest from '../fixtures/vouchers_save_receipt_request.json';
 import saveReceiptReturnTooMuch from '../fixtures/vouchers_save_receipt_seller_return_too_much.json';
 import saveReceiptsBatch from '../fixtures/vouchers_save_receipts_batch_round.json';
 import saveReceiptsBatchRequest from '../fixtures/vouchers_save_receipts_batch_round_request.json';
+import type { AccountHit } from '../../src/bindings/AccountHit';
 import type { AdvanceInput } from '../../src/bindings/AdvanceInput';
 import type { AdvancesInfo } from '../../src/bindings/AdvancesInfo';
 import type { CollectionList } from '../../src/bindings/CollectionList';
@@ -167,6 +178,8 @@ export const PREVIEW_PAYMENT_CASH_BELOW_ZERO: VoucherPreview = readVoucherPrevie
   previewPaymentCashBelowZero,
 );
 export const PREVIEW_ADVANCE: VoucherPreview = readVoucherPreview(previewAdvance);
+/** A پیشگی of 3,000 given to Akram, a buyer (plan 88): previewed as the payment to him it is saved as. */
+export const PREVIEW_ADVANCE_BUYER: VoucherPreview = readVoucherPreview(previewAdvanceBuyer);
 export const PREVIEW_RECEIPT_SELLER_RETURN: VoucherPreview = readVoucherPreview(
   previewReceiptSellerReturn,
 );
@@ -176,12 +189,18 @@ export const SAVED_RECEIPT: VoucherSaved = readVoucherSaved(saveReceipt);
 export const SAVED_RECEIPT_ARSHAD: VoucherSaved = readVoucherSaved(saveReceiptArshad);
 export const SAVED_PAYMENT: VoucherSaved = readVoucherSaved(savePayment);
 export const SAVED_ADVANCE: VoucherSaved = readVoucherSaved(saveAdvance);
+/** A buyer's پیشگی is saved as a payment voucher (cash lent): `voucher_type` is `payment` (plan 88). */
+export const SAVED_ADVANCE_BUYER: VoucherSaved = readVoucherSaved(saveAdvanceBuyer);
 export const SAVED_CASH_LENT: VoucherSaved = readVoucherSaved(savePaymentCashLent);
 export const EDITED_RECEIPT: VoucherSaved = readVoucherSaved(editReceipt);
 export const CANCELLED_CASH_LENT: VoucherCancelled = readVoucherCancelled(cancelCashLent);
 export const GOT_RECEIPT: VoucherRow = readVoucherRow(getReceipt);
 export const LIST_PAYMENTS: VouchersList = readVouchersList(listPayments);
 export const LIST_ALL: VouchersList = readVouchersList(listAll);
+/** The پیشگی list (`advance_view`): an advance of a seller and the cash lent to a buyer (plan 88). */
+export const LIST_ADVANCES_VIEW: VouchersList = readVouchersList(listAdvancesView);
+/** The sellers and the buyers the پیشگی field offers (scope `seller_buyer`, plan 88). */
+export const SEARCH_SELLER_BUYER: AccountHit[] = searchSellerBuyer as AccountHit[];
 export const OPEN_BILLS_AKRAM: OpenBills = readOpenBills(openBillsAkram);
 export const OPEN_BILLS_TRUNCATED: OpenBills = readOpenBills(openBillsTruncated);
 export const OPEN_PAYABLES_RAHIM: OpenPayables = readOpenPayables(openPayablesRahim);
@@ -201,6 +220,8 @@ export const REFUSED_NEEDS_REASON: UiError = readUiError(savePaymentNeedsReason)
 export const REFUSED_OLD_PAYMENT_FIELDS: UiError = readUiError(saveReceiptOldFields);
 export const REFUSED_RETURN_TOO_MUCH: UiError = readUiError(saveReceiptReturnTooMuch);
 export const REFUSED_CASH_BELOW_ZERO: UiError = readUiError(savePaymentCashBelowZero);
+/** A پیشگی to a buyer with no reason: at `reason` (plan 88). */
+export const REFUSED_ADVANCE_BUYER_NEEDS_REASON: UiError = readUiError(saveAdvanceBuyerNeedsReason);
 
 // Requests: exactly the `input` each command took
 export const REQUEST_SAVE_RECEIPT: ReceiptInput = readReceiptInput(saveReceiptRequest);
@@ -210,6 +231,16 @@ export const REQUEST_OLD_PAYMENT_FIELDS: Record<string, unknown> = saveReceiptOl
 export const REQUEST_SAVE_PAYMENT: PaymentInput = readPaymentInput(savePaymentRequest);
 export const REQUEST_SAVE_CASH_LENT: PaymentInput = readPaymentInput(savePaymentCashLentRequest);
 export const REQUEST_SAVE_ADVANCE: AdvanceInput = readAdvanceInput(saveAdvanceRequest);
+export const REQUEST_SAVE_ADVANCE_BUYER: AdvanceInput = readAdvanceInput(saveAdvanceBuyerRequest);
+export const REQUEST_SAVE_ADVANCE_BUYER_NEEDS_REASON: AdvanceInput = readAdvanceInput(
+  saveAdvanceBuyerNeedsReasonRequest,
+);
+export const REQUEST_PREVIEW_ADVANCE_BUYER: VoucherPreviewInput = readVoucherPreviewInput(
+  previewAdvanceBuyerRequest,
+);
+export const REQUEST_LIST_ADVANCES_VIEW: VouchersListInput =
+  readVouchersListInput(listAdvancesViewRequest);
+export const REQUEST_SEARCH_SELLER_BUYER: Record<string, unknown> = searchSellerBuyerRequest;
 export const REQUEST_PREVIEW_RECEIPT_BUYER: VoucherPreviewInput = readVoucherPreviewInput(
   previewReceiptBuyerRequest,
 );

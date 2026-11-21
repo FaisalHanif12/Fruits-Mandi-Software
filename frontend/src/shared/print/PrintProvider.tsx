@@ -3,10 +3,11 @@
 // gives the children a Fluent bundle of the print language and leaves the app language alone.
 // Both bundles are built once at start (i18n/index.ts), so nothing loads.
 
-import { LocalizationProvider, ReactLocalization } from '@fluent/react';
+import { LocalizationProvider } from '@fluent/react';
 import { Direction } from 'radix-ui';
 import { useMemo, type ReactNode } from 'react';
-import { bundles, type Language } from '../../i18n';
+import type { Language } from '../../i18n';
+import { createLocalization } from '../../i18n/localization';
 import { directionOf } from '../i18n';
 
 interface PrintProviderProps {
@@ -15,7 +16,7 @@ interface PrintProviderProps {
 }
 
 export function PrintProvider({ language, children }: PrintProviderProps) {
-  const l10n = useMemo(() => new ReactLocalization([bundles[language]]), [language]);
+  const l10n = useMemo(() => createLocalization(language), [language]);
   return (
     <LocalizationProvider l10n={l10n}>
       <Direction.Provider dir={directionOf(language)}>{children}</Direction.Provider>

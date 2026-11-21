@@ -200,48 +200,63 @@ pub fn save_payment(
     input: &PaymentInput,
 ) -> Result<VoucherSaved, ServiceError> {
     let window = day::window(ctx)?;
-    ctx.db.write(|tx| {
-        let planned = plan_payment(tx, window, input)?;
-        if !planned.errors.is_empty() {
-            return Err(planned.errors.into());
-        }
-        let (party, date, _, _) = planned.parts()?;
-        let entry = payment_entry(&planned)?;
-        // PRD FR-6.7: a payment takes cash out. If cash would end below 0 the user must confirm.
-        require_confirmed(
-            &cash_check(tx, cash_change(tx, &entry)?)?,
-            input.confirm_cash_below_zero,
-        )?;
-        let hint = hint_for(tx, party.role, party.record.id)?;
-        let now = ctx.now_text();
-        let number = repo::next_number(tx, VoucherType::Payment)?;
-        let row = payment_row(&planned, number)?;
-        let (voucher_id, posted) = insert_and_post(
-            ctx,
-            tx,
-            actor.user_id,
-            PostingSpec {
-                posting_type: PostingType::Payment,
-                date,
-                narration: row.narration.clone(),
-            },
-            &row,
-            entry,
-        )?;
-        payment_match(tx, actor.user_id, &now, &planned, posted.entry_id, &hint)?;
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(actor.user_id), "create", "voucher")
-                .entity_id(voucher_id)
-                .new_value(voucher_json(number, "payment", &row))
-                .into_entry(),
-        )?;
-        Ok(VoucherSaved {
-            voucher_id,
-            voucher_type: VoucherType::Payment,
-            number,
-            entry_id: posted.entry_id,
-            new_balance: ledger::balance_in(tx, party.record.id, None, None)?,
-        })
+    ctx.db
+        .write(|tx| save_payment_in(ctx, actor, tx, window, input))
+}
+
+/// The save of a payment inside the transaction of the caller. [`save_payment`] and the پیشگی to a
+/// buyer (PRD FR-15.11, v1.51: cash lent, saved as this payment) are this one function, so they
+/// can never differ (Code Standards B5).
+///
+/// # Errors
+/// As [`save_payment`].
+pub(super) fn save_payment_in(
+    ctx: &Context,
+    actor: &Actor,
+    tx: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    input: &PaymentInput,
+) -> Result<VoucherSaved, ServiceError> {
+    let planned = plan_payment(tx, window, input)?;
+    if !planned.errors.is_empty() {
+        return Err(planned.errors.into());
+    }
+    let (party, date, _, _) = planned.parts()?;
+    let entry = payment_entry(&planned)?;
+    // PRD FR-6.7: a payment takes cash out. If cash would end below 0 the user must confirm.
+    require_confirmed(
+        &cash_check(tx, cash_change(tx, &entry)?)?,
+        input.confirm_cash_below_zero,
+    )?;
+    let hint = hint_for(tx, party.role, party.record.id)?;
+    let now = ctx.now_text();
+    let number = repo::next_number(tx, VoucherType::Payment)?;
+    let row = payment_row(&planned, number)?;
+    let (voucher_id, posted) = insert_and_post(
+        ctx,
+        tx,
+        actor.user_id,
+        PostingSpec {
+            posting_type: PostingType::Payment,
+            date,
+            narration: row.narration.clone(),
+        },
+        &row,
+        entry,
+    )?;
+    payment_match(tx, actor.user_id, &now, &planned, posted.entry_id, &hint)?;
+    ctx.db.auditor().write(
+        tx,
+        &Event::new(Some(actor.user_id), "create", "voucher")
+            .entity_id(voucher_id)
+            .new_value(voucher_json(number, "payment", &row))
+            .into_entry(),
+    )?;
+    Ok(VoucherSaved {
+        voucher_id,
+        voucher_type: VoucherType::Payment,
+        number,
+        entry_id: posted.entry_id,
+        new_balance: ledger::balance_in(tx, party.record.id, None, None)?,
     })
 }

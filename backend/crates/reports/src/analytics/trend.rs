@@ -23,6 +23,10 @@
 //!
 //! A row opens the sale lines of its period (FR-18.2). The totals row adds the rows.
 //!
+//! The table keeps every column whatever the measure is (PRD FR-18.10, plan 84). With a measure the
+//! chart is the trend of that measure alone, one point for each row, from the same stored sums;
+//! without one it is the five series it always was.
+//!
 //! Example (the worked day, view G by day): 10-10-26 خام بکری 41,400, commission 5,448, shared
 //! income 5,488, shop expenses 3,000, profit 2,488.
 
@@ -32,9 +36,11 @@ use mandi_core::money::Paisa;
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
+use super::chart;
 use super::facts::{self, conds, run_range};
 use super::filters::Typed;
 use super::ids;
+use super::measure::Figure;
 use super::model::{AnalyticsGoods, AnalyticsGroupBy, AnalyticsKey};
 use super::table::{Table, col, count_of, row};
 use crate::error::ReportsError;
@@ -408,6 +414,8 @@ struct Period {
     profit: Option<Paisa>,
     trips: Option<Paisa>,
     gardens: Option<Paisa>,
+    /// The figure of the measure asked for (PRD FR-18.10), for the chart only.
+    measure: Option<Figure>,
 }
 
 impl Period {
@@ -449,6 +457,9 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         let slot = periods.entry(bucket).or_default();
         slot.gross = sums.gross;
         slot.commission = sums.total_comm(typed.side)?;
+        if let Some(measure) = typed.measure {
+            slot.measure = Some(sums.figure(measure, typed.side)?);
+        }
     }
 
     // Shared income, expenses and profit: not when a sale filter is set.
@@ -592,6 +603,8 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     ];
     let mut grand = Period::default();
     let mut all_rows = Vec::with_capacity(periods.len());
+    // The points of the chart of a measure: one for each row of the table, with the period's key.
+    let mut chart_points: Vec<(Cell, AnalyticsKey, Figure)> = Vec::new();
     for (bucket, period) in &periods {
         add(&mut grand.gross, period.gross)?;
         add(&mut grand.commission, period.commission)?;
@@ -601,17 +614,26 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         plus(&mut grand.trips, period.trips)?;
         plus(&mut grand.gardens, period.gardens)?;
         let (from, to) = bucket_days(group_by, bucket)?;
-        all_rows.push(row(
-            period.cells(period_cell(group_by, bucket)?),
-            AnalyticsKey {
-                from: Some(from),
-                to: Some(to),
-                ..AnalyticsKey::default()
-            },
-        ));
+        let key = AnalyticsKey {
+            from: Some(from),
+            to: Some(to),
+            ..AnalyticsKey::default()
+        };
+        if let Some(measure) = typed.measure {
+            chart_points.push((
+                period_cell(group_by, bucket)?,
+                key.clone(),
+                period.measure.unwrap_or_else(|| Figure::zero(measure)),
+            ));
+        }
+        all_rows.push(row(period.cells(period_cell(group_by, bucket)?), key));
     }
+    let charts = match typed.measure {
+        Some(measure) => chart::trend_chart(measure, chart_points)?,
+        None => Vec::new(),
+    };
     Ok(Table {
-        charts: Vec::new(),
+        charts,
         columns,
         total_count: count_of(all_rows.len()),
         rows: spec.slice(&all_rows),

@@ -13,6 +13,9 @@
 //!   in it has a row with no sales and a negative net, so the charges are never lost. The cell is empty when a buyer or city filter is set (a lot's
 //!   charges cannot be split by buyer) or when only the buyer side is counted.
 //!
+//! The table keeps every column whatever the measure is (PRD FR-18.10, plan 84); with a measure the
+//! chart is of that measure (see `chart`).
+//!
 //! Example (PRD 18.4): رحیم 1 بکری, 50 نگ, 29,400, 1,764, 1,764, total 3,928, net
 //! 29,400 − 1,764 − (3,000 + 250 + 50 + 5,000 + 0 + 20) = 19,316.
 
@@ -21,10 +24,12 @@ use std::collections::{HashMap, HashSet};
 use mandi_core::money::Paisa;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
+use super::chart::{self, RankedEntry};
 use super::facts::{self, Sums, compare_range, run_range};
 use super::filters::Typed;
 use super::ids;
 use super::item::totals_by_id;
+use super::measure::sums_by_id;
 use super::model::{AnalyticsGoods, AnalyticsKey, AnalyticsSide};
 use super::table::{Part, Table, col, compare_cells, compare_columns, count_of, part_cell, row};
 use crate::error::ReportsError;
@@ -96,18 +101,16 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         &facts::conds(typed, run_range(typed), &none),
         &["f.seller_account_id", "f.bikri_id"],
     )?;
-    let compared = if typed.compare.is_some() {
-        totals_by_id(
-            &facts::groups(
-                conn,
-                &facts::conds(typed, compare_range(typed), &none),
-                &["f.seller_account_id"],
-            )?,
-            typed,
+    let compared_groups = if typed.compare.is_some() {
+        facts::groups(
+            conn,
+            &facts::conds(typed, compare_range(typed), &none),
+            &["f.seller_account_id"],
         )?
     } else {
-        HashMap::new()
+        Vec::new()
     };
+    let compared = totals_by_id(&compared_groups, typed)?;
 
     // The distinct بکری of the whole filter, for the total row: the net of a بکری over all its
     // sellers is nothing exactly when the net of each of its sellers is (every net is 0 or more), so
@@ -288,8 +291,42 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         net_total,
     )?;
 
+    // With a measure the chart is made here from the sums of every row, with the same figure of
+    // the compared period (the compare columns of the table are the total commission).
+    let charts = match typed.measure {
+        Some(measure) => {
+            let compared_sums = sums_by_id(&compared_groups);
+            let mut ranked = Vec::with_capacity(entries.len());
+            for entry in &entries {
+                ranked.push(RankedEntry {
+                    label: parties
+                        .get(&entry.id)
+                        .map_or(Cell::Empty, |p| Cell::Party { party: p.clone() }),
+                    key: AnalyticsKey {
+                        seller_id: Some(entry.id),
+                        ..AnalyticsKey::default()
+                    },
+                    value: entry.sums.figure(measure, typed.side)?,
+                    compared: if with_compare {
+                        Some(
+                            compared_sums
+                                .get(&entry.id)
+                                .copied()
+                                .unwrap_or_default()
+                                .figure(measure, typed.side)?,
+                        )
+                    } else {
+                        None
+                    },
+                });
+            }
+            chart::ranked_chart(measure, ranked)?
+        }
+        None => Vec::new(),
+    };
+
     Ok(Table {
-        charts: Vec::new(),
+        charts,
         columns,
         total_count: count_of(all_rows.len()),
         rows: spec.slice(&all_rows),

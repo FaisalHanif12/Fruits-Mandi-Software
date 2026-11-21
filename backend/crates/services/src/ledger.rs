@@ -285,7 +285,12 @@ pub fn post_ordered(
     event: &PostingEvent,
     order_key: Option<i64>,
 ) -> Result<Posted, ServiceError> {
-    check_posting_date(ctx, event.date)?;
+    // The "closed up to" day is read through the writer's own transaction, so a save that reopens
+    // days and posts in the same transaction (placing opening capital in cash, PRD FR-16.14 v1.50,
+    // plan 87) sees its own reopen. Every other save sees the same committed state as before.
+    let (_, today) = day::window(ctx)?;
+    let closed = day::closed_in(tx)?;
+    validate::posting_date("entry_date", &format_ddmmyyyy(event.date), closed, today)?;
     post_checked(ctx, tx, user_id, event, order_key)
 }
 

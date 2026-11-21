@@ -23,6 +23,7 @@ use mandi_db::rusqlite::Connection;
 
 use super::filters::Typed;
 use super::ids;
+use super::measure::Figure;
 use super::model::{
     AnalyticsColumn, AnalyticsExpensePart, AnalyticsGroupBy, AnalyticsRow, AnalyticsView,
 };
@@ -257,23 +258,23 @@ fn lay_row(
     // Views E and L keep at most 24 item columns over the whole period. Each bucket is read with a
     // column for every item, so an item the whole period put in "other items" is added to that cell
     // here, and the cells of a row always add up to the row.
+    // The cells are money, or whole numbers when the measure is the quantity (PRD FR-18.10).
     if let Some(other) = other_at {
-        let mut rest = Paisa::ZERO;
+        let mut rest: Option<Figure> = None;
         for (j, column) in table_columns.iter().enumerate() {
             let is_placed = whole.columns.iter().any(|c| c.key == column.key);
             if column.key.starts_with("i_")
                 && !is_placed
-                && let Some(Cell::Money { paisa }) = source.cells.get(j)
+                && let Some(figure) = source.cells.get(j).and_then(Figure::from_cell)
             {
-                rest = rest.checked_add(*paisa)?;
+                rest = Some(match rest {
+                    Some(held) => held.plus(figure)?,
+                    None => figure,
+                });
             }
         }
         if let Some(held) = cells.get_mut(other.saturating_add(1)) {
-            *held = if rest == Paisa::ZERO {
-                Cell::Empty
-            } else {
-                Cell::Money { paisa: rest }
-            };
+            *held = rest.map_or(Cell::Empty, Figure::cell_or_empty);
         }
     }
     // A row of the sale views, F, K and the partner part of M opens its lines inside the bucket. A
@@ -473,4 +474,90 @@ fn run_page(
         rows,
         totals,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    //! The "other items" cell of a grouped matrix adds the columns the whole period left out, in money
+    //! or, for the quantity measure, in whole numbers (PRD FR-18.10, plan 84).
+
+    use super::*;
+
+    fn bucket() -> Bucket {
+        let day = BusinessDate::from_ymd(2026, 10, 1).unwrap();
+        Bucket {
+            label: Cell::Month {
+                year: 2026,
+                month: 10,
+            },
+            from: day,
+            to: BusinessDate::from_ymd(2026, 10, 31).unwrap(),
+        }
+    }
+
+    fn laid(kind: ColumnKind, cells: Vec<Cell>) -> Vec<Cell> {
+        let key = |k: &str| col(k, "title", kind);
+        // The whole period: seller, item 1, "other items", total. This bucket was read with a column
+        // for every item: seller, items 1, 2 and 3, total.
+        let whole = Table {
+            columns: vec![key("seller"), key("i_1"), key("i_other"), key("qty")],
+            rows: Vec::new(),
+            total_count: 0,
+            totals: Vec::new(),
+            charts: Vec::new(),
+        };
+        let table_columns = vec![
+            key("seller"),
+            key("i_1"),
+            key("i_2"),
+            key("i_3"),
+            key("qty"),
+        ];
+        let source = AnalyticsRow {
+            cells,
+            key: None,
+            kind: crate::reports::RowKind::Normal,
+        };
+        lay_row(
+            &bucket(),
+            AnalyticsView::E,
+            &whole,
+            Some(2),
+            &table_columns,
+            source,
+        )
+        .unwrap()
+        .unwrap()
+        .cells
+    }
+
+    #[test]
+    fn the_other_items_of_a_count_are_added_as_a_count() {
+        let n = |value| Cell::Number { value };
+        let cells = laid(
+            ColumnKind::Number,
+            vec![Cell::Empty, n(5), n(3), n(4), n(12)],
+        );
+        // The period, the seller, item 1, "other items" = 3 + 4, the total.
+        assert_eq!(cells[3], n(7));
+        assert_eq!(cells[2], n(5));
+        // Nothing left out is an empty cell.
+        let cells = laid(
+            ColumnKind::Number,
+            vec![Cell::Empty, n(5), Cell::Empty, Cell::Empty, n(5)],
+        );
+        assert_eq!(cells[3], Cell::Empty);
+    }
+
+    #[test]
+    fn the_other_items_of_money_are_added_as_money() {
+        let m = |rupees| Cell::Money {
+            paisa: Paisa::from_rupees(rupees).unwrap(),
+        };
+        let cells = laid(
+            ColumnKind::Money,
+            vec![Cell::Empty, m(500), m(300), m(400), m(1_200)],
+        );
+        assert_eq!(cells[3], m(700));
+    }
 }

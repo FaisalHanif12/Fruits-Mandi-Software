@@ -16,8 +16,8 @@ use mandi_domain::core::codes::{CodeType, number_code};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::gardens::{
-    GardenCreatePreview, GardenCreated, GardenDefaults, GardenInput, GardenRow,
-    GardenSetPartnersInput,
+    FIRST_INSTALLMENT_REASON_ID, GardenCreatePreview, GardenCreated, GardenDefaults, GardenInput,
+    GardenRow, GardenSetPartnersInput,
 };
 use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
@@ -241,12 +241,11 @@ fn plan(
         "paid_now_reason",
         input.paid_now_reason.as_deref(),
     );
-    if paid_now.is_some() && paid_now_reason.is_none() {
-        errors.push(FieldError::new(
-            ErrorCode::ErrReasonRequired,
-            "paid_now_reason",
-        ));
-    }
+    // PRD FR-12.35, plan 81: the form has no reason field for the first installment. With none sent
+    // it is saved with the standard reason, a Fluent message ID the screen turns into words (like
+    // `UNDO_REASON_ID`, CLAUDE.md rule 7). A reason an older caller sends is kept.
+    let paid_now_reason =
+        paid_now_reason.or_else(|| paid_now.map(|_| FIRST_INSTALLMENT_REASON_ID.to_owned()));
     let mut found = errors.finish().err().unwrap_or_default();
     let partners = read_partners(conn, &mut found, &input.partners)?;
     let shares = shares_of(conn, &partners)?;

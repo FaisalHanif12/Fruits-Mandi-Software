@@ -26,7 +26,8 @@ export function AnalyticsChart({ view, page, onDrill }: AnalyticsChartProps) {
   return (
     <div className="flex flex-col gap-2">
       {plans.map((plan, index) => {
-        const label = context.text(plan.labelId);
+        // The title names the measure the chart draws (PRD FR-18.10).
+        const label = context.text(plan.labelId, { measure: plan.measure });
         return (
           <figure
             key={index}

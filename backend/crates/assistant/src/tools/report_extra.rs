@@ -151,6 +151,7 @@ pub(super) fn apply(
     takes: &[FilterKind],
     filters: &mut ReportFilters,
     source: &mut SourceReportFilters,
+    notes: &mut Vec<String>,
 ) -> Result<(), ToolError> {
     if let Some(text) = extra.seller {
         if !takes.contains(&FilterKind::Seller) {
@@ -201,7 +202,7 @@ pub(super) fn apply(
         source.voucher_type = Some(kind);
     }
     if let Some(word) = extra.layout {
-        layout(word, takes, filters, source)?;
+        layout(word, takes, filters, source, notes)?;
     }
     if let Some(word) = extra.grade {
         if !takes.contains(&FilterKind::Grade) {
@@ -287,6 +288,7 @@ fn layout(
     takes: &[FilterKind],
     filters: &mut ReportFilters,
     source: &mut SourceReportFilters,
+    notes: &mut Vec<String>,
 ) -> Result<(), ToolError> {
     if takes.contains(&FilterKind::Detail) {
         return match word {
@@ -337,7 +339,14 @@ fn layout(
         source.stock_view = (view == StockView::Item).then_some(view);
         return Ok(());
     }
-    Err(not_taken(takes, "layout"))
+    // A report with no layout choice at all: how the rows are laid out is not a filter, so the
+    // figures are the same without it. It is left out and the model is told (plan 82).
+    notes.push(
+        "this report has no layout choice, so layout was left out; its rows and totals are the \
+         same"
+            .to_owned(),
+    );
+    Ok(())
 }
 
 #[cfg(test)]
@@ -389,29 +398,33 @@ mod tests {
     fn a_layout_belongs_to_one_of_three_reports() {
         let mut filters = ReportFilters::default();
         let mut source = SourceReportFilters::default();
+        let mut notes: Vec<String> = Vec::new();
         // R33 by month.
         let trips = [FilterKind::DateRange, FilterKind::TripView];
-        layout("month", &trips, &mut filters, &mut source).unwrap();
+        layout("month", &trips, &mut filters, &mut source, &mut notes).unwrap();
         assert_eq!(filters.trip_view, Some(TripView::Month));
         assert_eq!(source.trip_view, Some(TripView::Month));
         // R36 by partner; "month" is not a garden layout.
         let gardens = [FilterKind::GardenView];
-        layout("partner", &gardens, &mut filters, &mut source).unwrap();
+        layout("partner", &gardens, &mut filters, &mut source, &mut notes).unwrap();
         assert_eq!(filters.garden_view, Some(GardenView::Partner));
         assert_eq!(
-            layout("month", &gardens, &mut filters, &mut source)
+            layout("month", &gardens, &mut filters, &mut source, &mut notes)
                 .unwrap_err()
                 .allowed,
             ["garden", "partner"]
         );
         // R14 with its lines.
         let statement = [FilterKind::Detail];
-        layout("detail", &statement, &mut filters, &mut source).unwrap();
+        layout("detail", &statement, &mut filters, &mut source, &mut notes).unwrap();
         assert!(filters.detail && source.detail);
-        // A report with no layout at all refuses and lists what it takes.
+        assert!(notes.is_empty(), "a layout the report has says nothing");
+        // A report with no layout at all reads without it, and the note says so (plan 82).
         let plain = [FilterKind::DateRange];
-        let error = layout("detail", &plain, &mut filters, &mut source).unwrap_err();
-        assert_eq!(error.code, "ERR_OUT_OF_RANGE");
-        assert_eq!(error.field.as_deref(), Some("layout"));
+        let mut again = ReportFilters::default();
+        layout("detail", &plain, &mut again, &mut source, &mut notes).unwrap();
+        assert!(!again.detail);
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("no layout choice"), "{notes:?}");
     }
 }

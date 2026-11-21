@@ -134,6 +134,8 @@ const handlers: Record<string, (input: Input) => unknown> = {
   assistant_pick: () => real.PICK_MATCH,
   assistant_rerun: () => real.RERUN,
   assistant_new_conversation: () => real.NEW_CONVERSATION,
+  // The warm-up of the model connection has no answer (plan 82).
+  assistant_warm: () => null,
   assistant_settings_set: () => real.SETTINGS_SET,
   assistant_key_save: () => real.KEY_SAVE,
   assistant_key_remove: () => real.KEY_REMOVE,

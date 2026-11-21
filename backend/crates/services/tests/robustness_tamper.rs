@@ -69,6 +69,7 @@ fn advance(to: i64, amount: u32) -> AdvanceInput {
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: "first".into(),
+        reason: None,
     }
 }
 

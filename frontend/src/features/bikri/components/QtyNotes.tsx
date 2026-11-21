@@ -6,7 +6,7 @@
 
 import { Localized } from '@fluent/react';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
-import type { MissingNote, QtyNote } from '../grid-views';
+import type { LotNote, MissingNote, QtyNote } from '../grid-views';
 
 interface QtyNotesProps {
   notes: readonly QtyNote[];
@@ -80,6 +80,38 @@ export function MissingNotes({ notes, whole }: MissingNotesProps) {
                 <span className="type-label" />
               </Localized>
             )}{' '}
+            {note.words}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface LotNotesProps {
+  notes: readonly LotNote[];
+}
+
+/**
+ * What a lot still needs before its sale lines can be worked out, under the lots grid: "Lot 2: Choose the
+ * packing." A line with a quantity and a rate shows no figures while its lot misses its seller, item, packing
+ * or quantity received, so the lot row says so at once, in red (PRD FR-12.6 v1.49, plan 85).
+ */
+export function LotNotes({ notes }: LotNotesProps) {
+  if (notes.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-1">
+      {notes.map((note) => (
+        <li
+          key={`${note.rowId}-${note.words}`}
+          role="alert"
+          className="flex items-start gap-2 type-body text-due"
+        >
+          <CircleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
+          <span>
+            <Localized id="bikri-where-lot" vars={{ lot: String(note.lot + 1) }}>
+              <span className="type-label" />
+            </Localized>{' '}
             {note.words}
           </span>
         </li>

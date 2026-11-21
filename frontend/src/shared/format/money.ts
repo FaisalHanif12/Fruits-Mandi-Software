@@ -70,6 +70,11 @@ export interface FormatPaisaOptions {
    * the client's own print writes it, "(سیب 8 . 2600)" (PRD 19.2 R5). Display only, like every option.
    */
   plain?: boolean;
+  /**
+   * The figure without its minus sign, for a place that says the side in words (the capital card: "96,530 short").
+   * Display only, like every option: the amount is the backend's, nothing is worked out.
+   */
+  withoutSign?: boolean;
 }
 
 /** Shown in place of an amount the backend should never send (production only). */
@@ -124,7 +129,7 @@ export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string 
   const digits = negative ? text.slice(1) : text;
   const rupees = digits === '0' ? '0' : digits.slice(0, -PAISA_DIGITS);
   const grouped = options.plain === true ? rupees : groupDigits(rupees, options.grouping);
-  return negative ? `-${grouped}` : grouped;
+  return negative && options.withoutSign !== true ? `-${grouped}` : grouped;
 }
 
 /**

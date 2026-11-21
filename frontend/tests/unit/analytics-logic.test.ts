@@ -15,6 +15,7 @@ import {
   signedKeysOf,
 } from '../../src/features/analytics/columns';
 import {
+  CLASSIC_MEASURE,
   EMPTY_ANALYTICS_FILTERS,
   filtersToWire,
   isUnfiltered,
@@ -167,7 +168,11 @@ describe('a saved view comes back into the boxes', () => {
   it('opens the second saved view with nothing filled', () => {
     const second = VIEWS_GET_TWO[1];
     expect(second?.view).toBe('H');
-    expect(stateFromWire(second?.filters ?? first.filters)).toEqual(EMPTY_ANALYTICS_FILTERS);
+    // A view saved before plan 84 holds no measure: it opens as the total commission it was (PRD FR-18.10).
+    expect(stateFromWire(second?.filters ?? first.filters)).toEqual({
+      ...EMPTY_ANALYTICS_FILTERS,
+      measure: CLASSIC_MEASURE,
+    });
   });
 });
 

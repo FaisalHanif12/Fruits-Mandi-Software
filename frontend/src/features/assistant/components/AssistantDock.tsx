@@ -31,6 +31,7 @@ import {
   useAssistantStatus,
   useStartNewConversation,
   useStepLines,
+  useWarmAssistant,
 } from '../hooks';
 import { useAssistantNavigation } from '../navigation';
 import { useAssistantStore } from '../store';
@@ -55,6 +56,7 @@ export function AssistantDock() {
   const entries = useAssistantStore((state) => state.entries);
   const { openDock, closeDock, setTall, setDraft, recallQuestion } = useAssistantStore.getState();
   const newConversation = useStartNewConversation();
+  const warm = useWarmAssistant();
   const section = useRef<HTMLElement>(null);
   /** Where the focus was when the window opened: it goes back there when the window closes. */
   const origin = useRef<HTMLElement | null>(null);
@@ -91,6 +93,8 @@ export function AssistantDock() {
       origin.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
       focusBox();
+      // The connection to the model is warmed while the Owner is still reading and typing (plan 82).
+      warm();
     } else if (!open && wasOpen.current) {
       const back = origin.current;
       origin.current = null;
@@ -98,7 +102,7 @@ export function AssistantDock() {
       else focusRegion('screen');
     }
     wasOpen.current = open;
-  }, [open]);
+  }, [open, warm]);
 
   // After a reply that asks the Owner to type (the dates, the party, other words), the box has the
   // focus again, as long as the Owner is still in the window.
@@ -225,6 +229,7 @@ export function AssistantDock() {
                       onChange={setDraft}
                       onSend={send}
                       onRecall={recallQuestion}
+                      onFirstKey={warm}
                       busy={working}
                     />
                   ) : (

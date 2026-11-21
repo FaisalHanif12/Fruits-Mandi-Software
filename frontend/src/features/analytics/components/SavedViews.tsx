@@ -22,6 +22,7 @@ import {
   FreeTextInput,
   ErrorNotice,
   fieldError,
+  radixCollisionPadding,
   showToast,
 } from '../../../shared/ui';
 import { useSavedViews, useSaveViews } from '../hooks';
@@ -99,6 +100,7 @@ export function SavedViews({ current, savedName, onOpen, onSaved }: SavedViewsPr
             lang={language}
             align="end"
             sideOffset={4}
+            collisionPadding={radixCollisionPadding()}
             className="z-50 min-w-nav max-w-form rounded-2 border border-border bg-surface p-1 shadow-overlay"
           >
             {list.length === 0 ? (

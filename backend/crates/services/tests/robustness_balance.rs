@@ -961,6 +961,7 @@ fn vouchers_advance(w: &World, seller: i64, amount: &str, date: &str) {
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

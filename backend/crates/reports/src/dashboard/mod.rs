@@ -21,6 +21,7 @@ mod lent;
 mod lists;
 mod model;
 pub(crate) mod narrow;
+mod sales;
 mod seller_dues;
 mod signals;
 mod strip;
@@ -69,6 +70,11 @@ pub use narrow::{
     DuesParts, SalesToday, SellersNow, TilesNow, buyers_dues, cash_in_hand, dead, sales_today,
     sellers, stock, tiles_now, total_dues,
 };
+pub use sales::plans as sales_plans;
+pub use sales::{
+    SalesDay, SalesDayInput, SalesDayRow, SalesPeriod, SalesPeriodInput, SalesPeriodRow,
+    SalesPrintInput, sales_day, sales_period, sales_period_print_data, sales_period_spec,
+};
 pub use seller_dues::{
     SellerDuesInput, SellerDuesPage, SellerDuesPrintInput, SellerDuesRow, SellerDuesSide,
     seller_dues, seller_dues_print_data, seller_dues_spec,
@@ -95,13 +101,12 @@ pub(crate) struct Facts {
 
 fn load_facts(conn: &Connection, today: BusinessDate) -> Result<Facts, ReportsError> {
     let today_iso = today.to_iso();
-    let buyers = crate::prof::timed("facts.buyers_owing_now", || buyers_owing_now(conn, today))?;
+    let buyers = buyers_owing_now(conn, today)?;
     let typed = Typed {
         today: Some(today),
         ..Typed::default()
     };
-    let (sellers, sums) =
-        crate::prof::timed("facts.candidates", || candidates(conn, &typed, &today_iso, true))?;
+    let (sellers, sums) = candidates(conn, &typed, &today_iso, true)?;
     Ok(Facts {
         today,
         today_iso,
@@ -120,17 +125,16 @@ pub fn get(db: &Db, backup: BackupFacts) -> Result<Dashboard, ReportsError> {
     db.read(|conn| {
         in_snapshot(conn, |conn| {
             let today = today_of(db.clock().now_utc())?;
-            let facts = crate::prof::timed("get.load_facts", || load_facts(conn, today))?;
-            let lent = crate::prof::timed("get.lent", || lent::facts(conn, today))?;
-            let gardens = crate::prof::timed("get.gardens", || crate::gardens::open_gardens(conn))?;
-            let tiles = crate::prof::timed("get.tiles", || tiles::build(conn, &facts, &lent, &gardens))?;
-            let (bikri_today, bikri_today_count) =
-                crate::prof::timed("get.bikri_today", || lists::bikri_today(conn, &facts.today_iso))?;
+            let facts = load_facts(conn, today)?;
+            let lent = lent::facts(conn, today)?;
+            let gardens = crate::gardens::open_gardens(conn)?;
+            let tiles = tiles::build(conn, &facts, &lent, &gardens)?;
+            let (bikri_today, bikri_today_count) = lists::bikri_today(conn, &facts.today_iso)?;
             Ok(Dashboard {
                 today: facts.today_iso.clone(),
                 partners_locked: false,
                 tiles,
-                partners: crate::prof::timed("get.strip", || strip::build(conn, today))?,
+                partners: strip::build(conn, today)?,
                 gardens: gardens
                     .into_iter()
                     .map(|g| model::DashboardGarden {
@@ -148,10 +152,10 @@ pub fn get(db: &Db, backup: BackupFacts) -> Result<Dashboard, ReportsError> {
                     .collect(),
                 bikri_today,
                 bikri_today_count,
-                oldest_dues: crate::prof::timed("get.oldest_dues", || lists::oldest_dues(conn, &facts.buyers))?,
-                chart_days: crate::prof::timed("get.chart_days", || charts::days(conn, today))?,
-                chart_items: crate::prof::timed("get.chart_items", || charts::items(conn, today))?,
-                attention: crate::prof::timed("get.attention", || attention::list(conn, &facts, &lent, backup))?,
+                oldest_dues: lists::oldest_dues(conn, &facts.buyers)?,
+                chart_days: charts::days(conn, today)?,
+                chart_items: charts::items(conn, today)?,
+                attention: attention::list(conn, &facts, &lent, backup)?,
             })
         })
     })
@@ -165,9 +169,9 @@ pub fn attention(db: &Db, backup: BackupFacts) -> Result<AttentionList, ReportsE
     db.read(|conn| {
         in_snapshot(conn, |conn| {
             let today = today_of(db.clock().now_utc())?;
-            let facts = crate::prof::timed("att.load_facts", || load_facts(conn, today))?;
-            let lent = crate::prof::timed("att.lent", || lent::facts(conn, today))?;
-            crate::prof::timed("att.list", || attention::list(conn, &facts, &lent, backup))
+            let facts = load_facts(conn, today)?;
+            let lent = lent::facts(conn, today)?;
+            attention::list(conn, &facts, &lent, backup)
         })
     })
 }

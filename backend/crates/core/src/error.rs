@@ -495,11 +495,15 @@ pub enum ErrorCode {
     /// to a third account, or a third account already points at it or at this account (so a chain
     /// A to B to C is refused too). Field `linked_account_id`.
     ErrLinkAlreadyLinked,
+    /// Placing opening capital in روکڑ (PRD FR-16.14 v1.50, plan 87): none of the listed partners
+    /// has an opening capital that sits against ابتدائی فرق, so there is nothing to place. Nothing
+    /// was changed. Field `partner_ids`.
+    ErrNothingToPlace,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 173] = [
+    pub const ALL: [ErrorCode; 174] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -673,6 +677,7 @@ impl ErrorCode {
         ErrorCode::ErrOwnerOwesNotConfirmed,
         ErrorCode::ErrLinkNotSellerBuyer,
         ErrorCode::ErrLinkAlreadyLinked,
+        ErrorCode::ErrNothingToPlace,
     ];
 }
 

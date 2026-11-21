@@ -5,6 +5,7 @@
 import type { AnalyticsPrintData } from '../../../bindings/AnalyticsPrintData';
 import type { AnalyticsPrintHeading } from '../../../bindings/AnalyticsPrintHeading';
 import type { PrintHeading, PrintTable } from '../../reports';
+import { measureTitleId, type MeasureChoice } from '../filters';
 
 function headingOf(heading: AnalyticsPrintHeading | null): PrintHeading | null {
   if (heading === null) return null;
@@ -22,7 +23,8 @@ function headingOf(heading: AnalyticsPrintHeading | null): PrintHeading | null {
   }
 }
 
-export function printTableOf(data: AnalyticsPrintData): PrintTable {
+export function printTableOf(data: AnalyticsPrintData, measure: MeasureChoice): PrintTable {
+  // The row total of a matrix names the measure its cells hold (PRD FR-18.10).
   return {
     language: data.language,
     paper: data.paper,
@@ -30,7 +32,7 @@ export function printTableOf(data: AnalyticsPrintData): PrintTable {
     filters: data.filters,
     columns: data.columns.map((column) => ({
       key: column.key,
-      title_id: column.title_id,
+      title_id: measureTitleId(column.title_id, measure),
       kind: column.kind,
     })),
     headings: data.columns.map((column) => headingOf(column.heading)),

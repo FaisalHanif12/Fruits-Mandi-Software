@@ -111,6 +111,7 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
         order_by: order_by.as_deref(),
         hide_cancelled: !input.show_finished,
         hide_partner_money: locked,
+        advance_view: input.advance_view.unwrap_or(false),
     };
     // One page and the totals over the whole filter, each from one query (PRD FR-19.11, B31).
     let (mut rows, totals, months) = ctx.db.read(|conn| {

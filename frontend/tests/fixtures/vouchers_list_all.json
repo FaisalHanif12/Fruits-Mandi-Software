@@ -11,6 +11,7 @@
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
+      "account_type": "seller",
       "amount_paisa": 1500000,
       "mode": "cash",
       "bank_account_id": null,
@@ -41,6 +42,7 @@
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax"
       },
+      "account_type": "buyer",
       "amount_paisa": 900000,
       "mode": "cash",
       "bank_account_id": null,
@@ -79,6 +81,7 @@
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
+      "account_type": "seller",
       "amount_paisa": 431600,
       "mode": "cash",
       "bank_account_id": null,
@@ -109,6 +112,7 @@
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax"
       },
+      "account_type": "buyer",
       "amount_paisa": 300000,
       "mode": "cash",
       "bank_account_id": null,
@@ -139,6 +143,7 @@
         "name_ur": "کریم",
         "name_en": "Karim"
       },
+      "account_type": "seller",
       "amount_paisa": 500000,
       "mode": "cash",
       "bank_account_id": null,
@@ -169,6 +174,7 @@
         "name_ur": "ارشد ملتانی",
         "name_en": "Arshad Multani"
       },
+      "account_type": "buyer",
       "amount_paisa": 500000,
       "mode": "cash",
       "bank_account_id": null,

@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::accounts::LineError;
+use crate::accounts::{LineError, RecordRef};
 use crate::error::{ErrorCode, ErrorValue, FieldError};
 use crate::masters::AccountToMake;
 use crate::money::{BPS_FULL, Bps, Paisa, parse_bps};
@@ -169,6 +169,57 @@ pub enum OpeningCapitalWhere {
     /// Already counted in other openings (پہلے سے درج): the opening posts against ابتدائی فرق, as
     /// before v1.43 (PRD FR-10.9), so cash does not change.
     CountedElsewhere,
+}
+
+/// Input of `partners_place_opening_capital` (PRD FR-16.14 v1.50, plan 87): move the opening capital of
+/// these partners into روکڑ. Behind the partner code. The amount and the date of each opening are read
+/// from the books, never from the input (Code Standards S9).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PartnersPlaceOpeningCapitalInput {
+    /// The partners. One whose opening capital does not stand against ابتدائی فرق is left out and
+    /// listed in `skipped`. Field `partner_ids`.
+    #[ts(type = "Array<number>")]
+    pub partner_ids: Vec<i64>,
+    /// Why. Required (as FR-21.2).
+    pub reason: String,
+    /// The Owner's sign (دستخط, PRD FR-21.4): only his sign opens the closed days. Required.
+    #[serde(default)]
+    pub sign: String,
+}
+
+/// One opening capital that was moved into روکڑ.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PlacedOpeningCapital {
+    /// The partner. `code` is empty.
+    pub partner: RecordRef,
+    /// The day of the opening, `YYYY-MM-DD` (unchanged).
+    pub date: String,
+    /// The amount, whole rupees (unchanged).
+    #[ts(type = "Paisa")]
+    pub amount_paisa: Paisa,
+    /// The opening entry that was reversed.
+    #[ts(type = "number")]
+    pub old_entry_id: i64,
+    /// The new opening entry, with روکڑ on the other side.
+    #[ts(type = "number")]
+    pub new_entry_id: i64,
+}
+
+/// The answer of `partners_place_opening_capital`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartnersOpeningCapitalPlaced {
+    /// The openings moved, in the order of the input.
+    pub placed: Vec<PlacedOpeningCapital>,
+    /// The listed partners that had nothing to move (no opening capital, or it is in cash already).
+    pub skipped: Vec<RecordRef>,
+    /// Cash in hand after the change.
+    #[ts(type = "Paisa")]
+    pub cash_after_paisa: Paisa,
+    /// The first closed day that was reopened for the change and closed again, `YYYY-MM-DD`, or null
+    /// when every opening was on an open day.
+    pub reopened_from: Option<String>,
+    /// The "closed up to" day after the change (the same as before), `YYYY-MM-DD`, or null.
+    pub closed_up_to: Option<String>,
 }
 
 /// A new partner (PRD 17.1). He has no share until shares are set.

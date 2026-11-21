@@ -47,6 +47,8 @@ mod figure;
 mod function_words;
 mod items;
 mod lexicon;
+mod measure_words;
+mod party_flow;
 mod plan;
 mod reads;
 mod scan;
@@ -63,6 +65,8 @@ pub use compose_outside::{compose_outside, outside_message};
 pub use compose_print::compose_print;
 pub use compose_route::compose;
 pub use figure::{FigureAnswer, Sentence, compose_figure};
+pub use measure_words::{SaleAsk, asked_sale_measure};
+pub use party_flow::which_one_party;
 pub use plan::{PlanFilters, ReportPlan};
 pub use reads::{PlannedRead, plan_pre_reads, plan_reads};
 
@@ -663,6 +667,34 @@ pub enum CommissionSide {
     Buyer,
 }
 
+/// The measure of a sale that a question names with its own word, when it is not the gross amount of the
+/// sale (plan 82, the wrong-column fix of 21-11-2026): the net sale (صافی بکری: what is left for the sellers
+/// after commission and every deduction, the `net` column of R6 and view B), or the buyers' bills (what each
+/// buyer was charged: his goods, his commission and his Laga, the `buyer_total` column of R2). The plain
+/// "bikri" is the gross (view A `gross`); these words name ANOTHER column, so the plain figure would be a
+/// real number for the wrong thing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SaleMeasure {
+    /// صافی بکری, safi bikri, net sale.
+    Net,
+    /// گاہک کے بل: the bills of the buyers, with commission and Laga.
+    Bills,
+}
+
+/// How the Laga is asked beside the commission (plan 82): the commission without it, the Laga alone, or both
+/// apart ("commission aur laga alag alag"). `Whole` is the plain question, whose answer is what it always was.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LagaView {
+    /// No word about the Laga's place: the figures of the plain question.
+    Whole,
+    /// "laga ke baghair", "not counting laga", "sirf commission": the commission alone.
+    Without,
+    /// "sirf laga", "only laga": the Laga alone.
+    Only,
+    /// "commission aur laga alag alag": the two, each by itself.
+    Apart,
+}
+
 /// How a sale was paid, when a question asks the sales of one payment type ("udhaar me kitni bikri",
 /// "naqdi bikri"): the cash sales (R3) or the credit sales (R4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -828,6 +860,11 @@ pub struct Understanding {
     /// the commission, "gahak se commission", or one named buyer): the figure is that side's column, never
     /// the total. `None` when no side is named, both are, or the question holds a Laga too.
     pub commission_side: Option<CommissionSide>,
+    /// The sale measure the question names with its own word (net sale, the buyers' bills), when it is
+    /// one the app reads from its own column (plan 82). `None` for the plain gross sale.
+    pub sale_measure: Option<SaleMeasure>,
+    /// Where the Laga stands in a commission question (plan 82).
+    pub laga_view: LagaView,
     /// True when the question asks how many of something ("the number of bills", "kitne bayopariyon ko"):
     /// an instant figure that holds no count leaves that part out, so it goes to the model.
     pub asks_count: bool,

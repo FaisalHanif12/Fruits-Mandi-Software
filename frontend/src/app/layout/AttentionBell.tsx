@@ -18,7 +18,7 @@ import {
 import { useStartupUpdateCheck } from '../../features/settings';
 import { uiErrorOf } from '../../shared/api';
 import { useUiLanguage } from '../../shared/i18n';
-import { EmptyState, ErrorState, LoadingState, Num } from '../../shared/ui';
+import { EmptyState, ErrorState, LoadingState, Num, radixCollisionPadding } from '../../shared/ui';
 
 export function AttentionBell() {
   const { l10n } = useLocalization();
@@ -109,6 +109,7 @@ export function AttentionBell() {
           dir={direction}
           align="end"
           sideOffset={4}
+          collisionPadding={radixCollisionPadding()}
           className="z-30 flex max-h-screen w-full max-w-reading flex-col gap-2 overflow-y-auto rounded-2 border border-border bg-surface p-3 text-ink shadow-overlay"
         >
           <Localized id="attention-title">

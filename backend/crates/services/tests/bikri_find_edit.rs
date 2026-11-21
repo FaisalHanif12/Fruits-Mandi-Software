@@ -906,6 +906,7 @@ fn a_new_seller_with_an_open_advance_has_it_adjusted_when_the_tick_is_on() {
             removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .unwrap();

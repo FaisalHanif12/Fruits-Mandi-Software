@@ -2,6 +2,8 @@
 // box that asks for the reason; on confirm the days reopen and `then` runs (open the entry for
 // editing). The box is `dialog`; the screen puts it anywhere in its tree. A refusal (a month that is
 // month-closed, or a sign that is not the Owner's, for example) stays inside the box, with what was typed.
+// The one answer that is not a refusal is ERR_DAY_NOT_CLOSED: the day is open already, so the box closes and
+// the work goes on (plan 85).
 
 import { useState, type ReactNode } from 'react';
 import type { UiError } from '../../bindings/UiError';
@@ -46,7 +48,15 @@ export function useFixDayFlow(): {
             request.then();
           })
           .catch((failure: unknown) => {
-            setError(uiErrorOf(failure));
+            const refused = uiErrorOf(failure);
+            // The day is open already (someone reopened it): there is nothing to reopen, so the work goes on
+            // with no session and no days to close again (plan 85, `day_fix_open` contract).
+            if (refused.errors.some((item) => item.code === 'ERR_DAY_NOT_CLOSED')) {
+              setPending(null);
+              request.then();
+              return;
+            }
+            setError(refused);
           });
       }}
     />

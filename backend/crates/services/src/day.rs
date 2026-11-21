@@ -146,7 +146,7 @@ pub fn first_book_day(ctx: &Context) -> Result<Option<BusinessDate>, ServiceErro
 }
 
 /// The "closed up to" date as stored, read through the given connection.
-fn closed_in(conn: &Connection) -> Result<Option<BusinessDate>, ServiceError> {
+pub(crate) fn closed_in(conn: &Connection) -> Result<Option<BusinessDate>, ServiceError> {
     let text: Option<Option<String>> = conn
         .query_row(
             "SELECT closed_up_to_date FROM day_state WHERE id = 1",
@@ -502,7 +502,7 @@ pub fn close(
 
 /// The writes of [`close`] inside a transaction the caller owns, so a reopen-and-fix can close its
 /// days in the same one (PRD FR-21.4, Code Standards B3). A refusal comes before any write.
-fn close_in(
+pub(crate) fn close_in(
     ctx: &Context,
     tx: &Connection,
     actor: &Actor,
@@ -527,6 +527,7 @@ fn close_in(
     }
     let now = ctx.now_text();
     repo::set_closed_up_to(tx, Some(&to.to_iso()), actor.user_id, &now)?;
+    settle_manual_reopen(tx, to, actor.user_id)?;
     // One history row for each day closed, each with its own numbers (Architecture 15.3).
     for day in &days {
         let numbers = json!({
@@ -575,7 +576,8 @@ fn close_in(
 /// opens the day, as in a reopen to fix an entry (PRD FR-21.4, Umar 19-11-2026, plan 80 Q-R2-2): a
 /// wrong sign opens nothing and is audited without the typed text, and the right sign is kept in the
 /// audit entry beside the reason. A month that was month-closed cannot be reopened until its month
-/// close is reversed.
+/// close is reversed. The days stay held against the automatic close until a close reaches the last
+/// of them ([`auto_close_hold`], plan 85); the fact is kept in the `day_manual_reopen` setting.
 ///
 /// # Errors
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_SIGN_REQUIRED` and `ERR_SIGN_WRONG` on `sign`; the date
@@ -596,8 +598,13 @@ pub fn reopen(
         },
     )?;
     let (date, reason) = parse_reopen(ctx, &input.date, &input.reason)?;
-    ctx.db
-        .write(|tx| reopen_in(ctx, tx, actor, date, &reason, Some(&sign)))?;
+    ctx.db.write(|tx| {
+        let closed_before = reopen_in(ctx, tx, actor, date, &reason, Some(&sign))?;
+        // The Owner opened these days by hand: the automatic close leaves them alone until he closes
+        // them (PRD FR-21.4 v1.49, plan 85).
+        note_manual_reopen(tx, actor.user_id, date, closed_before)?;
+        Ok::<(), ServiceError>(())
+    })?;
     status(ctx)
 }
 
@@ -634,7 +641,7 @@ fn parse_reopen(
 /// one day-close row and one audit entry say who, why and (for a reopen to fix) with which sign.
 /// Returns the day that was the "closed up to" day before it. The state is read inside the
 /// transaction (see [`close_in`]).
-fn reopen_in(
+pub(crate) fn reopen_in(
     ctx: &Context,
     tx: &Connection,
     actor: &Actor,
@@ -687,17 +694,27 @@ fn reopen_in(
     Ok(closed_day)
 }
 
-/// The setting that remembers a fix in progress: `{ "token", "first", "last", "sign" }` (PRD
-/// FR-21.4, plan 73).
+/// The setting that remembers a fix in progress: `{ "token", "first", "last", "sign", "opened_at" }`
+/// (PRD FR-21.4, plan 73, plan 85).
 const KEY_FIX_PENDING: &str = "day_fix_pending";
 
-/// The fix in progress, if any: the token, the first and last day it reopened and the Owner's sign
-/// that opened it.
+/// The setting that remembers the days the Owner reopened by hand and has not closed again:
+/// `{ "first", "last" }` (PRD FR-21.4 v1.49, plan 85). It lives in the data file, so a restart keeps it.
+const KEY_MANUAL_REOPEN: &str = "day_manual_reopen";
+
+/// How long the automatic close waits for a fix in progress, in hours. A fix is a few minutes of work
+/// on one screen; one that is older than this was left behind (the app was closed in the middle of
+/// it), and the days it reopened are closed by the automatic close like any other open day (plan 85).
+pub const FIX_HOLD_HOURS: i64 = 12;
+
+/// The fix in progress, if any: the token, the first and last day it reopened, the Owner's sign that
+/// opened it and when (UTC text; empty in a record made before plan 85).
 struct Pending {
     token: String,
     first: BusinessDate,
     last: BusinessDate,
     sign: Option<String>,
+    opened_at: Option<String>,
 }
 
 fn pending_of(conn: &Connection) -> Result<Option<Pending>, ServiceError> {
@@ -718,14 +735,115 @@ fn pending_of(conn: &Connection) -> Result<Option<Pending>, ServiceError> {
         .get("sign")
         .and_then(serde_json::Value::as_str)
         .map(str::to_owned);
+    let opened_at = value
+        .get("opened_at")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
     Ok(match (token, day("first"), day("last")) {
         (Some(token), Some(first), Some(last)) => Some(Pending {
             token,
             first,
             last,
             sign,
+            opened_at,
         }),
         _ => None,
+    })
+}
+
+/// The days the Owner reopened by hand: the first day he opened and the last day that was closed
+/// when he did.
+struct ManualReopen {
+    first: BusinessDate,
+    last: BusinessDate,
+}
+
+fn manual_reopen_of(conn: &Connection) -> Result<Option<ManualReopen>, ServiceError> {
+    let Some(value) = crate::store::setting(conn, KEY_MANUAL_REOPEN)? else {
+        return Ok(None);
+    };
+    let day = |key: &str| {
+        value
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .and_then(BusinessDate::parse_iso)
+    };
+    Ok(match (day("first"), day("last")) {
+        (Some(first), Some(last)) => Some(ManualReopen { first, last }),
+        _ => None,
+    })
+}
+
+/// Remembers a reopen made by hand (PRD FR-21.2, plan 85). `closed_before` is the "closed up to" day
+/// before the reopen. A hold still in force is widened to the earlier first day and the later last day.
+fn note_manual_reopen(
+    tx: &Connection,
+    user_id: i64,
+    first: BusinessDate,
+    closed_before: BusinessDate,
+) -> Result<(), ServiceError> {
+    let kept = manual_reopen_of(tx)?.filter(|held| closed_before < held.last);
+    let (first, last) = kept.map_or((first, closed_before), |held| {
+        (held.first.min(first), held.last.max(closed_before))
+    });
+    crate::store::set_setting(
+        tx,
+        KEY_MANUAL_REOPEN,
+        &json!({ "first": first.to_iso(), "last": last.to_iso() }),
+        Some(user_id),
+    )
+}
+
+/// A close up to `closed_up_to` ends the hold of a reopen by hand when it reaches the last day he
+/// opened. A close that stops short leaves it: the days after it are still his.
+fn settle_manual_reopen(
+    tx: &Connection,
+    closed_up_to: BusinessDate,
+    user_id: i64,
+) -> Result<(), ServiceError> {
+    if manual_reopen_of(tx)?.is_some_and(|held| held.last <= closed_up_to) {
+        crate::store::set_setting(tx, KEY_MANUAL_REOPEN, &json!({}), Some(user_id))?;
+    }
+    Ok(())
+}
+
+/// Why the automatic close must not close today (PRD FR-21.4 v1.49, plan 85): the day is in use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AutoCloseHold {
+    /// A reopen to fix an entry, or to save a new one, is in progress (`day_fix_open` without its
+    /// `day_fix_close` yet).
+    FixInProgress,
+    /// The Owner reopened days by hand (`day_reopen`) and has not closed them again.
+    ReopenedByHand,
+}
+
+/// Whether the automatic close has to leave the open days alone. A fix in progress holds it while the
+/// fix still fits the books (the "closed up to" day is the day before its first day) and is younger
+/// than [`FIX_HOLD_HOURS`]. A reopen by hand holds it until a close reaches the last day he opened.
+/// Reads only.
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` for a date that is not `YYYY-MM-DD`.
+pub fn auto_close_hold(ctx: &Context) -> Result<Option<AutoCloseHold>, ServiceError> {
+    let now = ctx.now_utc();
+    ctx.db.read(|conn| {
+        let closed = closed_in(conn)?;
+        if let Some(pending) = pending_of(conn)? {
+            let fits = closed == pending.first.previous_day();
+            let fresh = pending
+                .opened_at
+                .as_deref()
+                .and_then(|text| chrono::DateTime::parse_from_rfc3339(text).ok())
+                .is_some_and(|at| {
+                    now.signed_duration_since(at) < chrono::Duration::hours(FIX_HOLD_HOURS)
+                });
+            if fits && fresh {
+                return Ok::<_, ServiceError>(Some(AutoCloseHold::FixInProgress));
+            }
+        }
+        let by_hand = manual_reopen_of(conn)?
+            .is_some_and(|held| closed.is_none_or(|closed| closed < held.last));
+        Ok(by_hand.then_some(AutoCloseHold::ReopenedByHand))
     })
 }
 
@@ -790,6 +908,10 @@ fn days_between(first: BusinessDate, last: BusinessDate) -> Vec<BusinessDate> {
 /// The reopen, the fix record and the audit entry are one save (Code Standards B3, plan 80 T3-1):
 /// if any of them fails, nothing is reopened.
 ///
+/// It names no entry, only a date: the same call serves an edit of a saved entry and the save of a NEW
+/// entry dated on a closed day (PRD FR-21.4 v1.49, plan 85). While the fix is open the automatic close
+/// leaves the days alone ([`auto_close_hold`]).
+///
 /// # Errors
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_SIGN_REQUIRED` and `ERR_SIGN_WRONG` on `sign`; the date
 /// codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`; `ERR_MONTH_CLOSED` on `date`.
@@ -830,6 +952,7 @@ pub fn fix_open(
                 "first": first.to_iso(),
                 "last": last.to_iso(),
                 "sign": sign,
+                "opened_at": ctx.now_text(),
             }),
             Some(actor.user_id),
         )?;
@@ -851,19 +974,23 @@ pub fn fix_open(
 }
 
 /// What [`check_sign`] looks at.
-struct SignCheck<'a> {
-    reason: &'a str,
-    sign: &'a str,
-    date: &'a str,
+pub(crate) struct SignCheck<'a> {
+    pub(crate) reason: &'a str,
+    pub(crate) sign: &'a str,
+    pub(crate) date: &'a str,
     /// The audit action written when the sign is wrong.
-    wrong_action: &'static str,
+    pub(crate) wrong_action: &'static str,
 }
 
 /// Checks the reason and the sign of a reopen (PRD FR-21.2, FR-21.4, plan 73, plan 80 Q-R2-2) and
 /// gives the sign to save: the Owner's own spelling of it, not the typed text. A missing reason or
 /// sign is refused first, both together. A wrong sign writes one audit entry that holds no typed
 /// text, and refuses with `ERR_SIGN_WRONG`: nothing opens.
-fn check_sign(ctx: &Context, actor: &Actor, check: &SignCheck<'_>) -> Result<String, ServiceError> {
+pub(crate) fn check_sign(
+    ctx: &Context,
+    actor: &Actor,
+    check: &SignCheck<'_>,
+) -> Result<String, ServiceError> {
     let mut errors = validate::FieldErrors::default();
     if check.reason.trim().is_empty() {
         errors.push(FieldError::new(ErrorCode::ErrReasonRequired, "reason"));

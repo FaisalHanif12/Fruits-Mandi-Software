@@ -40,6 +40,12 @@ import type { PrintTotalDuesInput } from '../../bindings/PrintTotalDuesInput';
 import type { SellerDuesPrintInput } from '../../bindings/SellerDuesPrintInput';
 import type { TotalDuesPrintInput } from '../../bindings/TotalDuesPrintInput';
 import { callCommand } from '../../shared/api';
+import type { PrintSalesInput } from '../../bindings/PrintSalesInput';
+import type { SalesDay } from '../../bindings/SalesDay';
+import type { SalesDayInput } from '../../bindings/SalesDayInput';
+import type { SalesPeriod } from '../../bindings/SalesPeriod';
+import type { SalesPeriodInput } from '../../bindings/SalesPeriodInput';
+import type { SalesPrintInput } from '../../bindings/SalesPrintInput';
 
 /** Everything the dashboard shows (PRD 9), in one call. One failure fails the whole answer. */
 export function dashboardGet(): Promise<Dashboard> {
@@ -98,6 +104,29 @@ export function dashboardCommissionPrint(input: {
   copies: string | null;
 }): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('dashboard_commission_print', { input });
+}
+
+/**
+ * The days (or the months of a year) of a period with sales, for the filters of the sales page, and the totals over
+ * the whole filter (PRD FR-9.9, FR-19.11, plan 83). Read only.
+ */
+export function dashboardSalesPeriod(input: SalesPeriodInput): Promise<SalesPeriod> {
+  return callCommand<SalesPeriod>('dashboard_sales_period', { input });
+}
+
+/** The بکری posted on one day of the sales page, in the same filters, with the totals of that day (PRD FR-9.9). Read only. */
+export function dashboardSalesDay(input: SalesDayInput): Promise<SalesDay> {
+  return callCommand<SalesDay>('dashboard_sales_day', { input });
+}
+
+/** Every row of the period of sales on screen, written in the print language for the preview (PRD FR-9.9, FR-19.3). */
+export function dashboardSalesPrintData(input: SalesPrintInput): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('dashboard_sales_print_data', { input });
+}
+
+/** Prints the period of sales, or saves it as a PDF: the same period, filters, language and paper as the preview. */
+export function dashboardSalesPrint(input: PrintSalesInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('dashboard_sales_print', { input });
 }
 
 /**

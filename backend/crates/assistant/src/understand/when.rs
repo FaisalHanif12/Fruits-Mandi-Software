@@ -1798,6 +1798,118 @@ pub(super) fn periods(scan: &Scan, today: NaiveDate) -> Vec<PeriodRef> {
     read_periods(scan, today).periods
 }
 
+/// Where a period's words stand in the question, as word positions.
+pub(super) fn period_run(scan: &Scan, p: &PeriodRef) -> Option<(usize, usize)> {
+    let tokens: Vec<String> = p.words.split_whitespace().map(key).collect();
+    if tokens.is_empty() {
+        return None;
+    }
+    (0..scan.words.len())
+        .find(|at| {
+            tokens
+                .iter()
+                .enumerate()
+                .all(|(i, t)| scan.words.get(at.saturating_add(i)) == Some(t))
+        })
+        .map(|at| (at, at.saturating_add(tokens.len())))
+}
+
+/// Two periods joined by "se ... tak" or "from ... to" are one range, and a period after "since" runs to
+/// today (plan 82, Umar's own example: "pichle saal se is mahine tak" is 1 January of last year up to
+/// today, not two periods the app would not read):
+///
+/// - "pichle saal se is mahine tak", "pichle mahine se ab tak", "from last year to this month": from the
+///   first day of the first period to the last day of the second;
+/// - "since last year", "pichle saal ke baad se": from the first day of that period to today.
+///
+/// "ke beech" or "ke darmiyan" after a range is part of it. A period that is in the future, or a second
+/// one that ends before the first begins, is left as it was (the app is not sure then).
+fn join_periods(scan: &Scan, out: &mut Vec<PeriodRef>, today: NaiveDate) {
+    // "10 october se 20 october ke beech": the two words are the range's own.
+    for p in out.iter_mut().filter(|p| p.kind == PeriodKind::Range) {
+        if let Some((start, end)) = period_run(scan, p) {
+            let rest: Vec<&str> = scan
+                .words
+                .get(end..)
+                .unwrap_or_default()
+                .iter()
+                .map(String::as_str)
+                .collect();
+            let extra = match rest.as_slice() {
+                [
+                    "ke" | "کے",
+                    "beech" | "بیچ" | "darmiyan" | "darmian" | "درمیان",
+                    ..,
+                ] => 2,
+                ["beech" | "بیچ" | "darmiyan" | "darmian" | "درمیان", ..] => 1,
+                _ => 0,
+            };
+            if extra > 0 {
+                p.words = scan.phrase(start, end.saturating_add(extra));
+            }
+        }
+    }
+    if let [a, b] = out.as_slice()
+        && let (Some(ra), Some(rb)) = (period_run(scan, a), period_run(scan, b))
+        && let Some(from) = a.from
+        && !a.future
+        && !b.future
+        && b.to >= from
+        && ra.1 <= rb.0
+    {
+        let joined_by_se =
+            rb.0 == ra.1.saturating_add(1) && matches!(scan.word(ra.1), Some("se" | "سے" | "say"));
+        let joined_by_to = ra.0 > 0
+            && scan.word(ra.0.saturating_sub(1)) == Some("from")
+            && rb.0 > 0
+            && matches!(
+                scan.word(rb.0.saturating_sub(1)),
+                Some("to" | "till" | "until")
+            );
+        if joined_by_se || joined_by_to {
+            let to = b.to;
+            let mut end = rb.1;
+            if matches!(scan.word(end), Some("tak" | "تک")) {
+                end = end.saturating_add(1);
+            }
+            let start = if joined_by_to {
+                ra.0.saturating_sub(1)
+            } else {
+                ra.0
+            };
+            out.clear();
+            out.push(period(
+                PeriodKind::Range,
+                Some(from),
+                to,
+                Confidence::High,
+                scan.phrase(start, end),
+                today,
+            ));
+        }
+        return;
+    }
+    if let [only] = out.as_slice()
+        && let Some((start, end)) = period_run(scan, only)
+        && let Some(from) = only.from
+        && start > 0
+        && scan.word(start.saturating_sub(1)) == Some("since")
+        && !only.future
+        && only.kind != PeriodKind::UpToNow
+    {
+        let words = scan.phrase(start.saturating_sub(1), end);
+        out.clear();
+        out.push(period(
+            PeriodKind::Range,
+            Some(from),
+            today,
+            Confidence::High,
+            words,
+            today,
+        ));
+    }
+}
+
 /// The periods of a question, and whether a time word was left over.
 pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
     let tense = tense_of(scan);
@@ -1915,6 +2027,7 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
         out.retain(|p| p.kind != PeriodKind::UpToNow);
         so_far_merged = so_far_merged || !touching;
     }
+    join_periods(scan, &mut out, today);
     // A question that has a period already ("whole day's bikri for this month") is not unsure of its
     // time for a stray word: only a question with none reads the stray word as its period.
     let stray = (!year_end && out.is_empty() && stray_time_words(scan, &used, today, &mut out))

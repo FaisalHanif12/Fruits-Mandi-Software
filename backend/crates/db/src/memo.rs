@@ -111,7 +111,10 @@ fn version(conn: &Connection) -> rusqlite::Result<i64> {
 /// Runs `f` in one read transaction when the connection is in autocommit, so the version, the
 /// answer and the check after it all see the same moment (the same as `mandi_reports::result_cache`
 /// does for its fingerprint). In a transaction already, `f` just runs.
-fn in_one_view<T>(conn: &Connection, f: impl FnOnce() -> rusqlite::Result<T>) -> rusqlite::Result<T> {
+fn in_one_view<T>(
+    conn: &Connection,
+    f: impl FnOnce() -> rusqlite::Result<T>,
+) -> rusqlite::Result<T> {
     if conn.is_autocommit() {
         let tx = conn.unchecked_transaction()?;
         let result = f();

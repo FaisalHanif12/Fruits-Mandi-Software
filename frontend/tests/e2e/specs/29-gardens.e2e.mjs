@@ -137,9 +137,7 @@ describe('E2E-40b: a garden (Urdu)', () => {
     // PRD FR-12.30 and C23: 30,000 at 60 / 40 is 18,000 from the shop and 12,000 from a pocket.
     await waitForNumbers('18,000', '12,000');
     await waitForText(t('ur', 'gardens-new-sources-help'));
-    // The reason of the first installment is filled in for him, visible and changeable.
-    const reason = await focusField('ur', 'gardens-field-paid-now-reason');
-    expect(await reason.getValue()).toBe(t('ur', 'gardens-first-installment-reason'));
+    // The first installment has no reason box (plan 81): the backend saves the standard words.
     await shootScreen('gardens-new', 'ur');
     await type(Key.F10);
     await confirmSpellingIfAsked();

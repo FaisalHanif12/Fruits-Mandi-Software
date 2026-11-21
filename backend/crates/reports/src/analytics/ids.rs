@@ -139,3 +139,13 @@ pub(crate) const FILTER_TRIP_BY_ITEM: &str = "report-filter-trip-by-item";
 pub(crate) const FILTER_TRIP_BY_DAY: &str = "report-filter-trip-by-day";
 pub(crate) const FILTER_COMPARE_FROM: &str = "analytics-filter-compare-from";
 pub(crate) const FILTER_COMPARE_TO: &str = "analytics-filter-compare-to";
+
+// The measure of a view (PRD FR-18.10, plan 84), as whole header facts of a print and of the Excel
+// sheet: the label says it all, so the value is empty.
+pub(crate) const FILTER_MEASURE_GROSS: &str = "analytics-filter-measure-gross";
+pub(crate) const FILTER_MEASURE_BUYER_TOTAL: &str = "analytics-filter-measure-buyer-total";
+pub(crate) const FILTER_MEASURE_QTY: &str = "analytics-filter-measure-qty";
+pub(crate) const FILTER_MEASURE_TOTAL_COMM: &str = "analytics-filter-measure-total-comm";
+pub(crate) const FILTER_MEASURE_SELLER_COMM: &str = "analytics-filter-measure-seller-comm";
+pub(crate) const FILTER_MEASURE_BUYER_COMM: &str = "analytics-filter-measure-buyer-comm";
+pub(crate) const FILTER_MEASURE_LAGA: &str = "analytics-filter-measure-laga";

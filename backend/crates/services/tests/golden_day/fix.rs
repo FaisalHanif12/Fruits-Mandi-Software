@@ -88,6 +88,7 @@ fn e2e_45_an_entry_of_a_closed_day_is_fixed_through_reopen_and_fix() {
             to: String::new(),
             offset: 0,
             limit: 0,
+            advance_view: None,
         },
     )
     .unwrap();

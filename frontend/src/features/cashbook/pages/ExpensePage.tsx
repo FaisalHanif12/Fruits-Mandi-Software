@@ -219,6 +219,7 @@ function ExpenseEditor({ today, urlType, editable = null, initial = null }: Expe
       onNew={startNew}
       flow={flow}
       error={error}
+      closedDay={{ date: draft.date, onReopened: flow.clearRefusal }}
       fieldsShown={EXPENSE_FIELD_PATHS[draft.type]}
       formRef={formRef}
       actions={

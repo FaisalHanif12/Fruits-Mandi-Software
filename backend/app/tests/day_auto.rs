@@ -8,7 +8,10 @@ use mandi_app_lib::day_auto::{Memory, Outcome, run_once};
 use mandi_backup::day_settings::{self, DaySettings};
 use mandi_services::auth::{self, FirstRunRaw};
 use mandi_services::core::drafts::DraftSaveInput;
+use mandi_services::core::edit::{DayFixCloseInput, DayFixOpenInput};
 use mandi_services::core::general::{GeneralInput, GeneralLineInput};
+use mandi_services::core::vouchers::{DayCloseInput, DayReopenInput};
+use mandi_services::day::AutoCloseHold;
 use mandi_services::settings::Firm;
 use mandi_services::testing::TestEnv;
 use mandi_services::{Secret, day, drafts, vouchers};
@@ -217,4 +220,168 @@ fn the_switch_is_off_until_the_owner_turns_it_on() {
     shop_time(&env, 22, 0);
     assert_eq!(run_once(&env.ctx, &mut Memory::default()), Outcome::NotDue);
     assert_eq!(closed_up_to(&env), None);
+}
+
+// ---- Plan 85: a day in use is never closed under the Owner's hands (PRD FR-21.4 v1.49) ----
+
+const SIGN: &str = "adnan";
+
+/// Sets the clock to a shop time (UTC+5) on a day of October 2026.
+fn shop_time_on(env: &TestEnv, day: u32, hour: u32, minute: u32) {
+    env.clock.set(
+        Utc.with_ymd_and_hms(2026, 10, day, hour.checked_sub(5).unwrap(), minute, 0)
+            .single()
+            .unwrap(),
+    );
+}
+
+fn close_by_hand(env: &TestEnv, up_to: &str) {
+    let owner = auth::require(&env.ctx).unwrap();
+    day::close(
+        &env.ctx,
+        &owner,
+        &DayCloseInput {
+            up_to: up_to.into(),
+        },
+    )
+    .unwrap();
+}
+
+fn fix_open(env: &TestEnv) -> String {
+    let owner = auth::require(&env.ctx).unwrap();
+    day::fix_open(
+        &env.ctx,
+        &owner,
+        &DayFixOpenInput {
+            date: "10-10-2026".into(),
+            reason: "نئی بکری لکھنی ہے".into(),
+            sign: SIGN.into(),
+        },
+    )
+    .unwrap()
+    .token
+}
+
+#[test]
+fn it_leaves_a_day_held_by_a_fix_and_closes_nothing_until_the_fix_ends() {
+    let (_dir, env) = world();
+    shop_time_on(&env, 10, 12, 0);
+    post_something(&env);
+    switch(&env, true, "21:00");
+    // The day was closed, and the Owner reopens it to save a new entry (the fix flow).
+    close_by_hand(&env, "10-10-2026");
+    let token = fix_open(&env);
+    assert_eq!(closed_up_to(&env).as_deref(), Some("2026-10-09"));
+
+    // The closing time passes while he works: every tick leaves the day open.
+    let mut memory = Memory::default();
+    for (hour, minute) in [(21, 0), (21, 5), (22, 30)] {
+        shop_time_on(&env, 10, hour, minute);
+        assert_eq!(
+            run_once(&env.ctx, &mut memory),
+            Outcome::Held(AutoCloseHold::FixInProgress)
+        );
+        assert_eq!(closed_up_to(&env).as_deref(), Some("2026-10-09"));
+    }
+
+    // The fix ends: its own close takes the days, and the timer finds nothing to do.
+    let owner = auth::require(&env.ctx).unwrap();
+    let closed = day::fix_close(&env.ctx, &owner, &DayFixCloseInput { token }).unwrap();
+    assert_eq!(closed.closed, vec!["2026-10-10".to_owned()]);
+    assert_eq!(closed_up_to(&env).as_deref(), Some("2026-10-10"));
+    assert_eq!(run_once(&env.ctx, &mut memory), Outcome::NotDue);
+}
+
+#[test]
+fn it_leaves_a_day_the_owner_reopened_by_hand_until_he_closes_it() {
+    let (_dir, env) = world();
+    shop_time_on(&env, 10, 12, 0);
+    post_something(&env);
+    switch(&env, true, "21:00");
+
+    // At 21:00 the timer closes today, as it always did.
+    shop_time_on(&env, 10, 21, 0);
+    assert_eq!(
+        run_once(&env.ctx, &mut Memory::default()),
+        Outcome::Closed("2026-10-10".to_owned())
+    );
+
+    // At 21:03 the Owner reopens it by hand, with his reason and his sign.
+    shop_time_on(&env, 10, 21, 3);
+    let owner = auth::require(&env.ctx).unwrap();
+    day::reopen(
+        &env.ctx,
+        &owner,
+        &DayReopenInput {
+            date: "10-10-2026".into(),
+            reason: "ایک اندراج رہ گیا".into(),
+            sign: SIGN.into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(closed_up_to(&env).as_deref(), Some("2026-10-09"));
+
+    // Before the change the next tick closed it again within five minutes. Now it is his: a new
+    // thread (a restart) holds just the same, because the fact is in the data file.
+    for (hour, minute) in [(21, 5), (21, 30), (23, 0)] {
+        shop_time_on(&env, 10, hour, minute);
+        assert_eq!(
+            run_once(&env.ctx, &mut Memory::default()),
+            Outcome::Held(AutoCloseHold::ReopenedByHand)
+        );
+        assert_eq!(closed_up_to(&env).as_deref(), Some("2026-10-09"));
+    }
+
+    // He closes it himself. The next day the timer works as before.
+    close_by_hand(&env, "10-10-2026");
+    shop_time_on(&env, 10, 23, 30);
+    assert_eq!(run_once(&env.ctx, &mut Memory::default()), Outcome::NotDue);
+    shop_time_on(&env, 11, 21, 30);
+    assert_eq!(
+        run_once(&env.ctx, &mut Memory::default()),
+        Outcome::Closed("2026-10-11".to_owned())
+    );
+    assert_eq!(closed_up_to(&env).as_deref(), Some("2026-10-11"));
+}
+
+#[test]
+fn it_closes_an_idle_day_when_a_fix_was_left_behind() {
+    let (_dir, env) = world();
+    shop_time_on(&env, 10, 12, 0);
+    post_something(&env);
+    switch(&env, true, "21:00");
+    close_by_hand(&env, "10-10-2026");
+    let token = fix_open(&env);
+
+    // The app was closed in the middle of the fix. That evening the day is still held ...
+    shop_time_on(&env, 10, 21, 30);
+    assert_eq!(
+        run_once(&env.ctx, &mut Memory::default()),
+        Outcome::Held(AutoCloseHold::FixInProgress)
+    );
+    // ... but the next evening nobody holds the token (the hold time has passed), so the timer
+    // closes the open days as it closes any idle day.
+    shop_time_on(&env, 11, 21, 30);
+    assert_eq!(
+        run_once(&env.ctx, &mut Memory::default()),
+        Outcome::Closed("2026-10-11".to_owned())
+    );
+    assert_eq!(closed_up_to(&env).as_deref(), Some("2026-10-11"));
+    // The old token closes nothing.
+    let owner = auth::require(&env.ctx).unwrap();
+    assert!(day::fix_close(&env.ctx, &owner, &DayFixCloseInput { token }).is_err());
+}
+
+#[test]
+fn it_closes_an_idle_day_after_the_closing_time() {
+    // The timer still works for a day nobody is using: no fix, no reopen by hand, no draft.
+    let (_dir, env) = world();
+    shop_time_on(&env, 10, 12, 0);
+    post_something(&env);
+    switch(&env, true, "21:00");
+    shop_time_on(&env, 10, 21, 40);
+    assert_eq!(
+        run_once(&env.ctx, &mut Memory::default()),
+        Outcome::Closed("2026-10-10".to_owned())
+    );
 }

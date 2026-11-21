@@ -131,3 +131,19 @@ describe('formatPaisa with plain', () => {
     );
   });
 });
+
+describe('formatPaisa withoutSign (plan 87: the capital card says the side in words)', () => {
+  it('leaves the minus sign out of a negative amount and changes nothing else', () => {
+    expect(
+      formatPaisa(paisaForTest(-9_653_000), { grouping: 'international', withoutSign: true }),
+    ).toBe('96,530');
+    expect(formatPaisa(paisaForTest(-9_653_000), { grouping: 'international' })).toBe('-96,530');
+    expect(
+      formatPaisa(paisaForTest(9_653_000), { grouping: 'international', withoutSign: true }),
+    ).toBe('96,530');
+    expect(formatPaisa(paisaForTest(0), { grouping: 'lakh', withoutSign: true })).toBe('0');
+    expect(formatPaisa(paisaForTest(-131_604_000), { grouping: 'lakh', withoutSign: true })).toBe(
+      '13,16,040',
+    );
+  });
+});

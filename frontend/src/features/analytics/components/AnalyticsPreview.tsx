@@ -19,6 +19,7 @@ import {
   usePrintFrameOf,
   usePrintJob,
 } from '../../reports';
+import { measureOfFilters } from '../filters';
 import { useAnalyticsPrintData, useAnalyticsPrintView } from '../hooks';
 import { AnalyticsPrintCharts } from '../print/AnalyticsPrintCharts';
 import { printTableOf } from '../print/print-table';
@@ -70,11 +71,13 @@ export function AnalyticsPreview({ view, filters, sort, onBack, exporter }: Anal
       />
     );
   } else {
+    // What the view counts: the row total of a matrix and the charts name it (PRD FR-18.10).
+    const measure = measureOfFilters(filters);
     body = (
       <ReportPrintDocument
-        data={printTableOf(query.data)}
+        data={printTableOf(query.data, measure)}
         frame={frame.data}
-        figures={<AnalyticsPrintCharts data={query.data} />}
+        figures={<AnalyticsPrintCharts data={query.data} measure={measure} />}
       />
     );
   }

@@ -1,7 +1,7 @@
 //! Offline, an error from OpenRouter, a timeout (PRD FR-7.81, E89, NFR-AI-3, NFR-AI-7).
 //!
 //! `robustness_assistant.rs` attack 6 runs all 12 failure kinds on a first call, a failure in the
-//! middle of a question, the 12 and 25 second limits and the retry. This file adds: a failure in
+//! middle of a question, the 20 and 45 second limits and the retry. This file adds: a failure in
 //! the call that rewrites an answer, a failure when a "which one" question goes on, the questions
 //! the app answers itself when the model cannot be reached, the reason an error reply carries
 //! (it must hold no key), and the quick questions after each ending.

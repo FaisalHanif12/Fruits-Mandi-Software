@@ -1,0 +1,21 @@
+{
+  "lines": [
+    {
+      "amount": "2,000",
+      "confirm_cash_below_zero": false,
+      "date": "10-10-2026",
+      "expected_goods": "",
+      "narration": "",
+      "seller_account_id": 20
+    },
+    {
+      "amount": "1,000",
+      "confirm_cash_below_zero": false,
+      "date": "10-10-2026",
+      "expected_goods": "",
+      "narration": "",
+      "reason": "نقد ادھار",
+      "seller_account_id": 22
+    }
+  ]
+}

@@ -45,19 +45,19 @@ analytics-view-c-help = ہر { -gahak }: خریداری، { -commission }، { -l
 analytics-view-d-title = قسم مال × مدت
 
 # review: pending
-analytics-view-d-help = ہر قسم مال کا { -commission } دن، مہینے یا سال کے حساب سے۔
+analytics-view-d-help = ہر قسم مال دن، مہینے یا سال کے حساب سے، آپ کے چنے ہوئے ناپ میں: { -kham-bikri }، نگ یا { -commission }۔
 
 # review: pending
 analytics-view-e-title = بیوپاری × قسم مال
 
 # review: pending
-analytics-view-e-help = ہر { -beopari } کا { -commission } قسم مال کے حساب سے۔
+analytics-view-e-help = ہر { -beopari } قسم مال کے حساب سے، آپ کے چنے ہوئے ناپ میں: { -kham-bikri }، نگ یا { -commission }۔
 
 # review: pending
 analytics-view-h-title = سرفہرست 10
 
 # review: pending
-analytics-view-h-help = { -commission } کے لحاظ سے سرفہرست اقسام، بیوپاری اور گاہک۔
+analytics-view-h-help = آپ کے چنے ہوئے ناپ کے لحاظ سے سرفہرست اقسام، بیوپاری اور گاہک: { -kham-bikri }، نگ یا { -commission }۔
 
 ## The columns of these views (the others are the report columns).
 
@@ -96,6 +96,25 @@ analytics-col-item-column = { -qism-maal }
 
 # review: pending
 analytics-col-row-total = کل { -commission }
+
+# دیگر ناپوں کے لیے D، E اور L کی قطار کا میزان: عنوان بتاتا ہے کہ خانوں میں کیا ہے (PRD FR-18.10)۔
+# review: pending
+analytics-col-row-total-gross = کل { -kham-bikri }
+
+# review: pending
+analytics-col-row-total-buyer-total = کل رقم گاہک
+
+# review: pending
+analytics-col-row-total-qty = کل نگ
+
+# review: pending
+analytics-col-row-total-seller-comm = کل { -commission } بیوپاری
+
+# review: pending
+analytics-col-row-total-buyer-comm = کل { -commission } گاہک
+
+# review: pending
+analytics-col-row-total-laga = کل { -laga }
 
 # review: pending
 analytics-col-other-items = دیگر اقسام
@@ -249,22 +268,22 @@ analytics-columns-main = اصل کالم پر واپس
 ## The chart above each table (PRD FR-18.3).
 
 # review: pending
-analytics-chart-a = قسم مال کے لحاظ سے کل { -commission }
+analytics-chart-a = قسم مال کے لحاظ سے { analytics-measure-name }
 
 # review: pending
-analytics-chart-b = بیوپاری کے لحاظ سے کل { -commission }
+analytics-chart-b = بیوپاری کے لحاظ سے { analytics-measure-name }
 
 # review: pending
-analytics-chart-c = گاہک کے لحاظ سے خریداری کی رقم
+analytics-chart-c = گاہک کے لحاظ سے { analytics-measure-name }
 
 # review: pending
-analytics-chart-d = مدت کے لحاظ سے { -commission }، ہر قسم مال کا الگ حصہ
+analytics-chart-d = مدت کے لحاظ سے { analytics-measure-name }، ہر قسم مال کا الگ حصہ
 
 # review: pending
-analytics-chart-e = بیوپاری کے لحاظ سے { -commission }، ہر قسم مال کا الگ حصہ
+analytics-chart-e = بیوپاری کے لحاظ سے { analytics-measure-name }، ہر قسم مال کا الگ حصہ
 
 # review: pending
-analytics-chart-h = { -commission } کے لحاظ سے سرفہرست اقسام
+analytics-chart-h = { analytics-measure-name } کے لحاظ سے سرفہرست 10
 
 # review: pending
 analytics-chart-limit = چارٹ میں { $total } میں سے پہلی { $shown } قطاریں دکھائی گئی ہیں۔
@@ -463,6 +482,10 @@ analytics-col-gardens-result = { -baghat } میں تبدیلی
 # review: pending
 analytics-filter-garden = { -bagh }
 
+# مدت کے حساب سے ایک ناپ: ہر مدت کا ایک نقطہ (PRD FR-18.10)۔
+# review: pending
+analytics-chart-g-measure = مدت کے لحاظ سے { analytics-measure-name }
+
 # review: pending
 analytics-chart-i = ہر باغ کی فروخت اور نتیجہ
 
@@ -495,7 +518,7 @@ analytics-view-k-help = ہر شراکت دار (یا دکان کے { -mehman }) 
 analytics-view-l-title = { -gahak } × { -qism-maal }
 
 # review: pending
-analytics-view-l-help = ہر { -gahak } کا { -commission } قسم مال کے حساب سے: ہر قسم پر اس کا گاہک { -commission } اور { -laga }۔
+analytics-view-l-help = ہر { -gahak } قسم مال کے حساب سے، آپ کے چنے ہوئے ناپ میں: { -kham-bikri }، نگ یا { -commission }۔
 
 # review: pending
 analytics-view-m-title = خرچہ
@@ -507,7 +530,7 @@ analytics-view-m-help = ہر مد اور پوری دکان کا { -dukan-kharcha
 analytics-chart-k = ہماری دکان اور دوسری دکانوں سے لیا گیا پھل
 
 # review: pending
-analytics-chart-l = { -gahak } کے لحاظ سے { -commission }، ہر قسم مال کا الگ حصہ
+analytics-chart-l = { -gahak } کے لحاظ سے { analytics-measure-name }، ہر قسم مال کا الگ حصہ
 
 # review: pending
 analytics-chart-m = ہر مدت کا { -dukan-kharcha }
@@ -538,3 +561,43 @@ analytics-chart-hide = چارٹ چھپائیں
 
 # review: pending
 analytics-chart-show = چارٹ دکھائیں
+
+## ناپ (plan 84, PRD FR-18.10): چارٹ، جدولیں اور فہرستیں کیا دکھائیں۔
+
+# وہ خانہ جس میں ناپ چنا جاتا ہے۔
+# review: pending
+analytics-filter-measure = ناپ
+
+# ہر ناپ کے الفاظ۔ پیغام کو `$measure` میں ناپ کی کنجی دے کر دکھایا جاتا ہے؛ کچھ نہ دیں تو کل کمیشن پڑھا جاتا ہے۔
+# review: pending
+analytics-measure-name = { $measure ->
+    [gross] { -kham-bikri }
+    [buyer_total] رقم گاہک
+    [qty] نگ
+    [seller_comm] { -commission } بیوپاری
+    [buyer_comm] { -commission } گاہک
+    [laga] { -laga }
+   *[total_comm] کل { -commission }
+}
+
+# پرنٹ اور ایکسل شیٹ کے سرے میں ناپ (PRD FR-18.10): ایسا عنوان جو پوری بات کہہ دے۔
+# review: pending
+analytics-filter-measure-gross = ناپ: { -kham-bikri }
+
+# review: pending
+analytics-filter-measure-buyer-total = ناپ: رقم گاہک
+
+# review: pending
+analytics-filter-measure-qty = ناپ: نگ
+
+# review: pending
+analytics-filter-measure-total-comm = ناپ: کل { -commission }
+
+# review: pending
+analytics-filter-measure-seller-comm = ناپ: { -commission } بیوپاری
+
+# review: pending
+analytics-filter-measure-buyer-comm = ناپ: { -commission } گاہک
+
+# review: pending
+analytics-filter-measure-laga = ناپ: { -laga }

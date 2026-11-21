@@ -40,6 +40,20 @@ export const LINE_NEEDS: Readonly<Record<string, 'buyer' | 'qty' | 'rate'>> = {
   seller_rate: 'rate',
 };
 
+/**
+ * The parts of a lot that a sale line needs before it can be worked out, by the end of the field path the
+ * backend gives, and the words that name what is missing (`bikri-lot-missing-<word>`): the seller, the item,
+ * the packing and the quantity received. The weight of an item sold by weight has its own answer
+ * (`ERR_WEIGHT_REQUIRED`), which is never held back. A lot that misses one of these gives its lines no
+ * figures, so the lot row says so at once (PRD FR-12.6 v1.49, plan 85).
+ */
+export const LOT_NEEDS: Readonly<Record<string, 'seller' | 'item' | 'packing' | 'qty'>> = {
+  seller_account_id: 'seller',
+  item_id: 'item',
+  packing_id: 'packing',
+  qty_received: 'qty',
+};
+
 /** Where a field path points. */
 export type Where =
   | { kind: 'header'; sub: string }

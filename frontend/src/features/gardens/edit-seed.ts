@@ -13,7 +13,7 @@ import {
   type Grouping,
 } from '../../shared/format';
 import { textOrNull } from '../purchases';
-import { newEntryDraft } from './draft';
+import { entryReasonText, newEntryDraft } from './draft';
 import type {
   ArrivalInput,
   ArrivalRow,
@@ -36,7 +36,11 @@ function sourcesOf(row: GardenHistoryRow): Record<number, MoneySource> {
  * shop, the qty, the goods arrived it took its نگ from and its note (a sale keeps its note where a
  * payment keeps its reason).
  */
-export function draftOfGardenEntry(row: GardenHistoryRow, grouping: Grouping): EntryDraft {
+export function draftOfGardenEntry(
+  row: GardenHistoryRow,
+  grouping: Grouping,
+  text: (id: string) => string,
+): EntryDraft {
   const kind =
     row.kind === 'installment' || row.kind === 'cost' || row.kind === 'refund'
       ? row.kind
@@ -61,7 +65,9 @@ export function draftOfGardenEntry(row: GardenHistoryRow, grouping: Grouping): E
       arrivalId: row.arrival_id === null ? '' : String(row.arrival_id),
     };
   }
-  return { ...base, reason: row.reason ?? '' };
+  // The standard words of a first installment are stored as their message id (plan 81): the form
+  // shows them as words, like any typed reason.
+  return { ...base, reason: entryReasonText(row.reason, text) };
 }
 
 /** One garden arrival (goods arrived) as the edit form holds it. */
@@ -133,7 +139,6 @@ export function gardenHeaderDraftOf(garden: GardenRow, grouping: Grouping): Gard
     items: garden.items.map((item) => pickedOf(item)),
     rent: formatPaisa(garden.rent_paisa, { grouping }),
     paidNow: '',
-    paidNowReason: '',
     seasonEnd: garden.season_end_date === null ? '' : isoToDisplayDate(garden.season_end_date),
     note: garden.note ?? '',
   };

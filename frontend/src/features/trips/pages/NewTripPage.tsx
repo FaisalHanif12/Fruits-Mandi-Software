@@ -86,15 +86,23 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
   const shares = useMemo(() => tripShareInputs(draft.partners), [draft.partners]);
   const { query, current } = useSharesCheck(shares);
   const check = query.data;
+  // An answer that could not be had is said so, never "checking" for ever; the backend checks the
+  // shares again on the save and is the final word (plan 81, Code Standards 4.1).
   const totalState: TotalState =
-    check === undefined || !current ? 'checking' : check.is_100 ? 'ok' : 'bad';
+    current && query.isError
+      ? 'failed'
+      : check === undefined || !current
+        ? 'checking'
+        : check.is_100
+          ? 'ok'
+          : 'bad';
   const draftText = useMemo(() => JSON.stringify(draft), [draft]);
   const shown = refusal !== null && refusal.text === draftText ? refusal.error : null;
   const error = shown ?? liveShareErrors(check, current);
   useRefusalIntoView(rootRef, shown);
 
   const changed = tripDraftChanged(draft, start);
-  const canSave = totalState === 'ok' && draft.date.trim() !== '';
+  const canSave = (totalState === 'ok' || totalState === 'failed') && draft.date.trim() !== '';
 
   const patchPartner = (index: number, patch: Partial<TripDraft['partners'][number]>) => {
     setDraft((previous) => ({

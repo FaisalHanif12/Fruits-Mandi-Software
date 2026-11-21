@@ -705,6 +705,11 @@ pub(super) fn other_measure(
             return Measure::Other;
         }
     }
+    // "kharcha madon ke hisab se", "mahine ke hisab se": a figure for each head or month, which one total is no
+    // answer to (plan 82).
+    if scan.has(Cue::HeadsWise) && !ranking {
+        return Measure::Breakdown;
+    }
     // The partner's total is asked with its own words ("kul raqam", "partner total"). "khalis" and
     // "net" are his خالص (C20); "total raqam" and "ٹوٹل رقم" are the words of a total due.
     if kinds.contains(&FigureKind::PartnerTotal)
@@ -1200,8 +1205,13 @@ pub(super) enum What {
     CashSales,
     /// Sales paid on credit over a period (R4 total), S-A8.
     CreditSales,
-    /// A seller's net sale (view B `net`), S-A8.
+    /// A seller's net sale (view B `net`), S-A8; the shop's (R6 `net` total, plan 82).
     NetSale,
+    /// The shop's profit: the `profit` total of view G over the period (plan 82).
+    Profit,
+    /// The buyers' bills, each the goods, the buyer commission and the Laga: R2 `buyer_total`, for all buyers
+    /// or for one (plan 82).
+    Bills,
     /// The value of the fruit taken (R37 total), S-A5.
     FruitValue,
     /// Capital put into the shop over a period (R15 `capital_in` total), S-A5.
@@ -1606,6 +1616,14 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     {
         return None;
     }
+    // "safi bikri", "gahakon ke bill": the net sale or the buyers' bills, each its own column (plan 82).
+    if u.sale_measure.is_some() {
+        return totals::measure_plan(u);
+    }
+    // "har gahak ne alag alag kitni bikri li": one row for each buyer or seller (plan 82).
+    if let Some(planned) = totals::role_breakdown_plan(u) {
+        return Some(planned);
+    }
     // "aaj udhaar me kitni bikri hui", "naqdi bikri": the sales of one payment type (R3 or R4).
     if let Some(planned) = totals::pay_sale_plan(u) {
         return Some(planned);
@@ -1905,7 +1923,13 @@ fn comparison_plan(u: &Understanding) -> Option<Planned> {
     const LEFT: [Doubt; 2] = [Doubt::Comparison, Doubt::SeveralPeriods];
     const MOST_PERIODS: usize = 4;
     let kind = match u.figures.value.as_slice() {
-        [k @ (FigureKind::Sale | FigureKind::Commission | FigureKind::Laga)] => *k,
+        [
+            k @ (FigureKind::Sale
+            | FigureKind::Commission
+            | FigureKind::Laga
+            | FigureKind::Expense
+            | FigureKind::Profit),
+        ] => *k,
         _ => return None,
     };
     if u.intent.value != Intent::Figure
@@ -3833,6 +3857,22 @@ fn shop_figure(
             }
             plan.line(Who::Shop, what_of(kind)?);
         }
+        // The shop's profit: view G's `profit` column (income less the shop's expenses), never the partner report
+        // R30, which is behind the partner code. A question about the shop's profit is no partner question
+        // and never ends locked (plan 82, D16).
+        FigureKind::Profit => {
+            period?;
+            plan.read(analytics(
+                "G",
+                An {
+                    from,
+                    to,
+                    ..An::default()
+                },
+            ));
+            plan.dated = true;
+            plan.line(Who::Shop, What::Profit);
+        }
         FigureKind::Cash if period.is_none() || today => {
             plan.read(tiles());
             plan.line(Who::Shop, What::Cash);
@@ -4153,8 +4193,14 @@ fn list(u: &Understanding, period: Option<&PeriodRef>, plan: &mut Plan) -> Optio
             ));
         }
         // The top ten by total commission: view H holds the items, the sellers and the buyers.
+        // The commission a BUYER gave is his own column, never the total of both sides on his lines (view H
+        // ranks by total commission): buyers take the sorted view C below (plan 82, D04).
+        // A bare "top 5 buyers" (no commission word) keeps view H.
         (ListOver::Items | ListOver::Sellers | ListOver::Buyers, Some(FigureKind::Commission))
-            if ask.rank == Some(Rank::Most) && group.is_none() && item.is_none() =>
+            if ask.rank == Some(Rank::Most)
+                && group.is_none()
+                && item.is_none()
+                && (over != ListOver::Buyers || u.figure_at.is_empty()) =>
         {
             plan.read(analytics(
                 "H",

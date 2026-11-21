@@ -27,6 +27,7 @@ import {
   assistantSettingsSet,
   assistantStatus,
   assistantTest,
+  assistantWarm,
   listenSteps,
 } from './api';
 import { useAssistantStore, type Asked } from './store';
@@ -163,6 +164,23 @@ export function useStartNewConversation(): () => void {
       }
     })();
     useAssistantStore.getState().newConversation();
+  }, []);
+}
+
+/**
+ * Warms up the model connection (plan 82, NFR-SEC-9 v1.22): fire and forget. The panel never waits
+ * for it, ignores what it answers and shows nothing when it fails, so the Owner cannot tell it ran.
+ * The backend decides if anything is sent (at most once in 5 minutes, 12 a day).
+ */
+export function useWarmAssistant(): () => void {
+  return useCallback(() => {
+    void (async () => {
+      try {
+        await assistantWarm();
+      } catch {
+        // Not shown: see above.
+      }
+    })();
   }, []);
 }
 

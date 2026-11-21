@@ -18,10 +18,12 @@ interface NumProps {
   inherit?: boolean;
   /** A number already made into text, for example a quantity. Fluent may fill it. */
   children?: ReactNode;
+  /** An amount shown without its minus sign, where the side is said in words (the capital card). Only with `paisa`. */
+  withoutSign?: boolean;
 }
 
-function Money({ paisa }: { paisa: Paisa }) {
-  return formatPaisa(paisa, { grouping: useGrouping() });
+function Money({ paisa, withoutSign }: { paisa: Paisa; withoutSign: boolean }) {
+  return formatPaisa(paisa, { grouping: useGrouping(), withoutSign });
 }
 
 /**
@@ -31,10 +33,10 @@ function Money({ paisa }: { paisa: Paisa }) {
  */
 export const RUNNING_NUMBER = { num: <Num inherit /> };
 
-export function Num({ paisa, inherit = false, children }: NumProps) {
+export function Num({ paisa, inherit = false, children, withoutSign = false }: NumProps) {
   return (
     <bdi dir="ltr" className={inherit ? 'number-run' : 'type-number'}>
-      {paisa === undefined ? children : <Money paisa={paisa} />}
+      {paisa === undefined ? children : <Money paisa={paisa} withoutSign={withoutSign} />}
     </bdi>
   );
 }

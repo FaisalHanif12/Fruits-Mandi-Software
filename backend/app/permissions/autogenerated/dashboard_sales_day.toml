@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-sales-day"
+description = "Enables the dashboard_sales_day command without any pre-configured scope."
+commands.allow = ["dashboard_sales_day"]
+
+[[permission]]
+identifier = "deny-dashboard-sales-day"
+description = "Denies the dashboard_sales_day command without any pre-configured scope."
+commands.deny = ["dashboard_sales_day"]

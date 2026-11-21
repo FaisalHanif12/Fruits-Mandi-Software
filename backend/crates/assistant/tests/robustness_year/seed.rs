@@ -1397,6 +1397,7 @@ fn advance(y: &Year, dd: &str, seller: i64, amount: &str) {
             removed: RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
+            reason: None,
         },
     )
     .expect("an advance");

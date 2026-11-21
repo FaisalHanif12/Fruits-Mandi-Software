@@ -310,7 +310,9 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       valueSetter: () => false,
       cellEditor: PickerCellEditor,
       cellEditorPopup: true,
-      cellEditorPopupPosition: 'under',
+      // The field of the picker is drawn over the cell, so the cell is the field and its list starts at it
+      // (plan 86). With 'under' the field was a second box below the cell, and the list a third.
+      cellEditorPopupPosition: 'over',
       // A picker cell opens its picker with the full list as soon as it gets the focus, by a click
       // or by a key (GridInner.onCellFocused, PRD FR-7.16, plan 46). A click on the cell that
       // already has the focus, with its list closed (Esc), opens it again, like a click on the
@@ -733,11 +735,13 @@ function GridInner({
     }
   }, [calc, columns, store, fixedRows]);
 
-  // The marks of earlier edits come from the history, which can answer before the grid is ready:
-  // the cells then read them once, when the grid has become ready.
+  // An answer can arrive before the grid is ready: the marks of earlier edits come from the history, and the
+  // backend's answer for a draft that was restored comes at once. The refresh above finds no grid then, and the
+  // cells were drawn with the old answer, so the cells read everything once, when the grid has become ready
+  // (a lot that misses its packing is red from the start, plan 85).
   useLayoutEffect(() => {
-    if (ready && live().cellMarks !== undefined) apiRef.current?.refreshCells({ force: true });
-  }, [ready, live]);
+    if (ready) apiRef.current?.refreshCells({ force: true });
+  }, [ready]);
 
   // After a key or the screen asked for a cell, focus it once the rows are drawn.
   const pendingFocus = store((state) => state.pendingFocus);

@@ -3,7 +3,7 @@
 //! deleted: a cancelled voucher keeps its number and its row (Code Standards D3).
 
 use crate::listing::{MonthSums, like_contains, like_prefix, month_sums};
-use mandi_core::accounts::RecordRef;
+use mandi_core::accounts::{AccountType, RecordRef};
 use mandi_core::edit::EntryFlags;
 use mandi_core::money::Paisa;
 use mandi_core::vouchers::{LastAdvance, VoucherMode, VoucherRow, VoucherType};
@@ -182,7 +182,8 @@ const ROW_COLUMNS: &str =
     "v.id, v.type, v.number, v.entry_date, v.account_id, a.code, a.name_ur, a.name_en,
                 v.amount_paisa, v.mode, v.bank_account_id, v.cheque_no, v.cheque_date,
                 v.expected_goods, v.narration, v.status, v.version,
-                v.collector_staff_id, v.reason, v.cancel_reason, v.current_entry_id, a.tag";
+                v.collector_staff_id, v.reason, v.cancel_reason, v.current_entry_id, a.tag,
+                a.party_type";
 
 /// A voucher row.
 fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<VoucherRow> {
@@ -210,6 +211,14 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<VoucherRow> {
                 .flatten()
                 .unwrap_or_default(),
             tag: r.get::<_, Option<String>>(21).ok().flatten(),
+        }),
+        // Seller or buyer when the account is a party of that side (PRD FR-15.11, v1.51).
+        account_type: account_id.map(|_| {
+            match r.get::<_, Option<String>>(22).ok().flatten().as_deref() {
+                Some("seller") => AccountType::Seller,
+                Some("buyer") => AccountType::Buyer,
+                _ => AccountType::Other,
+            }
         }),
         amount_paisa: Paisa::try_from_paisa(r.get(8)?).map_err(|_| bad(8, "amount"))?,
         // A salary deduction (plan 17) is stored as `salary`; as a row it reads as cash because it
@@ -256,6 +265,9 @@ pub struct ListFilter<'a> {
     /// True to leave out the vouchers of a partner's own money: ذاتی خرچہ, its واپسی, سرمایہ جمع and
     /// سرمایہ واپسی (PRD FR-17.11). Set while the partner section is locked.
     pub hide_partner_money: bool,
+    /// True for the پیشگی list (PRD FR-15.11, v1.51): with `voucher_type` `advance`, the payments to
+    /// a buyer are listed too. Ignored for any other type.
+    pub advance_view: bool,
 }
 
 /// The voucher types that hold a partner's own money (PRD FR-17.11): kept apart for the lock.
@@ -323,8 +335,21 @@ fn list_where(filter: &ListFilter<'_>, hide: bool) -> (String, Vec<Value>) {
     let mut conditions: Vec<String> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
     if let Some(kind) = filter.voucher_type {
-        conditions.push("v.type = ?".to_owned());
-        binds.push(Value::Text(kind.as_str().to_owned()));
+        if filter.advance_view && kind == VoucherType::Advance {
+            // A buyer's advance is saved as a payment to him (cash lent, PRD FR-15.11), so the
+            // پیشگی list holds the advances and the payments on a buyer account. The buyer test
+            // reads the account of the row by its primary key.
+            conditions.push(
+                "(v.type = ? OR (v.type = ? AND EXISTS (SELECT 1 FROM accounts b
+                    WHERE b.id = v.account_id AND b.party_type = 'buyer')))"
+                    .to_owned(),
+            );
+            binds.push(Value::Text(VoucherType::Advance.as_str().to_owned()));
+            binds.push(Value::Text(VoucherType::Payment.as_str().to_owned()));
+        } else {
+            conditions.push("v.type = ?".to_owned());
+            binds.push(Value::Text(kind.as_str().to_owned()));
+        }
     }
     if filter.hide_partner_money {
         let kinds = PARTNER_MONEY_TYPES.map(|kind| format!("'{}'", kind.as_str()));

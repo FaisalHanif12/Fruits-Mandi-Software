@@ -312,6 +312,9 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "qty_taken",
                 // Migration 0009 (plan 33 v1.1): the garden arrival a garden lot takes its goods from.
                 "arrival_id",
+                // Migration 0027 (plan 80 gate): the time a lot was removed in an edit, null while it
+                // is in force.
+                "removed_at",
             ],
         ),
         (

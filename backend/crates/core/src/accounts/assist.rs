@@ -26,6 +26,11 @@ pub enum AccountScope {
     /// A field that takes any account. A short code lists the seller and the buyer with that
     /// running number, each with its type (PRD 1.8 R5): `1` lists `0011` and `0021`.
     Any,
+    /// A field that takes a seller or a buyer and nothing else: the پیشگی field (PRD 15.4, FR-15.11,
+    /// v1.51). Active ones only, so nobody in the dead amount; no چکتا buyer, no نقدی منڈی, no
+    /// اپنا مال. A short code lists the seller and the buyer with that running number, each with its
+    /// type (`0` lists `0010` and `0020`).
+    SellerBuyer,
     /// The accounts of one control (`control_id` names it). Short codes do not apply: other
     /// accounts are found by full code or name (PRD FR-7.39).
     Control,

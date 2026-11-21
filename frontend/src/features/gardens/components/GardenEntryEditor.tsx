@@ -26,6 +26,7 @@ import { useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import { ClosedDayEntryNotice, finishFixSession } from '../../../shared/edit';
 import { isZeroPaisa } from '../../../shared/format';
 import { createEntryStore } from '../../../shared/grid';
 import {
@@ -263,6 +264,8 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
               }),
         );
       }
+      // Days reopened for this entry close again (PRD FR-21.4, plan 85); the money entries do it in their flow.
+      void finishFixSession(l10n);
       afterSave();
       return true;
     } catch (failure: unknown) {
@@ -336,6 +339,15 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
           </Button>
         </div>
       </div>
+      {/* A new entry on a closed day: the notice with "Reopen the day and save" (PRD FR-21.4, plan 85). */}
+      <ClosedDayEntryNotice
+        errors={error?.errors}
+        date={draft.date}
+        onReopened={() => {
+          flow.clearRefusal();
+          setArrivalRefusal(null);
+        }}
+      />
       <form
         ref={formRef}
         {...navigation}

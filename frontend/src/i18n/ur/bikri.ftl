@@ -313,6 +313,20 @@ bikri-line-buyer-left = «{ $text }» لکھا گیا، مگر { -gahak } نہی
 # review: pending
 bikri-line-no-figures = ابھی رقم نہیں بنی۔ اس لائن اور اس کے { -lot } کو دیکھیں۔
 
+# جس { -lot } میں کچھ باقی ہو جو اس کی لائنوں کی رقم بنانے کے لیے چاہیے، وہ { -lot } کی قطاروں کے نیچے فوراً بتایا
+# جاتا ہے، "لاٹ 2:" کے بعد (PRD FR-12.6 v1.49، پلان 85)۔ جب اس { -lot } کی کسی لائن پر تعداد اور ریٹ لکھ دیے جائیں۔
+# review: pending
+bikri-lot-missing-seller = { -beopari } چنیں۔
+
+# review: pending
+bikri-lot-missing-item = { -qism-maal } چنیں۔
+
+# review: pending
+bikri-lot-missing-packing = { -packing } چنیں۔
+
+# review: pending
+bikri-lot-missing-qty = آمد کی تعداد لکھیں۔
+
 # review: pending
 bikri-summary-seller-side = { -beopari } کی طرف
 

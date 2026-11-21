@@ -14,9 +14,9 @@
 
 use mandi_reports::dashboard::{
     BuyerDuesPrintInput, CashSalesDayPrintInput, CashSalesMonthPrintInput, CommissionPrintInput,
-    LentOpenPrintInput, SellerDuesPrintInput, TotalDuesPrintInput, buyer_dues_spec,
-    cash_sales_day_spec, cash_sales_month_spec, commission_month_spec, lent_open_spec,
-    seller_dues_spec, total_dues_spec,
+    LentOpenPrintInput, SalesPrintInput, SellerDuesPrintInput, TotalDuesPrintInput,
+    buyer_dues_spec, cash_sales_day_spec, cash_sales_month_spec, commission_month_spec,
+    lent_open_spec, sales_period_spec, seller_dues_spec, total_dues_spec,
 };
 use mandi_reports::export::{
     AnalyticsExportInput, BikriListExportInput, ExcelExported, ExportProgress, ExportStage,
@@ -89,6 +89,8 @@ pub enum TableExportSource {
     /// One month of the commission page (point 7). The partner columns only when the partner
     /// section is open.
     CommissionMonth(CommissionPrintInput),
+    /// The sales of a period (plan 83, PRD FR-9.9).
+    SalesPeriod(SalesPrintInput),
     /// The buyers who owe (point 9).
     BuyerDues(BuyerDuesPrintInput),
     /// The sellers with a balance (plan 79 item 2a).
@@ -216,6 +218,10 @@ pub async fn tables_export_excel<R: tauri::Runtime>(
                     i.language,
                 )
             }
+            TableExportSource::SalesPeriod(i) => (
+                sales_period_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
             TableExportSource::BuyerDues(i) => (
                 buyer_dues_spec(ctx.db(), i).map_err(engine_error)?,
                 i.language,
