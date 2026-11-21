@@ -71,6 +71,8 @@ export const FIT_MIN = {
   figure: 72,
   /** A choice column whose heading is two short words ("ادھاری / نقدی"). */
   choiceHeading: 108,
+  /** A heading of several words that is read on two lines, such as "Nag for Another Shop" (plan 90). */
+  wrappedHeading: 128,
 } as const;
 
 /**

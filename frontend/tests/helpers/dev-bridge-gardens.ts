@@ -110,7 +110,33 @@ export const gardensHandlers: Record<string, Handler> = {
   gardens_close: (input) => books.close(input as unknown as GardenCloseInput),
   gardens_reopen: (input) => books.reopen(input as unknown as GardenReopenInput),
   // Goods arrived of the garden (plan 33 version 1.1): the backend's real list, one entry in stock.
-  gardens_arrivals_list: () => arrivalsReal.ARRIVALS_IN_STOCK,
+  // With `?other` (plan 90) two entries: one has goods for another shop (40, "Haji Shop"), one has none.
+  gardens_arrivals_list: () => {
+    const base = arrivalsReal.ARRIVALS_IN_STOCK;
+    const first = base.rows[0];
+    const wanted = new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('other');
+    if (!wanted || first === undefined) return base;
+    const rows = [
+      {
+        ...first,
+        qty_left: 100,
+        qty_other: 40,
+        qty_other_left: 40,
+        qty_our_left: 60,
+        shop_name: 'Haji Shop',
+      },
+      {
+        ...first,
+        id: 2,
+        number: 2,
+        qty_left: 50,
+        qty_other: 0,
+        qty_other_left: 0,
+        qty_our_left: 50,
+      },
+    ];
+    return { ...base, rows, total_count: rows.length };
+  },
   gardens_arrival_save: () => arrivalsReal.ARRIVAL_SAVE,
   gardens_arrival_entry_preview: (input) => ({
     // The key of each row comes back with what is left for our shop: qty less the other part.

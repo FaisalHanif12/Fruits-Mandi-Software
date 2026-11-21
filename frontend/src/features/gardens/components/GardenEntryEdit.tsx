@@ -41,7 +41,7 @@ import {
 import { gardensEntryEditPreview } from '../api';
 import { ENTRY_FIELD_PATHS, buildEntry } from '../draft';
 import { draftOfGardenEntry } from '../edit-seed';
-import { useArrivalsList, useSaveGardenEntryEdit } from '../hooks';
+import { useAllArrivals, useSaveGardenEntryEdit } from '../hooks';
 import { historyKindText } from '../list-columns';
 import type { EntryDraft, GardenHistoryRow, GardenRow } from '../types';
 import { GardenEntryFieldsForm } from './GardenEntryFieldsForm';
@@ -69,7 +69,7 @@ export function GardenEntryEdit({ garden, row, onDone }: GardenEntryEditProps) {
   // The entry's own number in the band and the message: "Installment 1".
   const numberText = row.number === null ? kindText : `${kindText} ${String(row.number)}`;
   // The garden's goods arrived: a sale in another shop takes its نگ from one of them (FR-12.41).
-  const arrivalList = useArrivalsList(garden.id);
+  const arrivalList = useAllArrivals(garden.id);
   const arrivals = useMemo(
     () => arrivalList.data?.pages.flatMap((page) => page.rows) ?? [],
     [arrivalList.data],
@@ -188,6 +188,7 @@ export function GardenEntryEdit({ garden, row, onDone }: GardenEntryEditProps) {
                 onChange={change}
                 error={error}
                 arrivals={arrivals}
+                arrivalsLoading={arrivalList.isPending}
               />
               {payment ? (
                 <div className="col-span-2 flex flex-col gap-1">

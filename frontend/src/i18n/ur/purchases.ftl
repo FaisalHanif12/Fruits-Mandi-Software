@@ -286,10 +286,10 @@ goods-lines-title = مال کی لائنیں
 goods-lines-add = لائن شامل کریں
 
 # review: pending
-goods-lines-help-purchase = جو مال خریدا اس کی ہر قسم کی ایک لائن۔ جو مال دوسری دکان کو جائے اس کے { -nag } "{ -dusri-dukan }" میں لکھیں: باقی { -apni-dukan } کے لیے رہتا ہے۔
+goods-lines-help-purchase = جو مال خریدا اس کی ہر قسم کی ایک لائن۔ جو مال دوسری دکان کو جائے اس کے { -nag } "{ goods-line-col-other-qty }" میں لکھیں: باقی { -apni-dukan } کے لیے رہتا ہے۔
 
 # review: pending
-goods-lines-help-arrival = جو مال آیا اس کی ہر قسم کی ایک لائن۔ جو مال دوسری دکان کو جائے اس کے { -nag } "{ -dusri-dukan }" میں لکھیں: باقی { -apni-dukan } کے لیے رہتا ہے۔
+goods-lines-help-arrival = جو مال آیا اس کی ہر قسم کی ایک لائن۔ جو مال دوسری دکان کو جائے اس کے { -nag } "{ goods-line-col-other-qty }" میں لکھیں: باقی { -apni-dukan } کے لیے رہتا ہے۔
 
 # review: pending
 goods-lines-label-purchase = خریدا ہوا مال
@@ -307,7 +307,7 @@ goods-line-col-weight = وزن (کلو)
 goods-line-col-rate = ریٹ
 
 # review: pending
-goods-line-col-other-qty = { -dusri-dukan }
+goods-line-col-other-qty = { -dusri-dukan } کے { -nag }
 
 # review: pending
 goods-line-col-shop = دکان کا نام
@@ -379,6 +379,17 @@ purchases-detail-our-left = { -apni-dukan } کے لیے باقی
 # review: pending
 purchases-detail-other-left = { -dusri-dukan } کے لیے باقی
 
-# $count: how many { -nag } come from { -apni-dukan } because the part for { -dusri-dukan } is not enough.
+## A sale in another shop takes only the goods set for { -dusri-dukan } (plan 90, PRD FR-12.41).
+
+# $remaining: how many { -nag } are left for { -dusri-dukan } on the chosen line.
 # review: pending
-split-moved-from-our = اس بکری سے { $count } { -nag } { -apni-dukan } سے { -dusri-dukan } میں منتقل ہوں گے۔
+purchases-qty-above-other = { -dusri-dukan } کے لیے صرف { $remaining } { -nag } باقی ہیں۔ اس سے زیادہ نہیں لکھ سکتے۔ زیادہ بیچنے ہوں تو پہلے اس لائن پر "{ split-change }" دبا کر { -dusri-dukan } کے { -nag } بڑھائیں۔
+
+# review: pending
+purchases-other-goods-none = { -dusri-dukan } کے لیے کوئی مال باقی نہیں۔
+
+# review: pending
+purchases-other-goods-none-hint-arrival = پہلے { -maal-aaya } کی لائن میں "{ goods-line-col-other-qty }" لکھیں، یا لائن پر "{ split-change }" دبائیں۔
+
+# review: pending
+purchases-other-goods-none-hint-purchase = پہلے { -khareedari } کی لائن میں "{ goods-line-col-other-qty }" لکھیں، یا لائن پر "{ split-change }" دبائیں۔

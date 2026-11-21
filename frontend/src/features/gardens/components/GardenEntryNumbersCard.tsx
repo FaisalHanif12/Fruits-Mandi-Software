@@ -4,7 +4,7 @@
 // is the backend's. Nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { ArrowLeftRight, Calculator } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { CalcInfo, Card, Num } from '../../../shared/ui';
 import type { GardenEntryNumbers } from '../types';
 
@@ -25,19 +25,6 @@ export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCar
         </Localized>
       ) : (
         <>
-          {numbers.qty_from_our_shop !== null && numbers.qty_from_our_shop > 0 ? (
-            // The part set for another shop is not enough: the rest comes from our shop's part, in
-            // this same save (PRD FR-12.41, D1). Told in words and an icon, before the save.
-            <p role="status" className="flex items-start gap-2 type-label text-warn">
-              <ArrowLeftRight aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
-              <Localized
-                id="split-moved-from-our"
-                vars={{ count: String(numbers.qty_from_our_shop) }}
-              >
-                <span />
-              </Localized>
-            </p>
-          ) : null}
           <dl className="flex flex-col" aria-label={l10n.getString('gardens-numbers-title')}>
             <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-label text-ink">
               <Localized id="gardens-numbers-amount">

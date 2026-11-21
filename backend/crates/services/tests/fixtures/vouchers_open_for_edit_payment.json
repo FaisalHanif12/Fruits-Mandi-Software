@@ -10,6 +10,7 @@
       "name_ur": "رحیم",
       "name_en": "Rahim"
     },
+    "account_type": "seller",
     "amount_paisa": 431600,
     "mode": "cash",
     "bank_account_id": null,

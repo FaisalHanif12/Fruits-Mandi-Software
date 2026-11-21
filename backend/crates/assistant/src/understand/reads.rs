@@ -997,11 +997,13 @@ struct An {
     goods: Option<&'static str>,
     /// The commission side: `buyer` or `seller`; written only when set.
     side: Option<&'static str>,
+    /// Rows by `day`, `month` or `year` (views D, G and M).
+    group_by: Option<&'static str>,
 }
 
 fn analytics(view: &str, a: An) -> PlannedRead {
     let mut input = json!({
-        "view": view, "from": a.from, "to": a.to, "group_by": null, "item": a.item,
+        "view": view, "from": a.from, "to": a.to, "group_by": a.group_by, "item": a.item,
         "item_group": a.item_group, "seller": a.seller, "buyer": a.buyer, "city": null,
         "adda": null, "garden": null, "trip": null, "goods": a.goods, "partner": null,
         "side": a.side, "compare": null, "sort": a.sort, "rows": a.rows
@@ -1313,9 +1315,100 @@ pub fn plan_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
 /// few milliseconds and never a wrong figure. The model then writes the answer in ONE call instead of
 /// choosing the tools first (D7, plan 59 D).
 pub fn plan_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
-    plan_reads(u)
+    let reads = plan_reads(u)
         .or_else(|| paid::pre_reads(u))
         .or_else(|| pre_reads(u))
+        .or_else(|| both_sides_pre_reads(u))
+        .or_else(|| party_finds(u))?;
+    Some(with_the_buyers_of_a_seller(u, reads))
+}
+
+/// "6 november ko ehsan ne kitna maal bheja aur kis kis gahak ne kitna liya": a seller and a word for the buyers.
+/// View B holds the seller's sale; the buyers who bought his goods are the rows of view C read with his key.
+/// Without it the model answered that no buyer was named although three bought (plan 82, live check D29).
+fn with_the_buyers_of_a_seller(u: &Understanding, mut reads: Vec<PlannedRead>) -> Vec<PlannedRead> {
+    if !u.buyer_word || !u.sure || u.items.len() > 1 {
+        return reads;
+    }
+    let mut sellers = u.parties.iter().filter_map(|p| match &p.outcome {
+        Outcome::Found(hit) if hit.role == PartyRole::Seller => Some(hit.key.clone()),
+        _ => None,
+    });
+    let (Some(seller), None) = (sellers.next(), sellers.next()) else {
+        return reads;
+    };
+    let seller_view = reads.iter().find(|r| {
+        r.tool == "analytics"
+            && r.input.get("view").is_some_and(|v| v == "B")
+            && r.input.get("seller").is_some_and(|s| *s == seller)
+    });
+    let Some(seller_view) = seller_view else {
+        return reads;
+    };
+    let mut buyers = seller_view.clone();
+    if let Some(input) = buyers.input.as_object_mut() {
+        input.insert("view".to_owned(), json!("C"));
+    }
+    if !reads.contains(&buyers) {
+        reads.push(buyers);
+    }
+    reads
+}
+
+/// "commission bikri walon se kitni li aur khareedaron se": the commission taken from the sellers AND from the
+/// buyers of a period. View A holds both columns (`seller_comm`, `buyer_comm`) in its totals; the model cites each
+/// (plan 82, live check Y28: the side guard refused the answer twice).
+fn both_sides_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
+    if !u.sure
+        || u.intent.value != Intent::Figure
+        || u.figures.value != [FigureKind::Commission]
+        || !(u.seller_word && u.buyer_word)
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.periods.len() != 1
+        || u.periods.first().is_some_and(|p| p.future)
+    {
+        return None;
+    }
+    let period = u.periods.first();
+    let (from, to) = dates(period);
+    let mut reads = Vec::new();
+    if let Some(p) = period {
+        reads.push(period_read(p)?);
+    }
+    reads.push(analytics(
+        "A",
+        An {
+            from,
+            to,
+            ..An::default()
+        },
+    ));
+    Some(reads)
+}
+
+/// The `find` of each buyer or seller the app found, in HIS OWN role, for a question it cannot plan the other reads
+/// of (a word it does not know, two measures). A find is harmless to put first: without it the model searched a
+/// buyer as a seller first, a call lost (live check of 21-11-2026, D22 "Haroon and Ans together").
+fn party_finds(u: &Understanding) -> Option<Vec<PlannedRead>> {
+    if !matches!(u.intent.value, Intent::Figure | Intent::List) || u.parties.len() > MAX_THINGS {
+        return None;
+    }
+    let mut finds: Vec<PlannedRead> = Vec::new();
+    for party in &u.parties {
+        let Outcome::Found(hit) = &party.outcome else {
+            continue;
+        };
+        let Some(word) = role_word(hit.role).filter(|_| hit.role != PartyRole::Partner) else {
+            continue;
+        };
+        let one = find(&party.text, word);
+        if !finds.contains(&one) {
+            finds.push(one);
+        }
+    }
+    (!finds.is_empty()).then_some(finds)
 }
 
 /// The union of the reads of each figure of the question; see [`plan_pre_reads`].
@@ -1544,7 +1637,9 @@ fn pre_reads_of_one_record(u: &Understanding, period: Option<&PeriodRef>) -> Opt
             ));
         }
         PartyRole::Trip => {
-            plan.find(text, "trip");
+            // The trip is found by its books name (its code and day): the words typed may be "pehle safar"
+            // (the first trip), which no search matches (plan 82, D13, Y13, Y27).
+            plan.find(&hit.name_en, "trip");
             plan.read(with_field(
                 report("R33", Rep::default()),
                 "trip",
@@ -1628,6 +1723,10 @@ fn plan_unstopped(u: &Understanding) -> Option<Planned> {
     // "safi bikri", "gahakon ke bill": the net sale or the buyers' bills, each its own column (plan 82).
     if u.sale_measure.is_some() {
         return totals::measure_plan(u);
+    }
+    // "bijli ka kharcha mahine ke hisab se": the expenses for each month (plan 82).
+    if let Some(planned) = totals::expense_grain_plan(u) {
+        return Some(planned);
     }
     // "har gahak ne alag alag kitni bikri li": one row for each buyer or seller (plan 82).
     if let Some(planned) = totals::role_breakdown_plan(u) {

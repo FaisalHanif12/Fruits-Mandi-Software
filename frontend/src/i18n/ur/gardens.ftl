@@ -252,11 +252,11 @@ gardens-sale-amount = ملی ہوئی رقم
 gardens-sale-arrival = مال کہاں سے
 
 # review: pending
-gardens-sale-arrival-hint = صرف وہ مال نظر آتا ہے جو باقی ہے۔ پہلے { -dusri-dukan } کے لیے رکھا ہوا مال بکتا ہے۔ اس سے زیادہ بیچیں تو باقی { -apni-dukan } کے مال سے آتا ہے، اور اسکرین بتاتی ہے کتنا۔
+gardens-sale-arrival-hint = صرف وہ لائنیں نظر آتی ہیں جن میں { -dusri-dukan } کے لیے { -nag } باقی ہیں۔ اس سے زیادہ { -nag } نہیں بیچ سکتے۔ دکان کا نام اسی لائن سے بھر جاتا ہے؛ آپ بدل سکتے ہیں۔
 
-# $number: the entry; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
+# $number: the entry; $other_left: how many { -nag } are left for { -dusri-dukan }.
 # review: pending
-gardens-sale-arrival-option = { $number }: { $item }، { $packing } ({ -dusri-dukan } کے لیے { $other_left }، { -apni-dukan } کے لیے { $our_left } باقی)
+gardens-sale-arrival-option = { $number }: { $item }، { $packing } ({ -dusri-dukan } کے لیے { $other_left } باقی)
 
 # review: pending
 gardens-sale-amount-hint = رقم { -rokar } میں آتی ہے اور باغ بند ہونے تک باغ کے کھاتے میں رہتی ہے۔

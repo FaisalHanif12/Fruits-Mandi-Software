@@ -76,6 +76,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         commission_side: None,
         sale_measure: None,
         laga_view: super::LagaView::Whole,
+        breakdown_grain: None,
         buyer_rate: false,
         document_number: false,
         packing_filter: false,
@@ -265,6 +266,17 @@ fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
     let account_party = roles
         .iter()
         .any(|r| matches!(r, PartyRole::Buyer | PartyRole::Seller));
+    // "bikri walon se": the sellers, not a sale asked (plan 82, Y28).
+    if hit.cue == Cue::Sale
+        && scan.hits.iter().any(|c| {
+            matches!(c.cue, Cue::ManySellers | Cue::RoleSeller)
+                && c.start <= hit.start
+                && hit.end <= c.end
+                && c.end.saturating_sub(c.start) > 1
+        })
+    {
+        return None;
+    }
     // "chukta khate walon": "khate" is part of the name of the walk-in buyers' account, not a ledger asked
     // (plan 82, D28).
     if hit.cue == Cue::Ledger
@@ -1382,7 +1394,7 @@ pub(super) fn assemble(
         has_period: !periods.is_empty(),
         has_unexplained_words: unexplained_words(scan, &names, &periods),
     };
-    let (mut kinds, figure_at, two_figures, lower_ask) = figures(scan, &named);
+    let (mut kinds, figure_at, two_figures, mut lower_ask) = figures(scan, &named);
     // "chukta khate walon ne kitna maal khareeda": "khate" belongs to the name of the walk-in buyers' account, it
     // asks for no ledger (plan 82, D28).
     if scan.has_exact(Cue::Chukta) && names.parties.is_empty() {
@@ -1400,6 +1412,22 @@ pub(super) fn assemble(
         if kinds.is_empty() {
             kinds.push(FigureKind::Result);
         }
+    }
+    // "What share of the shop's total commission came from Mani, in percent": a share of the commission or the sale
+    // of a buyer or a seller is a percent of the shop's, never a partner's share (it was refused as a partner
+    // question, live check D25). The app writes no percent, so no instant line; the model reads and calculates.
+    if kinds.contains(&FigureKind::PartnerShare)
+        && kinds
+            .iter()
+            .any(|k| matches!(k, FigureKind::Commission | FigureKind::Sale))
+        && roles
+            .iter()
+            .any(|r| matches!(r, PartyRole::Buyer | PartyRole::Seller))
+        && !roles.contains(&PartyRole::Partner)
+        && !scan.has(Cue::RolePartner)
+    {
+        kinds.retain(|k| *k != FigureKind::PartnerShare);
+        lower_ask = true;
     }
     // An advance and a payable belong to a seller: a name found only as a seller is the seller asked
     // for, though "ne ... li" reads like a buyer ("tahir ne kitni peshgi li hui hai", live run 2, Q610).
@@ -1692,6 +1720,7 @@ pub(super) fn assemble(
         commission_side,
         sale_measure: None,
         laga_view: super::LagaView::Whole,
+        breakdown_grain: None,
         buyer_rate: super::reads::buyer_rate(scan),
         asks_count: count_asks > 0,
         count_asks,
@@ -1844,6 +1873,7 @@ pub(super) fn assemble(
     }
     // No instant line for a question with a word the app did not understand, or a known word that changes the
     // figure and that no plan reads: the reads are made, the model answers (plan 82).
+    understanding.breakdown_grain = super::measure_words::grain_of(scan);
     understanding.instant_stop = understanding.unexplained
         || super::measure_words::measure_word_left(scan, &understanding)
         || (understanding.cash_dirs.is_empty()

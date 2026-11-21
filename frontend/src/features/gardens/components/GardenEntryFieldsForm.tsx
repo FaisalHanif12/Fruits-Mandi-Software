@@ -16,6 +16,12 @@ import {
   Select,
   fieldError,
 } from '../../../shared/ui';
+import {
+  OtherShopNone,
+  OtherShopQtyError,
+  offeredForOtherShop,
+  shopAfterPicking,
+} from '../../purchases';
 import { arrivalNumberText } from '../list-columns';
 import type { ArrivalRow, EntryDraft } from '../types';
 
@@ -29,6 +35,13 @@ interface GardenEntryFieldsFormProps {
    * A garden with no goods arrived has none, and the sale is typed by hand as before.
    */
   arrivals: readonly ArrivalRow[];
+  /**
+   * How many نگ are left for another shop on the chosen line, when the qty typed is more than that
+   * (plan 90): the qty field says so and the save waits. Null: nothing to say (also on an edit).
+   */
+  qtyAbove?: number | null;
+  /** The garden's goods arrived are still being read: no "nothing left" yet. */
+  arrivalsLoading?: boolean;
 }
 
 export function GardenEntryFieldsForm({
@@ -36,6 +49,8 @@ export function GardenEntryFieldsForm({
   onChange,
   error,
   arrivals,
+  qtyAbove = null,
+  arrivalsLoading = false,
 }: GardenEntryFieldsFormProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -81,15 +96,29 @@ export function GardenEntryFieldsForm({
     );
   }
   if (draft.type === 'other_sale') {
-    // Any entry with goods left: the part set for another shop goes first, and the backend moves
-    // the rest from our shop's part (PRD FR-12.41, D1).
-    const offered = arrivals.filter(
-      (arrival) => arrival.status === 'saved' && arrival.qty_left > 0,
+    // Only the lines with goods left for another shop (plan 90, PRD FR-12.41); the line already
+    // chosen stays, so an entry open for edit still shows the line it was made on.
+    const offered = offeredForOtherShop(
+      arrivals.filter((arrival) => arrival.status === 'saved'),
+      draft.arrivalId,
     );
+    const pick = (arrivalId: string) => {
+      const previous = arrivals.find((arrival) => String(arrival.id) === draft.arrivalId);
+      const next = arrivals.find((arrival) => String(arrival.id) === arrivalId);
+      // The shop typed on that line fills the shop box (it stays editable, NFR-USE-27).
+      onChange({
+        arrivalId,
+        shop: shopAfterPicking(draft.shop, previous?.shop_name, next?.shop_name),
+      });
+    };
     return (
       <>
-        {arrivals.length === 0 ? null : (
-          <div className="col-span-2">
+        <div className="col-span-2">
+          {offered.length === 0 ? (
+            arrivalsLoading ? null : (
+              <OtherShopNone kind="arrival" />
+            )
+          ) : (
             <Field
               label={<Localized id="gardens-sale-arrival" />}
               info={
@@ -103,9 +132,7 @@ export function GardenEntryFieldsForm({
                 <Select
                   {...props}
                   value={draft.arrivalId === '' ? undefined : draft.arrivalId}
-                  onChange={(arrivalId) => {
-                    onChange({ arrivalId });
-                  }}
+                  onChange={pick}
                   options={offered.map((arrival) => ({
                     value: String(arrival.id),
                     label: l10n.getString('gardens-sale-arrival-option', {
@@ -115,14 +142,13 @@ export function GardenEntryFieldsForm({
                       item: displayName(arrival.item, language),
                       packing: displayName(arrival.packing, language),
                       other_left: String(arrival.qty_other_left),
-                      our_left: String(arrival.qty_our_left),
                     }),
                   }))}
                 />
               )}
             </Field>
-          </div>
-        )}
+          )}
+        </div>
         <div className="col-span-2">
           <Field label={<Localized id="gardens-sale-shop" />} error={fieldError(error, 'shop')}>
             {(props) => (
@@ -143,7 +169,13 @@ export function GardenEntryFieldsForm({
               <p />
             </Localized>
           }
-          error={fieldError(error, 'qty')}
+          error={
+            qtyAbove === null ? (
+              fieldError(error, 'qty')
+            ) : (
+              <OtherShopQtyError remaining={qtyAbove} />
+            )
+          }
         >
           {(props) => (
             <QtyInput

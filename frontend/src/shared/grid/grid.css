@@ -86,6 +86,13 @@
   direction: ltr;
 }
 
+/* The words of a heading of several words read in their own direction even though the label is left to
+   right: "دوسری دکان کے نگ" has its first word on the right (plan 90). One word, or an English heading, is
+   drawn as before. */
+.entry-grid .header-num .ag-header-cell-text {
+  unicode-bidi: plaintext;
+}
+
 .entry-grid .header-num .ag-header-cell-text,
 .entry-grid .header-center .ag-header-cell-text {
   text-align: center;

@@ -1375,27 +1375,43 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
         .filter(|h| h.cue == Cue::RoleTrip && !h.fuzzy)
     {
         let beside = [Some(hit.end), hit.start.checked_sub(1)];
-        let number = beside.into_iter().flatten().find_map(|at| {
-            scan.digits_at(at)
-                // The first trip is the one whose code is 0070: its running number is 0 (PRD FR-10.2).
-                .or_else(|| {
-                    scan.word(at)
-                        .and_then(ordinal_value)
-                        .map(|n| n.saturating_sub(1))
-                })
-                .map(|n| (at, n))
-        });
+        let number = beside
+            .into_iter()
+            .flatten()
+            .find_map(|at| scan.digits_at(at).map(|n| (at, n)));
+        // "pehla safar", "doosre safar", "akhri safar": the nth trip in the order of the books (the one with the
+        // lowest code first), or the last. Never a text search: the number "0" fits every code with a zero in it
+        // (plan 82, live check D13, Y13, Y27).
+        let nth = if number.is_none() {
+            beside
+                .into_iter()
+                .flatten()
+                .find_map(|at| scan.word(at).and_then(nth_word).map(|n| (at, n)))
+        } else {
+            None
+        };
         let days: Vec<String> = periods
             .iter()
             .filter(|p| p.kind == PeriodKind::Date)
             .map(|p| p.to.format("%d-%m-%Y").to_string())
             .collect();
-        if number.is_none() && days.is_empty() {
+        if number.is_none() && nth.is_none() && days.is_empty() {
             continue;
         }
         let typed = number.map(|(_, n)| n.to_string()).unwrap_or_default();
-        let found: Vec<_> = look
-            .list(SearchScope::TripAll, &typed)
+        let listed = look.list(SearchScope::TripAll, &typed);
+        let listed = match nth {
+            Some((_, n)) => {
+                let mut all = listed;
+                all.sort_by(|a, b| (a.code.len(), &a.code).cmp(&(b.code.len(), &b.code)));
+                match n {
+                    Nth::Place(i) => all.into_iter().nth(i).into_iter().collect(),
+                    Nth::Last => all.pop().into_iter().collect(),
+                }
+            }
+            None => listed,
+        };
+        let found: Vec<_> = listed
             .into_iter()
             .filter(|h| days.is_empty() || days.iter().any(|d| h.name_en.contains(d.as_str())))
             .map(|h| PartyHit {
@@ -1408,6 +1424,7 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
                 tag: None,
             })
             .collect();
+        let number = number.or(nth.map(|(at, _)| (at, 0)));
         let start = number.map_or(hit.start, |(at, _)| at.min(hit.start));
         let end = number.map_or(hit.end, |(at, _)| at.saturating_add(1).max(hit.end));
         // A trip number or day that no trip has ("safar 99"): no such trip, said as it is (live run 2,
@@ -1437,6 +1454,28 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
             best,
         ));
     }
+}
+
+/// Which trip an ordinal word names.
+#[derive(Debug, Clone, Copy)]
+enum Nth {
+    /// The first is place 0, the second place 1 ...
+    Place(usize),
+    /// The last one ("akhri safar").
+    Last,
+}
+
+/// "pehla", "doosre", "teesra" ... and "akhri", "last", "latest" beside a trip.
+fn nth_word(word: &str) -> Option<Nth> {
+    const LAST: [&str; 8] = [
+        "akhri", "aakhri", "akhiri", "aakhiri", "last", "latest", "آخری", "اخری",
+    ];
+    if LAST.contains(&word) {
+        return Some(Nth::Last);
+    }
+    ordinal_value(word)
+        .and_then(|n| usize::try_from(n.saturating_sub(1)).ok())
+        .map(Nth::Place)
 }
 
 /// The place an ordinal word names ("pehla safar", "doosre bagh", "first trip"): 1 for the first, 2 for the

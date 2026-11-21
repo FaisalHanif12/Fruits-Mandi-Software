@@ -57,9 +57,9 @@ pub const RETRY_MIN_LEFT_SECS: u64 = 6;
 
 /// When no reply has come by now, a second identical request is sent and the first reply to come
 /// is used (the hedge, plan 55 Section 3; live run 1: 90% of short calls end in 6 s, 94% in 8 s).
-/// 10 s since plan 82 (it was 7): a call that carries tool results takes up to 10 s, and a copy sent
-/// before that only doubles the cost of a call that was about to answer.
-pub const HEDGE_AFTER_SECS: u64 = 10;
+/// 7 s again since the live check of 21-11-2026 (NFR-AI-3 v1.24; it was 10 s in plan 82): 21% of the model
+/// calls timed out on provider stalls, and a copy sent at 7 s rescues them sooner.
+pub const HEDGE_AFTER_SECS: u64 = 7;
 
 /// The copy is sent only when at least this long is left for it.
 pub const HEDGE_MIN_COPY_SECS: u64 = 3;

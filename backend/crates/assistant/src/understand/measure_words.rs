@@ -27,7 +27,7 @@ use super::lexicon::{Cue, key};
 use super::scan::Scan;
 use super::who::Names;
 use super::{
-    Confidence, Doubt, FigureKind, Intent, LagaView, Measure, Outcome, PartyRole, PeriodRef,
+    Confidence, Doubt, FigureKind, Grain, Intent, LagaView, Measure, Outcome, PartyRole, PeriodRef,
     SaleMeasure, Understanding,
 };
 
@@ -400,5 +400,83 @@ pub fn asked_sale_measure(question: &str) -> Option<SaleAsk> {
             commission_too: scan.has_any(&[Cue::Commission, Cue::Laga]) && !inclusive,
         });
     }
+    // The gross sale alone ("khaam bikri"): the seller amounts, never the buyers' goods value of the register R2
+    // (live check of 21-11-2026, M18: 9,155,400 for a gross of 9,154,800, the 600 being a rate difference).
+    if gross_word && sale_word && !net && !bill {
+        return Some(SaleAsk {
+            measure: SaleMeasure::Gross,
+            gross_too: false,
+            balance_too: false,
+            commission_too: false,
+        });
+    }
     None
+}
+
+/// What a "for each" phrase of the question breaks the figure into ("mahine ke hisab se": the months; "madon ke
+/// hisab se": the heads), or `None` for a question with no such phrase. The words are the ones of the
+/// [`Cue::HeadsWise`] list of the lexicon.
+pub(super) fn grain_of(scan: &Scan) -> Option<Grain> {
+    const MONTH: &[&str] = &[
+        "mahine ke hisab se",
+        "mahine ke hisaab se",
+        "mahinay ke hisab se",
+        "month wise",
+        "monthly",
+        "har mahine",
+        "month by month",
+        "mahine wise",
+        "by month",
+        "ماہانہ",
+        "مہینے کے حساب سے",
+        "ہر مہینے",
+    ];
+    const DAY: &[&str] = &[
+        "din ke hisab se",
+        "day wise",
+        "daily",
+        "har din",
+        "by day",
+        "روزانہ",
+        "ہر دن",
+        "دن کے حساب سے",
+    ];
+    const YEAR: &[&str] = &[
+        "saal ke hisab se",
+        "year wise",
+        "yearly",
+        "har saal",
+        "by year",
+        "سالانہ",
+        "سال کے حساب سے",
+        "ہر سال",
+    ];
+    const HEAD: &[&str] = &[
+        "mad",
+        "madon",
+        "mad wise",
+        "madon ke hisab se",
+        "madon ke hisaab se",
+        "head wise",
+        "heads",
+        "by head",
+        "مد",
+        "مدوں",
+        "مدیں",
+        "مدوں کے حساب سے",
+    ];
+    if !scan.has(Cue::HeadsWise) {
+        return None;
+    }
+    if says_any(scan, MONTH) {
+        Some(Grain::Month)
+    } else if says_any(scan, DAY) {
+        Some(Grain::Day)
+    } else if says_any(scan, YEAR) {
+        Some(Grain::Year)
+    } else if says_any(scan, HEAD) {
+        Some(Grain::Head)
+    } else {
+        None
+    }
 }

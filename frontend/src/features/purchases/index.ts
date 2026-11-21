@@ -6,6 +6,7 @@
 // of a purchase too.
 export { CancelPurchaseDialog } from './components/CancelPurchaseDialog';
 export { OwnWriteOffDialog, UndoOwnWriteOffDialog } from './components/OwnWriteOffDialogs';
+export { OtherShopNone, OtherShopQtyError } from './components/OtherShopNotes';
 export { PurchaseDetail } from './components/PurchaseDetail';
 export { PurchaseEditFields } from './components/PurchaseEditFields';
 export { PurchaseEntryFieldsForm } from './components/PurchaseEntryFieldsForm';
@@ -36,8 +37,16 @@ export {
   useSavePurchaseEdit,
   usePurchaseEntryPreview,
   usePurchasesList,
+  useTripPurchases,
+  useTripStockPurchases,
   useSavePurchaseEntry,
 } from './hooks';
+export {
+  offeredForOtherShop,
+  qtyAboveOther,
+  shopAfterPicking,
+  type OtherShopLine,
+} from './other-shop';
 export { TRIP_PURCHASE_COLUMNS, purchaseNumberText, supplierText } from './list-columns';
 export type {
   OwnStockRow,

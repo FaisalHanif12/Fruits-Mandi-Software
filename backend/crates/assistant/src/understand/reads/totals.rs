@@ -8,6 +8,7 @@ use super::{
     An, FigureKind, Intent, Line, Measure, NOT_CARRIED, Outcome, PartyRole, PayKind, Plan, Planned,
     Rep, Understanding, What, Who, analytics, dates, key, period_read, report,
 };
+use crate::understand::Grain;
 use crate::understand::lexicon::Cue;
 use crate::understand::scan::Scan;
 
@@ -384,6 +385,52 @@ pub(super) fn role_breakdown_plan(u: &Understanding) -> Option<Planned> {
         An {
             from,
             to,
+            ..An::default()
+        },
+    ));
+    Some(Planned {
+        reads,
+        lines: Vec::new(),
+    })
+}
+
+/// The shop's expenses for each month, day or year of a period ("bijli ka kharcha mahine ke hisab se pichle saal
+/// se ab tak"): view M with its grouping, whose rows are the heads and whose columns are the months. One total
+/// is no answer to it, so no instant line is given; the model cites the cells of the head it was asked
+/// (plan 82, live check Y03: it had only the total of R29 and said the months were not there).
+pub(super) fn expense_grain_plan(u: &Understanding) -> Option<Planned> {
+    let grain = match u.breakdown_grain? {
+        Grain::Month => "month",
+        Grain::Day => "day",
+        Grain::Year => "year",
+        Grain::Head => return None,
+    };
+    if !u.sure
+        || u.intent.value != Intent::Figure
+        || u.figures.value.as_slice() != [FigureKind::Expense]
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || u.records.len() > 1
+        || u.compare
+        || u.scoped
+        || u.periods.len() != 1
+        || u.periods.first().is_some_and(|p| p.future)
+        || u.doubts.iter().any(|d| NOT_CARRIED.contains(d))
+    {
+        return None;
+    }
+    let period = u.periods.first();
+    let (from, to) = dates(period);
+    let mut reads = Vec::new();
+    if let Some(p) = period {
+        reads.push(period_read(p)?);
+    }
+    reads.push(analytics(
+        "M",
+        An {
+            from,
+            to,
+            group_by: Some(grain),
             ..An::default()
         },
     ));

@@ -679,6 +679,23 @@ pub enum SaleMeasure {
     Net,
     /// گاہک کے بل: the bills of the buyers, with commission and Laga.
     Bills,
+    /// خام بکری: the gross sale, the seller amounts (view A `gross`, R6 `gross`). Asked by the guard of the model's
+    /// answer only: the register R2 `value` is the buyers' goods value, which holds a rate difference.
+    Gross,
+}
+
+/// What a "for each" question breaks one figure into (plan 82, Y03): the heads ("madon ke hisab se"), or the days,
+/// months or years of the period ("mahine ke hisab se").
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Grain {
+    /// One figure for each head.
+    Head,
+    /// One figure for each day.
+    Day,
+    /// One figure for each month.
+    Month,
+    /// One figure for each year.
+    Year,
 }
 
 /// How the Laga is asked beside the commission (plan 82): the commission without it, the Laga alone, or both
@@ -865,6 +882,8 @@ pub struct Understanding {
     pub sale_measure: Option<SaleMeasure>,
     /// Where the Laga stands in a commission question (plan 82).
     pub laga_view: LagaView,
+    /// What a "for each" question breaks its figure into, when it says so ([`Grain`]).
+    pub breakdown_grain: Option<Grain>,
     /// True when the question asks how many of something ("the number of bills", "kitne bayopariyon ko"):
     /// an instant figure that holds no count leaves that part out, so it goes to the model.
     pub asks_count: bool,

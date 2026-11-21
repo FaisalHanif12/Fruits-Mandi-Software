@@ -559,7 +559,8 @@ const ROLES: &[Entry] = &[
         Cue::ManySellers,
         &[
             "sellers", "byopariyon", "byoparyon", "beopariyon", "zamindaron", "bezgaron",
-            "بیوپاریوں", "زمینداروں", "بزگروں",
+            "bikri walon", "bikri walo", "bikri wale", "bechne walon", "bechne wale",
+            "بیوپاریوں", "زمینداروں", "بزگروں", "بکری والوں", "بیچنے والوں",
         ],
     ),
     (

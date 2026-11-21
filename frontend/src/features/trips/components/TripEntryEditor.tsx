@@ -70,11 +70,12 @@ import {
   weightRowIds,
   purchaseNumberText,
   purchasesEntryPreview,
+  qtyAboveOther,
   resetLines,
   useSavePurchaseEntry,
   usePurchaseEntryPreview,
+  useTripStockPurchases,
   type EntryLineNumbers,
-  type PurchaseRow,
 } from '../../purchases';
 import { tripsCostPreview } from '../api';
 import {
@@ -119,8 +120,6 @@ interface ActiveView {
 
 interface TripEntryEditorProps {
   trip: TripRow;
-  /** The trip's purchases, for the purchase picker of a sale in another shop. */
-  purchases: readonly PurchaseRow[];
   /** Today, `YYYY-MM-DD`. */
   today: string;
   /** A purchase was saved: the screen shows it in the list. */
@@ -131,7 +130,6 @@ interface TripEntryEditorProps {
 
 export function TripEntryEditor({
   trip,
-  purchases,
   today,
   onPurchaseSaved,
   initialType,
@@ -182,6 +180,7 @@ export function TripEntryEditor({
   const purchasePreview = purchaseInput === null ? undefined : purchaseView.query.data;
   const costPreview = costInput === null ? undefined : costView.query.data;
   const salePreview = saleInput === null ? undefined : saleView.query.data;
+  const stockList = useTripStockPurchases(trip.id);
 
   const active: ActiveView =
     draft.type === 'purchase'
@@ -310,6 +309,8 @@ export function TripEntryEditor({
 
   const save = async (): Promise<boolean> => {
     setTried(true);
+    // More نگ than the purchase has for another shop is not saved: the qty field says so (plan 90).
+    if (qtyAbove !== null) return false;
     return flow.save();
   };
   const saveNow = () => {
@@ -405,9 +406,26 @@ export function TripEntryEditor({
     label: l10n.getString(`trips-type-${type.replaceAll('_', '-')}`),
   }));
   const payment = draft.type !== 'other_sale';
-  // Any purchase with goods left can be sold in another shop: the part set for another shop goes
-  // first and the backend moves the rest from our shop's part (PRD FR-12.41, D1).
-  const withStock = purchases.filter((purchase) => purchase.qty_left > 0);
+  // The sale in another shop offers the purchases of this trip that have goods left, all of them
+  // (the form keeps only those with goods for another shop, plan 90, PRD FR-12.41).
+  const withStock = useMemo(
+    () => stockList.data?.pages.flatMap((page) => page.rows) ?? [],
+    [stockList.data],
+  );
+  // How many نگ the chosen purchase has for another shop, when the qty typed is more (plan 90).
+  const pickedPurchase =
+    draft.type === 'other_sale'
+      ? withStock.find((purchase) => String(purchase.id) === draft.sale.purchaseId)
+      : undefined;
+  const qtyAbove =
+    pickedPurchase !== undefined &&
+    qtyAboveOther(
+      draft.sale.qty,
+      pickedPurchase.qty_other_left,
+      saleView.current ? salePreview?.numbers?.qty_from_our_shop : null,
+    )
+      ? pickedPurchase.qty_other_left
+      : null;
 
   const numbers =
     draft.type === 'purchase' ? (
@@ -521,6 +539,8 @@ export function TripEntryEditor({
                   amount={draft.amount}
                   purchases={withStock}
                   error={error}
+                  qtyAbove={qtyAbove}
+                  purchasesLoading={stockList.isPending}
                   onChange={({ shop, purchaseId, qty, amount }) => {
                     change({
                       sale: {

@@ -308,11 +308,11 @@ trips-cost-spread-qty = ({ $qty } { -nag })
 trips-sale-purchase = مال کہاں سے
 
 # review: pending
-trips-sale-purchase-hint = صرف اسی سفر کی وہ خریداریاں نظر آتی ہیں جن میں مال باقی ہے۔ پہلے { -dusri-dukan } کے لیے رکھا ہوا مال بکتا ہے۔ اس سے زیادہ بیچیں تو باقی { -apni-dukan } کے مال سے آتا ہے، اور اسکرین بتاتی ہے کتنا۔
+trips-sale-purchase-hint = صرف اسی سفر کی وہ خریداریاں نظر آتی ہیں جن میں { -dusri-dukan } کے لیے { -nag } باقی ہیں۔ اس سے زیادہ { -nag } نہیں بیچ سکتے۔ دکان کا نام اسی خریداری سے بھر جاتا ہے؛ آپ بدل سکتے ہیں۔
 
-# $number: the purchase; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
+# $number: the purchase; $other_left: how many { -nag } are left for { -dusri-dukan }.
 # review: pending
-trips-sale-purchase-option = { $number }: { $item }، { $packing } ({ -dusri-dukan } کے لیے { $other_left }، { -apni-dukan } کے لیے { $our_left } باقی)
+trips-sale-purchase-option = { $number }: { $item }، { $packing } ({ -dusri-dukan } کے لیے { $other_left } باقی)
 
 # review: pending
 trips-sale-shop = دکان
@@ -355,6 +355,9 @@ trips-purchases-title = اس سفر کی خریداریاں
 
 # review: pending
 trips-purchases-label = اس سفر کی خریداریوں کی فہرست
+
+# review: pending
+trips-purchases-failed = خریداریاں پڑھی نہیں جا سکیں
 
 # review: pending
 trips-purchases-empty = ابھی کوئی خریداری نہیں

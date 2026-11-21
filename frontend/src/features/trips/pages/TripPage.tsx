@@ -107,7 +107,6 @@ function TripBody({
       ) : trip.status === 'open' ? (
         <TripEntryEditor
           trip={trip}
-          purchases={detail.purchases}
           today={today}
           onPurchaseSaved={setSelectedPurchase}
           initialType={initialType}
@@ -119,7 +118,7 @@ function TripBody({
       )}
       <TripFiguresCard trip={trip} />
       <TripPurchasesSection
-        purchases={detail.purchases}
+        tripId={trip.id}
         selectedId={selectedPurchase}
         onSelect={setSelectedPurchase}
       />

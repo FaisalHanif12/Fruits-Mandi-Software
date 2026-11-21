@@ -9,7 +9,12 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { useDebouncedValue } from '../../shared/hooks';
+import {
+  useAllPagesQuery,
+  useDebouncedValue,
+  useLoadRest,
+  usePagedQuery,
+} from '../../shared/hooks';
 import {
   purchasesCancel,
   purchasesChangeSplit,
@@ -123,6 +128,63 @@ export function usePurchasesList(filter: PurchasesListInput, enabled = true) {
     placeholderData: keepPreviousData,
     staleTime: 0,
   });
+}
+
+/** What the two trip lists ask: one trip, no date or item filter. */
+function tripPurchasesInput(
+  tripId: number,
+  state: PurchasesListInput['state'],
+  offset: number,
+  limit: number,
+  sort: PurchasesListInput['sort'],
+): PurchasesListInput {
+  return {
+    trip_id: tripId,
+    from: null,
+    to: null,
+    item_id: null,
+    state,
+    offset,
+    limit,
+    // The trip's own list shows every purchase, a cancelled one marked; the choice list only those with goods.
+    show_finished: state === null,
+    search: null,
+    sort,
+    group_by_month: false,
+  };
+}
+
+/**
+ * The purchases of one trip, one page at a time, with the totals over all of them (PRD FR-19.11,
+ * plan 90): the list under the trip's form. Never kept: an entry changes it.
+ */
+export function useTripPurchases(tripId: number) {
+  return usePagedQuery({
+    screen: 'trips.purchases',
+    queryKey: [...PURCHASES_KEY, 'trip', tripId],
+    fetchPage: (offset, limit, sort) =>
+      purchasesList(tripPurchasesInput(tripId, null, offset, limit, sort)),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
+  });
+}
+
+/**
+ * Every purchase of one trip that still has goods, page after page, for the choice list of a sale
+ * in another shop (plan 90): the form needs all of them to offer the right lines, not only the
+ * page the list below is on.
+ */
+export function useTripStockPurchases(tripId: number) {
+  const query = useAllPagesQuery({
+    queryKey: [...PURCHASES_KEY, 'trip-stock', tripId],
+    fetchPage: (offset, limit) =>
+      purchasesList(tripPurchasesInput(tripId, 'in_stock', offset, limit, null)),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+  });
+  useLoadRest(query, true);
+  return query;
 }
 
 /** One purchase with the lots that sold it and its write-offs. Never kept: a sale changes it. */

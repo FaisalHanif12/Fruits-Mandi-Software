@@ -691,8 +691,15 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: Input = input(args)?;
     let view: AnalyticsView = serde_json::from_value(Json::String(parsed.view.clone()))
         .map_err(|_| bad("ERR_OUT_OF_RANGE", "view", "A to K"))?;
+    // View M (the shop's expenses by head, with a column for each day, month or year) is read by the app's own
+    // reads before the model answers (plan 82, Y03); the model's instructions still name A to K.
     let entry = catalog()
         .into_iter()
+        .chain(
+            mandi_reports::analytics::screen_catalog()
+                .into_iter()
+                .filter(|e| e.id == AnalyticsView::M),
+        )
         .find(|e| e.id == view)
         .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "view", "A to K"))?;
     let rows_wanted = parsed.rows.unwrap_or(DEFAULT_ROWS);

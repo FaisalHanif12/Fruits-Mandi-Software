@@ -9,6 +9,7 @@ import type { SearchHit } from '../../src/bindings/SearchHit';
 import * as purchasesApi from '../../src/features/purchases/api';
 import * as tripsApi from '../../src/features/trips/api';
 import * as searchApi from '../../src/shared/search/api';
+import { paisaForTest } from './paisa';
 import { BOX, ORANGE, createTripBooks, type TripStore, type TripsOptions } from './trips-data';
 
 export * from './trips-data';
@@ -100,4 +101,36 @@ export function fakeItemPickers(): void {
     Promise.resolve(hitsOf(scope)),
   );
   vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
+}
+
+/**
+ * The purchase list of one trip answers with the purchases of whatever `tripsGet` answers now, so a
+ * test that sets the trip's detail (a real backend answer) sets the list under it too (plan 90: the
+ * list loads page by page from `purchases_list`). The totals are zero, as the test asserts none.
+ */
+export function followTripGetPurchases(): void {
+  vi.mocked(purchasesApi.purchasesList).mockImplementation(async (input) => {
+    const detail = await tripsApi.tripsGet({
+      id: input.trip_id ?? 0,
+      entries_offset: 0,
+      entries_limit: 0,
+    });
+    const rows =
+      input.state === 'in_stock'
+        ? detail.purchases.filter((row) => row.qty_left > 0)
+        : detail.purchases;
+    const zero = paisaForTest(0);
+    return {
+      rows,
+      total_count: rows.length,
+      totals: {
+        total_cost_paisa: zero,
+        cost_left_paisa: zero,
+        qty_left: 0,
+        result_paisa: zero,
+        commission_paisa: zero,
+      },
+      months: [],
+    };
+  });
 }

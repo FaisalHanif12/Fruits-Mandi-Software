@@ -26,7 +26,7 @@ import {
 import { lineCell, lineCellText, typePurchaseLine } from '../helpers/goods-lines';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
-import { fakeItemPickers, fakeTrips } from '../helpers/trips';
+import { fakeItemPickers, fakeTrips, followTripGetPurchases } from '../helpers/trips';
 import * as real from '../helpers/trips-real';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { settlePreview } from '../helpers/preview-settled';
@@ -64,6 +64,7 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     resetClientState(language);
     signedIn(sessionUser({ language }));
     fakeTrips();
+    followTripGetPurchases();
   });
 
   const tripNumber = '0070';
@@ -396,26 +397,114 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     expect(lineCellText(1, 'otherQty')).toBe('20');
   });
 
-  it('D1: a sale in another shop that needs goods from our shop says how many move, before the save', async () => {
-    vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
-    vi.mocked(tripsApi.tripsOtherSalePreview).mockResolvedValue(real.OTHER_PREVIEW_MOVES);
-    const { user } = await openTrip();
-    await user.click(
+  /** The real open trip, with its one purchase set to have `other` نگ left for another shop (plan 90). */
+  const tripWithOther = (other: number, shop: string | null) => {
+    const purchase = real.TRIP_GET_OPEN.purchases[0];
+    if (purchase === undefined) throw new Error('the file has no purchase');
+    return {
+      ...real.TRIP_GET_OPEN,
+      purchases: [
+        {
+          ...purchase,
+          qty_left: 20,
+          qty_other: other,
+          qty_other_left: other,
+          qty_our_left: 20 - other,
+          shop_name: shop,
+        },
+      ],
+    };
+  };
+  const openSale = async () => {
+    const view = await openTrip();
+    await view.user.click(
       within(
         screen.getByRole('group', { name: named(message(language, 'trips-type-label')) }),
       ).getByRole('button', { name: named(message(language, 'trips-type-other-sale')) }),
     );
+    return view;
+  };
+
+  it('plan 90: a sale in another shop offers the purchase with its number left for another shop, and the shop name fills by itself', async () => {
+    const fake = fakeTrips();
+    followTripGetPurchases();
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(tripWithOther(8, 'Haji Shop'));
+    const { user } = await openSale();
+    await user.click(
+      screen.getByRole('combobox', { name: named(message(language, 'trips-sale-purchase')) }),
+    );
+    const option = await screen.findByRole('option');
+    const words = visible(option.textContent);
+    // Only the 8 for another shop are told; the 12 left for our shop are not part of this sale.
+    expect(words).toContain('8');
+    expect(words).not.toContain('12');
+    await user.click(option);
+    expect(field('trips-sale-shop')).toHaveValue('Haji Shop');
+    await user.type(field('trips-sale-qty'), '8');
+    await user.type(field('trips-sale-amount'), '2000');
+    press('F10');
+    await waitFor(() => {
+      expect(fake.saved.sales).toHaveLength(1);
+    });
+    expect(fake.saved.sales[0]).toMatchObject({ shop: 'Haji Shop', qty: '8' });
+  });
+
+  it('plan 90: a purchase with nothing left for another shop is not offered; the screen says so and where to set it', async () => {
+    followTripGetPurchases();
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(tripWithOther(0, null));
+    await openSale();
+    expect(
+      await screen.findByText(said(message(language, 'purchases-other-goods-none'))),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(said(message(language, 'purchases-other-goods-none-hint-purchase'))),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: named(message(language, 'trips-sale-purchase')) }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('plan 90: more نگ than the purchase has for another shop is refused under the qty and F10 sends nothing', async () => {
+    const fake = fakeTrips();
+    followTripGetPurchases();
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(tripWithOther(8, 'Haji Shop'));
+    const { user } = await openSale();
     await user.click(
       screen.getByRole('combobox', { name: named(message(language, 'trips-sale-purchase')) }),
     );
     await user.click(await screen.findByRole('option'));
-    await user.type(field('trips-sale-shop'), 'Haji Shop');
-    await user.type(field('trips-sale-qty'), '25');
+    await user.type(field('trips-sale-qty'), '9');
     await user.type(field('trips-sale-amount'), '2000');
-    // The backend's preview says 5 move from our shop; nothing is worked out here.
     expect(
-      await screen.findByText(said(message(language, 'split-moved-from-our', { count: 5 }))),
+      await screen.findByText(
+        said(message(language, 'purchases-qty-above-other', { remaining: 8 })),
+      ),
     ).toBeInTheDocument();
+    press('F10');
+    await settlePreview();
+    expect(fake.saved.sales).toHaveLength(0);
+  });
+
+  it('plan 90: a sum is read by the backend; when its preview says some would come from our shop the qty is refused', async () => {
+    const fake = fakeTrips();
+    followTripGetPurchases();
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(tripWithOther(8, 'Haji Shop'));
+    vi.mocked(tripsApi.tripsOtherSalePreview).mockResolvedValue(real.OTHER_PREVIEW_MOVES);
+    const { user } = await openSale();
+    await user.click(
+      screen.getByRole('combobox', { name: named(message(language, 'trips-sale-purchase')) }),
+    );
+    await user.click(await screen.findByRole('option'));
+    await user.type(field('trips-sale-qty'), '5+4');
+    await user.type(field('trips-sale-amount'), '2000');
+    expect(
+      await screen.findByText(
+        said(message(language, 'purchases-qty-above-other', { remaining: 8 })),
+      ),
+    ).toBeInTheDocument();
+    press('F10');
+    await settlePreview();
+    expect(fake.saved.sales).toHaveLength(0);
   });
 
   it('a part paid from a pocket: 48,000 from the shop, 48,000 recorded only, and no cash question (E2E-41)', async () => {

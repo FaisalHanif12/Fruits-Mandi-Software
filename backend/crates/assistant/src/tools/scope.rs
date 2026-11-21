@@ -504,6 +504,27 @@ fn window_of(result: &ToolResult) -> Window {
     }
 }
 
+/// The distinct periods, both ends known, that the views and reports of the EARLIER questions of the
+/// conversation were read for. A follow-up that names no period of its own ("what is the total of both?") is
+/// about these, never about the whole books.
+pub fn earlier_spans(state: &State) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = Vec::new();
+    for result in state
+        .results
+        .iter()
+        .filter(|r| r.turn < state.turn && matches!(r.tool, "analytics" | "report"))
+    {
+        if let Window::Span(from, to) = window_of(result)
+            && !from.is_empty()
+            && !to.is_empty()
+            && !out.contains(&(from.clone(), to.clone()))
+        {
+            out.push((from, to));
+        }
+    }
+    out
+}
+
 /// The scopes of the figures of a `find` result: each match is its own key.
 fn find_scopes(result: &ToolResult, rest: &[&str], counter: &mut u32) -> Vec<String> {
     let key_of = |node: &Node| match node.get(&["key"]) {

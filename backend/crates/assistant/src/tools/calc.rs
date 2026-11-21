@@ -672,12 +672,90 @@ fn mixes_the_cash_and_credit_registers(state: &State, paths: &[String]) -> Optio
     None
 }
 
+/// A follow-up that names no period of its own and adds, compares or averages figures ("what is the total of both?")
+/// is about the figures already shown, which were read for the period of the earlier questions. Figures read for
+/// other dates (the whole books) would be a figure of another thing (live check of 21-11-2026, Y31c: 454,000 for
+/// the two figures 295,000 and 98,000 of this year). Refused with the dates to read again.
+fn follow_up_keeps_the_period(
+    env: &Env<'_>,
+    state: &State,
+    parsed: &CalcInput,
+    figures: &[super::scope::Input],
+) -> Result<(), Stop> {
+    use super::scope::Window;
+    if state.turn == 0
+        || figures.len() < 2
+        || parsed.op == OpWord::PercentMore
+        || parsed.op == OpWord::PercentLess
+        || cues::names_period(env.question)
+    {
+        return Ok(());
+    }
+    let earlier = super::scope::earlier_spans(state);
+    if earlier.is_empty() {
+        return Ok(());
+    }
+    let other_dates = figures.iter().any(|f| match &f.window {
+        Window::Span(from, to) => !earlier.contains(&(from.clone(), to.clone())),
+        Window::Unknown | Window::Point => false,
+    });
+    if !other_dates {
+        return Ok(());
+    }
+    let dates = earlier
+        .iter()
+        .map(|(from, to)| format!("{from} to {to}"))
+        .collect::<Vec<_>>()
+        .join(" or ");
+    Err(bad(
+        "ERR_OUT_OF_RANGE",
+        "inputs",
+        &format!(
+            "this question names no period, so it is about the figures already shown, which were read for \
+             {dates}; these figures were read for other dates. Read each figure again with from and to set \
+             to {dates} and calculate on those results"
+        ),
+    )
+    .into())
+}
+
+/// Puts the two figures of a change in percent in time order: the one read for the earlier period first. True
+/// when they were swapped. A wildcard, an unknown or an open period, or periods that are the same day, leave the
+/// order as the model gave it.
+fn change_in_time_order(state: &State, parsed: &mut CalcInput) -> bool {
+    use super::scope::Window;
+    if parsed.op != OpWord::ChangePercent || parsed.inputs.len() != 2 {
+        return false;
+    }
+    let figures = super::scope::inputs_of(state, &parsed.inputs);
+    let [first, second] = figures.as_slice() else {
+        return false;
+    };
+    if first.wild || second.wild {
+        return false;
+    }
+    let (Window::Span(_, first_to), Window::Span(_, second_to)) = (&first.window, &second.window)
+    else {
+        return false;
+    };
+    if first_to.is_empty() || second_to.is_empty() || first_to <= second_to {
+        return false;
+    }
+    parsed.inputs.swap(0, 1);
+    true
+}
+
 /// The tool `calculate`.
 pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
-    let parsed: CalcInput = input(args)?;
+    let mut parsed: CalcInput = input(args)?;
     if parsed.inputs.is_empty() {
         return Err(bad("ERR_NO_INPUTS", "inputs", "no inputs").into());
     }
+    // "is mahine aur pichle mahine ka kharcha compare karo": a change in percent goes from the EARLIER period to
+    // the later one, whatever order the model wrote the two figures in. Written the other way round, this month's
+    // fall of 22.27% was shown as last month's "28.66% more" (live check of 21-11-2026, Y18). Only two figures
+    // of one thing whose periods are both known, the first later than the second, are put in order.
+    let reordered = change_in_time_order(state, &mut parsed);
     // The debit and the credit total of a day book or a trial balance are one amount seen from two
     // sides: their sum would be double the total of the book.
     if matches!(parsed.op, OpWord::Sum | OpWord::Average)
@@ -734,6 +812,7 @@ pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft,
     // robustness_cues: 9,376 and 2,724 for "kela ka commission"). An item added to the total of
     // all is never a figure, whatever the question says. Scopes: `scope.rs`.
     let figures_in = super::scope::inputs_of(state, &parsed.inputs);
+    follow_up_keeps_the_period(env, state, &parsed, &figures_in)?;
     let mix = super::scope::mix_of(&figures_in);
     let adds_up = matches!(parsed.op, OpWord::Sum | OpWord::Average);
     // A part and its whole are never added up or averaged, whatever the question says; nor is a
@@ -843,14 +922,25 @@ pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft,
         }
     }
     let calc = figures::calculate(parsed.op.calc(), &values).map_err(service_stop)?;
-    let node = Node::obj(vec![
+    let mut fields = vec![
         ("op", Node::Str(parsed.op.word().to_owned())),
         (
             "inputs",
             Node::List(parsed.inputs.iter().cloned().map(Node::Str).collect()),
         ),
         ("result", result_node(&calc, checked)),
-    ]);
+    ];
+    if reordered {
+        fields.push((
+            "note",
+            Node::Str(
+                "the change is worked out from the earlier period to the later one, so the inputs \
+                 were put in that order: a fall shows as less, a rise as more"
+                    .to_owned(),
+            ),
+        ));
+    }
+    let node = Node::obj(fields);
     let mut draft = Draft::new("calculate", args.clone(), node);
     draft.working = Some(working_of(parsed.op.title_id(), &calc.steps));
     Ok(draft)

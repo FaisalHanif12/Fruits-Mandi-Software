@@ -964,6 +964,41 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     ).toBeDisabled();
   });
 
+  it('plan 90: the purchases load page by page, with the totals of all of them from the backend', async () => {
+    const many = Array.from({ length: 60 }, (_, index) =>
+      e34Purchase({ id: 300 + index, number: index + 1 }),
+    );
+    fakeTrips({ purchases: many });
+    const { user } = await open();
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 60));
+    });
+    // The total row is the backend's (the fake says 2,600 of cost left and 5 نگ left), not the 25 rows' sum.
+    const pinned = await waitFor(() => {
+      const found = document.querySelector('.ag-row-pinned [col-id="cost_left"]');
+      if (found === null) throw new Error('no total row');
+      return found;
+    });
+    expect(visible(pinned.textContent)).toBe('2,600');
+    await user.click(await pagerButton(language, 'next'));
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 60));
+    });
+    expect(purchasesApi.purchasesList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ trip_id: 1, offset: PAGE_ROWS, limit: PAGE_ROWS }),
+    );
+  });
+
+  it('plan 90: the item lines of a purchase name the column "Nag for another shop"', async () => {
+    fakeTrips();
+    const { user } = await open();
+    await chooseType(user, 'purchase');
+    const section = linesSection('purchase');
+    expect(
+      visible(section?.querySelector('.ag-header-cell[col-id="otherQty"]')?.textContent).trim(),
+    ).toBe(message(language, 'goods-line-col-other-qty'));
+  });
+
   it('the history loads page by page', async () => {
     const many = Array.from({ length: 60 }, (_, index) =>
       costEntry({ id: 200 + index, number: index + 1 }),
@@ -987,7 +1022,10 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
   it('a trip with nothing bought says so and tells what to do', async () => {
     fakeTrips({ trips: [e34Trip({ purchase_count: 0 })], purchases: [], entries: [], results: [] });
     await open();
-    expect(screen.getByText(said(message(language, 'trips-purchases-empty')))).toBeInTheDocument();
+    // The purchases come page by page, so the empty words arrive with the list (plan 90).
+    expect(
+      await screen.findByText(said(message(language, 'trips-purchases-empty'))),
+    ).toBeInTheDocument();
     expect(screen.getByText(said(message(language, 'trips-entries-empty')))).toBeInTheDocument();
     expect(
       screen.getByText(said(message(language, 'trips-partner-results-empty'))),
