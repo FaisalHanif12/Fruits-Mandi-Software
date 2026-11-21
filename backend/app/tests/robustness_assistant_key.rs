@@ -291,6 +291,15 @@ fn the_key_is_in_no_reply_log_audit_row_support_file_or_backup() {
     assert!(!copies.is_empty(), "the backup made no file");
     h.assert_no_key(&[KEY, NEW_KEY], "after a backup");
 
+    // The backup key shown again with the Owner's password and sign (PRD FR-20.10, v1.54): the reply
+    // holds the backup key, and it brings the OpenRouter key into no reply, log, audit row or file.
+    let shown = h.ok(
+        "backup_key_reveal",
+        json!({ "input": { "password": OWNER_PASSWORD, "sign": "adnan" } }),
+    );
+    assert_eq!(shown["key"], json!(printed), "{shown}");
+    h.assert_no_key(&[KEY, NEW_KEY], "after the backup key is shown again");
+
     // The support information file, in the app data folder, and the replies that describe the app.
     let support = h.ok("support_info_save", json!({ "input": { "path": null } }));
     let support_path = PathBuf::from(support["path"].as_str().unwrap());

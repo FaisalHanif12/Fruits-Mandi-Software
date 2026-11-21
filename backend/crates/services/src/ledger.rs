@@ -653,7 +653,37 @@ pub fn trial_balance_unchecked(
     conn: &Connection,
     as_of: Option<&str>,
 ) -> Result<TrialBalance, ServiceError> {
-    let totals = balances_by_account(conn, as_of)?;
+    trial_balance_of(conn, &balances_by_account(conn, as_of)?)
+}
+
+/// All account balances read from the journal now, never from the memory of the totals. For the daily
+/// books check, which looks for a line changed outside the app (see
+/// [`mandi_db::ledger::account_totals_fresh`]).
+pub(crate) fn balances_by_account_fresh(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> Result<HashMap<i64, repo::Totals>, ServiceError> {
+    Ok(repo::account_totals_fresh(conn, as_of)?
+        .into_iter()
+        .collect())
+}
+
+/// [`trial_balance_unchecked`] from totals read now, never from the memory (the daily books check).
+///
+/// # Errors
+/// `ServiceError::Db`; `ERR_OVERFLOW`.
+pub(crate) fn trial_balance_fresh(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> Result<TrialBalance, ServiceError> {
+    trial_balance_of(conn, &balances_by_account_fresh(conn, as_of)?)
+}
+
+/// The trial balance from the totals of every account.
+fn trial_balance_of(
+    conn: &Connection,
+    totals: &HashMap<i64, repo::Totals>,
+) -> Result<TrialBalance, ServiceError> {
     let mut rows = Vec::new();
     let (mut total_dr, mut total_cr) = (Paisa::ZERO, Paisa::ZERO);
     for account in account_repo::tree_accounts(conn)? {

@@ -584,6 +584,20 @@ pub fn account_totals(
         .collect())
 }
 
+/// [`account_totals`] read from the journal now, never from the memory of `crate::memo`. The memory
+/// is right only because the app never changes a posted line, so a check that looks for a line changed
+/// OUTSIDE the app (the daily books check, PRD NFR-SEC-6, NFR-REL-8) must not use it: a kept answer
+/// would hide the very change it is looking for.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn account_totals_fresh(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
+    read_account_totals(conn, as_of)
+}
+
 /// The query behind [`account_totals`].
 fn read_account_totals(
     conn: &Connection,

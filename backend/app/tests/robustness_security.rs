@@ -1244,6 +1244,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
             true,
         ),
+        // PRD FR-20.10 v1.54: the key is shown again only with the Owner's password and sign.
+        (
+            "backup_key_reveal",
+            json!({ "input": { "password": "wrong-password", "sign": "adnan" } }),
+            true,
+        ),
         // Plan 56, restore on a new computer: open before sign-in, refused with ERR_ALREADY_SET_UP
         // once an Owner exists.
         (

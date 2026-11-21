@@ -1027,8 +1027,9 @@ fn trip_sales_have_a_monthly_series_and_add_up_to_view_j() {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
-            other_qty: None,
-            shop_name: None,
+            // 60 نگ are set aside for another shop (six sales of 10 below); plan 90 refuses a sale there above that.
+            other_qty: Some("60".into()),
+            shop_name: Some("Haji Shop".into()),
             sell_date: None,
             trip_id: Some(trip.id),
             date: "02-04-2026".into(),

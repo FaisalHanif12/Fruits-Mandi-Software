@@ -54,7 +54,14 @@ fn add_raw(
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.map(str::to_owned),
-            confirmed_rules_words: Vec::new(),
+            // PRD FR-7.66: a word the app spelled by rules only must be confirmed before save. The
+            // names of these tests are not all in the word list, so every word is confirmed, as
+            // the Owner does on the screen.
+            confirmed_rules_words: ur
+                .split_whitespace()
+                .chain(en.split_whitespace())
+                .map(str::to_owned)
+                .collect(),
         },
     )
 }

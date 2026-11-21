@@ -72,7 +72,10 @@ fn parse_today(text: &str) -> (i32, u32, u32) {
 }
 
 /// A fresh copy of the database in a temp folder, opened as the app opens it.
-fn fresh_env(source: &Path, today: (i32, u32, u32)) -> (tempfile::TempDir, mandi_services::testing::TestEnv) {
+fn fresh_env(
+    source: &Path,
+    today: (i32, u32, u32),
+) -> (tempfile::TempDir, mandi_services::testing::TestEnv) {
     let dir = tempfile::tempdir().expect("a folder for the copy");
     std::fs::create_dir_all(dir.path().join("data")).expect("the data folder");
     std::fs::copy(source, dir.path().join("data").join("mandi.db")).expect("the copy");
@@ -81,8 +84,11 @@ fn fresh_env(source: &Path, today: (i32, u32, u32)) -> (tempfile::TempDir, mandi
         from.push(ext);
         let from = PathBuf::from(from);
         if from.exists() {
-            std::fs::copy(&from, dir.path().join("data").join(format!("mandi.db{ext}")))
-                .expect("the side file");
+            std::fs::copy(
+                &from,
+                dir.path().join("data").join(format!("mandi.db{ext}")),
+            )
+            .expect("the side file");
         }
     }
     let env = mandi_services::testing::TestEnv::new(dir.path()).expect("open the copy");
@@ -134,7 +140,8 @@ fn offline_complex_questions() {
 }
 
 fn run_list(offline: bool) {
-    let source = PathBuf::from(std::env::var("MANDI_CX_DB").expect("MANDI_CX_DB: a copy of the database"));
+    let source =
+        PathBuf::from(std::env::var("MANDI_CX_DB").expect("MANDI_CX_DB: a copy of the database"));
     let questions_path = std::env::var("MANDI_CX_QUESTIONS").expect("MANDI_CX_QUESTIONS");
     let world = std::env::var("MANDI_CX_WORLD").expect("MANDI_CX_WORLD");
     let only: Vec<String> = env_or("MANDI_CX_ONLY", "")
@@ -184,7 +191,11 @@ fn run_list(offline: bool) {
 
     let live_client = OpenRouterClient;
     let offline_client = OfflineClient;
-    let client: &dyn ModelClient = if offline { &offline_client } else { &live_client };
+    let client: &dyn ModelClient = if offline {
+        &offline_client
+    } else {
+        &live_client
+    };
     let emit = |_s| {};
     let mut out = String::new();
     let mut spent = 0.0_f64;

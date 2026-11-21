@@ -144,12 +144,14 @@ fn data_error(_cause: impl std::fmt::Display) -> ServiceError {
 /// run is stored as a failed result by the caller, see [`store_failed`].)
 pub fn check_books(ctx: &Context) -> Result<BooksCheck, ServiceError> {
     let (debit, credit, lines) = ctx.db.read(|conn| {
-        let trial = ledger::trial_balance_unchecked(conn, None)?;
+        // Read from the journal now, never from the memory of the totals: this check looks for a line
+        // changed outside the app (PRD NFR-SEC-6, NFR-REL-8), which a kept answer would hide.
+        let trial = ledger::trial_balance_fresh(conn, None)?;
         // The trial balance walks the accounts of the tree. A line of an account that has no
         // row would be left out of it, so the sum of every posted line is worked out too.
         let mut line_dr = Paisa::ZERO;
         let mut line_cr = Paisa::ZERO;
-        for totals in ledger::balances_by_account(conn, None)?.values() {
+        for totals in ledger::balances_by_account_fresh(conn, None)?.values() {
             line_dr = line_dr
                 .checked_add(line_paisa(totals.dr_paisa)?)
                 .map_err(data_error)?;

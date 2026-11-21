@@ -285,7 +285,7 @@ fn backup_and_restore_on_a_copy_of_the_dev_database() {
         .collect();
     rep.check(
         "B3 the USB file is encrypted: no SQLite header, no account name, no table name, no key in it (NFR-BAK-6, NFR-SEC-7)",
-        leaks.is_empty() && !contains(&fs::read(&usb_dir.join(mandi_backup::names::manifest_name(&usb_row.name))).unwrap(), chain_key.to_hex().as_bytes()),
+        leaks.is_empty() && !contains(&fs::read(usb_dir.join(mandi_backup::names::manifest_name(&usb_row.name))).unwrap(), chain_key.to_hex().as_bytes()),
         format!("{} bytes, plain markers found: {leaks:?}", usb_bytes.len()),
     );
 
