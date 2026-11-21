@@ -884,8 +884,11 @@ fn run(u: &mut U, step: &Step) -> R {
                 &u.w.env.ctx,
                 &u.w.owner,
                 &PurchaseInput {
-                    other_qty: None,
-                    shop_name: None,
+                    // Half of the goods are set aside for another shop (PRD FR-12.41, v1.52): a
+                    // sale in another shop takes only from that part, a sale in our shop only from
+                    // the rest.
+                    other_qty: (*qty >= 2).then(|| (*qty / 2).to_string()),
+                    shop_name: (*qty >= 2).then(|| "Haji Traders".to_owned()),
                     sell_date: None,
                     trip_id: Some(u.trip),
                     date: day(*d).into(),
@@ -937,7 +940,13 @@ fn run(u: &mut U, step: &Step) -> R {
             let Some(purchase) = pick(&live, *p) else {
                 return Ok(false);
             };
-            let left = purchases::get(&u.w.env.ctx, &PurchaseGetInput { id: purchase })?.qty_left;
+            // A sale in another shop takes only the goods set aside for it when the purchase was
+            // made (PRD FR-12.41, v1.52); with none set aside the step has nothing to act on.
+            let row = purchases::get(&u.w.env.ctx, &PurchaseGetInput { id: purchase })?;
+            let left = row.qty_other_left;
+            if left == 0 {
+                return Ok(false);
+            }
             trips::other_sale_save(
                 &u.w.env.ctx,
                 &u.w.owner,
@@ -1652,7 +1661,7 @@ fn own_sale(u: &mut U, p: u8, qty: u8, rate: u16, d: u8) -> R {
     let Some(purchase_id) = pick(&live, p) else {
         return Ok(false);
     };
-    let left = purchases::get(&u.w.env.ctx, &PurchaseGetInput { id: purchase_id })?.qty_left;
+    let left = purchases::get(&u.w.env.ctx, &PurchaseGetInput { id: purchase_id })?.qty_our_left;
     if left == 0 {
         return Ok(false);
     }

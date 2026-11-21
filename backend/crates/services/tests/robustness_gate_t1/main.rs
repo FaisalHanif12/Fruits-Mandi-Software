@@ -268,7 +268,7 @@ fn step() -> BoxedStrategy<Step> {
                 .boxed(),
         ),
         (
-            1,
+            2,
             (2_u8..30, 100_u16..2_000, day())
                 .prop_map(|(qty, rate, day)| Step::TripBuy { qty, rate, day })
                 .boxed(),
@@ -291,7 +291,7 @@ fn step() -> BoxedStrategy<Step> {
                 .boxed(),
         ),
         (
-            2,
+            4,
             (any::<u8>(), any::<u8>(), 100_u16..30_000, day())
                 .prop_map(|(pick, qty, amount, day)| Step::TripOther {
                     pick,
@@ -314,7 +314,7 @@ fn step() -> BoxedStrategy<Step> {
                 .boxed(),
         ),
         (
-            3,
+            4,
             any::<u8>()
                 .prop_map(|pick| Step::TripCancel { pick })
                 .boxed(),
@@ -378,7 +378,7 @@ fn step() -> BoxedStrategy<Step> {
                 .boxed(),
         ),
         (
-            3,
+            4,
             (any::<u8>(), any::<u8>())
                 .prop_map(|(pick, qty)| Step::FruitEdit { pick, qty })
                 .boxed(),
@@ -710,6 +710,24 @@ fn every_posting_type_keeps_the_whole_books_exact() {
     } else {
         TestRunner::new_with_rng(config, TestRng::deterministic_rng(RngAlgorithm::ChaCha))
     };
+    // A cancel that saves needs an entry to exist and none of its goods to have sold, which a random
+    // order seldom gives. This fixed run saves it (a cost, then a sale in another shop, each
+    // cancelled) with every check of a normal run, so the kind is never a hole in the tally below.
+    let prelude = run_case(&fixed(vec![
+        Step::TripCost {
+            amount: 4_001,
+            day: 0,
+        },
+        Step::TripCancel { pick: 0 },
+        Step::TripOther {
+            pick: 0,
+            qty: 2,
+            amount: 5_000,
+            day: 1,
+        },
+        Step::TripCancel { pick: 0 },
+    ]));
+    assert_eq!(prelude, "DDDD", "the fixed run of the cancels");
     let result = runner.run(&case(), |case| {
         let _ = run_case(&case);
         Ok(())

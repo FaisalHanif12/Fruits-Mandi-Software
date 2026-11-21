@@ -17,5 +17,6 @@
     }
   ],
   "total_count": 1,
-  "truncated": false
+  "truncated": false,
+  "partners_locked": false
 }

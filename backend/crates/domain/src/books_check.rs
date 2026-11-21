@@ -467,13 +467,17 @@ pub struct PersonLines {
     pub credit: Paisa,
 }
 
-/// Compares, for each posting and each person of the چکتا کھاتہ, what his sale lines bill less
-/// what he paid with the net of his journal lines. The account's total is compared by
-/// [`compare_postings`]; this finds a line moved from one person to another, whose account total
-/// does not change (PRD FR-13.5).
+/// Compares, for each posting and each person of the چکتا کھاتہ, what his sale lines bill with the
+/// debit of his journal lines, and what he paid on the spot with their credit. The account's total is
+/// compared by [`compare_postings`]; this finds a line moved from one person to another, whose
+/// account total does not change (PRD FR-13.5).
 ///
-/// Example: شاہد buys 12,800 and pays 12,800: his net is 0; moved to ناصر, شاہد would be 0 in the
-/// lines and the lines would show ناصر.
+/// The debit and the credit are compared one by one, not their net: a person who paid the whole
+/// bill on the spot has a net of 0 whoever he is, so a net would never show that his lines were
+/// moved to another person (the check of NFR-SEC-6 must find it).
+///
+/// Example: شاہد buys 12,800 and pays 12,800: his lines are 12,800 debit and 12,800 credit. Moved to
+/// ناصر, the sale line says ناصر while the lines still say شاہد: two differences.
 ///
 /// # Errors
 /// `MoneyError::Overflow`.
@@ -481,27 +485,37 @@ pub fn compare_persons(
     sales: &[PersonSale],
     lines: &[PersonLines],
 ) -> Result<Vec<Difference>, MoneyError> {
-    let mut want: BTreeMap<(EntryId, &str), Paisa> = BTreeMap::new();
+    let mut want: BTreeMap<(EntryId, &str), (Paisa, Paisa)> = BTreeMap::new();
     for sale in sales {
-        let left = sale.buyer_total.checked_sub(sale.paid)?;
         let slot = want
             .entry((sale.entry_id, sale.person.as_str()))
-            .or_insert(Paisa::ZERO);
-        *slot = slot.checked_add(left)?;
+            .or_insert((Paisa::ZERO, Paisa::ZERO));
+        *slot = (
+            slot.0.checked_add(sale.buyer_total)?,
+            slot.1.checked_add(sale.paid)?,
+        );
     }
-    let mut have: BTreeMap<(EntryId, &str), Paisa> = BTreeMap::new();
+    let mut have: BTreeMap<(EntryId, &str), (Paisa, Paisa)> = BTreeMap::new();
     for line in lines {
-        let net = line.debit.checked_sub(line.credit)?;
         let slot = have
             .entry((line.entry_id, line.person.as_str()))
-            .or_insert(Paisa::ZERO);
-        *slot = slot.checked_add(net)?;
+            .or_insert((Paisa::ZERO, Paisa::ZERO));
+        *slot = (
+            slot.0.checked_add(line.debit)?,
+            slot.1.checked_add(line.credit)?,
+        );
     }
     let keys: BTreeSet<(EntryId, &str)> = want.keys().chain(have.keys()).copied().collect();
     let mut differences = Vec::new();
     for key in keys {
-        let a = want.get(&key).copied().unwrap_or(Paisa::ZERO);
-        let b = have.get(&key).copied().unwrap_or(Paisa::ZERO);
+        let a = want
+            .get(&key)
+            .copied()
+            .unwrap_or((Paisa::ZERO, Paisa::ZERO));
+        let b = have
+            .get(&key)
+            .copied()
+            .unwrap_or((Paisa::ZERO, Paisa::ZERO));
         if a != b {
             differences.push(Difference::new(
                 "bikri_sales",

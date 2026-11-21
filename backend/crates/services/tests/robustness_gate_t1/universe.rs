@@ -260,8 +260,10 @@ pub fn build(setup: &Setup) -> U {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
-            other_qty: None,
-            shop_name: None,
+            // Half of the goods are set aside for another shop (PRD FR-12.41, v1.52): a sale in
+            // another shop takes only from that part.
+            other_qty: (setup.purchase.0 >= 2).then(|| (setup.purchase.0 / 2).to_string()),
+            shop_name: (setup.purchase.0 >= 2).then(|| "Haji Traders".to_owned()),
             sell_date: None,
             trip_id: Some(trip),
             date: "10-10-2026".into(),
