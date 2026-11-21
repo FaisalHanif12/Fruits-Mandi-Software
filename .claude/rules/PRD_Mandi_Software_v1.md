@@ -2636,7 +2636,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | A79 | (retired in v1.32) | | |
 | A80 | The answer is in the app language, whatever language the question is in | App language | Should an English question get an English answer in the Urdu app? |
 | A81 | A model call that fails before a reply arrives is not counted in the 20 | Not counted | OK? |
-| A82 | A table in an answer shows up to 7 rows, newest first for a history | 7 rows | More or fewer? |
+| A82 | A table in an answer shows up to 7 rows, newest first for a history; a month-by-month table shows up to 12 rows (v1.54, plan 82) | 7 rows; 12 for months | More or fewer? |
 | A83 | The panel's conversation clears on logout, lock and closing the app | Clears | Keep it across days? |
 | A84 | The quick questions of FR-7.80 | As listed | Which questions does the Owner ask most? |
 | A85 | A new model name is checked with the NFR-AI-2 question list before it is used at the shop | Checked first | OK? |
