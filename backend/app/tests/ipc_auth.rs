@@ -1022,6 +1022,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "bikri_seller_paid_spread",
+            json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] },
+                "entry_id": null, "seller_paid": [] } }),
+            true,
+        ),
+        (
             "assist_seller_memory",
             json!({ "input": { "seller_account_id": 1 } }),
             true,

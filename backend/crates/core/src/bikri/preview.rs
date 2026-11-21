@@ -4,6 +4,7 @@ use serde::Serialize;
 use ts_rs::TS;
 
 use super::input::{ChargeSource, FreightPaidBy, LotChargeMethod, StoredMethod};
+use crate::accounts::BalanceSide;
 use crate::cash::CashCheck;
 use crate::error::FieldError;
 use crate::money::Paisa;
@@ -431,6 +432,63 @@ pub struct SplitPart {
     pub working: Working,
 }
 
+/// One seller's summary lines (PRD FR-12.23 v1.53, plan 91): what he was owed before this بکری, what
+/// his lots of it credit him, what he takes on the spot, and what he owes or is owed after. Worked
+/// out by the same domain function for the preview and the save (Code Standards B5), from the نقد of
+/// his lots as they stand.
+///
+/// `new = previous + paid - credit` (debit positive). Example: previous 30,000 بنام, credit 20,000,
+/// paid 5,000: `cut` 15,000 (taken off what he owed), new 15,000 بنام. Previous 10,000 جمع, credit
+/// 20,000, paid 28,000: `over_paid` 8,000, new 2,000 جمع.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct SellerPaidLines {
+    /// The seller.
+    #[ts(type = "number")]
+    pub seller_account_id: i64,
+    /// His balance before this بکری (an edit leaves the posting being edited out), 0 or more.
+    #[ts(type = "Paisa")]
+    pub previous_paisa: Paisa,
+    /// The side of `previous_paisa`: `dr` is بنام (he owes the shop), `cr` is جمع (the shop owes
+    /// him), `zero` when there is nothing.
+    pub previous_side: BalanceSide,
+    /// آج کی صافی بکری before cash: the sum of the seller credits (C8) of his lots in this بکری. Can
+    /// be negative.
+    #[ts(type = "Paisa")]
+    pub credit_paisa: Paisa,
+    /// موقع پر ادائیگی: the sum of the نقد of his lots, 0 or more.
+    #[ts(type = "Paisa")]
+    pub paid_paisa: Paisa,
+    /// پچھلے بنام سے کٹا: the part of today's credit that is not paid in cash and takes off what he
+    /// owed. 0 when he owed nothing.
+    #[ts(type = "Paisa")]
+    pub cut_paisa: Paisa,
+    /// بقایا میں جمع: the part of today's credit that is not paid in cash and is not taken off what he
+    /// owed, so it adds to what the shop owes him.
+    #[ts(type = "Paisa")]
+    pub added_to_credit_paisa: Paisa,
+    /// What he takes above today's credit. It lowers what the shop owed him or adds to what he owes.
+    #[ts(type = "Paisa")]
+    pub over_paid_paisa: Paisa,
+    /// What adds to what he owes because the charges of his lots are more than their sales (a lot
+    /// with a net below 0, PRD FR-12.7). 0 when today's credit is 0 or more.
+    #[ts(type = "Paisa")]
+    pub increase_owed_paisa: Paisa,
+    /// نیا بقایا, 0 or more.
+    #[ts(type = "Paisa")]
+    pub new_paisa: Paisa,
+    /// The side of `new_paisa`.
+    pub new_side: BalanceSide,
+    /// The most he can take on the spot without a question: today's credit (never below 0) plus what
+    /// the shop owed him before.
+    #[ts(type = "Paisa")]
+    pub limit_paisa: Paisa,
+    /// True when `paid_paisa` is above `limit_paisa`: the screen warns and the save asks the Owner to
+    /// confirm (PRD FR-12.23 v1.53, `ERR_SELLER_PAID_ABOVE_TODAY`).
+    pub needs_confirm: bool,
+    /// How `new_paisa` was worked out (PRD FR-7.43): message `working-seller-new-balance`.
+    pub working: Working,
+}
+
 /// Everything the live preview sends back. Nothing is saved.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct BikriPreview {
@@ -440,6 +498,9 @@ pub struct BikriPreview {
     pub summary: SummaryTotals,
     /// The live partner split of the shared income.
     pub split: Vec<SplitPart>,
+    /// One summary for each seller of a complete lot, in the order of his first lot (PRD FR-12.23
+    /// v1.53). Lots of trip goods and of gardens have none: they take no نقد.
+    pub sellers: Vec<SellerPaidLines>,
     /// Cash in hand after this بکری (PRD FR-6.7).
     pub cash: CashCheck,
     /// True if a commission or لاگا may be typed on a line (PRD FR-11.10). The rate tag cells
@@ -466,4 +527,25 @@ pub struct SellerMemory {
     pub marka_id: Option<i64>,
     /// True if the item and packing came from a lot he sent before.
     pub from_last_lot: bool,
+}
+
+/// The نقد to put into one lot, from `bikri_seller_paid_spread`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct LotCashSpread {
+    /// The key sent with the lot.
+    pub key: String,
+    /// The نقد of the lot, whole rupees. The screen writes it into the lot's نقد field.
+    #[ts(type = "Paisa")]
+    pub cash_paid_paisa: Paisa,
+}
+
+/// What `bikri_seller_paid_spread` sends back (plan 91). Nothing is saved.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct SellerPaidSpread {
+    /// The نقد of each lot of the sellers named, in lot order. A lot whose seller was not named, or
+    /// that cannot take cash, is not listed.
+    pub lots: Vec<LotCashSpread>,
+    /// The preview of the draft with those نقد values in place. Its errors include the mistakes of
+    /// the amounts, at `seller_paid[k].amount` and `seller_paid[k].seller_account_id`.
+    pub preview: BikriPreview,
 }

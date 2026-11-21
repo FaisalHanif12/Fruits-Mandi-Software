@@ -133,8 +133,12 @@ fn the_words_of_a_question_name_the_measure() {
         net("ہارون کے بلوں کی کل رقم کتنی ہے؟"),
         Some(SaleMeasure::Bills)
     );
-    // The plain sale, the gross, a count of bills and a partner's net name no sale measure.
-    assert_eq!(net("abhi tak ki khaam bikri kitni hui"), None);
+    // The gross sale named by its word is its own column (the guard keeps R2's goods value out of it).
+    assert_eq!(
+        net("abhi tak ki khaam bikri kitni hui"),
+        Some(SaleMeasure::Gross)
+    );
+    // The plain sale, a count of bills and a partner's net name no sale measure.
     assert_eq!(net("aaj ki bikri kitni hui"), None);
     assert_eq!(net("aaj kitne bill bane"), None);
     assert_eq!(net("alif ki khalis raqam kitni hai"), None);

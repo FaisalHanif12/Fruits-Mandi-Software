@@ -17,6 +17,7 @@ export { Button, type ButtonVariant } from './Button';
 export { CalcInfo, CalcInfoAt, type Working } from './CalcInfo';
 export { Card } from './Card';
 export { CashConfirmDialog } from './CashConfirmDialog';
+export { ConfirmEntryDialog } from './ConfirmEntryDialog';
 export { CashNote } from './CashNote';
 export { Checkbox } from './Checkbox';
 export { Code } from './Code';

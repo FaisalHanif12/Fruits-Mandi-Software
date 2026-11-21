@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-seller-paid-spread"
+description = "Enables the bikri_seller_paid_spread command without any pre-configured scope."
+commands.allow = ["bikri_seller_paid_spread"]
+
+[[permission]]
+identifier = "deny-bikri-seller-paid-spread"
+description = "Denies the bikri_seller_paid_spread command without any pre-configured scope."
+commands.deny = ["bikri_seller_paid_spread"]

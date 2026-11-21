@@ -189,6 +189,7 @@ const APP_COMMANDS: &[&str] = &[
     "general_preview",
     "general_save",
     "bikri_preview",
+    "bikri_seller_paid_spread",
     "assist_seller_memory",
     "assist_last_rate",
     "bikri_save",

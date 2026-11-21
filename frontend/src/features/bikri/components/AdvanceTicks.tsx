@@ -1,8 +1,9 @@
-// The tick "پیشگی اس بکری سے کاٹیں" of each seller shown in the summary (PRD FR-12.23, plan 78 C3, Umar
-// 17-11-2026): "Take the advance off this sale". It shows for a seller who has an advance open, with the open
-// amount, and it is OFF when a بکری opens. One tick covers every lot of that seller in the بکری, so the
-// summary of one lot and the whole بکری show the same tick. The amount is the party card's (the backend's),
-// written with formatPaisa; nothing is worked out here (CLAUDE.md rule 1).
+// The block of each seller shown in the summary: the tick "پیشگی اس بکری سے کاٹیں" (PRD FR-12.23, plan 78 C3, Umar
+// 17-11-2026: "Take the advance off this sale"), and beside it his money paid on the spot with the lines of his
+// account (plan 91, `SellerPaid`). The tick shows for a seller who has an advance open, with the open amount, and it
+// is OFF when a بکری opens. One tick covers every lot of that seller in the بکری, so the summary of one lot and the
+// whole بکری show the same tick. The amount is the party card's (the backend's), written with formatPaisa; nothing
+// is worked out here (CLAUDE.md rule 1).
 
 import { Localized } from '@fluent/react';
 import type { EntryRow, PickedRecord } from '../../../shared/grid';
@@ -13,7 +14,10 @@ import { Checkbox, Num } from '../../../shared/ui';
 import { isSellerTicked, setSellerTick } from '../advance-tick';
 import { useBikriDraft } from '../draft-store';
 import { tickLotsOf } from '../draft';
+import type { SellerPaidSpreading } from '../hooks/useSellerPaidSpread';
+import type { SellerPaidLines } from '../seller-paid-types';
 import { LOT } from '../types';
+import { SellerPaid } from './SellerPaid';
 
 interface SellerTickProps {
   seller: PickedRecord;
@@ -59,9 +63,13 @@ function SellerTick({ seller, rows }: SellerTickProps) {
 interface AdvanceTicksProps {
   /** The lot rows whose sellers are listed: the selected lot, or every lot of the بکری. */
   shown: readonly EntryRow[];
+  /** What the preview says about each seller's account in this بکری (plan 91); empty while nothing is worked out. */
+  sellers?: readonly SellerPaidLines[] | undefined;
+  /** Spreads an amount typed in a seller's summary over his lots' نقد. */
+  spreading: SellerPaidSpreading;
 }
 
-export function AdvanceTicks({ shown }: AdvanceTicksProps) {
+export function AdvanceTicks({ shown, sellers: summaries = [], spreading }: AdvanceTicksProps) {
   const stores = useBikriDraft();
   const rows = stores.lots((state) => state.rows);
   // Each seller once, in the order of the lots; a lot with no tick to take (own goods, a garden, carried) adds none.
@@ -75,7 +83,13 @@ export function AdvanceTicks({ shown }: AdvanceTicksProps) {
   return (
     <div className="flex flex-col gap-2">
       {sellers.map((seller) => (
-        <SellerTick key={seller.id} seller={seller} rows={rows} />
+        <SellerPaid
+          key={seller.id}
+          seller={seller}
+          lines={summaries.find((one) => one.seller_account_id === seller.id)}
+          spreading={spreading}
+          tick={<SellerTick seller={seller} rows={rows} />}
+        />
       ))}
     </div>
   );

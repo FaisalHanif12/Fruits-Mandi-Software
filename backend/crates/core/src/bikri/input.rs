@@ -424,6 +424,38 @@ pub struct BikriPreviewInput {
     pub draft: BikriDraft,
 }
 
+/// What one seller takes on the spot (موقع پر ادائیگی, PRD FR-12.23 v1.53, plan 91): the amount the
+/// screen asks to spread over the نقد of his lots of this بکری.
+///
+/// Example: رحیم has two lots with credits 12,000 and 8,000 and the Owner types `15000`: lot 1 gets
+/// 12,000 and lot 2 gets 3,000.
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
+pub struct SellerPaidInput {
+    /// The seller, the account of his lots in the draft.
+    #[ts(type = "number")]
+    pub seller_account_id: i64,
+    /// Whole rupees, as text. A simple sum such as `5000+2000` is taken (PRD FR-7.48). Empty means
+    /// the entry is ignored (the lots keep the نقد they have); `0` puts 0 on all his lots.
+    pub amount: String,
+}
+
+/// Input of `bikri_seller_paid_spread` (plan 91): works out the نقد of each lot of the sellers named,
+/// so the screen can write it into the lot fields. Nothing is saved.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct SellerPaidSpreadInput {
+    /// The draft as the screen holds it. For the new lots of a mixed screen: a draft with the day
+    /// and only the new lots.
+    pub draft: BikriDraft,
+    /// The posting being edited (the same id as `EditPreviewInput::entry_id`), or null for a new
+    /// بکری. With it the preview leaves the posting out of the sellers' previous balances.
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub entry_id: Option<i64>,
+    /// What each seller takes on the spot.
+    #[serde(default)]
+    pub seller_paid: Vec<SellerPaidInput>,
+}
+
 /// Input of `assist_seller_memory` (PRD FR-7.51).
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct SellerMemoryInput {

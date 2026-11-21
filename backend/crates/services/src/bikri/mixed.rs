@@ -28,12 +28,12 @@ use std::collections::{BTreeSet, HashSet};
 use mandi_db::bikri::edit as edit_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
-use mandi_domain::bikri::{PostingKind, merge_splits, merge_summaries, sum_changes};
+use mandi_domain::bikri::{PostingKind, merge_sellers, merge_splits, merge_summaries, sum_changes};
 use mandi_domain::core::bikri::{
     BikriDraft, BikriPreview, BikriStatus, CarriedLotInput, CarriedSaved, LotInput, LotPreview,
     MixedPart, MixedPartKind, MixedSalePreview, MixedSaleSaveInput, MixedSaleSaved,
-    MixedUndoCarried, MixedUndoDraft, MixedUndoInput, MixedUndoResult, SaleInput, SplitPart,
-    SummaryTotals, UNDO_REASON_ID, is_blank_sale, prepare_draft,
+    MixedUndoCarried, MixedUndoDraft, MixedUndoInput, MixedUndoResult, SaleInput, SellerPaidLines,
+    SplitPart, SummaryTotals, UNDO_REASON_ID, is_blank_sale, prepare_draft,
 };
 use mandi_domain::core::cash::CashCheck;
 use mandi_domain::core::dates::BusinessDate;
@@ -49,7 +49,7 @@ use super::later::{LaterPlan, lot_charges_of, on_date, plan_later, write_later};
 use super::load::{detail_of, draft_of, later_header};
 use super::rows::lot_running_totals;
 use super::save::write_new;
-use super::shared::{Basis, Worked, data, switches, work_out};
+use super::shared::{Basis, Worked, data, require_sellers_confirmed, switches, work_out};
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::cash;
@@ -249,6 +249,14 @@ fn plan_all(
     let summary = merge_summaries(&summaries, lot_count).map_err(money_error)?;
     let splits: Vec<&[SplitPart]> = parts.iter().map(|p| p.split.as_slice()).collect();
     let split = merge_splits(&splits).map_err(money_error)?;
+    // One summary for each seller over all the entries (PRD FR-12.23 v1.53): a seller with a carried
+    // lot and a new lot has one previous balance and one new balance.
+    let seller_parts: Vec<&[SellerPaidLines]> = carried
+        .iter()
+        .map(|c| c.worked.calc.sellers.as_slice())
+        .chain(new.iter().map(|n| n.worked.calc.sellers.as_slice()))
+        .collect();
+    let sellers = merge_sellers(&seller_parts).map_err(money_error)?;
     // One cash question over every entry together (PRD FR-6.7).
     let changes: Vec<Paisa> = carried
         .iter()
@@ -261,6 +269,7 @@ fn plan_all(
             lots,
             summary,
             split,
+            sellers,
             cash,
             allow_line_override: switches.allow_line_override,
             errors: errors.clone(),
@@ -329,6 +338,7 @@ pub fn save(
             return Err(ServiceError::from(work.errors.clone()));
         }
         cash::require_confirmed(&work.cash, input.confirm_cash_below_zero)?;
+        require_sellers_confirmed(&work.preview.preview.sellers, input.confirm_cash_below_zero)?;
         let mut entry_ids = Vec::new();
         let mut carried_saved = Vec::new();
         let mut date_iso = String::new();

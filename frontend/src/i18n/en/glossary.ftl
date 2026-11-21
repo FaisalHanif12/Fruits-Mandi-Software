@@ -137,6 +137,10 @@
 # review: pending
 -mauqa-par-jama = Paid on the Spot
 
+# Money paid to a seller at the time of the sale, typed in his summary (plan 91, PRD v1.53)
+# review: pending
+-mauqa-par-adaigi = Paid on the Spot
+
 # What is left of a buyer's bill after the money paid on the spot; it stays on his account (PRD FR-12.44)
 # review: pending
 -khate-mein-baqi = Left on Account
@@ -416,6 +420,7 @@ glossary-rate-farq = { -rate-farq }
 glossary-udhari = { -udhari }
 glossary-naqdi = { -naqdi }
 glossary-mauqa-par-jama = { -mauqa-par-jama }
+glossary-mauqa-par-adaigi = { -mauqa-par-adaigi }
 glossary-khate-mein-baqi = { -khate-mein-baqi }
 glossary-rokar = { -rokar }
 glossary-wasooli = { -wasooli }

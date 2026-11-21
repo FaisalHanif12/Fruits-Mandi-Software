@@ -35,7 +35,7 @@ import { cardChuktaOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
-import { useLanguage } from '../../../shared/i18n';
+import { displayName, useLanguage } from '../../../shared/i18n';
 import type { EntryRow } from '../../../shared/grid';
 import { isFromStep, useLayoutStep, useRefusalIntoView } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
@@ -108,6 +108,7 @@ import { ActiveLine, SalesSection } from '../components/SalesSection';
 import { NumbersStrip } from '../components/NumbersStrip';
 import { SplitPanel } from '../components/SplitPanel';
 import { AdvanceTicks } from '../components/AdvanceTicks';
+import { SellerOverConfirmDialog } from '../components/SellerOverConfirmDialog';
 import { SummaryPanel } from '../components/SummaryPanel';
 import {
   BikriDraftProvider,
@@ -554,7 +555,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             netIsNegative={netIsNegative}
             leftOut={whole ? leftOutWhole : leftOutLot}
             advance={
-              <AdvanceTicks shown={whole ? lotRows : lotRows.slice(lotIndex, lotIndex + 1)} />
+              <AdvanceTicks
+                shown={whole ? lotRows : lotRows.slice(lotIndex, lotIndex + 1)}
+                sellers={preview.sellers}
+              />
             }
           />
           <SplitPanel preview={preview} />
@@ -856,6 +860,24 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             cashAfter={flow.cashAfter}
             onConfirm={flow.confirmCash}
             onCloseFocus={flow.onCashCloseFocus}
+          />
+        )}
+        {flow.sellersAsked.length === 0 ? null : (
+          <SellerOverConfirmDialog
+            open={flow.sellerAsk !== null}
+            onOpenChange={flow.onSellerOpenChange}
+            entries={flow.sellersAsked.map((seller) => {
+              const picked = lotRows
+                .map((row) => row.picked?.[LOT.seller])
+                .find((one) => one?.id === seller.seller_account_id);
+              return {
+                sellerId: seller.seller_account_id,
+                name: picked === undefined ? '' : displayName(picked, language),
+                balance: seller.new_balance,
+              };
+            })}
+            onConfirm={flow.confirmSellerOver}
+            onCloseFocus={flow.onSellerCloseFocus}
           />
         )}
         {edit === null ? null : (

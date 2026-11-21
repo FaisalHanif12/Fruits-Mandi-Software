@@ -62,12 +62,13 @@ mod merge;
 mod own;
 mod person;
 mod process;
+mod seller_paid;
 mod stored;
 mod working;
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::{LotPreview, PreparedDraft, SummaryTotals};
+use mandi_core::bikri::{LotPreview, PreparedDraft, SellerPaidLines, SummaryTotals};
 use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::MoneyError;
@@ -88,6 +89,7 @@ pub use self::lookups::{
 pub use self::merge::{merge_splits, merge_summaries, sum_changes};
 pub use self::own::own_cost;
 pub use self::person::{CleanPerson, clean_person};
+pub use self::seller_paid::{SpreadLot, merge_sellers, seller_lines, spread_seller_paid};
 pub use self::stored::{
     PostingTarget, StoredCarrier, StoredCharge, StoredIdentity, StoredLot, StoredLotCharge,
     StoredPosting, StoredSale,
@@ -142,6 +144,8 @@ pub struct PostingCalc {
     pub lots: Vec<LotPreview>,
     /// The lines of PRD 12.5 for the whole بکری.
     pub summary: SummaryTotals,
+    /// One summary for each seller of a complete lot (PRD FR-12.23 v1.53, plan 91).
+    pub sellers: Vec<SellerPaidLines>,
     /// What stops a save.
     pub errors: Vec<FieldError>,
     /// What only warns.
@@ -332,9 +336,11 @@ fn calc_pass(
         }
     }
     let summary = whole.totals(&Scope::Whole)?;
+    let sellers = seller_paid::sellers_of(draft, lookups, &previews)?;
     Ok(PostingCalc {
         lots: previews,
         summary,
+        sellers,
         errors: issues.errors,
         warnings: issues.warnings,
         journal,

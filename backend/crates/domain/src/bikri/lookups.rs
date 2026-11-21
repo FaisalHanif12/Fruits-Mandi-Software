@@ -231,4 +231,9 @@ pub struct Lookups {
     /// The biggest lot counter ever given to each (seller, item) the draft's lots use, from
     /// `lot_counters` (PRD FR-12.45). A pair that never had a lot is missing, which counts as 0.
     pub lot_counters: HashMap<(i64, i64), i64>,
+    /// The balance of each seller of the draft's lots just before this posting, debit positive (a
+    /// جمع balance is negative), for the summary of a seller (PRD FR-12.23 v1.53, plan 91). An edit
+    /// leaves the posting being edited out, and entries dated after the posting day are not in it. A
+    /// seller with no line is missing, which counts as 0.
+    pub previous: HashMap<i64, Paisa>,
 }

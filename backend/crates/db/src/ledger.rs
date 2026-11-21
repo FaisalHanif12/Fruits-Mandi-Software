@@ -798,6 +798,57 @@ pub fn totals_for_accounts(
     rows.collect()
 }
 
+/// The posted debit and credit totals of the given accounts as they stood just before a posting
+/// dated `date_iso` (PRD FR-12.23 v1.53, plan 91: the "previous balance" of a seller in the summary of
+/// a بکری). It leaves out the entries dated after `date_iso`, and, for an edit, the entries dated
+/// `date_iso` that were written at or after `edited_entry` (the posting being edited and what came
+/// later the same day). A new posting passes `None`: every entry of its own day is before it. As
+/// [`totals_for_accounts`], it asks for the few entries to leave out, so it reads only
+/// `idx_journal_lines_account_amounts`. An account with no line is not in the answer.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn totals_before_posting(
+    conn: &Connection,
+    ids: &[i64],
+    date_iso: &str,
+    edited_entry: Option<i64>,
+) -> rusqlite::Result<std::collections::HashMap<i64, Totals>> {
+    if ids.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
+    let marks = vec!["?"; ids.len()].join(", ");
+    let same_day_later = if edited_entry.is_some() {
+        " UNION ALL SELECT id FROM journal_entries WHERE entry_date = ? AND id >= ?"
+    } else {
+        ""
+    };
+    let mut statement = conn.prepare(&format!(
+        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE account_id IN ({marks}) AND entry_id NOT IN (
+           SELECT id FROM journal_entries WHERE status <> 'posted'
+           UNION ALL SELECT id FROM journal_entries WHERE entry_date > ?{same_day_later})
+         GROUP BY account_id"
+    ))?;
+    let mut args: Vec<rusqlite::types::Value> =
+        ids.iter().map(|id| rusqlite::types::Value::Integer(*id)).collect();
+    args.push(rusqlite::types::Value::Text(date_iso.to_owned()));
+    if let Some(entry) = edited_entry {
+        args.push(rusqlite::types::Value::Text(date_iso.to_owned()));
+        args.push(rusqlite::types::Value::Integer(entry));
+    }
+    let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            Totals {
+                dr_paisa: r.get(1)?,
+                cr_paisa: r.get(2)?,
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
 /// The posted debit and credit totals of ALL the accounts of one control: one query through
 /// `idx_accounts_control` and the journal index (plan 38 B1).
 ///

@@ -50,7 +50,10 @@ use super::rows::{
     LotCharges, Posting, check_shares, insert_sales_and_facts, lot_columns, lot_running_totals,
     pin_cash_sales, posting_sums, shape, stored_line_ids,
 };
-use super::shared::{Basis, Replaced, Worked, data, refresh_chukta_index, switches, work_out};
+use super::shared::{
+    Basis, Replaced, Worked, data, refresh_chukta_index, require_sellers_confirmed, switches,
+    work_out,
+};
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::cash;
@@ -62,15 +65,15 @@ use crate::rules;
 use crate::vouchers::{rematch_party, role_of_account, stored_cash_change};
 
 /// Everything an edit works from, read once.
-struct EditPlan {
+pub(super) struct EditPlan {
     detail: BikriDetail,
     posting: PostingRef,
     kind: PostingKind,
     date: BusinessDate,
-    prepared: PreparedDraft,
-    basis: Basis,
+    pub(super) prepared: PreparedDraft,
+    pub(super) basis: Basis,
     /// Mistakes of the draft against the stored rows (a lot or line that is not the posting's).
-    extra: Vec<FieldError>,
+    pub(super) extra: Vec<FieldError>,
 }
 
 fn not_found(field: &str) -> ServiceError {
@@ -285,7 +288,7 @@ fn check_first(
 }
 
 /// Reads and checks everything an edit works from. Nothing is written.
-fn plan_edit(
+pub(super) fn plan_edit(
     conn: &Connection,
     entry_id: i64,
     draft: &BikriDraft,
@@ -561,6 +564,7 @@ pub(crate) fn edit_in(
         }
         let reason = reason?;
         cash::require_confirmed(&worked.cash, input.confirm_cash_below_zero)?;
+        require_sellers_confirmed(&worked.calc.sellers, input.confirm_cash_below_zero)?;
         write_edit(
             ctx,
             tx,

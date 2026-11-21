@@ -117,12 +117,15 @@ struct Named {
     stores: BTreeSet<i64>,
     /// (seller, item) pairs, for the counter of each lot's name (PRD FR-12.45).
     lot_pairs: BTreeSet<(i64, i64)>,
+    /// The sellers of the lots, for their previous balance (PRD FR-12.23 v1.53).
+    sellers: BTreeSet<i64>,
 }
 
 fn named(prepared: &PreparedDraft) -> Named {
     let mut n = Named::default();
     for lot in &prepared.lots {
         n.accounts.extend(lot.seller_account_id);
+        n.sellers.extend(lot.seller_account_id);
         if let Some(pair) = lot.seller_account_id.zip(lot.item_id) {
             n.lot_pairs.insert(pair);
         }
@@ -454,9 +457,28 @@ fn load_lookups(
         })
         .collect::<Result<HashMap<_, _>, ServiceError>>()?;
 
+    // The previous balance of each seller of a lot: his ledger just before this posting, as of the
+    // posting day (PRD FR-12.23 v1.53, plan 91). One query for all of them.
+    let previous = match prepared.header.entry_date {
+        Some(date) => {
+            let sellers: Vec<i64> = n
+                .sellers
+                .iter()
+                .copied()
+                .filter(|id| {
+                    accounts
+                        .get(id)
+                        .is_some_and(|a| matches!(a.kind, PartyKind::Seller | PartyKind::Khata))
+                })
+                .collect();
+            previous_balances(conn, &sellers, &date.to_iso(), replaces)?
+        }
+        None => HashMap::new(),
+    };
     let mut lookups = Lookups {
         accounts,
         items,
+        previous,
         packings: existing(conn, repo::MasterTable::Packings, &n.packings)?,
         markas: existing(conn, repo::MasterTable::Markas, &n.markas)?,
         stores: existing(conn, repo::MasterTable::Stores, &n.stores)?,
@@ -496,6 +518,24 @@ fn load_lookups(
         }
     }
     Ok(lookups)
+}
+
+/// The balance of each account just before a posting dated `date_iso`, debit positive (a جمع balance
+/// is negative). An edit passes the entry it replaces (PRD FR-12.23 v1.53, plan 91).
+fn previous_balances(
+    conn: &Connection,
+    ids: &[i64],
+    date_iso: &str,
+    replaces: Option<i64>,
+) -> Result<HashMap<i64, Paisa>, ServiceError> {
+    ledger_repo::totals_before_posting(conn, ids, date_iso, replaces)?
+        .into_iter()
+        .map(|(id, t)| {
+            let dr = paisa(t.dr_paisa)?;
+            let cr = paisa(t.cr_paisa)?;
+            Ok((id, dr.checked_sub(cr).map_err(money_error)?))
+        })
+        .collect()
 }
 
 pub(super) fn switches(settings: &OverridesSettings) -> Switches {
@@ -573,6 +613,50 @@ fn split_of(
         .collect())
 }
 
+/// Refuses a save when a seller is paid on the spot more than today's credit of his lots plus what
+/// the shop owed him, unless the user confirmed the question (PRD FR-12.23 v1.53, plan 91). It is the
+/// same question box as the cash one (PRD FR-6.7), so the same flag answers it. Every seller that
+/// needs the confirmation is returned at once, each at `sellers[k].paid`.
+///
+/// # Errors
+/// `ERR_SELLER_PAID_ABOVE_TODAY` (values `credit_paisa`, `limit_paisa`, `paid_paisa`).
+pub(crate) fn require_sellers_confirmed(
+    sellers: &[mandi_domain::core::bikri::SellerPaidLines],
+    confirmed: bool,
+) -> Result<(), ServiceError> {
+    if confirmed {
+        return Ok(());
+    }
+    let items: Vec<Rejection> = sellers
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.needs_confirm)
+        .map(|(k, s)| Rejection {
+            code: ErrorCode::ErrSellerPaidAboveToday,
+            field: Some(format!("sellers[{k}].paid")),
+            values: std::collections::BTreeMap::from([
+                (
+                    "credit_paisa".to_owned(),
+                    ErrorValue::Number(s.credit_paisa.as_paisa()),
+                ),
+                (
+                    "limit_paisa".to_owned(),
+                    ErrorValue::Number(s.limit_paisa.as_paisa()),
+                ),
+                (
+                    "paid_paisa".to_owned(),
+                    ErrorValue::Number(s.paid_paisa.as_paisa()),
+                ),
+            ]),
+        })
+        .collect();
+    if items.is_empty() {
+        Ok(())
+    } else {
+        Err(ServiceError::Rejected(items))
+    }
+}
+
 /// A journal entry with the positions of the lines that matter for matching.
 pub(crate) type BuiltEntry = (BalancedEntry, EntryLayout);
 
@@ -603,6 +687,7 @@ impl Worked {
             lots: self.calc.lots.clone(),
             summary: self.calc.summary.clone(),
             split: self.split.clone(),
+            sellers: self.calc.sellers.clone(),
             cash: self.cash,
             allow_line_override: self.switches.allow_line_override,
             errors: self.errors.clone(),
