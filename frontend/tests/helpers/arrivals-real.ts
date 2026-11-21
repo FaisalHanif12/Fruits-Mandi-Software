@@ -36,6 +36,7 @@ import arrivalEntryPreviewTwoLinesRequest from '../fixtures/gardens_arrival_entr
 import arrivalEntrySaveLineError from '../fixtures/gardens_arrival_entry_save_line_error.json';
 import arrivalEntrySaveTwoLines from '../fixtures/gardens_arrival_entry_save_two_lines.json';
 import gardenOtherSaleWithArrival from '../fixtures/gardens_entry_preview_other_sale_with_arrival.json';
+import gardenOtherSaleAbove from '../fixtures/gardens_entry_preview_other_sale_above_the_other_part.json';
 import stockListWithSplit from '../fixtures/bikri_stock_list_with_the_split.json';
 import arrivalCancel from '../fixtures/gardens_arrival_cancel.json';
 import arrivalCancelRequest from '../fixtures/gardens_arrival_cancel_request.json';
@@ -187,4 +188,6 @@ export const ARRIVAL_ENTRY_SAVE_LINE_ERROR = readUiError(arrivalEntrySaveLineErr
 export const ARRIVAL_CHANGE_SPLIT = arrivalChangeSplit as unknown as SplitSet;
 export const GARDEN_OTHER_SALE_WITH_ARRIVAL =
   gardenOtherSaleWithArrival as unknown as GardenEntryPreview;
+/** The preview of a sale above the goods set for another shop (plan 90): numbers null, ERR_QTY_EXCEEDS_OTHER_SHOP, remaining 50. */
+export const GARDEN_OTHER_SALE_ABOVE = gardenOtherSaleAbove as unknown as GardenEntryPreview;
 export const STOCK_LIST_WITH_SPLIT = readStockList(stockListWithSplit);

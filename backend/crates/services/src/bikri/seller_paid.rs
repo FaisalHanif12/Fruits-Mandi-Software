@@ -64,10 +64,16 @@ pub fn seller_paid_spread(
         };
         // Pass 1: the credit of each lot.
         let first = work_out(conn, prepared.clone(), &rule_set, switches, &basis)?;
-        let first_posting = basis.target.kind(&basis.stored) == mandi_domain::bikri::PostingKind::First;
+        let first_posting =
+            basis.target.kind(&basis.stored) == mandi_domain::bikri::PostingKind::First;
         // A lot takes cash when its seller is one that can be paid on the spot (his summary exists),
         // the lot was worked out, and this is a first posting.
-        let payable: HashSet<i64> = first.calc.sellers.iter().map(|s| s.seller_account_id).collect();
+        let payable: HashSet<i64> = first
+            .calc
+            .sellers
+            .iter()
+            .map(|s| s.seller_account_id)
+            .collect();
         let lots: Vec<SpreadLot> = prepared
             .lots
             .iter()

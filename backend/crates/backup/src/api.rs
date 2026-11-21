@@ -378,6 +378,40 @@ impl fmt::Debug for KeyConfirmInput {
     }
 }
 
+/// Input of `backup_key_reveal` (PRD FR-20.10, v1.54): the Owner's password and his sign. Neither
+/// is ever written to a log or an audit row; `Debug` hides both.
+#[derive(Clone, Deserialize, TS)]
+pub struct KeyRevealInput {
+    /// The Owner's password.
+    pub password: String,
+    /// The Owner's sign (دستخط, PRD FR-21.4).
+    pub sign: String,
+}
+
+impl fmt::Debug for KeyRevealInput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KeyRevealInput")
+            .field("password", &"[hidden]")
+            .field("sign", &"[hidden]")
+            .finish()
+    }
+}
+
+/// The backup key, shown again after the password and the sign were right (PRD FR-20.10, v1.54).
+#[derive(Clone, PartialEq, Eq, Serialize, TS)]
+pub struct KeyShown {
+    /// `XXXX-XXXX-XXXX-XXXX-XXXX-XXXX`, to read on the screen and to print on a new paper.
+    pub key: String,
+}
+
+impl fmt::Debug for KeyShown {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KeyShown")
+            .field("key", &"[hidden]")
+            .finish()
+    }
+}
+
 /// The settings as the screen shows them: the plain settings and whether the cloud keys exist.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct BackupSettingsView {

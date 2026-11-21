@@ -344,6 +344,7 @@ fn e2e_43_the_sellers_slips_of_rahim_and_karim() {
             "report-r35-phone",
             "report-r35-net-sale",
             "report-r35-paid-today",
+            "report-r35-sale-rest",
             "report-r35-today-left",
             "report-r35-previous",
             "report-r35-new-balance",
@@ -360,6 +361,8 @@ fn e2e_43_the_sellers_slips_of_rahim_and_karim() {
     assert_eq!(get("report-r35-net-sale"), -24_316);
     // نقد 5,000 + payment 4,316; left 15,000 جمع; previous 15,000 بنام; new 0.
     assert_eq!(get("report-r35-paid-today"), 9_316);
+    // The rest of today's sale that goes into his account: 24,316 − 9,316 = 15,000 (plan 91).
+    assert_eq!(get("report-r35-sale-rest"), 15_000);
     assert_eq!(get("report-r35-today-left"), -15_000);
     assert_eq!(get("report-r35-previous"), 15_000);
     assert_eq!(get("report-r35-new-balance"), 0);
@@ -697,7 +700,9 @@ fn negative_net_world() -> World {
     let mut lot = support::lot(&w, "lot-n", w.karim, w.apple, "10");
     lot.cash_paid = Some("500".into());
     let lot = support::with_sales(lot, vec![support::sale("s-1", w.akram, "10", "100")]);
-    save(&w, &support::draft(vec![lot]));
+    // 500 is paid on a lot whose credit is below 0, so the seller question of plan 91 applies: this
+    // set-up says yes. The numbers of the tests are the same as before.
+    support::save_old(&w, &support::draft(vec![lot]), true);
     w
 }
 
@@ -981,7 +986,9 @@ fn a_lot_with_nothing_sold_in_its_first_posting_still_charges_the_seller() {
         support::lot(&w, "lot-r", w.rahim, w.banana, "10"),
         vec![support::sale("s-1", w.akram, "10", "600")],
     );
-    save(&w, &support::draft(vec![rahim_lot, karim_lot]));
+    // 5,000 نقد on a lot that sells nothing is above its credit: the seller question of plan 91 is
+    // answered yes by this set-up. The numbers of the test are the same as before.
+    support::save_old(&w, &support::draft(vec![rahim_lot, karim_lot]), true);
     let slip = report(
         &w,
         ReportId::R35,
@@ -1317,11 +1324,14 @@ fn e2e_16_and_16b_a_later_sale_has_no_lot_charges_on_its_slip() {
             "report-r35-commission",
             "report-r35-net-sale",
             "report-r35-paid-today",
+            "report-r35-sale-rest",
             "report-r35-today-left",
             "report-r35-previous",
             "report-r35-new-balance",
         ]
     );
+    // Nothing was paid, so the whole net sale of 2,632 is the rest that goes into his account.
+    assert_eq!(line_of(&rahim, "report-r35-sale-rest"), 2_632);
     assert_eq!(line_of(&rahim, "report-r35-gross"), 2_800);
     assert_eq!(line_of(&rahim, "report-r35-commission"), 168);
     assert_eq!(line_of(&rahim, "report-r35-net-sale"), -2_632);

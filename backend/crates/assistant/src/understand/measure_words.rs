@@ -313,10 +313,10 @@ pub(super) fn measure_word_left(scan: &Scan, u: &Understanding) -> bool {
 /// answer only a part of the question, so none is given; the reads are still made and the model answers (the
 /// sale guard lets it cite the other columns it was asked).
 fn stop_when_more_is_asked(scan: &Scan, u: &mut Understanding) {
-    if asked_sale_measure(&scan.raw)
-        .is_some_and(|ask| ask.gross_too || ask.balance_too || ask.commission_too)
-    {
+    let ask = asked_sale_measure(&scan.raw);
+    if ask.is_some_and(|ask| ask.gross_too || ask.balance_too || ask.commission_too) {
         u.lower_ask = true;
+        u.gross_beside = ask.is_some_and(|ask| ask.gross_too);
     }
 }
 

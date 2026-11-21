@@ -125,10 +125,11 @@ fn new_balance_working(previous: Paisa, paid: Paisa, credit: Paisa, new: Paisa) 
 ///
 /// `new = previous + paid - credit`. Today's credit counts as 0 when it is negative (the charges
 /// of the lots are more than their sales): that part adds to what he owes (`increase_owed`). What
-/// is not paid in cash is `carry = credit - paid` (credit never below 0). When it is 0 or more it
+/// is not paid in cash is `carry = credit - paid` (credit never below 0), the rest of today's sale
+/// that goes into his account (Umar: "بکری کی باقی رقم، کھاتے میں جمع"). When it is 0 or more it
 /// first takes off what he owed (`cut`, never more than what he owed) and the rest adds to what the
-/// shop owes him (`added_to_credit`). When it is negative he took more than today's credit
-/// (`over_paid`). `limit` is today's credit (never below 0) plus what the shop owed him; a `paid`
+/// shop owes him (`added_to_credit`); `carry = cut + added_to_credit`. When it would be negative he
+/// took more than today's credit (`over_paid`) and `carry` is 0. `limit` is today's credit plus what the shop owed him (never below 0); a `paid`
 /// above it needs the Owner's confirmation.
 ///
 /// Examples: previous 30,000, credit 20,000, paid 5,000 gives cut 15,000, new 15,000 بنام, limit
@@ -160,14 +161,17 @@ pub fn seller_lines(
         Paisa::ZERO
     };
     let carry = credit_up.checked_sub(paid)?;
-    let (cut, added_to_credit, over_paid) = if carry.is_negative() {
-        (Paisa::ZERO, Paisa::ZERO, carry.checked_neg()?)
+    let (carry_up, cut, added_to_credit, over_paid) = if carry.is_negative() {
+        (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, carry.checked_neg()?)
     } else {
         let cut = carry.min(owes);
-        (cut, carry.checked_sub(cut)?, Paisa::ZERO)
+        (carry, cut, carry.checked_sub(cut)?, Paisa::ZERO)
     };
     let new = previous.checked_add(paid)?.checked_sub(credit)?;
-    let limit = credit_up.checked_add(owed_to_him)?;
+    // What he can take without a question: today's credit plus what the shop owed him. A negative
+    // credit (charges above sales) takes off what he was owed, so he is never moved from being owed
+    // to owing without being asked.
+    let limit = credit.checked_add(owed_to_him)?.max(Paisa::ZERO);
     let (previous_paisa, previous_side) = shown(previous)?;
     let (new_paisa, new_side) = shown(new)?;
     Ok(SellerPaidLines {
@@ -176,6 +180,7 @@ pub fn seller_lines(
         previous_side,
         credit_paisa: credit,
         paid_paisa: paid,
+        carry_paisa: carry_up,
         cut_paisa: cut,
         added_to_credit_paisa: added_to_credit,
         over_paid_paisa: over_paid,

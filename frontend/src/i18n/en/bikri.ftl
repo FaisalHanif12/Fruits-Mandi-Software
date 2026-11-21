@@ -210,18 +210,15 @@ bikri-seller-paid-net = Today's { -safi-bikri }
 # review: pending
 bikri-seller-paid-paid = { -mauqa-par-adaigi }
 
+# The rest of today's credit after the cash, put to his account (Umar, 21-11-2026): it lowers what he owes, or adds to what the shop owes him.
 # review: pending
-bikri-seller-paid-cut = Cut from what he owed ({ -banaam })
-
-# When the shop owed him: what is left of today's credit after the cash is added to his balance.
-# review: pending
-bikri-seller-paid-added = Added to the { -baqaya }
+bikri-seller-paid-rest = Rest of today's { -bikri }, credited to his account
 
 # review: pending
 bikri-seller-paid-over = Paid above today's { -bikri }
 
 # review: pending
-bikri-seller-paid-increase = Charges above the { -bikri }: added to what he owes ({ -banaam })
+bikri-seller-paid-increase = Today's charges above the { -bikri }, added to what he owes ({ -banaam })
 
 # review: pending
 bikri-seller-paid-new = New { -baqaya }

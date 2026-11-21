@@ -1,0 +1,212 @@
+{
+  "columns": [
+    {
+      "key": "item",
+      "kind": "names",
+      "title_id": "report-col-item"
+    },
+    {
+      "key": "packing",
+      "kind": "names",
+      "title_id": "report-col-packing"
+    },
+    {
+      "key": "qty",
+      "kind": "number",
+      "title_id": "report-col-qty"
+    },
+    {
+      "key": "rate",
+      "kind": "money",
+      "title_id": "report-col-rate"
+    },
+    {
+      "key": "amount",
+      "kind": "money",
+      "title_id": "report-col-amount"
+    }
+  ],
+  "dir": "ltr",
+  "filters": [
+    {
+      "label_id": "report-filter-day",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "0 Rahim"
+    }
+  ],
+  "language": "en",
+  "named_title_id": "print-seller-bill-named-title",
+  "paper": "a4",
+  "party": {
+    "code": "0010",
+    "name": "Rahim",
+    "person_key": null,
+    "short_code": "0",
+    "tag": null
+  },
+  "report": "R35",
+  "row_count": "3",
+  "rows": [
+    {
+      "cells": [
+        {
+          "text": "Banana-1",
+          "type": "names"
+        },
+        {
+          "text": "Box",
+          "type": "names"
+        },
+        {
+          "text": "12",
+          "type": "number"
+        },
+        {
+          "text": "1,000",
+          "type": "money"
+        },
+        {
+          "text": "12,000",
+          "type": "money"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "text": "Banana-2",
+          "type": "names"
+        },
+        {
+          "text": "Box",
+          "type": "names"
+        },
+        {
+          "text": "8",
+          "type": "number"
+        },
+        {
+          "text": "1,000",
+          "type": "money"
+        },
+        {
+          "text": "8,000",
+          "type": "money"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "args": [
+            {
+              "name": "item",
+              "value": {
+                "text": "Banana",
+                "type": "text"
+              }
+            }
+          ],
+          "id": "report-r35-item-total",
+          "type": "message"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "text": "20",
+          "type": "number"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "text": "20,000",
+          "type": "money"
+        }
+      ],
+      "kind": "item_total"
+    }
+  ],
+  "summary": [
+    {
+      "cell": {
+        "text": "20,000",
+        "type": "money"
+      },
+      "label_id": "report-r35-gross"
+    },
+    {
+      "cell": {
+        "side_id": "report-side-cr",
+        "text": "20,000",
+        "type": "balance"
+      },
+      "label_id": "report-r35-net-sale"
+    },
+    {
+      "cell": {
+        "text": "15,000",
+        "type": "money"
+      },
+      "label_id": "report-r35-paid-today"
+    },
+    {
+      "cell": {
+        "text": "5,000",
+        "type": "money"
+      },
+      "label_id": "report-r35-sale-rest"
+    },
+    {
+      "cell": {
+        "side_id": "report-side-cr",
+        "text": "5,000",
+        "type": "balance"
+      },
+      "label_id": "report-r35-today-left"
+    },
+    {
+      "cell": {
+        "side_id": "report-side-dr",
+        "text": "30,000",
+        "type": "balance"
+      },
+      "label_id": "report-r35-previous"
+    },
+    {
+      "cell": {
+        "side_id": "report-side-dr",
+        "text": "25,000",
+        "type": "balance"
+      },
+      "label_id": "report-r35-new-balance"
+    }
+  ],
+  "tables": [],
+  "title_id": "report-r35-title",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "totals_label_id": "report-total",
+  "words": null
+}

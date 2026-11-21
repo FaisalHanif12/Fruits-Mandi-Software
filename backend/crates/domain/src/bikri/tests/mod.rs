@@ -10,6 +10,7 @@ mod counter;
 mod edit;
 mod own;
 mod properties;
+mod seller_paid;
 mod worked;
 
 use std::collections::{HashMap, HashSet};

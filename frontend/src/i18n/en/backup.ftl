@@ -407,6 +407,36 @@ backup-key-lost = I lost the printed sheet
 backup-key-lost-help = A new key can be made only while no copy on the USB drive or in the cloud is locked with the old one.
 
 # review: pending
+backup-key-reveal-button = See the key again
+
+# review: pending
+backup-key-reveal-title = See the backup key again
+
+# review: pending
+backup-key-reveal-help = The printed sheet is lost? Type your password and your { -dastakhat }. The key is shown on this screen only until you close this box.
+
+# review: pending
+backup-key-reveal-password = Your password
+
+# review: pending
+backup-key-reveal-sign = Your { -dastakhat }
+
+# review: pending
+backup-key-reveal-show = Show the key
+
+# review: pending
+backup-key-reveal-wrong-password = The password is wrong. Tries left: { $tries_left }
+
+# review: pending
+backup-key-reveal-shown = This is your backup key. Print it and keep the sheet in a safe place, away from this computer. It leaves the screen when you close this box.
+
+# review: pending
+backup-key-reveal-close = Close
+
+# review: pending
+backup-key-reveal-idle = The backup key is set. If you lost the printed sheet, you can see the key again.
+
+# review: pending
 backup-wizard-step-key = Backup key
 
 # review: pending

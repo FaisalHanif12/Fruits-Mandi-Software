@@ -613,43 +613,54 @@ fn split_of(
         .collect())
 }
 
-/// Refuses a save when a seller is paid on the spot more than today's credit of his lots plus what
-/// the shop owed him, unless the user confirmed the question (PRD FR-12.23 v1.53, plan 91). It is the
-/// same question box as the cash one (PRD FR-6.7), so the same flag answers it. Every seller that
-/// needs the confirmation is returned at once, each at `sellers[k].paid`.
+/// Refuses a save that needs the user's confirmation and did not get it. One yes answers every
+/// question the screen showed, so the refusal names every one of them (PRD FR-6.7, FR-12.23 v1.53,
+/// plan 91):
+///
+/// * the entry takes cash in hand below 0: `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value
+///   `cash_after_paisa`);
+/// * a seller is paid on the spot more than today's credit of his lots plus what the shop owed him:
+///   `ERR_SELLER_PAID_ABOVE_TODAY` at `sellers[k].paid` for each such seller (values `credit_paisa`,
+///   `limit_paisa`, `paid_paisa`).
 ///
 /// # Errors
-/// `ERR_SELLER_PAID_ABOVE_TODAY` (values `credit_paisa`, `limit_paisa`, `paid_paisa`).
-pub(crate) fn require_sellers_confirmed(
+/// All the reasons together, the cash one first.
+pub(crate) fn require_confirmed(
+    cash: &CashCheck,
     sellers: &[mandi_domain::core::bikri::SellerPaidLines],
     confirmed: bool,
 ) -> Result<(), ServiceError> {
     if confirmed {
         return Ok(());
     }
-    let items: Vec<Rejection> = sellers
-        .iter()
-        .enumerate()
-        .filter(|(_, s)| s.needs_confirm)
-        .map(|(k, s)| Rejection {
-            code: ErrorCode::ErrSellerPaidAboveToday,
-            field: Some(format!("sellers[{k}].paid")),
-            values: std::collections::BTreeMap::from([
-                (
-                    "credit_paisa".to_owned(),
-                    ErrorValue::Number(s.credit_paisa.as_paisa()),
-                ),
-                (
-                    "limit_paisa".to_owned(),
-                    ErrorValue::Number(s.limit_paisa.as_paisa()),
-                ),
-                (
-                    "paid_paisa".to_owned(),
-                    ErrorValue::Number(s.paid_paisa.as_paisa()),
-                ),
-            ]),
-        })
-        .collect();
+    let mut items: Vec<Rejection> = match cash_service::require_confirmed(cash, false) {
+        Err(ServiceError::Rejected(items)) => items,
+        _ => Vec::new(),
+    };
+    items.extend(
+        sellers
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.needs_confirm)
+            .map(|(k, s)| Rejection {
+                code: ErrorCode::ErrSellerPaidAboveToday,
+                field: Some(format!("sellers[{k}].paid")),
+                values: std::collections::BTreeMap::from([
+                    (
+                        "credit_paisa".to_owned(),
+                        ErrorValue::Number(s.credit_paisa.as_paisa()),
+                    ),
+                    (
+                        "limit_paisa".to_owned(),
+                        ErrorValue::Number(s.limit_paisa.as_paisa()),
+                    ),
+                    (
+                        "paid_paisa".to_owned(),
+                        ErrorValue::Number(s.paid_paisa.as_paisa()),
+                    ),
+                ]),
+            }),
+    );
     if items.is_empty() {
         Ok(())
     } else {

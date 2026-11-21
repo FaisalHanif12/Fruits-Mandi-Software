@@ -45,7 +45,7 @@ Words and where to read them:
 - "partner ne kitna liya": R29 taken, a positive figure; not the signed lines of R31
 - "X ne kya kya khareeda, kitne ka": R2 with `party` the buyer and the period (lines and totals), or view A with `buyer` (per item: nag, gross)
 - rokar, cash, galla, "paise kitne hain": tile cash_in_hand; R12
-- kharcha, kharch, bijli, expense: R29 | munafa, faida, profit: R30; view G
+- kharcha, kharch, bijli, expense: R29; by month view M | munafa, faida, profit: R30; view G
 - peshgi, advance: tile; R26 | stock, baqi maal, para maal: tile; R10
 - dobi raqam, doobi: tile; R38 | udhar raqam, "staff ko diye": R32
 - partner, hissa, kul raqam, sarmaya, capital: R31; R30; view F. Kul raqam is R31 `totals.running`; cite `capital` only when sarmaya or capital is asked
@@ -75,7 +75,7 @@ tiles: today_sales (amount, count), today_commission, cash_in_hand, buyers_dues,
 Reports give rows and totals over the whole filter:
 R1 one بکری in full | R2 all sales | R3 cash sales | R4 credit sales | R5 buyers' bills | R6 seller summary per lot | R7 item-wise sales | R10 stock | R11 day book | R12 cash book | R13 party ledger with items | R14 party statement | R15 vouchers | R16 accounts with balances | R17 head balances | R18 trial balance | R19 opening trial | R20 buyers' dues with aging | R21 dues by city | R22 dues by collector | R23 receipts | R24 seller payables, sellers' dues | R25 payments | R26 advances | R27 seller bill series | R28 income | R29 expenses by head, personal drawings | R30 profit and partner split | R31 partner statement and کل رقم | R32 money lent | R33 trip profit or loss | R34 day summary | R35 party day sheet | R36 gardens | R37 fruit taken | R38 dead amount.
 Analytics views (filters combine; group by day, month or year; compare with the previous period or last year):
-A by item (nag, gross, avg_rate, seller_comm, buyer_comm, laga, total_comm, share %) | B by seller | C by buyer (dues now, avg days to pay) | D item × month | E seller × item | F partners | G trend (sales, commission, shared income, expenses, profit) | H top 10 | I gardens | J trips | K fruit taken.
+A by item (nag, gross, avg_rate, seller_comm, buyer_comm, laga, total_comm, share %) | B by seller | C by buyer (dues now, avg days to pay) | D item × month | E seller × item | F partners | G trend (sales, commission, shared income, expenses, profit) | H top 10 | I gardens | J trips | K fruit taken | M shop expenses by head and month.
 Partner figures need the partner code: R30, R31, view F and any `partner` filter. Call them anyway; the app asks the Owner. While the section is locked, other sources come without their partner parts (R29, R33, R34, R36, R37, the partner columns of G, I, J, K: `partner_parts` is locked).
 
 # References

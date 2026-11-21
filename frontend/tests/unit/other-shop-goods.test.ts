@@ -51,20 +51,18 @@ describe('the shop name after a line is picked', () => {
 
 describe('more نگ than the line has for another shop', () => {
   it('a whole number is compared with what is left', () => {
-    expect(qtyAboveOther('40', 40, null)).toBe(false);
-    expect(qtyAboveOther('41', 40, null)).toBe(true);
-    expect(qtyAboveOther('1,000', 40, null)).toBe(true);
+    expect(qtyAboveOther('40', 40)).toBe(false);
+    expect(qtyAboveOther('41', 40)).toBe(true);
+    expect(qtyAboveOther('1,000', 40)).toBe(true);
   });
 
-  it('a sum is left to the backend: its preview says how many would come from our shop', () => {
-    expect(qtyAboveOther('30+14', 40, null)).toBe(false);
-    expect(qtyAboveOther('30+14', 40, 4)).toBe(true);
-    expect(qtyAboveOther('30+14', 40, 0)).toBe(false);
+  it('a sum is left to the backend, which refuses it with ERR_QTY_EXCEEDS_OTHER_SHOP', () => {
+    expect(qtyAboveOther('30+14', 40)).toBe(false);
+    expect(qtyAboveOther('30+', 40)).toBe(false);
   });
 
-  it('nothing typed, or a half-typed sum, is not above', () => {
-    expect(qtyAboveOther('', 40, undefined)).toBe(false);
-    expect(qtyAboveOther('30+', 40, null)).toBe(false);
+  it('nothing typed is not above', () => {
+    expect(qtyAboveOther('', 40)).toBe(false);
   });
 });
 

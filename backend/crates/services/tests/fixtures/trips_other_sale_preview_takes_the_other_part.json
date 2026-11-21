@@ -1,8 +1,8 @@
 {
   "numbers": {
-    "amount": 200000,
-    "qty": 25,
-    "cost_paisa": 125000,
+    "amount": 160000,
+    "qty": 20,
+    "cost_paisa": 100000,
     "cost_working": {
       "message_id": "working-cost-of-goods",
       "args": [
@@ -17,7 +17,7 @@
           "name": "qty",
           "value": {
             "kind": "count",
-            "value": 25
+            "value": 20
           }
         },
         {
@@ -31,13 +31,13 @@
           "name": "result",
           "value": {
             "kind": "money",
-            "paisa": 125000
+            "paisa": 100000
           }
         }
       ],
       "rule_id": null
     },
-    "result_paisa": 75000,
+    "result_paisa": 60000,
     "result_working": {
       "message_id": "working-other-sale-result",
       "args": [
@@ -45,21 +45,21 @@
           "name": "amount",
           "value": {
             "kind": "money",
-            "paisa": 200000
+            "paisa": 160000
           }
         },
         {
           "name": "cost",
           "value": {
             "kind": "money",
-            "paisa": 125000
+            "paisa": 100000
           }
         },
         {
           "name": "result",
           "value": {
             "kind": "money",
-            "paisa": 75000
+            "paisa": 60000
           }
         }
       ],
@@ -74,7 +74,7 @@
           "name_en": "Partner A"
         },
         "share_bps": 4000,
-        "amount_paisa": 80000,
+        "amount_paisa": 64000,
         "working": {
           "message_id": "working-venture-credit",
           "args": [
@@ -82,7 +82,7 @@
               "name": "amount",
               "value": {
                 "kind": "money",
-                "paisa": 200000
+                "paisa": 160000
               }
             },
             {
@@ -96,7 +96,7 @@
               "name": "result",
               "value": {
                 "kind": "money",
-                "paisa": 80000
+                "paisa": 64000
               }
             }
           ],
@@ -111,7 +111,7 @@
           "name_en": "Partner B"
         },
         "share_bps": 3000,
-        "amount_paisa": 60000,
+        "amount_paisa": 48000,
         "working": {
           "message_id": "working-venture-credit",
           "args": [
@@ -119,7 +119,7 @@
               "name": "amount",
               "value": {
                 "kind": "money",
-                "paisa": 200000
+                "paisa": 160000
               }
             },
             {
@@ -133,7 +133,7 @@
               "name": "result",
               "value": {
                 "kind": "money",
-                "paisa": 60000
+                "paisa": 48000
               }
             }
           ],
@@ -148,7 +148,7 @@
           "name_en": "Partner C"
         },
         "share_bps": 3000,
-        "amount_paisa": 60000,
+        "amount_paisa": 48000,
         "working": {
           "message_id": "working-venture-credit",
           "args": [
@@ -156,7 +156,7 @@
               "name": "amount",
               "value": {
                 "kind": "money",
-                "paisa": 200000
+                "paisa": 160000
               }
             },
             {
@@ -170,7 +170,7 @@
               "name": "result",
               "value": {
                 "kind": "money",
-                "paisa": 60000
+                "paisa": 48000
               }
             }
           ],
@@ -178,11 +178,11 @@
         }
       }
     ],
-    "qty_left_after": 55,
+    "qty_left_after": 60,
     "qty_other_left_after": 0,
-    "qty_our_left_after": 55,
-    "qty_from_our_shop": 5,
-    "cost_left_after_paisa": 275000
+    "qty_our_left_after": 60,
+    "qty_from_our_shop": 0,
+    "cost_left_after_paisa": 300000
   },
   "errors": [],
   "warnings": []

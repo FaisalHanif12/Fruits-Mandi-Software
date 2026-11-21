@@ -26,7 +26,7 @@ import { showToast, type ToastOptions } from '../../../shared/ui';
 import { bikriPreview } from '../api';
 import { buildDraft, draftKey } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
-import type { SellerPaidLines } from '../seller-paid-types';
+import type { SellerPaidLines } from '../../../bindings/SellerPaidLines';
 import { LOT, type BikriDraft, type BikriPreview } from '../types';
 import type { SaveBikriInput } from './useSaveBikri';
 
@@ -184,17 +184,9 @@ export function useSaveFlow<R extends { number: number }>({
       onCashDeclined();
       return;
     }
-    // A question about a seller's money goes back to his field (plan 91); a plain cash question to the نقد cell.
-    const seller = lastSellers[0];
-    if (seller !== undefined) {
-      const field = document.querySelector<HTMLElement>(
-        `[data-seller-paid="${String(seller.seller_account_id)}"] input`,
-      );
-      if (field !== null) {
-        field.focus();
-        return;
-      }
-    }
+    // A question about a seller's money goes back to his field (plan 91, in `onCashCloseFocus`, once the box has
+    // let go of the focus); a plain cash question to the نقد cell.
+    if (lastSellers.length > 0) return;
     const rows = stores.lots.getState().rows;
     const first = rows.findIndex((row) => (row.typed[LOT.cash] ?? '').trim() !== '');
     stores.lots.getState().setPendingFocus({ rowIndex: Math.max(first, 0), field: LOT.cash });
@@ -202,7 +194,17 @@ export function useSaveFlow<R extends { number: number }>({
 
   /** After a "no" focus goes to the نقد cell, not back to the button (PRD FR-6.7). */
   const onCashCloseFocus = (event: Event) => {
-    if (!confirmed.current) event.preventDefault();
+    if (confirmed.current) return;
+    event.preventDefault();
+    // A question about a seller's money (plan 91): the cursor goes to his field, which the box held the focus from.
+    const seller = lastSellers[0];
+    if (seller !== undefined) {
+      document
+        .querySelector<HTMLElement>(
+          `[data-seller-paid="${String(seller.seller_account_id)}"] input[inputmode="numeric"]`,
+        )
+        ?.focus();
+    }
   };
 
   const typedText = useMemo(() => draftKey(typed), [typed]);

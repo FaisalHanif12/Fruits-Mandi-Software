@@ -405,6 +405,36 @@ backup-key-lost = پرنٹ کی ہوئی پرچی کھو گئی ہے
 backup-key-lost-help = نئی چابی تب ہی بن سکتی ہے جب یو ایس بی ڈرائیو یا کلاؤڈ کی کوئی کاپی پرانی چابی سے بند نہ ہو۔
 
 # review: pending
+backup-key-reveal-button = چابی دوبارہ دیکھیں
+
+# review: pending
+backup-key-reveal-title = بیک اپ کی چابی دوبارہ دیکھیں
+
+# review: pending
+backup-key-reveal-help = پرنٹ کی ہوئی پرچی کھو گئی ہے؟ اپنا پاس ورڈ اور { -dastakhat } لکھیں۔ چابی صرف اس وقت تک اسکرین پر رہے گی جب تک آپ یہ ڈبہ بند نہ کریں۔
+
+# review: pending
+backup-key-reveal-password = آپ کا پاس ورڈ
+
+# review: pending
+backup-key-reveal-sign = آپ کا { -dastakhat }
+
+# review: pending
+backup-key-reveal-show = چابی دکھائیں
+
+# review: pending
+backup-key-reveal-wrong-password = پاس ورڈ غلط ہے۔ باقی کوششیں: { $tries_left }
+
+# review: pending
+backup-key-reveal-shown = یہ آپ کی بیک اپ کی چابی ہے۔ اسے پرنٹ کر کے پرچی کمپیوٹر سے دور کسی محفوظ جگہ رکھیں۔ یہ ڈبہ بند کرتے ہی چابی اسکرین سے ہٹ جائے گی۔
+
+# review: pending
+backup-key-reveal-close = بند کریں
+
+# review: pending
+backup-key-reveal-idle = بیک اپ کی چابی بنی ہوئی ہے۔ اگر پرنٹ کی ہوئی پرچی کھو گئی ہو تو چابی دوبارہ دیکھی جا سکتی ہے۔
+
+# review: pending
 backup-wizard-step-key = بیک اپ کی چابی
 
 # review: pending

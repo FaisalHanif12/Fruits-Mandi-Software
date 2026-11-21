@@ -95,6 +95,13 @@ fn purchase_input(
     }
 }
 
+/// The purchase with `other` نگ set aside for another shop. A sale in another shop takes only those
+/// (PRD FR-12.41, v1.52, plan 90), so a test that sells in another shop sets them first.
+fn with_other(mut input: PurchaseInput, other: &str) -> PurchaseInput {
+    input.other_qty = Some(other.into());
+    input
+}
+
 fn cash_now(w: &World) -> i64 {
     w.env.ctx.db().read(cash::cash_in_hand).unwrap().rupees()
 }
@@ -573,7 +580,7 @@ fn e2e_34_and_34b_with_the_sale_in_another_shop_the_result_and_the_closing() {
     let purchase = purchases::save(
         &w.env.ctx,
         &w.owner,
-        &purchase_input(&w, trip.id, "20", "500", Some("400")),
+        &with_other(purchase_input(&w, trip.id, "20", "500", Some("400")), "15"),
     )
     .unwrap();
     let sale_input = OtherSaleInput {
@@ -625,15 +632,16 @@ fn e2e_34_and_34b_with_the_sale_in_another_shop_the_result_and_the_closing() {
     assert_eq!(stock.own_rows[0].balance, 5);
     assert_eq!(stock.own_rows[0].cost_left_paisa.rupees(), 2_600);
     assert_eq!(stock.own_rows[0].trip.id, trip.id);
-    // More than the stock left is refused.
+    // More than the other shop's part has left is refused (v1.52): the 15 set aside are all sold,
+    // though 5 are still in stock for our shop.
     let too_many = OtherSaleInput {
-        qty: "6".into(),
+        qty: "1".into(),
         ..sale_input.clone()
     };
     let preview = trips::other_sale_preview(&w.env.ctx, &too_many).unwrap();
     assert!(support::has(
         &preview.errors,
-        ErrorCode::ErrQtyExceedsLot,
+        ErrorCode::ErrQtyExceedsOtherShop,
         "qty"
     ));
 
@@ -777,7 +785,7 @@ fn the_last_nag_of_a_part_sale_take_all_the_cost_left_and_no_more() {
     let purchase = purchases::save(
         &w.env.ctx,
         &w.owner,
-        &purchase_input(&w, trip.id, "20", "500", Some("400")),
+        &with_other(purchase_input(&w, trip.id, "20", "500", Some("400")), "20"),
     )
     .unwrap();
     let sell = |qty: &str, money: &str| OtherSaleInput {
@@ -858,7 +866,7 @@ fn a_cancel_is_refused_once_something_was_sold_or_a_cost_was_spread_and_the_trip
     let sold = purchases::save(
         &w.env.ctx,
         &w.owner,
-        &purchase_input(&w, trip.id, "10", "100", None),
+        &with_other(purchase_input(&w, trip.id, "10", "100", None), "10"),
     )
     .unwrap();
     let kept = purchases::save(
@@ -960,7 +968,7 @@ fn a_trip_cost_cannot_be_cancelled_after_its_purchase_sold_something() {
     let purchase = purchases::save(
         &w.env.ctx,
         &w.owner,
-        &purchase_input(&w, trip.id, "20", "100", None),
+        &with_other(purchase_input(&w, trip.id, "20", "100", None), "5"),
     )
     .unwrap();
     let cost = trips::cost_save(

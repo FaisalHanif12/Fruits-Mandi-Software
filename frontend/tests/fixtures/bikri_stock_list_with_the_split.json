@@ -66,20 +66,20 @@
         "name_en": "Box"
       },
       "qty_bought": 80,
-      "qty_sold": 25,
+      "qty_sold": 20,
       "qty_written_off": 0,
-      "balance": 55,
-      "qty_our_left": 55,
+      "balance": 60,
+      "qty_our_left": 60,
       "qty_other_left": 0,
       "shop_name": "حاجی شاپ",
       "total_cost_paisa": 400000,
-      "cost_left_paisa": 275000,
+      "cost_left_paisa": 300000,
       "days_waiting": 0,
       "write_offs": []
     }
   ],
-  "own_balance_total": 95,
-  "own_cost_left_paisa": 395000,
+  "own_balance_total": 100,
+  "own_cost_left_paisa": 420000,
   "garden_rows": [],
   "garden_balance_total": 0
 }

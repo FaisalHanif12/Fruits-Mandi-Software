@@ -176,6 +176,10 @@ pub enum ErrorCode {
     /// Sold quantity of a lot is more than the quantity received (PRD FR-12.6). Field
     /// `lots[i].sales[j].qty`. Values: `available` (نگ left for this line).
     ErrQtyExceedsLot,
+    /// A sale in another shop (a garden's or a trip's) is for more نگ than the line has set aside for
+    /// another shop (PRD FR-12.41, v1.52, plan 90). The goods are never taken from our shop's part.
+    /// Field `qty`. Values: `remaining` (نگ left for another shop on that line).
+    ErrQtyExceedsOtherShop,
     /// A commission or لاگا was typed on a line while the Owner has switched typing off
     /// (PRD FR-11.10). Field `lots[i].sales[j].seller_comm`, `buyer_comm` or `laga`.
     ErrOverrideNotAllowed,
@@ -509,7 +513,7 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 175] = [
+    pub const ALL: [ErrorCode; 176] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -579,6 +583,7 @@ impl ErrorCode {
         ErrorCode::ErrPartnerNotListed,
         ErrorCode::ErrTooManyPartners,
         ErrorCode::ErrQtyExceedsLot,
+        ErrorCode::ErrQtyExceedsOtherShop,
         ErrorCode::ErrOverrideNotAllowed,
         ErrorCode::ErrCreditLimitExceeded,
         ErrorCode::ErrSellerRequired,

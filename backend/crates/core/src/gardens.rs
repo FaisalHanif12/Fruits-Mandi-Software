@@ -598,7 +598,8 @@ pub struct GardenOtherSaleInput {
     #[serde(default)]
     pub shop: Option<String>,
     /// The garden arrival (مال آیا) the goods come from (PRD FR-12.41). The qty comes off that
-    /// arrival's part for another shop (`ERR_QTY_EXCEEDS_LOT` on `qty`, value `available`). Required
+    /// arrival's part for another shop (`ERR_QTY_EXCEEDS_OTHER_SHOP` on `qty`, value `remaining`,
+    /// PRD FR-12.41 v1.52; never taken from our shop's part). Required
     /// when the garden has any arrival (`ERR_REQUIRED` on `arrival_id`); for a garden with no arrival
     /// it stays empty and the sale is typed by hand as before. The arrival must belong to this garden
     /// (`ERR_FORMAT_INVALID`) and stand (`ERR_ARRIVAL_CANCELLED`).
@@ -669,9 +670,9 @@ pub struct GardenEntryNumbers {
     pub rent_due_after_paisa: Paisa,
     /// How the balance after was worked out (CalcInfo).
     pub balance_working: Working,
-    /// Only for a sale in another shop linked to an arrival (PRD FR-12.41, plan 35 D1), else null:
-    /// the نگ the sale moves from our shop's part to the part for another shop. 0 when the part for
-    /// another shop has enough.
+    /// Only for a sale in another shop linked to an arrival (PRD FR-12.41), else null: the نگ the sale
+    /// moves from our shop's part to the part for another shop. Always 0 since v1.52 (plan 90): a
+    /// sale above the part for another shop is refused (`ERR_QTY_EXCEEDS_OTHER_SHOP`).
     #[ts(type = "number | null")]
     pub qty_from_our_shop: Option<i64>,
     /// Same case: نگ left of the arrival in all after this sale.

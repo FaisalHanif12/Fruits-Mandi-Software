@@ -1844,6 +1844,58 @@
       }
     }
   ],
+  "sellers": [
+    {
+      "seller_account_id": 19,
+      "previous_paisa": 0,
+      "previous_side": "zero",
+      "credit_paisa": 2177800,
+      "paid_paisa": 500000,
+      "carry_paisa": 1677800,
+      "cut_paisa": 0,
+      "added_to_credit_paisa": 1677800,
+      "over_paid_paisa": 0,
+      "increase_owed_paisa": 0,
+      "new_paisa": 1677800,
+      "new_side": "cr",
+      "limit_paisa": 2177800,
+      "needs_confirm": false,
+      "working": {
+        "message_id": "working-seller-new-balance",
+        "args": [
+          {
+            "name": "previous",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "paid",
+            "value": {
+              "kind": "money",
+              "paisa": 500000
+            }
+          },
+          {
+            "name": "credit",
+            "value": {
+              "kind": "money",
+              "paisa": 2177800
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": -1677800
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
   "cash": {
     "cash_before_paisa": 5780000,
     "change_paisa": 0,

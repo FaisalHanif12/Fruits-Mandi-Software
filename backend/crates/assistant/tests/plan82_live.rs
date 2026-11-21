@@ -432,3 +432,83 @@ fn the_share_of_a_buyer_in_the_shops_commission_is_no_partner_question() {
     assert!(!requests.is_empty(), "the model was not asked");
     assert!(!reply.locked, "{reply:#?}");
 }
+
+#[test]
+fn a_buyers_purchases_for_each_month_read_view_c_grouped_by_month_before_the_model_answers() {
+    // Y11 of the live check: no read gave a buyer's purchases by month, so the model said it could not. View C
+    // with `group_by` month gives one row for each month, each with its period. D8: Haroon bought 18,000 on
+    // 15-03-26 and 117,000 on 03-11-26 (his 12,000 apple of 2025 is another year).
+    let h = production_books();
+    let (_, requests) = h.ask(
+        "haroon ne is saal mahine ke hisab se kitna maal liya ?",
+        None,
+        Vec::new(),
+    );
+    assert!(!requests.is_empty(), "the model was not asked");
+    let reads = first_reads(&requests);
+    let view_c = reads
+        .iter()
+        .find(|r| r.contains("\\\"source\\\":\\\"C\\\""))
+        .unwrap_or_else(|| panic!("view C was not read ahead: {reads:#?}"));
+    for month in ["2026-03", "2026-11"] {
+        assert!(view_c.contains(month), "no row for {month}: {view_c}");
+    }
+    assert!(
+        view_c.contains("1800000") || view_c.contains("18000"),
+        "{view_c}"
+    );
+}
+
+#[test]
+fn the_analytics_tool_groups_the_rows_of_views_a_b_c_and_e_and_reads_view_m() {
+    // The model's own call is accepted too (D6 v1.14): group_by on A, B, C, E gives one set of rows for each
+    // bucket and unique keys; view M is the shop's expenses by head with a column for each month.
+    let h = production_books();
+    let (_, requests) = h.ask(
+        "is saal ki bikri mahine ke hisab se batao",
+        None,
+        vec![
+            tool_reply(&[
+                (
+                    "analytics",
+                    json!({
+                        "view": "A", "from": "2026-01-01", "to": "2026-11-08", "group_by": "month",
+                        "item": null, "item_group": null, "seller": null, "buyer": null, "city": null,
+                        "adda": null, "garden": null, "trip": null, "goods": null, "partner": null,
+                        "side": null, "compare": null, "sort": null, "rows": null, "grade": null
+                    }),
+                ),
+                (
+                    "analytics",
+                    json!({
+                        "view": "M", "from": "2026-01-01", "to": "2026-11-08", "group_by": "month",
+                        "item": null, "item_group": null, "seller": null, "buyer": null, "city": null,
+                        "adda": null, "garden": null, "trip": null, "goods": null, "partner": null,
+                        "side": null, "compare": null, "sort": null, "rows": null, "grade": null
+                    }),
+                ),
+            ]),
+            final_reply("{{r2.totals.gross}}"),
+        ],
+    );
+    let tools: Vec<String> = requests
+        .last()
+        .and_then(|r| r["messages"].as_array())
+        .map(|m| {
+            m.iter()
+                .filter(|x| x["role"] == "tool")
+                .map(|x| x["content"].to_string())
+                .collect()
+        })
+        .unwrap_or_default();
+    let all = tools.join(" ");
+    assert!(
+        all.contains("\\\"source\\\":\\\"M\\\""),
+        "view M was refused: {all}"
+    );
+    assert!(!all.contains("ERR_OUT_OF_RANGE"), "{all}");
+    assert!(
+        all.contains("2026-03") && all.contains("2026-11"),
+        "no monthly rows: {all}"
+    );
+}

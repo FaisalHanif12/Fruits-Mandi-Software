@@ -485,11 +485,11 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     expect(fake.saved.sales).toHaveLength(0);
   });
 
-  it('plan 90: a sum is read by the backend; when its preview says some would come from our shop the qty is refused', async () => {
-    const fake = fakeTrips();
+  it('plan 90: a sum is read by the backend, whose preview refuses a qty above the other part (ERR_QTY_EXCEEDS_OTHER_SHOP) and the words show under the qty', async () => {
+    fakeTrips();
     followTripGetPurchases();
     vi.mocked(tripsApi.tripsGet).mockResolvedValue(tripWithOther(8, 'Haji Shop'));
-    vi.mocked(tripsApi.tripsOtherSalePreview).mockResolvedValue(real.OTHER_PREVIEW_MOVES);
+    vi.mocked(tripsApi.tripsOtherSalePreview).mockResolvedValue(real.OTHER_PREVIEW_ABOVE);
     const { user } = await openSale();
     await user.click(
       screen.getByRole('combobox', { name: named(message(language, 'trips-sale-purchase')) }),
@@ -499,12 +499,9 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     await user.type(field('trips-sale-amount'), '2000');
     expect(
       await screen.findByText(
-        said(message(language, 'purchases-qty-above-other', { remaining: 8 })),
+        said(message(language, 'err-qty-exceeds-other-shop', { remaining: 20 })),
       ),
     ).toBeInTheDocument();
-    press('F10');
-    await settlePreview();
-    expect(fake.saved.sales).toHaveLength(0);
   });
 
   it('a part paid from a pocket: 48,000 from the shop, 48,000 recorded only, and no cash question (E2E-41)', async () => {

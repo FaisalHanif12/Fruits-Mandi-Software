@@ -691,9 +691,11 @@ impl<'a> Run<'a> {
         &self,
         text: &str,
         follow_up: bool,
+        earlier: Option<&(String, crate::understand::Understanding)>,
     ) -> (
         Option<crate::understand::Understanding>,
         bool,
+        Option<String>,
         Option<String>,
     ) {
         use crate::understand::{self, Intent};
@@ -705,13 +707,28 @@ impl<'a> Run<'a> {
             partner_locked: self.partner_locked,
         };
         let mut understood = understand::understand(&reader, text);
+        // A follow-up that changes only the subject ("aur ehsan ki ?") is the earlier question with that
+        // subject: it is understood in full, with the period of the question before (plan 82).
+        let mut written = None;
+        if let Some((before_text, before)) = earlier
+            && let Some(full) =
+                understand::follow_up_text(&reader, before_text, before, text, &understood)
+        {
+            let again = understand::understand(&reader, &full);
+            if again.sure {
+                understood = again;
+                written = Some(full);
+            }
+        }
         understood.multi_measure = self.d.runtime.multi_measure();
         let narrows = narrows_the_tiles(&understood);
-        if !understood.sure || (follow_up && leans_on_earlier_questions(&understood)) {
+        if !understood.sure
+            || (follow_up && written.is_none() && leans_on_earlier_questions(&understood))
+        {
             let which = (!follow_up)
                 .then(|| understand::which_one_party(&understood))
                 .flatten();
-            return (None, narrows, which);
+            return (None, narrows, which, None);
         }
         let kind = match understood.intent.value {
             Intent::Print => "print",
@@ -729,7 +746,7 @@ impl<'a> Run<'a> {
                 },
             }],
         });
-        (Some(understood), narrows, None)
+        (Some(understood), narrows, None, written)
     }
 
     /// Reads, before the first call, what the model would have chosen to read (plan 54 S3, plan 55
@@ -2956,15 +2973,23 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     // The app writes the answer itself when it understood the whole question and the answer is
     // already in the app. It costs no model call, so it is not counted and the daily limit does
     // not stop it (FR-7.81).
-    let (understood, narrows_tiles, which_party) = if d.runtime.local() || d.runtime.read_first() {
-        run.understand_question(text, !conv.turns.is_empty())
-    } else {
-        (None, false, None)
-    };
+    let earlier = conv
+        .turns
+        .last()
+        .and_then(|before| before.understood.clone());
+    let (understood, narrows_tiles, which_party, written) =
+        if d.runtime.local() || d.runtime.read_first() {
+            run.understand_question(text, !conv.turns.is_empty(), earlier.as_ref())
+        } else {
+            (None, false, None, None)
+        };
+    // The question the guards read: the follow-up written in full, or the question as typed.
+    let meant = written.as_deref().unwrap_or(text);
+    turn.understood = understood.as_ref().map(|u| (meant.to_owned(), u.clone()));
     // The side of the commission the question asks (D7, plan 59 F1): the guard keeps the answer on that
     // column.
-    turn.asked_days = crate::understand::asked_days(text, run.today);
-    turn.sale_ask = crate::understand::asked_sale_measure(text);
+    turn.asked_days = crate::understand::asked_days(meant, run.today);
+    turn.sale_ask = crate::understand::asked_sale_measure(meant);
     turn.commission_side = understood.as_ref().and_then(|u| u.commission_side);
     turn.commission_laga = understood.as_ref().is_some_and(|u| {
         u.figures

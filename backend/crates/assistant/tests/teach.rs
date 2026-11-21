@@ -622,8 +622,9 @@ fn a_filter_a_view_does_not_have_lists_the_views_that_do() {
     // (A `compare` on a view that has none is not refused since plan 82: it is left out and the
     // note says so; see `a_compare_on_a_view_that_has_none_is_left_out_with_a_note`.)
     for (view, extra, field, must_have, must_not) in [
-        ("A", json!({"group_by": "month"}), "group_by", "D", "A"),
-        ("B", json!({"group_by": "month"}), "group_by", "G", "B"),
+        // (D6 v1.14: A, B, C and E take `group_by` now; F and H do not.)
+        ("H", json!({"group_by": "month"}), "group_by", "D", "H"),
+        ("F", json!({"group_by": "month"}), "group_by", "G", "F"),
     ] {
         let e = s.refused("analytics", analytics(view, dated(extra)));
         let v = read(&e);

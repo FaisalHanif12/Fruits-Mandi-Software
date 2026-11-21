@@ -798,13 +798,58 @@ pub fn totals_for_accounts(
     rows.collect()
 }
 
+/// The place of an entry among the others of its day, with `e` the entry: the stable order key of
+/// its posting (migration 0005). A posting that was edited is a reversal and a new entry written
+/// later; the new entry copies the key of the posting it replaces, and a reversal is placed with
+/// the entry it reverses, so the posting, its reversals and every version of it share one place
+/// however many times it was edited. An entry that was never edited stands for its own id.
+const POSTING_ANCHOR: &str = "COALESCE(e.order_key,
+       (SELECT COALESCE(r.order_key, r.id) FROM journal_entries r WHERE r.id = e.reverses_entry_id),
+       e.id)";
+
+/// The SQL of [`totals_before_posting`] for this many accounts: `?1` is the day, `?2` the anchor of
+/// the edited posting or NULL, `?3` and on the accounts. Public so a test can check its query plan
+/// (Code Standards B18).
+#[doc(hidden)]
+pub fn totals_before_posting_sql(count: usize) -> String {
+    let marks = (0..count)
+        .map(|i| format!("?{}", i.saturating_add(3)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id IN ({marks}) AND e.status = 'posted'
+           AND (e.entry_date < ?1
+                OR (e.entry_date = ?1 AND (?2 IS NULL OR {POSTING_ANCHOR} < ?2)))
+         GROUP BY l.account_id"
+    )
+}
+
+/// The place of the posting that `entry_id` belongs to among the entries of its day (see
+/// [`POSTING_ANCHOR`]), or `None` when there is no such entry.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn posting_anchor(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        &format!("SELECT {POSTING_ANCHOR} FROM journal_entries e WHERE e.id = ?1"),
+        [entry_id],
+        |r| r.get(0),
+    )
+    .optional()
+}
+
 /// The posted debit and credit totals of the given accounts as they stood just before a posting
 /// dated `date_iso` (PRD FR-12.23 v1.53, plan 91: the "previous balance" of a seller in the summary of
-/// a بکری). It leaves out the entries dated after `date_iso`, and, for an edit, the entries dated
-/// `date_iso` that were written at or after `edited_entry` (the posting being edited and what came
-/// later the same day). A new posting passes `None`: every entry of its own day is before it. As
-/// [`totals_for_accounts`], it asks for the few entries to leave out, so it reads only
-/// `idx_journal_lines_account_amounts`. An account with no line is not in the answer.
+/// a بکری). It leaves out the entries dated after `date_iso`. For a new posting (`None`) every entry
+/// of its own day is before it. For an edit (`Some(entry)`, the posting's current entry) the entries
+/// of the day count only if their posting is placed before the edited posting, so the
+/// posting itself, with its reversals and its new versions, is left out whatever number its latest
+/// entry has, and an entry written after it the same day is left out. It looks up the entry of each
+/// line of the accounts, so its cost grows with their own lines and not with the entries of the
+/// journal after the day; it is meant for a few small accounts (sellers). An account with no line is
+/// not in the answer.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -817,26 +862,19 @@ pub fn totals_before_posting(
     if ids.is_empty() {
         return Ok(std::collections::HashMap::new());
     }
-    let marks = vec!["?"; ids.len()].join(", ");
-    let same_day_later = if edited_entry.is_some() {
-        " UNION ALL SELECT id FROM journal_entries WHERE entry_date = ? AND id >= ?"
-    } else {
-        ""
+    let anchor = match edited_entry {
+        Some(entry) => posting_anchor(conn, entry)?.or(Some(entry)),
+        None => None,
     };
-    let mut statement = conn.prepare(&format!(
-        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
-         FROM journal_lines WHERE account_id IN ({marks}) AND entry_id NOT IN (
-           SELECT id FROM journal_entries WHERE status <> 'posted'
-           UNION ALL SELECT id FROM journal_entries WHERE entry_date > ?{same_day_later})
-         GROUP BY account_id"
-    ))?;
-    let mut args: Vec<rusqlite::types::Value> =
-        ids.iter().map(|id| rusqlite::types::Value::Integer(*id)).collect();
-    args.push(rusqlite::types::Value::Text(date_iso.to_owned()));
-    if let Some(entry) = edited_entry {
-        args.push(rusqlite::types::Value::Text(date_iso.to_owned()));
-        args.push(rusqlite::types::Value::Integer(entry));
-    }
+    let mut statement = conn.prepare(&totals_before_posting_sql(ids.len()))?;
+    let mut args: Vec<rusqlite::types::Value> = vec![
+        rusqlite::types::Value::Text(date_iso.to_owned()),
+        anchor.map_or(
+            rusqlite::types::Value::Null,
+            rusqlite::types::Value::Integer,
+        ),
+    ];
+    args.extend(ids.iter().map(|id| rusqlite::types::Value::Integer(*id)));
     let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
         Ok((
             r.get::<_, i64>(0)?,

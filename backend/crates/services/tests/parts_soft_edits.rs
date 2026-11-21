@@ -352,7 +352,16 @@ fn a_sale_in_another_shop_edited_twice_shows_the_same_money_back_as_a_fresh_save
     let w = world();
     let ctx = &w.env.ctx;
     let trip = trip_of_three(&w);
-    let bought = purchases::save(ctx, &w.owner, &purchase_input(&w, trip.id, "500")).unwrap();
+    // The 15 sold in another shop are set aside for it (PRD FR-12.41, v1.52).
+    let bought = purchases::save(
+        ctx,
+        &w.owner,
+        &PurchaseInput {
+            other_qty: Some("15".into()),
+            ..purchase_input(&w, trip.id, "500")
+        },
+    )
+    .unwrap();
     let sale = trips::other_sale_save(
         ctx,
         &w.owner,
@@ -390,7 +399,10 @@ fn a_sale_in_another_shop_edited_twice_shows_the_same_money_back_as_a_fresh_save
     let fresh_bought = purchases::save(
         &fresh.env.ctx,
         &fresh.owner,
-        &purchase_input(&fresh, fresh_trip.id, "500"),
+        &PurchaseInput {
+            other_qty: Some("15".into()),
+            ..purchase_input(&fresh, fresh_trip.id, "500")
+        },
     )
     .unwrap();
     trips::other_sale_save(

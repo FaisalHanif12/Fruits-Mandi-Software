@@ -234,6 +234,10 @@ pub struct Turn {
     /// The sale measure the words of the question name (net sale, the buyers' bills), for the guard that
     /// keeps the answer on that column (plan 82, `sale_guard`).
     pub sale_ask: Option<crate::understand::SaleAsk>,
+    /// What the app understood of this question when it was sure, and the words it was read from (the question as
+    /// typed, or the follow-up written out in full, `understand::follow_up_text`). A later follow-up that changes
+    /// only the subject ("aur ehsan ki ?") is written from them (plan 82).
+    pub understood: Option<(String, crate::understand::Understanding)>,
     /// The one period the question names, as its first and last day, when the app reads it with
     /// certainty (plan 80, T5-2): a view or report an answer cites must be for these days.
     pub asked_days: Option<(String, String)>,

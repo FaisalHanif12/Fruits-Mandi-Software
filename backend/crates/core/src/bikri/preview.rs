@@ -458,12 +458,16 @@ pub struct SellerPaidLines {
     /// موقع پر ادائیگی: the sum of the نقد of his lots, 0 or more.
     #[ts(type = "Paisa")]
     pub paid_paisa: Paisa,
-    /// پچھلے بنام سے کٹا: the part of today's credit that is not paid in cash and takes off what he
-    /// owed. 0 when he owed nothing.
+    /// بکری کی باقی رقم، کھاتے میں جمع: today's credit less what he takes on the spot, never below 0.
+    /// It is the part of this بکری that goes into his account (Umar, plan 91). It is always
+    /// `cut_paisa + added_to_credit_paisa`.
+    #[ts(type = "Paisa")]
+    pub carry_paisa: Paisa,
+    /// The part of `carry_paisa` that takes off what he owed before. 0 when he owed nothing.
     #[ts(type = "Paisa")]
     pub cut_paisa: Paisa,
-    /// بقایا میں جمع: the part of today's credit that is not paid in cash and is not taken off what he
-    /// owed, so it adds to what the shop owes him.
+    /// The part of `carry_paisa` that is not taken off what he owed, so it adds to what the shop owes
+    /// him.
     #[ts(type = "Paisa")]
     pub added_to_credit_paisa: Paisa,
     /// What he takes above today's credit. It lowers what the shop owed him or adds to what he owes.
@@ -478,8 +482,8 @@ pub struct SellerPaidLines {
     pub new_paisa: Paisa,
     /// The side of `new_paisa`.
     pub new_side: BalanceSide,
-    /// The most he can take on the spot without a question: today's credit (never below 0) plus what
-    /// the shop owed him before.
+    /// The most he can take on the spot without a question: today's credit plus what the shop owed
+    /// him before, never below 0 (a negative credit takes off what he was owed).
     #[ts(type = "Paisa")]
     pub limit_paisa: Paisa,
     /// True when `paid_paisa` is above `limit_paisa`: the screen warns and the save asks the Owner to

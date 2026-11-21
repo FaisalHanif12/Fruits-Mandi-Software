@@ -16,6 +16,8 @@ export type { BackupTotals } from '../../bindings/BackupTotals';
 export type { CloudLevel } from '../../bindings/CloudLevel';
 export type { KeyConfirmInput } from '../../bindings/KeyConfirmInput';
 export type { KeyCreated } from '../../bindings/KeyCreated';
+export type { KeyRevealInput } from '../../bindings/KeyRevealInput';
+export type { KeyShown } from '../../bindings/KeyShown';
 export type { RestoreDone } from '../../bindings/RestoreDone';
 export type { RestoreInput } from '../../bindings/RestoreInput';
 export type { RestorePreview } from '../../bindings/RestorePreview';

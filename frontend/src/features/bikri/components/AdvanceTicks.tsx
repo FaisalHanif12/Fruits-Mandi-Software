@@ -15,7 +15,7 @@ import { isSellerTicked, setSellerTick } from '../advance-tick';
 import { useBikriDraft } from '../draft-store';
 import { tickLotsOf } from '../draft';
 import type { SellerPaidSpreading } from '../hooks/useSellerPaidSpread';
-import type { SellerPaidLines } from '../seller-paid-types';
+import type { SellerPaidLines } from '../../../bindings/SellerPaidLines';
 import { LOT } from '../types';
 import { SellerPaid } from './SellerPaid';
 

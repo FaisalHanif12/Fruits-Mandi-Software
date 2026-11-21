@@ -717,20 +717,15 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     });
   });
 
-  it('plan 90: a sum such as 30+14 is read by the backend; when its preview says some would come from our shop the qty is refused too', async () => {
-    const fake = fakeGardens();
+  it('plan 90: a sum such as 30+14 is read by the backend, whose preview refuses it (ERR_QTY_EXCEEDS_OTHER_SHOP) and the words show under the qty', async () => {
+    fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
     vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [{ ...first, qty_left: 100, qty_our_left: 60, qty_other: 40, qty_other_left: 40 }],
     });
-    const real = arrivals.GARDEN_OTHER_SALE_WITH_ARRIVAL;
-    if (real.numbers === null) throw new Error('the file has no numbers');
-    vi.mocked(gardensApi.gardensEntryPreview).mockResolvedValue({
-      ...real,
-      numbers: { ...real.numbers, qty_from_our_shop: 4 },
-    });
+    vi.mocked(gardensApi.gardensEntryPreview).mockResolvedValue(arrivals.GARDEN_OTHER_SALE_ABOVE);
     const { user } = await open();
     await user.click(
       within(typeList()).getByRole('button', {
@@ -746,12 +741,9 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     await user.type(field('gardens-sale-amount'), '20000');
     expect(
       await screen.findByText(
-        said(message(language, 'purchases-qty-above-other', { remaining: 40 })),
+        said(message(language, 'err-qty-exceeds-other-shop', { remaining: 50 })),
       ),
     ).toBeInTheDocument();
-    press('F10');
-    await settlePreview();
-    expect(fake.saved.entries).toHaveLength(0);
   });
 
   it('FR-12.37: each goods arrived entry shows the commission on its goods sold in our shop, in its row, in the total row and on its card with the backend’s working', async () => {

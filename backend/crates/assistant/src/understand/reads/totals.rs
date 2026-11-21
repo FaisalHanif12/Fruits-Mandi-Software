@@ -6,11 +6,11 @@
 
 use super::{
     An, FigureKind, Intent, Line, Measure, NOT_CARRIED, Outcome, PartyRole, PayKind, Plan, Planned,
-    Rep, Understanding, What, Who, analytics, dates, key, period_read, report,
+    Rep, Understanding, What, Who, analytics, dates, find, key, period_read, report, with_field,
 };
-use crate::understand::Grain;
 use crate::understand::lexicon::Cue;
 use crate::understand::scan::Scan;
+use crate::understand::{Grain, RecordKind};
 
 /// Words that ask a quantity in نگ and name no packing: "kitne nag bika", "how many units", "qty".
 const QTY_WORDS: [&str; 11] = [
@@ -419,13 +419,27 @@ pub(super) fn expense_grain_plan(u: &Understanding) -> Option<Planned> {
     {
         return None;
     }
+    // One head named ("bijli ka kharcha mahine ke hisab se"): only its row is read, so its months are the table.
+    let head = match u.records.as_slice() {
+        [] => None,
+        [one] => match &one.outcome {
+            Outcome::Found(hit) if hit.kind == RecordKind::ExpenseHead => {
+                Some((one.text.as_str(), hit.key.clone()))
+            }
+            _ => return None,
+        },
+        _ => return None,
+    };
     let period = u.periods.first();
     let (from, to) = dates(period);
     let mut reads = Vec::new();
     if let Some(p) = period {
         reads.push(period_read(p)?);
     }
-    reads.push(analytics(
+    if let Some((text, _)) = &head {
+        reads.push(find(text, "expense_head"));
+    }
+    let mut month_read = analytics(
         "M",
         An {
             from,
@@ -433,7 +447,90 @@ pub(super) fn expense_grain_plan(u: &Understanding) -> Option<Planned> {
             group_by: Some(grain),
             ..An::default()
         },
-    ));
+    );
+    if let Some((_, key)) = head {
+        month_read = with_field(month_read, "head", serde_json::json!(key));
+    }
+    reads.push(month_read);
+    Some(Planned {
+        reads,
+        lines: Vec::new(),
+    })
+}
+
+/// One buyer's purchases, or one seller's sales, for each month, day or year of a period ("haroon ne is saal mahine
+/// ke hisab se kitna maal liya"): view C (buyer) or view B (seller) with its grouping, one set of rows for each
+/// bucket, each row with its period. One total is no answer to it (plan 82, live check Y11: the model had no
+/// monthly read and said so).
+pub(super) fn party_grain_plan(u: &Understanding) -> Option<Planned> {
+    let grain = match u.breakdown_grain? {
+        Grain::Month => "month",
+        Grain::Day => "day",
+        Grain::Year => "year",
+        Grain::Head => return None,
+    };
+    if !u.sure
+        || u.intent.value != Intent::Figure
+        || u.figures.value.is_empty()
+        || !u
+            .figures
+            .value
+            .iter()
+            .all(|k| matches!(k, FigureKind::Purchases | FigureKind::Sale))
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.compare
+        || u.scoped
+        || u.periods.len() != 1
+        || u.periods.first().is_some_and(|p| p.future)
+        || u.doubts.iter().any(|d| NOT_CARRIED.contains(d))
+    {
+        return None;
+    }
+    let [party] = u.parties.as_slice() else {
+        return None;
+    };
+    let Outcome::Found(hit) = &party.outcome else {
+        return None;
+    };
+    let period = u.periods.first();
+    let (from, to) = dates(period);
+    let mut plan = Plan::default();
+    match hit.role {
+        PartyRole::Buyer => {
+            plan.find(&party.text, "buyer");
+            plan.read(analytics(
+                "C",
+                An {
+                    from,
+                    to,
+                    buyer: Some(hit.key.clone()),
+                    group_by: Some(grain),
+                    ..An::default()
+                },
+            ));
+        }
+        PartyRole::Seller => {
+            plan.find(&party.text, "seller");
+            plan.read(analytics(
+                "B",
+                An {
+                    from,
+                    to,
+                    seller: Some(hit.key.clone()),
+                    group_by: Some(grain),
+                    ..An::default()
+                },
+            ));
+        }
+        _ => return None,
+    }
+    let mut reads = Vec::new();
+    if let Some(p) = period {
+        reads.push(period_read(p)?);
+    }
+    reads.extend(plan.finds);
+    reads.extend(plan.reads);
     Some(Planned {
         reads,
         lines: Vec::new(),

@@ -85,6 +85,18 @@ pub const MAX_RESULT_BYTES: usize = 16_000;
 pub const MAX_ANSWER_WORDS: usize = 130;
 /// Rows of a table in an answer (PRD A82).
 pub const MAX_TABLE_ROWS: usize = 7;
+/// Rows of a table of a read grouped by month: every month of a year (plan 82, live check Y11: the table of a
+/// buyer's purchases month by month showed seven of eleven months).
+pub const MAX_MONTH_ROWS: usize = 12;
+/// The most rows a table of this read may show: a read grouped by month shows up to a year of months.
+#[must_use]
+pub fn table_cap(input: &serde_json::Value) -> usize {
+    if input.get("group_by").and_then(serde_json::Value::as_str) == Some("month") {
+        MAX_MONTH_ROWS
+    } else {
+        MAX_TABLE_ROWS
+    }
+}
 /// Tables and charts one answer may show.
 pub const MAX_SHOW: usize = 3;
 /// Suggested next questions of one answer.

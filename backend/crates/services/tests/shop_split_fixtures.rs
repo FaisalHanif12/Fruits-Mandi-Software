@@ -217,28 +217,47 @@ fn shop_split_fixtures_of_the_entries_the_split_and_the_sales_in_another_shop() 
         ErrorCode::ErrSplitAboveQty,
     );
 
-    // A sale in another shop takes the other part first (20) and moves the rest (5) from our shop.
-    let sale = json!({
+    // A sale in another shop takes only the other part (20). Above it is refused with the number
+    // left, in the preview and in the save, and nothing comes from our shop (PRD FR-12.41, v1.52).
+    let above = json!({
         "trip_id": trip.id, "date": "10-10-2026", "shop": "حاجی شاپ", "purchase_id": first,
         "qty": "25", "amount": "2,000", "note": null
     });
+    let shown = trips::other_sale_preview(ctx, &typed::<OtherSaleInput>(&above)).unwrap();
+    assert!(shown.numbers.is_none());
     pair(
-        "trips_other_sale_preview_moves_from_our_shop",
+        "trips_other_sale_preview_above_the_other_part",
+        &above,
+        &shown,
+    );
+    let error = trips::other_sale_save(ctx, owner, &typed::<OtherSaleInput>(&above)).unwrap_err();
+    refusal(
+        "trips_other_sale_above_the_other_part",
+        &above,
+        &error,
+        ErrorCode::ErrQtyExceedsOtherShop,
+    );
+    let sale = json!({
+        "trip_id": trip.id, "date": "10-10-2026", "shop": "حاجی شاپ", "purchase_id": first,
+        "qty": "20", "amount": "1,600", "note": null
+    });
+    pair(
+        "trips_other_sale_preview_takes_the_other_part",
         &sale,
         &trips::other_sale_preview(ctx, &typed::<OtherSaleInput>(&sale)).unwrap(),
     );
     trips::other_sale_save(ctx, owner, &typed::<OtherSaleInput>(&sale)).unwrap();
-    let too_many = json!({
+    let none_left = json!({
         "trip_id": trip.id, "date": "10-10-2026", "shop": null, "purchase_id": first,
-        "qty": "56", "amount": "100", "note": null
+        "qty": "1", "amount": "100", "note": null
     });
     let error =
-        trips::other_sale_save(ctx, owner, &typed::<OtherSaleInput>(&too_many)).unwrap_err();
+        trips::other_sale_save(ctx, owner, &typed::<OtherSaleInput>(&none_left)).unwrap_err();
     refusal(
-        "trips_other_sale_above_all_left",
-        &too_many,
+        "trips_other_sale_none_left_for_the_other_shop",
+        &none_left,
         &error,
-        ErrorCode::ErrQtyExceedsLot,
+        ErrorCode::ErrQtyExceedsOtherShop,
     );
     let ready = json!({ "date": "10-10-2026" });
     pair(
@@ -328,9 +347,29 @@ fn shop_split_fixtures_of_the_entries_the_split_and_the_sales_in_another_shop() 
         &split,
         &gardens::arrivals::change_split(ctx, owner, &typed::<SplitInput>(&split)).unwrap(),
     );
-    let sale_json = json!({
+    // The arrival has 50 for another shop: 60 is refused with 50 left, 50 is taken (v1.52).
+    let above_json = json!({
         "type": "other_sale", "garden_id": garden.id, "date": "10-10-2026", "shop": "حاجی شاپ",
         "arrival_id": arrival, "qty": "60", "amount": "20,000", "note": null
+    });
+    let shown = gardens::entry_preview(ctx, &typed::<GardenEntryInput>(&above_json)).unwrap();
+    assert!(shown.numbers.is_none());
+    pair(
+        "gardens_entry_preview_other_sale_above_the_other_part",
+        &above_json,
+        &shown,
+    );
+    let error =
+        gardens::entry_save(ctx, owner, &typed::<GardenEntryInput>(&above_json)).unwrap_err();
+    refusal(
+        "gardens_entry_other_sale_above_the_other_part",
+        &above_json,
+        &error,
+        ErrorCode::ErrQtyExceedsOtherShop,
+    );
+    let sale_json = json!({
+        "type": "other_sale", "garden_id": garden.id, "date": "10-10-2026", "shop": "حاجی شاپ",
+        "arrival_id": arrival, "qty": "50", "amount": "20,000", "note": null
     });
     pair(
         "gardens_entry_preview_other_sale_with_arrival",
@@ -341,7 +380,7 @@ fn shop_split_fixtures_of_the_entries_the_split_and_the_sales_in_another_shop() 
     // the entry's number, the arrival and the note, so the edit form can open it again (plan 44).
     let noted = json!({
         "type": "other_sale", "garden_id": garden.id, "date": "10-10-2026", "shop": "حاجی شاپ",
-        "arrival_id": arrival, "qty": "60", "amount": "20,000", "note": "نوٹ"
+        "arrival_id": arrival, "qty": "50", "amount": "20,000", "note": "نوٹ"
     });
     gardens::entry_save(ctx, owner, &typed::<GardenEntryInput>(&noted)).unwrap();
     let get = json!({ "id": garden.id, "history_offset": 0, "history_limit": 0 });

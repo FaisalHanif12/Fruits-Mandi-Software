@@ -83,7 +83,7 @@ Worked out by `oracle.py` (SQL over posted rows). Dev = copy of the dev database
 | Y15 | roman | pichle saal se is mahine tak shop ka nafa nuksan kitna raha ? | 2025-01-01 to 2026-11-30 | profit=9617660 |  |
 | Y16 | roman | pichle mahine ka nafa batao aur har partner ka hissa kitna bana ? | 2026-10-01 to 2026-10-31 | profit=948102 |  |
 | Y17 | roman | is saal partnaron ne zaati kharche mein kitna kitna paisa liya ? | 2026-01-01 to 2026-12-31 | partner a=250000; partner b=75000; usman=16000 | partner a=220000; partner b=75000; usman=16000 |
-| Y18 | roman | is mahine aur pichle mahine ka kharcha compare karo | 2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30 | last=170600; this=132600; diff=38000 | last=170600; this=132600 |
+| Y18 | roman | is mahine aur pichle mahine ka kharcha compare karo | 2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30 | last=170600; this=132600; diff=38000 | last=170600; this=132600 || this=132600; diff=38000 |
 | Y19 | roman | agar commission isi raftar se chalta raha to agle 3 mahine mein kitna hoga ? | Nov 2026 to Jan 2027 | per_month=958313; three_months=2874939 |  |
 | Y20 | roman | rahim ne kele ki bikri pichle 6 mahine mein kitni ki ? | 2026-05-05 to 2026-11-05 | sale=2319980 |  |
 | Y21a | roman | rahim ki is saal ki bikri kitni hai ? | 2026-01-01 to 2026-12-31 | rahim=9683650 |  |

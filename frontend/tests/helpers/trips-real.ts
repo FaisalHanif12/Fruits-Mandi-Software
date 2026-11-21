@@ -50,9 +50,10 @@ import changeSplit from '../fixtures/purchases_change_split.json';
 import changeSplitRequest from '../fixtures/purchases_change_split_request.json';
 import changeSplitAboveQty from '../fixtures/purchases_change_split_above_qty.json';
 import purchaseGetWithSplit from '../fixtures/purchases_get_with_a_split.json';
-import otherPreviewMoves from '../fixtures/trips_other_sale_preview_moves_from_our_shop.json';
-import otherPreviewMovesRequest from '../fixtures/trips_other_sale_preview_moves_from_our_shop_request.json';
-import otherAboveAllLeft from '../fixtures/trips_other_sale_above_all_left.json';
+import otherPreviewAbove from '../fixtures/trips_other_sale_preview_above_the_other_part.json';
+import otherPreviewAboveRequest from '../fixtures/trips_other_sale_preview_above_the_other_part_request.json';
+import otherAbove from '../fixtures/trips_other_sale_above_the_other_part.json';
+import otherNoneLeft from '../fixtures/trips_other_sale_none_left_for_the_other_shop.json';
 import costCancel from '../fixtures/trips_cost_cancel.json';
 import costCancelRequest from '../fixtures/trips_cost_cancel_request.json';
 import costCancelHasSales from '../fixtures/trips_cost_cancel_has_sales.json';
@@ -283,9 +284,12 @@ export const CHANGE_SPLIT = changeSplit as unknown as SplitSet;
 export const CHANGE_SPLIT_REQUEST = changeSplitRequest as unknown as SplitInput;
 export const CHANGE_SPLIT_ABOVE_QTY = readUiError(changeSplitAboveQty);
 export const PURCHASE_GET_WITH_SPLIT = readPurchaseRow(purchaseGetWithSplit);
-export const OTHER_PREVIEW_MOVES = readOtherSalePreview(otherPreviewMoves);
-export const OTHER_PREVIEW_MOVES_REQUEST = readOtherSaleInput(otherPreviewMovesRequest);
-export const OTHER_ABOVE_ALL_LEFT = readUiError(otherAboveAllLeft);
+/** The backend's preview of a sale above the goods set for another shop (plan 90): numbers null, ERR_QTY_EXCEEDS_OTHER_SHOP, remaining 20. */
+export const OTHER_PREVIEW_ABOVE = readOtherSalePreview(otherPreviewAbove);
+export const OTHER_PREVIEW_ABOVE_REQUEST = readOtherSaleInput(otherPreviewAboveRequest);
+/** The save of the same sale, refused (remaining 20), and the refusal when nothing is left for another shop (remaining 0). */
+export const OTHER_ABOVE = readUiError(otherAbove);
+export const OTHER_NONE_LEFT = readUiError(otherNoneLeft);
 
 /** The line fields of a purchase, as the backend names them in `lines[i].field` (PRD FR-12.41). */
 const LINE_FIELDS = new Set([

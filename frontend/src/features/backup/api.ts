@@ -12,6 +12,8 @@ import type {
   BackupStatus,
   KeyConfirmInput,
   KeyCreated,
+  KeyRevealInput,
+  KeyShown,
   RestoreDone,
   RestoreInput,
   RestorePreview,
@@ -77,4 +79,13 @@ export function backupKeySetup(): Promise<KeyCreated> {
 /** Compares the key typed from the printed sheet with the stored one (NFR-BAK-7). */
 export function backupKeyConfirm(input: KeyConfirmInput): Promise<null> {
   return callCommand<null>('backup_key_confirm', { input });
+}
+
+/**
+ * Shows the backup key again (PRD FR-20.10 v1.54), for an Owner who lost the printed sheet. The backend checks his
+ * password and his sign and answers the key only when both are right; a wrong one answers no key. The key is
+ * kept in memory by the dialog that asked, never stored.
+ */
+export function backupKeyReveal(input: KeyRevealInput): Promise<KeyShown> {
+  return callCommand<KeyShown>('backup_key_reveal', { input });
 }

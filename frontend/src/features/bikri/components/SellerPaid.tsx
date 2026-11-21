@@ -1,6 +1,6 @@
 // A seller's money paid on the spot, in his summary (plan 91, PRD FR-12.23 v1.53, FR-12.3, C6, C8): one field, "موقع پر
 // ادائیگی", beside the advance tick, and the lines of his account after this بکری: پچھلا بقایا, آج کی صافی بکری,
-// موقع پر ادائیگی, پچھلے بنام سے کٹا (or بقایا میں جمع when the shop owed him), and نیا بقایا, each with its side, and
+// موقع پر ادائیگی, بکری کی باقی رقم، کھاتے میں جمع, and نیا بقایا, each with its side, and
 // the working of the new balance behind its ⓘ. When the amount is more than the seller may take without a question,
 // the balance will grow and an amber line says so; the save asks "is this entry correct?" (the box on the page).
 //
@@ -18,7 +18,7 @@ import type { PickedRecord } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { Balance, CalcInfo, Field, MoneyInput, Num, fieldError } from '../../../shared/ui';
 import { cashText, type SellerPaidSpreading } from '../hooks/useSellerPaidSpread';
-import type { SellerPaidLines } from '../seller-paid-types';
+import type { SellerPaidLines } from '../../../bindings/SellerPaidLines';
 
 interface SellerPaidProps {
   seller: PickedRecord;
@@ -119,16 +119,9 @@ export function SellerPaid({ seller, lines, spreading, tick }: SellerPaidProps) 
             <Line labelId="bikri-seller-paid-paid">
               <Num paisa={lines.paid_paisa} />
             </Line>
-            {lines.previous_side === 'dr' || !isNothing(lines.cut_paisa) ? (
-              <Line labelId="bikri-seller-paid-cut">
-                <Num paisa={lines.cut_paisa} />
-              </Line>
-            ) : null}
-            {isNothing(lines.added_to_credit_paisa) ? null : (
-              <Line labelId="bikri-seller-paid-added">
-                <Num paisa={lines.added_to_credit_paisa} />
-              </Line>
-            )}
+            <Line labelId="bikri-seller-paid-rest">
+              <Num paisa={lines.carry_paisa} />
+            </Line>
             {isNothing(lines.over_paid_paisa) ? null : (
               <Line labelId="bikri-seller-paid-over">
                 <Num paisa={lines.over_paid_paisa} />

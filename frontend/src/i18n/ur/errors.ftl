@@ -250,6 +250,9 @@ err-date-range = آخری تاریخ پہلی تاریخ سے پہلے ہے۔ آ
 # PRD FR-12.6. A line sells more than the lot has left.
 # review: pending
 err-qty-exceeds-lot = اتنی تعداد دستیاب نہیں: صرف { $available } { -nag } باقی ہیں۔
+# A sale in another shop takes more نگ than the line has for { -dusri-dukan } (plan 90). Value: remaining (نگ left for { -dusri-dukan }).
+# review: pending
+err-qty-exceeds-other-shop = { -dusri-dukan } کے لیے صرف { $remaining } { -nag } باقی ہیں۔ اس سے زیادہ نہیں لکھ سکتے۔ زیادہ بیچنے ہوں تو پہلے اس لائن پر "{ split-change }" دبا کر { -dusri-dukan } کے { -nag } بڑھائیں۔
 # PRD FR-11.10. The setting is off.
 # review: pending
 err-override-not-allowed = لائن پر { -commission } یا { -laga } بدلنا بند ہے۔ مالک اسے ترتیبات میں چالو کر سکتا ہے۔
@@ -278,6 +281,9 @@ err-not-a-buyer = یہ { -gahak } کا کھاتہ نہیں۔ کوئی { -gahak }
 # allowed, in rupees.
 # review: pending
 err-paid-exceeds-total = { -mauqa-par-jama } اس لائن کی { -gahak } کی رقم سے زیادہ نہیں ہو سکتی۔ زیادہ سے زیادہ { $max } روپے۔
+# Values: credit_paisa, limit_paisa, paid_paisa in rupees (plan 91): the save asks the Owner to confirm.
+# review: pending
+err-seller-paid-above-today = بیوپاری کو دی گئی { -mauqa-par-adaigi } کی رقم { $paid } روپے ہے، جو آج کی { -bikri } اور پچھلے { -jama } کی حد { $limit } روپے سے زیادہ ہے۔ اس سے { -baqaya } بڑھے گا؛ محفوظ کرنے سے پہلے تصدیق کریں۔
 # A warning (PRD FR-12.8): the rest goes to باقی مال.
 # review: pending
 err-qty-left-unsold = { $left } { -nag } باقی ہیں۔ یہ { -baqi-maal } میں رہیں گے۔

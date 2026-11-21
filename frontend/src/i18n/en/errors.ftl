@@ -255,6 +255,9 @@ err-date-range = The last date is before the first date. Enter a last date on or
 # PRD FR-12.6. A line sells more than the lot has left.
 # review: pending
 err-qty-exceeds-lot = That quantity is not available: only { $available } { -nag } are left.
+# A sale in another shop takes more نگ than the line has for { -dusri-dukan } (plan 90). Value: remaining (نگ left for { -dusri-dukan }).
+# review: pending
+err-qty-exceeds-other-shop = Only { $remaining } { -nag } are left for { -dusri-dukan }. You cannot write more than that. To sell more, first press "{ split-change }" on that line and raise the { -nag } for { -dusri-dukan }.
 # PRD FR-11.10. The setting is off.
 # review: pending
 err-override-not-allowed = Changing the { -commission } or { -laga } on a line is switched off. The Owner can switch it on in Settings.
@@ -283,6 +286,9 @@ err-not-a-buyer = This is not a { -gahak } account. Choose a buyer.
 # allowed, in rupees.
 # review: pending
 err-paid-exceeds-total = { -mauqa-par-jama } cannot be more than the buyer total of the line. The most you can enter is Rs { $max }.
+# Values: credit_paisa, limit_paisa, paid_paisa in rupees (plan 91): the save asks the Owner to confirm.
+# review: pending
+err-seller-paid-above-today = The { -mauqa-par-adaigi } given to the seller is Rs { $paid }, which is more than the limit of Rs { $limit } (today's { -bikri } and what the shop owed him). His { -baqaya } will grow; confirm before saving.
 # A warning (PRD FR-12.8): the rest goes to باقی مال.
 # review: pending
 err-qty-left-unsold = { $left } { -nag } are left. They will stay in { -baqi-maal }.

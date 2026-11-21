@@ -137,7 +137,7 @@
   "purchases": [
     {
       "id": 1,
-      "version": 7,
+      "version": 8,
       "number": 1,
       "trip": {
         "id": 1,
@@ -295,12 +295,12 @@
       "qty_sold": 0,
       "qty_written_off": 2,
       "qty_left": 18,
-      "qty_other": 0,
-      "shop_name": null,
+      "qty_other": 5,
+      "shop_name": "Haji Shop",
       "qty_our_sold": 0,
       "qty_other_sold": 0,
-      "qty_our_left": 18,
-      "qty_other_left": 0,
+      "qty_our_left": 13,
+      "qty_other_left": 5,
       "can_change_split": true,
       "cost_released_paisa": 104000,
       "cost_left_paisa": 936000,

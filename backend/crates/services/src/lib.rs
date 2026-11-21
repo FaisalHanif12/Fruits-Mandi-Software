@@ -5,6 +5,7 @@
 pub mod accounts;
 pub mod assist;
 pub mod assistant;
+pub mod backup_key;
 mod audit;
 pub mod auth;
 pub mod bikri;

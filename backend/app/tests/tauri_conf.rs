@@ -396,6 +396,7 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-backup-settings-set",
             "allow-backup-key-setup",
             "allow-backup-key-confirm",
+            "allow-backup-key-reveal",
             "allow-backup-first-run-list",
             "allow-backup-first-run-preview",
             "allow-backup-first-run-restore",

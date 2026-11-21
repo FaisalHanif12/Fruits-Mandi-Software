@@ -840,13 +840,21 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
       expect(useBackupKeyStore.getState().key).toBeNull();
     });
 
-    it('a confirmed key shows no key card at all', async () => {
+    it('a confirmed key asks nothing and shows no key: only the quiet card with "see the key again" (PRD FR-20.10 v1.54)', async () => {
       await open();
       await waitFor(() => {
         expect(cell(LOCAL, 'kind')).not.toBe('');
       });
       expect(screen.queryByText(named(message(language, 'backup-key-missing')))).toBeNull();
-      expect(screen.queryByText(named(message(language, 'backup-key-title')))).toBeNull();
+      expect(screen.queryByText(named(message(language, 'backup-key-unconfirmed')))).toBeNull();
+      expect(
+        screen.queryByRole('button', { name: named(message(language, 'backup-key-make')) }),
+      ).toBeNull();
+      expect(
+        await screen.findByRole('button', {
+          name: named(message(language, 'backup-key-reveal-button')),
+        }),
+      ).toBeInTheDocument();
     });
   });
 

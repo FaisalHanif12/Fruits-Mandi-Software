@@ -142,7 +142,8 @@ fn build(w: &World) -> Ventures {
         ctx,
         &w.owner,
         &PurchaseInput {
-            other_qty: None,
+            // The 5 sold in another shop below are set aside for it (PRD FR-12.41, v1.52).
+            other_qty: Some("5".into()),
             shop_name: None,
             sell_date: None,
             trip_id: Some(trip),

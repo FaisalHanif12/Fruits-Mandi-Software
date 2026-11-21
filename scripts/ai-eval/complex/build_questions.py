@@ -530,7 +530,8 @@ def build_year(path):
     # Y18 expenses two months
     a, c = b.shop_expense(last_month), b.shop_expense(month)
     add("Y18", w, "roman", "is mahine aur pichle mahine ka kharcha compare karo",
-        [R({"last": a, "this": c, "diff": a - c}), R({"last": a, "this": c})], group="compare-periods", kind="expense",
+        [R({"last": a, "this": c, "diff": a - c}), R({"last": a, "this": c}), R({"this": c, "diff": a - c})],
+        group="compare-periods", kind="expense",
         period=f"{per(last_month)} / {per(month)}", source="R29 / view M compare", note="direction: less",
         direction="down")
 

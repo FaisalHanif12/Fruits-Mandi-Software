@@ -18,6 +18,14 @@
   font-size: var(--print-text-1);
 }
 
+/* A table drawn with its full grid (the buyers' list R5, Umar 21-11-2026): thin vertical lines between the
+   columns and at both edges, the same colour as the horizontal lines of the rows, in the heading and in the
+   totals row too, so each column reads clearly. A table asks for it with `print-table-grid`. */
+.print-report .print-table-grid th,
+.print-report .print-table-grid td {
+  border-inline: var(--print-rule) solid var(--color-border);
+}
+
 /* The totals row is drawn once, under the last row, not repeated at the foot of every page. */
 .print-report .print-table tfoot {
   display: table-row-group;

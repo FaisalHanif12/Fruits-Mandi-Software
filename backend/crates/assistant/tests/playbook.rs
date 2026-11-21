@@ -528,7 +528,9 @@ fn group_by_belongs_to_two_views_and_the_refusal_says_which() {
     let w = unlocked_day();
     let mut s = Session::new(&w, "2026-10-10", "monthly commission by item");
     s.period("this_year");
-    for view in ["A", "B", "C", "E", "H"] {
+    // D6 v1.14: A, B, C and E group their rows too (one set for each month) and view M has a column for each
+    // month; the views that still refuse it say which take it.
+    for view in ["F", "H", "J"] {
         let e = s
             .try_run(
                 "analytics",
@@ -539,7 +541,16 @@ fn group_by_belongs_to_two_views_and_the_refusal_says_which() {
             )
             .unwrap_err();
         assert_eq!(e.field.as_deref(), Some("group_by"), "{view}");
-        assert_eq!(e.allowed, ["D", "G"], "{view}");
+        assert_eq!(e.allowed, ["A", "B", "C", "D", "E", "G", "M"], "{view}");
+    }
+    for view in ["A", "B", "C", "E"] {
+        s.ok(
+            "analytics",
+            analytics(
+                view,
+                json!({"from": "r1.from", "to": "r1.to", "group_by": "month"}),
+            ),
+        );
     }
     for view in ["D", "G"] {
         s.ok(

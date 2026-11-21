@@ -90,11 +90,21 @@ pub fn column_words(columns: &[Column], analytics: bool, figure: Option<&str>) -
 
 /// The views that take a filter, as their letters.
 pub fn views_with(kind: AnalyticsFilterKind) -> Vec<String> {
-    view_catalog()
+    let mut out: Vec<String> = view_catalog()
         .iter()
         .filter(|entry| entry.filters.contains(&kind))
         .map(|entry| entry.id.code().to_owned())
-        .collect()
+        .collect();
+    // D6 v1.14: the tool also groups the rows of views A, B, C and E, and reads view M with its month columns.
+    if kind == AnalyticsFilterKind::GroupBy {
+        for letter in ["A", "B", "C", "E", "M"] {
+            if !out.iter().any(|v| v == letter) {
+                out.push(letter.to_owned());
+            }
+        }
+        out.sort();
+    }
+    out
 }
 
 /// The letters of the views that take a comparison.

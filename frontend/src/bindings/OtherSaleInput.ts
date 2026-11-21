@@ -21,8 +21,9 @@ export type OtherSaleInput = {
    */
   shop: string | null;
   /**
-   * The purchase the goods come from. It must be a purchase of this trip with stock left
-   * (`ERR_QTY_EXCEEDS_LOT`, value `available`, when it has fewer نگ).
+   * The purchase the goods come from. It must be a purchase of this trip. The qty comes off the
+   * part set aside for another shop; above it the sale is refused (`ERR_QTY_EXCEEDS_OTHER_SHOP`
+   * on `qty`, value `remaining`, PRD FR-12.41 v1.52).
    */
   purchase_id: number | null;
   /**

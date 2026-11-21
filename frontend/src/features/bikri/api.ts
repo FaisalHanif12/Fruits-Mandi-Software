@@ -42,7 +42,8 @@ import type { SellerMemoryInput } from '../../bindings/SellerMemoryInput';
 import { callCommand } from '../../shared/api';
 import type { BikriList } from '../../bindings/BikriList';
 import type { BikriListInput } from '../../bindings/BikriListInput';
-import type { SellerPaidSpread, SellerPaidSpreadInput } from './seller-paid-types';
+import type { SellerPaidSpread } from '../../bindings/SellerPaidSpread';
+import type { SellerPaidSpreadInput } from '../../bindings/SellerPaidSpreadInput';
 import type { BikriDraft, BikriPreview, SellerMemory } from './types';
 
 /**

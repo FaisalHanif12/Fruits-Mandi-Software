@@ -32,7 +32,7 @@
 use mandi_services::core::auth::Language;
 use mandi_services::core::text;
 
-use crate::limits::{MAX_ANSWER_WORDS, MAX_NEXT, MAX_SHOW, MAX_TABLE_ROWS};
+use crate::limits::{MAX_ANSWER_WORDS, MAX_NEXT, MAX_SHOW, table_cap};
 use crate::model_answer::{AnswerKind, ModelAnswer, Piece, ShowAs, pieces};
 use crate::prompt::{SYSTEM, WordKind, words};
 use crate::results::{NameVal, Node, Shown, Side, Val};
@@ -1095,10 +1095,9 @@ impl Check<'_> {
             if !ok {
                 failures.push(Failure::new("show", &show.result));
             }
-            if show
-                .rows
-                .is_some_and(|r| r < 1 || usize::try_from(r).unwrap_or(usize::MAX) > MAX_TABLE_ROWS)
-            {
+            if show.rows.is_some_and(|r| {
+                r < 1 || usize::try_from(r).unwrap_or(usize::MAX) > table_cap(&result.input)
+            }) {
                 failures.push(Failure::new("show", "rows"));
             }
         }

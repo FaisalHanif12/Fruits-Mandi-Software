@@ -418,12 +418,7 @@ export function TripEntryEditor({
       ? withStock.find((purchase) => String(purchase.id) === draft.sale.purchaseId)
       : undefined;
   const qtyAbove =
-    pickedPurchase !== undefined &&
-    qtyAboveOther(
-      draft.sale.qty,
-      pickedPurchase.qty_other_left,
-      saleView.current ? salePreview?.numbers?.qty_from_our_shop : null,
-    )
+    pickedPurchase !== undefined && qtyAboveOther(draft.sale.qty, pickedPurchase.qty_other_left)
       ? pickedPurchase.qty_other_left
       : null;
 

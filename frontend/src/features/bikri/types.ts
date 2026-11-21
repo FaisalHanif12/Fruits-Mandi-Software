@@ -10,8 +10,8 @@ import type { LinePreview } from '../../bindings/LinePreview';
 import type { LotPreview } from '../../bindings/LotPreview';
 import type { RateHint } from '../../bindings/RateHint';
 import type { SellerMemory } from '../../bindings/SellerMemory';
+import type { BikriPreview } from '../../bindings/BikriPreview';
 import type { SummaryTotals } from '../../bindings/SummaryTotals';
-import type { BikriPreviewWithSellers } from './seller-paid-types';
 
 /**
  * The draft of the screen as the backend takes it. When lots carried over from earlier بکری are on the
@@ -21,10 +21,8 @@ import type { BikriPreviewWithSellers } from './seller-paid-types';
  */
 export type BikriDraft = BackendDraft & { carried?: CarriedLotInput[] };
 
-/** The preview of the screen; from plan 91 it also says, for each seller, how his account stands after the sale. */
-export type BikriPreview = BikriPreviewWithSellers;
-
 export type {
+  BikriPreview,
   FieldError,
   LineCalc,
   LinePreview,

@@ -19,7 +19,7 @@
         "name_en": "Box"
       },
       "qty": 80,
-      "qty_left": 55,
+      "qty_left": 60,
       "weight_grams": null,
       "trip": {
         "id": 1,
@@ -60,5 +60,6 @@
       },
       "garden": null
     }
-  ]
+  ],
+  "total_count": 2
 }

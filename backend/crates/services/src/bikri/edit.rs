@@ -51,12 +51,10 @@ use super::rows::{
     pin_cash_sales, posting_sums, shape, stored_line_ids,
 };
 use super::shared::{
-    Basis, Replaced, Worked, data, refresh_chukta_index, require_sellers_confirmed, switches,
-    work_out,
+    Basis, Replaced, Worked, data, refresh_chukta_index, require_confirmed, switches, work_out,
 };
 use crate::audit::Event;
 use crate::auth::Actor;
-use crate::cash;
 use crate::context::Context;
 use crate::day;
 use crate::error::ServiceError;
@@ -81,7 +79,7 @@ fn not_found(field: &str) -> ServiceError {
 }
 
 /// An edit the rules do not allow (NFR-USE-13). `rule` is a short fixed name the screen turns
-/// into words: `lot_removed`, `lot_not_in_posting`, `lot_order_changed`,
+/// into words: `lot_has_later_sale`, `lot_has_write_off`, `lot_has_fruit`, `lot_not_in_posting`, `lot_order_changed`,
 /// `lot_seller_locked`, `lot_item_locked`, `lot_purchase_locked`, `line_not_in_posting`, `posting_lots_locked`.
 fn not_allowed(field: &str, rule: &str) -> FieldError {
     FieldError::new(ErrorCode::ErrEditNotAllowed, field)
@@ -563,8 +561,11 @@ pub(crate) fn edit_in(
             return Err(ServiceError::from(errors));
         }
         let reason = reason?;
-        cash::require_confirmed(&worked.cash, input.confirm_cash_below_zero)?;
-        require_sellers_confirmed(&worked.calc.sellers, input.confirm_cash_below_zero)?;
+        require_confirmed(
+            &worked.cash,
+            &worked.calc.sellers,
+            input.confirm_cash_below_zero,
+        )?;
         write_edit(
             ctx,
             tx,

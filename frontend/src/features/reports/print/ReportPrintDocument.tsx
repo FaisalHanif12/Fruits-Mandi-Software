@@ -224,11 +224,14 @@ export function TableBlock({ data, block, showHead = true, dense = false, ref }:
   return (
     <table
       ref={ref}
-      className={
-        dense || block.columns.length > DENSE_COLUMNS
-          ? 'print-table print-table-dense'
-          : 'print-table'
-      }
+      className={[
+        'print-table',
+        dense || block.columns.length > DENSE_COLUMNS ? 'print-table-dense' : '',
+        // The buyers' list (R5) is drawn with the full grid of lines between its columns (Umar, 21-11-2026).
+        buyersList ? 'print-table-grid' : '',
+      ]
+        .filter((name) => name !== '')
+        .join(' ')}
     >
       {showHead ? (
         <thead>

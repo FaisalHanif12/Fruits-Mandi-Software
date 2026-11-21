@@ -122,8 +122,10 @@ fn pattern(view: &str, word: &str) -> String {
     let digits = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit());
     let parts: Vec<&str> = word.split('_').collect();
     match (view, parts.as_slice()) {
-        ("D", ["p", year, month]) if digits(year) && digits(month) => "p_<year>_<month>".to_owned(),
-        ("D", ["p", year, month, day]) if digits(year) && digits(month) && digits(day) => {
+        ("D" | "M", ["p", year, month]) if digits(year) && digits(month) => {
+            "p_<year>_<month>".to_owned()
+        }
+        ("D" | "M", ["p", year, month, day]) if digits(year) && digits(month) && digits(day) => {
             "p_<year>_<month>".to_owned()
         }
         ("E", ["i", id]) if digits(id) => "i_<item_id>".to_owned(),
@@ -189,7 +191,12 @@ fn engine() -> Engine {
         }
     }
     let mut views: BTreeMap<String, Words2> = BTreeMap::new();
-    for entry in view_catalog() {
+    // D6 v1.14: the tool also reads view M (the shop's expenses by head, a column for each month), which the
+    // reports crate's assistant catalogue (A to K) does not list.
+    let view_m = mandi_reports::analytics::screen_catalog()
+        .into_iter()
+        .filter(|e| e.id.code() == "M");
+    for entry in view_catalog().into_iter().chain(view_m) {
         let id = entry.id.code().to_owned();
         let mut variants = vec![json!({})];
         if entry.filters.contains(&AnalyticsFilterKind::Compare) {
@@ -383,19 +390,29 @@ pub fn check(tools_text: &str) {
         .filter(|e| e.filters.contains(&AnalyticsFilterKind::Compare))
         .map(|e| e.id.code().to_owned())
         .collect();
-    let group: Words2 = view_catalog()
+    // D6 v1.14: D, G and M give a series; A, B, C and E give rows for each day, month or year (the tool adds
+    // them to the catalogue's grouping views).
+    let mut group: Words2 = view_catalog()
         .iter()
         .filter(|e| e.filters.contains(&AnalyticsFilterKind::GroupBy))
         .map(|e| e.id.code().to_owned())
         .collect();
+    for letter in ["A", "B", "C", "E", "M"] {
+        group.insert(letter.to_owned());
+    }
     assert_eq!(
-        letters(list_after(description, "Compare is for views ", ";")),
+        letters(list_after(description, "Compare is for views ", ".")),
         compare
     );
-    assert_eq!(
-        letters(list_after(description, "group_by is for ", ".")),
-        group
+    let series = list_after(
+        description,
+        "group_by (day, month, year) is for ",
+        ", and for ",
     );
+    let rows = list_after(description, ", and for ", " it gives");
+    let mut both = letters(series);
+    both.extend(letters(rows));
+    assert_eq!(both, group);
     // The compared words: X is total_comm, and purchase_value in C.
     assert!(description.contains("X being total_comm (purchase_value in C)"));
     for view in &compare {
@@ -405,10 +422,12 @@ pub fn check(tools_text: &str) {
         );
     }
     // The enum of the analytics sort: the fixed words of every view, and the compared words.
+    // (View M is read and not sorted: its `total` is no word of the enum.)
     let mut want: Words2 = engine
         .views
-        .values()
-        .flatten()
+        .iter()
+        .filter(|(id, _)| id.as_str() != "M")
+        .flat_map(|(_, words)| words)
         .filter(|w| !w.contains('<'))
         .cloned()
         .collect();

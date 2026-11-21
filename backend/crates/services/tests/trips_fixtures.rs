@@ -33,6 +33,7 @@ use mandi_services::core::purchases::{
     PurchaseCancelInput, PurchaseGetInput, PurchaseInput, PurchaseWriteOffInput,
     PurchaseWriteOffUndoInput, PurchasesListInput,
 };
+use mandi_services::core::split::SplitInput;
 use mandi_services::core::trips::{
     OtherSaleInput, TripCostInput, TripEntryCancelInput, TripGetInput, TripInput, TripsListInput,
 };
@@ -249,7 +250,19 @@ fn trip_fixtures_of_e2e_34_and_34b() {
         &bikri::open_for_edit(ctx, &typed::<EditOpenInput>(&open_request)).unwrap(),
     );
 
-    // A sale in another shop: 3 of the 5 left for 2,000.
+    // A sale in another shop: the 5 left are set aside for another shop first (PRD FR-12.41, v1.52),
+    // then 3 of them are sold for 2,000.
+    let version = purchases::get(ctx, &typed::<PurchaseGetInput>(&json!({ "id": bought.id })))
+        .unwrap()
+        .version;
+    purchases::change_split(
+        ctx,
+        owner,
+        &typed::<SplitInput>(&json!({
+            "id": bought.id, "version": version, "other_qty": "5", "shop_name": "Haji Shop"
+        })),
+    )
+    .unwrap();
     let other = json!({
         "trip_id": trip.id, "date": "10-10-2026", "shop": "Haji Shop", "purchase_id": bought.id,
         "qty": "3", "amount": "2,000", "note": null

@@ -2,15 +2,17 @@
 // made and confirmed. With no key yet (the wizard step was left for later, or the first sign-in
 // failed), the Owner makes it here and prints it. With a key that was never confirmed, he types it
 // from his printed sheet; if the sheet is lost he can make a new one, as long as no USB or cloud
-// copy is locked with the old key (the backend refuses otherwise, and says so).
+// copy is locked with the old key (the backend refuses otherwise, and says so). With a key that is set,
+// confirmed or not, "See the key again" shows it once more after his password and his sign (PRD FR-20.10 v1.54).
 
 import { Localized } from '@fluent/react';
 import { KeyRound } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button, Card, Notice } from '../../../shared/ui';
 import { useBackupKeyStore } from '../key-store';
 import type { BackupStatus } from '../types';
 import { BackupKeyCard, KeyConfirmForm } from './BackupKeyCard';
+import { KeyRevealDialog } from './KeyRevealDialog';
 
 interface KeyPanelProps {
   status: BackupStatus;
@@ -18,15 +20,31 @@ interface KeyPanelProps {
 
 export function KeyPanel({ status }: KeyPanelProps) {
   const [making, setMaking] = useState(false);
+  const [revealing, setRevealing] = useState(false);
+  const revealButton = useRef<HTMLButtonElement>(null);
   // A key being shown stays on screen even after the state says it is set, until the step is over.
   const showing = useBackupKeyStore((state) => state.key !== null);
   const needsKey = !status.key_set;
   const needsConfirm = status.key_set && !status.key_confirmed;
-  if (!making && !showing && !needsKey && !needsConfirm) return null;
+  // A key that is set can always be seen again, so the card stays, quietly, once the key is confirmed.
+  const canReveal = status.key_set;
+  if (!making && !showing && !needsKey && !needsConfirm && !canReveal) return null;
 
   const done = () => {
     setMaking(false);
   };
+
+  const revealButtonNode = (
+    <Button
+      ref={revealButton}
+      onClick={() => {
+        setRevealing(true);
+      }}
+    >
+      <KeyRound aria-hidden="true" className="size-icon-md" />
+      <Localized id="backup-key-reveal-button" />
+    </Button>
+  );
 
   return (
     <Card icon={KeyRound} title={<Localized id="backup-key-title" />}>
@@ -51,7 +69,7 @@ export function KeyPanel({ status }: KeyPanelProps) {
             <Localized id="backup-key-missing" />
           </Notice>
         </>
-      ) : (
+      ) : needsConfirm ? (
         <>
           <Notice tone={status.key_confirm_due ? 'warn' : 'info'}>
             <Localized
@@ -66,6 +84,7 @@ export function KeyPanel({ status }: KeyPanelProps) {
             />
           </div>
           <div className="flex flex-col items-start gap-1">
+            {revealButtonNode}
             <Button
               onClick={() => {
                 setMaking(true);
@@ -78,7 +97,15 @@ export function KeyPanel({ status }: KeyPanelProps) {
             </Localized>
           </div>
         </>
+      ) : (
+        <div className="flex flex-col items-start gap-2">
+          <Localized id="backup-key-reveal-idle">
+            <p className="type-body text-ink-muted" />
+          </Localized>
+          {revealButtonNode}
+        </div>
       )}
+      <KeyRevealDialog open={revealing} onOpenChange={setRevealing} returnFocusTo={revealButton} />
     </Card>
   );
 }

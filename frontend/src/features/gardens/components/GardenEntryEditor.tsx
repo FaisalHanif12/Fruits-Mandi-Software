@@ -153,12 +153,7 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
       ? arrivals.find((arrivalRow) => String(arrivalRow.id) === draft.arrivalId)
       : undefined;
   const qtyAbove =
-    pickedArrival !== undefined &&
-    qtyAboveOther(
-      draft.qty,
-      pickedArrival.qty_other_left,
-      view.current ? preview?.numbers?.qty_from_our_shop : null,
-    )
+    pickedArrival !== undefined && qtyAboveOther(draft.qty, pickedArrival.qty_other_left)
       ? pickedArrival.qty_other_left
       : null;
   // The check of the goods arrived lines: the same kind of answer, with no numbers.

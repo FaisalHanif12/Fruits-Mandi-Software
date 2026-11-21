@@ -354,6 +354,7 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::backup::backup_settings_set,
         commands::backup::backup_key_setup,
         commands::backup::backup_key_confirm,
+        commands::backup::backup_key_reveal,
         // Plan 56, restore on a new computer (append-only block).
         commands::backup_first_run::backup_first_run_list,
         commands::backup_first_run::backup_first_run_preview,

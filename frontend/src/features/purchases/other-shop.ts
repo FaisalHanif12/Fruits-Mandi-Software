@@ -42,16 +42,11 @@ export function shopAfterPicking(
 }
 
 /**
- * True when the sale takes more نگ than the line has for another shop. A whole number typed is
- * compared with the number left; a sum such as `20+25` is read by the backend, whose preview says
- * how many would have to come from our shop (`movedFromOur`, only when it is for what is on screen).
+ * True when the whole number typed is more than the line has for another shop, so the qty field says so before
+ * the backend is asked. A sum such as `20+25` is read by the backend, whose preview and save refuse it with
+ * `ERR_QTY_EXCEEDS_OTHER_SHOP` (value `remaining`, PRD FR-12.41), shown under the qty like any refusal.
  */
-export function qtyAboveOther(
-  qtyText: string,
-  left: number,
-  movedFromOur: number | null | undefined,
-): boolean {
+export function qtyAboveOther(qtyText: string, left: number): boolean {
   const plain = qtyText.replaceAll(',', '').trim();
-  if (/^\d+$/.test(plain) && Number(plain) > left) return true;
-  return (movedFromOur ?? 0) > 0;
+  return /^\d+$/.test(plain) && Number(plain) > left;
 }

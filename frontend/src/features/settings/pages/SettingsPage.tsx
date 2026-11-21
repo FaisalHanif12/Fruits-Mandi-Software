@@ -59,10 +59,11 @@ export function SettingsPage() {
   const data = settings.data;
   // A panel of fields scrolls inside its own area; the audit log fills the room itself (plan 38). The
   // screen runs down to the status bar through the band kept for the round assistant button
-  // (`fill-to-corner`), so a panel is not cut off above empty space; the band is the panel's bottom
-  // padding, so its last row scrolls clear of the button (Umar, 12-11-2026).
+  // (`fill-to-corner`). The panels are narrow reading columns at the start side, so the button is kept
+  // clear sideways (`pe-corner`: the room it takes at the end edge) and not by a tall empty band under
+  // the last card, which left the page scrolling into blank space (Umar, 21-11-2026).
   const scrolls = (content: ReactNode) => (
-    <div className="min-h-0 flex-1 overflow-auto pb-corner">{content}</div>
+    <div className="min-h-0 flex-1 overflow-auto pb-4 pe-corner">{content}</div>
   );
   return (
     <div className="fill-to-corner flex min-h-0 flex-col gap-3">

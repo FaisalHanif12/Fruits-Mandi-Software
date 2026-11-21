@@ -49,7 +49,7 @@ use super::later::{LaterPlan, lot_charges_of, on_date, plan_later, write_later};
 use super::load::{detail_of, draft_of, later_header};
 use super::rows::lot_running_totals;
 use super::save::write_new;
-use super::shared::{Basis, Worked, data, require_sellers_confirmed, switches, work_out};
+use super::shared::{Basis, Worked, data, require_confirmed, switches, work_out};
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::cash;
@@ -337,8 +337,11 @@ pub fn save(
         if !work.errors.is_empty() {
             return Err(ServiceError::from(work.errors.clone()));
         }
-        cash::require_confirmed(&work.cash, input.confirm_cash_below_zero)?;
-        require_sellers_confirmed(&work.preview.preview.sellers, input.confirm_cash_below_zero)?;
+        require_confirmed(
+            &work.cash,
+            &work.preview.preview.sellers,
+            input.confirm_cash_below_zero,
+        )?;
         let mut entry_ids = Vec::new();
         let mut carried_saved = Vec::new();
         let mut date_iso = String::new();

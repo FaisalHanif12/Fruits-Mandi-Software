@@ -1320,7 +1320,35 @@ pub fn plan_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
         .or_else(|| pre_reads(u))
         .or_else(|| both_sides_pre_reads(u))
         .or_else(|| party_finds(u))?;
-    Some(with_the_buyers_of_a_seller(u, reads))
+    Some(with_the_gross(u, with_the_buyers_of_a_seller(u, reads)))
+}
+
+/// "pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag": the gross sale is asked beside the bills (or
+/// the net sale) of the shop. R2 and R6 do not hold the gross (R2's goods value holds a rate difference), view A
+/// does, so it is read ahead for the same days (plan 82, live check M18: the guard refused the answer).
+fn with_the_gross(u: &Understanding, mut reads: Vec<PlannedRead>) -> Vec<PlannedRead> {
+    if !u.gross_beside || !u.sure || !u.parties.is_empty() || !u.items.is_empty() {
+        return reads;
+    }
+    let dates = reads
+        .iter()
+        .find(|r| r.tool == "report" || r.tool == "analytics")
+        .map(|r| (r.input.get("from").cloned(), r.input.get("to").cloned()));
+    let Some((from, to)) = dates else {
+        return reads;
+    };
+    let view_a = analytics(
+        "A",
+        An {
+            from: from.and_then(|v| v.as_str().map(str::to_owned)),
+            to: to.and_then(|v| v.as_str().map(str::to_owned)),
+            ..An::default()
+        },
+    );
+    if !reads.contains(&view_a) {
+        reads.push(view_a);
+    }
+    reads
 }
 
 /// "6 november ko ehsan ne kitna maal bheja aur kis kis gahak ne kitna liya": a seller and a word for the buyers.
@@ -1726,6 +1754,10 @@ fn plan_unstopped(u: &Understanding) -> Option<Planned> {
     }
     // "bijli ka kharcha mahine ke hisab se": the expenses for each month (plan 82).
     if let Some(planned) = totals::expense_grain_plan(u) {
+        return Some(planned);
+    }
+    // "haroon ne mahine ke hisab se kitna maal liya": one buyer's or seller's rows for each month (plan 82).
+    if let Some(planned) = totals::party_grain_plan(u) {
         return Some(planned);
     }
     // "har gahak ne alag alag kitni bikri li": one row for each buyer or seller (plan 82).

@@ -44,6 +44,7 @@ mod compose_outside;
 mod compose_print;
 mod compose_route;
 mod figure;
+mod follow_up;
 mod function_words;
 mod items;
 mod lexicon;
@@ -65,6 +66,7 @@ pub use compose_outside::{compose_outside, outside_message};
 pub use compose_print::compose_print;
 pub use compose_route::compose;
 pub use figure::{FigureAnswer, Sentence, compose_figure};
+pub use follow_up::follow_up_text;
 pub use measure_words::{SaleAsk, asked_sale_measure};
 pub use party_flow::which_one_party;
 pub use plan::{PlanFilters, ReportPlan};
@@ -780,6 +782,9 @@ pub struct Understanding {
     /// ("akram ka bakaya aur kul bakaya"), or collected and still to collect together. The app gives no instant
     /// answer and the model answers (D7, plan 59 C).
     pub lower_ask: bool,
+    /// True when the gross sale is asked BESIDE the net sale or the buyers' bills ("khaam bikri aur gahakon ke kul
+    /// bill alag alag"): view A holds the gross, so it is read ahead beside the register of the bills.
+    pub gross_beside: bool,
     /// True when a "so far" was folded into another period that ends today ("fruit so far and today's sales"):
     /// with several figures asked, which period belongs to which figure is not known, so the model answers.
     pub period_merged: bool,
