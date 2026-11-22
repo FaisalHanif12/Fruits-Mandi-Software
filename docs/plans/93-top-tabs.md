@@ -50,3 +50,5 @@ The second menu of بکری (7 items) and روکڑ (its items) moves from a vert
 
 - T6: dashboard quick actions back to the earlier look: natural-width buttons in one row, as before, with the two new ones (پچھلی بکری, پارٹی کھاتے) after نیا خرچہ. When the window is too narrow for all of them, the ones that do not fit go into a "مزید ▾" menu at the end of the row (no stretched grid, no second row).
 - T7: on the بکری بک screen the tabs and the screen's controls share ONE row again: visible tabs are بکری بک, وصولی and ادائیگی, the rest (پیشگی کھاتہ, پچھلی بکری, پارٹی کھاتے, باقی مال) go into "مزید ▾"; the date, بکری نمبر, پرنٹ, ادھاری تفصیل and محفوظ کریں stay on the same row. Other section screens keep the current rule.
+
+- T8 (Umar, 22-11-2026, screenshot): a field error in a compact row (the بکری بک toolbar date, for example a future date) was written inline and broke the row (tabs and "مزید" pushed out). It now shows as a floating bubble under the field, so the row never changes size; the field keeps its red border while the value is wrong. The bubble shows for 5 seconds, then hides, and shows again each time the same failing action is repeated.
