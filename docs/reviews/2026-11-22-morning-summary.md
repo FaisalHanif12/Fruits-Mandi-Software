@@ -16,5 +16,5 @@ Plans 81 to 91 and the small tweaks: garden form, assistant speed and accuracy, 
 2. Should a wrong sign have its own lockout after several tries (like the password)?
 3. A cancelled بکری row in پچھلی بکری now shows its buyer total (it showed 0 before). Keep it or show 0?
 4. Plan 91: an edit asks the seller-paid question again for an amount already confirmed; fine?
-5. The OS app icon (installer) still has the fruit; change it to the crate too?
+5. The OS app icon (installer) still has the fruit; change it to the crate too? **Decided by Umar, 22-11-2026: the installer icon stays as it is.**
 6. Merge: open the pull request for fix/gardens-new-form and choose "Create a merge commit".
