@@ -40,6 +40,8 @@ The second menu of بکری (7 items) and روکڑ (its items) moves from a vert
 
 - T4: the scroll line (scroll bar) of the page and panel scroll areas is not shown, on Mac and Windows; scrolling by wheel, trackpad, keys and drag still works. One shared rule in `styles/globals.css` (for example a `no-scrollbar` utility on the main screen area and the inner panels: `scrollbar-width: none` and `::-webkit-scrollbar { display: none }`). Data grids and wide tables that scroll sideways keep their own behaviour.
 
+- T5: the dashboard quick actions (PRD 9.3) gain پچھلی بکری and پارٹی کھاتے, after نیا خرچہ, same button style, no shortcut key (none exists), each opens its page.
+
 | # | Task | Owner |
 |---|---|---|
-| T2, T3, T4 | Frontend: the two logo tweaks and hidden scroll bars, both languages, tests updated | `frontend` |
+| T2 to T5 | Frontend: the two logo tweaks and hidden scroll bars, both languages, tests updated | `frontend` |
