@@ -51,3 +51,4 @@ Every item above works; golden tests unchanged; money agent PASS on items 8, 9, 
 - [A] Mixed save (carried lots beside new lots): the carried later entries are posted before the new بکری's lot advance, so a ticked carried credit does not adjust that same-save advance; the books stay right and the advance is matched by the next credit.
 - The lot advance entry is labelled "بکری 5 کی پیشگی" (Advance with sale 5) in روکڑ بک, R11 and R13, never like a voucher number; the seller card's last advance (FR-7.60) includes lot advances.
 - 23-11-2026: the disk filled up (backend/target 146 GB); all build folders were deleted on Umar's instruction and rebuilt.
+- Item 18 (Umar, 23-11-2026, screenshot of روکڑ بک): every list window is 30 days at a time (روکڑ بک, روزنامچہ, sales and other lists), except پچھلی بکری, which keeps 7 days. Owner: frontend-95b (useListWindow default), backend if any command caps the window at 7 days.
