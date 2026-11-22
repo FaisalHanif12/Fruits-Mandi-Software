@@ -277,8 +277,8 @@ fn a_call_that_sends_headers_and_then_stalls_the_body_never_takes_a_question_pas
 
 #[test]
 fn when_the_first_request_says_nothing_the_copy_answers_and_the_call_counts_once() {
-    // The first request is taken and never answered; at 10 s the copy goes out and is answered at
-    // once. The question is answered at about 10 s instead of waiting for the cut.
+    // The first request is taken and never answered; at 7 s the copy goes out and is answered at
+    // once. The question is answered at about 7 s instead of waiting for the cut.
     let url = serve(vec![
         Plan::Silent,
         Plan::ReplyAfter(Duration::ZERO, words_reply()),

@@ -11,6 +11,7 @@ import type { SortInput } from '../../bindings/SortInput';
 import {
   useAllPagesQuery,
   useDebouncedValue,
+  useLoadRest,
   usePagedQuery,
   usePreviewQuery,
 } from '../../shared/hooks';
@@ -250,6 +251,35 @@ export function useArrivalsList(gardenId: number, state: ArrivalsListInput['stat
     totalOf: (page) => page.total_count,
     keepPrevious: true,
   });
+}
+
+/**
+ * Every goods arrived entry of one garden that is still listed, page after page, for the choice
+ * list of a sale in another shop (plan 90): the form needs all the lines to offer the right ones,
+ * not only the page the list below is on.
+ */
+export function useAllArrivals(gardenId: number) {
+  const query = useAllPagesQuery({
+    queryKey: [...GARDENS_KEY, 'arrivals-all', gardenId],
+    fetchPage: (offset, limit) =>
+      gardensArrivalsList({
+        garden_id: gardenId,
+        from: null,
+        to: null,
+        item_id: null,
+        state: null,
+        offset,
+        limit,
+        show_finished: false,
+        search: null,
+        sort: null,
+        group_by_month: false,
+      }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+  });
+  useLoadRest(query, true);
+  return query;
 }
 
 export function useSaveGardenArrival() {

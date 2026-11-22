@@ -1,0 +1,10 @@
+{
+  "amount": "20,000",
+  "arrival_id": 1,
+  "date": "10-10-2026",
+  "garden_id": 2,
+  "note": null,
+  "qty": "60",
+  "shop": "حاجی شاپ",
+  "type": "other_sale"
+}

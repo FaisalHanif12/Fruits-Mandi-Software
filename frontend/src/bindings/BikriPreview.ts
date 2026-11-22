@@ -2,6 +2,7 @@
 import type { CashCheck } from './CashCheck';
 import type { FieldError } from './FieldError';
 import type { LotPreview } from './LotPreview';
+import type { SellerPaidLines } from './SellerPaidLines';
 import type { SplitPart } from './SplitPart';
 import type { SummaryTotals } from './SummaryTotals';
 
@@ -21,6 +22,11 @@ export type BikriPreview = {
    * The live partner split of the shared income.
    */
   split: Array<SplitPart>;
+  /**
+   * One summary for each seller of a complete lot, in the order of his first lot (PRD FR-12.23
+   * v1.53). Lots of trip goods and of gardens have none: they take no نقد.
+   */
+  sellers: Array<SellerPaidLines>;
   /**
    * Cash in hand after this بکری (PRD FR-6.7).
    */

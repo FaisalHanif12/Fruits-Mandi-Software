@@ -17,7 +17,7 @@ use serde_json::json;
 
 use crate::api::{
     BackupList, BackupListInput, BackupRow, BackupSettingsInput, BackupSettingsView, BackupStatus,
-    CloudLevel, DEFAULT_PAGE, KeyCreated, RowStatus, StatusError,
+    CloudLevel, DEFAULT_PAGE, KeyCreated, KeyShown, RowStatus, StatusError,
 };
 use crate::cloud::{CloudFactory, S3Factory};
 use crate::daily_pack::{PackSource, PendingPack};
@@ -268,6 +268,42 @@ impl BackupService {
         self.update_state(|s| s.key_confirmed_at = Some(at));
         self.audit(user_id, "confirm", "backup_key", None);
         Ok(())
+    }
+
+    /// Gives the backup key back for a second look (PRD FR-20.10, v1.54). The caller has already
+    /// proved the Owner's password and sign (`mandi_services::backup_key::prove`). The audit row of
+    /// the viewing is written first and is required: if it cannot be written, the key is not given.
+    /// The row holds no key (NFR-SEC-7).
+    ///
+    /// # Errors
+    /// `ERR_BACKUP_KEY_NOT_SET` when this computer has no key; `ERR_INTERNAL` if the Credential
+    /// Manager or the audit row fails.
+    pub fn key_reveal(&self, user_id: i64) -> Result<KeyShown, BackupError> {
+        let Some(key) = self.key()? else {
+            return Err(BackupError::new(
+                BackupCode::ErrBackupKeyNotSet,
+                "no key on this computer",
+            ));
+        };
+        self.db.write(|tx| {
+            self.db
+                .auditor()
+                .write(
+                    tx,
+                    &AuditEntry {
+                        user_id: Some(user_id),
+                        action: "reveal".to_owned(),
+                        entity: "backup_key".to_owned(),
+                        entity_id: None,
+                        old_json: None,
+                        new_json: Some(json!({ "backup_key": "viewed" })),
+                        reason: None,
+                    },
+                )
+                .map(|_| ())
+                .map_err(BackupError::from)
+        })?;
+        Ok(KeyShown { key: key.display() })
     }
 
     /// Writes an audit row. Best effort: the action it describes has happened.

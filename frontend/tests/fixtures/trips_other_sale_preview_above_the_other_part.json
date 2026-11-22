@@ -1,0 +1,13 @@
+{
+  "numbers": null,
+  "errors": [
+    {
+      "code": "ERR_QTY_EXCEEDS_OTHER_SHOP",
+      "field": "qty",
+      "values": {
+        "remaining": 20
+      }
+    }
+  ],
+  "warnings": []
+}

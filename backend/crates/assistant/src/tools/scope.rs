@@ -36,8 +36,8 @@ use mandi_reports::reports::ReportId;
 use crate::answer::AnswerSource;
 use crate::results::{Node, ToolResult};
 use crate::source::{SourceAnalyticsFilters, SourceParty, SourceReportFilters};
-use crate::tools::State;
 use crate::tools::cells::is_total_line;
+use crate::tools::{Env, State};
 
 /// The scope of everything: a dashboard tile, or a result read with no filter.
 pub const TILE: &str = "*";
@@ -502,6 +502,48 @@ fn window_of(result: &ToolResult) -> Window {
         }
         _ => Window::Unknown,
     }
+}
+
+/// The distinct periods, both ends known, that the views and reports of the EARLIER questions of the
+/// conversation were read for. A follow-up that names no period of its own ("what is the total of both?") is
+/// about these, never about the whole books.
+pub fn earlier_spans(state: &State) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = Vec::new();
+    for result in state
+        .results
+        .iter()
+        .filter(|r| r.turn < state.turn && matches!(r.tool, "analytics" | "report"))
+    {
+        if let Window::Span(from, to) = window_of(result)
+            && !from.is_empty()
+            && !to.is_empty()
+            && !out.contains(&(from.clone(), to.clone()))
+        {
+            out.push((from, to));
+        }
+    }
+    out
+}
+
+/// The period a follow-up is about, for a read that was given no dates: the period of the most recent earlier
+/// question that read one. `None` for the first question, for a question that names a period of its own, and
+/// when no earlier question read one.
+///
+/// Live check of 21-11-2026, Y31b: "and on tea?" after "electricity this year" read the expense report with no
+/// dates, so it gave all the books (115,000) and not this year's (98,000).
+pub fn follow_up_span(env: &Env<'_>, state: &State) -> Option<(String, String)> {
+    if state.turn == 0 || super::cues::names_period(env.question) {
+        return None;
+    }
+    earlier_spans(state).pop()
+}
+
+/// The note that tells the model the dates of a follow-up were filled in.
+pub fn follow_up_note(from: &str, to: &str) -> String {
+    format!(
+        "this question names no period, so it is about the period of the question before: {from} to {to}; \
+         the figures are for those dates"
+    )
 }
 
 /// The scopes of the figures of a `find` result: each match is its own key.

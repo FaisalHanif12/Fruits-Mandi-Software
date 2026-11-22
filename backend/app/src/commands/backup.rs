@@ -13,12 +13,12 @@ use mandi_backup::BackupCode;
 use mandi_backup::BackupError;
 use mandi_backup::api::{
     BackupList, BackupListInput, BackupNowInput, BackupSettingsInput, BackupSettingsView,
-    BackupStatus, KeyConfirmInput, KeyCreated, RestoreDone, RestoreInput, RestorePreview,
-    RestorePreviewInput, RunReport, TestRestoreInput, TestRestoreResult,
+    BackupStatus, KeyConfirmInput, KeyCreated, KeyRevealInput, KeyShown, RestoreDone, RestoreInput,
+    RestorePreview, RestorePreviewInput, RunReport, TestRestoreInput, TestRestoreResult,
 };
 use mandi_backup::run::Scope;
 use mandi_services::core::error::{ErrorCode, ErrorValue};
-use mandi_services::{Context, ServiceError, auth};
+use mandi_services::{Context, Secret, ServiceError, auth, backup_key};
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -367,6 +367,32 @@ pub async fn backup_key_confirm<R: tauri::Runtime>(
     run_backup(app, "backup_key_confirm", move |ctx| {
         let actor = auth::require(ctx)?;
         Ok(service_of(&handle)?.key_confirm(Some(actor.user_id), &input.key)?)
+    })
+    .await
+}
+
+/// Shows the backup key again after the printed paper was lost (PRD FR-20.10, v1.54, NFR-SEC-7). It
+/// asks the Owner's password (with the lockout of PRD FR-8.2) and his sign (PRD FR-21.4) and gives the
+/// key only when both are right. A wrong one gives no key. Each viewing and each refused try is one
+/// audit row without the key; the key, the password and the sign are never logged. Errors:
+/// `ERR_REQUIRED` (`password`), `ERR_SIGN_REQUIRED` (`sign`), `ERR_WRONG_PASSWORD` (`password`, value
+/// `tries_left`), `ERR_LOCKED_WAIT` (value `seconds`), `ERR_SIGN_WRONG` (`sign`),
+/// `ERR_BACKUP_KEY_NOT_SET`.
+#[tauri::command]
+pub async fn backup_key_reveal<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: KeyRevealInput,
+) -> Result<KeyShown, BackupWireError> {
+    let handle = app.clone();
+    run_backup(app, "backup_key_reveal", move |ctx| {
+        let actor = auth::require(ctx)?;
+        backup_key::prove(
+            ctx,
+            &actor,
+            &Secret::new(input.password.as_str()),
+            &input.sign,
+        )?;
+        Ok(service_of(&handle)?.key_reveal(actor.user_id)?)
     })
     .await
 }

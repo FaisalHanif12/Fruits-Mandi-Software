@@ -57,9 +57,9 @@ pub const RETRY_MIN_LEFT_SECS: u64 = 6;
 
 /// When no reply has come by now, a second identical request is sent and the first reply to come
 /// is used (the hedge, plan 55 Section 3; live run 1: 90% of short calls end in 6 s, 94% in 8 s).
-/// 10 s since plan 82 (it was 7): a call that carries tool results takes up to 10 s, and a copy sent
-/// before that only doubles the cost of a call that was about to answer.
-pub const HEDGE_AFTER_SECS: u64 = 10;
+/// 7 s again since the live check of 21-11-2026 (NFR-AI-3 v1.24; it was 10 s in plan 82): 21% of the model
+/// calls timed out on provider stalls, and a copy sent at 7 s rescues them sooner.
+pub const HEDGE_AFTER_SECS: u64 = 7;
 
 /// The copy is sent only when at least this long is left for it.
 pub const HEDGE_MIN_COPY_SECS: u64 = 3;
@@ -85,6 +85,18 @@ pub const MAX_RESULT_BYTES: usize = 16_000;
 pub const MAX_ANSWER_WORDS: usize = 130;
 /// Rows of a table in an answer (PRD A82).
 pub const MAX_TABLE_ROWS: usize = 7;
+/// Rows of a table of a read grouped by month: every month of a year (plan 82, live check Y11: the table of a
+/// buyer's purchases month by month showed seven of eleven months).
+pub const MAX_MONTH_ROWS: usize = 12;
+/// The most rows a table of this read may show: a read grouped by month shows up to a year of months.
+#[must_use]
+pub fn table_cap(input: &serde_json::Value) -> usize {
+    if input.get("group_by").and_then(serde_json::Value::as_str) == Some("month") {
+        MAX_MONTH_ROWS
+    } else {
+        MAX_TABLE_ROWS
+    }
+}
 /// Tables and charts one answer may show.
 pub const MAX_SHOW: usize = 3;
 /// Suggested next questions of one answer.

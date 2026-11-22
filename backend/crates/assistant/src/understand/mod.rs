@@ -44,6 +44,7 @@ mod compose_outside;
 mod compose_print;
 mod compose_route;
 mod figure;
+mod follow_up;
 mod function_words;
 mod items;
 mod lexicon;
@@ -65,6 +66,7 @@ pub use compose_outside::{compose_outside, outside_message};
 pub use compose_print::compose_print;
 pub use compose_route::compose;
 pub use figure::{FigureAnswer, Sentence, compose_figure};
+pub use follow_up::follow_up_text;
 pub use measure_words::{SaleAsk, asked_sale_measure};
 pub use party_flow::which_one_party;
 pub use plan::{PlanFilters, ReportPlan};
@@ -679,6 +681,23 @@ pub enum SaleMeasure {
     Net,
     /// گاہک کے بل: the bills of the buyers, with commission and Laga.
     Bills,
+    /// خام بکری: the gross sale, the seller amounts (view A `gross`, R6 `gross`). Asked by the guard of the model's
+    /// answer only: the register R2 `value` is the buyers' goods value, which holds a rate difference.
+    Gross,
+}
+
+/// What a "for each" question breaks one figure into (plan 82, Y03): the heads ("madon ke hisab se"), or the days,
+/// months or years of the period ("mahine ke hisab se").
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Grain {
+    /// One figure for each head.
+    Head,
+    /// One figure for each day.
+    Day,
+    /// One figure for each month.
+    Month,
+    /// One figure for each year.
+    Year,
 }
 
 /// How the Laga is asked beside the commission (plan 82): the commission without it, the Laga alone, or both
@@ -763,6 +782,9 @@ pub struct Understanding {
     /// ("akram ka bakaya aur kul bakaya"), or collected and still to collect together. The app gives no instant
     /// answer and the model answers (D7, plan 59 C).
     pub lower_ask: bool,
+    /// True when the gross sale is asked BESIDE the net sale or the buyers' bills ("khaam bikri aur gahakon ke kul
+    /// bill alag alag"): view A holds the gross, so it is read ahead beside the register of the bills.
+    pub gross_beside: bool,
     /// True when a "so far" was folded into another period that ends today ("fruit so far and today's sales"):
     /// with several figures asked, which period belongs to which figure is not known, so the model answers.
     pub period_merged: bool,
@@ -865,6 +887,8 @@ pub struct Understanding {
     pub sale_measure: Option<SaleMeasure>,
     /// Where the Laga stands in a commission question (plan 82).
     pub laga_view: LagaView,
+    /// What a "for each" question breaks its figure into, when it says so ([`Grain`]).
+    pub breakdown_grain: Option<Grain>,
     /// True when the question asks how many of something ("the number of bills", "kitne bayopariyon ko"):
     /// an instant figure that holds no count leaves that part out, so it goes to the model.
     pub asks_count: bool,
@@ -896,6 +920,11 @@ pub struct Understanding {
     /// are not given by the app alone then, because the word may be a filter the reads do not have ("chai"
     /// of "chai ka kharcha").
     pub unexplained: bool,
+    /// True when the question holds a word the app did not understand ([`Understanding::unexplained`]) or a known
+    /// word that changes the figure ("koi aur", "kam", "wapas", "nahi", "pehle wali") that no plan reads: the app
+    /// writes NO instant line then, however sure the rest is (plan 82, lead decision of 21-11-2026). The reads
+    /// for the model are still made.
+    pub instant_stop: bool,
     /// True when a word for buyers or sellers stands in the question ("gahakon se wasooli", "beopariyon
     /// ko"): a report that lists every party cannot be split by it, so its total is no answer.
     pub role_word: bool,

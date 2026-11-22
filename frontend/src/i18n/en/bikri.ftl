@@ -189,6 +189,53 @@ bikri-more-adjust-advance = Take the advance off this sale
 # review: pending
 bikri-summary-take-advance = { $name }: take the advance off this sale
 
+## A seller's money paid on the spot, in his summary (plan 91, PRD FR-12.3, FR-12.23, C6, C8).
+
+# $name: the seller, with his tag.
+# review: pending
+bikri-seller-paid-title = { $name }: { -mauqa-par-adaigi }
+
+# review: pending
+bikri-seller-paid-field = { -mauqa-par-adaigi }
+
+# review: pending
+bikri-seller-paid-hint = Money given to this seller when the { -bikri } is made. Whole rupees. It is shared over his lots' { -naqd }; the { -naqd } of each lot shows it and can still be changed.
+
+# review: pending
+bikri-seller-paid-previous = { -sabiqa-raqam }
+
+# review: pending
+bikri-seller-paid-net = Today's { -safi-bikri }
+
+# review: pending
+bikri-seller-paid-paid = { -mauqa-par-adaigi }
+
+# The rest of today's credit after the cash, put to his account (Umar, 21-11-2026): it lowers what he owes, or adds to what the shop owes him.
+# review: pending
+bikri-seller-paid-rest = Rest of today's { -bikri }, credited to his account
+
+# review: pending
+bikri-seller-paid-over = Paid above today's { -bikri }
+
+# review: pending
+bikri-seller-paid-increase = Today's charges above the { -bikri }, added to what he owes ({ -banaam })
+
+# review: pending
+bikri-seller-paid-new = New { -baqaya }
+
+# review: pending
+bikri-seller-paid-above = This is more than today's { -bikri }: the { -baqaya } will grow
+
+# review: pending
+bikri-seller-over-title = The money paid is more than today's { -bikri }
+
+# $name: the seller; $amount: his balance after this sale; $side: Debit or Credit.
+# review: pending
+bikri-seller-over-line = { $name }: new { -baqaya } <num>{ $amount }</num> { $side }
+
+# review: pending
+bikri-seller-over-question = The { -baqaya } will grow. Is this entry correct?
+
 # review: pending
 bikri-more-advance-open = Open advance: <num>{ $amount }</num>
 

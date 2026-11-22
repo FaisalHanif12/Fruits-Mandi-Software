@@ -60,7 +60,9 @@ pub struct MixedSaleSaveInput {
     #[serde(default)]
     pub new_lots: Vec<LotInput>,
     /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7). One answer for the
-    /// whole save: the cash question is asked over all its entries together.
+    /// whole save: the cash question is asked over all its entries together. It also answers the
+    /// seller question of `ERR_SELLER_PAID_ABOVE_TODAY` (plan 91), asked over the summaries of
+    /// all the entries.
     #[serde(default)]
     pub confirm_cash_below_zero: bool,
 }

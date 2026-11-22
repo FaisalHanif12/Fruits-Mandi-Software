@@ -62,6 +62,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer",
    "Haroon": "buyer",
@@ -92,6 +94,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer"
   }
@@ -169,6 +173,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer",
    "Haroon": "buyer",
@@ -218,6 +224,8 @@
   "wrong_columns": {
    "commission_on_his_lines_both_sides": 21390
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Haroon": "buyer"
   }
@@ -267,6 +275,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Faisal": "seller",
    "Ehsan": "seller",
@@ -314,6 +324,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -364,6 +376,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": "up",
+  "search_names": [],
   "roles": {}
  },
  {
@@ -397,6 +411,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -433,6 +449,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -466,6 +484,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -502,6 +522,8 @@
   ],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -545,6 +567,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -569,6 +593,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -593,6 +619,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -619,6 +647,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -652,6 +682,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -701,6 +733,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer"
   }
@@ -746,6 +780,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Haroon": "buyer",
    "Ans": "buyer",
@@ -799,6 +835,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ans": "buyer"
   }
@@ -844,6 +882,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer"
   }
@@ -908,6 +948,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Haroon": "buyer",
    "Ans": "buyer"
@@ -952,7 +994,15 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
-  "roles": {}
+  "direction": null,
+  "search_names": [
+   "Haroon",
+   "Ans"
+  ],
+  "roles": {
+   "Haroon": "buyer",
+   "Ans": "buyer"
+  }
  },
  {
   "id": "D23",
@@ -968,47 +1018,33 @@
   "readings": [
    {
     "req": {
-     "gross": [
-      232000
-     ],
      "comm": [
       28870
      ]
     },
-    "opt": {}
-   },
-   {
-    "req": {
+    "opt": {
      "gross": [
       232000
      ],
+     "qty": [
+      300
+     ]
+    }
+   },
+   {
+    "req": {
      "comm": [
       13720
      ]
     },
-    "opt": {}
-   },
-   {
-    "req": {
+    "opt": {
+     "gross": [
+      232000
+     ],
      "qty": [
       300
-     ],
-     "comm": [
-      28870
      ]
-    },
-    "opt": {}
-   },
-   {
-    "req": {
-     "qty": [
-      300
-     ],
-     "comm": [
-      13720
-     ]
-    },
-    "opt": {}
+    }
    }
   ],
   "names": [
@@ -1023,6 +1059,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -1064,6 +1102,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": "up",
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1115,6 +1155,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer"
   }
@@ -1152,6 +1194,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Faisal": "seller"
   }
@@ -1189,6 +1233,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -1224,6 +1270,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1287,7 +1335,15 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
-  "roles": {}
+  "direction": null,
+  "search_names": [
+   "Mani",
+   "Ans"
+  ],
+  "roles": {
+   "Mani": "buyer",
+   "Ans": "buyer"
+  }
  },
  {
   "id": "D28",
@@ -1328,6 +1384,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1392,6 +1450,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller",
    "Mani": "buyer",
@@ -1446,6 +1506,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1485,6 +1547,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller",
    "Ans": "buyer"
@@ -1528,6 +1592,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1564,6 +1630,8 @@
    "gross": 382000,
    "buyer_total": 407750
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1600,6 +1668,8 @@
    "net": 332780,
    "buyer_total": 407750
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1638,6 +1708,8 @@
    "commission_and_laga": 25750,
    "dues_outstanding": 294490
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1674,6 +1746,8 @@
    "gross": 382000,
    "buyer_total": 407750
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1710,6 +1784,8 @@
    "net": 332780,
    "buyer_total": 407750
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1746,6 +1822,8 @@
    "gross": 382000,
    "buyer_total": 407750
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1782,6 +1860,8 @@
    "net": 332780,
    "buyer_total": 407750
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1820,6 +1900,8 @@
    "commission_and_laga": 25750,
    "dues_outstanding": 294490
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -1858,6 +1940,8 @@
    "gross": 232000,
    "buyer_total": 247150
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -1898,6 +1982,8 @@
    "net": 200780,
    "buyer_total": 247150
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -1939,6 +2025,8 @@
    "commission+laga": 2640,
    "balance_outstanding": 47280
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer"
   }
@@ -1979,6 +2067,8 @@
    "buyer_total": 38640,
    "commission+laga": 2640
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer"
   }
@@ -2026,6 +2116,8 @@
    "value": 36000,
    "buyer_total": 38640
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Mani": "buyer"
   }
@@ -2065,6 +2157,8 @@
    "buyer_side": 25750,
    "commission_without_laga": 44470
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2115,6 +2209,8 @@
   "wrong_columns": {
    "all_commission": 48470
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2157,6 +2253,8 @@
    "net": 200780,
    "buyer_total": 247150
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -2197,6 +2295,8 @@
    "gross": 232000,
    "buyer_total": 247150
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -2242,6 +2342,8 @@
    "value": 172000,
    "buyer_total": 183070
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Haroon": "buyer"
   }
@@ -2286,6 +2388,8 @@
    "net": 200780,
    "buyer_total": 247150
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Ehsan": "seller"
   }
@@ -2327,6 +2431,8 @@
    "commission+laga": 11070,
    "balance_outstanding": 173070
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Haroon": "buyer"
   }
@@ -2373,6 +2479,8 @@
    "all_commission": 48470,
    "gross": 382000
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2406,6 +2514,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2455,6 +2565,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2508,7 +2620,11 @@
       23000
      ]
     },
-    "opt": {}
+    "opt": {
+     "whole_period_total": [
+      339000
+     ]
+    }
    }
   ],
   "names": [],
@@ -2521,6 +2637,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2563,6 +2681,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2599,6 +2719,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -2656,6 +2778,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Rizwan Butt": "buyer",
    "Tariq Mehmood": "buyer",
@@ -2711,6 +2835,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Sarfraz": "seller",
    "Haji Nazeer": "seller",
@@ -2779,6 +2905,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Rahim": "seller",
    "Karim": "seller"
@@ -2831,6 +2959,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Akram Baloch": "buyer"
   }
@@ -2873,6 +3003,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Akram Toll Tax": "buyer",
    "Akram Baloch": "buyer"
@@ -2926,7 +3058,11 @@
       185670
      ]
     },
-    "opt": {}
+    "opt": {
+     "year_total": [
+      5682950
+     ]
+    }
    }
   ],
   "names": [
@@ -2941,6 +3077,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Faisal": "buyer"
   }
@@ -2970,6 +3108,14 @@
      ]
     },
     "opt": {}
+   },
+   {
+    "req": {
+     "diff": [
+      7664300
+     ]
+    },
+    "opt": {}
    }
   ],
   "names": [],
@@ -2982,6 +3128,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": "down",
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3015,6 +3163,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3062,6 +3212,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3102,6 +3254,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3145,6 +3299,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3198,6 +3354,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3225,6 +3383,28 @@
      ]
     },
     "opt": {}
+   },
+   {
+    "req": {
+     "last": [
+      170600
+     ],
+     "this": [
+      132600
+     ]
+    },
+    "opt": {}
+   },
+   {
+    "req": {
+     "this": [
+      132600
+     ],
+     "diff": [
+      38000
+     ]
+    },
+    "opt": {}
    }
   ],
   "names": [],
@@ -3237,6 +3417,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": "down",
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3274,6 +3456,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3309,6 +3493,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Rahim": "seller"
   }
@@ -3346,6 +3532,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Rahim": "seller"
   }
@@ -3383,6 +3571,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Karim": "seller"
   }
@@ -3426,6 +3616,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3461,7 +3653,11 @@
       1117002
      ]
     },
-    "opt": {}
+    "opt": {
+     "six_month_total": [
+      6050656
+     ]
+    }
    }
   ],
   "names": [],
@@ -3474,6 +3670,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3523,6 +3721,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3566,6 +3766,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Rahim": "seller"
   }
@@ -3604,6 +3806,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3637,6 +3841,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3680,6 +3886,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3735,6 +3943,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3774,6 +3984,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3812,6 +4024,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Karim": "seller"
   }
@@ -3847,6 +4061,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3880,6 +4096,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3913,6 +4131,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3947,6 +4167,27 @@
       50000
      ]
     }
+   },
+   {
+    "req": {
+     "installments": [
+      350000
+     ],
+     "costs": [
+      20000
+     ],
+     "balance": [
+      1737824
+     ]
+    },
+    "opt": {
+     "money_in": [
+      2107824
+     ],
+     "rent": [
+      400000
+     ]
+    }
    }
   ],
   "names": [],
@@ -3959,6 +4200,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -3992,6 +4235,26 @@
      ]
     },
     "opt": {}
+   },
+   {
+    "req": {
+     "Akram Baloch": [
+      380564
+     ],
+     "Tariq Mehmood": [
+      380483
+     ],
+     "Rizwan Butt": [
+      373433
+     ],
+     "Kashif Ali": [
+      366328
+     ],
+     "Nadeem Traders": [
+      359210
+     ]
+    },
+    "opt": {}
    }
   ],
   "names": [
@@ -4010,6 +4273,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Akram Baloch": "buyer",
    "Tariq Mehmood": "buyer",
@@ -4040,6 +4305,14 @@
      ]
     },
     "opt": {}
+   },
+   {
+    "req": {
+     "diff": [
+      8507990
+     ]
+    },
+    "opt": {}
    }
   ],
   "names": [
@@ -4054,6 +4327,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": "up",
+  "search_names": [],
   "roles": {
    "Rahim": "seller"
   }
@@ -4105,6 +4380,8 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {},
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Faisal": "buyer"
   }
@@ -4145,6 +4422,8 @@
    "gross": 10859310,
    "buyer_total": 11537582
   },
+  "direction": null,
+  "search_names": [],
   "roles": {
    "Rahim": "seller"
   }
@@ -4159,7 +4438,7 @@
   "kind": "gross-and-bills",
   "period": "2026-10-01 to 2026-10-31",
   "source": "view A / R4",
-  "note": "",
+  "note": "last month the rate difference makes buyer value 9155400 against gross 9154800",
   "readings": [
    {
     "req": {
@@ -4183,8 +4462,11 @@
   "must_not_show": [],
   "fast": false,
   "wrong_columns": {
-   "all_commission": 1117002
+   "all_commission": 1117002,
+   "buyer_value_not_gross": 9155400
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -4213,6 +4495,27 @@
       9752880
      ]
     }
+   },
+   {
+    "req": {
+     "seller_commission": [
+      4796058
+     ],
+     "buyer_commission": [
+      4796094
+     ],
+     "laga": [
+      160728
+     ]
+    },
+    "opt": {
+     "together": [
+      9752880
+     ],
+     "commission_without_laga": [
+      9592152
+     ]
+    }
    }
   ],
   "names": [],
@@ -4227,6 +4530,8 @@
   "wrong_columns": {
    "gross": 79934420
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  },
  {
@@ -4263,6 +4568,8 @@
    "gross": 9154800,
    "all_commission": 1117002
   },
+  "direction": null,
+  "search_names": [],
   "roles": {}
  }
 ]

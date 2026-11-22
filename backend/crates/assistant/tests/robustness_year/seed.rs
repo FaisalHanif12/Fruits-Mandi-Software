@@ -1642,13 +1642,29 @@ fn buy(
     rate: &str,
     freight: &str,
 ) {
+    buy_split(y, trip, dd, item, qty, rate, freight, None);
+}
+
+/// A purchase with part of its goods set aside for another shop (PRD FR-12.41, v1.52): the
+/// quantity and the shop's name. A sale in another shop takes only from that part.
+#[allow(clippy::too_many_arguments)]
+fn buy_split(
+    y: &mut Year,
+    trip: i64,
+    dd: &str,
+    item: &'static str,
+    qty: &str,
+    rate: &str,
+    freight: &str,
+    other_shop: Option<(&str, &str)>,
+) {
     let it = y.items.iter().find(|i| i.key == item).expect("an item");
     let id = purchases::save(
         &y.w.env.ctx,
         &y.w.owner,
         &PurchaseInput {
-            other_qty: None,
-            shop_name: None,
+            other_qty: other_shop.map(|(q, _)| q.to_owned()),
+            shop_name: other_shop.map(|(_, shop)| shop.to_owned()),
             sell_date: None,
             trip_id: Some(trip),
             date: dd.to_owned(),
@@ -1678,7 +1694,17 @@ fn trip_one(y: &mut Year, dd: &str) {
         .id;
     y.trip_one = t;
     buy(y, t, dd, "mausami", "60", "2,100", "3,000");
-    buy(y, t, dd, "saib", "40", "3,800", "2,000");
+    // 10 of the apples are set aside for another shop (they are sold there in `trip_one_sales`).
+    buy_split(
+        y,
+        t,
+        dd,
+        "saib",
+        "40",
+        "3,800",
+        "2,000",
+        Some(("10", "Rafiq Fruit")),
+    );
     trips::cost_save(
         &y.w.env.ctx,
         &y.w.owner,

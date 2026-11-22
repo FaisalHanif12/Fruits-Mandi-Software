@@ -1,0 +1,22 @@
+{
+  "kind": "other_sale",
+  "numbers": null,
+  "cash": {
+    "cash_before_paisa": 4640000,
+    "change_paisa": 2000000,
+    "cash_after_paisa": 6640000,
+    "below_zero": false,
+    "lowers_cash": false,
+    "needs_confirm": false
+  },
+  "errors": [
+    {
+      "code": "ERR_QTY_EXCEEDS_OTHER_SHOP",
+      "field": "qty",
+      "values": {
+        "remaining": 50
+      }
+    }
+  ],
+  "warnings": []
+}

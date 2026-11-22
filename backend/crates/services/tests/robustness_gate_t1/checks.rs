@@ -249,8 +249,10 @@ fn garden_rent(u: &U, conn: &Connection, at: &str) {
     );
     assert_eq!(
         row.relief_paisa.as_paisa(),
-        row.rent_original_paisa.map_or(0, |o| o.as_paisa() - rent),
-        "{at}: I: the relief is not the original rent less the rent"
+        // Only a rent BELOW the original is a relief (PRD FR-12.51); a raised rent is no relief.
+        row.rent_original_paisa
+            .map_or(0, |o| (o.as_paisa() - rent).max(0)),
+        "{at}: I: the relief is not the original rent less the rent, or 0 when the rent was raised"
     );
 }
 

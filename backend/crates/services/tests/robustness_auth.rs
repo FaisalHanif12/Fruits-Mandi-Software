@@ -135,8 +135,9 @@ fn a_thousand_wrong_passwords_follow_the_lockout_table_and_the_right_one_still_w
             Ok(_) => panic!("a wrong password signed in"),
         }
     }
-    // PRD FR-8.2: 10 tries then 1 minute; 10 more then 5 minutes; then 15 minutes each time
-    // (Umar, 12-11-2026: 10 in a step, it was 5).
+    // PRD FR-8.2: 10 tries then 1 minute; 10 more then 5 minutes; then 15 minutes after EACH
+    // further wrong try (Umar, 12-11-2026: 10 in a step, it was 5; 19-11-2026, v1.45: each try,
+    // not each 10th).
     for (n, seconds) in &locks {
         let want = match n {
             10 => 60,
@@ -145,11 +146,15 @@ fn a_thousand_wrong_passwords_follow_the_lockout_table_and_the_right_one_still_w
         };
         assert_eq!(*seconds, want, "after try {n}");
     }
-    // A lock after every 10th wrong try: 100 of them in 1,000 tries.
-    assert_eq!(locks.len(), 100, "{locks:?}");
+    // A lock at the 10th and the 20th wrong try, then after each one (PRD FR-8.2 v1.45): 982 in
+    // 1,000 tries.
+    assert_eq!(locks.len(), 982, "{locks:?}");
     assert_eq!(
         locks.iter().map(|l| l.0).collect::<Vec<_>>(),
-        (1..=100).map(|n| n * 10).collect::<Vec<_>>()
+        [10_i64, 20]
+            .into_iter()
+            .chain(21..=1000)
+            .collect::<Vec<_>>()
     );
     // Every wrong try was written down once; the refused tries during locks wrote their own rows.
     let wrong_rows = raw(&dir)
@@ -375,15 +380,25 @@ fn a_restart_or_a_clock_change_never_makes_a_lock_longer_than_its_step() {
             let (dir, env) = env();
             set_up(&env);
             let wrong = Secret::new("not-the-password");
-            let mut made = 0;
-            while made < tries {
+            // The counter of the database is the truth: the try that starts a lock is counted and
+            // answers with the lock, so counting the plain refusals would never end once a lock
+            // follows every try (PRD FR-8.2 v1.45).
+            let counted = |dir: &TempDir| -> u32 {
+                raw(dir)
+                    .query_row("SELECT failed_attempts FROM users", [], |r| r.get(0))
+                    .unwrap()
+            };
+            let mut guard = 0;
+            while counted(&dir) < tries {
+                guard += 1;
+                assert!(guard < 500, "{tries} tries: the loop never ended");
                 match auth::login(&env.ctx, "owner", &wrong) {
                     Err(error) if locked_seconds(&error).is_some() => {
                         env.mono.advance_seconds(
                             u64::try_from(locked_seconds(&error).unwrap()).unwrap() + 1,
                         );
                     }
-                    Err(_) => made += 1,
+                    Err(_) => {}
                     Ok(_) => panic!("signed in with a wrong password"),
                 }
             }

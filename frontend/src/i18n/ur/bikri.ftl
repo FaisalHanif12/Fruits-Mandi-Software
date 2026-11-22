@@ -188,6 +188,53 @@ bikri-more-adjust-advance = { -peshgi } اس { -bikri } سے کاٹیں
 # review: pending
 bikri-summary-take-advance = { $name }: { -peshgi } اس { -bikri } سے کاٹیں
 
+## A seller's money paid on the spot, in his summary (plan 91, PRD FR-12.3, FR-12.23, C6, C8).
+
+# $name: the seller, with his tag.
+# review: pending
+bikri-seller-paid-title = { $name }: { -mauqa-par-adaigi }
+
+# review: pending
+bikri-seller-paid-field = { -mauqa-par-adaigi }
+
+# review: pending
+bikri-seller-paid-hint = اس بیوپاری کو { -bikri } کے وقت جو رقم دی۔ پورے روپے۔ یہ اس کے لاٹوں کے { -naqd } میں بٹ جاتی ہے؛ ہر لاٹ کا { -naqd } وہیں نظر آتا ہے اور بدلا جا سکتا ہے۔
+
+# review: pending
+bikri-seller-paid-previous = { -sabiqa-raqam }
+
+# review: pending
+bikri-seller-paid-net = آج کی { -safi-bikri }
+
+# review: pending
+bikri-seller-paid-paid = { -mauqa-par-adaigi }
+
+# The rest of today's credit after the cash, put to his account (Umar, 21-11-2026): it lowers what he owes, or adds to what the shop owes him.
+# review: pending
+bikri-seller-paid-rest = { -bikri } کی باقی رقم، کھاتے میں جمع
+
+# review: pending
+bikri-seller-paid-over = آج کی { -bikri } سے زیادہ ادائیگی
+
+# review: pending
+bikri-seller-paid-increase = آج کے اخراجات { -bikri } سے زیادہ، { -banaam } میں اضافہ
+
+# review: pending
+bikri-seller-paid-new = نیا { -baqaya }
+
+# review: pending
+bikri-seller-paid-above = یہ آج کی { -bikri } سے زیادہ ہے، { -baqaya } بڑھے گا
+
+# review: pending
+bikri-seller-over-title = دی گئی رقم آج کی { -bikri } سے زیادہ ہے
+
+# $name: the seller; $amount: his balance after this sale; $side: بنام or جمع.
+# review: pending
+bikri-seller-over-line = { $name }: نیا { -baqaya } <num>{ $amount }</num> { $side }
+
+# review: pending
+bikri-seller-over-question = اس سے { -baqaya } بڑھے گا۔ کیا یہ اندراج درست ہے؟
+
 # review: pending
 bikri-more-advance-open = { -peshgi } باقی: <num>{ $amount }</num>
 

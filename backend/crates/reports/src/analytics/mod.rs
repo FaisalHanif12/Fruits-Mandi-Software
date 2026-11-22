@@ -64,11 +64,10 @@ pub use model::{
     AnalyticsChartSeries, AnalyticsColumn, AnalyticsCompare, AnalyticsExpensePart,
     AnalyticsFilterKind, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading,
     AnalyticsKey, AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsMeasure, AnalyticsPage,
-    AnalyticsPartnerMoney,
-    AnalyticsPeriod, AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading,
-    AnalyticsPrintInput, AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsRow,
-    AnalyticsRunInput, AnalyticsSavedView, AnalyticsSide, AnalyticsTripView, AnalyticsView,
-    AnalyticsViewsSaveInput,
+    AnalyticsPartnerMoney, AnalyticsPeriod, AnalyticsPrintColumn, AnalyticsPrintData,
+    AnalyticsPrintHeading, AnalyticsPrintInput, AnalyticsPrintRow, AnalyticsResolvedFilters,
+    AnalyticsRow, AnalyticsRunInput, AnalyticsSavedView, AnalyticsSide, AnalyticsTripView,
+    AnalyticsView, AnalyticsViewsSaveInput,
 };
 pub use series::{
     BALANCE_WINDOW_MONTHS, BalanceSeries, BalanceSubject, MonthAmount, SalePart, balance_series,

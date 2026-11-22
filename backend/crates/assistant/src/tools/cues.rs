@@ -160,10 +160,29 @@ pub fn commission_and_sales_asked(question: &str) -> bool {
     let words: Vec<&str> = spaced.split_whitespace().collect();
     let key = |w: &str| text::search_ur(&text::search_en(w));
     let is_one_of = |word: &str, list: &[&str]| list.iter().any(|w| key(w) == word);
+    // "bikri walon se": the sellers ("those of the sale"), not a sale asked.
+    const SELLER_TAIL: &[&str] = &[
+        "wale",
+        "walon",
+        "walo",
+        "wala",
+        "wali",
+        "walay",
+        "والے",
+        "والوں",
+    ];
+    let sellers_phrase = |at: usize| {
+        words
+            .get(at.saturating_add(1))
+            .is_some_and(|n| is_one_of(n, SELLER_TAIL))
+    };
     words.iter().enumerate().any(|(at, word)| {
         let other: &[&str] = if is_one_of(word, COMMISSION) {
             SALES
         } else if is_one_of(word, SALES) {
+            if sellers_phrase(at) {
+                return false;
+            }
             COMMISSION
         } else {
             return false;
@@ -171,9 +190,14 @@ pub fn commission_and_sales_asked(question: &str) -> bool {
         // The other word comes next, or after one link word.
         let next = words.get(at.saturating_add(1)).copied();
         let after = words.get(at.saturating_add(2)).copied();
-        next.is_some_and(|n| is_one_of(n, other))
+        let next_at = at.saturating_add(1);
+        let after_at = at.saturating_add(2);
+        let counts = |n: &str, place: usize| {
+            is_one_of(n, other) && !(other == SALES && sellers_phrase(place))
+        };
+        next.is_some_and(|n| counts(n, next_at))
             || (next.is_some_and(|n| is_one_of(n, AND))
-                && after.is_some_and(|n| is_one_of(n, other)))
+                && after.is_some_and(|n| counts(n, after_at)))
     })
 }
 
@@ -839,6 +863,14 @@ const PERIOD_CUES: &[(&str, &[&str])] = &[
         ],
     ),
 ];
+
+/// True when the question names a period of its own: a period phrase, a number (a day, a month, "last 3
+/// months") or the end of the year. A follow-up with none is about the period of the question before it.
+pub fn names_period(question: &str) -> bool {
+    question.chars().any(char::is_numeric)
+        || year_end(question)
+        || PERIOD_CUES.iter().any(|(_, cues)| has(question, cues))
+}
 
 /// The one period the question names, when it names exactly one of the kinds above, holds no
 /// number and does not say "to the end of the year". `None` for none, for two (a comparison), and

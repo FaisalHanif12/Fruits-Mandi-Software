@@ -5,3 +5,5 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 3d9c60f7fd2793770af72d8eecad88b972c192cbb8547ae4276b37d3e37a08b6 # shrinks to case = Case { weights: [1], pockets: [false, false, false], qty: 2, rate: 1, freight: 0, trip_cost: 0, steps: [OwnSale { qty: 1, rate: 1, labour: 0, twin: false }, EditQty { pick: 0, qty: 1 }] }
+cc fba74c43068f45a59f16282a9b36df56a7d9231dd663fdbb016b3f1c7653ed14 # shrinks to case = Case { weights: [1], pockets: [false, false, false], qty: 2, rate: 1, freight: 0, trip_cost: 0, steps: [OtherSale { qty: 1, amount: 1 }] }
+cc 8fa6ced676ce1a7091d054ee5e57045efb2c734eb849c9903704102c54a1b21b # shrinks to case = Case { weights: [1], pockets: [false, false, false], qty: 2, rate: 1, freight: 0, trip_cost: 0, steps: [OtherSale { qty: 1, amount: 1 }, CancelOther { pick: 0 }, OwnSale { qty: 2, rate: 1, labour: 0, twin: false }] }

@@ -817,6 +817,17 @@ assistant-instant-sale-kind = { $kind ->
 # review: pending
 assistant-instant-sale-net = { -beopari } { $name } کی { $period } کی { -safi-bikri }: { $figure }
 # review: pending
+assistant-instant-sale-net-shop = { $period } کی { -safi-bikri }: { $figure }
+# review: pending
+assistant-instant-bills = { $role ->
+    [buyer] { -gahak } { $name } کے { $period } کے بلوں کی کل رقم (مال، { -commission } اور { -laga } سمیت): { $figure }
+   *[shop] تمام { -gahakon } کے { $period } کے بلوں کی کل رقم (مال، { -commission } اور { -laga } سمیت): { $figure }
+}
+# review: pending
+assistant-instant-profit = { $period } کا دکان کا منافع (مشترکہ آمدن میں سے { -dukan-kharcha } نکال کر): { $figure }
+# review: pending
+assistant-instant-commission-sides = { $period } کا { -commission } ({ -laga } کے بغیر): { -beopariyon } سے لیا گیا { $seller }، { -gahakon } سے لیا گیا { $buyer }
+# review: pending
 assistant-instant-fruit = { $role ->
     [partner] { $name } کا { $period } کا { -phal }، قیمت: { $figure }
     [guests] دکان کے { -mehman } کے لیے { $period } کا { -phal }، قیمت: { $figure }

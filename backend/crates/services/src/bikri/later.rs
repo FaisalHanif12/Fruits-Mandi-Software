@@ -164,6 +164,7 @@ pub(super) fn plan_later(
             target: PostingTarget::LaterSale { lot_id },
             stored,
             replaces: None,
+            saved_sellers: None,
         },
         extra,
     })

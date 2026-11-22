@@ -99,10 +99,13 @@ fn p2_the_catalogue_is_named_both_ways() {
         "report ids named in system.md and the catalogue"
     );
     // Analytics views.
-    let views: BTreeSet<String> = analytics_catalog()
+    let mut views: BTreeSet<String> = analytics_catalog()
         .iter()
         .map(|e| e.id.code().to_owned())
         .collect();
+    // D6 v1.14 (plan 82, Umar): the tool also reads view M, the shop's expenses by head with a column for each
+    // month, which the reports crate's assistant catalogue (A to K) does not list.
+    views.insert("M".to_owned());
     assert_eq!(view_letters_named(), views, "view letters");
     // The view enum of the tool schema is the same set.
     let from_schema: BTreeSet<String> = tools()
@@ -158,7 +161,11 @@ fn terms(file: &str) -> Vec<(String, String)> {
 /// shows the app's own words). Each has its
 /// reason. The test fails if a term leaves this list without being added to the prompt, or if
 /// another term goes missing.
-const GLOSSARY_GAPS: [(&str, &str); 13] = [
+const GLOSSARY_GAPS: [(&str, &str); 14] = [
+    (
+        "-mauqa-par-adaigi",
+        "plan 91 screen word for a seller's cash on the spot; the prompt already names the paid column; no room in the prefix",
+    ),
     (
         "-khate-mein-baqi",
         "the prompt names the columns paid and left; no room in the prefix (11,599 of 11,600 at the time; 11,800 since plan 82, kept out for the same reason)",

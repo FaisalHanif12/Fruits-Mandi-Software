@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePagedQuery } from '../../shared/hooks';
 import {
   backupKeyConfirm,
+  backupKeyReveal,
   backupKeySetup,
   backupList,
   backupNow,
@@ -22,6 +23,7 @@ import type {
   BackupRef,
   BackupSettingsInput,
   BackupStatus,
+  KeyRevealInput,
   RestoreInput,
   TestRestoreInput,
 } from './types';
@@ -142,5 +144,17 @@ export function useConfirmBackupKey() {
   return useMutation({
     mutationFn: (key: string) => backupKeyConfirm({ key }),
     onSuccess: refresh,
+  });
+}
+
+/**
+ * Shows the backup key again (PRD FR-20.10 v1.54). The answer holds the key, so it is not kept in the cache:
+ * `gcTime: 0` drops the finished call at once, and the dialog that asked keeps the key in its own state until it
+ * closes.
+ */
+export function useRevealBackupKey() {
+  return useMutation({
+    mutationFn: (input: KeyRevealInput) => backupKeyReveal(input),
+    gcTime: 0,
   });
 }

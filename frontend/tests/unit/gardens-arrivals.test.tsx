@@ -32,6 +32,7 @@ import { fakeGardens } from '../helpers/gardens';
 import { lineCell, lineCellText, linesSection, typeArrivalLine } from '../helpers/goods-lines';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
+import { settlePreview } from '../helpers/preview-settled';
 import { message, visible } from '../helpers/render';
 import { paisaForTest } from '../helpers/paisa';
 import { commissionWorking } from '../helpers/trips-data';
@@ -63,6 +64,12 @@ afterEach(() => {
 });
 
 const said = (text: string) => (content: string) => visible(content) === text;
+/** One option of an open list, or a clear failure when the list is shorter than the test expects. */
+const optionAt = (options: readonly HTMLElement[], index: number): HTMLElement => {
+  const found = options[index];
+  if (found === undefined) throw new Error(`no option ${String(index)}`);
+  return found;
+};
 type User = ReturnType<typeof userEvent.setup>;
 
 /** The check and the save of the goods arrived entry as a healthy backend answers them. */
@@ -140,6 +147,10 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
       'ourQty',
       '__remove',
     ]);
+    // Plan 90: the split column says whose نگ they are: "نگ for another shop", not only the shop.
+    expect(
+      visible(section?.querySelector('.ag-header-cell[col-id="otherQty"]')?.textContent).trim(),
+    ).toBe(message(language, 'goods-line-col-other-qty'));
     // The day to sell starts as the day of the arrival, visible like a typed value (NFR-USE-27).
     const sell = field('glossary-sell-date');
     const day = field('gardens-field-date');
@@ -437,7 +448,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     );
   });
 
-  it('FR-12.41: a sale in another shop picks the goods arrived it takes from; the option says what is left in each part', async () => {
+  it('FR-12.41, plan 90: a sale in another shop picks the goods arrived it takes from; the option says what is left for another shop, and the shop name fills by itself', async () => {
     const fake = fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
@@ -464,12 +475,13 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
       screen.getByRole('combobox', { name: named(message(language, 'gardens-sale-arrival')) }),
     );
     const option = await screen.findByRole('option');
-    // 40 are set for another shop and 60 for ours: both are told (the other shop's part is sold first).
+    // Only the 40 set for another shop are told: what is left for our shop is not part of this sale.
     const words = visible(option.textContent);
     expect(words).toContain('40');
-    expect(words).toContain('60');
+    expect(words).not.toContain('60');
     await user.click(option);
-    await user.type(field('gardens-sale-shop'), 'Haji Shop');
+    // The shop typed on that line is in the box already (editable, NFR-USE-27).
+    expect(field('gardens-sale-shop')).toHaveValue('Haji Shop');
     await user.type(field('gardens-sale-qty'), '20');
     await user.type(field('gardens-sale-amount'), '10000');
     press('F10');
@@ -479,8 +491,122 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     expect(fake.saved.entries[0]).toMatchObject({
       type: 'other_sale',
       arrival_id: first.id,
+      shop: 'Haji Shop',
       qty: '20',
     });
+  });
+
+  it('plan 90: a line with no goods set for another shop is not offered, and when none has any the screen says so and where to set it', async () => {
+    fakeGardens();
+    const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
+    if (first === undefined) throw new Error('the fixture has no arrival');
+    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+      ...arrivals.ARRIVALS_IN_STOCK,
+      rows: [{ ...first, qty_left: 100, qty_other: 0, qty_our_left: 100, qty_other_left: 0 }],
+    });
+    const { user } = await open();
+    await user.click(
+      within(typeList()).getByRole('button', {
+        name: named(message(language, 'gardens-type-other-sale')),
+      }),
+    );
+    expect(
+      await screen.findByText(said(message(language, 'purchases-other-goods-none'))),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(said(message(language, 'purchases-other-goods-none-hint-arrival'))),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: named(message(language, 'gardens-sale-arrival')) }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('plan 90: the list of lines of a sale in another shop reads every page of the garden, not only the first', async () => {
+    fakeGardens();
+    const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
+    if (first === undefined) throw new Error('the fixture has no arrival');
+    // 101 entries: the first 100 have nothing for another shop; the 101st, on the second page, has 5.
+    const all = Array.from({ length: 101 }, (_, index) => ({
+      ...first,
+      id: index + 1,
+      number: index + 1,
+      qty_left: 10,
+      qty_other: index === 100 ? 5 : 0,
+      qty_other_left: index === 100 ? 5 : 0,
+      qty_our_left: index === 100 ? 5 : 10,
+      shop_name: index === 100 ? 'Noor Shop' : null,
+    }));
+    vi.mocked(gardensApi.gardensArrivalsList).mockImplementation((input) =>
+      Promise.resolve({
+        ...arrivals.ARRIVALS_IN_STOCK,
+        rows: all.slice(input.offset, input.offset + input.limit),
+        total_count: all.length,
+      }),
+    );
+    const { user } = await open();
+    await user.click(
+      within(typeList()).getByRole('button', {
+        name: named(message(language, 'gardens-type-other-sale')),
+      }),
+    );
+    await user.click(
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'gardens-sale-arrival')),
+      }),
+    );
+    const options = await screen.findAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(visible(options[0]?.textContent)).toContain('5');
+    await user.click(optionAt(options, 0));
+    expect(field('gardens-sale-shop')).toHaveValue('Noor Shop');
+  });
+
+  it('plan 90: a line with a shop name changes the shop box with the pick, a name typed by hand stays', async () => {
+    fakeGardens();
+    const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
+    if (first === undefined) throw new Error('the fixture has no arrival');
+    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+      ...arrivals.ARRIVALS_IN_STOCK,
+      rows: [
+        {
+          ...first,
+          id: 1,
+          qty_left: 50,
+          qty_other: 30,
+          qty_other_left: 30,
+          shop_name: 'Haji Shop',
+        },
+        {
+          ...first,
+          id: 2,
+          number: 2,
+          qty_left: 50,
+          qty_other: 20,
+          qty_other_left: 20,
+          shop_name: null,
+        },
+      ],
+    });
+    const { user } = await open();
+    await user.click(
+      within(typeList()).getByRole('button', {
+        name: named(message(language, 'gardens-type-other-sale')),
+      }),
+    );
+    const picker = () =>
+      screen.getByRole('combobox', { name: named(message(language, 'gardens-sale-arrival')) });
+    await user.click(picker());
+    await user.click(optionAt(await screen.findAllByRole('option'), 0));
+    expect(field('gardens-sale-shop')).toHaveValue('Haji Shop');
+    // The second line has no shop name: the name of the first line was only a fill, so it goes.
+    await user.click(picker());
+    await user.click(optionAt(await screen.findAllByRole('option'), 1));
+    expect(field('gardens-sale-shop')).toHaveValue('');
+    // A name typed by hand is never taken away by a pick.
+    await user.type(field('gardens-sale-shop'), 'My Shop');
+    await user.click(picker());
+    await user.click(optionAt(await screen.findAllByRole('option'), 0));
+    expect(field('gardens-sale-shop')).toHaveValue('My Shop');
   });
 
   it('R3, R6: the list and the card show the goods left in each part; "change the split" sends the new part with the version', async () => {
@@ -551,20 +677,13 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     });
   });
 
-  it('D1: a sale in another shop that needs goods from our shop says how many move, before the save', async () => {
-    fakeGardens();
+  it('plan 90: more نگ than the line has for another shop is refused under the qty, at once, and F10 sends nothing', async () => {
+    const fake = fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
     vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
       ...arrivals.ARRIVALS_IN_STOCK,
-      rows: [{ ...first, qty_left: 100, qty_our_left: 60, qty_other_left: 40 }],
-    });
-    // The backend's own preview of a sale linked to an arrival, with the part that moves set to 4.
-    const real = arrivals.GARDEN_OTHER_SALE_WITH_ARRIVAL;
-    if (real.numbers === null) throw new Error('the file has no numbers');
-    vi.mocked(gardensApi.gardensEntryPreview).mockResolvedValue({
-      ...real,
-      numbers: { ...real.numbers, qty_from_our_shop: 4 },
+      rows: [{ ...first, qty_left: 100, qty_our_left: 60, qty_other: 40, qty_other_left: 40 }],
     });
     const { user } = await open();
     await user.click(
@@ -577,10 +696,53 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     );
     await user.click(await screen.findByRole('option'));
     await user.type(field('gardens-sale-shop'), 'Haji Shop');
-    await user.type(field('gardens-sale-qty'), '44');
+    const refusal = said(message(language, 'purchases-qty-above-other', { remaining: 40 }));
+    await user.type(field('gardens-sale-qty'), '40');
+    expect(screen.queryByText(refusal)).not.toBeInTheDocument();
+    // One more than the line has: the words are there before any save.
+    await user.type(field('gardens-sale-qty'), '{Backspace}{Backspace}44');
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+    await user.type(field('gardens-sale-amount'), '20000');
+    press('F10');
+    await settlePreview();
+    expect(fake.saved.entries).toHaveLength(0);
+    // Back to what the line has: it saves.
+    await user.type(field('gardens-sale-qty'), '{Backspace}{Backspace}40');
+    await waitFor(() => {
+      expect(screen.queryByText(refusal)).not.toBeInTheDocument();
+    });
+    press('F10');
+    await waitFor(() => {
+      expect(fake.saved.entries).toHaveLength(1);
+    });
+  });
+
+  it('plan 90: a sum such as 30+14 is read by the backend, whose preview refuses it (ERR_QTY_EXCEEDS_OTHER_SHOP) and the words show under the qty', async () => {
+    fakeGardens();
+    const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
+    if (first === undefined) throw new Error('the fixture has no arrival');
+    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+      ...arrivals.ARRIVALS_IN_STOCK,
+      rows: [{ ...first, qty_left: 100, qty_our_left: 60, qty_other: 40, qty_other_left: 40 }],
+    });
+    vi.mocked(gardensApi.gardensEntryPreview).mockResolvedValue(arrivals.GARDEN_OTHER_SALE_ABOVE);
+    const { user } = await open();
+    await user.click(
+      within(typeList()).getByRole('button', {
+        name: named(message(language, 'gardens-type-other-sale')),
+      }),
+    );
+    await user.click(
+      screen.getByRole('combobox', { name: named(message(language, 'gardens-sale-arrival')) }),
+    );
+    await user.click(await screen.findByRole('option'));
+    await user.type(field('gardens-sale-shop'), 'Haji Shop');
+    await user.type(field('gardens-sale-qty'), '30+14');
     await user.type(field('gardens-sale-amount'), '20000');
     expect(
-      await screen.findByText(said(message(language, 'split-moved-from-our', { count: 4 }))),
+      await screen.findByText(
+        said(message(language, 'err-qty-exceeds-other-shop', { remaining: 50 })),
+      ),
     ).toBeInTheDocument();
   });
 

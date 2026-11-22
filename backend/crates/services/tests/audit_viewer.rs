@@ -155,14 +155,23 @@ fn the_changed_fields_show_old_and_new_and_money_is_money() {
             },
         }]
     );
+    // The rate check is off by default since PRD v1.44 (plan 79 U4), so switching it on at 40% changes
+    // two fields: the switch and the percent.
     let rate = &settings.rows[0];
     assert_eq!(
         rate.changes,
-        [AuditChange {
-            path: "overrides.rate_check_percent".into(),
-            old: AuditValue::Number { value: 30 },
-            new: AuditValue::Number { value: 40 },
-        }]
+        [
+            AuditChange {
+                path: "overrides.rate_check_enabled".into(),
+                old: AuditValue::Bool { value: false },
+                new: AuditValue::Bool { value: true },
+            },
+            AuditChange {
+                path: "overrides.rate_check_percent".into(),
+                old: AuditValue::Number { value: 30 },
+                new: AuditValue::Number { value: 40 },
+            }
+        ]
     );
     // An opening or a posting audit holds paisa fields: they are money, not plain numbers.
     let money_change = page(&w, AuditFilters::default(), 0, 0)

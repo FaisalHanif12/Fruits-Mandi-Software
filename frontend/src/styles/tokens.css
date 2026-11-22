@@ -493,19 +493,13 @@
   --color-chart-6: #a0522d;
 }
 
-/* Plan 75 (the app mark): the colours of the logo, a gold mandi crate with an orange, a green apple and a
-   leaf on the deep navy of the menu (frontend/brand/app-icon.svg). Only `BrandMark` draws them. They are
-   `static` because the mark reads them with `var()` for its gradients, not through a class. */
+/* Plan 75 (the app mark), simplified on 21-11-2026 (Umar): the colours of the mark, a gold mandi crate on the
+   deep navy of the menu, with no fruit. Only `BrandMark` draws them. They are `static` because the mark reads
+   them with `var()` for its gradient, not through a class. */
 @theme static {
   --color-brand-ground-top: #1f3659;
   --color-brand-ground-bottom: #14233b;
   --color-brand-gold: #eab44b;
   --color-brand-gold-light: #f7d07a;
   --color-brand-gold-dark: #c98f2a;
-  --color-brand-orange-light: #ffd684;
-  --color-brand-orange: #f08b1e;
-  --color-brand-apple-light: #b6e58b;
-  --color-brand-apple: #46a64b;
-  --color-brand-leaf: #5cc06a;
-  --color-brand-leaf-vein: #2e8f4e;
 }

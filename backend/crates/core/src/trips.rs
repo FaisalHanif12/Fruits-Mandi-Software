@@ -538,8 +538,9 @@ pub struct OtherSaleInput {
     /// The shop, as typed (PRD FR-7.25).
     #[serde(default)]
     pub shop: Option<String>,
-    /// The purchase the goods come from. It must be a purchase of this trip with stock left
-    /// (`ERR_QTY_EXCEEDS_LOT`, value `available`, when it has fewer نگ).
+    /// The purchase the goods come from. It must be a purchase of this trip. The qty comes off the
+    /// part set aside for another shop; above it the sale is refused (`ERR_QTY_EXCEEDS_OTHER_SHOP`
+    /// on `qty`, value `remaining`, PRD FR-12.41 v1.52).
     #[serde(default)]
     #[ts(type = "number | null")]
     pub purchase_id: Option<i64>,
@@ -582,11 +583,9 @@ pub struct OtherSaleNumbers {
     /// نگ left for our shop after this sale (our part less what the sale moves from it).
     #[ts(type = "number")]
     pub qty_our_left_after: i64,
-    /// نگ this sale moves from our shop's part to the part for another shop (plan 35 D1): the sale
-    /// takes its qty from the part for another shop first, and what that part does not have is
-    /// moved from our shop's part in the same save. 0 when the part for another shop has enough.
-    /// More than the purchase has left in all is `ERR_QTY_EXCEEDS_LOT` with `available` = the
-    /// whole qty left. A cancel moves them back.
+    /// نگ this sale moves from our shop's part to the part for another shop. Always 0 since v1.52
+    /// (plan 90): the sale takes its qty only from the part for another shop, and above it the sale
+    /// is refused (`ERR_QTY_EXCEEDS_OTHER_SHOP`, value `remaining`). The field stays for the screens.
     #[ts(type = "number")]
     pub qty_from_our_shop: i64,
     /// The cost of the نگ left after this sale.

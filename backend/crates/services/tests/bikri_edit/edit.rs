@@ -184,12 +184,8 @@ fn lots_and_lines_that_are_not_the_postings_are_refused_with_their_field() {
         }
         error
     };
-    // A lot cannot be removed.
-    let e = try_with(&|d| {
-        d.lots.pop();
-    });
-    assert!(refused(&e, ErrorCode::ErrEditNotAllowed, "lots"));
-    assert_eq!(tools::rule_at(&e, "lots").as_deref(), Some("lot_removed"));
+    // A lot the draft leaves out is removed since PRD v1.45 (FR-7.70, plan 80 Q-R2-1): `lot_removal.rs`
+    // covers the removal and its refusals (a later sale, a write-off or fruit taken rests on the lot).
     // Lots cannot be put in another order.
     let e = try_with(&|d| d.lots.reverse());
     assert!(refused(&e, ErrorCode::ErrEditNotAllowed, "lots[1].lot_id"));

@@ -193,6 +193,9 @@ struct Built {
     filters: ReportFilters,
     source: SourceReportFilters,
     party: Option<AnswerRecord>,
+    /// The account of the expense head R29 is read for (`party` = a head found by `find`): the report has no
+    /// filter for a head, so its row is picked here and its figures are `matched` (plan 82, live check Y04).
+    head_account: Option<i64>,
     /// What the tool did that the model did not ask for, given back as `note` (plan 52 item 2).
     notes: Vec<String>,
     /// True when the model asked for a sort: the heading and total lines are then given apart
@@ -218,6 +221,40 @@ pub(super) fn not_taken(takes: &[FilterKind], field: &str) -> ToolError {
     )
     .allowed(report_fields(takes))
 }
+
+/// The account an expense head made (its row in R29 is the row of that account).
+pub(super) fn head_account_of(env: &Env<'_>, head_id: i64) -> Result<i64, ToolError> {
+    use mandi_services::core::masters::{MasterKind, MasterRow};
+    mandi_services::masters::list(env.ctx, MasterKind::ExpenseHead, true)
+        .map_err(|_| {
+            bad(
+                "ERR_INTERNAL",
+                "party",
+                "the expense heads could not be read",
+            )
+        })?
+        .into_iter()
+        .find_map(|row| match row {
+            MasterRow::ExpenseHead(head) if head.id == head_id => Some(head.account_id),
+            _ => None,
+        })
+        .ok_or_else(|| bad("ERR_NOT_FOUND", "party", "no such expense head"))
+}
+
+/// The reports of a flow (sales, receipts, payments, income, expenses, fruit taken): a follow-up with no dates
+/// reads them for the period of the question before.
+const FOLLOW_UP_REPORTS: [ReportId; 10] = [
+    ReportId::R2,
+    ReportId::R3,
+    ReportId::R4,
+    ReportId::R6,
+    ReportId::R7,
+    ReportId::R23,
+    ReportId::R25,
+    ReportId::R28,
+    ReportId::R29,
+    ReportId::R37,
+];
 
 fn build_filters(
     env: &Env<'_>,
@@ -249,12 +286,40 @@ fn build_filters(
         filters.to = to.clone();
         source.to = to;
     }
+    // A follow-up that names no period is about the period of the question before (the flow reports only:
+    // a ledger or a balance list is read as of now).
+    if input.from.is_none()
+        && input.to.is_none()
+        && input.as_of.is_none()
+        && takes.contains(&FilterKind::DateRange)
+        && FOLLOW_UP_REPORTS.contains(&id)
+        && let Some((from, to)) = super::scope::follow_up_span(env, state)
+    {
+        notes.push(super::scope::follow_up_note(&from, &to));
+        filters.from = from.clone();
+        source.from = from;
+        filters.to = to.clone();
+        source.to = to;
+    }
     if let Some(as_of) = date("as_of", &input.as_of)? {
         takes_or(takes, FilterKind::AsOf, "as_of")?;
         filters.as_of = as_of.clone();
         source.as_of = as_of;
     }
-    if let Some(text) = &input.party {
+    let mut head_account = None;
+    if id == ReportId::R29
+        && let Some(text) = &input.party
+        && let Ok(found) = super::record(env, state, text, "party")
+        && found.prefix == "eh"
+    {
+        head_account = Some(head_account_of(env, found.id)?);
+        notes.push(
+            "R29 has no filter for an expense head: `matched` holds the head's own count and expense, and \
+             rows holds its row; totals are the whole report's"
+                .to_owned(),
+        );
+    }
+    if let Some(text) = input.party.as_ref().filter(|_| head_account.is_none()) {
         let (account_id, record) = named(env, state, text, "party", &["a"])?;
         if takes.contains(&FilterKind::Party) {
             filters.party = Some(PartyFilter {
@@ -400,6 +465,7 @@ fn build_filters(
         filters,
         source,
         party: party_record,
+        head_account,
         notes,
         ranked: false,
     })
@@ -890,13 +956,21 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         keys = known;
     }
     built.ranked = !keys.is_empty();
-    let in_memory = parsed.where_.is_some() || keys.len() > 1;
+    let in_memory = parsed.where_.is_some() || keys.len() > 1 || built.head_account.is_some();
     let (page, rows, matched) = if in_memory {
         if id == ReportId::R31 {
             return Err(bad("ERR_OUT_OF_RANGE", "where", "a statement is read as it is").into());
         }
         let page = read_all(env, id, &built.filters)?;
-        let (rows, matched) = filter_and_sort(env, state, &page, &parsed, &keys, rows_wanted)?;
+        let (rows, matched) = filter_and_sort(
+            env,
+            state,
+            &page,
+            &parsed,
+            &keys,
+            rows_wanted,
+            built.head_account,
+        )?;
         (page, rows, matched)
     } else {
         let sort = report_sort(id, &keys, env);
@@ -922,8 +996,15 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
                     );
                 }
                 let page = read_all(env, id, &built.filters)?;
-                let (rows, matched) =
-                    filter_and_sort(env, state, &page, &parsed, &keys, rows_wanted)?;
+                let (rows, matched) = filter_and_sort(
+                    env,
+                    state,
+                    &page,
+                    &parsed,
+                    &keys,
+                    rows_wanted,
+                    built.head_account,
+                )?;
                 (page, rows, matched)
             }
             Err(other) => return Err(other),
@@ -1031,6 +1112,7 @@ fn filter_and_sort(
     parsed: &Input,
     keys: &[SortKey],
     rows_wanted: i64,
+    head_account: Option<i64>,
 ) -> Result<(Vec<Row>, Option<Matched>), ToolError> {
     // Only the report's own lines: a heading or a total line holds the sums of the lines under it
     // and would be counted twice (money review R1).
@@ -1040,6 +1122,24 @@ fn filter_and_sort(
         .filter(|r| r.kind == RowKind::Normal)
         .collect();
     let mut matched = None;
+    // One expense head of R29: its row only, and its count and figures as the matched part.
+    if let Some(account) = head_account {
+        let key = format!("a{account}");
+        kept.retain(|row| super::cells::row_key(row, 0, false, &mut Vec::new()) == key);
+        let mut totals = Vec::new();
+        for (i, column) in page.columns.iter().enumerate() {
+            if is_left_out(column) {
+                continue;
+            }
+            if let Some(total) = sum_column(&kept, i) {
+                totals.push((i, total));
+            }
+        }
+        matched = Some(Matched {
+            count: i64::try_from(kept.len()).unwrap_or(i64::MAX),
+            totals,
+        });
+    }
     if let Some(clause) = &parsed.where_ {
         let index = column_index(&page.columns, &clause.column, "where.column")?;
         // A column with no filled cell (an empty report, or an aging column nobody is in) has

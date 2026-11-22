@@ -674,10 +674,14 @@ fn a_sale_in_another_shop_is_edited_and_the_cost_follows_c21() {
     let w = world();
     let ctx = &w.env.ctx;
     let trip = trip_of_three(&w);
+    // The 15 sold in another shop are set aside for it (PRD FR-12.41, v1.52).
     let bought = purchases::save(
         ctx,
         &w.owner,
-        &purchase_input(&w, trip.id, "20", "500", Some("400")),
+        &PurchaseInput {
+            other_qty: Some("15".into()),
+            ..purchase_input(&w, trip.id, "20", "500", Some("400"))
+        },
     )
     .unwrap();
     let sale = trips::other_sale_save(
@@ -1365,10 +1369,14 @@ fn a_sale_edit_keeps_its_cost_when_a_trip_cost_came_after_it() {
     let w = world();
     let ctx = &w.env.ctx;
     let trip = trip_of_three(&w);
+    // The 15 sold in another shop are set aside for it (PRD FR-12.41, v1.52).
     let bought = purchases::save(
         ctx,
         &w.owner,
-        &purchase_input(&w, trip.id, "20", "500", Some("400")),
+        &PurchaseInput {
+            other_qty: Some("15".into()),
+            ..purchase_input(&w, trip.id, "20", "500", Some("400"))
+        },
     )
     .unwrap();
     let sale = trips::other_sale_save(
@@ -1488,6 +1496,19 @@ fn a_garden_sale_with_an_arrival_gives_its_goods_back_and_is_final_once_others_m
     )
     .unwrap()
     .row;
+    // 40 of the 100 are set aside for another shop: the sales below (20, then 30, then 5) take only
+    // those (PRD FR-12.41, v1.52).
+    mandi_services::gardens::arrivals::change_split(
+        ctx,
+        &w.owner,
+        &mandi_services::core::split::SplitInput {
+            id: arrival.id,
+            version: arrival.version,
+            other_qty: "40".into(),
+            shop_name: None,
+        },
+    )
+    .unwrap();
     let sale = |qty: &str, amount: &str| {
         GardenEntryInput::OtherSale(GardenOtherSaleInput {
             garden_id: Some(garden.id),

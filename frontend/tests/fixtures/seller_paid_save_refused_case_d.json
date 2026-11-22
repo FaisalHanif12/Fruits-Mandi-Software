@@ -1,0 +1,11 @@
+[
+  {
+    "code": "ERR_SELLER_PAID_ABOVE_TODAY",
+    "field": "sellers[0].paid",
+    "values": {
+      "credit_paisa": 2000000,
+      "limit_paisa": 2000000,
+      "paid_paisa": 2500000
+    }
+  }
+]

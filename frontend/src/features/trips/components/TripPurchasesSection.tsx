@@ -4,16 +4,17 @@
 // write-off, cancel the purchase. ↑ ↓ and Page Up and Page Down move between rows; Enter moves to
 // the actions of the card.
 //
-// Four states: no purchase yet (a helpful message and a button to start one), the list, and, for
-// the card, loading and an error with a retry (the card draws them). The list is the trip's own
-// purchases, which the page already loaded, so it has no loading state of its own.
+// The list loads page by page from the backend, with the totals over all the trip's purchases in
+// its last row (PRD FR-19.11, plan 90). Four states: loading, an error with a retry, no purchase yet
+// (a helpful message and a button to start one), and the rows; the card has its own.
 
 import { Localized } from '@fluent/react';
 import { ShoppingBasket } from 'lucide-react';
-import { useRef, useState } from 'react';
-import { ListGrid } from '../../../shared/grid';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { uiErrorOf } from '../../../shared/api';
+import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
 import { SHORTCUTS } from '../../../shared/keyboard';
-import { Card, EmptyState } from '../../../shared/ui';
+import { Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import {
   CancelPurchaseDialog,
   OwnWriteOffDialog,
@@ -21,6 +22,7 @@ import {
   TRIP_PURCHASE_COLUMNS,
   UndoOwnWriteOffDialog,
   usePurchase,
+  useTripPurchases,
   type OwnStockTarget,
   type PurchaseRow,
 } from '../../purchases';
@@ -38,26 +40,57 @@ function targetOf(row: PurchaseRow): OwnStockTarget {
 }
 
 interface TripPurchasesSectionProps {
-  purchases: readonly PurchaseRow[];
+  /** The trip whose purchases are listed. */
+  tripId: number;
   /** The purchase that has focus in the list, or null. */
   selectedId: number | null;
   onSelect: (id: number | null) => void;
 }
 
-export function TripPurchasesSection({
-  purchases,
-  selectedId,
-  onSelect,
-}: TripPurchasesSectionProps) {
+export function TripPurchasesSection({ tripId, selectedId, onSelect }: TripPurchasesSectionProps) {
   const [writeOff, setWriteOff] = useState<OwnStockTarget | null>(null);
   const [undoWriteOff, setUndoWriteOff] = useState<OwnStockTarget | null>(null);
   const [cancelRow, setCancelRow] = useState<PurchaseRow | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const selected = usePurchase(selectedId);
+  const list = useTripPurchases(tripId);
+  const paging = useListPaging(list.pager);
+  const first = list.data?.pages[0];
+  const purchases = useMemo(() => list.data?.pages.flatMap((page) => page.rows) ?? [], [list.data]);
+  // The total row is the backend's, over all the purchases of the trip. The callback depends on the
+  // loaded list, not on an amount (Code Standards F3).
+  const totals = useCallback(
+    (context: ListContext) => ({
+      labelField: 'number',
+      values: {
+        number: context.text('glossary-meezan'),
+        qty_left: String(first?.totals.qty_left ?? 0),
+        ...(first === undefined
+          ? {}
+          : {
+              cost_left: context.money(first.totals.cost_left_paisa),
+              result: context.money(first.totals.result_paisa),
+              commission: context.money(first.totals.commission_paisa),
+              total_cost: context.money(first.totals.total_cost_paisa),
+            }),
+      },
+    }),
+    [first],
+  );
 
   return (
     <Card compact icon={ShoppingBasket} title={<Localized id="trips-purchases-title" />}>
-      {purchases.length === 0 ? (
+      {list.isPending ? (
+        <LoadingState rows={3} />
+      ) : list.isError ? (
+        <ErrorState
+          title={<Localized id="trips-purchases-failed" />}
+          error={uiErrorOf(list.error)}
+          onRetry={() => {
+            void list.refetch();
+          }}
+        />
+      ) : purchases.length === 0 ? (
         <EmptyState
           icon={ShoppingBasket}
           title={<Localized id="trips-purchases-empty" />}
@@ -87,7 +120,10 @@ export function TripPurchasesSection({
             focusRowId={selectedId === null ? null : String(selectedId)}
             heightMode="auto"
             isInactive={(row) => row.status === 'cancelled'}
+            totals={totals}
+            paging={paging}
           />
+          <Pager pager={list.pager} />
         </>
       )}
       {selectedId === null ? null : (

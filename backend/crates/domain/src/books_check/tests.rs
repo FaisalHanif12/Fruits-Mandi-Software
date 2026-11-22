@@ -755,6 +755,11 @@ fn a_line_moved_between_chukta_persons_is_found() {
     // The two persons swap their lines: the account total is the same, the persons are not.
     let moved = [lines("nasir", 12_800, 12_800), lines("shahid", 2_000, 0)];
     assert_eq!(compare_persons(&sales, &moved).unwrap().len(), 2);
+    // A person who paid in full has a net of 0 whoever he is: his lines moved to another person are
+    // still found (the sale line says ناصر, the lines say شاہد).
+    let one = [sale("nasir", 12_800, 12_800)];
+    let on_shahid = [lines("shahid", 12_800, 12_800)];
+    assert_eq!(compare_persons(&one, &on_shahid).unwrap().len(), 2);
 }
 
 #[test]

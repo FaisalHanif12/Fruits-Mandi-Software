@@ -285,3 +285,21 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
   lot has a quantity and a rate, `grid-views.ts` (`tellLotNeeds`, `LOT_NEEDS` in `problems.ts`) puts the specific
   words red on the lot cell and in `LotNotes` under the lots grid, at once, not after a save try. A lot with no
   typed line stays silent (plan 79: only critical messages). Test: `bikri-lot-missing-at-once.test.tsx`.
+
+- **A seller's money paid on the spot (plan 91, PRD FR-12.23 v1.53, FR-12.3, C6, C8).** Each seller's block in the summary
+  (`AdvanceTicks` draws one `SellerPaid` for each seller of a lot the tick covers) has the advance tick, one field
+  "موقع پر ادائیگی" and the lines of his account from `BikriPreview.sellers` (`SellerPaidLines`: previous balance, today's
+  net, paid, cut from previous بنام or added to the balance, over-paid, charges above the sale when they exist, new
+  balance with its working behind the ⓘ). Typing an amount calls `bikri_seller_paid_spread` (`useSellerPaidSpread`, after
+  50 ms, newest answer wins; an empty field sends `0`); the backend spreads it over his lots' نقد and the screen writes each
+  lot's answer into its own نقد field, a value the app fills (F43). The lots' نقد are the draft's only truth: the draft has
+  no field for the seller's amount, so the autosave, a language switch and the save lose nothing (F39). The field shows
+  the sum of his lots' نقد as the backend worked it out, also when a lot's نقد was typed by hand. When
+  `sellers[k].needs_confirm` is true an amber line warns "یہ آج کی بکری سے زیادہ ہے، بقایا بڑھے گا", and F10 opens the
+  "is this entry correct?" box naming him and his new balance (`SellerOverConfirmDialog`, on the shared
+  `ConfirmEntryDialog`; the cash box is the same shell). The yes is the cash question's: `confirm_cash_below_zero`
+  (the backend refuses with `ERR_SELLER_PAID_ABOVE_TODAY` otherwise and the flow asks again with a fresh preview). The
+  shapes (`SellerPaidSpreadInput`, `SellerPaidSpread`, `LotCashSpread`, `SellerPaidLines`) are the generated bindings. The
+  seller bill and the day slip print the lines from the backend's print data (their labels are Fluent ids the backend
+  sends). Tests: `bikri-seller-paid.test.tsx`, `bikri-seller-paid-real.test.tsx` (the backend's recorded answers) and
+  `seller-paid-print.test.tsx` (the seller bill and the day slip in Urdu and English).

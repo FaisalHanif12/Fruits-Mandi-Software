@@ -82,3 +82,15 @@ button (and F9) of the collection screen opens the box. The hidden print window 
 language=<ur|en>[&collector=<id>][&city=<id>]&job=<job>` (`print/collection-params.ts` reads it; the day
 goes to the command as `DD-MM-YYYY`). It may call `reports_collection_print_data` only. An empty day
 shows the words for nothing to print.
+
+- **Editing a saved voucher is clear (plan 89, PRD FR-7.70, FR-7.71).** The amber band (`EditBand`) of a وصولی,
+  ادائیگی or پیشگی says what CAN be changed (`edit-band-can-voucher`: the amount, the account and the narration;
+  only the day is fixed), not only that the day cannot move. In edit mode `VoucherForm` puts the day and the account
+  in the first row and the amount and the reason for the change in the second; the party card is drawn by the screen
+  in the aside of `FormAside` (the picker has `showCard={false}` and says whose card it is through `onCardAccount`),
+  so a tall card never pushes the amount down; the cursor starts in the amount. After the save the voucher stays on
+  the screen (it is read again, `VoucherEditor` is keyed by id and version): its stamp (time, Owner, the sign when the
+  day was reopened, the reason), the mark "Before ..." on the amount with the old and the new figure in its tip, and
+  the "Edited" word of its list row. A voucher of a closed day that was reopened for the fix closes again after the
+  save (`finishFixSession`) and opens read only with the same stamp and mark (`SavedVoucherView`). Tests:
+  `vouchers-edit-clear.test.tsx` (the three types and the closed-day path), `vouchers-edit-cancel.test.tsx`.

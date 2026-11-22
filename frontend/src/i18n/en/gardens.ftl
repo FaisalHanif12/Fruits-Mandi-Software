@@ -252,11 +252,11 @@ gardens-sale-amount = Money received
 gardens-sale-arrival = Goods from
 
 # review: pending
-gardens-sale-arrival-hint = Only goods that are left are listed. The goods set for { -dusri-dukan } are sold first. If you sell more, the rest comes from { -apni-dukan }, and the screen tells you how many.
+gardens-sale-arrival-hint = Only lines that still have { -nag } left for { -dusri-dukan } are listed. You cannot sell more { -nag } than that. The shop name is filled from the line; you can change it.
 
-# $number: the entry; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
+# $number: the entry; $other_left: how many { -nag } are left for { -dusri-dukan }.
 # review: pending
-gardens-sale-arrival-option = { $number }: { $item }, { $packing } ({ $other_left } left for { -dusri-dukan }, { $our_left } for { -apni-dukan })
+gardens-sale-arrival-option = { $number }: { $item }, { $packing } ({ $other_left } left for { -dusri-dukan })
 
 # review: pending
 gardens-sale-amount-hint = The money comes into { -rokar } and goes to the garden's account until the garden is closed.

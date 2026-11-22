@@ -33,10 +33,9 @@ use super::rows::{
     LotCharges, LotShape, Posting, check_shares, insert_sales_and_facts, lot_columns,
     lot_running_totals, match_posting, one_based, posting_sums, shape, stored_line_ids,
 };
-use super::shared::{Basis, data, refresh_chukta_index, switches, work_out};
+use super::shared::{Basis, data, refresh_chukta_index, require_confirmed, switches, work_out};
 use crate::audit::Event;
 use crate::auth::Actor;
-use crate::cash;
 use crate::context::Context;
 use crate::day;
 use crate::drafts;
@@ -70,7 +69,11 @@ pub fn save(
         if !worked.errors.is_empty() {
             return Err(ServiceError::from(worked.errors.clone()));
         }
-        cash::require_confirmed(&worked.cash, input.confirm_cash_below_zero)?;
+        require_confirmed(
+            &worked.cash,
+            &worked.calc.sellers,
+            input.confirm_cash_below_zero,
+        )?;
         let written = write_new(ctx, tx, actor, &now, &worked)?;
         Ok(BikriSaved {
             bikri_id: written.bikri_id,

@@ -10,6 +10,8 @@
 //   empty   no copies at all              many    120 copies (page by page)
 //   bad     one copy failed its check     down    the cloud could not be reached
 //   lost    the restore would lose records
+//   (see the key again: a password `wrong` is refused as a wrong password, a sign `bad` as a wrong sign,
+//   anything else shows the backend's stand-in key)
 //   big     a shop with thousands of records (the counts of the restore dialog carry the thousands sign)
 
 import type { BackupList } from '../../src/bindings/BackupList';
@@ -28,6 +30,7 @@ import {
   STATUS_NEW,
   TEST_RESULT,
 } from './backup-real';
+import { KEY_REVEAL, WRONG_PASSWORD_WIRE, WRONG_SIGN_WIRE } from './backup-key-reveal';
 
 type Input = Record<string, unknown>;
 
@@ -53,6 +56,8 @@ function status(): BackupStatus {
     };
   }
   if (devFlag('key')) return { ...base, key_confirmed: false, key_confirm_due: true };
+  if (devFlag('set'))
+    return { ...base, key_set: true, key_confirmed: true, key_confirm_due: false };
   return base;
 }
 
@@ -134,6 +139,12 @@ const handlers: Record<string, (input: Input) => unknown> = {
   backup_settings_set: (input) => ({ ...SETTINGS_GET, settings: input['settings'] }),
   backup_key_setup: () => KEY_SETUP,
   backup_key_confirm: () => null,
+  backup_key_reveal: (input) => {
+    // The backend checks the password first, then the sign (PRD FR-20.10 v1.54); its recorded refusals are used here.
+    if (input['password'] === 'wrong') throw WRONG_PASSWORD_WIRE;
+    if (input['sign'] === 'bad') throw WRONG_SIGN_WIRE;
+    return KEY_REVEAL;
+  },
 };
 
 /** What Tauri rejects with for a command this page does not answer. */
@@ -164,7 +175,12 @@ export function installBackupDevBridge(): void {
               reject(refusal());
               return;
             }
-            resolve(handler(inputOf(args)));
+            try {
+              resolve(handler(inputOf(args)));
+            } catch (wire) {
+              // A refusal as the backend sends it (ok, errors, ref), on an Error like the page's other refusals.
+              reject(Object.assign(new Error('refused'), wire));
+            }
           }, 20);
         }),
     },

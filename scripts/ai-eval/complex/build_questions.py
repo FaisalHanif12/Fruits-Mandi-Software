@@ -38,7 +38,7 @@ def R(req, opt=None):
 
 def add(qid, world, lang, text, readings=None, names=(), names_any=(), outcomes=("answered",), zero=False,
         follow_of=None, group="", kind="", period="", source="", note="", ambiguous=False,
-        must_not_show=(), fast=False, wrong_columns=None):
+        must_not_show=(), fast=False, wrong_columns=None, direction=None, search_names=()):
     QUESTIONS.append({
         "id": qid, "world": world, "lang": lang, "question": text, "follow_of": follow_of,
         "group": group, "kind": kind, "period": period, "source": source, "note": note,
@@ -46,6 +46,7 @@ def add(qid, world, lang, text, readings=None, names=(), names_any=(), outcomes=
         "outcomes": list(outcomes), "zero": zero, "ambiguous": ambiguous,
         "must_not_show": list(must_not_show), "fast": fast,
         "wrong_columns": dict(wrong_columns or {}),
+        "direction": direction, "search_names": list(search_names),
     })
 
 
@@ -124,7 +125,7 @@ def build_dev(path):
         [R({"this_week": a, "diff": a - c}, {"last_week": c}),
          R({"this_week": S(tw)["btot"]})],
         group="compare-periods", kind="sale", period=f"{per(tw)} vs {per(lw)}", source="view A compare",
-        note="direction: this week more")
+        note="direction: this week more", direction="up")
 
     # D08 last 7 days
     r7 = cal.last_days(7)
@@ -213,22 +214,22 @@ def build_dev(path):
     # D22 English, two buyers together
     add("D22", w, "english", "How much commission did the shop earn from Haroon and Ans together this month?",
         [R({"together": h["buyer_comm"] + a_["buyer_comm"]}), R({"together": h["bc"] + a_["bc"]})],
-        group="several-buyers", kind="commission-sum", period=per(month), source="view C + calculator")
+        search_names=["Haroon", "Ans"], group="several-buyers", kind="commission-sum", period=per(month), source="view C + calculator")
 
     # D23 English, the top seller and the shop's commission on his goods
     top = max(((S(month, seller=s_)["gross"], s_) for s_ in (faisal, ehsan, adnan)))
     v = S(month, seller=top[1])
     add("D23", w, "english",
         "Which seller sent the most goods this month and how much commission did the shop get on his goods?",
-        [R({"gross": v["gross"], "comm": v["comm"]}), R({"gross": v["gross"], "comm": v["sc"]}),
-         R({"qty": v["qty"], "comm": v["comm"]}), R({"qty": v["qty"], "comm": v["sc"]})],
+        [R({"comm": v["comm"]}, {"gross": v["gross"], "qty": v["qty"]}),
+         R({"comm": v["sc"]}, {"gross": v["gross"], "qty": v["qty"]})],
         names=[b.name_of(top[1])["name_en"]], group="ranked-sellers", kind="top-1", period=per(month),
         source="view B", note="'most goods' may mean quantity (nag) or sale: both are honest")
 
     # D24 English, two months
     add("D24", w, "english", "Compare this month's commission with last month and tell me the difference",
         [R({"this": S(month)["comm"], "last": 0, "diff": S(month)["comm"]})], group="compare-periods",
-        kind="commission", period=f"{per(month)} vs {per(last_month)}", source="view A compare",
+        kind="commission", period=f"{per(month)} vs {per(last_month)}", source="view A compare", direction="up",
         note="last month has none: the difference is the whole figure, direction up")
 
     # D25 English, a percent
@@ -253,7 +254,8 @@ def build_dev(path):
     t1 = S(month, buyer=mani)["buyer_comm"] + S(month, buyer=ans)["buyer_comm"]
     t2 = S(month, buyer=mani)["bc"] + S(month, buyer=ans)["bc"]
     add("D27", w, "roman", "mani aur ans se is mahine aur pichle mahine kitni commission mili ?",
-        [R({"this_month": t1}), R({"this_month": t2}),
+        search_names=["Mani", "Ans"],
+        readings=[R({"this_month": t1}), R({"this_month": t2}),
          R({"mani": S(month, buyer=mani)["buyer_comm"], "ans": S(month, buyer=ans)["buyer_comm"]}),
          R({"mani": S(month, buyer=mani)["bc"], "ans": S(month, buyer=ans)["bc"]})], group="two-parties-two-periods",
         kind="commission", period=f"{per(month)} and {per(last_month)}", source="view C")
@@ -414,7 +416,7 @@ def build_year(path):
         rows[f"{y}-{m:02d}"] = sum(r["amount"] for r in b.journal_by_account("05010002", rng))
     req = {k: v for k, v in rows.items() if v != 0}
     add("Y03", w, "roman", "bijli ka kharcha mahine ke hisab se pichle saal se ab tak kitna raha ?",
-        [R(req)], group="expenses", kind="head-by-month", period="2025-11 to 2026-11", source="view M by month",
+        [R(req, {"whole_period_total": sum(rows.values())})], group="expenses", kind="head-by-month", period="2025-11 to 2026-11", source="view M by month",
         note="12 months; a month with 0 may be left out")
 
     # Y04 English, two heads, two periods
@@ -479,14 +481,16 @@ def build_year(path):
     faisal = acct("Faisal")
     ms = b.by_month(b.lines(ytd, buyer=faisal))
     add("Y11", w, "roman", "faisal gahaq ne is saal mahine ke hisab se kitna maal liya ?",
-        [R({f"{y}-{m:02d}": v["bval"] for (y, m), v in ms.items()})], names=["Faisal"], group="month-by-month",
+        [R({f"{y}-{m:02d}": v["bval"] for (y, m), v in ms.items()}, {"year_total": sum(v["bval"] for v in ms.values())})],
+        names=["Faisal"], group="month-by-month",
         kind="buyer-purchase", period=per(ytd), source="view C by month")
 
     # Y12 two months sale
     a, c = S(last_month)["gross"], S(month)["gross"]
     add("Y12", w, "roman", "pichle mahine aur is mahine ki bikri ka farq batao",
-        [R({"last": a, "this": c, "diff": a - c})], group="compare-periods", kind="sale",
-        period=f"{per(last_month)} / {per(month)}", source="view A compare", note="direction: less")
+        [R({"last": a, "this": c, "diff": a - c}), R({"diff": a - c})], group="compare-periods", kind="sale",
+        period=f"{per(last_month)} / {per(month)}", source="view A compare", note="direction: less",
+        direction="down")
 
     # Y13 trip result
     t1, t2 = b.trip(1), b.trip(2)
@@ -526,8 +530,10 @@ def build_year(path):
     # Y18 expenses two months
     a, c = b.shop_expense(last_month), b.shop_expense(month)
     add("Y18", w, "roman", "is mahine aur pichle mahine ka kharcha compare karo",
-        [R({"last": a, "this": c, "diff": a - c})], group="compare-periods", kind="expense",
-        period=f"{per(last_month)} / {per(month)}", source="R29 / view M compare", note="direction: less")
+        [R({"last": a, "this": c, "diff": a - c}), R({"last": a, "this": c}), R({"this": c, "diff": a - c})],
+        group="compare-periods", kind="expense",
+        period=f"{per(last_month)} / {per(month)}", source="R29 / view M compare", note="direction: less",
+        direction="down")
 
     # Y19 an estimate
     full = [O.month_range(2026, m) for m in (8, 9, 10)]
@@ -560,7 +566,7 @@ def build_year(path):
     for m in range(5, 11):
         req[f"2026-{m:02d}"] = S(O.month_range(2026, m))["comm"]
     add("Y22", w, "english", "How much commission did the shop earn in each month from May to October 2026?",
-        [R(req)], group="month-by-month", kind="commission", period="2026-05 to 2026-10", source="view A by month")
+        [R(req, {"six_month_total": sum(req.values())})], group="month-by-month", kind="commission", period="2026-05 to 2026-10", source="view A by month")
 
     # Y23 Urdu letters, heads last month
     h = heads(last_month)
@@ -627,7 +633,9 @@ def build_year(path):
     g = b.garden(1)
     add("Y32", w, "roman", "shahpur bagh ka hisab batao: kitna paisa lagaya, kitni bikri aayi aur ab balance kya hai ?",
         [R({"paid": g["paid"], "balance": g["balance"]}, {"money_in": g["money_in"], "rent": g["rent"],
-                                                      "rent_due": g["rent_due"]})],
+                                                      "rent_due": g["rent_due"]}),
+         R({"installments": g["installments"], "costs": g["costs"], "balance": g["balance"]},
+           {"money_in": g["money_in"], "rent": g["rent"]})],
         group="garden", kind="garden-balance", period="up to now", source="R36 garden",
         note=f"installments {g['installments']} + costs {g['costs']}; money in {g['money_in']} (after commission)")
 
@@ -636,15 +644,18 @@ def build_year(path):
     rank = sorted(((k, v) for k, v in by.items() if nm(k) not in ("Chukta Khata",)),
                   key=lambda kv: -kv[1]["buyer_comm"])[:5]
     add("Y33", w, "roman", "is saal sab se zyada commission dene wale 5 gahaq kaun hain aur kitni kitni ?",
-        [R({nm(k): v["buyer_comm"] for k, v in rank})], names=[nm(k) for k, _ in rank], group="ranked-buyers",
+        [R({nm(k): v["buyer_comm"] for k, v in rank}),
+         R({nm(k): v["bc"] for k, v in sorted(by.items(), key=lambda kv: -kv[1]["bc"])[:5] if nm(k) != "Chukta Khata"})],
+        names=[nm(k) for k, _ in rank], group="ranked-buyers",
         kind="top-5", period=per(ytd), source="view C ranked",
         note="order: " + " > ".join(f"{nm(k)} {v['buyer_comm']}" for k, v in rank))
 
     # Y34 a seller, this year and last year
     y25 = cal.year(1)
     add("Y34", w, "roman", "rahim ki bikri is saal pichle saal ke muqable mein kitni zyada ya kam hai ?",
-        [R({"this_year": S(ytd, seller=rahim)["gross"], "last_year": S(y25, seller=rahim)["gross"]})],
-        names=["Rahim"], group="compare-periods", kind="sale", period=f"{per(ytd)} / {per(y25)}",
+        [R({"this_year": S(ytd, seller=rahim)["gross"], "last_year": S(y25, seller=rahim)["gross"]}),
+         R({"diff": S(ytd, seller=rahim)["gross"] - S(y25, seller=rahim)["gross"]})],
+        names=["Rahim"], group="compare-periods", kind="sale", period=f"{per(ytd)} / {per(y25)}", direction="up",
         source="view B compare", note="the books start on 06-11-2025: last year is only 6 Nov to 31 Dec")
 
     # Y35 a buyer over three months
@@ -662,10 +673,16 @@ def build_year(path):
     add("M18", w, "roman", "pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag batao",
         [R({"gross_sale": o["gross"], "buyer_bills": o["btot"]})], group="measure-words", kind="gross-and-bills",
         period=per(last_month), source="view A / R4",
-        wrong_columns={"all_commission": o["comm"]})
+        wrong_columns={"all_commission": o["comm"], "buyer_value_not_gross": o["bval"]}
+        if o["bval"] != o["gross"] else {"all_commission": o["comm"]},
+        note=f"last month the rate difference makes buyer value {o['bval']} against gross {o['gross']}")
     y_ = S(ytd)
     add("M19", w, "urdu", "اس سال کمیشن اور لاگا الگ الگ بتاؤ",
-        [R({"commission_without_laga": y_["sc"] + y_["bc"], "laga": y_["laga"]}, {"together": y_["comm"]})],
+        [R({"commission_without_laga": y_["sc"] + y_["bc"], "laga": y_["laga"]}, {"together": y_["comm"]}),
+         # Two sides (Umar's lead, 22-11-2026): the seller-side and the buyer-side commission named
+         # one by one, with the laga, is as right as their sum.
+         R({"seller_commission": y_["sc"], "buyer_commission": y_["bc"], "laga": y_["laga"]},
+           {"together": y_["comm"], "commission_without_laga": y_["sc"] + y_["bc"]})],
         group="measure-words", kind="commission-and-laga", period=per(ytd), source="view A columns",
         wrong_columns={"gross": y_["gross"]})
     add("M20", w, "english", "What is the total of all buyer bills last month, with commission and laga included?",
@@ -687,7 +704,7 @@ def main():
     for q in QUESTIONS:
         books = dev_b if q["world"] == "dev" else year_b
         roles = {}
-        for name in q["names"] + q["names_any"]:
+        for name in q["names"] + q["names_any"] + q["search_names"]:
             rows = books.c.execute("select distinct party_type from accounts where lower(name_en)=lower(?) "
                                    "and party_type in ('seller','buyer')", (name,)).fetchall()
             if len(rows) == 1:

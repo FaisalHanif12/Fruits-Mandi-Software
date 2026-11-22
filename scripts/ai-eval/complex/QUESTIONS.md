@@ -28,7 +28,7 @@ Worked out by `oracle.py` (SQL over posted rows). Dev = copy of the dev database
 | D20 | urdu | مانی نے اب تک دکان کو کتنا کمیشن دیا ہے؟ | up to now | comm=2640 | comm=2160 |
 | D21 | urdu | ہارون اور انس نے اس مہینے کتنی خریداری کی اور کتنا کمیشن دیا؟ | 2026-11-01 to 2026-11-30 | haroon.value=172000; haroon.comm=11070; ans.value=149000; ans.comm=10140 | haroon.value=172000; haroon.comm=9150; ans.value=149000; ans.comm=8940 |
 | D22 | english | How much commission did the shop earn from Haroon and Ans together this month? | 2026-11-01 to 2026-11-30 | together=21210 | together=18090 |
-| D23 | english | Which seller sent the most goods this month and how much commission did the shop get on his goods? | 2026-11-01 to 2026-11-30 | gross=232000; comm=28870 | gross=232000; comm=13720 || qty=300; comm=28870 || qty=300; comm=13720 |
+| D23 | english | Which seller sent the most goods this month and how much commission did the shop get on his goods? | 2026-11-01 to 2026-11-30 | comm=28870 | comm=13720 |
 | D24 | english | Compare this month's commission with last month and tell me the difference | 2026-11-01 to 2026-11-30 vs 2026-10-01 to 2026-10-31 | this=48470; last=0; diff=48470 |  |
 | D25 | english | What share of the shop's total commission came from Mani this month, in percent? | 2026-11-01 to 2026-11-30 | pct=5.45 | pct=4.46 || pct=9.49 |
 | D26a | roman | faisal ki abhi tak ki bikri kitni hai ? | up to now | faisal=71000 |  |
@@ -77,13 +77,13 @@ Worked out by `oracle.py` (SQL over posted rows). Dev = copy of the dev database
 | Y09 | roman | akram baloch ne pichle 3 mahine mein kitna maal liya aur kitni commission di ? | 2026-08-05 to 2026-11-05 | purchase=1773150; comm=109980 | purchase=1773150; comm=106388 |
 | Y10 | roman | akram ne is mahine kitni commission di ? | 2026-11-01 to 2026-11-30 | ask 'which one' (Akram Toll Tax, Akram Baloch) |  |
 | Y11 | roman | faisal gahaq ne is saal mahine ke hisab se kitna maal liya ? | 2026-01-01 to 2026-12-31 | 2026-01=509380; 2026-02=538590; 2026-03=476270; 2026-04=530030; 2026-05=344470; 2026-06=776470; 2026-07=432790; 2026-08=889880; 2026-09=533050; 2026-10=466350; 2026-11=185670 |  |
-| Y12 | roman | pichle mahine aur is mahine ki bikri ka farq batao | 2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30 | last=9154800; this=1490500; diff=7664300 |  |
+| Y12 | roman | pichle mahine aur is mahine ki bikri ka farq batao | 2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30 | last=9154800; this=1490500; diff=7664300 | diff=7664300 |
 | Y13 | roman | pehle safar ka nateeja kya raha, kitna nafa ya nuksan hua ? | up to now | result=1690 |  |
 | Y14 | roman | pehle safar mein kitna paisa laga, kitna wapas aya aur har partner ka hissa kitna raha ? | up to now | paid=287000; money_in=288690; result=1690 |  |
 | Y15 | roman | pichle saal se is mahine tak shop ka nafa nuksan kitna raha ? | 2025-01-01 to 2026-11-30 | profit=9617660 |  |
 | Y16 | roman | pichle mahine ka nafa batao aur har partner ka hissa kitna bana ? | 2026-10-01 to 2026-10-31 | profit=948102 |  |
 | Y17 | roman | is saal partnaron ne zaati kharche mein kitna kitna paisa liya ? | 2026-01-01 to 2026-12-31 | partner a=250000; partner b=75000; usman=16000 | partner a=220000; partner b=75000; usman=16000 |
-| Y18 | roman | is mahine aur pichle mahine ka kharcha compare karo | 2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30 | last=170600; this=132600; diff=38000 |  |
+| Y18 | roman | is mahine aur pichle mahine ka kharcha compare karo | 2026-10-01 to 2026-10-31 / 2026-11-01 to 2026-11-30 | last=170600; this=132600; diff=38000 | last=170600; this=132600 || this=132600; diff=38000 |
 | Y19 | roman | agar commission isi raftar se chalta raha to agle 3 mahine mein kitna hoga ? | Nov 2026 to Jan 2027 | per_month=958313; three_months=2874939 |  |
 | Y20 | roman | rahim ne kele ki bikri pichle 6 mahine mein kitni ki ? | 2026-05-05 to 2026-11-05 | sale=2319980 |  |
 | Y21a | roman | rahim ki is saal ki bikri kitni hai ? | 2026-01-01 to 2026-12-31 | rahim=9683650 |  |
@@ -101,11 +101,11 @@ Worked out by `oracle.py` (SQL over posted rows). Dev = copy of the dev database
 | Y31a | english | How much did the shop spend on electricity this year? | 2026-01-01 to 2026-12-31 | electricity=295000 |  |
 | Y31b | english | and on tea? | 2026-01-01 to 2026-12-31 | (follow-up of Y31a) tea=98000 |  |
 | Y31c | english | what is the total of both? | 2026-01-01 to 2026-12-31 | (follow-up of Y31b) sum=393000 |  |
-| Y32 | roman | shahpur bagh ka hisab batao: kitna paisa lagaya, kitni bikri aayi aur ab balance kya hai ? | up to now | paid=370000; balance=1737824 |  |
-| Y33 | roman | is saal sab se zyada commission dene wale 5 gahaq kaun hain aur kitni kitni ? | 2026-01-01 to 2026-12-31 | Akram Baloch=392332; Tariq Mehmood=392027; Rizwan Butt=384849; Kashif Ali=376336; Nadeem Traders=373370 |  |
-| Y34 | roman | rahim ki bikri is saal pichle saal ke muqable mein kitni zyada ya kam hai ? | 2026-01-01 to 2026-12-31 / 2025-01-01 to 2025-12-31 | this_year=9683650; last_year=1175660 |  |
+| Y32 | roman | shahpur bagh ka hisab batao: kitna paisa lagaya, kitni bikri aayi aur ab balance kya hai ? | up to now | paid=370000; balance=1737824 | installments=350000; costs=20000; balance=1737824 |
+| Y33 | roman | is saal sab se zyada commission dene wale 5 gahaq kaun hain aur kitni kitni ? | 2026-01-01 to 2026-12-31 | Akram Baloch=392332; Tariq Mehmood=392027; Rizwan Butt=384849; Kashif Ali=376336; Nadeem Traders=373370 | Akram Baloch=380564; Tariq Mehmood=380483; Rizwan Butt=373433; Kashif Ali=366328; Nadeem Traders=359210 |
+| Y34 | roman | rahim ki bikri is saal pichle saal ke muqable mein kitni zyada ya kam hai ? | 2026-01-01 to 2026-12-31 / 2025-01-01 to 2025-12-31 | this_year=9683650; last_year=1175660 | diff=8507990 |
 | Y35 | roman | faisal gahaq ne pichle 3 mahine mein kitni commission di aur kitna maal liya ? | 2026-08-05 to 2026-11-05 | purchase=1952280; comm=121552 | purchase=1952280; comm=117136 |
 | M17 | roman | rahim ki safi bikri abhi tak kitni hai ? | up to now | net_sale=9916553 |  |
 | M18 | roman | pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag batao | 2026-10-01 to 2026-10-31 | gross_sale=9154800; buyer_bills=9723115 |  |
-| M19 | urdu | اس سال کمیشن اور لاگا الگ الگ بتاؤ | 2026-01-01 to 2026-12-31 | commission_without_laga=9592152; laga=160728 |  |
+| M19 | urdu | اس سال کمیشن اور لاگا الگ الگ بتاؤ | 2026-01-01 to 2026-12-31 | commission_without_laga=9592152; laga=160728 | seller_commission=4796058; buyer_commission=4796094; laga=160728 |
 | M20 | english | What is the total of all buyer bills last month, with commission and laga included? | 2026-10-01 to 2026-10-31 | buyer_bills=9723115 |  |

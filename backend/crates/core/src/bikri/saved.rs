@@ -19,6 +19,9 @@ pub struct BikriSaveInput {
     /// True after the user said yes to "کیا یہ اندراج درست ہے؟". Needed only when the entry takes
     /// روکڑ below 0 (PRD FR-6.7); without it the save is refused with
     /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` and nothing is written.
+    /// It also answers the question of PRD FR-12.23 v1.53, a seller paid on the spot more than
+    /// today's credit plus what the shop owed him (`sellers[k].needs_confirm` in the preview):
+    /// without it that save is refused with `ERR_SELLER_PAID_ABOVE_TODAY` (plan 91).
     #[serde(default)]
     pub confirm_cash_below_zero: bool,
 }

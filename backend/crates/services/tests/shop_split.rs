@@ -655,11 +655,25 @@ fn the_split_changes_while_goods_are_left_and_never_below_what_a_part_sold() {
     ));
 }
 
-// ---- R5, D1: a sale in another shop ----
+// ---- R5, plan 90: a sale in another shop takes only the other part ----
+
+/// The number left for another shop that a refusal names (`remaining`).
+fn remaining_of(e: &ServiceError) -> Option<i64> {
+    match e {
+        ServiceError::Rejected(items) => items
+            .iter()
+            .find(|i| i.code == ErrorCode::ErrQtyExceedsOtherShop)
+            .and_then(|i| i.values.get("remaining"))
+            .and_then(|v| match v {
+                mandi_services::core::error::ErrorValue::Number(n) => Some(*n),
+                _ => None,
+            }),
+        _ => None,
+    }
+}
 
 #[test]
-fn a_sale_in_another_shop_takes_the_other_part_first_and_moves_the_rest_and_a_cancel_moves_it_back()
-{
+fn a_sale_in_another_shop_takes_only_the_other_part_and_above_it_is_refused_with_what_is_left() {
     let w = world();
     day(&w, 10);
     let t = new_trip(&w);
@@ -671,7 +685,7 @@ fn a_sale_in_another_shop_takes_the_other_part_first_and_moves_the_rest_and_a_ca
     )
     .unwrap();
     let id = saved.saved[0].id;
-    // 20 fit in the other part: nothing moves.
+    // 20 fit in the other part: nothing comes from our shop.
     let small = other_sale(&w, t, id, "20", "1,200");
     let p = trips::other_sale_preview(&w.env.ctx, &small).unwrap();
     let n = p.numbers.unwrap();
@@ -685,21 +699,37 @@ fn a_sale_in_another_shop_takes_the_other_part_first_and_moves_the_rest_and_a_ca
     );
     assert_eq!(n.cost_paisa.rupees(), 1_000, "C21: 4,000 × 20 / 80");
     let small_saved = trips::other_sale_save(&w.env.ctx, &w.owner, &small).unwrap();
-    // 25 more: the other part has 10, so 15 move from our shop's part. The cost is C21 over all
-    // 60 left: 3,000 × 25 / 60 = 1,250.
+    // 25 more: the other part has 10, so it is refused with 10 left. The preview says the same.
+    // Our shop has 50 left, but its part is never touched (PRD FR-12.41, v1.52).
     let big = other_sale(&w, t, id, "25", "2,000");
-    let p = trips::other_sale_preview(&w.env.ctx, &big)
-        .unwrap()
-        .numbers
-        .unwrap();
-    assert_eq!((p.qty_from_our_shop, p.qty_other_left_after), (15, 0));
-    assert_eq!(
-        (p.qty_our_left_after, p.qty_left_after),
-        (35, 35),
-        "our part 50 less the 15 moved; 60 left less the 25 sold"
+    let shown = trips::other_sale_preview(&w.env.ctx, &big).unwrap();
+    assert!(shown.numbers.is_none(), "no figure for a refused sale");
+    assert!(
+        shown
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsOtherShop
+                && e.field == "qty"
+                && e.values.get("remaining")
+                    == Some(&mandi_services::core::error::ErrorValue::Number(10)))
     );
-    assert_eq!(p.cost_paisa.rupees(), 1_250);
-    let big_saved = trips::other_sale_save(&w.env.ctx, &w.owner, &big).unwrap();
+    let refused = trips::other_sale_save(&w.env.ctx, &w.owner, &big).unwrap_err();
+    assert!(has(&refused, ErrorCode::ErrQtyExceedsOtherShop, "qty"));
+    assert_eq!(remaining_of(&refused), Some(10));
+    let after_refusal = purchase(&w, id);
+    assert_eq!(
+        (
+            after_refusal.qty_other,
+            after_refusal.qty_other_sold,
+            after_refusal.qty_our_left,
+            after_refusal.qty_other_left
+        ),
+        (30, 20, 50, 10),
+        "a refused sale changes nothing"
+    );
+    // The 10 that are left are accepted, and then not one more.
+    let ten = other_sale(&w, t, id, "10", "800");
+    let ten_saved = trips::other_sale_save(&w.env.ctx, &w.owner, &ten).unwrap();
     let row = purchase(&w, id);
     assert_eq!(
         (
@@ -708,13 +738,13 @@ fn a_sale_in_another_shop_takes_the_other_part_first_and_moves_the_rest_and_a_ca
             row.qty_our_left,
             row.qty_other_left
         ),
-        (45, 45, 35, 0)
+        (30, 30, 50, 0)
     );
-    // More than all that is left is refused with the whole qty left.
-    let too_many = other_sale(&w, t, id, "36", "100");
-    let e = trips::other_sale_save(&w.env.ctx, &w.owner, &too_many).unwrap_err();
-    assert!(has(&e, ErrorCode::ErrQtyExceedsLot, "qty"));
-    // The ready lot now has 35.
+    let one = other_sale(&w, t, id, "1", "100");
+    let refused = trips::other_sale_save(&w.env.ctx, &w.owner, &one).unwrap_err();
+    assert!(has(&refused, ErrorCode::ErrQtyExceedsOtherShop, "qty"));
+    assert_eq!(remaining_of(&refused), Some(0));
+    // The ready lot still has all of our shop's 50.
     let ready = bikri::ready_goods(
         &w.env.ctx,
         &ReadyGoodsInput {
@@ -722,14 +752,14 @@ fn a_sale_in_another_shop_takes_the_other_part_first_and_moves_the_rest_and_a_ca
         },
     )
     .unwrap();
-    assert_eq!(ready.rows[0].qty_left, 35);
-    // Cancelling the big sale gives back 25 to the other part and moves the 15 back to our shop.
+    assert_eq!(ready.rows[0].qty_left, 50);
+    // Cancelling the sale of 10 gives its 10 back to the other part, and our part is as it was.
     trips::other_sale_cancel(
         &w.env.ctx,
         &w.owner,
         &TripEntryCancelInput {
-            id: big_saved.id,
-            version: big_saved.version,
+            id: ten_saved.id,
+            version: ten_saved.version,
             reason: "غلط".into(),
             confirm_cash_below_zero: false,
         },
@@ -900,7 +930,8 @@ fn a_goods_arrived_entry_holds_many_lines_and_each_is_its_own_arrival() {
 }
 
 #[test]
-fn a_garden_sale_in_another_shop_names_the_arrival_and_takes_the_other_part_first() {
+fn a_garden_sale_in_another_shop_names_the_arrival_takes_only_the_other_part_and_above_it_is_refused()
+ {
     let w = world();
     day(&w, 10);
     let g = new_garden(&w);
@@ -931,8 +962,43 @@ fn a_garden_sale_in_another_shop_names_the_arrival_and_takes_the_other_part_firs
             .iter()
             .any(|x| x.field == "arrival_id" && x.code == ErrorCode::ErrRequired)
     );
-    // 50 are sold in another shop: the other part has 30, so 20 move from our shop's part.
+    // 50 are asked for in another shop: the other part has 30, so it is refused with 30 left, in
+    // the preview and in the save. Our shop's 70 are never touched (PRD FR-12.41, v1.52).
     let sale = GardenEntryInput::OtherSale(garden_sale(g.id, Some(a), "50", "20,000"));
+    let shown = gardens::entry_preview(&w.env.ctx, &sale).unwrap();
+    assert!(shown.numbers.is_none(), "no figure for a refused sale");
+    assert!(
+        shown
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsOtherShop
+                && e.field == "qty"
+                && e.values.get("remaining")
+                    == Some(&mandi_services::core::error::ErrorValue::Number(30)))
+    );
+    let refused = gardens::entry_save(&w.env.ctx, &w.owner, &sale).unwrap_err();
+    assert!(has(&refused, ErrorCode::ErrQtyExceedsOtherShop, "qty"));
+    assert_eq!(remaining_of(&refused), Some(30));
+    let arrival = |id: i64| {
+        gardens::arrivals::get(
+            &w.env.ctx,
+            &mandi_services::core::arrivals::ArrivalGetInput { id },
+        )
+        .unwrap()
+    };
+    let row = arrival(a);
+    assert_eq!(
+        (
+            row.qty_other,
+            row.qty_other_sold,
+            row.qty_our_left,
+            row.qty_other_left
+        ),
+        (30, 0, 70, 30),
+        "a refused sale changes nothing"
+    );
+    // The 30 that are set aside for the other shop are accepted.
+    let sale = GardenEntryInput::OtherSale(garden_sale(g.id, Some(a), "30", "12,000"));
     let numbers = gardens::entry_preview(&w.env.ctx, &sale)
         .unwrap()
         .numbers
@@ -944,14 +1010,10 @@ fn a_garden_sale_in_another_shop_names_the_arrival_and_takes_the_other_part_firs
             numbers.qty_our_left_after,
             numbers.qty_left_after
         ),
-        (Some(20), Some(0), Some(50), Some(50))
+        (Some(0), Some(0), Some(70), Some(70))
     );
     let done = gardens::entry_save(&w.env.ctx, &w.owner, &sale).unwrap();
-    let row = gardens::arrivals::get(
-        &w.env.ctx,
-        &mandi_services::core::arrivals::ArrivalGetInput { id: a },
-    )
-    .unwrap();
+    let row = arrival(a);
     assert_eq!(
         (
             row.qty_other,
@@ -960,17 +1022,18 @@ fn a_garden_sale_in_another_shop_names_the_arrival_and_takes_the_other_part_firs
             row.qty_other_left,
             row.qty_left
         ),
-        (50, 50, 50, 0, 50)
+        (30, 30, 70, 0, 70)
     );
-    // Above all that is left.
+    // Not one more, though our shop has 70 left.
     let e = gardens::entry_save(
         &w.env.ctx,
         &w.owner,
-        &GardenEntryInput::OtherSale(garden_sale(g.id, Some(a), "51", "1,000")),
+        &GardenEntryInput::OtherSale(garden_sale(g.id, Some(a), "1", "1,000")),
     )
     .unwrap_err();
-    assert!(has(&e, ErrorCode::ErrQtyExceedsLot, "qty"));
-    // Cancel gives everything back, including what was moved.
+    assert!(has(&e, ErrorCode::ErrQtyExceedsOtherShop, "qty"));
+    assert_eq!(remaining_of(&e), Some(0));
+    // Cancel gives the 30 back to the other part.
     gardens::entry_cancel(
         &w.env.ctx,
         &w.owner,
@@ -982,11 +1045,7 @@ fn a_garden_sale_in_another_shop_names_the_arrival_and_takes_the_other_part_firs
         },
     )
     .unwrap();
-    let back = gardens::arrivals::get(
-        &w.env.ctx,
-        &mandi_services::core::arrivals::ArrivalGetInput { id: a },
-    )
-    .unwrap();
+    let back = arrival(a);
     assert_eq!(
         (
             back.qty_other,

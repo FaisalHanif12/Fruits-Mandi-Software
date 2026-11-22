@@ -584,6 +584,20 @@ pub fn account_totals(
         .collect())
 }
 
+/// [`account_totals`] read from the journal now, never from the memory of `crate::memo`. The memory
+/// is right only because the app never changes a posted line, so a check that looks for a line changed
+/// OUTSIDE the app (the daily books check, PRD NFR-SEC-6, NFR-REL-8) must not use it: a kept answer
+/// would hide the very change it is looking for.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn account_totals_fresh(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
+    read_account_totals(conn, as_of)
+}
+
 /// The query behind [`account_totals`].
 fn read_account_totals(
     conn: &Connection,
@@ -787,6 +801,95 @@ pub fn totals_for_accounts(
     }
     let mut statement = conn.prepare(&totals_for_accounts_sql(ids.len()))?;
     let rows = statement.query_map(rusqlite::params_from_iter(ids.iter()), |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            Totals {
+                dr_paisa: r.get(1)?,
+                cr_paisa: r.get(2)?,
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
+/// The place of an entry among the others of its day, with `e` the entry: the stable order key of
+/// its posting (migration 0005). A posting that was edited is a reversal and a new entry written
+/// later; the new entry copies the key of the posting it replaces, and a reversal is placed with
+/// the entry it reverses, so the posting, its reversals and every version of it share one place
+/// however many times it was edited. An entry that was never edited stands for its own id.
+const POSTING_ANCHOR: &str = "COALESCE(e.order_key,
+       (SELECT COALESCE(r.order_key, r.id) FROM journal_entries r WHERE r.id = e.reverses_entry_id),
+       e.id)";
+
+/// The SQL of [`totals_before_posting`] for this many accounts: `?1` is the day, `?2` the anchor of
+/// the edited posting or NULL, `?3` and on the accounts. Public so a test can check its query plan
+/// (Code Standards B18).
+#[doc(hidden)]
+pub fn totals_before_posting_sql(count: usize) -> String {
+    let marks = (0..count)
+        .map(|i| format!("?{}", i.saturating_add(3)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id IN ({marks}) AND e.status = 'posted'
+           AND (e.entry_date < ?1
+                OR (e.entry_date = ?1 AND (?2 IS NULL OR {POSTING_ANCHOR} < ?2)))
+         GROUP BY l.account_id"
+    )
+}
+
+/// The place of the posting that `entry_id` belongs to among the entries of its day (see
+/// [`POSTING_ANCHOR`]), or `None` when there is no such entry.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn posting_anchor(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        &format!("SELECT {POSTING_ANCHOR} FROM journal_entries e WHERE e.id = ?1"),
+        [entry_id],
+        |r| r.get(0),
+    )
+    .optional()
+}
+
+/// The posted debit and credit totals of the given accounts as they stood just before a posting
+/// dated `date_iso` (PRD FR-12.23 v1.53, plan 91: the "previous balance" of a seller in the summary of
+/// a بکری). It leaves out the entries dated after `date_iso`. For a new posting (`None`) every entry
+/// of its own day is before it. For an edit (`Some(entry)`, the posting's current entry) the entries
+/// of the day count only if their posting is placed before the edited posting, so the
+/// posting itself, with its reversals and its new versions, is left out whatever number its latest
+/// entry has, and an entry written after it the same day is left out. It looks up the entry of each
+/// line of the accounts, so its cost grows with their own lines and not with the entries of the
+/// journal after the day; it is meant for a few small accounts (sellers). An account with no line is
+/// not in the answer.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn totals_before_posting(
+    conn: &Connection,
+    ids: &[i64],
+    date_iso: &str,
+    edited_entry: Option<i64>,
+) -> rusqlite::Result<std::collections::HashMap<i64, Totals>> {
+    if ids.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
+    let anchor = match edited_entry {
+        Some(entry) => posting_anchor(conn, entry)?.or(Some(entry)),
+        None => None,
+    };
+    let mut statement = conn.prepare(&totals_before_posting_sql(ids.len()))?;
+    let mut args: Vec<rusqlite::types::Value> = vec![
+        rusqlite::types::Value::Text(date_iso.to_owned()),
+        anchor.map_or(
+            rusqlite::types::Value::Null,
+            rusqlite::types::Value::Integer,
+        ),
+    ];
+    args.extend(ids.iter().map(|id| rusqlite::types::Value::Integer(*id)));
+    let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
         Ok((
             r.get::<_, i64>(0)?,
             Totals {

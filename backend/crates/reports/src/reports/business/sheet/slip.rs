@@ -289,6 +289,12 @@ fn seller_summary(d: &SellerDay) -> Result<Vec<SummaryLine>, ReportsError> {
             "the lines of the seller's slip do not add up".to_owned(),
         ));
     }
+    // The rest of today's sale that goes into his account: today's net sale (never below 0) less
+    // what was paid today, never below 0 (Umar, PRD FR-12.23 v1.53, plan 91). It is made from the
+    // two printed lines. It is the `carry_paisa` of the بکری screen's summary when what was paid
+    // today is only the نقد of the lots (the slip's paid line also holds the day's ادائیگی).
+    let credit_today = signed(&sale)?.checked_neg()?.max(Paisa::ZERO);
+    let rest = credit_today.checked_sub(signed(&paid)?)?.max(Paisa::ZERO);
     let mut out = vec![line(ids::R35_GROSS, money(d.gross))];
     for (label, amount) in deduction_lines {
         if amount != Paisa::ZERO {
@@ -300,6 +306,7 @@ fn seller_summary(d: &SellerDay) -> Result<Vec<SummaryLine>, ReportsError> {
         out.push(line(ids::R35_OTHER, other));
     }
     out.push(line(ids::R35_PAID_TODAY, paid));
+    out.push(line(ids::R35_SALE_REST, money(rest)));
     out.push(line(ids::R35_TODAY_LEFT, left));
     out.push(line(ids::R35_PREVIOUS, previous));
     if d.opening != Paisa::ZERO {

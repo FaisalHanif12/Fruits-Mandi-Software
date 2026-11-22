@@ -37,6 +37,10 @@ edit-band = You are changing { $what } { $number } ({ $date })
 # review: pending
 edit-band-date-fixed = Its day cannot be changed. To move it to another day, cancel it and enter it again on the right day.
 
+# What a voucher's band says can be changed (plan 89, PRD FR-7.70): everything typed, but not the day.
+# review: pending
+edit-band-can-voucher = You can change the amount, the account and the narration. Only the day cannot change; to move it to another day, cancel it and enter it again on the right day.
+
 # The days that were reopened for this fix. $days: the dates, DD-MM-YYYY, one after another.
 # review: pending
 edit-band-days = Days reopened: { $days }. They close again after you save.

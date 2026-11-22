@@ -1396,6 +1396,10 @@ report-r35-phone = { -phone }
 # review: pending
 report-r35-store-rent = { -kiraya-store }
 
+# The rest of today's credit after the cash, put to the seller's account: his slip and bill show the same line as the screen (plan 91, Umar 21-11-2026).
+# review: pending
+report-r35-sale-rest = { -bikri } کی باقی رقم، کھاتے میں جمع
+
 # review: pending
 report-r35-net-sale = آج کی { -safi-bikri }
 

@@ -4,9 +4,10 @@
 // reopens the day, and then the voucher can be changed. No input exists on this screen.
 
 import { Localized } from '@fluent/react';
+import { useEntryMarks } from '../../../shared/edit';
 import { isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Card, Code, Fact, Notice, Num } from '../../../shared/ui';
+import { Card, Code, EditStampLine, Fact, Notice, Num, fieldMark } from '../../../shared/ui';
 import { screenTypeOf } from '../screen-type';
 import type { VoucherRow } from '../types';
 
@@ -14,6 +15,8 @@ export function SavedVoucherView({ row }: { row: VoucherRow }) {
   const language = useLanguage();
   const type = screenTypeOf(row.voucher_type);
   const cancelled = row.status === 'cancelled';
+  // What an edit changed, marked "Before ..." on the field, and the stamp of the last edit (plan 89, PRD FR-7.71).
+  const marks = useEntryMarks('voucher', row.id, row.edited !== null);
   return (
     <div className="flex flex-col gap-4">
       {cancelled ? (
@@ -25,6 +28,9 @@ export function SavedVoucherView({ row }: { row: VoucherRow }) {
         <Notice tone="info">
           <Localized id="vouchers-view-closed" />
         </Notice>
+      )}
+      {row.edited === null ? null : (
+        <EditStampLine stamp={row.edited} history={{ entity: 'voucher', id: row.id }} />
       )}
       <Card compact>
         <dl className="grid grid-cols-2 gap-4 normal:grid-cols-3">
@@ -44,7 +50,10 @@ export function SavedVoucherView({ row }: { row: VoucherRow }) {
             {row.account === null ? null : displayName(row.account, language)}
           </Fact>
           <Fact stat label={<Localized id="vouchers-field-amount" />}>
-            <Num inherit paisa={row.amount_paisa} />
+            <span className="flex flex-wrap items-center gap-2">
+              <Num inherit paisa={row.amount_paisa} />
+              {fieldMark(marks, 'amount_paisa')}
+            </span>
           </Fact>
           {row.reason === '' ? null : (
             <Fact label={<Localized id="vouchers-field-reason-lent" />}>{row.reason}</Fact>

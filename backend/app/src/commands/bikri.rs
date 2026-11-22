@@ -11,8 +11,9 @@ use mandi_services::core::bikri::{
     BikriSaveInput, BikriSaved, CancelInput, CancelPreview, CancelPreviewInput, EditOpenInput,
     EditPreviewInput, EditSaveInput, EditableBikri, LaterSaleInput, LaterSaleSaveInput,
     LaterSaleSaved, MixedSaleInput, MixedSalePreview, MixedSaleSaveInput, MixedSaleSaved,
-    MixedUndoInput, MixedUndoResult, StockList, StockListInput, UndoInput, UndoResult,
-    WriteOffDone, WriteOffInput, WriteOffUndoInput, WriteOffUndone,
+    MixedUndoInput, MixedUndoResult, SellerPaidSpread, SellerPaidSpreadInput, StockList,
+    StockListInput, UndoInput, UndoResult, WriteOffDone, WriteOffInput, WriteOffUndoInput,
+    WriteOffUndone,
 };
 use mandi_services::core::paging::PageInput;
 use mandi_services::{auth, bikri};
@@ -50,6 +51,24 @@ pub async fn bikri_preview<R: tauri::Runtime>(
     run(app, "bikri_preview", move |ctx| {
         auth::require(ctx)?;
         bikri::preview(ctx, &input.draft)
+    })
+    .await
+}
+
+/// Works out what a seller takes on the spot (موقع پر ادائیگی, PRD FR-12.23 v1.53, plan 91): the amount
+/// asked is spread over the نقد of his lots of this بکری, lot by lot in lot order, each up to its
+/// credit and all the rest on his last lot. Gives the نقد to write into each lot field and the
+/// preview of the draft with it in place (its `sellers` hold the summary lines). `entry_id` is the
+/// posting being edited, or null. Read only. Errors come back inside `preview.errors`, at
+/// `seller_paid[k].amount` and `seller_paid[k].seller_account_id`.
+#[tauri::command]
+pub async fn bikri_seller_paid_spread<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SellerPaidSpreadInput,
+) -> Result<SellerPaidSpread, UiError> {
+    run(app, "bikri_seller_paid_spread", move |ctx| {
+        auth::require(ctx)?;
+        bikri::seller_paid_spread(ctx, &input)
     })
     .await
 }

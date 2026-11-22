@@ -106,7 +106,7 @@ export function goodsLineColumns(
       field: LINE.otherQty,
       type: 'qty',
       headerId: 'goods-line-col-other-qty',
-      minWidth: FIT_MIN.heading,
+      minWidth: FIT_MIN.wrappedHeading,
       enterStop: false,
     },
     {

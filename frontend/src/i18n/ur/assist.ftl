@@ -129,6 +129,10 @@ working-sum = میزان ({ $count } لائن) = <num>{ $result }</num>
 # C6: the deductions of a lot.
 # review: pending
 working-deductions = <num>{ $freight }</num> + <num>{ $comm }</num> + <num>{ $labour }</num> + <num>{ $munshiana }</num> + <num>{ $cash }</num> + <num>{ $store_rent }</num> + <num>{ $phone }</num> = <num>{ $result }</num>
+# How a seller's new balance after a sale is worked out (plan 91): his balance before + what he was paid on the spot − today's net sale, with debit positive; a minus result is the shop owing him.
+# review: pending
+working-seller-new-balance = <num>{ $previous }</num> + <num>{ $paid }</num> − <num>{ $credit }</num> = <num>{ $result }</num> (پچھلا { -baqaya } + { -mauqa-par-adaigi } − آج کی { -safi-bikri }؛ منفی رقم { -jama } ہے)
+
 # C7: the net of a lot.
 # review: pending
 working-net = <num>{ $gross }</num> − <num>{ $deductions }</num> = <num>{ $result }</num>

@@ -60,7 +60,7 @@ pub(super) enum Body {
     Payment { payment: PaymentPlan },
     /// Money from a sale in another shop, with its journal entry. `arrival_id` is the arrival the
     /// goods come from, and `moved` how many نگ the sale moves from our shop's part to the part for
-    /// another shop (plan 35 D1).
+    /// another shop: always 0 since v1.52 (plan 90), kept for the entries saved before it.
     OtherSale {
         entry: BalancedEntry,
         qty: i64,
@@ -405,7 +405,8 @@ fn plan_other_sale(
     // The goods come from an arrival of the garden (PRD FR-12.41): required when the garden has
     // any arrival, and typed by hand as before when it has none.
     let mut arrival_id = None;
-    let mut moved = 0_i64;
+    // Always 0 since v1.52: the entries saved before it keep what they moved, for their cancel.
+    let moved = 0_i64;
     // (our left, other left, total left) of the linked arrival before this sale.
     let mut left_before: Option<(i64, i64, i64)> = None;
     if let Some(g) = garden.as_ref() {
@@ -441,17 +442,16 @@ fn plan_other_sale(
                                 );
                             }
                         }
-                        // The other shop's part first; the rest is moved from our shop's part. It
-                        // is refused only above all the نگ left.
-                        if let Some(q) = qty {
-                            if q.get() > parts.total_left {
-                                errors.push(
-                                    FieldError::new(ErrorCode::ErrQtyExceedsLot, "qty")
-                                        .with("available", ErrorValue::Number(parts.total_left)),
-                                );
-                            } else {
-                                moved = q.get().saturating_sub(parts.other_left).max(0);
-                            }
+                        // The goods come only from the arrival's part for another shop (PRD
+                        // FR-12.41, v1.52, plan 90). Above it the sale is refused with the number
+                        // left; nothing is ever moved from our shop's part.
+                        if let Some(q) = qty
+                            && q.get() > parts.other_left
+                        {
+                            errors.push(
+                                FieldError::new(ErrorCode::ErrQtyExceedsOtherShop, "qty")
+                                    .with("remaining", ErrorValue::Number(parts.other_left)),
+                            );
                         }
                         left_before = Some((parts.our_left, parts.other_left, parts.total_left));
                         arrival_id = Some(a.id);
@@ -629,9 +629,9 @@ pub(super) fn save(
                 source_id: id,
             },
         )?;
-        // The goods of a sale in another shop go out of the arrival: its part for another shop first,
-        // and the rest from our shop's part (PRD FR-12.41, plan 35 D1). The move keeps the journal
-        // entry, so a cancel gives back exactly these.
+        // The goods of a sale in another shop go out of the arrival's part for another shop (PRD
+        // FR-12.41, v1.52). Nothing is moved from our shop's part (`moved` is 0). The move keeps the
+        // journal entry, so a cancel gives back exactly these.
         if let (Some(arrival_id), Some(qty)) = (arrival_id, qty) {
             let qty_out = qty
                 .checked_neg()

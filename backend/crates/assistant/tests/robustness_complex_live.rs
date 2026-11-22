@@ -21,6 +21,8 @@
 //! - `MANDI_CX_OUT`: where to write the lines. `MANDI_CX_BUDGET`: dollars this run may spend.
 //! - `MANDI_CX_LOCAL`: `1` (default) keeps the app's own instant answers; `0` sends every question
 //!   to the model.
+//! - `MANDI_CX_WARM`: `1` (default) sends the panel's warm-up call once, before the first question of
+//!   the run, as the panel does when it opens (plan 82, NFR-SEC-9 v1.22); `0` leaves it out.
 #![cfg(test)]
 
 #[path = "../../services/tests/common/mod.rs"]
@@ -48,6 +50,9 @@ const PRICE_OUT: f64 = 0.50;
 const FEE: f64 = 1.055;
 /// What one question may still cost in the worst case, kept free before it starts.
 const WORST_QUESTION: f64 = 0.02;
+/// What the warm-up call costs at most: the fixed part of a request (about 11,700 tokens, none
+/// cached) and 16 output tokens.
+const WARM_COST: f64 = 0.002;
 
 fn cost(tokens_in: i64, cached: i64, out: i64) -> f64 {
     let fresh = (tokens_in - cached).max(0) as f64;
@@ -67,7 +72,10 @@ fn parse_today(text: &str) -> (i32, u32, u32) {
 }
 
 /// A fresh copy of the database in a temp folder, opened as the app opens it.
-fn fresh_env(source: &Path, today: (i32, u32, u32)) -> (tempfile::TempDir, mandi_services::testing::TestEnv) {
+fn fresh_env(
+    source: &Path,
+    today: (i32, u32, u32),
+) -> (tempfile::TempDir, mandi_services::testing::TestEnv) {
     let dir = tempfile::tempdir().expect("a folder for the copy");
     std::fs::create_dir_all(dir.path().join("data")).expect("the data folder");
     std::fs::copy(source, dir.path().join("data").join("mandi.db")).expect("the copy");
@@ -76,8 +84,11 @@ fn fresh_env(source: &Path, today: (i32, u32, u32)) -> (tempfile::TempDir, mandi
         from.push(ext);
         let from = PathBuf::from(from);
         if from.exists() {
-            std::fs::copy(&from, dir.path().join("data").join(format!("mandi.db{ext}")))
-                .expect("the side file");
+            std::fs::copy(
+                &from,
+                dir.path().join("data").join(format!("mandi.db{ext}")),
+            )
+            .expect("the side file");
         }
     }
     let env = mandi_services::testing::TestEnv::new(dir.path()).expect("open the copy");
@@ -129,7 +140,8 @@ fn offline_complex_questions() {
 }
 
 fn run_list(offline: bool) {
-    let source = PathBuf::from(std::env::var("MANDI_CX_DB").expect("MANDI_CX_DB: a copy of the database"));
+    let source =
+        PathBuf::from(std::env::var("MANDI_CX_DB").expect("MANDI_CX_DB: a copy of the database"));
     let questions_path = std::env::var("MANDI_CX_QUESTIONS").expect("MANDI_CX_QUESTIONS");
     let world = std::env::var("MANDI_CX_WORLD").expect("MANDI_CX_WORLD");
     let only: Vec<String> = env_or("MANDI_CX_ONLY", "")
@@ -140,6 +152,7 @@ fn run_list(offline: bool) {
     let budget: f64 = env_or("MANDI_CX_BUDGET", "0.40").parse().expect("a number");
     let today = parse_today(&std::env::var("MANDI_CX_TODAY").expect("MANDI_CX_TODAY"));
     let local = env_or("MANDI_CX_LOCAL", "1") == "1";
+    let warm_on = env_or("MANDI_CX_WARM", "1") == "1" && !offline;
     let out_path = PathBuf::from(std::env::var("MANDI_CX_OUT").expect("MANDI_CX_OUT"));
 
     let all: Vec<Value> = serde_json::from_str(
@@ -178,10 +191,15 @@ fn run_list(offline: bool) {
 
     let live_client = OpenRouterClient;
     let offline_client = OfflineClient;
-    let client: &dyn ModelClient = if offline { &offline_client } else { &live_client };
+    let client: &dyn ModelClient = if offline {
+        &offline_client
+    } else {
+        &live_client
+    };
     let emit = |_s| {};
     let mut out = String::new();
     let mut spent = 0.0_f64;
+    let mut warmed = !warm_on;
     let mut i = 0;
     while i < list.len() {
         // One group: a question and the follow-ups after it, on one copy of the books.
@@ -202,6 +220,21 @@ fn run_list(offline: bool) {
                 cloud_age_hours: None,
             },
         };
+        if !warmed {
+            // The panel warms the line when it opens; here once, before the first question.
+            let began = Instant::now();
+            let outcome = mandi_assistant::warm::warm(&deps);
+            spent += WARM_COST;
+            let millis = i64::try_from(began.elapsed().as_millis()).unwrap_or(i64::MAX);
+            eprintln!("warm-up: {outcome:?} in {millis} ms");
+            out.push_str(
+                &json!({"id": "_warm", "question": "warm-up", "outcome": format!("{outcome:?}"),
+                        "millis": millis, "cost": WARM_COST})
+                .to_string(),
+            );
+            out.push('\n');
+            warmed = true;
+        }
         let mut conversation: Option<String> = None;
         for q in &list[i..j] {
             let id = q["id"].as_str().unwrap_or("?");

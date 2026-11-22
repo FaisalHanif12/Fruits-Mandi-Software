@@ -308,11 +308,11 @@ trips-cost-spread-qty = ({ $qty } { -nag })
 trips-sale-purchase = Goods from
 
 # review: pending
-trips-sale-purchase-hint = Only purchases of this trip with goods left are listed. The goods set for { -dusri-dukan } are sold first. If you sell more, the rest comes from { -apni-dukan }, and the screen tells you how many.
+trips-sale-purchase-hint = Only purchases of this trip that still have { -nag } left for { -dusri-dukan } are listed. You cannot sell more { -nag } than that. The shop name is filled from the purchase; you can change it.
 
-# $number: the purchase; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
+# $number: the purchase; $other_left: how many { -nag } are left for { -dusri-dukan }.
 # review: pending
-trips-sale-purchase-option = { $number }: { $item }, { $packing } ({ $other_left } left for { -dusri-dukan }, { $our_left } for { -apni-dukan })
+trips-sale-purchase-option = { $number }: { $item }, { $packing } ({ $other_left } left for { -dusri-dukan })
 
 # review: pending
 trips-sale-shop = Shop
@@ -355,6 +355,9 @@ trips-purchases-title = Purchases of this trip
 
 # review: pending
 trips-purchases-label = List of the purchases of this trip
+
+# review: pending
+trips-purchases-failed = The purchases could not be read
 
 # review: pending
 trips-purchases-empty = No purchase yet

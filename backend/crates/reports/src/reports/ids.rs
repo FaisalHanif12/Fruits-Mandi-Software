@@ -204,6 +204,11 @@ pub(crate) const R35_OTHER: &str = "report-r35-other";
 pub(crate) const R35_PAID_TODAY: &str = "report-r35-paid-today";
 /// آج کا باقی: today's total + other entries − paid, with a side.
 pub(crate) const R35_TODAY_LEFT: &str = "report-r35-today-left";
+/// بکری کی باقی رقم، کھاتے میں جمع: on a seller's slip, today's net sale less what was paid on the spot
+/// (نقد and the day's payments), never below 0: the part of today's sale that goes into his account
+/// (Umar, plan 91, PRD FR-12.23 v1.53). Always shown on a seller's slip. It never changes a
+/// figure; it is the same number as `carry_paisa` of the بکری screen's seller summary.
+pub(crate) const R35_SALE_REST: &str = "report-r35-sale-rest";
 /// نیا بقایا: the balance at the end of the day, with a side.
 pub(crate) const R35_NEW_BALANCE: &str = "report-r35-new-balance";
 /// خام بکری: the seller's gross.

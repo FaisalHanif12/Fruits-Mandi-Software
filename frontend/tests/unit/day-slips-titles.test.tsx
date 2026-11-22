@@ -142,7 +142,12 @@ describe.each(['en', 'ur'] as const)('the title of a party slip (%s)', (language
     expect(sellerLabels).toContain(m('report-r35-today-left-seller'));
     expect(sellerLabels).not.toContain(m('report-r35-paid-today'));
     expect(visible(sellers.textContent)).toContain(m('print-slip-side-cr'));
-    // The ledger's book words are not on a slip.
-    expect(visible(sellers.textContent)).not.toContain(m('report-side-cr'));
+    // The ledger's book words are not on a slip. The one line whose label is Umar's own wording ("... credited to
+    // his account", PRD FR-12.23 v1.53) is set aside: it uses the plain verb, never the side of a balance.
+    const withoutRest = sellers.cloneNode(true) as HTMLElement;
+    for (const row of withoutRest.querySelectorAll('.print-slip-lines tr')) {
+      if (visible(row.querySelector('th')?.textContent) === m('report-r35-sale-rest')) row.remove();
+    }
+    expect(visible(withoutRest.textContent)).not.toContain(m('report-side-cr'));
   });
 });

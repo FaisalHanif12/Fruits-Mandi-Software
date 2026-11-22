@@ -89,6 +89,10 @@ pub struct Input {
     pub sort: Option<Vec<SortKey>>,
     /// How many rows.
     pub rows: Option<i64>,
+    /// One expense head (a key from `find` role `expense_head`), view M only: its row alone. The app's own read of a
+    /// question about one head sets it; the model's schema does not have it (plan 82, live check Y03).
+    #[serde(default)]
+    pub head: Option<String>,
 }
 
 fn bad(code: &str, field: &str, detail: &str) -> ToolError {
@@ -276,6 +280,19 @@ fn build_filters(
     }
     let mut compare = AnalyticsCompare::Off;
     let mut notes: Vec<String> = Vec::new();
+    // A follow-up that names no period is about the period of the question before.
+    if parsed.from.is_none()
+        && parsed.to.is_none()
+        && parsed.compare.is_none()
+        && takes.contains(&K::Period)
+        && let Some((from, to)) = super::scope::follow_up_span(env, state)
+    {
+        notes.push(super::scope::follow_up_note(&from, &to));
+        filters.from = from.clone();
+        source.from = from;
+        filters.to = to.clone();
+        source.to = to;
+    }
     if let Some(word) = &parsed.compare {
         'compare: {
             compare = match word.as_str() {
@@ -691,10 +708,26 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: Input = input(args)?;
     let view: AnalyticsView = serde_json::from_value(Json::String(parsed.view.clone()))
         .map_err(|_| bad("ERR_OUT_OF_RANGE", "view", "A to K"))?;
-    let entry = catalog()
+    // View M (the shop's expenses by head, with a column for each day, month or year) is read by the app's own
+    // reads before the model answers (plan 82, Y03); the model's instructions still name A to K.
+    let mut entry = catalog()
         .into_iter()
+        .chain(
+            mandi_reports::analytics::screen_catalog()
+                .into_iter()
+                .filter(|e| e.id == AnalyticsView::M),
+        )
         .find(|e| e.id == view)
-        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "view", "A to K"))?;
+        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "view", "A to K, M"))?;
+    // Views A, B, C and E group their rows by day, month or year as the screens do (PRD FR-18.9, plan 82, D6
+    // v1.14): one set of rows for each bucket, each row with its period, and the totals over the whole period.
+    if matches!(
+        view,
+        AnalyticsView::A | AnalyticsView::B | AnalyticsView::C | AnalyticsView::E
+    ) && !entry.filters.contains(&AnalyticsFilterKind::GroupBy)
+    {
+        entry.filters.push(AnalyticsFilterKind::GroupBy);
+    }
     let rows_wanted = parsed.rows.unwrap_or(DEFAULT_ROWS);
     if !(1..=MAX_ROWS).contains(&rows_wanted) {
         return Err(bad("ERR_OUT_OF_RANGE", "rows", "1 to 100").into());
@@ -782,9 +815,49 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
             }
         }
     };
+    let (page, rows) = match &parsed.head {
+        Some(head) => one_head(env, state, view, page, rows, head)?,
+        None => (page, rows),
+    };
     let mut draft = assemble(env, args, view, &built, &page, &rows, hidden_parts);
     draft.partner_data = partner_data;
     Ok(draft)
+}
+
+/// View M for one expense head: its row, and its figures as the totals (one row, so its cells are the totals).
+fn one_head(
+    env: &Env<'_>,
+    state: &State,
+    view: AnalyticsView,
+    mut page: AnalyticsPage,
+    rows: Vec<mandi_reports::analytics::AnalyticsRow>,
+    head: &str,
+) -> Result<(AnalyticsPage, Vec<mandi_reports::analytics::AnalyticsRow>), ToolError> {
+    if view != AnalyticsView::M {
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            "head",
+            "a head is read in view M only",
+        ));
+    }
+    let found = super::record(env, state, head, "head")?;
+    if found.prefix != "eh" {
+        return Err(bad(
+            "ERR_FORMAT_INVALID",
+            "head",
+            "this key is another kind of record",
+        ));
+    }
+    let account = super::report::head_account_of(env, found.id)?;
+    let kept: Vec<_> = rows
+        .into_iter()
+        .filter(|row| row.key.as_ref().and_then(|k| k.head_id) == Some(account))
+        .collect();
+    if let [only] = kept.as_slice() {
+        page.totals = only.cells.clone();
+    }
+    page.total_count = i64::try_from(kept.len()).unwrap_or(i64::MAX);
+    Ok((page, kept))
 }
 
 /// The row as a node: its cells by column key, and with a comparison its `earlier` and

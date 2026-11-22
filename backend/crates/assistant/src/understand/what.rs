@@ -45,6 +45,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         },
         two_figures: false,
         lower_ask: false,
+        gross_beside: false,
         period_merged: false,
         sum_asked: false,
         compare: false,
@@ -76,6 +77,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         commission_side: None,
         sale_measure: None,
         laga_view: super::LagaView::Whole,
+        breakdown_grain: None,
         buyer_rate: false,
         document_number: false,
         packing_filter: false,
@@ -87,6 +89,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         pay_kind: None,
         pay_asked: false,
         unexplained: false,
+        instant_stop: false,
         role_word: false,
         seller_word: false,
         buyer_word: false,
@@ -264,6 +267,27 @@ fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
     let account_party = roles
         .iter()
         .any(|r| matches!(r, PartyRole::Buyer | PartyRole::Seller));
+    // "bikri walon se": the sellers, not a sale asked (plan 82, Y28).
+    if hit.cue == Cue::Sale
+        && scan.hits.iter().any(|c| {
+            matches!(c.cue, Cue::ManySellers | Cue::RoleSeller)
+                && c.start <= hit.start
+                && hit.end <= c.end
+                && c.end.saturating_sub(c.start) > 1
+        })
+    {
+        return None;
+    }
+    // "chukta khate walon": "khate" is part of the name of the walk-in buyers' account, not a ledger asked
+    // (plan 82, D28).
+    if hit.cue == Cue::Ledger
+        && scan
+            .hits
+            .iter()
+            .any(|c| c.cue == Cue::Chukta && c.end == hit.start)
+    {
+        return None;
+    }
     Some(match hit.cue {
         Cue::Balance => FigureKind::Balance,
         // "kitne bikri hue", "how many sale": how many, not how much. "kitni bikri" and "kitne ki
@@ -1371,7 +1395,12 @@ pub(super) fn assemble(
         has_period: !periods.is_empty(),
         has_unexplained_words: unexplained_words(scan, &names, &periods),
     };
-    let (mut kinds, figure_at, two_figures, lower_ask) = figures(scan, &named);
+    let (mut kinds, figure_at, two_figures, mut lower_ask) = figures(scan, &named);
+    // "chukta khate walon ne kitna maal khareeda": "khate" belongs to the name of the walk-in buyers' account, it
+    // asks for no ledger (plan 82, D28).
+    if scan.has_exact(Cue::Chukta) && names.parties.is_empty() {
+        kinds.retain(|k| *k != FigureKind::Ledger);
+    }
     // "pump wala bagh mein kitna paisa laga": beside a garden or a trip, "laga" is the verb (how much was
     // spent), not the Laga charge: the question asks the garden's or the trip's result (plan 82, D11).
     if kinds.contains(&FigureKind::Laga)
@@ -1384,6 +1413,22 @@ pub(super) fn assemble(
         if kinds.is_empty() {
             kinds.push(FigureKind::Result);
         }
+    }
+    // "What share of the shop's total commission came from Mani, in percent": a share of the commission or the sale
+    // of a buyer or a seller is a percent of the shop's, never a partner's share (it was refused as a partner
+    // question, live check D25). The app writes no percent, so no instant line; the model reads and calculates.
+    if kinds.contains(&FigureKind::PartnerShare)
+        && kinds
+            .iter()
+            .any(|k| matches!(k, FigureKind::Commission | FigureKind::Sale))
+        && roles
+            .iter()
+            .any(|r| matches!(r, PartyRole::Buyer | PartyRole::Seller))
+        && !roles.contains(&PartyRole::Partner)
+        && !scan.has(Cue::RolePartner)
+    {
+        kinds.retain(|k| *k != FigureKind::PartnerShare);
+        lower_ask = true;
     }
     // An advance and a payable belong to a seller: a name found only as a seller is the seller asked
     // for, though "ne ... li" reads like a buyer ("tahir ne kitni peshgi li hui hai", live run 2, Q610).
@@ -1634,6 +1679,7 @@ pub(super) fn assemble(
         figures: part(kinds, figure_confidence),
         two_figures,
         lower_ask,
+        gross_beside: false,
         period_merged,
         sum_asked,
         compare,
@@ -1676,6 +1722,7 @@ pub(super) fn assemble(
         commission_side,
         sale_measure: None,
         laga_view: super::LagaView::Whole,
+        breakdown_grain: None,
         buyer_rate: super::reads::buyer_rate(scan),
         asks_count: count_asks > 0,
         count_asks,
@@ -1685,6 +1732,7 @@ pub(super) fn assemble(
         pay_kind: super::reads::pay_kind(scan),
         pay_asked: super::reads::pay_asked(scan),
         unexplained: unexplained_flag,
+        instant_stop: false,
         role_word: scan.has_any(&[
             Cue::RoleBuyer,
             Cue::ManyBuyers,
@@ -1778,10 +1826,11 @@ pub(super) fn assemble(
     {
         understanding.doubts.push(Doubt::NoParty);
     }
-    // A figure about someone needs the someone.
+    // A figure about someone needs the someone. The walk-in buyers together are someone ("chukta ne kitna liya").
     if matches!(understanding.intent.value, Intent::Figure)
         && needs_party(&understanding.figures.value)
         && understanding.parties.is_empty()
+        && !understanding.chukta_group
     {
         understanding.doubts.push(Doubt::NoParty);
     }
@@ -1824,6 +1873,14 @@ pub(super) fn assemble(
         understanding.doubts.retain(|d| *d != Doubt::UnknownWords);
         understanding.unexplained = false;
     }
+    // No instant line for a question with a word the app did not understand, or a known word that changes the
+    // figure and that no plan reads: the reads are made, the model answers (plan 82).
+    understanding.breakdown_grain = super::measure_words::grain_of(scan);
+    understanding.instant_stop = understanding.unexplained
+        || super::measure_words::measure_word_left(scan, &understanding)
+        || (understanding.cash_dirs.is_empty()
+            && understanding.capital_flow.is_none()
+            && changing_word(scan, &spans, &understanding.periods, &measure_spans));
     understanding.sure = is_sure(&understanding);
     // Two or more periods of one figure ("august, september and october", "this month and last month")
     // are not a doubt when every period can be read: the app plans the reads, and the run starts only
@@ -2160,4 +2217,68 @@ fn cash_and_credit_sales(kinds: &[FigureKind]) -> bool {
     );
     (cash_register && credit_register)
         || (has(&FigureKind::Cash) && (cash_register || credit_register))
+}
+
+/// Known words that change the figure asked and that no plan reads: a choice ("koi aur", "other"), a
+/// comparison ("kam", "zyada", "less", "more"), a denial ("nahi", "not"), a return ("wapas"),
+/// a second clause ("lekin", "magar") and a time relation ("pehle", "baad", "before", "after"). They stop
+/// the app's own instant line; a word inside a name or a period is not counted.
+///
+/// Example: "mani ki abhi tak ki commission koi aur" is "his commission, and some other": not a figure the
+/// app writes alone.
+const CHANGING_WORDS: &[&str] = &[
+    "koi",
+    "kuch",
+    "kam",
+    "zyada",
+    "ziada",
+    "wapas",
+    "nahi",
+    "nahin",
+    "nhi",
+    "lekin",
+    "magar",
+    "other",
+    "else",
+    "less",
+    "more",
+    "not",
+    "but",
+    "except",
+    "کوئی",
+    "کچھ",
+    "کم",
+    "زیادہ",
+    "واپس",
+    "نہیں",
+    "لیکن",
+    "مگر",
+];
+
+fn changing_word(
+    scan: &Scan,
+    spans: &[(usize, usize)],
+    periods: &[PeriodRef],
+    measure_spans: &[(usize, usize)],
+) -> bool {
+    let words: std::collections::HashSet<String> = CHANGING_WORDS.iter().map(|w| key(w)).collect();
+    let period_runs: Vec<(usize, usize)> = periods
+        .iter()
+        .filter_map(|p| super::when::period_run(scan, p))
+        .collect();
+    // "kal se pehle", "is mahine se baad": a time relation to a period, which no plan reads. "haroon pehle ..." (earlier)
+    // is not one.
+    let relation = |at: usize, w: &String| {
+        matches!(w.as_str(), "pehle" | "baad" | "before" | "after")
+            && at
+                .checked_sub(1)
+                .and_then(|b| scan.word(b))
+                .is_some_and(|p| matches!(p, "se" | "ke" | "from" | "since" | "تک" | "سے"))
+    };
+    scan.words.iter().enumerate().any(|(at, w)| {
+        (words.contains(w) || relation(at, w))
+            && !spans.iter().any(|(s, e)| *s <= at && at < *e)
+            && !measure_spans.iter().any(|(s, e)| *s <= at && at < *e)
+            && !period_runs.iter().any(|(s, e)| *s <= at && at < *e)
+    })
 }

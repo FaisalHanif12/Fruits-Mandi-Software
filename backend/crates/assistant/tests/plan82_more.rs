@@ -218,3 +218,127 @@ fn who_gave_the_most_commission_reads_the_buyers_own_column_not_the_total_of_bot
         );
     }
 }
+
+/// A question the app answers by itself (no model call) shows the figures asked, nothing else.
+fn instant(h: &Harness, question: &str) -> Vec<i64> {
+    let client = NoModel::default();
+    let (reply, took) = ask_with(h, &client, question);
+    assert_eq!(client.calls(), 0, "{question}: the model was called");
+    assert_eq!(
+        reply.outcome,
+        AskOutcome::Answered,
+        "{question}: {reply:#?}"
+    );
+    assert!(took < Duration::from_secs(1), "{question}: took {took:?}");
+    shown(&reply)
+}
+
+#[test]
+fn a_word_the_app_did_not_understand_stops_every_instant_answer_even_a_party_line() {
+    // The lead's rule of 21-11-2026: the app never answers AROUND a word. Each wording below has one word that
+    // changes the figure ("chai" a filter, "bina" a denial, "koi aur" another one, "kam" a comparison, "wapas"
+    // a return, "pehle" a time relation, "xyzzy" nothing known). The model client fails, so a question that
+    // reaches it is counted; before this rule every one was answered with Mani's full commission 1,200 / 160 /
+    // 1,360 or his zero.
+    let h = production();
+    for question in [
+        "mani ki chai wali commission abhi tak",
+        "mani ki commission abhi tak kitni hai bina hisab ke",
+        "mani ne kal se pehle kitni commission di",
+        "mani ne abhi tak kitni commission di aur kitna wapas hua",
+        "mani ki abhi tak ki commission koi aur",
+        "mani ki abhi tak ki bikri bina commission ke",
+        "mani ki abhi tak ki bikri pehle wali nahi",
+        "mani ki commission abhi tak kam ho gayi kitni hai",
+        "mani ki abhi tak ki commission xyzzy",
+    ] {
+        let client = NoModel::default();
+        let (reply, _) = ask_with(&h, &client, question);
+        assert!(
+            client.calls() > 0,
+            "{question}: answered by the app around a word: {reply:#?}"
+        );
+    }
+    // The light verbs and pronouns around the figure are no word of that kind: still answered.
+    assert_eq!(
+        instant(
+            &h,
+            "mani ne abhi tak shop ko kitni commission banwa kr di ?"
+        ),
+        [1_200, 160, 1_360]
+    );
+}
+
+#[test]
+fn the_net_sale_the_bills_the_profit_and_the_commission_sides_are_answered_by_the_app() {
+    // The sentences exist now (plan 82): the net sale is R6's `net` total, the bills R2's `buyer_total`, never
+    // the gross (260,500) or the dues. D8 books: net 244,870, bills 278,610, Mani's bill 21,360 (E2E-65),
+    // November's profit = its shared income 27,940 (the books have no shop expense), and the commission
+    // without Laga is its two sides 15,630 and 15,630.
+    let h = production();
+    for question in [
+        "abhi tak ki safi bikri kitni hai ?",
+        "What is the net sale so far?",
+        "اب تک کی صافی بکری کتنی ہے؟",
+    ] {
+        assert_eq!(instant(&h, question), [244_870], "{question}");
+    }
+    for question in [
+        "What is the total of all buyer bills so far?",
+        "abhi tak gahakon ko kul kitne ke bill bane",
+    ] {
+        assert_eq!(instant(&h, question), [278_610], "{question}");
+    }
+    assert_eq!(
+        instant(&h, "mani ke bill ki kul raqam kitni hai abhi tak ?"),
+        [21_360]
+    );
+    assert_eq!(instant(&h, "is mahine shop ka nafa kitna hai ?"), [27_940]);
+    assert_eq!(
+        instant(
+            &h,
+            "How much commission, not counting laga, has the shop earned so far?"
+        ),
+        [15_630, 15_630]
+    );
+}
+
+#[test]
+fn the_net_sale_or_the_bills_asked_beside_another_figure_are_not_answered_in_part() {
+    // "khaam bikri aur ... bill alag alag" asks two sale columns, "mani ke bill aur bakaya" a bill and a balance:
+    // one line would be a part of the answer. The model answers, with the reads made.
+    let h = production();
+    for question in [
+        "pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag batao",
+        "mani ke bill aur bakaya batao abhi tak",
+        "khaam aur safi bikri abhi tak dono batao",
+    ] {
+        let client = NoModel::default();
+        let (reply, _) = ask_with(&h, &client, question);
+        assert!(
+            client.calls() > 0,
+            "{question}: answered in part: {reply:#?}"
+        );
+    }
+}
+
+#[test]
+fn the_walk_in_buyers_asked_by_name_have_views_a_and_c_read_before_the_model_answers() {
+    // D28: "chukta khate walon": "khate" is part of the name of the account, not a ledger. The buyers of the
+    // walk-in account are read ahead: view A (commission) and view C (what each bought).
+    let h = production();
+    let (_, requests) = h.ask(
+        "chukta khate walon ne is mahine kitna maal khareeda ?",
+        None,
+        Vec::new(),
+    );
+    assert!(!requests.is_empty(), "the model was not asked");
+    let first = requests[0].to_string();
+    for view in ["A", "C"] {
+        assert!(
+            first.contains(&format!("\\\"view\\\":\\\"{view}\\\""))
+                || first.contains(&format!("\"view\":\"{view}\"")),
+            "view {view} was not read ahead: {first}"
+        );
+    }
+}

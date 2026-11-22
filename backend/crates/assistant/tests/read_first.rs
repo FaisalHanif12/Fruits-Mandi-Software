@@ -162,7 +162,11 @@ fn the_switches_turn_the_reads_and_the_low_effort_off() {
     h.ask_with("akram ka bakaya kitna hai", None, &client);
     let first = &client.requests()[0];
     assert!(results_in(first).is_empty(), "nothing read first");
-    assert_eq!(effort(first), "low", "plan 82: low whether or not the data was read");
+    assert_eq!(
+        effort(first),
+        "low",
+        "plan 82: low whether or not the data was read"
+    );
     // The reads on, the low effort off: the data is read and the model still thinks medium.
     let h = Harness::day();
     h.runtime.set_read_first(true);

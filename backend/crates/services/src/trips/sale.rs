@@ -62,7 +62,8 @@ pub(super) struct Ready {
     pub(super) note: Option<String>,
     pub(super) amount: Paisa,
     pub(super) qty: Qty,
-    /// نگ moved from our shop's part to the part for another shop by this sale (plan 35 D1).
+    /// نگ moved from our shop's part to the part for another shop by this sale: always 0 since v1.52
+    /// (plan 90). Kept for the entries saved before it, which a cancel and an edit still give back.
     pub(super) moved: i64,
     pub(super) cost: Paisa,
     pub(super) credits: Vec<CreditPart>,
@@ -180,10 +181,10 @@ pub(super) fn plan(
             .ok_or_else(|| data("the quantity of a purchase does not fit"))?,
         None => 0,
     };
-    // A sale in another shop takes its goods from the purchase's part for another shop first; what
-    // that part does not have is moved from our shop's part in the same save (PRD FR-12.41, plan 35
-    // D1). It is refused only above all the نگ left.
-    let (our_left, other_left, total_left) = match &purchase {
+    // A sale in another shop takes its goods only from the purchase's part for another shop (PRD
+    // FR-12.41, v1.52, plan 90). Above that part it is refused with the number left, and nothing is
+    // ever moved from our shop's part (this replaces plan 35 D1).
+    let (our_left, other_left) = match &purchase {
         Some(p) => {
             let parts = StockParts::of(
                 p.qty,
@@ -193,16 +194,16 @@ pub(super) fn plan(
                 p.qty_written_off,
             )
             .ok_or_else(|| data("the split of a purchase does not fit"))?;
-            (parts.our_left, parts.other_left, parts.total_left)
+            (parts.our_left, parts.other_left)
         }
-        None => (0, 0, 0),
+        None => (0, 0),
     };
     if let (Some(q), Some(_)) = (qty, purchase.as_ref())
-        && q.get() > total_left
+        && q.get() > other_left
     {
         errors.push(
-            FieldError::new(ErrorCode::ErrQtyExceedsLot, "qty")
-                .with("available", ErrorValue::Number(total_left)),
+            FieldError::new(ErrorCode::ErrQtyExceedsOtherShop, "qty")
+                .with("remaining", ErrorValue::Number(other_left)),
         );
     }
     let found = errors.finish().err().unwrap_or_default();
@@ -243,8 +244,12 @@ pub(super) fn plan(
     let qty_left_after = qty_left
         .checked_sub(qty.get())
         .ok_or_else(|| data("the quantity does not fit"))?;
-    let moved = qty.get().saturating_sub(other_left).max(0);
-    let qty_other_left_after = other_left.saturating_sub(qty.get()).max(0);
+    // Nothing is moved from our shop's part any more (v1.52). The field stays for the entries saved
+    // before it, whose cancel gives back what they moved.
+    let moved = 0;
+    let qty_other_left_after = other_left
+        .checked_sub(qty.get())
+        .ok_or_else(|| data("the quantity does not fit"))?;
     let numbers = OtherSaleNumbers {
         amount,
         qty: qty.get(),
@@ -263,7 +268,7 @@ pub(super) fn plan(
         credits: credits_view(&venture, &credits)?,
         qty_left_after,
         qty_other_left_after,
-        qty_our_left_after: our_left.saturating_sub(moved).max(0),
+        qty_our_left_after: our_left,
         qty_from_our_shop: moved,
         cost_left_after_paisa: cost_left.checked_sub(cost).map_err(money_error)?,
     };

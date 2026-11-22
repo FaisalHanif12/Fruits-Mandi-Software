@@ -228,7 +228,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     });
   });
 
-  it('changing the amount and pressing F10 sends the edit with the version, then a new form is ready', async () => {
+  it('changing the amount and pressing F10 sends the edit with the version, and the saved voucher stays with its stamp (plan 89)', async () => {
     const { user, router } = await open('/bikri/voucher?type=receipt&id=501');
     const amount = await labelled(language, 'vouchers-field-amount');
     await user.click(amount);
@@ -253,10 +253,13 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     expect(
       (await screen.findAllByText((content) => visible(content) === toast)).length,
     ).toBeGreaterThan(0);
+    // The voucher stays on the screen with the amount that was saved and the stamp of the edit; it does not
+    // jump to a blank form (plan 89, PRD FR-7.71).
     await waitFor(() => {
-      expect(router.state.location.search).not.toHaveProperty('id');
+      expect(document.querySelector('[data-edit-stamp]')).not.toBeNull();
     });
-    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('');
+    expect(router.state.location.search).toHaveProperty('id', 501);
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('9,000');
   });
 
   it('cancel asks what will happen and for a reason; an empty reason is told at its field and nothing is sent', async () => {

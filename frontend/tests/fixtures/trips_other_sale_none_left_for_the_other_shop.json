@@ -1,10 +1,10 @@
 {
   "errors": [
     {
-      "code": "ERR_QTY_EXCEEDS_LOT",
+      "code": "ERR_QTY_EXCEEDS_OTHER_SHOP",
       "field": "qty",
       "values": {
-        "available": 55
+        "remaining": 0
       }
     }
   ],

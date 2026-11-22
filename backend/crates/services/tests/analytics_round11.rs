@@ -31,7 +31,7 @@ use mandi_reports::reports::{Cell, PartyFilter, ReportFilters, ReportId, RowKind
 use mandi_services::core::auth::Language;
 use mandi_services::core::bikri::BikriSaveInput;
 use mandi_services::core::error::ErrorCode;
-use mandi_services::core::purchases::{PurchaseInput, PurchaseWriteOffInput};
+use mandi_services::core::purchases::{PurchaseGetInput, PurchaseInput, PurchaseWriteOffInput};
 use mandi_services::core::trips::{TripCostInput, TripInput};
 use mandi_services::core::ventures::{EntryPartInput, MoneySource, VenturePartnerInput};
 use mandi_services::{bikri, partners, purchases, trips};
@@ -726,8 +726,21 @@ fn the_commission_of_the_trip_screens_is_the_commission_of_view_j_e2e_34_and_e2e
     // A write-off adds and takes nothing (E2E-34b).
     write_off_5(&w, purchase);
     assert_eq!(screen_commissions(&w, trip), (1_200, 1_200, 1_200));
-    // A sale in another shop adds nothing: it is money, not a sale line of ours.
+    // A sale in another shop adds nothing: it is money, not a sale line of ours. The 5 left are set
+    // aside for another shop first (PRD FR-12.41, v1.52).
     let (w, trip, purchase, _) = trip_34();
+    let row = purchases::get(&w.env.ctx, &PurchaseGetInput { id: purchase }).unwrap();
+    purchases::change_split(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::split::SplitInput {
+            id: purchase,
+            version: row.version,
+            other_qty: "5".into(),
+            shop_name: None,
+        },
+    )
+    .unwrap();
     trips::other_sale_save(
         &w.env.ctx,
         &w.owner,

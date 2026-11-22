@@ -61,6 +61,7 @@ import {
   filledLines,
   lineCellErrors,
   linesText,
+  qtyAboveOther,
   weightRowIds,
   resetLines,
 } from '../../purchases';
@@ -76,7 +77,7 @@ import {
 } from '../draft';
 import {
   useArrivalEntryPreview,
-  useArrivalsList,
+  useAllArrivals,
   useGardenEntryPreview,
   useSaveArrivalEntry,
   useSaveGardenEntry,
@@ -116,7 +117,8 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
   const [lines] = useState(() => createEntryStore());
   const rows = lines((state) => state.rows);
   // The garden's goods arrived: a sale in another shop takes its نگ from one of them (FR-12.41).
-  const arrivalList = useArrivalsList(garden.id);
+  // All of them, not one page, so the list offers every line that has goods for another shop.
+  const arrivalList = useAllArrivals(garden.id);
   const arrivals = useMemo(
     () => arrivalList.data?.pages.flatMap((page) => page.rows) ?? [],
     [arrivalList.data],
@@ -145,6 +147,15 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
   const view = useGardenEntryPreview(input);
   const preview = input === null ? undefined : view.query.data;
   const previewFailed = input !== null && view.query.isError;
+  // How many نگ the chosen line has for another shop, when the qty typed is more (plan 90).
+  const pickedArrival =
+    draft.type === 'other_sale'
+      ? arrivals.find((arrivalRow) => String(arrivalRow.id) === draft.arrivalId)
+      : undefined;
+  const qtyAbove =
+    pickedArrival !== undefined && qtyAboveOther(draft.qty, pickedArrival.qty_other_left)
+      ? pickedArrival.qty_other_left
+      : null;
   // The check of the goods arrived lines: the same kind of answer, with no numbers.
   const arrivalInput = useMemo(
     () => (filled && arrival ? buildArrivalEntry(draft, rows, garden.id) : null),
@@ -243,6 +254,8 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
 
   const save = async (): Promise<boolean> => {
     setTried(true);
+    // More نگ than the line has for another shop is not saved: the qty field says so (plan 90).
+    if (qtyAbove !== null) return false;
     if (!arrival) return flow.save();
     setArrivalRefusal(null);
     try {
@@ -380,6 +393,8 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
                 onChange={change}
                 error={error}
                 arrivals={arrivals}
+                arrivalsLoading={arrivalList.isPending}
+                qtyAbove={qtyAbove}
               />
               {payment ? (
                 <div className="col-span-2 flex flex-col gap-1">

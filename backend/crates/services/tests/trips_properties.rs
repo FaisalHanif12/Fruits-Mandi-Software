@@ -28,6 +28,7 @@ use mandi_services::core::bikri::{
 use mandi_services::core::purchases::{
     PurchaseGetInput, PurchaseInput, PurchaseWriteOffInput, PurchaseWriteOffUndoInput,
 };
+use mandi_services::core::split::SplitInput;
 use mandi_services::core::trips::{
     OtherSaleInput, TripCostInput, TripEntryCancelInput, TripGetInput, TripInput,
 };
@@ -330,6 +331,8 @@ fn run(case: &Case) {
     for step in &case.steps {
         let row = purchases::get(&w.env.ctx, &PurchaseGetInput { id: saved.id }).unwrap();
         let left = row.qty_left;
+        // Our shop sells only its own part in a بکری (PRD FR-12.41); the rest is for another shop.
+        let ours = row.qty_our_left;
         match step {
             Step::OwnSale {
                 qty,
@@ -337,10 +340,10 @@ fn run(case: &Case) {
                 labour,
                 twin,
             } => {
-                if left == 0 {
+                if ours == 0 {
                     continue;
                 }
-                let qty = (*qty).min(left);
+                let qty = (*qty).min(ours);
                 let mut first = own_lot(&w, saved.id, qty);
                 if *labour > 0 {
                     first.labour = support::manual(&labour.to_string());
@@ -354,7 +357,7 @@ fn run(case: &Case) {
                         &rate.to_string(),
                     )],
                 )];
-                if *twin && left > qty {
+                if *twin && ours > qty {
                     let mut second = own_lot(&w, saved.id, 1);
                     second.key = "own-2".into();
                     lots.push(support::with_sales(
@@ -381,6 +384,22 @@ fn run(case: &Case) {
                 if left == 0 {
                     continue;
                 }
+                // A sale in another shop takes only the part set aside for another shop (PRD
+                // FR-12.41, v1.52): set aside what this sale needs first, from our shop's part.
+                let sold_now = (*qty).min(left);
+                if sold_now > row.qty_other_left {
+                    purchases::change_split(
+                        &w.env.ctx,
+                        &w.owner,
+                        &SplitInput {
+                            id: saved.id,
+                            version: row.version,
+                            other_qty: (row.qty_other + sold_now - row.qty_other_left).to_string(),
+                            shop_name: None,
+                        },
+                    )
+                    .unwrap();
+                }
                 let done = trips::other_sale_save(
                     &w.env.ctx,
                     &w.owner,
@@ -389,7 +408,7 @@ fn run(case: &Case) {
                         date: "10-10-2026".into(),
                         shop: Some("Haji Shop".into()),
                         purchase_id: Some(saved.id),
-                        qty: (*qty).min(left).to_string(),
+                        qty: sold_now.to_string(),
                         amount: amount.to_string(),
                         note: None,
                     },
@@ -418,7 +437,7 @@ fn run(case: &Case) {
                     continue;
                 }
                 let i = pick % live.len();
-                let available = left + live[i].qty0;
+                let available = ours + live[i].qty0;
                 let new_qty = (*qty).clamp(1, available);
                 let opened = bikri::open_for_edit(
                     &w.env.ctx,

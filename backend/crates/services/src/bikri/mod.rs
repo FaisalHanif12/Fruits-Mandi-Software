@@ -20,6 +20,7 @@ mod mixed;
 mod read;
 mod rows;
 mod save;
+mod seller_paid;
 mod shared;
 mod stock;
 
@@ -29,6 +30,7 @@ pub use later::{preview as later_sale_preview, save as later_sale_save};
 pub use mixed::{preview as mixed_preview, save as mixed_save, undo as mixed_undo};
 pub use read::{find, find_lots, find_page, get, list, list_whole, list_whole_paged, navigate};
 pub use save::save;
+pub use seller_paid::seller_paid_spread;
 pub use stock::{
     goods_sources, goods_to_load, list as stock_list, ready_goods, write_off, write_off_undo,
 };

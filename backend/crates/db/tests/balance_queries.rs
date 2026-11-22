@@ -13,8 +13,9 @@ use common::{account_id, setup};
 use mandi_db::ledger::{
     self, ACCOUNT_TOTALS_ALL_POSTED_SQL, DayMethod, LAST_DATE_LATER_ENTRIES,
     LAST_DATE_SAMPLE_LINES, PER_LINE_UP_TO_LINES, Totals, account_totals, account_totals_sql,
-    day_method, day_method_with, last_entry_date, last_entry_date_with, totals_for_accounts,
-    totals_for_accounts_sql, totals_of, totals_of_by, totals_of_per_line_sql, totals_of_sql,
+    day_method, day_method_with, last_entry_date, last_entry_date_with, posting_anchor,
+    totals_before_posting, totals_before_posting_sql, totals_for_accounts, totals_for_accounts_sql,
+    totals_of, totals_of_by, totals_of_per_line_sql, totals_of_sql,
 };
 use mandi_db::rusqlite::{Connection, params};
 
@@ -1062,4 +1063,170 @@ fn a_dormant_account_whose_newest_lines_are_all_drafts_gives_the_old_answer() {
         );
     }
     assert_eq!(last_entry_date(&conn, account).unwrap(), expected);
+}
+
+/// One posted entry with its own source and posting type and its stable order key, so a posting that
+/// was edited can be a reversal and a new entry that took the key of the entry it replaced.
+fn posted_of(
+    conn: &Connection,
+    date: &str,
+    kind: (&str, &str, i64),
+    lines: &[Line],
+    reverses: Option<i64>,
+    order_key: Option<i64>,
+) -> i64 {
+    let total: i64 = lines.iter().map(|l| l.dr).sum();
+    let (posting, source_type, source_id) = kind;
+    conn.execute(
+        "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, reverses_entry_id, total_paisa, order_key)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![date, posting, source_type, source_id, reverses, total, order_key],
+    )
+    .unwrap();
+    let entry = conn.last_insert_rowid();
+    for (index, l) in lines.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa, is_advance)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)",
+            params![entry, i64::try_from(index + 1).unwrap(), l.account, l.person, l.dr, l.cr],
+        )
+        .unwrap();
+    }
+    conn.execute(
+        "UPDATE journal_entries SET status = 'posted' WHERE id = ?1",
+        [entry],
+    )
+    .unwrap();
+    entry
+}
+
+/// The balance of a seller just before a posting (PRD FR-12.23 v1.53, plan 91): everything dated
+/// before the day, the entries of the day for a new posting, and for an edit only the entries of the
+/// day whose posting was written before the edited posting, however many times either was edited.
+/// A draft and the entries after the day are never in it.
+#[test]
+fn the_balance_before_a_posting_leaves_out_the_edited_posting_what_came_after_and_drafts() {
+    let (_dir, conn) = setup();
+    let seller = account_id(&conn, "02010002");
+    let cash = account_id(&conn, "01010001");
+    let pair = |dr: i64, cr: i64| {
+        let line = |account: i64, dr: i64, cr: i64| Line {
+            account,
+            dr,
+            cr,
+            person: None,
+            advance: false,
+        };
+        // The seller on one side and cash on the other, so the entry balances.
+        vec![line(seller, dr, cr), line(cash, cr, dr)]
+    };
+    let e1 = posted_of(
+        &conn,
+        "2026-10-09",
+        ("bikri_first", "bikri", 1),
+        &pair(3_000_000, 0),
+        None,
+        None,
+    );
+    let e2 = posted_of(
+        &conn,
+        "2026-10-10",
+        ("bikri_first", "bikri", 2),
+        &pair(0, 2_000_000),
+        None,
+        None,
+    );
+    let e3 = posted_of(
+        &conn,
+        "2026-10-10",
+        ("general", "voucher", 3),
+        &pair(500_000, 0),
+        None,
+        None,
+    );
+    // The second posting is edited: a reversal and a new entry that takes its place (the order key
+    // of the entry it replaces), both written after e3.
+    let r2 = posted_of(
+        &conn,
+        "2026-10-10",
+        ("reversal", "bikri", 2),
+        &pair(2_000_000, 0),
+        Some(e2),
+        None,
+    );
+    let e2b = posted_of(
+        &conn,
+        "2026-10-10",
+        ("bikri_first", "bikri", 2),
+        &pair(0, 2_500_000),
+        None,
+        Some(e2),
+    );
+    // A later sale of the same بکری, and another one: they share the source and the posting type but
+    // each is its own posting with its own place.
+    let l1 = posted_of(
+        &conn,
+        "2026-10-10",
+        ("bikri_later", "bikri", 2),
+        &pair(0, 100_000),
+        None,
+        None,
+    );
+    let l2 = posted_of(
+        &conn,
+        "2026-10-10",
+        ("bikri_later", "bikri", 2),
+        &pair(0, 200_000),
+        None,
+        None,
+    );
+    let _e4 = posted_of(
+        &conn,
+        "2026-10-11",
+        ("general", "voucher", 4),
+        &pair(100_000, 0),
+        None,
+        None,
+    );
+    // A draft of the day is never a balance.
+    let _draft = draft(&conn, "2026-10-09", &pair(9_900_000, 0), None);
+    let read = |date: &str, edited: Option<i64>| -> Option<(i64, i64)> {
+        totals_before_posting(&conn, &[seller], date, edited)
+            .unwrap()
+            .get(&seller)
+            .map(|t| (t.dr_paisa, t.cr_paisa))
+    };
+    // A new posting of the 10th: the 9th and everything already on the 10th, not the 11th.
+    assert_eq!(read("2026-10-10", None), Some((5_500_000, 4_800_000)));
+    // An edit of the second posting, by its first entry or by its newest: the same answer, only
+    // what was written before the posting itself. e3 came after it and is left out.
+    assert_eq!(read("2026-10-10", Some(e2)), Some((3_000_000, 0)));
+    assert_eq!(read("2026-10-10", Some(e2b)), Some((3_000_000, 0)));
+    assert_eq!(read("2026-10-10", Some(r2)), Some((3_000_000, 0)));
+    // An edit of the third posting: the second one counts with its reversal and its new version
+    // (a credit of 2,500,000 in all), even though its newest entry has a higher number.
+    assert_eq!(read("2026-10-10", Some(e3)), Some((5_000_000, 4_500_000)));
+    // An edit of the second later sale: the first later sale and everything before it count, not
+    // the other way round, although they share their source and posting type.
+    assert_eq!(read("2026-10-10", Some(l2)), Some((5_500_000, 4_600_000)));
+    assert_eq!(read("2026-10-10", Some(l1)), Some((5_500_000, 4_500_000)));
+    // An edit of the 9th: nothing before it.
+    assert_eq!(read("2026-10-09", Some(e1)), None);
+    // A day before any entry.
+    assert_eq!(read("2026-10-08", None), None);
+    // The anchors.
+    assert_eq!(posting_anchor(&conn, e2b).unwrap(), Some(e2));
+    assert_eq!(posting_anchor(&conn, r2).unwrap(), Some(e2));
+    assert_eq!(posting_anchor(&conn, e3).unwrap(), Some(e3));
+    assert_eq!(posting_anchor(&conn, l2).unwrap(), Some(l2));
+    // Another account has its own answer, and a list of accounts is one query.
+    let both = totals_before_posting(&conn, &[seller, cash], "2026-10-10", None).unwrap();
+    assert_eq!(both.len(), 2);
+    assert_eq!(both[&cash].cr_paisa, 5_500_000);
+    // The plan: the amounts index for the accounts and a point lookup of each entry, no scan of
+    // the journal.
+    let text = plan(&conn, &totals_before_posting_sql(2), 4);
+    assert!(text.contains(COVERING), "{text}");
+    assert!(!text.contains("SCAN l"), "{text}");
+    assert!(!text.contains("SCAN e"), "{text}");
 }

@@ -176,6 +176,10 @@ pub enum ErrorCode {
     /// Sold quantity of a lot is more than the quantity received (PRD FR-12.6). Field
     /// `lots[i].sales[j].qty`. Values: `available` (نگ left for this line).
     ErrQtyExceedsLot,
+    /// A sale in another shop (a garden's or a trip's) is for more نگ than the line has set aside for
+    /// another shop (PRD FR-12.41, v1.52, plan 90). The goods are never taken from our shop's part.
+    /// Field `qty`. Values: `remaining` (نگ left for another shop on that line).
+    ErrQtyExceedsOtherShop,
     /// A commission or لاگا was typed on a line while the Owner has switched typing off
     /// (PRD FR-11.10). Field `lots[i].sales[j].seller_comm`, `buyer_comm` or `laga`.
     ErrOverrideNotAllowed,
@@ -206,6 +210,12 @@ pub enum ErrorCode {
     /// Money paid on the spot is more than the line's buyer total (PRD FR-12.44, v1.32). Field
     /// `lots[i].sales[j].paid`. Values: `max` (whole rupees, the buyer total).
     ErrPaidExceedsTotal,
+    /// A seller is paid on the spot more than today's credit of his lots plus what the shop owed
+    /// him, and the user did not confirm (PRD FR-12.23 v1.53, plan 91). The save is refused unless
+    /// `confirm_cash_below_zero` is true, like the cash question (PRD FR-6.7). Field
+    /// `sellers[k].paid` (the place of the seller in `BikriPreview::sellers`). Values:
+    /// `credit_paisa`, `limit_paisa`, `paid_paisa`.
+    ErrSellerPaidAboveToday,
     /// Warning only: a lot is not fully sold (PRD FR-12.8 check 4). Values: `left` (نگ). Field
     /// `lots[i].qty_received`.
     ErrQtyLeftUnsold,
@@ -503,7 +513,7 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 174] = [
+    pub const ALL: [ErrorCode; 176] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -573,6 +583,7 @@ impl ErrorCode {
         ErrorCode::ErrPartnerNotListed,
         ErrorCode::ErrTooManyPartners,
         ErrorCode::ErrQtyExceedsLot,
+        ErrorCode::ErrQtyExceedsOtherShop,
         ErrorCode::ErrOverrideNotAllowed,
         ErrorCode::ErrCreditLimitExceeded,
         ErrorCode::ErrSellerRequired,
@@ -584,6 +595,7 @@ impl ErrorCode {
         ErrorCode::ErrCashBelowZeroNotConfirmed,
         ErrorCode::ErrNotABuyer,
         ErrorCode::ErrPaidExceedsTotal,
+        ErrorCode::ErrSellerPaidAboveToday,
         ErrorCode::ErrQtyLeftUnsold,
         ErrorCode::ErrLotNetNegative,
         ErrorCode::ErrRateFarFromAverage,

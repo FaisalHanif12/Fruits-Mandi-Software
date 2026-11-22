@@ -286,10 +286,10 @@ goods-lines-title = Items
 goods-lines-add = Add a line
 
 # review: pending
-goods-lines-help-purchase = One line for each item bought. For the goods that go to another shop, type their { -nag } in "{ -dusri-dukan }": the rest stays for { -apni-dukan }.
+goods-lines-help-purchase = One line for each item bought. For the goods that go to another shop, type their { -nag } in "{ goods-line-col-other-qty }": the rest stays for { -apni-dukan }.
 
 # review: pending
-goods-lines-help-arrival = One line for each item that arrived. For the goods that go to another shop, type their { -nag } in "{ -dusri-dukan }": the rest stays for { -apni-dukan }.
+goods-lines-help-arrival = One line for each item that arrived. For the goods that go to another shop, type their { -nag } in "{ goods-line-col-other-qty }": the rest stays for { -apni-dukan }.
 
 # review: pending
 goods-lines-label-purchase = Items bought
@@ -307,7 +307,7 @@ goods-line-col-weight = Weight (kg)
 goods-line-col-rate = Rate
 
 # review: pending
-goods-line-col-other-qty = { -dusri-dukan }
+goods-line-col-other-qty = { -nag } for { -dusri-dukan }
 
 # review: pending
 goods-line-col-shop = Shop name
@@ -379,6 +379,17 @@ purchases-detail-our-left = Left for { -apni-dukan }
 # review: pending
 purchases-detail-other-left = Left for { -dusri-dukan }
 
-# $count: how many { -nag } come from { -apni-dukan } because the part for { -dusri-dukan } is not enough.
+## A sale in another shop takes only the goods set for { -dusri-dukan } (plan 90, PRD FR-12.41).
+
+# $remaining: how many { -nag } are left for { -dusri-dukan } on the chosen line.
 # review: pending
-split-moved-from-our = { $count } { -nag } will move from { -apni-dukan } to { -dusri-dukan } with this sale.
+purchases-qty-above-other = Only { $remaining } { -nag } are left for { -dusri-dukan }. You cannot write more than that. To sell more, first press "{ split-change }" on that line and raise the { -nag } for { -dusri-dukan }.
+
+# review: pending
+purchases-other-goods-none = There are no goods left for { -dusri-dukan }.
+
+# review: pending
+purchases-other-goods-none-hint-arrival = First type the { -nag } in "{ goods-line-col-other-qty }" on a line of { -maal-aaya }, or press "{ split-change }" on a line.
+
+# review: pending
+purchases-other-goods-none-hint-purchase = First type the { -nag } in "{ goods-line-col-other-qty }" on a line of { -khareedari }, or press "{ split-change }" on a line.

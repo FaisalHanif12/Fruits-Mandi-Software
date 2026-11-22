@@ -483,8 +483,8 @@ fn up_to_now_works_for_every_view_and_report_that_takes_a_period_and_a_compariso
             analytics(view, json!({"from": "r1.from", "to": "r1.to"})),
         );
         // A comparison over it: the books start on that day, so there is nothing earlier. For the
-        // views that take a comparison it is left out with a note; the others say they have no
-        // comparison and list the views that do.
+        // views that take a comparison it is left out with a note; the others leave it out too, with a
+        // note that says they have no comparison and lists the views that do.
         let result = s.try_run(
             "analytics",
             analytics(
@@ -502,14 +502,17 @@ fn up_to_now_works_for_every_view_and_report_that_takes_a_period_and_a_compariso
             );
             assert!(v["compare"].is_null(), "{view}");
         } else {
-            let e = result.unwrap_err();
-            assert_eq!(e.code, "ERR_OUT_OF_RANGE", "{view}");
-            assert_eq!(e.field.as_deref(), Some("compare"));
+            // Plan 82 (the model's call is not lost on an error): a view with no comparison leaves `compare`
+            // out and says so, with the views that do compare; the figures are those of the dates given.
+            let id = result.unwrap_or_else(|e| panic!("{view}: {}", e.to_json()));
+            let v = s.json(&id);
+            let note = v["note"].as_str().unwrap_or_default();
             assert!(
-                e.allowed.contains(&"A".to_owned()),
-                "{view}: {:?}",
-                e.allowed
+                note.contains("no comparison, so compare was left out"),
+                "{view}: {v}"
             );
+            assert!(note.contains("A, B, C, D, E, H"), "{view}: {note}");
+            assert!(v["compare"].is_null(), "{view}");
         }
     }
     for id in ["R2", "R6", "R11", "R12", "R15", "R28", "R29"] {
@@ -525,7 +528,9 @@ fn group_by_belongs_to_two_views_and_the_refusal_says_which() {
     let w = unlocked_day();
     let mut s = Session::new(&w, "2026-10-10", "monthly commission by item");
     s.period("this_year");
-    for view in ["A", "B", "C", "E", "H"] {
+    // D6 v1.14: A, B, C and E group their rows too (one set for each month) and view M has a column for each
+    // month; the views that still refuse it say which take it.
+    for view in ["F", "H", "J"] {
         let e = s
             .try_run(
                 "analytics",
@@ -536,7 +541,16 @@ fn group_by_belongs_to_two_views_and_the_refusal_says_which() {
             )
             .unwrap_err();
         assert_eq!(e.field.as_deref(), Some("group_by"), "{view}");
-        assert_eq!(e.allowed, ["D", "G"], "{view}");
+        assert_eq!(e.allowed, ["A", "B", "C", "D", "E", "G", "M"], "{view}");
+    }
+    for view in ["A", "B", "C", "E"] {
+        s.ok(
+            "analytics",
+            analytics(
+                view,
+                json!({"from": "r1.from", "to": "r1.to", "group_by": "month"}),
+            ),
+        );
     }
     for view in ["D", "G"] {
         s.ok(

@@ -48,11 +48,9 @@ export type OtherSaleNumbers = {
    */
   qty_our_left_after: number;
   /**
-   * نگ this sale moves from our shop's part to the part for another shop (plan 35 D1): the sale
-   * takes its qty from the part for another shop first, and what that part does not have is
-   * moved from our shop's part in the same save. 0 when the part for another shop has enough.
-   * More than the purchase has left in all is `ERR_QTY_EXCEEDS_LOT` with `available` = the
-   * whole qty left. A cancel moves them back.
+   * نگ this sale moves from our shop's part to the part for another shop. Always 0 since v1.52
+   * (plan 90): the sale takes its qty only from the part for another shop, and above it the sale
+   * is refused (`ERR_QTY_EXCEEDS_OTHER_SHOP`, value `remaining`). The field stays for the screens.
    */
   qty_from_our_shop: number;
   /**

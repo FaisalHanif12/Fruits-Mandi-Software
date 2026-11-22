@@ -35,7 +35,7 @@ import { cardChuktaOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
-import { useLanguage } from '../../../shared/i18n';
+import { displayName, useLanguage } from '../../../shared/i18n';
 import type { EntryRow } from '../../../shared/grid';
 import { isFromStep, useLayoutStep, useRefusalIntoView } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
@@ -108,6 +108,7 @@ import { ActiveLine, SalesSection } from '../components/SalesSection';
 import { NumbersStrip } from '../components/NumbersStrip';
 import { SplitPanel } from '../components/SplitPanel';
 import { AdvanceTicks } from '../components/AdvanceTicks';
+import { SellerOverConfirmDialog } from '../components/SellerOverConfirmDialog';
 import { SummaryPanel } from '../components/SummaryPanel';
 import {
   BikriDraftProvider,
@@ -120,6 +121,7 @@ import { useGridViews } from '../hooks/useGridViews';
 import { LotCountersProvider, lotLabelVars, useLotCounters, useLotWho } from '../lot-name';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
+import { useSellerPaidSpread } from '../hooks/useSellerPaidSpread';
 import { LOT_GRID_FIELD, LOT_OWN_FIELD, problemsOf, type Problem } from '../problems';
 import { LOT, SALE } from '../types';
 
@@ -247,6 +249,8 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   );
   const reopened = useFixStore((state) => state.session);
   useDraftFills(stores, preview, stale);
+  // An amount typed in a seller's summary is spread over his lots' نقد by the backend (plan 91).
+  const spreading = useSellerPaidSpread(stores, entryId ?? null);
 
   // Safety and saving (plan 13). The draft goes to the backend every 5 seconds; a save stops that.
   // An edit has no draft of its own and never touches the draft of a new بکری (plan 16).
@@ -554,7 +558,11 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             netIsNegative={netIsNegative}
             leftOut={whole ? leftOutWhole : leftOutLot}
             advance={
-              <AdvanceTicks shown={whole ? lotRows : lotRows.slice(lotIndex, lotIndex + 1)} />
+              <AdvanceTicks
+                shown={whole ? lotRows : lotRows.slice(lotIndex, lotIndex + 1)}
+                sellers={preview.sellers}
+                spreading={spreading}
+              />
             }
           />
           <SplitPanel preview={preview} />
@@ -849,7 +857,27 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           />
         )}
         {stripShown ? <div aria-hidden="true" className="h-corner shrink-0" /> : null}
-        {flow.cashAfter === null ? null : (
+        {flow.asked === null ? null : flow.asked.sellers.length > 0 ? (
+          // A seller paid on the spot more than he may take without a question (plan 91): the same question as the
+          // cash one, with the sellers named; one yes answers both.
+          <SellerOverConfirmDialog
+            open={flow.ask !== null}
+            onOpenChange={flow.onCashOpenChange}
+            entries={flow.asked.sellers.map((seller) => {
+              const picked = lotRows
+                .map((row) => row.picked?.[LOT.seller])
+                .find((one) => one?.id === seller.seller_account_id);
+              return {
+                sellerId: seller.seller_account_id,
+                name: picked === undefined ? '' : displayName(picked, language),
+                balance: { amount_paisa: seller.new_paisa, side: seller.new_side },
+              };
+            })}
+            cashAfter={flow.asked.cash.needs_confirm ? flow.asked.cash.cash_after_paisa : null}
+            onConfirm={flow.confirmCash}
+            onCloseFocus={flow.onCashCloseFocus}
+          />
+        ) : flow.cashAfter === null ? null : (
           <CashConfirmDialog
             open={flow.ask !== null}
             onOpenChange={flow.onCashOpenChange}

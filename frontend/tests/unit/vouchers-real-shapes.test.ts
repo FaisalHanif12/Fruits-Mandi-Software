@@ -165,8 +165,7 @@ describe('the canned data of the component tests has the real shape', () => {
 
   it('a پیشگی to a buyer (plan 88): the preview and the save have the real shape, and a payment voucher comes back', () => {
     const books = createBooks();
-    const entry = {
-      type: 'advance' as const,
+    const input = {
       date: '10-10-2026',
       seller_account_id: 21,
       amount: '3,000',
@@ -175,9 +174,10 @@ describe('the canned data of the component tests has the real shape', () => {
       narration: '',
       confirm_cash_below_zero: false,
     };
-    expect(same(real.PREVIEW_ADVANCE_BUYER, books.preview(entry))).toBeNull();
+    expect(
+      same(real.PREVIEW_ADVANCE_BUYER, books.preview({ type: 'advance' as const, ...input })),
+    ).toBeNull();
     expect(same(real.PREVIEW_RECEIPT_BUYER, real.PREVIEW_ADVANCE_BUYER)).toBeNull();
-    const { type: _type, ...input } = entry;
     const saved = books.save({ type: 'advance', input });
     expect(same(real.SAVED_ADVANCE_BUYER, saved)).toBeNull();
     // As the backend says: a buyer's advance is a payment voucher, in the payment series.

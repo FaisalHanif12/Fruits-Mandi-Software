@@ -27,7 +27,7 @@ use super::lexicon::{Cue, key};
 use super::scan::Scan;
 use super::who::Names;
 use super::{
-    Confidence, Doubt, FigureKind, Intent, LagaView, Measure, Outcome, PartyRole, PeriodRef,
+    Confidence, Doubt, FigureKind, Grain, Intent, LagaView, Measure, Outcome, PartyRole, PeriodRef,
     SaleMeasure, Understanding,
 };
 
@@ -248,12 +248,14 @@ pub(super) fn settle(scan: &Scan, u: &mut Understanding, only_measure_words_unkn
         // A "net" that is a partner's (his khalis, "net worth") has no sale word beside it.
         clean(u, vec![FigureKind::Sale]);
         u.sale_measure = Some(SaleMeasure::Net);
+        stop_when_more_is_asked(scan, u);
         return;
     }
     // The buyers' bills: of all buyers, or of one buyer.
     if bill_word && !net_word && matches!(party, None | Some(PartyRole::Buyer)) {
         clean(u, vec![FigureKind::Sale]);
         u.sale_measure = Some(SaleMeasure::Bills);
+        stop_when_more_is_asked(scan, u);
         return;
     }
     // Where the Laga stands in a commission question.
@@ -290,6 +292,31 @@ pub(super) fn settle(scan: &Scan, u: &mut Understanding, only_measure_words_unkn
     {
         clean(u, vec![FigureKind::Commission]);
         u.laga_view = LagaView::Apart;
+    }
+}
+
+/// True when a word of the net sale or of the bills stands in a figure question that `settle` did not take
+/// ("mani ke bill aur bakaya", "safi bikri aur bakaya"): that word asks a column the instant lines do not
+/// write, so they stop (the reads are still made).
+pub(super) fn measure_word_left(scan: &Scan, u: &Understanding) -> bool {
+    u.sale_measure.is_none()
+        && matches!(u.intent.value, Intent::Figure | Intent::List)
+        && !counts_bills(u)
+        // "bijli ke bill": the electricity bill is an expense head, not a sale column.
+        && !u.figures.value.contains(&FigureKind::Expense)
+        && ((has_word(scan, NET_WORDS) && !u.figures.value.contains(&FigureKind::PartnerTotal))
+            || (has_word(scan, BILL_WORDS) && !scan.has(Cue::SalePlural)))
+}
+
+/// "khaam bikri aur gahakon ke kul bill alag alag", "mani ke bill aur bakaya": the net sale or the bills are asked
+/// BESIDE the gross, a balance or a commission, which `clean` dropped from the figures. An instant line would
+/// answer only a part of the question, so none is given; the reads are still made and the model answers (the
+/// sale guard lets it cite the other columns it was asked).
+fn stop_when_more_is_asked(scan: &Scan, u: &mut Understanding) {
+    let ask = asked_sale_measure(&scan.raw);
+    if ask.is_some_and(|ask| ask.gross_too || ask.balance_too || ask.commission_too) {
+        u.lower_ask = true;
+        u.gross_beside = ask.is_some_and(|ask| ask.gross_too);
     }
 }
 
@@ -373,5 +400,83 @@ pub fn asked_sale_measure(question: &str) -> Option<SaleAsk> {
             commission_too: scan.has_any(&[Cue::Commission, Cue::Laga]) && !inclusive,
         });
     }
+    // The gross sale alone ("khaam bikri"): the seller amounts, never the buyers' goods value of the register R2
+    // (live check of 21-11-2026, M18: 9,155,400 for a gross of 9,154,800, the 600 being a rate difference).
+    if gross_word && sale_word && !net && !bill {
+        return Some(SaleAsk {
+            measure: SaleMeasure::Gross,
+            gross_too: false,
+            balance_too: false,
+            commission_too: false,
+        });
+    }
     None
+}
+
+/// What a "for each" phrase of the question breaks the figure into ("mahine ke hisab se": the months; "madon ke
+/// hisab se": the heads), or `None` for a question with no such phrase. The words are the ones of the
+/// [`Cue::HeadsWise`] list of the lexicon.
+pub(super) fn grain_of(scan: &Scan) -> Option<Grain> {
+    const MONTH: &[&str] = &[
+        "mahine ke hisab se",
+        "mahine ke hisaab se",
+        "mahinay ke hisab se",
+        "month wise",
+        "monthly",
+        "har mahine",
+        "month by month",
+        "mahine wise",
+        "by month",
+        "ماہانہ",
+        "مہینے کے حساب سے",
+        "ہر مہینے",
+    ];
+    const DAY: &[&str] = &[
+        "din ke hisab se",
+        "day wise",
+        "daily",
+        "har din",
+        "by day",
+        "روزانہ",
+        "ہر دن",
+        "دن کے حساب سے",
+    ];
+    const YEAR: &[&str] = &[
+        "saal ke hisab se",
+        "year wise",
+        "yearly",
+        "har saal",
+        "by year",
+        "سالانہ",
+        "سال کے حساب سے",
+        "ہر سال",
+    ];
+    const HEAD: &[&str] = &[
+        "mad",
+        "madon",
+        "mad wise",
+        "madon ke hisab se",
+        "madon ke hisaab se",
+        "head wise",
+        "heads",
+        "by head",
+        "مد",
+        "مدوں",
+        "مدیں",
+        "مدوں کے حساب سے",
+    ];
+    if !scan.has(Cue::HeadsWise) {
+        return None;
+    }
+    if says_any(scan, MONTH) {
+        Some(Grain::Month)
+    } else if says_any(scan, DAY) {
+        Some(Grain::Day)
+    } else if says_any(scan, YEAR) {
+        Some(Grain::Year)
+    } else if says_any(scan, HEAD) {
+        Some(Grain::Head)
+    } else {
+        None
+    }
 }

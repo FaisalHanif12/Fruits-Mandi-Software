@@ -26,12 +26,31 @@ import { showToast, type ToastOptions } from '../../../shared/ui';
 import { bikriPreview } from '../api';
 import { buildDraft, draftKey } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
+import type { SellerPaidLines } from '../../../bindings/SellerPaidLines';
 import { LOT, type BikriDraft, type BikriPreview } from '../types';
 import type { SaveBikriInput } from './useSaveBikri';
 
-/** The box that asks about cash below zero: the cash after the entry, from the backend. */
+/**
+ * The code the backend refuses a save with when a seller is paid on the spot more than he may take without a question
+ * and no yes came (plan 91). The yes is the one of the cash question: `confirm_cash_below_zero` (PRD FR-6.7).
+ */
+const SELLER_OVER_REFUSAL = 'ERR_SELLER_PAID_ABOVE_TODAY';
+
+/** The sellers of a preview whose money paid on the spot needs the Owner's yes. */
+export function sellersNeedingYes(preview: BikriPreview | undefined): readonly SellerPaidLines[] {
+  return (preview?.sellers ?? []).filter((seller) => seller.needs_confirm);
+}
+
+/** Does this answer ask the "is this entry correct?" question: cash below zero, or a seller paid above his limit? */
+function needsYes(preview: BikriPreview): boolean {
+  return preview.cash.needs_confirm || sellersNeedingYes(preview).length > 0;
+}
+
+/** The box that asks "is this entry correct?": the cash after the entry and the sellers paid above their limit, from the backend. */
 export interface CashAsk {
   cash: CashCheck;
+  /** The sellers the question is also about (plan 91); empty for a plain cash question. */
+  sellers: readonly SellerPaidLines[];
   /** The save was started with Ctrl+Enter: the screen prints after it (plan 14). */
   andNext: boolean;
 }
@@ -89,6 +108,7 @@ export function useSaveFlow<R extends { number: number }>({
   const [ask, setAsk] = useState<CashAsk | null>(null);
   // The last cash asked about, kept so the box can close with its words still in place.
   const [lastCash, setLastCash] = useState<CashCheck | null>(null);
+  const [lastSellers, setLastSellers] = useState<readonly SellerPaidLines[]>([]);
   // The box calls onConfirm and then onOpenChange(false); only a "no" is a decline.
   const confirmed = useRef(false);
 
@@ -111,12 +131,18 @@ export function useSaveFlow<R extends { number: number }>({
         return true;
       } catch (error: unknown) {
         const refused = uiErrorOf(error);
-        if (refused.errors.some((item) => item.code === 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED')) {
-          // The cash changed since the last answer. Ask the question with the numbers as they are.
+        const codes: string[] = refused.errors.map((item) => item.code);
+        if (
+          codes.includes('ERR_CASH_BELOW_ZERO_NOT_CONFIRMED') ||
+          codes.includes(SELLER_OVER_REFUSAL)
+        ) {
+          // The cash or a seller's amount changed since the last answer. Ask the question with the numbers as they are.
           const fresh = await askPreview(draft).catch(() => null);
-          if (fresh?.cash.needs_confirm === true) {
+          if (fresh !== null && needsYes(fresh)) {
+            const sellers = sellersNeedingYes(fresh);
             setLastCash(fresh.cash);
-            setAsk({ cash: fresh.cash, andNext });
+            setLastSellers(sellers);
+            setAsk({ cash: fresh.cash, sellers, andNext });
             return false;
           }
         }
@@ -128,9 +154,11 @@ export function useSaveFlow<R extends { number: number }>({
   /** F10, Ctrl+S and the button. `andNext` is Ctrl+Enter. True when it was saved. */
   const save = async (andNext: boolean): Promise<boolean> => {
     setTried(true);
-    if (current && preview?.cash.needs_confirm === true) {
+    if (current && preview !== undefined && needsYes(preview)) {
+      const sellers = sellersNeedingYes(preview);
       setLastCash(preview.cash);
-      setAsk({ cash: preview.cash, andNext });
+      setLastSellers(sellers);
+      setAsk({ cash: preview.cash, sellers, andNext });
       return false;
     }
     return run(false, andNext);
@@ -156,6 +184,9 @@ export function useSaveFlow<R extends { number: number }>({
       onCashDeclined();
       return;
     }
+    // A question about a seller's money goes back to his field (plan 91, in `onCashCloseFocus`, once the box has
+    // let go of the focus); a plain cash question to the نقد cell.
+    if (lastSellers.length > 0) return;
     const rows = stores.lots.getState().rows;
     const first = rows.findIndex((row) => (row.typed[LOT.cash] ?? '').trim() !== '');
     stores.lots.getState().setPendingFocus({ rowIndex: Math.max(first, 0), field: LOT.cash });
@@ -163,7 +194,17 @@ export function useSaveFlow<R extends { number: number }>({
 
   /** After a "no" focus goes to the نقد cell, not back to the button (PRD FR-6.7). */
   const onCashCloseFocus = (event: Event) => {
-    if (!confirmed.current) event.preventDefault();
+    if (confirmed.current) return;
+    event.preventDefault();
+    // A question about a seller's money (plan 91): the cursor goes to his field, which the box held the focus from.
+    const seller = lastSellers[0];
+    if (seller !== undefined) {
+      document
+        .querySelector<HTMLElement>(
+          `[data-seller-paid="${String(seller.seller_account_id)}"] input[inputmode="numeric"]`,
+        )
+        ?.focus();
+    }
   };
 
   const typedText = useMemo(() => draftKey(typed), [typed]);
@@ -184,6 +225,8 @@ export function useSaveFlow<R extends { number: number }>({
     ask,
     /** The cash after the entry in the box, kept while it closes. */
     cashAfter: lastCash?.cash_after_paisa ?? null,
+    /** The cash question as last asked: whether cash goes below zero, and the sellers paid above their limit (plan 91). */
+    asked: lastCash === null ? null : { cash: lastCash, sellers: lastSellers },
     confirmCash,
     onCashOpenChange,
     onCashCloseFocus,

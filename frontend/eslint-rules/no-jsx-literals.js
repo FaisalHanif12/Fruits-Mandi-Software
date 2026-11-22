@@ -116,6 +116,8 @@ const CODE_ATTRIBUTES = new Set([
   // The path of a drawing and the clip that points at one of its parts (plan 75, the app mark).
   'd',
   'clipPath',
+  // Where a part of a drawing stands and how large (the crate of the app mark, 21-11-2026): numbers, never words.
+  'transform',
 ]);
 
 const HAS_LETTER = /\p{L}/u;

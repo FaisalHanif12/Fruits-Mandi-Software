@@ -328,6 +328,11 @@ const EXPECTED_FILES: &[&str] = &[
     "RateHintSource.ts",
     "SellerMemoryInput.ts",
     "SellerMemory.ts",
+    "SellerPaidInput.ts",
+    "SellerPaidSpreadInput.ts",
+    "SellerPaidSpread.ts",
+    "SellerPaidLines.ts",
+    "LotCashSpread.ts",
     "LastRateInput.ts",
     "BikriSaveInput.ts",
     "BikriSaved.ts",
@@ -714,6 +719,9 @@ const EXPECTED_FILES: &[&str] = &[
     "TestRestoreResult.ts",
     "KeyCreated.ts",
     "KeyConfirmInput.ts",
+    // PRD FR-20.10 v1.54: the backup key shown again.
+    "KeyRevealInput.ts",
+    "KeyShown.ts",
     "BackupSettingsView.ts",
     "BackupSettingsInput.ts",
     "BackupNowInput.ts",
@@ -1252,6 +1260,8 @@ fn export_bindings() {
     bikri::BikriPreview::export_all(&cfg).unwrap();
     bikri::SellerMemoryInput::export_all(&cfg).unwrap();
     bikri::SellerMemory::export_all(&cfg).unwrap();
+    bikri::SellerPaidSpreadInput::export_all(&cfg).unwrap();
+    bikri::SellerPaidSpread::export_all(&cfg).unwrap();
     bikri::LastRateInput::export_all(&cfg).unwrap();
     bikri::RateHint::export_all(&cfg).unwrap();
     bikri::BikriSaveInput::export_all(&cfg).unwrap();
@@ -1569,6 +1579,8 @@ fn export_bindings() {
     mandi_backup::api::TestRestoreResult::export_all(&cfg).unwrap();
     mandi_backup::api::KeyCreated::export_all(&cfg).unwrap();
     mandi_backup::api::KeyConfirmInput::export_all(&cfg).unwrap();
+    mandi_backup::api::KeyRevealInput::export_all(&cfg).unwrap();
+    mandi_backup::api::KeyShown::export_all(&cfg).unwrap();
     mandi_backup::api::BackupSettingsView::export_all(&cfg).unwrap();
     mandi_backup::api::BackupSettingsInput::export_all(&cfg).unwrap();
     mandi_backup::BackupCode::export_all(&cfg).unwrap();

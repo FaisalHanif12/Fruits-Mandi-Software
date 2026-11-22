@@ -32,9 +32,9 @@ export type GardenEntryNumbers = {
    */
   balance_working: Working;
   /**
-   * Only for a sale in another shop linked to an arrival (PRD FR-12.41, plan 35 D1), else null:
-   * the نگ the sale moves from our shop's part to the part for another shop. 0 when the part for
-   * another shop has enough.
+   * Only for a sale in another shop linked to an arrival (PRD FR-12.41), else null: the نگ the sale
+   * moves from our shop's part to the part for another shop. Always 0 since v1.52 (plan 90): a
+   * sale above the part for another shop is refused (`ERR_QTY_EXCEEDS_OTHER_SHOP`).
    */
   qty_from_our_shop: number | null;
   /**

@@ -139,6 +139,13 @@
           }
         },
         {
+          "label_id": "report-r35-sale-rest",
+          "cell": {
+            "type": "money",
+            "text": "15,000"
+          }
+        },
+        {
           "label_id": "report-r35-today-left",
           "cell": {
             "type": "balance",
@@ -375,6 +382,13 @@
           "label_id": "report-r35-paid-today",
           "cell": {
             "type": "empty"
+          }
+        },
+        {
+          "label_id": "report-r35-sale-rest",
+          "cell": {
+            "type": "money",
+            "text": "10,160"
           }
         },
         {

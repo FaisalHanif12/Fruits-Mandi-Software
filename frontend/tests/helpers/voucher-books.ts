@@ -101,6 +101,8 @@ export interface VoucherBooks {
   saves: BuiltVoucher[];
   edits: { id: number; version: number; entry: BookEntry; reason: string; confirm: boolean }[];
   cancels: { id: number; version: number; reason: string; confirm: boolean }[];
+  /** The Owner's sign the next edit carries in its stamp: null for an edit of an open day (plan 89, PRD FR-7.71). */
+  editSign: string | null;
   /** The advances saved so far: the shape the first advance tests read. */
   saved: { seller: number; amount: string }[];
 }
@@ -153,6 +155,7 @@ export function createBooks(options: BooksOptions = {}) {
     saves: [],
     edits: [],
     cancels: [],
+    editSign: null,
     saved: [],
   };
   const counters: Record<ScreenType, number> = { receipt: 0, payment: 0, advance: 0 };
@@ -324,6 +327,16 @@ export function createBooks(options: BooksOptions = {}) {
     if (row === undefined) throw refused('ERR_NOT_FOUND', null);
     row.version += 1;
     row.amount_paisa = money(rupeesOf(entry.amount));
+    // Like the backend (plan 89): the voucher comes back with the stamp of the edit that was just saved.
+    row.edited = {
+      at: '2026-10-10T11:35:00Z',
+      local_date: '2026-10-10',
+      local_time: '16:35',
+      by: 'Owner',
+      count: (row.edited?.count ?? 0) + 1,
+      reason: input.reason === '' ? null : input.reason,
+      sign: store.editSign,
+    };
     return {
       voucher_id: row.id,
       voucher_type: row.voucher_type,
@@ -531,7 +544,7 @@ export function collectionList(rows: 'two' | 'none' = 'two') {
 /** A saved voucher as the backend lists it: a receipt of 10,000 from Akram on today, still open. */
 export function voucherRow(overrides: Partial<VoucherRow> = {}): VoucherRow {
   const account = 'account' in overrides ? overrides.account : refOf(21);
-  const party = account === null || account === undefined ? undefined : partyOf(account.id);
+  const party = account === null ? undefined : partyOf(account.id);
   return {
     id: 501,
     voucher_type: 'receipt',

@@ -25,8 +25,9 @@ export type EditSaveInput = {
    */
   reason: string | null;
   /**
-   * True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7). Needed only when the
-   * edit lowers cash and leaves it below 0.
+   * True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7). Needed when the
+   * edit lowers cash and leaves it below 0, and when a seller is paid on the spot more than
+   * today's credit plus what the shop owed him (`ERR_SELLER_PAID_ABOVE_TODAY`, plan 91).
    */
   confirm_cash_below_zero: boolean;
 };

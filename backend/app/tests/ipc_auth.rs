@@ -1022,6 +1022,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "bikri_seller_paid_spread",
+            json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] },
+                "entry_id": null, "seller_paid": [] } }),
+            true,
+        ),
+        (
             "assist_seller_memory",
             json!({ "input": { "seller_account_id": 1 } }),
             true,
@@ -1448,6 +1454,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "backup_key_confirm",
             json!({ "input": { "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            true,
+        ),
+        // PRD FR-20.10 v1.54: the key shown again with the password and the sign.
+        (
+            "backup_key_reveal",
+            json!({ "input": { "password": "wrong-password", "sign": "adnan" } }),
             true,
         ),
         // Plan 56, restore on a new computer (append-only block): open before sign-in, and

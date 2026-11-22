@@ -18,7 +18,7 @@ use crate::answer::{
     Answer, AnswerChart, AnswerEstimate, AnswerName, AnswerOption, AnswerPart, AnswerSource,
     AnswerTable, FigureDifference, FigureDirection, PlaceValue, ScreenRoute,
 };
-use crate::limits::MAX_TABLE_ROWS;
+use crate::limits::table_cap;
 use crate::model_answer::{ModelAnswer, Piece, ShowAs, pieces};
 use crate::results::{Money, NameVal, Node, Shown, Side, ToolResult, Val};
 use crate::source::AnswerRecord;
@@ -180,12 +180,13 @@ fn next_text(env: &Env<'_>, state: &State, question: &str) -> String {
     out
 }
 
-fn set_table_id(mut table: AnswerTable, id: &str, rows: Option<i64>) -> AnswerTable {
-    table.result_id = id.to_owned();
+fn set_table_id(mut table: AnswerTable, result: &ToolResult, rows: Option<i64>) -> AnswerTable {
+    table.result_id = result.id.clone();
+    let most = table_cap(&result.input);
     let cap = rows
         .and_then(|r| usize::try_from(r).ok())
-        .unwrap_or(MAX_TABLE_ROWS)
-        .min(MAX_TABLE_ROWS);
+        .unwrap_or(most)
+        .min(most);
     table.rows.truncate(cap);
     table
 }
@@ -503,7 +504,7 @@ pub fn fill(env: &Env<'_>, state: &State, answer: &ModelAnswer, read_at: &str) -
         };
         match (&result.shown, show.as_) {
             (Some(Shown::Table(t) | Shown::TableChart(t, _)), ShowAs::Table) => {
-                tables.push(set_table_id(t.clone(), &result.id, show.rows));
+                tables.push(set_table_id(t.clone(), result, show.rows));
             }
             (Some(Shown::Chart(c, _) | Shown::TableChart(_, c)), ShowAs::Chart) => {
                 charts.push(set_chart_id((**c).clone(), &result.id));
@@ -549,7 +550,7 @@ pub fn plain_tables(state: &State, read_at: &str) -> Answer {
         .filter(|r| r.turn == state.turn)
         .filter_map(|r| match &r.shown {
             Some(Shown::Table(t) | Shown::TableChart(t, _)) => {
-                Some(set_table_id(t.clone(), &r.id, None))
+                Some(set_table_id(t.clone(), r, None))
             }
             _ => None,
         })

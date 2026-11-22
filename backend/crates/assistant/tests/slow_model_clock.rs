@@ -102,7 +102,7 @@ fn effort(request: &Value) -> &str {
 fn the_limits_are_the_ones_of_plan_82() {
     assert_eq!(FIRST_BYTE_SECS, 20);
     assert_eq!(QUESTION_TIMEOUT_SECS, 45);
-    assert_eq!(HEDGE_AFTER_SECS, 10);
+    assert_eq!(HEDGE_AFTER_SECS, 7);
     // The last call keeps time to answer: a call takes 4 to 10 s, and the try is 20.
     const { assert!(QUESTION_TIMEOUT_SECS - TOOLS_OFF_AT_SECS >= 10) };
     const { assert!(TOOLS_OFF_AT_SECS < QUESTION_TIMEOUT_SECS) };

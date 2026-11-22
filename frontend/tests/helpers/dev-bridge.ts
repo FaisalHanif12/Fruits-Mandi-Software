@@ -6,6 +6,7 @@
 // the development route imports it.
 
 import { IDS, SELLER_MEMORY, previewFor, previewWithOverLine } from './bikri-data';
+import { devSellerLines, devSpread } from './dev-bridge-seller-paid';
 import {
   cancelPreview,
   editable,
@@ -687,9 +688,15 @@ const handlers: Record<string, Handler> = {
         lot_counter: lot.lot_counter ?? index + 1,
       })),
     };
+    // `#/dev/bikri?seller` shows the seller's money paid on the spot (plan 91): his lines follow the نقد typed on his lots.
+    const withSellers = devFlag('seller')
+      ? { ...preview, sellers: devSellerLines(draftOf(input)) }
+      : preview;
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
-    return devFlag('cash') ? { ...preview, cash: CASH_BELOW_ZERO } : preview;
+    return devFlag('cash') ? { ...withSellers, cash: CASH_BELOW_ZERO } : withSellers;
   },
+  // Plan 91: the amount typed in the seller's summary, spread over his lots.
+  bikri_seller_paid_spread: (input) => devSpread(draftOf(input), input),
   assist_seller_memory: () => SELLER_MEMORY,
   // Plan 13: the saved بکری, the lists, drafts and the one-time people.
   bikri_save: (input) => ({

@@ -55,6 +55,7 @@ fn right_column(measure: SaleMeasure) -> &'static str {
     match measure {
         SaleMeasure::Net => "net",
         SaleMeasure::Bills => "buyer_total",
+        SaleMeasure::Gross => "gross",
     }
 }
 
@@ -123,6 +124,11 @@ fn kind_of(state: &State, path: &str, measure: SaleMeasure) -> Kind {
             let column = path.rsplit('.').next().unwrap_or_default();
             if column == right {
                 Kind::Right
+            } else if measure == SaleMeasure::Gross
+                && matches!(column, "purchase_value" | "seller_amount")
+            {
+                // A buyer's own purchase and the seller's amount are no other column of the gross sale.
+                Kind::Other
             } else if GROSS_LIKE.contains(&column) || column == "net" || column == "buyer_total" {
                 Kind::Sale
             } else if COMMISSION.contains(&column) {
@@ -137,9 +143,8 @@ fn kind_of(state: &State, path: &str, measure: SaleMeasure) -> Kind {
     }
 }
 
-/// The references of the right column that this question's reads hold: the totals of a result first.
-fn right_cells(state: &State, measure: SaleMeasure) -> Vec<String> {
-    let right = right_column(measure);
+/// The references of `column` that this question's reads hold: the totals of a result first.
+fn cells_of(state: &State, column: &str) -> Vec<String> {
     let mut out = Vec::new();
     for result in state
         .results
@@ -147,10 +152,10 @@ fn right_cells(state: &State, measure: SaleMeasure) -> Vec<String> {
         .filter(|r| r.turn == state.turn && matches!(r.tool, "analytics" | "report"))
     {
         if matches!(
-            result.node.get(&["totals", right]),
+            result.node.get(&["totals", column]),
             Some(Node::Val(Val::Money(_)))
         ) {
-            out.push(format!("{}.totals.{right}", result.id));
+            out.push(format!("{}.totals.{column}", result.id));
         }
     }
     out.truncate(3);
@@ -168,30 +173,41 @@ pub fn plan(ask: Option<SaleAsk>, text: &str, state: &State) -> Measure {
     for piece in pieces(text) {
         let Piece::Ref(r) = piece else { continue };
         let kind = kind_of(state, &r.path, ask.measure);
+        let column = r.path.rsplit('.').next().unwrap_or_default();
+        // The gross asked beside the net or the bills ("khaam bikri aur gahakon ke bill"): only the `gross`
+        // column is that figure. The register R2 `value` is the buyers' goods value, which holds a rate
+        // difference (live check of 21-11-2026, M18).
+        let gross_asked_too = ask.gross_too && column == "gross";
         let wrong = match kind {
             Kind::Other | Kind::Right => false,
-            // Another column of the sale: wrong for both measures (the net is no bill, the bill no net),
-            // unless the question asks that column too.
-            Kind::Sale => !ask.gross_too,
+            // Another column of the sale: wrong for every measure (the net is no bill, the bill no net, the
+            // gross neither), unless the question asks that column too.
+            Kind::Sale => !gross_asked_too,
             Kind::Commission => ask.measure == SaleMeasure::Bills && !ask.commission_too,
             Kind::Balance => ask.measure == SaleMeasure::Bills && !ask.balance_too,
         };
         if !wrong {
             continue;
         }
+        // The column the cell should have been: a goods value cited beside the gross asked too is the gross.
+        let target = if ask.gross_too && column == "value" {
+            "gross"
+        } else {
+            right
+        };
         // The same row of the same result holds the right column: only the cited cell changes.
         if let Some((id, row, _)) = split(&r.path)
             && kind == Kind::Sale
-            && money_at(state, id, row, right)
+            && money_at(state, id, row, target)
         {
-            let fixed = format!("{id}.{row}.{right}");
+            let fixed = format!("{id}.{row}.{target}");
             if !repairs.iter().any(|(wrong, _)| *wrong == r.path) {
                 repairs.push((r.path.clone(), fixed));
             }
             continue;
         }
         let mut failure = Failure::measure(&r.path, None);
-        failure.instead = right_cells(state, ask.measure);
+        failure.instead = cells_of(state, target);
         refused.push(failure);
     }
     if !refused.is_empty() {
@@ -201,5 +217,124 @@ pub fn plan(ask: Option<SaleAsk>, text: &str, state: &State) -> Measure {
         Measure::Fine
     } else {
         Measure::Repair(repairs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::results::{Money, ToolResult};
+    use crate::understand::asked_sale_measure;
+    use mandi_services::core::money::Paisa;
+    use serde_json::json;
+
+    fn money(rupees: i64) -> Node {
+        Node::val(Val::Money(Money::plain(
+            Paisa::from_rupees(rupees).unwrap(),
+        )))
+    }
+
+    fn result(id: &str, tool: &'static str, totals: Vec<(&str, Node)>) -> ToolResult {
+        ToolResult {
+            id: id.to_owned(),
+            tool,
+            input: json!({}),
+            node: Node::obj(vec![("totals", Node::obj(totals))]),
+            shown: None,
+            source: None,
+            partner_parts_locked: false,
+            partner_data: false,
+            turn: 0,
+            working: None,
+        }
+    }
+
+    /// The live books of M18: the register R2 holds the buyers' goods value 9,155,400 (it carries a 600 rate
+    /// difference) and the bills 9,723,115; view A holds the gross 9,154,800.
+    fn live_m18() -> State {
+        State {
+            results: vec![
+                result(
+                    "r1",
+                    "report",
+                    vec![
+                        ("value", money(9_155_400)),
+                        ("buyer_total", money(9_723_115)),
+                    ],
+                ),
+                result("r2", "analytics", vec![("gross", money(9_154_800))]),
+                result("r3", "analytics", vec![("purchase_value", money(36_000))]),
+            ],
+            turn: 0,
+        }
+    }
+
+    fn refused(plan: Measure) -> Vec<Failure> {
+        match plan {
+            Measure::Refuse(failures) => failures,
+            Measure::Fine => panic!("nothing was refused"),
+            Measure::Repair(repairs) => panic!("repaired: {repairs:?}"),
+        }
+    }
+
+    #[test]
+    fn the_register_goods_value_is_refused_for_the_gross_asked_beside_the_bills() {
+        let ask = asked_sale_measure(
+            "pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag batao",
+        );
+        let state = live_m18();
+        // The wrong gross: refused, with the gross of view A to cite instead.
+        let failures = refused(plan(
+            ask,
+            "{{r1.totals.value}} {{r1.totals.buyer_total}}",
+            &state,
+        ));
+        assert_eq!(failures.len(), 1);
+        assert_eq!(failures[0].at, "r1.totals.value");
+        assert_eq!(failures[0].instead, ["r2.totals.gross"]);
+        // The right gross and the bills together: fine.
+        assert!(matches!(
+            plan(ask, "{{r2.totals.gross}} {{r1.totals.buyer_total}}", &state),
+            Measure::Fine
+        ));
+    }
+
+    #[test]
+    fn the_gross_asked_alone_is_the_gross_column_and_not_the_register_value() {
+        let ask = asked_sale_measure("ehsan ki khaam bikri kitni hai");
+        assert_eq!(ask.map(|a| a.measure), Some(SaleMeasure::Gross));
+        let state = live_m18();
+        let failures = refused(plan(ask, "{{r1.totals.value}}", &state));
+        assert_eq!(failures[0].instead, ["r2.totals.gross"]);
+        // A bill or a net cited for the gross is the same fault.
+        refused(plan(ask, "{{r1.totals.buyer_total}}", &state));
+        // The gross itself, and a buyer's own purchase value, are fine.
+        assert!(matches!(
+            plan(ask, "{{r2.totals.gross}}", &state),
+            Measure::Fine
+        ));
+        assert!(matches!(
+            plan(ask, "{{r3.totals.purchase_value}}", &state),
+            Measure::Fine
+        ));
+    }
+
+    #[test]
+    fn a_question_that_names_no_gross_word_keeps_its_old_guard() {
+        // "gahakon ke kul bill": the register value is still a wrong column for the bills, and the repair of a
+        // row that holds the right column is unchanged.
+        let ask = asked_sale_measure("abhi tak gahakon ke kul bill kitne ke bane");
+        assert_eq!(ask.map(|a| a.measure), Some(SaleMeasure::Bills));
+        match plan(ask, "{{r1.totals.value}}", &live_m18()) {
+            Measure::Repair(repairs) => assert_eq!(
+                repairs,
+                [(
+                    "r1.totals.value".to_owned(),
+                    "r1.totals.buyer_total".to_owned()
+                )]
+            ),
+            _ => panic!("the goods value of R2 is put right to its bill total"),
+        }
+        assert!(asked_sale_measure("aaj ki bikri kitni hui").is_none());
     }
 }
