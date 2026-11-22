@@ -59,7 +59,7 @@ const CASH_MONTH_COLUMNS = { in_paisa: 'in', out_paisa: 'out', running_paisa: 'r
 function CashbookScreen({ today }: { today: string }) {
   const navigate = useNavigate();
   const openSource = useOpenRowSource();
-  // The book shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8).
+  // The book shows 30 days at a time, the latest first (PRD FR-19.11, v1.57, plan 95 item 18).
   const listWindow = useListWindow({ kind: 'days', source: { kind: 'cashbook' }, today });
   const range = useMemo(
     () => ({ from: textOrNull(listWindow.range.from), to: textOrNull(listWindow.range.to) }),

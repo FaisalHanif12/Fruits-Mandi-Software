@@ -1,8 +1,8 @@
 // ادھاری تفصیل (route /reports/adhari-sheet, found by R5; PRD R5 v1.43, FR-19.11, FR-19.15, plan 80 Q-R5-2): how
 // much the shop has to take from its buyers, on one compact page. One row for each buyer who bought on the
 // day, also one who paid in full, sorted by name: what he bought in short ("(Banana 20 . 600)"), today's
-// bill, the cash he paid on the spot, today's credit, what he owed at the start of the day and what he owes
-// now. A وصولی of the day is not on the sheet: it shows in the next day's previous balance. Under the table
+// bill, today's credit, what he owed at the start of the day and what he owes now (no cash column or cash total,
+// PRD R5 v1.57). A وصولی of the day is not on the sheet: it shows in the next day's previous balance. Under the table
 // are the buyers who owed but bought nothing today, as one total, and the total credit of all buyers; a
 // person in the dead amount and a buyer whose credit ends in جمع are listed apart. The rows, the counts and
 // every total are the backend's; the rows on screen are never added up (CLAUDE.md rule 1).
@@ -55,7 +55,7 @@ function rowId(row: AdhariSheetRow): string {
   return party.person_key ?? String(party.account_id);
 }
 
-/** One apart-line under the table: the five figures of a group of buyers, from the backend's totals. */
+/** One apart-line under the table: the figures of a group of buyers, from the backend's totals. */
 function TotalsLine({ id, sums, count }: { id: string; sums: AdhariSheetTotals; count?: number }) {
   return (
     <Localized
@@ -65,7 +65,6 @@ function TotalsLine({ id, sums, count }: { id: string; sums: AdhariSheetTotals; 
         count: <Num inherit />,
         prev: <Balance balance={sums.previous_due} inherit />,
         bill: <Num paisa={sums.bill_paisa} />,
-        cash: <Num paisa={sums.cash_paisa} />,
         credit: <Num paisa={sums.today_credit_paisa} />,
         due: <Balance balance={sums.total_due} inherit />,
       }}
@@ -132,7 +131,6 @@ export function AdhariSheetPage() {
             : {
                 party: context.text('glossary-meezan'),
                 bill: context.money(sums.bill_paisa),
-                cash: context.money(sums.cash_paisa),
                 today_credit: context.money(sums.today_credit_paisa),
                 previous: context.money(sums.previous_due.amount_paisa),
                 total_due: context.money(sums.total_due.amount_paisa),

@@ -412,6 +412,39 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     });
   });
 
+  it('an advance typed on a lot of a sale is named in words, with no voucher number (PRD FR-12.52)', async () => {
+    const { user } = await open('receipt');
+    await user.click(
+      screen.getByRole('button', { name: message(language, 'vouchers-from-seller') }),
+    );
+    vi.mocked(vouchersApi.assistAdvances).mockResolvedValue({
+      open: [
+        {
+          source: 'bikri',
+          voucher_number: null,
+          entry_date: '2026-10-10',
+          given_paisa: money(20000),
+          adjusted_paisa: money(0),
+          open_paisa: money(20000),
+        },
+      ],
+      total_count: 1,
+      truncated: false,
+      open_paisa: money(20000),
+      last: {
+        entry_date: '2026-10-10',
+        amount_paisa: money(20000),
+        voucher_number: null,
+        bikri_number: 5,
+      },
+    });
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
+    const text = await panelText(language, 'vouchers-advances-title');
+    expect(text).toContain(message(language, 'vouchers-source-bikri-advance'));
+    expect(text).not.toContain(message(language, 'vouchers-source-opening'));
+    expect(text).toContain('20,000');
+  });
+
   it('an advance goes with the expected goods; cash below zero shows the note and asks before saving', async () => {
     store = fakeVouchers({ cash: 20000 });
     const { user } = await open('advance');

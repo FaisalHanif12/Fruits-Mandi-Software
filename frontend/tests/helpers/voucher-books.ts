@@ -518,7 +518,12 @@ export function createBooks(options: BooksOptions = {}) {
       last:
         open === 0
           ? null
-          : { entry_date: '2026-09-01', amount_paisa: money(open), voucher_number: 1 },
+          : {
+              entry_date: '2026-09-01',
+              amount_paisa: money(open),
+              voucher_number: 1,
+              bikri_number: null,
+            },
     };
   }
 

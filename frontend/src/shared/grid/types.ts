@@ -145,6 +145,15 @@ export interface EntryColumn {
   readonly choices?: readonly ChoiceSpec[];
   /** A calculated cell of this column has the ⓘ with the backend's working (PRD FR-7.43). */
   readonly explain?: boolean;
+  /**
+   * A small icon button after the text of a `picker` cell (the lots grid: "show this lot's sale lines", plan 95 item 6, PRD
+   * FR-12.52). It is a real button: a click or Enter on it does `onPress` and never opens the picker or moves the cursor.
+   */
+  readonly cellButton?: {
+    /** The Fluent message that names the button and is its tooltip. */
+    readonly labelId: string;
+    readonly onPress: (row: EntryRow) => void;
+  };
 }
 
 /** A cell, by the row's ID and the column's field. */

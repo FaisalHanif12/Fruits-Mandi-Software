@@ -287,6 +287,15 @@ fn prepare_lot(
         None => None,
     };
     let freight = optional_money(issues, &lot_field(index, "freight"), input.freight.as_ref());
+    // Empty پیشگی is "not typed" (None), which is 0 (PRD FR-12.52).
+    let advance = match input.advance.as_ref().filter(|t| !is_blank(t)) {
+        Some(text) => {
+            let value = take(issues, validate::money(&lot_field(index, "advance"), text));
+            ok &= value.is_some();
+            value
+        }
+        None => None,
+    };
     // Empty نقد is "not typed" (None), which is 0 (PRD 12.3).
     let cash_paid = match input.cash_paid.as_ref().filter(|t| !is_blank(t)) {
         Some(text) => {
@@ -359,6 +368,7 @@ fn prepare_lot(
         phone,
         cash_paid,
         store_rent: store_rent.unwrap_or(Paisa::ZERO),
+        advance,
         adjust_advance: input.adjust_advance,
         sales,
     }

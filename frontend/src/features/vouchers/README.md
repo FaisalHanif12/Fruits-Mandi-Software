@@ -2,7 +2,8 @@
 
 The one voucher screen with a type list: وصولی (receipt), ادائیگی (payment) and پیشگی (advance).
 PRD FR-7.67, FR-7.68, FR-15.1 to FR-15.12, FR-6.7, FR-13.5, FR-13.8, FR-16.8 (shape), FR-19.2.
-It is one screen, not three: the tabs of the بکری area and `Alt+V`, `Alt+A`, `Alt+P` open it with a type
+It is one screen, not three: the three tabs of the روکڑ area (plan 95, PRD FR-5.3 v1.57; the screen and the اگراہی فہرست
+show the روکڑ tabs) and `Alt+V`, `Alt+A`, `Alt+P` open it with a type
 already chosen, and the old addresses (`/bikri/receipt`, `/bikri/payment`, `/bikri/advance`) go to
 `/bikri/voucher?type=...`. `&id=12` opens a saved voucher (edit while its day is open, else read
 only).
@@ -45,7 +46,8 @@ only).
   The backend sends at most the oldest 200 open bills or payable postings (`total_count`,
   `truncated`); when it cut the list a one-line note says "the oldest 200 of N are shown", and the
   totals and "full balance" are still for all of them.
-- **List** (`components/VoucherListSection.tsx`) of the type, with Edit, Cancel and Print, and a
+- **List** (`components/VoucherListSection.tsx`) of the type, one window of 30 days at a time (`useListWindow` with
+  `days: VOUCHER_DAYS_WINDOW`, plan 95 item 14, PRD FR-19.11 v1.57; the buttons say "30 days"), with Edit, Cancel and Print, and a
   pinned total under the amount column: the backend's `total_paisa` (`vouchers_list` returns
   `{ rows, total_paisa }`; a cancelled voucher is in the rows and left out of the total).
 - **Collection round** (`pages/CollectionPage.tsx`, `/bikri/collection`): the اگراہی فہرست

@@ -413,7 +413,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
         expect(drawnRows()).toEqual(['0', '1', '2']);
       }, SLOW_MS);
       expect(lastRun()?.filters).toEqual(
-        sentLike(R15_ALL_REQUEST, { from: '04-10-2026', to: '10-10-2026' }),
+        sentLike(R15_ALL_REQUEST, { from: '11-09-2026', to: '10-10-2026' }),
       );
       expect(lastRun()?.filters).not.toHaveProperty('voucher_type');
       // One line for each kind, in the words of the kind, with the backend's figure.
@@ -443,7 +443,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       await choose(user, 'report-filter-voucher-type', m('report-doc-payment'));
       await waitFor(() => {
         expect(lastRun()?.filters).toEqual(
-          sentLike(R15_PAYMENTS_REQUEST, { from: '04-10-2026', to: '10-10-2026' }),
+          sentLike(R15_PAYMENTS_REQUEST, { from: '11-09-2026', to: '10-10-2026' }),
         );
       }, SLOW_MS);
       await waitFor(() => {

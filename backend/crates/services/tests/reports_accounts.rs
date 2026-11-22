@@ -349,7 +349,9 @@ fn r13_shows_the_second_sale_line_of_the_same_buyer_with_its_own_items() {
             vec![support::sale("s-2", w.akram, "5", "1200")],
         ),
     ]);
-    save(&w, &draft);
+    // Each lot takes its default نقد 5,000, above its credit (2,520 and 2,545): the save asks once
+    // (PRD FR-12.23 v1.53, plan 91), and this test answers yes. The report numbers are unchanged.
+    support::save_old(&w, &draft, true);
     let page = report(&w, ReportId::R13, party(w.akram), 0, 0);
     let parts: Vec<(String, i64, i64)> = page
         .rows

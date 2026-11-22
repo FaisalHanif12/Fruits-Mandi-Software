@@ -96,7 +96,73 @@ fn a_negative_amount_is_refused() {
 
 /// previous in rupees, debit positive; credit in rupees; paid in rupees.
 fn lines(previous: i64, credit: i64, paid: i64) -> mandi_core::bikri::SellerPaidLines {
-    seller_lines(RAHIM, p(previous), p(credit), p(paid)).unwrap()
+    seller_lines(
+        RAHIM,
+        p(previous),
+        p(credit),
+        p(paid),
+        Paisa::ZERO,
+        Paisa::ZERO,
+    )
+    .unwrap()
+}
+
+/// The same with a پیشگی typed on his lots (PRD FR-12.52 v1.57).
+fn lines_with_advance(
+    previous: i64,
+    credit: i64,
+    paid: i64,
+    advance: i64,
+) -> mandi_core::bikri::SellerPaidLines {
+    seller_lines(
+        RAHIM,
+        p(previous),
+        p(credit),
+        p(paid),
+        p(advance),
+        Paisa::ZERO,
+    )
+    .unwrap()
+}
+
+/// PRD FR-12.52 v1.57, money agent worked numbers: previous 9,260 جمع (-9,260), credit 52,900, نقد
+/// 30,000, advance 20,000: new = -9,260 + 30,000 + 20,000 - 52,900 = -12,160 (12,160 جمع). The
+/// advance is not part of the sale: carry, cut, added and the limit are those without it.
+#[test]
+fn an_advance_moves_the_new_balance_and_nothing_else_of_the_summary() {
+    let with = lines_with_advance(-9_260, 52_900, 30_000, 20_000);
+    let without = lines(-9_260, 52_900, 30_000);
+    assert_eq!(with.advance_paisa, p(20_000));
+    assert_eq!(
+        (with.new_paisa, with.new_side),
+        (p(12_160), BalanceSide::Cr)
+    );
+    // The sale's own lines are the same with or without it.
+    assert_eq!(with.carry_paisa, p(22_900));
+    assert_eq!(with.carry_paisa, without.carry_paisa);
+    assert_eq!(with.cut_paisa, without.cut_paisa);
+    assert_eq!(with.added_to_credit_paisa, p(22_900));
+    assert_eq!(with.limit_paisa, without.limit_paisa);
+    assert_eq!(with.needs_confirm, without.needs_confirm);
+    assert_eq!(
+        with.working.message_id,
+        "working-seller-new-balance-advance"
+    );
+    assert_eq!(without.working.message_id, "working-seller-new-balance");
+    let result = with
+        .working
+        .args
+        .iter()
+        .find(|a| a.name == "result")
+        .unwrap();
+    assert_eq!(result.value, WorkingValue::Money { paisa: p(-12_160) });
+    // It owes more after the advance than without it, by exactly the advance.
+    // (both are shown as جمع amounts: 32,160 and 12,160).
+    assert_eq!(without.new_side, BalanceSide::Cr);
+    assert_eq!(
+        without.new_paisa.checked_sub(with.new_paisa).unwrap(),
+        p(20_000)
+    );
 }
 
 #[test]
@@ -246,7 +312,28 @@ fn the_working_of_the_new_balance_is_the_new_balance() {
 #[test]
 fn a_negative_paid_is_refused() {
     let negative = Paisa::try_from_paisa(-100).unwrap();
-    assert!(seller_lines(RAHIM, Paisa::ZERO, p(10), negative).is_err());
+    assert!(
+        seller_lines(
+            RAHIM,
+            Paisa::ZERO,
+            p(10),
+            negative,
+            Paisa::ZERO,
+            Paisa::ZERO
+        )
+        .is_err()
+    );
+    assert!(
+        seller_lines(
+            RAHIM,
+            Paisa::ZERO,
+            p(10),
+            Paisa::ZERO,
+            negative,
+            Paisa::ZERO
+        )
+        .is_err()
+    );
 }
 
 // ---- the summary inside calc_posting ----
@@ -468,5 +555,136 @@ proptest! {
         prop_assert_eq!(l.needs_confirm, paid_p > limit);
         // A balance is never shown negative.
         prop_assert!(!l.previous_paisa.is_negative() && !l.new_paisa.is_negative());
+    }
+}
+
+/// Lead decision, plan 95 (PRD FR-12.52 v1.57): an advance on lots with the tick ON is taken off today's
+/// credit, so it counts with نقد for the question "above today's credit". Previous 0, credit 52,900,
+/// نقد 50,000 and advance 20,000: 70,000 is above 52,900, so he is asked; with the tick off, or an
+/// advance of 2,000 (52,000 is within it), he is not.
+#[test]
+fn an_advance_with_the_tick_on_counts_for_the_question_and_with_the_tick_off_it_does_not() {
+    let ask = |advance: i64, adjusted: i64| {
+        seller_lines(
+            RAHIM,
+            Paisa::ZERO,
+            p(52_900),
+            p(50_000),
+            p(advance),
+            p(adjusted),
+        )
+        .unwrap()
+        .needs_confirm
+    };
+    assert!(ask(20_000, 20_000), "tick on: 70,000 > 52,900");
+    assert!(!ask(20_000, 0), "tick off: only the نقد 50,000 counts");
+    assert!(!ask(2_000, 2_000), "tick on, 52,000 is within 52,900");
+    assert!(ask(2_900, 2_900) == (52_900 < 50_000 + 2_900));
+    // The limit and the other lines are those without it.
+    let on = seller_lines(
+        RAHIM,
+        Paisa::ZERO,
+        p(52_900),
+        p(50_000),
+        p(20_000),
+        p(20_000),
+    )
+    .unwrap();
+    let off = seller_lines(
+        RAHIM,
+        Paisa::ZERO,
+        p(52_900),
+        p(50_000),
+        p(20_000),
+        Paisa::ZERO,
+    )
+    .unwrap();
+    assert_eq!(on.limit_paisa, off.limit_paisa);
+    assert_eq!(on.paid_paisa, off.paid_paisa);
+    assert_eq!(on.advance_adjusted_paisa, p(20_000));
+}
+
+/// A negative credit (the charges are more than the sales) leaves a limit of 0, so an advance with
+/// the tick on is asked; with the tick off it is not (money agent, plan 95 review).
+#[test]
+fn a_ticked_advance_is_asked_against_a_limit_of_zero_when_the_credit_is_negative() {
+    let ask = |adjusted: i64| {
+        seller_lines(
+            RAHIM,
+            Paisa::ZERO,
+            p(-500),
+            Paisa::ZERO,
+            p(1_000),
+            p(adjusted),
+        )
+        .unwrap()
+    };
+    let on = ask(1_000);
+    assert_eq!(on.limit_paisa, Paisa::ZERO);
+    assert!(on.needs_confirm, "1,000 is above a limit of 0");
+    assert!(!ask(0).needs_confirm, "tick off: nothing is counted");
+    // The ledger does not depend on the tick: previous 0 + advance 1,000 - credit (-500) = 1,500.
+    assert_eq!(on.new_paisa, ask(0).new_paisa);
+}
+
+/// Two parts of one save for one seller (a carried lot and a new lot): the advance that counts is the
+/// sum over the parts of the lots with the tick on, and the new balance is the sum of all of it.
+#[test]
+fn merging_the_parts_of_a_save_sums_the_ticked_advance() {
+    let first = seller_lines(
+        RAHIM,
+        Paisa::ZERO,
+        p(40_000),
+        p(10_000),
+        p(20_000),
+        p(20_000),
+    )
+    .unwrap();
+    let second = seller_lines(
+        RAHIM,
+        Paisa::ZERO,
+        p(12_900),
+        p(20_000),
+        p(5_000),
+        Paisa::ZERO,
+    )
+    .unwrap();
+    let merged = merge_sellers(&[&[first], &[second]]).unwrap();
+    assert_eq!(merged.len(), 1);
+    let m = &merged[0];
+    assert_eq!(m.advance_paisa, p(25_000));
+    assert_eq!(m.advance_adjusted_paisa, p(20_000));
+    assert_eq!(m.paid_paisa, p(30_000));
+    assert_eq!(m.credit_paisa, p(52_900));
+    // 30,000 + 20,000 = 50,000 is within 52,900: no question; the ticked 20,000 only is counted.
+    assert!(!m.needs_confirm);
+    // new = 0 + paid 30,000 + advance 25,000 - credit 52,900 = 2,100 (he owes).
+    assert_eq!(m.new_paisa, p(2_100));
+    assert_eq!(m.new_side, BalanceSide::Dr);
+}
+
+proptest! {
+    #[test]
+    fn the_tick_changes_the_question_and_never_the_ledger(
+        previous in -1_000_000i64..=1_000_000,
+        credit in -500_000i64..=1_000_000,
+        paid in 0i64..=2_000_000,
+        advance in 0i64..=2_000_000,
+        ticked in proptest::bool::ANY,
+    ) {
+        let adjusted = if ticked { advance } else { 0 };
+        let on = seller_lines(RAHIM, p(previous), p(credit), p(paid), p(advance), p(advance)).unwrap();
+        let off = seller_lines(RAHIM, p(previous), p(credit), p(paid), p(advance), Paisa::ZERO).unwrap();
+        let this = seller_lines(RAHIM, p(previous), p(credit), p(paid), p(advance), p(adjusted)).unwrap();
+        // The tick never moves the ledger or any other line.
+        prop_assert_eq!(on.new_paisa, off.new_paisa);
+        prop_assert_eq!(on.new_side, off.new_side);
+        prop_assert_eq!(on.limit_paisa, off.limit_paisa);
+        prop_assert_eq!(on.carry_paisa, off.carry_paisa);
+        // The question counts paid + the ticked advance.
+        let limit = this.limit_paisa.as_paisa();
+        prop_assert_eq!(this.needs_confirm, p(paid).as_paisa() + p(adjusted).as_paisa() > limit);
+        // A ticked advance can only add to the question, never remove it.
+        prop_assert!(!off.needs_confirm || on.needs_confirm);
     }
 }

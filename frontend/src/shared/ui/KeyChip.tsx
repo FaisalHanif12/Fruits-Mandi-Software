@@ -8,6 +8,8 @@ export type KeyChipTone = 'on-primary' | 'on-light';
 interface KeyChipProps {
   shortcut: Shortcut;
   tone: KeyChipTone;
+  /** Extra classes, for a chip that gives way in a short row (`Button`'s `tightInCompactRow`). */
+  className?: string;
 }
 
 const TONE_CLASSES: Record<KeyChipTone, string> = {
@@ -15,12 +17,12 @@ const TONE_CLASSES: Record<KeyChipTone, string> = {
   'on-light': 'bg-surface-sunken text-ink',
 };
 
-export function KeyChip({ shortcut, tone }: KeyChipProps) {
+export function KeyChip({ shortcut, tone, className = '' }: KeyChipProps) {
   return (
     <kbd
       lang="en"
       dir="ltr"
-      className={`inline-flex h-chip items-center rounded-1 px-2 type-key ${TONE_CLASSES[tone]}`}
+      className={`inline-flex h-chip items-center rounded-1 px-2 type-key ${TONE_CLASSES[tone]} ${className}`}
     >
       {shortcut.label}
     </kbd>

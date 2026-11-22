@@ -350,6 +350,21 @@
         "kind": "detail"
       },
       {
+        "key": "value",
+        "title_id": "print-sale-col-value",
+        "kind": "money"
+      },
+      {
+        "key": "commission",
+        "title_id": "print-sale-col-commission",
+        "kind": "money"
+      },
+      {
+        "key": "laga",
+        "title_id": "print-sale-col-laga",
+        "kind": "money"
+      },
+      {
         "key": "bill",
         "title_id": "print-sale-col-bill",
         "kind": "money"
@@ -396,6 +411,18 @@
           },
           {
             "type": "money",
+            "text": "17,400"
+          },
+          {
+            "type": "money",
+            "text": "1,044"
+          },
+          {
+            "type": "money",
+            "text": "240"
+          },
+          {
+            "type": "money",
             "text": "18,684"
           },
           {
@@ -436,6 +463,18 @@
                 "laga": "160"
               }
             ]
+          },
+          {
+            "type": "money",
+            "text": "12,000"
+          },
+          {
+            "type": "money",
+            "text": "720"
+          },
+          {
+            "type": "money",
+            "text": "160"
           },
           {
             "type": "money",
@@ -483,6 +522,18 @@
           },
           {
             "type": "money",
+            "text": "12,000"
+          },
+          {
+            "type": "money",
+            "text": "720"
+          },
+          {
+            "type": "money",
+            "text": "80"
+          },
+          {
+            "type": "money",
             "text": "12,800"
           },
           {
@@ -504,6 +555,18 @@
       },
       {
         "type": "empty"
+      },
+      {
+        "type": "money",
+        "text": "41,400"
+      },
+      {
+        "type": "money",
+        "text": "2,484"
+      },
+      {
+        "type": "money",
+        "text": "480"
       },
       {
         "type": "money",

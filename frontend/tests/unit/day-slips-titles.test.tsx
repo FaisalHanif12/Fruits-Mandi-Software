@@ -127,7 +127,7 @@ describe.each(['en', 'ur'] as const)('the title of a party slip (%s)', (language
     );
   });
 
-  it('a buyer’s slip says "Cash Paid In" and a seller’s says "Cash Paid Out", with the sides written for the reader', () => {
+  it('a buyer’s slip says "Cash Paid In" and a seller’s says نقد ادائیگی (Cash Paid), with the sides written for the reader', () => {
     const buyers = draw(daySlipsData(language, 'parchi'), 'parchi');
     const buyerLabels = [...buyers.querySelectorAll('.print-slip-lines th')].map((th) =>
       visible(th.textContent),
@@ -139,6 +139,9 @@ describe.each(['en', 'ur'] as const)('the title of a party slip (%s)', (language
       visible(th.textContent),
     );
     expect(sellerLabels).toContain(m('report-r35-paid-today-seller'));
+    // The seller's cash paid is the glossary term نقد ادائیگی (plan 95, PRD FR-12.52); the buyer's line keeps its own words.
+    expect(m('report-r35-paid-today-seller')).toBe(m('glossary-naqd-adaigi'));
+    expect(m('report-r35-paid-today')).not.toBe(m('glossary-naqd-adaigi'));
     expect(sellerLabels).toContain(m('report-r35-today-left-seller'));
     expect(sellerLabels).not.toContain(m('report-r35-paid-today'));
     expect(visible(sellers.textContent)).toContain(m('print-slip-side-cr'));

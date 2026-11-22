@@ -316,7 +316,7 @@ fn page_rows(
                     iso: raw.entry_date.clone(),
                 },
                 Cell::Doc {
-                    type_id: ids::doc_id(&raw.posting_type),
+                    type_id: ids::doc_id_of(&raw.posting_type, &raw.source_type),
                     number: raw.doc_number,
                 },
                 detail,

@@ -57,7 +57,10 @@ export function AdvanceHistory({ sellerId, effects = null }: AdvanceHistoryProps
             id: 'number',
             header: <Localized id="vouchers-col-number" />,
             cell: (item) =>
-              item.source === 'opening' || item.voucher_number === null ? (
+              item.source === 'bikri' ? (
+                // The پیشگی typed on a lot of a بکری has no voucher number (PRD FR-12.52 v1.57).
+                <Localized id="vouchers-source-bikri-advance" />
+              ) : item.source === 'opening' || item.voucher_number === null ? (
                 <Localized id="vouchers-source-opening" />
               ) : (
                 <Code>
@@ -130,8 +133,9 @@ export function AdvanceHistory({ sellerId, effects = null }: AdvanceHistoryProps
                 label={l10n.getString('vouchers-advances-title')}
                 columns={columns}
                 rows={open}
+                // Two advances typed on lots of one day have no number to tell them apart: their place does.
                 rowKey={(item) =>
-                  `${item.source}-${String(item.voucher_number)}-${item.entry_date}`
+                  `${item.source}-${String(item.voucher_number)}-${item.entry_date}-${String(open.indexOf(item))}`
                 }
               />
             )}

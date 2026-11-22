@@ -440,7 +440,8 @@ pub struct AssistAdvancesInput {
 /// One advance that is not yet fully adjusted.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct OpenAdvance {
-    /// `voucher` for a پیشگی voucher, `opening` for an opening debit marked as an advance.
+    /// `voucher` for a پیشگی voucher, `opening` for an opening debit marked as an advance, `bikri`
+    /// for the پیشگی typed on a lot of a بکری (PRD FR-12.52 v1.57).
     pub source: String,
     /// The voucher number, for source `voucher`.
     #[ts(type = "number | null")]
@@ -458,7 +459,8 @@ pub struct OpenAdvance {
     pub open_paisa: Paisa,
 }
 
-/// The last advance given to a seller.
+/// The last advance given to a seller: a پیشگی voucher or the پیشگی typed on a lot (PRD FR-7.60,
+/// FR-12.52 v1.57).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct LastAdvance {
     /// The day, `YYYY-MM-DD`.
@@ -466,9 +468,12 @@ pub struct LastAdvance {
     /// The amount.
     #[ts(type = "Paisa")]
     pub amount_paisa: Paisa,
-    /// The voucher number.
-    #[ts(type = "number")]
-    pub voucher_number: i64,
+    /// The voucher number; null for the پیشگی typed on a lot (then `bikri_number` is set).
+    #[ts(type = "number | null")]
+    pub voucher_number: Option<i64>,
+    /// The بکری number of a پیشگی typed on a lot (PRD FR-12.52 v1.57); null for a voucher.
+    #[ts(type = "number | null")]
+    pub bikri_number: Option<i64>,
 }
 
 /// A seller's advances for the card in the پیشگی screen (PRD FR-7.60). Read only.

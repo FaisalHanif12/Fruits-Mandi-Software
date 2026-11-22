@@ -545,30 +545,45 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<VoucherRow>> {
     .optional()
 }
 
-/// The last پیشگی voucher of a seller that is still in force.
+/// The last advance given to a seller that is still in force (PRD FR-7.60, FR-12.52 v1.57): a
+/// پیشگی voucher or the پیشگی typed on a lot, whichever is the newest. Read from the journal, the entries
+/// of the posting type `advance` that are posted and not reversed; a lot's advance of one بکری is one
+/// entry, so two lots of the same seller are one advance, summed. An opening debit is not an advance
+/// given.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn last_advance(conn: &Connection, seller_id: i64) -> rusqlite::Result<Option<LastAdvance>> {
     conn.query_row(
-        "SELECT entry_date, amount_paisa, number FROM vouchers
-         WHERE type = 'advance' AND account_id = ?1 AND status = 'saved'
-         ORDER BY entry_date DESC, number DESC LIMIT 1",
+        "SELECT e.entry_date, SUM(l.dr_paisa), v.number, b.number
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id
+         LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
+         WHERE l.account_id = ?1 AND l.is_advance = 1 AND l.dr_paisa > 0
+           AND e.posting_type = 'advance' AND e.status = 'posted' AND e.reverses_entry_id IS NULL
+           AND NOT EXISTS (SELECT 1 FROM journal_entries r
+                           WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
+         GROUP BY e.id
+         ORDER BY e.entry_date DESC, COALESCE(e.order_key, e.id) DESC, e.id DESC
+         LIMIT 1",
         [seller_id],
         |r| {
             Ok((
                 r.get::<_, String>(0)?,
                 r.get::<_, i64>(1)?,
-                r.get::<_, i64>(2)?,
+                r.get::<_, Option<i64>>(2)?,
+                r.get::<_, Option<i64>>(3)?,
             ))
         },
     )
     .optional()?
-    .map(|(entry_date, paisa, voucher_number)| {
+    .map(|(entry_date, paisa, voucher_number, bikri_number)| {
         Ok(LastAdvance {
             entry_date,
             amount_paisa: Paisa::try_from_paisa(paisa).map_err(|_| bad(1, "amount"))?,
             voucher_number,
+            bikri_number,
         })
     })
     .transpose()

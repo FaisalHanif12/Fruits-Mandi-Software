@@ -132,6 +132,9 @@ working-deductions = <num>{ $freight }</num> + <num>{ $comm }</num> + <num>{ $la
 # How a seller's new balance after a sale is worked out (plan 91): his balance before + what he was paid on the spot − today's net sale, with debit positive; a minus result is the shop owing him.
 # review: pending
 working-seller-new-balance = <num>{ $previous }</num> + <num>{ $paid }</num> − <num>{ $credit }</num> = <num>{ $result }</num> (previous { -baqaya } + { -mauqa-par-adaigi } − today's { -safi-bikri }; a minus figure is { -jama })
+# The same with an advance typed on his lots (PRD FR-12.52): it is a debit of its own, added too.
+# review: pending
+working-seller-new-balance-advance = <num>{ $previous }</num> + <num>{ $paid }</num> + <num>{ $advance }</num> − <num>{ $credit }</num> = <num>{ $result }</num> (previous { -baqaya } + { -mauqa-par-adaigi } + { -peshgi } − today's { -safi-bikri }; a minus figure is { -jama })
 
 # C7: the net of a lot.
 # review: pending

@@ -38,22 +38,3 @@ export function devSellerLines(draft: BikriDraft) {
     }),
   ];
 }
-
-/** The spread: the whole amount on the first lot of the named seller (a test double; the backend spreads by lot order). */
-export function devSpread(draft: BikriDraft, input: Record<string, unknown>) {
-  const asked =
-    (input['seller_paid'] as { seller_account_id: number; amount: string }[] | undefined) ?? [];
-  const amount = Number((asked[0]?.amount ?? '0').replaceAll(',', '') || '0');
-  const lots = draft.lots
-    .filter((lot) => lot.seller_account_id === asked[0]?.seller_account_id)
-    .map((lot, index) => ({ key: lot.key, cash_paid_paisa: (index === 0 ? amount : 0) * 100 }));
-  return {
-    lots,
-    preview: {
-      sellers: devSellerLines({
-        ...draft,
-        lots: draft.lots.map((lot) => ({ ...lot, cash_paid: String(amount) })),
-      }),
-    },
-  };
-}

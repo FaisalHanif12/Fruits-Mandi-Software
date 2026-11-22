@@ -246,10 +246,10 @@ common-goto-month-hint = مہینہ لکھیں، جیسے 10-2026۔ مختصر �
 # review: pending
 common-goto-month-placeholder = مہینہ-سال
 
-## The 7-day window of a list that shows many rows a day (PRD FR-19.11, plan 76 point 8).
+## The window of days of a list that shows many rows a day: 30 days at a time (PRD FR-19.11 v1.57, plan 95 item 18).
 
 # review: pending
-common-days-nav-label = 7 دن کے حساب سے آگے پیچھے جائیں
+common-days-nav-label = { $days } دن کے حساب سے آگے پیچھے جائیں
 
 # review: pending
 common-days-earlier = پچھلے <num>{ $days }</num> دن
@@ -273,7 +273,7 @@ common-days-latest-button = آج پر واپس
 common-goto-day = دن پر جائیں
 
 # review: pending
-common-goto-day-hint = دن لکھیں، مثلاً 10-10-2026۔ اس دن پر ختم ہونے والے 7 دن کھل جاتے ہیں۔ مختصر شکل بھی چلتی ہے: 10 اس مہینے کی 10 تاریخ ہے۔
+common-goto-day-hint = دن لکھیں، مثلاً 10-10-2026۔ اس دن پر ختم ہونے والے { $days } دن کھل جاتے ہیں۔ مختصر شکل بھی چلتی ہے: 10 اس مہینے کی 10 تاریخ ہے۔
 
 # review: pending
 common-goto-day-placeholder = دن-مہینہ-سال

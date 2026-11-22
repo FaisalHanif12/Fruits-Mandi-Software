@@ -26,18 +26,12 @@ layout-nav-backup = Backup
 # review: pending
 layout-nav-settings = Settings
 
-## The tabs of the { -bikri } area, in the title row of its screens (PRD FR-5.3, v1.56).
+## The tabs of the { -bikri } area, in the title row of its screens (PRD FR-5.3, v1.56, v1.57).
 
 # review: pending
 layout-module-label = { -bikri } menu
 # review: pending
 layout-module-bikri-book = { -bikri-book }
-# review: pending
-layout-module-receipt = { -wasooli }
-# review: pending
-layout-module-payment = { -adaigi }
-# review: pending
-layout-module-advance = { -peshgi-khata }
 # review: pending
 layout-module-today = Past Sales
 # review: pending
@@ -124,8 +118,13 @@ layout-rokar-expense = { -kharcha }
 layout-rokar-lent = { -adhar-raqam }
 # review: pending
 layout-rokar-khata = { -alag-khata }
+# The three voucher types are tabs of their own (PRD FR-5.3, v1.57): the tab says only the type.
 # review: pending
-layout-rokar-voucher = { -wasooli } / { -adaigi } / { -peshgi-khata }
+layout-rokar-receipt = { -wasooli }
+# review: pending
+layout-rokar-payment = { -adaigi }
+# review: pending
+layout-rokar-advance = { -peshgi }
 
 # review: pending
 layout-rokar-general = { -general }

@@ -11,12 +11,12 @@ import { useOpenReport, useReportCatalog } from '../../features/reports';
 import { asScreenType } from '../../features/vouchers/screen-type';
 import { bundles, LANGUAGES, type Language } from '../../i18n';
 import { useLanguage } from '../../shared/i18n';
-import { MAIN_ROUTES, MODULE_ROUTES } from '../nav-routes';
+import { MAIN_ROUTES, MODULE_ROUTES, VOUCHER_ROUTES } from '../nav-routes';
 
 /** The most screens and reports the search lists. */
 const MAX_SCREENS = 5;
 
-/** A screen of the main menu or the بکری side menu, or a report, found by its name. */
+/** A screen of the main menu, a tab of بکری or روکڑ, or a report, found by its name. */
 export interface ScreenRow {
   kind: 'screen';
   id: string;
@@ -52,7 +52,7 @@ function matches(text: string, titleId: string, reportId: ReportId | null): bool
   });
 }
 
-/** Every screen the search can open, in menu order: the main menu, the بکری side menu. */
+/** Every screen the search can open, in menu order: the main menu, the بکری tabs, the voucher tabs of روکڑ. */
 function menuScreens(): ScreenRow[] {
   const main = (Object.keys(MAIN_ROUTES) as (keyof typeof MAIN_ROUTES)[]).map<ScreenRow>((id) => ({
     kind: 'screen',
@@ -68,7 +68,16 @@ function menuScreens(): ScreenRow[] {
       target: { path: MODULE_ROUTES[id] },
     }),
   );
-  return [...main, ...module].filter((row) => messageIn('en', row.titleId) !== null);
+  // وصولی, ادائیگی and پیشگی are tabs of روکڑ (PRD FR-5.3 v1.57) and are found by their names too.
+  const vouchers = (Object.keys(VOUCHER_ROUTES) as (keyof typeof VOUCHER_ROUTES)[]).map<ScreenRow>(
+    (id) => ({
+      kind: 'screen',
+      id: `screen:${id}`,
+      titleId: `layout-rokar-${id}`,
+      target: { path: VOUCHER_ROUTES[id] },
+    }),
+  );
+  return [...main, ...module, ...vouchers].filter((row) => messageIn('en', row.titleId) !== null);
 }
 
 /**

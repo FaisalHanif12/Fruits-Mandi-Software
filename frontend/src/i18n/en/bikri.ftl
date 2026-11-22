@@ -82,6 +82,14 @@ bikri-lots-add-row = New lot
 # review: pending
 bikri-sales-add-row = New line
 
+# The small button beside the seller's name in a lot row: it selects that lot and shows its sale lines (PRD FR-12.52).
+# review: pending
+bikri-lot-show-lines = Show the sale lines of this { -lot }
+
+# Under the "+" of the sale lines when every nag of the lot is sold: no line is added, and this shows for a few seconds (PRD FR-12.52).
+# review: pending
+bikri-sales-sold-out = All of this seller's goods are sold
+
 # $max: the most lots in one sale.
 # review: pending
 bikri-lots-limit = One sale can hold at most <num>{ $max }</num> lots.
@@ -196,12 +204,6 @@ bikri-summary-take-advance = { $name }: take the advance off this sale
 bikri-seller-paid-title = { $name }: { -mauqa-par-adaigi }
 
 # review: pending
-bikri-seller-paid-field = { -mauqa-par-adaigi }
-
-# review: pending
-bikri-seller-paid-hint = Money given to this seller when the { -bikri } is made. Whole rupees. It is shared over his lots' { -naqd }; the { -naqd } of each lot shows it and can still be changed.
-
-# review: pending
 bikri-seller-paid-previous = { -sabiqa-raqam }
 
 # review: pending
@@ -213,6 +215,10 @@ bikri-seller-paid-paid = { -mauqa-par-adaigi }
 # The rest of today's credit after the cash, put to his account (Umar, 21-11-2026): it lowers what he owes, or adds to what the shop owes him.
 # review: pending
 bikri-seller-paid-rest = Rest of today's { -bikri }, credited to his account
+
+# The advance typed on his lots: a debit of its own, in the new balance (PRD FR-12.52).
+# review: pending
+bikri-seller-paid-advance = { -peshgi }
 
 # review: pending
 bikri-seller-paid-over = Paid above today's { -bikri }
@@ -235,6 +241,10 @@ bikri-seller-over-line = { $name }: new { -baqaya } <num>{ $amount }</num> { $si
 
 # review: pending
 bikri-seller-over-question = The { -baqaya } will grow. Is this entry correct?
+
+# The hint of the advance field in the lot's "more" panel (PRD FR-12.52).
+# review: pending
+bikri-more-advance-given-hint = The advance the seller takes when he brings these goods. Whole rupees. It is not a deduction of this sale; it is a separate advance.
 
 # review: pending
 bikri-more-advance-open = Open advance: <num>{ $amount }</num>

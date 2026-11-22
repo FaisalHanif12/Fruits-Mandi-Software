@@ -245,6 +245,15 @@ export async function typeEvent1Lot(user: User, language: Language) {
  * person looking at the screen does.
  */
 export async function typeCodeAndEnter(user: User, code: string) {
+  // A picker cell opens its editor by itself as soon as it has the focus (plan 46), and the field gets the focus a moment
+  // later. A key pressed in between goes to the cell and is lost, so a test that has just moved to the cell waits for the
+  // field a little first, as a person does. If the editor does not open by itself, the first key opens it, as before.
+  await waitFor(
+    () => {
+      expect(document.activeElement?.tagName).toBe('INPUT');
+    },
+    { timeout: 1_500 },
+  ).catch(() => undefined);
   await user.keyboard(code.slice(0, 1));
   await waitFor(
     () => {
@@ -254,6 +263,15 @@ export async function typeCodeAndEnter(user: User, code: string) {
   );
   if (code.length > 1) await user.keyboard(code.slice(1));
   await screen.findAllByRole('option', undefined, { timeout: 8_000 });
+  // The list shows its matches a moment before it highlights the first one. An Enter in between takes nothing, so a busy
+  // computer (or a cell that has more to draw) makes a test flaky; a person looking at the screen waits for the highlight.
+  // A list that never highlights (no match) is not waited for.
+  await waitFor(
+    () => {
+      expect(document.activeElement?.getAttribute('aria-activedescendant') ?? '').not.toBe('');
+    },
+    { timeout: 3_000 },
+  ).catch(() => undefined);
   await user.keyboard('{Enter}');
 }
 

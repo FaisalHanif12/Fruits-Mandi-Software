@@ -1,0 +1,124 @@
+{
+  "doc": "seller_bill",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "header": {
+    "firm": {
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+      "address": "Kot Radha Kishan",
+      "phone": "0300-1234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-seller-bill-title",
+    "facts": [
+      {
+        "label_id": "print-fact-number",
+        "value": "2"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
+  },
+  "number": "2",
+  "cancelled": false,
+  "revised_on": null,
+  "pages": [
+    {
+      "serial": "1",
+      "party": {
+        "role_id": "print-party-seller",
+        "code": "0010",
+        "short_code": "0",
+        "name": "رحیم",
+        "phone": null
+      },
+      "lines": [
+        {
+          "date": "10-10-2026",
+          "name": "اکرم ٹول ٹیکس",
+          "item": "کیلا-2",
+          "packing": "پیٹی",
+          "qty": "529",
+          "weight_kg": null,
+          "rate": "100",
+          "amount": "52,900",
+          "detail": "(کیلا 529 . 100)",
+          "note": null
+        }
+      ],
+      "amounts": [
+        {
+          "label_id": "print-gross-sale",
+          "amount": "52,900",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-freight",
+          "amount": "0",
+          "role": "line"
+        },
+        {
+          "label_id": "print-commission",
+          "amount": "0",
+          "role": "line"
+        },
+        {
+          "label_id": "print-labour",
+          "amount": "0",
+          "role": "line"
+        },
+        {
+          "label_id": "print-munshiana",
+          "amount": "0",
+          "role": "line"
+        },
+        {
+          "label_id": "print-cash-paid",
+          "amount": "30,000",
+          "role": "line"
+        },
+        {
+          "label_id": "print-store-rent",
+          "amount": "0",
+          "role": "line"
+        },
+        {
+          "label_id": "print-phone-charge",
+          "amount": "0",
+          "role": "line"
+        },
+        {
+          "label_id": "print-total-deductions",
+          "amount": "30,000",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-net-sale",
+          "amount": "22,900",
+          "role": "total"
+        },
+        {
+          "label_id": "print-seller-advance",
+          "amount": "20,000",
+          "role": "line"
+        }
+      ],
+      "payment_id": null,
+      "words": {
+        "label_id": "print-in-words",
+        "text": "بائیس ہزار نو سو روپے"
+      }
+    }
+  ]
+}

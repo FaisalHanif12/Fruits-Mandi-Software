@@ -54,3 +54,9 @@ Every item above works; golden tests unchanged; money agent PASS on items 8, 9, 
 - Item 18 (Umar, 23-11-2026, screenshot of روکڑ بک): every list window is 30 days at a time (روکڑ بک, روزنامچہ, sales and other lists), except پچھلی بکری, which keeps 7 days. Owner: frontend-95b (useListWindow default), backend if any command caps the window at 7 days.
 - Item 18b (Umar, 23-11-2026, screenshots of مارکیٹ سفر and باغات): lists of records rather than days (trips, gardens) show 30 rows per page, with the pager of FR-19.11.
 - Follow-ups: (a) an edit that re-posts the lot advance of a seller in the dead amount is allowed, while FR-10.10 refuses edits of his earlier پیشگی voucher; check at the next review. (b) The R1 seller bill lot name "کیلا-2" is plain text, its digit not in a Num (bare-digit guard). (c) Robustness-owned files got one-line compile fixes for the new LotInput field: `services/benches/bikri_draft/mod.rs`, `services/tests/robustness_gate_t2.rs`.
+
+## Built 23-11-2026
+
+- backend-95 (money agent PASS twice, and PASS on the last diff), frontend-95a, frontend-95b. Lead checks: typecheck, i18n:check, fmt clean; backend clippy -D warnings clean, golden_day 176 (no golden number changed), lot_advance 17, seller_paid 40 and the other 27 fixture binaries green (backend-95 run); frontend touched tests green (95a 98+119, 95b 790).
+- Screens checked by the lead in WebKit: بکری بک row (4 tabs, compact print buttons with words) at 1024, 1366, 1480, 1920; روکڑ tabs at 1024 and 1366; voucher screen with روکڑ tabs; روکڑ بک 30-day window; lot column نقد ادائیگی and lot icon; seller card advance numbers (9,260 جمع + 22,900 − 20,000 = 12,160 جمع).
+- English بکری tabs: مزید below 1920 (wider words), accepted.

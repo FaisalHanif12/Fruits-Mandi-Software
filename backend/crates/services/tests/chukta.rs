@@ -338,6 +338,63 @@ fn only_the_buyer_field_of_a_sale_line_lists_chukta_beside_buyers_and_never_the_
     assert!(ask(AccountScope::Any, "shahid", Some(true)).is_empty());
 }
 
+/// PRD FR-12.52 v1.57 (plan 95 item 5): the buyer field of a بکری line no longer offers نقدی منڈی
+/// (03040000); a walk-in buyer is a چکتا buyer. Every other buyer picker keeps it.
+#[test]
+fn the_sale_line_buyer_field_does_not_offer_naqdi_mandi_and_other_buyer_pickers_still_do() {
+    let w = world();
+    save_ok(&w, &event2(&w));
+    let ask = |text: &str, with_chukta: Option<bool>| {
+        search::search_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &SearchAccountsInput {
+                scope: AccountScope::Buyer,
+                control_id: None,
+                text: text.into(),
+                limit: 50,
+                offset: 0,
+                include_dead: None,
+                with_chukta,
+            },
+        )
+        .unwrap()
+    };
+    let recent = |with_chukta: Option<bool>| {
+        search::recent_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &AccountsRecentInput {
+                scope: AccountScope::Buyer,
+                control_id: None,
+                include_dead: None,
+                with_chukta,
+            },
+        )
+        .unwrap()
+    };
+    let has_naqdi = |hits: &[mandi_services::core::accounts::AccountHit]| {
+        hits.iter().any(|h| h.code == "03040000")
+    };
+    // The sale line field: not in the full list, not by name, not in the recent list.
+    assert!(!has_naqdi(&ask("", Some(true))));
+    assert!(!has_naqdi(&ask("naqdi", Some(true))));
+    assert!(!has_naqdi(&recent(Some(true))));
+    // The same field still offers the ordinary buyers and the چکتا buyers.
+    assert!(
+        ask("", Some(true))
+            .iter()
+            .any(|h| h.kind == HitKind::Chukta)
+    );
+    assert!(ask("akram", Some(true)).iter().any(|h| h.code == "0020"));
+    // Every other buyer picker (no `with_chukta`) keeps it, as before.
+    for flag in [None, Some(false)] {
+        assert!(has_naqdi(&ask("naqdi", flag)), "{flag:?}");
+        assert!(has_naqdi(&ask("", flag)), "{flag:?}");
+        assert!(has_naqdi(&recent(flag)), "{flag:?}");
+    }
+}
+
 #[test]
 fn the_party_card_of_a_chukta_buyer_has_his_name_and_phone_and_no_balance() {
     let w = world();

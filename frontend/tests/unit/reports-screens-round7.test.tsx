@@ -197,8 +197,8 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       expect(totalsCell('balance')).toContain('58,484');
       expect(lastRun()).toMatchObject({ id: 'R12', offset: 0, limit: PAGE_ROWS });
       expect(lastRun()?.filters).toEqual(
-        // The cash book shows 7 days at a time (PRD FR-19.11): the days that end today.
-        sentLike(R12_DAY_REQUEST, { shortcut: null, from: '04-10-2026', to: '10-10-2026' }),
+        // The cash book shows 30 days at a time (PRD FR-19.11): the days that end today.
+        sentLike(R12_DAY_REQUEST, { shortcut: null, from: '11-09-2026', to: '10-10-2026' }),
       );
       // The opening and the closing cash are the two lines above the table.
       for (const id of ['report-opening-balance', 'report-closing-balance']) {

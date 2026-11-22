@@ -195,23 +195,37 @@ describe.each(LANGUAGES)(
 );
 
 describe.each(LANGUAGES)('ادھاری تفصیل of the worked day (%s)', (language) => {
-  it('A5: a row for each buyer; the totals read 44,364 / 12,800 / 31,564 / 0 / 31,564', () => {
+  it('A5: a row for each buyer, without the چکتا buyer and without a cash column; the totals read 31,564 / 31,564 / 0 / 31,564', () => {
     useLanguageStore.setState({ language });
     const data = adhariPrintData(language);
     const page = render(
       <ReportPrintDocument data={printTableOf(data, 'R5')} frame={data.frame} />,
     ).container;
-    expect(page.querySelectorAll('tbody tr')).toHaveLength(3);
+    expect(page.querySelectorAll('tbody tr')).toHaveLength(2);
+    // The columns of ادھاری تفصیل (PRD R5 v1.57, plan 95 item 17): no cash column, no cash total.
+    const headings = [...page.querySelectorAll('thead th')].map((th) => visible(th.textContent));
+    expect(headings).toEqual(
+      [
+        'print-adhari-sheet-col-party',
+        'print-adhari-sheet-col-detail',
+        'print-adhari-sheet-col-bill',
+        'print-adhari-sheet-col-today-credit',
+        'print-adhari-sheet-col-previous',
+        'print-adhari-sheet-col-total',
+      ].map((id) => message(language, id)),
+    );
     const totals = [...page.querySelectorAll('tfoot tr')].map(cellTexts);
     const all = totals.flat().filter((cell) => cell !== '');
-    expect(all).toEqual(expect.arrayContaining(['44,364', '12,800', '31,564', '0']));
+    expect(all).toEqual(expect.arrayContaining(['31,564', '0']));
+    expect(all).not.toContain('44,364');
+    expect(visible(page.textContent)).not.toContain(language === 'ur' ? 'شاہد' : 'Shahid');
     // The last row of the totals is what every buyer owes: 31,564.
     expect(totals.at(-1)?.some((cell) => cell.startsWith('31,564'))).toBe(true);
     const text = visible(page.textContent);
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     expect(text).not.toContain(language === 'ur' ? 'Akram Toll Tax' : 'اکرم ٹول ٹیکس');
     // The line of what he bought is one piece: "(item qty . rate)" never wraps.
-    expect(page.querySelectorAll('p.print-nowrap').length).toBeGreaterThanOrEqual(3);
+    expect(page.querySelectorAll('p.print-nowrap').length).toBeGreaterThanOrEqual(2);
   });
 });
 

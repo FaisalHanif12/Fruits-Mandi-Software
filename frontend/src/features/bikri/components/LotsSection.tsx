@@ -23,7 +23,7 @@ import {
   type GridInterceptors,
   type RemoveQuestion,
 } from '../../../shared/grid';
-import { useLayoutStep } from '../../../shared/hooks';
+import { useLatest, useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
 import { addCarriedLots, carriedLotIds } from '../carried-lots';
@@ -68,6 +68,11 @@ interface LotsSectionProps {
    * بکری has them; an edit of a saved posting does not.
    */
   allowCarried?: boolean | undefined;
+  /**
+   * The button beside each seller's name was pressed (plan 95 item 6, PRD FR-12.52): select that lot and bring its sale lines,
+   * or its summary when it is sold out, into view. Absent: no button.
+   */
+  onShowLot?: ((rowId: string) => void) | undefined;
 }
 
 export function LotsSection({
@@ -79,12 +84,28 @@ export function LotsSection({
   canRemoveRow,
   note,
   allowCarried = false,
+  onShowLot,
 }: LotsSectionProps) {
   const stores = useBikriDraft();
   const step = useLayoutStep();
   // The arrows reach the trash cell of each lot, and from the last one the "+" under the grid.
   const addLink = useAddRowLink();
-  const columns = useMemo(() => lotColumns(step), [step]);
+  // The columns must keep their identity while the user types (a new set would rebuild the grid's cells and close the
+  // picker he is in), so the button reads the screen's newest handler when it is pressed.
+  const showLot = useLatest(onShowLot);
+  const hasShowLot = onShowLot !== undefined;
+  const columns = useMemo(
+    () =>
+      lotColumns(
+        step,
+        hasShowLot
+          ? (row) => {
+              showLot()?.(row.rowId);
+            }
+          : undefined,
+      ),
+    [step, hasShowLot, showLot],
+  );
   const rows = stores.lots((state) => state.rows);
   const focus = stores.lots((state) => state.focus);
   const selected = stores.view((state) => state.selectedLot);

@@ -1,0 +1,253 @@
+{
+  "frame": {
+    "language": "ur",
+    "dir": "rtl",
+    "header": {
+      "firm": {
+        "name": "ماہر عدنان اینڈ برادرز",
+        "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+        "address": "Kot Radha Kishan",
+        "phone": "0300-1234567"
+      },
+      "contacts": [],
+      "trade_mark": null,
+      "title_id": "print-seller-bills-title",
+      "facts": [
+        {
+          "label_id": "print-fact-date",
+          "value": "10-10-2026"
+        }
+      ]
+    },
+    "footer": {
+      "printed_label_id": "print-printed-at",
+      "printed_at": "10-10-2026 14:00",
+      "page_label_id": "print-page-label",
+      "of_label_id": "print-page-of"
+    }
+  },
+  "paper": "a4",
+  "date": "2026-10-10",
+  "sellers": [
+    {
+      "report": "R35",
+      "language": "ur",
+      "dir": "rtl",
+      "paper": "a4",
+      "title_id": "report-r35-title",
+      "party": {
+        "short_code": "0",
+        "code": "0010",
+        "name": "رحیم",
+        "tag": null,
+        "person_key": null
+      },
+      "named_title_id": "print-seller-bill-named-title",
+      "filters": [
+        {
+          "label_id": "report-filter-day",
+          "value": "10-10-2026"
+        },
+        {
+          "label_id": "report-filter-party",
+          "value": "0 رحیم"
+        }
+      ],
+      "columns": [
+        {
+          "key": "item",
+          "title_id": "report-col-item",
+          "kind": "names"
+        },
+        {
+          "key": "packing",
+          "title_id": "report-col-packing",
+          "kind": "names"
+        },
+        {
+          "key": "qty",
+          "title_id": "report-col-qty",
+          "kind": "number"
+        },
+        {
+          "key": "rate",
+          "title_id": "report-col-rate",
+          "kind": "money"
+        },
+        {
+          "key": "amount",
+          "title_id": "report-col-amount",
+          "kind": "money"
+        }
+      ],
+      "summary": [
+        {
+          "label_id": "report-r35-gross",
+          "cell": {
+            "type": "money",
+            "text": "62,160"
+          }
+        },
+        {
+          "label_id": "report-r35-net-sale",
+          "cell": {
+            "type": "balance",
+            "text": "62,160",
+            "side_id": "report-side-cr"
+          }
+        },
+        {
+          "label_id": "report-r35-paid-today",
+          "cell": {
+            "type": "money",
+            "text": "30,000"
+          }
+        },
+        {
+          "label_id": "report-r35-advance",
+          "cell": {
+            "type": "money",
+            "text": "20,000"
+          }
+        },
+        {
+          "label_id": "report-r35-sale-rest",
+          "cell": {
+            "type": "money",
+            "text": "32,160"
+          }
+        },
+        {
+          "label_id": "report-r35-today-left",
+          "cell": {
+            "type": "balance",
+            "text": "12,160",
+            "side_id": "report-side-cr"
+          }
+        },
+        {
+          "label_id": "report-r35-previous",
+          "cell": {
+            "type": "balance",
+            "text": "0",
+            "side_id": "report-side-zero"
+          }
+        },
+        {
+          "label_id": "report-r35-new-balance",
+          "cell": {
+            "type": "balance",
+            "text": "12,160",
+            "side_id": "report-side-cr"
+          }
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "names",
+              "text": "کیلا-1"
+            },
+            {
+              "type": "names",
+              "text": "پیٹی"
+            },
+            {
+              "type": "number",
+              "text": "1"
+            },
+            {
+              "type": "money",
+              "text": "9,260"
+            },
+            {
+              "type": "money",
+              "text": "9,260"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "names",
+              "text": "کیلا-2"
+            },
+            {
+              "type": "names",
+              "text": "پیٹی"
+            },
+            {
+              "type": "number",
+              "text": "529"
+            },
+            {
+              "type": "money",
+              "text": "100"
+            },
+            {
+              "type": "money",
+              "text": "52,900"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "message",
+              "id": "report-r35-item-total",
+              "args": [
+                {
+                  "name": "item",
+                  "value": {
+                    "type": "text",
+                    "text": "کیلا"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "empty"
+            },
+            {
+              "type": "number",
+              "text": "530"
+            },
+            {
+              "type": "empty"
+            },
+            {
+              "type": "money",
+              "text": "62,160"
+            }
+          ],
+          "kind": "item_total"
+        }
+      ],
+      "tables": [],
+      "row_count": "3",
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "words": null
+    }
+  ],
+  "buyers": []
+}

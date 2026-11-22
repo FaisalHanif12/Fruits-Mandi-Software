@@ -889,6 +889,26 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         } else {
             lot.cash_paid.unwrap_or(Paisa::ZERO)
         };
+        // پیشگی (PRD FR-12.52 v1.57): a lot that takes no نقد takes no advance either. It is its
+        // own posting and is not in the deductions, so it never changes this sale's credit or net.
+        // Only an ordinary seller can hold an advance: a الگ کھاتہ is not a seller account (the
+        // database refuses an advance flag there), and a garden or trip lot has no seller.
+        let no_advance = no_cash
+            || !ctx
+                .facts
+                .seller
+                .is_some_and(|s| s.kind == super::lookups::PartyKind::Seller);
+        if no_advance && lot.advance.is_some_and(|advance| advance != Paisa::ZERO) {
+            issues.error(
+                ErrorCode::ErrFormatInvalid,
+                &format!("{}.advance", ctx.prefix),
+            );
+        }
+        acc.advance = if no_advance {
+            Paisa::ZERO
+        } else {
+            lot.advance.unwrap_or(Paisa::ZERO)
+        };
         let totals = acc.totals(&Scope::Lot {
             labour: &labour.working,
             munshiana: &munshiana.working,
@@ -927,6 +947,7 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
                 partner_credits,
                 seller_credit: totals.seller_credit,
                 cash_paid: totals.cash_paid,
+                advance: totals.advance,
                 freight_deducted: totals.freight,
                 labour: totals.labour,
                 munshiana: totals.munshiana,

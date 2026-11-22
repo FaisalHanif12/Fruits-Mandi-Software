@@ -67,7 +67,13 @@ export { ListPage } from './ListPage';
 export { ERROR_BUBBLE_MS } from './error-bubble';
 export { OverflowRow, type OverflowItem } from './OverflowRow';
 export { itemsThatFit } from './overflow-fit';
-export { SectionTabs, TitleOrTabs, sectionTabsThatFit, type SectionTab } from './SectionTabs';
+export {
+  SectionTabs,
+  TitleOrTabs,
+  sectionTabsNaturalWidth,
+  sectionTabsThatFit,
+  type SectionTab,
+} from './SectionTabs';
 export { SectionTabsProvider, useSectionTabs } from './section-tabs-context';
 export { PeriodBox } from './PeriodBox';
 export { ShowClosedTick } from './ShowClosedTick';

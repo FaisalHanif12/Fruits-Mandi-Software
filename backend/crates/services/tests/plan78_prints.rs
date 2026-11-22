@@ -39,9 +39,9 @@ fn adhari(w: &support::World, date: &str) -> mandi_reports::reports::AdhariSheet
 fn the_adhari_sheet_of_the_worked_day_has_todays_buyers_and_the_whole_amount_owed() {
     let w = full_day();
     let sheet = adhari(&w, "10-10-2026");
-    // Rows are today's buyers only, with the plan's example figures: bill, نقد, today's ادھار,
-    // پچھلا بقایا and کل ادھار.
-    let rows: Vec<(String, [i64; 5])> = sheet
+    // Rows are today's buyers only, with the plan's example figures: bill, today's ادھار, پچھلا بقایا
+    // and کل ادھار. There is no نقد column (PRD R5 v1.57, plan 95 item 17).
+    let rows: Vec<(String, [i64; 4])> = sheet
         .rows
         .iter()
         .map(|r| {
@@ -49,7 +49,6 @@ fn the_adhari_sheet_of_the_worked_day_has_todays_buyers_and_the_whole_amount_owe
                 r.party.name_en.clone(),
                 [
                     rupees_of(r.bill_paisa),
-                    rupees_of(r.cash_paisa),
                     rupees_of(r.today_credit_paisa),
                     rupees_of(r.previous_due.amount_paisa),
                     rupees_of(r.total_due.amount_paisa),
@@ -57,26 +56,24 @@ fn the_adhari_sheet_of_the_worked_day_has_todays_buyers_and_the_whole_amount_owe
             )
         })
         .collect();
-    assert_eq!(sheet.total_count, 3);
-    assert!(rows.contains(&("Akram Toll Tax".into(), [12_880, 0, 12_880, 0, 12_880])));
-    assert!(rows.contains(&("Arshad Multani".into(), [18_684, 0, 18_684, 0, 18_684])));
-    assert!(rows.contains(&("Shahid".into(), [12_800, 12_800, 0, 0, 0])));
+    // PRD R5 v1.57 (plan 95 item 12): a چکتا buyer (شاہد, paid 12,800 on the spot) is not a row: he
+    // has no ادھار and no khata.
+    assert_eq!(sheet.total_count, 2);
+    assert!(rows.contains(&("Akram Toll Tax".into(), [12_880, 12_880, 0, 12_880])));
+    assert!(rows.contains(&("Arshad Multani".into(), [18_684, 18_684, 0, 18_684])));
+    assert!(rows.iter().all(|(name, _)| name != "Shahid"));
     let totals = |t: &mandi_reports::reports::AdhariSheetTotals| {
         [
             rupees_of(t.bill_paisa),
-            rupees_of(t.cash_paisa),
             rupees_of(t.today_credit_paisa),
             rupees_of(t.previous_due.amount_paisa),
             rupees_of(t.total_due.amount_paisa),
         ]
     };
-    assert_eq!(totals(&sheet.totals), [44_364, 12_800, 31_564, 0, 31_564]);
+    assert_eq!(totals(&sheet.totals), [31_564, 31_564, 0, 31_564]);
     // Nobody else owes, so کل ادھار is the same, and there is no "others" total.
     assert!(sheet.others.is_none() && sheet.others_count == 0);
-    assert_eq!(
-        totals(&sheet.all_totals),
-        [44_364, 12_800, 31_564, 0, 31_564]
-    );
+    assert_eq!(totals(&sheet.all_totals), [31_564, 31_564, 0, 31_564]);
     assert!(sheet.dead_totals.is_none() && sheet.credit_totals.is_none());
 }
 
@@ -120,8 +117,11 @@ fn the_adhari_print_has_every_buyer_the_others_row_and_the_whole_total() {
             },
         )
         .unwrap();
-        assert_eq!(print.rows.len(), 3);
-        assert_eq!(print.columns.len(), 7);
+        // اکرم and ارشد; the چکتا buyer شاہد is not a row (PRD R5 v1.57).
+        assert_eq!(print.rows.len(), 2);
+        // party, goods, bill, today's ادھار, پچھلا بقایا, کل ادھار: no نقد column (PRD R5 v1.57).
+        assert_eq!(print.columns.len(), 6);
+        assert!(print.columns.iter().all(|c| c.key != "cash"));
         assert_eq!(print.frame.header.title_id, "print-adhari-sheet-title");
         // No others today: the total of today's buyers, then کل ادھار.
         assert_eq!(print.extra_totals.len(), 1);
@@ -310,6 +310,64 @@ fn the_sale_print_has_a_sellers_table_and_a_buyers_table_that_agree_with_the_prd
     let mut future = slips_input(None);
     future.date = "12-10-2026".into();
     assert!(sale_print(w.env.ctx.db(), &future).is_err());
+}
+
+/// PRD FR-19.15 v1.57 (plan 95 item 13): the buyers table of the whole sale print shows the value of
+/// the goods, the commission and the لاگا beside the bill, so value + commission + لاگا = bill.
+/// Worked numbers PRD 4.4 and 4.5.
+#[test]
+fn the_sale_print_buyers_table_has_value_commission_laga_and_a_bill_that_adds_up() {
+    let w = reports_world::worked_day();
+    reports_world::save(&w, &support::event1(&w));
+    reports_world::save(&w, &reports_world::event2(&w));
+    let print = sale_print(w.env.ctx.db(), &slips_input(None)).unwrap();
+    let keys: Vec<&str> = print
+        .buyers
+        .columns
+        .iter()
+        .map(|c| c.key.as_str())
+        .collect();
+    assert_eq!(
+        keys,
+        [
+            "party",
+            "detail",
+            "value",
+            "commission",
+            "laga",
+            "bill",
+            "cash",
+            "credit"
+        ]
+    );
+    let money = |row: &mandi_reports::reports::PrintReportRow| -> Vec<String> {
+        row.cells[2..].iter().map(text_of).collect()
+    };
+    // اکرم 12,000 + 720 + 160 = 12,880; ارشد 17,400 + 1,044 + 240 = 18,684; شاہد (چکتا) 12,000 + 720 +
+    // 80 = 12,800, paid in full.
+    let mut got: Vec<Vec<String>> = print.buyers.rows.iter().map(money).collect();
+    got.sort();
+    let mut want: Vec<Vec<&str>> = vec![
+        vec!["12,000", "720", "160", "12,880", "0", "12,880"],
+        vec!["17,400", "1,044", "240", "18,684", "0", "18,684"],
+        vec!["12,000", "720", "80", "12,800", "12,800", "0"],
+    ];
+    want.sort();
+    assert_eq!(got.len(), want.len());
+    for (row, expected) in got.iter().zip(&want) {
+        for (cell, figure) in row.iter().zip(expected) {
+            assert!(cell.contains(figure), "{figure} in {cell}");
+        }
+    }
+    // Totals: value 41,400, commission 2,484, لاگا 480, bill 44,364, نقد 12,800, ادھار 31,564.
+    let totals: Vec<String> = print.buyers.totals.iter().map(text_of).collect();
+    assert_eq!(totals.len(), 8);
+    for (cell, figure) in totals[2..]
+        .iter()
+        .zip(["41,400", "2,484", "480", "44,364", "12,800", "31,564"])
+    {
+        assert!(cell.contains(figure), "{figure} in {cell}");
+    }
 }
 
 #[test]
@@ -692,10 +750,9 @@ fn the_adhari_sheet_counts_an_opening_dated_the_day_and_the_slip_of_one_bikri_ke
     assert_eq!(
         (
             rupees_of(haroon.bill_paisa),
-            rupees_of(haroon.cash_paisa),
             rupees_of(haroon.today_credit_paisa)
         ),
-        (125_060, 0, 125_060)
+        (125_060, 125_060)
     );
     assert_eq!(bal(&haroon.previous_due), (10_000, BalanceSide::Cr));
     assert_eq!(bal(&haroon.total_due), (115_060, BalanceSide::Dr));

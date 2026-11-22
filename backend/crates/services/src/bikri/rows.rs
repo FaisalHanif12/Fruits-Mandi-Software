@@ -297,6 +297,9 @@ pub(super) fn lot_columns<'a>(
         phone: lot_charge_columns(shaped.preview.phone.as_ref())?,
         cash_paid_paisa: totals.cash_paid.as_paisa(),
         store_rent_paisa: totals.store_rent.as_paisa(),
+        // The پیشگی typed on the lot (PRD FR-12.52 v1.57): kept here so an edit opens the lot with
+        // it. It is not in the deductions or the net, and its money is its own journal entry.
+        advance_paisa: totals.advance.as_paisa(),
         // A trip lot adjusts no advance: there is no seller (PRD FR-12.26). Nor does a garden's
         // lot: the garden's account holds sales money, never an advance (PRD FR-12.36). The
         // backend forces it off, whatever the screen sent.

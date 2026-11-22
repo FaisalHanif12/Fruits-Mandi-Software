@@ -9,6 +9,7 @@ import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
 import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput';
 import type { SortInput } from '../../bindings/SortInput';
 import {
+  RECORDS_PAGE_SIZE,
   useAllPagesQuery,
   useDebouncedValue,
   useLoadRest,
@@ -133,7 +134,13 @@ export function useGardensList(
   enabled = true,
 ) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return usePagedQuery({ screen: 'gardens.list', ...gardensListQuery(settled), enabled });
+  // The gardens are records, not days: 30 rows a page (PRD FR-19.11 v1.57, plan 95 item 18b).
+  return usePagedQuery({
+    screen: 'gardens.list',
+    ...gardensListQuery(settled),
+    enabled,
+    defaultPageSize: RECORDS_PAGE_SIZE,
+  });
 }
 
 /** Every garden of the filter, page after page, for a choice list (`useLoadRest`). */

@@ -178,6 +178,11 @@ pub const LOT_REMOVED_SQL: &str = include_str!("../migrations/0027_lot_removed.s
 /// or chain hash changes.
 pub const SPEED_GATE_SQL: &str = include_str!("../migrations/0028_speed_gate.sql");
 
+/// Migration 29 (plan 95 item 11, PRD FR-12.52 v1.57): the پیشگی typed on a lot, one column
+/// `bikri_lots.advance_paisa`. Every old lot gets 0; no journal line, amount, id or chain hash
+/// changes.
+pub const LOT_ADVANCE_SQL: &str = include_str!("../migrations/0029_lot_advance.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -218,6 +223,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(GARDEN_SHARES_LOCK_ARRIVALS_SQL),
         M::up(LOT_REMOVED_SQL),
         M::up(SPEED_GATE_SQL),
+        M::up(LOT_ADVANCE_SQL),
     ])
 }
 

@@ -225,6 +225,7 @@
           "cash_paid": 0,
           "store_rent": 0,
           "phone": 0,
+          "advance": 0,
           "deductions": 672000,
           "net": 10528000,
           "seller_credit": 10528000,
@@ -1031,6 +1032,7 @@
       "cash_paid": 0,
       "store_rent": 0,
       "phone": 0,
+      "advance": 0,
       "deductions": 672000,
       "net": 10528000,
       "seller_credit": 10528000,
@@ -1627,6 +1629,7 @@
         }
       }
     ],
+    "sellers": [],
     "cash": {
       "cash_before_paisa": 0,
       "change_paisa": 0,

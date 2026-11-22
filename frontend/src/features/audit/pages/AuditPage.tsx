@@ -69,7 +69,7 @@ function AuditLogBody() {
   const focusRowId = useAuditStore((now) => now.focusRowId);
   const { change, clear, open, setFocusRowId } = useAuditStore.getState();
   const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
-  // The log shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8), unless the Owner types
+  // The log shows 30 days at a time, the latest first (PRD FR-19.11, v1.57, plan 95 item 18), unless the Owner types
   // dates of his own in the boxes: those win, and the bar is not shown.
   const dayStatus = useDayStatus();
   const today = dayStatus.data?.today;

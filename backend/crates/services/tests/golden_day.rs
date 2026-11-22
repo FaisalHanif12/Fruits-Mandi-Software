@@ -274,7 +274,8 @@ fn e2e_19_the_opening_position() {
             last.amount_paisa,
             last.voucher_number
         ),
-        ("2026-09-01", rupees(15_000), 1)
+        // The voucher number is 1 (it is null only for the پیشگی typed on a lot, PRD FR-12.52 v1.57).
+        ("2026-09-01", rupees(15_000), Some(1))
     );
     assert_eq!(
         assist::party_card(&p.env.ctx, p.rahim)

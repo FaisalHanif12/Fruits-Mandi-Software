@@ -228,6 +228,10 @@ vouchers-source-bikri = { -bikri } { $number }
 # review: pending
 vouchers-source-opening = Opening balance
 
+# The advance a seller took with the goods of a sale (PRD FR-12.52 v1.57): it has no voucher number.
+# review: pending
+vouchers-source-bikri-advance = { -peshgi } with a { -bikri }
+
 # review: pending
 vouchers-source-cash-lent = { -naqd-udhar }
 

@@ -3,6 +3,7 @@
     "code": "ERR_SELLER_PAID_ABOVE_TODAY",
     "field": "sellers[0].paid",
     "values": {
+      "advance_adjusted_paisa": 0,
       "credit_paisa": 2000000,
       "limit_paisa": 2000000,
       "paid_paisa": 2500000

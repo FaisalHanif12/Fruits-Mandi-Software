@@ -214,6 +214,7 @@ function lotRow(lot: LotInput, records: DraftRecords): EntryRow {
   }
   put(typed, LOT.cash, lot.cash_paid);
   put(typed, LOT.storeRent, lot.store_rent);
+  put(typed, LOT.advance, lot.advance);
   typed[LOT.adjustAdvance] = lot.adjust_advance ? ON : '0';
   if (lot.lot_id !== undefined && lot.lot_id !== null) typed[LOT.lotId] = String(lot.lot_id);
   // A lot of own goods keeps its purchase (PRD FR-12.26).

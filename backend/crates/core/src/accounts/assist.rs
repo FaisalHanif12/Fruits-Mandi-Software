@@ -18,8 +18,9 @@ pub enum AccountScope {
     /// The seller field of a lot: the same as `seller`, and also the اپنا مال account (030119998),
     /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase.
     LotSeller,
-    /// A buyer field (control 0304), including نقدی منڈی and the چکتا buyers (each hit marked with
-    /// `kind` `chukta`, PRD FR-7.29, FR-13.4). The account چکتا کھاتہ itself is never offered. A short
+    /// A buyer field (control 0304), including نقدی منڈی. In the buyer field of a بکری line
+    /// (`with_chukta`) the چکتا buyers are listed too (each hit marked with `kind` `chukta`, PRD
+    /// FR-7.29, FR-13.4) and نقدی منڈی is left out (PRD FR-12.52 v1.57). The account چکتا کھاتہ itself is never offered. A short
     /// code is the running number of a buyer's code (`1` finds `0021`); a چکتا buyer has no short
     /// code.
     Buyer,

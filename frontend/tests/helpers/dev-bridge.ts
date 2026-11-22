@@ -6,7 +6,7 @@
 // the development route imports it.
 
 import { IDS, SELLER_MEMORY, previewFor, previewWithOverLine } from './bikri-data';
-import { devSellerLines, devSpread } from './dev-bridge-seller-paid';
+import { devSellerLines } from './dev-bridge-seller-paid';
 import {
   cancelPreview,
   editable,
@@ -711,7 +711,6 @@ const handlers: Record<string, Handler> = {
     return devFlag('cash') ? { ...withDate, cash: CASH_BELOW_ZERO } : withDate;
   },
   // Plan 91: the amount typed in the seller's summary, spread over his lots.
-  bikri_seller_paid_spread: (input) => devSpread(draftOf(input), input),
   assist_seller_memory: () => SELLER_MEMORY,
   // Plan 13: the saved بکری, the lists, drafts and the one-time people.
   bikri_save: (input) => ({

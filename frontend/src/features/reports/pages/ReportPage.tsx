@@ -178,8 +178,8 @@ function ReportBody({
   const language = useLanguage();
   // The day sheet (R35) sorts a seller's lots in the order of the app language (PRD FR-12.12, plan 71
   // L7), so a language switch asks the backend again.
-  // The registers with many rows a day show 7 days at a time, the lists with few rows a day one month (PRD
-  // FR-19.11, plan 76 point 8). The window is the range the report is asked for, unless dates are typed.
+  // The registers with many rows a day show 30 days at a time, the lists with few rows a day one calendar month
+  // (PRD FR-19.11 v1.57, plan 95 item 18). The window is the range the report is asked for, unless dates are typed.
   const dayStatus = useDayStatus();
   const today = dayStatus.data?.today;
   // Without the day (its read failed) the report asks for every row, as before the window.

@@ -35,6 +35,7 @@ pub fn merge_summaries(parts: &[&SummaryTotals], lots: i64) -> Result<SummaryTot
         acc.cash_paid = acc.cash_paid.checked_add(part.cash_paid)?;
         acc.store_rent = acc.store_rent.checked_add(part.store_rent)?;
         acc.phone = acc.phone.checked_add(part.phone)?;
+        acc.advance = acc.advance.checked_add(part.advance)?;
         acc.buyer_comm = acc.buyer_comm.checked_add(part.buyer_comm)?;
         acc.laga = acc.laga.checked_add(part.laga)?;
         acc.rate_diff = acc.rate_diff.checked_add(part.rate_diff)?;

@@ -756,7 +756,10 @@ fn the_open_advances_follow_the_journal_and_reversals() {
         "the card and the screen agree"
     );
     let last = info.last.unwrap();
-    assert_eq!((last.voucher_number, last.amount_paisa), (1, rupees(5_000)));
+    assert_eq!(
+        (last.voucher_number, last.amount_paisa),
+        (Some(1), rupees(5_000))
+    );
 
     // Reverse the voucher's entry (the same date, the day is open).
     let reversal = f

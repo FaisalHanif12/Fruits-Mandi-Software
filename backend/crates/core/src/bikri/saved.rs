@@ -272,6 +272,9 @@ pub struct SavedTotals {
     /// فون.
     #[ts(type = "Paisa")]
     pub phone: Paisa,
+    /// پیشگی the sellers took with these lots (PRD FR-12.52 v1.57). Not in `deductions` or `net`.
+    #[ts(type = "Paisa")]
+    pub advance: Paisa,
     /// کل اخراجات (C6).
     #[ts(type = "Paisa")]
     pub deductions: Paisa,
@@ -364,6 +367,7 @@ impl SavedTotals {
             cash_paid: lot.cash_paid,
             store_rent: lot.store_rent,
             phone,
+            advance: lot.advance,
             deductions: lot.deductions,
             net: lot.net,
             seller_credit,
@@ -391,6 +395,7 @@ impl SavedTotals {
             cash_paid: self.cash_paid.checked_add(other.cash_paid)?,
             store_rent: self.store_rent.checked_add(other.store_rent)?,
             phone: self.phone.checked_add(other.phone)?,
+            advance: self.advance.checked_add(other.advance)?,
             deductions: self.deductions.checked_add(other.deductions)?,
             net: self.net.checked_add(other.net)?,
             seller_credit: self.seller_credit.checked_add(other.seller_credit)?,
@@ -545,6 +550,9 @@ pub struct SavedLot {
     /// کرایہ سٹور.
     #[ts(type = "Paisa")]
     pub store_rent: Paisa,
+    /// پیشگی the seller took with this lot (PRD FR-12.52 v1.57). Its own entry; not a deduction.
+    #[ts(type = "Paisa")]
+    pub advance: Paisa,
     /// The tick "پیشگی سے کاٹیں" (PRD FR-12.23).
     pub adjust_advance: bool,
     /// The first posting of this lot.

@@ -14,7 +14,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Plus } from 'lucide-react';
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { RUNNING_NUMBER } from '../ui/Num';
 import { Button } from '../ui/Button';
 import type { AddRowLink } from './addLink';
@@ -34,9 +34,14 @@ interface AddRowButtonProps {
   limit?: AddRowLimit | undefined;
   /** The link to the grid above (`useAddRowLink`): the arrows come and go between its last row and this button. */
   link?: AddRowLink | undefined;
+  /**
+   * A short note beside the button that does not dim it: why the last press added nothing (plan 95 item 2, "All of this
+   * seller's goods are sold"). The screen decides when it shows and hides it.
+   */
+  note?: ReactNode;
 }
 
-export function AddRowButton({ labelId, onAdd, limit, link }: AddRowButtonProps) {
+export function AddRowButton({ labelId, onAdd, limit, link, note }: AddRowButtonProps) {
   const { l10n } = useLocalization();
   const reasonId = useId();
   const name = l10n.getString(labelId);
@@ -51,6 +56,11 @@ export function AddRowButton({ labelId, onAdd, limit, link }: AddRowButtonProps)
         if (link.focusLastRemove()) event.preventDefault();
       }}
     >
+      {note === undefined || note === null || note === false ? null : (
+        <p role="status" className="type-body min-w-0 text-warn">
+          {note}
+        </p>
+      )}
       {limit === undefined ? null : (
         <Localized id={limit.messageId} vars={limit.vars ?? {}} elems={RUNNING_NUMBER}>
           <p id={reasonId} className="type-body min-w-0 text-ink-muted" />

@@ -14,6 +14,7 @@
 //! 4. The stock moves of each lot, purchase and garden arrival against its stored quantities
 //!    (PRD C16).
 //! 5. The analytics facts against the live sale lines (PRD FR-18.6, FR-18.7).
+//! 6. The پیشگی typed on each lot against the advance entry of its بکری (PRD FR-12.52 v1.57).
 //!
 //! It reads only. A reason names the table and the record and holds no amount (NFR-OBS-2).
 
@@ -103,6 +104,7 @@ pub fn compare_connection(conn: &Connection) -> Result<Found, ServiceError> {
     chukta_persons(conn, &mut found)?;
     weight_lines(conn, &mut found)?;
     lots(conn, &mut found)?;
+    lot_advances(conn, &mut found)?;
     share_rows(conn, &mut found)?;
     stock(conn, &mut found)?;
     facts(conn, &mut found)?;
@@ -149,6 +151,95 @@ fn system_accounts(conn: &Connection) -> Result<SystemAccounts, ServiceError> {
         store_rent: get("02010003")?,
         munshiana: get("02010004")?,
     })
+}
+
+/// Comparison 6 (PRD FR-12.52 v1.57, NFR-SEC-6): the پیشگی typed on the lots of each saved بکری
+/// against the seller debit lines flagged as advances of its live `advance` entry. A lot that was
+/// removed by an edit, and every lot of a cancelled بکری, has none to show. Per بکری and seller, the
+/// sum of the lots' `advance_paisa` must equal the sum of his advance lines, and a بکری has at most one
+/// live advance entry. A reason names the table and the بکری, never an amount.
+fn lot_advances(conn: &Connection, found: &mut Found) -> Result<(), ServiceError> {
+    let mut stored: HashMap<(i64, i64), Paisa> = HashMap::new();
+    {
+        let mut statement = conn.prepare(
+            "SELECT l.bikri_id, l.seller_account_id, SUM(l.advance_paisa)
+             FROM bikri_lots l JOIN bikri_entries b ON b.id = l.bikri_id
+             WHERE b.status = 'saved' AND l.removed_at IS NULL AND l.advance_paisa > 0
+             GROUP BY l.bikri_id, l.seller_account_id",
+        )?;
+        let rows = statement.query_map([], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+            ))
+        })?;
+        for row in rows {
+            let (bikri, seller, sum) = row?;
+            let value = money(found, "bikri_lots", &format!("bikri {bikri}"), sum);
+            stored.insert((bikri, seller), value);
+        }
+    }
+    let mut posted: HashMap<(i64, i64), Paisa> = HashMap::new();
+    let mut entries: HashMap<i64, HashSet<i64>> = HashMap::new();
+    {
+        let mut statement = conn.prepare(
+            "SELECT e.source_id, e.id, l.account_id, l.dr_paisa
+             FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id
+             WHERE e.posting_type = 'advance' AND e.source_type = 'bikri' AND e.status = 'posted'
+               AND e.reverses_entry_id IS NULL
+               AND NOT EXISTS (SELECT 1 FROM journal_entries r
+                               WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
+               AND l.is_advance = 1 AND l.dr_paisa > 0",
+        )?;
+        let rows = statement.query_map([], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+                r.get::<_, i64>(3)?,
+            ))
+        })?;
+        for row in rows {
+            let (bikri, entry, seller, debit) = row?;
+            let value = money(
+                found,
+                "journal_lines",
+                &format!("journal entry {entry}"),
+                debit,
+            );
+            let slot = posted.entry((bikri, seller)).or_insert(Paisa::ZERO);
+            *slot = slot.checked_add(value).map_err(data_error)?;
+            entries.entry(bikri).or_default().insert(entry);
+        }
+    }
+    let mut keys: Vec<(i64, i64)> = stored.keys().chain(posted.keys()).copied().collect();
+    keys.sort_unstable();
+    keys.dedup();
+    for key in keys {
+        if stored.get(&key) != posted.get(&key) {
+            found.add(Difference::new(
+                "bikri_lots",
+                format!(
+                    "bikri {}: a seller's advance differs from its journal entry",
+                    key.0
+                ),
+            ));
+        }
+    }
+    let mut crowded: Vec<i64> = entries
+        .iter()
+        .filter(|(_, ids)| ids.len() > 1)
+        .map(|(bikri, _)| *bikri)
+        .collect();
+    crowded.sort_unstable();
+    for bikri in crowded {
+        found.add(Difference::new(
+            "journal_entries",
+            format!("bikri {bikri}: more than one advance entry is in force"),
+        ));
+    }
+    Ok(())
 }
 
 /// Comparison 1: the sale lines and lots of each posting against its journal lines.

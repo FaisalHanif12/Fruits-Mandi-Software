@@ -112,6 +112,10 @@ export type SavedLot = {
    */
   store_rent: Paisa;
   /**
+   * پیشگی the seller took with this lot (PRD FR-12.52 v1.57). Its own entry; not a deduction.
+   */
+  advance: Paisa;
+  /**
    * The tick "پیشگی سے کاٹیں" (PRD FR-12.23).
    */
   adjust_advance: boolean;

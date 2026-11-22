@@ -106,6 +106,7 @@
         "cash_paid": 500000,
         "store_rent": 0,
         "phone": 2000,
+        "advance": 0,
         "deductions": 991000,
         "net": 1659000,
         "seller_credit": 2159000,
@@ -1248,6 +1249,7 @@
     "cash_paid": 500000,
     "store_rent": 0,
     "phone": 2000,
+    "advance": 0,
     "deductions": 991000,
     "net": 1659000,
     "seller_credit": 2159000,
@@ -1741,6 +1743,60 @@
     }
   },
   "split": [],
+  "sellers": [
+    {
+      "seller_account_id": 19,
+      "previous_paisa": 0,
+      "previous_side": "zero",
+      "credit_paisa": 2159000,
+      "paid_paisa": 500000,
+      "advance_paisa": 0,
+      "advance_adjusted_paisa": 0,
+      "carry_paisa": 1659000,
+      "cut_paisa": 0,
+      "added_to_credit_paisa": 1659000,
+      "over_paid_paisa": 0,
+      "increase_owed_paisa": 0,
+      "new_paisa": 1659000,
+      "new_side": "cr",
+      "limit_paisa": 2159000,
+      "needs_confirm": false,
+      "working": {
+        "message_id": "working-seller-new-balance",
+        "args": [
+          {
+            "name": "previous",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "paid",
+            "value": {
+              "kind": "money",
+              "paisa": 500000
+            }
+          },
+          {
+            "name": "credit",
+            "value": {
+              "kind": "money",
+              "paisa": 2159000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": -1659000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
   "cash": {
     "cash_before_paisa": 5780000,
     "change_paisa": 0,

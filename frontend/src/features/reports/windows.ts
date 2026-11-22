@@ -1,5 +1,5 @@
 // Which reports show one window at a time (PRD FR-19.11, plan 76 point 8): the registers with many rows a day
-// (the sales registers, the day book, the cash book, the voucher registers) show 7 days; the lists with few rows a
+// (the sales registers, the day book, the cash book, the voucher registers) show 30 days; the lists with few rows a
 // day (the expense report, the fruit register, a partner's statement) show one month. The window opens on the
 // latest one and is the range the report is asked for, unless the Owner types dates of his own in the
 // boxes: those win. The aggregates, the balances as of a day and the party ledgers are not windowed (they

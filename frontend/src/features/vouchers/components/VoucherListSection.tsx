@@ -57,7 +57,7 @@ export function VoucherListSection({
   onCancel,
   onPrint,
 }: VoucherListSectionProps) {
-  // The list shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8). Rows of finished
+  // The list shows 30 days at a time, the latest first (PRD FR-19.11, v1.57, plan 95 items 14 and 18). Rows of finished
   // (cancelled) vouchers are left out until the tick is on.
   const listWindow = useListWindow({
     kind: 'days',
@@ -79,7 +79,7 @@ export function VoucherListSection({
     account_id: account?.id ?? null,
     show_finished: showFinished,
     search: searchText === '' ? null : searchText,
-    // A window is 7 days: the bar under the list says which, so no month heading is drawn.
+    // A window is 30 days: the bar under the list says which, so no month heading is drawn.
     group_by_month: false,
   };
   const list = useVouchersList(input, listWindow.ready);

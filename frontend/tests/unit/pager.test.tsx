@@ -1,5 +1,6 @@
 // The page buttons under every list (PRD FR-19.11, plan 38 R1): one page at a time from the backend,
-// "26 to 50 of 340", rows per page (25, 50, 100) remembered for the screen, "Page 2 of 14", First,
+// "26 to 50 of 340", rows per page (25, 30, 50, 100) remembered for the screen, 25 until a list of records (the trips
+// and the gardens, plan 95 item 18b) says 30, "Page 2 of 14", First,
 // Previous, Next and Last, Page Up and Page Down in the table, a new filter back on page 1, the
 // totals over the whole filter on every page, and a language switch that keeps the page. The backend
 // is a fake that counts the pages it is asked for.
@@ -11,7 +12,14 @@ import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProviders, createQueryClient } from '../../src/app/providers';
 import { PagedList, type ListColumn } from '../../src/shared/grid';
-import { pageWindow, useClientPager, usePagedQuery } from '../../src/shared/hooks';
+import {
+  PAGE_SIZES,
+  RECORDS_PAGE_SIZE,
+  pageWindow,
+  useClientPager,
+  usePagedQuery,
+  type PageSize,
+} from '../../src/shared/hooks';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as screenApi from '../../src/shared/screen-state/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
@@ -55,11 +63,14 @@ function fakeBackend(count: number) {
 function List({
   which,
   fetchPage,
+  defaultPageSize,
 }: {
   which: Which;
   fetchPage: (filter: string, offset: number, limit: number) => Promise<Page>;
+  defaultPageSize?: PageSize;
 }) {
   const query = usePagedQuery({
+    ...(defaultPageSize === undefined ? {} : { defaultPageSize }),
     screen: 'test.list',
     queryKey: ['test-list', which],
     fetchPage: (offset, limit) => fetchPage(which, offset, limit),
@@ -239,6 +250,37 @@ describe('the pager under a list', () => {
         value: '{"size":50}',
       });
     });
+  });
+
+  it('offers 25, 30, 50 and 100 rows per page; a list of records starts at 30 and every other list at 25', async () => {
+    expect(PAGE_SIZES).toEqual([25, 30, 50, 100]);
+    expect(RECORDS_PAGE_SIZE).toBe(30);
+    const records = fakeBackend(340);
+    const first = mount(
+      <List which={FILTER_A} fetchPage={records.fetchPage} defaultPageSize={RECORDS_PAGE_SIZE} />,
+    );
+    const nav = await navigationOf('en');
+    await expectFirstRow(1);
+    expect(plain(nav)).toContain('1 to 30 of 340');
+    expect(plain(nav)).toContain('Page 1 of 12');
+    expect(records.calls).toEqual([{ filter: 'a', offset: 0, limit: 30 }]);
+    first.unmount();
+    const others = fakeBackend(340);
+    mount(<List which={FILTER_A} fetchPage={others.fetchPage} />);
+    expect(plain(await navigationOf('en'))).toContain('1 to 25 of 340');
+    expect(others.calls).toEqual([{ filter: 'a', offset: 0, limit: 25 }]);
+  });
+
+  it('a size the Owner kept wins over the default of a list of records', async () => {
+    vi.mocked(screenApi.prefsScreenGet).mockImplementation(({ screen: name }) =>
+      Promise.resolve({ screen: name, value: name === 'pager.test.list' ? '{"size":50}' : null }),
+    );
+    const backend = fakeBackend(340);
+    mount(
+      <List which={FILTER_A} fetchPage={backend.fetchPage} defaultPageSize={RECORDS_PAGE_SIZE} />,
+    );
+    expect(plain(await navigationOf('en'))).toContain('1 to 50 of 340');
+    expect(backend.calls).toEqual([{ filter: 'a', offset: 0, limit: 50 }]);
   });
 
   it('starts with the rows per page that was kept for the screen', async () => {

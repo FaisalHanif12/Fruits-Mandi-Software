@@ -822,12 +822,12 @@ const POSTING_ANCHOR: &str = "COALESCE(e.order_key,
        e.id)";
 
 /// The SQL of [`totals_before_posting`] for this many accounts: `?1` is the day, `?2` the anchor of
-/// the edited posting or NULL, `?3` and on the accounts. Public so a test can check its query plan
-/// (Code Standards B18).
+/// the edited posting or NULL, `?3` the بکری whose پیشگی entries are left out or NULL, `?4` and on
+/// the accounts. Public so a test can check its query plan (Code Standards B18).
 #[doc(hidden)]
 pub fn totals_before_posting_sql(count: usize) -> String {
     let marks = (0..count)
-        .map(|i| format!("?{}", i.saturating_add(3)))
+        .map(|i| format!("?{}", i.saturating_add(4)))
         .collect::<Vec<_>>()
         .join(", ");
     format!(
@@ -836,6 +836,12 @@ pub fn totals_before_posting_sql(count: usize) -> String {
          WHERE l.account_id IN ({marks}) AND e.status = 'posted'
            AND (e.entry_date < ?1
                 OR (e.entry_date = ?1 AND (?2 IS NULL OR {POSTING_ANCHOR} < ?2)))
+           AND (?3 IS NULL
+                OR NOT (e.source_type = 'bikri' AND e.source_id = ?3
+                        AND (e.posting_type = 'advance'
+                             OR EXISTS (SELECT 1 FROM journal_entries o
+                                        WHERE o.id = e.reverses_entry_id
+                                          AND o.posting_type = 'advance'))))
          GROUP BY l.account_id"
     )
 }
@@ -873,6 +879,34 @@ pub fn totals_before_posting(
     date_iso: &str,
     edited_entry: Option<i64>,
 ) -> rusqlite::Result<std::collections::HashMap<i64, Totals>> {
+    before_posting(conn, ids, date_iso, edited_entry, None)
+}
+
+/// [`totals_before_posting`] for an edit of the FIRST posting of a بکری that has پیشگی entries (PRD
+/// FR-12.52 v1.57, plan 95): the entries of that بکری with the posting type `advance`, and their
+/// reversals, are left out too. They belong to the posting being edited, but they are written just
+/// before its first entry, so by order they would count as "before" it, and the edit would count the
+/// old advance twice (once in the previous balance, once as the new advance line).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn totals_before_posting_without_advance(
+    conn: &Connection,
+    ids: &[i64],
+    date_iso: &str,
+    edited_entry: Option<i64>,
+    bikri_id: i64,
+) -> rusqlite::Result<std::collections::HashMap<i64, Totals>> {
+    before_posting(conn, ids, date_iso, edited_entry, Some(bikri_id))
+}
+
+fn before_posting(
+    conn: &Connection,
+    ids: &[i64],
+    date_iso: &str,
+    edited_entry: Option<i64>,
+    without_advance_of: Option<i64>,
+) -> rusqlite::Result<std::collections::HashMap<i64, Totals>> {
     if ids.is_empty() {
         return Ok(std::collections::HashMap::new());
     }
@@ -884,6 +918,10 @@ pub fn totals_before_posting(
     let mut args: Vec<rusqlite::types::Value> = vec![
         rusqlite::types::Value::Text(date_iso.to_owned()),
         anchor.map_or(
+            rusqlite::types::Value::Null,
+            rusqlite::types::Value::Integer,
+        ),
+        without_advance_of.map_or(
             rusqlite::types::Value::Null,
             rusqlite::types::Value::Integer,
         ),

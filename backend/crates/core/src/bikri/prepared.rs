@@ -127,6 +127,8 @@ pub struct PreparedLot {
     pub cash_paid: Option<Paisa>,
     /// کرایہ سٹور, 0 if empty.
     pub store_rent: Paisa,
+    /// پیشگی typed on the lot (PRD FR-12.52 v1.57). `None` if empty, which is 0.
+    pub advance: Option<Paisa>,
     /// The tick "پیشگی سے کاٹیں".
     pub adjust_advance: bool,
     /// The sale lines.

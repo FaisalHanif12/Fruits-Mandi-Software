@@ -88,10 +88,10 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     return { ...app, user: userEvent.setup() };
   }
 
-  it('opens on the 7 days that end today with the cancelled vouchers left out', async () => {
+  it('opens on the 30 days that end today with the cancelled vouchers left out', async () => {
     await open();
     expect(lastCall()).toMatchObject({
-      from: '04-10-2026',
+      from: '11-09-2026',
       to: '10-10-2026',
       show_finished: false,
       search: null,
@@ -117,7 +117,7 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     });
   });
 
-  it('the buttons under the list move the window by 7 days, and the later one is off on the latest', async () => {
+  it('the buttons under the list move the window by 30 days, and the later one is off on the latest', async () => {
     const { user } = await open();
     expect(
       await screen.findByText(message(language, 'common-days-latest-note')),
@@ -125,11 +125,11 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     await user.click(
       screen.getByRole('button', {
         name: (name) =>
-          visible(name).includes(message(language, 'common-days-earlier', { days: '7' })),
+          visible(name).includes(message(language, 'common-days-earlier', { days: '30' })),
       }),
     );
     await waitFor(() => {
-      expect(lastCall()).toMatchObject({ from: '27-09-2026', to: '03-10-2026' });
+      expect(lastCall()).toMatchObject({ from: '12-08-2026', to: '10-09-2026' });
     });
     expect(
       screen.queryByText(message(language, 'common-days-latest-note')),

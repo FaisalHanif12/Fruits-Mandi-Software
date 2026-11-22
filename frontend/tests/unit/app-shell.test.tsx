@@ -138,7 +138,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     });
   });
 
-  it('Alt+B opens the بکری area on the sale book with its seven items, each a real screen; a main item built later opens its own screen, not made-up data', async () => {
+  it('Alt+B opens the بکری area on the sale book with its four tabs, each a real screen; the voucher tabs are in روکڑ; a main item built later opens its own screen, not made-up data', async () => {
     const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
@@ -151,26 +151,31 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       }),
     ).toBeInTheDocument();
     // The second menu is a row of tabs in the title row of each screen (plan 93): every screen draws its own copy,
-    // so the tabs are read again after each move.
+    // so the tabs are read again after each move. Since v1.57 (plan 95) it holds four tabs: the sale book, the party
+    // ledgers, the past sales and the goods left; وصولی, ادائیگی and پیشگی are tabs of روکڑ.
     const tabs = () =>
       within(
         screen.getByRole('navigation', {
           name: (name) => visible(name) === message(language, 'layout-module-label'),
         }),
       ).getAllByRole('button');
-    expect(tabs()).toHaveLength(7);
+    expect(tabs()).toHaveLength(4);
     expect(at(tabs(), 0)).toHaveAttribute('aria-current', 'page');
-    // The advance item is a real screen now (plan 10).
-    await user.click(at(tabs(), 3));
+    // پارٹی کھاتے (plan 66, PRD FR-12.43) is the second tab, and opens the list of buyers.
+    await user.click(at(tabs(), 1));
     expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: message(language, 'vouchers-advance-title'),
-      }),
+      await screen.findByRole(
+        'heading',
+        {
+          level: 1,
+          name: (name) => visible(name) === message(language, 'layout-module-party-ledgers'),
+        },
+        { timeout: 8_000 },
+      ),
     ).toBeInTheDocument();
-    expect(at(tabs(), 3)).toHaveAttribute('aria-current', 'page');
-    // Today's بکری is a real screen since plan 13.
-    await user.click(at(tabs(), 4));
+    expect(at(tabs(), 1)).toHaveAttribute('aria-current', 'page');
+    // Past sales is a real screen since plan 13.
+    await user.click(at(tabs(), 2));
     // (The first open of a screen loads its code, which can take a moment on a busy machine.)
     expect(
       await screen.findByRole(
@@ -182,40 +187,10 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    // وصولی and ادائیگی are the same voucher screen with their type chosen (plan 15).
-    await user.click(at(tabs(), 1));
-    expect(
-      await screen.findByRole(
-        'heading',
-        { level: 1, name: message(language, 'vouchers-receipt-title') },
-        { timeout: 8_000 },
-      ),
-    ).toBeInTheDocument();
-    expect(at(tabs(), 1)).toHaveAttribute('aria-current', 'page');
-    await user.click(at(tabs(), 2));
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: message(language, 'vouchers-payment-title'),
-      }),
-    ).toBeInTheDocument();
     expect(at(tabs(), 2)).toHaveAttribute('aria-current', 'page');
-    // پارٹی کھاتے (plan 66, PRD FR-12.43) sits above the goods left, and opens the list of buyers.
-    await user.click(at(tabs(), 5));
-    expect(
-      await screen.findByRole(
-        'heading',
-        {
-          level: 1,
-          name: (name) => visible(name) === message(language, 'layout-module-party-ledgers'),
-        },
-        { timeout: 8_000 },
-      ),
-    ).toBeInTheDocument();
-    expect(at(tabs(), 5)).toHaveAttribute('aria-current', 'page');
     // The goods left (باقی مال) is a real screen since plan 16; a later sale starts from it. Every
     // item of the area is built now (own goods, خریداری, joins in plan 16b).
-    await user.click(at(tabs(), 6));
+    await user.click(at(tabs(), 3));
     expect(
       await screen.findByRole(
         'heading',
@@ -226,7 +201,46 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    expect(at(tabs(), 6)).toHaveAttribute('aria-current', 'page');
+    expect(at(tabs(), 3)).toHaveAttribute('aria-current', 'page');
+    // Alt+P opens the voucher screen as پیشگی, under the روکڑ tabs (plan 95, PRD FR-5.3 v1.57); the بکری tabs are gone.
+    await user.keyboard('{Alt>}p{/Alt}');
+    expect(
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: message(language, 'vouchers-advance-title') },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', {
+        name: (name) => visible(name) === message(language, 'layout-module-label'),
+      }),
+    ).not.toBeInTheDocument();
+    const rokarTabs = () =>
+      within(
+        screen.getByRole('navigation', {
+          name: (name) => visible(name) === message(language, 'layout-rokar-label'),
+        }),
+      ).getAllByRole('button');
+    expect(at(rokarTabs(), 3)).toHaveAttribute('aria-current', 'page');
+    // وصولی and ادائیگی are the same voucher screen with their type chosen (plan 15): their tabs open it.
+    await user.click(at(rokarTabs(), 1));
+    expect(
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: message(language, 'vouchers-receipt-title') },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(at(rokarTabs(), 1)).toHaveAttribute('aria-current', 'page');
+    await user.click(at(rokarTabs(), 2));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: message(language, 'vouchers-payment-title'),
+      }),
+    ).toBeInTheDocument();
+    expect(at(rokarTabs(), 2)).toHaveAttribute('aria-current', 'page');
     // A main item built later (تجزیات, plan 21) opens its own screen, never a made-up page.
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     await user.click(
@@ -245,7 +259,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
     expect(
       screen.queryByRole('navigation', {
-        name: (name) => visible(name) === message(language, 'layout-module-label'),
+        name: (name) => visible(name) === message(language, 'layout-rokar-label'),
       }),
     ).not.toBeInTheDocument();
   });

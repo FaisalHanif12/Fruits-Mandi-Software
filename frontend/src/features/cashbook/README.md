@@ -12,8 +12,9 @@ returned loan (`cash` or `salary`).
 | `/rokar/lent?type=`    | ادھار رقم: money lent and returned (cash or salary)                          | `pages/LentPage.tsx`     |
 | `/rokar/khata?type=`   | الگ کھاتہ: paid out (minus) and received (plus)                              | `pages/KhataPage.tsx`    |
 
-The tabs of the area are `RokarTabs` (`app/layout/ModuleMenu.tsx`), in the title row of each screen (plan 93). Its last item opens the voucher
-screen of the بکری area (FR-15.10). The پھل tab (plan 17d) is one more entry in `expense-tabs.ts` and
+The tabs of the area are `RokarTabs` (`app/layout/ModuleMenu.tsx`), in the title row of each screen (plan 93): روکڑ,
+وصولی, ادائیگی, پیشگی, خرچہ, ادھار رقم, الگ کھاتہ, جنرل (plan 95, PRD FR-5.3 v1.57). وصولی, ادائیگی and پیشگی open the
+one voucher screen (`/bikri/voucher?type=`, FR-15.10) with the روکڑ tabs on it. The پھل tab (plan 17d) is one more entry in `expense-tabs.ts` and
 one more route; the tab strip shows itself when there are two.
 
 ## How an entry screen works

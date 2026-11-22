@@ -84,7 +84,7 @@ print-statement-total-paid = Total paid
 # review: pending
 print-statement-total-deductions = Total deductions
 # review: pending
-print-statement-total-cash = Total { -naqd }
+print-statement-total-cash = Total { -naqd-adaigi }
 # review: pending
 print-statement-total-advanced = Total { -peshgi }
 # review: pending

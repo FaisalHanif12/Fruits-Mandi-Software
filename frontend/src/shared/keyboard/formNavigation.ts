@@ -135,6 +135,36 @@ function handleKeyDown(
   }
 }
 
+/**
+ * Enter on the last field of a form that finishes with Enter, when that field is a Select (a Radix trigger, plan 95): with its
+ * list CLOSED the form finishes, as Enter in a last text field does (the short form of an item ends with "sold by", a Select).
+ * With the list open Enter only picks the option, which the list owns. It is asked in the capture phase, before the trigger
+ * opens its list on Enter, and a Select that is not the last field keeps its own Enter (it opens).
+ */
+function makeKeyDownCapture(onSubmit: (() => void) | undefined) {
+  return (event: KeyboardEvent<HTMLElement>): void => {
+    if (onSubmit === undefined || event.key !== 'Enter') return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || target.getAttribute('role') !== 'combobox')
+      return;
+    if (target.getAttribute('aria-expanded') === 'true' || target.closest('[data-nav-owns-keys]')) {
+      return;
+    }
+    const fields = fieldsOf(event.currentTarget);
+    const from = fields.indexOf(target);
+    if (from === -1) return;
+    // A Radix Select keeps a hidden native <select> beside its trigger; it is not a field the user can go to.
+    if (
+      fields.slice(from + 1).some((field) => !field.matches('[readonly], [aria-hidden="true"]'))
+    ) {
+      return;
+    }
+    event.preventDefault();
+    onSubmit();
+  };
+}
+
 function onFocus(event: FocusEvent<HTMLElement>): void {
   const target = event.target;
   if (target instanceof HTMLElement && isTextField(target) && !target.readOnly) target.select();
@@ -168,7 +198,12 @@ export const formNavigationProps = {
  */
 export function useFormNavigation(onSubmit: () => void) {
   return useMemo(
-    () => ({ onKeyDown: makeKeyDown(onSubmit), onFocus, 'data-form-zone': '' }),
+    () => ({
+      onKeyDown: makeKeyDown(onSubmit),
+      onKeyDownCapture: makeKeyDownCapture(onSubmit),
+      onFocus,
+      'data-form-zone': '',
+    }),
     [onSubmit],
   );
 }

@@ -130,20 +130,18 @@ describe.each(LANGUAGES)('ادھاری تفصیل, the second print of the sale 
       expect(box.querySelector('.print-doc')).not.toBeNull();
     }, SLOW_MS);
     expect(box.querySelectorAll('table')).toHaveLength(1);
-    // The backend's own sheet of the worked day: ارشد, اکرم and شاہد, one row each.
-    expect(box.querySelectorAll('tbody tr')).toHaveLength(3);
+    // The backend's own sheet of the worked day: ارشد and اکرم, one row each; the چکتا buyer شاہد is not on it (PRD R5 v1.57).
+    expect(box.querySelectorAll('tbody tr')).toHaveLength(2);
     // One header for the whole print and no slip of a buyer.
     expect(box.querySelectorAll('.print-header')).toHaveLength(1);
     expect(box.querySelector('.print-parchi-slip')).toBeNull();
     const text = visible(box.textContent);
     expect(text).toContain(message(language, 'print-adhari-sheet-all'));
-    // The totals row reads 44,364 / 12,800 / 31,564 / 0 / 31,564, as the plan has it.
+    // The totals row reads 31,564 / 31,564 / 0 / 31,564: the bills, the credit of the day, the balance before and the total; there is no cash column or cash total (PRD R5 v1.57).
     const totals = [...(box.querySelector('tfoot tr')?.querySelectorAll('td') ?? [])].map((cell) =>
       visible(cell.textContent),
     );
-    expect(totals.filter((cell) => cell !== '')).toEqual(
-      expect.arrayContaining(['44,364', '12,800']),
-    );
+    expect(totals.filter((cell) => cell !== '')).toEqual(expect.arrayContaining(['31,564', '0']));
     expect(text).toContain('31,564');
     // The names are in the print language: Urdu names on an Urdu print, English names on an English one.
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');

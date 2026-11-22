@@ -172,7 +172,8 @@ pub fn bikri_review(ctx: &Context, input: &EditPreviewInput) -> Result<EditPrevi
         conn.query_row(
             "SELECT e.source_id, e.entry_date, b.version FROM journal_entries e
              JOIN bikri_entries b ON b.id = e.source_id
-             WHERE e.id = ?1 AND e.source_type = 'bikri'",
+             WHERE e.id = ?1 AND e.source_type = 'bikri'
+               AND e.posting_type IN ('bikri_first', 'bikri_later')",
             [entry_id],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )

@@ -6,7 +6,9 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
+import { useTimedNotices } from '../../../shared/hooks';
 import { ErrorMessage, LinkButton } from '../../../shared/ui';
+import { LOT_WARNING_MS } from '../notices';
 import {
   LINE_GRID_FIELD,
   LINE_NEEDS,
@@ -25,6 +27,16 @@ interface ProblemListProps {
   headerShown?: boolean;
   /** The whole-sale view is on: the notes under the lines grid tell the quantity problems of every lot. */
   whole?: boolean;
+  /**
+   * Goes up each time the user repeats an action that can give a warning (he types in the lots or the lines, or tries to
+   * save): a warning that has hidden shows again (PRD FR-12.52, plan 95 item 1).
+   */
+  pulse?: number;
+}
+
+/** The key of one problem, so a warning that stands is the same warning on every answer of the preview. */
+function keyOf(problem: Problem): string {
+  return `${problem.item.code}|${problem.item.field}`;
 }
 
 /** Is the problem shown by a field with words under it? Then the list leaves it out. */
@@ -85,10 +97,21 @@ export function ProblemList({
   activeLine,
   headerShown = true,
   whole = false,
+  pulse = 0,
 }: ProblemListProps) {
   const navigate = useNavigate();
-  const listed = problems.filter(
+  const all = problems.filter(
     (problem) => !shownByField(problem, selectedLot, activeLine, headerShown, whole),
+  );
+  // A warning is a note, not a block: it shows for a while and hides, and shows again when the user repeats the action
+  // (PRD FR-12.52). An error stays until it is fixed. The red figure of the lot stays either way.
+  const visibleWarnings = useTimedNotices(
+    all.filter((problem) => problem.severity === 'warning').map(keyOf),
+    pulse,
+    LOT_WARNING_MS,
+  );
+  const listed = all.filter(
+    (problem) => problem.severity !== 'warning' || visibleWarnings.has(keyOf(problem)),
   );
   if (listed.length === 0) return null;
   return (

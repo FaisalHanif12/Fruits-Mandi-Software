@@ -25,7 +25,7 @@ import {
   type EntryRow,
   type GridInterceptors,
 } from '../../../shared/grid';
-import { useLatest, useLayoutStep } from '../../../shared/hooks';
+import { useLatest, useLayoutStep, useTimedNotices } from '../../../shared/hooks';
 import { SegmentedControl } from '../../../shared/ui';
 import { useOverrideSettings } from '../../settings';
 import { allLinesColumns, saleColumns } from '../columns';
@@ -34,6 +34,7 @@ import { useKeepCardInView } from '../hooks/useKeepCardInView';
 import { lotLabelVars, useLotWho } from '../lot-name';
 import type { GridView } from '../grid-views';
 import { MAX_SALE_LINES, saleRowCount } from '../limits';
+import { SOLD_OUT_NOTE_MS } from '../notices';
 import { LOT, SALE, type BikriPreview } from '../types';
 import { LineDetails } from './LineDetails';
 import { MissingNotes, QtyNotes } from './QtyNotes';
@@ -61,6 +62,11 @@ interface SalesSectionProps {
   cellMarks?: Record<string, Record<string, string>> | undefined;
   /** Can Ctrl+Delete remove this line? Default: yes. */
   canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
+  /**
+   * Is this lot sold out, by the backend's balance (`balance_qty` is 0)? The "+" of a sold out lot adds nothing and says so
+   * for a few seconds, again on each press (PRD FR-12.52, plan 95 item 2). Absent: no lot is sold out.
+   */
+  soldOut?: ((lotKey: string) => boolean) | undefined;
 }
 
 export function SalesSection({
@@ -74,6 +80,7 @@ export function SalesSection({
   cellChanged,
   cellMarks,
   canRemoveRow,
+  soldOut,
 }: SalesSectionProps) {
   const { l10n } = useLocalization();
   const stores = useBikriDraft();
@@ -96,11 +103,28 @@ export function SalesSection({
   const store = whole ? stores.all : stores.salesFor(lotKey);
   const rows = store((state) => state.rows);
 
+  // A press on the "+" of a sold out lot: nothing is added, and the words say why for a few seconds, again on each press.
+  // The note belongs to the lot it was pressed on, so it goes when another lot is shown (PRD FR-12.52).
+  const [soldOutTries, setSoldOutTries] = useState<{ lot: string; count: number } | null>(null);
+  if (soldOutTries !== null && !whole && soldOutTries.lot !== lotKey) setSoldOutTries(null);
+  const tellSoldOut = (lot: string) => {
+    setSoldOutTries((was) => ({ lot, count: (was?.lot === lot ? was.count : 0) + 1 }));
+  };
+  const soldOutShown = useTimedNotices(
+    soldOutTries === null ? [] : ['sold-out'],
+    soldOutTries?.count ?? 0,
+    SOLD_OUT_NOTE_MS,
+  ).has('sold-out');
+
   // A new line goes through the grid's one new-row path, the same as ↓ on the last line. In the view of
   // one lot it is a line of that lot; in the whole view it is a line of the lot of the line that had the
   // cursor last, or of the first lot (the lines of all lots are one list there).
   const addLine = () => {
     if (!whole) {
+      if (soldOut?.(lotKey) === true) {
+        tellSoldOut(lotKey);
+        return;
+      }
       addRowAndFocus(store, SALE.buyer);
       return;
     }
@@ -117,6 +141,10 @@ export function SalesSection({
           );
     const target = (owner ?? lots[0])?.rowId;
     if (target === undefined) return;
+    if (soldOut?.(target) === true) {
+      tellSoldOut(target);
+      return;
+    }
     stores.salesFor(target).getState().addRow();
     stores.focusSaleLine(target, 'last', SALE.buyer);
   };
@@ -306,7 +334,13 @@ export function SalesSection({
             heightMode={rows.length > SHORT_GRID_ROWS ? 'fill' : 'auto'}
           />
         </div>
-        <AddRowButton labelId="bikri-sales-add-row" onAdd={addLine} limit={limit} link={addLink} />
+        <AddRowButton
+          labelId="bikri-sales-add-row"
+          onAdd={addLine}
+          limit={limit}
+          link={addLink}
+          note={soldOutShown ? <Localized id="bikri-sales-sold-out" /> : null}
+        />
       </div>
       <QtyNotes notes={view.qtyNotes} whole={whole} />
       <MissingNotes notes={view.missingNotes} whole={whole} />

@@ -84,7 +84,7 @@ print-statement-total-paid = کل ادائیگی
 # review: pending
 print-statement-total-deductions = کل کٹوتیاں
 # review: pending
-print-statement-total-cash = کل { -naqd }
+print-statement-total-cash = کل { -naqd-adaigi }
 # review: pending
 print-statement-total-advanced = کل { -peshgi }
 # review: pending

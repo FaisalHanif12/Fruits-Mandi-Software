@@ -457,6 +457,24 @@ body[data-index-form] .ag-popup {
   cursor: pointer;
 }
 
+/* A small icon button after the text of a picker cell (plan 95 item 6): the same 32 px target as the trash button. */
+.entry-grid .row-action-button {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--radius-2);
+  color: var(--color-ink-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.entry-grid .row-action-button:hover {
+  color: var(--color-primary);
+  background: var(--color-surface-sunken);
+}
+
 .entry-grid .row-remove-button:hover {
   color: var(--color-due);
   background: var(--color-surface-sunken);

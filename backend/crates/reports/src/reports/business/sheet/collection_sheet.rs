@@ -313,8 +313,14 @@ fn load_all(db: &Db, input: &CollectionSheetInput, scope: Scope) -> Result<Loade
             let day = day_of(&input.date, today)?;
             let iso = day.to_iso();
             let all_lines = buyer_lines(conn, &iso, &iso, Filter::default())?;
+            let chukta = chukta_accounts(conn)?;
             let mut by_party: HashMap<(i64, Option<String>), Vec<&BuyerLine>> = HashMap::new();
             for line in &all_lines {
+                // PRD R5 (v1.57, plan 95 item 12): the ادھاری تفصیل has no چکتا buyers. They have no
+                // ادھار and no khata. The other sheet (every buyer who owes) lists them as before.
+                if scope == Scope::DayBuyers && chukta.contains(&line.account_id) {
+                    continue;
+                }
                 let person = (!line.person.is_empty()).then(|| line.person.clone());
                 by_party
                     .entry((line.account_id, person))
@@ -329,7 +335,6 @@ fn load_all(db: &Db, input: &CollectionSheetInput, scope: Scope) -> Result<Loade
             // as R20): a چکتا buyer is listed only on the day he bought, with a previous due of 0.
             let mut keys: Vec<(i64, Option<String>)> = Vec::new();
             let mut previous: HashMap<(i64, Option<String>), Paisa> = HashMap::new();
-            let chukta = chukta_accounts(conn)?;
             // The ادھاری تفصیل counts an opening dated today in what he owed before today.
             let todays_openings = if scope == Scope::DayBuyers {
                 openings_of_day(conn, &iso)?
@@ -769,10 +774,8 @@ pub struct AdhariSheetRow {
     /// Today's bill.
     #[ts(type = "Paisa")]
     pub bill_paisa: Paisa,
-    /// نقد: what he paid on the spot (PRD FR-12.44).
-    #[ts(type = "Paisa")]
-    pub cash_paisa: Paisa,
-    /// آج کا ادھار: today's bill less نقد.
+    /// آج کا ادھار: today's bill less what he paid on the spot (PRD FR-12.44). The sheet has no نقد
+    /// column of its own (PRD R5 v1.57, plan 95 item 17).
     #[ts(type = "Paisa")]
     pub today_credit_paisa: Paisa,
     /// پچھلا بقایا: what he owed at the start of the day (an opening dated today counts).
@@ -789,9 +792,6 @@ pub struct AdhariSheetTotals {
     /// Σ today's bills.
     #[ts(type = "Paisa")]
     pub bill_paisa: Paisa,
-    /// Σ نقد.
-    #[ts(type = "Paisa")]
-    pub cash_paisa: Paisa,
     /// Σ آج کا ادھار.
     #[ts(type = "Paisa")]
     pub today_credit_paisa: Paisa,
@@ -835,7 +835,6 @@ fn adhari_totals(sums: &Sums) -> Result<AdhariSheetTotals, ReportsError> {
         .checked_sub(sums.paid)?;
     Ok(AdhariSheetTotals {
         bill_paisa: sums.bill,
-        cash_paisa: sums.paid,
         today_credit_paisa: sums.bill.checked_sub(sums.paid)?,
         previous_due: Balance::from_net(sums.previous)?,
         total_due: Balance::from_net(due)?,
@@ -861,7 +860,6 @@ fn adhari_row(entry: &Entry) -> Result<AdhariSheetRow, ReportsError> {
         party: row.party.clone(),
         lines: row.lines.clone(),
         bill_paisa: row.bill_paisa,
-        cash_paisa: row.paid_paisa,
         today_credit_paisa: row.bill_paisa.checked_sub(row.paid_paisa)?,
         previous_due: row.previous_due,
         total_due: row.total_due,
@@ -985,7 +983,6 @@ pub fn adhari_sheet_spec(
             ColumnKind::Detail,
         ),
         column("bill", "print-adhari-sheet-col-bill", ColumnKind::Money),
-        column("cash", "print-adhari-sheet-col-cash", ColumnKind::Money),
         column(
             "today_credit",
             "print-adhari-sheet-col-today-credit",
@@ -1019,9 +1016,6 @@ pub fn adhari_sheet_spec(
                         paisa: row.bill_paisa,
                     },
                     Cell::Money {
-                        paisa: row.cash_paisa,
-                    },
-                    Cell::Money {
                         paisa: row.today_credit_paisa,
                     },
                     Cell::Balance {
@@ -1050,7 +1044,6 @@ pub fn adhari_sheet_spec(
             Cell::Empty,
             Cell::Empty,
             money(t.bill_paisa),
-            money(t.cash_paisa),
             money(t.today_credit_paisa),
             Cell::Balance {
                 paisa: t.previous_due.amount_paisa,

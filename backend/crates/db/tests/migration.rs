@@ -24,7 +24,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 28;
+const LATEST: usize = 29;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -4707,6 +4707,8 @@ fn migration_23_adds_the_link_columns_and_the_0605_accounts_and_touches_no_numbe
         ("ventures", "rent_original_paisa"),
         // Migration 27 (plan 80 gate): the time a lot was removed in an edit is new.
         ("bikri_lots", "removed_at"),
+        // Migration 29 (plan 95 item 11): the پیشگی typed on a lot is new, 0 on every old lot.
+        ("bikri_lots", "advance_paisa"),
     ];
     // A table is one text of all its rows; the rows the migration made are taken out of it by line.
     // `venture_items` is the table of migration 25.

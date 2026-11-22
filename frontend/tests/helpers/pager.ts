@@ -3,11 +3,14 @@
 
 import { screen } from '@testing-library/react';
 import type { Language } from '../../src/i18n';
-import { DEFAULT_PAGE_SIZE } from '../../src/shared/hooks';
+import { DEFAULT_PAGE_SIZE, RECORDS_PAGE_SIZE } from '../../src/shared/hooks';
 import { message, visible } from './render';
 
 /** How many rows a list asks for until the Owner chooses another number (plan 38 R1). */
 export const PAGE_ROWS = DEFAULT_PAGE_SIZE;
+
+/** How many rows a list of records (the trips and the gardens) asks for until the Owner chooses (PRD FR-19.11 v1.57). */
+export const RECORD_ROWS = RECORDS_PAGE_SIZE;
 
 /** "26 to 50 of 340" in the language, as it reads in the page text (`visible(...)`). */
 export function rangeText(language: Language, from: number, to: number, total: number): string {

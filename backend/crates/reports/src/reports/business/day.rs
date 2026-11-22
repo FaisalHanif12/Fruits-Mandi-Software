@@ -215,6 +215,24 @@ fn vouchers_by_day(
     )
 }
 
+/// The پیشگی typed on lots, by day (PRD FR-12.52 v1.57): the entries of the posting type `advance`
+/// with a بکری as their source that are in force. The first number is the count of the seller debit
+/// lines flagged as advances (one for each lot, as one for each voucher), the second their sum.
+fn lot_advances_by_day(conn: &Connection, from: &str, to: &str) -> Result<ByDay, ReportsError> {
+    by_day(
+        conn,
+        &format!(
+            "SELECT e.entry_date, COUNT(l.id), COALESCE(SUM(l.dr_paisa), 0)
+             FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id
+             WHERE {LIVE} AND e.posting_type = 'advance' AND e.source_type = 'bikri'
+               AND l.is_advance = 1 AND l.dr_paisa > 0
+               AND e.entry_date >= ?1 AND e.entry_date <= ?2
+             GROUP BY e.entry_date"
+        ),
+        &values(from, to),
+    )
+}
+
 /// The money of the sales of trip goods by day: the partners' parts of the seller credits (by the
 /// day of the posting) and the money of the sales in other shops.
 fn trips_sold_by_day(conn: &Connection, from: &str, to: &str) -> Result<ByDay, ReportsError> {
@@ -596,7 +614,21 @@ pub(crate) fn run(
     )?;
     let receipts = vouchers_by_day(conn, "receipt", &from, &to)?;
     let payments = vouchers_by_day(conn, "payment", &from, &to)?;
-    let advances = vouchers_by_day(conn, "advance", &from, &to)?;
+    // The advances of the day: the پیشگی vouchers, and the پیشگی typed on a lot (PRD FR-12.52 v1.57),
+    // which is a journal entry of its own and has no voucher. One count for each, so the cash the day
+    // paid out for advances adds up with the cash lines.
+    let mut advances = vouchers_by_day(conn, "advance", &from, &to)?;
+    for (day, (count, sum)) in lot_advances_by_day(conn, &from, &to)? {
+        let slot = advances.entry(day).or_insert((0, 0));
+        slot.0 = slot
+            .0
+            .checked_add(count)
+            .ok_or_else(|| ReportsError::Data("the advances of a day do not fit".to_owned()))?;
+        slot.1 = slot
+            .1
+            .checked_add(sum)
+            .ok_or_else(|| ReportsError::Data("the advances of a day do not fit".to_owned()))?;
+    }
     let expenses = expenses_by_day(conn, &from, &to)?;
     let drawings = live_lines(
         conn,

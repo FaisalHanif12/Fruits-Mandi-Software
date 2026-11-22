@@ -17,7 +17,7 @@ import {
 } from '../../src/features/vouchers/draft';
 import type { VoucherDraft } from '../../src/features/vouchers/types';
 import { asScreenType, parseVoucherSearch } from '../../src/features/vouchers/screen-type';
-import { moduleMenuOf } from '../../src/app/nav-routes';
+import { mainNavOf, moduleMenuOf, rokarMenuOf } from '../../src/app/nav-routes';
 import { voucherRow } from '../helpers/vouchers';
 
 const AKRAM = { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
@@ -346,11 +346,21 @@ describe('the address of the voucher screen', () => {
     expect(asScreenType('nope')).toBeNull();
   });
 
-  it('marks the side menu item of the current type (PRD FR-15.10)', () => {
-    expect(moduleMenuOf('/bikri/voucher', { type: 'advance' })).toBe('advance');
-    expect(moduleMenuOf('/bikri/voucher', { type: 'payment' })).toBe('payment');
-    expect(moduleMenuOf('/bikri/voucher', {})).toBe('receipt');
-    expect(moduleMenuOf('/bikri/collection')).toBe('receipt');
+  it('marks the روکڑ tab of the current type (PRD FR-15.10, FR-5.3 v1.57)', () => {
+    expect(rokarMenuOf('/bikri/voucher', { type: 'advance' })).toBe('advance');
+    expect(rokarMenuOf('/bikri/voucher', { type: 'payment' })).toBe('payment');
+    expect(rokarMenuOf('/bikri/voucher', {})).toBe('receipt');
+    expect(rokarMenuOf('/bikri/collection')).toBe('receipt');
+    expect(rokarMenuOf('/rokar/expense')).toBe('expense');
+    expect(rokarMenuOf('/rokar')).toBe('cashbook');
+  });
+
+  it('the voucher screen and the اگراہی فہرست belong to روکڑ, not to بکری (PRD FR-5.3 v1.57)', () => {
+    expect(mainNavOf('/bikri/voucher')).toBe('rokar');
+    expect(mainNavOf('/bikri/collection')).toBe('rokar');
+    expect(mainNavOf('/bikri/book')).toBe('bikri');
     expect(moduleMenuOf('/bikri/book')).toBe('bikri-book');
+    expect(moduleMenuOf('/bikri/later')).toBe('stock');
+    expect(moduleMenuOf('/bikri/party-ledgers')).toBe('party-ledgers');
   });
 });

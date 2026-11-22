@@ -11,10 +11,6 @@ export type AdhariSheetTotals = {
    */
   bill_paisa: Paisa;
   /**
-   * Σ نقد.
-   */
-  cash_paisa: Paisa;
-  /**
    * Σ آج کا ادھار.
    */
   today_credit_paisa: Paisa;

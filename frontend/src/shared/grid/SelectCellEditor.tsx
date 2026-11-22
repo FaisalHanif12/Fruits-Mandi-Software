@@ -17,7 +17,7 @@
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
 import type { CustomCellEditorProps } from 'ag-grid-react';
 import { Check } from 'lucide-react';
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { DropdownPopup } from '../ui/DropdownPopup';
 import type { EntryStore } from './entryStore';
 import type { EntryRow } from './types';
@@ -66,6 +66,21 @@ export function SelectCellEditor(props: EditorProps) {
   useEffect(() => {
     list.current?.focus();
   }, []);
+
+  // The list goes away (a choice, Esc, an arrow): if the focus was in it, the cell gets it back, so the keyboard goes on from
+  // the cell. Without this Esc, which closes the list from outside (the Esc order), left the focus on the page and the
+  // arrow keys dead (plan 95 item 3: the list now opens by itself, so leaving it with Esc is a normal way on). When an
+  // arrow or Tab has already moved the focus to another cell, nothing is taken back.
+  useLayoutEffect(
+    () => () => {
+      if (api.isDestroyed()) return;
+      const active = document.activeElement;
+      const lost =
+        active === null || active === document.body || list.current?.contains(active) === true;
+      if (lost && node.rowIndex !== null) api.setFocusedCell(node.rowIndex, field);
+    },
+    [api, node, field],
+  );
 
   const keyParams = (event: KeyboardEvent, editing: boolean): KeyParams => ({
     event: event.nativeEvent,

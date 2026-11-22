@@ -125,6 +125,10 @@ cashbook-kind-payment = { -adaigi }
 # review: pending
 cashbook-kind-advance = { -peshgi-khata }
 
+# The advance a seller took with the goods of a sale (plan 95 item 11, PRD FR-12.52): the number after it is the sale's.
+# review: pending
+cashbook-kind-bikri-advance = { -peshgi } with { -bikri }
+
 # review: pending
 cashbook-kind-shop-expense = { -dukan-kharcha }
 

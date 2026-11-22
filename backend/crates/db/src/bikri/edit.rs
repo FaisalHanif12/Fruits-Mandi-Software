@@ -511,7 +511,7 @@ pub fn update_lot(
              phone_method = ?20, phone_value_paisa = ?21, phone_rule_id = ?22, cash_paid_paisa = ?23,
              store_rent_paisa = ?24, adjust_advance = ?25, qty_sold = ?26, gross_paisa = ?27,
              seller_comm_paisa = ?28, deductions_paisa = ?29, net_paisa = ?30, updated_at = ?31,
-             updated_by = ?32, lot_counter = ?33, version = version + 1
+             updated_by = ?32, lot_counter = ?33, advance_paisa = ?34, version = version + 1
          WHERE id = ?1",
         params![
             lot_id,
@@ -546,7 +546,8 @@ pub fn update_lot(
             lot.net_paisa,
             now,
             user_id,
-            lot.lot_counter
+            lot.lot_counter,
+            lot.advance_paisa
         ],
     )?;
     Ok(())
@@ -675,6 +676,52 @@ pub fn postings_in_force(conn: &Connection, bikri_id: i64) -> rusqlite::Result<V
         })
     })?;
     rows.collect()
+}
+
+/// The پیشگی entry of a بکری that is in force (PRD FR-12.52 v1.57, plan 95): posted, of the posting type
+/// `advance`, with this بکری as its source and not reversed. A بکری has at most one: the entry of the
+/// advances of the lots of its first posting. It is not a posting of the بکری (it has no sale lines
+/// and is never edited alone), so [`postings_in_force`] does not list it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn advance_entry_in_force(
+    conn: &Connection,
+    bikri_id: i64,
+) -> rusqlite::Result<Option<PostingRef>> {
+    conn.query_row(
+        "SELECT e.id, e.posting_type, e.entry_date FROM journal_entries e
+         WHERE e.source_type = 'bikri' AND e.source_id = ?1 AND e.status = 'posted'
+           AND e.posting_type = 'advance'
+           AND NOT EXISTS (SELECT 1 FROM journal_entries r
+                           WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
+         ORDER BY e.id DESC LIMIT 1",
+        [bikri_id],
+        |r| {
+            Ok(PostingRef {
+                entry_id: r.get(0)?,
+                posting_type: r.get(1)?,
+                entry_date: r.get(2)?,
+            })
+        },
+    )
+    .optional()
+}
+
+/// The بکری whose FIRST posting is `entry_id`, or `None` when the entry is not a first posting of a
+/// بکری. An edit of a first posting leaves the پیشگی entries of its بکری out of the previous
+/// balance of its sellers (PRD FR-12.52 v1.57).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn bikri_of_first_posting(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT source_id FROM journal_entries
+         WHERE id = ?1 AND source_type = 'bikri' AND posting_type = 'bikri_first'",
+        [entry_id],
+        |r| r.get(0),
+    )
+    .optional()
 }
 
 /// The posting `entry_id`, if it belongs to this بکری and is a first or later posting in force.

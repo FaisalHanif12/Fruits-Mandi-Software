@@ -315,6 +315,11 @@ report-doc-payment = { -adaigi }
 # review: pending
 report-doc-advance = { -peshgi }
 
+# The advance a seller took with the goods of a sale (plan 95 item 11, PRD FR-12.52): the row of the روکڑ بک, the
+# day book and the ledger; the number of the sale follows it.
+# review: pending
+report-doc-bikri-advance = { -peshgi } with { -bikri }
+
 # review: pending
 report-doc-shop-expense = { -dukan-kharcha }
 
@@ -542,7 +547,7 @@ report-col-labour = { -mazdoori }
 report-col-munshiana = { -munshiana }
 
 # review: pending
-report-col-cash-paid = { -naqd }
+report-col-cash-paid = { -naqd-adaigi }
 
 # review: pending
 report-col-store-rent = { -kiraya-store }
@@ -1248,7 +1253,7 @@ report-r1-help = The lots of one { -bikri }: what came, what was sold, the charg
 report-r5-title = { -udhari } Details
 
 # review: pending
-report-r5-help = How much the shop has to take from its { -gahakon } on the day: one row for each { -gahak } who bought, with his goods, the day's bill, the cash he paid on the spot, today's credit, what he owed before and the total credit now. At the end, the total credit of all { -gahakon }.
+report-r5-help = How much the shop has to take from its { -gahakon } on the day: one row for each { -gahak } who bought, with his goods, the day's bill, today's credit, what he owed before and the total credit now. At the end, the total credit of all { -gahakon }.
 
 # review: pending
 report-col-serial = No.
@@ -1402,6 +1407,10 @@ report-r35-sale-rest = Rest of today's { -bikri }, credited to his account
 # review: pending
 report-r35-net-sale = Today's { -safi-bikri }
 
+# The advance a seller took with the goods of the day (plan 95 item 11, PRD FR-12.52); a line of his day slip only when it is not 0.
+# review: pending
+report-r35-advance = { -peshgi }
+
 # The new lines of the day total sheet (R34).
 # review: pending
 report-r34-qty = Total { -nag }
@@ -1434,7 +1443,7 @@ report-r34-sellers-net = Sellers' { -safi-bikri } Today
 report-r34-sellers-other = Sellers' Other Entries
 
 # review: pending
-report-r34-sellers-paid = Sellers' Cash Paid Out
+report-r34-sellers-paid = Sellers' { -naqd-adaigi }
 
 # The two short tables under the lines of a day.
 # review: pending
@@ -1554,7 +1563,7 @@ report-r4-detail = The sale lines that still have something { -khate-mein-baqi }
 report-r4-when = To see what was sold on credit.
 
 # review: pending
-report-r5-detail = Every { -gahak } who bought on the day, also one who paid in full, one row each, sorted by name. Each row has his goods written as (item quantity . rate), the day's bill, the cash he paid on the spot, today's credit, his { -sabiqa-raqam } and his total credit. Under the table: the { -gahakon } who owed but bought nothing today as one total, and the total credit of all { -gahakon }. A { -wasooli } of the day shows in the next day's { -sabiqa-raqam }.
+report-r5-detail = Every { -gahak } who bought on the day, also one who paid in full, one row each, sorted by name. Each row has his goods written as (item quantity . rate), the day's bill, today's credit, his { -sabiqa-raqam } and his total credit. Under the table: the { -gahakon } who owed but bought nothing today as one total, and the total credit of all { -gahakon }. A { -wasooli } of the day shows in the next day's { -sabiqa-raqam }.
 
 # review: pending
 report-r5-when = For the collector's round and for the list of what is owed after the day's sales.
@@ -1753,7 +1762,7 @@ report-r35-opening = { -ibtidai-baqaya }
 
 # Seller's slip: what the shop paid him that day in cash (his cash and the payments).
 # review: pending
-report-r35-paid-today-seller = Cash Paid Out
+report-r35-paid-today-seller = { -naqd-adaigi }
 
 # Seller's slip: what the shop still has to pay him for the day.
 # review: pending
@@ -1761,4 +1770,4 @@ report-r35-today-left-seller = Still to Pay Today
 
 # The same column in the short table of sellers of the day summary (R34).
 # review: pending
-report-col-paid-today-seller = Cash Paid Out
+report-col-paid-today-seller = { -naqd-adaigi }

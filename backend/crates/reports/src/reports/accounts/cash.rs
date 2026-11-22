@@ -155,7 +155,7 @@ pub(crate) fn run(
                     iso: row.entry_date.clone(),
                 },
                 Cell::Doc {
-                    type_id: ids::doc_id(&row.posting_type),
+                    type_id: ids::doc_id_of(&row.posting_type, &row.source_type),
                     number: row.number,
                 },
                 party,

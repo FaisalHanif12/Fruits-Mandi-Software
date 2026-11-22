@@ -157,7 +157,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
     return { ...view, fake, user: userEvent.setup() };
   }
 
-  /** The reports that show 7 days at a time. */
+  /** The reports that show 30 days at a time. */
   const WINDOWED = new Set<ReportId>(['R2', 'R3', 'R4', 'R6', 'R27']);
 
   describe('every report asks for what the filters hold and shows the backend’s totals', () => {
@@ -182,7 +182,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       // The fixture of a report that was asked with filters (R3 for today, R4 for one item, R7 for
       // one day) is answered the same however the screen asks; this proves the first request is
       // empty filters, which every one of them accepts, and the totals row is the backend's. The registers
-      // with many rows a day ask for the 7 days that end today (PRD FR-19.11, plan 76 point 8).
+      // with many rows a day ask for the 30 days that end today (PRD FR-19.11, plan 76 point 8).
       await openReport(id);
       await waitFor(() => {
         // A balance carries its side as a word after the figure (R24's and R28's totals).
@@ -195,7 +195,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
           filters: {
             ...request.filters,
             shortcut: null,
-            from: WINDOWED.has(id) ? '04-10-2026' : '',
+            from: WINDOWED.has(id) ? '11-09-2026' : '',
             to: WINDOWED.has(id) ? '10-10-2026' : '',
             as_of: '',
             item_id: null,

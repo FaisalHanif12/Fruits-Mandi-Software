@@ -1,7 +1,7 @@
 // The columns of ادھاری تفصیل (R5, PRD R5 v1.43, plan 80 Q-R5-2): the buyer with his tag (a person in the dead
-// amount carries that word), what he bought today in short ("(Banana 20 . 600)"), today's bill, the cash he
-// paid on the spot, today's credit, what he owed at the start of the day and what he owes now, each balance with
-// its side word. The words are the print's own (`print-adhari-sheet-col-*`), so the screen and the paper say
+// amount carries that word), what he bought today in short ("(Banana 20 . 600)"), today's bill, today's credit,
+// what he owed at the start of the day and what he owes now, each balance with its side word. There is no cash
+// column and no cash total (PRD R5 v1.57, plan 95 item 17): the whole sale print keeps the cash. The words are the print's own (`print-adhari-sheet-col-*`), so the screen and the paper say
 // the same. Every figure is the backend's; the list adds up nothing. Money is centred (NFR-USE-19).
 
 import type { AdhariSheetRow } from '../../bindings/AdhariSheetRow';
@@ -20,7 +20,6 @@ export const ADHARI_COLUMN_TITLE_IDS: readonly string[] = [
   'print-adhari-sheet-col-party',
   'print-adhari-sheet-col-detail',
   'print-adhari-sheet-col-bill',
-  'print-adhari-sheet-col-cash',
   'print-adhari-sheet-col-today-credit',
   'print-adhari-sheet-col-previous',
   'print-adhari-sheet-col-total',
@@ -50,13 +49,6 @@ export const ADHARI_COLUMNS: readonly ListColumn<AdhariSheetRow>[] = [
     type: 'money',
     headerId: 'print-adhari-sheet-col-bill',
     value: (row, { money }) => money(row.bill_paisa),
-  },
-  {
-    field: 'cash',
-    type: 'money',
-    headerId: 'print-adhari-sheet-col-cash',
-    from: 'normal',
-    value: (row, { money }) => money(row.cash_paisa),
   },
   {
     field: 'today_credit',

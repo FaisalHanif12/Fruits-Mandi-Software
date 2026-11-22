@@ -21,11 +21,8 @@ export type AdhariSheetRow = {
    */
   bill_paisa: Paisa;
   /**
-   * نقد: what he paid on the spot (PRD FR-12.44).
-   */
-  cash_paisa: Paisa;
-  /**
-   * آج کا ادھار: today's bill less نقد.
+   * آج کا ادھار: today's bill less what he paid on the spot (PRD FR-12.44). The sheet has no نقد
+   * column of its own (PRD R5 v1.57, plan 95 item 17).
    */
   today_credit_paisa: Paisa;
   /**

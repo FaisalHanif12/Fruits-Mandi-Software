@@ -27,7 +27,7 @@ import type {
   ValueSetterParams,
 } from 'ag-grid-community';
 import { AgGridReact, type CustomCellRendererProps } from 'ag-grid-react';
-import { ChevronDown, Pencil } from 'lucide-react';
+import { ChevronDown, Pencil, Rows3 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CardChukta } from '../accounts';
 import { useGrouping, type Grouping } from '../format';
@@ -159,6 +159,44 @@ function SelectCellFace(props: CustomCellRendererProps<EntryRow>) {
     <span className="flex items-center justify-center gap-1">
       <span>{props.valueFormatted ?? ''}</span>
       <ChevronDown aria-hidden="true" className="size-icon-sm shrink-0 text-ink-muted" />
+    </span>
+  );
+}
+
+/**
+ * The name of a record in a picker cell, with a small icon button after it when the column has one (plan 95 item 6). The name
+ * is read from the row store, so it is right whenever a record is picked, whatever the grid decides about drawing the cell
+ * again (a custom cell renderer is not always drawn again when the cell's value changes).
+ */
+function PickerCellFace({
+  store,
+  rowId,
+  field,
+  language,
+  button,
+}: {
+  store: EntryStore;
+  rowId: string;
+  field: string;
+  language: ReturnType<typeof useLanguage>;
+  button: { label: string; onPress: () => void };
+}) {
+  const record = store((state) => state.rows.find((row) => row.rowId === rowId)?.picked?.[field]);
+  return (
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="min-w-0 flex-1 truncate">
+        {record === undefined ? '' : displayName(record, language)}
+      </span>
+      <button
+        type="button"
+        data-cell-button=""
+        className="row-action-button"
+        aria-label={button.label}
+        title={button.label}
+        onClick={button.onPress}
+      >
+        <Rows3 aria-hidden="true" className="size-icon-sm" />
+      </button>
     </span>
   );
 }
@@ -308,6 +346,35 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       },
       // The editor writes the record to the store itself; the grid has nothing to set.
       valueSetter: () => false,
+      // A button in the cell (plan 95 item 6): the grid leaves a press on it alone, so it neither focuses the cell nor
+      // opens the picker, and the button's own click does its work.
+      ...(column.cellButton === undefined
+        ? {}
+        : {
+            cellRenderer: (params: CustomCellRendererProps<EntryRow>) => {
+              const { cellButton } = column;
+              const row = params.data;
+              return cellButton === undefined || row === undefined ? null : (
+                <PickerCellFace
+                  store={store}
+                  rowId={row.rowId}
+                  field={column.field}
+                  language={language}
+                  button={{
+                    label: word(cellButton.labelId),
+                    onPress: () => {
+                      cellButton.onPress(row);
+                    },
+                  }}
+                />
+              );
+            },
+            cellRendererParams: {
+              suppressMouseEventHandling: (params: { event: Event }) =>
+                params.event.target instanceof Element &&
+                params.event.target.closest('[data-cell-button]') !== null,
+            },
+          }),
       cellEditor: PickerCellEditor,
       cellEditorPopup: true,
       // The field of the picker is drawn over the cell, so the cell is the field and its list starts at it
@@ -319,6 +386,9 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       // field of a form (plan 32, R7). Alt+↓ is the key for that (gridKeys.ts).
       onCellClicked: (event) => {
         if (event.data === undefined || !isEditable(column, event.data)) return;
+        // A press on the cell's own button (plan 95 item 6) is the button's: the picker does not open.
+        const pressed = event.event?.target;
+        if (pressed instanceof Element && pressed.closest('[data-cell-button]') !== null) return;
         const { rowIndex } = event;
         if (rowIndex === null) return;
         if (env.mouseFocus.onlySelected({ rowIndex, colId: column.field })) return;
@@ -774,17 +844,19 @@ function GridInner({
     }
   };
 
-  // A picker cell that gets the focus opens its picker with the full list (PRD FR-7.16, plan 46).
+  // A picker cell that gets the focus opens its picker with the full list (PRD FR-7.16, plan 46), and so does a
+  // select cell (the quality, PRD FR-12.52, plan 95 item 3): its short list opens by itself when the cursor reaches the
+  // cell, and leaving it with no choice keeps it empty (Esc or an arrow).
   // It waits one turn, so the press of the mouse that focused the cell is over, and checks again
   // that the focus is still on the cell and that nothing is being typed in yet.
-  const openPickerCell = (rowIndex: number, field: string) => {
+  const openPickerCell = (rowIndex: number, field: string, type: 'picker' | 'select') => {
     window.setTimeout(() => {
       const api = apiRef.current;
       if (api === null || api.isDestroyed()) return;
       const focused = api.getFocusedCell();
       if (focused?.rowIndex !== rowIndex || focused.column.getColId() !== field) return;
       if (api.getEditingCells().length > 0) return;
-      store.getState().setEditHint('open-list');
+      if (type === 'picker') store.getState().setEditHint('open-list');
       api.startEditingCell({ rowIndex, colKey: field });
     }, 0);
   };
@@ -823,10 +895,10 @@ function GridInner({
       moved &&
       !restoring.current &&
       row !== undefined &&
-      column?.type === 'picker' &&
+      (column?.type === 'picker' || column?.type === 'select') &&
       isEditable(column, row)
     ) {
-      openPickerCell(event.rowIndex, colId);
+      openPickerCell(event.rowIndex, colId, column.type);
     }
   };
 

@@ -267,6 +267,11 @@ pub struct SummaryTotals {
     /// فون.
     #[ts(type = "Paisa")]
     pub phone: Paisa,
+    /// پیشگی: money the sellers take as an advance with these goods (PRD FR-12.52 v1.57). It is NOT
+    /// in `deductions` or `net` (C6, C7): it is its own posting, a seller debit flagged as an
+    /// advance against روکڑ, and it never changes what the sale credits him.
+    #[ts(type = "Paisa")]
+    pub advance: Paisa,
     /// کل اخراجات (C6).
     #[ts(type = "Paisa")]
     pub deductions: Paisa,
@@ -437,7 +442,7 @@ pub struct SplitPart {
 /// out by the same domain function for the preview and the save (Code Standards B5), from the نقد of
 /// his lots as they stand.
 ///
-/// `new = previous + paid - credit` (debit positive). Example: previous 30,000 بنام, credit 20,000,
+/// `new = previous + paid + advance - credit` (debit positive). Example: previous 30,000 بنام, credit 20,000,
 /// paid 5,000: `cut` 15,000 (taken off what he owed), new 15,000 بنام. Previous 10,000 جمع, credit
 /// 20,000, paid 28,000: `over_paid` 8,000, new 2,000 جمع.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -458,6 +463,16 @@ pub struct SellerPaidLines {
     /// موقع پر ادائیگی: the sum of the نقد of his lots, 0 or more.
     #[ts(type = "Paisa")]
     pub paid_paisa: Paisa,
+    /// پیشگی: the sum of the advance typed on his lots, 0 or more (PRD FR-12.52 v1.57). A debit of
+    /// its own, not part of this sale: `paid`, `carry` and the limit do not hold it, and `new`
+    /// does.
+    #[ts(type = "Paisa")]
+    pub advance_paisa: Paisa,
+    /// The part of `advance_paisa` that belongs to his lots whose tick "پیشگی سے کاٹیں" is on: it is
+    /// taken off today's credit, so for the question "above today's credit" it counts like نقد
+    /// (lead decision, plan 95, PRD FR-12.52 v1.57). 0 when no lot of his has the tick on.
+    #[ts(type = "Paisa")]
+    pub advance_adjusted_paisa: Paisa,
     /// بکری کی باقی رقم، کھاتے میں جمع: today's credit less what he takes on the spot, never below 0.
     /// It is the part of this بکری that goes into his account (Umar, plan 91). It is always
     /// `cut_paisa + added_to_credit_paisa`.
@@ -486,8 +501,8 @@ pub struct SellerPaidLines {
     /// him before, never below 0 (a negative credit takes off what he was owed).
     #[ts(type = "Paisa")]
     pub limit_paisa: Paisa,
-    /// True when `paid_paisa` is above `limit_paisa`: the screen warns and the save asks the Owner to
-    /// confirm (PRD FR-12.23 v1.53, `ERR_SELLER_PAID_ABOVE_TODAY`).
+    /// True when `paid_paisa + advance_adjusted_paisa` is above `limit_paisa`: the screen warns and
+    /// the save asks the Owner to confirm (PRD FR-12.23 v1.53, `ERR_SELLER_PAID_ABOVE_TODAY`).
     pub needs_confirm: bool,
     /// How `new_paisa` was worked out (PRD FR-7.43): message `working-seller-new-balance`.
     pub working: Working,

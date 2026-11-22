@@ -1250,6 +1250,7 @@ fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
         phone: None,
         cash_paid: Some("5,000".to_owned()),
         store_rent: None,
+        advance: None,
         adjust_advance: true,
         sales: (0..lines)
             .map(|j| SaleInput {

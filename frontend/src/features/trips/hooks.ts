@@ -14,7 +14,12 @@ import type { SortInput } from '../../bindings/SortInput';
 import type { TripCostEditInput } from '../../bindings/TripCostEditInput';
 import type { TripHeaderEditInput } from '../../bindings/TripHeaderEditInput';
 import type { TripOtherSaleEditInput } from '../../bindings/TripOtherSaleEditInput';
-import { useAllPagesQuery, useDebouncedValue, usePagedQuery } from '../../shared/hooks';
+import {
+  RECORDS_PAGE_SIZE,
+  useAllPagesQuery,
+  useDebouncedValue,
+  usePagedQuery,
+} from '../../shared/hooks';
 import { readAgainAfterPurchase } from '../purchases';
 import {
   tripsCostCancel,
@@ -99,7 +104,13 @@ export function useTripsList(
   enabled = true,
 ) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return usePagedQuery({ screen: 'trips.list', ...tripsListQuery(settled), enabled });
+  // The trips are records, not days: 30 rows a page (PRD FR-19.11 v1.57, plan 95 item 18b).
+  return usePagedQuery({
+    screen: 'trips.list',
+    ...tripsListQuery(settled),
+    enabled,
+    defaultPageSize: RECORDS_PAGE_SIZE,
+  });
 }
 
 /** Every trip of the filter, page after page, for a choice list (`useLoadRest`). */

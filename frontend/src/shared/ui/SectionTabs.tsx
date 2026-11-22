@@ -8,7 +8,8 @@
 //
 // Keys (PRD FR-7.17): ← → move between the tabs in the reading direction, Enter opens, ↓ moves into the screen. Only
 // the open tab is a Tab stop; the arrows reach the others (roving focus). The row marks itself `data-section-tabs`, so
-// the arrow into a screen never lands on a tab.
+// the arrow into a screen never lands on a tab. The row writes the width all its tabs want to `data-natural-width`
+// (in pixels), so a screen can tell whether its own controls leave the tabs enough room (`BikriToolbar`).
 
 import { Localized, useLocalization } from '@fluent/react';
 import { ChevronDown, type LucideIcon } from 'lucide-react';
@@ -38,8 +39,28 @@ interface SectionTabsProps<Id extends string> {
 /** The space between two tabs, as the row's own gap (`gap-1` is 4 px). */
 const TAB_GAP_PX = 4;
 
+/**
+ * Room added to the measured width of the row before the tabs are counted. The tabs and the row are measured as
+ * fractions of a pixel, but a row that has exactly the room its tabs want is as wide as the tabs (it takes their
+ * natural width), so a fraction lost to rounding must never push the last tab behind "More" (plan 95, WebKit at 1920).
+ */
+const ROUNDING_SLACK_PX = 1;
+
 const TAB_CLASSES =
   'type-control inline-flex h-control-compact shrink-0 items-center gap-2 whitespace-nowrap rounded-2 px-3 transition-calm';
+
+/**
+ * The width of an element as a fraction of a pixel, or 0 when it has no layout (a test, a window being built).
+ * `offsetWidth` says whether it has a box; it is rounded, so the width itself is read from the rectangle.
+ */
+function widthOf(element: HTMLElement): number {
+  return element.offsetWidth === 0 ? 0 : element.getBoundingClientRect().width;
+}
+
+/** The width all the tabs want in one row: their own widths and the gaps between them. */
+export function sectionTabsNaturalWidth(widths: readonly number[]): number {
+  return widths.reduce((sum, w) => sum + w, 0) + TAB_GAP_PX * Math.max(widths.length - 1, 0);
+}
 
 /**
  * How many tabs fit the width (the arithmetic is `itemsThatFit`, with the gap of this row). `widths` are the measured
@@ -88,9 +109,15 @@ export function SectionTabs<Id extends string>({
     const ruler = rulerRef.current;
     if (box === null || ruler === null) return undefined;
     const measure = () => {
-      const widths = (Array.from(ruler.children) as HTMLElement[]).map((cell) => cell.offsetWidth);
-      const more = moreRulerRef.current?.offsetWidth ?? 0;
-      setFit(sectionTabsThatFit(box.clientWidth, widths, more));
+      // Fractions of a pixel, never the rounded `offsetWidth`: see ROUNDING_SLACK_PX.
+      const widths = (Array.from(ruler.children) as HTMLElement[]).map(widthOf);
+      const more = moreRulerRef.current === null ? 0 : widthOf(moreRulerRef.current);
+      // A screen that shares the row with its own controls reads this to decide whether to make them smaller
+      // before the last tabs go behind "More" (the sale book, plan 95).
+      box.dataset['naturalWidth'] = String(sectionTabsNaturalWidth(widths));
+      // A row with no width yet (a test, a window being built) shows every tab: width 0 means "not measured".
+      const room = widthOf(box);
+      setFit(sectionTabsThatFit(room > 0 ? room + ROUNDING_SLACK_PX : 0, widths, more));
     };
     measure();
     if (typeof ResizeObserver !== 'function') return undefined;

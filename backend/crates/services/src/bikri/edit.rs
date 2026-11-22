@@ -60,6 +60,7 @@ use crate::auth::Actor;
 use crate::context::Context;
 use crate::day;
 use crate::error::ServiceError;
+use crate::error::money_error;
 use crate::ledger::{self, PostingEvent};
 use crate::rules;
 use crate::vouchers::{rematch_party, role_of_account, stored_cash_change};
@@ -303,9 +304,17 @@ fn saved_sellers(
     }
     let mut paid: HashMap<i64, Paisa> = HashMap::new();
     for lot in &detail.lots {
+        // The amount of a seller is his نقد and the advance of his lots whose tick is on (lead
+        // decision, plan 95): both are counted by the question "above today's credit".
+        let ticked = if lot.adjust_advance {
+            lot.advance
+        } else {
+            Paisa::ZERO
+        };
         let sum = paid.entry(lot.seller.id).or_insert(Paisa::ZERO);
         *sum = sum
             .checked_add(lot.cash_paid)
+            .and_then(|s| s.checked_add(ticked))
             .map_err(crate::error::money_error)?;
     }
     Ok(Some(SavedSellers {
@@ -391,7 +400,18 @@ pub(super) fn plan_edit(
         stored,
         replaces: Some(Replaced {
             entry_id,
-            cash_change: stored_cash_change(conn, &old_entry)?,
+            // The edit replaces the first entry and, with it, the پیشگی entry of the lots (PRD
+            // FR-12.52 v1.57), so cash now still holds both.
+            cash_change: {
+                let advance = if kind == PostingKind::First {
+                    super::advance::cash_of_live(conn, detail.id)?
+                } else {
+                    Paisa::ZERO
+                };
+                stored_cash_change(conn, &old_entry)?
+                    .checked_add(advance)
+                    .map_err(money_error)?
+            },
         }),
         saved_sellers: saved_sellers(&detail, kind, entry_id, date, today)?,
     };
@@ -499,6 +519,7 @@ fn posting_json(detail: &BikriDetail, entry_id: i64, kind: PostingKind) -> Value
                 "phone": lot_charge_json(&lot.phone),
                 "cash_paid_paisa": lot.cash_paid.as_paisa(),
                 "store_rent_paisa": lot.store_rent.as_paisa(),
+                "advance_paisa": lot.advance.as_paisa(),
                 "adjust_advance": lot.adjust_advance,
                 "sales": sales,
             })
@@ -663,6 +684,28 @@ fn write_edit(
     let old_entry = ledger_repo::get_entry(tx, old_entry_id)?
         .ok_or_else(|| data("the posting of a بکری cannot be read"))?;
     let reversal = ledger::reverse(ctx, tx, user, old_entry_id, reason.unwrap_or(""))?;
+    // The پیشگی entry of the lots goes with the first entry (PRD FR-12.52 v1.57): reversed now, written
+    // again below with the new lots. Its order key is kept (or, when there was none, the first
+    // entry's), so the new advance stays just before the new first entry in the seller's order.
+    let old_advance = if first {
+        super::advance::live_entry(tx, detail.id)?
+    } else {
+        None
+    };
+    let mut advance_keys: Vec<(i64, Option<String>)> = Vec::new();
+    let mut advance_key = old_key;
+    if let Some(old_advance) = &old_advance {
+        advance_key = ledger::order_key_of(tx, old_advance.entry_id)?;
+        if let Some(stored) = ledger_repo::get_entry(tx, old_advance.entry_id)? {
+            advance_keys.extend(
+                stored
+                    .lines
+                    .iter()
+                    .map(|l| (l.account_id, l.person_key.clone())),
+            );
+        }
+        ledger::reverse(ctx, tx, user, old_advance.entry_id, reason.unwrap_or(""))?;
+    }
     edit_repo::reverse_moves(tx, old_entry_id, reversal.entry_id, user, &now)?;
     edit_repo::reverse_facts(tx, old_entry_id, reversal.entry_id, user, &now)?;
     // The trip partners' parts of the seller credit are taken back (PRD FR-12.26, C25).
@@ -672,6 +715,27 @@ fn write_edit(
     // The garden goods the old lines took go back to their arrivals, exactly (PRD FR-12.40).
     crate::gardens::arrivals::give_back_entry(tx, old_entry_id, user, &now)?;
 
+    // 2a. The new پیشگی entry, before the new first entry.
+    let new_advance_id = match &worked.advance_entry {
+        Some(advance_entry) if first => {
+            advance_keys.extend(
+                advance_entry
+                    .lines()
+                    .iter()
+                    .map(|l| (l.account_id.get(), l.person_key.clone())),
+            );
+            Some(super::advance::post_edited(
+                ctx,
+                tx,
+                user,
+                detail.id,
+                date,
+                advance_entry,
+                advance_key,
+            )?)
+        }
+        _ => None,
+    };
     // 2. The new posting, with the place of the old one.
     let posted = ledger::post_ordered(
         ctx,
@@ -835,7 +899,9 @@ fn write_edit(
     pin_cash_sales(tx, &post, &lots, layout, &line_ids)?;
     let new_stored = ledger_repo::get_entry(tx, new_entry_id)?
         .ok_or_else(|| data("the new posting cannot be read back"))?;
-    for (account_id, person_key) in touched_keys(&old_entry, &new_stored) {
+    let mut touched = touched_keys(&old_entry, &new_stored);
+    touched.extend(advance_keys);
+    for (account_id, person_key) in touched {
         if let Some(role) = role_of_account(tx, account_id)? {
             rematch_party(tx, user, &now, account_id, person_key.as_deref(), role)?;
         }
@@ -869,6 +935,11 @@ fn write_edit(
             object.insert("removed_lots".to_owned(), Value::Array(removed_lots));
         }
         object.insert("reversal_entry_id".to_owned(), json!(reversal.entry_id));
+        object.insert(
+            "advance_paisa".to_owned(),
+            json!(worked.calc.summary.advance.as_paisa()),
+        );
+        object.insert("advance_entry_id".to_owned(), json!(new_advance_id));
         object.insert(
             "gross_paisa".to_owned(),
             json!(worked.calc.summary.gross.as_paisa()),

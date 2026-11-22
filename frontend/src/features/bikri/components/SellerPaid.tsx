@@ -1,30 +1,28 @@
-// A seller's money paid on the spot, in his summary (plan 91, PRD FR-12.23 v1.53, FR-12.3, C6, C8): one field, "موقع پر
-// ادائیگی", beside the advance tick, and the lines of his account after this بکری: پچھلا بقایا, آج کی صافی بکری,
-// موقع پر ادائیگی, بکری کی باقی رقم، کھاتے میں جمع, and نیا بقایا, each with its side, and
-// the working of the new balance behind its ⓘ. When the amount is more than the seller may take without a question,
-// the balance will grow and an amber line says so; the save asks "is this entry correct?" (the box on the page).
+// A seller's account after this بکری, in his summary (plan 91, PRD FR-12.23 v1.53, FR-12.3, C6, C8; plan 95 item 8, PRD
+// FR-12.52): the tick "پیشگی اس بکری سے کاٹیں" beside the lines of his account: پچھلا بقایا, آج کی صافی بکری,
+// موقع پر ادائیگی, بکری کی باقی رقم، کھاتے میں جمع, and نیا بقایا, each with its side, and the working of the new
+// balance behind its ⓘ. There is no box to type an amount here any more (Umar, 23-11-2026): cash to the seller is typed
+// only in the نقد ادائیگی of his lots, and موقع پر ادائیگی is the sum of those, worked out by the backend. When it is more
+// than the seller may take without a question, the balance will grow and an amber line says so; the save asks "is this
+// entry correct?" (the box on the page).
 //
-// The amount typed is spread by the backend over his lots' نقد, which are written into the lots' own fields
-// (`useSellerPaidSpread`); the field shows the sum of those نقد as the backend worked it out. Every figure here is the
-// backend's (CLAUDE.md rule 1): the lines that are 0 are left out by comparing the text a figure is written as, never
-// the number.
+// Every figure here is the backend's (CLAUDE.md rule 1): the lines that are 0 are left out by comparing the text a figure
+// is written as, never the number.
 
 import { Localized } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { Working } from '../../../bindings/Working';
 import { formatPaisa, useGrouping, type Paisa } from '../../../shared/format';
 import type { PickedRecord } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Balance, CalcInfo, Field, MoneyInput, Num, fieldError } from '../../../shared/ui';
-import { cashText, type SellerPaidSpreading } from '../hooks/useSellerPaidSpread';
+import { Balance, CalcInfo, Num } from '../../../shared/ui';
 import type { SellerPaidLines } from '../../../bindings/SellerPaidLines';
 
 interface SellerPaidProps {
   seller: PickedRecord;
   /** What the preview says about this seller, or undefined while it cannot work it out. */
   lines: SellerPaidLines | undefined;
-  spreading: SellerPaidSpreading;
   /** The seller's advance tick, shown above the field when he has an advance open (plan 78 C3). */
   tick?: ReactNode;
 }
@@ -52,51 +50,22 @@ function Line({ labelId, working, children, emphasis = false }: LineProps) {
   );
 }
 
-export function SellerPaid({ seller, lines, spreading, tick }: SellerPaidProps) {
+export function SellerPaid({ seller, lines, tick }: SellerPaidProps) {
   const grouping = useGrouping();
   const language = useLanguage();
   const name = displayName(seller, language);
-  // What is being typed, until the field loses focus; then the field shows the sum the backend worked out.
-  const [typed, setTyped] = useState<string | null>(null);
-  const value = typed ?? (lines === undefined ? '' : cashText(lines.paid_paisa));
   // A figure is "nothing" when the text it is written as is 0: no amount is compared as a number here.
   const isNothing = (paisa: Paisa) => formatPaisa(paisa, { grouping }) === '0';
   return (
     <section
       aria-label={name}
       data-seller-paid={seller.id}
-      className="flex flex-col gap-2 rounded-2 border border-border bg-surface-sunken p-3"
+      className="flex min-w-0 flex-col gap-2 rounded-2 border border-border bg-surface-sunken p-3"
     >
       <Localized id="bikri-seller-paid-title" vars={{ name }}>
         <h3 className="type-label text-ink" />
       </Localized>
       {tick}
-      <div
-        onBlur={() => {
-          setTyped(null);
-        }}
-      >
-        <Field
-          label={<Localized id="bikri-seller-paid-field" />}
-          info={
-            <Localized id="bikri-seller-paid-hint">
-              <p />
-            </Localized>
-          }
-          error={fieldError(spreading.errors[seller.id], 'seller_paid[0].amount')}
-        >
-          {(props) => (
-            <MoneyInput
-              {...props}
-              value={value}
-              onChange={(text) => {
-                setTyped(text);
-                spreading.spread(seller.id, text);
-              }}
-            />
-          )}
-        </Field>
-      </div>
       {lines === undefined ? null : (
         <>
           {lines.needs_confirm ? (
@@ -122,6 +91,12 @@ export function SellerPaid({ seller, lines, spreading, tick }: SellerPaidProps) 
             <Line labelId="bikri-seller-paid-rest">
               <Num paisa={lines.carry_paisa} />
             </Line>
+            {isNothing(lines.advance_paisa) ? null : (
+              // The advance typed on his lots, a debit of its own: it is in the new balance (PRD FR-12.52).
+              <Line labelId="bikri-seller-paid-advance">
+                <Num paisa={lines.advance_paisa} />
+              </Line>
+            )}
             {isNothing(lines.over_paid_paisa) ? null : (
               <Line labelId="bikri-seller-paid-over">
                 <Num paisa={lines.over_paid_paisa} />

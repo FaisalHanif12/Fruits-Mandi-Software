@@ -247,10 +247,10 @@ common-goto-month-hint = Type a month, for example 10-2026. A short form works t
 # review: pending
 common-goto-month-placeholder = MM-YYYY
 
-## The 7-day window of a list that shows many rows a day (PRD FR-19.11, plan 76 point 8).
+## The window of days of a list that shows many rows a day: 30 days at a time (PRD FR-19.11 v1.57, plan 95 item 18).
 
 # review: pending
-common-days-nav-label = Move by 7 days
+common-days-nav-label = Move by { $days } days
 
 # review: pending
 common-days-earlier = Earlier <num>{ $days }</num> days
@@ -274,7 +274,7 @@ common-days-latest-button = Back to today
 common-goto-day = Go to day
 
 # review: pending
-common-goto-day-hint = Type a day, for example 10-10-2026. The 7 days that end on it open. A short form works too: 10 is the 10th of this month.
+common-goto-day-hint = Type a day, for example 10-10-2026. The { $days } days that end on it open. A short form works too: 10 is the 10th of this month.
 
 # review: pending
 common-goto-day-placeholder = DD-MM-YYYY

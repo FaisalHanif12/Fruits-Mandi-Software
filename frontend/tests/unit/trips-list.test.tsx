@@ -19,7 +19,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
-import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
+import { RECORD_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { e34Trip, fakeTrips, tripRow } from '../helpers/trips';
 import { refusal } from '../helpers/ui-error';
@@ -125,7 +125,7 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
     });
   });
 
-  it('lists the trips and the totals the backend sent, asking for the first page of 25', async () => {
+  it('lists the trips and the totals the backend sent, asking for the first page of 30', async () => {
     fakeTrips();
     await open();
     await waitFor(() => {
@@ -147,7 +147,7 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
       partner_id: null,
       search: null,
       offset: 0,
-      limit: PAGE_ROWS,
+      limit: RECORD_ROWS,
       sort: null,
       // The list is in date order, so the month rows are asked for.
       group_by_month: true,
@@ -186,27 +186,28 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
     });
   });
 
-  it('loads page by page: the next 25 rows come on the page button, the count says where it is', async () => {
+  it('loads page by page: the next 30 rows come on the page button, the count says where it is', async () => {
     const many = Array.from({ length: 60 }, (_, index) =>
       tripRow({ id: index + 1, number: index + 1, market: `Market ${String(index + 1)}` }),
     );
     fakeTrips({ trips: many });
     const { user } = await open();
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 60));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 30, 60));
     });
     await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 60));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 31, 60, 60));
     });
     expect(tripsApi.tripsList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
+      expect.objectContaining({ offset: RECORD_ROWS, limit: RECORD_ROWS }),
     );
-    await user.click(await pagerButton(language, 'last'));
-    await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(rangeText(language, 51, 60, 60));
-    });
+    // 60 rows at 30 a page are two pages: the second is the last.
     expect(await pagerButton(language, 'next')).toBeDisabled();
+    await user.click(await pagerButton(language, 'first'));
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 30, 60));
+    });
   });
 
   it('the search is sent to the backend, and a search with no match offers to clear it', async () => {

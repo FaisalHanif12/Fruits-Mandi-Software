@@ -2,7 +2,8 @@
 import type { Paisa } from '../shared/format/money';
 
 /**
- * The last advance given to a seller.
+ * The last advance given to a seller: a پیشگی voucher or the پیشگی typed on a lot (PRD FR-7.60,
+ * FR-12.52 v1.57).
  */
 export type LastAdvance = {
   /**
@@ -14,7 +15,11 @@ export type LastAdvance = {
    */
   amount_paisa: Paisa;
   /**
-   * The voucher number.
+   * The voucher number; null for the پیشگی typed on a lot (then `bikri_number` is set).
    */
-  voucher_number: number;
+  voucher_number: number | null;
+  /**
+   * The بکری number of a پیشگی typed on a lot (PRD FR-12.52 v1.57); null for a voucher.
+   */
+  bikri_number: number | null;
 };

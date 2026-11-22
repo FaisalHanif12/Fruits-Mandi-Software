@@ -246,6 +246,29 @@ mod lot {
         assert_result("own result", own.result_paisa, &own.result_working);
     }
 
+    /// PRD FR-12.52 v1.57: a lot of trip goods has no seller, so it takes no پیشگی. An amount typed on
+    /// it is refused at `lots[0].advance`, and it adds nothing to the summary or the journal.
+    #[test]
+    fn an_advance_on_a_trip_lot_is_refused() {
+        let mut lot = own_lot(BANANA, "15");
+        lot.advance = Some("5000".to_owned());
+        let d = draft(vec![with(lot, vec![sale(AKRAM, "15", "600")])]);
+        let calc = run_with(
+            &d,
+            &with_purchase(purchase(BANANA, 20, 10_400)),
+            default_rules(),
+            switches(),
+        );
+        assert!(
+            calc.errors
+                .iter()
+                .any(|e| e.code == ErrorCode::ErrFormatInvalid && e.field == "lots[0].advance"),
+            "{:?}",
+            calc.errors
+        );
+        assert_eq!(r(calc.summary.advance), 0);
+    }
+
     /// A loss: 1 x 10 with labour 50 typed. The credit is -41, split 17 / 12 / 12 and posted on the
     /// debit side of the partners. The lot net is not "the seller's debt".
     #[test]

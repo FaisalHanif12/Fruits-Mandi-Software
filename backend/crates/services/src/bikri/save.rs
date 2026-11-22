@@ -134,6 +134,20 @@ pub(super) fn write_new(
         lot_ids.push(insert_lot(tx, actor.user_id, now, bikri_id, index, shaped)?);
     }
 
+    // 4a. The پیشگی the lots take (PRD FR-12.52 v1.57, FR-15.8) is its own entry, written just before
+    // the first entry so it comes first in the seller's order.
+    let advance_entry_id = match &worked.advance_entry {
+        Some(advance_entry) => Some(super::advance::post_new(
+            ctx,
+            tx,
+            actor.user_id,
+            bikri_id,
+            date,
+            advance_entry,
+        )?),
+        None => None,
+    };
+
     // 4. The journal entry, posted through the one function.
     let posted = ledger::post(
         ctx,
@@ -199,6 +213,8 @@ pub(super) fn write_new(
                 "shared_income_paisa": worked.calc.summary.shared_income.as_paisa(),
                 "cash_after_paisa": worked.cash.cash_after_paisa.as_paisa(),
                 "cash_below_zero_confirmed": worked.cash.needs_confirm,
+                "advance_paisa": worked.calc.summary.advance.as_paisa(),
+                "advance_entry_id": advance_entry_id,
             }))
             .into_entry(),
     )?;

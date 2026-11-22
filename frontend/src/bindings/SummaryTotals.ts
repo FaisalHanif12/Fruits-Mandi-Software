@@ -40,6 +40,12 @@ export type SummaryTotals = {
    */
   phone: Paisa;
   /**
+   * پیشگی: money the sellers take as an advance with these goods (PRD FR-12.52 v1.57). It is NOT
+   * in `deductions` or `net` (C6, C7): it is its own posting, a seller debit flagged as an
+   * advance against روکڑ, and it never changes what the sale credits him.
+   */
+  advance: Paisa;
+  /**
    * کل اخراجات (C6).
    */
   deductions: Paisa;

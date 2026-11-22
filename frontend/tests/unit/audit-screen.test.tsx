@@ -161,12 +161,12 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
     return { ...app, user };
   }
 
-  it('asks for the first page with every filter empty but the 7 days that end today, and shows the entries in words', async () => {
+  it('asks for the first page with every filter empty but the 30 days that end today, and shows the entries in words', async () => {
     await openAudit();
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
-    // Nothing is filtered but the window (PRD FR-19.11): the 7 days that end today. The first page is the
+    // Nothing is filtered but the window (PRD FR-19.11): the 30 days that end today. The first page is the
     // list's default page of 25 rows.
     expect(lastRequest()).toEqual({
       filters: {
@@ -174,7 +174,7 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
         action: '',
         entity: '',
         entity_id: null,
-        from: '04-10-2026',
+        from: '11-09-2026',
         to: '10-10-2026',
         text: '',
       },

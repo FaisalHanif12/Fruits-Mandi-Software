@@ -66,6 +66,10 @@ pub struct JournalLot {
     pub seller_credit: Paisa,
     /// نقد given to the seller in this posting.
     pub cash_paid: Paisa,
+    /// پیشگی the seller takes with these goods (PRD FR-12.52 v1.57). It is NOT part of this entry:
+    /// it is posted as its own entry (see [`build_lot_advance_entry`]), so a بکری entry's lines
+    /// and its balance are the same with or without it.
+    pub advance: Paisa,
     /// Freight paid by the firm (0 when the seller paid it, PRD E6).
     pub freight_deducted: Paisa,
     /// مزدوری.
@@ -325,6 +329,48 @@ pub fn build_bikri_entry_with_layout(
         }
     }
     Ok((build_entry(lines)?, layout))
+}
+
+/// The پیشگی entry and, for each line of a lot, the lot's place and the line's place in the entry.
+pub type LotAdvanceEntry = (BalancedEntry, Vec<(usize, usize)>);
+
+/// The entry of the پیشگی the sellers take with their lots (PRD FR-12.52 v1.57, FR-15.8, plan 95): a
+/// seller debit flagged as an advance for each lot that has one, in lot order, and one روکڑ credit
+/// for the total. It is its own entry of the posting type `advance`, written in the same save as the
+/// بکری and just before its first entry, so the advance comes first in the seller's order and a lot
+/// whose tick "پیشگی سے کاٹیں" is on is adjusted by its own credit (PRD FR-15.8).
+///
+/// `lots` are the lots of the first posting as `(seller account, advance)`, in lot order. A lot with
+/// no advance gets no line. Returns `None` when no lot has one: then nothing is written. Each line of
+/// the entry is one lot, so the daily books check can compare each lot with its line.
+///
+/// Returns the entry and, for each line of a lot, the lot's place and the line's place in the entry.
+///
+/// Example: عدنان's lot with 20,000 and کریم's with 3,000: عدنان Dr 20,000, کریم Dr 3,000, روکڑ Cr
+/// 23,000; the entry total is 23,000.
+///
+/// # Errors
+/// [`LedgerError`] for an amount that is negative or does not fit.
+pub fn build_lot_advance_entry(
+    lots: &[(AccountId, Paisa)],
+    cash: AccountId,
+) -> Result<Option<LotAdvanceEntry>, LedgerError> {
+    let mut lines = Vec::new();
+    let mut places = Vec::new();
+    let mut total = Paisa::ZERO;
+    for (lot_index, (seller, advance)) in lots.iter().enumerate() {
+        if *advance == Paisa::ZERO {
+            continue;
+        }
+        places.push((lot_index, lines.len()));
+        lines.push(LedgerLine::new(*seller, Side::Dr, *advance).as_advance());
+        total = total.checked_add(*advance)?;
+    }
+    if lines.is_empty() {
+        return Ok(None);
+    }
+    lines.push(LedgerLine::new(cash, Side::Cr, total));
+    Ok(Some((build_entry(lines)?, places)))
 }
 
 #[cfg(test)]

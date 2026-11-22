@@ -286,7 +286,8 @@ fn sale_input(sale: &SavedSale, keep_ids: bool) -> SaleInput {
     }
 }
 
-fn lot_input(lot: &SavedLot, entry_id: i64, keep_ids: bool) -> LotInput {
+/// `first` is true for a first posting: only it holds the lot's پیشگی (PRD FR-12.52 v1.57).
+fn lot_input(lot: &SavedLot, entry_id: i64, keep_ids: bool, first: bool) -> LotInput {
     LotInput {
         key: format!("lot:{}", lot.id),
         lot_id: keep_ids.then_some(lot.id),
@@ -306,6 +307,7 @@ fn lot_input(lot: &SavedLot, entry_id: i64, keep_ids: bool) -> LotInput {
         phone: typed_lot_charge(&lot.phone),
         cash_paid: Some(rupees(lot.cash_paid)),
         store_rent: (lot.store_rent > Paisa::ZERO).then(|| rupees(lot.store_rent)),
+        advance: (first && lot.advance > Paisa::ZERO).then(|| rupees(lot.advance)),
         adjust_advance: lot.adjust_advance,
         sales: lines_of(lot, entry_id)
             .map(|s| sale_input(s, keep_ids))
@@ -349,7 +351,7 @@ pub(super) fn draft_of(
     let posting = posting_lots(detail, entry_id, kind);
     let lots = posting
         .iter()
-        .map(|lot| lot_input(lot, entry_id, keep_ids))
+        .map(|lot| lot_input(lot, entry_id, keep_ids, kind == PostingKind::First))
         .collect();
     BikriDraft {
         header: header_input(detail, date, kind == PostingKind::First),
@@ -386,6 +388,7 @@ pub(super) fn later_lot_input(state: &LotState, sales: Vec<SaleInput>) -> LotInp
         phone: None,
         cash_paid: Some("0".to_owned()),
         store_rent: None,
+        advance: None,
         adjust_advance: state.adjust_advance,
         sales,
     }

@@ -1,6 +1,7 @@
 // The quality of a sale line on the sale book (PRD FR-12.42, plan 58): a list cell after the rate in
-// the grid, reached with the arrow keys, opened with Space, never an Enter stop (a line is still
-// buyer, qty, rate). It is sent with the line only when chosen, changes no figure, and survives a
+// the grid, reached with the arrow keys, never an Enter stop (a line is still buyer, qty, rate). Its list
+// opens by itself when the cursor reaches the cell, and leaving with no choice keeps it empty (PRD
+// FR-12.52, plan 95 item 3, Umar 23-11-2026). It is sent with the line only when chosen, changes no figure, and survives a
 // language switch in the middle of the entry. The payment type lives in the details of the line
 // (option C), not in the grid, so the table has the same columns at every size. Urdu and English.
 
@@ -59,6 +60,8 @@ describe.each(LANGUAGES)('the quality of a sale line (%s)', (language) => {
   const say = (id: string) => message(language, id);
   /** The key that moves to the next column in reading order: → in English, ← in Urdu. */
   const forward = language === 'ur' ? '{ArrowLeft}' : '{ArrowRight}';
+  /** The list of the quality (the page also holds the list of global search, so it is asked by name). */
+  const gradeList = () => screen.queryByRole('listbox', { name: say('glossary-darja') });
 
   beforeEach(() => {
     resetClientState(language);
@@ -93,15 +96,19 @@ describe.each(LANGUAGES)('the quality of a sale line (%s)', (language) => {
     }, SLOW_MS);
   });
 
-  it('is reached with the arrow key from the rate, opened with Space, chosen with the arrows and Enter, and sent', async () => {
-    const { backend, user } = await twoLines();
+  /** Moves the cursor from the rate to the quality; its list opens by itself. */
+  async function reachGrade(user: Awaited<ReturnType<typeof twoLines>>['user']) {
     await user.click(cellOf(salesGrid(language), 0, 'rate'));
     await user.keyboard(forward);
-    expect(focusedIn(salesGrid(language))).toBe('0:grade');
-    await user.keyboard(' ');
     await waitFor(() => {
       expect(screen.getByRole('listbox', { name: say('glossary-darja') })).toBeInTheDocument();
-    });
+    }, SLOW_MS);
+    expect(focusedIn(salesGrid(language))).toBe('0:grade');
+  }
+
+  it('is reached with the arrow key from the rate, its list opens by itself, chosen with the arrows and Enter, and sent', async () => {
+    const { backend, user } = await twoLines();
+    await reachGrade(user);
     // The empty choice is first; two ↓ reach the second word.
     await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
     await waitFor(() => {
@@ -117,11 +124,33 @@ describe.each(LANGUAGES)('the quality of a sale line (%s)', (language) => {
     expect(textOf(salesGrid(language), 0, 'buyerTotal')).toBe('12,880');
   });
 
-  it('is cleared with Delete and then sent with no quality', async () => {
+  it('leaving with no choice keeps it empty: Esc closes the list, and an arrow goes on to the next cell', async () => {
     const { backend, user } = await twoLines();
+    await reachGrade(user);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(gradeList()).not.toBeInTheDocument();
+    }, SLOW_MS);
+    expect(backend.lastDraft().lots[0]?.sales[0]).not.toHaveProperty('grade');
+    expect(visible(cellOf(salesGrid(language), 0, 'grade').textContent).trim()).toBe('');
+    // Going on with the arrow from the cell: the list does not trap the cursor, and nothing was chosen.
     await user.click(cellOf(salesGrid(language), 0, 'rate'));
     await user.keyboard(forward);
-    await user.keyboard(' {ArrowDown}{Enter}');
+    await waitFor(() => {
+      expect(gradeList()).toBeInTheDocument();
+    }, SLOW_MS);
+    await user.keyboard(forward);
+    await waitFor(() => {
+      expect(gradeList()).not.toBeInTheDocument();
+    }, SLOW_MS);
+    expect(focusedIn(salesGrid(language))).not.toBe('0:grade');
+    expect(backend.lastDraft().lots[0]?.sales[0]).not.toHaveProperty('grade');
+  });
+
+  it('is cleared with Delete and then sent with no quality', async () => {
+    const { backend, user } = await twoLines();
+    await reachGrade(user);
+    await user.keyboard('{ArrowDown}{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales[0]?.grade).toBe('first');
     }, SLOW_MS);
@@ -133,9 +162,8 @@ describe.each(LANGUAGES)('the quality of a sale line (%s)', (language) => {
 
   it('keeps the chosen word through a language switch in the middle of the entry, and says it in the other language', async () => {
     const { backend, user } = await twoLines();
-    await user.click(cellOf(salesGrid(language), 0, 'rate'));
-    await user.keyboard(forward);
-    await user.keyboard(' {ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
+    await reachGrade(user);
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales[0]?.grade).toBe('third');
     }, SLOW_MS);

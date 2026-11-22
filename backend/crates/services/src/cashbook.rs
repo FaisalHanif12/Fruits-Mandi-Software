@@ -145,7 +145,14 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
             rows.push(CashbookRow {
                 entry_id: row.entry_id,
                 entry_date: row.entry_date.clone(),
-                posting_type: row.posting_type.clone(),
+                // The پیشگی typed on a lot is its own entry with a بکری as its source (PRD FR-12.52
+                // v1.57): its row says `bikri_advance` and carries the number of the SALE, so it is
+                // never read as the number of a پیشگی voucher.
+                posting_type: if row.posting_type == "advance" && row.source_type == "bikri" {
+                    "bikri_advance".to_owned()
+                } else {
+                    row.posting_type.clone()
+                },
                 number: row.number,
                 account,
                 kind: kind_of(row, cash, partner.is_some()),

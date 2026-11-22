@@ -965,11 +965,16 @@ impl Index {
         // The پیشگی field gives money out, so it never offers a person in the dead amount (a
         // recovery is a وصولی, PRD FR-10.10) and never نقدی منڈی, which has no ledger.
         let advance_field = scope == AccountScope::SellerBuyer;
+        // The buyer field of a بکری line (`with_chukta`) no longer offers نقدی منڈی: a walk-in buyer is
+        // a چکتا buyer (PRD FR-12.52 v1.57, plan 95 item 5). Old lines on 03040000 still load and show;
+        // every other buyer picker keeps it.
+        let sale_line_field = scope == AccountScope::Buyer && with_chukta;
         let include_dead = include_dead && !advance_field;
         (list, move |e: &Entry| {
             (!narrow || e.account.map(|a| a.control_id) == control_id)
                 && (with_own || e.code != mandi_domain::core::accounts::OWN_GOODS_CODE)
-                && (!advance_field || e.code != mandi_domain::core::accounts::NAQDI_MANDI_CODE)
+                && (!(advance_field || sale_line_field)
+                    || e.code != mandi_domain::core::accounts::NAQDI_MANDI_CODE)
                 && (include_dead || !e.dead)
                 && (with_chukta || e.chukta.is_none())
                 && !hidden.is_some_and(|ids| ids.contains(&e.id))

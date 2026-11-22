@@ -28,7 +28,7 @@ pub const MAX_STAMP_IDS: usize = 500;
 /// Top-level keys of an edit's audit entry that are for the audit viewer and not edits the user
 /// made: the numbers of the postings an edit wrote (every edit writes new ones), the totals of the
 /// new posting and the cash question. The history shows the fields the user changed.
-const AUDIT_ONLY: [&str; 13] = [
+const AUDIT_ONLY: [&str; 15] = [
     "entry_id",
     "journal_entry_id",
     "current_entry_id",
@@ -41,6 +41,10 @@ const AUDIT_ONLY: [&str; 13] = [
     "net_paisa",
     "buyer_total_paisa",
     "shared_income_paisa",
+    // The total of the lots' پیشگی and the id of its entry (PRD FR-12.52 v1.57, plan 95): what an
+    // edit wrote, not a field the user changed. The advance of each lot is under `lots`.
+    "advance_paisa",
+    "advance_entry_id",
     // The Owner's sign of the fix the edit was made in (plan 73): shown as the version's `sign`.
     "sign",
 ];

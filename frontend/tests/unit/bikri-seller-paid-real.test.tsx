@@ -1,15 +1,12 @@
 // A seller's money paid on the spot with the backend's REAL answers (plan 91, PRD FR-12.23 v1.53): its four worked
 // previews, drawn in the seller's summary in Urdu and in English with the numbers of the plan (previous 30,000 بنام,
 // credit 20,000, paid 5,000: the rest 15,000, new 15,000 بنام; two lots paid 15,000; the shop owed him 10,000 and he took
-// 28,000; paid 25,000 needing the Owner's yes), and its spread of 15,000 over two lots (12,000 and 3,000) written into
-// the lots' own نقد fields. Nothing on the screen is worked out: every figure is read off the recorded answer.
+// 28,000; paid 25,000 needing the Owner's yes). Nothing on the screen is worked out: every figure is read off the
+// recorded answer. (The spread of an amount typed in the summary is gone, plan 95 item 8: cash is typed in the lots.)
 
-import { renderHook, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
-import { createBikriDraft } from '../../src/features/bikri/draft-store';
-import { useSellerPaidSpread } from '../../src/features/bikri/hooks/useSellerPaidSpread';
-import { LOT } from '../../src/features/bikri/types';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { CommandError } from '../../src/shared/api';
 import * as urduApi from '../../src/shared/urdu/api';
@@ -29,9 +26,9 @@ import {
   SELLER_PREVIEW_A,
   SELLER_PREVIEW_B,
   SELLER_PREVIEW_C,
+  SELLER_PREVIEW_ADVANCE,
   SELLER_PREVIEW_D,
   SELLER_SAVE_REFUSED_D,
-  SELLER_SPREAD_TWO,
 } from '../helpers/seller-paid-real';
 import { refusal } from '../helpers/ui-error';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
@@ -137,6 +134,27 @@ describe.each(LANGUAGES)(
       ).toBeNull();
     });
 
+    it('the advance of his lots: a line of its own between the cash and the new balance; the rest of the sale stays 22,900; new 12,160 جمع', async () => {
+      await openWith(SELLER_PREVIEW_ADVANCE);
+      const byLabel = new Map(lines());
+      expect(byLabel.get(m('bikri-seller-paid-previous'))).toContain('9,260');
+      expect(byLabel.get(m('bikri-seller-paid-previous'))).toContain(side('cr'));
+      expect(byLabel.get(m('bikri-seller-paid-net'))).toBe('52,900');
+      expect(byLabel.get(m('bikri-seller-paid-paid'))).toBe('30,000');
+      expect(byLabel.get(m('bikri-seller-paid-rest'))).toBe('22,900');
+      expect(byLabel.get(m('bikri-seller-paid-advance'))).toBe('20,000');
+      expect(byLabel.get(m('bikri-seller-paid-new'))).toContain('12,160');
+      expect(byLabel.get(m('bikri-seller-paid-new'))).toContain(side('cr'));
+      // The advance stands after the cash lines and before the new balance.
+      const labels = lines().map(([label]) => label);
+      expect(labels.indexOf(m('bikri-seller-paid-advance'))).toBeGreaterThan(
+        labels.indexOf(m('bikri-seller-paid-paid')),
+      );
+      expect(labels.indexOf(m('bikri-seller-paid-advance'))).toBeLessThan(
+        labels.indexOf(m('bikri-seller-paid-new')),
+      );
+    });
+
     it('case D: paid 25,000 is above his limit: the amber line, F10 asks naming him and 35,000 بنام, yes saves with the yes', async () => {
       const { backend, user } = await openWith(SELLER_PREVIEW_D);
       // The save refuses with the backend's own list until the yes comes (plan 91, one yes for the entry).
@@ -177,34 +195,3 @@ describe.each(LANGUAGES)(
     });
   },
 );
-
-describe('the spread of 15,000 over two lots (the backend’s real answer)', () => {
-  it('writes 12,000 and 3,000 into the two lots’ own نقد fields, and asks with the amount as typed and no posting left out', async () => {
-    const stores = createBikriDraft('2026-10-10');
-    const seller = { id: RAHIM, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
-    const first = stores.lots.getState().rows[0]?.rowId ?? '';
-    stores.lots.getState().patchRow(first, { picked: { [LOT.seller]: seller } });
-    stores.lots.getState().addRow();
-    const second = stores.lots.getState().rows[1]?.rowId ?? '';
-    stores.lots.getState().patchRow(second, { picked: { [LOT.seller]: seller } });
-    // The answer is the backend's, with its lot keys put to the keys of these two rows.
-    vi.mocked(bikriApi.bikriSellerPaidSpread).mockResolvedValue({
-      ...SELLER_SPREAD_TWO,
-      lots: SELLER_SPREAD_TWO.lots.map((lot, index) => ({
-        ...lot,
-        key: index === 0 ? first : second,
-      })),
-    });
-    const { result } = renderHook(() => useSellerPaidSpread(stores, null));
-    result.current.spread(RAHIM, '15000');
-    await waitFor(() => {
-      expect(stores.lots.getState().rows.map((row) => row.typed[LOT.cash])).toEqual([
-        '12000',
-        '3000',
-      ]);
-    });
-    const sent = vi.mocked(bikriApi.bikriSellerPaidSpread).mock.calls.at(-1)?.[0];
-    expect(sent?.seller_paid).toEqual([{ seller_account_id: RAHIM, amount: '15000' }]);
-    expect(sent?.entry_id ?? null).toBeNull();
-  });
-});

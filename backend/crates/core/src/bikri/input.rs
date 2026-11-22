@@ -400,6 +400,15 @@ pub struct LotInput {
     /// کرایہ سٹور, whole rupees.
     #[serde(default)]
     pub store_rent: Option<String>,
+    /// پیشگی: money the seller takes as an advance when he brings these goods, whole rupees (PRD
+    /// FR-12.52 v1.57, plan 95). It is its own posting in the same save: the seller owes it (an
+    /// advance) and روکڑ pays it. It is not a deduction of this sale: the lot's net does not
+    /// change. Empty means 0. Only a lot of a first posting that can take نقد has one; a trip lot, a
+    /// garden's lot and a carried lot refuse an amount above 0 (`ERR_FORMAT_INVALID` at
+    /// `lots[i].advance`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub advance: Option<String>,
     /// The tick "پیشگی سے کاٹیں" (PRD FR-12.23).
     pub adjust_advance: bool,
     /// The sale lines.

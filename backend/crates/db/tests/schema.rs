@@ -315,6 +315,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 // Migration 0027 (plan 80 gate): the time a lot was removed in an edit, null while it
                 // is in force.
                 "removed_at",
+                // Migration 0029 (plan 95 item 11, PRD FR-12.52 v1.57): the پیشگی typed on the lot.
+                "advance_paisa",
             ],
         ),
         (
@@ -847,7 +849,8 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     // (`paid_paisa`, written as three column CHECKs, one of them the whole rupee check).
     // Migration 22 adds none: `lot_counter` and `last_counter` are counters, not money.
     // Migration 25 adds ventures 1 (`rent_original_paisa`).
-    assert_eq!(found, 66);
+    // Migration 29 adds bikri_lots 1 (`advance_paisa`, plan 95 item 11).
+    assert_eq!(found, 67);
 }
 
 /// Every `*_date` column checks for a real date.

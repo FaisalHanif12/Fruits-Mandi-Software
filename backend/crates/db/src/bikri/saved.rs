@@ -253,6 +253,7 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let phone = lot_charge(c)?;
     let cash_paid = c.paisa()?;
     let store_rent = c.paisa()?;
+    let advance = c.paisa()?;
     let adjust_advance: bool = c.get()?;
     let first_entry_id: Option<i64> = c.get()?;
     let gross = c.paisa()?;
@@ -320,6 +321,7 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
         phone,
         cash_paid,
         store_rent,
+        advance,
         adjust_advance,
         first_entry_id,
         gross,
@@ -441,7 +443,7 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
                 l.labour_paisa, l.labour_method, l.labour_value_paisa, l.labour_rule_id,
                 l.munshiana_paisa, l.munshiana_method, l.munshiana_value_paisa, l.munshiana_rule_id,
                 l.phone_paisa, l.phone_method, l.phone_value_paisa, l.phone_rule_id,
-                l.cash_paid_paisa, l.store_rent_paisa, l.adjust_advance, l.first_entry_id,
+                l.cash_paid_paisa, l.store_rent_paisa, l.advance_paisa, l.adjust_advance, l.first_entry_id,
                 l.gross_paisa, l.seller_comm_paisa, l.deductions_paisa, l.net_paisa,
                 l.purchase_id, pu.number, pu.venture_id, tr.number,
                 l.arrival_id, ga.number, ga.venture_id, gd.number
@@ -486,7 +488,13 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
         "SELECT e.id, e.posting_type, e.entry_date, e.total_paisa,
                 EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
          FROM journal_entries e
-         WHERE e.source_type = 'bikri' AND e.source_id = ?1 AND e.status = 'posted' ORDER BY e.id",
+         WHERE e.source_type = 'bikri' AND e.source_id = ?1 AND e.status = 'posted'
+           -- The پیشگی entry of the lots (PRD FR-12.52 v1.57) and its reversals are not postings of
+           -- the بکری: they are not edited or cancelled alone, only with the first posting.
+           AND e.posting_type <> 'advance'
+           AND NOT EXISTS (SELECT 1 FROM journal_entries o
+                           WHERE o.id = e.reverses_entry_id AND o.posting_type = 'advance')
+         ORDER BY e.id",
     )?;
     let postings = statement.query_map([id], |row| {
         let mut c = Cols::new(row);

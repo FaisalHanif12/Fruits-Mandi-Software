@@ -2,7 +2,7 @@
 // Menu items whose module is not built yet open the "coming soon" page.
 
 import { EXPENSE_TABS } from '../features/cashbook/expense-tabs';
-import { asScreenType } from '../features/vouchers/screen-type';
+import { asScreenType, type ScreenType } from '../features/vouchers/screen-type';
 import type { MainNavId } from './layout/MainNav';
 import type { ModuleMenuId, RokarMenuId } from './layout/ModuleMenu';
 
@@ -22,26 +22,36 @@ export const MAIN_ROUTES = {
 
 export const MODULE_ROUTES = {
   'bikri-book': '/bikri/book',
-  receipt: '/bikri/receipt',
-  payment: '/bikri/payment',
-  advance: '/bikri/advance',
-  today: '/bikri/today',
   'party-ledgers': '/bikri/party-ledgers',
+  today: '/bikri/today',
   stock: '/bikri/stock',
 } as const satisfies Record<ModuleMenuId, string>;
 
 /**
- * The addresses of the روکڑ side menu (PRD 5, plan 17). The last item is the voucher screen of the
- * بکری area (PRD FR-15.10), opened as وصولی; it is a link, not a screen of this area.
+ * The addresses of the tabs of the روکڑ area (PRD 5, plan 17, FR-5.3 v1.57). وصولی, ادائیگی and پیشگی are
+ * one voucher screen (PRD FR-15.10) with the type of the tab in its address (`?type=`); the address here is
+ * the screen's, and `asScreenType(id)` says which type a tab opens.
  */
 export const ROKAR_ROUTES = {
   cashbook: '/rokar',
+  receipt: '/bikri/voucher',
+  payment: '/bikri/voucher',
+  advance: '/bikri/voucher',
   expense: '/rokar/expense',
   lent: '/rokar/lent',
   khata: '/rokar/khata',
   general: '/rokar/general',
-  voucher: '/bikri/voucher',
 } as const satisfies Record<RokarMenuId, string>;
+
+/**
+ * The addresses that send a user to the voucher screen with a type chosen (the router redirects each one,
+ * `voucherTypeRoute`). The top bar's search opens them by name (PRD FR-5.4, FR-15.10).
+ */
+export const VOUCHER_ROUTES = {
+  receipt: '/bikri/receipt',
+  payment: '/bikri/payment',
+  advance: '/bikri/advance',
+} as const satisfies Record<ScreenType, string>;
 
 /** The screens of the partners area besides the overview (PRD 17.3, 17.4). */
 export const PARTNERS_ROUTES = {
@@ -50,9 +60,15 @@ export const PARTNERS_ROUTES = {
   statement: '/partners/statement',
 } as const;
 
-/** The روکڑ side menu item a path belongs to. The پھل tab belongs to خرچہ (PRD 16.7). */
-export function rokarMenuOf(pathname: string): RokarMenuId {
+/**
+ * The روکڑ tab a path belongs to. The پھل tab belongs to خرچہ (PRD 16.7). The voucher screen is one address
+ * for three tabs; its `type` in the address says which one is open, and the اگراہی فہرست belongs to وصولی
+ * (PRD FR-5.3 v1.57, FR-7.67, FR-15.10).
+ */
+export function rokarMenuOf(pathname: string, search: Record<string, unknown> = {}): RokarMenuId {
   if (EXPENSE_TABS.some((tab) => tab.path === pathname)) return 'expense';
+  if (pathname === '/bikri/voucher') return asScreenType(search['type']) ?? 'receipt';
+  if (pathname === '/bikri/collection') return 'receipt';
   const found = (Object.keys(ROKAR_ROUTES) as RokarMenuId[]).find(
     (id) => id !== 'cashbook' && ROKAR_ROUTES[id] === pathname,
   );
@@ -86,8 +102,12 @@ export function rokarAddressOf(voucherType: string): string {
   }
 }
 
-/** The main menu item a path belongs to. */
+/**
+ * The main menu item a path belongs to. The voucher screen and the اگراہی فہرست are screens of the روکڑ
+ * area since v1.57 (PRD FR-5.3), though their addresses start with /bikri.
+ */
 export function mainNavOf(pathname: string): MainNavId {
+  if (pathname === '/bikri/voucher' || pathname === '/bikri/collection') return 'rokar';
   const first = pathname.split('/')[1] ?? '';
   const found = (Object.keys(MAIN_ROUTES) as MainNavId[]).find(
     (id) => id !== 'dashboard' && MAIN_ROUTES[id] === `/${first}`,
@@ -95,14 +115,8 @@ export function mainNavOf(pathname: string): MainNavId {
   return found ?? 'dashboard';
 }
 
-/**
- * The side menu item of the بکری area a path belongs to. The voucher screen is one address for three
- * items; its `type` in the address says which one is current (PRD FR-7.67, FR-15.10). The اگراہی فہرست
- * belongs to the receipt item.
- */
-export function moduleMenuOf(pathname: string, search: Record<string, unknown> = {}): ModuleMenuId {
-  if (pathname === '/bikri/voucher') return asScreenType(search['type']) ?? 'receipt';
-  if (pathname === '/bikri/collection') return 'receipt';
+/** The tab of the بکری area a path belongs to (PRD FR-5.3 v1.57). */
+export function moduleMenuOf(pathname: string): ModuleMenuId {
   // A later sale starts from the list of goods left (plan 16).
   if (pathname === '/bikri/later') return 'stock';
   const found = (Object.keys(MODULE_ROUTES) as ModuleMenuId[]).find(

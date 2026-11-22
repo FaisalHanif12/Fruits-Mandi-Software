@@ -49,6 +49,12 @@ interface ButtonProps {
   controls?: string;
   /** The tip that shows when the button is pointed at; it is the same words as its accessible name. */
   title?: string;
+  /**
+   * In the top row of the sale book, when the row is short of room (`BikriToolbar` marks it `data-compact`), the
+   * button gives up half its side padding and its key chip, so an icon and a short word take as little as they can
+   * (plan 95; the key stays in the tip and the name the screen gives it).
+   */
+  tightInCompactRow?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -76,11 +82,16 @@ export function Button({
   expanded,
   controls,
   title,
+  tightInCompactRow = false,
   ref,
 }: ButtonProps) {
   const chip =
     shortcut === undefined ? null : (
-      <KeyChip shortcut={shortcut} tone={variant === 'primary' ? 'on-primary' : 'on-light'} />
+      <KeyChip
+        shortcut={shortcut}
+        tone={variant === 'primary' ? 'on-primary' : 'on-light'}
+        className={tightInCompactRow ? 'group-data-[compact]/toolbar:hidden' : ''}
+      />
     );
   return (
     <button
@@ -94,7 +105,7 @@ export function Button({
       aria-expanded={expanded}
       aria-controls={controls}
       title={title}
-      className={`inline-flex ${detail === undefined ? (small ? 'h-target' : 'h-control') : 'min-h-control py-2'} shrink-0 items-center gap-2 ${round ? 'rounded-full' : 'rounded-2'} border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? `${small ? 'w-target' : 'w-control'} justify-center px-0` : 'px-4'} ${VARIANT_CLASSES[variant]}`}
+      className={`inline-flex ${detail === undefined ? (small ? 'h-target' : 'h-control') : 'min-h-control py-2'} shrink-0 items-center gap-2 ${round ? 'rounded-full' : 'rounded-2'} border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? `${small ? 'w-target' : 'w-control'} justify-center px-0` : `px-4 ${tightInCompactRow ? 'group-data-[compact]/toolbar:px-2' : ''}`} ${VARIANT_CLASSES[variant]}`}
     >
       {detail === undefined ? (
         <>
