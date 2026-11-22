@@ -36,3 +36,13 @@ A lot's نقد is cash given to the seller in the same posting: seller بنام 
 ## Acceptance
 
 Worked numbers above pass; golden tests unchanged; the field and lines show and print; warning and confirm work; every new test fails before; clippy, typecheck, lint, i18n:check pass.
+
+## Follow-up, 22-11-2026 (Umar)
+
+In an edit, the "above today's sale" question for a seller paid on the spot is asked **only when that seller's amount changes** from what was saved. An unchanged amount is not asked again. A changed amount above today's credit asks as before. Cash below zero (FR-6.7) is not part of this rule and asks as always.
+
+Worked check: saved بکری with رحیم paid 25,000 on credit 20,000 (confirmed at save). Edit only a buyer rate: no seller-paid question. Edit رحیم's amount to 26,000: asked. Edit it back to 25,000 in a new edit: not asked, because it equals the saved amount.
+
+| # | Task | Owner |
+|---|---|---|
+| T3 | Backend: the edit compares each seller's amount with the saved one (the sum of his lots' stored نقد) and skips `ERR_SELLER_PAID_ABOVE_TODAY` when unchanged; tests that fail before; check the screen needs no change (it shows the box only when the backend asks) | `backend` |
