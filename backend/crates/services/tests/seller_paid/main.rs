@@ -13,6 +13,7 @@
 //! Run it with `cargo test -p mandi-services --test seller_paid`.
 #![cfg(test)]
 
+mod edit_unchanged;
 mod fixtures;
 
 #[path = "../common/mod.rs"]

@@ -24,7 +24,8 @@
 //! commission 732, he pays 13,092; خام 29,600, seller commission 1,776, صافی 19,504; the shared
 //! income is 3,972, split 1,590 / 1,191 / 1,191.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::sync::Arc;
 
 use mandi_db::bikri::edit::{self as edit_repo, Ended, PostingRef};
 use mandi_db::bikri::write::{self as repo};
@@ -51,7 +52,8 @@ use super::rows::{
     pin_cash_sales, posting_sums, shape, stored_line_ids,
 };
 use super::shared::{
-    Basis, Replaced, Worked, data, refresh_chukta_index, require_confirmed, switches, work_out,
+    Basis, Replaced, SavedSellers, Worked, data, refresh_chukta_index, require_confirmed, switches,
+    work_out,
 };
 use crate::audit::Event;
 use crate::auth::Actor;
@@ -64,7 +66,7 @@ use crate::vouchers::{rematch_party, role_of_account, stored_cash_change};
 
 /// Everything an edit works from, read once.
 pub(super) struct EditPlan {
-    detail: BikriDetail,
+    detail: Arc<BikriDetail>,
     posting: PostingRef,
     kind: PostingKind,
     date: BusinessDate,
@@ -285,6 +287,36 @@ fn check_first(
     errors
 }
 
+/// What the first posting being edited paid its sellers: the sum of the stored نقد of his lots, with
+/// the saved بکری for the credit it gave them (PRD FR-12.23, plan 91 follow-up). The edit asks the
+/// "above today's credit" question for a seller only when his new amount is not this one, or his
+/// credit went down. A later sale has no seller summary, so it has none.
+fn saved_sellers(
+    detail: &Arc<BikriDetail>,
+    kind: PostingKind,
+    entry_id: i64,
+    date: BusinessDate,
+    today: BusinessDate,
+) -> Result<Option<SavedSellers>, ServiceError> {
+    if kind != PostingKind::First {
+        return Ok(None);
+    }
+    let mut paid: HashMap<i64, Paisa> = HashMap::new();
+    for lot in &detail.lots {
+        let sum = paid.entry(lot.seller.id).or_insert(Paisa::ZERO);
+        *sum = sum
+            .checked_add(lot.cash_paid)
+            .map_err(crate::error::money_error)?;
+    }
+    Ok(Some(SavedSellers {
+        paid,
+        detail: Arc::clone(detail),
+        entry_id,
+        date,
+        today,
+    }))
+}
+
 /// Reads and checks everything an edit works from. Nothing is written.
 pub(super) fn plan_edit(
     conn: &Connection,
@@ -293,6 +325,8 @@ pub(super) fn plan_edit(
     window: (Option<BusinessDate>, BusinessDate),
 ) -> Result<EditPlan, ServiceError> {
     let (detail, posting) = load_posting(conn, entry_id)?;
+    // Shared with the basis, which reads the credit the saved posting gave each seller from it.
+    let detail = Arc::new(detail);
     let kind = kind_of(&posting);
     let date = BusinessDate::parse_iso(&posting.entry_date)
         .ok_or_else(|| data("the date of a posting is not a date"))?;
@@ -359,6 +393,7 @@ pub(super) fn plan_edit(
             entry_id,
             cash_change: stored_cash_change(conn, &old_entry)?,
         }),
+        saved_sellers: saved_sellers(&detail, kind, entry_id, date, today)?,
     };
     Ok(EditPlan {
         detail,

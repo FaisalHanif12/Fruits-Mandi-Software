@@ -3,6 +3,7 @@
 //! the screen and the saved numbers cannot differ.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::sync::Arc;
 
 use mandi_db::arrivals as arrival_repo;
 use mandi_db::bikri as repo;
@@ -776,6 +777,29 @@ pub(crate) struct Basis {
     pub stored: StoredPosting,
     /// The posting an edit replaces.
     pub replaces: Option<Replaced>,
+    /// What an edit of a first posting knows about its sellers, for the "above today's credit"
+    /// question (PRD FR-12.23, plan 91 follow-up, Umar 22-11-2026). `None` for anything else.
+    pub saved_sellers: Option<SavedSellers>,
+}
+
+/// What a first posting being edited paid and credited its sellers, for the seller question of an
+/// edit (PRD FR-12.23, Umar 22-11-2026): the question is asked again only when a seller's amount
+/// changed, or when it did not but the edit lowered his credit for the day (he then owes more than
+/// before).
+#[derive(Debug, Clone)]
+pub(crate) struct SavedSellers {
+    /// What each seller was paid on the spot: the sum of the stored نقد of his lots, by seller
+    /// account.
+    pub paid: HashMap<i64, Paisa>,
+    /// The saved بکری, read once for the edit. The credit the saved posting gave each seller is
+    /// worked out from it only when it is needed (see [`skip_unchanged_sellers`]).
+    pub detail: Arc<mandi_domain::core::bikri::BikriDetail>,
+    /// The posting being edited.
+    pub entry_id: i64,
+    /// Its day.
+    pub date: BusinessDate,
+    /// Today, for reading the stored draft like any draft.
+    pub today: BusinessDate,
 }
 
 impl Basis {
@@ -785,8 +809,73 @@ impl Basis {
             target: PostingTarget::New,
             stored: StoredPosting::none(),
             replaces: None,
+            saved_sellers: None,
         }
     }
+}
+
+/// Drops the "above today's credit" question for each seller of an edit whose amount is the one
+/// that was saved and whose credit for the day was not lowered (PRD FR-12.23, Umar 22-11-2026). A
+/// seller whose amount changed is asked as for a new بکری. A seller who had no saved lot has a saved
+/// amount of 0, so a new amount is a change. A seller whose amount is the saved one but whose credit
+/// is now below the saved credit is asked too: he owes more than before.
+///
+/// Only the flag changes: his credit, limit, carry, new balance and the journal are those of the one
+/// calculation, so the screen and the save cannot differ (Code Standards B5). The saved credit is
+/// read by working the stored draft out with the same calculation (no second formula), and only when
+/// a seller is over his limit with his saved amount, which is rare. The cash question (FR-6.7) is not
+/// touched. Only `work_out` calls this; the mixed save works the flag out again in `merge_sellers`,
+/// so an edit sent through it would lose this rule.
+fn skip_unchanged_sellers(
+    conn: &Connection,
+    rules: &RuleSet,
+    switches: Switches,
+    basis: &Basis,
+    saved: &SavedSellers,
+    sellers: &mut [mandi_domain::core::bikri::SellerPaidLines],
+) -> Result<(), ServiceError> {
+    let same_amount = |seller: &mandi_domain::core::bikri::SellerPaidLines| {
+        seller.needs_confirm
+            && seller.paid_paisa
+                == saved
+                    .paid
+                    .get(&seller.seller_account_id)
+                    .copied()
+                    .unwrap_or(Paisa::ZERO)
+    };
+    if !sellers.iter().any(same_amount) {
+        return Ok(());
+    }
+    // The credit each seller had in the saved posting: the same working of the stored draft.
+    let stored_draft = super::load::draft_of(
+        &saved.detail,
+        saved.entry_id,
+        saved.date,
+        mandi_domain::bikri::PostingKind::First,
+        true,
+    );
+    let stored_prepared =
+        mandi_domain::core::bikri::prepare_draft(&stored_draft, saved.today, None);
+    let stored_basis = Basis {
+        target: basis.target,
+        stored: basis.stored.clone(),
+        replaces: basis.replaces,
+        saved_sellers: None,
+    };
+    let stored = work_out(conn, stored_prepared, rules, switches, &stored_basis)?;
+    for seller in sellers.iter_mut().filter(|s| same_amount(s)) {
+        // A seller the saved working has no summary for is asked: nothing proves he is unchanged.
+        let was = stored
+            .calc
+            .sellers
+            .iter()
+            .find(|s| s.seller_account_id == seller.seller_account_id)
+            .map(|s| s.credit_paisa);
+        if was.is_some_and(|was| seller.credit_paisa >= was) {
+            seller.needs_confirm = false;
+        }
+    }
+    Ok(())
 }
 
 /// True if a draft names a چکتا buyer on any sale line.
@@ -842,7 +931,7 @@ pub(crate) fn work_out(
     )?;
     lookups.purchases = purchases;
     lookups.arrivals = arrivals;
-    let calc = calc_posting(
+    let mut calc = calc_posting(
         basis.target,
         &prepared,
         &lookups,
@@ -851,6 +940,9 @@ pub(crate) fn work_out(
         &basis.stored,
     )
     .map_err(calc_error)?;
+    if let Some(saved) = &basis.saved_sellers {
+        skip_unchanged_sellers(conn, rules, switches, basis, saved, &mut calc.sellers)?;
+    }
     let mut errors = calc.errors.clone();
     let accounts = system_accounts(conn)?;
     let (split, change, entry) = books_of(conn, &prepared, &calc, &accounts, &mut errors)?;
