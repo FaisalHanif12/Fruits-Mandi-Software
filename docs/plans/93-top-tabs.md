@@ -45,3 +45,8 @@ The second menu of بکری (7 items) and روکڑ (its items) moves from a vert
 | # | Task | Owner |
 |---|---|---|
 | T2 to T5 | Frontend: the two logo tweaks and hidden scroll bars, both languages, tests updated | `frontend` |
+
+## Changes after Umar's test of 22-11-2026 (screenshots)
+
+- T6: dashboard quick actions back to the earlier look: natural-width buttons in one row, as before, with the two new ones (پچھلی بکری, پارٹی کھاتے) after نیا خرچہ. When the window is too narrow for all of them, the ones that do not fit go into a "مزید ▾" menu at the end of the row (no stretched grid, no second row).
+- T7: on the بکری بک screen the tabs and the screen's controls share ONE row again: visible tabs are بکری بک, وصولی and ادائیگی, the rest (پیشگی کھاتہ, پچھلی بکری, پارٹی کھاتے, باقی مال) go into "مزید ▾"; the date, بکری نمبر, پرنٹ, ادھاری تفصیل and محفوظ کریں stay on the same row. Other section screens keep the current rule.
