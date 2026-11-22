@@ -36,3 +36,7 @@
 - Empty reason or sign: told in the box, nothing saved.
 - Settings: wrong password or wrong current sign changes nothing; right ones change the sign; the new sign opens the next edit.
 - Golden tests unchanged; clippy, typecheck, lint, i18n:check and the touched tests pass.
+
+## T2b: the blank band under Settings > فرم (Umar, 22-11-2026, his screenshots)
+
+Root cause, reproduced by the lead in headless WebKit at 1480x830: a print-header person row has the role Radix Select. Radix keeps a hidden native `<select>`, which takes `main` (relative in AppShell) as its containing block instead of the panel's scroll box, so `main` gets 502 px of overflow: the title and tabs scroll away and a blank band shows. With no person there is no bug, which is why the earlier check (no person) passed. Making the scroll box `relative` gives 0 overflow. Owner: `frontend`. Check the other inner scroll areas the same way. The lead verifies with the WebKit script (one person added, main overflow must be 0) before handing to Umar.
