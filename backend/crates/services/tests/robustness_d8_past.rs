@@ -117,22 +117,6 @@ fn put_on(
     truck: Option<&str>,
 ) -> i64 {
     let day = iso(day);
-    let draft: i64 = match conn.query_row(
-        "SELECT id FROM journal_entries WHERE status = 'draft' AND posting_type = 'bikri_first' LIMIT 1",
-        [],
-        |r| r.get(0),
-    ) {
-        Ok(id) => id,
-        Err(_) => {
-            conn.execute(
-                "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, status, total_paisa)
-                 VALUES (?1, 'bikri_first', 'bikri', 1, 'draft', 0)",
-                [&day],
-            )
-            .unwrap();
-            conn.last_insert_rowid()
-        }
-    };
     conn.execute(
         "INSERT INTO bikri_entries (number, entry_date, bill_date, truck_no, status, cancel_reason)
          VALUES (?1, ?2, ?2, ?3, ?4, CASE WHEN ?4 = 'cancelled' THEN 'wrong' END)",
@@ -140,6 +124,20 @@ fn put_on(
     )
     .unwrap();
     let id = conn.last_insert_rowid();
+    // A بکری is in the day of its POSTED journal entry (PRD FR-12.46, v1.45): one entry per بکری,
+    // made as a draft and then posted (it has no lines, so it balances at 0 = 0).
+    conn.execute(
+        "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, status, total_paisa)
+         VALUES (?1, 'bikri_first', 'bikri', ?2, 'draft', 0)",
+        mandi_services::db::rusqlite::params![day, id],
+    )
+    .unwrap();
+    let posted = conn.last_insert_rowid();
+    conn.execute(
+        "UPDATE journal_entries SET status = 'posted' WHERE id = ?1",
+        [posted],
+    )
+    .unwrap();
     conn.execute(
         "INSERT INTO bikri_lots (bikri_id, lot_no, seller_account_id, item_id, packing_id, qty_received, qty_sold,
             gross_paisa, net_paisa, lot_counter)
@@ -158,7 +156,7 @@ fn put_on(
             laga_method, laga_value_paisa, laga_paisa, buyer_total_paisa, rate_diff_paisa, payment_type)
          VALUES (?1, ?2, 1, ?3, ?4, ?5, 10, ?8, ?6, 'percent', 0, 0, ?8, ?6, 'percent', 0, 0, 'per_unit', 0, 0,
             ?7, 0, 'credit')",
-        mandi_services::db::rusqlite::params![id, lot, draft, day, w.akram, gross * 100, total * 100, gross * 10],
+        mandi_services::db::rusqlite::params![id, lot, posted, day, w.akram, gross * 100, total * 100, gross * 10],
     )
     .unwrap();
     id

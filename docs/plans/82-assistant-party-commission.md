@@ -103,3 +103,13 @@ Still open: view C has no "commission + Laga" column, so D04 ranks by the buyer 
 
 Fixed with tests (`tests/plan82_live.rs` 8, `src/sale_guard.rs` unit tests 3, `plan82_more.rs`): Y31c follow-up keeps the earlier period (calculate refuses other dates and names the ones to read, `tools/calc.rs`); Y18 a change in percent is worked out from the earlier period to the later one (inputs put in time order, note in the result); M18 the gross sale is view A `gross`, never R2 `value` (sale guard, `SaleMeasure::Gross`); first, second and last trip by code order (D13, Y13, Y27); D25 a share of the shop's commission is no partner question; Y28 "bikri walon" is the sellers (view A read ahead, both columns citable); D29 the buyers of a seller's day (view C read ahead); D22 the `find` of a found party in its own role is read ahead; D28 done earlier; `HEDGE_AFTER_SECS` is 7 (NFR-AI-3 v1.24).
 Open: Y03/Y11 months. The tool `analytics` now also accepts view M (expenses by head with a column for each month; the app reads it ahead for "kharcha mahine ke hisab se"), but the model's instructions still name A to K and no view gives a buyer's purchases by month (views A, B, C and E group their rows on the screens only): the lead decides whether tools.json and D6 name view M and the grouping of view C.
+
+### Update (22-11-2026, backend-ai): the 7 items of the second live rerun
+
+- Y31b, D26b, Y21b: a short follow-up that changes only the subject is written out as the question before with the new subject (`understand::follow_up_text`, `Turn.understood`), so the app answers it with the period of the question before and no model call. A read of a follow-up that names no period and gives no dates is read for the period of the last earlier question that read one (flow reports and every analytics view, `tools::scope::follow_up_span`).
+- Y04: `report` R29 with `party` = an expense head found by `find` picks the head's row and gives its figures as `matched` (R29 has no head filter in the reports crate).
+- M18: the gross asked beside the bills has view A read ahead (`Understanding.gross_beside`).
+- Y03, Y11: view M takes an internal `head` input (not in the prompt schema); a table of a read grouped by month shows up to 12 rows (`limits::table_cap`, `MAX_MONTH_ROWS`; PRD A82 says 7 for other tables).
+- M19: the commission and the Laga of the shop apart are answered by the app: the commission of each side and the Laga.
+- D25: "share" beside a found buyer or seller is no partner question, so the locked partner section no longer stops the reads ahead.
+- Tests: `tests/plan82_follow_up.rs` (8), `plan82_live.rs` (D25 with a partner code set).

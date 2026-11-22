@@ -36,8 +36,8 @@ pub use model::{
     CommissionPeriod, CommissionPeriodKind, CommissionPeriodShown, CommissionPrintInput,
     CommissionSide, PartnerShare,
 };
-pub use print::{commission_month_print_data, commission_month_spec};
 pub(in crate::dashboard) use period::{Resolved, resolve as resolve_period};
+pub use print::{commission_month_print_data, commission_month_spec};
 pub use read::{commission_day, commission_month};
 pub(in crate::dashboard) use read::{narrowed, resolve_party};
 
