@@ -31,3 +31,13 @@ The second menu of بکری (7 items) and روکڑ (its items) moves from a vert
 - بکری بک and روکڑ at 1024x600, 1366x768, 1480x830 and 1920x1080, ur and en: the tabs on one line (or a مزید menu), no horizontal scroll, the lot grid wider than before.
 - Every tab opens its page; the active one is marked; keyboard path works.
 - typecheck, lint, i18n:check and the touched tests pass; screenshot tests updated.
+
+## Small tweaks (Umar, 22-11-2026)
+
+- T2: the logo in the main side bar (beside "منڈی سافٹ ویئر") shows the fruit picture of the app icon again (`backend/app/icons/icon.png`, bundled with the frontend, no network), as it was before the crate-only change (`git show f81ad78d^:frontend/src/shared/ui/BrandMark.tsx`). Only in the main side bar.
+- T3: the sign-in page side panel shows no logo icon at all (the gold crate box goes); keep it simple: the firm name and text only.
+- The installer icon itself stays as it is (Umar, 22-11-2026).
+
+| # | Task | Owner |
+|---|---|---|
+| T2, T3 | Frontend: the two logo tweaks, both languages, brand-mark tests updated | `frontend` |
