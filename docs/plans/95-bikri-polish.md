@@ -42,3 +42,8 @@
 ## Acceptance (lead checks in WebKit at 1024, 1366, 1480, 1920, ur and en, and the money numbers above)
 
 Every item above works; golden tests unchanged; money agent PASS on items 8, 9, 11; typecheck, lint, i18n:check, clippy, the touched tests pass.
+
+## Lead decisions during the build
+
+- [A] The "above today's credit" warning and confirm (FR-12.23 v1.53, FR-6.7) counts نقد ادائیگی plus the lot پیشگی when "پیشگی اس بکری سے کاٹیں" is ticked, because the advance is then taken off today's credit too and his balance can grow. With the tick off, the advance is not counted (it stays an open advance). This follows the existing rule: warn whenever his balance will grow.
+- Lot پیشگی model (backend with the money agent): its own journal entry, posting type `advance`, source the بکری; one seller بنام line (is_advance) per lot and one روکڑ جمع; same transaction; column `bikri_lots.advance_paisa` (migration 0029); never in deductions, net or credit.
