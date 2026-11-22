@@ -678,7 +678,11 @@ def build_year(path):
         note=f"last month the rate difference makes buyer value {o['bval']} against gross {o['gross']}")
     y_ = S(ytd)
     add("M19", w, "urdu", "اس سال کمیشن اور لاگا الگ الگ بتاؤ",
-        [R({"commission_without_laga": y_["sc"] + y_["bc"], "laga": y_["laga"]}, {"together": y_["comm"]})],
+        [R({"commission_without_laga": y_["sc"] + y_["bc"], "laga": y_["laga"]}, {"together": y_["comm"]}),
+         # Two sides (Umar's lead, 22-11-2026): the seller-side and the buyer-side commission named
+         # one by one, with the laga, is as right as their sum.
+         R({"seller_commission": y_["sc"], "buyer_commission": y_["bc"], "laga": y_["laga"]},
+           {"together": y_["comm"], "commission_without_laga": y_["sc"] + y_["bc"]})],
         group="measure-words", kind="commission-and-laga", period=per(ytd), source="view A columns",
         wrong_columns={"gross": y_["gross"]})
     add("M20", w, "english", "What is the total of all buyer bills last month, with commission and laga included?",

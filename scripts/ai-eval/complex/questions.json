@@ -4495,6 +4495,27 @@
       9752880
      ]
     }
+   },
+   {
+    "req": {
+     "seller_commission": [
+      4796058
+     ],
+     "buyer_commission": [
+      4796094
+     ],
+     "laga": [
+      160728
+     ]
+    },
+    "opt": {
+     "together": [
+      9752880
+     ],
+     "commission_without_laga": [
+      9592152
+     ]
+    }
    }
   ],
   "names": [],

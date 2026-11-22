@@ -107,5 +107,5 @@ Worked out by `oracle.py` (SQL over posted rows). Dev = copy of the dev database
 | Y35 | roman | faisal gahaq ne pichle 3 mahine mein kitni commission di aur kitna maal liya ? | 2026-08-05 to 2026-11-05 | purchase=1952280; comm=121552 | purchase=1952280; comm=117136 |
 | M17 | roman | rahim ki safi bikri abhi tak kitni hai ? | up to now | net_sale=9916553 |  |
 | M18 | roman | pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag batao | 2026-10-01 to 2026-10-31 | gross_sale=9154800; buyer_bills=9723115 |  |
-| M19 | urdu | اس سال کمیشن اور لاگا الگ الگ بتاؤ | 2026-01-01 to 2026-12-31 | commission_without_laga=9592152; laga=160728 |  |
+| M19 | urdu | اس سال کمیشن اور لاگا الگ الگ بتاؤ | 2026-01-01 to 2026-12-31 | commission_without_laga=9592152; laga=160728 | seller_commission=4796058; buyer_commission=4796094; laga=160728 |
 | M20 | english | What is the total of all buyer bills last month, with commission and laga included? | 2026-10-01 to 2026-10-31 | buyer_bills=9723115 |  |
