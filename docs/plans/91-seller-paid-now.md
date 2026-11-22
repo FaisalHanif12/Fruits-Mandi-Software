@@ -41,7 +41,7 @@ Worked numbers above pass; golden tests unchanged; the field and lines show and 
 
 In an edit, the "above today's sale" question for a seller paid on the spot is asked **only when that seller's amount changes** from what was saved. An unchanged amount is not asked again. A changed amount above today's credit asks as before. Cash below zero (FR-6.7) is not part of this rule and asks as always.
 
-Worked check: saved بکری with رحیم paid 25,000 on credit 20,000 (confirmed at save). Edit only a buyer rate: no seller-paid question. Edit رحیم's amount to 26,000: asked. Edit it back to 25,000 in a new edit: not asked, because it equals the saved amount.
+Worked check: saved بکری with رحیم paid 25,000 on credit 20,000 (confirmed at save). Edit only a buyer rate: no seller-paid question. Edit رحیم's amount to 26,000: asked. If that 26,000 edit was not saved, a new edit keeping 25,000 is not asked, because it equals the saved amount. After a saved 26,000, the saved amount is 26,000, so going back to 25,000 is a change and is asked.
 
 | # | Task | Owner |
 |---|---|---|
