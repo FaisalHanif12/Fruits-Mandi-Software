@@ -125,14 +125,21 @@ fn put_on(
     .unwrap();
     let id = conn.last_insert_rowid();
     // A بکری is in the day of its POSTED journal entry (PRD FR-12.46, v1.45): one entry per بکری,
-    // made as a draft and then posted (it has no lines, so it balances at 0 = 0).
+    // made as a draft with its two balanced lines (the database refuses a posted entry with no
+    // lines) and then posted.
     conn.execute(
         "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, status, total_paisa)
-         VALUES (?1, 'bikri_first', 'bikri', ?2, 'draft', 0)",
+         VALUES (?1, 'bikri_first', 'bikri', ?2, 'draft', 100)",
         mandi_services::db::rusqlite::params![day, id],
     )
     .unwrap();
     let posted = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa)
+         VALUES (?1, 1, ?2, 100, 0), (?1, 2, ?3, 0, 100)",
+        mandi_services::db::rusqlite::params![posted, w.akram, w.rahim],
+    )
+    .unwrap();
     conn.execute(
         "UPDATE journal_entries SET status = 'posted' WHERE id = ?1",
         [posted],
@@ -159,6 +166,26 @@ fn put_on(
         mandi_services::db::rusqlite::params![id, lot, posted, day, w.akram, gross * 100, total * 100, gross * 10],
     )
     .unwrap();
+    let sale = conn.last_insert_rowid();
+    // The list follows the stored facts of each posting day (PRD FR-12.46, v1.45; plan 80 Q-R5-5):
+    // one fact for the line, and for a cancelled بکری its reversal on the same day (net 0).
+    let fact = |sign: i64| {
+        conn.execute(
+            "INSERT INTO analytics_facts (journal_entry_id, entry_date, year, month, bikri_id, lot_id, sale_id,
+                item_id, seller_account_id, buyer_account_id, qty, seller_amount_paisa, seller_comm_paisa,
+                buyer_value_paisa, buyer_comm_paisa, laga_paisa, sign)
+             VALUES (?1, ?2, CAST(substr(?2, 1, 4) AS INTEGER), CAST(substr(?2, 6, 2) AS INTEGER), ?3, ?4, ?5,
+                ?6, ?7, ?8, 10, ?9, 0, ?9, 0, 0, ?10)",
+            mandi_services::db::rusqlite::params![
+                posted, day, id, lot, sale, w.banana, w.rahim, w.akram, gross * 100, sign
+            ],
+        )
+        .unwrap();
+    };
+    fact(1);
+    if status == "cancelled" {
+        fact(-1);
+    }
     id
 }
 

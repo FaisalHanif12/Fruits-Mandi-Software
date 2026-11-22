@@ -380,16 +380,25 @@ fn a_restart_or_a_clock_change_never_makes_a_lock_longer_than_its_step() {
             let (dir, env) = env();
             set_up(&env);
             let wrong = Secret::new("not-the-password");
-            let mut made = 0;
-            while made < tries {
+            // The counter of the database is the truth: the try that starts a lock is counted and
+            // answers with the lock, so counting the plain refusals would never end once a lock
+            // follows every try (PRD FR-8.2 v1.45).
+            let counted = |dir: &TempDir| -> u32 {
+                raw(dir)
+                    .query_row("SELECT failed_attempts FROM users", [], |r| r.get(0))
+                    .unwrap()
+            };
+            let mut guard = 0;
+            while counted(&dir) < tries {
+                guard += 1;
+                assert!(guard < 500, "{tries} tries: the loop never ended");
                 match auth::login(&env.ctx, "owner", &wrong) {
                     Err(error) if locked_seconds(&error).is_some() => {
-                        eprintln!("DEBUG tries {tries} {label} made {made} locked {:?}", locked_seconds(&error));
                         env.mono.advance_seconds(
                             u64::try_from(locked_seconds(&error).unwrap()).unwrap() + 1,
                         );
                     }
-                    Err(_) => made += 1,
+                    Err(_) => {}
                     Ok(_) => panic!("signed in with a wrong password"),
                 }
             }
