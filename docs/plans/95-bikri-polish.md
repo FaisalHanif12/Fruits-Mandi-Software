@@ -52,3 +52,4 @@ Every item above works; golden tests unchanged; money agent PASS on items 8, 9, 
 - The lot advance entry is labelled "بکری 5 کی پیشگی" (Advance with sale 5) in روکڑ بک, R11 and R13, never like a voucher number; the seller card's last advance (FR-7.60) includes lot advances.
 - 23-11-2026: the disk filled up (backend/target 146 GB); all build folders were deleted on Umar's instruction and rebuilt.
 - Item 18 (Umar, 23-11-2026, screenshot of روکڑ بک): every list window is 30 days at a time (روکڑ بک, روزنامچہ, sales and other lists), except پچھلی بکری, which keeps 7 days. Owner: frontend-95b (useListWindow default), backend if any command caps the window at 7 days.
+- Item 18b (Umar, 23-11-2026, screenshots of مارکیٹ سفر and باغات): lists of records rather than days (trips, gardens) show 30 rows per page, with the pager of FR-19.11.
