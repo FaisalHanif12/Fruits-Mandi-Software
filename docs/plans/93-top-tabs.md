@@ -38,6 +38,8 @@ The second menu of بکری (7 items) and روکڑ (its items) moves from a vert
 - T3: the sign-in page side panel shows no logo icon at all (the gold crate box goes); keep it simple: the firm name and text only.
 - The installer icon itself stays as it is (Umar, 22-11-2026).
 
+- T4: the scroll line (scroll bar) of the page and panel scroll areas is not shown, on Mac and Windows; scrolling by wheel, trackpad, keys and drag still works. One shared rule in `styles/globals.css` (for example a `no-scrollbar` utility on the main screen area and the inner panels: `scrollbar-width: none` and `::-webkit-scrollbar { display: none }`). Data grids and wide tables that scroll sideways keep their own behaviour.
+
 | # | Task | Owner |
 |---|---|---|
-| T2, T3 | Frontend: the two logo tweaks, both languages, brand-mark tests updated | `frontend` |
+| T2, T3, T4 | Frontend: the two logo tweaks and hidden scroll bars, both languages, tests updated | `frontend` |
