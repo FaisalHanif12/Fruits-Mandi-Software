@@ -31,3 +31,12 @@ Lot input gains `seller_comm_rate`, `buyer_comm_rate`, `laga_rate` (text, option
 ## Acceptance
 
 Worked numbers pass; golden tests unchanged; a line override survives a lot change; 4 Enters per line; lead checks in WebKit.
+
+## Contract as fixed by backend, 22-11-2026
+
+- Input: `LotInput` gains optional `seller_comm_rate`, `buyer_comm_rate`, `laga_rate`, each the existing `LineChargeInput { method: "percent" | "per_unit", value: string }` (percent text "5", "2.5"; لاگا per نگ rupees with per_unit). Absent, null or blank = the rule decides. A line's own typed rate wins over the lot rate. With line override off in Settings: `ERR_OVERRIDE_NOT_ALLOWED` at `lots[i].seller_comm_rate` (and the other two).
+- Output: `LotPreview` gains `seller_comm_rate`, `buyer_comm_rate`, `laga_rate`, each `LotRate | null` (null while the lot cannot be worked out). `LotRate { method, value_bps, value_paisa, source: typed | rule | default | none, rule_id }`. The buyer side and لاگا default are resolved without a buyer (item, group, default level), as Umar decided.
+- Edit load: the lot rate is shown when every line of the lot was saved with the same manual value (the most common one if lines differ); lines that differ keep their own override.
+- Saved lines unchanged in shape: each line its own snapshot, دستی when it follows a lot value.
+- Carried lots and later sales: rules of the later day (FR-12.17); a lot rate typed on a carried lot applies to its new lines.
+- Lead decision: the three new `None` fields are added to every `LotInput` literal in tests and benches by backend, including `robustness*` files, as a mechanical change with no logic change (no robustness teammate is running).
