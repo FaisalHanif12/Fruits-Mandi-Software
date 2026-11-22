@@ -46,3 +46,5 @@ Worked check: saved بکری with رحیم paid 25,000 on credit 20,000 (confirm
 | # | Task | Owner |
 |---|---|---|
 | T3 | Backend: the edit compares each seller's amount with the saved one (the sum of his lots' stored نقد) and skips `ERR_SELLER_PAID_ABOVE_TODAY` when unchanged; tests that fail before; check the screen needs no change (it shows the box only when the backend asks) | `backend` |
+
+Decision, 22-11-2026 (Umar, after the money agent's question): the edit also asks when the seller's amount is unchanged but the edit lowers his credit for the day so that the amount is above it and he owes more than before. Example: credit 20,000, paid 25,000 (confirmed); the rate edit makes the credit 15,000 with paid still 25,000: asked. An edit that changes neither his amount nor lowers his credit asks nothing.
