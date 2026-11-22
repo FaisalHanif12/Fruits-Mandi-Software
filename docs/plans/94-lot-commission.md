@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Umar's request and decision, 22-11-2026 ("go with my choice"); starts after plan 92 T1 |
+| Status | **CANCELLED by Umar, 22-11-2026**, after seeing the three columns in the lot row: no lot-level commission; commission stays on each sale line. All plan 94 code is reverted. |
 | Branch | `fix/vouchers-edit-sign` |
 | PRD | FR-11.10 (v1.56 bullet), FR-11.6, FR-12.3, FR-12.4, FR-12.20, NFR-USE-6, C2 |
 
