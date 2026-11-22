@@ -25,7 +25,7 @@ use mandi_db::vouchers::{self as repo, EditedVoucher, VoucherExtra};
 use mandi_domain::cash;
 use mandi_domain::core::accounts::Balance;
 use mandi_domain::core::dates::BusinessDate;
-use mandi_domain::core::error::ErrorCode;
+use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::core::vouchers::{
@@ -226,12 +226,102 @@ fn confirm_cash(
     require_confirmed(&check, confirmed)
 }
 
+/// Whether the edit of this type needs the Owner's reason and sign on any day (PRD FR-15.3, v1.55).
+fn needs_sign(voucher_type: VoucherType) -> bool {
+    matches!(
+        voucher_type,
+        VoucherType::Receipt | VoucherType::Payment | VoucherType::Advance
+    )
+}
+
+/// The date the voucher has, when the edit types a different one (PRD FR-7.70: a date never changes).
+fn changed_date(
+    old: &VoucherRow,
+    input: &VoucherEditInput,
+    today: BusinessDate,
+) -> Option<BusinessDate> {
+    let old_date = BusinessDate::parse_iso(&old.entry_date)?;
+    validate::date("entry.date", input.entry.date_text(), today)
+        .is_ok_and(|typed| typed != old_date)
+        .then_some(old_date)
+}
+
+/// Checks the reason and the sign of the edit of a وصولی, ادائیگی or پیشگی (PRD FR-15.3 v1.55,
+/// FR-21.4, plan 92) and gives the sign to save: the Owner's own spelling of it, or `None` when the
+/// sign was left empty because a reopen-and-fix already took it (the audit entry then reads it from
+/// the fix). It is the sign check of a reopen (`owner_sign::accepted`), on any day, today included.
+///
+/// Every refusal that `edit_in` would give first (a voucher that is not found, cancelled, of an older
+/// version or of another type, a changed date) is left to it, so those codes keep coming first. A
+/// missing reason and a missing sign are refused together. A wrong sign writes one audit entry that
+/// holds no typed text, and nothing is saved: the refused try is its own save, so it stays.
+///
+/// # Errors
+/// `ERR_EDIT_DATE_FIXED` on `entry.date`; `ERR_REASON_REQUIRED` on `reason`; `ERR_SIGN_REQUIRED` and
+/// `ERR_SIGN_WRONG` on `sign`.
+fn check_edit_sign(
+    ctx: &Context,
+    actor: &Actor,
+    today: BusinessDate,
+    input: &VoucherEditInput,
+) -> Result<Option<String>, ServiceError> {
+    let Some(old) = ctx
+        .db
+        .read(|conn| repo::get(conn, input.id).map_err(ServiceError::from))?
+    else {
+        return Ok(None);
+    };
+    if !needs_sign(old.voucher_type)
+        || input.entry.voucher_type() != old.voucher_type
+        || old.status != "saved"
+        || old.version != input.version
+    {
+        return Ok(None);
+    }
+    if let Some(old_date) = changed_date(&old, input, today) {
+        return Err(crate::edit::date_fixed("entry.date", old_date));
+    }
+    let typed = input.sign.trim();
+    let fix = ctx.db.read(|conn| day::fix_sign(conn, &old.entry_date))?;
+    let mut errors = FieldErrors::default();
+    if input.reason.trim().is_empty() {
+        errors.push(FieldError::new(ErrorCode::ErrReasonRequired, "reason"));
+    }
+    if typed.is_empty() && fix.is_none() {
+        errors.push(FieldError::new(ErrorCode::ErrSignRequired, "sign"));
+    }
+    errors.finish()?;
+    if typed.is_empty() {
+        return Ok(None);
+    }
+    let configured = ctx.db.read(crate::owner_sign::configured)?;
+    if let Some(sign) = crate::owner_sign::accepted(typed, configured.as_deref()) {
+        return Ok(Some(sign));
+    }
+    ctx.db.write(|tx| {
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "voucher_edit_sign_wrong", "voucher")
+                .entity_id(old.id)
+                .new_value(json!({
+                    "type": old.voucher_type.as_str(),
+                    "number": old.number,
+                }))
+                .into_entry(),
+        )?;
+        Ok::<(), ServiceError>(())
+    })?;
+    Err(ServiceError::reject_field(ErrorCode::ErrSignWrong, "sign"))
+}
+
 /// Edits a voucher (PRD FR-15.3): see the module text.
 ///
 /// # Errors
 /// `ERR_NOT_FOUND` (`id`), `ERR_VOUCHER_CANCELLED` (`id`), `ERR_VERSION_CHANGED` (`version`),
 /// `ERR_FORMAT_INVALID` (`entry.type`, a voucher cannot change its type), `ERR_DATE_CLOSED` (the
-/// old day or the new one), every error of the type's own save, `ERR_RETURN_EXCEEDS_OPEN` and
+/// old day or the new one), `ERR_EDIT_DATE_FIXED`, for a وصولی, ادائیگی or پیشگی on any day
+/// `ERR_REASON_REQUIRED` (`reason`) and `ERR_SIGN_REQUIRED` and `ERR_SIGN_WRONG` (`sign`, see
+/// [`check_edit_sign`]), every error of the type's own save, `ERR_RETURN_EXCEEDS_OPEN` and
 /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`. Nothing is written when any of them is returned.
 pub fn edit(
     ctx: &Context,
@@ -239,19 +329,24 @@ pub fn edit(
     input: &VoucherEditInput,
 ) -> Result<VoucherSaved, ServiceError> {
     let window = day::window(ctx)?;
-    ctx.db.write(|tx| edit_in(ctx, actor, tx, window, input))
+    let sign = check_edit_sign(ctx, actor, window.1, input)?;
+    ctx.db
+        .write(|tx| edit_in(ctx, actor, tx, window, input, sign.as_deref()))
 }
 
 /// The edit inside the transaction of the caller: the save of the edit, and the rehearsal of the
 /// preview (`crate::edit`), are this one function (Code Standards B5). The date of a voucher never
 /// changes (`ERR_EDIT_DATE_FIXED` on `entry.date`, PRD FR-7.70) and the reason is needed when the
-/// voucher is not of today (`ERR_REASON_REQUIRED` on `reason`).
+/// voucher is not of today (`ERR_REASON_REQUIRED` on `reason`). `sign` is the Owner's sign that
+/// [`check_edit_sign`] accepted, saved in the audit entry; the review passes `None`, and the sign of a
+/// reopen-and-fix in progress is used when there is none.
 pub(crate) fn edit_in(
     ctx: &Context,
     actor: &Actor,
     tx: &Connection,
     window: (Option<BusinessDate>, BusinessDate),
     input: &VoucherEditInput,
+    sign: Option<&str>,
 ) -> Result<VoucherSaved, ServiceError> {
     let mut errors = FieldErrors::default();
     let typed_note = errors
@@ -271,9 +366,7 @@ pub(crate) fn edit_in(
         // The date never changes (PRD FR-7.70): cancel the voucher and enter it again. It is checked
         // first, so a date on a closed day is still named as a date that cannot change, and a
         // changed date is named before a missing reason.
-        if validate::date("entry.date", input.entry.date_text(), window.1)
-            .is_ok_and(|typed| typed != old_date)
-        {
+        if let Some(old_date) = changed_date(&old.row, input, window.1) {
             return Err(crate::edit::date_fixed("entry.date", old_date));
         }
         let note = crate::edit::reason_for(window.1, old_date, &typed_note)?;
@@ -398,7 +491,11 @@ pub(crate) fn edit_in(
         if let Some(note) = &note {
             event = event.reason(note);
         }
-        event = event.sign(crate::day::fix_sign(tx, &old.row.entry_date)?.as_deref());
+        let sign = match sign {
+            Some(typed) => Some(typed.to_owned()),
+            None => crate::day::fix_sign(tx, &old.row.entry_date)?,
+        };
+        event = event.sign(sign.as_deref());
         ctx.db.auditor().write(tx, &event.into_entry())?;
         let new_balance = match planned.account() {
             Some(account) => ledger::balance_in(tx, account.id, None, None)?,

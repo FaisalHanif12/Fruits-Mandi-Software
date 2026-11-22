@@ -153,6 +153,11 @@
   --field-date-w: 128px;
   --field-mid-w: 168px;
 
+  /* The least room the tabs of a section keep in a one-row toolbar at the compact step: the open tab and "More"
+     (the sale book's, in English, is the widest: 128 + 4 + 92). Under it the buttons of the screen go to the row
+     below (plan 93 T8). */
+  --section-tabs-min-w: 232px;
+
   /* A filter of a filter bar (a period, a side, a status): wide enough for "From the first date". */
   --field-filter-w: 192px;
 
@@ -414,6 +419,7 @@
   --container-field: var(--field-short-w);
   --container-date: var(--field-date-w);
   --container-mid: var(--field-mid-w);
+  --container-section-tabs: var(--section-tabs-min-w);
   --container-filter: var(--field-filter-w);
 
   /* A container query needs a plain length, never var(): these two are written out. */
@@ -493,13 +499,20 @@
   --color-chart-6: #a0522d;
 }
 
-/* Plan 75 (the app mark), simplified on 21-11-2026 (Umar): the colours of the mark, a gold mandi crate on the
-   deep navy of the menu, with no fruit. Only `BrandMark` draws them. They are `static` because the mark reads
-   them with `var()` for its gradient, not through a class. */
+/* Plan 75 (the app mark): the colours of the app icon, a gold mandi crate with an orange, a green apple and a leaf
+   on the deep navy of the menu. The main menu shows the icon as a file (`BrandMark`, plan 93 T2); the print header's
+   fruit picture (`shared/print/PrintFruitMark`) draws the fruit colours as tints with `var()`, which is why these are
+   `static` (read through `var()`, not through a class). */
 @theme static {
   --color-brand-ground-top: #1f3659;
   --color-brand-ground-bottom: #14233b;
   --color-brand-gold: #eab44b;
   --color-brand-gold-light: #f7d07a;
   --color-brand-gold-dark: #c98f2a;
+  --color-brand-orange-light: #ffd684;
+  --color-brand-orange: #f08b1e;
+  --color-brand-apple-light: #b6e58b;
+  --color-brand-apple: #46a64b;
+  --color-brand-leaf: #5cc06a;
+  --color-brand-leaf-vein: #2e8f4e;
 }

@@ -277,6 +277,9 @@ describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (la
     ['dashboard-new-payment', '/bikri/voucher', { type: 'payment' }],
     ['dashboard-new-advance', '/bikri/voucher', { type: 'advance' }],
     ['dashboard-new-expense', '/rokar/expense', { type: 'shop_expense' }],
+    // Plan 93 T5: two more quick actions, after the expense one; no key of their own.
+    ['dashboard-open-past-sales', '/bikri/today', {}],
+    ['dashboard-open-party-ledgers', '/bikri/party-ledgers', {}],
     ['dashboard-open-daybook', '/reports/R11', {}],
   ];
 
@@ -296,6 +299,41 @@ describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (la
       expect(router.state.location.pathname).toBe(path);
     });
     expect(router.state.location.search).toMatchObject(search);
+  });
+});
+
+describe.each(LANGUAGES)('the quick actions Past Sales and Party Ledgers (%s)', (language) => {
+  it('come after the new-expense button in the same group, in the same style, and show no key (none exists)', async () => {
+    await openDashboard(language);
+    await whenLoaded(language);
+    const group = screen.getByRole('group', { name: named(language, 'dashboard-quick-title') });
+    // The buttons keep their natural width in ONE row (plan 93 T6, Umar 22-11-2026): no grid, no stretched button.
+    // What does not fit goes behind "More" (tests in overflow-row.test.tsx).
+    expect(group).not.toHaveClass('grid');
+    const buttons = within(group).getAllByRole('button');
+    expect(buttons).toHaveLength(7);
+    for (const button of buttons) {
+      expect(button).not.toHaveClass('justify-center');
+      expect(button).not.toHaveClass('w-full');
+    }
+    const words = buttons.map((button) => visible(button.textContent));
+    const at = (id: string) => words.findIndex((text) => text.startsWith(message(language, id)));
+    expect(at('dashboard-open-past-sales')).toBe(at('dashboard-new-expense') + 1);
+    expect(at('dashboard-open-party-ledgers')).toBe(at('dashboard-new-expense') + 2);
+    for (const id of ['dashboard-open-past-sales', 'dashboard-open-party-ledgers']) {
+      const button = must(buttons[at(id)]);
+      // The words are the Party Ledgers and Past Sales names of the tabs (the same words everywhere).
+      expect(visible(button.textContent)).toBe(message(language, id));
+      expect(button.querySelector('kbd')).toBeNull();
+      // The same look as the other plain actions (not the primary one).
+      expect(button.className).toBe(must(buttons[at('dashboard-new-expense')]).className);
+    }
+    expect(message(language, 'dashboard-open-past-sales')).toBe(
+      message(language, 'layout-module-today'),
+    );
+    expect(message(language, 'dashboard-open-party-ledgers')).toBe(
+      message(language, 'layout-module-party-ledgers'),
+    );
   });
 });
 

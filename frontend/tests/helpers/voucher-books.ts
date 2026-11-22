@@ -99,7 +99,19 @@ export interface VoucherBooks {
   rows: VoucherRow[];
   /** What was sent to each command. */
   saves: BuiltVoucher[];
-  edits: { id: number; version: number; entry: BookEntry; reason: string; confirm: boolean }[];
+  /** The edits the backend accepted (a refused one is not here). `sign` is what was sent with it. */
+  edits: {
+    id: number;
+    version: number;
+    entry: BookEntry;
+    reason: string;
+    sign?: string;
+    confirm: boolean;
+  }[];
+  /** Every edit that reached the backend, accepted or not, as sent. */
+  editTries: VoucherBooks['edits'];
+  /** The day of the vouchers was reopened by a fix that took the Owner's sign: the edit may carry none (plan 92). */
+  dayReopened: boolean;
   cancels: { id: number; version: number; reason: string; confirm: boolean }[];
   /** The Owner's sign the next edit carries in its stamp: null for an edit of an open day (plan 89, PRD FR-7.71). */
   editSign: string | null;
@@ -154,6 +166,8 @@ export function createBooks(options: BooksOptions = {}) {
     rows: [],
     saves: [],
     edits: [],
+    editTries: [],
+    dayReopened: false,
     cancels: [],
     editSign: null,
     saved: [],
@@ -322,6 +336,20 @@ export function createBooks(options: BooksOptions = {}) {
     input: Omit<VoucherBooks['edits'][number], 'entry'> & { entry: VoucherEntry },
   ): VoucherSaved {
     const entry = bookEntry(input.entry);
+    store.editTries.push({ ...input, entry });
+    // Like the backend (plan 92, PRD FR-15.3): a وصولی, ادائیگی or پیشگی always needs a reason and the Owner's
+    // sign, unless the day was reopened by a fix that already took the sign. A wrong sign saves nothing.
+    const typedSign = (input.sign ?? '').trim();
+    const missing = [
+      ...(input.reason.trim() === '' ? [{ code: 'ERR_REASON_REQUIRED', field: 'reason' }] : []),
+      ...(typedSign === '' && !store.dayReopened
+        ? [{ code: 'ERR_SIGN_REQUIRED', field: 'sign' }]
+        : []),
+    ];
+    if (missing.length > 0) throw new CommandError(refusal(missing));
+    if (typedSign !== '' && !['adnan', 'عدنان'].includes(typedSign.toLowerCase())) {
+      throw refused('ERR_SIGN_WRONG', 'sign');
+    }
     store.edits.push({ ...input, entry });
     const row = store.rows.find((one) => one.id === input.id);
     if (row === undefined) throw refused('ERR_NOT_FOUND', null);
@@ -335,7 +363,7 @@ export function createBooks(options: BooksOptions = {}) {
       by: 'Owner',
       count: (row.edited?.count ?? 0) + 1,
       reason: input.reason === '' ? null : input.reason,
-      sign: store.editSign,
+      sign: typedSign === '' ? store.editSign : typedSign,
     };
     return {
       voucher_id: row.id,

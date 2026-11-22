@@ -109,7 +109,8 @@ fn receipt_edit(
     reason: &str,
 ) -> VoucherEditInput {
     serde_json::from_value(json!({
-        "id": id, "version": version, "reason": reason, "confirm_cash_below_zero": false,
+        "id": id, "version": version, "reason": reason, "sign": "adnan",
+        "confirm_cash_below_zero": false,
         "entry": { "type": "receipt", "date": date, "account_id": w.akram,
                    "amount": amount, "collector_staff_id": null, "narration": "" }
     }))
@@ -137,7 +138,7 @@ fn a_voucher_review_is_the_save_without_the_save() {
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .unwrap();
-    let input = receipt_edit(&w, id, version, "4,000", "10-10-2026", "");
+    let input = receipt_edit(&w, id, version, "4,000", "10-10-2026", "غلط رقم");
     let before = books(&w);
 
     // The voucher opens as the typed entry the edit takes back (the real answers for frontend).
@@ -233,7 +234,8 @@ fn payment_edit(
     confirm: bool,
 ) -> VoucherEditInput {
     serde_json::from_value(json!({
-        "id": id, "version": version, "reason": "", "confirm_cash_below_zero": false,
+        "id": id, "version": version, "reason": "x", "sign": "adnan",
+        "confirm_cash_below_zero": false,
         "entry": { "type": "payment", "date": "10-10-2026", "account_id": w.rahim,
                    "amount": amount, "reason": "", "narration": "",
                    "confirm_cash_below_zero": confirm }
@@ -339,8 +341,21 @@ fn the_date_never_changes_and_the_reason_is_for_an_entry_that_is_not_of_today() 
         version
     );
 
+    // A receipt needs a reason on any day, today included (plan 92, PRD FR-15.3 v1.55): the save
+    // refuses an edit without one at `reason`. The review itself does not fail for a missing reason.
+    let today_without = receipt_edit(&w, id, version, "4,000", "10-10-2026", "");
+    let preview = edit::voucher_review(ctx, &today_without).unwrap();
+    assert!(preview.errors.is_empty(), "{:?}", preview.errors);
+    let refused = vouchers::edit(ctx, &w.owner, &today_without).unwrap_err();
+    let ServiceError::Rejected(items) = refused else {
+        panic!("not a refusal")
+    };
+    assert_eq!(
+        (items[0].code, items[0].field.as_deref()),
+        (ErrorCode::ErrReasonRequired, Some("reason"))
+    );
     // Tomorrow the entry is not of today: the review says a reason is needed, and the save refuses
-    // an edit without one. The review itself does not fail for a missing reason.
+    // an edit without one.
     set_today(&w.env, 2026, 10, 11);
     let same_day = receipt_edit(&w, id, version, "4,000", "10-10-2026", "");
     let preview = edit::voucher_review(ctx, &same_day).unwrap();
@@ -634,7 +649,7 @@ fn a_print_of_an_edited_entry_says_when_it_was_revised() {
     vouchers::edit(
         ctx,
         &w.owner,
-        &receipt_edit(&w, id, version, "4,000", "10-10-2026", ""),
+        &receipt_edit(&w, id, version, "4,000", "10-10-2026", "غلط رقم"),
     )
     .unwrap();
     assert_eq!(bikri_print(Language::En).as_deref(), Some("10-10-2026"));

@@ -132,7 +132,7 @@ export function AssistantDevPage() {
           onSignOut={() => undefined}
         />
       }
-      moduleMenu={null}
+      sectionTabs={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}

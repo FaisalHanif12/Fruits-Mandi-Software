@@ -1,5 +1,5 @@
 // The brand panel beside the sign-in form (plan 75 T2, PRD FR-5.6 area, Section 8.1), in Urdu and
-// English: a clear order (mark, app name, firm, mandi, short lines, version), the app name on one
+// English: a clear order (app name, firm, mandi, short lines, version; no logo, plan 93 T3), the app name on one
 // line whatever the window, no hand-written side or text, and a picture that a reader skips.
 // The width and the one-line check of a real window are made in the browser (plan 75 screenshots);
 // here the class that keeps the name on one line is held to.
@@ -74,6 +74,18 @@ describe.each(LANGUAGES)('sign-in brand panel (%s)', (language) => {
     // The number is its own element, isolated and written left to right like every code (F25).
     expect(visible(version?.textContent)).toBe('0.1.12');
     expect(version).toHaveAttribute('dir', 'ltr');
+  });
+
+  it('has no logo icon at all: no crate tile, no fruit, only the firm name and the words (plan 93 T3)', () => {
+    const panel = renderPanel();
+    // The mark of the main menu (the app icon as a picture) is not here.
+    expect(panel.querySelector('img')).toBeNull();
+    expect(panel.querySelector('[class*="fill-brand"]')).toBeNull();
+    // The only pictures are the rings in the corner and the small icons of the three short lines: no mark above the name.
+    const others = Array.from(panel.querySelectorAll('svg')).filter(
+      (picture) => !picture.classList.contains('absolute') && picture.closest('li') === null,
+    );
+    expect(others).toEqual([]);
   });
 
   it('draws its picture as decoration that a screen reader skips, and uses no hand-written side', () => {

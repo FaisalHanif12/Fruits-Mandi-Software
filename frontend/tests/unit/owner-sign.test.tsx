@@ -3,7 +3,8 @@
 // types and files follow): the reopen box has a second, required field below the reason; the sign is plain text;
 // `day_fix_open` gets it as typed; ERR_SIGN_WRONG and ERR_SIGN_REQUIRED are told under the field and nothing
 // opens; the stamp, its row mark and the edit history show the sign after the name; Settings, Security changes
-// the Owner's sign with his password. Keyboard only: Enter goes from the reason to the sign and opens.
+// the Owner's sign with his password and his current sign, and the new sign typed twice (plan 92). Keyboard only:
+// Enter goes from the reason to the sign and opens.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Localized } from '@fluent/react';
@@ -271,6 +272,9 @@ describe.each(LANGUAGES)('Settings, Security: the Owner’s sign (%s)', (languag
     signedIn(sessionUser({ language }));
   });
 
+  const field = (id: string) =>
+    screen.getByLabelText<HTMLInputElement>(named(message(language, id)));
+
   async function openCard() {
     const app = await renderApp('/settings');
     await screen.findByRole('heading', { level: 1, name: message(language, 'settings-title') });
@@ -281,56 +285,136 @@ describe.each(LANGUAGES)('Settings, Security: the Owner’s sign (%s)', (languag
     const password = await screen.findByLabelText<HTMLInputElement>(
       named(message(language, 'settings-sign-password')),
     );
-    const sign = screen.getByLabelText<HTMLInputElement>(
-      named(message(language, 'settings-sign-new')),
-    );
-    return { ...app, user, password, sign };
+    return {
+      ...app,
+      user,
+      password,
+      current: field('settings-sign-current'),
+      sign: field('settings-sign-new'),
+      again: field('settings-sign-new-again'),
+    };
   }
 
-  it('keyboard only: the password, Enter, the new sign, Enter: it is sent as typed, and both are cleared', async () => {
+  it('keyboard only: the password, the current sign, the new sign twice, each with Enter: all are sent as typed, and all are cleared', async () => {
     vi.mocked(settingsApi.settingsSetOwnerSign).mockResolvedValue(null);
-    const { user, password, sign } = await openCard();
+    const { user, password, current, sign, again } = await openCard();
     await user.click(password);
     await user.keyboard('owner-pass{Enter}');
+    await waitFor(() => {
+      expect(current).toHaveFocus();
+    });
+    await user.keyboard('adnan{Enter}');
     await waitFor(() => {
       expect(sign).toHaveFocus();
     });
     await user.keyboard('sana{Enter}');
     await waitFor(() => {
+      expect(again).toHaveFocus();
+    });
+    await user.keyboard('sana{Enter}');
+    await waitFor(() => {
       expect(settingsApi.settingsSetOwnerSign).toHaveBeenCalledWith({
         password: 'owner-pass',
+        current_sign: 'adnan',
         sign: 'sana',
       });
     });
     await waitFor(() => {
       expect(password.value).toBe('');
+      expect(current.value).toBe('');
       expect(sign.value).toBe('');
+      expect(again.value).toBe('');
     });
     expect(visible(document.body.textContent)).toContain(message(language, 'settings-sign-saved'));
+  });
+
+  it('two new signs that are not the same are told under the second one, and nothing is sent', async () => {
+    const { user, password, current, sign, again } = await openCard();
+    await user.type(password, 'owner-pass');
+    await user.type(current, 'adnan');
+    await user.type(sign, 'sana');
+    await user.type(again, 'sanaa{Enter}');
+    expect(
+      await screen.findByText(named(message(language, 'settings-sign-mismatch'))),
+    ).toBeTruthy();
+    expect(settingsApi.settingsSetOwnerSign).not.toHaveBeenCalled();
+    // What was typed stays, and typing again takes the words away.
+    expect(sign.value).toBe('sana');
+    await user.type(again, '{Backspace}');
+    await waitFor(() => {
+      expect(screen.queryByText(named(message(language, 'settings-sign-mismatch')))).toBeNull();
+    });
+  });
+
+  it('the button waits until all four are filled', async () => {
+    const { user, password, current, sign } = await openCard();
+    const button = screen.getByRole('button', {
+      name: named(message(language, 'settings-sign-button')),
+    });
+    expect(button).toBeDisabled();
+    await user.type(password, 'owner-pass');
+    await user.type(current, 'adnan');
+    await user.type(sign, 'sana');
+    expect(button).toBeDisabled();
   });
 
   it('a wrong password is told under the password, and nothing is cleared', async () => {
     vi.mocked(settingsApi.settingsSetOwnerSign).mockRejectedValue(
       fail({ code: 'ERR_WRONG_PASSWORD', field: 'password', values: { tries_left: 9 } }),
     );
-    const { user, password, sign } = await openCard();
+    const { user, password, current, sign, again } = await openCard();
     await user.type(password, 'bad');
-    await user.type(sign, 'sana{Enter}');
+    await user.type(current, 'adnan');
+    await user.type(sign, 'sana');
+    await user.type(again, 'sana{Enter}');
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain(
         message(language, 'err-wrong-password', { tries_left: 9 }),
       );
     });
     expect(sign.value).toBe('sana');
+    expect(current.value).toBe('adnan');
   });
 
-  it('a sign the backend refuses is told under the sign', async () => {
+  it.each([
+    ['ERR_SIGN_WRONG', 'err-sign-wrong'],
+    ['ERR_SIGN_REQUIRED', 'err-sign-required'],
+  ])(
+    'a current sign the backend refuses (%s) is told under the current sign, and nothing is cleared',
+    async (code, id) => {
+      vi.mocked(settingsApi.settingsSetOwnerSign).mockRejectedValue(
+        fail({ code, field: 'current_sign' }),
+      );
+      const { user, password, current, sign, again } = await openCard();
+      await user.type(password, 'owner-pass');
+      await user.type(current, 'munshi');
+      await user.type(sign, 'sana');
+      await user.type(again, 'sana{Enter}');
+      await waitFor(() => {
+        expect(visible(current.closest('div')?.parentElement?.textContent)).toContain(
+          message(language, id),
+        );
+      });
+      expect(settingsApi.settingsSetOwnerSign).toHaveBeenCalledWith({
+        password: 'owner-pass',
+        current_sign: 'munshi',
+        sign: 'sana',
+      });
+      expect(current.value).toBe('munshi');
+      expect(sign.value).toBe('sana');
+      expect(again.value).toBe('sana');
+    },
+  );
+
+  it('a new sign the backend refuses is told under the new sign', async () => {
     vi.mocked(settingsApi.settingsSetOwnerSign).mockRejectedValue(
       fail({ code: 'ERR_REQUIRED', field: 'sign' }),
     );
-    const { user, password, sign } = await openCard();
+    const { user, password, current, sign, again } = await openCard();
     await user.type(password, 'owner-pass');
-    await user.type(sign, 'x{Enter}');
+    await user.type(current, 'adnan');
+    await user.type(sign, 'x');
+    await user.type(again, 'x{Enter}');
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain(message(language, 'err-required'));
     });

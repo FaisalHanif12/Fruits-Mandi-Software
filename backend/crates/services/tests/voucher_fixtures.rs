@@ -333,7 +333,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     let edit_request = json!({
         "id": receipt_saved.voucher_id, "version": row.version,
         "entry": entry("receipt", &smaller), "reason": "رقم درست کی",
-        "confirm_cash_below_zero": false
+        "sign": "adnan", "confirm_cash_below_zero": false
     });
     let edited = vouchers::edit(ctx, owner, &typed::<VoucherEditInput>(&edit_request)).unwrap();
     pair("vouchers_edit_receipt", &edit_request, &edited);

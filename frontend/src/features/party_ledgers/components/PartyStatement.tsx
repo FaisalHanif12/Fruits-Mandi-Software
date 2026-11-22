@@ -239,7 +239,7 @@ export function PartyStatement({
   if (printDay !== null) {
     return (
       <ListPage titleId="party-ledgers-title" icon={UsersRound} help={titleHelp}>
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="no-scrollbar min-h-0 flex-1 overflow-auto">
           <PartyDayPreview
             accountId={accountId}
             date={printDay}

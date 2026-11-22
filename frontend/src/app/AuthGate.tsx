@@ -30,7 +30,7 @@ import { FirstRunGate } from './FirstRunGate';
 import { confirmLeaveAll } from './leave-guards';
 import { AppShell } from './layout/AppShell';
 import { MainNav } from './layout/MainNav';
-import { ModuleMenu, RokarMenu } from './layout/ModuleMenu';
+import { ModuleTabs, RokarTabs } from './layout/ModuleMenu';
 import {
   MAIN_ROUTES,
   MODULE_ROUTES,
@@ -148,9 +148,9 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
             onSignOut={signOut}
           />
         }
-        moduleMenu={
+        sectionTabs={
           main === 'bikri' ? (
-            <ModuleMenu
+            <ModuleTabs
               current={moduleMenuOf(pathname, search)}
               onSelect={(id) => {
                 const type = asScreenType(id);
@@ -159,7 +159,7 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
               }}
             />
           ) : main === 'rokar' ? (
-            <RokarMenu
+            <RokarTabs
               current={rokarMenuOf(pathname)}
               onSelect={(id) => {
                 // The last item is the voucher screen of the بکری area (PRD FR-15.10).

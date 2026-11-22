@@ -57,8 +57,10 @@ import {
   EditReasonDialog,
   EditReviewCard,
   EntryActions,
+  TitleOrTabs,
   showToast,
   useErrorText,
+  useSectionTabs,
 } from '../../../shared/ui';
 import {
   ClosedDayEntryNotice,
@@ -248,6 +250,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     (typed) => bikriEditReview(entryId ?? 0, typed),
   );
   const reopened = useFixStore((state) => state.session);
+  const inSection = useSectionTabs() !== null;
   useDraftFills(stores, preview, stale);
   // An amount typed in a seller's summary is spread over his lots' نقد by the backend (plan 91).
   const spreading = useSellerPaidSpread(stores, entryId ?? null);
@@ -294,7 +297,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const dialogOpen = flow.ask !== null || findOpen || askReason;
 
   /** F10: an edit of an earlier day asks for the reason first (plan 16). */
+  // Each try to save, so the error bubble of the date shows again (plan 93 T8).
+  const [saveTries, setSaveTries] = useState(0);
   const trySave = (andNext: boolean) => {
+    setSaveTries((count) => count + 1);
     if (edit !== null) {
       if (!edit.editable.editable) return;
       // The backend says whether the entry needs a reason; until it has said, the day decides.
@@ -313,9 +319,14 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     },
     { enabled: !dialogOpen },
   );
-  useShortcut(SHORTCUTS.saveAndNext, () => void flow.save(true), {
-    enabled: !dialogOpen && edit === null,
-  });
+  useShortcut(
+    SHORTCUTS.saveAndNext,
+    () => {
+      setSaveTries((count) => count + 1);
+      void flow.save(true);
+    },
+    { enabled: !dialogOpen && edit === null },
+  );
   useShortcut(
     SHORTCUTS.find,
     () => {
@@ -598,8 +609,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           off above empty space (Umar, 12-11-2026). Its last row scrolls clear of the button: with no
           numbers strip the area ends with that band as padding, and with the strip docked under it
           (never over it, so it cannot cover a grid, plan 38) the band is a spacer under the strip. */}
+        {/* `relative`: this scroll box holds drop-downs (Radix Select keeps a hidden native <select> beside each), and
+          it must be their containing block, or the screen under the shell scrolls instead (plan 92). */}
         <div
-          className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 short:gap-2 ${
+          className={`no-scrollbar relative flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 short:gap-2 ${
             stripShown ? 'pb-4' : 'pb-corner'
           }`}
         >
@@ -609,10 +622,23 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                 // The side menu already says where we are, so the name gives its room to the grids
                 // in the smallest window (design system 8, plan 12). Screen readers still hear it.
                 // The line of help is behind an ⓘ, so the name and the buttons are one row (plan 38).
-                <div className="contents wide:flex wide:items-center wide:gap-1">
-                  <Localized id="glossary-bikri-book">
-                    <h1 className="sr-only wide:not-sr-only wide:type-section" />
-                  </Localized>
+                <div
+                  className={
+                    // Here the tabs and the controls share ONE row (Umar, 22-11-2026, plan 93 T7): the tabs take the
+                    // room that is left (`flex-1`, no natural width) and the rest go behind "More". At the compact
+                    // step (1024 to 1365) they keep at least the open tab and "More" (`min-w-section-tabs`), and
+                    // when the row is then too wide the buttons go to the row below (plan 93 T8).
+                    inSection
+                      ? 'flex min-w-section-tabs flex-1 items-center gap-2 normal:min-w-0'
+                      : 'contents wide:flex wide:items-center wide:gap-1'
+                  }
+                >
+                  {/* In a section (PRD FR-5.3, v1.56) the row of tabs is the name. */}
+                  <TitleOrTabs title={<Localized id="glossary-bikri-book" />}>
+                    <Localized id="glossary-bikri-book">
+                      <h1 className="sr-only wide:not-sr-only wide:type-section" />
+                    </Localized>
+                  </TitleOrTabs>
                   <div className="hidden wide:block">
                     <InfoHint>
                       <Localized id="bikri-help">
@@ -629,7 +655,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                     setRegion(null);
                   }}
                 >
-                  <HeadFields error={formError} number={null} onDone={goToLots} />
+                  <HeadFields error={formError} number={null} onDone={goToLots} pulse={saveTries} />
                 </div>
               }
               onOpen={onOpenSaved}
@@ -675,6 +701,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   number={edit.editable.number}
                   editing
                   onDone={goToLots}
+                  pulse={saveTries}
                 />
               </div>
               <div className="ms-auto flex flex-wrap items-center gap-2">

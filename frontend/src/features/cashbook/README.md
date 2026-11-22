@@ -12,7 +12,7 @@ returned loan (`cash` or `salary`).
 | `/rokar/lent?type=`    | ادھار رقم: money lent and returned (cash or salary)                          | `pages/LentPage.tsx`     |
 | `/rokar/khata?type=`   | الگ کھاتہ: paid out (minus) and received (plus)                              | `pages/KhataPage.tsx`    |
 
-The side menu of the area is `RokarMenu` (`app/layout/ModuleMenu.tsx`). Its last item opens the voucher
+The tabs of the area are `RokarTabs` (`app/layout/ModuleMenu.tsx`), in the title row of each screen (plan 93). Its last item opens the voucher
 screen of the بکری area (FR-15.10). The پھل tab (plan 17d) is one more entry in `expense-tabs.ts` and
 one more route; the tab strip shows itself when there are two.
 

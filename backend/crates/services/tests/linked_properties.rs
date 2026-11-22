@@ -315,6 +315,7 @@ fn apply(run: &mut Run, op: &Op) {
                     version: row.version,
                     entry,
                     reason: "x".into(),
+                    sign: "adnan".into(),
                     confirm_cash_below_zero: true,
                 },
             );

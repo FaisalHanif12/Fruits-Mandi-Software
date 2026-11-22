@@ -30,6 +30,12 @@ dashboard-new-advance = New { -peshgi }
 dashboard-new-expense = New { -kharcha }
 
 # review: pending
+dashboard-open-past-sales = Past Sales
+
+# review: pending
+dashboard-open-party-ledgers = { party-ledgers-title }
+
+# review: pending
 dashboard-open-daybook = { -roznamcha }
 
 # review: pending

@@ -50,7 +50,7 @@ export function DuesDevPage() {
   return (
     <AppShell
       nav={<MainNav current="dashboard" onSelect={() => undefined} onSignOut={() => undefined} />}
-      moduleMenu={null}
+      sectionTabs={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}

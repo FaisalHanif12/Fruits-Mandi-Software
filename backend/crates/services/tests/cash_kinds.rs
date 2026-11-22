@@ -476,6 +476,7 @@ fn edit_and_cancel_go_through_the_generic_voucher_code() {
             version: row.version,
             entry: VoucherEntry::ShopExpense(shop(electricity, "3,384", "10-10-2026")),
             reason: "typing mistake".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -497,6 +498,7 @@ fn edit_and_cancel_go_through_the_generic_voucher_code() {
             version: row.version,
             entry: VoucherEntry::PersonalExpense(personal(a, "100", "10-10-2026")),
             reason: String::new(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -567,6 +569,8 @@ fn a_take_or_loan_cannot_be_cancelled_or_made_smaller_than_its_returns() {
                 version: row.version,
                 entry: VoucherEntry::PersonalExpense(personal(a, amount, "10-10-2026")),
                 reason: String::new(),
+                // A personal expense asks for neither a reason (of today) nor the sign (plan 92).
+                sign: String::new(),
                 confirm_cash_below_zero: false,
             },
         )
@@ -617,6 +621,7 @@ fn edit_voucher(
             entry,
             // A reason is needed for an entry that is not of today (PRD FR-7.70).
             reason: "edit".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -2330,7 +2335,8 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
             id,
             version: opened.row.version,
             entry: opened.entry.clone(),
-            reason: String::new(),
+            reason: "nothing changed".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         };
         let preview = edit::voucher_review(ctx, &input).unwrap();
@@ -2363,6 +2369,7 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
             version: opened.row.version,
             entry: VoucherEntry::PersonalExpense(changed),
             reason: String::new(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -2392,6 +2399,7 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
             version: opened.row.version,
             entry: VoucherEntry::General(lines),
             reason: String::new(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )

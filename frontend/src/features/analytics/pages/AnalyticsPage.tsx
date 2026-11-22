@@ -357,7 +357,7 @@ function AnalyticsBody({
         </div>
       }
     >
-      {table ? body : <div className="min-h-0 flex-1 overflow-auto">{body}</div>}
+      {table ? body : <div className="no-scrollbar min-h-0 flex-1 overflow-auto">{body}</div>}
     </ListPage>
   );
 }

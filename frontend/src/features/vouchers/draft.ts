@@ -241,6 +241,23 @@ export function accountPath(draft: VoucherDraft): string {
   return draft.type === 'advance' ? 'seller_account_id' : 'account_id';
 }
 
+/**
+ * The field paths the form really draws for this voucher. The notice at the top of the form tells every problem that is not
+ * at one of them, so a refusal is never shown nowhere (plan 92: the reason of a payment was listed as shown, but a payment
+ * has no reason field, so its refusal was silent).
+ */
+export function shownFieldPaths(draft: VoucherDraft): string[] {
+  return [
+    'date',
+    accountPath(draft),
+    'amount',
+    ...(draft.type === 'receipt' ? ['collector_staff_id'] : []),
+    ...(isCashLent(draft) ? ['reason'] : []),
+    ...(draft.type === 'advance' && !isCashLent(draft) ? ['expected_goods'] : []),
+    'narration',
+  ];
+}
+
 /** Where a voucher of the waiting list stands (PRD FR-15.1). A saved one leaves the list. */
 export type ListedStatus =
   | { kind: 'waiting' }

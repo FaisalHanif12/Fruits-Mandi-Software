@@ -652,6 +652,7 @@ fn voucher_edit_and_cancel_fail_cleanly_at_every_row_change() {
         version,
         entry: VoucherEntry::Receipt(receipt(&w, "9,000")),
         reason: "typo".into(),
+        sign: "adnan".into(),
         confirm_cash_below_zero: true,
     };
     at_every_step(&w, "voucher edit", || {

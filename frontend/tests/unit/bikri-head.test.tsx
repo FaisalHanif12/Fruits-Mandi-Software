@@ -105,6 +105,26 @@ describe.each(LANGUAGES)('a language switch in the head (%s)', (language) => {
   });
 });
 
+describe.each(LANGUAGES)('the tabs and the controls in one row (%s)', (language) => {
+  beforeEach(() => {
+    resetClientState(language);
+    signedIn(sessionUser({ language }));
+  });
+
+  it('the block of the tabs keeps room for the open tab and More at the compact step (1024), and only there', async () => {
+    await openBook(language);
+    const nav = await screen.findByRole('navigation', {
+      name: named(message(language, 'layout-module-label')),
+    });
+    // The name's block: it takes the room that is left, but never less than the open tab and "More" at the compact step,
+    // so the buttons go to the row below instead of pushing the tabs out (plan 93 T8). From the normal step (1366) it has
+    // no minimum, as Umar approved.
+    const block = nav.parentElement;
+    expect(block).toHaveClass('min-w-section-tabs', 'flex-1', 'normal:min-w-0');
+    expect(block?.parentElement).toHaveClass('flex-wrap');
+  });
+});
+
 describe.each(LANGUAGES)('the bottom of the page (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);

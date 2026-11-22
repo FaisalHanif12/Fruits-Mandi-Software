@@ -11,6 +11,7 @@
 //   (PRD FR-7.9), so opening one from the find box never loses anything.
 
 import type { ReactNode } from 'react';
+import { useSectionTabs } from '../../../shared/ui';
 import { BikriFindDialog } from './BikriFindDialog';
 
 interface BikriToolbarProps {
@@ -38,13 +39,19 @@ export function BikriToolbar({
   title,
   head,
 }: BikriToolbarProps) {
+  // In a section the row of tabs is the name. On the sale book the tabs and the controls share ONE row (Umar,
+  // 22-11-2026, plan 93 T7): the controls keep their size and the tabs take the room that is left, the last ones going
+  // behind "More". The other section screens let their buttons wrap under the tabs instead.
+  const inSection = useSectionTabs() !== null;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
         {title}
         {head}
         {lastSaved}
-        <div className="ms-auto flex flex-wrap items-center gap-2">{children}</div>
+        <div className={`ms-auto flex flex-wrap items-center gap-2 ${inSection ? 'shrink-0' : ''}`}>
+          {children}
+        </div>
       </div>
       <BikriFindDialog open={findOpen} onOpenChange={onFindOpenChange} onOpen={onOpen} />
     </div>

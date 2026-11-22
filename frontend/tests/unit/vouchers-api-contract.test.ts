@@ -98,6 +98,8 @@ describe('each wrapper sends the command and the input of the backend', () => {
       version: 2,
       entry: { type: 'receipt', ...RECEIPT },
       reason: 'wrong amount',
+      // The Owner's sign goes as typed (PRD FR-15.3, plan 92).
+      sign: 'adnan',
       confirm_cash_below_zero: true,
     };
     await api.vouchersEdit({
@@ -105,9 +107,21 @@ describe('each wrapper sends the command and the input of the backend', () => {
       version: edit.version,
       entry: edit.entry,
       reason: edit.reason,
+      sign: edit.sign,
       confirm: edit.confirm_cash_below_zero,
     });
     expect(call).toHaveBeenLastCalledWith('vouchers_edit', { input: edit });
+    // The other kinds of voucher (expense, lent ...) send no sign at all: the backend ignores it for them.
+    await api.vouchersEdit({
+      id: edit.id,
+      version: edit.version,
+      entry: edit.entry,
+      reason: edit.reason,
+      confirm: edit.confirm_cash_below_zero,
+    });
+    const [, sent] = call.mock.lastCall ?? [];
+    expect(sent).toEqual({ input: { ...edit, sign: undefined } });
+    expect(Object.keys((sent as { input: object }).input)).not.toContain('sign');
     const cancel: VoucherCancelInput = {
       id: 501,
       version: 2,
@@ -205,6 +219,8 @@ describe('each wrapper sends exactly the request the backend’s own test sent',
       version: edit.version,
       entry: edit.entry,
       reason: edit.reason,
+      // The backend's own request of a receipt edit carries the Owner's sign (plan 92).
+      sign: edit.sign,
       confirm: edit.confirm_cash_below_zero,
     });
     expect(call).toHaveBeenLastCalledWith('vouchers_edit', { input: edit });

@@ -1,13 +1,14 @@
 // The shell pieces (plan 04, PRD FR-5.2, FR-5.3, FR-5.5, FR-5.6, FR-7.9, FR-7.11, FR-7.17), in
-// Urdu and English: main menu, side menu, top bar, status bar, stepper, the save prompt, text
-// size and the frame that joins them.
+// Urdu and English: main menu, the tabs of an area (plan 93, v1.56: in the title row of the screen, not a side
+// panel), top bar, status bar, stepper, the save prompt, text size and the frame that joins them.
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
+import { Localized } from '@fluent/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '../../src/app/layout/AppShell';
-import { BIKRI_MENU, ModuleMenu } from '../../src/app/layout/ModuleMenu';
+import { BIKRI_MENU, ModuleTabs } from '../../src/app/layout/ModuleMenu';
 import { MAIN_NAV, MainNav } from '../../src/app/layout/MainNav';
 import { StatusBar } from '../../src/app/layout/StatusBar';
 import {
@@ -22,7 +23,7 @@ import { TopBar } from '../../src/app/layout/TopBar';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { formNavigationProps } from '../../src/shared/keyboard';
-import { SaveChangesPrompt, Stepper } from '../../src/shared/ui';
+import { SaveChangesPrompt, Stepper, TitleOrTabs } from '../../src/shared/ui';
 import { message, renderIn, visible } from '../helpers/render';
 import { USER_NAME, at } from '../helpers/sample';
 
@@ -138,15 +139,20 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
   });
 });
 
-describe.each(LANGUAGES)('ModuleMenu (%s)', (language) => {
+describe.each(LANGUAGES)('ModuleTabs (%s)', (language) => {
   it('lists the seven items of PRD FR-5.3 in order and marks the current one', () => {
-    renderIn(language, <ModuleMenu current="receipt" onSelect={vi.fn()} />);
+    renderIn(language, <ModuleTabs current="receipt" onSelect={vi.fn()} />);
     const nav = screen.getByRole('navigation', { name: named(language, 'layout-module-label') });
     const items = within(nav).getAllByRole('button');
     expect(items.map((item) => visible(item.textContent))).toEqual(
       BIKRI_MENU.map((entry) => message(language, entry.labelId)),
     );
     expect(items[1]).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('the receipt tab says وصولی only, never "وصولی / اگراہی" (v1.56)', () => {
+    expect(message(language, 'layout-module-receipt')).toBe(message(language, 'glossary-wasooli'));
+    expect(message(language, 'layout-module-receipt')).not.toContain('/');
   });
 });
 
@@ -373,22 +379,30 @@ describe('text size (PRD FR-7.11, NFR-USE-18)', () => {
 
 function SampleScreen() {
   return (
-    <form {...formNavigationProps}>
-      <input data-testid="first" />
-      <input data-testid="second" />
-    </form>
+    <div>
+      {/* The title row of a screen: in a section the tabs stand in for the name (PRD FR-5.3, v1.56). */}
+      <TitleOrTabs title={<Localized id="glossary-bikri-book" />}>
+        <Localized id="glossary-bikri-book">
+          <h1 />
+        </Localized>
+      </TitleOrTabs>
+      <form {...formNavigationProps}>
+        <input data-testid="first" />
+        <input data-testid="second" />
+      </form>
+    </div>
   );
 }
 
 describe.each(LANGUAGES)('AppShell (%s)', (language) => {
-  function renderShell() {
+  function renderShell(onSelect = vi.fn()) {
     setLanguage(language);
     return renderIn(
       language,
       <QueryClientProvider client={new QueryClient()}>
         <AppShell
           nav={<MainNav current="bikri" onSelect={vi.fn()} onSignOut={vi.fn()} />}
-          moduleMenu={<ModuleMenu current="bikri-book" onSelect={vi.fn()} />}
+          sectionTabs={<ModuleTabs current="bikri-book" onSelect={onSelect} />}
           userName={USER_NAME}
           onLock={vi.fn()}
           onGuide={vi.fn()}
@@ -411,6 +425,8 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
     // the screen holds the hidden native <select> Radix puts beside each drop-down.
     const main = screen.getByRole('main');
     expect(main).toHaveClass('relative', 'overflow-auto');
+    // It scrolls by wheel, keys and drag but shows no scroll line (plan 93 T4).
+    expect(main).toHaveClass('no-scrollbar');
     expect(main.closest('.h-screen')).toHaveClass('overflow-hidden');
   });
 
@@ -426,18 +442,67 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 
-  it('the arrow into the screen leaves the menu for the screen, and the other goes back', async () => {
+  const tabsNav = () =>
+    screen.getByRole('navigation', { name: named(language, 'layout-module-label') });
+
+  it('the tabs are in the title row of the screen, not a panel beside it, and the open tab is the title', () => {
+    renderShell();
+    // Inside the screen, so the width a side panel took goes to the screen.
+    expect(screen.getByRole('main')).toContainElement(tabsNav());
+    const tabs = within(tabsNav()).getAllByRole('button');
+    expect(tabs).toHaveLength(BIKRI_MENU.length);
+    expect(at(tabs, 0)).toHaveAttribute('aria-current', 'page');
+    // The name stays for screen readers as the page's one heading, but it is not drawn: the tab is the title.
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveClass('sr-only');
+    expect(visible(heading.textContent)).toBe(message(language, 'glossary-bikri-book'));
+  });
+
+  it('only the open tab is a Tab stop; the arrows reach the rest', () => {
+    renderShell();
+    const tabs = within(tabsNav()).getAllByRole('button');
+    expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1, -1, -1, -1]);
+  });
+
+  it('← and → move between the tabs in the reading direction, Enter opens one, and ↓ goes into the screen', async () => {
+    const onSelect = vi.fn();
+    renderShell(onSelect);
+    const user = userEvent.setup();
+    const tabs = within(tabsNav()).getAllByRole('button');
+    // In Urdu the left arrow reads on; in English the right arrow does.
+    const next = language === 'ur' ? '{ArrowLeft}' : '{ArrowRight}';
+    const back = language === 'ur' ? '{ArrowRight}' : '{ArrowLeft}';
+    at(tabs, 0).focus();
+    await user.keyboard(next);
+    expect(at(tabs, 1)).toHaveFocus();
+    await user.keyboard(next);
+    expect(at(tabs, 2)).toHaveFocus();
+    await user.keyboard(back);
+    expect(at(tabs, 1)).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onSelect).toHaveBeenCalledWith('receipt');
+    // The ends do not wrap.
+    await user.keyboard('{End}');
+    expect(at(tabs, 6)).toHaveFocus();
+    await user.keyboard(next);
+    expect(at(tabs, 6)).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(at(tabs, 0)).toHaveFocus();
+    // ↓ goes into the screen: its first field, never a tab.
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByTestId('first')).toHaveFocus();
+  });
+
+  it('the arrow from the main menu into the screen lands on its first field, not on a tab', async () => {
     renderShell();
     const user = userEvent.setup();
-    const sideMenuItems = within(
-      screen.getByRole('navigation', { name: named(language, 'layout-module-label') }),
-    ).getAllByRole('button');
-    const sideMenuItem = at(sideMenuItems, 0);
-    sideMenuItem.focus();
+    const mainMenu = screen.getByRole('navigation', { name: named(language, 'layout-nav-label') });
+    const first = at(within(mainMenu).getAllByRole('button'), 0);
+    first.focus();
     await user.keyboard(intoScreen);
     expect(screen.getByTestId('first')).toHaveFocus();
-    // From the first field, the way back is the menu side. The nearest menu answers.
+    // From the first field, the way back is the menu side: the main menu answers (the tabs are not a menu).
     await user.keyboard(toMenu);
-    expect(sideMenuItem).toHaveFocus();
+    expect(mainMenu.contains(document.activeElement)).toBe(true);
   });
 });

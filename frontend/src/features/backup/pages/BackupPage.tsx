@@ -104,7 +104,7 @@ export function BackupPage() {
     >
       {/* The screen scrolls in this area. The state is one row of chips, the copies fill the room
           that is left with their page buttons under them, and the settings come last. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
         {nowError === null ? null : <ErrorNotice error={nowError} />}
         {report === null ? null : <RunReportNotices report={report} />}
         <KeyPanel status={state} />

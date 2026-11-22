@@ -40,3 +40,9 @@
 ## T2b: the blank band under Settings > فرم (Umar, 22-11-2026, his screenshots)
 
 Root cause, reproduced by the lead in headless WebKit at 1480x830: a print-header person row has the role Radix Select. Radix keeps a hidden native `<select>`, which takes `main` (relative in AppShell) as its containing block instead of the panel's scroll box, so `main` gets 502 px of overflow: the title and tabs scroll away and a blank band shows. With no person there is no bug, which is why the earlier check (no person) passed. Making the scroll box `relative` gives 0 overflow. Owner: `frontend`. Check the other inner scroll areas the same way. The lead verifies with the WebKit script (one person added, main overflow must be 0) before handing to Umar.
+
+## Built 22-11-2026
+
+- Backend (backend-2, money agent: no money behaviour changed) and frontend (frontend-2). The lead's checks on the final tree: voucher_edit_sign 15, owner_sign 8, days 8, plan85_closed_day 6, golden_day 176 passed (no golden number changed), clippy -D warnings and fmt clean, assistant client timing tests 19 and true_deadline 2 pass alone (earlier failures were machine load); typecheck and i18n:check pass. T2b verified in WebKit (main overflow 0 with people in the header, 1024 to 1920, ur and en).
+- Note for robustness: `robustness_gate_t1/steps.rs` and `robustness_gate_t3_atomic.rs` got a mechanical `sign: "adnan"` on their voucher-edit literals so they compile; no assertion changed.
+- Follow-up: `mandi-app --test robustness_security` (`hostile_input_to_every_command...`) ran over 25 minutes in one loaded run; plan 92 adds only a few reads per call. Check its time at the next robustness gate.

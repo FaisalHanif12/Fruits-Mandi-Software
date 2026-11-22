@@ -102,7 +102,7 @@ function PartnersOverviewPageScreen() {
         </>
       }
     >
-      <div className="min-h-0 flex-1 overflow-auto">{body}</div>
+      <div className="no-scrollbar min-h-0 flex-1 overflow-auto">{body}</div>
     </ListPage>
   );
 }

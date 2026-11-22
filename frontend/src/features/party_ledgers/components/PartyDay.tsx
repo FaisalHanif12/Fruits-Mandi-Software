@@ -94,7 +94,7 @@ export function PartyDay({ accountId, date, onBack }: PartyDayProps) {
       }
     >
       {printing ? (
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="no-scrollbar min-h-0 flex-1 overflow-auto">
           <PartyDayPreview
             accountId={accountId}
             date={date}

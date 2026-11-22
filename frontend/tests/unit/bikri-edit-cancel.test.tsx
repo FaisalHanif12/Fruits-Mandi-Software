@@ -505,6 +505,12 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       const { user } = await openEdit();
       await user.click(cellOf(lotsGrid(language), 0, 'qty'));
       press('Delete', { ctrlKey: true });
+      // A lot with sale lines asks first, in one sentence (plan 43 R3): the answer "remove" takes it with its lines.
+      const box = await screen.findByRole('alertdialog', undefined, { timeout: 8_000 });
+      expect(visible(box.textContent)).toContain(message(language, 'bikri-lot-remove-title'));
+      await user.click(
+        within(box).getByRole('button', { name: message(language, 'common-remove-line-confirm') }),
+      );
       // The lot is out of the edit (plan 80 Q-R2-1, PRD FR-7.70): its row is gone and the preview asks without it.
       await waitFor(() => {
         expect(textOf(lotsGrid(language), 0, 'qty')).not.toBe('50');

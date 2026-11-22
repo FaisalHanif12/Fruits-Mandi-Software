@@ -70,16 +70,19 @@ pub(crate) fn accepted(typed: &str, configured: Option<&str>) -> Option<String> 
     right.then(|| wanted.to_owned())
 }
 
-/// Changes the Owner's sign, proved by his password (PRD FR-21.4, plan 73). The change is in the
-/// audit log; the sign itself is not.
+/// Changes the Owner's sign, proved by his password and his current sign (PRD FR-21.4, Section 21,
+/// plan 73, plan 92). The change is in the audit log; the sign itself is not. A wrong current sign
+/// changes nothing and is audited without the typed text, like a wrong sign on a reopen.
 ///
 /// # Errors
 /// `ERR_REQUIRED` and `ERR_TEXT_TOO_LONG` (value `max`) and `ERR_CONTROL_CHARS` on `sign`;
-/// `ERR_REQUIRED` or `ERR_WRONG_PASSWORD` on `password`; `ERR_LOCKED_WAIT`.
+/// `ERR_REQUIRED` or `ERR_WRONG_PASSWORD` on `password`; `ERR_LOCKED_WAIT`; then, after the password,
+/// `ERR_SIGN_REQUIRED` or `ERR_SIGN_WRONG` on `current_sign`.
 pub fn set_owner_sign(
     ctx: &Context,
     actor: &Actor,
     password: &Secret,
+    current_sign: &str,
     sign: &str,
 ) -> Result<(), ServiceError> {
     let cleaned = validate::free_text("sign", sign).map_err(ServiceError::from)?;
@@ -93,6 +96,7 @@ pub fn set_owner_sign(
         )]));
     }
     prove_owner(ctx, actor, password, "password", false)?;
+    check_current_sign(ctx, actor, current_sign)?;
     ctx.db.write(|tx| {
         let was_default = configured(tx)?.is_none();
         store::set_setting(tx, KEY_OWNER_SIGN, &json!(cleaned), Some(actor.user_id))?;
@@ -105,6 +109,37 @@ pub fn set_owner_sign(
         )?;
         Ok(())
     })
+}
+
+/// Checks the sign the Owner has now, typed again to change it (plan 92). A wrong one writes one audit
+/// entry with no typed text: the refused try is its own save, so it stays.
+fn check_current_sign(ctx: &Context, actor: &Actor, typed: &str) -> Result<(), ServiceError> {
+    if typed.trim().is_empty() {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrSignRequired,
+            "current_sign",
+        ));
+    }
+    let current = ctx.db.read(configured)?;
+    if accepted(typed, current.as_deref()).is_some() {
+        return Ok(());
+    }
+    ctx.db.write(|tx| {
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(
+                Some(actor.user_id),
+                "owner_sign_change_sign_wrong",
+                "settings",
+            )
+            .into_entry(),
+        )?;
+        Ok::<(), ServiceError>(())
+    })?;
+    Err(ServiceError::reject_field(
+        ErrorCode::ErrSignWrong,
+        "current_sign",
+    ))
 }
 
 #[cfg(test)]

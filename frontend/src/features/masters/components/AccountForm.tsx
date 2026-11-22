@@ -405,7 +405,13 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
         </Localized>
       ) : null}
       {dead === null ? null : <DeadInfoLine info={dead} />}
-      <div className={embedded === undefined ? 'min-h-0 flex-1 overflow-auto' : undefined}>
+      {/* `relative`: the scroll box is the containing block of the hidden native <select> that Radix Select keeps beside each
+          drop-down, so the screen under the shell does not scroll for it (plan 92). */}
+      <div
+        className={
+          embedded === undefined ? 'no-scrollbar relative min-h-0 flex-1 overflow-auto' : undefined
+        }
+      >
         <form
           ref={(element) => {
             containerRef.current = element;

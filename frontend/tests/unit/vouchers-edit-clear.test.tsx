@@ -27,6 +27,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { DAY_FIX_CLOSE_E2E_45, DAY_FIX_OPEN_E2E_45 } from '../helpers/edit-real';
+import { saveChange } from '../helpers/edit-sign-box';
 import { fakeMasters } from '../helpers/masters';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { paisaForTest } from '../helpers/paisa';
@@ -161,9 +162,9 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
     },
   );
 
-  it('the amount and the reason for the change come before the other fields, and the party card comes after all of them', async () => {
+  it('the amount comes before the other fields, the form has no reason field (the box on save asks it), and the party card comes after all of them', async () => {
     const { amount } = await openSaved('receipt');
-    const reason = await labelled(language, 'vouchers-field-edit-reason');
+    expect(screen.queryByLabelText(named(m('vouchers-field-edit-reason')))).toBeNull();
     const narration = await labelled(language, 'vouchers-field-narration');
     // The card is the one with the buyer's name inside the form (the list under it has his name too).
     const form = document.querySelector('form');
@@ -173,9 +174,8 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
     );
     const before = (a: Node, b: Node) =>
       Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    // Amount, then the reason for the change, then the narration, as in the first rows of the form.
-    expect(before(amount, reason)).toBe(true);
-    expect(before(reason, narration)).toBe(true);
+    // The amount comes before the narration, as in the first rows of the form.
+    expect(before(amount, narration)).toBe(true);
     // The card is beside the fields, so it follows every one of them: it can never sit between them and push
     // the amount down (Umar's screenshot).
     expect(before(narration, card)).toBe(true);
@@ -197,15 +197,14 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
       const { user, router, amount } = await openSaved(type);
       await user.click(amount);
       await user.keyboard('{Control>}a{/Control}9000');
-      await user.click(await labelled(language, 'vouchers-field-edit-reason'));
-      await user.keyboard('wrong amount');
-      press('F10');
+      await saveChange(user, language, 'wrong amount');
       await waitFor(() => {
         expect(store.edits).toHaveLength(1);
       });
       expect(store.edits[0]).toMatchObject({
         version: 1,
         reason: 'wrong amount',
+        sign: 'adnan',
         entry: { type, amount: '9000' },
       });
       // The voucher is still on the screen (not a blank form), with the amount that was saved.
@@ -219,6 +218,8 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
       expect(stamp).toContain('Owner');
       expect(stamp).toContain('10-10-2026');
       expect(stamp).toContain('wrong amount');
+      // The sign of the edit shows in the stamp too (PRD FR-7.71, plan 92).
+      expect(stamp).toContain('adnan');
       expect((await labelled(language, 'vouchers-field-amount')).value).toBe('9,000');
       // The mark on the amount: what it held before, and the old against the new in its tip.
       const mark = await waitFor(() => {
@@ -245,7 +246,9 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
     store.editSign = 'adnan';
     vi.mocked(editApi.dayFixOpen).mockImplementation(() => {
       row.needs_reopen = false;
-      return Promise.resolve(DAY_FIX_OPEN_E2E_45);
+      // The reopen took the reason and the sign, so the edit of this fix asks nothing again (plan 92).
+      store.dayReopened = true;
+      return Promise.resolve({ ...DAY_FIX_OPEN_E2E_45, days: ['2026-10-05', '2026-10-10'] });
     });
     vi.mocked(editApi.dayFixClose).mockImplementation(() => {
       row.needs_reopen = true;
@@ -273,12 +276,14 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
       expect(amount).toHaveFocus();
     });
     await user.keyboard('{Control>}a{/Control}9000');
-    await user.click(await labelled(language, 'vouchers-field-edit-reason'));
-    await user.keyboard('wrong amount');
+    // Asked once only: the reopen asked the reason and the sign, so F10 saves at once with no second box. The
+    // reason of the reopen goes with the edit and the sign goes empty (the backend took it at the reopen).
     press('F10');
     await waitFor(() => {
       expect(store.edits).toHaveLength(1);
     });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(store.edits[0]).toMatchObject({ reason: 'wrong amount', sign: '' });
     await waitFor(() => {
       expect(editApi.dayFixClose).toHaveBeenCalledTimes(1);
     });

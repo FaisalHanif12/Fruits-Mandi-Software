@@ -21,7 +21,7 @@ import { PartnersOverviewPage } from '../../features/partners/pages/PartnersOver
 import { StatementPage } from '../../features/partners/pages/StatementPage';
 import { AppShell } from '../layout/AppShell';
 import { MainNav, type MainNavId } from '../layout/MainNav';
-import { RokarMenu, type RokarMenuId } from '../layout/ModuleMenu';
+import { RokarTabs, type RokarMenuId } from '../layout/ModuleMenu';
 import { SAMPLE_USER } from './sample';
 
 const SAMPLE_DATE = '10-10-2026';
@@ -74,7 +74,7 @@ export function RokarPage() {
   return (
     <AppShell
       nav={<MainNav current={main} onSelect={() => undefined} onSignOut={() => undefined} />}
-      moduleMenu={id === null ? null : <RokarMenu current={id} onSelect={() => undefined} />}
+      sectionTabs={id === null ? null : <RokarTabs current={id} onSelect={() => undefined} />}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}

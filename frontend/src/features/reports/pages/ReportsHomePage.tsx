@@ -121,7 +121,7 @@ export function ReportsHomePage() {
         <nav
           ref={ref}
           onKeyDown={onKeyDown}
-          className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto"
+          className="no-scrollbar flex min-h-0 flex-1 flex-col gap-5 overflow-auto"
         >
           {shown.map((group) => (
             <section

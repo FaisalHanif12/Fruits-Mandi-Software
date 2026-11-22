@@ -47,6 +47,8 @@ export {
   DEFAULT_PAGE_SIZE,
   moveIndex,
   rovingKeyHandler,
+  rovingRowKeyHandler,
   useRovingKeys,
+  useRovingRowKeys,
   type RovingOptions,
 } from './rovingFocus';

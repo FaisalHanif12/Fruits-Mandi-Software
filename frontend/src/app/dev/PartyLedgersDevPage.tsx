@@ -11,7 +11,7 @@ import { installPartyLedgersDevBridge } from '../../../tests/helpers/dev-bridge-
 import { PartyLedgersPage } from '../../features/party_ledgers/pages/PartyLedgersPage';
 import { AppShell } from '../layout/AppShell';
 import { MainNav } from '../layout/MainNav';
-import { ModuleMenu } from '../layout/ModuleMenu';
+import { ModuleTabs } from '../layout/ModuleMenu';
 import { SAMPLE_USER } from './sample';
 
 const SAMPLE_DATE = '10-10-2026';
@@ -25,7 +25,7 @@ export function PartyLedgersDevPage() {
   return (
     <AppShell
       nav={<MainNav current="bikri" onSelect={() => undefined} onSignOut={() => undefined} />}
-      moduleMenu={<ModuleMenu current="party-ledgers" onSelect={() => undefined} />}
+      sectionTabs={<ModuleTabs current="party-ledgers" onSelect={() => undefined} />}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}
