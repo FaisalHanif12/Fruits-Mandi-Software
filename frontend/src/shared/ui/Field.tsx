@@ -2,13 +2,15 @@
 // Code Standards F16, PRD FR-7.1 and FR-7.6). The label sits at the start edge (the right edge
 // in Urdu). An error replaces the hint, in red, with an icon and plain words, so colour is
 // never the only signal (NFR-USE-12). An `inline` field has its label before the control, on one
-// line, for a field that sits in a row of buttons (the date of the sale book, plan 71 H4).
+// line, for a field that sits in a row of buttons (the date of the sale book, plan 71 H4). The error of such a field
+// is a bubble that floats under it (`FieldErrorBubble`, plan 93 T8), so long words never widen the row.
 //
 // The control is given as a function, so the field can pass it the id and the aria links:
 //   <Field label={...} hint={...}>{(control) => <MoneyInput {...control} value={v} onChange={set} />}</Field>
 
 import { CircleAlert } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
+import { FieldErrorBubble } from './FieldErrorBubble';
 import { InfoHint } from './InfoHint';
 
 /** What a field passes to its control. Every input of shared/ui accepts these. */
@@ -42,8 +44,16 @@ interface FieldProps {
    * heading is its label (the share of each partner). Every field still has a label (F28).
    */
   hideLabel?: boolean;
-  /** The label stands before the control on one line, so the field is as high as a button. */
+  /**
+   * The label stands before the control on one line, so the field is as high as a button. Its error floats as a
+   * bubble under the field, for 5 s, and shows again when the user repeats the action (plan 93 T8).
+   */
   inline?: boolean;
+  /**
+   * For an `inline` field: a number that goes up each time the screen repeats the action that gives the error (a try to
+   * save), so the bubble shows again.
+   */
+  bubblePulse?: number | undefined;
   children: (control: FieldControlProps) => ReactNode;
 }
 
@@ -56,6 +66,7 @@ export function Field({
   readOnly = false,
   hideLabel = false,
   inline = false,
+  bubblePulse,
   children,
 }: FieldProps) {
   const id = useId();
@@ -89,7 +100,13 @@ export function Field({
       {inline ? (
         <div className="flex min-w-0 items-center gap-2">
           {head}
-          {control}
+          {hasError ? (
+            <FieldErrorBubble id={noteId} error={error} pulse={bubblePulse}>
+              {control}
+            </FieldErrorBubble>
+          ) : (
+            control
+          )}
         </div>
       ) : (
         <>
@@ -97,12 +114,12 @@ export function Field({
           {control}
         </>
       )}
-      {hasError ? (
+      {hasError && !inline ? (
         <p id={noteId} className="flex items-center gap-2 type-body text-due">
           <CircleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
           <span>{error}</span>
         </p>
-      ) : hasHint ? (
+      ) : hasHint && !(hasError && inline) ? (
         <p id={noteId} className="type-body text-ink-muted">
           {hint}
         </p>

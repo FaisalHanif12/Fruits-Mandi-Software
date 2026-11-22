@@ -307,6 +307,7 @@ fn a_capital_entry_is_edited_and_cancelled_by_reversal() {
             version: row.version,
             entry: VoucherEntry::CapitalIn(capital(b, "30,000", "10-10-2026")),
             reason: "typing mistake".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -326,6 +327,7 @@ fn a_capital_entry_is_edited_and_cancelled_by_reversal() {
             version: row.version,
             entry: VoucherEntry::CapitalOut(capital(b, "30,000", "10-10-2026")),
             reason: String::new(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -581,6 +583,7 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
             version: row.version,
             entry: VoucherEntry::KhataOut(k_out(family, "8,000")),
             reason: "typing".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -1060,6 +1063,7 @@ fn a_general_is_edited_and_cancelled_and_the_buyer_is_matched_again() {
                 gl(w.rahim, "", "1,500"),
             ])),
             reason: "typing".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )

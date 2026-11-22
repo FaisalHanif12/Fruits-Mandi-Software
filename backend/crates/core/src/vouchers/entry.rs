@@ -332,8 +332,16 @@ pub struct VoucherEditInput {
     pub version: i64,
     /// The new values. Its type must be the voucher's type.
     pub entry: VoucherEntry,
-    /// Why, for the audit log. Empty if none.
+    /// Why, for the audit log. Required (`ERR_REASON_REQUIRED`) for a وصولی, ادائیگی or پیشگی on
+    /// any day, today included (PRD FR-15.3, v1.55); for the other types only when the voucher is
+    /// not of today.
     pub reason: String,
+    /// The Owner's sign (دستخط), required for a وصولی, ادائیگی or پیشگی on any day
+    /// (`ERR_SIGN_REQUIRED`, `ERR_SIGN_WRONG`, PRD FR-15.3 v1.55, FR-21.4). It may be left empty only
+    /// when the day of the voucher was reopened by a reopen-and-fix that already took the sign. The
+    /// other types ignore it. The review (`vouchers_edit_preview`) never checks it.
+    #[serde(default)]
+    pub sign: String,
     /// True after the user said yes to "کیا یہ اندراج درست ہے؟" (PRD FR-6.7). Needed when the edit
     /// takes cash in hand below 0, for example a smaller receipt.
     #[serde(default)]

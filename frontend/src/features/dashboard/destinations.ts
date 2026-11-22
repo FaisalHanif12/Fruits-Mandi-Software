@@ -14,6 +14,8 @@ export type Destination =
   | { kind: 'bikri-book'; id?: number }
   | { kind: 'bikri-today' }
   | { kind: 'stock' }
+  /** The party ledgers screen of the بکری area: each party's balance, day by day (PRD FR-12.43, plan 93 T5). */
+  | { kind: 'party-ledgers' }
   | { kind: 'cashbook' }
   | { kind: 'trips' }
   | { kind: 'gardens' }
@@ -137,6 +139,9 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'stock':
         void navigate({ to: '/bikri/stock' });
+        return;
+      case 'party-ledgers':
+        void navigate({ to: '/bikri/party-ledgers' });
         return;
       case 'cashbook':
         void navigate({ to: '/rokar' });

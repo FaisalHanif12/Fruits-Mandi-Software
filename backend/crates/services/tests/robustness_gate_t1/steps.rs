@@ -1649,6 +1649,7 @@ fn voucher_edit(u: &mut U, p: u8, amount: u16) -> R {
             version: version(u, "vouchers", id),
             entry,
             reason: "edit".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: true,
         },
     )?;

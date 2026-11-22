@@ -152,8 +152,18 @@ vouchers-field-narration = Narration
 # review: pending
 vouchers-field-edit-reason = Reason for the change
 
+# The box that asks why and the Owner's sign when a saved voucher is changed (PRD FR-15.3, plan 92).
 # review: pending
-vouchers-edit-reason-hint = Optional. The reason is kept in the record of the change.
+vouchers-edit-sign-title = Save the changes?
+
+# review: pending
+vouchers-edit-sign-text = Write why this entry is being changed, and the Owner's { -dastakhat }. The changes are saved only after that.
+
+# review: pending
+vouchers-edit-sign-label = { -dastakhat }
+
+# review: pending
+vouchers-edit-sign-hint = Only the Owner's { -dastakhat } saves the changes.
 
 ## What the backend says about the entry on the form (PRD FR-6.7, FR-7.68, FR-15.5, FR-15.12).
 

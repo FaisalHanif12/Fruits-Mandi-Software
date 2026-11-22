@@ -31,7 +31,7 @@ import { useEscapeDispatcher } from '../../shared/keyboard';
 import { Button, CashConfirmDialog } from '../../shared/ui';
 import { AppShell } from '../layout/AppShell';
 import { MainNav } from '../layout/MainNav';
-import { ModuleMenu } from '../layout/ModuleMenu';
+import { ModuleTabs } from '../layout/ModuleMenu';
 import { GalleryLocalization } from './GalleryLocalization';
 import { SAMPLE_USER } from './sample';
 
@@ -52,8 +52,8 @@ export function BikriPage() {
   return (
     <AppShell
       nav={<MainNav current="bikri" onSelect={() => undefined} onSignOut={() => undefined} />}
-      moduleMenu={
-        <ModuleMenu
+      sectionTabs={
+        <ModuleTabs
           current={
             devFlag('today')
               ? 'today'

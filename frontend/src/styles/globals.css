@@ -118,6 +118,17 @@ body {
   margin-block-end: calc(-1 * var(--chat-corner));
 }
 
+/* The page and its panels scroll by wheel, trackpad, keys and drag, but show no scroll line: on Mac and on Windows
+   (Umar, 22-11-2026, plan 93 T4). One rule for the main screen area and the inner panels of a screen. A data grid
+   (AG Grid) and a wide table that scrolls sideways keep their own bars: it is not used on them. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* The boxes of a report or an analytics filter bar (plan 59, NFR-USE-16). As many columns as fit the
    free width, none narrower than `--field-filter-grid-min-w`, so a select never squeezes its text onto
    two lines that overflow the box, in Urdu or in English. The boxes that do not fit go to the next row.

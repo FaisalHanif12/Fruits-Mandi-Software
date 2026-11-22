@@ -24,13 +24,28 @@ export function registerFocusRegion(region: FocusRegion, element: HTMLElement): 
   };
 }
 
-/** Moves focus into a region: its current item, else its first field. True when it moved. */
+/** The row of tabs of a section (PRD FR-5.3, v1.56) marks itself with this; it is not a field of the screen. */
+const TABS_MARK = '[data-section-tabs]';
+
+/** The first element of `selector` in `element` that is not in the tab row of a section. */
+function firstOutsideTabs(element: HTMLElement, selector: string): HTMLElement | null {
+  return (
+    Array.from(element.querySelectorAll<HTMLElement>(selector)).find(
+      (candidate) => candidate.closest(TABS_MARK) === null,
+    ) ?? null
+  );
+}
+
+/**
+ * Moves focus into a region: its current item, else its first field. True when it moved. The tab row of a
+ * section sits in the title row of the screen, but it is the way in to other screens, not a field of this one:
+ * the arrow from a menu, and the arrow down from the tabs, land on the screen's own first field.
+ */
 export function focusRegion(region: FocusRegion): boolean {
   const element = regions.get(region)?.at(-1);
   if (element === undefined) return false;
   const target =
-    element.querySelector<HTMLElement>('[aria-current="page"]') ??
-    element.querySelector<HTMLElement>(FOCUSABLE);
+    firstOutsideTabs(element, '[aria-current="page"]') ?? firstOutsideTabs(element, FOCUSABLE);
   if (target === null) return false;
   target.focus();
   return document.activeElement === target;

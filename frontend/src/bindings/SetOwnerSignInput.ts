@@ -9,6 +9,11 @@ export type SetOwnerSignInput = {
    */
   password: string;
   /**
+   * The sign the Owner has now, typed again (plan 92). Checked after the password. Left out, it is
+   * empty and refused with `ERR_SIGN_REQUIRED`.
+   */
+  current_sign: string;
+  /**
    * The new sign (دستخط): 1 to 40 characters, trimmed.
    */
   sign: string;

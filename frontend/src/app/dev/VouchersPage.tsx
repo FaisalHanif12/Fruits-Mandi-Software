@@ -12,7 +12,7 @@ import { VoucherPage } from '../../features/vouchers/pages/VoucherPage';
 import { asScreenType } from '../../features/vouchers/screen-type';
 import { AppShell } from '../layout/AppShell';
 import { MainNav } from '../layout/MainNav';
-import { ModuleMenu } from '../layout/ModuleMenu';
+import { ModuleTabs } from '../layout/ModuleMenu';
 import { SAMPLE_USER } from './sample';
 
 const SAMPLE_DATE = '10-10-2026';
@@ -27,7 +27,7 @@ export function VouchersPage() {
   return (
     <AppShell
       nav={<MainNav current="bikri" onSelect={() => undefined} onSignOut={() => undefined} />}
-      moduleMenu={<ModuleMenu current={type} onSelect={() => undefined} />}
+      sectionTabs={<ModuleTabs current={type} onSelect={() => undefined} />}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}

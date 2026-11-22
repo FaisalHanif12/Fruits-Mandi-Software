@@ -11,7 +11,7 @@ import type { FirmDisplay } from '../../../bindings/FirmDisplay';
 import { LanguageSwitch } from '../../../app/layout/LanguageSwitch';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS } from '../../../shared/keyboard';
-import { BrandMark, Code } from '../../../shared/ui';
+import { Code } from '../../../shared/ui';
 import { BrandRings } from './BrandRings';
 
 interface AuthLayoutProps {
@@ -41,7 +41,6 @@ export function AuthLayout({ firm, version, children }: AuthLayoutProps) {
       <aside className="relative flex w-auth-panel shrink-0 flex-col justify-between gap-6 overflow-hidden bg-nav p-6 text-on-primary wide:w-auth-panel-wide wide:p-7">
         <BrandRings />
         <div className="relative flex flex-col gap-3">
-          <BrandMark />
           <div className="flex flex-col">
             {/* One line at every width: the panel is as wide as the name needs, and the name never
                 breaks inside (a word is never split, NFR-URD-10). */}

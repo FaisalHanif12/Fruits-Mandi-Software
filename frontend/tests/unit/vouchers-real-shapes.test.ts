@@ -365,6 +365,7 @@ describe('the screen builds the request the backend’s own test sent', () => {
     expect(real.REQUEST_EDIT_RECEIPT).toMatchObject({
       id: 2,
       version: 2,
+      sign: 'adnan',
       confirm_cash_below_zero: false,
     });
     expect(real.REQUEST_CANCEL_CASH_LENT).toMatchObject({ id: 4, version: 2 });

@@ -1,4 +1,4 @@
-### The app shell: main menu, side menu, top bar, status bar, and the "save changes?" prompt
+### The app shell: main menu, area tabs, top bar, status bar, and the "save changes?" prompt
 ### (PRD FR-5.2, FR-5.3, FR-5.5, FR-5.6, FR-7.9).
 
 # review: pending
@@ -26,14 +26,14 @@ layout-nav-backup = بیک اپ
 # review: pending
 layout-nav-settings = ترتیبات
 
-## The side menu of the { -bikri } area (PRD FR-5.3).
+## The tabs of the { -bikri } area, in the title row of its screens (PRD FR-5.3, v1.56).
 
 # review: pending
 layout-module-label = { -bikri } کا مینو
 # review: pending
 layout-module-bikri-book = { -bikri-book }
 # review: pending
-layout-module-receipt = { -wasooli } / { -agrahi }
+layout-module-receipt = { -wasooli }
 # review: pending
 layout-module-payment = { -adaigi }
 # review: pending
@@ -112,7 +112,7 @@ layout-search-none = کوئی کھاتہ نہیں ملا۔
 # review: pending
 layout-search-failed = تلاش نہیں ہو سکی۔
 
-## The side menu of the { -rokar } area (PRD 5, plan 17).
+## The tabs of the { -rokar } area, in the title row of its screens (PRD 5, plan 17, plan 93).
 
 # review: pending
 layout-rokar-label = { -rokar } کا مینو

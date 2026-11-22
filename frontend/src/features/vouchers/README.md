@@ -2,7 +2,7 @@
 
 The one voucher screen with a type list: وصولی (receipt), ادائیگی (payment) and پیشگی (advance).
 PRD FR-7.67, FR-7.68, FR-15.1 to FR-15.12, FR-6.7, FR-13.5, FR-13.8, FR-16.8 (shape), FR-19.2.
-It is one screen, not three: the side menu items and `Alt+V`, `Alt+A`, `Alt+P` open it with a type
+It is one screen, not three: the tabs of the بکری area and `Alt+V`, `Alt+A`, `Alt+P` open it with a type
 already chosen, and the old addresses (`/bikri/receipt`, `/bikri/payment`, `/bikri/advance`) go to
 `/bikri/voucher?type=...`. `&id=12` opens a saved voucher (edit while its day is open, else read
 only).
@@ -86,7 +86,7 @@ shows the words for nothing to print.
 - **Editing a saved voucher is clear (plan 89, PRD FR-7.70, FR-7.71).** The amber band (`EditBand`) of a وصولی,
   ادائیگی or پیشگی says what CAN be changed (`edit-band-can-voucher`: the amount, the account and the narration;
   only the day is fixed), not only that the day cannot move. In edit mode `VoucherForm` puts the day and the account
-  in the first row and the amount and the reason for the change in the second; the party card is drawn by the screen
+  in the first row and the amount in the second; the party card is drawn by the screen
   in the aside of `FormAside` (the picker has `showCard={false}` and says whose card it is through `onCardAccount`),
   so a tall card never pushes the amount down; the cursor starts in the amount. After the save the voucher stays on
   the screen (it is read again, `VoucherEditor` is keyed by id and version): its stamp (time, Owner, the sign when the
@@ -94,3 +94,16 @@ shows the words for nothing to print.
   the "Edited" word of its list row. A voucher of a closed day that was reopened for the fix closes again after the
   save (`finishFixSession`) and opens read only with the same stamp and mark (`SavedVoucherView`). Tests:
   `vouchers-edit-clear.test.tsx` (the three types and the closed-day path), `vouchers-edit-cancel.test.tsx`.
+
+- **Saving a change asks the reason and the Owner's sign (plan 92, PRD FR-15.3, FR-21.4, FR-7.71).** F10, Ctrl+S and
+  the button on a saved وصولی, ادائیگی or پیشگی open one box (`ReasonDialog` with its sign field, opened by
+  `useSaveFlow`: `askSign`, `confirmSign`) on any day, today included. Both fields are required; the focus starts in
+  the reason, Enter goes to the sign, Enter or F10 there saves, Esc closes the box with nothing saved and the change
+  kept. The backend checks the sign: a wrong one is told under the sign in the box and nothing is saved (no
+  lockout). The cash question (FR-6.7) comes after the box. When the day was reopened to fix this entry the reopen
+  asked both already: its reason goes with the edit, the sign goes empty (the backend took it at the reopen), and no
+  second box opens; if the backend still wants the sign the box opens. A refusal is never silent: the box shows the
+  problems of the sign and of the reason, and `shownFieldPaths(draft)` (draft.ts) lists only the fields the form
+  really draws, so every other problem shows in the notice (the reason of a payment to a seller was listed as shown
+  although it has no field, so the refusal showed nowhere). Tests: `voucher-edit-sign.test.tsx`, helper
+  `tests/helpers/edit-sign-box.ts`.

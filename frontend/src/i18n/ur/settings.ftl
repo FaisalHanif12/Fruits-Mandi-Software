@@ -137,13 +137,23 @@ settings-tab-printing = پرنٹنگ
 settings-sign-title = مالک کا { -dastakhat }
 
 # review: pending
-settings-sign-hint = بند دن کھول کر اندراج درست کرنے کے لیے صرف مالک کا { -dastakhat } چلتا ہے۔ اپنا پاس ورڈ اور نیا { -dastakhat } لکھیں۔ یہ دوبارہ نہیں دکھایا جاتا۔
+settings-sign-hint = بند دن کھول کر اندراج درست کرنے اور { -wasooli }، { -adaigi } یا { -peshgi-khata } کی تبدیلی محفوظ کرنے کے لیے صرف مالک کا { -dastakhat } چلتا ہے۔ اپنا پاس ورڈ، موجودہ { -dastakhat } اور نیا { -dastakhat } دو بار لکھیں۔ یہ دوبارہ نہیں دکھایا جاتا۔
 
 # review: pending
 settings-sign-password = آپ کا پاس ورڈ
 
 # review: pending
+settings-sign-current = موجودہ { -dastakhat }
+
+# review: pending
 settings-sign-new = نیا { -dastakhat }
+
+# review: pending
+settings-sign-new-again = نیا { -dastakhat } دوبارہ لکھیں
+
+# The two new signs typed in Settings are not the same. Nothing was sent (PRD Section 21, plan 92).
+# review: pending
+settings-sign-mismatch = دونوں نئے { -dastakhat } ایک جیسے نہیں ہیں۔
 
 # review: pending
 settings-sign-button = { -dastakhat } تبدیل کریں

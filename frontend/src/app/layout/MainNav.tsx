@@ -88,7 +88,7 @@ export function MainNav({ current: screenArea, onSelect, onSignOut }: MainNavPro
       {/* The mark of the app, with its name in the wide menu. In the narrow rail it stands alone, and it
           gives way at the smallest window, where the twelve items need the room (NFR-USE-15). */}
       <div className="flex items-center justify-center gap-3 pb-3 normal:justify-start normal:px-3 shortest:hidden">
-        <BrandMark size="sm" />
+        <BrandMark />
         <p className="type-section hidden whitespace-nowrap text-on-primary normal:block">
           {l10n.getString('common-app-name')}
         </p>

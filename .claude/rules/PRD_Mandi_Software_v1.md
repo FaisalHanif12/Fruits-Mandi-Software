@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.54 (functional requirements; Umar's backup key request of 21-11-2026; Umar's seller paid-on-the-spot request of 21-11-2026 (plan 91); Umar's other-shop goods request of 21-11-2026 (plan 90); Umar's buyer peshgi request of 20-11-2026 (plan 88); his capital card request of 20-11-2026 (plan 87); his closed-day decisions of 20-11-2026 (plan 85); his analytics measure request of 20-11-2026 (plan 84); his sales page request of 20-11-2026 (plan 83); his garden form request of 20-11-2026 (plan 81); the plan 80 gate decisions of 19-11-2026; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plans 73, 74 and 75, two changes in 75) and 14-11-2026 (plan 76, eleven points; plan 77) and 17-11-2026 (plan 78, twenty points) and 18-11-2026 (plan 79, seven points), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.56 (functional requirements; Umar's top tabs decisions of 22-11-2026 (plan 93; plan 94 cancelled); Umar's voucher edit request of 22-11-2026 (plan 92); Umar's backup key request of 21-11-2026; Umar's seller paid-on-the-spot request of 21-11-2026 (plan 91); Umar's other-shop goods request of 21-11-2026 (plan 90); Umar's buyer peshgi request of 20-11-2026 (plan 88); his capital card request of 20-11-2026 (plan 87); his closed-day decisions of 20-11-2026 (plan 85); his analytics measure request of 20-11-2026 (plan 84); his sales page request of 20-11-2026 (plan 83); his garden form request of 20-11-2026 (plan 81); the plan 80 gate decisions of 19-11-2026; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plans 73, 74 and 75, two changes in 75) and 14-11-2026 (plan 76, eleven points; plan 77) and 17-11-2026 (plan 78, twenty points) and 18-11-2026 (plan 79, seven points), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 12 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.54 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.56 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.22 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.13 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.27 |
@@ -430,7 +430,7 @@ FR-5.3 [C] **The بکری area has its own side menu.** When the user opens بک
 | # | Urdu | What it opens | Section |
 |---|---|---|---|
 | 1 | بکری بک | Sales voucher | 12 |
-| 2 | وصولی / اگراہی | Receipts from buyers | 15.2 |
+| 2 | وصولی | Receipts from buyers (v1.56: the label is وصولی only) | 15.2 |
 | 3 | ادائیگی | Payments to sellers, transporters and others | 15.3 |
 | 4 | پیشگی کھاتہ | Advances to sellers | 15.4 |
 | 5 | پچھلی بکری | Past Sales: today's بکری, then earlier days a week at a time (v1.35) | 12.7 |
@@ -440,6 +440,8 @@ FR-5.3 [C] **The بکری area has its own side menu.** When the user opens بک
 خریداری (purchases) is in the مارکیٹ سفر section from v1.6, because every purchase belongs to a trip (12.10).
 
 Items 2, 3 and 4 open one voucher screen, with that type already chosen (FR-7.67, FR-15.10).
+
+[C] (Umar, 22-11-2026, v1.56, plan 93) **The second menu is a row of tabs at the top, not a side menu.** In بکری and روکڑ (16) the items above are tabs in the page's title row, each with its icon and short label; the active tab is the page title and is marked clearly. The width the side menu took goes to the screen. At a narrow window the tabs that do not fit go into a "مزید" (More) menu, never onto a second line. Every section with sub-pages uses the same tabs. Example: on بکری بک the row reads بکری بک | وصولی | ادائیگی | پیشگی کھاتہ | پچھلی بکری | پارٹی کھاتے | باقی مال.
 
 FR-5.4 [A] Global search (`Ctrl+K`, or the search box at the top) finds any account, بکری number, truck number (an old بکری only, v1.34), voucher number or screen, by Urdu name, English name or code, with the smart search of FR-7.40.
 
@@ -599,7 +601,7 @@ FR-7.71 [C] **Every edit is stamped where it happened.** Umar (31-10-2026): an e
 - A "تبدیلیوں کی تاریخ" (Edit history) button lists every version: time, who, reason, and old against new for each field.
 - A print of an edited entry, and of a report that holds it, says "نظر ثانی شدہ: 31-10-26" (Revised) in its header.
 - The time and name come from the audit log written in the same save (FR-21.3, NFR-SEC-5). Who is the signed-in user's display name [A]. Nothing is typed for the stamp and it cannot be changed or removed.
-- [C] (Umar, 13-11-2026, v1.36) An edit made through a reopened day (FR-21.4) also shows the sign given when the day was opened, everywhere its stamp shows: "تبدیل شدہ: 13-11-26 12:40 صبح، Owner، دستخط: adnan", with the reason. The edit history lists the sign of each such version. An edit of an open day has no sign.
+- [C] (Umar, 13-11-2026, v1.36) An edit made through a reopened day (FR-21.4) also shows the sign given when the day was opened, everywhere its stamp shows: "تبدیل شدہ: 13-11-26 12:40 صبح، Owner، دستخط: adnan", with the reason. The edit history lists the sign of each such version. An edit of an open day has no sign, except an edit of a وصولی, ادائیگی or پیشگی, which always carries one (FR-15.3, v1.55).
 
 ### 7.2 Arrow-key navigation [C]
 
@@ -625,7 +627,7 @@ FR-7.15 [C] **Forms.** In normal fields, `↑` and `↓` move to the field above
 
 FR-7.16 [C] **Pickers.** Typing in a picker opens its list of matches. While the list is open, `↑` `↓` move through matches and `Enter` picks. While the list is closed, `↑` `↓` move between fields like any other field. `Alt+↓` opens the full list without typing. [C] (Umar, 01-11-2026, v1.14) The list opens as soon as the picker gets the focus, by click or by keyboard, with recent first (FR-7.41). It replaces the v1.8 rule that arriving by keyboard never opens it. While it is open, `↑` `↓` choose in the list, `Enter` picks and moves to the next field, `←` `→` and `Tab` leave the field, and `Esc` closes the list; with the list closed, `↑` `↓` move between fields and rows again. Example: in a بکری line, `Enter` from the qty lands on the buyer box and its list is already open.
 
-FR-7.17 [C] **Menus, lists and reports.** In the main bar and the بکری side menu, `↑` `↓` move between items and `Enter` opens. `←` moves from the menu into the screen, `→` moves back to the menu. In lists and reports, `↑` `↓` move between rows, `Enter` opens the selected row, `Page Up` / `Page Down` move a page.
+FR-7.17 [C] **Menus, lists and reports.** In the main bar, `↑` `↓` move between items and `Enter` opens. `←` moves from the menu into the screen, `→` moves back to the menu. In the top tabs of a section (FR-5.3, v1.56), `←` `→` move between tabs in the reading direction, `Enter` opens, and `↓` moves into the screen. In lists and reports, `↑` `↓` move between rows, `Enter` opens the selected row, `Page Up` / `Page Down` move a page.
 
 FR-7.18 [C] **Esc, in this order:** close an open list or dialog; else cancel typing in the current cell; else leave the screen (asking first if there is unsaved work, FR-7.9).
 
@@ -1109,7 +1111,7 @@ One card per partner: today's share, this month's share, this year's share (from
 
 - Today's بکری: number, seller, خام بکری, صافی بکری, status.
 - Top 10 oldest buyer dues: name, city, amount, days, leaving out anyone in the dead amount.
-- Quick action buttons: نئی بکری, وصولی, ادائیگی, پیشگی, خرچہ, روزنامچہ.
+- Quick action buttons: نئی بکری, وصولی, ادائیگی, پیشگی, خرچہ, روزنامچہ; and from v1.56 (Umar, 22-11-2026, plan 93) پچھلی بکری and پارٹی کھاتے, after خرچہ, with no shortcut key of their own.
 - آج کے کام: the attention list (FR-7.44), each item one click from its screen.
 
 ### 9.4 Mini charts [A]
@@ -1319,6 +1321,7 @@ FR-11.7 [C] چکتا کھاتہ follows the same rules as any buyer (6% by defau
 FR-11.8 [A] A "test a rule" box: pick seller, buyer, item, qty and rate, and see which rule wins and the amount, before saving the rule.
 FR-11.9 [A] Seller commission "فی لاٹ" is charged once per lot, on the first sale line of the lot's first posting. Later sales of that lot do not charge it again. [C] If an edit removes that line, the charge moves to the first remaining line of that lot in that posting, with its stored method and value (no new rule lookup), so the lot is still charged exactly once (Umar, 15-10-2026). This is the one change FR-12.20 allows on a line the user did not edit. If no line of that lot is left in that posting, the charge goes with the removed line, as before. Example: a per-lot commission of 500 sits on line 1 of 2; line 1 is removed; line 2 now carries 500, and the lot's seller commission includes 500 once.
 FR-11.10 [A] Lot charges (مزدوری, منشیانہ, فون) are suggested by the rules but are always editable amounts on the lot. [C] Umar (15-10-2026): the default is 6% for every seller, buyer and item, and the commission agent can change it on the بکری itself. So seller commission, buyer commission and لاگا are editable on each sale line by default (the "allow override" setting starts on; the Owner can turn it off in Section 21). Example: on one line he types 4% for the seller and 5% for the buyer instead of 6%. An edited value is saved with method "دستی" (manual). A rule (11.1) is for a rate that should apply every time, for example رحیم always 5%.
+- (v1.56, plan 94: commission and لاگا in the lot row was decided and then cancelled by Umar the same day, 22-11-2026. Commission and لاگا stay on each sale line, as above.)
 
 ---
 
@@ -1824,6 +1827,7 @@ There is no mode field: all money is روکڑ, the shop's one cash account, in t
 FR-15.1 [A] Several vouchers can be entered one after another in a list, with a running total, and saved together (each is its own posting event).
 FR-15.2 [A] Print a receipt slip with the amount in words (FR-19.7).
 FR-15.3 [A] Edit while its date is open (reversal + new posting), or in a closed day through FR-21.4; cancel with reason; all effects reversed (Section 6). Edits follow FR-7.70 and are stamped (FR-7.71).
+- [C] (Umar, 22-11-2026, v1.55, plan 92) Saving an edited وصولی, ادائیگی or پیشگی, on any day, opens a box that asks the reason and the Owner's sign (FR-21.4); both are required. A wrong sign shows "دستخط درست نہیں" and saves nothing, with no lockout. The right sign saves the edit, and the entry shows its stamp with the time, the reason and the sign (FR-7.71). On a closed day the reason and sign are asked once, for the reopen and the edit together. Example: ادائیگی 1 of 16-11-26 changed from 100,000 to 110,000; with "adnan" it saves and shows "تبدیل شدہ".
 
 ### 15.2 وصولی / اگراہی (receipt from buyer) [C]
 
@@ -2386,7 +2390,7 @@ Example: the laptop is stolen on 15-03-2028. On a new laptop the Owner installs 
 | Overrides | Allow line-level commission and لاگا override (on / off, default on, FR-11.10) |
 | Checks | Credit limit: warn or block. Rate check (FR-7.55) on or off (default off, v1.44), with its percent (default 30%). |
 | Day | Closing time; auto day close on or off |
-| Security | Partner code (FR-17.11): set, change, reset; the Owner's sign for reopening a day (FR-21.4), default "adnan" (v1.36) |
+| Security | Partner code (FR-17.11): set, change, reset; the Owner's sign for reopening a day (FR-21.4), default "adnan" (v1.36), changed with the password and the current sign (v1.55) |
 | سوال پوچھیں (Ask the app) | On or off; the OpenRouter key (kept in Credential Manager, shown as •••• and its last 4 characters); the model (default `openai/gpt-6-luna`); test the connection; today's count of 20; the question log (FR-7.85, v1.16) |
 | Backup | Cloud account details, local backup folder, USB on / off, closing time |
 | Printing | Paper size per document (A4, A5, 80 mm), printer, copies. Every print uses digits 0 to 9 (FR-19.6, v1.32). |
@@ -2398,7 +2402,7 @@ FR-21.1 [A] **Day close (دن بند کریں).** Closes the oldest open day (an
 FR-21.2 [A] **Reopen.** Reopening needs a reason and the Owner's sign, as FR-21.4 (v1.45). Reopening a date reopens that date and every later date (the "closed up to" date moves back to the day before it). It is written to the audit log. A month that has been month-closed cannot be reopened until its month close is reversed by the Owner.
 FR-21.3 [A] **Audit log.** Every create, edit, cancel, login, rule change, share change, opening change, day close, reopen, month close and restore: user, time, screen, record, old value, new value, reason. Read-only. Owner can filter it.
 FR-21.4 [C] **Reopen and fix in one step.** (Added in v1.13.) Umar (31-10-2026): an entry of a closed day is corrected by reopening, fixing and closing again. On such an entry the Edit button reads "دن کھولیں اور درست کریں" (Reopen the day and fix). It asks for the reason and the sign (دستخط), reopens that date and every later closed date (FR-21.2), opens the entry for editing, and after the save, or when the user leaves without saving, closes the same days again in order with the checks of FR-21.1. If a check fails, the days stay open, and the attention list (FR-7.44) says which. A month that is month-closed is refused until its month close is reversed (FR-21.2). Reopen and close again are both in the audit log.
-- [C] **The sign** (Umar, 13-11-2026, v1.36). Below the reason the box asks for the sign. Only the Owner's sign opens the day: "adnan" by default [A], typed in English letters (case and spaces at the ends do not matter) or as عدنان in Urdu letters [A]. Anything else is refused with "دستخط درست نہیں" (The sign is not correct) under the field, and nothing opens. Each wrong sign is in the audit log. The sign is saved with the reason in the audit entry of the reopen and of every edit saved in that fix, and shows in the edit stamp (FR-7.71). The Owner can change his sign in Settings, Security, with his password [A]. Example: the munshi types reason "ریٹ غلط تھا" and sign "adnan": the day opens; with sign "munshi" it stays closed.
+- [C] **The sign** (Umar, 13-11-2026, v1.36). Below the reason the box asks for the sign. Only the Owner's sign opens the day: "adnan" by default [A], typed in English letters (case and spaces at the ends do not matter) or as عدنان in Urdu letters [A]. Anything else is refused with "دستخط درست نہیں" (The sign is not correct) under the field, and nothing opens. Each wrong sign is in the audit log. The sign is saved with the reason in the audit entry of the reopen and of every edit saved in that fix, and shows in the edit stamp (FR-7.71). The Owner can change his sign in Settings, Security, with his password and his current sign, then the new sign typed twice (Umar, 22-11-2026, v1.55). Example: the munshi types reason "ریٹ غلط تھا" and sign "adnan": the day opens; with sign "munshi" it stays closed.
 
 ---
 
@@ -2948,6 +2952,8 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.37 | 13-11-2026 | Umar's decision of 13-11-2026 (plan 74): one party's statement on پارٹی کھاتے shows 30 days at a time with arrows, a go-to-date, a day opened in place under its row, and a compact statement print for any period (new FR-12.47). No golden number changed. No money rule changed. |
 | 1.43 | 17-11-2026 | Umar's owner review round 3 of 17-11-2026 (plan 78, twenty points U1 to U20), with his answers: the print menu (FR-12.12), one purpose per print with the party's name in the title and clear words (FR-19.15, FR-19.12, glossary پچھلا بقایا and ابتدائی بقایا), the whole sale print as a sellers table and a buyers table (FR-19.15), ادھاری تفصیل as one row per buyer of the day with the total owed by all (R5), the compact statement (FR-12.47), the opening balance in every statement and history (FR-19.16), one row per بکری in party history (FR-19.8), the advance tick per seller and off by default (FR-12.23, 12.3, 4.4), the lot dropdown in the summary (FR-12.49), three load buttons that replace the ready lots of trips and gardens (FR-12.50, FR-12.39, FR-12.40), default or custom shares on a trip or garden (FR-12.29), a garden with several items (12.11), a goods filter on the commission page (FR-9.3), روکڑ from the first day (FR-16.14), the Back button (FR-7.92), the question box that never moves (FR-7.73), years of data kept tidy (FR-19.17); advances to sellers in the partners' totals and statement (FR-17.13, FR-17.9, FR-17.12, C22, C28), the rent relief with the sign (FR-12.51), where the opening capital is and where the capital is now (17.1, FR-16.14). Golden numbers changed with Umar's approval (17-11-2026, B4): E2E-34 and E2E-34b partner totals −6,296 / −4,722 / −4,722, E2E-37 adds two lines for ب, E2E-40 4,040 / 24,460 / −2,100, E2E-40b −33,000 / −500 / −4,500, E2E-41 2,272 / 52,364 / −276, because رحیم's opening advance is open in them. No trial balance changed. |
 | 1.44 | 18-11-2026 | Umar's request of 18-11-2026 (plan 79, seven points), approved by Umar with the defaults of its Q1 and Q2: every party filter starts at سب (FR-19.1); every dashboard tile opens its own page that does its job (FR-9.1); the seller dues page (FR-9.6), the total dues page (FR-9.7) and the cash sales page with the tile آج کی نقدی in place of the health check tile (FR-9.8, 9.1, NFR-OBS-5); کل اگراہی includes open money lent (9.1, FR-7.76); only critical warnings on the بکری screen (FR-12.6), the rate check off by default (FR-7.55, Section 21); the rate hint retired (FR-7.53, 12.4, E2E-26 drops its hint part); the opening line on the new pages (FR-19.16); the buyer slip with branding and no repeated total (FR-19.15). No golden number changed. No money rule changed. |
+| 1.56 | 22-11-2026 | Umar's decisions (plans 93 and 94): the second menu of a section is a row of top tabs, and the label is وصولی (FR-5.3, FR-7.17); commission in the lot row decided and then cancelled the same day (FR-11.10 unchanged); پچھلی بکری and پارٹی کھاتے among the dashboard quick actions (9.3). No golden number changed. |
+| 1.55 | 22-11-2026 | Umar's request (plan 92): saving an edited وصولی, ادائیگی or پیشگی asks the reason and the sign (FR-15.3, FR-7.71); the sign is changed with the password and the current sign (FR-21.4). No golden number changed. |
 | 1.54 | 21-11-2026 | Umar's request: see the backup key again with the password and sign, and print a new paper (FR-20.10). No golden number changed. |
 | 1.53 | 21-11-2026 | Umar's request (plan 91): a seller's money paid on the spot, spread into his lots' نقد, with his balance lines on screen and print (FR-12.23). No golden number changed. |
 | 1.52 | 21-11-2026 | Umar's request (plan 90): a sale in another shop takes only goods set aside for another shop, with the shop name filled; above it is refused (FR-12.41). No golden number changed. |

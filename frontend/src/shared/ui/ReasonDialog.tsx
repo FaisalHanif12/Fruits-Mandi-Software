@@ -13,13 +13,22 @@
 // - `signLabel` adds a second required field below the reason: the Owner's sign (PRD FR-21.4, plan 73).
 //   It is raw text, never converted from Roman letters to Urdu (the sign is compared as typed), and Enter
 //   in the reason goes on to it. A sign the backend refuses is told under it and nothing opens.
+// - `saveKey` makes F10 act as the action button while the box is open (the box of a saved voucher's change, plan 92):
+//   the box takes the entry keys, so the screen under it does not answer F10 as well.
 
 import { Localized } from '@fluent/react';
 import { AlertDialog } from 'radix-ui';
 import { useRef, useState, type ReactNode } from 'react';
 import type { UiError } from '../../bindings/UiError';
 import { useUiLanguage } from '../i18n';
-import { SHORTCUTS, runEscape, useFormNavigation } from '../keyboard';
+import {
+  ModalLayerContext,
+  SHORTCUTS,
+  runEscape,
+  useFormNavigation,
+  useModalLayer,
+  useShortcut,
+} from '../keyboard';
 import { Button, type ButtonVariant } from './Button';
 import { ErrorNotice } from './ErrorNotice';
 import { Field } from './Field';
@@ -63,6 +72,8 @@ interface ReasonDialogProps {
   confirmDisabled?: boolean;
   /** What the reason field starts with, for a box that is opened again after a step between. */
   initialReason?: string;
+  /** F10 does what the action button does. Default: no. */
+  saveKey?: boolean;
 }
 
 function ReasonForm({
@@ -80,6 +91,7 @@ function ReasonForm({
   confirmVariant = 'danger',
   confirmDisabled = false,
   initialReason = '',
+  saveKey = false,
   onClose,
 }: Omit<ReasonDialogProps, 'open' | 'onOpenChange' | 'title'> & { onClose: () => void }) {
   const [reason, setReason] = useState(initialReason);
@@ -97,6 +109,7 @@ function ReasonForm({
     else onConfirm(trimmed);
   };
   const navigation = useFormNavigation(submit);
+  useShortcut(SHORTCUTS.save, submit, { enabled: saveKey });
   const missing = tried && reason.trim() === '';
   const signMissing = tried && asksSign && sign.trim() === '';
   return (
@@ -171,7 +184,13 @@ function ReasonForm({
         <Button shortcut={SHORTCUTS.back} onClick={onClose}>
           <Localized id="common-back" />
         </Button>
-        <Button variant={confirmVariant} busy={busy} disabled={confirmDisabled} onClick={submit}>
+        <Button
+          variant={confirmVariant}
+          busy={busy}
+          disabled={confirmDisabled}
+          {...(saveKey ? { shortcut: SHORTCUTS.save } : {})}
+          onClick={submit}
+        >
           {confirmLabel}
         </Button>
       </div>
@@ -183,6 +202,8 @@ export function ReasonDialog({ open, onOpenChange, title, ...form }: ReasonDialo
   const { language, direction } = useUiLanguage();
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  // A box that takes F10 holds the screen's entry keys back while it is open (modalLayer.ts).
+  const layer = useModalLayer(open && form.saveKey === true);
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
@@ -215,12 +236,14 @@ export function ReasonDialog({ open, onOpenChange, title, ...form }: ReasonDialo
         >
           <AlertDialog.Title className="type-section">{title}</AlertDialog.Title>
           {open ? (
-            <ReasonForm
-              {...form}
-              onClose={() => {
-                onOpenChange(false);
-              }}
-            />
+            <ModalLayerContext.Provider value={form.saveKey === true ? layer : null}>
+              <ReasonForm
+                {...form}
+                onClose={() => {
+                  onOpenChange(false);
+                }}
+              />
+            </ModalLayerContext.Provider>
           ) : null}
         </AlertDialog.Content>
       </AlertDialog.Portal>

@@ -355,7 +355,7 @@ proptest! {
                         }).unwrap();
                         prop_assert!(preview.errors.is_empty());
                         let saved = vouchers::edit(&w.env.ctx, &w.owner, &VoucherEditInput {
-                            id, version: row.version, entry, reason: "x".into(), confirm_cash_below_zero: true,
+                            id, version: row.version, entry, reason: "x".into(), sign: "adnan".into(), confirm_cash_below_zero: true,
                         }).unwrap();
                         prop_assert_eq!(signed(preview.new_balance), signed(saved.new_balance));
                     }
@@ -464,7 +464,7 @@ proptest! {
                             replacing_voucher_id: Some(id),
                         }).unwrap();
                         let edited = vouchers::edit(&w.env.ctx, &w.owner, &VoucherEditInput {
-                            id, version: row.version, entry, reason: "x".into(), confirm_cash_below_zero: true,
+                            id, version: row.version, entry, reason: "x".into(), sign: "adnan".into(), confirm_cash_below_zero: true,
                         });
                         match edited {
                             Ok(saved) => {

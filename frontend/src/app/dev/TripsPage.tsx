@@ -60,7 +60,7 @@ export function TripsPage() {
   return (
     <AppShell
       nav={<MainNav current="trips" onSelect={() => undefined} onSignOut={() => undefined} />}
-      moduleMenu={null}
+      sectionTabs={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}

@@ -256,7 +256,7 @@ pub fn voucher_review(
                 .ok_or_else(|| ServiceError::Data("a saved voucher has no posting".to_owned()))?,
         },
         |conn| crate::vouchers::edit::row_value(conn, id),
-        |tx| crate::vouchers::edit::edit_in(ctx, &actor, tx, window, &asked),
+        |tx| crate::vouchers::edit::edit_in(ctx, &actor, tx, window, &asked, None),
     );
     preview_of(ctx, entry_date, outcome, diff::changes_of_rows)
 }

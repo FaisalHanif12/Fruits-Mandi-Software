@@ -71,14 +71,19 @@ pub async fn settings_set_number_grouping<R: tauri::Runtime>(
 pub struct SetOwnerSignInput {
     /// The Owner's password, to prove it is he who changes his sign.
     pub password: String,
+    /// The sign the Owner has now, typed again (plan 92). Checked after the password. Left out, it is
+    /// empty and refused with `ERR_SIGN_REQUIRED`.
+    #[serde(default)]
+    pub current_sign: String,
     /// The new sign (دستخط): 1 to 40 characters, trimmed.
     pub sign: String,
 }
 
 /// Changes the Owner's sign that opens a closed day to fix an entry (PRD FR-21.4, plan 73), proved by
-/// his password. The change is in the audit log; the sign is not. Errors: `ERR_REQUIRED`,
-/// `ERR_TEXT_TOO_LONG` (value `max`) and `ERR_CONTROL_CHARS` on `sign`; `ERR_REQUIRED` or
-/// `ERR_WRONG_PASSWORD` (value `tries_left`) on `password`; `ERR_LOCKED_WAIT` (value `seconds`).
+/// his password and his current sign. The change is in the audit log; the sign is not. Errors:
+/// `ERR_REQUIRED`, `ERR_TEXT_TOO_LONG` (value `max`) and `ERR_CONTROL_CHARS` on `sign`;
+/// `ERR_REQUIRED` or `ERR_WRONG_PASSWORD` (value `tries_left`) on `password`; `ERR_LOCKED_WAIT`
+/// (value `seconds`); `ERR_SIGN_REQUIRED` or `ERR_SIGN_WRONG` on `current_sign`.
 #[tauri::command]
 pub async fn settings_set_owner_sign<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -90,6 +95,7 @@ pub async fn settings_set_owner_sign<R: tauri::Runtime>(
             ctx,
             &actor,
             &Secret::new(input.password.as_str()),
+            &input.current_sign,
             &input.sign,
         )
     })

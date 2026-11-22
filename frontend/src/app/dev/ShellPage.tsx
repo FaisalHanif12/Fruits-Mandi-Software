@@ -23,7 +23,7 @@ import { GalleryLocalization } from './GalleryLocalization';
 import { AppShell } from '../layout/AppShell';
 import { MainNav, type MainNavId } from '../layout/MainNav';
 import { SAMPLE_USER } from './sample';
-import { ModuleMenu, type ModuleMenuId } from '../layout/ModuleMenu';
+import { ModuleTabs, type ModuleMenuId } from '../layout/ModuleMenu';
 
 const SAMPLE_DATE = '10-10-2026';
 
@@ -76,7 +76,7 @@ function Content() {
   return (
     <AppShell
       nav={<MainNav current={main} onSelect={setMain} onSignOut={() => undefined} />}
-      moduleMenu={main === 'bikri' ? <ModuleMenu current={module} onSelect={setModule} /> : null}
+      sectionTabs={main === 'bikri' ? <ModuleTabs current={module} onSelect={setModule} /> : null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}

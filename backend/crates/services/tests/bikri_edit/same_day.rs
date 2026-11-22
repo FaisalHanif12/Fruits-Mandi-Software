@@ -40,6 +40,7 @@ fn edit_voucher(
             version: voucher_version(w, id),
             entry,
             reason: "درستی".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: true,
         },
     )
@@ -91,7 +92,8 @@ fn a_same_day_seller_return_edited_after_a_ticked_bikri_stays_allowed() {
             id: back.voucher_id,
             version,
             entry: VoucherEntry::Receipt(seller_return("10-10-2026", w.rahim, "10,000")),
-            reason: String::new(),
+            reason: "x".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: true,
         },
     )

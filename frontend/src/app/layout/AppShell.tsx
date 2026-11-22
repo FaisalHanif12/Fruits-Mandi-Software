@@ -1,13 +1,15 @@
 // The frame of every screen after login (PRD FR-5.2 to FR-5.6): the main menu on the start side,
-// the top bar, the screen, the status bar, and optionally the side menu of an area. It registers
-// the menu and the screen for the arrow keys (PRD FR-7.17), and mounts the text size keys once.
+// the top bar, the screen and the status bar. The second menu of an area (بکری, روکڑ) is not a panel of the
+// frame: it is the row of tabs in the title row of the screen (PRD FR-5.3, v1.56, plan 93), given to the screen
+// here with `sectionTabs`. The shell registers the menu and the screen for the arrow keys (PRD FR-7.17), and
+// mounts the text size keys once.
 
 import type { ReactNode } from 'react';
 import { AssistantButton, AssistantDock } from '../../features/assistant';
 import { PartyReportLinks } from '../../features/reports';
 import type { VoucherSearchHit } from '../../shared/accounts';
 import { useFocusRegion } from '../../shared/keyboard';
-import { useWorkAreaStore } from '../../shared/ui';
+import { SectionTabsProvider, useWorkAreaStore } from '../../shared/ui';
 import { StatusBar, type DayState } from './StatusBar';
 import { TopBar } from './TopBar';
 import { useTextSize } from './text-size';
@@ -15,8 +17,8 @@ import { useTextSize } from './text-size';
 interface AppShellProps {
   /** The main menu, the top bar's neighbour on the start side. */
   nav: ReactNode;
-  /** The side menu of an area (the بکری side menu), between the main menu and the screen. */
-  moduleMenu?: ReactNode;
+  /** The row of tabs of the area the screen belongs to (بکری, روکڑ), drawn in the title row of the screen. */
+  sectionTabs?: ReactNode;
   userName: string;
   onLock: () => void;
   /** The user menu's "show the guide" (PRD FR-7.12). */
@@ -42,7 +44,7 @@ interface AppShellProps {
 
 export function AppShell({
   nav,
-  moduleMenu,
+  sectionTabs = null,
   userName,
   onLock,
   onGuide,
@@ -68,7 +70,6 @@ export function AppShell({
     <div className="flex h-screen flex-col overflow-hidden bg-bg text-ink">
       <div className="flex min-h-0 flex-1">
         {nav}
-        {moduleMenu}
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             userName={userName}
@@ -91,10 +92,12 @@ export function AppShell({
                 window, outside this scroll area, and the whole page scrolled (finding 29). */}
             <main
               ref={screen}
-              className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto px-6 pt-6 pb-corner short:pt-2 wide:mx-auto wide:w-full wide:max-w-page"
+              className="no-scrollbar relative min-h-0 flex-1 scroll-pb-strip overflow-auto px-6 pt-6 pb-corner short:pt-2 wide:mx-auto wide:w-full wide:max-w-page"
             >
               {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
-              <PartyReportLinks>{children}</PartyReportLinks>
+              <SectionTabsProvider value={sectionTabs}>
+                <PartyReportLinks>{children}</PartyReportLinks>
+              </SectionTabsProvider>
             </main>
             <div ref={setSlot} className="pointer-events-none absolute inset-0 z-40" />
           </div>

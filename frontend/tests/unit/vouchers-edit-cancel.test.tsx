@@ -13,12 +13,12 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import * as accountApi from '../../src/shared/accounts/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { paisaForTest } from '../helpers/paisa';
+import { saveChange } from '../helpers/edit-sign-box';
 import { fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
 import {
   fail,
   healthyBackend,
   leaveAppWindow,
-  press,
   renderApp,
   resetClientState,
   sessionUser,
@@ -233,9 +233,8 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     const amount = await labelled(language, 'vouchers-field-amount');
     await user.click(amount);
     await user.keyboard('{Control>}a{/Control}9000');
-    await user.click(await labelled(language, 'vouchers-field-edit-reason'));
-    await user.keyboard('r');
-    press('F10');
+    // F10 asks the reason and the Owner's sign in a box (plan 92); nothing is sent before they are given.
+    await saveChange(user, language, 'r');
     await waitFor(() => {
       expect(store.edits).toHaveLength(1);
     });
@@ -243,6 +242,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       id: 501,
       version: 1,
       reason: 'r',
+      sign: 'adnan',
       confirm: false,
       entry: { type: 'receipt', account_id: 21, amount: '9000' },
     });

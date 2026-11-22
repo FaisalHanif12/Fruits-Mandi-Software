@@ -63,7 +63,13 @@ export function vouchersEdit(input: {
   id: number;
   version: number;
   entry: VoucherEntry;
+  /** Why it is changed. A وصولی, ادائیگی or پیشگی always needs it (PRD FR-15.3, plan 92); the others when not of today. */
   reason: string;
+  /**
+   * The Owner's sign, as typed. A وصولی, ادائیگی or پیشگی needs it (PRD FR-15.3, FR-21.4, plan 92); it may be empty only
+   * when the day was reopened to fix this entry, which took the sign already. The other kinds of voucher leave it out.
+   */
+  sign?: string;
   confirm: boolean;
 }): Promise<VoucherSaved> {
   return callCommand<VoucherSaved>('vouchers_edit', {
@@ -72,6 +78,7 @@ export function vouchersEdit(input: {
       version: input.version,
       entry: input.entry,
       reason: input.reason,
+      ...(input.sign === undefined ? {} : { sign: input.sign }),
       confirm_cash_below_zero: input.confirm,
     },
   });

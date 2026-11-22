@@ -38,10 +38,8 @@ interface VoucherFormProps {
   onChange: (patch: Partial<VoucherDraft>) => void;
   /** What the backend refused or the preview found, with the field paths. */
   error: UiError | null;
-  /** A saved voucher is being edited: its type cannot change, and a reason for the change is asked. */
+  /** A saved voucher is being edited: its type cannot change. The reason and the sign are asked in a box on save. */
   editing: boolean;
-  editReason: string;
-  onEditReason: (reason: string) => void;
   /** The marks of the edits this voucher went through ("Before 600", plan 44); none when new. */
   marks?: EntryMarks | undefined;
   /**
@@ -73,8 +71,6 @@ export function VoucherForm({
   onChange,
   error,
   editing,
-  editReason,
-  onEditReason,
   marks,
   onCardAccount,
 }: VoucherFormProps) {
@@ -290,30 +286,15 @@ export function VoucherForm({
       )}
     </Field>
   );
-  const editReasonField = (
-    <Field
-      label={<Localized id="vouchers-field-edit-reason" />}
-      info={
-        <Localized id="vouchers-edit-reason-hint">
-          <p />
-        </Localized>
-      }
-      error={fieldError(error, 'edit_reason')}
-    >
-      {(props) => <FreeTextInput {...props} value={editReason} onChange={onEditReason} />}
-    </Field>
-  );
-
-  // A saved voucher that is being changed (plan 89): the two things the Owner comes to change, the amount and the
-  // reason for the change, stand in the first two rows beside the day and the account, so they are on screen at
-  // once; the side the money moves from (fixed for a saved voucher) comes after them.
+  // A saved voucher that is being changed (plan 89): the amount, the thing the Owner comes to change, stands in the
+  // second row beside the day and the account, so it is on screen at once; the side the money moves from (fixed for a
+  // saved voucher) comes after it. The reason of the change and the sign are asked in a box when he saves (plan 92).
   if (editing) {
     return (
       <FormGrid columns={2}>
         {dateField}
         {accountField}
         {amountField}
-        {editReasonField}
         {fromField}
         {collectorField}
         {reasonField}

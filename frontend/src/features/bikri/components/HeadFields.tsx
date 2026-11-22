@@ -27,9 +27,14 @@ interface HeadFieldsProps {
   editing?: boolean;
   /** Enter on the date: the screen moves on to the lots. */
   onDone: () => void;
+  /**
+   * A number that goes up each time the user tries to save: the error of the date, a bubble that hides after 5 s, shows
+   * again (plan 93 T8).
+   */
+  pulse?: number;
 }
 
-export function HeadFields({ error, number, editing = false, onDone }: HeadFieldsProps) {
+export function HeadFields({ error, number, editing = false, onDone, pulse }: HeadFieldsProps) {
   const stores = useBikriDraft();
   const entryDate = stores.header((state) => state.entryDate);
   const navigation = useFormNavigation(onDone);
@@ -43,6 +48,7 @@ export function HeadFields({ error, number, editing = false, onDone }: HeadField
     >
       <Field
         inline
+        bubblePulse={pulse}
         label={<Localized id="bikri-header-date" />}
         error={fieldError(error, 'header.entry_date')}
         readOnly={editing}

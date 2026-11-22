@@ -101,6 +101,7 @@ fn edit_receipt(
             version: row.version,
             entry: VoucherEntry::Receipt(input),
             reason: "ٹھیک کیا".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -459,6 +460,7 @@ fn edit_may_change_the_account_and_both_buyers_are_matched_again() {
             version: row.version,
             entry: VoucherEntry::Payment(payment(w.arshad, "1,000", "x")),
             reason: String::new(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -551,6 +553,7 @@ fn edit_of_an_advance_moves_the_adjustment() {
             }),
             // The advance is dated 01-09-26, not today, so the edit needs a reason (PRD FR-7.70).
             reason: "غلط رقم".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: true,
         },
     )
@@ -651,6 +654,7 @@ fn every_voucher_posts_cash_and_its_slip_has_no_mode_bank_or_cheque_line() {
             version: row.version,
             entry: VoucherEntry::Receipt(receipt(w.akram, "4,000")),
             reason: "رقم درست کی".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -719,7 +723,8 @@ fn the_cash_question_covers_payment_edit_and_cancel() {
             id: row.id,
             version: row.version,
             entry: VoucherEntry::Payment(payment(w.rahim, "19,000", "")),
-            reason: String::new(),
+            reason: "x".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -731,7 +736,8 @@ fn the_cash_question_covers_payment_edit_and_cancel() {
         id: row.id,
         version: row.version,
         entry: VoucherEntry::Payment(payment(w.rahim, "21,000", "")),
-        reason: String::new(),
+        reason: "x".into(),
+        sign: "adnan".into(),
         confirm_cash_below_zero: false,
     };
     let refused = vouchers::edit(&w.env.ctx, &w.owner, &up).unwrap_err();

@@ -138,13 +138,23 @@ settings-tab-printing = Printing
 settings-sign-title = The Owner's { -dastakhat }
 
 # review: pending
-settings-sign-hint = Only the Owner's { -dastakhat } opens a closed day to fix an entry. Write your password and the new { -dastakhat }. It is never shown again.
+settings-sign-hint = Only the Owner's { -dastakhat } opens a closed day to fix an entry, and saves a change to a { -wasooli }, { -adaigi } or { -peshgi-khata }. Write your password, the current { -dastakhat }, and the new { -dastakhat } twice. It is never shown again.
 
 # review: pending
 settings-sign-password = Your password
 
 # review: pending
+settings-sign-current = Current { -dastakhat }
+
+# review: pending
 settings-sign-new = New { -dastakhat }
+
+# review: pending
+settings-sign-new-again = New { -dastakhat } again
+
+# The two new signs typed in Settings are not the same. Nothing was sent (PRD Section 21, plan 92).
+# review: pending
+settings-sign-mismatch = The two new { -dastakhat } are not the same.
 
 # review: pending
 settings-sign-button = Change the { -dastakhat }

@@ -150,23 +150,27 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         name: message(language, 'glossary-bikri-book'),
       }),
     ).toBeInTheDocument();
-    const side = screen.getByRole('navigation', {
-      name: (name) => visible(name) === message(language, 'layout-module-label'),
-    });
-    const items = within(side).getAllByRole('button');
-    expect(items).toHaveLength(7);
-    expect(items[0]).toHaveAttribute('aria-current', 'page');
+    // The second menu is a row of tabs in the title row of each screen (plan 93): every screen draws its own copy,
+    // so the tabs are read again after each move.
+    const tabs = () =>
+      within(
+        screen.getByRole('navigation', {
+          name: (name) => visible(name) === message(language, 'layout-module-label'),
+        }),
+      ).getAllByRole('button');
+    expect(tabs()).toHaveLength(7);
+    expect(at(tabs(), 0)).toHaveAttribute('aria-current', 'page');
     // The advance item is a real screen now (plan 10).
-    await user.click(at(items, 3));
+    await user.click(at(tabs(), 3));
     expect(
       await screen.findByRole('heading', {
         level: 1,
         name: message(language, 'vouchers-advance-title'),
       }),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[3]).toHaveAttribute('aria-current', 'page');
+    expect(at(tabs(), 3)).toHaveAttribute('aria-current', 'page');
     // Today's بکری is a real screen since plan 13.
-    await user.click(at(items, 4));
+    await user.click(at(tabs(), 4));
     // (The first open of a screen loads its code, which can take a moment on a busy machine.)
     expect(
       await screen.findByRole(
@@ -179,7 +183,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       ),
     ).toBeInTheDocument();
     // وصولی and ادائیگی are the same voucher screen with their type chosen (plan 15).
-    await user.click(at(items, 1));
+    await user.click(at(tabs(), 1));
     expect(
       await screen.findByRole(
         'heading',
@@ -187,17 +191,17 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[1]).toHaveAttribute('aria-current', 'page');
-    await user.click(at(items, 2));
+    expect(at(tabs(), 1)).toHaveAttribute('aria-current', 'page');
+    await user.click(at(tabs(), 2));
     expect(
       await screen.findByRole('heading', {
         level: 1,
         name: message(language, 'vouchers-payment-title'),
       }),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[2]).toHaveAttribute('aria-current', 'page');
+    expect(at(tabs(), 2)).toHaveAttribute('aria-current', 'page');
     // پارٹی کھاتے (plan 66, PRD FR-12.43) sits above the goods left, and opens the list of buyers.
-    await user.click(at(items, 5));
+    await user.click(at(tabs(), 5));
     expect(
       await screen.findByRole(
         'heading',
@@ -208,10 +212,10 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[5]).toHaveAttribute('aria-current', 'page');
+    expect(at(tabs(), 5)).toHaveAttribute('aria-current', 'page');
     // The goods left (باقی مال) is a real screen since plan 16; a later sale starts from it. Every
     // item of the area is built now (own goods, خریداری, joins in plan 16b).
-    await user.click(at(items, 6));
+    await user.click(at(tabs(), 6));
     expect(
       await screen.findByRole(
         'heading',
@@ -222,7 +226,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
+    expect(at(tabs(), 6)).toHaveAttribute('aria-current', 'page');
     // A main item built later (تجزیات, plan 21) opens its own screen, never a made-up page.
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     await user.click(
@@ -290,13 +294,12 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/book');
     });
-    // The side menu is nearest to the screen, and the arrow into the screen leaves it.
-    const side = screen.getByRole('navigation', {
-      name: (name) => visible(name) === message(language, 'layout-module-label'),
-    });
-    within(side).getAllByRole('button')[0]?.focus();
+    // The arrow into the screen leaves the main menu for the screen's own first field, not for a tab (plan 93).
+    within(nav).getAllByRole('button')[0]?.focus();
     await user.keyboard(language === 'ur' ? '{ArrowLeft}' : '{ArrowRight}');
-    expect(screen.getByRole('main').contains(document.activeElement)).toBe(true);
+    const active = document.activeElement;
+    expect(screen.getByRole('main').contains(active)).toBe(true);
+    expect(active?.closest('[data-section-tabs]')).toBeNull();
   });
 
   it('the Owner is the only user and sees every menu item, Settings included', async () => {

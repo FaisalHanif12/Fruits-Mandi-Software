@@ -1,62 +1,88 @@
 // The quick action buttons of the dashboard (PRD 9.3, NFR-USE-9): a new بکری, وصولی, ادائیگی, پیشگی
-// and خرچہ, and the day book. Each shows its key (PRD FR-7.4); the keys themselves work from every
-// screen (the app shell registers them). Plain buttons of the shared kit.
+// and خرچہ, then پچھلی بکری and پارٹی کھاتے (plan 93 T5: they open their screens and have no key of their own, so
+// they show no key), and the day book. Each shows its key where it has one (PRD FR-7.4); the keys themselves work
+// from every screen (the app shell registers them). Plain buttons of the shared kit, at their natural width in ONE
+// row: the ones that do not fit the window go behind "More" at the end of the row (plan 93 T6, Umar 22-11-2026).
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import { SHORTCUTS } from '../../../shared/keyboard';
-import { Button } from '../../../shared/ui';
-import { useOpenDestination } from '../destinations';
+import type { Shortcut } from '../../../shared/keyboard';
+import { Button, OverflowRow, type OverflowItem } from '../../../shared/ui';
+import { useOpenDestination, type Destination } from '../destinations';
 
-export function QuickActions() {
-  const open = useOpenDestination();
-  return (
-    <div role="group" aria-labelledby="dashboard-quick-title" className="flex flex-wrap gap-2">
-      <Button
-        variant="primary"
-        shortcut={SHORTCUTS.newBikri}
-        onClick={() => {
-          open({ kind: 'bikri-book' });
-        }}
-      >
-        <Localized id="dashboard-new-bikri" />
-      </Button>
-      <Button
-        shortcut={SHORTCUTS.newReceipt}
-        onClick={() => {
-          open({ kind: 'receipt' });
-        }}
-      >
-        <Localized id="dashboard-new-receipt" />
-      </Button>
-      <Button
-        shortcut={SHORTCUTS.newPayment}
-        onClick={() => {
-          open({ kind: 'payment' });
-        }}
-      >
-        <Localized id="dashboard-new-payment" />
-      </Button>
-      <Button
-        shortcut={SHORTCUTS.newAdvance}
-        onClick={() => {
-          open({ kind: 'advance' });
-        }}
-      >
-        <Localized id="dashboard-new-advance" />
-      </Button>
-      <Button
-        shortcut={SHORTCUTS.newExpense}
-        onClick={() => {
-          open({ kind: 'shop-expenses' });
-        }}
-      >
-        <Localized id="dashboard-new-expense" />
-      </Button>
-    </div>
-  );
+interface QuickAction {
+  id: string;
+  /** The Fluent message ID of the words of the button. */
+  labelId: string;
+  to: Destination;
+  /** The key of the action, where there is one: the two screens at the end have none. */
+  shortcut?: Shortcut;
+  primary?: boolean;
 }
 
-/** The day book, at the end of the greeting's row: the five buttons above are then one row (plan 38). */
+/** In this order (PRD 9.3): the five entries, then the two screens. */
+const ACTIONS: readonly QuickAction[] = [
+  {
+    id: 'bikri',
+    labelId: 'dashboard-new-bikri',
+    to: { kind: 'bikri-book' },
+    shortcut: SHORTCUTS.newBikri,
+    primary: true,
+  },
+  {
+    id: 'receipt',
+    labelId: 'dashboard-new-receipt',
+    to: { kind: 'receipt' },
+    shortcut: SHORTCUTS.newReceipt,
+  },
+  {
+    id: 'payment',
+    labelId: 'dashboard-new-payment',
+    to: { kind: 'payment' },
+    shortcut: SHORTCUTS.newPayment,
+  },
+  {
+    id: 'advance',
+    labelId: 'dashboard-new-advance',
+    to: { kind: 'advance' },
+    shortcut: SHORTCUTS.newAdvance,
+  },
+  {
+    id: 'expense',
+    labelId: 'dashboard-new-expense',
+    to: { kind: 'shop-expenses' },
+    shortcut: SHORTCUTS.newExpense,
+  },
+  // No key exists for these two, so none is shown (PRD FR-7.4).
+  { id: 'past-sales', labelId: 'dashboard-open-past-sales', to: { kind: 'bikri-today' } },
+  { id: 'party-ledgers', labelId: 'dashboard-open-party-ledgers', to: { kind: 'party-ledgers' } },
+];
+
+export function QuickActions() {
+  const { l10n } = useLocalization();
+  const open = useOpenDestination();
+  const items: OverflowItem[] = ACTIONS.map((action) => ({
+    id: action.id,
+    label: l10n.getString(action.labelId),
+    onSelect: () => {
+      open(action.to);
+    },
+    node: (
+      <Button
+        {...(action.primary === true ? { variant: 'primary' as const } : {})}
+        {...(action.shortcut === undefined ? {} : { shortcut: action.shortcut })}
+        onClick={() => {
+          open(action.to);
+        }}
+      >
+        <Localized id={action.labelId} />
+      </Button>
+    ),
+  }));
+  return <OverflowRow items={items} aria-labelledby="dashboard-quick-title" />;
+}
+
+/** The day book, at the end of the greeting's row: the buttons above are then one row (plan 38). */
 export function DayBookButton() {
   const open = useOpenDestination();
   return (

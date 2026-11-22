@@ -4,7 +4,7 @@
 // `data-nav-item`; a disabled item is skipped.
 
 import { useMemo, type KeyboardEvent } from 'react';
-import { arrowSide, elementDirection, intoScreenSide } from './direction';
+import { arrowSide, elementDirection, intoScreenSide, readingStep } from './direction';
 import { focusRegion } from './focusRegions';
 
 /** The index an item key moves to, or null for a key that does not move. Does not wrap. */
@@ -99,4 +99,50 @@ export function rovingKeyHandler({ pageSize = DEFAULT_PAGE_SIZE, isMenu = false 
 export function useRovingKeys(options: RovingOptions = {}) {
   const { pageSize, isMenu } = options;
   return useMemo(() => rovingKeyHandler({ pageSize, isMenu }), [pageSize, isMenu]);
+}
+
+/**
+ * The key handler of a row of tabs along the top of a screen (PRD FR-7.17, v1.56): ← and → move to the neighbour
+ * tab in the reading direction (in Urdu the left arrow reads on), Home and End jump, Enter opens the focused one (a
+ * button does it by itself), and ↓ moves into the screen. A drop-down that is open on a tab (the "More" button)
+ * keeps ↓ for itself: it has already stopped the key. Items are marked `data-nav-item`. Put it on the row.
+ */
+export function rovingRowKeyHandler() {
+  return (event: KeyboardEvent<HTMLElement>): void => {
+    if (
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+    const container = event.currentTarget;
+    const items = itemsOf(container);
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const current = items.findIndex((item) => item === target || item.contains(target));
+    if (current === -1) return;
+    if (event.key === 'ArrowDown') {
+      if (focusRegion('screen')) event.preventDefault();
+      return;
+    }
+    const last = items.length - 1;
+    const step = readingStep(event.key, elementDirection(container));
+    let to: number | null = null;
+    if (step === 'toEnd') to = Math.min(current + 1, last);
+    else if (step === 'toStart') to = Math.max(current - 1, 0);
+    else if (event.key === 'Home') to = 0;
+    else if (event.key === 'End') to = last;
+    const item = to === null ? undefined : items[to];
+    if (item === undefined) return;
+    event.preventDefault();
+    item.focus();
+  };
+}
+
+/** The same handler, kept between renders. */
+export function useRovingRowKeys() {
+  return useMemo(() => rovingRowKeyHandler(), []);
 }

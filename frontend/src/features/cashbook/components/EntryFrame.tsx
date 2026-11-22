@@ -27,6 +27,8 @@ import {
   ErrorNotice,
   Field,
   InfoHint,
+  TitleOrTabs,
+  useSectionTabs,
   SaveChangesPrompt,
   SegmentedControl,
 } from '../../../shared/ui';
@@ -138,6 +140,8 @@ export function EntryFrame<T extends string>({
   const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
   const [askNew, setAskNew] = useState(false);
+  // In a section the row of tabs stands in for the name (PRD FR-5.3, v1.56): it takes the room that is left.
+  const inSection = useSectionTabs() !== null;
   useRefusalIntoView(rootRef, error);
 
   const saveNow = () => {
@@ -165,10 +169,16 @@ export function EntryFrame<T extends string>({
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         {/* The name first, with its line of help behind an ⓘ, so the name and the buttons are one
             row (plan 38 G5, G7). */}
-        <div className="flex items-center gap-1">
-          <Localized id={titleId}>
-            <h1 className="sr-only normal:not-sr-only normal:type-title" />
-          </Localized>
+        <div
+          className={
+            inSection ? 'flex min-w-0 flex-auto items-center gap-2' : 'flex items-center gap-1'
+          }
+        >
+          <TitleOrTabs title={<Localized id={titleId} />}>
+            <Localized id={titleId}>
+              <h1 className="sr-only normal:not-sr-only normal:type-title" />
+            </Localized>
+          </TitleOrTabs>
           <div className="hidden normal:block">
             <InfoHint>
               <Localized id={helpId}>
@@ -177,7 +187,7 @@ export function EntryFrame<T extends string>({
             </InfoHint>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={`flex flex-wrap items-center gap-2 ${inSection ? 'ms-auto shrink-0' : ''}`}>
           {actions}
           <Button shortcut={SHORTCUTS.newEntry} onClick={requestNew}>
             <Plus aria-hidden="true" className="size-icon-md" />

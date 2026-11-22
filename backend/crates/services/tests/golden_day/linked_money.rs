@@ -750,6 +750,7 @@ fn edit_khata_out(
                 "10-10-2026",
             )),
             reason: "x".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )

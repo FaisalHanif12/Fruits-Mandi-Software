@@ -14,6 +14,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { IconChip } from './IconChip';
 import { InfoHint } from './InfoHint';
+import { useSectionTabs } from './section-tabs-context';
+import { TitleOrTabs } from './SectionTabs';
 
 interface ListPageProps {
   /** The Fluent message ID of the screen's name, drawn as the page heading. */
@@ -31,21 +33,35 @@ interface ListPageProps {
 }
 
 export function ListPage({ titleId, icon, help, actions, filters, children }: ListPageProps) {
+  // In a section (بکری, روکڑ) the row of tabs stands in for the name. It wants the width of all its tabs, so when the
+  // buttons do not fit beside it they go to the row under it (the row wraps) and the tabs keep the first row; "More"
+  // shows only when the tabs alone do not fit the width (PRD FR-5.3, v1.56).
+  const inSection = useSectionTabs() !== null;
   return (
     <div className="fill-to-corner flex min-h-0 flex-col gap-3 short:gap-2">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex items-center gap-1">
-          {icon === undefined ? null : (
-            <span className="me-2">
-              <IconChip icon={icon} />
-            </span>
-          )}
-          <Localized id={titleId}>
-            <h1 className="type-title" />
-          </Localized>
+        <div
+          className={
+            inSection ? 'flex min-w-0 flex-auto items-center gap-2' : 'flex items-center gap-1'
+          }
+        >
+          <TitleOrTabs title={<Localized id={titleId} />}>
+            {icon === undefined ? null : (
+              <span className="me-2">
+                <IconChip icon={icon} />
+              </span>
+            )}
+            <Localized id={titleId}>
+              <h1 className="type-title" />
+            </Localized>
+          </TitleOrTabs>
           {help === undefined ? null : <InfoHint>{help}</InfoHint>}
         </div>
-        {actions === undefined ? null : <div className="flex flex-wrap gap-2">{actions}</div>}
+        {actions === undefined ? null : (
+          <div className={`flex flex-wrap gap-2 ${inSection ? 'ms-auto shrink-0' : ''}`}>
+            {actions}
+          </div>
+        )}
       </div>
       {filters === undefined ? null : <div className="shrink-0">{filters}</div>}
       {/* No `min-h-0` here: when the window is too short for the list's floor of rows, this box grows with

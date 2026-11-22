@@ -179,7 +179,7 @@ export function ReportResults({
       <>
         {extras ? (
           <div
-            className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${slip ? SLIP_BESIDE[slipBesideFrom].row : ''}`}
+            className={`no-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${slip ? SLIP_BESIDE[slipBesideFrom].row : ''}`}
           >
             <div className={`min-w-0 ${SLIP_BESIDE[slipBesideFrom].goods}`}>{grid}</div>
             {/* The short buyers' and sellers' tables of each day of the day total sheet (R34). */}

@@ -1,8 +1,8 @@
-// The side menus of the بکری area (PRD FR-5.3) and of the روکڑ area (PRD 5, plan 17), one look
-// (design system 6): 200 px, sunken ground. Each item has a small icon; the current item is a white card
-// with primary text and a thin border, so it does not compete with the dark main menu (plan 75, item 3).
-// Next to the main menu, so the arrow that points into the screen leads to the screen, and the other
-// arrow leads back to the menu (PRD FR-7.17).
+// The second menu of the بکری area (PRD FR-5.3) and of the روکڑ area (PRD 5, plan 17): the items, in order,
+// and the tabs that show them. Since v1.56 (plan 93) they are not a side panel but a row of tabs in the title row
+// of the screen (`shared/ui/SectionTabs`): one component for every section, so the same row looks and works the same
+// in both. The shell gives the row to the screen through `SectionTabsProvider`; a screen says where its title row
+// is with `TitleOrTabs` and builds nothing of its own.
 
 import { useLocalization } from '@fluent/react';
 import {
@@ -21,7 +21,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
-import { useFocusRegion, useRovingKeys } from '../../shared/keyboard';
+import { SectionTabs } from '../../shared/ui';
 
 export type ModuleMenuId =
   'bikri-book' | 'receipt' | 'payment' | 'advance' | 'today' | 'party-ledgers' | 'stock';
@@ -59,58 +59,44 @@ export const ROKAR_MENU: readonly { id: RokarMenuId; labelId: string; icon: Luci
   { id: 'voucher', labelId: 'layout-rokar-voucher', icon: FileSignature },
 ];
 
-interface SideMenuProps<Id extends string> {
+interface SectionRowProps<Id extends string> {
   entries: readonly { id: Id; labelId: string; icon: LucideIcon }[];
-  /** The Fluent message ID of the menu's name, read by screen readers. */
+  /** The Fluent message ID of the row's name, read by screen readers. */
   labelId: string;
   current: Id;
   onSelect: (id: Id) => void;
 }
 
-function SideMenu<Id extends string>({ entries, labelId, current, onSelect }: SideMenuProps<Id>) {
+function SectionRow<Id extends string>({
+  entries,
+  labelId,
+  current,
+  onSelect,
+}: SectionRowProps<Id>) {
   const { l10n } = useLocalization();
-  const region = useFocusRegion<HTMLElement>('menu');
-  const onKeyDown = useRovingKeys({ isMenu: true });
   return (
-    <nav
-      ref={region}
-      aria-label={l10n.getString(labelId)}
-      onKeyDown={onKeyDown}
-      className="flex w-module-menu shrink-0 flex-col gap-1 border-e border-border bg-surface-sunken px-3 py-4"
-    >
-      {entries.map(({ id, labelId: entryLabelId, icon: Icon }) => {
-        const isCurrent = id === current;
-        return (
-          <button
-            key={id}
-            type="button"
-            data-nav-item
-            aria-current={isCurrent ? 'page' : undefined}
-            onClick={() => {
-              onSelect(id);
-            }}
-            className={`flex min-h-control items-center gap-3 rounded-2 border px-3 py-1 text-start transition-calm ${isCurrent ? 'border-border bg-surface text-primary' : 'border-transparent text-ink hover:bg-bg'}`}
-          >
-            <Icon
-              aria-hidden="true"
-              className={`size-icon-md shrink-0 ${isCurrent ? 'text-primary' : 'text-ink-muted'}`}
-            />
-            <span className="type-body min-w-0">{l10n.getString(entryLabelId)}</span>
-          </button>
-        );
-      })}
-    </nav>
+    <SectionTabs
+      tabs={entries.map((entry) => ({
+        id: entry.id,
+        label: l10n.getString(entry.labelId),
+        icon: entry.icon,
+      }))}
+      label={l10n.getString(labelId)}
+      current={current}
+      onSelect={onSelect}
+    />
   );
 }
 
-interface ModuleMenuProps {
+interface ModuleTabsProps {
   current: ModuleMenuId;
   onSelect: (id: ModuleMenuId) => void;
 }
 
-export function ModuleMenu({ current, onSelect }: ModuleMenuProps) {
+/** The tabs of the بکری area (PRD FR-5.3). */
+export function ModuleTabs({ current, onSelect }: ModuleTabsProps) {
   return (
-    <SideMenu
+    <SectionRow
       entries={BIKRI_MENU}
       labelId="layout-module-label"
       current={current}
@@ -119,14 +105,15 @@ export function ModuleMenu({ current, onSelect }: ModuleMenuProps) {
   );
 }
 
-interface RokarMenuProps {
+interface RokarTabsProps {
   current: RokarMenuId;
   onSelect: (id: RokarMenuId) => void;
 }
 
-export function RokarMenu({ current, onSelect }: RokarMenuProps) {
+/** The tabs of the روکڑ area (PRD 5, PRD 16). */
+export function RokarTabs({ current, onSelect }: RokarTabsProps) {
   return (
-    <SideMenu
+    <SectionRow
       entries={ROKAR_MENU}
       labelId="layout-rokar-label"
       current={current}

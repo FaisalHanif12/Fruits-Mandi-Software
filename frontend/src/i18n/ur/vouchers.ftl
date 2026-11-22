@@ -152,8 +152,18 @@ vouchers-field-narration = تفصیل
 # review: pending
 vouchers-field-edit-reason = تبدیلی کی وجہ
 
+# The box that asks why and the Owner's sign when a saved voucher is changed (PRD FR-15.3, plan 92).
 # review: pending
-vouchers-edit-reason-hint = لکھنا ضروری نہیں۔ یہ وجہ تبدیلی کے ریکارڈ میں رہتی ہے۔
+vouchers-edit-sign-title = تبدیلیاں محفوظ کریں؟
+
+# review: pending
+vouchers-edit-sign-text = لکھیں کہ یہ اندراج کیوں بدلا جا رہا ہے، اور مالک کا { -dastakhat } لکھیں۔ اس کے بعد ہی تبدیلیاں محفوظ ہوں گی۔
+
+# review: pending
+vouchers-edit-sign-label = { -dastakhat }
+
+# review: pending
+vouchers-edit-sign-hint = تبدیلیاں صرف مالک کے { -dastakhat } سے محفوظ ہوتی ہیں۔
 
 ## What the backend says about the entry on the form (PRD FR-6.7, FR-7.68, FR-15.5, FR-15.12).
 

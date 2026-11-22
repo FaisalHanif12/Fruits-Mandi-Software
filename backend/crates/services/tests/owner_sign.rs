@@ -361,13 +361,80 @@ fn an_edit_of_an_open_day_has_no_sign_and_the_sign_of_a_closed_fix_does_not_leak
     assert_eq!(first.sign.as_deref(), Some("adnan"));
 }
 
+/// Plan 92 (PRD FR-21.4, Section 21): the sign is changed with the password AND the current sign.
+/// A missing or wrong current sign changes nothing, is checked after the password, and a wrong one
+/// is audited without the typed text.
+#[test]
+fn a_missing_or_wrong_current_sign_changes_nothing() {
+    let (w, _) = closed_day();
+    let ctx = &w.env.ctx;
+    let set = |password: &str, current: &str, sign: &str| {
+        owner_sign::set_owner_sign(ctx, &w.owner, &Secret::new(password), current, sign)
+    };
+    // Missing: refused at `current_sign`, nothing audited.
+    assert_eq!(
+        refusals(&set(OWNER_PASSWORD, "  ", "sana").unwrap_err()),
+        [(ErrorCode::ErrSignRequired, Some("current_sign".into()))]
+    );
+    assert_eq!(count_of(&w, "owner_sign_change_sign_wrong"), 0);
+    // The password is checked first: a wrong password with a wrong current sign says the password.
+    assert_eq!(
+        refusals(&set("not-the-password", "munshi", "sana").unwrap_err()),
+        [(ErrorCode::ErrWrongPassword, Some("password".into()))]
+    );
+    // Wrong (and the new sign typed as if it were the current one): refused, audited, no text kept.
+    for typed in ["munshi", "sana"] {
+        assert_eq!(
+            refusals(&set(OWNER_PASSWORD, typed, "sana").unwrap_err()),
+            [(ErrorCode::ErrSignWrong, Some("current_sign".into()))],
+            "{typed}"
+        );
+    }
+    assert_eq!(count_of(&w, "owner_sign_change_sign_wrong"), 2);
+    assert!(
+        rows_of(&w, "owner_sign_change_sign_wrong")
+            .iter()
+            .all(|(new, _)| {
+                let text = new.clone().unwrap_or_default().to_lowercase();
+                !text.contains("munshi") && !text.contains("sana")
+            })
+    );
+    // Nothing changed: the sign is still adnan, so it still opens, and no change was audited.
+    assert!(
+        rows_of(&w, "edit")
+            .iter()
+            .all(|(new, _)| { !new.clone().unwrap_or_default().contains("owner_sign") })
+    );
+    let opened = fix(&w, "adnan").unwrap();
+    day::fix_close(
+        ctx,
+        &w.owner,
+        &DayFixCloseInput {
+            token: opened.token,
+        },
+    )
+    .unwrap();
+    // The right current sign, in any case and in Urdu while it is the default, changes it.
+    set(OWNER_PASSWORD, " ADNAN", "sana").unwrap();
+    // Now only the new sign is the current one.
+    assert_eq!(
+        refusals(&set(OWNER_PASSWORD, "adnan", "other").unwrap_err()),
+        [(ErrorCode::ErrSignWrong, Some("current_sign".into()))]
+    );
+    set(OWNER_PASSWORD, "SANA ", "other").unwrap();
+    assert!(fix(&w, "other").is_ok());
+    assert_chain_ok(&w.dir);
+}
+
 #[test]
 fn the_owner_changes_his_sign_with_his_password_and_only_the_new_sign_opens() {
     let (w, _) = closed_day();
     let ctx = &w.env.ctx;
-    let set = |password: &str, sign: &str| {
-        owner_sign::set_owner_sign(ctx, &w.owner, &Secret::new(password), sign)
+    let set_from = |password: &str, current: &str, sign: &str| {
+        owner_sign::set_owner_sign(ctx, &w.owner, &Secret::new(password), current, sign)
     };
+    // The sign he has now is typed again (plan 92): "adnan" until he changes it.
+    let set = |password: &str, sign: &str| set_from(password, "adnan", sign);
     // A wrong password is refused at the password; a missing, long or odd sign at the sign.
     assert_eq!(
         refusals(&set("not-the-password", "sana").unwrap_err()),
@@ -398,7 +465,8 @@ fn the_owner_changes_his_sign_with_his_password_and_only_the_new_sign_opens() {
     .unwrap();
     // A sign of exactly 40 characters is fine; so is a short one.
     set(OWNER_PASSWORD, &"y".repeat(40)).unwrap();
-    set(OWNER_PASSWORD, "  Sana ").unwrap();
+    // The sign he has now is the current sign from here on.
+    set_from(OWNER_PASSWORD, &"y".repeat(40), "  Sana ").unwrap();
     // The old sign and its Urdu spelling are refused now; the new one opens, in any case.
     for old in ["adnan", "عدنان", &"y".repeat(40)] {
         assert_eq!(

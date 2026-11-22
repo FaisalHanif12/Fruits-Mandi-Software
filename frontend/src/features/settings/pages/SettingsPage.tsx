@@ -62,8 +62,14 @@ export function SettingsPage() {
   // (`fill-to-corner`). The panels are narrow reading columns at the start side, so the button is kept
   // clear sideways (`pe-corner`: the room it takes at the end edge) and not by a tall empty band under
   // the last card, which left the page scrolling into blank space (Umar, 21-11-2026).
+  // `relative` makes this scroll box the containing block of the hidden native <select> that Radix Select keeps
+  // beside each drop-down (the role of a print-header person on the firm tab). Without it that element is placed
+  // against the screen (`main`) instead, outside this box: `main` gets a tall overflow, the title and the tabs
+  // scroll away and a blank band shows under the panel (plan 92, Umar's report; finding 29 is the same cause).
   const scrolls = (content: ReactNode) => (
-    <div className="min-h-0 flex-1 overflow-auto pb-4 pe-corner">{content}</div>
+    <div className="no-scrollbar relative min-h-0 flex-1 overflow-auto pb-4 pe-corner">
+      {content}
+    </div>
   );
   return (
     <div className="fill-to-corner flex min-h-0 flex-col gap-3">

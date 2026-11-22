@@ -692,8 +692,23 @@ const handlers: Record<string, Handler> = {
     const withSellers = devFlag('seller')
       ? { ...preview, sellers: devSellerLines(draftOf(input)) }
       : preview;
+    // `#/dev/bikri?futuredate` answers like the backend for a date after today (plan 93 T8): the error of the date, whose
+    // long words used to widen the one-line toolbar of the sale book. It is drawn as a bubble now.
+    const withDate = devFlag('futuredate')
+      ? {
+          ...withSellers,
+          errors: [
+            ...withSellers.errors,
+            {
+              code: 'ERR_DATE_IN_FUTURE',
+              field: 'header.entry_date',
+              values: { today: '10-10-2026' },
+            },
+          ],
+        }
+      : withSellers;
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
-    return devFlag('cash') ? { ...withSellers, cash: CASH_BELOW_ZERO } : withSellers;
+    return devFlag('cash') ? { ...withDate, cash: CASH_BELOW_ZERO } : withDate;
   },
   // Plan 91: the amount typed in the seller's summary, spread over his lots.
   bikri_seller_paid_spread: (input) => devSpread(draftOf(input), input),

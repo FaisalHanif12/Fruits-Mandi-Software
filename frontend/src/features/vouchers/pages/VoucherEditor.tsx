@@ -40,11 +40,14 @@ import {
   FormAside,
   Notice,
   PartyCard,
+  ReasonDialog,
   SaveChangesPrompt,
   SegmentedControl,
   showToast,
   type SegmentedOption,
   InfoHint,
+  TitleOrTabs,
+  useSectionTabs,
 } from '../../../shared/ui';
 import {
   ClosedDayEntryNotice,
@@ -76,6 +79,7 @@ import {
   newDraft,
   nextDraft,
   savedKindOf,
+  shownFieldPaths,
   type ListedOutcome,
   type ListedVoucher,
 } from '../draft';
@@ -87,18 +91,6 @@ import { SCREEN_TYPES, screenTypeOf, type ScreenType } from '../screen-type';
 import { useSaveFlow } from '../useSaveFlow';
 import { useSaveList } from '../useSaveList';
 import type { VoucherDraft, VoucherRow, VoucherSaved, VoucherType } from '../types';
-
-/** The fields the form shows next to their inputs, so the notice never tells a problem twice. */
-const FIELD_PATHS = [
-  'date',
-  'account_id',
-  'seller_account_id',
-  'amount',
-  'collector_staff_id',
-  'reason',
-  'expected_goods',
-  'narration',
-];
 
 const TYPE_OPTIONS: readonly SegmentedOption<ScreenType>[] = SCREEN_TYPES.map((type) => ({
   value: type,
@@ -119,8 +111,9 @@ interface VoucherEditorProps {
 export function VoucherEditor({ today, initial, editing, urlType }: VoucherEditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
+  // In a section the row of tabs stands in for the name (PRD FR-5.3, v1.56): it takes the room that is left.
+  const inSection = useSectionTabs() !== null;
   const [draft, setDraft] = useState<VoucherDraft>(initial);
-  const [editReason, setEditReason] = useState('');
   // What earlier edits changed on this voucher, marked "Before ..." on its fields (PRD FR-7.71).
   const marks = useEntryMarks('voucher', editing?.id ?? null, editing?.edited != null);
   const [finished, setFinished] = useState(false);
@@ -183,7 +176,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
     `voucher:${String(editing?.id ?? 0)}`,
     editing === null || entry === null
       ? null
-      : { id: editing.id, version: editing.version, entry, reason: editReason },
+      : { id: editing.id, version: editing.version, entry, reason: '' },
     vouchersEditPreview,
   );
   const router = useRouter();
@@ -216,7 +209,6 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
       return;
     }
     setDraft(nextDraft(draft));
-    setEditReason('');
     // The next voucher starts at the account, the field that always changes.
     window.requestAnimationFrame(() => {
       formRef.current?.querySelector<HTMLInputElement>('input[role="combobox"]')?.focus();
@@ -225,7 +217,23 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
   useEffect(() => {
     if (finished) void navigate({ to: '/bikri/voucher', search: { type: draft.type } });
   }, [finished, navigate, draft.type]);
-  const flow = useSaveFlow({ draft, editing, editReason, preview, current, onSaved: afterSave });
+  // The day of this voucher was reopened to fix it: the reopen asked the reason and the sign already, so the edit asks
+  // nothing again (PRD FR-15.3, FR-21.4, plan 92).
+  const reopenedReason =
+    editing !== null &&
+    reopened !== null &&
+    reopened.days.includes(editing.entry_date) &&
+    reopened.reason.trim() !== ''
+      ? reopened.reason
+      : null;
+  const flow = useSaveFlow({
+    draft,
+    editing,
+    reopenedReason,
+    preview,
+    current,
+    onSaved: afterSave,
+  });
   const listRun = useSaveList();
   const busy = flow.busy || listRun.busy;
   const rowEntries = useMemo(
@@ -264,9 +272,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
 
   const dirty =
     !finished &&
-    (editing === null
-      ? isFilled(draft) || list.length > 0
-      : JSON.stringify(draft) !== initialText || editReason !== '');
+    (editing === null ? isFilled(draft) || list.length > 0 : JSON.stringify(draft) !== initialText);
 
   const focusAccount = () => {
     // The next voucher starts at the account, the field that always changes.
@@ -376,7 +382,6 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
 
   const startNew = () => {
     setDraft(newDraft(draft.type, today));
-    setEditReason('');
     if (editing !== null) void navigate({ to: '/bikri/voucher', search: { type: draft.type } });
   };
   const requestNew = () => {
@@ -433,10 +438,16 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {/* The name, the type list and the buttons are one row where they fit (plan 38). The line
             of help is behind an ⓘ. */}
-        <div className="flex items-center gap-1">
-          <Localized id={`vouchers-${draft.type}-title`}>
-            <h1 className="sr-only normal:not-sr-only normal:type-title" />
-          </Localized>
+        <div
+          className={
+            inSection ? 'flex min-w-0 flex-auto items-center gap-2' : 'flex items-center gap-1'
+          }
+        >
+          <TitleOrTabs title={<Localized id={`vouchers-${draft.type}-title`} />}>
+            <Localized id={`vouchers-${draft.type}-title`}>
+              <h1 className="sr-only normal:not-sr-only normal:type-title" />
+            </Localized>
+          </TitleOrTabs>
           <div className="hidden normal:block">
             <InfoHint>
               <Localized id={`vouchers-${draft.type}-help`}>
@@ -445,56 +456,64 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
             </InfoHint>
           </div>
         </div>
-        <Field label={<Localized id="vouchers-field-type" />} hideLabel>
-          {() => (
-            <div>
-              <SegmentedControl
-                options={TYPE_OPTIONS}
-                value={draft.type}
-                groupLabel={l10n.getString('vouchers-field-type')}
-                disabled={editing !== null}
-                onChange={onType}
-              />
-            </div>
-          )}
-        </Field>
-        <div className="ms-auto flex flex-wrap items-center gap-2">
-          {list.length === 0 ? null : (
-            <Localized id="vouchers-waiting-count" vars={{ count: list.length }}>
-              <span className="type-body text-ink-muted" />
-            </Localized>
-          )}
-          {draft.type === 'receipt' && editing === null ? (
+        {/* The type switch and the buttons are one group: in a section it goes to the row under the tabs when the tabs
+            and it do not fit side by side (PRD FR-5.3, v1.56); elsewhere it is part of the row as before. */}
+        <div
+          className={
+            inSection ? 'flex min-w-0 flex-auto flex-wrap items-center gap-x-3 gap-y-2' : 'contents'
+          }
+        >
+          <Field label={<Localized id="vouchers-field-type" />} hideLabel>
+            {() => (
+              <div>
+                <SegmentedControl
+                  options={TYPE_OPTIONS}
+                  value={draft.type}
+                  groupLabel={l10n.getString('vouchers-field-type')}
+                  disabled={editing !== null}
+                  onChange={onType}
+                />
+              </div>
+            )}
+          </Field>
+          <div className={`ms-auto flex flex-wrap items-center gap-2`}>
+            {list.length === 0 ? null : (
+              <Localized id="vouchers-waiting-count" vars={{ count: list.length }}>
+                <span className="type-body text-ink-muted" />
+              </Localized>
+            )}
+            {draft.type === 'receipt' && editing === null ? (
+              <Button
+                onClick={() => {
+                  void navigate({ to: '/bikri/collection' });
+                }}
+              >
+                <FileText aria-hidden="true" className="size-icon-md" />
+                <Localized id="vouchers-collection-open" />
+              </Button>
+            ) : null}
             <Button
-              onClick={() => {
-                void navigate({ to: '/bikri/collection' });
-              }}
+              shortcut={SHORTCUTS.newEntry}
+              disabled={editing === null && (busy || !isFilled(draft))}
+              onClick={editing === null ? addToList : requestNew}
             >
-              <FileText aria-hidden="true" className="size-icon-md" />
-              <Localized id="vouchers-collection-open" />
+              <Plus aria-hidden="true" className="size-icon-md" />
+              <Localized id={editing === null ? 'vouchers-add-to-list' : 'vouchers-new'} />
             </Button>
-          ) : null}
-          <Button
-            shortcut={SHORTCUTS.newEntry}
-            disabled={editing === null && (busy || !isFilled(draft))}
-            onClick={editing === null ? addToList : requestNew}
-          >
-            <Plus aria-hidden="true" className="size-icon-md" />
-            <Localized id={editing === null ? 'vouchers-add-to-list' : 'vouchers-new'} />
-          </Button>
-          <Button shortcut={SHORTCUTS.print} onClick={requestPrint}>
-            <Printer aria-hidden="true" className="size-icon-md" />
-            <Localized id="vouchers-print" />
-          </Button>
-          <Button
-            variant="primary"
-            shortcut={SHORTCUTS.save}
-            busy={busy}
-            disabled={!dirty}
-            onClick={saveNow}
-          >
-            <Localized id="layout-save-save" />
-          </Button>
+            <Button shortcut={SHORTCUTS.print} onClick={requestPrint}>
+              <Printer aria-hidden="true" className="size-icon-md" />
+              <Localized id="vouchers-print" />
+            </Button>
+            <Button
+              variant="primary"
+              shortcut={SHORTCUTS.save}
+              busy={busy}
+              disabled={!dirty}
+              onClick={saveNow}
+            >
+              <Localized id="layout-save-save" />
+            </Button>
+          </div>
         </div>
       </div>
       {editing === null ? null : (
@@ -537,7 +556,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
         }}
         className="flex flex-col gap-4"
       >
-        {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
+        {error === null ? null : <ErrorNotice error={error} fieldsShown={shownFieldPaths(draft)} />}
         <div className="rounded-3 border border-border bg-surface p-3">
           {/* The fields on the left, the party card beside them (plan 89): a tall card never pushes the amount
               and the reason out of view. In a narrow window the card goes under the fields. */}
@@ -550,8 +569,6 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
                   error={error}
                   editing={editing !== null}
                   marks={marks}
-                  editReason={editReason}
-                  onEditReason={setEditReason}
                   onCardAccount={(id, chukta) => {
                     setCard({ id, chukta: chukta ?? null });
                   }}
@@ -680,6 +697,8 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
         open={askNew}
         onOpenChange={setAskNew}
         onSave={() => {
+          // A saved voucher asks its reason and sign in a box of its own: this question closes first (plan 92).
+          if (editing !== null) setAskNew(false);
           void flow.save(false).then((saved) => {
             if (saved) setAskNew(false);
           });
@@ -687,6 +706,26 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
         onLeave={() => {
           setAskNew(false);
           startNew();
+        }}
+      />
+      <ReasonDialog
+        open={flow.askSign !== null}
+        onOpenChange={(open) => {
+          flow.onSignOpenChange(open);
+        }}
+        title={<Localized id="vouchers-edit-sign-title" />}
+        description={<Localized id="vouchers-edit-sign-text" />}
+        reasonLabel={<Localized id="vouchers-field-edit-reason" />}
+        signLabel={<Localized id="vouchers-edit-sign-label" />}
+        signHint={<Localized id="vouchers-edit-sign-hint" />}
+        confirmLabel={<Localized id="edit-reason-confirm" />}
+        confirmVariant="primary"
+        saveKey
+        error={flow.signError}
+        busy={flow.busy}
+        initialReason={flow.signedReason}
+        onConfirm={(reason, sign) => {
+          flow.confirmSign(reason, sign ?? '');
         }}
       />
       <CancelVoucherDialog

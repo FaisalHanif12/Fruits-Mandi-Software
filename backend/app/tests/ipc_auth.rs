@@ -2715,13 +2715,28 @@ fn the_voucher_commands_work_through_the_ipc() {
     let edit = |version: i64, amount: &str| {
         h.call(
             "vouchers_edit",
-            json!({ "input": { "id": id, "version": version, "reason": "", "confirm_cash_below_zero": false,
+            json!({ "input": { "id": id, "version": version, "reason": "x", "sign": "adnan", "confirm_cash_below_zero": false,
                 "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram, "amount": amount, "collector_staff_id": null, "narration": "" } } }),
         )
     };
     assert_eq!(
         edit(version + 7, "2,000").unwrap_err()["errors"][0]["code"],
         "ERR_VERSION_CHANGED"
+    );
+    // The Owner's sign is asked on every edit of a receipt (plan 92), at its own field.
+    let unsigned = h
+        .call(
+            "vouchers_edit",
+            json!({ "input": { "id": id, "version": version, "reason": "x", "sign": "",
+                "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram, "amount": "2,000", "collector_staff_id": null, "narration": "" } } }),
+        )
+        .unwrap_err();
+    assert_eq!(
+        (
+            &unsigned["errors"][0]["code"],
+            &unsigned["errors"][0]["field"]
+        ),
+        (&json!("ERR_SIGN_REQUIRED"), &json!("sign"))
     );
     let edited = edit(version, "2,000").unwrap();
     assert_eq!(

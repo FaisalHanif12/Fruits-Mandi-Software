@@ -805,6 +805,7 @@ fn run(case: &Case) {
                         version: row.version,
                         entry,
                         reason: "edit".into(),
+                        sign: "adnan".into(),
                         confirm_cash_below_zero: true,
                     },
                 ) {

@@ -41,7 +41,7 @@ export function DeadAmountDevPage() {
   return (
     <AppShell
       nav={<MainNav current="reports" onSelect={() => undefined} onSignOut={() => undefined} />}
-      moduleMenu={null}
+      sectionTabs={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onGuide={() => undefined}

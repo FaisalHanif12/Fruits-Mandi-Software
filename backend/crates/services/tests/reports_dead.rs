@@ -960,6 +960,7 @@ fn an_edit_of_a_recovery_is_checked_against_what_he_owes_with_its_own_reversal_t
                 version,
                 entry: VoucherEntry::Receipt(entry),
                 reason: "درستی".into(),
+                sign: "adnan".into(),
                 confirm_cash_below_zero: false,
             },
         )
@@ -1002,6 +1003,7 @@ fn an_edited_recovery_counts_its_new_amount_and_one_saved_before_the_move_is_a_c
             version: vouchers::get(&w.env.ctx, saved.voucher_id).unwrap().version,
             entry: VoucherEntry::Receipt(smaller),
             reason: "درستی".into(),
+            sign: "adnan".into(),
             confirm_cash_below_zero: false,
         },
     )
