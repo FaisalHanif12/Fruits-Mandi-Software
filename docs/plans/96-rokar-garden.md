@@ -31,3 +31,15 @@ A busy garden has about 90 goods-arrived entries. Today the page is one long scr
 | T1 | Real cashbook response from the copy, saved as a fixture | backend |
 | T2 | روکڑ بک blank table: find, fix, test with the real response | frontend-a |
 | T3 | Garden page organized (and trips if shared) | frontend-b |
+
+## 3. P0: the sign is never shown (Umar, 24-11-2026, screenshot 77)
+
+The وصولی list row stamp tooltip showed "دستخط: adnan". The sign is a secret. PRD v1.58:
+- backend: stop writing the sign text into audit `new_json` (record `sign_given: true` only) for reopen, fix edits and voucher edits; `EditStamp` / history responses never carry the sign (drop the field or always null); old audit rows that hold a sign text stay (append-only) but every reader strips it. Tests: no response from stamp, history, audit list or any command contains the sign text.
+- frontend: the stamp shows "تبدیل شدہ" with the date, time and user; the reason on hover; no sign anywhere (row tooltip, header stamp, field marks, edit history, audit screen, prints "نظر ثانی شدہ"). Remove the sign Fluent words used for display.
+- Follow-up recommendation for Umar: keep the stored Owner sign as a one-way hash (like the partner code), not plain text.
+
+| # | Task | Owner |
+|---|---|---|
+| T4 | Sign never stored in audit text, never returned | backend-96 (after T1) |
+| T5 | Sign never displayed; stamp = تبدیل شدہ + time, reason on hover | frontend-96c |
