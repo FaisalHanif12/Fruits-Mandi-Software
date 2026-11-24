@@ -103,9 +103,16 @@ interface GardenEntryEditorProps {
   today: string;
   /** The type the form starts on, when the address names one (PRD FR-7.79); else the first. */
   initialType?: EntryType | undefined;
+  /** A goods arrived entry was saved: the ids of the new entries, so the list shows them first (plan 96). */
+  onArrivalsSaved?: ((ids: readonly number[]) => void) | undefined;
 }
 
-export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEditorProps) {
+export function GardenEntryEditor({
+  garden,
+  today,
+  initialType,
+  onArrivalsSaved,
+}: GardenEntryEditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const errorText = useErrorText();
@@ -279,6 +286,7 @@ export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEdi
       }
       // Days reopened for this entry close again (PRD FR-21.4, plan 85); the money entries do it in their flow.
       void finishFixSession(l10n);
+      onArrivalsSaved?.(saved.rows.map((row) => row.id));
       afterSave();
       return true;
     } catch (failure: unknown) {

@@ -56,3 +56,27 @@ sits after روکڑ and before مارکیٹ سفر.
   such a sale (it moves the rest from our shop's part, plan 35 D1): this screen no longer lets it through. The choice
   lists read every page (`useAllArrivals`, `useTripStockPurchases`), not the one page the list below is on. The trip's
   purchases list is paged (`useTripPurchases`, `purchases_list` with `trip_id`) with the backend's totals row.
+
+- **A busy garden stays organized (plan 96, PRD FR-12.11, FR-12.40, FR-12.41, FR-19.11, NFR-USE-16).** A garden has
+  about 90 goods arrived entries, so the page is short and nothing in it moves as entries come and are sold:
+  - the head of the garden holds the four key figures that are always in view (running balance and commission with
+    their working, rent still due, money in; `KeyFigures`); the full figures and each partner's money fold under
+    one heading (`GardenFiguresFold`, `FoldSection`, shut at first);
+  - `GardenArrivalsSection` is the main list: a search box (number, item or other shop, `useArrivalsList` with
+    `search`), 30 rows a page (`RECORDS_PAGE_SIZE`), the newest first (the list's own order; a click on a heading
+    sorts the whole list by the backend), the backend's totals, and a height of its own (`--arrivals-region-h`)
+    so the rows scroll inside it and the page grows no further;
+  - the details of the entry with focus are `ArrivalDetail`: the buttons first, then the figures two to a line,
+    the sales that took goods from it (the first four, the rest on a button). Beside the list from the normal
+    window width (a docked panel, `--arrivals-panel-w`, so the list keeps 5 columns in 660 px; the commission,
+    the day to sell and the day it arrived join the list at the wide step); on a narrow window they open in a
+    window of their own with Enter or a double click, and a button there closes it before it opens its own box;
+  - keys: ↑ ↓ move between entries and the panel follows; Enter goes to the first button of the panel (or opens the
+    window); Esc goes back to the entry in the list (`useEscape('edit')`, PRD FR-7.18);
+  - a saved goods arrived entry (`GardenEntryEditor.onArrivalsSaved`) clears the search, goes to the first page,
+    selects the newest new entry and tints the new rows for 6 seconds (`ListGrid.markedRowIds`); the form is ready
+    for the next entry where it was and the page does not scroll.
+    The development page `/dev/gardens?many` answers with 90 entries (`tests/helpers/arrivals-many.ts`: search, sort,
+    paging and totals like the backend's; `?few` has 6); `gardens-arrivals-many.test.tsx` covers it in both languages.
+    The trips page keeps its own purchases list (`TripPurchasesSection`, `features/purchases`): it does not use these
+    components.

@@ -2,13 +2,17 @@
 // from the books of gardens-data.ts (the numbers of E2E-40), plus the partners overview with the
 // open gardens under each card. dev-bridge.ts asks this table first while the address is
 // /dev/gardens. Flags in the hash: `?list` the list of gardens, `?new` the new garden form,
-// `?overview` the partners overview, else one garden; `&empty` (no garden yet), `&closed` (the
+// `?overview` the partners overview, else one garden; `&many` (a garden with about 90 goods arrived
+// entries, plan 96: the list is searched, sorted and paged like the backend's, and a saved entry is
+// added to it), `&few` (a handful), `&empty` (no garden yet), `&closed` (the
 // garden closed on 13-10-2026), `&fresh` (nothing paid yet, rent 50,000 still due), `&cash` (cash
 // 5,000, so a 30,000 installment asks the cash question). Never part of a build: only the
 // development route imports it.
 
 import * as arrivalsReal from './arrivals-real';
 import type { ArrivalEntryInput } from '../../src/bindings/ArrivalEntryInput';
+import type { ArrivalRow } from '../../src/bindings/ArrivalRow';
+import type { ArrivalsListInput } from '../../src/bindings/ArrivalsListInput';
 import type { GardenCloseInput } from '../../src/bindings/GardenCloseInput';
 import type { GardenEntryCancelInput } from '../../src/bindings/GardenEntryCancelInput';
 import type { GardenEntryInput } from '../../src/bindings/GardenEntryInput';
@@ -17,6 +21,7 @@ import type { GardenInput } from '../../src/bindings/GardenInput';
 import type { GardenReopenInput } from '../../src/bindings/GardenReopenInput';
 import type { GardensListInput } from '../../src/bindings/GardensListInput';
 import type { PartnerVentureCard } from '../../src/bindings/PartnerVentureCard';
+import { listArrivals, manyArrivals } from './arrivals-many';
 import { createGardenBooks, e40Closed, e40Garden, e40History, gardenRow } from './gardens-data';
 import { paisaForTest } from './paisa';
 import { overviewRow, THREE_PARTNERS } from './partners';
@@ -33,6 +38,9 @@ const flag = (name: string): boolean =>
   new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
 
 const money = (rupees: number) => paisaForTest(rupees * 100);
+
+/** The entries of the garden of `?many` or `?few`: kept here, so a saved entry joins the list (plan 96). */
+const manyRows: ArrivalRow[] = flag('many') ? manyArrivals(90) : flag('few') ? manyArrivals(6) : [];
 
 const books = createGardenBooks(
   flag('empty')
@@ -111,7 +119,8 @@ export const gardensHandlers: Record<string, Handler> = {
   gardens_reopen: (input) => books.reopen(input as unknown as GardenReopenInput),
   // Goods arrived of the garden (plan 33 version 1.1): the backend's real list, one entry in stock.
   // With `?other` (plan 90) two entries: one has goods for another shop (40, "Haji Shop"), one has none.
-  gardens_arrivals_list: () => {
+  gardens_arrivals_list: (input) => {
+    if (manyRows.length > 0) return listArrivals(manyRows, input as unknown as ArrivalsListInput);
     const base = arrivalsReal.ARRIVALS_IN_STOCK;
     const first = base.rows[0];
     const wanted = new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('other');
@@ -149,14 +158,37 @@ export const gardensHandlers: Record<string, Handler> = {
     errors: [],
     warnings: [],
   }),
-  gardens_arrival_entry_save: (input) => ({
-    rows: (input as ArrivalEntryInput).lines.map((_, index) => ({
-      ...arrivalsReal.ARRIVAL_SAVE.row,
-      id: index + 1,
-      number: index + 1,
-    })),
-    warnings: [],
-  }),
+  gardens_arrival_entry_save: (input) => {
+    const lines = (input as ArrivalEntryInput).lines;
+    if (manyRows.length === 0) {
+      return {
+        rows: lines.map((_, index) => ({
+          ...arrivalsReal.ARRIVAL_SAVE.row,
+          id: index + 1,
+          number: index + 1,
+        })),
+        warnings: [],
+      };
+    }
+    // A saved entry joins the list as the newest: the next numbers, today's day, nothing sold yet.
+    const rows = lines.map((line, index) => {
+      const number = Math.max(...manyRows.map((row) => row.number)) + 1 + index;
+      const qty = Number(line.qty);
+      const made: ArrivalRow = {
+        ...arrivalsReal.ARRIVAL_SAVE.row,
+        id: number,
+        number,
+        entry_date: '2026-10-30',
+        sell_date: '2026-10-30',
+        qty,
+        qty_left: qty,
+        qty_our_left: qty,
+      };
+      manyRows.push(made);
+      return made;
+    });
+    return { rows, warnings: [] };
+  },
   gardens_arrival_cancel: () => arrivalsReal.ARRIVAL_CANCEL,
   gardens_arrival_set_sell_date: () => arrivalsReal.ARRIVAL_SET_SELL_DATE,
   gardens_arrival_write_off: () => arrivalsReal.ARRIVAL_WRITE_OFF,

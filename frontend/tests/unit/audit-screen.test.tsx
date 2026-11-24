@@ -338,6 +338,38 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
       );
     });
 
+    it('the Owner’s sign is never shown, even when an old row still holds its text (PRD FR-7.71, v1.58)', async () => {
+      vi.mocked(auditApi.auditList).mockResolvedValue({
+        ...pageOf(0, 100),
+        rows: [
+          {
+            ...DETAIL_ROW,
+            changes: [
+              ...DETAIL_ROW.changes,
+              { path: 'sign', old: { kind: 'null' }, new: { kind: 'text', text: 'adnan' } },
+              { path: 'reopen.sign', old: { kind: 'null' }, new: { kind: 'text', text: 'adnan' } },
+            ],
+          },
+        ],
+        total_count: 1,
+      });
+      const { user } = await openAudit();
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['4711']);
+      }, SLOW_MS);
+      await user.click(pick('.ag-row[row-id="4711"] [col-id="user"]'));
+      await user.keyboard('{Enter}');
+      await screen.findByRole('heading', {
+        level: 3,
+        name: (name) => visible(name) === m('audit-detail-title', { number: '4711' }),
+      });
+      // The four real fields are there; the two sign fields are not, and the text appears nowhere.
+      await waitFor(() => {
+        expect(document.querySelectorAll('.ag-row')).toHaveLength(4);
+      });
+      expect(visible(document.body.textContent)).not.toContain('adnan');
+    });
+
     it('shows who, when, what and the reason as typed, and Esc comes back to the list', async () => {
       const { user } = await openDetail();
       const facts = within(pick('dl'));

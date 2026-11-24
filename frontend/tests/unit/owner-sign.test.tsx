@@ -2,7 +2,7 @@
 // v1.36, plan 73), in the Urdu and the English app, against a test double of the plan's contract (the backend's
 // types and files follow): the reopen box has a second, required field below the reason; the sign is plain text;
 // `day_fix_open` gets it as typed; ERR_SIGN_WRONG and ERR_SIGN_REQUIRED are told under the field and nothing
-// opens; the stamp, its row mark and the edit history show the sign after the name; Settings, Security changes
+// opens; the stamp, its row mark and the edit history never show the sign (v1.58, plan 96 T5); Settings, Security changes
 // the Owner's sign with his password and his current sign, and the new sign typed twice (plan 92). Keyboard only:
 // Enter goes from the reason to the sign and opens.
 
@@ -192,79 +192,120 @@ function withQuery(ui: ReactNode) {
   return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
 }
 
-describe.each(LANGUAGES)('the sign in the stamp and the history (%s)', (language) => {
-  const base = AUDIT_EDIT_STAMP_BIKRI[0]?.stamp;
-  if (base === undefined || base === null) throw new Error('the backend file has a stamp');
-  const stamp: EditStamp = base;
-  const when = {
-    date: '11-10-2026',
-    time: message(language, 'edit-time', { hour: '2', minute: '00', part: 'noon', meridian: 'pm' }),
-    by: 'Maher Adnan',
-  };
-
-  it('the backend’s own stamp of the edit made in the fix carries the sign, and its history version too', () => {
-    expect(stamp.sign).toBe('adnan');
-    expect(AUDIT_EDIT_HISTORY_BIKRI.versions[0]?.sign).toBe('adnan');
-    // The edit of an open day in the same file has none.
-    expect(AUDIT_EDIT_STAMP_BIKRI[1]?.stamp?.sign ?? null).toBeNull();
-    renderIn(language, <EditStampLine stamp={stamp} />);
-    expect(visible(document.body.textContent)).toContain(
-      message(language, 'glossary-dastakhat') + ': adnan',
-    );
-  });
-
-  it('an edit made through a reopened day shows the sign after the name; an edit of an open day does not', () => {
-    const signed = { ...stamp, sign: 'adnan' };
-    const first = renderIn(language, <EditStampLine stamp={signed} />);
-    expect(visible(document.body.textContent)).toContain(
-      message(language, 'edit-stamp-signed', { ...when, sign: 'adnan' }),
-    );
-    first.unmount();
-    renderIn(language, <EditStampLine stamp={{ ...stamp, sign: null }} />);
-    const text = visible(document.body.textContent);
-    expect(text).toContain(message(language, 'edit-stamp', when));
-    expect(text).not.toContain(message(language, 'glossary-dastakhat'));
-  });
-
-  it('the row mark carries the sign in its tip', () => {
-    renderIn(language, <EditedMark stamp={{ ...stamp, sign: 'adnan' }} />);
-    const mark = screen.getByText(message(language, 'edit-mark')).closest('[data-edited-mark]');
-    expect(visible(mark?.getAttribute('title'))).toBe(
-      message(language, 'edit-mark-tip-signed', { ...when, sign: 'adnan' }),
-    );
-  });
-
-  it('the edit history lists the sign of the version that has one, and only that one', async () => {
-    const [first, ...rest] = AUDIT_EDIT_HISTORY_BIKRI.versions;
-    if (first === undefined) throw new Error('the backend file has a version');
-    vi.mocked(editApi.auditEditHistory).mockResolvedValue({
-      ...AUDIT_EDIT_HISTORY_BIKRI,
-      versions: [{ ...first, sign: 'adnan' }, ...rest],
-    });
-    renderIn(
-      language,
-      withQuery(<EditStampLine stamp={stamp} history={{ entity: 'bikri', id: 1 }} />),
-    );
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole('button', {
-        name: (name) => visible(name).startsWith(message(language, 'edit-action-history')),
+describe.each(LANGUAGES)(
+  'the sign is never shown in a stamp, a tip or the history (%s)',
+  (language) => {
+    const base = AUDIT_EDIT_STAMP_BIKRI[0]?.stamp;
+    if (base === undefined || base === null) throw new Error('the backend file has a stamp');
+    const stamp: EditStamp = base;
+    const when = {
+      date: '11-10-2026',
+      time: message(language, 'edit-time', {
+        hour: '2',
+        minute: '00',
+        part: 'noon',
+        meridian: 'pm',
       }),
-    );
-    const dialog = await screen.findByRole('dialog');
-    await waitFor(() => {
-      expect(visible(dialog.textContent)).toContain(message(language, 'edit-history-title'));
-      expect(dialog.querySelectorAll('[data-edit-version]').length).toBeGreaterThan(0);
+      by: 'Maher Adnan',
+    };
+    // Everything a screen must never print: the sign as typed, and its word as a label.
+    const secret = (text: string | null | undefined) => {
+      const seen = visible(text);
+      expect(seen).not.toContain('adnan');
+      expect(seen).not.toContain(message(language, 'glossary-dastakhat'));
+    };
+
+    // An older backend sent the sign on the stamp and on each history version (plans 73 and 92). The types no longer
+    // have it (plan 96 T4), but a screen must still never print it, so the tests build such data on purpose. A value
+    // held in a variable is not an object literal, so it needs no cast.
+    const legacy = { ...stamp, sign: 'adnan' };
+
+    it('a stamp that still carries the sign shows the date, the time and who, and not the sign', () => {
+      renderIn(language, <EditStampLine stamp={legacy} />);
+      const text = visible(document.body.textContent);
+      expect(text).toContain(message(language, 'edit-stamp', when));
+      secret(text);
     });
-    const versions = Array.from(dialog.querySelectorAll('[data-edit-version]'));
-    expect(visible(versions[0]?.textContent)).toContain(
-      message(language, 'glossary-dastakhat') + ': adnan',
-    );
-    for (const other of versions.slice(1)) {
-      expect(visible(other.textContent)).not.toContain(message(language, 'glossary-dastakhat'));
-    }
-  });
-});
+
+    it('a stamp with a sign reads the same as a stamp without one', () => {
+      const first = renderIn(language, <EditStampLine stamp={legacy} />);
+      const signed = visible(document.querySelector('[data-edit-stamp]')?.textContent);
+      first.unmount();
+      renderIn(language, <EditStampLine stamp={stamp} />);
+      expect(visible(document.querySelector('[data-edit-stamp]')?.textContent)).toBe(signed);
+      secret(signed);
+    });
+
+    it('the row mark shows the date, the time and who on hover, with the reason after them, and never the sign', () => {
+      const reasoned = { ...legacy, reason: 'wrong rate' };
+      const first = renderIn(language, <EditedMark stamp={reasoned} />);
+      const mark = screen.getByText(message(language, 'edit-mark')).closest('[data-edited-mark]');
+      expect(visible(mark?.getAttribute('title'))).toBe(
+        message(language, 'edit-mark-tip-reason', { ...when, reason: 'wrong rate' }),
+      );
+      secret(mark?.getAttribute('title'));
+      first.unmount();
+      // No reason typed: only the date, the time and who.
+      renderIn(language, <EditedMark stamp={{ ...reasoned, reason: null }} />);
+      const bare = screen.getByText(message(language, 'edit-mark')).closest('[data-edited-mark]');
+      expect(visible(bare?.getAttribute('title'))).toBe(message(language, 'edit-mark-tip', when));
+      secret(bare?.getAttribute('title'));
+    });
+
+    it('the edit history shows when, who and the reason of each version, and never the sign, not as a version word and not as a changed field', async () => {
+      const [first, ...rest] = AUDIT_EDIT_HISTORY_BIKRI.versions;
+      if (first === undefined) throw new Error('the backend file has a version');
+      // A version of an older backend: the sign as a field of the version and as a changed field. Held in a
+      // variable, so it is not an object literal and needs no cast.
+      const legacyVersion = {
+        ...first,
+        sign: 'adnan',
+        changes: [
+          ...first.changes,
+          {
+            path: 'sign',
+            old: { kind: 'null' as const },
+            new: { kind: 'text' as const, text: 'adnan' },
+          },
+        ],
+      };
+      vi.mocked(editApi.auditEditHistory).mockResolvedValue({
+        ...AUDIT_EDIT_HISTORY_BIKRI,
+        versions: [legacyVersion, ...rest],
+      });
+      renderIn(
+        language,
+        withQuery(<EditStampLine stamp={stamp} history={{ entity: 'bikri', id: 1 }} />),
+      );
+      const user = userEvent.setup();
+      await user.click(
+        screen.getByRole('button', {
+          name: (name) => visible(name).startsWith(message(language, 'edit-action-history')),
+        }),
+      );
+      const dialog = await screen.findByRole('dialog');
+      await waitFor(() => {
+        expect(visible(dialog.textContent)).toContain(message(language, 'edit-history-title'));
+        expect(dialog.querySelectorAll('[data-edit-version]').length).toBeGreaterThan(0);
+      });
+      const versions = Array.from(dialog.querySelectorAll('[data-edit-version]'));
+      expect(visible(versions[0]?.textContent)).toContain(
+        message(language, 'edit-history-version', {
+          date: '11-10-2026',
+          time: message(language, 'edit-time', {
+            hour: '2',
+            minute: '00',
+            part: 'noon',
+            meridian: 'pm',
+          }),
+          by: first.by,
+        }),
+      );
+      for (const version of versions) secret(version.textContent);
+      secret(dialog.textContent);
+    });
+  },
+);
 
 describe.each(LANGUAGES)('Settings, Security: the Owner’s sign (%s)', (language: Language) => {
   beforeEach(() => {

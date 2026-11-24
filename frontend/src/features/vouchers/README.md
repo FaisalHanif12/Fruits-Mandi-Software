@@ -91,8 +91,8 @@ shows the words for nothing to print.
   in the first row and the amount in the second; the party card is drawn by the screen
   in the aside of `FormAside` (the picker has `showCard={false}` and says whose card it is through `onCardAccount`),
   so a tall card never pushes the amount down; the cursor starts in the amount. After the save the voucher stays on
-  the screen (it is read again, `VoucherEditor` is keyed by id and version): its stamp (time, Owner, the sign when the
-  day was reopened, the reason), the mark "Before ..." on the amount with the old and the new figure in its tip, and
+  the screen (it is read again, `VoucherEditor` is keyed by id and version): its stamp (time, Owner, the reason; never the
+  sign), the mark "Before ..." on the amount with the old and the new figure in its tip, and
   the "Edited" word of its list row. A voucher of a closed day that was reopened for the fix closes again after the
   save (`finishFixSession`) and opens read only with the same stamp and mark (`SavedVoucherView`). Tests:
   `vouchers-edit-clear.test.tsx` (the three types and the closed-day path), `vouchers-edit-cancel.test.tsx`.

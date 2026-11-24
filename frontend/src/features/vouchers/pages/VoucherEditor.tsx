@@ -197,7 +197,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
     if (editing === null) void finishFixSession(l10n);
     if (editing !== null) {
       // A saved voucher that was changed stays on the screen (plan 89, PRD FR-7.71): the row is read again, so the
-      // entry comes back with its stamp (time, Owner, the sign when the day was reopened, the reason) and the mark
+      // entry comes back with its stamp (time, Owner, the reason; never the Owner's sign, PRD FR-7.71 v1.58) and the mark
       // "Before ... now ..." on what changed. The days a fix reopened close again first (PRD FR-21.4); a voucher of
       // a day that is closed again opens read only, with the same stamp.
       void finishFixSession(l10n).then(() =>

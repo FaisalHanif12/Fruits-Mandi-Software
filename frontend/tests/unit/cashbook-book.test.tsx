@@ -267,18 +267,25 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
       ).getAllByRole('button')[index];
       if (item === undefined) throw new Error('no menu item');
       await user.click(item);
-      await waitFor(() => {
-        expect(router.state.location.pathname).toBe(path);
-      });
-      await waitFor(() => {
-        expect(
-          within(
-            screen.getByRole('navigation', {
-              name: named(message(language, 'layout-rokar-label')),
-            }),
-          ).getAllByRole('button')[index],
-        ).toHaveAttribute('aria-current', 'page');
-      });
+      // Each screen of the area is a lazy route: on a busy computer its chunk takes longer than the 1 s of the default.
+      await waitFor(
+        () => {
+          expect(router.state.location.pathname).toBe(path);
+        },
+        { timeout: 8000 },
+      );
+      await waitFor(
+        () => {
+          expect(
+            within(
+              screen.getByRole('navigation', {
+                name: named(message(language, 'layout-rokar-label')),
+              }),
+            ).getAllByRole('button')[index],
+          ).toHaveAttribute('aria-current', 'page');
+        },
+        { timeout: 8000 },
+      );
     }
   });
 

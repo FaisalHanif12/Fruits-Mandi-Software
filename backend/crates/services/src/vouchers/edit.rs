@@ -282,12 +282,14 @@ fn check_edit_sign(
         return Err(crate::edit::date_fixed("entry.date", old_date));
     }
     let typed = input.sign.trim();
-    let fix = ctx.db.read(|conn| day::fix_sign(conn, &old.entry_date))?;
+    let fix = ctx
+        .db
+        .read(|conn| day::fix_sign_given(conn, &old.entry_date))?;
     let mut errors = FieldErrors::default();
     if input.reason.trim().is_empty() {
         errors.push(FieldError::new(ErrorCode::ErrReasonRequired, "reason"));
     }
-    if typed.is_empty() && fix.is_none() {
+    if typed.is_empty() && !fix {
         errors.push(FieldError::new(ErrorCode::ErrSignRequired, "sign"));
     }
     errors.finish()?;
@@ -491,11 +493,9 @@ pub(crate) fn edit_in(
         if let Some(note) = &note {
             event = event.reason(note);
         }
-        let sign = match sign {
-            Some(typed) => Some(typed.to_owned()),
-            None => crate::day::fix_sign(tx, &old.row.entry_date)?,
-        };
-        event = event.sign(sign.as_deref());
+        // The sign is a secret: the audit entry only says it was given, by this edit or by the fix.
+        let given = sign.is_some() || crate::day::fix_sign_given(tx, &old.row.entry_date)?;
+        event = event.sign_given(given);
         ctx.db.auditor().write(tx, &event.into_entry())?;
         let new_balance = match planned.account() {
             Some(account) => ledger::balance_in(tx, account.id, None, None)?,

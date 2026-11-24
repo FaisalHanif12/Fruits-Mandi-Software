@@ -5,7 +5,6 @@
 import type { EditStamp } from '../../bindings/EditStamp';
 import type { ListContext } from '../grid/ListGrid';
 import { isoToDisplayDate } from '../format';
-import { whenWhoMessage } from './sign';
 import { clockPartsOf } from './time';
 
 /** The words of a status, with "Edited" after them when the entry was edited. */
@@ -17,7 +16,10 @@ export function statusWithEdited(
   return edited === null ? status : `${status} · ${context.text('edit-mark')}`;
 }
 
-/** The tip of an edited row: "Edited: 31-10-2026 4:35 pm, Owner". Nothing for an entry never edited. */
+/**
+ * The tip of an edited row: "Edited: 31-10-2026 4:35 pm, Owner", with the reason after it when one was given
+ * (PRD FR-7.71, v1.58). Never the Owner's sign. Nothing for an entry never edited.
+ */
 export function editedTip(edited: EditStamp | null, context: ListContext): string | undefined {
   if (edited === null) return undefined;
   const clock = clockPartsOf(edited.local_time);
@@ -30,10 +32,8 @@ export function editedTip(edited: EditStamp | null, context: ListContext): strin
           part: clock.part,
           meridian: clock.meridian,
         });
-  const tip = whenWhoMessage('edit-mark-tip', edited, {
-    date: isoToDisplayDate(edited.local_date),
-    time,
-    by: edited.by,
-  });
-  return context.text(tip.id, tip.vars);
+  const vars = { date: isoToDisplayDate(edited.local_date), time, by: edited.by };
+  return edited.reason === null || edited.reason.trim() === ''
+    ? context.text('edit-mark-tip', vars)
+    : context.text('edit-mark-tip-reason', { ...vars, reason: edited.reason });
 }

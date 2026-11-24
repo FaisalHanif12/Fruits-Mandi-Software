@@ -287,7 +287,8 @@ describe.each(LANGUAGES)('the words the backend sends (%s)', (language) => {
       'print-freight': ['کرایہ', 'Freight'],
       'print-labour': ['مزدوری', 'Labour'],
       'print-munshiana': ['منشیانہ', 'Munshiana'],
-      'print-cash-paid': ['نقد', 'Cash Paid'],
+      // PRD v1.57 FR-12.52: the lot column and the bill line read نقد ادائیگی (Cash Paid).
+      'print-cash-paid': ['نقد ادائیگی', 'Cash Paid'],
       'print-store-rent': ['کرایہ سٹور', 'Store Rent'],
       'print-phone-charge': ['فون', 'Phone Charge'],
       'print-laga': ['لاگا', 'Laga'],

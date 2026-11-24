@@ -29,13 +29,17 @@ vi.mock('../../src/shared/search/api');
 const PERIOD_START = 'report-period-start-balance';
 const OPENING = 'report-opening-balance';
 
-/** The backend's R13 answer for a period that starts after the opening date: its first line is the period's. */
-const R13_LATER_PERIOD = {
+/** R13 of the backend's file with the first line of its summary named `id` (the file's own is the period's). */
+const withFirstLine = (id: string) => ({
   ...R13_AKRAM,
   summary: R13_AKRAM.summary.map((line) =>
-    line.label_id === OPENING ? { ...line, label_id: PERIOD_START } : line,
+    line.label_id === OPENING || line.label_id === PERIOD_START ? { ...line, label_id: id } : line,
   ),
-};
+});
+/** The backend's R13 answer for a period that starts after the opening date: its first line is the period's. */
+const R13_LATER_PERIOD = withFirstLine(PERIOD_START);
+/** The same answer for a period that holds the opening date: its first line is the account's opening row. */
+const R13_FROM_OPENING = withFirstLine(OPENING);
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -72,7 +76,7 @@ describe.each(LANGUAGES)('the opening lines of a ledger (%s)', (language: Langua
   });
 
   it('R13 for a period that holds the opening date keeps ابتدائی بقایا / Opening balance for its first line', async () => {
-    fakeReports({ pages: { R13: R13_AKRAM } });
+    fakeReports({ pages: { R13: R13_FROM_OPENING } });
     await renderApp('/reports/R13?party=21');
     expect(await screen.findByText(label(OPENING), undefined, { timeout: 8_000 })).toBeTruthy();
     expect(screen.queryByText(label(PERIOD_START))).toBeNull();

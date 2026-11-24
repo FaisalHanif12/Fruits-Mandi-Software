@@ -276,6 +276,12 @@
   --ag-row-hover-color: var(--color-row-current);
 }
 
+/* A marked row (plan 96): the row a panel beside the list is showing, or the rows an entry has just added.
+   A little stronger than the row with focus; the panel or the toast says it in words as well. */
+.entry-grid .row-marked {
+  background-color: var(--color-primary-soft);
+}
+
 /* A zero amount in a money column: the quiet ink, never a different place or size (plan 75, item 8). */
 .entry-grid.list-grid .cell-zero {
   color: var(--color-ink-muted);

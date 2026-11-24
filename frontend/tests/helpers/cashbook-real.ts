@@ -5,6 +5,7 @@
 // day of 10-10-2026 with Aslam's loan of 5,000 (E2E-30) and Partner A's 2,000 (E2E-29).
 
 import assistAttentionOverdue from '../fixtures/assist_attention_overdue.json';
+import cashbookBookUmarReal from '../fixtures/cashbook_book_umar_real.json';
 import cashbookGetDay from '../fixtures/cashbook_get_day.json';
 import cashbookGetDayRequest from '../fixtures/cashbook_get_day_request.json';
 import cashbookGetSecondPage from '../fixtures/cashbook_get_second_page.json';
@@ -141,6 +142,8 @@ function readVoucherSaved(value: unknown): VoucherSaved {
 
 // Answers
 export const CASHBOOK_DAY: Cashbook = readCashbook(cashbookGetDay);
+/** Umar's own books, the window of 30 days that ends 24-11-2026: 11 lines, so the list is a long one (plan 96 T2). */
+export const CASHBOOK_UMAR_REAL: Cashbook = readCashbook(cashbookBookUmarReal);
 export const CASHBOOK_SECOND_PAGE: Cashbook = readCashbook(cashbookGetSecondPage);
 export const PREVIEW_SHOP: ExpensePreview = readExpensePreview(vouchersPreviewExpenseShop);
 export const PREVIEW_PERSONAL: ExpensePreview = readExpensePreview(vouchersPreviewExpensePersonal);

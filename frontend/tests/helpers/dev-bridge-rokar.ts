@@ -22,6 +22,7 @@ import type { PersonalReturnInput } from '../../src/bindings/PersonalReturnInput
 import type { ShopExpenseInput } from '../../src/bindings/ShopExpenseInput';
 import type { LentListInput } from '../../src/bindings/LentListInput';
 import type { LentPersonCreateRequest } from '../../src/bindings/LentPersonCreateRequest';
+import type { Cashbook } from '../../src/bindings/Cashbook';
 import type { PartnerTakesInput } from '../../src/bindings/PartnerTakesInput';
 import type { VoucherEntry } from '../../src/bindings/VoucherEntry';
 import type { VouchersListInput } from '../../src/bindings/VouchersListInput';
@@ -47,6 +48,7 @@ import type { GeneralPreviewInput } from '../../src/bindings/GeneralPreviewInput
 import type { PartnersStatementDayInput } from '../../src/bindings/PartnersStatementDayInput';
 import type { PartnersStatementInput } from '../../src/bindings/PartnersStatementInput';
 import type { PartnersStatementMonthInput } from '../../src/bindings/PartnersStatementMonthInput';
+import { CASHBOOK_UMAR_REAL } from './cashbook-real';
 import { devFlag } from './dev-bridge';
 import capitalPrintEn from '../fixtures/cashbook_capital_print_data_en.json';
 import capitalPrintUr from '../fixtures/cashbook_capital_print_data_ur.json';
@@ -231,6 +233,19 @@ function capitalCard(): CapitalWhere {
   return devFlag('umar') ? UMAR_BEFORE : WORKED_DAY;
 }
 
+/** `&many`: the book with its lines repeated up to 14, each with its own entry id (a long list, plan 96 T2). */
+const MANY_ROWS = 14;
+function paddedBook(book: Cashbook): Cashbook {
+  if (!devFlag('many') || book.rows.length === 0) return book;
+  const rows = Array.from({ length: MANY_ROWS }, (_, index) => {
+    const source = book.rows[index % book.rows.length];
+    return source === undefined
+      ? undefined
+      : { ...source, entry_id: source.entry_id + index * 1000 };
+  }).filter((row): row is NonNullable<typeof row> => row !== undefined);
+  return { ...book, rows, total_count: rows.length };
+}
+
 export const rokarHandlers: Record<string, Handler> = {
   ...plan76Handlers,
   fruit_preview: (input) => fruitBooks.preview(input as unknown as FruitInput),
@@ -240,7 +255,12 @@ export const rokarHandlers: Record<string, Handler> = {
   fruit_get: (input) => fruitBooks.get(input as unknown as FruitGetInput),
   fruit_list: (input) => fruitBooks.list(input as unknown as FruitListInput),
   fruit_lots: (input) => fruitBooks.lots(input as unknown as FruitLotsInput),
-  cashbook_get: (input) => books.cashbook(input as unknown as CashbookInput),
+  // `&many` pads the book to 14 lines, so a list of more than ten rows (the 'fill' height of a long list) can be photographed.
+  // `&umar-book` is the real answer of Umar's books (11 lines, plan 96 T2).
+  cashbook_get: (input) =>
+    devFlag('umar-book')
+      ? CASHBOOK_UMAR_REAL
+      : paddedBook(books.cashbook(input as unknown as CashbookInput)),
   // Where the partners' money is and whose it is (plan 78 E): the worked day after Events 1 to 5. `?locked` is the
   // partner section locked, which asks for the code in the place of the card.
   cashbook_capital_where: () => {

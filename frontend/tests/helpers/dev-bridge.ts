@@ -287,12 +287,6 @@ export function devFlag(name: string): boolean {
   return new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
 }
 
-/** The stamp of an edited بکری; with `?signed` it carries the sign given when the day was reopened (plan 73). */
-function editedStampOf<T extends object>(stamp: T | null): (T & { sign?: string }) | null {
-  if (stamp === null) return null;
-  return devFlag('signed') ? { ...stamp, sign: 'adnan' } : stamp;
-}
-
 // The question panel listens for Tauri events, and Tauri's own `unlisten` calls
 // `__TAURI_EVENT_PLUGIN_INTERNALS__.unregisterListener` when the panel's effect ends. A plain browser tab has no
 // such object, so the end of that effect threw and the whole page went blank (seen in the plan 76 window check).
@@ -734,7 +728,7 @@ const handlers: Record<string, Handler> = {
           ...(devFlag('closedday') ? { needs_reopen: true } : {}),
           ...(devFlag('edited')
             ? {
-                edited: editedStampOf(AUDIT_EDIT_STAMP_BIKRI[0]?.stamp ?? null),
+                edited: AUDIT_EDIT_STAMP_BIKRI[0]?.stamp ?? null,
               }
             : {}),
         }),

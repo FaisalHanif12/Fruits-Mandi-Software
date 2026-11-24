@@ -31,6 +31,9 @@ const MARKER_CLASSES: ReadonlySet<string> = new Set([
   'cell-control',
   // A list whose rows grow with a long column: the tests and the measuring tool tell it from a fixed-height list.
   'list-grid-wrap',
+  // The name of a group of the top row of the sale book (plan 95): `group-data-[compact]/toolbar:` on a child reads the
+  // `data-compact` of this row. Tailwind makes no rule for the marker itself, only for the variant that uses it.
+  'group/toolbar',
 ]);
 
 export interface ClassUse {

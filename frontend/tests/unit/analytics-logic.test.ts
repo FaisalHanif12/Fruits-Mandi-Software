@@ -15,12 +15,13 @@ import {
   signedKeysOf,
 } from '../../src/features/analytics/columns';
 import {
-  CLASSIC_MEASURE,
+  LEGACY_MEASURE,
   EMPTY_ANALYTICS_FILTERS,
   filtersToWire,
   isUnfiltered,
   periodMessageId,
   stateFromWire,
+  takesMeasure,
   type AnalyticsFilterState,
 } from '../../src/features/analytics/filters';
 import { columnWidth, fitColumns, STEP_ROOM, windowOf } from '../../src/features/analytics/fit';
@@ -84,6 +85,16 @@ const takesOf = (view: AnalyticsView) => {
 /** The request of the backend's own test, as a plain filters object. */
 const filtersOf = (request: AnalyticsRunInput) => request.filters;
 
+/**
+ * The backend's request as the screen sends it today: the same filters, and for a view that lists the measure
+ * (the catalogue says so) the measure the screen always adds, sales at first (PRD FR-18.10, plan 84). The backend's
+ * request files of the first plans have no measure.
+ */
+const asSent = (view: AnalyticsView, request: AnalyticsRunInput) =>
+  takesMeasure(takesOf(view))
+    ? { ...filtersOf(request), measure: EMPTY_ANALYTICS_FILTERS.measure }
+    : filtersOf(request);
+
 describe('the boxes become the request the backend wrote', () => {
   const cases: [string, AnalyticsView, Partial<AnalyticsFilterState>, AnalyticsRunInput][] = [
     ['nothing filled', 'A', {}, ANALYTICS_RUN_A_REQUEST],
@@ -105,7 +116,7 @@ describe('the boxes become the request the backend wrote', () => {
   ];
   it.each(cases)('%s', (_name, view, part, request) => {
     const state: AnalyticsFilterState = { ...EMPTY_ANALYTICS_FILTERS, ...part };
-    expect(filtersToWire(state, takesOf(view))).toEqual(filtersOf(request));
+    expect(filtersToWire(state, takesOf(view))).toEqual(asSent(view, request));
   });
 
   it('never sends a grouping to a view that has none, which the backend would refuse', () => {
@@ -162,7 +173,13 @@ describe('a saved view comes back into the boxes', () => {
     expect(state.item?.id).toBe(1);
     // The names of a record come with the first answer; until then they are empty.
     expect(state.item?.name_ur).toBe('');
-    expect(filtersToWire(state, takesOf(first.view))).toEqual(first.filters);
+    // A view saved before plan 84 has no measure: it opens as the total commission it was, and that is what it sends
+    // again once the screen sends the measure to every view that lists it.
+    expect(filtersToWire(state, takesOf(first.view))).toEqual(
+      takesMeasure(takesOf(first.view))
+        ? { ...first.filters, measure: LEGACY_MEASURE }
+        : first.filters,
+    );
   });
 
   it('opens the second saved view with nothing filled', () => {
@@ -171,7 +188,7 @@ describe('a saved view comes back into the boxes', () => {
     // A view saved before plan 84 holds no measure: it opens as the total commission it was (PRD FR-18.10).
     expect(stateFromWire(second?.filters ?? first.filters)).toEqual({
       ...EMPTY_ANALYTICS_FILTERS,
-      measure: CLASSIC_MEASURE,
+      measure: LEGACY_MEASURE,
     });
   });
 });
@@ -473,7 +490,7 @@ describe('round 11: the boxes of views F, G and J and the new filters become the
   ];
   it.each(cases)('%s', (_name, view, part, request) => {
     const state: AnalyticsFilterState = { ...EMPTY_ANALYTICS_FILTERS, ...part };
-    expect(filtersToWire(state, takesOf(view))).toEqual(filtersOf(request));
+    expect(filtersToWire(state, takesOf(view))).toEqual(asSent(view, request));
   });
 
   it('never sends a comparison to F, G or J: the backend refuses it, so the boxes do not offer it', () => {
@@ -719,7 +736,7 @@ describe('the garden slice: the boxes of view I and the garden filter become the
   ];
   it.each(cases)('%s', (_name, view, part, request) => {
     const state: AnalyticsFilterState = { ...EMPTY_ANALYTICS_FILTERS, ...part };
-    expect(filtersToWire(state, takesOf(view))).toEqual(filtersOf(request));
+    expect(filtersToWire(state, takesOf(view))).toEqual(asSent(view, request));
   });
 
   it('never sends a garden to F or J, which the backend refuses with ERR_OUT_OF_RANGE', () => {

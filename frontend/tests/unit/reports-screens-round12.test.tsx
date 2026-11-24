@@ -186,7 +186,13 @@ describe.each(LANGUAGES)('R1, the sale book (%s)', (language: Language) => {
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(1);
     }, SLOW_MS);
-    expect(screen.getByRole('button', { name: named(m('print-box-print')) })).toBeVisible();
+    // The button names the word of the print and its key. jsdom loads no CSS, so the short word that gives way to
+    // the key in a short row (plan 95) is in its name too: the name starts with the print word, and there is one.
+    const printButtons = screen
+      .getAllByRole('button')
+      .filter((button) => visible(button.textContent).startsWith(m('print-box-print')));
+    expect(printButtons).toHaveLength(1);
+    expect(printButtons[0]).toBeVisible();
     expect(screen.queryByRole('button', { name: named(m('report-preview')) })).toBeNull();
   });
 

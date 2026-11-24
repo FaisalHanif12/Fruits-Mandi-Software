@@ -238,6 +238,13 @@
       }
     },
     {
+      "label_id": "report-r35-sale-rest",
+      "cell": {
+        "type": "money",
+        "paisa": 1500000
+      }
+    },
+    {
       "label_id": "report-r35-today-left",
       "cell": {
         "type": "balance",

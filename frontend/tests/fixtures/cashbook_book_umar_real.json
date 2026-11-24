@@ -1,0 +1,263 @@
+{
+  "opening_paisa": 0,
+  "closing_paisa": 92426000,
+  "first_entry_date": "2026-10-29",
+  "rows": [
+    {
+      "entry_id": 18,
+      "entry_date": "2026-10-29",
+      "posting_type": "opening",
+      "number": null,
+      "account": {
+        "id": 19,
+        "code": "06020001",
+        "name_ur": "سرمایہ - عدنان",
+        "name_en": "Capital - Adnan"
+      },
+      "kind": "opening_capital",
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "عدنان",
+        "name_en": "Adnan"
+      },
+      "narration": "",
+      "in_paisa": 50000000,
+      "out_paisa": 0,
+      "running_paisa": 50000000,
+      "source": {
+        "kind": "account",
+        "id": 19
+      }
+    },
+    {
+      "entry_id": 20,
+      "entry_date": "2026-10-29",
+      "posting_type": "opening",
+      "number": null,
+      "account": {
+        "id": 22,
+        "code": "06020002",
+        "name_ur": "سرمایہ - عثمان",
+        "name_en": "Capital - Usman"
+      },
+      "kind": "opening_capital",
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "عثمان",
+        "name_en": "Usman"
+      },
+      "narration": "",
+      "in_paisa": 50000000,
+      "out_paisa": 0,
+      "running_paisa": 100000000,
+      "source": {
+        "kind": "account",
+        "id": 22
+      }
+    },
+    {
+      "entry_id": 9,
+      "entry_date": "2026-11-06",
+      "posting_type": "bikri_first",
+      "number": 1,
+      "account": null,
+      "kind": "other",
+      "partner": null,
+      "narration": "",
+      "in_paisa": 2136000,
+      "out_paisa": 0,
+      "running_paisa": 102136000,
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      }
+    },
+    {
+      "entry_id": 10,
+      "entry_date": "2026-11-06",
+      "posting_type": "reversal",
+      "number": 1,
+      "account": null,
+      "kind": "other",
+      "partner": null,
+      "narration": "مانی کا کھاتہ اپڈاٹے کرنہ حئی",
+      "in_paisa": 0,
+      "out_paisa": 2136000,
+      "running_paisa": 100000000,
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      }
+    },
+    {
+      "entry_id": 11,
+      "entry_date": "2026-11-06",
+      "posting_type": "bikri_first",
+      "number": 1,
+      "account": null,
+      "kind": "other",
+      "partner": null,
+      "narration": "",
+      "in_paisa": 2136000,
+      "out_paisa": 0,
+      "running_paisa": 102136000,
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      }
+    },
+    {
+      "entry_id": 12,
+      "entry_date": "2026-11-16",
+      "posting_type": "payment",
+      "number": 1,
+      "account": {
+        "id": 29,
+        "code": "0011",
+        "name_ur": "احسان",
+        "name_en": "Ehsan"
+      },
+      "kind": "other",
+      "partner": null,
+      "narration": "احسان کو ایک lakh پیچلہ دیدیہ حئی",
+      "in_paisa": 0,
+      "out_paisa": 10000000,
+      "running_paisa": 92136000,
+      "source": {
+        "kind": "voucher",
+        "id": 1
+      }
+    },
+    {
+      "entry_id": 13,
+      "entry_date": "2026-11-16",
+      "posting_type": "bikri_first",
+      "number": 2,
+      "account": null,
+      "kind": "other",
+      "partner": null,
+      "narration": "",
+      "in_paisa": 2690000,
+      "out_paisa": 0,
+      "running_paisa": 94826000,
+      "source": {
+        "kind": "bikri",
+        "id": 2
+      }
+    },
+    {
+      "entry_id": 14,
+      "entry_date": "2026-11-16",
+      "posting_type": "receipt",
+      "number": 1,
+      "account": {
+        "id": 28,
+        "code": "0022",
+        "name_ur": "انس",
+        "name_en": "Ans"
+      },
+      "kind": "other",
+      "partner": null,
+      "narration": "",
+      "in_paisa": 10000000,
+      "out_paisa": 0,
+      "running_paisa": 104826000,
+      "source": {
+        "kind": "voucher",
+        "id": 2
+      }
+    },
+    {
+      "entry_id": 15,
+      "entry_date": "2026-11-20",
+      "posting_type": "garden_payment",
+      "number": null,
+      "account": null,
+      "kind": "other",
+      "partner": null,
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 20000000,
+      "running_paisa": 84826000,
+      "source": {
+        "kind": "garden",
+        "id": 2
+      }
+    },
+    {
+      "entry_id": 16,
+      "entry_date": "2026-11-21",
+      "posting_type": "garden_payment",
+      "number": null,
+      "account": null,
+      "kind": "other",
+      "partner": null,
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 1000000,
+      "running_paisa": 83826000,
+      "source": {
+        "kind": "garden",
+        "id": 2
+      }
+    },
+    {
+      "entry_id": 21,
+      "entry_date": "2026-11-22",
+      "posting_type": "bikri_first",
+      "number": 3,
+      "account": null,
+      "kind": "other",
+      "partner": null,
+      "narration": "",
+      "in_paisa": 16600000,
+      "out_paisa": 8000000,
+      "running_paisa": 92426000,
+      "source": {
+        "kind": "bikri",
+        "id": 3
+      }
+    }
+  ],
+  "total_count": 11,
+  "totals": {
+    "in_paisa": 133562000,
+    "out_paisa": 41136000
+  },
+  "months": [
+    {
+      "month": "2026-10",
+      "count": 2,
+      "figures": [
+        {
+          "key": "in_paisa",
+          "is_money": true,
+          "value": 100000000
+        },
+        {
+          "key": "out_paisa",
+          "is_money": true,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "month": "2026-11",
+      "count": 9,
+      "figures": [
+        {
+          "key": "in_paisa",
+          "is_money": true,
+          "value": 33562000
+        },
+        {
+          "key": "out_paisa",
+          "is_money": true,
+          "value": 41136000
+        }
+      ]
+    }
+  ]
+}

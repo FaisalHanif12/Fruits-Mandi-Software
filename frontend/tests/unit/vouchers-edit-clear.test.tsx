@@ -75,7 +75,7 @@ function rowOf(type: 'receipt' | 'payment' | 'advance') {
 }
 
 /** What the audit log holds after the edit: the amount went from 10,000 to 9,000, with the reason. */
-function historyOf(row: { id: number }, sign: string | null): EditHistory {
+function historyOf(row: { id: number }): EditHistory {
   return {
     entity: 'voucher',
     id: row.id,
@@ -96,7 +96,6 @@ function historyOf(row: { id: number }, sign: string | null): EditHistory {
           },
         ],
         changes_truncated: false,
-        sign,
       },
     ],
   };
@@ -192,7 +191,7 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
     'a %s: change the amount, give the reason, F10: it is saved, and the voucher stays with its stamp, the mark on the amount and "Edited" in its row',
     async (type) => {
       vi.mocked(editApi.auditEditHistory).mockImplementation((_entity, id) =>
-        Promise.resolve(historyOf({ id }, null)),
+        Promise.resolve(historyOf({ id })),
       );
       const { user, router, amount } = await openSaved(type);
       await user.click(amount);
@@ -218,8 +217,9 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
       expect(stamp).toContain('Owner');
       expect(stamp).toContain('10-10-2026');
       expect(stamp).toContain('wrong amount');
-      // The sign of the edit shows in the stamp too (PRD FR-7.71, plan 92).
-      expect(stamp).toContain('adnan');
+      // The Owner's sign never shows, not even when the backend's stamp still carries it (PRD FR-7.71, v1.58).
+      expect(stamp).not.toContain('adnan');
+      expect(stamp).not.toContain(message(language, 'glossary-dastakhat'));
       expect((await labelled(language, 'vouchers-field-amount')).value).toBe('9,000');
       // The mark on the amount: what it held before, and the old against the new in its tip.
       const mark = await waitFor(() => {
@@ -238,12 +238,11 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
     },
   );
 
-  it('a voucher of a closed day: reopen with the sign, change the amount, save, the day closes again, and the read-only voucher shows the stamp with the sign and the mark', async () => {
+  it('a voucher of a closed day: reopen with the sign, change the amount, save, the day closes again, and the read-only voucher shows the stamp (never the sign) and the mark', async () => {
     const row = store.rows.find((one) => one.id === 501);
     if (row === undefined) throw new Error('no row');
     row.entry_date = '2026-10-05';
     row.needs_reopen = true;
-    store.editSign = 'adnan';
     vi.mocked(editApi.dayFixOpen).mockImplementation(() => {
       row.needs_reopen = false;
       // The reopen took the reason and the sign, so the edit of this fix asks nothing again (plan 92).
@@ -255,7 +254,7 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
       return Promise.resolve(DAY_FIX_CLOSE_E2E_45);
     });
     vi.mocked(editApi.auditEditHistory).mockImplementation((_entity, id) =>
-      Promise.resolve(historyOf({ id }, 'adnan')),
+      Promise.resolve(historyOf({ id })),
     );
     await renderApp('/bikri/voucher?type=receipt&id=501');
     const user = userEvent.setup();
@@ -287,12 +286,13 @@ describe.each(LANGUAGES)('editing a voucher is clear (%s)', (language) => {
     await waitFor(() => {
       expect(editApi.dayFixClose).toHaveBeenCalledTimes(1);
     });
-    // The day is closed again: the voucher is read only, with its stamp, the sign and the mark.
+    // The day is closed again: the voucher is read only, with its stamp and the mark, and never the sign.
     await waitFor(() => {
       expect(document.querySelector('[data-edit-stamp]')).not.toBeNull();
     });
     const stamp = visible(document.querySelector('[data-edit-stamp]')?.textContent);
-    expect(stamp).toContain('adnan');
+    expect(stamp).not.toContain('adnan');
+    expect(stamp).not.toContain(m('glossary-dastakhat'));
     expect(stamp).toContain('wrong amount');
     expect(screen.queryByLabelText(named(m('vouchers-field-amount')))).toBeNull();
     const mark = await waitFor(() => {

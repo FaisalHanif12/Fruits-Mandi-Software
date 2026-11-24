@@ -196,6 +196,9 @@ function CashbookScreen({ today }: { today: string }) {
           void book.refetch();
         }}
         pager={book.pager}
+        // The cards above leave little room, so a long book is as tall as its rows and the page scrolls with the
+        // pager under it, in place of a few lines with a scroll inside (plan 96 T2).
+        autoHeight
         onPageKey={listWindow.onPageKey}
         sort={{ value: book.sort, onChange: book.setSort }}
         months={

@@ -113,7 +113,7 @@ pub fn place(
     input: &PartnersPlaceOpeningCapitalInput,
 ) -> Result<PartnersOpeningCapitalPlaced, ServiceError> {
     // The sign first: a wrong sign writes only its own audit row (the refusal must not undo it).
-    let sign = day::check_sign(
+    day::check_sign(
         ctx,
         actor,
         &SignCheck {
@@ -166,7 +166,7 @@ pub fn place(
         let closed_before = day::closed_in(tx)?;
         let closed_up_to = closed_before.filter(|closed| earliest <= *closed);
         if closed_up_to.is_some() {
-            day::reopen_in(ctx, tx, actor, earliest, &reason, Some(&sign))?;
+            day::reopen_in(ctx, tx, actor, earliest, &reason, true)?;
         }
         let now = ctx.now_text();
         let mut placed: Vec<PlacedOpeningCapital> = Vec::new();
@@ -213,7 +213,7 @@ pub fn place(
                         "amount_paisa": candidate.amount.as_paisa(),
                         "partner_id": candidate.partner_id,
                     }))
-                    .sign(Some(&sign))
+                    .sign_given(true)
                     .reason(&reason)
                     .into_entry(),
             )?;

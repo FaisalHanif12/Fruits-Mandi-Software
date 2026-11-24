@@ -12,6 +12,8 @@ import { message, visible } from '../helpers/render';
 import { renderRouted } from '../helpers/router';
 
 const GALLERY_I18N = path.resolve(import.meta.dirname, '../../src/app/dev/i18n');
+// The gallery's words are loaded on top of the app's files, so its glossary terms are the app's.
+const APP_I18N = path.resolve(import.meta.dirname, '../../src/i18n');
 
 beforeEach(() => {
   useLanguageStore.setState({ language: 'ur' });
@@ -21,7 +23,9 @@ describe('/dev/gallery', () => {
   it('its Urdu and English words match, like the app files (NFR-URD-22)', () => {
     // "20 نگ @ 600" is the same markup in both files; only the glossary term differs.
     const allowed = new Set([...IDENTICAL_ALLOWED, 'gallery-numbers-line']);
-    expect(checkI18n(GALLERY_I18N, { identicalAllowed: allowed })).toEqual([]);
+    expect(
+      checkI18n(GALLERY_I18N, { identicalAllowed: allowed, alsoDefinedIn: [APP_I18N] }),
+    ).toEqual([]);
   });
 
   it('shows every component once per language, each pane in its own language and direction', async () => {

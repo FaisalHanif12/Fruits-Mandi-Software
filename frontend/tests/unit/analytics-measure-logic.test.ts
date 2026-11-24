@@ -10,7 +10,7 @@ import type { AnalyticsView } from '../../src/bindings/AnalyticsView';
 import { chartsOf, printChartsOf } from '../../src/features/analytics/chart';
 import { analyticsColumns, planColumns } from '../../src/features/analytics/columns';
 import {
-  CLASSIC_MEASURE,
+  LEGACY_MEASURE,
   DEFAULT_MEASURE,
   EMPTY_ANALYTICS_FILTERS,
   MEASURE_CHOICES,
@@ -111,8 +111,8 @@ describe('what brings a measure back', () => {
     }
     const before = filtersToWire(EMPTY_ANALYTICS_FILTERS, takes('D'), 'D');
     delete before.measure;
-    expect(stateFromWire(before).measure).toBe(CLASSIC_MEASURE);
-    expect(CLASSIC_MEASURE).toBe('total_comm');
+    expect(stateFromWire(before).measure).toBe(LEGACY_MEASURE);
+    expect(LEGACY_MEASURE).toBe('total_comm');
   });
 
   it('is kept for the Owner and read back; sales is not kept (it is the start); an unreadable one is sales', () => {

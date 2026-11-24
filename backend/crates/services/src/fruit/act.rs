@@ -312,7 +312,7 @@ pub(crate) fn edit_in(
         if !reason.is_empty() {
             event = event.reason(&reason);
         }
-        event = event.sign(crate::day::fix_sign(tx, &old.entry_date)?.as_deref());
+        event = event.sign_given(crate::day::fix_sign_given(tx, &old.entry_date)?);
         ctx.db.auditor().write(tx, &event.into_entry())?;
         Ok(FruitEdited {
             id: old.id,

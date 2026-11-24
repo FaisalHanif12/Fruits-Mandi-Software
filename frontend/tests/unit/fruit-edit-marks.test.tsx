@@ -75,8 +75,6 @@ const HISTORY: EditHistory = {
         },
       ],
       changes_truncated: false,
-      // An edit of an open day has no sign (PRD FR-7.71).
-      sign: null,
     },
   ],
 };
@@ -139,21 +137,30 @@ describe.each(LANGUAGES)('the marks of an edited پھل entry (%s)', (language) 
     await confirmFixDay(language, user, '05-10-2026');
   });
 
-  it('a field changed through a reopened day carries the sign in its tip, after the name (PRD FR-7.71, v1.36)', async () => {
+  it('a field changed through a reopened day never shows the sign in its tip, even when the history still holds it (PRD FR-7.71, v1.58)', async () => {
     const [first] = HISTORY.versions;
     if (first === undefined) throw new Error('the history has a version');
+    // The sign as a stamp field and as a changed field: neither reaches a screen. The two real marks stay.
     vi.mocked(editApi.auditEditHistory).mockResolvedValue({
       ...HISTORY,
-      versions: [{ ...first, sign: 'adnan' }],
+      versions: [
+        {
+          ...first,
+          changes: [
+            ...first.changes,
+            { path: 'sign', old: { kind: 'null' }, new: { kind: 'text', text: 'adnan' } },
+          ],
+        },
+      ],
     });
     await openForEdit();
     await waitFor(() => {
       expect(marks()).toHaveLength(2);
     });
     for (const mark of marks()) {
-      expect(visible(mark.getAttribute('title'))).toContain(
-        `${message(language, 'glossary-dastakhat')}: adnan`,
-      );
+      const tip = visible(mark.getAttribute('title'));
+      expect(tip).not.toContain('adnan');
+      expect(tip).not.toContain(message(language, 'glossary-dastakhat'));
     }
   });
 

@@ -579,3 +579,45 @@ gardens-fact-refunds = Paid back by the owner
 
 # review: pending
 gardens-fact-owner-owes = The owner owes the garden
+
+## The goods arrived list of a busy garden (plan 96): search, the panel beside the list, the figures that fold.
+
+# review: pending
+gardens-arrival-search-label = Search the goods arrived
+
+# review: pending
+gardens-arrival-search-hint = A number, an item or another shop
+
+# review: pending
+gardens-arrival-no-match = No goods arrived match this search
+
+# review: pending
+gardens-arrival-no-match-help = Try another number or item, or clear the search to see them all.
+
+# review: pending
+gardens-arrival-search-clear = Clear the search
+
+# The panel is beside the list: the entry with focus is shown in it.
+# review: pending
+gardens-arrival-pick-help = Choose an entry in the list to see its details beside it. Press Enter to go to its buttons.
+
+# The panel is a window of its own on a narrow screen.
+# review: pending
+gardens-arrival-open-help = Press Enter, or double-click an entry, to see its details and buttons.
+
+# $count: how many sales the entry has.
+# review: pending
+gardens-arrival-lots-more = Show all { $count } sales
+
+# review: pending
+gardens-arrival-lots-less = Show fewer sales
+
+# review: pending
+gardens-arrival-detail-close = Close
+
+# The key figures of the garden, always in view; the full list opens under the heading.
+# review: pending
+gardens-figures-open = Show every figure and each partner
+
+# review: pending
+gardens-figures-shut = Hide the figures

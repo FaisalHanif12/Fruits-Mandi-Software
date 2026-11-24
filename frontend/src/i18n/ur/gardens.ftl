@@ -579,3 +579,45 @@ gardens-fact-refunds = مالک کی طرف سے واپس کی گئی رقم
 
 # review: pending
 gardens-fact-owner-owes = مالک کے ذمے
+
+## The goods arrived list of a busy garden (plan 96): search, the panel beside the list, the figures that fold.
+
+# review: pending
+gardens-arrival-search-label = آئے ہوئے مال میں تلاش
+
+# review: pending
+gardens-arrival-search-hint = نمبر، { -qism-maal } یا دوسری دکان
+
+# review: pending
+gardens-arrival-no-match = اس تلاش سے کوئی آیا ہوا مال نہیں ملا
+
+# review: pending
+gardens-arrival-no-match-help = دوسرا نمبر یا { -qism-maal } آزمائیں، یا تلاش صاف کر کے سب دیکھیں۔
+
+# review: pending
+gardens-arrival-search-clear = تلاش صاف کریں
+
+# The panel is beside the list: the entry with focus is shown in it.
+# review: pending
+gardens-arrival-pick-help = فہرست میں اندراج چنیں، اس کی تفصیل ساتھ نظر آئے گی۔ اس کے بٹنوں تک جانے کے لیے Enter دبائیں۔
+
+# The panel is a window of its own on a narrow screen.
+# review: pending
+gardens-arrival-open-help = اندراج کی تفصیل اور بٹن دیکھنے کے لیے Enter دبائیں یا اس پر ڈبل کلک کریں۔
+
+# $count: how many sales the entry has.
+# review: pending
+gardens-arrival-lots-more = سب { $count } { -bikri } دکھائیں
+
+# review: pending
+gardens-arrival-lots-less = کم { -bikri } دکھائیں
+
+# review: pending
+gardens-arrival-detail-close = بند کریں
+
+# The key figures of the garden, always in view; the full list opens under the heading.
+# review: pending
+gardens-figures-open = سب اعداد اور ہر شراکت دار دکھائیں
+
+# review: pending
+gardens-figures-shut = اعداد چھپائیں

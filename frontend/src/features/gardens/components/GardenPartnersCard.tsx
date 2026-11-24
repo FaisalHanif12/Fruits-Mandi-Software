@@ -15,9 +15,11 @@ interface GardenPartnersCardProps {
   results: readonly GardenPartnerResult[];
   /** A closed garden shows the result of the closing; an open one shows what is paid so far. */
   closed: boolean;
+  /** Inside the figures that fold: the heading and the table without a card of their own (plan 96). */
+  bare?: boolean;
 }
 
-export function GardenPartnersCard({ results, closed }: GardenPartnersCardProps) {
+export function GardenPartnersCard({ results, closed, bare = false }: GardenPartnersCardProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const columns: readonly TableColumn<GardenPartnerResult>[] = [
@@ -83,20 +85,32 @@ export function GardenPartnersCard({ results, closed }: GardenPartnersCardProps)
       ),
     },
   ];
+  const content =
+    results.length === 0 ? (
+      <Localized id="gardens-partner-results-empty">
+        <p className="type-body text-ink-muted" />
+      </Localized>
+    ) : (
+      <Table
+        label={l10n.getString('gardens-partner-results-title')}
+        columns={columns}
+        rows={results}
+        rowKey={(row) => String(row.partner.id)}
+      />
+    );
+  if (bare) {
+    return (
+      <section className="flex min-w-0 flex-col gap-2">
+        <Localized id="gardens-partner-results-title">
+          <h3 className="type-label text-ink-muted" />
+        </Localized>
+        {content}
+      </section>
+    );
+  }
   return (
     <Card compact icon={Users} title={<Localized id="gardens-partner-results-title" />}>
-      {results.length === 0 ? (
-        <Localized id="gardens-partner-results-empty">
-          <p className="type-body text-ink-muted" />
-        </Localized>
-      ) : (
-        <Table
-          label={l10n.getString('gardens-partner-results-title')}
-          columns={columns}
-          rows={results}
-          rowKey={(row) => String(row.partner.id)}
-        />
-      )}
+      {content}
     </Card>
   );
 }

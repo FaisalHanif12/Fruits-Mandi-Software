@@ -97,8 +97,6 @@ pub struct StatementEdited {
     pub count: i64,
     /// The reason typed with it.
     pub reason: Option<String>,
-    /// The Owner's sign saved with it, when it was made in a reopened day (PRD FR-21.4).
-    pub sign: Option<String>,
 }
 
 /// One entry of the statement.
@@ -295,7 +293,6 @@ fn edit_of(
             by: last.by.clone(),
             count: last.count,
             reason: last.reason.clone(),
-            sign: last.sign.clone(),
         })
 }
 

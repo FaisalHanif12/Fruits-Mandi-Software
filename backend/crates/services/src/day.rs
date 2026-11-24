@@ -587,7 +587,7 @@ pub fn reopen(
     actor: &Actor,
     input: &DayReopenInput,
 ) -> Result<DayStatusInfo, ServiceError> {
-    let sign = check_sign(
+    check_sign(
         ctx,
         actor,
         &SignCheck {
@@ -599,7 +599,7 @@ pub fn reopen(
     )?;
     let (date, reason) = parse_reopen(ctx, &input.date, &input.reason)?;
     ctx.db.write(|tx| {
-        let closed_before = reopen_in(ctx, tx, actor, date, &reason, Some(&sign))?;
+        let closed_before = reopen_in(ctx, tx, actor, date, &reason, true)?;
         // The Owner opened these days by hand: the automatic close leaves them alone until he closes
         // them (PRD FR-21.4 v1.49, plan 85).
         note_manual_reopen(tx, actor.user_id, date, closed_before)?;
@@ -647,7 +647,7 @@ pub(crate) fn reopen_in(
     actor: &Actor,
     date: BusinessDate,
     reason: &str,
-    sign: Option<&str>,
+    sign_given: bool,
 ) -> Result<BusinessDate, ServiceError> {
     let Some(closed_day) = closed_in(tx)?.filter(|c| date <= *c) else {
         return Err(ServiceError::reject_field(
@@ -670,8 +670,9 @@ pub(crate) fn reopen_in(
         "closed_up_to_before": closed_day.to_iso(),
         "closed_up_to_after": new_iso,
     });
-    if let (Some(sign), Some(object)) = (sign, numbers.as_object_mut()) {
-        object.insert("sign".to_owned(), json!(sign));
+    // The sign is a secret: only the fact that it was given is kept (PRD FR-21.4, FR-7.71 v1.58).
+    if let (true, Some(object)) = (sign_given, numbers.as_object_mut()) {
+        object.insert("sign_given".to_owned(), json!(true));
     }
     repo::insert_day_close(
         tx,
@@ -687,14 +688,14 @@ pub(crate) fn reopen_in(
         &Event::new(Some(actor.user_id), "day_reopen", "day")
             .old(json!({ "closed_up_to": closed_day.to_iso() }))
             .new_value(json!({ "closed_up_to": new_iso }))
-            .sign(sign)
+            .sign_given(sign_given)
             .reason(reason)
             .into_entry(),
     )?;
     Ok(closed_day)
 }
 
-/// The setting that remembers a fix in progress: `{ "token", "first", "last", "sign", "opened_at" }`
+/// The setting that remembers a fix in progress: `{ "token", "first", "last", "sign_given", "opened_at" }`
 /// (PRD FR-21.4, plan 73, plan 85).
 const KEY_FIX_PENDING: &str = "day_fix_pending";
 
@@ -707,13 +708,14 @@ const KEY_MANUAL_REOPEN: &str = "day_manual_reopen";
 /// it), and the days it reopened are closed by the automatic close like any other open day (plan 85).
 pub const FIX_HOLD_HOURS: i64 = 12;
 
-/// The fix in progress, if any: the token, the first and last day it reopened, the Owner's sign that
-/// opened it and when (UTC text; empty in a record made before plan 85).
+/// The fix in progress, if any: the token, the first and last day it reopened, whether the Owner's sign
+/// opened it (the sign itself is never kept, PRD FR-7.71 v1.58) and when (UTC text; empty in a record
+/// made before plan 85).
 struct Pending {
     token: String,
     first: BusinessDate,
     last: BusinessDate,
-    sign: Option<String>,
+    sign_given: bool,
     opened_at: Option<String>,
 }
 
@@ -731,10 +733,16 @@ fn pending_of(conn: &Connection) -> Result<Option<Pending>, ServiceError> {
         .get("token")
         .and_then(serde_json::Value::as_str)
         .map(str::to_owned);
-    let sign = value
-        .get("sign")
-        .and_then(serde_json::Value::as_str)
-        .map(str::to_owned);
+    // A record made before plan 96 holds the sign text under `sign`: it only counts as "given" and the
+    // text is never read.
+    let sign_given = value
+        .get("sign_given")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+        || value
+            .get("sign")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|sign| !sign.is_empty());
     let opened_at = value
         .get("opened_at")
         .and_then(serde_json::Value::as_str)
@@ -744,7 +752,7 @@ fn pending_of(conn: &Connection) -> Result<Option<Pending>, ServiceError> {
             token,
             first,
             last,
-            sign,
+            sign_given,
             opened_at,
         }),
         _ => None,
@@ -847,25 +855,25 @@ pub fn auto_close_hold(ctx: &Context) -> Result<Option<AutoCloseHold>, ServiceEr
     })
 }
 
-/// The Owner's sign of the fix in progress when the day of an entry was reopened by it (PRD FR-21.4,
-/// plan 73): the edit service saves it beside the reason in the audit entry of the edit, so the
-/// stamp and the history show it. `None` when no fix is in progress, when the record is stale (the
-/// closed-up-to day is no longer the day before its first), or when the entry's day is not one the fix
-/// reopened: an edit of an open day has no sign.
+/// Whether the Owner's sign opened the fix in progress that reopened the day of an entry (PRD FR-21.4,
+/// plan 73): the edit service saves `sign_given: true` beside the reason in the audit entry of the
+/// edit. The sign itself is a secret and is never kept (PRD FR-7.71 v1.58, plan 96). False when no fix
+/// is in progress, when the record is stale (the closed-up-to day is no longer the day before its
+/// first), or when the entry's day is not one the fix reopened: an edit of an open day has no sign.
 ///
 /// # Errors
 /// `ServiceError::Db`.
-pub(crate) fn fix_sign(conn: &Connection, date_iso: &str) -> Result<Option<String>, ServiceError> {
+pub(crate) fn fix_sign_given(conn: &Connection, date_iso: &str) -> Result<bool, ServiceError> {
     let Some(pending) = pending_of(conn)? else {
-        return Ok(None);
+        return Ok(false);
     };
-    let (Some(sign), Some(date)) = (pending.sign, BusinessDate::parse_iso(date_iso)) else {
-        return Ok(None);
+    let (true, Some(date)) = (pending.sign_given, BusinessDate::parse_iso(date_iso)) else {
+        return Ok(false);
     };
     if closed_in(conn)? != pending.first.previous_day() {
-        return Ok(None);
+        return Ok(false);
     }
-    Ok((pending.first <= date && date <= pending.last).then_some(sign))
+    Ok(pending.first <= date && date <= pending.last)
 }
 
 fn clear_pending(tx: &Connection, user_id: i64) -> Result<(), ServiceError> {
@@ -920,7 +928,7 @@ pub fn fix_open(
     actor: &Actor,
     input: &DayFixOpenInput,
 ) -> Result<DayFixOpened, ServiceError> {
-    let sign = check_sign(
+    check_sign(
         ctx,
         actor,
         &SignCheck {
@@ -936,7 +944,7 @@ pub fn fix_open(
         // A record of a fix that no longer fits the closed-up-to day is stale (a day was closed or
         // reopened some other way since): it is ignored, so its old last day is not closed again.
         let pending = pending_of(tx)?.filter(|p| closed_before == p.first.previous_day());
-        let before = reopen_in(ctx, tx, actor, first, &reason, Some(&sign))?;
+        let before = reopen_in(ctx, tx, actor, first, &reason, true)?;
         // A fix in progress keeps its last day: the days between stay open and are closed with it.
         let last = pending.as_ref().map_or(before, |p| p.last.max(before));
         let token = new_token(ctx)?;
@@ -951,7 +959,7 @@ pub fn fix_open(
                 "token": token,
                 "first": first.to_iso(),
                 "last": last.to_iso(),
-                "sign": sign,
+                "sign_given": true,
                 "opened_at": ctx.now_text(),
             }),
             Some(actor.user_id),
@@ -960,7 +968,7 @@ pub fn fix_open(
             tx,
             &Event::new(Some(actor.user_id), "day_fix_open", "day")
                 .new_value(json!({ "days": days }))
-                .sign(Some(&sign))
+                .sign_given(true)
                 .reason(&reason)
                 .into_entry(),
         )?;
@@ -983,14 +991,14 @@ pub(crate) struct SignCheck<'a> {
 }
 
 /// Checks the reason and the sign of a reopen (PRD FR-21.2, FR-21.4, plan 73, plan 80 Q-R2-2) and
-/// gives the sign to save: the Owner's own spelling of it, not the typed text. A missing reason or
-/// sign is refused first, both together. A wrong sign writes one audit entry that holds no typed
-/// text, and refuses with `ERR_SIGN_WRONG`: nothing opens.
+/// says nothing more than yes: the sign is a secret and is never saved (PRD FR-7.71 v1.58, plan 96).
+/// A missing reason or sign is refused first, both together. A wrong sign writes one audit entry that
+/// holds no typed text, and refuses with `ERR_SIGN_WRONG`: nothing opens.
 pub(crate) fn check_sign(
     ctx: &Context,
     actor: &Actor,
     check: &SignCheck<'_>,
-) -> Result<String, ServiceError> {
+) -> Result<(), ServiceError> {
     let mut errors = validate::FieldErrors::default();
     if check.reason.trim().is_empty() {
         errors.push(FieldError::new(ErrorCode::ErrReasonRequired, "reason"));
@@ -1000,8 +1008,8 @@ pub(crate) fn check_sign(
     }
     errors.finish()?;
     let configured = ctx.db.read(crate::owner_sign::configured)?;
-    if let Some(sign) = crate::owner_sign::accepted(check.sign, configured.as_deref()) {
-        return Ok(sign);
+    if crate::owner_sign::accepted(check.sign, configured.as_deref()).is_some() {
+        return Ok(());
     }
     // The refused try is audited on its own: the refusal must not roll the entry back.
     ctx.db.write(|tx| {

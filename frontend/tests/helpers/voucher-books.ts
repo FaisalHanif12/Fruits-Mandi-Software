@@ -113,8 +113,6 @@ export interface VoucherBooks {
   /** The day of the vouchers was reopened by a fix that took the Owner's sign: the edit may carry none (plan 92). */
   dayReopened: boolean;
   cancels: { id: number; version: number; reason: string; confirm: boolean }[];
-  /** The Owner's sign the next edit carries in its stamp: null for an edit of an open day (plan 89, PRD FR-7.71). */
-  editSign: string | null;
   /** The advances saved so far: the shape the first advance tests read. */
   saved: { seller: number; amount: string }[];
 }
@@ -169,7 +167,6 @@ export function createBooks(options: BooksOptions = {}) {
     editTries: [],
     dayReopened: false,
     cancels: [],
-    editSign: null,
     saved: [],
   };
   const counters: Record<ScreenType, number> = { receipt: 0, payment: 0, advance: 0 };
@@ -363,7 +360,6 @@ export function createBooks(options: BooksOptions = {}) {
       by: 'Owner',
       count: (row.edited?.count ?? 0) + 1,
       reason: input.reason === '' ? null : input.reason,
-      sign: typedSign === '' ? store.editSign : typedSign,
     };
     return {
       voucher_id: row.id,

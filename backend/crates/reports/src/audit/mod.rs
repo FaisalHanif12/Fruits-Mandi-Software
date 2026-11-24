@@ -173,10 +173,14 @@ fn resolve(
             .ok_or_else(|| ReportsError::Data(format!("a day has no next day: {to}")))?;
         conds.text("a.at < ?", Some(&utc_start_of(&next.to_iso())?));
     }
-    // `instr` finds the words with no wildcard characters to escape.
+    // `instr` finds the words with no wildcard characters to escape. The Owner's sign, as an old row
+    // kept it under `sign`, is taken out first, so a search can never find it (PRD FR-7.71 v1.58).
     conds.text(
-        "instr(lower(COALESCE(a.reason, '') || ' ' || COALESCE(a.old_json, '') || ' ' \
-         || COALESCE(a.new_json, '')), lower(?)) > 0",
+        "instr(lower(COALESCE(a.reason, '') || ' ' \
+         || COALESCE(CASE WHEN json_valid(a.old_json) THEN json_remove(a.old_json, '$.sign') \
+                          ELSE a.old_json END, '') || ' ' \
+         || COALESCE(CASE WHEN json_valid(a.new_json) THEN json_remove(a.new_json, '$.sign') \
+                          ELSE a.new_json END, '')), lower(?)) > 0",
         words.as_deref(),
     );
     resolved.from = from;

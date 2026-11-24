@@ -223,7 +223,7 @@ describe.each(LANGUAGES)('the card of one report (%s)', (language: Language) => 
         'print-adhari-sheet-col-party',
         'print-adhari-sheet-col-detail',
         'print-adhari-sheet-col-bill',
-        'print-adhari-sheet-col-cash',
+        // PRD v1.57 R5: the sheet has no نقد column and no نقد total (money paid on the spot is on the whole sale print).
         'print-adhari-sheet-col-today-credit',
         'print-adhari-sheet-col-previous',
         'print-adhari-sheet-col-total',

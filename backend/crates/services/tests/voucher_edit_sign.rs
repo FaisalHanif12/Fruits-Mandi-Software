@@ -2,7 +2,8 @@
 //! Owner's reason and sign on any day, today included. The sign check is the one of a day reopen
 //! (`owner_sign::accepted`): "adnan" by default, case and spaces at the ends ignored, عدنان accepted.
 //! A wrong sign saves nothing and writes one audit entry without the typed text. The right sign is
-//! saved in the audit entry of the edit, beside the reason, and the edit stamp and history return it.
+//! recorded in the audit entry of the edit, beside the reason, as `sign_given` only: the sign is a secret
+//! (PRD FR-7.71 v1.58, plan 96) and the edit stamp and history never return it.
 //! The other voucher types, and the review (preview), do not ask for it. A voucher of a closed day
 //! edited in a reopen-and-fix does not ask for the sign twice.
 //!
@@ -15,12 +16,15 @@ mod common;
 mod support;
 
 use common::{OWNER_PASSWORD, assert_chain_ok, raw, set_today};
-use mandi_reports::audit::{EditHistoryInput, edit_history};
+use mandi_reports::audit::{
+    AuditFilters, AuditListInput, EditHistoryInput, EditStampInput, edit_history, edit_stamps,
+    list as audit_list,
+};
 use mandi_services::core::edit::{DayFixCloseInput, DayFixOpenInput, EditEntity};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::vouchers::{
     AdvanceInput, PaymentInput, ReceiptInput, RemovedPaymentFields, VoucherEditInput, VoucherEntry,
-    VoucherSaved,
+    VoucherSaved, VouchersListInput,
 };
 use mandi_services::secret::Secret;
 use mandi_services::{ServiceError, bikri, day, edit, owner_sign, vouchers};
@@ -213,19 +217,25 @@ fn an_edit_of_todays_payment_needs_the_reason_and_the_sign_and_a_wrong_sign_save
     assert_eq!(edited.number, saved.number);
     assert_eq!(state(&w, id).0, 1_500);
     assert_eq!(cash(&w), before.1 - 500);
-    // The audit entry has the reason and the Owner's own spelling of the sign.
+    // The audit entry has the reason and says the sign was given; the sign text is a secret and is not
+    // in it (PRD FR-7.71 v1.58, plan 96).
     let edits = voucher_edits(&w);
     let last = edits.last().unwrap();
     assert_eq!(last.1.as_deref(), Some(REASON));
     assert!(
         last.0
             .as_deref()
-            .is_some_and(|json| json.contains("\"sign\":\"adnan\"")),
+            .is_some_and(|json| json.contains("\"sign_given\":true")),
         "{last:?}"
     );
-    // The stamp on the row and the history return the sign, with the reason.
+    assert!(
+        last.0
+            .as_deref()
+            .is_some_and(|json| !json.contains("adnan")),
+        "{last:?}"
+    );
+    // The stamp on the row and the history carry the reason, and no sign.
     let stamp = vouchers::get(&w.env.ctx, id).unwrap().flags.edited.unwrap();
-    assert_eq!(stamp.sign.as_deref(), Some("adnan"));
     assert_eq!(stamp.reason.as_deref(), Some(REASON));
     let history = edit_history(
         w.env.ctx.db(),
@@ -236,7 +246,7 @@ fn an_edit_of_todays_payment_needs_the_reason_and_the_sign_and_a_wrong_sign_save
     )
     .unwrap();
     assert_eq!(history.versions.len(), 1);
-    assert_eq!(history.versions[0].sign.as_deref(), Some("adnan"));
+    assert_eq!(history.versions[0].reason.as_deref(), Some(REASON));
     // The Urdu spelling works too (the default sign).
     edit_with(&w, id, to("1,200"), REASON, "عدنان").unwrap();
     assert_eq!(state(&w, id).0, 1_200);
@@ -390,9 +400,21 @@ fn a_payment_of_a_closed_day_edited_in_a_reopen_and_fix_takes_the_sign_of_the_re
     assert_eq!(state(&w, id).0, 1_000);
     edit_with(&w, id, to("1,500"), REASON, "").unwrap();
     assert_eq!(state(&w, id).0, 1_500);
-    // The edit holds the sign the fix took, so the stamp shows it.
-    let stamp = vouchers::get(&w.env.ctx, id).unwrap().flags.edited.unwrap();
-    assert_eq!(stamp.sign.as_deref(), Some("adnan"));
+    // The edit's audit entry says the fix took the sign; the stamp shows the edit and no sign.
+    assert!(
+        vouchers::get(&w.env.ctx, id)
+            .unwrap()
+            .flags
+            .edited
+            .is_some()
+    );
+    let last = voucher_edits(&w).pop().unwrap();
+    assert!(
+        last.0
+            .as_deref()
+            .is_some_and(|json| json.contains("\"sign_given\":true") && !json.contains("adnan")),
+        "{last:?}"
+    );
     day::fix_close(
         &w.env.ctx,
         &w.owner,
@@ -435,6 +457,131 @@ fn the_sign_the_owner_chose_is_the_one_an_edit_asks_for() {
         );
     }
     edit_with(&w, id, to, REASON, " SANA").unwrap();
-    let stamp = vouchers::get(&w.env.ctx, id).unwrap().flags.edited.unwrap();
-    assert_eq!(stamp.sign.as_deref(), Some("Sana"));
+    assert!(
+        vouchers::get(&w.env.ctx, id)
+            .unwrap()
+            .flags
+            .edited
+            .is_some()
+    );
+    let last = voucher_edits(&w).pop().unwrap();
+    assert!(
+        last.0
+            .as_deref()
+            .is_some_and(|json| json.contains("\"sign_given\":true")
+                && !json.to_lowercase().contains("sana")),
+        "{last:?}"
+    );
+}
+
+/// Plan 96 T4 (PRD FR-7.71, FR-21.4, v1.58): the sign of a voucher edit is a secret. The voucher detail
+/// and list (with their stamp), the stamp command, the history and the audit viewer, also searched by
+/// words, never carry its text; the audit entry of the edit says only `sign_given`.
+#[test]
+fn a_voucher_edit_never_returns_the_sign_text_in_any_response() {
+    const SECRET: &str = "zq7-sign-4417";
+    let w = day_with_event1();
+    owner_sign::set_owner_sign(
+        &w.env.ctx,
+        &w.owner,
+        &Secret::new(OWNER_PASSWORD),
+        "adnan",
+        SECRET,
+    )
+    .unwrap();
+    let saved =
+        vouchers::save_payment(&w.env.ctx, &w.owner, &payment(&w, "1,000", "10-10-2026")).unwrap();
+    let id = saved.voucher_id;
+    edit_with(
+        &w,
+        id,
+        VoucherEntry::Payment(payment(&w, "1,500", "10-10-2026")),
+        REASON,
+        &format!(" {SECRET} ").to_uppercase(),
+    )
+    .unwrap();
+    let ctx = &w.env.ctx;
+    let listed = vouchers::list(
+        ctx,
+        &VouchersListInput {
+            voucher_type: None,
+            from: String::new(),
+            to: String::new(),
+            account_id: None,
+            offset: 0,
+            limit: 100,
+            show_finished: true,
+            search: None,
+            sort: None,
+            group_by_month: false,
+            advance_view: None,
+        },
+    )
+    .unwrap();
+    let history = edit_history(
+        ctx.db(),
+        &EditHistoryInput {
+            entity: EditEntity::Voucher,
+            id,
+        },
+    )
+    .unwrap();
+    let stamps = edit_stamps(
+        ctx.db(),
+        &EditStampInput {
+            entity: EditEntity::Voucher,
+            ids: vec![id],
+        },
+    )
+    .unwrap();
+    let audit = audit_list(
+        ctx.db(),
+        &AuditListInput {
+            group_by_month: false,
+            sort: None,
+            filters: AuditFilters::default(),
+            offset: 0,
+            limit: 1_000,
+        },
+    )
+    .unwrap();
+    let responses = [
+        (
+            "voucher detail",
+            serde_json::to_string(&vouchers::get(ctx, id).unwrap()).unwrap(),
+        ),
+        ("voucher list", serde_json::to_string(&listed).unwrap()),
+        ("history", serde_json::to_string(&history).unwrap()),
+        ("stamps", serde_json::to_string(&stamps).unwrap()),
+        ("audit list", serde_json::to_string(&audit).unwrap()),
+    ];
+    for (name, json) in &responses {
+        assert!(
+            !json.to_lowercase().contains(SECRET),
+            "the sign is in the {name}: {json}"
+        );
+    }
+    assert!(vouchers::get(ctx, id).unwrap().flags.edited.is_some());
+    // A search of the audit viewer for the sign finds nothing.
+    let found = audit_list(
+        ctx.db(),
+        &AuditListInput {
+            group_by_month: false,
+            sort: None,
+            filters: AuditFilters {
+                text: SECRET.into(),
+                ..AuditFilters::default()
+            },
+            offset: 0,
+            limit: 100,
+        },
+    )
+    .unwrap();
+    assert!(found.rows.is_empty());
+    // The audit entry of the edit says only that the sign was given.
+    let last = voucher_edits(&w).pop().unwrap();
+    let json = last.0.unwrap();
+    assert!(json.contains("\"sign_given\":true"), "{json}");
+    assert!(!json.to_lowercase().contains(SECRET), "{json}");
+    assert_chain_ok(&w.dir);
 }

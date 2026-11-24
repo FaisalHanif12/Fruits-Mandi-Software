@@ -197,10 +197,6 @@ edit-fix-failed = The days could not be closed
 # review: pending
 edit-stamp = Edited: { $date } { $time }, { $by }
 
-# The same, when the edit was made through a reopened day: $sign is the sign given then (PRD FR-7.71, v1.36).
-# review: pending
-edit-stamp-signed = Edited: { $date } { $time }, { $by }, { -dastakhat }: { $sign }
-
 # review: pending
 edit-stamp-reason = Reason: { $reason }
 
@@ -214,8 +210,9 @@ edit-mark = Edited
 # review: pending
 edit-mark-tip = Edited: { $date } { $time }, { $by }
 
+# The same, when the edit has a reason: it shows on hover (PRD FR-7.71, v1.58). The Owner's sign is never shown.
 # review: pending
-edit-mark-tip-signed = Edited: { $date } { $time }, { $by }, { -dastakhat }: { $sign }
+edit-mark-tip-reason = Edited: { $date } { $time }, { $by }, reason: { $reason }
 
 # The time of day. $hour and $minute are the clock, $meridian is am or pm.
 # review: pending
@@ -243,10 +240,6 @@ edit-history-failed = The edit history could not be opened.
 
 # review: pending
 edit-history-version = { $date } { $time }, { $by }
-
-# A version made through a reopened day: its sign follows the name (PRD FR-7.71, v1.36).
-# review: pending
-edit-history-version-signed = { $date } { $time }, { $by }, { -dastakhat }: { $sign }
 
 # review: pending
 edit-history-field = Field

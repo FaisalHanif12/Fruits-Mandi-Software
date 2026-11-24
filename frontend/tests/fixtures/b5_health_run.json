@@ -21,7 +21,11 @@
       "ok": true
     },
     "journal_entries": 0,
-    "ran": true
+    "ran": true,
+    "tables": {
+      "at": null,
+      "ok": true
+    }
   },
   "checked_at": "<time>",
   "data": {

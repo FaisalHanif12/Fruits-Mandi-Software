@@ -77,7 +77,7 @@ export const DEFAULT_MEASURE: MeasureChoice = 'gross';
  * The measure of a view that names none: the total commission, the one figure the views drew before plan 84. A
  * view saved before then opens as it was saved, and a result that names none is read so.
  */
-export const CLASSIC_MEASURE: MeasureChoice = 'total_comm';
+export const LEGACY_MEASURE: MeasureChoice = 'total_comm';
 
 /** The column of views D, E and L that adds up a row: its heading names the measure its cells hold. */
 export const ROW_TOTAL_TITLE_ID = 'analytics-col-row-total';
@@ -277,7 +277,7 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
 export function measureOfFilters(filters: {
   measure?: AnalyticsMeasure | undefined;
 }): MeasureChoice {
-  return MEASURE_CHOICES.find((choice) => choice === filters.measure) ?? CLASSIC_MEASURE;
+  return MEASURE_CHOICES.find((choice) => choice === filters.measure) ?? LEGACY_MEASURE;
 }
 
 /** True when no box that the view takes is filled: nothing to clear. */

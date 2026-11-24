@@ -36,6 +36,7 @@ import { settlePreview } from '../helpers/preview-settled';
 import { message, visible } from '../helpers/render';
 import { paisaForTest } from '../helpers/paisa';
 import { commissionWorking } from '../helpers/trips-data';
+import { stubLayoutStep } from '../helpers/layout-step';
 import { fakeItemPickers } from '../helpers/trips';
 
 vi.mock('../../src/app/api');
@@ -60,6 +61,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   leaveAppWindow();
 });
 
@@ -762,6 +764,8 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
       ],
       totals: { ...arrivals.ARRIVALS_IN_STOCK.totals, commission_paisa: paisaForTest(150_000) },
     });
+    // The commission column is in the list from the wide step; the details beside it show it from the normal one.
+    stubLayoutStep('wide');
     const { user } = await open();
     const row = await waitFor(() => {
       const found = document.querySelector('.ag-row[row-id="1"]');
@@ -771,8 +775,12 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     expect(visible(row.querySelector('[col-id="commission"]')?.textContent)).toBe('1,500');
     const pinned = document.querySelector('.ag-row-pinned');
     expect(visible(pinned?.querySelector('[col-id="commission"]')?.textContent)).toBe('1,500');
-    // The card has the figure with its working.
-    const label = (await screen.findAllByText(said(message(language, 'glossary-commission'))))
+    // The details beside the list have the figure with its working.
+    const label = (
+      await within(await screen.findByRole('complementary')).findAllByText(
+        said(message(language, 'glossary-commission')),
+      )
+    )
       .map((node) => node.closest('div'))
       .find((box) => box !== null && box.querySelector('button') !== null);
     if (label === null || label === undefined) throw new Error('no commission fact on the card');

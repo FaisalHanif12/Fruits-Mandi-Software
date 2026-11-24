@@ -8,6 +8,7 @@ import type { AuditValue } from '../../bindings/AuditValue';
 import type { EditHistory } from '../../bindings/EditHistory';
 import type { EditVersion } from '../../bindings/EditVersion';
 import type { SearchScope } from '../../bindings/SearchScope';
+import { isSignPath } from './no-sign';
 
 /** What a changed field held before and holds now, and the edit that changed it. */
 export interface EntryMark {
@@ -30,6 +31,8 @@ export function markMapOf(history: EditHistory | undefined): MarkMap {
   const marks = new Map<string, EntryMark>();
   for (const version of history.versions) {
     for (const change of version.changes) {
+      // The Owner's sign is a secret: it never becomes a mark (PRD FR-7.71, v1.58).
+      if (isSignPath(change.path)) continue;
       marks.set(change.path, { before: change.old, after: change.new, version });
     }
   }

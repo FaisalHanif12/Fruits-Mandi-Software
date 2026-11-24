@@ -2,5 +2,5 @@
 export declare const IDENTICAL_ALLOWED: Set<string>;
 export declare function checkI18n(
   i18nDir: string,
-  options?: { identicalAllowed?: Set<string> },
+  options?: { identicalAllowed?: Set<string>; alsoDefinedIn?: string[] },
 ): string[];

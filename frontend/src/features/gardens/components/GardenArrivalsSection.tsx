@@ -1,39 +1,42 @@
 // The goods arrived entries of one garden (مال آیا, PRD FR-12.40): the garden's stock. Each entry
 // says what came (item, packing, quantity), the day to sell and what is left. A new بکری holds a
 // lot for every entry whose day to sell has come and that still has goods left; goods not sold
-// stay here and come again the next day. The entry that has focus is shown in full under the list:
-// every figure, the lots that sold it and its write-offs, and what can be done with it: change the
-// day to sell, write goods off, undo a write-off, cancel (only while nothing of it is sold).
-// None of these posts any money.
+// stay here and come again the next day. None of these posts any money.
 //
-// Four states: loading, an error with a retry, nothing yet (a helpful message), and the rows.
+// A busy garden has about 90 of them (plan 96), so this section is a list with a place of its own and
+// nothing under it that moves: a search box (a number, an item or another shop), the list at 30 rows a
+// page with the newest first and the backend's totals, and the details of the entry that has focus:
+// beside the list from the normal window width, in a window of its own on a narrow one. The details
+// hold what can be done with the entry: change the day to sell, change the split, write off, undo a
+// write-off, cancel, edit. The keys: ↑ ↓ move between entries, Enter goes to the buttons of the
+// details (or opens them), Esc goes back to the list.
+//
+// Four states: loading, an error with a retry, nothing yet (a helpful message), and the rows; a search
+// with no match says so and offers to clear it.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useRouter } from '@tanstack/react-router';
-import { ArrowLeftRight, Ban, CalendarClock, Package, RotateCcw, Sprout } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { Package, SearchX, Sprout } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { useFixDayFlow } from '../../../shared/edit';
 import { isoToDisplayDate } from '../../../shared/format';
 import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
-import { displayName, useLanguage, useLotNames } from '../../../shared/i18n';
+import { isFromStep, useLayoutStep } from '../../../shared/hooks';
+import { displayName, useLanguage } from '../../../shared/i18n';
+import { useEscape } from '../../../shared/keyboard';
 import {
   Button,
-  CalcInfo,
   Card,
-  Code,
   EmptyState,
-  EntryActions,
   ErrorState,
-  Fact,
+  FilterBar,
+  FormDialog,
   LoadingState,
-  Num,
   SellDateDialog,
   SplitDialog,
-  Table,
   showToast,
-  type TableColumn,
 } from '../../../shared/ui';
 import { ARRIVAL_COLUMNS } from '../arrival-columns';
 import { useArrivalsList, useChangeArrivalSplit, useSetArrivalSellDate } from '../hooks';
@@ -44,26 +47,47 @@ import {
   UndoWriteOffArrivalDialog,
   WriteOffArrivalDialog,
 } from './ArrivalDialogs';
+import { ArrivalDetail } from './ArrivalDetail';
 
-/** A list with more rows than this fills the room and scrolls inside; shorter ones are as tall as their rows. */
-const SHORT_LIST_ROWS = 30;
+/** A list with more rows than this has the height of its own and scrolls inside; a shorter one is as tall as its rows. */
+const SHORT_LIST_ROWS = 10;
+/** How long the rows an entry has just added stay tinted. */
+const MARK_MS = 6000;
+const NO_ROWS: readonly string[] = [];
+
+/** The goods arrived entries a save has just added (plan 96): the list shows them first, tinted. */
+export interface AddedArrivals {
+  /** The ids of the new entries, in the order they were saved. */
+  ids: readonly number[];
+  /** A new number for each save, so the same ids twice are still two saves. */
+  token: number;
+}
 
 interface GardenArrivalsSectionProps {
   garden: GardenRow;
   /** Edit was pressed on an arrival whose day is open (or was reopened for it): the page edits it. */
   onEdit: (arrival: ArrivalRow) => void;
+  /** The entries a save has just added: the list goes to its first page, clears its search and tints them. */
+  added?: AddedArrivals | null;
 }
 
-export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionProps) {
+export function GardenArrivalsSection({
+  garden,
+  onEdit,
+  added = null,
+}: GardenArrivalsSectionProps) {
   const { l10n } = useLocalization();
-  const { lotItem } = useLotNames();
   const router = useRouter();
   const fix = useFixDayFlow();
   const language = useLanguage();
-  const list = useArrivalsList(garden.id);
+  const docked = isFromStep(useLayoutStep(), 'normal');
+  const [search, setSearch] = useState('');
+  const list = useArrivalsList(garden.id, { search });
   const paging = useListPaging(list.pager);
   const setSellDate = useSetArrivalSellDate();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [markedIds, setMarkedIds] = useState<readonly string[]>(NO_ROWS);
   const [sellDateOpen, setSellDateOpen] = useState(false);
   const [sellDateError, setSellDateError] = useState<UiError | null>(null);
   const changeSplit = useChangeArrivalSplit();
@@ -72,12 +96,50 @@ export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionP
   const [writeOff, setWriteOff] = useState<ArrivalRow | null>(null);
   const [undo, setUndo] = useState<ArrivalRow | null>(null);
   const [cancel, setCancel] = useState<ArrivalRow | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const first = list.data?.pages[0];
   const rows = useMemo(() => list.data?.pages.flatMap((page) => page.rows) ?? [], [list.data]);
   // The row that has focus; if it left the list, the first row is used.
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0] ?? null;
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
+  // On a narrow screen the details are a window of their own; it never stays open on a wide one.
+  const detailShown = !docked && detailOpen && selected !== null;
+
+  // A save has just added entries: the first page of the whole list, the new rows first and tinted, the
+  // newest of them in the details. The search is cleared so none of them is hidden (plan 96).
+  const seen = useRef(0);
+  const { goTo } = list.pager;
+  useEffect(() => {
+    if (added === null || added.token === seen.current) return;
+    seen.current = added.token;
+    setSearch('');
+    goTo(1);
+    setSelectedId(added.ids.at(-1) ?? null);
+    setMarkedIds(added.ids.map(String));
+  }, [added, goTo]);
+  useEffect(() => {
+    if (markedIds.length === 0) return;
+    const timer = window.setTimeout(() => {
+      setMarkedIds(NO_ROWS);
+    }, MARK_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [markedIds]);
+
+  // Esc in the details beside the list goes back to the entry in the list (PRD FR-7.18).
+  useEscape(
+    'edit',
+    () => {
+      const cell =
+        listRef.current?.querySelector<HTMLElement>('.ag-cell-focus') ??
+        listRef.current?.querySelector<HTMLElement>('.ag-cell');
+      cell?.focus();
+    },
+    () => docked && panelRef.current?.contains(document.activeElement) === true,
+  );
 
   // The total row is the backend's, over the whole filter. The callback depends on the loaded list,
   // not on an amount (Code Standards F3).
@@ -97,36 +159,46 @@ export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionP
     [first],
   );
 
-  const lotColumns: readonly TableColumn<ArrivalRow['lots'][number]>[] = [
-    {
-      id: 'bikri',
-      header: l10n.getString('gardens-arrival-lot-bikri'),
-      kind: 'number',
-      size: 'qty',
-      cell: (lot) => <Num>{String(lot.bikri_number)}</Num>,
-    },
-    {
-      // The name of the lot: the goods of this arrival with the counter the lot got (PRD FR-12.45).
-      id: 'lot',
-      header: l10n.getString('gardens-arrival-lot-name'),
-      cell: (lot) => (selected === null ? '' : lotItem(selected.item, lot.lot_counter)),
-    },
-    {
-      id: 'date',
-      header: l10n.getString('purchases-col-date'),
-      kind: 'number',
-      size: 'date',
-      cell: (lot) => <Code>{isoToDisplayDate(lot.entry_date)}</Code>,
-    },
-    {
-      id: 'qty',
-      header: l10n.getString('purchases-lot-qty-sold'),
-      kind: 'number',
-      size: 'qty',
-      cell: (lot) => <Num>{String(lot.qty_sold)}</Num>,
-    },
-  ];
+  /** What a button of the details does: the window of the details gives way to the box of the button. */
+  const act = (run: (arrival: ArrivalRow) => void) => () => {
+    if (selected === null) return;
+    setDetailOpen(false);
+    run(selected);
+  };
+  const details =
+    selected === null ? null : (
+      <ArrivalDetail
+        key={selected.id}
+        arrival={selected}
+        busy={fix.busy}
+        titleless={detailShown}
+        onEdit={act((arrival) => {
+          if (!arrival.needs_reopen) {
+            onEdit(arrival);
+            return;
+          }
+          // A closed day: the days are reopened first, then the arrival is edited (FR-21.4).
+          fix.start({
+            date: arrival.entry_date,
+            ownerHref: router.state.location.href,
+            then: () => {
+              onEdit(arrival);
+            },
+          });
+        })}
+        onChangeSellDate={act(() => {
+          setSellDateOpen(true);
+        })}
+        onChangeSplit={act(() => {
+          setSplitOpen(true);
+        })}
+        onWriteOff={act(setWriteOff)}
+        onUndoWriteOff={act(setUndo)}
+        onCancel={act(setCancel)}
+      />
+    );
 
+  const long = rows.length > SHORT_LIST_ROWS;
   let body;
   if (list.isPending) {
     body = <LoadingState rows={3} />;
@@ -140,7 +212,7 @@ export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionP
         }}
       />
     );
-  } else if (rows.length === 0) {
+  } else if (rows.length === 0 && search.trim() === '') {
     body = (
       <EmptyState
         icon={Sprout}
@@ -150,185 +222,87 @@ export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionP
     );
   } else {
     body = (
-      <>
-        <ListGrid<ArrivalRow>
-          columns={ARRIVAL_COLUMNS}
-          rows={rows}
-          getRowId={(row) => String(row.id)}
-          labelId="gardens-arrival-label"
-          // Enter shows the entry in full under the list: it is already the row that has focus.
-          onOpen={(row) => {
-            setSelectedId(row.id);
-          }}
-          onFocusRow={(rowId) => {
-            setSelectedId(Number(rowId));
-          }}
-          focusRowId={selectedId === null ? null : String(selectedId)}
-          heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
-          totals={totals}
-          paging={paging}
-        />
-        <Pager pager={list.pager} />
-        {selected === null ? null : (
-          <div className="flex flex-col gap-3 rounded-3 border border-border bg-surface p-3">
-            <Localized
-              id="gardens-arrival-card-title"
-              vars={{
-                number: arrivalNumberText(selected.number, say),
-                item: displayName(selected.item, language),
-              }}
-            >
-              <h3 className="type-section text-ink" />
-            </Localized>
-            {selected.status === 'cancelled' ? (
-              <Localized
-                id="gardens-arrival-cancelled"
-                vars={{ reason: selected.cancel_reason ?? '' }}
-              >
-                <p role="status" className="type-label text-due" />
-              </Localized>
-            ) : null}
-            <div className="@container min-w-0">
-              <dl className="grid grid-cols-3 gap-x-4 gap-y-3 @form3:grid-cols-5">
-                <Fact label={<Localized id="gardens-arrival-col-date" />}>
-                  <Code>{isoToDisplayDate(selected.entry_date)}</Code>
-                </Fact>
-                <Fact label={<Localized id="glossary-sell-date" />}>
-                  <Code>{isoToDisplayDate(selected.sell_date)}</Code>
-                </Fact>
-                <Fact label={<Localized id="glossary-qism-maal" />}>
-                  {displayName(selected.item, language)}
-                </Fact>
-                <Fact label={<Localized id="glossary-packing" />}>
-                  {displayName(selected.packing, language)}
-                </Fact>
-                <Fact label={<Localized id="gardens-arrival-col-qty" />}>
-                  <Num>{String(selected.qty)}</Num>
-                </Fact>
-                <Fact label={<Localized id="bikri-saved-qty-sold" />}>
-                  <Num>{String(selected.qty_sold)}</Num>
-                </Fact>
-                <Fact label={<Localized id="bikri-stock-col-written-off" />}>
-                  <Num>{String(selected.qty_written_off)}</Num>
-                </Fact>
-                <Fact label={<Localized id="gardens-arrival-col-left" />}>
-                  <Num>{String(selected.qty_left)}</Num>
-                </Fact>
-                <Fact label={<Localized id="purchases-detail-qty-other" />}>
-                  <Num>{String(selected.qty_other)}</Num>
-                </Fact>
-                <Fact label={<Localized id="goods-line-col-shop" />}>
-                  {selected.shop_name ?? ''}
-                </Fact>
-                <Fact label={<Localized id="purchases-detail-our-sold" />}>
-                  <Num>{String(selected.qty_our_sold)}</Num>
-                </Fact>
-                <Fact label={<Localized id="purchases-detail-other-sold" />}>
-                  <Num>{String(selected.qty_other_sold)}</Num>
-                </Fact>
-                <Fact label={<Localized id="purchases-detail-our-left" />}>
-                  <Num>{String(selected.qty_our_left)}</Num>
-                </Fact>
-                <Fact label={<Localized id="purchases-detail-other-left" />}>
-                  <Num>{String(selected.qty_other_left)}</Num>
-                </Fact>
-                <Fact label={<Localized id="glossary-commission" />}>
-                  <span className="inline-flex items-center gap-1">
-                    <Num paisa={selected.commission_paisa} />
-                    <CalcInfo working={selected.commission_working} inCell />
-                  </span>
-                </Fact>
-                <Fact label={<Localized id="bikri-stock-col-days" />}>
-                  <Num>{String(selected.days_waiting)}</Num>
-                </Fact>
-                {selected.note === null || selected.note === '' ? null : (
-                  <Fact label={<Localized id="gardens-field-note" />}>{selected.note}</Fact>
-                )}
-              </dl>
-            </div>
-            {selected.lots.length === 0 ? null : (
-              <Table
-                columns={lotColumns}
-                rows={selected.lots}
-                rowKey={(lot) => String(lot.lot_id)}
-                label={l10n.getString('gardens-arrival-lots')}
-              />
-            )}
-            {selected.status === 'cancelled' ? null : (
-              <EntryActions
-                flags={selected}
-                noCancel
-                busy={fix.busy}
-                onEdit={() => {
-                  if (!selected.needs_reopen) {
-                    onEdit(selected);
-                    return;
-                  }
-                  // A closed day: the days are reopened first, then the arrival is edited (FR-21.4).
-                  fix.start({
-                    date: selected.entry_date,
-                    ownerHref: router.state.location.href,
-                    then: () => {
-                      onEdit(selected);
-                    },
-                  });
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="max-w-form">
+          <FilterBar
+            screen="gardens.arrivals"
+            search={{
+              value: search,
+              onChange: setSearch,
+              labelId: 'gardens-arrival-search-label',
+              placeholderId: 'gardens-arrival-search-hint',
+            }}
+          />
+        </div>
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title={<Localized id="gardens-arrival-no-match" />}
+            help={<Localized id="gardens-arrival-no-match-help" />}
+            action={
+              <Button
+                onClick={() => {
+                  setSearch('');
                 }}
-                onCancel={() => undefined}
-              />
-            )}
-            {selected.status === 'cancelled' ? null : (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  disabled={!selected.can_change_sell_date}
-                  onClick={() => {
-                    setSellDateOpen(true);
+              >
+                <Localized id="gardens-arrival-search-clear" />
+              </Button>
+            }
+          />
+        ) : (
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              <div ref={listRef} className={long ? 'h-arrivals-region' : undefined}>
+                <ListGrid<ArrivalRow>
+                  columns={ARRIVAL_COLUMNS}
+                  rows={rows}
+                  getRowId={(row) => String(row.id)}
+                  labelId="gardens-arrival-label"
+                  // Enter goes to the buttons of the details, or opens them in their window.
+                  onOpen={(row) => {
+                    setSelectedId(row.id);
+                    if (!docked) {
+                      setDetailOpen(true);
+                      return;
+                    }
+                    window.requestAnimationFrame(() => {
+                      panelRef.current
+                        ?.querySelector<HTMLElement>('button:not([disabled])')
+                        ?.focus();
+                    });
                   }}
-                >
-                  <CalendarClock aria-hidden="true" className="size-icon-md" />
-                  <Localized id="purchases-change-sell-date" />
-                </Button>
-                <Button
-                  disabled={!selected.can_change_split}
-                  onClick={() => {
-                    setSplitOpen(true);
+                  onFocusRow={(rowId) => {
+                    setSelectedId(Number(rowId));
                   }}
-                >
-                  <ArrowLeftRight aria-hidden="true" className="size-icon-md" />
-                  <Localized id="split-change" />
-                </Button>
-                <Button
-                  disabled={selected.qty_left <= 0}
-                  onClick={() => {
-                    setWriteOff(selected);
-                  }}
-                >
-                  <Ban aria-hidden="true" className="size-icon-md" />
-                  <Localized id="purchases-write-off" />
-                </Button>
-                <Button
-                  disabled={selected.write_offs.length === 0}
-                  onClick={() => {
-                    setUndo(selected);
-                  }}
-                >
-                  <RotateCcw aria-hidden="true" className="size-icon-md" />
-                  <Localized id="purchases-undo-write-off" />
-                </Button>
-                <Button
-                  variant="danger"
-                  disabled={!selected.can_cancel}
-                  onClick={() => {
-                    setCancel(selected);
-                  }}
-                >
-                  <Ban aria-hidden="true" className="size-icon-md" />
-                  <Localized id="gardens-arrival-cancel" />
-                </Button>
+                  focusRowId={selectedId === null ? null : String(selectedId)}
+                  markedRowIds={markedIds}
+                  heightMode={long ? 'fill' : 'auto'}
+                  isInactive={(row) => row.status === 'cancelled'}
+                  sort={{ value: list.sort, onChange: list.setSort }}
+                  totals={totals}
+                  paging={paging}
+                />
               </div>
-            )}
+              <Pager pager={list.pager} />
+              <Localized id={docked ? 'gardens-arrival-pick-help' : 'gardens-arrival-open-help'}>
+                <p className="type-body text-ink-muted" />
+              </Localized>
+            </div>
+            {docked && details !== null ? (
+              <aside
+                ref={panelRef}
+                aria-label={l10n.getString('gardens-arrival-card-title', {
+                  number: arrivalNumberText(selected?.number ?? 0, say),
+                  item: selected === null ? '' : displayName(selected.item, language),
+                })}
+                className="sticky top-0 max-h-arrivals-region w-arrivals-panel shrink-0 self-start overflow-y-auto rounded-3 border border-border bg-surface p-3"
+              >
+                {details}
+              </aside>
+            ) : null}
           </div>
         )}
-      </>
+      </div>
     );
   }
 
@@ -338,6 +312,34 @@ export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionP
         <p className="type-body text-ink-muted" />
       </Localized>
       {body}
+      {detailShown ? (
+        <FormDialog
+          open
+          onOpenChange={setDetailOpen}
+          title={
+            <Localized
+              id="gardens-arrival-card-title"
+              vars={{
+                number: arrivalNumberText(selected.number, say),
+                item: displayName(selected.item, language),
+              }}
+            >
+              <span />
+            </Localized>
+          }
+        >
+          {details}
+          <div>
+            <Button
+              onClick={() => {
+                setDetailOpen(false);
+              }}
+            >
+              <Localized id="gardens-arrival-detail-close" />
+            </Button>
+          </div>
+        </FormDialog>
+      ) : null}
       <SellDateDialog
         open={sellDateOpen}
         onOpenChange={(open) => {

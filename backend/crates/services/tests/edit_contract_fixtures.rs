@@ -181,7 +181,6 @@ fn stamp(count: i64, reason: Option<&str>) -> EditStamp {
         by: "Maher Adnan".to_owned(),
         count,
         reason: reason.map(str::to_owned),
-        sign: None,
     }
 }
 
