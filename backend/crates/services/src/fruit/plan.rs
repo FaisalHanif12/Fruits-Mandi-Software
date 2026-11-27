@@ -16,9 +16,11 @@ use mandi_domain::core::fruit::{
 };
 use mandi_domain::core::ids::{AccountId, PartnerId};
 use mandi_domain::core::money::{Grams, MAX_RUPEES, Paisa, Qty};
+use mandi_domain::core::rules::Working;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::fruit::{
-    FruitPartAmount, FruitParts, fruit_entry, fruit_value, guest_parts, partner_part,
+    FruitPartAmount, FruitParts, fruit_entry, fruit_value, guest_parts, max_deduction,
+    net_after_deduction, partner_part,
 };
 use mandi_domain::ledger::BalancedEntry;
 
@@ -52,7 +54,11 @@ pub(super) struct Ready {
     pub qty: i64,
     pub weight_grams: Option<i64>,
     pub rate: Paisa,
+    /// The amount that is posted: `qty × rate` less the deduction (PRD FR-16.11 v1.59). It is what
+    /// is stored in `fruit_takes.value_paisa` and what the credited account is credited.
     pub value: Paisa,
+    /// کل کٹوتی, 0 when there is none.
+    pub deduction: Paisa,
     pub note: Option<String>,
     pub entry: BalancedEntry,
     pub numbers: FruitNumbers,
@@ -143,7 +149,10 @@ fn lot_source(
     Ok(Some(source))
 }
 
-/// The other agent's shop: an ordinary seller account, the item and the packing typed.
+/// The other agent's shop: an ordinary seller account, the item and the packing typed. The آڑھتی box
+/// of the screen lists only the accounts marked آڑھتی دکان (PRD FR-16.11 v1.59), but that is a list
+/// rule of the picker (scope `agent_shop`), not a rule of the entry: an entry saved before the mark
+/// existed, or from an account that is not marked, is still saved and edited.
 fn agent_source(
     conn: &Connection,
     errors: &mut FieldErrors,
@@ -290,6 +299,19 @@ pub(super) fn plan(
     // The quantity, the weight and the rate.
     let qty: Option<Qty> = errors.take(validate::qty("qty", &input.qty));
     let rate: Option<Paisa> = errors.take(validate::rate("rate", &input.rate));
+    // کل کٹوتی (PRD FR-16.11 v1.59): empty or 0 deducts nothing. It is parsed before the value is known,
+    // so a bad amount is told even when the quantity or the rate is wrong. Only fruit from another
+    // shop takes one.
+    // Empty text and text with only invisible marks both mean 0 (`money_optional`).
+    let deduction: Option<Paisa> = errors
+        .take(validate::money_optional(
+            "deduction",
+            input.deduction.as_deref().unwrap_or_default(),
+        ))
+        .map(|typed| typed.unwrap_or(Paisa::ZERO));
+    if input.source == FruitSource::Shop && deduction.is_some_and(|d| d > Paisa::ZERO) {
+        errors.push(FieldError::new(ErrorCode::ErrFormatInvalid, "deduction"));
+    }
     let weight_text = input
         .weight
         .as_deref()
@@ -338,31 +360,53 @@ pub(super) fn plan(
                 );
                 None
             } else {
-                let guests = if input.for_guests {
-                    guest_partners(conn, &mut errors, &all, date)?
-                } else {
-                    Vec::new()
-                };
-                if errors.is_empty() {
-                    Some(finish(
-                        conn,
-                        &all,
-                        chosen,
-                        &guests,
-                        input,
-                        FinishArgs {
-                            source,
-                            qty,
-                            weight,
-                            rate,
-                            value,
-                            date,
-                            note,
-                            editing,
-                        },
-                    )?)
-                } else {
-                    None
+                // The net: what the agent is credited and the partners are charged (C1 less the
+                // deduction). A deduction that is not less than the value is refused.
+                let deduction = deduction.unwrap_or(Paisa::ZERO);
+                match net_after_deduction(value.value, deduction).map_err(money_error)? {
+                    None => {
+                        // At least one rupee is left to credit, so the most is the value less 1.
+                        let max = max_deduction(value.value)
+                            .map_err(money_error)?
+                            .map_or(0, Paisa::rupees);
+                        errors.push(
+                            FieldError::new(ErrorCode::ErrDeductionNotBelowValue, "deduction")
+                                .with("max", ErrorValue::Number(max))
+                                .with("value", ErrorValue::Number(value.value.rupees())),
+                        );
+                        None
+                    }
+                    Some(net) => {
+                        let guests = if input.for_guests {
+                            guest_partners(conn, &mut errors, &all, date)?
+                        } else {
+                            Vec::new()
+                        };
+                        if errors.is_empty() {
+                            Some(finish(
+                                conn,
+                                &all,
+                                chosen,
+                                &guests,
+                                input,
+                                FinishArgs {
+                                    source,
+                                    qty,
+                                    weight,
+                                    rate,
+                                    value,
+                                    deduction,
+                                    net: net.net,
+                                    net_working: (deduction > Paisa::ZERO).then_some(net.working),
+                                    date,
+                                    note,
+                                    editing,
+                                },
+                            )?)
+                        } else {
+                            None
+                        }
+                    }
                 }
             }
         }
@@ -384,7 +428,14 @@ struct FinishArgs<'a> {
     qty: Qty,
     weight: Option<Grams>,
     rate: Paisa,
+    /// The value (C1), before the deduction.
     value: mandi_domain::fruit::FruitValue,
+    /// کل کٹوتی, 0 when there is none.
+    deduction: Paisa,
+    /// The amount posted: `value - deduction`.
+    net: Paisa,
+    /// How the net was worked out; `None` without a deduction.
+    net_working: Option<Working>,
     date: BusinessDate,
     note: Option<String>,
     editing: Option<&'a FruitRec>,
@@ -405,6 +456,9 @@ fn finish(
         weight,
         rate,
         value,
+        deduction,
+        net,
+        net_working,
         date,
         note,
         editing,
@@ -413,10 +467,11 @@ fn finish(
         Some(entry) => frepo::parts_of_entry(conn, entry)?,
         None => Vec::new(),
     };
-    // Keep the saved split when for whom, the day and the value did not change (money agent rule 13).
+    // Keep the saved split when for whom, the day and the amount posted did not change (money agent
+    // rule 13). The stored value is the net, so it is compared with the new net.
     let kept = editing.filter(|old| {
         old.entry_date == date.to_iso()
-            && old.value_paisa == value.value.as_paisa()
+            && old.value_paisa == net.as_paisa()
             && old.partner.as_ref().map(|p| p.id) == chosen.map(|p| p.id)
             && !old_parts.is_empty()
     });
@@ -442,20 +497,18 @@ fn finish(
             working: None,
         }
     } else if input.for_guests {
-        guest_parts(value.value, &pairs).map_err(money_error)?
+        guest_parts(net, &pairs).map_err(money_error)?
     } else {
         let partner = chosen.ok_or_else(|| data("a fruit entry for a partner has no partner"))?;
-        partner_part(
-            (PartnerId::new(partner.id), account_of(partner)?),
-            value.value,
-        )
+        partner_part((PartnerId::new(partner.id), account_of(partner)?), net)
     };
     let entry = fruit_entry(&parts.parts, AccountId::new(source.account.id))
         .map_err(|e| data(&format!("the journal entry of a fruit entry: {e}")))?;
-    // The credit is the sum of the parts. It must be the value that is stored with the entry.
-    if entry.total() != value.value {
+    // The credit is the sum of the parts. It must be the amount that is stored with the entry: the
+    // net, which is the value when there is no deduction.
+    if entry.total() != net {
         return Err(data(
-            "the parts of a fruit entry do not add up to its value",
+            "the parts of a fruit entry do not add up to its net value",
         ));
     }
 
@@ -501,6 +554,9 @@ fn finish(
         rate_paisa: rate,
         value_paisa: value.value,
         value_working: value.working,
+        deduction_paisa: deduction,
+        net_paisa: net,
+        net_working,
         parts: shown,
         parts_working: parts.working,
         credit: FruitCredit {
@@ -519,7 +575,8 @@ fn finish(
         qty: qty.get(),
         weight_grams: weight.map(Grams::get),
         rate,
-        value: value.value,
+        value: net,
+        deduction,
         note,
         entry,
         numbers,

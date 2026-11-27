@@ -67,7 +67,7 @@ fn input(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
 /// about the spelling check).
 fn save(env: &TestEnv, owner: &auth::Actor, mut input: AccountInput) -> AccountRow {
     loop {
-        match accounts::save(&env.ctx, owner, &input) {
+        match accounts::save_with_confirm(&env.ctx, owner, &input, true) {
             Ok(row) => return row,
             Err(ServiceError::Rejected(items))
                 if items
@@ -191,7 +191,7 @@ fn the_tag_is_checked_stored_once_and_never_inside_a_name() {
     for bad in ["1A", "ABCDE", "ب", "K-"] {
         let mut form = input(AccountType::Buyer, "", "طارق", "Tariq");
         form.tag = bad.into();
-        let error = accounts::save(&env.ctx, &owner, &form).unwrap_err();
+        let error = accounts::save_with_confirm(&env.ctx, &owner, &form, true).unwrap_err();
         assert_eq!(
             first_error(error),
             (ErrorCode::ErrTagInvalid, Some("tag".to_owned())),
@@ -532,10 +532,11 @@ fn a_typed_code_must_be_free_and_a_full_code_of_the_type() {
         ("002", ErrorCode::ErrCodeInvalid),
         ("0020x", ErrorCode::ErrCodeInvalid),
     ] {
-        let error = accounts::save(
+        let error = accounts::save_with_confirm(
             &env.ctx,
             &owner,
             &input(AccountType::Buyer, typed, "ناصر", "Nasir"),
+            true,
         )
         .unwrap_err();
         let (code, field) = first_error(error);
@@ -631,10 +632,11 @@ fn the_numbers_of_a_type_can_run_out_with_a_clear_code() {
         first_error(accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap_err());
     assert_eq!(code, ErrorCode::ErrSeriesFull);
     let (code, field) = first_error(
-        accounts::save(
+        accounts::save_with_confirm(
             &env.ctx,
             &owner,
             &input(AccountType::Buyer, "", "اور", "Aur"),
+            true,
         )
         .unwrap_err(),
     );
@@ -676,14 +678,16 @@ fn an_edit_keeps_the_code_checks_the_version_and_refreshes_search() {
     );
 
     // The old version is refused.
-    let (code, _) = first_error(accounts::save(&env.ctx, &owner, &edit).unwrap_err());
+    let (code, _) =
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &edit, true).unwrap_err());
     assert_eq!(code, ErrorCode::ErrVersionChanged);
 
     // The code and the type cannot change.
     let mut again = edit.clone();
     again.version = Some(saved.version);
     again.code = "0029".into();
-    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &again).unwrap_err());
+    let (code, field) =
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &again, true).unwrap_err());
     assert_eq!(
         (code, field.as_deref()),
         (ErrorCode::ErrFormatInvalid, Some("code"))
@@ -691,7 +695,8 @@ fn an_edit_keeps_the_code_checks_the_version_and_refreshes_search() {
     let mut again = edit.clone();
     again.version = Some(saved.version);
     again.account_type = AccountType::Seller;
-    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &again).unwrap_err());
+    let (code, field) =
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &again, true).unwrap_err());
     assert_eq!(
         (code, field.as_deref()),
         (ErrorCode::ErrFormatInvalid, Some("account_type"))
@@ -808,7 +813,8 @@ fn a_system_account_cannot_be_made_inactive() {
     let cash = accounts::get(&env.ctx, account_id(&env, "01010001")).unwrap();
     let mut edit = form_of(&cash);
     edit.is_active = false;
-    let (error_code, field) = first_error(accounts::save(&env.ctx, &owner, &edit).unwrap_err());
+    let (error_code, field) =
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &edit, true).unwrap_err());
     assert_eq!(
         (error_code, field.as_deref()),
         (ErrorCode::ErrSystemAccount, Some("is_active"))
@@ -841,7 +847,7 @@ fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
             line(&env, arshad, "31-08-2026", "", "3000", false),
         ],
     };
-    accounts::openings_save(&env.ctx, &owner, &grid).unwrap();
+    accounts::openings_save_with_confirm(&env.ctx, &owner, &grid, true).unwrap();
 
     let list = |text: &str, kind: AccountListKind, inactive: bool| {
         accounts::list(
@@ -918,7 +924,7 @@ fn an_opening_is_a_balanced_entry_against_the_opening_difference() {
         "the preview writes nothing"
     );
 
-    let saved = accounts::openings_save(&env.ctx, &owner, &grid).unwrap();
+    let saved = accounts::openings_save_with_confirm(&env.ctx, &owner, &grid, true).unwrap();
     assert_eq!(saved.rows.len(), 2);
     assert_eq!(saved.opening_difference.side, BalanceSide::Zero);
     assert_eq!(difference(&env), (BalanceSide::Zero, rupees(0)));
@@ -973,7 +979,7 @@ fn an_opening_is_a_balanced_entry_against_the_opening_difference() {
     // Saving the same grid again changes nothing: no new entries, no new audit rows.
     let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
     let audits = audit_total(&dir);
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -982,6 +988,7 @@ fn an_opening_is_a_balanced_entry_against_the_opening_difference() {
                 line(&env, capital, "31-08-2026", "", "65,000", false),
             ],
         },
+        true,
     )
     .unwrap();
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
@@ -994,7 +1001,7 @@ fn changing_an_opening_reverses_the_old_entry_and_posts_the_new_one() {
     let (dir, env, owner) = ready();
     let cash = account_id(&env, "01010001");
     let capital = account_id(&env, "06010001");
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -1003,6 +1010,7 @@ fn changing_an_opening_reverses_the_old_entry_and_posts_the_new_one() {
                 line(&env, capital, "31-08-2026", "", "65000", false),
             ],
         },
+        true,
     )
     .unwrap();
     // The cash was typed wrong: it is 70,000. ابتدائی فرق now shows the 5,000 that is missing.
@@ -1020,12 +1028,13 @@ fn changing_an_opening_reverses_the_old_entry_and_posts_the_new_one() {
         ),
         (BalanceSide::Cr, rupees(5_000))
     );
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, cash, "31-08-2026", "70000", "", false)],
         },
+        true,
     )
     .unwrap();
     assert_eq!(difference(&env), (BalanceSide::Cr, rupees(5_000)));
@@ -1052,18 +1061,19 @@ fn changing_an_opening_reverses_the_old_entry_and_posts_the_new_one() {
     assert_eq!(trial.total_dr, trial.total_cr);
 
     // The capital is corrected to 70,000 and the difference goes back to nothing.
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, capital, "31-08-2026", "", "70000", false)],
         },
+        true,
     )
     .unwrap();
     assert_eq!(difference(&env), (BalanceSide::Zero, rupees(0)));
 
     // Clearing an opening removes its effect and its date.
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -1072,6 +1082,7 @@ fn changing_an_opening_reverses_the_old_entry_and_posts_the_new_one() {
                 line(&env, capital, "", "", "", false),
             ],
         },
+        true,
     )
     .unwrap();
     let row = accounts::get(&env.ctx, cash).unwrap();
@@ -1102,7 +1113,15 @@ fn the_account_form_posts_its_opening_and_marks_a_seller_advance() {
         ),
         1
     );
-    assert_eq!(difference(&env), (BalanceSide::Cr, rupees(15_000)));
+    // The money he got went out of روکڑ (PRD FR-10.9 v1.60); ابتدائی فرق is not touched.
+    assert_eq!(difference(&env), (BalanceSide::Zero, rupees(0)));
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM journal_lines WHERE account_id = (SELECT id FROM accounts WHERE code = '01010001') AND cr_paisa = 1500000"
+        ),
+        1
+    );
     // Editing the form without touching the opening writes no new entry.
     let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
     let mut edit = input(AccountType::Seller, &rahim.code, "رحیم", "Rahim");
@@ -1123,7 +1142,7 @@ fn opening_mistakes_name_the_field_and_write_nothing() {
     let try_save = |edit: &dyn Fn(&mut AccountInput)| {
         let mut form = input(AccountType::Buyer, "", "ناصر", "Nasir");
         edit(&mut form);
-        first_error(accounts::save(&env.ctx, &owner, &form).unwrap_err())
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &form, true).unwrap_err())
     };
     // Both sides.
     let (code, field) = try_save(&|f| {
@@ -1180,7 +1199,7 @@ fn a_closed_day_cannot_take_or_lose_an_opening() {
     let (dir, env, owner) = ready();
     let cash = account_id(&env, "01010001");
     let capital = account_id(&env, "06010001");
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -1189,6 +1208,7 @@ fn a_closed_day_cannot_take_or_lose_an_opening() {
                 line(&env, capital, "31-08-2026", "", "65000", false),
             ],
         },
+        true,
     )
     .unwrap();
     raw(&dir)
@@ -1201,12 +1221,13 @@ fn a_closed_day_cannot_take_or_lose_an_opening() {
 
     // A new opening on a closed day.
     let akram = buyer(&env, &owner, "اکرم ٹول ٹیکس", "Akram Toll Tax");
-    let error = accounts::openings_save(
+    let error = accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, akram.id, "01-09-2026", "500", "", false)],
         },
+        true,
     )
     .unwrap_err();
     let ServiceError::Rejected(items) = error else {
@@ -1215,22 +1236,24 @@ fn a_closed_day_cannot_take_or_lose_an_opening() {
     assert_eq!(items[0].code, ErrorCode::ErrDateClosed);
     assert_eq!(items[0].field.as_deref(), Some("lines[0].opening_date"));
     // On the open day it works.
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, akram.id, "10-09-2026", "500", "", false)],
         },
+        true,
     )
     .unwrap();
     // Changing the cash opening, whose day (31-08) is closed, is refused and nothing moves.
     let before = count(&dir, "SELECT COUNT(*) FROM journal_entries");
-    let error = accounts::openings_save(
+    let error = accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, cash, "10-09-2026", "70000", "", false)],
         },
+        true,
     )
     .unwrap_err();
     let (code, _) = first_error(error);
@@ -1292,7 +1315,7 @@ fn the_grid_saves_all_lines_or_none_and_points_at_each_bad_line() {
     );
     assert!(preview.rows[0].errors.is_empty());
 
-    let error = accounts::openings_save(&env.ctx, &owner, &bad).unwrap_err();
+    let error = accounts::openings_save_with_confirm(&env.ctx, &owner, &bad, true).unwrap_err();
     let ServiceError::Rejected(items) = error else {
         panic!("not a rejection")
     };
@@ -1308,45 +1331,49 @@ fn the_grid_saves_all_lines_or_none_and_points_at_each_bad_line() {
     );
 
     // The same refusals on the single form: an opening on an income account.
-    let error = accounts::openings_save(
+    let error = accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, income, "31-08-2026", "100", "", false)],
         },
+        true,
     )
     .unwrap_err();
     assert_eq!(first_error(error).0, ErrorCode::ErrOpeningNotAllowed);
     // ابتدائی فرق itself and a head 05 account are refused too.
     let difference_id = account_id(&env, "06019999");
-    let error = accounts::openings_save(
+    let error = accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, difference_id, "31-08-2026", "100", "", false)],
         },
+        true,
     )
     .unwrap_err();
     assert_eq!(first_error(error).0, ErrorCode::ErrOpeningNotAllowed);
     // نقدی منڈی pays at once, so a balance there is refused too.
     let naqdi = account_id(&env, "03040000");
-    let error = accounts::openings_save(
+    let error = accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, naqdi, "31-08-2026", "100", "", false)],
         },
+        true,
     )
     .unwrap_err();
     assert_eq!(first_error(error).0, ErrorCode::ErrOpeningNotAllowed);
     // A چکتا کھاتہ account has no person to hold a balance (FR-13.5).
     let chukta = account_id(&env, "0030");
-    let error = accounts::openings_save(
+    let error = accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, chukta, "31-08-2026", "100", "", false)],
         },
+        true,
     )
     .unwrap_err();
     assert_eq!(first_error(error).0, ErrorCode::ErrOpeningNotAllowed);
@@ -1359,7 +1386,7 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
     let akram = buyer(&env, &owner, "اکرم ٹول ٹیکس", "Akram Toll Tax");
     let cash = account_id(&env, "01010001");
     let capital = account_id(&env, "06010001");
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -1370,6 +1397,7 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
                 line(&env, capital, "31-08-2026", "", "67,880", false),
             ],
         },
+        true,
     )
     .unwrap();
     let tree = coa::tree(&env.ctx).unwrap();
@@ -1381,10 +1409,11 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
         ["01", "02", "03", "04", "05", "06"]
     );
     let head = |code: &str| tree.heads.iter().find(|h| h.code == code).unwrap();
-    // Assets: cash 50,000 debit. Parties: 15,000 + 2,880 debit. Capital: 67,880 credit.
+    // Assets: cash 50,000 debit less the parties' 17,880 paid out through روکڑ (PRD FR-10.9 v1.60).
+    // Parties: 15,000 + 2,880 debit. Capital: 67,880 credit less ابتدائی فرق 17,880 debit.
     assert_eq!(
         (head("01").balance.side, head("01").balance.amount_paisa),
-        (BalanceSide::Dr, rupees(50_000))
+        (BalanceSide::Dr, rupees(32_120))
     );
     assert_eq!(
         (head("03").balance.side, head("03").balance.amount_paisa),
@@ -1392,7 +1421,7 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
     );
     assert_eq!(
         (head("06").balance.side, head("06").balance.amount_paisa),
-        (BalanceSide::Cr, rupees(67_880))
+        (BalanceSide::Cr, rupees(50_000))
     );
     let buyers = head("03")
         .controls
@@ -1560,7 +1589,7 @@ fn a_rules_only_spelling_asks_to_be_confirmed_and_nothing_is_written() {
     let mut form = input(AccountType::Buyer, "", "زیبق", "Zaibq");
     form.father_or_firm_ur = "قوبرط".into();
     form.father_or_firm_en = "Qobrt".into();
-    let error = accounts::save(&env.ctx, &owner, &form).unwrap_err();
+    let error = accounts::save_with_confirm(&env.ctx, &owner, &form, true).unwrap_err();
     let ServiceError::Rejected(items) = error else {
         panic!("not a rejection")
     };
@@ -1584,8 +1613,9 @@ fn a_rules_only_spelling_asks_to_be_confirmed_and_nothing_is_written() {
 
 #[test]
 fn random_opening_changes_always_leave_the_books_balanced() {
-    // Property: after every change in a long run of random openings, the trial balance is equal
-    // and ابتدائی فرق is exactly Σ debits − Σ credits of the openings in force, on its credit side (PRD FR-10.9).
+    // Property: after every change in a long run of random openings of buyers, the trial balance is
+    // equal, ابتدائی فرق stays 0 and روکڑ is exactly Σ credits − Σ debits of the openings in force
+    // (PRD FR-10.9 v1.60).
     let (dir, env, owner) = ready();
     let rows: Vec<AccountRow> = ["Akram", "Arshad", "Nasir", "Tariq"]
         .iter()
@@ -1632,19 +1662,23 @@ fn random_opening_changes_always_leave_the_books_balanced() {
         };
         // The preview says what ابتدائی فرق will be; the save must give exactly that (B5).
         let preview = accounts::openings_preview(&env.ctx, &grid).unwrap();
-        let saved = accounts::openings_save(&env.ctx, &owner, &grid).unwrap();
+        let saved = accounts::openings_save_with_confirm(&env.ctx, &owner, &grid, true).unwrap();
         assert_eq!(preview.opening_difference_after, saved.opening_difference);
         now[pick] = (dr, cr);
         let trial = ledger::trial_balance(&env.ctx, None).unwrap();
         assert_eq!(trial.total_dr, trial.total_cr);
         let want: i64 = now.iter().map(|(d, c)| d - c).sum();
-        let (side, amount) = difference(&env);
-        let got = match side {
-            BalanceSide::Cr => amount.as_paisa(),
-            BalanceSide::Dr => -amount.as_paisa(),
+        assert_eq!(difference(&env), (BalanceSide::Zero, rupees(0)));
+        let cash = accounts::get(&env.ctx, account_id(&env, "01010001"))
+            .unwrap()
+            .balance;
+        // Debit positive: cash goes down by what went out (بنام) and up by what came in (جمع).
+        let got = match cash.side {
+            BalanceSide::Dr => cash.amount_paisa.as_paisa(),
+            BalanceSide::Cr => -cash.amount_paisa.as_paisa(),
             BalanceSide::Zero => 0,
         };
-        assert_eq!(got, want * 100, "ابتدائی فرق after {now:?}");
+        assert_eq!(got, -want * 100, "روکڑ after {now:?}");
         for (i, row) in rows.iter().enumerate() {
             let balance = accounts::get(&env.ctx, row.id).unwrap().balance;
             let expected = (now[i].0 - now[i].1) * 100;
@@ -1842,23 +1876,25 @@ fn the_account_rows_say_whether_they_can_take_an_opening() {
     ];
     codes.push(rahim.code.as_str());
     for row in codes.iter().map(|code| by_code(code)) {
-        let tried = accounts::openings_save(
+        let tried = accounts::openings_save_with_confirm(
             &env.ctx,
             &owner,
             &OpeningsInput {
                 lines: vec![line(&env, row.id, "01-09-2026", "100", "", false)],
             },
+            true,
         );
         let refused = matches!(&tried, Err(ServiceError::Rejected(items)) if items.iter().any(|i| i.code == ErrorCode::ErrOpeningNotAllowed));
         assert_eq!(refused, !row.can_take_opening, "{}", row.code);
         if tried.is_ok() {
             // Put it back, so the next account's difference is not counted twice.
-            accounts::openings_save(
+            accounts::openings_save_with_confirm(
                 &env.ctx,
                 &owner,
                 &OpeningsInput {
                     lines: vec![line(&env, row.id, "", "", "", false)],
                 },
+                true,
             )
             .unwrap();
         }
@@ -1898,12 +1934,13 @@ fn a_line_error_of_the_openings_preview_carries_its_values() {
         Some(&ErrorValue::Text("09-09-2026".into()))
     );
     // The same values arrive when the grid is saved and refused.
-    let error = accounts::openings_save(
+    let error = accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
             lines: vec![line(&env, akram.id, "01-09-2026", "100", "", false)],
         },
+        true,
     )
     .unwrap_err();
     let ServiceError::Rejected(items) = error else {
@@ -1966,7 +2003,8 @@ fn an_account_whose_opening_day_is_closed_can_still_be_edited() {
     // A real change of the opening is still refused on the closed day, with nothing written.
     let mut change = form_of(&saved);
     change.opening_dr = "16000".into();
-    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &change).unwrap_err());
+    let (code, field) =
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &change, true).unwrap_err());
     assert_eq!(
         (code, field.as_deref()),
         (ErrorCode::ErrDateClosed, Some("opening_date"))
@@ -1978,7 +2016,8 @@ fn an_account_whose_opening_day_is_closed_can_still_be_edited() {
     clear.opening_date = String::new();
     clear.opening_dr = String::new();
     clear.opening_is_advance = false;
-    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &clear).unwrap_err());
+    let (code, field) =
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &clear, true).unwrap_err());
     assert_eq!(
         (code, field.as_deref()),
         (ErrorCode::ErrDateClosed, Some("opening_date"))
@@ -1997,7 +2036,7 @@ fn the_golden_cash_account_can_be_edited_after_its_opening_day_is_closed() {
     let (dir, env, owner) = ready();
     let cash = account_id(&env, "01010001");
     let capital = account_id(&env, "06010001");
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -2006,6 +2045,7 @@ fn the_golden_cash_account_can_be_edited_after_its_opening_day_is_closed() {
                 line(&env, capital, "31-08-2026", "", "65000", false),
             ],
         },
+        true,
     )
     .unwrap();
     raw(&dir)
@@ -2051,7 +2091,7 @@ fn the_openings_preview_and_save_give_the_same_errors_for_a_closed_old_day() {
         [(ErrorCode::ErrDateClosed, "lines[0].opening_date".to_owned())]
     );
     let ServiceError::Rejected(items) =
-        accounts::openings_save(&env.ctx, &owner, &moved).unwrap_err()
+        accounts::openings_save_with_confirm(&env.ctx, &owner, &moved, true).unwrap_err()
     else {
         panic!("not a rejection")
     };
@@ -2069,7 +2109,7 @@ fn the_openings_preview_and_save_give_the_same_errors_for_a_closed_old_day() {
     assert_eq!(preview.rows[0].errors.len(), 1);
     assert_eq!(preview.rows[0].errors[0].code, ErrorCode::ErrDateClosed);
     assert_eq!(preview.rows[0].errors[0].field, "lines[0].opening_date");
-    assert!(accounts::openings_save(&env.ctx, &owner, &clear).is_err());
+    assert!(accounts::openings_save_with_confirm(&env.ctx, &owner, &clear, true).is_err());
 
     // A line that leaves the opening as it is has no error, whatever day it is on.
     let same = OpeningsInput {
@@ -2077,7 +2117,7 @@ fn the_openings_preview_and_save_give_the_same_errors_for_a_closed_old_day() {
     };
     let preview = accounts::openings_preview(&env.ctx, &same).unwrap();
     assert!(preview.rows[0].errors.is_empty());
-    accounts::openings_save(&env.ctx, &owner, &same).unwrap();
+    accounts::openings_save_with_confirm(&env.ctx, &owner, &same, true).unwrap();
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
 }
 
@@ -2107,7 +2147,8 @@ fn an_inactive_account_takes_no_new_opening_but_can_be_edited_and_cleared() {
     let mut change = form_of(&saved);
     change.is_active = false;
     change.opening_dr = "16000".into();
-    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &change).unwrap_err());
+    let (code, field) =
+        first_error(accounts::save_with_confirm(&env.ctx, &owner, &change, true).unwrap_err());
     assert_eq!(
         (code, field.as_deref()),
         (ErrorCode::ErrAccountInactive, Some("opening_dr"))
@@ -2115,7 +2156,7 @@ fn an_inactive_account_takes_no_new_opening_but_can_be_edited_and_cleared() {
     let grid = OpeningsInput {
         lines: vec![line(&env, saved.id, "31-08-2026", "16000", "", true)],
     };
-    let preview = accounts::openings_preview(&env.ctx, &grid).unwrap();
+    let preview = accounts::openings_preview_with_confirm(&env.ctx, &grid, true).unwrap();
     let preview_errors: Vec<(ErrorCode, String)> = preview.rows[0]
         .errors
         .iter()
@@ -2129,7 +2170,7 @@ fn an_inactive_account_takes_no_new_opening_but_can_be_edited_and_cleared() {
         )]
     );
     let ServiceError::Rejected(items) =
-        accounts::openings_save(&env.ctx, &owner, &grid).unwrap_err()
+        accounts::openings_save_with_confirm(&env.ctx, &owner, &grid, true).unwrap_err()
     else {
         panic!("not a rejection")
     };
@@ -2149,7 +2190,7 @@ fn an_inactive_account_takes_no_new_opening_but_can_be_edited_and_cleared() {
             .errors
             .is_empty()
     );
-    accounts::openings_save(&env.ctx, &owner, &clear).unwrap();
+    accounts::openings_save_with_confirm(&env.ctx, &owner, &clear, true).unwrap();
     assert_eq!(
         count(&dir, "SELECT COUNT(*) FROM journal_entries"),
         entries + 1,
@@ -2175,7 +2216,7 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
         &owner,
         input(AccountType::MoneyLent, "", "اسلم", "Aslam"),
     );
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -2200,6 +2241,7 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
                 line(&env, akram.id, "31-08-2026", "4,000", "", false),
             ],
         },
+        true,
     )
     .unwrap();
     let list = |kind: AccountListKind| {
@@ -2412,7 +2454,7 @@ fn the_opening_filter_lists_the_accounts_that_can_take_an_opening_and_have_none(
             line(&env, arshad, "31-08-2026", "", "3000", false),
         ],
     };
-    accounts::openings_save(&env.ctx, &owner, &grid).unwrap();
+    accounts::openings_save_with_confirm(&env.ctx, &owner, &grid, true).unwrap();
     let after = list(Some(false));
     let names_after = codes(&after);
     assert!(!names_after.contains(&"0010".to_owned()) && !names_after.contains(&"0021".to_owned()));

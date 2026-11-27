@@ -270,6 +270,8 @@ struct EntryLine {
     dr: Paisa,
     cr: Paisa,
     note: Option<String>,
+    /// True for a payment typed as a پیشگی to a buyer: it keeps that label (PRD FR-15.11).
+    peshgi: bool,
 }
 
 /// The lines of the party from `from` to `to` that the day's sale part does not own: the vouchers
@@ -290,17 +292,19 @@ fn entry_lines(
                 r.get::<_, i64>(2)?,
                 r.get::<_, i64>(3)?,
                 r.get::<_, Option<String>>(4)?,
+                r.get::<_, bool>(5)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut out = Vec::with_capacity(rows.len());
-    for (date, posting_type, dr, cr, note) in rows {
+    for (date, posting_type, dr, cr, note, peshgi) in rows {
         out.push(EntryLine {
             date,
             posting_type,
             dr: paisa(dr)?,
             cr: paisa(cr)?,
             note,
+            peshgi,
         });
     }
     Ok(out)
@@ -312,7 +316,8 @@ fn entry_lines(
 pub fn entry_lines_sql() -> String {
     format!(
         "SELECT e.entry_date, e.posting_type, l.dr_paisa, l.cr_paisa,
-                COALESCE(NULLIF(TRIM(v.narration), ''), NULLIF(TRIM(l.narration), ''))
+                COALESCE(NULLIF(TRIM(v.narration), ''), NULLIF(TRIM(l.narration), '')),
+                v.entered_as IS 'advance'
          FROM journal_lines l
          JOIN journal_entries e ON e.id = l.entry_id
          LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id
@@ -376,8 +381,14 @@ fn day_entries(
                 entries.push(one(ENTRY_RECEIPT, line.cr)?);
             }
             ("payment", true, false) => {
+                // The same money either way; only the word differs for a پیشگی to a buyer.
                 add(&mut sums.payments, line.dr)?;
-                entries.push(one(ENTRY_PAYMENT, line.dr)?);
+                let label = if line.peshgi {
+                    ENTRY_ADVANCE
+                } else {
+                    ENTRY_PAYMENT
+                };
+                entries.push(one(label, line.dr)?);
             }
             ("advance", true, false) => {
                 add(&mut sums.advances, line.dr)?;

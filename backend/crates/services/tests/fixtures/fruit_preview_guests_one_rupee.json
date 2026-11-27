@@ -43,6 +43,9 @@
       ],
       "rule_id": null
     },
+    "deduction_paisa": 0,
+    "net_paisa": 100,
+    "net_working": null,
     "parts": [
       {
         "partner": {

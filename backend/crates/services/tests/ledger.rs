@@ -74,7 +74,9 @@ fn buyer_akram(env: &TestEnv, owner: &auth::Actor) -> i64 {
         note: String::new(),
         tag: String::new(),
     };
-    accounts::save(&env.ctx, owner, &form).unwrap().id
+    accounts::save_with_confirm(&env.ctx, owner, &form, true)
+        .unwrap()
+        .id
 }
 
 /// The receipt of PRD Section 4.6: cash Dr 10,000, Akram Cr 10,000.
@@ -120,10 +122,11 @@ fn a_receipt_updates_the_ledger_and_the_trial_balance() {
         (balance.side, balance.amount_paisa),
         (BalanceSide::Dr, rupees(2_880))
     );
+    // اکرم's opening of 12,880 went through روکڑ (PRD FR-10.9 v1.60): −12,880 + 10,000.
     let cash = ledger::account_balance(&env.ctx, id_of(&env, "01010001")).unwrap();
     assert_eq!(
         (cash.side, cash.amount_paisa),
-        (BalanceSide::Dr, rupees(10_000))
+        (BalanceSide::Cr, rupees(2_880))
     );
 
     let ledger_rows = ledger::ledger(&env.ctx, akram, None, Some("2026-10-10"), None).unwrap();
@@ -563,7 +566,7 @@ fn openings_through_the_grid_chain_with_every_other_entry() {
     let akram = buyer_akram(&env, &owner);
     let cash = id_of(&env, "01010001");
     let version = accounts::get(&env.ctx, cash).unwrap().version;
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -576,6 +579,7 @@ fn openings_through_the_grid_chain_with_every_other_entry() {
                 opening_is_advance: false,
             }],
         },
+        true,
     )
     .unwrap();
     receipt(&env, &owner, akram, "2026-10-10").unwrap();

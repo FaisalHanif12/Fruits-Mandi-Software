@@ -23,6 +23,7 @@
   "father_or_firm_ur": "",
   "id": 19,
   "is_active": true,
+  "is_agent_shop": false,
   "is_chukta_khata": false,
   "is_system": false,
   "linked_account": null,

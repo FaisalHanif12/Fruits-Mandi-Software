@@ -7,14 +7,14 @@ use mandi_services::core::printing::PrintOutcome;
 use crate::error::UiError;
 use crate::print_report::{
     PrintAdhariInput, PrintAdvancesOpenInput, PrintAnalyticsViewInput, PrintBikriListInput,
-    PrintBuyerDuesInput, PrintCapitalInput, PrintCashSalesDayInput, PrintCashSalesMonthInput,
+    PrintBuyerDuesInput, PrintCashSalesDayInput, PrintCashSalesMonthInput,
     PrintCollectionSheetInput, PrintCommissionInput, PrintLentOpenInput, PrintPartnerMonthInput,
     PrintReportInput, PrintSalesInput, PrintSellerDuesInput, PrintSlipsInput, PrintStatementInput,
     PrintStatementRowsInput, PrintTotalDuesInput, run_adhari, run_advances_open, run_analytics,
-    run_bikri_list, run_buyer_dues, run_capital, run_cash_sales_day, run_cash_sales_month,
-    run_collection_sheet, run_commission, run_lent_open, run_parchi, run_partner_month, run_report,
-    run_sale, run_sales_period, run_seller_bills, run_seller_dues, run_statement,
-    run_statement_rows, run_total_dues,
+    run_bikri_list, run_buyer_dues, run_cash_sales_day, run_cash_sales_month, run_collection_sheet,
+    run_commission, run_lent_open, run_parchi, run_partner_month, run_report, run_sale,
+    run_sales_period, run_seller_bills, run_seller_dues, run_statement, run_statement_rows,
+    run_total_dues,
 };
 
 /// Prints a report on the printer of Settings, or saves it as a PDF named
@@ -196,17 +196,6 @@ pub async fn dashboard_total_dues_print<R: tauri::Runtime>(
     input: PrintTotalDuesInput,
 ) -> Result<PrintOutcome, UiError> {
     run_total_dues(app, input).await
-}
-
-/// Prints the card "where the capital is", or saves it as `capital-<YYYYMMDD>-<language>.pdf` (plan
-/// 87). The data is `cashbook_capital_print_data`. Behind the partner code. Errors as
-/// `reports_buyer_parchi_print`, and `ERR_PARTNER_LOCKED`.
-#[tauri::command]
-pub async fn cashbook_capital_print<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    input: PrintCapitalInput,
-) -> Result<PrintOutcome, UiError> {
-    run_capital(app, input).await
 }
 
 /// Prints the page of money lent that is still open, or saves it as

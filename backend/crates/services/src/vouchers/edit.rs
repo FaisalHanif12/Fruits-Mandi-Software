@@ -425,8 +425,13 @@ pub(crate) fn edit_in(
         } else {
             floor_before(tx, old.row.voucher_type, new_account)?
         };
-        // 3. Post it and update the voucher, which keeps its number.
-        let row = planned.row(old.row.number)?;
+        // 3. Post it and update the voucher, which keeps its number. A پیشگی typed to a buyer stays
+        // a پیشگی while it stays with a buyer (PRD FR-15.11 v1.60).
+        let mut row = planned.row(old.row.number)?;
+        row.extra.entered_as = old
+            .extra
+            .entered_as
+            .filter(|_| planned.role() == Some(Role::Buyer));
         let date = planned
             .date()
             .ok_or_else(|| ServiceError::Data("an edited voucher has no date".to_owned()))?;

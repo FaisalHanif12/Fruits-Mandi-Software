@@ -91,7 +91,7 @@ export function PurchaseEditFields({ draft, onChange, error }: PurchaseEditField
           error={fieldError(error, 'weight')}
         >
           {(props) => (
-            <FreeTextInput
+            <QtyInput
               {...props}
               value={draft.weight}
               onChange={(weight) => {
@@ -169,6 +169,7 @@ export function PurchaseEditFields({ draft, onChange, error }: PurchaseEditField
           <FreeTextInput
             {...props}
             value={draft.shopName}
+            kind="name"
             onChange={(shopName) => {
               onChange({ shopName });
             }}
@@ -183,6 +184,7 @@ export function PurchaseEditFields({ draft, onChange, error }: PurchaseEditField
           <FreeTextInput
             {...props}
             value={draft.supplier}
+            kind="name"
             onChange={(supplier) => {
               onChange({ supplier });
             }}

@@ -4,7 +4,8 @@
 // found shows under the field it points at.
 //
 // - From our shop the item and packing come from the lot and are shown, not typed; the weight shows
-//   only for an item sold by weight. From another shop the item and packing are picked.
+//   only for an item sold by weight. From another shop the agent (only an account marked آڑھتی دکان, added on the spot if
+//   missing), the item and the packing are picked, and an optional کل کٹوتی is typed after the rate (plan 97 item 1).
 // - The rate stays empty. The last rate of the item shows as grey text and as a hint under the field
 //   and is never put into it (PRD FR-7.53, Code Standards F43).
 // - The order of the fields is the order of the keys: Enter goes to the next field (PRD FR-7.14).
@@ -199,7 +200,8 @@ export function FruitForm({ draft, onChange, error, preview, editing, marks }: F
         {(props) => (
           <AccountPicker
             {...props}
-            scope="seller"
+            // Only the accounts marked آڑھتی دکان; a new one is added on the spot (PRD FR-16.11 v1.59, FR-7.69).
+            scope="agent_shop"
             value={draft.agent}
             onChange={(hit) => {
               patch({ agent: hit === null ? null : valueOfRef(hit) });
@@ -326,6 +328,30 @@ export function FruitForm({ draft, onChange, error, preview, editing, marks }: F
           />
         )}
       </Field>
+      {shop ? null : (
+        // The other shop's commission, freight and other charges in one amount, typed here; the backend subtracts it and
+        // shows the net below (PRD FR-16.11 v1.59). Only fruit from another shop has one.
+        <Field
+          label={<Localized id="fruit-field-deduction" />}
+          mark={fieldMark(marks, 'deduction_paisa')}
+          info={
+            <Localized id="fruit-deduction-hint">
+              <p />
+            </Localized>
+          }
+          error={fieldError(error, 'deduction')}
+        >
+          {(props) => (
+            <MoneyInput
+              {...props}
+              value={draft.deduction}
+              onChange={(deduction) => {
+                patch({ deduction });
+              }}
+            />
+          )}
+        </Field>
+      )}
       <FormSpan>
         <Field label={<Localized id="fruit-field-note" />} error={fieldError(error, 'note')}>
           {(props) => (

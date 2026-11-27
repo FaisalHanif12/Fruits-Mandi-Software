@@ -4,6 +4,7 @@
 // (CLAUDE.md rule 1).
 
 import { vi } from 'vitest';
+import type { AdhariOtherRow } from '../../src/bindings/AdhariOtherRow';
 import type { AdhariSheet } from '../../src/bindings/AdhariSheet';
 import type { AdhariSheetRow } from '../../src/bindings/AdhariSheetRow';
 import type { CollectionSheet } from '../../src/bindings/CollectionSheet';
@@ -126,6 +127,35 @@ export function adhariBuyer(
   };
 }
 
+/**
+ * A buyer of the "other buyers" list of ادھاری تفصیل (plan 97 item 6): he owed at the start of the day and bought nothing, so
+ * his total is what he owed. A balance of جمع is shown with its side (`side: 'cr'`).
+ */
+export function adhariOther(
+  id: number,
+  code: string,
+  ur: string,
+  en: string,
+  owed: number,
+  options: { tag?: string; side?: 'dr' | 'cr' } = {},
+): AdhariOtherRow {
+  const balance =
+    options.side === 'cr' ? ({ amount_paisa: rupees(owed), side: 'cr' } as const) : dr(owed);
+  return {
+    party: {
+      account_id: id,
+      code,
+      short_code: code.slice(3),
+      name_ur: ur,
+      name_en: en,
+      tag: options.tag ?? null,
+      person_key: null,
+    },
+    previous_due: balance,
+    total_due: balance,
+  };
+}
+
 /** After Events 1 to 5 on 10-10-26 (PRD R5 v1.43, v1.57): اکرم 12,880 / 0 / 12,880 and ارشد 18,684; the چکتا buyer شاہد is not on the sheet. */
 export const ADHARI_AKRAM = adhariBuyer(
   20,
@@ -150,6 +180,7 @@ export const ADHARI_SHEET: AdhariSheet = {
   totals: sums(31_564, 0, 0),
   others: null,
   others_count: 0,
+  other_rows: [],
   all_totals: sums(31_564, 0, 0),
   dead_totals: null,
   credit_totals: null,

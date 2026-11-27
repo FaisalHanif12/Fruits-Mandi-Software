@@ -10,6 +10,10 @@ import type { CashCheck } from '../../src/bindings/CashCheck';
 import type { Cashbook } from '../../src/bindings/Cashbook';
 import type { CashbookInput } from '../../src/bindings/CashbookInput';
 import type { CashbookRow } from '../../src/bindings/CashbookRow';
+import type { CashKind } from '../../src/bindings/CashKind';
+import type { CashRefs } from '../../src/bindings/CashRefs';
+import type { CashRowStatus } from '../../src/bindings/CashRowStatus';
+import { CASH_GROUPS, groupOfKind, kindOfType } from './cash-groups';
 import type { ExpenseEntry } from '../../src/bindings/ExpenseEntry';
 import type { ExpensePreview } from '../../src/bindings/ExpensePreview';
 import type { FieldError } from '../../src/bindings/FieldError';
@@ -109,6 +113,11 @@ export interface CashRec {
   inRupees: number;
   outRupees: number;
   running: number;
+  /** What the row is, when it is not the voucher type itself (a buyer's پیشگی, a garden cost ...). */
+  kind?: CashKind;
+  /** The records the row is about (PRD FR-16.14). */
+  refs?: Partial<CashRefs>;
+  status?: CashRowStatus;
 }
 
 /** Money taken by a partner, or lent to a person: the same shape (PRD FR-16.2, FR-16.5). */
@@ -682,39 +691,81 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
     return rows.slice(offset, offset + size);
   }
 
-  function cashbook(input: CashbookInput): Cashbook {
-    const from = input.from === null || input.from === '' ? null : isoOf(input.from);
-    const to = input.to === null || input.to === '' ? null : isoOf(input.to);
-    const inRange = store.cashRows.filter(
-      (row) => (from === null || row.date >= from) && (to === null || row.date <= to),
-    );
-    const first = inRange[0];
-    const last = inRange[inRange.length - 1];
-    const totalIn = inRange.reduce((total, row) => total + row.inRupees, 0);
-    const totalOut = inRange.reduce((total, row) => total + row.outRupees, 0);
-    const closing = last === undefined ? store.cash : last.running;
-    const opening = first === undefined ? closing : closing - totalIn + totalOut;
-    const rows: CashbookRow[] = page(inRange, input.offset, input.limit).map((row, index) => ({
-      entry_id: 1700 + input.offset + index,
+  function cashRowOf(row: CashRec, index: number): CashbookRow {
+    const kind = row.kind ?? kindOfType(row.type);
+    return {
+      entry_id: 1700 + index,
       entry_date: row.date,
       posting_type: row.type,
+      kind,
+      group: groupOfKind(kind),
+      status: row.status ?? 'live',
       number: row.number,
-      account: null,
+      refs: {
+        parties: [],
+        party_count: row.refs?.parties?.length ?? 0,
+        partner: null,
+        garden: null,
+        trip: null,
+        expense_head: null,
+        ...row.refs,
+      },
       narration: row.narration,
       in_paisa: money(row.inRupees),
       out_paisa: money(row.outRupees),
       running_paisa: money(row.running),
       source: null,
-      // Plan 78 E: a row that is not an opening or a capital row is `other`, with no partner.
-      kind: 'other',
-      partner: null,
-    }));
+    };
+  }
+
+  function cashbook(input: CashbookInput): Cashbook {
+    const from = input.from === null || input.from === '' ? null : isoOf(input.from);
+    const to = input.to === null || input.to === '' ? null : isoOf(input.to);
+    const days = store.cashRows.filter(
+      (row) => (from === null || row.date >= from) && (to === null || row.date <= to),
+    );
+    const live = days.filter((row) => (row.status ?? 'live') === 'live');
+    const kinds = input.kinds ?? null;
+    const shown = (input.show_reversed ? days : live).filter(
+      (row) => kinds === null || kinds.includes(row.kind ?? kindOfType(row.type)),
+    );
+    const counted = shown.filter((row) => (row.status ?? 'live') === 'live');
+    const sum = (rows: readonly CashRec[], side: 'inRupees' | 'outRupees') =>
+      rows.reduce((total, row) => total + row[side], 0);
+    const first = days[0];
+    const last = days[days.length - 1];
+    const closing = last === undefined ? store.cash : last.running;
+    const opening =
+      first === undefined ? closing : closing - sum(live, 'inRupees') + sum(live, 'outRupees');
+    const capital = live.reduce((total, row) => {
+      if (row.type === 'capital_in') return total + row.inRupees;
+      return row.type === 'capital_out' ? total - row.outRupees : total;
+    }, 0);
+    const rows = page(shown, input.offset, input.limit).map((row, index) => {
+      const made = cashRowOf(row, input.offset + index);
+      return kinds === null ? made : { ...made, running_paisa: null };
+    });
+    const summary = CASH_GROUPS.map(([group, groupKinds]) => {
+      const mine = live.filter((row) => groupKinds.includes(row.kind ?? kindOfType(row.type)));
+      return {
+        group,
+        kinds: [...groupKinds],
+        count: mine.length,
+        in_paisa: money(sum(mine, 'inRupees')),
+        out_paisa: money(sum(mine, 'outRupees')),
+      };
+    });
     return {
+      total_capital_paisa: money(capital),
       opening_paisa: money(opening),
       closing_paisa: money(closing),
       rows,
-      total_count: inRange.length,
-      totals: { in_paisa: money(totalIn), out_paisa: money(totalOut) },
+      total_count: shown.length,
+      totals: {
+        in_paisa: money(sum(counted, 'inRupees')),
+        out_paisa: money(sum(counted, 'outRupees')),
+      },
+      summary,
       months: [],
       first_entry_date: store.cashRows[0]?.date ?? null,
     };
@@ -754,11 +805,15 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
     days_past_return_by: null,
   });
 
-  function partnerTakes(input: PartnerTakesInput): PartnerTakes {
-    const partner = partnerOf(input.partner_id);
-    if (partner === null) throw refused('ERR_NOT_FOUND', 'partner_id');
-    const rows = store.takes.get(partner.id) ?? [];
-    const takeRows: TakeRow[] = page(rows, input.offset, input.limit).map((row) => ({
+  /** The rows one partner took, as the backend lists them (plan 98: each row names its partner). */
+  function takeRowsOf(partner: RecordRef): TakeRow[] {
+    return (store.takes.get(partner.id) ?? []).map((row) => ({
+      partner: {
+        id: partner.id,
+        code: '',
+        name_ur: partner.name_ur,
+        name_en: partner.name_en,
+      },
       source: 'voucher',
       voucher_id: row.voucher_id,
       number: row.number,
@@ -771,15 +826,32 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       open_paisa: money(row.amount - row.returned),
       days_past_return_by: null,
     }));
+  }
+
+  function partnerTakes(input: PartnerTakesInput): PartnerTakes {
+    // No partner (null or missing) lists every partner with takes, in the order the partners were made.
+    const everyone = input.partner_id === null || input.partner_id === undefined;
+    const partner = everyone ? null : partnerOf(input.partner_id ?? null);
+    if (!everyone && partner === null) throw refused('ERR_NOT_FOUND', 'partner_id');
+    const owners = partner === null ? PARTNERS.filter((one) => store.takes.has(one.id)) : [partner];
+    const rows = owners.flatMap((owner) => store.takes.get(owner.id) ?? []);
+    let takeRows = owners.flatMap((owner) => takeRowsOf(owner));
+    // The screen sends the day in descending order for the latest first; the stand-in only turns the rows round.
+    if (input.sort?.column === 'entry_date' && input.sort.direction === 'desc') {
+      takeRows = [...takeRows].sort((a, b) => b.entry_date.localeCompare(a.entry_date));
+    }
     return {
-      partner: {
-        id: partner.id,
-        code: partner.code,
-        name_ur: partner.name_ur,
-        name_en: partner.name_en,
-      },
-      rows: takeRows,
-      total_count: rows.length,
+      partner:
+        partner === null
+          ? null
+          : {
+              id: partner.id,
+              code: partner.code,
+              name_ur: partner.name_ur,
+              name_en: partner.name_en,
+            },
+      rows: page(takeRows, input.offset, input.limit),
+      total_count: takeRows.length,
       totals: {
         taken_paisa: money(rows.reduce((total, row) => total + row.amount, 0)),
         returned_paisa: money(rows.reduce((total, row) => total + row.returned, 0)),

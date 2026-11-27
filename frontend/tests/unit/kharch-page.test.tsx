@@ -6,7 +6,7 @@
 // month buttons with the keyboard. The page and view M read the same thing (`analytics_run`, view M), so the screen
 // adds nothing up: every figure is the backend's.
 
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UiError } from '../../src/bindings/UiError';
@@ -116,7 +116,7 @@ describe.each(LANGUAGES)('the kharch page (%s)', (language) => {
   };
 
   it('opens on the current month with the two parts: the shop’s kharch per head, and each partner’s own', async () => {
-    await open();
+    const { user } = await open();
     await waitFor(() => {
       expect(cell('shop', '0', 'head')).toContain(names('بجلی', 'Electricity'));
     }, SLOW_MS);
@@ -131,7 +131,17 @@ describe.each(LANGUAGES)('the kharch page (%s)', (language) => {
     expect(cell('partner', '1', 'own')).toBe('0');
     expect(cell('partner', '2', 'own')).toBe('0');
     expect(totalsCell('partner', 'own')).toBe('2,000');
-    // Each part has its chart, with its own words: the shop's by period, the partners' own kharch.
+    // Each part has its chart, folded at first so the second part is on screen without scrolling (plan 98); a click on
+    // its button shows it, with its own words: the shop's by period, the partners' own kharch.
+    const showChart = async (part: 'shop' | 'partner') => {
+      await user.click(
+        within(section(part) as HTMLElement).getByRole('button', {
+          name: (name) => visible(name) === m('analytics-chart-show'),
+        }),
+      );
+    };
+    expect(screen.queryByRole('img')).toBeNull();
+    await showChart('partner');
     expect(
       await screen.findByRole(
         'img',
@@ -139,8 +149,13 @@ describe.each(LANGUAGES)('the kharch page (%s)', (language) => {
         SLOW_MS,
       ),
     ).toBeInTheDocument();
+    await showChart('shop');
     expect(
-      screen.getByRole('img', { name: (name) => visible(name).startsWith(m('analytics-chart-m')) }),
+      await screen.findByRole(
+        'img',
+        { name: (name) => visible(name).startsWith(m('analytics-chart-m')) },
+        SLOW_MS,
+      ),
     ).toBeInTheDocument();
     // Each part has its own name as a heading, from the words the print header uses too.
     expect(visible(section('shop').textContent)).toContain(m('analytics-filter-expense-shop'));
@@ -167,6 +182,108 @@ describe.each(LANGUAGES)('the kharch page (%s)', (language) => {
       expect(readOf('partner')?.filters.partner_id).toBe(1);
     }, SLOW_MS);
     expect(readOf('shop')?.filters.partner_id).toBeNull();
+  });
+
+  /** True when the first part comes before the second in the page. */
+  function comesBefore(first: 'shop' | 'partner', second: 'shop' | 'partner'): boolean {
+    return (
+      (section(first).compareDocumentPosition(section(second)) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+      0
+    );
+  }
+
+  /** The button that is the heading of the shop part, when it is folded to one line. */
+  function shopLine(): HTMLElement {
+    return within(section('shop') as HTMLElement).getByRole('button', {
+      name: (name) => visible(name).includes(m('analytics-filter-expense-shop')),
+    });
+  }
+
+  it('the shop part comes first with no partner chosen; once one is chosen his part is first and the shop part is one line with its total (plan 98)', async () => {
+    const { user } = await open();
+    await waitFor(() => {
+      expect(cell('partner', '0', 'own')).toBe('2,000');
+    }, SLOW_MS);
+    // Every partner: the shop's kharch first with its table, the partners' own under it.
+    expect(comesBefore('shop', 'partner')).toBe(true);
+    expect(cell('shop', '0', 'head')).toContain(names('بجلی', 'Electricity'));
+    await user.click(await screen.findByRole('combobox', { name: m('report-filter-partner') }));
+    await user.click(await screen.findByRole('option', { name: names('الف', 'Partner A') }));
+    // A partner is asked for by name: his own kharch is the first thing on screen, and the shop part is folded to its
+    // heading with the backend's total (3,000), not a tall chart and table above him.
+    await waitFor(() => {
+      expect(comesBefore('partner', 'shop')).toBe(true);
+    }, SLOW_MS);
+    await waitFor(() => {
+      expect(cell('partner', '0', 'own')).toBe('2,000');
+    }, SLOW_MS);
+    await waitFor(() => {
+      expect(visible(shopLine().textContent)).toContain('3,000');
+    }, SLOW_MS);
+    expect(shopLine()).toHaveAttribute('aria-expanded', 'false');
+    expect(section('shop').querySelector('.ag-row')).toBeNull();
+    // A click opens it: the table of heads is there, and a second click folds it again.
+    await user.click(shopLine());
+    await waitFor(() => {
+      expect(cell('shop', '0', 'head')).toContain(names('بجلی', 'Electricity'));
+    }, SLOW_MS);
+    expect(shopLine()).toHaveAttribute('aria-expanded', 'true');
+    await user.click(shopLine());
+    await waitFor(() => {
+      expect(section('shop').querySelector('.ag-row')).toBeNull();
+    }, SLOW_MS);
+  });
+
+  it('a partner chosen while the partner code is not entered shows the code box first, never nothing (plan 98)', async () => {
+    fakeAnalytics({
+      refuse: (input) => (input.filters.expense_part === 'partner' ? LOCKED : null),
+    });
+    await renderApp('/kharch?partner=1');
+    await heading();
+    // The partner part asks for the code, in the first place; the shop part is one line under it with its total.
+    await waitFor(() => {
+      expect(visible(section('partner').textContent)).toContain(m('partners-code-box-text'));
+    }, SLOW_MS);
+    expect(comesBefore('partner', 'shop')).toBe(true);
+    expect(visible(section('partner').textContent)).not.toContain('2,000');
+    expect(readOf('partner')?.filters.partner_id).toBe(1);
+    await waitFor(() => {
+      expect(visible(shopLine().textContent)).toContain('3,000');
+    }, SLOW_MS);
+    // A part that is closed has no print or Excel button: the box asks for the code instead.
+    expect(
+      within(section('partner') as HTMLElement).queryByRole('button', {
+        name: (name) => visible(name).includes(m('report-preview')),
+      }),
+    ).toBeNull();
+    // The box has its button, so the user can enter the code from here.
+    expect(
+      within(section('partner') as HTMLElement).getByRole('button', {
+        name: (name) => visible(name) === m('partners-code-enter'),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('the charts start folded, one click shows each, and the choice is kept (plan 98)', async () => {
+    const { user } = await open();
+    await waitFor(() => {
+      expect(cell('shop', '0', 'head')).toContain(names('بجلی', 'Electricity'));
+    }, SLOW_MS);
+    expect(screen.queryByRole('img')).toBeNull();
+    const toggle = () =>
+      within(section('shop') as HTMLElement).getByRole('button', {
+        name: (name) => visible(name) === m('analytics-chart-show'),
+      });
+    await user.click(toggle());
+    expect(
+      await screen.findByRole('img', {
+        name: (name) => visible(name).startsWith(m('analytics-chart-m')),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      Object.keys(window.localStorage).some((key) => key.endsWith('kharch.chart_shown.shop')),
+    ).toBe(true);
   });
 
   it('a year reads the year so far, by month', async () => {

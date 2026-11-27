@@ -309,29 +309,159 @@ pub fn compute(
     Ok(range)
 }
 
-/// The tool.
-pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, Stop> {
-    let parsed: Input = input(args)?;
-    let today = NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d")
-        .map_err(|_| ToolError::new("ERR_INTERNAL", "today", "no date"))?;
-    let mut range = compute(today, &parsed, env.numbers)?;
-    let iso = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
-    let mut note = None;
-    // "Up to now" starts at the first day of the books (plan 52 item 2), so every tool, and a
-    // comparison, gets a real start date. With nothing posted yet it stays open.
-    if parsed.kind == Kind::UpToNow
+/// The words a `period` field of `report`, `analytics` and `estimate` takes (PRD FR-7.87 v1.60), for
+/// the refusal of a wrong one.
+pub const PERIOD_WORDS: [&str; 14] = [
+    "today",
+    "yesterday",
+    "this_week",
+    "last_week",
+    "this_month",
+    "last_month",
+    "this_year",
+    "last_year",
+    "up_to_now",
+    "month:1 to month:12",
+    "day:DD-MM",
+    "last_days:N",
+    "last_months:N",
+    "last_years:N",
+];
+
+/// Reads a period word (`this_month`, `month:9`, `day:15-10`, `last_days:10`) into the input of the
+/// period list, so a word is worked out exactly as the tool `period` works it out. `None` for a word
+/// that is not in the list. A range is given as `from` and `to`, never as a word.
+///
+/// Example: `month:9` is September (the latest that has started); `last_days:10` needs the question to
+/// hold "10" with days, checked by [`compute`].
+pub fn parse_word(word: &str) -> Option<Input> {
+    let word = word.trim().to_ascii_lowercase().replace(' ', "_");
+    let (head, arg) = match word.split_once(':') {
+        Some((head, arg)) => (head.to_owned(), Some(arg.trim_matches('_').to_owned())),
+        None => match word.strip_prefix("month_") {
+            Some(n) => ("month".to_owned(), Some(n.to_owned())),
+            None => (word.clone(), None),
+        },
+    };
+    let mut input = Input {
+        kind: Kind::Today,
+        month: None,
+        day: None,
+        from: None,
+        to: None,
+        n: None,
+    };
+    let number = || arg.as_deref().and_then(|a| a.parse::<i64>().ok());
+    input.kind = match head.as_str() {
+        "today" => Kind::Today,
+        "yesterday" => Kind::Yesterday,
+        "this_week" => Kind::ThisWeek,
+        "last_week" => Kind::LastWeek,
+        "this_month" => Kind::ThisMonth,
+        "last_month" => Kind::LastMonth,
+        "this_year" => Kind::ThisYear,
+        "last_year" => Kind::LastYear,
+        "up_to_now" => Kind::UpToNow,
+        "month" => {
+            input.month = Some(number()?);
+            Kind::Month
+        }
+        "day" => {
+            input.day = Some(arg.clone()?);
+            Kind::Day
+        }
+        "last_days" | "last_n_days" => {
+            input.n = Some(number()?);
+            Kind::LastNDays
+        }
+        "last_months" | "last_n_months" => {
+            input.n = Some(number()?);
+            Kind::LastNMonths
+        }
+        "last_years" | "last_n_years" => {
+            input.n = Some(number()?);
+            Kind::LastNYears
+        }
+        _ => return None,
+    };
+    // A word that takes no argument must come with none.
+    let takes_arg = matches!(
+        input.kind,
+        Kind::Month | Kind::Day | Kind::LastNDays | Kind::LastNMonths | Kind::LastNYears
+    );
+    (takes_arg == arg.is_some()).then_some(input)
+}
+
+/// A period word worked out: its dates, and the node a read puts in its result so the answer can cite
+/// them (`{{r1.period.label}}`, `{{r1.period.from}}`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Resolved {
+    /// The first day, ISO. `None` only for `up_to_now` on books with nothing posted.
+    pub from: Option<String>,
+    /// The last day, ISO.
+    pub to: String,
+    /// The node of the period (`label`, or `from_month` and `to_month`, with `from` and `to`).
+    pub node: Node,
+}
+
+/// Works out the `period` word of a read (PRD FR-7.87 v1.60), with the same rules as the tool
+/// `period`, so a question needs no round of its own for its dates.
+///
+/// # Errors
+/// `ERR_OUT_OF_RANGE` for a word not in the list; the refusals of [`compute`], on `period`.
+pub(super) fn resolve_word(env: &Env<'_>, word: &str) -> Result<Resolved, ToolError> {
+    let parsed = parse_word(word).ok_or_else(|| {
+        ToolError::new(
+            "ERR_OUT_OF_RANGE",
+            "period",
+            "not a period word; a range of dates is given as from and to",
+        )
+        .allowed(PERIOD_WORDS.iter().map(|w| (*w).to_owned()).collect())
+    })?;
+    let today = today_of(env)?;
+    let mut range = compute(today, &parsed, env.numbers).map_err(|mut e| {
+        e.field = Some("period".to_owned());
+        e
+    })?;
+    open_from_the_books(env, parsed.kind, &mut range);
+    let node = Node::obj(fields_of(&range));
+    Ok(Resolved {
+        from: range.from.map(iso),
+        to: iso(range.to),
+        node,
+    })
+}
+
+fn today_of(env: &Env<'_>) -> Result<NaiveDate, ToolError> {
+    NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d")
+        .map_err(|_| ToolError::new("ERR_INTERNAL", "today", "no date"))
+}
+
+fn iso(d: NaiveDate) -> String {
+    d.format("%Y-%m-%d").to_string()
+}
+
+/// "Up to now" starts at the first day of the books (plan 52 item 2), so every tool, and a
+/// comparison, gets a real start date. With nothing posted yet it stays open. Gives the first day
+/// when it was put in.
+fn open_from_the_books(env: &Env<'_>, kind: Kind, range: &mut Range) -> Option<NaiveDate> {
+    if kind == Kind::UpToNow
         && range.from.is_none()
         && let Some(first) = books_start(env)
         && first <= range.to
     {
         range.from = Some(first);
-        note = Some(format!(
-            "up_to_now starts at the first day of the books, {}",
-            iso(first)
-        ));
+        return Some(first);
     }
+    None
+}
+
+/// The fields of a period: `from`, `to`, and `label` when it is exactly one month, else the month of
+/// each end. The month of each end is held as a value, so a month the model names ("2 November se 5
+/// November") is put back as a reference by the app instead of being lost to a rewrite that leaves it
+/// out (plan 70, H6).
+fn fields_of(range: &Range) -> Vec<(&'static str, Node)> {
     let mut fields = vec![
-        ("kind", Node::Str(format!("{:?}", parsed.kind))),
         (
             "from",
             range
@@ -343,12 +473,6 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
     if let Some((year, month)) = range.month {
         fields.push(("label", Node::Val(Val::Month { year, month })));
     } else {
-        // Only one month has a `label`. The model wrote `{{r1.label}}` for "December se aaj tak", the
-        // reference failed the checks and a rewrite call of 8 seconds followed (plan 70, H1): it reads
-        // this note with the result, before it writes, and cites the dates.
-        // The month of each end is held as a value, so a month the model names ("2 November se 5
-        // November") is put back as a reference by the app instead of being lost to a rewrite that
-        // leaves it out (plan 70, H6).
         if let Some(from) = range.from {
             fields.push((
                 "from_month",
@@ -365,11 +489,32 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
                 month: range.to.month(),
             }),
         ));
+    }
+    fields
+}
+
+/// The tool.
+pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, Stop> {
+    let parsed: Input = input(args)?;
+    let today = today_of(env)?;
+    let mut range = compute(today, &parsed, env.numbers)?;
+    let mut note = open_from_the_books(env, parsed.kind, &mut range).map(|first| {
+        format!(
+            "up_to_now starts at the first day of the books, {}",
+            iso(first)
+        )
+    });
+    // Only one month has a `label`. The model wrote `{{r1.label}}` for "December se aaj tak", the
+    // reference failed the checks and a rewrite call of 8 seconds followed (plan 70, H1): it reads
+    // this note with the result, before it writes, and cites the dates.
+    if range.month.is_none() {
         let hint = "this period has no `label` (only one month has): cite its `from` and `to` \
                     dates, or `from_month` and `to_month` for the name of a month, as references \
                     to this result's fields";
         note = Some(note.map_or_else(|| hint.to_owned(), |old| format!("{old}; {hint}")));
     }
+    let mut fields = vec![("kind", Node::Str(format!("{:?}", parsed.kind)))];
+    fields.extend(fields_of(&range));
     if let Some(note) = note {
         fields.push(("note", Node::Str(note)));
     }

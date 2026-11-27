@@ -89,7 +89,9 @@
           }
         ],
         "rule_id": null
-      }
+      },
+      "sale_value_paisa": 0,
+      "last_sale_date": null
     },
     {
       "id": 2,
@@ -180,7 +182,9 @@
           }
         ],
         "rule_id": null
-      }
+      },
+      "sale_value_paisa": 0,
+      "last_sale_date": null
     }
   ],
   "warnings": []

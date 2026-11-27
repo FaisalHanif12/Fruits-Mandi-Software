@@ -560,8 +560,6 @@ fn a_receipt_changes_every_kept_page_and_sum() {
         // اکرم pays 1,000 more: 100,000 paisa.
         vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.akram, "1,000")).unwrap();
     });
-    let cash_before = cashbook::capital_where(&w.env.ctx).is_ok();
-    assert!(cash_before);
     for (id, before, after) in changes {
         assert_ne!(
             before, after,
@@ -629,7 +627,8 @@ fn a_new_entry_shows_in_the_statement_and_the_capital_card() {
     };
     let first = rows_of();
     assert_eq!(first, rows_of(), "the same statement twice");
-    let cash_card = |ctx| cashbook::capital_where(ctx).unwrap();
+    // The cash cards of the روکڑ بک (the capital card is gone, plan 99).
+    let cash_card = |ctx| cashbook::get(ctx, &Default::default()).unwrap();
     let card_before = format!("{:?}", cash_card(&w.env.ctx));
     assert_eq!(card_before, format!("{:?}", cash_card(&w.env.ctx)));
     vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.akram, "500")).unwrap();

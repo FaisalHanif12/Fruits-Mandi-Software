@@ -1,25 +1,29 @@
 {
+  "total_capital_paisa": 140000000,
   "opening_paisa": 0,
-  "closing_paisa": 92426000,
+  "closing_paisa": 105784000,
   "first_entry_date": "2026-10-29",
   "rows": [
     {
       "entry_id": 18,
       "entry_date": "2026-10-29",
       "posting_type": "opening",
-      "number": null,
-      "account": {
-        "id": 19,
-        "code": "06020001",
-        "name_ur": "سرمایہ - عدنان",
-        "name_en": "Capital - Adnan"
-      },
       "kind": "opening_capital",
-      "partner": {
-        "id": 1,
-        "code": "",
-        "name_ur": "عدنان",
-        "name_en": "Adnan"
+      "group": "capital",
+      "status": "live",
+      "number": null,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "عدنان",
+          "name_en": "Adnan"
+        },
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
       "narration": "",
       "in_paisa": 50000000,
@@ -34,19 +38,22 @@
       "entry_id": 20,
       "entry_date": "2026-10-29",
       "posting_type": "opening",
-      "number": null,
-      "account": {
-        "id": 22,
-        "code": "06020002",
-        "name_ur": "سرمایہ - عثمان",
-        "name_en": "Capital - Usman"
-      },
       "kind": "opening_capital",
-      "partner": {
-        "id": 2,
-        "code": "",
-        "name_ur": "عثمان",
-        "name_en": "Usman"
+      "group": "capital",
+      "status": "live",
+      "number": null,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "عثمان",
+          "name_en": "Usman"
+        },
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
       "narration": "",
       "in_paisa": 50000000,
@@ -58,47 +65,28 @@
       }
     },
     {
-      "entry_id": 9,
-      "entry_date": "2026-11-06",
-      "posting_type": "bikri_first",
-      "number": 1,
-      "account": null,
-      "kind": "other",
-      "partner": null,
-      "narration": "",
-      "in_paisa": 2136000,
-      "out_paisa": 0,
-      "running_paisa": 102136000,
-      "source": {
-        "kind": "bikri",
-        "id": 1
-      }
-    },
-    {
-      "entry_id": 10,
-      "entry_date": "2026-11-06",
-      "posting_type": "reversal",
-      "number": 1,
-      "account": null,
-      "kind": "other",
-      "partner": null,
-      "narration": "مانی کا کھاتہ اپڈاٹے کرنہ حئی",
-      "in_paisa": 0,
-      "out_paisa": 2136000,
-      "running_paisa": 100000000,
-      "source": {
-        "kind": "bikri",
-        "id": 1
-      }
-    },
-    {
       "entry_id": 11,
       "entry_date": "2026-11-06",
       "posting_type": "bikri_first",
+      "kind": "bikri_paid",
+      "group": "bikri",
+      "status": "live",
       "number": 1,
-      "account": null,
-      "kind": "other",
-      "partner": null,
+      "refs": {
+        "parties": [
+          {
+            "id": 26,
+            "code": "0020",
+            "name_ur": "مانی",
+            "name_en": "Mani"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
       "narration": "",
       "in_paisa": 2136000,
       "out_paisa": 0,
@@ -112,15 +100,25 @@
       "entry_id": 12,
       "entry_date": "2026-11-16",
       "posting_type": "payment",
+      "kind": "payment",
+      "group": "payment",
+      "status": "live",
       "number": 1,
-      "account": {
-        "id": 29,
-        "code": "0011",
-        "name_ur": "احسان",
-        "name_en": "Ehsan"
+      "refs": {
+        "parties": [
+          {
+            "id": 29,
+            "code": "0011",
+            "name_ur": "احسان",
+            "name_en": "Ehsan"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
-      "kind": "other",
-      "partner": null,
       "narration": "احسان کو ایک lakh پیچلہ دیدیہ حئی",
       "in_paisa": 0,
       "out_paisa": 10000000,
@@ -134,10 +132,25 @@
       "entry_id": 13,
       "entry_date": "2026-11-16",
       "posting_type": "bikri_first",
+      "kind": "bikri_paid",
+      "group": "bikri",
+      "status": "live",
       "number": 2,
-      "account": null,
-      "kind": "other",
-      "partner": null,
+      "refs": {
+        "parties": [
+          {
+            "id": 9,
+            "code": "0030",
+            "name_ur": "دانش",
+            "name_en": "Danish"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
       "narration": "",
       "in_paisa": 2690000,
       "out_paisa": 0,
@@ -148,22 +161,32 @@
       }
     },
     {
-      "entry_id": 14,
+      "entry_id": 23,
       "entry_date": "2026-11-16",
       "posting_type": "receipt",
+      "kind": "receipt",
+      "group": "receipt",
+      "status": "live",
       "number": 1,
-      "account": {
-        "id": 28,
-        "code": "0022",
-        "name_ur": "انس",
-        "name_en": "Ans"
+      "refs": {
+        "parties": [
+          {
+            "id": 28,
+            "code": "0022",
+            "name_ur": "انس",
+            "name_en": "Ans"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
-      "kind": "other",
-      "partner": null,
       "narration": "",
-      "in_paisa": 10000000,
+      "in_paisa": 11000000,
       "out_paisa": 0,
-      "running_paisa": 104826000,
+      "running_paisa": 105826000,
       "source": {
         "kind": "voucher",
         "id": 2
@@ -173,14 +196,27 @@
       "entry_id": 15,
       "entry_date": "2026-11-20",
       "posting_type": "garden_payment",
-      "number": null,
-      "account": null,
-      "kind": "other",
-      "partner": null,
+      "kind": "garden_installment",
+      "group": "garden",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": {
+          "id": 2,
+          "code": "0080",
+          "name_ur": "پومپ والا باغ",
+          "name_en": "Pump Wala Bagh"
+        },
+        "trip": null,
+        "expense_head": null
+      },
       "narration": "",
       "in_paisa": 0,
       "out_paisa": 20000000,
-      "running_paisa": 84826000,
+      "running_paisa": 85826000,
       "source": {
         "kind": "garden",
         "id": 2
@@ -190,14 +226,27 @@
       "entry_id": 16,
       "entry_date": "2026-11-21",
       "posting_type": "garden_payment",
-      "number": null,
-      "account": null,
-      "kind": "other",
-      "partner": null,
+      "kind": "garden_cost",
+      "group": "garden",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": {
+          "id": 2,
+          "code": "0080",
+          "name_ur": "پومپ والا باغ",
+          "name_en": "Pump Wala Bagh"
+        },
+        "trip": null,
+        "expense_head": null
+      },
       "narration": "",
       "in_paisa": 0,
       "out_paisa": 1000000,
-      "running_paisa": 83826000,
+      "running_paisa": 84826000,
       "source": {
         "kind": "garden",
         "id": 2
@@ -207,25 +256,614 @@
       "entry_id": 21,
       "entry_date": "2026-11-22",
       "posting_type": "bikri_first",
+      "kind": "bikri_paid",
+      "group": "bikri",
+      "status": "live",
       "number": 3,
-      "account": null,
-      "kind": "other",
-      "partner": null,
+      "refs": {
+        "parties": [
+          {
+            "id": 9,
+            "code": "0030",
+            "name_ur": "رضا",
+            "name_en": "Raza"
+          },
+          {
+            "id": 9,
+            "code": "0030",
+            "name_ur": "دانش",
+            "name_en": "Danish"
+          }
+        ],
+        "party_count": 2,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
       "narration": "",
       "in_paisa": 16600000,
-      "out_paisa": 8000000,
-      "running_paisa": 92426000,
+      "out_paisa": 0,
+      "running_paisa": 101426000,
       "source": {
         "kind": "bikri",
         "id": 3
       }
+    },
+    {
+      "entry_id": 21,
+      "entry_date": "2026-11-22",
+      "posting_type": "bikri_first",
+      "kind": "bikri_seller_cash",
+      "group": "bikri",
+      "status": "live",
+      "number": 3,
+      "refs": {
+        "parties": [
+          {
+            "id": 30,
+            "code": "0012",
+            "name_ur": "عدنان",
+            "name_en": "adnan"
+          },
+          {
+            "id": 18,
+            "code": "0010",
+            "name_ur": "فیصل",
+            "name_en": "Faisal",
+            "tag": "F"
+          }
+        ],
+        "party_count": 2,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 8000000,
+      "running_paisa": 93426000,
+      "source": {
+        "kind": "bikri",
+        "id": 3
+      }
+    },
+    {
+      "entry_id": 24,
+      "entry_date": "2026-11-24",
+      "posting_type": "bikri_first",
+      "kind": "bikri_paid",
+      "group": "bikri",
+      "status": "live",
+      "number": 4,
+      "refs": {
+        "parties": [
+          {
+            "id": 9,
+            "code": "0030",
+            "name_ur": "دون",
+            "name_en": "Don"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 1908000,
+      "out_paisa": 0,
+      "running_paisa": 95334000,
+      "source": {
+        "kind": "bikri",
+        "id": 4
+      }
+    },
+    {
+      "entry_id": 24,
+      "entry_date": "2026-11-24",
+      "posting_type": "bikri_first",
+      "kind": "bikri_seller_cash",
+      "group": "bikri",
+      "status": "live",
+      "number": 4,
+      "refs": {
+        "parties": [
+          {
+            "id": 29,
+            "code": "0011",
+            "name_ur": "احسان",
+            "name_en": "Ehsan"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 2000000,
+      "running_paisa": 93334000,
+      "source": {
+        "kind": "bikri",
+        "id": 4
+      }
+    },
+    {
+      "entry_id": 25,
+      "entry_date": "2026-11-24",
+      "posting_type": "shop_expense",
+      "kind": "shop_expense",
+      "group": "expense",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": {
+          "id": 1,
+          "code": "1",
+          "name_ur": "بجلی",
+          "name_en": "Bijli"
+        }
+      },
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 4000000,
+      "running_paisa": 89334000,
+      "source": {
+        "kind": "voucher",
+        "id": 3
+      }
+    },
+    {
+      "entry_id": 26,
+      "entry_date": "2026-11-24",
+      "posting_type": "personal_expense",
+      "kind": "personal_expense",
+      "group": "expense",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "عدنان",
+          "name_en": "Adnan"
+        },
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "غرلی کر گی",
+      "in_paisa": 0,
+      "out_paisa": 200000,
+      "running_paisa": 89134000,
+      "source": {
+        "kind": "voucher",
+        "id": 4
+      }
+    },
+    {
+      "entry_id": 27,
+      "entry_date": "2026-11-26",
+      "posting_type": "purchase",
+      "kind": "purchase",
+      "group": "trip",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": null,
+        "trip": {
+          "id": 1,
+          "code": "0070",
+          "name_ur": "0070 29-10-2026",
+          "name_en": "0070 29-10-2026"
+        },
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 2850000,
+      "running_paisa": 86284000,
+      "source": {
+        "kind": "purchase",
+        "id": 1
+      }
+    },
+    {
+      "entry_id": 28,
+      "entry_date": "2026-11-26",
+      "posting_type": "shop_expense",
+      "kind": "shop_expense",
+      "group": "expense",
+      "status": "live",
+      "number": 2,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": {
+          "id": 2,
+          "code": "2",
+          "name_ur": "کر عیہ",
+          "name_en": "Kar Aya"
+        }
+      },
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 1000000,
+      "running_paisa": 85284000,
+      "source": {
+        "kind": "voucher",
+        "id": 5
+      }
+    },
+    {
+      "entry_id": 29,
+      "entry_date": "2026-11-26",
+      "posting_type": "shop_expense",
+      "kind": "shop_expense",
+      "group": "expense",
+      "status": "live",
+      "number": 3,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": {
+          "id": 2,
+          "code": "2",
+          "name_ur": "کر عیہ",
+          "name_en": "Kar Aya"
+        }
+      },
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 1000000,
+      "running_paisa": 84284000,
+      "source": {
+        "kind": "voucher",
+        "id": 6
+      }
+    },
+    {
+      "entry_id": 31,
+      "entry_date": "2026-11-26",
+      "posting_type": "payment",
+      "kind": "cash_lent",
+      "group": "lent",
+      "status": "live",
+      "number": 2,
+      "refs": {
+        "parties": [
+          {
+            "id": 26,
+            "code": "0020",
+            "name_ur": "مانی",
+            "name_en": "Mani"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "سودہ کے لی",
+      "in_paisa": 0,
+      "out_paisa": 5000000,
+      "running_paisa": 79284000,
+      "source": {
+        "kind": "voucher",
+        "id": 7
+      }
+    },
+    {
+      "entry_id": 32,
+      "entry_date": "2026-11-26",
+      "posting_type": "money_lent",
+      "kind": "money_lent",
+      "group": "lent",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [
+          {
+            "id": 37,
+            "code": "01030001",
+            "name_ur": "سعید",
+            "name_en": "Saeed"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "ادھار",
+      "in_paisa": 0,
+      "out_paisa": 5000000,
+      "running_paisa": 74284000,
+      "source": {
+        "kind": "voucher",
+        "id": 8
+      }
+    },
+    {
+      "entry_id": 33,
+      "entry_date": "2026-11-26",
+      "posting_type": "venture_receipt",
+      "kind": "garden_other_sale",
+      "group": "garden",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": {
+          "id": 2,
+          "code": "0080",
+          "name_ur": "پومپ والا باغ",
+          "name_en": "Pump Wala Bagh"
+        },
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 1500000,
+      "out_paisa": 0,
+      "running_paisa": 75784000,
+      "source": {
+        "kind": "garden",
+        "id": 2
+      }
+    },
+    {
+      "entry_id": 34,
+      "entry_date": "2026-11-26",
+      "posting_type": "capital_in",
+      "kind": "capital_in",
+      "group": "capital",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "عثمان",
+          "name_en": "Usman"
+        },
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 20000000,
+      "out_paisa": 0,
+      "running_paisa": 95784000,
+      "source": {
+        "kind": "voucher",
+        "id": 9
+      }
+    },
+    {
+      "entry_id": 35,
+      "entry_date": "2026-11-26",
+      "posting_type": "capital_in",
+      "kind": "capital_in",
+      "group": "capital",
+      "status": "live",
+      "number": 2,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "عثمان",
+          "name_en": "Usman"
+        },
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 20000000,
+      "out_paisa": 0,
+      "running_paisa": 115784000,
+      "source": {
+        "kind": "voucher",
+        "id": 10
+      }
+    },
+    {
+      "entry_id": 36,
+      "entry_date": "2026-11-26",
+      "posting_type": "advance",
+      "kind": "advance",
+      "group": "advance",
+      "status": "live",
+      "number": 1,
+      "refs": {
+        "parties": [
+          {
+            "id": 18,
+            "code": "0010",
+            "name_ur": "فیصل",
+            "name_en": "Faisal",
+            "tag": "F"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 10000000,
+      "running_paisa": 105784000,
+      "source": {
+        "kind": "voucher",
+        "id": 11
+      }
     }
   ],
-  "total_count": 11,
+  "total_count": 23,
   "totals": {
-    "in_paisa": 133562000,
-    "out_paisa": 41136000
+    "in_paisa": 175834000,
+    "out_paisa": 70050000
   },
+  "summary": [
+    {
+      "group": "receipt",
+      "kinds": [
+        "receipt"
+      ],
+      "count": 1,
+      "in_paisa": 11000000,
+      "out_paisa": 0
+    },
+    {
+      "group": "payment",
+      "kinds": [
+        "payment"
+      ],
+      "count": 1,
+      "in_paisa": 0,
+      "out_paisa": 10000000
+    },
+    {
+      "group": "advance",
+      "kinds": [
+        "advance",
+        "buyer_advance"
+      ],
+      "count": 1,
+      "in_paisa": 0,
+      "out_paisa": 10000000
+    },
+    {
+      "group": "lent",
+      "kinds": [
+        "cash_lent",
+        "money_lent",
+        "money_lent_return"
+      ],
+      "count": 2,
+      "in_paisa": 0,
+      "out_paisa": 10000000
+    },
+    {
+      "group": "expense",
+      "kinds": [
+        "shop_expense",
+        "personal_expense",
+        "personal_return"
+      ],
+      "count": 4,
+      "in_paisa": 0,
+      "out_paisa": 6200000
+    },
+    {
+      "group": "bikri",
+      "kinds": [
+        "bikri_paid",
+        "bikri_seller_cash",
+        "bikri_advance"
+      ],
+      "count": 6,
+      "in_paisa": 23334000,
+      "out_paisa": 10000000
+    },
+    {
+      "group": "garden",
+      "kinds": [
+        "garden_installment",
+        "garden_cost",
+        "garden_other_sale",
+        "garden_refund"
+      ],
+      "count": 3,
+      "in_paisa": 1500000,
+      "out_paisa": 21000000
+    },
+    {
+      "group": "trip",
+      "kinds": [
+        "purchase",
+        "trip_cost",
+        "trip_other_sale"
+      ],
+      "count": 1,
+      "in_paisa": 0,
+      "out_paisa": 2850000
+    },
+    {
+      "group": "capital",
+      "kinds": [
+        "capital_in",
+        "capital_out",
+        "opening_capital"
+      ],
+      "count": 4,
+      "in_paisa": 140000000,
+      "out_paisa": 0
+    },
+    {
+      "group": "khata",
+      "kinds": [
+        "khata_out",
+        "khata_in"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "opening",
+      "kinds": [
+        "opening_cash",
+        "opening_balance"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "other",
+      "kinds": [
+        "general",
+        "fruit",
+        "other"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    }
+  ],
   "months": [
     {
       "month": "2026-10",
@@ -245,17 +883,17 @@
     },
     {
       "month": "2026-11",
-      "count": 9,
+      "count": 21,
       "figures": [
         {
           "key": "in_paisa",
           "is_money": true,
-          "value": 33562000
+          "value": 75834000
         },
         {
           "key": "out_paisa",
           "is_money": true,
-          "value": 41136000
+          "value": 70050000
         }
       ]
     }

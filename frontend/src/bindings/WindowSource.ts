@@ -32,9 +32,9 @@ export type WindowSource =
   | {
       kind: 'partner_takes';
       /**
-       * The partner.
+       * The partner, or null for the list of every partner (plan 98).
        */
-      partner_id: number;
+      partner_id?: number | null;
     }
   | {
       kind: 'partner_statement';
@@ -50,4 +50,18 @@ export type WindowSource =
        */
       account_id: number;
     }
-  | { kind: 'commission' };
+  | { kind: 'commission' }
+  | {
+      kind: 'garden_sales';
+      /**
+       * The garden (`ventures.id`).
+       */
+      garden_id: number;
+    }
+  | {
+      kind: 'partner_ventures';
+      /**
+       * The partner.
+       */
+      partner_id: number;
+    };

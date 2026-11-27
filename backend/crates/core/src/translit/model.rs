@@ -116,11 +116,11 @@ fn ranked(map: BTreeMap<String, f64>) -> Fill {
 }
 
 impl Model {
-    /// Trains on the single-word pairs of the list.
-    pub(crate) fn train(entries: &[Entry]) -> Model {
+    /// Trains on the single-word pairs given.
+    pub(crate) fn train(entries: &[&Entry]) -> Model {
         // 1. Cut every English word into groups once.
         let mut prepared: Vec<(&Entry, Vec<Step>)> = Vec::new();
-        for entry in entries {
+        for entry in entries.iter().copied() {
             if entry.roman.contains(' ') || entry.urdu.contains(' ') {
                 continue;
             }
@@ -448,7 +448,7 @@ mod tests {
         .iter()
         .map(|(r, u)| entry(r, u))
         .collect();
-        let model = Model::train(&entries);
+        let model = Model::train(&entries.iter().collect::<Vec<_>>());
         assert_eq!(model.lined_up, 10);
         assert_eq!(model.skipped, 0);
         let piece = pieces("kareem").unwrap().into_iter().nth(3).unwrap(); // "ee"
@@ -465,8 +465,9 @@ mod tests {
             .iter()
             .map(|(r, u)| entry(r, u))
             .collect();
-        let a = Model::train(&entries);
-        let b = Model::train(&entries);
+        let all: Vec<&Entry> = entries.iter().collect();
+        let a = Model::train(&all);
+        let b = Model::train(&all);
         let piece = pieces("shahid").unwrap().into_iter().nth(1).unwrap();
         assert_eq!(a.options(&piece), b.options(&piece));
         assert_eq!(a.chunks, b.chunks);

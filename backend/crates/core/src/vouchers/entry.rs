@@ -63,7 +63,7 @@ pub struct PaymentInput {
     #[serde(flatten)]
     #[ts(skip)]
     pub removed: RemovedPaymentFields,
-    /// Why. Required when the account is a buyer (cash lent, PRD FR-15.11). Empty otherwise.
+    /// Why, for cash lent to a buyer (PRD FR-15.11). Optional (v1.60). Empty if none.
     pub reason: String,
     /// A note, up to 500 characters. Empty if none.
     pub narration: String,

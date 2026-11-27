@@ -1,0 +1,42 @@
+# Animals, birds, fodder and the cattle yard (plan 99, coverage by topic).
+
+@w 80
+جانور = janwar jaanwar janvar :M3
+بھینس = bhains bhens :F2
+بھینسا = bhainsa :M1
+اونٹ = oont :M3
+اونٹنی = oontni :F1
+گھوڑی = ghori ghodi :F1
+گدھا = gadha gadhaa :M1
+گدھی = gadhi :F1
+کتا = kutta kuta :M1
+بلا = billa:70 :M1
+چیتا = cheeta chita :M1
+بھالو = bhalu bhaalu
+ریچھ = reech richh :M3
+ہرن = hiran hirn :M3
+لومڑی = lomri lomdi :F1
+بندر = bandar:70 :M3
+بچھو = bichhu bichu bichoo
+چھپکلی = chipkali chhipkali :F1
+مینڈک = mendak maindak :M3
+تتلی = titli tetli :F1
+جگنو = jugnu jugnoo
+مکڑی = makri makdi :F1
+مرغی = murghi murgi :F1
+مور = mor:50 :M3 @30
+بگلا = bagla :M1
+الو = ulloo ullu
+باز = baaz:50 baz:20
+بلبل = bulbul
+مینا = maina mena
+کوئل = koel koyal
+چڑیا گھر = chirya_ghar chiriya_ghar
+بھوسہ = bhoosa bhusa bhoosah
+ونڈا = wanda vanda :M1
+برسیم = barseem barsim
+جوار = jawar jowar juwar
+باجرہ = bajra bajrah
+گوبر = gobar gober
+کھونٹا = khoonta khunta :M1
+رسی = rassi rasi:60 :F1

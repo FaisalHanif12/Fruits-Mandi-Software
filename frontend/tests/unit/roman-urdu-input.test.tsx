@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { formNavigationProps, useEscapeDispatcher } from '../../src/shared/keyboard';
-import { Field, RomanUrduInput, TextInput } from '../../src/shared/ui';
+import { Field, FreeTextInput, RomanUrduInput, TextInput } from '../../src/shared/ui';
 import * as urduApi from '../../src/shared/urdu/api';
 import { KEY_MAP, mapPhoneticKey } from '../../src/shared/urdu/phonetic_keyboard';
 import { fail } from '../helpers/app';
@@ -91,6 +91,8 @@ describe.each(LANGUAGES)('RomanUrduInput in roman mode (%s)', (language) => {
     expect(urduApi.translitSuggest).toHaveBeenLastCalledWith({
       text: 'tariq',
       direction: 'to_urdu',
+      kind: 'name',
+      before: null,
     });
     expect(urduApi.translitSuggest).toHaveBeenCalledTimes(5);
   });
@@ -495,5 +497,56 @@ describe('the phonetic keyboard table', () => {
       expect(mapPhoneticKey(letter), letter).not.toBeNull();
       expect(mapPhoneticKey(letter.toUpperCase()), letter.toUpperCase()).not.toBeNull();
     }
+  });
+});
+
+describe('what the speller is told about the field (plan 99, PRD FR-7.22)', () => {
+  function Free({ kind }: { kind?: 'name' | 'place' | undefined }) {
+    const [value, setValue] = useState('');
+    return (
+      <Field label={message('en', 'common-back')}>
+        {(control) => <FreeTextInput {...control} value={value} onChange={setValue} kind={kind} />}
+      </Field>
+    );
+  }
+  const type = async (kind?: 'name' | 'place') => {
+    renderIn('ur', <Free kind={kind} />);
+    const input = screen.getByRole<HTMLInputElement>('combobox');
+    const user = userEvent.setup();
+    await user.click(input);
+    await user.keyboard('tariq ');
+    await waitFor(() => {
+      expect(input.value).toBe('طارق ');
+    });
+    await user.keyboard('shahid');
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(0);
+    });
+  };
+
+  it('free text asks with the kind word, the current word only, and the text before it for context', async () => {
+    await type();
+    expect(urduApi.translitSuggest).toHaveBeenLastCalledWith({
+      text: 'shahid',
+      direction: 'to_urdu',
+      kind: 'word',
+      before: 'طارق ',
+    });
+    expect(urduApi.translitSuggest).toHaveBeenCalledWith({
+      text: 'tariq',
+      direction: 'to_urdu',
+      kind: 'word',
+      before: null,
+    });
+  });
+
+  it.each(['name', 'place'] as const)('a free field that holds a %s says so', async (kind) => {
+    await type(kind);
+    expect(urduApi.translitSuggest).toHaveBeenLastCalledWith({
+      text: 'shahid',
+      direction: 'to_urdu',
+      kind,
+      before: 'طارق ',
+    });
   });
 });

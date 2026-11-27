@@ -12,7 +12,7 @@ use std::sync::Arc;
 use mandi_db::rusqlite::{Connection, OptionalExtension, params};
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::translit::{
-    self, Direction, Kind, LearnedPair, MAX_INPUT_CHARS, Suggestion, WordList,
+    self, Direction, Hint, Kind, LearnedPair, MAX_INPUT_CHARS, Suggestion, WordList,
 };
 use mandi_domain::core::validate::{self, FieldErrors};
 use serde_json::json;
@@ -125,6 +125,23 @@ pub fn suggest(
     text: &str,
     direction: Direction,
 ) -> Result<Vec<Suggestion>, ServiceError> {
+    suggest_for(ctx, text, direction, None, None)
+}
+
+/// [`suggest`] for a field of the screen (plan 99, PRD FR-7.22): `kind` is the field's kind
+/// ([`Kind::Word`] for free text, a name kind for name fields) and `before` is the text of the
+/// field before the word being typed. Only the last [`MAX_SUGGEST_CHARS`] characters of `before`
+/// are read, so a long note is never refused. Reads only.
+///
+/// # Errors
+/// As [`suggest`].
+pub fn suggest_for(
+    ctx: &Context,
+    text: &str,
+    direction: Direction,
+    kind: Option<Kind>,
+    before: Option<&str>,
+) -> Result<Vec<Suggestion>, ServiceError> {
     // Count with a cap, so a huge text is refused without reading all of it.
     if text
         .chars()
@@ -141,7 +158,21 @@ pub fn suggest(
     }
     let learned = learned_pairs(ctx)?;
     let list = WordList::embedded();
-    Ok(translit::suggest(text, &learned, list, direction))
+    let hint = Hint {
+        kind,
+        before: before.map(|text| last_chars(text, MAX_SUGGEST_CHARS)),
+    };
+    Ok(translit::suggest_for(
+        text, &learned, list, direction, &hint,
+    ))
+}
+
+/// The last `max` characters of a text.
+fn last_chars(text: &str, max: usize) -> &str {
+    match text.char_indices().rev().nth(max.saturating_sub(1)) {
+        Some((start, _)) => text.get(start..).unwrap_or(text),
+        None => text,
+    }
 }
 
 /// A learned English word: letters only, one word, lower case.

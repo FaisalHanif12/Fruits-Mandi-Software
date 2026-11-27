@@ -401,3 +401,181 @@ fn arrivals_fixtures_of_the_date_to_sell_the_arrival_and_its_linked_lot() {
         &gardens::arrivals::list(ctx, &typed::<ArrivalsListInput>(&all)).unwrap(),
     );
 }
+
+/// Plan 99 (PRD FR-12.53, FR-17.3): the garden page's sold-out arrivals and sale money, and the
+/// partner's open gardens and trips page by page.
+#[test]
+fn plan99_fixtures_of_the_garden_page_and_the_partners_ventures() {
+    use mandi_services::core::accounts::AccountType;
+    use mandi_services::core::garden_sale_money::GardensSaleMoneyInput;
+    use mandi_services::core::gardens::{GardenEntryInput, GardenGetInput};
+    use mandi_services::core::partners::PartnersOpenVenturesInput;
+    use mandi_services::core::windows::WindowsBoundsInput;
+    use mandi_services::{partners, windows};
+
+    let w = support::world();
+    let ctx = &w.env.ctx;
+    let owner = &w.owner;
+    set_today(&w.env, 2026, 10, 11);
+    let garden = gardens::create(
+        ctx,
+        owner,
+        &GardenInput {
+            name_ur: "شاہ پور باغ".into(),
+            name_en: "Shahpur Garden".into(),
+            confirmed_rules_words: vec![
+                "شاہ".into(),
+                "پور".into(),
+                "باغ".into(),
+                "Shahpur".into(),
+                "Garden".into(),
+            ],
+            date: "10-10-2026".into(),
+            item_id: Some(w.banana),
+            item_ids: Vec::new(),
+            rent: "50,000".into(),
+            season_end: None,
+            note: None,
+            partners: partners_json(&w),
+            paid_now: Some("30,000".into()),
+            paid_now_reason: None,
+            parts: Vec::new(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap()
+    .row;
+    trips::create(
+        ctx,
+        owner,
+        &TripInput {
+            date: "11-10-2026".into(),
+            market: Some("Lahore".into()),
+            sent_person: None,
+            note: None,
+            partners: partners_json(&w),
+        },
+    )
+    .unwrap();
+    let account = gardens::get(
+        ctx,
+        &GardenGetInput {
+            id: garden.id,
+            history_offset: 0,
+            history_limit: 0,
+        },
+    )
+    .unwrap()
+    .row
+    .account
+    .id;
+    // The sale in another shop comes first: once a garden has arrivals, such a sale names one with
+    // goods set aside for another shop (plan 90).
+    let other = json!({
+        "type": "other_sale", "garden_id": garden.id, "date": "11-10-2026", "shop": "Haji Traders",
+        "qty": "10", "amount": "15,000", "note": null, "arrival_id": null
+    });
+    gardens::entry_save(ctx, owner, &typed::<GardenEntryInput>(&other)).unwrap();
+
+    let arrive = |qty: &str| {
+        let request = json!({
+            "garden_id": garden.id, "date": "10-10-2026", "sell_date": "10-10-2026",
+            "item_id": w.banana, "packing_id": w.box_, "qty": qty, "weight": null, "note": null
+        });
+        gardens::arrivals::save(ctx, owner, &typed::<ArrivalInput>(&request))
+            .unwrap()
+            .row
+            .id
+    };
+    let (large, small) = (arrive("100"), arrive("20"));
+    let buyer = |ur: &str, en: &str| {
+        support::add_account(&w.env, owner, AccountType::Buyer, ur, en, true, "")
+    };
+    let (mani, anas) = (buyer("مانی", "Mani"), buyer("انس", "Anas"));
+    let from = |key: &str, arrival: i64, qty: &str| LotInput {
+        arrival_id: Some(arrival),
+        adjust_advance: false,
+        ..bare_lot(&w, key, account, w.banana, qty)
+    };
+    let mut first = from("g-1", large, "30");
+    first.labour = support::manual("150");
+    first.munshiana = support::manual("50");
+    first.phone = support::manual("20");
+    let mut lines = vec![
+        sale("s-1", mani, "20", "1000"),
+        sale("s-2", anas, "10", "1000"),
+    ];
+    lines[1].paid = Some("5,000".into());
+    let second = with_sales(
+        from("g-2", small, "20"),
+        vec![sale("s-3", mani, "20", "900")],
+    );
+    bikri::save(
+        ctx,
+        owner,
+        &BikriSaveInput {
+            draft: draft_on("11-10-2026", vec![with_sales(first, lines), second]),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let sold_out = json!({
+        "garden_id": garden.id, "from": null, "to": null, "item_id": null,
+        "state": "sold_out", "offset": 0, "limit": 0
+    });
+    pair(
+        "gardens_arrivals_list_sold_out",
+        &sold_out,
+        &gardens::arrivals::list(ctx, &typed::<ArrivalsListInput>(&sold_out)).unwrap(),
+    );
+    let money = |name: &str, request: Value| {
+        let input: GardensSaleMoneyInput = typed(&request);
+        pair(name, &request, &gardens::sale_money(ctx, &input).unwrap());
+    };
+    money(
+        "gardens_sale_money_month",
+        json!({ "garden_id": garden.id, "from": "12-09-2026", "to": "11-10-2026",
+            "arrival_id": null, "search": null, "offset": 0, "limit": 0 }),
+    );
+    money(
+        "gardens_sale_money_arrival",
+        json!({ "garden_id": garden.id, "from": null, "to": null, "arrival_id": large,
+            "search": null, "offset": 0, "limit": 0 }),
+    );
+    money(
+        "gardens_sale_money_second_page",
+        json!({ "garden_id": garden.id, "from": null, "to": null, "arrival_id": null,
+            "search": null, "offset": 2, "limit": 2 }),
+    );
+    let ventures = |name: &str, request: Value| {
+        let input: PartnersOpenVenturesInput = typed(&request);
+        pair(
+            name,
+            &request,
+            &partners::open_ventures(ctx, &input).unwrap(),
+        );
+    };
+    ventures(
+        "partners_open_ventures_latest",
+        json!({ "partner_id": w.partners[0], "from": null, "to": null, "offset": 0, "limit": 1 }),
+    );
+    ventures(
+        "partners_open_ventures_month",
+        json!({ "partner_id": w.partners[0], "from": "12-09-2026", "to": "11-10-2026",
+            "offset": 0, "limit": 0 }),
+    );
+    for (name, source) in [
+        (
+            "windows_bounds_partner_ventures",
+            json!({ "kind": "partner_ventures", "partner_id": w.partners[0] }),
+        ),
+        (
+            "windows_bounds_garden_sales",
+            json!({ "kind": "garden_sales", "garden_id": garden.id }),
+        ),
+    ] {
+        let request = json!({ "source": source });
+        let input: WindowsBoundsInput = typed(&request);
+        pair(name, &request, &windows::bounds(ctx, &input).unwrap());
+    }
+}

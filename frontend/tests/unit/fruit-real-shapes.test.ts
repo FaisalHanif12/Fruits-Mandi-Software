@@ -146,9 +146,11 @@ describe('the screen builds the request the backend’s own test sent', () => {
     expect(sendsTheSame(buildFruit(draft, 1), real.FRUIT_PREVIEW_EDIT_HOME_REQUEST)).toBeNull();
     const request = buildSaveRequest(draft, editing);
     expect(request.edit).toEqual({ id: 1, version: 2, reason: 'wrong quantity' });
-    expect(
-      sendsTheSame({ ...request.edit, entry: request.entry }, real.FRUIT_EDIT_HOME_REQUEST),
-    ).toBeNull();
+    // The entry inside is compared by its own keys, because the backend's file leaves empty
+    // defaults (such as no کل کٹوتی) out.
+    const { entry, ...sent } = real.FRUIT_EDIT_HOME_REQUEST;
+    expect(sendsTheSame(request.entry, entry)).toBeNull();
+    expect(request.edit).toEqual(sent);
   });
 });
 
@@ -244,9 +246,16 @@ describe('the numbers of E2E-42 in the real answers', () => {
   });
 
   it('the list and its totals over the whole filter, and the statement of A', () => {
-    expect(real.FRUIT_LIST_ALL.totals).toEqual({ qty: 5, value_paisa: 416_000 });
-    expect(real.FRUIT_LIST_GUESTS_ONLY.totals).toEqual({ qty: 3, value_paisa: 300_000 });
-    expect(real.FRUIT_LIST_CANCELLED.totals).toEqual({ qty: 0, value_paisa: 0 });
+    // The net, the کل کٹوتی and the value before it (PRD FR-16.11): no other shop deducted here.
+    const totals = (qty: number, value: number) => ({
+      qty,
+      value_paisa: value,
+      deduction_paisa: 0,
+      gross_paisa: value,
+    });
+    expect(real.FRUIT_LIST_ALL.totals).toEqual(totals(5, 416_000));
+    expect(real.FRUIT_LIST_GUESTS_ONLY.totals).toEqual(totals(3, 300_000));
+    expect(real.FRUIT_LIST_CANCELLED.totals).toEqual(totals(0, 0));
     const lines = real.PARTNERS_STATEMENT_FRUIT_ALIF.lines.filter(
       (line) => line.heading === 'fruit',
     );

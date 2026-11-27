@@ -12,9 +12,11 @@ pub(crate) mod act;
 mod plan;
 mod read;
 
+use mandi_domain::core::accounts::{AccountInput, AccountRow, AccountType};
 use mandi_domain::core::fruit::{
-    FruitCancelInput, FruitCancelled, FruitEditInput, FruitEdited, FruitGetInput, FruitInput,
-    FruitList, FruitListInput, FruitLots, FruitLotsInput, FruitPreview, FruitRow, FruitSaved,
+    AgentShopInput, FruitCancelInput, FruitCancelled, FruitEditInput, FruitEdited, FruitGetInput,
+    FruitInput, FruitList, FruitListInput, FruitLots, FruitLotsInput, FruitPreview, FruitRow,
+    FruitSaved,
 };
 
 use crate::auth::Actor;
@@ -102,4 +104,49 @@ pub fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, ServiceE
 /// `ServiceError::Db`.
 pub fn lots(ctx: &Context, input: &FruitLotsInput) -> Result<FruitLots, ServiceError> {
     read::lots(ctx, input)
+}
+
+/// Adds another commission agent's shop on the spot, from the آڑھتی box of the پھل screen (PRD
+/// FR-16.11 v1.59, FR-7.69, plan 97 item 1). It makes a seller account marked آڑھتی دکان with both
+/// names and an optional phone; the code is given by itself. The new account is in the search index
+/// at once, so the box finds it and the screen can choose it.
+///
+/// # Errors
+/// The errors of a new seller account: the name checks (`ERR_NAME_...`), `ERR_SPELLING_UNCONFIRMED`,
+/// the phone check; nothing is written when any is returned.
+pub fn agent_shop_add(
+    ctx: &Context,
+    actor: &Actor,
+    input: &AgentShopInput,
+) -> Result<AccountRow, ServiceError> {
+    let account = AccountInput {
+        id: None,
+        version: None,
+        account_type: AccountType::Seller,
+        control_id: None,
+        code: String::new(),
+        name_ur: input.name_ur.clone(),
+        name_en: input.name_en.clone(),
+        confirmed_rules_words: input.confirmed_rules_words.clone(),
+        father_or_firm_ur: String::new(),
+        father_or_firm_en: String::new(),
+        city_id: None,
+        adda_id: None,
+        phone1: input.phone.clone(),
+        phone2: String::new(),
+        address: String::new(),
+        linked_account_id: None,
+        opening_date: String::new(),
+        opening_dr: String::new(),
+        opening_cr: String::new(),
+        opening_is_advance: false,
+        credit_allowed: true,
+        credit_limit: String::new(),
+        default_marka_id: None,
+        collector_staff_id: None,
+        is_active: true,
+        note: String::new(),
+        tag: String::new(),
+    };
+    crate::accounts::save_agent_shop(ctx, actor, &account)
 }

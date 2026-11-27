@@ -772,9 +772,24 @@ function GridInner<T>({
   useEffect(() => {
     rowIdOf.current = getRowId;
   });
+  // The rows the grid itself has reported the focus on since these rows were drawn. A `focusRowId` that is one of
+  // them is the screen handing the grid its own report back; by then the user may have moved on (↓ again), and a
+  // restore a frame later would pull the focus back to the row he left.
+  const reportedHere = useRef(new Set<string>());
+  const restoredRows = useRef(rows);
   useEffect(() => {
+    const redrawn = restoredRows.current !== rows;
+    restoredRows.current = rows;
+    if (redrawn) reportedHere.current.clear();
     const wanted = focusRowId;
     if (wanted === null || wanted === undefined || firstField === undefined) return;
+    if (
+      !redrawn &&
+      reportedHere.current.has(wanted) &&
+      rootRef.current?.contains(document.activeElement) === true
+    ) {
+      return;
+    }
     let frames = 0;
     const settle = () => {
       const api = apiRef.current;
@@ -1024,7 +1039,10 @@ function GridInner<T>({
         onCellFocused={(event) => {
           if (event.rowIndex === null || onFocusRow === undefined) return;
           const row = apiRef.current?.getDisplayedRowAtIndex(event.rowIndex)?.data;
-          if (row !== undefined && !isHeadingRow(row)) onFocusRow(getRowId(row));
+          if (row === undefined || isHeadingRow(row)) return;
+          const rowId = getRowId(row);
+          reportedHere.current.add(rowId);
+          onFocusRow(rowId);
         }}
       />
     </div>

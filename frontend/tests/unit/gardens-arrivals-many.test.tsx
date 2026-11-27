@@ -1,9 +1,10 @@
 // A garden with about 90 goods arrived entries (plan 96, PRD FR-12.40, FR-12.41, FR-19.11, NFR-USE-16),
-// in the Urdu and the English app: the list is 30 rows a page, newest first, searched by a number, an
-// item or another shop, with the backend's totals; the details of the entry that has focus are beside
-// the list (a window of their own on a narrow screen), with the buttons first; Enter goes to the
-// buttons and Esc back to the list; a saved entry shows first, tinted, and the page stays where it was;
-// the figures of the garden fold. The list answers like the backend's (tests/helpers/arrivals-many.ts).
+// in the Urdu and the English app: the goods not sold yet are 30 rows a page, newest first, searched by
+// a number, an item or another shop, with the backend's totals; the details of the entry that has focus
+// are in place under the list at every window width (PRD FR-12.53), with the buttons first and its sale
+// lines under them; Enter goes to the buttons and Esc back to the list; a saved entry shows first,
+// tinted, and the page stays where it was; the figures of the garden are open and fold. The list
+// answers like the backend's (tests/helpers/arrivals-many.ts).
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -128,7 +129,13 @@ describe.each(LANGUAGES)('a garden with many goods arrived entries (%s)', (langu
       number: message(language, 'gardens-arrival-number', { number }),
       item: itemName(entryOf(number)),
     });
-  const lastAsk = () => vi.mocked(gardensApi.gardensArrivalsList).mock.calls.at(-1)?.[0];
+  /** The last ask of the list of the goods not sold yet. */
+  const lastAsk = () =>
+    vi
+      .mocked(gardensApi.gardensArrivalsList)
+      .mock.calls.map(([input]) => input)
+      .filter((input) => input.state === 'in_stock')
+      .at(-1);
 
   it('the list is 30 rows a page, the newest first, and the totals and the count are over all 90', async () => {
     await open();
@@ -146,10 +153,17 @@ describe.each(LANGUAGES)('a garden with many goods arrived entries (%s)', (langu
     await waitFor(() => {
       expect(pagerText()).toContain(rangeText(language, 1, 30, 90));
     });
-    // The total of "left" is the backend's, over the whole filter, never over the 30 rows on screen.
+    // The totals of what is left are the backend's, over the whole filter, never over the 30 rows on
+    // screen.
     const pinned = document.querySelector('.ag-row-pinned');
-    const left = all.reduce((sum, row) => sum + row.qty_left, 0);
-    expect(visible(pinned?.querySelector('[col-id="qty_left"]')?.textContent)).toBe(String(left));
+    for (const field of ['qty_our_left', 'qty_other_left'] as const) {
+      const left = all.reduce((sum, row) => sum + row[field], 0);
+      expect(visible(pinned?.querySelector(`[col-id="${field}"]`)?.textContent)).toBe(String(left));
+    }
+    // The goods sold are a list of their own, asked on their own.
+    expect(
+      vi.mocked(gardensApi.gardensArrivalsList).mock.calls.map(([input]) => input.state),
+    ).toContain('sold_out');
   });
 
   it('the next page asks the backend for the next 30', async () => {
@@ -196,44 +210,28 @@ describe.each(LANGUAGES)('a garden with many goods arrived entries (%s)', (langu
     expect(within(details()).getByText(said(cardTitle(12)))).toBeInTheDocument();
   });
 
-  it('the details are beside the list: a click on another entry shows that one, with its sales, and one at a time', async () => {
+  it('the details are under the list: a click on another entry shows that one, with its sale lines, and one at a time', async () => {
     const { user } = await open();
     expect(within(details()).getByText(said(cardTitle(90)))).toBeInTheDocument();
     await user.click(cellOf('87', 'number'));
     expect(await within(details()).findByText(said(cardTitle(87)))).toBeInTheDocument();
     expect(within(details()).queryByText(said(cardTitle(90)))).toBeNull();
-    // Its two sales, with the buttons of the entry in one block above its figures.
-    const sales = within(details()).getByRole('table', {
-      name: named(message(language, 'gardens-arrival-lots')),
+    // Its sale lines are asked for this entry, every day of them, with the buttons in one block above.
+    await waitFor(() => {
+      expect(gardensApi.gardensSaleMoney).toHaveBeenLastCalledWith(
+        expect.objectContaining({ garden_id: 1, arrival_id: 87, from: null, to: null }),
+      );
     });
-    expect(within(sales).getAllByRole('row')).toHaveLength(3);
+    expect(
+      await within(details()).findByText(said(message(language, 'gardens-arrival-no-sales'))),
+    ).toBeInTheDocument();
     expect(document.querySelectorAll('[data-arrival-actions]')).toHaveLength(1);
     expect(screen.getAllByRole('complementary')).toHaveLength(1);
-  });
-
-  it('a long history of sales shows the first four and the rest on a button', async () => {
-    const lots = Array.from({ length: 7 }, (_, index) => ({
-      bikri_id: 500 + index,
-      bikri_number: 500 + index,
-      lot_id: 900 + index,
-      lot_no: 1,
-      lot_counter: index + 1,
-      entry_date: '2026-10-20',
-      qty_sold: 5,
-    }));
-    all = all.map((row) => (row.number === 90 ? { ...row, lots } : row));
-    const { user } = await open();
-    const table = () =>
-      within(details()).getByRole('table', {
-        name: named(message(language, 'gardens-arrival-lots')),
-      });
-    expect(within(table()).getAllByRole('row')).toHaveLength(5);
-    await user.click(
-      within(details()).getByRole('button', {
-        name: said(message(language, 'gardens-arrival-lots-more', { count: 7 })),
-      }),
-    );
-    expect(within(table()).getAllByRole('row')).toHaveLength(8);
+    // The list comes first and the details under it.
+    const list = screen.getByRole('group', {
+      name: named(message(language, 'gardens-arrival-label')),
+    });
+    expect((list.compareDocumentPosition(details()) & 4) !== 0).toBe(true);
   });
 
   it('Enter on an entry goes to the first button of its details, and Esc goes back to the list', async () => {
@@ -253,19 +251,20 @@ describe.each(LANGUAGES)('a garden with many goods arrived entries (%s)', (langu
     expect(within(details()).getByText(said(cardTitle(88)))).toBeInTheDocument();
   });
 
-  it('on a narrow window the details are a window of their own: Enter opens it, Esc closes it', async () => {
+  it('on a narrow window the details are under the list too: Enter goes to their buttons, Esc comes back', async () => {
     stubLayoutStep('compact');
     const { user } = await open();
-    expect(screen.queryByRole('complementary')).toBeNull();
     await user.click(cellOf('88', 'number'));
     await user.keyboard('{Enter}');
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(said(cardTitle(88)))).toBeInTheDocument();
-    // The buttons of the entry are in the window, in one block.
-    expect(dialog.querySelectorAll('[data-arrival-actions]')).toHaveLength(1);
+    await waitFor(() => {
+      expect(details().contains(document.activeElement)).toBe(true);
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(within(details()).getByText(said(cardTitle(88)))).toBeInTheDocument();
+    expect(details().querySelectorAll('[data-arrival-actions]')).toHaveLength(1);
     await user.keyboard('{Escape}');
     await waitFor(() => {
-      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(document.querySelector('.list-grid')?.contains(document.activeElement)).toBe(true);
     });
   });
 
@@ -341,10 +340,17 @@ describe.each(LANGUAGES)('a garden with many goods arrived entries (%s)', (langu
     expect(
       await screen.findByText(said(message(language, 'gardens-arrival-failed'))),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByText(said(message(language, 'gardens-sold-failed'))),
+    ).toBeInTheDocument();
     vi.mocked(gardensApi.gardensArrivalsList).mockImplementation((input) =>
       Promise.resolve(listArrivals(all, input)),
     );
-    await userEvent.click(screen.getByRole('button', { name: message(language, 'common-retry') }));
+    for (const retry of screen.getAllByRole('button', {
+      name: message(language, 'common-retry'),
+    })) {
+      await userEvent.click(retry);
+    }
     await waitFor(() => {
       expect(rowIds()[0]).toBe('90');
     });
@@ -362,29 +368,32 @@ describe.each(LANGUAGES)('a garden with many goods arrived entries (%s)', (langu
     ).toBeNull();
   });
 
-  it('on a narrow window a button of the details closes their window and opens its own box', async () => {
+  it('on a narrow window a button of the details opens its own box', async () => {
     stubLayoutStep('compact');
     const { user } = await open();
     await user.click(cellOf('88', 'number'));
-    await user.keyboard('{Enter}');
-    const dialog = await screen.findByRole('dialog');
+    await within(details()).findByText(said(cardTitle(88)));
     await user.click(
-      within(dialog).getByRole('button', {
+      within(details()).getByRole('button', {
         name: said(message(language, 'purchases-change-sell-date')),
       }),
     );
-    // The box of the day to sell is the only window left.
+    // The box of the day to sell is the only window.
+    const dialog = await screen.findByRole('dialog');
     expect(
-      await screen.findByText(said(message(language, 'gardens-arrival-sell-date-title'))),
+      within(dialog).getByRole('heading', {
+        name: named(message(language, 'gardens-arrival-sell-date-title')),
+      }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
-  it('the key figures are always in view; the full figures and each partner fold under one heading', async () => {
+  it('the key figures are always in view; the full figures and each partner are open and fold under one heading', async () => {
     const { user } = await open();
-    const fold = screen
-      .getByRole('button', { name: named(message(language, 'gardens-figures-title')) })
-      .closest('section');
+    const button = screen.getByRole('button', {
+      name: named(message(language, 'gardens-figures-title')),
+    });
+    const fold = button.closest('section');
     if (fold === null) throw new Error('the figures have no section');
     // The four figures of the head of the garden.
     for (const id of [
@@ -395,18 +404,19 @@ describe.each(LANGUAGES)('a garden with many goods arrived entries (%s)', (langu
     ]) {
       expect(screen.getAllByText(said(message(language, id))).length).toBeGreaterThan(0);
     }
-    expect(
+    // Open when the page opens (PRD FR-12.53), under the history; a press shuts them.
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    const table = () =>
       within(fold).queryByRole('table', {
         name: named(message(language, 'gardens-partner-results-title')),
-      }),
-    ).toBeNull();
-    await user.click(
-      screen.getByRole('button', { name: named(message(language, 'gardens-figures-title')) }),
-    );
-    expect(
-      await within(fold).findByRole('table', {
-        name: named(message(language, 'gardens-partner-results-title')),
-      }),
-    ).toBeInTheDocument();
+      });
+    expect(table()).toBeInTheDocument();
+    const history = screen.getByRole('heading', {
+      name: named(message(language, 'gardens-history-title')),
+    });
+    expect((history.compareDocumentPosition(fold) & 4) !== 0).toBe(true);
+    await user.click(button);
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(table()).toBeNull();
   });
 });

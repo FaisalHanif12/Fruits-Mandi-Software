@@ -23,8 +23,10 @@ pub(crate) mod entry_edit;
 pub(crate) mod header_edit;
 mod make;
 mod read;
+mod sale_money;
 
 pub(crate) use read::cards_of_partner;
+pub use sale_money::sale_money;
 
 use mandi_domain::core::gardens::{
     GardenCloseInput, GardenClosePreview, GardenClosed, GardenCreatePreview, GardenCreated,

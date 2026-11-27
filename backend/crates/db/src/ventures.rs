@@ -1272,6 +1272,7 @@ pub fn search_sources(
             tag: None,
             sold_by_weight: false,
             is_dead: false,
+            is_agent_shop: false,
         })
     })?;
     rows.collect()

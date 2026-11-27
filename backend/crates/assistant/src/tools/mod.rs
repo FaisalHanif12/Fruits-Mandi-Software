@@ -35,6 +35,7 @@ pub mod find_lists;
 pub mod find_lots;
 pub mod find_masters;
 pub mod help;
+pub mod history;
 pub mod names_only;
 pub mod party;
 pub mod period;
@@ -358,8 +359,16 @@ const VALUE_FIELDS: &[&str] = &[
     "rs", "n", "month", "date", "pct", "side", "checked", "places", "label", "ur", "en", "tag",
 ];
 
-/// The value a path reaches when it goes on below it by `VALUE_FIELDS`, or `None`.
+/// The value a path reaches when it goes on below it by `VALUE_FIELDS`, or `None`. A record's name
+/// (a party column of a row, such as `rows.je2.seller`) may also be written with `.name` after it,
+/// as the matches of a `find` are (`matches.0.name`): the live log's `rows.je2.seller.name` cost a
+/// rewrite call (plan 99 A1).
 fn leaf_of_value<'n>(root: &'n Node, rest: &[&str]) -> Option<&'n Node> {
+    if let Some(("name", head)) = rest.split_last().map(|(last, head)| (*last, head))
+        && let Some(node @ Node::Val(Val::Name(_))) = root.get(head)
+    {
+        return Some(node);
+    }
     for cut in (1..rest.len()).rev() {
         let (head, tail) = rest.split_at(cut);
         if tail.len() > 2 || !tail.iter().all(|s| VALUE_FIELDS.contains(s)) {
@@ -572,6 +581,33 @@ mod tests {
         assert_eq!(parse_key("a"), None);
         assert_eq!(parse_key("A20"), None);
         assert_eq!(parse_key("a2x"), None);
+    }
+
+    #[test]
+    fn a_name_may_be_written_with_name_after_it_and_nothing_else_may() {
+        let row = Node::obj(vec![
+            (
+                "seller",
+                Node::Val(Val::Name(crate::results::NameVal {
+                    name_ur: "رحیم".to_owned(),
+                    name_en: "Rahim".to_owned(),
+                    tag: None,
+                    code: None,
+                })),
+            ),
+            ("qty", Node::Val(Val::Count(50))),
+        ]);
+        let root = Node::obj(vec![("rows", Node::Keyed(vec![("je2".to_owned(), row)]))]);
+        let seller = root.get(&["rows", "je2", "seller"]);
+        assert_eq!(
+            leaf_of_value(&root, &["rows", "je2", "seller", "name"]),
+            seller
+        );
+        assert_eq!(leaf_of_value(&root, &["rows", "je2", "qty", "name"]), None);
+        assert_eq!(
+            leaf_of_value(&root, &["rows", "je2", "buyer", "name"]),
+            None
+        );
     }
 
     #[test]

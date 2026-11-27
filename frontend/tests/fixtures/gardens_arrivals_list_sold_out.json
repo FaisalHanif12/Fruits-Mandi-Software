@@ -1,0 +1,121 @@
+{
+  "rows": [
+    {
+      "id": 2,
+      "version": 2,
+      "number": 2,
+      "garden": {
+        "id": 1,
+        "number": 1,
+        "code": "0080",
+        "name_ur": "شاہ پور باغ",
+        "name_en": "Shahpur Garden",
+        "account": {
+          "id": 35,
+          "code": "0080",
+          "name_ur": "شاہ پور باغ",
+          "name_en": "Shahpur Garden"
+        }
+      },
+      "entry_date": "2026-10-10",
+      "sell_date": "2026-10-10",
+      "status": "saved",
+      "cancel_reason": null,
+      "item": {
+        "id": 1,
+        "code": "0040",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 20,
+      "weight_grams": null,
+      "note": null,
+      "qty_sold": 20,
+      "qty_written_off": 0,
+      "qty_left": 0,
+      "qty_other": 0,
+      "shop_name": null,
+      "qty_our_sold": 20,
+      "qty_other_sold": 0,
+      "qty_our_left": 0,
+      "qty_other_left": 0,
+      "can_change_split": false,
+      "days_waiting": 0,
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": "goods_moved",
+      "needs_reopen": false,
+      "edited": null,
+      "can_change_sell_date": false,
+      "lots": [
+        {
+          "bikri_id": 1,
+          "bikri_number": 1,
+          "lot_id": 2,
+          "lot_no": 2,
+          "lot_counter": 2,
+          "entry_date": "2026-10-11",
+          "qty_sold": 20
+        }
+      ],
+      "write_offs": [],
+      "commission_paisa": 232000,
+      "commission_working": {
+        "message_id": "working-goods-commission",
+        "args": [
+          {
+            "name": "seller",
+            "value": {
+              "kind": "money",
+              "paisa": 108000
+            }
+          },
+          {
+            "name": "buyer",
+            "value": {
+              "kind": "money",
+              "paisa": 108000
+            }
+          },
+          {
+            "name": "laga",
+            "value": {
+              "kind": "money",
+              "paisa": 16000
+            }
+          },
+          {
+            "name": "total",
+            "value": {
+              "kind": "money",
+              "paisa": 232000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "sale_value_paisa": 1800000,
+      "last_sale_date": "2026-10-11"
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "qty": 20,
+    "qty_sold": 20,
+    "qty_written_off": 0,
+    "qty_left": 0,
+    "qty_our_sold": 20,
+    "qty_other_sold": 0,
+    "qty_our_left": 0,
+    "qty_other_left": 0,
+    "sale_value_paisa": 1800000,
+    "commission_paisa": 232000
+  },
+  "months": []
+}

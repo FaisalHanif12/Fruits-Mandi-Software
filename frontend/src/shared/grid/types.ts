@@ -190,6 +190,13 @@ export interface GridInterceptors {
   /** ↑ was pressed on the first row. Return true if the screen took it. */
   readonly onAboveFirst?: (cell: CellRef) => boolean;
   /**
+   * The grid is about to add a new row after this cell: `↓` on the last row, `Enter` on the last stop, or the cursor
+   * moving on from a cell the backend closed. Return true if the screen refuses it (it says why, for a few seconds);
+   * the grid then adds nothing and the cursor stays. Every key path asks here, so a screen never writes its own
+   * handler for them (plan 97 item 2, PRD FR-12.52). The "+" button is the screen's own and asks the same question.
+   */
+  readonly onNewRow?: (cell: CellRef) => boolean;
+  /**
    * The cell this row is held on, or null. While a row is held (the backend refused its quantity), the
    * cursor stays on that cell: arrows, Tab and Enter do not leave it, and no other cell of the row can
    * be typed in. Esc and Ctrl+Delete keep their meaning (PRD FR-7.18). The screen only reads what the

@@ -199,15 +199,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     let lent_saved = vouchers::save_payment(ctx, owner, &typed::<PaymentInput>(&lent)).unwrap();
     pair("vouchers_save_payment_cash_lent", &lent, &lent_saved);
 
-    // 6. Refusals: cash lent without a reason, and a seller returning what he does not owe.
-    let no_reason = payment_json(w.akram, "1,000", "");
-    let error = vouchers::save_payment(ctx, owner, &typed::<PaymentInput>(&no_reason)).unwrap_err();
-    refusal(
-        "vouchers_save_payment_to_buyer_needs_reason",
-        &no_reason,
-        &error,
-        ErrorCode::ErrPaymentToBuyerNeedsReason,
-    );
+    // 6. A refusal: a seller returning what he does not owe.
     let too_much = receipt_json(w.rahim, "1,000");
     let error = vouchers::save_receipt(ctx, owner, &typed::<ReceiptInput>(&too_much)).unwrap_err();
     refusal(

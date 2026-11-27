@@ -74,11 +74,13 @@ describe('the canned data of the cash book tests has the real shape', () => {
       limit: 5,
       sort: null,
       group_by_month: false,
+      show_reversed: false,
     };
     expect(same(real.CASHBOOK_DAY, books.cashbook(input))).toBeNull();
     expect(same(real.CASHBOOK_SECOND_PAGE, books.cashbook({ ...input, offset: 5 }))).toBeNull();
-    // The rows have the account the money came from or went to, or nothing.
-    expect(real.CASHBOOK_DAY.rows[0]?.account?.code).toBe('06019999');
+    // Each row says what it is (PRD FR-16.14): the first is the opening cash, with no party of its own.
+    expect(real.CASHBOOK_DAY.rows[0]?.kind).toBe('opening_cash');
+    expect(real.CASHBOOK_DAY.rows[0]?.refs.parties).toEqual([]);
   });
 
   it('the heads, the previews, the saves and the refusals of the خرچہ screen', () => {
@@ -125,6 +127,26 @@ describe('the canned data of the cash book tests has the real shape', () => {
         }),
       ),
     ).toBeNull();
+    // The list of every partner (plan 98): the same keys, `partner` null on the page and a partner on each row, and the
+    // request the backend's own test sent (no partner).
+    expect(
+      same(
+        real.PARTNER_TAKES_ALL,
+        books.partnerTakes({
+          partner_id: null,
+          from: null,
+          to: null,
+          offset: 0,
+          limit: 0,
+          sort: null,
+          group_by_month: false,
+          show_finished: false,
+        }),
+      ),
+    ).toBeNull();
+    expect(real.REQUEST_PARTNER_TAKES_ALL.partner_id ?? null).toBeNull();
+    expect(real.PARTNER_TAKES_ALL.partner).toBeNull();
+    expect(real.PARTNER_TAKES_ALL.rows[0]?.partner.id).toBe(1);
     const electricity = HEADS[0];
     if (electricity === undefined) throw new Error('no head');
     books.store.repeat.push({

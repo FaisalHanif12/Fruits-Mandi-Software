@@ -15,6 +15,8 @@ const WHAT_ID = {
   receipt: 'glossary-wasooli',
   payment: 'glossary-adaigi',
   advance: 'glossary-peshgi-khata',
+  // A پیشگی typed for a buyer (saved as cash lent, PRD FR-15.11 v1.60).
+  buyer_advance: 'glossary-peshgi',
   fruit: 'glossary-phal',
   expense: 'glossary-kharcha',
   lent: 'glossary-naqd-udhar',
@@ -36,6 +38,7 @@ const CAN_ID: Partial<Record<EditBandKind, string>> = {
   receipt: 'edit-band-can-voucher',
   payment: 'edit-band-can-voucher',
   advance: 'edit-band-can-voucher',
+  buyer_advance: 'edit-band-can-voucher',
 };
 
 interface EditBandProps {

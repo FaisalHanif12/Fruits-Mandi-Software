@@ -16,7 +16,14 @@
 // starts without a shell.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  appendFileSync,
+} from 'node:fs';
 import { cpus, loadavg, totalmem } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,7 +37,9 @@ const TARGET = join(BACKEND, 'target-gate-t2');
 // A clean export builds in its own target folder: two source trees must not share build files (cargo
 // reuses a crate whose files look older than its build, and would mix the two trees).
 const CARGO_TARGET = process.env.GATE_T2_SRC ? join(TARGET, 'src-build') : TARGET;
-const SRC_BACKEND = process.env.GATE_T2_SRC ? join(resolve(process.env.GATE_T2_SRC), 'backend') : BACKEND;
+const SRC_BACKEND = process.env.GATE_T2_SRC
+  ? join(resolve(process.env.GATE_T2_SRC), 'backend')
+  : BACKEND;
 const PERF = join(TARGET, 'perf');
 const OUT = join(PERF, 'gate-t2-results.jsonl');
 const LOGS = join(PERF, 'gate-t2-logs');
@@ -87,14 +96,26 @@ function runTest(name) {
   const res = spawnSync(
     'cargo',
     [
-      'test', '--release', '-p', pkg, '--test', file, '--',
-      '--ignored', '--nocapture', '--test-threads=1', '--exact', name,
+      'test',
+      '--release',
+      '-p',
+      pkg,
+      '--test',
+      file,
+      '--',
+      '--ignored',
+      '--nocapture',
+      '--test-threads=1',
+      '--exact',
+      name,
     ],
     { cwd: SRC_BACKEND, env, encoding: 'utf8', maxBuffer: 1 << 28 },
   );
   writeFileSync(join(LOGS, `${name}.log`), `${res.stdout ?? ''}\n${res.stderr ?? ''}`);
   const ok = res.status === 0;
-  console.log(`gate-t2: ${name} ${ok ? 'finished' : `EXIT ${res.status} (see ${join(LOGS, `${name}.log`)})`}`);
+  console.log(
+    `gate-t2: ${name} ${ok ? 'finished' : `EXIT ${res.status} (see ${join(LOGS, `${name}.log`)})`}`,
+  );
   return ok;
 }
 
@@ -136,7 +157,9 @@ function report() {
   // would take with a core to itself. The verdict uses the adjusted figure when the load average
   // was above 12 (8 logical CPUs), the wall figure otherwise. Both are in the table.
   const adjusted = (r) =>
-    r.cpu_mean_ms > 0 && r.wall_mean_ms > 0 ? r.p95_ms * Math.min(1, r.cpu_mean_ms / r.wall_mean_ms) : r.p95_ms;
+    r.cpu_mean_ms > 0 && r.wall_mean_ms > 0
+      ? r.p95_ms * Math.min(1, r.cpu_mean_ms / r.wall_mean_ms)
+      : r.p95_ms;
   const judged = (r) => (r.load1 > 12 ? adjusted(r) : r.p95_ms);
   const status = (r) => {
     if (!(r.target_ms > 0)) return 'INFO';
@@ -162,7 +185,21 @@ function report() {
     r.cpu_mean_ms > 0 ? fmt(r.cpu_mean_ms) : '-',
     `${Number(r.load1).toFixed(0)}`,
   ]);
-  const header = ['id', 'NFR', 'action', 'p95 wall', 'p95 adjusted', 'fastest', 'target', 'result', 'runs', 'first call', 'warm p95', 'CPU/call', 'load'];
+  const header = [
+    'id',
+    'NFR',
+    'action',
+    'p95 wall',
+    'p95 adjusted',
+    'fastest',
+    'target',
+    'result',
+    'runs',
+    'first call',
+    'warm p95',
+    'CPU/call',
+    'load',
+  ];
   const lines = [header, ...table].map((cells) => `| ${cells.join(' | ')} |`);
   lines.splice(1, 0, `|${header.map(() => '---').join('|')}|`);
   const over = final.filter((r) => status(r).startsWith('OVER'));
@@ -171,7 +208,9 @@ function report() {
   const text = [
     `# Gate T2 speed run (${new Date().toISOString()})`,
     '',
-    `Machine: ${cpu}, ${cpus().length} logical CPUs, ${(totalmem() / 2 ** 30).toFixed(0)} GB. Load average now: ${loadavg().map((n) => n.toFixed(1)).join(' ')}.`,
+    `Machine: ${cpu}, ${cpus().length} logical CPUs, ${(totalmem() / 2 ** 30).toFixed(0)} GB. Load average now: ${loadavg()
+      .map((n) => n.toFixed(1))
+      .join(' ')}.`,
     `Rows: ${final.length}. Over target: ${over.length}. Measured with the load average above 12: ${loadedRows} (their verdict uses the CPU-adjusted p95).`,
     '',
     ...lines,
@@ -189,16 +228,33 @@ function report() {
 
 function criterion() {
   const gate = { ...env, MANDI_PERF_DIR: GATE };
-  for (const name of ['accounts', 'search', 'rules', 'translit', 'vouchers', 'bikri', 'bikri_save']) {
+  for (const name of [
+    'accounts',
+    'search',
+    'rules',
+    'translit',
+    'vouchers',
+    'bikri',
+    'bikri_save',
+  ]) {
     console.log(`gate-t2: cargo bench --bench ${name} (on the full data)`);
     const res = spawnSync('cargo', ['bench', '-p', 'mandi-services', '--bench', name], {
-      cwd: SRC_BACKEND, env: gate, stdio: 'inherit',
+      cwd: SRC_BACKEND,
+      env: gate,
+      stdio: 'inherit',
     });
-    appendFileSync(OUT, `${JSON.stringify({ id: `criterion.${name}.exit`, fact: `cargo bench ${name} exit ${res.status}` })}\n`);
+    appendFileSync(
+      OUT,
+      `${JSON.stringify({ id: `criterion.${name}.exit`, fact: `cargo bench ${name} exit ${res.status}` })}\n`,
+    );
   }
-  console.log('gate-t2: now: node scripts/perf/run.mjs --skip-bench --skip-install with the same environment');
+  console.log(
+    'gate-t2: now: node scripts/perf/run.mjs --skip-bench --skip-install with the same environment',
+  );
   return spawnSync('node', [join(HERE, 'run.mjs'), '--skip-bench', '--skip-install'], {
-    cwd: ROOT, env: { ...gate }, stdio: 'inherit',
+    cwd: ROOT,
+    env: { ...gate },
+    stdio: 'inherit',
   }).status;
 }
 

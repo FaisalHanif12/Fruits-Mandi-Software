@@ -64,6 +64,9 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         sale_number: None,
         garden_goods: false,
         last_one: false,
+        last_bikri: false,
+        garden_asked: false,
+        trip_asked: false,
         months_asked: false,
         months_range: None,
         oldest: false,
@@ -1663,6 +1666,14 @@ pub(super) fn assemble(
     let names_have_garden = roles_found
         .iter()
         .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip));
+    // A garden or a trip spoken of with none named, read before the names move into the understanding.
+    // A question that wants a thing explained ("market safar kiya hai, samajh nahi aa rahi") reads
+    // the guide, never the books of the gardens or the trips.
+    let explains = super::reads::asks_to_explain(scan);
+    let garden_asked = !explains && super::reads::garden_word(scan, &names);
+    let trip_asked = !explains
+        && (super::reads::trip_word(scan, &names)
+            || (!names_have_garden && super::reads::own_goods(scan)));
     let beyond = reader
         .today_date()
         .is_some_and(|today| beyond_estimate(&periods, today));
@@ -1700,6 +1711,9 @@ pub(super) fn assemble(
             .flatten(),
         garden_goods: super::reads::garden_goods(scan, &names_have_garden),
         last_one: super::reads::last_one(scan),
+        last_bikri: super::reads::asks_last_bikri(scan),
+        garden_asked,
+        trip_asked,
         months_asked: scan.has_exact(Cue::HowManyMonths),
         months_range: scan
             .has_exact(Cue::HowManyMonths)
@@ -1877,6 +1891,7 @@ pub(super) fn assemble(
     // figure and that no plan reads: the reads are made, the model answers (plan 82).
     understanding.breakdown_grain = super::measure_words::grain_of(scan);
     understanding.instant_stop = understanding.unexplained
+        || super::reads::percent_of_a_balance(scan, &understanding.figures.value)
         || super::measure_words::measure_word_left(scan, &understanding)
         || (understanding.cash_dirs.is_empty()
             && understanding.capital_flow.is_none()

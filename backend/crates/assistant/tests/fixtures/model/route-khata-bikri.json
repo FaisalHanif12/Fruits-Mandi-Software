@@ -1,0 +1,74 @@
+{
+  "steps": [
+    {
+      "expected": "اکرم ٹول ٹیکس کے ذمے 2,880 بنام ✓ باقی ہیں۔\n• کل بل 12,880، جمع 10,000۔",
+      "outcome": "answered",
+      "question": "akram ka khata bikri wise dikhao",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"text\": \"akram\", \"role\": \"buyer\"}",
+                      "name": "find"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  },
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R13\", \"from\": null, \"to\": null, \"period\": null, \"as_of\": null, \"party\": \"r1.matches.0\", \"item\": null, \"item_group\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"seller\": null, \"zamindar\": null, \"status\": null, \"voucher_type\": null, \"layout\": \"bikri\", \"group_by\": null, \"where\": null, \"sort\": null, \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_0_1",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"{{r1.matches.0.name}} کے ذمے {{r2.summary.closing}} باقی ہیں۔\\n• کل بل {{r2.totals.debit}}، جمع {{r2.totals.credit}}۔\", \"show\": [{\"result\": \"r2\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day"
+}

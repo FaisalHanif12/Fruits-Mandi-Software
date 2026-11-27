@@ -86,7 +86,27 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
     from: 'wide',
     value: (row, { money }) => money(row.rate_paisa),
   },
+  // The whole value and the other shop's کل کٹوتی come before the net, so "2 @ 1,400 = 2,800 − 200 = 2,600" adds up on the row
+  // (PRD FR-16.11 v1.59, plan 97 item 1). Both are the backend's figures; a row with no deduction leaves the deduction empty.
   {
+    field: 'gross',
+    type: 'money',
+    headerId: 'fruit-col-gross',
+    from: 'wide',
+    value: (row, { money }) => money(row.gross_paisa),
+  },
+  {
+    field: 'deduction',
+    type: 'money',
+    headerId: 'fruit-col-deduction',
+    from: 'wide',
+    value: (row, { money }) => {
+      const text = money(row.deduction_paisa);
+      return text === '0' ? '' : text;
+    },
+  },
+  {
+    // What was posted: the whole value less the deduction (the agent's credit and the partners' charge).
     field: 'value',
     sortKey: 'value_paisa',
     type: 'money',

@@ -678,9 +678,14 @@ fn the_overview_counts_the_open_gardens_and_trips() {
             .iter()
             .all(|r| r.open_gardens_count == 0 && r.open_trips_count == 0)
     );
-    let cards = partners::open_ventures(&w.env.ctx, w.partners[0]).unwrap();
-    assert!(cards.is_empty());
-    assert!(partners::open_ventures(&w.env.ctx, 99_999).is_err());
+    let of = |partner_id: i64| mandi_services::core::partners::PartnersOpenVenturesInput {
+        partner_id,
+        ..Default::default()
+    };
+    let cards = partners::open_ventures(&w.env.ctx, &of(w.partners[0])).unwrap();
+    assert!(cards.rows.is_empty());
+    assert_eq!(cards.total_count, 0);
+    assert!(partners::open_ventures(&w.env.ctx, &of(99_999)).is_err());
 }
 
 // ---- Plan 76 point 8: the money lists take a range and total it ----
@@ -702,7 +707,7 @@ fn the_money_lists_take_a_first_and_last_day() {
             &PartnerTakesInput {
                 from: from.map(str::to_owned),
                 to: to.map(str::to_owned),
-                partner_id: a,
+                partner_id: Some(a),
                 offset: 0,
                 limit: 0,
                 sort: None,

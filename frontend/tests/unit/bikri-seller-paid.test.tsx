@@ -98,9 +98,8 @@ describe.each(LANGUAGES)(
 
     it('shows the field and the lines of his account: previous, today’s net, paid, the rest credited to his account, new balance, with sides', async () => {
       await openWith();
-      expect(visible(block().textContent)).toContain(
-        m('bikri-seller-paid-title', { name: names(language).rahim }),
-      );
+      // The title is the seller's name only (plan 97 item 3): no "paid on the spot" words in it.
+      expect(visible(block().querySelector('h3')?.textContent)).toBe(names(language).rahim);
       expect(lines()).toEqual([
         { label: m('bikri-seller-paid-previous'), value: `30,000${side('dr')}` },
         { label: m('bikri-seller-paid-net'), value: '20,000' },

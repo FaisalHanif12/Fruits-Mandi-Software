@@ -12,8 +12,6 @@ mod reports_world;
 mod support;
 
 use common::set_today;
-use mandi_services::cashbook;
-use mandi_services::core::cashbook::{CapitalWhereKind, CapitalWhoseKind};
 use mandi_services::core::partners::{PartnersSetSharesInput, ShareInput};
 use mandi_services::core::statement::{
     PartnersStatementInput, StatementDetail, StatementHeading, StatementLine,
@@ -211,9 +209,7 @@ proptest! {
     #![proptest_config(ProptestConfig { cases: 8, ..ProptestConfig::default() })]
 
     /// PRD FR-17.13, FR-17.9: after every step of a random run of advances and receipts from the seller,
-    /// the partners' open parts equal the advances still out, no part is below 0, and the card
-    /// "where the capital is" balances with no `other` line (Σ کل رقم + opening capital + open advances =
-    /// the equity of the books).
+    /// the partners' open parts equal the advances still out.
     #[test]
     fn the_partners_open_parts_always_equal_the_advances_still_out(
         steps in prop::collection::vec((any::<bool>(), 1i64..=30), 1..=6),
@@ -238,17 +234,15 @@ proptest! {
                 let amount = (thousands * 1_000).min(open);
                 vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.rahim, &amount.to_string())).unwrap();
             }
-            let card = cashbook::capital_where(&w.env.ctx).unwrap();
-            prop_assert_eq!(card.net_paisa, card.whose_total_paisa);
-            prop_assert!(card.have_lines.iter().chain(&card.owe_lines).all(|l| l.kind != CapitalWhereKind::Other));
-            prop_assert!(card.whose_lines.iter().all(|l| l.kind != CapitalWhoseKind::Other));
-            let parts: i64 = card
-                .whose_lines
+            // The partners' open parts are what their advance lines add up to, taken away (the
+            // card "where the capital is" that also showed them is gone, plan 99).
+            let parts: i64 = w
+                .partners
                 .iter()
-                .filter(|l| l.kind == CapitalWhoseKind::AdvancesOpen)
-                .map(|l| l.amount_paisa.rupees())
+                .flat_map(|p| advance_lines(&w, *p))
+                .map(|l| l.2)
                 .sum();
-            prop_assert_eq!(parts, open_advances_sql(&w));
+            prop_assert_eq!(-parts, open_advances_sql(&w));
         }
     }
 }

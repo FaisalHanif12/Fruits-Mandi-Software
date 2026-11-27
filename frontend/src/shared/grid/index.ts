@@ -15,6 +15,7 @@ export {
   type ListSort,
 } from './ListGrid';
 export { Pager } from './Pager';
+export { NumberRuns } from './NumberRuns';
 export { DayTable, type DayColumn } from './DayTable';
 export { useListContext } from './use-list-context';
 export { useListPaging } from './useListPaging';

@@ -35,7 +35,7 @@ use mandi_db::Db;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::accounts::ledger_items::{DetailQuery, load};
+use super::accounts::ledger_items::{DetailQuery, LineVoucher, load};
 use super::accounts::lines::{self, LineFilter, RawLine};
 use super::common::{add, in_snapshot, paisa, parse_day, source_of, today as today_of};
 use super::ids;
@@ -186,7 +186,7 @@ struct Entry {
     reverses: Option<i64>,
     doc_number: Option<i64>,
     venture: (Option<String>, Option<i64>),
-    voucher: Option<(String, Option<String>)>,
+    voucher: Option<LineVoucher>,
     narration: Option<String>,
     /// (line number, debit, credit) in line order.
     lines: Vec<(i64, i64, i64)>,
@@ -227,13 +227,7 @@ fn entries_of(raw: Vec<RawLine>) -> Result<Vec<Entry>, ReportsError> {
                 reverses: line.reverses,
                 doc_number: line.doc_number,
                 venture: (line.venture_kind.clone(), line.venture_id),
-                voucher: (line.source_type == "voucher")
-                    .then(|| {
-                        line.voucher_type
-                            .clone()
-                            .map(|t| (t, line.voucher_reason.clone()))
-                    })
-                    .flatten(),
+                voucher: line.voucher(),
                 narration,
                 lines: vec![(line.line_no, line.dr, line.cr)],
                 dr: line.dr,
@@ -311,7 +305,14 @@ fn row_of(
     Ok(StatementRowsRow {
         date: entry.date.clone(),
         entry_id: entry.id,
-        type_id: ids::doc_id(&entry.posting_type),
+        // A پیشگی typed for a buyer keeps that word in his history (PRD FR-15.11 v1.60).
+        type_id: if entry.posting_type == "payment"
+            && entry.voucher.as_ref().is_some_and(|v| v.peshgi)
+        {
+            ids::doc_id("buyer_advance")
+        } else {
+            ids::doc_id(&entry.posting_type)
+        },
         number: entry.doc_number,
         source: source_of(
             &entry.source_type,

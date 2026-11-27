@@ -84,14 +84,17 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
       expect(visible(list.textContent)).toContain('50,000');
     });
     const text = visible(list.textContent);
-    // The first row is the opening cash, said as what it is (plan 78 E); its other side is a named account.
-    expect(text).toContain(message(language, 'cashbook-row-opening-cash'));
-    expect(text).toContain(nameOf(language, 'ابتدائی فرق', 'Opening Difference'));
+    // Every row says what it is, with its number and its party or head (PRD FR-16.14): the opening cash, then the
+    // sale's cash paid to Rahim, then the shop expense of electricity.
+    expect(text).toContain(message(language, 'cashbook-row-kind-opening-cash'));
+    const sale = [
+      visible(message(language, 'cashbook-row-bikri', { number: '1' })),
+      message(language, 'cashbook-row-kind-bikri-seller-cash'),
+      nameOf(language, 'رحیم', 'Rahim'),
+    ];
+    expect(text).toContain(sale.join(message(language, 'cashbook-row-name-gap')));
     expect(text).toContain(
-      message(language, 'cashbook-kind-number', {
-        kind: message(language, 'cashbook-kind-bikri-first'),
-        number: 1,
-      }),
+      `${message(language, 'cashbook-row-kind-shop-expense')} 2${message(language, 'cashbook-row-name-gap')}${nameOf(language, 'بجلی', 'Electricity')}`,
     );
     // The totals are the backend's over all six rows, not the five on screen.
     expect(text).toContain('50,500');
@@ -125,7 +128,7 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
       expect(visible(list.textContent)).toContain(nameOf(language, 'اسلم', 'Aslam'));
     });
     expect(visible(list.textContent)).toContain(
-      message(language, 'cashbook-kind-money-lent-return'),
+      message(language, 'cashbook-row-kind-money-lent-return'),
     );
   });
 });

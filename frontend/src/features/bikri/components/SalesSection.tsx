@@ -13,7 +13,7 @@
 // - Typed lines live in the store of the lot, so a language switch loses nothing (F39).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import type { CardChukta } from '../../../shared/accounts';
 import { groupDigits, useGrouping } from '../../../shared/format';
@@ -34,7 +34,7 @@ import { useKeepCardInView } from '../hooks/useKeepCardInView';
 import { lotLabelVars, useLotWho } from '../lot-name';
 import type { GridView } from '../grid-views';
 import { MAX_SALE_LINES, saleRowCount } from '../limits';
-import { SOLD_OUT_NOTE_MS } from '../notices';
+import { NOTICE_MS } from '../notices';
 import { LOT, SALE, type BikriPreview } from '../types';
 import { LineDetails } from './LineDetails';
 import { MissingNotes, QtyNotes } from './QtyNotes';
@@ -107,14 +107,28 @@ export function SalesSection({
   // The note belongs to the lot it was pressed on, so it goes when another lot is shown (PRD FR-12.52).
   const [soldOutTries, setSoldOutTries] = useState<{ lot: string; count: number } | null>(null);
   if (soldOutTries !== null && !whole && soldOutTries.lot !== lotKey) setSoldOutTries(null);
-  const tellSoldOut = (lot: string) => {
+  const tellSoldOut = useCallback((lot: string) => {
     setSoldOutTries((was) => ({ lot, count: (was?.lot === lot ? was.count : 0) + 1 }));
-  };
+  }, []);
   const soldOutShown = useTimedNotices(
     soldOutTries === null ? [] : ['sold-out'],
     soldOutTries?.count ?? 0,
-    SOLD_OUT_NOTE_MS,
+    NOTICE_MS,
   ).has('sold-out');
+  // The lot a line belongs to: in the view of one lot it is that lot, in the whole view the lot that owns the row.
+  const soldOutNow = useLatest(soldOut);
+  const lotOfRow = useCallback(
+    (rowId: string): string | undefined => {
+      if (!whole) return lotKey;
+      return stores.lots.getState().rows.find((lot) =>
+        stores
+          .salesFor(lot.rowId)
+          .getState()
+          .rows.some((row) => row.rowId === rowId),
+      )?.rowId;
+    },
+    [whole, lotKey, stores],
+  );
 
   // A new line goes through the grid's one new-row path, the same as ↓ on the last line. In the view of
   // one lot it is a line of that lot; in the whole view it is a line of the lot of the line that had the
@@ -229,6 +243,14 @@ export function SalesSection({
         stores.lots.getState().setPendingFocus({ rowIndex: Math.max(index, 0), field: LOT.seller });
         return true;
       },
+      // A new line after the last one (↓ on it, Enter on its last stop) is refused when its lot is sold out: nothing is
+      // added, the cursor stays, and the words say why for 5 seconds, again on each try (plan 97 item 2, FR-12.52).
+      onNewRow: (cell) => {
+        const lot = lotOfRow(cell.rowId);
+        if (lot === undefined || soldOutNow()?.(lot) !== true) return false;
+        tellSoldOut(lot);
+        return true;
+      },
       // A line with something refused keeps the cursor until it is fixed. A چکتا buyer needs no
       // stop of his own: he is one chosen record of the buyer box, so Enter goes on as usual
       // (PRD FR-12.5, FR-13.5).
@@ -246,7 +268,7 @@ export function SalesSection({
         return false;
       },
     }),
-    [stores, lotKey, errorsNow, heldFieldOf],
+    [stores, lotKey, errorsNow, heldFieldOf, lotOfRow, soldOutNow, tellSoldOut],
   );
 
   // A quantity the backend refused (more than the lot has left): once for each text it refused, the cursor

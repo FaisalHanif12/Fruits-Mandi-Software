@@ -106,8 +106,10 @@ pub enum PrintDetailPart {
     },
     /// Cash lent to a buyer.
     CashLent {
-        /// The reason as typed.
+        /// The reason as typed; empty when none was typed.
         reason: String,
+        /// True when it was typed as a پیشگی to a buyer (PRD FR-15.11 v1.60).
+        advance: bool,
     },
     /// A note as typed.
     Text {
@@ -476,8 +478,9 @@ impl Fmt {
             DetailPart::PaidOnSpot { bikri_number } => PrintDetailPart::PaidOnSpot {
                 bikri_number: self.style.count(*bikri_number),
             },
-            DetailPart::CashLent { reason } => PrintDetailPart::CashLent {
+            DetailPart::CashLent { reason, advance } => PrintDetailPart::CashLent {
                 reason: reason.clone(),
+                advance: *advance,
             },
             DetailPart::Text { text } => PrintDetailPart::Text { text: text.clone() },
         })

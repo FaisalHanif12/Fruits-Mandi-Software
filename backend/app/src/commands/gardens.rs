@@ -9,6 +9,7 @@ use mandi_services::core::arrivals::{
     ArrivalWriteOffDone, ArrivalWriteOffInput, ArrivalWriteOffUndoInput, ArrivalWriteOffUndone,
     ArrivalsList, ArrivalsListInput, SellDateInput, SellDateSet,
 };
+use mandi_services::core::garden_sale_money::{GardensSaleMoney, GardensSaleMoneyInput};
 use mandi_services::core::gardens::{
     GardenCloseInput, GardenClosePreview, GardenCloseRequest, GardenClosed, GardenCreatePreview,
     GardenCreated, GardenDefaults, GardenDetail, GardenEntryCancelInput, GardenEntryCancelled,
@@ -286,6 +287,22 @@ pub async fn gardens_arrivals_list<R: tauri::Runtime>(
     run(app, "gardens_arrivals_list", move |ctx| {
         auth::require(ctx)?;
         gardens::arrivals::list(ctx, &input)
+    })
+    .await
+}
+
+/// Where the money of a garden's sales is (PRD FR-12.53 v1.60, plan 99): one row for each sale
+/// line of its lots, each lot's charges and each sale in another shop, page by page, with the
+/// totals over the whole filter. Read only. Errors: `ERR_NOT_FOUND` (`garden_id`); the date codes
+/// (`from`, `to`).
+#[tauri::command]
+pub async fn gardens_sale_money<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: GardensSaleMoneyInput,
+) -> Result<GardensSaleMoney, UiError> {
+    run(app, "gardens_sale_money", move |ctx| {
+        auth::require(ctx)?;
+        gardens::sale_money(ctx, &input)
     })
     .await
 }

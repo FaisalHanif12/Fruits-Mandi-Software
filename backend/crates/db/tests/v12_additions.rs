@@ -708,8 +708,9 @@ fn zip3(partners: &[i64], bps: [i64; 3], amounts: [i64; 3]) -> Vec<(i64, i64, i6
 }
 
 #[test]
-fn a_payment_to_a_buyer_needs_a_reason_but_a_payment_to_a_seller_does_not() {
-    // PRD FR-15.11, E2E-32: 3,000 cash to اکرم, reason "نقد ادھار". A payment to رحیم (E2E, 4,316) has none.
+fn the_reason_of_a_payment_is_optional_for_every_account() {
+    // PRD FR-15.11 v1.60 (migration 31): cash lent to a buyer needs no reason either; the two
+    // triggers of migration 1 are gone.
     let (_dir, conn) = setup();
     let f = fixture(&conn);
     let chukta_khata = account_id(&conn, "0030");
@@ -721,28 +722,22 @@ fn a_payment_to_a_buyer_needs_a_reason_but_a_payment_to_a_seller_does_not() {
             params![n.get(), account, reason],
         )
     };
-    let refused = |e: Error| matches!(classify(e), DbError::Constraint(m) if m.contains("ERR_REASON_REQUIRED"));
-    for account in [f.buyer, chukta_khata] {
-        for reason in [None, Some(""), Some("  ")] {
-            assert!(
-                refused(payment(account, reason).unwrap_err()),
-                "{account} {reason:?}"
-            );
+    for account in [f.buyer, f.seller, chukta_khata] {
+        for reason in [None, Some(""), Some("نقد ادھار")] {
+            assert!(payment(account, reason).is_ok(), "{account} {reason:?}");
         }
     }
-    assert!(payment(f.buyer, Some("نقد ادھار")).is_ok());
-    assert!(payment(f.seller, None).is_ok(), "a seller needs no reason");
-    // The reason cannot be taken away later.
-    let cleared = conn.execute(
+    // A reason can be cleared later, and a payment can move to a buyer without one.
+    conn.execute(
         "UPDATE vouchers SET reason = NULL WHERE reason IS NOT NULL",
         [],
-    );
-    assert!(refused(cleared.unwrap_err()));
-    let moved = conn.execute(
-        "UPDATE vouchers SET account_id = ?1 WHERE account_id = ?2 AND reason IS NULL",
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE vouchers SET account_id = ?1 WHERE account_id = ?2",
         params![f.buyer, f.seller],
-    );
-    assert!(refused(moved.unwrap_err()));
+    )
+    .unwrap();
 }
 
 #[test]

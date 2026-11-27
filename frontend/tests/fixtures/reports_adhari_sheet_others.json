@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-11",
+  "rows": [],
+  "total_count": 0,
+  "totals": {
+    "bill_paisa": 0,
+    "today_credit_paisa": 0,
+    "previous_due": {
+      "amount_paisa": 0,
+      "side": "zero"
+    },
+    "total_due": {
+      "amount_paisa": 0,
+      "side": "zero"
+    }
+  },
+  "others": {
+    "bill_paisa": 0,
+    "today_credit_paisa": 0,
+    "previous_due": {
+      "amount_paisa": 2156400,
+      "side": "dr"
+    },
+    "total_due": {
+      "amount_paisa": 2156400,
+      "side": "dr"
+    }
+  },
+  "others_count": 2,
+  "other_rows": [
+    {
+      "party": {
+        "account_id": 22,
+        "code": "0021",
+        "short_code": "1",
+        "name_ur": "ارشد ملتانی",
+        "name_en": "Arshad Multani",
+        "tag": null,
+        "person_key": null
+      },
+      "previous_due": {
+        "amount_paisa": 1868400,
+        "side": "dr"
+      },
+      "total_due": {
+        "amount_paisa": 1868400,
+        "side": "dr"
+      }
+    },
+    {
+      "party": {
+        "account_id": 21,
+        "code": "0020",
+        "short_code": "0",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax",
+        "tag": null,
+        "person_key": null
+      },
+      "previous_due": {
+        "amount_paisa": 288000,
+        "side": "dr"
+      },
+      "total_due": {
+        "amount_paisa": 288000,
+        "side": "dr"
+      }
+    }
+  ],
+  "all_totals": {
+    "bill_paisa": 0,
+    "today_credit_paisa": 0,
+    "previous_due": {
+      "amount_paisa": 2156400,
+      "side": "dr"
+    },
+    "total_due": {
+      "amount_paisa": 2156400,
+      "side": "dr"
+    }
+  },
+  "dead_totals": null,
+  "credit_totals": null
+}

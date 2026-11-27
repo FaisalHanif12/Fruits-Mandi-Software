@@ -214,10 +214,9 @@ pub struct AdvanceInput {
     /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` and nothing is written.
     #[serde(default)]
     pub confirm_cash_below_zero: bool,
-    /// Why. Needed only when the account is a buyer: a پیشگی to a buyer is cash lent to him and is
-    /// saved as a payment to him (PRD 15.4, FR-15.11, v1.51), which asks for a reason
-    /// (`ERR_PAYMENT_TO_BUYER_NEEDS_REASON` at `reason`). Ignored for a seller. Missing or empty
-    /// means none.
+    /// Why, when the account is a buyer: a پیشگی to a buyer is cash lent to him and is saved as a
+    /// payment to him (PRD 15.4, FR-15.11, v1.51) marked `entered_as` `advance`. Optional (v1.60).
+    /// Ignored for a seller. Missing or empty means none.
     #[serde(default)]
     #[ts(optional)]
     pub reason: Option<String>,
@@ -368,6 +367,31 @@ pub struct VouchersTotals {
     pub total_paisa: Option<Paisa>,
 }
 
+/// How a voucher was typed, when that differs from what it posts as (PRD FR-15.11 v1.60).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum VoucherEnteredAs {
+    /// A پیشگی to a buyer, saved as cash lent (a payment).
+    Advance,
+}
+
+impl VoucherEnteredAs {
+    /// The stored form in `vouchers.entered_as`.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            VoucherEnteredAs::Advance => "advance",
+        }
+    }
+
+    /// Reads [`VoucherEnteredAs::as_str`] back.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "advance" => Some(VoucherEnteredAs::Advance),
+            _ => None,
+        }
+    }
+}
+
 /// A voucher in the list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct VoucherRow {
@@ -376,6 +400,10 @@ pub struct VoucherRow {
     pub id: i64,
     /// The kind.
     pub voucher_type: VoucherType,
+    /// `advance` for a payment to a buyer that was typed as a پیشگی (PRD FR-15.11 v1.60): the
+    /// screens and the پیشگی list name it پیشگی; its number is still in the ادائیگی series and its
+    /// posting is the payment's. Null for every other voucher.
+    pub entered_as: Option<VoucherEnteredAs>,
     /// The number in its series.
     #[ts(type = "number")]
     pub number: i64,

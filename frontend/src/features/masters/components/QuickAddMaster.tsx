@@ -171,6 +171,7 @@ function QuickAddForm({
             urduError={fieldError(error, 'name_ur')}
             englishError={fieldError(error, 'name_en')}
             checkSpelling={config.names.spelling}
+            kind={config.names.kind}
             fillOnOpen
           />
         )}

@@ -2,11 +2,11 @@
 // comes right after the short one: the header (number, name, state, the four key figures that are
 // always in view, the running balance, the rent still due, the commission and the money in, with the
 // working behind the ⓘ of the two that have one, then the day, the fruits, the end of the season and
-// a note) and, under the goods arrived, the figures that fold (each partner with his % and where his
-// money comes from by default, the rent, what was paid from the shop and from pockets, the money in,
-// the garden's account, and each partner's money; plan 96). The running balance starts in minus and
-// is shown with its sign: a minus is not an alarm here, it is the money paid and not yet back
-// (FR-12.37).
+// a note) and, under the history, the figures that fold, open when the page opens (each partner with
+// his % and where his money comes from by default, the rent, what was paid from the shop and from
+// pockets, the money in, the garden's account, and each partner's money; plan 96, PRD FR-12.53). The
+// running balance starts in minus and is shown with its sign: a minus is not an alarm here, it is the
+// money paid and not yet back (FR-12.37).
 // Everything is the backend's; nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
@@ -211,6 +211,7 @@ export function GardenFiguresFold({
   ];
   return (
     <FoldSection
+      defaultOpen
       title={
         <span className="inline-flex items-center gap-2">
           <IconChip icon={Calculator} />

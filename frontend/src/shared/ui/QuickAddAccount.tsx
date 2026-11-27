@@ -84,7 +84,10 @@ const URDU_LETTER = /[؀-ۿ]/;
 
 function startingType(scope: AccountScope): AccountType {
   // A seller or a buyer field (the پیشگی field) starts as a seller, whom a پیشگی is mostly for.
-  return scope === 'seller' || scope === 'lot_seller' || scope === 'seller_buyer'
+  return scope === 'seller' ||
+    scope === 'lot_seller' ||
+    scope === 'agent_shop' ||
+    scope === 'seller_buyer'
     ? 'seller'
     : 'buyer';
 }

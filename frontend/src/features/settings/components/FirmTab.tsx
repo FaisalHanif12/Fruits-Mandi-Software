@@ -246,6 +246,7 @@ export function FirmTab({ firm }: FirmTabProps) {
                 setValues({ ...values, mandi_ur: next.urdu, mandi_en: next.english });
                 rememberMarks('mandi')(next);
               }}
+              kind="place"
               urduLabel={<Localized id="settings-firm-mandi-ur" />}
               englishLabel={<Localized id="settings-firm-mandi-en" />}
               urduError={fieldError(error, 'mandi_ur')}

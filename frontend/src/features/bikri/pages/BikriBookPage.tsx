@@ -22,7 +22,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { ChevronLeft, FileText } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { BikriEdited } from '../../../bindings/BikriEdited';
@@ -37,7 +37,13 @@ import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import type { EntryRow } from '../../../shared/grid';
-import { holdScroll, isFromStep, useLayoutStep, useRefusalIntoView } from '../../../shared/hooks';
+import {
+  NoticePulseContext,
+  holdScroll,
+  isFromStep,
+  useLayoutStep,
+  useRefusalIntoView,
+} from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -45,7 +51,6 @@ import {
   CashNote,
   Code,
   EmptyState,
-  ErrorNotice,
   ErrorState,
   InfoHint,
   LinkButton,
@@ -106,6 +111,7 @@ import { ArrivalLotPanel } from '../components/ArrivalLotPanel';
 import { OwnLotPanel } from '../components/OwnLotPanel';
 import { LotsSection } from '../components/LotsSection';
 import { ProblemList } from '../components/ProblemList';
+import { TimedErrorNotice } from '../components/TimedErrorNotice';
 import { ActiveLine, SalesSection } from '../components/SalesSection';
 import { NumbersStrip } from '../components/NumbersStrip';
 import { SplitPanel } from '../components/SplitPanel';
@@ -120,7 +126,13 @@ import {
 } from '../draft-store';
 import { buildDraft, isArrivalLot, isCarriedLot, isFilledByUser, isOwnLot } from '../draft';
 import { useGridViews } from '../hooks/useGridViews';
-import { LotCountersProvider, lotLabelVars, useLotCounters, useLotWho } from '../lot-name';
+import {
+  LotCountersProvider,
+  lotLabelVars,
+  useLotCounters,
+  useLotWho,
+  type LotCounters,
+} from '../lot-name';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
 import { LOT_GRID_FIELD, LOT_OWN_FIELD, problemsOf, type Problem } from '../problems';
@@ -213,6 +225,26 @@ function removableLot(firstPosting: boolean): (row: EntryRow) => boolean {
   return (row) => (row.typed[LOT.lotId] ?? '') === '' || (firstPosting && !isCarriedLot(row));
 }
 
+/**
+ * The two things the whole screen hands down: the lot numbers, and the count of the user's repeated actions that shows a hidden
+ * note again (plan 97 item 4). One component, so the body of the screen keeps its place in the tree.
+ */
+function ScreenProviders({
+  lotCounters,
+  pulse,
+  children,
+}: {
+  lotCounters: LotCounters;
+  pulse: number;
+  children: ReactNode;
+}) {
+  return (
+    <LotCountersProvider value={lotCounters}>
+      <NoticePulseContext.Provider value={pulse}>{children}</NoticePulseContext.Provider>
+    </LotCountersProvider>
+  );
+}
+
 function Editor({ onOpenSaved, mode }: EditorProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
@@ -300,6 +332,11 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const [typingPulse, setTypingPulse] = useState(0);
   const bumpTyping = () => {
     setTypingPulse((count) => count + 1);
+  };
+  // An Enter in the lots or the lines is the same action again too: a cell that was refused keeps the cursor on Enter, and
+  // the note of its problem shows again (plan 97 item 4).
+  const bumpOnEnter = (event: { key: string }) => {
+    if (event.key === 'Enter') bumpTyping();
   };
   const trySave = (andNext: boolean) => {
     setSaveTries((count) => count + 1);
@@ -560,7 +597,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   // column of their own in a wide window, and under the sale lines in the others (F22).
   const numbers = (
     <>
-      {preview === undefined ? null : <CashNote cash={preview.cash} />}
+      {preview === undefined ? null : <CashNote cash={preview.cash} fade />}
       {query.isError ? (
         <ErrorState
           title={<Localized id="bikri-preview-failed" />}
@@ -594,6 +631,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
               <AdvanceTicks
                 shown={whole ? lotRows : lotRows.slice(lotIndex, lotIndex + 1)}
                 sellers={preview.sellers}
+                gardens={preview.gardens}
+                trips={preview.trips}
+                previewLots={preview.lots}
+                whole={whole}
               />
             }
           />
@@ -623,7 +664,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const dirty = edit === null ? isFilledByUser(draft) : !edit.done && !(diff?.unchanged ?? true);
 
   return (
-    <LotCountersProvider value={lotCounters}>
+    <ScreenProviders lotCounters={lotCounters} pulse={saveTries + typingPulse}>
       <div ref={rootRef} className="fill-to-corner flex min-h-0 flex-col gap-3 short:gap-2">
         {/* The screen scrolls in this area, and it runs down to the status bar through the band the shell
           keeps under every screen for the round assistant button (`fill-to-corner`), so nothing is cut
@@ -754,7 +795,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             />
           ) : null}
           {refused === null ? null : (
-            <ErrorNotice error={refused} fieldsShown={refusedItems.map((item) => item.field)} />
+            <TimedErrorNotice
+              error={refused}
+              fieldsShown={refusedItems.map((item) => item.field)}
+            />
           )}
           {edit === null ? null : (
             <>
@@ -774,7 +818,6 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             selectedLot={lotIndex}
             activeLine={activeLine}
             whole={whole}
-            pulse={saveTries + typingPulse}
           />
           <div className="grid grid-cols-1 gap-3 wide:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-3 wide:col-span-2">
@@ -784,6 +827,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   setRegion('lots');
                 }}
                 onInputCapture={bumpTyping}
+                onKeyDownCapture={bumpOnEnter}
                 onPointerDownCapture={(event) => {
                   // The button beside a lot's seller scrolls on purpose, so it is not held (plan 95 item 6).
                   const pressed = event.target;
@@ -861,6 +905,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   setRegion('sales');
                 }}
                 onInputCapture={bumpTyping}
+                onKeyDownCapture={bumpOnEnter}
               >
                 <SalesSection
                   lotKey={lotKey}
@@ -982,7 +1027,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             : {})}
         />
       </div>
-    </LotCountersProvider>
+    </ScreenProviders>
   );
 }
 

@@ -38,6 +38,12 @@ interface ListWindowOptions {
   today: string | undefined;
   /** The days of a window of days (30 unless a list says another number). */
   days?: number;
+  /**
+   * The month a month window opens on until the user moves, `YYYY-MM`: for a list whose latest data
+   * may be older than this month (the open gardens and trips of a partner, plan 99). Null or left out
+   * opens on today's month.
+   */
+  opensOn?: string | null | undefined;
 }
 
 export interface ListWindow {
@@ -82,6 +88,7 @@ export function useListWindow({
   source,
   today,
   days: size = DAYS_WINDOW,
+  opensOn = null,
 }: ListWindowOptions): ListWindow {
   // The window asked for: the end day of the days, or the month; null is the latest.
   const [asked, setAsked] = useState<string | null>(null);
@@ -100,7 +107,7 @@ export function useListWindow({
   const known = today !== undefined;
   const now = today ?? '';
   const end = known && kind === 'days' ? daysWindowEnd(asked, now, first, size) : null;
-  const month = known && kind === 'month' ? windowMonth(asked, now, firstMonth) : null;
+  const month = known && kind === 'month' ? windowMonth(asked ?? opensOn, now, firstMonth) : null;
 
   const span = end === null ? null : daysWindowOf(end, size);
   const bounded = month === null ? null : monthBounds(month);

@@ -1,0 +1,112 @@
+# Very common daily verbs. :V adds every form of the stem.
+
+# کہنا (the bare stem is written کہہ, so these are by hand)
+@w 94
+کہہ = keh kah kh~
+کہا = kaha keha kahaa
+کہی = kahi kehi khi~
+کہے = kahe kahay kehe khay~
+کہیں = kahein kahen kehen
+کہنا = kehna kahna kahnaa khna
+کہنے = kehne kahne kehny kahnay
+کہتا = kehta kahta khta
+کہتی = kehti kahti
+کہتے = kehte kahte kehty kahtay
+کہوں = kahun kahoon kehun
+کہو = kaho keho
+کہہ دیا = keh_diya kehdia kehdiya kahdiya
+کہہ رہا = keh_raha kehraha
+کہہ رہے = keh_rahe kehrahe
+
+# پینا, جینا (irregular endings)
+@w 88
+پی = pee pi
+پینا = peena pina
+پینے = peene pine peeny peenay
+پیتا = peeta pita
+پیتی = peeti piti
+پیتے = peete pite peety
+پیا = piya pia piyaa
+پیے = piye pie piyay
+پئیں = piyen pien piyein
+پیوں = piyun piyoon peeun
+پیو = piyo pio
+جینا = jeena jina
+جیتا = jeeta jita
+
+@w 94
+آ = aa a :V
+رکھ = rakh rkh :V
+دیکھ = dekh dkh daikh :V
+سن = sun sn :V
+بول = bol :V
+پوچھ = pooch puch poch :V
+لکھ = likh lkh :V
+پڑھ = parh padh prh :V
+سمجھ = samajh samjh smjh :V
+سوچ = soch :V
+جان = jaan jan :V
+مان = maan man :V
+مل = mil ml :V
+چل = chal chl :V
+کھا = kha khaa :V
+سو = so soo :V
+بیٹھ = baith beth bth :V
+اٹھ = uth uthh :V
+لا = la laa :V
+پا = pa paa :V
+مر = mar mr @82 :V
+مار = maar mar @83 :V
+بن = ban bn :V
+بنا = bana bna :V
+لگ = lag lg :V
+لگا = laga lga :V
+بتا = bata btaa bta :V
+دکھا = dikha dkha :V
+دکھ = dikh @80 :V
+اٹھا = utha uthaa :V
+چلا = chala chla :V
+ہٹ = hat @78 :V
+ہٹا = hata hataa @82 :V
+نکل = nikal nikl~ :V @84
+نکال = nikaal nikal nkal :V @83
+کھول = khol :V
+کھل = khul @80 :V
+ڈال = dal daal :V
+رک = ruk rk @86 :V
+روک = rok @84 :V
+بھول = bhool bhul bool~ :V
+بھلا = bhula @72 :V
+چاہ = chah chaah :V
+ڈھونڈ = dhoond dhund dhoondh dhundh @82 :V
+بدل = badal badl bdl :V
+ڈر = dar dr @82 :V
+رو = ro roo @82 :V
+دھو = dho dhoo @82 :V
+کھو = kho khoo @76 :V
+گا = gaa ga~ :V @40
+@w 90
+کہیے = kahiye kahiay kahie
+کہہ کر = kehkar kahkar keh_kar kah_kar
+کہوں گا = kahunga kahoonga kehunga
+کہوں گی = kahungi kehungi
+کہے گا = kahega kehega kahayga
+کہے گی = kahegi kehegi
+کہیں گے = kahenge kehenge kahayngay
+کہو گے = kahoge kehoge
+کہتیں = kehtin kahtin
+کہنی = kehni kahni
+کہہ رہی = keh_rahi kehrahi kehrhi
+پی کر = peekar pikar pee_kar
+پیجیے = peejiye pijiye
+پیوں گا = piyunga peeunga
+پیے گا = piyega piega
+پئیں گے = piyenge pienge
+پیو گے = piyoge pioge
+پیتیں = peeteen piteen
+جیا = jiya:90 jia:80
+جیے = jiye jiay
+جیو = jiyo jio:80
+جیتی = jeeti jiti
+جیتے = jeete jite
+جینے = jeene jine

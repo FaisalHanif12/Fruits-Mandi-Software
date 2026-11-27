@@ -89,9 +89,8 @@ describe.each(LANGUAGES)(
 
     it('case A: previous 30,000 بنام, credit 20,000, paid 5,000: the rest 15,000 credited to his account, new 15,000 بنام', async () => {
       await openWith(SELLER_PREVIEW_A);
-      expect(visible(block().textContent)).toContain(
-        m('bikri-seller-paid-title', { name: names(language).rahim }),
-      );
+      // The title is the seller's name only (plan 97 item 3): no "paid on the spot" words in it.
+      expect(visible(block().querySelector('h3')?.textContent)).toBe(names(language).rahim);
       expect(lines().map(([label]) => label)).toEqual([
         m('bikri-seller-paid-previous'),
         m('bikri-seller-paid-net'),

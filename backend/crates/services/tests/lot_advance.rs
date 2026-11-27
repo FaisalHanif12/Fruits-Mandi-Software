@@ -868,6 +868,8 @@ fn the_cash_book_row_of_a_lot_advance_says_bikri_advance_with_the_number_of_the_
             limit: 0,
             sort: None,
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
         },
     )
     .unwrap();

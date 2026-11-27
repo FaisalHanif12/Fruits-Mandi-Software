@@ -31,7 +31,7 @@ export type FruitNumbers = {
    */
   rate_paisa: Paisa;
   /**
-   * The value (C1).
+   * The value (C1): `qty × rate`, before any deduction.
    */
   value_paisa: Paisa;
   /**
@@ -39,8 +39,22 @@ export type FruitNumbers = {
    */
   value_working: Working;
   /**
+   * کل کٹوتی (PRD FR-16.11 v1.59): what the other shop takes off. 0 when there is none.
+   */
+  deduction_paisa: Paisa;
+  /**
+   * The net: `value_paisa - deduction_paisa`. This is what is posted: the agent is credited it and
+   * the parts add up to it. Equal to `value_paisa` when there is no deduction.
+   */
+  net_paisa: Paisa;
+  /**
+   * How the net was worked out (message `working-fruit-net`: value, deduction, result). Null when
+   * there is no deduction.
+   */
+  net_working: Working | null;
+  /**
    * One part for the partner, or one for each partner active on the day for the guests, in the
-   * order the partners were created. The parts add up to the value.
+   * order the partners were created. The parts add up to `net_paisa`.
    */
   parts: Array<FruitPart>;
   /**

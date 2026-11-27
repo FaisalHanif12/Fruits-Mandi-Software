@@ -25,6 +25,16 @@ export function voucherNumberText(
   });
 }
 
+/** The words of the account kind column of a voucher. */
+export function voucherKindText(
+  row: Pick<VoucherRow, 'account_type' | 'entered_as'>,
+  text: (id: string, vars?: Record<string, string>) => string,
+): string {
+  if (row.entered_as === 'advance') return text('vouchers-kind-buyer-advance');
+  if (row.account_type === 'buyer') return text('vouchers-kind-buyer-lent');
+  return row.account_type === undefined ? '' : text(`accounts-type-${row.account_type}`);
+}
+
 export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
   {
     field: 'number',
@@ -50,13 +60,13 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     value: (row, { language }) => (row.account === null ? '' : displayName(row.account, language)),
   },
   {
-    // What kind of account it is, in words: a seller, a buyer or another account. The پیشگی list holds
-    // a buyer's cash lent beside the advances, and this tells them apart (PRD FR-15.11, plan 88).
+    // Who it is with, in words: a seller, a buyer or another account. For a buyer it says how the money was
+    // typed: a پیشگی (remembered, PRD FR-15.11 v1.60) or نقد ادھار. The پیشگی list holds both beside the
+    // sellers' advances, and the ادائیگی list holds a buyer's پیشگی too.
     field: 'kind',
     type: 'short',
     headerId: 'vouchers-col-kind',
-    value: (row, { text }) =>
-      row.account_type === undefined ? '' : text(`accounts-type-${row.account_type}`),
+    value: (row, { text }) => voucherKindText(row, text),
   },
   {
     field: 'amount',

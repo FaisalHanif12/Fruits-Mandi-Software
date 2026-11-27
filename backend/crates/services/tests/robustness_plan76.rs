@@ -1361,9 +1361,11 @@ fn statements_money_lent_dues_and_window_bounds_refuse_bad_input() {
             account_id: Some(i64::MAX),
         },
         WindowSource::Capital,
-        WindowSource::PartnerTakes { partner_id: 0 },
         WindowSource::PartnerTakes {
-            partner_id: 999_999,
+            partner_id: Some(0),
+        },
+        WindowSource::PartnerTakes {
+            partner_id: Some(999_999),
         },
         WindowSource::PartnerStatement { partner_id: -1 },
         WindowSource::PartnerStatement {
@@ -1907,7 +1909,9 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         ("capital", WindowSource::Capital),
         (
             "partner takes",
-            WindowSource::PartnerTakes { partner_id: pa },
+            WindowSource::PartnerTakes {
+                partner_id: Some(pa),
+            },
         ),
         (
             "partner statement",
@@ -2412,7 +2416,7 @@ fn the_paged_reads_of_plans_76_and_77_on_ten_years_against_nfr_spd_24() {
         ("partner_takes whole life", "", ""),
     ] {
         let input = mandi_services::core::expenses::PartnerTakesInput {
-            partner_id: pa,
+            partner_id: Some(pa),
             from: (!from.is_empty()).then(|| from.to_owned()),
             to: (!to.is_empty()).then(|| to.to_owned()),
             offset: 0,

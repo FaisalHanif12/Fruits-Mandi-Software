@@ -32,6 +32,7 @@ fn home(w: &support::World, qty: &str, rate: &str) -> FruitInput {
         weight: None,
         rate: rate.into(),
         note: None,
+        deduction: None,
         editing_id: None,
     }
 }
@@ -51,6 +52,7 @@ fn guests(w: &support::World, agent: i64, qty: &str, rate: &str) -> FruitInput {
         weight: None,
         rate: rate.into(),
         note: None,
+        deduction: None,
         editing_id: None,
     }
 }

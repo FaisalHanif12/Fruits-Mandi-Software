@@ -41,7 +41,6 @@ use mandi_reports::reports::{
 };
 use mandi_services::auth::{self, Actor};
 use mandi_services::core::auth::Language;
-use mandi_services::core::cashbook::CapitalPrintInput;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::paging::SortInput;
 use mandi_services::core::printing::{Paper, PrintOutcome, PrintTo, parse_copies};
@@ -203,18 +202,6 @@ pub struct PrintSellerDuesInput {
 pub struct PrintTotalDuesInput {
     /// The filter of the page, the print language and the paper.
     pub sheet: TotalDuesPrintInput,
-    /// The printer of the Printing settings, or a PDF.
-    pub to: PrintTo,
-    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
-    #[serde(default)]
-    pub copies: Option<String>,
-}
-
-/// Input of `cashbook_capital_print`: the card "where the capital is" to the printer or to a PDF (plan 87, PRD FR-16.14 v1.50, FR-19.10).
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct PrintCapitalInput {
-    /// The day, the print language and the paper.
-    pub sheet: CapitalPrintInput,
     /// The printer of the Printing settings, or a PDF.
     pub to: PrintTo,
     /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
@@ -1210,32 +1197,6 @@ pub async fn run_total_dues<R: tauri::Runtime>(
         total_dues_print_data(ctx.db(), &sheet)
             .map(drop)
             .map_err(engine_error)
-    })
-    .await
-}
-
-/// Runs the print of the card "where the capital is" (plan 87). Behind the partner code.
-///
-/// # Errors
-/// As `cashbook_capital_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
-/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
-pub async fn run_capital<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    input: PrintCapitalInput,
-) -> Result<PrintOutcome, UiError> {
-    let sheet = input.sheet;
-    let page = TablePage {
-        command: "cashbook_capital_print",
-        kind: "capital",
-        entity: "capital",
-        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
-        language: sheet.language,
-        paper: sheet.paper,
-        to: input.to,
-        copies: input.copies,
-    };
-    run_table_page(app, page, move |ctx| {
-        crate::commands::cashbook::capital_print_data(ctx, &sheet).map(drop)
     })
     .await
 }

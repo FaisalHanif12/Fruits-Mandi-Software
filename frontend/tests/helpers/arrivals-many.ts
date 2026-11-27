@@ -106,6 +106,9 @@ function entry(number: number): ArrivalRow {
         : [{ move_id: number * 100, move_date: iso(day), qty: writtenOff, reason: 'Spoiled' }],
     commission_paisa: paisaForTest(sold * 150 * 100),
     commission_working: commissionWorking(sold * 60, sold * 60, sold * 30),
+    // The value of its sales and the last day of one (plan 99, PRD FR-12.53).
+    sale_value_paisa: paisaForTest(sold * 500 * 100),
+    last_sale_date: sold === 0 ? null : iso(Math.max(0, day - 2)),
     note: number === 4 ? 'First picking of the season' : null,
   };
 }
@@ -139,10 +142,19 @@ const SORTS: Record<string, (row: ArrivalRow) => string | number> = {
   qty_left: (row) => row.qty_left,
 };
 
+/** True when the row is in the state asked for (the backend's `ArrivalStateFilter`). */
+function inState(row: ArrivalRow, state: ArrivalsListInput['state']): boolean {
+  if (state === 'in_stock') return row.status === 'saved' && row.qty_left > 0;
+  if (state === 'sold_out') return row.status === 'saved' && row.qty_left === 0;
+  return true;
+}
+
 /** The answer of `gardens_arrivals_list` for `rows`: filtered, sorted, one page, with the totals of the filter. */
 export function listArrivals(all: readonly ArrivalRow[], input: ArrivalsListInput): ArrivalsList {
   const wanted = input.search?.trim().toLowerCase() ?? '';
-  const found = all.filter((row) => wanted === '' || textOf(row).includes(wanted));
+  const found = all.filter(
+    (row) => inState(row, input.state) && (wanted === '' || textOf(row).includes(wanted)),
+  );
   const key = SORTS[input.sort?.column ?? 'entry_date'] ?? SORTS['entry_date'];
   const sign = input.sort === null || input.sort.direction === 'asc' ? 1 : -1;
   const sorted = [...found].sort((a, b) => {
@@ -162,6 +174,11 @@ export function listArrivals(all: readonly ArrivalRow[], input: ArrivalsListInpu
       qty_sold: sum((row) => row.qty_sold),
       qty_written_off: sum((row) => row.qty_written_off),
       qty_left: sum((row) => row.qty_left),
+      qty_our_sold: sum((row) => row.qty_our_sold),
+      qty_other_sold: sum((row) => row.qty_other_sold),
+      qty_our_left: sum((row) => row.qty_our_left),
+      qty_other_left: sum((row) => row.qty_other_left),
+      sale_value_paisa: paisaForTest(sum((row) => row.qty_sold) * 500 * 100),
       commission_paisa: paisaForTest(sum((row) => row.qty_sold) * 150 * 100),
     },
     months: [],

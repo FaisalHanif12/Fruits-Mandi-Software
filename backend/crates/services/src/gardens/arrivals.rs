@@ -31,7 +31,7 @@ use mandi_domain::core::codes::{CodeType, number_code};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
-use mandi_domain::core::money::Grams;
+use mandi_domain::core::money::{Grams, Paisa};
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::split::StockParts;
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -42,7 +42,7 @@ use crate::audit::Event;
 use crate::auth::Actor;
 use crate::context::Context;
 use crate::day;
-use crate::error::{Rejection, ServiceError};
+use crate::error::{Rejection, ServiceError, money_error};
 use crate::flags::Marker;
 use crate::ventures::{self, not_found, require_open_day, required_reason, sell_date_of};
 
@@ -93,12 +93,38 @@ fn write_off_rows(off: Vec<ArrivalWriteOff>) -> Vec<WriteOffRow> {
         .collect()
 }
 
+fn paisa(value: i64) -> Result<Paisa, ServiceError> {
+    Paisa::try_from_paisa(value).map_err(money_error)
+}
+
+/// Σ sold in our shop, sold in other shops, left for our shop and left for another shop over some
+/// saved arrivals, each worked out by the split rule of the rows (PRD FR-12.41).
+fn split_totals(rows: &[repo::QtyColumns]) -> Result<(i64, i64, i64, i64), ServiceError> {
+    let mut sums = (0_i64, 0_i64, 0_i64, 0_i64);
+    for &(qty, other, sold, sold_other, off) in rows {
+        let parts = StockParts::of(qty, other, sold, sold_other, off)
+            .ok_or_else(|| data("the split of an arrival does not fit"))?;
+        let add = |a: i64, b: i64| {
+            a.checked_add(b)
+                .ok_or_else(|| data("the quantities of the arrivals do not fit"))
+        };
+        sums = (
+            add(sums.0, parts.our_sold)?,
+            add(sums.1, parts.other_sold)?,
+            add(sums.2, parts.our_left)?,
+            add(sums.3, parts.other_left)?,
+        );
+    }
+    Ok(sums)
+}
+
 /// One arrival as the screens show it.
 fn row_of(
     rec: &ArrivalRec,
     lots: Vec<ArrivalLotRef>,
     write_offs: Vec<WriteOffRow>,
     commission: &mandi_db::commission::Commission,
+    sold: Option<&(i64, String)>,
     today: BusinessDate,
 ) -> Result<ArrivalRow, ServiceError> {
     let (commission_paisa, commission_working) = ventures::commission_view(commission)?;
@@ -169,6 +195,8 @@ fn row_of(
         write_offs,
         commission_paisa,
         commission_working,
+        sale_value_paisa: paisa(sold.map_or(0, |s| s.0))?,
+        last_sale_date: sold.map(|s| s.1.clone()),
     })
 }
 
@@ -181,6 +209,7 @@ fn rows_of(
     let ids: Vec<i64> = recs.iter().map(|r| r.id).collect();
     let mut offs = repo::write_offs_of(conn, &ids)?;
     let commissions = mandi_db::commission::by_arrivals(conn, &ids)?;
+    let sold = repo::sale_values(conn, &ids)?;
     let mut rows = recs
         .iter()
         .map(|rec| {
@@ -202,6 +231,7 @@ fn rows_of(
                 lots,
                 off,
                 &commissions.get(&rec.id).copied().unwrap_or_default(),
+                sold.get(&rec.id),
                 today,
             )
         })
@@ -498,6 +528,7 @@ pub fn save(
             Vec::new(),
             // A new arrival has no sale yet, so no commission.
             &mandi_db::commission::Commission::default(),
+            None,
             today,
         )?;
         Ok(ArrivalSaved {
@@ -625,6 +656,7 @@ pub fn entry_save(
                 Vec::new(),
                 // A new arrival has no sale yet, so no commission.
                 &mandi_db::commission::Commission::default(),
+                None,
                 today,
             )?);
         }
@@ -837,6 +869,8 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
             .checked_sub(sums.qty_sold)
             .and_then(|v| v.checked_sub(sums.qty_written_off))
             .ok_or_else(|| data("the quantity of the arrivals does not fit"))?;
+        let split = split_totals(&repo::quantities(conn, &filter)?)?;
+        let sale_value = paisa(repo::sale_value_total(conn, &filter)?)?;
         // Month headings with their subtotals, over the whole filter (plan 38 R4).
         let months = if input.group_by_month && in_date_order {
             crate::page::month_subtotals(
@@ -860,6 +894,11 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
                 qty_sold: sums.qty_sold,
                 qty_written_off: sums.qty_written_off,
                 qty_left,
+                qty_our_sold: split.0,
+                qty_other_sold: split.1,
+                qty_our_left: split.2,
+                qty_other_left: split.3,
+                sale_value_paisa: sale_value,
                 commission_paisa: ventures::commission_view(&sums.commission)?.0,
             },
             months,

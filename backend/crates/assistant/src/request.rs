@@ -212,6 +212,46 @@ fn message_for_send(
     Value::Object(out)
 }
 
+/// The result a call gets that never ran.
+const NOT_RUN: &str = "{\"error\":{\"code\":\"ERR_NOT_RUN\",\"detail\":\"not read: the \
+question stopped before this call ran\"}}";
+
+/// Gives every tool call a result. A question that stopped while a call waited (the partner code,
+/// PRD FR-7.82, that was never typed) leaves a call with none, and the provider then refuses the
+/// whole conversation with HTTP 400 ("No tool output found for function call"): the next question
+/// of that conversation failed (found by the replay of the real log, plan 99).
+fn answer_every_call(messages: Vec<Value>) -> Vec<Value> {
+    let mut out: Vec<Value> = Vec::with_capacity(messages.len());
+    let mut waiting: Vec<String> = Vec::new();
+    let close = |out: &mut Vec<Value>, waiting: &mut Vec<String>| {
+        for id in waiting.drain(..) {
+            out.push(json!({"role": "tool", "tool_call_id": id, "content": NOT_RUN}));
+        }
+    };
+    for message in messages {
+        let role = message.get("role").and_then(Value::as_str);
+        if role == Some("tool") {
+            if let Some(id) = message.get("tool_call_id").and_then(Value::as_str) {
+                waiting.retain(|w| w != id);
+            }
+        } else {
+            close(&mut out, &mut waiting);
+        }
+        if role == Some("assistant")
+            && let Some(calls) = message.get("tool_calls").and_then(Value::as_array)
+        {
+            waiting.extend(
+                calls
+                    .iter()
+                    .filter_map(|c| c.get("id").and_then(Value::as_str).map(str::to_owned)),
+            );
+        }
+        out.push(message);
+    }
+    close(&mut out, &mut waiting);
+    out
+}
+
 /// Everything that builds one request.
 pub struct Parts<'a> {
     /// The model.
@@ -260,7 +300,7 @@ pub fn request_body(parts: &Parts<'_>) -> Value {
     }
     json!({
         "model": parts.model,
-        "messages": messages,
+        "messages": answer_every_call(messages),
         "tools": tools(),
         "tool_choice": if parts.tools_off { TOOL_CHOICE_NONE } else { TOOL_CHOICE_AUTO },
         "response_format": {
@@ -373,5 +413,41 @@ mod tests {
         keys.sort_unstable();
         keys.dedup();
         assert_eq!(keys.len(), BODY_KEYS_ALLOWED.len());
+    }
+
+    #[test]
+    fn a_call_that_never_ran_gets_a_result_before_the_conversation_is_sent() {
+        let call = |id: &str| json!({"id": id, "type": "function", "function": {"name": "report", "arguments": "{}"}});
+        let sent = answer_every_call(vec![
+            json!({"role": "user", "content": "partner ka hisaab"}),
+            json!({"role": "assistant", "content": null,
+                   "tool_calls": [call("a"), call("b")]}),
+            json!({"role": "tool", "tool_call_id": "a", "content": "{}"}),
+            json!({"role": "user", "content": "aaj ki bikri"}),
+            json!({"role": "assistant", "content": null, "tool_calls": [call("c")]}),
+        ]);
+        let ids: Vec<(Option<&str>, Option<&str>)> = sent
+            .iter()
+            .map(|m| (m["role"].as_str(), m["tool_call_id"].as_str()))
+            .collect();
+        assert_eq!(
+            ids,
+            [
+                (Some("user"), None),
+                (Some("assistant"), None),
+                (Some("tool"), Some("a")),
+                (Some("tool"), Some("b")),
+                (Some("user"), None),
+                (Some("assistant"), None),
+                (Some("tool"), Some("c")),
+            ]
+        );
+        assert!(sent[3]["content"].as_str().unwrap().contains("ERR_NOT_RUN"));
+        // A conversation whose calls all ran is sent as it is.
+        let whole = vec![
+            json!({"role": "assistant", "content": null, "tool_calls": [call("a")]}),
+            json!({"role": "tool", "tool_call_id": "a", "content": "{}"}),
+        ];
+        assert_eq!(answer_every_call(whole.clone()), whole);
     }
 }

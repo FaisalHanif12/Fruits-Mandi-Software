@@ -38,6 +38,7 @@ export function PurchaseEntryFieldsForm({
           <FreeTextInput
             {...props}
             value={fields.supplier}
+            kind="name"
             onChange={(supplier) => {
               onChange({ supplier });
             }}

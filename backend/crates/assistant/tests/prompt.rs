@@ -31,7 +31,7 @@ fn read_repo(relative: &str) -> String {
 // ---- P1 ---------------------------------------------------------------------------------------
 
 #[test]
-fn p1_the_fixed_part_is_at_most_11800_tokens() {
+fn p1_the_fixed_part_is_within_the_limit() {
     let bpe = tiktoken_rs::o200k_base().unwrap();
     let tools_min =
         serde_json::to_string(&serde_json::from_str::<Value>(TOOLS_JSON).unwrap()).unwrap();

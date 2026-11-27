@@ -19,6 +19,15 @@ pub struct SuggestInput {
     pub text: String,
     /// `to_urdu` for English letters, `to_english` for Urdu letters.
     pub direction: Direction,
+    /// The kind of the field (plan 99): `word` for free text (reasons, narrations, notes), where
+    /// everyday words come first; a name kind (`name`, `place`, `item`) or null for a name field,
+    /// where names come first.
+    #[serde(default)]
+    pub kind: Option<Kind>,
+    /// The text of the field before the word being typed, for context (after کہا, `ke` is کہ). Only
+    /// its end is read. Null or empty when there is none.
+    #[serde(default)]
+    pub before: Option<String>,
 }
 
 /// Up to three suggestions, the best first (PRD FR-7.22).
@@ -129,7 +138,14 @@ pub async fn translit_suggest<R: tauri::Runtime>(
 ) -> Result<Suggestions, UiError> {
     run(app, "translit_suggest", move |ctx| {
         auth::require(ctx)?;
-        translit::suggest(ctx, &input.text, input.direction).map(|items| Suggestions { items })
+        translit::suggest_for(
+            ctx,
+            &input.text,
+            input.direction,
+            input.kind,
+            input.before.as_deref(),
+        )
+        .map(|items| Suggestions { items })
     })
     .await
 }

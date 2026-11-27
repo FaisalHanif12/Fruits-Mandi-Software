@@ -3,7 +3,7 @@
 // opened in a plain browser tab and photographed in both languages and at every window size. The
 // flags in the hash choose the screen: none is the sale book; `?id=41` a saved بکری; `?id=41&edit=7`
 // its first entry open for edit; `?today` the list; `?stock` the goods left;
-// `?over` Umar's case of plan 57 (50 in the lot, one line; type 70 over its quantity); `?umar` Umar's case of D8 plan 61 (a lot of 200, type three lines, the third with the rate 900); `?thousand` 1,000 sale lines in one lot, to time typing, moving and the summary; `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer; `?own` the
+// `?cards` adds a garden card and a trip card to the summary (plan 97 item 5); `?over` Umar's case of plan 57 (50 in the lot, one line; type 70 over its quantity); `?umar` Umar's case of D8 plan 61 (a lot of 200, type three lines, the third with the rate 900); `?thousand` 1,000 sale lines in one lot, to time typing, moving and the summary; `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer; `?own` the
 // lot of trip goods of E2E-34 (with `?stock`, `?id=1` and `?id=1&edit=4` the same lot saved, in
 // the goods left list and open for edit), answered with the backend's real files; `?tripday` a new
 // بکری with two purchases of today already in it as lots (plan 33). Never shipped: the route exists

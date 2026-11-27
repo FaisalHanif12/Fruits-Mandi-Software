@@ -130,6 +130,8 @@ export function ExpenseForm({ draft, onChange, error, marks }: ExpenseFormProps)
           {(props) => (
             <FreeTextInput
               {...props}
+              // A person or a shop: typed as a name, not as everyday words (plan 99).
+              kind="name"
               value={draft.paidTo}
               onChange={(paidTo) => {
                 onChange({ paidTo });
@@ -178,6 +180,7 @@ export function ExpenseForm({ draft, onChange, error, marks }: ExpenseFormProps)
             {(props) => (
               <FreeTextInput
                 {...props}
+                kind="name"
                 value={draft.takenBy}
                 onChange={(takenBy) => {
                   onChange({ takenBy });

@@ -1,0 +1,71 @@
+{
+  "rows": [
+    {
+      "id": 1,
+      "version": 2,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "source": "other_shop",
+      "lot": null,
+      "credit_account": {
+        "id": 35,
+        "code": "0012",
+        "name_ur": "حاجی نذیر",
+        "name_en": "Haji Nazeer"
+      },
+      "item": {
+        "id": 2,
+        "code": "0041",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 2,
+      "weight_grams": null,
+      "rate_paisa": 140000,
+      "value_paisa": 260000,
+      "deduction_paisa": 20000,
+      "gross_paisa": 280000,
+      "note": null,
+      "status": "saved",
+      "cancel_reason": null,
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "amount_paisa": 260000
+        }
+      ],
+      "journal_entry_id": 4,
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "qty": 2,
+    "value_paisa": 260000,
+    "deduction_paisa": 20000,
+    "gross_paisa": 280000
+  },
+  "months": [],
+  "partners_locked": false
+}

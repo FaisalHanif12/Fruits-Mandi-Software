@@ -91,6 +91,39 @@ fn the_next_day_with_no_sale_has_no_rows_and_the_others_are_the_total_of_r20() {
     assert_eq!(rupees_of(others.total_due.amount_paisa), 21_564);
     assert_eq!(rupees_of(sheet.all_totals.total_due.amount_paisa), 21_564);
     assert_eq!(sheet.all_totals.total_due.side, BalanceSide::Dr);
+    // Plan 97 item 6: the others are listed one by one, by name in the Urdu order (ا ر before ا ک),
+    // with پچھلا بقایا and کل ادھار, and they add up to the total of the others.
+    let listed: Vec<(String, i64, i64)> = sheet
+        .other_rows
+        .iter()
+        .map(|r| {
+            (
+                r.party.name_en.clone(),
+                rupees_of(r.previous_due.amount_paisa),
+                rupees_of(r.total_due.amount_paisa),
+            )
+        })
+        .collect();
+    assert_eq!(
+        listed,
+        vec![
+            ("Arshad Multani".to_owned(), 18_684, 18_684),
+            ("Akram Toll Tax".to_owned(), 2_880, 2_880),
+        ]
+    );
+    assert!(sheet.other_rows.iter().all(|r| {
+        r.previous_due.side == BalanceSide::Dr
+            && r.total_due.side == BalanceSide::Dr
+            && r.party.person_key.is_none()
+    }));
+    assert_eq!(
+        sheet
+            .other_rows
+            .iter()
+            .map(|r| rupees_of(r.total_due.amount_paisa))
+            .sum::<i64>(),
+        rupees_of(others.total_due.amount_paisa)
+    );
     let tile = mandi_reports::dashboard::get(
         w.env.ctx.db(),
         mandi_reports::dashboard::BackupFacts {
@@ -105,7 +138,8 @@ fn the_next_day_with_no_sale_has_no_rows_and_the_others_are_the_total_of_r20() {
 }
 
 #[test]
-fn the_adhari_print_has_every_buyer_the_others_row_and_the_whole_total() {
+fn the_adhari_print_has_every_buyer_the_sum_of_todays_buyers_and_the_whole_total() {
+    use mandi_reports::reports::RowKind;
     let w = full_day();
     for language in [Language::Ur, Language::En] {
         let print = adhari_sheet_print_data(
@@ -117,15 +151,19 @@ fn the_adhari_print_has_every_buyer_the_others_row_and_the_whole_total() {
             },
         )
         .unwrap();
-        // اکرم and ارشد; the چکتا buyer شاہد is not a row (PRD R5 v1.57).
-        assert_eq!(print.rows.len(), 2);
+        // اکرم and ارشد; the چکتا buyer شاہد is not a row (PRD R5 v1.57). Under them one row of sums
+        // (Group), "today's buyers" (plan 97 item 6).
+        let kinds: Vec<RowKind> = print.rows.iter().map(|r| r.kind).collect();
+        assert_eq!(kinds, [RowKind::Normal, RowKind::Normal, RowKind::Group]);
+        assert_eq!(print.row_count, "2");
         // party, goods, bill, today's ادھار, پچھلا بقایا, کل ادھار: no نقد column (PRD R5 v1.57).
         assert_eq!(print.columns.len(), 6);
         assert!(print.columns.iter().all(|c| c.key != "cash"));
         assert_eq!(print.frame.header.title_id, "print-adhari-sheet-title");
-        // No others today: the total of today's buyers, then کل ادھار.
-        assert_eq!(print.extra_totals.len(), 1);
-        assert_eq!(print.extra_totals[0].label_id, "print-adhari-sheet-all");
+        // The totals row is کل ادھار for all buyers; nobody else owes, so there is no others
+        // heading, and no dead or credit row.
+        assert_eq!(print.totals_label_id, "print-adhari-sheet-all");
+        assert!(print.extra_totals.is_empty());
         assert!(print.words.is_some());
     }
     // A future day is refused.
@@ -139,6 +177,72 @@ fn the_adhari_print_has_every_buyer_the_others_row_and_the_whole_total() {
         )
         .is_err()
     );
+}
+
+/// Plan 97 item 6: the next day, with no sale, the print lists the other buyers by name under a
+/// heading, after the row of sums of today's buyers; the totals row is کل ادھار for all of them.
+#[test]
+fn the_adhari_print_of_a_day_with_no_sale_lists_the_other_buyers_by_name() {
+    use mandi_reports::reports::RowKind;
+    let w = full_day();
+    set_today(&w.env, 2026, 10, 11);
+    let print = adhari_sheet_print_data(
+        w.env.ctx.db(),
+        &AdhariSheetPrintInput {
+            date: "11-10-2026".into(),
+            language: Language::En,
+            paper: None,
+        },
+    )
+    .unwrap();
+    // The sums of today's buyers (none), the heading, then ارشد and اکرم.
+    let kinds: Vec<RowKind> = print.rows.iter().map(|r| r.kind).collect();
+    assert_eq!(
+        kinds,
+        [
+            RowKind::Group,
+            RowKind::Group,
+            RowKind::Normal,
+            RowKind::Normal
+        ]
+    );
+    assert_eq!(print.row_count, "2");
+    assert_eq!(print.totals_label_id, "print-adhari-sheet-all");
+    assert!(print.extra_totals.is_empty());
+    assert!(print.words.is_some());
+}
+
+/// A buyer in the dead amount who bought nothing is not listed among the others, and the total of the
+/// others leaves him out, as R20 does (PRD FR-10.10, plan 97 item 6).
+#[test]
+fn a_person_in_the_dead_amount_is_not_one_of_the_other_buyers() {
+    use mandi_services::core::dead::{DeadMarkInput, DeadReason};
+    let w = full_day();
+    set_today(&w.env, 2026, 10, 11);
+    mandi_services::dead::mark(
+        &w.env.ctx,
+        &w.owner,
+        &DeadMarkInput {
+            account_id: w.arshad,
+            entry_date: "11-10-2026".into(),
+            reason: DeadReason::Died,
+            note: String::new(),
+        },
+    )
+    .unwrap();
+    let sheet = adhari(&w, "11-10-2026");
+    let names: Vec<&str> = sheet
+        .other_rows
+        .iter()
+        .map(|r| r.party.name_en.as_str())
+        .collect();
+    assert_eq!(names, ["Akram Toll Tax"]);
+    assert_eq!(sheet.others_count, 1);
+    assert_eq!(
+        rupees_of(sheet.others.as_ref().unwrap().total_due.amount_paisa),
+        2_880
+    );
+    assert_eq!(rupees_of(sheet.all_totals.total_due.amount_paisa), 2_880);
 }
 
 // ---- A6: an opening balance on a day slip is its own line ----

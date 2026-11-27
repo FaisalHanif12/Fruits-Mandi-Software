@@ -28,7 +28,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { backendReopens, confirmFixDay } from '../helpers/fix-day';
-import { fakeGardens } from '../helpers/gardens';
+import { fakeGardens, fakeUnsoldArrivals, noArrivals } from '../helpers/gardens';
 import { lineCell, lineCellText, linesSection, typeArrivalLine } from '../helpers/goods-lines';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
@@ -421,7 +421,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
 
   it('lists the entries of the garden with what is left, and the card has the figures and the day to sell', async () => {
     fakeGardens();
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue(arrivals.ARRIVALS_IN_STOCK);
+    fakeUnsoldArrivals(arrivals.ARRIVALS_IN_STOCK);
     await open();
     const row = await waitFor(() => {
       const found = document.querySelector('.ag-row[row-id="1"]');
@@ -431,7 +431,10 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     expect(visible(row.querySelector('[col-id="number"]')?.textContent)).toBe(
       message(language, 'gardens-arrival-number', { number: 1 }),
     );
-    expect(visible(row.querySelector('[col-id="qty_left"]')?.textContent)).toBe('100');
+    // Arrived 100, none sold yet, all left for our shop.
+    expect(visible(row.querySelector('[col-id="qty"]')?.textContent)).toBe('100');
+    expect(visible(row.querySelector('[col-id="qty_sold"]')?.textContent)).toBe('0');
+    expect(visible(row.querySelector('[col-id="qty_our_left"]')?.textContent)).toBe('100');
     const card = (
       await screen.findByText(
         said(
@@ -454,7 +457,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     const fake = fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [
         {
@@ -502,7 +505,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [{ ...first, qty_left: 100, qty_other: 0, qty_our_left: 100, qty_other_left: 0 }],
     });
@@ -539,11 +542,15 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
       shop_name: index === 100 ? 'Noor Shop' : null,
     }));
     vi.mocked(gardensApi.gardensArrivalsList).mockImplementation((input) =>
-      Promise.resolve({
-        ...arrivals.ARRIVALS_IN_STOCK,
-        rows: all.slice(input.offset, input.offset + input.limit),
-        total_count: all.length,
-      }),
+      Promise.resolve(
+        input.state === 'sold_out'
+          ? noArrivals()
+          : {
+              ...arrivals.ARRIVALS_IN_STOCK,
+              rows: all.slice(input.offset, input.offset + input.limit),
+              total_count: all.length,
+            },
+      ),
     );
     const { user } = await open();
     await user.click(
@@ -567,7 +574,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [
         {
@@ -615,7 +622,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [
         {
@@ -683,7 +690,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     const fake = fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [{ ...first, qty_left: 100, qty_our_left: 60, qty_other: 40, qty_other_left: 40 }],
     });
@@ -723,7 +730,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [{ ...first, qty_left: 100, qty_our_left: 60, qty_other: 40, qty_other_left: 40 }],
     });
@@ -752,7 +759,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the fixture has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       // The backend's own list has no sale yet, so the figures are made up here: 700 + 700 + 100.
       rows: [
@@ -802,7 +809,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
 
   it('change the day to sell: the box starts with the day now, and the new day goes with the version', async () => {
     fakeGardens();
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue(arrivals.ARRIVALS_IN_STOCK);
+    fakeUnsoldArrivals(arrivals.ARRIVALS_IN_STOCK);
     vi.mocked(gardensApi.gardensArrivalSetSellDate).mockResolvedValue(
       arrivals.ARRIVAL_SET_SELL_DATE,
     );
@@ -833,7 +840,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
 
   it('write off: the quantity and the reason go to the backend; more than is left is refused in the box', async () => {
     fakeGardens();
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue(arrivals.ARRIVALS_IN_STOCK);
+    fakeUnsoldArrivals(arrivals.ARRIVALS_IN_STOCK);
     vi.mocked(gardensApi.gardensArrivalWriteOff).mockRejectedValueOnce(
       fail({ code: 'ERR_WRITE_OFF_EXCEEDS_BALANCE', field: 'qty', values: { available: 100 } }),
     );
@@ -873,7 +880,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
 
   it('cancel: the reason goes to the backend with the version; an entry with sales cannot be cancelled', async () => {
     fakeGardens();
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue(arrivals.ARRIVALS_IN_STOCK);
+    fakeUnsoldArrivals(arrivals.ARRIVALS_IN_STOCK);
     vi.mocked(gardensApi.gardensArrivalCancel).mockResolvedValue(arrivals.ARRIVAL_CANCEL);
     const { user } = await open();
     await screen.findByText(
@@ -914,7 +921,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     fakeGardens();
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the backend file has no arrival');
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [{ ...first, entry_date: '2026-10-05', needs_reopen: true, can_edit: true }],
     });
@@ -930,7 +937,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
 
   it('an entry that was sold in part cannot be cancelled: the button is dimmed', async () => {
     fakeGardens();
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+    fakeUnsoldArrivals({
       ...arrivals.ARRIVALS_IN_STOCK,
       rows: [arrivals.ARRIVAL_AFTER_A_SALE],
     });

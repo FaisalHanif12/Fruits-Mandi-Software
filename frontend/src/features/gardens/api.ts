@@ -9,6 +9,8 @@ import type { GardenArrivalEditInput } from '../../bindings/GardenArrivalEditInp
 import type { GardenCloseRequest } from '../../bindings/GardenCloseRequest';
 import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
 import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput';
+import type { GardensSaleMoney } from '../../bindings/GardensSaleMoney';
+import type { GardensSaleMoneyInput } from '../../bindings/GardensSaleMoneyInput';
 import type {
   ArrivalCancelInput,
   ArrivalCancelled,
@@ -202,6 +204,15 @@ export function gardensArrivalEditSave(input: GardenArrivalEditInput): Promise<E
 /** The review of an edit of the header of a garden: the names, the item, the rent, the season end. */
 export function gardensHeaderEditPreview(input: GardenHeaderEditInput): Promise<EditPreview> {
   return callCommand<EditPreview>('gardens_header_edit_preview', { input });
+}
+
+/**
+ * Where the garden's sale money is (PRD FR-12.53): one row for each sale line of its lots, one for the
+ * charges of a lot and one for each sale in another shop, a page at a time, with the totals over the
+ * whole filter. Read only.
+ */
+export function gardensSaleMoney(input: GardensSaleMoneyInput): Promise<GardensSaleMoney> {
+  return callCommand<GardensSaleMoney>('gardens_sale_money', { input });
 }
 
 /** Saves the edit of the header of a garden. */

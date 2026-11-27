@@ -3,6 +3,10 @@
 //! its own date, an audit row says "opening on a closed day", and only a date after today is refused.
 //! A CHANGED opening and the openings grid keep `ERR_DATE_CLOSED`. Owner: `robustness`.
 //!
+//! PRD FR-10.9 v1.60 (plan 99, Umar 27-11-2026): a new PARTY account's opening goes through روکڑ,
+//! so on a closed day it is refused. The any-day rule of FR-10.11 stays for accounts whose opening
+//! goes to ابتدائی فرق (here a payables account). Follow-up for the robustness gate.
+//!
 //! Backend asked for attacks on: an opening dated before the first transaction, in a month that is
 //! closed, a seller's opening advance, and a 0103 (money lent) or 0603 (drawings) account. In every
 //! case:
@@ -73,6 +77,28 @@ fn with_opening(kind: AccountType, name: (&str, &str), date: &str, dr: &str) -> 
     form.opening_date = date.into();
     form.opening_dr = dr.into();
     form
+}
+
+/// [`with_opening`] for an account whose opening goes to ابتدائی فرق, a "دیگر" account under the
+/// payables control 0201: it still takes its opening on a closed day (FR-10.11).
+fn payable_with_opening(w: &World, name: (&str, &str), date: &str, dr: &str) -> AccountInput {
+    let control = one(
+        &w.dir,
+        "SELECT id FROM account_controls WHERE code = '0201'",
+    );
+    let mut form = with_opening(AccountType::Other, name, date, dr);
+    form.control_id = Some(control);
+    form
+}
+
+/// A new party's opening on a closed day is refused and writes nothing (FR-10.9 v1.60).
+fn assert_party_refused_on_a_closed_day(w: &World, form: &AccountInput) {
+    let before = fingerprint(&w.dir);
+    assert_eq!(
+        code_of(accounts::save(&w.env.ctx, &w.owner, form).unwrap_err()),
+        ErrorCode::ErrDateClosed
+    );
+    assert_eq!(fingerprint(&w.dir), before, "the refusal wrote something");
 }
 
 fn code_of(error: ServiceError) -> ErrorCode {
@@ -342,7 +368,7 @@ fn an_opening_in_a_month_that_is_closed_saves_and_changes_no_partner_and_no_mont
     let saved = accounts::save(
         &w.env.ctx,
         &w.owner,
-        &with_opening(AccountType::Buyer, ("ناصر", "Nasir"), "15-10-2026", "7,770"),
+        &payable_with_opening(&w, ("ناصر", "Nasir"), "15-10-2026", "7,770"),
     )
     .expect("a new account's opening in a closed month saves");
     assert_eq!(saved.opening_dr_paisa.rupees(), 7_770);
@@ -464,7 +490,7 @@ fn a_closed_days_close_row_stays_as_it_was_and_the_opening_is_audited_and_balanc
     let saved = accounts::save(
         &w.env.ctx,
         &w.owner,
-        &with_opening(AccountType::Buyer, ("ناصر", "Nasir"), "15-10-2026", "1,000"),
+        &payable_with_opening(&w, ("ناصر", "Nasir"), "15-10-2026", "1,000"),
     )
     .unwrap();
     // (a) The audit row names the account, the amount and the date.
@@ -520,8 +546,14 @@ fn a_sellers_opening_advance_on_a_closed_day_is_an_advance_and_a_buyers_is_not()
         "5,000",
     );
     seller.opening_is_advance = true;
+    assert_party_refused_on_a_closed_day(&w, &seller);
+    seller.opening_date = "06-10-2026".into();
     let saved = accounts::save(&w.env.ctx, &w.owner, &seller).expect("a seller's advance saves");
-    assert_eq!(audit_reasons(&w), was + 1);
+    assert_eq!(
+        audit_reasons(&w),
+        was,
+        "an open day needs no closed-day row"
+    );
     let advance_lines = one(
         &w.dir,
         &format!(
@@ -538,7 +570,7 @@ fn a_sellers_opening_advance_on_a_closed_day_is_an_advance_and_a_buyers_is_not()
     assert_books(&w, "a seller's opening advance");
     // A buyer cannot have an advance: refused, or the line is not marked as one. Never a quiet advance.
     let before = fingerprint(&w.dir);
-    let mut buyer = with_opening(AccountType::Buyer, ("ناصر", "Nasir"), "01-10-2026", "5,000");
+    let mut buyer = with_opening(AccountType::Buyer, ("ناصر", "Nasir"), "06-10-2026", "5,000");
     buyer.opening_is_advance = true;
     match accounts::save(&w.env.ctx, &w.owner, &buyer) {
         Err(error) => {
@@ -559,7 +591,7 @@ fn a_sellers_opening_advance_on_a_closed_day_is_an_advance_and_a_buyers_is_not()
     // An advance with a credit is no advance: refused.
     let before = fingerprint(&w.dir);
     let mut credit = account_input(AccountType::Seller, "جمیل", "Jameel");
-    credit.opening_date = "01-10-2026".into();
+    credit.opening_date = "06-10-2026".into();
     credit.opening_cr = "5,000".into();
     credit.opening_is_advance = true;
     match accounts::save(&w.env.ctx, &w.owner, &credit) {
@@ -591,18 +623,17 @@ fn id_by_sql(w: &World, sql: &str) -> i64 {
 fn a_person_lent_money_gets_his_opening_on_a_closed_day_and_the_drawings_account_only_a_debit() {
     let w = support::world();
     close_through(&w, "05-10-2026");
-    // 0103: a new money-lent person with an opening on a closed day.
-    let lent = accounts::save(
-        &w.env.ctx,
-        &w.owner,
-        &with_opening(
-            AccountType::MoneyLent,
-            ("اسلم", "Aslam"),
-            "01-10-2026",
-            "2,000",
-        ),
-    )
-    .expect("a new 0103 account with an opening on a closed day");
+    // 0103: a new money-lent person is a party: refused on a closed day, saved on an open one.
+    let mut form = with_opening(
+        AccountType::MoneyLent,
+        ("اسلم", "Aslam"),
+        "01-10-2026",
+        "2,000",
+    );
+    assert_party_refused_on_a_closed_day(&w, &form);
+    form.opening_date = "06-10-2026".into();
+    let lent = accounts::save(&w.env.ctx, &w.owner, &form)
+        .expect("a new 0103 account with an opening on an open day");
     assert!(lent.code.starts_with("0103"), "{}", lent.code);
     assert_eq!(
         ledger::account_balance(&w.env.ctx, lent.id)
@@ -743,10 +774,11 @@ fn a_repeated_new_account_with_the_same_name_and_opening_is_asked_and_not_double
     // twice: the second is a duplicate warning or a refusal, and the books carry one opening.
     let w = support::world();
     close_through(&w, "05-10-2026");
-    let form = with_opening(AccountType::Buyer, ("ناصر", "Nasir"), "01-10-2026", "100");
+    // A party's opening needs an open day (FR-10.9 v1.60).
+    let form = with_opening(AccountType::Buyer, ("ناصر", "Nasir"), "06-10-2026", "100");
     accounts::save(&w.env.ctx, &w.owner, &form).unwrap();
     let again = accounts::save(&w.env.ctx, &w.owner, &form);
-    let openings = openings_on(&w, "2026-10-01");
+    let openings = openings_on(&w, "2026-10-06");
     match again {
         Ok(_) => assert_eq!(
             openings, 2,

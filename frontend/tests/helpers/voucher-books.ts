@@ -185,11 +185,6 @@ export function createBooks(options: BooksOptions = {}) {
     const errors: FieldError[] = [];
     const warnings: FieldError[] = [];
     if (decimals) errors.push({ code: 'ERR_DECIMALS_NOT_ALLOWED', field: 'amount', values: {} });
-    // Money given to a buyer, by a payment or by a پیشگی, is cash lent and needs a reason (plan 88,
-    // PRD FR-15.11).
-    if (entry.type !== 'receipt' && party?.type === 'buyer' && (entry.reason ?? '').trim() === '') {
-      errors.push({ code: 'ERR_PAYMENT_TO_BUYER_NEEDS_REASON', field: 'reason', values: {} });
-    }
     const buyer = party?.type === 'buyer';
     const seller = party?.type === 'seller';
     const due = dueOf(id);
@@ -299,6 +294,8 @@ export function createBooks(options: BooksOptions = {}) {
     store.rows.push({
       id: voucherId,
       voucher_type: kind,
+      // A پیشگی typed for a buyer is saved as a payment and remembered as پیشگی (PRD FR-15.11 v1.60).
+      entered_as: built.type === 'advance' && kind === 'payment' ? 'advance' : null,
       number,
       ...(partyOf(id) === undefined ? {} : { account_type: partyOf(id)?.type ?? 'other' }),
       entry_date: isoOf(input.date),
@@ -577,6 +574,7 @@ export function voucherRow(overrides: Partial<VoucherRow> = {}): VoucherRow {
   return {
     id: 501,
     voucher_type: 'receipt',
+    entered_as: null,
     number: 1,
     entry_date: TODAY_ISO,
     account: refOf(21),

@@ -16,6 +16,7 @@ import { displayName, useLanguage } from '../../../shared/i18n';
 import { ErrorMessage, Num, ReasonDialog, showToast } from '../../../shared/ui';
 import { useCancelVoucher } from '../hooks';
 import { screenTypeOf } from '../screen-type';
+import { keptKindOf } from '../draft';
 import { voucherNumberText } from '../list-columns';
 import type { VoucherCancelled, VoucherRow } from '../types';
 
@@ -57,7 +58,7 @@ export function CancelVoucherDialog({ row, onClose, onCancelled }: CancelVoucher
           'success',
           type === null
             ? l10n.getString('vouchers-cancelled-other', { number })
-            : l10n.getString('vouchers-cancelled', { kind: type, number }),
+            : l10n.getString('vouchers-cancelled', { kind: keptKindOf(row, type), number }),
         );
         setCashConfirmed(false);
         onCancelled(cancelled);

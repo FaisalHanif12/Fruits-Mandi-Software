@@ -165,10 +165,40 @@
         }
       ],
       "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "print-adhari-sheet-total"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "31,564"
+        },
+        {
+          "type": "money",
+          "text": "31,564"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        },
+        {
+          "type": "balance",
+          "text": "31,564",
+          "side_id": "report-side-dr"
+        }
+      ],
+      "kind": "group"
     }
   ],
   "row_count": "2",
-  "totals_label_id": "print-adhari-sheet-total",
+  "totals_label_id": "print-adhari-sheet-all",
   "totals": [
     {
       "type": "empty"
@@ -199,35 +229,5 @@
     "label_id": "print-in-words",
     "text": "اکتیس ہزار پانچ سو چونسٹھ روپے"
   },
-  "extra_totals": [
-    {
-      "label_id": "print-adhari-sheet-all",
-      "cells": [
-        {
-          "type": "empty"
-        },
-        {
-          "type": "empty"
-        },
-        {
-          "type": "money",
-          "text": "31,564"
-        },
-        {
-          "type": "money",
-          "text": "31,564"
-        },
-        {
-          "type": "balance",
-          "text": "0",
-          "side_id": "report-side-zero"
-        },
-        {
-          "type": "balance",
-          "text": "31,564",
-          "side_id": "report-side-dr"
-        }
-      ]
-    }
-  ]
+  "extra_totals": []
 }

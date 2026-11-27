@@ -70,7 +70,7 @@ pub use follow_up::follow_up_text;
 pub use measure_words::{SaleAsk, asked_sale_measure};
 pub use party_flow::which_one_party;
 pub use plan::{PlanFilters, ReportPlan};
-pub use reads::{PlannedRead, plan_pre_reads, plan_reads};
+pub use reads::{PlannedRead, plan_pre_reads, plan_reads, plan_scope_reads};
 
 /// The days the typed question asks, when it names exactly one period that the app reads with
 /// certainty and that is not in the future: its first and last day, `YYYY-MM-DD`. Read from the words
@@ -861,6 +861,15 @@ pub struct Understanding {
     /// True when the question asks for the last one ("aakhri", "last", "pichla") and names no period:
     /// the last rate of an item sold to a buyer is the newest line of his sales (R2).
     pub last_one: bool,
+    /// True when the question asks for the latest بکری ("pichli bikri", "aakhri bikri", "last sale",
+    /// پچھلی بکری): R1 and R5 of it are read ahead for the model (PRD FR-7.87 v1.60).
+    pub last_bikri: bool,
+    /// True when the question speaks of a garden and names none: R36 and view I of every garden are
+    /// read ahead for the model, with no instant figure (PRD FR-7.87 v1.60).
+    pub garden_asked: bool,
+    /// The same for a market trip or the trips' own goods ("apna maal") with no trip named: R33 and
+    /// view J.
+    pub trip_asked: bool,
     /// True when the question asks in how many months something sold ("mooli kitne mahine biki hai"):
     /// the item's sales by month (view D) hold the answer.
     pub months_asked: bool,

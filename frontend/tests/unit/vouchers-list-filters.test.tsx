@@ -136,13 +136,24 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     ).not.toBeInTheDocument();
   });
 
+  // The grid draws its heading again once, just after the first rows; a title taken before that is no
+  // longer on the page (seen on a slow machine). So the click waits until the same title stays put.
+  async function settledTitle(column: string): Promise<HTMLElement> {
+    let last: HTMLElement | null = null;
+    for (let tries = 0; tries < 40; tries += 1) {
+      const now = document.querySelector<HTMLElement>(
+        `.ag-header-cell[col-id="${column}"] .ag-header-cell-text`,
+      );
+      if (now !== null && now === last) return now;
+      last = now;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    throw new Error(`no settled title of ${column}`);
+  }
+
   it('a click on the amount title asks the backend for that order', async () => {
     const { user } = await open();
-    const title = document.querySelector<HTMLElement>(
-      '.ag-header-cell[col-id="amount"] .ag-header-cell-text',
-    );
-    if (title === null) throw new Error('no title');
-    await user.click(title);
+    await user.click(await settledTitle('amount'));
     await waitFor(() => {
       // The app language goes with the sort: names then sort in the alphabet of the screen.
       expect(lastCall()?.sort).toEqual({ column: 'amount_paisa', direction: 'asc', language });

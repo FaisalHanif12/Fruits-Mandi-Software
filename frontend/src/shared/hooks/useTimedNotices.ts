@@ -14,6 +14,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLatest } from './useLatest';
 
+/**
+ * How long every short warning or error note of an entry screen stays on screen, in milliseconds (plan 97 item 4, PRD
+ * FR-12.52, Umar 24-11-2026, Code Standards G8). The one value for the notes above the lots, the notes under the grids,
+ * the "all sold" note and the error bubble of a field (`ERROR_BUBBLE_MS` is this value).
+ */
+export const NOTICE_MS = 5_000;
+
 export function useTimedNotices(
   keys: readonly string[],
   pulse: number,

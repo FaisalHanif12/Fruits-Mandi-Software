@@ -7,6 +7,8 @@
 import type { BuyerDuesPage } from '../../src/bindings/BuyerDuesPage';
 import type { LentDues } from '../../src/bindings/LentDues';
 import type { PartnerVentureCard } from '../../src/bindings/PartnerVentureCard';
+import type { PartnersOpenVenturesInput } from '../../src/bindings/PartnersOpenVenturesInput';
+import { openVenturesAnswer } from './partner-ventures';
 import { paisaForTest } from './paisa';
 
 type Input = Record<string, unknown>;
@@ -112,6 +114,7 @@ const VENTURES: PartnerVentureCard[] = [
   {
     venture_id: 1,
     kind: 'garden',
+    entry_date: '2026-10-01',
     number: 1,
     code: '0080',
     name_ur: 'شاہ پور باغ',
@@ -125,6 +128,7 @@ const VENTURES: PartnerVentureCard[] = [
   {
     venture_id: 2,
     kind: 'trip',
+    entry_date: '2026-10-10',
     number: 1,
     code: '0070',
     name_ur: 'سفر ۱',
@@ -140,5 +144,6 @@ const VENTURES: PartnerVentureCard[] = [
 export const plan76Handlers: Record<string, (input: Input) => unknown> = {
   dashboard_buyer_dues: () => BUYER_DUES,
   lent_dues: () => LENT_DUES,
-  partners_open_ventures: () => VENTURES,
+  partners_open_ventures: (input) =>
+    openVenturesAnswer(VENTURES, input as unknown as PartnersOpenVenturesInput),
 };

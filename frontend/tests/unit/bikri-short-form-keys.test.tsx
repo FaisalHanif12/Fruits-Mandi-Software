@@ -25,8 +25,8 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeFirstLine,
   typeHeaderAndLot,
-  typeTwoLines,
 } from '../helpers/bikri-screen';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { message } from '../helpers/render';
@@ -80,11 +80,14 @@ describe.each(LANGUAGES)('the short forms of the بکری screen, by keyboard (%
     });
     await user.keyboard(text.slice(1));
   }
-  /** The buyer cell of a third line is asked for a name nobody has; the second add row opens the چکتا form. */
+  /**
+   * The buyer cell of the second line is asked for a name nobody has; the second add row opens the چکتا form. (Two
+   * lines would sell the whole lot of 50 and add no line to type in, PRD FR-12.52.)
+   */
   async function openChuktaForm() {
     const book = await openBook(language);
     await typeHeaderAndLot(book.user, language);
-    await typeTwoLines(book.user, language);
+    await typeFirstLine(book.user, language);
     await typeInCell(book.user, newBuyer);
     await screen.findByText(say('search-no-match'));
     await book.user.keyboard('{ArrowDown}{ArrowDown}{Enter}');

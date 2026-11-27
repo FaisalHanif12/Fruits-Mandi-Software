@@ -1,35 +1,57 @@
-//! The روکڑ بک (PRD 16.1, FR-19.11, plan 17): every cash in and out from all modules, one page at a
-//! time, with the opening and closing cash and the totals over the whole range. There is no cash
-//! count (PRD FR-16.1): the book only shows what was posted.
+//! The روکڑ بک (PRD 16.1, FR-16.14 v1.60, FR-19.11, plan 17, plan 99): every cash in and out from all
+//! modules, one page at a time, with the cards (کل سرمایہ, شروع میں روکڑ, آخر میں روکڑ), the totals
+//! and the in and out of each type over the whole range. There is no cash count (PRD FR-16.1): the
+//! book only shows what was posted.
 //!
-//! One row is one journal entry that moves cash. The running cash is the opening cash plus the
-//! sums of the rows up to it, over the whole range, so a page far down has the right figure. The
-//! sums are `SUM()` on INTEGER columns; the differences are worked out here with checked maths.
+//! A row is one journal entry that moves cash, or, for a بکری posting, what cash received from the
+//! buyers or what it gave the sellers. By default only the entries in force are rows (an edited entry
+//! shows once; a cancelled one not at all); `show_reversed` adds the reversed ones and their الٹا
+//! اندراج. Totals, summary and cards are over the entries in force, so the switch never changes them.
+//!
+//! The running cash is the opening cash plus the sums of the rows up to it, over the whole range, so a
+//! page far down has the right figure. The sums are `SUM()` on INTEGER columns; the differences are
+//! worked out here with checked maths.
 
 use std::collections::HashMap;
 
 use mandi_db::accounts as account_repo;
 use mandi_db::cashbook as repo;
+use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::RecordRef;
 use mandi_domain::core::cashbook::{
-    CapitalWhere, CapitalWhereInput, Cashbook, CashbookInput, CashbookKind, CashbookRow,
-    CashbookTotals,
+    CashGroup, CashGroupSummary, CashKind, CashRefs, CashRowStatus, Cashbook, CashbookInput,
+    CashbookRow, CashbookTotals, MAX_ROW_PARTIES,
 };
+use mandi_domain::core::codes::{CodeType, number_code};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::row_source::RowSource;
 use mandi_domain::core::validate::{self, FieldErrors};
 
-use crate::capital_card;
 use crate::cash::CASH_ACCOUNT_CODE;
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
 use crate::page;
 
+/// The controls whose lines are the partners' side of linked money (PRD FR-16.6, FR-16.13): never
+/// the party of a cash row.
+const LINKED_CONTROLS: [&str; 2] = ["0605", "0307"];
+
 fn paisa(value: i64) -> Result<Paisa, ServiceError> {
     Paisa::try_from_paisa(value).map_err(money_error)
+}
+
+/// In less out, signed.
+fn net(in_paisa: i64, out_paisa: i64) -> Result<Paisa, ServiceError> {
+    paisa(in_paisa)?
+        .checked_sub(paisa(out_paisa)?)
+        .map_err(money_error)
+}
+
+fn data(message: &str) -> ServiceError {
+    ServiceError::Data(message.to_owned())
 }
 
 /// A date bound of the range: empty is open.
@@ -43,11 +65,33 @@ fn bound(
     errors.take(validate::date(field, text, today))
 }
 
-/// One page of the cash book with the opening and closing cash and the totals over the whole
-/// range (PRD FR-19.11). Without `from` the book starts at the first entry and the opening is 0.
+/// The order of the sort asked for.
+fn order_of(input: &CashbookInput) -> Result<repo::Order, ServiceError> {
+    let Some(sort) = &input.sort else {
+        return Ok(repo::Order::Date { desc: false });
+    };
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let chosen = sort
+        .order_by(&repo::SORT_COLUMNS)
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    Ok(match sort.column.as_str() {
+        "entry_date" => repo::Order::Date {
+            desc: sort.direction == SortDirection::Desc,
+        },
+        "in_paisa" | "out_paisa" => repo::Order::Amount {
+            out: sort.column == "out_paisa",
+            desc: sort.direction == SortDirection::Desc,
+        },
+        _ => repo::Order::Other(chosen),
+    })
+}
+
+/// One page of the cash book with the cards, the totals and the summary over the whole range (PRD
+/// FR-16.14, FR-19.11). Without `from` the book starts at the first entry and the opening is 0. Read
+/// only.
 ///
 /// # Errors
-/// The date codes on `from` and `to`; `ServiceError::Db`.
+/// The date codes on `from` and `to`; the sort codes; `ServiceError::Db`.
 pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceError> {
     let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
@@ -55,95 +99,179 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
     let to = bound(&mut errors, "to", input.to.as_deref(), today);
     errors.finish()?;
     let (from_iso, to_iso) = (from.map(BusinessDate::to_iso), to.map(BusinessDate::to_iso));
-    // The sort is checked first: an unknown column is refused (plan 38 R4).
-    let order = match &input.sort {
-        None => repo::Order::Date { desc: false },
-        Some(sort) => {
-            let chosen = sort
-                .order_by(&repo::SORT_COLUMNS)
-                .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
-            match sort.column.as_str() {
-                "entry_date" => repo::Order::Date {
-                    desc: sort.direction == SortDirection::Desc,
-                },
-                "in_paisa" | "out_paisa" => repo::Order::Amount {
-                    out: sort.column == "out_paisa",
-                    desc: sort.direction == SortDirection::Desc,
-                },
-                _ => repo::Order::Other(chosen),
-            }
-        }
-    };
+    let order = order_of(input)?;
     let in_date_order = matches!(order, repo::Order::Date { .. });
+    let kinds: Vec<&str> = input.kinds.iter().flatten().map(|k| k.as_str()).collect();
     ctx.db.read_snapshot(|conn| {
         let cash = account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
-            .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
-        let range = repo::range(conn, cash, from_iso.as_deref(), to_iso.as_deref())?;
-        // The opening is the cash at the end of the day before the first day of the range: the
-        // whole book less what is dated from the first day on (both are kept sums, so a page
-        // after the first does not read the book again).
-        let opening = match from_iso.as_deref() {
-            Some(first) => {
-                let whole = repo::range(conn, cash, None, None)?;
-                let from_first = repo::range(conn, cash, Some(first), None)?;
-                let before_in = whole
-                    .in_paisa
-                    .checked_sub(from_first.in_paisa)
-                    .ok_or_else(|| ServiceError::Data("cash before the range".to_owned()))?;
-                let before_out = whole
-                    .out_paisa
-                    .checked_sub(from_first.out_paisa)
-                    .ok_or_else(|| ServiceError::Data("cash before the range".to_owned()))?;
-                paisa(before_in)?
-                    .checked_sub(paisa(before_out)?)
-                    .map_err(money_error)?
-            }
-            None => Paisa::ZERO,
+            .ok_or_else(|| data("the cash account is missing"))?;
+        let (from, to) = (from_iso.as_deref(), to_iso.as_deref());
+        let filter = repo::Filter {
+            cash_id: cash,
+            from,
+            to,
+            show_reversed: input.show_reversed,
+            kinds: &kinds,
+            split: true,
         };
-        let (total_in, total_out) = (paisa(range.in_paisa)?, paisa(range.out_paisa)?);
+        let live_filter = repo::Filter {
+            show_reversed: false,
+            ..filter
+        };
+        let sums = repo::range_sums(conn, cash, from, to)?;
+        let opening = opening_cash(conn, cash, from)?;
+        // A reversed pair adds the same to cash in and out, so the net of every entry is the net of
+        // the entries in force.
         let closing = opening
-            .checked_add(total_in)
-            .and_then(|v| v.checked_sub(total_out))
+            .checked_add(net(sums.live.in_paisa, sums.live.out_paisa)?)
             .map_err(money_error)?;
-        let stored = repo::page(
+        // The rows shown, and what the totals are over: the entries in force of the same filter.
+        let (set, totals) = if kinds.is_empty() {
+            let set = if input.show_reversed {
+                sums.all
+            } else {
+                sums.live
+            };
+            (set, sums.live)
+        } else {
+            let set = repo::filtered_sums(conn, &filter)?;
+            let totals = if input.show_reversed {
+                repo::filtered_sums(conn, &live_filter)?
+            } else {
+                set
+            };
+            (set, totals)
+        };
+        let keys = repo::page(
             conn,
-            cash,
-            from_iso.as_deref(),
-            to_iso.as_deref(),
+            &filter,
+            set,
             &order,
             i64::from(input.offset),
             page::limit_of(input.limit),
         )?;
-        let ids: Vec<i64> = stored.iter().map(|r| r.entry_id).collect();
-        let others = repo::counterparts(conn, cash, &ids)?;
-        // The partner behind each capital entry of the page (plan 78 E), one query.
-        let capital: HashMap<i64, repo::CapitalPartner> = repo::capital_partners(conn, &ids)?
-            .into_iter()
-            .map(|c| (c.entry_id, c))
-            .collect();
-        let mut rows = Vec::with_capacity(stored.len());
-        for row in &stored {
-            let running = match (row.run_in_paisa, row.run_out_paisa) {
+        let rows = rows_of(conn, cash, &keys, opening)?;
+        // Month headings with their subtotals, for the months this page touches (plan 38 B2).
+        let months = match (
+            input.group_by_month && in_date_order,
+            rows.first(),
+            rows.last(),
+        ) {
+            (true, Some(first), Some(last)) => {
+                let newest_first = matches!(order, repo::Order::Date { desc: true });
+                page::month_subtotals(
+                    repo::months_between(conn, &filter, (&first.entry_date, &last.entry_date))?,
+                    &[("in_paisa", true), ("out_paisa", true)],
+                    newest_first,
+                )
+            }
+            _ => Vec::new(),
+        };
+        let (capital_dr, capital_cr) = repo::capital_sums(conn, to)?;
+        Ok(Cashbook {
+            total_capital_paisa: net(capital_cr, capital_dr)?,
+            opening_paisa: opening,
+            closing_paisa: closing,
+            first_entry_date: repo::first_entry_date(conn, cash)?,
+            rows,
+            total_count: set.rows,
+            totals: CashbookTotals {
+                in_paisa: paisa(totals.in_paisa)?,
+                out_paisa: paisa(totals.out_paisa)?,
+            },
+            summary: summary_of(&repo::sums_by_kind(
+                conn,
+                &repo::Filter {
+                    kinds: &[],
+                    ..live_filter
+                },
+            )?)?,
+            months,
+        })
+    })
+}
+
+/// Cash in hand at the end of the day before the first day of the range: the whole book less what
+/// is dated from the first day on (both are kept sums, so a page after the first does not read the
+/// book again). 0 without a first day.
+fn opening_cash(conn: &Connection, cash: i64, from: Option<&str>) -> Result<Paisa, ServiceError> {
+    let Some(first) = from else {
+        return Ok(Paisa::ZERO);
+    };
+    let whole = repo::range(conn, cash, None, None)?;
+    let from_first = repo::range(conn, cash, Some(first), None)?;
+    net(whole.in_paisa, whole.out_paisa)?
+        .checked_sub(net(from_first.in_paisa, from_first.out_paisa)?)
+        .map_err(money_error)
+}
+
+/// In and out of every group of the type filter, in filter order (PRD FR-16.14).
+fn summary_of(by_kind: &[(String, repo::RowSums)]) -> Result<Vec<CashGroupSummary>, ServiceError> {
+    CashGroup::ALL
+        .into_iter()
+        .map(|group| {
+            let (mut count, mut cash_in, mut cash_out) = (0_i64, Paisa::ZERO, Paisa::ZERO);
+            for (kind, sums) in by_kind {
+                let kind =
+                    CashKind::parse(kind).ok_or_else(|| data("an unknown kind of cash row"))?;
+                if kind.group() != group {
+                    continue;
+                }
+                count = count
+                    .checked_add(sums.rows)
+                    .ok_or_else(|| data("the rows of the cash book do not fit"))?;
+                cash_in = cash_in
+                    .checked_add(paisa(sums.in_paisa)?)
+                    .map_err(money_error)?;
+                cash_out = cash_out
+                    .checked_add(paisa(sums.out_paisa)?)
+                    .map_err(money_error)?;
+            }
+            Ok(CashGroupSummary {
+                group,
+                kinds: CashKind::ALL
+                    .into_iter()
+                    .filter(|k| k.group() == group)
+                    .collect(),
+                count,
+                in_paisa: cash_in,
+                out_paisa: cash_out,
+            })
+        })
+        .collect()
+}
+
+/// The rows of a page, in the order of its keys, with their names and running cash.
+fn rows_of(
+    conn: &Connection,
+    cash: i64,
+    keys: &[repo::PageKey],
+    opening: Paisa,
+) -> Result<Vec<CashbookRow>, ServiceError> {
+    let row_keys: Vec<repo::RowKey> = keys.iter().map(|k| k.key).collect();
+    let facts = repo::rows(conn, cash, &row_keys)?;
+    let mut entry_ids: Vec<i64> = row_keys.iter().map(|k| k.entry_id).collect();
+    entry_ids.sort_unstable();
+    entry_ids.dedup();
+    let lines = repo::entry_lines(conn, &entry_ids)?;
+    let none = Vec::new();
+    keys.iter()
+        .map(|key| {
+            let row = facts
+                .get(&key.key)
+                .ok_or_else(|| data("a row of the cash book is missing"))?;
+            let kind =
+                CashKind::parse(&row.kind).ok_or_else(|| data("an unknown kind of cash row"))?;
+            let running = match (key.run_in_paisa, key.run_out_paisa) {
                 (Some(run_in), Some(run_out)) => Some(
                     opening
-                        .checked_add(paisa(run_in)?)
-                        .map_err(money_error)?
-                        .checked_sub(paisa(run_out)?)
+                        .checked_add(net(run_in, run_out)?)
                         .map_err(money_error)?,
                 ),
                 _ => None,
             };
-            // The other side is shown only when it is one account: the entry of a بکری has many.
-            let account = counterpart(&others, row);
-            let partner = capital.get(&row.entry_id).map(|c| RecordRef {
-                id: c.partner_id,
-                code: String::new(),
-                name_ur: c.name_ur.clone(),
-                name_en: c.name_en.clone(),
-                tag: None,
-            });
-            rows.push(CashbookRow {
-                entry_id: row.entry_id,
+            Ok(CashbookRow {
+                entry_id: key.key.entry_id,
                 entry_date: row.entry_date.clone(),
                 // The پیشگی typed on a lot is its own entry with a بکری as its source (PRD FR-12.52
                 // v1.57): its row says `bikri_advance` and carries the number of the SALE, so it is
@@ -153,10 +281,20 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
                 } else {
                     row.posting_type.clone()
                 },
+                kind,
+                group: kind.group(),
+                status: match row.status.as_str() {
+                    "reversed" => CashRowStatus::Reversed,
+                    "reversal" => CashRowStatus::Reversal,
+                    _ => CashRowStatus::Live,
+                },
                 number: row.number,
-                account,
-                kind: kind_of(row, cash, partner.is_some()),
-                partner,
+                refs: refs_of(
+                    cash,
+                    kind,
+                    row,
+                    lines.get(&key.key.entry_id).unwrap_or(&none),
+                ),
                 narration: if row.narration.is_empty() {
                     row.reason.clone()
                 } else {
@@ -166,56 +304,98 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
                 out_paisa: paisa(row.out_paisa)?,
                 running_paisa: running,
                 source: Some(source_of(row)),
-            });
-        }
-        // Month headings with their subtotals, for the months this page touches (plan 38 B2).
-        let months = match (
-            input.group_by_month && in_date_order,
-            stored.first(),
-            stored.last(),
-        ) {
-            (true, Some(first), Some(last)) => {
-                let newest_first = matches!(order, repo::Order::Date { desc: true });
-                page::month_subtotals(
-                    repo::months_between(
-                        conn,
-                        cash,
-                        (from_iso.as_deref(), to_iso.as_deref()),
-                        (&first.entry_date, &last.entry_date),
-                    )?,
-                    &[("in_paisa", true), ("out_paisa", true)],
-                    newest_first,
-                )
-            }
-            _ => Vec::new(),
-        };
-        Ok(Cashbook {
-            opening_paisa: opening,
-            closing_paisa: closing,
-            first_entry_date: repo::first_entry_date(conn, cash)?,
-            rows,
-            total_count: range.count,
-            totals: CashbookTotals {
-                in_paisa: total_in,
-                out_paisa: total_out,
-            },
-            months,
+            })
         })
-    })
+        .collect()
 }
 
-/// What a row is in the words of the Owner (plan 78 E, PRD FR-16.14): the opening of the cash account,
-/// a partner's opening capital, or capital in or out; any other row is `other`.
-fn kind_of(row: &repo::CashRow, cash: i64, has_partner: bool) -> CashbookKind {
-    match row.posting_type.as_str() {
-        "opening" if row.source_type == "account" && row.source_id == cash => {
-            CashbookKind::OpeningCash
-        }
-        "opening" if has_partner => CashbookKind::OpeningCapital,
-        "capital_in" => CashbookKind::CapitalIn,
-        "capital_out" => CashbookKind::CapitalOut,
-        _ => CashbookKind::Other,
+fn record(named: &repo::Named) -> RecordRef {
+    RecordRef {
+        id: named.id,
+        code: named.code.clone(),
+        name_ur: named.name_ur.clone(),
+        name_en: named.name_en.clone(),
+        tag: named.tag.clone(),
     }
+}
+
+/// The records a row names (PRD FR-16.14): read from the lines of its entry, so an old version of an
+/// edited entry names its own parties.
+fn refs_of(cash: i64, kind: CashKind, row: &repo::CashRow, lines: &[repo::EntryLine]) -> CashRefs {
+    let mut refs = CashRefs::default();
+    if let Some(venture) = &row.venture {
+        let (code_type, slot) = if venture.kind == "garden" {
+            (CodeType::Garden, &mut refs.garden)
+        } else {
+            (CodeType::Trip, &mut refs.trip)
+        };
+        *slot = Some(RecordRef {
+            id: venture.id,
+            code: number_code(code_type, venture.number),
+            name_ur: venture.name_ur.clone(),
+            name_en: venture.name_en.clone(),
+            tag: None,
+        });
+        return refs;
+    }
+    let others = || {
+        lines.iter().filter(move |l| {
+            l.account.id != cash && !LINKED_CONTROLS.contains(&l.control_code.as_str())
+        })
+    };
+    match kind {
+        CashKind::OpeningCash => {}
+        CashKind::OpeningCapital
+        | CashKind::CapitalIn
+        | CashKind::CapitalOut
+        | CashKind::PersonalExpense
+        | CashKind::PersonalReturn => {
+            refs.partner = others().find_map(|l| l.partner.as_ref().map(record));
+        }
+        CashKind::ShopExpense => {
+            refs.expense_head = others().find_map(|l| l.expense_head.as_ref().map(record));
+        }
+        CashKind::BikriPaid | CashKind::BikriSellerCash => {
+            // The cash part of a بکری posts each نقد as seller then cash, and each payment on the
+            // spot as cash then buyer (PRD FR-12.9); a reversal keeps the order of the lines.
+            let buyers = kind == CashKind::BikriPaid;
+            let by_line: HashMap<i64, &repo::EntryLine> =
+                lines.iter().map(|l| (l.line_no, l)).collect();
+            let found = lines
+                .iter()
+                .filter(|l| l.account.id == cash)
+                // Part 1 is cash in, part 2 cash out: only the cash lines of this row's side.
+                .filter(|l| (l.dr_paisa > 0) == (row.key.part == 1))
+                .filter_map(|l| {
+                    let beside = if buyers {
+                        l.line_no.checked_add(1)
+                    } else {
+                        l.line_no.checked_sub(1)
+                    };
+                    beside.and_then(|n| by_line.get(&n).copied())
+                });
+            set_parties(&mut refs, found);
+        }
+        _ => set_parties(&mut refs, others()),
+    }
+    refs
+}
+
+/// The distinct parties of some lines, in their order: at most [`MAX_ROW_PARTIES`] names and the
+/// count of all. Two چکتا buyers on the account 0030 are two parties.
+fn set_parties<'a>(refs: &mut CashRefs, lines: impl Iterator<Item = &'a repo::EntryLine>) {
+    let mut seen: Vec<(i64, &str)> = Vec::new();
+    for line in lines {
+        let key = (line.account.id, line.account.name_ur.as_str());
+        if seen.contains(&key) {
+            continue;
+        }
+        seen.push(key);
+        if refs.parties.len() < MAX_ROW_PARTIES {
+            refs.parties.push(record(&line.account));
+        }
+    }
+    refs.party_count = i64::try_from(seen.len()).unwrap_or(i64::MAX);
 }
 
 /// The record a row opens (PRD FR-19.4). An entry of a trip or a garden opens the trip or the
@@ -224,60 +404,8 @@ fn source_of(row: &repo::CashRow) -> RowSource {
     RowSource::of_stored(
         &row.source_type,
         row.source_id,
-        row.entry_id,
+        row.key.entry_id,
         row.venture_kind.as_deref(),
         row.venture_id,
     )
-}
-
-/// The one account on the other side of an entry that only takes cash in, or only gives it out.
-fn counterpart(
-    others: &HashMap<i64, Vec<repo::Counterpart>>,
-    row: &repo::CashRow,
-) -> Option<RecordRef> {
-    // An entry that does both (cash in on one line and out on another) has no single other side.
-    if row.in_paisa > 0 && row.out_paisa > 0 {
-        return None;
-    }
-    // Cash received (debit) is matched by credits; cash paid out (credit) by debits.
-    let cash_received = row.in_paisa > 0;
-    let mut found: Option<&repo::Counterpart> = None;
-    for line in others.get(&row.entry_id)?.iter() {
-        if line.is_debit == cash_received {
-            continue;
-        }
-        match found {
-            Some(first) if first.account_id != line.account_id => return None,
-            Some(_) => {}
-            None => found = Some(line),
-        }
-    }
-    found.map(|line| RecordRef {
-        id: line.account_id,
-        code: line.code.clone(),
-        name_ur: line.name_ur.clone(),
-        name_en: line.name_en.clone(),
-        tag: line.tag.clone(),
-    })
-}
-
-/// Where the partners' money is now and whose it is (PRD FR-16.14 v1.43 and v1.50): the card on the
-/// روکڑ page as of today. The caller checks the partner code (`ERR_PARTNER_LOCKED`). The work is in
-/// [`crate::capital_card`].
-///
-/// # Errors
-/// `ServiceError::Db`; `ServiceError::Data`; `ERR_OVERFLOW`.
-pub fn capital_where(ctx: &Context) -> Result<CapitalWhere, ServiceError> {
-    capital_card::read(ctx, &CapitalWhereInput::default())
-}
-
-/// [`capital_where`] as of a day (plan 87): every figure counts the entries dated on or before it.
-///
-/// # Errors
-/// `ERR_DATE_*` on `as_of`; as [`capital_where`].
-pub fn capital_where_at(
-    ctx: &Context,
-    input: &CapitalWhereInput,
-) -> Result<CapitalWhere, ServiceError> {
-    capital_card::read(ctx, input)
 }

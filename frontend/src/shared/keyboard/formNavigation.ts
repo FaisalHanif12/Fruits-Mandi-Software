@@ -8,7 +8,14 @@
 // still leave the field like in any text field (data-picker-field). Entering a field
 // selects its whole value. Screens never write their own arrow handlers (Code Standards F27).
 
-import { useMemo, type FocusEvent, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type FocusEvent,
+  type KeyboardEvent,
+} from 'react';
 import { arrowSide, elementDirection, menuSide } from './direction';
 import { focusRegion } from './focusRegions';
 import { pickNeighbour, shouldLeaveField, type Move } from './fieldNavigation';
@@ -60,16 +67,13 @@ export function passEnterToForm(event: KeyboardEvent<HTMLElement>): void {
   passedOn.add(event.nativeEvent);
 }
 
-function makeKeyDown(onSubmit: (() => void) | undefined) {
-  return (event: KeyboardEvent<HTMLElement>): void => {
-    handleKeyDown(event, onSubmit);
-  };
+/** How a form finishes: `now` for an Enter the form got itself, `afterPick` for a picker's Enter. */
+interface Finish {
+  now: () => void;
+  afterPick: () => void;
 }
 
-function handleKeyDown(
-  event: KeyboardEvent<HTMLElement>,
-  onSubmit: (() => void) | undefined,
-): void {
+function handleKeyDown(event: KeyboardEvent<HTMLElement>, finish: Finish | undefined): void {
   const passed = event.key === 'Enter' && passedOn.has(event.nativeEvent);
   if (
     (event.defaultPrevented && !passed) ||
@@ -100,9 +104,10 @@ function handleKeyDown(
     const next = fields.slice(from + 1).find((field) => !field.matches('[readonly]'));
     if (next === undefined) {
       // The last field: Enter finishes the form, when the screen says what finishing means.
-      if (onSubmit !== undefined) {
+      if (finish !== undefined) {
         event.preventDefault();
-        onSubmit();
+        if (passed) finish.afterPick();
+        else finish.now();
       }
       return;
     }
@@ -187,23 +192,45 @@ export function focusNextField(from: HTMLElement): boolean {
 
 /** Put these on the element that holds a form's fields. */
 export const formNavigationProps = {
-  onKeyDown: makeKeyDown(undefined),
+  onKeyDown: (event: KeyboardEvent<HTMLElement>): void => {
+    handleKeyDown(event, undefined);
+  },
   onFocus,
   'data-form-zone': '',
 } as const;
 
 /**
  * The same, and Enter in the last field runs `onSubmit` (the sign-in screen: "Enter also logs
- * in").
+ * in"). When a picker's Enter picks on the last field, the form finishes only after the screen has
+ * the picked value: the `onSubmit` of this render still holds the values from before the pick, so
+ * the newest one is run once the pick is drawn.
  */
 export function useFormNavigation(onSubmit: () => void) {
+  const latest = useRef(onSubmit);
+  useLayoutEffect(() => {
+    latest.current = onSubmit;
+  });
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLElement>): void => {
+      handleKeyDown(event, {
+        now: onSubmit,
+        afterPick: () => {
+          // React draws the pick when this key event ends; the microtask runs after that.
+          queueMicrotask(() => {
+            latest.current();
+          });
+        },
+      });
+    },
+    [onSubmit],
+  );
   return useMemo(
     () => ({
-      onKeyDown: makeKeyDown(onSubmit),
+      onKeyDown,
       onKeyDownCapture: makeKeyDownCapture(onSubmit),
       onFocus,
       'data-form-zone': '',
     }),
-    [onSubmit],
+    [onKeyDown, onSubmit],
   );
 }

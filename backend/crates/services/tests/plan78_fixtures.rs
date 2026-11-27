@@ -1,7 +1,6 @@
 //! Real answers of the plan 78 commands, as JSON files for the frontend (plan 78, Group 2 and the
-//! money items): the three load buttons of the بکری screen, the card "where the capital is" and its
-//! refusal while the partner section is locked, a garden refund, a change of a garden's rent with the
-//! Owner's sign (and its refusals), and a partner's month with the advance lines.
+//! money items): the three load buttons of the بکری screen, a garden refund, a change of a garden's
+//! rent with the Owner's sign (and its refusals), and a partner's month with the advance lines.
 //!
 //! Each fixture is a pair, as in `garden_fixtures.rs`: `<name>_request.json` is exactly the `input` the
 //! command takes, `<name>.json` the answer of the real service. The test compares the files with the
@@ -23,11 +22,8 @@ use mandi_services::core::auth::Language;
 use mandi_services::core::edit::GardenHeaderEditInput;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::gardens::{GardenEntryInput, GardenGetInput};
-use mandi_services::core::partner_code::PartnerCodeSetInput;
 use mandi_services::core::statement::PartnersStatementMonthInput;
-use mandi_services::{
-    ServiceError, bikri, cashbook, edit, gardens, partner_code, partners, vouchers,
-};
+use mandi_services::{ServiceError, bikri, edit, gardens, partners, vouchers};
 use reports_world::*;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -117,36 +113,6 @@ fn the_three_load_buttons_of_the_bikri_screen() {
             &bikri::goods_to_load(ctx, &typed(&request)).unwrap(),
         );
     }
-}
-
-#[test]
-fn the_card_where_the_capital_is_and_its_refusal_while_locked() {
-    // After Events 1 to 5: 58,484 + 21,564 - 10,160 - 4,400 = 65,488.
-    let w = full_day();
-    let ctx = &w.env.ctx;
-    pair(
-        "cashbook_capital_where",
-        &json!({}),
-        &cashbook::capital_where(ctx).unwrap(),
-    );
-    partner_code::set(
-        ctx,
-        &w.owner,
-        &PartnerCodeSetInput {
-            password: "secret1".to_owned(),
-            code: "4826".to_owned(),
-            code_again: "4826".to_owned(),
-        },
-    )
-    .unwrap();
-    partner_code::lock(ctx).unwrap();
-    let refused = partner_code::require_unlocked(ctx).unwrap_err();
-    refusal(
-        "cashbook_capital_where_locked",
-        &json!({}),
-        &refused,
-        ErrorCode::ErrPartnerLocked,
-    );
 }
 
 fn garden_entry_json(kind: &str, garden: i64, amount: &str) -> Value {
@@ -369,6 +335,27 @@ fn the_prints_of_the_worked_day_for_the_sale_print_the_slips_the_bills_and_the_a
         });
         pair(
             &format!("reports_adhari_sheet_print_data_{name}"),
+            &request,
+            &adhari_sheet_print_data(db, &typed(&request)).unwrap(),
+        );
+    }
+    // Plan 97 item 6: the next day, with no sale, the other buyers who owe are listed one by one (ارشد
+    // 18,684, then اکرم 2,880), under the sums of today's buyers and a heading.
+    common::set_today(&w.env, 2026, 10, 11);
+    let request = json!({ "date": "11-10-2026" });
+    pair(
+        "reports_adhari_sheet_others",
+        &request,
+        &adhari_sheet(db, &typed::<AdhariSheetInput>(&request)).unwrap(),
+    );
+    for (name, language) in [("en", Language::En), ("ur", Language::Ur)] {
+        let request = input_json(&AdhariSheetPrintInput {
+            date: "11-10-2026".into(),
+            language,
+            paper: None,
+        });
+        pair(
+            &format!("reports_adhari_sheet_others_print_data_{name}"),
             &request,
             &adhari_sheet_print_data(db, &typed(&request)).unwrap(),
         );

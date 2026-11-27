@@ -27,8 +27,8 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeFirstLine,
   typeHeaderAndLot,
-  typeTwoLines,
 } from '../helpers/bikri-screen';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { message, visible } from '../helpers/render';
@@ -81,11 +81,14 @@ describe.each(LANGUAGES)('adding from the cells of the بکری screen (%s)', (l
     await user.keyboard(text.slice(1));
   }
 
-  /** The header and the lot of Event 1 are typed, two sale lines too; the third asks for a buyer. */
+  /**
+   * The header and the lot of Event 1 are typed, and the first sale line; the second line asks for a buyer. (Two lines
+   * would sell all 50, and a sold out lot adds no line to type in, PRD FR-12.52.)
+   */
   async function askForNewBuyer() {
     const book = await openBook(language);
     await typeHeaderAndLot(book.user, language);
-    await typeTwoLines(book.user, language);
+    await typeFirstLine(book.user, language);
     await typeInCell(book.user, newBuyer);
     await screen.findByText(message(language, 'search-no-match'));
     return book;
@@ -98,6 +101,7 @@ describe.each(LANGUAGES)('adding from the cells of the بکری screen (%s)', (l
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
     expect(textOf(lots, 0, 'qty')).toBe('50');
     expect(textOf(salesGrid(language), 0, 'qty')).toBe('20');
+    // The second line is the free one: its qty starts at what the lot has left (FR-7.52).
     expect(textOf(salesGrid(language), 1, 'qty')).toBe('30');
   }
 

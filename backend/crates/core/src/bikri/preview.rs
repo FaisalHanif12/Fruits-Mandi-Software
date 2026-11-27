@@ -508,6 +508,65 @@ pub struct SellerPaidLines {
     pub working: Working,
 }
 
+/// One garden's card in the summary (PRD FR-12.52, plan 97 item 5): what its account held before this
+/// بکری, what the garden lots of it credit the account, and what it holds just after this posting (as
+/// of the posting's day; an entry dated later on the same account is not in it, as in a seller's
+/// summary). Worked out by the
+/// same domain function for the preview and the save (Code Standards B5), from the lot totals as
+/// `calc_posting` worked them out, so the credit is the line the journal posts to the garden's
+/// account. A garden lot takes no نقد, so there is no "paid on the spot" line.
+///
+/// `new = previous - credit` (debit positive). Example: the garden holds 12,000 جمع (previous
+/// −12,000) and its lots credit 56,400: new −68,400, shown as 68,400 جمع. A garden whose lots credit
+/// less than their charges (credit below 0) is debited by that amount.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct GardenCardLines {
+    /// The garden, with its account (the seller of its lots).
+    pub garden: GardenRef,
+    /// The garden account's balance before this بکری (an edit leaves the posting being edited out),
+    /// 0 or more.
+    #[ts(type = "Paisa")]
+    pub previous_paisa: Paisa,
+    /// The side of `previous_paisa`: `dr` is بنام, `cr` is جمع (the usual side of a garden's sales
+    /// money), `zero` when there is nothing.
+    pub previous_side: BalanceSide,
+    /// آج کی صافی بکری: the sum of the seller credits (C8) of its lots in this بکری. Can be negative.
+    #[ts(type = "Paisa")]
+    pub credit_paisa: Paisa,
+    /// نیا بقایا, 0 or more.
+    #[ts(type = "Paisa")]
+    pub new_paisa: Paisa,
+    /// The side of `new_paisa`.
+    pub new_side: BalanceSide,
+    /// How `new_paisa` was worked out (PRD FR-7.43): message `working-garden-new-balance`.
+    pub working: Working,
+}
+
+/// One trip's card in the summary (PRD FR-12.26, plan 97 item 5): the sales and charges of the trip
+/// lots of this بکری and the money that goes to the trip's partners by their shares (C25). A trip lot
+/// takes no نقد, so `credit_paisa` is always `gross_paisa - deductions_paisa`. No partner figure is
+/// held here.
+///
+/// Example (E2E-34): 9,000 sold, commission 540, no lot charges: gross 9,000, deductions 540,
+/// credit 8,460.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct TripCardLines {
+    /// The trip.
+    pub trip: TripRef,
+    /// خام بکری: the sum of the seller amounts of its lots.
+    #[ts(type = "Paisa")]
+    pub gross_paisa: Paisa,
+    /// کٹوتی: the sum of the deductions (C6) of its lots.
+    #[ts(type = "Paisa")]
+    pub deductions_paisa: Paisa,
+    /// آج کی صافی بکری: the sum of the seller credits (C8) of its lots, the money that goes to the
+    /// trip's partners. Can be negative.
+    #[ts(type = "Paisa")]
+    pub credit_paisa: Paisa,
+    /// How `credit_paisa` was worked out (PRD FR-7.43): message `working-trip-card-credit`.
+    pub working: Working,
+}
+
 /// Everything the live preview sends back. Nothing is saved.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct BikriPreview {
@@ -520,6 +579,12 @@ pub struct BikriPreview {
     /// One summary for each seller of a complete lot, in the order of his first lot (PRD FR-12.23
     /// v1.53). Lots of trip goods and of gardens have none: they take no نقد.
     pub sellers: Vec<SellerPaidLines>,
+    /// One card for each garden that has a complete lot in this بکری, in the order of its first lot
+    /// (PRD FR-12.52, plan 97 item 5).
+    pub gardens: Vec<GardenCardLines>,
+    /// One card for each trip that has a complete lot of its goods in this بکری, in the order of its
+    /// first lot (PRD FR-12.52, plan 97 item 5).
+    pub trips: Vec<TripCardLines>,
     /// Cash in hand after this بکری (PRD FR-6.7).
     pub cash: CashCheck,
     /// True if a commission or لاگا may be typed on a line (PRD FR-11.10). The rate tag cells

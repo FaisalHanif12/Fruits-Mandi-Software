@@ -436,6 +436,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "lines": [] } }),
             true,
         ),
+        ("accounts_openings_to_cash_preview", json!({}), true),
+        (
+            "accounts_openings_to_cash",
+            json!({ "input": { "reason": "x", "sign": "adnan", "confirm_cash_below_zero": false } }),
+            true,
+        ),
         ("coa_tree", json!({}), true),
         (
             "coa_control_accounts",
@@ -710,6 +716,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "gardens_sale_money",
+            json!({ "input": { "garden_id": 1, "from": null, "to": null, "arrival_id": null, "search": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
             "gardens_arrivals_list",
             json!({ "input": { "garden_id": null, "from": null, "to": null, "item_id": null,
                 "state": null, "offset": 0, "limit": 0 } }),
@@ -749,6 +760,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("fruit_get", json!({ "input": { "id": 1 } }), true),
         ("fruit_list", json!({ "input": {} }), true),
         ("fruit_lots", json!({ "input": {} }), true),
+        (
+            "fruit_agent_shop_add",
+            json!({ "input": { "name_ur": "حاجی ٹریڈرز", "name_en": "Haji Traders", "phone": "" } }),
+            true,
+        ),
         (
             "masters_dead_preview",
             json!({ "input": { "account_id": 1 } }),
@@ -887,26 +903,10 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "shares": [{ "partner_id": 1, "share": "100" }] } }),
             true,
         ),
-        (
-            "partners_place_opening_capital",
-            json!({ "input": { "partner_ids": [1], "reason": "x", "sign": "adnan" } }),
-            true,
-        ),
         ("partners_overview", json!({}), true),
         (
             "cashbook_get",
             json!({ "input": { "from": null, "to": null, "offset": 0, "limit": 0 } }),
-            true,
-        ),
-        ("cashbook_capital_where", json!({}), true),
-        (
-            "cashbook_capital_print_data",
-            json!({ "input": { "language": "ur" } }),
-            true,
-        ),
-        (
-            "cashbook_capital_print",
-            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
             true,
         ),
         (
@@ -2647,15 +2647,8 @@ fn the_voucher_commands_work_through_the_ipc() {
             "collector_staff_id": null, "narration": "" })
     };
 
-    // A payment to a buyer needs a reason, and an empty till asks first (PRD FR-6.7).
-    let refused = h
-        .call("vouchers_save_payment", payment(akram, "3,000", "", true))
-        .unwrap_err();
-    assert_eq!(
-        refused["errors"][0]["code"],
-        "ERR_PAYMENT_TO_BUYER_NEEDS_REASON"
-    );
-    assert_eq!(refused["errors"][0]["field"], "reason");
+    // The reason of cash lent to a buyer is optional (PRD FR-15.11 v1.60); an empty till asks
+    // first (PRD FR-6.7).
     let asks = h
         .call(
             "vouchers_save_payment",

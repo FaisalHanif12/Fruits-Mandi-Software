@@ -15,6 +15,7 @@ import {
   Warehouse,
   type LucideIcon,
 } from 'lucide-react';
+import type { Kind } from '../../bindings/Kind';
 import type { Language } from '../../i18n';
 import { displayName, otherScriptName } from '../../shared/i18n';
 import type { AccountScope } from '../../shared/accounts';
@@ -73,8 +74,11 @@ export interface MasterConfig {
   emptyId: string;
   /** Does this master have a code of its own? Only a narration does not. */
   hasCode: boolean;
-  /** The two names, or null for a master with none (mark). */
-  names: { urduLabelId: string; englishLabelId: string; spelling: boolean } | null;
+  /**
+   * The two names, or null for a master with none (mark). `kind` is what the names are, said to
+   * the speller (plan 99): a place, an item, a person or firm, or everyday words.
+   */
+  names: { urduLabelId: string; englishLabelId: string; spelling: boolean; kind: Kind } | null;
   fields: readonly FieldSpec[];
   /** Read-only facts under the fields. */
   shown: readonly ShownSpec[];
@@ -95,6 +99,7 @@ const NAMES = {
   urduLabelId: 'masters-field-name-ur',
   englishLabelId: 'masters-field-name-en',
   spelling: true,
+  kind: 'name',
 } as const;
 
 /** A column that shows the text of a field or the name of a record it points at. */
@@ -174,7 +179,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     newId: 'masters-city-new',
     emptyId: 'masters-city-empty',
     hasCode: true,
-    names: NAMES,
+    names: { ...NAMES, kind: 'place' },
     fields: [],
     shown: [],
     extraColumns: [],
@@ -188,7 +193,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     newId: 'masters-item-new',
     emptyId: 'masters-item-empty',
     hasCode: true,
-    names: NAMES,
+    names: { ...NAMES, kind: 'item' },
     fields: [
       {
         key: 'item_group',
@@ -224,7 +229,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     newId: 'masters-packing-new',
     emptyId: 'masters-packing-empty',
     hasCode: true,
-    names: NAMES,
+    names: { ...NAMES, kind: 'item' },
     fields: [
       {
         key: 'approx_kg',
@@ -245,7 +250,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     newId: 'masters-adda-new',
     emptyId: 'masters-adda-empty',
     hasCode: true,
-    names: NAMES,
+    names: { ...NAMES, kind: 'place' },
     fields: [
       { key: 'city', labelId: 'masters-adda-city', control: { type: 'picker', scope: 'city' } },
     ],
@@ -310,6 +315,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
       urduLabelId: 'masters-narration-text-ur',
       englishLabelId: 'masters-narration-text-en',
       spelling: false,
+      kind: 'word',
     },
     fields: [
       {
@@ -331,7 +337,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     newId: 'masters-expense-head-new',
     emptyId: 'masters-expense-head-empty',
     hasCode: true,
-    names: NAMES,
+    names: { ...NAMES, kind: 'word' },
     fields: [],
     shown: [
       {

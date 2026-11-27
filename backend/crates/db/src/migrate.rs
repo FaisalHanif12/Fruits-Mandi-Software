@@ -183,6 +183,18 @@ pub const SPEED_GATE_SQL: &str = include_str!("../migrations/0028_speed_gate.sql
 /// changes.
 pub const LOT_ADVANCE_SQL: &str = include_str!("../migrations/0029_lot_advance.sql");
 
+/// Migration 30 (plan 97 item 1, PRD FR-16.11 v1.59): the mark `accounts.is_agent_shop` of another
+/// commission agent's shop and the column `fruit_takes.deduction_paisa` (کل کٹوتی). Every old account
+/// and entry gets 0; no journal line, amount, id or chain hash changes.
+pub const AGENT_SHOP_FRUIT_DEDUCTION_SQL: &str =
+    include_str!("../migrations/0030_agent_shop_fruit_deduction.sql");
+
+/// Migration 31 (plan 99, PRD FR-15.11 v1.60): the column `vouchers.entered_as` (a پیشگی typed to a
+/// buyer) and the end of the two triggers that required a reason for cash lent to a buyer. No old
+/// row, amount, id or chain hash changes.
+pub const BUYER_PESHGI_SQL: &str =
+    include_str!("../migrations/0031_buyer_peshgi_and_optional_reason.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -224,6 +236,8 @@ pub fn migrations() -> Migrations<'static> {
         M::up(LOT_REMOVED_SQL),
         M::up(SPEED_GATE_SQL),
         M::up(LOT_ADVANCE_SQL),
+        M::up(AGENT_SHOP_FRUIT_DEDUCTION_SQL),
+        M::up(BUYER_PESHGI_SQL),
     ])
 }
 

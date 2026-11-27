@@ -7,7 +7,7 @@ returned loan (`cash` or `salary`).
 
 | Route                  | Screen                                                                       | Page                     |
 | ---------------------- | ---------------------------------------------------------------------------- | ------------------------ |
-| `/rokar`               | روکڑ بک, paged, opening and closing cash, backend totals                     | `pages/CashbookPage.tsx` |
+| `/rokar`               | روکڑ بک: three cards, named rows, type filter, summary, backend totals       | `pages/CashbookPage.tsx` |
 | `/rokar/expense?type=` | the ONE خرچہ screen: دکان خرچہ, ذاتی خرچہ, ذاتی خرچہ واپسی. `Alt+K` opens it | `pages/ExpensePage.tsx`  |
 | `/rokar/lent?type=`    | ادھار رقم: money lent and returned (cash or salary)                          | `pages/LentPage.tsx`     |
 | `/rokar/khata?type=`   | الگ کھاتہ: paid out (minus) and received (plus)                              | `pages/KhataPage.tsx`    |
@@ -76,33 +76,23 @@ one more route; the tab strip shows itself when there are two.
   screen. Tests: `others-dues-page.test.tsx`, `khata-link.test.tsx`, `lent-link.test.tsx`.
 - The lists under the ادھار رقم, partner takes (خرچہ) and capital forms show **one month at a time**
   (`ListWindowBar`, PRD FR-19.11): the hooks take the month's `from` and `to`.
-- **The capital card (سرمایہ کہاں ہے, plan 87, PRD FR-16.14)** is a folded section of `/rokar`
-  (`components/CapitalWhereCard.tsx`, pieces in `components/capital/`). It reads nothing until it is opened and is
-  behind the partner code (`ERR_PARTNER_LOCKED` shows the code box). It reads like a statement: `CapitalHeadline`
-  (the partners' total capital, which is the backend's `net_paisa`, with ✓ "both sides are equal" and the day it is
-  as of), two `CapitalBlock` tables (`have_lines`: to receive and in hand; `owe_lines`: to pay) with the backend's
-  subtotals, `CapitalNet`, `CapitalWhose` (each partner's کل رقم, his share in basis points written as a percent and
-  a bar, the opening capital, the open advances) and `OpeningDifferenceNotice`, the amber warning for the opening
-  difference. **Every amount of the blocks and the net is unsigned; the side is the block, never a minus sign.**
-  Cash below zero comes from the backend as the cash line of the paying block and is written "cash short" with a
-  note; a net that is short (`net_side` is `owe`) carries the word "short". A line that is one account (what is owed
-  for labour, freight ...) is named by the account. A partner's total below 0 is written without its sign, in the
-  due colour, with the words "owes the firm" (`Num withoutSign`). The net, the headline and the whose total are
-  unsigned from the backend, each with its side (`net_side`, `whose_lines_side`; `owe` is written "short").
-  - The warning shows what the difference is made of (one line for each group of `difference.groups`, each with the
-    backend's net and side) and, folded, every account that makes it (each opens its ledger). The button "put the
-    capital into روکڑ" shows only when `difference.placeable_partners` is not empty. It opens `PlaceCapitalDialog`
-    (the `ReasonDialog` of the reopen-and-fix flow with its sign field) and calls `partners_place_opening_capital`
-    (`partnersPlaceOpeningCapital` in `api.ts`, kept here because only this card calls it) with those partners. A
-    wrong sign is told in the box and nothing is read again; a yes closes the box, shows a toast, and reads the card,
-    the cash book, the partners and the day again (`useReadAgain`).
-  - Every line opens the page the backend names for it (`line.link`): `capital-links.ts` maps a `CapitalLink` and the
-    record it names to a destination (`targetOfLink`, plain data, tested) and `useOpenCapitalTarget` navigates. The
-    cash line brings the cash rows into view (the card is on that page).
-  - The "show it as of" box is `GoToDate`; the card is read as of that day (`as_of` is sent as typed, `DD-MM-YYYY`,
-    null is today). Print opens the preview of the card in place of the book (`TablePrintPreview`; the hidden print
-    window has the kind `capital`, `app/print-kinds`), with the same day. Excel is not offered for this card.
-  - `capital-types.ts` re-exports the generated bindings. The print is `cashbook_capital_print_data` (the card laid out as a table by the backend, ids in `print.ftl` as `print-capital-*`) and `cashbook_capital_print`. Tests: `cashbook-capital-where.test.tsx`,
-    `cashbook-capital-links.test.ts`, `plan78-api-contract.test.ts` and `plan78-real-answers.test.tsx` (the backend's real fixtures: worked day, before and after the fix, as of a day, print data, refusals); the hand-made data of the four states is
-    `tests/helpers/capital-card.ts`; the development page `/dev/rokar?screen=book&umar` shows Umar's data before the
-    fix and the fix with the sign "adnan".
+
+## Plan 99: a simple, exact روکڑ (PRD FR-16.14 v1.60, FR-10.9)
+
+- Three cards (`components/CashCards.tsx`): کل سرمایہ, شروع میں روکڑ and آخر میں روکڑ, all the backend's.
+- Every row is named for what it is (`row-text.ts`): the backend sends the `kind` and the records (`refs`:
+  parties with a count of all, partner, garden, trip, expense head), and the words come from Fluent, for
+  example "وصولی 1، اکرم", "بکری 2، موقع پر جمع، شاہد" and "باغ خرچ 1، پومپ والا باغ". A sale's cash is two
+  rows with one entry, so a row's key is the entry and the kind.
+- The type filter (سب and the backend's groups) sends the group's kinds as `Cashbook.summary` names them. With
+  a type chosen the backend sends no running cash, and the screen says so. The switch "Show old and cancelled
+  entries too" sends `show_reversed`; the rows then say they are an old entry or a reversing one.
+- `components/CashSummary.tsx`: in and out by type over the window (it does not narrow with the filter); a type
+  in it filters the book. A button in the filter row shows it; it starts shut so the book stays in view, and the
+  screen remembers how it was left.
+- The one-time fix of old opening balances (`components/OpeningsToCashView.tsx`): an amber note on the page only
+  while `accounts_openings_to_cash_preview` has rows. The view lists each opening, cash and the opening
+  difference before and after and the days that reopen; the save asks the reason and the Owner's sign
+  (`ReasonDialog`), then the cash question when cash ends below zero (FR-6.7), and calls
+  `accounts_openings_to_cash`.
+- The capital card of plan 87 and its print are gone. Tests: `plan99-rokar.test.tsx`.

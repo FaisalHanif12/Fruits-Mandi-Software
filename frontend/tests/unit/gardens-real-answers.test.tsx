@@ -128,7 +128,7 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
 
   it('an open garden (E2E-40): the figures, the partners and what each one paid', async () => {
     vi.mocked(gardensApi.gardensGet).mockResolvedValue(real.GARDENS_GET_OPEN);
-    const { user } = await open();
+    await open();
     expect(screen.getByText(said(message(language, 'gardens-status-open')))).toBeInTheDocument();
     const balance = screen.getAllByText(said(message(language, 'gardens-balance')))[0];
     expect(balance?.closest('div')?.textContent).toContain('11,400');
@@ -136,7 +136,8 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     const figuresButton = screen.getByRole('button', {
       name: named(message(language, 'gardens-figures-title')),
     });
-    await user.click(figuresButton);
+    // Open when the page opens (PRD FR-12.53).
+    expect(figuresButton).toHaveAttribute('aria-expanded', 'true');
     const figures = figuresButton.closest('section');
     if (figures === null) throw new Error('the figures have no section');
     const partners = within(figures).getByRole('list', {
@@ -383,14 +384,15 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
 
   it('a garden closed in loss (E2E-40b) shows its credits and each partner’s result', async () => {
     vi.mocked(gardensApi.gardensGet).mockResolvedValue(real.GARDENS_GET_CLOSED_LOSS);
-    const { user } = await open();
+    await open();
     expect(
       screen.getByText(said(message(language, 'gardens-closed-notice', { date: '13-10-2026' }))),
     ).toBeInTheDocument();
     const figuresButton = screen.getByRole('button', {
       name: named(message(language, 'gardens-figures-title')),
     });
-    await user.click(figuresButton);
+    // Open when the page opens (PRD FR-12.53).
+    expect(figuresButton).toHaveAttribute('aria-expanded', 'true');
     const figures = figuresButton.closest('section');
     if (figures === null) throw new Error('the figures have no section');
     // Closing 10,000 at 60 / 40 gives 6,000 and 4,000; the result is minus 45,000.

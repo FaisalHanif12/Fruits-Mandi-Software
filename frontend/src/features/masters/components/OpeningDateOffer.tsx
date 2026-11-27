@@ -7,6 +7,8 @@
 //   the form cannot tell which of the two dates is the closed one;
 // - today is closed too: "reopen the day" (PRD FR-21.4). Clearing the opening needs the open day too,
 //   so there is no "save without the opening".
+// A new account whose opening goes through روکڑ on a closed day (PRD FR-10.9, FR-21.4) says so in its own
+// words, with the "reopen the day and save" button of the other entry screens.
 // The backend's answer carries `today` and `today_open`; this reads them and offers.
 // The refusal comes from the save, and the opening date sits low in a long form, so the offer scrolls
 // itself into view when it appears: the Owner never sees a red date with the reason out of sight.
@@ -31,12 +33,25 @@ export function closedOpeningDate(
 }
 
 interface OpeningDateOfferProps {
+  /** A new account: its opening was never saved, so the words say it is to be written. */
+  isNew?: boolean;
   offer: { today: string; todayOpen: boolean };
   onUseToday: (today: string) => void;
   onReopen: () => void;
 }
 
-export function OpeningDateOffer({ offer, onUseToday, onReopen }: OpeningDateOfferProps) {
+/** The words of the offer, by whether today is open and whether the account is new. */
+function offerMessageId(todayOpen: boolean, isNew: boolean): string {
+  const base = isNew ? 'accounts-opening-closed-new' : 'accounts-opening-closed';
+  return `${base}-${todayOpen ? 'today-open' : 'today-closed'}`;
+}
+
+export function OpeningDateOffer({
+  offer,
+  onUseToday,
+  onReopen,
+  isNew = false,
+}: OpeningDateOfferProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = rootRef.current;
@@ -60,18 +75,12 @@ export function OpeningDateOffer({ offer, onUseToday, onReopen }: OpeningDateOff
               </Button>
             ) : null}
             <Button onClick={onReopen}>
-              <Localized id="edit-action-fix-day" />
+              <Localized id={isNew ? 'edit-action-fix-save' : 'edit-action-fix-day'} />
             </Button>
           </span>
         }
       >
-        <Localized
-          id={
-            offer.todayOpen
-              ? 'accounts-opening-closed-today-open'
-              : 'accounts-opening-closed-today-closed'
-          }
-        />
+        <Localized id={offerMessageId(offer.todayOpen, isNew)} />
       </Notice>
     </div>
   );

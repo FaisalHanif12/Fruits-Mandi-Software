@@ -1,0 +1,18 @@
+{
+  "input": {
+    "agent_account_id": 35,
+    "date": "10-10-2026",
+    "deduction": "200",
+    "editing_id": null,
+    "for_guests": false,
+    "item_id": 2,
+    "lot_id": null,
+    "note": null,
+    "packing_id": 1,
+    "partner_id": 1,
+    "qty": "2",
+    "rate": "1,400",
+    "source": "other_shop",
+    "weight": null
+  }
+}

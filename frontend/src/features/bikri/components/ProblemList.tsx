@@ -6,9 +6,9 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
-import { useTimedNotices } from '../../../shared/hooks';
+import { useNoticePulse, useTimedNotices } from '../../../shared/hooks';
 import { ErrorMessage, LinkButton } from '../../../shared/ui';
-import { LOT_WARNING_MS } from '../notices';
+import { NOTICE_MS } from '../notices';
 import {
   LINE_GRID_FIELD,
   LINE_NEEDS,
@@ -28,8 +28,9 @@ interface ProblemListProps {
   /** The whole-sale view is on: the notes under the lines grid tell the quantity problems of every lot. */
   whole?: boolean;
   /**
-   * Goes up each time the user repeats an action that can give a warning (he types in the lots or the lines, or tries to
-   * save): a warning that has hidden shows again (PRD FR-12.52, plan 95 item 1).
+   * Goes up each time the user repeats an action that can give a problem (he types in the lots or the lines, or tries to
+   * save): a problem that has hidden shows again (PRD FR-12.52, plan 97 item 4). Not given: the count of the screen's
+   * `NoticePulseContext`.
    */
   pulse?: number;
 }
@@ -97,22 +98,18 @@ export function ProblemList({
   activeLine,
   headerShown = true,
   whole = false,
-  pulse = 0,
+  pulse,
 }: ProblemListProps) {
   const navigate = useNavigate();
+  const screenPulse = useNoticePulse();
   const all = problems.filter(
     (problem) => !shownByField(problem, selectedLot, activeLine, headerShown, whole),
   );
-  // A warning is a note, not a block: it shows for a while and hides, and shows again when the user repeats the action
-  // (PRD FR-12.52). An error stays until it is fixed. The red figure of the lot stays either way.
-  const visibleWarnings = useTimedNotices(
-    all.filter((problem) => problem.severity === 'warning').map(keyOf),
-    pulse,
-    LOT_WARNING_MS,
-  );
-  const listed = all.filter(
-    (problem) => problem.severity !== 'warning' || visibleWarnings.has(keyOf(problem)),
-  );
+  // A problem in this list is a note, not a block: it shows for 5 seconds and hides, and shows again when the user repeats
+  // the action that gives it, an error as much as a warning (PRD FR-12.52, plan 97 item 4, Umar 24-11-2026). The red mark
+  // on the cell or the figure stays until it is fixed, and saving is refused while an error stands.
+  const visible = useTimedNotices(all.map(keyOf), pulse ?? screenPulse, NOTICE_MS);
+  const listed = all.filter((problem) => visible.has(keyOf(problem)));
   if (listed.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1">

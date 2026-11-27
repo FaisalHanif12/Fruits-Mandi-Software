@@ -13,7 +13,7 @@ import { TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Working } from '../../../bindings/Working';
 import { formatPaisa, useGrouping } from '../../../shared/format';
-import { CalcInfo, Field, Num, Select, type SelectOption } from '../../../shared/ui';
+import { CalcInfo, Field, Num, Select, TimedNote, type SelectOption } from '../../../shared/ui';
 import { useLocalization } from '@fluent/react';
 import type { SummaryTotals } from '../types';
 import type { Paisa } from '../../../shared/format';
@@ -194,12 +194,15 @@ export function SummaryPanel({
               </Localized>
               <Rows lines={sellerLines(totals, hasAdvance)} negativeNet={netIsNegative} />
               {netIsNegative ? (
-                <p className="flex items-center gap-2 type-body text-due">
-                  <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-                  <Localized id="bikri-summary-net-negative">
-                    <span />
-                  </Localized>
-                </p>
+                // The words hide after 5 seconds and come back on a repeated action; the figure itself stays red (plan 97 item 4).
+                <TimedNote>
+                  <p className="flex items-center gap-2 type-body text-due">
+                    <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+                    <Localized id="bikri-summary-net-negative">
+                      <span />
+                    </Localized>
+                  </p>
+                </TimedNote>
               ) : null}
             </div>
             <div className="flex flex-col gap-1">
@@ -212,9 +215,11 @@ export function SummaryPanel({
         </div>
       )}
       {totals !== null && leftOut > 0 ? (
-        <Localized id="bikri-left-out" vars={{ count: leftOut }}>
-          <p role="status" className="flex items-center gap-2 type-body text-warn" />
-        </Localized>
+        <TimedNote>
+          <Localized id="bikri-left-out" vars={{ count: leftOut }}>
+            <p role="status" className="flex items-center gap-2 type-body text-warn" />
+          </Localized>
+        </TimedNote>
       ) : null}
     </section>
   );

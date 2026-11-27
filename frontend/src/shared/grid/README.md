@@ -135,6 +135,10 @@ its tip (`labelId`, for example "New lot"), the `onAdd` that adds the row, and, 
   `Enter` on the last cell and the button all call it, so the rows, the cursor and the keyboard rules are
   the same. The sale book's lots go to the new lot's seller, its lines to the new line's buyer; in the
   whole-sale view the line goes to the lot of the line that had the cursor, else to the first lot.
+- A screen can refuse a new row (plan 97 item 2): `GridInterceptors.onNewRow(cell)` returns true to say "not now" (the sale
+  book does it for a sold out lot). The grid asks it before every key that makes a row (`↓` on the last row, `Enter` on the
+  last stop, `↓` on the last trash cell with no "+", the cursor moving on from a cell the backend closed). A refused key adds
+  nothing and the cursor stays. The "+" button is the screen's own `onAdd` and asks the same question itself.
 - The limits are the screen's: 50 lots and 1,000 lines in a بکری (`features/bikri/limits.ts`, the same
   numbers as the backend). The button takes no room from the grid's rows and adds no width.
 

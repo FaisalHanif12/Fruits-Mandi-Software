@@ -199,10 +199,6 @@ bikri-summary-take-advance = { $name }: take the advance off this sale
 
 ## A seller's money paid on the spot, in his summary (plan 91, PRD FR-12.3, FR-12.23, C6, C8).
 
-# $name: the seller, with his tag.
-# review: pending
-bikri-seller-paid-title = { $name }: { -mauqa-par-adaigi }
-
 # review: pending
 bikri-seller-paid-previous = { -sabiqa-raqam }
 
@@ -228,6 +224,20 @@ bikri-seller-paid-increase = Today's charges above the { -bikri }, added to what
 
 # review: pending
 bikri-seller-paid-new = New { -baqaya }
+
+## The card of a garden and of a trip in the summary (plan 97 item 5, PRD FR-12.52). The rows of the garden card use the words of the seller card (previous { -baqaya }, today's { -safi-bikri }, new { -baqaya }).
+
+# $code: the trip's code, for example 0070.
+# review: pending
+bikri-trip-card-title = { -safar } <code>{ $code }</code>
+
+# The charges taken off the sales of the trip's goods in this { -bikri }.
+# review: pending
+bikri-trip-card-deductions = Deductions
+
+# Where the trip's credit goes: to the partners of the trip, by their share of it (no partner figure is shown here).
+# review: pending
+bikri-trip-card-partners = To the trip's partners by their share
 
 # review: pending
 bikri-seller-paid-above = This is more than today's { -bikri }: the { -baqaya } will grow

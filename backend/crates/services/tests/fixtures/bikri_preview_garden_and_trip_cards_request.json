@@ -1,0 +1,87 @@
+{
+  "draft": {
+    "header": {
+      "entry_date": "12-10-2026"
+    },
+    "lots": [
+      {
+        "adjust_advance": false,
+        "arrival_id": null,
+        "cash_paid": null,
+        "freight": null,
+        "freight_paid_by": "firm",
+        "item_id": 1,
+        "key": "garden-2",
+        "labour": null,
+        "lot_id": null,
+        "marka_id": null,
+        "munshiana": null,
+        "packing_id": 1,
+        "phone": null,
+        "purchase_id": null,
+        "qty_received": "50",
+        "sales": [
+          {
+            "buyer_account_id": 22,
+            "buyer_comm": null,
+            "buyer_rate": null,
+            "chukta": null,
+            "key": "g-1",
+            "laga": null,
+            "note": null,
+            "paid": null,
+            "qty": "50",
+            "rate_differs": false,
+            "sale_id": null,
+            "seller_comm": null,
+            "seller_rate": "600",
+            "weight": null
+          }
+        ],
+        "seller_account_id": 35,
+        "store_id": null,
+        "store_rent": null,
+        "weight_received": null
+      },
+      {
+        "adjust_advance": false,
+        "arrival_id": null,
+        "cash_paid": null,
+        "freight": null,
+        "freight_paid_by": "firm",
+        "item_id": null,
+        "key": "own-2",
+        "labour": null,
+        "lot_id": null,
+        "marka_id": null,
+        "munshiana": null,
+        "packing_id": null,
+        "phone": null,
+        "purchase_id": 1,
+        "qty_received": "5",
+        "sales": [
+          {
+            "buyer_account_id": 21,
+            "buyer_comm": null,
+            "buyer_rate": null,
+            "chukta": null,
+            "key": "t-1",
+            "laga": null,
+            "note": null,
+            "paid": null,
+            "qty": "5",
+            "rate_differs": false,
+            "sale_id": null,
+            "seller_comm": null,
+            "seller_rate": "700",
+            "weight": null
+          }
+        ],
+        "seller_account_id": 17,
+        "store_id": null,
+        "store_rent": null,
+        "weight_received": null
+      }
+    ]
+  }
+}

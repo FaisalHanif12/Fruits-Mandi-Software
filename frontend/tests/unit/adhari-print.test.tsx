@@ -131,7 +131,10 @@ describe.each(LANGUAGES)('ادھاری تفصیل, the second print of the sale 
     }, SLOW_MS);
     expect(box.querySelectorAll('table')).toHaveLength(1);
     // The backend's own sheet of the worked day: ارشد and اکرم, one row each; the چکتا buyer شاہد is not on it (PRD R5 v1.57).
-    expect(box.querySelectorAll('tbody tr')).toHaveLength(2);
+    // Under them the backend's row of today's buyers (their total, PRD R5 v1.59); nobody else owes, so no other row.
+    expect(box.querySelectorAll('tbody tr[data-row="normal"]')).toHaveLength(2);
+    expect(box.querySelectorAll('tbody tr[data-row="group"]')).toHaveLength(1);
+    expect(box.querySelectorAll('tbody tr')).toHaveLength(3);
     // One header for the whole print and no slip of a buyer.
     expect(box.querySelectorAll('.print-header')).toHaveLength(1);
     expect(box.querySelector('.print-parchi-slip')).toBeNull();

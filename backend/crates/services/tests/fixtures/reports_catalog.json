@@ -791,6 +791,7 @@
       "fruit-col-weight",
       "report-col-qty",
       "report-col-rate",
+      "fruit-col-deduction",
       "report-col-value",
       "fruit-col-source"
     ]

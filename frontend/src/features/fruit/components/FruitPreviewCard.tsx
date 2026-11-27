@@ -6,6 +6,7 @@
 
 import { Calculator } from 'lucide-react';
 import { Localized, useLocalization } from '@fluent/react';
+import { formatPaisa, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   CalcInfo,
@@ -31,6 +32,7 @@ interface FruitPreviewCardProps {
 
 export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
   const language = useLanguage();
+  const grouping = useGrouping();
   const { l10n } = useLocalization();
   const numbers = preview?.numbers ?? null;
   if (preview === undefined) {
@@ -52,6 +54,10 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
     );
   }
   const credited = numbers.credit.account;
+  // A کل کٹوتی (fruit from another shop, PRD FR-16.11 v1.59): the value stays the whole value, and the backend's net is what the
+  // agent is credited and the partners are charged. Whether there is one is read from the text the figure is written as, so no
+  // amount is compared as a number here.
+  const hasDeduction = formatPaisa(numbers.deduction_paisa, { grouping }) !== '0';
   // Each partner's part with his total now and after (plan 39: the shared table, figures centred).
   const locked = preview.partners_locked;
   const allColumns: TableColumn<Part>[] = [
@@ -97,6 +103,21 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
             <CalcInfo working={numbers.value_working} />
           </span>
         </Fact>
+        {hasDeduction ? (
+          <>
+            <Fact label={<Localized id="fruit-numbers-deduction" />}>
+              <Num paisa={numbers.deduction_paisa} />
+            </Fact>
+            <Fact stat label={<Localized id="fruit-numbers-net" />}>
+              <span className="flex items-center gap-1">
+                <span>
+                  <Num inherit paisa={numbers.net_paisa} />
+                </span>
+                {numbers.net_working === null ? null : <CalcInfo working={numbers.net_working} />}
+              </span>
+            </Fact>
+          </>
+        ) : null}
         <Fact
           label={
             <Localized id="fruit-numbers-credit" vars={{ name: displayName(credited, language) }} />

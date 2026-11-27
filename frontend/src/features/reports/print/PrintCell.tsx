@@ -15,7 +15,7 @@ import { PrintName } from '../../../shared/print';
 import { scriptOf } from '../../../shared/text/scriptHint';
 import { Code } from '../../../shared/ui/Code';
 import { Num } from '../../../shared/ui/Num';
-import { monthMessageId } from '../cells';
+import { cashLentMessageId, monthMessageId } from '../cells';
 
 /** The column kinds that hold figures: they are centred in their column (NFR-USE-19, plan 39 R1). */
 const FIGURE_KINDS: ReadonlySet<ReportColumnKind> = new Set([
@@ -84,7 +84,7 @@ function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSal
     case 'cash_lent':
       return (
         <p>
-          <NumberRuns text={l10n.getString('report-detail-cash-lent', { reason: part.reason })} />
+          <NumberRuns text={l10n.getString(cashLentMessageId(part), { reason: part.reason })} />
         </p>
       );
     case 'paid_on_spot':

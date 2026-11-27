@@ -6,10 +6,11 @@
 //! put together the way Urdu writes them. Several ways of joining are offered, because Urdu
 //! writes some of them with a space and some without.
 
+use super::Kind;
 use super::forward;
 use super::model::Model;
 use super::reverse;
-use super::wordlist::WordList;
+use super::wordlist::{Entry, WordList};
 
 /// The little words that mean "the" before a name: `fazl ur rehman`, `noor ul haq`.
 pub(crate) const PARTICLES: [&str; 6] = ["ul", "ur", "ud", "us", "un", "uz"];
@@ -48,10 +49,10 @@ const KEEP: usize = 3;
 /// A spelling and its score.
 pub(crate) type Scored = (String, f64);
 
-/// The few best spellings of an English part: the list first, else the rules.
+/// The few best spellings of an English part: the name list first, else the rules.
 fn urdu_parts(model: &Model, list: &WordList, roman: &str, keep: usize) -> Vec<String> {
     let mut found: Vec<String> = list
-        .by_roman(roman)
+        .names_by_roman(roman)
         .iter()
         .map(|e| e.urdu.clone())
         .collect();
@@ -67,7 +68,11 @@ fn urdu_parts(model: &Model, list: &WordList, roman: &str, keep: usize) -> Vec<S
 
 /// The few best English spellings (lower case) of an Urdu part.
 fn roman_parts(model: &Model, list: &WordList, urdu: &str, keep: usize) -> Vec<String> {
-    let mut found: Vec<String> = list.by_urdu(urdu).iter().map(|e| e.roman.clone()).collect();
+    let mut found: Vec<String> = list
+        .names_by_urdu(urdu)
+        .iter()
+        .map(|e| e.roman.clone())
+        .collect();
     if found.is_empty() {
         found = reverse::candidates(model, urdu, keep)
             .into_iter()
@@ -92,6 +97,13 @@ fn finish(mut found: Vec<Scored>) -> Vec<Scored> {
     });
     found.truncate(KEEP);
     found
+}
+
+/// True if one of the pairs is a person's name or a place.
+fn is_name_or_place(entries: &[&Entry]) -> bool {
+    entries
+        .iter()
+        .any(|e| matches!(e.kind, Kind::Name | Kind::Place))
 }
 
 /// A word split at a character count: the two halves.
@@ -136,13 +148,17 @@ pub(crate) fn urdu_compounds(model: &Model, list: &WordList, word: &str) -> Vec<
         let Some(tail) = PARTICLES.iter().find_map(|p| rest.strip_prefix(p)) else {
             continue;
         };
-        if tail.chars().count() < 3 || !list.contains_roman(tail) {
+        if tail.chars().count() < 3 || list.names_by_roman(tail).is_empty() {
             continue;
         }
         let stems = urdu_parts(model, list, stem, 1);
         let tails = urdu_parts(model, list, tail, 1);
         if let (Some(s), Some(t)) = (stems.first(), tails.first()) {
-            let sure = if list.contains_roman(stem) { 0.88 } else { 0.8 };
+            let sure = if list.names_by_roman(stem).is_empty() {
+                0.8
+            } else {
+                0.88
+            };
             found.push((format!("{s} {AL_URDU}{t}"), sure));
         }
     }
@@ -156,12 +172,16 @@ pub(crate) fn urdu_compounds(model: &Model, list: &WordList, word: &str) -> Vec<
             }
         }
     }
-    // `ghulamrasool`: two words of the list written together
+    // `ghulamrasool`: two names of the list written together, each of 3 letters or more.
+    // Only person and place names: `kar` + `aya` is not a name, and the items plum + ber are
+    // not a plumber (plan 99).
     for cut in 3..letters.saturating_sub(2) {
         let Some((left, right)) = split_at_letters(word, cut) else {
             continue;
         };
-        if list.contains_roman(left) && list.contains_roman(right) {
+        if is_name_or_place(&list.names_by_roman(left))
+            && is_name_or_place(&list.names_by_roman(right))
+        {
             let lefts = urdu_parts(model, list, left, 1);
             let rights = urdu_parts(model, list, right, 1);
             if let (Some(l), Some(r)) = (lefts.first(), rights.first()) {
@@ -213,7 +233,9 @@ pub(crate) fn roman_compounds(model: &Model, list: &WordList, word: &str) -> Vec
         let Some((left, right)) = split_at_letters(word, cut) else {
             continue;
         };
-        if !list.by_urdu(left).is_empty() && !list.by_urdu(right).is_empty() {
+        if is_name_or_place(&list.names_by_urdu(left))
+            && is_name_or_place(&list.names_by_urdu(right))
+        {
             let lefts = roman_parts(model, list, left, 1);
             let rights = roman_parts(model, list, right, 1);
             if let (Some(l), Some(r)) = (lefts.first(), rights.first()) {

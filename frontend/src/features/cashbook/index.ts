@@ -18,5 +18,3 @@ export { useEditDraft } from './edit-seed';
 export { previewRefusal, useFollowType } from './entry-support';
 export { CASHBOOK_KEY, useEntryPreview, useReadAgain } from './hooks';
 export { kindId } from './list-columns';
-// Plan 87: the hidden print window of the capital card reads this (app/print-kinds).
-export { cashbookCapitalPrintData } from './api';

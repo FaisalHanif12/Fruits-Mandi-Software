@@ -3,7 +3,7 @@
 // day, also one who paid in full, sorted by name: what he bought in short ("(Banana 20 . 600)"), today's
 // bill, today's credit, what he owed at the start of the day and what he owes now (no cash column or cash total,
 // PRD R5 v1.57). A وصولی of the day is not on the sheet: it shows in the next day's previous balance. Under the table
-// are the buyers who owed but bought nothing today, as one total, and the total credit of all buyers; a
+// are the buyers who owed but bought nothing today, one row each by name (plan 97 item 6) with their total, and the total credit of all buyers; a
 // person in the dead amount and a buyer whose credit ends in جمع are listed apart. The rows, the counts and
 // every total are the backend's; the rows on screen are never added up (CLAUDE.md rule 1).
 //
@@ -18,6 +18,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { FileText, Printer } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import type { AdhariOtherRow } from '../../../bindings/AdhariOtherRow';
 import type { AdhariSheetRow } from '../../../bindings/AdhariSheetRow';
 import type { AdhariSheetTotals } from '../../../bindings/AdhariSheetTotals';
 import { uiErrorOf } from '../../../shared/api';
@@ -39,6 +40,7 @@ import {
 } from '../../../shared/ui';
 import { useDayStatus } from '../../../app/use-day-status';
 import { reportsAdhariSheetPrint, reportsAdhariSheetPrintData } from '../api';
+import { AdhariOthers } from '../components/AdhariOthers';
 import { TablePrintPreview } from '../components/TablePrintPreview';
 import { ADHARI_COLUMNS } from '../adhari-columns';
 import { useAdhariSheet } from '../adhari-hooks';
@@ -114,6 +116,14 @@ export function AdhariSheetPage() {
     (row: AdhariSheetRow) => {
       // A چکتا buyer has no ledger (PRD FR-13.6).
       if (row.party.person_key !== null) return;
+      open?.('R13', { party: row.party.account_id });
+    },
+    [open],
+  );
+
+  // The ledger of an other buyer: he has an account, so the ledger of the party always opens (R13).
+  const openOtherLedger = useCallback(
+    (row: AdhariOtherRow) => {
       open?.('R13', { party: row.party.account_id });
     },
     [open],
@@ -254,6 +264,9 @@ export function AdhariSheetPage() {
         focusRowId={focusId}
         totals={totals}
       />
+      {first === undefined ? null : (
+        <AdhariOthers rows={first.other_rows} onOpen={openOtherLedger} />
+      )}
       {first?.others === null || first?.others === undefined ? null : (
         <TotalsLine id="adhari-others-line" sums={first.others} count={first.others_count} />
       )}

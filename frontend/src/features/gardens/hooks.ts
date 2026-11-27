@@ -40,6 +40,7 @@ import {
   gardensHeaderEditSave,
   gardensList,
   gardensReopen,
+  gardensSaleMoney,
   gardensSummary,
 } from './api';
 import type {
@@ -259,7 +260,8 @@ export function useArrivalsList(
 ) {
   const settled = useDebouncedValue(search.trim(), FILTER_DELAY_MS);
   return usePagedQuery({
-    screen: 'gardens.arrivals',
+    // Each section remembers its own page: the goods not sold yet and the goods sold (FR-12.53).
+    screen: state === 'sold_out' ? 'gardens.arrivals_sold' : 'gardens.arrivals',
     queryKey: [...GARDENS_KEY, 'arrivals', gardenId, state, settled],
     fetchPage: (offset, limit, sort) =>
       gardensArrivalsList({
@@ -279,6 +281,48 @@ export function useArrivalsList(
     totalOf: (page) => page.total_count,
     keepPrevious: true,
     defaultPageSize: RECORDS_PAGE_SIZE,
+  });
+}
+
+/** The sales of a garden that the money list asks for (PRD FR-12.53). */
+export interface SaleMoneyFilter {
+  /** The days, `DD-MM-YYYY`, or null for no limit (every month). */
+  from: string | null;
+  to: string | null;
+  /** Only the sales of the goods of this goods arrived entry, or null for every sale. */
+  arrivalId: number | null;
+  search?: string;
+}
+
+/**
+ * Where the garden's sale money is, a page at a time, with the totals over the whole filter. It is
+ * kept under the gardens' key, so every save of a garden reads it again; a screen that opens it asks
+ * afresh, so a receipt taken since is in "collected since".
+ */
+export function useSaleMoney(
+  gardenId: number,
+  { from, to, arrivalId, search = '' }: SaleMoneyFilter,
+  screen: string,
+  enabled = true,
+) {
+  const settled = useDebouncedValue(search.trim(), FILTER_DELAY_MS);
+  return usePagedQuery({
+    screen,
+    queryKey: [...GARDENS_KEY, 'sale-money', gardenId, from, to, arrivalId, settled],
+    fetchPage: (offset, limit) =>
+      gardensSaleMoney({
+        garden_id: gardenId,
+        from,
+        to,
+        arrival_id: arrivalId,
+        search: settled === '' ? null : settled,
+        offset,
+        limit,
+      }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    enabled,
+    keepPrevious: true,
   });
 }
 

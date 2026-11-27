@@ -1034,6 +1034,7 @@ fn a_lot_credit_fruit_and_a_general_line_on_a_shop_linked_khata_are_mirrored() {
             weight: None,
             rate: "580".into(),
             note: None,
+            deduction: None,
             editing_id: None,
         },
     )

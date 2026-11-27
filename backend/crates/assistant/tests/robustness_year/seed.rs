@@ -1859,6 +1859,7 @@ fn fruit_home(y: &Year, dd: &str) {
             weight: None,
             rate: "1,800".into(),
             note: None,
+            deduction: None,
             editing_id: None,
         },
     )
@@ -1882,6 +1883,7 @@ fn fruit_guests(y: &Year, dd: &str) {
             weight: None,
             rate: "4,000".into(),
             note: None,
+            deduction: None,
             editing_id: None,
         },
     )

@@ -26,7 +26,13 @@ import {
 import { noChangeReview } from '../helpers/edit-real';
 import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { CLOSED_DAY_ENTRY } from '../helpers/entry-flags';
-import { e40Garden, e40History, fakeGardenItemPicker, fakeGardens } from '../helpers/gardens';
+import {
+  e40Garden,
+  e40History,
+  fakeGardenItemPicker,
+  fakeGardens,
+  fakeUnsoldArrivals,
+} from '../helpers/gardens';
 import { BANANA } from '../helpers/gardens-data';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
@@ -298,7 +304,7 @@ describe.each(LANGUAGES)('goods arrived and the garden header open for edit (%s)
     const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
     if (first === undefined) throw new Error('the real fixture has no arrival');
     expect(first.can_edit).toBe(true);
-    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue(arrivals.ARRIVALS_IN_STOCK);
+    fakeUnsoldArrivals(arrivals.ARRIVALS_IN_STOCK);
     vi.mocked(gardensApi.gardensArrivalEditSave).mockResolvedValue(EDITED);
     const { user } = await open();
     // The arrival detail has its own Edit button, above the history's (which is off until a row has focus).

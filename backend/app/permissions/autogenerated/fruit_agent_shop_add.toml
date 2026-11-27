@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fruit-agent-shop-add"
+description = "Enables the fruit_agent_shop_add command without any pre-configured scope."
+commands.allow = ["fruit_agent_shop_add"]
+
+[[permission]]
+identifier = "deny-fruit-agent-shop-add"
+description = "Denies the fruit_agent_shop_add command without any pre-configured scope."
+commands.deny = ["fruit_agent_shop_add"]

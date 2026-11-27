@@ -85,9 +85,14 @@ export type ReportDetailPart =
   | {
       kind: 'cash_lent';
       /**
-       * The reason as typed.
+       * The reason as typed; empty when none was typed (v1.60).
        */
       reason: string;
+      /**
+       * True when it was typed as a پیشگی to a buyer: shown as پیشگی, with the same posting
+       * (PRD FR-15.11 v1.60).
+       */
+      advance: boolean;
     }
   | {
       kind: 'text';

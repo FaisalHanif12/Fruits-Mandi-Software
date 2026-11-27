@@ -586,8 +586,10 @@ pub struct FruitInfo {
     pub qty: i64,
     /// The rate, paisa.
     pub rate_paisa: i64,
-    /// The value, paisa.
+    /// The value as posted, paisa: the net when the entry has a deduction (PRD FR-16.11 v1.59).
     pub value_paisa: i64,
+    /// کل کٹوتی, paisa: 0 when there is none. The value before it is `value_paisa + deduction_paisa`.
+    pub deduction_paisa: i64,
     /// True for the shop's guests.
     pub guests: bool,
     /// The posting in force (after a cancel, the posting that was reversed). The row holds the values
@@ -608,7 +610,7 @@ pub fn fruit_infos(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i
     let mut statement = conn.prepare(&format!(
         "SELECT f.id, f.number, it.id, it.code, it.name_ur, it.name_en,
                 pk.id, pk.code, pk.name_ur, pk.name_en, f.qty, f.rate_paisa, f.value_paisa,
-                f.partner_id IS NULL, f.current_entry_id
+                f.partner_id IS NULL, f.current_entry_id, f.deduction_paisa
          FROM fruit_takes f JOIN items it ON it.id = f.item_id JOIN packings pk ON pk.id = f.packing_id
          WHERE f.id IN ({})",
         marks(ids.len())
@@ -625,6 +627,7 @@ pub fn fruit_infos(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i
                 value_paisa: r.get(12)?,
                 guests: r.get(13)?,
                 current_entry_id: r.get(14)?,
+                deduction_paisa: r.get(15)?,
             },
         ))
     })?;

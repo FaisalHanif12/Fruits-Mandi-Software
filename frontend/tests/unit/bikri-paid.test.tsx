@@ -352,7 +352,7 @@ describe.each(LANGUAGES)(
       expect(summaryFigure(language, 'glossary-naqdi')).toBe('0');
     });
 
-    it('Event 2: a چکتا buyer pays the 12,800 the backend sets, the paid cell is closed, and Enter after the rate goes on', async () => {
+    it('Event 2: a چکتا buyer pays the 12,800 the backend sets, the paid cell is closed, and the cursor goes on, but the lot is sold out so it adds no line', async () => {
       seedBikriDraft({ lot: 'karim' });
       const { user, backend } = await openSaleBook(language, chuktaAnswer);
       const sales = salesGrid(language);
@@ -373,8 +373,15 @@ describe.each(LANGUAGES)(
       await user.keyboard('10{Enter}1200{Enter}');
       await waitFor(() => {
         expect(textOf(sales, 0, 'paid')).toBe('12,800');
-        expect(focusedIn(sales)).toBe('1:buyer');
       }, SLOW_MS);
+      // The cursor would go on to a new line, but the lot (10 of 10) is sold out: no line is added, and the words say why
+      // (plan 97 item 2, PRD FR-12.52).
+      await waitFor(() => {
+        expect(
+          screen.queryByText((text) => visible(text) === message(language, 'bikri-sales-sold-out')),
+        ).not.toBeNull();
+      }, SLOW_MS);
+      expect(sales.querySelector('.ag-row[row-index="1"]')).toBeNull();
       expect(cellOf(sales, 0, 'paid')).toHaveClass('cell-calc');
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,800');
       // Nothing was typed for the paid cell: the draft sends none, and no payment type.

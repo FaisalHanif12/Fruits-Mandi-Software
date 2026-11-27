@@ -10,7 +10,7 @@
 
 - The آڑھتی box lists only seller accounts marked آڑھتی دکان. A new shop is added on the spot (names, optional phone), saved as a seller account with that mark (FR-7.69). Marked accounts are not offered as a lot's seller in بکری; they show in seller payables and the ادائیگی picker as usual.
 - New input کل کٹوتی (whole rupees, 0 or more, less than the value). Subtracted: the agent is credited value − کل کٹوتی; the partner, or the partners for guests (C27), are charged the same net. 0 posts exactly as today.
-- Worked numbers: 2 پیٹی × 1,400 = 2,800; کل کٹوتی 200; net 2,800 − 200 = 2,600. Journal: الف 0604 بنام 2,600, agent جمع 2,600. Guests with 3 partners: 2,600 → 867 / 867 / 866 by C27 (split_by_qty, leftover to the first created).
+- Worked numbers: 2 پیٹی × 1,400 = 2,800; کل کٹوتی 200; net 2,800 − 200 = 2,600. Journal: الف 0604 بنام 2,600, agent جمع 2,600. Guests with 3 partners: 2,600 → 868 / 866 / 866 by C27 (split_by_qty: each floored to 866, the whole leftover 2 to the partner created first; corrected by backend-97).
 - Backend: a numbered migration (the next free number) with the account mark and the fruit take's deduction column (`*_paisa`, CHECK multiple of 100, ≥ 0); the lead records the names in Architecture 15.4 and 15.6 after the hand-off. Edit and cancel follow FR-16.12. Money agent review required.
 
 ## 2. Sold-out lot: no new sale line (FR-12.52)
@@ -67,3 +67,9 @@ When a بکری holds a garden lot or a trip lot, the summary has one card for e
 ## Out of scope
 
 - Any change to how a lot's money posts.
+
+## Follow-ups
+
+- Robustness-owned files edited mechanically by backend-97 (lead approval, no robustness teammate running): `deduction: None,` added to `FruitInput` literals in `services/tests/robustness_gate_t1/steps.rs`, `assistant/tests/robustness_year/seed.rs`, `assistant/tests/robustness_live.rs`. The robustness tester reviews them at the gate.
+- Also by backend-96f (lead approval): `"fruit_takes"` added to the skip list of `db/tests/robustness_d8_migration.rs`, because migration 0030 adds `fruit_takes.deduction_paisa`.
+- Also by backend-97 (lead approval): `'advance_paisa'` added to `lots_without_counter` in `db/tests/robustness_d8_migration.rs` (migration 29 of plan 95 added it). Comparison lists only; no expected number changed.

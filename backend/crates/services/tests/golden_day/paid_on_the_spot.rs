@@ -49,7 +49,7 @@ fn case() -> Case {
     let anas = buyer("انس", "Anas");
     let haroon = buyer("ہارون", "Haroon");
     let mango = support::add_item(&w.env, &w.owner, "آم", "Mango", "fruit", "unit");
-    // His 10,000 جمع: the shop owes him (an opening credit, posted against ابتدائی فرق).
+    // His 10,000 جمع: the shop owes him (an opening credit, posted against روکڑ, PRD FR-10.9 v1.60).
     accounts::openings_save(
         &w.env.ctx,
         &w.owner,
@@ -111,7 +111,7 @@ fn e2e_65_paid_21360_10000_and_0_journal_cash_matching_and_dues() {
     let c = case();
     let w = &c.w;
     assert_eq!(balance(w, c.haroon), (BalanceSide::Cr, 10_000));
-    assert_eq!(cash(w), (BalanceSide::Dr, 50_000));
+    assert_eq!(cash(w), (BalanceSide::Dr, 60_000));
     let draft = c.draft(["21,360", "10,000", ""]);
 
     // The preview: line by line, the totals of the lot, and what it does to cash.
@@ -156,7 +156,7 @@ fn e2e_65_paid_21360_10000_and_0_journal_cash_matching_and_dues() {
         (182_000, 21_920, 160_080, 23_440)
     );
     assert_eq!(support::r(preview.cash.change_paisa), 31_360);
-    assert_eq!(support::r(preview.cash.cash_after_paisa), 81_360);
+    assert_eq!(support::r(preview.cash.cash_after_paisa), 91_360);
 
     // The save is the same calculation.
     let saved = save_ok(w, &draft, false);
@@ -228,7 +228,7 @@ fn e2e_65_paid_21360_10000_and_0_journal_cash_matching_and_dues() {
     assert_eq!(journal.iter().map(|l| l.1).sum::<i64>(), 225_880);
     assert_eq!(journal.iter().map(|l| l.2).sum::<i64>(), 225_880);
     // Cash is up by 31,360.
-    assert_eq!(cash(w), (BalanceSide::Dr, 81_360));
+    assert_eq!(cash(w), (BalanceSide::Dr, 91_360));
     // The partner split is that of E2E-64.
     assert_eq!(shares_of(w, saved.entry_id), [9_376, 7_032, 7_032]);
 
@@ -276,7 +276,7 @@ fn e2e_65_paid_21360_10000_and_0_journal_cash_matching_and_dues() {
     assert_eq!(tiles.buyers_dues_paisa.rupees(), 153_160);
 
     // The books balance. The trial balance adds the net balance of each account, so the debit side is
-    // cash 81,360 + رحیم 15,000 + انس 38,100 + ہارون 115,060 + ابتدائی فرق 10,000 = 259,520, and the credit
+    // cash 91,360 + رحیم 15,000 + انس 38,100 + ہارون 115,060 = 259,520, and the credit
     // side is capital 65,000 + احسان 160,080 + commission 10,920 + 10,920 + لاگا 1,600 + مزدوری 1,000 +
     // کرایہ 10,000 = 259,520.
     let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
@@ -295,7 +295,7 @@ fn e2e_65_nothing_paid_and_everything_paid_post_what_credit_and_cash_lines_poste
     let lines = entry_lines(&credit.w, saved.entry_id);
     assert_eq!(lines.len(), 9, "no cash part");
     assert_eq!(lines.iter().map(|l| l.1).sum::<i64>(), 194_520);
-    assert_eq!(cash(&credit.w), (BalanceSide::Dr, 50_000));
+    assert_eq!(cash(&credit.w), (BalanceSide::Dr, 60_000));
     assert_eq!(
         balance(&credit.w, credit.haroon),
         (BalanceSide::Dr, 115_060)
@@ -306,7 +306,7 @@ fn e2e_65_nothing_paid_and_everything_paid_post_what_credit_and_cash_lines_poste
     let lines = entry_lines(&all.w, saved.entry_id);
     assert_eq!(lines.len(), 15, "nine lines and three cash pairs");
     assert_eq!(lines.iter().map(|l| l.1).sum::<i64>(), 194_520 + 194_520);
-    assert_eq!(cash(&all.w), (BalanceSide::Dr, 50_000 + 194_520));
+    assert_eq!(cash(&all.w), (BalanceSide::Dr, 60_000 + 194_520));
     // ہارون paid all 125,060 and keeps his 10,000 جمع.
     assert_eq!(balance(&all.w, all.haroon), (BalanceSide::Cr, 10_000));
     assert_eq!(balance(&all.w, all.mani).1, 0);
@@ -346,7 +346,7 @@ fn e2e_65_one_rupee_over_the_buyer_total_is_refused_and_nothing_is_saved() {
         Some(&mandi_services::core::error::ErrorValue::Number(21_360))
     );
     assert_eq!(scalar(&c.w, "SELECT COUNT(*) FROM bikri_sales"), 0);
-    assert_eq!(cash(&c.w), (BalanceSide::Dr, 50_000));
+    assert_eq!(cash(&c.w), (BalanceSide::Dr, 60_000));
 }
 
 /// `{ "draft": ... }`, what `bikri_preview` takes inside `input`.

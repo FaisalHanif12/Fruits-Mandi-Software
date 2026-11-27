@@ -102,6 +102,7 @@ export function SplitDialog({
             <FreeTextInput
               {...control}
               value={shop}
+              kind="name"
               onChange={(text) => {
                 setTypedShop(text);
               }}

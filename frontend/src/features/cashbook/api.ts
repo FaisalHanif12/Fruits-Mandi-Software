@@ -17,22 +17,15 @@ import type { LentPersonCreateRequest } from '../../bindings/LentPersonCreateReq
 import type { LentPersonUpdateInput } from '../../bindings/LentPersonUpdateInput';
 import type { MoneyLentRequest } from '../../bindings/MoneyLentRequest';
 import type { MoneyLentReturnInput } from '../../bindings/MoneyLentReturnInput';
+import type { OpeningsToCashDone } from '../../bindings/OpeningsToCashDone';
+import type { OpeningsToCashInput } from '../../bindings/OpeningsToCashInput';
+import type { OpeningsToCashPreview } from '../../bindings/OpeningsToCashPreview';
 import type { PartnerTakesInput } from '../../bindings/PartnerTakesInput';
-import type { PrintOutcome } from '../../bindings/PrintOutcome';
-import type { TablePrintData } from '../../bindings/TablePrintData';
 import type { PersonalExpenseInput } from '../../bindings/PersonalExpenseInput';
 import type { PersonalReturnInput } from '../../bindings/PersonalReturnInput';
 import type { RepeatLastMonthInput } from '../../bindings/RepeatLastMonthInput';
 import type { ShopExpenseInput } from '../../bindings/ShopExpenseInput';
 import { callCommand } from '../../shared/api';
-import type {
-  CapitalPrintInput,
-  CapitalWhere,
-  CapitalWhereInput,
-  PartnersOpeningCapitalPlaced,
-  PartnersPlaceOpeningCapitalInput,
-  PrintCapitalInput,
-} from './capital-types';
 import type {
   Cashbook,
   CashbookInput,
@@ -60,34 +53,16 @@ export function cashbookGet(input: CashbookInput): Promise<Cashbook> {
 }
 
 /**
- * The capital card of the روکڑ page as of a day (`DD-MM-YYYY` as typed, or null for today): where the partners' money is, in two blocks, whose it
- * is, and the opening difference when it is not 0 (PRD FR-16.14, plan 87). Behind the partner code: while the
- * section is locked the backend answers `ERR_PARTNER_LOCKED`.
+ * What the one-time fix "put the old opening balances into روکڑ" would do (PRD FR-10.9 v1.60): the openings of
+ * parties still against the opening difference, cash and that difference before and after. Reads only.
  */
-export function cashbookCapitalWhere(input: CapitalWhereInput): Promise<CapitalWhere> {
-  return callCommand<CapitalWhere>('cashbook_capital_where', { input });
+export function openingsToCashPreview(): Promise<OpeningsToCashPreview> {
+  return callCommand<OpeningsToCashPreview>('accounts_openings_to_cash_preview');
 }
 
-/**
- * Puts the opening capital of the chosen partners into روکڑ (plan 87, PRD FR-16.14, FR-21.4): each opening is
- * reversed and posted again on its own date with روکڑ on the other side. It is a command of the partners area, kept
- * here because only this card calls it. The reason and the Owner's sign are checked by the backend, which reopens
- * and closes the days itself.
- */
-export function partnersPlaceOpeningCapital(
-  input: PartnersPlaceOpeningCapitalInput,
-): Promise<PartnersOpeningCapitalPlaced> {
-  return callCommand<PartnersOpeningCapitalPlaced>('partners_place_opening_capital', { input });
-}
-
-/** The card as a print table, every line, in the print language (PRD FR-19.13). */
-export function cashbookCapitalPrintData(input: CapitalPrintInput): Promise<TablePrintData> {
-  return callCommand<TablePrintData>('cashbook_capital_print_data', { input });
-}
-
-/** Prints the card, or saves it as a PDF: the same day, language and paper as the preview. */
-export function cashbookCapitalPrint(input: PrintCapitalInput): Promise<PrintOutcome> {
-  return callCommand<PrintOutcome>('cashbook_capital_print', { input });
+/** Posts those openings again against روکڑ, with the reason and the Owner's sign (PRD FR-21.4). */
+export function openingsToCash(input: OpeningsToCashInput): Promise<OpeningsToCashDone> {
+  return callCommand<OpeningsToCashDone>('accounts_openings_to_cash', { input });
 }
 
 /** The shop expense heads, the most used first (PRD FR-7.62). */

@@ -7,6 +7,7 @@
 
 import { IDS, SELLER_MEMORY, previewFor, previewWithOverLine } from './bikri-data';
 import { devSellerLines } from './dev-bridge-seller-paid';
+import { gardenCard, tripCard, withCards } from './venture-cards';
 import {
   cancelPreview,
   editable,
@@ -81,6 +82,8 @@ interface Party {
   /** Balance in paisa and its side, as the backend sends it. */
   paisa: number;
   side: 'dr' | 'cr' | 'zero';
+  /** A seller account marked آڑھتی دکان: the only kind the آڑھتی box of the پھل screen lists (PRD FR-16.11 v1.59). */
+  agentShop?: boolean;
 }
 
 const OWN_ID = 17;
@@ -141,6 +144,17 @@ const BIKRI_PARTIES: readonly Party[] = [
     en: 'Chukta Khata',
     paisa: 0,
     side: 'zero',
+  },
+  // Another commission agent's shop, marked آڑھتی دکان (the پھل screen's آڑھتی box lists only these).
+  {
+    id: 35,
+    code: '0012',
+    type: 'seller',
+    ur: 'حاجی نذیر',
+    en: 'Haji Nazir',
+    paisa: 0,
+    side: 'zero',
+    agentShop: true,
   },
 ];
 
@@ -256,9 +270,12 @@ const ADDED_CHUKTA: (typeof SHAHID)[] = [];
 function partyMatches(party: Party, scope: string, text: string): boolean {
   // The account چکتا کھاتہ is never offered; his buyers are (PRD FR-13.4).
   if (party.id === IDS.chuktaKhata) return false;
-  // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
-  if (scope === 'lot_seller') {
-    if (party.type !== 'seller') return false;
+  // The آڑھتی box of the پھل screen lists only the shops marked آڑھتی دکان (PRD FR-16.11 v1.59).
+  if (scope === 'agent_shop') {
+    if (party.type !== 'seller' || party.agentShop !== true) return false;
+  } else if (scope === 'lot_seller') {
+    // The seller of a lot may be any seller and اپنا مال, but not a marked shop; every other seller field leaves اپنا مال out.
+    if (party.type !== 'seller' || party.agentShop === true) return false;
     // Only usable entries (plan 46, PRD FR-12.26): اپنا مال only while a trip has goods left, which
     // the stand-in has for the `?own` page only.
     if (party.code === OWN_CODE && !devFlag('own')) return false;
@@ -511,6 +528,24 @@ const handlers: Record<string, Handler> = {
     ...chuktaHits(asText(input['scope']), '', input['with_chukta'] === true),
   ],
   search_accounts_touch: () => null,
+  // The short form of a new commission agent's shop (PRD FR-7.69, FR-16.11 v1.59): a seller marked آڑھتی دکان.
+  fruit_agent_shop_add: (input) => {
+    NEXT_ID.value += 1;
+    const ur = asText(input['name_ur']);
+    const en = asText(input['name_en']);
+    const code = `001${String(20 + ADDED_PARTIES.length)}`;
+    ADDED_PARTIES.push({
+      id: NEXT_ID.value,
+      code,
+      type: 'seller',
+      ur,
+      en,
+      paisa: 0,
+      side: 'zero',
+      agentShop: true,
+    });
+    return { ...accountRow(NEXT_ID.value, 'seller', code, ur, en), is_agent_shop: true };
+  },
   accounts_balances: (input) => {
     const ids = Array.isArray(input['ids']) ? input['ids'] : [];
     return parties()
@@ -686,13 +721,18 @@ const handlers: Record<string, Handler> = {
     const withSellers = devFlag('seller')
       ? { ...preview, sellers: devSellerLines(draftOf(input)) }
       : preview;
+    // `#/dev/bikri?cards` adds the card of a garden and the card of a trip to the summary (plan 97 item 5); they show in
+    // the view of the whole sale (choose "the whole sale" in the summary).
+    const withVentures = devFlag('cards')
+      ? withCards(withSellers, [gardenCard()], [tripCard()])
+      : withSellers;
     // `#/dev/bikri?futuredate` answers like the backend for a date after today (plan 93 T8): the error of the date, whose
     // long words used to widen the one-line toolbar of the sale book. It is drawn as a bubble now.
     const withDate = devFlag('futuredate')
       ? {
-          ...withSellers,
+          ...withVentures,
           errors: [
-            ...withSellers.errors,
+            ...withVentures.errors,
             {
               code: 'ERR_DATE_IN_FUTURE',
               field: 'header.entry_date',
@@ -700,7 +740,7 @@ const handlers: Record<string, Handler> = {
             },
           ],
         }
-      : withSellers;
+      : withVentures;
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
     return devFlag('cash') ? { ...withDate, cash: CASH_BELOW_ZERO } : withDate;
   },

@@ -88,11 +88,19 @@ describe.each(LANGUAGES)('the quality of a sale line (%s)', (language) => {
   });
 
   it('takes no Enter stop: buyer, qty, rate, paid, then the next line, four stops for each line', async () => {
-    await twoLines();
-    // typeTwoLines used only Enter, four for each line: both lines are full and the cursor is on the
-    // next line's buyer. The quality is between the rate and the paid cell and is not a stop.
+    const { user } = await openBook(language);
+    await typeHeaderAndLot(user, language);
+    const sales = salesGrid(language);
+    await user.keyboard('0{Enter}');
     await waitFor(() => {
-      expect(focusedIn(salesGrid(language))).toBe('2:buyer');
+      expect(focusedIn(sales)).toBe('0:qty');
+    }, SLOW_MS);
+    // Four Enters fill the line (buyer, qty, rate, paid) and the cursor is on the next line's buyer. The quality is between
+    // the rate and the paid cell and is not a stop. The line is 20 of 50, so the lot has goods left and a line is added (a
+    // sold out lot adds none, plan 97 item 2: bikri-sold-out-keys).
+    await user.keyboard('20{Enter}600{Enter}{Enter}');
+    await waitFor(() => {
+      expect(focusedIn(sales)).toBe('1:buyer');
     }, SLOW_MS);
   });
 

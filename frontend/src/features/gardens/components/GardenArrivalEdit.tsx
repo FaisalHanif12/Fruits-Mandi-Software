@@ -228,7 +228,7 @@ export function GardenArrivalEdit({ garden, arrival, onDone }: GardenArrivalEdit
                   error={fieldError(error, 'weight')}
                 >
                   {(props) => (
-                    <FreeTextInput
+                    <QtyInput
                       {...props}
                       value={draft.weight}
                       onChange={(weight) => {

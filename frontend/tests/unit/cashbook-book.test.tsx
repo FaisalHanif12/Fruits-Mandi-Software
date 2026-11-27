@@ -103,12 +103,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     });
     const text = visible(list.textContent);
     // The kind of each row is written in words, with its number.
-    expect(text).toContain(
-      message(language, 'cashbook-kind-number', {
-        kind: message(language, 'cashbook-kind-receipt'),
-        number: 1,
-      }),
-    );
+    expect(text).toContain(`${message(language, 'cashbook-row-kind-receipt')} 1`);
     // The totals row is the backend's over the whole range: in 10,000, out 4,316 + 3,000 + 2,000.
     expect(text).toContain('10,000');
     expect(text).toContain('9,316');
@@ -147,6 +142,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
         limit: PAGE_ROWS,
         sort: null,
         group_by_month: true,
+        show_reversed: false,
       });
     });
     const range = (from: number, to: number) =>
@@ -208,7 +204,10 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
       expect(visible(pageText())).toContain('60,000');
     });
     expect(pageText()).not.toContain(message(language, 'cashbook-running-date-only'));
-    await user.click(await screen.findByText(named(message(language, 'cashbook-col-in'))));
+    const list = await screen.findByRole('group', {
+      name: named(message(language, 'cashbook-list-label')),
+    });
+    await user.click(await within(list).findByText(named(message(language, 'cashbook-col-in'))));
     await waitFor(() => {
       expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(
         expect.objectContaining({ sort: { column: 'in_paisa', direction: 'asc', language } }),
@@ -267,12 +266,13 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
       ).getAllByRole('button')[index];
       if (item === undefined) throw new Error('no menu item');
       await user.click(item);
-      // Each screen of the area is a lazy route: on a busy computer its chunk takes longer than the 1 s of the default.
+      // Each screen of the area is a lazy route, and the path changes once its code has loaded. In a
+      // full run on a busy computer the first load took more than 8 s.
       await waitFor(
         () => {
           expect(router.state.location.pathname).toBe(path);
         },
-        { timeout: 8000 },
+        { timeout: 20_000 },
       );
       await waitFor(
         () => {
@@ -287,7 +287,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
         { timeout: 8000 },
       );
     }
-  });
+  }, 90_000);
 
   it('a language switch redraws the book in the other language and keeps the window', async () => {
     const { user } = await open();

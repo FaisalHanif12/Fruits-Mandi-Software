@@ -6,11 +6,10 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import type { SortInput } from '../../bindings/SortInput';
 import { usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { VOUCHERS_KEY, vouchersPreview } from '../vouchers';
 import {
-  cashbookCapitalWhere,
-  partnersPlaceOpeningCapital,
   cashbookGet,
   expensePreview,
   generalPreview,
@@ -22,6 +21,8 @@ import {
   lentList,
   lentPersonCreate,
   lentPersonUpdate,
+  openingsToCash,
+  openingsToCashPreview,
   partnerTakes,
   repeatLastMonth,
   saveKhataIn,
@@ -32,9 +33,10 @@ import {
   savePersonalReturn,
   saveShopExpense,
 } from './api';
-import type { PartnersPlaceOpeningCapitalInput } from './capital-types';
 import { inputOf } from './entry-support';
+import type { OpeningsToCashInput } from '../../bindings/OpeningsToCashInput';
 import type {
+  CashKind,
   ExpenseEntry,
   GeneralInput,
   GeneralPreview,
@@ -70,16 +72,36 @@ export function useReadAgain() {
     );
 }
 
+/** What of the book the screen shows besides its days (PRD FR-16.14 v1.60). */
+export interface CashbookView {
+  /** "Show old and cancelled too": the old postings and their reversing entries show as well. */
+  showReversed: boolean;
+  /** The kinds of the chosen type, as the backend's summary names them; null shows every type. */
+  kinds: readonly CashKind[] | null;
+}
+
+const EVERY_TYPE: CashbookView = { showReversed: false, kinds: null };
+
 /** The cash book of a range, page by page, with the totals over the whole range (PRD 16.1). */
 export function useCashbook(
   range: { from: string | null; to: string | null },
   groupByMonth = false,
+  view: CashbookView = EVERY_TYPE,
 ) {
+  const { showReversed, kinds } = view;
   return usePagedQuery({
     screen: 'cashbook.book',
-    queryKey: [...CASHBOOK_KEY, 'book', range, groupByMonth],
+    queryKey: [...CASHBOOK_KEY, 'book', range, groupByMonth, showReversed, kinds],
     fetchPage: (offset, limit, sort) =>
-      cashbookGet({ ...range, offset, limit, sort, group_by_month: groupByMonth && sort === null }),
+      cashbookGet({
+        ...range,
+        offset,
+        limit,
+        sort,
+        group_by_month: groupByMonth && sort === null,
+        show_reversed: showReversed,
+        ...(kinds === null ? {} : { kinds: [...kinds] }),
+      }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
@@ -87,28 +109,22 @@ export function useCashbook(
 }
 
 /**
- * The capital card as of a day (PRD FR-16.14, plan 87). It is read only when the card is open, and read again after
- * every save (the key starts with `cashbook`). A locked partner section is an error the card shows as the code box
- * (`ErrorState`). `asOf` is the day as typed, `DD-MM-YYYY`, or null for today.
+ * The old opening balances not yet in روکڑ (PRD FR-10.9 v1.60). Read again after every save (its key starts
+ * with `cashbook`), and never kept stale: the روکڑ page offers the fix only while there are some.
  */
-export function useCapitalWhere(enabled: boolean, asOf: string | null) {
+export function useOpeningsToCashPreview() {
   return useQuery({
-    queryKey: [...CASHBOOK_KEY, 'capital-where', asOf],
-    queryFn: () => cashbookCapitalWhere(asOf === null ? {} : { as_of: asOf }),
-    enabled,
+    queryKey: [...CASHBOOK_KEY, 'openings-to-cash'],
+    queryFn: openingsToCashPreview,
     staleTime: 0,
   });
 }
 
-/**
- * Puts the opening capital of the chosen partners into روکڑ with the reason and the Owner's sign (plan 87). When the
- * backend says yes, the card, the cash book, the partners' totals and the day are read again (PRD 6.2). A refusal
- * (a wrong sign, no reason) is the mutation's error and changes nothing.
- */
-export function usePlaceOpeningCapital() {
+/** Moves those openings into روکڑ; what shows cash, balances and days is read again. */
+export function useMoveOpeningsToCash() {
   const readAgain = useReadAgain();
   return useMutation({
-    mutationFn: (input: PartnersPlaceOpeningCapitalInput) => partnersPlaceOpeningCapital(input),
+    mutationFn: (input: OpeningsToCashInput) => openingsToCash(input),
     onSuccess: readAgain,
   });
 }
@@ -154,7 +170,14 @@ export interface TaggedPreview {
   preview: VoucherPreview;
 }
 
-/** One partner's money taken, page by page (PRD FR-16.2). Never kept: a save changes it. */
+/** The order of the list of every partner until a column title is clicked: the latest day first (plan 98). */
+const NEWEST_FIRST: SortInput = { column: 'entry_date', direction: 'desc', language: null };
+
+/**
+ * The money taken, page by page (PRD FR-16.2): one partner's, or every partner's when `partnerId` is null (plan 98:
+ * the backend lists each partner with takes in the range, his name on each row, with its totals over all of them).
+ * The list of every partner starts with the latest day first. Never kept: a save changes it.
+ */
 export function usePartnerTakes(
   partnerId: number | null,
   groupByMonth = false,
@@ -162,19 +185,21 @@ export function usePartnerTakes(
   range: { from: string | null; to: string | null } = { from: null, to: null },
   ready = true,
 ) {
+  const everyone = partnerId === null;
   return usePagedQuery({
-    screen: 'cashbook.takes',
+    screen: everyone ? 'cashbook.takes_all' : 'cashbook.takes',
     queryKey: [...CASHBOOK_KEY, 'takes', partnerId, groupByMonth, showFinished, range],
-    enabled: partnerId !== null && ready,
+    enabled: ready,
     fetchPage: (offset, limit, sort) =>
       partnerTakes({
-        partner_id: partnerId ?? 0,
+        partner_id: partnerId,
         from: range.from,
         to: range.to,
         offset,
         limit,
-        sort,
-        group_by_month: groupByMonth && sort === null,
+        sort: sort ?? (everyone ? NEWEST_FIRST : null),
+        // Months are headed only in the natural order of one partner's list.
+        group_by_month: groupByMonth && sort === null && !everyone,
         show_finished: showFinished,
       }),
     rowsIn: (page) => page.rows.length,

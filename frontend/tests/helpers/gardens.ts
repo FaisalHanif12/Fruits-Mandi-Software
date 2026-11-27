@@ -5,6 +5,7 @@
 
 import { paisaForTest } from './paisa';
 import { vi } from 'vitest';
+import type { ArrivalsList } from '../../src/bindings/ArrivalsList';
 import type { RecordRef } from '../../src/bindings/RecordRef';
 import type { SearchHit } from '../../src/bindings/SearchHit';
 import * as gardensApi from '../../src/features/gardens/api';
@@ -19,6 +20,38 @@ function answer<T>(make: () => T): Promise<T> {
   return new Promise<T>((resolve) => {
     resolve(make());
   });
+}
+
+/** A list of goods arrived with nothing in it, as the backend answers it. */
+export function noArrivals(): ArrivalsList {
+  return {
+    rows: [],
+    total_count: 0,
+    totals: {
+      qty: 0,
+      qty_sold: 0,
+      qty_written_off: 0,
+      qty_left: 0,
+      qty_our_sold: 0,
+      qty_other_sold: 0,
+      qty_our_left: 0,
+      qty_other_left: 0,
+      sale_value_paisa: paisaForTest(0),
+      commission_paisa: paisaForTest(0),
+    },
+    months: [],
+  };
+}
+
+/**
+ * The goods arrived list answers the entries given when the goods not sold yet are asked for (and
+ * when every entry is asked for, as the sale in another shop does), and nothing when the goods sold
+ * are asked for (PRD FR-12.53: the two lists of a garden).
+ */
+export function fakeUnsoldArrivals(list: ArrivalsList): void {
+  vi.mocked(gardensApi.gardensArrivalsList).mockImplementation((input) =>
+    Promise.resolve(input.state === 'sold_out' ? noArrivals() : list),
+  );
 }
 
 /** Sets the answers of the gardens commands, and returns the store behind them. */
@@ -53,18 +86,22 @@ export function fakeGardens(options: GardensOptions = {}): FakeGardens {
     answer(() => books.reopen(input)),
   );
   // A garden with no goods arrived yet; the tests of the goods arrived set their own answers.
-  vi.mocked(gardensApi.gardensArrivalsList).mockImplementation(() =>
+  vi.mocked(gardensApi.gardensArrivalsList).mockImplementation(() => Promise.resolve(noArrivals()));
+  // No sale of the garden yet; the tests of the sale money set their own answers.
+  vi.mocked(gardensApi.gardensSaleMoney).mockImplementation(() =>
     Promise.resolve({
       rows: [],
       total_count: 0,
       totals: {
         qty: 0,
-        qty_sold: 0,
-        qty_written_off: 0,
-        qty_left: 0,
-        commission_paisa: paisaForTest(0),
+        value_paisa: paisaForTest(0),
+        buyer_total_paisa: paisaForTest(0),
+        paid_paisa: paisaForTest(0),
+        collected_paisa: paisaForTest(0),
+        still_due_paisa: paisaForTest(0),
+        lot_charges_paisa: paisaForTest(0),
+        garden_credit_paisa: paisaForTest(0),
       },
-      months: [],
     }),
   );
   return books.store;

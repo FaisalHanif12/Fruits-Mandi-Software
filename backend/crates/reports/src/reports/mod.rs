@@ -180,11 +180,9 @@ pub use model::{
     ReportGroup, ReportId, ReportPage, ReportPrintInput, ReportRunInput, ReportTable,
     ResolvedFilters, Row, RowKind, RowSource, SourceKind, StockView, SummaryLine, TripView,
 };
-mod capital_card_print;
 mod day_slips;
 mod statement_month_print;
 mod table_print;
-pub use capital_card_print::{capital_card_print_data, capital_card_spec};
 pub use day_slips::{DaySlipsInput, DaySlipsPrintData, SlipSections, day_slips, seller_bills};
 pub use print_data::{
     PrintArgValue, PrintCell, PrintDetailPart, PrintMessageArg, PrintOptions, PrintReportColumn,

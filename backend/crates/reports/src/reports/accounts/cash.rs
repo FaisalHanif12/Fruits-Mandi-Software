@@ -39,7 +39,8 @@ pub(crate) const CASH_ACCOUNT_CODE: &str = "01010001";
 /// The one account on the other side of an entry that only takes cash in, or only gives it out.
 /// An entry that does both has no single other side, and the entry of a بکری has many.
 fn counterpart_of(
-    others: &HashMap<i64, Vec<cash_repo::Counterpart>>,
+    lines: &HashMap<i64, Vec<cash_repo::EntryLine>>,
+    cash_id: i64,
     row: &cash_repo::CashRow,
 ) -> Option<i64> {
     if row.in_paisa > 0 && row.out_paisa > 0 {
@@ -48,14 +49,14 @@ fn counterpart_of(
     // Cash received (a debit on cash) is matched by credits; cash paid out by debits.
     let cash_received = row.in_paisa > 0;
     let mut found: Option<i64> = None;
-    for line in others.get(&row.entry_id)? {
-        if line.is_debit == cash_received {
+    for line in lines.get(&row.key.entry_id)? {
+        if line.account.id == cash_id || (line.dr_paisa > 0) == cash_received {
             continue;
         }
         match found {
-            Some(first) if first != line.account_id => return None,
+            Some(first) if first != line.account.id => return None,
             Some(_) => {}
-            None => found = Some(line.account_id),
+            None => found = Some(line.account.id),
         }
     }
     found
@@ -112,32 +113,51 @@ pub(crate) fn run(
         open_cr.checked_add(total_out)?,
     )?;
 
-    let stored = cash_repo::page(
-        conn,
-        cash,
+    // R12 is the whole book: one row for each entry, the reversed ones and the reversals too.
+    let filter = cash_repo::Filter {
+        cash_id: cash,
         from,
         to,
+        show_reversed: true,
+        kinds: &[],
+        split: false,
+    };
+    let set = cash_repo::RowSums {
+        rows: range.count,
+        in_paisa: range.in_paisa,
+        out_paisa: range.out_paisa,
+    };
+    let keys = cash_repo::page(
+        conn,
+        &filter,
+        set,
         &cash_repo::Order::Date {
             desc: matches!(typed.line_sort, Some(LineSort::Newest)),
         },
         spec.offset,
         spec.sql_limit(),
     )?;
-    let entry_ids: Vec<i64> = stored.iter().map(|r| r.entry_id).collect();
-    let others = cash_repo::counterparts(conn, cash, &entry_ids)?;
-    let account_ids: Vec<i64> = stored
+    let row_keys: Vec<cash_repo::RowKey> = keys.iter().map(|k| k.key).collect();
+    let facts = cash_repo::rows(conn, cash, &row_keys)?;
+    let entry_ids: Vec<i64> = row_keys.iter().map(|k| k.entry_id).collect();
+    let lines = cash_repo::entry_lines(conn, &entry_ids)?;
+    let account_ids: Vec<i64> = row_keys
         .iter()
-        .filter_map(|r| counterpart_of(&others, r))
+        .filter_map(|k| facts.get(k))
+        .filter_map(|r| counterpart_of(&lines, cash, r))
         .collect();
     let parties = load_parties(conn, &account_ids)?;
 
-    let mut rows = Vec::with_capacity(stored.len());
-    for row in &stored {
+    let mut rows = Vec::with_capacity(keys.len());
+    for key in &keys {
+        let row = facts
+            .get(&key.key)
+            .ok_or_else(|| ReportsError::Data("a cash book row is missing".to_owned()))?;
         let balance = Balance::from_totals(
-            open_dr.checked_add(paisa(row.run_in_paisa.ok_or_else(missing_run)?)?)?,
-            open_cr.checked_add(paisa(row.run_out_paisa.ok_or_else(missing_run)?)?)?,
+            open_dr.checked_add(paisa(key.run_in_paisa.ok_or_else(missing_run)?)?)?,
+            open_cr.checked_add(paisa(key.run_out_paisa.ok_or_else(missing_run)?)?)?,
         )?;
-        let party = match counterpart_of(&others, row) {
+        let party = match counterpart_of(&lines, cash, row) {
             Some(id) => Cell::Party {
                 party: party_of_line(&parties, id, None)?,
             },
@@ -155,8 +175,8 @@ pub(crate) fn run(
                     iso: row.entry_date.clone(),
                 },
                 Cell::Doc {
-                    type_id: ids::doc_id_of(&row.posting_type, &row.source_type),
-                    number: row.number,
+                    type_id: ids::doc_id_of_cash(row),
+                    number: doc_number(row),
                 },
                 party,
                 text_cell(Some(narration.clone())),
@@ -167,7 +187,7 @@ pub(crate) fn run(
             source: Some(source_of(
                 &row.source_type,
                 row.source_id,
-                row.entry_id,
+                row.key.entry_id,
                 (row.venture_kind.as_deref(), row.venture_id),
             )),
             kind: RowKind::Normal,
@@ -206,6 +226,15 @@ pub(crate) fn run(
             },
         ],
     })
+}
+
+/// The number R12 prints beside the document: a voucher's or a بکری's, as before. The numbers of
+/// a trip purchase or a garden entry are on the روکڑ بک screen only.
+fn doc_number(row: &cash_repo::CashRow) -> Option<i64> {
+    match row.source_type.as_str() {
+        "voucher" | "bikri" => row.number,
+        _ => None,
+    }
 }
 
 /// The page of R12 is in day order, so every row has its running sums; a row without them is a

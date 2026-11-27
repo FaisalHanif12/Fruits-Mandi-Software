@@ -306,11 +306,25 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
   `LotInput.advance`, text as typed). It is a real advance with its own posting in the same save, not a deduction of the
   sale; the backend works it out and checks it (the cash question too). Own, garden and arrival lots do not show it.
 
-- **Short notes that hide (plan 95 items 1 and 2, PRD FR-12.52).** `shared/hooks/useTimedNotices` shows a note for a time
-  and shows it again when the user repeats the action (`pulse`). A lot warning in `ProblemList` stays 10 s
-  (`LOT_WARNING_MS` in `notices.ts`); the page passes a pulse made of each save try and each change in the lots or lines.
-  An error never hides, and the red net figure of the lot stays. The "+" of a sold out lot (the backend's `balance_qty` is 0) adds no line and says "all of this seller's goods are sold" for `SOLD_OUT_NOTE_MS`, again on each press. Tests:
-  `bikri-lot-warning-timer.test.tsx`, `bikri-lot-buttons.test.tsx`.
+- **Short notes that hide (plan 95 items 1 and 2, plan 97 items 2 and 4, PRD FR-12.52).** `shared/hooks/useTimedNotices`
+  shows a note for `NOTICE_MS` (5 s, the one constant, also `ERROR_BUBBLE_MS`) and shows it again when the user repeats the
+  action. The page gives the count of repeated actions (each try to save, each change typed in the lots or lines, each Enter
+  there) through `NoticePulseContext` (`ScreenProviders` on the page; `NoticeScope` in `LinesForm` for a later sale). Everything that is a
+  note uses it: the list above the lots (`ProblemList`, warnings and errors), the notes under the grids (`QtyNotes`,
+  `MissingNotes`, `LotNotes`), the refusal of a save (`TimedErrorNotice`) and the "all sold" note. The red mark on a cell or
+  figure stays until the problem is fixed, and a save is still refused while an error stands. Umar's rule is "all warnings
+  disappear in 5 seconds", so the rest fades too (the lead's decision, plan 97): the words under the fields of the "more"
+  panel, the line details and the own-goods panel (`Field` with `fadeError`: the red mark and `aria-invalid` stay and the words
+  stay in a line only a screen reader reads), the summary notes ("one line is left out", the net below zero), the seller's
+  "will grow" line, the cash below zero note (`CashNote fade`; the confirm box at save still asks, FR-6.7) and the own-goods
+  loss note (`shared/ui/TimedNote`). Only a notice that carries a button (the closed-day notice) stays.
+  A sold out lot (the backend's `balance_qty` is 0) takes no new sale line by any path: the "+" button, `↓` on the last
+  line and `Enter` on its last stop (the grid asks `GridInterceptors.onNewRow` before every key that makes a row, so there
+  is no screen-level key handler), and the words "all of this seller's goods are sold" show for 5 s, again on each try.
+  Tests: `bikri-lot-warning-timer.test.tsx`, `bikri-notes-fade.test.tsx`, `bikri-lot-buttons.test.tsx`,
+  `bikri-sold-out-keys.test.tsx`, `grid-new-row-refused.test.tsx`.
+- **The seller card title (plan 97 item 3).** The title of a seller's card in the summary (`SellerPaid`) is his name with
+  his tag only; the "paid on the spot" words are the label of the row inside the card.
 
 - **The button beside a lot's seller (plan 95 item 6).** The seller column has `cellButton` (shared grid): a real icon
   button after the name. A press selects that lot and shows its sale lines (the cursor goes to the first line), or its

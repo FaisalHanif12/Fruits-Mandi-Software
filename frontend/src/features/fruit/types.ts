@@ -81,6 +81,11 @@ export interface FruitDraft {
   qty: string;
   weight: string;
   rate: string;
+  /**
+   * کل کٹوتی (PRD FR-16.11 v1.59): what the other shop kept, in whole rupees, as typed. Only for fruit from another shop; empty
+   * means none. The backend subtracts it from the value and works out the net.
+   */
+  deduction: string;
   note: string;
   /** Only when an entry is being edited: why (PRD FR-16.12). */
   reason: string;

@@ -1,17 +1,26 @@
 //! Opening balances (PRD FR-10.9): one account at a time from the form, many at once from the
 //! grid. The preview and the save use the same plan (Code Standards B5).
 //!
-//! An opening is a posted entry against ابتدائی فرق (06019999), or, for a partner's opening capital
-//! that is in the shop's cash (PRD 17.1 v1.43), against روکڑ. Changing it reverses the old entry (on
-//! its own date, which must still be open) and posts a new one on the same other side; an opening
-//! that did not change writes nothing.
+//! An opening is a posted entry. Its other side:
+//! - the opening of a party (a seller, a buyer, a person of money lent or a الگ کھاتہ) is روکڑ (PRD
+//!   FR-10.9 v1.60, plan 99): an opening بنام means cash went out to him (account Dr, cash Cr), an
+//!   opening جمع means cash came in from him (cash Dr, account Cr);
+//! - a partner's opening capital is روکڑ or ابتدائی فرق (06019999), as he chose (PRD 17.1 v1.43);
+//! - every other opening is ابتدائی فرق.
+//!
+//! Changing it reverses the old entry (on its own date, which must still be open) and posts a new one
+//! with the other side of the rule above; an opening that did not change writes nothing. Openings of
+//! parties saved before v1.60 against ابتدائی فرق move only by the one-time fix
+//! ([`super::to_cash`]). A change that takes cash below zero asks first (PRD FR-6.7).
+//!
+//! Example (plan 99): the new opening مانی 30,000 بنام posts مانی Dr 30,000, روکڑ Cr 30,000.
 
 use mandi_db::accounts as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
-    BUYER_CONTROL, Balance, LineError, OPENING_DIFFERENCE_CODE, OpeningDay, OpeningPreviewRow,
-    OpeningRequest, OpeningsInput, OpeningsPreview, OpeningsSaved, RecordRef, SELLER_CONTROL,
-    opening_request_in_force,
+    BUYER_CONTROL, Balance, KHATA_CONTROL, LineError, MONEY_LENT_CONTROL, OPENING_DIFFERENCE_CODE,
+    OpeningDay, OpeningPreviewRow, OpeningRequest, OpeningsInput, OpeningsPreview, OpeningsSaved,
+    RecordRef, SELLER_CONTROL, opening_request_in_force,
 };
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::{ErrorCode, FieldError};
@@ -138,7 +147,7 @@ pub(crate) fn apply(
         wanted,
         amount_field,
         day,
-        OpeningCounter::AsBefore,
+        counter_for(facts),
         confirmed,
     )
 }
@@ -146,14 +155,52 @@ pub(crate) fn apply(
 /// The account on the other side of an opening entry (PRD FR-10.9, PRD 17.1 v1.43).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OpeningCounter {
-    /// ابتدائی فرق: the money is already counted in other openings. The only way before v1.43.
+    /// ابتدائی فرق: the money is already counted in other openings (a partner's choice).
     Difference,
     /// روکڑ: the money is in the shop's cash (a partner's opening capital put into cash, plan 78 E).
     Cash,
+    /// A party's opening (PRD FR-10.9 v1.60): a new or changed one is against روکڑ. One that did
+    /// not change stays as it is.
+    PartyThroughCash,
     /// The same as the opening in force: an opening that came into cash stays in cash when it is
     /// changed, and one against ابتدائی فرق stays against it. A first opening is against
     /// ابتدائی فرق.
     AsBefore,
+}
+
+/// True for the controls whose openings go through روکڑ (PRD FR-10.9 v1.60): sellers, buyers,
+/// persons of money lent and الگ کھاتے. The accounts that can take no opening at all (چکتا, اپنا
+/// مال) are refused before this is asked.
+pub(crate) fn goes_through_cash(control_code: &str) -> bool {
+    matches!(
+        control_code,
+        SELLER_CONTROL | BUYER_CONTROL | MONEY_LENT_CONTROL | KHATA_CONTROL
+    )
+}
+
+/// The rule of the account form and the grid for the other side of an account's opening.
+fn counter_for(facts: &repo::AccountFacts) -> OpeningCounter {
+    if goes_through_cash(&facts.control_code) {
+        OpeningCounter::PartyThroughCash
+    } else {
+        OpeningCounter::AsBefore
+    }
+}
+
+/// True when a new opening of the account, with this counter, has روکڑ on its other side. The
+/// opening typed on the cash account itself is cash by its own account, never "in cash".
+fn will_be_in_cash(
+    facts: &repo::AccountFacts,
+    cash_id: i64,
+    counter: OpeningCounter,
+    was_in_cash: bool,
+) -> bool {
+    facts.id != cash_id
+        && match counter {
+            OpeningCounter::Difference => false,
+            OpeningCounter::Cash | OpeningCounter::PartyThroughCash => true,
+            OpeningCounter::AsBefore => was_in_cash,
+        }
 }
 
 /// True when the opening entry in force of an account has a line on روکڑ, so its other side is the
@@ -173,23 +220,6 @@ fn opening_is_in_cash(
         |r| r.get(0),
     )?;
     Ok(found)
-}
-
-/// True when the same opening is asked to go into روکڑ (`OpeningCounter::Cash`), the account has an
-/// opening in force and that opening does not have روکڑ on its other side yet. The cash account's own
-/// opening never moves (it is cash by its own account).
-fn moves_to_cash(
-    tx: &Connection,
-    facts: &repo::AccountFacts,
-    have: &OpeningRequest,
-    counter: OpeningCounter,
-) -> Result<bool, ServiceError> {
-    if counter != OpeningCounter::Cash || !have.has_amount() {
-        return Ok(false);
-    }
-    let cash_id = repo::id_by_code(tx, CASH_ACCOUNT_CODE)?
-        .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
-    Ok(facts.id != cash_id && !opening_is_in_cash(tx, facts, cash_id)?)
 }
 
 /// What cash gains from an opening that is in cash: a credit opening on the account puts the same
@@ -243,10 +273,9 @@ pub(crate) fn apply_with(
     confirmed: bool,
 ) -> Result<bool, ServiceError> {
     let have = current_opening(facts)?;
-    // The same opening is not written again, except when it is asked to move into روکڑ and now stands
-    // against ابتدائی فرق (plan 87, PRD FR-16.14 v1.50): then the old entry is reversed and the same
-    // amount is posted again on the same date with روکڑ on the other side.
-    if same_opening(&have, wanted) && !moves_to_cash(tx, facts, &have, counter)? {
+    // The same opening is not written again: an old party opening against ابتدائی فرق waits for the
+    // one-time fix (PRD FR-10.9 v1.60), so saving a phone number never touches a closed day.
+    if same_opening(&have, wanted) {
         return Ok(false);
     }
     if wanted.has_amount() && !opening_allowed(facts) {
@@ -295,13 +324,22 @@ pub(crate) fn apply_with(
     // The opening typed on the cash account itself is cash by its own account, never "in cash" as
     // the other side, and it keeps the rules it always had.
     let was_in_cash = opening_is_in_cash(tx, facts, cash_id)?;
-    let in_cash = facts.id != cash_id
-        && match counter {
-            OpeningCounter::Difference => false,
-            OpeningCounter::Cash => true,
-            OpeningCounter::AsBefore => was_in_cash,
-        };
+    let in_cash = will_be_in_cash(facts, cash_id, counter, was_in_cash);
     let counter_id = if in_cash { cash_id } else { difference_id(tx)? };
+    // PRD FR-10.9 v1.60 (Umar, 27-11-2026): an opening through روکڑ changes the cash of its day, so
+    // a NEW party account's opening on a closed day is refused like any posting (`ERR_DATE_CLOSED`
+    // on `opening_date`): the form reopens the day with the reason and the sign, saves, and closes
+    // it again (FR-21.4). Only an opening against ابتدائی فرق keeps FR-10.11. Checked before the
+    // cash question, so the user is not asked about cash for a day that cannot take the save.
+    let new_account = day == OpeningDay::NewAccount && !have.has_amount();
+    if new_account
+        && in_cash
+        && let Some(date) = wanted.date.filter(|_| wanted.has_amount())
+    {
+        let (_, today) = crate::day::window(ctx)?;
+        let closed = crate::day::closed_in(tx)?;
+        validate::posting_date("opening_date", &format_ddmmyyyy(date), closed, today)?;
+    }
     // PRD FR-6.7: changing an opening that is in cash takes cash out (the old entry goes, the new
     // one comes). When cash would end below zero the user is asked first: the refusal carries the
     // cash after the change, and the save goes through when the form is sent again confirmed.
@@ -346,16 +384,17 @@ pub(crate) fn apply_with(
                 reverses: None,
                 entry,
             };
-            // A new account is dated on any day up to today, a closed one too (PRD FR-10.11); it
-            // has no old entry (`have` is empty), so no closed entry is touched.
-            let new_account = day == OpeningDay::NewAccount && !have.has_amount();
-            let posted = if new_account {
+            // A new account whose opening is against ابتدائی فرق is dated on any day up to today,
+            // a closed one too (PRD FR-10.11); it has no old entry (`have` is empty), so no closed
+            // entry is touched.
+            let on_any_day = new_account && !in_cash;
+            let posted = if on_any_day {
                 ledger::post_new_opening(ctx, tx, user_id, &event)
             } else {
                 ledger::post(ctx, tx, user_id, &event)
             }
             .map_err(on_opening_date)?;
-            if new_account {
+            if on_any_day {
                 audit_closed_day_opening(ctx, tx, user_id, facts.id, date, wanted)?;
             }
             repo::set_opening(
@@ -558,11 +597,18 @@ fn plan(
                                 }
                             }
                         }
-                        // PRD FR-6.7 (plan 78 E): changing an opening that is in cash takes cash out;
-                        // refused when cash would end below zero, as the save refuses it (B5).
-                        if !same_opening(&have, &found) && opening_is_in_cash(conn, facts, cash_id)?
-                        {
-                            let change = opening_cash_change(&have, true, &found, true)?;
+                        // PRD FR-6.7: a change that takes cash out (a new opening بنام of a
+                        // party, or a change of one that is in cash) is refused when cash would
+                        // end below zero, as the save refuses it (B5).
+                        let was_in_cash = opening_is_in_cash(conn, facts, cash_id)?;
+                        let in_cash =
+                            will_be_in_cash(facts, cash_id, counter_for(facts), was_in_cash);
+                        let change = if same_opening(&have, &found) {
+                            Paisa::ZERO
+                        } else {
+                            opening_cash_change(&have, was_in_cash, &found, in_cash)?
+                        };
+                        if change != Paisa::ZERO {
                             let before = match cash_running {
                                 Some(cash) => cash,
                                 None => crate::cash::cash_in_hand(conn)?,
@@ -606,11 +652,24 @@ fn plan(
 }
 
 /// The signed effect on ابتدائی فرق (debit minus credit, in paisa) of changing an account's
-/// opening: an opening debit puts a credit on ابتدائی فرق, so its net moves by `cr − dr` of the
-/// account's opening.
-fn difference_delta(have: &OpeningRequest, wanted: &OpeningRequest) -> Result<Paisa, ServiceError> {
-    let net = |o: &OpeningRequest| o.cr.checked_sub(o.dr).map_err(money_error);
-    net(wanted)?.checked_sub(net(have)?).map_err(money_error)
+/// opening. An opening debit that stands against ابتدائی فرق puts a credit on it, so it counts
+/// `cr − dr`; an opening in cash counts nothing. The change is the new one's count less the old's.
+fn difference_delta(
+    have: &OpeningRequest,
+    was_in_cash: bool,
+    wanted: &OpeningRequest,
+    in_cash: bool,
+) -> Result<Paisa, ServiceError> {
+    let on_difference = |o: &OpeningRequest, cash: bool| -> Result<Paisa, ServiceError> {
+        if cash {
+            Ok(Paisa::ZERO)
+        } else {
+            cash_effect(o)
+        }
+    };
+    on_difference(wanted, in_cash)?
+        .checked_sub(on_difference(have, was_in_cash)?)
+        .map_err(money_error)
 }
 
 fn difference_after(conn: &Connection, lines: &[PlannedLine]) -> Result<Balance, ServiceError> {
@@ -618,21 +677,18 @@ fn difference_after(conn: &Connection, lines: &[PlannedLine]) -> Result<Balance,
         .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
     let now = ledger::balance_in(conn, difference_id(conn)?, None, None)?;
     // Balance -> signed net (debit positive).
-    let mut net = match now.side {
-        mandi_domain::core::accounts::BalanceSide::Cr => {
-            now.amount_paisa.checked_neg().map_err(money_error)?
-        }
-        _ => now.amount_paisa,
-    };
+    let mut net = ledger::signed(now)?;
     for line in lines {
         if let (Some(facts), Some(wanted)) = (&line.facts, &line.request) {
             let have = current_opening(facts)?;
-            // An opening that is in cash stays in cash: it never moves ابتدائی فرق (plan 78 E).
-            if !same_opening(&have, wanted) && !opening_is_in_cash(conn, facts, cash_id)? {
-                net = net
-                    .checked_add(difference_delta(&have, wanted)?)
-                    .map_err(money_error)?;
+            if same_opening(&have, wanted) {
+                continue;
             }
+            let was_in_cash = opening_is_in_cash(conn, facts, cash_id)?;
+            let in_cash = will_be_in_cash(facts, cash_id, counter_for(facts), was_in_cash);
+            net = net
+                .checked_add(difference_delta(&have, was_in_cash, wanted, in_cash)?)
+                .map_err(money_error)?;
         }
     }
     Balance::from_net(net).map_err(money_error)

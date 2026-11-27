@@ -322,6 +322,12 @@ pub struct ArrivalRow {
     pub commission_paisa: Paisa,
     /// How the commission was worked out: the three parts and their sum (CalcInfo).
     pub commission_working: Working,
+    /// The value of the goods sold from this arrival (PRD FR-12.53 v1.60): the seller amounts of
+    /// the garden lots that sold from it, plus the money of the sales in another shop that name it.
+    #[ts(type = "Paisa")]
+    pub sale_value_paisa: Paisa,
+    /// The latest day it was sold (in our shop or another), `YYYY-MM-DD`; null if nothing was sold.
+    pub last_sale_date: Option<String>,
 }
 
 /// What `gardens_arrival_save` gives back.
@@ -425,6 +431,21 @@ pub struct ArrivalsTotals {
     /// Σ نگ left.
     #[ts(type = "number")]
     pub qty_left: i64,
+    /// Σ نگ sold in our shop.
+    #[ts(type = "number")]
+    pub qty_our_sold: i64,
+    /// Σ نگ sold in other shops.
+    #[ts(type = "number")]
+    pub qty_other_sold: i64,
+    /// Σ نگ left for our shop.
+    #[ts(type = "number")]
+    pub qty_our_left: i64,
+    /// Σ نگ left for another shop.
+    #[ts(type = "number")]
+    pub qty_other_left: i64,
+    /// Σ sale value (the rows' `sale_value_paisa`) over the whole filter.
+    #[ts(type = "Paisa")]
+    pub sale_value_paisa: Paisa,
     /// Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
     #[ts(type = "Paisa")]
     pub commission_paisa: Paisa,

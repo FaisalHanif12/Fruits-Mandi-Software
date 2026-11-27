@@ -28,7 +28,6 @@ import {
   CashConfirmDialog,
   CashNote,
   EmptyState,
-  ErrorNotice,
   ErrorState,
   LoadingState,
   PartyCard,
@@ -47,7 +46,9 @@ import { useSaveFlow, type SaveMutation } from '../hooks/useSaveFlow';
 import { problemsOf, type Problem } from '../problems';
 import { SALE, type BikriDraft, type SummaryTotals } from '../types';
 import { ActiveLine, SalesSection } from './SalesSection';
+import { NoticeScope } from './NoticeScope';
 import { ProblemList } from './ProblemList';
+import { TimedErrorNotice } from './TimedErrorNotice';
 import { SplitPanel } from './SplitPanel';
 import { SummaryPanel } from './SummaryPanel';
 
@@ -176,7 +177,13 @@ export function LinesForm<R extends { number: number }>({
   const [askReason, setAskReason] = useState(false);
   const dialogOpen = flow.ask !== null || askReason;
   const unsaved = dirty ?? hasLines(draft);
+  // Each try to save and each change or Enter in the lines: a note that has hidden shows again (PRD FR-12.52, plan 97 item 4).
+  const [noticePulse, setNoticePulse] = useState(0);
+  const repeatNotices = () => {
+    setNoticePulse((count) => count + 1);
+  };
   const trySave = () => {
+    repeatNotices();
     if (!canSave) return;
     if (reason?.needed === true && reason.store.get().trim() === '') {
       setAskReason(true);
@@ -254,7 +261,7 @@ export function LinesForm<R extends { number: number }>({
   const numbers =
     preview === undefined ? null : (
       <>
-        <CashNote cash={preview.cash} />
+        <CashNote cash={preview.cash} fade />
         <SummaryPanel
           totals={lotPreview?.totals ?? null}
           whole={false}
@@ -288,7 +295,12 @@ export function LinesForm<R extends { number: number }>({
   }
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-3 short:gap-2">
+    <NoticeScope
+      ref={rootRef}
+      pulse={noticePulse}
+      onRepeat={repeatNotices}
+      className="flex flex-col gap-3 short:gap-2"
+    >
       {/* The name with its help behind an ⓘ, and Back and Save on the same row, so the buttons are in
           view whatever the length of the lines below (plan 38, later sale). */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -319,7 +331,7 @@ export function LinesForm<R extends { number: number }>({
         {typeof dayField === 'function' ? dayField(formError) : dayField}
       </div>
       {refused === null ? null : (
-        <ErrorNotice
+        <TimedErrorNotice
           error={refused}
           fieldsShown={[
             ...refusalErrors(refused).map((item) => item.field),
@@ -392,6 +404,6 @@ export function LinesForm<R extends { number: number }>({
         />
       )}
       <LeaveGuard dirty={unsaved} onSave={() => flow.save(false)} />
-    </div>
+    </NoticeScope>
   );
 }

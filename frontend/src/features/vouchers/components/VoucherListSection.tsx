@@ -86,11 +86,11 @@ export function VoucherListSection({
   const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the filter before it.
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
-  // The kind of account is a column of the پیشگی list only, where a buyer's cash lent and the advances
-  // of sellers share one list (PRD FR-15.11); the other two lists keep their columns.
+  // The kind column is in the پیشگی list, where buyers' money and the sellers' advances share one list, and in
+  // the ادائیگی list, which holds a buyer's پیشگی too (PRD FR-15.11); the وصولی list has no need of it.
   const columns = useMemo(
     () =>
-      type === 'advance' ? VOUCHER_COLUMNS : VOUCHER_COLUMNS.filter((c) => c.field !== 'kind'),
+      type === 'receipt' ? VOUCHER_COLUMNS.filter((c) => c.field !== 'kind') : VOUCHER_COLUMNS,
     [type],
   );
   const selected = rows?.find((row) => row.id === selectedId) ?? null;

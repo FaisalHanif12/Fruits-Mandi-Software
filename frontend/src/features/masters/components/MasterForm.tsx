@@ -349,6 +349,7 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
               urduError={fieldError(error, 'name_ur')}
               englishError={fieldError(error, 'name_en')}
               checkSpelling={config.names.spelling}
+              kind={config.names.kind}
               fillOnOpen={embedded !== undefined}
               // What the pair writes on open is the form's starting point, not a change of the user's.
               onFilledOnOpen={(names) => {

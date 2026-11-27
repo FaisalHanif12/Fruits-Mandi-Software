@@ -19,6 +19,7 @@ export { Card } from './Card';
 export { CashConfirmDialog } from './CashConfirmDialog';
 export { ConfirmEntryDialog } from './ConfirmEntryDialog';
 export { CashNote } from './CashNote';
+export { TimedNote } from './TimedNote';
 export { Checkbox } from './Checkbox';
 export { Code } from './Code';
 export { ControlAccountPicker } from './ControlAccountPicker';

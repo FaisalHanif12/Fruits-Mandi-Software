@@ -62,6 +62,11 @@
       "kind": "money"
     },
     {
+      "key": "deduction",
+      "title_id": "fruit-col-deduction",
+      "kind": "money"
+    },
+    {
       "key": "value",
       "title_id": "report-col-value",
       "kind": "money"
@@ -127,6 +132,9 @@
         {
           "type": "money",
           "paisa": 58000
+        },
+        {
+          "type": "empty"
         },
         {
           "type": "money",
@@ -196,6 +204,9 @@
           "paisa": 100000
         },
         {
+          "type": "empty"
+        },
+        {
           "type": "money",
           "paisa": 300000
         },
@@ -240,6 +251,9 @@
     {
       "type": "number",
       "value": 5
+    },
+    {
+      "type": "empty"
     },
     {
       "type": "empty"

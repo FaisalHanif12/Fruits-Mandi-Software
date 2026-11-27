@@ -16,8 +16,9 @@ import {
   type CashbookFakeBooks,
 } from './cashbook-books';
 import { account, balance, sampleTree, ZERO } from './accounts';
+import { nothingToMove } from './cash-groups';
 
-export { ASLAM, FAMILY_KHATA };
+export { ASLAM, FAMILY_KHATA, nothingToMove };
 export type FakeCashbook = CashbookFakeBooks;
 
 /** The person who can borrow, and the khata, as accounts of the chart. */
@@ -66,6 +67,8 @@ const answer = <T>(make: () => T): Promise<T> =>
 /** Sets the answers of the cash book commands from fresh books, and returns the books. */
 export function fakeCashbook(options: CashbookBooksOptions = {}): FakeCashbook {
   const books = createCashbookBooks(options);
+  // No old opening balance waits for the one-time fix (PRD FR-10.9): the روکڑ page offers nothing.
+  vi.mocked(cashbookApi.openingsToCashPreview).mockResolvedValue(nothingToMove());
   vi.mocked(cashbookApi.cashbookGet).mockImplementation((input) =>
     answer(() => books.cashbook(input)),
   );

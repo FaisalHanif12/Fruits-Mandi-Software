@@ -1,0 +1,64 @@
+# Farming, animals, birds and insects (plan 99, coverage by topic).
+
+@w 80
+سپرے = spray supray sprey
+ٹیوب ویل = tubewell tube_well tubewel :M3
+کٹائی = katai kataai
+بوائی = buwai bowai
+چارہ = chaara chara:60
+مویشی = maweshi maveshi mawayshi :MY
+گوڈی = godi:50 goudi
+تھریشر = thresher thrasher :M3
+خچر = khachar khachchar :M3
+بھیڑ = bher bhair bheer :F2
+چرواہا = charwaha charvaha :M1
+کنواں = kuwan kunwan kuan
+کنویں = kuwen kunwen
+رہٹ = rahat:50 rehat:50
+آبیانہ = abiyana abiana
+زمینداری = zamindari zameendari
+سنڈی = sundi sundee :F1
+دیمک = deemak dimak :F2
+زہر = zehr zehar zaher
+جڑی بوٹی = jari_booti jadi_buti
+گھاس = ghaas ghas
+گٹھا = gattha gatha:60 :M1
+پنیری = paniri panairi
+ٹہنی = tehni tahni :F1
+جڑ = jarr jad:60 :F2
+کیاری = kyari kiyari :F1
+مزارع = muzara mazara
+ڈیرہ = dera dairah :M2
+ڈنگر = dangar :M3
+بچھڑا = bachra bachhra :M1
+بچھڑی = bachri bachhri :F1
+کٹا = katta :M1
+بکرا = bakra bakraa :M1
+میمنا = memna maimna :M1
+مرغا = murgha :M1
+چوزہ = chooza chuza :M2
+بطخ = batakh batkh :F2
+کبوتر = kabootar kabutar :M3
+طوطا = tota totaa :M1
+چڑیا = chirya chiriya
+چڑیاں = chiriyan chiryan
+کوا = kawwa kawa:70 :M1
+چیل = cheel :F2
+مکھی = makhi makkhi :F1
+مچھر = machar machchar machhar :M3
+چیونٹی = cheonti chyunti chunti:40 :F1
+چوہا = chooha chuha :M1
+سانپ = saanp sanp :M3
+مچھلی = machli machhli :F1
+ہاتھی = hathi haathi
+گیدڑ = geedar gidar :M3
+نیولا = nevla newla :M1
+شہد = shehad shahad
+باڑہ = baara:60 bara:40
+کھرلی = khurli :F1
+رکھوالی = rakhwali
+نمبردار = numberdar nambardar :M3
+آڑھت = arhat aarhat
+
+# rahat is mostly راحت, not رہٹ (checker)
+راحت = rahat:86 raahat:80

@@ -20,10 +20,14 @@ import type { GardenGetInput } from '../../src/bindings/GardenGetInput';
 import type { GardenInput } from '../../src/bindings/GardenInput';
 import type { GardenReopenInput } from '../../src/bindings/GardenReopenInput';
 import type { GardensListInput } from '../../src/bindings/GardensListInput';
+import type { GardensSaleMoneyInput } from '../../src/bindings/GardensSaleMoneyInput';
+import type { PartnersOpenVenturesInput } from '../../src/bindings/PartnersOpenVenturesInput';
 import type { PartnerVentureCard } from '../../src/bindings/PartnerVentureCard';
 import { listArrivals, manyArrivals } from './arrivals-many';
 import { createGardenBooks, e40Closed, e40Garden, e40History, gardenRow } from './gardens-data';
 import { paisaForTest } from './paisa';
+import { openVenturesAnswer } from './partner-ventures';
+import { MANI_ROW, SALE_MONEY_ROWS, saleMoneyAnswer } from './sale-money';
 import { overviewRow, THREE_PARTNERS } from './partners';
 
 type Input = Record<string, unknown>;
@@ -41,6 +45,40 @@ const money = (rupees: number) => paisaForTest(rupees * 100);
 
 /** The entries of the garden of `?many` or `?few`: kept here, so a saved entry joins the list (plan 96). */
 const manyRows: ArrivalRow[] = flag('many') ? manyArrivals(90) : flag('few') ? manyArrivals(6) : [];
+
+/** Two entries all sold (one with 5 written off), for the list of the goods sold (plan 99). */
+function soldEntries(): ArrivalRow[] {
+  return manyArrivals(12)
+    .filter((row) => row.qty_sold > 0)
+    .slice(0, 2)
+    .map((row, index) => {
+      const writtenOff = index === 1 ? 5 : 0;
+      const other = index === 0 ? 15 : 0;
+      const ours = row.qty - writtenOff - other;
+      return {
+        ...row,
+        id: 201 + index,
+        number: 201 + index,
+        qty_sold: ours + other,
+        qty_our_sold: ours,
+        qty_other_sold: other,
+        qty_written_off: writtenOff,
+        qty_left: 0,
+        qty_our_left: 0,
+        qty_other_left: 0,
+        qty_other: other,
+        shop_name: other === 0 ? null : 'Haji Shop',
+        sale_value_paisa: money(ours * 600),
+        commission_paisa: money(ours * 72),
+        last_sale_date: '2026-10-09',
+        can_change_split: false,
+        can_change_sell_date: false,
+        can_cancel: false,
+        days_waiting: 0,
+      };
+    });
+}
+if (manyRows.length > 0) manyRows.push(...soldEntries());
 
 const books = createGardenBooks(
   flag('empty')
@@ -76,6 +114,7 @@ const card = (
 ): PartnerVentureCard => ({
   venture_id: 1,
   kind: 'garden',
+  entry_date: '2026-10-10',
   number: 1,
   code: '0080',
   name_ur: 'شاہ پور باغ',
@@ -120,8 +159,10 @@ export const gardensHandlers: Record<string, Handler> = {
   // Goods arrived of the garden (plan 33 version 1.1): the backend's real list, one entry in stock.
   // With `?other` (plan 90) two entries: one has goods for another shop (40, "Haji Shop"), one has none.
   gardens_arrivals_list: (input) => {
-    if (manyRows.length > 0) return listArrivals(manyRows, input as unknown as ArrivalsListInput);
-    const base = arrivalsReal.ARRIVALS_IN_STOCK;
+    const asked = input as unknown as ArrivalsListInput;
+    if (manyRows.length > 0) return listArrivals(manyRows, asked);
+    if (asked.state === 'sold_out') return listArrivals(soldEntries(), asked);
+    const base = listArrivals(manyArrivals(3), asked);
     const first = base.rows[0];
     const wanted = new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('other');
     if (!wanted || first === undefined) return base;
@@ -145,6 +186,18 @@ export const gardensHandlers: Record<string, Handler> = {
       },
     ];
     return { ...base, rows, total_count: rows.length };
+  },
+  // Where the sale money of the garden is (plan 99, PRD FR-12.53): the worked example's rows, or the
+  // first of them as the sale lines of one goods arrived entry.
+  gardens_sale_money: (input) => {
+    const asked = input as unknown as GardensSaleMoneyInput;
+    return saleMoneyAnswer(asked.arrival_id === null ? SALE_MONEY_ROWS : [MANI_ROW], asked);
+  },
+  windows_bounds: () => ({ first_date: '2026-08-01', last_date: '2026-10-10' }),
+  partners_open_ventures: (input) => {
+    const asked = input as unknown as PartnersOpenVenturesInput;
+    const row = overview().find((one) => one.partner_id === asked.partner_id);
+    return openVenturesAnswer(row?.open_ventures ?? [], asked);
   },
   gardens_arrival_save: () => arrivalsReal.ARRIVAL_SAVE,
   gardens_arrival_entry_preview: (input) => ({

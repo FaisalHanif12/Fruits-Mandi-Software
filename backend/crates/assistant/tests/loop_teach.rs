@@ -118,7 +118,12 @@ fn a_wrong_sort_word_is_left_out_with_a_note_and_the_question_is_answered() {
         // Call 3: the answer.
         final_reply(&advice()),
     ];
-    let (reply, requests) = h.ask("apni sale ko ziyada kaise karain ?", None, replies);
+    // Asked to look at the books: a bare growth question is general advice with no tool (D6 rule 8).
+    let (reply, requests) = h.ask(
+        "kitabein dekh kar batao apni sale ko ziyada kaise karain ?",
+        None,
+        replies,
+    );
     assert_eq!(reply.outcome, AskOutcome::Advice, "{reply:#?}");
     assert_eq!(requests.len(), 3);
     let messages = tool_messages(&requests[2]);

@@ -1,0 +1,263 @@
+# Spellings two words share, looked at one by one (checker round 2 sweep). Both readings are
+# real; the word after the spelling is the one meant to come first. Mostly causative and
+# plain verbs (nikalna نکالنا نکلنا), or words the lead decided (laga لاگا, hogay ہو گئے).
+bacha بچا
+bachain بچائیں
+badal بدل
+bajain بجائیں
+banain بنیں
+banta بنتا
+bantay بنتے
+bante بنتے
+banti بنتی
+barhain بڑھیں
+batain بتائیں
+bhari بھری
+bigar بگاڑ
+bigarkar بگاڑ کر
+bigarna بگاڑنا
+bigarnay بگاڑنے
+bigarne بگاڑنے
+bigarni بگاڑنی
+bigarny بگاڑنے
+bigarta بگاڑتا
+bigartay بگاڑتے
+bigarte بگاڑتے
+bigarteen بگاڑتیں
+bigarti بگاڑتی
+bigartin بگاڑتیں
+bigarty بگاڑتے
+bike بائیک
+chalain چلیں
+chamkain چمکیں
+charhain چڑھائیں
+chhupain چھپیں
+chhuta چھوٹا
+chhutay چھوٹے
+chhute چھوٹے
+chor چھوڑ
+chori چوری
+daal ڈال
+daalein دالیں
+daalen ڈالیں
+dabain دبائیں
+daur دور
+daura دوڑا
+dauray دوڑے
+daure دوڑے
+dhund دھند
+dhundh دھند
+dkha دکھا
+dora دوڑا
+dore دوڑے
+dubo ڈبو
+faslon فاصلوں
+gaay گئے
+gaey گئے
+gay گے
+ghuma گھوما
+girain گرائیں
+guzar گزر
+guzarkar گزر کر
+guzarna گزرنا
+guzarne گزرنے
+guzarni گزرنی
+guzarny گزرنے
+guzarta گزرتا
+guzarte گزرتے
+guzarti گزرتی
+guzartin گزرتیں
+guzarty گزرتے
+hatain ہٹائیں
+hogay ہو گئے
+jaga جگہ
+jagain جاگیں
+jalain جلائیں
+jama karaya جمع کرایا
+jhukain جھکیں
+kahi کہی
+karaya کرایہ
+kat کاٹ
+kata کاٹا
+katay کاٹے
+kate کاٹے
+katega کاٹے گا
+kategi کاٹے گی
+katein کاٹیں
+katen کاٹیں
+katenge کاٹیں گے
+katengi کاٹیں گی
+kati کاٹی
+katiye کاٹیے
+katkar کاٹ کر
+katna کاٹنا
+katne کاٹنے
+katni کاٹنی
+katny کاٹنے
+kato کاٹو
+katoge کاٹو گے
+katogi کاٹو گی
+katoon کاٹوں
+katta کاٹتا
+katte کاٹتے
+katti کاٹتی
+kattin کاٹتیں
+katty کاٹتے
+katun کاٹوں
+katunga کاٹوں گا
+katungi کاٹوں گی
+keh کہ
+khaata کھاتہ
+khata کھاتہ
+khta کھاتہ
+kraaya کرایہ
+laga لاگا
+lagain لگیں
+lain لیں
+lautain لوٹائیں
+len den لین دین
+lkh لکھ
+lotain لاٹیں
+lungi لوں گی
+maan ماں
+mai میں
+man مان
+mangni منگنی
+mar مار
+mara مرا
+maray مرے
+mare مرے
+marega مرے گا
+maregi مرے گی
+marein مریں
+maren مریں
+marenge مریں گے
+marengi مریں گی
+mari مری
+mariye مریے
+markar مر کر
+marlay مرلہ
+marna مرنا
+marne مرنے
+marni مرنی
+marny مرنے
+maro مارو
+maroge مرو گے
+marogi مرو گی
+maroon مروں
+marta مارتا
+marte مرتے
+marti مرتی
+martin مرتیں
+marty مرتے
+marun مروں
+marunga مروں گا
+marungi مروں گی
+milain ملیں
+mor موڑ
+nai نہیں
+nikal نکال
+nikalkar نکال کر
+nikalna نکالنا
+nikalnay نکالنے
+nikalne نکالنے
+nikalni نکالنی
+nikalny نکالنے
+nikalta نکالتا
+nikaltay نکالتے
+nikalte نکالتے
+nikalteen نکالتیں
+nikalti نکالتی
+nikaltin نکالتیں
+nikalty نکالتے
+pakain پکائیں
+pakar پکڑ
+pata پتہ
+patah پتہ
+patay پاتے
+pate پاتے
+pehnain پہنیں
+phansain پھنسیں
+pohanchain پہنچیں
+rait ریٹ
+raiton ریٹوں
+sale سیل
+samjhain سمجھیں
+sikha سیکھا
+sunain سنیں
+tayar تیار
+ties not yet reviewed: 197
+tori توری
+urain اڑیں
+utarkar اتار کر
+utarna اتارنا
+utarne اتارنے
+utarni اتارنی
+utarny اتارنے
+utarte اتارتے
+utarti اتارتی
+utartin اتارتیں
+utarty اتارتے
+uthain اٹھیں
+party پارٹی
+parti پارٹی
+nikal نکل
+nikalna نکلنا
+nikalne نکلنے
+nikalta نکلتا
+nikalny نکلنے
+nikalte نکلتے
+nikalti نکلتی
+nikalty نکلتے
+nikalni نکلنی
+nikaltin نکلتیں
+daura دورہ
+nikalkar نکل کر
+dora دورہ
+daure دورے
+dauray دورے
+dore دورے
+ties not yet reviewed: 16
+sade ساڑھے
+baraat بارات
+chingchi چنگچی
+late لیٹ
+dhund ڈھونڈ
+pila پلا
+banty بنتے
+injection انجکشن
+paty پاتے
+kisse کس سے
+aein آئیں
+ghum گم
+ghuma گھما
+girain گریں
+daury دورے
+jalain جلیں
+ties not yet reviewed: 15
+mri مری
+ties not yet reviewed: 1
+thela تھیلا
+chalni چلنی
+thele تھیلے
+thelay تھیلے
+bechain بے چین
+mandi منڈی
+thely تھیلے
+thelon تھیلوں
+trak ٹرک
+tanki ٹنکی
+kattay کٹے
+tankiyan ٹنکیاں
+tankian ٹنکیاں
+daire ڈیرے
+tankiyon ٹنکیوں
+tankion ٹنکیوں
+baja بجا
+nami نامی
+hujam حجم
+ties not yet reviewed: 19
+soda سوڈا
+ties not yet reviewed: 1
+baara بارہ
+ties not yet reviewed: 1

@@ -265,6 +265,8 @@ fn r12_is_the_cash_book_of_the_screen_row_for_row() {
         &w.env.ctx,
         &CashbookInput {
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
             sort: None,
             from: Some("10-10-2026".into()),
             to: Some("10-10-2026".into()),
@@ -373,6 +375,8 @@ fn r12_shows_cash_below_zero_on_the_credit_side_and_agrees_with_the_cash_book() 
         &w.env.ctx,
         &CashbookInput {
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
             sort: None,
             from: Some("10-10-2026".into()),
             to: Some("10-10-2026".into()),

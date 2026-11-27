@@ -272,8 +272,18 @@ describe.each(LANGUAGES)('تجزیات, view K and the fruit of view F (%s)', (l
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(ANALYTICS_LINES_K_GUESTS.rows.length);
       }, SLOW_MS);
-      // The lines are the lines of the fruit register: the document, who it was for, where from.
-      expect(drawnColumns()).toEqual(['date', 'doc', 'for', 'item', 'qty', 'rate', 'value']);
+      // The lines are the lines of the fruit register: the document, who it was for, where from, with
+      // the other shop's deduction beside the rate (PRD FR-16.11 v1.59).
+      expect(drawnColumns()).toEqual([
+        'date',
+        'doc',
+        'for',
+        'item',
+        'qty',
+        'rate',
+        'deduction',
+        'value',
+      ]);
     });
 
     it('shows the print with the columns of the backend, and the title of the view', async () => {

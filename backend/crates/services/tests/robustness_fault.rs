@@ -217,7 +217,8 @@ fn child_process_for_the_kill_tests() {
                 say("ACK voucher 1");
             }
             2 => {
-                accounts::save(&env.ctx, &owner, &buyer_input(n)).unwrap();
+                // His opening goes through the cash book (PRD FR-10.9 v1.60).
+                accounts::save_with_confirm(&env.ctx, &owner, &buyer_input(n), true).unwrap();
                 say("ACK account 1");
             }
             3 => {
@@ -692,7 +693,7 @@ fn a_full_disk_stops_every_save_before_it_writes_and_saving_works_again_when_spa
         ),
         (
             "account",
-            accounts::save(&ctx, &owner, &buyer_input(1)).map(|_| ()),
+            accounts::save_with_confirm(&ctx, &owner, &buyer_input(1), true).map(|_| ()),
         ),
         (
             "advance list",
@@ -803,7 +804,8 @@ fn sqlite_running_out_of_pages_in_the_middle_of_a_save_rolls_everything_back() {
         let results = [
             vouchers::save_advance(&env.ctx, &owner, &advance(rahim, 700)).map(|_| ()),
             vouchers::save_advances(&env.ctx, &owner, &AdvancesInput { lines }).map(|_| ()),
-            accounts::save(&env.ctx, &owner, &buyer_input(headroom as u64)).map(|_| ()),
+            accounts::save_with_confirm(&env.ctx, &owner, &buyer_input(headroom as u64), true)
+                .map(|_| ()),
         ];
         for result in results {
             match result {

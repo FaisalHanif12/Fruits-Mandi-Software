@@ -441,7 +441,11 @@ describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)
     );
     const urdu = must(contactField('settings-firm-contact-name-ur')[0]);
     await user.click(urdu);
-    await user.keyboard('zaheer ');
+    // Space takes the spelling that shows: wait for it, as a user does. A Space before the answer
+    // came keeps the English letters (a busy machine made the test fail that way).
+    await user.keyboard('zaheer');
+    await screen.findByRole('option', { name: 'ظہیر' });
+    await user.keyboard(' ');
     await waitFor(() => {
       expect(urdu.value).toBe('ظہیر ');
     });

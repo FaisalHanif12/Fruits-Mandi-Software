@@ -26,13 +26,13 @@ vouchers-receipt-help = Take money from a { -gahak }. It settles his oldest bill
 vouchers-payment-title = { -adaigi }
 
 # review: pending
-vouchers-payment-help = Pay a { -beopari } or another account. Money paid to a { -gahak } is { -naqd-udhar }, and a reason is needed.
+vouchers-payment-help = Pay a { -beopari } or another account. Money paid to a { -gahak } is { -naqd-udhar }.
 
 # review: pending
 vouchers-advance-title = { -peshgi-khata }
 
 # review: pending
-vouchers-advance-help = Give a { -beopari } money before his goods are sold. Money given to a { -gahak } is { -naqd-udhar }, and a reason is needed. After you save, the new balance shows.
+vouchers-advance-help = Give a { -beopari } money before his goods are sold. Money given to a { -gahak } is { -naqd-udhar }. After you save, the new balance shows.
 
 # review: pending
 vouchers-load-failed = The voucher screen could not be opened
@@ -63,14 +63,14 @@ vouchers-number-payment = P-{ $number }
 # review: pending
 vouchers-number-advance = A-{ $number }
 
-## After a save, an edit and a cancel. $kind is receipt, payment or advance (and, after a save only,
-## lent: an advance to a buyer, saved as cash lent); $number is the number in its series.
+## After a save, an edit and a cancel. $kind is receipt, payment, advance or buyer-advance (a پیشگی to a
+## buyer, saved as cash lent and still named پیشگی, PRD FR-15.11); $number is the number in its series.
 
 # review: pending
 vouchers-saved = { $kind ->
     [receipt] { -wasooli } { $number } saved
     [payment] { -adaigi } { $number } saved
-    [lent] { -naqd-udhar } { $number } saved
+    [buyer-advance] { -peshgi } { $number } saved
    *[advance] { -peshgi-khata } { $number } saved
 }
 
@@ -78,6 +78,7 @@ vouchers-saved = { $kind ->
 vouchers-edited = { $kind ->
     [receipt] Changes to { -wasooli } { $number } saved
     [payment] Changes to { -adaigi } { $number } saved
+    [buyer-advance] Changes to { -peshgi } { $number } saved
    *[advance] Changes to { -peshgi-khata } { $number } saved
 }
 
@@ -85,6 +86,7 @@ vouchers-edited = { $kind ->
 vouchers-cancelled = { $kind ->
     [receipt] { -wasooli } { $number } cancelled
     [payment] { -adaigi } { $number } cancelled
+    [buyer-advance] { -peshgi } { $number } cancelled
    *[advance] { -peshgi-khata } { $number } cancelled
 }
 
@@ -135,7 +137,7 @@ vouchers-fill-oldest = Oldest bill
 vouchers-field-collector = Collector
 
 # review: pending
-vouchers-field-reason-lent = Reason for the { -naqd-udhar }
+vouchers-field-reason-lent = Reason for the { -naqd-udhar } (optional)
 
 # review: pending
 vouchers-reason-lent-hint = This amount becomes one of his bills and is collected with his other dues ({ -agrahi }).
@@ -302,9 +304,15 @@ vouchers-col-account = Account
 # review: pending
 vouchers-col-amount = Amount
 
-# What kind of account it is: a seller or a buyer (the advance list, PRD FR-15.11).
+# Who the voucher is with: a seller, a buyer (پیشگی or cash lent) or another account (PRD FR-15.11).
 # review: pending
 vouchers-col-kind = Account type
+
+# review: pending
+vouchers-kind-buyer-advance = { -gahak }: { -peshgi }
+
+# review: pending
+vouchers-kind-buyer-lent = { -gahak }: { -naqd-udhar }
 
 # review: pending
 vouchers-col-bill = Bill

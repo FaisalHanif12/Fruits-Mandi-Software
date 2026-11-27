@@ -201,7 +201,12 @@ describe.each(LANGUAGES)('ادھاری تفصیل of the worked day (%s)', (lang
     const page = render(
       <ReportPrintDocument data={printTableOf(data, 'R5')} frame={data.frame} />,
     ).container;
-    expect(page.querySelectorAll('tbody tr')).toHaveLength(2);
+    // The two buyers, then the total of the day's buyers (PRD R5 v1.59): nobody else owes, so no row for the others.
+    const body = [...page.querySelectorAll('tbody tr')];
+    expect(body.map((row) => row.getAttribute('data-row'))).toEqual(['normal', 'normal', 'group']);
+    expect(visible(body.at(-1)?.textContent)).toContain(
+      message(language, 'print-adhari-sheet-total'),
+    );
     // The columns of ادھاری تفصیل (PRD R5 v1.57, plan 95 item 17): no cash column, no cash total.
     const headings = [...page.querySelectorAll('thead th')].map((th) => visible(th.textContent));
     expect(headings).toEqual(

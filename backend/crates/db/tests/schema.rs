@@ -164,6 +164,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "link_partner_id",
                 "link_since_entry_id",
                 "person_type",
+                // Migration 0030 (plan 97 item 1): the mark of another commission agent's shop.
+                "is_agent_shop",
             ]);
             v
         }),
@@ -550,6 +552,9 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "status",
                 "cancel_reason",
                 "current_entry_id",
+                // Migration 0030 (plan 97 item 1, PRD FR-16.11 v1.59): the کل کٹوتی typed on fruit from
+                // another shop.
+                "deduction_paisa",
             ],
         ),
         (
@@ -664,6 +669,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "status",
                 "cancel_reason",
                 "current_entry_id",
+                "entered_as",
             ],
         ),
         (
@@ -850,7 +856,8 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     // Migration 22 adds none: `lot_counter` and `last_counter` are counters, not money.
     // Migration 25 adds ventures 1 (`rent_original_paisa`).
     // Migration 29 adds bikri_lots 1 (`advance_paisa`, plan 95 item 11).
-    assert_eq!(found, 67);
+    // Migration 30 adds fruit_takes 1 (`deduction_paisa`, plan 97 item 1).
+    assert_eq!(found, 68);
 }
 
 /// Every `*_date` column checks for a real date.

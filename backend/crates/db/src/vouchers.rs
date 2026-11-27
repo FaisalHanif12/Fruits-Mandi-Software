@@ -6,7 +6,7 @@ use crate::listing::{MonthSums, like_contains, like_prefix, month_sums};
 use mandi_core::accounts::{AccountType, RecordRef};
 use mandi_core::edit::EntryFlags;
 use mandi_core::money::Paisa;
-use mandi_core::vouchers::{LastAdvance, VoucherMode, VoucherRow, VoucherType};
+use mandi_core::vouchers::{LastAdvance, VoucherEnteredAs, VoucherMode, VoucherRow, VoucherType};
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 
@@ -31,6 +31,8 @@ pub struct VoucherExtra {
     pub taken_by: Option<String>,
     /// True for a salary deduction: the stored mode is `salary` and no cash moves.
     pub salary: bool,
+    /// A پیشگی typed to a buyer, saved as this payment (PRD FR-15.11 v1.60).
+    pub entered_as: Option<VoucherEnteredAs>,
 }
 
 impl VoucherExtra {
@@ -46,7 +48,7 @@ impl VoucherExtra {
 /// Any SQLite error.
 pub fn extras(conn: &Connection, voucher_id: i64) -> rusqlite::Result<VoucherExtra> {
     conn.query_row(
-        "SELECT partner_id, expense_head_id, return_by_date, taken_by, mode = 'salary'
+        "SELECT partner_id, expense_head_id, return_by_date, taken_by, mode = 'salary', entered_as
          FROM vouchers WHERE id = ?1",
         [voucher_id],
         |r| {
@@ -56,6 +58,7 @@ pub fn extras(conn: &Connection, voucher_id: i64) -> rusqlite::Result<VoucherExt
                 return_by_date: r.get(2)?,
                 taken_by: r.get(3)?,
                 salary: r.get(4)?,
+                entered_as: entered_as_of(5, r.get(5)?)?,
             })
         },
     )
@@ -122,9 +125,9 @@ pub fn insert(
         "INSERT INTO vouchers (created_at, created_by, updated_at, updated_by, type, number, entry_date,
              account_id, amount_paisa, mode, bank_account_id, cheque_no, cheque_date, expected_goods, narration,
              collector_staff_id, reason, partner_id, expense_head_id, return_by_date,
-             taken_by)
+             taken_by, entered_as)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
-                 ?17, ?18, ?19)",
+                 ?17, ?18, ?19, ?20)",
         params![
             now,
             user_id,
@@ -145,6 +148,7 @@ pub fn insert(
             voucher.extra.expense_head_id,
             voucher.extra.return_by_date,
             voucher.extra.taken_by,
+            voucher.extra.entered_as.map(VoucherEnteredAs::as_str),
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -169,6 +173,15 @@ pub fn set_current_entry(
     Ok(())
 }
 
+/// The stored `entered_as` of column `column`, if any.
+fn entered_as_of(
+    column: usize,
+    text: Option<String>,
+) -> rusqlite::Result<Option<VoucherEnteredAs>> {
+    text.map(|t| VoucherEnteredAs::parse(&t).ok_or_else(|| bad(column, "entered_as")))
+        .transpose()
+}
+
 fn bad(column: usize, what: &str) -> rusqlite::Error {
     rusqlite::Error::FromSqlConversionFailure(
         column,
@@ -183,7 +196,7 @@ const ROW_COLUMNS: &str =
                 v.amount_paisa, v.mode, v.bank_account_id, v.cheque_no, v.cheque_date,
                 v.expected_goods, v.narration, v.status, v.version,
                 v.collector_staff_id, v.reason, v.cancel_reason, v.current_entry_id, a.tag,
-                a.party_type";
+                a.party_type, v.entered_as";
 
 /// A voucher row.
 fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<VoucherRow> {
@@ -191,6 +204,7 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<VoucherRow> {
     let row = VoucherRow {
         id: r.get(0)?,
         voucher_type: VoucherType::parse(&r.get::<_, String>(1)?).ok_or_else(|| bad(1, "type"))?,
+        entered_as: entered_as_of(23, r.get(23)?)?,
         number: r.get(2)?,
         entry_date: r.get(3)?,
         account: account_id.map(|id| RecordRef {
@@ -687,7 +701,7 @@ pub fn update_for_edit(
              mode = ?5, bank_account_id = ?6, cheque_no = ?7, cheque_date = ?8, collector_staff_id = ?9,
              reason = ?10, expected_goods = ?11, narration = ?12, current_entry_id = ?13,
              updated_at = ?14, updated_by = ?15, partner_id = ?16, expense_head_id = ?17,
-             return_by_date = ?18, taken_by = ?19, version = version + 1
+             return_by_date = ?18, taken_by = ?19, entered_as = ?20, version = version + 1
          WHERE id = ?1 AND status = 'saved'",
         params![
             id,
@@ -709,6 +723,7 @@ pub fn update_for_edit(
             edited.extra.expense_head_id,
             edited.extra.return_by_date,
             edited.extra.taken_by,
+            edited.extra.entered_as.map(VoucherEnteredAs::as_str),
         ],
     )?;
     Ok(changed > 0)

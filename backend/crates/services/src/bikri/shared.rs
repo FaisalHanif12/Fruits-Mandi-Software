@@ -8,6 +8,7 @@ use std::sync::Arc;
 use mandi_db::arrivals as arrival_repo;
 use mandi_db::bikri as repo;
 use mandi_db::bikri::edit as edit_repo;
+use mandi_db::gardens as garden_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::partners as partner_repo;
 use mandi_db::purchases as purchase_repo;
@@ -29,7 +30,7 @@ use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::rules::{CreditLimitMode, ItemGroup, OverridesSettings};
 use mandi_domain::core::split::StockParts;
-use mandi_domain::core::ventures::TripRef;
+use mandi_domain::core::ventures::{GardenRef, TripRef};
 use mandi_domain::ledger::bikri::{
     EntryLayout, SystemAccounts, build_bikri_entry_with_layout, build_lot_advance_entry,
 };
@@ -358,6 +359,39 @@ fn fill_own_lots(prepared: &mut PreparedDraft, purchases: &HashMap<i64, Purchase
     }
 }
 
+/// The garden of each garden account of `accounts`, keyed by the account id, for the garden card of
+/// the summary (PRD FR-12.52, plan 97 item 5). One query for all of them (Code Standards B22). An
+/// account that belongs to no garden has none.
+fn load_gardens(
+    conn: &Connection,
+    accounts: &HashMap<i64, AccountFacts>,
+) -> Result<HashMap<i64, GardenRef>, ServiceError> {
+    let ids: Vec<i64> = accounts
+        .iter()
+        .filter(|(_, facts)| facts.kind == PartyKind::Garden)
+        .map(|(id, _)| *id)
+        .collect();
+    Ok(garden_repo::of_accounts(conn, &ids)?
+        .into_iter()
+        .map(|rec| {
+            (
+                rec.account.id,
+                GardenRef {
+                    id: rec.id,
+                    number: rec.number,
+                    code: mandi_domain::core::codes::number_code(
+                        mandi_domain::core::codes::CodeType::Garden,
+                        rec.number,
+                    ),
+                    name_ur: rec.name_ur,
+                    name_en: rec.name_en,
+                    account: rec.account,
+                },
+            )
+        })
+        .collect())
+}
+
 /// What the database says about the accounts, items and masters of a draft.
 fn load_lookups(
     conn: &Connection,
@@ -469,19 +503,25 @@ fn load_lookups(
                 .iter()
                 .copied()
                 .filter(|id| {
-                    accounts
-                        .get(id)
-                        .is_some_and(|a| matches!(a.kind, PartyKind::Seller | PartyKind::Khata))
+                    accounts.get(id).is_some_and(|a| {
+                        matches!(
+                            a.kind,
+                            PartyKind::Seller | PartyKind::Khata | PartyKind::Garden
+                        )
+                    })
                 })
                 .collect();
             previous_balances(conn, &sellers, &date.to_iso(), replaces)?
         }
         None => HashMap::new(),
     };
+    // The garden of each garden account named as a seller, for the garden card (plan 97 item 5).
+    let gardens = load_gardens(conn, &accounts)?;
     let mut lookups = Lookups {
         accounts,
         items,
         previous,
+        gardens,
         packings: existing(conn, repo::MasterTable::Packings, &n.packings)?,
         markas: existing(conn, repo::MasterTable::Markas, &n.markas)?,
         stores: existing(conn, repo::MasterTable::Stores, &n.stores)?,
@@ -722,6 +762,8 @@ impl Worked {
             summary: self.calc.summary.clone(),
             split: self.split.clone(),
             sellers: self.calc.sellers.clone(),
+            gardens: self.calc.gardens.clone(),
+            trips: self.calc.trips.clone(),
             cash: self.cash,
             allow_line_override: self.switches.allow_line_override,
             errors: self.errors.clone(),

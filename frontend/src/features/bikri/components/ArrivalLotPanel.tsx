@@ -17,7 +17,7 @@ import type { LotPreview } from '../../../bindings/LotPreview';
 import type { UiError } from '../../../bindings/UiError';
 import type { EntryRow } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Card, Code, Fact, Num, fieldError } from '../../../shared/ui';
+import { Card, Code, Fact, Num, TimedNote, fieldError } from '../../../shared/ui';
 import { LOT } from '../types';
 
 interface ArrivalLotPanelProps {
@@ -67,7 +67,12 @@ export function ArrivalLotPanel({ row, lotIndex, error, lot }: ArrivalLotPanelPr
             </>
           )}
         </dl>
-        {problem === null ? null : <div role="alert">{problem}</div>}
+        {problem === null ? null : (
+          // The words of the problem hide after 5 seconds and come back on the next try (plan 97 item 4).
+          <TimedNote>
+            <div role="alert">{problem}</div>
+          </TimedNote>
+        )}
       </div>
     </Card>
   );

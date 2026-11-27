@@ -145,12 +145,18 @@ export function detailText(line: StatementLine, say: StatementSay): string {
   // A garden's closing line says the rent now, the rent it was made with and the relief, only when the owner gave
   // relief: the backend then sends `relief_paisa` (PRD FR-12.51, plan 78 D3).
   const relief = line.detail === 'garden_closed' && line.values['relief_paisa'] !== undefined;
-  const suffix = withPart || tripPart ? '-part' : relief ? '-relief' : '';
+  const vars: Record<string, string> = messageVars(line.values, say.grouping);
+  // A fruit line of fruit from another shop with a کل کٹوتی says it: "... = 2,800، کٹوتی 200" (PRD FR-16.11 v1.59, plan 97 item
+  // 1). The backend always sends `deduction_paisa` (0 when none); a deduction is told apart by the text its figure is written
+  // as, so no amount is compared as a number here.
+  const deduction =
+    line.detail === 'fruit_taken' && vars['deduction'] !== undefined && vars['deduction'] !== '0';
+  const suffix =
+    withPart || tripPart ? '-part' : relief ? '-relief' : deduction ? '-deduction' : '';
   const id = `partners-statement-detail-${idPart(line.detail)}${suffix}`;
   if (!say.exists(id)) {
     return say.text('partners-statement-detail-other', { reason: line.reason });
   }
-  const vars: Record<string, string> = messageVars(line.values, say.grouping);
   const number = line.number === null ? '' : String(line.number);
   vars['number'] = number;
   vars['reason'] = line.reason;

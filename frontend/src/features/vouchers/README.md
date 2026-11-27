@@ -12,16 +12,19 @@ only).
 
 - **Form** (`components/VoucherForm.tsx`): type list, date, account (`AccountPicker` with
   `PartyCard`), amount, collector (receipt),
-  reason (money given to a buyer is cash lent: a payment to him, or an advance to him), expected goods
+  reason (optional, v1.60: money given to a buyer is cash lent, a payment to him or an advance to him), expected goods
   (an advance to a seller), narration. Current and new balance come from the preview.
 - **Advance to a buyer** (plan 88, PRD 15.4, FR-15.11): the advance tab's account field takes a seller
   or a buyer (scope `seller_buyer`), each row marked with his kind. A seller goes on as before. A buyer
-  is cash lent: the reason is asked and required, his open bills show under the form, and the input
-  carries `reason` and no expected goods. The backend saves it as a payment to him, so the message
-  says "Cash Lent" with a number of the payment series (`savedKindOf`). The advance list is asked
-  with `advance_view` and has its own window source `{ kind: 'advances' }`; it holds the advances
-  and the cash lent, with an account type column. Opening a cash lent row from that list opens it
-  on the payment tab, which edits a payment.
+  is cash lent: a reason can be typed (optional, v1.60), his open bills show under the form, and the
+  input carries `reason` and no expected goods. The backend saves it as a payment to him and remembers
+  it as a پیشگی (`VoucherRow.entered_as`, v1.60), so it is named پیشگی everywhere: the message says
+  "Advance" with a number of the payment series (`savedKindOf`, and `keptKindOf` after an edit or a
+  cancel), the edit band says Advance (`buyer_advance`), and the saved view says it. The advance list is
+  asked with `advance_view` and has its own window source `{ kind: 'advances' }`; it holds the advances
+  and the cash lent. The پیشگی and ادائیگی lists have a column that says who it is with, and for a
+  buyer whether it was typed as پیشگی or is نقد ادھار (`voucherKindText`). Opening a buyer's row from
+  the advance list opens it on the payment tab, which edits a payment.
 - **Waiting list** (PRD FR-15.1, `components/WaitingList.tsx`, `useSaveList.ts`): `F2` puts the form in
   the list and starts the next voucher (type and date stay); `F10` (or `Ctrl+Enter`)
   saves the list one voucher at a time, each with its own save command and its own transaction,
@@ -105,7 +108,8 @@ shows the words for nothing to print.
   lockout). The cash question (FR-6.7) comes after the box. When the day was reopened to fix this entry the reopen
   asked both already: its reason goes with the edit, the sign goes empty (the backend took it at the reopen), and no
   second box opens; if the backend still wants the sign the box opens. A refusal is never silent: the box shows the
-  problems of the sign and of the reason, and `shownFieldPaths(draft)` (draft.ts) lists only the fields the form
+  problems of the sign and of the reason (the backend names both the change's and a cash lent's reason `reason`,
+  and a cash lent's is optional, so a refused `reason` is the box's), and `shownFieldPaths(draft)` (draft.ts) lists only the fields the form
   really draws, so every other problem shows in the notice (the reason of a payment to a seller was listed as shown
   although it has no field, so the refusal showed nowhere). Tests: `voucher-edit-sign.test.tsx`, helper
   `tests/helpers/edit-sign-box.ts`.

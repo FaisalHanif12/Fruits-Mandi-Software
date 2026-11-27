@@ -139,7 +139,7 @@ fn the_new_enum_words_of_report_are_the_words_the_code_takes() {
     assert_eq!(
         words("layout"),
         [
-            "detail", "trip", "item", "day", "month", "partner", "garden"
+            "detail", "trip", "item", "day", "month", "partner", "garden", "bikri"
         ]
     );
     // `voucher_type` is a plain string (a 13-word list would cost about 60 tokens): its

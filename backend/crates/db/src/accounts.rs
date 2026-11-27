@@ -124,6 +124,38 @@ pub fn inactive_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i6
     rows.collect()
 }
 
+/// The accounts of these controls whose opening in force has no line on the cash account, by
+/// opening day then id: the party openings the one-time fix moves into روکڑ (PRD FR-10.9 v1.60,
+/// plan 99).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn openings_not_in_cash(
+    conn: &Connection,
+    control_codes: &[&str],
+    cash_id: i64,
+) -> rusqlite::Result<Vec<i64>> {
+    if control_codes.is_empty() {
+        return Ok(Vec::new());
+    }
+    let marks = vec!["?"; control_codes.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT a.id FROM accounts a JOIN account_controls c ON c.id = a.control_id
+         WHERE c.code IN ({marks}) AND a.opening_entry_id IS NOT NULL
+           AND (a.opening_dr_paisa > 0 OR a.opening_cr_paisa > 0)
+           AND NOT EXISTS (SELECT 1 FROM journal_lines l
+                           WHERE l.entry_id = a.opening_entry_id AND l.account_id = ?)
+         ORDER BY a.opening_date, a.id"
+    ))?;
+    let mut values: Vec<rusqlite::types::Value> = control_codes
+        .iter()
+        .map(|c| rusqlite::types::Value::Text((*c).to_owned()))
+        .collect();
+    values.push(rusqlite::types::Value::Integer(cash_id));
+    let ids = statement.query_map(rusqlite::params_from_iter(values.iter()), |r| r.get(0))?;
+    ids.collect()
+}
+
 /// The facts a rule needs about one account.
 ///
 /// # Errors
@@ -249,7 +281,8 @@ const ROW_SELECT: &str = "SELECT a.id, a.version, a.code, a.serial,
         a.credit_allowed, a.credit_limit_paisa,
         mk.id, mk.code, mk.mark_text,
         st.id, st.name_ur, st.name_en,
-        a.is_system, a.is_chukta_khata, a.is_active, a.note, h.code, a.tag, l.tag
+        a.is_system, a.is_chukta_khata, a.is_active, a.note, h.code, a.tag, l.tag,
+        a.is_agent_shop
      FROM accounts a
      JOIN account_controls c ON c.id = a.control_id
      JOIN account_heads h ON h.id = c.head_id
@@ -349,6 +382,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
             r.get(40)?,
         ),
         is_chukta_khata: r.get(40)?,
+        is_agent_shop: r.get(46)?,
         is_active: r.get(41)?,
         note: r.get::<_, Option<String>>(42)?.unwrap_or_default(),
         balance: Balance::ZERO,
@@ -901,7 +935,9 @@ pub fn search_sources(
                                                  AND g.kind = 'garden' AND g.status = 'closed')),
                 {TYPE_SQL}, a.control_id, a.tag, c.code,
                 -- A person moved to the dead amount (PRD FR-10.10).
-                EXISTS (SELECT 1 FROM dead_marks d WHERE d.account_id = a.id AND d.is_active = 1)
+                EXISTS (SELECT 1 FROM dead_marks d WHERE d.account_id = a.id AND d.is_active = 1),
+                -- Another commission agent's shop (PRD FR-16.11 v1.59).
+                a.is_agent_shop
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
@@ -937,6 +973,7 @@ pub fn search_sources(
                 control_code: Some(r.get(14)?),
                 sold_by_weight: false,
                 is_dead: r.get(15)?,
+                is_agent_shop: r.get(16)?,
             })
         },
     )?;

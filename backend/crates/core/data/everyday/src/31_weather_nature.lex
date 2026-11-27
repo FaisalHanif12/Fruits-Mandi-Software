@@ -1,0 +1,43 @@
+# Weather and nature (plan 99, coverage by topic).
+
+@w 80
+آسمان = aasman asman :M3
+چاندنی = chandni
+ستارہ = sitara sitarah :M2
+بادل = baadal badal:70 :M3
+بوند = boond :F2
+طوفان = toofan tufan toofaan :M3
+آندھی = aandhi andhi:60 :F1
+ہوا = hawa hava
+سایہ = saya saaya :M2
+چھاؤں = chaon chhaon chaaon
+بہار = bahaar bahar:40
+خزاں = khizan khazan
+شبنم = shabnam
+اوس = oas
+سیلاب = sailab selaab :M3
+زلزلہ = zalzala zalzalah :M2
+دریا = darya dariya
+ندی = nadi nadee :F1
+نہر = nehar nahar :F2
+جھیل = jheel jhil :F2
+سمندر = samandar samundar :M3
+پہاڑ = pahar:70 pahaar pahad :M3
+پہاڑی = pahari pahadi :F1
+جنگل = jungle jangal :M3
+ریگستان = registan
+میدان = maidan medan :M3
+ریت = reit rait ret
+پتھر = pathar patthar :M3
+کنکر = kankar :M3
+درخت = darakht darkht :M3
+پودا = poda pauda :M1
+پتا = patta :M1
+پھول = phool phul :M3
+بیل = bel bail:70
+کانٹا = kanta kaanta :M1
+روشنی = roshni roshnee :F1
+اندھیرا = andhera andhaira :M1
+دھواں = dhuan dhuwan dhooan
+راکھ = raakh rakh:40
+کیچڑ = keechar keechad kichar

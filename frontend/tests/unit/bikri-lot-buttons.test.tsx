@@ -1,5 +1,5 @@
 // Plan 95 items 2 and 6 (PRD FR-12.52, FR-12.49, Umar 23-11-2026), on the بکری screen against the fake backend of Event 1:
-// - a lot that is sold out: the "+" of its sale lines adds no line and says "All of this seller's goods are sold" for a few
+// - a lot that is sold out: the "+" of its sale lines adds no line and says "All of this seller's goods are sold" for 5
 //   seconds, again on each press (the lot's balance is the backend's `balance_qty`);
 // - the small button beside the seller's name in each lot row selects that lot and brings its sale lines into view, or its
 //   summary when it is sold out, and never opens the picker of the cell.
@@ -7,7 +7,7 @@
 
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SOLD_OUT_NOTE_MS } from '../../src/features/bikri/notices';
+import { NOTICE_MS } from '../../src/features/bikri/notices';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import {
@@ -71,8 +71,15 @@ describe.each(LANGUAGES)('the buttons of the lots and the sale lines (%s)', (lan
     await waitFor(() => {
       expect(screen.getAllByText((text) => visible(text) === '18,684').length).toBeGreaterThan(0);
     }, SLOW_MS);
+    // The last Enter of the typed lines is a try to add a line after a sold out lot (plan 97 item 2): if the backend's answer
+    // had come by then it said why, so the test waits for those words to go before it presses the + itself.
+    await waitFor(
+      () => {
+        expect(soldOutNote()).toBeNull();
+      },
+      { timeout: NOTICE_MS + 4_000 },
+    );
     const before = rowCount();
-    expect(soldOutNote()).toBeNull();
     await user.click(plus());
     expect(soldOutNote()).not.toBeNull();
     expect(rowCount()).toBe(before);
@@ -81,13 +88,13 @@ describe.each(LANGUAGES)('the buttons of the lots and the sale lines (%s)', (lan
       () => {
         expect(soldOutNote()).toBeNull();
       },
-      { timeout: SOLD_OUT_NOTE_MS + 4_000 },
+      { timeout: NOTICE_MS + 4_000 },
     );
     // A second press shows it again, and still no line.
     await user.click(plus());
     expect(soldOutNote()).not.toBeNull();
     expect(rowCount()).toBe(before);
-  });
+  }, 60_000);
 
   it('the + of a lot with goods left still adds a line', async () => {
     const { user } = await openBook(language);

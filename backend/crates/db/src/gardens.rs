@@ -188,6 +188,24 @@ pub fn get_many(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<GardenRe
     Ok(out)
 }
 
+/// The gardens whose accounts are these, in one query (Code Standards B22). An account that belongs to
+/// no garden gives no row.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn of_accounts(conn: &Connection, account_ids: &[i64]) -> rusqlite::Result<Vec<GardenRec>> {
+    if account_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let marks = vec!["?"; account_ids.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT {COLUMNS} {FROM} WHERE v.kind = 'garden' AND v.account_id IN ({marks})
+         ORDER BY v.id"
+    ))?;
+    let rows = statement.query_map(rusqlite::params_from_iter(account_ids.iter()), read)?;
+    rows.collect()
+}
+
 /// The garden whose account this is: its id and status. `None` if the account belongs to no garden.
 ///
 /// # Errors

@@ -550,6 +550,8 @@
   },
   "split": [],
   "sellers": [],
+  "gardens": [],
+  "trips": [],
   "cash": {
     "cash_before_paisa": 4900000,
     "change_paisa": 0,

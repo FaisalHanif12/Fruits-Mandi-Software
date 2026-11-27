@@ -141,7 +141,10 @@ export function RomanUrduInput({
   const token = mode === 'roman' && focused && readOnly !== true ? trailingLatinRun(value) : '';
   // What Esc closed: the English word, or (no word) the text itself.
   const listKey = token !== '' ? token : `\u0000${value}`;
-  const suggestions = useSuggestions(token, dismissedFor !== listKey);
+  const suggestions = useSuggestions(token, dismissedFor !== listKey, {
+    kind,
+    before: token === '' ? '' : value.slice(0, value.length - token.length),
+  });
   const extraRows = focused && readOnly !== true && dismissedFor !== listKey ? (extras ?? []) : [];
   const extraCount = extraRows.length;
   const spellingsOpen = token !== '' && dismissedFor !== token && suggestions.length > 0;

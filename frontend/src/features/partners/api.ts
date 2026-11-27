@@ -9,7 +9,7 @@ import type { PartnerCodeStatus } from '../../bindings/PartnerCodeStatus';
 import { callCommand } from '../../shared/api';
 import type { PartnerStatementDay } from '../../bindings/PartnerStatementDay';
 import type { PartnerStatementMonth } from '../../bindings/PartnerStatementMonth';
-import type { PartnerVentureCard } from '../../bindings/PartnerVentureCard';
+import type { PartnerOpenVentures } from '../../bindings/PartnerOpenVentures';
 import type { PartnersStatementDayInput } from '../../bindings/PartnersStatementDayInput';
 import type { PartnersStatementMonthInput } from '../../bindings/PartnersStatementMonthInput';
 import type { PartnersStatementMonthPrintInput } from '../../bindings/PartnersStatementMonthPrintInput';
@@ -133,12 +133,14 @@ export function partnersCodeReset(input: PartnerCodeResetInput): Promise<Partner
 
 /**
  * The open gardens and trips one partner is in, with his % and his money in each (PRD 17.3, FR-12.29,
- * plan 76 point 11). Asked when the compact line of the overview is opened, not with the overview.
- * Behind the partner code.
+ * plan 76 point 11), a page at a time, newest first, for the days they were made in (null: every one),
+ * with the backend's totals over the whole filter (plan 99). Asked when the compact line of the
+ * overview is opened, not with the overview. Behind the partner code.
  */
-export function partnersOpenVentures(partnerId: number): Promise<PartnerVentureCard[]> {
-  const input: PartnersOpenVenturesInput = { partner_id: partnerId };
-  return callCommand<PartnerVentureCard[]>('partners_open_ventures', { input });
+export function partnersOpenVentures(
+  input: PartnersOpenVenturesInput,
+): Promise<PartnerOpenVentures> {
+  return callCommand<PartnerOpenVentures>('partners_open_ventures', { input });
 }
 
 /**

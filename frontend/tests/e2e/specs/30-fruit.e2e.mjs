@@ -5,20 +5,23 @@
 // proves the screens send what was typed and show what the backend sends.
 //   1. The tab پھل is next to خرچہ on the خرچہ screen (Alt+K) and opens the fruit screen, which has
 //      no entries and says what to do.
-//   2. For the guests, from another shop (agent کریم, کیلا, پیٹی), 3 at 1,000: the screen shows the
-//      value 3,000 and the equal parts of the three partners (1,000 each) before F10; F10 saves.
+//   2. For the guests, from another shop: the آڑھتی box lists only shops marked آڑھتی دکان, so the shop
+//      نور دکان is added on the spot from the box (Enter on its name, the short form, F10; PRD FR-7.69,
+//      FR-16.11 v1.59) and taken. Then کیلا, پیٹی, 3 at 1,000: the screen shows the value 3,000 and the
+//      equal parts of the three partners (1,000 each) before F10; F10 saves.
 //   3. A language switch in the middle of the next entry (partner الف, 2 at 1,400) keeps what was
 //      typed; F10 saves it in English.
 //   4. The entry is edited with a reason, then cancelled with a reason: the row stays in the list
 //      marked cancelled.
 // It runs on Windows only (LOCAL-ONLY in the Mac phase: checked with `node --check`).
 
-import { $, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 import { OWNER, PARTNERS } from '../support/credentials.mjs';
 import { t } from '../support/messages.mjs';
 import {
   Key,
   choose,
+  field,
   focusField,
   pageText,
   pick,
@@ -38,6 +41,33 @@ const FRUIT_ONE = () => t('ur', 'fruit-number', { number: 1 });
 function sourceButton(language, id) {
   const group = `//*[@role="group"][@aria-label="${t(language, 'fruit-field-source')}"]`;
   return $(`${group}//button[contains(normalize-space(.), "${t(language, id)}")]`);
+}
+
+/**
+ * Adds a commission agent's shop on the spot from the آڑھتی box with the keyboard (PRD FR-7.69): types
+ * its Urdu name, Enter on the add row opens the short form, the English name is typed, F10 saves, and
+ * the box takes the shop. Only shops marked آڑھتی دکان are listed, and this is how one is made.
+ * @param {string} nameUr @param {string} nameEn
+ */
+async function addAgentShop(nameUr, nameEn) {
+  const box = await focusField('ur', 'fruit-field-agent');
+  await box.setValue(nameUr);
+  const addRow = await $(
+    `//button[contains(normalize-space(.), "${t('ur', 'search-add-row-named', { noun: 'agent-shop', text: nameUr })}")]`,
+  );
+  await addRow.waitForDisplayed({ timeout: WAIT_MS });
+  await browser.keys(Key.Enter);
+  const form = await $(
+    `//*[@role="dialog"][.//*[contains(normalize-space(.), "${t('ur', 'agent-shop-add-title')}")]]`,
+  );
+  await form.waitForDisplayed({ timeout: WAIT_MS });
+  await (await field('ur', 'accounts-field-name-en')).setValue(nameEn);
+  await browser.keys(Key.F10);
+  await form.waitForDisplayed({ timeout: WAIT_MS, reverse: true });
+  await browser.waitUntil(async () => (await box.getValue()).includes(nameUr), {
+    timeout: WAIT_MS,
+    timeoutMsg: `The آڑھتی box never took the new shop "${nameUr}".`,
+  });
 }
 
 /** A cell of the list under the form: the first cell of the row with this id. @param {number} id */
@@ -67,7 +97,7 @@ describe('E2E-42: fruit taken (Urdu, then English)', () => {
   it('2. for the guests, from another shop: the value and the equal parts show before F10; F10 saves', async () => {
     await choose('ur', 'fruit-field-for', 'fruit-for-guests');
     await (await sourceButton('ur', 'fruit-source-other')).click();
-    await pick('ur', 'fruit-field-agent', 'karim', 'کریم');
+    await addAgentShop('نور دکان', 'Noor Shop');
     await pick('ur', 'glossary-qism-maal', 'banana', 'کیلا');
     await pick('ur', 'glossary-packing', 'box', 'پیٹی');
     await focusField('ur', 'fruit-field-qty');
@@ -94,7 +124,7 @@ describe('E2E-42: fruit taken (Urdu, then English)', () => {
     );
     await partner.waitForDisplayed({ timeout: WAIT_MS });
     await partner.click();
-    await pick('ur', 'fruit-field-agent', 'karim', 'کریم');
+    await pick('ur', 'fruit-field-agent', 'noor', 'نور');
     await pick('ur', 'glossary-qism-maal', 'banana', 'کیلا');
     await pick('ur', 'glossary-packing', 'box', 'پیٹی');
     await focusField('ur', 'fruit-field-qty');

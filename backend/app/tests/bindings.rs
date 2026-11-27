@@ -84,6 +84,11 @@ const EXPECTED_FILES: &[&str] = &[
     "OpeningPreviewRow.ts",
     "OpeningsPreview.ts",
     "OpeningsSaved.ts",
+    "OpeningPartyKind.ts",
+    "OpeningToCashRow.ts",
+    "OpeningsToCashPreview.ts",
+    "OpeningsToCashInput.ts",
+    "OpeningsToCashDone.ts",
     "CoaTree.ts",
     "CoaControlAccounts.ts",
     "CoaControlAccountsInput.ts",
@@ -184,6 +189,7 @@ const EXPECTED_FILES: &[&str] = &[
     "VouchersTotals.ts",
     "VouchersListInput.ts",
     "VoucherRow.ts",
+    "VoucherEnteredAs.ts",
     "AssistAdvancesInput.ts",
     "OpenAdvance.ts",
     "LastAdvance.ts",
@@ -237,21 +243,11 @@ const EXPECTED_FILES: &[&str] = &[
     "PartnerOverviewRow.ts",
     "CashbookInput.ts",
     "Cashbook.ts",
-    "CapitalWhere.ts",
-    "CapitalWhereInput.ts",
-    "CapitalPrintInput.ts",
-    "CapitalWhereKind.ts",
-    "CapitalWhereLine.ts",
-    "CapitalSide.ts",
-    "CapitalLink.ts",
-    "CapitalDifference.ts",
-    "CapitalDifferenceGroup.ts",
-    "CapitalDifferenceKind.ts",
-    "CapitalDifferencePart.ts",
-    "CapitalDifferenceSide.ts",
-    "CapitalWhoseKind.ts",
-    "CapitalWhoseLine.ts",
-    "CashbookKind.ts",
+    "CashKind.ts",
+    "CashGroup.ts",
+    "CashRowStatus.ts",
+    "CashRefs.ts",
+    "CashGroupSummary.ts",
     "CashbookRow.ts",
     "ShopExpenseInput.ts",
     "PersonalExpenseInput.ts",
@@ -419,6 +415,13 @@ const EXPECTED_FILES: &[&str] = &[
     "ArrivalWriteOffUndoInput.ts",
     "ArrivalWriteOffUndone.ts",
     "ArrivalsList.ts",
+    "GardensSaleMoneyInput.ts",
+    "GardensSaleMoney.ts",
+    "SaleMoneyRow.ts",
+    "SaleMoneyKind.ts",
+    "SaleMoneyLot.ts",
+    "SaleMoneyCharges.ts",
+    "SaleMoneyTotals.ts",
     "ArrivalsListInput.ts",
     "ArrivalsTotals.ts",
     "ArrivalLotPreview.ts",
@@ -491,6 +494,7 @@ const EXPECTED_FILES: &[&str] = &[
     "FruitLotsInput.ts",
     "FruitLotRow.ts",
     "FruitLots.ts",
+    "AgentShopInput.ts",
     "DeadReason.ts",
     "DeadPartyType.ts",
     "DeadInfo.ts",
@@ -562,9 +566,8 @@ const EXPECTED_FILES: &[&str] = &[
     "WindowSource.ts",
     "WindowsBoundsInput.ts",
     "PartnersOpenVenturesInput.ts",
-    "PartnersPlaceOpeningCapitalInput.ts",
-    "PartnersOpeningCapitalPlaced.ts",
-    "PlacedOpeningCapital.ts",
+    "PartnerOpenVentures.ts",
+    "PartnerVentureTotals.ts",
     "PartnersStatementMonthPrintInput.ts",
     "PartnerStatementDay.ts",
     "PartnersStatementDayInput.ts",
@@ -1005,7 +1008,6 @@ const EXPECTED_FILES: &[&str] = &[
     "PrintBuyerDuesInput.ts",
     "PrintSellerDuesInput.ts",
     "PrintTotalDuesInput.ts",
-    "PrintCapitalInput.ts",
     "PrintLentOpenInput.ts",
     "PrintAdvancesOpenInput.ts",
     "PrintCashSalesMonthInput.ts",
@@ -1083,6 +1085,11 @@ fn export_bindings() {
     accounts::OpeningsRequest::export_all(&cfg).unwrap();
     accounts::OpeningsPreview::export_all(&cfg).unwrap();
     accounts::OpeningsSaved::export_all(&cfg).unwrap();
+    accounts::OpeningPartyKind::export_all(&cfg).unwrap();
+    accounts::OpeningToCashRow::export_all(&cfg).unwrap();
+    accounts::OpeningsToCashPreview::export_all(&cfg).unwrap();
+    accounts::OpeningsToCashInput::export_all(&cfg).unwrap();
+    accounts::OpeningsToCashDone::export_all(&cfg).unwrap();
     accounts::CoaTree::export_all(&cfg).unwrap();
     accounts::CoaControlAccounts::export_all(&cfg).unwrap();
     accounts::CoaControlAccountsInput::export_all(&cfg).unwrap();
@@ -1128,6 +1135,7 @@ fn export_bindings() {
     vouchers::VouchersList::export_all(&cfg).unwrap();
     vouchers::VouchersTotals::export_all(&cfg).unwrap();
     vouchers::VoucherRow::export_all(&cfg).unwrap();
+    vouchers::VoucherEnteredAs::export_all(&cfg).unwrap();
     vouchers::AssistAdvancesInput::export_all(&cfg).unwrap();
     vouchers::AdvancesInfo::export_all(&cfg).unwrap();
     vouchers::ReceiptInput::export_all(&cfg).unwrap();
@@ -1176,21 +1184,11 @@ fn export_bindings() {
     partners::SharesCheck::export_all(&cfg).unwrap();
     partners::PartnerOverviewRow::export_all(&cfg).unwrap();
     cashbook::CashbookInput::export_all(&cfg).unwrap();
-    cashbook::CapitalWhere::export_all(&cfg).unwrap();
-    cashbook::CapitalWhereInput::export_all(&cfg).unwrap();
-    cashbook::CapitalPrintInput::export_all(&cfg).unwrap();
-    cashbook::CapitalSide::export_all(&cfg).unwrap();
-    cashbook::CapitalLink::export_all(&cfg).unwrap();
-    cashbook::CapitalDifference::export_all(&cfg).unwrap();
-    cashbook::CapitalDifferenceGroup::export_all(&cfg).unwrap();
-    cashbook::CapitalDifferenceKind::export_all(&cfg).unwrap();
-    cashbook::CapitalDifferencePart::export_all(&cfg).unwrap();
-    cashbook::CapitalDifferenceSide::export_all(&cfg).unwrap();
-    cashbook::CapitalWhereKind::export_all(&cfg).unwrap();
-    cashbook::CapitalWhereLine::export_all(&cfg).unwrap();
-    cashbook::CapitalWhoseKind::export_all(&cfg).unwrap();
-    cashbook::CapitalWhoseLine::export_all(&cfg).unwrap();
-    cashbook::CashbookKind::export_all(&cfg).unwrap();
+    cashbook::CashKind::export_all(&cfg).unwrap();
+    cashbook::CashGroup::export_all(&cfg).unwrap();
+    cashbook::CashRowStatus::export_all(&cfg).unwrap();
+    cashbook::CashRefs::export_all(&cfg).unwrap();
+    cashbook::CashGroupSummary::export_all(&cfg).unwrap();
     cashbook::CashbookRow::export_all(&cfg).unwrap();
     cashbook::CashbookTotals::export_all(&cfg).unwrap();
     cashbook::Cashbook::export_all(&cfg).unwrap();
@@ -1333,6 +1331,8 @@ fn export_bindings() {
     arrivals::ArrivalGetInput::export_all(&cfg).unwrap();
     arrivals::ArrivalsListInput::export_all(&cfg).unwrap();
     arrivals::ArrivalsList::export_all(&cfg).unwrap();
+    mandi_services::core::garden_sale_money::GardensSaleMoneyInput::export_all(&cfg).unwrap();
+    mandi_services::core::garden_sale_money::GardensSaleMoney::export_all(&cfg).unwrap();
     arrivals::ArrivalsTotals::export_all(&cfg).unwrap();
     arrivals::ArrivalWriteOffInput::export_all(&cfg).unwrap();
     arrivals::ArrivalWriteOffDone::export_all(&cfg).unwrap();
@@ -1438,6 +1438,7 @@ fn export_bindings() {
     fruit::FruitLotsInput::export_all(&cfg).unwrap();
     fruit::FruitLotRow::export_all(&cfg).unwrap();
     fruit::FruitLots::export_all(&cfg).unwrap();
+    fruit::AgentShopInput::export_all(&cfg).unwrap();
     dead::DeadReason::export_all(&cfg).unwrap();
     dead::DeadPartyType::export_all(&cfg).unwrap();
     dead::DeadInfo::export_all(&cfg).unwrap();
@@ -1469,9 +1470,7 @@ fn export_bindings() {
     mandi_services::core::windows::WindowsBounds::export_all(&cfg).unwrap();
     mandi_services::core::windows::WindowsBoundsInput::export_all(&cfg).unwrap();
     mandi_services::core::partners::PartnersOpenVenturesInput::export_all(&cfg).unwrap();
-    mandi_services::core::partners::PartnersPlaceOpeningCapitalInput::export_all(&cfg).unwrap();
-    mandi_services::core::partners::PartnersOpeningCapitalPlaced::export_all(&cfg).unwrap();
-    mandi_services::core::partners::PlacedOpeningCapital::export_all(&cfg).unwrap();
+    mandi_services::core::partners::PartnerOpenVentures::export_all(&cfg).unwrap();
     mandi_services::core::statement::PartnersStatementMonthPrintInput::export_all(&cfg).unwrap();
     mandi_services::core::statement::PartnerStatementDay::export_all(&cfg).unwrap();
     mandi_services::core::statement::PartnersStatementDayInput::export_all(&cfg).unwrap();
@@ -1740,7 +1739,6 @@ fn export_bindings() {
     mandi_app_lib::print_report::PrintBuyerDuesInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintSellerDuesInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintTotalDuesInput::export_all(&cfg).unwrap();
-    mandi_app_lib::print_report::PrintCapitalInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintLentOpenInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintAdvancesOpenInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintCashSalesMonthInput::export_all(&cfg).unwrap();

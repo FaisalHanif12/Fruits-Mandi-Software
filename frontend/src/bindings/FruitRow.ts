@@ -65,9 +65,19 @@ export type FruitRow = {
    */
   rate_paisa: Paisa;
   /**
-   * The value.
+   * The value as posted: what the partner (or the guests' partners) were charged and the credited
+   * account was credited. With a deduction it is the net, `gross_paisa - deduction_paisa`; without
+   * one it is `qty × rate`. The registers and the partner statement add it up.
    */
   value_paisa: Paisa;
+  /**
+   * کل کٹوتی typed on an entry from another shop (PRD FR-16.11 v1.59). 0 when there is none.
+   */
+  deduction_paisa: Paisa;
+  /**
+   * The value before the deduction (C1): `value_paisa + deduction_paisa`.
+   */
+  gross_paisa: Paisa;
   /**
    * The note, as typed.
    */

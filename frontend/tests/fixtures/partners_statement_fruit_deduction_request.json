@@ -1,0 +1,11 @@
+{
+  "input": {
+    "from": null,
+    "group_by_month": false,
+    "limit": 0,
+    "offset": 0,
+    "partner_id": 1,
+    "sort": null,
+    "to": null
+  }
+}

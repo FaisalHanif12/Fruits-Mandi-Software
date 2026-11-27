@@ -27,6 +27,7 @@ pub mod error;
 pub mod expenses;
 pub mod firm;
 pub mod fruit;
+pub mod garden_sale_money;
 pub mod gardens;
 pub mod general;
 pub mod ids;

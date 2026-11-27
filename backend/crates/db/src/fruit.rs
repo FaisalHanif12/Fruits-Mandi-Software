@@ -40,8 +40,10 @@ pub struct FruitRec {
     pub weight_grams: Option<i64>,
     /// The rate, paisa.
     pub rate_paisa: i64,
-    /// The value, paisa.
+    /// The value as posted, paisa: the net when there is a deduction (PRD FR-16.11 v1.59).
     pub value_paisa: i64,
+    /// کل کٹوتی, paisa: 0 when there is none. The value before it is `value_paisa + deduction_paisa`.
+    pub deduction_paisa: i64,
     /// The note.
     pub note: Option<String>,
     /// The first posting.
@@ -60,7 +62,7 @@ const SELECT: &str = "SELECT f.id, f.version, f.number, f.entry_date,
         ca.id, ca.code, ca.name_ur, ca.name_en,
         it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
         f.qty, f.weight_grams, f.rate_paisa, f.value_paisa, f.note, f.journal_entry_id,
-        f.status, f.cancel_reason, f.current_entry_id, ca.tag, l.lot_counter
+        f.status, f.cancel_reason, f.current_entry_id, ca.tag, l.lot_counter, f.deduction_paisa
     FROM fruit_takes f
     LEFT JOIN partners pa ON pa.id = f.partner_id
     LEFT JOIN bikri_lots l ON l.id = f.lot_id
@@ -119,6 +121,7 @@ fn read(r: &Row<'_>) -> rusqlite::Result<FruitRec> {
         weight_grams: r.get(25)?,
         rate_paisa: r.get(26)?,
         value_paisa: r.get(27)?,
+        deduction_paisa: r.get(35)?,
         note: r.get(28)?,
         journal_entry_id: r.get(29)?,
         status: r.get(30)?,
@@ -184,8 +187,10 @@ pub struct NewFruit<'a> {
     pub weight_grams: Option<i64>,
     /// The rate, paisa.
     pub rate_paisa: i64,
-    /// The value, paisa.
+    /// The value as posted, paisa: the net when there is a deduction.
     pub value_paisa: i64,
+    /// کل کٹوتی, paisa: 0 when there is none (only `other_shop`).
+    pub deduction_paisa: i64,
     /// The note.
     pub note: Option<&'a str>,
 }
@@ -204,8 +209,8 @@ pub fn insert(
     conn.execute(
         "INSERT INTO fruit_takes (created_at, created_by, updated_at, updated_by, number, entry_date,
              partner_id, source, lot_id, credit_account_id, item_id, packing_id,
-             qty, weight_grams, rate_paisa, value_paisa, note)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+             qty, weight_grams, rate_paisa, value_paisa, note, deduction_paisa)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
         params![
             now,
             user_id,
@@ -221,7 +226,8 @@ pub fn insert(
             fruit.weight_grams,
             fruit.rate_paisa,
             fruit.value_paisa,
-            fruit.note
+            fruit.note,
+            fruit.deduction_paisa
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -242,7 +248,7 @@ pub fn update(
         "UPDATE fruit_takes SET updated_at = ?2, updated_by = ?3, version = version + 1,
              entry_date = ?4, partner_id = ?5, source = ?6, lot_id = ?7, credit_account_id = ?8,
              item_id = ?9, packing_id = ?10, qty = ?11, weight_grams = ?12,
-             rate_paisa = ?13, value_paisa = ?14, note = ?15
+             rate_paisa = ?13, value_paisa = ?14, note = ?15, deduction_paisa = ?16
          WHERE id = ?1",
         params![
             id,
@@ -259,7 +265,8 @@ pub fn update(
             fruit.weight_grams,
             fruit.rate_paisa,
             fruit.value_paisa,
-            fruit.note
+            fruit.note,
+            fruit.deduction_paisa
         ],
     )?;
     Ok(())
@@ -455,21 +462,23 @@ pub fn list(
     rows.collect()
 }
 
-/// The row count of the whole filter, and Σ نگ and Σ value of its saved entries, paisa (B31).
+/// The row count of the whole filter, and Σ نگ, Σ value (the amount posted, the net) and Σ deduction of
+/// its saved entries, paisa (B31). The deduction is its own `SUM()` (PRD FR-16.11 v1.59).
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<(i64, i64, i64)> {
+pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<(i64, i64, i64, i64)> {
     let (condition, binds) = filter_where(filter);
     conn.query_row(
         &format!(
             "SELECT COUNT(*),
                     COALESCE(SUM(CASE WHEN f.status = 'saved' THEN f.qty END), 0),
-                    COALESCE(SUM(CASE WHEN f.status = 'saved' THEN f.value_paisa END), 0)
+                    COALESCE(SUM(CASE WHEN f.status = 'saved' THEN f.value_paisa END), 0),
+                    COALESCE(SUM(CASE WHEN f.status = 'saved' THEN f.deduction_paisa END), 0)
              FROM fruit_takes f{condition}"
         ),
         params_from_iter(binds.iter()),
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
     )
 }
 

@@ -83,11 +83,12 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
   };
 
   /** The figures of the garden fold under one heading (plan 96); the partners and each one's money are inside. */
-  const openFigures = async (user: User): Promise<HTMLElement> => {
+  /** The figures of the garden: open when the page opens (PRD FR-12.53), nothing to press. */
+  const figuresSection = (): HTMLElement => {
     const button = screen.getByRole('button', {
       name: named(message(language, 'gardens-figures-title')),
     });
-    await user.click(button);
+    expect(button).toHaveAttribute('aria-expanded', 'true');
     const section = button.closest('section');
     if (section === null) throw new Error('the figures have no section');
     return section;
@@ -154,7 +155,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
 
   it('shows the garden: its number, name and state, the running balance with its working, and the rent due', async () => {
     fakeGardens();
-    const { user } = await open();
+    await open();
     expect(screen.getByText(said(message(language, 'gardens-status-open')))).toBeInTheDocument();
     expect(
       screen.getAllByText(language === 'ur' ? 'شاہ پور باغ' : 'Shahpur Garden').length,
@@ -166,7 +167,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     const due = screen.getAllByText(said(message(language, 'gardens-rent-due')))[0];
     expect(due?.closest('div')?.textContent).toContain('0');
     // The partners with their % and where their money comes from by default, under the heading that folds.
-    const figures = await openFigures(user);
+    const figures = figuresSection();
     const partners = within(figures).getByRole('list', {
       name: named(message(language, 'gardens-partners-title')),
     });
@@ -269,8 +270,8 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
         }),
       ],
     });
-    const { user } = await open();
-    await openFigures(user);
+    await open();
+    figuresSection();
     const line = (id: string) =>
       screen.getAllByText(said(message(language, id)))[0]?.closest('div')?.textContent;
     expect(visible(line('gardens-fact-rent'))).toContain('45,000');
@@ -288,8 +289,8 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
 
   it('plan 78 D3: a garden whose rent was never changed has no relief lines, and the refund type is not offered', async () => {
     fakeGardens();
-    const { user } = await open();
-    await openFigures(user);
+    await open();
+    figuresSection();
     for (const id of [
       'gardens-fact-rent-original',
       'gardens-fact-relief',
@@ -346,7 +347,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
 
   it('a closed garden takes no entry: a note with the day instead of the form, and a button to undo', async () => {
     fakeGardens({ gardens: [e40Closed()], history: e40History(true) });
-    const { user } = await open();
+    await open();
     expect(
       screen.getByText(said(message(language, 'gardens-closed-notice', { date: '13-10-2026' }))),
     ).toBeInTheDocument();
@@ -358,7 +359,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     ).toBeInTheDocument();
     // No closing card for a closed garden; its partners show the result: A +6,840, B +4,560.
     expect(screen.queryByText(said(message(language, 'gardens-close-title')))).toBeNull();
-    const figures = await openFigures(user);
+    const figures = figuresSection();
     const table = within(figures).getByRole('table', {
       name: named(message(language, 'gardens-partner-results-title')),
     });

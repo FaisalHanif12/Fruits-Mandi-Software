@@ -282,6 +282,24 @@ pub(crate) struct RawLine {
     pub(crate) doc_number: Option<i64>,
     pub(crate) voucher_type: Option<String>,
     pub(crate) voucher_reason: Option<String>,
+    /// True for a payment typed as a پیشگی to a buyer (`vouchers.entered_as`, PRD FR-15.11).
+    pub(crate) voucher_peshgi: bool,
+}
+
+impl RawLine {
+    /// The voucher behind a line of a voucher entry.
+    pub(crate) fn voucher(&self) -> Option<super::ledger_items::LineVoucher> {
+        if self.source_type != "voucher" {
+            return None;
+        }
+        self.voucher_type
+            .clone()
+            .map(|kind| super::ledger_items::LineVoucher {
+                kind,
+                reason: self.voucher_reason.clone(),
+                peshgi: self.voucher_peshgi,
+            })
+    }
 }
 
 /// The page query and the values it binds (public for the query plan test, Code Standards B18).
@@ -331,7 +349,8 @@ fn raw_select(venture_kind: &str, venture_id: &str) -> String {
         "SELECT e.id, e.entry_date, l.line_no, e.posting_type, e.source_type, e.source_id,
                 e.reverses_entry_id, l.account_id, COALESCE(l.narration, e.narration),
                 l.chukta_person_key, l.dr_paisa, l.cr_paisa,
-                COALESCE(b.number, v.number), v.type, v.reason, {venture_kind}, {venture_id}"
+                COALESCE(b.number, v.number), v.type, v.reason, {venture_kind}, {venture_id},
+                v.entered_as IS 'advance'"
     )
 }
 
@@ -359,6 +378,7 @@ fn read_raw(r: &mandi_db::rusqlite::Row<'_>) -> mandi_db::rusqlite::Result<RawLi
         voucher_reason: r.get(14)?,
         venture_kind: r.get(15)?,
         venture_id: r.get(16)?,
+        voucher_peshgi: r.get::<_, Option<bool>>(17)?.unwrap_or(false),
     })
 }
 

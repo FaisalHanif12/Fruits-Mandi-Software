@@ -132,6 +132,22 @@ pub fn resolve(
             _ => (None, false),
         };
         let count = count.unwrap_or(0);
+        // "fruit" or "sabzi" typed as one item, which no item is named: it means the group.
+        if field == "item"
+            && count == 0
+            && let Some(group) = super::state_rules::group_of_word(&text)
+            && let Some(map) = args.as_object_mut()
+            && map.get("item_group").is_none_or(Value::is_null)
+        {
+            map.insert("item".to_owned(), Value::Null);
+            let group = group.as_str();
+            map.insert("item_group".to_owned(), Value::String(group.to_owned()));
+            notes.push(format!(
+                "item \"{text}\" is no item: it was taken as item_group {group}"
+            ));
+            changed = true;
+            continue;
+        }
         let named = count == 1 && !more && names_it(&draft.node, &text);
         let id = state.next_id('f');
         let result = stored(draft, id.clone(), turn);

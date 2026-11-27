@@ -209,6 +209,8 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
                 limit: PAGE,
                 sort: sort_input,
                 group_by_month,
+                show_reversed: false,
+                kinds: None,
             },
         )
         .expect("the cash book")
@@ -558,6 +560,8 @@ fn check_running_sums(big: &volume::Volume, ctx: &mandi_services::Context) {
                 limit: 3,
                 sort: None,
                 group_by_month: false,
+                show_reversed: false,
+                kinds: None,
             },
         )
         .expect("the cash book page");
@@ -578,6 +582,8 @@ fn check_running_sums(big: &volume::Volume, ctx: &mandi_services::Context) {
                 limit: 3,
                 sort: sort("entry_date", SortDirection::Desc),
                 group_by_month: false,
+                show_reversed: false,
+                kinds: None,
             },
         )
         .expect("the newest-first page");

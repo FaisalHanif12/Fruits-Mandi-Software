@@ -1,29 +1,28 @@
-// The goods arrived entries of one garden (مال آیا, PRD FR-12.40): the garden's stock. Each entry
-// says what came (item, packing, quantity), the day to sell and what is left. A new بکری holds a
-// lot for every entry whose day to sell has come and that still has goods left; goods not sold
-// stay here and come again the next day. None of these posts any money.
+// The goods arrived entries of one garden (مال آیا, PRD FR-12.40, FR-12.53), in two sections: the goods
+// not sold yet ("بکنا باقی": arrived, sold so far, left for our shop and for another shop, the days
+// waiting and the day to sell) and the goods sold ("بک چکا": arrived, sold in our shop and in another
+// shop, written off, the sale value, the commission and the last sale). Each section has its own list
+// at 30 rows a page with the newest first, its own search (a number, an item or another shop) and the
+// backend's totals over its whole filter. None of these posts any money.
 //
-// A busy garden has about 90 of them (plan 96), so this section is a list with a place of its own and
-// nothing under it that moves: a search box (a number, an item or another shop), the list at 30 rows a
-// page with the newest first and the backend's totals, and the details of the entry that has focus:
-// beside the list from the normal window width, in a window of its own on a narrow one. The details
-// hold what can be done with the entry: change the day to sell, change the split, write off, undo a
-// write-off, cancel, edit. The keys: ↑ ↓ move between entries, Enter goes to the buttons of the
-// details (or opens them), Esc goes back to the list.
+// The details of the entry that has focus open in place, under its list: its facts, what can be done
+// with it (change the day to sell, change the split, write off, undo a write-off, cancel, edit) and
+// its sale lines with where their money is. The goods not sold yet show the first entry's details from
+// the start; the goods sold show them once an entry is chosen. The keys: ↑ ↓ move between entries,
+// Enter goes to the buttons of the details, Esc goes back to the list.
 //
 // Four states: loading, an error with a retry, nothing yet (a helpful message), and the rows; a search
 // with no match says so and offers to clear it.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useRouter } from '@tanstack/react-router';
-import { Package, SearchX, Sprout } from 'lucide-react';
+import { CircleCheck, Package, ReceiptText, SearchX, Sprout } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { useFixDayFlow } from '../../../shared/edit';
 import { isoToDisplayDate } from '../../../shared/format';
 import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
-import { isFromStep, useLayoutStep } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { useEscape } from '../../../shared/keyboard';
 import {
@@ -32,13 +31,12 @@ import {
   EmptyState,
   ErrorState,
   FilterBar,
-  FormDialog,
   LoadingState,
   SellDateDialog,
   SplitDialog,
   showToast,
 } from '../../../shared/ui';
-import { ARRIVAL_COLUMNS } from '../arrival-columns';
+import { ARRIVAL_IN_STOCK_COLUMNS, ARRIVAL_SOLD_COLUMNS } from '../arrival-columns';
 import { useArrivalsList, useChangeArrivalSplit, useSetArrivalSellDate } from '../hooks';
 import { arrivalNumberText } from '../list-columns';
 import type { ArrivalRow, GardenRow } from '../types';
@@ -48,12 +46,44 @@ import {
   WriteOffArrivalDialog,
 } from './ArrivalDialogs';
 import { ArrivalDetail } from './ArrivalDetail';
+import { SaleMoneyList } from './SaleMoneyList';
 
 /** A list with more rows than this has the height of its own and scrolls inside; a shorter one is as tall as its rows. */
 const SHORT_LIST_ROWS = 10;
 /** How long the rows an entry has just added stay tinted. */
 const MARK_MS = 6000;
 const NO_ROWS: readonly string[] = [];
+
+/** Which of the two sections of the goods arrived: not sold yet, or sold (PRD FR-12.53). */
+export type ArrivalStock = 'in_stock' | 'sold_out';
+
+/** The words of each section: its list, heading, search and empty states. */
+const SECTION = {
+  in_stock: {
+    columns: ARRIVAL_IN_STOCK_COLUMNS,
+    icon: Package,
+    titleId: 'gardens-arrival-title',
+    helpId: 'gardens-arrival-help',
+    labelId: 'gardens-arrival-label',
+    searchLabelId: 'gardens-arrival-search-label',
+    failedId: 'gardens-arrival-failed',
+    emptyIcon: Sprout,
+    emptyId: 'gardens-arrival-empty',
+    emptyHelpId: 'gardens-arrival-empty-help',
+  },
+  sold_out: {
+    columns: ARRIVAL_SOLD_COLUMNS,
+    icon: CircleCheck,
+    titleId: 'gardens-sold-title',
+    helpId: 'gardens-sold-help',
+    labelId: 'gardens-sold-label',
+    searchLabelId: 'gardens-sold-search-label',
+    failedId: 'gardens-sold-failed',
+    emptyIcon: ReceiptText,
+    emptyId: 'gardens-sold-empty',
+    emptyHelpId: 'gardens-sold-empty-help',
+  },
+} as const;
 
 /** The goods arrived entries a save has just added (plan 96): the list shows them first, tinted. */
 export interface AddedArrivals {
@@ -65,6 +95,7 @@ export interface AddedArrivals {
 
 interface GardenArrivalsSectionProps {
   garden: GardenRow;
+  stock: ArrivalStock;
   /** Edit was pressed on an arrival whose day is open (or was reopened for it): the page edits it. */
   onEdit: (arrival: ArrivalRow) => void;
   /** The entries a save has just added: the list goes to its first page, clears its search and tints them. */
@@ -73,6 +104,7 @@ interface GardenArrivalsSectionProps {
 
 export function GardenArrivalsSection({
   garden,
+  stock,
   onEdit,
   added = null,
 }: GardenArrivalsSectionProps) {
@@ -80,13 +112,12 @@ export function GardenArrivalsSection({
   const router = useRouter();
   const fix = useFixDayFlow();
   const language = useLanguage();
-  const docked = isFromStep(useLayoutStep(), 'normal');
+  const section = SECTION[stock];
   const [search, setSearch] = useState('');
-  const list = useArrivalsList(garden.id, { search });
+  const list = useArrivalsList(garden.id, { state: stock, search });
   const paging = useListPaging(list.pager);
   const setSellDate = useSetArrivalSellDate();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [markedIds, setMarkedIds] = useState<readonly string[]>(NO_ROWS);
   const [sellDateOpen, setSellDateOpen] = useState(false);
   const [sellDateError, setSellDateError] = useState<UiError | null>(null);
@@ -101,11 +132,12 @@ export function GardenArrivalsSection({
 
   const first = list.data?.pages[0];
   const rows = useMemo(() => list.data?.pages.flatMap((page) => page.rows) ?? [], [list.data]);
-  // The row that has focus; if it left the list, the first row is used.
-  const selected = rows.find((row) => row.id === selectedId) ?? rows[0] ?? null;
+  // The row that has focus. The goods not sold yet start on the first entry (and fall back to it
+  // when the chosen one leaves the list); the goods sold show details once an entry is chosen.
+  const chosen = rows.find((row) => row.id === selectedId) ?? null;
+  const selected =
+    chosen ?? (stock === 'in_stock' || selectedId !== null ? (rows[0] ?? null) : null);
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
-  // On a narrow screen the details are a window of their own; it never stays open on a wide one.
-  const detailShown = !docked && detailOpen && selected !== null;
 
   // A save has just added entries: the first page of the whole list, the new rows first and tinted, the
   // newest of them in the details. The search is cleared so none of them is hidden (plan 96).
@@ -129,7 +161,7 @@ export function GardenArrivalsSection({
     };
   }, [markedIds]);
 
-  // Esc in the details beside the list goes back to the entry in the list (PRD FR-7.18).
+  // Esc in the details under the list goes back to the entry in the list (PRD FR-7.18).
   useEscape(
     'edit',
     () => {
@@ -138,31 +170,40 @@ export function GardenArrivalsSection({
         listRef.current?.querySelector<HTMLElement>('.ag-cell');
       cell?.focus();
     },
-    () => docked && panelRef.current?.contains(document.activeElement) === true,
+    () => panelRef.current?.contains(document.activeElement) === true,
   );
 
   // The total row is the backend's, over the whole filter. The callback depends on the loaded list,
   // not on an amount (Code Standards F3).
   const totals = useCallback(
-    (context: ListContext) => ({
-      labelField: 'number',
-      values: {
-        number: context.text('glossary-meezan'),
-        qty_left: String(first?.totals.qty_left ?? 0),
-        qty: String(first?.totals.qty ?? 0),
-        qty_sold: String(first?.totals.qty_sold ?? 0),
-        ...(first === undefined
-          ? {}
-          : { commission: context.money(first.totals.commission_paisa) }),
-      },
-    }),
+    (context: ListContext) => {
+      const sum = first?.totals;
+      return {
+        labelField: 'number',
+        values: {
+          number: context.text('glossary-meezan'),
+          ...(sum === undefined
+            ? {}
+            : {
+                qty: String(sum.qty),
+                qty_sold: String(sum.qty_sold),
+                qty_our_left: String(sum.qty_our_left),
+                qty_other_left: String(sum.qty_other_left),
+                qty_our_sold: String(sum.qty_our_sold),
+                qty_other_sold: String(sum.qty_other_sold),
+                qty_written_off: String(sum.qty_written_off),
+                sale_value: context.money(sum.sale_value_paisa),
+                commission: context.money(sum.commission_paisa),
+              }),
+        },
+      };
+    },
     [first],
   );
 
-  /** What a button of the details does: the window of the details gives way to the box of the button. */
+  /** What a button of the details does, for the entry they show. */
   const act = (run: (arrival: ArrivalRow) => void) => () => {
     if (selected === null) return;
-    setDetailOpen(false);
     run(selected);
   };
   const details =
@@ -171,7 +212,6 @@ export function GardenArrivalsSection({
         key={selected.id}
         arrival={selected}
         busy={fix.busy}
-        titleless={detailShown}
         onEdit={act((arrival) => {
           if (!arrival.needs_reopen) {
             onEdit(arrival);
@@ -205,7 +245,7 @@ export function GardenArrivalsSection({
   } else if (list.isError) {
     body = (
       <ErrorState
-        title={<Localized id="gardens-arrival-failed" />}
+        title={<Localized id={section.failedId} />}
         error={uiErrorOf(list.error)}
         onRetry={() => {
           void list.refetch();
@@ -215,9 +255,9 @@ export function GardenArrivalsSection({
   } else if (rows.length === 0 && search.trim() === '') {
     body = (
       <EmptyState
-        icon={Sprout}
-        title={<Localized id="gardens-arrival-empty" />}
-        help={<Localized id="gardens-arrival-empty-help" />}
+        icon={section.emptyIcon}
+        title={<Localized id={section.emptyId} />}
+        help={<Localized id={section.emptyHelpId} />}
       />
     );
   } else {
@@ -225,11 +265,11 @@ export function GardenArrivalsSection({
       <div className="flex min-w-0 flex-col gap-3">
         <div className="max-w-form">
           <FilterBar
-            screen="gardens.arrivals"
+            screen={stock === 'in_stock' ? 'gardens.arrivals' : 'gardens.arrivals_sold'}
             search={{
               value: search,
               onChange: setSearch,
-              labelId: 'gardens-arrival-search-label',
+              labelId: section.searchLabelId,
               placeholderId: 'gardens-arrival-search-hint',
             }}
           />
@@ -250,56 +290,67 @@ export function GardenArrivalsSection({
             }
           />
         ) : (
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-3">
-              <div ref={listRef} className={long ? 'h-arrivals-region' : undefined}>
-                <ListGrid<ArrivalRow>
-                  columns={ARRIVAL_COLUMNS}
-                  rows={rows}
-                  getRowId={(row) => String(row.id)}
-                  labelId="gardens-arrival-label"
-                  // Enter goes to the buttons of the details, or opens them in their window.
-                  onOpen={(row) => {
-                    setSelectedId(row.id);
-                    if (!docked) {
-                      setDetailOpen(true);
-                      return;
-                    }
-                    window.requestAnimationFrame(() => {
-                      panelRef.current
-                        ?.querySelector<HTMLElement>('button:not([disabled])')
-                        ?.focus();
-                    });
-                  }}
-                  onFocusRow={(rowId) => {
-                    setSelectedId(Number(rowId));
-                  }}
-                  focusRowId={selectedId === null ? null : String(selectedId)}
-                  markedRowIds={markedIds}
-                  heightMode={long ? 'fill' : 'auto'}
-                  isInactive={(row) => row.status === 'cancelled'}
-                  sort={{ value: list.sort, onChange: list.setSort }}
-                  totals={totals}
-                  paging={paging}
-                />
-              </div>
-              <Pager pager={list.pager} />
-              <Localized id={docked ? 'gardens-arrival-pick-help' : 'gardens-arrival-open-help'}>
-                <p className="type-body text-ink-muted" />
-              </Localized>
+          <div className="flex min-w-0 flex-col gap-3">
+            <div ref={listRef} className={long ? 'h-arrivals-region' : undefined}>
+              <ListGrid<ArrivalRow>
+                columns={section.columns}
+                rows={rows}
+                getRowId={(row) => String(row.id)}
+                labelId={section.labelId}
+                // Enter goes to the buttons of the details under the list.
+                onOpen={(row) => {
+                  setSelectedId(row.id);
+                  window.requestAnimationFrame(() => {
+                    panelRef.current?.querySelector<HTMLElement>('button:not([disabled])')?.focus();
+                  });
+                }}
+                onFocusRow={(rowId) => {
+                  setSelectedId(Number(rowId));
+                }}
+                focusRowId={selectedId === null ? null : String(selectedId)}
+                markedRowIds={markedIds}
+                heightMode={long ? 'fill' : 'auto'}
+                isInactive={(row) => row.status === 'cancelled'}
+                sort={{ value: list.sort, onChange: list.setSort }}
+                totals={totals}
+                paging={paging}
+              />
             </div>
-            {docked && details !== null ? (
+            <Pager pager={list.pager} />
+            <Localized id="gardens-arrival-pick-help">
+              <p className="type-body text-ink-muted" />
+            </Localized>
+            {selected === null ? null : (
               <aside
                 ref={panelRef}
                 aria-label={l10n.getString('gardens-arrival-card-title', {
-                  number: arrivalNumberText(selected?.number ?? 0, say),
-                  item: selected === null ? '' : displayName(selected.item, language),
+                  number: arrivalNumberText(selected.number, say),
+                  item: displayName(selected.item, language),
                 })}
-                className="sticky top-0 max-h-arrivals-region w-arrivals-panel shrink-0 self-start overflow-y-auto rounded-3 border border-border bg-surface p-3"
+                className="flex min-w-0 flex-col gap-3 rounded-3 border border-border bg-surface p-3"
               >
                 {details}
+                {/* Its sales, and where their money is, in place (FR-12.53). */}
+                <div className="flex min-w-0 flex-col gap-2">
+                  <Localized id="gardens-arrival-lots">
+                    <h4 className="type-label text-ink" />
+                  </Localized>
+                  <SaleMoneyList
+                    key={selected.id}
+                    gardenId={garden.id}
+                    filter={{ from: null, to: null, arrivalId: selected.id }}
+                    screen="gardens.arrival_sales"
+                    labelId="gardens-arrival-sales-label"
+                    labelVars={{ number: arrivalNumberText(selected.number, say) }}
+                    empty={
+                      <Localized id="gardens-arrival-no-sales">
+                        <p className="type-body text-ink-muted" />
+                      </Localized>
+                    }
+                  />
+                </div>
               </aside>
-            ) : null}
+            )}
           </div>
         )}
       </div>
@@ -307,39 +358,11 @@ export function GardenArrivalsSection({
   }
 
   return (
-    <Card compact icon={Package} title={<Localized id="gardens-arrival-title" />}>
-      <Localized id="gardens-arrival-help">
+    <Card compact icon={section.icon} title={<Localized id={section.titleId} />}>
+      <Localized id={section.helpId}>
         <p className="type-body text-ink-muted" />
       </Localized>
       {body}
-      {detailShown ? (
-        <FormDialog
-          open
-          onOpenChange={setDetailOpen}
-          title={
-            <Localized
-              id="gardens-arrival-card-title"
-              vars={{
-                number: arrivalNumberText(selected.number, say),
-                item: displayName(selected.item, language),
-              }}
-            >
-              <span />
-            </Localized>
-          }
-        >
-          {details}
-          <div>
-            <Button
-              onClick={() => {
-                setDetailOpen(false);
-              }}
-            >
-              <Localized id="gardens-arrival-detail-close" />
-            </Button>
-          </div>
-        </FormDialog>
-      ) : null}
       <SellDateDialog
         open={sellDateOpen}
         onOpenChange={(open) => {

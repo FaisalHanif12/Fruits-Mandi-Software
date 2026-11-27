@@ -17,6 +17,10 @@ export type PartnerVentureCard = {
    */
   kind: VentureKind;
   /**
+   * The day it was made, `YYYY-MM-DD` (the month the list pages by).
+   */
+  entry_date: string;
+  /**
    * Its number in the series of its kind, from 1.
    */
   number: number;

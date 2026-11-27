@@ -201,7 +201,6 @@ describe('the address of a print', () => {
       'cash-sales-month',
       'cash-sales-day',
       'sales',
-      'capital',
     ]);
     expect(isKindAddress('print=parchi&job=a')).toBe(true);
     expect(isKindAddress('print=nothing&job=a')).toBe(true);

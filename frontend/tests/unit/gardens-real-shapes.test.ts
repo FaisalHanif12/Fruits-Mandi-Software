@@ -171,6 +171,7 @@ describe('the canned data of the garden tests has the real shape', () => {
         {
           venture_id: 1,
           kind: 'garden',
+          entry_date: '2026-10-01',
           number: 1,
           code: '0080',
           name_ur: 'شاہ پور باغ',

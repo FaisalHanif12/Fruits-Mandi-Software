@@ -228,6 +228,11 @@ pub struct Lookups {
     pub purchases: HashMap<i64, PurchaseFacts>,
     /// The garden arrivals the lots of the draft name (PRD FR-12.40).
     pub arrivals: HashMap<i64, ArrivalFacts>,
+    /// The garden of each garden account the draft's lots name as seller, keyed by the account id,
+    /// for the garden card of the summary (PRD FR-12.52, plan 97 item 5). A lot linked to an arrival
+    /// takes its garden from the arrival; a lot typed by hand with a garden account takes it from
+    /// here.
+    pub gardens: HashMap<i64, GardenRef>,
     /// The biggest lot counter ever given to each (seller, item) the draft's lots use, from
     /// `lot_counters` (PRD FR-12.45). A pair that never had a lot is missing, which counts as 0.
     pub lot_counters: HashMap<(i64, i64), i64>,

@@ -95,6 +95,7 @@ fn input_of(w: &World, agent: i64, live: &Live, editing: Option<i64>) -> FruitIn
         weight: None,
         rate: live.rate.to_string(),
         note: None,
+        deduction: None,
         editing_id: editing,
     }
 }

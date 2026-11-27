@@ -292,6 +292,17 @@ masters-chart-title = Chart of accounts
 # review: pending
 masters-chart-help = Heads, controls and accounts as a tree.
 
+## A party's opening goes through روکڑ (PRD FR-10.9 v1.60, plan 99).
+
+# review: pending
+accounts-opening-cash = From the { -rokar }: this { -ibtidai-baqaya } goes through the { -rokar }. A { -banaam } amount goes out of it, a { -jama } amount comes into it.
+
+# review: pending
+accounts-opening-cash-out = From the { -rokar }: this amount goes out of the { -rokar }.
+
+# review: pending
+accounts-opening-cash-in = From the { -rokar }: this amount comes into the { -rokar }.
+
 ## The opening balances grid (plan 07, PRD FR-10.9).
 
 # review: pending
@@ -301,7 +312,7 @@ openings-open = Write opening balances
 openings-title = Opening balances
 
 # review: pending
-openings-help = Write the opening Debit or Credit against each account. Leave the accounts that have none empty.
+openings-help = Write the opening Debit or Credit against each account. Leave the accounts that have none empty. The opening of a { -beopari }, a { -gahak }, a { -adhar-raqam } account or a { -alag-khata } goes through the { -rokar }: a Debit goes out of it, a Credit comes into it.
 
 # review: pending
 openings-grid-label = Opening balances list
@@ -401,6 +412,14 @@ accounts-opening-closed-today-open = The date of this opening balance is a close
 
 # review: pending
 accounts-opening-closed-today-closed = This day is closed, so this opening balance cannot be changed now. Reopen the day to change it.
+
+# A new account's opening on a closed day (PRD FR-21.4).
+# review: pending
+accounts-opening-closed-new-today-open = The date of this opening balance is a closed day, so it cannot be written there. Use today's date, which is open, or reopen the day.
+
+# A new account's opening on a closed day (PRD FR-21.4).
+# review: pending
+accounts-opening-closed-new-today-closed = This day is closed, so this opening balance cannot be written now. Reopen the day to save it.
 
 # The line under the opening date field itself.
 # review: pending

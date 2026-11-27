@@ -112,6 +112,7 @@ const ADVICE_WORDS: &[&str] = &[
     "barhao",
     "barhane",
     "bherane",
+    "bhera",
     "badhayen",
     "badhana",
     "badhao",
@@ -192,6 +193,11 @@ const GENERAL_ADVICE_VOCABULARY: &[&str] = &[
     // the small words
     "jaldi",
     "tez",
+    "ziyada",
+    "ziada",
+    "karain",
+    "sakhty",
+    "sakty",
     "fast",
     "faster",
     "quickly",
@@ -669,6 +675,17 @@ mod tests {
 
     fn help(q: &str) -> bool {
         is_how_to(q, &question_numbers(q))
+    }
+
+    /// The two growth questions the Owner asked on 02-11-2026 are general advice (one call, no
+    /// guide); a question about doing an entry is not.
+    #[test]
+    fn growing_sales_is_general_advice_and_an_entry_question_is_not() {
+        let advice = |q: &str| general_advice_asked(q, &question_numbers(q));
+        assert!(advice("apni sale ko ziyada kaise karain ?"));
+        assert!(advice("hum apni sale ko kaise bhera sakhty hain ?"));
+        assert!(!advice("mujhay bikri add krne ka tareeka batao?"));
+        assert!(!advice("sale entry kese kartay hain"));
     }
 
     /// The four misses of the live run of 02-11-2026 and the help questions that passed.

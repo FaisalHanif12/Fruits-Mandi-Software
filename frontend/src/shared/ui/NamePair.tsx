@@ -128,6 +128,8 @@ export function NamePair({
   knownRecords,
 }: NamePairProps) {
   const language = useLanguage();
+  // What the pair holds, said to the speller with every word: a name unless the screen says otherwise.
+  const wordKind: Kind = kind ?? 'name';
   // In the English app the English name is the one typed, and the Urdu name fills from it.
   const englishFirst = language !== 'ur';
   const [mode, setMode] = useState<TypingMode>('roman');
@@ -165,7 +167,12 @@ export function NamePair({
           : null;
     if (direction === null) return undefined;
     let current = true;
-    translitSuggest({ text: direction === 'to_urdu' ? english : urdu, direction })
+    translitSuggest({
+      text: direction === 'to_urdu' ? english : urdu,
+      direction,
+      kind: wordKind,
+      before: null,
+    })
       .then((answer) => {
         const worked = workedFrom(answer);
         if (!current || worked === null) return;
@@ -188,7 +195,7 @@ export function NamePair({
       current = false;
     };
     // Once, when the pair opens.
-  }, [fillOnOpen, checkSpelling]);
+  }, [fillOnOpen, checkSpelling, wordKind]);
 
   /** The English name for an Urdu text, or null when it cannot be worked out right now. */
   const englishFor = async (urdu: string): Promise<Worked | null> => {
@@ -201,7 +208,14 @@ export function NamePair({
     if (local.every((word): word is string => word !== null))
       return { text: capitalizeWords(local.join(' ')), rulesWords: [] };
     try {
-      return workedFrom(await translitSuggest({ text: urdu, direction: 'to_english' }));
+      return workedFrom(
+        await translitSuggest({
+          text: urdu,
+          direction: 'to_english',
+          kind: wordKind,
+          before: null,
+        }),
+      );
     } catch {
       return null;
     }
@@ -210,7 +224,14 @@ export function NamePair({
   const urduFor = async (english: string): Promise<Worked | null> => {
     if (english.trim() === '') return { text: '', rulesWords: [] };
     try {
-      return workedFrom(await translitSuggest({ text: english, direction: 'to_urdu' }));
+      return workedFrom(
+        await translitSuggest({
+          text: english,
+          direction: 'to_urdu',
+          kind: wordKind,
+          before: null,
+        }),
+      );
     } catch {
       return null;
     }
@@ -308,7 +329,7 @@ export function NamePair({
           onChange={changeUrdu}
           mode={mode}
           onModeChange={setMode}
-          kind={kind}
+          kind={wordKind}
           onWordConverted={converted}
           onPendingChange={setPending}
           marked={marks.urdu}

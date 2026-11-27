@@ -1,5 +1,5 @@
-// The روکڑ بک with Umar's own books (plan 96 T2, PRD FR-16.14, FR-19.11). The answer is what the real backend
-// sent for the window of 30 days that ends 24-11-2026: 11 lines, so the list is a long one. A list of more
+// The روکڑ بک with Umar's own books (plan 96 T2, PRD FR-16.14, FR-19.11), in the shape of plan 99. The answer is
+// what the real backend sent for a copy of his books, 29-10-2026 to 27-11-2026: 23 lines, so the list is a long one. A list of more
 // than ten rows is drawn in the 'fill' height mode (the book now has its own as-tall-as-its-rows height, but every
 // other long list still uses it, see list-grid-fill-class.test.tsx), and its box once lost the AG Grid theme class (a missing
 // space joined `ag-theme-quartz` and `list-grid-fill` into one unknown word), so the cards showed and the table
@@ -38,7 +38,7 @@ afterEach(() => {
 
 describe.each(LANGUAGES)("the روکڑ بک with Umar's real books (%s)", (language) => {
   async function open() {
-    prepareCashbook(language, [], { cash: 924260 });
+    prepareCashbook(language, [], { cash: 1_057_840 });
     vi.mocked(cashbookApi.cashbookGet).mockResolvedValue(CASHBOOK_UMAR_REAL);
     await renderApp('/rokar');
     await screen.findByRole('heading', { level: 1, name: message(language, 'cashbook-title') });
@@ -46,7 +46,7 @@ describe.each(LANGUAGES)("the روکڑ بک with Umar's real books (%s)", (langu
   }
 
   it('keeps the AG Grid theme on its box and is as tall as its rows, so the whole book shows and the page scrolls', async () => {
-    expect(CASHBOOK_UMAR_REAL.rows).toHaveLength(11);
+    expect(CASHBOOK_UMAR_REAL.rows).toHaveLength(23);
     const list = await open();
     // Without the theme class AG Grid has no layout rules: the grid is 2 px tall and the table is blank.
     expect(list).toHaveClass(GRID_THEME_CLASS);
@@ -60,11 +60,12 @@ describe.each(LANGUAGES)("the روکڑ بک with Umar's real books (%s)", (langu
       expect(visible(list.textContent)).toContain('500,000');
     });
     const text = visible(list.textContent);
-    // The two openings of the partners' capital, with the partner's name (plan 78 E).
+    // The two openings of the partners' capital, named for what they are with the partner (PRD FR-16.14).
     expect(text).toContain(
-      message(language, 'cashbook-row-opening-capital', {
-        partner: language === 'ur' ? 'عدنان' : 'Adnan',
-      }),
+      [
+        message(language, 'cashbook-row-kind-opening-capital'),
+        language === 'ur' ? 'عدنان' : 'Adnan',
+      ].join(message(language, 'cashbook-row-name-gap')),
     );
     // The month rows hold the backend's counts, not a count of the rows on screen.
     const headings = document.querySelectorAll('.month-heading');
@@ -73,24 +74,28 @@ describe.each(LANGUAGES)("the روکڑ بک with Umar's real books (%s)", (langu
       message(language, 'common-month-count', { count: 2 }),
     );
     expect(visible(headings[1]?.textContent)).toContain(
-      message(language, 'common-month-count', { count: 9 }),
+      message(language, 'common-month-count', { count: 21 }),
     );
-    // The totals row: in 1,335,620 and out 411,360, over the whole range.
-    expect(text).toContain('1,335,620');
-    expect(text).toContain('411,360');
-    expect(visible(pageText())).toContain(rangeText(language, 1, 11, 11));
+    // The totals row: in 1,758,340 and out 700,500, over the whole range.
+    expect(text).toContain('1,758,340');
+    expect(text).toContain('700,500');
+    expect(visible(pageText())).toContain(rangeText(language, 1, 23, 23));
   });
 
-  it('shows the cash at the start and at the end of the window as the backend sent them', async () => {
+  it('shows the capital and the cash at the start and at the end of the window as the backend sent them', async () => {
     await open();
-    // The window starts before the first line (29-10-2026), so nothing was in hand: 0. It ends at 924,260.
-    const opening = await screen.findByText(message(language, 'cashbook-opening'));
-    const closing = await screen.findByText(message(language, 'cashbook-closing'));
-    const factOf = (label: HTMLElement) => visible(label.closest('dl')?.textContent);
+    // The window starts before the first line (29-10-2026), so nothing was in hand: 0. It ends at 1,057,840, and
+    // the partners put in 1,400,000.
+    const capital = await screen.findByText(named(message(language, 'cashbook-card-capital')));
+    const opening = await screen.findByText(named(message(language, 'cashbook-opening')));
+    const closing = await screen.findByText(named(message(language, 'cashbook-closing')));
+    // One card holds its label and its own figure.
+    const cardOf = (label: HTMLElement) => visible(label.closest('dt')?.parentElement?.textContent);
     await waitFor(() => {
-      expect(factOf(opening)).toContain('0');
-      expect(factOf(closing)).toContain('924,260');
+      expect(cardOf(capital)).toContain('1,400,000');
+      expect(cardOf(opening)).toContain('0');
+      expect(cardOf(closing)).toContain('1,057,840');
     });
-    expect(factOf(opening)).not.toContain('924,260');
+    expect(cardOf(opening)).not.toContain('1,057,840');
   });
 });

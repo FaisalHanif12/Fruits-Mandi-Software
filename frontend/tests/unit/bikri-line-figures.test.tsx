@@ -456,28 +456,27 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     expect(notesWith(say('bikri-line-missing-rate'))).toHaveLength(0);
   });
 
-  it('Enter to line 4, then the blank line 4 removed: line 3 keeps its rate and its figures', async () => {
+  it('Enter after line 3 of a sold out lot adds no line 4, and line 3 keeps its rate and its figures', async () => {
     const { user, sales } = await typeFirstTwoLines(realAnswer);
     await pickBuyer(user, '2');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('2:qty');
     }, SLOW_MS);
-    // Rate, then the paid cell (this buyer may take credit), then the next line.
-    await user.keyboard('{Enter}900{Enter}{Enter}');
+    // Qty, then the rate. Line 3 takes the last 50 of the 200: the lot is sold out (plan 97 item 2).
+    await user.keyboard('{Enter}900{Enter}');
     await waitFor(() => {
       expect(textOf(sales, 2, 'buyerTotal')).toBe('125,060');
-      expect(focusedIn(sales)).toBe('3:buyer');
     }, SLOW_MS);
-    // The blank line 4 goes by its remove button; the cursor comes back to line 3.
-    const removeButton = sales.querySelector<HTMLElement>(
-      '.ag-row[row-index="3"] .row-remove-button',
-    );
-    if (removeButton === null) throw new Error('no remove button on line 4');
-    await user.click(removeButton);
+    // The backend's answer is in, so Enter on the paid cell adds no line 4: the cursor stays and the words say why. (Before the
+    // answer a blank line 4 could be added; then it was removed by its button and line 3 kept its rate and figures, D8 plan 61.)
+    await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(sales.querySelector('.ag-row[row-index="3"]')).toBeNull();
-      expect(focusedIn(sales)?.startsWith('2:')).toBe(true);
+      expect(
+        screen.queryByText((text) => visible(text) === say('bikri-sales-sold-out')),
+      ).not.toBeNull();
     }, SLOW_MS);
+    expect(sales.querySelector('.ag-row[row-index="3"]')).toBeNull();
+    expect(focusedIn(sales)).toBe('2:paid');
     expect(textOf(sales, 2, 'rate')).toBe('900');
     expect(cellOf(sales, 2, 'rate')).not.toHaveClass('cell-hint');
     expect(textOf(sales, 2, 'buyerTotal')).toBe('125,060');

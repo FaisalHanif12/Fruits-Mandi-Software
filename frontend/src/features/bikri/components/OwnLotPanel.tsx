@@ -33,6 +33,7 @@ import {
   Num,
   Select,
   ShareAmounts,
+  TimedNote,
   fieldError,
 } from '../../../shared/ui';
 import {
@@ -159,6 +160,7 @@ export function OwnLotPanel({ row, lotIndex, error, lot }: OwnLotPanelProps) {
           hint={<Localized id="bikri-own-purchase-hint" />}
           readOnly={locked}
           error={fieldError(error, `lots[${String(lotIndex)}].purchase_id`)}
+          fadeError
         >
           {(control) => (
             <Select
@@ -174,9 +176,11 @@ export function OwnLotPanel({ row, lotIndex, error, lot }: OwnLotPanelProps) {
           )}
         </Field>
         {inStock.isError && options.length === 0 ? (
-          <Localized id="bikri-own-load-failed">
-            <p className="type-body text-due" role="alert" />
-          </Localized>
+          <TimedNote>
+            <Localized id="bikri-own-load-failed">
+              <p className="type-body text-due" role="alert" />
+            </Localized>
+          </TimedNote>
         ) : !inStock.isPending && options.length === 0 ? (
           <Localized id="bikri-own-none">
             <p className="type-body text-ink-muted" role="status" />
@@ -268,12 +272,14 @@ function OwnResult({ lot }: { lot: LotPreview | undefined }) {
         </div>
       </dl>
       {loss ? (
-        <p className="flex items-center gap-2 type-body text-due">
-          <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-          <Localized id="purchases-loss-note">
-            <span />
-          </Localized>
-        </p>
+        <TimedNote>
+          <p className="flex items-center gap-2 type-body text-due">
+            <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+            <Localized id="purchases-loss-note">
+              <span />
+            </Localized>
+          </p>
+        </TimedNote>
       ) : null}
     </div>
   );

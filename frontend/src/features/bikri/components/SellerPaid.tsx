@@ -12,11 +12,11 @@
 import { Localized } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { Working } from '../../../bindings/Working';
 import { formatPaisa, useGrouping, type Paisa } from '../../../shared/format';
 import type { PickedRecord } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Balance, CalcInfo, Num } from '../../../shared/ui';
+import { Balance, Num, TimedNote } from '../../../shared/ui';
+import { CardLine as Line } from './CardLine';
 import type { SellerPaidLines } from '../../../bindings/SellerPaidLines';
 
 interface SellerPaidProps {
@@ -25,29 +25,6 @@ interface SellerPaidProps {
   lines: SellerPaidLines | undefined;
   /** The seller's advance tick, shown above the field when he has an advance open (plan 78 C3). */
   tick?: ReactNode;
-}
-
-interface LineProps {
-  labelId: string;
-  working?: Working;
-  children: ReactNode;
-  emphasis?: boolean;
-}
-
-function Line({ labelId, working, children, emphasis = false }: LineProps) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-3 border-b border-border py-1 ${emphasis ? 'type-label' : 'type-body'} text-ink`}
-    >
-      <Localized id={labelId}>
-        <dt />
-      </Localized>
-      <dd className="value-col">
-        {children}
-        {working === undefined ? null : <CalcInfo working={working} inCell />}
-      </dd>
-    </div>
-  );
 }
 
 export function SellerPaid({ seller, lines, tick }: SellerPaidProps) {
@@ -62,19 +39,21 @@ export function SellerPaid({ seller, lines, tick }: SellerPaidProps) {
       data-seller-paid={seller.id}
       className="flex min-w-0 flex-col gap-2 rounded-2 border border-border bg-surface-sunken p-3"
     >
-      <Localized id="bikri-seller-paid-title" vars={{ name }}>
-        <h3 className="type-label text-ink" />
-      </Localized>
+      {/* The title is the seller's name and tag only (plan 97 item 3, Umar 24-11-2026): the rows below say what the card is. */}
+      <h3 className="type-label text-ink">{name}</h3>
       {tick}
       {lines === undefined ? null : (
         <>
           {lines.needs_confirm ? (
-            <p role="status" className="flex items-center gap-2 type-body text-warn">
-              <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-              <Localized id="bikri-seller-paid-above">
-                <span />
-              </Localized>
-            </p>
+            // The amber line hides after 5 seconds and comes back on a repeated action; the save still asks (plan 97 item 4).
+            <TimedNote>
+              <p role="status" className="flex items-center gap-2 type-body text-warn">
+                <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+                <Localized id="bikri-seller-paid-above">
+                  <span />
+                </Localized>
+              </p>
+            </TimedNote>
           ) : null}
           <dl className="flex flex-col" aria-label={name}>
             <Line labelId="bikri-seller-paid-previous">

@@ -53,6 +53,9 @@ pub struct SearchSource {
     /// True for an account that is in the dead amount (PRD FR-10.10, plan 40): inactive, but still
     /// offered to the receipt picker and the ادھار رقم واپسی picker. False for every other record.
     pub is_dead: bool,
+    /// True for a seller account marked آڑھتی دکان (another commission agent's shop, PRD FR-16.11
+    /// v1.59). False for every other record.
+    pub is_agent_shop: bool,
 }
 
 fn value(v: &ColValue) -> Value {
@@ -765,6 +768,7 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         tag: None,
         sold_by_weight: r.get(11)?,
         is_dead: false,
+        is_agent_shop: false,
     })
 }
 

@@ -59,6 +59,8 @@ fn cashbook_book_for_a_copy_of_the_real_database() {
         limit: 25,
         sort: None,
         group_by_month: true,
+        show_reversed: false,
+        kinds: None,
     };
     eprintln!("input: {input:?}");
     let answer = cashbook::get(&env.ctx, &input).expect("cashbook::get");

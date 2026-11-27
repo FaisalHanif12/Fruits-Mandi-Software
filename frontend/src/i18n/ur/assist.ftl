@@ -35,6 +35,8 @@ accountpicker-unknown-buyer = اس کوڈ کا کوئی { -gahak } نہیں
 # review: pending
 accountpicker-unknown-any = اس کوڈ کا کوئی کھاتہ نہیں
 # review: pending
+accountpicker-unknown-agent-shop = اس کوڈ کی کوئی { -arhti-dukan } نہیں
+# review: pending
 accountpicker-reserved = یہ کوڈ نظام کے کھاتوں کے لیے رکھا گیا ہے۔ عام کھاتے کا یہ کوڈ نہیں ہو سکتا۔
 # review: pending
 accountpicker-inactive = { $name } ({ $code }) غیر فعال ہے۔ نئے اندراج میں اسے استعمال نہیں کیا جا سکتا۔
@@ -53,6 +55,15 @@ chukta-add-title = نیا { -chukta } { -gahak }
 chukta-add-help = اس کا نام لکھیں اور فون ہو تو وہ بھی۔ وہ پورا بل اسی وقت دیتا ہے اور اس کا کوئی کھاتہ نہیں ہوتا۔
 # review: pending
 chukta-saved = { -chukta } { -gahak } شامل ہو گیا
+
+## The short form of a new commission agent's shop (PRD FR-7.69, FR-16.11 v1.59).
+
+# review: pending
+agent-shop-add-title = نئی { -arhti-dukan }
+# review: pending
+agent-shop-add-help = اس کا نام لکھیں اور فون ہو تو وہ بھی۔ اس دکان سے { -phal } لیا جائے تو اس کے کھاتے میں رقم جمع ہوتی ہے، اور دکان اسے { -adaigi } سے ادا کرتی ہے۔
+# review: pending
+agent-shop-saved = { -arhti-dukan } شامل ہو گئی
 
 ## How was this worked out? (PRD FR-7.43). The backend names the message and gives its values.
 
@@ -136,6 +147,15 @@ working-seller-new-balance = <num>{ $previous }</num> + <num>{ $paid }</num> −
 # review: pending
 working-seller-new-balance-advance = <num>{ $previous }</num> + <num>{ $paid }</num> + <num>{ $advance }</num> − <num>{ $credit }</num> = <num>{ $result }</num> (پچھلا { -baqaya } + { -mauqa-par-adaigi } + { -peshgi } − آج کی { -safi-bikri }؛ منفی رقم { -jama } ہے)
 
+# How a garden's new balance after a بکری is worked out (plan 97 item 5): its balance before − the credit of its lots, with debit positive; a minus result is جمع.
+# review: pending
+working-garden-new-balance = <num>{ $previous }</num> − <num>{ $credit }</num> = <num>{ $result }</num> (پچھلا { -baqaya } − آج کی { -safi-bikri }؛ منفی رقم { -jama } ہے)
+# What a trip's lots credit to the trip's partners (plan 97 item 5, C25): the sales less the deductions of its lots.
+# review: pending
+working-trip-card-credit = <num>{ $gross }</num> − <num>{ $deductions }</num> = <num>{ $result }</num> ({ -kham-bikri } − کٹوتی)
+# What the other shop is credited and the partners are charged for fruit with a کل کٹوتی (PRD FR-16.11 v1.59): the value less the deduction.
+# review: pending
+working-fruit-net = <num>{ $value }</num> − <num>{ $deduction }</num> = <num>{ $result }</num> (قیمت − کل کٹوتی)
 # C7: the net of a lot.
 # review: pending
 working-net = <num>{ $gross }</num> − <num>{ $deductions }</num> = <num>{ $result }</num>
@@ -338,3 +358,13 @@ attention-records-differ = { $count ->
     [one] پچھلے ہفتے <num>{ $count }</num> سوال کا ایک عدد ریکارڈ سے نہیں ملا۔ ترتیبات میں سوالات کا ریکارڈ دیکھیں
    *[other] پچھلے ہفتے <num>{ $count }</num> سوالوں کے اعداد ریکارڈ سے نہیں ملے۔ ترتیبات میں سوالات کا ریکارڈ دیکھیں
 }
+
+# PRD FR-12.53: دکان میں فروخت کی ایک لائن پر باغ کو کیا جمع ہوتا ہے۔
+# review: pending
+working-sale-money-credit = <num>{ $value }</num> − <num>{ $commission }</num> = <num>{ $result }</num> (رقم − { -commission })
+# PRD FR-12.53: لاٹ کے اخراجات، جو باغ کی رقم سے کٹتے ہیں۔
+# review: pending
+working-sale-money-lot-charges = <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $munshiana }</num> + <num>{ $phone }</num> + <num>{ $store_rent }</num> = <num>{ $result }</num> ({ -lot } کے اخراجات، جو { -bagh } کی رقم سے کٹے)
+# PRD FR-12.53: دوسری دکان کی فروخت پر باغ کو ملی رقم جمع ہوتی ہے۔
+# review: pending
+working-sale-money-other-shop = <num>{ $result }</num>: { -dusri-dukan } سے ملی رقم

@@ -28,6 +28,7 @@ import {
   ADHARI_AKRAM,
   ADHARI_SHEET,
   adhariBuyer,
+  adhariOther,
   dr,
   fakeCollectionSheet,
   rupees,
@@ -153,11 +154,15 @@ describe.each(LANGUAGES)('ادھاری تفصیل, R5 (%s)', (language) => {
     ).toBeNull();
   });
 
-  it('under the table: the buyers who bought nothing today as one total, and the total credit of all buyers', async () => {
+  it('under the table: the buyers who bought nothing today with their total, and the total credit of all buyers', async () => {
     vi.mocked(reportsApi.reportsAdhariSheet).mockResolvedValue({
       ...ADHARI_SHEET,
       others: sums(0, 0, 5_000),
       others_count: 2,
+      other_rows: [
+        adhariOther(40, '0040', 'بلال', 'Bilal', 3_000),
+        adhariOther(41, '0041', 'سلیم', 'Saleem', 2_000),
+      ],
       all_totals: sums(31_564, 0, 5_000),
     });
     await open();
@@ -176,6 +181,108 @@ describe.each(LANGUAGES)('ادھاری تفصیل, R5 (%s)', (language) => {
     );
     // The total credit of all buyers is the backend's `all_totals`: 5,000 + 31,564.
     expect(visible(all.textContent)).toContain('36,564');
+  });
+
+  // Plan 97 item 6 (PRD R5, Umar 24-11-2026): the single row of the other buyers became one row for each buyer, by name.
+  describe('the other buyers, one row each', () => {
+    const others = [
+      adhariOther(40, '0040', 'بلال', 'Bilal', 3_000, { tag: 'K' }),
+      adhariOther(41, '0041', 'سلیم', 'Saleem', 2_000),
+      adhariOther(42, '0042', 'نعیم', 'Naeem', 1_500, { side: 'cr' }),
+    ];
+    const fake = () =>
+      vi.mocked(reportsApi.reportsAdhariSheet).mockResolvedValue({
+        ...ADHARI_SHEET,
+        others: sums(0, 0, 5_000),
+        others_count: 3,
+        other_rows: others,
+        all_totals: sums(31_564, 0, 5_000),
+      });
+    /** The section of the other buyers: found by its heading, which names it. */
+    const otherList = async (): Promise<HTMLElement> => {
+      const section = (await heading()).closest('section');
+      if (section === null) throw new Error('the other buyers have no section');
+      return section;
+    };
+    const heading = () =>
+      screen.findByRole('heading', {
+        level: 2,
+        name: (name) => visible(name) === m('print-adhari-sheet-others'),
+      });
+
+    it('lists each other buyer by name with his tag, his code and what he owed, in the backend’s order, under a small heading', async () => {
+      fake();
+      await open();
+      await waitFor(() => {
+        expect(rowOf('20')).not.toBeNull();
+      });
+      await heading();
+      const list = await otherList();
+      await waitFor(() => {
+        expect(list.querySelectorAll('.ag-row')).toHaveLength(3);
+      });
+      const names = Array.from(list.querySelectorAll('.ag-row')).map((row) =>
+        visible(row.querySelector('[col-id="party"]')?.textContent),
+      );
+      expect(names).toEqual(
+        language === 'ur' ? ['بلال K', 'سلیم', 'نعیم'] : ['Bilal K', 'Saleem', 'Naeem'],
+      );
+      const first = list.querySelector<HTMLElement>('.ag-row[row-id="40"]');
+      expect(cell(first, 'previous')).toContain('3,000');
+      expect(cell(first, 'total_due')).toContain('3,000');
+      // A buyer whose balance is جمع is shown with its side word.
+      const credit = list.querySelector<HTMLElement>('.ag-row[row-id="42"]');
+      expect(cell(credit, 'total_due')).toContain('1,500');
+      expect(cell(credit, 'total_due')).toContain(m('report-side-cr'));
+    });
+
+    it('keeps the totals under the list: the total of these buyers and the total credit of all buyers, from the backend', async () => {
+      fake();
+      await open();
+      await heading();
+      const total = await screen.findByText(
+        (text) => visible(text).includes(m('print-adhari-sheet-others')),
+        { selector: 'p' },
+      );
+      expect(visible(total.textContent)).toContain('5,000');
+      expect(visible(total.textContent)).toContain('(3)');
+      const all = await screen.findByText(
+        (text) => visible(text).includes(m('print-adhari-sheet-all')),
+        { selector: 'p' },
+      );
+      expect(visible(all.textContent)).toContain('36,564');
+    });
+
+    it('Enter on an other buyer opens his ledger (R13)', async () => {
+      fake();
+      const { router } = await open();
+      const list = await otherList();
+      await waitFor(() => {
+        expect(list.querySelector('.ag-row[row-id="41"]')).not.toBeNull();
+      });
+      const target = list.querySelector<HTMLElement>('.ag-row[row-id="41"] [col-id="party"]');
+      if (target === null) throw new Error('no cell');
+      const user = userEvent.setup();
+      await user.click(target);
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/reports/R13');
+      });
+      expect(router.state.location.search).toMatchObject({ party: 41 });
+    });
+
+    it('with no other buyer there is no heading and no list', async () => {
+      await open();
+      await waitFor(() => {
+        expect(rowOf('20')).not.toBeNull();
+      });
+      expect(
+        screen.queryByRole('heading', {
+          level: 2,
+          name: (name) => visible(name) === m('print-adhari-sheet-others'),
+        }),
+      ).toBeNull();
+    });
   });
 
   it('a person in the dead amount is marked and his total is listed apart', async () => {

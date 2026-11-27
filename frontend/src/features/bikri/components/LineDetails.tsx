@@ -155,6 +155,7 @@ export function LineDetails({
                 )
               }
               error={fieldError(error, path(spec.sub))}
+              fadeError
             >
               {(control) => (
                 <div className="flex flex-col gap-2">
@@ -215,6 +216,7 @@ export function LineDetails({
             <Field
               label={<Localized id="bikri-line-buyer-rate" />}
               error={fieldError(error, path('buyer_rate'))}
+              fadeError
             >
               {(control) => (
                 <div className="flex items-center gap-2">
@@ -269,6 +271,7 @@ export function LineDetails({
             ) : undefined
           }
           error={fieldError(error, path('paid'))}
+          fadeError
         >
           {(control) => (
             <output id={control.id} className="inline-flex items-center gap-1 type-body text-ink">
@@ -285,6 +288,7 @@ export function LineDetails({
           <Field
             label={<Localized id="bikri-line-weight" />}
             error={fieldError(error, path('weight'))}
+            fadeError
           >
             {(control) => (
               <MoneyInput

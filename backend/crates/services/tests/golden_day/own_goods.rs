@@ -30,6 +30,8 @@ pub(super) fn cash_sources(w: &support::World) -> Vec<(String, RowSource)> {
         &w.env.ctx,
         &CashbookInput {
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
             sort: None,
             from: None,
             to: None,

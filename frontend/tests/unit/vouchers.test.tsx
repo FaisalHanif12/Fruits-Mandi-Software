@@ -369,16 +369,19 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     expect(pageText()).not.toContain(hint);
   });
 
-  it('a payment to a buyer is cash lent: the reason is asked, told at its field, and sent', async () => {
+  it('a payment to a buyer is cash lent: the reason is optional, nothing asks for it, and a typed one is sent', async () => {
     const { user } = await open('payment');
     await pick(user, language, 'vouchers-field-paid-to', '0020', '0020');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('3000');
     const reason = await labelled(language, 'vouchers-field-reason-lent');
     await waitFor(() => {
-      expect(reason).toHaveAttribute('aria-invalid', 'true');
+      expect(vouchersApi.vouchersPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ type: 'payment', amount: '3000', reason: '' }),
+        null,
+      );
     });
-    expect(pageText()).toContain(message(language, 'err-payment-to-buyer-needs-reason'));
+    expect(reason).not.toHaveAttribute('aria-invalid', 'true');
     await user.click(reason);
     await user.keyboard('x');
     press('F10');
@@ -388,6 +391,21 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
       type: 'payment',
       input: { account_id: 21, amount: '3000', reason: 'x' },
+    });
+  });
+
+  it('cash lent saves with no reason at all (PRD FR-15.11, v1.60)', async () => {
+    const { user } = await open('payment');
+    await pick(user, language, 'vouchers-field-paid-to', '0020', '0020');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('3000');
+    press('F10');
+    await waitFor(() => {
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+      type: 'payment',
+      input: { account_id: 21, amount: '3000', reason: '' },
     });
   });
 

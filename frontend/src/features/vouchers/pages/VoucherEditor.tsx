@@ -519,7 +519,8 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
       {editing === null ? null : (
         <>
           <EditBand
-            kind={draft.type}
+            // A پیشگی typed for a buyer is changed on the ادائیگی tab and is still named پیشگی (FR-15.11).
+            kind={editing.entered_as === 'advance' ? 'buyer_advance' : draft.type}
             number={String(editing.number)}
             date={editing.entry_date}
             reopenedDays={reopened?.days ?? []}

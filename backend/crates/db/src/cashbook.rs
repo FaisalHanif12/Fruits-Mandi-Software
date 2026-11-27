@@ -1,21 +1,27 @@
-//! The روکڑ بک in SQL (PRD 16.1, FR-19.11, plan 17, plan 38 B2, NFR-SPD-24): one row for each
-//! journal entry that moves cash, one page at a time, with the sums over the whole range.
+//! The روکڑ بک in SQL (PRD 16.1, FR-16.14 v1.60, FR-19.11, plan 17, plan 38 B2, plan 99,
+//! NFR-SPD-24): the rows of cash, one page at a time, with the sums over the whole range.
 //!
 //! No rules here. Sums are `SUM()` on INTEGER columns only (money agent Section 9); the caller
 //! subtracts in checked `Paisa` maths. Reads posted entries only (PRD FR-6.1).
 //!
+//! **A row** is a journal entry that moves cash and a **part** of it: part 0 is the whole entry; a
+//! بکری posting is split into part 1, what cash received on it (موقع پر جمع), and part 2, what cash
+//! paid out (نقد ادائیگی). Each row has one **kind** ([`kind_sql`], one definition for the list, the
+//! type filter and the summary).
+//!
+//! **In force**: an entry that is neither reversed nor a reversal. A reversal is posted on the day
+//! of the entry it reverses, so leaving the pairs out changes no day-end balance.
+//!
 //! The cash account has hundreds of thousands of lines, so a page must not read them all:
 //!
-//! - **Natural order** (by day, then entry): the page walks `journal_entries` by the day index and
-//!   stops after `offset + limit` cash entries, so the first pages cost a few hundred lookups. The
-//!   running cash of the first row comes from the sums of the entries before the page, or, past
-//!   the middle of the book, from the total less the entries after it.
-//! - **By amount**: the cash lines are grouped by entry on the covering index (no join with the
-//!   entries) and the biggest are taken. The running cash is not given for this order.
-//! - **By another column** (posting type, number, narration) the entries are read and sorted; this
-//!   is the slow path and gives no running cash either.
-//! - **Totals** of the whole book come from the covering index when no day is asked for, and from
-//!   the day index when a range is; the last answers are kept (`memo`).
+//! - **Natural order** (by day, then entry, then part): the page walks `journal_entries` by the day
+//!   index and stops after `offset + limit` rows, so the first pages cost a few hundred lookups. The
+//!   running cash of the first row comes from the sums of the entries before the page, or, past the
+//!   middle of the book, from the total less the entries after it.
+//! - **By another column or by amount** the rows are read and sorted; the running cash is not given.
+//! - **Totals** of all entries come from the covering index when no day is asked for, and from the
+//!   day index when a range is (the last answers are kept, `memo`); the pairs not in force are read
+//!   from the index of reversals and taken off.
 
 use std::collections::HashMap;
 
@@ -26,25 +32,140 @@ use crate::listing::MonthSums;
 use crate::memo::{self, Sums};
 use crate::row_source_sql;
 
-/// One entry that moves cash.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CashRow {
+/// An entry `e` that is in force: not a reversal and not reversed.
+const IN_FORCE: &str = "e.reverses_entry_id IS NULL
+    AND NOT EXISTS (SELECT 1 FROM journal_entries rv WHERE rv.reverses_entry_id = e.id)";
+
+/// The posting type an entry `e` stands for: a reversal stands for the type of what it reverses.
+const BASE_TYPE: &str = "(CASE WHEN e.posting_type = 'reversal'
+    THEN (SELECT og.posting_type FROM journal_entries og WHERE og.id = e.reverses_entry_id)
+    ELSE e.posting_type END)";
+
+/// The three parts a row can be, as the inner side of a `CROSS JOIN` (which keeps the walk of
+/// the entries outside).
+const PARTS: &str = "(SELECT 0 AS part UNION ALL SELECT 1 UNION ALL SELECT 2)";
+
+/// True when entry `e` is split into a part for cash in and a part for cash out: a بکری posting.
+fn split_sql() -> String {
+    format!("(e.source_type = 'bikri' AND {BASE_TYPE} IN ('bikri_first', 'bikri_later'))")
+}
+
+/// True when `(e, p.part)` is a row: the part fits the entry and it has a cash line of its side.
+/// `cash` is the id of the cash account (a number, not text from the user). Without `split`, every
+/// entry is one row (part 0), as R12 shows it.
+fn is_row_sql(cash: i64, split: bool) -> String {
+    let split = if split { split_sql() } else { "0".to_owned() };
+    format!(
+        "(CASE WHEN {split} THEN p.part > 0 ELSE p.part = 0 END)
+         AND EXISTS (SELECT 1 FROM journal_lines cx WHERE cx.account_id = {cash} AND cx.entry_id = e.id
+                     AND (p.part = 0 OR (p.part = 1 AND cx.dr_paisa > 0) OR (p.part = 2 AND cx.cr_paisa > 0)))"
+    )
+}
+
+/// What cash received on the row `(e, p.part)`.
+fn in_sql(cash: i64) -> String {
+    format!(
+        "(CASE WHEN p.part = 2 THEN 0 ELSE (SELECT COALESCE(SUM(ci.dr_paisa), 0) FROM journal_lines ci
+            WHERE ci.account_id = {cash} AND ci.entry_id = e.id) END)"
+    )
+}
+
+/// What cash paid out on the row `(e, p.part)`.
+fn out_sql(cash: i64) -> String {
+    format!(
+        "(CASE WHEN p.part = 1 THEN 0 ELSE (SELECT COALESCE(SUM(co.cr_paisa), 0) FROM journal_lines co
+            WHERE co.account_id = {cash} AND co.entry_id = e.id) END)"
+    )
+}
+
+/// The voucher column `column` of an entry `e` that is a voucher's.
+fn voucher_of(column: &str) -> String {
+    format!(
+        "(SELECT vq.{column} FROM vouchers vq WHERE e.source_type = 'voucher' AND vq.id = e.source_id)"
+    )
+}
+
+/// The kind of the row `(e, p.part)`: the words of `mandi_core::cashbook::CashKind` (PRD FR-16.14
+/// v1.60). A reversal has the kind of what it reverses; on a بکری reversal the sides are swapped (the
+/// money given back to a seller comes in).
+pub fn kind_sql(cash: i64) -> String {
+    let entered = voucher_of("entered_as");
+    // The پیشگی typed to a buyer is a payment whose party is a buyer (the lines of the entry are
+    // read, so an old version of an edited voucher keeps its own party).
+    let to_buyer =
+        "EXISTS (SELECT 1 FROM journal_lines bl JOIN accounts ba ON ba.id = bl.account_id
+        WHERE bl.entry_id = e.id AND ba.party_type = 'buyer')";
+    let venture_entry = "(SELECT vk.kind FROM venture_entries vk WHERE e.source_type = 'venture' AND vk.id = e.source_id)";
+    let venture_kind = row_source_sql::VENTURE_KIND;
+    format!(
+        "(CASE {BASE_TYPE}
+            WHEN 'bikri_first' THEN (CASE WHEN (p.part = 1) = (e.posting_type <> 'reversal') THEN 'bikri_paid' ELSE 'bikri_seller_cash' END)
+            WHEN 'bikri_later' THEN (CASE WHEN (p.part = 1) = (e.posting_type <> 'reversal') THEN 'bikri_paid' ELSE 'bikri_seller_cash' END)
+            WHEN 'advance' THEN (CASE WHEN e.source_type = 'bikri' THEN 'bikri_advance' ELSE 'advance' END)
+            WHEN 'payment' THEN (CASE WHEN {to_buyer} THEN (CASE WHEN {entered} = 'advance' THEN 'buyer_advance' ELSE 'cash_lent' END) ELSE 'payment' END)
+            WHEN 'receipt' THEN 'receipt'
+            WHEN 'money_lent' THEN 'money_lent'
+            WHEN 'money_lent_return' THEN 'money_lent_return'
+            WHEN 'shop_expense' THEN 'shop_expense'
+            WHEN 'personal_expense' THEN 'personal_expense'
+            WHEN 'personal_return' THEN 'personal_return'
+            WHEN 'capital_in' THEN 'capital_in'
+            WHEN 'capital_out' THEN 'capital_out'
+            WHEN 'khata_out' THEN 'khata_out'
+            WHEN 'khata_in' THEN 'khata_in'
+            WHEN 'purchase' THEN 'purchase'
+            WHEN 'trip_cost' THEN 'trip_cost'
+            WHEN 'garden_payment' THEN (CASE WHEN {venture_entry} = 'cost' THEN 'garden_cost' ELSE 'garden_installment' END)
+            WHEN 'venture_receipt' THEN (CASE WHEN {venture_entry} = 'refund' THEN 'garden_refund'
+                WHEN {venture_kind} = 'garden' THEN 'garden_other_sale' ELSE 'trip_other_sale' END)
+            WHEN 'general' THEN 'general'
+            WHEN 'fruit_taken' THEN 'fruit'
+            WHEN 'opening' THEN (CASE WHEN e.source_type = 'account' AND e.source_id = {cash} THEN 'opening_cash'
+                WHEN EXISTS (SELECT 1 FROM partners po WHERE e.source_type = 'account' AND po.capital_account_id = e.source_id) THEN 'opening_capital'
+                ELSE 'opening_balance' END)
+            ELSE 'other' END)"
+    )
+}
+
+/// The key of one row: an entry and a part (see the module text).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RowKey {
     /// The journal entry.
     pub entry_id: i64,
+    /// 0 the whole entry, 1 cash received on a بکری, 2 cash paid out on a بکری.
+    pub part: i64,
+}
+
+/// One row of a page: its key and, in day order without a type filter, the running sums.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PageKey {
+    /// The row.
+    pub key: RowKey,
+    /// Σ of cash received over this row and every row before it in the set of rows shown, in day
+    /// order. `None` when the page is not in day order or a type filter is set.
+    pub run_in_paisa: Option<i64>,
+    /// Σ of cash paid out, as above.
+    pub run_out_paisa: Option<i64>,
+}
+
+/// What one row shows, from its entry and its source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CashRow {
+    /// The row.
+    pub key: RowKey,
     /// The day, `YYYY-MM-DD`.
     pub entry_date: String,
     /// The stored posting type.
     pub posting_type: String,
-    /// What cash received in this entry (Σ debit on cash), paisa.
+    /// The kind of [`kind_sql`].
+    pub kind: String,
+    /// `live`, `reversed` or `reversal`.
+    pub status: String,
+    /// What cash received on this row, paisa.
     pub in_paisa: i64,
-    /// What cash paid out in this entry (Σ credit on cash), paisa.
+    /// What cash paid out on this row, paisa.
     pub out_paisa: i64,
-    /// Σ of `in_paisa` over this row and every row before it in the range, in day order. `None`
-    /// when the page is not in day order: the running cash means nothing there.
-    pub run_in_paisa: Option<i64>,
-    /// Σ of `out_paisa` over this row and every row before it in the range. `None` as above.
-    pub run_out_paisa: Option<i64>,
-    /// The number of its voucher or بکری, if it has one.
+    /// The number of its voucher, بکری, purchase, garden or trip entry or پھل, if it has one.
     pub number: Option<i64>,
     /// The note of the entry. Empty if none.
     pub narration: String,
@@ -59,60 +180,23 @@ pub struct CashRow {
     pub venture_id: Option<i64>,
     /// `trip` or `garden`, with `venture_id`.
     pub venture_kind: Option<String>,
+    /// The trip or garden of a venture or purchase row: `(id, kind, number, name_ur, name_en)`.
+    pub venture: Option<VentureName>,
 }
 
-/// The partner behind an entry of capital (plan 78 E): who put capital in or took it back, or whose
-/// opening capital came into cash.
+/// The trip or garden a row names.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CapitalPartner {
-    /// The journal entry.
-    pub entry_id: i64,
-    /// The partner.
-    pub partner_id: i64,
-    /// His Urdu name.
+pub struct VentureName {
+    /// `ventures.id`.
+    pub id: i64,
+    /// `trip` or `garden`.
+    pub kind: String,
+    /// Its number in the series of its kind.
+    pub number: i64,
+    /// Urdu name.
     pub name_ur: String,
-    /// His English name.
+    /// English name.
     pub name_en: String,
-}
-
-/// The partner of each of these entries that is an entry of capital: a capital voucher (in or out)
-/// by its voucher's partner, and an opening posted on a partner's capital account by that partner.
-/// Any other entry has no row. One query.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn capital_partners(
-    conn: &Connection,
-    entry_ids: &[i64],
-) -> rusqlite::Result<Vec<CapitalPartner>> {
-    if entry_ids.is_empty() {
-        return Ok(Vec::new());
-    }
-    let marks = vec!["?"; entry_ids.len()].join(", ");
-    let mut statement = conn.prepare(&format!(
-        "SELECT e.id, p.id, p.name_ur, p.name_en
-         FROM journal_entries e
-         JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id
-         JOIN partners p ON p.id = v.partner_id
-         WHERE e.posting_type IN ('capital_in', 'capital_out') AND e.id IN ({marks})
-         UNION ALL
-         SELECT e.id, p.id, p.name_ur, p.name_en
-         FROM journal_entries e
-         JOIN partners p ON e.source_type = 'account' AND p.capital_account_id = e.source_id
-         WHERE e.posting_type = 'opening' AND e.id IN ({marks})"
-    ))?;
-    let mut values: Vec<i64> = Vec::with_capacity(entry_ids.len().saturating_mul(2));
-    values.extend_from_slice(entry_ids);
-    values.extend_from_slice(entry_ids);
-    let rows = statement.query_map(params_from_iter(values.iter()), |r| {
-        Ok(CapitalPartner {
-            entry_id: r.get(0)?,
-            partner_id: r.get(1)?,
-            name_ur: r.get(2)?,
-            name_en: r.get(3)?,
-        })
-    })?;
-    rows.collect()
 }
 
 /// The day of the first posted entry that moved cash, or `None` when none did. It walks the entries
@@ -136,7 +220,7 @@ pub fn first_entry_date(conn: &Connection, cash_id: i64) -> rusqlite::Result<Opt
     })
 }
 
-/// The sums over a whole range.
+/// The sums over all posted entries of a range, in force or not.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CashRange {
     /// How many entries move cash in the range.
@@ -147,11 +231,31 @@ pub struct CashRange {
     pub out_paisa: i64,
 }
 
+/// A set of rows: how many and what they add up to.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RowSums {
+    /// Rows.
+    pub rows: i64,
+    /// Σ cash received, paisa.
+    pub in_paisa: i64,
+    /// Σ cash paid out, paisa.
+    pub out_paisa: i64,
+}
+
+/// The sums of a range: every row, and the rows in force.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RangeSums {
+    /// Every row, the reversed ones and the reversals too.
+    pub all: RowSums,
+    /// The rows in force.
+    pub live: RowSums,
+}
+
 /// How a page is ordered.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Order {
-    /// By day, then entry, oldest first (`desc` false) or newest first. The only order with a
-    /// running cash.
+    /// By day, then entry, then part, oldest first (`desc` false) or newest first. The only order
+    /// with a running cash.
     Date {
         /// Newest first.
         desc: bool,
@@ -168,8 +272,7 @@ pub enum Order {
 }
 
 /// The columns the cash book can be sorted by: the name of the field of the row and its SQL
-/// expression over the slow path's `r`. `entry_date`, `in_paisa` and `out_paisa` have their own
-/// fast paths (see [`Order`]); `running_paisa` is the day order, so it is not a sort of its own.
+/// expression over the rows `r`. `running_paisa` is the day order, so it is not a sort of its own.
 pub const SORT_COLUMNS: [(&str, &str); 6] = [
     ("entry_date", "r.entry_date"),
     ("posting_type", "r.posting_type"),
@@ -179,11 +282,31 @@ pub const SORT_COLUMNS: [(&str, &str); 6] = [
     ("out_paisa", "r.out_p"),
 ];
 
-/// The number of the voucher or بکری of an entry, as the slow path reads it.
+/// The number of the voucher or بکری of a row `r`, for a sort by number.
 const NUMBER_OF_ENTRY: &str = "CASE r.source_type
     WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = r.source_id)
     WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = r.source_id)
+    WHEN 'purchase' THEN (SELECT pu.number FROM purchases pu WHERE pu.id = r.source_id)
+    WHEN 'venture' THEN (SELECT vn.number FROM venture_entries vn WHERE vn.id = r.source_id)
 END";
+
+/// Which rows of a range are read.
+#[derive(Debug, Clone, Copy)]
+pub struct Filter<'a> {
+    /// The cash account.
+    pub cash_id: i64,
+    /// First day, `YYYY-MM-DD`, included; `None` is open.
+    pub from: Option<&'a str>,
+    /// Last day, included; `None` is open.
+    pub to: Option<&'a str>,
+    /// True to read the reversed postings and the reversals too.
+    pub show_reversed: bool,
+    /// Only these kinds (the words of [`kind_sql`]); empty is every kind.
+    pub kinds: &'a [&'a str],
+    /// True to split a بکری posting into its cash in and its cash out (the روکڑ بک screen); false
+    /// for one row an entry (R12).
+    pub split: bool,
+}
 
 /// `AND` conditions on the day of an entry `e`, only for the ends that are set, and their values.
 fn day_conditions(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
@@ -200,6 +323,27 @@ fn day_conditions(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) 
     (sql, binds)
 }
 
+/// `AND` the entry is in force, unless every entry is asked for.
+fn force_sql(show_reversed: bool) -> String {
+    if show_reversed {
+        String::new()
+    } else {
+        format!(" AND {IN_FORCE}")
+    }
+}
+
+/// `AND` the kind of the row is one of `kinds`, with the values to bind; nothing when empty.
+fn kinds_sql(cash: i64, kinds: &[&str]) -> (String, Vec<Value>) {
+    if kinds.is_empty() {
+        return (String::new(), Vec::new());
+    }
+    let marks = vec!["?"; kinds.len()].join(", ");
+    (
+        format!(" AND {} IN ({marks})", kind_sql(cash)),
+        kinds.iter().map(|k| Value::Text((*k).to_owned())).collect(),
+    )
+}
+
 /// True if every entry in the file is posted (a draft only exists inside a save). Uses the index
 /// of unposted entries, so it is instant.
 fn no_drafts(conn: &Connection) -> rusqlite::Result<bool> {
@@ -211,8 +355,9 @@ fn no_drafts(conn: &Connection) -> rusqlite::Result<bool> {
     Ok(!any)
 }
 
-/// The count of entries, Σ in and Σ out of the entries in a range. `from` and `to` are
-/// `YYYY-MM-DD` and included; `None` leaves that end open.
+/// The count of entries, Σ in and Σ out of every posted entry in a range, in force or not. `from`
+/// and `to` are `YYYY-MM-DD` and included; `None` leaves that end open. The sums are the cash that
+/// moved: a reversed pair adds the same to both, so the net is the balance.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -265,120 +410,154 @@ pub fn range(
     })
 }
 
-/// The part of an entry's row the page query reads: its sums on cash and its own columns.
-struct Part {
-    entry_id: i64,
-    entry_date: String,
-    posting_type: String,
-    in_paisa: i64,
-    out_paisa: i64,
-    number: Option<i64>,
-    narration: String,
-    reason: String,
-    source_type: String,
-    source_id: i64,
-    venture_id: Option<i64>,
-    venture_kind: Option<String>,
+/// The rows and sums of a range, all and in force, without a type filter. A reversal and the entry
+/// it reverses are on the same day, so a pair is inside the range when its reversal is.
+///
+/// # Errors
+/// Any SQLite error; a sum that does not fit.
+pub fn range_sums(
+    conn: &Connection,
+    cash_id: i64,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> rusqlite::Result<RangeSums> {
+    let whole = range(conn, cash_id, from, to)?;
+    // The pairs not in force, read from the reversals alone. A pair moves, in and out each, what
+    // its reversal moves in and out together.
+    let (days, mut binds) = day_conditions(from, to);
+    binds.insert(0, Value::Integer(cash_id));
+    let (pairs, moved_dr, moved_cr): (i64, i64, i64) = conn.query_row(
+        &format!(
+            "SELECT COUNT(DISTINCT e.id), COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+             FROM journal_entries e INDEXED BY idx_journal_entries_reverses
+             JOIN journal_lines l ON l.entry_id = e.id AND l.account_id = ?
+             WHERE e.reverses_entry_id IS NOT NULL AND e.status = 'posted'{days}"
+        ),
+        params_from_iter(binds.iter()),
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+    let moved = moved_dr.checked_add(moved_cr).ok_or_else(overflow)?;
+    // The بکری postings with both sides: they are two rows each.
+    let split = split_sql();
+    let (days, binds) = day_conditions(from, to);
+    let (both, both_live): (i64, i64) = conn.query_row(
+        &format!(
+            "SELECT COUNT(*), COALESCE(SUM(CASE WHEN {IN_FORCE} THEN 1 ELSE 0 END), 0)
+             FROM journal_entries e
+             WHERE e.source_type = 'bikri' AND e.status = 'posted'{days} AND {split}
+               AND EXISTS (SELECT 1 FROM journal_lines d WHERE d.account_id = {cash_id} AND d.entry_id = e.id AND d.dr_paisa > 0)
+               AND EXISTS (SELECT 1 FROM journal_lines c WHERE c.account_id = {cash_id} AND c.entry_id = e.id AND c.cr_paisa > 0)"
+        ),
+        params_from_iter(binds.iter()),
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let all = RowSums {
+        rows: whole.count.checked_add(both).ok_or_else(overflow)?,
+        in_paisa: whole.in_paisa,
+        out_paisa: whole.out_paisa,
+    };
+    let live = RowSums {
+        rows: pairs
+            .checked_mul(2)
+            .and_then(|n| whole.count.checked_sub(n))
+            .and_then(|n| n.checked_add(both_live))
+            .ok_or_else(overflow)?,
+        in_paisa: whole.in_paisa.checked_sub(moved).ok_or_else(overflow)?,
+        out_paisa: whole.out_paisa.checked_sub(moved).ok_or_else(overflow)?,
+    };
+    Ok(RangeSums { all, live })
 }
 
-/// The sums on cash and the own columns of these entries, one query.
-fn parts_of(conn: &Connection, cash_id: i64, ids: &[i64]) -> rusqlite::Result<HashMap<i64, Part>> {
-    let mut out = HashMap::new();
-    if ids.is_empty() {
-        return Ok(out);
-    }
-    let marks = vec!["?"; ids.len()].join(", ");
-    let (venture_id, venture_kind) = (row_source_sql::VENTURE_ID, row_source_sql::VENTURE_KIND);
+/// The rows `r` of a filter: `(entry_id, part, entry_date, posting_type, source_type, source_id,
+/// narration, kind, in_p, out_p)`, with the values of its `?` marks.
+fn rows_cte(filter: &Filter<'_>) -> (String, Vec<Value>) {
+    let cash = filter.cash_id;
+    let (days, mut binds) = day_conditions(filter.from, filter.to);
+    let force = force_sql(filter.show_reversed);
+    let (kinds, kind_binds) = kinds_sql(cash, filter.kinds);
+    binds.extend(kind_binds);
+    let (is_row, kind, in_p, out_p) = (
+        is_row_sql(cash, filter.split),
+        kind_sql(cash),
+        in_sql(cash),
+        out_sql(cash),
+    );
+    let sql = format!(
+        "WITH r AS (
+             SELECT e.id AS entry_id, p.part AS part, e.entry_date AS entry_date,
+                    e.posting_type AS posting_type, e.source_type AS source_type,
+                    e.source_id AS source_id, COALESCE(e.narration, '') AS narration,
+                    {kind} AS kind, {in_p} AS in_p, {out_p} AS out_p
+             FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+             CROSS JOIN {PARTS} AS p
+             WHERE e.status = 'posted'{days}{force}{kinds} AND {is_row})"
+    );
+    (sql, binds)
+}
+
+/// The count and sums of the rows of a filter (a type filter's totals).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn filtered_sums(conn: &Connection, filter: &Filter<'_>) -> rusqlite::Result<RowSums> {
+    let (cte, binds) = rows_cte(filter);
+    conn.query_row(
+        &format!(
+            "{cte} SELECT COUNT(*), COALESCE(SUM(r.in_p), 0), COALESCE(SUM(r.out_p), 0) FROM r"
+        ),
+        params_from_iter(binds.iter()),
+        |r| {
+            Ok(RowSums {
+                rows: r.get(0)?,
+                in_paisa: r.get(1)?,
+                out_paisa: r.get(2)?,
+            })
+        },
+    )
+}
+
+/// The count and sums of each kind of the rows of a filter.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn sums_by_kind(
+    conn: &Connection,
+    filter: &Filter<'_>,
+) -> rusqlite::Result<Vec<(String, RowSums)>> {
+    let (cte, binds) = rows_cte(filter);
     let mut statement = conn.prepare(&format!(
-        "SELECT e.id, e.entry_date, e.posting_type, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0),
-                CASE e.source_type
-                    WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = e.source_id)
-                    WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = e.source_id)
-                END,
-                COALESCE(e.narration, ''),
-                CASE e.source_type
-                    WHEN 'voucher' THEN COALESCE((SELECT v.reason FROM vouchers v WHERE v.id = e.source_id), '')
-                    ELSE ''
-                END,
-                e.source_type, e.source_id, {venture_id}, {venture_kind}
-         FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id AND l.account_id = ?
-         WHERE e.id IN ({marks}) GROUP BY e.id"
+        "{cte} SELECT r.kind, COUNT(*), COALESCE(SUM(r.in_p), 0), COALESCE(SUM(r.out_p), 0)
+         FROM r GROUP BY r.kind"
     ))?;
-    let mut values: Vec<i64> = Vec::with_capacity(ids.len().saturating_add(1));
-    values.push(cash_id);
-    values.extend_from_slice(ids);
-    let rows = statement.query_map(params_from_iter(values.iter()), |r| {
-        Ok(Part {
-            entry_id: r.get(0)?,
-            entry_date: r.get(1)?,
-            posting_type: r.get(2)?,
-            in_paisa: r.get(3)?,
-            out_paisa: r.get(4)?,
-            number: r.get(5)?,
-            narration: r.get(6)?,
-            reason: r.get(7)?,
-            source_type: r.get(8)?,
-            source_id: r.get(9)?,
-            venture_id: r.get(10)?,
-            venture_kind: r.get(11)?,
-        })
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((
+            r.get(0)?,
+            RowSums {
+                rows: r.get(1)?,
+                in_paisa: r.get(2)?,
+                out_paisa: r.get(3)?,
+            },
+        ))
     })?;
-    for part in rows {
-        let part = part?;
-        out.insert(part.entry_id, part);
-    }
-    Ok(out)
-}
-
-/// Rows in the order of `ids`, with the running sums given by `running` (or none).
-fn rows_in_order(
-    parts: &mut HashMap<i64, Part>,
-    ids: &[i64],
-    mut running: impl FnMut(&Part) -> rusqlite::Result<(Option<i64>, Option<i64>)>,
-) -> rusqlite::Result<Vec<CashRow>> {
-    let mut rows = Vec::with_capacity(ids.len());
-    for id in ids {
-        let Some(part) = parts.remove(id) else {
-            continue;
-        };
-        let (run_in_paisa, run_out_paisa) = running(&part)?;
-        rows.push(CashRow {
-            entry_id: part.entry_id,
-            entry_date: part.entry_date,
-            posting_type: part.posting_type,
-            in_paisa: part.in_paisa,
-            out_paisa: part.out_paisa,
-            run_in_paisa,
-            run_out_paisa,
-            number: part.number,
-            narration: part.narration,
-            reason: part.reason,
-            source_type: part.source_type,
-            source_id: part.source_id,
-            venture_id: part.venture_id,
-            venture_kind: part.venture_kind,
-        });
-    }
-    Ok(rows)
+    rows.collect()
 }
 
 fn overflow() -> rusqlite::Error {
     rusqlite::Error::IntegralValueOutOfRange(0, i64::MAX)
 }
 
-/// Σ in and Σ out of the cash entries in a range whose (day, id) is on one side of `key`: `later`
-/// true is after it, false before it.
+/// Σ in and Σ out of the cash entries of the set in a range whose (day, id) is on one side of
+/// `key`: `later` true is after it, false before it.
 fn sums_beside(
     conn: &Connection,
-    cash_id: i64,
-    from: Option<&str>,
-    to: Option<&str>,
+    filter: &Filter<'_>,
     key: (&str, i64),
     later: bool,
 ) -> rusqlite::Result<(i64, i64)> {
-    let (days, mut binds) = day_conditions(from, to);
+    let (days, mut binds) = day_conditions(filter.from, filter.to);
+    let force = force_sql(filter.show_reversed);
     let op = if later { ">" } else { "<" };
-    let mut all = vec![Value::Integer(cash_id)];
+    let mut all = vec![Value::Integer(filter.cash_id)];
     all.append(&mut binds);
     all.push(Value::Text(key.0.to_owned()));
     all.push(Value::Text(key.0.to_owned()));
@@ -388,7 +567,7 @@ fn sums_beside(
             "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
              FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
              JOIN journal_lines l ON l.entry_id = e.id AND l.account_id = ?
-             WHERE e.status = 'posted'{days}
+             WHERE e.status = 'posted'{days}{force}
                AND (e.entry_date {op} ? OR (e.entry_date = ? AND e.id {op} ?))"
         ),
         params_from_iter(all.iter()),
@@ -396,205 +575,462 @@ fn sums_beside(
     )
 }
 
-/// One page of the entries in day order, with the running sums. See the module doc.
+/// One key of the walk: the row, its day and what it moved.
+struct Walked {
+    key: RowKey,
+    entry_date: String,
+    in_paisa: i64,
+    out_paisa: i64,
+}
+
+/// The cash received and paid out of one entry, both sides.
+fn entry_cash(conn: &Connection, cash_id: i64, entry_id: i64) -> rusqlite::Result<(i64, i64)> {
+    conn.query_row(
+        "SELECT COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0) FROM journal_lines
+         WHERE account_id = ?1 AND entry_id = ?2",
+        [cash_id, entry_id],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )
+}
+
+fn add2(a: (i64, i64), b: (i64, i64)) -> rusqlite::Result<(i64, i64)> {
+    Ok((
+        a.0.checked_add(b.0).ok_or_else(overflow)?,
+        a.1.checked_add(b.1).ok_or_else(overflow)?,
+    ))
+}
+
+/// One page of the rows in day order, with the running sums unless a type filter is set. See the
+/// module doc.
 fn page_by_date(
     conn: &Connection,
-    cash_id: i64,
-    (from, to): (Option<&str>, Option<&str>),
+    filter: &Filter<'_>,
+    set: RowSums,
     desc: bool,
     (offset, limit): (i64, i64),
-) -> rusqlite::Result<Vec<CashRow>> {
-    let (days, mut binds) = day_conditions(from, to);
+) -> rusqlite::Result<Vec<PageKey>> {
+    let cash = filter.cash_id;
+    let (days, mut binds) = day_conditions(filter.from, filter.to);
+    let force = force_sql(filter.show_reversed);
+    let (kinds, kind_binds) = kinds_sql(cash, filter.kinds);
+    binds.extend(kind_binds);
     let direction = if desc { "DESC" } else { "ASC" };
-    // Values in the order of the `?` marks: the day conditions, the cash account, limit, offset.
-    binds.push(Value::Integer(cash_id));
     binds.push(Value::Integer(limit));
     binds.push(Value::Integer(offset));
+    let (is_row, in_p, out_p) = (is_row_sql(cash, filter.split), in_sql(cash), out_sql(cash));
     let mut statement = conn.prepare(&format!(
-        "SELECT e.id, e.entry_date FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
-         WHERE e.status = 'posted'{days}
-           AND EXISTS (SELECT 1 FROM journal_lines l WHERE l.account_id = ? AND l.entry_id = e.id)
-         ORDER BY e.entry_date {direction}, e.id {direction} LIMIT ? OFFSET ?"
+        "SELECT e.id, e.entry_date, p.part, {in_p}, {out_p}
+         FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         CROSS JOIN {PARTS} AS p
+         WHERE e.status = 'posted'{days}{force}{kinds} AND {is_row}
+         ORDER BY e.entry_date {direction}, e.id {direction}, p.part {direction} LIMIT ? OFFSET ?"
     ))?;
-    let keys: Vec<(i64, String)> = statement
+    let walked: Vec<Walked> = statement
         .query_map(params_from_iter(binds.iter()), |r| {
-            Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
+            Ok(Walked {
+                key: RowKey {
+                    entry_id: r.get(0)?,
+                    part: r.get(2)?,
+                },
+                entry_date: r.get(1)?,
+                in_paisa: r.get(3)?,
+                out_paisa: r.get(4)?,
+            })
         })?
         .collect::<Result<_, _>>()?;
-    let (Some(first), Some(last)) = (keys.first(), keys.last()) else {
+    // With a type filter the running cash is not given (PRD FR-16.14 v1.60).
+    let unrun = |rows: &[Walked]| {
+        rows.iter()
+            .map(|w| PageKey {
+                key: w.key,
+                run_in_paisa: None,
+                run_out_paisa: None,
+            })
+            .collect()
+    };
+    if !filter.kinds.is_empty() {
+        return Ok(unrun(&walked));
+    }
+    let (Some(first), Some(last)) = (walked.first(), walked.last()) else {
         return Ok(Vec::new());
     };
-    let ids: Vec<i64> = keys.iter().map(|k| k.0).collect();
-    let mut parts = parts_of(conn, cash_id, &ids)?;
-    // The sums of the entries before the first row of the page in the order walked, from the
-    // nearer end of the book.
-    let total = range(conn, cash_id, from, to)?;
-    let page_in: i64 = ids
-        .iter()
-        .filter_map(|id| parts.get(id))
-        .try_fold(0_i64, |sum, p| sum.checked_add(p.in_paisa))
-        .ok_or_else(overflow)?;
-    let page_out: i64 = ids
-        .iter()
-        .filter_map(|id| parts.get(id))
-        .try_fold(0_i64, |sum, p| sum.checked_add(p.out_paisa))
-        .ok_or_else(overflow)?;
-    // `walked_before` is the sums of the entries the walk passed before the page.
-    let walked_before: (i64, i64) = if offset <= total.count / 2 {
+    let page_sums = walked.iter().try_fold((0_i64, 0_i64), |sum, w| {
+        add2(sum, (w.in_paisa, w.out_paisa))
+    })?;
+    // `walked_before` is the sums of the rows the walk passed before the page: the entries beside
+    // the first one, and the other part of the first entry when the walk passed it already.
+    let walked_before: (i64, i64) = if offset <= set.rows / 2 {
         // `desc` walks from the newest, so what is before the page is what is later in day order.
-        sums_beside(conn, cash_id, from, to, (&first.1, first.0), desc)?
+        let beside = sums_beside(conn, filter, (&first.entry_date, first.key.entry_id), desc)?;
+        let passed = match (desc, first.key.part) {
+            (false, 2) => (entry_cash(conn, cash, first.key.entry_id)?.0, 0),
+            (true, 1) => (0, entry_cash(conn, cash, first.key.entry_id)?.1),
+            _ => (0, 0),
+        };
+        add2(beside, passed)?
     } else {
-        let after = sums_beside(conn, cash_id, from, to, (&last.1, last.0), !desc)?;
+        let beside = sums_beside(conn, filter, (&last.entry_date, last.key.entry_id), !desc)?;
+        let still = match (desc, last.key.part) {
+            (false, 1) => (0, entry_cash(conn, cash, last.key.entry_id)?.1),
+            (true, 2) => (entry_cash(conn, cash, last.key.entry_id)?.0, 0),
+            _ => (0, 0),
+        };
+        let after = add2(beside, still)?;
         (
-            total
-                .in_paisa
-                .checked_sub(page_in)
+            set.in_paisa
+                .checked_sub(page_sums.0)
                 .and_then(|v| v.checked_sub(after.0))
                 .ok_or_else(overflow)?,
-            total
-                .out_paisa
-                .checked_sub(page_out)
+            set.out_paisa
+                .checked_sub(page_sums.1)
                 .and_then(|v| v.checked_sub(after.1))
                 .ok_or_else(overflow)?,
         )
     };
-    // The running sums in day order. Oldest first: the walked entries are the earlier ones. Newest
+    // The running sums in day order. Oldest first: the walked rows are the earlier ones. Newest
     // first: the first row has everything except what was walked before it.
     let (mut run_in, mut run_out) = if desc {
         (
-            total
-                .in_paisa
+            set.in_paisa
                 .checked_sub(walked_before.0)
                 .ok_or_else(overflow)?,
-            total
-                .out_paisa
+            set.out_paisa
                 .checked_sub(walked_before.1)
                 .ok_or_else(overflow)?,
         )
     } else {
         walked_before
     };
-    rows_in_order(&mut parts, &ids, |part| {
-        if desc {
+    let mut keys = Vec::with_capacity(walked.len());
+    for w in &walked {
+        let (shown_in, shown_out) = if desc {
             // This row's running sums include itself; the next (older) row takes it off.
-            let out = (Some(run_in), Some(run_out));
-            run_in = run_in.checked_sub(part.in_paisa).ok_or_else(overflow)?;
-            run_out = run_out.checked_sub(part.out_paisa).ok_or_else(overflow)?;
-            Ok(out)
+            let shown = (run_in, run_out);
+            run_in = run_in.checked_sub(w.in_paisa).ok_or_else(overflow)?;
+            run_out = run_out.checked_sub(w.out_paisa).ok_or_else(overflow)?;
+            shown
         } else {
-            run_in = run_in.checked_add(part.in_paisa).ok_or_else(overflow)?;
-            run_out = run_out.checked_add(part.out_paisa).ok_or_else(overflow)?;
-            Ok((Some(run_in), Some(run_out)))
-        }
-    })
+            run_in = run_in.checked_add(w.in_paisa).ok_or_else(overflow)?;
+            run_out = run_out.checked_add(w.out_paisa).ok_or_else(overflow)?;
+            (run_in, run_out)
+        };
+        keys.push(PageKey {
+            key: w.key,
+            run_in_paisa: Some(shown_in),
+            run_out_paisa: Some(shown_out),
+        });
+    }
+    Ok(keys)
 }
 
-/// One page of the entries by the cash received or paid out, biggest first or smallest first.
-fn page_by_amount(
+/// One page of the rows sorted by another column or by amount. This reads every row of the range.
+fn page_sorted(
     conn: &Connection,
-    cash_id: i64,
-    (from, to): (Option<&str>, Option<&str>),
-    (out, desc): (bool, bool),
-    (offset, limit): (i64, i64),
-) -> rusqlite::Result<Vec<CashRow>> {
-    let column = if out { "o" } else { "i" };
-    let direction = if desc { "DESC" } else { "ASC" };
-    let mut binds = vec![Value::Integer(cash_id)];
-    // The covering index alone gives the sums of an entry; the entries are joined only when a day
-    // is asked for or a draft exists.
-    let join = if from.is_none() && to.is_none() && no_drafts(conn)? {
-        String::new()
-    } else {
-        let (days, day_binds) = day_conditions(from, to);
-        binds.extend(day_binds);
-        format!(" JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'{days}")
-    };
-    // The cash account id is the first `?` only when there is no join: with the join the day values
-    // come first in the text, so the id goes first there too (see the order of the clauses below).
-    let sql = format!(
-        "SELECT l.entry_id, SUM(l.dr_paisa) AS i, SUM(l.cr_paisa) AS o
-         FROM journal_lines l{join}
-         WHERE l.account_id = ?
-         GROUP BY l.entry_id ORDER BY {column} {direction}, l.entry_id {direction} LIMIT ? OFFSET ?"
-    );
-    // Values in the order of the `?` marks: the join's day values, then the account, limit, offset.
-    let mut ordered: Vec<Value> = binds.iter().skip(1).cloned().collect();
-    ordered.push(Value::Integer(cash_id));
-    ordered.push(Value::Integer(limit));
-    ordered.push(Value::Integer(offset));
-    let mut statement = conn.prepare(&sql)?;
-    let ids: Vec<i64> = statement
-        .query_map(params_from_iter(ordered.iter()), |r| r.get::<_, i64>(0))?
-        .collect::<Result<_, _>>()?;
-    let mut parts = parts_of(conn, cash_id, &ids)?;
-    rows_in_order(&mut parts, &ids, |_| Ok((None, None)))
-}
-
-/// One page of the entries sorted by another column. This reads every entry of the range: the slow
-/// path (posting type, number, narration).
-fn page_by_other(
-    conn: &Connection,
-    cash_id: i64,
-    (from, to): (Option<&str>, Option<&str>),
+    filter: &Filter<'_>,
     order: &str,
     (offset, limit): (i64, i64),
-) -> rusqlite::Result<Vec<CashRow>> {
-    let (days, day_binds) = day_conditions(from, to);
-    let mut binds = vec![Value::Integer(cash_id)];
-    binds.extend(day_binds);
+) -> rusqlite::Result<Vec<PageKey>> {
+    let (cte, mut binds) = rows_cte(filter);
     binds.push(Value::Integer(limit));
     binds.push(Value::Integer(offset));
     let mut statement = conn.prepare(&format!(
-        "WITH r AS (
-             SELECT e.id AS entry_id, e.entry_date AS entry_date, e.posting_type AS posting_type,
-                    e.source_type AS source_type, e.source_id AS source_id,
-                    COALESCE(e.narration, '') AS narration,
-                    SUM(l.dr_paisa) AS in_p, SUM(l.cr_paisa) AS out_p
-             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-             WHERE l.account_id = ? AND e.status = 'posted'{days}
-             GROUP BY e.id)
-         SELECT r.entry_id FROM r ORDER BY {order}, r.entry_date, r.entry_id LIMIT ? OFFSET ?"
+        "{cte} SELECT r.entry_id, r.part FROM r
+         ORDER BY {order}, r.entry_date, r.entry_id, r.part LIMIT ? OFFSET ?"
     ))?;
-    let ids: Vec<i64> = statement
-        .query_map(params_from_iter(binds.iter()), |r| r.get::<_, i64>(0))?
-        .collect::<Result<_, _>>()?;
-    let mut parts = parts_of(conn, cash_id, &ids)?;
-    rows_in_order(&mut parts, &ids, |_| Ok((None, None)))
+    let keys = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok(PageKey {
+            key: RowKey {
+                entry_id: r.get(0)?,
+                part: r.get(1)?,
+            },
+            run_in_paisa: None,
+            run_out_paisa: None,
+        })
+    })?;
+    keys.collect()
 }
 
-/// One page of the entries of the range in the order asked for. Only [`Order::Date`] has the
-/// running sums.
+/// One page of the rows of the filter in the order asked for. Only [`Order::Date`] without a type
+/// filter has the running sums. `set` is the sums of the rows shown (in force, or all with
+/// `show_reversed`), which the running sums are counted from.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn page(
     conn: &Connection,
-    cash_id: i64,
-    from: Option<&str>,
-    to: Option<&str>,
+    filter: &Filter<'_>,
+    set: RowSums,
     order: &Order,
     offset: i64,
     limit: i64,
-) -> rusqlite::Result<Vec<CashRow>> {
+) -> rusqlite::Result<Vec<PageKey>> {
     match order {
-        Order::Date { desc } => page_by_date(conn, cash_id, (from, to), *desc, (offset, limit)),
+        Order::Date { desc } => page_by_date(conn, filter, set, *desc, (offset, limit)),
         Order::Amount { out, desc } => {
-            page_by_amount(conn, cash_id, (from, to), (*out, *desc), (offset, limit))
+            let column = if *out { "r.out_p" } else { "r.in_p" };
+            let direction = if *desc { "DESC" } else { "ASC" };
+            page_sorted(
+                conn,
+                filter,
+                &format!("{column} {direction}"),
+                (offset, limit),
+            )
         }
-        Order::Other(sql) => page_by_other(conn, cash_id, (from, to), sql, (offset, limit)),
+        Order::Other(sql) => page_sorted(conn, filter, sql, (offset, limit)),
     }
 }
 
-/// The count of entries and the cash in and out of each month from the month of `first_day` to the
-/// month of `last_day` (both `YYYY-MM-DD`), clipped to the range: one query for each month, each
-/// read through the day index. These are the months a page touches (plan 38 B2).
+/// What each row of a page shows, in no particular order (one query).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn rows(
+    conn: &Connection,
+    cash_id: i64,
+    keys: &[RowKey],
+) -> rusqlite::Result<HashMap<RowKey, CashRow>> {
+    let mut out = HashMap::new();
+    for chunk in keys.chunks(500) {
+        rows_chunk(conn, cash_id, chunk, &mut out)?;
+    }
+    Ok(out)
+}
+
+/// [`rows`] for one chunk of keys.
+fn rows_chunk(
+    conn: &Connection,
+    cash_id: i64,
+    keys: &[RowKey],
+    out: &mut HashMap<RowKey, CashRow>,
+) -> rusqlite::Result<()> {
+    let marks = vec!["(?, ?)"; keys.len()].join(", ");
+    let (venture_id, venture_kind) = (row_source_sql::VENTURE_ID, row_source_sql::VENTURE_KIND);
+    let (kind, in_p, out_p) = (kind_sql(cash_id), in_sql(cash_id), out_sql(cash_id));
+    let reason = voucher_of("reason");
+    let mut statement = conn.prepare(&format!(
+        "WITH k(entry_id, part) AS (VALUES {marks}),
+         x AS (
+             SELECT e.id AS entry_id, p.part AS part, e.entry_date AS entry_date,
+                    e.posting_type AS posting_type, {kind} AS kind,
+                    CASE WHEN e.reverses_entry_id IS NOT NULL THEN 'reversal'
+                         WHEN NOT ({IN_FORCE}) THEN 'reversed' ELSE 'live' END AS status,
+                    {in_p} AS in_p, {out_p} AS out_p,
+                    CASE e.source_type
+                        WHEN 'voucher' THEN {voucher_number}
+                        WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = e.source_id)
+                        WHEN 'purchase' THEN (SELECT pu.number FROM purchases pu WHERE pu.id = e.source_id)
+                        WHEN 'venture' THEN (SELECT vn.number FROM venture_entries vn WHERE vn.id = e.source_id)
+                        WHEN 'fruit' THEN (SELECT ft.number FROM fruit_takes ft WHERE ft.id = e.source_id)
+                    END AS number,
+                    COALESCE(e.narration, '') AS narration, COALESCE({reason}, '') AS reason,
+                    e.source_type AS source_type, e.source_id AS source_id,
+                    {venture_id} AS venture_id, {venture_kind} AS venture_kind,
+                    CASE e.source_type
+                        WHEN 'venture' THEN {venture_id}
+                        WHEN 'purchase' THEN (SELECT pv.venture_id FROM purchases pv WHERE pv.id = e.source_id)
+                    END AS named_venture
+             FROM k AS p JOIN journal_entries e ON e.id = p.entry_id)
+         SELECT x.entry_id, x.part, x.entry_date, x.posting_type, x.kind, x.status, x.in_p, x.out_p,
+                x.number, x.narration, x.reason, x.source_type, x.source_id, x.venture_id,
+                x.venture_kind, vt.id, vt.kind, vt.number, vt.name_ur, vt.name_en
+         FROM x LEFT JOIN ventures vt ON vt.id = x.named_venture",
+        voucher_number = voucher_of("number"),
+    ))?;
+    let values: Vec<i64> = keys.iter().flat_map(|k| [k.entry_id, k.part]).collect();
+    let found = statement.query_map(params_from_iter(values.iter()), |r| {
+        let venture = match r.get::<_, Option<i64>>(15)? {
+            Some(id) => Some(VentureName {
+                id,
+                kind: r.get(16)?,
+                number: r.get(17)?,
+                name_ur: r.get(18)?,
+                name_en: r.get(19)?,
+            }),
+            None => None,
+        };
+        Ok(CashRow {
+            key: RowKey {
+                entry_id: r.get(0)?,
+                part: r.get(1)?,
+            },
+            entry_date: r.get(2)?,
+            posting_type: r.get(3)?,
+            kind: r.get(4)?,
+            status: r.get(5)?,
+            in_paisa: r.get(6)?,
+            out_paisa: r.get(7)?,
+            number: r.get(8)?,
+            narration: r.get(9)?,
+            reason: r.get(10)?,
+            source_type: r.get(11)?,
+            source_id: r.get(12)?,
+            venture_id: r.get(13)?,
+            venture_kind: r.get(14)?,
+            venture,
+        })
+    })?;
+    for row in found {
+        let row = row?;
+        out.insert(row.key, row);
+    }
+    Ok(())
+}
+
+/// A name that a line of an entry points at.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Named {
+    /// Row id.
+    pub id: i64,
+    /// Its code (empty when it has none).
+    pub code: String,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// Its tag, if any.
+    pub tag: Option<String>,
+}
+
+/// One line of an entry of a page, with what the screen names it by.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryLine {
+    /// The entry.
+    pub entry_id: i64,
+    /// Its line number.
+    pub line_no: i64,
+    /// The account, by its own names. A چکتا line carries the names of its person (with the code
+    /// of the account 0030).
+    pub account: Named,
+    /// The code of the account's control (`0602`, `0605`...).
+    pub control_code: String,
+    /// `seller`, `buyer`, ... from the account.
+    pub party_type: String,
+    /// Debit, paisa.
+    pub dr_paisa: i64,
+    /// Credit, paisa.
+    pub cr_paisa: i64,
+    /// The partner whose capital or drawings account this is.
+    pub partner: Option<Named>,
+    /// The expense head this account is.
+    pub expense_head: Option<Named>,
+}
+
+/// Every line of these entries, in entry and line order (one query).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn entry_lines(
+    conn: &Connection,
+    entry_ids: &[i64],
+) -> rusqlite::Result<HashMap<i64, Vec<EntryLine>>> {
+    let mut out: HashMap<i64, Vec<EntryLine>> = HashMap::new();
+    for chunk in entry_ids.chunks(500) {
+        let marks = vec!["?"; chunk.len()].join(", ");
+        let mut statement = conn.prepare(&format!(
+            "SELECT l.entry_id, l.line_no, a.id, a.code, a.name_ur, a.name_en, a.tag, k.code,
+                    a.party_type, l.dr_paisa, l.cr_paisa, c.name_ur, c.name_en,
+                    pt.id, pt.name_ur, pt.name_en, eh.id, eh.code, eh.name_ur, eh.name_en
+             FROM journal_lines l
+             JOIN accounts a ON a.id = l.account_id
+             JOIN account_controls k ON k.id = a.control_id
+             LEFT JOIN chukta_buyers c ON c.person_key = l.chukta_person_key
+             LEFT JOIN partners pt ON k.code IN ('0602', '0603')
+                  AND (pt.capital_account_id = a.id OR pt.drawings_account_id = a.id)
+             LEFT JOIN expense_heads eh ON eh.account_id = a.id
+             WHERE l.entry_id IN ({marks})
+             ORDER BY l.entry_id, l.line_no"
+        ))?;
+        let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
+            let mut account = Named {
+                id: r.get(2)?,
+                code: r.get(3)?,
+                name_ur: r.get(4)?,
+                name_en: r.get(5)?,
+                tag: r.get(6)?,
+            };
+            // A چکتا line shows its person's names.
+            if let (Some(name_ur), Some(name_en)) = (
+                r.get::<_, Option<String>>(11)?,
+                r.get::<_, Option<String>>(12)?,
+            ) {
+                account.name_ur = name_ur;
+                account.name_en = name_en;
+                account.tag = None;
+            }
+            let partner = match r.get::<_, Option<i64>>(13)? {
+                Some(id) => Some(Named {
+                    id,
+                    code: String::new(),
+                    name_ur: r.get(14)?,
+                    name_en: r.get(15)?,
+                    tag: None,
+                }),
+                None => None,
+            };
+            let expense_head = match r.get::<_, Option<i64>>(16)? {
+                Some(id) => Some(Named {
+                    id,
+                    code: r.get(17)?,
+                    name_ur: r.get(18)?,
+                    name_en: r.get(19)?,
+                    tag: None,
+                }),
+                None => None,
+            };
+            Ok(EntryLine {
+                entry_id: r.get(0)?,
+                line_no: r.get(1)?,
+                account,
+                control_code: r.get(7)?,
+                party_type: r.get(8)?,
+                dr_paisa: r.get(9)?,
+                cr_paisa: r.get(10)?,
+                partner,
+                expense_head,
+            })
+        })?;
+        for row in rows {
+            let row = row?;
+            out.entry(row.entry_id).or_default().push(row);
+        }
+    }
+    Ok(out)
+}
+
+/// Σ debit and Σ credit of the lines on the capital accounts (the partners' under 0602 and the
+/// firm's ابتدائی سرمایہ 06010001) of the openings, capital put in and capital taken back that are
+/// in force, dated on or before `up_to` (`None` is every day): the card کل سرمایہ (PRD FR-16.14
+/// v1.60).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn capital_sums(conn: &Connection, up_to: Option<&str>) -> rusqlite::Result<(i64, i64)> {
+    conn.query_row(
+        &format!(
+            "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+             FROM accounts a
+             JOIN account_controls k ON k.id = a.control_id
+             JOIN journal_lines l ON l.account_id = a.id
+             JOIN journal_entries e ON e.id = l.entry_id
+             WHERE (k.code = '0602' OR a.code = '06010001')
+               AND e.status = 'posted' AND e.posting_type IN ('opening', 'capital_in', 'capital_out')
+               AND {IN_FORCE} AND (?1 IS NULL OR e.entry_date <= ?1)"
+        ),
+        [up_to],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )
+}
+
+/// The count of rows and the cash in and out of each month from the month of `first_day` to the
+/// month of `last_day` (both `YYYY-MM-DD`), clipped to the range of the filter, the rows in force
+/// (or of the type filter): one query for each month, each read through the day index. These are
+/// the months a page touches (plan 38 B2).
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn months_between(
     conn: &Connection,
-    cash_id: i64,
-    (from, to): (Option<&str>, Option<&str>),
+    filter: &Filter<'_>,
     (first_day, last_day): (&str, &str),
 ) -> rusqlite::Result<Vec<MonthSums>> {
     let (low, high) = if first_day <= last_day {
@@ -617,20 +1053,31 @@ pub fn months_between(
         let key = format!("{year:04}-{month:02}");
         let lo = format!("{key}-01");
         let hi = format!("{key}-31");
-        let lo = from.map_or(
+        let lo = filter.from.map_or(
             lo.clone(),
             |f| if f > lo.as_str() { f.to_owned() } else { lo },
         );
-        let hi = to.map_or(
+        let hi = filter.to.map_or(
             hi.clone(),
             |t| if t < hi.as_str() { t.to_owned() } else { hi },
         );
-        let sums = range(conn, cash_id, Some(&lo), Some(&hi))?;
-        // A month with no entry gets no heading, as when the months were grouped from the rows.
-        if sums.count > 0 {
+        let month_filter = Filter {
+            from: Some(&lo),
+            to: Some(&hi),
+            show_reversed: false,
+            split: true,
+            ..*filter
+        };
+        let sums = if filter.kinds.is_empty() {
+            range_sums(conn, filter.cash_id, Some(&lo), Some(&hi))?.live
+        } else {
+            filtered_sums(conn, &month_filter)?
+        };
+        // A month with no row gets no heading, as when the months were grouped from the rows.
+        if sums.rows > 0 {
             out.push(MonthSums {
                 month: key,
-                count: sums.count,
+                count: sums.rows,
                 sums: vec![sums.in_paisa, sums.out_paisa],
             });
         }
@@ -645,331 +1092,4 @@ pub fn months_between(
         }
     }
     Ok(out)
-}
-
-/// One account on the other side of an entry that moves cash.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Counterpart {
-    /// The entry.
-    pub entry_id: i64,
-    /// The account.
-    pub account_id: i64,
-    /// Its code.
-    pub code: String,
-    /// Urdu name.
-    pub name_ur: String,
-    /// English name.
-    pub name_en: String,
-    /// Its tag (نشان), if any (PRD 10.2).
-    pub tag: Option<String>,
-    /// True if the line is a debit.
-    pub is_debit: bool,
-}
-
-/// The lines of these entries that are not on the cash account, in line order. One query for the
-/// whole page.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn counterparts(
-    conn: &Connection,
-    cash_id: i64,
-    entry_ids: &[i64],
-) -> rusqlite::Result<HashMap<i64, Vec<Counterpart>>> {
-    let mut out: HashMap<i64, Vec<Counterpart>> = HashMap::new();
-    if entry_ids.is_empty() {
-        return Ok(out);
-    }
-    let marks = vec!["?"; entry_ids.len()].join(", ");
-    let mut statement = conn.prepare(&format!(
-        "SELECT l.entry_id, l.account_id, a.code, a.name_ur, a.name_en, l.dr_paisa > 0, a.tag
-         FROM journal_lines l JOIN accounts a ON a.id = l.account_id
-         WHERE l.account_id <> ? AND l.entry_id IN ({marks})
-         ORDER BY l.entry_id, l.line_no"
-    ))?;
-    let mut values: Vec<i64> = Vec::with_capacity(entry_ids.len().saturating_add(1));
-    values.push(cash_id);
-    values.extend_from_slice(entry_ids);
-    let rows = statement.query_map(params_from_iter(values.iter()), |r| {
-        Ok(Counterpart {
-            entry_id: r.get(0)?,
-            account_id: r.get(1)?,
-            code: r.get(2)?,
-            name_ur: r.get(3)?,
-            name_en: r.get(4)?,
-            is_debit: r.get(5)?,
-            tag: r.get(6)?,
-        })
-    })?;
-    for row in rows {
-        let row = row?;
-        out.entry(row.entry_id).or_default().push(row);
-    }
-    Ok(out)
-}
-
-/// The net of an account, with where it sits in the chart: for the card "where the capital is"
-/// (plan 78 E). `net_paisa` is Σ debit less Σ credit of its posted lines.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AccountNet {
-    /// Row id.
-    pub id: i64,
-    /// Its code.
-    pub code: String,
-    /// The code of its control.
-    pub control_code: String,
-    /// The code of its head (`01` to `06`).
-    pub head_code: String,
-    /// Σ debit, paisa.
-    pub dr_paisa: i64,
-    /// Σ credit, paisa.
-    pub cr_paisa: i64,
-}
-
-/// Every account with the sums of its posted lines and its place in the chart, one pass.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn account_nets(conn: &Connection) -> rusqlite::Result<Vec<AccountNet>> {
-    // The sums of every account in one pass over the covering index of the amounts, kept for the next
-    // read while no line is written (`crate::memo`). Two correlated sums for each of the 20,000
-    // accounts read every line twice (plan 80 gate: 0.7 seconds on the 10-year book).
-    let sums = crate::memo::account_rows(conn, "journal_sums_by_account", || {
-        let mut statement = conn.prepare(
-            "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
-             FROM journal_lines GROUP BY account_id",
-        )?;
-        let rows = statement.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
-        rows.collect()
-    })?;
-    let by_account: HashMap<i64, (i64, i64)> =
-        sums.iter().map(|&(id, dr, cr)| (id, (dr, cr))).collect();
-    nets_with_chart(conn, &by_account)
-}
-
-/// [`account_nets`] at the end of a day: only posted entries dated on or before `as_of`
-/// (`YYYY-MM-DD`, included) count (plan 87, the card "where the capital is" for a past day). The
-/// dated sums are not kept in `memo`: they are read on demand, one pass over the lines.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn account_nets_as_of(conn: &Connection, as_of: &str) -> rusqlite::Result<Vec<AccountNet>> {
-    let mut statement = conn.prepare(
-        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE e.status = 'posted' AND e.entry_date <= ?1
-         GROUP BY l.account_id",
-    )?;
-    let rows = statement.query_map([as_of], |r| {
-        Ok((
-            r.get::<_, i64>(0)?,
-            (r.get::<_, i64>(1)?, r.get::<_, i64>(2)?),
-        ))
-    })?;
-    let by_account: HashMap<i64, (i64, i64)> = rows.collect::<rusqlite::Result<_>>()?;
-    nets_with_chart(conn, &by_account)
-}
-
-/// Every account with its place in the chart and the sums given for it (0 and 0 when it has none).
-fn nets_with_chart(
-    conn: &Connection,
-    by_account: &HashMap<i64, (i64, i64)>,
-) -> rusqlite::Result<Vec<AccountNet>> {
-    let mut statement = conn.prepare(
-        "SELECT a.id, a.code, k.code, h.code
-         FROM accounts a
-         JOIN account_controls k ON k.id = a.control_id
-         JOIN account_heads h ON h.id = k.head_id
-         ORDER BY a.id",
-    )?;
-    let rows = statement.query_map([], |r| {
-        let id: i64 = r.get(0)?;
-        let (dr_paisa, cr_paisa) = by_account.get(&id).copied().unwrap_or((0, 0));
-        Ok(AccountNet {
-            id,
-            code: r.get(1)?,
-            control_code: r.get(2)?,
-            head_code: r.get(3)?,
-            dr_paisa,
-            cr_paisa,
-        })
-    })?;
-    rows.collect()
-}
-
-/// What each seller's advances still have open, `(account id, paisa)`: Σ of his live advance lines
-/// less what their active matching rows settled (PRD FR-15.8). Only sellers with something open. The
-/// two sums are read apart and subtracted with checked maths (money agent Section 9).
-///
-/// # Errors
-/// Any SQLite error; an amount that does not fit.
-pub fn open_advances_by_seller(conn: &Connection) -> rusqlite::Result<Vec<(i64, i64)>> {
-    open_advances_by_seller_at(conn, None)
-}
-
-/// [`open_advances_by_seller`] at the end of a day (plan 87): an advance counts when its entry is
-/// dated on or before `as_of`, and a matching row settles it only when its credit is dated on or
-/// before `as_of` too. A credit older than its advance comes back on the day of the advance
-/// (`core::advances`), so the two dates are both needed. `None` is now.
-///
-/// # Errors
-/// Any SQLite error; an amount that does not fit.
-pub fn open_advances_by_seller_at(
-    conn: &Connection,
-    as_of: Option<&str>,
-) -> rusqlite::Result<Vec<(i64, i64)>> {
-    let mut given: HashMap<i64, i64> = HashMap::new();
-    {
-        let dated = if as_of.is_some() {
-            "AND e.entry_date <= ?1"
-        } else {
-            ""
-        };
-        let mut statement = conn.prepare(&format!(
-            "SELECT l.account_id, SUM(l.dr_paisa)
-             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-             WHERE l.is_advance = 1 AND l.dr_paisa > 0 AND {live} {dated}
-             GROUP BY l.account_id",
-            live = crate::matching::LIVE
-        ))?;
-        let rows = statement.query_map(params_from_iter(as_of), |r| {
-            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
-        })?;
-        for row in rows {
-            let (account, sum) = row?;
-            given.insert(account, sum);
-        }
-    }
-    let mut settled: HashMap<i64, i64> = HashMap::new();
-    {
-        let (credit_join, dated) = if as_of.is_some() {
-            (
-                "JOIN journal_lines cl ON cl.id = a.credit_line_id
-                 JOIN journal_entries ce ON ce.id = cl.entry_id",
-                "AND e.entry_date <= ?1 AND ce.entry_date <= ?1",
-            )
-        } else {
-            ("", "")
-        };
-        let mut statement = conn.prepare(&format!(
-            "SELECT l.account_id, SUM(a.amount_paisa)
-             FROM advance_allocations a
-             JOIN journal_lines l ON l.id = a.advance_line_id
-             JOIN journal_entries e ON e.id = l.entry_id
-             {credit_join}
-             WHERE a.is_active = 1 AND l.is_advance = 1 AND l.dr_paisa > 0 AND {live} {dated}
-             GROUP BY l.account_id",
-            live = crate::matching::LIVE
-        ))?;
-        let rows = statement.query_map(params_from_iter(as_of), |r| {
-            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
-        })?;
-        for row in rows {
-            let (account, sum) = row?;
-            settled.insert(account, sum);
-        }
-    }
-    let mut out = Vec::new();
-    for (account, sum) in given {
-        let open = sum
-            .checked_sub(settled.get(&account).copied().unwrap_or(0))
-            .ok_or_else(overflow)?;
-        if open > 0 {
-            out.push((account, open));
-        }
-    }
-    out.sort_unstable();
-    Ok(out)
-}
-
-/// One live entry's line on ابتدائی فرق, with the account it belongs to when the entry is an opening
-/// (plan 87, the breakdown of the warning on the card "where the capital is").
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DifferenceLine {
-    /// The journal entry.
-    pub entry_id: i64,
-    /// Its day, `YYYY-MM-DD`.
-    pub entry_date: String,
-    /// Its posting type in the stored form (`opening`, `general`, ...).
-    pub posting_type: String,
-    /// The debit of the line, paisa (0 when it is a credit).
-    pub dr_paisa: i64,
-    /// The credit of the line, paisa (0 when it is a debit).
-    pub cr_paisa: i64,
-    /// The account of the entry's source (`source_type` `account`), if any.
-    pub account: Option<DifferenceAccount>,
-}
-
-/// The account whose opening a [`DifferenceLine`] is.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DifferenceAccount {
-    /// Row id.
-    pub id: i64,
-    /// Its code.
-    pub code: String,
-    /// Urdu name.
-    pub name_ur: String,
-    /// English name.
-    pub name_en: String,
-    /// Its tag, if any.
-    pub tag: Option<String>,
-    /// The code of its control (`0602` for a partner's capital account).
-    pub control_code: String,
-    /// The opening entry now in force on the account.
-    pub opening_entry_id: Option<i64>,
-    /// The partner whose capital account it is: `(id, name_ur, name_en)`.
-    pub partner: Option<(i64, String, String)>,
-}
-
-/// The lines of the live entries on the account `difference_id` (ابتدائی فرق), oldest first, each with
-/// the account of its source. A reversed entry and its reversal are both left out, so the lines add up
-/// to the account's net. `as_of` (`YYYY-MM-DD`, included) limits them to a day; `None` is now.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn difference_lines(
-    conn: &Connection,
-    difference_id: i64,
-    as_of: Option<&str>,
-) -> rusqlite::Result<Vec<DifferenceLine>> {
-    let mut statement = conn.prepare(&format!(
-        "SELECT e.id, e.entry_date, e.posting_type, l.dr_paisa, l.cr_paisa,
-                a.id, a.code, a.name_ur, a.name_en, a.tag, k.code, a.opening_entry_id,
-                p.id, p.name_ur, p.name_en
-         FROM journal_lines l
-         JOIN journal_entries e ON e.id = l.entry_id
-         LEFT JOIN accounts a ON e.source_type = 'account' AND a.id = e.source_id
-         LEFT JOIN account_controls k ON k.id = a.control_id
-         LEFT JOIN partners p ON p.capital_account_id = a.id
-         WHERE l.account_id = ?1 AND {live} AND (?2 IS NULL OR e.entry_date <= ?2)
-         ORDER BY e.entry_date, e.id, l.line_no",
-        live = crate::matching::LIVE
-    ))?;
-    let rows = statement.query_map(rusqlite::params![difference_id, as_of], |r| {
-        let account = match r.get::<_, Option<i64>>(5)? {
-            Some(id) => Some(DifferenceAccount {
-                id,
-                code: r.get(6)?,
-                name_ur: r.get(7)?,
-                name_en: r.get(8)?,
-                tag: r.get(9)?,
-                control_code: r.get(10)?,
-                opening_entry_id: r.get(11)?,
-                partner: match r.get::<_, Option<i64>>(12)? {
-                    Some(pid) => Some((pid, r.get(13)?, r.get(14)?)),
-                    None => None,
-                },
-            }),
-            None => None,
-        };
-        Ok(DifferenceLine {
-            entry_id: r.get(0)?,
-            entry_date: r.get(1)?,
-            posting_type: r.get(2)?,
-            dr_paisa: r.get(3)?,
-            cr_paisa: r.get(4)?,
-            account,
-        })
-    })?;
-    rows.collect()
 }

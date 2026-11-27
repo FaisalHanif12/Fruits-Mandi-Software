@@ -33,6 +33,8 @@ accountpicker-unknown-seller = There is no { -beopari } with this code
 # review: pending
 accountpicker-unknown-buyer = There is no { -gahak } with this code
 # review: pending
+accountpicker-unknown-agent-shop = There is no { -arhti-dukan } with this code
+# review: pending
 accountpicker-unknown-any = There is no account with this code
 # review: pending
 accountpicker-reserved = This code is kept for system accounts. An ordinary account cannot have it.
@@ -53,6 +55,15 @@ chukta-add-title = New { -chukta } { -gahak }
 chukta-add-help = Write his name and, if you have it, his phone. He pays the whole bill on the spot and has no account.
 # review: pending
 chukta-saved = { -chukta } { -gahak } added
+
+## The short form of a new commission agent's shop (PRD FR-7.69, FR-16.11 v1.59).
+
+# review: pending
+agent-shop-add-title = New { -arhti-dukan }
+# review: pending
+agent-shop-add-help = Write its name, and its phone if you have it. When { -phal } is taken from this shop, its account is credited, and the shop is paid with a normal { -adaigi }.
+# review: pending
+agent-shop-saved = { -arhti-dukan } added
 
 ## How was this worked out? (PRD FR-7.43). The backend names the message and gives its values.
 
@@ -136,6 +147,15 @@ working-seller-new-balance = <num>{ $previous }</num> + <num>{ $paid }</num> −
 # review: pending
 working-seller-new-balance-advance = <num>{ $previous }</num> + <num>{ $paid }</num> + <num>{ $advance }</num> − <num>{ $credit }</num> = <num>{ $result }</num> (previous { -baqaya } + { -mauqa-par-adaigi } + { -peshgi } − today's { -safi-bikri }; a minus figure is { -jama })
 
+# How a garden's new balance after a بکری is worked out (plan 97 item 5): its balance before − the credit of its lots, with debit positive; a minus result is جمع.
+# review: pending
+working-garden-new-balance = <num>{ $previous }</num> − <num>{ $credit }</num> = <num>{ $result }</num> (previous { -baqaya } − today's { -safi-bikri }; a minus figure is { -jama })
+# What a trip's lots credit to the trip's partners (plan 97 item 5, C25): the sales less the deductions of its lots.
+# review: pending
+working-trip-card-credit = <num>{ $gross }</num> − <num>{ $deductions }</num> = <num>{ $result }</num> ({ -kham-bikri } − deductions)
+# What the other shop is credited and the partners are charged for fruit with a total deduction (PRD FR-16.11 v1.59): the value less the deduction.
+# review: pending
+working-fruit-net = <num>{ $value }</num> − <num>{ $deduction }</num> = <num>{ $result }</num> (value − total deduction)
 # C7: the net of a lot.
 # review: pending
 working-net = <num>{ $gross }</num> − <num>{ $deductions }</num> = <num>{ $result }</num>
@@ -395,3 +415,13 @@ attention-records-differ = { $count ->
     [one] <num>{ $count }</num> question in the past week had a figure that did not agree with the records. See the question log in Settings.
    *[other] <num>{ $count }</num> questions in the past week had a figure that did not agree with the records. See the question log in Settings.
 }
+
+# PRD FR-12.53: what a garden is credited for a sale line in our shop.
+# review: pending
+working-sale-money-credit = <num>{ $value }</num> − <num>{ $commission }</num> = <num>{ $result }</num> (value − { -commission })
+# PRD FR-12.53: the charges of a lot, taken off the garden's money.
+# review: pending
+working-sale-money-lot-charges = <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $munshiana }</num> + <num>{ $phone }</num> + <num>{ $store_rent }</num> = <num>{ $result }</num> ({ -lot } charges, taken off the money of the { -bagh })
+# PRD FR-12.53: a sale in another shop credits the garden the money received.
+# review: pending
+working-sale-money-other-shop = <num>{ $result }</num>: the money received in { -dusri-dukan }

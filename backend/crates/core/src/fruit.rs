@@ -125,6 +125,24 @@ impl FruitStatus {
     }
 }
 
+// ---- Another commission agent's shop (PRD FR-16.11 v1.59, FR-7.69) ----
+
+/// Input of `fruit_agent_shop_add`: a new other-shop agent, added on the spot from the آڑھتی box of the
+/// پھل screen. It makes a seller account marked آڑھتی دکان; the code is given by itself.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct AgentShopInput {
+    /// Urdu name (PRD FR-7.28). The English name is filled from it on the screen (FR-7.24).
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`. Empty if none.
+    #[serde(default)]
+    pub phone: String,
+    /// Words the user confirmed in the spelling check (PRD FR-7.66).
+    #[serde(default)]
+    pub confirmed_rules_words: Vec<String>,
+}
+
 // ---- One entry ----
 
 /// One fruit entry as the screen types it (PRD 16.7). Everything is text, parsed by the backend.
@@ -169,6 +187,14 @@ pub struct FruitInput {
     /// The rate, whole rupees, more than 0 (`ERR_MUST_BE_MORE_THAN_ZERO` on `rate`). Typed by the
     /// user; the last rate only shows as a hint (PRD FR-7.53).
     pub rate: String,
+    /// کل کٹوتی (PRD FR-16.7, FR-16.11 v1.59): the other shop's commission, freight and other charges
+    /// in one amount, whole rupees, for `other_shop` only. Empty means 0, and 0 posts exactly as an
+    /// entry with no deduction. It is subtracted: the agent is credited the value less the deduction
+    /// and the partner (or the guests' partners, C27) are charged the same net. A deduction with
+    /// `source` `shop` is `ERR_FORMAT_INVALID` on `deduction`; one that is not less than the value
+    /// is `ERR_DEDUCTION_NOT_BELOW_VALUE` on `deduction`; a bad amount is the usual money error.
+    #[serde(default)]
+    pub deduction: Option<String>,
     /// A note, up to 500 characters.
     #[serde(default)]
     pub note: Option<String>,
@@ -234,13 +260,23 @@ pub struct FruitNumbers {
     /// The rate.
     #[ts(type = "Paisa")]
     pub rate_paisa: Paisa,
-    /// The value (C1).
+    /// The value (C1): `qty × rate`, before any deduction.
     #[ts(type = "Paisa")]
     pub value_paisa: Paisa,
     /// How the value was worked out.
     pub value_working: Working,
+    /// کل کٹوتی (PRD FR-16.11 v1.59): what the other shop takes off. 0 when there is none.
+    #[ts(type = "Paisa")]
+    pub deduction_paisa: Paisa,
+    /// The net: `value_paisa - deduction_paisa`. This is what is posted: the agent is credited it and
+    /// the parts add up to it. Equal to `value_paisa` when there is no deduction.
+    #[ts(type = "Paisa")]
+    pub net_paisa: Paisa,
+    /// How the net was worked out (message `working-fruit-net`: value, deduction, result). Null when
+    /// there is no deduction.
+    pub net_working: Option<Working>,
     /// One part for the partner, or one for each partner active on the day for the guests, in the
-    /// order the partners were created. The parts add up to the value.
+    /// order the partners were created. The parts add up to `net_paisa`.
     pub parts: Vec<FruitPart>,
     /// How the guests' parts were worked out (C27). Null for one partner.
     pub parts_working: Option<Working>,
@@ -436,9 +472,17 @@ pub struct FruitRow {
     /// The rate.
     #[ts(type = "Paisa")]
     pub rate_paisa: Paisa,
-    /// The value.
+    /// The value as posted: what the partner (or the guests' partners) were charged and the credited
+    /// account was credited. With a deduction it is the net, `gross_paisa - deduction_paisa`; without
+    /// one it is `qty × rate`. The registers and the partner statement add it up.
     #[ts(type = "Paisa")]
     pub value_paisa: Paisa,
+    /// کل کٹوتی typed on an entry from another shop (PRD FR-16.11 v1.59). 0 when there is none.
+    #[ts(type = "Paisa")]
+    pub deduction_paisa: Paisa,
+    /// The value before the deduction (C1): `value_paisa + deduction_paisa`.
+    #[ts(type = "Paisa")]
+    pub gross_paisa: Paisa,
     /// The note, as typed.
     pub note: Option<String>,
     /// Saved or cancelled.
@@ -524,9 +568,17 @@ pub struct FruitTotals {
     /// Σ of نگ.
     #[ts(type = "number")]
     pub qty: i64,
-    /// Σ of the value.
+    /// Σ of the value as posted (the net: `qty × rate` less the deduction).
     #[ts(type = "Paisa")]
     pub value_paisa: Paisa,
+    /// Σ of the کل کٹوتی (PRD FR-16.11 v1.59).
+    #[ts(type = "Paisa")]
+    pub deduction_paisa: Paisa,
+    /// Σ of the value before the deduction (C1, `qty × rate`): `value_paisa + deduction_paisa`, added
+    /// by the backend with a checked sum, so the footer shows gross, deduction and net without the
+    /// screen adding anything up.
+    #[ts(type = "Paisa")]
+    pub gross_paisa: Paisa,
 }
 
 /// One page of entries.

@@ -61,7 +61,7 @@ fn form(ur: &str, en: &str, owes: &str, tag: &str) -> AccountInput {
 /// Saves an account, confirming whatever spelling the check asks about.
 fn save(env: &TestEnv, owner: &auth::Actor, mut input: AccountInput) -> AccountRow {
     loop {
-        match accounts::save(&env.ctx, owner, &input) {
+        match accounts::save_with_confirm(&env.ctx, owner, &input, true) {
             Ok(row) => return row,
             Err(ServiceError::Rejected(items))
                 if items

@@ -12,7 +12,7 @@ mod common;
 mod support;
 
 use mandi_services::core::accounts::{BalanceSide, OpeningLineInput, OpeningsInput};
-use mandi_services::core::cashbook::{CashbookInput, CashbookKind};
+use mandi_services::core::cashbook::{CashKind, CashbookInput};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::partners::{OpeningCapitalWhere, PartnerCreateInput, PartnerRow};
 use mandi_services::{ServiceError, accounts, cashbook, ledger, partners};
@@ -117,10 +117,10 @@ fn an_opening_capital_in_cash_is_the_default_and_raises_cash() {
     let row = book
         .rows
         .iter()
-        .find(|r| r.kind == CashbookKind::OpeningCapital)
+        .find(|r| r.kind == CashKind::OpeningCapital)
         .expect("an opening capital row");
     assert_eq!(row.in_paisa.rupees(), 50_000);
-    assert_eq!(row.partner.as_ref().map(|p| p.id), Some(d.id));
+    assert_eq!(row.refs.partner.as_ref().map(|p| p.id), Some(d.id));
     // The trial balance still balances.
     let tb = ledger::trial_balance(&w.env.ctx, None).unwrap();
     assert_eq!(tb.total_dr, tb.total_cr);

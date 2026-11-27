@@ -112,7 +112,7 @@ fn books() -> Books {
 /// Akram's opening debit of `dr` rupees, dated 15-05-2026 (inside the window of the pace). Saving it
 /// again with another amount reverses the old opening on 15-05 and posts the new one.
 fn open_akram(w: &world::World, dr: &str) {
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &w.env.ctx,
         &w.owner,
         &OpeningsInput {
@@ -125,13 +125,15 @@ fn open_akram(w: &world::World, dr: &str) {
                 opening_is_advance: false,
             }],
         },
+        // A party opening goes through روکڑ (PRD FR-10.9 v1.60): "yes" to the cash box.
+        true,
     )
     .unwrap();
 }
 
 /// Arshad's opening on 31-03-2026 (before the window of the pace): `dr` or `cr` in rupees.
 fn open_arshad(w: &world::World, dr: &str, cr: &str) {
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &w.env.ctx,
         &w.owner,
         &OpeningsInput {
@@ -144,6 +146,8 @@ fn open_arshad(w: &world::World, dr: &str, cr: &str) {
                 opening_is_advance: false,
             }],
         },
+        // A party opening goes through روکڑ (PRD FR-10.9 v1.60): "yes" to the cash box.
+        true,
     )
     .unwrap();
 }

@@ -1172,10 +1172,10 @@ fn a_real_backup_copy_migrates_without_moving_a_number() {
 }
 
 /// The lots of the file by the columns that exist at version 21 (migration 22 adds `lot_counter`
-/// and migration 27 adds `removed_at`).
+/// migration 27 adds `removed_at` and migration 29 adds `advance_paisa`).
 fn lots_without_counter(conn: &Connection) -> Vec<String> {
     let columns: Vec<String> = conn
-        .prepare("SELECT name FROM pragma_table_info('bikri_lots') WHERE name NOT IN ('lot_counter', 'removed_at') ORDER BY cid")
+        .prepare("SELECT name FROM pragma_table_info('bikri_lots') WHERE name NOT IN ('lot_counter', 'removed_at', 'advance_paisa') ORDER BY cid")
         .unwrap()
         .query_map([], |r| r.get(0))
         .unwrap()
@@ -1207,7 +1207,8 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
     let mut conn = connection(&path);
     // Migration 22 adds a column to `bikri_lots` and makes `lot_counters`; migration 23 adds columns to
     // `accounts` and `partners` and the two controls 0307 and 0605 (checked on their own below); migration 25
-    // makes `venture_items` and adds a column to `ventures`. The other changes are those of 20 and 21.
+    // makes `venture_items` and adds a column to `ventures`; migration 30 adds a column to `fruit_takes`.
+    // The other changes are those of 20 and 21.
     let skip: Vec<&str> = CHANGES_ON_PURPOSE
         .iter()
         .copied()
@@ -1217,6 +1218,7 @@ fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
             "account_controls",
             "ventures",
             "venture_items",
+            "fruit_takes",
         ])
         .collect();
     let rows_before = all_rows(&conn, &skip);

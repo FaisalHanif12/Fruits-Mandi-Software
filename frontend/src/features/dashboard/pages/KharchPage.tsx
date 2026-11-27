@@ -125,6 +125,7 @@ export function KharchPage() {
         <div className="flex flex-col gap-3">
           <KharchBoard
             filters={wire}
+            chartsFolded
             onLeave={() => {
               void navigate({ to: '/' });
             }}

@@ -144,7 +144,8 @@ fn a_new_bikri_on_a_closed_today_is_saved_through_reopen_and_closed_again() {
     assert_eq!(closed_up_to(&w).as_deref(), Some("2026-10-10"));
     assert!(!day::status(&w.env.ctx).unwrap().today_open);
 
-    // The audit has the reopen with the reason and the sign, the save, and the close, in order.
+    // The audit has the reopen with the reason and that the sign was given (never the sign, PRD
+    // FR-21.4 v1.58), the save, and the close, in order.
     let trail = audit_trail(&w);
     let actions: Vec<&str> = trail.iter().map(|(a, _)| a.as_str()).collect();
     let position = |name: &str, from: usize| {
@@ -160,7 +161,8 @@ fn a_new_bikri_on_a_closed_today_is_saved_through_reopen_and_closed_again() {
     let fix_close = position("day_fix_close", create);
     assert!(reopen < fix && fix < create && create < fix_close);
     for row in [&trail[reopen], &trail[fix]] {
-        assert!(row.1.contains(&format!("\"sign\":\"{SIGN}\"")), "{row:?}");
+        assert!(row.1.contains("\"sign_given\":true"), "{row:?}");
+        assert!(!row.1.contains(SIGN), "{row:?}");
     }
     assert!(trail[fix_close].1.contains("2026-10-10"));
     assert_chain_ok(&w.dir);

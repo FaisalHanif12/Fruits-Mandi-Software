@@ -21,13 +21,15 @@ use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::partners::{
     CAPITAL_CONTROL, DRAWINGS_CONTROL, MAX_PARTNERS, OpeningCapitalWhere, PartnerCreateInput,
-    PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput,
-    PartnersList, PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed, check_shares,
-    not_100, read_shares, venture_account,
+    PartnerDetail, PartnerOpenVentures, PartnerOverviewRow, PartnerRow, PartnerUpdateInput,
+    PartnerVentureCard, PartnerVentureTotals, PartnersCheckSharesInput, PartnersList,
+    PartnersOpenVenturesInput, PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed,
+    check_shares, not_100, read_shares, venture_account,
 };
 use mandi_domain::core::text;
 use mandi_domain::core::translit::Kind;
 use mandi_domain::core::validate::{self, FieldErrors};
+use mandi_domain::core::ventures::VentureKind;
 use mandi_domain::partners::ShareKind;
 use serde_json::{Value, json};
 
@@ -846,20 +848,75 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
 }
 
 /// The open gardens and trips a partner is in, with his %, his money in and back and the running
-/// balance or result of each: the list the partner page opens on demand (plan 76 point 11). Gardens
-/// first, then trips, by number. Read only.
+/// balance or result of each: the list the partner page opens on demand (plan 76 point 11), by
+/// month and page by page (PRD FR-17.3, FR-19.11, plan 99). `from` and `to` are of the day the
+/// garden or trip was made. Newest first, with the totals over the whole filter. Read only.
 ///
 /// # Errors
-/// `ERR_NOT_FOUND` on `partner_id`; `ServiceError::Db`.
+/// `ERR_NOT_FOUND` on `partner_id`; the date codes on `from` and `to`; `ServiceError::Db`.
 pub fn open_ventures(
     ctx: &Context,
-    partner_id: i64,
-) -> Result<Vec<mandi_domain::core::partners::PartnerVentureCard>, ServiceError> {
-    ctx.db.read(|conn| {
-        repo::get(conn, partner_id)?
+    input: &PartnersOpenVenturesInput,
+) -> Result<PartnerOpenVentures, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let mut errors = FieldErrors::default();
+    let mut day_of = |field: &str, text: Option<&String>| {
+        let text = text.map(|t| t.trim()).filter(|t| !t.is_empty())?;
+        errors
+            .take(mandi_domain::core::validate::date(field, text, today))
+            .map(BusinessDate::to_iso)
+    };
+    let from = day_of("from", input.from.as_ref());
+    let to = day_of("to", input.to.as_ref());
+    errors.finish()?;
+    let mut cards = ctx.db.read(|conn| {
+        repo::get(conn, input.partner_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
-        let mut cards = crate::gardens::cards_of_partner(conn, partner_id)?;
-        cards.extend(crate::trips::cards_of_partner(conn, partner_id)?);
-        Ok(cards)
+        let mut cards = crate::gardens::cards_of_partner(conn, input.partner_id)?;
+        cards.extend(crate::trips::cards_of_partner(conn, input.partner_id)?);
+        Ok::<_, ServiceError>(cards)
+    })?;
+    cards.retain(|c| {
+        from.as_ref().is_none_or(|f| c.entry_date >= *f)
+            && to.as_ref().is_none_or(|t| c.entry_date <= *t)
+    });
+    cards.sort_by(|a, b| (&b.entry_date, b.venture_id).cmp(&(&a.entry_date, a.venture_id)));
+    let totals = venture_totals(&cards)?;
+    let total_count = i64::try_from(cards.len()).unwrap_or(i64::MAX);
+    let limit = usize::try_from(crate::page::limit_of(input.limit)).unwrap_or(usize::MAX);
+    let offset = usize::try_from(input.offset).unwrap_or(usize::MAX);
+    Ok(PartnerOpenVentures {
+        rows: cards.into_iter().skip(offset).take(limit).collect(),
+        total_count,
+        totals,
     })
+}
+
+/// The totals of the open gardens and trips: his money, and the gardens' balances and the trips'
+/// results apart (different measures).
+fn venture_totals(cards: &[PartnerVentureCard]) -> Result<PartnerVentureTotals, ServiceError> {
+    let mut totals = PartnerVentureTotals {
+        paid_shop_paisa: Paisa::ZERO,
+        paid_pocket_paisa: Paisa::ZERO,
+        money_back_paisa: Paisa::ZERO,
+        gardens_balance_paisa: Paisa::ZERO,
+        trips_result_paisa: Paisa::ZERO,
+    };
+    for card in cards {
+        let balance = match card.kind {
+            VentureKind::Garden => &mut totals.gardens_balance_paisa,
+            VentureKind::Trip => &mut totals.trips_result_paisa,
+        };
+        *balance = balance
+            .checked_add(card.balance_paisa)
+            .map_err(money_error)?;
+        for (sum, part) in [
+            (&mut totals.paid_shop_paisa, card.paid_shop_paisa),
+            (&mut totals.paid_pocket_paisa, card.paid_pocket_paisa),
+            (&mut totals.money_back_paisa, card.money_back_paisa),
+        ] {
+            *sum = sum.checked_add(part).map_err(money_error)?;
+        }
+    }
+    Ok(totals)
 }

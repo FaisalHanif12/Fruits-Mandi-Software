@@ -2408,6 +2408,8 @@
         }
       }
     ],
+    "gardens": [],
+    "trips": [],
     "cash": {
       "cash_before_paisa": 97000000,
       "change_paisa": -1500000,

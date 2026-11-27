@@ -14,7 +14,7 @@ mod support;
 
 use common::set_today;
 use mandi_services::core::capital::CapitalInput;
-use mandi_services::core::cashbook::{CashbookInput, CashbookKind};
+use mandi_services::core::cashbook::{CashKind, CashbookInput};
 use mandi_services::{cashbook, vouchers};
 use reports_world::*;
 
@@ -42,31 +42,39 @@ fn the_opening_cash_and_the_capital_rows_are_named_with_their_partner() {
     assert_eq!(book.closing_paisa.rupees(), 98_484);
     // The first row is the opening cash of the cash account, 65,000 on 31-08-26.
     let first = book.rows.first().unwrap();
-    assert_eq!(first.kind, CashbookKind::OpeningCash);
+    assert_eq!(first.kind, CashKind::OpeningCash);
     assert_eq!(first.entry_date, "2026-08-31");
     assert_eq!(first.in_paisa.rupees(), 65_000);
-    assert!(first.partner.is_none());
+    assert!(first.refs.partner.is_none());
 
-    let find = |kind: CashbookKind| -> Vec<&mandi_services::core::cashbook::CashbookRow> {
+    let find = |kind: CashKind| -> Vec<&mandi_services::core::cashbook::CashbookRow> {
         book.rows.iter().filter(|r| r.kind == kind).collect()
     };
-    let capital_in = find(CashbookKind::CapitalIn);
+    let capital_in = find(CashKind::CapitalIn);
     assert_eq!(capital_in.len(), 1);
     assert_eq!(capital_in[0].in_paisa.rupees(), 50_000);
-    assert_eq!(capital_in[0].partner.as_ref().map(|p| p.id), Some(b));
-    let capital_out = find(CashbookKind::CapitalOut);
+    assert_eq!(capital_in[0].refs.partner.as_ref().map(|p| p.id), Some(b));
+    let capital_out = find(CashKind::CapitalOut);
     assert_eq!(capital_out.len(), 1);
     assert_eq!(capital_out[0].out_paisa.rupees(), 10_000);
-    assert_eq!(capital_out[0].partner.as_ref().map(|p| p.id), Some(b));
-    // Every other row has no kind and no partner.
+    assert_eq!(capital_out[0].refs.partner.as_ref().map(|p| p.id), Some(b));
+    // Every other row is named for what it is; only a partner's own money names a partner.
     for row in book.rows.iter().filter(|r| {
         !matches!(
             r.kind,
-            CashbookKind::OpeningCash | CashbookKind::CapitalIn | CashbookKind::CapitalOut
+            CashKind::OpeningCash | CashKind::CapitalIn | CashKind::CapitalOut
         )
     }) {
-        assert_eq!(row.kind, CashbookKind::Other, "{}", row.posting_type);
-        assert!(row.partner.is_none());
+        assert_ne!(row.kind, CashKind::Other, "{}", row.posting_type);
+        assert_eq!(
+            row.refs.partner.is_some(),
+            matches!(
+                row.kind,
+                CashKind::PersonalExpense | CashKind::PersonalReturn
+            ),
+            "{}",
+            row.posting_type
+        );
     }
     // A window that does not reach the first day still knows the first day of the book.
     let later = cashbook::get(

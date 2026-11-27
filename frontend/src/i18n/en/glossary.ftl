@@ -364,6 +364,10 @@
 # review: pending
 -dusri-dukan = Another Shop
 
+# Another commission agent's shop, an account marked as one: the آڑھتی box of the fruit-taken screen lists only these (PRD FR-16.11, v1.59)
+# review: pending
+-arhti-dukan = Commission Agent Shop
+
 # The shop's guests, who share the fruit served to them equally (PRD 16.7, C27)
 # review: pending
 -mehman = Guests

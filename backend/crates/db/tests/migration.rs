@@ -24,7 +24,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 29;
+const LATEST: usize = 31;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -512,6 +512,36 @@ fn an_empty_file_gets_the_whole_design_and_the_seed_without_a_copy() {
     assert_eq!(
         (counts.heads, counts.controls, counts.accounts),
         (6, 16, 18)
+    );
+}
+
+#[test]
+fn migration_31_adds_the_peshgi_mark_and_drops_the_buyer_reason_rule() {
+    // PRD FR-15.11 v1.60: the mark is only 'advance' and only on a payment; the two triggers that
+    // asked for a reason on cash lent are gone.
+    let dir = tempdir().unwrap();
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate(&mut conn, &dir.path().join("backups"), &clock()).unwrap();
+    let triggers = schema(&conn, "trigger").join("\n");
+    assert!(!triggers.contains("vouchers_payment_to_buyer_needs_reason"));
+    let column: String = conn
+        .query_row(
+            "SELECT type FROM pragma_table_xinfo('vouchers') WHERE name = 'entered_as'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(column, "TEXT");
+    let sql: String = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'vouchers'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(
+        sql.contains("entered_as = 'advance' AND type = 'payment'"),
+        "{sql}"
     );
 }
 
@@ -4709,6 +4739,10 @@ fn migration_23_adds_the_link_columns_and_the_0605_accounts_and_touches_no_numbe
         ("bikri_lots", "removed_at"),
         // Migration 29 (plan 95 item 11): the پیشگی typed on a lot is new, 0 on every old lot.
         ("bikri_lots", "advance_paisa"),
+        // Migration 30 (plan 97 item 1): the mark of another agent's shop and the deduction of fruit
+        // taken from it are new, 0 on every old row.
+        ("accounts", "is_agent_shop"),
+        ("fruit_takes", "deduction_paisa"),
     ];
     // A table is one text of all its rows; the rows the migration made are taken out of it by line.
     // `venture_items` is the table of migration 25.
@@ -5081,5 +5115,74 @@ fn migration_26_locks_the_shares_of_a_garden_after_goods_arrived() {
             ),
         ),
         1
+    );
+}
+
+/// Migration 30 (plan 97 item 1, PRD FR-16.11 v1.59): the mark `accounts.is_agent_shop` and the column
+/// `fruit_takes.deduction_paisa`. Both are 0 on every old row, so nothing posted moves. The mark is 0 or
+/// 1; the deduction is whole rupees, never negative, and only fruit from another shop has one.
+#[test]
+fn migration_30_adds_the_agent_shop_mark_and_the_fruit_deduction() {
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), LATEST as i64);
+    let default_of = |table: &str, column: &str| -> String {
+        conn.query_row(
+            "SELECT dflt_value FROM pragma_table_info(?1) WHERE name = ?2",
+            [table, column],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(default_of("accounts", "is_agent_shop"), "0");
+    assert_eq!(default_of("fruit_takes", "deduction_paisa"), "0");
+    // No seeded account is a shop of another agent.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE is_agent_shop <> 0"
+        ),
+        0
+    );
+    // The mark is 0 or 1.
+    let marked = conn.execute("UPDATE accounts SET is_agent_shop = 2 WHERE id = 1", []);
+    assert!(marked.is_err(), "a mark of 2 is refused");
+    conn.execute("UPDATE accounts SET is_agent_shop = 1 WHERE id = 1", [])
+        .unwrap();
+    conn.execute("UPDATE accounts SET is_agent_shop = 0 WHERE id = 1", [])
+        .unwrap();
+
+    // The deduction: foreign keys are off, so the rows need no real parents; only the CHECKs matter.
+    conn.pragma_update(None, "foreign_keys", "OFF").unwrap();
+    let insert = |number: i64, source: &str, lot: Option<i64>, deduction: i64| {
+        conn.execute(
+            "INSERT INTO fruit_takes (number, entry_date, source, lot_id, credit_account_id, item_id,
+                 packing_id, qty, rate_paisa, value_paisa, deduction_paisa)
+             VALUES (?1, '2026-10-10', ?2, ?3, 1, 1, 1, 2, 140000, 260000, ?4)",
+            rusqlite::params![number, source, lot, deduction],
+        )
+    };
+    assert!(
+        insert(1, "other_shop", None, 20_000).is_ok(),
+        "a deduction on another shop"
+    );
+    assert!(insert(2, "other_shop", None, 0).is_ok(), "no deduction");
+    assert!(
+        insert(3, "shop", Some(1), 0).is_ok(),
+        "our own lot with none"
+    );
+    assert!(
+        insert(4, "shop", Some(1), 20_000).is_err(),
+        "our own lot takes no deduction"
+    );
+    assert!(
+        insert(5, "other_shop", None, 15_050).is_err(),
+        "a deduction is whole rupees"
+    );
+    assert!(
+        insert(6, "other_shop", None, -10_000).is_err(),
+        "a deduction is never negative"
     );
 }

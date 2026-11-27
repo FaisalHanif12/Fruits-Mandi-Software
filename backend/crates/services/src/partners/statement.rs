@@ -1053,10 +1053,18 @@ fn venture_draft(
                 };
                 draft.subject = Some(named(&f.item));
                 draft.packing = Some(named(&f.packing));
+                // The line says "qty @ rate = value", so `value_paisa` is the value before the deduction
+                // (qty × rate, C1) and the deduction is its own argument; the amount of the line is
+                // the net the partner was charged (PRD FR-16.11 v1.59).
+                let gross = f
+                    .value_paisa
+                    .checked_add(f.deduction_paisa)
+                    .ok_or_else(|| data("a figure does not fit"))?;
                 draft = draft
                     .number_value("qty", signed(f.qty)?)
                     .number_value("rate_paisa", f.rate_paisa)
-                    .number_value("value_paisa", signed(f.value_paisa)?)
+                    .number_value("value_paisa", signed(gross)?)
+                    .number_value("deduction_paisa", signed(f.deduction_paisa)?)
                     .text_value("for", if f.guests { "guests" } else { "home" });
             }
             draft

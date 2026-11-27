@@ -75,7 +75,7 @@ pub fn spread_seller_paid(
 }
 
 /// The side of a signed balance (debit positive).
-fn side_of(signed: Paisa) -> BalanceSide {
+pub(super) fn side_of(signed: Paisa) -> BalanceSide {
     if signed == Paisa::ZERO {
         BalanceSide::Zero
     } else if signed.is_negative() {
@@ -86,7 +86,7 @@ fn side_of(signed: Paisa) -> BalanceSide {
 }
 
 /// A signed balance as the screen shows it: never negative, with its side.
-fn shown(signed: Paisa) -> Result<(Paisa, BalanceSide), MoneyError> {
+pub(super) fn shown(signed: Paisa) -> Result<(Paisa, BalanceSide), MoneyError> {
     let side = side_of(signed);
     let amount = if signed.is_negative() {
         signed.checked_neg()?
@@ -96,7 +96,7 @@ fn shown(signed: Paisa) -> Result<(Paisa, BalanceSide), MoneyError> {
     Ok((amount, side))
 }
 
-fn money(name: &str, paisa: Paisa) -> WorkingArg {
+pub(super) fn money(name: &str, paisa: Paisa) -> WorkingArg {
     WorkingArg {
         name: name.to_owned(),
         value: WorkingValue::Money { paisa },

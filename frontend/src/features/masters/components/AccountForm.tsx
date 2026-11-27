@@ -81,6 +81,7 @@ import {
   type AccountRow,
   type AccountType,
 } from '../../../shared/accounts';
+import { OpeningCashNote, opensThroughCash } from './OpeningCashNote';
 import { OpeningDateOffer, closedOpeningDate } from './OpeningDateOffer';
 import { Landmark, Languages } from 'lucide-react';
 
@@ -277,7 +278,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
       void finishFixSession(l10n);
       return true;
     } catch (failure: unknown) {
-      // The change of an opening in روکڑ would take cash below zero: ask the question of PRD FR-6.7 with the
+      // A new or changed opening in روکڑ would take cash below zero: ask the question of PRD FR-6.7 with the
       // figure the backend named. The refusal stays on the form behind the box, as any refusal does.
       if (!confirmCashBelowZero) {
         const after = cashAfterOfRefusal(failure);
@@ -345,6 +346,11 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   const hasOpeningDebit = values.opening_dr.trim() !== '';
   const forSeller = type === 'seller';
   const forBuyer = type === 'buyer';
+  // A party's opening posts against روکڑ (PRD FR-10.9 v1.60); a new account is a seller or a buyer.
+  const throughCash =
+    account === null
+      ? opensThroughCash(type, null)
+      : account.can_take_opening && opensThroughCash(account.account_type, account.control.code);
   // A part that is shut says how many of its fields hold something, and a part with a problem opens
   // itself (plan 38, account form).
   const has = (...paths: string[]) => paths.some((path) => fieldError(error, path) !== undefined);
@@ -388,10 +394,10 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   );
 
   return (
-    <div
-      className={`flex max-w-form flex-col gap-3 ${embedded === undefined ? 'fill-to-corner min-h-0' : ''}`}
-    >
-      <div className="flex shrink-0 flex-wrap items-center gap-3">
+    // The form is as tall as it needs to be and the shell's screen area scrolls it, like every other
+    // master form (MasterForm), so no card is ever cut off at a small window (Umar, 27-11-2026).
+    <div className="flex max-w-form flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {embedded === undefined ? heading : null}
         {account !== null && !account.is_active ? (
           <Localized id="accounts-status-inactive">
@@ -405,371 +411,361 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
         </Localized>
       ) : null}
       {dead === null ? null : <DeadInfoLine info={dead} />}
-      {/* `relative`: the scroll box is the containing block of the hidden native <select> that Radix Select keeps beside each
-          drop-down, so the screen under the shell does not scroll for it (plan 92). */}
-      <div
-        className={
-          embedded === undefined ? 'no-scrollbar relative min-h-0 flex-1 overflow-auto' : undefined
-        }
+      <form
+        ref={(element) => {
+          containerRef.current = element;
+          formRef.current = element;
+        }}
+        {...navigation}
+        onSubmit={(event) => {
+          event.preventDefault();
+        }}
+        className="flex flex-col gap-3"
       >
-        <form
-          ref={(element) => {
-            containerRef.current = element;
-            formRef.current = element;
-          }}
-          {...navigation}
-          onSubmit={(event) => {
-            event.preventDefault();
-          }}
-          className="flex flex-col gap-3"
-        >
-          {embedded === undefined ? <LeaveGuard dirty={dirty} onSave={persist} /> : null}
-          {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
+        {embedded === undefined ? <LeaveGuard dirty={dirty} onSave={persist} /> : null}
+        {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
 
-          <Card icon={Landmark} title={<Localized id="accounts-section-account" />}>
-            <FormGrid columns={3}>
+        <Card icon={Landmark} title={<Localized id="accounts-section-account" />}>
+          <FormGrid columns={3}>
+            <Field
+              label={<Localized id="accounts-field-type" />}
+              hint={isNew ? <Localized id="accounts-field-type-hint" /> : undefined}
+              error={fieldError(error, 'account_type')}
+              readOnly={!isNew}
+            >
+              {(props) => (
+                <Select
+                  {...props}
+                  value={kind}
+                  onChange={(next: AccountKind) => {
+                    setType(next);
+                    setCodeTyped(false);
+                    setValues((current) => ({ ...current, account_type: next, code: '' }));
+                  }}
+                  options={(isNew ? NEW_ACCOUNT_KINDS : [kind]).map((option) => ({
+                    value: option,
+                    label: <Localized id={kindMessageId(option)} />,
+                  }))}
+                />
+              )}
+            </Field>
+            {type === 'other' ? (
               <Field
-                label={<Localized id="accounts-field-type" />}
-                hint={isNew ? <Localized id="accounts-field-type-hint" /> : undefined}
-                error={fieldError(error, 'account_type')}
+                label={<Localized id="accounts-field-control" />}
+                error={fieldError(error, 'control_id')}
                 readOnly={!isNew}
               >
                 {(props) => (
                   <Select
                     {...props}
-                    value={kind}
-                    onChange={(next: AccountKind) => {
-                      setType(next);
+                    value={controlId === null ? undefined : String(controlId)}
+                    onChange={(next) => {
+                      setControlId(Number(next));
                       setCodeTyped(false);
-                      setValues((current) => ({ ...current, account_type: next, code: '' }));
+                      setValues((current) => ({ ...current, code: '' }));
                     }}
-                    options={(isNew ? NEW_ACCOUNT_KINDS : [kind]).map((option) => ({
-                      value: option,
-                      label: <Localized id={kindMessageId(option)} />,
+                    options={(controls.data ?? []).map((control) => ({
+                      value: String(control.id),
+                      label: (
+                        <span className="flex gap-2">
+                          <span>{displayName(control, language)}</span>
+                          <Code>{control.code}</Code>
+                        </span>
+                      ),
                     }))}
                   />
                 )}
               </Field>
-              {type === 'other' ? (
-                <Field
-                  label={<Localized id="accounts-field-control" />}
-                  error={fieldError(error, 'control_id')}
-                  readOnly={!isNew}
-                >
-                  {(props) => (
-                    <Select
-                      {...props}
-                      value={controlId === null ? undefined : String(controlId)}
-                      onChange={(next) => {
-                        setControlId(Number(next));
-                        setCodeTyped(false);
-                        setValues((current) => ({ ...current, code: '' }));
-                      }}
-                      options={(controls.data ?? []).map((control) => ({
-                        value: String(control.id),
-                        label: (
-                          <span className="flex gap-2">
-                            <span>{displayName(control, language)}</span>
-                            <Code>{control.code}</Code>
-                          </span>
-                        ),
-                      }))}
-                    />
-                  )}
-                </Field>
-              ) : null}
+            ) : null}
+            <Field
+              label={<Localized id="accounts-field-code" />}
+              info={
+                isNew ? (
+                  <Localized id="accounts-field-code-hint">
+                    <p />
+                  </Localized>
+                ) : undefined
+              }
+              error={fieldError(error, 'code')}
+              readOnly={!isNew}
+            >
+              {(props) => (
+                <CodeInput
+                  {...props}
+                  value={codeShown}
+                  onChange={(code) => {
+                    setCodeTyped(true);
+                    setValues((current) => ({ ...current, code }));
+                  }}
+                />
+              )}
+            </Field>
+          </FormGrid>
+        </Card>
+
+        <Card icon={Languages} title={<Localized id="accounts-section-names" />}>
+          <FormGrid columns={3}>
+            {pair(
+              { urdu: 'accounts-field-name-ur', english: 'accounts-field-name-en' },
+              values.names,
+              setNames,
+              { ur: 'name_ur', en: 'name_en' },
+              'names',
+            )}
+            <Field
+              label={<Localized id="accounts-field-tag" />}
+              info={
+                <Localized id="accounts-field-tag-hint">
+                  <p />
+                </Localized>
+              }
+              error={fieldError(error, 'tag')}
+            >
+              {(props) => (
+                <TagInput
+                  {...props}
+                  value={values.tag}
+                  onChange={(tag) => {
+                    setValues((current) => ({ ...current, tag }));
+                  }}
+                />
+              )}
+            </Field>
+          </FormGrid>
+          <SimilarAccounts
+            matches={(similar.data ?? []).filter((match) => match.id !== account?.id)}
+          />
+          <FormGrid columns={2}>
+            {pair(
+              { urdu: 'accounts-field-father-ur', english: 'accounts-field-father-en' },
+              values.father,
+              setFather,
+              { ur: 'father_or_firm_ur', en: 'father_or_firm_en' },
+              'father',
+            )}
+          </FormGrid>
+        </Card>
+
+        <FoldSection
+          title={<Localized id="accounts-section-contact" />}
+          defaultOpen
+          filled={filledCount(values.phone1, values.phone2, values.address)}
+          forceOpen={has('city_id', 'adda_id', 'phone1', 'phone2', 'address')}
+        >
+          <FormGrid columns={4}>
+            <Field
+              label={<Localized id="accounts-field-city" />}
+              error={fieldError(error, 'city_id')}
+            >
+              {(props) => (
+                <Picker {...props} scope="city" value={values.city} onChange={ref('city')} />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="accounts-field-adda" />}
+              error={fieldError(error, 'adda_id')}
+            >
+              {(props) => (
+                <Picker {...props} scope="adda" value={values.adda} onChange={ref('adda')} />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="accounts-field-phone1" />}
+              error={fieldError(error, 'phone1')}
+            >
+              {(props) => (
+                <TextInput {...props} value={values.phone1} onChange={text('phone1')} lang="en" />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="accounts-field-phone2" />}
+              error={fieldError(error, 'phone2')}
+            >
+              {(props) => (
+                <TextInput {...props} value={values.phone2} onChange={text('phone2')} lang="en" />
+              )}
+            </Field>
+          </FormGrid>
+          <Field
+            label={<Localized id="accounts-field-address" />}
+            error={fieldError(error, 'address')}
+          >
+            {(props) => (
+              <FreeTextInput {...props} value={values.address} onChange={text('address')} />
+            )}
+          </Field>
+        </FoldSection>
+
+        <FoldSection
+          title={<Localized id="accounts-section-opening" />}
+          defaultOpen
+          filled={filledCount(values.opening_dr, values.opening_cr)}
+          forceOpen={has('opening_date', 'opening_dr', 'opening_cr')}
+        >
+          <FormGrid columns={3}>
+            <Field
+              label={<Localized id="accounts-field-opening-date" />}
+              // A closed day is said here in a few words, and the way out is offered under the fields. The
+              // plain "enter a date after X" line cannot be followed when X is today, so it is not shown.
+              error={
+                openingOffer === null ? (
+                  fieldError(error, 'opening_date')
+                ) : (
+                  <span className="block">
+                    <Localized id="accounts-opening-closed-short" />
+                  </span>
+                )
+              }
+            >
+              {(props) => (
+                <DateInput {...props} value={values.opening_date} onChange={text('opening_date')} />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="accounts-field-opening-dr" />}
+              error={fieldError(error, 'opening_dr')}
+            >
+              {(props) => (
+                <MoneyInput {...props} value={values.opening_dr} onChange={text('opening_dr')} />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="accounts-field-opening-cr" />}
+              error={fieldError(error, 'opening_cr')}
+            >
+              {(props) => (
+                <MoneyInput {...props} value={values.opening_cr} onChange={text('opening_cr')} />
+              )}
+            </Field>
+          </FormGrid>
+          {throughCash ? <OpeningCashNote dr={values.opening_dr} cr={values.opening_cr} /> : null}
+          {openingOffer === null ? null : (
+            <OpeningDateOffer
+              isNew={isNew}
+              offer={openingOffer}
+              onUseToday={(today) => {
+                setValues((current) => ({ ...current, opening_date: today }));
+                save.reset();
+              }}
+              onReopen={() => {
+                fixFlow.start({
+                  date: values.opening_date,
+                  ownerHref: router.state.location.href,
+                  then: () => {
+                    save.reset();
+                  },
+                });
+              }}
+            />
+          )}
+          {forSeller && hasOpeningDebit ? (
+            <Checkbox
+              checked={values.opening_is_advance}
+              onChange={(checked) => {
+                setValues((current) => ({ ...current, opening_is_advance: checked }));
+              }}
+              label={<Localized id="accounts-field-opening-advance" />}
+            />
+          ) : null}
+        </FoldSection>
+
+        {forBuyer ? (
+          <FoldSection
+            title={<Localized id="accounts-section-credit" />}
+            filled={filledCount(values.credit_limit)}
+            forceOpen={has('credit_limit', 'collector_staff_id')}
+          >
+            <FormGrid columns={4}>
+              <Checkbox
+                checked={values.credit_allowed}
+                onChange={(checked) => {
+                  setValues((current) => ({ ...current, credit_allowed: checked }));
+                }}
+                label={<Localized id="accounts-field-credit-allowed" />}
+              />
               <Field
-                label={<Localized id="accounts-field-code" />}
-                info={
-                  isNew ? (
-                    <Localized id="accounts-field-code-hint">
-                      <p />
-                    </Localized>
-                  ) : undefined
-                }
-                error={fieldError(error, 'code')}
-                readOnly={!isNew}
+                label={<Localized id="accounts-field-credit-limit" />}
+                error={fieldError(error, 'credit_limit')}
               >
                 {(props) => (
-                  <CodeInput
+                  <MoneyInput
                     {...props}
-                    value={codeShown}
-                    onChange={(code) => {
-                      setCodeTyped(true);
-                      setValues((current) => ({ ...current, code }));
-                    }}
+                    value={values.credit_limit}
+                    onChange={text('credit_limit')}
+                  />
+                )}
+              </Field>
+              <Field
+                label={<Localized id="accounts-field-collector" />}
+                error={fieldError(error, 'collector_staff_id')}
+              >
+                {(props) => (
+                  <Picker
+                    {...props}
+                    scope="collector"
+                    value={values.collector}
+                    onChange={ref('collector')}
                   />
                 )}
               </Field>
             </FormGrid>
-          </Card>
+          </FoldSection>
+        ) : null}
 
-          <Card icon={Languages} title={<Localized id="accounts-section-names" />}>
-            <FormGrid columns={3}>
-              {pair(
-                { urdu: 'accounts-field-name-ur', english: 'accounts-field-name-en' },
-                values.names,
-                setNames,
-                { ur: 'name_ur', en: 'name_en' },
-                'names',
-              )}
+        <FoldSection
+          title={<Localized id="accounts-section-more" />}
+          filled={filledCount(values.note)}
+          forceOpen={has('linked_account_id', 'default_marka_id', 'note')}
+        >
+          <FormGrid columns={2}>
+            {forSeller || forBuyer ? (
               <Field
-                label={<Localized id="accounts-field-tag" />}
+                label={<Localized id="accounts-field-linked" />}
                 info={
-                  <Localized id="accounts-field-tag-hint">
+                  <Localized id="accounts-field-linked-hint">
                     <p />
                   </Localized>
                 }
-                error={fieldError(error, 'tag')}
+                error={fieldError(error, 'linked_account_id')}
               >
                 {(props) => (
-                  <TagInput
+                  // A seller is linked to his buyer account and a buyer to his seller account.
+                  <AccountPicker
                     {...props}
-                    value={values.tag}
-                    onChange={(tag) => {
-                      setValues((current) => ({ ...current, tag }));
+                    scope={forSeller ? 'buyer' : 'seller'}
+                    value={values.linked_account}
+                    onChange={(hit) => {
+                      setValues((current) => ({
+                        ...current,
+                        linked_account: hit === null ? null : pickedOf(hit),
+                      }));
                     }}
                   />
                 )}
               </Field>
-            </FormGrid>
-            <SimilarAccounts
-              matches={(similar.data ?? []).filter((match) => match.id !== account?.id)}
-            />
-            <FormGrid columns={2}>
-              {pair(
-                { urdu: 'accounts-field-father-ur', english: 'accounts-field-father-en' },
-                values.father,
-                setFather,
-                { ur: 'father_or_firm_ur', en: 'father_or_firm_en' },
-                'father',
-              )}
-            </FormGrid>
-          </Card>
-
-          <FoldSection
-            title={<Localized id="accounts-section-contact" />}
-            defaultOpen
-            filled={filledCount(values.phone1, values.phone2, values.address)}
-            forceOpen={has('city_id', 'adda_id', 'phone1', 'phone2', 'address')}
-          >
-            <FormGrid columns={4}>
+            ) : null}
+            {forSeller ? (
               <Field
-                label={<Localized id="accounts-field-city" />}
-                error={fieldError(error, 'city_id')}
+                label={<Localized id="accounts-field-marka" />}
+                error={fieldError(error, 'default_marka_id')}
               >
                 {(props) => (
-                  <Picker {...props} scope="city" value={values.city} onChange={ref('city')} />
-                )}
-              </Field>
-              <Field
-                label={<Localized id="accounts-field-adda" />}
-                error={fieldError(error, 'adda_id')}
-              >
-                {(props) => (
-                  <Picker {...props} scope="adda" value={values.adda} onChange={ref('adda')} />
-                )}
-              </Field>
-              <Field
-                label={<Localized id="accounts-field-phone1" />}
-                error={fieldError(error, 'phone1')}
-              >
-                {(props) => (
-                  <TextInput {...props} value={values.phone1} onChange={text('phone1')} lang="en" />
-                )}
-              </Field>
-              <Field
-                label={<Localized id="accounts-field-phone2" />}
-                error={fieldError(error, 'phone2')}
-              >
-                {(props) => (
-                  <TextInput {...props} value={values.phone2} onChange={text('phone2')} lang="en" />
-                )}
-              </Field>
-            </FormGrid>
-            <Field
-              label={<Localized id="accounts-field-address" />}
-              error={fieldError(error, 'address')}
-            >
-              {(props) => (
-                <FreeTextInput {...props} value={values.address} onChange={text('address')} />
-              )}
-            </Field>
-          </FoldSection>
-
-          <FoldSection
-            title={<Localized id="accounts-section-opening" />}
-            defaultOpen
-            filled={filledCount(values.opening_dr, values.opening_cr)}
-            forceOpen={has('opening_date', 'opening_dr', 'opening_cr')}
-          >
-            <FormGrid columns={3}>
-              <Field
-                label={<Localized id="accounts-field-opening-date" />}
-                // A closed day is said here in a few words, and the way out is offered under the fields. The
-                // plain "enter a date after X" line cannot be followed when X is today, so it is not shown.
-                error={
-                  openingOffer === null ? (
-                    fieldError(error, 'opening_date')
-                  ) : (
-                    <span className="block">
-                      <Localized id="accounts-opening-closed-short" />
-                    </span>
-                  )
-                }
-              >
-                {(props) => (
-                  <DateInput
+                  <Picker
                     {...props}
-                    value={values.opening_date}
-                    onChange={text('opening_date')}
+                    scope="marka"
+                    value={values.default_marka}
+                    onChange={ref('default_marka')}
                   />
                 )}
               </Field>
-              <Field
-                label={<Localized id="accounts-field-opening-dr" />}
-                error={fieldError(error, 'opening_dr')}
-              >
-                {(props) => (
-                  <MoneyInput {...props} value={values.opening_dr} onChange={text('opening_dr')} />
-                )}
-              </Field>
-              <Field
-                label={<Localized id="accounts-field-opening-cr" />}
-                error={fieldError(error, 'opening_cr')}
-              >
-                {(props) => (
-                  <MoneyInput {...props} value={values.opening_cr} onChange={text('opening_cr')} />
-                )}
-              </Field>
-            </FormGrid>
-            {openingOffer === null ? null : (
-              <OpeningDateOffer
-                offer={openingOffer}
-                onUseToday={(today) => {
-                  setValues((current) => ({ ...current, opening_date: today }));
-                  save.reset();
-                }}
-                onReopen={() => {
-                  fixFlow.start({
-                    date: values.opening_date,
-                    ownerHref: router.state.location.href,
-                    then: () => {
-                      save.reset();
-                    },
-                  });
-                }}
-              />
-            )}
-            {forSeller && hasOpeningDebit ? (
-              <Checkbox
-                checked={values.opening_is_advance}
-                onChange={(checked) => {
-                  setValues((current) => ({ ...current, opening_is_advance: checked }));
-                }}
-                label={<Localized id="accounts-field-opening-advance" />}
-              />
             ) : null}
-          </FoldSection>
-
-          {forBuyer ? (
-            <FoldSection
-              title={<Localized id="accounts-section-credit" />}
-              filled={filledCount(values.credit_limit)}
-              forceOpen={has('credit_limit', 'collector_staff_id')}
-            >
-              <FormGrid columns={4}>
-                <Checkbox
-                  checked={values.credit_allowed}
-                  onChange={(checked) => {
-                    setValues((current) => ({ ...current, credit_allowed: checked }));
-                  }}
-                  label={<Localized id="accounts-field-credit-allowed" />}
-                />
-                <Field
-                  label={<Localized id="accounts-field-credit-limit" />}
-                  error={fieldError(error, 'credit_limit')}
-                >
-                  {(props) => (
-                    <MoneyInput
-                      {...props}
-                      value={values.credit_limit}
-                      onChange={text('credit_limit')}
-                    />
-                  )}
-                </Field>
-                <Field
-                  label={<Localized id="accounts-field-collector" />}
-                  error={fieldError(error, 'collector_staff_id')}
-                >
-                  {(props) => (
-                    <Picker
-                      {...props}
-                      scope="collector"
-                      value={values.collector}
-                      onChange={ref('collector')}
-                    />
-                  )}
-                </Field>
-              </FormGrid>
-            </FoldSection>
-          ) : null}
-
-          <FoldSection
-            title={<Localized id="accounts-section-more" />}
-            filled={filledCount(values.note)}
-            forceOpen={has('linked_account_id', 'default_marka_id', 'note')}
-          >
-            <FormGrid columns={2}>
-              {forSeller || forBuyer ? (
-                <Field
-                  label={<Localized id="accounts-field-linked" />}
-                  info={
-                    <Localized id="accounts-field-linked-hint">
-                      <p />
-                    </Localized>
-                  }
-                  error={fieldError(error, 'linked_account_id')}
-                >
-                  {(props) => (
-                    // A seller is linked to his buyer account and a buyer to his seller account.
-                    <AccountPicker
-                      {...props}
-                      scope={forSeller ? 'buyer' : 'seller'}
-                      value={values.linked_account}
-                      onChange={(hit) => {
-                        setValues((current) => ({
-                          ...current,
-                          linked_account: hit === null ? null : pickedOf(hit),
-                        }));
-                      }}
-                    />
-                  )}
-                </Field>
-              ) : null}
-              {forSeller ? (
-                <Field
-                  label={<Localized id="accounts-field-marka" />}
-                  error={fieldError(error, 'default_marka_id')}
-                >
-                  {(props) => (
-                    <Picker
-                      {...props}
-                      scope="marka"
-                      value={values.default_marka}
-                      onChange={ref('default_marka')}
-                    />
-                  )}
-                </Field>
-              ) : null}
-            </FormGrid>
-            <Field label={<Localized id="accounts-field-note" />} error={fieldError(error, 'note')}>
-              {(props) => <FreeTextInput {...props} value={values.note} onChange={text('note')} />}
-            </Field>
-          </FoldSection>
-        </form>
-        {fixFlow.dialog}
-      </div>
+          </FormGrid>
+          <Field label={<Localized id="accounts-field-note" />} error={fieldError(error, 'note')}>
+            {(props) => <FreeTextInput {...props} value={values.note} onChange={text('note')} />}
+          </Field>
+        </FoldSection>
+      </form>
+      {fixFlow.dialog}
       <ActionBar>
         <div className="me-auto flex flex-col gap-1">
           {account === null ? null : account.is_system ? (
@@ -851,11 +847,8 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
           </Button>
         </div>
       </ActionBar>
-      {/* The screen runs down through the band of the round assistant button (`fill-to-corner`), so the bar
-          of buttons keeps its place above it. */}
-      {embedded === undefined ? <div aria-hidden="true" className="h-corner shrink-0" /> : null}
       {spelling.dialog}
-      {/* The cash question of PRD FR-6.7: a change of an opening in روکڑ that takes cash below zero. No has the
+      {/* The cash question of PRD FR-6.7: a new or changed opening in روکڑ that takes cash below zero. No has the
           focus; the yes sends the same account again with the answer. */}
       {cashAsk === null ? null : (
         <CashConfirmDialog

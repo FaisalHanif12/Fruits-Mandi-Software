@@ -155,6 +155,7 @@ export function GardenEntryFieldsForm({
               <FreeTextInput
                 {...props}
                 value={draft.shop}
+                kind="name"
                 onChange={(shop) => {
                   onChange({ shop });
                 }}

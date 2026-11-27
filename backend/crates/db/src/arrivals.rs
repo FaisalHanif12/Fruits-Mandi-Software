@@ -601,6 +601,106 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
     Ok(out)
 }
 
+/// The quantity columns of one saved arrival: arrived, set aside for another shop, sold, sold in
+/// other shops, written off.
+pub type QtyColumns = (i64, i64, i64, i64, i64);
+
+/// The quantity columns of every saved arrival of a filter (for the split totals of PRD FR-12.53,
+/// worked out by the one split rule in Rust).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn quantities(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<QtyColumns>> {
+    let (condition, binds) = filter_where(filter);
+    let mut statement = conn.prepare(&format!(
+        "SELECT a.qty, a.other_qty, a.qty_sold, a.qty_sold_other, a.qty_written_off
+         FROM garden_arrivals a{} a.status = 'saved'",
+        and_or_where(&condition)
+    ))?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+    })?;
+    rows.collect()
+}
+
+/// `condition` followed by ` AND`, or ` WHERE` when it is empty.
+fn and_or_where(condition: &str) -> String {
+    if condition.is_empty() {
+        " WHERE".to_owned()
+    } else {
+        format!("{condition} AND")
+    }
+}
+
+/// What was sold from arrivals, as `(arrival id, value, day)`: the seller amounts of the live sale
+/// lines of the garden lots linked to an arrival, and the money of the saved sales in another shop
+/// that name it. `ids` is the condition on the arrival id, with its `?` marks used twice.
+fn sold_sql(ids: &str) -> String {
+    format!(
+        "SELECT l.arrival_id AS arrival_id, s.seller_amount_paisa AS value, s.entry_date AS day
+         FROM bikri_lots l
+         JOIN bikri_entries b ON b.id = l.bikri_id AND b.status = 'saved'
+         JOIN bikri_sales s ON s.lot_id = l.id AND s.is_active = 1
+         WHERE l.removed_at IS NULL AND l.arrival_id IN ({ids})
+         UNION ALL
+         SELECT e.arrival_id, e.amount_paisa, e.entry_date FROM venture_entries e
+         WHERE e.kind = 'other_sale' AND e.status = 'saved' AND e.arrival_id IN ({ids})"
+    )
+}
+
+/// The value sold from each of these arrivals and the latest day it was sold (PRD FR-12.53). An
+/// arrival with nothing sold has no entry.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn sale_values(
+    conn: &Connection,
+    ids: &[i64],
+) -> rusqlite::Result<HashMap<i64, (i64, String)>> {
+    let mut out = HashMap::new();
+    for chunk in ids.chunks(500) {
+        let marks = vec!["?"; chunk.len()].join(", ");
+        let mut statement = conn.prepare(&format!(
+            "SELECT x.arrival_id, COALESCE(SUM(x.value), 0), MAX(x.day) FROM ({}) x
+             GROUP BY x.arrival_id",
+            sold_sql(&marks)
+        ))?;
+        let values: Vec<i64> = chunk.iter().chain(chunk.iter()).copied().collect();
+        let rows = statement.query_map(params_from_iter(values.iter()), |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                (r.get::<_, i64>(1)?, r.get::<_, String>(2)?),
+            ))
+        })?;
+        for row in rows {
+            let (id, sums) = row?;
+            out.insert(id, sums);
+        }
+    }
+    Ok(out)
+}
+
+/// The value sold from every saved arrival of a filter.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn sale_value_total(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<i64> {
+    let (condition, binds) = filter_where(filter);
+    let ids = format!(
+        "SELECT a.id FROM garden_arrivals a{} a.status = 'saved'",
+        and_or_where(&condition)
+    );
+    let values: Vec<Value> = binds.iter().chain(binds.iter()).cloned().collect();
+    conn.query_row(
+        &format!(
+            "SELECT COALESCE(SUM(x.value), 0) FROM ({}) x",
+            sold_sql(&ids)
+        ),
+        params_from_iter(values.iter()),
+        |r| r.get(0),
+    )
+}
+
 /// The saved arrivals of open gardens with goods left for our shop, on any day to sell, oldest day to
 /// sell first, then by number (plan 78 C1). At most `limit` rows.
 ///

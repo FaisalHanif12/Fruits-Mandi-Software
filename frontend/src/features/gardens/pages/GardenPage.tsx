@@ -7,10 +7,11 @@
 // note that says so, with a button that undoes the closing while its day is open. Everything else
 // stays readable.
 //
-// The page stays short and in one place however many entries the garden has (plan 96): the facts with the
-// four key figures at the top, the entry form, the goods arrived list with the details of the entry that
-// has focus beside it, the figures that fold (each partner's money in them), then the history. A saved
-// goods arrived entry shows at the head of its list, tinted, and the page does not move.
+// The page stays organized however many entries the garden has (plan 96, PRD FR-12.53): the facts with
+// the four key figures at the top, the entry form, the goods arrived in two lists (not sold yet, then
+// sold) with the details of an entry under its list, where the sale money is, the history, then the
+// garden's figures (open; each partner's money in them). A saved goods arrived entry shows at the head
+// of the first list, tinted, and the page does not move.
 //
 // Four states: loading, an error with a retry (also for a garden that does not exist), the garden.
 
@@ -31,6 +32,7 @@ import { GardenEntryEditor } from '../components/GardenEntryEditor';
 import { GardenFiguresFold, GardenHeaderCard } from '../components/GardenHeaderCard';
 import { GardenHeaderEdit } from '../components/GardenHeaderEdit';
 import { GardenHistorySection } from '../components/GardenHistorySection';
+import { GardenSaleMoneySection } from '../components/GardenSaleMoneySection';
 import { ReopenGardenDialog } from '../components/ReopenGardenDialog';
 import { useGarden, type GardenView } from '../hooks';
 import { parseGardenSearch } from '../screen-type';
@@ -65,6 +67,11 @@ function GardenBody({
   const { detail } = view;
   const garden = detail.row;
   const open = garden.status === 'open';
+  const editArrival = (arrival: ArrivalRow) => {
+    setEditing(null);
+    setEditingHeader(false);
+    setEditingArrival(arrival);
+  };
   return (
     <div className="flex max-w-page flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -139,21 +146,9 @@ function GardenBody({
           </Localized>
         </Notice>
       )}
-      <GardenArrivalsSection
-        garden={garden}
-        added={added}
-        onEdit={(arrival) => {
-          setEditing(null);
-          setEditingHeader(false);
-          setEditingArrival(arrival);
-        }}
-      />
-      <GardenFiguresFold
-        garden={garden}
-        results={detail.partner_results}
-        partnersLocked={detail.partners_locked}
-        closed={!open}
-      />
+      <GardenArrivalsSection garden={garden} stock="in_stock" added={added} onEdit={editArrival} />
+      <GardenArrivalsSection garden={garden} stock="sold_out" onEdit={editArrival} />
+      <GardenSaleMoneySection garden={garden} />
       <GardenHistorySection
         history={view.history}
         count={view.historyCount}
@@ -163,6 +158,12 @@ function GardenBody({
           setEditingHeader(false);
           setEditing(row);
         }}
+      />
+      <GardenFiguresFold
+        garden={garden}
+        results={detail.partner_results}
+        partnersLocked={detail.partners_locked}
+        closed={!open}
       />
       {open ? (
         <CloseGardenCard garden={garden} today={today} focusOnOpen={openType === 'close'} />

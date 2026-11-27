@@ -135,6 +135,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             <Field
               label={<Localized id="bikri-more-weight" />}
               error={fieldError(error, path('weight_received'))}
+              fadeError
             >
               {(control) => (
                 <MoneyInput
@@ -149,6 +150,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             <Field
               label={<Localized id="glossary-kiraya-store" />}
               error={fieldError(error, path('store_rent'))}
+              fadeError
             >
               {(control) => (
                 <MoneyInput
@@ -171,6 +173,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
                   </Localized>
                 }
                 error={fieldError(error, path('advance'))}
+                fadeError
               >
                 {(control) => (
                   <MoneyInput
@@ -186,6 +189,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             <Field
               label={<Localized id="glossary-phone" />}
               error={fieldError(error, path('phone'))}
+              fadeError
             >
               {(control) => (
                 <MoneyInput

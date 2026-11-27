@@ -706,6 +706,7 @@ function GridInner({
     ],
   );
   const getKeyHandler = useLatest(keyHandler);
+  const interceptorsNow = useLatest(interceptors);
 
   const mouseFocusTracker = useMouseFocus();
   // The cell that had the focus before, so a picker cell opens its list when the focus MOVES onto
@@ -801,9 +802,12 @@ function GridInner({
       api.setFocusedCell(step.rowIndex, step.field);
       api.ensureIndexVisible(step.rowIndex);
     } else if (fixedRows !== true) {
-      addRowAndFocus(store, step.field);
+      // A screen that refuses a new row (a sold out lot) is asked here too, as on every key path.
+      const refused =
+        interceptorsNow()?.onNewRow?.({ rowId: focus.rowId, field: focus.field }) === true;
+      if (!refused) addRowAndFocus(store, step.field);
     }
-  }, [calc, columns, store, fixedRows]);
+  }, [calc, columns, store, fixedRows, interceptorsNow]);
 
   // An answer can arrive before the grid is ready: the marks of earlier edits come from the history, and the
   // backend's answer for a draft that was restored comes at once. The refresh above finds no grid then, and the

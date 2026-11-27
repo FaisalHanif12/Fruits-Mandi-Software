@@ -292,6 +292,17 @@ masters-chart-title = کھاتوں کی ترتیب
 # review: pending
 masters-chart-help = مدیں، کنٹرول اور کھاتے درخت کی صورت میں۔
 
+## A party's opening goes through روکڑ (PRD FR-10.9 v1.60, plan 99).
+
+# review: pending
+accounts-opening-cash = { -rokar } سے: یہ { -ibtidai-baqaya } { -rokar } میں درج ہوگا۔ { -banaam } والی رقم { -rokar } سے جائے گی، { -jama } والی رقم { -rokar } میں آئے گی۔
+
+# review: pending
+accounts-opening-cash-out = { -rokar } سے: یہ رقم { -rokar } سے جائے گی۔
+
+# review: pending
+accounts-opening-cash-in = { -rokar } سے: یہ رقم { -rokar } میں آئے گی۔
+
 ## The opening balances grid (plan 07, PRD FR-10.9).
 
 # review: pending
@@ -301,7 +312,7 @@ openings-open = ابتدائی بقایا لکھیں
 openings-title = ابتدائی بقایا
 
 # review: pending
-openings-help = ہر کھاتے کے سامنے اس کا ابتدائی { -banaam } یا { -jama } لکھیں۔ جن کھاتوں کا ابتدائی بقایا نہیں ہے، انہیں خالی چھوڑ دیں۔
+openings-help = ہر کھاتے کے سامنے اس کا ابتدائی { -banaam } یا { -jama } لکھیں۔ جن کھاتوں کا ابتدائی بقایا نہیں ہے، انہیں خالی چھوڑ دیں۔ { -beopari }، { -gahak }، { -adhar-raqam } یا { -alag-khata } کا { -ibtidai-baqaya } { -rokar } سے درج ہوتا ہے: { -banaam } رقم { -rokar } سے جاتی ہے، { -jama } رقم { -rokar } میں آتی ہے۔
 
 # review: pending
 openings-grid-label = ابتدائی بقایا کی فہرست
@@ -401,6 +412,14 @@ accounts-opening-closed-today-open = اس ابتدائی رقم کی تاریخ 
 
 # review: pending
 accounts-opening-closed-today-closed = یہ دن بند ہے، اس لیے یہ ابتدائی رقم ابھی بدلی نہیں جا سکتی۔ بدلنے کے لیے دن دوبارہ کھولیں۔
+
+# A new account's opening on a closed day (PRD FR-21.4).
+# review: pending
+accounts-opening-closed-new-today-open = اس ابتدائی رقم کی تاریخ بند دن کی ہے، اس لیے وہاں یہ درج نہیں ہو سکتی۔ آج کی تاریخ لگائیں، جو کھلی ہے، یا دن دوبارہ کھولیں۔
+
+# A new account's opening on a closed day (PRD FR-21.4).
+# review: pending
+accounts-opening-closed-new-today-closed = یہ دن بند ہے، اس لیے یہ ابتدائی رقم ابھی درج نہیں ہو سکتی۔ درج کرنے کے لیے دن دوبارہ کھولیں۔
 
 # review: pending
 accounts-opening-closed-short = یہ تاریخ بند ہے۔

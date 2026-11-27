@@ -279,14 +279,21 @@ export function FruitListSection({
         totals={
           first === undefined
             ? undefined
-            : (context) => ({
-                labelField: 'for',
-                values: {
-                  for: context.text('glossary-meezan'),
-                  qty: String(first.totals.qty),
-                  value: context.money(first.totals.value_paisa),
-                },
-              })
+            : (context) => {
+                // The three totals are the backend's (it adds the gross with a checked sum): the screen adds no money. A deduction
+                // total of 0 leaves its cell empty, as a row does.
+                const deduction = context.money(first.totals.deduction_paisa);
+                return {
+                  labelField: 'for',
+                  values: {
+                    for: context.text('glossary-meezan'),
+                    qty: String(first.totals.qty),
+                    gross: context.money(first.totals.gross_paisa),
+                    deduction: deduction === '0' ? '' : deduction,
+                    value: context.money(first.totals.value_paisa),
+                  },
+                };
+              }
         }
       />
       <ListWindowBar window={listWindow} />

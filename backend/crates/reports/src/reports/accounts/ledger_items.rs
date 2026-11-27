@@ -25,6 +25,17 @@ use crate::error::ReportsError;
 use crate::reports::common::{IN_CHUNK, grade_of, paisa, placeholders};
 use crate::reports::model::{DetailPart, Names};
 
+/// The voucher behind a ledger line.
+#[derive(Debug, Clone)]
+pub(crate) struct LineVoucher {
+    /// The voucher type.
+    pub(crate) kind: String,
+    /// The reason, as typed.
+    pub(crate) reason: Option<String>,
+    /// True for a payment typed as a پیشگی to a buyer (PRD FR-15.11).
+    pub(crate) peshgi: bool,
+}
+
 /// A ledger line that may have items.
 #[derive(Debug, Clone)]
 pub(crate) struct DetailQuery {
@@ -32,8 +43,8 @@ pub(crate) struct DetailQuery {
     pub(crate) line_no: i64,
     /// For a line of a بکری entry: that entry, or the entry it reverses.
     pub(crate) bikri_base_entry: Option<i64>,
-    /// For a line of a voucher entry: the voucher type and its reason.
-    pub(crate) voucher: Option<(String, Option<String>)>,
+    /// For a line of a voucher entry: the voucher.
+    pub(crate) voucher: Option<LineVoucher>,
 }
 
 struct BaseLine {
@@ -82,13 +93,18 @@ pub(crate) fn load(
 
     // Vouchers: cash lent, or the reason as typed.
     for q in queries {
-        if let Some((kind, reason)) = &q.voucher {
-            let reason = reason.as_deref().map(str::trim).filter(|r| !r.is_empty());
-            if kind == "payment" && ledger_is_buyer {
+        if let Some(voucher) = &q.voucher {
+            let reason = voucher
+                .reason
+                .as_deref()
+                .map(str::trim)
+                .filter(|r| !r.is_empty());
+            if voucher.kind == "payment" && ledger_is_buyer {
                 found.insert(
                     (q.entry_id, q.line_no),
                     vec![DetailPart::CashLent {
                         reason: reason.unwrap_or_default().to_owned(),
+                        advance: voucher.peshgi,
                     }],
                 );
             } else if let Some(reason) = reason {

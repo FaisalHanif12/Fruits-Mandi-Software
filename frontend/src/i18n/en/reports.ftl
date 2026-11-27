@@ -284,6 +284,16 @@ report-detail-lot = { -bikri } { $number }: { $item } { $qty } { $packing }, { -
 # review: pending
 report-detail-cash-lent = { -naqd-udhar }: { $reason }
 
+# review: pending
+report-detail-cash-lent-plain = { -naqd-udhar }
+
+# A پیشگی typed for a buyer (saved as cash lent, PRD FR-15.11 v1.60).
+# review: pending
+report-detail-buyer-advance = { -peshgi }: { $reason }
+
+# review: pending
+report-detail-buyer-advance-plain = { -peshgi }
+
 # The mark on the credit line of money a buyer paid on the spot (PRD FR-12.44, FR-19.8).
 # review: pending
 report-detail-paid-on-spot = { -bikri } { $number }: { -mauqa-par-jama }
@@ -314,6 +324,10 @@ report-doc-payment = { -adaigi }
 
 # review: pending
 report-doc-advance = { -peshgi }
+
+# A پیشگی typed for a buyer (saved as cash lent, PRD FR-15.11 v1.60).
+# review: pending
+report-doc-buyer-advance = { -peshgi } ({ -gahak })
 
 # The advance a seller took with the goods of a sale (plan 95 item 11, PRD FR-12.52): the row of the روکڑ بک, the
 # day book and the ledger; the number of the sale follows it.

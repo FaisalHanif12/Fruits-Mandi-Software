@@ -14,6 +14,7 @@ import type {
 } from '../../src/features/partners/types';
 import { money } from './accounts';
 import { fail } from './app';
+import { openVenturesAnswer } from './partner-ventures';
 
 const FULL_BPS = 10_000;
 const PERCENT = /^(\d{1,3})(?:\.(\d{1,2}))?$/;
@@ -159,9 +160,12 @@ export function fakePartners(
   );
   vi.mocked(partnersApi.partnersOverview).mockImplementation(() => Promise.resolve(store.overview));
   // The list behind the compact line of the overview, read when it is opened (plan 76 point 11).
-  vi.mocked(partnersApi.partnersOpenVentures).mockImplementation((partnerId) =>
+  vi.mocked(partnersApi.partnersOpenVentures).mockImplementation((input) =>
     Promise.resolve(
-      store.overview.find((row) => row.partner_id === partnerId)?.open_ventures ?? [],
+      openVenturesAnswer(
+        store.overview.find((row) => row.partner_id === input.partner_id)?.open_ventures ?? [],
+        input,
+      ),
     ),
   );
   vi.mocked(partnersApi.partnersGet).mockImplementation((id) => {

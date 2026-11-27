@@ -119,6 +119,8 @@ pub(crate) const FRUIT_SOURCE_OTHER: &str = "fruit-source-other";
 pub(crate) const COL_FRUIT_FOR: &str = "fruit-filter-for";
 pub(crate) const COL_FRUIT_SOURCE: &str = "fruit-col-source";
 pub(crate) const COL_FRUIT_WEIGHT: &str = "fruit-col-weight";
+/// The کل کٹوتی of fruit from another shop (PRD FR-16.11 v1.59), between the rate and the value.
+pub(crate) const COL_FRUIT_DEDUCTION: &str = "fruit-col-deduction";
 pub(crate) const COL_DAYS_WAITING: &str = "report-col-days-waiting";
 // The two parts of the goods left (plan 35, PRD FR-12.41): R10.
 pub(crate) const COL_OUR_LEFT: &str = "report-col-our-left";
@@ -369,6 +371,7 @@ pub(crate) fn title_id(code: &str) -> String {
 /// PRD FR-12.40), which posts nothing.
 const POSTING_TYPES: &[&str] = &[
     "bikri_advance",
+    "buyer_advance",
     "bikri_first",
     "bikri_later",
     "reversal",
@@ -415,6 +418,16 @@ pub(crate) fn doc_id_of(posting_type: &str, source_type: &str) -> String {
         doc_id("bikri_advance")
     } else {
         doc_id(posting_type)
+    }
+}
+
+/// The document label of a row of the cash book (R12): a پیشگی typed to a buyer, saved as cash
+/// lent, is `report-doc-buyer-advance` (PRD FR-15.11 v1.60); every other row is [`doc_id_of`].
+pub(crate) fn doc_id_of_cash(row: &mandi_db::cashbook::CashRow) -> String {
+    if row.kind == "buyer_advance" {
+        doc_id("buyer_advance")
+    } else {
+        doc_id_of(&row.posting_type, &row.source_type)
     }
 }
 

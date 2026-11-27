@@ -28,6 +28,7 @@ search-empty-kind = { $noun ->
    [staff] ابھی عملے کا کوئی فرد نہیں
    [lent-person] ابھی کوئی شخص نہیں
    [khata] ابھی کوئی { -alag-khata } نہیں
+   [agent-shop] ابھی کوئی { -arhti-dukan } نہیں
 }
 # review: pending
 search-add-row = { $noun ->
@@ -46,6 +47,7 @@ search-add-row = { $noun ->
    [lent-person] نیا شخص شامل کریں
    [khata] نیا { -alag-khata } شامل کریں
    [chukta] نیا { -chukta } { -gahak } شامل کریں
+   [agent-shop] نئی { -arhti-dukan } شامل کریں
 }
 # review: pending
 search-add-row-named = { $noun ->
@@ -64,6 +66,7 @@ search-add-row-named = { $noun ->
    [lent-person] «{ $text }» کو نیا شخص بنائیں
    [khata] «{ $text }» کو نیا { -alag-khata } بنائیں
    [chukta] «{ $text }» کو نیا { -chukta } { -gahak } بنائیں
+   [agent-shop] «{ $text }» کو نئی { -arhti-dukan } بنائیں
 }
 
 ### The short form of "add it here" (plan 41, PRD FR-7.69).

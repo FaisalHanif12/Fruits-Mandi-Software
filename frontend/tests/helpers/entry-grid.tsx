@@ -13,6 +13,7 @@ import {
   type EntryColumn,
   type EntryRow,
   type EntryStore,
+  type GridInterceptors,
   type RemoveQuestion,
 } from '../../src/shared/grid';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -80,7 +81,10 @@ function Harness({
   canRemoveRow,
   removeQuestion,
   withAddButton,
+  interceptors,
 }: {
+  /** What the screen adds to the keys (the sale book refuses a new line on a sold out lot, plan 97). */
+  interceptors?: GridInterceptors;
   /** A "+" button under the grid, linked to it, as the sale book has (the arrows come and go). */
   withAddButton?: boolean;
   withLabel?: boolean;
@@ -122,6 +126,7 @@ function Harness({
       {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
       {...(removeQuestion === undefined ? {} : { removeQuestion })}
       {...(withAddButton === true ? { addLink } : {})}
+      {...(interceptors === undefined ? {} : { interceptors })}
       heightMode="auto"
     />
   );
@@ -171,6 +176,8 @@ export async function renderGrid(
     removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
     /** A "+" button under the grid, linked to it. */
     withAddButton?: boolean;
+    /** What the screen adds to Enter, ↑ and a new row (plan 97 item 2). */
+    interceptors?: GridInterceptors;
   } = {},
 ): Promise<GridRig> {
   act(() => {
@@ -189,6 +196,7 @@ export async function renderGrid(
       {...(options.canRemoveRow === undefined ? {} : { canRemoveRow: options.canRemoveRow })}
       {...(options.removeQuestion === undefined ? {} : { removeQuestion: options.removeQuestion })}
       {...(options.withAddButton === undefined ? {} : { withAddButton: options.withAddButton })}
+      {...(options.interceptors === undefined ? {} : { interceptors: options.interceptors })}
       {...(options.copyAbove === undefined ? {} : { copyAbove: options.copyAbove })}
       {...(options.onExplain === undefined ? {} : { onExplain: options.onExplain })}
     />,
