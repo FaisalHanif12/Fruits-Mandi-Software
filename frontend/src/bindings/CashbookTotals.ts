@@ -2,7 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 
 /**
- * What the range adds up to, over the whole range (B31).
+ * What the rows add up to, over the whole range and filter (B31), the postings in force only.
  */
 export type CashbookTotals = {
   /**

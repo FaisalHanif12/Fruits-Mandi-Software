@@ -1087,6 +1087,10 @@ pub struct EstimateInput {
     pub party: Option<String>,
     /// Months ahead, 1 to 12. Null with `until`.
     pub ahead: Option<i64>,
+    /// How far as a period word (PRD FR-7.87 v1.60): `next_months:N` is `ahead` N, `year_end` (or
+    /// `this_year`) is `until` year_end. Never with `ahead` or `until`.
+    #[serde(default)]
+    pub period: Option<String>,
     /// `year_end`: from the current month to December. Only when the question says so.
     pub until: Option<String>,
     /// A what-if on the pace: `double`, `half`, `triple`, `up` or `down`. Only when the question
@@ -1096,6 +1100,40 @@ pub struct EstimateInput {
     pub percent: Option<String>,
     /// A number from the question (`q.n1`) or a figure already read.
     pub target: Option<String>,
+}
+
+/// Reads the `period` word of an estimate into `ahead` or `until`; both are then checked as if the
+/// model had sent them (the months must be a number of the question, `year_end` must be said).
+///
+/// Example: `next_months:6` is `ahead` 6.
+fn apply_period_word(parsed: &mut EstimateInput) -> Result<(), ToolError> {
+    let Some(word) = parsed.period.take().filter(|w| !w.trim().is_empty()) else {
+        return Ok(());
+    };
+    if parsed.ahead.is_some() || parsed.until.is_some() {
+        return Err(bad(
+            "ERR_FORMAT_INVALID",
+            "period",
+            "give period, or ahead or until, not both",
+        ));
+    }
+    let word = word.trim().to_ascii_lowercase();
+    let months = ["next_months:", "next_n_months:"]
+        .iter()
+        .find_map(|head| word.strip_prefix(head))
+        .and_then(|n| n.parse::<i64>().ok());
+    match (word.as_str(), months) {
+        ("year_end" | "this_year", _) => parsed.until = Some("year_end".to_owned()),
+        (_, Some(n)) => parsed.ahead = Some(n),
+        _ => {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "period",
+                "an estimate looks ahead: next_months:N or year_end",
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// True when the estimate runs to the end of the year: the model said `until: "year_end"`, or it
@@ -1825,7 +1863,8 @@ fn working_title(method: Method) -> &'static str {
 
 /// The tool `estimate`.
 pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
-    let parsed: EstimateInput = input(args)?;
+    let mut parsed: EstimateInput = input(args)?;
+    apply_period_word(&mut parsed)?;
     let series = parsed.measure.series(parsed.head.is_some());
     check_filters(&parsed, series)?;
     let today = NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d")

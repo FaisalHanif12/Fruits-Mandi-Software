@@ -62,7 +62,12 @@ print-labour = { -mazdoori }
 print-munshiana = { -munshiana }
 
 # review: pending
-print-cash-paid = { -naqd }
+print-cash-paid = { -naqd-adaigi }
+
+# The advance a seller took when he brought the goods of this sale (plan 95 item 11, PRD FR-12.52): a line of the
+# seller bill, printed only when it is not 0.
+# review: pending
+print-seller-advance = { -peshgi }
 
 # review: pending
 print-store-rent = { -kiraya-store }
@@ -202,6 +207,10 @@ print-box-to-pdf = PDF file
 
 # review: pending
 print-box-print = Print
+
+# The short word of the print button when the top row of the sale book is short of room (plan 95).
+# review: pending
+print-box-print-short = Print
 
 # review: pending
 print-box-save-pdf = Save PDF
@@ -719,6 +728,20 @@ print-sale-col-buyer = Buyer
 # review: pending
 print-sale-col-bought = Goods
 
+# The value of the goods, the buyer's commission and لاگا: the three parts of the bill (plan 95 item 13, PRD FR-19.15).
+# review: pending
+print-sale-col-value = { report-r35-goods }
+
+# review: pending
+print-sale-col-commission = { -commission }
+
+# review: pending
+print-sale-col-laga = { -laga }
+
+# The advance of a lot, in the sellers table (plan 95 item 11, PRD FR-12.52).
+# review: pending
+print-sale-col-advance = { -peshgi }
+
 # review: pending
 print-sale-col-bill = Bill
 
@@ -792,7 +815,7 @@ print-sale-empty = Nothing was sold on this day
 
 # What ادھاری تفصیل is for, one line (plan 78 A0, A5).
 # review: pending
-print-adhari-box-help = One row for each of today's buyers: the bill, the cash, today's credit, the balance before and the total credit. At the end, the total credit of all buyers.
+print-adhari-box-help = One row for each of today's buyers: the bill, today's credit, the balance before and the total credit. At the end, the total credit of all buyers.
 
 ## The prints of the dashboard pages: sellers, total dues, money lent, advances and cash sales (plan 79, PRD FR-19.10).
 
@@ -849,107 +872,3 @@ print-cash-sales-col-bikri = { -bikri }
 
 # review: pending
 print-cash-sales-col-bill = Bill
-
-## The print of the capital card (plan 87, PRD FR-16.14, FR-19.13): the backend writes these ids into its print data.
-
-# review: pending
-print-capital-title = Where the { -sarmaya } is
-
-# review: pending
-print-capital-col-item = Detail
-
-# review: pending
-print-capital-col-amount = Amount
-
-# review: pending
-print-capital-col-share = { -hissa }
-
-# review: pending
-print-capital-have-title = To receive and in hand
-
-# review: pending
-print-capital-have-total = Total to receive and in hand
-
-# review: pending
-print-capital-owe-title = To pay
-
-# review: pending
-print-capital-owe-total = Total to pay
-
-# review: pending
-print-capital-net = Net
-
-# review: pending
-print-capital-net-short = Net, short
-
-# review: pending
-print-capital-whose-title = Whose it is
-
-# review: pending
-print-capital-whose-opening-capital = Opening { -sarmaya }
-
-# review: pending
-print-capital-whose-advances-open = Partners' part of the open { -peshgi }
-
-# review: pending
-print-capital-whose-other = Other
-
-# review: pending
-print-capital-total = Partners' total { -sarmaya }
-
-# review: pending
-print-capital-total-short = Partners' total { -sarmaya }, short
-
-# review: pending
-print-capital-diff-title = Opening difference
-
-# review: pending
-print-capital-diff-partner-capital = Partners' opening { -sarmaya } that is not in { -rokar }
-
-# review: pending
-print-capital-diff-account-opening = Difference of the buyers' and sellers' opening balances
-
-# review: pending
-print-capital-diff-other-entry = Other entries
-
-# review: pending
-print-capital-line-cash = Cash in hand
-
-# review: pending
-print-capital-line-cash-short = Cash short
-
-# review: pending
-print-capital-line-buyers-owe = Owed by { -gahakon }
-
-# review: pending
-print-capital-line-buyer-credits = Held for buyers who paid ahead
-
-# review: pending
-print-capital-line-dead-amount = { -doobi-raqam }
-
-# review: pending
-print-capital-line-seller-advances = { -peshgi } with { -beopariyon }
-
-# review: pending
-print-capital-line-sellers-owe-beyond = Owed by { -beopariyon } beyond their { -peshgi }
-
-# review: pending
-print-capital-line-sellers-payable = Owed to { -beopariyon }
-
-# review: pending
-print-capital-line-money-lent = { -adhar-raqam } not yet returned
-
-# review: pending
-print-capital-line-owed-for-charges = Owed for { -mazdoori }, { -kiraya }, { -munshiana } and stores
-
-# review: pending
-print-capital-line-separate-khatas = { -alag-khata }
-
-# review: pending
-print-capital-line-gardens-held = Money of { -baghat } held until they close
-
-# review: pending
-print-capital-line-linked = Linked money already in the partners' { -kul-raqam }
-
-# review: pending
-print-capital-line-other = Other

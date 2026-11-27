@@ -178,15 +178,6 @@ fn the_switches_turn_the_reads_and_the_low_effort_off() {
     assert_eq!(effort(first), "medium");
 }
 
-/// The tools whose results the first request holds, for a question asked with the reads on.
-fn read_for(question: &str) -> Vec<String> {
-    let h = day();
-    let client = RecordedClient::new(vec![answer_reply("x")]);
-    h.ask_with(question, None, &client);
-    let results = results_in(&client.requests()[0]);
-    results.into_iter().map(|(_, tool)| tool).collect()
-}
-
 /// The tool results of the first request: (tool, source, filters), in order.
 fn reads_with_filters(question: &str) -> Vec<(String, String, Value)> {
     let h = day();
@@ -257,10 +248,13 @@ fn a_question_with_a_city_an_adda_or_a_scope_word_is_not_read_for_the_whole_shop
         "bagh ka is mahine ka commission kitna hai",
         "apna maal ki is mahine ki bikri kitni hai",
     ] {
-        let tools = read_for(question);
+        let reads = reads_with_filters(question);
+        // The gardens' view (I) and the trips' view (J) hold only the gardens or the trips, never
+        // the whole shop: they are the reads of a garden or a trip with no name (plan 99 A1).
         assert!(
-            !tools.iter().any(|t| t == "analytics" || t == "tiles"),
-            "{question}: the whole shop was read: {tools:?}"
+            !reads.iter().any(|(tool, source, _)| tool == "tiles"
+                || (tool == "analytics" && source != "I" && source != "J")),
+            "{question}: the whole shop was read: {reads:?}"
         );
     }
 }

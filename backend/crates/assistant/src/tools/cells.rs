@@ -25,7 +25,7 @@ use crate::results::{Money, NameVal, Node, Val};
 /// This list is the second line of defence. The first is [`is_left_out`]: every column of kind
 /// `Text` is left out unless it is in [`SYSTEM_TEXT_COLUMNS`], so a typed-text column nobody
 /// thought of (R6-1: `shop_name`) is kept from the model by default.
-const LEFT_OUT_COLUMNS: [&str; 18] = [
+const LEFT_OUT_COLUMNS: [&str; 19] = [
     "narration",
     "note",
     "notes",
@@ -44,6 +44,11 @@ const LEFT_OUT_COLUMNS: [&str; 18] = [
     "sent",
     "marka",
     "taken_by",
+    // R37's کل کٹوتی column (PRD FR-16.11 v1.59, plan 97). Not private: it is left out until the D6
+    // column lists (`tools.json`, Code Standards Q11) name it, which needs Umar's approval. Its
+    // `value` column is the amount posted (the net), so every figure the model reads still adds up
+    // to the books.
+    "deduction",
 ];
 
 /// The only columns of kind `Text` the model may read. Each holds text the app makes, not text a
@@ -156,8 +161,12 @@ fn detail_part(part: &DetailPart) -> Node {
             ("kind", Node::Str("paid_on_spot".to_owned())),
             ("bikri", count(*bikri_number)),
         ]),
-        // A reason is typed by hand: the model learns only that cash was lent (PRD FR-7.83).
-        DetailPart::CashLent { .. } => Node::obj(vec![("kind", Node::Str("cash_lent".to_owned()))]),
+        // A reason is typed by hand: the model learns only that cash was lent (PRD FR-7.83). Cash
+        // typed as a پیشگی to a buyer is an advance to him, as the books show it (FR-15.11 v1.60).
+        DetailPart::CashLent { advance, .. } => {
+            let kind = if *advance { "advance" } else { "cash_lent" };
+            Node::obj(vec![("kind", Node::Str(kind.to_owned()))])
+        }
         DetailPart::Text { .. } => Node::obj(vec![("kind", Node::Str("text".to_owned()))]),
     }
 }
@@ -414,6 +423,18 @@ pub fn signed_paisa(cell: &Cell) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_buyer_advance_is_read_as_advance_and_its_reason_never_is() {
+        let part = |advance| DetailPart::CashLent {
+            reason: "گھر کا خرچ".to_owned(),
+            advance,
+        };
+        let word = |node: Node| format!("{node:?}");
+        assert!(word(detail_part(&part(true))).contains("\"advance\""));
+        assert!(word(detail_part(&part(false))).contains("cash_lent"));
+        assert!(!word(detail_part(&part(true))).contains("گھر"));
+    }
 
     fn column(key: &str, kind: ColumnKind) -> Column {
         Column {

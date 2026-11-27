@@ -118,9 +118,19 @@ impl CellContext<'_> {
             P::PaidOnSpot { bikri_number } => self
                 .l10n
                 .text_with("report-detail-paid-on-spot", &[("number", &bikri_number)]),
-            P::CashLent { reason } => self
-                .l10n
-                .text_with("report-detail-cash-lent", &[("reason", &reason)]),
+            P::CashLent { reason, advance } => {
+                // The label a پیشگی to a buyer keeps (PRD FR-15.11 v1.60); a reason is optional.
+                let id = if advance {
+                    "report-detail-buyer-advance"
+                } else {
+                    "report-detail-cash-lent"
+                };
+                if reason.is_empty() {
+                    self.l10n.text(&format!("{id}-plain"))
+                } else {
+                    self.l10n.text_with(id, &[("reason", &reason)])
+                }
+            }
             P::Text { text } => text,
         })
     }

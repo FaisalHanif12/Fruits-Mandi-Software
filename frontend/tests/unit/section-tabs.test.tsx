@@ -16,6 +16,7 @@ import {
   SectionTabs,
   SectionTabsProvider,
   TitleOrTabs,
+  sectionTabsNaturalWidth,
   sectionTabsThatFit,
 } from '../../src/shared/ui';
 import { message, renderIn, visible } from '../helpers/render';
@@ -39,6 +40,24 @@ describe('how many tabs fit', () => {
   });
 });
 
+describe('the width all the tabs want', () => {
+  it('is their widths and the 4 px gaps between them (fractions kept), and nothing for no tabs', () => {
+    expect(sectionTabsNaturalWidth([101.4, 112.2, 111, 95.4])).toBeCloseTo(432, 5);
+    expect(sectionTabsNaturalWidth([100])).toBe(100);
+    expect(sectionTabsNaturalWidth([])).toBe(0);
+  });
+
+  it('a row exactly as wide as its tabs, within a rounded pixel, shows every tab (WebKit at 1920, plan 95)', () => {
+    // The tabs want 432.0 in all; the row, as wide as they are, measures 431.6; the 1 px of slack the tabs add to the
+    // row's width keeps the last tab in the row.
+    const widths = [101.4, 112.2, 111, 95.4];
+    expect(sectionTabsThatFit(431.6 + 1, widths, 78)).toBe(4);
+    expect(sectionTabsThatFit(431.6, widths, 78)).toBeLessThan(4);
+    // Less than that by more than a pixel still puts the last ones behind More.
+    expect(sectionTabsThatFit(420, widths, 78)).toBeLessThan(4);
+  });
+});
+
 const named = (text: string) => (name: string) => visible(name) === text;
 
 describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
@@ -57,8 +76,8 @@ describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
         }}
         tabs={[
           { id: 'a', label: m('layout-module-bikri-book'), icon: Receipt },
-          { id: 'b', label: m('layout-module-receipt'), icon: Wallet },
-          { id: 'c', label: m('layout-module-payment'), icon: BookText },
+          { id: 'b', label: m('layout-module-party-ledgers'), icon: Wallet },
+          { id: 'c', label: m('layout-module-today'), icon: BookText },
         ]}
       />
     );
@@ -74,8 +93,8 @@ describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
     const tabs = tabsOf();
     expect(tabs.map((tab) => visible(tab.textContent))).toEqual([
       m('layout-module-bikri-book'),
-      m('layout-module-receipt'),
-      m('layout-module-payment'),
+      m('layout-module-party-ledgers'),
+      m('layout-module-today'),
     ]);
     expect(at(tabs, 0)).toHaveAttribute('aria-current', 'page');
     expect(at(tabs, 1)).not.toHaveAttribute('aria-current');
@@ -88,9 +107,15 @@ describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
   });
 
   it('the tabs that do not fit go behind More, the open tab stays in the row, and a pick from the menu opens it', async () => {
-    // A row 250 wide with tabs 100 wide and a More button 100 wide: one tab fits beside More.
-    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(250);
+    // A row 250 wide with tabs 100 wide and a More button 100 wide: one tab fits beside More. The tabs are measured
+    // as fractions of a pixel (`getBoundingClientRect`), so a rounding never hides the last tab (plan 95).
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const width = this.tagName === 'NAV' ? 250 : 100;
+      return { width, height: 0, top: 0, left: 0, right: width, bottom: 0, x: 0, y: 0 } as DOMRect;
+    });
     const onSelect = vi.fn();
     renderIn(language, <Row onSelect={onSelect} />);
     const user = userEvent.setup();
@@ -103,21 +128,21 @@ describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
     await user.click(more);
     const items = await screen.findAllByRole('menuitem');
     expect(items.map((item) => visible(item.textContent))).toEqual([
-      m('layout-module-receipt'),
-      m('layout-module-payment'),
+      m('layout-module-party-ledgers'),
+      m('layout-module-today'),
     ]);
     await user.click(at(items, 1));
     expect(onSelect).toHaveBeenCalledWith('c');
     // The picked tab is now the open one and is in the row: it took the place of the last tab that fits.
     await waitFor(() => {
       const open = tabsOf().find((tab) => tab.getAttribute('aria-current') === 'page');
-      expect(visible(open?.textContent)).toBe(m('layout-module-payment'));
+      expect(visible(open?.textContent)).toBe(m('layout-module-today'));
     });
   });
 
   it('the bikri and the rokar tabs are the same component with their own items (PRD FR-5.3, 5)', () => {
     const first = renderIn(language, <ModuleTabs current="today" onSelect={vi.fn()} />);
-    expect(tabsOf()).toHaveLength(7);
+    expect(tabsOf()).toHaveLength(4);
     first.unmount();
     renderIn(language, <RokarTabs current="expense" onSelect={vi.fn()} />);
     const rokar = within(
@@ -125,13 +150,15 @@ describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
     ).getAllByRole('button');
     expect(rokar.map((tab) => visible(tab.textContent))).toEqual([
       m('layout-rokar-cashbook'),
+      m('layout-rokar-receipt'),
+      m('layout-rokar-payment'),
+      m('layout-rokar-advance'),
       m('layout-rokar-expense'),
       m('layout-rokar-lent'),
       m('layout-rokar-khata'),
       m('layout-rokar-general'),
-      m('layout-rokar-voucher'),
     ]);
-    expect(at(rokar, 1)).toHaveAttribute('aria-current', 'page');
+    expect(at(rokar, 4)).toHaveAttribute('aria-current', 'page');
   });
 
   it('a screen in a section draws the tabs in its title row with its buttons at the end, and keeps its heading for readers', () => {
@@ -146,7 +173,7 @@ describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
         </ListPage>
       </SectionTabsProvider>,
     );
-    expect(tabsOf()).toHaveLength(7);
+    expect(tabsOf()).toHaveLength(4);
     const heading = screen.getByRole('heading', { level: 1 });
     expect(visible(heading.textContent)).toBe(m('layout-module-today'));
     expect(heading).toHaveClass('sr-only');
@@ -172,7 +199,7 @@ describe.each(LANGUAGES)('the tabs of a section (%s)', (language: Language) => {
     // shown now (so the title row can decide, by wrapping, whether the buttons fit beside it).
     const ruler = nav.querySelector('[aria-hidden="true"]');
     expect(ruler).toHaveClass('h-0', 'invisible', 'overflow-hidden');
-    expect(ruler?.firstElementChild?.children).toHaveLength(7);
+    expect(ruler?.firstElementChild?.children).toHaveLength(4);
     // The name's block grows from its natural width (all tabs) and gives way only when the tabs alone do not fit; the
     // screen's buttons keep their size and sit at the end of whichever row they land on.
     const block = nav.parentElement;

@@ -213,6 +213,8 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
         &w.env.ctx,
         &CashbookInput {
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
             sort: None,
             from: None,
             to: None,
@@ -226,6 +228,8 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
         &w.env.ctx,
         &CashbookInput {
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
             sort: None,
             from: Some("10-10-2026".into()),
             to: Some("10-10-2026".into()),
@@ -282,6 +286,8 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
             &w.env.ctx,
             &CashbookInput {
                 group_by_month: false,
+                show_reversed: false,
+                kinds: None,
                 sort: None,
                 from: None,
                 to: None,
@@ -312,7 +318,7 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
     // The pages together are the rows of the single big page, with the same running cash.
     let running: Vec<Paisa> = all.rows.iter().map(|r| r.running_paisa.unwrap()).collect();
     assert_eq!(running.last().copied(), Some(rupees(58_484)));
-    // The shop expense shows the account of its head and its voucher number.
+    // The shop expense names its head and its voucher number.
     let expense_row = all
         .rows
         .iter()
@@ -322,9 +328,13 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
         (
             expense_row.number,
             expense_row.out_paisa,
-            expense_row.account.as_ref().map(|a| a.code.as_str())
+            expense_row
+                .refs
+                .expense_head
+                .as_ref()
+                .map(|h| h.name_en.as_str())
         ),
-        (Some(1), rupees(3_000), Some("05010001"))
+        (Some(1), rupees(3_000), Some("Electricity"))
     );
 }
 
@@ -439,7 +449,7 @@ fn e2e_29_a_partner_returns_2000_and_the_take_shows_fully_returned() {
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
-                partner_id: a,
+                partner_id: Some(a),
                 offset: 0,
                 limit: 0,
             },
@@ -786,7 +796,7 @@ fn a_partner_take_past_its_return_by_day_is_in_the_attention_data() {
             show_finished: true,
             group_by_month: false,
             sort: None,
-            partner_id: w.partners[1],
+            partner_id: Some(w.partners[1]),
             offset: 0,
             limit: 0,
         },

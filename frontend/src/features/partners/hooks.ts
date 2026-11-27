@@ -3,7 +3,7 @@
 // lists are read again (PRD 17.1).
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDebouncedValue } from '../../shared/hooks';
+import { useDebouncedValue, usePagedQuery } from '../../shared/hooks';
 import {
   partnersCheckShares,
   partnersCreate,
@@ -35,13 +35,37 @@ export function usePartnerOverview() {
 
 /**
  * The open gardens and trips one partner is in, read when his compact line is opened (plan 76 point
- * 11). Never kept: what he paid and got back changes with every entry.
+ * 11), a page at a time for the days they were made in, with the backend's totals over the whole
+ * filter (plan 99, PRD FR-17.3, FR-19.11). Asked again whenever the list is opened: what he paid and
+ * got back changes with every entry, and every save of a partner posting reads the partners again.
  */
-export function usePartnerOpenVentures(partnerId: number, enabled: boolean) {
-  return useQuery({
-    queryKey: [...PARTNERS_KEY, 'open-ventures', partnerId],
-    queryFn: () => partnersOpenVentures(partnerId),
+export function usePartnerOpenVentures(
+  partnerId: number,
+  { from, to }: { from: string | null; to: string | null },
+  enabled: boolean,
+) {
+  return usePagedQuery({
+    screen: 'partners.ventures',
+    queryKey: [...PARTNERS_KEY, 'open-ventures', partnerId, from, to],
+    fetchPage: (offset, limit) =>
+      partnersOpenVentures({ partner_id: partnerId, from, to, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
     enabled,
+    keepPrevious: true,
+  });
+}
+
+/**
+ * The month of the newest open garden or trip a partner is in, `YYYY-MM`, or null when he is in none:
+ * the list opens on it (plan 99, PRD FR-17.3). The backend lists newest first, so its first row is it.
+ */
+export function usePartnerLatestVentureMonth(partnerId: number) {
+  return useQuery({
+    queryKey: [...PARTNERS_KEY, 'open-ventures-latest', partnerId],
+    queryFn: () =>
+      partnersOpenVentures({ partner_id: partnerId, from: null, to: null, offset: 0, limit: 1 }),
+    select: (page) => page.rows[0]?.entry_date.slice(0, 7) ?? null,
     staleTime: 0,
   });
 }

@@ -7,6 +7,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { ArrowLeft } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import type { AuditRow } from '../../../bindings/AuditRow';
+import { withoutSignChanges } from '../../../shared/edit';
 import { ListGrid } from '../../../shared/grid';
 import { Button, Card, Code, Num } from '../../../shared/ui';
 import { actionWord, entityWord } from '../words';
@@ -32,7 +33,8 @@ export function AuditDetail({ row, onBack }: AuditDetailProps) {
   const { l10n } = useLocalization();
   const text = (id: string) => l10n.getString(id);
   const changes = useMemo<ChangeRow[]>(
-    () => row.changes.map((change, index) => ({ key: String(index), change })),
+    // The Owner's sign is a secret, never shown even when an old row still holds it (PRD FR-7.71, v1.58).
+    () => withoutSignChanges(row.changes).map((change, index) => ({ key: String(index), change })),
     [row],
   );
   return (

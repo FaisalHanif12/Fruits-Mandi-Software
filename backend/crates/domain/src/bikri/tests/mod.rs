@@ -11,6 +11,7 @@ mod edit;
 mod own;
 mod properties;
 mod seller_paid;
+mod venture_cards;
 mod worked;
 
 use std::collections::{HashMap, HashSet};
@@ -227,6 +228,7 @@ pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
         phone: manual("20"),
         cash_paid: Some("5,000".into()),
         store_rent: None,
+        advance: None,
         adjust_advance: true,
         sales: Vec::new(),
     }

@@ -587,21 +587,30 @@ describe.each(LANGUAGES)('opening an entry from the cash book (%s)', (language) 
   /** The cash book answers with these rows. */
   function bookWith(...rows: object[]) {
     vi.mocked(cashbookApi.cashbookGet).mockResolvedValue({
+      total_capital_paisa: paisaForTest(0),
       opening_paisa: paisaForTest(0),
       closing_paisa: paisaForTest(0),
+      summary: [],
       rows: rows.map((row, index) => ({
         entry_id: 900 + index,
         entry_date: '2026-10-10',
         posting_type: 'shop_expense',
+        kind: 'shop_expense',
+        group: 'expense',
+        status: 'live',
         number: 3,
-        account: null,
+        refs: {
+          parties: [],
+          party_count: 0,
+          partner: null,
+          garden: null,
+          trip: null,
+          expense_head: null,
+        },
         narration: 'October bill',
         in_paisa: paisaForTest(0),
         out_paisa: paisaForTest(300_000),
         running_paisa: paisaForTest(-300_000),
-        // A row that is not an opening or a capital row (plan 78 E).
-        kind: 'other',
-        partner: null,
         ...row,
       })),
       total_count: rows.length,

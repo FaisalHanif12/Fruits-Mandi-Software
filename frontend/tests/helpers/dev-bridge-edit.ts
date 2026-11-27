@@ -95,8 +95,6 @@ const EXPENSE_HISTORY: EditHistory = {
         },
       ],
       changes_truncated: false,
-      // An edit of an open day has no sign (PRD FR-7.71).
-      sign: null,
     },
   ],
 };
@@ -183,24 +181,7 @@ export const editHandlers: Record<string, Handler> = {
     return DAY_FIX_OPEN_E2E_45;
   },
   day_fix_close: () => DAY_FIX_CLOSE_E2E_45,
-  // `?signed`: the edits carry the sign given when the day was reopened, as they do after plan 73.
-  audit_edit_stamp: () =>
-    devFlag('signed')
-      ? AUDIT_EDIT_STAMP_BIKRI.map((row) => ({
-          ...row,
-          stamp: row.stamp === null ? null : { ...row.stamp, sign: OWNER_SIGN },
-        }))
-      : AUDIT_EDIT_STAMP_BIKRI,
+  audit_edit_stamp: () => AUDIT_EDIT_STAMP_BIKRI,
   audit_edit_history: (input) =>
-    input['entity'] === 'voucher'
-      ? EXPENSE_HISTORY
-      : devFlag('signed')
-        ? {
-            ...AUDIT_EDIT_HISTORY_BIKRI,
-            versions: AUDIT_EDIT_HISTORY_BIKRI.versions.map((version) => ({
-              ...version,
-              sign: OWNER_SIGN,
-            })),
-          }
-        : AUDIT_EDIT_HISTORY_BIKRI,
+    input['entity'] === 'voucher' ? EXPENSE_HISTORY : AUDIT_EDIT_HISTORY_BIKRI,
 };

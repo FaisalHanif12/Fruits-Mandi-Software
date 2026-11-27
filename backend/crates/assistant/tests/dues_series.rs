@@ -41,7 +41,7 @@ fn today() -> BusinessDate {
 
 /// An opening of `account_id` on `date`: `dr` or `cr` in rupees (the other empty).
 fn open(w: &world::World, account_id: i64, date: &str, dr: &str, cr: &str) {
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &w.env.ctx,
         &w.owner,
         &OpeningsInput {
@@ -54,6 +54,8 @@ fn open(w: &world::World, account_id: i64, date: &str, dr: &str, cr: &str) {
                 opening_is_advance: false,
             }],
         },
+        // A party opening goes through روکڑ (PRD FR-10.9 v1.60): "yes" to the cash box.
+        true,
     )
     .unwrap();
 }

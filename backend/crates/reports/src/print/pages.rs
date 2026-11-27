@@ -178,6 +178,11 @@ fn seller_page(ctx: &Ctx, serial: String, lots: &[&SavedLot]) -> Result<PrintPag
         (NET_SALE, totals.net)
     };
     amounts.push(ctx.amount(net_label, net_shown, AmountRole::Total)?);
+    // پیشگی (PRD FR-12.52 v1.57): money he took as an advance with his goods. It is not a deduction
+    // (C6, C7), so it comes after the net, and only when there is one.
+    if totals.advance != Paisa::ZERO {
+        amounts.push(ctx.amount(SELLER_ADVANCE, totals.advance, line_role)?);
+    }
     Ok(PrintPage {
         serial,
         party,

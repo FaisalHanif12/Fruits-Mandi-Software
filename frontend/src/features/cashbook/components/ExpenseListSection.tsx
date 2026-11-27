@@ -1,8 +1,9 @@
 // The list under the خرچہ form (PRD 16.2, FR-16.2, FR-19.11): for دکان خرچہ the shop expenses of the
 // day in the date field, with their heads and the backend's total; for ذاتی خرچہ and its واپسی the
-// chosen partner's money taken, oldest first, with what was returned and what is still open. Both
-// load from the backend (the day's list in one call, the takes page by page with totals over the
-// whole list). Four states each: loading, an error with a retry, nothing yet, and the rows.
+// chosen partner's money taken, oldest first, with what was returned and what is still open, and with
+// no partner chosen every partner's takes, latest day first, with his name on each row (plan 98). Both
+// load from the backend (the day's list in one call, the takes page by page with totals over the whole
+// list). Four states each: loading, an error with a retry, nothing yet, and the rows.
 
 import { Localized } from '@fluent/react';
 import { HandCoins, ReceiptText } from 'lucide-react';
@@ -24,9 +25,10 @@ import { useDayStatus } from '../../../app/use-day-status';
 import { useVouchersList } from '../../vouchers';
 import { useOpenVoucher } from '../../../shared/edit';
 import { VoucherRowActions } from './VoucherRowActions';
-import { EXPENSE_DAY_COLUMNS, TAKE_COLUMNS } from '../list-columns';
+import { EXPENSE_DAY_COLUMNS, takeColumns } from '../list-columns';
 import { usePartnerTakes } from '../hooks';
 import type { ExpenseType } from '../screen-type';
+import type { TakeRow } from '../types';
 
 /** A pause so a burst of key presses in the search box asks once. */
 const SEARCH_DELAY_MS = 150;
@@ -115,7 +117,17 @@ function ShopDay({ day }: { day: string }) {
   );
 }
 
-function PartnerTakesList({ partnerId }: { partnerId: number }) {
+/**
+ * The identity of a row of money taken: the partner, where it came from and which entry (two partners may have an
+ * opening on one day). The grid also asks for the id of its totals row, an empty object, so a field may be missing.
+ */
+function takeRowId(row: Omit<TakeRow, 'partner'> & { partner?: TakeRow['partner'] }): string {
+  return `${String(row.partner?.id)}-${row.source}-${String(row.voucher_id ?? row.entry_date)}`;
+}
+
+/** The money taken: one partner's (`partnerId`), or every partner's with his name on each row (null, plan 98). */
+function PartnerTakesList({ partnerId }: { partnerId: number | null }) {
+  const everyone = partnerId === null;
   const open = useOpenVoucher();
   // A take that is fully returned is left out until the tick is on (plan 38 G6).
   const [showReturned, setShowReturned] = useState(false);
@@ -150,17 +162,17 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
         label={<Localized id="cashbook-show-returned" />}
       />
       <PagedList
-        columns={TAKE_COLUMNS}
+        columns={takeColumns(everyone)}
         rows={rows}
-        getRowId={(row) => `${row.source}-${String(row.voucher_id ?? row.entry_date)}`}
+        getRowId={takeRowId}
         // A row made by a voucher opens that voucher; an opening balance has no voucher.
         onOpen={(row) => {
           if (row.source === 'voucher' && row.voucher_id !== null) {
             open({ id: row.voucher_id, voucher_type: 'personal_expense' });
           }
         }}
-        labelId="cashbook-takes-label"
-        failedId="cashbook-takes-failed"
+        labelId={everyone ? 'cashbook-all-takes-title' : 'cashbook-takes-label'}
+        failedId={everyone ? 'cashbook-all-failed' : 'cashbook-takes-failed'}
         error={takes.isError ? uiErrorOf(takes.error) : null}
         onRetry={() => {
           void takes.refetch();
@@ -176,8 +188,12 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
         empty={
           <EmptyState
             icon={HandCoins}
-            title={<Localized id="cashbook-takes-empty" />}
-            help={<Localized id="cashbook-takes-empty-help" />}
+            title={
+              <Localized id={everyone ? 'cashbook-all-takes-empty' : 'cashbook-takes-empty'} />
+            }
+            help={
+              <Localized id={everyone ? 'cashbook-all-empty-help' : 'cashbook-takes-empty-help'} />
+            }
           />
         }
         totals={
@@ -199,23 +215,19 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
   );
 }
 
+/** The Fluent id of the card's title: the day's shop expenses, one partner's money, or every partner's (plan 98). */
+function titleIdOf(type: ExpenseType, partnerId: number | null): string {
+  if (type === 'shop_expense') return 'cashbook-day-title';
+  return partnerId === null ? 'cashbook-all-takes-title' : 'cashbook-takes-title';
+}
+
 export function ExpenseListSection({ type, day, partnerId }: ExpenseListSectionProps) {
-  const shop = type === 'shop_expense';
   return (
-    <Card
-      compact
-      icon={ReceiptText}
-      title={<Localized id={shop ? 'cashbook-day-title' : 'cashbook-takes-title'} />}
-    >
-      {shop ? (
+    <Card compact icon={ReceiptText} title={<Localized id={titleIdOf(type, partnerId)} />}>
+      {type === 'shop_expense' ? (
         <ShopDay day={day} />
-      ) : partnerId === null ? (
-        <EmptyState
-          icon={HandCoins}
-          title={<Localized id="cashbook-takes-pick" />}
-          help={<Localized id="cashbook-takes-pick-help" />}
-        />
       ) : (
+        // No partner chosen: every partner's money with his name on each row (plan 98), not a request to choose.
         <PartnerTakesList partnerId={partnerId} />
       )}
     </Card>

@@ -358,20 +358,23 @@ fn a_comparison_needs_both_dates_and_one_from_the_first_day_of_the_books_is_left
     let w = day();
     let mut s = Session::new(&w);
     s.period("up_to_now"); // r1: from is the first day of the books
-    // A `from` that is plainly empty (null) with a `to` is still refused, with the reason.
-    let e = s.refused(
-        "analytics",
-        analytics(
-            "A",
-            json!({"from": null, "to": "r1.to", "compare": "previous", "rows": 10}),
-        ),
-    );
-    let v = read(&e);
-    assert_eq!(v["error"]["code"], "ERR_REQUIRED");
-    assert_eq!(v["error"]["field"], "from");
-    let detail = v["error"]["detail"].as_str().unwrap();
-    assert!(detail.contains("both dates"), "{detail}");
-    assert!(detail.contains("this_year"), "{detail}");
+    // A `from` left empty with a `to` is no longer refused (a refusal cost a whole round in the
+    // live log, plan 99): the year of `to` is read from its first day, and the note says so. The
+    // earlier year is before the books, so the comparison is left out, as below.
+    let id = s
+        .run(
+            "analytics",
+            analytics(
+                "A",
+                json!({"from": null, "to": "r1.to", "compare": "previous", "rows": 10}),
+            ),
+        )
+        .expect("the missing end is filled");
+    let v = s.json(&id);
+    assert_eq!(v["filters"]["from"], "2026-01-01", "{v}");
+    let note = v["note"].as_str().expect("a note");
+    assert!(note.contains("from was not given"), "{note}");
+    assert!(note.contains("no earlier period"), "{note}");
     // The period `up_to_now` starts on the first day of the books: nothing is before it, so the
     // comparison is left out and the note says why. No figure is shown as new.
     let id = s

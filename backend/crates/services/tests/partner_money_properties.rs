@@ -302,7 +302,7 @@ fn check(w: &World, lent_person: i64) {
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
-                partner_id: partner,
+                partner_id: Some(partner),
                 offset: 0,
                 limit: 0,
             },

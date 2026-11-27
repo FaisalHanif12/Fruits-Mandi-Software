@@ -1,10 +1,12 @@
-// The facts of one garden (PRD 12.11, FR-12.34, FR-12.37, FR-12.38), in two cards so the entry form
-// comes right after the short one: the header (number, name, state, day, main fruit, end of the
-// season, a note, and the running balance and the rent still due in two lines, with the working
-// behind the balance's ⓘ) and, under the entry form, the figures (each partner with his % and where
-// his money comes from by default, the rent, what was paid from the shop and from pockets, the
-// money in, and the garden's account). The running balance starts in minus and is shown with its
-// sign: a minus is not an alarm here, it is the money paid and not yet back (FR-12.37).
+// The facts of one garden (PRD 12.11, FR-12.34, FR-12.37, FR-12.38), in two parts so the entry form
+// comes right after the short one: the header (number, name, state, the four key figures that are
+// always in view, the running balance, the rent still due, the commission and the money in, with the
+// working behind the ⓘ of the two that have one, then the day, the fruits, the end of the season and
+// a note) and, under the history, the figures that fold, open when the page opens (each partner with
+// his % and where his money comes from by default, the rent, what was paid from the shop and from
+// pockets, the money in, the garden's account, and each partner's money; plan 96, PRD FR-12.53). The
+// running balance starts in minus and is shown with its sign: a minus is not an alarm here, it is the
+// money paid and not yet back (FR-12.37).
 // Everything is the backend's; nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
@@ -18,12 +20,16 @@ import {
   Card,
   Code,
   Fact,
+  FoldSection,
+  IconChip,
   Num,
+  PartnerLockedBox,
   STATUS_CLOSED,
   STATUS_OPEN,
   StatusChip,
 } from '../../../shared/ui';
-import type { GardenRow } from '../types';
+import type { GardenPartnerResult, GardenRow } from '../types';
+import { GardenPartnersCard } from './GardenPartnersCard';
 
 interface GardenCardProps {
   garden: GardenRow;
@@ -49,26 +55,13 @@ function Line({
   );
 }
 
-/** The running balance and the rent still due: two lines, the balance with its working. */
-function BalanceLines({ garden }: GardenCardProps) {
-  const { l10n } = useLocalization();
+/**
+ * The four figures of the garden that are always in view, as small cards at the head of the header (plan 75,
+ * plan 96): the running balance and the commission with their working, the rent still due and the money in.
+ */
+function KeyFigures({ garden }: GardenCardProps) {
   return (
-    <dl className="flex flex-col">
-      <Line label={l10n.getString('gardens-balance')} strong>
-        <Num paisa={garden.balance_paisa} />
-        <CalcInfo working={garden.balance_working} inCell />
-      </Line>
-      <Line label={l10n.getString('gardens-rent-due')}>
-        <Num paisa={garden.rent_due_paisa} />
-      </Line>
-    </dl>
-  );
-}
-
-/** The running balance and the rent still due as two stat cards at the head of the header (plan 75). */
-function BalanceStats({ garden }: GardenCardProps) {
-  return (
-    <dl className="grid grid-cols-1 gap-3 @form2:grid-cols-2">
+    <dl className="grid grid-cols-2 gap-3 @form4:grid-cols-4">
       <Fact stat label={<Localized id="gardens-balance" />}>
         <span className="inline-flex items-center gap-1">
           <span>
@@ -79,6 +72,17 @@ function BalanceStats({ garden }: GardenCardProps) {
       </Fact>
       <Fact stat label={<Localized id="gardens-rent-due" />}>
         <Num inherit paisa={garden.rent_due_paisa} />
+      </Fact>
+      <Fact stat label={<Localized id="glossary-commission" />}>
+        <span className="inline-flex items-center gap-1">
+          <span>
+            <Num inherit paisa={garden.commission_paisa} />
+          </span>
+          <CalcInfo working={garden.commission_working} inCell />
+        </span>
+      </Fact>
+      <Fact stat label={<Localized id="gardens-fact-money-in" />}>
+        <Num inherit paisa={garden.money_in_paisa} />
       </Fact>
     </dl>
   );
@@ -108,7 +112,7 @@ export function GardenHeaderCard({ garden, onEdit }: GardenHeaderCardProps) {
       }
     >
       <div className="@container min-w-0 flex flex-col gap-3">
-        <BalanceStats garden={garden} />
+        <KeyFigures garden={garden} />
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 @form3:grid-cols-4">
           <Fact label={<Localized id="gardens-field-date" />}>
             <Code>{isoToDisplayDate(garden.entry_date)}</Code>
@@ -154,7 +158,21 @@ export function GardenHeaderCard({ garden, onEdit }: GardenHeaderCardProps) {
   );
 }
 
-export function GardenFiguresCard({ garden }: GardenCardProps) {
+interface GardenFiguresFoldProps extends GardenCardProps {
+  /** Each partner's money in the garden; not shown while the partner section is locked. */
+  results: readonly GardenPartnerResult[];
+  /** The partner code is not given: the partners' money is behind it (PRD FR-17.11). */
+  partnersLocked: boolean;
+  /** A closed garden shows the result of the closing; an open one shows what is paid so far. */
+  closed: boolean;
+}
+
+export function GardenFiguresFold({
+  garden,
+  results,
+  partnersLocked,
+  closed,
+}: GardenFiguresFoldProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   // After a relief (plan 78 D3, PRD FR-12.51) the rent is the one now; the rent the garden was made with, the
@@ -192,8 +210,16 @@ export function GardenFiguresCard({ garden }: GardenCardProps) {
     { id: 'account', message: 'gardens-fact-account', paisa: garden.account_balance_paisa },
   ];
   return (
-    <Card compact icon={Calculator} title={<Localized id="gardens-figures-title" />}>
-      <div className="@container min-w-0">
+    <FoldSection
+      defaultOpen
+      title={
+        <span className="inline-flex items-center gap-2">
+          <IconChip icon={Calculator} />
+          <Localized id="gardens-figures-title" />
+        </span>
+      }
+    >
+      <div className="@container flex min-w-0 flex-col gap-4">
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 @form3:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-1">
             <Localized id="gardens-partners-title">
@@ -239,16 +265,14 @@ export function GardenFiguresCard({ garden }: GardenCardProps) {
                 </Line>
               ))}
             </dl>
-            <dl className="flex flex-col">
-              <Line label={l10n.getString('glossary-commission')}>
-                <Num paisa={garden.commission_paisa} />
-                <CalcInfo working={garden.commission_working} inCell />
-              </Line>
-            </dl>
-            <BalanceLines garden={garden} />
           </div>
         </div>
+        {partnersLocked ? (
+          <PartnerLockedBox />
+        ) : (
+          <GardenPartnersCard results={results} closed={closed} bare />
+        )}
       </div>
-    </Card>
+    </FoldSection>
   );
 }

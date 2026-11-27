@@ -15,6 +15,7 @@ mod reports_world;
 #[path = "bikri_preview/support.rs"]
 mod support;
 
+use mandi_reports::reports::{ReportFilters, ReportId};
 use mandi_services::core::cashbook::CashbookInput;
 use mandi_services::core::edit::GardenHeaderEditInput;
 use mandi_services::core::error::{ErrorCode, ErrorValue};
@@ -284,7 +285,9 @@ fn a_relief_lowers_the_rent_still_due_and_the_loss_is_split_by_the_shares() {
         "{kept:?}"
     );
     assert_eq!(kept.2, "relief from the owner");
-    assert!(kept.1.contains("\"sign\":\"adnan\""), "{kept:?}");
+    // The audit says the sign was given, never the sign itself (PRD FR-21.4 v1.58).
+    assert!(kept.1.contains("\"sign_given\":true"), "{kept:?}");
+    assert!(!kept.1.contains("adnan"), "{kept:?}");
 }
 
 #[test]
@@ -334,6 +337,9 @@ fn the_owner_owes_what_was_paid_above_the_new_rent_and_pays_it_back_by_refund() 
             .iter()
             .any(|h| h.kind == GardenHistoryKind::Refund && rupees(h.amount_paisa) == 5_000)
     );
+    // R36 still reads the garden after a refund (the refund is money in that is no sale; before
+    // plan 99 the report failed on it).
+    report(&w, ReportId::R36, ReportFilters::default(), 0, 0);
     // Cancelling the refund puts the debt back.
     let entry = get(&w, garden.id)
         .history

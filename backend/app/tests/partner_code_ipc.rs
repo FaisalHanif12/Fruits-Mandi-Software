@@ -101,15 +101,6 @@ fn refused_commands() -> Vec<(&'static str, Value)> {
             json!({ "input": { "effective_from": "10-10-2026",
                 "shares": [{ "partner_id": 1, "share": "100" }] } }),
         ),
-        (
-            "partners_place_opening_capital",
-            json!({ "input": { "partner_ids": [1], "reason": "x", "sign": "adnan" } }),
-        ),
-        ("cashbook_capital_where", json!({})),
-        (
-            "cashbook_capital_print_data",
-            json!({ "input": { "language": "ur" } }),
-        ),
         ("partners_overview", json!({})),
         (
             "partners_statement",

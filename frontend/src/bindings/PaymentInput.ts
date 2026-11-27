@@ -18,7 +18,7 @@ export type PaymentInput = {
    */
   amount: string;
   /**
-   * Why. Required when the account is a buyer (cash lent, PRD FR-15.11). Empty otherwise.
+   * Why, for cash lent to a buyer (PRD FR-15.11). Optional (v1.60). Empty if none.
    */
   reason: string;
   /**

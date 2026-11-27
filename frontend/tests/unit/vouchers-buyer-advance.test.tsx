@@ -1,7 +1,7 @@
 // Plan 88, PRD 15.4, FR-15.11 (v1.51), FR-7.58, FR-7.60, FR-7.69: the پیشگی tab of the voucher screen
 // takes a buyer as well as a seller. The account box lists both, each marked in words; a seller
-// goes on as before (his advances, the expected goods); a buyer is cash lent: a reason is asked and
-// required, his open bills show under the form, and what is saved carries the reason and no
+// goes on as before (his advances, the expected goods); a buyer is cash lent, remembered as an advance
+// (v1.60): a reason can be typed, his open bills show under the form, and what is saved carries the reason and no
 // expected goods. Both languages, by keyboard, against a fake backend. The screen works out no
 // money: every figure shown is the fake backend's.
 
@@ -147,7 +147,7 @@ describe.each(LANGUAGES)('the پیشگی tab takes a buyer too (%s)', (language)
     expect(rows.some((row) => row.includes('0030'))).toBe(false);
   });
 
-  it('choosing a buyer shows his open bills and his card, asks for the reason and has no expected goods', async () => {
+  it('choosing a buyer shows his open bills and his card, offers the reason and has no expected goods', async () => {
     const user = await open();
     // Before anyone is chosen the field for a seller's goods is there.
     expect(
@@ -157,7 +157,7 @@ describe.each(LANGUAGES)('the پیشگی tab takes a buyer too (%s)', (language)
     const bills = await panelText(language, 'vouchers-bills-title');
     expect(bills).toContain('12,880');
     expect(await screen.findByText(message(language, 'assist-card-balance'))).toBeInTheDocument();
-    // The reason of cash lent is asked; a seller's expected goods are not.
+    // The reason of cash lent can be typed; a seller's expected goods are not there.
     expect(await labelled(language, 'vouchers-field-reason-lent')).toBeInTheDocument();
     expect(screen.queryByLabelText(named(message(language, 'vouchers-field-expected')))).toBeNull();
     // The seller's advances do not show for him.
@@ -166,16 +166,19 @@ describe.each(LANGUAGES)('the پیشگی tab takes a buyer too (%s)', (language)
     ).toBeNull();
   });
 
-  it('the reason is required: told at its field, and saving with it sends the buyer, the reason and no goods', async () => {
+  it('the reason is optional: nothing asks for it, and saving with it sends the buyer, the reason and no goods', async () => {
     const user = await open();
     await pick(user, language, '0020', '0020');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('3000');
     const reason = await labelled(language, 'vouchers-field-reason-lent');
     await waitFor(() => {
-      expect(reason).toHaveAttribute('aria-invalid', 'true');
+      expect(vouchersApi.vouchersPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ type: 'advance', amount: '3000' }),
+        null,
+      );
     });
-    expect(pageText()).toContain(message(language, 'err-payment-to-buyer-needs-reason'));
+    expect(reason).not.toHaveAttribute('aria-invalid', 'true');
     await user.click(reason);
     await user.keyboard('x');
     press('F10');
@@ -283,7 +286,7 @@ describe.each(LANGUAGES)('the پیشگی tab takes a buyer too (%s)', (language)
     expect(sent?.input).not.toHaveProperty('reason');
   });
 
-  it('saved, it says cash lent with its number in the payment series, and the advance list shows it with his type', async () => {
+  it("saved, it is named an advance with its number in the payment series, and the advance list says it was a buyer's advance", async () => {
     const user = await open();
     await pick(user, language, '0020', '0020');
     await user.click(await labelled(language, 'vouchers-field-amount'));
@@ -291,9 +294,9 @@ describe.each(LANGUAGES)('the پیشگی tab takes a buyer too (%s)', (language)
     await user.click(await labelled(language, 'vouchers-field-reason-lent'));
     await user.keyboard('x');
     press('F10');
-    // The backend saved it as a payment to him (cash lent): P-1, and the message names the cash lent.
+    // The backend saved it as a payment to him (cash lent), P-1, and remembers it as an advance (v1.60).
     const toast = message(language, 'vouchers-saved', {
-      kind: 'lent',
+      kind: 'buyer-advance',
       number: message(language, 'vouchers-number-payment', { number: 1 }),
     });
     expect(
@@ -308,7 +311,7 @@ describe.each(LANGUAGES)('the پیشگی tab takes a buyer too (%s)', (language)
     await waitFor(() => {
       expect(cell(501, 'number')).toBe(message(language, 'vouchers-number-payment', { number: 1 }));
     });
-    expect(cell(501, 'kind')).toBe(message(language, 'accounts-type-buyer'));
+    expect(cell(501, 'kind')).toBe(message(language, 'vouchers-kind-buyer-advance'));
     expect(cell(501, 'amount')).toBe('3,000');
   });
 
@@ -347,7 +350,8 @@ describe.each(LANGUAGES)('the پیشگی tab takes a buyer too (%s)', (language)
     expect(cell(601, 'number')).toBe(message(language, 'vouchers-number-advance', { number: 1 }));
     expect(cell(601, 'kind')).toBe(message(language, 'accounts-type-seller'));
     expect(cell(602, 'number')).toBe(message(language, 'vouchers-number-payment', { number: 2 }));
-    expect(cell(602, 'kind')).toBe(message(language, 'accounts-type-buyer'));
+    // Typed on the payment tab, so it is cash lent, not an advance.
+    expect(cell(602, 'kind')).toBe(message(language, 'vouchers-kind-buyer-lent'));
   });
 
   it("opening a buyer's cash lent from the advance list opens it on the payment tab, which edits a payment", async () => {

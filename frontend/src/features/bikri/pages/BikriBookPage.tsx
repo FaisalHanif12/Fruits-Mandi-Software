@@ -22,7 +22,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { ChevronLeft, FileText } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { BikriEdited } from '../../../bindings/BikriEdited';
@@ -37,7 +37,13 @@ import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import type { EntryRow } from '../../../shared/grid';
-import { isFromStep, useLayoutStep, useRefusalIntoView } from '../../../shared/hooks';
+import {
+  NoticePulseContext,
+  holdScroll,
+  isFromStep,
+  useLayoutStep,
+  useRefusalIntoView,
+} from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -45,7 +51,6 @@ import {
   CashNote,
   Code,
   EmptyState,
-  ErrorNotice,
   ErrorState,
   InfoHint,
   LinkButton,
@@ -106,6 +111,7 @@ import { ArrivalLotPanel } from '../components/ArrivalLotPanel';
 import { OwnLotPanel } from '../components/OwnLotPanel';
 import { LotsSection } from '../components/LotsSection';
 import { ProblemList } from '../components/ProblemList';
+import { TimedErrorNotice } from '../components/TimedErrorNotice';
 import { ActiveLine, SalesSection } from '../components/SalesSection';
 import { NumbersStrip } from '../components/NumbersStrip';
 import { SplitPanel } from '../components/SplitPanel';
@@ -120,10 +126,15 @@ import {
 } from '../draft-store';
 import { buildDraft, isArrivalLot, isCarriedLot, isFilledByUser, isOwnLot } from '../draft';
 import { useGridViews } from '../hooks/useGridViews';
-import { LotCountersProvider, lotLabelVars, useLotCounters, useLotWho } from '../lot-name';
+import {
+  LotCountersProvider,
+  lotLabelVars,
+  useLotCounters,
+  useLotWho,
+  type LotCounters,
+} from '../lot-name';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
-import { useSellerPaidSpread } from '../hooks/useSellerPaidSpread';
 import { LOT_GRID_FIELD, LOT_OWN_FIELD, problemsOf, type Problem } from '../problems';
 import { LOT, SALE } from '../types';
 
@@ -214,6 +225,26 @@ function removableLot(firstPosting: boolean): (row: EntryRow) => boolean {
   return (row) => (row.typed[LOT.lotId] ?? '') === '' || (firstPosting && !isCarriedLot(row));
 }
 
+/**
+ * The two things the whole screen hands down: the lot numbers, and the count of the user's repeated actions that shows a hidden
+ * note again (plan 97 item 4). One component, so the body of the screen keeps its place in the tree.
+ */
+function ScreenProviders({
+  lotCounters,
+  pulse,
+  children,
+}: {
+  lotCounters: LotCounters;
+  pulse: number;
+  children: ReactNode;
+}) {
+  return (
+    <LotCountersProvider value={lotCounters}>
+      <NoticePulseContext.Provider value={pulse}>{children}</NoticePulseContext.Provider>
+    </LotCountersProvider>
+  );
+}
+
 function Editor({ onOpenSaved, mode }: EditorProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
@@ -252,8 +283,6 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const reopened = useFixStore((state) => state.session);
   const inSection = useSectionTabs() !== null;
   useDraftFills(stores, preview, stale);
-  // An amount typed in a seller's summary is spread over his lots' نقد by the backend (plan 91).
-  const spreading = useSellerPaidSpread(stores, entryId ?? null);
 
   // Safety and saving (plan 13). The draft goes to the backend every 5 seconds; a save stops that.
   // An edit has no draft of its own and never touches the draft of a new بکری (plan 16).
@@ -299,6 +328,16 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   /** F10: an edit of an earlier day asks for the reason first (plan 16). */
   // Each try to save, so the error bubble of the date shows again (plan 93 T8).
   const [saveTries, setSaveTries] = useState(0);
+  // Each change the user makes in the lots or the lines, so a lot warning that has hidden shows again (PRD FR-12.52).
+  const [typingPulse, setTypingPulse] = useState(0);
+  const bumpTyping = () => {
+    setTypingPulse((count) => count + 1);
+  };
+  // An Enter in the lots or the lines is the same action again too: a cell that was refused keeps the cursor on Enter, and
+  // the note of its problem shows again (plan 97 item 4).
+  const bumpOnEnter = (event: { key: string }) => {
+    if (event.key === 'Enter') bumpTyping();
+  };
   const trySave = (andNext: boolean) => {
     setSaveTries((count) => count + 1);
     if (edit !== null) {
@@ -487,6 +526,26 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
         : null);
 
   const rootRef = useRef<HTMLDivElement>(null);
+  // The box the screen scrolls in. A press on a cell of the lots does not move it (plan 95 item 7).
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // The button beside a lot's seller (plan 95 item 6, PRD FR-12.52): that lot is selected and its sale lines are brought into
+  // view; a lot that is sold out shows its summary instead (FR-12.49), where the dropdown already names it.
+  const showLot = (rowId: string) => {
+    const view = stores.view.getState();
+    view.setWhole(false);
+    view.select(rowId);
+    const soldOut = preview?.lots.find((lot) => lot.key === rowId)?.balance_qty === 0;
+    if (!soldOut) stores.focusSaleLine(rowId, 0, SALE.buyer);
+    // The lines of the lot are drawn after the selection: look for the heading once they are.
+    window.setTimeout(() => {
+      const heading = rootRef.current?.querySelector(
+        soldOut ? '#bikri-summary-heading' : '#bikri-sales-heading',
+      );
+      if (heading instanceof HTMLElement && typeof heading.scrollIntoView === 'function') {
+        heading.scrollIntoView({ block: 'start' });
+      }
+    }, 0);
+  };
   // A refusal above the grid he is typing in is brought into view (never left unseen).
   useRefusalIntoView(rootRef, refused);
   /** The next thing to type after the date: the first seller. */
@@ -538,7 +597,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   // column of their own in a wide window, and under the sale lines in the others (F22).
   const numbers = (
     <>
-      {preview === undefined ? null : <CashNote cash={preview.cash} />}
+      {preview === undefined ? null : <CashNote cash={preview.cash} fade />}
       {query.isError ? (
         <ErrorState
           title={<Localized id="bikri-preview-failed" />}
@@ -572,7 +631,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
               <AdvanceTicks
                 shown={whole ? lotRows : lotRows.slice(lotIndex, lotIndex + 1)}
                 sellers={preview.sellers}
-                spreading={spreading}
+                gardens={preview.gardens}
+                trips={preview.trips}
+                previewLots={preview.lots}
+                whole={whole}
               />
             }
           />
@@ -602,7 +664,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const dirty = edit === null ? isFilledByUser(draft) : !edit.done && !(diff?.unchanged ?? true);
 
   return (
-    <LotCountersProvider value={lotCounters}>
+    <ScreenProviders lotCounters={lotCounters} pulse={saveTries + typingPulse}>
       <div ref={rootRef} className="fill-to-corner flex min-h-0 flex-col gap-3 short:gap-2">
         {/* The screen scrolls in this area, and it runs down to the status bar through the band the shell
           keeps under every screen for the round assistant button (`fill-to-corner`), so nothing is cut
@@ -612,6 +674,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
         {/* `relative`: this scroll box holds drop-downs (Radix Select keeps a hidden native <select> beside each), and
           it must be their containing block, or the screen under the shell scrolls instead (plan 92). */}
         <div
+          ref={scrollRef}
           className={`no-scrollbar relative flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 short:gap-2 ${
             stripShown ? 'pb-4' : 'pb-corner'
           }`}
@@ -732,7 +795,10 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             />
           ) : null}
           {refused === null ? null : (
-            <ErrorNotice error={refused} fieldsShown={refusedItems.map((item) => item.field)} />
+            <TimedErrorNotice
+              error={refused}
+              fieldsShown={refusedItems.map((item) => item.field)}
+            />
           )}
           {edit === null ? null : (
             <>
@@ -759,6 +825,19 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                 className="flex flex-col gap-2"
                 onFocusCapture={() => {
                   setRegion('lots');
+                }}
+                onInputCapture={bumpTyping}
+                onKeyDownCapture={bumpOnEnter}
+                onPointerDownCapture={(event) => {
+                  // The button beside a lot's seller scrolls on purpose, so it is not held (plan 95 item 6).
+                  const pressed = event.target;
+                  if (
+                    pressed instanceof Element &&
+                    pressed.closest('[data-cell-button]') !== null
+                  ) {
+                    return;
+                  }
+                  if (scrollRef.current !== null) holdScroll(scrollRef.current);
                 }}
               >
                 <LotsSection
@@ -793,6 +872,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   cellChanged={lotChanged}
                   cellMarks={lotMarks}
                   canRemoveRow={canRemoveLot}
+                  onShowLot={showLot}
                 />
                 {lotRow === undefined || !isOwnLot(lotRow) ? null : (
                   <OwnLotPanel
@@ -824,6 +904,8 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                 onFocusCapture={() => {
                   setRegion('sales');
                 }}
+                onInputCapture={bumpTyping}
+                onKeyDownCapture={bumpOnEnter}
               >
                 <SalesSection
                   lotKey={lotKey}
@@ -834,6 +916,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   card={wide ? null : card}
                   cellChanged={saleChanged}
                   cellMarks={saleMarks}
+                  soldOut={(key) => preview?.lots.find((lot) => lot.key === key)?.balance_qty === 0}
                 />
               </div>
               {wide ? null : numbers}
@@ -944,7 +1027,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             : {})}
         />
       </div>
-    </LotCountersProvider>
+    </ScreenProviders>
   );
 }
 

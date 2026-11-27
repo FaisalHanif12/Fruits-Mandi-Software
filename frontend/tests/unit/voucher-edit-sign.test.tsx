@@ -214,13 +214,14 @@ describe.each(LANGUAGES)(
       expect(
         (await screen.findAllByText((content) => visible(content) === toast)).length,
       ).toBeGreaterThan(0);
-      // The entry shows its stamp with the reason and the sign (PRD FR-7.71).
+      // The entry shows its stamp with the reason, and never the sign (PRD FR-7.71, v1.58).
       await waitFor(() => {
         expect(document.querySelector('[data-edit-stamp]')).not.toBeNull();
       });
       const stamp = visible(document.querySelector('[data-edit-stamp]')?.textContent);
       expect(stamp).toContain('wrong amount');
-      expect(stamp).toContain(`${m('glossary-dastakhat')}: adnan`);
+      expect(stamp).not.toContain('adnan');
+      expect(stamp).not.toContain(m('glossary-dastakhat'));
     });
 
     it('keyboard only: F10, the reason, Enter to the sign, the sign, then F10 saves', async () => {

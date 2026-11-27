@@ -9,8 +9,10 @@ use ts_rs::TS;
 mod combine;
 mod compound;
 mod forward;
+mod glued;
 mod graphemes;
 mod letters;
+mod loose;
 mod model;
 mod phrase;
 mod reverse;
@@ -66,7 +68,8 @@ pub fn suggest_to_english(text: &str, learned: &[LearnedPair], list: &WordList) 
 
 /// The same suggestions as [`suggest_to_urdu`] and [`suggest_to_english`], each with where it
 /// came from (Tech Stack 4.4 v1.2, PRD FR-7.66). The screen marks a word whose source is
-/// `rules` with "check the spelling".
+/// `rules` with "check the spelling". Names come first, as in a name field; a free-text field
+/// uses [`suggest_for`].
 ///
 /// ```
 /// use mandi_core::translit::{Direction, Source, WordList, suggest};
@@ -80,7 +83,37 @@ pub fn suggest(
     list: &WordList,
     direction: Direction,
 ) -> Vec<Suggestion> {
-    phrase::suggest(text, learned, list, direction)
+    suggest_for(text, learned, list, direction, &Hint::default())
+}
+
+/// What the screen knows about the field being typed in (plan 99).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Hint<'a> {
+    /// The kind of the field: [`Kind::Word`] for free text (reasons, narrations, notes),
+    /// where everyday words come first. A name kind, or none, means a name field, where
+    /// names come first.
+    pub kind: Option<Kind>,
+    /// The text of the field before the word being typed. Its last word helps to choose:
+    /// after کہا, `ke` is کہ.
+    pub before: Option<&'a str>,
+}
+
+/// [`suggest`] for a field the screen describes (PRD FR-7.22, NFR-URD-30).
+///
+/// ```
+/// use mandi_core::translit::{Direction, Hint, Kind, WordList, suggest_for};
+/// let free_text = Hint { kind: Some(Kind::Word), before: None };
+/// let got = suggest_for("hai", &[], WordList::embedded(), Direction::ToUrdu, &free_text);
+/// assert_eq!(got[0].text, "ہے");
+/// ```
+pub fn suggest_for(
+    text: &str,
+    learned: &[LearnedPair],
+    list: &WordList,
+    direction: Direction,
+    hint: &Hint<'_>,
+) -> Vec<Suggestion> {
+    phrase::suggest(text, learned, list, direction, hint)
 }
 
 fn texts(suggestions: Vec<Suggestion>) -> Vec<String> {

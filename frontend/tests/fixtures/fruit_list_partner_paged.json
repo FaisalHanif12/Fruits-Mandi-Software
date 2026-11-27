@@ -41,6 +41,8 @@
       "weight_grams": null,
       "rate_paisa": 58000,
       "value_paisa": 116000,
+      "deduction_paisa": 0,
+      "gross_paisa": 116000,
       "note": null,
       "status": "saved",
       "cancel_reason": null,
@@ -66,7 +68,9 @@
   "total_count": 1,
   "totals": {
     "qty": 2,
-    "value_paisa": 116000
+    "value_paisa": 116000,
+    "deduction_paisa": 0,
+    "gross_paisa": 116000
   },
   "months": [],
   "partners_locked": false

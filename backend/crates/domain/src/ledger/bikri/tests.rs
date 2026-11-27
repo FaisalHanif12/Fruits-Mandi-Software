@@ -77,6 +77,7 @@ fn event1_lot() -> JournalLot {
         partner_credits: Vec::new(),
         seller_credit: p(24_316),
         cash_paid: p(5_000),
+        advance: Paisa::ZERO,
         freight_deducted: p(3_000),
         labour: p(250),
         munshiana: p(50),
@@ -127,6 +128,7 @@ fn event_2_cash_line_of_a_chukta_buyer_is_25_600() {
         partner_credits: Vec::new(),
         seller_credit: p(10_160),
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: p(1_000),
         labour: p(50),
         munshiana: p(50),
@@ -170,6 +172,7 @@ fn a_negative_seller_credit_is_a_debit_on_the_seller() {
         partner_credits: Vec::new(),
         seller_credit: p(-2_436),
         cash_paid: p(5_000),
+        advance: Paisa::ZERO,
         freight_deducted: p(3_000),
         labour: Paisa::ZERO,
         munshiana: Paisa::ZERO,
@@ -193,6 +196,7 @@ fn a_seller_credit_of_exactly_zero_makes_no_seller_line() {
         partner_credits: Vec::new(),
         seller_credit: Paisa::ZERO,
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: p(940),
         labour: Paisa::ZERO,
         munshiana: Paisa::ZERO,
@@ -220,6 +224,7 @@ fn a_negative_rate_difference_is_a_debit_on_rate_diff() {
         // 12,000 + 17,400 - 1,764 = 27,636
         seller_credit: p(27_636),
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: Paisa::ZERO,
         labour: Paisa::ZERO,
         munshiana: Paisa::ZERO,
@@ -272,6 +277,7 @@ fn nothing_to_post_is_an_error_and_a_huge_entry_is_too_large() {
         partner_credits: Vec::new(),
         seller_credit: p(huge),
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: Paisa::ZERO,
         labour: Paisa::ZERO,
         munshiana: Paisa::ZERO,
@@ -331,6 +337,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
         partner_credits: Vec::new(),
         seller_credit: p(10_160),
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: p(1_000),
         labour: p(50),
         munshiana: p(50),
@@ -363,6 +370,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
         partner_credits: Vec::new(),
         seller_credit: p(-2_436),
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: p(3_000),
         labour: Paisa::ZERO,
         munshiana: Paisa::ZERO,
@@ -388,6 +396,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
                 partner_credits: Vec::new(),
                 seller_credit: p(-2_436),
                 cash_paid: Paisa::ZERO,
+                advance: Paisa::ZERO,
                 freight_deducted: p(3_000),
                 labour: Paisa::ZERO,
                 munshiana: Paisa::ZERO,
@@ -421,6 +430,7 @@ fn trip_lot(credit: i64, parts: [i64; 3], total: i64, comm: i64, laga: i64) -> J
         ],
         seller_credit: p(credit),
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: Paisa::ZERO,
         labour: Paisa::ZERO,
         munshiana: Paisa::ZERO,
@@ -481,6 +491,7 @@ fn d8_lot(paid: [i64; 3]) -> JournalLot {
         partner_credits: Vec::new(),
         seller_credit: p(160_080),
         cash_paid: Paisa::ZERO,
+        advance: Paisa::ZERO,
         freight_deducted: p(10_000),
         labour: p(1_000),
         munshiana: Paisa::ZERO,
@@ -578,4 +589,54 @@ fn every_amount_of_paid_between_zero_and_the_total_gives_a_balanced_entry() {
         assert_eq!(side_sum(&entry, AKRAM, Cr), paid, "paid {paid}");
         assert_eq!(side_sum(&entry, CASH, Dr), paid, "paid {paid}");
     }
+}
+
+// ---- the پیشگی entry of the lots (PRD FR-12.52 v1.57, plan 95) ----
+
+#[test]
+fn the_advance_entry_has_a_flagged_debit_for_each_lot_with_one_and_one_cash_credit() {
+    let id = AccountId::new;
+    // عدنان's lot 20,000 and کریم's lot 3,000; a middle lot with none gets no line.
+    let (entry, places) = build_lot_advance_entry(
+        &[
+            (id(RAHIM), p(20_000)),
+            (id(AKRAM), Paisa::ZERO),
+            (id(KARIM), p(3_000)),
+        ],
+        id(CASH),
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(entry.total(), p(23_000));
+    assert_eq!(entry.lines().len(), 3);
+    // Each lot's line is an advance debit on its seller, in lot order; lot 1 has none.
+    assert_eq!(places, vec![(0, 0), (2, 1)]);
+    assert!(entry.lines()[0].is_advance && entry.lines()[0].side == Dr);
+    assert!(entry.lines()[1].is_advance && entry.lines()[1].side == Dr);
+    assert_eq!(side_sum(&entry, RAHIM, Dr), 20_000);
+    assert_eq!(side_sum(&entry, KARIM, Dr), 3_000);
+    // One cash credit of the whole, never flagged.
+    assert_eq!(side_sum(&entry, CASH, Cr), 23_000);
+    assert!(!entry.lines()[2].is_advance);
+}
+
+#[test]
+fn two_lots_of_one_seller_keep_their_own_lines_and_no_advance_means_no_entry() {
+    let id = AccountId::new;
+    let (entry, places) =
+        build_lot_advance_entry(&[(id(RAHIM), p(20_000)), (id(RAHIM), p(5_000))], id(CASH))
+            .unwrap()
+            .unwrap();
+    assert_eq!(places, vec![(0, 0), (1, 1)]);
+    assert_eq!(side_sum(&entry, RAHIM, Dr), 25_000);
+    assert_eq!(side_sum(&entry, CASH, Cr), 25_000);
+    assert!(
+        build_lot_advance_entry(&[(id(RAHIM), Paisa::ZERO)], id(CASH))
+            .unwrap()
+            .is_none()
+    );
+    assert!(build_lot_advance_entry(&[], id(CASH)).unwrap().is_none());
+    // A negative amount is a bug of the caller, refused before anything is written.
+    let negative = Paisa::try_from_paisa(-100).unwrap();
+    assert!(build_lot_advance_entry(&[(id(RAHIM), negative)], id(CASH)).is_err());
 }

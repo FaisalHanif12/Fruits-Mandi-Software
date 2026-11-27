@@ -980,6 +980,7 @@ pub(crate) fn cards_of_partner(
         cards.push(PartnerVentureCard {
             venture_id: garden.rec.id,
             kind: VentureKind::Garden,
+            entry_date: garden.rec.entry_date.clone(),
             number: garden.rec.number,
             code: mandi_domain::core::codes::number_code(
                 mandi_domain::core::codes::CodeType::Garden,

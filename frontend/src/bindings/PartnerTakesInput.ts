@@ -6,9 +6,11 @@ import type { SortInput } from './SortInput';
  */
 export type PartnerTakesInput = {
   /**
-   * The partner. `ERR_NOT_FOUND` on `partner_id`.
+   * The partner. Null (or left out) means every partner (plan 98): each row then names its
+   * partner. A partner made inactive is listed while he has takes in the range.
+   * `ERR_NOT_FOUND` on `partner_id`.
    */
-  partner_id: number;
+  partner_id?: number | null;
   /**
    * First day of the range, `DD-MM-YYYY` or a shortcut. Null or empty means no lower limit
    * (plan 76 point 8: a screen sends the first day of its month). The rows, the count, the

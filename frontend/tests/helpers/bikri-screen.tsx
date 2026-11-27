@@ -126,6 +126,35 @@ export async function openBook(
 }
 
 /**
+ * Waits until the picker cell of the lot grid has the cursor and its list field is open. The cell
+ * opens it a moment after it gets the cursor, and a key pressed in between goes to the cell and is
+ * lost (see `typeCodeAndEnter`), so a person waits for it, and so does the test. An editor that does
+ * not open by itself is opened by the first key, as before.
+ */
+async function pickerCellReady(lots: HTMLElement, cell: string) {
+  await waitFor(() => {
+    expect(focusedIn(lots)).toBe(cell);
+  });
+  await waitFor(
+    () => {
+      expect(document.activeElement?.tagName).toBe('INPUT');
+    },
+    { timeout: 8_000 },
+  ).catch(() => undefined);
+}
+
+/** Enter keeps the item and the packing the seller's memory filled, then the quantity has the cursor. */
+async function passItemAndPacking(user: User, lots: HTMLElement) {
+  await pickerCellReady(lots, '0:item');
+  await user.keyboard('{Enter}');
+  await pickerCellReady(lots, '0:packing');
+  await user.keyboard('{Enter}');
+  await waitFor(() => {
+    expect(focusedIn(lots)).not.toBe('0:packing');
+  });
+}
+
+/**
  * Types the lot of Event 1 with the keys only. The header is only the date (plan 71 H1): it has the
  * cursor when the screen opens, and Enter goes on to the first lot's seller. The seller is typed as
  * his short code (`0` is Rahim, 0010); his item and packing come from his last lot. Then the lot's
@@ -145,7 +174,8 @@ export async function typeHeaderAndLot(user: User, language: Language) {
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
   });
   // Picking the seller moved on to the item: the item and the packing, then the quantity.
-  await user.keyboard('{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
+  await passItemAndPacking(user, lots);
+  await user.keyboard('50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
   await waitFor(() => {
     expect(focusedIn(salesGrid(language))).toBe('0:buyer');
   });
@@ -164,7 +194,26 @@ export async function expectNewEmptyBook(language: Language) {
   });
 }
 
-/** Types the two sale lines of Event 1: Akram 20 at 600 and Arshad 30 at 580. */
+/**
+ * Types the first sale line of Event 1, Akram 20 at 600. The lot of 50 has 30 left, so the last Enter adds a second
+ * line and the cursor ends on its buyer. Use it where a test needs a free line to type in (PRD FR-7.52).
+ */
+export async function typeFirstLine(user: User, language: Language) {
+  const sales = salesGrid(language);
+  await user.keyboard('0{Enter}');
+  await waitFor(() => {
+    expect(focusedIn(sales)).toBe('0:qty');
+  });
+  await user.keyboard('20{Enter}600{Enter}{Enter}');
+  await waitFor(() => {
+    expect(focusedIn(sales)).toBe('1:buyer');
+  });
+}
+
+/**
+ * Types the two sale lines of Event 1: Akram 20 at 600 and Arshad 30 at 580. They sell the whole lot of 50, so the last
+ * Enter adds no line and the cursor stays on the paid cell of the second line (PRD FR-12.52, plan 97 item 2).
+ */
 export async function typeTwoLines(user: User, language: Language) {
   const sales = salesGrid(language);
   await user.keyboard('0{Enter}');
@@ -180,7 +229,21 @@ export async function typeTwoLines(user: User, language: Language) {
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('1:qty');
   });
-  await user.keyboard('{Enter}580{Enter}{Enter}');
+  await user.keyboard('{Enter}580{Enter}');
+  // The lot is known to be sold out only when the backend's answer for the second line is in (its total is 18,684). The
+  // last Enter would add a blank line before that, so a busy machine could give either screen: wait for the answer.
+  // A test whose preview has no such figure (a failing preview) goes on after a few seconds, as it did before.
+  try {
+    await waitFor(
+      () => {
+        expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
+      },
+      { timeout: 4000 },
+    );
+  } catch {
+    // No figure to wait for: the Enter below is the user's, as typed.
+  }
+  await user.keyboard('{Enter}');
 }
 
 /** Types a picker field and takes the first match: waits for the list, so Enter finds it. */
@@ -210,7 +273,8 @@ export async function typeEvent1Lot(user: User, language: Language) {
   await waitFor(() => {
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
   });
-  await user.keyboard('{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
+  await passItemAndPacking(user, lots);
+  await user.keyboard('50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
   await waitFor(() => {
     expect(focusedIn(salesGrid(language))).toBe('0:buyer');
   });
@@ -245,6 +309,15 @@ export async function typeEvent1Lot(user: User, language: Language) {
  * person looking at the screen does.
  */
 export async function typeCodeAndEnter(user: User, code: string) {
+  // A picker cell opens its editor by itself as soon as it has the focus (plan 46), and the field gets the focus a moment
+  // later. A key pressed in between goes to the cell and is lost, so a test that has just moved to the cell waits for the
+  // field a little first, as a person does. If the editor does not open by itself, the first key opens it, as before.
+  await waitFor(
+    () => {
+      expect(document.activeElement?.tagName).toBe('INPUT');
+    },
+    { timeout: 1_500 },
+  ).catch(() => undefined);
   await user.keyboard(code.slice(0, 1));
   await waitFor(
     () => {
@@ -254,6 +327,15 @@ export async function typeCodeAndEnter(user: User, code: string) {
   );
   if (code.length > 1) await user.keyboard(code.slice(1));
   await screen.findAllByRole('option', undefined, { timeout: 8_000 });
+  // The list shows its matches a moment before it highlights the first one. An Enter in between takes nothing, so a busy
+  // computer (or a cell that has more to draw) makes a test flaky; a person looking at the screen waits for the highlight.
+  // A list that never highlights (no match) is not waited for.
+  await waitFor(
+    () => {
+      expect(document.activeElement?.getAttribute('aria-activedescendant') ?? '').not.toBe('');
+    },
+    { timeout: 3_000 },
+  ).catch(() => undefined);
   await user.keyboard('{Enter}');
 }
 

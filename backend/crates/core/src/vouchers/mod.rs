@@ -214,10 +214,9 @@ pub struct AdvanceInput {
     /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` and nothing is written.
     #[serde(default)]
     pub confirm_cash_below_zero: bool,
-    /// Why. Needed only when the account is a buyer: a پیشگی to a buyer is cash lent to him and is
-    /// saved as a payment to him (PRD 15.4, FR-15.11, v1.51), which asks for a reason
-    /// (`ERR_PAYMENT_TO_BUYER_NEEDS_REASON` at `reason`). Ignored for a seller. Missing or empty
-    /// means none.
+    /// Why, when the account is a buyer: a پیشگی to a buyer is cash lent to him and is saved as a
+    /// payment to him (PRD 15.4, FR-15.11, v1.51) marked `entered_as` `advance`. Optional (v1.60).
+    /// Ignored for a seller. Missing or empty means none.
     #[serde(default)]
     #[ts(optional)]
     pub reason: Option<String>,
@@ -368,6 +367,31 @@ pub struct VouchersTotals {
     pub total_paisa: Option<Paisa>,
 }
 
+/// How a voucher was typed, when that differs from what it posts as (PRD FR-15.11 v1.60).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum VoucherEnteredAs {
+    /// A پیشگی to a buyer, saved as cash lent (a payment).
+    Advance,
+}
+
+impl VoucherEnteredAs {
+    /// The stored form in `vouchers.entered_as`.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            VoucherEnteredAs::Advance => "advance",
+        }
+    }
+
+    /// Reads [`VoucherEnteredAs::as_str`] back.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "advance" => Some(VoucherEnteredAs::Advance),
+            _ => None,
+        }
+    }
+}
+
 /// A voucher in the list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct VoucherRow {
@@ -376,6 +400,10 @@ pub struct VoucherRow {
     pub id: i64,
     /// The kind.
     pub voucher_type: VoucherType,
+    /// `advance` for a payment to a buyer that was typed as a پیشگی (PRD FR-15.11 v1.60): the
+    /// screens and the پیشگی list name it پیشگی; its number is still in the ادائیگی series and its
+    /// posting is the payment's. Null for every other voucher.
+    pub entered_as: Option<VoucherEnteredAs>,
     /// The number in its series.
     #[ts(type = "number")]
     pub number: i64,
@@ -440,7 +468,8 @@ pub struct AssistAdvancesInput {
 /// One advance that is not yet fully adjusted.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct OpenAdvance {
-    /// `voucher` for a پیشگی voucher, `opening` for an opening debit marked as an advance.
+    /// `voucher` for a پیشگی voucher, `opening` for an opening debit marked as an advance, `bikri`
+    /// for the پیشگی typed on a lot of a بکری (PRD FR-12.52 v1.57).
     pub source: String,
     /// The voucher number, for source `voucher`.
     #[ts(type = "number | null")]
@@ -458,7 +487,8 @@ pub struct OpenAdvance {
     pub open_paisa: Paisa,
 }
 
-/// The last advance given to a seller.
+/// The last advance given to a seller: a پیشگی voucher or the پیشگی typed on a lot (PRD FR-7.60,
+/// FR-12.52 v1.57).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct LastAdvance {
     /// The day, `YYYY-MM-DD`.
@@ -466,9 +496,12 @@ pub struct LastAdvance {
     /// The amount.
     #[ts(type = "Paisa")]
     pub amount_paisa: Paisa,
-    /// The voucher number.
-    #[ts(type = "number")]
-    pub voucher_number: i64,
+    /// The voucher number; null for the پیشگی typed on a lot (then `bikri_number` is set).
+    #[ts(type = "number | null")]
+    pub voucher_number: Option<i64>,
+    /// The بکری number of a پیشگی typed on a lot (PRD FR-12.52 v1.57); null for a voucher.
+    #[ts(type = "number | null")]
+    pub bikri_number: Option<i64>,
 }
 
 /// A seller's advances for the card in the پیشگی screen (PRD FR-7.60). Read only.

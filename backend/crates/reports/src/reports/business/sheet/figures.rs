@@ -89,6 +89,9 @@ pub(super) struct SellerDay {
     pub(super) has_other: bool,
     /// As on a buyer's day: the opening balance of the day, part of `other` (plan 78 A6).
     pub(super) opening: Paisa,
+    /// پیشگی the seller took with the lots of the day (PRD FR-12.52 v1.57): part of `other`, which a
+    /// seller's slip writes on a line of its own.
+    pub(super) advance: Paisa,
     pub(super) has_other_beyond_opening: bool,
     pub(super) left: Paisa,
     pub(super) new: Paisa,
@@ -435,6 +438,7 @@ fn seller_day(
     let (mut freight, mut labour, mut munshiana, mut phone) =
         (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
     let (mut store_rent, mut cash_given) = (Paisa::ZERO, Paisa::ZERO);
+    let mut advance = Paisa::ZERO;
     for c in charges {
         add(&mut freight, c.freight)?;
         add(&mut labour, c.labour)?;
@@ -442,6 +446,7 @@ fn seller_day(
         add(&mut phone, c.phone)?;
         add(&mut store_rent, c.store_rent)?;
         add(&mut cash_given, c.cash)?;
+        add(&mut advance, c.advance)?;
     }
     let mut deductions = commission;
     for part in [freight, labour, munshiana, phone, store_rent] {
@@ -469,7 +474,11 @@ fn seller_day(
     }
     let other = other_dr.checked_sub(other_cr)?;
     let opening = today.opening_dr.checked_sub(today.opening_cr)?;
-    let beyond = other_dr.checked_sub(today.opening_dr)? != Paisa::ZERO
+    // The opening and the lots' پیشگی are lines of their own, so "other entries" is what is left.
+    let beyond = other_dr
+        .checked_sub(today.opening_dr)?
+        .checked_sub(advance)?
+        != Paisa::ZERO
         || other_cr.checked_sub(today.opening_cr)? != Paisa::ZERO;
     let paid = cash_given.checked_add(today.payments_dr)?;
     let left = sale.checked_add(other)?.checked_add(paid)?;
@@ -500,6 +509,7 @@ fn seller_day(
         other,
         has_other: other_dr != Paisa::ZERO || other_cr != Paisa::ZERO,
         opening,
+        advance,
         has_other_beyond_opening: beyond,
         left,
         new,
@@ -599,6 +609,10 @@ pub(super) fn narrow_seller(d: &SellerDay, bikri_ids: &[i64]) -> Result<SellerDa
         add(&mut deductions, part)?;
     }
     let sale = deductions.checked_sub(gross)?;
+    let mut advance = Paisa::ZERO;
+    for c in &charges {
+        add(&mut advance, c.advance)?;
+    }
     // left = sale + other + paid, so the rest of the day is what makes the day's left.
     let other = d.left.checked_sub(sale.checked_add(cash_given)?)?;
     Ok(SellerDay {
@@ -614,7 +628,9 @@ pub(super) fn narrow_seller(d: &SellerDay, bikri_ids: &[i64]) -> Result<SellerDa
         paid: cash_given,
         other,
         has_other: other != Paisa::ZERO,
-        has_other_beyond_opening: other.checked_sub(d.opening)? != Paisa::ZERO,
+        advance,
+        has_other_beyond_opening: other.checked_sub(d.opening)?.checked_sub(advance)?
+            != Paisa::ZERO,
         charges,
         ..d.clone()
     })
@@ -773,6 +789,7 @@ mod tests {
                     phone: rupees(phone),
                     store_rent: rupees(rent),
                     cash: rupees(cash),
+                    advance: Paisa::ZERO,
                 })
                 .collect();
             let gross: i64 = lines.iter().map(|l| l.0).sum();

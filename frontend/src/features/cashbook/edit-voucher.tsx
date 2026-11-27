@@ -41,8 +41,10 @@ export interface VoucherEditing {
 }
 
 /** The kind of band for a voucher type. */
-export function bandKindOf(type: VoucherRow['voucher_type']): EditBandKind {
-  switch (type) {
+export function bandKindOf(row: Pick<VoucherRow, 'voucher_type' | 'entered_as'>): EditBandKind {
+  // A پیشگی typed for a buyer is saved as a payment and is still named پیشگی (PRD FR-15.11 v1.60).
+  if (row.entered_as === 'advance') return 'buyer_advance';
+  switch (row.voucher_type) {
     case 'shop_expense':
     case 'personal_expense':
     case 'personal_return':
@@ -151,7 +153,7 @@ export function VoucherEditTop({ edit }: VoucherEditTopProps) {
   return (
     <>
       <EditBand
-        kind={bandKindOf(row.voucher_type)}
+        kind={bandKindOf(row)}
         number={String(row.number)}
         date={row.entry_date}
         reopenedDays={edit.reopenedDays}

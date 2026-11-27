@@ -45,7 +45,7 @@ fruit-lot-failed = { -lot } نہیں آ سکے
 # review: pending
 fruit-field-agent = { -arhti }
 # review: pending
-fruit-agent-hint = دوسرے { -arhti } کا { -beopari } کھاتہ۔ اگر موجود نہ ہو تو F4 سے بنائیں۔
+fruit-agent-hint = صرف { -arhti-dukan } کے کھاتے۔ اگر موجود نہ ہو تو F4 سے نئی { -arhti-dukan } بنائیں۔
 # review: pending
 fruit-item-from-lot = { -lot } سے لیا گیا
 # review: pending
@@ -57,6 +57,11 @@ fruit-qty-left = { -lot } میں { $remaining } باقی ہیں
 fruit-field-weight = وزن (کلو)
 # review: pending
 fruit-field-rate = ریٹ
+# The other shop's commission, freight and other charges in one amount (PRD FR-16.11 v1.59). Only for fruit from another shop.
+# review: pending
+fruit-field-deduction = کل کٹوتی
+# review: pending
+fruit-deduction-hint = دوسری دکان کا { -commission }، کرایہ اور دوسرا خرچ، سب ایک رقم میں۔ یہ قیمت میں سے گھٹائی جاتی ہے۔ نہ ہو تو خالی چھوڑیں۔
 # review: pending
 fruit-rate-hint-note = ہلکے رنگ کا لکھا صرف اشارہ ہے۔ ریٹ خود لکھیں۔
 # review: pending
@@ -73,6 +78,11 @@ fruit-numbers-incomplete = فارم مکمل ہو تو اعداد نظر آئی�
 fruit-numbers-failed = اعداد نہیں نکل سکے
 # review: pending
 fruit-numbers-value = قیمت
+# The deduction and the net of fruit from another shop with a کل کٹوتی: the net is what the other shop is credited and the partners are charged.
+# review: pending
+fruit-numbers-deduction = کل کٹوتی
+# review: pending
+fruit-numbers-net = قیمت منفی کٹوتی
 # review: pending
 fruit-numbers-credit = کھاتے میں جمع
 # review: pending
@@ -174,6 +184,11 @@ fruit-from-lot = { -lot } { $lot }
 fruit-col-rate = ریٹ
 # review: pending
 fruit-col-value = قیمت
+# review: pending
+fruit-col-gross = کل قیمت
+# The column of R37 and of the list: what the other shop kept (empty when there is none).
+# review: pending
+fruit-col-deduction = کل کٹوتی
 # review: pending
 fruit-col-source = کہاں سے
 # review: pending

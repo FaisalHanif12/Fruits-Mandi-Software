@@ -689,6 +689,8 @@ describe('round 11: the party day sheet (R35)', () => {
       'report-r35-phone',
       'report-r35-net-sale',
       'report-r35-paid-today',
+      // The rest of today's credit, put to his account (plan 91, Umar 21-11-2026).
+      'report-r35-sale-rest',
       'report-r35-today-left',
       'report-r35-previous',
       'report-r35-new-balance',

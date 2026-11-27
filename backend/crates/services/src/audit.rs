@@ -45,18 +45,19 @@ impl Event {
         self
     }
 
-    /// The Owner's sign given when the day was reopened to fix an entry (PRD FR-21.4, plan 73): saved
-    /// beside the reason, as the key `sign` of the new value. Nothing is added when there is none.
-    pub fn sign(mut self, sign: Option<&str>) -> Self {
-        if let Some(sign) = sign {
+    /// The Owner's sign was given when the day was reopened to fix an entry (PRD FR-21.4, FR-7.71
+    /// v1.58, plan 96): saved beside the reason as the key `sign_given: true` of the new value. The sign
+    /// is a secret: its text is never written to the audit log. Nothing is added when `given` is false.
+    pub fn sign_given(mut self, given: bool) -> Self {
+        if given {
             match self.0.new_json.as_mut() {
                 Some(Value::Object(object)) => {
-                    object.insert("sign".to_owned(), Value::String(sign.to_owned()));
+                    object.insert("sign_given".to_owned(), Value::Bool(true));
                 }
                 Some(_) => {}
                 None => {
                     let mut object = Map::new();
-                    object.insert("sign".to_owned(), Value::String(sign.to_owned()));
+                    object.insert("sign_given".to_owned(), Value::Bool(true));
                     self.0.new_json = Some(Value::Object(object));
                 }
             }

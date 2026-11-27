@@ -82,6 +82,14 @@ bikri-lots-add-row = نئی { -lot }
 # review: pending
 bikri-sales-add-row = نئی لائن
 
+# The small button beside the seller's name in a lot row: it selects that lot and shows its sale lines (PRD FR-12.52).
+# review: pending
+bikri-lot-show-lines = اس { -lot } کی لائنیں دکھائیں
+
+# نیچے "+" دبانے پر، جب اس { -lot } کا سارا مال بک چکا ہو: کوئی لائن نہیں بنتی، یہ جملہ چند سیکنڈ نظر آتا ہے (PRD FR-12.52)۔
+# review: pending
+bikri-sales-sold-out = اس بیوپاری کا سارا مال بک چکا ہے
+
 # $max: ایک { -bikri } میں { -lot } کی زیادہ سے زیادہ تعداد۔
 # review: pending
 bikri-lots-limit = ایک { -bikri } میں { -lot } کی تعداد <num>{ $max }</num> سے زیادہ نہیں ہو سکتی۔
@@ -190,16 +198,6 @@ bikri-summary-take-advance = { $name }: { -peshgi } اس { -bikri } سے کاٹ�
 
 ## A seller's money paid on the spot, in his summary (plan 91, PRD FR-12.3, FR-12.23, C6, C8).
 
-# $name: the seller, with his tag.
-# review: pending
-bikri-seller-paid-title = { $name }: { -mauqa-par-adaigi }
-
-# review: pending
-bikri-seller-paid-field = { -mauqa-par-adaigi }
-
-# review: pending
-bikri-seller-paid-hint = اس بیوپاری کو { -bikri } کے وقت جو رقم دی۔ پورے روپے۔ یہ اس کے لاٹوں کے { -naqd } میں بٹ جاتی ہے؛ ہر لاٹ کا { -naqd } وہیں نظر آتا ہے اور بدلا جا سکتا ہے۔
-
 # review: pending
 bikri-seller-paid-previous = { -sabiqa-raqam }
 
@@ -213,6 +211,10 @@ bikri-seller-paid-paid = { -mauqa-par-adaigi }
 # review: pending
 bikri-seller-paid-rest = { -bikri } کی باقی رقم، کھاتے میں جمع
 
+# The advance typed on his lots: a debit of its own, in the new balance (PRD FR-12.52).
+# review: pending
+bikri-seller-paid-advance = { -peshgi }
+
 # review: pending
 bikri-seller-paid-over = آج کی { -bikri } سے زیادہ ادائیگی
 
@@ -221,6 +223,20 @@ bikri-seller-paid-increase = آج کے اخراجات { -bikri } سے زیادہ
 
 # review: pending
 bikri-seller-paid-new = نیا { -baqaya }
+
+## The card of a garden and of a trip in the summary (plan 97 item 5, PRD FR-12.52). The rows of the garden card use the words of the seller card (پچھلا { -baqaya }, آج کی { -safi-bikri }, نیا { -baqaya }).
+
+# $code: the trip's code, for example 0070.
+# review: pending
+bikri-trip-card-title = { -safar } <code>{ $code }</code>
+
+# The charges taken off the sales of the trip's goods in this { -bikri }.
+# review: pending
+bikri-trip-card-deductions = کٹوتی
+
+# Where the trip's credit goes: to the partners of the trip, by their share of it (no partner figure is shown here).
+# review: pending
+bikri-trip-card-partners = سفر کے شراکت داروں کو ان کے حصے کے مطابق
 
 # review: pending
 bikri-seller-paid-above = یہ آج کی { -bikri } سے زیادہ ہے، { -baqaya } بڑھے گا
@@ -234,6 +250,10 @@ bikri-seller-over-line = { $name }: نیا { -baqaya } <num>{ $amount }</num> { 
 
 # review: pending
 bikri-seller-over-question = اس سے { -baqaya } بڑھے گا۔ کیا یہ اندراج درست ہے؟
+
+# The hint of the advance field in the lot's "more" panel (PRD FR-12.52).
+# review: pending
+bikri-more-advance-given-hint = بیوپاری مال لاتے وقت جو { -peshgi } لے۔ پورے روپے۔ یہ اس { -bikri } کی کٹوتی نہیں، الگ { -peshgi } ہے۔
 
 # review: pending
 bikri-more-advance-open = { -peshgi } باقی: <num>{ $amount }</num>

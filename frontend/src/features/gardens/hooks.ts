@@ -9,6 +9,7 @@ import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
 import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput';
 import type { SortInput } from '../../bindings/SortInput';
 import {
+  RECORDS_PAGE_SIZE,
   useAllPagesQuery,
   useDebouncedValue,
   useLoadRest,
@@ -39,6 +40,7 @@ import {
   gardensHeaderEditSave,
   gardensList,
   gardensReopen,
+  gardensSaleMoney,
   gardensSummary,
 } from './api';
 import type {
@@ -133,7 +135,13 @@ export function useGardensList(
   enabled = true,
 ) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return usePagedQuery({ screen: 'gardens.list', ...gardensListQuery(settled), enabled });
+  // The gardens are records, not days: 30 rows a page (PRD FR-19.11 v1.57, plan 95 item 18b).
+  return usePagedQuery({
+    screen: 'gardens.list',
+    ...gardensListQuery(settled),
+    enabled,
+    defaultPageSize: RECORDS_PAGE_SIZE,
+  });
 }
 
 /** Every garden of the filter, page after page, for a choice list (`useLoadRest`). */
@@ -228,11 +236,33 @@ export function useReopenGarden() {
 // garden's stock, so everything a garden changes is read again, and with it the goods ready for a
 // new بکری (the queries that start with `bikri`).
 
-/** The goods arrived entries of one garden, page by page, for the filter (PRD FR-19.11). */
-export function useArrivalsList(gardenId: number, state: ArrivalsListInput['state'] = null) {
+/**
+ * The list of a garden with many goods arrived entries is in the order the Owner meets them: the newest
+ * first (plan 96). It is the list's own order, so the third click on a heading goes back to it.
+ */
+const NEWEST_FIRST: SortInput = { column: 'entry_date', direction: 'desc', language: null };
+
+interface ArrivalsFilter {
+  /** Only arrivals in this state. Null lists all. */
+  state?: ArrivalsListInput['state'];
+  /** The text of the search box: the number, the item or the other shop. Empty asks for no limit. */
+  search?: string;
+}
+
+/**
+ * The goods arrived entries of one garden, page by page, for the filter (PRD FR-19.11): 30 a page,
+ * newest first, narrowed by the search box after a short pause. The first page carries the count and
+ * the totals over the whole filter.
+ */
+export function useArrivalsList(
+  gardenId: number,
+  { state = null, search = '' }: ArrivalsFilter = {},
+) {
+  const settled = useDebouncedValue(search.trim(), FILTER_DELAY_MS);
   return usePagedQuery({
-    screen: 'gardens.arrivals',
-    queryKey: [...GARDENS_KEY, 'arrivals', gardenId, state],
+    // Each section remembers its own page: the goods not sold yet and the goods sold (FR-12.53).
+    screen: state === 'sold_out' ? 'gardens.arrivals_sold' : 'gardens.arrivals',
+    queryKey: [...GARDENS_KEY, 'arrivals', gardenId, state, settled],
     fetchPage: (offset, limit, sort) =>
       gardensArrivalsList({
         garden_id: gardenId,
@@ -243,12 +273,55 @@ export function useArrivalsList(gardenId: number, state: ArrivalsListInput['stat
         offset,
         limit,
         show_finished: false,
-        search: null,
-        sort,
+        search: settled === '' ? null : settled,
+        sort: sort ?? NEWEST_FIRST,
         group_by_month: false,
       }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
+    keepPrevious: true,
+    defaultPageSize: RECORDS_PAGE_SIZE,
+  });
+}
+
+/** The sales of a garden that the money list asks for (PRD FR-12.53). */
+export interface SaleMoneyFilter {
+  /** The days, `DD-MM-YYYY`, or null for no limit (every month). */
+  from: string | null;
+  to: string | null;
+  /** Only the sales of the goods of this goods arrived entry, or null for every sale. */
+  arrivalId: number | null;
+  search?: string;
+}
+
+/**
+ * Where the garden's sale money is, a page at a time, with the totals over the whole filter. It is
+ * kept under the gardens' key, so every save of a garden reads it again; a screen that opens it asks
+ * afresh, so a receipt taken since is in "collected since".
+ */
+export function useSaleMoney(
+  gardenId: number,
+  { from, to, arrivalId, search = '' }: SaleMoneyFilter,
+  screen: string,
+  enabled = true,
+) {
+  const settled = useDebouncedValue(search.trim(), FILTER_DELAY_MS);
+  return usePagedQuery({
+    screen,
+    queryKey: [...GARDENS_KEY, 'sale-money', gardenId, from, to, arrivalId, settled],
+    fetchPage: (offset, limit) =>
+      gardensSaleMoney({
+        garden_id: gardenId,
+        from,
+        to,
+        arrival_id: arrivalId,
+        search: settled === '' ? null : settled,
+        offset,
+        limit,
+      }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    enabled,
     keepPrevious: true,
   });
 }

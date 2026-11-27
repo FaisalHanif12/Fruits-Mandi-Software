@@ -185,6 +185,7 @@ export function GardenHeaderEdit({ garden, onDone }: GardenHeaderEditProps) {
                   onChange={(names) => {
                     change({ names });
                   }}
+                  kind="place"
                   urduLabel={<Localized id="gardens-field-name-ur" />}
                   englishLabel={<Localized id="gardens-field-name-en" />}
                   urduError={fieldError(error, 'name_ur')}

@@ -145,6 +145,15 @@ export interface EntryColumn {
   readonly choices?: readonly ChoiceSpec[];
   /** A calculated cell of this column has the ⓘ with the backend's working (PRD FR-7.43). */
   readonly explain?: boolean;
+  /**
+   * A small icon button after the text of a `picker` cell (the lots grid: "show this lot's sale lines", plan 95 item 6, PRD
+   * FR-12.52). It is a real button: a click or Enter on it does `onPress` and never opens the picker or moves the cursor.
+   */
+  readonly cellButton?: {
+    /** The Fluent message that names the button and is its tooltip. */
+    readonly labelId: string;
+    readonly onPress: (row: EntryRow) => void;
+  };
 }
 
 /** A cell, by the row's ID and the column's field. */
@@ -180,6 +189,13 @@ export interface GridInterceptors {
   readonly onEnter?: (cell: CellRef, enter?: EnterInfo) => boolean;
   /** ↑ was pressed on the first row. Return true if the screen took it. */
   readonly onAboveFirst?: (cell: CellRef) => boolean;
+  /**
+   * The grid is about to add a new row after this cell: `↓` on the last row, `Enter` on the last stop, or the cursor
+   * moving on from a cell the backend closed. Return true if the screen refuses it (it says why, for a few seconds);
+   * the grid then adds nothing and the cursor stays. Every key path asks here, so a screen never writes its own
+   * handler for them (plan 97 item 2, PRD FR-12.52). The "+" button is the screen's own and asks the same question.
+   */
+  readonly onNewRow?: (cell: CellRef) => boolean;
   /**
    * The cell this row is held on, or null. While a row is held (the backend refused its quantity), the
    * cursor stays on that cell: arrows, Tab and Enter do not leave it, and no other cell of the row can

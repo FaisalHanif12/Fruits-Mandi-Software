@@ -9,6 +9,11 @@
 //! refusal carries `today_open` 0, and the form offers "save without the opening" or "reopen the
 //! day".
 //!
+//! From PRD v1.60 (plan 99, Umar 27-11-2026) a PARTY's opening goes through روکڑ, so a new party
+//! account's opening on a closed day is refused too: the form reopens the day with the reason and
+//! the sign, saves, and closes it again (FR-21.4). Only an account whose opening goes to ابتدائی
+//! فرق (here a payables account) still saves on a closed day (FR-10.11).
+//!
 //! The refusals of the form are also written as fixtures for the frontend, with the real answers
 //! (`MANDI_WRITE_FIXTURES=1` writes them; otherwise the test checks them).
 #![cfg(test)]
@@ -19,11 +24,12 @@ use std::path::{Path, PathBuf};
 
 use common::*;
 use mandi_services::core::accounts::{AccountInput, AccountRow, Balance, BalanceSide};
+use mandi_services::core::edit::{DayFixCloseInput, DayFixOpenInput};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::masters::{CityInput, MasterInput};
 use mandi_services::core::money::Paisa;
 use mandi_services::testing::TestEnv;
-use mandi_services::{ServiceError, accounts, auth, ledger, masters};
+use mandi_services::{ServiceError, accounts, auth, day, ledger, masters};
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -111,11 +117,21 @@ fn buyer_request(date: &str, dr: &str) -> Value {
     })
 }
 
+/// The same form for an account whose opening goes to ابتدائی فرق: a "دیگر" account under the
+/// payables control 0201, which is no party (PRD FR-10.9 v1.60).
+fn other_request(dir: &TempDir, date: &str, dr: &str) -> Value {
+    let control: i64 = count(dir, "SELECT id FROM account_controls WHERE code = '0201'");
+    let mut request = buyer_request(date, dr);
+    request["account_type"] = json!("other");
+    request["control_id"] = json!(control);
+    request
+}
+
 /// Saves a request, confirming the words of the spelling check like the screen does.
 fn save(env: &TestEnv, owner: &auth::Actor, request: &Value) -> Result<AccountRow, ServiceError> {
     let mut input: AccountInput = serde_json::from_value(request.clone()).unwrap();
     loop {
-        match accounts::save(&env.ctx, owner, &input) {
+        match accounts::save_with_confirm(&env.ctx, owner, &input, true) {
             Err(ServiceError::Rejected(items))
                 if !items.is_empty()
                     && items
@@ -228,7 +244,7 @@ fn a_new_account_saves_its_opening_on_a_closed_day_and_the_books_balance() {
     // طارق with 5,000 بنام on 30-10-26 saves, and the opening is dated 30-10-26.
     let (dir, env, owner) = world("2026-10-30");
     let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
-    let tariq = save(&env, &owner, &buyer_request("30-10-2026", "5,000")).unwrap();
+    let tariq = save(&env, &owner, &other_request(&dir, "30-10-2026", "5,000")).unwrap();
     assert_eq!(tariq.opening_dr_paisa, Paisa::from_rupees(5_000).unwrap());
     assert_eq!(tariq.opening_date.as_deref(), Some("2026-10-30"));
     assert_eq!(
@@ -274,7 +290,7 @@ fn a_new_account_saves_its_opening_on_a_closed_day_and_the_books_balance() {
     ledger::verify_journal_chain(&env.ctx).unwrap();
 
     // An opening on an open day writes no such row.
-    let mut open = buyer_request("31-10-2026", "2,000");
+    let mut open = other_request(&dir, "31-10-2026", "2,000");
     open["name_ur"] = json!("ناصر علی");
     open["name_en"] = json!("Nasir Ali");
     save(&env, &owner, &open).unwrap();
@@ -285,17 +301,86 @@ fn a_new_account_saves_its_opening_on_a_closed_day_and_the_books_balance() {
 fn a_new_account_saves_its_opening_even_when_today_is_closed_too() {
     // Closed at night: the days up to 31-10-26, today included, are closed.
     let (dir, env, owner) = world("2026-10-31");
-    let tariq = save(&env, &owner, &buyer_request("31-10-2026", "5,000")).unwrap();
+    let tariq = save(&env, &owner, &other_request(&dir, "31-10-2026", "5,000")).unwrap();
     assert_eq!(tariq.opening_date.as_deref(), Some("2026-10-31"));
     assert_eq!(closed_day_audits(&dir), 1);
     let (dr, cr) = books(&dir);
     assert_eq!(dr, cr);
     // An old closed day too.
-    let mut old = buyer_request("01-01-2026", "300");
+    let mut old = other_request(&dir, "01-01-2026", "300");
     old["name_ur"] = json!("ناصر علی");
     old["name_en"] = json!("Nasir Ali");
     save(&env, &owner, &old).unwrap();
     assert_eq!(closed_day_audits(&dir), 2);
+    ledger::verify_journal_chain(&env.ctx).unwrap();
+}
+
+#[test]
+fn a_new_party_with_an_opening_on_a_closed_day_is_refused_until_the_day_is_reopened() {
+    // PRD FR-10.9 v1.60: طارق's 5,000 بنام would change the cash of 30-10-26, a closed day.
+    let (dir, env, owner) = world("2026-10-30");
+    let accounts_before = count(&dir, "SELECT COUNT(*) FROM accounts");
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+    let request = buyer_request("30-10-2026", "5,000");
+    let error = save(&env, &owner, &request).unwrap_err();
+    let ServiceError::Rejected(items) = &error else {
+        panic!("{error:?}");
+    };
+    assert_eq!(items.len(), 1, "{items:?}");
+    assert_eq!(items[0].code, ErrorCode::ErrDateClosed);
+    assert_eq!(items[0].field.as_deref(), Some("opening_date"));
+    assert_eq!(
+        text_value(&error, "closed_up_to").as_deref(),
+        Some("30-10-2026")
+    );
+    assert_eq!(number_value(&error, "today_open"), Some(1));
+    pair("accounts_save_party_opening_closed_day", &request, &error);
+    assert_eq!(
+        count(&dir, "SELECT COUNT(*) FROM accounts"),
+        accounts_before
+    );
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+
+    // The form's way: reopen with the reason and the sign, save, close again (FR-21.4).
+    let opened = day::fix_open(
+        &env.ctx,
+        &owner,
+        &DayFixOpenInput {
+            date: "30-10-2026".into(),
+            reason: "new buyer's opening".into(),
+            sign: "adnan".into(),
+        },
+    )
+    .unwrap();
+    let tariq = save(&env, &owner, &request).unwrap();
+    day::fix_close(
+        &env.ctx,
+        &owner,
+        &DayFixCloseInput {
+            token: opened.token,
+        },
+    )
+    .unwrap();
+    assert_eq!(tariq.opening_date.as_deref(), Some("2026-10-30"));
+    // طارق بنام 5,000, روکڑ جمع 5,000, and the day is closed again.
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM journal_lines WHERE cr_paisa = 500000 AND account_id = \
+             (SELECT id FROM accounts WHERE code = '01010001')"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM day_state WHERE closed_up_to_date = '2026-10-30'"
+        ),
+        1
+    );
+    assert_eq!(closed_day_audits(&dir), 0);
+    let (dr, cr) = books(&dir);
+    assert_eq!(dr, cr);
     ledger::verify_journal_chain(&env.ctx).unwrap();
 }
 

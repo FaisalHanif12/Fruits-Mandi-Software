@@ -85,6 +85,7 @@
         "cash_paid": 0,
         "store_rent": 0,
         "phone": 0,
+        "advance": 0,
         "deductions": 2192000,
         "net": 16008000,
         "seller_credit": 16008000,
@@ -1535,6 +1536,7 @@
     "cash_paid": 0,
     "store_rent": 0,
     "phone": 0,
+    "advance": 0,
     "deductions": 2192000,
     "net": 16008000,
     "seller_credit": 16008000,
@@ -2138,6 +2140,8 @@
       "previous_side": "zero",
       "credit_paisa": 16008000,
       "paid_paisa": 0,
+      "advance_paisa": 0,
+      "advance_adjusted_paisa": 0,
       "carry_paisa": 16008000,
       "cut_paisa": 0,
       "added_to_credit_paisa": 16008000,
@@ -2183,10 +2187,12 @@
       }
     }
   ],
+  "gardens": [],
+  "trips": [],
   "cash": {
-    "cash_before_paisa": 5000000,
+    "cash_before_paisa": 6000000,
     "change_paisa": 3136000,
-    "cash_after_paisa": 8136000,
+    "cash_after_paisa": 9136000,
     "below_zero": false,
     "lowers_cash": false,
     "needs_confirm": false

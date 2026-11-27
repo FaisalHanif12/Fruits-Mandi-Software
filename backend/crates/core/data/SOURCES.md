@@ -11,16 +11,35 @@ every row waits for the Urdu reviewer (`review = pending`, NFR-URD-4) until it i
 | `wikidata` | 3,312 | yes | English and Urdu labels of Wikidata items written by people: people of Pakistan, Pakistani given names and settlements of Pakistan. Labels are cut into words and paired by place | CC0 1.0 | None |
 | `geonames` | 133 | yes | Populated places and administrative areas of Pakistan that have an Urdu alternate name. English side: the GeoNames `name`. Urdu side: the `ur` alternate name | CC BY 4.0 | The attribution below |
 | `geonames,wikidata` | 179 | yes | A pair found in both | CC BY 4.0 | The attribution below |
-| `engine` | 4,730 | **no** | Words of the names of places in Punjab and Khyber Pakhtunkhwa that occur in at least 3 GeoNames place names. Only the ENGLISH side is from GeoNames; the Urdu was proposed by our own spelling rules | CC BY 4.0 (English side) | The attribution below |
 
-The file has 12,942 entries; 8,212 of them count as known. A row with source `engine` stays in
-the file so the reviewer can confirm it in bulk (set `review` to `reviewed`), but it does not
-count as a known word until then: the screen marks it "check the spelling" and a save asks the
-user to confirm it, exactly like a word the rules made (PRD FR-7.66; `Entry::counts_as_known`).
-The PRD asks for 15,000 known entries (FR-7.27, NFR-URD-24). That is NOT met; the gap is closed
-by the reviewer confirming the `engine` rows and by the shop's own 1,572 account names (Phase 2
-import). The list is not padded; `the_list_has_fifteen_thousand_known_entries` is kept as an
-ignored test.
+Plan 99 (27-11-2026): the 4,730 rows with source `engine` (words of place names whose Urdu only
+our own spelling rules had proposed) no longer ship. Many were wrong (ghar غار, aya عیہ,
+kar کر as a place) and they outranked the spelling rules. They are in
+`translit_engine_places.tsv` (not built into the app) for a reviewer; a row the reviewer
+confirms moves back with `review = reviewed` (the English side is from GeoNames, CC BY 4.0,
+credited below). Wrong rows of the other sources were also removed (hai حئی, darkhast درخاست,
+sheher شیر, kirae کرایہ, hun ھن) and pakka now gives پکا.
+
+## The everyday dictionary (`translit_everyday.tsv`)
+
+| `source` | Rows | Words | What | Licence | Duty |
+|---|---|---|---|---|---|
+| `everyday` | about 69,900 | about 16,400 | Common Urdu words with the Roman spellings people type: verbs in every form, pronouns, numbers, days, relations, home, food, health, travel, money, shop and mandi words, English loanwords and common phrases (plan 99, PRD FR-7.27, NFR-URD-30) | Ours | None |
+
+Every row was written by one agent from the lemma files in `everyday/src/` and checked by a
+second, independent checker agent against standard dictionary spelling (Urdu Lughat,
+Feroz-ul-Lughat). Rows of checked batches have `review = checked` (`everyday/checked.txt`);
+Umar's Urdu reviewer has not read them yet (NFR-URD-4). Build:
+`python3 data/import/build_everyday.py` from `backend/crates/core`.
+
+**Coverage check only:** to find common words that were missing, the word frequency list of the
+Leipzig Corpora Collection corpus `urd_newscrawl_2016_1M` was read (Leipzig terms of use:
+downloadable corpora are CC BY 4.0). No row, spelling or count of it is in this repository or
+the app. D. Goldhahn, T. Eckart, U. Quasthoff: Building Large Monolingual Dictionaries at the
+Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012.
+
+The list now has 8,209 name list entries and the everyday words, so it meets the 15,000 known
+entries of FR-7.27 (`the_list_has_fifteen_thousand_known_entries`).
 
 Attribution (CC BY 4.0): **This product contains data from GeoNames (https://www.geonames.org),
 licensed under CC BY 4.0.** The same line must be shown in the app's About screen and stays in
@@ -53,4 +72,5 @@ Counts are printed by the test `the_known_entries_are_reported_and_proposed_ones
 
 ## Review needed (NFR-URD-4)
 
-All rows are `pending`. Nothing in the list was checked by a person who reads Urdu.
+All name list rows are `pending`; the everyday rows are `checked` by a second agent. Nothing
+was read yet by a person who reads Urdu.

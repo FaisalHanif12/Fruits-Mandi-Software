@@ -31,11 +31,12 @@ describe('the no-scrollbar utility', () => {
     const used = sources(SRC)
       .filter(({ text }) => text.includes('no-scrollbar'))
       .map(({ file }) => path.relative(SRC, file));
+    // The account form had a panel of its own; from plan 99 it scrolls in the screen of the shell like
+    // every other form (AppShell holds the utility), so no card is cut off.
     for (const expected of [
       'app/layout/AppShell.tsx',
       'features/settings/pages/SettingsPage.tsx',
       'features/bikri/pages/BikriBookPage.tsx',
-      'features/masters/components/AccountForm.tsx',
     ]) {
       expect(used).toContain(expected);
     }

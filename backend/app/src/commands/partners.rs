@@ -6,15 +6,11 @@
 //! gives the names only while it is locked (`partners_locked`, every `share_bps` 0).
 
 use mandi_reports::reports::{TablePrintData, partner_statement_month_print_data};
-use mandi_services::capital_place;
 use mandi_services::core::partners::{
     PartnerCreateInput, PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput,
     PartnersCheckSharesInput, PartnersGetInput, PartnersList, PartnersSetSharesInput, SharesCheck,
 };
-use mandi_services::core::partners::{
-    PartnerVentureCard, PartnersOpenVenturesInput, PartnersOpeningCapitalPlaced,
-    PartnersPlaceOpeningCapitalInput,
-};
+use mandi_services::core::partners::{PartnerOpenVentures, PartnersOpenVenturesInput};
 use mandi_services::core::statement::{
     PartnerStatement, PartnerStatementDay, PartnerStatementMonth, PartnersStatementDayInput,
     PartnersStatementInput, PartnersStatementMonthInput, PartnersStatementMonthPrintInput,
@@ -122,25 +118,6 @@ pub async fn partners_check_shares<R: tauri::Runtime>(
     .await
 }
 
-/// Moves the opening capital of the listed partners into روکڑ (PRD FR-16.14 v1.50, FR-10.9, plan 87):
-/// each opening entry that stands against ابتدائی فرق is reversed and posted again on the same day
-/// with روکڑ on the other side. The closed days are reopened and closed again inside the same save.
-/// Behind the partner code (PRD FR-17.11). Errors: `ERR_PARTNER_LOCKED`; `ERR_REASON_REQUIRED`
-/// (`reason`); `ERR_SIGN_REQUIRED`, `ERR_SIGN_WRONG` (`sign`); `ERR_REQUIRED`, `ERR_NOT_FOUND`,
-/// `ERR_NOTHING_TO_PLACE` (`partner_ids`); `ERR_MONTH_CLOSED`; `ERR_TRIAL_NOT_BALANCED`.
-#[tauri::command]
-pub async fn partners_place_opening_capital<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    input: PartnersPlaceOpeningCapitalInput,
-) -> Result<PartnersOpeningCapitalPlaced, UiError> {
-    run(app, "partners_place_opening_capital", move |ctx| {
-        let actor = auth::require(ctx)?;
-        partner_code::require_unlocked(ctx)?;
-        capital_place::place(ctx, &actor, &input)
-    })
-    .await
-}
-
 /// One row per active partner: today, month and year income share, month expense share, profit,
 /// money taken and capital balance.
 #[tauri::command]
@@ -231,11 +208,11 @@ pub async fn partners_statement_month_print_data<R: tauri::Runtime>(
 pub async fn partners_open_ventures<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: PartnersOpenVenturesInput,
-) -> Result<Vec<PartnerVentureCard>, UiError> {
+) -> Result<PartnerOpenVentures, UiError> {
     run(app, "partners_open_ventures", move |ctx| {
         auth::require(ctx)?;
         partner_code::require_unlocked(ctx)?;
-        partners::open_ventures(ctx, input.partner_id)
+        partners::open_ventures(ctx, &input)
     })
     .await
 }

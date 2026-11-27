@@ -657,15 +657,15 @@ fn opening_step(w: &mut World) {
     } else {
         form.opening_cr = amount;
     }
-    // Plan 53: a new account's opening posts on its own date, open or closed; only a date after
-    // today is refused.
-    let expect = if iso.as_str() <= "2026-10-10" {
+    // PRD FR-10.9 v1.60 (plan 99): a party's opening goes through the cash book, so a new party
+    // account's opening needs an open day; the cash question is answered yes.
+    let expect = if is_open(w, &iso) {
         Expect::Ok
     } else {
         Expect::Refused
     };
     let before = fingerprint(&w.dir);
-    let result = accounts::save(&w.env.ctx, &w.owner, &form);
+    let result = accounts::save_with_confirm(&w.env.ctx, &w.owner, &form, true);
     check(
         w,
         &format!("new account with an opening on {iso}"),
@@ -1149,34 +1149,23 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
     close_through(&w, "05-09-2026");
     let closed_dates = ["05-09-2026", "04-09-2026", "31-08-2026"];
     for date in closed_dates {
-        // A NEW account with an opening saves on a closed day (plan 53: Umar chose that its
-        // opening posts on its own date). The entry is dated that day, an audit row says so, and
-        // the books balance. A CHANGED opening on a closed day is refused below.
-        let iso = date.split('-').rev().collect::<Vec<_>>().join("-");
-        let count = |sql: &str, arg: &str| -> i64 {
-            common::raw(&w.dir)
-                .query_row(sql, [arg], |r| r.get(0))
-                .unwrap()
-        };
-        let openings_sql = "SELECT COUNT(*) FROM journal_entries WHERE entry_date = ?1 AND posting_type = 'opening'";
-        let audit_sql = "SELECT COUNT(*) FROM audit_log WHERE reason = ?1";
-        let (entries_was, audit_was) = (
-            count(openings_sql, &iso),
-            count(audit_sql, "opening on a closed day"),
-        );
+        // PRD FR-10.9 v1.60 (plan 99): a NEW party account's opening goes through the cash book, so
+        // on a closed day it is refused and writes nothing. A CHANGED opening on a closed day is
+        // refused below too.
+        let before = fingerprint(&w.dir);
         let mut form = account_input(AccountType::Buyer, "ناصر", "Nasir");
         form.opening_date = date.into();
         form.opening_dr = "100".into();
-        let saved = accounts::save(&w.env.ctx, &w.owner, &form)
-            .unwrap_or_else(|e| panic!("{date}: a new account's opening on a closed day: {e:?}"));
-        assert_eq!(saved.opening_dr_paisa.as_paisa(), 10_000, "{date}");
-        assert_eq!(count(openings_sql, &iso), entries_was + 1, "{date}: entry");
         assert_eq!(
-            count(audit_sql, "opening on a closed day"),
-            audit_was + 1,
-            "{date}: audit row"
+            code_of(accounts::save_with_confirm(&w.env.ctx, &w.owner, &form, true).unwrap_err()),
+            ErrorCode::ErrDateClosed,
+            "{date}"
         );
-        assert_books_balance(&w.dir, "an opening on a closed day");
+        assert_eq!(
+            fingerprint(&w.dir),
+            before,
+            "{date}: a refusal wrote something"
+        );
         let before = fingerprint(&w.dir);
         let seller = w.sellers[0];
         let advance = vouchers::save_advance(

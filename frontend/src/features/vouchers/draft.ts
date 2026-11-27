@@ -82,8 +82,8 @@ export function accountScope(
 }
 
 /**
- * Money given to a buyer is cash lent to him and needs a reason (PRD FR-15.11): a payment to a buyer
- * and an advance to a buyer are the same entry.
+ * Money given to a buyer is cash lent to him (PRD FR-15.11): a payment to a buyer and an advance to a
+ * buyer are the same entry. Its reason is optional (v1.60).
  */
 export function isCashLent(draft: VoucherDraft): boolean {
   return (draft.type === 'payment' || draft.type === 'advance') && draft.accountType === 'buyer';
@@ -139,7 +139,7 @@ export function build(draft: VoucherDraft, confirmCash: boolean): BuiltVoucher |
         input: {
           ...common,
           seller_account_id: account.id,
-          // A buyer's advance is cash lent: it has a reason and no expected goods (FR-15.11).
+          // A buyer's advance is cash lent: it can have a reason and has no expected goods (FR-15.11).
           expected_goods: isCashLent(draft) ? '' : draft.expected_goods,
           // Sent for a buyer only: a seller's advance is the request it always was (plan 88).
           ...(isCashLent(draft) ? { reason: draft.reason } : {}),
@@ -150,12 +150,23 @@ export function build(draft: VoucherDraft, confirmCash: boolean): BuiltVoucher |
 }
 
 /**
- * The word that picks the message after a save: the type of the screen, except an advance to a buyer,
- * which the backend saved as cash lent (a payment voucher), so the message says `lent` (PRD FR-15.11,
- * plan 88). Example: a پیشگی of 3,000 to a buyer says "نقد ادھار P-3 محفوظ ہو گیا".
+ * The word that picks the message after a save: the type of the screen, except a پیشگی to a buyer. The
+ * backend saves it as cash lent (a payment voucher, with a number in the ادائیگی series) and remembers it
+ * as پیشگی (PRD FR-15.11 v1.60), so the message says `buyer-advance`. Example: a پیشگی of 3,000 to a
+ * buyer says "پیشگی ا-3 محفوظ ہو گئی".
  */
 export function savedKindOf(draft: VoucherDraft, saved: VoucherSaved): string {
-  return draft.type === 'advance' && saved.voucher_type !== 'advance' ? 'lent' : draft.type;
+  return draft.type === 'advance' && saved.voucher_type !== 'advance'
+    ? 'buyer-advance'
+    : draft.type;
+}
+
+/** The word of a saved voucher's own messages: a پیشگی typed for a buyer stays a پیشگی (PRD FR-15.11 v1.60). */
+export function keptKindOf(
+  row: Pick<VoucherRow, 'entered_as'>,
+  type: ScreenType,
+): ScreenType | 'buyer-advance' {
+  return row.entered_as === 'advance' ? 'buyer-advance' : type;
 }
 
 /** The tagged form the preview and the edit take. */

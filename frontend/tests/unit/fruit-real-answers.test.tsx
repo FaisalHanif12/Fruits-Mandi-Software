@@ -50,6 +50,8 @@ const HAJI = account(
   '0012',
   'حاجی نذیر',
   'Haji Nazeer',
+  // Marked آڑھتی دکان: the آڑھتی box lists only such accounts (PRD FR-16.11 v1.59).
+  { is_agent_shop: true },
 );
 
 /** The masters the backend's test used: item 2 (apple), item 5 (sold by weight), packing 1 (box). */
@@ -453,7 +455,12 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     });
     const sent = vi.mocked(fruitApi.fruitEdit).mock.calls[0]?.[0];
     if (sent === undefined) throw new Error('nothing sent');
-    expect(sendsTheSame(sent, real.FRUIT_EDIT_HOME_REQUEST)).toBeNull();
+    // The entry inside is compared by its own keys: the backend's file leaves empty defaults (no
+    // کل کٹوتی) out, and the screen sends them.
+    const { entry, ...rest } = real.FRUIT_EDIT_HOME_REQUEST;
+    const { entry: sentEntry, ...sentRest } = sent;
+    expect(sendsTheSame(sentEntry, entry)).toBeNull();
+    expect(sentRest).toEqual(rest);
   });
 
   it('cancel: the box sends the backend’s own request; cancelling again is refused in words', async () => {

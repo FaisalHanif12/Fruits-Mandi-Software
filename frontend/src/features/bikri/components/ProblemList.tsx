@@ -6,7 +6,9 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
+import { useNoticePulse, useTimedNotices } from '../../../shared/hooks';
 import { ErrorMessage, LinkButton } from '../../../shared/ui';
+import { NOTICE_MS } from '../notices';
 import {
   LINE_GRID_FIELD,
   LINE_NEEDS,
@@ -25,6 +27,17 @@ interface ProblemListProps {
   headerShown?: boolean;
   /** The whole-sale view is on: the notes under the lines grid tell the quantity problems of every lot. */
   whole?: boolean;
+  /**
+   * Goes up each time the user repeats an action that can give a problem (he types in the lots or the lines, or tries to
+   * save): a problem that has hidden shows again (PRD FR-12.52, plan 97 item 4). Not given: the count of the screen's
+   * `NoticePulseContext`.
+   */
+  pulse?: number;
+}
+
+/** The key of one problem, so a warning that stands is the same warning on every answer of the preview. */
+function keyOf(problem: Problem): string {
+  return `${problem.item.code}|${problem.item.field}`;
 }
 
 /** Is the problem shown by a field with words under it? Then the list leaves it out. */
@@ -85,11 +98,18 @@ export function ProblemList({
   activeLine,
   headerShown = true,
   whole = false,
+  pulse,
 }: ProblemListProps) {
   const navigate = useNavigate();
-  const listed = problems.filter(
+  const screenPulse = useNoticePulse();
+  const all = problems.filter(
     (problem) => !shownByField(problem, selectedLot, activeLine, headerShown, whole),
   );
+  // A problem in this list is a note, not a block: it shows for 5 seconds and hides, and shows again when the user repeats
+  // the action that gives it, an error as much as a warning (PRD FR-12.52, plan 97 item 4, Umar 24-11-2026). The red mark
+  // on the cell or the figure stays until it is fixed, and saving is refused while an error stands.
+  const visible = useTimedNotices(all.map(keyOf), pulse ?? screenPulse, NOTICE_MS);
+  const listed = all.filter((problem) => visible.has(keyOf(problem)));
   if (listed.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1">

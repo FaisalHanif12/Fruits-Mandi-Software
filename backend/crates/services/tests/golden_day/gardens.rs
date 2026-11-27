@@ -1341,6 +1341,7 @@ fn fruit_taken_from_a_garden_lot_goes_to_the_garden_and_a_closed_garden_refuses_
         weight: None,
         rate: "600".into(),
         note: None,
+        deduction: None,
         editing_id: None,
     };
     let money_in_before = detail(&w, garden.id).row.money_in_paisa.rupees();

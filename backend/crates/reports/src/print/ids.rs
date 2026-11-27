@@ -22,6 +22,9 @@ pub(super) const PHONE_CHARGE: &str = "print-phone-charge";
 pub(super) const TOTAL_DEDUCTIONS: &str = "print-total-deductions";
 pub(super) const NET_SALE: &str = "print-net-sale";
 pub(super) const SELLER_OWES: &str = "print-seller-owes";
+/// پیشگی: the advance the seller took with his lots (PRD FR-12.52 v1.57). Printed after the net,
+/// only when there is one: it is not a deduction.
+pub(super) const SELLER_ADVANCE: &str = "print-seller-advance";
 pub(super) const ITEMS_VALUE: &str = "print-items-value";
 pub(super) const BUYER_COMMISSION: &str = "print-buyer-commission";
 pub(super) const LAGA: &str = "print-laga";

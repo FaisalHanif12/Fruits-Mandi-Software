@@ -68,7 +68,7 @@ async function panelText(language: Language, titleId: string): Promise<string> {
 }
 
 /** The backend's refusal as the command wrapper rejects with it. */
-const refused = (error: typeof real.REFUSED_NEEDS_REASON) => new CommandError(error);
+const refused = (error: typeof real.REFUSED_RETURN_TOO_MUCH) => new CommandError(error);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -227,26 +227,6 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
     await pick(user, language, 'vouchers-field-paid-to', '0010');
     const text = await panelText(language, 'vouchers-payables-title');
     for (const figure of ['24,316', '15,000', '5,000', '4,316']) expect(text).toContain(figure);
-  });
-
-  it('a refusal for cash lent with no reason is told at the reason field, in words', async () => {
-    vi.mocked(vouchersApi.vouchersPreview).mockResolvedValue(real.PREVIEW_PAYMENT_BUYER);
-    vi.mocked(vouchersApi.vouchersSave).mockRejectedValue(refused(real.REFUSED_NEEDS_REASON));
-    const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '0020');
-    await user.click(await amountField());
-    await user.keyboard('3000');
-    await user.click(await labelled(language, 'vouchers-field-reason-lent'));
-    await user.keyboard('x');
-    press('F10');
-    expect(
-      (
-        await screen.findAllByText(
-          (content) => visible(content) === message(language, 'err-payment-to-buyer-needs-reason'),
-        )
-      ).length,
-    ).toBeGreaterThan(0);
-    expect(pageText()).not.toContain('ERR_');
   });
 
   it('a seller returning too much is refused at the amount with the most he can return', async () => {

@@ -19,6 +19,7 @@ export { Card } from './Card';
 export { CashConfirmDialog } from './CashConfirmDialog';
 export { ConfirmEntryDialog } from './ConfirmEntryDialog';
 export { CashNote } from './CashNote';
+export { TimedNote } from './TimedNote';
 export { Checkbox } from './Checkbox';
 export { Code } from './Code';
 export { ControlAccountPicker } from './ControlAccountPicker';
@@ -67,7 +68,13 @@ export { ListPage } from './ListPage';
 export { ERROR_BUBBLE_MS } from './error-bubble';
 export { OverflowRow, type OverflowItem } from './OverflowRow';
 export { itemsThatFit } from './overflow-fit';
-export { SectionTabs, TitleOrTabs, sectionTabsThatFit, type SectionTab } from './SectionTabs';
+export {
+  SectionTabs,
+  TitleOrTabs,
+  sectionTabsNaturalWidth,
+  sectionTabsThatFit,
+  type SectionTab,
+} from './SectionTabs';
 export { SectionTabsProvider, useSectionTabs } from './section-tabs-context';
 export { PeriodBox } from './PeriodBox';
 export { ShowClosedTick } from './ShowClosedTick';

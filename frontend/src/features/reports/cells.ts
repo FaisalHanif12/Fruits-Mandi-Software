@@ -138,13 +138,22 @@ function detailPartText(part: ReportDetailPart, context: ListContext, shortSale:
         deductions: money(part.deductions_paisa),
       });
     case 'cash_lent':
-      return text('report-detail-cash-lent', { reason: part.reason });
+      return text(cashLentMessageId(part), { reason: part.reason });
     case 'paid_on_spot':
       // The mark on the credit line of money paid on the spot (PRD FR-12.44, FR-19.8).
       return text('report-detail-paid-on-spot', { number: String(part.bikri_number) });
     case 'text':
       return part.text;
   }
+}
+
+/**
+ * The words of a ledger line of money given to a buyer: نقد ادھار, or پیشگی when it was typed as one
+ * (PRD FR-15.11 v1.60), each with its reason when there is one (the reason is optional).
+ */
+export function cashLentMessageId(part: { reason: string; advance: boolean }): string {
+  const id = part.advance ? 'report-detail-buyer-advance' : 'report-detail-cash-lent';
+  return part.reason.trim() === '' ? `${id}-plain` : id;
 }
 
 /**

@@ -1,13 +1,13 @@
 // The bar under a list that shows one window at a time (PRD FR-19.11, plan 76 point 8): a box to go to a day (or a
 // month), and the buttons that move the window, with the days or the month of each. It is the one bar of every
-// windowed list: the 7-day lists (the sales registers, the cash book, the voucher lists, the audit log) and the
+// windowed list: the 30-day lists (the sales registers, the day book, the cash book, the audit log, the voucher lists) and the
 // 1-month lists (the expense, fruit, خرچہ and جنرل lists and the party and partner statements). It works
 // on a `ListWindow` (`useListWindow`) and adds nothing up; there is no money here. Page Up and Page Down are the
 // list's own (`onPageKey` of `PagedList`, which the window gives).
 
 import { Localized, useLocalization } from '@fluent/react';
 import type { ListWindow } from '../hooks/useListWindow';
-import { DAYS_WINDOW, daysWindowOf, isoToDisplayDate, stepDaysWindow } from '../format';
+import { daysWindowOf, isoToDisplayDate, stepDaysWindow } from '../format';
 import { SHORTCUTS } from '../keyboard';
 import { Button } from './Button';
 import { GoToDate } from './GoToDate';
@@ -17,8 +17,8 @@ import { RUNNING_NUMBER } from './Num';
 import { WindowNav } from './WindowNav';
 
 /** The days of a window as words under a button: "07-11-2026 to 13-11-2026". */
-function DaysRange({ end }: { end: string }) {
-  const days = daysWindowOf(end);
+function DaysRange({ end, size }: { end: string; size: number }) {
+  const days = daysWindowOf(end, size);
   return (
     <Localized
       id="common-days-range"
@@ -59,22 +59,27 @@ export function ListWindowBar({ window }: ListWindowBarProps) {
         today={today}
         onGo={window.goTo}
         label={<Localized id="common-goto-day" />}
-        info={<Localized id="common-goto-day-hint" />}
+        info={<Localized id="common-goto-day-hint" vars={{ days: String(window.days) }} />}
         placeholder={l10n.getString('common-goto-day-placeholder')}
       />
       <WindowNav
-        label={l10n.getString('common-days-nav-label')}
+        label={l10n.getString('common-days-nav-label', { days: String(window.days) })}
         earlier={
           <Localized
             id="common-days-earlier"
-            vars={{ days: String(DAYS_WINDOW) }}
+            vars={{ days: String(window.days) }}
             elems={RUNNING_NUMBER}
           >
             <span />
           </Localized>
         }
         earlierShortcut={SHORTCUTS.pastEarlier}
-        earlierDetail={<DaysRange end={stepDaysWindow(end, -1, today, window.first)} />}
+        earlierDetail={
+          <DaysRange
+            end={stepDaysWindow(end, -1, today, window.first, window.days)}
+            size={window.days}
+          />
+        }
         onEarlier={() => {
           window.move(-1);
         }}
@@ -82,14 +87,19 @@ export function ListWindowBar({ window }: ListWindowBarProps) {
         later={
           <Localized
             id="common-days-later"
-            vars={{ days: String(DAYS_WINDOW) }}
+            vars={{ days: String(window.days) }}
             elems={RUNNING_NUMBER}
           >
             <span />
           </Localized>
         }
         laterShortcut={SHORTCUTS.pastLater}
-        laterDetail={<DaysRange end={stepDaysWindow(end, 1, today, window.first)} />}
+        laterDetail={
+          <DaysRange
+            end={stepDaysWindow(end, 1, today, window.first, window.days)}
+            size={window.days}
+          />
+        }
         onLater={() => {
           window.move(1);
         }}
@@ -97,7 +107,7 @@ export function ListWindowBar({ window }: ListWindowBarProps) {
         middle={
           <>
             <span className="type-body text-ink">
-              <DaysRange end={end} />
+              <DaysRange end={end} size={window.days} />
             </span>
             {window.isLatest ? null : (
               <Button variant="ghost" onClick={window.latest}>

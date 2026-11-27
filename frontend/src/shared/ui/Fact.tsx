@@ -15,15 +15,20 @@ interface FactProps {
   label: ReactNode;
   /** A small card with a bigger figure, for a figure that heads a screen. */
   stat?: boolean;
+  /** On a very short window (1024 x 600) the label and the figure of a `stat` card share one line. */
+  slimWhenShort?: boolean;
   /** A small picture in a soft chip at the end of the label row, like a tile of the dashboard. Only with `stat`. */
   icon?: LucideIcon;
   children: ReactNode;
 }
 
-export function Fact({ label, stat = false, icon, children }: FactProps) {
+const SLIM =
+  'shortest:flex-row shortest:flex-wrap shortest:items-center shortest:justify-between shortest:gap-x-2 shortest:py-1';
+
+export function Fact({ label, stat = false, slimWhenShort = false, icon, children }: FactProps) {
   return (
     <div
-      className={`flex min-w-0 flex-col gap-1 ${stat ? 'rounded-2 border border-border bg-surface px-3 py-2' : ''}`}
+      className={`flex min-w-0 flex-col gap-1 ${stat ? 'rounded-2 border border-border bg-surface px-3 py-2' : ''} ${slimWhenShort ? SLIM : ''}`}
     >
       {stat && icon !== undefined ? (
         <dt className="type-label flex items-start justify-between gap-2 text-ink-muted">

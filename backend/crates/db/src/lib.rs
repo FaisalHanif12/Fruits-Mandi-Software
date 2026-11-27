@@ -45,6 +45,7 @@ pub mod party_reads;
 pub mod purchases;
 pub mod row_source_sql;
 pub mod rules;
+pub mod sale_money;
 pub mod seed;
 pub mod statement;
 pub mod ventures;

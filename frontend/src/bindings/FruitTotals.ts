@@ -10,7 +10,17 @@ export type FruitTotals = {
    */
   qty: number;
   /**
-   * Σ of the value.
+   * Σ of the value as posted (the net: `qty × rate` less the deduction).
    */
   value_paisa: Paisa;
+  /**
+   * Σ of the کل کٹوتی (PRD FR-16.11 v1.59).
+   */
+  deduction_paisa: Paisa;
+  /**
+   * Σ of the value before the deduction (C1, `qty × rate`): `value_paisa + deduction_paisa`, added
+   * by the backend with a checked sum, so the footer shows gross, deduction and net without the
+   * screen adding anything up.
+   */
+  gross_paisa: Paisa;
 };

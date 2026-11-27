@@ -124,6 +124,8 @@ pub struct NewLot<'a> {
     pub cash_paid_paisa: i64,
     /// کرایہ سٹور, paisa.
     pub store_rent_paisa: i64,
+    /// پیشگی, paisa (PRD FR-12.52 v1.57). Not in `deductions_paisa`.
+    pub advance_paisa: i64,
     /// The tick "پیشگی سے کاٹیں".
     pub adjust_advance: bool,
     /// Quantity sold in this posting.
@@ -156,9 +158,9 @@ pub fn insert_lot(
              munshiana_paisa, munshiana_method, munshiana_value_paisa, munshiana_rule_id,
              phone_paisa, phone_method, phone_value_paisa, phone_rule_id,
              cash_paid_paisa, store_rent_paisa, adjust_advance, qty_sold, gross_paisa, seller_comm_paisa,
-             deductions_paisa, net_paisa, purchase_id, arrival_id, lot_counter)
+             deductions_paisa, net_paisa, purchase_id, arrival_id, lot_counter, advance_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-             ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36)",
+             ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37)",
         params![
             now,
             user_id,
@@ -196,6 +198,7 @@ pub fn insert_lot(
             lot.purchase_id,
             lot.arrival_id,
             lot.lot_counter,
+            lot.advance_paisa,
         ],
     )?;
     Ok(conn.last_insert_rowid())

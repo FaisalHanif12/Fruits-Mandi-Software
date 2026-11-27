@@ -8,6 +8,7 @@
 
 mod link_check;
 mod openings;
+mod to_cash;
 
 use mandi_db::accounts as repo;
 use mandi_db::codes::CodeTable;
@@ -29,6 +30,7 @@ pub(crate) use openings::{OpeningCounter, apply_with as apply_opening_with};
 pub use openings::{
     openings_preview, openings_preview_with_confirm, openings_save, openings_save_with_confirm,
 };
+pub use to_cash::{openings_to_cash, openings_to_cash_preview};
 
 use crate::audit::Event;
 use crate::auth::Actor;
@@ -389,6 +391,42 @@ pub fn save_with_confirm(
     let in_force = stored.as_ref().map(current_opening).transpose()?;
     let mut prepared = prepare_account(input, closed, today, in_force.as_ref())?;
     prepared.confirm_cash_below_zero = confirm_cash_below_zero;
+    let checks = spelling_checks(ctx, &prepared)?;
+    let (id, learned) = ctx
+        .db
+        .write(|tx| write(ctx, actor, tx, &prepared, &checks))?;
+    for learned in learned {
+        learned.after_commit(ctx);
+    }
+    search::refresh_account(ctx, id);
+    get(ctx, id)
+}
+
+/// Adds a seller account marked آڑھتی دکان, another commission agent's shop (PRD FR-16.11 v1.59,
+/// FR-7.69, plan 97 item 1). It is a new seller account like any other (same checks, same code series,
+/// same search index update); the one difference is the mark `is_agent_shop`, written in the same
+/// insert. `input` must be a new seller (`id` null, `account_type` seller): any other is
+/// `ERR_FORMAT_INVALID` on `account_type`.
+///
+/// # Errors
+/// As [`save`] for a new account.
+pub fn save_agent_shop(
+    ctx: &Context,
+    actor: &Actor,
+    input: &AccountInput,
+) -> Result<AccountRow, ServiceError> {
+    if input.id.is_some() || input.account_type != AccountType::Seller {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrFormatInvalid,
+            "account_type",
+        ));
+    }
+    let (closed, today) = day::window(ctx)?;
+    let mut prepared = prepare_account(input, closed, today, None)?;
+    prepared.fields.push((
+        "is_agent_shop",
+        mandi_domain::core::masters::ColValue::Int(1),
+    ));
     let checks = spelling_checks(ctx, &prepared)?;
     let (id, learned) = ctx
         .db

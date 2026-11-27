@@ -311,9 +311,12 @@ pub fn advances_page(
                 continue;
             }
             open.push(OpenAdvance {
-                // Only a پیشگی voucher or an opening debit makes an advance line.
+                // A پیشگی voucher, an opening debit, or the پیشگی typed on a lot of a بکری (PRD FR-12.52
+                // v1.57) makes an advance line.
                 source: if line.voucher_number.is_some() {
                     "voucher".to_owned()
+                } else if line.source_type == "bikri" {
+                    "bikri".to_owned()
                 } else {
                     "opening".to_owned()
                 },

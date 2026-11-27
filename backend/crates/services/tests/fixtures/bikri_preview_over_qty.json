@@ -119,6 +119,7 @@
     "cash_paid": 0,
     "store_rent": 0,
     "phone": 0,
+    "advance": 0,
     "deductions": 0,
     "net": 0,
     "seller_credit": 0,
@@ -613,6 +614,8 @@
   },
   "split": [],
   "sellers": [],
+  "gardens": [],
+  "trips": [],
   "cash": {
     "cash_before_paisa": 5000000,
     "change_paisa": 0,

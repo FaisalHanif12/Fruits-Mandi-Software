@@ -31,6 +31,15 @@ two tabs) and one route in `app/router.tsx`. The side menu of the روکڑ area 
 - Edit: the form opens with the entry as `fruit_get` gives it now (id and version), the saved rate in the
   visible field, and asks why (a required `reason`, sent with `fruit_edit`). Cancel: `CancelFruitDialog`
   asks why and sends `fruit_cancel`.
+- **Fruit from another shop (plan 97 item 1, PRD FR-16.11 v1.59).** The آڑھتی box is an `AccountPicker` with scope `agent_shop`:
+  it lists only the accounts marked آڑھتی دکان, and its add row, `F4` and Enter on a name that matches nothing open the short
+  form `QuickAddAgentShop` (both names, an optional phone, `fruit_agent_shop_add`, F10 saves, Esc closes), never the account
+  form. After the rate there is an optional کل کٹوتی (`draft.deduction`, only for this source, sent as typed, `null` for our
+  shop). The card shows the value, the deduction and the net with the backend's working (`net_working`) when there is a
+  deduction; the parts are of the net. A deduction not below the value is refused at its field. The list shows the whole
+  value, the deduction and the net (`gross_paisa`, `deduction_paisa`, `value_paisa`), and the partner statement line says
+  "= 2,800، کٹوتی 200" (`partners-statement-detail-fruit-taken-deduction`). Tests: `fruit-agent-shop.test.tsx`,
+  `statement-text-fruit-deduction.test.ts`.
 - Everything typed is text in the screen's state (`draft.ts`), so a language switch loses nothing (F39).
   The frame (keys, leave guard, new-entry prompt) is `EntryFrame` of the cashbook module. No cash moves
   on this screen, so the cash question never comes.

@@ -1,0 +1,74 @@
+{
+  "steps": [
+    {
+      "expected": "بازار کے سفر میں خریدے گئے نگ 20 ہیں، لاگت 10,400۔",
+      "outcome": "answered",
+      "question": "market safar ka hisaab batao",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R33\", \"from\": null, \"to\": null, \"period\": \"up_to_now\", \"as_of\": null, \"party\": null, \"item\": null, \"item_group\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"seller\": null, \"zamindar\": null, \"status\": null, \"voucher_type\": null, \"layout\": null, \"group_by\": null, \"where\": null, \"sort\": null, \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  },
+                  {
+                    "function": {
+                      "arguments": "{\"view\": \"J\", \"from\": null, \"to\": null, \"period\": \"up_to_now\", \"group_by\": null, \"item\": null, \"item_group\": null, \"grade\": null, \"seller\": null, \"buyer\": null, \"city\": null, \"adda\": null, \"garden\": null, \"trip\": null, \"goods\": null, \"partner\": null, \"side\": null, \"compare\": null, \"sort\": null, \"rows\": null}",
+                      "name": "analytics"
+                    },
+                    "id": "call_0_1",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"بازار کے سفر میں خریدے گئے نگ {{r1.totals.bought_qty}} ہیں، لاگت {{r1.totals.bought_cost}}۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "trip"
+}

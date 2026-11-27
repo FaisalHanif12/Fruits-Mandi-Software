@@ -110,12 +110,33 @@ import {
 } from './reports-real';
 import {
   ADHARI_SHEET,
+  adhariOther,
   SHEET as COLLECTION_SHEET,
   printData as collectionPrintData,
 } from './collection-sheet';
 import { daySlipsData, salePrintData } from './day-slips';
 
 type Input = Record<string, unknown>;
+
+/**
+ * ادھاری تفصیل with 30 other buyers (plan 97 item 6), for `#/dev/reports/R5?others`: buyers who owed at the start of the day
+ * and bought nothing. A stand-in's figures: the total of these buyers and of all buyers is the sheet's own, shown as it comes.
+ */
+function adhariWithOthers() {
+  const names = ['بلال', 'سلیم', 'نعیم', 'کامران', 'فیصل', 'عمران'];
+  const english = ['Bilal', 'Saleem', 'Naeem', 'Kamran', 'Faisal', 'Imran'];
+  const rows = Array.from({ length: 30 }, (_, index) =>
+    adhariOther(
+      100 + index,
+      `00${String(100 + index)}`,
+      `${names[index % names.length] ?? ''} ${String(index + 1)}`,
+      `${english[index % english.length] ?? ''} ${String(index + 1)}`,
+      1_000 + index * 250,
+      index === 3 ? { tag: 'K' } : index === 7 ? { side: 'cr' } : {},
+    ),
+  );
+  return { ...ADHARI_SHEET, others_count: rows.length, other_rows: rows };
+}
 
 /** The gardens of the garden box of R36: the garden world of the gardens module. */
 const gardenBooks = createGardenBooks();
@@ -317,7 +338,8 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_collection_sheet_print_data: (input) =>
     collectionPrintData(input['language'] === 'ur' ? 'ur' : 'en'),
   // Plan 80 Q-R5-2: R5 in the reports menu is ادھاری تفصیل of the day (the v1.43 sheet) and its print.
-  reports_adhari_sheet: () => ADHARI_SHEET,
+  // `#/dev/reports/R5?others` adds the other buyers (plan 97 item 6): 30 of them, to show the list and its scroll.
+  reports_adhari_sheet: () => (devFlag('others') ? adhariWithOthers() : ADHARI_SHEET),
   reports_adhari_sheet_print_data: (input) =>
     collectionPrintData(input['language'] === 'ur' ? 'ur' : 'en'),
   reports_buyer_parchi_print_data: (input) => {

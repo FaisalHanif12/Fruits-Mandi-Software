@@ -10,7 +10,7 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import type { SortInput } from '../../bindings/SortInput';
-import { describePager, usePagerControl } from './usePager';
+import { describePager, usePagerControl, type PageSize } from './usePager';
 
 /** The largest page of any list (PRD FR-19.11, B31); the most a command is asked for at once. */
 export const PAGE_SIZE = 100;
@@ -58,6 +58,8 @@ interface PagedQueryOptions<TPage> extends Omit<ListQueryOptions<TPage>, 'fetchP
    * analytics number): never read again by themselves, and not kept after the list closes.
    */
   snapshot?: boolean;
+  /** The rows per page until the Owner chooses another number for this list (25 unless the list says). */
+  defaultPageSize?: PageSize;
 }
 
 export function usePagedQuery<TPage>({
@@ -69,13 +71,14 @@ export function usePagedQuery<TPage>({
   enabled = true,
   keepPrevious = false,
   snapshot = false,
+  defaultPageSize,
 }: PagedQueryOptions<TPage>) {
   // The order of the list: a click on a column title (plan 38 R4). A new order is a new filter, so
   // the list goes back to page 1.
   const [sort, setSort] = useState<SortInput | null>(null);
   const keyed = useMemo(() => [...queryKey, { sort }], [queryKey, sort]);
   const filterKey = JSON.stringify(keyed);
-  const control = usePagerControl(screen, filterKey);
+  const control = usePagerControl(screen, filterKey, defaultPageSize);
   const { page, pageSize } = control;
   const query = useQuery({
     queryKey: [...keyed, 'page', pageSize, page],

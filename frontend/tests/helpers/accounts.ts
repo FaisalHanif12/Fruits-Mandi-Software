@@ -94,6 +94,7 @@ export function account(
     default_marka: null,
     collector: null,
     is_system: false,
+    is_agent_shop: false,
     can_take_opening: true,
     is_chukta_khata: false,
     is_active: true,
@@ -378,7 +379,12 @@ function inScope(row: AccountRow, scope: AccountScope): boolean {
   if (scope === 'any' || scope === 'control') return true;
   // The seller of a lot may be any seller, اپنا مال, a separate khata and an open garden; every
   // other seller field, and every buyer field, leaves اپنا مال, the khatas and the gardens out.
-  if (scope === 'lot_seller') return row.account_type === 'seller' || isKhata(row) || isGarden(row);
+  // A shop marked آڑھتی دکان is not offered as a lot's seller (PRD FR-16.11 v1.59), and is the only kind of account the آڑھتی box of
+  // the fruit screen lists (`agent_shop`); every other seller field still lists it.
+  if (scope === 'agent_shop') return row.account_type === 'seller' && row.is_agent_shop;
+  if (scope === 'lot_seller') {
+    return (row.account_type === 'seller' && !row.is_agent_shop) || isKhata(row) || isGarden(row);
+  }
   if (scope === 'seller') return row.account_type === 'seller' && row.code !== OWN_GOODS_CODE;
   // A seller or a buyer, as the پیشگی field takes them (plan 88): never اپنا مال, a khata or a garden.
   if (scope === 'seller_buyer') {

@@ -1,0 +1,72 @@
+{
+  "partner": {
+    "id": 1,
+    "code": "",
+    "name_ur": "الف",
+    "name_en": "Partner A"
+  },
+  "opening_total_paisa": 0,
+  "closing_total_paisa": -860000,
+  "lines": [
+    {
+      "entry_date": "2026-09-01",
+      "heading": "advance",
+      "detail": "advance_out",
+      "entry_id": 3,
+      "number": null,
+      "venture_code": null,
+      "secondary_number": null,
+      "subject": {
+        "id": 19,
+        "code": "0010",
+        "name_ur": "رحیم",
+        "name_en": "Rahim"
+      },
+      "packing": null,
+      "reason": "",
+      "amount_paisa": -600000,
+      "running_paisa": -600000,
+      "values": {
+        "amount_paisa": 1500000,
+        "share_bps": 4000
+      }
+    },
+    {
+      "entry_date": "2026-10-10",
+      "heading": "fruit",
+      "detail": "fruit_taken",
+      "entry_id": 4,
+      "number": 1,
+      "venture_code": null,
+      "secondary_number": null,
+      "subject": {
+        "id": 2,
+        "code": "0041",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "reason": "",
+      "amount_paisa": -260000,
+      "running_paisa": -860000,
+      "values": {
+        "deduction_paisa": 20000,
+        "for": "home",
+        "qty": 2,
+        "rate_paisa": 140000,
+        "value_paisa": 280000
+      }
+    }
+  ],
+  "total_count": 2,
+  "totals": {
+    "plus_paisa": 0,
+    "minus_paisa": 860000
+  },
+  "months": []
+}

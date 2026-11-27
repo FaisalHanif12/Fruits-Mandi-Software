@@ -3,6 +3,7 @@
     {
       "id": 1,
       "voucher_type": "advance",
+      "entered_as": null,
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
@@ -34,6 +35,7 @@
     {
       "id": 2,
       "voucher_type": "payment",
+      "entered_as": "advance",
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {

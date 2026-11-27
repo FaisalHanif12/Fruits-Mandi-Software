@@ -75,7 +75,7 @@ pub fn spread_seller_paid(
 }
 
 /// The side of a signed balance (debit positive).
-fn side_of(signed: Paisa) -> BalanceSide {
+pub(super) fn side_of(signed: Paisa) -> BalanceSide {
     if signed == Paisa::ZERO {
         BalanceSide::Zero
     } else if signed.is_negative() {
@@ -86,7 +86,7 @@ fn side_of(signed: Paisa) -> BalanceSide {
 }
 
 /// A signed balance as the screen shows it: never negative, with its side.
-fn shown(signed: Paisa) -> Result<(Paisa, BalanceSide), MoneyError> {
+pub(super) fn shown(signed: Paisa) -> Result<(Paisa, BalanceSide), MoneyError> {
     let side = side_of(signed);
     let amount = if signed.is_negative() {
         signed.checked_neg()?
@@ -96,7 +96,7 @@ fn shown(signed: Paisa) -> Result<(Paisa, BalanceSide), MoneyError> {
     Ok((amount, side))
 }
 
-fn money(name: &str, paisa: Paisa) -> WorkingArg {
+pub(super) fn money(name: &str, paisa: Paisa) -> WorkingArg {
     WorkingArg {
         name: name.to_owned(),
         value: WorkingValue::Money { paisa },
@@ -104,12 +104,33 @@ fn money(name: &str, paisa: Paisa) -> WorkingArg {
 }
 
 /// How the new balance was worked out: `previous + paid - credit`, all signed with debit positive.
-fn new_balance_working(previous: Paisa, paid: Paisa, credit: Paisa, new: Paisa) -> Working {
+/// With a پیشگی on his lots (PRD FR-12.52 v1.57) it is `previous + paid + advance - credit`, and
+/// the message is `working-seller-new-balance-advance`.
+fn new_balance_working(
+    previous: Paisa,
+    paid: Paisa,
+    advance: Paisa,
+    credit: Paisa,
+    new: Paisa,
+) -> Working {
+    if advance == Paisa::ZERO {
+        return Working {
+            message_id: "working-seller-new-balance".to_owned(),
+            args: vec![
+                money("previous", previous),
+                money("paid", paid),
+                money("credit", credit),
+                money("result", new),
+            ],
+            rule_id: None,
+        };
+    }
     Working {
-        message_id: "working-seller-new-balance".to_owned(),
+        message_id: "working-seller-new-balance-advance".to_owned(),
         args: vec![
             money("previous", previous),
             money("paid", paid),
+            money("advance", advance),
             money("credit", credit),
             money("result", new),
         ],
@@ -121,9 +142,16 @@ fn new_balance_working(previous: Paisa, paid: Paisa, credit: Paisa, new: Paisa) 
 ///
 /// * `previous` is his ledger balance before this بکری, debit positive (a جمع balance is negative);
 /// * `credit` is the sum of the seller credits (C8) of his lots in this بکری, before نقد;
-/// * `paid` is the sum of the نقد of those lots, 0 or more.
+/// * `paid` is the sum of the نقد of those lots, 0 or more;
+/// * `advance` is the sum of the پیشگی of those lots, 0 or more (PRD FR-12.52 v1.57). It is money he
+///   takes as an advance, a debit of its own: it is not part of `paid`, `carry`, `cut` or the
+///   limit, which are about this sale only;
+/// * `advance_adjusted` is the part of `advance` on lots whose tick "پیشگی سے کاٹیں" is on. That
+///   advance is taken off today's credit, so the question "above today's credit" counts
+///   `paid + advance_adjusted` (lead decision, plan 95). With the tick off the advance stays open
+///   and is not counted.
 ///
-/// `new = previous + paid - credit`. Today's credit counts as 0 when it is negative (the charges
+/// `new = previous + paid + advance - credit`. Today's credit counts as 0 when it is negative (the charges
 /// of the lots are more than their sales): that part adds to what he owes (`increase_owed`). What
 /// is not paid in cash is `carry = credit - paid` (credit never below 0), the rest of today's sale
 /// that goes into his account (Umar: "بکری کی باقی رقم، کھاتے میں جمع"). When it is 0 or more it
@@ -132,19 +160,22 @@ fn new_balance_working(previous: Paisa, paid: Paisa, credit: Paisa, new: Paisa) 
 /// took more than today's credit (`over_paid`) and `carry` is 0. `limit` is today's credit plus what the shop owed him (never below 0); a `paid`
 /// above it needs the Owner's confirmation.
 ///
-/// Examples: previous 30,000, credit 20,000, paid 5,000 gives cut 15,000, new 15,000 بنام, limit
-/// 20,000. Previous -10,000 (جمع), credit 20,000, paid 28,000 gives over_paid 8,000, new 2,000 جمع,
+/// Examples: previous 30,000, credit 20,000, paid 5,000, no advance gives cut 15,000, new 15,000
+/// بنام, limit 20,000. Previous -9,260 (جمع), credit 52,900, paid 30,000, advance 20,000 gives
+/// carry 22,900, added to credit 22,900, new -12,160 (12,160 جمع). Previous -10,000 (جمع), credit 20,000, paid 28,000 gives over_paid 8,000, new 2,000 جمع,
 /// limit 30,000, no confirmation.
 ///
 /// # Errors
-/// [`MoneyError::NegativeValue`] for a negative `paid`; [`MoneyError::Overflow`].
+/// [`MoneyError::NegativeValue`] for a negative `paid` or `advance`; [`MoneyError::Overflow`].
 pub fn seller_lines(
     seller_account_id: i64,
     previous: Paisa,
     credit: Paisa,
     paid: Paisa,
+    advance: Paisa,
+    advance_adjusted: Paisa,
 ) -> Result<SellerPaidLines, MoneyError> {
-    if paid.is_negative() {
+    if paid.is_negative() || advance.is_negative() || advance_adjusted.is_negative() {
         return Err(MoneyError::NegativeValue);
     }
     let owes = previous.max(Paisa::ZERO);
@@ -167,7 +198,10 @@ pub fn seller_lines(
         let cut = carry.min(owes);
         (carry, cut, carry.checked_sub(cut)?, Paisa::ZERO)
     };
-    let new = previous.checked_add(paid)?.checked_sub(credit)?;
+    let new = previous
+        .checked_add(paid)?
+        .checked_add(advance)?
+        .checked_sub(credit)?;
     // What he can take without a question: today's credit plus what the shop owed him. A negative
     // credit (charges above sales) takes off what he was owed, so he is never moved from being owed
     // to owing without being asked.
@@ -180,6 +214,8 @@ pub fn seller_lines(
         previous_side,
         credit_paisa: credit,
         paid_paisa: paid,
+        advance_paisa: advance,
+        advance_adjusted_paisa: advance_adjusted,
         carry_paisa: carry_up,
         cut_paisa: cut,
         added_to_credit_paisa: added_to_credit,
@@ -188,8 +224,8 @@ pub fn seller_lines(
         new_paisa,
         new_side,
         limit_paisa: limit,
-        needs_confirm: paid > limit,
-        working: new_balance_working(previous, paid, credit, new),
+        needs_confirm: paid.checked_add(advance_adjusted)? > limit,
+        working: new_balance_working(previous, paid, advance, credit, new),
     })
 }
 
@@ -205,8 +241,9 @@ pub(super) fn sellers_of(
     lookups: &Lookups,
     lots: &[LotPreview],
 ) -> Result<Vec<SellerPaidLines>, MoneyError> {
-    // (seller, credit, paid), in the order of the first lot of each seller.
-    let mut sums: Vec<(i64, Paisa, Paisa)> = Vec::new();
+    // (seller, credit, paid, advance, advance with the tick on), in the order of the first lot of
+    // each seller.
+    let mut sums: Vec<(i64, Paisa, Paisa, Paisa, Paisa)> = Vec::new();
     for (lot, preview) in draft.lots.iter().zip(lots) {
         let (Some(seller_id), Some(totals)) = (lot.seller_account_id, preview.totals.as_ref())
         else {
@@ -218,22 +255,35 @@ pub(super) fn sellers_of(
         if facts.is_own_goods || !matches!(facts.kind, PartyKind::Seller | PartyKind::Khata) {
             continue;
         }
-        match sums.iter_mut().find(|(id, _, _)| *id == seller_id) {
-            Some((_, credit, paid)) => {
+        let ticked = if lot.adjust_advance {
+            totals.advance
+        } else {
+            Paisa::ZERO
+        };
+        match sums.iter_mut().find(|(id, _, _, _, _)| *id == seller_id) {
+            Some((_, credit, paid, advance, adjusted)) => {
                 *credit = credit.checked_add(totals.seller_credit)?;
                 *paid = paid.checked_add(totals.cash_paid)?;
+                *advance = advance.checked_add(totals.advance)?;
+                *adjusted = adjusted.checked_add(ticked)?;
             }
-            None => sums.push((seller_id, totals.seller_credit, totals.cash_paid)),
+            None => sums.push((
+                seller_id,
+                totals.seller_credit,
+                totals.cash_paid,
+                totals.advance,
+                ticked,
+            )),
         }
     }
     sums.into_iter()
-        .map(|(seller_id, credit, paid)| {
+        .map(|(seller_id, credit, paid, advance, adjusted)| {
             let previous = lookups
                 .previous
                 .get(&seller_id)
                 .copied()
                 .unwrap_or(Paisa::ZERO);
-            seller_lines(seller_id, previous, credit, paid)
+            seller_lines(seller_id, previous, credit, paid, advance, adjusted)
         })
         .collect()
 }
@@ -255,26 +305,32 @@ fn previous_signed(lines: &SellerPaidLines) -> Result<Paisa, MoneyError> {
 /// # Errors
 /// [`MoneyError::Overflow`].
 pub fn merge_sellers(parts: &[&[SellerPaidLines]]) -> Result<Vec<SellerPaidLines>, MoneyError> {
-    // (seller, previous signed, credit, paid)
-    let mut sums: Vec<(i64, Paisa, Paisa, Paisa)> = Vec::new();
+    // (seller, previous signed, credit, paid, advance, advance with the tick on)
+    let mut sums: Vec<(i64, Paisa, Paisa, Paisa, Paisa, Paisa)> = Vec::new();
     for lines in parts.iter().flat_map(|part| part.iter()) {
         match sums
             .iter_mut()
-            .find(|(id, _, _, _)| *id == lines.seller_account_id)
+            .find(|(id, _, _, _, _, _)| *id == lines.seller_account_id)
         {
-            Some((_, _, credit, paid)) => {
+            Some((_, _, credit, paid, advance, adjusted)) => {
                 *credit = credit.checked_add(lines.credit_paisa)?;
                 *paid = paid.checked_add(lines.paid_paisa)?;
+                *advance = advance.checked_add(lines.advance_paisa)?;
+                *adjusted = adjusted.checked_add(lines.advance_adjusted_paisa)?;
             }
             None => sums.push((
                 lines.seller_account_id,
                 previous_signed(lines)?,
                 lines.credit_paisa,
                 lines.paid_paisa,
+                lines.advance_paisa,
+                lines.advance_adjusted_paisa,
             )),
         }
     }
     sums.into_iter()
-        .map(|(seller_id, previous, credit, paid)| seller_lines(seller_id, previous, credit, paid))
+        .map(|(seller_id, previous, credit, paid, advance, adjusted)| {
+            seller_lines(seller_id, previous, credit, paid, advance, adjusted)
+        })
         .collect()
 }

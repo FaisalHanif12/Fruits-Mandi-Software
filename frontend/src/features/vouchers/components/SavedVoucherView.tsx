@@ -43,6 +43,11 @@ export function SavedVoucherView({ row }: { row: VoucherRow }) {
               </Code>
             )}
           </Fact>
+          {row.entered_as === 'advance' ? (
+            <Fact label={<Localized id="vouchers-col-kind" />}>
+              <Localized id="vouchers-kind-buyer-advance" />
+            </Fact>
+          ) : null}
           <Fact label={<Localized id="vouchers-field-date" />}>
             <Code>{isoToDisplayDate(row.entry_date)}</Code>
           </Fact>

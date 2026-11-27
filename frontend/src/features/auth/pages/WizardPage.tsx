@@ -257,6 +257,7 @@ export function WizardPage({ onBack }: WizardPageProps = {}) {
         englishLabel={<Localized id={englishLabelId} />}
         urduError={fieldError(error, urduField) ?? required(urduField)}
         englishError={fieldError(error, englishField) ?? required(englishField)}
+        kind={name === 'mandi' ? 'place' : 'name'}
       />
     );
   };

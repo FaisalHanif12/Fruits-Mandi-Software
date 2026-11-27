@@ -237,8 +237,6 @@ pub enum ErrorCode {
     /// The print or the PDF failed after it started: the page did not get ready, or the print
     /// system refused the job. The cause is in the log with the reference number (plan 14).
     ErrPrintFailed,
-    /// A payment to a buyer is cash lent to him and needs a reason (PRD FR-15.11). Field `reason`.
-    ErrPaymentToBuyerNeedsReason,
     /// A seller's receipt (or a return of money lent) is more than what is open to return: his
     /// open advances plus what he owes the firm beyond them (PRD FR-15.12). Values: `open_paisa`.
     ErrReturnExceedsOpen,
@@ -382,6 +380,11 @@ pub enum ErrorCode {
     ErrGardenEntryCancelled,
     /// The fruit entry was cancelled already (plan 17d). Field `id`.
     ErrFruitCancelled,
+    /// The کل کٹوتی of fruit taken from another shop is not less than the value (PRD FR-16.11 v1.59,
+    /// plan 97 item 1): the agent would be credited nothing. Field `deduction`. Values: `max` (whole
+    /// rupees, the most that can be deducted: the value less one rupee) and `value` (whole rupees,
+    /// the value of the fruit, C1).
+    ErrDeductionNotBelowValue,
     /// A بکری cannot be cancelled while fruit taken from one of its lots is in force: cancel those
     /// entries first (plan 17d). Field `id`. Values: `qty_taken` (نگ).
     ErrBikriHasFruit,
@@ -505,10 +508,9 @@ pub enum ErrorCode {
     /// to a third account, or a third account already points at it or at this account (so a chain
     /// A to B to C is refused too). Field `linked_account_id`.
     ErrLinkAlreadyLinked,
-    /// Placing opening capital in روکڑ (PRD FR-16.14 v1.50, plan 87): none of the listed partners
-    /// has an opening capital that sits against ابتدائی فرق, so there is nothing to place. Nothing
-    /// was changed. Field `partner_ids`.
-    ErrNothingToPlace,
+    /// The one-time fix "پرانے ابتدائی بقایا روکڑ میں درج کریں" (PRD FR-10.9 v1.60, plan 99): every
+    /// party opening is already against روکڑ, so there is nothing to move. Nothing was changed.
+    ErrOpeningsAlreadyInCash,
 }
 
 impl ErrorCode {
@@ -603,7 +605,6 @@ impl ErrorCode {
         ErrorCode::ErrPrintWindowsOnly,
         ErrorCode::ErrPrinterNotFound,
         ErrorCode::ErrPrintFailed,
-        ErrorCode::ErrPaymentToBuyerNeedsReason,
         ErrorCode::ErrReturnExceedsOpen,
         ErrorCode::ErrVoucherCancelled,
         ErrorCode::ErrPaymentAbovePayable,
@@ -651,6 +652,7 @@ impl ErrorCode {
         ErrorCode::ErrCloseBeforeLastEntry,
         ErrorCode::ErrGardenEntryCancelled,
         ErrorCode::ErrFruitCancelled,
+        ErrorCode::ErrDeductionNotBelowValue,
         ErrorCode::ErrBikriHasFruit,
         ErrorCode::ErrTagInvalid,
         ErrorCode::ErrSellDateBeforeEntry,
@@ -689,7 +691,7 @@ impl ErrorCode {
         ErrorCode::ErrOwnerOwesNotConfirmed,
         ErrorCode::ErrLinkNotSellerBuyer,
         ErrorCode::ErrLinkAlreadyLinked,
-        ErrorCode::ErrNothingToPlace,
+        ErrorCode::ErrOpeningsAlreadyInCash,
     ];
 }
 

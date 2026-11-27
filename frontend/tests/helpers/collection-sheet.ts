@@ -4,6 +4,7 @@
 // (CLAUDE.md rule 1).
 
 import { vi } from 'vitest';
+import type { AdhariOtherRow } from '../../src/bindings/AdhariOtherRow';
 import type { AdhariSheet } from '../../src/bindings/AdhariSheet';
 import type { AdhariSheetRow } from '../../src/bindings/AdhariSheetRow';
 import type { CollectionSheet } from '../../src/bindings/CollectionSheet';
@@ -119,7 +120,6 @@ export function adhariBuyer(
     party: base.party,
     lines: base.lines,
     bill_paisa: base.bill_paisa,
-    cash_paisa: base.paid_paisa,
     today_credit_paisa: rupees(bill - cash),
     previous_due: base.previous_due,
     total_due: base.total_due,
@@ -127,7 +127,36 @@ export function adhariBuyer(
   };
 }
 
-/** After Events 1 to 5 on 10-10-26 (PRD R5 v1.43): اکرم 12,880 / 0 / 12,880; ارشد 18,684; شاہد (چکتا) paid in full. */
+/**
+ * A buyer of the "other buyers" list of ادھاری تفصیل (plan 97 item 6): he owed at the start of the day and bought nothing, so
+ * his total is what he owed. A balance of جمع is shown with its side (`side: 'cr'`).
+ */
+export function adhariOther(
+  id: number,
+  code: string,
+  ur: string,
+  en: string,
+  owed: number,
+  options: { tag?: string; side?: 'dr' | 'cr' } = {},
+): AdhariOtherRow {
+  const balance =
+    options.side === 'cr' ? ({ amount_paisa: rupees(owed), side: 'cr' } as const) : dr(owed);
+  return {
+    party: {
+      account_id: id,
+      code,
+      short_code: code.slice(3),
+      name_ur: ur,
+      name_en: en,
+      tag: options.tag ?? null,
+      person_key: null,
+    },
+    previous_due: balance,
+    total_due: balance,
+  };
+}
+
+/** After Events 1 to 5 on 10-10-26 (PRD R5 v1.43, v1.57): اکرم 12,880 / 0 / 12,880 and ارشد 18,684; the چکتا buyer شاہد is not on the sheet. */
 export const ADHARI_AKRAM = adhariBuyer(
   20,
   '0020',
@@ -138,24 +167,21 @@ export const ADHARI_AKRAM = adhariBuyer(
   0,
 );
 export const ADHARI_ARSHAD = adhariBuyer(21, '0021', 'ارشد ملتانی', 'Arshad Multani', 18_684, 0, 0);
-export const ADHARI_SHAHID = adhariBuyer(30, '0030', 'شاہد', 'Shahid', 12_800, 12_800, 0, {
-  personKey: 'p-1',
-});
 const sums = (bill: number, cash: number, previous: number) => ({
   bill_paisa: rupees(bill),
-  cash_paisa: rupees(cash),
   today_credit_paisa: rupees(bill - cash),
   previous_due: dr(previous),
   total_due: dr(previous + bill - cash),
 });
 export const ADHARI_SHEET: AdhariSheet = {
   date: '2026-10-10',
-  rows: [ADHARI_AKRAM, ADHARI_ARSHAD, ADHARI_SHAHID],
-  total_count: 3,
-  totals: sums(44_364, 12_800, 0),
+  rows: [ADHARI_AKRAM, ADHARI_ARSHAD],
+  total_count: 2,
+  totals: sums(31_564, 0, 0),
   others: null,
   others_count: 0,
-  all_totals: sums(44_364, 12_800, 0),
+  other_rows: [],
+  all_totals: sums(31_564, 0, 0),
   dead_totals: null,
   credit_totals: null,
 };

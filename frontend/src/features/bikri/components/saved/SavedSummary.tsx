@@ -19,18 +19,20 @@ interface Line {
   emphasis?: 'total';
 }
 
-function sellerLines(totals: SavedTotals): Line[] {
+function sellerLines(totals: SavedTotals, hasAdvance: boolean): Line[] {
   return [
     { labelId: 'glossary-kham-bikri', paisa: totals.gross },
     { labelId: 'glossary-kiraya', paisa: totals.freight },
     { labelId: 'glossary-commission', paisa: totals.seller_comm },
     { labelId: 'glossary-mazdoori', paisa: totals.labour },
     { labelId: 'glossary-munshiana', paisa: totals.munshiana },
-    { labelId: 'glossary-naqd', paisa: totals.cash_paid },
+    { labelId: 'glossary-naqd-adaigi', paisa: totals.cash_paid },
     { labelId: 'glossary-kiraya-store', paisa: totals.store_rent },
     { labelId: 'glossary-phone', paisa: totals.phone },
     { labelId: 'bikri-summary-deductions', paisa: totals.deductions, emphasis: 'total' },
     { labelId: 'glossary-safi-bikri', paisa: totals.net, emphasis: 'total' },
+    // The advance the seller took with these goods: not part of the deductions or the net, an advance of its own (PRD FR-12.52).
+    ...(hasAdvance ? [{ labelId: 'glossary-peshgi', paisa: totals.advance }] : []),
   ];
 }
 
@@ -80,6 +82,7 @@ export function SavedSummary({ detail }: { detail: BikriDetail }) {
   const totals = lot?.totals ?? detail.totals;
   // The test is on the text the backend's number is written as, so nothing is compared as a number.
   const hasRateDiff = formatPaisa(totals.rate_diff, { grouping }) !== '0';
+  const hasAdvance = formatPaisa(totals.advance, { grouping }) !== '0';
   const netIsNegative = formatPaisa(totals.net, { grouping }).startsWith('-');
   return (
     <section
@@ -139,7 +142,7 @@ export function SavedSummary({ detail }: { detail: BikriDetail }) {
           <Localized id="bikri-summary-seller-side">
             <h3 className="type-label text-ink-muted" />
           </Localized>
-          <Rows lines={sellerLines(totals)} negativeNet={netIsNegative} />
+          <Rows lines={sellerLines(totals, hasAdvance)} negativeNet={netIsNegative} />
           {netIsNegative ? (
             <p className="flex items-center gap-2 type-body text-due">
               <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />

@@ -3,6 +3,9 @@
 //! every split goes through `split_by_qty` and nothing else (money agent Section 5.5).
 //!
 //! - [`fruit_value`] (C1): `qty × rate`, or `round(kg × rate per kg)` for an item sold by weight.
+//! - [`net_after_deduction`] (PRD FR-16.11 v1.59): fruit from another shop may carry a کل کٹوتی, the
+//!   other shop's commission, freight and other charges in one amount. The net, `value - deduction`,
+//!   is what the agent is credited and what the partners are charged. 0 deducts nothing.
 //! - [`partner_part`]: fruit taken home is worth its whole value to that one partner.
 //! - [`guest_parts`] (C27): fruit for the shop's guests is split equally between the partners, never
 //!   by the firm's shares. The partners come in the order they were created, and the leftover rupees
@@ -11,7 +14,9 @@
 //!   No commission, no cash, and no partner share rows (fruit is never a shop expense).
 //!
 //! Example (PRD E2E-42): 3 پیٹی سیب at 1,000 = 3,000 for the guests of a shop with three partners:
-//! 1,000 / 1,000 / 1,000. And 1,000 over three partners: 334 / 333 / 333.
+//! 1,000 / 1,000 / 1,000. And 1,000 over three partners: 334 / 333 / 333. Example (PRD FR-16.11 v1.59):
+//! 2 پیٹی at 1,400 = 2,800, کل کٹوتی 200: the net is 2,600, and the guests of three partners are
+//! charged 868 / 866 / 866 (C27: the leftover 2 rupees go to the partner created first).
 //!
 //! ```
 //! use mandi_domain::core::ids::{AccountId, PartnerId};
@@ -127,6 +132,62 @@ pub fn fruit_value(qty: Qty, weight: Option<Grams>, rate: Paisa) -> Result<Fruit
     }
 }
 
+/// The net of an entry from another shop, with how it was worked out (PRD FR-16.11 v1.59).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FruitNet {
+    /// `value - deduction`, whole rupees, more than 0.
+    pub net: Paisa,
+    /// How it was worked out (CalcInfo): message `working-fruit-net`, args `value`, `deduction`,
+    /// `result`.
+    pub working: Working,
+}
+
+/// The most that can be deducted from `value`: one rupee less, so the agent is credited something
+/// (PRD FR-16.11 v1.59). `None` when the value is not above one rupee, so nothing can be deducted.
+///
+/// Example: a value of 2,800 allows a deduction up to 2,799.
+///
+/// # Errors
+/// `MoneyError::Overflow`.
+pub fn max_deduction(value: Paisa) -> Result<Option<Paisa>, MoneyError> {
+    let one = Paisa::from_rupees(1)?;
+    let max = value.checked_sub(one)?;
+    Ok((max > Paisa::ZERO).then_some(max))
+}
+
+/// What the partners are charged and the agent is credited when the other shop takes a کل کٹوتی off
+/// the value (PRD FR-16.11 v1.59): `net = value - deduction`, all in whole rupees with checked
+/// subtraction. A deduction of 0 gives `Some` with the net equal to the value.
+///
+/// Returns `None` when the deduction is not less than the value (the agent would be credited nothing
+/// or less): the caller refuses it with `ERR_DEDUCTION_NOT_BELOW_VALUE`. The net is therefore always
+/// more than 0.
+///
+/// Example: 2,800 less 200 is 2,600. 2,800 less 2,800 is `None`.
+///
+/// # Errors
+/// `MoneyError::NegativeValue` for a negative deduction or value; `MoneyError::Overflow`.
+pub fn net_after_deduction(value: Paisa, deduction: Paisa) -> Result<Option<FruitNet>, MoneyError> {
+    if deduction.is_negative() || value.is_negative() {
+        return Err(MoneyError::NegativeValue);
+    }
+    if deduction >= value {
+        return Ok(None);
+    }
+    let net = value.checked_sub(deduction)?;
+    Ok(Some(FruitNet {
+        net,
+        working: working(
+            "working-fruit-net",
+            vec![
+                money_arg("value", value),
+                money_arg("deduction", deduction),
+                money_arg("result", net),
+            ],
+        ),
+    }))
+}
+
 /// Fruit taken home by one partner: his part is the whole value (PRD FR-16.10). Nobody else is
 /// affected.
 #[must_use]
@@ -230,6 +291,62 @@ mod tests {
             .iter()
             .map(|part| part.amount.rupees())
             .collect()
+    }
+
+    /// PRD FR-16.11 v1.59: 2 × 1,400 = 2,800, کل کٹوتی 200, net 2,600. The partner's 0604 account is
+    /// debited 2,600 and the agent is credited 2,600.
+    #[test]
+    fn a_deduction_is_subtracted_and_the_partner_and_the_agent_get_the_net() {
+        let value = fruit_value(Qty::new(2).unwrap(), None, p(1_400)).unwrap();
+        assert_eq!(value.value, p(2_800));
+        let net = net_after_deduction(value.value, p(200)).unwrap().unwrap();
+        assert_eq!(net.net, p(2_600));
+        assert_eq!(net.working.message_id, "working-fruit-net");
+        let parts = partner_part((PartnerId::new(1), AccountId::new(11)), net.net);
+        assert_eq!(rupees(&parts), vec![2_600]);
+        let entry = fruit_entry(&parts.parts, AccountId::new(99)).unwrap();
+        assert_eq!(entry.total(), p(2_600));
+        assert_eq!(entry.lines().len(), 2);
+    }
+
+    /// The guests of three partners are charged the net by C27: floors 866 each, and the 2 leftover
+    /// rupees all go to the partner created first (E68): 868 / 866 / 866.
+    #[test]
+    fn guests_share_the_net_by_c27() {
+        let net = net_after_deduction(p(2_800), p(200)).unwrap().unwrap().net;
+        let parts = guest_parts(net, &three()).unwrap();
+        assert_eq!(rupees(&parts), vec![868, 866, 866]);
+        let entry = fruit_entry(&parts.parts, AccountId::new(99)).unwrap();
+        assert_eq!(entry.total(), p(2_600));
+        assert_eq!(entry.lines().len(), 4);
+    }
+
+    /// A deduction of 0 deducts nothing: the net is the value, so the entry is what it was.
+    #[test]
+    fn a_deduction_of_zero_posts_exactly_as_before() {
+        let net = net_after_deduction(p(2_800), Paisa::ZERO).unwrap().unwrap();
+        assert_eq!(net.net, p(2_800));
+    }
+
+    /// The deduction must be less than the value; the most is one rupee less.
+    #[test]
+    fn a_deduction_not_below_the_value_gives_none_and_the_most_is_one_rupee_less() {
+        assert!(net_after_deduction(p(2_800), p(2_800)).unwrap().is_none());
+        assert!(net_after_deduction(p(2_800), p(3_000)).unwrap().is_none());
+        let just_below = net_after_deduction(p(2_800), p(2_799)).unwrap().unwrap();
+        assert_eq!(just_below.net, p(1));
+        assert_eq!(max_deduction(p(2_800)).unwrap(), Some(p(2_799)));
+        // One rupee of value leaves nothing to deduct.
+        assert_eq!(max_deduction(p(1)).unwrap(), None);
+    }
+
+    /// A negative deduction is refused, never worked out.
+    #[test]
+    fn a_negative_deduction_is_an_error() {
+        assert_eq!(
+            net_after_deduction(p(2_800), p(-100)),
+            Err(MoneyError::NegativeValue)
+        );
     }
 
     #[test]
@@ -346,6 +463,38 @@ mod tests {
             prop_assert_eq!(first, value - floor * (i64::try_from(count).unwrap() - 1));
             let entry = fruit_entry(&parts.parts, AccountId::new(9_999)).unwrap();
             prop_assert_eq!(entry.total(), p(value));
+        }
+
+        /// PRD FR-16.11 v1.59: for any value and any deduction below it, the net is a whole rupee of
+        /// at least 1, `net + deduction = value`, the guests' parts of the net add up to the net and
+        /// the entry balances at the net. A deduction of the value or more has no net.
+        #[test]
+        fn the_net_is_whole_positive_and_the_entry_balances_at_the_net(
+            value in 1_i64..5_000_000,
+            cut in 0_i64..5_000_000,
+            count in 1_usize..10,
+        ) {
+            let deduction = cut % value;
+            let net = net_after_deduction(p(value), p(deduction)).unwrap().unwrap();
+            prop_assert!(net.net >= p(1));
+            prop_assert_eq!(net.net.as_paisa() % 100, 0);
+            prop_assert_eq!(net.net.checked_add(p(deduction)).unwrap(), p(value));
+            let partners: Vec<(PartnerId, AccountId)> = (0..count)
+                .map(|i| {
+                    let n = i64::try_from(i).unwrap() + 1;
+                    (PartnerId::new(n), AccountId::new(100 + n))
+                })
+                .collect();
+            let parts = guest_parts(net.net, &partners).unwrap();
+            let entry = fruit_entry(&parts.parts, AccountId::new(9_999)).unwrap();
+            prop_assert_eq!(entry.total(), net.net);
+            // A deduction of the value or more has no net.
+            prop_assert!(net_after_deduction(p(value), p(value + cut)).unwrap().is_none());
+            // With no deduction the net is the value: the entry is what it was.
+            let same = net_after_deduction(p(value), Paisa::ZERO).unwrap().unwrap();
+            prop_assert_eq!(same.net, p(value));
+            let max = max_deduction(p(value)).unwrap();
+            prop_assert_eq!(max, if value > 1 { Some(p(value - 1)) } else { None });
         }
     }
 }

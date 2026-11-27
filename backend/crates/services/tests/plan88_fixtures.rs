@@ -18,12 +18,11 @@ mod support;
 use std::path::{Path, PathBuf};
 
 use mandi_services::core::accounts::SearchAccountsInput;
-use mandi_services::core::error::ErrorCode;
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesInput, VoucherPreviewInput, VouchersListInput,
 };
 use mandi_services::core::windows::WindowsBoundsInput;
-use mandi_services::{ServiceError, search, vouchers, windows};
+use mandi_services::{search, vouchers, windows};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -61,26 +60,6 @@ fn pair<A: Serialize>(name: &str, request: &Value, answer: &A) {
         &format!("{name}.json"),
         &(serde_json::to_string_pretty(answer).unwrap() + "\n"),
     );
-}
-
-/// A refusal as a command returns it. `ref` is a stand-in: the real one is a counter.
-fn wire(error: &ServiceError) -> Value {
-    let ServiceError::Rejected(items) = error else {
-        panic!("not a refusal of the user's entry: {error:?}");
-    };
-    json!({
-        "ok": false,
-        "errors": items
-            .iter()
-            .map(|i| json!({ "code": i.code, "field": i.field, "values": i.values }))
-            .collect::<Vec<_>>(),
-        "ref": "E-20261010-0001"
-    })
-}
-
-fn refusal(name: &str, request: &Value, error: &ServiceError, code: ErrorCode) {
-    assert_eq!(error.code(), code, "{name}");
-    pair(name, request, &wire(error));
 }
 
 fn typed<T: serde::de::DeserializeOwned>(request: &Value) -> T {
@@ -133,14 +112,6 @@ fn the_real_answers_of_the_plan_88_commands_are_the_fixtures() {
     assert!(preview.errors.is_empty());
     assert_eq!(preview.new_balance.amount_paisa.rupees(), 3_000);
     pair("vouchers_preview_advance_buyer", &preview_request, &preview);
-    let no_reason = advance_json(w.akram, "3,000", None);
-    let error = vouchers::save_advance(ctx, owner, &typed::<AdvanceInput>(&no_reason)).unwrap_err();
-    refusal(
-        "vouchers_save_advance_buyer_needs_reason",
-        &no_reason,
-        &error,
-        ErrorCode::ErrPaymentToBuyerNeedsReason,
-    );
     let buyer_saved = vouchers::save_advance(ctx, owner, &typed::<AdvanceInput>(&buyer)).unwrap();
     assert_eq!(
         serde_json::to_value(buyer_saved.voucher_type).unwrap(),

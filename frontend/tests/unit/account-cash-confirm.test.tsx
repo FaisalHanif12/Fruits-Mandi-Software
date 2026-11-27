@@ -1,5 +1,5 @@
-// The account form when a change of an opening that is in روکڑ would take cash below zero (PRD FR-6.7, plan 80
-// R4-4), in the Urdu and the English app. `accounts_save` answers ERR_CASH_BELOW_ZERO_NOT_CONFIRMED with the value
+// The account form when an opening in روکڑ would take cash below zero (PRD FR-6.7, plan 80 R4-4, and plan 99:
+// a party's opening goes through روکڑ, FR-10.9 v1.60), and the "from روکڑ" note, in the Urdu and the English app. `accounts_save` answers ERR_CASH_BELOW_ZERO_NOT_CONFIRMED with the value
 // `cash_after_paisa`; the form asks the question of FR-6.7 with that figure, No sends nothing, and the yes sends the
 // same account again with `confirm_cash_below_zero`.
 
@@ -120,5 +120,77 @@ describe.each(LANGUAGES)('the account form and the cash question (%s)', (languag
     });
     expect(vi.mocked(accountApi.accountsSave)).toHaveBeenCalledTimes(1);
     expect((await labelled(language, 'accounts-field-opening-cr')).value).toBe('100');
+  });
+});
+
+describe.each(LANGUAGES)('a party opening goes through روکڑ (%s)', (language) => {
+  const m = (id: string) => message(language, id);
+
+  beforeEach(() => {
+    resetClientState(language);
+    signedIn(sessionUser({ language }));
+  });
+
+  const noteText = () => visible(document.body.textContent);
+
+  it('says so under the opening of a new account, with the way the money moves as it is typed', async () => {
+    fakeAccounts([]);
+    await renderApp('/index/accounts/new');
+    const user = userEvent.setup();
+    const debit = await labelled(language, 'accounts-field-opening-dr');
+    expect(noteText()).toContain(m('accounts-opening-cash'));
+    await user.click(debit);
+    await user.keyboard('5000');
+    expect(noteText()).toContain(m('accounts-opening-cash-out'));
+    await user.clear(debit);
+    await user.click(await labelled(language, 'accounts-field-opening-cr'));
+    await user.keyboard('700');
+    expect(noteText()).toContain(m('accounts-opening-cash-in'));
+    expect(noteText()).not.toContain(m('accounts-opening-cash-out'));
+  });
+
+  it('says nothing about روکڑ for an account whose opening goes to the opening difference', async () => {
+    fakeAccounts([CAPITAL]);
+    await renderApp('/index/accounts/61');
+    await labelled(language, 'accounts-field-opening-cr');
+    expect(noteText()).not.toContain(m('accounts-opening-cash'));
+    expect(noteText()).not.toContain(m('accounts-opening-cash-in'));
+  });
+
+  it('a new opening that takes cash below zero asks the cash question, and the yes saves it confirmed', async () => {
+    fakeAccounts([]);
+    const saved = vi.mocked(accountApi.accountsSave).getMockImplementation();
+    if (saved === undefined) throw new Error('no fake save');
+    vi.mocked(accountApi.accountsSave).mockImplementation((draft, words, confirm) =>
+      confirm === true
+        ? saved(draft, words, confirm)
+        : Promise.reject(
+            fail({
+              code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED',
+              field: 'opening_dr',
+              values: { cash_after_paisa: -216_000 },
+            }),
+          ),
+    );
+    await renderApp('/index/accounts/new');
+    const user = userEvent.setup();
+    await user.click(await labelled(language, 'accounts-field-name-en'));
+    await user.keyboard('Mani');
+    await user.click(await labelled(language, 'accounts-field-name-ur'));
+    await user.keyboard('مانی');
+    await user.click(await labelled(language, 'accounts-field-opening-dr'));
+    await user.keyboard('30000');
+    press('F10');
+    const box = await screen.findByRole('alertdialog');
+    expect(visible(box.textContent)).toContain('-2,160');
+    await user.click(
+      within(box).getByRole('button', { name: message(language, 'common-cash-confirm-yes') }),
+    );
+    await waitFor(() => {
+      expect(vi.mocked(accountApi.accountsSave)).toHaveBeenCalledTimes(2);
+    });
+    const calls = vi.mocked(accountApi.accountsSave).mock.calls;
+    expect(calls.map(([, , confirm]) => confirm)).toEqual([false, true]);
+    expect(calls[1]?.[0]).toMatchObject({ id: null, opening_dr: '30000' });
   });
 });

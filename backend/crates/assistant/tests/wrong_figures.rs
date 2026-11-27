@@ -1519,6 +1519,7 @@ fn q215_the_fruit_taken_home_is_totalled_for_each_partner_and_the_guests() {
         weight: None,
         rate: rate.into(),
         note: None,
+        deduction: None,
         editing_id: None,
     };
     let (ctx, owner) = (&h.world.env.ctx, &h.world.owner);
@@ -1832,6 +1833,7 @@ fn r37_read_by_the_assistant_while_the_partner_section_is_locked_shows_no_partne
         weight: None,
         rate: rate.into(),
         note: None,
+        deduction: None,
         editing_id: None,
     };
     let (ctx, owner) = (&h.world.env.ctx, &h.world.owner);

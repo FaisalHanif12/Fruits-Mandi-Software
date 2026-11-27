@@ -20,11 +20,14 @@ use mandi_services::core::lent::{
 };
 use mandi_services::core::masters::{ExpenseHeadInput, MasterInput, StaffInput};
 use mandi_services::core::money::Paisa;
+use mandi_services::core::paging::{SortDirection, SortInput};
+use mandi_services::core::partners::{PartnerUpdateInput, PartnersSetSharesInput, ShareInput};
 use mandi_services::core::row_source::SourceKind;
 use mandi_services::core::vouchers::{
     VoucherCancelInput, VoucherEditInput, VoucherEntry, VoucherType,
 };
-use mandi_services::{ServiceError, ledger, lent, masters, partners, search, vouchers};
+use mandi_services::core::windows::{WindowSource, WindowsBoundsInput};
+use mandi_services::{ServiceError, ledger, lent, masters, partners, search, vouchers, windows};
 use support::World;
 
 fn rupees(value: i64) -> Paisa {
@@ -588,7 +591,7 @@ fn a_take_or_loan_cannot_be_cancelled_or_made_smaller_than_its_returns() {
             show_finished: true,
             group_by_month: false,
             sort: None,
-            partner_id: a,
+            partner_id: Some(a),
             offset: 0,
             limit: 0,
         },
@@ -669,7 +672,7 @@ fn a_take_with_returns_cannot_be_edited_to_another_partner() {
                 show_finished: true,
                 group_by_month: false,
                 sort: None,
-                partner_id: partner,
+                partner_id: Some(partner),
                 offset: 0,
                 limit: 0,
             },
@@ -840,7 +843,7 @@ fn a_return_dated_before_its_take_cannot_be_saved() {
             show_finished: true,
             group_by_month: false,
             sort: None,
-            partner_id: a,
+            partner_id: Some(a),
             offset: 0,
             limit: 0,
         },
@@ -1425,6 +1428,8 @@ fn the_cash_book_filters_by_day_and_gives_the_opening_before_it() {
             &w.env.ctx,
             &mandi_services::core::cashbook::CashbookInput {
                 group_by_month: false,
+                show_reversed: false,
+                kinds: None,
                 sort: None,
                 from: from.map(str::to_owned),
                 to: to.map(str::to_owned),
@@ -1449,6 +1454,8 @@ fn the_cash_book_filters_by_day_and_gives_the_opening_before_it() {
         &w.env.ctx,
         &mandi_services::core::cashbook::CashbookInput {
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
             sort: None,
             from: Some("31-02-2026".into()),
             to: None,
@@ -1498,7 +1505,7 @@ fn a_drawings_opening_debit_is_money_taken_dated_its_opening_day() {
             show_finished: true,
             group_by_month: false,
             sort: None,
-            partner_id: w.partners[0],
+            partner_id: Some(w.partners[0]),
             offset: 0,
             limit: 0,
         },
@@ -1949,7 +1956,7 @@ fn an_opening_on_money_taken_is_a_debit_and_cannot_be_cleared_under_its_returns(
             show_finished: true,
             group_by_month: false,
             sort: None,
-            partner_id: a,
+            partner_id: Some(a),
             offset: 0,
             limit: 0,
         },
@@ -2252,6 +2259,8 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
         ctx,
         &mandi_services::core::cashbook::CashbookInput {
             group_by_month: false,
+            show_reversed: false,
+            kinds: None,
             sort: None,
             from: None,
             to: None,
@@ -2468,4 +2477,256 @@ fn ids_by_type(ctx: &mandi_services::context::Context, kind: VoucherType) -> i64
     )
     .unwrap();
     page.rows[0].id
+}
+
+/// Plan 98 (PRD FR-16.2): with no partner chosen the list of money taken holds every active partner's
+/// takes, each row naming its partner; with a partner chosen it holds only his. Returns settle each
+/// partner's own oldest takes; the totals are over all the rows.
+#[test]
+fn takes_with_no_partner_list_every_partner_and_a_partner_lists_only_his() {
+    let w = support::world();
+    let (a, b) = (w.partners[0], w.partners[1]);
+    // B takes 1,000 on 09-10-2026, A takes 2,000 on 10-10-2026 and gives 500 back the same day.
+    vouchers::save_personal_expense(&w.env.ctx, &w.owner, &personal(b, "1,000", "09-10-2026"))
+        .unwrap();
+    vouchers::save_personal_expense(&w.env.ctx, &w.owner, &personal(a, "2,000", "10-10-2026"))
+        .unwrap();
+    vouchers::save_personal_return(&w.env.ctx, &w.owner, &return_of(a, "500", "10-10-2026"))
+        .unwrap();
+    let takes = |partner_id: Option<i64>, offset: u32, limit: u32, sort: Option<SortInput>| {
+        partners::takes(
+            &w.env.ctx,
+            &PartnerTakesInput {
+                from: None,
+                to: None,
+                show_finished: true,
+                group_by_month: false,
+                sort,
+                partner_id,
+                offset,
+                limit,
+            },
+        )
+        .unwrap()
+    };
+    let figures = |t: &mandi_services::core::expenses::PartnerTakes| {
+        (
+            t.totals.taken_paisa.rupees(),
+            t.totals.returned_paisa.rupees(),
+            t.totals.open_paisa.rupees(),
+        )
+    };
+
+    // No partner: both takes, oldest day first, each with its own partner and its own returns.
+    let all = takes(None, 0, 0, None);
+    assert!(all.partner.is_none());
+    assert_eq!(all.total_count, 2);
+    let rows: Vec<(i64, &str, i64, i64, i64)> = all
+        .rows
+        .iter()
+        .map(|r| {
+            (
+                r.partner.id,
+                r.entry_date.as_str(),
+                r.amount_paisa.rupees(),
+                r.returned_paisa.rupees(),
+                r.open_paisa.rupees(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            (b, "2026-10-09", 1_000, 0, 1_000),
+            (a, "2026-10-10", 2_000, 500, 1_500),
+        ]
+    );
+    // The totals are over all the partners: 1,000 + 2,000 taken, 500 returned, 2,500 open.
+    assert_eq!(figures(&all), (3_000, 500, 2_500));
+    // Newest first when asked, and a page of one keeps the count and the totals of the whole list.
+    let newest = takes(
+        None,
+        0,
+        0,
+        Some(SortInput {
+            column: "entry_date".into(),
+            direction: SortDirection::Desc,
+            language: None,
+        }),
+    );
+    assert_eq!(newest.rows[0].partner.id, a);
+    let second_page = takes(None, 1, 1, None);
+    assert_eq!(second_page.rows.len(), 1);
+    assert_eq!(second_page.rows[0].partner.id, a);
+    assert_eq!(second_page.total_count, 2);
+    assert_eq!(figures(&second_page), (3_000, 500, 2_500));
+
+    // A partner chosen: only his row and his totals, as before plan 98.
+    let only_a = takes(Some(a), 0, 0, None);
+    assert_eq!(only_a.partner.as_ref().map(|p| p.id), Some(a));
+    assert_eq!(only_a.total_count, 1);
+    assert_eq!(only_a.rows[0].partner.id, a);
+    assert_eq!(figures(&only_a), (2_000, 500, 1_500));
+    let only_b = takes(Some(b), 0, 0, None);
+    assert_eq!(only_b.rows.len(), 1);
+    assert_eq!(only_b.rows[0].partner.id, b);
+    assert_eq!(figures(&only_b), (1_000, 0, 1_000));
+
+    // The first day of the window: the earliest take of any partner, or of the one chosen.
+    let first_day = |partner_id: Option<i64>| {
+        windows::bounds(
+            &w.env.ctx,
+            &WindowsBoundsInput {
+                source: WindowSource::PartnerTakes { partner_id },
+            },
+        )
+        .unwrap()
+        .first_date
+    };
+    assert_eq!(first_day(None).as_deref(), Some("2026-10-09"));
+    assert_eq!(first_day(Some(a)).as_deref(), Some("2026-10-10"));
+}
+
+/// Plan 98, money review: in the list of every partner, a return settles that partner's own oldest
+/// take first, even when another partner's take lies between his takes in day order.
+#[test]
+fn a_return_in_the_all_partners_list_settles_his_own_oldest_take_only() {
+    let w = support::world();
+    let (a, b) = (w.partners[0], w.partners[1]);
+    for (partner, amount, date) in [
+        (a, "1,000", "08-10-2026"),
+        (b, "700", "09-10-2026"),
+        (a, "2,000", "10-10-2026"),
+    ] {
+        vouchers::save_personal_expense(&w.env.ctx, &w.owner, &personal(partner, amount, date))
+            .unwrap();
+    }
+    // A gives 1,200 back: his first take of 1,000 is settled, 200 goes to his second. B is untouched.
+    vouchers::save_personal_return(&w.env.ctx, &w.owner, &return_of(a, "1,200", "10-10-2026"))
+        .unwrap();
+    let all = partners::takes(
+        &w.env.ctx,
+        &PartnerTakesInput {
+            from: None,
+            to: None,
+            show_finished: true,
+            group_by_month: false,
+            sort: None,
+            partner_id: None,
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    let rows: Vec<(i64, i64, i64, i64)> = all
+        .rows
+        .iter()
+        .map(|r| {
+            (
+                r.partner.id,
+                r.amount_paisa.rupees(),
+                r.returned_paisa.rupees(),
+                r.open_paisa.rupees(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            (a, 1_000, 1_000, 0),
+            (b, 700, 0, 700),
+            (a, 2_000, 200, 1_800)
+        ]
+    );
+    assert_eq!(
+        (
+            all.totals.taken_paisa.rupees(),
+            all.totals.returned_paisa.rupees(),
+            all.totals.open_paisa.rupees()
+        ),
+        (3_700, 1_200, 2_500)
+    );
+}
+
+/// Plan 98, lead decision: a partner made inactive still shows in the list of every partner while he
+/// has takes in the range, so no take is hidden; the one-partner list shows him by his id as before.
+#[test]
+fn an_inactive_partner_with_takes_stays_in_the_all_partners_list() {
+    let w = support::world();
+    let (a, b, c) = (w.partners[0], w.partners[1], w.partners[2]);
+    vouchers::save_personal_expense(&w.env.ctx, &w.owner, &personal(c, "800", "09-10-2026"))
+        .unwrap();
+    vouchers::save_personal_expense(&w.env.ctx, &w.owner, &personal(a, "2,000", "10-10-2026"))
+        .unwrap();
+    // C has a share of 0 from today (A 50%, B 50%), so he can be made inactive.
+    partners::set_shares(
+        &w.env.ctx,
+        &w.owner,
+        &PartnersSetSharesInput {
+            effective_from: "10-10-2026".into(),
+            shares: [(a, "50"), (b, "50"), (c, "0")]
+                .iter()
+                .map(|&(partner_id, share)| ShareInput {
+                    partner_id,
+                    share: share.to_owned(),
+                })
+                .collect(),
+        },
+    )
+    .unwrap();
+    let row = partners::get(&w.env.ctx, c).unwrap().row;
+    partners::update(
+        &w.env.ctx,
+        &w.owner,
+        &PartnerUpdateInput {
+            id: c,
+            version: row.version,
+            name_ur: row.name_ur.clone(),
+            name_en: row.name_en.clone(),
+            is_active: false,
+            confirmed_rules_words: Vec::new(),
+        },
+    )
+    .unwrap();
+    let list = |partner_id: Option<i64>| {
+        partners::takes(
+            &w.env.ctx,
+            &PartnerTakesInput {
+                from: None,
+                to: None,
+                show_finished: true,
+                group_by_month: false,
+                sort: None,
+                partner_id,
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    let all = list(None);
+    let who: Vec<(i64, i64)> = all
+        .rows
+        .iter()
+        .map(|r| (r.partner.id, r.amount_paisa.rupees()))
+        .collect();
+    assert_eq!(who, vec![(c, 800), (a, 2_000)]);
+    assert_eq!(
+        (
+            all.totals.taken_paisa.rupees(),
+            all.totals.open_paisa.rupees()
+        ),
+        (2_800, 2_800)
+    );
+    assert_eq!(list(Some(c)).rows.len(), 1);
+    // The first day of the window counts his take too.
+    let first = windows::bounds(
+        &w.env.ctx,
+        &WindowsBoundsInput {
+            source: WindowSource::PartnerTakes { partner_id: None },
+        },
+    )
+    .unwrap()
+    .first_date;
+    assert_eq!(first.as_deref(), Some("2026-10-09"));
 }

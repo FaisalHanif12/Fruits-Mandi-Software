@@ -458,6 +458,10 @@ pub struct AccountRow {
     /// The چکتا کھاتہ account of walk-in buyers, whose person is typed on the line (PRD Section 13,
     /// account `0030`), and the old closed account `0031`.
     pub is_chukta_khata: bool,
+    /// A seller account marked آڑھتی دکان (another commission agent's shop, PRD FR-16.11 v1.59, plan
+    /// 97 item 1). The آڑھتی box of the پھل screen lists only these accounts and the seller field of
+    /// a lot does not offer them; everywhere else they are sellers. Made by `fruit_agent_shop_add`.
+    pub is_agent_shop: bool,
     /// False when hidden from pickers.
     pub is_active: bool,
     /// The note. Empty if none.

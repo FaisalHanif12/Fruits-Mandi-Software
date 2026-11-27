@@ -39,6 +39,8 @@
   "weight_grams": null,
   "rate_paisa": 58000,
   "value_paisa": 174000,
+  "deduction_paisa": 0,
+  "gross_paisa": 174000,
   "note": null,
   "status": "saved",
   "cancel_reason": null,
@@ -64,7 +66,6 @@
     "local_time": "14:00",
     "by": "Maher Adnan",
     "count": 1,
-    "reason": "wrong quantity",
-    "sign": null
+    "reason": "wrong quantity"
   }
 }

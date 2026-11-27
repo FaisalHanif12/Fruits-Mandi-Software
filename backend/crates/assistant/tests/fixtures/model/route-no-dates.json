@@ -1,0 +1,66 @@
+{
+  "steps": [
+    {
+      "expected": "اب تک کل کمیشن 5,448 ہے۔",
+      "outcome": "answered",
+      "question": "kon sa maal sab se zyada commission deta hai",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"view\": \"A\", \"from\": null, \"to\": null, \"period\": null, \"group_by\": null, \"item\": null, \"item_group\": null, \"grade\": null, \"seller\": null, \"buyer\": null, \"city\": null, \"adda\": null, \"garden\": null, \"trip\": null, \"goods\": null, \"partner\": null, \"side\": null, \"compare\": null, \"sort\": [{\"column\": \"total_comm\", \"order\": \"desc\"}], \"rows\": null}",
+                      "name": "analytics"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"اب تک کل کمیشن {{r1.totals.total_comm}} ہے۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day"
+}

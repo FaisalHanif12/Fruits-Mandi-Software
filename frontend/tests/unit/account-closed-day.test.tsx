@@ -28,6 +28,8 @@ import { AUDIT_EDIT_STAMP_BIKRI, DAY_FIX_OPEN_E2E_45 } from '../helpers/edit-rea
 import { fakeMasters } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { refusal } from '../helpers/ui-error';
+import partyClosedDay from '../fixtures/accounts_save_party_opening_closed_day.json';
+import type { UiError } from '../../src/bindings/UiError';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -270,5 +272,33 @@ describe.each(LANGUAGES)('the opening date of a closed day (%s)', (language) => 
       expect(visible(document.body.textContent)).toContain('Maher Adnan');
     });
     expect(editApi.auditEditStamp).toHaveBeenCalledWith('account', [21]);
+  });
+
+  it('a new account on a closed day says it cannot be written there and offers to reopen the day and save (PRD FR-21.4)', async () => {
+    // The backend's own refusal of a new party's opening on a closed day (today is open).
+    vi.mocked(accountApi.accountsSave).mockRejectedValueOnce(
+      new CommandError(partyClosedDay as UiError),
+    );
+    await renderApp('/index/accounts/new');
+    const user = userEvent.setup();
+    await user.type(await field('accounts-field-name-en'), 'Mani');
+    await user.type(await field('accounts-field-name-ur'), 'مانی');
+    await user.type(await field('accounts-field-opening-dr'), '30000');
+    press('F10');
+    expect(
+      await screen.findByText(message(language, 'accounts-opening-closed-new-today-open')),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: named(
+          message(language, 'accounts-opening-closed-use-today', { today: '31-10-2026' }),
+        ),
+      }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'edit-action-fix-save')) }),
+    );
+    // The box of the reason and the Owner's sign (the reopen-and-fix flow).
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
 });

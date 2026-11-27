@@ -42,7 +42,10 @@ The screens of شراکت دار open only with a 4-digit code.
   it in place with its source (`components/PartnerDayCard.tsx`). The month is in the address; the screen is behind
   the partner code. Commands: `partners_statement_month`, `partners_statement_day`,
   `partners_statement_month_print_data`. The old range statement list is gone.
-- The overview shows one compact line for each partner's open trips and gardens (`OpenVenturesLine.tsx`); the list
-  is read on demand (`partners_open_ventures`).
+- The overview shows one compact line for each partner's open trips and gardens (`OpenVenturesLine.tsx`, the count
+  of all the open ones); the list (`OpenVentures.tsx`) is read on demand (`partners_open_ventures`), one month at a
+  time by the day each was made (`useListWindow` with `{ kind: 'partner_ventures' }`), opening on the latest month
+  that has one (`usePartnerLatestVentureMonth`, `opensOn`), page by page, with the backend's totals (the gardens'
+  balance and the trips' result kept apart) (plan 99, PRD FR-17.3).
 - Tests: `partner-statement.test.tsx` (E2E-37, D4-A33), `fruit-statement.test.tsx`, `gardens-statement.test.tsx`
   (the real lines in the opened day), `partners-overview-ventures.test.tsx`.

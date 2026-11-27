@@ -1,4 +1,5 @@
 {
+  "total_capital_paisa": 5000000,
   "opening_paisa": -280000,
   "closing_paisa": 3570000,
   "first_entry_date": "2026-09-05",
@@ -7,15 +8,25 @@
       "entry_id": 8,
       "entry_date": "2026-10-10",
       "posting_type": "money_lent",
+      "kind": "money_lent",
+      "group": "lent",
+      "status": "live",
       "number": 1,
-      "account": {
-        "id": 37,
-        "code": "01030001",
-        "name_ur": "اسلم",
-        "name_en": "Aslam"
+      "refs": {
+        "parties": [
+          {
+            "id": 37,
+            "code": "01030001",
+            "name_ur": "اسلم",
+            "name_en": "Aslam"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
-      "kind": "other",
-      "partner": null,
       "narration": "گھریلو ضرورت",
       "in_paisa": 0,
       "out_paisa": 500000,
@@ -29,15 +40,25 @@
       "entry_id": 9,
       "entry_date": "2026-10-11",
       "posting_type": "money_lent_return",
+      "kind": "money_lent_return",
+      "group": "lent",
+      "status": "live",
       "number": 1,
-      "account": {
-        "id": 37,
-        "code": "01030001",
-        "name_ur": "اسلم",
-        "name_en": "Aslam"
+      "refs": {
+        "parties": [
+          {
+            "id": 37,
+            "code": "01030001",
+            "name_ur": "اسلم",
+            "name_en": "Aslam"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
-      "kind": "other",
-      "partner": null,
       "narration": "",
       "in_paisa": 300000,
       "out_paisa": 0,
@@ -53,5 +74,133 @@
     "in_paisa": 5350000,
     "out_paisa": 1500000
   },
+  "summary": [
+    {
+      "group": "receipt",
+      "kinds": [
+        "receipt"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "payment",
+      "kinds": [
+        "payment"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "advance",
+      "kinds": [
+        "advance",
+        "buyer_advance"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "lent",
+      "kinds": [
+        "cash_lent",
+        "money_lent",
+        "money_lent_return"
+      ],
+      "count": 2,
+      "in_paisa": 300000,
+      "out_paisa": 500000
+    },
+    {
+      "group": "expense",
+      "kinds": [
+        "shop_expense",
+        "personal_expense",
+        "personal_return"
+      ],
+      "count": 3,
+      "in_paisa": 50000,
+      "out_paisa": 500000
+    },
+    {
+      "group": "bikri",
+      "kinds": [
+        "bikri_paid",
+        "bikri_seller_cash",
+        "bikri_advance"
+      ],
+      "count": 1,
+      "in_paisa": 0,
+      "out_paisa": 500000
+    },
+    {
+      "group": "garden",
+      "kinds": [
+        "garden_installment",
+        "garden_cost",
+        "garden_other_sale",
+        "garden_refund"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "trip",
+      "kinds": [
+        "purchase",
+        "trip_cost",
+        "trip_other_sale"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "capital",
+      "kinds": [
+        "capital_in",
+        "capital_out",
+        "opening_capital"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "khata",
+      "kinds": [
+        "khata_out",
+        "khata_in"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "opening",
+      "kinds": [
+        "opening_cash",
+        "opening_balance"
+      ],
+      "count": 1,
+      "in_paisa": 5000000,
+      "out_paisa": 0
+    },
+    {
+      "group": "other",
+      "kinds": [
+        "general",
+        "fruit",
+        "other"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    }
+  ],
   "months": []
 }

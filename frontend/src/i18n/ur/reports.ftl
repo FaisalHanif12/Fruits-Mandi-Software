@@ -284,6 +284,16 @@ report-detail-lot = { -bikri } { $number }: { $item } { $qty } { $packing }، { 
 # review: pending
 report-detail-cash-lent = { -naqd-udhar }: { $reason }
 
+# review: pending
+report-detail-cash-lent-plain = { -naqd-udhar }
+
+# A پیشگی typed for a buyer (saved as cash lent, PRD FR-15.11 v1.60).
+# review: pending
+report-detail-buyer-advance = { -peshgi }: { $reason }
+
+# review: pending
+report-detail-buyer-advance-plain = { -peshgi }
+
 # The mark on the credit line of money a buyer paid on the spot (PRD FR-12.44, FR-19.8).
 # review: pending
 report-detail-paid-on-spot = { -bikri } { $number }: { -mauqa-par-jama }
@@ -314,6 +324,15 @@ report-doc-payment = { -adaigi }
 
 # review: pending
 report-doc-advance = { -peshgi }
+
+# A پیشگی typed for a buyer (saved as cash lent, PRD FR-15.11 v1.60).
+# review: pending
+report-doc-buyer-advance = { -peshgi } ({ -gahak })
+
+# The advance a seller took with the goods of a sale (plan 95 item 11, PRD FR-12.52): the row of the روکڑ بک, the
+# day book and the ledger; the number of the sale follows it.
+# review: pending
+report-doc-bikri-advance = { -peshgi } { -bikri } نمبر
 
 # review: pending
 report-doc-shop-expense = { -dukan-kharcha }
@@ -542,7 +561,7 @@ report-col-labour = { -mazdoori }
 report-col-munshiana = { -munshiana }
 
 # review: pending
-report-col-cash-paid = { -naqd }
+report-col-cash-paid = { -naqd-adaigi }
 
 # review: pending
 report-col-store-rent = { -kiraya-store }
@@ -1249,7 +1268,7 @@ report-r1-help = ایک { -bikri } کے لاٹ: کیا آیا، کیا بکا، 
 report-r5-title = { -udhari } تفصیل
 
 # review: pending
-report-r5-help = اس دن دکان کو اپنے { -gahakon } سے کتنا لینا ہے: ہر وہ { -gahak } جس نے خریداری کی، ایک قطار میں: اس کا مال، آج کا بل، نقد، آج کا ادھار، { -sabiqa-raqam } اور کل ادھار۔ آخر میں سب { -gahakon } کا کل ادھار۔
+report-r5-help = اس دن دکان کو اپنے { -gahakon } سے کتنا لینا ہے: ہر وہ { -gahak } جس نے خریداری کی، ایک قطار میں: اس کا مال، آج کا بل، آج کا ادھار، { -sabiqa-raqam } اور کل ادھار۔ آخر میں سب { -gahakon } کا کل ادھار۔
 
 # review: pending
 report-col-serial = نمبر شمار
@@ -1403,6 +1422,10 @@ report-r35-sale-rest = { -bikri } کی باقی رقم، کھاتے میں جم�
 # review: pending
 report-r35-net-sale = آج کی { -safi-bikri }
 
+# The advance a seller took with the goods of the day (plan 95 item 11, PRD FR-12.52); a line of his day slip only when it is not 0.
+# review: pending
+report-r35-advance = { -peshgi }
+
 # The new lines of the day total sheet (R34).
 # review: pending
 report-r34-qty = کل { -nag }
@@ -1435,7 +1458,7 @@ report-r34-sellers-net = بیوپاریوں کی آج کی { -safi-bikri }
 report-r34-sellers-other = بیوپاریوں کے دیگر اندراج
 
 # review: pending
-report-r34-sellers-paid = بیوپاریوں کو نقد ادا کر دیا
+report-r34-sellers-paid = بیوپاریوں کی { -naqd-adaigi }
 
 # The two short tables under the lines of a day.
 # review: pending
@@ -1555,7 +1578,7 @@ report-r4-detail = { -bikri } کی وہ لائنیں جن میں کچھ رقم {
 report-r4-when = یہ دیکھنے کے لیے کہ کتنا مال ادھار بکا۔
 
 # review: pending
-report-r5-detail = ہر وہ { -gahak } جس نے اس دن خریداری کی، پورا ادا کرنے والا بھی، ہر ایک کی ایک قطار، نام کے حساب سے۔ ہر قطار میں اس کا مال (قسم مال تعداد . ریٹ) کی شکل میں، آج کا بل، نقد، آج کا ادھار، { -sabiqa-raqam } اور کل ادھار۔ جدول کے نیچے: وہ { -gahakon } جن کے ذمے رقم تھی مگر آج خریداری نہیں کی، ایک میزان میں، اور سب { -gahakon } کا کل ادھار۔ دن کی { -wasooli } اگلے دن کی { -sabiqa-raqam } میں نظر آتی ہے۔
+report-r5-detail = ہر وہ { -gahak } جس نے اس دن خریداری کی، پورا ادا کرنے والا بھی، ہر ایک کی ایک قطار، نام کے حساب سے۔ ہر قطار میں اس کا مال (قسم مال تعداد . ریٹ) کی شکل میں، آج کا بل، آج کا ادھار، { -sabiqa-raqam } اور کل ادھار۔ جدول کے نیچے: وہ { -gahakon } جن کے ذمے رقم تھی مگر آج خریداری نہیں کی، ایک میزان میں، اور سب { -gahakon } کا کل ادھار۔ دن کی { -wasooli } اگلے دن کی { -sabiqa-raqam } میں نظر آتی ہے۔
 
 # review: pending
 report-r5-when = اگراہی کے چکر کے لیے اور دن کی بکری کے بعد باقی رقم کی فہرست کے لیے۔
@@ -1754,7 +1777,7 @@ report-r35-opening = { -ibtidai-baqaya }
 
 # Seller's slip: what the shop paid him that day in cash (his نقد and the ادائیگی).
 # review: pending
-report-r35-paid-today-seller = نقد ادا کر دیا
+report-r35-paid-today-seller = { -naqd-adaigi }
 
 # Seller's slip: what the shop still has to pay him for the day.
 # review: pending
@@ -1762,4 +1785,4 @@ report-r35-today-left-seller = آج دینا باقی
 
 # The same column in the short table of sellers of the day summary (R34).
 # review: pending
-report-col-paid-today-seller = نقد ادا کر دیا
+report-col-paid-today-seller = { -naqd-adaigi }

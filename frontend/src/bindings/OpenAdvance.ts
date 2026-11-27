@@ -6,7 +6,8 @@ import type { Paisa } from '../shared/format/money';
  */
 export type OpenAdvance = {
   /**
-   * `voucher` for a پیشگی voucher, `opening` for an opening debit marked as an advance.
+   * `voucher` for a پیشگی voucher, `opening` for an opening debit marked as an advance, `bikri`
+   * for the پیشگی typed on a lot of a بکری (PRD FR-12.52 v1.57).
    */
   source: string;
   /**

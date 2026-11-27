@@ -8,6 +8,7 @@ use std::sync::Arc;
 use mandi_db::arrivals as arrival_repo;
 use mandi_db::bikri as repo;
 use mandi_db::bikri::edit as edit_repo;
+use mandi_db::gardens as garden_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::partners as partner_repo;
 use mandi_db::purchases as purchase_repo;
@@ -29,8 +30,10 @@ use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::rules::{CreditLimitMode, ItemGroup, OverridesSettings};
 use mandi_domain::core::split::StockParts;
-use mandi_domain::core::ventures::TripRef;
-use mandi_domain::ledger::bikri::{EntryLayout, SystemAccounts, build_bikri_entry_with_layout};
+use mandi_domain::core::ventures::{GardenRef, TripRef};
+use mandi_domain::ledger::bikri::{
+    EntryLayout, SystemAccounts, build_bikri_entry_with_layout, build_lot_advance_entry,
+};
 use mandi_domain::ledger::{BalancedEntry, LedgerError, MAX_LINE_PAISA};
 use mandi_domain::partners::ShareKind;
 use mandi_domain::rules::RuleSet;
@@ -356,6 +359,39 @@ fn fill_own_lots(prepared: &mut PreparedDraft, purchases: &HashMap<i64, Purchase
     }
 }
 
+/// The garden of each garden account of `accounts`, keyed by the account id, for the garden card of
+/// the summary (PRD FR-12.52, plan 97 item 5). One query for all of them (Code Standards B22). An
+/// account that belongs to no garden has none.
+fn load_gardens(
+    conn: &Connection,
+    accounts: &HashMap<i64, AccountFacts>,
+) -> Result<HashMap<i64, GardenRef>, ServiceError> {
+    let ids: Vec<i64> = accounts
+        .iter()
+        .filter(|(_, facts)| facts.kind == PartyKind::Garden)
+        .map(|(id, _)| *id)
+        .collect();
+    Ok(garden_repo::of_accounts(conn, &ids)?
+        .into_iter()
+        .map(|rec| {
+            (
+                rec.account.id,
+                GardenRef {
+                    id: rec.id,
+                    number: rec.number,
+                    code: mandi_domain::core::codes::number_code(
+                        mandi_domain::core::codes::CodeType::Garden,
+                        rec.number,
+                    ),
+                    name_ur: rec.name_ur,
+                    name_en: rec.name_en,
+                    account: rec.account,
+                },
+            )
+        })
+        .collect())
+}
+
 /// What the database says about the accounts, items and masters of a draft.
 fn load_lookups(
     conn: &Connection,
@@ -467,19 +503,25 @@ fn load_lookups(
                 .iter()
                 .copied()
                 .filter(|id| {
-                    accounts
-                        .get(id)
-                        .is_some_and(|a| matches!(a.kind, PartyKind::Seller | PartyKind::Khata))
+                    accounts.get(id).is_some_and(|a| {
+                        matches!(
+                            a.kind,
+                            PartyKind::Seller | PartyKind::Khata | PartyKind::Garden
+                        )
+                    })
                 })
                 .collect();
             previous_balances(conn, &sellers, &date.to_iso(), replaces)?
         }
         None => HashMap::new(),
     };
+    // The garden of each garden account named as a seller, for the garden card (plan 97 item 5).
+    let gardens = load_gardens(conn, &accounts)?;
     let mut lookups = Lookups {
         accounts,
         items,
         previous,
+        gardens,
         packings: existing(conn, repo::MasterTable::Packings, &n.packings)?,
         markas: existing(conn, repo::MasterTable::Markas, &n.markas)?,
         stores: existing(conn, repo::MasterTable::Stores, &n.stores)?,
@@ -529,7 +571,19 @@ fn previous_balances(
     date_iso: &str,
     replaces: Option<i64>,
 ) -> Result<HashMap<i64, Paisa>, ServiceError> {
-    ledger_repo::totals_before_posting(conn, ids, date_iso, replaces)?
+    // An edit of a FIRST posting leaves the پیشگی entries of its بکری out too (PRD FR-12.52 v1.57): they
+    // are written just before the first entry, so by order they would count as "before" it.
+    let first_of = match replaces {
+        Some(entry) => edit_repo::bikri_of_first_posting(conn, entry)?,
+        None => None,
+    };
+    let totals = match first_of {
+        Some(bikri_id) => ledger_repo::totals_before_posting_without_advance(
+            conn, ids, date_iso, replaces, bikri_id,
+        )?,
+        None => ledger_repo::totals_before_posting(conn, ids, date_iso, replaces)?,
+    };
+    totals
         .into_iter()
         .map(|(id, t)| {
             let dr = paisa(t.dr_paisa)?;
@@ -622,7 +676,8 @@ fn split_of(
 ///   `cash_after_paisa`);
 /// * a seller is paid on the spot more than today's credit of his lots plus what the shop owed him:
 ///   `ERR_SELLER_PAID_ABOVE_TODAY` at `sellers[k].paid` for each such seller (values `credit_paisa`,
-///   `limit_paisa`, `paid_paisa`).
+///   `limit_paisa`, `paid_paisa`). The amount counted is his نقد plus the advance of his lots whose
+///   tick "پیشگی سے کاٹیں" is on (plan 95).
 ///
 /// # Errors
 /// All the reasons together, the cash one first.
@@ -659,6 +714,10 @@ pub(crate) fn require_confirmed(
                         "paid_paisa".to_owned(),
                         ErrorValue::Number(s.paid_paisa.as_paisa()),
                     ),
+                    (
+                        "advance_adjusted_paisa".to_owned(),
+                        ErrorValue::Number(s.advance_adjusted_paisa.as_paisa()),
+                    ),
                 ]),
             }),
     );
@@ -686,6 +745,9 @@ pub(crate) struct Worked {
     /// The journal entry of the worked rows and where its matching lines are. `None` when
     /// nothing could be worked out (then `errors` says why).
     pub entry: Option<BuiltEntry>,
+    /// The entry of the پیشگی the lots take (PRD FR-12.52 v1.57): `None` when no lot has one. Posted
+    /// just before `entry` in the same save.
+    pub advance_entry: Option<BalancedEntry>,
     /// What the entry does to cash in hand (PRD FR-6.7).
     pub cash: CashCheck,
     /// The Owner's switches used.
@@ -700,6 +762,8 @@ impl Worked {
             summary: self.calc.summary.clone(),
             split: self.split.clone(),
             sellers: self.calc.sellers.clone(),
+            gardens: self.calc.gardens.clone(),
+            trips: self.calc.trips.clone(),
             cash: self.cash,
             allow_line_override: self.switches.allow_line_override,
             errors: self.errors.clone(),
@@ -708,17 +772,27 @@ impl Worked {
     }
 }
 
+/// What [`books_of`] builds: the split, the cash change of the whole save, the بکری entry with its
+/// layout, and the entry of the lots' پیشگی if any lot has one (PRD FR-12.52 v1.57).
+type Books = (
+    Vec<SplitPart>,
+    Paisa,
+    Option<BuiltEntry>,
+    Option<BalancedEntry>,
+);
+
 /// Builds the entry of the worked rows, splits its income and works out what it does to cash.
-/// Returns the split, the cash change and the entry with its layout.
+/// Returns the split, the cash change and the entry with its layout. The cash change is that of the
+/// بکری entry and of the پیشگی entry together, so the one confirm of PRD FR-6.7 covers both.
 fn books_of(
     conn: &Connection,
     prepared: &PreparedDraft,
     calc: &PostingCalc,
     accounts: &SystemAccounts,
     errors: &mut Vec<FieldError>,
-) -> Result<(Vec<SplitPart>, Paisa, Option<BuiltEntry>), ServiceError> {
+) -> Result<Books, ServiceError> {
     let (Some(date), false) = (prepared.header.entry_date, calc.journal.lots.is_empty()) else {
-        return Ok((Vec::new(), Paisa::ZERO, None));
+        return Ok((Vec::new(), Paisa::ZERO, None, None));
     };
     let built = match build_bikri_entry_with_layout(&calc.journal, accounts) {
         Ok(built) => built,
@@ -728,7 +802,7 @@ fn books_of(
                 FieldError::new(ErrorCode::ErrEntryTooLarge, "lots")
                     .with("max", ErrorValue::Number(max)),
             );
-            return Ok((Vec::new(), Paisa::ZERO, None));
+            return Ok((Vec::new(), Paisa::ZERO, None, None));
         }
         Err(LedgerError::Overflow) => return Err(ServiceError::reject(ErrorCode::ErrOverflow)),
         // A complete lot with no complete line and no charge has no journal line at all. That is the
@@ -739,7 +813,7 @@ fn books_of(
             if errors.is_empty() {
                 errors.push(FieldError::new(ErrorCode::ErrNoSaleLines, "lots"));
             }
-            return Ok((Vec::new(), Paisa::ZERO, None));
+            return Ok((Vec::new(), Paisa::ZERO, None, None));
         }
         Err(other) => {
             // The calculation built rows that do not balance: a bug signal (Code Standards B16).
@@ -751,9 +825,42 @@ fn books_of(
             }]));
         }
     };
-    let change = cash::net_change(&built.0, accounts.cash).map_err(money_error)?;
+    // The پیشگی of the lots is its own entry (PRD FR-12.52 v1.57, FR-15.8): a seller debit flagged as an
+    // advance for each lot that has one, and روکڑ credit for the total.
+    let advance_lots: Vec<(AccountId, Paisa)> = calc
+        .journal
+        .lots
+        .iter()
+        .map(|lot| (lot.seller_account_id, lot.advance))
+        .collect();
+    let advance = match build_lot_advance_entry(&advance_lots, accounts.cash) {
+        Ok(built) => built.map(|(entry, _)| entry),
+        Err(LedgerError::TooLarge) => {
+            let max = MAX_LINE_PAISA.checked_div(100).unwrap_or(i64::MAX);
+            errors.push(
+                FieldError::new(ErrorCode::ErrEntryTooLarge, "lots")
+                    .with("max", ErrorValue::Number(max)),
+            );
+            return Ok((Vec::new(), Paisa::ZERO, None, None));
+        }
+        Err(LedgerError::Overflow) => return Err(ServiceError::reject(ErrorCode::ErrOverflow)),
+        Err(other) => {
+            tracing::error!(error = %other, "the پیشگی entry of a بکری does not balance");
+            return Err(ServiceError::Rejected(vec![Rejection {
+                code: ErrorCode::ErrJournalUnbalanced,
+                field: None,
+                values: std::collections::BTreeMap::new(),
+            }]));
+        }
+    };
+    let mut change = cash::net_change(&built.0, accounts.cash).map_err(money_error)?;
+    if let Some(advance) = &advance {
+        change = change
+            .checked_add(cash::net_change(advance, accounts.cash).map_err(money_error)?)
+            .map_err(money_error)?;
+    }
     let split = split_of(conn, date, &built.0, calc.summary.shared_income, errors)?;
-    Ok((split, change, Some(built)))
+    Ok((split, change, Some(built), advance))
 }
 
 /// The posting an edit takes the place of: its entry, and what it did to cash in hand.
@@ -788,8 +895,8 @@ pub(crate) struct Basis {
 /// before).
 #[derive(Debug, Clone)]
 pub(crate) struct SavedSellers {
-    /// What each seller was paid on the spot: the sum of the stored نقد of his lots, by seller
-    /// account.
+    /// What each seller was paid on the spot: the sum of the stored نقد of his lots and of the advance
+    /// of his lots whose tick is on, by seller account.
     pub paid: HashMap<i64, Paisa>,
     /// The saved بکری, read once for the edit. The credit the saved posting gave each seller is
     /// worked out from it only when it is needed (see [`skip_unchanged_sellers`]).
@@ -836,12 +943,17 @@ fn skip_unchanged_sellers(
 ) -> Result<(), ServiceError> {
     let same_amount = |seller: &mandi_domain::core::bikri::SellerPaidLines| {
         seller.needs_confirm
-            && seller.paid_paisa
-                == saved
-                    .paid
-                    .get(&seller.seller_account_id)
-                    .copied()
-                    .unwrap_or(Paisa::ZERO)
+            && seller
+                .paid_paisa
+                .checked_add(seller.advance_adjusted_paisa)
+                .ok()
+                == Some(
+                    saved
+                        .paid
+                        .get(&seller.seller_account_id)
+                        .copied()
+                        .unwrap_or(Paisa::ZERO),
+                )
     };
     if !sellers.iter().any(same_amount) {
         return Ok(());
@@ -945,7 +1057,8 @@ pub(crate) fn work_out(
     }
     let mut errors = calc.errors.clone();
     let accounts = system_accounts(conn)?;
-    let (split, change, entry) = books_of(conn, &prepared, &calc, &accounts, &mut errors)?;
+    let (split, change, entry, advance_entry) =
+        books_of(conn, &prepared, &calc, &accounts, &mut errors)?;
     // An edit's cash question is about the difference between the new entry and the one it
     // replaces: cash now still holds the old posting (PRD FR-6.7).
     let change = match basis.replaces {
@@ -959,6 +1072,7 @@ pub(crate) fn work_out(
         errors,
         split,
         entry,
+        advance_entry,
         cash,
         switches,
     })

@@ -12,7 +12,7 @@ use mandi_services::core::accounts::{
     AccountScope, AccountsRecentInput, AccountsTouchInput, ResolveCodeInput, ResolveStatus,
     SearchAccountsInput,
 };
-use mandi_services::core::vouchers::{AdvancesInput, VoucherSaved};
+use mandi_services::core::vouchers::{AdvancesInput, VoucherEnteredAs, VoucherSaved};
 use mandi_services::{dead, search};
 
 const REASON: &str = "نقد ادھار";
@@ -221,35 +221,43 @@ fn a_peshgi_to_a_buyer_is_the_same_save_as_the_payment_to_him() {
 }
 
 #[test]
-fn a_peshgi_to_a_buyer_needs_a_reason_at_its_field_and_nothing_is_saved() {
+fn a_peshgi_to_a_buyer_saves_without_a_reason_and_is_remembered_as_a_peshgi() {
+    // PRD FR-15.11 v1.60: the reason is optional; the پیشگی posts as cash lent and is marked.
     let w = events_1_to_5();
-    let vouchers_before = voucher_count(&w);
     for reason in [None, Some(""), Some("   ")] {
-        let refused =
-            vouchers::save_advance(&w.env.ctx, &w.owner, &advance_to(w.akram, "3,000", reason))
-                .unwrap_err();
-        assert_eq!(
-            first_error(&refused),
-            (
-                ErrorCode::ErrPaymentToBuyerNeedsReason,
-                Some("reason".to_owned())
-            ),
-            "reason {reason:?}"
+        let preview = preview_of(
+            &w,
+            VoucherEntry::Advance(advance_to(w.akram, "3,000", reason)),
         );
+        assert!(preview.errors.is_empty(), "reason {reason:?}");
     }
-    assert_eq!(voucher_count(&w), vouchers_before);
-    assert_eq!(cash_of(&w), (BalanceSide::Dr, 58_484));
-    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 2_880));
-
-    // The preview says the same, at the same field.
-    let preview = preview_of(
-        &w,
-        VoucherEntry::Advance(advance_to(w.akram, "3,000", None)),
-    );
-    assert_eq!(preview.errors.len(), 1);
+    let saved =
+        vouchers::save_advance(&w.env.ctx, &w.owner, &advance_to(w.akram, "3,000", None)).unwrap();
+    assert_eq!(saved.voucher_type, VoucherType::Payment);
+    let row = vouchers::get(&w.env.ctx, saved.voucher_id).unwrap();
+    assert_eq!(row.entered_as, Some(VoucherEnteredAs::Advance));
+    assert_eq!(row.reason, "");
+    // E2E-32's numbers: cash 58,484 − 3,000, اکرم 2,880 + 3,000, and the line is no advance.
+    assert_eq!(cash_of(&w), (BalanceSide::Dr, 55_484));
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 5_880));
     assert_eq!(
-        (preview.errors[0].code, preview.errors[0].field.as_str()),
-        (ErrorCode::ErrPaymentToBuyerNeedsReason, "reason")
+        scalar(
+            &w,
+            &format!(
+                "SELECT COUNT(*) FROM journal_lines WHERE entry_id = {} AND is_advance = 1",
+                saved.entry_id
+            )
+        ),
+        0
+    );
+    // Cash lent from the ادائیگی tab is not marked.
+    let lent =
+        vouchers::save_payment(&w.env.ctx, &w.owner, &payment_input(w.akram, "1,000", "")).unwrap();
+    assert_eq!(
+        vouchers::get(&w.env.ctx, lent.voucher_id)
+            .unwrap()
+            .entered_as,
+        None
     );
 }
 
@@ -436,18 +444,10 @@ fn the_running_list_takes_sellers_and_buyers_each_line_its_own_voucher() {
             advance_to(w.arshad, "1,000", Some(REASON)),
         ],
     };
-    // The preview: the buyer line without a reason says so at `lines[0].reason`; the seller line
-    // is fine; the third line is a buyer with a reason. Balances before and after are his.
+    // The preview: every line is fine, a buyer line with or without a reason (PRD FR-15.11 v1.60).
+    // Balances before and after are his.
     let preview = vouchers::preview_advances(&w.env.ctx, &input).unwrap();
-    assert_eq!(
-        (
-            preview.rows[0].errors[0].code,
-            preview.rows[0].errors[0].field.as_str()
-        ),
-        (ErrorCode::ErrPaymentToBuyerNeedsReason, "lines[0].reason")
-    );
-    assert!(preview.rows[1].errors.is_empty());
-    assert!(preview.rows[2].errors.is_empty());
+    assert!(preview.rows.iter().all(|r| r.errors.is_empty()));
     assert_eq!(
         (
             preview.rows[2].current_balance.amount_paisa,
@@ -455,12 +455,11 @@ fn the_running_list_takes_sellers_and_buyers_each_line_its_own_voucher() {
         ),
         (rupees(18_684), rupees(19_684))
     );
-    assert_eq!(preview.total_paisa, rupees(3_000));
+    assert_eq!(preview.total_paisa, rupees(6_000));
 
     let saved = vouchers::save_advances(&w.env.ctx, &w.owner, &input).unwrap();
-    assert!(saved.rows[0].saved.is_none());
-    assert_eq!(saved.rows[0].errors[0].field, "lines[0].reason".to_owned());
-    let kinds: Vec<VoucherType> = saved.rows[1..]
+    let kinds: Vec<VoucherType> = saved
+        .rows
         .iter()
         .map(|r| {
             r.saved
@@ -469,8 +468,15 @@ fn the_running_list_takes_sellers_and_buyers_each_line_its_own_voucher() {
                 .unwrap()
         })
         .collect();
-    assert_eq!(kinds, vec![VoucherType::Advance, VoucherType::Payment]);
-    assert_eq!(saved.saved_paisa, rupees(3_000));
+    assert_eq!(
+        kinds,
+        vec![
+            VoucherType::Payment,
+            VoucherType::Advance,
+            VoucherType::Payment
+        ]
+    );
+    assert_eq!(saved.saved_paisa, rupees(6_000));
 }
 
 #[test]

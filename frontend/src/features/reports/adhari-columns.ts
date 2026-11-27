@@ -1,9 +1,10 @@
 // The columns of ادھاری تفصیل (R5, PRD R5 v1.43, plan 80 Q-R5-2): the buyer with his tag (a person in the dead
-// amount carries that word), what he bought today in short ("(Banana 20 . 600)"), today's bill, the cash he
-// paid on the spot, today's credit, what he owed at the start of the day and what he owes now, each balance with
-// its side word. The words are the print's own (`print-adhari-sheet-col-*`), so the screen and the paper say
+// amount carries that word), what he bought today in short ("(Banana 20 . 600)"), today's bill, today's credit,
+// what he owed at the start of the day and what he owes now, each balance with its side word. There is no cash
+// column and no cash total (PRD R5 v1.57, plan 95 item 17): the whole sale print keeps the cash. The words are the print's own (`print-adhari-sheet-col-*`), so the screen and the paper say
 // the same. Every figure is the backend's; the list adds up nothing. Money is centred (NFR-USE-19).
 
+import type { AdhariOtherRow } from '../../bindings/AdhariOtherRow';
 import type { AdhariSheetRow } from '../../bindings/AdhariSheetRow';
 import type { Balance } from '../../bindings/Balance';
 import type { ListColumn } from '../../shared/grid';
@@ -20,7 +21,6 @@ export const ADHARI_COLUMN_TITLE_IDS: readonly string[] = [
   'print-adhari-sheet-col-party',
   'print-adhari-sheet-col-detail',
   'print-adhari-sheet-col-bill',
-  'print-adhari-sheet-col-cash',
   'print-adhari-sheet-col-today-credit',
   'print-adhari-sheet-col-previous',
   'print-adhari-sheet-col-total',
@@ -52,13 +52,6 @@ export const ADHARI_COLUMNS: readonly ListColumn<AdhariSheetRow>[] = [
     value: (row, { money }) => money(row.bill_paisa),
   },
   {
-    field: 'cash',
-    type: 'money',
-    headerId: 'print-adhari-sheet-col-cash',
-    from: 'normal',
-    value: (row, { money }) => money(row.cash_paisa),
-  },
-  {
     field: 'today_credit',
     type: 'money',
     headerId: 'print-adhari-sheet-col-today-credit',
@@ -69,6 +62,42 @@ export const ADHARI_COLUMNS: readonly ListColumn<AdhariSheetRow>[] = [
     type: 'money',
     headerId: 'print-adhari-sheet-col-previous',
     from: 'normal',
+    value: (row, { money }) => money(row.previous_due.amount_paisa),
+    unit: (row, { text }) => sideWord(row.previous_due, text),
+  },
+  {
+    field: 'total_due',
+    type: 'money',
+    headerId: 'print-adhari-sheet-col-total',
+    value: (row, { money }) => money(row.total_due.amount_paisa),
+    unit: (row, { text }) => sideWord(row.total_due, text),
+  },
+];
+
+/**
+ * The columns of the list of the other buyers under the sheet (plan 97 item 6, PRD R5): each buyer who owed at the start of the
+ * day and bought nothing today, by his name with his tag and his code, with what he owed at the start of the day and what he
+ * owes now (the same amount: he bought nothing). The words of the headings are the print's own. Every figure is the backend's.
+ */
+export const ADHARI_OTHER_COLUMNS: readonly ListColumn<AdhariOtherRow>[] = [
+  {
+    field: 'party',
+    type: 'name',
+    headerId: 'print-adhari-sheet-col-party',
+    grow: true,
+    value: (row, { language }) => nameWithTag(row.party, row.party.tag, language),
+  },
+  {
+    field: 'code',
+    type: 'code',
+    headerId: 'accounts-col-code',
+    from: 'normal',
+    value: (row) => row.party.code,
+  },
+  {
+    field: 'previous',
+    type: 'money',
+    headerId: 'print-adhari-sheet-col-previous',
     value: (row, { money }) => money(row.previous_due.amount_paisa),
     unit: (row, { text }) => sideWord(row.previous_due, text),
   },

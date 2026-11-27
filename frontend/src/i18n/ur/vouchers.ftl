@@ -26,13 +26,13 @@ vouchers-receipt-help = { -gahak } سے رقم لیں۔ رقم اس کے سب س
 vouchers-payment-title = { -adaigi }
 
 # review: pending
-vouchers-payment-help = { -beopari } یا کسی اور کھاتے کو رقم دیں۔ کسی { -gahak } کو رقم دینا { -naqd-udhar } ہے، اس کی وجہ لکھنی ہوگی۔
+vouchers-payment-help = { -beopari } یا کسی اور کھاتے کو رقم دیں۔ کسی { -gahak } کو رقم دینا { -naqd-udhar } ہے۔
 
 # review: pending
 vouchers-advance-title = { -peshgi-khata }
 
 # review: pending
-vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہلے رقم دیں۔ کسی { -gahak } کو رقم دینا { -naqd-udhar } ہے، اس کی وجہ لکھنی ہوگی۔ محفوظ کرنے کے بعد نیا بقایا نظر آتا ہے۔
+vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہلے رقم دیں۔ کسی { -gahak } کو رقم دینا { -naqd-udhar } ہے۔ محفوظ کرنے کے بعد نیا بقایا نظر آتا ہے۔
 
 # review: pending
 vouchers-load-failed = واؤچر کی اسکرین کھل نہیں سکی
@@ -63,14 +63,14 @@ vouchers-number-payment = ا-{ $number }
 # review: pending
 vouchers-number-advance = پ-{ $number }
 
-## After a save, an edit and a cancel. $kind is receipt, payment or advance (and, after a save only,
-## lent: an advance to a buyer, saved as cash lent); $number is the number in its series.
+## After a save, an edit and a cancel. $kind is receipt, payment, advance or buyer-advance (a پیشگی to a
+## buyer, saved as cash lent and still named پیشگی, PRD FR-15.11); $number is the number in its series.
 
 # review: pending
 vouchers-saved = { $kind ->
     [receipt] { -wasooli } { $number } محفوظ ہو گئی
     [payment] { -adaigi } { $number } محفوظ ہو گئی
-    [lent] { -naqd-udhar } { $number } محفوظ ہو گیا
+    [buyer-advance] { -peshgi } { $number } محفوظ ہو گئی
    *[advance] { -peshgi-khata } { $number } محفوظ ہو گیا
 }
 
@@ -78,6 +78,7 @@ vouchers-saved = { $kind ->
 vouchers-edited = { $kind ->
     [receipt] { -wasooli } { $number } میں تبدیلی محفوظ ہو گئی
     [payment] { -adaigi } { $number } میں تبدیلی محفوظ ہو گئی
+    [buyer-advance] { -peshgi } { $number } میں تبدیلی محفوظ ہو گئی
    *[advance] { -peshgi-khata } { $number } میں تبدیلی محفوظ ہو گئی
 }
 
@@ -85,6 +86,7 @@ vouchers-edited = { $kind ->
 vouchers-cancelled = { $kind ->
     [receipt] { -wasooli } { $number } منسوخ ہو گئی
     [payment] { -adaigi } { $number } منسوخ ہو گئی
+    [buyer-advance] { -peshgi } { $number } منسوخ ہو گئی
    *[advance] { -peshgi-khata } { $number } منسوخ ہو گیا
 }
 
@@ -135,7 +137,7 @@ vouchers-fill-oldest = سب سے پرانا بل
 vouchers-field-collector = اگراہی والا
 
 # review: pending
-vouchers-field-reason-lent = { -naqd-udhar } کی وجہ
+vouchers-field-reason-lent = { -naqd-udhar } کی وجہ (اختیاری)
 
 # review: pending
 vouchers-reason-lent-hint = یہ رقم اس کے بلوں میں شامل ہو جاتی ہے اور اس کے باقی ذمے کے ساتھ { -agrahi } میں آتی ہے۔
@@ -228,6 +230,10 @@ vouchers-source-bikri = { -bikri } { $number }
 # review: pending
 vouchers-source-opening = ابتدائی بقایا
 
+# The advance a seller took with the goods of a sale (PRD FR-12.52 v1.57): it has no voucher number.
+# review: pending
+vouchers-source-bikri-advance = { -bikri } کے ساتھ { -peshgi }
+
 # review: pending
 vouchers-source-cash-lent = { -naqd-udhar }
 
@@ -301,6 +307,12 @@ vouchers-col-amount = رقم
 # What kind of account it is: a seller or a buyer (the advance list, PRD FR-15.11).
 # review: pending
 vouchers-col-kind = کھاتے کی قسم
+
+# review: pending
+vouchers-kind-buyer-advance = { -gahak }: { -peshgi }
+
+# review: pending
+vouchers-kind-buyer-lent = { -gahak }: { -naqd-udhar }
 
 # review: pending
 vouchers-col-bill = بل کی رقم

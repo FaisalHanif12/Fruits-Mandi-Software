@@ -257,16 +257,19 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
     written_off: { from: 'wide' },
     shop_name: { from: 'wide' },
   },
-  // The fruit register (R37): the date, who it was for, the item, the quantity and the value always;
-  // the document, the rate and where it came from at the normal step; the seller of the lot, the
-  // packing and the weight (only for items sold by weight) at the wide step.
+  // The fruit register (R37): the date, who it was for, the item, the quantity and the value always; the
+  // rate, the other shop's deduction (PRD FR-16.11) and where it came from at the normal step, so
+  // qty × rate − deduction = value reads on the row wherever the rate shows; the document, the seller of
+  // the lot and the weight (only for items sold by weight) at the wide step. The packing has no room beside
+  // them and is in the print and the Excel file (a table never scrolls sideways).
   R37: {
-    doc: { from: 'normal' },
     rate: { from: 'normal' },
+    deduction: { from: 'normal' },
     source: { from: 'normal' },
+    doc: { from: 'wide' },
     seller: { from: 'wide' },
-    packing: { from: 'wide' },
     weight: { from: 'wide' },
+    packing: NEVER,
   },
   // The receipts register (R23) has a collector the payments register does not: it comes with the
   // normal step. (R15 and R25 fit at every step; their narration waits for the wide step like any

@@ -13,6 +13,9 @@ menu) and StatusBar (Tech Stack 5.3, PRD 5).
   row is always one line: tabs that do not fit go behind "More", the open one stays in the row. Keys: ← → between
   tabs in the reading direction, Enter opens, ↓ into the screen; only the open tab is a Tab stop. A screen that is
   a state of one entry (a saved بکری read only, an edit, a later sale) keeps its own title and has no tabs.
+  Plan 95 (PRD FR-5.3 v1.57): the بکری tabs are بکری بک, پارٹی کھاتے, پچھلی بکری, باقی مال; وصولی, ادائیگی and پیشگی
+  are three tabs of روکڑ that open the one voucher screen (`/bikri/voucher?type=`), which, with the اگراہی فہرست,
+  belongs to روکڑ (`mainNavOf`, `rokarMenuOf` in `app/nav-routes.ts`).
 
 - `AttentionBell` (plan 19, PRD FR-7.44): the number the backend counts (`assist_attention`) and the
   list under it, one line for each kind, each opening the right screen; a new version of the app is

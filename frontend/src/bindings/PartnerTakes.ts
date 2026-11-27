@@ -9,9 +9,9 @@ import type { TakesTotals } from './TakesTotals';
  */
 export type PartnerTakes = {
   /**
-   * The partner. `code` is empty.
+   * The partner asked for, `code` empty. Null when the list is of every partner (plan 98).
    */
-  partner: RecordRef;
+  partner: RecordRef | null;
   /**
    * The page.
    */

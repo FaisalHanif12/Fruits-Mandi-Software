@@ -9,10 +9,12 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PartnerVentureCard } from '../../src/bindings/PartnerVentureCard';
 import { LANGUAGES, type Language } from '../../src/i18n';
+import * as partnersApi from '../../src/features/partners/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { paisaForTest } from '../helpers/paisa';
 import { named } from '../helpers/bikri-screen';
 import {
+  fail,
   healthyBackend,
   leaveAppWindow,
   renderApp,
@@ -43,6 +45,7 @@ const money = (rupees: number) => paisaForTest(rupees * 100);
 const GARDEN_CARD: PartnerVentureCard = {
   venture_id: 1,
   kind: 'garden',
+  entry_date: '2026-10-01',
   number: 1,
   code: '0080',
   name_ur: 'شاہ پور باغ',
@@ -57,6 +60,7 @@ const GARDEN_CARD: PartnerVentureCard = {
 const TRIP_CARD: PartnerVentureCard = {
   venture_id: 3,
   kind: 'trip',
+  entry_date: '2026-10-10',
   number: 3,
   code: '0072',
   name_ur: '0072 12-10-2026',
@@ -90,15 +94,11 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
 
   const nameOf = (language_: Language, ur: string, en: string) => (language_ === 'ur' ? ur : en);
 
-  async function open() {
+  async function open(cards: PartnerVentureCard[] = [GARDEN_CARD, TRIP_CARD]) {
     const fake = fakePartners(THREE_PARTNERS);
     const [a, b, c] = THREE_PARTNERS;
     if (a === undefined || b === undefined || c === undefined) throw new Error('three partners');
-    fake.overview = [
-      overviewRow(a, { open_ventures: [GARDEN_CARD, TRIP_CARD] }),
-      overviewRow(b),
-      overviewRow(c),
-    ];
+    fake.overview = [overviewRow(a, { open_ventures: cards }), overviewRow(b), overviewRow(c)];
     const view = await renderApp('/partners');
     await screen.findByRole('heading', {
       level: 1,
@@ -193,6 +193,53 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
         ),
       }),
     ).toBeNull();
+  });
+
+  it('opens on the latest month that has one, a month at a time, with the gardens’ balance and the trips’ result apart (plan 99)', async () => {
+    // Made in August; today is in October. The list opens on August, not on an empty October.
+    await open([
+      { ...GARDEN_CARD, entry_date: '2026-08-12' },
+      { ...TRIP_CARD, entry_date: '2026-08-20' },
+    ]);
+    const card = await cardOf(nameOf(language, 'الف', 'Partner A'));
+    const table = await within(card).findByRole('table');
+    expect(visible(table.textContent)).toContain('0080');
+    await waitFor(() => {
+      expect(partnersApi.partnersOpenVentures).toHaveBeenLastCalledWith({
+        partner_id: 1,
+        from: '01-08-2026',
+        to: '31-08-2026',
+        offset: 0,
+        limit: 25,
+      });
+    });
+    // The totals are the backend's over the month; a garden's balance and a trip's result are never
+    // added together.
+    const totals = visible(table.querySelector('tfoot')?.textContent);
+    expect(totals).toContain('11,400');
+    expect(totals).toContain('5,280');
+    expect(totals).not.toContain('16,680');
+    expect(totals).toContain(message(language, 'glossary-meezan'));
+    // The month bar under the list moves a month at a time.
+    expect(
+      within(card).getByRole('button', {
+        name: (name) => visible(name).includes(message(language, 'common-month-earlier')),
+      }),
+    ).toBeTruthy();
+  });
+
+  it('a locked partner section shows the code box in the list’s place', async () => {
+    await open();
+    vi.mocked(partnersApi.partnersOpenVentures).mockRejectedValue(
+      fail({ code: 'ERR_PARTNER_LOCKED', field: null, values: {} }),
+    );
+    const card = await cardOf(nameOf(language, 'الف', 'Partner A'));
+    expect(
+      await within(card).findByRole('button', {
+        name: (name) => visible(name).startsWith(message(language, 'partners-code-enter')),
+      }),
+    ).toBeTruthy();
+    expect(within(card).queryByRole('table')).toBeNull();
   });
 
   it('the garden opens from its name', async () => {

@@ -231,9 +231,12 @@ impl ExpensePreview {
 /// Input of `partner_takes`.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct PartnerTakesInput {
-    /// The partner. `ERR_NOT_FOUND` on `partner_id`.
-    #[ts(type = "number")]
-    pub partner_id: i64,
+    /// The partner. Null (or left out) means every partner (plan 98): each row then names its
+    /// partner. A partner made inactive is listed while he has takes in the range.
+    /// `ERR_NOT_FOUND` on `partner_id`.
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub partner_id: Option<i64>,
     /// First day of the range, `DD-MM-YYYY` or a shortcut. Null or empty means no lower limit
     /// (plan 76 point 8: a screen sends the first day of its month). The rows, the count, the
     /// totals and the months are over the range.
@@ -275,6 +278,8 @@ pub enum TakeSource {
 /// One amount a partner took, with what has been returned against it (oldest first, PRD FR-16.2).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct TakeRow {
+    /// The partner who took it (plan 98). `code` is empty.
+    pub partner: RecordRef,
     /// Where it came from.
     pub source: TakeSource,
     /// The voucher, for source `voucher`.
@@ -322,8 +327,8 @@ pub struct TakesTotals {
 /// A partner's money taken, one page, oldest first (PRD FR-16.2, FR-19.11). Read only.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PartnerTakes {
-    /// The partner. `code` is empty.
-    pub partner: RecordRef,
+    /// The partner asked for, `code` empty. Null when the list is of every partner (plan 98).
+    pub partner: Option<RecordRef>,
     /// The page.
     pub rows: Vec<TakeRow>,
     /// How many rows there are in all.

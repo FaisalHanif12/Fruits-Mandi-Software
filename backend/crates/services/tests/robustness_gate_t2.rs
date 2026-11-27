@@ -1098,6 +1098,8 @@ fn t2_05_lists_windows_and_statements() {
                 limit: PAGE,
                 sort: None,
                 group_by_month: false,
+                show_reversed: false,
+                kinds: None,
             },
         )
         .expect("the cash book")
@@ -1250,6 +1252,7 @@ fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
         phone: None,
         cash_paid: Some("5,000".to_owned()),
         store_rent: None,
+        advance: None,
         adjust_advance: true,
         sales: (0..lines)
             .map(|j| SaleInput {

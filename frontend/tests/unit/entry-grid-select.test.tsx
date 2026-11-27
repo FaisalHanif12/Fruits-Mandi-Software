@@ -1,8 +1,8 @@
 // The quality list of a sale line in the shared entry grid (PRD FR-12.42, entry-grid skill): a
 // `select` cell holds one of a few fixed words or nothing. It is reached with the arrow keys or a
-// click, never an Enter stop (a line stays buyer, qty, rate, NFR-USE-6), opens with Space, Alt+↓ or
-// a click, takes ↑ ↓ and Enter in the list, keeps the focus on the cell, and nothing can be typed in
-// it. Urdu and English. A language switch in the sale book is tested with the whole screen
+// click, never an Enter stop (a line stays buyer, qty, rate, NFR-USE-6). Its list opens by itself when
+// the cursor reaches the cell (PRD FR-12.52, plan 95 item 3), and again with Alt+↓ or a click after Esc;
+// it takes ↑ ↓ and Enter, keeps the focus on the cell, and nothing can be typed in it. Urdu and English. A language switch in the sale book is tested with the whole screen
 // (bikri-grade.test.tsx), because this rig has a fixed language.
 
 import { screen, waitFor, within } from '@testing-library/react';
@@ -45,7 +45,15 @@ describe.each(LANGUAGES)('the quality list cell of the entry grid (%s)', (langua
     await rig.focusCell(0, 'rate');
     await rig.user.keyboard(forward(language));
     expect(rig.focused()).toBe('0:grade');
-    expect(list()).toBeNull();
+    // The list opened by itself; Esc leaves it with no choice, and then Enter goes on like on any cell.
+    await waitFor(() => {
+      expect(list()).not.toBeNull();
+    });
+    await rig.user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(list()).toBeNull();
+    });
+    expect(rig.typed(0, 'grade') ?? '').toBe('');
     await rig.user.keyboard('{Enter}');
     await waitFor(() => {
       expect(rig.focused()).toBe('1:buyer');
@@ -58,11 +66,10 @@ describe.each(LANGUAGES)('the quality list cell of the entry grid (%s)', (langua
     expect(visible(rig.cell(1, 'grade').textContent)).toBe(first);
   });
 
-  it('opens with Space, lists the empty choice and the three words, and Enter chooses', async () => {
+  it('opens by itself, lists the empty choice and the three words, and Enter chooses', async () => {
     const rig = await renderGrid(language, { withSelect: true, rows: [{}] });
     await rig.focusCell(0, 'rate');
     await rig.user.keyboard(forward(language));
-    await rig.user.keyboard(' ');
     await waitFor(() => {
       expect(list()).not.toBeNull();
     });
@@ -79,6 +86,14 @@ describe.each(LANGUAGES)('the quality list cell of the entry grid (%s)', (langua
     const rig = await renderGrid(language, { withSelect: true, rows: [{}, {}] });
     await rig.focusCell(0, 'rate');
     await rig.user.keyboard(forward(language));
+    await waitFor(() => {
+      expect(list()).not.toBeNull();
+    });
+    await rig.user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(list()).toBeNull();
+    });
+    // Alt+↓ opens it again.
     await rig.user.keyboard('{Alt>}{ArrowDown}{/Alt}');
     await waitFor(() => {
       expect(list()).not.toBeNull();
@@ -100,7 +115,6 @@ describe.each(LANGUAGES)('the quality list cell of the entry grid (%s)', (langua
     const rig = await renderGrid(language, { withSelect: true, rows: [{ grade: 'second' }] });
     await rig.focusCell(0, 'rate');
     await rig.user.keyboard(forward(language));
-    await rig.user.keyboard(' ');
     await waitFor(() => {
       expect(list()).not.toBeNull();
     });
@@ -118,8 +132,16 @@ describe.each(LANGUAGES)('the quality list cell of the entry grid (%s)', (langua
     const rig = await renderGrid(language, { withSelect: true, rows: [{ grade: 'third' }] });
     await rig.focusCell(0, 'rate');
     await rig.user.keyboard(forward(language));
+    await waitFor(() => {
+      expect(list()).not.toBeNull();
+    });
     await rig.user.keyboard('a9');
-    expect(list()).toBeNull();
+    // The list is still open with the same word: nothing was typed into it.
+    expect(rig.typed(0, 'grade')).toBe('third');
+    await rig.user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(list()).toBeNull();
+    });
     expect(rig.isEditing()).toBe(false);
     expect(rig.typed(0, 'grade')).toBe('third');
     await rig.user.keyboard('{Delete}');

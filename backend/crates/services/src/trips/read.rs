@@ -648,6 +648,7 @@ pub(crate) fn cards_of_partner(
         cards.push(mandi_domain::core::partners::PartnerVentureCard {
             venture_id: id,
             kind: mandi_domain::core::ventures::VentureKind::Trip,
+            entry_date: row.entry_date.clone(),
             number: row.number,
             code: row.code.clone(),
             name_ur: row.name_ur.clone(),

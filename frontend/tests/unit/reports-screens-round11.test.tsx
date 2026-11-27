@@ -361,7 +361,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         expect(lastRun()?.filters.party).toEqual({ account_id: 19, person_key: null });
       }, SLOW_MS);
       await waitFor(() => {
-        expect(slipLines()).toHaveLength(11);
+        expect(slipLines()).toHaveLength(12);
       }, SLOW_MS);
       expect(slipLines()).toEqual([
         `${m('report-r35-gross')} 29,400`,
@@ -372,6 +372,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         `${m('report-r35-phone')} 20`,
         `${m('report-r35-net-sale')} 24,316 ${m('report-side-cr')}`,
         `${m('report-r35-paid-today')} 9,316`,
+        `${m('report-r35-sale-rest')} 15,000`,
         `${m('report-r35-today-left')} 15,000 ${m('report-side-cr')}`,
         `${m('report-r35-previous')} 15,000 ${m('report-side-dr')}`,
         `${m('report-r35-new-balance')} 0`,

@@ -14,7 +14,7 @@ use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::Grouping;
 use mandi_core::printing::{PrintDoc, PrintSetup};
 use mandi_core::urdu_words::urdu_words;
-use mandi_core::vouchers::{VoucherRow, VoucherType};
+use mandi_core::vouchers::{VoucherEnteredAs, VoucherRow, VoucherType};
 use mandi_db::Db;
 use mandi_db::accounts as account_repo;
 use mandi_db::rusqlite::Connection;
@@ -99,7 +99,13 @@ fn build_slip(
 ) -> Result<PrintData, ReportsError> {
     let row = &loaded.row;
     let style = NumberStyle::new(loaded.grouping);
-    let (title_id, amount_label) = match row.voucher_type {
+    // A پیشگی typed for a buyer is saved as cash lent and keeps the word پیشگی on its slip (PRD
+    // FR-15.11 v1.60).
+    let shown_as = match row.entered_as {
+        Some(VoucherEnteredAs::Advance) => VoucherType::Advance,
+        None => row.voucher_type,
+    };
+    let (title_id, amount_label) = match shown_as {
         VoucherType::Receipt => (TITLE_RECEIPT_SLIP, SLIP_AMOUNT_RECEIVED),
         VoucherType::Payment => (TITLE_PAYMENT_SLIP, SLIP_AMOUNT_PAID),
         VoucherType::Advance => (TITLE_ADVANCE_SLIP, SLIP_AMOUNT_ADVANCE),

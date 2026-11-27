@@ -321,9 +321,6 @@ err-print-failed = The document could not be printed. Check the printer and try 
 
 ## Vouchers (plan 15, PRD 15.1 to 15.4).
 
-# PRD FR-15.11. Money paid to a buyer is cash lent to him.
-# review: pending
-err-payment-to-buyer-needs-reason = Money paid to a { -gahak } is { -naqd-udhar }. Please write the reason.
 
 # PRD FR-15.12, FR-16.2. $open is the most that can be returned, in rupees.
 # review: pending
@@ -520,6 +517,10 @@ err-backup-not-started = The backup service is not running yet. Wait a moment an
 err-backup-restore-failed = The restore could not be finished. Close the app and open it again. If your books look wrong, contact support: when there were books on this computer, a safety copy was made before the restore.
 
 ## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
+
+# PRD FR-16.11 v1.59. Values: max (the value less 1 rupee) and value, in rupees.
+# review: pending
+err-deduction-not-below-value = The total deduction must be less than the value. The value is { $value } rupees, the most you can deduct is { $max } rupees.
 
 # PRD FR-16.9. The same day is allowed.
 # review: pending
@@ -758,6 +759,5 @@ err-linked-account-restricted = This account is written by the app itself. It ca
 # review: pending
 err-partner-has-linked-balance = This { -shirakat-dar } cannot be made inactive while a { -alag-khata } or a loan linked to him still has a balance. Settle it first.
 
-
 # review: pending
-err-nothing-to-place = None of these partners has opening { -sarmaya } standing against the opening difference. There is nothing to put in.
+err-openings-already-in-cash = Every old { -ibtidai-baqaya } is already in the { -rokar }. There is nothing to move.

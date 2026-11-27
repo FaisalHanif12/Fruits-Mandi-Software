@@ -112,8 +112,12 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
     const { sales: fileSales, ...fileLot } = file.lots[0] ?? { sales: [] };
     expect(sentLot).toEqual(fileLot);
     expect(sentSales.slice(0, 2)).toEqual(fileSales.slice(0, 2));
-    // The third row is blank (no buyer, no rate): the backend ignores what else is in it.
-    expect(sentSales[2]).toMatchObject({ buyer_account_id: null, seller_rate: '' });
+    // The lot is sold out (50 of 50), so the last Enter adds no third line once the backend's answer is in (plan 97 item 2). If
+    // that Enter came before the answer, a blank third row may be there: it has no buyer and no rate, and the backend ignores
+    // what else is in it. The file has the blank third row of the earlier screen.
+    for (const extra of sentSales.slice(2)) {
+      expect(extra).toMatchObject({ buyer_account_id: null, seller_rate: '' });
+    }
     expect(fileSales[2]).toMatchObject({ buyer_account_id: null, seller_rate: '' });
   });
 

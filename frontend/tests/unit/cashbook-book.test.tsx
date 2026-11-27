@@ -91,7 +91,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
 
   it("shows the day: the opening and closing cash, every movement and the backend's totals", async () => {
     await open();
-    // The book shows 7 days at a time and opens on the latest, the days that end today (PRD FR-19.11).
+    // The book shows 30 days at a time and opens on the latest, the days that end today (PRD FR-19.11).
     expect(
       await screen.findByText(message(language, 'common-days-latest-note')),
     ).toBeInTheDocument();
@@ -103,12 +103,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     });
     const text = visible(list.textContent);
     // The kind of each row is written in words, with its number.
-    expect(text).toContain(
-      message(language, 'cashbook-kind-number', {
-        kind: message(language, 'cashbook-kind-receipt'),
-        number: 1,
-      }),
-    );
+    expect(text).toContain(`${message(language, 'cashbook-row-kind-receipt')} 1`);
     // The totals row is the backend's over the whole range: in 10,000, out 4,316 + 3,000 + 2,000.
     expect(text).toContain('10,000');
     expect(text).toContain('9,316');
@@ -141,12 +136,13 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     const { user } = await open();
     await waitFor(() => {
       expect(cashbookApi.cashbookGet).toHaveBeenCalledWith({
-        from: '04-10-2026',
+        from: '11-09-2026',
         to: '10-10-2026',
         offset: 0,
         limit: PAGE_ROWS,
         sort: null,
         group_by_month: true,
+        show_reversed: false,
       });
     });
     const range = (from: number, to: number) =>
@@ -208,7 +204,10 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
       expect(visible(pageText())).toContain('60,000');
     });
     expect(pageText()).not.toContain(message(language, 'cashbook-running-date-only'));
-    await user.click(await screen.findByText(named(message(language, 'cashbook-col-in'))));
+    const list = await screen.findByRole('group', {
+      name: named(message(language, 'cashbook-list-label')),
+    });
+    await user.click(await within(list).findByText(named(message(language, 'cashbook-col-in'))));
     await waitFor(() => {
       expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(
         expect.objectContaining({ sort: { column: 'in_paisa', direction: 'asc', language } }),
@@ -239,7 +238,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('the side menu of the area leads to each screen and to the voucher screen', async () => {
+  it('the tabs of the area lead to each screen (the voucher tabs are in rokar-tabs.test.tsx)', async () => {
     const { user, router } = await open();
     const menu = screen.getByRole('navigation', {
       name: named(message(language, 'layout-rokar-label')),
@@ -247,30 +246,36 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     const items = within(menu).getAllByRole('button');
     expect(items.map((item) => visible(item.textContent))).toEqual([
       message(language, 'layout-rokar-cashbook'),
+      message(language, 'layout-rokar-receipt'),
+      message(language, 'layout-rokar-payment'),
+      message(language, 'layout-rokar-advance'),
       message(language, 'layout-rokar-expense'),
       message(language, 'layout-rokar-lent'),
       message(language, 'layout-rokar-khata'),
       message(language, 'layout-rokar-general'),
-      message(language, 'layout-rokar-voucher'),
     ]);
     expect(items[0]).toHaveAttribute('aria-current', 'page');
     for (const [index, path] of [
-      [1, '/rokar/expense'],
-      [2, '/rokar/lent'],
-      [3, '/rokar/khata'],
-      [4, '/rokar/general'],
-      [5, '/bikri/voucher'],
+      [4, '/rokar/expense'],
+      [5, '/rokar/lent'],
+      [6, '/rokar/khata'],
+      [7, '/rokar/general'],
     ] as const) {
       const item = within(
         screen.getByRole('navigation', { name: named(message(language, 'layout-rokar-label')) }),
       ).getAllByRole('button')[index];
       if (item === undefined) throw new Error('no menu item');
       await user.click(item);
-      await waitFor(() => {
-        expect(router.state.location.pathname).toBe(path);
-      });
-      if (index < 5) {
-        await waitFor(() => {
+      // Each screen of the area is a lazy route, and the path changes once its code has loaded. In a
+      // full run on a busy computer the first load took more than 8 s.
+      await waitFor(
+        () => {
+          expect(router.state.location.pathname).toBe(path);
+        },
+        { timeout: 20_000 },
+      );
+      await waitFor(
+        () => {
           expect(
             within(
               screen.getByRole('navigation', {
@@ -278,23 +283,24 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
               }),
             ).getAllByRole('button')[index],
           ).toHaveAttribute('aria-current', 'page');
-        });
-      }
+        },
+        { timeout: 8000 },
+      );
     }
-  });
+  }, 90_000);
 
   it('a language switch redraws the book in the other language and keeps the window', async () => {
     const { user } = await open();
-    // One window back: the 7 days before the latest.
+    // One window back: the 30 days before the latest.
     await user.click(
       await screen.findByRole('button', {
         name: (name) =>
-          visible(name).includes(message(language, 'common-days-earlier', { days: '7' })),
+          visible(name).includes(message(language, 'common-days-earlier', { days: '30' })),
       }),
     );
     await waitFor(() => {
       expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(
-        expect.objectContaining({ from: '27-09-2026', to: '03-10-2026' }),
+        expect.objectContaining({ from: '12-08-2026', to: '10-09-2026' }),
       );
     });
     const other: Language = language === 'ur' ? 'en' : 'ur';
@@ -302,9 +308,9 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
       useLanguageStore.setState({ language: other });
     });
     await waitFor(() => {
-      expect(visible(pageText())).toContain('27-09-2026');
+      expect(visible(pageText())).toContain('12-08-2026');
     });
-    // The 7 days before have no cash movement: the page says so, in the other language.
+    // The 30 days before have no cash movement: the page says so, in the other language.
     expect(await screen.findByText(message(other, 'cashbook-empty'))).toBeInTheDocument();
     // Alt+L is the same switch from the keyboard.
     press('KeyL', { altKey: true });

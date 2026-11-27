@@ -234,6 +234,12 @@ pub(crate) fn sort_page(page: &mut ReportPage, sort: &SortInput) -> Result<(), R
         }
     }
     let urdu = sort.language == Some(mandi_core::auth::Language::Ur);
+    // PRD FR-7.88, E2E-63: in R20 sorted by the days of the oldest open bill, buyers whose bills
+    // are equally old come with the larger balance first, whichever way the days are sorted.
+    let tie = (page.id == ReportId::R20
+        && page.columns.get(index).is_some_and(|c| c.key == "days"))
+    .then(|| page.columns.iter().position(|c| c.key == "balance"))
+    .flatten();
     // The ledgers, the day book and the cash report are in the order of the days, so newest first
     // is the exact reverse of it, as their pages on the screen are (one SQL page, plan 38 B2): the
     // rows of one day run newest line first, in the print and the Excel file too.
@@ -255,7 +261,17 @@ pub(crate) fn sort_page(page: &mut ReportPage, sort: &SortInput) -> Result<(), R
                 a.cells.get(index).unwrap_or(&empty),
                 b.cells.get(index).unwrap_or(&empty),
             );
-            sort.direction.apply(compare(x, y, urdu))
+            let order = sort.direction.apply(compare(x, y, urdu));
+            match tie {
+                Some(balance) => order.then_with(|| {
+                    compare(
+                        b.cells.get(balance).unwrap_or(&empty),
+                        a.cells.get(balance).unwrap_or(&empty),
+                        urdu,
+                    )
+                }),
+                None => order,
+            }
         });
         sorted.append(segment);
     };

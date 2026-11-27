@@ -2,7 +2,7 @@
 ## The column words and the words of the totals are the print's own (print.ftl), so the screen and the paper say the same.
 
 # review: pending
-adhari-help = How much the shop has to take from its { -gahakon } on the chosen day: one row for each { -gahak } who bought, with his goods, the day's bill, the cash he paid on the spot, today's credit, what he owed before and the total credit now. Under the table: the { -gahakon } who owed but bought nothing today, and the total credit of all { -gahakon }. The totals are over every { -gahak }, not only the rows on screen.
+adhari-help = How much the shop has to take from its { -gahakon } on the chosen day: one row for each { -gahak } who bought, with his goods, the day's bill, today's credit, what he owed before and the total credit now. Under the table: the { -gahakon } who owed but bought nothing today, and the total credit of all { -gahakon }. The totals are over every { -gahak }, not only the rows on screen.
 
 # review: pending
 adhari-label = Buyers of the day

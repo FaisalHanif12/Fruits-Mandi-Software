@@ -131,7 +131,7 @@ white) makes an inline SVG, so no file and no network. Test: `analytics-print-ch
 - The screen always sends the measure to a view that takes it (a view with none reads the classic total commission).
   `filtersToWire` leaves it out for the other views, because the backend refuses it there. The measure is not a filter:
   "clear filters" keeps it. It is remembered per user (`remember.ts`), comes from an address (`search.ts`), and is part of
-  every saved view; a view saved before plan 84 has none and opens as the total commission it was (`CLASSIC_MEASURE`).
+  every saved view; a view saved before plan 84 has none and opens as the total commission it was (`LEGACY_MEASURE`).
 - The result names the measure it was read for in `page.filters.measure` (`measureOfFilters`). The chart title is the
   message of the view with `{ measure }` (`analytics-chart-a` and the others), the series are named from their column
   or, when the table has no such column (the buyer total of view A), from the measure's own words. A matrix's row total

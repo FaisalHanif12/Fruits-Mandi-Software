@@ -1,0 +1,17 @@
+[
+  {
+    "id": 35,
+    "code": "0012",
+    "name_ur": "حاجی نذیر",
+    "name_en": "Haji Nazeer",
+    "extra_ur": "",
+    "extra_en": "",
+    "account_type": "seller",
+    "kind": "account",
+    "chukta_id": null,
+    "phone": null,
+    "control_id": 5,
+    "is_active": true,
+    "is_dead": false
+  }
+]

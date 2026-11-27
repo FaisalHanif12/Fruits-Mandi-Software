@@ -180,6 +180,7 @@ fn build(world_name: &str, masters: Option<&Masters>) -> world::World {
                 weight: None,
                 rate: if guests { "1,000" } else { "580" }.into(),
                 note: None,
+                deduction: None,
                 editing_id: None,
             };
             fruit::save(&w.env.ctx, &w.owner, &input(false)).expect("fruit for the home");

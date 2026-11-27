@@ -22,7 +22,7 @@
 use std::fmt::Write as _;
 
 use mandi_core::text::{is_english_name, is_urdu_name};
-use mandi_core::translit::{Direction, Source, WordList, suggest, suggest_to_english};
+use mandi_core::translit::{Direction, Entry, Source, WordList, suggest, suggest_to_english};
 
 const FROZEN: &str = include_str!("translit_names.tsv");
 const HOLDOUT: &str = include_str!("translit_holdout.tsv");
@@ -132,7 +132,13 @@ fn spaceless(text: &str) -> String {
     text.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
-/// Which words of the typed name are missing from the word list: none, some or all.
+/// A pair of the name list: everyday words (plan 99) are not names, so the subsets of the
+/// name lists stay the same as before the everyday dictionary.
+fn is_name_pair(entry: &&Entry) -> bool {
+    entry.counts_as_known() && !entry.is_everyday()
+}
+
+/// Which words of the typed name are missing from the name list: none, some or all.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Coverage {
     AllSeen,
@@ -144,7 +150,7 @@ fn coverage(list: &WordList, roman: &str) -> Coverage {
     let words: Vec<&str> = roman.split(' ').collect();
     let unseen = words
         .iter()
-        .filter(|w| !list.contains_known_roman(&w.to_lowercase()))
+        .filter(|w| !list.by_roman(&w.to_lowercase()).iter().any(is_name_pair))
         .count();
     if unseen == 0 {
         Coverage::AllSeen
@@ -300,16 +306,18 @@ fn the_word_list_does_not_hold_the_test_names() {
         "the hold-out is too small: {}",
         holdout.len()
     );
+    // The everyday words are written apart from every test list; only the name list is
+    // built from names, so only it must keep the hold-out out.
     for case in &holdout {
         assert!(
-            list.by_roman(&case.roman).is_empty(),
-            "hold-out name {} is an entry of the word list",
+            !list.by_roman(&case.roman).iter().any(is_name_pair),
+            "hold-out name {} is an entry of the name list",
             case.roman
         );
         for urdu in &case.urdu {
             assert!(
-                list.by_urdu(urdu).is_empty(),
-                "hold-out name {urdu} is an entry of the word list"
+                !list.by_urdu(urdu).iter().any(is_name_pair),
+                "hold-out name {urdu} is an entry of the name list"
             );
         }
     }
@@ -320,7 +328,11 @@ fn the_word_list_does_not_hold_the_test_names() {
     let frozen = parse(FROZEN);
     let mut phrase_overlap = 0;
     for case in frozen.iter().filter(|c| c.roman.contains(' ')) {
-        for entry in list.by_roman(&case.roman) {
+        for entry in list
+            .by_roman(&case.roman)
+            .iter()
+            .filter(|e| !e.is_everyday())
+        {
             if case.urdu.contains(&entry.urdu) {
                 phrase_overlap += 1;
                 assert_eq!(

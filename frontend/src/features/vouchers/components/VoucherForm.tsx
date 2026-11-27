@@ -1,7 +1,7 @@
 // The fields of one voucher (PRD 15.1 to 15.4): the date, who it is with (a buyer, a seller or any
 // account) with his party card, the amount with the
 // buttons that fill it from the backend's figures, how the money moves, and what only some types
-// have (the collector of a receipt, the reason of cash lent, the expected goods of an advance).
+// have (the collector of a receipt, the optional reason of cash lent, the expected goods of an advance).
 // Everything is text in the screen's state, so a language switch loses nothing (F39). The screen
 // owns the keys: F10 saves, F2 starts a new voucher.
 //

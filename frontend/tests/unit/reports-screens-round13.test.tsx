@@ -14,6 +14,8 @@ import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportRow } from '../../src/bindings/ReportRow';
 import * as gardensApi from '../../src/features/gardens/api';
 import * as reportsApi from '../../src/features/reports/api';
+import { GRID_ROOM, reportColumns } from '../../src/features/reports/columns';
+import { LIST_COLUMN_WIDTHS, LIST_GROW_MIN_WIDTH } from '../../src/shared/grid';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLayoutStep, type LayoutStep } from '../../src/shared/hooks/useLayoutStep';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -161,9 +163,6 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
     expect(cell('0', 'rate')).toBe('580');
     expect(cell('0', 'value')).toBe('1,160');
     expect(cell('0', 'source')).toBe(m('fruit-source-own'));
-    expect(cell('0', 'doc')).toBe(
-      m('report-doc-number', { kind: m('report-doc-fruit-taken'), number: '1' }),
-    );
     // The guests' line says "guests", and came from another shop's agent.
     expect(cell('1', 'for')).toBe(m('fruit-for-guests'));
     expect(cell('1', 'qty')).toBe('3');
@@ -174,18 +173,19 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
     expect(totalsCell('value')).toBe('4,160');
   });
 
-  it('draws the columns that fit: the seller, the packing and the weight wait for the wide step', async () => {
+  it('draws the columns that fit: the document, the seller and the weight wait for the wide step', async () => {
     await openRegister();
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(2);
     }, SLOW_MS);
+    // The other shop's deduction stands beside the rate, so the value reads on the row (PRD FR-16.11).
     expect(drawnColumns()).toEqual([
       'date',
-      'doc',
       'for',
       'item',
       'qty',
       'rate',
+      'deduction',
       'value',
       'source',
     ]);
@@ -201,10 +201,10 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
         'for',
         'seller',
         'item',
-        'packing',
         'weight',
         'qty',
         'rate',
+        'deduction',
         'value',
         'source',
       ],
@@ -217,6 +217,18 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
     }, SLOW_MS);
     expect(drawnColumns()).toEqual([...columns]);
   });
+
+  it.each(['compact', 'normal', 'wide'] as const)(
+    'fits the room of the %s step, with no sideways scroll (NFR-USE-15)',
+    (step) => {
+      const width = reportColumns('R37', R37_FRUIT.columns, step).reduce(
+        (sum, shown) =>
+          sum + (shown.grow === true ? LIST_GROW_MIN_WIDTH : LIST_COLUMN_WIDTHS[shown.type]),
+        0,
+      );
+      expect(width).toBeLessThanOrEqual(GRID_ROOM[step]);
+    },
+  );
 
   it('labels its box "Partner or guests" and offers all, the guests and each partner', async () => {
     const { user } = await openRegister();

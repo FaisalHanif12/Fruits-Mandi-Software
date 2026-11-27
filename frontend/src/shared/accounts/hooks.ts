@@ -25,6 +25,7 @@ import {
   accountsSave,
   accountsSetActive,
   accountsSimilar,
+  agentShopAdd,
   chuktaAdd,
   coaControlAccounts,
   coaControlsList,
@@ -198,6 +199,18 @@ export function useChuktaAdd() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: chuktaAdd,
+    onSuccess: () => client.invalidateQueries({ queryKey: ['search'] }),
+  });
+}
+
+/**
+ * Adds another commission agent's shop from the آڑھتی box (PRD FR-7.69, FR-16.11). The lists of the pickers are read again, so
+ * the shop is found by name from now on.
+ */
+export function useAgentShopAdd() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: agentShopAdd,
     onSuccess: () => client.invalidateQueries({ queryKey: ['search'] }),
   });
 }

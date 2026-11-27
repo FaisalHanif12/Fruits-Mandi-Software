@@ -49,6 +49,7 @@ fn lot(sales: Vec<SaleInput>) -> LotInput {
         phone: None,
         cash_paid: Some("5000".to_owned()),
         store_rent: None,
+        advance: None,
         adjust_advance: true,
         sales,
     }

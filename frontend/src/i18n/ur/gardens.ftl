@@ -402,7 +402,7 @@ gardens-arrival-sell-date-hint = شروع میں مال آنے کا دن ہوت�
 gardens-arrival-posts-nothing = اس مال کے ساتھ کوئی رقم نہیں ہے۔ یہ { -bagh } کے ذخیرے میں رہتا ہے جب تک { -bikri } میں بک نہ جائے یا ضائع نہ لکھا جائے۔ بیچتے وقت اسے { -bikri } میں خود شامل کریں۔
 
 # review: pending
-gardens-arrival-title = { -maal-aaya }
+gardens-arrival-title = { -maal-aaya }: بکنا باقی
 
 # review: pending
 gardens-arrival-help = اس { -bagh } سے آیا ہوا وہ مال جو ابھی بکا نہیں۔ یہ یہاں رہتا ہے جب تک آپ اسے { -bikri } میں شامل کر کے بیچ نہ دیں۔ وہاں یہ اپنی { -sell-date } کی ترتیب میں آتا ہے۔
@@ -411,7 +411,7 @@ gardens-arrival-help = اس { -bagh } سے آیا ہوا وہ مال جو ابھ
 gardens-arrival-failed = آیا ہوا مال پڑھا نہیں جا سکا
 
 # review: pending
-gardens-arrival-empty = ابھی کوئی مال نہیں آیا
+gardens-arrival-empty = ابھی کوئی مال بکنے کو باقی نہیں
 
 # review: pending
 gardens-arrival-empty-help = اوپر اندراج کی قسم میں { -maal-aaya } چنیں، { -qism-maal }، { -packing } اور { -nag } لکھیں اور محفوظ کریں۔
@@ -451,13 +451,6 @@ gardens-arrival-cancelled = یہ اندراج منسوخ ہے۔ { $reason }
 # The lots of the sales that took goods from the entry.
 # review: pending
 gardens-arrival-lots = اس مال کی فروخت
-
-# review: pending
-gardens-arrival-lot-bikri = { -bikri }
-
-# آنے والے مال کے { -lot } کا نام اس کی گنتی کے ساتھ: "آم-2" (PRD FR-12.45)۔
-# review: pending
-gardens-arrival-lot-name = { -lot }
 
 # review: pending
 gardens-arrival-cancel = { -maal-aaya } منسوخ کریں
@@ -579,3 +572,173 @@ gardens-fact-refunds = مالک کی طرف سے واپس کی گئی رقم
 
 # review: pending
 gardens-fact-owner-owes = مالک کے ذمے
+
+## The goods arrived list of a busy garden (plan 96): search, the panel beside the list, the figures that fold.
+
+# review: pending
+gardens-arrival-search-label = آئے ہوئے مال میں تلاش
+
+# review: pending
+gardens-arrival-search-hint = نمبر، { -qism-maal } یا دوسری دکان
+
+# review: pending
+gardens-arrival-no-match = اس تلاش سے کوئی آیا ہوا مال نہیں ملا
+
+# review: pending
+gardens-arrival-no-match-help = دوسرا نمبر یا { -qism-maal } آزمائیں، یا تلاش صاف کر کے سب دیکھیں۔
+
+# review: pending
+gardens-arrival-search-clear = تلاش صاف کریں
+
+# The panel is beside the list: the entry with focus is shown in it.
+# review: pending
+gardens-arrival-pick-help = فہرست میں اندراج چنیں، اس کی تفصیل اور فروخت فہرست کے نیچے نظر آئے گی۔ اس کے بٹنوں تک جانے کے لیے Enter دبائیں۔
+
+# The key figures of the garden, always in view; the full list opens under the heading.
+# review: pending
+gardens-figures-open = سب اعداد اور ہر شراکت دار دکھائیں
+
+# review: pending
+gardens-figures-shut = اعداد چھپائیں
+
+# Plan 99 (PRD FR-12.53): the goods arrived in two lists, and where the sale money is.
+
+# review: pending
+gardens-arrival-col-sold = اب تک بکا
+
+# review: pending
+gardens-arrival-col-our-sold = { -apni-dukan } میں بکا
+
+# review: pending
+gardens-arrival-col-other-sold = { -dusri-dukan } میں بکا
+
+# review: pending
+gardens-arrival-col-sale-value = فروخت کی رقم
+
+# review: pending
+gardens-arrival-col-last-sale = آخری فروخت
+
+# $number: the goods arrived entry.
+# review: pending
+gardens-arrival-sales-label = اندراج { $number } کے مال کی فروخت
+
+# review: pending
+gardens-arrival-no-sales = اس اندراج کا ابھی کچھ نہیں بکا۔
+
+# The goods arrived that are all sold or written off (PRD FR-12.53).
+# review: pending
+gardens-sold-title = { -maal-aaya }: بک چکا
+
+# review: pending
+gardens-sold-help = اس { -bagh } کا وہ مال جو سارا بک گیا یا ضائع لکھا گیا، اور وہ کتنے کا بکا۔
+
+# review: pending
+gardens-sold-label = بکے ہوئے مال کی فہرست
+
+# review: pending
+gardens-sold-search-label = بکے ہوئے مال میں تلاش
+
+# review: pending
+gardens-sold-empty = اس { -bagh } کا ابھی کوئی مال پورا نہیں بکا
+
+# review: pending
+gardens-sold-empty-help = جب کسی اندراج کا سارا مال بک جائے یا ضائع لکھا جائے تو وہ یہاں آتا ہے۔
+
+# Where the sale money of the garden is (PRD FR-12.53).
+# review: pending
+gardens-sales-title = فروخت کی رقم کہاں ہے
+
+# review: pending
+gardens-sales-help = اس { -bagh } کے مال کی ہر فروخت: { -gahak } کا بل، موقع پر { -rokar } میں جمع رقم، بعد میں { -wasooli } سے آئی رقم، جو ابھی اس کے کھاتے میں باقی ہے، اور { -bagh } کو جمع ہوئی رقم۔
+
+# review: pending
+gardens-sales-search-label = فروخت میں تلاش
+
+# review: pending
+gardens-sales-search-hint = { -gahak }، دکان، { -qism-maal } یا { -bikri } نمبر
+
+# review: pending
+gardens-sales-every-month = سارے مہینے
+
+# review: pending
+gardens-sales-label = فروخت اور اس کی رقم کی فہرست
+
+# review: pending
+gardens-sales-failed = فروخت پڑھی نہیں جا سکی
+
+# review: pending
+gardens-sales-no-match = تلاش سے کوئی فروخت نہیں ملی
+
+# review: pending
+gardens-sales-no-match-help = تلاش کے خانے کے الفاظ بدلیں۔
+
+# review: pending
+gardens-sales-month-empty = اس مہینے کوئی فروخت نہیں
+
+# review: pending
+gardens-sales-month-empty-help = نیچے کے بٹنوں سے دوسرا مہینہ دیکھیں، یا سارے مہینے پر نشان لگائیں۔
+
+# review: pending
+gardens-sales-empty = اس { -bagh } کا ابھی کچھ نہیں بکا
+
+# review: pending
+gardens-sales-empty-help = اس کا مال { -bikri } میں شامل کریں، یا { -dusri-dukan } میں فروخت لکھیں۔
+
+# review: pending
+gardens-sales-col-sale = { -bikri } اور { -lot }
+
+# review: pending
+gardens-sales-col-buyer = { -gahak } اور مال
+
+# review: pending
+gardens-sales-col-bill = { -gahak } کا بل
+
+# review: pending
+gardens-sales-col-paid = { -mauqa-par-jama }
+
+# review: pending
+gardens-sales-col-collected = بعد میں وصول
+
+# review: pending
+gardens-sales-col-still-due = { -khate-mein-baqi }
+
+# review: pending
+gardens-sales-col-credit = { -bagh } کو { -jama }
+
+# review: pending
+gardens-sales-other-shop = { -dusri-dukan }
+
+# $number: the sale.
+# review: pending
+gardens-sales-bikri = { -bikri } { $number }
+
+# review: pending
+gardens-sales-lot-charges = { -lot } کے اخراجات
+
+# review: pending
+gardens-sales-shop-unnamed = دکان کا نام نہیں لکھا
+
+# $qty: the units; $rate: the seller rate. Written as R5 writes the goods.
+# review: pending
+gardens-sales-goods = ({ $qty } . { $rate })
+
+# $kg: the weight in kilograms, for an item sold by weight.
+# review: pending
+gardens-sales-goods-weight = ({ $kg } کلو . { $rate })
+
+# $qty: the units, for a sale in another shop, which has no rate.
+# review: pending
+gardens-sales-goods-count = ({ $qty } { -nag })
+
+# review: pending
+gardens-sales-charges-total = { -bagh } کی رقم سے کٹے ہوئے { -lot } کے اخراجات:
+
+# review: pending
+gardens-sold-failed = بکا ہوا مال پڑھا نہیں جا سکا
+
+# review: pending
+gardens-sales-col-value = رقم
+
+# $qty: the units of every sale in the filter, in the total row.
+# review: pending
+gardens-sales-goods-total = { $qty } { -nag }

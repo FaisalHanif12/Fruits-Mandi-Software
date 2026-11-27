@@ -257,7 +257,9 @@ fn buyer_summary(d: &BuyerDay) -> Result<Vec<SummaryLine>, ReportsError> {
 fn seller_summary(d: &SellerDay) -> Result<Vec<SummaryLine>, ReportsError> {
     let previous = net_cell(d.previous)?;
     let sale = net_cell(d.sale)?;
-    let other_value = d.other.checked_sub(d.opening)?;
+    // The opening and the پیشگی of the lots (PRD FR-12.52 v1.57) are lines of their own: "other
+    // entries" is what is left of the day's other debits and credits.
+    let other_value = d.other.checked_sub(d.opening)?.checked_sub(d.advance)?;
     let left_value = d.left.checked_sub(d.opening)?;
     let other = net_cell(other_value)?;
     let paid = blank_if_zero(d.paid);
@@ -266,7 +268,8 @@ fn seller_summary(d: &SellerDay) -> Result<Vec<SummaryLine>, ReportsError> {
     let opening = net_cell(d.opening)?;
     let want_left = signed(&sale)?
         .checked_add(signed(&other)?)?
-        .checked_add(signed(&paid)?)?;
+        .checked_add(signed(&paid)?)?
+        .checked_add(d.advance)?;
     let want_new = signed(&previous)?
         .checked_add(signed(&opening)?)?
         .checked_add(signed(&left)?)?;
@@ -306,6 +309,10 @@ fn seller_summary(d: &SellerDay) -> Result<Vec<SummaryLine>, ReportsError> {
         out.push(line(ids::R35_OTHER, other));
     }
     out.push(line(ids::R35_PAID_TODAY, paid));
+    // پیشگی: money he took as an advance with his goods; its own line, only when there is one.
+    if d.advance != Paisa::ZERO {
+        out.push(line(ids::R35_ADVANCE, money(d.advance)));
+    }
     out.push(line(ids::R35_SALE_REST, money(rest)));
     out.push(line(ids::R35_TODAY_LEFT, left));
     out.push(line(ids::R35_PREVIOUS, previous));

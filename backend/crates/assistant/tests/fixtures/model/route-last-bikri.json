@@ -1,0 +1,74 @@
+{
+  "steps": [
+    {
+      "expected": "بکری 2، تاریخ 10-10-26:\n• خام بکری 12,000، کٹوتی 1,840، صافی 10,160۔\n• گاہک کے کل بل 12,800۔",
+      "outcome": "answered",
+      "question": "pichli bikri ki details batao",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R1\", \"from\": null, \"to\": null, \"period\": null, \"as_of\": null, \"party\": null, \"item\": null, \"item_group\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": \"last\", \"seller\": null, \"zamindar\": null, \"status\": null, \"voucher_type\": null, \"layout\": null, \"group_by\": null, \"where\": null, \"sort\": null, \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  },
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R5\", \"from\": null, \"to\": null, \"period\": null, \"as_of\": null, \"party\": null, \"item\": null, \"item_group\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": \"last\", \"seller\": null, \"zamindar\": null, \"status\": null, \"voucher_type\": null, \"layout\": null, \"group_by\": null, \"where\": null, \"sort\": null, \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_0_1",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"{{r1.latest_bikri.bikri}}، تاریخ {{r1.latest_bikri.date}}:\\n• خام بکری {{r1.totals.gross}}، کٹوتی {{r1.totals.deductions}}، صافی {{r1.totals.net}}۔\\n• گاہک کے کل بل {{r2.totals.buyer_total}}۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day"
+}

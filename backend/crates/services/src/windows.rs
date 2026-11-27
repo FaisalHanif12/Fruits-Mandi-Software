@@ -136,15 +136,30 @@ pub fn bounds(ctx: &Context, input: &WindowsBoundsInput) -> Result<WindowsBounds
             first(conn, &voucher_types(&["capital_in", "capital_out"]), vec![])
         }
         WindowSource::PartnerTakes { partner_id } => {
-            let partner = partner_repo::get(conn, *partner_id)?.ok_or_else(|| {
-                ServiceError::reject_field(ErrorCode::ErrNotFound, "source.partner_id")
-            })?;
+            // One partner's drawings account, or the drawings accounts of every partner, inactive
+            // ones too, as the list does (plan 98).
+            let accounts: Vec<i64> = match partner_id {
+                Some(id) => vec![
+                    partner_repo::get(conn, *id)?
+                        .ok_or_else(|| {
+                            ServiceError::reject_field(ErrorCode::ErrNotFound, "source.partner_id")
+                        })?
+                        .drawings_account_id,
+                ],
+                None => partner_repo::list(conn)?
+                    .into_iter()
+                    .map(|p| p.drawings_account_id)
+                    .collect(),
+            };
+            let marks = vec!["?"; accounts.len()].join(", ");
             first(
                 conn,
-                "SELECT MIN(e.entry_date) FROM journal_lines l
-                 JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'
-                 WHERE l.account_id = ?1",
-                vec![Value::Integer(partner.drawings_account_id)],
+                &format!(
+                    "SELECT MIN(e.entry_date) FROM journal_lines l
+                     JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'
+                     WHERE l.account_id IN ({marks})"
+                ),
+                accounts.into_iter().map(Value::Integer).collect(),
             )
         }
         WindowSource::PartnerStatement { partner_id } => {
@@ -156,6 +171,25 @@ pub fn bounds(ctx: &Context, input: &WindowsBoundsInput) -> Result<WindowsBounds
         WindowSource::PartyLedger { account_id } => first_day_of(conn, *account_id),
         WindowSource::Commission => {
             first(conn, "SELECT MIN(entry_date) FROM analytics_facts", vec![])
+        }
+        WindowSource::GardenSales { garden_id } => {
+            mandi_db::gardens::get(conn, *garden_id)?.ok_or_else(|| {
+                ServiceError::reject_field(ErrorCode::ErrNotFound, "source.garden_id")
+            })?;
+            Ok(mandi_db::sale_money::first_sale_day(conn, *garden_id)?)
+        }
+        // The oldest of his open gardens and trips: the list pages by the day each was made.
+        WindowSource::PartnerVentures { partner_id } => {
+            partner_repo::get(conn, *partner_id)?.ok_or_else(|| {
+                ServiceError::reject_field(ErrorCode::ErrNotFound, "source.partner_id")
+            })?;
+            first(
+                conn,
+                "SELECT MIN(v.entry_date) FROM ventures v
+                 JOIN venture_partners p ON p.venture_id = v.id
+                 WHERE v.status = 'open' AND p.partner_id = ?1",
+                vec![Value::Integer(*partner_id)],
+            )
         }
     })?;
     Ok(WindowsBounds {

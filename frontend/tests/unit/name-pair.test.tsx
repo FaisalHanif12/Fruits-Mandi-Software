@@ -135,6 +135,8 @@ describe.each(LANGUAGES)('NamePair (%s)', (language) => {
     expect(urduApi.translitSuggest).toHaveBeenCalledWith({
       text: 'ارشد ملتانی',
       direction: 'to_english',
+      kind: 'name',
+      before: null,
     });
   });
 

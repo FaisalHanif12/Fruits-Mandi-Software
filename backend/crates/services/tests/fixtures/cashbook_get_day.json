@@ -1,4 +1,5 @@
 {
+  "total_capital_paisa": 5000000,
   "opening_paisa": -280000,
   "closing_paisa": 3270000,
   "first_entry_date": "2026-09-05",
@@ -7,15 +8,18 @@
       "entry_id": 1,
       "entry_date": "2026-10-10",
       "posting_type": "opening",
-      "number": null,
-      "account": {
-        "id": 16,
-        "code": "06019999",
-        "name_ur": "ابتدائی فرق",
-        "name_en": "Opening Difference"
-      },
       "kind": "opening_cash",
-      "partner": null,
+      "group": "opening",
+      "status": "live",
+      "number": null,
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
       "narration": "",
       "in_paisa": 5000000,
       "out_paisa": 0,
@@ -29,10 +33,25 @@
       "entry_id": 4,
       "entry_date": "2026-10-10",
       "posting_type": "bikri_first",
+      "kind": "bikri_seller_cash",
+      "group": "bikri",
+      "status": "live",
       "number": 1,
-      "account": null,
-      "kind": "other",
-      "partner": null,
+      "refs": {
+        "parties": [
+          {
+            "id": 19,
+            "code": "0010",
+            "name_ur": "رحیم",
+            "name_en": "Rahim"
+          }
+        ],
+        "party_count": 1,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": null
+      },
       "narration": "",
       "in_paisa": 0,
       "out_paisa": 500000,
@@ -46,15 +65,23 @@
       "entry_id": 5,
       "entry_date": "2026-10-10",
       "posting_type": "shop_expense",
+      "kind": "shop_expense",
+      "group": "expense",
+      "status": "live",
       "number": 2,
-      "account": {
-        "id": 35,
-        "code": "05010001",
-        "name_ur": "بجلی",
-        "name_en": "Electricity"
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": null,
+        "garden": null,
+        "trip": null,
+        "expense_head": {
+          "id": 1,
+          "code": "1",
+          "name_ur": "بجلی",
+          "name_en": "Electricity"
+        }
       },
-      "kind": "other",
-      "partner": null,
       "narration": "Partner A",
       "in_paisa": 0,
       "out_paisa": 300000,
@@ -68,15 +95,23 @@
       "entry_id": 6,
       "entry_date": "2026-10-10",
       "posting_type": "personal_expense",
+      "kind": "personal_expense",
+      "group": "expense",
+      "status": "live",
       "number": 1,
-      "account": {
-        "id": 24,
-        "code": "06030001",
-        "name_ur": "ذاتی خرچہ - الف",
-        "name_en": "Drawings - Partner A"
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
-      "kind": "other",
-      "partner": null,
       "narration": "گھر کا خرچ",
       "in_paisa": 0,
       "out_paisa": 200000,
@@ -90,15 +125,23 @@
       "entry_id": 7,
       "entry_date": "2026-10-10",
       "posting_type": "personal_return",
+      "kind": "personal_return",
+      "group": "expense",
+      "status": "live",
       "number": 1,
-      "account": {
-        "id": 24,
-        "code": "06030001",
-        "name_ur": "ذاتی خرچہ - الف",
-        "name_en": "Drawings - Partner A"
+      "refs": {
+        "parties": [],
+        "party_count": 0,
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "garden": null,
+        "trip": null,
+        "expense_head": null
       },
-      "kind": "other",
-      "partner": null,
       "narration": "first part",
       "in_paisa": 50000,
       "out_paisa": 0,
@@ -114,5 +157,133 @@
     "in_paisa": 5050000,
     "out_paisa": 1500000
   },
+  "summary": [
+    {
+      "group": "receipt",
+      "kinds": [
+        "receipt"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "payment",
+      "kinds": [
+        "payment"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "advance",
+      "kinds": [
+        "advance",
+        "buyer_advance"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "lent",
+      "kinds": [
+        "cash_lent",
+        "money_lent",
+        "money_lent_return"
+      ],
+      "count": 1,
+      "in_paisa": 0,
+      "out_paisa": 500000
+    },
+    {
+      "group": "expense",
+      "kinds": [
+        "shop_expense",
+        "personal_expense",
+        "personal_return"
+      ],
+      "count": 3,
+      "in_paisa": 50000,
+      "out_paisa": 500000
+    },
+    {
+      "group": "bikri",
+      "kinds": [
+        "bikri_paid",
+        "bikri_seller_cash",
+        "bikri_advance"
+      ],
+      "count": 1,
+      "in_paisa": 0,
+      "out_paisa": 500000
+    },
+    {
+      "group": "garden",
+      "kinds": [
+        "garden_installment",
+        "garden_cost",
+        "garden_other_sale",
+        "garden_refund"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "trip",
+      "kinds": [
+        "purchase",
+        "trip_cost",
+        "trip_other_sale"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "capital",
+      "kinds": [
+        "capital_in",
+        "capital_out",
+        "opening_capital"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "khata",
+      "kinds": [
+        "khata_out",
+        "khata_in"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    },
+    {
+      "group": "opening",
+      "kinds": [
+        "opening_cash",
+        "opening_balance"
+      ],
+      "count": 1,
+      "in_paisa": 5000000,
+      "out_paisa": 0
+    },
+    {
+      "group": "other",
+      "kinds": [
+        "general",
+        "fruit",
+        "other"
+      ],
+      "count": 0,
+      "in_paisa": 0,
+      "out_paisa": 0
+    }
+  ],
   "months": []
 }

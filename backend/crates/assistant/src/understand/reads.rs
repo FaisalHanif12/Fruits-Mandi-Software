@@ -135,7 +135,7 @@ const GOODS_WORDS: [&str; 7] = ["maal", "mal", "goods", "saman", "saaman", "ما
 
 /// True when the words say "own goods": an own-word at most two words before a word for goods
 /// ("apna maal", "apne maal", "hamara apna mal").
-fn own_goods(scan: &Scan) -> bool {
+pub(super) fn own_goods(scan: &Scan) -> bool {
     let is = |list: &[&str], word: &str| list.iter().any(|x| key(x) == word);
     scan.words.iter().enumerate().any(|(at, word)| {
         is(&OWN_WORDS, word)
@@ -303,6 +303,47 @@ pub(super) fn garden_word(scan: &Scan, names: &Names) -> bool {
                 .iter()
                 .any(|s| key(s) == *w)
             }))
+}
+
+/// True when the question wants something explained or asks how or where, not what the books hold:
+/// a word of the how-to cues, or "samajh" ("I do not understand it").
+///
+/// Example: "is main market safar kiya hai iski mujhay samaj nahi aa rahi" is true.
+pub(super) fn asks_to_explain(scan: &Scan) -> bool {
+    const UNDERSTAND: [&str; 8] = [
+        "samaj",
+        "samajh",
+        "samjh",
+        "smjh",
+        "samj",
+        "samajhao",
+        "سمجھ",
+        "سمجھائیں",
+    ];
+    scan.has_any(&[Cue::Define, Cue::Where, Cue::Capability, Cue::How])
+        || scan
+            .words
+            .iter()
+            .any(|w| UNDERSTAND.iter().any(|s| key(s) == *w))
+}
+
+/// True when a percent is asked of something other than a flow (a balance, the dues): no instant
+/// line writes a percent there, so only the plain figure would show (live check NFR-AI-2 Q071:
+/// "what percent of the total dues does arshad owe" got his balance). A percent of a sale or a
+/// commission is judged by [`other_measure`].
+pub(super) fn percent_of_a_balance(scan: &Scan, kinds: &[FigureKind]) -> bool {
+    const PERCENT: [&str; 5] = ["percent", "percentage", "fisad", "feesad", "فیصد"];
+    let flow = kinds.iter().any(|k| {
+        matches!(
+            k,
+            FigureKind::Sale | FigureKind::SaleCount | FigureKind::Commission | FigureKind::Laga
+        )
+    });
+    !flow
+        && scan
+            .words
+            .iter()
+            .any(|w| PERCENT.iter().any(|x| key(x) == *w))
 }
 
 /// True when the question says "trip" and no trip was found for it.
@@ -958,7 +999,7 @@ struct Rep {
 
 fn report(id: &str, r: Rep) -> PlannedRead {
     let mut input = json!({
-        "id": id, "from": r.from, "to": r.to, "as_of": r.as_of, "party": r.party,
+        "id": id, "from": r.from, "to": r.to, "period": null, "as_of": r.as_of, "party": r.party,
         "item": r.item, "city": r.city, "adda": r.adda, "collector": r.collector,
         "partner": r.partner, "trip": null, "garden": null, "bikri": null,
         "seller": r.seller, "zamindar": r.zamindar, "status": r.status,
@@ -1003,7 +1044,7 @@ struct An {
 
 fn analytics(view: &str, a: An) -> PlannedRead {
     let mut input = json!({
-        "view": view, "from": a.from, "to": a.to, "group_by": a.group_by, "item": a.item,
+        "view": view, "from": a.from, "to": a.to, "period": null, "group_by": a.group_by, "item": a.item,
         "item_group": a.item_group, "seller": a.seller, "buyer": a.buyer, "city": null,
         "adda": null, "garden": null, "trip": null, "goods": a.goods, "partner": null,
         "side": a.side, "compare": null, "sort": a.sort, "rows": a.rows
@@ -1315,12 +1356,25 @@ pub fn plan_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
 /// few milliseconds and never a wrong figure. The model then writes the answer in ONE call instead of
 /// choosing the tools first (D7, plan 59 D).
 pub fn plan_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
-    let reads = plan_reads(u)
+    let reads = last_bikri_pre_reads(u)
+        .or_else(|| plan_reads(u))
         .or_else(|| paid::pre_reads(u))
+        .or_else(|| venture_pre_reads(u))
         .or_else(|| pre_reads(u))
         .or_else(|| both_sides_pre_reads(u))
         .or_else(|| party_finds(u))?;
     Some(with_the_gross(u, with_the_buyers_of_a_seller(u, reads)))
+}
+
+/// The pre-reads that are safe even when the app is not sure of the whole question: the latest بکری,
+/// and the whole books of the gardens or the market trips when none is named. Each reads whole
+/// records the model picks from, so an unknown word cannot turn one into a wrong narrow figure. No
+/// instant line and no scope guard use them.
+///
+/// Example: "pichli bikri ki details batao" is unsure ("details" is unknown), and still reads R1 and
+/// R5 of the latest بکری before the first call.
+pub fn plan_scope_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
+    last_bikri_pre_reads(u).or_else(|| venture_pre_reads(u))
 }
 
 /// "pichle mahine ki khaam bikri aur gahakon ke kul bill alag alag": the gross sale is asked beside the bills (or
@@ -1718,6 +1772,11 @@ fn pre_reads_of_one_record(u: &Understanding, period: Option<&PeriodRef>) -> Opt
 /// The reads of a question and the figures an instant answer gives from them. A question with a word the
 /// app did not understand keeps its reads and gives NO line (plan 82): the model answers, with the reads made.
 pub(super) fn plan(u: &Understanding) -> Option<Planned> {
+    // "The last بکری" has its own reads (R1 and R5 of it) and no instant line: the app's other
+    // plans would read a sale of all the books or of today.
+    if u.last_bikri && u.parties.is_empty() && u.items.is_empty() && u.records.is_empty() {
+        return None;
+    }
     let mut planned = plan_unstopped(u)?;
     if u.instant_stop {
         planned.lines.clear();
@@ -2648,6 +2707,130 @@ pub(super) fn last_one(scan: &Scan) -> bool {
     })
 }
 
+/// True when the question asks for the latest بکری: a word for the last one straight before a word
+/// for a sale ("pichli bikri", "aakhri bikri ki details", "last sale", "تازہ بکری"). "pichli bikri
+/// ka rate" asks a rate and is not this.
+///
+/// Example: "pichli bikri ki details batao" is true; "pichle mahine ki bikri" and "last rate" are not.
+pub(super) fn asks_last_bikri(scan: &Scan) -> bool {
+    const HEAD: [&str; 14] = [
+        "last",
+        "latest",
+        "pichli",
+        "pichla",
+        "pehli",
+        "aakhri",
+        "akhri",
+        "aakhir",
+        "aakhiri",
+        "taza",
+        "tazah",
+        "پچھلی",
+        "آخری",
+        "تازہ",
+    ];
+    const SALE: [&str; 7] = ["bikri", "bikry", "bikree", "sale", "bakri", "بکری", "سیل"];
+    const RATE: [&str; 6] = ["rate", "price", "bhao", "bhaw", "ریٹ", "بھاؤ"];
+    let is = |w: &str, list: &[&str]| list.iter().any(|x| key(x) == w);
+    // "pehli bikri" is the first one, never the last.
+    scan.words.iter().enumerate().any(|(at, w)| {
+        is(w, &HEAD)
+            && *w != key("pehli")
+            && scan
+                .word(at.saturating_add(1))
+                .is_some_and(|next| is(next, &SALE))
+    }) && !scan.words.iter().any(|w| is(w, &RATE))
+}
+
+/// The reads of "the last بکری": R1 (its lots: the sellers' side) and R5 (its buyers), both with
+/// `bikri: "last"`, in the days of a period when one is named. Only reads; no instant line.
+///
+/// Example: "pichli bikri ki details batao" reads R1 and R5 of the latest بکری.
+fn last_bikri_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
+    if !u.last_bikri
+        || !matches!(
+            u.intent.value,
+            Intent::Figure | Intent::List | Intent::Unclear
+        )
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.periods.len() > 1
+        || u.periods.iter().any(|p| p.future)
+        || u.bikri_number.is_some()
+    {
+        return None;
+    }
+    let (from, to) = dates(u.periods.first());
+    Some(
+        ["R1", "R5"]
+            .into_iter()
+            .map(|id| {
+                with_field(
+                    report(
+                        id,
+                        Rep {
+                            from: from.clone(),
+                            to: to.clone(),
+                            ..Rep::default()
+                        },
+                    ),
+                    "bikri",
+                    json!("last"),
+                )
+            })
+            .collect(),
+    )
+}
+
+/// The reads of a question about the gardens or the market trips with none named: the whole books of
+/// R36 and view I (gardens), R33 and view J (trips), in the days of a period when one is named. Only
+/// reads; the model picks the rows (PRD FR-7.87 v1.60).
+///
+/// Example: "bagh ka munafa batao" reads R36 and view I.
+fn venture_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
+    if !(u.garden_asked || u.trip_asked)
+        || !matches!(
+            u.intent.value,
+            Intent::Figure | Intent::List | Intent::Unclear | Intent::Advice
+        )
+        || !u.records.is_empty()
+        || u.parties
+            .iter()
+            .any(|p| matches!(p.outcome, Outcome::Found(_)))
+        || u.periods.len() > 1
+        || u.periods.iter().any(|p| p.future)
+    {
+        return None;
+    }
+    let period = u.periods.first();
+    let (from, to) = dates(period);
+    let mut reads = Vec::new();
+    if let Some(p) = period {
+        reads.push(period_read(p)?);
+    }
+    let both = [(u.garden_asked, "R36", "I"), (u.trip_asked, "R33", "J")];
+    for (_, id, view) in both.into_iter().filter(|(asked, _, _)| *asked) {
+        reads.push(report(
+            id,
+            Rep {
+                from: from.clone(),
+                to: to.clone(),
+                ..Rep::default()
+            },
+        ));
+        reads.push(analytics(
+            view,
+            An {
+                from: from.clone(),
+                to: to.clone(),
+                ..An::default()
+            },
+        ));
+    }
+    Some(reads)
+}
+
 /// The last rate of an item ("akram ko kela aakhri kis rate pe diya", "last rate of banana to akram",
 /// "what was the last rate of banana today", "آلو کا اب تک کا آخری ریٹ"): the register of the sales (R2)
 /// for the item, the period if one is named and the buyer if one is, newest first by date and then by
@@ -3051,7 +3234,7 @@ fn forecast_plan(u: &Understanding) -> Option<Planned> {
     plan.read(PlannedRead {
         tool: "estimate",
         input: json!({
-            "measure": measure, "item": item, "seller": seller, "buyer": buyer,
+            "measure": measure, "item": item, "seller": seller, "buyer": buyer, "period": null,
             "garden": null, "trip": null, "head": head, "partner": partner, "party": party,
             "ahead": ahead, "until": until, "what_if": null, "percent": null, "target": null
         }),

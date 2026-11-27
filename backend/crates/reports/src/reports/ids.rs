@@ -119,6 +119,8 @@ pub(crate) const FRUIT_SOURCE_OTHER: &str = "fruit-source-other";
 pub(crate) const COL_FRUIT_FOR: &str = "fruit-filter-for";
 pub(crate) const COL_FRUIT_SOURCE: &str = "fruit-col-source";
 pub(crate) const COL_FRUIT_WEIGHT: &str = "fruit-col-weight";
+/// The کل کٹوتی of fruit from another shop (PRD FR-16.11 v1.59), between the rate and the value.
+pub(crate) const COL_FRUIT_DEDUCTION: &str = "fruit-col-deduction";
 pub(crate) const COL_DAYS_WAITING: &str = "report-col-days-waiting";
 // The two parts of the goods left (plan 35, PRD FR-12.41): R10.
 pub(crate) const COL_OUR_LEFT: &str = "report-col-our-left";
@@ -202,6 +204,9 @@ pub(crate) const R35_TODAY_TOTAL: &str = "report-r35-today-total";
 pub(crate) const R35_OTHER: &str = "report-r35-other";
 /// آج ادا: paid today.
 pub(crate) const R35_PAID_TODAY: &str = "report-r35-paid-today";
+/// پیشگی: on a seller's slip, the advance he took with his goods today (PRD FR-12.52 v1.57). Shown
+/// only when there is one, after what was paid today; it is part of today's left.
+pub(crate) const R35_ADVANCE: &str = "report-r35-advance";
 /// آج کا باقی: today's total + other entries − paid, with a side.
 pub(crate) const R35_TODAY_LEFT: &str = "report-r35-today-left";
 /// بکری کی باقی رقم، کھاتے میں جمع: on a seller's slip, today's net sale less what was paid on the spot
@@ -365,6 +370,8 @@ pub(crate) fn title_id(code: &str) -> String {
 /// document kinds that have no posting but still print as a document: `garden_arrival` (مال آیا,
 /// PRD FR-12.40), which posts nothing.
 const POSTING_TYPES: &[&str] = &[
+    "bikri_advance",
+    "buyer_advance",
     "bikri_first",
     "bikri_later",
     "reversal",
@@ -399,6 +406,28 @@ pub(crate) fn doc_id(posting_type: &str) -> String {
         format!("report-doc-{}", posting_type.replace('_', "-"))
     } else {
         "report-doc-other".to_owned()
+    }
+}
+
+/// The document label of an entry, from its posting type and its source. The پیشگی typed on a lot
+/// (posting type `advance`, source a بکری, PRD FR-12.52 v1.57) is `report-doc-bikri-advance`
+/// ("Advance with sale 5": the number is the بکری's), so it is never read as the number of a
+/// پیشگی voucher.
+pub(crate) fn doc_id_of(posting_type: &str, source_type: &str) -> String {
+    if posting_type == "advance" && source_type == "bikri" {
+        doc_id("bikri_advance")
+    } else {
+        doc_id(posting_type)
+    }
+}
+
+/// The document label of a row of the cash book (R12): a پیشگی typed to a buyer, saved as cash
+/// lent, is `report-doc-buyer-advance` (PRD FR-15.11 v1.60); every other row is [`doc_id_of`].
+pub(crate) fn doc_id_of_cash(row: &mandi_db::cashbook::CashRow) -> String {
+    if row.kind == "buyer_advance" {
+        doc_id("buyer_advance")
+    } else {
+        doc_id_of(&row.posting_type, &row.source_type)
     }
 }
 
@@ -459,5 +488,21 @@ mod tests {
             assert!(doc_id(kind).starts_with("report-doc-"));
             assert_ne!(doc_id(kind), "report-doc-other");
         }
+    }
+}
+
+#[cfg(test)]
+mod doc_label_tests {
+    use super::*;
+
+    /// The label of the entry in the روکڑ بک, R11 and R13 (PRD FR-12.52 v1.57): the پیشگی typed on a
+    /// lot is "Advance with sale 5", never read as the number of a پیشگی voucher.
+    #[test]
+    fn the_advance_of_a_lot_is_labelled_with_the_sale_and_a_voucher_advance_is_not() {
+        assert_eq!(doc_id_of("advance", "bikri"), "report-doc-bikri-advance");
+        assert_eq!(doc_id_of("advance", "voucher"), "report-doc-advance");
+        assert_eq!(doc_id_of("bikri_first", "bikri"), "report-doc-bikri-first");
+        assert_eq!(doc_id_of("reversal", "bikri"), "report-doc-reversal");
+        assert!(posting_types().contains(&"bikri_advance"));
     }
 }

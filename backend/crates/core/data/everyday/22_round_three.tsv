@@ -1,0 +1,805 @@
+roman	urdu	kind	weight	review	source
+kirya	کرایہ	word	90	checked	everyday
+mri	میری	word	70	checked	everyday
+mery	میری	word	60	checked	everyday
+kahn	کہاں	word	80	checked	everyday
+ar	اور	word	80	checked	everyday
+b	بھی	word	80	checked	everyday
+tah	تھا	word	80	checked	everyday
+teek	ٹھیک	word	62	checked	everyday
+tik	ٹھیک	word	44	checked	everyday
+mujhse	مجھ سے	word	86	checked	everyday
+mjhse	مجھ سے	word	85	checked	everyday
+mujse	مجھ سے	word	70	checked	everyday
+mujhsay	مجھ سے	word	44	checked	everyday
+mjhsay	مجھ سے	word	44	checked	everyday
+mujsay	مجھ سے	word	44	checked	everyday
+tujhse	تجھ سے	word	86	checked	everyday
+tujhsay	تجھ سے	word	44	checked	everyday
+humse	ہم سے	word	86	checked	everyday
+hamse	ہم سے	word	85	checked	everyday
+humsay	ہم سے	word	44	checked	everyday
+hamsay	ہم سے	word	44	checked	everyday
+tumse	تم سے	word	86	checked	everyday
+tumsay	تم سے	word	44	checked	everyday
+aapse	آپ سے	word	86	checked	everyday
+apse	آپ سے	word	85	checked	everyday
+aapsay	آپ سے	word	44	checked	everyday
+apsay	آپ سے	word	44	checked	everyday
+unse	ان سے	word	86	checked	everyday
+inse	ان سے	word	85	checked	everyday
+unsay	ان سے	word	44	checked	everyday
+insay	ان سے	word	44	checked	everyday
+kisse	کس سے	word	60	checked	everyday
+kis se	کس سے	word	85	checked	everyday
+kissay	کس سے	word	44	checked	everyday
+kis say	کس سے	word	44	checked	everyday
+sabse	سب سے	word	86	checked	everyday
+sbse	سب سے	word	85	checked	everyday
+sabsay	سب سے	word	44	checked	everyday
+sbsay	سب سے	word	44	checked	everyday
+dheere	دھیرے	word	86	checked	everyday
+dheeray	دھیرے	word	85	checked	everyday
+dhire	دھیرے	word	84	checked	everyday
+dheray	دھیرے	word	70	checked	everyday
+dheerey	دھیرے	word	44	checked	everyday
+dhiray	دھیرے	word	44	checked	everyday
+dhere	دھیرے	word	44	checked	everyday
+dherey	دھیرے	word	44	checked	everyday
+thand	ٹھنڈ	word	86	checked	everyday
+thandh	ٹھنڈ	word	85	checked	everyday
+jume	جمعے	word	88	checked	everyday
+jumay	جمعے	word	87	checked	everyday
+jumy	جمعے	word	86	checked	everyday
+jumey	جمعے	word	50	checked	everyday
+jumon	جمعوں	word	85	checked	everyday
+jumo	جمعوں	word	50	checked	everyday
+jumoon	جمعوں	word	50	checked	everyday
+gharwalon	گھر والوں	word	86	checked	everyday
+ghar walon	گھر والوں	word	85	checked	everyday
+gharwalo	گھر والوں	word	60	checked	everyday
+ghar walo	گھر والوں	word	44	checked	everyday
+rupee	روپے	word	96	checked	everyday
+rupi	روپے	word	44	checked	everyday
+tankhuwah	تنخواہ	word	86	checked	everyday
+tankhuah	تنخواہ	word	70	checked	everyday
+tankhuwa	تنخواہ	word	44	checked	everyday
+tankhua	تنخواہ	word	44	checked	everyday
+dokan	دکان	word	86	checked	everyday
+dokaan	دکان	word	70	checked	everyday
+jamaa	جمع	word	90	checked	everyday
+adaygi	ادائیگی	word	86	checked	everyday
+adaigy	ادائیگی	word	70	checked	everyday
+bioparion	بیوپاریوں	word	86	checked	everyday
+biopariyon	بیوپاریوں	word	85	checked	everyday
+biopario	بیوپاریوں	word	44	checked	everyday
+biopariyo	بیوپاریوں	word	44	checked	everyday
+byopariyo	بیوپاریوں	word	44	checked	everyday
+santara	سنگترہ	word	80	checked	everyday
+santra	سنگترہ	word	80	checked	everyday
+fal	پھل	word	80	checked	everyday
+acche	اچھے	word	86	checked	everyday
+acchay	اچھے	word	85	checked	everyday
+acchey	اچھے	word	44	checked	everyday
+jhooth	جھوٹ	word	80	checked	everyday
+jhuth	جھوٹ	word	44	checked	everyday
+loag	لوگ	word	80	checked	everyday
+chhay	چھ	word	90	checked	everyday
+shirakat dar	شراکت دار	word	90	checked	everyday
+shirkat dar	شراکت دار	word	66	checked	everyday
+shirakat	شراکت	word	90	checked	everyday
+tarazu	ترازو	word	86	checked	everyday
+taraazu	ترازو	word	85	checked	everyday
+trazu	ترازو	word	84	checked	everyday
+baraat	بارات	word	96	checked	everyday
+barat	بارات	word	70	checked	everyday
+baraatein	باراتیں	word	67	checked	everyday
+baraatain	باراتیں	word	66	checked	everyday
+baraaten	باراتیں	word	65	checked	everyday
+baratein	باراتیں	word	64	checked	everyday
+baratain	باراتیں	word	63	checked	everyday
+baraaton	باراتوں	word	64	checked	everyday
+baraato	باراتوں	word	29	checked	everyday
+baraatoon	باراتوں	word	29	checked	everyday
+baraton	باراتوں	word	61	checked	everyday
+pety	پیٹی	word	90	checked	everyday
+ke bare	کے بارے	word	90	checked	everyday
+k bare	کے بارے	word	90	checked	everyday
+ke baare	کے بارے	word	90	checked	everyday
+k baare	کے بارے	word	90	checked	everyday
+ke bary	کے بارے	word	80	checked	everyday
+ke baray	کے بارے	word	44	checked	everyday
+k baray	کے بارے	word	44	checked	everyday
+ke baaray	کے بارے	word	44	checked	everyday
+k baaray	کے بارے	word	44	checked	everyday
+chhod	چھوڑ	word	80	checked	everyday
+chhodna	چھوڑنا	word	79	checked	everyday
+chhodnaa	چھوڑنا	word	44	checked	everyday
+chorrna	چھوڑنا	word	77	checked	everyday
+chhodne	چھوڑنے	word	78	checked	everyday
+chhodny	چھوڑنے	word	77	checked	everyday
+chhodnay	چھوڑنے	word	76	checked	everyday
+chhodney	چھوڑنے	word	43	checked	everyday
+chorrne	چھوڑنے	word	74	checked	everyday
+chorrny	چھوڑنے	word	73	checked	everyday
+chorrnay	چھوڑنے	word	38	checked	everyday
+chhodni	چھوڑنی	word	74	checked	everyday
+chhodny	چھوڑنی	word	39	checked	everyday
+chhodnee	چھوڑنی	word	39	checked	everyday
+chorrni	چھوڑنی	word	71	checked	everyday
+chhodta	چھوڑتا	word	78	checked	everyday
+chorrta	چھوڑتا	word	77	checked	everyday
+chhodti	چھوڑتی	word	77	checked	everyday
+chhodty	چھوڑتی	word	42	checked	everyday
+chhodtee	چھوڑتی	word	42	checked	everyday
+chorrti	چھوڑتی	word	74	checked	everyday
+chhodte	چھوڑتے	word	77	checked	everyday
+chhodty	چھوڑتے	word	76	checked	everyday
+chhodtay	چھوڑتے	word	75	checked	everyday
+chhodtey	چھوڑتے	word	42	checked	everyday
+chorrte	چھوڑتے	word	73	checked	everyday
+chorrty	چھوڑتے	word	72	checked	everyday
+chorrtay	چھوڑتے	word	37	checked	everyday
+chhodtin	چھوڑتیں	word	71	checked	everyday
+chhodteen	چھوڑتیں	word	70	checked	everyday
+chhodti	چھوڑتیں	word	36	checked	everyday
+chorrtin	چھوڑتیں	word	68	checked	everyday
+chhodtee	چھوڑتیں	word	31	checked	everyday
+chorrti	چھوڑتیں	word	31	checked	everyday
+chhodkar	چھوڑ کر	word	68	checked	everyday
+chhodkr	چھوڑ کر	word	33	checked	everyday
+chorrkar	چھوڑ کر	word	66	checked	everyday
+chhoda	چھوڑا	word	78	checked	everyday
+chhodaa	چھوڑا	word	43	checked	everyday
+chorra	چھوڑا	word	76	checked	everyday
+chhodi	چھوڑی	word	76	checked	everyday
+chhodee	چھوڑی	word	41	checked	everyday
+chorri	چھوڑی	word	74	checked	everyday
+chhode	چھوڑے	word	77	checked	everyday
+chhoday	چھوڑے	word	76	checked	everyday
+chhody	چھوڑے	word	75	checked	everyday
+chhodey	چھوڑے	word	42	checked	everyday
+chorre	چھوڑے	word	73	checked	everyday
+chorray	چھوڑے	word	72	checked	everyday
+chorrey	چھوڑے	word	37	checked	everyday
+chhodein	چھوڑیں	word	75	checked	everyday
+chhoden	چھوڑیں	word	74	checked	everyday
+chhodain	چھوڑیں	word	73	checked	everyday
+chorrein	چھوڑیں	word	72	checked	everyday
+chorren	چھوڑیں	word	71	checked	everyday
+chhodei	چھوڑیں	word	35	checked	everyday
+chhode	چھوڑیں	word	35	checked	everyday
+chhodai	چھوڑیں	word	35	checked	everyday
+chorrei	چھوڑیں	word	35	checked	everyday
+chorre	چھوڑیں	word	35	checked	everyday
+chhodun	چھوڑوں	word	74	checked	everyday
+chhodoon	چھوڑوں	word	73	checked	everyday
+chhodon	چھوڑوں	word	39	checked	everyday
+chorrun	چھوڑوں	word	71	checked	everyday
+chorroon	چھوڑوں	word	70	checked	everyday
+chhodu	چھوڑوں	word	34	checked	everyday
+chhodoo	چھوڑوں	word	34	checked	everyday
+chorru	چھوڑوں	word	34	checked	everyday
+chorroo	چھوڑوں	word	34	checked	everyday
+chhodo	چھوڑو	word	76	checked	everyday
+chorro	چھوڑو	word	75	checked	everyday
+chhodiye	چھوڑیے	word	66	checked	everyday
+chhodiay	چھوڑیے	word	31	checked	everyday
+chhodie	چھوڑیے	word	31	checked	everyday
+chorriye	چھوڑیے	word	63	checked	everyday
+chhodiyay	چھوڑیے	word	26	checked	everyday
+chorriyay	چھوڑیے	word	26	checked	everyday
+chhodunga	چھوڑوں گا	word	72	checked	everyday
+chhodoonga	چھوڑوں گا	word	71	checked	everyday
+chhodonga	چھوڑوں گا	word	37	checked	everyday
+chorrunga	چھوڑوں گا	word	69	checked	everyday
+chhodungi	چھوڑوں گی	word	70	checked	everyday
+chhodoongi	چھوڑوں گی	word	69	checked	everyday
+chhodongi	چھوڑوں گی	word	35	checked	everyday
+chorrungi	چھوڑوں گی	word	67	checked	everyday
+chhodega	چھوڑے گا	word	73	checked	everyday
+chhodayga	چھوڑے گا	word	72	checked	everyday
+chhoday ga	چھوڑے گا	word	38	checked	everyday
+chhodeyga	چھوڑے گا	word	38	checked	everyday
+chorrega	چھوڑے گا	word	69	checked	everyday
+chhodegi	چھوڑے گی	word	71	checked	everyday
+chhodaygi	چھوڑے گی	word	70	checked	everyday
+chhodeygi	چھوڑے گی	word	36	checked	everyday
+chorregi	چھوڑے گی	word	68	checked	everyday
+chhodenge	چھوڑیں گے	word	72	checked	everyday
+chhodainge	چھوڑیں گے	word	71	checked	everyday
+chhodeinge	چھوڑیں گے	word	70	checked	everyday
+chhodengy	چھوڑیں گے	word	37	checked	everyday
+chhodaingay	چھوڑیں گے	word	37	checked	everyday
+chorrenge	چھوڑیں گے	word	67	checked	everyday
+chhodengay	چھوڑیں گے	word	32	checked	everyday
+chhodeingay	چھوڑیں گے	word	32	checked	everyday
+chorrengay	چھوڑیں گے	word	32	checked	everyday
+chhodengi	چھوڑیں گی	word	68	checked	everyday
+chhodaingi	چھوڑیں گی	word	67	checked	everyday
+chhodeingi	چھوڑیں گی	word	33	checked	everyday
+chorrengi	چھوڑیں گی	word	65	checked	everyday
+chhodoge	چھوڑو گے	word	69	checked	everyday
+chhodogay	چھوڑو گے	word	68	checked	everyday
+chhodogy	چھوڑو گے	word	34	checked	everyday
+chorroge	چھوڑو گے	word	66	checked	everyday
+chhodogey	چھوڑو گے	word	29	checked	everyday
+chorrogay	چھوڑو گے	word	29	checked	everyday
+chhodogi	چھوڑو گی	word	66	checked	everyday
+chhodogee	چھوڑو گی	word	31	checked	everyday
+chorrogi	چھوڑو گی	word	64	checked	everyday
+dalwa	ڈلوا	word	92	checked	everyday
+dalwana	ڈلوانا	word	91	checked	everyday
+dalwanaa	ڈلوانا	word	50	checked	everyday
+dalwane	ڈلوانے	word	90	checked	everyday
+dalwany	ڈلوانے	word	89	checked	everyday
+dalwanay	ڈلوانے	word	88	checked	everyday
+dalwaney	ڈلوانے	word	50	checked	everyday
+dalwani	ڈلوانی	word	86	checked	everyday
+dalwany	ڈلوانی	word	50	checked	everyday
+dalwanee	ڈلوانی	word	50	checked	everyday
+dalwata	ڈلواتا	word	90	checked	everyday
+dalwati	ڈلواتی	word	89	checked	everyday
+dalwaty	ڈلواتی	word	50	checked	everyday
+dalwatee	ڈلواتی	word	50	checked	everyday
+dalwate	ڈلواتے	word	89	checked	everyday
+dalwaty	ڈلواتے	word	88	checked	everyday
+dalwatay	ڈلواتے	word	87	checked	everyday
+dalwatey	ڈلواتے	word	50	checked	everyday
+dalwatin	ڈلواتیں	word	83	checked	everyday
+dalwateen	ڈلواتیں	word	82	checked	everyday
+dalwati	ڈلواتیں	word	48	checked	everyday
+dalwatee	ڈلواتیں	word	43	checked	everyday
+dalwakar	ڈلوا کر	word	45	checked	everyday
+dalwakr	ڈلوا کر	word	45	checked	everyday
+dalwaya	ڈلوایا	word	90	checked	everyday
+dalwaia	ڈلوایا	word	89	checked	everyday
+dalwai	ڈلوائی	word	88	checked	everyday
+dalwayi	ڈلوائی	word	87	checked	everyday
+dalwaee	ڈلوائی	word	86	checked	everyday
+dalwaie	ڈلوائی	word	50	checked	everyday
+dalwaye	ڈلوائے	word	89	checked	everyday
+dalwae	ڈلوائے	word	88	checked	everyday
+dalwaay	ڈلوائے	word	87	checked	everyday
+dalwaey	ڈلوائے	word	86	checked	everyday
+dalwaaye	ڈلوائے	word	50	checked	everyday
+dalwayay	ڈلوائے	word	44	checked	everyday
+dalway	ڈلوائے	word	44	checked	everyday
+dalwaen	ڈلوائیں	word	85	checked	everyday
+dalwayen	ڈلوائیں	word	84	checked	everyday
+dalwaein	ڈلوائیں	word	83	checked	everyday
+dalwain	ڈلوائیں	word	82	checked	everyday
+dalwaeen	ڈلوائیں	word	50	checked	everyday
+dalwae	ڈلوائیں	word	44	checked	everyday
+dalwaye	ڈلوائیں	word	44	checked	everyday
+dalwaei	ڈلوائیں	word	44	checked	everyday
+dalwai	ڈلوائیں	word	44	checked	everyday
+dalwen	ڈلوائیں	word	44	checked	everyday
+dalwaun	ڈلواؤں	word	86	checked	everyday
+dalwaoon	ڈلواؤں	word	85	checked	everyday
+dalwaon	ڈلواؤں	word	50	checked	everyday
+dalwaou	ڈلواؤں	word	50	checked	everyday
+dalwau	ڈلواؤں	word	44	checked	everyday
+dalwaoo	ڈلواؤں	word	44	checked	everyday
+dalwao	ڈلواؤ	word	88	checked	everyday
+dalwaou	ڈلواؤ	word	50	checked	everyday
+dalwaiye	ڈلوائیے	word	78	checked	everyday
+dalwaiay	ڈلوائیے	word	43	checked	everyday
+dalwaie	ڈلوائیے	word	43	checked	everyday
+dalwaiyay	ڈلوائیے	word	38	checked	everyday
+dalwaunga	ڈلواؤں گا	word	84	checked	everyday
+dalwaoonga	ڈلواؤں گا	word	83	checked	everyday
+dalwaonga	ڈلواؤں گا	word	49	checked	everyday
+dalwaungi	ڈلواؤں گی	word	82	checked	everyday
+dalwaoongi	ڈلواؤں گی	word	47	checked	everyday
+dalwayega	ڈلوائے گا	word	85	checked	everyday
+dalwaega	ڈلوائے گا	word	84	checked	everyday
+dalwaayga	ڈلوائے گا	word	83	checked	everyday
+dalwaye ga	ڈلوائے گا	word	50	checked	everyday
+dalwayga	ڈلوائے گا	word	44	checked	everyday
+dalwayegi	ڈلوائے گی	word	83	checked	everyday
+dalwaegi	ڈلوائے گی	word	82	checked	everyday
+dalwaaygi	ڈلوائے گی	word	48	checked	everyday
+dalwayenge	ڈلوائیں گے	word	84	checked	everyday
+dalwaenge	ڈلوائیں گے	word	83	checked	everyday
+dalwaayenge	ڈلوائیں گے	word	49	checked	everyday
+dalwaeinge	ڈلوائیں گے	word	49	checked	everyday
+dalwayengay	ڈلوائیں گے	word	44	checked	everyday
+dalwaengay	ڈلوائیں گے	word	44	checked	everyday
+dalwayengi	ڈلوائیں گی	word	80	checked	everyday
+dalwaengi	ڈلوائیں گی	word	79	checked	everyday
+dalwaoge	ڈلواؤ گے	word	81	checked	everyday
+dalwaogay	ڈلواؤ گے	word	80	checked	everyday
+dalwaaoge	ڈلواؤ گے	word	46	checked	everyday
+dalwaogey	ڈلواؤ گے	word	41	checked	everyday
+dalwaogi	ڈلواؤ گی	word	78	checked	everyday
+badalwa	بدلوا	word	84	checked	everyday
+badlwa	بدلوا	word	83	checked	everyday
+badalwana	بدلوانا	word	83	checked	everyday
+badalwanaa	بدلوانا	word	48	checked	everyday
+badlwana	بدلوانا	word	81	checked	everyday
+badalwane	بدلوانے	word	82	checked	everyday
+badalwany	بدلوانے	word	81	checked	everyday
+badalwanay	بدلوانے	word	80	checked	everyday
+badalwaney	بدلوانے	word	47	checked	everyday
+badlwane	بدلوانے	word	78	checked	everyday
+badlwany	بدلوانے	word	77	checked	everyday
+badlwanay	بدلوانے	word	42	checked	everyday
+badalwani	بدلوانی	word	78	checked	everyday
+badalwany	بدلوانی	word	43	checked	everyday
+badalwanee	بدلوانی	word	43	checked	everyday
+badlwani	بدلوانی	word	75	checked	everyday
+badalwata	بدلواتا	word	82	checked	everyday
+badlwata	بدلواتا	word	81	checked	everyday
+badalwati	بدلواتی	word	81	checked	everyday
+badalwaty	بدلواتی	word	46	checked	everyday
+badalwatee	بدلواتی	word	46	checked	everyday
+badlwati	بدلواتی	word	78	checked	everyday
+badalwate	بدلواتے	word	81	checked	everyday
+badalwaty	بدلواتے	word	80	checked	everyday
+badalwatay	بدلواتے	word	79	checked	everyday
+badalwatey	بدلواتے	word	46	checked	everyday
+badlwate	بدلواتے	word	77	checked	everyday
+badlwaty	بدلواتے	word	76	checked	everyday
+badlwatay	بدلواتے	word	41	checked	everyday
+badalwatin	بدلواتیں	word	75	checked	everyday
+badalwateen	بدلواتیں	word	74	checked	everyday
+badalwati	بدلواتیں	word	40	checked	everyday
+badlwatin	بدلواتیں	word	72	checked	everyday
+badalwatee	بدلواتیں	word	35	checked	everyday
+badlwati	بدلواتیں	word	35	checked	everyday
+badalwakar	بدلوا کر	word	37	checked	everyday
+badalwakr	بدلوا کر	word	37	checked	everyday
+badlwakar	بدلوا کر	word	37	checked	everyday
+badalwaya	بدلوایا	word	82	checked	everyday
+badalwaia	بدلوایا	word	81	checked	everyday
+badlwaya	بدلوایا	word	80	checked	everyday
+badlwaia	بدلوایا	word	79	checked	everyday
+badalwai	بدلوائی	word	80	checked	everyday
+badalwayi	بدلوائی	word	79	checked	everyday
+badalwaee	بدلوائی	word	78	checked	everyday
+badalwaie	بدلوائی	word	45	checked	everyday
+badlwai	بدلوائی	word	76	checked	everyday
+badlwayi	بدلوائی	word	75	checked	everyday
+badalwaye	بدلوائے	word	81	checked	everyday
+badalwae	بدلوائے	word	80	checked	everyday
+badalwaay	بدلوائے	word	79	checked	everyday
+badalwaey	بدلوائے	word	78	checked	everyday
+badalwaaye	بدلوائے	word	46	checked	everyday
+badlwaye	بدلوائے	word	76	checked	everyday
+badlwae	بدلوائے	word	75	checked	everyday
+badalwayay	بدلوائے	word	41	checked	everyday
+badalway	بدلوائے	word	41	checked	everyday
+badlwayay	بدلوائے	word	41	checked	everyday
+badlwaay	بدلوائے	word	41	checked	everyday
+badalwaen	بدلوائیں	word	77	checked	everyday
+badalwayen	بدلوائیں	word	76	checked	everyday
+badalwaein	بدلوائیں	word	75	checked	everyday
+badalwain	بدلوائیں	word	74	checked	everyday
+badalwaeen	بدلوائیں	word	42	checked	everyday
+badlwaen	بدلوائیں	word	72	checked	everyday
+badlwayen	بدلوائیں	word	71	checked	everyday
+badlwaein	بدلوائیں	word	71	checked	everyday
+badalwae	بدلوائیں	word	37	checked	everyday
+badalwaye	بدلوائیں	word	37	checked	everyday
+badalwaei	بدلوائیں	word	37	checked	everyday
+badalwai	بدلوائیں	word	37	checked	everyday
+badalwen	بدلوائیں	word	37	checked	everyday
+badlwae	بدلوائیں	word	37	checked	everyday
+badlwaye	بدلوائیں	word	37	checked	everyday
+badlwaei	بدلوائیں	word	37	checked	everyday
+badalwaun	بدلواؤں	word	78	checked	everyday
+badalwaoon	بدلواؤں	word	77	checked	everyday
+badalwaon	بدلواؤں	word	43	checked	everyday
+badalwaou	بدلواؤں	word	43	checked	everyday
+badlwaun	بدلواؤں	word	74	checked	everyday
+badlwaoon	بدلواؤں	word	73	checked	everyday
+badalwau	بدلواؤں	word	38	checked	everyday
+badalwaoo	بدلواؤں	word	38	checked	everyday
+badlwau	بدلواؤں	word	38	checked	everyday
+badlwaoo	بدلواؤں	word	38	checked	everyday
+badalwao	بدلواؤ	word	80	checked	everyday
+badalwaou	بدلواؤ	word	45	checked	everyday
+badlwao	بدلواؤ	word	78	checked	everyday
+badalwaiye	بدلوائیے	word	70	checked	everyday
+badalwaiay	بدلوائیے	word	35	checked	everyday
+badalwaie	بدلوائیے	word	35	checked	everyday
+badlwaiye	بدلوائیے	word	67	checked	everyday
+badalwaiyay	بدلوائیے	word	30	checked	everyday
+badlwaiyay	بدلوائیے	word	30	checked	everyday
+badalwaunga	بدلواؤں گا	word	76	checked	everyday
+badalwaoonga	بدلواؤں گا	word	75	checked	everyday
+badalwaonga	بدلواؤں گا	word	41	checked	everyday
+badlwaunga	بدلواؤں گا	word	73	checked	everyday
+badalwaungi	بدلواؤں گی	word	74	checked	everyday
+badalwaoongi	بدلواؤں گی	word	39	checked	everyday
+badlwaungi	بدلواؤں گی	word	72	checked	everyday
+badalwayega	بدلوائے گا	word	77	checked	everyday
+badalwaega	بدلوائے گا	word	76	checked	everyday
+badalwaayga	بدلوائے گا	word	75	checked	everyday
+badalwaye ga	بدلوائے گا	word	42	checked	everyday
+badlwayega	بدلوائے گا	word	73	checked	everyday
+badlwaega	بدلوائے گا	word	72	checked	everyday
+badalwayga	بدلوائے گا	word	37	checked	everyday
+badalwayegi	بدلوائے گی	word	75	checked	everyday
+badalwaegi	بدلوائے گی	word	74	checked	everyday
+badalwaaygi	بدلوائے گی	word	40	checked	everyday
+badlwayegi	بدلوائے گی	word	72	checked	everyday
+badlwaegi	بدلوائے گی	word	71	checked	everyday
+badalwayenge	بدلوائیں گے	word	76	checked	everyday
+badalwaenge	بدلوائیں گے	word	75	checked	everyday
+badalwaayenge	بدلوائیں گے	word	41	checked	everyday
+badalwaeinge	بدلوائیں گے	word	41	checked	everyday
+badlwayenge	بدلوائیں گے	word	72	checked	everyday
+badlwaenge	بدلوائیں گے	word	71	checked	everyday
+badalwayengay	بدلوائیں گے	word	36	checked	everyday
+badalwaengay	بدلوائیں گے	word	36	checked	everyday
+badlwayengay	بدلوائیں گے	word	36	checked	everyday
+badlwaengay	بدلوائیں گے	word	36	checked	everyday
+badalwayengi	بدلوائیں گی	word	72	checked	everyday
+badalwaengi	بدلوائیں گی	word	71	checked	everyday
+badlwayengi	بدلوائیں گی	word	70	checked	everyday
+badalwaoge	بدلواؤ گے	word	73	checked	everyday
+badalwaogay	بدلواؤ گے	word	72	checked	everyday
+badalwaaoge	بدلواؤ گے	word	38	checked	everyday
+badlwaoge	بدلواؤ گے	word	70	checked	everyday
+badalwaogey	بدلواؤ گے	word	33	checked	everyday
+badlwaogay	بدلواؤ گے	word	33	checked	everyday
+badalwaogi	بدلواؤ گی	word	70	checked	everyday
+badlwaogi	بدلواؤ گی	word	69	checked	everyday
+chalwa	چلوا	word	82	checked	everyday
+chlwa	چلوا	word	81	checked	everyday
+chalwana	چلوانا	word	81	checked	everyday
+chalwanaa	چلوانا	word	46	checked	everyday
+chlwana	چلوانا	word	79	checked	everyday
+chalwane	چلوانے	word	80	checked	everyday
+chalwany	چلوانے	word	79	checked	everyday
+chalwanay	چلوانے	word	78	checked	everyday
+chalwaney	چلوانے	word	45	checked	everyday
+chlwane	چلوانے	word	76	checked	everyday
+chlwany	چلوانے	word	75	checked	everyday
+chlwanay	چلوانے	word	40	checked	everyday
+chalwani	چلوانی	word	76	checked	everyday
+chalwany	چلوانی	word	41	checked	everyday
+chalwanee	چلوانی	word	41	checked	everyday
+chlwani	چلوانی	word	73	checked	everyday
+chalwata	چلواتا	word	80	checked	everyday
+chlwata	چلواتا	word	79	checked	everyday
+chalwati	چلواتی	word	79	checked	everyday
+chalwaty	چلواتی	word	44	checked	everyday
+chalwatee	چلواتی	word	44	checked	everyday
+chlwati	چلواتی	word	76	checked	everyday
+chalwate	چلواتے	word	79	checked	everyday
+chalwaty	چلواتے	word	78	checked	everyday
+chalwatay	چلواتے	word	77	checked	everyday
+chalwatey	چلواتے	word	44	checked	everyday
+chlwate	چلواتے	word	75	checked	everyday
+chlwaty	چلواتے	word	74	checked	everyday
+chlwatay	چلواتے	word	39	checked	everyday
+chalwatin	چلواتیں	word	73	checked	everyday
+chalwateen	چلواتیں	word	72	checked	everyday
+chalwati	چلواتیں	word	38	checked	everyday
+chlwatin	چلواتیں	word	70	checked	everyday
+chalwatee	چلواتیں	word	33	checked	everyday
+chlwati	چلواتیں	word	33	checked	everyday
+chalwakar	چلوا کر	word	35	checked	everyday
+chalwakr	چلوا کر	word	35	checked	everyday
+chlwakar	چلوا کر	word	35	checked	everyday
+chalwaya	چلوایا	word	80	checked	everyday
+chalwaia	چلوایا	word	79	checked	everyday
+chlwaya	چلوایا	word	78	checked	everyday
+chlwaia	چلوایا	word	77	checked	everyday
+chalwai	چلوائی	word	78	checked	everyday
+chalwayi	چلوائی	word	77	checked	everyday
+chalwaee	چلوائی	word	76	checked	everyday
+chalwaie	چلوائی	word	43	checked	everyday
+chlwai	چلوائی	word	74	checked	everyday
+chlwayi	چلوائی	word	73	checked	everyday
+chalwaye	چلوائے	word	79	checked	everyday
+chalwae	چلوائے	word	78	checked	everyday
+chalwaay	چلوائے	word	77	checked	everyday
+chalwaey	چلوائے	word	76	checked	everyday
+chalwaaye	چلوائے	word	44	checked	everyday
+chlwaye	چلوائے	word	74	checked	everyday
+chlwae	چلوائے	word	73	checked	everyday
+chalwayay	چلوائے	word	39	checked	everyday
+chalway	چلوائے	word	39	checked	everyday
+chlwayay	چلوائے	word	39	checked	everyday
+chlwaay	چلوائے	word	39	checked	everyday
+chalwaen	چلوائیں	word	75	checked	everyday
+chalwayen	چلوائیں	word	74	checked	everyday
+chalwaein	چلوائیں	word	73	checked	everyday
+chalwain	چلوائیں	word	72	checked	everyday
+chalwaeen	چلوائیں	word	40	checked	everyday
+chlwaen	چلوائیں	word	70	checked	everyday
+chlwayen	چلوائیں	word	69	checked	everyday
+chlwaein	چلوائیں	word	69	checked	everyday
+chalwae	چلوائیں	word	35	checked	everyday
+chalwaye	چلوائیں	word	35	checked	everyday
+chalwaei	چلوائیں	word	35	checked	everyday
+chalwai	چلوائیں	word	35	checked	everyday
+chalwen	چلوائیں	word	35	checked	everyday
+chlwae	چلوائیں	word	35	checked	everyday
+chlwaye	چلوائیں	word	35	checked	everyday
+chlwaei	چلوائیں	word	35	checked	everyday
+chalwaun	چلواؤں	word	76	checked	everyday
+chalwaoon	چلواؤں	word	75	checked	everyday
+chalwaon	چلواؤں	word	41	checked	everyday
+chalwaou	چلواؤں	word	41	checked	everyday
+chlwaun	چلواؤں	word	72	checked	everyday
+chlwaoon	چلواؤں	word	71	checked	everyday
+chalwau	چلواؤں	word	36	checked	everyday
+chalwaoo	چلواؤں	word	36	checked	everyday
+chlwau	چلواؤں	word	36	checked	everyday
+chlwaoo	چلواؤں	word	36	checked	everyday
+chalwao	چلواؤ	word	78	checked	everyday
+chalwaou	چلواؤ	word	43	checked	everyday
+chlwao	چلواؤ	word	76	checked	everyday
+chalwaiye	چلوائیے	word	68	checked	everyday
+chalwaiay	چلوائیے	word	33	checked	everyday
+chalwaie	چلوائیے	word	33	checked	everyday
+chlwaiye	چلوائیے	word	65	checked	everyday
+chalwaiyay	چلوائیے	word	28	checked	everyday
+chlwaiyay	چلوائیے	word	28	checked	everyday
+chalwaunga	چلواؤں گا	word	74	checked	everyday
+chalwaoonga	چلواؤں گا	word	73	checked	everyday
+chalwaonga	چلواؤں گا	word	39	checked	everyday
+chlwaunga	چلواؤں گا	word	71	checked	everyday
+chalwaungi	چلواؤں گی	word	72	checked	everyday
+chalwaoongi	چلواؤں گی	word	37	checked	everyday
+chlwaungi	چلواؤں گی	word	70	checked	everyday
+chalwayega	چلوائے گا	word	75	checked	everyday
+chalwaega	چلوائے گا	word	74	checked	everyday
+chalwaayga	چلوائے گا	word	73	checked	everyday
+chalwaye ga	چلوائے گا	word	40	checked	everyday
+chlwayega	چلوائے گا	word	71	checked	everyday
+chlwaega	چلوائے گا	word	70	checked	everyday
+chalwayga	چلوائے گا	word	35	checked	everyday
+chalwayegi	چلوائے گی	word	73	checked	everyday
+chalwaegi	چلوائے گی	word	72	checked	everyday
+chalwaaygi	چلوائے گی	word	38	checked	everyday
+chlwayegi	چلوائے گی	word	70	checked	everyday
+chlwaegi	چلوائے گی	word	69	checked	everyday
+chalwayenge	چلوائیں گے	word	74	checked	everyday
+chalwaenge	چلوائیں گے	word	73	checked	everyday
+chalwaayenge	چلوائیں گے	word	39	checked	everyday
+chalwaeinge	چلوائیں گے	word	39	checked	everyday
+chlwayenge	چلوائیں گے	word	70	checked	everyday
+chlwaenge	چلوائیں گے	word	69	checked	everyday
+chalwayengay	چلوائیں گے	word	34	checked	everyday
+chalwaengay	چلوائیں گے	word	34	checked	everyday
+chlwayengay	چلوائیں گے	word	34	checked	everyday
+chlwaengay	چلوائیں گے	word	34	checked	everyday
+chalwayengi	چلوائیں گی	word	70	checked	everyday
+chalwaengi	چلوائیں گی	word	69	checked	everyday
+chlwayengi	چلوائیں گی	word	68	checked	everyday
+chalwaoge	چلواؤ گے	word	71	checked	everyday
+chalwaogay	چلواؤ گے	word	70	checked	everyday
+chalwaaoge	چلواؤ گے	word	36	checked	everyday
+chlwaoge	چلواؤ گے	word	68	checked	everyday
+chalwaogey	چلواؤ گے	word	31	checked	everyday
+chlwaogay	چلواؤ گے	word	31	checked	everyday
+chalwaogi	چلواؤ گی	word	68	checked	everyday
+chlwaogi	چلواؤ گی	word	67	checked	everyday
+ghmanay	گھمانے	word	38	checked	everyday
+ghmatay	گھماتے	word	37	checked	everyday
+ghmati	گھماتیں	word	31	checked	everyday
+ghmakar	گھما کر	word	33	checked	everyday
+ghmayay	گھمائے	word	37	checked	everyday
+ghmaay	گھمائے	word	37	checked	everyday
+ghmae	گھمائیں	word	33	checked	everyday
+ghmaye	گھمائیں	word	33	checked	everyday
+ghmaei	گھمائیں	word	33	checked	everyday
+ghmau	گھماؤں	word	34	checked	everyday
+ghmaoo	گھماؤں	word	34	checked	everyday
+ghmaiyay	گھمائیے	word	26	checked	everyday
+ghmayengay	گھمائیں گے	word	32	checked	everyday
+ghmaengay	گھمائیں گے	word	32	checked	everyday
+ghmaogay	گھماؤ گے	word	29	checked	everyday
+khara	کھڑا	word	92	checked	everyday
+khada	کھڑا	word	91	checked	everyday
+khari	کھڑی	word	91	checked	everyday
+kharee	کھڑی	word	50	checked	everyday
+khadi	کھڑی	word	89	checked	everyday
+khare	کھڑے	word	90	checked	everyday
+kharay	کھڑے	word	89	checked	everyday
+khary	کھڑے	word	88	checked	everyday
+kharey	کھڑے	word	50	checked	everyday
+khade	کھڑے	word	86	checked	everyday
+garib	غریب	word	90	checked	everyday
+gareeb	غریب	word	80	checked	everyday
+gareebon	غریبوں	word	80	checked	everyday
+garibon	غریبوں	word	85	checked	everyday
+gareebo	غریبوں	word	44	checked	everyday
+garibo	غریبوں	word	44	checked	everyday
+gum	گم	word	86	checked	everyday
+ghum	گم	word	40	checked	everyday
+sil	سل	word	80	checked	everyday
+seat	سیٹ	word	90	checked	everyday
+nalka	نلکا	word	86	checked	everyday
+nalqa	نلکا	word	85	checked	everyday
+rashan	راشن	word	86	checked	everyday
+raashan	راشن	word	85	checked	everyday
+khad	کھاد	word	80	checked	everyday
+khaad	کھاد	word	85	checked	everyday
+mechanic	مکینک	word	86	checked	everyday
+mekanik	مکینک	word	85	checked	everyday
+plumber	پلمبر	word	86	checked	everyday
+palambar	پلمبر	word	85	checked	everyday
+salami	سلامی	word	86	checked	everyday
+slami	سلامی	word	85	checked	everyday
+kinnu	کینو	word	86	checked	everyday
+kinnoo	کینو	word	85	checked	everyday
+bukhara	بخارا	word	70	checked	everyday
+bukhare	بخارے	word	68	checked	everyday
+bukharay	بخارے	word	67	checked	everyday
+bukhary	بخارے	word	66	checked	everyday
+bukharey	بخارے	word	33	checked	everyday
+bukharon	بخاروں	word	74	checked	everyday
+bukharo	بخاروں	word	39	checked	everyday
+bukharoon	بخاروں	word	39	checked	everyday
+nuskha	نسخہ	word	86	checked	everyday
+nuskhah	نسخہ	word	85	checked	everyday
+nuskhe	نسخے	word	84	checked	everyday
+nuskhay	نسخے	word	83	checked	everyday
+nuskhy	نسخے	word	82	checked	everyday
+nuskhey	نسخے	word	49	checked	everyday
+nuskhon	نسخوں	word	81	checked	everyday
+nuskho	نسخوں	word	46	checked	everyday
+nuskhoon	نسخوں	word	46	checked	everyday
+chashma	چشمہ	word	86	checked	everyday
+chashmah	چشمہ	word	85	checked	everyday
+chashme	چشمے	word	84	checked	everyday
+chashmay	چشمے	word	83	checked	everyday
+chashmy	چشمے	word	82	checked	everyday
+chashmey	چشمے	word	49	checked	everyday
+chashmon	چشموں	word	81	checked	everyday
+chashmo	چشموں	word	46	checked	everyday
+chashmoon	چشموں	word	46	checked	everyday
+sukoon	سکون	word	86	checked	everyday
+sakoon	سکون	word	85	checked	everyday
+sukun	سکون	word	84	checked	everyday
+sakun	سکون	word	44	checked	everyday
+dhoka	دھوکا	word	86	checked	everyday
+dhokha	دھوکا	word	85	checked	everyday
+dhoke	دھوکے	word	84	checked	everyday
+dhokay	دھوکے	word	83	checked	everyday
+dhoky	دھوکے	word	82	checked	everyday
+dhokey	دھوکے	word	49	checked	everyday
+dhokhe	دھوکے	word	80	checked	everyday
+dhokon	دھوکوں	word	81	checked	everyday
+dhoko	دھوکوں	word	46	checked	everyday
+dhokoon	دھوکوں	word	46	checked	everyday
+dhokhon	دھوکوں	word	78	checked	everyday
+dhoka	دھوکہ	word	60	checked	everyday
+dhokha	دھوکہ	word	60	checked	everyday
+cylinder	سلنڈر	word	86	checked	everyday
+silinder	سلنڈر	word	85	checked	everyday
+salandar	سلنڈر	word	84	checked	everyday
+heater	ہیٹر	word	86	checked	everyday
+heatar	ہیٹر	word	85	checked	everyday
+geyser	گیزر	word	86	checked	everyday
+geezer	گیزر	word	85	checked	everyday
+gizer	گیزر	word	84	checked	everyday
+chicken	چکن	word	86	checked	everyday
+chikan	چکن	word	85	checked	everyday
+injection	انجکشن	word	60	checked	everyday
+injakshan	انجکشن	word	60	checked	everyday
+result	رزلٹ	word	86	checked	everyday
+rizalt	رزلٹ	word	85	checked	everyday
+admission	ایڈمیشن	word	86	checked	everyday
+edmission	ایڈمیشن	word	85	checked	everyday
+van	وین	word	86	checked	everyday
+wain	وین	word	85	checked	everyday
+train	ٹرین	word	86	checked	everyday
+tren	ٹرین	word	85	checked	everyday
+challan	چالان	word	86	checked	everyday
+chalan	چالان	word	85	checked	everyday
+signal	سگنل	word	86	checked	everyday
+signel	سگنل	word	85	checked	everyday
+box	باکس	word	86	checked	everyday
+baks	باکس	word	85	checked	everyday
+courier	کوریئر	word	86	checked	everyday
+korier	کوریئر	word	85	checked	everyday
+curier	کوریئر	word	84	checked	everyday
+sample	سیمپل	word	86	checked	everyday
+sampal	سیمپل	word	85	checked	everyday
+pension	پنشن	word	86	checked	everyday
+pinshan	پنشن	word	85	checked	everyday
+manager	مینیجر	word	70	checked	everyday
+mainejar	مینیجر	word	85	checked	everyday
+generator	جنریٹر	word	86	checked	everyday
+janretor	جنریٹر	word	85	checked	everyday
+jenretor	جنریٹر	word	84	checked	everyday
+wiring	وائرنگ	word	86	checked	everyday
+wairing	وائرنگ	word	85	checked	everyday
+stamp	سٹامپ	word	90	checked	everyday
+astamp	سٹامپ	word	90	checked	everyday
+istamp	سٹامپ	word	80	checked	everyday
+stamp	سٹیمپ	word	60	checked	everyday
+stemp	سٹیمپ	word	85	checked	everyday
+late	لیٹ	word	96	checked	everyday
+busy	بزی	word	86	checked	everyday
+bizi	بزی	word	85	checked	everyday
+busi	بزی	word	44	checked	everyday
+shutter	شٹر	word	86	checked	everyday
+shatar	شٹر	word	85	checked	everyday
+id card	آئی ڈی کارڈ	word	86	checked	everyday
+tent	ٹینٹ	word	86	checked	everyday
+suzuki	سوزوکی	word	86	checked	everyday
+lab	لیب	word	86	checked	everyday
+pen	پین	word	86	checked	everyday
+solar	سولر	word	86	checked	everyday
+panel	پینل	word	86	checked	everyday
+reading	ریڈنگ	word	86	checked	everyday
+entry	انٹری	word	86	checked	everyday
+intry	انٹری	word	85	checked	everyday
+entri	انٹری	word	44	checked	everyday
+intri	انٹری	word	44	checked	everyday
+electrician	الیکٹریشن	word	86	checked	everyday
+partner	پارٹنر	word	96	checked	everyday
+partnar	پارٹنر	word	85	checked	everyday
+easy	ایزی	word	86	checked	everyday
+eazy	ایزی	word	80	checked	everyday
+easi	ایزی	word	44	checked	everyday
+eazi	ایزی	word	44	checked	everyday
+jazz	جاز	word	86	checked	everyday
+pickup	پک اپ	word	86	checked	everyday
+pick up	پک اپ	word	85	checked	everyday
+chingchi	چنگچی	word	96	checked	everyday
+qingqi	چنگچی	word	96	checked	everyday
+chingchy	چنگچی	word	84	checked	everyday
+chinchi	چنگچی	word	83	checked	everyday
+kingki	چنگچی	word	44	checked	everyday
+mazda	مزدا	word	86	checked	everyday
+cold	کولڈ	word	86	checked	everyday
+drink	ڈرنک	word	86	checked	everyday
+ac	اے سی	word	96	checked	everyday
+visiting card	وزیٹنگ کارڈ	word	86	checked	everyday
+trial	ٹرائل	word	90	checked	everyday
+chor do	چھوڑ دو	word	86	checked	everyday
+chhor do	چھوڑ دو	word	85	checked	everyday
+chordo	چھوڑ دو	word	84	checked	everyday
+chor diya	چھوڑ دیا	word	86	checked	everyday
+chor dia	چھوڑ دیا	word	85	checked	everyday
+chor di	چھوڑ دی	word	86	checked	everyday
+chor kar	چھوڑ کر	word	86	checked	everyday
+chor kr	چھوڑ کر	word	85	checked	everyday
+tery	تیری	word	40	checked	everyday
+apny	اپنی	word	40	checked	everyday
+hamary	ہماری	word	40	checked	everyday
+tumhary	تمہاری	word	40	checked	everyday
+usky	اس کی	word	40	checked	everyday
+unky	ان کی	word	40	checked	everyday
+kisky	کس کی	word	40	checked	everyday
+jisky	جس کی	word	40	checked	everyday
+apky	آپ کی	word	40	checked	everyday
+kaisy	کیسی	word	40	checked	everyday
+aisy	ایسی	word	40	checked	everyday
+jaisy	جیسی	word	40	checked	everyday
+waisy	ویسی	word	40	checked	everyday
+kitny	کتنی	word	40	checked	everyday
+itny	اتنی	word	40	checked	everyday
+jitny	جتنی	word	40	checked	everyday
+sary	ساری	word	40	checked	everyday
+achy	اچھی	word	40	checked	everyday
+bary	بڑی	word	40	checked	everyday
+choty	چھوٹی	word	40	checked	everyday
+lady	لیڈی	word	80	checked	everyday
+dairy	ڈیری	word	80	checked	everyday
+dairi	ڈیری	word	44	checked	everyday
+jury	جیوری	word	60	checked	everyday
+juri	جیوری	word	44	checked	everyday
+para	پارہ	word	40	checked	everyday
+pari	پری	word	40	checked	everyday
+pare	پرے	word	40	checked	everyday
+paray	پرے	word	44	checked	everyday
+baraten	باراتیں	word	65	checked	everyday
+barate	باراتیں	word	44	checked	everyday
+baraati	باراتی	word	80	checked	everyday
+barati	باراتی	word	75	checked	everyday
+tayyary	تیاری	word	60	checked	everyday
+tiyari	تیاری	word	85	checked	everyday
+talashy	تلاشی	word	40	checked	everyday
+laayay	لائے	word	44	checked	everyday
+paayay	پائے	word	44	checked	everyday

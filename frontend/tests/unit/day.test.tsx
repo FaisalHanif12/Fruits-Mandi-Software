@@ -401,7 +401,9 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
       expect(sign).toHaveAttribute('aria-invalid', 'true');
     });
     expect(
-      await screen.findByText((text) => visible(text).includes(message(language, 'err-sign-wrong'))),
+      await screen.findByText((text) =>
+        visible(text).includes(message(language, 'err-sign-wrong')),
+      ),
     ).toBeInTheDocument();
     expect(sign.value).toBe('munshi');
     expect((await labelled(language, 'day-reopen-reason')).value).toBe('Wrong rate');

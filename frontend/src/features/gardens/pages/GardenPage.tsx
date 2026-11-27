@@ -7,6 +7,12 @@
 // note that says so, with a button that undoes the closing while its day is open. Everything else
 // stays readable.
 //
+// The page stays organized however many entries the garden has (plan 96, PRD FR-12.53): the facts with
+// the four key figures at the top, the entry form, the goods arrived in two lists (not sold yet, then
+// sold) with the details of an entry under its list, where the sale money is, the history, then the
+// garden's figures (open; each partner's money in them). A saved goods arrived entry shows at the head
+// of the first list, tinted, and the page does not move.
+//
 // Four states: loading, an error with a retry (also for a garden that does not exist), the garden.
 
 import { Localized } from '@fluent/react';
@@ -16,17 +22,17 @@ import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { Button, ErrorState, LoadingState, Notice, PartnerLockedBox } from '../../../shared/ui';
+import { Button, ErrorState, LoadingState, Notice } from '../../../shared/ui';
 import type { PagerState } from '../../../shared/hooks';
 import { CloseGardenCard } from '../components/CloseGardenCard';
 import { GardenArrivalEdit } from '../components/GardenArrivalEdit';
-import { GardenArrivalsSection } from '../components/GardenArrivalsSection';
+import { GardenArrivalsSection, type AddedArrivals } from '../components/GardenArrivalsSection';
 import { GardenEntryEdit } from '../components/GardenEntryEdit';
 import { GardenEntryEditor } from '../components/GardenEntryEditor';
-import { GardenFiguresCard, GardenHeaderCard } from '../components/GardenHeaderCard';
+import { GardenFiguresFold, GardenHeaderCard } from '../components/GardenHeaderCard';
 import { GardenHeaderEdit } from '../components/GardenHeaderEdit';
 import { GardenHistorySection } from '../components/GardenHistorySection';
-import { GardenPartnersCard } from '../components/GardenPartnersCard';
+import { GardenSaleMoneySection } from '../components/GardenSaleMoneySection';
 import { ReopenGardenDialog } from '../components/ReopenGardenDialog';
 import { useGarden, type GardenView } from '../hooks';
 import { parseGardenSearch } from '../screen-type';
@@ -56,9 +62,16 @@ function GardenBody({
   const [editingArrival, setEditingArrival] = useState<ArrivalRow | null>(null);
   // The facts of the garden open for edit (names, main fruit, rent, season end, note).
   const [editingHeader, setEditingHeader] = useState(false);
+  // The goods arrived entries the form has just saved: the list shows them first and tinted.
+  const [added, setAdded] = useState<AddedArrivals | null>(null);
   const { detail } = view;
   const garden = detail.row;
   const open = garden.status === 'open';
+  const editArrival = (arrival: ArrivalRow) => {
+    setEditing(null);
+    setEditingHeader(false);
+    setEditingArrival(arrival);
+  };
   return (
     <div className="flex max-w-page flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -105,6 +118,9 @@ function GardenBody({
           garden={garden}
           today={today}
           initialType={openType === undefined || openType === 'close' ? undefined : openType}
+          onArrivalsSaved={(ids) => {
+            setAdded((previous) => ({ ids, token: (previous?.token ?? 0) + 1 }));
+          }}
         />
       ) : (
         <Notice
@@ -130,20 +146,9 @@ function GardenBody({
           </Localized>
         </Notice>
       )}
-      <GardenArrivalsSection
-        garden={garden}
-        onEdit={(arrival) => {
-          setEditing(null);
-          setEditingHeader(false);
-          setEditingArrival(arrival);
-        }}
-      />
-      <GardenFiguresCard garden={garden} />
-      {detail.partners_locked ? (
-        <PartnerLockedBox />
-      ) : (
-        <GardenPartnersCard results={detail.partner_results} closed={!open} />
-      )}
+      <GardenArrivalsSection garden={garden} stock="in_stock" added={added} onEdit={editArrival} />
+      <GardenArrivalsSection garden={garden} stock="sold_out" onEdit={editArrival} />
+      <GardenSaleMoneySection garden={garden} />
       <GardenHistorySection
         history={view.history}
         count={view.historyCount}
@@ -153,6 +158,12 @@ function GardenBody({
           setEditingHeader(false);
           setEditing(row);
         }}
+      />
+      <GardenFiguresFold
+        garden={garden}
+        results={detail.partner_results}
+        partnersLocked={detail.partners_locked}
+        closed={!open}
       />
       {open ? (
         <CloseGardenCard garden={garden} today={today} focusOnOpen={openType === 'close'} />

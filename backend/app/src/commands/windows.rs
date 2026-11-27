@@ -1,8 +1,9 @@
 //! `windows_bounds` (plan 76 point 8, PRD FR-19.11): the first day that has data in a list, for the
 //! back button of its 7-day or 1-month window. The sign-in check, then one service call. Read only.
 //!
-//! The first day of a partner's statement or of his money taken is a partner fact (PRD FR-17.11,
-//! NFR-SEC-14): those two sources are refused while the partner section is locked, like every other
+//! The first day of a partner's statement, of his money taken or of his gardens and trips is a
+//! partner fact (PRD FR-17.11, NFR-SEC-14): those sources are refused while the partner section is
+//! locked, like every other
 //! partner read (Code Standards S8). Example: with the section locked, `PartnerStatement` answers
 //! `ERR_PARTNER_LOCKED`, and `Sales` still answers.
 
@@ -22,7 +23,9 @@ pub async fn windows_bounds<R: tauri::Runtime>(
         auth::require(ctx)?;
         if matches!(
             input.source,
-            WindowSource::PartnerStatement { .. } | WindowSource::PartnerTakes { .. }
+            WindowSource::PartnerStatement { .. }
+                | WindowSource::PartnerTakes { .. }
+                | WindowSource::PartnerVentures { .. }
         ) {
             partner_code::require_unlocked(ctx)?;
         }

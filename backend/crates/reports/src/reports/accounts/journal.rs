@@ -78,7 +78,7 @@ pub(crate) fn run_r11(
                     iso: line.entry_date.clone(),
                 },
                 Cell::Doc {
-                    type_id: ids::doc_id(&line.posting_type),
+                    type_id: ids::doc_id_of(&line.posting_type, &line.source_type),
                     number: line.doc_number,
                 },
                 Cell::Party {

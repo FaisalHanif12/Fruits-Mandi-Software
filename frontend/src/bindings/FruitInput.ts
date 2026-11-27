@@ -55,6 +55,15 @@ export type FruitInput = {
    */
   rate: string;
   /**
+   * کل کٹوتی (PRD FR-16.7, FR-16.11 v1.59): the other shop's commission, freight and other charges
+   * in one amount, whole rupees, for `other_shop` only. Empty means 0, and 0 posts exactly as an
+   * entry with no deduction. It is subtracted: the agent is credited the value less the deduction
+   * and the partner (or the guests' partners, C27) are charged the same net. A deduction with
+   * `source` `shop` is `ERR_FORMAT_INVALID` on `deduction`; one that is not less than the value
+   * is `ERR_DEDUCTION_NOT_BELOW_VALUE` on `deduction`; a bad amount is the usual money error.
+   */
+  deduction: string | null;
+  /**
    * A note, up to 500 characters.
    */
   note: string | null;

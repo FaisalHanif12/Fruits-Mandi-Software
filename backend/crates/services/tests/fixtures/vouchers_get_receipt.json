@@ -1,6 +1,7 @@
 {
   "id": 2,
   "voucher_type": "receipt",
+  "entered_as": null,
   "number": 1,
   "entry_date": "2026-10-10",
   "account": {

@@ -10,7 +10,7 @@ import { useLanguage } from '../i18n';
 import type { EditEntity } from '../../bindings/EditEntity';
 import type { EditVersion } from '../../bindings/EditVersion';
 import { useEditHistory } from '../edit/hooks';
-import { whenWhoMessage } from '../edit/sign';
+import { withoutSignChanges } from '../edit/no-sign';
 import { auditValueText } from '../edit/value-text';
 import { uiErrorOf } from '../api';
 import { Button } from './Button';
@@ -40,12 +40,13 @@ function Version({ version }: { version: EditVersion }) {
   const language = useLanguage();
   const grouping = useGrouping();
   const ctx = { l10n, language, grouping };
-  // The sign given when the day was reopened follows the name (PRD FR-7.71, v1.36).
-  const when = whenWhoMessage('edit-history-version', version, {
+  // The date, the time and who. Never the Owner's sign (PRD FR-7.71, v1.58): not here, and not as a changed field.
+  const when = {
     date: isoToDisplayDate(version.local_date),
     time: stampTimeText(version.local_time, l10n),
     by: version.by,
-  });
+  };
+  const changed = withoutSignChanges(version.changes);
   const columns: readonly TableColumn<EditVersion['changes'][number]>[] = [
     {
       id: 'field',
@@ -66,7 +67,7 @@ function Version({ version }: { version: EditVersion }) {
   return (
     <section className="flex flex-col gap-2" data-edit-version="">
       <h3 className="type-body font-semibold text-ink">
-        <Localized id={when.id} vars={when.vars}>
+        <Localized id="edit-history-version" vars={when}>
           <span />
         </Localized>{' '}
         <Localized id={actionId(version.action)}>
@@ -78,11 +79,11 @@ function Version({ version }: { version: EditVersion }) {
           <p className="type-body text-ink" />
         </Localized>
       )}
-      {version.changes.length === 0 ? null : (
+      {changed.length === 0 ? null : (
         <Table
           label={l10n.getString('edit-history-title')}
           columns={columns}
-          rows={version.changes}
+          rows={changed}
           rowKey={(change) => change.path}
         />
       )}

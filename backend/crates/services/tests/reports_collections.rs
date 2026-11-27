@@ -790,3 +790,48 @@ fn the_collections_filters_not_taken_are_refused() {
         vec![(ErrorCode::ErrDateInvalid, "filters.as_of".to_owned())]
     );
 }
+
+/// PRD FR-7.88 and E2E-63: on 15-11-26 both bills of 10-10-26 are 36 days old; sorted by days,
+/// the larger balance comes first (ارشد 18,684, then اکرم 2,880), in both directions. Without the
+/// tie rule the code order would put اکرم (0020) first.
+#[test]
+fn r20_sorted_by_days_puts_the_larger_balance_first_when_two_bills_are_equally_old() {
+    use mandi_reports::reports::{ReportRunInput, run};
+    use mandi_services::core::paging::{SortDirection, SortInput};
+    let w = full_day();
+    set_today(&w.env, 2026, 11, 15);
+    let codes = |direction: SortDirection| -> Vec<(String, i64)> {
+        let page = run(
+            w.env.ctx.db(),
+            &ReportRunInput {
+                group_by_month: false,
+                sort: Some(SortInput {
+                    column: "days".into(),
+                    direction,
+                    language: Some(Language::Ur),
+                }),
+                id: ReportId::R20,
+                filters: ReportFilters::default(),
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap();
+        let days = page.columns.iter().position(|c| c.key == "days").unwrap();
+        let balance = page
+            .columns
+            .iter()
+            .position(|c| c.key == "balance")
+            .unwrap();
+        page.rows
+            .iter()
+            .map(|r| {
+                assert!(matches!(r.cells[days], Cell::Number { value: 36 }), "{r:?}");
+                (code_of(&r.cells[0]), money(&r.cells[balance]))
+            })
+            .collect()
+    };
+    let wanted = vec![("0021".to_owned(), 18_684), ("0020".to_owned(), 2_880)];
+    assert_eq!(codes(SortDirection::Desc), wanted);
+    assert_eq!(codes(SortDirection::Asc), wanted);
+}

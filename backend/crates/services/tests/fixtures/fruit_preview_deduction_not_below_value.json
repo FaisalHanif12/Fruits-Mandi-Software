@@ -1,0 +1,16 @@
+{
+  "numbers": null,
+  "errors": [
+    {
+      "code": "ERR_DEDUCTION_NOT_BELOW_VALUE",
+      "field": "deduction",
+      "values": {
+        "max": 2799,
+        "value": 2800
+      }
+    }
+  ],
+  "warnings": [],
+  "rate_hint": null,
+  "partners_locked": false
+}

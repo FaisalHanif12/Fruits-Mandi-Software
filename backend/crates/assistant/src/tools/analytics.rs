@@ -55,6 +55,10 @@ pub struct Input {
     pub from: Option<String>,
     /// The last day.
     pub to: Option<String>,
+    /// A period word instead of `from` and `to` (`this_month`, `month:9`, `last_days:10`), worked
+    /// out by the app with the rules of the tool `period` (PRD FR-7.87 v1.60).
+    #[serde(default)]
+    pub period: Option<String>,
     /// `day`, `month` or `year`.
     pub group_by: Option<String>,
     /// An item.
@@ -705,7 +709,7 @@ fn sort_in_memory(
 
 /// The tool.
 pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
-    let parsed: Input = input(args)?;
+    let mut parsed: Input = input(args)?;
     let view: AnalyticsView = serde_json::from_value(Json::String(parsed.view.clone()))
         .map_err(|_| bad("ERR_OUT_OF_RANGE", "view", "A to K"))?;
     // View M (the shop's expenses by head, with a column for each day, month or year) is read by the app's own
@@ -732,11 +736,15 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     if !(1..=MAX_ROWS).contains(&rows_wanted) {
         return Err(bad("ERR_OUT_OF_RANGE", "rows", "1 to 100").into());
     }
+    let dated = fill_dates(env, state, &mut parsed, &entry.filters)?;
     let keys = parsed.sort.clone().unwrap_or_default();
     if keys.len() > 2 {
         return Err(bad("ERR_OUT_OF_RANGE", "sort", "up to 2 keys").into());
     }
     let mut built = build_filters(env, state, &parsed, &entry.filters)?;
+    // A comparison with no dates is given the days of `default_window` by `build_filters`.
+    let window_filled =
+        parsed.from.is_none() && parsed.to.is_none() && !built.filters.from.is_empty();
     let mut hidden_parts = false;
     let rule = view_rule(view, &built.filters);
     let partner_data = rule != PartnerRule::Free && !env.partner_locked;
@@ -819,9 +827,98 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
         Some(head) => one_head(env, state, view, page, rows, head)?,
         None => (page, rows),
     };
-    let mut draft = assemble(env, args, view, &built, &page, &rows, hidden_parts);
+    // The input the guards read holds the days that were read.
+    let mut stored = args.clone();
+    if (dated.filled || window_filled)
+        && let Some(map) = stored.as_object_mut()
+    {
+        let day = |d: &str| {
+            if d.is_empty() {
+                Json::Null
+            } else {
+                Json::String(d.to_owned())
+            }
+        };
+        map.insert("from".to_owned(), day(&built.filters.from));
+        map.insert("to".to_owned(), day(&built.filters.to));
+    }
+    built.notes.extend(dated.note);
+    let mut draft = assemble(env, &stored, view, &built, &page, &rows, hidden_parts);
     draft.partner_data = partner_data;
+    super::report::add_dated(&mut draft.node, dated.period, None);
     Ok(draft)
+}
+
+/// What [`fill_dates`] filled in.
+struct Dated {
+    /// The node of the period, so the answer can cite its dates.
+    period: Option<Node>,
+    /// True when the dates of the input were filled by the app.
+    filled: bool,
+    note: Option<String>,
+}
+
+/// Fills the dates of a view before its filters are read (PRD FR-7.87 v1.60, plan 99 A1): the
+/// `period` word, and the missing end of a comparison that has one date only, which used to be
+/// refused with `ERR_REQUIRED` and cost a round. A view with no dates reads all the books.
+///
+/// Example (today 10-10-26): `{view:"A", compare:"previous", from:"01-10-2026", to:null}` reads
+/// 01-10-26 to 10-10-26 with the note "to was not given".
+fn fill_dates(
+    env: &Env<'_>,
+    state: &State,
+    parsed: &mut Input,
+    takes: &[AnalyticsFilterKind],
+) -> Result<Dated, ToolError> {
+    let mut out = Dated {
+        period: None,
+        filled: false,
+        note: None,
+    };
+    let word = parsed.period.take().filter(|w| !w.trim().is_empty());
+    if word.is_some() && (parsed.from.is_some() || parsed.to.is_some()) {
+        return Err(bad(
+            "ERR_FORMAT_INVALID",
+            "period",
+            "give period, or from and to, not both",
+        ));
+    }
+    let takes_period = takes.contains(&AnalyticsFilterKind::Period);
+    if let Some(word) = word {
+        if !takes_period {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "period",
+                "this view does not have that filter; the views that do are listed",
+            )
+            .allowed(views_with(AnalyticsFilterKind::Period)));
+        }
+        let resolved = super::period::resolve_word(env, &word)?;
+        parsed.from.clone_from(&resolved.from);
+        parsed.to = Some(resolved.to);
+        out.period = Some(resolved.node);
+        out.filled = true;
+        return Ok(out);
+    }
+    if parsed.compare.is_some() && takes_period && parsed.from.is_some() != parsed.to.is_some() {
+        if let Some(to) = parsed.to.as_deref() {
+            if let Some(day) = date_arg(env, state, to, "to")?
+                && let Some(year) = day.get(..4)
+            {
+                parsed.from = Some(format!("{year}-01-01"));
+                out.note = Some(format!(
+                    "from was not given, so the year of to is read from its first day \
+                     ({year}-01-01)"
+                ));
+                out.filled = true;
+            }
+        } else {
+            parsed.to = Some(env.today.to_iso());
+            out.note = Some("to was not given, so today is used".to_owned());
+            out.filled = true;
+        }
+    }
+    Ok(out)
 }
 
 /// View M for one expense head: its row, and its figures as the totals (one row, so its cells are the totals).
@@ -922,6 +1019,26 @@ fn is_narrowed(filters: &AnalyticsFilters) -> bool {
 /// The column of view A that is each row's share of the table's commission.
 const SHARE_COLUMN: &str = "share";
 
+/// View F's net change: profit plus gardens, trips and fruit, without the money the partner took.
+/// For a question about his خالص (PRD C20, which takes it off) it is left out with this note, so it
+/// can never be shown as the خالص (live check NFR-AI-2, Q055: 996 shown for −1,004). R30 holds the
+/// خالص in `net`.
+const NET_CHANGE_COLUMN: &str = "net_change";
+const NET_CHANGE_NOTE: &str = "net_change is left out: it does not take off the money a partner \
+     took, so it is not his khaalis; read R30 and cite its `net`";
+
+/// True when the question asks for a خالص.
+fn asks_khaalis(question: &str) -> bool {
+    use mandi_services::core::text;
+    let words = text::search_ur(&text::search_en(question));
+    ["khalis", "khalees", "khaalis", "khaalas", "خالص"]
+        .iter()
+        .any(|k| {
+            let k = text::search_ur(&text::search_en(k));
+            words.split_whitespace().any(|w| w.starts_with(&k))
+        })
+}
+
 /// True when the share of view A would be trivial: the filters left one row, so its share of the
 /// table is 100% whatever the books hold. The model reads it as "the share of all commission"
 /// (Q029 of the live run of 03-11-2026), so the figure is not given.
@@ -952,7 +1069,13 @@ fn assemble(
     hidden_parts: bool,
 ) -> Draft {
     let no_share = share_is_trivial(view, built, page);
+    let no_net = view == AnalyticsView::F && asks_khaalis(env.question);
+    let hidden =
+        |key: &str| (no_share && key == SHARE_COLUMN) || (no_net && key == NET_CHANGE_COLUMN);
     let mut notes = built.notes.clone();
+    if no_net {
+        notes.push(NET_CHANGE_NOTE.to_owned());
+    }
     if no_share {
         notes.push(TRIVIAL_SHARE_NOTE.to_owned());
     } else if matches!(view, AnalyticsView::A | AnalyticsView::H) && is_narrowed(&built.filters) {
@@ -971,7 +1094,7 @@ fn assemble(
         .enumerate()
         .filter(|(i, c)| !is_left_out(c) && !compare_at.is_some_and(|(a, b)| *i == a || *i == b))
         .map(|(i, c)| Node::Str(shown_key(i, c)))
-        .filter(|n| !(no_share && matches!(n, Node::Str(k) if k == SHARE_COLUMN)))
+        .filter(|n| !matches!(n, Node::Str(k) if hidden(k)))
         .collect();
     let mut used = Vec::new();
     let keyed: Vec<(String, Node)> = rows
@@ -989,7 +1112,7 @@ fn assemble(
                 &mut used,
             );
             let mut fields = row_fields(env, &columns, &row.cells, compare_at, figure);
-            fields.retain(|(k, _)| !(no_share && k == SHARE_COLUMN));
+            fields.retain(|(k, _)| !hidden(k));
             (key, Node::Obj(fields))
         })
         .collect();
@@ -997,7 +1120,7 @@ fn assemble(
     let totals: Vec<(String, Node)> = totals_fields
         .into_iter()
         .filter(|(_, node)| !matches!(node, Node::Null))
-        .filter(|(k, _)| !(no_share && k == SHARE_COLUMN))
+        .filter(|(k, _)| !hidden(k))
         .collect();
     let compare = compare_at.map_or(Node::Null, |(earlier, change)| {
         compare_node(
@@ -1007,7 +1130,8 @@ fn assemble(
             figure,
         )
     });
-    let chart = series_of(page);
+    // View F's chart ranks by the net change: with it left out, the series goes too.
+    let chart = series_of(page).filter(|_| !no_net);
     let mut echo = Vec::new();
     for (name, value) in [
         ("from", page.filters.from.clone()),
@@ -1024,6 +1148,16 @@ fn assemble(
     // So the model can see the figure is for one quality, not for the whole item.
     if let Some(grade) = page.filters.grade {
         echo.push(("grade", Node::Str(grade.as_str().to_owned())));
+    }
+    // The picked parties, by the keys the model sent: a view with no column for them (view A of
+    // one seller) was otherwise taken as unfiltered and doubted (plan 99, logged question).
+    for (name, id) in [
+        ("seller", built.source.seller.as_ref().map(|r| r.id)),
+        ("buyer", built.source.buyer.as_ref().map(|p| p.record.id)),
+    ] {
+        if let Some(id) = id {
+            echo.push((name, Node::Str(format!("a{id}"))));
+        }
     }
     let series = chart
         .as_ref()
@@ -1044,7 +1178,7 @@ fn assemble(
         ("series", series),
     ];
     // The month with the most and the month with the least, for "kis mahine mein sab se zyada".
-    if let Some((peak, lowest)) = series_extremes(page) {
+    if !no_net && let Some((peak, lowest)) = series_extremes(page) {
         fields.push(("peak", peak));
         fields.push(("lowest", lowest));
         notes.push(

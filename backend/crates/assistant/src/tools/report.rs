@@ -101,6 +101,16 @@ pub struct SortKey {
     pub order: OrderWord,
 }
 
+/// The `bikri` input: a بکری number, or the word `last` for the latest one (PRD FR-7.87 v1.60).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum BikriWord {
+    /// The number.
+    Number(i64),
+    /// `last`, or the number typed as text.
+    Word(String),
+}
+
 /// The input of `report` (D6-system-prompt Section 3).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -113,6 +123,11 @@ pub struct Input {
     pub to: Option<String>,
     /// The day of a balance list.
     pub as_of: Option<String>,
+    /// A period word instead of `from` and `to` (`this_month`, `month:9`, `last_days:10`), worked
+    /// out by the app with the rules of the tool `period` (PRD FR-7.87 v1.60). A balance list reads
+    /// it as of its last day.
+    #[serde(default)]
+    pub period: Option<String>,
     /// A find match or a key.
     pub party: Option<String>,
     /// An item.
@@ -136,8 +151,8 @@ pub struct Input {
     pub trip: Option<String>,
     /// A garden.
     pub garden: Option<String>,
-    /// A بکری number, for R1.
-    pub bikri: Option<i64>,
+    /// A بکری number, or `last` for the latest one (R1, and R5 for its buyers).
+    pub bikri: Option<BikriWord>,
     /// A seller (R2 to R5, R6, R7, R10, R26, R27): plan 55 P1 to P4.
     #[serde(default)]
     pub seller: Option<String>,
@@ -389,7 +404,8 @@ fn build_filters(
         filters.garden_id = Some(garden_id);
         source.garden = Some(record);
     }
-    if let Some(number) = input.bikri {
+    if let Some(word) = &input.bikri {
+        let number = bikri_number_of(word)?;
         takes_or(takes, FilterKind::Bikri, "bikri")?;
         let rows = bikri::find(
             env.ctx,
@@ -877,8 +893,242 @@ fn rows_hold_partner_lines(columns: &[Column], rows: &[Row]) -> bool {
 }
 
 /// The tool.
+/// The word of `bikri` for the latest one.
+const LAST_WORDS: [&str; 3] = ["last", "latest", "aakhri"];
+
+/// The number a `bikri` word holds once `last` has been worked out.
+fn bikri_number_of(word: &BikriWord) -> Result<i64, ToolError> {
+    match word {
+        BikriWord::Number(n) => Ok(*n),
+        BikriWord::Word(text) => text.trim().parse().map_err(|_| {
+            bad(
+                "ERR_FORMAT_INVALID",
+                "bikri",
+                "a بکری number, or the word last",
+            )
+        }),
+    }
+}
+
+fn is_last_word(word: &BikriWord) -> bool {
+    matches!(word, BikriWord::Word(w) if LAST_WORDS.contains(&w.trim().to_ascii_lowercase().as_str()))
+}
+
+/// The latest بکری the model asked for with `bikri: "last"`, given back as `latest_bikri`.
+pub(super) struct LatestBikri {
+    number: i64,
+    date: String,
+}
+
+/// What a `period` word and `bikri: "last"` came to.
+pub(super) struct Dated {
+    /// The node of the period, so the answer can cite its dates.
+    pub(super) period: Option<Node>,
+    /// The latest بکری, when it was asked for.
+    latest: Option<LatestBikri>,
+    /// The input as it was read: the dates and the number filled in. The guards read it, and so
+    /// does the button.
+    pub(super) stored: Json,
+    /// What was done, given to the model.
+    pub(super) note: Option<String>,
+}
+
+/// Fills the `period` word and `bikri: "last"` into the input, before the filters are read (PRD
+/// FR-7.87 v1.60). A period is the from and to of a report with dates, and the "as of" day of a
+/// balance list. The latest بکری is the one of the latest day (in the days asked, else of all the
+/// books), then the highest number; a cancelled one is never taken. R1 given a day and no number is
+/// that day's latest. The days only choose the بکری: it is then read whole (no date filter), so a
+/// later sale of it on another day is in R5 too.
+///
+/// Example (worked day): `report{id:"R1", bikri:"last"}` reads بکری 2 of 10-10-26.
+fn fill_dates(
+    env: &Env<'_>,
+    state: &State,
+    args: &Json,
+    parsed: &mut Input,
+    id: ReportId,
+    takes: &[FilterKind],
+) -> Result<Dated, ToolError> {
+    let mut out = Dated {
+        period: None,
+        latest: None,
+        stored: args.clone(),
+        note: None,
+    };
+    let word = parsed.period.take().filter(|w| !w.trim().is_empty());
+    let resolved = match &word {
+        Some(word) => {
+            if parsed.from.is_some() || parsed.to.is_some() || parsed.as_of.is_some() {
+                return Err(bad(
+                    "ERR_FORMAT_INVALID",
+                    "period",
+                    "give period, or from and to, not both",
+                ));
+            }
+            Some(super::period::resolve_word(env, word)?)
+        }
+        None => None,
+    };
+    let dated_r1 = id == ReportId::R1
+        && parsed.bikri.is_none()
+        && (resolved.is_some()
+            || parsed.from.is_some()
+            || parsed.to.is_some()
+            || parsed.as_of.is_some());
+    let wants_last = dated_r1 || parsed.bikri.as_ref().is_some_and(is_last_word);
+    if wants_last {
+        takes_or(takes, FilterKind::Bikri, "bikri")?;
+        let (from, to) = match &resolved {
+            Some(p) => (p.from.clone(), Some(p.to.clone())),
+            None => {
+                let day =
+                    |field: &str, text: &Option<String>| -> Result<Option<String>, ToolError> {
+                        Ok(text
+                            .as_deref()
+                            .map(|t| date_arg(env, state, t, field))
+                            .transpose()?
+                            .flatten())
+                    };
+                match day("as_of", &parsed.as_of)? {
+                    Some(on) => (Some(on.clone()), Some(on)),
+                    None => (day("from", &parsed.from)?, day("to", &parsed.to)?),
+                }
+            }
+        };
+        let (number, date) = latest_bikri(env, from.as_deref(), to.as_deref())?;
+        parsed.bikri = Some(BikriWord::Number(number));
+        parsed.as_of = None;
+        parsed.from = None;
+        parsed.to = None;
+        out.note = Some(
+            "this is the latest بکری of the days asked (its number and day are in \
+             latest_bikri: cite latest_bikri.bikri and latest_bikri.date)"
+                .to_owned(),
+        );
+        out.latest = Some(LatestBikri { number, date });
+    } else if let Some(p) = &resolved {
+        if takes.contains(&FilterKind::DateRange) {
+            parsed.from.clone_from(&p.from);
+            parsed.to = Some(p.to.clone());
+        } else if takes.contains(&FilterKind::AsOf) {
+            if id == ReportId::R35 && p.from.as_deref() != Some(p.to.as_str()) {
+                return Err(bad(
+                    "ERR_OUT_OF_RANGE",
+                    "period",
+                    "R35 is one day: today, yesterday or day:DD-MM; for more days read R13",
+                ));
+            }
+            parsed.as_of = Some(p.to.clone());
+        } else {
+            return Err(not_taken(takes, "period"));
+        }
+    }
+    if (resolved.is_some() || wants_last)
+        && let Some(map) = out.stored.as_object_mut()
+    {
+        let text = |v: &Option<String>| v.clone().map_or(Json::Null, Json::String);
+        map.insert("from".to_owned(), text(&parsed.from));
+        map.insert("to".to_owned(), text(&parsed.to));
+        map.insert("as_of".to_owned(), text(&parsed.as_of));
+        if let Some(latest) = &out.latest {
+            map.insert("bikri".to_owned(), Json::from(latest.number));
+        }
+    }
+    out.period = resolved.map(|p| p.node);
+    Ok(out)
+}
+
+/// The number and day of the latest saved بکری in the days given (all the books with none), newest
+/// first by day and then by number, as the find screen lists them (PRD FR-12.13).
+fn latest_bikri(
+    env: &Env<'_>,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<(i64, String), ToolError> {
+    use mandi_services::core::bikri::{BikriFindInput, BikriStatus};
+    use mandi_services::core::paging::PageInput;
+    const PAGE: u32 = 100;
+    const MOST_PAGES: u32 = 100;
+    // One day is asked for as that day, so no page before it is read.
+    let one_day = from
+        .filter(|f| Some(*f) == to)
+        .and_then(BusinessDate::parse_iso)
+        .map(format_ddmmyyyy);
+    let input = BikriFindInput {
+        date: one_day,
+        ..BikriFindInput::default()
+    };
+    let mut offset = 0_u32;
+    for _ in 0..MOST_PAGES {
+        let rows = bikri::find_page(
+            env.ctx,
+            &input,
+            PageInput {
+                offset,
+                limit: PAGE,
+            },
+        )
+        .map_err(|_| bad("ERR_INTERNAL", "bikri", "the search failed"))?;
+        let full = u32::try_from(rows.len()).unwrap_or(PAGE) >= PAGE;
+        for row in rows {
+            if from.is_some_and(|f| row.entry_date.as_str() < f) {
+                return Err(no_bikri_in_days());
+            }
+            if row.status == BikriStatus::Saved && to.is_none_or(|t| row.entry_date.as_str() <= t) {
+                return Ok((row.number, row.entry_date));
+            }
+        }
+        if !full {
+            break;
+        }
+        offset = offset.saturating_add(PAGE);
+    }
+    Err(no_bikri_in_days())
+}
+
+fn no_bikri_in_days() -> ToolError {
+    bad(
+        "ERR_NOT_FOUND",
+        "bikri",
+        "there is no saved بکری in the days asked; say so (kind answer), or read all the books",
+    )
+}
+
+/// Puts the period and the latest بکری of a read into its result, after `filters`.
+pub(super) fn add_dated(node: &mut Node, period: Option<Node>, latest: Option<&LatestBikri>) {
+    let Node::Obj(fields) = node else {
+        return;
+    };
+    let at = fields
+        .iter()
+        .position(|(k, _)| k == "filters")
+        .map_or(fields.len(), |i| i.saturating_add(1));
+    let mut extra: Vec<(String, Node)> = Vec::new();
+    if let Some(period) = period {
+        extra.push(("period".to_owned(), period));
+    }
+    if let Some(latest) = latest {
+        extra.push((
+            "latest_bikri".to_owned(),
+            Node::obj(vec![
+                (
+                    "bikri",
+                    Node::Val(Val::Doc {
+                        type_id: "report-doc-bikri-first".to_owned(),
+                        number: Some(latest.number),
+                    }),
+                ),
+                ("date", Node::Val(Val::Date(latest.date.clone()))),
+            ]),
+        ));
+    }
+    let tail = fields.split_off(at);
+    fields.extend(extra);
+    fields.extend(tail);
+}
+
 pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
-    let parsed: Input = input(args)?;
+    let mut parsed: Input = input(args)?;
     let id: ReportId = serde_json::from_value(Json::String(parsed.id.clone()))
         .map_err(|_| bad("ERR_OUT_OF_RANGE", "id", "R1 to R38"))?;
     let entry = catalog()
@@ -905,7 +1155,15 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
     {
         keys.truncate(1);
     }
+    // R13 one row for each بکری is the پارٹی کھاتے statement (PRD FR-19.8, v1.60).
+    if id == ReportId::R13 && parsed.layout.as_deref() == Some(super::history::LAYOUT_BIKRI) {
+        let dated = fill_dates(env, state, args, &mut parsed, id, &entry.filters)?;
+        return super::history::run(env, state, &parsed, rows_wanted, &entry.title_id, dated);
+    }
+    let dated = fill_dates(env, state, args, &mut parsed, id, &entry.filters)?;
+    let args = &dated.stored;
     let mut built = build_filters(env, state, &parsed, id, &entry.filters)?;
+    built.notes.extend(dated.note.clone());
     if entry.party_required && id != ReportId::R1 && id != ReportId::R31 && built.party.is_none() {
         return Err(bad("ERR_REQUIRED", "party", "this report is one party's").into());
     }
@@ -923,6 +1181,7 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
     if id == ReportId::R31 && built.filters.partner_id.is_none() {
         let mut draft = partner_overview(env, args, &entry.title_id, &built.source)?;
         draft.partner_data = partner_data;
+        add_dated(&mut draft.node, dated.period, None);
         return Ok(draft);
     }
     // A sort word the report has no column for is left out, and the note says so (plan 52 item
@@ -1032,6 +1291,7 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         closing,
     );
     draft.partner_data = partner_data || partner_lines;
+    add_dated(&mut draft.node, dated.period, dated.latest.as_ref());
     // A partner's capital, next to his statement, when the statement runs up to now (his capital
     // balance is today's): Q203 and Q204 of the live run 2 found only his کل رقم. Only when the
     // question asks for the capital: its `balance` is a figure of its own, and beside the
@@ -1374,6 +1634,10 @@ fn assemble(
     // So the model can see the figure is for one quality, not for the whole item.
     if let Some(grade) = page.filters.grade {
         echo.push(("grade", Node::Str(grade.as_str().to_owned())));
+    }
+    // The picked seller, by the key the model sent (a `party` has its own field).
+    if let Some(record) = built.source.seller.as_ref() {
+        echo.push(("seller", Node::Str(format!("a{}", record.id))));
     }
     let mut fields = vec![
         ("source", Node::Str(id.code().to_owned())),

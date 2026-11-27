@@ -137,6 +137,11 @@
 -naqd = نقد
     .gender = masculine
 
+# Cash given to the seller at the time of sale: the lot column and the summary line (PRD FR-12.52, v1.57)
+# review: pending
+-naqd-adaigi = نقد ادائیگی
+    .gender = feminine
+
 # Phone charge on the seller
 # review: pending
 -phone = فون
@@ -407,6 +412,10 @@
 # review: pending
 -dusri-dukan = دوسری دکان
 
+# Another commission agent's shop, an account marked as one: the آڑھتی box of the fruit-taken screen lists only these (PRD FR-16.11, v1.59)
+# review: pending
+-arhti-dukan = آڑھتی دکان
+
 # The shop's guests, who share the fruit served to them equally (PRD 16.7, C27)
 # review: pending
 -mehman = مہمان
@@ -461,6 +470,7 @@ glossary-munshiana = { -munshiana }
 glossary-kiraya = { -kiraya }
 glossary-kiraya-store = { -kiraya-store }
 glossary-naqd = { -naqd }
+glossary-naqd-adaigi = { -naqd-adaigi }
 glossary-phone = { -phone }
 glossary-naqdi-mandi = { -naqdi-mandi }
 glossary-rate-farq = { -rate-farq }

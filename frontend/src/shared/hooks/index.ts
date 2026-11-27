@@ -20,6 +20,7 @@ export {
 } from './usePagedQuery';
 export {
   DEFAULT_PAGE_SIZE,
+  RECORDS_PAGE_SIZE,
   PAGE_SIZES,
   describePager,
   pageWindow,
@@ -33,3 +34,6 @@ export {
 export { usePeriod, type PeriodControl, type PeriodState } from './usePeriod';
 export { useWindowParam } from './useWindowParam';
 export { useListWindow, type ListWindow, type ListWindowKind } from './useListWindow';
+export { NOTICE_MS, useTimedNotices } from './useTimedNotices';
+export { NoticePulseContext, useNoticePulse } from './useNoticePulse';
+export { HOLD_SCROLL_MS, holdScroll } from './holdScroll';

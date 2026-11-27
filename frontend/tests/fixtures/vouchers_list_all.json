@@ -3,6 +3,7 @@
     {
       "id": 1,
       "voucher_type": "advance",
+      "entered_as": null,
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
@@ -34,6 +35,7 @@
     {
       "id": 2,
       "voucher_type": "receipt",
+      "entered_as": null,
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
@@ -66,13 +68,13 @@
         "local_time": "14:00",
         "by": "Maher Adnan",
         "count": 1,
-        "reason": "رقم درست کی",
-        "sign": "adnan"
+        "reason": "رقم درست کی"
       }
     },
     {
       "id": 3,
       "voucher_type": "payment",
+      "entered_as": null,
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
@@ -104,6 +106,7 @@
     {
       "id": 4,
       "voucher_type": "payment",
+      "entered_as": null,
       "number": 2,
       "entry_date": "2026-10-10",
       "account": {
@@ -135,6 +138,7 @@
     {
       "id": 5,
       "voucher_type": "advance",
+      "entered_as": null,
       "number": 2,
       "entry_date": "2026-10-10",
       "account": {
@@ -166,6 +170,7 @@
     {
       "id": 6,
       "voucher_type": "receipt",
+      "entered_as": null,
       "number": 2,
       "entry_date": "2026-10-10",
       "account": {

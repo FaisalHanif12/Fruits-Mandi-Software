@@ -80,6 +80,7 @@
      "id",
      "from",
      "to",
+     "period",
      "as_of",
      "party",
      "item",
@@ -111,13 +112,20 @@
        "string",
        "null"
       ],
-      "description": "A period result (r2.from) or YYYY-MM-DD"
+      "description": "A range: YYYY-MM-DD"
      },
      "to": {
       "type": [
        "string",
        "null"
       ]
+     },
+     "period": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Null unless the question names a period. Then, instead of from and to: up_to_now this_month last_month this_year last_year this_week last_week today yesterday month:9 day:15-10 last_days:10 last_months:3 last_years:2. A balance list reads as of its last day"
      },
      "as_of": {
       "type": [
@@ -189,11 +197,21 @@
       ]
      },
      "bikri": {
-      "type": [
-       "integer",
-       "null"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string",
+        "enum": [
+         "last"
+        ]
+       },
+       {
+        "type": "null"
+       }
       ],
-      "description": "A بکری number, for R1"
+      "description": "R1, R5: a بکری number, or last (the latest; in the period if given)"
      },
      "seller": {
       "type": [
@@ -238,6 +256,7 @@
        "month",
        "partner",
        "garden",
+       "bikri",
        null
       ]
      },
@@ -473,6 +492,7 @@
      "view",
      "from",
      "to",
+     "period",
      "group_by",
      "item",
      "item_group",
@@ -519,6 +539,13 @@
        "string",
        "null"
       ]
+     },
+     "period": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "As in report: null unless the question names a period (null and no dates: all the books)"
      },
      "group_by": {
       "type": [
@@ -759,7 +786,7 @@
   "type": "function",
   "function": {
    "name": "period",
-   "description": "From and to dates and a label for a period word, from today's date.",
+   "description": "From and to dates for a period word, only when no read needs them: report, analytics and estimate take the word themselves.",
    "strict": true,
    "parameters": {
     "type": "object",
@@ -886,6 +913,7 @@
      "garden",
      "trip",
      "ahead",
+     "period",
      "until",
      "what_if",
      "percent",
@@ -949,6 +977,13 @@
        "null"
       ],
       "description": "Months ahead, 1 to 12: a question number with unit months; with none, 6, or 12 for a target; null with until"
+     },
+     "period": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "next_months:N or year_end, instead of ahead and until"
      },
      "target": {
       "type": [

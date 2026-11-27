@@ -591,15 +591,15 @@ const FIELD_CODES: &[&str] = &[
 /// password counts a try, a failed backup is logged, and so on. Anything else that commits on a
 /// refusal is a half-save.
 const MAY_COMMIT_ON_ERROR: &[&str] = &[
-    "auth_",                          // failed tries are counted (NFR-SEC-2)
-    "setup_",                         // first run
-    "partner_code_",                  // a wrong code is counted and logged (FR-17.11)
-    "backup_",                        // a failed run is written to the backup log (FR-20.7)
-    "health_",                        // the daily check keeps its result
-    "assistant_",   // a refused question is still a row of the question log (FR-7.84)
-    "day_auto",     // the closing job
-    "day_fix_open", // a wrong sign is written to the audit log (PRD FR-21.4)
-    "partners_place_opening_capital", // a wrong sign is written to the audit log, as day_fix_open (PRD FR-21.4, FR-16.14); `robustness_security.rs` proves it writes nothing else
+    "auth_",                     // failed tries are counted (NFR-SEC-2)
+    "setup_",                    // first run
+    "partner_code_",             // a wrong code is counted and logged (FR-17.11)
+    "backup_",                   // a failed run is written to the backup log (FR-20.7)
+    "health_",                   // the daily check keeps its result
+    "assistant_",                // a refused question is still a row of the question log (FR-7.84)
+    "day_auto",                  // the closing job
+    "day_fix_open",              // a wrong sign is written to the audit log (PRD FR-21.4)
+    "accounts_openings_to_cash", // a wrong sign is written to the audit log, as day_fix_open (PRD FR-21.4, FR-10.9); `robustness_security.rs` proves it writes nothing else
     "partners_code_", // a wrong password counts a try and is logged (FR-17.11, NFR-SEC-14)
     "settings_set_owner_sign", // a wrong password counts a try (NFR-SEC-2)
     "settings_set_security",

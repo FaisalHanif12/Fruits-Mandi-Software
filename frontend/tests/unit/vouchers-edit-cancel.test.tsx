@@ -126,8 +126,8 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     expect(cell(501, 'status')).toBe(message(language, 'vouchers-state-saved'));
     expect(vouchersApi.vouchersList).toHaveBeenCalledWith({
       voucher_type: 'receipt',
-      // The list shows 7 days at a time: the days that end today (PRD FR-19.11).
-      from: '04-10-2026',
+      // The list shows 30 days at a time: the days that end today (PRD FR-19.11, v1.57).
+      from: '11-09-2026',
       to: '10-10-2026',
       account_id: null,
       offset: 0,

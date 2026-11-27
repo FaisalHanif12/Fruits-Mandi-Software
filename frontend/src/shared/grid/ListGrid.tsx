@@ -14,6 +14,7 @@ import type {
   CellKeyDownEvent,
   ColDef,
   GridApi,
+  IRowNode,
   GridReadyEvent,
   ICellRendererParams,
   IsFullWidthRowParams,
@@ -32,6 +33,7 @@ import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutSt
 import { StatusChip, type StatusChipLook } from '../ui/StatusChip';
 import { directionOf, useLanguage } from '../i18n';
 import './agGridSetup';
+import { listGridClassName } from './listGridClass';
 import { FillCell, FillNumberCell, NumberRuns, NumberRunsCell, hasNumberRun } from './NumberRuns';
 import {
   LIST_COLUMN_WIDTHS,
@@ -42,6 +44,9 @@ import {
 
 /** The height of a quiet group heading when the design token is not there (tests have no CSS). */
 const QUIET_HEADING_ROW_PX = 32;
+
+/** Between two row ids in the key of the marked rows; an id never holds it. */
+const MARK_SEPARATOR = '\u0000';
 
 /** How many frames the grid waits for a new page's first row before it stops asking for focus. */
 const FOCUS_RETRIES = 30;
@@ -75,9 +80,7 @@ export interface ListCellControl<T> {
   readonly onSpace: (row: T) => void;
 }
 
-/** The class of the box of every list grid, and the selector that finds it (for `useShortcut`'s `unlessFocusIn`). */
-export const LIST_GRID_CLASS = 'list-grid';
-export const LIST_GRID_SELECTOR = `.${LIST_GRID_CLASS}`;
+export { LIST_GRID_CLASS, LIST_GRID_SELECTOR } from './listGridClass';
 
 /** The mark on the element of a cell control, so a click or a key on it is not the row's. */
 const CELL_CONTROL_MARK = 'data-cell-control';
@@ -313,6 +316,13 @@ interface ListGridProps<T> {
   isInactive?: ((row: T) => boolean) | undefined;
   /** A row that heads a group (a head in a list of heads) reads stronger. */
   isGroup?: ((row: T) => boolean) | undefined;
+  /**
+   * The rows to mark, for example the rows an entry has just added (plan 96). They read tinted, and the
+   * list scrolls to the first of them. The grid draws the rows again when the marks change, so a screen
+   * marks rows seldom (after a save), never with the focus. Keep it the same array between renders while
+   * the marks do not change.
+   */
+  markedRowIds?: readonly string[] | undefined;
   /** The row to focus when the grid is first drawn, for example the one just edited. */
   focusRowId?: string | null | undefined;
   /** Asked when the grid is drawn: the row that had focus before a rebuild (see ListGrid). */
@@ -576,6 +586,7 @@ function GridInner<T>({
   onOpenTotals,
   isInactive,
   isGroup,
+  markedRowIds,
   focusRowId,
   readFocusRow,
   onFocusRow,
@@ -761,9 +772,24 @@ function GridInner<T>({
   useEffect(() => {
     rowIdOf.current = getRowId;
   });
+  // The rows the grid itself has reported the focus on since these rows were drawn. A `focusRowId` that is one of
+  // them is the screen handing the grid its own report back; by then the user may have moved on (↓ again), and a
+  // restore a frame later would pull the focus back to the row he left.
+  const reportedHere = useRef(new Set<string>());
+  const restoredRows = useRef(rows);
   useEffect(() => {
+    const redrawn = restoredRows.current !== rows;
+    restoredRows.current = rows;
+    if (redrawn) reportedHere.current.clear();
     const wanted = focusRowId;
     if (wanted === null || wanted === undefined || firstField === undefined) return;
+    if (
+      !redrawn &&
+      reportedHere.current.has(wanted) &&
+      rootRef.current?.contains(document.activeElement) === true
+    ) {
+      return;
+    }
     let frames = 0;
     const settle = () => {
       const api = apiRef.current;
@@ -808,6 +834,44 @@ function GridInner<T>({
       cancelAnimationFrame(restoreFrame.current);
     };
   }, [rows, focusRowId, firstField]);
+
+  // The marked rows (plan 96) read tinted. The grid draws the class of a row only when the row is drawn, so
+  // a change of the marks draws the rows concerned again (those marked now and those marked before, never
+  // the whole list); if the key focus was in one of them it is put back on the same cell. The first marked
+  // row is brought into view. A list that never marks a row does nothing here.
+  const markKey = markedRowIds === undefined ? '' : markedRowIds.join(MARK_SEPARATOR);
+  const markedNow = useRef<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    const before = markedNow.current;
+    const now = new Set(markKey === '' ? [] : markKey.split(MARK_SEPARATOR));
+    markedNow.current = now;
+    const api = apiRef.current;
+    const root = rootRef.current;
+    if (api === null || root === null || (now.size === 0 && before.size === 0)) return;
+    const touched: IRowNode<T>[] = [];
+    const firstId = markKey === '' ? undefined : markKey.split(MARK_SEPARATOR)[0];
+    let firstIndex = -1;
+    api.forEachNode((node, position) => {
+      if (node.data === undefined || isHeadingRow(node.data)) return;
+      const id = rowIdOf.current(node.data);
+      if (now.has(id) || before.has(id)) touched.push(node);
+      if (firstIndex < 0 && id === firstId) firstIndex = position;
+    });
+    const focused = api.getFocusedCell();
+    const keysHere = root.contains(document.activeElement);
+    api.redrawRows({ rowNodes: touched });
+    if (
+      keysHere &&
+      focused !== null &&
+      touched.some((node) => node.rowIndex === focused.rowIndex)
+    ) {
+      api.setFocusedCell(focused.rowIndex, focused.column);
+      requestAnimationFrame(() => {
+        root.querySelector<HTMLElement>('.ag-cell-focus')?.focus();
+      });
+    }
+    if (firstIndex >= 0) api.ensureIndexVisible(firstIndex);
+  }, [markKey, rows]);
 
   // The page turn of the screen is made anew on every render. It is read at the moment of the key,
   // so the options handed to the grid below stay the same object: a new `defaultColDef` on every
@@ -901,7 +965,7 @@ function GridInner<T>({
   return (
     <div
       ref={rootRef}
-      className={`entry-grid ${LIST_GRID_CLASS} ag-theme-quartz${heightMode === 'fill' ? 'list-grid-fill' : ''} ${growing ? 'list-grid-wrap' : ''}`}
+      className={listGridClassName(heightMode, growing)}
       role="group"
       aria-label={l10n.getString(labelId, labelVars)}
       dir={direction}
@@ -952,6 +1016,11 @@ function GridInner<T>({
             params.data !== undefined &&
             (isHeadingRow(params.data) ||
               (!params.node.isRowPinned() && isGroup?.(params.data) === true)),
+          'row-marked': (params) =>
+            params.data !== undefined &&
+            !isHeadingRow(params.data) &&
+            !params.node.isRowPinned() &&
+            markedNow.current.has(rowIdOf.current(params.data)),
         }}
         onGridReady={onGridReady}
         onSortChanged={onSortChanged}
@@ -970,7 +1039,10 @@ function GridInner<T>({
         onCellFocused={(event) => {
           if (event.rowIndex === null || onFocusRow === undefined) return;
           const row = apiRef.current?.getDisplayedRowAtIndex(event.rowIndex)?.data;
-          if (row !== undefined && !isHeadingRow(row)) onFocusRow(getRowId(row));
+          if (row === undefined || isHeadingRow(row)) return;
+          const rowId = getRowId(row);
+          reportedHere.current.add(rowId);
+          onFocusRow(rowId);
         }}
       />
     </div>

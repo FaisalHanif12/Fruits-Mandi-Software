@@ -2,6 +2,7 @@
   "row": {
     "id": 3,
     "voucher_type": "payment",
+    "entered_as": null,
     "number": 1,
     "entry_date": "2026-10-10",
     "account": {

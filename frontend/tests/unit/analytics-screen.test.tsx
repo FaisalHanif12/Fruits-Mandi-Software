@@ -834,8 +834,12 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       await waitFor(() => {
         expect(analyticsApi.analyticsViewsSave).toHaveBeenCalled();
       }, SLOW_MS);
+      // The backend's file was written before the measure: a saved view keeps the measure of its screen, sales at first.
+      const wanted = VIEWS_SAVE_TWO_REQUEST.views[0];
       expect(vi.mocked(analyticsApi.analyticsViewsSave).mock.calls[0]?.[0].views[0]).toEqual(
-        VIEWS_SAVE_TWO_REQUEST.views[0],
+        wanted === undefined
+          ? undefined
+          : { ...wanted, filters: { ...wanted.filters, measure: 'gross' } },
       );
       expect(fake.saved()).toHaveLength(1);
       expect(
@@ -1132,9 +1136,11 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
 });
 
 /** The first request of view A: the backend's own request, one page of the pager. */
-// The backend's request file was written before the sort: no sort chosen is `null` (plan 38 R4).
+// The backend's request file was written before the sort: no sort chosen is `null` (plan 38 R4). It was also written
+// before the measure: the screen always sends it to a view that lists it, sales at first (PRD FR-18.10, plan 84).
 const ANALYTICS_RUN_A_REQUEST_WITH_PAGE = {
   ...ANALYTICS_RUN_A_REQUEST,
+  filters: { ...ANALYTICS_RUN_A_REQUEST.filters, measure: 'gross' },
   limit: PAGE_ROWS,
   sort: null,
 };

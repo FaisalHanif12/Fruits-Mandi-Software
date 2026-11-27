@@ -1,12 +1,11 @@
 // Test helper for plan 91 (a seller's money paid on the spot): the lines of a seller's account as the backend sends them
-// in `BikriPreview.sellers`, and the answer of `bikri_seller_paid_spread`. The worked numbers are the plan's (PRD FR-12.23
-// v1.53): previous 30,000 بنام, today's credit 20,000, paid 5,000: cut 15,000, new 15,000 بنام. The shapes are the interim
-// ones of the generated bindings; the spread answer is the generated `SellerPaidSpread`.
+// in `BikriPreview.sellers`. The worked numbers are the plan's (PRD FR-12.23
+// v1.53): previous 30,000 بنام, today's credit 20,000, paid 5,000: cut 15,000, new 15,000 بنام. The shapes are
+// those of the generated bindings.
 
 import type { BalanceSide } from '../../src/bindings/BalanceSide';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import type { SellerPaidLines } from '../../src/bindings/SellerPaidLines';
-import type { SellerPaidSpread } from '../../src/bindings/SellerPaidSpread';
 import { paisaForTest } from './paisa';
 import { working } from './trips-data';
 
@@ -22,6 +21,10 @@ export interface SellerLinesOptions {
   added?: number;
   over?: number;
   increase?: number;
+  /** The پیشگی typed on his lots (PRD FR-12.52), whole rupees. */
+  advance?: number;
+  /** The part of it that sits on lots whose tick takes the advance off the sale. */
+  advanceAdjusted?: number;
   new?: { rupees: number; side: BalanceSide };
   limit?: number;
   needsConfirm?: boolean;
@@ -44,6 +47,8 @@ export function sellerLines(options: SellerLinesOptions): SellerPaidLines {
     added_to_credit_paisa: rupees(options.added ?? 0),
     over_paid_paisa: rupees(options.over ?? 0),
     increase_owed_paisa: rupees(options.increase ?? 0),
+    advance_paisa: rupees(options.advance ?? 0),
+    advance_adjusted_paisa: rupees(options.advanceAdjusted ?? 0),
     new_paisa: rupees(next.rupees),
     new_side: next.side,
     limit_paisa: rupees(options.limit ?? 20_000),
@@ -63,15 +68,4 @@ export function withSellers(
   lines: readonly SellerPaidLines[],
 ): BikriPreview {
   return { ...preview, sellers: [...lines] };
-}
-
-/** The answer of the spread: the lots named with their نقد, and a preview to go with it. */
-export function spreadAnswer(
-  preview: BikriPreview,
-  lots: readonly { key: string; rupees: number }[],
-): SellerPaidSpread {
-  return {
-    lots: lots.map((lot) => ({ key: lot.key, cash_paid_paisa: rupees(lot.rupees) })),
-    preview,
-  };
 }

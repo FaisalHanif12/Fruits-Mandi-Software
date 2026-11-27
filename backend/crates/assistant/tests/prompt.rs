@@ -31,7 +31,7 @@ fn read_repo(relative: &str) -> String {
 // ---- P1 ---------------------------------------------------------------------------------------
 
 #[test]
-fn p1_the_fixed_part_is_at_most_11800_tokens() {
+fn p1_the_fixed_part_is_within_the_limit() {
     let bpe = tiktoken_rs::o200k_base().unwrap();
     let tools_min =
         serde_json::to_string(&serde_json::from_str::<Value>(TOOLS_JSON).unwrap()).unwrap();
@@ -161,7 +161,11 @@ fn terms(file: &str) -> Vec<(String, String)> {
 /// shows the app's own words). Each has its
 /// reason. The test fails if a term leaves this list without being added to the prompt, or if
 /// another term goes missing.
-const GLOSSARY_GAPS: [(&str, &str); 14] = [
+const GLOSSARY_GAPS: [(&str, &str); 15] = [
+    (
+        "-naqd-adaigi",
+        "plan 95 screen word of the lot's cash paid (it was نقد, which the prompt holds); the prompt names the column نقد; no room in the prefix (lead's ruling of 24-11-2026)",
+    ),
     (
         "-mauqa-par-adaigi",
         "plan 91 screen word for a seller's cash on the spot; the prompt already names the paid column; no room in the prefix",

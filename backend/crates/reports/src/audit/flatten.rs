@@ -6,6 +6,10 @@
 //! text and shown as `hidden` in the list of changes. A change to a secret still shows (that it
 //! changed, not what it was).
 //!
+//! The Owner's sign (a field named exactly `sign`, written before PRD v1.58) is a secret too: the
+//! reopen and the edits made in it now write only `sign_given`, but an old row keeps its text (the log
+//! is append-only), so every reader hides it (PRD FR-7.71 v1.58, plan 96).
+//!
 //! Example: old `{"firm":{"name_en":"Maher"}}` and new `{"firm":{"name_en":"Maher Adnan"}}` give
 //! one change: `firm.name_en` from `Maher` to `Maher Adnan`.
 
@@ -25,6 +29,10 @@ const HIDDEN_TEXT: &str = "[hidden]";
 /// True for a field name that holds a secret.
 fn is_secret(key: &str) -> bool {
     let key = key.to_lowercase();
+    // The Owner's sign, as an old audit row kept it. `sign_given` is a yes or no and is shown.
+    if key == "sign" {
+        return true;
+    }
     [
         "password",
         "secret",

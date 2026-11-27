@@ -45,9 +45,6 @@ cashbook-col-date = Date
 cashbook-col-kind = Entry
 
 # review: pending
-cashbook-col-account = Account
-
-# review: pending
 cashbook-col-narration = Narration
 
 # review: pending
@@ -75,6 +72,9 @@ cashbook-col-state = State
 cashbook-col-reason = Reason
 
 # review: pending
+cashbook-col-partner = Partner
+
+# review: pending
 cashbook-col-taken-by = Taken by
 
 # review: pending
@@ -100,84 +100,6 @@ cashbook-col-balance = Balance
 
 # review: pending
 cashbook-state-cancelled = Cancelled
-
-## What a row of the cash book is. The kind is the stored posting type, written with hyphens.
-
-# $kind: the word for the kind; $number: its number.
-# review: pending
-cashbook-kind-number = { $kind } { $number }
-
-# review: pending
-cashbook-kind-bikri-first = { -bikri }
-
-# review: pending
-cashbook-kind-bikri-later = Later sale
-
-# review: pending
-cashbook-kind-reversal = Reversal
-
-# review: pending
-cashbook-kind-receipt = { -wasooli }
-
-# review: pending
-cashbook-kind-payment = { -adaigi }
-
-# review: pending
-cashbook-kind-advance = { -peshgi-khata }
-
-# review: pending
-cashbook-kind-shop-expense = { -dukan-kharcha }
-
-# review: pending
-cashbook-kind-personal-expense = { -zati-kharcha }
-
-# review: pending
-cashbook-kind-personal-return = { -zati-kharcha } { -wapsi }
-
-# review: pending
-cashbook-kind-money-lent = { -adhar-raqam }
-
-# review: pending
-cashbook-kind-money-lent-return = { -adhar-raqam } { -wapsi }
-
-# review: pending
-cashbook-kind-capital-in = Capital invested
-
-# review: pending
-cashbook-kind-capital-out = Capital taken back
-
-# review: pending
-cashbook-kind-khata-out = { -alag-khata }: money paid out
-
-# review: pending
-cashbook-kind-khata-in = { -alag-khata }: money received
-
-# review: pending
-cashbook-kind-purchase = { -khareedari }
-
-# review: pending
-cashbook-kind-trip-cost = Trip cost
-
-# review: pending
-cashbook-kind-garden-payment = Garden payment
-
-# review: pending
-cashbook-kind-venture-receipt = Sale in another shop
-
-# review: pending
-cashbook-kind-garden-close = Garden closed
-
-# review: pending
-cashbook-kind-fruit-taken = Fruit taken
-
-# review: pending
-cashbook-kind-general = { -general }
-
-# review: pending
-cashbook-kind-opening = Opening balance
-
-# review: pending
-cashbook-kind-month-close = Month close
 
 ## Shared by the entry screens.
 
@@ -392,11 +314,18 @@ cashbook-takes-empty-help = What he takes for himself and what he gives back is 
 # review: pending
 cashbook-takes-failed = The partner's money taken could not be opened
 
+# The list under the form with no partner chosen (plan 98): every partner's entries of the type.
 # review: pending
-cashbook-takes-pick = Choose a partner
+cashbook-all-takes-title = Money the partners took
 
 # review: pending
-cashbook-takes-pick-help = His money taken and given back shows here.
+cashbook-all-failed = The partners' money could not be opened
+
+# review: pending
+cashbook-all-takes-empty = No partner took any money in this period
+
+# review: pending
+cashbook-all-empty-help = Fill the form above and save to add one, or choose a partner to see only his.
 
 # review: pending
 cashbook-take-opening = Opening balance
@@ -797,218 +726,275 @@ cashbook-link-word-shop = The shop
 # review: pending
 cashbook-link-word-partner = One { -shirakat-dar }
 
-## The rows that start the book or move a partner's capital (plan 78 E, PRD FR-16.14). $partner: the partner, with his tag.
+## The روکڑ بک (PRD FR-16.14 v1.60, plan 99): the cards, the type filter, the switch of old and cancelled
+## postings and the summary by type.
 
 # review: pending
-cashbook-row-opening-cash = Opening cash
+cashbook-card-capital = Total { -sarmaya }
 
 # review: pending
-cashbook-row-opening-capital = Opening { -sarmaya }: { $partner }
+cashbook-filter-type = Type
 
 # review: pending
-cashbook-row-capital-in = { -sarmaya } invested: { $partner }
+cashbook-filter-type-all = All
 
 # review: pending
-cashbook-row-capital-out = { -sarmaya } taken back: { $partner }
+cashbook-show-reversed = Show old and cancelled entries too
 
-## Where the capital is, a card of the cash book behind the partner code (plan 87, PRD FR-16.14). It reads like a statement:
-## a headline, two blocks (to receive and in hand, to pay), whose it is, and a warning for the opening difference.
+# review: pending
+cashbook-running-all-types-only = The cash after each line shows only with every type.
+
+# review: pending
+cashbook-empty-type = No entry of this type on these days
+
+# review: pending
+cashbook-empty-type-help = Show every type, or choose other days.
+
+# review: pending
+cashbook-empty-type-action = Show every type
+
+# review: pending
+cashbook-summary-title = In and out by type
+
+# review: pending
+cashbook-summary-col-type = Type
+
+# review: pending
+cashbook-summary-col-count = Entries
+
+## The types of the filter and of the summary.
+
+# review: pending
+cashbook-group-receipt = { -wasooli }
+
+# review: pending
+cashbook-group-payment = { -adaigi }
+
+# review: pending
+cashbook-group-advance = { -peshgi }
+
+# review: pending
+cashbook-group-lent = { -adhar-raqam } and { -naqd-udhar }
+
+# review: pending
+cashbook-group-expense = { -kharcha }
+
+# review: pending
+cashbook-group-bikri = { -bikri }
 
 # review: pending
-cashbook-capital-title = Where the { -sarmaya } is
+cashbook-group-garden = { -bagh }
 
 # review: pending
-cashbook-capital-help = Where the partners' money is now, and whose it is. The totals of the two sides are always equal.
+cashbook-group-trip = { -safar }
 
 # review: pending
-cashbook-capital-failed = The { -sarmaya } could not be read
+cashbook-group-capital = { -sarmaya }
 
 # review: pending
-cashbook-capital-headline = Partners' total { -sarmaya }
+cashbook-group-khata = { -alag-khata }
 
 # review: pending
-cashbook-capital-equal = Both sides are equal
+cashbook-group-opening = { -ibtidai-baqaya }
 
 # review: pending
-cashbook-capital-unequal = The two sides differ, check the reports
+cashbook-group-other = Other
 
+## What a row of the book is (the backend says the kind).
+
+# review: pending
+cashbook-row-kind-opening-cash = Opening cash
+
+# review: pending
+cashbook-row-kind-opening-capital = Opening { -sarmaya }
+
 # review: pending
-cashbook-capital-as-of = As of { $date }
+cashbook-row-kind-opening-balance = { -ibtidai-baqaya }
 
 # review: pending
-cashbook-capital-go-label = Show it as of
+cashbook-row-kind-receipt = { -wasooli }
 
 # review: pending
-cashbook-capital-go-info = Type a date, for example 10-10-2026. The { -sarmaya } is shown as it stood on that day.
+cashbook-row-kind-payment = { -adaigi }
 
 # review: pending
-cashbook-capital-go-placeholder = Type a date
+cashbook-row-kind-advance = { -peshgi }
 
 # review: pending
-cashbook-capital-go-today = Up to today
+cashbook-row-kind-buyer-advance = { -peshgi }
 
 # review: pending
-cashbook-capital-empty = No { -sarmaya } is recorded yet
+cashbook-row-kind-cash-lent = { -naqd-udhar }
 
 # review: pending
-cashbook-capital-empty-help = First put in a partner's { -sarmaya }. Then this shows where the money is and whose it is.
+cashbook-row-kind-money-lent = { -adhar-raqam }
 
 # review: pending
-cashbook-capital-empty-action = Put in { -sarmaya }
+cashbook-row-kind-money-lent-return = { -adhar-raqam } { -wapsi }
 
 # review: pending
-cashbook-capital-receive-title = To receive and in hand
+cashbook-row-kind-shop-expense = { -dukan-kharcha }
 
 # review: pending
-cashbook-capital-owe-title = To pay
+cashbook-row-kind-personal-expense = { -zati-kharcha }
 
 # review: pending
-cashbook-capital-whose-title = Whose it is
+cashbook-row-kind-personal-return = { -zati-kharcha } { -wapsi }
 
 # review: pending
-cashbook-capital-net-label = Net
+cashbook-row-kind-bikri-paid = { -mauqa-par-jama }
 
 # review: pending
-cashbook-capital-col-what = Detail
+cashbook-row-kind-bikri-seller-cash = { -naqd-adaigi }
 
 # review: pending
-cashbook-capital-col-amount = Amount
+cashbook-row-kind-bikri-advance = { -peshgi }
 
 # review: pending
-cashbook-capital-col-share = { -hissa }
+cashbook-row-kind-garden-installment = { -bagh } { -qist }
 
 # review: pending
-cashbook-capital-where-cash = Cash in hand
+cashbook-row-kind-garden-cost = { -bagh } cost
 
 # review: pending
-cashbook-capital-where-buyers-owe = Owed by { -gahakon }
+cashbook-row-kind-garden-other-sale = Sale in another shop
 
 # review: pending
-cashbook-capital-where-dead-amount = { -doobi-raqam }
+cashbook-row-kind-garden-refund = Relief refund
 
 # review: pending
-cashbook-capital-where-seller-advances = { -peshgi } with { -beopariyon }
+cashbook-row-kind-purchase = { -khareedari }
 
 # review: pending
-cashbook-capital-where-sellers-owe-beyond = Owed by { -beopariyon } beyond their { -peshgi }
+cashbook-row-kind-trip-cost = { -safar } cost
 
 # review: pending
-cashbook-capital-where-money-lent = { -adhar-raqam } not yet returned
+cashbook-row-kind-trip-other-sale = Sale in another shop
 
 # review: pending
-cashbook-capital-where-separate-khatas = { -alag-khata }
+cashbook-row-kind-capital-in = { -sarmaya } put in
 
 # review: pending
-cashbook-capital-where-cash-short = Cash short
+cashbook-row-kind-capital-out = { -sarmaya } taken back
 
 # review: pending
-cashbook-capital-cash-short-note = Cash in hand is below zero, so this amount is on the paying side.
+cashbook-row-kind-khata-out = { -alag-khata }: money paid out
 
 # review: pending
-cashbook-capital-where-sellers-payable = Owed to { -beopariyon }
+cashbook-row-kind-khata-in = { -alag-khata }: money received
 
 # review: pending
-cashbook-capital-where-owed-for-charges = Owed for { -mazdoori }, { -kiraya }, { -munshiana } and stores
+cashbook-row-kind-general = { -general }
 
 # review: pending
-cashbook-capital-where-gardens-held = Money of { -baghat } held until they close
+cashbook-row-kind-fruit = { -phal }
 
 # review: pending
-cashbook-capital-where-linked-in-partner-totals = Linked money already in the partners' { -kul-raqam }
+cashbook-row-kind-other = Other entry
+
+## How a row is put together: its kind and number, then the party, garden, trip, head or partner. The pieces are
+## joined by the screen with these separators (no finished message is ever passed into another one).
 
+# $number: the number of the sale; the words of its cash follow after a separator.
 # review: pending
-cashbook-capital-where-other = Other
+cashbook-row-bikri = { -bikri } { $number }
 
 # review: pending
-cashbook-capital-whose-partner-total = { -kul-raqam }: { $partner }
+cashbook-row-name-gap = ,{ " " }
 
+# $count: how many more parties the row has than the names shown.
 # review: pending
-cashbook-capital-whose-owes = Owes the firm
+cashbook-row-more = and { $count } more
 
+# Written before an entry's own words.
 # review: pending
-cashbook-capital-whose-opening-capital = Opening { -sarmaya }
+cashbook-row-reversal = Reversing entry:{ " " }
 
 # review: pending
-cashbook-capital-whose-advances-open = Partners' part of the open { -peshgi }
+cashbook-row-reversed = Old entry:{ " " }
 
+## The one-time fix: old opening balances of parties into روکڑ (PRD FR-10.9 v1.60, plan 99).
+
 # review: pending
-cashbook-capital-whose-other = Other
+cashbook-openings-offer = The old { -ibtidai-baqaya } of <num>{ $count }</num> accounts is not yet in the { -rokar }.
 
 # review: pending
-cashbook-capital-share = <num>{ $percent }</num>%
+cashbook-openings-button = Put old opening balances into the { -rokar }
 
-## The warning of the opening difference. $amount and its side are drawn by the screen (<balance>).
+# review: pending
+cashbook-openings-title = Old opening balances into the { -rokar }
 
 # review: pending
-cashbook-capital-warning-place = The partners' opening { -sarmaya } is not in { -rokar }
+cashbook-openings-failed = The old { -ibtidai-baqaya } could not be read
 
 # review: pending
-cashbook-capital-warning-old = Difference in the old books: <balance></balance>
+cashbook-openings-nothing = Every old { -ibtidai-baqaya } is in the { -rokar }.
 
 # review: pending
-cashbook-capital-warning-place-text = This money was written against the opening difference, so { -rokar } shows less than it really is. Use the button below to put it into { -rokar }.
+cashbook-openings-explain = These opening balances of { -gahakon }, { -beopariyon }, { -adhar-raqam } and { -alag-khata } were first written against the opening difference. Each one is reversed on its own date and written again against the { -rokar }: a { -banaam } amount goes out of the { -rokar } and a { -jama } amount comes into it. No account balance and no { -kul-raqam } changes.
 
 # review: pending
-cashbook-capital-warning-old-text = The opening amounts typed when the accounts were made do not match each other. Below are the accounts that make this difference.
+cashbook-openings-cash-before = Cash now
 
 # review: pending
-cashbook-capital-warning-sum-partner = Partners' opening { -sarmaya } that is not in { -rokar }
+cashbook-openings-cash-after = Cash after
 
 # review: pending
-cashbook-capital-warning-sum-party = Difference of the buyers' and sellers' opening balances
+cashbook-openings-difference-before = Opening difference now
 
 # review: pending
-cashbook-capital-warning-sum-other = Other entries
+cashbook-openings-difference-after = Opening difference after
 
 # review: pending
-cashbook-capital-warning-part-other = Entry that is not an opening
+cashbook-openings-reopens = Closed days from <num>{ $date }</num> open and close again by themselves.
 
 # review: pending
-cashbook-capital-warning-part-other-entry = Other entry
+cashbook-openings-below-zero = Cash goes below zero after this. It is asked again before it is saved.
 
 # review: pending
-cashbook-capital-col-date = Date
+cashbook-openings-table = Accounts whose { -ibtidai-baqaya } moves into the { -rokar }
 
 # review: pending
-cashbook-capital-net-owe = Short
+cashbook-openings-col-code = Code
 
 # review: pending
-cashbook-capital-where-buyer-credits = Held for buyers who paid ahead
+cashbook-openings-col-account = Account
 
 # review: pending
-cashbook-capital-warning-parts = These accounts make the difference
+cashbook-openings-col-kind = Type
 
 # review: pending
-cashbook-capital-warning-part-partner = Opening { -sarmaya }, not in { -rokar }
+cashbook-openings-col-out = Out of cash ({ -banaam })
 
 # review: pending
-cashbook-capital-warning-part-party = { -ibtidai-baqaya }
+cashbook-openings-col-in = Into cash ({ -jama })
 
 # review: pending
-cashbook-capital-col-account = Account
+cashbook-openings-kind-seller = { -beopari }
 
 # review: pending
-cashbook-capital-col-opening = Amount in the difference
+cashbook-openings-kind-buyer = { -gahak }
 
 # review: pending
-cashbook-capital-warning-place-button = Put the { -sarmaya } into { -rokar }
+cashbook-openings-kind-money-lent = { -adhar-raqam }
 
-## The box that asks for the reason and the Owner's sign before the opening capital is put into cash.
+# review: pending
+cashbook-openings-kind-separate-khata = { -alag-khata }
 
 # review: pending
-cashbook-capital-place-title = Put the { -sarmaya } into { -rokar }?
+cashbook-openings-ask-title = Put the old opening balances into the { -rokar }?
 
 # review: pending
-cashbook-capital-place-text = The opening { -sarmaya } of each partner is reversed on its own date and written again with { -rokar }. Closed days reopen and close again by themselves. { -rokar } goes up; the partners' { -kul-raqam } and the { -trial-balance } do not change. Write the reason and the Owner's { -dastakhat }.
+cashbook-openings-ask-text = Write the reason and the Owner's { -dastakhat }.
 
 # review: pending
-cashbook-capital-place-label = Reason
+cashbook-openings-reason = Reason
 
 # review: pending
-cashbook-capital-place-sign-hint = Only the Owner's { -dastakhat } puts it in.
+cashbook-openings-sign-hint = Only the Owner's { -dastakhat } saves it.
 
 # review: pending
-cashbook-capital-place-confirm = Put it in
+cashbook-openings-confirm = Save
 
 # review: pending
-cashbook-capital-placed-toast = The { -sarmaya } is now in { -rokar }
+cashbook-openings-done = The old opening balances are now in the { -rokar }

@@ -10,6 +10,7 @@
 
 import { CircleAlert } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
+import { NOTICE_MS, useNoticePulse, useTimedNotices } from '../hooks';
 import { FieldErrorBubble } from './FieldErrorBubble';
 import { InfoHint } from './InfoHint';
 
@@ -54,7 +55,32 @@ interface FieldProps {
    * save), so the bubble shows again.
    */
   bubblePulse?: number | undefined;
+  /**
+   * The error words under the field hide after 5 seconds and show again when the user repeats the action (the screen's
+   * `NoticePulseContext`, plan 97 item 4, PRD FR-12.52). The red mark and `aria-invalid` stay, and the words stay for a screen
+   * reader. Only the sale book's panels say yes; every other form keeps its words under the field.
+   */
+  fadeError?: boolean | undefined;
   children: (control: FieldControlProps) => ReactNode;
+}
+
+/** The words of an error under a field; with `fade` they hide after `NOTICE_MS` and stay in a line only a screen reader reads. */
+function ErrorLine({ id, error, fade }: { id: string; error: ReactNode; fade: boolean }) {
+  const pulse = useNoticePulse();
+  const shown = useTimedNotices(fade ? [id] : [], pulse, NOTICE_MS).has(id) || !fade;
+  if (!shown) {
+    return (
+      <p id={id} className="sr-only">
+        {error}
+      </p>
+    );
+  }
+  return (
+    <p id={id} className="flex items-center gap-2 type-body text-due">
+      <CircleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+      <span>{error}</span>
+    </p>
+  );
 }
 
 export function Field({
@@ -67,6 +93,7 @@ export function Field({
   hideLabel = false,
   inline = false,
   bubblePulse,
+  fadeError = false,
   children,
 }: FieldProps) {
   const id = useId();
@@ -115,10 +142,7 @@ export function Field({
         </>
       )}
       {hasError && !inline ? (
-        <p id={noteId} className="flex items-center gap-2 type-body text-due">
-          <CircleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-          <span>{error}</span>
-        </p>
+        <ErrorLine id={noteId} error={error} fade={fadeError} />
       ) : hasHint && !(hasError && inline) ? (
         <p id={noteId} className="type-body text-ink-muted">
           {hint}

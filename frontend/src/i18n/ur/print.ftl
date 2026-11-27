@@ -62,7 +62,12 @@ print-labour = { -mazdoori }
 print-munshiana = { -munshiana }
 
 # review: pending
-print-cash-paid = { -naqd }
+print-cash-paid = { -naqd-adaigi }
+
+# The advance a seller took when he brought the goods of this sale (plan 95 item 11, PRD FR-12.52): a line of the
+# seller bill, printed only when it is not 0.
+# review: pending
+print-seller-advance = { -peshgi }
 
 # review: pending
 print-store-rent = { -kiraya-store }
@@ -202,6 +207,10 @@ print-box-to-pdf = PDF فائل
 
 # review: pending
 print-box-print = پرنٹ کریں
+
+# The short word of the print button when the top row of the sale book is short of room (plan 95).
+# review: pending
+print-box-print-short = پرنٹ
 
 # review: pending
 print-box-save-pdf = PDF محفوظ کریں
@@ -719,6 +728,20 @@ print-sale-col-buyer = { -gahak }
 # review: pending
 print-sale-col-bought = مال
 
+# The value of the goods, the buyer's commission and لاگا: the three parts of the bill (plan 95 item 13, PRD FR-19.15).
+# review: pending
+print-sale-col-value = { report-r35-goods }
+
+# review: pending
+print-sale-col-commission = { -commission }
+
+# review: pending
+print-sale-col-laga = { -laga }
+
+# The advance of a lot, in the sellers table (plan 95 item 11, PRD FR-12.52).
+# review: pending
+print-sale-col-advance = { -peshgi }
+
 # review: pending
 print-sale-col-bill = بل
 
@@ -792,7 +815,7 @@ print-sale-empty = اس دن کوئی { -bikri } نہیں
 
 # What ادھاری تفصیل is for, one line (plan 78 A0, A5).
 # review: pending
-print-adhari-box-help = آج کے ہر { -gahak } کی ایک قطار: کتنا بل، کتنا نقد، آج کا ادھار، پہلے کا بقایا اور کل ادھار۔ آخر میں سب { -gahakon } کا کل ادھار۔
+print-adhari-box-help = آج کے ہر { -gahak } کی ایک قطار: کتنا بل، آج کا ادھار، پہلے کا بقایا اور کل ادھار۔ آخر میں سب { -gahakon } کا کل ادھار۔
 
 ## The prints of the dashboard pages: sellers, total dues, money lent, advances and cash sales (plan 79, PRD FR-19.10).
 
@@ -849,107 +872,3 @@ print-cash-sales-col-bikri = { -bikri }
 
 # review: pending
 print-cash-sales-col-bill = بل
-
-## The print of the capital card (plan 87, PRD FR-16.14, FR-19.13): the backend writes these ids into its print data.
-
-# review: pending
-print-capital-title = { -sarmaya } کہاں ہے
-
-# review: pending
-print-capital-col-item = تفصیل
-
-# review: pending
-print-capital-col-amount = رقم
-
-# review: pending
-print-capital-col-share = { -hissa }
-
-# review: pending
-print-capital-have-title = لینا ہے / پاس ہے
-
-# review: pending
-print-capital-have-total = لینا ہے / پاس ہے کا { -meezan }
-
-# review: pending
-print-capital-owe-title = دینا ہے
-
-# review: pending
-print-capital-owe-total = دینا ہے کا { -meezan }
-
-# review: pending
-print-capital-net = صافی
-
-# review: pending
-print-capital-net-short = صافی (کمی)
-
-# review: pending
-print-capital-whose-title = رقم کس کی ہے
-
-# review: pending
-print-capital-whose-opening-capital = ابتدائی { -sarmaya }
-
-# review: pending
-print-capital-whose-advances-open = کھلی { -peshgi } میں شراکت داروں کا حصہ
-
-# review: pending
-print-capital-whose-other = دیگر
-
-# review: pending
-print-capital-total = شراکت داروں کا کل { -sarmaya }
-
-# review: pending
-print-capital-total-short = شراکت داروں کا کل { -sarmaya } (کمی)
-
-# review: pending
-print-capital-diff-title = ابتدائی فرق
-
-# review: pending
-print-capital-diff-partner-capital = شراکت داروں کا ابتدائی { -sarmaya } جو { -rokar } میں درج نہیں
-
-# review: pending
-print-capital-diff-account-opening = گاہکوں اور بیوپاریوں کے ابتدائی بقایا کا فرق
-
-# review: pending
-print-capital-diff-other-entry = دیگر اندراجات
-
-# review: pending
-print-capital-line-cash = موجود { -rokar }
-
-# review: pending
-print-capital-line-cash-short = { -rokar } کم
-
-# review: pending
-print-capital-line-buyers-owe = { -gahakon } کے ذمے
-
-# review: pending
-print-capital-line-buyer-credits = گاہکوں کی پہلے سے جمع رقم
-
-# review: pending
-print-capital-line-dead-amount = { -doobi-raqam }
-
-# review: pending
-print-capital-line-seller-advances = { -beopariyon } کے پاس { -peshgi }
-
-# review: pending
-print-capital-line-sellers-owe-beyond = { -beopariyon } کے ذمے ({ -peshgi } سے زیادہ)
-
-# review: pending
-print-capital-line-sellers-payable = { -beopariyon } کو ادائیگی باقی
-
-# review: pending
-print-capital-line-money-lent = { -adhar-raqam } باقی
-
-# review: pending
-print-capital-line-owed-for-charges = { -mazdoori }، { -kiraya }، { -munshiana } اور سٹور کے واجبات
-
-# review: pending
-print-capital-line-separate-khatas = { -alag-khata }
-
-# review: pending
-print-capital-line-gardens-held = { -baghat } کی بند ہونے تک رکی رقم
-
-# review: pending
-print-capital-line-linked = منسلک رقم جو شراکت داروں کی { -kul-raqam } میں آ چکی ہے
-
-# review: pending
-print-capital-line-other = دیگر

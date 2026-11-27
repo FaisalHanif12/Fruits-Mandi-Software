@@ -1,5 +1,12 @@
 ## نیا کیا ہے
 
+- اردو لکھنا اب بہت بہتر: روزمرہ کے 16,000 سے زیادہ الفاظ اور ان کے عام ہجے، جیسے "gher ly kr gaye" سے "گھر لے کر گئے" اور "karaya" سے "کرایہ"۔ واٹس ایپ والے ہجے (krdo، hogya) بھی۔
+- روکڑ صاف اور درست: اوپر کل سرمایہ، شروع میں روکڑ اور آخر میں روکڑ۔ ہر لائن پر اس کا نام، جیسے "وصولی 1، اکرم" یا "باغ کی قسط"۔ قسم کا فلٹر، قسم وار میزان، اور پرانے یا منسوخ اندراج ایک بٹن کے پیچھے۔ "سرمایہ کہاں ہے" ہٹا دیا گیا۔
+- بیوپاری، گاہک، ادھار رقم اور الگ کھاتے کا ابتدائی بقایا اب روکڑ سے جاتا یا آتا ہے۔ پرانے بقایا ایک بٹن سے روکڑ میں درج کریں (وجہ اور دستخط کے ساتھ)۔
+- گاہک کو پیشگی اب ہر جگہ "پیشگی" ہی لکھی جاتی ہے۔ نقد ادھار کی وجہ لکھنا اب ضروری نہیں۔
+- سوال پوچھیں اب زیادہ تیز: سیدھا صحیح حصے میں جاتا ہے، پچھلی بکری، پارٹی کا حساب، باغ اور سفر کے سوال کم وقت میں۔
+- باغ کا صفحہ: آیا ہوا مال دو حصوں میں، "بکنا باقی" اور "بک چکا"۔ نیا حصہ "فروخت کی رقم کہاں ہے": ہر گاہک کا بل، موقع پر جمع، بعد میں وصول اور باقی۔ تاریخچہ اوپر، باغ کے اعداد کھلے۔
+- شراکت دار کے کھلے باغ اور سفر مہینہ وار۔ نیا کھاتہ فارم پورا نیچے تک چلتا ہے۔
 - بکری میں "+ باقی مال سے" کا بٹن: پچھلا بچا ہوا مال اور نیا ٹرک ایک ہی بکری میں بیچیں۔ پرانا مال اپنی پرانی بکری میں جاتا ہے، اس پر خرچہ دوبارہ نہیں لگتا۔
 - ادھاری تفصیل اب دن کی اگراہی شیٹ ہے: ہر گاہک کا سابقہ، آج کا بل، موقع پر جمع اور کل بقایا، ایک صفحے پر کئی گاہک۔
 - گاہک کی پرچیاں ایک A4 پر کئی، کاٹنے کی لکیر کے ساتھ۔ بکری کا پرنٹ بیوپاری اور گاہک دونوں حصوں کے ساتھ۔ ہر پرنٹ کے اوپر پھل کی تصویر۔
@@ -41,6 +48,13 @@
 
 ## What's new
 
+- Much better Urdu typing: more than 16,000 everyday words with their common spellings, for example "gher ly kr gaye" gives "گھر لے کر گئے" and "karaya" gives "کرایہ". WhatsApp spellings (krdo, hogya) too.
+- A clear, exact Cash Book: Total Capital, Opening Cash and Closing Cash at the top. Every row named, for example "Receipt 1, Akram" or "Garden installment". A type filter, totals by type, and old or cancelled entries behind a switch. "Where the capital is" is removed.
+- The opening balance of a seller, buyer, money-lent person or separate khata now goes through cash. Old openings move to cash with one button (with a reason and the sign).
+- An advance to a buyer is now shown as "Advance" everywhere. The reason for cash lent is optional.
+- Ask the app is faster: it goes straight to the right section, so questions about past sales, a party's account, gardens and trips take less time.
+- Garden page: goods arrived in two parts, "Not sold yet" and "Sold". New part "Where the sale money is": each buyer's bill, paid on the spot, collected later and still due. History on top, the garden's figures open.
+- A partner's open gardens and trips page by month. The new account form scrolls to the end.
 - A "+ From Unsold Stock" button on the Sale screen: sell leftover stock and a new truck in one sale. The old goods go to their old sale with no charges again.
 - Credit Details is now the day's collection sheet: each buyer's previous due, today's bill, paid on the spot and total due, many buyers to a page.
 - Buyer slips, several to an A4 page with cut lines. The sale print has a seller part and a buyer part. A fruit picture on every print header.

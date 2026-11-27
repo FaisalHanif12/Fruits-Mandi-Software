@@ -31,11 +31,24 @@ function run(input: Input): AnalyticsPage {
   const filters = filtersOf(input);
   const partner = filters['expense_part'] === 'partner';
   if (partner && devFlag('locked')) throw refusal('ERR_PARTNER_LOCKED');
-  const base = partner
+  let base = partner
     ? ANALYTICS_RUN_M_PARTNERS
     : filters['group_by'] === 'day'
       ? ANALYTICS_RUN_M_BY_DAY
       : ANALYTICS_RUN_M;
+  // A partner chosen narrows the partner part to his row (the backend does the same; plan 98). The stand-in only
+  // picks the row and its figure: it adds nothing up.
+  const wanted = filters['partner_id'];
+  if (partner && typeof wanted === 'number') {
+    const rows = base.rows.filter((row) => row.key?.partner_id === wanted);
+    const own = rows[0]?.cells[1];
+    base = {
+      ...base,
+      rows,
+      total_count: rows.length,
+      totals: base.totals.map((cell, index) => (index === 1 && own !== undefined ? own : cell)),
+    };
+  }
   return devFlag('empty') ? { ...base, rows: [], total_count: 0 } : base;
 }
 

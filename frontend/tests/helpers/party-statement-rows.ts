@@ -91,7 +91,6 @@ export const EDIT_STAMP: StatementEdited = {
   by: 'Owner',
   count: 1,
   reason: 'rate was wrong',
-  sign: null,
 };
 
 /** The head of the buyer of the worked example, account 20. */

@@ -6,8 +6,8 @@ use mandi_services::core::accounts::{
     AccountBalance, AccountRow, AccountSaveRequest, AccountsBalancesInput, AccountsGetInput,
     AccountsList, AccountsListInput, AccountsNextCodeInput, AccountsSetActiveInput,
     AccountsSimilarInput, CoaControl, CoaControlAccounts, CoaControlAccountsInput, CoaHead,
-    CoaTree, OpeningsPreview, OpeningsRequest, OpeningsSaved, ResolveCodeInput, ResolvedCode,
-    SimilarAccount,
+    CoaTree, OpeningsPreview, OpeningsRequest, OpeningsSaved, OpeningsToCashDone,
+    OpeningsToCashInput, OpeningsToCashPreview, ResolveCodeInput, ResolvedCode, SimilarAccount,
 };
 use mandi_services::{accounts, auth, coa, search};
 
@@ -135,6 +135,38 @@ pub async fn accounts_openings_save<R: tauri::Runtime>(
             &input.base,
             input.confirm_cash_below_zero,
         )
+    })
+    .await
+}
+
+/// What the one-time fix "پرانے ابتدائی بقایا روکڑ میں درج کریں" would move (PRD FR-10.9 v1.60,
+/// plan 99): every party opening that is not against روکڑ, with cash and ابتدائی فرق before and
+/// after. An empty list means there is nothing to fix. Read only.
+#[tauri::command]
+pub async fn accounts_openings_to_cash_preview<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<OpeningsToCashPreview, UiError> {
+    run(app, "accounts_openings_to_cash_preview", |ctx| {
+        auth::require(ctx)?;
+        accounts::openings_to_cash_preview(ctx)
+    })
+    .await
+}
+
+/// Moves every party opening into روکڑ, with a reason and the Owner's sign (PRD FR-10.9 v1.60,
+/// FR-21.4): the closed days are reopened and closed again in the same save. No party balance and
+/// no partner total changes. Errors: `ERR_SIGN_REQUIRED`, `ERR_SIGN_WRONG` (`sign`);
+/// `ERR_REASON_REQUIRED` (`reason`); `ERR_OPENINGS_ALREADY_IN_CASH`;
+/// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`); `ERR_MONTH_CLOSED`;
+/// `ERR_TRIAL_NOT_BALANCED`.
+#[tauri::command]
+pub async fn accounts_openings_to_cash<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: OpeningsToCashInput,
+) -> Result<OpeningsToCashDone, UiError> {
+    run(app, "accounts_openings_to_cash", move |ctx| {
+        let actor = auth::require(ctx)?;
+        accounts::openings_to_cash(ctx, &actor, &input)
     })
     .await
 }

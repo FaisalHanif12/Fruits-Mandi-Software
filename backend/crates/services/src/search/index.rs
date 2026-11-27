@@ -61,6 +61,10 @@ pub struct Entry {
     /// be listed, but only a field that asks for it (`include_dead`) sees it; the hit it makes says
     /// `is_active: false` and `is_dead: true`.
     dead: bool,
+    /// True for a seller account marked آڑھتی دکان (another commission agent's shop, PRD FR-16.11
+    /// v1.59, plan 97 item 1). The آڑھتی box of the پھل screen lists only these and the seller field
+    /// of a lot leaves them out.
+    agent_shop: bool,
     /// For a چکتا buyer (plan 64, PRD FR-7.29): his record and the account his sale line goes on.
     /// `None` for every other entry. His entry has a negative `id` (minus his row id in
     /// `chukta_buyers`), so it can never be taken for an account.
@@ -160,6 +164,7 @@ impl Entry {
             order,
             account,
             dead: source.is_dead,
+            agent_shop: source.is_agent_shop,
             chukta: None,
             code: source.code.to_lowercase(),
             words_ur: words(&key_ur),
@@ -217,6 +222,7 @@ impl Entry {
                 control_id: source.control_id,
             }),
             dead: false,
+            agent_shop: false,
             chukta: Some(ChuktaRef {
                 chukta_id: source.id,
                 account_id: source.account_id,
@@ -950,7 +956,7 @@ impl Index {
         hidden: Option<&'a HashSet<i64>>,
     ) -> (&'a [Arc<Entry>], impl Fn(&Entry) -> bool + 'a) {
         let list = match scope {
-            AccountScope::Seller => self.entries(SearchScope::Seller),
+            AccountScope::Seller | AccountScope::AgentShop => self.entries(SearchScope::Seller),
             // Sellers, اپنا مال, the separate khatas and the gardens (PRD 12.3, FR-12.26, FR-16.7);
             // the caller leaves out the unusable ones with `hidden`.
             AccountScope::LotSeller => self.lot_sellers.as_slice(),
@@ -965,11 +971,22 @@ impl Index {
         // The پیشگی field gives money out, so it never offers a person in the dead amount (a
         // recovery is a وصولی, PRD FR-10.10) and never نقدی منڈی, which has no ledger.
         let advance_field = scope == AccountScope::SellerBuyer;
-        let include_dead = include_dead && !advance_field;
+        // The آڑھتی box of the پھل screen lists only the shops marked آڑھتی دکان; the seller field of
+        // a lot leaves them out (PRD FR-16.11 v1.59). Every other seller list keeps them.
+        let agent_shop_field = scope == AccountScope::AgentShop;
+        let lot_field = scope == AccountScope::LotSeller;
+        // The buyer field of a بکری line (`with_chukta`) no longer offers نقدی منڈی: a walk-in buyer is
+        // a چکتا buyer (PRD FR-12.52 v1.57, plan 95 item 5). Old lines on 03040000 still load and show;
+        // every other buyer picker keeps it.
+        let sale_line_field = scope == AccountScope::Buyer && with_chukta;
+        let include_dead = include_dead && !advance_field && !agent_shop_field;
         (list, move |e: &Entry| {
             (!narrow || e.account.map(|a| a.control_id) == control_id)
+                && (!agent_shop_field || e.agent_shop)
+                && (!lot_field || !e.agent_shop)
                 && (with_own || e.code != mandi_domain::core::accounts::OWN_GOODS_CODE)
-                && (!advance_field || e.code != mandi_domain::core::accounts::NAQDI_MANDI_CODE)
+                && (!(advance_field || sale_line_field)
+                    || e.code != mandi_domain::core::accounts::NAQDI_MANDI_CODE)
                 && (include_dead || !e.dead)
                 && (with_chukta || e.chukta.is_none())
                 && !hidden.is_some_and(|ids| ids.contains(&e.id))

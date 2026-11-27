@@ -20,8 +20,10 @@ pub const MAX_CALL_OUTPUT_TOKENS: u32 = 1_500;
 /// Input tokens of one question, cached tokens included (90,000 since plan 52).
 pub const MAX_INPUT_TOKENS: u32 = 90_000;
 /// The fixed part of a request (tools, instructions, answer schema), in tokens, as the `o200k_base`
-/// tokenizer counts it (the model counts about 3.4% more). 11,800 since NFR v1.23 NFR-AI-5 and Code
-/// Standards v1.29 Q9 (Umar, 20-11-2026, plan 82): the three lines of D6-system-prompt v1.13 (zero is
+/// tokenizer counts it (the model counts about 3.4% more). 12,200 since plan 99 (PRD v1.60 FR-7.87,
+/// Umar approved up to 12,800 on 27-11-2026): the `period` word on reads, `bikri: "last"`, R13 per
+/// بکری and the new routing table (D6-system-prompt v1.15, measured 12,122). It was 11,800 since
+/// NFR v1.23 NFR-AI-5 and Code Standards v1.29 Q9 (Umar, 20-11-2026, plan 82): the three lines of D6-system-prompt v1.13 (zero is
 /// cited or said as none, a typed day is `{{q.n1}}`, `not_found` only for a name with no match; the
 /// fixed part measured 11,695). It was 11,600 since NFR v1.16 and Code Standards v1.20 Q9 (Umar,
 /// 06-11-2026): the item group filter of the report and view tools. It was 11,500 since NFR v1.15 and Code Standards v1.19 (D6-system-prompt v1.5: the tenth tool
@@ -30,7 +32,7 @@ pub const MAX_INPUT_TOKENS: u32 = 90_000;
 /// 12 tools, forgiving tools, typed names, general advice, one-call help and the whole-year
 /// estimate. It was 9,500 in v1.2: the tools list the sort and where words of every report and
 /// view, and the tool `app_help` comes with the help button.
-pub const MAX_PREFIX_TOKENS: u32 = 11_800;
+pub const MAX_PREFIX_TOKENS: u32 = 12_200;
 /// Seconds one try of a model call may wait for the reply (plan 82, lead decision 20-11-2026; it
 /// was 12 in plan 55): the model takes 4 to 10 s a call on a good line, and a call that carries tool
 /// results was cut at 12 s four times in a row in the question log (ids 42 to 45). The first try is

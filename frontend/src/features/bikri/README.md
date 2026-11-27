@@ -286,20 +286,52 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
   words red on the lot cell and in `LotNotes` under the lots grid, at once, not after a save try. A lot with no
   typed line stays silent (plan 79: only critical messages). Test: `bikri-lot-missing-at-once.test.tsx`.
 
-- **A seller's money paid on the spot (plan 91, PRD FR-12.23 v1.53, FR-12.3, C6, C8).** Each seller's block in the summary
-  (`AdvanceTicks` draws one `SellerPaid` for each seller of a lot the tick covers) has the advance tick, one field
-  "موقع پر ادائیگی" and the lines of his account from `BikriPreview.sellers` (`SellerPaidLines`: previous balance, today's
-  net, paid, cut from previous بنام or added to the balance, over-paid, charges above the sale when they exist, new
-  balance with its working behind the ⓘ). Typing an amount calls `bikri_seller_paid_spread` (`useSellerPaidSpread`, after
-  50 ms, newest answer wins; an empty field sends `0`); the backend spreads it over his lots' نقد and the screen writes each
-  lot's answer into its own نقد field, a value the app fills (F43). The lots' نقد are the draft's only truth: the draft has
-  no field for the seller's amount, so the autosave, a language switch and the save lose nothing (F39). The field shows
-  the sum of his lots' نقد as the backend worked it out, also when a lot's نقد was typed by hand. When
-  `sellers[k].needs_confirm` is true an amber line warns "یہ آج کی بکری سے زیادہ ہے، بقایا بڑھے گا", and F10 opens the
-  "is this entry correct?" box naming him and his new balance (`SellerOverConfirmDialog`, on the shared
-  `ConfirmEntryDialog`; the cash box is the same shell). The yes is the cash question's: `confirm_cash_below_zero`
-  (the backend refuses with `ERR_SELLER_PAID_ABOVE_TODAY` otherwise and the flow asks again with a fresh preview). The
-  shapes (`SellerPaidSpreadInput`, `SellerPaidSpread`, `LotCashSpread`, `SellerPaidLines`) are the generated bindings. The
-  seller bill and the day slip print the lines from the backend's print data (their labels are Fluent ids the backend
-  sends). Tests: `bikri-seller-paid.test.tsx`, `bikri-seller-paid-real.test.tsx` (the backend's recorded answers) and
-  `seller-paid-print.test.tsx` (the seller bill and the day slip in Urdu and English).
+- **A seller's summary (plan 91, plan 95 item 8, PRD FR-12.23 v1.53, FR-12.52 v1.57, FR-12.3, C6, C8).** Each seller's block in
+  the summary (`AdvanceTicks` draws one `SellerPaid` for each seller of a lot the tick covers, 2 or 3 to a row by the
+  summary's own width, one in a narrow one) has the advance tick and the lines of his account from
+  `BikriPreview.sellers` (`SellerPaidLines`: previous balance, today's net, موقع پر ادائیگی, the rest credited to his
+  account, the advance typed on his lots, over-paid, charges above the sale when they exist, new balance with its working
+  behind the ⓘ). There is NO box to type an amount here (Umar, 23-11-2026): cash to the seller is typed only in the
+  **نقد ادائیگی** of his lots (the lots grid column and the summary line read `glossary-naqd-adaigi`), and موقع پر
+  ادائیگی is the sum of those, worked out by the backend. The lots' نقد are the draft's only truth, so the autosave, a
+  language switch and the save lose nothing (F39). When `sellers[k].needs_confirm` is true an amber line warns "یہ آج کی
+  بکری سے زیادہ ہے، بقایا بڑھے گا", and F10 opens the "is this entry correct?" box naming him and his new balance
+  (`SellerOverConfirmDialog`, on the shared `ConfirmEntryDialog`; the cash box is the same shell). A No puts the cursor on
+  the نقد ادائیگی cell of his first lot with cash. The yes is the cash question's: `confirm_cash_below_zero` (the backend
+  refuses with `ERR_SELLER_PAID_ABOVE_TODAY` otherwise and the flow asks again with a fresh preview). The seller bill and
+  the day slip print the lines from the backend's print data. Tests: `bikri-seller-paid.test.tsx`,
+  `bikri-seller-paid-real.test.tsx` (the backend's recorded answers) and `seller-paid-print.test.tsx`.
+
+- **The پیشگی of a lot (plan 95 item 11, PRD FR-12.52).** The lot's "more" panel has a پیشگی field (`LOT.advance`, sent as
+  `LotInput.advance`, text as typed). It is a real advance with its own posting in the same save, not a deduction of the
+  sale; the backend works it out and checks it (the cash question too). Own, garden and arrival lots do not show it.
+
+- **Short notes that hide (plan 95 items 1 and 2, plan 97 items 2 and 4, PRD FR-12.52).** `shared/hooks/useTimedNotices`
+  shows a note for `NOTICE_MS` (5 s, the one constant, also `ERROR_BUBBLE_MS`) and shows it again when the user repeats the
+  action. The page gives the count of repeated actions (each try to save, each change typed in the lots or lines, each Enter
+  there) through `NoticePulseContext` (`ScreenProviders` on the page; `NoticeScope` in `LinesForm` for a later sale). Everything that is a
+  note uses it: the list above the lots (`ProblemList`, warnings and errors), the notes under the grids (`QtyNotes`,
+  `MissingNotes`, `LotNotes`), the refusal of a save (`TimedErrorNotice`) and the "all sold" note. The red mark on a cell or
+  figure stays until the problem is fixed, and a save is still refused while an error stands. Umar's rule is "all warnings
+  disappear in 5 seconds", so the rest fades too (the lead's decision, plan 97): the words under the fields of the "more"
+  panel, the line details and the own-goods panel (`Field` with `fadeError`: the red mark and `aria-invalid` stay and the words
+  stay in a line only a screen reader reads), the summary notes ("one line is left out", the net below zero), the seller's
+  "will grow" line, the cash below zero note (`CashNote fade`; the confirm box at save still asks, FR-6.7) and the own-goods
+  loss note (`shared/ui/TimedNote`). Only a notice that carries a button (the closed-day notice) stays.
+  A sold out lot (the backend's `balance_qty` is 0) takes no new sale line by any path: the "+" button, `↓` on the last
+  line and `Enter` on its last stop (the grid asks `GridInterceptors.onNewRow` before every key that makes a row, so there
+  is no screen-level key handler), and the words "all of this seller's goods are sold" show for 5 s, again on each try.
+  Tests: `bikri-lot-warning-timer.test.tsx`, `bikri-notes-fade.test.tsx`, `bikri-lot-buttons.test.tsx`,
+  `bikri-sold-out-keys.test.tsx`, `grid-new-row-refused.test.tsx`.
+- **The seller card title (plan 97 item 3).** The title of a seller's card in the summary (`SellerPaid`) is his name with
+  his tag only; the "paid on the spot" words are the label of the row inside the card.
+
+- **The button beside a lot's seller (plan 95 item 6).** The seller column has `cellButton` (shared grid): a real icon
+  button after the name. A press selects that lot and shows its sale lines (the cursor goes to the first line), or its
+  summary when the lot is sold out. A press on it never opens the picker and never moves the cursor (the grid leaves the
+  mouse press alone). The page holds its scroll position for 0.4 s after any other press in the lots (`holdScroll`), so a
+  click on the نقد ادائیگی cell never makes the page jump.
+
+- **Short forms by keyboard (plan 95 item 4).** The forms opened from a picker ("add it here", PRD FR-7.69) are drawn in
+  a portal, but React still sent their key presses to the picker cell's handler, so Tab or ↓ ended the edit and took the form
+  with it. `PickerCellEditor` now answers only keys from its own element. Test: `bikri-short-form-keys.test.tsx`.

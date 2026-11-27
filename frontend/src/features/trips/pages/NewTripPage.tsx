@@ -296,6 +296,7 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
                 <FreeTextInput
                   {...props}
                   value={draft.market}
+                  kind="place"
                   onChange={(market) => {
                     setDraft((previous) => ({ ...previous, market }));
                   }}
@@ -310,6 +311,7 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
                 <FreeTextInput
                   {...props}
                   value={draft.sentPerson}
+                  kind="name"
                   onChange={(sentPerson) => {
                     setDraft((previous) => ({ ...previous, sentPerson }));
                   }}

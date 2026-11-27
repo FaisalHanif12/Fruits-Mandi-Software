@@ -77,7 +77,7 @@ fn level_word(level: RuleLevel) -> &'static str {
 }
 
 /// A group named by a word, in the words the Owner and the prompt use.
-fn group_of_word(word: &str) -> Option<ItemGroup> {
+pub(super) fn group_of_word(word: &str) -> Option<ItemGroup> {
     match word.trim().to_lowercase().as_str() {
         "fruit" | "fruits" | "phal" | "پھل" => Some(ItemGroup::Fruit),
         "vegetable" | "vegetables" | "sabzi" | "sabzian" | "سبزی" => Some(ItemGroup::Vegetable),

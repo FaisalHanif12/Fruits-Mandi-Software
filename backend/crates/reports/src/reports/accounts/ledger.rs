@@ -267,13 +267,7 @@ fn page_rows(
             line_no: raw.line_no,
             bikri_base_entry: (raw.source_type == "bikri")
                 .then(|| raw.reverses.unwrap_or(raw.entry_id)),
-            voucher: (raw.source_type == "voucher")
-                .then(|| {
-                    raw.voucher_type
-                        .clone()
-                        .map(|t| (t, raw.voucher_reason.clone()))
-                })
-                .flatten(),
+            voucher: raw.voucher(),
         })
         .collect();
     let mut details = load(conn, &queries, ledger_is_buyer)?;
@@ -316,7 +310,7 @@ fn page_rows(
                     iso: raw.entry_date.clone(),
                 },
                 Cell::Doc {
-                    type_id: ids::doc_id(&raw.posting_type),
+                    type_id: ids::doc_id_of(&raw.posting_type, &raw.source_type),
                     number: raw.doc_number,
                 },
                 detail,

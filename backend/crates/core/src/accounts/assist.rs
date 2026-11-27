@@ -16,10 +16,17 @@ pub enum AccountScope {
     /// (`0` finds `0010`). The اپنا مال account is not offered here (PRD FR-12.26).
     Seller,
     /// The seller field of a lot: the same as `seller`, and also the اپنا مال account (030119998),
-    /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase.
+    /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase. An account
+    /// marked آڑھتی دکان (`agent_shop`) is not offered here (PRD FR-16.11 v1.59, plan 97 item 1).
     LotSeller,
-    /// A buyer field (control 0304), including نقدی منڈی and the چکتا buyers (each hit marked with
-    /// `kind` `chukta`, PRD FR-7.29, FR-13.4). The account چکتا کھاتہ itself is never offered. A short
+    /// The آڑھتی box of the پھل screen (PRD FR-16.7, FR-16.11 v1.59): only the seller accounts marked
+    /// آڑھتی دکان, other commission agents' shops. Active ones only, nobody in the dead amount. A
+    /// short code is the running number of a seller's code, as `seller`. A new shop is added on the
+    /// spot with `fruit_agent_shop_add` (PRD FR-7.69).
+    AgentShop,
+    /// A buyer field (control 0304), including نقدی منڈی. In the buyer field of a بکری line
+    /// (`with_chukta`) the چکتا buyers are listed too (each hit marked with `kind` `chukta`, PRD
+    /// FR-7.29, FR-13.4) and نقدی منڈی is left out (PRD FR-12.52 v1.57). The account چکتا کھاتہ itself is never offered. A short
     /// code is the running number of a buyer's code (`1` finds `0021`); a چکتا buyer has no short
     /// code.
     Buyer,

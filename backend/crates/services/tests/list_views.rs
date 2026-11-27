@@ -998,6 +998,7 @@ fn fruit_on(
             } else {
                 Some(note.into())
             },
+            deduction: None,
             editing_id: None,
         },
     )
@@ -1697,7 +1698,7 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
         from: None,
         to: None,
         show_finished: true,
-        partner_id: a,
+        partner_id: Some(a),
         offset: 0,
         limit: 0,
         sort: None,
@@ -2549,7 +2550,7 @@ fn a_fully_returned_take_or_loan_is_finished_and_the_totals_follow_the_rows_show
             &PartnerTakesInput {
                 from: None,
                 to: None,
-                partner_id: a,
+                partner_id: Some(a),
                 offset: 0,
                 limit: 0,
                 sort: None,

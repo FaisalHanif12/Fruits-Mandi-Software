@@ -4,7 +4,11 @@
 // `Paisa`, shown and never worked out.
 
 import type { Cashbook } from '../../bindings/Cashbook';
-import type { CashbookKind } from '../../bindings/CashbookKind';
+import type { CashGroup } from '../../bindings/CashGroup';
+import type { CashGroupSummary } from '../../bindings/CashGroupSummary';
+import type { CashKind } from '../../bindings/CashKind';
+import type { CashRefs } from '../../bindings/CashRefs';
+import type { CashRowStatus } from '../../bindings/CashRowStatus';
 import type { CashbookInput } from '../../bindings/CashbookInput';
 import type { CashbookRow } from '../../bindings/CashbookRow';
 import type { ExpenseEntry } from '../../bindings/ExpenseEntry';
@@ -41,7 +45,11 @@ import type { TakeRow } from '../../bindings/TakeRow';
 
 export type {
   Cashbook,
-  CashbookKind,
+  CashGroup,
+  CashGroupSummary,
+  CashKind,
+  CashRefs,
+  CashRowStatus,
   CashbookInput,
   CashbookRow,
   ExpenseEntry,

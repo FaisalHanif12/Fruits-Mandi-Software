@@ -1,9 +1,9 @@
 // ادھاری تفصیل (route /reports/adhari-sheet, found by R5; PRD R5 v1.43, FR-19.11, FR-19.15, plan 80 Q-R5-2): how
 // much the shop has to take from its buyers, on one compact page. One row for each buyer who bought on the
 // day, also one who paid in full, sorted by name: what he bought in short ("(Banana 20 . 600)"), today's
-// bill, the cash he paid on the spot, today's credit, what he owed at the start of the day and what he owes
-// now. A وصولی of the day is not on the sheet: it shows in the next day's previous balance. Under the table
-// are the buyers who owed but bought nothing today, as one total, and the total credit of all buyers; a
+// bill, today's credit, what he owed at the start of the day and what he owes now (no cash column or cash total,
+// PRD R5 v1.57). A وصولی of the day is not on the sheet: it shows in the next day's previous balance. Under the table
+// are the buyers who owed but bought nothing today, one row each by name (plan 97 item 6) with their total, and the total credit of all buyers; a
 // person in the dead amount and a buyer whose credit ends in جمع are listed apart. The rows, the counts and
 // every total are the backend's; the rows on screen are never added up (CLAUDE.md rule 1).
 //
@@ -18,6 +18,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { FileText, Printer } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import type { AdhariOtherRow } from '../../../bindings/AdhariOtherRow';
 import type { AdhariSheetRow } from '../../../bindings/AdhariSheetRow';
 import type { AdhariSheetTotals } from '../../../bindings/AdhariSheetTotals';
 import { uiErrorOf } from '../../../shared/api';
@@ -39,6 +40,7 @@ import {
 } from '../../../shared/ui';
 import { useDayStatus } from '../../../app/use-day-status';
 import { reportsAdhariSheetPrint, reportsAdhariSheetPrintData } from '../api';
+import { AdhariOthers } from '../components/AdhariOthers';
 import { TablePrintPreview } from '../components/TablePrintPreview';
 import { ADHARI_COLUMNS } from '../adhari-columns';
 import { useAdhariSheet } from '../adhari-hooks';
@@ -55,7 +57,7 @@ function rowId(row: AdhariSheetRow): string {
   return party.person_key ?? String(party.account_id);
 }
 
-/** One apart-line under the table: the five figures of a group of buyers, from the backend's totals. */
+/** One apart-line under the table: the figures of a group of buyers, from the backend's totals. */
 function TotalsLine({ id, sums, count }: { id: string; sums: AdhariSheetTotals; count?: number }) {
   return (
     <Localized
@@ -65,7 +67,6 @@ function TotalsLine({ id, sums, count }: { id: string; sums: AdhariSheetTotals; 
         count: <Num inherit />,
         prev: <Balance balance={sums.previous_due} inherit />,
         bill: <Num paisa={sums.bill_paisa} />,
-        cash: <Num paisa={sums.cash_paisa} />,
         credit: <Num paisa={sums.today_credit_paisa} />,
         due: <Balance balance={sums.total_due} inherit />,
       }}
@@ -120,6 +121,14 @@ export function AdhariSheetPage() {
     [open],
   );
 
+  // The ledger of an other buyer: he has an account, so the ledger of the party always opens (R13).
+  const openOtherLedger = useCallback(
+    (row: AdhariOtherRow) => {
+      open?.('R13', { party: row.party.account_id });
+    },
+    [open],
+  );
+
   // The totals row is the backend's: today's buyers, not the dead amount and not those whose credit ends in جمع.
   const totals = useCallback(
     (context: ListContext) => {
@@ -132,7 +141,6 @@ export function AdhariSheetPage() {
             : {
                 party: context.text('glossary-meezan'),
                 bill: context.money(sums.bill_paisa),
-                cash: context.money(sums.cash_paisa),
                 today_credit: context.money(sums.today_credit_paisa),
                 previous: context.money(sums.previous_due.amount_paisa),
                 total_due: context.money(sums.total_due.amount_paisa),
@@ -256,6 +264,9 @@ export function AdhariSheetPage() {
         focusRowId={focusId}
         totals={totals}
       />
+      {first === undefined ? null : (
+        <AdhariOthers rows={first.other_rows} onOpen={openOtherLedger} />
+      )}
       {first?.others === null || first?.others === undefined ? null : (
         <TotalsLine id="adhari-others-line" sums={first.others} count={first.others_count} />
       )}

@@ -316,9 +316,6 @@ err-print-failed = دستاویز پرنٹ نہیں ہو سکی۔ پرنٹر د�
 
 ## Vouchers (plan 15, PRD 15.1 to 15.4).
 
-# PRD FR-15.11. Money paid to a buyer is cash lent to him.
-# review: pending
-err-payment-to-buyer-needs-reason = { -gahak } کو رقم دینا { -naqd-udhar } ہے۔ اس کی وجہ لکھیں۔
 
 # PRD FR-15.12, FR-16.2. $open is the most that can be returned, in rupees.
 # review: pending
@@ -513,6 +510,10 @@ err-backup-not-started = بیک اپ کی سروس ابھی چل نہیں رہی
 err-backup-restore-failed = بحالی مکمل نہیں ہو سکی۔ ایپ بند کر کے دوبارہ کھولیں۔ اگر کھاتے غلط لگیں تو مدد کے لیے رابطہ کریں: اس کمپیوٹر پر پہلے سے حساب ہو تو بحالی سے پہلے حفاظتی کاپی بنائی گئی تھی۔
 
 ## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
+
+# PRD FR-16.11 v1.59. Values: max (the value less 1 rupee) and value, in rupees.
+# review: pending
+err-deduction-not-below-value = کل کٹوتی قیمت سے کم ہونی چاہیے۔ قیمت { $value } روپے ہے، زیادہ سے زیادہ کٹوتی { $max } روپے۔
 
 # PRD FR-16.9. The same day is allowed.
 # review: pending
@@ -751,6 +752,5 @@ err-linked-account-restricted = یہ کھاتہ ایپ خود لکھتی ہے۔ 
 # review: pending
 err-partner-has-linked-balance = جب تک اس { -shirakat-dar } سے جڑے { -alag-khata } یا ادھار پر بقایا ہے، اسے غیر فعال نہیں کر سکتے۔ پہلے بقایا پورا کریں۔
 
-
 # review: pending
-err-nothing-to-place = ان شراکت داروں میں سے کسی کا ابتدائی { -sarmaya } ابتدائی فرق کے مقابل نہیں، درج کرنے کے لیے کچھ نہیں۔
+err-openings-already-in-cash = پرانے { -ibtidai-baqaya } پہلے ہی { -rokar } میں درج ہیں۔ درج کرنے کے لیے کچھ نہیں۔

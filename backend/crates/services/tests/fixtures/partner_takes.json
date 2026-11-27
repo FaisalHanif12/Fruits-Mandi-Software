@@ -7,6 +7,12 @@
   },
   "rows": [
     {
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
       "source": "voucher",
       "voucher_id": 3,
       "number": 1,

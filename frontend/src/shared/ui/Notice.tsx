@@ -33,7 +33,7 @@ export function Notice({ tone = 'warn', children, action }: NoticeProps) {
   return (
     <div
       role={tone === 'error' ? 'alert' : 'status'}
-      className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2 border p-3 ${STYLE[tone]}`}
+      className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2 border p-3 shortest:py-1 ${STYLE[tone]}`}
     >
       <Icon aria-hidden="true" className="size-icon-md shrink-0" />
       <span className="type-body min-w-0 flex-1">{children}</span>

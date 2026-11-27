@@ -20,8 +20,4 @@ export type StatementEdited = {
    * The reason typed with it.
    */
   reason: string | null;
-  /**
-   * The Owner's sign saved with it, when it was made in a reopened day (PRD FR-21.4).
-   */
-  sign: string | null;
 };

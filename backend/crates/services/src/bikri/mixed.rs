@@ -28,12 +28,16 @@ use std::collections::{BTreeSet, HashSet};
 use mandi_db::bikri::edit as edit_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
-use mandi_domain::bikri::{PostingKind, merge_sellers, merge_splits, merge_summaries, sum_changes};
+use mandi_domain::bikri::{
+    PostingKind, merge_gardens, merge_sellers, merge_splits, merge_summaries, merge_trips,
+    sum_changes,
+};
 use mandi_domain::core::bikri::{
-    BikriDraft, BikriPreview, BikriStatus, CarriedLotInput, CarriedSaved, LotInput, LotPreview,
-    MixedPart, MixedPartKind, MixedSalePreview, MixedSaleSaveInput, MixedSaleSaved,
-    MixedUndoCarried, MixedUndoDraft, MixedUndoInput, MixedUndoResult, SaleInput, SellerPaidLines,
-    SplitPart, SummaryTotals, UNDO_REASON_ID, is_blank_sale, prepare_draft,
+    BikriDraft, BikriPreview, BikriStatus, CarriedLotInput, CarriedSaved, GardenCardLines,
+    LotInput, LotPreview, MixedPart, MixedPartKind, MixedSalePreview, MixedSaleSaveInput,
+    MixedSaleSaved, MixedUndoCarried, MixedUndoDraft, MixedUndoInput, MixedUndoResult, SaleInput,
+    SellerPaidLines, SplitPart, SummaryTotals, TripCardLines, UNDO_REASON_ID, is_blank_sale,
+    prepare_draft,
 };
 use mandi_domain::core::cash::CashCheck;
 use mandi_domain::core::dates::BusinessDate;
@@ -257,6 +261,19 @@ fn plan_all(
         .chain(new.iter().map(|n| n.worked.calc.sellers.as_slice()))
         .collect();
     let sellers = merge_sellers(&seller_parts).map_err(money_error)?;
+    // One card for each garden and each trip over all the entries (PRD FR-12.52, plan 97 item 5).
+    let garden_parts: Vec<&[GardenCardLines]> = carried
+        .iter()
+        .map(|c| c.worked.calc.gardens.as_slice())
+        .chain(new.iter().map(|n| n.worked.calc.gardens.as_slice()))
+        .collect();
+    let gardens = merge_gardens(&garden_parts).map_err(money_error)?;
+    let trip_parts: Vec<&[TripCardLines]> = carried
+        .iter()
+        .map(|c| c.worked.calc.trips.as_slice())
+        .chain(new.iter().map(|n| n.worked.calc.trips.as_slice()))
+        .collect();
+    let trips = merge_trips(&trip_parts).map_err(money_error)?;
     // One cash question over every entry together (PRD FR-6.7).
     let changes: Vec<Paisa> = carried
         .iter()
@@ -270,6 +287,8 @@ fn plan_all(
             summary,
             split,
             sellers,
+            gardens,
+            trips,
             cash,
             allow_line_override: switches.allow_line_override,
             errors: errors.clone(),

@@ -221,15 +221,15 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await twoLots(user, language);
     await user.click(switchTo(linesArea(language, false), language, true));
     const sales = salesGrid(language);
-    // Lot 1: Akram, Arshad and the blank line the Enter made; lot 2: its own blank line.
+    // Lot 1: Akram and Arshad (50 of 50 are sold, so the Enter made no blank line, PRD FR-12.52); lot 2: its own blank line.
     await waitFor(() => {
-      expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(sales.querySelectorAll('.ag-row')).toHaveLength(3);
       expect(textOf(sales, 0, 'buyer')).toBe(names(language).akram);
       expect(textOf(sales, 1, 'buyer')).toBe(names(language).arshad);
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
       expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
-      for (const row of [0, 1, 2]) expect(textOf(sales, row, 'lot')).toBe(lotLabel(language, 1));
-      expect(textOf(sales, 3, 'lot')).toBe(lotLabel(language, 2));
+      for (const row of [0, 1]) expect(textOf(sales, row, 'lot')).toBe(lotLabel(language, 1));
+      expect(textOf(sales, 2, 'lot')).toBe(lotLabel(language, 2));
     });
   });
 
@@ -239,10 +239,10 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await user.click(switchTo(linesArea(language, false), language, true));
     const sales = salesGrid(language);
     await waitFor(() => {
-      expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(sales.querySelectorAll('.ag-row')).toHaveLength(3);
     });
-    // The buyer of the line of lot 2 (the fourth line), by short code 2, then Enter.
-    await user.click(cellOf(sales, 3, 'buyer'));
+    // The buyer of the line of lot 2 (the third line), by short code 2, then Enter.
+    await user.click(cellOf(sales, 2, 'buyer'));
     await user.keyboard('1{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[1]?.sales[0]?.buyer_account_id).toBe(IDS.arshad);
@@ -252,7 +252,7 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     expect(backend.lastDraft().lots[0]?.sales[1]?.buyer_account_id).toBe(IDS.arshad);
     // The cursor moved on to the quantity of that line, and the details are those of lot 2.
     await waitFor(() => {
-      expect(focusedIn(sales)).toBe('3:qty');
+      expect(focusedIn(sales)).toBe('2:qty');
     });
     await screen.findByRole('textbox', {
       name: named(message(language, 'bikri-line-seller-comm')),
@@ -275,15 +275,16 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await user.click(switchTo(linesArea(language, false), language, true));
     const sales = salesGrid(language);
     await waitFor(() => {
-      expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(sales.querySelectorAll('.ag-row')).toHaveLength(3);
     });
-    // The last stop of a line is its paid cell (PRD FR-12.44).
-    await user.click(cellOf(sales, 2, 'paid'));
+    // The last stop of a line is its paid cell (PRD FR-12.44). Lot 1 is sold out, so its last line is Arshad's, and the
+    // Enter makes no new line: it goes on to the line lot 2 already has.
+    await user.click(cellOf(sales, 1, 'paid'));
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(focusedIn(sales)).toBe('3:buyer');
+      expect(focusedIn(sales)).toBe('2:buyer');
     });
-    expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
+    expect(sales.querySelectorAll('.ag-row')).toHaveLength(3);
   });
 
   it('a language switch in the whole view keeps the lines, the words of the lot column and the cursor', async () => {
@@ -291,13 +292,13 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await twoLots(user, language);
     await user.click(switchTo(linesArea(language, false), language, true));
     await waitFor(() => {
-      expect(salesGrid(language).querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(salesGrid(language).querySelectorAll('.ag-row')).toHaveLength(3);
     });
     await user.click(cellOf(salesGrid(language), 1, 'qty'));
     const next: Language = language === 'ur' ? 'en' : 'ur';
     await user.keyboard('{Alt>}l{/Alt}');
     await waitFor(() => {
-      expect(textOf(salesGrid(next), 3, 'lot')).toBe(lotLabel(next, 2));
+      expect(textOf(salesGrid(next), 2, 'lot')).toBe(lotLabel(next, 2));
     });
     const sales = salesGrid(next);
     await waitFor(() => {
@@ -327,10 +328,10 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await twoLots(user, language);
     await user.click(switchTo(linesArea(language, false), language, true));
     await waitFor(() => {
-      expect(salesGrid(language).querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(salesGrid(language).querySelectorAll('.ag-row')).toHaveLength(3);
     });
     failing = true;
-    await user.click(cellOf(salesGrid(language), 3, 'buyer'));
+    await user.click(cellOf(salesGrid(language), 2, 'buyer'));
     await user.keyboard('1{Enter}');
     expect(
       await screen.findByText(
@@ -338,7 +339,7 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
       ),
     ).toBeInTheDocument();
     // What was typed is still there, in the lot that owns it.
-    expect(textOf(salesGrid(language), 3, 'buyer')).toBe(names(language).arshad);
+    expect(textOf(salesGrid(language), 2, 'buyer')).toBe(names(language).arshad);
     expect(textOf(salesGrid(language), 0, 'buyer')).toBe(names(language).akram);
   });
 
@@ -353,10 +354,10 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await user.click(switchTo(linesArea(language, false), language, true));
     const sales = salesGrid(language);
     await waitFor(() => {
-      expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(sales.querySelectorAll('.ag-row')).toHaveLength(3);
     });
     await waitFor(() => {
-      expect(cellOf(sales, 3, 'qty')).toHaveClass('cell-error');
+      expect(cellOf(sales, 2, 'qty')).toHaveClass('cell-error');
       expect(cellOf(sales, 0, 'qty')).not.toHaveClass('cell-error');
       expect(visible(document.body.textContent)).toContain(
         message(language, 'bikri-where-line', { lot: 2, line: 1 }),

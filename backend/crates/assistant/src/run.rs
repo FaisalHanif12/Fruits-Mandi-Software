@@ -179,6 +179,39 @@ fn with_lot(arguments: &str, key: &str) -> String {
     }
 }
 
+/// The question before in a conversation, as it was understood.
+type Earlier = (String, crate::understand::Understanding);
+
+/// What the app made of a question before anything else is done ([`Run::understand_question`]).
+struct Heard {
+    /// The understanding, when the app is sure of the whole question.
+    understood: Option<crate::understand::Understanding>,
+    /// True when the question names a filter a dashboard tile does not take.
+    narrows_tiles: bool,
+    /// The name several records have, for "کون سا؟" with no model call.
+    which_party: Option<String>,
+    /// The follow-up written in full.
+    written: Option<String>,
+    /// The pre-reads safe for a question the app is not sure of.
+    scope_reads: Option<Vec<crate::understand::PlannedRead>>,
+}
+
+/// The input of a logged read as it is read again: a read made with a `period` word reads that
+/// period again from today, so the days the app filled in then are left out.
+fn rerun_input(input: &Value) -> Value {
+    let mut input = input.clone();
+    if input.get("period").is_some_and(Value::is_string)
+        && let Some(map) = input.as_object_mut()
+    {
+        for field in ["from", "to", "as_of"] {
+            if map.contains_key(field) {
+                map.insert(field.to_owned(), Value::Null);
+            }
+        }
+    }
+    input
+}
+
 /// What the app did ahead of the model for a question that is a lot's name (`Run::prefind_lot`).
 enum LotPre {
     /// No lot was named: the question goes on as any other.
@@ -687,17 +720,10 @@ impl<'a> Run<'a> {
     /// The third value is the name of a party that several records have, in a commission or a sale
     /// question the app would write by itself once the Owner picks one: the app asks "کون سا؟" with no
     /// model call (plan 82, PRD FR-7.77, FR-7.90).
-    fn understand_question(
-        &self,
-        text: &str,
-        follow_up: bool,
-        earlier: Option<&(String, crate::understand::Understanding)>,
-    ) -> (
-        Option<crate::understand::Understanding>,
-        bool,
-        Option<String>,
-        Option<String>,
-    ) {
+    ///
+    /// When the app is not sure of the question, the last value holds the pre-reads that are safe
+    /// all the same ([`crate::understand::plan_scope_reads`], plan 99 A1).
+    fn understand_question(&self, text: &str, follow_up: bool, earlier: Option<&Earlier>) -> Heard {
         use crate::understand::{self, Intent};
         let reader = understand::Reader {
             ctx: &self.snap,
@@ -728,7 +754,13 @@ impl<'a> Run<'a> {
             let which = (!follow_up)
                 .then(|| understand::which_one_party(&understood))
                 .flatten();
-            return (None, narrows, which, None);
+            return Heard {
+                understood: None,
+                narrows_tiles: narrows,
+                which_party: which,
+                written: None,
+                scope_reads: understand::plan_scope_reads(&understood),
+            };
         }
         let kind = match understood.intent.value {
             Intent::Print => "print",
@@ -746,7 +778,13 @@ impl<'a> Run<'a> {
                 },
             }],
         });
-        (Some(understood), narrows, None, written)
+        Heard {
+            understood: Some(understood),
+            narrows_tiles: narrows,
+            which_party: None,
+            written,
+            scope_reads: None,
+        }
     }
 
     /// Reads, before the first call, what the model would have chosen to read (plan 54 S3, plan 55
@@ -761,9 +799,18 @@ impl<'a> Run<'a> {
     ) -> bool {
         // The reads of the plan, or the reads of each figure it can plan (D7, plan 59 D): they only fill the
         // first request, nothing answers from them but the model.
-        let Some(reads) = crate::understand::plan_pre_reads(understood) else {
-            return false;
-        };
+        crate::understand::plan_pre_reads(understood)
+            .is_some_and(|reads| self.run_pre_reads(conv, turn, &reads))
+    }
+
+    /// Runs reads before the first call. True when something was read; a read the tool refuses is
+    /// dropped.
+    fn run_pre_reads(
+        &self,
+        conv: &mut Conversation,
+        turn: &mut Turn,
+        reads: &[crate::understand::PlannedRead],
+    ) -> bool {
         let mut read_any = false;
         for read in reads {
             let done = self.preread_tool(conv, turn, read.tool, &read.input.to_string());
@@ -2977,12 +3024,23 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
         .turns
         .last()
         .and_then(|before| before.understood.clone());
-    let (understood, narrows_tiles, which_party, written) =
-        if d.runtime.local() || d.runtime.read_first() {
-            run.understand_question(text, !conv.turns.is_empty(), earlier.as_ref())
-        } else {
-            (None, false, None, None)
-        };
+    let Heard {
+        understood,
+        narrows_tiles,
+        which_party,
+        written,
+        scope_reads,
+    } = if d.runtime.local() || d.runtime.read_first() {
+        run.understand_question(text, !conv.turns.is_empty(), earlier.as_ref())
+    } else {
+        Heard {
+            understood: None,
+            narrows_tiles: false,
+            which_party: None,
+            written: None,
+            scope_reads: None,
+        }
+    };
     // The question the guards read: the follow-up written in full, or the question as typed.
     let meant = written.as_deref().unwrap_or(text);
     turn.understood = understood.as_ref().map(|u| (meant.to_owned(), u.clone()));
@@ -3073,6 +3131,12 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     {
         // The books were read for the question before the first call (plan 54 S3): the call has
         // only to write the answer.
+        turn.read_first = true;
+    } else if d.runtime.read_first()
+        && scope_reads.is_some_and(|reads| run.run_pre_reads(&mut conv, &mut turn, &reads))
+    {
+        // The latest بکری, or every garden or trip, read ahead for a question the app is not sure
+        // of (plan 99 A1).
         turn.read_first = true;
     } else if let Some(kind) = cues::period_kind(text) {
         // One clear period in the question: read it before the first call, so that call can
@@ -3300,7 +3364,7 @@ pub fn rerun(d: &Deps<'_>, input: &AssistantRerunInput) -> Result<AskReply, Serv
             continue;
         };
         let env = run.env(&numbers, &row.question);
-        if let Ok(draft) = tools::call(&env, &state, tool, &input.to_string()) {
+        if let Ok(draft) = tools::call(&env, &state, tool, &rerun_input(input).to_string()) {
             let id = call
                 .get("id")
                 .and_then(Value::as_str)

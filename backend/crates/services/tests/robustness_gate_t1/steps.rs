@@ -1722,6 +1722,7 @@ fn fruit_input(u: &U, kind: u8, lot: Option<i64>, qty: i64, rate: u16, d: u8) ->
         weight: None,
         rate: rate.to_string(),
         note: None,
+        deduction: None,
         editing_id: None,
     }
 }
@@ -1795,6 +1796,7 @@ fn fruit_edit(u: &mut U, p: u8, qty: u8) -> R {
         weight: None,
         rate: rate.to_string(),
         note: None,
+        deduction: None,
         editing_id: Some(id),
     };
     fruit::edit(
@@ -2124,13 +2126,16 @@ fn day_reopen(u: &mut U, d: u8, kind: u8) -> R {
                 "day_reopen: the closed-up-to day is not the day before the one reopened"
             );
             u.closed_level = level - 1;
-            // The right sign is saved as the Owner set it, not as it was typed (FR-21.4).
+            // The audit row says the right sign was given, never the sign itself (FR-21.4 v1.58).
             let (action, text) = last_audit(u);
             assert_eq!(action, "day_reopen");
-            assert!(text.contains("adnan"), "the audit row has no sign: {text}");
             assert!(
-                !text.contains("عدنان") && !text.contains("ADNAN"),
-                "the audit row holds the typed sign: {text}"
+                text.contains("\"sign_given\":true"),
+                "the audit row does not say the sign was given: {text}"
+            );
+            assert!(
+                !text.contains("adnan") && !text.contains("عدنان") && !text.contains("ADNAN"),
+                "the audit row holds the sign: {text}"
             );
             Ok(true)
         }
@@ -2234,9 +2239,13 @@ fn fix_cycle(u: &mut U, d: u8, p: u8, change: u8, value: u16, kind: u8) -> R {
         let reopened = edited.as_str() >= iso_of_level(level)
             && edited.as_str() <= iso_of_level(closed_before);
         assert_eq!(
-            text.contains("adnan"),
+            text.contains("\"sign_given\":true"),
             reopened,
-            "the sign of the fix is on the edit of {edited} iff its day was reopened by the fix: {text}"
+            "the edit of {edited} says the sign was given iff its day was reopened by the fix: {text}"
+        );
+        assert!(
+            !text.contains("adnan"),
+            "the audit row holds the sign: {text}"
         );
     }
     let closed = days::fix_close(

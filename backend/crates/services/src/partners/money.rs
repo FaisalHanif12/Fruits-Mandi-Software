@@ -143,6 +143,12 @@ fn is_take(line: &LiveLine) -> bool {
 /// A drawings opening debit is a take dated its opening date (PRD FR-10.9). Σ open is the debit
 /// balance of his drawings account.
 ///
+/// With no `partner_id` (plan 98) the list holds the takes of every partner, each row naming its
+/// partner. A partner made inactive is included while he has takes in the range, so nothing is
+/// hidden. Returns still settle the oldest takes of the same partner first, partner by partner;
+/// the rows are then put in day order (the partner created first on a day), and the totals and
+/// months are over all of them. No new money maths.
+///
 /// # Errors
 /// `ERR_NOT_FOUND` on `partner_id`.
 pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, ServiceError> {
@@ -154,83 +160,46 @@ pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, S
             .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
     }
     ctx.db.read(|conn| {
-        let partner = repo::get(conn, input.partner_id)?
-            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
-        let lines = open_lines::live_lines(conn, &[partner.drawings_account_id])?;
-        let bills = lines
-            .iter()
-            .filter(|l| is_take(l))
-            .map(|l| Ok((l.line_id, paisa(l.dr_paisa)?)))
-            .collect::<Result<Vec<_>, ServiceError>>()?;
-        let credits = lines
-            .iter()
-            .filter(|l| l.cr_paisa > 0)
-            .map(|l| Ok((l.line_id, paisa(l.cr_paisa)?)))
-            .collect::<Result<Vec<_>, ServiceError>>()?;
-        let open: HashMap<i64, OpenAmount> = open_amounts(&bills, &credits)
-            .map_err(money_error)?
-            .into_iter()
-            .map(|o| (o.line_id, o))
-            .collect();
+        let (chosen, partners) = match input.partner_id {
+            Some(id) => {
+                let partner = repo::get(conn, id)?.ok_or_else(|| {
+                    ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id")
+                })?;
+                (
+                    Some(record_of(partner.id, &partner.name_ur, &partner.name_en)),
+                    vec![partner],
+                )
+            }
+            // Every partner, the one created first first. An inactive partner is read too, so a take
+            // of his that is still in the window is never hidden; one with no takes adds nothing
+            // (lead decision, plan 98).
+            None => {
+                let mut all = repo::list(conn)?;
+                all.sort_by_key(|p| p.id);
+                (None, all)
+            }
+        };
         let mut totals = TakesTotals {
             taken_paisa: Paisa::ZERO,
             returned_paisa: Paisa::ZERO,
             open_paisa: Paisa::ZERO,
         };
-        let mut rows = Vec::with_capacity(open.len());
+        let mut rows = Vec::new();
         let mut month_acc = page::MonthAcc::new(3);
-        for line in lines.iter().filter(|l| is_take(l)) {
-            let Some(figures) = open.get(&line.line_id) else {
-                continue;
-            };
-            // A fully returned take is finished: it steps aside, with its money, unless asked for
-            // (plan 38 R5). The totals and the months are over the rows listed.
-            if !input.show_finished && figures.open == Paisa::ZERO {
-                continue;
-            }
-            // The range keeps the takes dated inside it (plan 76 point 8).
-            if !page::in_range(&line.entry_date, from.as_deref(), to.as_deref()) {
-                continue;
-            }
-            let amount = paisa(line.dr_paisa)?;
-            totals.taken_paisa = totals
-                .taken_paisa
-                .checked_add(amount)
-                .map_err(money_error)?;
-            totals.returned_paisa = totals
-                .returned_paisa
-                .checked_add(figures.returned)
-                .map_err(money_error)?;
-            totals.open_paisa = totals
-                .open_paisa
-                .checked_add(figures.open)
-                .map_err(money_error)?;
-            month_acc.add(
-                &line.entry_date,
-                &[
-                    amount.as_paisa(),
-                    figures.returned.as_paisa(),
-                    figures.open.as_paisa(),
-                ],
+        for partner in &partners {
+            let who = record_of(partner.id, &partner.name_ur, &partner.name_en);
+            collect_takes(
+                conn,
+                partner,
+                &who,
+                (from.as_deref(), to.as_deref()),
+                (input.show_finished, today),
+                (&mut rows, &mut totals, &mut month_acc),
             )?;
-            let return_by = line.return_by.as_deref().and_then(BusinessDate::parse_iso);
-            rows.push(TakeRow {
-                source: if line.is_opening {
-                    TakeSource::Opening
-                } else {
-                    TakeSource::Voucher
-                },
-                voucher_id: line.voucher_id,
-                number: line.number,
-                entry_date: line.entry_date.clone(),
-                amount_paisa: amount,
-                reason: line.reason.clone(),
-                taken_by: line.taken_by.clone(),
-                return_by: line.return_by.clone(),
-                returned_paisa: figures.returned,
-                open_paisa: figures.open,
-                days_past_return_by: days_past_return_by(figures.open, return_by, today),
-            });
+        }
+        if partners.len() > 1 {
+            // Day order across partners. A stable sort keeps each partner's own order inside a day.
+            rows.sort_by(|a, b| a.entry_date.cmp(&b.entry_date));
         }
         let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
         if let Some(sort) = &input.sort {
@@ -250,13 +219,96 @@ pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, S
             Vec::new()
         };
         Ok(PartnerTakes {
-            partner: record_of(partner.id, &partner.name_ur, &partner.name_en),
+            partner: chosen,
             rows: page::slice(rows, input.offset, input.limit),
             total_count,
             totals,
             months,
         })
     })
+}
+
+/// The takes of one partner that fall in the range, added to `rows`, with their figures added to the
+/// totals and the months. Returns settle his own oldest takes first (PRD FR-16.2, money agent 8.2b).
+fn collect_takes(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    who: &RecordRef,
+    (from, to): (Option<&str>, Option<&str>),
+    (show_finished, today): (bool, BusinessDate),
+    (rows, totals, month_acc): (&mut Vec<TakeRow>, &mut TakesTotals, &mut page::MonthAcc),
+) -> Result<(), ServiceError> {
+    let lines = open_lines::live_lines(conn, &[partner.drawings_account_id])?;
+    let bills = lines
+        .iter()
+        .filter(|l| is_take(l))
+        .map(|l| Ok((l.line_id, paisa(l.dr_paisa)?)))
+        .collect::<Result<Vec<_>, ServiceError>>()?;
+    let credits = lines
+        .iter()
+        .filter(|l| l.cr_paisa > 0)
+        .map(|l| Ok((l.line_id, paisa(l.cr_paisa)?)))
+        .collect::<Result<Vec<_>, ServiceError>>()?;
+    let open: HashMap<i64, OpenAmount> = open_amounts(&bills, &credits)
+        .map_err(money_error)?
+        .into_iter()
+        .map(|o| (o.line_id, o))
+        .collect();
+    for line in lines.iter().filter(|l| is_take(l)) {
+        let Some(figures) = open.get(&line.line_id) else {
+            continue;
+        };
+        // A fully returned take is finished: it steps aside, with its money, unless asked for
+        // (plan 38 R5). The totals and the months are over the rows listed.
+        if !show_finished && figures.open == Paisa::ZERO {
+            continue;
+        }
+        // The range keeps the takes dated inside it (plan 76 point 8).
+        if !page::in_range(&line.entry_date, from, to) {
+            continue;
+        }
+        let amount = paisa(line.dr_paisa)?;
+        totals.taken_paisa = totals
+            .taken_paisa
+            .checked_add(amount)
+            .map_err(money_error)?;
+        totals.returned_paisa = totals
+            .returned_paisa
+            .checked_add(figures.returned)
+            .map_err(money_error)?;
+        totals.open_paisa = totals
+            .open_paisa
+            .checked_add(figures.open)
+            .map_err(money_error)?;
+        month_acc.add(
+            &line.entry_date,
+            &[
+                amount.as_paisa(),
+                figures.returned.as_paisa(),
+                figures.open.as_paisa(),
+            ],
+        )?;
+        let return_by = line.return_by.as_deref().and_then(BusinessDate::parse_iso);
+        rows.push(TakeRow {
+            partner: who.clone(),
+            source: if line.is_opening {
+                TakeSource::Opening
+            } else {
+                TakeSource::Voucher
+            },
+            voucher_id: line.voucher_id,
+            number: line.number,
+            entry_date: line.entry_date.clone(),
+            amount_paisa: amount,
+            reason: line.reason.clone(),
+            taken_by: line.taken_by.clone(),
+            return_by: line.return_by.clone(),
+            returned_paisa: figures.returned,
+            open_paisa: figures.open,
+            days_past_return_by: days_past_return_by(figures.open, return_by, today),
+        });
+    }
+    Ok(())
 }
 
 /// A partner's capital history, oldest first, one page (PRD 17.4, FR-19.11). Read only. The rows

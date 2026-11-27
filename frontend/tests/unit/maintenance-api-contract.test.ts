@@ -184,6 +184,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'journal_chain',
       'journal_entries',
       'ran',
+      // The check of the money tables against the journal (NFR-SEC-6, v1.21).
+      'tables',
     ]);
     expect(keys(HEALTH_RUN.data)).toEqual(['reference', 'state']);
     expect(HEALTH_RUN.backup === null ? [] : keys(HEALTH_RUN.backup)).toEqual([

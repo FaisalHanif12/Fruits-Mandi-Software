@@ -427,6 +427,7 @@ pub fn lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> 
         phone: manual("20"),
         cash_paid: Some("5,000".into()),
         store_rent: None,
+        advance: None,
         adjust_advance: true,
         sales: Vec::new(),
     }

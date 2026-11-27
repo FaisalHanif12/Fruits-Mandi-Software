@@ -66,14 +66,25 @@ describe.each(LANGUAGES)('the free text field (%s)', (language) => {
       expect(
         screen.getByRole('button', { name: (name) => name.endsWith(full) }),
       ).toBeInTheDocument();
-      await user.keyboard('ghar kharch ');
       if (language === 'ur') {
+        // Space takes the spelling that shows, so each word is typed and then waited for, as a
+        // user sees it; a Space before the answer came keeps the English letters (a busy machine
+        // made the test fail that way).
+        for (const [word, urdu] of [
+          ['ghar', 'گھر'],
+          ['kharch', 'خرچ'],
+        ] as const) {
+          await user.keyboard(word);
+          await screen.findByRole('option', { name: urdu });
+          await user.keyboard(' ');
+        }
         await waitFor(() => {
           expect(input.value).toBe('گھر خرچ ');
         });
         expect(wrapper).toHaveAttribute('dir', 'rtl');
         expect(input).toHaveAttribute('lang', 'ur');
       } else {
+        await user.keyboard('ghar kharch ');
         expect(input.value).toBe('ghar kharch ');
         expect(urduApi.translitSuggest).not.toHaveBeenCalled();
         expect(wrapper).toHaveAttribute('dir', 'ltr');

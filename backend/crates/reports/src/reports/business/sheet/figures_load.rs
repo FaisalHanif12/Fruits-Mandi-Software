@@ -507,6 +507,8 @@ pub(super) struct LotCharges {
     pub(super) phone: Paisa,
     pub(super) store_rent: Paisa,
     pub(super) cash: Paisa,
+    /// پیشگی the seller took with the lot (PRD FR-12.52 v1.57): its own entry, the same day.
+    pub(super) advance: Paisa,
 }
 
 /// The lots whose first posting is dated from `from` to `to`, a posting cancelled or edited the
@@ -542,7 +544,7 @@ pub(super) fn lot_charges_in(
     let sql = format!(
         "SELECT e.entry_date, l.seller_account_id, COALESCE(l.chukta_person_key, ''),
                 l.freight_paisa, l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa,
-                l.phone_paisa, l.store_rent_paisa, l.cash_paid_paisa, l.bikri_id
+                l.phone_paisa, l.store_rent_paisa, l.cash_paid_paisa, l.bikri_id, l.advance_paisa
          {from_lots}
          JOIN accounts a ON a.id = l.seller_account_id
          JOIN account_controls k ON k.id = a.control_id
@@ -568,6 +570,7 @@ pub(super) fn lot_charges_in(
                     r.get::<_, i64>(9)?,
                 ],
                 r.get::<_, i64>(10)?,
+                r.get::<_, i64>(11)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -580,6 +583,7 @@ pub(super) fn lot_charges_in(
         firm_paid,
         [labour, munshiana, phone, rent, cash],
         bikri_id,
+        advance,
     ) in rows
     {
         out.push(LotCharges {
@@ -598,6 +602,7 @@ pub(super) fn lot_charges_in(
             phone: paisa(phone)?,
             store_rent: paisa(rent)?,
             cash: paisa(cash)?,
+            advance: paisa(advance)?,
         });
     }
     Ok(out)

@@ -15,7 +15,7 @@
 // where every amount of the line stands with its working (NFR-USE-27). bikri-column-widths.test.ts
 // keeps the sums inside the room of each window.
 
-import { FIT_MIN, type EntryColumn } from '../../shared/grid';
+import { FIT_MIN, type EntryColumn, type EntryRow } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks';
 import { isArrivalLot, isCarriedLot, isGardenLot, isOwnLot } from './draft';
 import { LOT, SALE } from './types';
@@ -34,7 +34,14 @@ const LOT_MIN = {
   qty: 80,
 } as const;
 
-export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
+/**
+ * @param onShowLot the button beside the seller's name (plan 95 item 6, PRD FR-12.52): it selects that lot and shows its
+ *   sale lines, or its summary when it is sold out. Absent: the cell has no button (a later sale has one lot only).
+ */
+export function lotColumns(
+  step: LayoutStep,
+  onShowLot?: (row: EntryRow) => void,
+): readonly EntryColumn[] {
   return [
     {
       field: LOT.seller,
@@ -42,6 +49,9 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       // The only account field that offers اپنا مال, the trips' goods (PRD FR-12.26): scope
       // `lot_seller` is `seller` plus that account, and the backend decides what is offered.
       picker: { kind: 'account', scope: 'lot_seller' },
+      ...(onShowLot === undefined
+        ? {}
+        : { cellButton: { labelId: 'bikri-lot-show-lines', onPress: onShowLot } }),
       headerId: 'bikri-col-seller',
       minWidth: LOT_MIN.seller,
       // A lot carried over from an earlier بکری is shown, not typed: it is a saved lot (plan 76 point 1).
@@ -100,7 +110,7 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
     {
       field: LOT.cash,
       type: 'money',
-      headerId: 'glossary-naqd',
+      headerId: 'glossary-naqd-adaigi',
       showsCalc: true,
       explain: true,
       editable: (row) => !isOwnLot(row) && !isGardenLot(row) && !isCarriedLot(row),

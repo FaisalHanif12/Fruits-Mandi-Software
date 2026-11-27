@@ -26,6 +26,7 @@ import type {
 import type { AccountBalance } from '../../bindings/AccountBalance';
 import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
 import type { AccountSaveRequest } from '../../bindings/AccountSaveRequest';
+import type { AgentShopInput } from '../../bindings/AgentShopInput';
 import type { OpeningsRequest } from '../../bindings/OpeningsRequest';
 import type { ChuktaAddInput } from '../../bindings/ChuktaAddInput';
 import type { ChuktaBuyer } from '../../bindings/ChuktaBuyer';
@@ -298,6 +299,14 @@ export function chuktaSearch(text: string): Promise<ChuktaBuyer[]> {
  */
 export function chuktaAdd(input: ChuktaAddInput): Promise<ChuktaBuyer> {
   return callCommand<ChuktaBuyer>('chukta_add', { input });
+}
+
+/**
+ * Adds another commission agent's shop on the spot, from the آڑھتی box of the پھل screen (PRD FR-7.69, FR-16.11, v1.59). It
+ * is a seller account marked آڑھتی دکان, with a code given by itself. Both names are required; the phone is optional.
+ */
+export function agentShopAdd(input: AgentShopInput): Promise<AccountRow> {
+  return callCommand<AccountRow>('fruit_agent_shop_add', { input });
 }
 
 /** The most results of the global search the box shows. */

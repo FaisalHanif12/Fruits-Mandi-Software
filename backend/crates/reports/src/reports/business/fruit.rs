@@ -13,6 +13,10 @@
 //! `value_paisa` columns over the whole filter, never a sum of a page (Code Standards B31); the
 //! quantity total is a plain count of نگ over different items and packings, as in R4 and R10.
 //!
+//! Fruit from another shop may carry a کل کٹوتی (PRD FR-16.11 v1.59). `value` is what was posted, the
+//! net, so the register adds up to the journal; the deduction has its own column, empty when it is 0,
+//! so `qty × rate − deduction = value` can be read on the row. The deduction total is its own `SUM()`.
+//!
 //! Example (E2E-42, 10-10-26): two rows. الف, Banana, 2 @ 580 = 1,160, our shop; the guests,
 //! Apple, 3 @ 1,000 = 3,000, another shop. Totals 5 and 4,160.
 
@@ -114,6 +118,7 @@ struct Raw {
     qty: i64,
     rate: i64,
     value: i64,
+    deduction: i64,
 }
 
 /// The entries of one page under a clause, and the sums over the whole clause.
@@ -122,8 +127,10 @@ pub(crate) struct Entries {
     pub(crate) total_count: i64,
     /// Σ of the quantities (a plain count of نگ).
     pub(crate) qty: i64,
-    /// Σ of the stored values.
+    /// Σ of the stored values (what was posted: the net).
     pub(crate) value: Paisa,
+    /// Σ of the stored deductions (PRD FR-16.11 v1.59), its own `SUM()`.
+    pub(crate) deduction: Paisa,
 }
 
 /// The columns of the register, which are also those of the lines behind view K.
@@ -140,9 +147,20 @@ pub(crate) fn columns() -> Vec<Column> {
         col("weight", ids::COL_FRUIT_WEIGHT, ColumnKind::Text),
         col("qty", ids::COL_QTY, ColumnKind::Number),
         col("rate", ids::COL_RATE, ColumnKind::Money),
+        col("deduction", ids::COL_FRUIT_DEDUCTION, ColumnKind::Money),
         col("value", ids::COL_VALUE, ColumnKind::Money),
         col("source", ids::COL_FRUIT_SOURCE, ColumnKind::Label),
     ]
+}
+
+/// The deduction of a row or the total: empty when it is 0, so a register with no deduction reads as
+/// it did before.
+fn deduction_cell(deduction: Paisa) -> Cell {
+    if deduction == Paisa::ZERO {
+        Cell::Empty
+    } else {
+        Cell::Money { paisa: deduction }
+    }
 }
 
 /// The totals row under [`columns`].
@@ -157,6 +175,7 @@ pub(crate) fn totals_cells(entries: &Entries) -> Vec<Cell> {
         Cell::Empty,
         Cell::Number { value: entries.qty },
         Cell::Empty,
+        deduction_cell(entries.deduction),
         Cell::Money {
             paisa: entries.value,
         },
@@ -170,21 +189,23 @@ pub(crate) fn totals_cells(entries: &Entries) -> Vec<Cell> {
 /// # Errors
 /// A database error; `ReportsError::Money` if a stored amount is not whole rupees.
 pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entries, ReportsError> {
-    let (total_count, qty_total, value_total): (i64, i64, i64) = conn.query_row(
-        &format!(
-            "SELECT COUNT(*), COALESCE(SUM(ft.qty), 0), COALESCE(SUM(ft.value_paisa), 0)
-             FROM fruit_takes ft WHERE {}",
-            c.sql()
-        ),
-        params_from_iter(c.args().iter()),
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )?;
+    let (total_count, qty_total, value_total, deduction_total): (i64, i64, i64, i64) = conn
+        .query_row(
+            &format!(
+                "SELECT COUNT(*), COALESCE(SUM(ft.qty), 0), COALESCE(SUM(ft.value_paisa), 0),
+                        COALESCE(SUM(ft.deduction_paisa), 0)
+                 FROM fruit_takes ft WHERE {}",
+                c.sql()
+            ),
+            params_from_iter(c.args().iter()),
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )?;
 
     let sql = format!(
         "SELECT ft.id, ft.number, ft.entry_date, p.name_ur, p.name_en, ft.source,
                 ft.credit_account_id, ft.chukta_person_key, l.chukta_name_ur, l.chukta_name_en,
                 i.name_ur, i.name_en, pk.name_ur, pk.name_en, ft.weight_grams, ft.qty, ft.rate_paisa,
-                ft.value_paisa
+                ft.value_paisa, ft.deduction_paisa
          FROM fruit_takes ft
          JOIN items i ON i.id = ft.item_id
          JOIN packings pk ON pk.id = ft.packing_id
@@ -222,6 +243,7 @@ pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entri
                 qty: r.get(15)?,
                 rate: r.get(16)?,
                 value: r.get(17)?,
+                deduction: r.get(18)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -265,6 +287,7 @@ pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entri
                 Cell::Money {
                     paisa: paisa(raw.rate)?,
                 },
+                deduction_cell(paisa(raw.deduction)?),
                 Cell::Money {
                     paisa: paisa(raw.value)?,
                 },
@@ -284,6 +307,7 @@ pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entri
         total_count,
         qty: qty_total,
         value: paisa(value_total)?,
+        deduction: paisa(deduction_total)?,
     })
 }
 

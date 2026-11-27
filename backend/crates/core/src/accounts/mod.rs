@@ -12,6 +12,7 @@
 
 mod assist;
 mod prepare;
+mod to_cash;
 mod types;
 
 pub use assist::*;
@@ -19,4 +20,5 @@ pub use prepare::{
     OpeningDay, OpeningRequest, PreparedAccount, account_code_for, opening_request,
     opening_request_in_force, opening_request_on, prepare_account,
 };
+pub use to_cash::*;
 pub use types::*;

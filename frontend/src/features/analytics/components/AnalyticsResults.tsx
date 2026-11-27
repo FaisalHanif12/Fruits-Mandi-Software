@@ -59,6 +59,12 @@ interface AnalyticsResultsProps {
   onDrill: (row: AnalyticsKey, column: AnalyticsKey | null, about: string) => void;
   focusRowId: string | null;
   onFocusRow: (rowId: string) => void;
+  /**
+   * Where the choice to show or fold the chart is kept, and whether it starts shown. A screen with two tables under
+   * each other (the kharch page) folds its charts at first, so the second table is on screen without scrolling
+   * (plan 98); a view has its own flag, shown from the normal step up.
+   */
+  chart?: { key: string; shown: boolean };
 }
 
 export function AnalyticsResults({
@@ -74,13 +80,14 @@ export function AnalyticsResults({
   onDrill,
   focusRowId,
   onFocusRow,
+  chart,
 }: AnalyticsResultsProps) {
   const step = useLayoutStep();
   // The chart is always shown from 1366 wide (PRD FR-18.3, plan 76): at the compact step (1024 x 600) it
   // starts folded, one click away, because it would push the table out of view. The choice is kept.
   const [chartOpen, setChartOpen] = useRememberedFlag(
-    'analytics.chart_shown',
-    isFromStep(step, 'normal'),
+    chart?.key ?? 'analytics.chart_shown',
+    chart?.shown ?? isFromStep(step, 'normal'),
   );
   const context = useListContext();
   const paging = useListPaging(query.pager);

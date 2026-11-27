@@ -42,8 +42,6 @@ import type { SellerMemoryInput } from '../../bindings/SellerMemoryInput';
 import { callCommand } from '../../shared/api';
 import type { BikriList } from '../../bindings/BikriList';
 import type { BikriListInput } from '../../bindings/BikriListInput';
-import type { SellerPaidSpread } from '../../bindings/SellerPaidSpread';
-import type { SellerPaidSpreadInput } from '../../bindings/SellerPaidSpreadInput';
 import type { BikriDraft, BikriPreview, SellerMemory } from './types';
 
 /**
@@ -71,15 +69,6 @@ export function assistSellerMemory(sellerAccountId: number): Promise<SellerMemor
 export function bikriSave(draft: BikriDraft, confirmCashBelowZero: boolean): Promise<BikriSaved> {
   const input: BikriSaveInput = { draft, confirm_cash_below_zero: confirmCashBelowZero };
   return callCommand<BikriSaved>('bikri_save', { input });
-}
-
-/**
- * Works out the نقد of each lot of the sellers named from the amounts typed in their summaries (plan 91, PRD FR-12.23
- * v1.53): the amount is spread over a seller's lots in lot order, each up to its credit, the rest on his last lot. The
- * screen writes each lot's نقد into its field; nothing is saved (Code Standards B5).
- */
-export function bikriSellerPaidSpread(input: SellerPaidSpreadInput): Promise<SellerPaidSpread> {
-  return callCommand<SellerPaidSpread>('bikri_seller_paid_spread', { input });
 }
 
 /** A saved بکری with the values stored when it was saved, never worked out again. */

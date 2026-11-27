@@ -45,7 +45,7 @@ fruit-lot-failed = The lots could not be loaded
 # review: pending
 fruit-field-agent = { -arhti }
 # review: pending
-fruit-agent-hint = The seller account of the other commission agent. Add it with F4 if it is not there yet.
+fruit-agent-hint = Only { -arhti-dukan } accounts. If it is not there yet, press F4 to add a new { -arhti-dukan }.
 # review: pending
 fruit-item-from-lot = Taken from the lot
 # review: pending
@@ -57,6 +57,11 @@ fruit-qty-left = The lot has { $remaining } left
 fruit-field-weight = Weight (kg)
 # review: pending
 fruit-field-rate = Rate
+# The other shop's commission, freight and other charges in one amount (PRD FR-16.11 v1.59). Only for fruit from another shop.
+# review: pending
+fruit-field-deduction = Total deduction
+# review: pending
+fruit-deduction-hint = The other shop's { -commission }, freight and other charges, all in one amount. It is subtracted from the value. Leave it empty if there is none.
 # review: pending
 fruit-rate-hint-note = The grey text is only a hint. Type the rate.
 # review: pending
@@ -73,6 +78,11 @@ fruit-numbers-incomplete = The figures show when the form is complete.
 fruit-numbers-failed = The figures could not be worked out
 # review: pending
 fruit-numbers-value = Value
+# The deduction and the net of fruit from another shop with a total deduction: the net is what the other shop is credited and the partners are charged.
+# review: pending
+fruit-numbers-deduction = Total deduction
+# review: pending
+fruit-numbers-net = Value less deduction
 # review: pending
 fruit-numbers-credit = Credited to
 # review: pending
@@ -174,6 +184,11 @@ fruit-from-lot = { -lot } { $lot }
 fruit-col-rate = Rate
 # review: pending
 fruit-col-value = Value
+# review: pending
+fruit-col-gross = Gross value
+# The column of R37 and of the list: what the other shop kept (empty when there is none).
+# review: pending
+fruit-col-deduction = Total deduction
 # review: pending
 fruit-col-source = From where
 # review: pending

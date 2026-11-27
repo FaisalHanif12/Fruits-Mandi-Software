@@ -26,6 +26,12 @@
   border-inline: var(--print-rule) solid var(--color-border);
 }
 
+/* A heading row ("the other buyers who did not buy today") stays with the row under it: it is never the last line of a page
+   (plan 97 item 6). A row itself is never split (`.print-table tr`, shared/print). */
+.print-report .print-table tr[data-row='group'] {
+  break-after: avoid;
+}
+
 /* The totals row is drawn once, under the last row, not repeated at the foot of every page. */
 .print-report .print-table tfoot {
   display: table-row-group;

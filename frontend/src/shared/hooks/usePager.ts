@@ -1,6 +1,7 @@
 // The state of the page buttons under a list (PRD FR-19.11, plan 38 R1): which page is on screen,
 // how many rows a page has, and the numbers the pager shows ("Page 2 of 14", "26 to 50 of 340").
-// The rows per page (25, 50 or 100) is remembered for each screen (PRD FR-7.45). A new filter goes
+// The rows per page (25, 30, 50 or 100) is remembered for each screen (PRD FR-7.45); a list of records (the trips and the
+// gardens, plan 95 item 18b) starts at 30, every other list at 25. A new filter goes
 // back to page 1. When the Owner comes back to a list from a record he opened, the list is on the
 // same page again. The counts are row counts, never money, so working them out here is allowed.
 
@@ -8,11 +9,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useScreenMemory } from '../screen-state/hooks';
 import { choiceOr, isRecord } from '../screen-state/remember';
 
-/** The choices of "rows per page" (plan 38 R1). */
-export const PAGE_SIZES = [25, 50, 100] as const;
+/** The choices of "rows per page" (plan 38 R1; 30 from plan 95 item 18b). */
+export const PAGE_SIZES = [25, 30, 50, 100] as const;
 export type PageSize = (typeof PAGE_SIZES)[number];
 /** What a list shows until the Owner chooses another number for that screen. */
 export const DEFAULT_PAGE_SIZE: PageSize = 25;
+/** What a list of records (not of days) shows until the Owner chooses: the trips and the gardens (PRD FR-19.11 v1.57). */
+export const RECORDS_PAGE_SIZE: PageSize = 30;
 
 /** The page of a screen is kept under this name, so every screen has its own (FR-7.45). */
 const MEMORY_PREFIX = 'pager.';
@@ -60,11 +63,11 @@ export function resetPagerMemory(): void {
   pageMemory.clear();
 }
 
-function sizeFrom(saved: unknown): PageSize {
+function sizeFrom(saved: unknown, fallback: PageSize): PageSize {
   const text = isRecord(saved) ? saved['size'] : undefined;
   const wanted = typeof text === 'number' ? String(text) : text;
   const sizes = PAGE_SIZES.map(String);
-  return Number(choiceOr(wanted, sizes, String(DEFAULT_PAGE_SIZE))) as PageSize;
+  return Number(choiceOr(wanted, sizes, String(fallback))) as PageSize;
 }
 
 export interface PagerControl {
@@ -79,11 +82,15 @@ export interface PagerControl {
 /**
  * The page and the rows per page of one list. `screen` names the list (`cashbook.takes`: lower-case
  * letters, digits and `_ - .`). `filterKey` is the text of everything the list is filtered by; when
- * it changes, the list goes back to page 1.
+ * it changes, the list goes back to page 1. `defaultSize` is what the list shows until the Owner chooses.
  */
-export function usePagerControl(screen: string, filterKey: string): PagerControl {
+export function usePagerControl(
+  screen: string,
+  filterKey: string,
+  defaultSize: PageSize = DEFAULT_PAGE_SIZE,
+): PagerControl {
   const memory = useScreenMemory(MEMORY_PREFIX + screen);
-  const savedSize = useMemo(() => sizeFrom(memory.saved), [memory.saved]);
+  const savedSize = useMemo(() => sizeFrom(memory.saved, defaultSize), [memory.saved, defaultSize]);
   const [chosen, setChosen] = useState<PageSize | null>(null);
   const pageSize = chosen ?? savedSize;
 

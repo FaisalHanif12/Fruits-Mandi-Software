@@ -153,8 +153,9 @@ pub fn sales_money_by_month(
 }
 
 /// What the lines on the accounts of some gardens came from: for each garden account and kind of
-/// record (`bikri`, `venture`, `fruit`), `(account id, source type, Σ credits, Σ debits)`, the
-/// closing and its undo left out. One query for all the accounts, so money in splits into where it
+/// record (`bikri`, `venture`, `fruit`, and `refund` for a relief refund of the owner, PRD
+/// FR-12.51, which posts as a garden entry but is no sale), `(account id, source type, Σ credits,
+/// Σ debits)`, the closing and its undo left out. One query for all the accounts, so money in splits into where it
 /// came from (our shop, other shops, fruit taken) and the split can be checked against money in.
 ///
 /// # Errors
@@ -167,10 +168,14 @@ pub fn money_in_by_source(
     for chunk in account_ids.chunks(500) {
         let marks = vec!["?"; chunk.len()].join(", ");
         let mut statement = conn.prepare(&format!(
-            "SELECT l.account_id, e.source_type, COALESCE(SUM(l.cr_paisa), 0), COALESCE(SUM(l.dr_paisa), 0)
+            "SELECT l.account_id,
+                    CASE WHEN e.source_type = 'venture' AND EXISTS (SELECT 1 FROM venture_entries r
+                              WHERE r.id = e.source_id AND r.kind = 'refund')
+                         THEN 'refund' ELSE e.source_type END AS kind,
+                    COALESCE(SUM(l.cr_paisa), 0), COALESCE(SUM(l.dr_paisa), 0)
              FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
              WHERE l.account_id IN ({marks}) AND e.status = 'posted' AND {NOT_A_CLOSING}
-             GROUP BY l.account_id, e.source_type ORDER BY l.account_id, e.source_type"
+             GROUP BY l.account_id, kind ORDER BY l.account_id, kind"
         ))?;
         let rows = statement.query_map(rusqlite::params_from_iter(chunk), |r| {
             Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))

@@ -140,19 +140,27 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
 });
 
 describe.each(LANGUAGES)('ModuleTabs (%s)', (language) => {
-  it('lists the seven items of PRD FR-5.3 in order and marks the current one', () => {
-    renderIn(language, <ModuleTabs current="receipt" onSelect={vi.fn()} />);
+  it('lists the four items of PRD FR-5.3 (v1.57) in order and marks the current one', () => {
+    renderIn(language, <ModuleTabs current="party-ledgers" onSelect={vi.fn()} />);
     const nav = screen.getByRole('navigation', { name: named(language, 'layout-module-label') });
     const items = within(nav).getAllByRole('button');
     expect(items.map((item) => visible(item.textContent))).toEqual(
       BIKRI_MENU.map((entry) => message(language, entry.labelId)),
     );
+    expect(items.map((item) => visible(item.textContent))).toEqual([
+      message(language, 'layout-module-bikri-book'),
+      message(language, 'layout-module-party-ledgers'),
+      message(language, 'layout-module-today'),
+      message(language, 'layout-module-stock'),
+    ]);
     expect(items[1]).toHaveAttribute('aria-current', 'page');
   });
 
-  it('the receipt tab says وصولی only, never "وصولی / اگراہی" (v1.56)', () => {
-    expect(message(language, 'layout-module-receipt')).toBe(message(language, 'glossary-wasooli'));
-    expect(message(language, 'layout-module-receipt')).not.toContain('/');
+  it('the receipt tab of روکڑ says وصولی only, never "وصولی / اگراہی" (v1.56, v1.57)', () => {
+    expect(message(language, 'layout-rokar-receipt')).toBe(message(language, 'glossary-wasooli'));
+    expect(message(language, 'layout-rokar-receipt')).not.toContain('/');
+    expect(message(language, 'layout-rokar-payment')).toBe(message(language, 'glossary-adaigi'));
+    expect(message(language, 'layout-rokar-advance')).toBe(message(language, 'glossary-peshgi'));
   });
 });
 
@@ -461,7 +469,7 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
   it('only the open tab is a Tab stop; the arrows reach the rest', () => {
     renderShell();
     const tabs = within(tabsNav()).getAllByRole('button');
-    expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1, -1, -1, -1]);
+    expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1]);
   });
 
   it('← and → move between the tabs in the reading direction, Enter opens one, and ↓ goes into the screen', async () => {
@@ -480,12 +488,12 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
     await user.keyboard(back);
     expect(at(tabs, 1)).toHaveFocus();
     await user.keyboard('{Enter}');
-    expect(onSelect).toHaveBeenCalledWith('receipt');
+    expect(onSelect).toHaveBeenCalledWith('party-ledgers');
     // The ends do not wrap.
     await user.keyboard('{End}');
-    expect(at(tabs, 6)).toHaveFocus();
+    expect(at(tabs, 3)).toHaveFocus();
     await user.keyboard(next);
-    expect(at(tabs, 6)).toHaveFocus();
+    expect(at(tabs, 3)).toHaveFocus();
     await user.keyboard('{Home}');
     expect(at(tabs, 0)).toHaveFocus();
     // ↓ goes into the screen: its first field, never a tab.

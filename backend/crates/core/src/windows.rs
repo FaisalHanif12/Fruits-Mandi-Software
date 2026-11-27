@@ -50,9 +50,10 @@ pub enum WindowSource {
     Capital,
     /// A partner's money taken and returned.
     PartnerTakes {
-        /// The partner.
-        #[ts(type = "number")]
-        partner_id: i64,
+        /// The partner, or null for the list of every partner (plan 98).
+        #[serde(default)]
+        #[ts(type = "number | null", optional)]
+        partner_id: Option<i64>,
     },
     /// A partner's statement.
     PartnerStatement {
@@ -68,6 +69,18 @@ pub enum WindowSource {
     },
     /// The commission page.
     Commission,
+    /// A garden's sale money list (PRD FR-12.53, plan 99).
+    GardenSales {
+        /// The garden (`ventures.id`).
+        #[ts(type = "number")]
+        garden_id: i64,
+    },
+    /// A partner's open gardens and trips (PRD FR-17.3, plan 99).
+    PartnerVentures {
+        /// The partner.
+        #[ts(type = "number")]
+        partner_id: i64,
+    },
 }
 
 /// Input of `windows_bounds`.

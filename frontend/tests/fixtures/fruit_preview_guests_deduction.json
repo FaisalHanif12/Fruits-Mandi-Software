@@ -1,0 +1,151 @@
+{
+  "numbers": {
+    "item": {
+      "id": 2,
+      "code": "0041",
+      "name_ur": "سیب",
+      "name_en": "Apple"
+    },
+    "packing": {
+      "id": 1,
+      "code": "0050",
+      "name_ur": "پیٹی",
+      "name_en": "Box"
+    },
+    "qty": 2,
+    "weight_grams": null,
+    "rate_paisa": 140000,
+    "value_paisa": 280000,
+    "value_working": {
+      "message_id": "working-fruit-value",
+      "args": [
+        {
+          "name": "qty",
+          "value": {
+            "kind": "count",
+            "value": 2
+          }
+        },
+        {
+          "name": "rate",
+          "value": {
+            "kind": "money",
+            "paisa": 140000
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 280000
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "deduction_paisa": 20000,
+    "net_paisa": 260000,
+    "net_working": {
+      "message_id": "working-fruit-net",
+      "args": [
+        {
+          "name": "value",
+          "value": {
+            "kind": "money",
+            "paisa": 280000
+          }
+        },
+        {
+          "name": "deduction",
+          "value": {
+            "kind": "money",
+            "paisa": 20000
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 260000
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "parts": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "amount_paisa": 86800,
+        "total_before_paisa": -860000,
+        "total_after_paisa": -946800
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "amount_paisa": 86600,
+        "total_before_paisa": -450000,
+        "total_after_paisa": -536600
+      },
+      {
+        "partner": {
+          "id": 3,
+          "code": "",
+          "name_ur": "ج",
+          "name_en": "Partner C"
+        },
+        "amount_paisa": 86600,
+        "total_before_paisa": -450000,
+        "total_after_paisa": -536600
+      }
+    ],
+    "parts_working": {
+      "message_id": "working-fruit-guests",
+      "args": [
+        {
+          "name": "value",
+          "value": {
+            "kind": "money",
+            "paisa": 260000
+          }
+        },
+        {
+          "name": "count",
+          "value": {
+            "kind": "count",
+            "value": 3
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 86800
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "credit": {
+      "account": {
+        "id": 35,
+        "code": "0012",
+        "name_ur": "حاجی نذیر",
+        "name_en": "Haji Nazeer"
+      }
+    },
+    "lot": null
+  },
+  "errors": [],
+  "warnings": [],
+  "rate_hint": null,
+  "partners_locked": false
+}

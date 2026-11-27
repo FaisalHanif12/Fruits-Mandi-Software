@@ -101,7 +101,7 @@ pub(crate) struct Garden {
     pub(crate) money: Money,
     /// Sales in our shop: the net of the lines of بکری on its account.
     pub(crate) our_shop: Paisa,
-    /// Money in that is neither: fruit taken from its lots.
+    /// Money in that is neither: fruit taken from its lots and relief refunds of its owner.
     pub(crate) other_in: Paisa,
     pub(crate) commission: Commission,
     pub(crate) partners: Vec<PartnerFigure>,
@@ -245,7 +245,8 @@ fn split_money_in(
         match source.as_str() {
             "bikri" => add(&mut our_shop, net)?,
             "venture" => add(&mut other_shops, net)?,
-            "fruit" => add(&mut other_in, net)?,
+            // Fruit taken and the owner's relief refund are money in that is no sale.
+            "fruit" | "refund" => add(&mut other_in, net)?,
             _ => {
                 return Err(data(&format!(
                     "the account of garden {} has a line from an unknown source",

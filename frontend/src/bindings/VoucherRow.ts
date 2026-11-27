@@ -4,6 +4,7 @@ import type { AccountType } from './AccountType';
 import type { EditStamp } from './EditStamp';
 import type { LockedReason } from './LockedReason';
 import type { RecordRef } from './RecordRef';
+import type { VoucherEnteredAs } from './VoucherEnteredAs';
 import type { VoucherMode } from './VoucherMode';
 import type { VoucherType } from './VoucherType';
 
@@ -19,6 +20,12 @@ export type VoucherRow = {
    * The kind.
    */
   voucher_type: VoucherType;
+  /**
+   * `advance` for a payment to a buyer that was typed as a پیشگی (PRD FR-15.11 v1.60): the
+   * screens and the پیشگی list name it پیشگی; its number is still in the ادائیگی series and its
+   * posting is the payment's. Null for every other voucher.
+   */
+  entered_as: VoucherEnteredAs | null;
   /**
    * The number in its series.
    */

@@ -333,16 +333,12 @@ describe('the screen builds the request the backend’s own test sent', () => {
     // The preview takes the same entry, with the type, and no voucher it replaces.
     expect(entryOf(built)).toEqual(real.REQUEST_PREVIEW_ADVANCE_BUYER.entry);
     expect(real.REQUEST_PREVIEW_ADVANCE_BUYER.replacing_voucher_id).toBeNull();
-    // Without a reason the backend refuses at the field `reason`, which the form shows there.
+    // With no reason the entry goes with an empty one: it is optional (v1.60, PRD FR-15.11).
     const bare = build(
       draft('advance', { account: buyer, accountType: 'buyer', amount: '3,000' }),
       false,
     );
-    expect(bare?.input).toEqual({ ...real.REQUEST_SAVE_ADVANCE_BUYER_NEEDS_REASON, reason: '' });
-    expect(real.REFUSED_ADVANCE_BUYER_NEEDS_REASON.errors).toEqual([
-      { code: 'ERR_PAYMENT_TO_BUYER_NEEDS_REASON', field: 'reason', values: {} },
-    ]);
-    expect(real.REQUEST_SAVE_ADVANCE_BUYER_NEEDS_REASON).not.toHaveProperty('reason');
+    expect(bare?.input).toEqual({ ...real.REQUEST_SAVE_ADVANCE_BUYER, reason: '' });
   });
 
   it('the picker of the پیشگی field asks the real scope and gets sellers and buyers with their type (plan 88)', () => {

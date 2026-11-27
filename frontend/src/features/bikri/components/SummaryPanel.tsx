@@ -13,7 +13,7 @@ import { TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Working } from '../../../bindings/Working';
 import { formatPaisa, useGrouping } from '../../../shared/format';
-import { CalcInfo, Field, Num, Select, type SelectOption } from '../../../shared/ui';
+import { CalcInfo, Field, Num, Select, TimedNote, type SelectOption } from '../../../shared/ui';
 import { useLocalization } from '@fluent/react';
 import type { SummaryTotals } from '../types';
 import type { Paisa } from '../../../shared/format';
@@ -21,7 +21,8 @@ import type { Paisa } from '../../../shared/format';
 interface Line {
   labelId: string;
   paisa: Paisa;
-  working: Working;
+  /** The backend's working behind the ⓘ. The advance has none: it is a figure of its own, typed on the lots. */
+  working?: Working;
   /** Shown in red: a net below zero. */
   emphasis?: 'total' | 'negative';
 }
@@ -47,7 +48,12 @@ interface SummaryPanelProps {
   advance?: ReactNode;
 }
 
-function sellerLines(totals: SummaryTotals): Line[] {
+/**
+ * @param hasAdvance a پیشگی is typed on the lots shown (PRD FR-12.52): its line stands after the net, because it is not
+ *   part of the deductions or the net (C6, C7), it is an advance of its own. The test is on the text the figure is written
+ *   as, so nothing is compared as a number.
+ */
+function sellerLines(totals: SummaryTotals, hasAdvance: boolean): Line[] {
   const { workings } = totals;
   return [
     { labelId: 'glossary-kham-bikri', paisa: totals.gross, working: workings.gross },
@@ -55,7 +61,7 @@ function sellerLines(totals: SummaryTotals): Line[] {
     { labelId: 'glossary-commission', paisa: totals.seller_comm, working: workings.seller_comm },
     { labelId: 'glossary-mazdoori', paisa: totals.labour, working: workings.labour },
     { labelId: 'glossary-munshiana', paisa: totals.munshiana, working: workings.munshiana },
-    { labelId: 'glossary-naqd', paisa: totals.cash_paid, working: workings.cash_paid },
+    { labelId: 'glossary-naqd-adaigi', paisa: totals.cash_paid, working: workings.cash_paid },
     { labelId: 'glossary-kiraya-store', paisa: totals.store_rent, working: workings.store_rent },
     { labelId: 'glossary-phone', paisa: totals.phone, working: workings.phone },
     {
@@ -70,6 +76,7 @@ function sellerLines(totals: SummaryTotals): Line[] {
       working: workings.net,
       emphasis: 'total',
     },
+    ...(hasAdvance ? [{ labelId: 'glossary-peshgi', paisa: totals.advance }] : []),
   ];
 }
 
@@ -108,7 +115,7 @@ function Rows({ lines, negativeNet }: { lines: readonly Line[]; negativeNet: boo
             </Localized>
             <dd className="value-col">
               <Num paisa={line.paisa} />
-              <CalcInfo working={line.working} inCell />
+              {line.working === undefined ? null : <CalcInfo working={line.working} inCell />}
             </dd>
           </div>
         );
@@ -132,6 +139,7 @@ export function SummaryPanel({
   // The rate difference shows only when it is not 0 (PRD 12.5). The test is on the text the
   // backend's number is written as, so nothing is compared as a number here.
   const hasRateDiff = totals !== null && formatPaisa(totals.rate_diff, { grouping }) !== '0';
+  const hasAdvance = totals !== null && formatPaisa(totals.advance, { grouping }) !== '0';
   const choices: readonly SelectOption<string>[] | null =
     lots === undefined || onChoose === undefined
       ? null
@@ -184,14 +192,17 @@ export function SummaryPanel({
               <Localized id="bikri-summary-seller-side">
                 <h3 className="type-label text-ink-muted" />
               </Localized>
-              <Rows lines={sellerLines(totals)} negativeNet={netIsNegative} />
+              <Rows lines={sellerLines(totals, hasAdvance)} negativeNet={netIsNegative} />
               {netIsNegative ? (
-                <p className="flex items-center gap-2 type-body text-due">
-                  <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-                  <Localized id="bikri-summary-net-negative">
-                    <span />
-                  </Localized>
-                </p>
+                // The words hide after 5 seconds and come back on a repeated action; the figure itself stays red (plan 97 item 4).
+                <TimedNote>
+                  <p className="flex items-center gap-2 type-body text-due">
+                    <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+                    <Localized id="bikri-summary-net-negative">
+                      <span />
+                    </Localized>
+                  </p>
+                </TimedNote>
               ) : null}
             </div>
             <div className="flex flex-col gap-1">
@@ -204,9 +215,11 @@ export function SummaryPanel({
         </div>
       )}
       {totals !== null && leftOut > 0 ? (
-        <Localized id="bikri-left-out" vars={{ count: leftOut }}>
-          <p role="status" className="flex items-center gap-2 type-body text-warn" />
-        </Localized>
+        <TimedNote>
+          <Localized id="bikri-left-out" vars={{ count: leftOut }}>
+            <p role="status" className="flex items-center gap-2 type-body text-warn" />
+          </Localized>
+        </TimedNote>
       ) : null}
     </section>
   );

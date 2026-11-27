@@ -6,7 +6,21 @@
 
 import { Localized } from '@fluent/react';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
+import { useNoticePulse, useTimedNotices } from '../../../shared/hooks';
 import type { LotNote, MissingNote, QtyNote } from '../grid-views';
+import { NOTICE_MS } from '../notices';
+
+/**
+ * The notes of `notes` that are on screen now. Each note shows for 5 seconds when it appears and again, for another 5,
+ * each time the user repeats the action (a change typed in the lots or lines, an Enter, a try to save: the screen's
+ * `NoticePulseContext`). The red mark on the cell stays until the problem is fixed (PRD FR-12.52, plan 97 item 4).
+ */
+function useShownNotes<T extends { rowId: string; words: string }>(notes: readonly T[]): T[] {
+  const pulse = useNoticePulse();
+  const keyOf = (note: T) => `${note.rowId}-${note.words}`;
+  const shown = useTimedNotices(notes.map(keyOf), pulse, NOTICE_MS);
+  return notes.filter((note) => shown.has(keyOf(note)));
+}
 
 interface QtyNotesProps {
   notes: readonly QtyNote[];
@@ -15,10 +29,11 @@ interface QtyNotesProps {
 }
 
 export function QtyNotes({ notes, whole }: QtyNotesProps) {
-  if (notes.length === 0) return null;
+  const listed = useShownNotes(notes);
+  if (listed.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1">
-      {notes.map((note) => (
+      {listed.map((note) => (
         <li
           key={`${note.rowId}-${note.words}`}
           role="alert"
@@ -57,10 +72,11 @@ interface MissingNotesProps {
  * line, and in the whole-sale view its lot too. A blank row has no note.
  */
 export function MissingNotes({ notes, whole }: MissingNotesProps) {
-  if (notes.length === 0) return null;
+  const listed = useShownNotes(notes);
+  if (listed.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1">
-      {notes.map((note) => (
+      {listed.map((note) => (
         <li
           key={`${note.rowId}-${note.words}`}
           role="alert"
@@ -98,10 +114,11 @@ interface LotNotesProps {
  * or quantity received, so the lot row says so at once, in red (PRD FR-12.6 v1.49, plan 85).
  */
 export function LotNotes({ notes }: LotNotesProps) {
-  if (notes.length === 0) return null;
+  const listed = useShownNotes(notes);
+  if (listed.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1">
-      {notes.map((note) => (
+      {listed.map((note) => (
         <li
           key={`${note.rowId}-${note.words}`}
           role="alert"

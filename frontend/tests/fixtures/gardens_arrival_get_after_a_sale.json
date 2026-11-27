@@ -97,5 +97,7 @@
       }
     ],
     "rule_id": null
-  }
+  },
+  "sale_value_paisa": 3600000,
+  "last_sale_date": "2026-10-12"
 }

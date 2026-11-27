@@ -8,11 +8,21 @@ import type { CashCheck } from '../../bindings/CashCheck';
 import { formatPaisa, useGrouping } from '../format';
 import { Notice } from './Notice';
 import { Num } from './Num';
+import { TimedNote } from './TimedNote';
 
-export function CashNote({ cash }: { cash: CashCheck }) {
+interface CashNoteProps {
+  cash: CashCheck;
+  /**
+   * The note hides after 5 seconds and shows again when the user repeats the action (the screen's `NoticePulseContext`, plan 97
+   * item 4, Umar 24-11-2026). The confirm box at save still asks (FR-6.7). Only the sale book says yes.
+   */
+  fade?: boolean;
+}
+
+export function CashNote({ cash, fade = false }: CashNoteProps) {
   const grouping = useGrouping();
   if (!cash.needs_confirm) return null;
-  return (
+  const note = (
     <Notice tone="warn">
       <Localized id="common-cash-confirm-title">
         <span className="type-label" />
@@ -26,4 +36,5 @@ export function CashNote({ cash }: { cash: CashCheck }) {
       </Localized>
     </Notice>
   );
+  return fade ? <TimedNote>{note}</TimedNote> : note;
 }

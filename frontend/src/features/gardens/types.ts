@@ -19,6 +19,7 @@ import type { ArrivalWriteOffInput } from '../../bindings/ArrivalWriteOffInput';
 import type { ArrivalWriteOffUndoInput } from '../../bindings/ArrivalWriteOffUndoInput';
 import type { ArrivalWriteOffUndone } from '../../bindings/ArrivalWriteOffUndone';
 import type { EntryPartInput } from '../../bindings/EntryPartInput';
+import type { SaleMoneyTotals } from '../../bindings/SaleMoneyTotals';
 import type { SellDateInput } from '../../bindings/SellDateInput';
 import type { SellDateSet } from '../../bindings/SellDateSet';
 import type { SplitInput } from '../../bindings/SplitInput';
@@ -98,6 +99,7 @@ export type {
   GardenRow,
   GardenSetPartnersInput,
   GardenSummaryRow,
+  SaleMoneyTotals,
   GardensList,
   GardensListInput,
   GardensSummary,

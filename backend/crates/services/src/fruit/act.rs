@@ -41,6 +41,7 @@ fn columns<'a>(ready: &'a Ready, date_iso: &'a str) -> NewFruit<'a> {
         weight_grams: ready.weight_grams,
         rate_paisa: ready.rate.as_paisa(),
         value_paisa: ready.value.as_paisa(),
+        deduction_paisa: ready.deduction.as_paisa(),
         note: ready.note.as_deref(),
     }
 }
@@ -123,6 +124,7 @@ fn audit_values(rec: &FruitRec) -> Value {
         "weight_grams": rec.weight_grams,
         "rate_paisa": rec.rate_paisa,
         "value_paisa": rec.value_paisa,
+        "deduction_paisa": rec.deduction_paisa,
         "status": rec.status,
     })
 }
@@ -312,7 +314,7 @@ pub(crate) fn edit_in(
         if !reason.is_empty() {
             event = event.reason(&reason);
         }
-        event = event.sign(crate::day::fix_sign(tx, &old.entry_date)?.as_deref());
+        event = event.sign_given(crate::day::fix_sign_given(tx, &old.entry_date)?);
         ctx.db.auditor().write(tx, &event.into_entry())?;
         Ok(FruitEdited {
             id: old.id,

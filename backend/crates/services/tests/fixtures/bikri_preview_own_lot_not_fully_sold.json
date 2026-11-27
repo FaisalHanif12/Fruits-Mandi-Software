@@ -258,6 +258,7 @@
         "cash_paid": 0,
         "store_rent": 0,
         "phone": 0,
+        "advance": 0,
         "deductions": 36000,
         "net": 564000,
         "seller_credit": 564000,
@@ -1071,6 +1072,7 @@
     "cash_paid": 0,
     "store_rent": 0,
     "phone": 0,
+    "advance": 0,
     "deductions": 36000,
     "net": 564000,
     "seller_credit": 564000,
@@ -1660,6 +1662,49 @@
             "value": {
               "kind": "money",
               "paisa": 24000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
+  "sellers": [],
+  "gardens": [],
+  "trips": [
+    {
+      "trip": {
+        "id": 1,
+        "number": 1,
+        "code": "0070",
+        "name_ur": "0070 10-10-2026",
+        "name_en": "0070 10-10-2026"
+      },
+      "gross_paisa": 600000,
+      "deductions_paisa": 36000,
+      "credit_paisa": 564000,
+      "working": {
+        "message_id": "working-trip-card-credit",
+        "args": [
+          {
+            "name": "gross",
+            "value": {
+              "kind": "money",
+              "paisa": 600000
+            }
+          },
+          {
+            "name": "deductions",
+            "value": {
+              "kind": "money",
+              "paisa": 36000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 564000
             }
           }
         ],

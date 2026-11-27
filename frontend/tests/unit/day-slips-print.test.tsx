@@ -199,6 +199,8 @@ describe.each(LANGS)('the seller slip of رحیم in %s', (_name, language, _buy
       [m('report-r35-phone'), '20'],
       [m('report-r35-net-sale'), `24,316 ${side.cr}`],
       [m('report-r35-paid-today-seller'), '9,316'],
+      // The rest of today's بکری that stays on his account, in the same lines as the seller bill (PRD FR-12.23, plan 91).
+      [m('report-r35-sale-rest'), '15,000'],
       [m('report-r35-today-left-seller'), `15,000 ${side.cr}`],
       [m('report-r35-previous'), `15,000 ${side.dr}`],
       [m('report-r35-new-balance'), '0'],

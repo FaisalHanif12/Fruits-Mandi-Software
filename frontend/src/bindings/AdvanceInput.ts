@@ -34,10 +34,9 @@ export type AdvanceInput = {
    */
   confirm_cash_below_zero: boolean;
   /**
-   * Why. Needed only when the account is a buyer: a پیشگی to a buyer is cash lent to him and is
-   * saved as a payment to him (PRD 15.4, FR-15.11, v1.51), which asks for a reason
-   * (`ERR_PAYMENT_TO_BUYER_NEEDS_REASON` at `reason`). Ignored for a seller. Missing or empty
-   * means none.
+   * Why, when the account is a buyer: a پیشگی to a buyer is cash lent to him and is saved as a
+   * payment to him (PRD 15.4, FR-15.11, v1.51) marked `entered_as` `advance`. Optional (v1.60).
+   * Ignored for a seller. Missing or empty means none.
    */
   reason?: string;
 };

@@ -70,6 +70,12 @@
      drawn (plan 38 G2, Code Standards F34). */
   --list-region-h: 264px;
 
+  /* The list of goods arrived of a busy garden (plan 96): about 90 entries, 30 to a page, so the list has a
+     height of its own and the rows scroll inside it, with the page growing no further. The panel beside it
+     (the details of the entry with focus) is 384 px wide: the list keeps 660 px of a 1366 px window. */
+  --arrivals-region-h: min(560px, 70vh);
+  --arrivals-panel-w: 384px;
+
   /* A row of a read-only list: tight enough for 25 rows to fit a window with the page buttons. */
   --list-row-h: 40px;
 
@@ -348,6 +354,8 @@
   --spacing-slip-card: 360px;
   --spacing-strip: var(--strip-clearance);
   --spacing-list-region: var(--list-region-h);
+  --spacing-arrivals-region: var(--arrivals-region-h);
+  --spacing-arrivals-panel: var(--arrivals-panel-w);
   --spacing-col-code: var(--col-code-w);
   --spacing-col-money: var(--col-money-w);
   --spacing-col-qty: var(--col-qty-w);

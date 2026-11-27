@@ -81,6 +81,11 @@ pub(super) fn row_of(conn: &Connection, rec: &FruitRec) -> Result<FruitRow, Serv
         weight_grams: rec.weight_grams,
         rate_paisa: paisa(rec.rate_paisa)?,
         value_paisa: paisa(rec.value_paisa)?,
+        deduction_paisa: paisa(rec.deduction_paisa)?,
+        // The value before the deduction (C1): the amount posted plus the deduction, checked.
+        gross_paisa: paisa(rec.value_paisa)?
+            .checked_add(paisa(rec.deduction_paisa)?)
+            .map_err(money_error)?,
         note: rec.note.clone(),
         status,
         cancel_reason: rec.cancel_reason.clone(),
@@ -184,7 +189,7 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
         hide_cancelled: !input.show_finished,
     };
     ctx.db.read(|conn| {
-        let (count, qty, value) = frepo::totals(conn, &filter)?;
+        let (count, qty, value, deduction) = frepo::totals(conn, &filter)?;
         let recs = frepo::list(
             conn,
             &filter,
@@ -212,6 +217,10 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
             totals: FruitTotals {
                 qty,
                 value_paisa: paisa(value)?,
+                deduction_paisa: paisa(deduction)?,
+                gross_paisa: paisa(value)?
+                    .checked_add(paisa(deduction)?)
+                    .map_err(money_error)?,
             },
             months,
             partners_locked: locked,

@@ -12,7 +12,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { X } from 'lucide-react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
-import { formatGrams, isoToDisplayDate } from '../../../shared/format';
+import { formatGrams, formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   Button,
@@ -80,9 +80,13 @@ function Saved({
 }) {
   const { l10n } = useLocalization();
   const language = useLanguage();
+  const grouping = useGrouping();
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   const cancelled = row.status === 'cancelled';
   const credited = row.credit_account;
+  // A کل کٹوتی (PRD FR-16.11 v1.59): the saved value is the net; the whole value and the deduction are told beside it. Whether
+  // there is one is read from the text the figure is written as, never by comparing an amount.
+  const hasDeduction = formatPaisa(row.deduction_paisa, { grouping }) !== '0';
   return (
     <Card
       compact
@@ -134,9 +138,23 @@ function Saved({
         <Fact label={<Localized id="fruit-field-rate" />}>
           <Num paisa={row.rate_paisa} />
         </Fact>
-        <Fact stat label={<Localized id="fruit-numbers-value" />}>
-          <Num inherit paisa={row.value_paisa} />
-        </Fact>
+        {hasDeduction ? (
+          <>
+            <Fact label={<Localized id="fruit-numbers-value" />}>
+              <Num paisa={row.gross_paisa} />
+            </Fact>
+            <Fact label={<Localized id="fruit-numbers-deduction" />}>
+              <Num paisa={row.deduction_paisa} />
+            </Fact>
+            <Fact stat label={<Localized id="fruit-numbers-net" />}>
+              <Num inherit paisa={row.value_paisa} />
+            </Fact>
+          </>
+        ) : (
+          <Fact stat label={<Localized id="fruit-numbers-value" />}>
+            <Num inherit paisa={row.value_paisa} />
+          </Fact>
+        )}
         <Fact label={<Localized id="fruit-numbers-credit" />}>
           {displayName(credited, language)}
         </Fact>

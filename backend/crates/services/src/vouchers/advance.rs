@@ -22,7 +22,8 @@ use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{
     AdvanceInput, AdvancePreviewRow, AdvanceRowResult, AdvancesInput, AdvancesPreview,
-    AdvancesSaved, PaymentInput, VoucherEntry, VoucherMode, VoucherSaved, VoucherType,
+    AdvancesSaved, PaymentInput, VoucherEnteredAs, VoucherEntry, VoucherMode, VoucherSaved,
+    VoucherType,
 };
 use mandi_domain::ledger::{BalancedEntry, LedgerLine, PostingType, Side, build_entry};
 
@@ -179,8 +180,15 @@ pub fn save_advance(
         // function of a payment to a buyer, in this transaction: same checks, same posting, same
         // voucher type and number series.
         if let Some(payment) = buyer_payment(tx, input)? {
-            return super::payment::save_payment_in(ctx, actor, tx, window, &payment)
-                .map_err(buyer_errors);
+            return super::payment::save_payment_in(
+                ctx,
+                actor,
+                tx,
+                window,
+                &payment,
+                Some(VoucherEnteredAs::Advance),
+            )
+            .map_err(buyer_errors);
         }
         let planned = plan_advance(tx, window, input, &mut HashMap::new())?;
         if !planned.errors.is_empty() {

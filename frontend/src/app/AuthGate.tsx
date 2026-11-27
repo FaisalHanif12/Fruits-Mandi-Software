@@ -151,20 +151,20 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         sectionTabs={
           main === 'bikri' ? (
             <ModuleTabs
-              current={moduleMenuOf(pathname, search)}
+              current={moduleMenuOf(pathname)}
               onSelect={(id) => {
-                const type = asScreenType(id);
-                if (type === null) goTo(MODULE_ROUTES[id]);
-                else goToVoucher(type);
+                goTo(MODULE_ROUTES[id]);
               }}
             />
           ) : main === 'rokar' ? (
             <RokarTabs
-              current={rokarMenuOf(pathname)}
+              current={rokarMenuOf(pathname, search)}
               onSelect={(id) => {
-                // The last item is the voucher screen of the بکری area (PRD FR-15.10).
-                if (id === 'voucher') goToVoucher('receipt');
-                else goTo(ROKAR_ROUTES[id]);
+                // وصولی, ادائیگی and پیشگی are the one voucher screen with the type of the tab
+                // (PRD FR-5.3 v1.57, FR-15.10).
+                const type = asScreenType(id);
+                if (type === null) goTo(ROKAR_ROUTES[id]);
+                else goToVoucher(type);
               }}
             />
           ) : null

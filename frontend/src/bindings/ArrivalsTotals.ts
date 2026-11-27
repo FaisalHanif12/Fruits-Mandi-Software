@@ -22,6 +22,26 @@ export type ArrivalsTotals = {
    */
   qty_left: number;
   /**
+   * Σ نگ sold in our shop.
+   */
+  qty_our_sold: number;
+  /**
+   * Σ نگ sold in other shops.
+   */
+  qty_other_sold: number;
+  /**
+   * Σ نگ left for our shop.
+   */
+  qty_our_left: number;
+  /**
+   * Σ نگ left for another shop.
+   */
+  qty_other_left: number;
+  /**
+   * Σ sale value (the rows' `sale_value_paisa`) over the whole filter.
+   */
+  sale_value_paisa: Paisa;
+  /**
    * Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
    */
   commission_paisa: Paisa;

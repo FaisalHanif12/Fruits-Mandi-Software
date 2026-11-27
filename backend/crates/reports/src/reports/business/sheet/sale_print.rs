@@ -5,9 +5,10 @@
 //!
 //! * **Sellers**: one row for each lot posted in the scope, as R6 shows a lot (date, بکری, seller, lot
 //!   name, quantity, خام بکری, the deductions, کل اخراجات, صافی بکری), with a totals row.
-//! * **Buyers**: one row for each buyer: what he bought in short, his bill, نقد (paid on the spot)
-//!   and ادھار (left on his account), with a totals row. A چکتا buyer is a row by his name; a buyer
-//!   with two بکری in the scope is one row.
+//! * **Buyers**: one row for each buyer: what he bought in short, the value of his goods, his
+//!   commission, his لاگا, his bill (= value + commission + لاگا, C5, PRD FR-19.15 v1.57), نقد (paid on
+//!   the spot) and ادھار (left on his account), with a totals row. A چکتا buyer is a row by his name; a
+//!   buyer with two بکری in the scope is one row.
 //!
 //! R6 lists a lot by the date of its بکری and gives its totals over all its postings, so a lot
 //! carried from an earlier بکری and sold today (PRD FR-12.48) would be missing from it while its
@@ -21,8 +22,9 @@
 //!
 //! Example (E2E-1 and E2E-2, 10-10-26, بکری 1): the sellers table has one row, رحیم کیلا-1, 50 نگ,
 //! gross 29,400, freight 3,000, commission 1,764, labour 250, munshiana 50, نقد 5,000, phone 20,
-//! deductions 10,084, net 19,316. The buyers table has اکرم 12,880 and ارشد 18,684, total 31,564,
-//! نقد 0 and ادھار 31,564.
+//! deductions 10,084, net 19,316. The buyers table has اکرم 12,000 + 720 + 160 = 12,880 and ارشد
+//! 17,400 + 1,044 + 240 = 18,684, total value 29,400, commission 1,764, لاگا 400, bill 31,564, نقد 0
+//! and ادھار 31,564.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -58,9 +60,14 @@ const BUYERS_TITLE: &str = "print-sale-buyers-title";
 const BUYERS_TOTAL: &str = "print-sale-buyers-total";
 const COL_BUYER: &str = "print-sale-col-buyer";
 const COL_BOUGHT: &str = "print-sale-col-bought";
+const COL_VALUE: &str = "print-sale-col-value";
+const COL_COMMISSION: &str = "print-sale-col-commission";
+const COL_LAGA: &str = "print-sale-col-laga";
 const COL_BILL: &str = "print-sale-col-bill";
 const COL_CASH: &str = "print-sale-col-cash";
 const COL_CREDIT: &str = "print-sale-col-credit";
+/// The heading of the پیشگی column of the sellers table (PRD FR-12.52 v1.57).
+const COL_ADVANCE: &str = "print-sale-col-advance";
 
 /// The whole sale print: the header and footer, the sellers table and the buyers table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -96,6 +103,8 @@ struct LotRaw {
     counter: i64,
     /// Freight (when the firm paid it), labour, munshiana, نقد, store rent, phone.
     charges: [i64; 6],
+    /// پیشگی typed on the lot (PRD FR-12.52 v1.57): its own entry, charged to no deduction.
+    advance: i64,
     first_entry: i64,
 }
 
@@ -120,14 +129,17 @@ struct LotRow {
     cash: Paisa,
     store_rent: Paisa,
     phone: Paisa,
+    /// پیشگی, in the lot's first posting only. Not in the deductions or the net.
+    advance: Paisa,
 }
 
 const LOT_COLUMNS: &str = "l.id, e.id, b.id, b.number, l.lot_no, e.entry_date, l.seller_account_id,
     l.chukta_person_key, l.chukta_name_ur, l.chukta_name_en, i.name_ur, i.name_en, l.lot_counter,
     CASE WHEN l.freight_paid_by = 'firm' THEN l.freight_paisa ELSE 0 END, l.labour_paisa,
-    l.munshiana_paisa, l.cash_paid_paisa, l.store_rent_paisa, l.phone_paisa, l.first_entry_id";
+    l.munshiana_paisa, l.cash_paid_paisa, l.store_rent_paisa, l.phone_paisa, l.first_entry_id,
+    l.advance_paisa";
 
-/// The first 20 columns of [`LOT_COLUMNS`]: the lot id, the posting (entry) id and the lot.
+/// The first 21 columns of [`LOT_COLUMNS`]: the lot id, the posting (entry) id and the lot.
 fn lot_of(r: &mandi_db::rusqlite::Row<'_>) -> mandi_db::rusqlite::Result<(i64, i64, LotRaw)> {
     Ok((
         r.get(0)?,
@@ -155,6 +167,7 @@ fn lot_of(r: &mandi_db::rusqlite::Row<'_>) -> mandi_db::rusqlite::Result<(i64, i
                 r.get(18)?,
             ],
             first_entry: r.get(19)?,
+            advance: r.get(20)?,
         },
     ))
 }
@@ -193,7 +206,7 @@ fn lot_rows(
                 lot,
                 entry,
                 raw,
-                [r.get::<_, i64>(20)?, r.get(21)?, r.get(22)?],
+                [r.get::<_, i64>(21)?, r.get(22)?, r.get(23)?],
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -223,6 +236,7 @@ fn lot_rows(
             cash: charge(cash)?,
             store_rent: charge(store_rent)?,
             phone: charge(phone)?,
+            advance: charge(raw.advance)?,
         };
         let _ = lot;
         rows.insert(key, row);
@@ -372,6 +386,10 @@ fn page_of(
     let mut rows = Vec::with_capacity(lots.len());
     let mut sums = [Paisa::ZERO; 10];
     let mut qty_total = 0_i64;
+    // The پیشگی column (PRD FR-12.52 v1.57) is there only when a lot of the scope has one. It is the
+    // last column and is in none of the deductions or the net.
+    let any_advance = lots.iter().any(|l| l.advance != Paisa::ZERO);
+    let mut advance_total = Paisa::ZERO;
     for lot in &lots {
         let base = parties
             .get(&(lot.seller, None))
@@ -432,6 +450,10 @@ fn page_of(
             Cell::Number { value: lot.qty },
         ];
         cells.extend(money.map(|paisa| Cell::Money { paisa }));
+        add(&mut advance_total, lot.advance)?;
+        if any_advance {
+            cells.push(Cell::Money { paisa: lot.advance });
+        }
         rows.push(Row {
             cells,
             source: Some(RowSource {
@@ -455,6 +477,13 @@ fn page_of(
         Cell::Number { value: qty_total },
     ];
     totals.extend(sums.map(|paisa| Cell::Money { paisa }));
+    let mut columns = crate::reports::sales::default_columns(ReportId::R6);
+    if any_advance {
+        totals.push(Cell::Money {
+            paisa: advance_total,
+        });
+        columns.push(column("advance", COL_ADVANCE, ColumnKind::Money));
+    }
     let buyers = buyers_table(conn, iso, only)?;
     Ok(ReportPage {
         group_above: None,
@@ -466,7 +495,7 @@ fn page_of(
             to: Some(iso.to_owned()),
             ..ResolvedFilters::default()
         },
-        columns: crate::reports::sales::default_columns(ReportId::R6),
+        columns,
         total_count: i64::try_from(rows.len()).unwrap_or(i64::MAX),
         rows,
         offset: 0,
@@ -499,15 +528,21 @@ fn buyers_table(
     let keys: Vec<(i64, Option<String>)> = by_party.keys().cloned().collect();
     let parties = parties_for(conn, &keys)?;
     let mut rows = Vec::with_capacity(keys.len());
+    let (mut value_total, mut commission_total, mut laga_total) =
+        (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
     let (mut bill_total, mut cash_total) = (Paisa::ZERO, Paisa::ZERO);
     for key in sort_by_party(keys, &parties, |k| k.clone()) {
         let party = parties
             .get(&key)
             .cloned()
             .ok_or_else(|| ReportsError::Data("a buyer has no account".to_owned()))?;
+        let (mut value, mut commission, mut laga) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
         let (mut bill, mut cash) = (Paisa::ZERO, Paisa::ZERO);
         let mut parts = Vec::new();
         for l in by_party.get(&key).map(Vec::as_slice).unwrap_or_default() {
+            add(&mut value, l.value)?;
+            add(&mut commission, l.commission)?;
+            add(&mut laga, l.laga)?;
             add(&mut bill, l.total)?;
             add(&mut cash, l.paid)?;
             parts.push(DetailPart::Sale {
@@ -522,12 +557,24 @@ fn buyers_table(
                 laga_paisa: l.laga,
             });
         }
+        // The three parts add up to the bill (C5): a stored buyer total is value + commission + لاگا.
+        if value.checked_add(commission)?.checked_add(laga)? != bill {
+            return Err(ReportsError::Data(
+                "a buyer's value, commission and لاگا do not add up to his bill".to_owned(),
+            ));
+        }
+        add(&mut value_total, value)?;
+        add(&mut commission_total, commission)?;
+        add(&mut laga_total, laga)?;
         add(&mut bill_total, bill)?;
         add(&mut cash_total, cash)?;
         rows.push(Row {
             cells: vec![
                 Cell::Party { party },
                 Cell::Detail { parts },
+                Cell::Money { paisa: value },
+                Cell::Money { paisa: commission },
+                Cell::Money { paisa: laga },
                 Cell::Money { paisa: bill },
                 Cell::Money { paisa: cash },
                 Cell::Money {
@@ -553,6 +600,9 @@ fn buyers_table(
         columns: vec![
             column("party", COL_BUYER, ColumnKind::Party),
             column("detail", COL_BOUGHT, ColumnKind::Detail),
+            column("value", COL_VALUE, ColumnKind::Money),
+            column("commission", COL_COMMISSION, ColumnKind::Money),
+            column("laga", COL_LAGA, ColumnKind::Money),
             column("bill", COL_BILL, ColumnKind::Money),
             column("cash", COL_CASH, ColumnKind::Money),
             column("credit", COL_CREDIT, ColumnKind::Money),
@@ -562,6 +612,11 @@ fn buyers_table(
         totals: vec![
             Cell::Empty,
             Cell::Empty,
+            Cell::Money { paisa: value_total },
+            Cell::Money {
+                paisa: commission_total,
+            },
+            Cell::Money { paisa: laga_total },
             Cell::Money { paisa: bill_total },
             Cell::Money { paisa: cash_total },
             Cell::Money {

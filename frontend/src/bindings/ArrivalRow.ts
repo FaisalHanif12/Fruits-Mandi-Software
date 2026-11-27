@@ -135,6 +135,15 @@ export type ArrivalRow = {
    */
   commission_working: Working;
   /**
+   * The value of the goods sold from this arrival (PRD FR-12.53 v1.60): the seller amounts of
+   * the garden lots that sold from it, plus the money of the sales in another shop that name it.
+   */
+  sale_value_paisa: Paisa;
+  /**
+   * The latest day it was sold (in our shop or another), `YYYY-MM-DD`; null if nothing was sold.
+   */
+  last_sale_date: string | null;
+  /**
    * The Edit button works (alone, or after a reopen).
    */
   can_edit: boolean;

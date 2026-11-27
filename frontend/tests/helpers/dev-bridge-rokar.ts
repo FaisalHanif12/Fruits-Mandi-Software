@@ -3,14 +3,10 @@
 // the account search, the party card). dev-bridge.ts asks this table first while the address is
 // /dev/rokar. Flags in the hash: `?screen=book|expense|lent|khata|general|capital|statement|overview|day`, `&type=personal_expense` ...,
 // `&empty` (nothing yet), `&cash` (cash 1,000, so a 3,000 entry asks the cash question),
-// `&repeat` (two regular expenses of last month). Never part of a build: only the development
-// route imports it.
+// `&repeat` (two regular expenses of last month), `&takes` (two partners took money and one gave some back, plan 98).
+// Never part of a build: only the development route imports it.
 
 import type { CashbookInput } from '../../src/bindings/CashbookInput';
-import type {
-  CapitalWhere,
-  PartnersPlaceOpeningCapitalInput,
-} from '../../src/features/cashbook/capital-types';
 import type { ExpenseEntry } from '../../src/bindings/ExpenseEntry';
 import type { KhataStatementInput } from '../../src/bindings/KhataStatementInput';
 import type { KhataInInput } from '../../src/bindings/KhataInInput';
@@ -22,6 +18,7 @@ import type { PersonalReturnInput } from '../../src/bindings/PersonalReturnInput
 import type { ShopExpenseInput } from '../../src/bindings/ShopExpenseInput';
 import type { LentListInput } from '../../src/bindings/LentListInput';
 import type { LentPersonCreateRequest } from '../../src/bindings/LentPersonCreateRequest';
+import type { Cashbook } from '../../src/bindings/Cashbook';
 import type { PartnerTakesInput } from '../../src/bindings/PartnerTakesInput';
 import type { VoucherEntry } from '../../src/bindings/VoucherEntry';
 import type { VouchersListInput } from '../../src/bindings/VouchersListInput';
@@ -47,12 +44,14 @@ import type { GeneralPreviewInput } from '../../src/bindings/GeneralPreviewInput
 import type { PartnersStatementDayInput } from '../../src/bindings/PartnersStatementDayInput';
 import type { PartnersStatementInput } from '../../src/bindings/PartnersStatementInput';
 import type { PartnersStatementMonthInput } from '../../src/bindings/PartnersStatementMonthInput';
+import { CASHBOOK_UMAR_REAL } from './cashbook-real';
+import type { CashRec } from './cashbook-books';
+import type { OpeningsToCashPreview } from '../../src/bindings/OpeningsToCashPreview';
+import { nothingToMove } from './cash-groups';
 import { devFlag } from './dev-bridge';
-import capitalPrintEn from '../fixtures/cashbook_capital_print_data_en.json';
-import capitalPrintUr from '../fixtures/cashbook_capital_print_data_ur.json';
-import { EMPTY_CARD, UMAR_AFTER, UMAR_BEFORE, WORKED_DAY } from './capital-card';
 import { plan76Handlers } from './dev-bridge-plan76';
 import { createFruitBooks, HAJI_NAZIR } from './fruit-data';
+import { account as accountRow } from './accounts';
 import { GENERAL_ACCOUNTS, createPartnerMoneyBooks } from './partner-money-books';
 import { dayAnswerOf, monthAnswerOf } from './partner-month';
 import { paisaForTest } from './paisa';
@@ -71,13 +70,133 @@ const flag = (name: string): boolean =>
 
 const money = (rupees: number) => paisaForTest(rupees * 100);
 
-/** The worked day's cash (PRD 4.9): in 10,000, out 4,316 + 3,000 + 2,000. */
-const DAY_ROWS = [
-  { type: 'receipt', number: 1, inRupees: 10000, outRupees: 0, running: 60000 },
-  { type: 'payment', number: 1, inRupees: 0, outRupees: 4316, running: 55684 },
-  { type: 'shop_expense', number: 1, inRupees: 0, outRupees: 3000, running: 52684 },
-  { type: 'personal_expense', number: 1, inRupees: 0, outRupees: 2000, running: 50684 },
-] as const;
+const who = (id: number, code: string, name_ur: string, name_en: string) => ({
+  id,
+  code,
+  name_ur,
+  name_en,
+});
+const named = (id: number, code: string, ur: string, en: string) => ({
+  parties: [who(id, code, ur, en)],
+  party_count: 1,
+});
+
+/**
+ * The worked day's cash as PRD FR-16.14 names its rows: بکری 1 نقد, بکری 2 paid on the spot, وصولی 1,
+ * ادائیگی 1, دکان خرچہ 1 and ذاتی خرچہ 1; with the day's opening 50,000 it closes at 58,484. `&named`
+ * adds a buyer's پیشگی, a garden cost and an old and a reversing line (the switch shows them).
+ */
+const DAY_ROWS: CashRec[] = [
+  {
+    date: '2026-10-10',
+    type: 'payment',
+    number: 1,
+    narration: '',
+    kind: 'bikri_seller_cash',
+    refs: named(10, '0010', 'رحیم', 'Rahim'),
+    inRupees: 0,
+    outRupees: 5000,
+    running: 45000,
+  },
+  {
+    date: '2026-10-10',
+    type: 'receipt',
+    number: 2,
+    narration: '',
+    kind: 'bikri_paid',
+    refs: named(30, '0030', 'شاہد', 'Shahid'),
+    inRupees: 12800,
+    outRupees: 0,
+    running: 57800,
+  },
+  {
+    date: '2026-10-10',
+    type: 'receipt',
+    number: 1,
+    narration: '',
+    refs: named(20, '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax'),
+    inRupees: 10000,
+    outRupees: 0,
+    running: 67800,
+  },
+  {
+    date: '2026-10-10',
+    type: 'payment',
+    number: 1,
+    narration: '',
+    refs: named(10, '0010', 'رحیم', 'Rahim'),
+    inRupees: 0,
+    outRupees: 4316,
+    running: 63484,
+  },
+  {
+    date: '2026-10-10',
+    type: 'shop_expense',
+    number: 1,
+    narration: '',
+    refs: { expense_head: who(501, '05010001', 'بجلی', 'Electricity') },
+    inRupees: 0,
+    outRupees: 3000,
+    running: 60484,
+  },
+  {
+    date: '2026-10-10',
+    type: 'personal_expense',
+    number: 1,
+    narration: 'گھر کا خرچ',
+    refs: { partner: who(1, '', 'الف', 'Partner A') },
+    inRupees: 0,
+    outRupees: 2000,
+    running: 58484,
+  },
+];
+
+const NAMED_ROWS: CashRec[] = [
+  {
+    date: '2026-10-10',
+    type: 'payment',
+    number: 2,
+    narration: '',
+    kind: 'buyer_advance',
+    refs: named(24, '0024', 'مانی', 'Mani'),
+    inRupees: 0,
+    outRupees: 5000,
+    running: 53484,
+  },
+  {
+    date: '2026-10-10',
+    type: 'payment',
+    number: 1,
+    narration: '',
+    kind: 'garden_cost',
+    refs: { garden: who(8, '0080', 'پومپ والا باغ', 'Pump Garden') },
+    inRupees: 0,
+    outRupees: 4000,
+    running: 49484,
+  },
+  {
+    date: '2026-10-10',
+    type: 'receipt',
+    number: 3,
+    narration: '',
+    refs: named(21, '0021', 'ارشد ملتانی', 'Arshad Multani'),
+    status: 'reversed',
+    inRupees: 700,
+    outRupees: 0,
+    running: 50184,
+  },
+  {
+    date: '2026-10-10',
+    type: 'receipt',
+    number: 3,
+    narration: '',
+    refs: named(21, '0021', 'ارشد ملتانی', 'Arshad Multani'),
+    status: 'reversal',
+    inRupees: 0,
+    outRupees: 700,
+    running: 49484,
+  },
+];
 
 function headAt(index: number): HeadRec {
   const found = HEADS[index];
@@ -86,10 +205,8 @@ function headAt(index: number): HeadRec {
 }
 
 const books = createCashbookBooks({
-  cash: flag('cash') ? 1000 : 50684,
-  cashRows: flag('empty')
-    ? []
-    : DAY_ROWS.map((row) => ({ date: '2026-10-10', narration: '', ...row })),
+  cash: flag('cash') ? 1000 : 58484,
+  cashRows: flag('empty') ? [] : [...DAY_ROWS, ...(flag('named') ? NAMED_ROWS : [])],
 });
 if (flag('repeat')) {
   books.store.repeat.push(
@@ -108,6 +225,30 @@ if (flag('repeat')) {
       last_date: '2026-09-30',
     },
   );
+}
+// `&takes`: two partners have taken money, so the list under the خرچہ form (plan 98) can be looked at with data.
+if (flag('takes')) {
+  const take = (partner_id: number, amount: string, reason: string) =>
+    books.saveExpense({
+      type: 'personal_expense',
+      date: '10-10-2026',
+      partner_id,
+      amount,
+      reason,
+      return_by: null,
+      taken_by: null,
+      narration: null,
+      confirm_cash_below_zero: true,
+    });
+  take(1, '2000', 'گھر کا خرچ');
+  take(2, '500', 'شادی');
+  books.saveExpense({
+    type: 'personal_return',
+    date: '10-10-2026',
+    partner_id: 1,
+    amount: '700',
+    narration: null,
+  });
 }
 
 const moneyBooks = createPartnerMoneyBooks(books);
@@ -156,17 +297,29 @@ const DAY_SUMMARY: DayCloseSummary = {
   open_qty: 0,
 };
 
-const PEOPLE = [
-  { ...ASLAM, type: 'money_lent' as const, control: 103 },
-  { ...FAMILY_KHATA, type: 'other' as const, control: 305 },
-  // The other commission agent of the پھل tab: a seller account (plan 17d, PRD FR-16.11).
-  { ...HAJI_NAZIR, type: 'seller' as const, control: 11 },
+interface Person {
+  id: number;
+  code: string;
+  name_ur: string;
+  name_en: string;
+  type: 'money_lent' | 'other' | 'seller';
+  control: number;
+  /** A seller account marked آڑھتی دکان: the only kind the آڑھتی box of the پھل tab lists (PRD FR-16.11 v1.59). */
+  agentShop?: boolean;
+}
+
+const PEOPLE: Person[] = [
+  { ...ASLAM, type: 'money_lent', control: 103 },
+  { ...FAMILY_KHATA, type: 'other', control: 305 },
+  // The other commission agent of the پھل tab: a seller account marked آڑھتی دکان (plan 17d, PRD FR-16.11).
+  { ...HAJI_NAZIR, type: 'seller', control: 11, agentShop: true },
 ];
+let nextShopId = 900;
 
 const asNumber = (value: unknown): number => (typeof value === 'number' ? value : 0);
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
 
-function hitOf(person: (typeof PEOPLE)[number]) {
+function hitOf(person: Person) {
   return {
     id: person.id,
     code: person.code,
@@ -199,6 +352,7 @@ if (!flag('empty')) {
     qty: '2',
     weight: null,
     rate: '580',
+    deduction: null,
     note: null,
     editing_id: null,
   });
@@ -214,21 +368,53 @@ if (!flag('empty')) {
     qty: '3',
     weight: null,
     rate: '1000',
+    deduction: null,
     note: null,
     editing_id: null,
   });
 }
 
-/**
- * The card of the روکڑ page (PRD FR-16.14, plan 87). By default the worked day after Events 1 to 5; `&umar` is Umar's
- * data before the fix (a warning with the button), and the fix (`partners_place_opening_capital`, the sign "adnan")
- * turns it into the card after it; `&umar-after` starts there; `&capital-empty` is a shop with nothing recorded.
- */
-let umarFixed = false;
-function capitalCard(): CapitalWhere {
-  if (devFlag('capital-empty')) return EMPTY_CARD;
-  if (devFlag('umar-after') || (devFlag('umar') && umarFixed)) return UMAR_AFTER;
-  return devFlag('umar') ? UMAR_BEFORE : WORKED_DAY;
+/** Plan 99 Section 4: openings بنام 125,000 out of cash, جمع 40,000 in; cash 1,057,840 to 972,840. */
+const OLD_OPENINGS: OpeningsToCashPreview = {
+  rows: [
+    ['مانی', 'Mani', 24, '0024', 'buyer', 30000, 0],
+    ['انس', 'Anas', 25, '0025', 'buyer', 15000, 0],
+    ['عبدالرحمان', 'Abdul Rehman', 27, '0027', 'buyer', 20000, 0],
+    ['عدنان', 'Adnan', 16, '0016', 'seller', 60000, 0],
+    ['فیصل', 'Faisal', 17, '0017', 'buyer', 0, 10000],
+    ['ہارون', 'Haroon', 26, '0026', 'buyer', 0, 10000],
+    ['احسان', 'Ehsan', 18, '0018', 'seller', 0, 20000],
+  ].map(([ur, en, id, code, kind, dr, cr]) => ({
+    account: who(Number(id), String(code), String(ur), String(en)),
+    kind: kind === 'seller' ? ('seller' as const) : ('buyer' as const),
+    date: '2026-10-29',
+    dr_paisa: money(Number(dr)),
+    cr_paisa: money(Number(cr)),
+    cash_change_paisa: money(Number(cr) - Number(dr)),
+    day_closed: true,
+  })),
+  total_dr_paisa: money(125000),
+  total_cr_paisa: money(40000),
+  cash_change_paisa: money(-85000),
+  cash_before_paisa: money(1057840),
+  cash_after_paisa: money(972840),
+  needs_cash_confirm: false,
+  opening_difference_before: { amount_paisa: money(85000), side: 'cr' },
+  opening_difference_after: { amount_paisa: money(0), side: 'zero' },
+  reopens_from: '2026-10-29',
+};
+
+/** `&many`: the book with its lines repeated up to 14, each with its own entry id (a long list, plan 96 T2). */
+const MANY_ROWS = 14;
+function paddedBook(book: Cashbook): Cashbook {
+  if (!devFlag('many') || book.rows.length === 0) return book;
+  const rows = Array.from({ length: MANY_ROWS }, (_, index) => {
+    const source = book.rows[index % book.rows.length];
+    return source === undefined
+      ? undefined
+      : { ...source, entry_id: source.entry_id + index * 1000 };
+  }).filter((row): row is NonNullable<typeof row> => row !== undefined);
+  return { ...book, rows, total_count: rows.length };
 }
 
 export const rokarHandlers: Record<string, Handler> = {
@@ -240,41 +426,24 @@ export const rokarHandlers: Record<string, Handler> = {
   fruit_get: (input) => fruitBooks.get(input as unknown as FruitGetInput),
   fruit_list: (input) => fruitBooks.list(input as unknown as FruitListInput),
   fruit_lots: (input) => fruitBooks.lots(input as unknown as FruitLotsInput),
-  cashbook_get: (input) => books.cashbook(input as unknown as CashbookInput),
-  // Where the partners' money is and whose it is (plan 78 E): the worked day after Events 1 to 5. `?locked` is the
-  // partner section locked, which asks for the code in the place of the card.
-  cashbook_capital_where: () => {
-    if (devFlag('locked')) {
-      throw Object.assign(new Error('ERR_PARTNER_LOCKED'), {
-        ok: false,
-        errors: [{ code: 'ERR_PARTNER_LOCKED', field: null, values: {} }],
-        ref: 'E-20261010-0001',
-      });
-    }
-    return capitalCard();
-  },
-  // The print of the card: the backend's own layout (its fixture, Umar-shaped data before the fix).
-  cashbook_capital_print_data: (input) =>
-    input['language'] === 'ur' ? capitalPrintUr : capitalPrintEn,
-  // The fix: only the Owner's sign puts the opening capital into روکڑ (plan 87).
-  partners_place_opening_capital: (input) => {
-    const wanted = input as unknown as PartnersPlaceOpeningCapitalInput;
-    if (wanted.sign.trim().toLowerCase() !== 'adnan') {
-      throw Object.assign(new Error('ERR_SIGN_WRONG'), {
-        ok: false,
-        errors: [{ code: 'ERR_SIGN_WRONG', field: 'sign', values: {} }],
-        ref: 'E-20261121-0001',
-      });
-    }
-    umarFixed = true;
-    return {
-      placed: [],
-      skipped: [],
-      cash_after_paisa: money(838_260),
-      reopened_from: '2026-10-29',
-      closed_up_to: '2026-11-19',
-    };
-  },
+  // `&many` pads the book to 14 lines, so a list of more than ten rows (the 'fill' height of a long list) can be photographed.
+  // `&umar-book` is the real answer of Umar's books (11 lines, plan 96 T2).
+  cashbook_get: (input) =>
+    devFlag('umar-book')
+      ? CASHBOOK_UMAR_REAL
+      : paddedBook(books.cashbook(input as unknown as CashbookInput)),
+  // The one-time fix of old openings (PRD FR-10.9): `&old-openings` has two to move, else nothing.
+  accounts_openings_to_cash_preview: () =>
+    devFlag('old-openings') ? OLD_OPENINGS : nothingToMove(),
+  accounts_openings_to_cash: () => ({
+    rows: OLD_OPENINGS.rows,
+    total_dr_paisa: OLD_OPENINGS.total_dr_paisa,
+    total_cr_paisa: OLD_OPENINGS.total_cr_paisa,
+    cash_after_paisa: OLD_OPENINGS.cash_after_paisa,
+    opening_difference_after: OLD_OPENINGS.opening_difference_after,
+    reopened_from: '2026-10-29',
+    closed_up_to: '2026-11-19',
+  }),
   masters_expense_heads: () => books.heads(),
   vouchers_preview_expense: (input) => books.expensePreview(input['entry'] as ExpenseEntry),
   vouchers_preview: (input) => {
@@ -399,6 +568,16 @@ export const rokarHandlers: Record<string, Handler> = {
         is_active: true,
       }));
     }
+    // The آڑھتی box of the پھل tab lists only the shops marked آڑھتی دکان (PRD FR-16.11 v1.59).
+    if (asText(input['scope']) === 'agent_shop') {
+      return PEOPLE.filter(
+        (person) =>
+          person.agentShop === true &&
+          [person.code, person.name_ur, person.name_en].some((part) =>
+            part.toLowerCase().includes(wanted),
+          ),
+      ).map(hitOf);
+    }
     if (asText(input['scope']) === 'seller') {
       return PEOPLE.filter(
         (person) =>
@@ -418,10 +597,30 @@ export const rokarHandlers: Record<string, Handler> = {
   },
   search_accounts_recent: (input) =>
     PEOPLE.filter((person) =>
-      asText(input['scope']) === 'seller'
-        ? person.type === 'seller'
-        : asNumber(input['control_id']) === person.control,
+      asText(input['scope']) === 'agent_shop'
+        ? person.agentShop === true
+        : asText(input['scope']) === 'seller'
+          ? person.type === 'seller'
+          : asNumber(input['control_id']) === person.control,
     ).map(hitOf),
+  // The short form of a new commission agent's shop (PRD FR-7.69, FR-16.11 v1.59).
+  fruit_agent_shop_add: (input) => {
+    nextShopId += 1;
+    const person: Person = {
+      id: nextShopId,
+      code: `001${String(nextShopId - 880)}`,
+      name_ur: asText(input['name_ur']),
+      name_en: asText(input['name_en']),
+      type: 'seller',
+      control: 11,
+      agentShop: true,
+    };
+    PEOPLE.push(person);
+    return {
+      ...accountRow(person.id, 'seller', person.code, person.name_ur, person.name_en),
+      is_agent_shop: true,
+    };
+  },
   search_accounts_touch: () => null,
   accounts_balances: () => [],
   assist_party_card: (input) => {

@@ -321,6 +321,14 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "lines": [] } }),
             true,
         ),
+        // Plan 99 (PRD FR-10.9 v1.60): the one-time fix of the party openings. Both need the Owner;
+        // the amounts and the days come from the books, never from the input.
+        ("accounts_openings_to_cash_preview", json!({}), true),
+        (
+            "accounts_openings_to_cash",
+            json!({ "input": { "reason": "x", "sign": "adnan", "confirm_cash_below_zero": false } }),
+            true,
+        ),
         ("coa_tree", json!({}), true),
         (
             "coa_control_accounts",
@@ -595,6 +603,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "gardens_sale_money",
+            json!({ "input": { "garden_id": 1, "from": null, "to": null, "arrival_id": null, "search": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
             "gardens_arrivals_list",
             json!({ "input": { "garden_id": null, "from": null, "to": null, "item_id": null,
                 "state": null, "offset": 0, "limit": 0 } }),
@@ -634,6 +647,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("fruit_get", json!({ "input": { "id": 1 } }), true),
         ("fruit_list", json!({ "input": {} }), true),
         ("fruit_lots", json!({ "input": {} }), true),
+        (
+            "fruit_agent_shop_add",
+            json!({ "input": { "name_ur": "حاجی ٹریڈرز", "name_en": "Haji Traders", "phone": "" } }),
+            true,
+        ),
         (
             "masters_dead_preview",
             json!({ "input": { "account_id": 1 } }),
@@ -770,13 +788,6 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "partners_check_shares",
             json!({ "input": { "shares": [{ "partner_id": 1, "share": "100" }] } }),
-            true,
-        ),
-        // Plan 87 (PRD FR-16.14 v1.50): moves the opening capital into روکڑ. Needs the Owner and the
-        // partner code; the amount and the date come from the books, never from the input.
-        (
-            "partners_place_opening_capital",
-            json!({ "input": { "partner_ids": [1], "reason": "x", "sign": "adnan" } }),
             true,
         ),
         ("partners_overview", json!({}), true),
@@ -1664,26 +1675,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "offset": 0, "limit": 100 } }),
             true,
         ),
-        // Plan 78 (append-only block): the commands of the print menu, the compact statement, the
-        // load buttons and the capital card. All need the Owner; the card and the partner month print
-        // also need the partner code.
+        // Plan 78 (append-only block): the commands of the print menu, the compact statement and the
+        // load buttons. All need the Owner; the partner month print also needs the partner code.
         ("bikri_goods_sources", json!({}), true),
         (
             "bikri_goods_to_load",
             json!({ "input": { "kind": "trip" } }),
-            true,
-        ),
-        ("cashbook_capital_where", json!({}), true),
-        // Plan 87 (PRD FR-16.14 v1.50): the print of the capital card. Both need the Owner and the
-        // partner code.
-        (
-            "cashbook_capital_print_data",
-            json!({ "input": { "language": "ur" } }),
-            true,
-        ),
-        (
-            "cashbook_capital_print",
-            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
             true,
         ),
         (
@@ -2233,6 +2230,23 @@ fn hostile(rng: &mut Rng) -> Value {
     options[rng.below(options.len())].clone()
 }
 
+/// Commands the mock app cannot run: the printing ones open a print window and wait for a real web
+/// view (the mock never answers, so the call hangs), and the update ones need the updater plugin,
+/// which the mock does not load (they panic and never reply). Their sign-in refusal is still
+/// checked by `ipc_auth.rs`; the print data commands stay in this test (follow-up for robustness,
+/// plan 99).
+fn needs_the_real_app(name: &str) -> bool {
+    name.ends_with("_print")
+        || name.starts_with("updates_")
+        || matches!(
+            name,
+            "reports_print_voucher"
+                | "reports_print_collection"
+                | "reports_print_report"
+                | "analytics_print_view"
+        )
+}
+
 #[test]
 fn hostile_input_to_every_command_never_ends_in_an_internal_error_or_breaks_the_books() {
     let h = Harness::new();
@@ -2248,6 +2262,7 @@ fn hostile_input_to_every_command_never_ends_in_an_internal_error_or_breaks_the_
         .into_iter()
         .filter(|(name, _, protected)| {
             *protected
+                && !needs_the_real_app(name)
                 && !matches!(
                     *name,
                     "auth_logout"
@@ -2758,62 +2773,11 @@ fn the_window_bounds_of_a_partner_list_are_refused_while_the_section_is_locked()
 }
 
 #[test]
-fn placing_the_opening_capital_needs_the_partner_code_and_writes_nothing_without_it() {
-    // Plan 87, S8: `partners_place_opening_capital` is a partner command. While the section is locked
-    // it is refused with ERR_PARTNER_LOCKED, with every hostile partner list, and the whole file stays
-    // as it was (no entry, no audit row, no reopened day).
-    let h = Harness::new();
-    partners_and_code(&h);
-    h.ok("partners_code_lock", json!({}));
-    let before = h.fingerprint();
-    for ids in [
-        json!([1]),
-        json!([1, 2, 3]),
-        json!([]),
-        json!([999_999]),
-        json!([-1, 0]),
-    ] {
-        assert_eq!(
-            h.code(
-                "partners_place_opening_capital",
-                json!({ "input": { "partner_ids": ids.clone(), "reason": "x", "sign": "adnan" } })
-            ),
-            "ERR_PARTNER_LOCKED",
-            "partners_place_opening_capital answered for {ids} while the partner section was locked"
-        );
-    }
-    // The capital card and its print are partner history too (plan 87, FR-16.14): refused while locked.
-    for (command, input) in [
-        ("cashbook_capital_where", json!({})),
-        (
-            "cashbook_capital_print_data",
-            json!({ "input": { "language": "ur" } }),
-        ),
-        (
-            "cashbook_capital_print",
-            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
-        ),
-    ] {
-        assert_eq!(
-            h.code(command, input),
-            "ERR_PARTNER_LOCKED",
-            "{command} answered while the partner section was locked"
-        );
-    }
-    assert_eq!(
-        h.fingerprint(),
-        before,
-        "a refused placing of the opening capital, or of its print, wrote something"
-    );
-}
-
-#[test]
-fn placing_the_opening_capital_writes_only_the_audit_row_of_a_wrong_sign_and_nothing_else_on_a_refusal()
- {
-    // Plan 87, FR-21.4, FR-16.14: a wrong sign is written to the audit log (`capital_place_sign_wrong`),
-    // exactly one row and no other table; every other refusal (no partner, no reason, an unknown partner)
-    // writes nothing at all. `robustness_gate_t4_ipc.rs` lists the command as one that may commit on an
-    // error only because of that one audit row.
+fn the_openings_fix_writes_only_the_audit_row_of_a_wrong_sign_and_nothing_else_on_a_refusal() {
+    // Plan 99, FR-21.4, FR-10.9: a wrong sign is written to the audit log
+    // (`openings_to_cash_sign_wrong`), exactly one row and no other table; every other refusal (no
+    // sign, no reason, nothing to move) writes nothing at all. `robustness_gate_t4_ipc.rs` lists the
+    // command as one that may commit on an error only because of that one audit row.
     let h = Harness::new();
     partners_and_code(&h);
     let counts = |h: &Harness| -> Vec<(String, i64)> {
@@ -2837,15 +2801,13 @@ fn placing_the_opening_capital_writes_only_the_audit_row_of_a_wrong_sign_and_not
             })
             .collect()
     };
-    // A wrong sign writes exactly one audit row (`capital_place_sign_wrong`) and no other table; an
-    // empty sign or any other refusal writes nothing.
     let mut wrong_signs = 0_i64;
     for sign in ["", "   ", "nobody", "ADNAN-x", "adnan\u{0}", "عدنان x"] {
         let before = counts(&h);
         let fp_before = h.fingerprint();
         let code = h.code(
-            "partners_place_opening_capital",
-            json!({ "input": { "partner_ids": [1], "reason": "x", "sign": sign } }),
+            "accounts_openings_to_cash",
+            json!({ "input": { "reason": "x", "sign": sign, "confirm_cash_below_zero": false } }),
         );
         assert!(code.starts_with("ERR_"), "sign {sign:?} gave {code}");
         let after = counts(&h);
@@ -2882,19 +2844,30 @@ fn placing_the_opening_capital_writes_only_the_audit_row_of_a_wrong_sign_and_not
         "at least the plain wrong signs are written to the audit log"
     );
     let actions: i64 =
-        h.one("SELECT COUNT(*) FROM audit_log WHERE action = 'capital_place_sign_wrong'");
+        h.one("SELECT COUNT(*) FROM audit_log WHERE action = 'openings_to_cash_sign_wrong'");
     assert_eq!(actions, wrong_signs);
-    // With the right sign, every other refusal writes nothing.
+    // With the right sign, every other refusal writes nothing: no reason, and nothing to move (the
+    // new shop has no party opening).
     let fp = h.fingerprint();
-    for payload in [
-        json!({ "input": { "partner_ids": [], "reason": "x", "sign": "adnan" } }),
-        json!({ "input": { "partner_ids": [1], "reason": "", "sign": "adnan" } }),
-        json!({ "input": { "partner_ids": [999_999], "reason": "x", "sign": "adnan" } }),
-        json!({ "input": { "partner_ids": [-1, 0], "reason": "x", "sign": "adnan" } }),
+    for (payload, expected) in [
+        (
+            json!({ "input": { "reason": "", "sign": "adnan" } }),
+            "ERR_REASON_REQUIRED",
+        ),
+        (
+            json!({ "input": { "reason": "x", "sign": "adnan" } }),
+            "ERR_OPENINGS_ALREADY_IN_CASH",
+        ),
     ] {
-        let code = h.code("partners_place_opening_capital", payload.clone());
-        assert!(code.starts_with("ERR_"), "{payload} gave {code}");
-        assert_eq!(h.fingerprint(), fp, "{payload} -> {code} wrote something");
+        assert_eq!(
+            h.code("accounts_openings_to_cash", payload.clone()),
+            expected
+        );
+        assert_eq!(
+            h.fingerprint(),
+            fp,
+            "{payload} -> {expected} wrote something"
+        );
     }
 }
 

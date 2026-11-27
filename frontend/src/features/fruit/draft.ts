@@ -31,6 +31,7 @@ export const FRUIT_FIELD_PATHS: readonly string[] = [
   'qty',
   'weight',
   'rate',
+  'deduction',
   'note',
   'reason',
 ];
@@ -69,6 +70,7 @@ export function newFruitDraft(today: string): FruitDraft {
     qty: '',
     weight: '',
     rate: '',
+    deduction: '',
     note: '',
     reason: '',
   };
@@ -76,12 +78,22 @@ export function newFruitDraft(today: string): FruitDraft {
 
 /**
  * The other source: what belongs to the first one goes (the lot, or the agent, item and packing,
- * and the weight, which belongs to the item). What is typed for the goods stays: quantity, rate and
- * note.
+ * and the weight, which belongs to the item, and the کل کٹوتی, which belongs to the other shop). What is typed for the goods
+ * stays: quantity, rate and note.
  */
 export function changeSource(draft: FruitDraft, source: FruitDraft['source']): FruitDraft {
   if (source === draft.source) return draft;
-  return { ...draft, source, lot: null, agent: null, item: null, packing: null, weight: '' };
+  // A کل کٹوتی is the other shop's: it goes with the agent when the source changes.
+  return {
+    ...draft,
+    source,
+    lot: null,
+    agent: null,
+    item: null,
+    packing: null,
+    weight: '',
+    deduction: '',
+  };
 }
 
 /**
@@ -127,9 +139,18 @@ export function draftFromRow(row: FruitRow, grouping: Grouping): FruitDraft {
     qty: String(row.qty),
     weight: row.weight_grams === null ? '' : formatGrams(row.weight_grams),
     rate: formatPaisa(row.rate_paisa, { grouping }),
+    // The saved کل کٹوتی is put into the visible field like a typed value (F43); none stays empty. Whether there is one is read
+    // from the text the figure is written as, so no amount is compared as a number here.
+    deduction: deductionText(row, grouping),
     note: row.note ?? '',
     reason: '',
   };
+}
+
+/** The کل کٹوتی of a saved entry as the text the field starts with: the figure, or empty when there is none. */
+function deductionText(row: FruitRow, grouping: Grouping): string {
+  const text = formatPaisa(row.deduction_paisa, { grouping });
+  return text === '0' ? '' : text;
 }
 
 /** Who the entry is for, as the backend takes it: a partner id, or the guests. */
@@ -160,6 +181,8 @@ export function buildFruit(draft: FruitDraft, editingId: number | null = null): 
     qty: draft.qty.trim(),
     weight: textOrNull(draft.weight),
     rate: draft.rate.trim(),
+    // Only fruit from another shop has a کل کٹوتی; the backend refuses one on our own lots.
+    deduction: shop ? null : textOrNull(draft.deduction),
     note: textOrNull(draft.note),
     editing_id: editingId,
   };
@@ -186,7 +209,7 @@ export function fruitIsFilled(draft: FruitDraft): boolean {
     draft.agent !== null ||
     draft.item !== null ||
     draft.packing !== null ||
-    [draft.qty, draft.weight, draft.rate, draft.note, draft.reason].some(
+    [draft.qty, draft.weight, draft.rate, draft.deduction, draft.note, draft.reason].some(
       (text) => text.trim() !== '',
     )
   );

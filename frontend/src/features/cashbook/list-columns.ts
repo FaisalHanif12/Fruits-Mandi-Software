@@ -10,37 +10,12 @@ import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate, type Paisa } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
-import type { Language } from '../../i18n';
 import { STATUS_CANCELLED, STATUS_SAVED } from '../../shared/ui';
 import { voucherNumberText } from '../vouchers';
+import { cashRowText, kindId } from './row-text';
 import type { CashbookRow, KhataEntryRow, LentRow, TakeRow, VoucherRow } from './types';
 
-type Say = (id: string, vars?: Record<string, string>) => string;
-
-/** The Fluent message ID of a stored kind such as `shop_expense`: hyphens, not underscores. */
-export function kindId(kind: string): string {
-  return kind.replaceAll('_', '-');
-}
-
-/**
- * The row of the cash book as words: the kind of posting, and its number when it has one. The rows that start the
- * book or move a partner's capital say what they are, with the partner's name (plan 78 E, PRD FR-16.14): "Opening
- * cash", "Opening capital: Partner A", "Capital invested: Partner A", "Capital taken back: Partner A".
- */
-export function cashbookKindText(
-  row: Pick<CashbookRow, 'posting_type' | 'number' | 'kind' | 'partner'>,
-  text: Say,
-  language: Language,
-) {
-  if (row.kind !== 'other') {
-    const partner = row.partner === null ? '' : displayName(row.partner, language);
-    return text(`cashbook-row-${kindId(row.kind)}`, { partner });
-  }
-  const kind = text(`cashbook-kind-${kindId(row.posting_type)}`);
-  return row.number === null
-    ? kind
-    : text('cashbook-kind-number', { kind, number: String(row.number) });
-}
+export { kindId };
 
 /**
  * The cash in hand after a line. The backend sends it in date order only; a list sorted by anything
@@ -59,20 +34,13 @@ export const CASHBOOK_COLUMNS: readonly ListColumn<CashbookRow>[] = [
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
+    // The row named for what it is, with its number and its party, garden or trip (PRD FR-16.14 v1.60).
     field: 'kind',
-    type: 'text',
+    type: 'name',
     headerId: 'cashbook-col-kind',
     sortKey: 'posting_type',
     grow: true,
-    value: (row, { language, text }) => cashbookKindText(row, text, language),
-  },
-  {
-    field: 'account',
-    type: 'name',
-    headerId: 'cashbook-col-account',
-    from: 'normal',
-    grow: true,
-    value: (row, { language }) => (row.account === null ? '' : displayName(row.account, language)),
+    value: (row, { language, text }) => cashRowText(row, text, language),
   },
   {
     field: 'narration',
@@ -154,6 +122,15 @@ export const EXPENSE_DAY_COLUMNS: readonly ListColumn<VoucherRow>[] = [
   },
 ];
 
+/** The partner of a row of money taken, shown when the list is of every partner (plan 98). The backend has no order by it. */
+const TAKE_PARTNER_COLUMN: ListColumn<TakeRow> = {
+  field: 'partner',
+  type: 'name',
+  headerId: 'cashbook-col-partner',
+  grow: true,
+  value: (row, { language }) => displayName(row.partner, language),
+};
+
 /** A partner's money taken (PRD FR-16.2): what, why, who took it, when it comes back. */
 export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
   {
@@ -220,6 +197,17 @@ export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
     value: (row) => (row.days_past_return_by === null ? '' : String(row.days_past_return_by)),
   },
 ];
+
+/** The same with the partner's name after the date: the list of every partner's money taken (plan 98). */
+const TAKE_COLUMNS_ALL: readonly ListColumn<TakeRow>[] = (() => {
+  const [date, ...rest] = TAKE_COLUMNS;
+  return date === undefined ? [TAKE_PARTNER_COLUMN] : [date, TAKE_PARTNER_COLUMN, ...rest];
+})();
+
+/** The columns of the list of money taken: with the partner's name when it is every partner's, else one partner's own. */
+export function takeColumns(everyone: boolean): readonly ListColumn<TakeRow>[] {
+  return everyone ? TAKE_COLUMNS_ALL : TAKE_COLUMNS;
+}
 
 /** A person's loans (PRD FR-16.5). */
 export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [

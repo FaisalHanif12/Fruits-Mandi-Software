@@ -174,6 +174,7 @@ export function TripHeaderEdit({ trip, onDone }: TripHeaderEditProps) {
                   <FreeTextInput
                     {...props}
                     value={draft.market}
+                    kind="place"
                     onChange={(market) => {
                       setDraft((current) => ({ ...current, market }));
                     }}
@@ -188,6 +189,7 @@ export function TripHeaderEdit({ trip, onDone }: TripHeaderEditProps) {
                   <FreeTextInput
                     {...props}
                     value={draft.sentPerson}
+                    kind="name"
                     onChange={(sentPerson) => {
                       setDraft((current) => ({ ...current, sentPerson }));
                     }}

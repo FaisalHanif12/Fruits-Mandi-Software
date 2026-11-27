@@ -1,8 +1,8 @@
 // The parts of the account form that fold and its Save bar (plan 38, G1, G5): the daily parts
 // (account, names, contact, opening) are open, the credit and the "more" parts start shut, a shut
 // part says how many of its fields hold a value, a part with a problem opens itself, a heading is a
-// button reached by the keyboard, and Save is always in view under the scrolling form. Urdu and
-// English.
+// button reached by the keyboard, and the whole form scrolls in the screen of the shell with Save
+// after it, so no card is cut off at a small window (plan 99). Urdu and English.
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -158,15 +158,21 @@ describe.each(LANGUAGES)('the account form folds (%s)', (language) => {
     expect(credit).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('Save is under the scrolling form, not inside it, so it is always in view', async () => {
+  it('the form is as tall as it needs to be and the screen of the shell scrolls it, so no card is cut off', async () => {
     fakeAccounts([NASIR]);
     await renderApp('/index/accounts/23');
     const save = await screen.findByRole('button', {
       name: (name) => visible(name).startsWith(message(language, 'layout-save-save')),
     });
     expect(save.closest('form')).toBeNull();
-    const scroller = document.querySelector('form')?.parentElement;
-    expect(scroller?.className).toContain('overflow-auto');
-    expect(scroller?.contains(save)).toBe(false);
+    const form = document.querySelector('form');
+    // Like every other master form (MasterForm): nothing between the form and the screen area of the
+    // shell is pinned to the window height or scrolls by itself (Umar, 27-11-2026, plan 99).
+    for (let box = form?.parentElement; box && box.tagName !== 'MAIN'; box = box.parentElement) {
+      expect(box.className).not.toMatch(/overflow-auto|fill-to-corner|min-h-0/);
+    }
+    expect(form?.closest('main')?.className).toContain('overflow-auto');
+    // Save comes after the whole form, in the same scrolled screen.
+    expect(form !== null && (form.compareDocumentPosition(save) & 4) !== 0).toBe(true);
   });
 });

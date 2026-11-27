@@ -67,6 +67,7 @@ fn home(w: &World, lot: i64, partner: usize, date: &str, qty: &str, rate: &str) 
         weight: None,
         rate: rate.into(),
         note: None,
+        deduction: None,
         editing_id: None,
     }
 }
@@ -85,6 +86,7 @@ fn guests(w: &World, agent: i64, date: &str, qty: &str, rate: &str) -> FruitInpu
         weight: None,
         rate: rate.into(),
         note: None,
+        deduction: None,
         editing_id: None,
     }
 }
@@ -157,8 +159,9 @@ fn entries(page: &ReportPage) -> Vec<Entry> {
                 weight,
                 n(&c[7]),
                 n(&c[8]),
-                n(&c[9]),
-                names_en(&c[10]),
+                // The deduction column (plan 97) sits before the value.
+                n(&c[10]),
+                names_en(&c[11]),
             )
         })
         .collect()
@@ -353,7 +356,7 @@ fn r37_while_the_partner_section_is_locked_lists_the_guests_only_with_their_tota
         )]
     );
     assert_eq!(page.total_count, 1);
-    assert_eq!((n(&page.totals[7]), n(&page.totals[9])), (3, 3_000));
+    assert_eq!((n(&page.totals[7]), n(&page.totals[10])), (3, 3_000));
     // Not locked: both entries, as before.
     let open = r37(&w, day("10-10-2026", "10-10-2026"));
     assert_eq!(open.total_count, 2);
@@ -381,7 +384,7 @@ fn e2e_42_the_register_the_day_summary_and_the_stock_show_the_fruit() {
         ]
     );
     assert_eq!(page.total_count, 2);
-    assert_eq!((n(&page.totals[7]), n(&page.totals[9])), (5, 4_160));
+    assert_eq!((n(&page.totals[7]), n(&page.totals[10])), (5, 4_160));
     // The seller credited: رحیم for the lot, حاجی نذیر for the other shop.
     assert_eq!(names_en(&page.rows[0].cells[3]), "Rahim");
     assert_eq!(names_en(&page.rows[1].cells[3]), "Haji Nazeer");
@@ -465,7 +468,7 @@ fn e2e_42_view_k_and_the_fruit_column_of_view_f_agree() {
     // The register adds up to the same totals.
     let register = r37(&w, day("10-10-2026", "10-10-2026"));
     assert_eq!(
-        (n(&register.totals[7]), n(&register.totals[9])),
+        (n(&register.totals[7]), n(&register.totals[10])),
         (k_totals(&k).0, k_totals(&k).1)
     );
 
@@ -497,13 +500,13 @@ fn e2e_42_the_lines_behind_a_number_add_up_to_it() {
     let k = av(&w, AnalyticsView::K, f.clone());
     let alif_row = data_rows(&k)[0].key.clone().unwrap();
     let one = lines_of(&w, AnalyticsView::K, f.clone(), alif_row, None);
-    assert_eq!((one.total_count, n(&one.totals[9])), (1, 1_160));
+    assert_eq!((one.total_count, n(&one.totals[10])), (1, 1_160));
     // The guests row opens the guests' entry.
     let guests_row = data_rows(&k)[1].key.clone().unwrap();
     assert_eq!(guests_row.guests, Some(true));
     let two = lines_of(&w, AnalyticsView::K, f.clone(), guests_row, None);
     assert_eq!(
-        (two.total_count, n(&two.totals[7]), n(&two.totals[9])),
+        (two.total_count, n(&two.totals[7]), n(&two.totals[10])),
         (1, 3, 3_000)
     );
     // The whole filter: the two entries.
@@ -514,7 +517,7 @@ fn e2e_42_the_lines_behind_a_number_add_up_to_it() {
         AnalyticsKey::default(),
         None,
     );
-    assert_eq!((all.total_count, n(&all.totals[9])), (2, 4_160));
+    assert_eq!((all.total_count, n(&all.totals[10])), (2, 4_160));
 
     // The fruit cell of view F opens his lines on his account: −1,160 and −1,000, in all −2,160.
     let fruit_key = AnalyticsKey {
@@ -640,7 +643,7 @@ fn a_take_cancelled_and_entered_again_on_another_day_moves_in_every_report() {
     // R37: 10-10 only the guests; 11-10 الف 1 at 600; both days 4 نگ, 3,600.
     let d10 = r37(&w, day("10-10-2026", "10-10-2026"));
     assert_eq!(entries(&d10).len(), 1);
-    assert_eq!((n(&d10.totals[7]), n(&d10.totals[9])), (3, 3_000));
+    assert_eq!((n(&d10.totals[7]), n(&d10.totals[10])), (3, 3_000));
     let d11 = r37(&w, day("11-10-2026", "11-10-2026"));
     assert_eq!(
         entries(&d11),
@@ -654,7 +657,7 @@ fn a_take_cancelled_and_entered_again_on_another_day_moves_in_every_report() {
         )]
     );
     let both = r37(&w, day("10-10-2026", "11-10-2026"));
-    assert_eq!((n(&both.totals[7]), n(&both.totals[9])), (4, 3_600));
+    assert_eq!((n(&both.totals[7]), n(&both.totals[10])), (4, 3_600));
     // R34 on each day.
     assert_eq!(
         r34_fruit(&w, "10-10-2026", "11-10-2026"),
@@ -711,7 +714,7 @@ fn a_cancelled_take_is_in_no_report() {
     .unwrap();
     let page = r37(&w, ReportFilters::default());
     assert_eq!(entries(&page).len(), 1);
-    assert_eq!((n(&page.totals[7]), n(&page.totals[9])), (2, 1_160));
+    assert_eq!((n(&page.totals[7]), n(&page.totals[10])), (2, 1_160));
     assert_eq!(
         r34_fruit(&w, "10-10-2026", "10-10-2026"),
         [("2026-10-10".to_owned(), 2, 1_160)]
@@ -838,7 +841,7 @@ fn taking_all_the_leftover_empties_the_lot_out_of_r10_but_not_out_of_the_registe
     assert!(lots.is_empty(), "{lots:?}");
     assert_eq!(totals, [0, 0, 0, 0, 0]);
     let page = r37(&w, ReportFilters::default());
-    assert_eq!((n(&page.totals[7]), n(&page.totals[9])), (5, 2_900));
+    assert_eq!((n(&page.totals[7]), n(&page.totals[10])), (5, 2_900));
 }
 
 #[test]
@@ -857,7 +860,7 @@ fn a_weight_item_shows_its_weight_and_its_stored_value_not_qty_times_rate() {
         (rows[0].3.as_str(), rows[0].4, rows[0].5, rows[0].6),
         ("12.345", 1, 100, 1_235)
     );
-    assert_eq!(n(&page.totals[9]), 1_235);
+    assert_eq!(n(&page.totals[10]), 1_235);
     let k = av(&w, AnalyticsView::K, AnalyticsFilters::default());
     assert_eq!(k_totals(&k), (1, 1_235, 0, 1_235));
 }
@@ -1122,7 +1125,7 @@ fn t12_fruit_from_a_garden_lot_is_money_in_for_the_garden_and_closes_with_it() {
         },
     );
     assert_eq!(
-        (n(&reg.totals[7]), n(&reg.totals[9])),
+        (n(&reg.totals[7]), n(&reg.totals[10])),
         (k_totals(&by_garden).0, k_totals(&by_garden).1)
     );
 
@@ -1322,7 +1325,7 @@ fn for_random_takes_edits_and_cancels_the_fruit_column_is_minus_view_k_and_the_r
                 assert_eq!(own + other, value, "seed {seed} step {step}");
                 let register = r37(&w, day(from, to));
                 assert_eq!(
-                    (n(&register.totals[7]), n(&register.totals[9])),
+                    (n(&register.totals[7]), n(&register.totals[10])),
                     (qty, value),
                     "seed {seed} step {step} {from}-{to}: R37 against K"
                 );

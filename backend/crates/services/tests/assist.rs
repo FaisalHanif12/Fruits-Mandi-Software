@@ -79,7 +79,7 @@ fn e2e_23_a_new_buyer_typed_in_english_letters_becomes_urdu_and_is_found_in_both
         ("اکرم ٹول ٹیکس", "Akram Toll Tax"),
         ("ارشد ملتانی", "Arshad Multani"),
     ] {
-        accounts::save(&env.ctx, &owner, &buyer_form("", ur, en)).unwrap();
+        accounts::save_with_confirm(&env.ctx, &owner, &buyer_form("", ur, en), true).unwrap();
     }
 
     // The user types `tariq mehmood` in the Urdu name field: the first suggestion is the one
@@ -98,10 +98,11 @@ fn e2e_23_a_new_buyer_typed_in_english_letters_becomes_urdu_and_is_found_in_both
     assert_eq!(down.first().map(|s| s.text.as_str()), Some("Tariq Mehmood"));
 
     // Save with the code left empty: the next free code, with no spelling confirmation needed.
-    let saved = accounts::save(
+    let saved = accounts::save_with_confirm(
         &env.ctx,
         &owner,
         &buyer_form("", &first.text, "Tariq Mehmood"),
+        true,
     )
     .unwrap();
     assert_eq!(saved.code, "0022");
@@ -140,7 +141,7 @@ fn form(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
 }
 
 fn add(env: &TestEnv, owner: &auth::Actor, kind: AccountType, ur: &str, en: &str) -> AccountRow {
-    accounts::save(&env.ctx, owner, &form(kind, "", ur, en)).unwrap()
+    accounts::save_with_confirm(&env.ctx, owner, &form(kind, "", ur, en), true).unwrap()
 }
 
 fn rupees(value: i64) -> Paisa {
@@ -274,10 +275,11 @@ fn a_short_code_in_a_seller_field_and_an_unknown_one() {
     assert_eq!(unknown.status, ResolveStatus::Unknown);
     assert_eq!(unknown.suggested_code.as_deref(), Some("0017"));
     assert!(unknown.account.is_none());
-    accounts::save(
+    accounts::save_with_confirm(
         &env.ctx,
         &owner,
         &form(AccountType::Seller, "0017", "ناصر", "Nasir"),
+        true,
     )
     .unwrap();
     let found = resolve(&env, AccountScope::Seller, "7");
@@ -434,10 +436,11 @@ fn a_full_code_that_does_not_exist_offers_to_add_it() {
         (ResolveStatus::Unknown, None)
     );
     // The suggested code really is free: the add works with it.
-    let added = accounts::save(
+    let added = accounts::save_with_confirm(
         &env.ctx,
         &owner,
         &form(AccountType::Buyer, "0025", "ناصر", "Nasir"),
+        true,
     )
     .unwrap();
     assert_eq!(added.code, "0025");
@@ -584,7 +587,7 @@ fn text_limits_and_empty_codes_are_refused() {
 fn row_balances_and_global_search() {
     let (_dir, env, owner) = ready();
     let [rahim, _, akram, arshad] = the_parties(&env, &owner);
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -607,6 +610,7 @@ fn row_balances_and_global_search() {
                 },
             ],
         },
+        true,
     )
     .unwrap();
     let rows = search::balances(&env.ctx, &[akram.id, arshad.id, rahim.id, 999_999]).unwrap();
@@ -679,7 +683,7 @@ fn the_party_card_of_a_buyer_shows_balance_credit_and_last_entry() {
     input.credit_limit = "20,000".into();
     input.opening_date = "09-10-2026".into();
     input.opening_dr = "12,880".into();
-    let akram = accounts::save(&env.ctx, &owner, &input).unwrap();
+    let akram = accounts::save_with_confirm(&env.ctx, &owner, &input, true).unwrap();
 
     let card = assist::party_card(&env.ctx, akram.id).unwrap();
     assert_eq!(
@@ -704,7 +708,7 @@ fn the_party_card_of_a_buyer_shows_balance_credit_and_last_entry() {
     assert!(card.warnings.is_empty() && card.is_active);
 
     // Owing 25,000 against a 20,000 limit: over by 5,000.
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -717,6 +721,7 @@ fn the_party_card_of_a_buyer_shows_balance_credit_and_last_entry() {
                 opening_is_advance: false,
             }],
         },
+        true,
     )
     .unwrap();
     let card = assist::party_card(&env.ctx, akram.id).unwrap();
@@ -725,7 +730,7 @@ fn the_party_card_of_a_buyer_shows_balance_credit_and_last_entry() {
     assert_eq!(card.warnings[0].kind, CardWarningKind::OverCreditLimit);
     assert_eq!(card.warnings[0].amount_paisa, Some(rupees(5_000)));
     // A credit balance means he owes nothing: used is 0.
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -738,6 +743,7 @@ fn the_party_card_of_a_buyer_shows_balance_credit_and_last_entry() {
                 opening_is_advance: false,
             }],
         },
+        true,
     )
     .unwrap();
     let card = assist::party_card(&env.ctx, akram.id).unwrap();
@@ -766,7 +772,7 @@ fn the_party_card_of_a_seller_shows_the_open_advance_and_what_he_owes_beyond_it(
     input.opening_date = "01-09-2026".into();
     input.opening_dr = "15000".into();
     input.opening_is_advance = true;
-    let rahim = accounts::save(&env.ctx, &owner, &input).unwrap();
+    let rahim = accounts::save_with_confirm(&env.ctx, &owner, &input, true).unwrap();
     let card = assist::party_card(&env.ctx, rahim.id).unwrap();
     assert_eq!(
         (card.balance.side, card.balance.amount_paisa),
@@ -823,7 +829,7 @@ fn the_party_card_of_a_seller_shows_the_open_advance_and_what_he_owes_beyond_it(
     assert_eq!(card.warnings[0].amount_paisa, Some(rupees(5_000)));
 
     // Clearing the opening reverses the advance line: the advance is gone with it.
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         &owner,
         &OpeningsInput {
@@ -836,6 +842,7 @@ fn the_party_card_of_a_seller_shows_the_open_advance_and_what_he_owes_beyond_it(
                 opening_is_advance: false,
             }],
         },
+        true,
     )
     .unwrap();
     let card = assist::party_card(&env.ctx, rahim.id).unwrap();
@@ -1138,7 +1145,7 @@ fn an_adjustment_that_points_at_a_reversed_entry_does_not_lower_the_open_advance
     input.opening_date = "01-09-2026".into();
     input.opening_dr = "15000".into();
     input.opening_is_advance = true;
-    let rahim = accounts::save(&env.ctx, &owner, &input).unwrap();
+    let rahim = accounts::save_with_confirm(&env.ctx, &owner, &input, true).unwrap();
     let cash = env
         .ctx
         .db()

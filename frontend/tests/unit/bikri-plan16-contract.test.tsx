@@ -413,13 +413,21 @@ describe('the edit rules against the backend files', () => {
 
   it('a changed day is told under the day field, next to the shares problem of that day', async () => {
     await openWith(EDIT_PREVIEW_DAY_CHANGED);
-    expect(
-      await screen.findByText(said(message(language, 'err-edit-date-fixed'))),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(said(message(language, 'err-shares-not-100', { total: '0' }))),
-    ).toBeInTheDocument();
+    // The shares problem is a note in the list above the lots, and every such note hides 5 s after it shows (PRD FR-12.52,
+    // plan 97 item 4). A search of the whole page by element (`findByText`) takes seconds on a page this big on a busy
+    // machine, so both messages are waited for together with one cheap look at the text, while the note is still there.
+    const dateFixed = message(language, 'err-edit-date-fixed');
+    const sharesNot100 = message(language, 'err-shares-not-100', { total: '0' });
+    const alerts = () =>
+      Array.from(document.querySelectorAll('li[role="alert"]')).map((item) =>
+        visible(item.textContent),
+      );
+    await waitFor(() => {
+      expect(pageText()).toContain(dateFixed);
+      expect(alerts().some((text) => text.includes(sharesNot100))).toBe(true);
+    });
     expect(pageText()).not.toContain('ERR_EDIT_DATE_FIXED');
+    expect(pageText()).not.toContain('ERR_SHARES_NOT_100');
   });
 });
 

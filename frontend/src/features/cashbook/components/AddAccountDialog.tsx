@@ -141,6 +141,8 @@ function AddForm({
       {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
       <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
         <NamePair
+          // A person is a name; a khata is named in words ("خاندانی کھاتہ", plan 99).
+          kind={kind === 'khata' ? 'word' : 'name'}
           value={names}
           onChange={setNames}
           fillOnOpen

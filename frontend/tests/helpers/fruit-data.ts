@@ -6,7 +6,9 @@
 // guest fruit 3,000 shared 1,000 / 1,000 / 1,000, and 1,000 over three partners as 334 / 333 / 333
 // (C27). The sums are this test double's, written the way the plan has them; the screen only shows
 // what comes back and never works out an amount (CLAUDE.md rule 1). Every shape is the generated
-// binding, so a change of the contract fails to compile here first.
+// binding, so a change of the contract fails to compile here first. A کل کٹوتی (PRD FR-16.11 v1.59, plan 97 item 1) is
+// subtracted from the value: 2 × 1,400 = 2,800 less 200 is 2,600, which the other shop is credited and the partners are charged
+// (guests: 2,600 over three partners is 868 / 866 / 866 by C27).
 
 import type { ErrorCode } from '../../src/bindings/ErrorCode';
 import type { FieldError } from '../../src/bindings/FieldError';
@@ -118,11 +120,23 @@ function refuse(items: RefusalItem[]): never {
 /** Digits of what was typed, commas away: the books of a test double work on whole rupees. */
 const digits = (text: string): number => Number(text.replace(/,/g, '').trim());
 
-/** C27 for the test double: equal parts, the rupees left over to the partner made first. */
+/**
+ * The کل کٹوتی of an entry in whole rupees, 0 when there is none. The backend's request files leave
+ * the field out (an empty default), so a missing one reads as none too.
+ */
+const deductionOf = (input: FruitInput): number => {
+  const typed = (input.deduction ?? '').trim();
+  return typed === '' ? 0 : digits(typed);
+};
+
+/**
+ * C27 for the test double: equal parts, every rupee left over goes to the partner made first (`split_by_qty`, the tie goes to
+ * the first): 1,000 is 334 / 333 / 333 and 2,600 is 868 / 866 / 866.
+ */
 function guestParts(value: number): number[] {
   const each = Math.floor(value / PARTNERS.length);
   const left = value - each * PARTNERS.length;
-  return PARTNERS.map((_, index) => each + (index < left ? 1 : 0));
+  return PARTNERS.map((_, index) => each + (index === 0 ? left : 0));
 }
 
 export function createFruitBooks(options: FruitOptions = {}) {
@@ -135,6 +149,8 @@ export function createFruitBooks(options: FruitOptions = {}) {
   // The value of each saved row in whole rupees, kept next to the rows so the totals of the list
   // never read a Paisa as a number (a test double works on rupees).
   const rupees = new Map<number, number>();
+  // The deduction of each saved row in whole rupees, for the deduction total of the list.
+  const deductions = new Map<number, number>();
   const lotOf = (id: number | null) => store.lots.find((lot) => lot.lot_id === id) ?? null;
 
   const preview = (input: FruitInput): FruitPreview => {
@@ -175,7 +191,18 @@ export function createFruitBooks(options: FruitOptions = {}) {
       }
     }
     const value = qty * rate;
-    const amounts = guests ? guestParts(value) : [value];
+    // The other shop's کل کٹوتی (v1.59): only fruit from another shop has one, and it must be less than the value.
+    const deduction = deductionOf(input);
+    if (deduction > 0 && input.source === 'shop')
+      errors.push(problem('ERR_FORMAT_INVALID', 'deduction'));
+    else if (deduction > 0 && deduction >= value) {
+      errors.push(problem('ERR_DEDUCTION_NOT_BELOW_VALUE', 'deduction', { max: value - 1, value }));
+    }
+    if (errors.length > 0) {
+      return { numbers: null, errors, warnings: [], rate_hint, partners_locked: false };
+    }
+    const net = value - deduction;
+    const amounts = guests ? guestParts(net) : [net];
     // A part of 0 is left out of the parts (the backend does not save it).
     const parts: FruitPart[] = guests
       ? PARTNERS.flatMap((partner, index) => {
@@ -193,9 +220,9 @@ export function createFruitBooks(options: FruitOptions = {}) {
         })
       : PARTNERS.filter((partner) => partner.ref.id === input.partner_id).map((partner) => ({
           partner: partner.ref,
-          amount_paisa: money(value),
+          amount_paisa: money(net),
           total_before_paisa: money(partner.total),
-          total_after_paisa: money(partner.total - value),
+          total_after_paisa: money(partner.total - net),
         }));
     const numbers: FruitNumbers = {
       item: lot?.item ?? BANANA_REF,
@@ -209,10 +236,20 @@ export function createFruitBooks(options: FruitOptions = {}) {
         moneyArg('rate', rate),
         moneyArg('result', value),
       ]),
+      deduction_paisa: money(deduction),
+      net_paisa: money(net),
+      net_working:
+        deduction > 0
+          ? working('working-fruit-net', [
+              moneyArg('value', value),
+              moneyArg('deduction', deduction),
+              moneyArg('result', net),
+            ])
+          : null,
       parts,
       parts_working: guests
         ? working('working-guest-fruit-split', [
-            moneyArg('value', value),
+            moneyArg('value', net),
             countArg('partners', PARTNERS.length),
             moneyArg('result', amounts[0] ?? 0),
           ])
@@ -259,7 +296,10 @@ export function createFruitBooks(options: FruitOptions = {}) {
       qty: numbers.qty,
       weight_grams: numbers.weight_grams,
       rate_paisa: numbers.rate_paisa,
-      value_paisa: numbers.value_paisa,
+      // What was posted is the net; the whole value and the deduction are beside it (PRD FR-16.11 v1.59).
+      value_paisa: numbers.net_paisa,
+      deduction_paisa: numbers.deduction_paisa,
+      gross_paisa: numbers.value_paisa,
       note: input.note,
       status: 'saved',
       cancel_reason: null,
@@ -271,6 +311,10 @@ export function createFruitBooks(options: FruitOptions = {}) {
       ...OPEN_ENTRY,
     };
   };
+
+  /** The net of an entry in whole rupees, for the totals of the list: the value less the کل کٹوتی. */
+  const netOf = (input: FruitInput): number =>
+    digits(input.qty) * digits(input.rate) - deductionOf(input);
 
   const takeFromLot = (lotId: number | null, qty: number) => {
     const lot = lotOf(lotId);
@@ -284,7 +328,8 @@ export function createFruitBooks(options: FruitOptions = {}) {
       if (store.refuse.save !== undefined) return refuse(store.refuse.save);
       const row = rowFrom(store.rows.length + 1, 1, input);
       takeFromLot(input.lot_id, row.qty);
-      rupees.set(row.id, digits(input.qty) * digits(input.rate));
+      rupees.set(row.id, netOf(input));
+      deductions.set(row.id, deductionOf(input));
       store.saved.entries.push(input);
       store.rows.push(row);
       return {
@@ -309,7 +354,8 @@ export function createFruitBooks(options: FruitOptions = {}) {
       const row = rowFrom(old.id, old.version + 1, input.entry);
       takeFromLot(old.lot?.lot_id ?? null, -old.qty);
       takeFromLot(input.entry.lot_id, row.qty);
-      rupees.set(row.id, digits(input.entry.qty) * digits(input.entry.rate));
+      rupees.set(row.id, netOf(input.entry));
+      deductions.set(row.id, deductionOf(input.entry));
       store.rows[index] = row;
       store.saved.edits.push(input);
       return {
@@ -358,6 +404,15 @@ export function createFruitBooks(options: FruitOptions = {}) {
         totals: {
           qty: saved.reduce((sum, row) => sum + row.qty, 0),
           value_paisa: money(saved.reduce((sum, row) => sum + (rupees.get(row.id) ?? 0), 0)),
+          deduction_paisa: money(
+            saved.reduce((sum, row) => sum + (deductions.get(row.id) ?? 0), 0),
+          ),
+          gross_paisa: money(
+            saved.reduce(
+              (sum, row) => sum + (rupees.get(row.id) ?? 0) + (deductions.get(row.id) ?? 0),
+              0,
+            ),
+          ),
         },
         months: [],
         // The partner section is open in these tests unless one says otherwise (PRD FR-17.11).

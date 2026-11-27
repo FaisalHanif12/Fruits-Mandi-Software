@@ -1,19 +1,23 @@
-//! Words and phrases (plan 05 Section 4).
+//! Words and phrases (plan 05 Section 4, plan 99).
 //!
 //! A text is cut into words, spaces and everything else. Each word gets a ranked list of
-//! spellings: learned pairs first, then the word list by weight, then the spelling rules.
-//! Phrases that are in the word list as a whole (`abdul rehman`) are taken as one unit. The
-//! best three whole texts are made by trying the lists in order of their scores.
+//! spellings: learned pairs first, then the word the word before asks for (a two-word phrase
+//! of the everyday dictionary: after کہا, `ke` is کہ), then the word list by its standing in
+//! the field (in a name field the names come first, in free text the everyday words), then
+//! the spelling rules. Phrases that are in the word list as a whole (`abdul rehman`, `ly kr`)
+//! are taken as one unit. The best three whole texts are made by trying the lists in order of
+//! their scores.
 
 use std::collections::HashSet;
 
 use super::combine::{Scored, Slot, Unit, best_texts};
 use super::compound;
+use super::loose;
 use super::source::{self, Script};
-use super::wordlist::{WordList, plain_urdu};
+use super::wordlist::{Entry, Field, WordList, plain_urdu};
 use super::{
-    Direction, LearnedPair, MAX_INPUT_CHARS, MAX_SUGGESTIONS, Source, SuggestedWord, Suggestion,
-    forward, reverse,
+    Direction, Hint, Kind, LearnedPair, MAX_INPUT_CHARS, MAX_SUGGESTIONS, Source, SuggestedWord,
+    Suggestion, forward, reverse,
 };
 use crate::text;
 
@@ -27,6 +31,34 @@ const KNOWN_WORD_BOOST: f64 = 6.0;
 const MAX_WORDS: usize = 16;
 /// The longest word the rules try, in letters. Longer words are kept as typed.
 const MAX_WORD_LETTERS: usize = 40;
+/// How far back in the text before the word the word before is looked for.
+const CONTEXT_CHARS: usize = 60;
+/// The score of the word that the word before asks for: after learned pairs, before the list.
+const AFTER_WORD_SCORE: f64 = 0.97;
+/// The score of the best other spelling of a known word, when the word itself is not listed.
+const OTHER_SPELLING_ALONE: f64 = 0.92;
+/// The same, when the list has the typed spelling too.
+const OTHER_SPELLING_AFTER: f64 = 0.55;
+
+/// The field the text is typed in. English names are always spelled as names.
+fn field_of(direction: Direction, hint: &Hint<'_>) -> Field {
+    if direction == Direction::ToUrdu && hint.kind == Some(Kind::Word) {
+        Field::Text
+    } else {
+        Field::Name
+    }
+}
+
+/// The Urdu word at the very end of the text, if only spaces follow it. Punctuation or a
+/// number after it ends the phrase, so there is no word before.
+fn last_urdu_word(before: &str) -> Option<String> {
+    let skip = before.chars().count().saturating_sub(CONTEXT_CHARS);
+    let tail: String = before.chars().skip(skip).collect();
+    match tokenize(&tail, Direction::ToEnglish).pop() {
+        Some(Token::Word(word)) => Some(word),
+        _ => None,
+    }
+}
 
 /// A piece of the text.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -107,13 +139,33 @@ fn push_unique(list: &mut Vec<Scored>, seen: &mut HashSet<String>, text: String,
     }
 }
 
-/// The ranked spellings of one word (or one phrase of the list).
-fn word_candidates(
-    word: &str,
-    learned: &[LearnedPair],
-    list: &WordList,
+/// The standing the other spellings are measured against: the first one's, else 1.
+fn top_standing(entries: &[(&Entry, f64)]) -> f64 {
+    entries
+        .first()
+        .map(|(_, s)| *s)
+        .filter(|s| *s > 0.0)
+        .unwrap_or(1.0)
+}
+
+/// What a word is spelled with: the learned pairs, the list and the field.
+#[derive(Clone, Copy)]
+struct Spelling<'a> {
+    learned: &'a [LearnedPair],
+    list: &'a WordList,
     direction: Direction,
-) -> Vec<Scored> {
+    field: Field,
+}
+
+/// The ranked spellings of one word (or one phrase of the list). `before` is the Urdu word
+/// just before it, if there is one.
+fn word_candidates(word: &str, before: Option<&str>, spelling: Spelling<'_>) -> Vec<Scored> {
+    let Spelling {
+        learned,
+        list,
+        direction,
+        field,
+    } = spelling;
     // Marks (zabar, khari zabar) do not change which word it is.
     let plain = if direction == Direction::ToEnglish {
         plain_urdu(word)
@@ -146,21 +198,41 @@ fn word_candidates(
         let score = 1.0 - 0.001 * f64::from(u32::try_from(rank).unwrap_or(u32::MAX));
         push_unique(&mut found, &mut seen, text, score);
     }
-    // 2. The word list, the heaviest first.
+    // 1b. The word the word before asks for.
+    if direction == Direction::ToUrdu
+        && let Some(urdu) = before.and_then(|b| list.word_after(b, &lower))
+    {
+        push_unique(&mut found, &mut seen, urdu.to_owned(), AFTER_WORD_SCORE);
+    }
+    // 2. The word list, the strongest in this field first.
     let entries = match direction {
-        Direction::ToUrdu => list.by_roman(&lower),
-        Direction::ToEnglish => list.by_urdu(word),
+        Direction::ToUrdu => list.ranked_by_roman(&lower, field),
+        Direction::ToEnglish => list.ranked_by_urdu(word, field),
     };
-    let top = entries.first().map_or(1, |e| e.weight.max(1));
-    for entry in &entries {
+    let top = top_standing(&entries);
+    for (entry, standing) in &entries {
         let text = match direction {
             Direction::ToUrdu => entry.urdu.clone(),
             Direction::ToEnglish => capitalise(&entry.roman),
         };
-        let score = 0.95 * f64::from(entry.weight) / f64::from(top);
-        push_unique(&mut found, &mut seen, text, score);
+        push_unique(&mut found, &mut seen, text, 0.95 * standing / top);
     }
-    let model = list.model();
+    // 2a. In free text, a word we know typed another way: `accha` for `acha`, `aarahe` for
+    // `aa rahe`, or a hurried `mjhy`.
+    if direction == Direction::ToUrdu && field == Field::Text && found.len() < MAX_SUGGESTIONS {
+        let share = if entries.is_empty() {
+            OTHER_SPELLING_ALONE
+        } else {
+            OTHER_SPELLING_AFTER
+        };
+        for (text, score) in loose::other_spellings(list, &lower, !entries.is_empty())
+            .into_iter()
+            .take(MAX_SUGGESTIONS)
+        {
+            push_unique(&mut found, &mut seen, text, share * score);
+        }
+    }
+    let model = list.model(field);
     // 2b. A word that is not in the list but is made of parts that are.
     if entries.is_empty() && !word.contains(' ') && word.chars().count() <= MAX_WORD_LETTERS {
         for (text, score) in compound_candidates(model, list, word, &lower, direction) {
@@ -179,9 +251,10 @@ fn word_candidates(
         // A spelling the rules make that is also a word of the list is much more likely to be
         // right (the user typed another way of writing a word we know).
         for (text, score) in &mut made {
-            let known = match direction {
-                Direction::ToUrdu => !list.by_urdu(text).is_empty(),
-                Direction::ToEnglish => list.contains_roman(&text.to_lowercase()),
+            let known = match (direction, field) {
+                (Direction::ToUrdu, Field::Name) => !list.names_by_urdu(text).is_empty(),
+                (Direction::ToUrdu, Field::Text) => list.contains_known_urdu(text),
+                (Direction::ToEnglish, _) => !list.names_by_roman(&text.to_lowercase()).is_empty(),
             };
             if known {
                 *score *= KNOWN_WORD_BOOST;
@@ -250,8 +323,7 @@ fn compound_candidates(
 fn joined_with_next(
     tokens: &[Token],
     index: usize,
-    learned: &[LearnedPair],
-    list: &WordList,
+    spelling: Spelling<'_>,
 ) -> Option<(Vec<Scored>, usize)> {
     let Some(Token::Word(word)) = tokens.get(index) else {
         return None;
@@ -270,7 +342,7 @@ fn joined_with_next(
     let Some(Token::Word(next)) = tokens.get(index.saturating_add(2)) else {
         return None;
     };
-    let tails = word_candidates(next, learned, list, Direction::ToUrdu);
+    let tails = word_candidates(next, None, spelling);
     let mut made: Vec<Scored> = Vec::new();
     for (tail, score) in tails.iter().take(3) {
         if is_particle {
@@ -305,7 +377,18 @@ pub(super) fn suggest(
     learned: &[LearnedPair],
     list: &WordList,
     direction: Direction,
+    hint: &Hint<'_>,
 ) -> Vec<Suggestion> {
+    let spelling = Spelling {
+        learned,
+        list,
+        direction,
+        field: field_of(direction, hint),
+    };
+    let mut before: Option<String> = match direction {
+        Direction::ToUrdu => hint.before.and_then(last_urdu_word),
+        Direction::ToEnglish => None,
+    };
     let tokens = tokenize(input, direction);
     let mut layout: Vec<Slot> = Vec::new();
     let mut units: Vec<Unit> = Vec::new();
@@ -318,6 +401,12 @@ pub(super) fn suggest(
                 index = index.saturating_add(1);
             }
             Token::Fixed(text) => {
+                // Urdu already in the text counts as the word before; anything else ends
+                // the phrase.
+                before = match direction {
+                    Direction::ToUrdu => last_urdu_word(text),
+                    Direction::ToEnglish => None,
+                };
                 layout.push(Slot::Fixed(text.clone()));
                 index = index.saturating_add(1);
             }
@@ -329,7 +418,7 @@ pub(super) fn suggest(
                     let Some((key, span)) = phrase_at(&tokens, index, words) else {
                         continue;
                     };
-                    let found = phrase_candidates(&key, list, direction);
+                    let found = phrase_candidates(&key, spelling);
                     if !found.is_empty() {
                         candidates = found;
                         taken = span;
@@ -338,7 +427,7 @@ pub(super) fn suggest(
                 }
                 if candidates.is_empty()
                     && direction == Direction::ToUrdu
-                    && let Some((found, span)) = joined_with_next(&tokens, index, learned, list)
+                    && let Some((found, span)) = joined_with_next(&tokens, index, spelling)
                 {
                     candidates = found;
                     taken = span;
@@ -348,9 +437,14 @@ pub(super) fn suggest(
                     candidates = if words_done > MAX_WORDS {
                         Vec::new()
                     } else {
-                        word_candidates(word, learned, list, direction)
+                        word_candidates(word, before.as_deref(), spelling)
                     };
                 }
+                before = candidates
+                    .first()
+                    .filter(|_| direction == Direction::ToUrdu)
+                    .and_then(|(text, _)| text.split(' ').next_back())
+                    .map(str::to_owned);
                 if candidates.is_empty() {
                     // Nothing to offer: the word stays as typed.
                     layout.push(Slot::Fixed(word.clone()));
@@ -423,25 +517,22 @@ pub(super) fn phrase_at(tokens: &[Token], start: usize, words: usize) -> Option<
 }
 
 /// The spellings of a phrase that is in the list as a whole.
-fn phrase_candidates(key: &str, list: &WordList, direction: Direction) -> Vec<Scored> {
-    let entries = match direction {
-        Direction::ToUrdu => list.by_roman(&key.to_lowercase()),
-        Direction::ToEnglish => list.by_urdu(key),
+fn phrase_candidates(key: &str, spelling: Spelling<'_>) -> Vec<Scored> {
+    let entries = match spelling.direction {
+        Direction::ToUrdu => spelling
+            .list
+            .ranked_by_roman(&key.to_lowercase(), spelling.field),
+        Direction::ToEnglish => spelling.list.ranked_by_urdu(key, spelling.field),
     };
-    let top = entries.first().map_or(1, |e| e.weight.max(1));
+    let top = top_standing(&entries);
     let mut seen = HashSet::new();
     let mut found = Vec::new();
-    for entry in entries {
-        let text = match direction {
+    for (entry, standing) in entries {
+        let text = match spelling.direction {
             Direction::ToUrdu => entry.urdu.clone(),
             Direction::ToEnglish => capitalise(&entry.roman),
         };
-        push_unique(
-            &mut found,
-            &mut seen,
-            text,
-            0.95 * f64::from(entry.weight) / f64::from(top),
-        );
+        push_unique(&mut found, &mut seen, text, 0.95 * standing / top);
     }
     monotone(found)
 }

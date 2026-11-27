@@ -5,6 +5,7 @@
 // day of 10-10-2026 with Aslam's loan of 5,000 (E2E-30) and Partner A's 2,000 (E2E-29).
 
 import assistAttentionOverdue from '../fixtures/assist_attention_overdue.json';
+import cashbookBookUmarReal from '../fixtures/cashbook_book_umar_real.json';
 import cashbookGetDay from '../fixtures/cashbook_get_day.json';
 import cashbookGetDayRequest from '../fixtures/cashbook_get_day_request.json';
 import cashbookGetSecondPage from '../fixtures/cashbook_get_second_page.json';
@@ -17,6 +18,8 @@ import lentReport from '../fixtures/lent_report.json';
 import lentReportRequest from '../fixtures/lent_report_request.json';
 import mastersExpenseHeads from '../fixtures/masters_expense_heads.json';
 import partnerTakes from '../fixtures/partner_takes.json';
+import partnerTakesAll from '../fixtures/partner_takes_all.json';
+import partnerTakesAllRequest from '../fixtures/partner_takes_all_request.json';
 import partnerTakesRequest from '../fixtures/partner_takes_request.json';
 import vouchersPreviewExpensePersonal from '../fixtures/vouchers_preview_expense_personal.json';
 import vouchersPreviewExpensePersonalRequest from '../fixtures/vouchers_preview_expense_personal_request.json';
@@ -141,6 +144,8 @@ function readVoucherSaved(value: unknown): VoucherSaved {
 
 // Answers
 export const CASHBOOK_DAY: Cashbook = readCashbook(cashbookGetDay);
+/** A copy of Umar's own books, 29-10-2026 to 27-11-2026: 23 lines, so the list is a long one (plan 96 T2, 99). */
+export const CASHBOOK_UMAR_REAL: Cashbook = readCashbook(cashbookBookUmarReal);
 export const CASHBOOK_SECOND_PAGE: Cashbook = readCashbook(cashbookGetSecondPage);
 export const PREVIEW_SHOP: ExpensePreview = readExpensePreview(vouchersPreviewExpenseShop);
 export const PREVIEW_PERSONAL: ExpensePreview = readExpensePreview(vouchersPreviewExpensePersonal);
@@ -165,6 +170,8 @@ export const REFUSED_RETURN_BY_BEFORE_ENTRY: UiError = readUiError(
   vouchersSaveMoneyLentReturnByBeforeEntry,
 );
 export const PARTNER_TAKES: PartnerTakes = readPartnerTakes(partnerTakes);
+/** The backend's answer for every partner (plan 98): `partner` is null and each row names its partner. */
+export const PARTNER_TAKES_ALL: PartnerTakes = readPartnerTakes(partnerTakesAll);
 export const REPEAT_LAST_MONTH: RepeatLastMonth = readRepeatLastMonth(
   vouchersRepeatLastMonthPreview,
 );
@@ -214,6 +221,8 @@ export const REQUEST_SAVE_LENT_RETURN_SALARY: MoneyLentReturnInput = readMoneyLe
   vouchersSaveMoneyLentReturnSalaryRequest,
 );
 export const REQUEST_PARTNER_TAKES: PartnerTakesInput = readPartnerTakesInput(partnerTakesRequest);
+export const REQUEST_PARTNER_TAKES_ALL: PartnerTakesInput =
+  readPartnerTakesInput(partnerTakesAllRequest);
 export const REQUEST_REPEAT_LAST_MONTH: RepeatLastMonthInput = readRepeatLastMonthInput(
   vouchersRepeatLastMonthPreviewRequest,
 );

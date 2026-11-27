@@ -45,8 +45,6 @@ import listAdvancesViewRequest from '../fixtures/vouchers_list_advances_view_req
 import previewAdvanceBuyer from '../fixtures/vouchers_preview_advance_buyer.json';
 import previewAdvanceBuyerRequest from '../fixtures/vouchers_preview_advance_buyer_request.json';
 import saveAdvanceBuyer from '../fixtures/vouchers_save_advance_buyer.json';
-import saveAdvanceBuyerNeedsReason from '../fixtures/vouchers_save_advance_buyer_needs_reason.json';
-import saveAdvanceBuyerNeedsReasonRequest from '../fixtures/vouchers_save_advance_buyer_needs_reason_request.json';
 import saveAdvanceBuyerRequest from '../fixtures/vouchers_save_advance_buyer_request.json';
 import saveAdvance from '../fixtures/vouchers_save_advance.json';
 import saveAdvanceRequest from '../fixtures/vouchers_save_advance_request.json';
@@ -55,7 +53,6 @@ import savePaymentRequest from '../fixtures/vouchers_save_payment_request.json';
 import savePaymentCashBelowZero from '../fixtures/vouchers_save_payment_cash_below_zero.json';
 import savePaymentCashLent from '../fixtures/vouchers_save_payment_cash_lent.json';
 import savePaymentCashLentRequest from '../fixtures/vouchers_save_payment_cash_lent_request.json';
-import savePaymentNeedsReason from '../fixtures/vouchers_save_payment_to_buyer_needs_reason.json';
 import saveReceiptArshad from '../fixtures/vouchers_save_receipt_arshad.json';
 import saveReceiptArshadRequest from '../fixtures/vouchers_save_receipt_arshad_request.json';
 import saveReceiptOldFields from '../fixtures/vouchers_save_receipt_old_payment_fields.json';
@@ -215,13 +212,10 @@ export const SLIP_ADVANCE_UR: PrintData = readPrintData(slipAdvanceUr);
 export const GLOBAL_VOUCHER_NUMBER: GlobalHit[] = readListGlobalHit(searchVoucherNumber);
 
 // Refusals, as `{ ok: false, errors, ref }`
-export const REFUSED_NEEDS_REASON: UiError = readUiError(savePaymentNeedsReason);
 /** An old client sent a mode, a bank and a cheque: four ERR_FIELD_NOT_ALLOWED, one per name. */
 export const REFUSED_OLD_PAYMENT_FIELDS: UiError = readUiError(saveReceiptOldFields);
 export const REFUSED_RETURN_TOO_MUCH: UiError = readUiError(saveReceiptReturnTooMuch);
 export const REFUSED_CASH_BELOW_ZERO: UiError = readUiError(savePaymentCashBelowZero);
-/** A پیشگی to a buyer with no reason: at `reason` (plan 88). */
-export const REFUSED_ADVANCE_BUYER_NEEDS_REASON: UiError = readUiError(saveAdvanceBuyerNeedsReason);
 
 // Requests: exactly the `input` each command took
 export const REQUEST_SAVE_RECEIPT: ReceiptInput = readReceiptInput(saveReceiptRequest);
@@ -232,9 +226,6 @@ export const REQUEST_SAVE_PAYMENT: PaymentInput = readPaymentInput(savePaymentRe
 export const REQUEST_SAVE_CASH_LENT: PaymentInput = readPaymentInput(savePaymentCashLentRequest);
 export const REQUEST_SAVE_ADVANCE: AdvanceInput = readAdvanceInput(saveAdvanceRequest);
 export const REQUEST_SAVE_ADVANCE_BUYER: AdvanceInput = readAdvanceInput(saveAdvanceBuyerRequest);
-export const REQUEST_SAVE_ADVANCE_BUYER_NEEDS_REASON: AdvanceInput = readAdvanceInput(
-  saveAdvanceBuyerNeedsReasonRequest,
-);
 export const REQUEST_PREVIEW_ADVANCE_BUYER: VoucherPreviewInput = readVoucherPreviewInput(
   previewAdvanceBuyerRequest,
 );

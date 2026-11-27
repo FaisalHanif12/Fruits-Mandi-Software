@@ -2,8 +2,9 @@
 //!
 //! - **Seller**: the seller بنام, روکڑ جمع. A payment above his payable is allowed with a
 //!   warning; the extra shows as what he owes the firm, and it is not an advance (PRD FR-15.7).
-//! - **Buyer**: cash lent to him (PRD FR-15.11). A reason is required. It becomes one of his
-//!   bills for matching, aging and اگراہی, and a credit he has waiting settles it at once.
+//! - **Buyer**: cash lent to him (PRD FR-15.11). A reason can be typed (optional from v1.60). It
+//!   becomes one of his bills for matching, aging and اگراہی, and a credit he has waiting settles it
+//!   at once. A پیشگی typed to a buyer is saved here too, marked `entered_as` `advance`.
 //! - **A payable account** such as the transporters (کرایہ کھاتہ, PRD FR-14.2).
 //!
 //! A payment never adjusts an advance. It takes cash out, so the save asks the cash question of
@@ -16,7 +17,9 @@ use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::FieldErrors;
-use mandi_domain::core::vouchers::{PaymentInput, VoucherMode, VoucherSaved, VoucherType};
+use mandi_domain::core::vouchers::{
+    PaymentInput, VoucherEnteredAs, VoucherMode, VoucherSaved, VoucherType,
+};
 use mandi_domain::ledger::{BalancedEntry, LedgerLine, PostingType, Side, build_entry};
 
 use super::common::{
@@ -61,8 +64,7 @@ impl PlannedPayment {
     }
 }
 
-/// Checks a payment as typed: the form fields, the account and its person, and the reason that
-/// cash lent to a buyer needs (PRD FR-15.11).
+/// Checks a payment as typed: the form fields and the account and its person (PRD 15.3, FR-15.11).
 ///
 /// # Errors
 /// `ServiceError::Db` only.
@@ -96,14 +98,6 @@ pub(super) fn plan_payment(
             refusal: ErrorCode::ErrFormatInvalid,
         },
     )?;
-    // The trigger of the database refuses this too (with another code); the service checks first
-    // so the screen gets the code with its field.
-    if party.as_ref().is_some_and(|p| p.role == Role::Buyer) && reason.is_none() {
-        errors.push(FieldError::new(
-            ErrorCode::ErrPaymentToBuyerNeedsReason,
-            "reason",
-        ));
-    }
     Ok(PlannedPayment {
         party,
         money,
@@ -191,7 +185,6 @@ pub(super) fn payment_match(
 /// # Errors
 /// The field errors of the date, amount, bank and cheque fields; `ERR_NOT_FOUND`,
 /// `ERR_FORMAT_INVALID`, `ERR_ACCOUNT_INACTIVE` on `account_id`;
-/// `ERR_PAYMENT_TO_BUYER_NEEDS_REASON` on `reason`;
 /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`); `ERR_DATE_CLOSED` and
 /// `ERR_DATE_IN_FUTURE` on `date`. Nothing is written when any of them is returned.
 pub fn save_payment(
@@ -201,12 +194,13 @@ pub fn save_payment(
 ) -> Result<VoucherSaved, ServiceError> {
     let window = day::window(ctx)?;
     ctx.db
-        .write(|tx| save_payment_in(ctx, actor, tx, window, input))
+        .write(|tx| save_payment_in(ctx, actor, tx, window, input, None))
 }
 
 /// The save of a payment inside the transaction of the caller. [`save_payment`] and the پیشگی to a
 /// buyer (PRD FR-15.11, v1.51: cash lent, saved as this payment) are this one function, so they
-/// can never differ (Code Standards B5).
+/// can never differ (Code Standards B5). `entered_as` is `advance` for the پیشگی (v1.60): it is
+/// remembered on the voucher and changes nothing else.
 ///
 /// # Errors
 /// As [`save_payment`].
@@ -216,6 +210,7 @@ pub(super) fn save_payment_in(
     tx: &Connection,
     window: (Option<BusinessDate>, BusinessDate),
     input: &PaymentInput,
+    entered_as: Option<VoucherEnteredAs>,
 ) -> Result<VoucherSaved, ServiceError> {
     let planned = plan_payment(tx, window, input)?;
     if !planned.errors.is_empty() {
@@ -231,7 +226,8 @@ pub(super) fn save_payment_in(
     let hint = hint_for(tx, party.role, party.record.id)?;
     let now = ctx.now_text();
     let number = repo::next_number(tx, VoucherType::Payment)?;
-    let row = payment_row(&planned, number)?;
+    let mut row = payment_row(&planned, number)?;
+    row.extra.entered_as = entered_as;
     let (voucher_id, posted) = insert_and_post(
         ctx,
         tx,

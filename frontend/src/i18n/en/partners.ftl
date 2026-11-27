@@ -422,6 +422,14 @@ partners-statement-detail-fruit-taken = { $for ->
    *[home] { -phal } for home: { $subject } { $qty } { $packing } @ { $rate } = { $value }
 }
 
+# The same with a total deduction (fruit from another shop, PRD FR-16.11 v1.59): $value is the whole value, $deduction what the
+# other shop kept; the amount of the line is the net.
+# review: pending
+partners-statement-detail-fruit-taken-deduction = { $for ->
+    [guests] { -phal } for { -mehman }: { $subject } { $qty } { $packing } @ { $rate } = { $value }, deduction { $deduction }, your equal part
+   *[home] { -phal } for home: { $subject } { $qty } { $packing } @ { $rate } = { $value }, deduction { $deduction }
+}
+
 # $fruit: the entry's number. The details of an entry are shown only for the posting in force.
 # review: pending
 partners-statement-detail-fruit-earlier = { -phal } { $fruit }: an earlier posting of an entry that was changed, or its reversal
@@ -549,7 +557,7 @@ partners-code-lock-now = Close it now
 # One compact line for each partner under the overview: how many trips and gardens he is in that are
 # still open, with a button that opens the list (PRD 17.3, plan 76 point 11).
 # review: pending
-partners-ventures-line = Open: { -safar } <num>{ $trips }</num>, { -bagh } <num>{ $gardens }</num>
+partners-ventures-line = All open: { -safar } <num>{ $trips }</num>, { -bagh } <num>{ $gardens }</num>
 
 # review: pending
 partners-ventures-show = Show the list
@@ -672,3 +680,24 @@ partners-statement-detail-advance-out = { -peshgi } to { $subject } { $amount },
 # $subject: the seller. $amount: what was settled. $share: his percent.
 # review: pending
 partners-statement-detail-advance-back = { -peshgi } back from { $subject } { $amount }, your { $share }%
+
+# Plan 99 (PRD FR-17.3): the open gardens and trips list pages by month.
+
+# review: pending
+partners-ventures-col-made = Made on
+
+# The total result of the trips, under the balance column, beside the gardens balance.
+# review: pending
+partners-ventures-total-trips = { -safar }s
+
+# review: pending
+partners-ventures-month-empty = No open { -bagh } or { -safar } was made in this month
+
+# review: pending
+partners-ventures-month-empty-help = Move to another month with the buttons below.
+
+# review: pending
+partners-ventures-empty = No { -bagh } or { -safar } is open
+
+# review: pending
+partners-ventures-empty-help = A { -bagh } or a { -safar } shows here while it is open.

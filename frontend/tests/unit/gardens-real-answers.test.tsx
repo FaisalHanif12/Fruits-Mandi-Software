@@ -132,14 +132,22 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     expect(screen.getByText(said(message(language, 'gardens-status-open')))).toBeInTheDocument();
     const balance = screen.getAllByText(said(message(language, 'gardens-balance')))[0];
     expect(balance?.closest('div')?.textContent).toContain('11,400');
-    const partners = screen.getByRole('list', {
+    // The partners and each one's money are under the heading that folds (plan 96).
+    const figuresButton = screen.getByRole('button', {
+      name: named(message(language, 'gardens-figures-title')),
+    });
+    // Open when the page opens (PRD FR-12.53).
+    expect(figuresButton).toHaveAttribute('aria-expanded', 'true');
+    const figures = figuresButton.closest('section');
+    if (figures === null) throw new Error('the figures have no section');
+    const partners = within(figures).getByRole('list', {
       name: named(message(language, 'gardens-partners-title')),
     });
     expect(within(partners).getAllByRole('listitem')).toHaveLength(2);
     expect(visible(partners.textContent)).toContain('60%');
     expect(visible(partners.textContent)).toContain('40%');
     // A paid 33,000 from the shop, B 22,000 from his pocket; nothing is back yet (net −33,000).
-    const table = screen.getByRole('table', {
+    const table = within(figures).getByRole('table', {
       name: named(message(language, 'gardens-partner-results-title')),
     });
     for (const figure of ['33,000', '22,000', '-33,000', '-22,000']) {
@@ -380,8 +388,15 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     expect(
       screen.getByText(said(message(language, 'gardens-closed-notice', { date: '13-10-2026' }))),
     ).toBeInTheDocument();
+    const figuresButton = screen.getByRole('button', {
+      name: named(message(language, 'gardens-figures-title')),
+    });
+    // Open when the page opens (PRD FR-12.53).
+    expect(figuresButton).toHaveAttribute('aria-expanded', 'true');
+    const figures = figuresButton.closest('section');
+    if (figures === null) throw new Error('the figures have no section');
     // Closing 10,000 at 60 / 40 gives 6,000 and 4,000; the result is minus 45,000.
-    const table = screen.getByRole('table', {
+    const table = within(figures).getByRole('table', {
       name: named(message(language, 'gardens-partner-results-title')),
     });
     for (const figure of ['6,000', '4,000', '-27,000']) {

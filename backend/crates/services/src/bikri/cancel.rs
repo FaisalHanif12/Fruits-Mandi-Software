@@ -55,9 +55,14 @@ pub(super) struct Live {
     pub(super) date: BusinessDate,
 }
 
+/// The postings of a بکری in force, and last the entry of its lots' پیشگی if it has one (PRD FR-12.52
+/// v1.57): a cancel, an undo and their cash question treat that entry like a posting, so it is
+/// reversed with the others and its cash is given back with theirs.
 pub(super) fn live_postings(conn: &Connection, bikri_id: i64) -> Result<Vec<Live>, ServiceError> {
+    let advance = edit_repo::advance_entry_in_force(conn, bikri_id)?;
     edit_repo::postings_in_force(conn, bikri_id)?
         .into_iter()
+        .chain(advance)
         .map(|p| {
             Ok(Live {
                 entry_id: p.entry_id,

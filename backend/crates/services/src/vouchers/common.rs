@@ -285,10 +285,18 @@ pub(super) fn stored_line(
 
 /// Adds the columns of the vouchers of plan 17 to an audit value, when there are any.
 pub(super) fn add_extra_json(value: &mut Value, extra: &VoucherExtra) {
-    if *extra == VoucherExtra::default() {
+    let Some(map) = value.as_object_mut() else {
         return;
+    };
+    // How a buyer's پیشگی was typed (PRD FR-15.11 v1.60), only when it is one.
+    if let Some(entered_as) = extra.entered_as {
+        map.insert("entered_as".to_owned(), json!(entered_as.as_str()));
     }
-    if let Some(map) = value.as_object_mut() {
+    let plan_17 = VoucherExtra {
+        entered_as: None,
+        ..extra.clone()
+    };
+    if plan_17 != VoucherExtra::default() {
         map.insert("partner_id".to_owned(), json!(extra.partner_id));
         map.insert("expense_head_id".to_owned(), json!(extra.expense_head_id));
         map.insert("return_by_date".to_owned(), json!(extra.return_by_date));

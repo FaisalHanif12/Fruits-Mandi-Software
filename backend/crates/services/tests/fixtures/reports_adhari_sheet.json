@@ -27,7 +27,6 @@
         }
       ],
       "bill_paisa": 1868400,
-      "cash_paisa": 0,
       "today_credit_paisa": 1868400,
       "previous_due": {
         "amount_paisa": 0,
@@ -65,7 +64,6 @@
         }
       ],
       "bill_paisa": 1288000,
-      "cash_paisa": 0,
       "today_credit_paisa": 1288000,
       "previous_due": {
         "amount_paisa": 0,
@@ -76,51 +74,11 @@
         "side": "dr"
       },
       "is_dead": false
-    },
-    {
-      "party": {
-        "account_id": 9,
-        "code": "0030",
-        "short_code": null,
-        "name_ur": "شاہد",
-        "name_en": "Shahid",
-        "tag": null,
-        "person_key": "شاہد|03000000000",
-        "phone": "0300-0000000"
-      },
-      "lines": [
-        {
-          "item": {
-            "ur": "سیب",
-            "en": "Apple"
-          },
-          "packing": {
-            "ur": "پیٹی",
-            "en": "Box"
-          },
-          "qty": 10,
-          "weight_grams": null,
-          "rate_paisa": 120000
-        }
-      ],
-      "bill_paisa": 1280000,
-      "cash_paisa": 1280000,
-      "today_credit_paisa": 0,
-      "previous_due": {
-        "amount_paisa": 0,
-        "side": "zero"
-      },
-      "total_due": {
-        "amount_paisa": 0,
-        "side": "zero"
-      },
-      "is_dead": false
     }
   ],
-  "total_count": 3,
+  "total_count": 2,
   "totals": {
-    "bill_paisa": 4436400,
-    "cash_paisa": 1280000,
+    "bill_paisa": 3156400,
     "today_credit_paisa": 3156400,
     "previous_due": {
       "amount_paisa": 0,
@@ -133,9 +91,9 @@
   },
   "others": null,
   "others_count": 0,
+  "other_rows": [],
   "all_totals": {
-    "bill_paisa": 4436400,
-    "cash_paisa": 1280000,
+    "bill_paisa": 3156400,
     "today_credit_paisa": 3156400,
     "previous_due": {
       "amount_paisa": 0,

@@ -3,9 +3,11 @@
 //! Standards B29); the others are one transaction each (Code Standards B3). Until plan 17d T2 each
 //! command answers `ERR_NOT_IMPLEMENTED`.
 
+use mandi_services::core::accounts::AccountRow;
 use mandi_services::core::fruit::{
-    FruitCancelInput, FruitCancelled, FruitEditInput, FruitEdited, FruitGetInput, FruitInput,
-    FruitList, FruitListInput, FruitLots, FruitLotsInput, FruitPreview, FruitRow, FruitSaved,
+    AgentShopInput, FruitCancelInput, FruitCancelled, FruitEditInput, FruitEdited, FruitGetInput,
+    FruitInput, FruitList, FruitListInput, FruitLots, FruitLotsInput, FruitPreview, FruitRow,
+    FruitSaved,
 };
 use mandi_services::partner_code;
 use mandi_services::{auth, fruit};
@@ -127,6 +129,24 @@ pub async fn fruit_lots<R: tauri::Runtime>(
     run(app, "fruit_lots", move |ctx| {
         auth::require(ctx)?;
         fruit::lots(ctx, &input)
+    })
+    .await
+}
+
+/// Adds another commission agent's shop on the spot, from the آڑھتی box of the پھل screen (PRD
+/// FR-16.11 v1.59, FR-7.69). It makes a seller account marked آڑھتی دکان, with both names and an
+/// optional phone, and the code is given by itself. The answer is the new account (`id`, `code`, the
+/// names), so the box can choose it at once; it is already in `search_accounts` with scope
+/// `agent_shop`. Errors: the name codes on `name_ur` and `name_en`, `ERR_SPELLING_UNCONFIRMED`, the
+/// phone code on `phone1`.
+#[tauri::command]
+pub async fn fruit_agent_shop_add<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: AgentShopInput,
+) -> Result<AccountRow, UiError> {
+    run(app, "fruit_agent_shop_add", move |ctx| {
+        let actor = auth::require(ctx)?;
+        fruit::agent_shop_add(ctx, &actor, &input)
     })
     .await
 }

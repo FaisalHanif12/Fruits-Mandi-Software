@@ -63,6 +63,11 @@
       "kind": "money"
     },
     {
+      "key": "deduction",
+      "title_id": "fruit-col-deduction",
+      "kind": "money"
+    },
+    {
       "key": "value",
       "title_id": "report-col-value",
       "kind": "money"
@@ -120,6 +125,9 @@
           "text": "580"
         },
         {
+          "type": "empty"
+        },
+        {
           "type": "money",
           "text": "1,160"
         },
@@ -175,6 +183,9 @@
           "text": "1,000"
         },
         {
+          "type": "empty"
+        },
+        {
           "type": "money",
           "text": "3,000"
         },
@@ -214,6 +225,9 @@
     {
       "type": "number",
       "text": "5"
+    },
+    {
+      "type": "empty"
     },
     {
       "type": "empty"

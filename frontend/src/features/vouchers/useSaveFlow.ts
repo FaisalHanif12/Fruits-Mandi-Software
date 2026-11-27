@@ -32,10 +32,10 @@ import { uiErrorOf } from '../../shared/api';
 import { useSingleFlight } from '../../shared/hooks';
 import { showToast } from '../../shared/ui';
 import { vouchersPreview } from './api';
-import { accountRequired, build, entryOf, isCashLent, savedKindOf } from './draft';
+import { accountRequired, build, entryOf, keptKindOf, savedKindOf } from './draft';
 import { voucherNumberText } from './list-columns';
 import { useEditVoucher, useSaveVoucher } from './hooks';
-import type { VoucherDraft, VoucherPreview, VoucherSaved } from './types';
+import type { VoucherDraft, VoucherPreview, VoucherRow, VoucherSaved } from './types';
 
 /** The box that asks about cash below zero: the cash after the entry, from the backend. */
 export interface CashAsk {
@@ -65,20 +65,17 @@ export interface SignAsk {
   andNext: boolean;
 }
 
-/**
- * The problems that belong to the box of a change (plan 92): the sign, and the reason of the change. A cash lent has a
- * reason of its own that the backend also names `reason`; while that one is empty the problem is the form's.
- */
-function belongsToBox(item: UiError['errors'][number], draft: VoucherDraft): boolean {
-  if (item.field === 'sign') return true;
-  return item.field === 'reason' && !(isCashLent(draft) && draft.reason.trim() === '');
+/** The problems that belong to the box of a change (plan 92): the sign, and the reason of the change. */
+function belongsToBox(item: UiError['errors'][number]): boolean {
+  return item.field === 'sign' || item.field === 'reason';
 }
 
-/** A saved voucher that is being changed: its id, the version read with it and its number. */
+/** A saved voucher that is being changed: its id, the version read with it, its number and how it was typed. */
 interface EditingVoucher {
   id: number;
   version: number;
   number: number;
+  entered_as: VoucherRow['entered_as'];
 }
 
 interface SaveFlowOptions {
@@ -153,7 +150,7 @@ export function useSaveFlow({
         showToast(
           'success',
           l10n.getString(editing === null ? 'vouchers-saved' : 'vouchers-edited', {
-            kind: editing === null ? savedKindOf(draft, saved) : draft.type,
+            kind: editing === null ? savedKindOf(draft, saved) : keptKindOf(editing, draft.type),
             number,
           }),
         );
@@ -163,12 +160,9 @@ export function useSaveFlow({
         const refused = uiErrorOf(error);
         // The sign or the reason of a change was refused: the box tells it under its field, with what was typed
         // still in it. What is not the box's is told at the form, as for a new voucher (plan 92).
-        if (editing !== null && refused.errors.some((item) => belongsToBox(item, draft))) {
-          const rest = refused.errors.filter((item) => !belongsToBox(item, draft));
-          setSignError({
-            ...refused,
-            errors: refused.errors.filter((item) => belongsToBox(item, draft)),
-          });
+        if (editing !== null && refused.errors.some(belongsToBox)) {
+          const rest = refused.errors.filter((item) => !belongsToBox(item));
+          setSignError({ ...refused, errors: refused.errors.filter(belongsToBox) });
           setAskSign({ andNext });
           setRefusal(rest.length === 0 ? null : { error: { ...refused, errors: rest }, draftText });
           return false;

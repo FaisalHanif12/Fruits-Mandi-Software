@@ -57,7 +57,7 @@ export function VoucherListSection({
   onCancel,
   onPrint,
 }: VoucherListSectionProps) {
-  // The list shows 7 days at a time, the latest first (PRD FR-19.11, plan 76 point 8). Rows of finished
+  // The list shows 30 days at a time, the latest first (PRD FR-19.11, v1.57, plan 95 items 14 and 18). Rows of finished
   // (cancelled) vouchers are left out until the tick is on.
   const listWindow = useListWindow({
     kind: 'days',
@@ -79,18 +79,18 @@ export function VoucherListSection({
     account_id: account?.id ?? null,
     show_finished: showFinished,
     search: searchText === '' ? null : searchText,
-    // A window is 7 days: the bar under the list says which, so no month heading is drawn.
+    // A window is 30 days: the bar under the list says which, so no month heading is drawn.
     group_by_month: false,
   };
   const list = useVouchersList(input, listWindow.ready);
   const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the filter before it.
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
-  // The kind of account is a column of the پیشگی list only, where a buyer's cash lent and the advances
-  // of sellers share one list (PRD FR-15.11); the other two lists keep their columns.
+  // The kind column is in the پیشگی list, where buyers' money and the sellers' advances share one list, and in
+  // the ادائیگی list, which holds a buyer's پیشگی too (PRD FR-15.11); the وصولی list has no need of it.
   const columns = useMemo(
     () =>
-      type === 'advance' ? VOUCHER_COLUMNS : VOUCHER_COLUMNS.filter((c) => c.field !== 'kind'),
+      type === 'receipt' ? VOUCHER_COLUMNS.filter((c) => c.field !== 'kind') : VOUCHER_COLUMNS,
     [type],
   );
   const selected = rows?.find((row) => row.id === selectedId) ?? null;

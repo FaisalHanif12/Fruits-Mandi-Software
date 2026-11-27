@@ -44,11 +44,6 @@
       "kind": "money"
     },
     {
-      "key": "cash",
-      "title_id": "print-adhari-sheet-col-cash",
-      "kind": "money"
-    },
-    {
       "key": "today_credit",
       "title_id": "print-adhari-sheet-col-today-credit",
       "kind": "money"
@@ -65,7 +60,6 @@
     }
   ],
   "column_labels": [
-    null,
     null,
     null,
     null,
@@ -105,10 +99,6 @@
         {
           "type": "money",
           "text": "18,684"
-        },
-        {
-          "type": "money",
-          "text": "0"
         },
         {
           "type": "money",
@@ -161,10 +151,6 @@
         },
         {
           "type": "money",
-          "text": "0"
-        },
-        {
-          "type": "money",
           "text": "12,880"
         },
         {
@@ -183,43 +169,19 @@
     {
       "cells": [
         {
-          "type": "party",
-          "party": {
-            "short_code": null,
-            "code": "0030",
-            "name": "Shahid",
-            "tag": null,
-            "person_key": "شاہد|03000000000",
-            "phone": "0300-0000000"
-          }
+          "type": "label",
+          "id": "print-adhari-sheet-total"
         },
         {
-          "type": "detail",
-          "parts": [
-            {
-              "kind": "sale",
-              "bikri_number": "2",
-              "item": "Apple",
-              "packing": "Box",
-              "qty": "10",
-              "rate": "1200",
-              "value": "12,000",
-              "commission": "720",
-              "laga": "80"
-            }
-          ]
+          "type": "empty"
         },
         {
           "type": "money",
-          "text": "12,800"
+          "text": "31,564"
         },
         {
           "type": "money",
-          "text": "12,800"
-        },
-        {
-          "type": "money",
-          "text": "0"
+          "text": "31,564"
         },
         {
           "type": "balance",
@@ -228,15 +190,15 @@
         },
         {
           "type": "balance",
-          "text": "0",
-          "side_id": "report-side-zero"
+          "text": "31,564",
+          "side_id": "report-side-dr"
         }
       ],
-      "kind": "normal"
+      "kind": "group"
     }
   ],
-  "row_count": "3",
-  "totals_label_id": "print-adhari-sheet-total",
+  "row_count": "2",
+  "totals_label_id": "print-adhari-sheet-all",
   "totals": [
     {
       "type": "empty"
@@ -246,11 +208,7 @@
     },
     {
       "type": "money",
-      "text": "44,364"
-    },
-    {
-      "type": "money",
-      "text": "12,800"
+      "text": "31,564"
     },
     {
       "type": "money",
@@ -271,39 +229,5 @@
     "label_id": "print-in-words",
     "text": "Thirty-one thousand five hundred sixty-four rupees only"
   },
-  "extra_totals": [
-    {
-      "label_id": "print-adhari-sheet-all",
-      "cells": [
-        {
-          "type": "empty"
-        },
-        {
-          "type": "empty"
-        },
-        {
-          "type": "money",
-          "text": "44,364"
-        },
-        {
-          "type": "money",
-          "text": "12,800"
-        },
-        {
-          "type": "money",
-          "text": "31,564"
-        },
-        {
-          "type": "balance",
-          "text": "0",
-          "side_id": "report-side-zero"
-        },
-        {
-          "type": "balance",
-          "text": "31,564",
-          "side_id": "report-side-dr"
-        }
-      ]
-    }
-  ]
+  "extra_totals": []
 }

@@ -47,6 +47,7 @@
       "amount_paisa": -116000,
       "running_paisa": 26400,
       "values": {
+        "deduction_paisa": 0,
         "for": "home",
         "qty": 2,
         "rate_paisa": 58000,
@@ -77,6 +78,7 @@
       "amount_paisa": -100000,
       "running_paisa": -73600,
       "values": {
+        "deduction_paisa": 0,
         "for": "guests",
         "qty": 3,
         "rate_paisa": 100000,

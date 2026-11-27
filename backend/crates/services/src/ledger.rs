@@ -291,7 +291,7 @@ pub fn post_ordered(
     let (_, today) = day::window(ctx)?;
     let closed = day::closed_in(tx)?;
     validate::posting_date("entry_date", &format_ddmmyyyy(event.date), closed, today)?;
-    post_checked(ctx, tx, user_id, event, order_key)
+    post_checked(ctx, tx, user_id, event, order_key, true)
 }
 
 /// Posts the opening entry of a NEW account (PRD FR-10.11, plan 53 T1). Its date may lie on a
@@ -317,16 +317,46 @@ pub(crate) fn post_new_opening(
     }
     let (_, today) = day::window(ctx)?;
     validate::posting_date("entry_date", &format_ddmmyyyy(event.date), None, today)?;
-    post_checked(ctx, tx, user_id, event, None)
+    post_checked(ctx, tx, user_id, event, None, true)
 }
 
-/// The rest of [`post_ordered`], after the date has been checked.
+/// Posts again the opening of an account with روکڑ in the place of ابتدائی فرق (the one-time fix of
+/// PRD FR-10.9 v1.60, plan 99): the same account, day, amount and advance mark, at the place of the
+/// entry it replaces (its order key). The account's state is not checked: the opening does not
+/// change, so an account made inactive keeps it. Everything else is checked as [`post_ordered`].
+///
+/// # Errors
+/// As [`post_ordered`]; `ServiceError::Data` for a posting that is not an opening.
+pub(crate) fn post_moved_opening(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    event: &PostingEvent,
+    order_key: i64,
+) -> Result<Posted, ServiceError> {
+    if event.posting_type != PostingType::Opening
+        || event.source_type != SourceType::Account
+        || event.reverses.is_some()
+    {
+        return Err(ServiceError::Data(
+            "only an opening is moved to cash".to_owned(),
+        ));
+    }
+    let (_, today) = day::window(ctx)?;
+    let closed = day::closed_in(tx)?;
+    validate::posting_date("entry_date", &format_ddmmyyyy(event.date), closed, today)?;
+    post_checked(ctx, tx, user_id, event, Some(order_key), false)
+}
+
+/// The rest of [`post_ordered`], after the date has been checked. `check_active` is false only for
+/// [`post_moved_opening`].
 fn post_checked(
     ctx: &Context,
     tx: &Connection,
     user_id: i64,
     event: &PostingEvent,
     order_key: Option<i64>,
+    check_active: bool,
 ) -> Result<Posted, ServiceError> {
     check_own_goods_account(tx, &event.entry)?;
     // An `order_key` is the mark of an edit: it is the key of the entry the new posting replaces.
@@ -362,7 +392,9 @@ fn post_checked(
                 .as_ref()
                 .map_or(&[][..], |(_, lines)| lines.as_slice()),
         };
-        check_accounts_active(tx, &event.entry, rules)?;
+        if check_active {
+            check_accounts_active(tx, &event.entry, rules)?;
+        }
         check_dead_people(tx, &event.entry, rules)?;
     }
     check_person_keys(tx, &event.entry)?;

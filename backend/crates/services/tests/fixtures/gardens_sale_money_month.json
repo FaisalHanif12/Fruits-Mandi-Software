@@ -1,0 +1,347 @@
+{
+  "rows": [
+    {
+      "kind": "bikri",
+      "date": "2026-10-11",
+      "bikri_id": 1,
+      "bikri_number": 1,
+      "lot": {
+        "lot_id": 1,
+        "lot_no": 1,
+        "lot_counter": 1,
+        "item": {
+          "id": 1,
+          "code": "0040",
+          "name_ur": "کیلا",
+          "name_en": "Banana"
+        },
+        "packing": {
+          "id": 1,
+          "code": "0050",
+          "name_ur": "پیٹی",
+          "name_en": "Box"
+        }
+      },
+      "item": null,
+      "buyer": {
+        "id": 36,
+        "code": "0022",
+        "name_ur": "مانی",
+        "name_en": "Mani"
+      },
+      "shop_name": null,
+      "entry_id": null,
+      "qty": 20,
+      "weight_grams": null,
+      "rate_paisa": 100000,
+      "value_paisa": 2000000,
+      "buyer_total_paisa": 2136000,
+      "paid_paisa": 0,
+      "collected_paisa": 0,
+      "still_due_paisa": 2136000,
+      "garden_credit_paisa": 1880000,
+      "charges": null,
+      "working": {
+        "message_id": "working-sale-money-credit",
+        "args": [
+          {
+            "name": "value",
+            "value": {
+              "kind": "money",
+              "paisa": 2000000
+            }
+          },
+          {
+            "name": "commission",
+            "value": {
+              "kind": "money",
+              "paisa": 120000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 1880000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "kind": "bikri",
+      "date": "2026-10-11",
+      "bikri_id": 1,
+      "bikri_number": 1,
+      "lot": {
+        "lot_id": 1,
+        "lot_no": 1,
+        "lot_counter": 1,
+        "item": {
+          "id": 1,
+          "code": "0040",
+          "name_ur": "کیلا",
+          "name_en": "Banana"
+        },
+        "packing": {
+          "id": 1,
+          "code": "0050",
+          "name_ur": "پیٹی",
+          "name_en": "Box"
+        }
+      },
+      "item": null,
+      "buyer": {
+        "id": 37,
+        "code": "0023",
+        "name_ur": "انس",
+        "name_en": "Anas"
+      },
+      "shop_name": null,
+      "entry_id": null,
+      "qty": 10,
+      "weight_grams": null,
+      "rate_paisa": 100000,
+      "value_paisa": 1000000,
+      "buyer_total_paisa": 1068000,
+      "paid_paisa": 500000,
+      "collected_paisa": 0,
+      "still_due_paisa": 568000,
+      "garden_credit_paisa": 940000,
+      "charges": null,
+      "working": {
+        "message_id": "working-sale-money-credit",
+        "args": [
+          {
+            "name": "value",
+            "value": {
+              "kind": "money",
+              "paisa": 1000000
+            }
+          },
+          {
+            "name": "commission",
+            "value": {
+              "kind": "money",
+              "paisa": 60000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 940000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "kind": "lot_charges",
+      "date": "2026-10-11",
+      "bikri_id": 1,
+      "bikri_number": 1,
+      "lot": {
+        "lot_id": 1,
+        "lot_no": 1,
+        "lot_counter": 1,
+        "item": {
+          "id": 1,
+          "code": "0040",
+          "name_ur": "کیلا",
+          "name_en": "Banana"
+        },
+        "packing": {
+          "id": 1,
+          "code": "0050",
+          "name_ur": "پیٹی",
+          "name_en": "Box"
+        }
+      },
+      "item": null,
+      "buyer": null,
+      "shop_name": null,
+      "entry_id": null,
+      "qty": null,
+      "weight_grams": null,
+      "rate_paisa": null,
+      "value_paisa": null,
+      "buyer_total_paisa": null,
+      "paid_paisa": null,
+      "collected_paisa": null,
+      "still_due_paisa": null,
+      "garden_credit_paisa": -22000,
+      "charges": {
+        "freight_paisa": 0,
+        "labour_paisa": 15000,
+        "munshiana_paisa": 5000,
+        "phone_paisa": 2000,
+        "store_rent_paisa": 0
+      },
+      "working": {
+        "message_id": "working-sale-money-lot-charges",
+        "args": [
+          {
+            "name": "freight",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "labour",
+            "value": {
+              "kind": "money",
+              "paisa": 15000
+            }
+          },
+          {
+            "name": "munshiana",
+            "value": {
+              "kind": "money",
+              "paisa": 5000
+            }
+          },
+          {
+            "name": "phone",
+            "value": {
+              "kind": "money",
+              "paisa": 2000
+            }
+          },
+          {
+            "name": "store_rent",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 22000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "kind": "bikri",
+      "date": "2026-10-11",
+      "bikri_id": 1,
+      "bikri_number": 1,
+      "lot": {
+        "lot_id": 2,
+        "lot_no": 2,
+        "lot_counter": 2,
+        "item": {
+          "id": 1,
+          "code": "0040",
+          "name_ur": "کیلا",
+          "name_en": "Banana"
+        },
+        "packing": {
+          "id": 1,
+          "code": "0050",
+          "name_ur": "پیٹی",
+          "name_en": "Box"
+        }
+      },
+      "item": null,
+      "buyer": {
+        "id": 36,
+        "code": "0022",
+        "name_ur": "مانی",
+        "name_en": "Mani"
+      },
+      "shop_name": null,
+      "entry_id": null,
+      "qty": 20,
+      "weight_grams": null,
+      "rate_paisa": 90000,
+      "value_paisa": 1800000,
+      "buyer_total_paisa": 1924000,
+      "paid_paisa": 0,
+      "collected_paisa": 0,
+      "still_due_paisa": 1924000,
+      "garden_credit_paisa": 1692000,
+      "charges": null,
+      "working": {
+        "message_id": "working-sale-money-credit",
+        "args": [
+          {
+            "name": "value",
+            "value": {
+              "kind": "money",
+              "paisa": 1800000
+            }
+          },
+          {
+            "name": "commission",
+            "value": {
+              "kind": "money",
+              "paisa": 108000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 1692000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "kind": "other_shop",
+      "date": "2026-10-11",
+      "bikri_id": null,
+      "bikri_number": null,
+      "lot": null,
+      "item": null,
+      "buyer": null,
+      "shop_name": "Haji Traders",
+      "entry_id": 2,
+      "qty": 10,
+      "weight_grams": null,
+      "rate_paisa": null,
+      "value_paisa": 1500000,
+      "buyer_total_paisa": null,
+      "paid_paisa": null,
+      "collected_paisa": null,
+      "still_due_paisa": null,
+      "garden_credit_paisa": 1500000,
+      "charges": null,
+      "working": {
+        "message_id": "working-sale-money-other-shop",
+        "args": [
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 1500000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
+  "total_count": 5,
+  "totals": {
+    "qty": 60,
+    "value_paisa": 6300000,
+    "buyer_total_paisa": 5128000,
+    "paid_paisa": 500000,
+    "collected_paisa": 0,
+    "still_due_paisa": 4628000,
+    "lot_charges_paisa": 22000,
+    "garden_credit_paisa": 5990000
+  }
+}

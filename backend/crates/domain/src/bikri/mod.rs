@@ -64,11 +64,14 @@ mod person;
 mod process;
 mod seller_paid;
 mod stored;
+mod venture_cards;
 mod working;
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::{LotPreview, PreparedDraft, SellerPaidLines, SummaryTotals};
+use mandi_core::bikri::{
+    GardenCardLines, LotPreview, PreparedDraft, SellerPaidLines, SummaryTotals, TripCardLines,
+};
 use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::MoneyError;
@@ -94,6 +97,7 @@ pub use self::stored::{
     PostingTarget, StoredCarrier, StoredCharge, StoredIdentity, StoredLot, StoredLotCharge,
     StoredPosting, StoredSale,
 };
+pub use self::venture_cards::{garden_lines, merge_gardens, merge_trips, trip_lines};
 pub use self::working::partner_share;
 
 /// Which posting of a بکری this is (PRD FR-12.17). A later sale charges no lot charges and no
@@ -146,6 +150,10 @@ pub struct PostingCalc {
     pub summary: SummaryTotals,
     /// One summary for each seller of a complete lot (PRD FR-12.23 v1.53, plan 91).
     pub sellers: Vec<SellerPaidLines>,
+    /// One card for each garden with a complete lot (PRD FR-12.52, plan 97 item 5).
+    pub gardens: Vec<GardenCardLines>,
+    /// One card for each trip with a complete lot of its goods (PRD FR-12.52, plan 97 item 5).
+    pub trips: Vec<TripCardLines>,
     /// What stops a save.
     pub errors: Vec<FieldError>,
     /// What only warns.
@@ -337,10 +345,13 @@ fn calc_pass(
     }
     let summary = whole.totals(&Scope::Whole)?;
     let sellers = seller_paid::sellers_of(draft, lookups, &previews)?;
+    let (gardens, trips) = venture_cards::cards_of(draft, lookups, &previews)?;
     Ok(PostingCalc {
         lots: previews,
         summary,
         sellers,
+        gardens,
+        trips,
         errors: issues.errors,
         warnings: issues.warnings,
         journal,

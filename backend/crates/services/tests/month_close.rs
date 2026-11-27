@@ -564,9 +564,18 @@ fn a_new_accounts_opening_inside_a_closed_month_leaves_the_month_close_as_it_was
     );
     assert_eq!(months()[1].1, MonthState::Closed);
 
-    // A new buyer with 5,000 بنام, dated 10-10-26: inside October, a month-closed month.
+    // A new account under payables (0201) with 5,000 بنام, dated 10-10-26: inside October, a
+    // month-closed month. Its opening goes to ابتدائی فرق; a party's opening goes through روکڑ and
+    // needs an open day (PRD FR-10.9 v1.60).
+    let payables: i64 = raw(&w.dir)
+        .query_row(
+            "SELECT id FROM account_controls WHERE code = '0201'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
     let input_json = serde_json::json!({
-        "id": null, "version": null, "account_type": "buyer", "control_id": null, "code": "",
+        "id": null, "version": null, "account_type": "other", "control_id": payables, "code": "",
         "name_ur": "طارق محمود", "name_en": "Tariq Mehmood", "confirmed_rules_words": [],
         "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null, "adda_id": null,
         "phone1": "", "phone2": "", "address": "", "linked_account_id": null,

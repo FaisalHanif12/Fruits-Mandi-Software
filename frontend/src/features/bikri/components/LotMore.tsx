@@ -23,7 +23,7 @@ import {
   fieldError,
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
-import { isOwnLot } from '../draft';
+import { isArrivalLot, isGardenLot, isOwnLot } from '../draft';
 import { lotLabelVars, useLotWho } from '../lot-name';
 import { LOT, type LotPreview } from '../types';
 
@@ -135,6 +135,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             <Field
               label={<Localized id="bikri-more-weight" />}
               error={fieldError(error, path('weight_received'))}
+              fadeError
             >
               {(control) => (
                 <MoneyInput
@@ -149,6 +150,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             <Field
               label={<Localized id="glossary-kiraya-store" />}
               error={fieldError(error, path('store_rent'))}
+              fadeError
             >
               {(control) => (
                 <MoneyInput
@@ -160,9 +162,34 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
                 />
               )}
             </Field>
+            {isOwnLot(row) || isGardenLot(row) || isArrivalLot(row) ? null : (
+              // The advance the seller takes when he brings these goods: a real advance with its own posting, not a
+              // deduction of this sale (PRD FR-12.52, plan 95 item 11). Own, garden and arrival lots take none.
+              <Field
+                label={<Localized id="glossary-peshgi" />}
+                info={
+                  <Localized id="bikri-more-advance-given-hint">
+                    <p />
+                  </Localized>
+                }
+                error={fieldError(error, path('advance'))}
+                fadeError
+              >
+                {(control) => (
+                  <MoneyInput
+                    {...control}
+                    value={typed(LOT.advance)}
+                    onChange={(text) => {
+                      setTyped(LOT.advance, text);
+                    }}
+                  />
+                )}
+              </Field>
+            )}
             <Field
               label={<Localized id="glossary-phone" />}
               error={fieldError(error, path('phone'))}
+              fadeError
             >
               {(control) => (
                 <MoneyInput

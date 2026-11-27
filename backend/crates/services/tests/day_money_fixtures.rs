@@ -289,6 +289,13 @@ fn the_expense_and_lent_fixtures_are_the_real_answers() {
         &back,
         &vouchers::save_personal_return(&w.env.ctx, &w.owner, &typed(&back)).unwrap(),
     );
+    // Plan 98: no partner chosen lists every active partner's takes, each row with its partner.
+    let every_partner = json!({ "partner_id": null, "offset": 0, "limit": 0 });
+    pair(
+        "partner_takes_all",
+        &every_partner,
+        &partners::takes(&w.env.ctx, &typed::<PartnerTakesInput>(&every_partner)).unwrap(),
+    );
     // A cash question: B takes more than the cash that is left.
     let big = json!({
         "date": "10-10-2026", "partner_id": b, "amount": "60,000", "reason": "plot",

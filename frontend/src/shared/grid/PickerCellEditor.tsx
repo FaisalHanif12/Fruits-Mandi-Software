@@ -143,6 +143,10 @@ export function PickerCellEditor(props: EditorProps) {
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target;
+    // The short form the picker opens ("add it here", PRD FR-7.69) is drawn in a portal outside this element, but React
+    // still sends its key presses up to this handler. They are the form's, never the cell's: Tab or ↓ in the form must not
+    // end the edit and take the form with it (plan 95 item 4, Umar lost a new چکتا buyer this way).
+    if (!(target instanceof Node) || !event.currentTarget.contains(target)) return;
     // An open list owns ↑ ↓ and Enter (PRD FR-7.16); Esc is answered by the Esc order (FR-7.18).
     // The list is open whenever the cell is, so ← → and Tab still leave the cell and the Ctrl
     // shortcuts of the grid still work (plan 46).

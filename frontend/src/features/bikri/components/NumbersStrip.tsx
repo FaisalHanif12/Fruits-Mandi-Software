@@ -17,7 +17,7 @@ import { TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { CashCheck } from '../../../bindings/CashCheck';
 import { formatPaisa, useGrouping } from '../../../shared/format';
-import { Num } from '../../../shared/ui';
+import { Num, TimedNote } from '../../../shared/ui';
 import { lotLabelVars } from '../lot-name';
 import type { SummaryTotals } from '../types';
 
@@ -83,9 +83,11 @@ function StripRow({ label, totals, netIsNegative, leftOut }: Group) {
         ))
       )}
       {totals !== null && leftOut > 0 ? (
-        <Localized id="bikri-strip-left-out" vars={{ count: leftOut }}>
-          <span className="type-body text-warn" />
-        </Localized>
+        <TimedNote>
+          <Localized id="bikri-strip-left-out" vars={{ count: leftOut }}>
+            <span className="type-body text-warn" />
+          </Localized>
+        </TimedNote>
       ) : null}
     </div>
   );
@@ -123,16 +125,18 @@ export function NumbersStrip({
         />
       )}
       {cash.needs_confirm ? (
-        <p className="flex items-center gap-2 type-body text-warn">
-          <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-          <Localized
-            id="common-cash-after"
-            vars={{ amount: formatPaisa(cash.cash_after_paisa, { grouping }) }}
-            elems={{ num: <Num /> }}
-          >
-            <span />
-          </Localized>
-        </p>
+        <TimedNote>
+          <p className="flex items-center gap-2 type-body text-warn">
+            <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+            <Localized
+              id="common-cash-after"
+              vars={{ amount: formatPaisa(cash.cash_after_paisa, { grouping }) }}
+              elems={{ num: <Num /> }}
+            >
+              <span />
+            </Localized>
+          </p>
+        </TimedNote>
       ) : null}
     </section>
   );

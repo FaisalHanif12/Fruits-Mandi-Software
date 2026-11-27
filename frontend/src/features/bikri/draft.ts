@@ -212,6 +212,7 @@ export function lotInput(
   // A garden's lot is the same: no نقد and no advance tick (PRD FR-12.36). The backend refuses a
   // typed نقد on it, so a new lot sends none whatever was typed before the seller became a garden.
   const noCash = own || isGardenLot(row);
+  const advanceText = noCash ? null : textOrNull(typed[LOT.advance]);
   const purchaseId = own ? savedId(typed[LOT.purchase]) : null;
   // A garden's lot may take its goods from a goods arrived entry (PRD FR-12.40). A saved lot says
   // it has none, as the backend's own draft of it does (an edit sends it back as it came); a new
@@ -246,6 +247,8 @@ export function lotInput(
     phone: chargeInput(typed[LOT.phone], typed[LOT.phoneMethod]),
     cash_paid: noCash && lotId === null ? null : textOrNull(typed[LOT.cash]),
     store_rent: textOrNull(typed[LOT.storeRent]),
+    // پیشگی (plan 95 item 11): sent as typed, only for a lot that can take cash; the backend works it out and checks it.
+    ...(advanceText === null ? {} : { advance: advanceText }),
     // The tick starts OFF and is made in the seller's summary (PRD FR-12.23, plan 78 C3). Trip goods have no
     // advance to deduct, and the backend stores and sends back false for them.
     adjust_advance: noCash ? false : adjustAdvance,

@@ -197,10 +197,6 @@ edit-fix-failed = دن بند نہیں ہو سکے
 # review: pending
 edit-stamp = تبدیل شدہ: { $date } { $time }، { $by }
 
-# The same, when the edit was made through a reopened day: $sign is the sign given then (PRD FR-7.71, v1.36).
-# review: pending
-edit-stamp-signed = تبدیل شدہ: { $date } { $time }، { $by }، { -dastakhat }: { $sign }
-
 # review: pending
 edit-stamp-reason = وجہ: { $reason }
 
@@ -214,8 +210,9 @@ edit-mark = تبدیل شدہ
 # review: pending
 edit-mark-tip = تبدیل شدہ: { $date } { $time }، { $by }
 
+# The same, when the edit has a reason: it shows on hover (PRD FR-7.71, v1.58). The Owner's sign is never shown.
 # review: pending
-edit-mark-tip-signed = تبدیل شدہ: { $date } { $time }، { $by }، { -dastakhat }: { $sign }
+edit-mark-tip-reason = تبدیل شدہ: { $date } { $time }، { $by }، وجہ: { $reason }
 
 # The time of day. $hour and $minute are the clock, $part tells the part of the day.
 # review: pending
@@ -245,10 +242,6 @@ edit-history-failed = تبدیلیوں کی تاریخ نہیں کھل سکی۔
 
 # review: pending
 edit-history-version = { $date } { $time }، { $by }
-
-# A version made through a reopened day: its sign follows the name (PRD FR-7.71, v1.36).
-# review: pending
-edit-history-version-signed = { $date } { $time }، { $by }، { -dastakhat }: { $sign }
 
 # review: pending
 edit-history-field = خانہ

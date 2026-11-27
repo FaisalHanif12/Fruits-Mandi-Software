@@ -274,7 +274,8 @@ fn e2e_19_the_opening_position() {
             last.amount_paisa,
             last.voucher_number
         ),
-        ("2026-09-01", rupees(15_000), 1)
+        // The voucher number is 1 (it is null only for the پیشگی typed on a lot, PRD FR-12.52 v1.57).
+        ("2026-09-01", rupees(15_000), Some(1))
     );
     assert_eq!(
         assist::party_card(&p.env.ctx, p.rahim)
@@ -1417,26 +1418,13 @@ fn e2e_32_cash_lent_to_a_buyer_is_one_of_his_bills() {
     let cash = support::id_of(&w.env, "01010001");
     assert_eq!(balance(&w, cash), (BalanceSide::Dr, 58_484));
 
-    // A payment to a buyer needs a reason (PRD FR-15.11), checked at its field.
-    let refused =
-        vouchers::save_payment(&w.env.ctx, &w.owner, &payment_input(w.akram, "3,000", ""))
-            .unwrap_err();
-    assert_eq!(
-        (refused.code(), first_field(&refused)),
-        (
-            ErrorCode::ErrPaymentToBuyerNeedsReason,
-            Some("reason".to_owned())
-        )
-    );
+    // The reason of cash lent to a buyer is optional (PRD FR-15.11 v1.60): without one the
+    // preview has no mistake.
     let preview = preview_of(
         &w,
         VoucherEntry::Payment(payment_input(w.akram, "3,000", "")),
     );
-    assert_eq!(preview.errors.len(), 1);
-    assert_eq!(
-        preview.errors[0].code,
-        ErrorCode::ErrPaymentToBuyerNeedsReason
-    );
+    assert!(preview.errors.is_empty());
 
     // ادائیگی of 3,000 cash to اکرم, reason نقد ادھار.
     let input = payment_input(w.akram, "3,000", "نقد ادھار");

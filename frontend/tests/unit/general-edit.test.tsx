@@ -229,8 +229,6 @@ describe.each(LANGUAGES)('a journal entry open for edit (%s)', (language) => {
             },
           ],
           changes_truncated: false,
-          // An edit of an open day has no sign (PRD FR-7.71).
-          sign: null,
         },
       ],
     });

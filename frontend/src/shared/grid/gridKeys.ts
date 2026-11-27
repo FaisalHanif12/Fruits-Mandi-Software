@@ -108,6 +108,15 @@ export function createGridKeyHandler(env: GridKeyEnv) {
   /** The last cell of a row in reading order: where the arrow back from the trash cell lands. */
   const lastField = columns[columns.length - 1]?.field;
 
+  /**
+   * Adds a row after `cell` and puts the cursor on `field` of it, unless the screen refuses (a sold out lot, plan 97
+   * item 2). The one place every key that makes a row goes through.
+   */
+  const addRowAfter = (cell: CellRef, field: string) => {
+    if (env.interceptors?.onNewRow?.(cell) === true) return;
+    addRowAndFocus(store, field);
+  };
+
   const moveVertically = (params: KeyParams, rowIndex: number, field: string, step: 1 | -1) => {
     const target = rowIndex + step;
     if (target < 0) {
@@ -117,7 +126,8 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     }
     if (target >= store.getState().rows.length) {
       if (env.fixedRows === true) return;
-      addRowAndFocus(store, field);
+      const last = store.getState().rows[rowIndex];
+      if (last !== undefined) addRowAfter({ rowId: last.rowId, field }, field);
       return;
     }
     focusCell(params, target, field);
@@ -176,7 +186,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
             // Under the last row: the "+" button. Without one, a row is added as ↓ does on any cell.
             if (env.focusAdd !== undefined) env.focusAdd();
             else if (env.fixedRows !== true && lastField !== undefined) {
-              addRowAndFocus(store, lastField);
+              addRowAfter({ rowId: removable.rowId, field: lastField }, lastField);
             }
           } else if (hasTrash(rows[target])) {
             focusCell(params, target, REMOVE_COLUMN_ID);
@@ -271,7 +281,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       if (step.kind === 'cell') {
         focusCell(params, step.rowIndex, step.field);
       } else if (env.fixedRows !== true) {
-        addRowAndFocus(store, step.field);
+        addRowAfter({ rowId: row.rowId, field }, step.field);
       }
       return true;
     }

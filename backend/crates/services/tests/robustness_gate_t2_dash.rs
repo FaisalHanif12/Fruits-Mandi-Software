@@ -99,7 +99,7 @@ fn t2_09_partner_pages() {
     use mandi_services::core::statement::{
         PartnersStatementDayInput, PartnersStatementInput, PartnersStatementMonthInput,
     };
-    use mandi_services::{cashbook, partners};
+    use mandi_services::partners;
 
     let gate = volume::gate_volume();
     let (env, _actor) = support::open(&gate.dir);
@@ -234,13 +234,6 @@ fn t2_09_partner_pages() {
             },
         ));
     }
-    rows.push(measure(
-        "partner.capital_where",
-        nfr,
-        "cashbook_capital_where (the card on روکڑ)",
-        1_000.0,
-        || cashbook::capital_where(ctx).expect("the card"),
-    ));
     finish(&rows);
 }
 

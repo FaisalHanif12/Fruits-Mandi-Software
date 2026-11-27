@@ -9,19 +9,17 @@
 #
 # Measured on 12-10-2026 with the 12,942-entry word list (8,212 known entries) after the Indian
 # Wikidata people sets were taken out (lead decision). Several numbers are LOWER than the first
-# baseline (for example frozen_outside_top3 61.4 -> 47.0). That is not a worse engine: the names
-# with a word the list lacks are now 300, not 270, because the words the Indian rows had made
-# known are unknown again, and unknown words are the hard ones. The in-list numbers went up.
-#
-# Raise a number when the rules or the list get better. Never lower one to make a change pass:
-# a lower number means the suggestions got worse and the change must be fixed.
-frozen_outside_top3 = 47.0
-holdout_outside_top3 = 37.9
-dev_outside_top3 = 60.9
+# baseline (for example #
+# Raised on 27-11-2026 (plan 99): the everyday dictionary and the field-aware ranking. Names
+# with a word outside the name list went from 47.0 to 66.6 (frozen), 37.9 to 43.3 (hold-out)
+# and 60.9 to 68.2 (development); English names from 72.2 to 79.0.
+frozen_outside_top3 = 66.6
+holdout_outside_top3 = 43.3
+dev_outside_top3 = 68.2
 frozen_in_list_top1 = 92.0
-frozen_in_list_top3 = 95.4
-frozen_english = 72.2
-holdout_in_list_top1 = 82.7
-holdout_in_list_top3 = 89.3
+frozen_in_list_top3 = 95.5
+frozen_english = 79.0
+holdout_in_list_top1 = 82.8
+holdout_in_list_top3 = 89.8
 dev_in_list_top1 = 95.4
-dev_in_list_top3 = 98.1
+dev_in_list_top3 = 98.4

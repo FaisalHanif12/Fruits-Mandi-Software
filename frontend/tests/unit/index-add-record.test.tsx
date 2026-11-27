@@ -149,7 +149,7 @@ describe.each(LANGUAGES)(
         Array.from(document.querySelectorAll('[aria-current="page"]')).map((item) =>
           visible(item.textContent),
         );
-      expect(current().join(' ')).toContain(message(language, 'layout-nav-bikri'));
+      expect(current().join(' ')).toContain(message(language, 'layout-nav-rokar'));
       await askForNewBuyer(user);
       const dialog = await goToFullForm(user);
       // The short form is gone; the full form is above the screen with the typed text as the name.
@@ -189,7 +189,7 @@ describe.each(LANGUAGES)(
       await waitFor(() => {
         expect(screen.queryByRole('dialog', indexForm())).not.toBeInTheDocument();
       });
-      expect(current().join(' ')).toContain(message(language, 'layout-nav-bikri'));
+      expect(current().join(' ')).toContain(message(language, 'layout-nav-rokar'));
     });
 
     it('Save in the full form returns with nothing lost and the new buyer chosen in the field', async () => {

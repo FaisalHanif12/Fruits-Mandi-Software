@@ -1,0 +1,59 @@
+# Mandi trade words (plan 99, coverage by topic).
+
+@w 84
+نیلامی = neelami nilami neelaami :F1
+بولی = boli bolee :F1
+بھاؤ = bhao bhaao
+تھوک = thok thoak
+تھوک فروش = thokfarosh thok_farosh
+پرچون = parchoon parchun
+ریڑھی = rerhi rehri redhi :F1
+ریڑھی بان = rerhi_ban rehriban
+بیعانہ = bayana beyana bayanah :M2
+ہنڈی = hundi hundee :F1
+سود = sood
+گودام = godam godaam :M3
+آمد = aamad amad
+تیزی = tezi tayzi teji
+مندا = manda mandha :ADJ
+مندی = mandi:40
+دلال = dalal dalaal :M3
+دلالی = dalali dalaali
+تلائی = tulai tolai
+کریٹ = crate krait :M3
+باردانہ = bardana bardanah
+پلے دار = palledar paledar :M3
+پلے داری = palledari paledari
+حمال = hamal hammal :M3
+ٹھیلا = thela theyla :M1
+چھابڑی = chhabri chabri :F1
+سودا = sauda soda:60 sodda:70 :M1
+بچت = bachat :F2
+گھاٹا = ghata ghaata :M1
+بیجک = bijak beejak :M3
+بلٹی = bilty bilti :F1
+محصول = mehsool mahsool
+سٹاکسٹ = stockist stakist
+داغی = daaghi daghi dagi
+تازہ = taza taaza taazah
+باسی = baasi basi
+سڑا = sarra:60 :ADJ
+سائز = size saiz :M3
+کوالٹی = quality kwalti :F1
+سیزن = season sizan :M3
+ریٹ لسٹ = rate_list
+سیٹھ = seth saith :M3
+خسارہ = khasara khasarah
+لاگت = lagat laagat :F2
+کھیپ = khep khaip :F2
+ڈھیر = dher dhair :M3
+چھانٹی = chhanti chaanti :F1
+
+# common words found missing from the first half of the first held-out list
+پرچی = parchi parchee :F1
+چکے = chuke:92 chukay:90 chuky:80
+چکی = chuki:80
+چکیں = chukin:70 chukein:70
+تھینک = thank:90
+رش = rush:80
+پک = pick:70

@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "venture_id": 2,
+      "kind": "trip",
+      "entry_date": "2026-10-11",
+      "number": 1,
+      "code": "0070",
+      "name_ur": "0070 11-10-2026",
+      "name_en": "0070 11-10-2026",
+      "share_bps": 4000,
+      "paid_shop_paisa": 0,
+      "paid_pocket_paisa": 0,
+      "money_back_paisa": 0,
+      "balance_paisa": 0
+    }
+  ],
+  "total_count": 2,
+  "totals": {
+    "paid_shop_paisa": 1200000,
+    "paid_pocket_paisa": 0,
+    "money_back_paisa": 0,
+    "gardens_balance_paisa": 2990000,
+    "trips_result_paisa": 0
+  }
+}

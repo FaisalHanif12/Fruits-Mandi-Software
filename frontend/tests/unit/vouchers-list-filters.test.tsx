@@ -88,10 +88,10 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     return { ...app, user: userEvent.setup() };
   }
 
-  it('opens on the 7 days that end today with the cancelled vouchers left out', async () => {
+  it('opens on the 30 days that end today with the cancelled vouchers left out', async () => {
     await open();
     expect(lastCall()).toMatchObject({
-      from: '04-10-2026',
+      from: '11-09-2026',
       to: '10-10-2026',
       show_finished: false,
       search: null,
@@ -117,7 +117,7 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     });
   });
 
-  it('the buttons under the list move the window by 7 days, and the later one is off on the latest', async () => {
+  it('the buttons under the list move the window by 30 days, and the later one is off on the latest', async () => {
     const { user } = await open();
     expect(
       await screen.findByText(message(language, 'common-days-latest-note')),
@@ -125,24 +125,35 @@ describe.each(LANGUAGES)('the filters of the voucher list (%s)', (language) => {
     await user.click(
       screen.getByRole('button', {
         name: (name) =>
-          visible(name).includes(message(language, 'common-days-earlier', { days: '7' })),
+          visible(name).includes(message(language, 'common-days-earlier', { days: '30' })),
       }),
     );
     await waitFor(() => {
-      expect(lastCall()).toMatchObject({ from: '27-09-2026', to: '03-10-2026' });
+      expect(lastCall()).toMatchObject({ from: '12-08-2026', to: '10-09-2026' });
     });
     expect(
       screen.queryByText(message(language, 'common-days-latest-note')),
     ).not.toBeInTheDocument();
   });
 
+  // The grid draws its heading again once, just after the first rows; a title taken before that is no
+  // longer on the page (seen on a slow machine). So the click waits until the same title stays put.
+  async function settledTitle(column: string): Promise<HTMLElement> {
+    let last: HTMLElement | null = null;
+    for (let tries = 0; tries < 40; tries += 1) {
+      const now = document.querySelector<HTMLElement>(
+        `.ag-header-cell[col-id="${column}"] .ag-header-cell-text`,
+      );
+      if (now !== null && now === last) return now;
+      last = now;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    throw new Error(`no settled title of ${column}`);
+  }
+
   it('a click on the amount title asks the backend for that order', async () => {
     const { user } = await open();
-    const title = document.querySelector<HTMLElement>(
-      '.ag-header-cell[col-id="amount"] .ag-header-cell-text',
-    );
-    if (title === null) throw new Error('no title');
-    await user.click(title);
+    await user.click(await settledTitle('amount'));
     await waitFor(() => {
       // The app language goes with the sort: names then sort in the alphabet of the screen.
       expect(lastCall()?.sort).toEqual({ column: 'amount_paisa', direction: 'asc', language });

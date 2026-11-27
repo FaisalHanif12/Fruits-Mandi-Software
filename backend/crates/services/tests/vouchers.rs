@@ -72,17 +72,19 @@ fn fixture() -> Fixture {
     set_up(&env);
     login_owner(&env);
     let owner = auth::require(&env.ctx).unwrap();
-    let rahim = accounts::save(
+    let rahim = accounts::save_with_confirm(
         &env.ctx,
         &owner,
         &account_input(AccountType::Seller, "رحیم", "Rahim"),
+        true,
     )
     .unwrap()
     .id;
-    let karim = accounts::save(
+    let karim = accounts::save_with_confirm(
         &env.ctx,
         &owner,
         &account_input(AccountType::Seller, "کریم", "Karim"),
+        true,
     )
     .unwrap()
     .id;
@@ -108,7 +110,7 @@ fn id_of(env: &TestEnv, code: &str) -> i64 {
 
 fn set_opening(env: &TestEnv, owner: &auth::Actor, id: i64, dr: &str, cr: &str, advance: bool) {
     use mandi_services::core::accounts::{OpeningLineInput, OpeningsInput};
-    accounts::openings_save(
+    accounts::openings_save_with_confirm(
         &env.ctx,
         owner,
         &OpeningsInput {
@@ -121,6 +123,7 @@ fn set_opening(env: &TestEnv, owner: &auth::Actor, id: i64, dr: &str, cr: &str, 
                 opening_is_advance: advance,
             }],
         },
+        true,
     )
     .unwrap();
 }
@@ -243,17 +246,19 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         audit_total(&f.dir),
     );
     let old_closed = id_of(&f.env, "0031");
-    let buyer = accounts::save(
+    let buyer = accounts::save_with_confirm(
         &f.env.ctx,
         &f.owner,
         &account_input(AccountType::Buyer, "اکرم ٹول ٹیکس", "Akram Toll Tax"),
+        true,
     )
     .unwrap()
     .id;
-    let off = accounts::save(
+    let off = accounts::save_with_confirm(
         &f.env.ctx,
         &f.owner,
         &account_input(AccountType::Seller, "ناصر", "Nasir"),
+        true,
     )
     .unwrap();
     accounts::set_active(&f.env.ctx, &f.owner, off.id, false).unwrap();
@@ -298,13 +303,8 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
             ErrorCode::ErrDateInFuture,
             "date",
         ),
-        // PRD FR-15.11 (v1.51): a buyer is given the advance as cash lent, which needs a reason.
-        // The old refusal of a non-seller stays for the closed old account below.
-        (
-            advance(buyer, "100"),
-            ErrorCode::ErrPaymentToBuyerNeedsReason,
-            "reason",
-        ),
+        // PRD FR-15.11 (v1.51): a buyer is given the advance as cash lent (his reason is optional
+        // from v1.60). The refusal of a non-seller stays for the closed old account below.
         (
             advance(old_closed, "100"),
             ErrorCode::ErrNotASeller,
@@ -355,7 +355,12 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
     .unwrap_err() else {
         panic!("not a rejection")
     };
-    assert!(items.len() >= 3);
+    // The date and the amount. A buyer's reason is optional from v1.60 (PRD FR-15.11).
+    assert_eq!(
+        items.iter().map(|i| i.code).collect::<Vec<_>>().len(),
+        2,
+        "{items:?}"
+    );
 }
 
 #[test]
@@ -605,7 +610,8 @@ fn the_running_list_shows_balances_and_saves_each_voucher_alone() {
         }
     }
     assert_eq!(balance(&f.env, f.rahim), (BalanceSide::Dr, 23_000));
-    assert_eq!(balance(&f.env, f.cash), (BalanceSide::Dr, 41_000));
+    // The seller's opening of 15,000 went through روکڑ (PRD FR-10.9 v1.60).
+    assert_eq!(balance(&f.env, f.cash), (BalanceSide::Dr, 26_000));
     // The list is bounded.
     let too_many = AdvancesInput {
         lines: (0..501).map(|_| advance(f.rahim, "1")).collect(),
@@ -756,7 +762,10 @@ fn the_open_advances_follow_the_journal_and_reversals() {
         "the card and the screen agree"
     );
     let last = info.last.unwrap();
-    assert_eq!((last.voucher_number, last.amount_paisa), (1, rupees(5_000)));
+    assert_eq!(
+        (last.voucher_number, last.amount_paisa),
+        (Some(1), rupees(5_000))
+    );
 
     // Reverse the voucher's entry (the same date, the day is open).
     let reversal = f
@@ -777,7 +786,8 @@ fn the_open_advances_follow_the_journal_and_reversals() {
     assert_eq!(balance(&f.env, f.rahim), (BalanceSide::Dr, 15_000));
     assert_eq!(
         balance(&f.env, f.cash),
-        (BalanceSide::Dr, 50_000),
+        // 50,000 less the seller's opening of 15,000, which went through روکڑ (FR-10.9 v1.60).
+        (BalanceSide::Dr, 35_000),
         "cash is back"
     );
     // The reversal's lines carry no advance flag.
@@ -904,10 +914,11 @@ fn reversing_a_line_switches_off_the_matching_that_rests_on_it() {
 #[test]
 fn the_advance_screen_reads_only_a_seller() {
     let f = fixture();
-    let buyer = accounts::save(
+    let buyer = accounts::save_with_confirm(
         &f.env.ctx,
         &f.owner,
         &account_input(AccountType::Buyer, "اکرم ٹول ٹیکس", "Akram Toll Tax"),
+        true,
     )
     .unwrap()
     .id;

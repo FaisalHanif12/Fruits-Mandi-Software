@@ -99,6 +99,7 @@ export function OtherSaleFieldsForm({
             <FreeTextInput
               {...props}
               value={fields.shop}
+              kind="name"
               onChange={(shop) => {
                 onChange({ shop });
               }}

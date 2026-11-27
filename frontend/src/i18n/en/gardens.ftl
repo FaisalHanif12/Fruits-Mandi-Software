@@ -402,7 +402,7 @@ gardens-arrival-sell-date-hint = Starts as the day the goods arrived. Goods that
 gardens-arrival-posts-nothing = These goods carry no money. They stay in the stock of the { -bagh } until they are sold in a { -bikri } or written off. Add them to a { -bikri } by hand when you sell them.
 
 # review: pending
-gardens-arrival-title = { -maal-aaya }
+gardens-arrival-title = { -maal-aaya }: not sold yet
 
 # review: pending
 gardens-arrival-help = The goods that came from this { -bagh } and are not sold yet. They wait here until you add them to a { -bikri } by hand and sell them. There they are listed by their { -sell-date }.
@@ -411,7 +411,7 @@ gardens-arrival-help = The goods that came from this { -bagh } and are not sold 
 gardens-arrival-failed = The goods arrived could not be read
 
 # review: pending
-gardens-arrival-empty = No goods have arrived yet
+gardens-arrival-empty = No goods are waiting to be sold
 
 # review: pending
 gardens-arrival-empty-help = Choose { -maal-aaya } in the kind of entry above, fill in the item, the packing and the { -nag }, and save.
@@ -451,13 +451,6 @@ gardens-arrival-cancelled = This entry is cancelled. { $reason }
 # The lots of the sales that took goods from the entry.
 # review: pending
 gardens-arrival-lots = Sales of these goods
-
-# review: pending
-gardens-arrival-lot-bikri = { -bikri }
-
-# The name of a lot of the goods that arrived, with its counter: "Mango-2" (PRD FR-12.45).
-# review: pending
-gardens-arrival-lot-name = { -lot }
 
 # review: pending
 gardens-arrival-cancel = Cancel { -maal-aaya }
@@ -579,3 +572,173 @@ gardens-fact-refunds = Paid back by the owner
 
 # review: pending
 gardens-fact-owner-owes = The owner owes the garden
+
+## The goods arrived list of a busy garden (plan 96): search, the panel beside the list, the figures that fold.
+
+# review: pending
+gardens-arrival-search-label = Search the goods arrived
+
+# review: pending
+gardens-arrival-search-hint = A number, an item or another shop
+
+# review: pending
+gardens-arrival-no-match = No goods arrived match this search
+
+# review: pending
+gardens-arrival-no-match-help = Try another number or item, or clear the search to see them all.
+
+# review: pending
+gardens-arrival-search-clear = Clear the search
+
+# The panel is beside the list: the entry with focus is shown in it.
+# review: pending
+gardens-arrival-pick-help = Choose an entry in the list to see its details and its sales under the list. Press Enter to go to its buttons.
+
+# The key figures of the garden, always in view; the full list opens under the heading.
+# review: pending
+gardens-figures-open = Show every figure and each partner
+
+# review: pending
+gardens-figures-shut = Hide the figures
+
+# Plan 99 (PRD FR-12.53): the goods arrived in two lists, and where the sale money is.
+
+# review: pending
+gardens-arrival-col-sold = Sold so far
+
+# review: pending
+gardens-arrival-col-our-sold = Sold in { -apni-dukan }
+
+# review: pending
+gardens-arrival-col-other-sold = Sold in { -dusri-dukan }
+
+# review: pending
+gardens-arrival-col-sale-value = Sale value
+
+# review: pending
+gardens-arrival-col-last-sale = Last sale
+
+# $number: the goods arrived entry.
+# review: pending
+gardens-arrival-sales-label = Sales of the goods of entry { $number }
+
+# review: pending
+gardens-arrival-no-sales = Nothing of this entry has been sold yet.
+
+# The goods arrived that are all sold or written off (PRD FR-12.53).
+# review: pending
+gardens-sold-title = { -maal-aaya }: sold
+
+# review: pending
+gardens-sold-help = The goods of this { -bagh } that are all sold or written off, with what they sold for.
+
+# review: pending
+gardens-sold-label = List of the goods sold
+
+# review: pending
+gardens-sold-search-label = Search the goods sold
+
+# review: pending
+gardens-sold-empty = No goods of this { -bagh } are sold out yet
+
+# review: pending
+gardens-sold-empty-help = An entry comes here when all of it is sold or written off.
+
+# Where the sale money of the garden is (PRD FR-12.53).
+# review: pending
+gardens-sales-title = Where the sale money is
+
+# review: pending
+gardens-sales-help = Every sale of the goods of this { -bagh }: the bill of the { -gahak }, what he paid on the spot into { -rokar }, what came in later by { -wasooli }, what is still on his account, and what the { -bagh } was credited.
+
+# review: pending
+gardens-sales-search-label = Search the sales
+
+# review: pending
+gardens-sales-search-hint = { -gahak }, shop, item or { -bikri } number
+
+# review: pending
+gardens-sales-every-month = Every month
+
+# review: pending
+gardens-sales-label = List of the sales and their money
+
+# review: pending
+gardens-sales-failed = The sales could not be read
+
+# review: pending
+gardens-sales-no-match = No sale matches the search
+
+# review: pending
+gardens-sales-no-match-help = Change the words in the search box.
+
+# review: pending
+gardens-sales-month-empty = No sale in this month
+
+# review: pending
+gardens-sales-month-empty-help = Move to another month with the buttons below, or tick Every month.
+
+# review: pending
+gardens-sales-empty = Nothing of this { -bagh } has been sold yet
+
+# review: pending
+gardens-sales-empty-help = Add its goods to a { -bikri }, or enter a sale in { -dusri-dukan }.
+
+# review: pending
+gardens-sales-col-sale = { -bikri } and { -lot }
+
+# review: pending
+gardens-sales-col-buyer = { -gahak } and goods
+
+# review: pending
+gardens-sales-col-bill = Bill of the { -gahak }
+
+# review: pending
+gardens-sales-col-paid = { -mauqa-par-jama }
+
+# review: pending
+gardens-sales-col-collected = Collected later
+
+# review: pending
+gardens-sales-col-still-due = { -khate-mein-baqi }
+
+# review: pending
+gardens-sales-col-credit = Credited to the { -bagh }
+
+# review: pending
+gardens-sales-other-shop = { -dusri-dukan }
+
+# $number: the sale.
+# review: pending
+gardens-sales-bikri = { -bikri } { $number }
+
+# review: pending
+gardens-sales-lot-charges = { -lot } charges
+
+# review: pending
+gardens-sales-shop-unnamed = Shop name not typed
+
+# $qty: the units; $rate: the seller rate. Written as R5 writes the goods.
+# review: pending
+gardens-sales-goods = ({ $qty } . { $rate })
+
+# $kg: the weight in kilograms, for an item sold by weight.
+# review: pending
+gardens-sales-goods-weight = ({ $kg } kg . { $rate })
+
+# $qty: the units, for a sale in another shop, which has no rate.
+# review: pending
+gardens-sales-goods-count = ({ $qty } { -nag })
+
+# review: pending
+gardens-sales-charges-total = { -lot } charges taken off the money of the { -bagh }:
+
+# review: pending
+gardens-sold-failed = The goods sold could not be read
+
+# review: pending
+gardens-sales-col-value = Value
+
+# $qty: the units of every sale in the filter, in the total row.
+# review: pending
+gardens-sales-goods-total = { $qty } { -nag }

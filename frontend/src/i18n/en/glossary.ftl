@@ -113,6 +113,10 @@
 # review: pending
 -naqd = Cash Paid
 
+# Cash given to the seller at the time of sale: the lot column and the summary line (PRD FR-12.52, v1.57)
+# review: pending
+-naqd-adaigi = Cash Paid
+
 # Phone charge on the seller
 # review: pending
 -phone = Phone Charge
@@ -360,6 +364,10 @@
 # review: pending
 -dusri-dukan = Another Shop
 
+# Another commission agent's shop, an account marked as one: the آڑھتی box of the fruit-taken screen lists only these (PRD FR-16.11, v1.59)
+# review: pending
+-arhti-dukan = Commission Agent Shop
+
 # The shop's guests, who share the fruit served to them equally (PRD 16.7, C27)
 # review: pending
 -mehman = Guests
@@ -414,6 +422,7 @@ glossary-munshiana = { -munshiana }
 glossary-kiraya = { -kiraya }
 glossary-kiraya-store = { -kiraya-store }
 glossary-naqd = { -naqd }
+glossary-naqd-adaigi = { -naqd-adaigi }
 glossary-phone = { -phone }
 glossary-naqdi-mandi = { -naqdi-mandi }
 glossary-rate-farq = { -rate-farq }

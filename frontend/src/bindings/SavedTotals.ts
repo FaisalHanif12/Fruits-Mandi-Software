@@ -43,6 +43,10 @@ export type SavedTotals = {
    */
   phone: Paisa;
   /**
+   * پیشگی the sellers took with these lots (PRD FR-12.52 v1.57). Not in `deductions` or `net`.
+   */
+  advance: Paisa;
+  /**
    * کل اخراجات (C6).
    */
   deductions: Paisa;

@@ -2,7 +2,8 @@
 
 The one voucher screen with a type list: وصولی (receipt), ادائیگی (payment) and پیشگی (advance).
 PRD FR-7.67, FR-7.68, FR-15.1 to FR-15.12, FR-6.7, FR-13.5, FR-13.8, FR-16.8 (shape), FR-19.2.
-It is one screen, not three: the tabs of the بکری area and `Alt+V`, `Alt+A`, `Alt+P` open it with a type
+It is one screen, not three: the three tabs of the روکڑ area (plan 95, PRD FR-5.3 v1.57; the screen and the اگراہی فہرست
+show the روکڑ tabs) and `Alt+V`, `Alt+A`, `Alt+P` open it with a type
 already chosen, and the old addresses (`/bikri/receipt`, `/bikri/payment`, `/bikri/advance`) go to
 `/bikri/voucher?type=...`. `&id=12` opens a saved voucher (edit while its day is open, else read
 only).
@@ -11,16 +12,19 @@ only).
 
 - **Form** (`components/VoucherForm.tsx`): type list, date, account (`AccountPicker` with
   `PartyCard`), amount, collector (receipt),
-  reason (money given to a buyer is cash lent: a payment to him, or an advance to him), expected goods
+  reason (optional, v1.60: money given to a buyer is cash lent, a payment to him or an advance to him), expected goods
   (an advance to a seller), narration. Current and new balance come from the preview.
 - **Advance to a buyer** (plan 88, PRD 15.4, FR-15.11): the advance tab's account field takes a seller
   or a buyer (scope `seller_buyer`), each row marked with his kind. A seller goes on as before. A buyer
-  is cash lent: the reason is asked and required, his open bills show under the form, and the input
-  carries `reason` and no expected goods. The backend saves it as a payment to him, so the message
-  says "Cash Lent" with a number of the payment series (`savedKindOf`). The advance list is asked
-  with `advance_view` and has its own window source `{ kind: 'advances' }`; it holds the advances
-  and the cash lent, with an account type column. Opening a cash lent row from that list opens it
-  on the payment tab, which edits a payment.
+  is cash lent: a reason can be typed (optional, v1.60), his open bills show under the form, and the
+  input carries `reason` and no expected goods. The backend saves it as a payment to him and remembers
+  it as a پیشگی (`VoucherRow.entered_as`, v1.60), so it is named پیشگی everywhere: the message says
+  "Advance" with a number of the payment series (`savedKindOf`, and `keptKindOf` after an edit or a
+  cancel), the edit band says Advance (`buyer_advance`), and the saved view says it. The advance list is
+  asked with `advance_view` and has its own window source `{ kind: 'advances' }`; it holds the advances
+  and the cash lent. The پیشگی and ادائیگی lists have a column that says who it is with, and for a
+  buyer whether it was typed as پیشگی or is نقد ادھار (`voucherKindText`). Opening a buyer's row from
+  the advance list opens it on the payment tab, which edits a payment.
 - **Waiting list** (PRD FR-15.1, `components/WaitingList.tsx`, `useSaveList.ts`): `F2` puts the form in
   the list and starts the next voucher (type and date stay); `F10` (or `Ctrl+Enter`)
   saves the list one voucher at a time, each with its own save command and its own transaction,
@@ -45,7 +49,8 @@ only).
   The backend sends at most the oldest 200 open bills or payable postings (`total_count`,
   `truncated`); when it cut the list a one-line note says "the oldest 200 of N are shown", and the
   totals and "full balance" are still for all of them.
-- **List** (`components/VoucherListSection.tsx`) of the type, with Edit, Cancel and Print, and a
+- **List** (`components/VoucherListSection.tsx`) of the type, one window of 30 days at a time (`useListWindow` with
+  `days: VOUCHER_DAYS_WINDOW`, plan 95 item 14, PRD FR-19.11 v1.57; the buttons say "30 days"), with Edit, Cancel and Print, and a
   pinned total under the amount column: the backend's `total_paisa` (`vouchers_list` returns
   `{ rows, total_paisa }`; a cancelled voucher is in the rows and left out of the total).
 - **Collection round** (`pages/CollectionPage.tsx`, `/bikri/collection`): the اگراہی فہرست
@@ -89,8 +94,8 @@ shows the words for nothing to print.
   in the first row and the amount in the second; the party card is drawn by the screen
   in the aside of `FormAside` (the picker has `showCard={false}` and says whose card it is through `onCardAccount`),
   so a tall card never pushes the amount down; the cursor starts in the amount. After the save the voucher stays on
-  the screen (it is read again, `VoucherEditor` is keyed by id and version): its stamp (time, Owner, the sign when the
-  day was reopened, the reason), the mark "Before ..." on the amount with the old and the new figure in its tip, and
+  the screen (it is read again, `VoucherEditor` is keyed by id and version): its stamp (time, Owner, the reason; never the
+  sign), the mark "Before ..." on the amount with the old and the new figure in its tip, and
   the "Edited" word of its list row. A voucher of a closed day that was reopened for the fix closes again after the
   save (`finishFixSession`) and opens read only with the same stamp and mark (`SavedVoucherView`). Tests:
   `vouchers-edit-clear.test.tsx` (the three types and the closed-day path), `vouchers-edit-cancel.test.tsx`.
@@ -103,7 +108,8 @@ shows the words for nothing to print.
   lockout). The cash question (FR-6.7) comes after the box. When the day was reopened to fix this entry the reopen
   asked both already: its reason goes with the edit, the sign goes empty (the backend took it at the reopen), and no
   second box opens; if the backend still wants the sign the box opens. A refusal is never silent: the box shows the
-  problems of the sign and of the reason, and `shownFieldPaths(draft)` (draft.ts) lists only the fields the form
+  problems of the sign and of the reason (the backend names both the change's and a cash lent's reason `reason`,
+  and a cash lent's is optional, so a refused `reason` is the box's), and `shownFieldPaths(draft)` (draft.ts) lists only the fields the form
   really draws, so every other problem shows in the notice (the reason of a payment to a seller was listed as shown
   although it has no field, so the refusal showed nowhere). Tests: `voucher-edit-sign.test.tsx`, helper
   `tests/helpers/edit-sign-box.ts`.

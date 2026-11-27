@@ -172,3 +172,35 @@ impl TestEnv {
         })
     }
 }
+
+/// Gives an account the opening it would have had before PRD v1.60 (plan 99): against ابتدائی فرق,
+/// also for a seller, a buyer, a person of money lent or a الگ کھاتہ, whose openings now go through
+/// روکڑ. For the tests of the one-time fix only. `opening` is the date and the amounts.
+///
+/// # Errors
+/// The errors of the opening save; `ServiceError::Data` if the account is missing.
+pub fn opening_before_v160(
+    ctx: &Context,
+    user_id: i64,
+    account_id: i64,
+    opening: &mandi_domain::core::accounts::OpeningRequest,
+) -> Result<(), ServiceError> {
+    ctx.db.write(|tx| {
+        let facts = mandi_db::accounts::facts(tx, account_id)?
+            .ok_or_else(|| ServiceError::Data("the account is missing".to_owned()))?;
+        let now = ctx.now_text();
+        crate::accounts::apply_opening_with(
+            ctx,
+            tx,
+            user_id,
+            &now,
+            &facts,
+            opening,
+            "opening_dr",
+            mandi_domain::core::accounts::OpeningDay::NewAccount,
+            crate::accounts::OpeningCounter::Difference,
+            true,
+        )
+        .map(|_| ())
+    })
+}

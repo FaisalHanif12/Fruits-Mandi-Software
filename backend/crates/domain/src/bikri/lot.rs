@@ -302,6 +302,9 @@ pub(super) struct Acc {
     pub cash_paid: Paisa,
     pub store_rent: Paisa,
     pub phone: Paisa,
+    /// پیشگی typed on the lot (PRD FR-12.52 v1.57). Not in the deductions or the net: its own
+    /// posting, never taken off this sale.
+    pub advance: Paisa,
     pub buyer_comm: Paisa,
     pub laga: Paisa,
     pub rate_diff: Paisa,
@@ -341,6 +344,7 @@ impl Acc {
         self.cash_paid = self.cash_paid.checked_add(lot.cash_paid)?;
         self.store_rent = self.store_rent.checked_add(lot.store_rent)?;
         self.phone = self.phone.checked_add(lot.phone)?;
+        self.advance = self.advance.checked_add(lot.advance)?;
         self.buyer_comm = self.buyer_comm.checked_add(lot.buyer_comm)?;
         self.laga = self.laga.checked_add(lot.laga)?;
         self.rate_diff = self.rate_diff.checked_add(lot.rate_diff)?;
@@ -426,6 +430,7 @@ impl Acc {
             cash_paid: self.cash_paid,
             store_rent: self.store_rent,
             phone: self.phone,
+            advance: self.advance,
             deductions,
             net,
             seller_credit: credit,

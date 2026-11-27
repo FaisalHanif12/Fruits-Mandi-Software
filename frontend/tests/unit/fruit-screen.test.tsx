@@ -41,7 +41,8 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const HAJI = account(31, 'seller', '0012', 'حاجی نذیر', 'Haji Nazir');
+// Another commission agent's shop: an account marked آڑھتی دکان, the only kind the آڑھتی box lists (PRD FR-16.11 v1.59).
+const HAJI = account(31, 'seller', '0012', 'حاجی نذیر', 'Haji Nazir', { is_agent_shop: true });
 
 beforeEach(() => {
   vi.resetAllMocks();

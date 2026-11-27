@@ -54,6 +54,8 @@ export const LOT = {
   weight: 'weight',
   phone: 'phone',
   storeRent: 'storeRent',
+  // پیشگی the seller takes with these goods: a real advance of its own (PRD FR-12.52, plan 95 item 11).
+  advance: 'advance',
   freightPaidBy: 'freightPaidBy',
   adjustAdvance: 'adjustAdvance',
   labourMethod: 'labourMethod',

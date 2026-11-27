@@ -12,6 +12,10 @@
 //   add over the screen with what was typed filled in (FR-7.42, FR-10.8). The new account is put in
 //   the field. The quick add has a link to the full Index form for fields it does not ask.
 //
+// - The آڑھتی box of the پھل screen (scope `agent_shop`, plan 97 item 1, PRD FR-16.11 v1.59) lists only the accounts marked
+//   آڑھتی دکان, and its add row, `F4` and Enter on a name that matches nothing open the short form of a new shop
+//   (`QuickAddAgentShop`), not the account form.
+//
 // Pickers never convert English letters to Urdu (F41): the text is searched as typed.
 
 import { Localized } from '@fluent/react';
@@ -38,6 +42,7 @@ import type { FieldControlProps } from './Field';
 import { PartyCard } from './PartyCard';
 import { PickerBase, type PickerValue } from './PickerBase';
 import { QuickAddAccount } from './QuickAddAccount';
+import { QuickAddAgentShop } from './QuickAddAgentShop';
 import { QuickAddChukta } from './QuickAddChukta';
 
 interface AccountPickerProps extends FieldControlProps {
@@ -120,6 +125,8 @@ const CODE_TEXT = /^\d{1,18}$/;
 const ADD: Record<AccountScope, { noun: string; kind: AddRecordKind | null }> = {
   seller: { noun: 'seller', kind: 'seller' },
   lot_seller: { noun: 'seller', kind: 'seller' },
+  // Another commission agent's shop: its own short form, no full account form (plan 97 item 1).
+  agent_shop: { noun: 'agent-shop', kind: null },
   buyer: { noun: 'buyer', kind: 'buyer' },
   any: { noun: 'account', kind: 'any' },
   // A seller or a buyer (the پیشگی field): the short form lets the user choose which.
@@ -132,6 +139,7 @@ const UNKNOWN_ID: Record<AccountScope, string> = {
   seller: 'accountpicker-unknown-seller',
   // The seller field of a lot also offers اپنا مال; an unknown code is still an unknown seller.
   lot_seller: 'accountpicker-unknown-seller',
+  agent_shop: 'accountpicker-unknown-agent-shop',
   buyer: 'accountpicker-unknown-buyer',
   any: 'accountpicker-unknown-any',
   seller_buyer: 'accountpicker-unknown-any',
@@ -167,6 +175,10 @@ export function AccountPicker({
   // The short form of a new چکتا buyer (the second add row): the text it starts with, and who waits.
   const [addingChukta, setAddingChukta] = useState<string | null>(null);
   const chuktaWaiting = useRef<((added: AccountHit | null) => void) | null>(null);
+  // The short form of a new commission agent's shop (the add row of the آڑھتی box): the text it starts with.
+  const [addingShop, setAddingShop] = useState<string | null>(null);
+  const shopWaiting = useRef<((added: AccountHit | null) => void) | null>(null);
+  const agentShop = scope === 'agent_shop';
   const addRecord = useAddRecord();
   const add = ADD[scope];
   // True while a code that Enter sent to the backend is being answered: when it is found, the
@@ -203,13 +215,20 @@ export function AccountPicker({
   // Opens the quick add. `done` is told which account was saved, or null when the form closed
   // without one (Esc). The message path (`null`) puts a saved account in the field itself.
   function openQuickAdd(text: string, done: ((added: AccountHit | null) => void) | null) {
-    waiting.current =
+    const take =
       done ??
-      ((hit) => {
+      ((hit: AccountHit | null) => {
         if (hit === null) return;
         setNote(null);
         onChange(hit);
       });
+    // The آڑھتی box has its own short form: a new shop, never an account of another kind.
+    if (agentShop) {
+      shopWaiting.current = take;
+      setAddingShop(text);
+      return;
+    }
+    waiting.current = take;
     setAdding(text);
   }
   function finishQuickAdd(hit: AccountHit | null) {
@@ -428,6 +447,28 @@ export function AccountPicker({
             setAddingChukta(null);
             setNote(null);
             done?.(chuktaHitOf(buyer));
+          }}
+        />
+      ) : null}
+      {agentShop ? (
+        <QuickAddAgentShop
+          open={addingShop !== null}
+          onOpenChange={(open) => {
+            if (open) return;
+            // The form closed without a save (Esc, Back): the box is as it was.
+            const done = shopWaiting.current;
+            shopWaiting.current = null;
+            setAddingShop(null);
+            done?.(null);
+          }}
+          typed={addingShop ?? ''}
+          onSaved={(shop) => {
+            // Saved: the box takes the shop at once, and the form closes (PRD FR-7.69).
+            const done = shopWaiting.current;
+            shopWaiting.current = null;
+            setAddingShop(null);
+            setNote(null);
+            done?.(hitOfRow(shop));
           }}
         />
       ) : null}

@@ -150,10 +150,12 @@ fn the_collection_sheet_is_a_sheet_with_the_totals_of_the_day() {
     );
 }
 
-/// Plan 80 Q-R5-2 (PRD v1.43 R5, FR-19.3): the buyers-only ادھاری تفصیل sheet of a day is a sheet too
-/// (`tables_export_excel`, kind `adhari_sheet`), made from the table of its print. After Events 1 to 5
-/// on 10-10-26: today's bills 44,364, paid on the spot 12,800, credit of today 31,564, previous 0,
-/// total credit 31,564. Money and counts go through `rupees_as_f64` and `count_as_f64` (M13).
+/// Plan 80 Q-R5-2 (PRD v1.43 R5, FR-19.3, v1.57, plan 97 item 6): the buyers-only ادھاری تفصیل sheet of
+/// a day is a sheet too (`tables_export_excel`, kind `adhari_sheet`), made from the table of its
+/// print. After Events 1 to 5 on 10-10-26: two buyers bought (اکرم and ارشد; the چکتا buyer شاہد is not
+/// a row), each with his bill, today's ادھار, پچھلا بقایا and کل ادھار. Under them one row of sums of
+/// today's buyers, then the totals row for all buyers: bills 31,564, today's ادھار 31,564, previous 0,
+/// total credit 31,564. Money goes through `rupees_as_f64` (M13).
 #[test]
 fn the_adhari_sheet_is_a_sheet_with_the_totals_of_the_day() {
     let w = full_day();
@@ -168,15 +170,53 @@ fn the_adhari_sheet_is_a_sheet_with_the_totals_of_the_day() {
     .unwrap();
     let sheet = export(&w, &spec, Language::En, "adhari");
     let head = head_row(&sheet, &spec, Language::En);
-    // Three buyers bought today (اکرم, ارشد, شاہد), one row each, then the totals row.
+    // The columns are party, goods, bill, today's credit, previous, total.
     assert_eq!(
-        nums(&sheet, head + 4, 2, 7),
-        ["44364", "12800", "31564", "0", "31564"]
+        (1..=2).map(|i| sheet.num(head + i, 2)).collect::<Vec<_>>(),
+        ["18684", "12880"]
     );
     assert_eq!(
-        (1..=3).map(|i| sheet.num(head + i, 2)).collect::<Vec<_>>(),
-        ["18684", "12880", "12800"]
+        nums(&sheet, head + 3, 2, 6),
+        ["31564", "31564", "0", "31564"],
+        "the sums of today's buyers"
     );
+    assert_eq!(
+        nums(&sheet, head + 4, 2, 6),
+        ["31564", "31564", "0", "31564"],
+        "the totals row: all buyers"
+    );
+}
+
+/// Plan 97 item 6: the next day, with no sale, the other buyers are rows by name (ارشد, then اکرم),
+/// under the heading of the others, and the totals row is کل ادھار for all of them, 21,564 (R20).
+#[test]
+fn the_adhari_sheet_of_a_day_with_no_sale_lists_the_other_buyers() {
+    let w = full_day();
+    common::set_today(&w.env, 2026, 10, 11);
+    let spec = adhari_sheet_spec(
+        w.env.ctx.db(),
+        &AdhariSheetPrintInput {
+            date: "11-10-2026".into(),
+            language: Language::En,
+            paper: None,
+        },
+    )
+    .unwrap();
+    let sheet = export(&w, &spec, Language::En, "adhari-others");
+    let head = head_row(&sheet, &spec, Language::En);
+    // head + 1: the sums of today's buyers (none); head + 2: the heading; then the two buyers.
+    assert_eq!(nums(&sheet, head + 1, 2, 6), ["0", "0", "0", "0"]);
+    assert_eq!(
+        (3..=4).map(|i| sheet.num(head + i, 4)).collect::<Vec<_>>(),
+        ["18684", "2880"],
+        "previous"
+    );
+    assert_eq!(
+        (3..=4).map(|i| sheet.num(head + i, 5)).collect::<Vec<_>>(),
+        ["18684", "2880"],
+        "total credit"
+    );
+    assert_eq!(sheet.num(head + 5, 5), "21564", "the totals row");
 }
 
 #[test]

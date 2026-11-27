@@ -1,0 +1,9 @@
+{
+  "input": {
+    "control_id": null,
+    "limit": 50,
+    "offset": 0,
+    "scope": "agent_shop",
+    "text": ""
+  }
+}

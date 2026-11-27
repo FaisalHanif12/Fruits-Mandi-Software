@@ -1225,7 +1225,7 @@ fn the_balance_before_a_posting_leaves_out_the_edited_posting_what_came_after_an
     assert_eq!(both[&cash].cr_paisa, 5_500_000);
     // The plan: the amounts index for the accounts and a point lookup of each entry, no scan of
     // the journal.
-    let text = plan(&conn, &totals_before_posting_sql(2), 4);
+    let text = plan(&conn, &totals_before_posting_sql(2), 5);
     assert!(text.contains(COVERING), "{text}");
     assert!(!text.contains("SCAN l"), "{text}");
     assert!(!text.contains("SCAN e"), "{text}");

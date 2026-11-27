@@ -116,7 +116,10 @@ function readEntries(file, label, errors) {
 /**
  * Checks the Fluent folders under `i18nDir` (which holds `ur/` and `en/`).
  * @param {string} i18nDir
- * @param {{ identicalAllowed?: Set<string> }} [options]
+ * @param {{ identicalAllowed?: Set<string>, alsoDefinedIn?: string[] }} [options] `alsoDefinedIn`: other
+ *   folders (each with `ur/` and `en/`) whose messages and terms are loaded together with these files at run
+ *   time, so a reference to them is not a gap. The dev gallery keeps its own words apart and is loaded on top
+ *   of the app's files (`createBundle(language, extra)`), so it asks for the app's glossary this way.
  * @returns {string[]} one line per problem; empty when everything matches
  */
 export function checkI18n(i18nDir, options = {}) {
@@ -174,6 +177,19 @@ export function checkI18n(i18nDir, options = {}) {
   for (const language of LANGUAGES) {
     /** @type {Map<string, string>} */
     const where = new Map();
+    for (const other of options.alsoDefinedIn ?? []) {
+      const otherDir = path.join(other, language);
+      if (!existsSync(otherDir)) continue;
+      for (const name of readdirSync(otherDir).filter((file) => file.endsWith('.ftl'))) {
+        const resource = parse(readFileSync(path.join(otherDir, name), 'utf8'), {
+          withSpans: false,
+        });
+        for (const entry of resource.body) {
+          if (entry instanceof Message) where.set(entry.id.name, name);
+          if (entry instanceof Term) where.set(`-${entry.id.name}`, name);
+        }
+      }
+    }
     /** @type {Array<{ file: string, owner: string, target: string }>} */
     const references = [];
     for (const name of filesByLanguage[language] ?? []) {

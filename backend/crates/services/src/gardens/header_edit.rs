@@ -308,8 +308,8 @@ pub(crate) fn edit_in(
     if let Some(reason) = &reason {
         event = event.reason(reason);
     }
-    let fix = crate::day::fix_sign(tx, &garden.entry_date)?;
-    event = event.sign(rent_sign.or(fix.as_deref()));
+    let fix = crate::day::fix_sign_given(tx, &garden.entry_date)?;
+    event = event.sign_given(rent_sign.is_some() || fix);
     ctx.db.auditor().write(tx, &event.into_entry())?;
     let version = repo::get(tx, garden.id)?
         .map(|g| g.version)

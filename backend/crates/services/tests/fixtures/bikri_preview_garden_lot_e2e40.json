@@ -85,6 +85,7 @@
         "cash_paid": 0,
         "store_rent": 0,
         "phone": 0,
+        "advance": 0,
         "deductions": 360000,
         "net": 5640000,
         "seller_credit": 5640000,
@@ -877,6 +878,7 @@
     "cash_paid": 0,
     "store_rent": 0,
     "phone": 0,
+    "advance": 0,
     "deductions": 360000,
     "net": 5640000,
     "seller_credit": 5640000,
@@ -1473,6 +1475,57 @@
       }
     }
   ],
+  "sellers": [],
+  "gardens": [
+    {
+      "garden": {
+        "id": 1,
+        "number": 1,
+        "code": "0080",
+        "name_ur": "شاہ پور باغ",
+        "name_en": "Shahpur Garden",
+        "account": {
+          "id": 35,
+          "code": "0080",
+          "name_ur": "شاہ پور باغ",
+          "name_en": "Shahpur Garden"
+        }
+      },
+      "previous_paisa": 0,
+      "previous_side": "zero",
+      "credit_paisa": 5640000,
+      "new_paisa": 5640000,
+      "new_side": "cr",
+      "working": {
+        "message_id": "working-garden-new-balance",
+        "args": [
+          {
+            "name": "previous",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "credit",
+            "value": {
+              "kind": "money",
+              "paisa": 5640000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": -5640000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
+  "trips": [],
   "cash": {
     "cash_before_paisa": 1700000,
     "change_paisa": 0,

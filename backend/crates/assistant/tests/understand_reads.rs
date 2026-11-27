@@ -764,7 +764,7 @@ fn a_few_reads_in_full() {
     assert_eq!(
         last.input,
         serde_json::json!({
-            "view": "B", "from": "2026-09-01", "to": "2026-09-30", "group_by": null, "item": null,
+            "view": "B", "from": "2026-09-01", "to": "2026-09-30", "period": null, "group_by": null, "item": null,
             "item_group": null, "grade": null, "seller": seller, "buyer": null, "city": null, "adda": null, "garden": null,
             "trip": null, "goods": null, "partner": null, "side": null, "compare": null,
             "sort": null, "rows": null
@@ -781,7 +781,7 @@ fn a_few_reads_in_full() {
     assert_eq!(
         day[1].input,
         serde_json::json!({
-            "id": "R34", "from": "2026-10-10", "to": "2026-10-10", "as_of": null, "party": null,
+            "id": "R34", "from": "2026-10-10", "to": "2026-10-10", "period": null, "as_of": null, "party": null,
             "item": null, "city": null, "adda": null, "collector": null, "partner": null,
             "trip": null, "garden": null, "bikri": null, "seller": null, "zamindar": null,
             "status": null, "voucher_type": null, "layout": null, "group_by": null,

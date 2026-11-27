@@ -9,8 +9,6 @@ mod audit;
 pub mod auth;
 pub mod backup_key;
 pub mod bikri;
-pub mod capital_card;
-pub mod capital_place;
 pub mod cash;
 pub mod cashbook;
 pub mod chukta;
