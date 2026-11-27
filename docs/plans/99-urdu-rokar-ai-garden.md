@@ -248,3 +248,17 @@ All builders stopped at the usage limit. Nothing is committed, and the tree is n
   - The 18 misses from the live 324-phrase test (304 of 324 phrases exact) wait for a later plan.
   - phrase.rs and wordlist.rs are over 400 lines (G3 SHOULD).
 - Robustness-owned follow-up: robustness_opening (5 tests) now saves new party openings on an open day and tests the FR-10.11 mechanism with a payables account (smallest edit, approved by the lead). Pre-existing flake, not from plan 99: app runner::every_error_reference_is_written_to_the_log fails with 2 test threads and passes single-thread.
+
+## 13. State at the commit (27-11-2026)
+
+- Committed and pushed: dcc38e4f on `fix/rokar-garden` (plans 97, 98, 99).
+- Green:
+  - Frontend: 459 files and 11,794 tests, plus 449 sensitive tests.
+  - Backend: 4,778 passed in the full run, and every failed target green on re-run.
+  - The pre-existing flake (app runner log capture, 2 threads) passes single-thread.
+- Assistant:
+  - Replay of the 43 real questions: calls 59 → 46, average 2.19 → 1.64, none over 15 s, 226 s → 180 s, no answer worse.
+  - NFR-AI-2 live: 101 of 109 (92.7%), below the 97% target.
+  - Q055 خالص was wrong (996 instead of −1,004); it is fixed with a unit test but not re-asked live.
+  - Open: the old/new live round on the 8 misses (Q032, Q055, Q065, Q069, Q083, Q086, Q090, Q100). It waits for Umar to unlock the Mac and allow the Keychain twice.
+- Not run: the reviewer and robustness gate for the whole run (plans 95 to 99). It waits for Umar's go-ahead.
