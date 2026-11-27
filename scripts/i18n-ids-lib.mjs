@@ -640,6 +640,8 @@ export const BACKEND_LITERALS_OK = new Map([
   ['day-auto-close', 'the name of a job'],
   ['seller-item', 'a name of the assistant understanding of a question'],
   ['seller-own', 'a name of the assistant understanding of a question'],
+  ['total-worth', 'a kind of print (print_report.rs)'],
+  ['dead-amount', 'a source key of Total Worth, part of the template total-worth-source-{}'],
 ]);
 
 /** The words after the first dash of every defined ID, as the families the Fluent files have. */
@@ -749,7 +751,14 @@ export function checkBackendTemplates(root, defined) {
     /\bcolumn\(\s*"([a-z_]+)"/g,
   );
 
+  const worthSources = all(
+    read('backend/crates/reports/src/dashboard/total_worth.rs'),
+    /TotalWorthSource::[A-Za-z]+ => "([a-z-]+)"/g,
+  );
+
   const problems = [];
+  if (worthSources.length < 15)
+    problems.push('could not read the sources of dashboard/total_worth.rs');
   if (reportCodes.length < 30)
     problems.push('could not read the report codes from reports/model.rs');
   if (viewLetters.length < 12)
@@ -781,6 +790,7 @@ export function checkBackendTemplates(root, defined) {
         'report-doc-other',
       ],
     ],
+    ['total-worth-source-{}', worthSources.map((source) => `total-worth-source-${source}`)],
     [
       'print-partner-month-col-{}',
       monthColumns.map((key) => `print-partner-month-col-${key.replaceAll('_', '-')}`),

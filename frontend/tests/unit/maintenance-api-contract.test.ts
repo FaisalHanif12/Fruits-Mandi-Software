@@ -149,6 +149,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'entity',
       'entity_id',
       'id',
+      'kind',
       'new_json',
       'old_json',
       'reason',

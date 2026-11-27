@@ -2,6 +2,8 @@
 // refreshes everything that shows what it wrote (PRD 6.2): the trips, the stock list of باقی مال,
 // the party cards, the cash and the partners' totals, so every screen shows the new numbers.
 
+import type { CancelSecrets } from '../../shared/ui';
+import type { PurchaseCancelRequest } from '../../bindings/PurchaseCancelRequest';
 import {
   keepPreviousData,
   useMutation,
@@ -31,13 +33,7 @@ import {
 } from './api';
 import type { PurchaseEditInput } from '../../bindings/PurchaseEditInput';
 import type { SellDateInput } from '../../bindings/SellDateInput';
-import type {
-  PurchaseCancelInput,
-  PurchaseEntryInput,
-  PurchaseInput,
-  PurchasesListInput,
-  SplitInput,
-} from './types';
+import type { PurchaseEntryInput, PurchaseInput, PurchasesListInput, SplitInput } from './types';
 
 export const PURCHASES_KEY = ['purchases'] as const;
 /** The preview waits this long after the last key press, and the one before it is dropped (F35). */
@@ -227,7 +223,7 @@ export function useChangePurchaseSplit() {
 export function useCancelPurchase() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: PurchaseCancelInput) => purchasesCancel(input),
+    mutationFn: (input: PurchaseCancelRequest) => purchasesCancel(input),
     onSuccess: () => readAgainAfterPurchase(queryClient),
   });
 }
@@ -261,8 +257,8 @@ export function useWriteOffOwn() {
 export function useWriteOffOwnUndo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ moveId, reason }: { moveId: number; reason: string }) =>
-      purchasesWriteOffUndo(moveId, reason),
+    mutationFn: ({ moveId, secrets }: { moveId: number; secrets: CancelSecrets }) =>
+      purchasesWriteOffUndo(moveId, secrets),
     onSuccess: () => readAgainAfterPurchase(queryClient),
   });
 }

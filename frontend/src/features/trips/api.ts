@@ -3,6 +3,7 @@
 // Every command takes one `{ input }` object, except the two that take nothing.
 
 import { callCommand } from '../../shared/api';
+import type { TripEntryCancelRequest } from '../../bindings/TripEntryCancelRequest';
 import type { EditPreview } from '../../bindings/EditPreview';
 import type { EntryEdited } from '../../bindings/EntryEdited';
 import type { TripCostEditInput } from '../../bindings/TripCostEditInput';
@@ -19,7 +20,6 @@ import type {
   TripCostSaved,
   TripDefaults,
   TripDetail,
-  TripEntryCancelInput,
   TripEntryCancelled,
   TripInput,
   TripRow,
@@ -67,7 +67,7 @@ export function tripsCostSave(input: TripCostInput): Promise<TripCostSaved> {
   return callCommand<TripCostSaved>('trips_cost_save', { input });
 }
 
-export function tripsCostCancel(input: TripEntryCancelInput): Promise<TripEntryCancelled> {
+export function tripsCostCancel(input: TripEntryCancelRequest): Promise<TripEntryCancelled> {
   return callCommand<TripEntryCancelled>('trips_cost_cancel', { input });
 }
 
@@ -80,7 +80,7 @@ export function tripsOtherSaleSave(input: OtherSaleInput): Promise<OtherSaleSave
   return callCommand<OtherSaleSaved>('trips_other_sale_save', { input });
 }
 
-export function tripsOtherSaleCancel(input: TripEntryCancelInput): Promise<TripEntryCancelled> {
+export function tripsOtherSaleCancel(input: TripEntryCancelRequest): Promise<TripEntryCancelled> {
   return callCommand<TripEntryCancelled>('trips_other_sale_cancel', { input });
 }
 

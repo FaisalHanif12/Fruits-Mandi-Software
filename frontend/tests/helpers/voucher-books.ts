@@ -471,6 +471,9 @@ export function createBooks(options: BooksOptions = {}) {
               days: 0,
             },
           ];
+    // The 15,000 of this posting is already taken off the advance he had.
+    const advance = store.advances.get(input.seller_id) ?? 0;
+    const advanceLeft = payable === 0 ? advance : Math.max(advance - 15000, 0);
     return {
       account: refOf(input.seller_id) ?? {
         id: input.seller_id,
@@ -482,7 +485,12 @@ export function createBooks(options: BooksOptions = {}) {
       total_count: postings.length,
       truncated: false,
       open_paisa: money(payable),
-      advances_open_paisa: money(store.advances.get(input.seller_id) ?? 0),
+      advances_open_paisa: money(advanceLeft),
+      // The backend's net: what the shop owes less his open advance, never below 0 (plan 100 A).
+      net_payable_paisa: money(Math.max(payable - advanceLeft, 0)),
+      uncovered_advance_paisa: money(Math.max(advanceLeft - payable, 0)),
+      advance_covered:
+        Math.min(advanceLeft, payable) === 0 ? null : money(Math.min(advanceLeft, payable)),
       owes_firm_paisa: money(0),
       balance: payable === 0 ? ZERO : balance(payable, 'cr'),
     };
@@ -508,6 +516,9 @@ export function createBooks(options: BooksOptions = {}) {
       total_count: rows.length,
       truncated: false,
       open_paisa: money(open),
+      // Nothing is payable against it here, so the whole advance is not covered (plan 100 A).
+      uncovered_paisa: money(open),
+      advance_covered: null,
       last:
         open === 0
           ? null

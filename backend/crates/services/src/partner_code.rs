@@ -51,7 +51,7 @@ const LOCK_KEY: &str = "\u{1}partner_code";
 const CODE_DIGITS: usize = 4;
 
 /// True if the text is exactly 4 ASCII digits.
-fn is_code(text: &str) -> bool {
+pub(crate) fn is_code(text: &str) -> bool {
     text.len() == CODE_DIGITS && text.bytes().all(|b| b.is_ascii_digit())
 }
 
@@ -77,7 +77,7 @@ fn stored_tries(conn: &Connection) -> Result<(u32, Option<String>), ServiceError
     Ok((count, until))
 }
 
-fn is_set(ctx: &Context) -> Result<bool, ServiceError> {
+pub(crate) fn is_set(ctx: &Context) -> Result<bool, ServiceError> {
     Ok(ctx.db.read(stored_hash)?.is_some())
 }
 
@@ -176,6 +176,15 @@ fn register_wrong_try(ctx: &Context, actor: &Actor, field: &str) -> ServiceError
             "partner_code_failed",
             &json!({ "reason": "wrong_code", "attempts": attempts }),
         )?;
+        if let WrongTry::Locked { seconds } = outcome {
+            audit(
+                ctx,
+                tx,
+                actor,
+                "lockout_started",
+                &json!({ "seconds": seconds }),
+            )?;
+        }
         Ok::<_, ServiceError>(outcome)
     });
     match counted {
@@ -205,8 +214,32 @@ fn clear_tries(ctx: &Context, tx: &Connection, actor: &Actor) -> Result<(), Serv
     Ok(())
 }
 
-/// Checks a typed code against the stored one, with the wait around it.
-fn check_code(
+/// Refuses at once while a wait runs, before anything typed is looked at (NFR-SEC-2). The try is in
+/// the audit log.
+pub(crate) fn refuse_while_waiting(
+    ctx: &Context,
+    actor: &Actor,
+    field: &str,
+) -> Result<(), ServiceError> {
+    let Some(seconds) = wait_seconds(ctx)? else {
+        return Ok(());
+    };
+    ctx.db.write(|tx| {
+        audit(
+            ctx,
+            tx,
+            actor,
+            "partner_code_failed",
+            &json!({ "reason": "locked", "seconds": seconds }),
+        )
+    })?;
+    Err(locked_wait(seconds, field))
+}
+
+/// Checks a typed code against the stored one, with the wait around it. A right code forgets the
+/// wrong tries; it does not open the partner section by itself. Every write here is its own save,
+/// so a refusal after it cannot undo the count.
+pub(crate) fn check_code(
     ctx: &Context,
     actor: &Actor,
     typed: &str,
@@ -221,18 +254,7 @@ fn check_code(
     let Some(hash) = ctx.db.read(stored_hash)? else {
         return Err(ServiceError::reject(ErrorCode::ErrPartnerCodeNotSet));
     };
-    if let Some(seconds) = wait_seconds(ctx)? {
-        ctx.db.write(|tx| {
-            audit(
-                ctx,
-                tx,
-                actor,
-                "partner_code_failed",
-                &json!({ "reason": "locked", "seconds": seconds }),
-            )
-        })?;
-        return Err(locked_wait(seconds, field));
-    }
+    refuse_while_waiting(ctx, actor, field)?;
     if ctx.hasher.verify(&Secret::new(typed), &hash) {
         ctx.db.write(|tx| clear_tries(ctx, tx, actor))?;
         return Ok(());

@@ -79,7 +79,8 @@ one more route; the tab strip shows itself when there are two.
 
 ## Plan 99: a simple, exact روکڑ (PRD FR-16.14 v1.60, FR-10.9)
 
-- Three cards (`components/CashCards.tsx`): کل سرمایہ, شروع میں روکڑ and آخر میں روکڑ, all the backend's.
+- Two cards (`components/CashCards.tsx`): کل سرمایہ and آخر میں روکڑ, both the backend's (شروع میں روکڑ was
+  removed in v1.61, plan 100).
 - Every row is named for what it is (`row-text.ts`): the backend sends the `kind` and the records (`refs`:
   parties with a count of all, partner, garden, trip, expense head), and the words come from Fluent, for
   example "وصولی 1، اکرم", "بکری 2، موقع پر جمع، شاہد" and "باغ خرچ 1، پومپ والا باغ". A sale's cash is two
@@ -96,3 +97,11 @@ one more route; the tab strip shows itself when there are two.
   (`ReasonDialog`), then the cash question when cash ends below zero (FR-6.7), and calls
   `accounts_openings_to_cash`.
 - The capital card of plan 87 and its print are gone. Tests: `plan99-rokar.test.tsx`.
+
+## Plan 100: the lists under the forms (PRD FR-19.11) and two cards on روکڑ بک
+
+- Under دکان خرچہ, ادھار رقم, الگ کھاتہ and جنرل, `components/EntryListSection.tsx` lists 30 days at a time,
+  newest first (a date-descending sort until the user picks a column), with pages, arrows, go-to-date and
+  Edit and Cancel on the focused row. Without a person or khata it lists every entry; with one, only his.
+  The kinds and columns are in `entry-list-columns.ts`. A save reads the list again (`VOUCHERS_KEY`).
+- The روکڑ بک has two cards: کل سرمایہ and آخر میں روکڑ.

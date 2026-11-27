@@ -552,6 +552,12 @@ pub fn save_advances(
                 });
             }
             Err(ServiceError::Rejected(items)) => {
+                // Each line is its own save: one refused on a closed day is audited.
+                let refused = ServiceError::Rejected(items);
+                crate::audit::note_refused_save(ctx, "vouchers_save_advances", &refused);
+                let ServiceError::Rejected(items) = refused else {
+                    return Err(refused);
+                };
                 let errors = items
                     .into_iter()
                     .map(|item| LineError {

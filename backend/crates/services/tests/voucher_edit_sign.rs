@@ -504,6 +504,7 @@ fn a_voucher_edit_never_returns_the_sign_text_in_any_response() {
     let listed = vouchers::list(
         ctx,
         &VouchersListInput {
+            voucher_types: None,
             voucher_type: None,
             from: String::new(),
             to: String::new(),

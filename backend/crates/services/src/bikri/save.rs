@@ -82,6 +82,8 @@ pub fn save(
             preview: worked.preview(),
         })
     })?;
+    // Only a save just made may be undone without the code (PRD FR-7.47).
+    crate::cancel_guard::remember(ctx, crate::cancel_guard::Saved::Bikri(saved.bikri_id));
     refresh_chukta_index(ctx, &input.draft);
     Ok(saved)
 }
@@ -219,6 +221,8 @@ pub(super) fn write_new(
             .into_entry(),
     )?;
     drafts::discard_in(tx, actor.user_id, drafts::BIKRI_SCREEN)?;
+    // A new بکری brings back the reminders hidden with "بعد میں" (PRD FR-7.44 v1.61).
+    crate::assist::clear_snoozes(tx, actor.user_id)?;
     Ok(NewWritten {
         bikri_id,
         number,

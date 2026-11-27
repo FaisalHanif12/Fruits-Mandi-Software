@@ -181,7 +181,8 @@ function DaySlipsBody({ data, variant }: Pick<DaySlipsDocumentProps, 'data' | 'v
   const { frame } = data;
   if (variant === 'parchi') {
     return (
-      <div className="print-report print-parchi-page" data-variant="parchi">
+      // The slips stand on one white sheet of the paper, on screen too: never the tinted ground of the app (plan 100 H).
+      <div className="print-sheet print-report print-parchi-page" data-variant="parchi">
         <div className="print-parchi-grid">
           {data.buyers.map((slip, index) => (
             <PartySlip key={index} slip={slip} parchi header={frame.header} />

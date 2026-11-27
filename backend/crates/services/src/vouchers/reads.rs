@@ -274,6 +274,7 @@ pub fn open_payables_page(
         };
         let postings: Vec<PayablePosting> = postings.into_iter().skip(offset).take(limit).collect();
         let shown_to = count_of(offset.saturating_add(postings.len()))?;
+        let net = payables::net_of(work.open, work.advances_open).map_err(money_error)?;
         Ok(OpenPayables {
             account: party.record.clone(),
             total_count,
@@ -281,10 +282,28 @@ pub fn open_payables_page(
             postings,
             open_paisa: work.open,
             advances_open_paisa: work.advances_open,
+            net_payable_paisa: net.payable,
+            uncovered_advance_paisa: net.uncovered_advance,
+            advance_covered: covered_part(work.advances_open, net.uncovered_advance)?,
             owes_firm_paisa: work.excess_paid,
             balance: ledger::balance_in(conn, party.record.id, key, None)?,
         })
     })
+}
+
+/// What a بنام balance owes the shop, 0 for a جمع or zero balance.
+fn owed_by(balance: mandi_domain::core::accounts::Balance) -> Paisa {
+    if balance.side == BalanceSide::Dr {
+        balance.amount_paisa
+    } else {
+        Paisa::ZERO
+    }
+}
+
+/// The part of an open advance the seller's credit covers, `None` when 0 (PRD FR-9.6 v1.61).
+fn covered_part(open: Paisa, uncovered: Paisa) -> Result<Option<Paisa>, ServiceError> {
+    let covered = open.checked_sub(uncovered).map_err(money_error)?;
+    Ok(Some(covered).filter(|c| *c > Paisa::ZERO))
 }
 
 /// The totals of a seller key (payable, open advances, owed beyond them) from sums of his lines,
@@ -372,12 +391,16 @@ fn open_payables_fast(
             });
         }
     }
+    let net = payables::net_of(totals.open, totals.advances_open).map_err(money_error)?;
     Ok(OpenPayables {
         truncated: total_count > offset.saturating_add(postings.len()),
         total_count: count_of(total_count)?,
         postings,
         open_paisa: totals.open,
         advances_open_paisa: totals.advances_open,
+        net_payable_paisa: net.payable,
+        uncovered_advance_paisa: net.uncovered_advance,
+        advance_covered: covered_part(totals.advances_open, net.uncovered_advance)?,
         owes_firm_paisa: totals.excess_paid,
         balance: ledger::balance_in(conn, party.record.id, key, None)?,
         account: party.record,
@@ -420,6 +443,23 @@ pub fn advances_report(
         let mut rows = Vec::new();
         let (mut given, mut returned, mut adjusted, mut open) =
             (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+        // The payable working is as it stands now and is not dated, so what an advance is covered
+        // by is known only for today (as R24 does).
+        let current = as_of >= today;
+        // One grouped read of the sellers' balances (Code Standards B22).
+        let balances: HashMap<i64, ledger_repo::Totals> = if current {
+            ledger_repo::account_totals_in_controls(
+                conn,
+                &[mandi_domain::core::accounts::SELLER_CONTROL],
+                None,
+            )?
+            .into_iter()
+            .collect()
+        } else {
+            HashMap::new()
+        };
+        let mut uncovered = Paisa::ZERO;
+        let mut covered = Paisa::ZERO;
         // A list of all sellers leaves out the people in the dead amount (R26, PRD FR-10.10).
         let dead = if input.seller_id.is_none() {
             Some(mandi_db::dead::dead_set(conn, Some(&as_of_iso))?)
@@ -470,9 +510,41 @@ pub fn advances_report(
                     totals.account_id
                 )));
             }
-            // The page of the tile پیشگی باقی lists the sellers with something open only.
-            if input.only_open && left == Paisa::ZERO {
+            let row_uncovered = match current {
+                true if left > Paisa::ZERO => {
+                    // What his payable leaves uncovered is what his balance says he owes, at most
+                    // the open advance (R24's identity, the same split as the party card).
+                    let owed = match balances.get(&totals.account_id) {
+                        Some(own) => paisa(own.dr_paisa)?
+                            .checked_sub(paisa(own.cr_paisa)?)
+                            .map_err(money_error)?
+                            .max(Paisa::ZERO),
+                        // An advance on an account outside the sellers (a الگ کھاتہ's lot): rare.
+                        None => owed_by(ledger::balance_in(conn, totals.account_id, None, None)?),
+                    };
+                    Some(
+                        payables::advance_cover(left, owed)
+                            .map_err(money_error)?
+                            .uncovered,
+                    )
+                }
+                true => Some(Paisa::ZERO),
+                false => None,
+            };
+            // The page of the tile پیشگی باقی lists the sellers with something open only, and for
+            // today only what their payable does not cover (v1.61, plan 100 A).
+            if input.only_open && row_uncovered.unwrap_or(left) == Paisa::ZERO {
                 continue;
+            }
+            let row_covered = match row_uncovered {
+                Some(amount) => covered_part(left, amount)?,
+                None => None,
+            };
+            if let Some(amount) = row_uncovered {
+                uncovered = uncovered.checked_add(amount).map_err(money_error)?;
+            }
+            if let Some(amount) = row_covered {
+                covered = covered.checked_add(amount).map_err(money_error)?;
             }
             given = given.checked_add(g).map_err(money_error)?;
             returned = returned.checked_add(r).map_err(money_error)?;
@@ -484,6 +556,8 @@ pub fn advances_report(
                 returned_paisa: r,
                 adjusted_paisa: a,
                 open_paisa: left,
+                uncovered_paisa: row_uncovered,
+                advance_covered: row_covered,
                 last_date: totals.last_date,
             });
         }
@@ -506,6 +580,8 @@ pub fn advances_report(
             returned_paisa: returned,
             adjusted_paisa: adjusted,
             open_paisa: open,
+            uncovered_paisa: current.then_some(uncovered),
+            advance_covered: Some(covered).filter(|c| current && *c > Paisa::ZERO),
         })
     })
 }

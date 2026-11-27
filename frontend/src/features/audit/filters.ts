@@ -2,12 +2,28 @@
 // (PRD FR-21.3: the Owner can filter it). The boxes hold text as typed; the backend reads the dates
 // and checks everything (CLAUDE.md rule 1). The record number is an id, typed as digits.
 
-import type { AuditFilters } from './types';
+import type { AuditEventKind, AuditFilters } from './types';
 
 /** The choice of a drop-down that means "any". Radix does not allow an empty value for a choice. */
 export const ANY = '*';
 
+/** The kinds of event the log can be filtered to (PRD FR-21.3 v1.61), in the order of the drop-down. */
+export const AUDIT_KINDS: readonly AuditEventKind[] = [
+  'edit',
+  'cancel',
+  'reopen',
+  'wrong_code',
+  'wrong_sign',
+  'wrong_password',
+  'lockout',
+  'closed_day',
+];
+
 export interface AuditFilterState {
+  /** A kind of event, or ANY (plan 100 D). */
+  kind: string;
+  /** Only the security events (wrong password, code or sign, a wait started, a closed day refused). */
+  securityOnly: boolean;
   /** The user id as text, or ANY. */
   user: string;
   /** An action as the backend names it, or ANY. */
@@ -24,6 +40,8 @@ export interface AuditFilterState {
 }
 
 export const EMPTY_AUDIT_FILTERS: AuditFilterState = {
+  kind: ANY,
+  securityOnly: false,
   user: ANY,
   action: ANY,
   entity: ANY,
@@ -40,6 +58,11 @@ function idOf(text: string): number | null {
   return Number.parseInt(digits, 10);
 }
 
+/** The kind chosen, or null for every kind. */
+function kindToWire(state: AuditFilterState): AuditEventKind | null {
+  return AUDIT_KINDS.find((kind) => kind === state.kind) ?? null;
+}
+
 /** The filters as the backend reads them. Every key is sent. */
 export function filtersToWire(state: AuditFilterState): AuditFilters {
   return {
@@ -50,6 +73,8 @@ export function filtersToWire(state: AuditFilterState): AuditFilters {
     from: state.from.trim(),
     to: state.to.trim(),
     text: state.text.trim(),
+    kind: kindToWire(state),
+    security_only: state.securityOnly,
   };
 }
 
@@ -57,6 +82,8 @@ export function filtersToWire(state: AuditFilterState): AuditFilters {
 export function isUnfiltered(state: AuditFilterState): boolean {
   const wire = filtersToWire(state);
   return (
+    wire.kind === null &&
+    !wire.security_only &&
     wire.user_id === null &&
     wire.action === '' &&
     wire.entity === '' &&

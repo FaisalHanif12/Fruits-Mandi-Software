@@ -177,6 +177,8 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
         from: '11-09-2026',
         to: '10-10-2026',
         text: '',
+        kind: null,
+        security_only: false,
       },
       offset: 0,
       limit: PAGE_ROWS,
@@ -249,9 +251,29 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
         from: '01-10-2026',
         to: '31-10-2026',
         text: 'lakh',
+        kind: null,
+        security_only: false,
       });
     }, SLOW_MS);
     // The list asked for starts again from the first entry.
+    expect(lastRequest()?.offset).toBe(0);
+  });
+
+  it('asks for one kind of event, and for security events only (plan 100 D)', async () => {
+    const { user } = await openAudit();
+    await waitFor(() => {
+      expect(drawnRows()).toHaveLength(3);
+    }, SLOW_MS);
+    await user.click(screen.getByRole('combobox', { name: m('audit-filter-kind') }));
+    await user.click(
+      await screen.findByRole('option', { name: named(language, 'audit-kind-wrong-sign') }),
+    );
+    await user.click(
+      screen.getByRole('checkbox', { name: named(language, 'audit-filter-security') }),
+    );
+    await waitFor(() => {
+      expect(lastRequest()?.filters).toMatchObject({ kind: 'wrong_sign', security_only: true });
+    }, SLOW_MS);
     expect(lastRequest()?.offset).toBe(0);
   });
 

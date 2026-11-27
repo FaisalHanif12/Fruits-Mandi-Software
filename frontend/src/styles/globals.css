@@ -411,3 +411,9 @@ body {
     transition-delay: 0s, 0s, 0s, 0s, var(--motion-fast);
   }
 }
+
+/* The bell's panel (plan 100 J). Radix says how much room is under the bell; the panel takes no more. */
+.attention-panel {
+  inline-size: var(--attention-panel-w);
+  max-block-size: min(var(--attention-panel-h), var(--radix-popover-content-available-height));
+}

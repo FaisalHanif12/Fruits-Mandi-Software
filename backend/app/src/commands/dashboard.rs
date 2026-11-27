@@ -6,21 +6,33 @@
 //! function.
 
 use mandi_reports::dashboard::{
-    self, AttentionList, BackupFacts, BuyerDuesInput, BuyerDuesPage, BuyerDuesPrintInput,
+    self, AttentionPanel, BackupFacts, BuyerDuesInput, BuyerDuesPage, BuyerDuesPrintInput,
     CashSalesDay, CashSalesDayInput, CashSalesDayPrintInput, CashSalesMonth, CashSalesMonthInput,
     CashSalesMonthPrintInput, CommissionDay, CommissionDayInput, CommissionMonth,
     CommissionMonthInput, CommissionPrintInput, Dashboard, LentOpenInput, LentOpenPage,
     LentOpenPrintInput, SalesDay, SalesDayInput, SalesPeriod, SalesPeriodInput, SalesPrintInput,
     SellerDuesInput, SellerDuesPage, SellerDuesPrintInput, TotalDues, TotalDuesPrintInput,
+    TotalWorthInput, TotalWorthPage, TotalWorthPrintInput,
 };
 use mandi_reports::reports::TablePrintData;
 use mandi_services::auth;
 use mandi_services::partner_code;
 
+use mandi_services::assist;
+use serde::Deserialize;
+use ts_rs::TS;
+
 use super::reports_engine::engine_error;
 use super::run;
 use crate::backup_runtime::BackupRuntime;
 use crate::error::UiError;
+
+/// Input of `assist_snooze`: the `item_key` of the panel item to hide.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct AttentionSnoozeInput {
+    /// For example `seller:12`, `buyer:7`, `payable:3` or `kind:drafts`.
+    pub item_key: String,
+}
 
 /// What the backup service says about the cloud copy. If the service is not running, the cloud
 /// copy counts as off: no old-backup item is made up for a copy that cannot run.
@@ -59,20 +71,66 @@ pub async fn dashboard_get<R: tauri::Runtime>(
     .await
 }
 
-/// The attention list and the number on the bell (PRD FR-7.44). Read only. The bell asks again
-/// after every save.
+/// The bell panel (PRD FR-7.44, v1.61, plan 100): the top 5 sellers to pay, the top 5 buyers to
+/// collect from, the payables still to pay and the other reminders, without the items hidden by
+/// `assist_snooze`. Read only. The bell asks again after every save.
 #[tauri::command]
 pub async fn assist_attention<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-) -> Result<AttentionList, UiError> {
+) -> Result<AttentionPanel, UiError> {
     let backup = backup_facts(&app);
     run(app, "assist_attention", move |ctx| {
-        auth::require(ctx)?;
-        let mut shown = dashboard::attention(ctx.db(), backup).map_err(engine_error)?;
+        let actor = auth::require(ctx)?;
+        let hidden = assist::snoozed_keys(ctx, &actor)?;
+        let mut shown =
+            dashboard::attention_panel(ctx.db(), backup, &hidden).map_err(engine_error)?;
         if partner_code::is_locked(ctx)? {
             shown.hide_partners();
         }
         Ok(shown)
+    })
+    .await
+}
+
+/// Hides one item of the bell panel until the next بکری save ("بعد میں", plan 100 J). It writes the
+/// Owner's own preference `attention.snoozed` and nothing else. Errors: `ERR_REQUIRED` and
+/// `ERR_FORMAT_INVALID` on `item_key` (not a key the panel gives).
+#[tauri::command]
+pub async fn assist_snooze<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: AttentionSnoozeInput,
+) -> Result<(), UiError> {
+    run(app, "assist_snooze", move |ctx| {
+        let actor = auth::require(ctx)?;
+        assist::snooze(ctx, &actor, &input.item_key)
+    })
+    .await
+}
+
+/// One page of the rows of one side of کل مالیت, with the totals of every source and the net
+/// (plan 100 B, PRD FR-9.10). Read only. Errors: `ERR_OUT_OF_RANGE` on `limit` above 100.
+#[tauri::command]
+pub async fn dashboard_total_worth<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: TotalWorthInput,
+) -> Result<TotalWorthPage, UiError> {
+    run(app, "dashboard_total_worth", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::total_worth(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print of کل مالیت: both sides with every row, a total for each source and side, and the net
+/// (plan 100 B, PRD FR-9.10, FR-19.10). Read only.
+#[tauri::command]
+pub async fn dashboard_total_worth_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: TotalWorthPrintInput,
+) -> Result<TablePrintData, UiError> {
+    run(app, "dashboard_total_worth_print_data", move |ctx| {
+        auth::require(ctx)?;
+        dashboard::total_worth_print_data(ctx.db(), &input).map_err(engine_error)
     })
     .await
 }

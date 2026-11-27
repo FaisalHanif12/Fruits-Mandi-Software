@@ -252,6 +252,15 @@ html:has(.print-doc[data-paper='mm80']) {
   color: var(--color-ink);
 }
 
+/* The firm's phones (up to 4) stand side by side and wrap between two numbers, with space, not a sign,
+   between them, so a line never ends with a sign (plan 100 H). */
+.print-firm-phones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: var(--print-gap-2);
+}
+
 .print-contact-role {
   color: var(--color-ink-muted);
 }
@@ -296,6 +305,21 @@ html:has(.print-doc[data-paper='mm80']) {
 .print-doc[data-paper='mm80'] .print-zones > .print-mark,
 .print-doc[data-paper='mm80'] .print-zones > .print-firm,
 .print-doc[data-paper='mm80'] .print-zones > .print-contacts {
+  order: 0;
+}
+
+/* The two sides of a parchi's band keep the same edges: the picture at the physical left, the people at the
+   physical right, in both print languages (plan 100 H). */
+.print-doc[dir='rtl'] .print-slip-band > .print-slip-picture {
+  order: 3;
+}
+
+.print-doc[dir='rtl'] .print-slip-band > .print-slip-people {
+  order: 1;
+}
+
+.print-doc[data-paper='mm80'] .print-slip-band > .print-slip-picture,
+.print-doc[data-paper='mm80'] .print-slip-band > .print-slip-people {
   order: 0;
 }
 

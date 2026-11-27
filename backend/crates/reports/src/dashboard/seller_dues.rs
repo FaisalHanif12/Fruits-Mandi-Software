@@ -5,8 +5,12 @@
 //! its tile and R24 by construction (PRD FR-15.9, FR-7.59). A seller's history opens with
 //! `party_ledgers_statement_rows` (opening balance first, one row for each بکری).
 //!
+//! Each row's payable and advance are netted (v1.61, plan 100 A), so the side totals equal the
+//! tiles and payable less advance less owes is the sum of the balances.
+//!
 //! Example (plan 79 s01): فیصل F 72,740 جمع, احسان 120,780 جمع, عدنان 9,260 جمع. The shop owes
-//! sellers 202,780 (the tile); sellers owe the shop 0.
+//! sellers 202,780 (the tile); sellers owe the shop 0. Plan 100: a seller with 117,040 payable and
+//! 100,000 advance shows payable 17,040, advance 0, balance 17,040 جمع.
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -99,10 +103,11 @@ pub struct SellerDuesRow {
     /// His ledger balance with its side: جمع when the shop owes him, بنام when he owes the shop or
     /// holds an open advance. The balance of his party card and of R13.
     pub balance: Balance,
-    /// What is payable to him (PRD FR-7.59). 0 when nothing.
+    /// What the shop really owes him: his payable (PRD FR-7.59) less his open advances, never
+    /// below 0 (v1.61). 0 when nothing.
     #[ts(type = "Paisa")]
     pub payable_paisa: Paisa,
-    /// His open advances (PRD FR-15.8).
+    /// The part of his open advances (PRD FR-15.8) his payable does not cover (v1.61).
     #[ts(type = "Paisa")]
     pub advance_open_paisa: Paisa,
     /// What he owes the shop beyond his advances (PRD FR-15.9).
@@ -120,7 +125,7 @@ pub struct SellerDuesPage {
     /// How many sellers the filter (side, party, search) matches.
     #[ts(type = "number")]
     pub total_count: i64,
-    /// The shop owes these sellers: Σ payable of the sellers the party and the search match, whatever
+    /// The shop owes these sellers: Σ net payable of the sellers the party and the search match, whatever
     /// the side. With no party and no search it is the tile بیوپاریوں کو ادائیگی باقی.
     #[ts(type = "Paisa")]
     pub shop_owes_paisa: Paisa,
@@ -128,7 +133,7 @@ pub struct SellerDuesPage {
     /// it is the tile بیوپاریوں کے ذمے.
     #[ts(type = "Paisa")]
     pub seller_owes_paisa: Paisa,
-    /// Σ of their open advances (the tile پیشگی باقی).
+    /// Σ of their open advances not covered by a payable (the tile پیشگی باقی).
     #[ts(type = "Paisa")]
     pub advances_open_paisa: Paisa,
     /// The ledger balances of the rows of the whole filter added up, with the side of the result.
@@ -216,12 +221,16 @@ fn last_changes(conn: &Connection) -> Result<HashMap<i64, String>, ReportsError>
     Ok(rows)
 }
 
-fn row_of(seller: Seller) -> SellerDuesRow {
+fn row_of(seller: Seller) -> Result<SellerDuesRow, ReportsError> {
+    // Netted as the tiles are (PRD FR-9.6 v1.61, plan 100 A).
     let (payable, advance, owes) = match seller.working {
-        Some(w) => (w.open, w.advances_open, w.owes_firm),
+        Some(w) => {
+            let net = w.net()?;
+            (net.payable, net.uncovered_advance, w.owes_firm)
+        }
         None => (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO),
     };
-    SellerDuesRow {
+    Ok(SellerDuesRow {
         party: seller.party,
         city: None,
         balance: seller.balance,
@@ -229,12 +238,14 @@ fn row_of(seller: Seller) -> SellerDuesRow {
         advance_open_paisa: advance,
         owes_paisa: owes,
         last_change_date: None,
-    }
+    })
 }
 
 fn keeps(side: SellerDuesSide, row: &SellerDuesRow) -> bool {
     match side {
-        SellerDuesSide::All => true,
+        // One row per seller with a balance (PRD FR-9.6): a seller whose payable his advance
+        // covers exactly owes and is owed nothing.
+        SellerDuesSide::All => row.balance.side != BalanceSide::Zero,
         SellerDuesSide::ShopOwes => row.payable_paisa > Paisa::ZERO,
         SellerDuesSide::SellerOwes => row.owes_paisa > Paisa::ZERO,
     }
@@ -268,7 +279,7 @@ fn load_all(
                 .into_iter()
                 .filter(|s| text.is_empty() || matches(&s.party, text, &text_ur, &text_en))
                 .map(row_of)
-                .collect();
+                .collect::<Result<_, _>>()?;
             // The side totals are over the party and the search, whatever the side (plan 79 2a).
             let (mut shop_owes, mut seller_owes, mut advances_open) =
                 (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);

@@ -36,7 +36,9 @@ import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
 import { LinkedPartsCard } from '../components/LinkedPartsCard';
 import { LentForm } from '../components/LentForm';
+import { EntryListSection } from '../components/EntryListSection';
 import { LentListSection } from '../components/LentListSection';
+import { LENT_ENTRY_COLUMNS, LENT_ENTRY_TYPES } from '../entry-list-columns';
 import { useEntryPreview, useLentPerson, useSaveLent } from '../hooks';
 import {
   LENT_FIELD_PATHS,
@@ -184,7 +186,21 @@ function LentEditor({ today, urlType, editable = null, initial = null }: LentEdi
       closedDay={{ date: draft.date, onReopened: flow.clearRefusal }}
       fieldsShown={LENT_FIELD_PATHS[draft.type]}
       formRef={formRef}
-      below={<LentListSection personId={draft.person?.id ?? null} />}
+      below={
+        <>
+          {/* Every money lent and returned, 30 days at a time, or only the chosen person's (plan 100 F). */}
+          <EntryListSection
+            screen="cashbook.lent.entries"
+            titleId="cashbook-entries-lent-title"
+            types={LENT_ENTRY_TYPES}
+            accountId={draft.person?.id ?? null}
+            source={{ kind: 'lent' }}
+            columns={LENT_ENTRY_COLUMNS}
+            today={today}
+          />
+          {draft.person === null ? null : <LentListSection personId={draft.person.id} />}
+        </>
+      }
     >
       <FormAside
         form={

@@ -14,6 +14,7 @@
 //! with the change `firm.name_en` from `Maher` to `Maher Adnan` and his user name.
 
 mod flatten;
+mod kinds;
 mod model;
 mod stamp;
 
@@ -31,8 +32,8 @@ use crate::reports::common::{Conds, parse_day, today};
 use crate::reports::page_spec;
 
 pub use model::{
-    AuditChange, AuditFilters, AuditListInput, AuditOptions, AuditPage, AuditResolvedFilters,
-    AuditRow, AuditUser, AuditValue,
+    AuditChange, AuditEventKind, AuditFilters, AuditListInput, AuditOptions, AuditPage,
+    AuditResolvedFilters, AuditRow, AuditUser, AuditValue,
 };
 pub use stamp::{
     EditHistory, EditHistoryInput, EditStampInput, EditStampRow, EditVersion, MAX_STAMP_IDS,
@@ -183,6 +184,7 @@ fn resolve(
                           ELSE a.new_json END, '')), lower(?)) > 0",
         words.as_deref(),
     );
+    kinds::add(&mut conds, input.kind, input.security_only);
     resolved.from = from;
     resolved.to = to;
     resolved.text = words;
@@ -294,6 +296,7 @@ pub fn list(db: &Db, input: &AuditListInput) -> Result<AuditPage, ReportsError> 
             let old = parse_json(old)?;
             let new = parse_json(new)?;
             let (changes, changes_truncated) = flatten::changes(old.as_ref(), new.as_ref());
+            let kind = kinds::kind_of(&action, &entity, new.as_ref());
             rows.push(AuditRow {
                 id,
                 at,
@@ -306,6 +309,7 @@ pub fn list(db: &Db, input: &AuditListInput) -> Result<AuditPage, ReportsError> 
                 }),
                 action,
                 entity,
+                kind,
                 entity_id,
                 reason,
                 old_json: old.as_ref().map(|v| flatten::redact(v).to_string()),

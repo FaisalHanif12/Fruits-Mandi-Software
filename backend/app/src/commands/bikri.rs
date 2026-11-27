@@ -5,16 +5,17 @@
 use mandi_reports::reports::{
     BikriListPrintData, BikriListPrintInput, bikri_list_print_data as list_print_data,
 };
+use mandi_services::cancel_guard;
 use mandi_services::core::bikri::{
     BikriCancelled, BikriDetail, BikriEdited, BikriFindInput, BikriGetInput, BikriList,
     BikriListInput, BikriListRow, BikriNavigateInput, BikriPreview, BikriPreviewInput,
-    BikriSaveInput, BikriSaved, CancelInput, CancelPreview, CancelPreviewInput, EditOpenInput,
-    EditPreviewInput, EditSaveInput, EditableBikri, LaterSaleInput, LaterSaleSaveInput,
-    LaterSaleSaved, MixedSaleInput, MixedSalePreview, MixedSaleSaveInput, MixedSaleSaved,
-    MixedUndoInput, MixedUndoResult, SellerPaidSpread, SellerPaidSpreadInput, StockList,
-    StockListInput, UndoInput, UndoResult, WriteOffDone, WriteOffInput, WriteOffUndoInput,
-    WriteOffUndone,
+    BikriSaveInput, BikriSaved, CancelPreview, CancelPreviewInput, EditOpenInput, EditPreviewInput,
+    EditSaveInput, EditableBikri, LaterSaleInput, LaterSaleSaveInput, LaterSaleSaved,
+    MixedSaleInput, MixedSalePreview, MixedSaleSaveInput, MixedSaleSaved, MixedUndoInput,
+    MixedUndoResult, SellerPaidSpread, SellerPaidSpreadInput, StockList, StockListInput, UndoInput,
+    UndoResult, WriteOffDone, WriteOffInput, WriteOffUndone,
 };
+use mandi_services::core::cancel::{BikriCancelRequest, BikriWriteOffUndoRequest};
 use mandi_services::core::paging::PageInput;
 use mandi_services::{auth, bikri};
 use serde::Deserialize;
@@ -253,6 +254,9 @@ pub async fn bikri_mixed_save<R: tauri::Runtime>(
 
 /// Undoes a mixed save straight after it: the later postings are reversed and the new بکری is
 /// cancelled, in one transaction (plan 76 point 1, PRD FR-7.47).
+///
+/// Only straight after the save, in the same session (PRD FR-7.47): else `ERR_UNDO_EXPIRED`. It
+/// needs no code, sign or reason.
 #[tauri::command]
 pub async fn bikri_mixed_undo<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -260,7 +264,7 @@ pub async fn bikri_mixed_undo<R: tauri::Runtime>(
 ) -> Result<MixedUndoResult, UiError> {
     run(app, "bikri_mixed_undo", move |ctx| {
         let actor = auth::require(ctx)?;
-        bikri::mixed_undo(ctx, &actor, &input)
+        cancel_guard::undo_mixed(ctx, &actor, &input)
     })
     .await
 }
@@ -322,20 +326,27 @@ pub async fn bikri_cancel_preview<R: tauri::Runtime>(
 
 /// Cancels a بکری with a reason (PRD FR-12.22): every posting is reversed in one transaction, the
 /// number is kept, and matching is worked out again.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn bikri_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: CancelInput,
+    input: BikriCancelRequest,
 ) -> Result<BikriCancelled, UiError> {
     run(app, "bikri_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        bikri::cancel(ctx, &actor, &input)
+        cancel_guard::cancel_bikri(ctx, &actor, &input)
     })
     .await
 }
 
 /// Undoes a بکری straight after its save (PRD FR-7.47): a cancel with a fixed reason, giving back
 /// a draft with the same values.
+///
+/// Only straight after the save, in the same session (PRD FR-7.47): else `ERR_UNDO_EXPIRED`. It
+/// needs no code, sign or reason.
 #[tauri::command]
 pub async fn bikri_undo<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -343,7 +354,7 @@ pub async fn bikri_undo<R: tauri::Runtime>(
 ) -> Result<UndoResult, UiError> {
     run(app, "bikri_undo", move |ctx| {
         let actor = auth::require(ctx)?;
-        bikri::undo(ctx, &actor, &input)
+        cancel_guard::undo_bikri(ctx, &actor, &input)
     })
     .await
 }
@@ -362,14 +373,18 @@ pub async fn bikri_write_off<R: tauri::Runtime>(
 }
 
 /// Undoes a write-off with a reason (PRD FR-12.16): the opposite stock move is recorded.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn bikri_write_off_undo<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: WriteOffUndoInput,
+    input: BikriWriteOffUndoRequest,
 ) -> Result<WriteOffUndone, UiError> {
     run(app, "bikri_write_off_undo", move |ctx| {
         let actor = auth::require(ctx)?;
-        bikri::write_off_undo(ctx, &actor, &input)
+        cancel_guard::undo_bikri_write_off(ctx, &actor, &input)
     })
     .await
 }

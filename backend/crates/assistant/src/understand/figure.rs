@@ -503,6 +503,13 @@ impl Cx<'_> {
             (Some(Node::Val(Val::Money(b))), Some(Node::Val(Val::Money(p))))
                 if b.side == Some(Side::Cr) && b.paisa == p.paisa && b.paisa != Paisa::ZERO
         );
+        // A covered advance (PRD FR-9.6 v1.61) is not open, yet it was taken: a peshgi question
+        // needs both figures, which the model writes.
+        if what == What::Advance
+            && matches!(card.node.get(&["advance_covered"]), Some(Node::Val(_)))
+        {
+            return None;
+        }
         let (kind, path): (&str, &[&str]) = match what {
             What::Payable if credit_balance => ("payable", &["balance"]),
             What::Payable => ("payable", &["payable"]),
@@ -543,7 +550,7 @@ impl Cx<'_> {
         )])
     }
 
-    /// The shop's figures of the tiles and of R24.
+    /// The shop's figures of the tiles.
     fn shop(&self, what: What) -> Option<Sentence> {
         let (kind, source, path): (&str, Option<&ToolResult>, &[&str]) = match what {
             What::Cash => ("cash", self.tiles(), &["cash_in_hand", "amount"]),
@@ -552,7 +559,8 @@ impl Cx<'_> {
             What::AdvancesOpen => ("advances", self.tiles(), &["advances_open", "amount"]),
             What::DeadAmount => ("dead", self.tiles(), &["dead_amount", "amount"]),
             What::MoneyLent => ("lent", self.tiles(), &["money_lent_open", "amount"]),
-            What::ShopPayable => ("payable", self.report("R24"), &["totals", "payable"]),
+            // The tile, netted for each seller (PRD 9.1 v1.61): R24's payable column stays gross.
+            What::ShopPayable => ("payable", self.tiles(), &["sellers_payable", "amount"]),
             _ => return None,
         };
         Some(plain(

@@ -21,6 +21,9 @@
   "truncated": false,
   "open_paisa": 431600,
   "advances_open_paisa": 0,
+  "net_payable_paisa": 431600,
+  "uncovered_advance_paisa": 0,
+  "advance_covered": null,
   "owes_firm_paisa": 0,
   "balance": {
     "amount_paisa": 431600,

@@ -574,6 +574,8 @@ export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): Par
     credit_limit: row.account_type === 'buyer' ? row.credit_limit_paisa : null,
     credit_used: row.account_type === 'buyer' ? money(2880) : null,
     advance_open: row.account_type === 'seller' ? money(15000) : null,
+    advance_covered: null,
+    net_payable: row.account_type === 'seller' ? money(0) : null,
     warnings: [],
     ...extra,
   };

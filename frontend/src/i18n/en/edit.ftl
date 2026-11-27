@@ -503,3 +503,27 @@ edit-field-mark-full = { $mark }, { $when }
 # What the mark says when the old value is a record this screen cannot name.
 # review: pending
 edit-mark-other = (another one)
+
+# The one box of every cancel (plan 100, PRD FR-7.93): the reason, the Owner's sign and the partner code,
+# all three required, on any day. The undo straight after a save asks none of them.
+# review: pending
+cancel-reason-label = Reason
+
+# review: pending
+cancel-sign-label = { -dastakhat }
+
+# review: pending
+cancel-sign-hint = The Owner's { -dastakhat }.
+
+# review: pending
+cancel-code-label = { -shirakat-dar } code
+
+# review: pending
+cancel-code-hint = The 4 digit { -shirakat-dar } code.
+
+# Shown in the box when no partner code has been made yet (PRD FR-17.11).
+# review: pending
+cancel-no-code = No { -shirakat-dar } code has been made yet. Make it in Settings first, then cancel.
+
+# review: pending
+cancel-make-code = Open Settings

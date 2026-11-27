@@ -12,8 +12,13 @@ use ts_rs::TS;
 pub const SETTING_KEY_CONTACTS: &str = "firm_contacts";
 /// The `settings` key of the trade mark: a JSON string, as typed (Architecture 15.3).
 pub const SETTING_KEY_TRADE_MARK: &str = "trade_mark";
-/// The most people the header prints (PRD Section 21, v1.12: up to 6).
-pub const MAX_CONTACTS: usize = 6;
+/// The most people the header prints (PRD Section 21, v1.61: up to 8).
+pub const MAX_CONTACTS: usize = 8;
+/// The most phones of the firm, printed after its name in every header (PRD Section 21, v1.61).
+pub const MAX_FIRM_PHONES: usize = 4;
+/// The `settings` key of the firm's second to fourth phones: a JSON list of 11-digit phones. The
+/// first phone stays in the `firm` setting.
+pub const SETTING_KEY_MORE_PHONES: &str = "firm_more_phones";
 
 /// The role of a person in the print header (PRD Section 21, v1.12, Umar 31-10-2026). The header
 /// prints the owners first, then the munshi.
@@ -66,7 +71,8 @@ mod tests {
     fn the_keys_are_the_ones_of_architecture_15_3() {
         assert_eq!(SETTING_KEY_CONTACTS, "firm_contacts");
         assert_eq!(SETTING_KEY_TRADE_MARK, "trade_mark");
-        assert_eq!(MAX_CONTACTS, 6);
+        assert_eq!(MAX_CONTACTS, 8);
+        assert_eq!(MAX_FIRM_PHONES, 4);
     }
 
     #[test]

@@ -215,7 +215,8 @@ fn the_json_shapes_are_the_contract() {
     assert_eq!(settings["idle_lock_minutes"], 15);
     assert_eq!(settings["default_language"], "ur");
     assert_eq!(settings["number_grouping"], "international");
-    assert_eq!(settings["firm"]["phone"], "03001234567");
+    // Up to four firm phones (plan 100 H).
+    assert_eq!(settings["firm"]["phones"], json!(["03001234567"]));
     assert_eq!(h.ok("day_status", json!({}))["today_open"], true);
     assert_eq!(h.ok("day_status", json!({}))["closed_up_to"], Value::Null);
     // Writes return null or the saved value.
@@ -1691,6 +1692,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("lent_dues", json!({ "input": {} }), true),
         ("dashboard_get", json!({}), true),
         ("assist_attention", json!({}), true),
+        // Plan 100: the total worth page and "بعد میں" on the bell.
+        (
+            "assist_snooze",
+            json!({ "input": { "item_key": "kind:drafts" } }),
+            true,
+        ),
+        ("dashboard_total_worth", json!({ "input": {} }), true),
+        (
+            "dashboard_total_worth_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_total_worth_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
         (
             "prefs_screen_get",
             json!({ "input": { "screen": "report.r20" } }),
@@ -2757,12 +2775,18 @@ fn the_voucher_commands_work_through_the_ipc() {
         "voucher_id"
     );
 
-    // Cancel needs a reason; the voucher keeps its number and is marked cancelled.
+    // Cancel needs a reason, the sign and the partner code (PRD FR-7.93, plan 100 C); the voucher
+    // keeps its number and is marked cancelled.
+    h.ok(
+        "partners_code_set",
+        json!({ "input": { "password": OWNER_PASSWORD, "code": "4826", "code_again": "4826" } }),
+    );
     let row = h.ok("vouchers_get", json!({ "input": { "id": id } }));
     let no_reason = h
         .call(
             "vouchers_cancel",
-            json!({ "input": { "id": id, "version": row["version"], "reason": "", "confirm_cash_below_zero": false } }),
+            json!({ "input": { "id": id, "version": row["version"], "reason": "", "confirm_cash_below_zero": false,
+                "partner_code": "4826", "sign": "adnan" } }),
         )
         .unwrap_err();
     assert_eq!(no_reason["errors"][0]["code"], "ERR_REASON_REQUIRED");
@@ -2771,7 +2795,7 @@ fn the_voucher_commands_work_through_the_ipc() {
         .call(
             "vouchers_cancel",
             json!({ "input": { "id": id, "version": row["version"], "reason": "غلط",
-                "confirm_cash_below_zero": false } }),
+                "confirm_cash_below_zero": false, "partner_code": "4826", "sign": "adnan" } }),
         )
         .unwrap_err();
     assert_eq!(
@@ -2782,7 +2806,7 @@ fn the_voucher_commands_work_through_the_ipc() {
     let cancelled = h.ok(
         "vouchers_cancel",
         json!({ "input": { "id": id, "version": row["version"], "reason": "غلط",
-            "confirm_cash_below_zero": true } }),
+            "confirm_cash_below_zero": true, "partner_code": "4826", "sign": "adnan" } }),
     );
     assert_eq!(cancelled["number"], 1);
     assert_eq!(
@@ -2792,7 +2816,8 @@ fn the_voucher_commands_work_through_the_ipc() {
     assert_eq!(
         h.call(
             "vouchers_cancel",
-            json!({ "input": { "id": id, "version": row["version"], "reason": "x", "confirm_cash_below_zero": false } })
+            json!({ "input": { "id": id, "version": row["version"], "reason": "x", "confirm_cash_below_zero": false,
+                "partner_code": "4826", "sign": "adnan" } })
         )
         .unwrap_err()["errors"][0]["code"],
         "ERR_VOUCHER_CANCELLED"
@@ -3382,7 +3407,8 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
     let mut too_many = set.clone();
     let ali =
         json!({ "name_ur": "علی", "name_en": "Ali", "role": "owner", "phone": "03001234567" });
-    too_many["firm_contacts"] = json!([ali, ali, ali, ali, ali, ali, ali]);
+    // At most 8 people now (plan 100 H).
+    too_many["firm_contacts"] = json!([ali, ali, ali, ali, ali, ali, ali, ali, ali]);
     let error = h
         .call("settings_set_firm", json!({ "input": too_many }))
         .unwrap_err();

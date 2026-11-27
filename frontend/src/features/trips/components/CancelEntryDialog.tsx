@@ -11,7 +11,12 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
-import { ErrorMessage, ReasonDialog, showToast } from '../../../shared/ui';
+import {
+  ConfirmCancelDialog,
+  ErrorMessage,
+  showToast,
+  type CancelSecrets,
+} from '../../../shared/ui';
 import { useCancelCost, useCancelOtherSale } from '../hooks';
 import { entryNumberText } from '../list-columns';
 import type { TripEntryRow } from '../types';
@@ -40,13 +45,13 @@ export function CancelEntryDialog({ row, onClose }: CancelEntryDialogProps) {
       ? null
       : { ...error, errors: error.errors.filter((item) => item.code !== CASH_CODE) };
 
-  const confirm = (reason: string) => {
+  const confirm = (secrets: CancelSecrets) => {
     if (row === null) return;
     setError(null);
     const input = {
+      ...secrets,
       id: row.id,
       version: row.version,
-      reason,
       confirm_cash_below_zero: cashConfirmed,
     };
     const done = (cancelled: { trip_reopened: boolean }) => {
@@ -70,7 +75,7 @@ export function CancelEntryDialog({ row, onClose }: CancelEntryDialogProps) {
   };
 
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (open) return;

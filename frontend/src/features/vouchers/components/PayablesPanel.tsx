@@ -1,11 +1,23 @@
 // A seller's payable postings, oldest first, under the form (PRD FR-7.59): the date, where the
 // credit came from (a بکری, his opening credit, a جنرل credit), the credit, the advance already
 // adjusted against it, what was paid and what is still open. "Paid" and "still open" are worked
-// out by the backend when shown, oldest first. Nothing is added up here (CLAUDE.md rule 1).
+// out by the backend when shown, oldest first. With an open advance, a line says the advance and what
+// is really left to pay him (plan 100 A). Nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { isoToDisplayDate, isPositivePaisa } from '../../../shared/format';
-import { Num, Table, type TableColumn } from '../../../shared/ui';
+import {
+  formatPaisa,
+  isoToDisplayDate,
+  isPositivePaisa,
+  useGrouping,
+} from '../../../shared/format';
+import {
+  AdvanceCoveredLine,
+  Num,
+  RUNNING_NUMBER,
+  Table,
+  type TableColumn,
+} from '../../../shared/ui';
 import { useOpenPayables } from '../hooks';
 import type { PayablePosting } from '../types';
 import { PanelShell } from './PanelShell';
@@ -17,6 +29,7 @@ interface PayablesPanelProps {
 
 export function PayablesPanel({ sellerId }: PayablesPanelProps) {
   const { l10n } = useLocalization();
+  const grouping = useGrouping();
   const query = useOpenPayables(sellerId);
   return (
     <PanelShell
@@ -74,12 +87,6 @@ export function PayablesPanel({ sellerId }: PayablesPanelProps) {
                 <Localized id="vouchers-payables-open" />
                 <Num paisa={data.open_paisa} />
               </span>
-              {isPositivePaisa(data.advances_open_paisa) ? (
-                <span className="flex items-baseline gap-2">
-                  <Localized id="vouchers-advances-open" />
-                  <Num paisa={data.advances_open_paisa} />
-                </span>
-              ) : null}
               {isPositivePaisa(data.owes_firm_paisa) ? (
                 <span className="flex items-baseline gap-2 text-due">
                   <Localized id="vouchers-payables-owes" />
@@ -87,6 +94,23 @@ export function PayablesPanel({ sellerId }: PayablesPanelProps) {
                 </span>
               ) : null}
             </p>
+            {/* His open advance and what is really left to pay him, one line (PRD v1.61, plan 100 A).
+                Only the part his credit does not cover counts as پیشگی باقی; the covered part has its own line. */}
+            {isPositivePaisa(data.advances_open_paisa) ? (
+              <Localized
+                id="vouchers-payables-net-note"
+                vars={{
+                  advance: formatPaisa(data.uncovered_advance_paisa, { grouping }),
+                  net: formatPaisa(data.net_payable_paisa, { grouping }),
+                }}
+                elems={RUNNING_NUMBER}
+              >
+                <p className="type-label text-ink" data-payables-net />
+              </Localized>
+            ) : null}
+            {data.advance_covered === null ? null : (
+              <AdvanceCoveredLine amount={data.advance_covered} />
+            )}
             {data.postings.length === 0 ? (
               <Localized id="vouchers-payables-none">
                 <p className="type-body text-ink-muted" />

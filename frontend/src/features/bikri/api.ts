@@ -12,7 +12,8 @@ import type { BikriNavigateInput } from '../../bindings/BikriNavigateInput';
 import type { BikriPreviewInput } from '../../bindings/BikriPreviewInput';
 import type { BikriSaveInput } from '../../bindings/BikriSaveInput';
 import type { BikriSaved } from '../../bindings/BikriSaved';
-import type { CancelInput } from '../../bindings/CancelInput';
+import type { BikriCancelRequest } from '../../bindings/BikriCancelRequest';
+import type { BikriWriteOffUndoRequest } from '../../bindings/BikriWriteOffUndoRequest';
 import type { CancelPreview } from '../../bindings/CancelPreview';
 import type { CancelPreviewInput } from '../../bindings/CancelPreviewInput';
 import type { EditableBikri } from '../../bindings/EditableBikri';
@@ -35,8 +36,8 @@ import type { UndoInput } from '../../bindings/UndoInput';
 import type { UndoResult } from '../../bindings/UndoResult';
 import type { WriteOffDone } from '../../bindings/WriteOffDone';
 import type { WriteOffInput } from '../../bindings/WriteOffInput';
-import type { WriteOffUndoInput } from '../../bindings/WriteOffUndoInput';
 import type { WriteOffUndone } from '../../bindings/WriteOffUndone';
+import type { CancelSecrets } from '../../shared/ui';
 import type { NavigateTo } from '../../bindings/NavigateTo';
 import type { SellerMemoryInput } from '../../bindings/SellerMemoryInput';
 import { callCommand } from '../../shared/api';
@@ -169,17 +170,22 @@ export function bikriCancelPreview(id: number): Promise<CancelPreview> {
   return callCommand<CancelPreview>('bikri_cancel_preview', { input });
 }
 
-/** Cancels the whole بکری by reversal. A reason is required (PRD FR-12.11, FR-12.22). */
+/**
+ * Cancels the whole بکری by reversal (PRD FR-12.11, FR-12.22). It carries the reason, the Owner's sign and
+ * the partner code, which the backend checks first (PRD FR-7.93).
+ */
 export function bikriCancel(
   id: number,
   version: number,
-  reason: string,
+  secrets: CancelSecrets,
   confirmCashBelowZero: boolean,
 ): Promise<BikriCancelled> {
-  const input: CancelInput = {
+  const input: BikriCancelRequest = {
     id,
     version,
-    reason,
+    reason: secrets.reason,
+    sign: secrets.sign,
+    partner_code: secrets.partner_code,
     confirm_cash_below_zero: confirmCashBelowZero,
   };
   return callCommand<BikriCancelled>('bikri_cancel', { input });
@@ -197,9 +203,9 @@ export function bikriWriteOff(lotId: number, qty: string, reason: string): Promi
   return callCommand<WriteOffDone>('bikri_write_off', { input });
 }
 
-/** Undoes one write-off with a reason (PRD FR-12.16). */
-export function bikriWriteOffUndo(moveId: number, reason: string): Promise<WriteOffUndone> {
-  const input: WriteOffUndoInput = { move_id: moveId, reason };
+/** Undoes one write-off (PRD FR-12.16): the reason, the Owner's sign and the partner code (PRD FR-7.93). */
+export function bikriWriteOffUndo(moveId: number, secrets: CancelSecrets): Promise<WriteOffUndone> {
+  const input: BikriWriteOffUndoRequest = { move_id: moveId, ...secrets };
   return callCommand<WriteOffUndone>('bikri_write_off_undo', { input });
 }
 

@@ -11,7 +11,7 @@
 //! reports look the same.
 
 use mandi_core::auth::Language;
-use mandi_core::firm::FirmRole;
+use mandi_core::firm::{FirmRole, MAX_FIRM_PHONES};
 use mandi_core::text;
 use serde::Serialize;
 use ts_rs::TS;
@@ -39,7 +39,7 @@ pub struct PrintContact {
 pub struct PrintHeader {
     /// The firm name and mandi in the print language.
     pub firm: PrintFirm,
-    /// The people, at most 6: the owners first, then the munshi; inside a role, in the order of
+    /// The people, at most 8: the owners first, then the munshi; inside a role, in the order of
     /// the Settings (v1.12). Empty if none are set.
     pub contacts: Vec<PrintContact>,
     /// The trade mark, printed in a box. Null if not set: the template draws no empty box.
@@ -78,6 +78,17 @@ pub(super) fn pick(language: Language, name_ur: &str, name_en: &str) -> String {
     }
 }
 
+/// The firm's phones in print form, the first of Settings first, at most [`MAX_FIRM_PHONES`],
+/// empty ones left out.
+fn firm_phones(firm: &FirmNames) -> Vec<String> {
+    std::iter::once(&firm.phone)
+        .chain(firm.more_phones.iter())
+        .filter(|phone| !phone.trim().is_empty())
+        .take(MAX_FIRM_PHONES)
+        .map(|phone| text::phone_display(phone))
+        .collect()
+}
+
 /// The header of one print (PRD FR-19.13).
 ///
 /// Example: a firm with an owner, the munshi and the trade mark "RH" gives a header with the
@@ -111,7 +122,7 @@ pub(super) fn header(
             name: pick(language, &firm.name_ur, &firm.name_en),
             mandi: pick(language, &firm.mandi_ur, &firm.mandi_en),
             address: firm.address.clone(),
-            phone: text::phone_display(&firm.phone),
+            phones: firm_phones(firm),
         },
         contacts,
         trade_mark,
@@ -143,6 +154,34 @@ mod tests {
             mandi_en: "New Sabzi Mandi".to_owned(),
             ..FirmNames::default()
         }
+    }
+
+    #[test]
+    fn up_to_four_firm_phones_print_after_the_name_with_the_empty_ones_left_out() {
+        let mut names = firm();
+        names.phone = "03001111111".to_owned();
+        names.more_phones = [
+            "03002222222",
+            "",
+            "03003333333",
+            "03004444444",
+            "03005555555",
+        ]
+        .iter()
+        .map(|p| (*p).to_owned())
+        .collect();
+        let out = header(Language::En, &names, "t", Vec::new());
+        assert_eq!(
+            out.firm.phones,
+            vec![
+                "0300-1111111",
+                "0300-2222222",
+                "0300-3333333",
+                "0300-4444444"
+            ]
+        );
+        let none = header(Language::En, &firm(), "t", Vec::new());
+        assert!(none.firm.phones.is_empty());
     }
 
     #[test]

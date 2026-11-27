@@ -166,6 +166,13 @@ pub fn run(env: &Env<'_>, state: &super::State, args: &Value) -> Result<Draft, S
         card.advance_open
             .map_or(Node::Null, |a| Node::Val(Val::Money(Money::plain(a)))),
     ));
+    // The part of a seller's advance his own credit covers: taken, but not open (PRD FR-9.6 v1.61).
+    if let Some(covered) = card.advance_covered {
+        fields.push((
+            "advance_covered",
+            Node::Val(Val::Money(Money::plain(covered))),
+        ));
+    }
     fields.push(("dead", Node::Bool(card.dead.is_some())));
     fields.push(("active", Node::Bool(card.is_active)));
     let warnings = card
@@ -224,9 +231,10 @@ fn extras(
                 },
             )
             .map_err(service_stop)?;
+            // Net everywhere (PRD v1.61, plan 100 A): less his open advance, as his card.
             fields.push((
                 "payable",
-                Node::Val(Val::Money(Money::plain(open.open_paisa))),
+                Node::Val(Val::Money(Money::plain(open.net_payable_paisa))),
             ));
         }
         _ => {}

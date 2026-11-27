@@ -71,10 +71,8 @@ describe.each(LANGUAGES)('the tag on the dashboard (%s)', (language) => {
   });
 
   it('writes the most urgent record of the attention list with his tag', async () => {
-    fakeDashboard({
-      attention: WITH_FIRST_TAG,
-      dashboard: { ...DASHBOARD_WORKED_DAY, attention: WITH_FIRST_TAG },
-    });
+    // The dashboard's own list of the day (آج کے کام) is the answer of `dashboard_get`.
+    fakeDashboard({ dashboard: { ...DASHBOARD_WORKED_DAY, attention: WITH_FIRST_TAG } });
     await openDashboard(language);
     const name = language === 'ur' ? 'کریم BA' : 'Karim BA';
     const wanted = message(language, 'attention-open-first', { name });

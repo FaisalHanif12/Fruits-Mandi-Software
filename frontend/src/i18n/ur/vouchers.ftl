@@ -613,3 +613,7 @@ vouchers-cancel-text-other = { $number } (<num>{ $amount }</num>، { $name }) م
 
 # review: pending
 vouchers-cancelled-other = { $number } منسوخ ہو گیا
+
+# Under the seller's payables, when he has an open advance (plan 100 A, PRD v1.61).
+# review: pending
+vouchers-payables-net-note = { -peshgi } باقی: <num>{ $advance }</num>، { -khalis } دینا: <num>{ $net }</num>

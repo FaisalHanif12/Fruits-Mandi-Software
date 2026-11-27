@@ -3,11 +3,12 @@
 //! Standards B29); the others are one transaction each (Code Standards B3). Until plan 17d T2 each
 //! command answers `ERR_NOT_IMPLEMENTED`.
 
+use mandi_services::cancel_guard;
 use mandi_services::core::accounts::AccountRow;
+use mandi_services::core::cancel::FruitCancelRequest;
 use mandi_services::core::fruit::{
-    AgentShopInput, FruitCancelInput, FruitCancelled, FruitEditInput, FruitEdited, FruitGetInput,
-    FruitInput, FruitList, FruitListInput, FruitLots, FruitLotsInput, FruitPreview, FruitRow,
-    FruitSaved,
+    AgentShopInput, FruitCancelled, FruitEditInput, FruitEdited, FruitGetInput, FruitInput,
+    FruitList, FruitListInput, FruitLots, FruitLotsInput, FruitPreview, FruitRow, FruitSaved,
 };
 use mandi_services::partner_code;
 use mandi_services::{auth, fruit};
@@ -77,14 +78,18 @@ pub async fn fruit_edit<R: tauri::Runtime>(
 /// Cancels an entry by reversal while its day is open (PRD FR-16.12). Errors: `ERR_NOT_FOUND`,
 /// `ERR_FRUIT_CANCELLED` and `ERR_DATE_CLOSED` on `id`; `ERR_VERSION_CHANGED` on `version`;
 /// `ERR_REASON_REQUIRED` on `reason`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn fruit_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: FruitCancelInput,
+    input: FruitCancelRequest,
 ) -> Result<FruitCancelled, UiError> {
     run(app, "fruit_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        fruit::cancel(ctx, &actor, &input)
+        cancel_guard::cancel_fruit(ctx, &actor, &input)
     })
     .await
 }

@@ -21,9 +21,19 @@ export type AdvancesInfo = {
    */
   truncated: boolean;
   /**
-   * Their total over all of them, not only the page: given less adjusted.
+   * Their total over all of them, not only the page: given less adjusted. It is the working of
+   * the listed rows, not what the card shows as پیشگی باقی.
    */
   open_paisa: Paisa;
+  /**
+   * The part of `open_paisa` his own credit does not cover: the card's پیشگی باقی (PRD FR-9.6
+   * v1.61). Equal to the party card's `advance_open`.
+   */
+  uncovered_paisa: Paisa;
+  /**
+   * The part of `open_paisa` his credit already covers ("بقایا میں سے کٹ چکی"). Null when 0.
+   */
+  advance_covered: Paisa | null;
   /**
    * The last پیشگی voucher, or null if there is none.
    */

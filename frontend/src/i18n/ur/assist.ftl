@@ -19,6 +19,15 @@ assist-card-credit-limit = ادھار کی حد
 assist-card-credit-used = استعمال شدہ
 # review: pending
 assist-card-advance = { -peshgi-khata } باقی
+
+# review: pending
+assist-card-net-payable = { -khalis } دینا
+
+## The part of a seller's open advance that his own credit already covers (PRD FR-9.6 v1.61).
+
+# review: pending
+assist-advance-covered = { -peshgi } <num>{ $amount }</num>: بقایا میں سے کٹ چکی
+
 # review: pending
 assist-warning-inactive = یہ کھاتہ غیر فعال ہے
 # review: pending
@@ -368,3 +377,56 @@ working-sale-money-lot-charges = <num>{ $freight }</num> + <num>{ $labour }</num
 # PRD FR-12.53: دوسری دکان کی فروخت پر باغ کو ملی رقم جمع ہوتی ہے۔
 # review: pending
 working-sale-money-other-shop = <num>{ $result }</num>: { -dusri-dukan } سے ملی رقم
+
+## The bell's panel with three sections (plan 100 J, PRD FR-7.44).
+
+# review: pending
+attention-section-sellers = { -beopariyon } کو ادائیگی
+
+# review: pending
+attention-section-buyers = { -gahakon } سے { -wasooli }
+
+# review: pending
+attention-section-general = عام یاد دہانیاں
+
+# review: pending
+attention-section-total = { -meezan } <money></money>
+
+# review: pending
+attention-row-days = <num>{ $days }</num> دن
+
+# review: pending
+attention-see-all = سب دیکھیں
+
+# review: pending
+attention-see-all-count = (<num>{ $count }</num>)
+
+# review: pending
+attention-see-all-label = سب دیکھیں: { $section }
+
+# review: pending
+attention-sellers-none = کسی { -beopari } کو دینا باقی نہیں
+
+# review: pending
+attention-buyers-none = کسی { -gahak } سے لینا باقی نہیں
+
+# review: pending
+attention-general-none = کوئی اور یاد دہانی نہیں
+
+# review: pending
+attention-later = بعد میں
+
+# review: pending
+attention-later-label = بعد میں: { $name }
+
+# review: pending
+attention-later-reminder = یہ یاد دہانی اگلی { -bikri } محفوظ ہونے تک چھپائیں
+
+# review: pending
+attention-pay = { -adaigi } کریں
+
+# review: pending
+attention-pay-label = { $name } کو { -adaigi }
+
+# review: pending
+attention-hidden-note = <num>{ $count }</num> باتیں اگلی { -bikri } محفوظ ہونے تک چھپی ہیں

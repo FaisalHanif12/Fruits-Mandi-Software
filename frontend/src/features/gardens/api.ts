@@ -3,7 +3,11 @@
 // Every command takes one `{ input }` object, except the two that take nothing.
 
 import { callCommand } from '../../shared/api';
+import type { ArrivalCancelRequest } from '../../bindings/ArrivalCancelRequest';
+import type { ArrivalWriteOffUndoRequest } from '../../bindings/ArrivalWriteOffUndoRequest';
 import type { EditPreview } from '../../bindings/EditPreview';
+import type { GardenEntryCancelRequest } from '../../bindings/GardenEntryCancelRequest';
+import type { GardenReopenRequest } from '../../bindings/GardenReopenRequest';
 import type { EntryEdited } from '../../bindings/EntryEdited';
 import type { GardenArrivalEditInput } from '../../bindings/GardenArrivalEditInput';
 import type { GardenCloseRequest } from '../../bindings/GardenCloseRequest';
@@ -12,7 +16,6 @@ import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput
 import type { GardensSaleMoney } from '../../bindings/GardensSaleMoney';
 import type { GardensSaleMoneyInput } from '../../bindings/GardensSaleMoneyInput';
 import type {
-  ArrivalCancelInput,
   ArrivalCancelled,
   ArrivalEntryInput,
   ArrivalEntryPreview,
@@ -24,7 +27,6 @@ import type {
   ArrivalsListInput,
   ArrivalWriteOffDone,
   ArrivalWriteOffInput,
-  ArrivalWriteOffUndoInput,
   ArrivalWriteOffUndone,
   SellDateInput,
   SellDateSet,
@@ -37,14 +39,12 @@ import type {
   GardenCreated,
   GardenDefaults,
   GardenDetail,
-  GardenEntryCancelInput,
   GardenEntryCancelled,
   GardenEntryInput,
   GardenEntryPreview,
   GardenEntrySaved,
   GardenGetInput,
   GardenInput,
-  GardenReopenInput,
   GardenReopened,
   GardenRow,
   GardenSetPartnersInput,
@@ -97,7 +97,7 @@ export function gardensEntrySave(input: GardenEntryInput): Promise<GardenEntrySa
   return callCommand<GardenEntrySaved>('gardens_entry_save', { input });
 }
 
-export function gardensEntryCancel(input: GardenEntryCancelInput): Promise<GardenEntryCancelled> {
+export function gardensEntryCancel(input: GardenEntryCancelRequest): Promise<GardenEntryCancelled> {
   return callCommand<GardenEntryCancelled>('gardens_entry_cancel', { input });
 }
 
@@ -120,7 +120,7 @@ export function gardensClose(
 }
 
 /** Undoes the closing by reversal while its day is open (PRD FR-12.38). */
-export function gardensReopen(input: GardenReopenInput): Promise<GardenReopened> {
+export function gardensReopen(input: GardenReopenRequest): Promise<GardenReopened> {
   return callCommand<GardenReopened>('gardens_reopen', { input });
 }
 
@@ -160,7 +160,7 @@ export function gardensArrivalGet(id: number): Promise<ArrivalRow> {
 }
 
 /** Cancels an entry with a reason, while nothing of it is sold or written off. */
-export function gardensArrivalCancel(input: ArrivalCancelInput): Promise<ArrivalCancelled> {
+export function gardensArrivalCancel(input: ArrivalCancelRequest): Promise<ArrivalCancelled> {
   return callCommand<ArrivalCancelled>('gardens_arrival_cancel', { input });
 }
 
@@ -176,7 +176,7 @@ export function gardensArrivalWriteOff(input: ArrivalWriteOffInput): Promise<Arr
 
 /** Undoes a write-off. */
 export function gardensArrivalWriteOffUndo(
-  input: ArrivalWriteOffUndoInput,
+  input: ArrivalWriteOffUndoRequest,
 ): Promise<ArrivalWriteOffUndone> {
   return callCommand<ArrivalWriteOffUndone>('gardens_arrival_write_off_undo', { input });
 }

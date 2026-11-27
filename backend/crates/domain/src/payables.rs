@@ -47,6 +47,12 @@ use mandi_core::money::{MoneyError, Paisa};
 
 use crate::matching::{Open, match_bills};
 
+// The netting of a seller's payable and open advance lives in `mandi-core`, so the reports use the
+// very same function (PRD 9.1 v1.61).
+pub use mandi_core::seller_net::{
+    AdvanceCover, NetPayable, advance_cover, net_of, net_oldest_first,
+};
+
 /// One live line of the seller key, with the part of it that advance rows take.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Line {
@@ -327,6 +333,35 @@ pub fn return_limit(advances_open: Paisa, excess_paid: Paisa) -> Result<Paisa, M
 mod tests {
     use super::*;
     use proptest::prelude::*;
+
+    proptest! {
+        /// The netted figures always add back, at most one is above 0, and netting the postings
+        /// oldest first leaves exactly the net payable.
+        #[test]
+        fn netting_keeps_the_books_and_matches_the_postings(
+            amounts in proptest::collection::vec(0_i64..5_000, 0..12),
+            advance in 0_i64..20_000,
+        ) {
+            let rupees = |n: i64| Paisa::from_rupees(n).unwrap();
+            let postings: Vec<Paisa> = amounts.iter().map(|a| rupees(*a)).collect();
+            let open = postings
+                .iter()
+                .try_fold(Paisa::ZERO, |sum, a| sum.checked_add(*a))
+                .unwrap();
+            let net = net_of(open, rupees(advance)).unwrap();
+            prop_assert!(net.payable == Paisa::ZERO || net.uncovered_advance == Paisa::ZERO);
+            prop_assert_eq!(
+                net.payable.checked_sub(net.uncovered_advance).unwrap(),
+                open.checked_sub(rupees(advance)).unwrap()
+            );
+            let left = net_oldest_first(&postings, rupees(advance)).unwrap();
+            let total = left
+                .iter()
+                .try_fold(Paisa::ZERO, |sum, a| sum.checked_add(*a))
+                .unwrap();
+            prop_assert_eq!(total, net.payable);
+        }
+    }
 
     fn p(rupees: i64) -> Paisa {
         Paisa::from_rupees(rupees).unwrap()

@@ -52,12 +52,13 @@ export type VoucherPreview = {
    */
   return_limit_paisa: Paisa | null;
   /**
-   * Payment to a seller: what is payable to him now (PRD FR-7.59). Null for any other voucher.
+   * Payment to a seller: what the shop really owes him now, his open payable less his open
+   * advance, never below 0 (PRD FR-7.59, net from v1.61). Null for any other voucher.
    */
   payable_open_paisa: Paisa | null;
   /**
-   * True for a payment to a seller who has nothing payable: the screen offers to make it a
-   * پیشگی (PRD FR-7.68). Never switches by itself.
+   * True for a payment to a seller who has nothing payable after his open advance (the net is
+   * 0): the screen offers to make it a پیشگی (PRD FR-7.68). Never switches by itself.
    */
   payable_is_zero_for_seller: boolean;
   /**

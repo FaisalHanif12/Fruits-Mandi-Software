@@ -30,7 +30,9 @@ use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::validate;
-use mandi_domain::core::vouchers::{VoucherRow, VouchersList, VouchersListInput, VouchersTotals};
+use mandi_domain::core::vouchers::{
+    VoucherRow, VoucherType, VouchersList, VouchersListInput, VouchersTotals,
+};
 
 pub use advance::{preview_advances, save_advance, save_advances};
 pub use capital_kinds::{save_capital_in, save_capital_out};
@@ -69,10 +71,25 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
     // S8): while locked, a list of ذاتی خرچہ, its واپسی, سرمایہ جمع or سرمایہ واپسی is refused, and
     // the list of every type leaves those vouchers out of its rows, count and total.
     let locked = crate::partner_code::is_locked(ctx)?;
+    // Several kinds at once take the place of `voucher_type` (plan 100 F). The same kind twice is
+    // one kind.
+    let mut kinds: Vec<VoucherType> = input.voucher_types.clone().unwrap_or_default();
+    kinds.sort_by_key(|kind| kind.as_str());
+    kinds.dedup();
+    let asked: &[VoucherType] = if kinds.is_empty() {
+        input.voucher_type.as_slice()
+    } else {
+        &kinds
+    };
+    // The one kind of the list, when there is only one: its money total means something.
+    let single = match asked {
+        [only] => Some(*only),
+        _ => None,
+    };
     if locked
-        && input
-            .voucher_type
-            .is_some_and(|kind| repo::PARTNER_MONEY_TYPES.contains(&kind))
+        && asked
+            .iter()
+            .any(|kind| repo::PARTNER_MONEY_TYPES.contains(kind))
     {
         return Err(ServiceError::reject(ErrorCode::ErrPartnerLocked));
     }
@@ -103,7 +120,8 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
         .as_ref()
         .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
     let filter = repo::ListFilter {
-        voucher_type: input.voucher_type,
+        voucher_type: single,
+        voucher_types: if single.is_some() { &[] } else { &kinds },
         from: from.as_deref(),
         to: to.as_deref(),
         account_id: input.account_id,
@@ -135,7 +153,7 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
     // for one type (PRD FR-15.1).
     let saved = Paisa::try_from_paisa(totals.saved_paisa).map_err(money_error)?;
     // The money total of a month is given only for one type, like the list's own total.
-    let figures: &[(&str, bool)] = if input.voucher_type.is_some() {
+    let figures: &[(&str, bool)] = if single.is_some() {
         &[("cancelled_count", false), ("total_paisa", true)]
     } else {
         &[("cancelled_count", false)]
@@ -146,7 +164,7 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
         total_count: totals.count,
         totals: VouchersTotals {
             cancelled_count: totals.cancelled,
-            total_paisa: input.voucher_type.map(|_| saved),
+            total_paisa: single.map(|_| saved),
         },
         months: month_rows,
     })

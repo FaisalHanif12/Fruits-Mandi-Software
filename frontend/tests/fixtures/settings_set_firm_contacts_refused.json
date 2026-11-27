@@ -4,7 +4,7 @@
       "code": "ERR_OUT_OF_RANGE",
       "field": "firm_contacts",
       "values": {
-        "max": 6,
+        "max": 8,
         "min": 0
       }
     }

@@ -288,6 +288,7 @@ fn e2e_19_the_opening_position() {
     let list = vouchers::list(
         &p.env.ctx,
         &VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,

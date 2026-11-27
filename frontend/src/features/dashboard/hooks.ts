@@ -2,8 +2,8 @@
 // (see app/refresh-after-save.ts) and the bell is also read once a minute, so a count that changed
 // without a save (a draft kept by the auto-save, a day that passed) still shows (NFR-SPD-22).
 
-import { useQuery } from '@tanstack/react-query';
-import { assistAttention, dashboardGet } from './api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { assistAttention, assistSnooze, dashboardGet } from './api';
 
 export const DASHBOARD_KEY = ['dashboard'] as const;
 export const ATTENTION_KEY = ['attention'] as const;
@@ -22,5 +22,14 @@ export function useAttention(enabled = true) {
     queryFn: assistAttention,
     enabled,
     refetchInterval: ATTENTION_POLL_MS,
+  });
+}
+
+/** "Later" on an item of the panel: the panel is read again at once, so it leaves the list (plan 100 J). */
+export function useSnooze() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: assistSnooze,
+    onSuccess: () => client.invalidateQueries({ queryKey: ATTENTION_KEY }),
   });
 }

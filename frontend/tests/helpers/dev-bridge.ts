@@ -607,6 +607,8 @@ const handlers: Record<string, Handler> = {
         credit_limit: null,
         credit_used: null,
         advance_open: null,
+        advance_covered: null,
+        net_payable: null,
         warnings: [],
       };
     }
@@ -629,6 +631,8 @@ const handlers: Record<string, Handler> = {
         credit_limit: null,
         credit_used: null,
         advance_open: null,
+        advance_covered: null,
+        net_payable: null,
         warnings: [],
         dead: null,
       };
@@ -653,6 +657,8 @@ const handlers: Record<string, Handler> = {
       credit_limit: buyer ? 5000000 : null,
       credit_used: buyer ? party.paisa : null,
       advance_open: buyer ? null : 1500000,
+      advance_covered: null,
+      net_payable: buyer ? null : party.side === 'cr' ? party.paisa : 0,
       warnings: [],
       dead: null,
     };

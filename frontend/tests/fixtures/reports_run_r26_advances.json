@@ -42,6 +42,16 @@
       "kind": "money"
     },
     {
+      "key": "covered",
+      "title_id": "report-col-advance-covered",
+      "kind": "money"
+    },
+    {
+      "key": "uncovered",
+      "title_id": "report-col-advance-uncovered",
+      "kind": "money"
+    },
+    {
       "key": "last_date",
       "title_id": "report-col-last-date",
       "kind": "date"
@@ -79,6 +89,14 @@
           "paisa": 0
         },
         {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
           "type": "date",
           "iso": "2026-09-01"
         }
@@ -109,6 +127,14 @@
     {
       "type": "money",
       "paisa": 1500000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
     },
     {
       "type": "money",

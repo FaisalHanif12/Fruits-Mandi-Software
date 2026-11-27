@@ -1,16 +1,18 @@
-// The attention bell in the top bar (PRD FR-7.44, FR-5.6): a bell with the number of things to do,
-// and a list that opens under it. Each line says what to do and opens the right screen. The number
-// and the lines are the backend's (`assist_attention`); the bell asks again after every save and
-// once a minute (NFR-SPD-22). A new version of the app is one more line at the top of the list, only
-// a note: installing stays in Settings. Four states: loading, an error with a retry, nothing to do,
-// and the lines. The bell never blocks typing: it is one small read in the background.
+// The attention bell in the top bar (PRD FR-7.44, FR-5.6, plan 100 J): a bell with the number of things
+// to do, and a large panel that opens under it, about half the window wide and most of its height, with
+// three sections (sellers to pay, buyers to collect from, general reminders; `AttentionPanelBody`). The
+// number and the lines are the backend's (`assist_attention`); the bell asks again after every save and
+// once a minute (NFR-SPD-22). A new version of the app is one more line at the top of the panel, only a
+// note: installing stays in Settings. Four states: loading, an error with a retry, nothing to do, and the
+// lines. The bell never blocks typing: it is one small read in the background.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Bell, BellRing, Download } from 'lucide-react';
 import { Popover } from 'radix-ui';
 import { useState } from 'react';
+import type { AttentionPanel } from '../../bindings/AttentionPanel';
 import {
-  AttentionLines,
+  AttentionPanelBody,
   useAttention,
   useOpenDestination,
   type Destination,
@@ -20,6 +22,17 @@ import { uiErrorOf } from '../../shared/api';
 import { useUiLanguage } from '../../shared/i18n';
 import { EmptyState, ErrorState, LoadingState, Num, radixCollisionPadding } from '../../shared/ui';
 
+/** Nothing in any group, and nothing hidden for later: the panel then says there is nothing to do. */
+function isNothing(panel: AttentionPanel): boolean {
+  return (
+    panel.sellers.rows.length === 0 &&
+    panel.buyers.rows.length === 0 &&
+    panel.payables.length === 0 &&
+    panel.general.length === 0 &&
+    panel.hidden_count === 0
+  );
+}
+
 export function AttentionBell() {
   const { l10n } = useLocalization();
   const { language, direction } = useUiLanguage();
@@ -27,7 +40,7 @@ export function AttentionBell() {
   const attention = useAttention();
   const update = useStartupUpdateCheck(true);
   const openDestination = useOpenDestination();
-  const count = attention.data?.total_count ?? 0;
+  const count = attention.data?.bell_count ?? 0;
   const newVersion = update.data?.available === true ? (update.data.version ?? '') : null;
   const label = l10n.getString('attention-bell-label', { count: String(count) });
   const Icon = count > 0 ? BellRing : Bell;
@@ -50,7 +63,7 @@ export function AttentionBell() {
         }}
       />
     );
-  } else if (attention.data.items.length === 0 && newVersion === null) {
+  } else if (isNothing(attention.data) && newVersion === null) {
     body = (
       <EmptyState
         icon={Bell}
@@ -80,7 +93,7 @@ export function AttentionBell() {
             </Localized>
           </button>
         )}
-        <AttentionLines items={attention.data.items} onOpen={go} />
+        <AttentionPanelBody panel={attention.data} onOpen={go} />
       </div>
     );
   }
@@ -110,7 +123,7 @@ export function AttentionBell() {
           align="end"
           sideOffset={4}
           collisionPadding={radixCollisionPadding()}
-          className="z-30 flex max-h-screen w-full max-w-reading flex-col gap-2 overflow-y-auto rounded-2 border border-border bg-surface p-3 text-ink shadow-overlay"
+          className="attention-panel z-30 flex flex-col gap-2 overflow-y-auto rounded-3 border border-border bg-surface p-4 text-ink shadow-overlay"
         >
           <Localized id="attention-title">
             <h2 className="type-section" />

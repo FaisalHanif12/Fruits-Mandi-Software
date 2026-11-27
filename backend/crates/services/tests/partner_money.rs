@@ -475,6 +475,7 @@ fn the_overview_has_returned_net_and_total_and_a_return_adds_back() {
     let list = vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,
@@ -648,6 +649,7 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
     let received = vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,

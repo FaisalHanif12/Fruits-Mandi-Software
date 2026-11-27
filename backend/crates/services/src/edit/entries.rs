@@ -73,7 +73,7 @@ pub(crate) fn review(
     body: impl FnOnce(&Connection) -> Result<Edited, ServiceError>,
 ) -> Result<EditPreview, ServiceError> {
     let outcome = rehearse(ctx, scope, row, body);
-    preview_of(ctx, entry_date, outcome, diff::changes_of_rows)
+    preview_of(ctx, entry_date, false, outcome, diff::changes_of_rows)
 }
 
 /// The save of a new edit: the mistakes the review found are returned as they are (nothing is

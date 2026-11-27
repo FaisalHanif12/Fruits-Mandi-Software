@@ -9,7 +9,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { Check } from 'lucide-react';
 import { isoToDisplayDate, isPositivePaisa } from '../../../shared/format';
-import { Code, Num, Table, type TableColumn } from '../../../shared/ui';
+import { AdvanceCoveredLine, Code, Num, Table, type TableColumn } from '../../../shared/ui';
 import { useAdvances } from '../hooks';
 import type { AdvanceEffect, OpenAdvance } from '../types';
 import { NoneMark } from './NoneMark';
@@ -37,7 +37,7 @@ export function AdvanceHistory({ sellerId, effects = null }: AdvanceHistoryProps
       title={<Localized id="vouchers-advances-title" />}
       failed={<Localized id="vouchers-advances-failed" />}
     >
-      {({ open, open_paisa, last }) => {
+      {({ open, uncovered_paisa, advance_covered, last }) => {
         if (open.length === 0 && last === null) {
           return (
             <Localized id="vouchers-advances-none">
@@ -116,9 +116,10 @@ export function AdvanceHistory({ sellerId, effects = null }: AdvanceHistoryProps
         return (
           <>
             <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1 type-body">
-              <span className="flex items-baseline gap-2">
+              {/* پیشگی باقی is only what his credit does not cover (PRD FR-9.6 v1.61). */}
+              <span className="flex items-baseline gap-2" data-advance-uncovered>
                 <Localized id="vouchers-advances-open" />
-                <Num paisa={open_paisa} />
+                <Num paisa={uncovered_paisa} />
               </span>
               {last === null ? null : (
                 <span className="flex items-baseline gap-2">
@@ -128,6 +129,7 @@ export function AdvanceHistory({ sellerId, effects = null }: AdvanceHistoryProps
                 </span>
               )}
             </p>
+            {advance_covered === null ? null : <AdvanceCoveredLine amount={advance_covered} />}
             {open.length === 0 ? null : (
               <Table
                 label={l10n.getString('vouchers-advances-title')}

@@ -27,11 +27,12 @@ use std::path::{Path, PathBuf};
 
 use mandi_services::core::accounts::SearchGlobalInput;
 use mandi_services::core::bikri::BikriSaveInput;
+use mandi_services::core::cancel::VoucherCancelRequest;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesReportInput, AssistAdvancesInput, CollectionListInput, OpenBillsInput,
-    OpenPayablesInput, PaymentInput, ReceiptInput, ReceiptsInput, VoucherCancelInput,
-    VoucherEditInput, VoucherGetInput, VoucherPreviewInput, VouchersListInput,
+    OpenPayablesInput, PaymentInput, ReceiptInput, ReceiptsInput, VoucherEditInput,
+    VoucherGetInput, VoucherPreviewInput, VouchersListInput,
 };
 use mandi_services::{ServiceError, bikri, search, vouchers};
 use serde::Serialize;
@@ -330,12 +331,16 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     let edited = vouchers::edit(ctx, owner, &typed::<VoucherEditInput>(&edit_request)).unwrap();
     pair("vouchers_edit_receipt", &edit_request, &edited);
     let lent_row = vouchers::get(ctx, lent_saved.voucher_id).unwrap();
-    let cancel_request = json!({
+    let cancel_request = json!({ "partner_code": "4826", "sign": "adnan",
         "id": lent_saved.voucher_id, "version": lent_row.version, "reason": "غلط اندراج",
         "confirm_cash_below_zero": false
     });
-    let cancelled =
-        vouchers::cancel(ctx, owner, &typed::<VoucherCancelInput>(&cancel_request)).unwrap();
+    let cancelled = vouchers::cancel(
+        ctx,
+        owner,
+        &typed::<VoucherCancelRequest>(&cancel_request).base,
+    )
+    .unwrap();
     pair("vouchers_cancel_cash_lent", &cancel_request, &cancelled);
 
     // 11. The lists: payments (one cancelled, so the total leaves it out), and all types (no total).

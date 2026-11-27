@@ -19,6 +19,15 @@ assist-card-credit-limit = Credit limit
 assist-card-credit-used = Used
 # review: pending
 assist-card-advance = { -peshgi-khata } open
+
+# review: pending
+assist-card-net-payable = Net to pay
+
+## The part of a seller's open advance that his own credit already covers (PRD FR-9.6 v1.61).
+
+# review: pending
+assist-advance-covered = { -peshgi } <num>{ $amount }</num>: already taken out of his balance
+
 # review: pending
 assist-warning-inactive = This account is inactive
 # review: pending
@@ -425,3 +434,62 @@ working-sale-money-lot-charges = <num>{ $freight }</num> + <num>{ $labour }</num
 # PRD FR-12.53: a sale in another shop credits the garden the money received.
 # review: pending
 working-sale-money-other-shop = <num>{ $result }</num>: the money received in { -dusri-dukan }
+
+## The bell's panel with three sections (plan 100 J, PRD FR-7.44).
+
+# review: pending
+attention-section-sellers = Pay sellers
+
+# review: pending
+attention-section-buyers = Collect from buyers
+
+# review: pending
+attention-section-general = General reminders
+
+# review: pending
+attention-section-total = Total <money></money>
+
+# review: pending
+attention-row-days = <num>{ $days }</num> { $days ->
+    [one] day
+   *[other] days
+ }
+
+# review: pending
+attention-see-all = See all
+
+# review: pending
+attention-see-all-count = (<num>{ $count }</num>)
+
+# review: pending
+attention-see-all-label = See all: { $section }
+
+# review: pending
+attention-sellers-none = No seller waits for payment
+
+# review: pending
+attention-buyers-none = No buyer owes
+
+# review: pending
+attention-general-none = No other reminder
+
+# review: pending
+attention-later = Later
+
+# review: pending
+attention-later-label = Later: { $name }
+
+# review: pending
+attention-later-reminder = Hide this reminder until the next sale is saved
+
+# review: pending
+attention-pay = Pay
+
+# review: pending
+attention-pay-label = Pay { $name }
+
+# review: pending
+attention-hidden-note = <num>{ $count }</num> { $count ->
+    [one] item is hidden until the next sale is saved
+   *[other] items are hidden until the next sale is saved
+ }

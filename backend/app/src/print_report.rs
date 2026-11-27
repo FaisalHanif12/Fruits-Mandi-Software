@@ -28,9 +28,9 @@ use mandi_reports::analytics::{AnalyticsPrintInput, print_data as analytics_prin
 use mandi_reports::dashboard::{
     BuyerDuesPrintInput, CashSalesDayPrintInput, CashSalesMonthPrintInput, CommissionPrintInput,
     LentOpenPrintInput, SalesPrintInput, SellerDuesPrintInput, TotalDuesPrintInput,
-    buyer_dues_print_data, cash_sales_day_print_data, cash_sales_month_print_data,
-    commission_month_print_data, lent_open_print_data, sales_period_print_data,
-    seller_dues_print_data, total_dues_print_data,
+    TotalWorthPrintInput, buyer_dues_print_data, cash_sales_day_print_data,
+    cash_sales_month_print_data, commission_month_print_data, lent_open_print_data,
+    sales_period_print_data, seller_dues_print_data, total_dues_print_data, total_worth_print_data,
 };
 use mandi_reports::reports::{
     AdhariSheetPrintInput, BikriListPrintInput, CollectionSheetPrintInput, DaySlipsInput, ReportId,
@@ -202,6 +202,18 @@ pub struct PrintSellerDuesInput {
 pub struct PrintTotalDuesInput {
     /// The filter of the page, the print language and the paper.
     pub sheet: TotalDuesPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `dashboard_total_worth_print`: the کل مالیت page to the printer or to a PDF (plan 100, PRD FR-9.10).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintTotalWorthInput {
+    /// The print language and the paper.
+    pub sheet: TotalWorthPrintInput,
     /// The printer of the Printing settings, or a PDF.
     pub to: PrintTo,
     /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
@@ -1195,6 +1207,34 @@ pub async fn run_total_dues<R: tauri::Runtime>(
     };
     run_table_page(app, page, move |ctx| {
         total_dues_print_data(ctx.db(), &sheet)
+            .map(drop)
+            .map_err(engine_error)
+    })
+    .await
+}
+
+/// Runs the print of the کل مالیت page (plan 100 B, PRD FR-9.10).
+///
+/// # Errors
+/// As `dashboard_total_worth_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_total_worth<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintTotalWorthInput,
+) -> Result<PrintOutcome, UiError> {
+    let sheet = input.sheet;
+    let page = TablePage {
+        command: "dashboard_total_worth_print",
+        kind: "total-worth",
+        entity: "total_worth",
+        sheet: serde_json::to_value(&sheet).map_err(UiError::internal)?,
+        language: sheet.language,
+        paper: sheet.paper,
+        to: input.to,
+        copies: input.copies,
+    };
+    run_table_page(app, page, move |ctx| {
+        total_worth_print_data(ctx.db(), &sheet)
             .map(drop)
             .map_err(engine_error)
     })

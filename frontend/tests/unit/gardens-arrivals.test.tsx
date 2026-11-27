@@ -38,6 +38,7 @@ import { paisaForTest } from '../helpers/paisa';
 import { commissionWorking } from '../helpers/trips-data';
 import { stubLayoutStep } from '../helpers/layout-step';
 import { fakeItemPickers } from '../helpers/trips';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -903,6 +904,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
       }),
       'Wrong',
     );
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', {
         name: said(message(language, 'gardens-arrival-cancel-confirm')),
@@ -913,6 +915,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
         id: 1,
         version: 3,
         reason: 'Wrong',
+        ...CANCEL_SECRETS,
       });
     });
   });

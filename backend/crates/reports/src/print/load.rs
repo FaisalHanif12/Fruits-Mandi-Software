@@ -3,7 +3,8 @@
 
 use mandi_core::edit::EditStamp;
 use mandi_core::firm::{
-    FirmContact, FirmRole, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_TRADE_MARK,
+    FirmContact, FirmRole, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_MORE_PHONES,
+    SETTING_KEY_TRADE_MARK,
 };
 use mandi_core::money::Grouping;
 use mandi_core::printing::PrintSetup;
@@ -35,8 +36,10 @@ pub struct FirmNames {
     pub mandi_en: String,
     /// Address as typed.
     pub address: String,
-    /// Phone as typed.
+    /// The first phone as typed.
     pub phone: String,
+    /// The second to fourth phones as saved (PRD Section 21 v1.61). Empty if none.
+    pub more_phones: Vec<String>,
     /// The contact persons for the print header, at most 3 (PRD Section 21, plan 17e). Empty if
     /// none are set.
     pub contacts: Vec<FirmContact>,
@@ -126,6 +129,9 @@ pub(crate) fn load_firm(conn: &Connection) -> Result<FirmNames, ReportsError> {
         mandi_en: text("mandi_en"),
         address: text("address"),
         phone: text("phone"),
+        more_phones: setting(conn, SETTING_KEY_MORE_PHONES)?
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default(),
         contacts: load_contacts(conn)?,
         trade_mark: setting(conn, SETTING_KEY_TRADE_MARK)?
             .as_ref()

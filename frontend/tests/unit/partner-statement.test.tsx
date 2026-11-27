@@ -219,6 +219,43 @@ describe.each(LANGUAGES)('the partner statement by month (%s)', (language) => {
     );
   });
 
+  it('plan 100 item 12: an advance the seller’s credit now covers comes back as its own line, in words (FR-17.13 v1.61)', async () => {
+    const template = real.STATEMENT_B.lines[0];
+    if (template === undefined) throw new Error('no line');
+    const rahim = { id: 19, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
+    fakePartnerMonth(
+      real.STATEMENT_B.partner,
+      [
+        {
+          ...template,
+          entry_date: '2026-10-10',
+          heading: 'advance' as const,
+          detail: 'advance_covered' as const,
+          subject: rahim,
+          number: null,
+          reason: '',
+          amount_paisa: paisaForTest(450_000),
+          running_paisa: paisaForTest(0),
+          values: { amount_paisa: 1_500_000, share_bps: 3_000 },
+        },
+      ],
+      PARTNER_MONTH_TODAY,
+    );
+    const { user } = await open('?partner=2&month=2026-10');
+    await screen.findByRole('treegrid');
+    await waitFor(() => {
+      expect(rowsOf(list()).length).toBeGreaterThan(1);
+    });
+    const lines = (await openDays(user, ['2026-10-10'])).get('2026-10-10') ?? [];
+    expect(lines[0]?.detail).toBe(
+      m('partners-statement-detail-advance-covered', {
+        subject: nameOf(language, 'رحیم', 'Rahim'),
+        amount: '15,000',
+        share: '30',
+      }),
+    );
+  });
+
   it('plan 78 B4: the backend’s own months with an advance: September has it going out, October part of it coming back', async () => {
     vi.mocked(partnersApi.partnersStatementMonth).mockImplementation((input) =>
       Promise.resolve(

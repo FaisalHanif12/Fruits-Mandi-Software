@@ -19,9 +19,6 @@ cashbook-filter-from = From
 cashbook-filter-to = To
 
 # review: pending
-cashbook-opening = Cash at the start
-
-# review: pending
 cashbook-closing = Cash at the end
 
 # review: pending
@@ -285,21 +282,6 @@ cashbook-repeat-failed = Last month's expenses could not be opened
 ## The list under the form.
 
 # review: pending
-cashbook-day-title = Shop expenses of the day
-
-# review: pending
-cashbook-day-label = Shop expenses of the day
-
-# review: pending
-cashbook-day-empty = No shop expense on this day
-
-# review: pending
-cashbook-day-empty-help = Fill the form above and save to add one.
-
-# review: pending
-cashbook-day-failed = The shop expenses of the day could not be opened
-
-# review: pending
 cashbook-takes-title = Money the partner took
 
 # review: pending
@@ -383,12 +365,6 @@ cashbook-lent-empty-help = Money lent to him and what he gives back will be list
 # review: pending
 cashbook-lent-failed = The person's loans could not be opened
 
-# review: pending
-cashbook-lent-pick = Choose a person
-
-# review: pending
-cashbook-lent-pick-help = His loans, what he returned and what is still open show here.
-
 ## The { -alag-khata } screen (PRD 16.6, FR-16.6).
 
 # review: pending
@@ -404,10 +380,10 @@ cashbook-khata-type = Type of entry
 cashbook-field-khata = { -alag-khata }
 
 # review: pending
-cashbook-khata-title = The khata's entries
+cashbook-khata-title = This khata's account
 
 # review: pending
-cashbook-khata-label = The khata's entries
+cashbook-khata-label = This khata's account
 
 # review: pending
 cashbook-khata-opening = Balance at the start
@@ -426,12 +402,6 @@ cashbook-khata-empty-help = Money paid out and received will be listed here, wit
 
 # review: pending
 cashbook-khata-failed = The khata's entries could not be opened
-
-# review: pending
-cashbook-khata-pick = Choose a khata
-
-# review: pending
-cashbook-khata-pick-help = Its entries and its running balance show here.
 
 # review: pending
 cashbook-khata-kind-paid-out = Paid out
@@ -998,3 +968,35 @@ cashbook-openings-confirm = Save
 
 # review: pending
 cashbook-openings-done = The old opening balances are now in the { -rokar }
+
+## The saved entries under the forms of the روکڑ area, 30 days at a time (plan 100 F, PRD FR-19.11).
+
+# review: pending
+cashbook-col-person = Person
+
+# review: pending
+cashbook-col-khata = { -alag-khata }
+
+# review: pending
+cashbook-entries-shop-title = { -dukan-kharcha } entries
+
+# review: pending
+cashbook-entries-lent-title = { -adhar-raqam } entries
+
+# review: pending
+cashbook-entries-khata-title = { -alag-khata } entries
+
+# review: pending
+cashbook-entries-failed = The entries could not be opened
+
+# review: pending
+cashbook-entries-empty = No entry in the last 30 days
+
+# review: pending
+cashbook-entries-empty-help = Fill the form above and save to add one. Use the buttons below to see earlier days.
+
+# review: pending
+cashbook-entries-no-match = No entry matches in these days
+
+# review: pending
+cashbook-entries-no-match-help = Search for other words, or go to other days.

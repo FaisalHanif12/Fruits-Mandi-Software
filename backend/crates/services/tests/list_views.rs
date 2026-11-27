@@ -286,6 +286,7 @@ fn advance_on(w: &World, date: &str, seller: i64, amount: &str, narration: &str)
 
 fn voucher_input(kind: Option<VoucherType>) -> VouchersListInput {
     VouchersListInput {
+        voucher_types: None,
         voucher_type: kind,
         from: String::new(),
         to: String::new(),
@@ -312,6 +313,7 @@ fn voucher_numbers_in_pages(w: &World, input: &VouchersListInput) -> Vec<i64> {
             let page = vouchers::list(
                 &w.env.ctx,
                 &VouchersListInput {
+                    voucher_types: None,
                     offset: u32::try_from(offset).unwrap(),
                     limit: 1,
                     ..input.clone()
@@ -367,6 +369,7 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
     assert_eq!(hidden.total_count, 4);
     assert_eq!(hidden.totals.cancelled_count, 1);
     let shown_input = VouchersListInput {
+        voucher_types: None,
         show_finished: true,
         ..voucher_input(advances)
     };
@@ -383,6 +386,7 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
         voucher_numbers_in_pages(
             &w,
             &VouchersListInput {
+                voucher_types: None,
                 sort: sort(column, direction),
                 ..voucher_input(advances)
             },
@@ -397,6 +401,7 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
     assert_eq!(sorted("entry_date", SortDirection::Asc), [1, 3, 4, 5]);
     assert_eq!(sorted("number", SortDirection::Desc), [5, 4, 3, 1]);
     let by_status_input = VouchersListInput {
+        voucher_types: None,
         sort: sort("status", SortDirection::Asc),
         ..shown_input.clone()
     };
@@ -408,6 +413,7 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
     let bad = vouchers::list(
         &w.env.ctx,
         &VouchersListInput {
+            voucher_types: None,
             sort: sort("narration", SortDirection::Asc),
             ..voucher_input(advances)
         },
@@ -420,6 +426,7 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
         let list = vouchers::list(
             &w.env.ctx,
             &VouchersListInput {
+                voucher_types: None,
                 search: Some(text.into()),
                 ..input
             },
@@ -442,6 +449,7 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
         vouchers::list(
             &w.env.ctx,
             &VouchersListInput {
+                voucher_types: None,
                 group_by_month: true,
                 ..input
             },
@@ -492,11 +500,13 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
     assert_eq!(list.months[1].count, 3);
     // Newest first when sorted by the day, descending; no months for another sort.
     let list = monthly(VouchersListInput {
+        voucher_types: None,
         sort: sort("entry_date", SortDirection::Desc),
         ..voucher_input(advances)
     });
     assert_eq!(list.months[0].month, "2026-11");
     let list = monthly(VouchersListInput {
+        voucher_types: None,
         sort: sort("amount_paisa", SortDirection::Asc),
         ..voucher_input(advances)
     });

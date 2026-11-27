@@ -12,10 +12,10 @@ use std::path::{Path, PathBuf};
 
 use mandi_services::bikri;
 use mandi_services::core::bikri::{
-    CancelInput, CancelPreviewInput, EditOpenInput, EditPreviewInput, EditSaveInput,
-    LaterSaleInput, LaterSaleSaveInput, StockListInput, UndoInput, WriteOffInput,
-    WriteOffUndoInput,
+    CancelPreviewInput, EditOpenInput, EditPreviewInput, EditSaveInput, LaterSaleInput,
+    LaterSaleSaveInput, StockListInput, UndoInput, WriteOffInput,
 };
+use mandi_services::core::cancel::{BikriCancelRequest, BikriWriteOffUndoRequest};
 use mandi_services::core::error::ErrorCode;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -97,9 +97,13 @@ fn the_real_answers_of_the_plan_16_commands_are_the_fixtures() {
     let done = bikri::write_off(&w.env.ctx, &w.owner, &typed::<WriteOffInput>(&request)).unwrap();
     assert_eq!((done.qty_written_off, done.balance), (3, 2));
     pair("bikri_write_off_lot1", &request, &done);
-    let request = json!({ "move_id": done.move_id, "reason": "غلطی" });
-    let undone =
-        bikri::write_off_undo(&w.env.ctx, &w.owner, &typed::<WriteOffUndoInput>(&request)).unwrap();
+    let request = json!({ "partner_code": "4826", "sign": "adnan",  "move_id": done.move_id, "reason": "غلطی" });
+    let undone = bikri::write_off_undo(
+        &w.env.ctx,
+        &w.owner,
+        &typed::<BikriWriteOffUndoRequest>(&request).base,
+    )
+    .unwrap();
     assert_eq!((undone.qty_written_off, undone.balance), (0, 5));
     pair("bikri_write_off_undo_lot1", &request, &undone);
 
@@ -169,9 +173,14 @@ fn the_real_answers_of_the_plan_16_commands_are_the_fixtures() {
         bikri::cancel_preview(&w.env.ctx, &typed::<CancelPreviewInput>(&request)).unwrap();
     assert!(cancel_preview.can_cancel);
     pair("bikri_cancel_preview_event2", &request, &cancel_preview);
-    let request = json!({ "id": two.bikri_id, "version": cancel_preview.version,
+    let request = json!({ "partner_code": "4826", "sign": "adnan",  "id": two.bikri_id, "version": cancel_preview.version,
         "reason": "غلط اندراج", "confirm_cash_below_zero": false });
-    let cancelled = bikri::cancel(&w.env.ctx, &w.owner, &typed::<CancelInput>(&request)).unwrap();
+    let cancelled = bikri::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &typed::<BikriCancelRequest>(&request).base,
+    )
+    .unwrap();
     pair("bikri_cancel_event2", &request, &cancelled);
 
     // bikri_undo: a new بکری 3 is undone straight after its save.

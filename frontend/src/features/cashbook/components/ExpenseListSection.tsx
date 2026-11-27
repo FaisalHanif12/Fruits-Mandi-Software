@@ -1,120 +1,32 @@
-// The list under the خرچہ form (PRD 16.2, FR-16.2, FR-19.11): for دکان خرچہ the shop expenses of the
-// day in the date field, with their heads and the backend's total; for ذاتی خرچہ and its واپسی the
-// chosen partner's money taken, oldest first, with what was returned and what is still open, and with
-// no partner chosen every partner's takes, latest day first, with his name on each row (plan 98). Both
-// load from the backend (the day's list in one call, the takes page by page with totals over the whole
-// list). Four states each: loading, an error with a retry, nothing yet, and the rows.
+// The list under the خرچہ form (PRD 16.2, FR-16.2, FR-19.11): for دکان خرچہ every shop expense, 30 days at
+// a time, the latest first (plan 100 F, `EntryListSection`); for ذاتی خرچہ and its واپسی the chosen
+// partner's money taken, oldest first, with what was returned and what is still open, and with no partner
+// chosen every partner's takes, latest day first, with his name on each row (plan 98). Both load from the
+// backend page by page, with the backend's totals. Four states each: loading, an error with a retry,
+// nothing yet, and the rows.
 
 import { Localized } from '@fluent/react';
 import { HandCoins, ReceiptText } from 'lucide-react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { useDebouncedValue, useListWindow } from '../../../shared/hooks';
-import { formNavigationProps } from '../../../shared/keyboard';
-import {
-  Card,
-  Checkbox,
-  EmptyState,
-  FilterBar,
-  ListWindowBar,
-  PartnerLockedBox,
-  ShowClosedTick,
-} from '../../../shared/ui';
+import { useListWindow } from '../../../shared/hooks';
+import { Card, Checkbox, EmptyState, ListWindowBar, PartnerLockedBox } from '../../../shared/ui';
 import { useDayStatus } from '../../../app/use-day-status';
-import { useVouchersList } from '../../vouchers';
 import { useOpenVoucher } from '../../../shared/edit';
-import { VoucherRowActions } from './VoucherRowActions';
-import { EXPENSE_DAY_COLUMNS, takeColumns } from '../list-columns';
+import { SHOP_ENTRY_COLUMNS, SHOP_ENTRY_TYPES } from '../entry-list-columns';
+import { takeColumns } from '../list-columns';
 import { usePartnerTakes } from '../hooks';
 import type { ExpenseType } from '../screen-type';
 import type { TakeRow } from '../types';
-
-/** A pause so a burst of key presses in the search box asks once. */
-const SEARCH_DELAY_MS = 150;
+import { EntryListSection } from './EntryListSection';
 
 interface ExpenseListSectionProps {
   type: ExpenseType;
-  /** The day in the date field, `DD-MM-YYYY`, when it is a whole date; else today. */
-  day: string;
+  /** Today, `YYYY-MM-DD`. */
+  today: string;
   /** The partner chosen on the form, or null. */
   partnerId: number | null;
-}
-
-function ShopDay({ day }: { day: string }) {
-  const open = useOpenVoucher();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  // The cancelled expenses of the day step aside until the tick is on (plan 38 G6); the search box
-  // finds a number, a head or the words of the narration.
-  const [search, setSearch] = useState('');
-  const [showFinished, setShowFinished] = useState(false);
-  const searchText = useDebouncedValue(search.trim(), SEARCH_DELAY_MS);
-  const list = useVouchersList({
-    voucher_type: 'shop_expense',
-    from: day,
-    to: day,
-    account_id: null,
-    show_finished: showFinished,
-    search: searchText === '' ? null : searchText,
-    group_by_month: false,
-  });
-  const first = list.data?.pages[0];
-  const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
-  const selected = rows?.find((row) => row.id === selectedId) ?? null;
-  return (
-    <>
-      <div {...formNavigationProps}>
-        <FilterBar
-          screen="cashbook.day"
-          search={{ value: search, onChange: setSearch }}
-          extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
-        />
-      </div>
-      <VoucherRowActions row={selected} />
-      <PagedList
-        columns={EXPENSE_DAY_COLUMNS}
-        rows={rows}
-        getRowId={(row) => String(row.id)}
-        labelId="cashbook-day-label"
-        failedId="cashbook-day-failed"
-        error={list.isError ? uiErrorOf(list.error) : null}
-        onRetry={() => {
-          void list.refetch();
-        }}
-        pager={list.pager}
-        sort={{ value: list.sort, onChange: list.setSort }}
-        empty={
-          <EmptyState
-            icon={ReceiptText}
-            title={<Localized id="cashbook-day-empty" />}
-            help={<Localized id="cashbook-day-empty-help" />}
-          />
-        }
-        onOpen={(row) => {
-          if (row.can_edit && !row.needs_reopen) open(row);
-          else setSelectedId(row.id);
-        }}
-        onFocusRow={(rowId) => {
-          setSelectedId(rows?.find((row) => String(row.id) === rowId)?.id ?? null);
-        }}
-        focusRowId={selectedId === null ? null : String(selectedId)}
-        isInactive={(row) => row.status === 'cancelled'}
-        totals={
-          first === undefined
-            ? undefined
-            : (context) => ({
-                labelField: 'head',
-                values: {
-                  head: context.text('glossary-meezan'),
-                  ...(first.totals.total_paisa === null
-                    ? {}
-                    : { amount: context.money(first.totals.total_paisa) }),
-                },
-              })
-        }
-      />
-    </>
-  );
 }
 
 /**
@@ -148,8 +60,8 @@ function PartnerTakesList({ partnerId }: { partnerId: number | null }) {
   );
   const first = takes.data?.pages[0];
   const rows = takes.data?.pages.flatMap((page) => page.rows);
-  // A partner's money is behind his code: while it is locked the box stands in the list's place, never an error with a
-  // retry (PRD FR-17.11). The month window is refused for the same reason, so there is no window bar either.
+  // A partner's own spending needs no partner code since v1.61 (plan 100 E, PRD FR-17.11). If the backend ever
+  // refuses it with ERR_PARTNER_LOCKED, the code box stands in the list's place, never an error with a retry.
   const locked =
     takes.isError &&
     uiErrorOf(takes.error).errors.some((item) => item.code === 'ERR_PARTNER_LOCKED');
@@ -215,21 +127,30 @@ function PartnerTakesList({ partnerId }: { partnerId: number | null }) {
   );
 }
 
-/** The Fluent id of the card's title: the day's shop expenses, one partner's money, or every partner's (plan 98). */
-function titleIdOf(type: ExpenseType, partnerId: number | null): string {
-  if (type === 'shop_expense') return 'cashbook-day-title';
-  return partnerId === null ? 'cashbook-all-takes-title' : 'cashbook-takes-title';
-}
-
-export function ExpenseListSection({ type, day, partnerId }: ExpenseListSectionProps) {
+export function ExpenseListSection({ type, today, partnerId }: ExpenseListSectionProps) {
+  if (type === 'shop_expense') {
+    return (
+      <EntryListSection
+        screen="cashbook.shop.list"
+        titleId="cashbook-entries-shop-title"
+        types={SHOP_ENTRY_TYPES}
+        accountId={null}
+        source={{ kind: 'vouchers', voucher_type: 'shop_expense' }}
+        columns={SHOP_ENTRY_COLUMNS}
+        today={today}
+      />
+    );
+  }
   return (
-    <Card compact icon={ReceiptText} title={<Localized id={titleIdOf(type, partnerId)} />}>
-      {type === 'shop_expense' ? (
-        <ShopDay day={day} />
-      ) : (
-        // No partner chosen: every partner's money with his name on each row (plan 98), not a request to choose.
-        <PartnerTakesList partnerId={partnerId} />
-      )}
+    <Card
+      compact
+      icon={ReceiptText}
+      title={
+        <Localized id={partnerId === null ? 'cashbook-all-takes-title' : 'cashbook-takes-title'} />
+      }
+    >
+      {/* No partner chosen: every partner's money with his name on each row (plan 98), not a request to choose. */}
+      <PartnerTakesList partnerId={partnerId} />
     </Card>
   );
 }

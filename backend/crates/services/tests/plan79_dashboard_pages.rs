@@ -271,7 +271,8 @@ fn a_seller_with_an_open_advance_shows_all_three_figures() {
             row.balance.amount_paisa.rupees(),
             row.balance.side
         ),
-        (19_316, 15_000, 0, 4_316, BalanceSide::Cr)
+        // Umar 28-11-2026, plan 100: the advance his payable covers is netted.
+        (4_316, 0, 0, 4_316, BalanceSide::Cr)
     );
     assert_eq!(page.shop_owes_paisa, t.sellers_payable_paisa);
     assert_eq!(page.advances_open_paisa, t.advances_open_paisa);

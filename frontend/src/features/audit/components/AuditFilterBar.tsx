@@ -8,6 +8,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import type { UiError } from '../../../bindings/UiError';
 import { formNavigationProps } from '../../../shared/keyboard';
 import {
+  Checkbox,
   CodeInput,
   DateInput,
   Field,
@@ -17,8 +18,8 @@ import {
   Select,
   fieldError,
 } from '../../../shared/ui';
-import { ANY, type AuditFilterState } from '../filters';
-import { actionMessageId, entityMessageId } from '../words';
+import { ANY, AUDIT_KINDS, type AuditFilterState } from '../filters';
+import { actionMessageId, entityMessageId, kindMessageId } from '../words';
 import type { AuditOptions } from '../types';
 
 interface AuditFilterBarProps {
@@ -86,6 +87,15 @@ export function AuditFilterBar({
             labelId: 'audit-filter-text',
             placeholderId: 'audit-filter-text-hint',
           }}
+          extra={
+            <Checkbox
+              checked={state.securityOnly}
+              onChange={(securityOnly) => {
+                onChange({ securityOnly });
+              }}
+              label={<Localized id="audit-filter-security" />}
+            />
+          }
           moreSet={moreSet}
           moreOpen={hiddenProblem}
           more={
@@ -172,6 +182,24 @@ export function AuditFilterBar({
             </>
           }
         >
+          <Field label={<Localized id="audit-filter-kind" />} error={fieldError(error, 'kind')}>
+            {(control) => (
+              <Select<string>
+                {...control}
+                value={state.kind}
+                onChange={(kind) => {
+                  onChange({ kind });
+                }}
+                options={[
+                  { value: ANY, label: any },
+                  ...AUDIT_KINDS.map((kind) => ({
+                    value: kind,
+                    label: l10n.getString(kindMessageId(kind)),
+                  })),
+                ]}
+              />
+            )}
+          </Field>
           <Field
             label={<Localized id="report-filter-from" />}
             error={fieldError(error, 'filters.from')}

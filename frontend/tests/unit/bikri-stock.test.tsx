@@ -25,6 +25,7 @@ import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS, sliceOf } from '../helpers/paged';
 import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -350,6 +351,7 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
       }),
       'found it',
     );
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', {
         name: message(language, 'bikri-write-off-undo-confirm'),
@@ -358,6 +360,7 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     await waitFor(() => {
       expect(plan.writeOffUndos).toEqual([{ moveId: 70, reason: 'found it' }]);
     });
+    expect(plan.secrets[0]).toMatchObject(CANCEL_SECRETS);
   });
 
   it('150 lots come one page at a time: 25 at once, the count and the total are the backend’s, Next page loads the next 25', async () => {

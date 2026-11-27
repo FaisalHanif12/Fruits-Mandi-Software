@@ -6,7 +6,7 @@
 import type { BikriDetail } from '../../src/bindings/BikriDetail';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import type { StockList } from '../../src/bindings/StockList';
-import type { ArrivalCancelInput } from '../../src/bindings/ArrivalCancelInput';
+import type { ArrivalCancelRequest } from '../../src/bindings/ArrivalCancelRequest';
 import type { ArrivalCancelled } from '../../src/bindings/ArrivalCancelled';
 import type { ArrivalEntryInput } from '../../src/bindings/ArrivalEntryInput';
 import type { ArrivalEntryPreview } from '../../src/bindings/ArrivalEntryPreview';
@@ -20,7 +20,7 @@ import type { ArrivalsList } from '../../src/bindings/ArrivalsList';
 import type { ArrivalsListInput } from '../../src/bindings/ArrivalsListInput';
 import type { ArrivalWriteOffDone } from '../../src/bindings/ArrivalWriteOffDone';
 import type { ArrivalWriteOffInput } from '../../src/bindings/ArrivalWriteOffInput';
-import type { ArrivalWriteOffUndoInput } from '../../src/bindings/ArrivalWriteOffUndoInput';
+import type { ArrivalWriteOffUndoRequest } from '../../src/bindings/ArrivalWriteOffUndoRequest';
 import type { ArrivalWriteOffUndone } from '../../src/bindings/ArrivalWriteOffUndone';
 import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
 import type { PurchaseSaved } from '../../src/bindings/PurchaseSaved';
@@ -71,8 +71,8 @@ import purchaseSetSellDate from '../fixtures/purchases_set_sell_date.json';
 import purchaseSetSellDateRequest from '../fixtures/purchases_set_sell_date_request.json';
 
 // The files are the wire shapes the backend sent. These readers are the one place that says so.
-function readArrivalCancelInput(value: unknown): ArrivalCancelInput {
-  return value as ArrivalCancelInput;
+function readArrivalCancelRequest(value: unknown): ArrivalCancelRequest {
+  return value as ArrivalCancelRequest;
 }
 function readArrivalCancelled(value: unknown): ArrivalCancelled {
   return value as ArrivalCancelled;
@@ -92,8 +92,8 @@ function readArrivalWriteOffDone(value: unknown): ArrivalWriteOffDone {
 function readArrivalWriteOffInput(value: unknown): ArrivalWriteOffInput {
   return value as ArrivalWriteOffInput;
 }
-function readArrivalWriteOffUndoInput(value: unknown): ArrivalWriteOffUndoInput {
-  return value as ArrivalWriteOffUndoInput;
+function readArrivalWriteOffUndoRequest(value: unknown): ArrivalWriteOffUndoRequest {
+  return value as ArrivalWriteOffUndoRequest;
 }
 function readArrivalWriteOffUndone(value: unknown): ArrivalWriteOffUndone {
   return value as ArrivalWriteOffUndone;
@@ -144,7 +144,7 @@ export const ARRIVALS_ALL = readArrivalsList(arrivalsListAll);
 export const ARRIVALS_ALL_REQUEST = readArrivalsListInput(arrivalsListAllRequest);
 export const ARRIVAL_AFTER_A_SALE = readArrivalRow(arrivalGetAfterSale);
 export const ARRIVAL_CANCEL = readArrivalCancelled(arrivalCancel);
-export const ARRIVAL_CANCEL_REQUEST = readArrivalCancelInput(arrivalCancelRequest);
+export const ARRIVAL_CANCEL_REQUEST = readArrivalCancelRequest(arrivalCancelRequest);
 export const ARRIVAL_CANCEL_HAS_SALES = readUiError(arrivalCancelHasSales);
 export const ARRIVAL_SET_SELL_DATE = readSellDateSet(arrivalSetSellDate);
 export const ARRIVAL_SET_SELL_DATE_REQUEST = readSellDateInput(arrivalSetSellDateRequest);
@@ -152,7 +152,7 @@ export const ARRIVAL_WRITE_OFF = readArrivalWriteOffDone(arrivalWriteOff);
 export const ARRIVAL_WRITE_OFF_REQUEST = readArrivalWriteOffInput(arrivalWriteOffRequest);
 export const ARRIVAL_WRITE_OFF_EXCEEDS = readUiError(arrivalWriteOffExceeds);
 export const ARRIVAL_WRITE_OFF_UNDO = readArrivalWriteOffUndone(arrivalWriteOffUndo);
-export const ARRIVAL_WRITE_OFF_UNDO_REQUEST = readArrivalWriteOffUndoInput(
+export const ARRIVAL_WRITE_OFF_UNDO_REQUEST = readArrivalWriteOffUndoRequest(
   arrivalWriteOffUndoRequest,
 );
 export const PURCHASE_SET_SELL_DATE = readSellDateSet(purchaseSetSellDate);

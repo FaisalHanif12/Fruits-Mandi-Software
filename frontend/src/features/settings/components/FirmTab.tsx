@@ -1,5 +1,6 @@
-// The firm's names, mandi, address and phone (PRD Section 21 "Firm", plan 04), up to six people and
-// the trade mark that every print shows in its header (plan 17e, plan 42, FR-19.13). Each person has
+// The firm's names, mandi, address and up to four phones (PRD Section 21 "Firm", plan 04, v1.61), up to
+// eight people and the trade mark that every print shows in its header (plan 17e, plan 42, plan 100 H,
+// FR-19.13). Each person has
 // a role (owner or munshi; the owners print first, then the munshi), both names, one per script
 // (PRD FR-7.24), and an optional phone. A word of the firm's, the mandi's and each person's names made
 // only by the spelling rules is checked before the save (PRD FR-7.66, as the backend checks it too). A
@@ -10,7 +11,7 @@ import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalization } from '@fluent/react';
-import { Contact, MapPin, Plus, Store, X } from 'lucide-react';
+import { Contact, MapPin, Phone, Plus, Store, X } from 'lucide-react';
 import type { FirmContact } from '../../../bindings/FirmContact';
 import type { FirmRole } from '../../../bindings/FirmRole';
 import type { FirmSettings } from '../../../bindings/FirmSettings';
@@ -36,8 +37,17 @@ import {
 import type { SpellingMarks } from '../../../shared/urdu/spelling';
 import { useSetFirm } from '../hooks';
 
-/** The most people a print header holds (PRD Section 21, v1.12). */
-const MAX_CONTACTS = 6;
+/** The most people a print header holds (PRD Section 21, v1.61). */
+const MAX_CONTACTS = 8;
+
+/** The most phones of the firm (PRD Section 21, v1.61). */
+const MAX_PHONES = 4;
+
+/** The names of the four phone boxes in the form's state. */
+const PHONE_FIELDS = ['phone1', 'phone2', 'phone3', 'phone4'] as const;
+
+/** The field paths the backend names a problem of a phone with. */
+const PHONE_PATHS = Array.from({ length: MAX_PHONES }, (_, index) => `phones[${String(index)}]`);
 
 /** The roles of a person in the header, in the order the header prints them. */
 const ROLES: readonly FirmRole[] = ['owner', 'munshi'];
@@ -45,8 +55,9 @@ const ROLES: readonly FirmRole[] = ['owner', 'munshi'];
 /** The fields of the firm that are one text each; the contacts are a list of their own. */
 type FirmFields = Pick<
   FirmSettings,
-  'name_ur' | 'name_en' | 'mandi_ur' | 'mandi_en' | 'address' | 'phone' | 'trade_mark'
->;
+  'name_ur' | 'name_en' | 'mandi_ur' | 'mandi_en' | 'address' | 'trade_mark'
+> &
+  Record<(typeof PHONE_FIELDS)[number], string>;
 
 const FIELDS = [
   'name_ur',
@@ -54,9 +65,17 @@ const FIELDS = [
   'mandi_ur',
   'mandi_en',
   'address',
-  'phone',
+  'phone1',
+  'phone2',
+  'phone3',
+  'phone4',
   'trade_mark',
 ] as const satisfies readonly (keyof FirmFields)[];
+
+/** The phones as typed, without the boxes left empty: what is sent and what a change is measured against. */
+function phonesOf(values: FirmFields): string[] {
+  return PHONE_FIELDS.map((field) => values[field]).filter((phone) => phone.trim() !== '');
+}
 
 /** The field paths a person row shows next to its inputs (the backend names them like this). */
 const CONTACT_PATHS = Array.from({ length: MAX_CONTACTS }, (_, index) =>
@@ -80,7 +99,10 @@ function fieldsOf(firm: FirmSettings): FirmFields {
     mandi_ur: firm.mandi_ur,
     mandi_en: firm.mandi_en,
     address: firm.address,
-    phone: firm.phone,
+    phone1: firm.phones[0] ?? '',
+    phone2: firm.phones[1] ?? '',
+    phone3: firm.phones[2] ?? '',
+    phone4: firm.phones[3] ?? '',
     trade_mark: firm.trade_mark,
   };
 }
@@ -129,12 +151,13 @@ export function FirmTab({ firm }: FirmTabProps) {
   });
   const save = useSetFirm();
   const error = save.error === null ? null : uiErrorOf(save.error);
-  const dirty = useMemo(
-    () =>
-      FIELDS.some((field) => values[field] !== firm[field]) ||
-      JSON.stringify(contacts.filter(filled)) !== JSON.stringify(firm.firm_contacts),
-    [values, contacts, firm],
-  );
+  const dirty = useMemo(() => {
+    const saved = fieldsOf(firm);
+    return (
+      FIELDS.some((field) => values[field] !== saved[field]) ||
+      JSON.stringify(contacts.filter(filled)) !== JSON.stringify(firm.firm_contacts)
+    );
+  }, [values, contacts, firm]);
 
   // The saved values arrived again (after a save): the form shows exactly them.
   useEffect(() => {
@@ -166,7 +189,13 @@ export function FirmTab({ firm }: FirmTabProps) {
     const contact = contacts[index];
     if (index >= contacts.length) {
       return save.mutateAsync({
-        ...values,
+        name_ur: values.name_ur,
+        name_en: values.name_en,
+        mandi_ur: values.mandi_ur,
+        mandi_en: values.mandi_en,
+        address: values.address,
+        phones: phonesOf(values),
+        trade_mark: values.trade_mark,
         firm_contacts: contacts.filter(filled),
         confirmed_rules_words: [...new Set(words)],
       });
@@ -222,7 +251,10 @@ export function FirmTab({ firm }: FirmTabProps) {
       >
         <LeaveGuard dirty={dirty} onSave={submit} />
         {error === null ? null : (
-          <ErrorNotice error={error} fieldsShown={[...FIELDS, 'firm_contacts', ...CONTACT_PATHS]} />
+          <ErrorNotice
+            error={error}
+            fieldsShown={[...FIELDS, ...PHONE_PATHS, 'phones', 'firm_contacts', ...CONTACT_PATHS]}
+          />
         )}
         {/* The names in a card, the Urdu and the English name of each side by side from 480 px of free
             width. The order of the fields is the reading order (row by row, from the start edge), so Enter
@@ -255,20 +287,7 @@ export function FirmTab({ firm }: FirmTabProps) {
           </FormGrid>
         </Card>
         <Card icon={MapPin} title={<Localized id="settings-firm-card-details" />}>
-          <FormGrid columns={3}>
-            <Field
-              label={<Localized id="settings-firm-phone" />}
-              error={fieldError(error, 'phone')}
-            >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={values.phone}
-                  onChange={setField('phone')}
-                  lang="en"
-                />
-              )}
-            </Field>
+          <FormGrid columns={2}>
             <Field
               label={<Localized id="settings-firm-address" />}
               error={fieldError(error, 'address')}
@@ -290,6 +309,45 @@ export function FirmTab({ firm }: FirmTabProps) {
                 />
               )}
             </Field>
+          </FormGrid>
+        </Card>
+        {/* Up to four phones, printed after the firm name in every header (plan 100 H). A box left empty is not sent. */}
+        <Card icon={Phone} title={<Localized id="settings-firm-card-phones" />}>
+          <Localized id="settings-firm-phones-help">
+            <p className="type-body text-ink-muted" />
+          </Localized>
+          {fieldError(error, 'phones') === undefined ? null : (
+            <p role="alert" className="type-body text-due">
+              {fieldError(error, 'phones')}
+            </p>
+          )}
+          <FormGrid columns={2}>
+            {PHONE_FIELDS.map((field, index) => (
+              <Field
+                key={field}
+                label={
+                  <Localized id="settings-firm-phone-number" vars={{ number: String(index + 1) }} />
+                }
+                // The backend numbers its problem by the phones sent, so the empty boxes before this one do not count.
+                error={
+                  values[field].trim() === ''
+                    ? undefined
+                    : fieldError(
+                        error,
+                        `phones[${String(phonesOf(values).indexOf(values[field]))}]`,
+                      )
+                }
+              >
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    value={values[field]}
+                    onChange={setField(field)}
+                    lang="en"
+                  />
+                )}
+              </Field>
+            ))}
           </FormGrid>
         </Card>
         <Card icon={Contact} title={<Localized id="settings-firm-contacts-title" />}>

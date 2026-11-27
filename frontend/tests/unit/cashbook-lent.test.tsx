@@ -101,8 +101,33 @@ describe.each(LANGUAGES)('the ادھار رقم screen (%s)', (language) => {
     for (const gone of FORMER_PAYMENT_LABELS[language]) {
       expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
     }
-    // Without a person the list says to choose one.
-    expect(await screen.findByText(message(language, 'cashbook-lent-pick'))).toBeInTheDocument();
+    // Without a person the list under the form holds every entry of the last 30 days, and no person card shows.
+    expect(
+      await screen.findByRole('heading', {
+        name: named(message(language, 'cashbook-entries-lent-title')),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: named(message(language, 'cashbook-lent-title')) }),
+    ).toBeNull();
+  });
+
+  it('the list under the form asks for money lent and returned together, newest first, and again after a save (plan 100 F)', async () => {
+    const { user } = await open();
+    const asked = () => vi.mocked(vouchersApi.vouchersList).mock.calls.map((call) => call[0]);
+    await waitFor(() => {
+      expect(asked().length).toBeGreaterThan(0);
+    });
+    expect(asked().at(-1)).toMatchObject({
+      voucher_types: ['money_lent', 'money_lent_return'],
+      account_id: null,
+      sort: { column: 'entry_date', direction: 'desc', language: null },
+    });
+    const before = asked().length;
+    await lend(user);
+    await waitFor(() => {
+      expect(asked().length).toBeGreaterThan(before);
+    });
   });
 
   it("lends cash: the text goes as typed, the loan is listed, and the balance is the backend's", async () => {
@@ -279,7 +304,18 @@ describe.each(LANGUAGES)('the ادھار رقم screen (%s)', (language) => {
 
   it("the person's loans failing to load say so with a retry that works", async () => {
     const { user } = await open();
-    vi.mocked(cashbookApi.lentList).mockRejectedValueOnce(fail({ code: 'ERR_NOT_IMPLEMENTED' }));
+    // The form also reads this person's first loan (limit 1) for his type and balance, so the failure
+    // is given to the list's own page, once.
+    const answer = vi.mocked(cashbookApi.lentList).getMockImplementation();
+    let failed = false;
+    vi.mocked(cashbookApi.lentList).mockImplementation((input) => {
+      if (input.limit !== 1 && !failed) {
+        failed = true;
+        return Promise.reject(fail({ code: 'ERR_NOT_IMPLEMENTED' }));
+      }
+      if (answer === undefined) throw new Error('no fake loans');
+      return answer(input);
+    });
     await pickAccount(user, language, 'cashbook-field-person', 'aslam', aslam);
     const title = await screen.findByText(message(language, 'cashbook-lent-failed'));
     const alert = title.closest('[role="alert"]');

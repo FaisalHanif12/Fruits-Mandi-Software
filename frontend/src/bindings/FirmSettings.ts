@@ -26,11 +26,12 @@ export type FirmSettings = {
    */
   address: string;
   /**
-   * Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`.
+   * The firm's phones, 0 to 4, `03XXXXXXXXX` or `03XX-XXXXXXX`, printed after the firm name in
+   * every header (PRD Section 21 v1.61).
    */
-  phone: string;
+  phones: Array<string>;
   /**
-   * The people printed in the header of every print, 0 to 6, each with a role (owner or
+   * The people printed in the header of every print, 0 to 8, each with a role (owner or
    * munshi) and an optional phone; the header prints the owners first (PRD Section 21,
    * FR-19.13, v1.12). Stored under the settings key `firm_contacts`.
    */

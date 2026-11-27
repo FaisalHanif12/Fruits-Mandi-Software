@@ -3,9 +3,9 @@
 // takes one `{ input }` object. No cash moves on this screen, so there is no cash flag.
 
 import { callCommand } from '../../shared/api';
+import type { FruitCancelRequest } from '../../bindings/FruitCancelRequest';
 import type { EditPreview } from '../../bindings/EditPreview';
 import type {
-  FruitCancelInput,
   FruitCancelled,
   FruitEditInput,
   FruitEdited,
@@ -41,7 +41,7 @@ export function fruitEditPreview(input: FruitEditInput): Promise<EditPreview> {
 }
 
 /** Cancels an entry with a reason, by a reversal, while its day is open (PRD FR-16.12). */
-export function fruitCancel(input: FruitCancelInput): Promise<FruitCancelled> {
+export function fruitCancel(input: FruitCancelRequest): Promise<FruitCancelled> {
   return callCommand<FruitCancelled>('fruit_cancel', { input });
 }
 

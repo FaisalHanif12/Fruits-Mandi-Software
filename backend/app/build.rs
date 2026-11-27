@@ -319,6 +319,10 @@ const APP_COMMANDS: &[&str] = &[
     "dashboard_cash_sales_day_print_data",
     "advances_report_print_data",
     "assist_attention",
+    "assist_snooze",
+    "dashboard_total_worth",
+    "dashboard_total_worth_print_data",
+    "dashboard_total_worth_print",
     "prefs_screen_get",
     "prefs_screen_set",
     // Run B, D5 round 12 (append-only block).

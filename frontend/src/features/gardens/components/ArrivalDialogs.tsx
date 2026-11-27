@@ -9,7 +9,15 @@ import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Field, QtyInput, ReasonDialog, Select, fieldError, showToast } from '../../../shared/ui';
+import {
+  ConfirmCancelDialog,
+  Field,
+  QtyInput,
+  ReasonDialog,
+  Select,
+  fieldError,
+  showToast,
+} from '../../../shared/ui';
 import { useCancelGardenArrival, useWriteOffArrival, useWriteOffArrivalUndo } from '../hooks';
 import { arrivalNumberText } from '../list-columns';
 import type { ArrivalRow } from '../types';
@@ -30,7 +38,7 @@ export function CancelArrivalDialog({ row, onClose }: DialogProps) {
     onClose();
   };
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (!open) close();
@@ -48,14 +56,13 @@ export function CancelArrivalDialog({ row, onClose }: DialogProps) {
       }
       reasonLabel={<Localized id="gardens-arrival-reason" />}
       confirmLabel={<Localized id="gardens-arrival-cancel-confirm" />}
-      confirmVariant="danger"
       error={error}
       busy={cancel.isPending}
-      onConfirm={(reason) => {
+      onConfirm={(secrets) => {
         if (row === null) return;
         setError(null);
         cancel
-          .mutateAsync({ id: row.id, version: row.version, reason })
+          .mutateAsync({ ...secrets, id: row.id, version: row.version })
           .then((done) => {
             showToast(
               'success',
@@ -155,7 +162,7 @@ export function UndoWriteOffArrivalDialog({ row, onClose }: DialogProps) {
   const writeOffs = row?.write_offs ?? [];
   const moveId = chosen ?? (writeOffs.length === 1 ? String(writeOffs[0]?.move_id) : undefined);
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (!open) close();
@@ -188,11 +195,11 @@ export function UndoWriteOffArrivalDialog({ row, onClose }: DialogProps) {
           )}
         </Field>
       }
-      onConfirm={(reason) => {
+      onConfirm={(secrets) => {
         if (moveId === undefined) return;
         setError(null);
         undo
-          .mutateAsync({ move_id: Number(moveId), reason })
+          .mutateAsync({ ...secrets, move_id: Number(moveId) })
           .then(() => {
             showToast('success', <Localized id="gardens-arrival-write-off-undone" />);
             close();

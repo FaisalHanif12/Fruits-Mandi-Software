@@ -13,7 +13,6 @@ import { useCountdown } from '../../../shared/hooks';
 import { useFormNavigation } from '../../../shared/keyboard';
 import {
   Button,
-  Card,
   ErrorNotice,
   Field,
   LinkButton,
@@ -22,6 +21,7 @@ import {
   showToast,
 } from '../../../shared/ui';
 import { useResetPartnerCode, useSetPartnerCode, useUnlockPartners } from '../code-hooks';
+import { CodeCardShell } from './CodeCardShell';
 
 /** A code is four digits. The backend checks it again (ERR_PARTNER_CODE_INVALID). */
 const CODE_LENGTH = 4;
@@ -68,11 +68,12 @@ export function UnlockCard({ waitSeconds, onForgot, onOpened }: UnlockCardProps)
   };
 
   return (
-    <Card compact icon={Lock} title={<Localized id="partners-code-locked-title" />}>
-      <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
-        <Localized id="partners-code-locked-help">
-          <p className="type-body text-ink-muted" />
-        </Localized>
+    <CodeCardShell
+      icon={Lock}
+      titleId="partners-code-locked-title"
+      helpId="partners-code-locked-help"
+    >
+      <form {...navigation} onSubmit={submit} className="flex flex-col gap-3">
         <Field label={<Localized id="partners-code-field" />} error={fieldError(error, 'code')}>
           {(props) => (
             <PasswordInput
@@ -91,7 +92,7 @@ export function UnlockCard({ waitSeconds, onForgot, onOpened }: UnlockCardProps)
             <p className="type-body text-due" role="status" />
           </Localized>
         ) : null}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col items-center gap-2">
           <Button
             variant="primary"
             busy={unlock.isPending}
@@ -101,12 +102,14 @@ export function UnlockCard({ waitSeconds, onForgot, onOpened }: UnlockCardProps)
             <LockKeyhole aria-hidden="true" className="size-icon-md" />
             <Localized id="partners-code-open" />
           </Button>
-          <LinkButton onClick={onForgot}>
-            <Localized id="partners-code-forgot" />
-          </LinkButton>
+          <div className="flex justify-center">
+            <LinkButton onClick={onForgot}>
+              <Localized id="partners-code-forgot" />
+            </LinkButton>
+          </div>
         </div>
       </form>
-    </Card>
+    </CodeCardShell>
   );
 }
 
@@ -145,11 +148,12 @@ export function SetCodeCard({ onDone }: SetCodeCardProps) {
   };
 
   return (
-    <Card compact icon={KeyRound} title={<Localized id="partners-code-set-title" />}>
-      <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
-        <Localized id="partners-code-set-help">
-          <p className="type-body text-ink-muted" />
-        </Localized>
+    <CodeCardShell
+      icon={KeyRound}
+      titleId="partners-code-set-title"
+      helpId="partners-code-set-help"
+    >
+      <form {...navigation} onSubmit={submit} className="flex flex-col gap-3">
         <Field
           label={<Localized id="partners-code-password" />}
           error={fieldError(error, 'password')}
@@ -191,7 +195,7 @@ export function SetCodeCard({ onDone }: SetCodeCardProps) {
           )}
         </Field>
         {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELDS} />}
-        <div>
+        <div className="flex flex-col items-center gap-2">
           <Button
             variant="primary"
             busy={setCode.isPending}
@@ -205,7 +209,7 @@ export function SetCodeCard({ onDone }: SetCodeCardProps) {
           </Button>
         </div>
       </form>
-    </Card>
+    </CodeCardShell>
   );
 }
 
@@ -245,11 +249,12 @@ export function ResetCodeCard({ onBack, onDone }: ResetCodeCardProps) {
   };
 
   return (
-    <Card compact icon={KeyRound} title={<Localized id="partners-code-reset-title" />}>
-      <form {...navigation} onSubmit={submit} className="flex max-w-field flex-col gap-3">
-        <Localized id="partners-code-reset-help">
-          <p className="type-body text-ink-muted" />
-        </Localized>
+    <CodeCardShell
+      icon={KeyRound}
+      titleId="partners-code-reset-title"
+      helpId="partners-code-reset-help"
+    >
+      <form {...navigation} onSubmit={submit} className="flex flex-col gap-3">
         <Field
           label={<Localized id="partners-code-reset-secret" />}
           error={fieldError(error, 'password_or_recovery')}
@@ -291,7 +296,7 @@ export function ResetCodeCard({ onBack, onDone }: ResetCodeCardProps) {
           )}
         </Field>
         {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELDS} />}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col items-center gap-2">
           <Button
             variant="primary"
             busy={reset.isPending}
@@ -301,11 +306,13 @@ export function ResetCodeCard({ onBack, onDone }: ResetCodeCardProps) {
             <KeyRound aria-hidden="true" className="size-icon-md" />
             <Localized id="partners-code-reset-button" />
           </Button>
-          <LinkButton onClick={onBack}>
-            <Localized id="common-back" />
-          </LinkButton>
+          <div className="flex justify-center">
+            <LinkButton onClick={onBack}>
+              <Localized id="common-back" />
+            </LinkButton>
+          </div>
         </div>
       </form>
-    </Card>
+    </CodeCardShell>
   );
 }

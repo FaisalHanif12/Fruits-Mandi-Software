@@ -61,12 +61,13 @@ pub struct SalesToday {
     pub commission_paisa: Paisa,
 }
 
-/// What the sellers hold: the sums of the rows of R24.
+/// What the sellers hold, from the workings of the rows of R24, netted for each seller (PRD 9.1
+/// v1.61).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SellersNow {
-    /// Σ of what is payable to them (the `open` of the workings).
+    /// Σ of what the shop really owes them: each one's payable less his advances, not below 0.
     pub payable_paisa: Paisa,
-    /// Σ of their open advances.
+    /// Σ of the parts of their open advances their payable does not cover.
     pub advances_open_paisa: Paisa,
     /// Σ of what they owe beyond their advances: the "بیوپاری کے ذمے" total of R24.
     pub dues_paisa: Paisa,
@@ -96,9 +97,14 @@ pub struct TilesNow {
     pub tiles: DashboardTiles,
 }
 
+/// The id of the cash account.
+pub(crate) fn cash_account(conn: &Connection) -> Result<i64, ReportsError> {
+    account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
+        .ok_or_else(|| ReportsError::Data("the cash account is missing".to_owned()))
+}
+
 pub(crate) fn cash_of(conn: &Connection) -> Result<Paisa, ReportsError> {
-    let cash_id = account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
-        .ok_or_else(|| ReportsError::Data("the cash account is missing".to_owned()))?;
+    let cash_id = cash_account(conn)?;
     let cash = totals_of(conn, cash_id, None, None)?;
     Ok(paisa(cash.dr_paisa)?.checked_sub(paisa(cash.cr_paisa)?)?)
 }
@@ -135,8 +141,9 @@ fn sellers_of(conn: &Connection, today: BusinessDate) -> Result<SellersNow, Repo
     let (mut payable, mut advances, mut dues) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
     for seller in &sellers {
         if let Some(working) = seller.working {
-            add(&mut payable, working.open)?;
-            add(&mut advances, working.advances_open)?;
+            let net = working.net()?;
+            add(&mut payable, net.payable)?;
+            add(&mut advances, net.uncovered_advance)?;
             add(&mut dues, working.owes_firm)?;
         }
     }

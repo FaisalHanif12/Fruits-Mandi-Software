@@ -26,16 +26,18 @@ use std::path::{Path, PathBuf};
 
 use common::set_today;
 use mandi_services::core::bikri::{
-    BikriDraft, BikriSaveInput, CancelInput, EditOpenInput, LotInput, StockListInput,
+    BikriDraft, BikriSaveInput, EditOpenInput, LotInput, StockListInput,
+};
+use mandi_services::core::cancel::{
+    BikriCancelRequest, PurchaseCancelRequest, PurchaseWriteOffUndoRequest, TripEntryCancelRequest,
 };
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::purchases::{
-    PurchaseCancelInput, PurchaseGetInput, PurchaseInput, PurchaseWriteOffInput,
-    PurchaseWriteOffUndoInput, PurchasesListInput,
+    PurchaseGetInput, PurchaseInput, PurchaseWriteOffInput, PurchasesListInput,
 };
 use mandi_services::core::split::SplitInput;
 use mandi_services::core::trips::{
-    OtherSaleInput, TripCostInput, TripEntryCancelInput, TripGetInput, TripInput, TripsListInput,
+    OtherSaleInput, TripCostInput, TripGetInput, TripInput, TripsListInput,
 };
 use mandi_services::{ServiceError, bikri, purchases, trips};
 use serde::Serialize;
@@ -337,20 +339,23 @@ fn trip_fixtures_of_e2e_34_and_34b() {
     );
 
     // Cancelling the sale in another shop and the بکری: the trip opens again.
-    let cancel_other = json!({
+    let cancel_other = json!({ "partner_code": "4826", "sign": "adnan",
         "id": sold.id, "version": sold.version, "reason": "wrong shop",
         "confirm_cash_below_zero": false
     });
-    let cancelled =
-        trips::other_sale_cancel(ctx, owner, &typed::<TripEntryCancelInput>(&cancel_other))
-            .unwrap();
+    let cancelled = trips::other_sale_cancel(
+        ctx,
+        owner,
+        &typed::<TripEntryCancelRequest>(&cancel_other).base,
+    )
+    .unwrap();
     pair("trips_other_sale_cancel", &cancel_other, &cancelled);
     let detail = bikri::get(ctx, saved.bikri_id).unwrap();
-    let cancel = json!({
+    let cancel = json!({ "partner_code": "4826", "sign": "adnan",
         "id": saved.bikri_id, "version": detail.version, "reason": "غلط اندراج",
         "confirm_cash_below_zero": false
     });
-    let done = bikri::cancel(ctx, owner, &typed::<CancelInput>(&cancel)).unwrap();
+    let done = bikri::cancel(ctx, owner, &typed::<BikriCancelRequest>(&cancel).base).unwrap();
     pair("bikri_cancel_own_lot", &cancel, &done);
     pair(
         "trips_get_reopened",
@@ -358,9 +363,13 @@ fn trip_fixtures_of_e2e_34_and_34b() {
         &trips::get(ctx, &typed::<TripGetInput>(&get_trip)).unwrap(),
     );
     // Undoing the write-off gives back the 2 nag and their cost.
-    let undo = json!({ "move_id": off.move_id, "reason": "not spoiled" });
-    let undone =
-        purchases::write_off_undo(ctx, owner, &typed::<PurchaseWriteOffUndoInput>(&undo)).unwrap();
+    let undo = json!({ "partner_code": "4826", "sign": "adnan",  "move_id": off.move_id, "reason": "not spoiled" });
+    let undone = purchases::write_off_undo(
+        ctx,
+        owner,
+        &typed::<PurchaseWriteOffUndoRequest>(&undo).base,
+    )
+    .unwrap();
     pair("purchases_write_off_undo", &undo, &undone);
 }
 
@@ -419,12 +428,16 @@ fn trip_fixtures_of_e2e_41() {
         &trips::get(ctx, &typed::<TripGetInput>(&get_trip)).unwrap(),
     );
     // The truck cannot be cancelled once its purchase sold something.
-    let cancel_cost = json!({
+    let cancel_cost = json!({ "partner_code": "4826", "sign": "adnan",
         "id": saved_cost.id, "version": saved_cost.version, "reason": "wrong",
         "confirm_cash_below_zero": false
     });
-    let error =
-        trips::cost_cancel(ctx, owner, &typed::<TripEntryCancelInput>(&cancel_cost)).unwrap_err();
+    let error = trips::cost_cancel(
+        ctx,
+        owner,
+        &typed::<TripEntryCancelRequest>(&cancel_cost).base,
+    )
+    .unwrap_err();
     refusal(
         "trips_cost_cancel_has_sales",
         &cancel_cost,
@@ -471,20 +484,28 @@ fn trip_fixtures_of_cancels_and_the_cash_question() {
         "parts": [], "confirm_cash_below_zero": false
     });
     let truck = trips::cost_save(ctx, owner, &typed::<TripCostInput>(&cost)).unwrap();
-    let cancel_truck = json!({
+    let cancel_truck = json!({ "partner_code": "4826", "sign": "adnan",
         "id": truck.id, "version": truck.version, "reason": "wrong amount",
         "confirm_cash_below_zero": false
     });
-    let cancelled =
-        trips::cost_cancel(ctx, owner, &typed::<TripEntryCancelInput>(&cancel_truck)).unwrap();
+    let cancelled = trips::cost_cancel(
+        ctx,
+        owner,
+        &typed::<TripEntryCancelRequest>(&cancel_truck).base,
+    )
+    .unwrap();
     pair("trips_cost_cancel", &cancel_truck, &cancelled);
     let row = purchases::get(ctx, &PurchaseGetInput { id: bought.id }).unwrap();
-    let cancel_purchase = json!({
+    let cancel_purchase = json!({ "partner_code": "4826", "sign": "adnan",
         "id": row.id, "version": row.version, "reason": "wrong goods",
         "confirm_cash_below_zero": false
     });
-    let done =
-        purchases::cancel(ctx, owner, &typed::<PurchaseCancelInput>(&cancel_purchase)).unwrap();
+    let done = purchases::cancel(
+        ctx,
+        owner,
+        &typed::<PurchaseCancelRequest>(&cancel_purchase).base,
+    )
+    .unwrap();
     pair("purchases_cancel", &cancel_purchase, &done);
     pair(
         "purchases_list_cancelled",

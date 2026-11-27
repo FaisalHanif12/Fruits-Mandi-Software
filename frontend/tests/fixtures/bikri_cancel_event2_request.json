@@ -1,6 +1,8 @@
 {
   "confirm_cash_below_zero": false,
   "id": 2,
+  "partner_code": "4826",
   "reason": "غلط اندراج",
+  "sign": "adnan",
   "version": 1
 }

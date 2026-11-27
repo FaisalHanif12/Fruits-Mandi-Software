@@ -299,6 +299,11 @@ pub struct VouchersListInput {
     /// The kind, or null for all.
     #[serde(default)]
     pub voucher_type: Option<VoucherType>,
+    /// Several kinds in one list, for example `money_lent` and `money_lent_return` (plan 100 F).
+    /// When given and not empty it is used instead of `voucher_type`.
+    #[serde(default)]
+    #[ts(optional)]
+    pub voucher_types: Option<Vec<VoucherType>>,
     /// From this day, `DD-MM-YYYY`, or empty for the start.
     pub from: String,
     /// To this day, `DD-MM-YYYY`, or empty for no end.
@@ -515,9 +520,17 @@ pub struct AdvancesInfo {
     pub total_count: i64,
     /// True if there are more open advances after this page.
     pub truncated: bool,
-    /// Their total over all of them, not only the page: given less adjusted.
+    /// Their total over all of them, not only the page: given less adjusted. It is the working of
+    /// the listed rows, not what the card shows as پیشگی باقی.
     #[ts(type = "Paisa")]
     pub open_paisa: Paisa,
+    /// The part of `open_paisa` his own credit does not cover: the card's پیشگی باقی (PRD FR-9.6
+    /// v1.61). Equal to the party card's `advance_open`.
+    #[ts(type = "Paisa")]
+    pub uncovered_paisa: Paisa,
+    /// The part of `open_paisa` his credit already covers ("بقایا میں سے کٹ چکی"). Null when 0.
+    #[ts(type = "Paisa | null")]
+    pub advance_covered: Option<Paisa>,
     /// The last پیشگی voucher, or null if there is none.
     pub last: Option<LastAdvance>,
 }

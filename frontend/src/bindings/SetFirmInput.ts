@@ -26,11 +26,13 @@ export type SetFirmInput = {
    */
   address: string;
   /**
-   * Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`.
+   * The firm's phones, 0 to 4; an empty one is left out. Errors on `phones[i]`
+   * (`ERR_PHONE_INVALID`) and `phones` (`ERR_OUT_OF_RANGE`, values `min` 0, `max` 4). Missing
+   * means none.
    */
-  phone: string;
+  phones: Array<string>;
   /**
-   * The people of the header, 0 to 6. Each has both names, each in its own script, a role
+   * The people of the header, 0 to 8. Each has both names, each in its own script, a role
    * (owner or munshi) and an optional phone (empty means none).
    * Missing means none.
    */

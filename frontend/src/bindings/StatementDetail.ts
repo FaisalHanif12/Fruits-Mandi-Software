@@ -29,4 +29,5 @@ export type StatementDetail =
   | 'linked_other'
   | 'advance_out'
   | 'advance_back'
+  | 'advance_covered'
   | 'lent_share_note';

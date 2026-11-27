@@ -263,6 +263,8 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<VoucherRow> {
 pub struct ListFilter<'a> {
     /// Only this kind.
     pub voucher_type: Option<VoucherType>,
+    /// Only these kinds, when not empty (plan 100 F); `voucher_type` is then not read.
+    pub voucher_types: &'a [VoucherType],
     /// First day, `YYYY-MM-DD`, included.
     pub from: Option<&'a str>,
     /// Last day, `YYYY-MM-DD`, included.
@@ -285,12 +287,7 @@ pub struct ListFilter<'a> {
 }
 
 /// The voucher types that hold a partner's own money (PRD FR-17.11): kept apart for the lock.
-pub const PARTNER_MONEY_TYPES: [VoucherType; 4] = [
-    VoucherType::PersonalExpense,
-    VoucherType::PersonalReturn,
-    VoucherType::CapitalIn,
-    VoucherType::CapitalOut,
-];
+pub const PARTNER_MONEY_TYPES: [VoucherType; 2] = [VoucherType::CapitalIn, VoucherType::CapitalOut];
 
 /// The columns a list can be sorted by: the name of the field of the row, and its SQL expression.
 /// The first four are indexed or small; `account` sorts by the account code.
@@ -348,7 +345,16 @@ pub struct ListTotals {
 fn list_where(filter: &ListFilter<'_>, hide: bool) -> (String, Vec<Value>) {
     let mut conditions: Vec<String> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
-    if let Some(kind) = filter.voucher_type {
+    if !filter.voucher_types.is_empty() {
+        let marks = vec!["?"; filter.voucher_types.len()].join(", ");
+        conditions.push(format!("v.type IN ({marks})"));
+        binds.extend(
+            filter
+                .voucher_types
+                .iter()
+                .map(|kind| Value::Text(kind.as_str().to_owned())),
+        );
+    } else if let Some(kind) = filter.voucher_type {
         if filter.advance_view && kind == VoucherType::Advance {
             // A buyer's advance is saved as a payment to him (cash lent, PRD FR-15.11), so the
             // پیشگی list holds the advances and the payments on a buyer account. The buyer test
@@ -378,7 +384,17 @@ fn list_where(filter: &ListFilter<'_>, hide: bool) -> (String, Vec<Value>) {
         binds.push(Value::Text(to.to_owned()));
     }
     if let Some(account) = filter.account_id {
-        conditions.push("v.account_id = ?".to_owned());
+        // A جنرل entry has no account of its own: "only this account" means an entry with a line
+        // on it (plan 100 F). The lines of the posting now in force are read by their index.
+        if only_general(filter) {
+            conditions.push(
+                "EXISTS (SELECT 1 FROM journal_lines g
+                    WHERE g.entry_id = v.current_entry_id AND g.account_id = ?)"
+                    .to_owned(),
+            );
+        } else {
+            conditions.push("v.account_id = ?".to_owned());
+        }
         binds.push(Value::Integer(account));
     }
     if let Some(text) = filter.search.map(str::trim).filter(|t| !t.is_empty()) {
@@ -406,6 +422,18 @@ fn list_where(filter: &ListFilter<'_>, hide: bool) -> (String, Vec<Value>) {
         (String::new(), binds)
     } else {
         (format!(" WHERE {}", conditions.join(" AND ")), binds)
+    }
+}
+
+/// True when the filter lists جنرل entries only.
+fn only_general(filter: &ListFilter<'_>) -> bool {
+    if filter.voucher_types.is_empty() {
+        filter.voucher_type == Some(VoucherType::General)
+    } else {
+        filter
+            .voucher_types
+            .iter()
+            .all(|k| *k == VoucherType::General)
     }
 }
 

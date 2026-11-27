@@ -3,6 +3,7 @@
 // مال, the party cards, the cash, the day status and the partners' totals, so every screen shows
 // the new numbers.
 
+import type { TripEntryCancelRequest } from '../../bindings/TripEntryCancelRequest';
 import {
   keepPreviousData,
   useMutation,
@@ -37,14 +38,7 @@ import {
   tripsOtherSaleSave,
   tripsSummary,
 } from './api';
-import type {
-  OtherSaleInput,
-  TripCostInput,
-  TripDetail,
-  TripEntryCancelInput,
-  TripInput,
-  TripsListInput,
-} from './types';
+import type { OtherSaleInput, TripCostInput, TripDetail, TripInput, TripsListInput } from './types';
 
 export const TRIPS_KEY = ['trips'] as const;
 /** The preview waits this long after the last key press, and the one before it is dropped (F35). */
@@ -231,7 +225,7 @@ export function useSaveTripHeaderEdit() {
 export function useCancelCost() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: TripEntryCancelInput) => tripsCostCancel(input),
+    mutationFn: (input: TripEntryCancelRequest) => tripsCostCancel(input),
     onSuccess: () => readAgainAfterTrip(queryClient),
   });
 }
@@ -239,7 +233,7 @@ export function useCancelCost() {
 export function useCancelOtherSale() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: TripEntryCancelInput) => tripsOtherSaleCancel(input),
+    mutationFn: (input: TripEntryCancelRequest) => tripsOtherSaleCancel(input),
     onSuccess: () => readAgainAfterTrip(queryClient),
   });
 }

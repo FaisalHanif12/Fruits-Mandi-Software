@@ -1,7 +1,8 @@
-// The attention bell in the top bar (round 9, PRD FR-7.44, FR-5.6, NFR-SPD-22): the number the
-// backend counts, the list under it with each kind in words and opening its screen, the most urgent
-// record opening itself, a new version as a note, the four states, by keyboard, and read again after
-// every save. Urdu and English, against a fake backend.
+// The attention bell in the top bar (round 9, PRD FR-7.44, FR-5.6, NFR-SPD-22, plan 100 J): the number
+// the backend counts, the large panel under it with its three sections (sellers to pay, buyers to
+// collect from, general reminders), each line in words and opening its screen, "See all", "Pay", "Later",
+// the most urgent record opening itself, a new version as a note, the four states, by keyboard, and read
+// again after every save. Urdu and English, against a fake backend.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -23,8 +24,9 @@ import {
   signedIn,
 } from '../helpers/app';
 import { UPDATE_AVAILABLE, UPDATE_NONE } from '../helpers/b5-real';
+import { PANEL_EMPTY, PANEL_WORKED_DAY } from '../helpers/attention-panel';
 import { ATTENTION_18_10, fakeDashboard } from '../helpers/dashboard';
-import type { AttentionList } from '../../src/bindings/AttentionList';
+import type { AttentionPanel } from '../../src/bindings/AttentionPanel';
 import { message, renderIn, visible } from '../helpers/render';
 import { must } from '../helpers/must';
 import { paisaForTest } from '../helpers/paisa';
@@ -66,29 +68,126 @@ async function bell(language: Language, count: number) {
 }
 
 describe.each(LANGUAGES)('the bell (%s)', (language) => {
-  it('wears the number the backend counts and opens a list of what to do', async () => {
+  it('wears the number the backend counts and opens the panel with its three sections', async () => {
     await openApp(language);
-    const button = await bell(language, ATTENTION_18_10.total_count);
-    expect(button).toHaveAttribute('data-attention-count', String(ATTENTION_18_10.total_count));
+    const button = await bell(language, PANEL_WORKED_DAY.bell_count);
+    expect(button).toHaveAttribute('data-attention-count', String(PANEL_WORKED_DAY.bell_count));
     await userEvent.setup().click(button);
-    const list = await screen.findByRole('heading', { name: named(language, 'attention-title') });
-    const panel = must(list.parentElement);
-    // Three kinds of the fixture: 8 earlier days, a payable of 10,160, the backup a day old.
+    const heading = await screen.findByRole('heading', {
+      name: named(language, 'attention-title'),
+    });
+    const panel = must(heading.parentElement);
+    for (const id of [
+      'attention-section-sellers',
+      'attention-section-buyers',
+      'attention-section-general',
+    ]) {
+      expect(within(panel).getByRole('heading', { name: named(language, id) })).toBeInTheDocument();
+    }
+    const words = visible(panel.textContent);
+    // کریم is to be paid 10,160; the two buyers owe 21,564 in all, ارشد first.
+    for (const figure of ['10,160', '18,684', '2,880', '21,564', '4,000', '300', '100']) {
+      expect(words).toContain(figure);
+    }
+    expect(words.indexOf('18,684')).toBeLessThan(words.indexOf('2,880'));
+    // The general reminders keep their lines.
     const lines = within(panel)
       .getAllByRole('button')
       .filter((one) => one.hasAttribute('data-attention-kind'));
     expect(lines.map((line) => line.getAttribute('data-attention-kind'))).toEqual([
       'open_days',
-      'payables_old',
       'backup_old',
     ]);
     expect(visible(lines[0]?.textContent)).toContain(
       message(language, 'attention-open-days', { count: 8 }),
     );
-    expect(visible(lines[1]?.textContent)).toContain('10,160');
-    expect(visible(lines[2]?.textContent)).toContain(
+    expect(visible(lines[1]?.textContent)).toContain(
       message(language, 'attention-backup-old', { days: 1 }),
     );
+  });
+
+  /** Opens the panel and gives it back. */
+  async function openPanel(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+    await user.click(await bell(language, PANEL_WORKED_DAY.bell_count));
+    const heading = await screen.findByRole('heading', {
+      name: named(language, 'attention-title'),
+    });
+    return must(heading.parentElement);
+  }
+
+  it.each([
+    ['attention-section-sellers', '/dues/sellers', { side: 'shop_owes' }],
+    ['attention-section-buyers', '/dues', {}],
+  ] as const)('"See all" of %s opens its whole list', async (section, path, search) => {
+    const { router } = await openApp(language);
+    const user = userEvent.setup();
+    const panel = await openPanel(user);
+    await user.click(
+      within(panel).getByRole('button', {
+        name: named(language, 'attention-see-all-label', {
+          section: message(language, section),
+        }),
+      }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(path);
+    });
+    expect(router.state.location.search).toMatchObject(search);
+  });
+
+  it('a buyer opens his history on the party ledgers', async () => {
+    const { router } = await openApp(language);
+    const user = userEvent.setup();
+    const panel = await openPanel(user);
+    const name = language === 'ur' ? 'ارشد ملتانی' : 'Arshad Multani';
+    const line = within(panel)
+      .getAllByRole('button')
+      .find((one) => visible(one.textContent).includes(name));
+    await user.click(must(line));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/bikri/party-ledgers');
+    });
+    expect(router.state.location.search).toMatchObject({ side: 'buyer', party: 21 });
+  });
+
+  it('"Pay" on a payable opens a new payment with that account chosen', async () => {
+    const { router } = await openApp(language);
+    const user = userEvent.setup();
+    const panel = await openPanel(user);
+    const name = language === 'ur' ? 'کرایہ کھاتہ' : 'Freight Payable';
+    await user.click(
+      within(panel).getByRole('button', { name: named(language, 'attention-pay-label', { name }) }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/bikri/voucher');
+    });
+    expect(router.state.location.search).toMatchObject({ type: 'payment', party: { id: 2 } });
+  });
+
+  it('"Later" hides one item through the backend and reads the panel again', async () => {
+    vi.mocked(dashboardApi.assistSnooze).mockResolvedValue(null);
+    await openApp(language);
+    const user = userEvent.setup();
+    const panel = await openPanel(user);
+    const asked = vi.mocked(dashboardApi.assistAttention).mock.calls.length;
+    fakeDashboard({ panel: { ...PANEL_WORKED_DAY, payables: [], hidden_count: 1 } });
+    const name = language === 'ur' ? 'کرایہ کھاتہ' : 'Freight Payable';
+    await user.click(
+      within(panel).getByRole('button', {
+        name: named(language, 'attention-later-label', { name }),
+      }),
+    );
+    await waitFor(() => {
+      expect(dashboardApi.assistSnooze).toHaveBeenCalledWith('payable:2', expect.anything());
+    });
+    await waitFor(() => {
+      expect(vi.mocked(dashboardApi.assistAttention).mock.calls.length).toBeGreaterThan(asked);
+    });
+    await waitFor(() => {
+      expect(visible(panel.textContent)).toContain(
+        message(language, 'attention-hidden-note', { count: 1 }),
+      );
+    });
   });
 
   it.each([
@@ -96,7 +195,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
     ['backup_old', '/backup'],
   ] as const)('the %s line opens %s and closes the list', async (kind, path) => {
     const { router } = await openApp(language);
-    await userEvent.setup().click(await bell(language, ATTENTION_18_10.total_count));
+    await userEvent.setup().click(await bell(language, PANEL_WORKED_DAY.bell_count));
     const line = await waitFor(() => {
       const found = document.querySelector(`[data-attention-kind="${kind}"]`);
       if (found === null) throw new Error('no line yet');
@@ -112,8 +211,16 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
   });
 
   it('the most urgent record is a second button that opens the record itself: the seller’s ledger', async () => {
+    // A general line that names a record: the seller کریم of the older fixture.
+    const withFirst = ATTENTION_18_10.items.find((item) => item.kind === 'payables_old');
+    fakeDashboard({
+      panel: {
+        ...PANEL_WORKED_DAY,
+        general: [{ ...must(withFirst), item_key: 'kind:payables_old' }],
+      },
+    });
     const { router } = await openApp(language);
-    await userEvent.setup().click(await bell(language, ATTENTION_18_10.total_count));
+    await userEvent.setup().click(await bell(language, PANEL_WORKED_DAY.bell_count));
     const first = await screen.findByRole('button', {
       name: (name) =>
         visible(name).startsWith(message(language, 'attention-open-first', { name: '' }).trim()),
@@ -129,7 +236,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
 
   it('works by keyboard: Enter opens the list, ↓ moves between its lines, Enter opens one, Esc closes it', async () => {
     const { router } = await openApp(language);
-    const button = await bell(language, ATTENTION_18_10.total_count);
+    const button = await bell(language, PANEL_WORKED_DAY.bell_count);
     const user = userEvent.setup();
     button.focus();
     await user.keyboard('{Enter}');
@@ -152,7 +259,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
   });
 
   it('says nothing needs attention when the list is empty, and the bell wears no number', async () => {
-    fakeDashboard({ attention: { items: [], total_count: 0, partners_locked: false } });
+    fakeDashboard({ panel: PANEL_EMPTY });
     await openApp(language);
     const button = await bell(language, 0);
     expect(button).toHaveAttribute('data-attention-count', '0');
@@ -163,7 +270,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
   });
 
   it('shows an error with a retry when the list cannot be read, and the retry works', async () => {
-    fakeDashboard({ attention: new CommandError(refusal([{ code: 'ERR_INTERNAL' }])) });
+    fakeDashboard({ panel: new CommandError(refusal([{ code: 'ERR_INTERNAL' }])) });
     resetClientState(language);
     // The bell alone, so no other part of the app can take the focus from the list.
     renderIn(
@@ -187,14 +294,14 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
     );
     // The list is now the lines of the answer, in the same open list.
     await waitFor(() => {
-      expect(document.querySelectorAll('[data-attention-kind]')).toHaveLength(3);
+      expect(document.querySelectorAll('[data-attention-kind]')).toHaveLength(2);
     });
   });
 
   it('a new version is one more line at the top, only a note; it opens the settings and installs nothing', async () => {
     vi.mocked(maintenanceApi.updatesCheck).mockResolvedValue(UPDATE_AVAILABLE);
     const { router } = await openApp(language);
-    await userEvent.setup().click(await bell(language, ATTENTION_18_10.total_count));
+    await userEvent.setup().click(await bell(language, PANEL_WORKED_DAY.bell_count));
     const note = await waitFor(() => {
       const found = document.querySelector('[data-update-note]');
       if (found === null) throw new Error('no note yet');
@@ -210,58 +317,63 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
   });
 
   // Every kind of the list, each with the screen it opens (PRD FR-7.44) and the record it names.
-  const ALL_KINDS: AttentionList = {
-    partners_locked: false,
-    items: [
-      { kind: 'drafts', count: 2, amount_paisa: null, qty: null, days: null, first: null },
-      { kind: 'open_days', count: 8, amount_paisa: null, qty: null, days: 8, first: null },
-      { kind: 'stock_waiting', count: 1, amount_paisa: null, qty: 5, days: 3, first: null },
-      {
-        kind: 'over_credit_limit',
-        count: 1,
-        amount_paisa: null,
-        qty: null,
-        days: null,
-        first: null,
-      },
-      {
-        kind: 'dues_old',
-        count: 1,
-        amount_paisa: paisaForTest(288_000),
-        qty: null,
-        days: 41,
-        first: null,
-      },
-      {
-        kind: 'payables_old',
-        count: 1,
-        amount_paisa: paisaForTest(1_016_000),
-        qty: null,
-        days: null,
-        first: null,
-      },
-      { kind: 'backup_old', count: 1, amount_paisa: null, qty: null, days: 2, first: null },
-      {
-        kind: 'loans_overdue',
-        count: 1,
-        amount_paisa: paisaForTest(200_000),
-        qty: null,
-        days: 1,
-        first: null,
-      },
-      {
-        kind: 'takes_overdue',
-        count: 1,
-        amount_paisa: paisaForTest(200_000),
-        qty: null,
-        days: 3,
-        first: null,
-      },
-      { kind: 'names_missing', count: 4, amount_paisa: null, qty: null, days: null, first: null },
-      { kind: 'health_check', count: 1, amount_paisa: null, qty: null, days: null, first: null },
-      { kind: 'records_differ', count: 2, amount_paisa: null, qty: null, days: 0, first: null },
-    ],
-    total_count: 25,
+  const ALL_KINDS: AttentionPanel = {
+    ...PANEL_EMPTY,
+    general: (
+      [
+        { kind: 'drafts', count: 2, amount_paisa: null, qty: null, days: null, first: null },
+        { kind: 'open_days', count: 8, amount_paisa: null, qty: null, days: 8, first: null },
+        { kind: 'stock_waiting', count: 1, amount_paisa: null, qty: 5, days: 3, first: null },
+        {
+          kind: 'over_credit_limit',
+          count: 1,
+          amount_paisa: null,
+          qty: null,
+          days: null,
+          first: null,
+        },
+        {
+          kind: 'dues_old',
+          count: 1,
+          amount_paisa: paisaForTest(288_000),
+          qty: null,
+          days: 41,
+          first: null,
+        },
+        {
+          kind: 'payables_old',
+          count: 1,
+          amount_paisa: paisaForTest(1_016_000),
+          qty: null,
+          days: null,
+          first: null,
+        },
+        { kind: 'backup_old', count: 1, amount_paisa: null, qty: null, days: 2, first: null },
+        {
+          kind: 'loans_overdue',
+          count: 1,
+          amount_paisa: paisaForTest(200_000),
+          qty: null,
+          days: 1,
+          first: null,
+        },
+        {
+          kind: 'takes_overdue',
+          count: 1,
+          amount_paisa: paisaForTest(200_000),
+          qty: null,
+          days: 3,
+          first: null,
+        },
+        { kind: 'names_missing', count: 4, amount_paisa: null, qty: null, days: null, first: null },
+        { kind: 'health_check', count: 1, amount_paisa: null, qty: null, days: null, first: null },
+        { kind: 'records_differ', count: 2, amount_paisa: null, qty: null, days: 0, first: null },
+      ] satisfies Omit<AttentionPanel['general'][number], 'item_key'>[]
+    ).map((item) => ({
+      ...item,
+      item_key: `kind:${item.kind}`,
+    })),
+    bell_count: 12,
   };
 
   it.each([
@@ -278,9 +390,9 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
     ['health_check', '/settings'],
     ['records_differ', '/settings'],
   ] as const)('the %s line says its words and opens %s', async (kind, path) => {
-    fakeDashboard({ attention: ALL_KINDS });
+    fakeDashboard({ panel: ALL_KINDS });
     const { router } = await openApp(language);
-    await userEvent.setup().click(await bell(language, ALL_KINDS.total_count));
+    await userEvent.setup().click(await bell(language, ALL_KINDS.bell_count));
     const line = await waitFor(() => {
       const found = document.querySelector(`[data-attention-kind="${kind}"]`);
       if (found === null) throw new Error('no line yet');
@@ -349,10 +461,10 @@ describe('the bell and the dashboard are read again after every save', () => {
       </QueryClientProvider>,
     );
     await screen.findByRole('button', {
-      name: named('en', 'attention-bell-label', { count: ATTENTION_18_10.total_count }),
+      name: named('en', 'attention-bell-label', { count: PANEL_WORKED_DAY.bell_count }),
     });
     const asked = vi.mocked(dashboardApi.assistAttention).mock.calls.length;
-    fakeDashboard({ attention: { items: [], total_count: 0, partners_locked: false } });
+    fakeDashboard({ panel: PANEL_EMPTY });
     // Any command that writes goes through a mutation; one stands for them all.
     await client
       .getMutationCache()

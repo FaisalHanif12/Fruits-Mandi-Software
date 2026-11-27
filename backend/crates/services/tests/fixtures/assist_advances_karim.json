@@ -12,6 +12,8 @@
   "total_count": 1,
   "truncated": false,
   "open_paisa": 500000,
+  "uncovered_paisa": 500000,
+  "advance_covered": null,
   "last": {
     "entry_date": "2026-10-10",
     "amount_paisa": 500000,

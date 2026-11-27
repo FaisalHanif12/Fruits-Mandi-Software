@@ -81,13 +81,13 @@ describe.each(LANGUAGES)('the Firm tab in cards (%s)', (language: Language) => {
     );
   });
 
-  it('Enter goes through the fields in reading order: the names, then phone, address, trade mark, then the people', async () => {
+  it('Enter goes through the fields in reading order: the names, address, trade mark, the four phones, then the people', async () => {
     const user = await open();
     const nameFirst = language === 'ur' ? 'settings-firm-name-ur' : 'settings-firm-name-en';
     const start = await screen.findByLabelText<HTMLInputElement>(label(nameFirst));
     start.focus();
     const order: string[] = [];
-    for (let step = 0; step < 7; step += 1) {
+    for (let step = 0; step < 10; step += 1) {
       const focused = document.activeElement;
       order.push(
         focused instanceof HTMLElement
@@ -99,29 +99,30 @@ describe.each(LANGUAGES)('the Firm tab in cards (%s)', (language: Language) => {
           : '',
       );
       // Enter in the last field would save the form, so it is pressed between the fields only.
-      if (step < 6) await user.keyboard('{Enter}');
+      if (step < 9) await user.keyboard('{Enter}');
     }
-    const ids =
+    const names =
       language === 'ur'
         ? [
             'settings-firm-name-ur',
             'settings-firm-name-en',
             'settings-firm-mandi-ur',
             'settings-firm-mandi-en',
-            'settings-firm-phone',
-            'settings-firm-address',
-            'settings-firm-trade-mark',
           ]
         : [
             'settings-firm-name-en',
             'settings-firm-name-ur',
             'settings-firm-mandi-en',
             'settings-firm-mandi-ur',
-            'settings-firm-phone',
-            'settings-firm-address',
-            'settings-firm-trade-mark',
           ];
-    expect(order).toEqual(ids.map((id) => message(language, id)));
+    expect(order).toEqual([
+      ...[...names, 'settings-firm-address', 'settings-firm-trade-mark'].map((id) =>
+        message(language, id),
+      ),
+      ...['1', '2', '3', '4'].map((number) =>
+        visible(message(language, 'settings-firm-phone-number', { number })),
+      ),
+    ]);
     // The people of the header come after the trade mark, in the card of their own.
     const people = screen.getByRole('heading', {
       level: 2,

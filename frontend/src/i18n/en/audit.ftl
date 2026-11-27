@@ -294,3 +294,149 @@ audit-entity-trip-cost = Trip cost
 
 # review: pending
 audit-entity-trip-other-sale = Sale in another shop
+
+# Plan 100 D (PRD FR-21.3 v1.61): every action and area the app writes has words, never a code.
+# review: pending
+audit-action-change-split = Split changed
+
+# review: pending
+audit-action-close = Closed
+
+# review: pending
+audit-action-reopen = Reopened
+
+# review: pending
+audit-action-day-fix-open = Day reopened to fix an entry
+
+# review: pending
+audit-action-day-fix-close = Day closed again after the fix
+
+# review: pending
+audit-action-mixed-save = Sale saved with unsold goods
+
+# review: pending
+audit-action-mixed-undo = Save undone
+
+# review: pending
+audit-action-opening-moved-to-cash = Opening balance moved to cash
+
+# review: pending
+audit-action-opening-on-closed-day = Opening balance on a closed day
+
+# review: pending
+audit-action-set-sell-date = Date to sell changed
+
+# review: pending
+audit-action-reveal = Backup key shown
+
+# review: pending
+audit-action-reveal-refused = Backup key not shown
+
+# review: pending
+audit-action-partner-code-failed = Wrong partner code
+
+# review: pending
+audit-action-partner-code-set = Partner code made
+
+# review: pending
+audit-action-partner-code-change = Partner code changed
+
+# review: pending
+audit-action-partner-code-reset = Partner code reset
+
+# review: pending
+audit-action-partner-unlock = Partner section opened
+
+# review: pending
+audit-action-assistant-key-save = Assistant key saved
+
+# review: pending
+audit-action-assistant-key-replace = Assistant key replaced
+
+# review: pending
+audit-action-assistant-key-remove = Assistant key removed
+
+# review: pending
+audit-action-day-reopen-sign-wrong = Wrong sign: reopening a day
+
+# review: pending
+audit-action-day-fix-sign-wrong = Wrong sign: reopen and fix
+
+# review: pending
+audit-action-voucher-edit-sign-wrong = Wrong sign: changing a voucher
+
+# review: pending
+audit-action-owner-sign-change-sign-wrong = Wrong sign: changing the sign
+
+# review: pending
+audit-action-garden-rent-sign-wrong = Wrong sign: changing a garden rent
+
+# review: pending
+audit-action-openings-to-cash-sign-wrong = Wrong sign: opening balances to cash
+
+# review: pending
+audit-action-cancel-sign-wrong = Wrong sign: cancelling
+
+# review: pending
+audit-action-lockout-started = Wait started after wrong tries
+
+# review: pending
+audit-action-closed-day-refused = Save refused: the day is closed
+
+# review: pending
+audit-entity-assistant-key = Assistant key
+
+# review: pending
+audit-entity-chukta-buyer = { -chukta } buyer
+
+# review: pending
+audit-entity-collection-list = Collection list
+
+# review: pending
+audit-entity-fruit-take = { -phal }
+
+# review: pending
+audit-entity-garden = { -bagh }
+
+# review: pending
+audit-entity-garden-arrival = Goods arrived
+
+# review: pending
+audit-entity-garden-entry = Garden entry
+
+# review: pending
+audit-entity-garden-installment = Garden installment
+
+# review: pending
+audit-entity-partner-code = Partner code
+
+# Plan 100 D: the two new filters of the log.
+# review: pending
+audit-filter-kind = Kind
+
+# review: pending
+audit-filter-security = Security events only
+
+# review: pending
+audit-kind-edit = Changes
+
+# review: pending
+audit-kind-cancel = Cancels
+
+# review: pending
+audit-kind-reopen = Days reopened
+
+# review: pending
+audit-kind-wrong-code = Wrong partner code
+
+# review: pending
+audit-kind-wrong-sign = Wrong sign
+
+# review: pending
+audit-kind-wrong-password = Wrong password
+
+# review: pending
+audit-kind-lockout = Wait after wrong tries
+
+# review: pending
+audit-kind-closed-day = Refused: day closed

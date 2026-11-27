@@ -415,6 +415,10 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::dashboard::dashboard_cash_sales_day_print_data,
         commands::vouchers::advances_report_print_data,
         commands::dashboard::assist_attention,
+        commands::dashboard::assist_snooze,
+        commands::dashboard::dashboard_total_worth,
+        commands::dashboard::dashboard_total_worth_print_data,
+        commands::report_print::dashboard_total_worth_print,
         commands::screen_prefs::prefs_screen_get,
         commands::screen_prefs::prefs_screen_set,
         // Run B, D5 round 12 (append-only block).

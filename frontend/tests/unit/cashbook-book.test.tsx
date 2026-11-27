@@ -107,8 +107,8 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     // The totals row is the backend's over the whole range: in 10,000, out 4,316 + 3,000 + 2,000.
     expect(text).toContain('10,000');
     expect(text).toContain('9,316');
-    expect(pageText()).toContain(message(language, 'cashbook-opening'));
-    expect(pageText()).toContain('50,000');
+    // The cash at the start has no card any more (plan 100); the cash at the end has.
+    expect(pageText()).toContain(message(language, 'cashbook-closing'));
     expect(pageText()).toContain('50,684');
   });
 

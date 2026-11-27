@@ -398,9 +398,9 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("total dues", "tiles{} | report{id:R20,sort:balance:desc}"),
     ("gahakon ke kul bakaya", "tiles{} | report{id:R20,sort:balance:desc}"),
     ("sab gahakon ka bakaya", "report{id:R20,sort:balance:desc}"),
-    ("sellers ka payable kitna hai", "report{id:R24,sort:payable:desc}"),
-    ("sellers ka kul payable", "report{id:R24,sort:payable:desc}"),
-    ("beopariyon ko kul kitna dena hai", "report{id:R24,sort:payable:desc}"),
+    ("sellers ka payable kitna hai", "tiles{} | report{id:R24,sort:payable:desc}"),
+    ("sellers ka kul payable", "tiles{} | report{id:R24,sort:payable:desc}"),
+    ("beopariyon ko kul kitna dena hai", "tiles{} | report{id:R24,sort:payable:desc}"),
     // What was GIVEN is an event, not what is open: the tile and the card hold what is open.
     ("kitni peshgi di hui hai", "NONE"),
     ("doobi raqam kitni hai", "tiles{}"),

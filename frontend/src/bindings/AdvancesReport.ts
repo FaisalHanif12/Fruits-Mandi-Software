@@ -42,4 +42,13 @@ export type AdvancesReport = {
    * Σ open.
    */
   open_paisa: Paisa;
+  /**
+   * Σ of the uncovered parts (the tile پیشگی باقی when the filter is all sellers). Null as on
+   * the rows.
+   */
+  uncovered_paisa: Paisa | null;
+  /**
+   * Σ of the covered parts over every seller of the filter. Null when 0 and as on the rows.
+   */
+  advance_covered: Paisa | null;
 };

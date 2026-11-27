@@ -3,6 +3,7 @@
 // shows what it changed is read again (PRD 6.2): the stock list, the lists of بکری, the balances.
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { CancelSecrets } from '../../../shared/ui';
 import { bikriCancel, bikriUndo, bikriWriteOff, bikriWriteOffUndo } from '../api';
 import { readAgainAfterPosting } from './useSaveBikri';
 
@@ -18,8 +19,8 @@ export function useWriteOff() {
 export function useWriteOffUndo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ moveId, reason }: { moveId: number; reason: string }) =>
-      bikriWriteOffUndo(moveId, reason),
+    mutationFn: ({ moveId, secrets }: { moveId: number; secrets: CancelSecrets }) =>
+      bikriWriteOffUndo(moveId, secrets),
     onSuccess: () => readAgainAfterPosting(queryClient),
   });
 }
@@ -27,8 +28,12 @@ export function useWriteOffUndo() {
 export function useCancelBikri() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: number; version: number; reason: string; confirm: boolean }) =>
-      bikriCancel(input.id, input.version, input.reason, input.confirm),
+    mutationFn: (input: {
+      id: number;
+      version: number;
+      secrets: CancelSecrets;
+      confirm: boolean;
+    }) => bikriCancel(input.id, input.version, input.secrets, input.confirm),
     onSuccess: () => readAgainAfterPosting(queryClient),
   });
 }

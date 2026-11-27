@@ -23,6 +23,7 @@ use std::collections::{HashMap, HashSet};
 
 use mandi_core::accounts::{Balance, BalanceSide, SELLER_CONTROL};
 use mandi_core::money::Paisa;
+use mandi_core::seller_net::{NetPayable, net_of};
 use mandi_db::ledger::{Totals, account_totals_in_controls, totals_of};
 use mandi_db::rusqlite::{Connection, params};
 use mandi_db::vouchers::advance_totals;
@@ -66,6 +67,17 @@ pub(crate) struct Working {
     pub(crate) advances_open: Paisa,
     /// What he owes the firm beyond his advances (PRD FR-15.9).
     pub(crate) owes_firm: Paisa,
+}
+
+impl Working {
+    /// His payable and advance netted (PRD 9.1 v1.61, plan 100 A): the one netting every tile,
+    /// page and reminder of the sellers uses. R24 itself keeps the three columns.
+    ///
+    /// # Errors
+    /// `ReportsError::Money` if the amounts do not fit.
+    pub(crate) fn net(&self) -> Result<NetPayable, ReportsError> {
+        Ok(net_of(self.open, self.advances_open)?)
+    }
 }
 
 /// One seller (an account).
@@ -183,7 +195,7 @@ fn worth_a_row(balance: Balance, working: Option<Working>) -> bool {
 }
 
 /// The payable working of one seller key from the grouped sums of his live lines (PRD FR-7.59).
-fn working_of(
+pub(super) fn working_of(
     sums: &SellerSums,
     account_id: i64,
     person_key: Option<&str>,

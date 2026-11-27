@@ -279,7 +279,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       vi.mocked(settingsApi.settingsSetFirm).mockRejectedValue(
         fail(
           { code: 'ERR_NAME_UR_SCRIPT', field: 'name_ur' },
-          { code: 'ERR_PHONE_INVALID', field: 'phone' },
+          { code: 'ERR_PHONE_INVALID', field: 'phones[0]' },
           { code: 'ERR_DB_BUSY' },
         ),
       );
@@ -290,7 +290,11 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       await waitFor(() => {
         expect(urdu).toHaveAttribute('aria-invalid', 'true');
       });
-      expect(field(language, 'settings-firm-phone')).toHaveAttribute('aria-invalid', 'true');
+      const firstPhone = visible(message(language, 'settings-firm-phone-number', { number: '1' }));
+      expect(screen.getByLabelText((label) => visible(label) === firstPhone)).toHaveAttribute(
+        'aria-invalid',
+        'true',
+      );
       const alert = screen.getByRole('alert');
       expect(visible(alert.textContent)).toContain(message(language, 'err-db-busy'));
       expect(visible(alert.textContent)).not.toContain(message(language, 'err-phone-invalid'));

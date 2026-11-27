@@ -414,6 +414,7 @@ fn voucher_page(
     vouchers::list(
         &w.env.ctx,
         &VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,

@@ -10,6 +10,7 @@ use mandi_core::money::Paisa;
 use serde::Serialize;
 use ts_rs::TS;
 
+use super::total_worth_model::TotalWorthTile;
 use crate::reports::{Names, PartyRef};
 
 /// Most rows of today's بکری list (PRD 9.3). The count of all of them is given as well.
@@ -80,11 +81,13 @@ pub struct DashboardTiles {
     /// ڈوبی رقم: how many people still owe something in it.
     #[ts(type = "number")]
     pub dead_count: i64,
-    /// بیوپاریوں کو ادائیگی باقی: Σ of each seller's open payable (FR-7.59), the payable total of R24,
-    /// leaving out anyone in the dead amount.
+    /// بیوپاریوں کو ادائیگی باقی: Σ over the sellers of `max(payable - open advance, 0)` (FR-7.59,
+    /// netted from v1.61, plan 100 A), leaving out anyone in the dead amount. R24 keeps the gross
+    /// payable.
     #[ts(type = "Paisa")]
     pub sellers_payable_paisa: Paisa,
-    /// پیشگی باقی: Σ of the advances not yet adjusted (FR-15.8), the open total of R26.
+    /// پیشگی باقی: Σ over the sellers of `max(open advance - payable, 0)` (FR-15.8, netted from
+    /// v1.61): the advances no payable covers. R26 keeps the gross open advances.
     #[ts(type = "Paisa")]
     pub advances_open_paisa: Paisa,
     /// باقی مال: lots of saved بکری with goods left.
@@ -136,6 +139,9 @@ pub struct DashboardTiles {
     /// آج کی نقدی: how many buyers paid something on the spot today.
     #[ts(type = "number")]
     pub cash_sales_today_buyers: i64,
+    /// کل مالیت (PRD FR-9.10, v1.61): money to have, money to give and the net. It takes the place
+    /// of the آج کی نقدی tile on the grid; its page is `dashboard_total_worth`.
+    pub total_worth: TotalWorthTile,
 }
 
 /// One partner of the strip (PRD 9.2).

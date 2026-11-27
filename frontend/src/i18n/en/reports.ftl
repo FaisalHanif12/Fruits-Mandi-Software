@@ -654,6 +654,12 @@ report-col-given = Given
 report-col-returned = Returned
 
 # review: pending
+report-col-advance-covered = Covered by balance
+
+# review: pending
+report-col-advance-uncovered = Net open
+
+# review: pending
 report-col-adjusted = Adjusted
 
 # review: pending

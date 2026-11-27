@@ -351,6 +351,7 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
         vouchers::list(
             &w.env.ctx,
             &VouchersListInput {
+                voucher_types: None,
                 voucher_type: kind,
                 from: String::new(),
                 to: String::new(),

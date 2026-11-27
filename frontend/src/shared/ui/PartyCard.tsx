@@ -28,6 +28,7 @@ import { useDeadAmountActions } from './dead-amount';
 import { DeadInfoLine } from './DeadInfoLine';
 import { ErrorMessage } from './ErrorMessage';
 import { LinkButton } from './LinkButton';
+import { AdvanceCoveredLine } from './AdvanceCoveredLine';
 import { Num } from './Num';
 import { usePartyCardLinks } from './party-card-links';
 
@@ -244,7 +245,13 @@ function CardBody({ card }: { card: PartyCardData }) {
             <Num paisa={card.advance_open} />
           </Fact>
         )}
+        {card.net_payable === null ? null : (
+          <Fact labelId="assist-card-net-payable">
+            <Num paisa={card.net_payable} />
+          </Fact>
+        )}
       </div>
+      {card.advance_covered === null ? null : <AdvanceCoveredLine amount={card.advance_covered} />}
       {card.linked === undefined ? null : <LinkedAccount linked={card.linked} />}
       {card.warnings.length === 0 ? null : (
         <ul className="flex flex-wrap gap-2">

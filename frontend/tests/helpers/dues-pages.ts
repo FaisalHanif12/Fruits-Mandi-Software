@@ -135,6 +135,9 @@ export const ADVANCES_OPEN: AdvancesReport = {
       returned_paisa: rupees(0),
       adjusted_paisa: rupees(0),
       open_paisa: rupees(15_000),
+      // Nothing is payable yet, so the whole advance is not covered (plan 100 A).
+      uncovered_paisa: rupees(15_000),
+      advance_covered: null,
       last_date: '2026-09-01',
     },
   ],
@@ -145,6 +148,8 @@ export const ADVANCES_OPEN: AdvancesReport = {
   returned_paisa: rupees(0),
   adjusted_paisa: rupees(0),
   open_paisa: rupees(15_000),
+  uncovered_paisa: rupees(15_000),
+  advance_covered: null,
 };
 
 /** October 2026 after Events 1 to 5: one day, 10-10-26, one buyer paid on the spot, 12,800. */

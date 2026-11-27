@@ -59,8 +59,8 @@ export type ExpensePreview = {
    */
   warnings: Array<FieldError>;
   /**
-   * True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
-   * are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+   * Always false from PRD v1.61: a personal expense and the partner's total beside it are open
+   * without the partner code (plan 100 E). Kept for the screen's older check.
    */
   partners_locked: boolean;
 };

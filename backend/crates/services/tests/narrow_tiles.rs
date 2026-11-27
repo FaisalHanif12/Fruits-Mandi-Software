@@ -18,7 +18,7 @@ mod support;
 use common::*;
 use mandi_reports::dashboard::{self, BackupFacts};
 use mandi_reports::reports::{
-    Cell, ReportFilters, ReportId, ReportPage, ReportRunInput, run_dues_without_ages,
+    Cell, ReportFilters, ReportId, ReportPage, ReportRunInput, RowKind, run_dues_without_ages,
 };
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::bikri::{ChuktaInput, LineChargeMethod};
@@ -211,20 +211,17 @@ fn narrow_is_the_dashboard(w: &World) -> mandi_reports::dashboard::DashboardTile
             paisa: t.buyers_dues_paisa
         }
     );
-    // R24: the tile's three sums are the totals of the report.
+    // R24 keeps the gross figures; the tiles net each seller's payable and advance (PRD 9.1
+    // v1.61). His dues are R24's total.
     let r24 = report(w, ReportId::R24, ReportFilters::default(), 0, 1_000);
-    assert_eq!(
-        total_of(&r24, "payable"),
-        Cell::Money {
-            paisa: t.sellers_payable_paisa
-        }
-    );
-    assert_eq!(
-        total_of(&r24, "advance_open"),
-        Cell::Money {
-            paisa: t.advances_open_paisa
-        }
-    );
+    let (mut payable, mut advance) = (0, 0);
+    for row in r24.rows.iter().filter(|r| r.kind == RowKind::Normal) {
+        let (open, given) = (money(&row.cells[2]), money(&row.cells[3]));
+        payable += (open - given).max(0);
+        advance += (given - open).max(0);
+    }
+    assert_eq!(rs(t.sellers_payable_paisa), payable);
+    assert_eq!(rs(t.advances_open_paisa), advance);
     assert_eq!(
         total_of(&r24, "owes_firm"),
         Cell::Money {
@@ -518,16 +515,18 @@ fn cash_below_zero_is_negative_and_is_the_signed_closing_of_the_cash_book() {
 
 #[test]
 fn e2e_28_an_advance_that_stays_open_and_a_seller_with_an_advance_and_no_balance() {
-    // The tick off: رحیم's whole 19,316 is payable and his 15,000 advance stays open.
+    // The tick off: رحیم's whole 19,316 is payable and his 15,000 advance stays open; the tiles
+    // net them (PRD 9.1 v1.61).
     let w = worked_day();
     let mut draft = support::event1(&w);
     draft.lots[0].adjust_advance = false;
     save(&w, &draft);
     narrow_is_the_dashboard(&w);
     let sellers = dashboard::sellers(db(&w), today_of(&w)).unwrap();
+    // Umar 28-11-2026, plan 100
     assert_eq!(
         (rs(sellers.payable_paisa), rs(sellers.advances_open_paisa)),
-        (19_316, 15_000)
+        (4_316, 0)
     );
     // After he is paid the 19,316 his balance is the advance alone: 15,000 بنام, advance open,
     // and he is not in what sellers owe beyond their advances.

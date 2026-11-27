@@ -12,6 +12,8 @@
       "returned_paisa": 0,
       "adjusted_paisa": 1500000,
       "open_paisa": 0,
+      "uncovered_paisa": 0,
+      "advance_covered": null,
       "last_date": "2026-10-10"
     },
     {
@@ -25,6 +27,8 @@
       "returned_paisa": 0,
       "adjusted_paisa": 0,
       "open_paisa": 500000,
+      "uncovered_paisa": 500000,
+      "advance_covered": null,
       "last_date": "2026-10-10"
     }
   ],
@@ -34,5 +38,7 @@
   "given_paisa": 2000000,
   "returned_paisa": 0,
   "adjusted_paisa": 1500000,
-  "open_paisa": 500000
+  "open_paisa": 500000,
+  "uncovered_paisa": 500000,
+  "advance_covered": null
 }

@@ -5,10 +5,11 @@
 pub mod accounts;
 pub mod assist;
 pub mod assistant;
-mod audit;
+pub mod audit;
 pub mod auth;
 pub mod backup_key;
 pub mod bikri;
+pub mod cancel_guard;
 pub mod cash;
 pub mod cashbook;
 pub mod chukta;

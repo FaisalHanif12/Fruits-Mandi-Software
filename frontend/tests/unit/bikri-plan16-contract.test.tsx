@@ -63,6 +63,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -218,16 +219,17 @@ describe('goods left against the backend files', () => {
       }),
       WRITE_OFF_UNDO_REQUEST.reason,
     );
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', {
         name: message(language, 'bikri-write-off-undo-confirm'),
       }),
     );
     await waitFor(() => {
-      expect(bikriApi.bikriWriteOffUndo).toHaveBeenCalledWith(
-        WRITE_OFF_UNDO_REQUEST.move_id,
-        WRITE_OFF_UNDO_REQUEST.reason,
-      );
+      expect(bikriApi.bikriWriteOffUndo).toHaveBeenCalledWith(WRITE_OFF_UNDO_REQUEST.move_id, {
+        reason: WRITE_OFF_UNDO_REQUEST.reason,
+        ...CANCEL_SECRETS,
+      });
     });
   });
 });
@@ -456,6 +458,7 @@ describe('a cancel against the backend files (E2E-15)', () => {
       }),
       CANCEL_REQUEST.reason,
     );
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', {
         name: starts(message(language, 'bikri-cancel-confirm')),
@@ -465,7 +468,7 @@ describe('a cancel against the backend files (E2E-15)', () => {
       expect(bikriApi.bikriCancel).toHaveBeenCalledWith(
         CANCEL_REQUEST.id,
         CANCEL_REQUEST.version,
-        CANCEL_REQUEST.reason,
+        { reason: CANCEL_REQUEST.reason, ...CANCEL_SECRETS },
         CANCEL_REQUEST.confirm_cash_below_zero,
       );
     });

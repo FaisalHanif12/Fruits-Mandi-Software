@@ -38,7 +38,7 @@ const SETTINGS: Settings = {
     mandi_ur: 'نئی سبزی منڈی کوٹ رادھا کشن',
     mandi_en: 'New Sabzi Mandi Kot Radha Kishan',
     address: 'Kot Radha Kishan',
-    phone: '0300-1234567',
+    phones: ['0300-1234567'],
     firm_contacts: [],
     trade_mark: '',
   },
@@ -79,7 +79,11 @@ function health(): DailyHealth | null {
 
 /** The rows of the log: the backend's, with real days and numbers (its fixture holds stand-ins). */
 function auditRows(): AuditRow[] {
-  const base = [...AUDIT_FIRST_PAGE.rows, ...AUDIT_SETTINGS.rows];
+  // Rows recorded before plan 100 hold no kind.
+  const base = [...AUDIT_FIRST_PAGE.rows, ...AUDIT_SETTINGS.rows].map((row) => ({
+    ...row,
+    kind: row.kind ?? null,
+  }));
   const rows: AuditRow[] = [];
   const count = devFlag('many') ? 230 : base.length;
   for (let index = 0; index < count; index += 1) {
@@ -93,7 +97,33 @@ function auditRows(): AuditRow[] {
       at: '2026-10-10T09:05:00Z',
     });
   }
+  const first = base[0];
+  if (first !== undefined) rows.unshift(...securityRows(first));
   return rows;
+}
+
+/** The security events of plan 100: wrong codes and signs, a wait, a closed day and a cancel. */
+function securityRows(like: AuditRow): AuditRow[] {
+  const events: Pick<AuditRow, 'action' | 'entity' | 'kind' | 'reason'>[] = [
+    { action: 'cancel', entity: 'voucher', kind: 'cancel', reason: 'ٹائپ دو بار ہوا' },
+    { action: 'cancel_sign_wrong', entity: 'voucher', kind: 'wrong_sign', reason: null },
+    { action: 'partner_code_failed', entity: 'partner_code', kind: 'wrong_code', reason: null },
+    { action: 'lockout_started', entity: 'partner_code', kind: 'lockout', reason: null },
+    { action: 'closed_day_refused', entity: 'voucher', kind: 'closed_day', reason: null },
+  ];
+  return events.map((event, index) => ({
+    ...like,
+    ...event,
+    id: 1100 - index,
+    date: '2026-10-10',
+    time: `18:1${String(index)}:00`,
+    at: '2026-10-10T13:10:00Z',
+    entity_id: event.entity === 'voucher' ? 4 : null,
+    old_json: null,
+    new_json: null,
+    changes: [],
+    changes_truncated: false,
+  }));
 }
 
 const handlers: Record<string, (input: Input) => unknown> = {

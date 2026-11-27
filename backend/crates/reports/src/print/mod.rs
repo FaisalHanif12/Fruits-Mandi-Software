@@ -105,8 +105,9 @@ pub struct PrintFirm {
     pub mandi: String,
     /// Address as typed. Empty if none.
     pub address: String,
-    /// Phone, printed `03XX-XXXXXXX` with plain digits. Empty if none.
-    pub phone: String,
+    /// The firm's phones (up to 4, PRD Section 21 v1.61), each printed `03XX-XXXXXXX` with plain
+    /// digits, in the order of Settings, after the firm name. Empty if none.
+    pub phones: Vec<String>,
 }
 
 /// One fact in the header: a label ID and its value, for example the بکری number or the date.

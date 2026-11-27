@@ -29,6 +29,7 @@ import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { settlePreview } from '../helpers/preview-settled';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -318,13 +319,16 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     await user.click(row);
     await user.click(screen.getByRole('button', { name: message(language, 'edit-action-cancel') }));
     await user.type(field('gardens-cancel-reason'), 'wrong garden');
+    await typeSignAndCode(user, language);
     await user.click(
       screen.getByRole('button', { name: message(language, 'gardens-cancel-confirm') }),
     );
     await waitFor(() => {
-      expect(gardensApi.gardensEntryCancel).toHaveBeenCalledWith(
-        real.GARDENS_ENTRY_CANCEL_COST_REQUEST,
-      );
+      // The recorded request, with the sign and the code every cancel carries since v1.61.
+      expect(gardensApi.gardensEntryCancel).toHaveBeenCalledWith({
+        ...real.GARDENS_ENTRY_CANCEL_COST_REQUEST,
+        ...CANCEL_SECRETS,
+      });
     });
   });
 
@@ -418,11 +422,15 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     );
     const dialog = await screen.findByRole('alertdialog');
     await user.type(within(dialog).getByRole('combobox'), 'wrong day');
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', { name: message(language, 'gardens-reopen-confirm') }),
     );
     await waitFor(() => {
-      expect(gardensApi.gardensReopen).toHaveBeenCalledWith(real.GARDENS_REOPEN_E2E40_REQUEST);
+      expect(gardensApi.gardensReopen).toHaveBeenCalledWith({
+        ...real.GARDENS_REOPEN_E2E40_REQUEST,
+        ...CANCEL_SECRETS,
+      });
     });
   });
 

@@ -3,16 +3,18 @@
 // promise (`CommandError`), the way `invoke` fails.
 
 import { vi } from 'vitest';
-import type { AttentionList } from '../../src/bindings/AttentionList';
+import type { AttentionPanel } from '../../src/bindings/AttentionPanel';
 import type { Dashboard } from '../../src/bindings/Dashboard';
 import * as dashboardApi from '../../src/features/dashboard/api';
-import { ATTENTION_18_10, DASHBOARD_WORKED_DAY } from './dashboard-real';
+import { PANEL_WORKED_DAY } from './attention-panel';
+import { DASHBOARD_WORKED_DAY } from './dashboard-real';
 
 export * from './dashboard-real';
 
 export interface DashboardOptions {
   dashboard?: Dashboard | Error;
-  attention?: AttentionList | Error;
+  /** The bell's panel (plan 100 J). */
+  panel?: AttentionPanel | Error;
 }
 
 /** Sets the dashboard commands. The dashboard's own attention list is the one it holds. */
@@ -23,8 +25,8 @@ export function fakeDashboard(options: DashboardOptions = {}) {
       : Promise.resolve(options.dashboard ?? DASHBOARD_WORKED_DAY),
   );
   vi.mocked(dashboardApi.assistAttention).mockImplementation(() =>
-    options.attention instanceof Error
-      ? Promise.reject(options.attention)
-      : Promise.resolve(options.attention ?? ATTENTION_18_10),
+    options.panel instanceof Error
+      ? Promise.reject(options.panel)
+      : Promise.resolve(options.panel ?? PANEL_WORKED_DAY),
   );
 }

@@ -276,11 +276,12 @@ pub struct VoucherPreview {
     /// them). Null for any other voucher.
     #[ts(type = "Paisa | null")]
     pub return_limit_paisa: Option<Paisa>,
-    /// Payment to a seller: what is payable to him now (PRD FR-7.59). Null for any other voucher.
+    /// Payment to a seller: what the shop really owes him now, his open payable less his open
+    /// advance, never below 0 (PRD FR-7.59, net from v1.61). Null for any other voucher.
     #[ts(type = "Paisa | null")]
     pub payable_open_paisa: Option<Paisa>,
-    /// True for a payment to a seller who has nothing payable: the screen offers to make it a
-    /// پیشگی (PRD FR-7.68). Never switches by itself.
+    /// True for a payment to a seller who has nothing payable after his open advance (the net is
+    /// 0): the screen offers to make it a پیشگی (PRD FR-7.68). Never switches by itself.
     pub payable_is_zero_for_seller: bool,
     /// Cash in hand after this voucher (PRD FR-6.7). `needs_confirm` is true when the save will
     /// need `confirm_cash_below_zero`. For a voucher that cannot lower cash (a receipt, in cash
@@ -482,13 +483,24 @@ pub struct OpenPayables {
     pub total_count: i64,
     /// True if there are more postings after this page.
     pub truncated: bool,
-    /// Σ still to pay on ALL his postings, not only on `postings`. The "پورا بقایا" button fills
-    /// this amount.
+    /// Σ still to pay on ALL his postings, not only on `postings` (the working; the "پورا بقایا"
+    /// button fills `net_payable_paisa`).
     #[ts(type = "Paisa")]
     pub open_paisa: Paisa,
     /// His open advances (PRD FR-15.8). They are not taken off `open_paisa`.
     #[ts(type = "Paisa")]
     pub advances_open_paisa: Paisa,
+    /// What the shop really owes him: `open_paisa` less `advances_open_paisa`, never below 0
+    /// (PRD v1.61, plan 100 A). The "پورا بقایا" button fills this.
+    #[ts(type = "Paisa")]
+    pub net_payable_paisa: Paisa,
+    /// The part of `advances_open_paisa` his payable does not cover, shown as پیشگی باقی (PRD
+    /// FR-9.6 v1.61, "covered advance").
+    #[ts(type = "Paisa")]
+    pub uncovered_advance_paisa: Paisa,
+    /// The part of his open advances his payable covers ("بقایا میں سے کٹ چکی"). Null when 0.
+    #[ts(type = "Paisa | null")]
+    pub advance_covered: Option<Paisa>,
     /// What he owes the firm beyond his advances: payments above his payable (PRD FR-15.7,
     /// FR-15.9, "بیوپاری کے ذمے").
     #[ts(type = "Paisa")]
@@ -519,8 +531,9 @@ pub struct AdvancesReportInput {
     /// these sellers.
     #[serde(default)]
     pub search: Option<String>,
-    /// True lists only the sellers with something still open (the page of the tile پیشگی باقی,
-    /// plan 79 item 3). The totals are over those sellers. When no seller is picked, people in
+    /// True lists only the sellers with something still open that his payable does not cover (the
+    /// page of the tile پیشگی باقی, plan 79 item 3 and plan 100 A; for a day before today, every
+    /// seller with an open advance). The totals are over those sellers. When no seller is picked, people in
     /// the dead amount are left out, as in R26 (PRD FR-10.10).
     #[serde(default)]
     pub only_open: bool,
@@ -567,6 +580,15 @@ pub struct AdvancesReportRow {
     /// Given less returned less adjusted.
     #[ts(type = "Paisa")]
     pub open_paisa: Paisa,
+    /// The part of `open_paisa` his open payable does not cover (PRD v1.61, plan 100 A): the
+    /// open advance less the payable, never below 0. The tile پیشگی باقی is its total. Null when
+    /// the report is as of a day before today (the payable working is not dated).
+    #[ts(type = "Paisa | null")]
+    pub uncovered_paisa: Option<Paisa>,
+    /// The part of `open_paisa` his payable covers, shown as "بقایا میں سے کٹ چکی". Null when 0,
+    /// and when `uncovered_paisa` is null.
+    #[ts(type = "Paisa | null")]
+    pub advance_covered: Option<Paisa>,
     /// The day of his last advance, `YYYY-MM-DD`.
     pub last_date: Option<String>,
 }
@@ -597,6 +619,13 @@ pub struct AdvancesReport {
     /// Σ open.
     #[ts(type = "Paisa")]
     pub open_paisa: Paisa,
+    /// Σ of the uncovered parts (the tile پیشگی باقی when the filter is all sellers). Null as on
+    /// the rows.
+    #[ts(type = "Paisa | null")]
+    pub uncovered_paisa: Option<Paisa>,
+    /// Σ of the covered parts over every seller of the filter. Null when 0 and as on the rows.
+    #[ts(type = "Paisa | null")]
+    pub advance_covered: Option<Paisa>,
 }
 
 // ---- The collection list (PRD FR-15.6, FR-7.61) ----

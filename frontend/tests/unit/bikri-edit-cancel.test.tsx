@@ -42,6 +42,7 @@ import { openInfo } from '../helpers/info';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -655,10 +656,12 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       });
       // Focus starts in the reason field.
       expect(reasonField(dialog)).toHaveFocus();
-      await user.keyboard('entered twice{Enter}');
+      // Enter goes on from the reason to the sign and the code; Enter on the code cancels (FR-7.93).
+      await user.keyboard('entered twice{Enter}adnan{Enter}4826{Enter}');
       await waitFor(() => {
         expect(plan.cancels).toHaveLength(1);
       });
+      expect(plan.secrets[0]).toMatchObject(CANCEL_SECRETS);
       expect(plan.cancels[0]).toMatchObject({ reason: 'entered twice', confirm: false });
     });
 
@@ -676,11 +679,13 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
           name: starts(message(language, 'bikri-cancel-confirm')),
         }),
       );
+      // The reason and the sign are both told as empty (FR-7.93).
       expect(
-        await within(dialog).findByText(said(message(language, 'err-required'))),
-      ).toBeInTheDocument();
+        await within(dialog).findAllByText(said(message(language, 'err-required'))),
+      ).toHaveLength(2);
       expect(plan.cancels).toEqual([]);
       await user.type(reasonField(dialog), 'entered twice');
+      await typeSignAndCode(user, language);
       await user.click(
         within(dialog).getByRole('button', {
           name: starts(message(language, 'bikri-cancel-confirm')),
@@ -704,6 +709,7 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
         expect(visible(dialog.textContent)).toContain('36,564');
       });
       await user.type(reasonField(dialog), 'wrong');
+      await typeSignAndCode(user, language);
       await user.click(
         within(dialog).getByRole('button', {
           name: starts(message(language, 'bikri-cancel-confirm')),
@@ -755,6 +761,7 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
         expect(visible(dialog.textContent)).toContain('36,564');
       });
       await user.type(reasonField(dialog), 'entered twice');
+      await typeSignAndCode(user, language);
       await user.click(
         within(dialog).getByRole('button', {
           name: starts(message(language, 'bikri-cancel-confirm')),

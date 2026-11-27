@@ -34,9 +34,6 @@ settings-firm-mandi-ur = منڈی (اردو)
 settings-firm-mandi-en = منڈی (انگریزی)
 
 # review: pending
-settings-firm-phone = فون
-
-# review: pending
 settings-firm-address = پتہ
 
 # Plan 17e, PRD Section 21 (Firm), FR-19.13.
@@ -44,7 +41,7 @@ settings-firm-address = پتہ
 settings-firm-contacts-title = پرنٹ کے ہیڈر کے افراد
 
 # review: pending
-settings-firm-contacts-help = زیادہ سے زیادہ 6 افراد۔ ہر پرنٹ میں فرم کے نام کے نیچے پہلے مالک چھپتے ہیں، پھر منشی۔ فون خالی چھوڑ سکتے ہیں۔ مثلاً "منشی آصف بھٹی 0300-4058860"۔
+settings-firm-contacts-help = زیادہ سے زیادہ 8 افراد۔ ہر پرنٹ میں فرم کے نام کے نیچے پہلے مالک چھپتے ہیں، پھر منشی۔ فون خالی چھوڑ سکتے ہیں۔ مثلاً "منشی آصف بھٹی 0300-4058860"۔
 
 # review: pending
 settings-firm-munshi-note = منشی عملے کی فہرست میں سنبھالے جاتے ہیں۔ ہر فعال منشی ہر پرنٹ کے سرے پر نیچے کے افراد کے بعد چھپتا ہے۔ کسی کو چھپنے سے روکنا ہو تو وہاں اسے غیر فعال کریں۔
@@ -79,7 +76,7 @@ settings-firm-contact-remove = ہٹائیں
 settings-firm-contact-remove-label = فرد { $number } ہٹائیں
 
 # review: pending
-settings-firm-contacts-full = زیادہ سے زیادہ چھ افراد ہو سکتے ہیں۔ نیا شامل کرنے کے لیے کسی کو ہٹائیں۔
+settings-firm-contacts-full = زیادہ سے زیادہ 8 افراد ہو سکتے ہیں۔ نیا شامل کرنے کے لیے کسی کو ہٹائیں۔
 
 # The role of a person in the print header: the owners print first, then the munshi (PRD Section 21).
 # review: pending
@@ -397,3 +394,14 @@ settings-firm-card-names = فرم اور منڈی کا نام
 
 # review: pending
 settings-firm-card-details = فون، پتہ اور { -trade-mark }
+
+## The firm phones (plan 100 H, PRD Section 21 v1.61).
+
+# review: pending
+settings-firm-card-phones = فرم کے فون
+
+# review: pending
+settings-firm-phones-help = زیادہ سے زیادہ 4 فون۔ ہر پرنٹ پر فرم کے نام کے بعد چھپتے ہیں۔ خالی خانہ نہیں چھپتا۔
+
+# review: pending
+settings-firm-phone-number = فون { $number }

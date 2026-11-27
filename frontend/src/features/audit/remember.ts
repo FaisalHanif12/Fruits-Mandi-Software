@@ -18,6 +18,8 @@ function short(value: unknown, most: number, fallback: string): string {
 export function rememberedAudit(state: AuditFilterState): Record<string, unknown> | null {
   const base = EMPTY_AUDIT_FILTERS;
   const kept: Record<string, unknown> = {};
+  if (state.kind !== base.kind) kept['kind'] = state.kind;
+  if (state.securityOnly) kept['securityOnly'] = true;
   if (state.user !== base.user) kept['user'] = state.user;
   if (state.action !== base.action) kept['action'] = state.action;
   if (state.entity !== base.entity) kept['entity'] = state.entity;
@@ -32,6 +34,8 @@ export function rememberedAudit(state: AuditFilterState): Record<string, unknown
 export function auditFromRemembered(raw: unknown): AuditFilterState | null {
   if (!isRecord(raw)) return null;
   return {
+    kind: short(raw['kind'], 20, ANY),
+    securityOnly: raw['securityOnly'] === true,
     user: short(raw['user'], 20, ANY),
     action: short(raw['action'], 60, ANY),
     entity: short(raw['entity'], 60, ANY),

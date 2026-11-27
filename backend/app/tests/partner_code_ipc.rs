@@ -136,23 +136,11 @@ fn refused_commands() -> Vec<(&'static str, Value)> {
             "capital_history",
             json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
         ),
-        (
-            "partner_takes",
-            json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
-        ),
         // Plan 80 gate R4-1 and R4-2: the fruit one partner took, and the lists of a partner's own
         // money (the lists of every type leave those vouchers out instead, see the second test).
         (
             "fruit_list",
             json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
-        ),
-        (
-            "vouchers_list",
-            json!({ "input": { "voucher_type": "personal_expense", "from": "", "to": "" } }),
-        ),
-        (
-            "vouchers_list",
-            json!({ "input": { "voucher_type": "personal_return", "from": "", "to": "" } }),
         ),
         (
             "vouchers_list",
@@ -224,10 +212,6 @@ fn refused_commands() -> Vec<(&'static str, Value)> {
         (
             "windows_bounds",
             json!({ "input": { "source": { "kind": "partner_statement", "partner_id": 1 } } }),
-        ),
-        (
-            "windows_bounds",
-            json!({ "input": { "source": { "kind": "partner_takes", "partner_id": 1 } } }),
         ),
     ]
 }
@@ -409,17 +393,6 @@ fn what_is_hidden_while_locked_comes_back_with_the_code() {
                 "assist_attention_overdue",
                 h.ok("assist_attention_overdue", json!({}))["partners_locked"] == json!(true),
             ),
-            (
-                "vouchers_preview_expense",
-                h.ok(
-                    "vouchers_preview_expense",
-                    json!({ "input": { "entry": { "type": "personal_expense", "date": "10-10-2026",
-                        "partner_id": 1, "amount": "2,000", "reason": "گھر کا خرچ",
-                        "return_by": null, "taken_by": null, "narration": null,
-                        "confirm_cash_below_zero": false }, "replacing_voucher_id": null } }),
-                )["partners_locked"]
-                    == json!(true),
-            ),
         ]
     };
 
@@ -435,6 +408,17 @@ fn what_is_hidden_while_locked_comes_back_with_the_code() {
 
     // Locked: all are hidden, and the strip is empty.
     h.ok("partners_code_lock", json!({}));
+    // Umar 28-11-2026, plan 100 E: a partner's personal expense, with his کل رقم before and after,
+    // is open without the code.
+    let own = h.ok(
+        "vouchers_preview_expense",
+        json!({ "input": { "entry": { "type": "personal_expense", "date": "10-10-2026",
+            "partner_id": 1, "amount": "2,000", "reason": "گھر کا خرچ", "return_by": null,
+            "taken_by": null, "narration": null, "confirm_cash_below_zero": false },
+            "replacing_voucher_id": null } }),
+    );
+    assert_eq!(own["partners_locked"], json!(false));
+    assert!(own["partner_effect"].is_object(), "{own}");
     // The first day of the sales list is not a partner fact: it still answers.
     h.ok(
         "windows_bounds",
@@ -489,5 +473,77 @@ fn the_code_commands_need_the_sign_in_and_a_logout_locks_the_section() {
     assert_eq!(
         h.ok("partners_code_status", json!({}))["unlocked"],
         json!(false)
+    );
+}
+
+/// The commands that cancel something (PRD FR-7.93 v1.61, plan 100 C), each with a request aimed at
+/// a record that does not exist.
+fn cancel_commands() -> Vec<(&'static str, Value)> {
+    let by_id = |id: &str| json!({ id: 999_999, "version": 1 });
+    let by_move = || json!({ "move_id": 999_999 });
+    vec![
+        ("bikri_cancel", by_id("id")),
+        ("bikri_write_off_undo", by_move()),
+        ("vouchers_cancel", by_id("id")),
+        ("fruit_cancel", by_id("id")),
+        ("purchases_cancel", by_id("id")),
+        ("purchases_write_off_undo", by_move()),
+        ("trips_cost_cancel", by_id("id")),
+        ("trips_other_sale_cancel", by_id("id")),
+        ("gardens_entry_cancel", by_id("id")),
+        ("gardens_arrival_cancel", by_id("id")),
+        ("gardens_reopen", by_id("id")),
+        ("gardens_arrival_write_off_undo", by_move()),
+    ]
+}
+
+fn with(mut base: Value, reason: &str, code: &str, sign: &str) -> Value {
+    base["reason"] = json!(reason);
+    base["partner_code"] = json!(code);
+    base["sign"] = json!(sign);
+    json!({ "input": base })
+}
+
+#[test]
+fn every_cancel_command_asks_the_code_the_sign_and_a_reason_first() {
+    let h = Harness::new();
+    partners_set_up(&h);
+    h.ok(
+        "partners_code_set",
+        json!({ "input": { "password": OWNER_PASSWORD, "code": CODE, "code_again": CODE } }),
+    );
+    h.ok("partners_code_lock", json!({}));
+    for (command, base) in cancel_commands() {
+        // An old client that sends no proof is refused before anything is looked for.
+        assert_eq!(
+            h.code(command, with(base.clone(), "غلط", "", "")),
+            "ERR_SIGN_REQUIRED",
+            "{command}"
+        );
+        assert_eq!(
+            h.code(command, with(base.clone(), "غلط", "1111", "adnan")),
+            "ERR_PARTNER_CODE_WRONG",
+            "{command}"
+        );
+        assert_eq!(
+            h.code(command, with(base.clone(), "غلط", CODE, "munshi")),
+            "ERR_SIGN_WRONG",
+            "{command}"
+        );
+        // The right proof gets through to the cancel, which finds nothing.
+        assert_eq!(
+            h.code(command, with(base, "غلط", CODE, "adnan")),
+            "ERR_NOT_FOUND",
+            "{command}"
+        );
+    }
+    // The 10-second undo asks for nothing, but only straight after a save: an id nobody saved is
+    // refused.
+    assert_eq!(
+        h.code(
+            "bikri_undo",
+            json!({ "input": { "id": 999_999, "confirm_cash_below_zero": false } })
+        ),
+        "ERR_UNDO_EXPIRED"
     );
 }

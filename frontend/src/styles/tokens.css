@@ -172,6 +172,11 @@
      border). At 1024 px the bar has 4 columns of 212 px. */
   --field-filter-grid-min-w: 208px;
 
+  /* The bell's panel (plan 100 J): about half the window wide, never narrower than its two lists need, and
+     most of the window's height; it never runs past the window. */
+  --attention-panel-w: min(max(50vw, 560px), calc(100vw - 32px));
+  --attention-panel-h: 80vh;
+
   /* Toast and dialog sizes (UsersEn, FormEn boards). */
   --toast-max-w: 480px;
   --dialog-w: 520px;

@@ -9,7 +9,8 @@ The screen after sign-in, and the attention list that the bell and the dashboard
 - `components/`: one file for each part (`DashboardTiles`, `PartnerStrip`,
   `TodayBikriList`, `OldestDues`, `QuickActions`, `DashboardCharts`, `AttentionLines`, `KindIcon`,
   `UpdateNote`). Every part opens the screen behind it (FR-9.1).
-- `api.ts`: `dashboard_get` and `assist_attention`, both read only. `hooks.ts`: the two queries.
+- `api.ts`: `dashboard_get` and `assist_attention` (the bell's panel), both read only, and
+  `assist_snooze` (the "Later" button). `hooks.ts`: the queries and the snooze.
 - `destinations.ts`: where a tile, a line or a name leads, as plain data (`Destination`), and the one
   hook that opens it (`useOpenDestination`). Tests say where a click goes by comparing destinations.
 - `attention.ts`: the Fluent message of each kind (`attention-<kind>`, and `attention-<kind>-aged`
@@ -109,7 +110,7 @@ that person's history (the opening balance first, FR-19.16).
 | کل اگراہی                                   | `TotalDuesPage` (`/dues/total`), four sections  | `dashboard_total_dues` + the four lists                  | party ledgers, R13, or the ادھار رقم screen               |
 | ادھار رقم باقی                              | `LentOpenPage` (`/dues/lent`)                   | `dashboard_lent_open`                                    | the ادھار رقم screen, his name chosen                     |
 | پیشگی باقی                                  | `AdvancesOpenPage` (`/dues/advances`)           | `advances_report` with `only_open`                       | the پیشگی screen, his name chosen                         |
-| آج کی نقدی                                  | `CashSalesPage` (`/cash-sales?month=YYYY-MM`)   | `dashboard_cash_sales_month`, `dashboard_cash_sales_day` | a day opens its buyers in place; the بکری number opens it |
+| آج کی نقدی (a quick action since plan 100)   | `CashSalesPage` (`/cash-sales?month=YYYY-MM`)   | `dashboard_cash_sales_month`, `dashboard_cash_sales_day` | a day opens its buyers in place; the بکری number opens it |
 
 The other tiles keep the pages of plans 76 to 78 (`/bikri/today`, `/commission`, `/rokar`, `/dues`, R38, `/others-dues`,
 `/kharch`, `/bikri/stock`, `/trips`, `/gardens`). The books check tile is gone: its result is the line of the Day tab
@@ -148,3 +149,15 @@ month, and one day from the Print button inside the open row. Tests: `dues-pages
 - Files: `sales-search.ts`, `sales-hooks.ts`, `components/SalesDays.tsx`, `components/SalesFilterBar.tsx`,
   `pages/SalesPage.tsx`. Words: `i18n/*/sales.ftl`. Tests: `sales-page.test.tsx`, `sales-search.test.ts`, `dashboard-screen`,
   `back-pages`, `print-kinds`. Development page: `#/dev/sales` (flags `?empty`, `?down`).
+
+## Plan 100: کل مالیت and the bell's panel (PRD v1.61, FR-9.10, FR-7.44)
+
+- The tile کل مالیت replaced today's cash sales: the net big, "have" and "give" small under it. It opens
+  `/total-worth` (`pages/TotalWorthPage.tsx`): the three figures, then money to have and money to give, each
+  with the total of every source and its rows page by page. A row opens that party's history
+  (`total-worth-links.ts`). Print, PDF and Excel hold both sides. Every figure is `dashboard_total_worth`.
+- The bell opens a large panel (`components/AttentionPanelBody.tsx`): sellers to pay and buyers to collect
+  from (top five each, the backend's totals, "See all"), then the general reminders. A payable reminder has
+  "Pay", which opens ادائیگی with that account chosen. Every item has "Later" (`assist_snooze`); the backend
+  brings it back after the next بکری save.
+- Tests: `total-worth-page.test.tsx`, `dashboard-bell.test.tsx`. Development page: `#/dev/dues/worth`.

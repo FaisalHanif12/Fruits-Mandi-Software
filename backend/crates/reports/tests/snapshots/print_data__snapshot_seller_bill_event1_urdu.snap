@@ -12,7 +12,9 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
       "name": "ماہر عدنان اینڈ برادرز",
       "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
-      "phone": "0300-1234567"
+      "phones": [
+        "0300-1234567"
+      ]
     },
     "contacts": [],
     "trade_mark": null,

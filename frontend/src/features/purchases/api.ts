@@ -10,9 +10,10 @@ import type { PurchaseGetInput } from '../../bindings/PurchaseGetInput';
 import type { PurchaseWriteOffInput } from '../../bindings/PurchaseWriteOffInput';
 import type { SellDateInput } from '../../bindings/SellDateInput';
 import type { SellDateSet } from '../../bindings/SellDateSet';
-import type { PurchaseWriteOffUndoInput } from '../../bindings/PurchaseWriteOffUndoInput';
+import type { PurchaseCancelRequest } from '../../bindings/PurchaseCancelRequest';
+import type { PurchaseWriteOffUndoRequest } from '../../bindings/PurchaseWriteOffUndoRequest';
+import type { CancelSecrets } from '../../shared/ui';
 import type {
-  PurchaseCancelInput,
   PurchaseCancelled,
   PurchaseEntryInput,
   PurchaseEntryPreview,
@@ -64,7 +65,7 @@ export function purchasesChangeSplit(input: SplitInput): Promise<SplitSet> {
 }
 
 /** Cancels a purchase with a reason, by reversal, while nothing of it was sold or written off. */
-export function purchasesCancel(input: PurchaseCancelInput): Promise<PurchaseCancelled> {
+export function purchasesCancel(input: PurchaseCancelRequest): Promise<PurchaseCancelled> {
   return callCommand<PurchaseCancelled>('purchases_cancel', { input });
 }
 
@@ -97,12 +98,12 @@ export function purchasesWriteOff(
   return callCommand<PurchaseWriteOffDone>('purchases_write_off', { input });
 }
 
-/** Undoes one write-off of trip goods with a reason (PRD FR-12.28). */
+/** Undoes one write-off of trip goods (PRD FR-12.28): the reason, the sign and the partner code (FR-7.93). */
 export function purchasesWriteOffUndo(
   moveId: number,
-  reason: string,
+  secrets: CancelSecrets,
 ): Promise<PurchaseWriteOffUndone> {
-  const input: PurchaseWriteOffUndoInput = { move_id: moveId, reason };
+  const input: PurchaseWriteOffUndoRequest = { move_id: moveId, ...secrets };
   return callCommand<PurchaseWriteOffUndone>('purchases_write_off_undo', { input });
 }
 

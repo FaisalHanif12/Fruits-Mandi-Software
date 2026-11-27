@@ -34,7 +34,9 @@
       "address": "Kot Radha Kishan",
       "mandi": "New Sabzi Mandi Kot Radha Kishan",
       "name": "Maher Adnan and Brothers",
-      "phone": "0300-1234567"
+      "phones": [
+        "0300-1234567"
+      ]
     },
     "title_id": "print-collection-list-title",
     "trade_mark": "RH"

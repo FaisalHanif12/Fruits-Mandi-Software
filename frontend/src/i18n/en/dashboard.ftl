@@ -559,8 +559,6 @@ commission-party-lost = This party could not be found
 # review: pending
 commission-party-lost-help = Pick him again in the box above, or choose All.
 
-
-
 ## The tile of garden owners and others (plan 76 point 10, PRD FR-9.1, FR-16.13): it replaces the last backup tile.
 
 # review: pending
@@ -572,13 +570,121 @@ dashboard-tile-others-note = { $count ->
    *[other] <num>{ $count }</num> people
 }
 
-## The tile Today's cash sales (plan 79 item 2c, PRD FR-9.8): it replaces the books check tile.
+## The tile and page کل مالیت, Total Worth (plan 100 B, PRD FR-9.10).
 
 # review: pending
-dashboard-tile-cash-sales = Today's cash sales
+dashboard-tile-worth = Total Worth
 
 # review: pending
-dashboard-tile-cash-sales-note = <num>{ $count }</num> { $count ->
-    [one] buyer
-   *[other] buyers
-}
+dashboard-tile-worth-note = Have <have></have>, give <give></give>
+
+# review: pending
+dashboard-tile-worth-below = More to give than to have
+
+# review: pending
+dashboard-open-cash-sales = Cash sales today
+
+# review: pending
+total-worth-title = Total Worth
+
+# review: pending
+total-worth-help = Every rupee the shop has or must take, what it must give, and the net. Enter on a row opens that history.
+
+# review: pending
+total-worth-net = Net
+
+# review: pending
+total-worth-have = Money to have
+
+# review: pending
+total-worth-give = Money to give
+
+# review: pending
+total-worth-side-have = Money to have
+
+# review: pending
+total-worth-side-give = Money to give
+
+# review: pending
+total-worth-side-total = Total <money></money>
+
+# review: pending
+total-worth-parts-have = Money to have by kind
+
+# review: pending
+total-worth-parts-give = Money to give by kind
+
+# review: pending
+total-worth-have-label = Money to have, party by party
+
+# review: pending
+total-worth-give-label = Money to give, party by party
+
+# review: pending
+total-worth-have-empty = Nothing to take
+
+# review: pending
+total-worth-give-empty = Nothing to give
+
+# review: pending
+total-worth-empty-help = A balance on this side will be listed here.
+
+# review: pending
+total-worth-failed = Total worth could not be opened
+
+# review: pending
+total-worth-col-source = Kind
+
+# review: pending
+total-worth-col-party = Account
+
+# review: pending
+total-worth-col-count = Rows
+
+# review: pending
+total-worth-col-amount = Amount
+
+# review: pending
+total-worth-source-cash = Cash
+
+# review: pending
+total-worth-source-buyers-dues = Buyers' dues
+
+# review: pending
+total-worth-source-sellers-dues = Sellers' dues
+
+# review: pending
+total-worth-source-dead-amount = Dead amount
+
+# review: pending
+total-worth-source-money-lent = Money lent still open
+
+# review: pending
+total-worth-source-open-advances = Open advances
+
+# review: pending
+total-worth-source-khata-minus = Separate khatas in minus
+
+# review: pending
+total-worth-source-garden-minus = Gardens in minus
+
+# review: pending
+total-worth-source-other-have = Other money to take
+
+# review: pending
+total-worth-source-sellers-payable = Sellers to be paid
+
+# review: pending
+total-worth-source-payables = Labour, freight, store rent and munshiana
+
+# review: pending
+total-worth-source-buyers-credit = Buyers in credit
+
+# review: pending
+total-worth-source-khata-plus = Separate khatas in plus
+
+# review: pending
+total-worth-source-garden-plus = Gardens' money not yet shared
+
+# review: pending
+total-worth-source-other-give = Other money to give

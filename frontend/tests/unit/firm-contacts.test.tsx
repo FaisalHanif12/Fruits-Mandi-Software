@@ -48,6 +48,13 @@ const CONTACTS: FirmContact[] = [
   { name_ur: 'آصف بھٹی', name_en: 'Asif Bhatti', role: 'munshi', phone: '0300-4058860' },
 ];
 
+/** Eight people, the most a header holds since v1.61 (plan 100 H). */
+const EIGHT: FirmContact[] = [
+  ...CONTACTS,
+  { name_ur: 'بلال', name_en: 'Bilal', role: 'munshi', phone: '0345-1234567' },
+  { name_ur: 'حسن', name_en: 'Hassan', role: 'owner', phone: '' },
+];
+
 function withFirm(extra: { firm_contacts?: FirmContact[]; trade_mark?: string }) {
   const base = settings();
   vi.mocked(settingsApi.settingsGet).mockResolvedValue({
@@ -176,15 +183,15 @@ describe.each(LANGUAGES)('the contacts and the trade mark of the firm (%s)', (la
     ]);
   });
 
-  it('six people are the most: the add button is off and the words say why', async () => {
-    withFirm({ firm_contacts: CONTACTS });
+  it('eight people are the most: the add button is off and the words say why', async () => {
+    withFirm({ firm_contacts: EIGHT });
     await open();
     expect(addButton()).toBeDisabled();
     expect(screen.getByText(message(language, 'settings-firm-contacts-full'))).toBeInTheDocument();
   });
 
   it('removing a contact takes only that one out of the save', async () => {
-    withFirm({ firm_contacts: CONTACTS });
+    withFirm({ firm_contacts: EIGHT });
     const { user } = await open();
     await user.click(
       screen.getByRole('button', {
@@ -205,6 +212,8 @@ describe.each(LANGUAGES)('the contacts and the trade mark of the firm (%s)', (la
       'Imran',
       'Salman',
       'Asif Bhatti',
+      'Bilal',
+      'Hassan',
     ]);
   });
 

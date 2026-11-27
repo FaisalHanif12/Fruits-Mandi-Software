@@ -536,11 +536,9 @@ fn plain_questions_that_a_word_could_wrongly_refuse_are_still_answered() {
     let f = facts_of(&y);
     let h = multi_harness(y);
     // "li" is no buying: it is the verb of "peshgi li hui hai" (an advance taken), asked as the seller's advance.
-    instant(
-        &h,
-        "tahir ne kitni peshgi li hui hai",
-        &[oracle(&f, "r26.tahir.open")],
-    );
+    // Tahir's credit covers his advance (plan 100, PRD FR-9.6 v1.61): it is taken but not open, so the model
+    // answers with both figures, and the question is not refused.
+    goes_to_the_model(&h, "tahir ne kitni peshgi li hui hai");
     // Two parties, each with the same figure: one line for each, not a repeat.
     instant(
         &h,

@@ -25,9 +25,10 @@ pub struct FirmSettings {
     pub mandi_en: String,
     /// Address, up to 500 characters.
     pub address: String,
-    /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`.
-    pub phone: String,
-    /// The people printed in the header of every print, 0 to 6, each with a role (owner or
+    /// The firm's phones, 0 to 4, `03XXXXXXXXX` or `03XX-XXXXXXX`, printed after the firm name in
+    /// every header (PRD Section 21 v1.61).
+    pub phones: Vec<String>,
+    /// The people printed in the header of every print, 0 to 8, each with a role (owner or
     /// munshi) and an optional phone; the header prints the owners first (PRD Section 21,
     /// FR-19.13, v1.12). Stored under the settings key `firm_contacts`.
     pub firm_contacts: Vec<FirmContact>,
@@ -49,9 +50,12 @@ pub struct SetFirmInput {
     pub mandi_en: String,
     /// Address, up to 500 characters.
     pub address: String,
-    /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`.
-    pub phone: String,
-    /// The people of the header, 0 to 6. Each has both names, each in its own script, a role
+    /// The firm's phones, 0 to 4; an empty one is left out. Errors on `phones[i]`
+    /// (`ERR_PHONE_INVALID`) and `phones` (`ERR_OUT_OF_RANGE`, values `min` 0, `max` 4). Missing
+    /// means none.
+    #[serde(default)]
+    pub phones: Vec<String>,
+    /// The people of the header, 0 to 8. Each has both names, each in its own script, a role
     /// (owner or munshi) and an optional phone (empty means none).
     /// Missing means none.
     #[serde(default)]
@@ -109,7 +113,10 @@ impl From<(Firm, FirmPrintInfo)> for FirmSettings {
             mandi_ur: firm.mandi_ur,
             mandi_en: firm.mandi_en,
             address: firm.address,
-            phone: firm.phone,
+            phones: std::iter::once(firm.phone)
+                .chain(info.more_phones)
+                .filter(|phone| !phone.is_empty())
+                .collect(),
             firm_contacts: info.firm_contacts,
             trade_mark: info.trade_mark,
         }
@@ -119,6 +126,7 @@ impl From<(Firm, FirmPrintInfo)> for FirmSettings {
 impl From<&SetFirmInput> for FirmPrintInfo {
     fn from(input: &SetFirmInput) -> Self {
         Self {
+            more_phones: input.phones.iter().skip(1).cloned().collect(),
             firm_contacts: input.firm_contacts.clone(),
             trade_mark: input.trade_mark.clone(),
         }
@@ -133,7 +141,7 @@ impl From<&SetFirmInput> for Firm {
             mandi_ur: input.mandi_ur.clone(),
             mandi_en: input.mandi_en.clone(),
             address: input.address.clone(),
-            phone: input.phone.clone(),
+            phone: input.phones.first().cloned().unwrap_or_default(),
         }
     }
 }
@@ -164,7 +172,7 @@ pub async fn settings_get<R: tauri::Runtime>(
 /// spelling rules made that is not in `confirmed_rules_words` (PRD FR-7.66). Confirmed words are
 /// learned (FR-7.26). Until plan 17e T2 a request with a contact or a trade mark answers
 /// `ERR_NOT_IMPLEMENTED` on `firm_contacts` or `trade_mark`; from T2 the contact codes are on
-/// `firm_contacts[i].name_ur`, `.name_en` and `.phone`, `ERR_OUT_OF_RANGE` (values `min` 0, `max` 6) on `firm_contacts`, and
+/// `firm_contacts[i].name_ur`, `.name_en` and `.phone`, `ERR_OUT_OF_RANGE` (values `min` 0, `max` 8) on `firm_contacts`, and
 /// `ERR_TEXT_TOO_LONG` on `trade_mark`.
 #[tauri::command]
 pub async fn settings_set_firm<R: tauri::Runtime>(

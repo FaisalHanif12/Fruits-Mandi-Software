@@ -197,7 +197,7 @@ fn list_of(w: &World, kind: Option<VoucherType>) -> Result<(i64, Vec<VoucherType
 }
 
 #[test]
-fn r4_2_vouchers_list_refuses_a_partners_own_money_while_locked() {
+fn r4_2_vouchers_list_refuses_a_partners_capital_while_locked() {
     let w = support::world();
     let ctx = &w.env.ctx;
     save_partner_vouchers(&w);
@@ -236,18 +236,27 @@ fn r4_2_vouchers_list_refuses_a_partners_own_money_while_locked() {
 
     set_code_and_lock(&w);
 
-    // Locked: each of the four is refused.
-    for kind in partner_types {
+    // Umar 28-11-2026, plan 100 E (PRD FR-17.11 v1.61): a partner's personal expense and its return
+    // are open without the code; his capital stays behind it.
+    let open_kinds = [VoucherType::PersonalExpense, VoucherType::PersonalReturn];
+    let locked_kinds = [VoucherType::CapitalIn, VoucherType::CapitalOut];
+    for kind in open_kinds {
+        assert_eq!(list_of(&w, Some(kind)).unwrap().0, 1, "{kind:?}");
+    }
+    for kind in locked_kinds {
         assert_eq!(
             list_of(&w, Some(kind)).unwrap_err(),
             ErrorCode::ErrPartnerLocked,
             "{kind:?}"
         );
     }
-    // The list of every type leaves them out of its rows and its count.
+    // The list of every type leaves the capital out of its rows and its count.
     let all_locked = list_of(&w, None).unwrap();
-    for kind in partner_types {
+    for kind in locked_kinds {
         assert!(!all_locked.1.contains(&kind), "{kind:?} is still listed");
+    }
+    for kind in open_kinds {
+        assert!(all_locked.1.contains(&kind), "{kind:?} is missing");
     }
     assert_eq!(
         all_locked.0,

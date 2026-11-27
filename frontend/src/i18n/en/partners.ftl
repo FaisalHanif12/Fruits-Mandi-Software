@@ -665,7 +665,7 @@ partners-capital-where-cash-help = The money goes into the shop's cash, so cash 
 # review: pending
 partners-capital-where-counted-help = The money is counted in another opening already. Cash in hand does not change.
 
-## Advances to sellers in the partner statement (plan 78 B4, PRD FR-17.13). The words are for the lines of `advance_out` and `advance_back`.
+## Advances to sellers in the partner statement (plan 78 B4, PRD FR-17.13). The words are for the lines of `advance_out`, `advance_back` and `advance_covered`.
 
 # review: pending
 partners-month-col-advances = { -peshgi }
@@ -680,6 +680,10 @@ partners-statement-detail-advance-out = { -peshgi } to { $subject } { $amount },
 # $subject: the seller. $amount: what was settled. $share: his percent.
 # review: pending
 partners-statement-detail-advance-back = { -peshgi } back from { $subject } { $amount }, your { $share }%
+
+# $subject: the seller. $amount: what his own credit now covers, coming back (PRD FR-17.13 v1.61). $share: his percent.
+# review: pending
+partners-statement-detail-advance-covered = { -peshgi } to { $subject } { $amount }: already taken out of his balance, your { $share }%
 
 # Plan 99 (PRD FR-17.3): the open gardens and trips list pages by month.
 

@@ -100,8 +100,10 @@ function AuditLogBody() {
     opened !== null,
   );
 
+  // The log scrolls as one page: the table is as tall as its rows, so the page buttons and the 30-day bar stand under
+  // it and never over a row (plan 100 D; the grid that filled the room left over ran under the pager).
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="no-scrollbar relative flex min-h-0 flex-1 flex-col gap-3 overflow-auto pe-corner">
       <div className="flex shrink-0 items-center gap-1">
         <Localized id="audit-title">
           <h2 className="type-section" />

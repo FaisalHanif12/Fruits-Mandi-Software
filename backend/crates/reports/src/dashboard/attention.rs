@@ -14,7 +14,8 @@
 //!   7 days) hold (each less the advances adjusted on it), and `Lold` what his older ordinary
 //!   credits hold. The part older than 7 days is `min(max(0, P − R), Lold)`. An opening credit is
 //!   the oldest posting whatever its date (FR-7.59), so what is left of it is aged by its own
-//!   date. A credit exactly 7 days old is not older.
+//!   date. A credit exactly 7 days old is not older. From v1.61 (plan 100 A) his open advance is
+//!   netted against what is still to pay, oldest first, so only what the shop really owes counts.
 //! * **Loans and takes past their return-by day.** From the R32 working (`lent`).
 //!
 //! Example (PRD 4.9, E2E-30b and W1): on 18-10-26 کریم's payable 10,160, posted on 10-10-26, is
@@ -24,6 +25,7 @@ use std::collections::HashMap;
 
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::Paisa;
+use mandi_core::seller_net::net_oldest_first;
 use mandi_db::ledger::totals_for_accounts;
 use mandi_db::rusqlite::Connection;
 
@@ -255,12 +257,22 @@ fn payables_old(conn: &Connection, facts: &Facts) -> Result<Option<AttentionItem
         let rest = open.checked_sub(held.recent)?.max(Paisa::ZERO);
         let on_old = rest.min(old_ordinary);
         let on_opening = rest.checked_sub(on_old)?.min(held.opening);
-        let mut old = on_old;
+        // His open advance is netted against what is still to pay, oldest first in payable order:
+        // the opening credit, then the older credits (the recent ones come last, and are not old)
+        // (v1.61, plan 100 A).
+        let netted = net_oldest_first(&[on_opening, on_old], working.advances_open)?;
+        let (net_opening, net_old) = match netted.as_slice() {
+            [opening, older] => (*opening, *older),
+            _ => {
+                return Err(ReportsError::Data("the netting lost an amount".to_owned()));
+            }
+        };
+        let mut old = net_old;
         if opening_day
             .as_deref()
             .is_some_and(|day| day < cutoff.as_str())
         {
-            add(&mut old, on_opening)?;
+            add(&mut old, net_opening)?;
         }
         if old > Paisa::ZERO {
             count = count

@@ -82,7 +82,9 @@ export function VoucherForm({
     target.kind === 'bills' && draft.type === 'receipt' ? target.accountId : null,
   );
   const payables = useOpenPayables(target.kind === 'payables' ? target.accountId : null);
-  const fillFull = bills.data?.open_paisa ?? payables.data?.open_paisa ?? null;
+  // For a seller "the whole balance" is what the shop really owes him: his payable less his open advance, never
+  // below 0, as the backend works it out (PRD v1.61, plan 100 A).
+  const fillFull = bills.data?.open_paisa ?? payables.data?.net_payable_paisa ?? null;
   const oldest = bills.data?.bills[0]?.open_paisa ?? null;
   const fill = (amount: NonNullable<typeof fillFull>) => {
     onChange({ amount: formatPaisa(amount, { grouping }) });

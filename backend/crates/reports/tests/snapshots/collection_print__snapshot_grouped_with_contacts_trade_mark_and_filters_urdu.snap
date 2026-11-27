@@ -12,7 +12,9 @@ expression: "build_collection(&grouped_list(), &set).unwrap()"
       "name": "ماہر عدنان اینڈ برادرز",
       "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
-      "phone": "0300-1234567"
+      "phones": [
+        "0300-1234567"
+      ]
     },
     "contacts": [
       {

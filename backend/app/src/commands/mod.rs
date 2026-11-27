@@ -93,7 +93,11 @@ where
     let state = AppState::of(&app)?;
     run_blocking(name, move || {
         let ctx = state.context()?;
-        body(&ctx).map_err(UiError::from)
+        body(&ctx).map_err(|error| {
+            // A save refused on a closed day goes to the audit log (PRD FR-21.3 v1.61).
+            mandi_services::audit::note_refused_save(&ctx, name, &error);
+            UiError::from(error)
+        })
     })
     .await
 }

@@ -131,6 +131,7 @@ fn detail_id(detail: StatementDetail) -> &'static str {
         StatementDetail::FruitTaken => "partners-statement-detail-fruit-taken",
         StatementDetail::AdvanceOut => "partners-statement-detail-advance-out",
         StatementDetail::AdvanceBack => "partners-statement-detail-advance-back",
+        StatementDetail::AdvanceCovered => "partners-statement-detail-advance-covered",
         StatementDetail::KhataPaid => "partners-statement-detail-khata-paid",
         StatementDetail::KhataReceived => "partners-statement-detail-khata-received",
         StatementDetail::LentGiven => "partners-statement-detail-lent-given",

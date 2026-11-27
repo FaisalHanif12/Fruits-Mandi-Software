@@ -8,7 +8,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
-import { ReasonDialog, showToast } from '../../../shared/ui';
+import { ConfirmCancelDialog, showToast, type CancelSecrets } from '../../../shared/ui';
 import { useCancelFruit } from '../hooks';
 import { fruitNumberText } from '../list-columns';
 import type { FruitRow } from '../types';
@@ -25,11 +25,11 @@ export function CancelFruitDialog({ row, onClose }: CancelFruitDialogProps) {
   const [error, setError] = useState<UiError | null>(null);
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
 
-  const confirm = (reason: string) => {
+  const confirm = (secrets: CancelSecrets) => {
     if (row === null) return;
     setError(null);
     cancel
-      .mutateAsync({ id: row.id, version: row.version, reason })
+      .mutateAsync({ ...secrets, id: row.id, version: row.version })
       .then(() => {
         showToast(
           'success',
@@ -43,7 +43,7 @@ export function CancelFruitDialog({ row, onClose }: CancelFruitDialogProps) {
   };
 
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (open) return;

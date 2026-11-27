@@ -1,5 +1,11 @@
 //! Read-only help for the entry screens (Tech Stack 4.7, PRD 7.6): the party card now; the
-//! memories and hints of plans 12 and 13 later. Nothing here writes (Code Standards B29).
+//! memories and hints of plans 12 and 13 later. Nothing here writes the books (Code Standards B29).
+//! The one thing kept is which reminders the Owner hid with "بعد میں" (module `snooze`).
+
+mod snooze;
+
+pub(crate) use snooze::clear_snoozes;
+pub use snooze::{snooze, snoozed_keys};
 
 use mandi_db::accounts as account_repo;
 use mandi_db::bikri as bikri_repo;
@@ -16,6 +22,7 @@ use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::PageInput;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{AdvancesInfo, OpenAdvance};
+use mandi_domain::payables::advance_cover;
 
 use crate::context::Context;
 use crate::error::{ServiceError, money_error};
@@ -122,7 +129,21 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
         } else {
             None
         };
+        // The warning is about what he owes beyond all his open advances (PRD FR-15.9). The card
+        // shows only the part of them his own credit does not cover (PRD FR-9.6 v1.61).
         let warnings = warnings(&row, credit_used, advance_open, balance)?;
+        let cover = advance_open
+            .map(|advance| advance_cover(advance, owed(balance)))
+            .transpose()
+            .map_err(money_error)?;
+        // What the shop really owes him: his جمع balance (R24's identity), 0 when he owes.
+        let net_payable = is_seller.then(|| {
+            if balance.side == BalanceSide::Cr {
+                balance.amount_paisa
+            } else {
+                Paisa::ZERO
+            }
+        });
         let linked = linked_balance(conn, account_id, balance)?;
         let (city_ur, city_en) = row
             .city
@@ -153,7 +174,9 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
                 None
             },
             credit_used,
-            advance_open,
+            advance_open: cover.map(|c| c.uncovered),
+            advance_covered: cover.map(|c| c.covered).filter(|c| *c > Paisa::ZERO),
+            net_payable,
             warnings,
             linked,
         })
@@ -240,6 +263,8 @@ fn chukta_card_of(
         credit_limit: None,
         credit_used: None,
         advance_open: None,
+        advance_covered: None,
+        net_payable: None,
         warnings: Vec::new(),
         linked: None,
     }
@@ -248,7 +273,7 @@ fn chukta_card_of(
 /// A seller's open advances and his last پیشگی voucher, for the card in the پیشگی screen (PRD
 /// FR-7.60). Each open advance is a posted advance line (a پیشگی voucher or an opening debit
 /// marked as an advance) with what has been adjusted against it; only lines with something left
-/// are listed, oldest first. The total equals the open advance on the party card. `last` is the
+/// are listed, oldest first. `uncovered_paisa` equals the open advance on the party card. `last` is the
 /// last saved پیشگی voucher: an opening advance has no voucher number, so it is never "last".
 /// Only reads.
 ///
@@ -328,12 +353,17 @@ pub fn advances_page(
             });
         }
         let shown_to = offset.saturating_add(open.len());
+        // What his own credit already covers is not پیشگی باقی (PRD FR-9.6 v1.61).
+        let balance = ledger::balance_in(conn, seller_id, None, None)?;
+        let cover = advance_cover(total, owed(balance)).map_err(money_error)?;
         Ok(AdvancesInfo {
             truncated: count > shown_to,
             total_count: i64::try_from(count)
                 .map_err(|_| ServiceError::reject(ErrorCode::ErrOverflow))?,
             open,
             open_paisa: total,
+            uncovered_paisa: cover.uncovered,
+            advance_covered: Some(cover.covered).filter(|c| *c > Paisa::ZERO),
             last: voucher_repo::last_advance(conn, seller_id)?,
         })
     })

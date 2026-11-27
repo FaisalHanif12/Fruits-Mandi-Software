@@ -90,9 +90,10 @@ fn field_error(rejection: crate::error::Rejection) -> FieldError {
 }
 
 /// The effect the screen shows: the parties, the cash and the partners (which stay out while the
-/// partner section is locked, PRD FR-17.11).
-fn effect_of(ctx: &Context, facts: Facts) -> Result<EditEffect, ServiceError> {
-    let locked = crate::partner_code::is_locked(ctx)?;
+/// partner section is locked, PRD FR-17.11). `partners_open` is true for an edit of a partner's
+/// personal expense or its return that stays one: that is open without the code (v1.61).
+fn effect_of(ctx: &Context, facts: Facts, partners_open: bool) -> Result<EditEffect, ServiceError> {
+    let locked = !partners_open && crate::partner_code::is_locked(ctx)?;
     Ok(EditEffect {
         parties: facts.parties,
         cash: facts.cash,
@@ -110,6 +111,7 @@ fn effect_of(ctx: &Context, facts: Facts) -> Result<EditEffect, ServiceError> {
 pub(crate) fn preview_of<R>(
     ctx: &Context,
     entry_date: BusinessDate,
+    partners_open: bool,
     outcome: Result<Rehearsed<R>, ServiceError>,
     changes_of: impl Fn(&R, &R) -> Vec<EditChange>,
 ) -> Result<EditPreview, ServiceError> {
@@ -122,7 +124,7 @@ pub(crate) fn preview_of<R>(
             review: EditReview {
                 entry_date: entry_date.to_iso(),
                 changes: changes_of(&done.before, &done.after),
-                effect: effect_of(ctx, done.facts)?,
+                effect: effect_of(ctx, done.facts, partners_open)?,
                 reason_required,
                 needs_reopen,
             },
@@ -132,7 +134,7 @@ pub(crate) fn preview_of<R>(
             review: EditReview {
                 entry_date: entry_date.to_iso(),
                 changes: Vec::new(),
-                effect: effect_of(ctx, Facts::default())?,
+                effect: effect_of(ctx, Facts::default(), partners_open)?,
                 reason_required,
                 needs_reopen,
             },
@@ -151,7 +153,7 @@ use mandi_domain::core::edit::{
 };
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::fruit::FruitEditInput;
-use mandi_domain::core::vouchers::VoucherEditInput;
+use mandi_domain::core::vouchers::{VoucherEditInput, VoucherType};
 
 use crate::auth::Actor;
 use crate::context::Context;
@@ -219,7 +221,7 @@ pub fn bikri_review(ctx: &Context, input: &EditPreviewInput) -> Result<EditPrevi
         },
         |tx| crate::bikri::edit::edit_in(ctx, &actor, tx, window, &rule_set, switches, &asked),
     );
-    preview_of(ctx, entry_date, outcome, bikri::changes)
+    preview_of(ctx, entry_date, false, outcome, bikri::changes)
 }
 
 /// The review of an edit of a voucher of any type: what changes and what it does, from a rehearsal of
@@ -259,7 +261,20 @@ pub fn voucher_review(
         |conn| crate::vouchers::edit::row_value(conn, id),
         |tx| crate::vouchers::edit::edit_in(ctx, &actor, tx, window, &asked, None),
     );
-    preview_of(ctx, entry_date, outcome, diff::changes_of_rows)
+    let his_own = |kind| {
+        matches!(
+            kind,
+            VoucherType::PersonalExpense | VoucherType::PersonalReturn
+        )
+    };
+    let partners_open = his_own(old.voucher_type) && his_own(input.entry.voucher_type());
+    preview_of(
+        ctx,
+        entry_date,
+        partners_open,
+        outcome,
+        diff::changes_of_rows,
+    )
 }
 
 /// The review of an edit of fruit taken, from a rehearsal of `fruit::edit` (PRD FR-7.70).
@@ -292,7 +307,7 @@ pub fn fruit_review(ctx: &Context, input: &FruitEditInput) -> Result<EditPreview
         |conn| crate::fruit::row_value(conn, id),
         |tx| crate::fruit::act::edit_in(ctx, &actor, tx, window, &asked),
     );
-    preview_of(ctx, entry_date, outcome, diff::changes_of_rows)
+    preview_of(ctx, entry_date, false, outcome, diff::changes_of_rows)
 }
 
 /// The review of an edit of a trip purchase: what changes and what it does, from a rehearsal of
@@ -677,6 +692,7 @@ pub fn garden_header_preview(
         return preview_of(
             ctx,
             entry_date,
+            false,
             Err::<Rehearsed<serde_json::Value>, _>(refused),
             diff::changes_of_rows,
         );
@@ -689,6 +705,7 @@ pub fn garden_header_preview(
             return preview_of(
                 ctx,
                 entry_date,
+                false,
                 Err::<Rehearsed<serde_json::Value>, _>(refused),
                 diff::changes_of_rows,
             );

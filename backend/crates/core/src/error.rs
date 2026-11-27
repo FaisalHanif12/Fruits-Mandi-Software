@@ -511,11 +511,16 @@ pub enum ErrorCode {
     /// The one-time fix "پرانے ابتدائی بقایا روکڑ میں درج کریں" (PRD FR-10.9 v1.60, plan 99): every
     /// party opening is already against روکڑ, so there is nothing to move. Nothing was changed.
     ErrOpeningsAlreadyInCash,
+    /// The undo of a save (PRD FR-7.47) came too late, or not in the session that saved: it is
+    /// only offered straight after the save. To take the entry back, cancel it with the partner
+    /// code, the sign and a reason (PRD FR-7.93, plan 100). Field `id`, `new_bikri_id` or
+    /// `later_entry_ids`.
+    ErrUndoExpired,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 176] = [
+    pub const ALL: [ErrorCode; 177] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -692,6 +697,7 @@ impl ErrorCode {
         ErrorCode::ErrLinkNotSellerBuyer,
         ErrorCode::ErrLinkAlreadyLinked,
         ErrorCode::ErrOpeningsAlreadyInCash,
+        ErrorCode::ErrUndoExpired,
     ];
 }
 

@@ -16,6 +16,9 @@ vi.mock('../../src/shared/api/invoke');
 
 const call = vi.mocked(invoke.callCommand);
 
+/** What every cancel carries since v1.61 (PRD FR-7.93): the partner code, the sign and a reason. */
+const SECRETS = { reason: 'Wrong', sign: 'adnan', partner_code: '4826' };
+
 beforeEach(() => {
   vi.resetAllMocks();
   call.mockResolvedValue(null);
@@ -127,7 +130,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
     expect(call).toHaveBeenLastCalledWith('trips_cost_preview', { input: cost });
     await tripsApi.tripsCostSave(cost);
     expect(call).toHaveBeenLastCalledWith('trips_cost_save', { input: cost });
-    const cancel = { id: 12, version: 1, reason: 'Wrong', confirm_cash_below_zero: false };
+    const cancel = { id: 12, version: 1, ...SECRETS, confirm_cash_below_zero: false };
     await tripsApi.tripsCostCancel(cancel);
     expect(call).toHaveBeenLastCalledWith('trips_cost_cancel', { input: cancel });
     const sale = {
@@ -208,11 +211,11 @@ describe('each wrapper sends the command and `{ input }`', () => {
     expect(call).toHaveBeenLastCalledWith('purchases_write_off', {
       input: { purchase_id: 7, qty: '5', reason: 'Spoiled' },
     });
-    await purchasesApi.purchasesWriteOffUndo(90, 'Mistake');
+    await purchasesApi.purchasesWriteOffUndo(90, SECRETS);
     expect(call).toHaveBeenLastCalledWith('purchases_write_off_undo', {
-      input: { move_id: 90, reason: 'Mistake' },
+      input: { move_id: 90, ...SECRETS },
     });
-    const cancel = { id: 7, version: 1, reason: 'Wrong', confirm_cash_below_zero: false };
+    const cancel = { id: 7, version: 1, ...SECRETS, confirm_cash_below_zero: false };
     await purchasesApi.purchasesCancel(cancel);
     expect(call).toHaveBeenLastCalledWith('purchases_cancel', { input: cancel });
     const list = {

@@ -9,7 +9,8 @@ use mandi_domain::auth::validate as rules;
 use mandi_domain::core::auth::{Language, PrefKey};
 use mandi_domain::core::error::FieldError;
 use mandi_domain::core::firm::{
-    FirmContact, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_TRADE_MARK,
+    FirmContact, MAX_CONTACTS, MAX_FIRM_PHONES, SETTING_KEY_CONTACTS, SETTING_KEY_MORE_PHONES,
+    SETTING_KEY_TRADE_MARK,
 };
 use mandi_domain::core::money::Grouping;
 use mandi_domain::core::translit::Kind;
@@ -74,7 +75,7 @@ impl FirmFields {
         mandi_ur: "mandi_ur",
         mandi_en: "mandi_en",
         address: "address",
-        phone: "phone",
+        phone: "phones[0]",
     };
     /// The first-run wizard.
     pub const FIRST_RUN: FirmFields = FirmFields {
@@ -297,16 +298,20 @@ pub fn set_firm_confirmed(
 /// the firm details.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct FirmPrintInfo {
-    /// The people of the print header, 0 to 6, each with a role (`firm_contacts`).
+    /// The firm's second to fourth phones (PRD Section 21 v1.61). The first one is [`Firm::phone`].
+    pub more_phones: Vec<String>,
+    /// The people of the print header, 0 to 8, each with a role (`firm_contacts`).
     pub firm_contacts: Vec<FirmContact>,
     /// The trade mark text as typed, or empty (`trade_mark`).
     pub trade_mark: String,
 }
 
 impl FirmPrintInfo {
-    /// True when no contact and no trade mark is set.
+    /// True when no contact, no trade mark and no further phone is set.
     pub fn is_empty(&self) -> bool {
-        self.firm_contacts.is_empty() && self.trade_mark.trim().is_empty()
+        self.firm_contacts.is_empty()
+            && self.trade_mark.trim().is_empty()
+            && self.more_phones.is_empty()
     }
 }
 
@@ -322,7 +327,12 @@ fn load_print_info(conn: &Connection) -> Result<FirmPrintInfo, ServiceError> {
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
+    let mut more_phones: Vec<String> = store::setting(conn, SETTING_KEY_MORE_PHONES)?
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default();
+    more_phones.truncate(MAX_FIRM_PHONES.saturating_sub(1));
     Ok(FirmPrintInfo {
+        more_phones,
         firm_contacts,
         trade_mark,
     })
@@ -390,15 +400,46 @@ impl FirmPrintInfo {
             }
         }
         let trade_mark = errors.take(validate::free_text("trade_mark", &self.trade_mark));
+        // The further phones are `phones[1]` onwards on the screen; an empty one is left out.
+        let mut more_phones = Vec::new();
+        for (index, phone) in self.more_phones.iter().enumerate() {
+            let field = format!("phones[{}]", index.saturating_add(1));
+            if let Some(Some(phone)) = errors.take(validate::phone_optional(&field, phone))
+                && !phone.is_empty()
+            {
+                more_phones.push(phone);
+            }
+        }
+        let max_more = MAX_FIRM_PHONES.saturating_sub(1);
+        if more_phones.len() > max_more {
+            errors.push(
+                FieldError::new(
+                    mandi_domain::core::error::ErrorCode::ErrOutOfRange,
+                    "phones",
+                )
+                .with("min", mandi_domain::core::error::ErrorValue::Number(0))
+                .with(
+                    "max",
+                    mandi_domain::core::error::ErrorValue::Number(
+                        i64::try_from(MAX_FIRM_PHONES).unwrap_or(i64::MAX),
+                    ),
+                ),
+            );
+        }
         errors.finish()?;
         Ok(FirmPrintInfo {
+            more_phones,
             firm_contacts: contacts,
             trade_mark: trade_mark.unwrap_or_default(),
         })
     }
 
-    fn to_json(&self) -> (Value, Value) {
-        (json!(self.firm_contacts), json!(self.trade_mark))
+    fn to_json(&self) -> (Value, Value, Value) {
+        (
+            json!(self.firm_contacts),
+            json!(self.trade_mark),
+            json!(self.more_phones),
+        )
     }
 }
 
@@ -443,15 +484,29 @@ pub fn set_firm_with_print_info(
         )?;
         let old_info = load_print_info(tx)?;
         if old_info != info {
-            let (contacts, trade_mark) = info.to_json();
+            let (contacts, trade_mark, more_phones) = info.to_json();
             store::set_setting(tx, SETTING_KEY_CONTACTS, &contacts, Some(actor.user_id))?;
             store::set_setting(tx, SETTING_KEY_TRADE_MARK, &trade_mark, Some(actor.user_id))?;
-            let (old_contacts, old_trade_mark) = old_info.to_json();
+            store::set_setting(
+                tx,
+                SETTING_KEY_MORE_PHONES,
+                &more_phones,
+                Some(actor.user_id),
+            )?;
+            let (old_contacts, old_trade_mark, old_more_phones) = old_info.to_json();
             ctx.db.auditor().write(
                 tx,
                 &Event::new(Some(actor.user_id), "edit", "settings")
-                    .old(json!({ "firm_contacts": old_contacts, "trade_mark": old_trade_mark }))
-                    .new_value(json!({ "firm_contacts": contacts, "trade_mark": trade_mark }))
+                    .old(json!({
+                        "firm_contacts": old_contacts,
+                        "trade_mark": old_trade_mark,
+                        "firm_more_phones": old_more_phones,
+                    }))
+                    .new_value(json!({
+                        "firm_contacts": contacts,
+                        "trade_mark": trade_mark,
+                        "firm_more_phones": more_phones,
+                    }))
                     .into_entry(),
             )?;
         }

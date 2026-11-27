@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { searchMasters, searchRecent, searchTouch } from './api';
+import { NOT_A_SAVE, notePick } from './saved-picks';
 import type { SearchHit, SearchScope } from './types';
 
 /** How many matches a typed search asks for. The list is short on purpose: type more to narrow. */
@@ -126,11 +127,16 @@ export function usePickerHits<H>(source: PickerSource<H>, text: string, open: bo
   };
 }
 
-/** Tells the backend a record was chosen, so it comes first next time (PRD FR-7.41). */
+/** Tells the backend a record was chosen, so it comes first next time (PRD FR-7.41). It is told once
+    more when an entry is saved after the choice (plan 100 I, `saved-picks.ts`). */
 export function useTouchRecord<H>(source: PickerSource<H>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => source.touch(id),
+    mutationFn: (id: number) => {
+      notePick(`${source.key.join('|')}|${String(id)}`, () => source.touch(id));
+      return source.touch(id);
+    },
+    meta: NOT_A_SAVE,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [...source.key] }),
   });
 }

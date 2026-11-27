@@ -1,7 +1,8 @@
 // Typed wrappers around the dashboard and attention commands (plan 19). Both are read only: they
 // write nothing and work out nothing the screens could not read (Code Standards B29).
 
-import type { AttentionList } from '../../bindings/AttentionList';
+import type { AttentionPanel } from '../../bindings/AttentionPanel';
+import type { AttentionSnoozeInput } from '../../bindings/AttentionSnoozeInput';
 import type { BuyerDuesInput } from '../../bindings/BuyerDuesInput';
 import type { BuyerDuesPage } from '../../bindings/BuyerDuesPage';
 import type { BuyerDuesPrintInput } from '../../bindings/BuyerDuesPrintInput';
@@ -39,6 +40,10 @@ import type { PrintSellerDuesInput } from '../../bindings/PrintSellerDuesInput';
 import type { PrintTotalDuesInput } from '../../bindings/PrintTotalDuesInput';
 import type { SellerDuesPrintInput } from '../../bindings/SellerDuesPrintInput';
 import type { TotalDuesPrintInput } from '../../bindings/TotalDuesPrintInput';
+import type { PrintTotalWorthInput } from '../../bindings/PrintTotalWorthInput';
+import type { TotalWorthInput } from '../../bindings/TotalWorthInput';
+import type { TotalWorthPage } from '../../bindings/TotalWorthPage';
+import type { TotalWorthPrintInput } from '../../bindings/TotalWorthPrintInput';
 import { callCommand } from '../../shared/api';
 import type { PrintSalesInput } from '../../bindings/PrintSalesInput';
 import type { SalesDay } from '../../bindings/SalesDay';
@@ -52,9 +57,15 @@ export function dashboardGet(): Promise<Dashboard> {
   return callCommand<Dashboard>('dashboard_get');
 }
 
-/** The attention list and the number on the bell (PRD FR-7.44). */
-export function assistAttention(): Promise<AttentionList> {
-  return callCommand<AttentionList>('assist_attention');
+/** The bell's panel: its three groups and the number on the bell (PRD FR-7.44, plan 100 J). Read only. */
+export function assistAttention(): Promise<AttentionPanel> {
+  return callCommand<AttentionPanel>('assist_attention');
+}
+
+/** "Later": hides one item of the panel until the next بکری is saved (plan 100 J). Nothing in the books changes. */
+export function assistSnooze(itemKey: string): Promise<null> {
+  const input: AttentionSnoozeInput = { item_key: itemKey };
+  return callCommand<null>('assist_snooze', { input });
 }
 
 /**
@@ -239,4 +250,23 @@ export function dashboardCashSalesDayPrintData(
 
 export function dashboardCashSalesDayPrint(input: PrintCashSalesDayInput): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('dashboard_cash_sales_day_print', { input });
+}
+
+/**
+ * One page of the money to have or to give of کل مالیت, with each source's total, the two totals and the net
+ * (PRD FR-9.10, FR-19.11, plan 100 B). The net is the backend's; the screen never takes one side from the
+ * other. Read only.
+ */
+export function dashboardTotalWorth(input: TotalWorthInput): Promise<TotalWorthPage> {
+  return callCommand<TotalWorthPage>('dashboard_total_worth', { input });
+}
+
+/** Both sides of کل مالیت with every row, written in the print language for the preview (PRD FR-9.10, FR-19.3). */
+export function dashboardTotalWorthPrintData(input: TotalWorthPrintInput): Promise<TablePrintData> {
+  return callCommand<TablePrintData>('dashboard_total_worth_print_data', { input });
+}
+
+/** Prints کل مالیت, or saves it as a PDF: the same language and paper as the preview. */
+export function dashboardTotalWorthPrint(input: PrintTotalWorthInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('dashboard_total_worth_print', { input });
 }

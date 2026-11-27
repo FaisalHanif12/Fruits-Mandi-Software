@@ -761,3 +761,7 @@ err-partner-has-linked-balance = This { -shirakat-dar } cannot be made inactive 
 
 # review: pending
 err-openings-already-in-cash = Every old { -ibtidai-baqaya } is already in the { -rokar }. There is nothing to move.
+
+# PRD FR-7.47, FR-7.93 (plan 100): the undo of a save is only straight after it, in the same session.
+# review: pending
+err-undo-expired = Undo works only straight after saving. To take this entry back now, cancel it with the reason, the { -dastakhat } and the { -shirakat-dar } code.

@@ -4,7 +4,7 @@ The audit viewer: every change with who did it, when, what it was, the reason, a
 values. It is read only (`audit_list`, `audit_options`); nothing here edits or deletes. It sits in
 Settings as its own tab (`/settings?tab=audit`) and is exported as `AuditLog`.
 
-- `pages/AuditPage.tsx`: the viewer. The filters (who, action, area, a record of an area, dates, words)
+- `pages/AuditPage.tsx`: the viewer. The filters (who, action, kind of event, security events only, area, a record of an area, dates, words)
   and the open entry are kept in `store.ts`, so a language switch loses nothing. A filter change asks
   the backend once, 250 ms after the last key. A refusal that points at a box shows under that box.
 - `components/AuditResults.tsx`: the list one page at a time (the shared pager) with the backend's

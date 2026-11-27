@@ -875,6 +875,35 @@ const EXPECTED_FILES: &[&str] = &[
     "AttentionFirst.ts",
     "AttentionItem.ts",
     "AttentionList.ts",
+    // Plan 100 (append-only block).
+    "CancelProof.ts",
+    "BikriCancelRequest.ts",
+    "BikriWriteOffUndoRequest.ts",
+    "VoucherCancelRequest.ts",
+    "FruitCancelRequest.ts",
+    "PurchaseCancelRequest.ts",
+    "PurchaseWriteOffUndoRequest.ts",
+    "TripEntryCancelRequest.ts",
+    "GardenEntryCancelRequest.ts",
+    "ArrivalCancelRequest.ts",
+    "GardenReopenRequest.ts",
+    "ArrivalWriteOffUndoRequest.ts",
+    "AuditEventKind.ts",
+    "TotalWorthTile.ts",
+    "TotalWorthSide.ts",
+    "TotalWorthSource.ts",
+    "TotalWorthRow.ts",
+    "TotalWorthPart.ts",
+    "TotalWorthInput.ts",
+    "TotalWorthPage.ts",
+    "TotalWorthPrintInput.ts",
+    "PrintTotalWorthInput.ts",
+    "AttentionPanel.ts",
+    "AttentionPartyGroup.ts",
+    "AttentionPartyRow.ts",
+    "AttentionPayableRow.ts",
+    "AttentionPanelItem.ts",
+    "AttentionSnoozeInput.ts",
     "ScreenStateGetInput.ts",
     "ScreenStateSetInput.ts",
     "ScreenState.ts",
@@ -1648,6 +1677,25 @@ fn export_bindings() {
     // Run B, plan 19 (append-only block).
     mandi_reports::dashboard::Dashboard::export_all(&cfg).unwrap();
     mandi_reports::dashboard::AttentionList::export_all(&cfg).unwrap();
+    // Plan 100 (append-only block).
+    mandi_services::core::cancel::CancelProof::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::BikriCancelRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::BikriWriteOffUndoRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::VoucherCancelRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::FruitCancelRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::PurchaseCancelRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::PurchaseWriteOffUndoRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::TripEntryCancelRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::GardenEntryCancelRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::ArrivalCancelRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::GardenReopenRequest::export_all(&cfg).unwrap();
+    mandi_services::core::cancel::ArrivalWriteOffUndoRequest::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalWorthInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalWorthPage::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::TotalWorthPrintInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintTotalWorthInput::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::AttentionPanel::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::dashboard::AttentionSnoozeInput::export_all(&cfg).unwrap();
     mandi_app_lib::commands::screen_prefs::ScreenStateGetInput::export_all(&cfg).unwrap();
     mandi_app_lib::commands::screen_prefs::ScreenStateSetInput::export_all(&cfg).unwrap();
     mandi_app_lib::commands::screen_prefs::ScreenState::export_all(&cfg).unwrap();
@@ -1938,7 +1986,7 @@ fn plan_04_contract_shapes() {
             "mandi_ur: string",
             "mandi_en: string",
             "address: string",
-            "phone: string",
+            "phones: Array<string>",
             "firm_contacts: Array<FirmContact>",
             "trade_mark: string",
             "confirmed_rules_words: Array<string>",

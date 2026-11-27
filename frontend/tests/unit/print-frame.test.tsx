@@ -144,14 +144,14 @@ describe.each(LANGUAGES)(
             ...base.header.firm,
             mandi: language === 'ur' ? 'نیو سبزی منڈی، دکان 7' : 'New Sabzi Mandi, Shop 7',
             address: 'Shop 12-14, Kot Radha Kishan',
-            phone: '0300-1112233',
+            phones: ['0300-1112233'],
           },
         },
       };
       const { root } = show(data);
       const lines = [...root.querySelectorAll<HTMLElement>('.print-firm-line')];
-      // The mandi line, the address and phone line, and the three contact persons.
-      expect(lines).toHaveLength(5);
+      // The phones' line, the mandi line, the address line and the three contact persons.
+      expect(lines).toHaveLength(6);
       for (const line of lines) {
         expect(bareText(line), textOf(line)).not.toMatch(/\d/);
       }
@@ -178,7 +178,7 @@ describe.each(LANGUAGES)(
         ...base,
         header: {
           ...base.header,
-          firm: { ...base.header.firm, address: 'Kot Radha Kishan', phone: '' },
+          firm: { ...base.header.firm, address: 'Kot Radha Kishan', phones: [] },
         },
       };
       const { root } = show(data);

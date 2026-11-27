@@ -35,6 +35,7 @@ import { message, visible } from '../helpers/render';
 import { settlePreview } from '../helpers/preview-settled';
 
 const money = (rupees: number) => paisaForTest(rupees * 100);
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -730,6 +731,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
       { code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED', field: 'confirm_cash_below_zero' },
     ];
     await user.type(field('gardens-cancel-reason'), 'Wrong shop');
+    await typeSignAndCode(user, language);
     await user.click(
       screen.getByRole('button', { name: message(language, 'gardens-cancel-confirm') }),
     );
@@ -738,6 +740,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
         id: 14,
         version: 1,
         reason: 'Wrong shop',
+        ...CANCEL_SECRETS,
         confirm_cash_below_zero: false,
       });
     });
@@ -754,6 +757,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
       id: 14,
       version: 1,
       reason: 'Wrong shop',
+      ...CANCEL_SECRETS,
       confirm_cash_below_zero: true,
     });
   });
@@ -905,13 +909,19 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     const dialog = await screen.findByRole('alertdialog');
     expect(visible(dialog.textContent)).toContain(message(language, 'gardens-reopen-title'));
     await user.type(within(dialog).getByRole('combobox'), 'Wrong day');
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', { name: message(language, 'gardens-reopen-confirm') }),
     );
     await waitFor(() => {
       expect(fake.saved.reopens).toHaveLength(1);
     });
-    expect(fake.saved.reopens[0]).toEqual({ id: 1, version: 2, reason: 'Wrong day' });
+    expect(fake.saved.reopens[0]).toEqual({
+      id: 1,
+      version: 2,
+      reason: 'Wrong day',
+      ...CANCEL_SECRETS,
+    });
   });
 
   it('the keyboard alone does an installment: type the amount, Enter to the reason, F10', async () => {

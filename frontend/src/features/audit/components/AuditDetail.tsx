@@ -10,7 +10,7 @@ import type { AuditRow } from '../../../bindings/AuditRow';
 import { withoutSignChanges } from '../../../shared/edit';
 import { ListGrid } from '../../../shared/grid';
 import { Button, Card, Code, Num } from '../../../shared/ui';
-import { actionWord, entityWord } from '../words';
+import { actionWord, entityWord, kindMessageId } from '../words';
 import { CHANGE_COLUMNS, whenText, type ChangeRow } from '../columns';
 
 interface AuditDetailProps {
@@ -57,15 +57,22 @@ export function AuditDetail({ row, onBack }: AuditDetailProps) {
             {row.user?.display_name ?? text('audit-system-user')}
           </DetailFact>
           <DetailFact labelId="audit-col-action">{actionWord(row.action, text)}</DetailFact>
+          {row.kind === null ? null : (
+            <DetailFact labelId="audit-filter-kind">{text(kindMessageId(row.kind))}</DetailFact>
+          )}
           <DetailFact labelId="audit-col-entity">{entityWord(row.entity, text)}</DetailFact>
           {row.entity_id === null ? null : (
             <DetailFact labelId="audit-col-record">
               <Code>{String(row.entity_id)}</Code>
             </DetailFact>
           )}
-          {row.reason === null ? null : (
-            <DetailFact labelId="audit-col-reason">{row.reason}</DetailFact>
-          )}
+          <DetailFact labelId="audit-col-reason">
+            {row.reason === null || row.reason === '' ? (
+              <span className="text-ink-muted">{text('audit-value-none')}</span>
+            ) : (
+              row.reason
+            )}
+          </DetailFact>
         </dl>
       </Card>
       {changes.length === 0 ? (

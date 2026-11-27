@@ -213,8 +213,8 @@ describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (la
     ['dashboard-tile-trips', '/trips'],
     ['dashboard-tile-gardens', '/gardens'],
     ['dashboard-tile-lent', '/dues/lent'],
-    // The tile of today's cash sales replaced the books check tile (plan 79 item 2c).
-    ['dashboard-tile-cash-sales', '/cash-sales'],
+    // The tile کل مالیت replaced today's cash sales (plan 100 B).
+    ['dashboard-tile-worth', '/total-worth'],
     // The kharch page: the shop's kharch per head and each partner's own (PRD FR-9.5, plan 77).
     ['dashboard-tile-expenses', '/kharch'],
     // The tile of garden owners' and others' dues replaced the last backup tile (plan 76 point 10).
@@ -310,8 +310,10 @@ describe.each(LANGUAGES)('the quick actions Past Sales and Party Ledgers (%s)', 
     // The buttons keep their natural width in ONE row (plan 93 T6, Umar 22-11-2026): no grid, no stretched button.
     // What does not fit goes behind "More" (tests in overflow-row.test.tsx).
     expect(group).not.toHaveClass('grid');
+    // Eight: since plan 100 B today's cash sales is also a quick action, so its page stays reachable
+    // after its tile became کل مالیت.
     const buttons = within(group).getAllByRole('button');
-    expect(buttons).toHaveLength(7);
+    expect(buttons).toHaveLength(8);
     for (const button of buttons) {
       expect(button).not.toHaveClass('justify-center');
       expect(button).not.toHaveClass('w-full');
@@ -528,15 +530,13 @@ describe.each(LANGUAGES)('the states of the dashboard (%s)', (language) => {
   });
 });
 
-describe.each(LANGUAGES)('today’s cash sales tile and the new version (%s)', (language) => {
-  it('the tile of today’s cash sales shows the backend’s figure and how many buyers paid; the books check tile is gone', async () => {
+describe.each(LANGUAGES)('the total worth tile and the new version (%s)', (language) => {
+  it('the tile کل مالیت shows the net big, with money to have and to give under it; the cash sales tile is gone', async () => {
     await openDashboard(language);
     await whenLoaded(language);
-    expect(tileText(language, 'dashboard-tile-cash-sales')).toContain(
-      message(language, 'dashboard-tile-cash-sales-note', {
-        count: DASHBOARD_WORKED_DAY.tiles.cash_sales_today_buyers,
-      }),
-    );
+    // The worked day (plan 100 B): have 80,048, give 14,560, net 65,488.
+    const text = tileText(language, 'dashboard-tile-worth');
+    for (const figure of ['65,488', '80,048', '14,560']) expect(text).toContain(figure);
     expect(() => tile(language, 'dashboard-tile-health')).toThrow();
     // The tile of garden owners' and others' dues stands where the last backup tile was; the backup state is
     // in the status bar and the attention list (plan 76 point 10).

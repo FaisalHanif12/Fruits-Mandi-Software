@@ -39,6 +39,7 @@ import { message, renderIn, visible } from '../helpers/render';
 import { fakeTrips } from '../helpers/trips';
 import * as trips from '../helpers/trips-real';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -414,13 +415,14 @@ describe.each(LANGUAGES)(
         }),
         'by mistake',
       );
+      await typeSignAndCode(user, language);
       await user.click(
         screen.getByRole('button', { name: message(language, 'purchases-write-off-undo-confirm') }),
       );
       await waitFor(() => {
         expect(purchasesApi.purchasesWriteOffUndo).toHaveBeenCalledWith(
           trips.WRITE_OFF_LAST_2.move_id,
-          'by mistake',
+          { reason: 'by mistake', ...CANCEL_SECRETS },
         );
       });
       // The real answer says the trip did not open again, so the short message is the one told.

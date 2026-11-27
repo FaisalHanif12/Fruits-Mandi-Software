@@ -82,20 +82,17 @@ describe.each(LANGUAGES)("the روکڑ بک with Umar's real books (%s)", (langu
     expect(visible(pageText())).toContain(rangeText(language, 1, 23, 23));
   });
 
-  it('shows the capital and the cash at the start and at the end of the window as the backend sent them', async () => {
+  it('shows the capital and the cash at the end of the window as the backend sent them', async () => {
     await open();
-    // The window starts before the first line (29-10-2026), so nothing was in hand: 0. It ends at 1,057,840, and
-    // the partners put in 1,400,000.
+    // The window ends at 1,057,840, and the partners put in 1,400,000. There is no card for the cash at the start
+    // (plan 100).
     const capital = await screen.findByText(named(message(language, 'cashbook-card-capital')));
-    const opening = await screen.findByText(named(message(language, 'cashbook-opening')));
     const closing = await screen.findByText(named(message(language, 'cashbook-closing')));
     // One card holds its label and its own figure.
     const cardOf = (label: HTMLElement) => visible(label.closest('dt')?.parentElement?.textContent);
     await waitFor(() => {
       expect(cardOf(capital)).toContain('1,400,000');
-      expect(cardOf(opening)).toContain('0');
       expect(cardOf(closing)).toContain('1,057,840');
     });
-    expect(cardOf(opening)).not.toContain('1,057,840');
   });
 });

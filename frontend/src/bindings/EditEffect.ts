@@ -16,11 +16,12 @@ export type EditEffect = {
    */
   cash: EffectCash | null;
   /**
-   * Each partner whose share changes. Empty while the partner section is locked.
+   * Each partner whose share changes. Empty while the partner section is locked, except in an
+   * edit of a partner's personal expense or its return (PRD FR-17.11 v1.61).
    */
   partners: Array<EffectPartner>;
   /**
-   * True while the partner section is locked (PRD FR-17.11): `partners` is then empty and the
+   * True when `partners` is left out because the partner section is locked (PRD FR-17.11): the
    * screen shows "کوڈ درج کریں" in its place.
    */
   partners_locked: boolean;

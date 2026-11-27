@@ -1,6 +1,6 @@
 // The quick action buttons of the dashboard (PRD 9.3, NFR-USE-9): a new بکری, وصولی, ادائیگی, پیشگی
-// and خرچہ, then پچھلی بکری and پارٹی کھاتے (plan 93 T5: they open their screens and have no key of their own, so
-// they show no key), and the day book. Each shows its key where it has one (PRD FR-7.4); the keys themselves work
+// and خرچہ, then پچھلی بکری, پارٹی کھاتے and آج کی نقدی (plan 93 T5, plan 100 B: they open their screens and have no
+// key of their own, so they show no key), and the day book. Each shows its key where it has one (PRD FR-7.4); the keys themselves work
 // from every screen (the app shell registers them). Plain buttons of the shared kit, at their natural width in ONE
 // row: the ones that do not fit the window go behind "More" at the end of the row (plan 93 T6, Umar 22-11-2026).
 
@@ -15,7 +15,7 @@ interface QuickAction {
   /** The Fluent message ID of the words of the button. */
   labelId: string;
   to: Destination;
-  /** The key of the action, where there is one: the two screens at the end have none. */
+  /** The key of the action, where there is one: the screens at the end have none. */
   shortcut?: Shortcut;
   primary?: boolean;
 }
@@ -56,6 +56,8 @@ const ACTIONS: readonly QuickAction[] = [
   // No key exists for these two, so none is shown (PRD FR-7.4).
   { id: 'past-sales', labelId: 'dashboard-open-past-sales', to: { kind: 'bikri-today' } },
   { id: 'party-ledgers', labelId: 'dashboard-open-party-ledgers', to: { kind: 'party-ledgers' } },
+  // The نقدی page lost its tile to کل مالیت and keeps its way in here (plan 100 B).
+  { id: 'cash-sales', labelId: 'dashboard-open-cash-sales', to: { kind: 'cash-sales' } },
 ];
 
 export function QuickActions() {

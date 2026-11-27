@@ -3,10 +3,11 @@
 // balance went down), the sellers' balances and party cards, the partners' totals and statements,
 // a garden's history, the search recents and the day.
 
+import type { FruitCancelRequest } from '../../bindings/FruitCancelRequest';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useDebouncedValue, usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { fruitCancel, fruitEdit, fruitGet, fruitList, fruitPreview, fruitSave } from './api';
-import type { FruitCancelInput, FruitInput, FruitListInput, FruitSaveRequest } from './types';
+import type { FruitInput, FruitListInput, FruitSaveRequest } from './types';
 
 export const FRUIT_KEY = ['fruit'] as const;
 /** A pause so a burst of key presses in a filter asks once. */
@@ -56,7 +57,7 @@ export function useSaveFruit() {
 export function useCancelFruit() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: FruitCancelInput) => fruitCancel(input),
+    mutationFn: (input: FruitCancelRequest) => fruitCancel(input),
     onSuccess: () => readAgainAfterFruit(queryClient),
   });
 }

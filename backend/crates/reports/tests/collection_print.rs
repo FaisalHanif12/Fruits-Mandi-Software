@@ -135,6 +135,7 @@ fn firm() -> FirmNames {
         mandi_en: "New Sabzi Mandi, Kot Radha Kishan".into(),
         address: "Kot Radha Kishan".into(),
         phone: "03001234567".into(),
+        more_phones: Vec::new(),
         contacts: Vec::new(),
         trade_mark: String::new(),
     }

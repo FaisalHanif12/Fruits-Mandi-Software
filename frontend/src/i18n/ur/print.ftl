@@ -872,3 +872,14 @@ print-cash-sales-col-bikri = { -bikri }
 
 # review: pending
 print-cash-sales-col-bill = بل
+
+## The print of کل مالیت (plan 100 B, PRD FR-9.10): the title and the two column headings.
+
+# review: pending
+print-total-worth-title = کل مالیت
+
+# review: pending
+print-total-worth-col-party = { -khata }
+
+# review: pending
+print-total-worth-col-amount = رقم

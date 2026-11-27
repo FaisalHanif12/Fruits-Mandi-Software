@@ -2,6 +2,8 @@
 // Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
 
 import { callCommand } from '../../shared/api';
+import type { VoucherCancelRequest } from '../../bindings/VoucherCancelRequest';
+import type { CancelSecrets } from '../../shared/ui';
 import type { VoucherEditable } from '../../bindings/VoucherEditable';
 import type { EditPreview } from '../../bindings/EditPreview';
 import type { Link } from '../../bindings/Link';
@@ -110,21 +112,22 @@ export function vouchersOpenForEdit(id: number): Promise<VoucherEditable> {
   return callCommand<VoucherEditable>('vouchers_open_for_edit', { input: { id } });
 }
 
-/** Cancels a saved voucher with a reason, by reversal (PRD FR-15.3). */
-export function vouchersCancel(input: {
-  id: number;
-  version: number;
-  reason: string;
-  confirm: boolean;
-}): Promise<VoucherCancelled> {
-  return callCommand<VoucherCancelled>('vouchers_cancel', {
-    input: {
-      id: input.id,
-      version: input.version,
-      reason: input.reason,
-      confirm_cash_below_zero: input.confirm,
-    },
-  });
+/**
+ * Cancels a saved voucher with a reason, by reversal (PRD FR-15.3). It carries the Owner's sign and the
+ * partner code, which the backend checks first (PRD FR-7.93).
+ */
+export function vouchersCancel(
+  input: CancelSecrets & { id: number; version: number; confirm: boolean },
+): Promise<VoucherCancelled> {
+  const request: VoucherCancelRequest = {
+    id: input.id,
+    version: input.version,
+    reason: input.reason,
+    sign: input.sign,
+    partner_code: input.partner_code,
+    confirm_cash_below_zero: input.confirm,
+  };
+  return callCommand<VoucherCancelled>('vouchers_cancel', { input: request });
 }
 
 /** One saved voucher, with its version and whether it can still be edited. */

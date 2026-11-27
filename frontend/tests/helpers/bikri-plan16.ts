@@ -3,6 +3,7 @@
 // wrappers must have been mocked with vi.mock in the test file. `fakeBikri()` (the plan 12 and 13
 // commands) is separate.
 
+import type { CancelSecrets } from '../../src/shared/ui';
 import { vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
@@ -109,6 +110,8 @@ export interface FakePlan16 {
   undos: { id: number; confirm: boolean }[];
   writeOffs: { lotId: number; qty: string; reason: string }[];
   writeOffUndos: { moveId: number; reason: string }[];
+  /** What every cancel carried besides: the reason, the sign and the partner code, as sent (plan 100 C). */
+  secrets: CancelSecrets[];
 }
 
 /**
@@ -135,6 +138,7 @@ export function fakePlan16(
     undos: [],
     writeOffs: [],
     writeOffUndos: [],
+    secrets: [],
   };
   const rows = options.rows ?? [stockRow()];
   vi.mocked(bikriApi.bikriStockList).mockImplementation((input) => {
@@ -214,9 +218,10 @@ export function fakePlan16(
   vi.mocked(bikriApi.bikriCancelPreview).mockResolvedValue(
     options.cancelPreview ?? cancelPreview(),
   );
-  vi.mocked(bikriApi.bikriCancel).mockImplementation((id, version, reason, confirm) => {
+  vi.mocked(bikriApi.bikriCancel).mockImplementation((id, version, secrets, confirm) => {
     unconfirmed(confirm);
-    store.cancels.push({ id, version, reason, confirm });
+    store.cancels.push({ id, version, reason: secrets.reason, confirm });
+    store.secrets.push(secrets);
     return Promise.resolve({ bikri_id: id, number: 1, reversal_entry_ids: [10] });
   });
   vi.mocked(bikriApi.bikriUndo).mockImplementation((id, confirm) => {
@@ -234,8 +239,9 @@ export function fakePlan16(
       balance: 0,
     });
   });
-  vi.mocked(bikriApi.bikriWriteOffUndo).mockImplementation((moveId, reason) => {
-    store.writeOffUndos.push({ moveId, reason });
+  vi.mocked(bikriApi.bikriWriteOffUndo).mockImplementation((moveId, secrets) => {
+    store.writeOffUndos.push({ moveId, reason: secrets.reason });
+    store.secrets.push(secrets);
     return Promise.resolve({
       lot_id: 40,
       reversal_move_id: 71,

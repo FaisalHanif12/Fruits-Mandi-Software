@@ -25,7 +25,9 @@ use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
 use serde_json::{Value, json};
 
-pub use index::{AccountPage, Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, Usage, short_running};
+pub use index::{
+    AccountPage, Index, MAX_FULL_LIST, MAX_HITS, MOST_USED_FIRST, RECENT_KEPT, Usage, short_running,
+};
 
 use crate::auth::Actor;
 use crate::context::Context;

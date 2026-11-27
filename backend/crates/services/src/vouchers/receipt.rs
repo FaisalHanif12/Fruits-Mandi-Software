@@ -496,6 +496,12 @@ pub fn save_receipts_batch(
                 });
             }
             Err(ServiceError::Rejected(items)) => {
+                // Each line is its own save: one refused on a closed day is audited.
+                let refused = ServiceError::Rejected(items);
+                crate::audit::note_refused_save(ctx, "vouchers_save_receipts_batch", &refused);
+                let ServiceError::Rejected(items) = refused else {
+                    return Err(refused);
+                };
                 rows.push(ReceiptRowResult {
                     saved: None,
                     skipped: false,

@@ -20,5 +20,7 @@
   "credit_limit": null,
   "credit_used": 288000,
   "advance_open": null,
+  "advance_covered": null,
+  "net_payable": null,
   "warnings": []
 }

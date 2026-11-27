@@ -11,6 +11,11 @@ export type VouchersListInput = {
    */
   voucher_type: VoucherType | null;
   /**
+   * Several kinds in one list, for example `money_lent` and `money_lent_return` (plan 100 F).
+   * When given and not empty it is used instead of `voucher_type`.
+   */
+  voucher_types?: Array<VoucherType>;
+  /**
    * From this day, `DD-MM-YYYY`, or empty for the start.
    */
   from: string;

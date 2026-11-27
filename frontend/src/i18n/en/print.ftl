@@ -872,3 +872,14 @@ print-cash-sales-col-bikri = { -bikri }
 
 # review: pending
 print-cash-sales-col-bill = Bill
+
+## The print of Total Worth (plan 100 B, PRD FR-9.10): the title and the two column headings.
+
+# review: pending
+print-total-worth-title = Total Worth
+
+# review: pending
+print-total-worth-col-party = Account
+
+# review: pending
+print-total-worth-col-amount = Amount

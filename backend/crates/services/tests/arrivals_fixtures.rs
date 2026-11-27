@@ -25,12 +25,12 @@ use std::path::{Path, PathBuf};
 
 use common::set_today;
 use mandi_services::core::arrivals::{
-    ArrivalCancelInput, ArrivalGetInput, ArrivalInput, ArrivalWriteOffInput,
-    ArrivalWriteOffUndoInput, ArrivalsListInput, SellDateInput,
+    ArrivalGetInput, ArrivalInput, ArrivalWriteOffInput, ArrivalsListInput, SellDateInput,
 };
 use mandi_services::core::bikri::{
     BikriDraft, BikriSaveInput, HeaderInput, LotInput, ReadyGoodsInput, StockListInput,
 };
+use mandi_services::core::cancel::{ArrivalCancelRequest, ArrivalWriteOffUndoRequest};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::gardens::{GardenCloseInput, GardenInput};
 use mandi_services::core::purchases::PurchaseInput;
@@ -348,9 +348,9 @@ fn arrivals_fixtures_of_the_date_to_sell_the_arrival_and_its_linked_lot() {
 
     // Cancel is refused once something is sold; a write-off of the rest can be undone.
     let after = gardens::arrivals::get(ctx, &typed::<ArrivalGetInput>(&get)).unwrap();
-    let cancel = json!({ "id": id, "version": after.version, "reason": "غلط" });
-    let error =
-        gardens::arrivals::cancel(ctx, owner, &typed::<ArrivalCancelInput>(&cancel)).unwrap_err();
+    let cancel = json!({ "partner_code": "4826", "sign": "adnan",  "id": id, "version": after.version, "reason": "غلط" });
+    let error = gardens::arrivals::cancel(ctx, owner, &typed::<ArrivalCancelRequest>(&cancel).base)
+        .unwrap_err();
     refusal(
         "gardens_arrival_cancel_has_sales",
         &cancel,
@@ -370,12 +370,16 @@ fn arrivals_fixtures_of_the_date_to_sell_the_arrival_and_its_linked_lot() {
         &error,
         ErrorCode::ErrWriteOffExceedsBalance,
     );
-    let undo = json!({ "move_id": written.move_id, "reason": "غلطی" });
+    let undo = json!({ "partner_code": "4826", "sign": "adnan",  "move_id": written.move_id, "reason": "غلطی" });
     pair(
         "gardens_arrival_write_off_undo",
         &undo,
-        &gardens::arrivals::write_off_undo(ctx, owner, &typed::<ArrivalWriteOffUndoInput>(&undo))
-            .unwrap(),
+        &gardens::arrivals::write_off_undo(
+            ctx,
+            owner,
+            &typed::<ArrivalWriteOffUndoRequest>(&undo).base,
+        )
+        .unwrap(),
     );
 
     // An untouched arrival is cancelled with a reason.
@@ -384,12 +388,12 @@ fn arrivals_fixtures_of_the_date_to_sell_the_arrival_and_its_linked_lot() {
         "item_id": w.banana, "packing_id": w.box_, "qty": "5", "weight": null, "note": "ٹوٹا"
     });
     let spare = gardens::arrivals::save(ctx, owner, &typed::<ArrivalInput>(&spare)).unwrap();
-    let cancel =
-        json!({ "id": spare.row.id, "version": spare.row.version, "reason": "غلط اندراج" });
+    let cancel = json!({ "partner_code": "4826", "sign": "adnan",  "id": spare.row.id, "version": spare.row.version, "reason": "غلط اندراج" });
     pair(
         "gardens_arrival_cancel",
         &cancel,
-        &gardens::arrivals::cancel(ctx, owner, &typed::<ArrivalCancelInput>(&cancel)).unwrap(),
+        &gardens::arrivals::cancel(ctx, owner, &typed::<ArrivalCancelRequest>(&cancel).base)
+            .unwrap(),
     );
     let all = json!({
         "garden_id": null, "from": null, "to": null, "item_id": null, "state": null,

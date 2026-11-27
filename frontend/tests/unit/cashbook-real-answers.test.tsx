@@ -75,7 +75,7 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
     );
   });
 
-  it('shows the opening, the closing, a minus balance, the words of each kind and the totals of the whole range', async () => {
+  it('shows the closing, the words of each kind and the totals of the whole range, with no opening card', async () => {
     await renderApp('/rokar');
     const list = await screen.findByRole('group', {
       name: named(message(language, 'cashbook-list-label')),
@@ -100,8 +100,9 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
     expect(text).toContain('50,500');
     expect(text).toContain('15,000');
     expect(pageText()).toContain('32,700');
-    // The opening cash of the range is below zero: the minus sign shows.
-    expect(pageText()).toContain('-2,800');
+    // The card of the opening cash was removed in v1.61 (plan 100 G): the range's opening, which is
+    // below zero in this answer, is not shown. The cards are the capital and the cash at the end.
+    expect(pageText()).not.toContain('-2,800');
     expect(pageText()).not.toContain('ERR_');
   });
 

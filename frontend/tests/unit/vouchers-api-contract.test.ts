@@ -12,7 +12,7 @@ import type { OpenPayablesInput } from '../../src/bindings/OpenPayablesInput';
 import type { PaymentInput } from '../../src/bindings/PaymentInput';
 import type { PrintVoucherInput } from '../../src/bindings/PrintVoucherInput';
 import type { ReceiptInput } from '../../src/bindings/ReceiptInput';
-import type { VoucherCancelInput } from '../../src/bindings/VoucherCancelInput';
+import type { VoucherCancelRequest } from '../../src/bindings/VoucherCancelRequest';
 import type { VoucherEditInput } from '../../src/bindings/VoucherEditInput';
 import type { VoucherPreviewInput } from '../../src/bindings/VoucherPreviewInput';
 import type { VoucherPrintDataInput } from '../../src/bindings/VoucherPrintDataInput';
@@ -122,16 +122,21 @@ describe('each wrapper sends the command and the input of the backend', () => {
     const [, sent] = call.mock.lastCall ?? [];
     expect(sent).toEqual({ input: { ...edit, sign: undefined } });
     expect(Object.keys((sent as { input: object }).input)).not.toContain('sign');
-    const cancel: VoucherCancelInput = {
+    // A cancel carries the partner code and the sign beside its reason (PRD FR-7.93, v1.61).
+    const cancel: VoucherCancelRequest = {
       id: 501,
       version: 2,
       reason: 'typed twice',
+      sign: 'adnan',
+      partner_code: '4826',
       confirm_cash_below_zero: false,
     };
     await api.vouchersCancel({
       id: cancel.id,
       version: cancel.version,
       reason: cancel.reason,
+      sign: cancel.sign,
+      partner_code: cancel.partner_code,
       confirm: cancel.confirm_cash_below_zero,
     });
     expect(call).toHaveBeenLastCalledWith('vouchers_cancel', { input: cancel });
@@ -224,11 +229,14 @@ describe('each wrapper sends exactly the request the backend’s own test sent',
       confirm: edit.confirm_cash_below_zero,
     });
     expect(call).toHaveBeenLastCalledWith('vouchers_edit', { input: edit });
-    const cancel = real.REQUEST_CANCEL_CASH_LENT;
+    // The recorded request of the cancel, with the two secrets every cancel carries since v1.61.
+    const cancel = { ...real.REQUEST_CANCEL_CASH_LENT, sign: 'adnan', partner_code: '4826' };
     await api.vouchersCancel({
       id: cancel.id,
       version: cancel.version,
       reason: cancel.reason,
+      sign: cancel.sign,
+      partner_code: cancel.partner_code,
       confirm: cancel.confirm_cash_below_zero,
     });
     expect(call).toHaveBeenLastCalledWith('vouchers_cancel', { input: cancel });

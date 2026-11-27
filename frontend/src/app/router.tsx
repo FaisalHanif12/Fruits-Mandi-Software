@@ -238,6 +238,16 @@ const totalDuesRoute = createRoute({
   ),
 });
 
+// کل مالیت (plan 100 B, PRD FR-9.10): every rupee the shop has or must take, what it must give, and the net.
+const totalWorthRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/total-worth',
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/TotalWorthPage'),
+    'TotalWorthPage',
+  ),
+});
+
 const lentOpenRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/dues/lent',
@@ -715,6 +725,7 @@ const appRoutes = [
   buyerDuesRoute,
   sellerDuesRoute,
   totalDuesRoute,
+  totalWorthRoute,
   lentOpenRoute,
   advancesOpenRoute,
   cashSalesRoute,

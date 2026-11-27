@@ -7,14 +7,22 @@
 //! screen); the open amount is `given − returned − adjusted`, worked out here with checked maths
 //! and never below 0. A seller whose advance is fully adjusted still has his row, with 0 open.
 //!
+//! Two more columns split the open amount (PRD FR-9.6 v1.61): what the seller's payable covers
+//! ("بقایا میں سے کٹ چکی") and what it does not (پیشگی باقی, the tile). The payable working is as it
+//! stands now, so for a day before today both are empty, as R24's payable figures are.
+//!
 //! Example (E2E-7): رحیم given 15,000, returned 0, adjusted 15,000, open 0. (E2E-31) given
-//! 15,000, returned 10,000, adjusted 5,000, open 0.
+//! 15,000, returned 10,000, adjusted 5,000, open 0. (Plan 100) a payable of 117,040 and an open
+//! advance of 100,000: covered 100,000, uncovered 0.
 
 use mandi_core::money::Paisa;
+use mandi_core::seller_net::net_of;
 use mandi_db::rusqlite::Connection;
 use mandi_db::vouchers::advance_totals;
 
 use super::super::PageSpec;
+use super::grouped::payable_sums;
+use super::payables::working_of;
 use crate::error::ReportsError;
 use crate::reports::common::{add, col, count_of, date_cell, load_parties, paisa, party_of_line};
 use crate::reports::filters::Typed;
@@ -31,8 +39,21 @@ pub(crate) fn columns() -> Vec<Column> {
         col("returned", ids::COL_RETURNED, ColumnKind::Money),
         col("adjusted", ids::COL_ADJUSTED, ColumnKind::Money),
         col("open", ids::COL_OPEN, ColumnKind::Money),
+        col("covered", ids::COL_ADVANCE_COVERED, ColumnKind::Money),
+        col("uncovered", ids::COL_ADVANCE_UNCOVERED, ColumnKind::Money),
         col("last_date", ids::COL_LAST_DATE, ColumnKind::Date),
     ]
+}
+
+/// The covered and uncovered cells, empty when they are not known.
+fn split_cells(split: Option<[Paisa; 2]>) -> [Cell; 2] {
+    match split {
+        Some([covered, uncovered]) => [
+            Cell::Money { paisa: covered },
+            Cell::Money { paisa: uncovered },
+        ],
+        None => [Cell::Empty, Cell::Empty],
+    }
 }
 
 /// Builds R26.
@@ -49,7 +70,13 @@ pub(crate) fn run(
         .today
         .ok_or_else(|| ReportsError::Data("the report has no today".to_owned()))?
         .to_iso();
-    let as_of = typed.as_of.clone().unwrap_or(today);
+    let as_of = typed.as_of.clone().unwrap_or_else(|| today.clone());
+    // The payables are known only as they stand now (as R24 does).
+    let sums = if as_of >= today {
+        Some(payable_sums(conn, typed.seller_id)?)
+    } else {
+        None
+    };
     let mut totals = advance_totals(conn, &as_of, typed.seller_id)?;
     // A seller in the dead amount has his advance netted into R38 (PRD FR-10.10, A66).
     let dead = mandi_db::dead::dead_set(conn, Some(&as_of))?;
@@ -62,7 +89,8 @@ pub(crate) fn run(
         code(a.account_id).cmp(&code(b.account_id))
     });
 
-    let mut sums = [Paisa::ZERO; 4];
+    let mut totals_of_columns = [Paisa::ZERO; 4];
+    let mut split_totals = [Paisa::ZERO; 2];
     let mut all_rows = Vec::with_capacity(totals.len());
     for t in totals {
         let given = paisa(t.given_paisa)?;
@@ -75,9 +103,25 @@ pub(crate) fn run(
                 t.account_id
             )));
         }
-        for (slot, amount) in sums.iter_mut().zip([given, returned, adjusted, left]) {
+        for (slot, amount) in totals_of_columns
+            .iter_mut()
+            .zip([given, returned, adjusted, left])
+        {
             add(slot, amount)?;
         }
+        let split = match &sums {
+            Some(sums) => {
+                let payable = working_of(sums, t.account_id, None)?.open;
+                let uncovered = net_of(payable, left)?.uncovered_advance;
+                let covered = left.checked_sub(uncovered)?;
+                for (slot, amount) in split_totals.iter_mut().zip([covered, uncovered]) {
+                    add(slot, amount)?;
+                }
+                Some([covered, uncovered])
+            }
+            None => None,
+        };
+        let [covered_cell, uncovered_cell] = split_cells(split);
         all_rows.push(Row {
             cells: vec![
                 Cell::Party {
@@ -87,6 +131,8 @@ pub(crate) fn run(
                 Cell::Money { paisa: returned },
                 Cell::Money { paisa: adjusted },
                 Cell::Money { paisa: left },
+                covered_cell,
+                uncovered_cell,
                 date_cell(t.last_date),
             ],
             source: Some(RowSource {
@@ -97,7 +143,8 @@ pub(crate) fn run(
         });
     }
 
-    let [given, returned, adjusted, left] = sums;
+    let [given, returned, adjusted, left] = totals_of_columns;
+    let [covered_total, uncovered_total] = split_cells(sums.as_ref().map(|_| split_totals));
     Ok(ReportPage {
         group_above: None,
         tables: Vec::new(),
@@ -116,6 +163,8 @@ pub(crate) fn run(
             Cell::Money { paisa: returned },
             Cell::Money { paisa: adjusted },
             Cell::Money { paisa: left },
+            covered_total,
+            uncovered_total,
             Cell::Empty,
         ],
         summary: Vec::new(),

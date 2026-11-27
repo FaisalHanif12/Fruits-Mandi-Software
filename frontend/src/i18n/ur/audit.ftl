@@ -294,3 +294,149 @@ audit-entity-trip-cost = { -safar } خرچ
 
 # review: pending
 audit-entity-trip-other-sale = دوسری دکان میں فروخت
+
+# Plan 100 D (PRD FR-21.3 v1.61): every action and area the app writes has words, never a code.
+# review: pending
+audit-action-change-split = تقسیم بدلی گئی
+
+# review: pending
+audit-action-close = بند کیا گیا
+
+# review: pending
+audit-action-reopen = دوبارہ کھولا گیا
+
+# review: pending
+audit-action-day-fix-open = اندراج درست کرنے کے لیے دن کھولا گیا
+
+# review: pending
+audit-action-day-fix-close = درستی کے بعد دن دوبارہ بند ہوا
+
+# review: pending
+audit-action-mixed-save = باقی مال کے ساتھ { -bikri } محفوظ ہوئی
+
+# review: pending
+audit-action-mixed-undo = محفوظ کرنا واپس لیا گیا
+
+# review: pending
+audit-action-opening-moved-to-cash = { -ibtidai-baqaya } { -rokar } میں درج ہوا
+
+# review: pending
+audit-action-opening-on-closed-day = بند دن پر { -ibtidai-baqaya }
+
+# review: pending
+audit-action-set-sell-date = تاریخ فروخت بدلی گئی
+
+# review: pending
+audit-action-reveal = بیک اپ کی چابی دکھائی گئی
+
+# review: pending
+audit-action-reveal-refused = بیک اپ کی چابی نہیں دکھائی گئی
+
+# review: pending
+audit-action-partner-code-failed = غلط { -shirakat-dar } کوڈ
+
+# review: pending
+audit-action-partner-code-set = { -shirakat-dar } کوڈ بنایا گیا
+
+# review: pending
+audit-action-partner-code-change = { -shirakat-dar } کوڈ بدلا گیا
+
+# review: pending
+audit-action-partner-code-reset = { -shirakat-dar } کوڈ نیا بنایا گیا
+
+# review: pending
+audit-action-partner-unlock = { -shirakat-dar } کا حصہ کھولا گیا
+
+# review: pending
+audit-action-assistant-key-save = سوال پوچھیں کی چابی محفوظ ہوئی
+
+# review: pending
+audit-action-assistant-key-replace = سوال پوچھیں کی چابی بدلی گئی
+
+# review: pending
+audit-action-assistant-key-remove = سوال پوچھیں کی چابی ہٹائی گئی
+
+# review: pending
+audit-action-day-reopen-sign-wrong = غلط { -dastakhat }: دن کھولنا
+
+# review: pending
+audit-action-day-fix-sign-wrong = غلط { -dastakhat }: دن کھول کر درستی
+
+# review: pending
+audit-action-voucher-edit-sign-wrong = غلط { -dastakhat }: واؤچر میں تبدیلی
+
+# review: pending
+audit-action-owner-sign-change-sign-wrong = غلط { -dastakhat }: { -dastakhat } بدلنا
+
+# review: pending
+audit-action-garden-rent-sign-wrong = غلط { -dastakhat }: { -thaika } بدلنا
+
+# review: pending
+audit-action-openings-to-cash-sign-wrong = غلط { -dastakhat }: { -ibtidai-baqaya } { -rokar } میں
+
+# review: pending
+audit-action-cancel-sign-wrong = غلط { -dastakhat }: منسوخی
+
+# review: pending
+audit-action-lockout-started = غلط کوششوں کے بعد انتظار شروع ہوا
+
+# review: pending
+audit-action-closed-day-refused = دن بند ہونے کی وجہ سے محفوظ نہیں ہوا
+
+# review: pending
+audit-entity-assistant-key = سوال پوچھیں کی چابی
+
+# review: pending
+audit-entity-chukta-buyer = { -chukta } { -gahak }
+
+# review: pending
+audit-entity-collection-list = { -agrahi } فہرست
+
+# review: pending
+audit-entity-fruit-take = { -phal }
+
+# review: pending
+audit-entity-garden = { -bagh }
+
+# review: pending
+audit-entity-garden-arrival = مال آیا
+
+# review: pending
+audit-entity-garden-entry = { -bagh } کا اندراج
+
+# review: pending
+audit-entity-garden-installment = { -bagh } کی قسط
+
+# review: pending
+audit-entity-partner-code = { -shirakat-dar } کوڈ
+
+# Plan 100 D: the two new filters of the log.
+# review: pending
+audit-filter-kind = قسم
+
+# review: pending
+audit-filter-security = صرف حفاظتی واقعات
+
+# review: pending
+audit-kind-edit = تبدیلیاں
+
+# review: pending
+audit-kind-cancel = منسوخیاں
+
+# review: pending
+audit-kind-reopen = دن کھولنا
+
+# review: pending
+audit-kind-wrong-code = غلط { -shirakat-dar } کوڈ
+
+# review: pending
+audit-kind-wrong-sign = غلط { -dastakhat }
+
+# review: pending
+audit-kind-wrong-password = غلط پاس ورڈ
+
+# review: pending
+audit-kind-lockout = غلط کوششوں پر انتظار
+
+# review: pending
+audit-kind-closed-day = بند دن پر روکا گیا

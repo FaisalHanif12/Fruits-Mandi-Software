@@ -626,8 +626,34 @@ fn short(payload: &Value) -> String {
     payload.to_string().chars().take(260).collect()
 }
 
+/// True when all a refused save committed is its audit entry "closed_day_refused" (PRD FR-21.3
+/// v1.61, plan 100 D). Every change writes its own audit entry (Code Standards S7), so nothing
+/// else can have been committed.
+fn only_the_closed_day_note(
+    h: &Harness,
+    error: &Value,
+    audit_before: i64,
+    lines_before: i64,
+) -> bool {
+    let closed = error["errors"]
+        .as_array()
+        .is_some_and(|items| items.iter().any(|i| i["code"] == "ERR_DATE_CLOSED"));
+    let new_rows = h.one(&format!(
+        "SELECT COUNT(*) FROM audit_log WHERE id > {audit_before}"
+    ));
+    let notes = h.one(&format!(
+        "SELECT COUNT(*) FROM audit_log WHERE id > {audit_before} AND action = 'closed_day_refused'"
+    ));
+    closed
+        && new_rows == notes
+        && notes == 1
+        && h.one("SELECT COUNT(*) FROM journal_lines") == lines_before
+}
+
 fn attack(h: &Harness, tally: &mut Tally, command: &str, payload: Value) {
     let before = h.data_version();
+    let audit_before = h.one("SELECT COALESCE(MAX(id), 0) FROM audit_log");
+    let lines_before = h.one("SELECT COUNT(*) FROM journal_lines");
     let answer = h.call(command, payload.clone());
     let after = h.data_version();
     tally.calls += 1;
@@ -679,7 +705,10 @@ fn attack(h: &Harness, tally: &mut Tally, command: &str, payload: Value) {
                     }
                 }
             }
-            if before != after && !MAY_COMMIT_ON_ERROR.iter().any(|p| command.starts_with(p)) {
+            if before != after
+                && !MAY_COMMIT_ON_ERROR.iter().any(|p| command.starts_with(p))
+                && !only_the_closed_day_note(h, &error, audit_before, lines_before)
+            {
                 tally.wrote_on_error.push(format!(
                     "{command} {} -> {}",
                     short(&payload),
@@ -1284,10 +1313,21 @@ fn an_entry_of_a_garden_is_not_found_by_the_trip_commands_and_the_other_way_roun
             "SELECT version FROM venture_entries WHERE id = {id}"
         ))
     };
+    // Every cancel asks the code and the sign first (PRD FR-7.93 v1.61, plan 100 C).
+    mandi_services::partner_code::set(
+        &h.world.env.ctx,
+        &h.world.owner,
+        &mandi_services::core::partner_code::PartnerCodeSetInput {
+            password: common::OWNER_PASSWORD.to_owned(),
+            code: "4826".to_owned(),
+            code_again: "4826".to_owned(),
+        },
+    )
+    .unwrap();
     let control = h.call(
         "gardens_entry_cancel",
         json!({ "input": { "id": garden_cost, "version": version(garden_cost), "reason": "x",
-            "confirm_cash_below_zero": true } }),
+            "confirm_cash_below_zero": true, "partner_code": "4826", "sign": "adnan" } }),
     );
     println!(
         "CONTROL gardens_entry_cancel on the cost of the closed garden -> {:?}",
@@ -1303,7 +1343,7 @@ fn an_entry_of_a_garden_is_not_found_by_the_trip_commands_and_the_other_way_roun
     ] {
         let before = h.data_version();
         let payload = json!({ "input": { "id": id, "version": version(id), "reason": "x",
-            "confirm_cash_below_zero": true } });
+            "confirm_cash_below_zero": true, "partner_code": "4826", "sign": "adnan" } });
         let code = match h.call(command, payload.clone()) {
             Ok(_) => "OK".to_owned(),
             Err(e) => e["errors"][0]["code"].as_str().unwrap_or("IPC").to_owned(),

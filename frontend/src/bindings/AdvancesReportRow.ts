@@ -27,6 +27,17 @@ export type AdvancesReportRow = {
    */
   open_paisa: Paisa;
   /**
+   * The part of `open_paisa` his open payable does not cover (PRD v1.61, plan 100 A): the
+   * open advance less the payable, never below 0. The tile پیشگی باقی is its total. Null when
+   * the report is as of a day before today (the payable working is not dated).
+   */
+  uncovered_paisa: Paisa | null;
+  /**
+   * The part of `open_paisa` his payable covers, shown as "بقایا میں سے کٹ چکی". Null when 0,
+   * and when `uncovered_paisa` is null.
+   */
+  advance_covered: Paisa | null;
+  /**
    * The day of his last advance, `YYYY-MM-DD`.
    */
   last_date: string | null;

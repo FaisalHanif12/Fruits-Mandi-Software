@@ -26,10 +26,11 @@ use std::path::{Path, PathBuf};
 
 use common::set_today;
 use mandi_services::core::bikri::{BikriDraft, BikriSaveInput};
+use mandi_services::core::cancel::{GardenEntryCancelRequest, GardenReopenRequest};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::gardens::{
-    GardenCloseInput, GardenEntryCancelInput, GardenEntryInput, GardenGetInput, GardenInput,
-    GardenReopenInput, GardenSetPartnersInput, GardensListInput,
+    GardenCloseInput, GardenEntryInput, GardenGetInput, GardenInput, GardenSetPartnersInput,
+    GardensListInput,
 };
 use mandi_services::core::statement::PartnersStatementInput;
 use mandi_services::{ServiceError, bikri, gardens, partners};
@@ -388,12 +389,16 @@ fn garden_fixtures_of_e2e_40() {
         &error,
         ErrorCode::ErrGardenClosed,
     );
-    let cancel_closed = json!({
+    let cancel_closed = json!({ "partner_code": "4826", "sign": "adnan",
         "id": labour_saved.id, "version": labour_saved.version, "reason": "wrong",
         "confirm_cash_below_zero": false
     });
-    let error = gardens::entry_cancel(ctx, owner, &typed::<GardenEntryCancelInput>(&cancel_closed))
-        .unwrap_err();
+    let error = gardens::entry_cancel(
+        ctx,
+        owner,
+        &typed::<GardenEntryCancelRequest>(&cancel_closed).base,
+    )
+    .unwrap_err();
     refusal(
         "gardens_entry_cancel_garden_closed",
         &cancel_closed,
@@ -416,7 +421,7 @@ fn garden_fixtures_of_e2e_40() {
     );
 
     // The undo of the closing, the cancel of the labour, and the closing again.
-    let reopen = json!({
+    let reopen = json!({ "partner_code": "4826", "sign": "adnan",
         "id": garden,
         "version": gardens::get(ctx, &typed::<GardenGetInput>(&get_json(garden))).unwrap().row.version,
         "reason": "wrong day"
@@ -424,7 +429,7 @@ fn garden_fixtures_of_e2e_40() {
     pair(
         "gardens_reopen_e2e40",
         &reopen,
-        &gardens::reopen(ctx, owner, &typed::<GardenReopenInput>(&reopen)).unwrap(),
+        &gardens::reopen(ctx, owner, &typed::<GardenReopenRequest>(&reopen).base).unwrap(),
     );
     pair(
         "gardens_get_reopened",
@@ -434,16 +439,16 @@ fn garden_fixtures_of_e2e_40() {
     let error = gardens::reopen(
         ctx,
         owner,
-        &typed::<GardenReopenInput>(&json!({
+        &typed::<GardenReopenRequest>(&json!({ "partner_code": "4826", "sign": "adnan", 
             "id": garden,
             "version": gardens::get(ctx, &typed::<GardenGetInput>(&get_json(garden))).unwrap().row.version,
             "reason": "again"
-        })),
+        })).base,
     )
     .unwrap_err();
     refusal(
         "gardens_reopen_not_closed",
-        &json!({
+        &json!({ "partner_code": "4826", "sign": "adnan",
             "id": garden,
             "version": gardens::get(ctx, &typed::<GardenGetInput>(&get_json(garden))).unwrap().row.version,
             "reason": "again"
@@ -451,18 +456,19 @@ fn garden_fixtures_of_e2e_40() {
         &error,
         ErrorCode::ErrGardenNotClosed,
     );
-    let cancel = json!({
+    let cancel = json!({ "partner_code": "4826", "sign": "adnan",
         "id": labour_saved.id, "version": labour_saved.version, "reason": "wrong garden",
         "confirm_cash_below_zero": false
     });
     pair(
         "gardens_entry_cancel_cost",
         &cancel,
-        &gardens::entry_cancel(ctx, owner, &typed::<GardenEntryCancelInput>(&cancel)).unwrap(),
+        &gardens::entry_cancel(ctx, owner, &typed::<GardenEntryCancelRequest>(&cancel).base)
+            .unwrap(),
     );
     // Cancelling it again is refused: it is cancelled already.
-    let error =
-        gardens::entry_cancel(ctx, owner, &typed::<GardenEntryCancelInput>(&cancel)).unwrap_err();
+    let error = gardens::entry_cancel(ctx, owner, &typed::<GardenEntryCancelRequest>(&cancel).base)
+        .unwrap_err();
     assert!(matches!(error, ServiceError::Rejected(_)));
 }
 

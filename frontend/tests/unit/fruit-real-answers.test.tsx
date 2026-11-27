@@ -31,6 +31,7 @@ import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { settlePreview } from '../helpers/preview-settled';
 import { message, visible } from '../helpers/render';
 import { sendsTheSame } from '../helpers/shapes';
+import { typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -482,6 +483,7 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     await user.click(screen.getByRole('button', { name: startsWith('edit-action-cancel') }));
     await screen.findByRole('alertdialog');
     await user.type(field('fruit-cancel-reason'), 'not taken');
+    await typeSignAndCode(user, language);
     await user.click(
       within(screen.getByRole('alertdialog')).getByRole('button', {
         name: startsWith('fruit-cancel-confirm'),
@@ -501,6 +503,7 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     await user.click(screen.getByRole('button', { name: startsWith('edit-action-cancel') }));
     const dialog = await screen.findByRole('alertdialog');
     await user.type(field('fruit-cancel-reason'), 'again');
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', { name: startsWith('fruit-cancel-confirm') }),
     );

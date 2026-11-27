@@ -16,7 +16,7 @@ export type SellerDuesPage = {
    */
   total_count: number;
   /**
-   * The shop owes these sellers: Σ payable of the sellers the party and the search match, whatever
+   * The shop owes these sellers: Σ net payable of the sellers the party and the search match, whatever
    * the side. With no party and no search it is the tile بیوپاریوں کو ادائیگی باقی.
    */
   shop_owes_paisa: Paisa;
@@ -26,7 +26,7 @@ export type SellerDuesPage = {
    */
   seller_owes_paisa: Paisa;
   /**
-   * Σ of their open advances (the tile پیشگی باقی).
+   * Σ of their open advances not covered by a payable (the tile پیشگی باقی).
    */
   advances_open_paisa: Paisa;
   /**

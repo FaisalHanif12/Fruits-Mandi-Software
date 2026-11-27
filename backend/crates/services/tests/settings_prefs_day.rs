@@ -104,6 +104,7 @@ fn plan_17e_contacts_and_trade_mark_save_with_an_audit_row_and_read_back() {
         FirmPrintInfo::default()
     );
     let info = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![
             contact("آصف بھٹی", "Asif Bhatti", "0300-4058860"),
             contact("اکرم", "Akram", "03211234567"),
@@ -159,6 +160,7 @@ fn plan_17e_a_contact_phone_typed_in_urdu_digits_is_stored_and_printed_in_plain_
     let (_dir, env, owner) = owner_ready();
     let firm = settings::get(&env.ctx).unwrap().firm;
     let info = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![contact("علی", "Ali", "۰۳۰۰۱۲۳۴۵۶۷")],
         trade_mark: String::new(),
     };
@@ -179,6 +181,7 @@ fn plan_17e_contact_and_trade_mark_mistakes_come_back_together_and_nothing_is_sa
     let firm = settings::get(&env.ctx).unwrap().firm;
     let before = settings_audit(&dir).len();
     let bad = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![
             contact("Asif", "Asif", "0300-4058860"), // Urdu name in Latin letters
             contact("اکرم", "اکرم", "0123"),         // English name in Urdu, bad phone
@@ -202,6 +205,7 @@ fn plan_17e_contact_and_trade_mark_mistakes_come_back_together_and_nothing_is_sa
     }
     // More than 6 people: out of range at the list, with the limits.
     let seven = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![contact("علی", "Ali", "03001234567"); 7],
         trade_mark: String::new(),
     };

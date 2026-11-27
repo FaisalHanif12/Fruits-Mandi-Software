@@ -7,6 +7,7 @@ import type { AttentionFirst } from '../../bindings/AttentionFirst';
 import type { AttentionKind } from '../../bindings/AttentionKind';
 import type { ReportId } from '../../bindings/ReportId';
 import type { SellerDuesSide } from '../../bindings/SellerDuesSide';
+import type { PickerValue } from '../../shared/ui';
 import { useOpenArrival } from '../gardens';
 
 export type Destination =
@@ -16,6 +17,8 @@ export type Destination =
   | { kind: 'stock' }
   /** The party ledgers screen of the بکری area: each party's balance, day by day (PRD FR-12.43, plan 93 T5). */
   | { kind: 'party-ledgers' }
+  /** One seller's or buyer's history on that screen (plan 100 J: a row of the bell). */
+  | { kind: 'party-statement'; side: 'buyer' | 'seller'; party: number }
   | { kind: 'cashbook' }
   | { kind: 'trips' }
   | { kind: 'gardens' }
@@ -37,8 +40,10 @@ export type Destination =
   | { kind: 'lent-open' }
   /** Every seller with an open advance (the tile پیشگی باقی, PRD FR-9.1). */
   | { kind: 'advances-open' }
-  /** نقدی day by day (the tile آج کی نقدی, PRD FR-9.8). */
+  /** نقدی day by day (the quick action آج کی نقدی, PRD FR-9.8). */
   | { kind: 'cash-sales' }
+  /** کل مالیت: money to have, money to give and the net (the tile کل مالیت, PRD FR-9.10, plan 100). */
+  | { kind: 'total-worth' }
   /** The commission page: one month, a row for each day (PRD FR-9.3, plan 76 point 7). */
   | { kind: 'commission' }
   /** The sales page: one month, a row for each day with sales (the tile آج کی بکری, PRD FR-9.9, plan 83). */
@@ -55,7 +60,8 @@ export type Destination =
   /** The question log of the assistant, in Settings (PRD FR-7.84, FR-7.76 point 2, plan 80 R6-3). */
   | { kind: 'settings-assistant' }
   | { kind: 'receipt' }
-  | { kind: 'payment' }
+  /** A new ادائیگی, with an account already chosen where one is named (plan 100 J: a payable of the bell). */
+  | { kind: 'payment'; party?: PickerValue }
   | { kind: 'advance' }
   | { kind: 'report'; id: ReportId; party?: number; partner?: number };
 
@@ -143,6 +149,12 @@ export function useOpenDestination(): (destination: Destination) => void {
       case 'party-ledgers':
         void navigate({ to: '/bikri/party-ledgers' });
         return;
+      case 'party-statement':
+        void navigate({
+          to: '/bikri/party-ledgers',
+          search: { side: destination.side, party: destination.party },
+        });
+        return;
       case 'cashbook':
         void navigate({ to: '/rokar' });
         return;
@@ -191,6 +203,9 @@ export function useOpenDestination(): (destination: Destination) => void {
       case 'cash-sales':
         void navigate({ to: '/cash-sales' });
         return;
+      case 'total-worth':
+        void navigate({ to: '/total-worth' });
+        return;
       case 'commission':
         void navigate({ to: '/commission' });
         return;
@@ -225,7 +240,13 @@ export function useOpenDestination(): (destination: Destination) => void {
         void navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });
         return;
       case 'payment':
-        void navigate({ to: '/bikri/voucher', search: { type: 'payment' } });
+        void navigate({
+          to: '/bikri/voucher',
+          search: {
+            type: 'payment',
+            ...(destination.party === undefined ? {} : { party: destination.party }),
+          },
+        });
         return;
       case 'advance':
         void navigate({ to: '/bikri/voucher', search: { type: 'advance' } });

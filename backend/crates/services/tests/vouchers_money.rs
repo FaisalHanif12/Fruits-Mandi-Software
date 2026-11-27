@@ -331,6 +331,7 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
     let list = vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,
@@ -1718,6 +1719,7 @@ fn plan_17e_the_receipt_slip_has_the_shared_header_the_tag_and_the_short_code() 
     assert_eq!(slip(Language::En).pages[0].party.tag.as_deref(), Some("K"));
     let firm = settings::get(&w.env.ctx).unwrap().firm;
     let info = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![FirmContact {
             name_ur: "علی".into(),
             name_en: "Ali".into(),

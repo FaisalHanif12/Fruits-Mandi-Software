@@ -2,12 +2,14 @@
 //! (PRD FR-7.67). The other kinds use the same list and numbering in later plans. A voucher is
 //! never deleted; it is cancelled by a reversal.
 
+use mandi_services::cancel_guard;
+use mandi_services::core::cancel::VoucherCancelRequest;
 use mandi_services::core::links::Link;
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesInput, AdvancesPreview, AdvancesReport, AdvancesReportInput,
-    AdvancesSaved, PaymentInput, ReceiptInput, ReceiptsInput, ReceiptsSaved, VoucherCancelInput,
-    VoucherCancelled, VoucherEditInput, VoucherEditable, VoucherGetInput, VoucherPreview,
-    VoucherPreviewInput, VoucherRow, VoucherSaved, VouchersList, VouchersListInput,
+    AdvancesSaved, PaymentInput, ReceiptInput, ReceiptsInput, ReceiptsSaved, VoucherCancelled,
+    VoucherEditInput, VoucherEditable, VoucherGetInput, VoucherPreview, VoucherPreviewInput,
+    VoucherRow, VoucherSaved, VouchersList, VouchersListInput,
 };
 use mandi_services::{auth, vouchers};
 use serde::Deserialize;
@@ -171,14 +173,18 @@ pub async fn vouchers_edit<R: tauri::Runtime>(
 /// credit again and is matched to his oldest bills (FR-12.22). Errors: `ERR_NOT_FOUND` (`id`),
 /// `ERR_VERSION_CHANGED`, `ERR_VOUCHER_CANCELLED`, `ERR_REASON_REQUIRED` (`reason`),
 /// `ERR_DATE_CLOSED`, `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn vouchers_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: VoucherCancelInput,
+    input: VoucherCancelRequest,
 ) -> Result<VoucherCancelled, UiError> {
     run(app, "vouchers_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        vouchers::cancel(ctx, &actor, &input)
+        cancel_guard::cancel_voucher(ctx, &actor, &input)
     })
     .await
 }

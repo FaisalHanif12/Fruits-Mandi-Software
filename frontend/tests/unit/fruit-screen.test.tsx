@@ -29,6 +29,7 @@ import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { settlePreview } from '../helpers/preview-settled';
 import { message, visible } from '../helpers/render';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -377,13 +378,19 @@ describe.each(LANGUAGES)('the fruit screen (%s)', (language) => {
     await user.click(screen.getByRole('button', { name: startsWith('edit-action-cancel') }));
     const dialog = await screen.findByRole('alertdialog');
     await user.type(field('fruit-cancel-reason'), 'mistake');
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', { name: startsWith('fruit-cancel-confirm') }),
     );
     await waitFor(() => {
       expect(fake.saved.cancels).toHaveLength(1);
     });
-    expect(fake.saved.cancels[0]).toMatchObject({ id: 1, version: 1, reason: 'mistake' });
+    expect(fake.saved.cancels[0]).toMatchObject({
+      id: 1,
+      version: 1,
+      reason: 'mistake',
+      ...CANCEL_SECRETS,
+    });
     expect(fake.lots[0]?.balance).toBe(5);
     await screen.findByText(
       said(message(language, 'fruit-cancelled-toast', { number: fruitNumber(1) })),

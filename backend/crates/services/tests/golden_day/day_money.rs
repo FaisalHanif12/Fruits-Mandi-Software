@@ -177,6 +177,7 @@ fn e2e_8_9_10_12_event_5_on_the_khercha_screen_completes_the_day() {
     let list = vouchers::list(
         &w.env.ctx,
         &VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,

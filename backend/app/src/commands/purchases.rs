@@ -2,12 +2,14 @@
 //! write-off of spoiled goods. Every command needs the signed-in Owner. The preview, the list and
 //! the get only read (Code Standards B29); the others are one transaction each (Code Standards B3).
 
+use mandi_services::cancel_guard;
 use mandi_services::core::arrivals::{SellDateInput, SellDateSet};
+use mandi_services::core::cancel::{PurchaseCancelRequest, PurchaseWriteOffUndoRequest};
 use mandi_services::core::purchases::{
-    PurchaseCancelInput, PurchaseCancelled, PurchaseEntryInput, PurchaseEntryPreview,
-    PurchaseEntrySaved, PurchaseGetInput, PurchaseInput, PurchasePreview, PurchaseRow,
-    PurchaseSaved, PurchaseWriteOffDone, PurchaseWriteOffInput, PurchaseWriteOffUndoInput,
-    PurchaseWriteOffUndone, PurchasesList, PurchasesListInput,
+    PurchaseCancelled, PurchaseEntryInput, PurchaseEntryPreview, PurchaseEntrySaved,
+    PurchaseGetInput, PurchaseInput, PurchasePreview, PurchaseRow, PurchaseSaved,
+    PurchaseWriteOffDone, PurchaseWriteOffInput, PurchaseWriteOffUndone, PurchasesList,
+    PurchasesListInput,
 };
 use mandi_services::core::split::{SplitInput, SplitSet};
 use mandi_services::{auth, purchases};
@@ -50,14 +52,18 @@ pub async fn purchases_save<R: tauri::Runtime>(
 /// Errors: `ERR_NOT_FOUND`, `ERR_PURCHASE_CANCELLED`, `ERR_PURCHASE_HAS_SALES`,
 /// `ERR_PURCHASE_CARRIES_TRIP_COST` on `id`; `ERR_VERSION_CHANGED` on `version`;
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on `id`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn purchases_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: PurchaseCancelInput,
+    input: PurchaseCancelRequest,
 ) -> Result<PurchaseCancelled, UiError> {
     run(app, "purchases_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        purchases::cancel(ctx, &actor, &input)
+        cancel_guard::cancel_purchase(ctx, &actor, &input)
     })
     .await
 }
@@ -106,14 +112,18 @@ pub async fn purchases_write_off<R: tauri::Runtime>(
 
 /// Undoes a write-off of trip goods, while its day is open. Errors: `ERR_NOT_FOUND` on `move_id`;
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on `move_id`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn purchases_write_off_undo<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: PurchaseWriteOffUndoInput,
+    input: PurchaseWriteOffUndoRequest,
 ) -> Result<PurchaseWriteOffUndone, UiError> {
     run(app, "purchases_write_off_undo", move |ctx| {
         let actor = auth::require(ctx)?;
-        purchases::write_off_undo(ctx, &actor, &input)
+        cancel_guard::undo_purchase_write_off(ctx, &actor, &input)
     })
     .await
 }

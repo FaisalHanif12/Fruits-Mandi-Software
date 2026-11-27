@@ -13,6 +13,9 @@
 // - `signLabel` adds a second required field below the reason: the Owner's sign (PRD FR-21.4, plan 73).
 //   It is raw text, never converted from Roman letters to Urdu (the sign is compared as typed), and Enter
 //   in the reason goes on to it. A sign the backend refuses is told under it and nothing opens.
+// - `codeLabel` adds a third required field: the 4-digit partner code, masked as it is typed (every cancel
+//   asks it, PRD FR-7.93, plan 100). Only the digits are kept. It is a secret: it stays in this box's state
+//   and goes only to the command; nothing logs it or keeps it. A refusal of it is told under it.
 // - `saveKey` makes F10 act as the action button while the box is open (the box of a saved voucher's change, plan 92):
 //   the box takes the entry keys, so the screen under it does not answer F10 as well.
 
@@ -35,7 +38,16 @@ import { Field } from './Field';
 import { FreeTextInput } from './FreeTextInput';
 import { fieldError } from './field-error';
 import { Notice } from './Notice';
+import { PasswordInput } from './PasswordInput';
 import { TextInput } from './TextInput';
+
+/** The partner code is four digits (PRD FR-17.11). The backend checks it again. */
+const CODE_LENGTH = 4;
+
+/** Only the digits of what was typed, at most four (a hint on the screen, not the rule). */
+function digitsOf(text: string): string {
+  return text.replace(/\D/g, '').slice(0, CODE_LENGTH);
+}
 
 interface ReasonDialogProps {
   open: boolean;
@@ -54,14 +66,21 @@ interface ReasonDialogProps {
   note?: ReactNode;
   /**
    * The action was asked for, with the reason typed (trimmed, never empty) and, when the box has a sign
-   * field, the sign as typed (trimmed, never empty) as the second argument. A box without a sign field calls
-   * it with the reason alone.
+   * field, the sign as typed (trimmed, never empty) as the second argument, and when it has a code field the
+   * four digits as the third. A box without a sign field calls it with the reason alone.
    */
-  onConfirm: (reason: string, sign?: string) => void;
+  onConfirm: (reason: string, sign?: string, code?: string) => void;
   /** The label of the sign field. Only a box that asks for the Owner's sign has one. */
   signLabel?: ReactNode;
   /** A line under the sign field: who can sign. */
   signHint?: ReactNode;
+  /** The label of the partner code field. Only a box that asks for the code has one. */
+  codeLabel?: ReactNode;
+  /** A line under the code field. */
+  codeHint?: ReactNode;
+  /** What the sign and code fields start with, for a box that is opened again after a step between. */
+  initialSign?: string;
+  initialCode?: string;
   /** Fields the action needs besides the reason, shown above it (for example the quantity). */
   extra?: ReactNode;
   /** The field paths `extra` shows its own problems for, so they are not told twice. */
@@ -81,6 +100,10 @@ function ReasonForm({
   reasonLabel,
   signLabel,
   signHint,
+  codeLabel,
+  codeHint,
+  initialSign = '',
+  initialCode = '',
   confirmLabel,
   error,
   busy,
@@ -95,23 +118,27 @@ function ReasonForm({
   onClose,
 }: Omit<ReasonDialogProps, 'open' | 'onOpenChange' | 'title'> & { onClose: () => void }) {
   const [reason, setReason] = useState(initialReason);
-  const [sign, setSign] = useState('');
+  const [sign, setSign] = useState(initialSign);
+  const [code, setCode] = useState(initialCode);
   const [tried, setTried] = useState(false);
   const asksSign = signLabel !== undefined;
+  const asksCode = codeLabel !== undefined;
   const submit = () => {
     const trimmed = reason.trim();
     const signed = sign.trim();
-    if (trimmed === '' || (asksSign && signed === '')) {
+    if (trimmed === '' || (asksSign && signed === '') || (asksCode && code.length < CODE_LENGTH)) {
       setTried(true);
       return;
     }
-    if (asksSign) onConfirm(trimmed, signed);
+    if (asksCode) onConfirm(trimmed, signed, code);
+    else if (asksSign) onConfirm(trimmed, signed);
     else onConfirm(trimmed);
   };
   const navigation = useFormNavigation(submit);
   useShortcut(SHORTCUTS.save, submit, { enabled: saveKey });
   const missing = tried && reason.trim() === '';
   const signMissing = tried && asksSign && sign.trim() === '';
+  const codeMissing = tried && asksCode && code.length < CODE_LENGTH;
   return (
     <form
       {...navigation}
@@ -126,7 +153,12 @@ function ReasonForm({
       {error === null ? null : (
         <ErrorNotice
           error={error}
-          fieldsShown={['reason', ...(asksSign ? ['sign'] : []), ...extraFields]}
+          fieldsShown={[
+            'reason',
+            ...(asksSign ? ['sign'] : []),
+            ...(asksCode ? ['partner_code'] : []),
+            ...extraFields,
+          ]}
         />
       )}
       {note === undefined ? null : <Notice tone="warn">{note}</Notice>}
@@ -176,6 +208,33 @@ function ReasonForm({
                 setSign(text);
                 setTried(false);
               }}
+            />
+          )}
+        </Field>
+      ) : null}
+      {asksCode ? (
+        <Field
+          label={codeLabel}
+          hint={codeHint}
+          error={
+            codeMissing ? (
+              <Localized id="err-partner-code-invalid">
+                <span className="block" />
+              </Localized>
+            ) : (
+              fieldError(error, 'partner_code')
+            )
+          }
+        >
+          {(control) => (
+            <PasswordInput
+              {...control}
+              value={code}
+              onChange={(text) => {
+                setCode(digitsOf(text));
+                setTried(false);
+              }}
+              autoComplete="new-password"
             />
           )}
         </Field>

@@ -39,6 +39,7 @@ import {
 } from '../helpers/trips';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { settlePreview } from '../helpers/preview-settled';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -935,6 +936,7 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await user.click(row);
     await user.click(screen.getByRole('button', { name: message(language, 'edit-action-cancel') }));
     await user.type(combo('trips-cancel-reason'), 'Wrong amount');
+    await typeSignAndCode(user, language);
     await user.click(
       screen.getByRole('button', { name: message(language, 'trips-cancel-confirm') }),
     );
@@ -943,6 +945,7 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
         id: 12,
         version: 1,
         reason: 'Wrong amount',
+        ...CANCEL_SECRETS,
         confirm_cash_below_zero: false,
       });
     });

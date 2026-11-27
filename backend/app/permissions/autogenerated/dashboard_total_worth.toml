@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-total-worth"
+description = "Enables the dashboard_total_worth command without any pre-configured scope."
+commands.allow = ["dashboard_total_worth"]
+
+[[permission]]
+identifier = "deny-dashboard-total-worth"
+description = "Denies the dashboard_total_worth command without any pre-configured scope."
+commands.deny = ["dashboard_total_worth"]

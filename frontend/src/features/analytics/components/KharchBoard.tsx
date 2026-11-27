@@ -4,8 +4,9 @@
 // `expense_part` shop or partner), so the page and the view can never differ. Each part has its own heading, chart and
 // table (the table of every view: page by page, the backend's totals over the whole filter, a window of the period
 // columns), and its own print preview and Excel. Enter on a figure opens the entries behind it (date, entry, name,
-// reason, amount) and Esc returns. The partner part is behind the partner code (PRD FR-17.11): the command refuses it
-// with ERR_PARTNER_LOCKED and the table says "enter the code" in its place, while the shop part shows (ErrorState).
+// reason, amount) and Esc returns. Since v1.61 (plan 100 E, PRD FR-17.11) the partner part, a partner's own spending,
+// needs no partner code. If the backend ever refuses a part with ERR_PARTNER_LOCKED, that table says "enter the
+// code" in its place and the other part still shows (ErrorState).
 //
 // With a partner chosen in the filter (plan 98) his part comes first and the shop part is one line under it, its heading
 // with the backend's total, which a click opens; with no partner the shop part is first, and on the kharch page both

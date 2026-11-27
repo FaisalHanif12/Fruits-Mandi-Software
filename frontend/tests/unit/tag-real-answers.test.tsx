@@ -353,7 +353,7 @@ describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)
     expect(await screen.findByText(message(language, 'settings-saved'))).toBeInTheDocument();
   });
 
-  it('the real refusal of a seventh person shows in the contacts block, with the least and the most', async () => {
+  it('the real refusal of a ninth person shows in the contacts block, with the least and the most', async () => {
     vi.mocked(settingsApi.settingsGet).mockResolvedValue(real.SETTINGS_GET_CONTACTS);
     vi.mocked(settingsApi.settingsSetFirm).mockRejectedValue(
       new CommandError(real.SETTINGS_SET_FIRM_CONTACTS_REFUSED),
@@ -366,7 +366,7 @@ describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)
     press('F10');
     const alert = await within(contactsBlock()).findByRole('alert');
     expect(visible(alert.textContent)).toBe(
-      message(language, 'err-out-of-range', { min: 0, max: 6 }),
+      message(language, 'err-out-of-range', { min: 0, max: 8 }),
     );
     expect(visible(document.body.textContent)).not.toContain('ERR_OUT_OF_RANGE');
   });

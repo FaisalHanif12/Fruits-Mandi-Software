@@ -11,7 +11,12 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
-import { ErrorMessage, ReasonDialog, showToast } from '../../../shared/ui';
+import {
+  ConfirmCancelDialog,
+  ErrorMessage,
+  showToast,
+  type CancelSecrets,
+} from '../../../shared/ui';
 import { useCancelGardenEntry } from '../hooks';
 import { historyKindText } from '../list-columns';
 import type { GardenHistoryRow } from '../types';
@@ -37,16 +42,16 @@ export function CancelGardenEntryDialog({ row, onClose }: CancelGardenEntryDialo
       ? null
       : { ...error, errors: error.errors.filter((item) => item.code !== CASH_CODE) };
 
-  const confirm = (reason: string) => {
+  const confirm = (secrets: CancelSecrets) => {
     const entryId = row?.entry_id ?? null;
     const version = row?.version ?? null;
     if (row === null || entryId === null || version === null) return;
     setError(null);
     cancel
       .mutateAsync({
+        ...secrets,
         id: entryId,
         version,
-        reason,
         confirm_cash_below_zero: cashConfirmed,
       })
       .then(() => {
@@ -65,7 +70,7 @@ export function CancelGardenEntryDialog({ row, onClose }: CancelGardenEntryDialo
   };
 
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (open) return;

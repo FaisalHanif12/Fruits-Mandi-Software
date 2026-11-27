@@ -10,11 +10,11 @@ use crate::print_report::{
     PrintBuyerDuesInput, PrintCashSalesDayInput, PrintCashSalesMonthInput,
     PrintCollectionSheetInput, PrintCommissionInput, PrintLentOpenInput, PrintPartnerMonthInput,
     PrintReportInput, PrintSalesInput, PrintSellerDuesInput, PrintSlipsInput, PrintStatementInput,
-    PrintStatementRowsInput, PrintTotalDuesInput, run_adhari, run_advances_open, run_analytics,
-    run_bikri_list, run_buyer_dues, run_cash_sales_day, run_cash_sales_month, run_collection_sheet,
-    run_commission, run_lent_open, run_parchi, run_partner_month, run_report, run_sale,
-    run_sales_period, run_seller_bills, run_seller_dues, run_statement, run_statement_rows,
-    run_total_dues,
+    PrintStatementRowsInput, PrintTotalDuesInput, PrintTotalWorthInput, run_adhari,
+    run_advances_open, run_analytics, run_bikri_list, run_buyer_dues, run_cash_sales_day,
+    run_cash_sales_month, run_collection_sheet, run_commission, run_lent_open, run_parchi,
+    run_partner_month, run_report, run_sale, run_sales_period, run_seller_bills, run_seller_dues,
+    run_statement, run_statement_rows, run_total_dues, run_total_worth,
 };
 
 /// Prints a report on the printer of Settings, or saves it as a PDF named
@@ -196,6 +196,17 @@ pub async fn dashboard_total_dues_print<R: tauri::Runtime>(
     input: PrintTotalDuesInput,
 ) -> Result<PrintOutcome, UiError> {
     run_total_dues(app, input).await
+}
+
+/// Prints the کل مالیت page, or saves it as `total-worth-<YYYYMMDD>-<language>.pdf` (plan 100,
+/// PRD FR-9.10). The data is `dashboard_total_worth_print_data`. Errors as
+/// `reports_buyer_parchi_print`.
+#[tauri::command]
+pub async fn dashboard_total_worth_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintTotalWorthInput,
+) -> Result<PrintOutcome, UiError> {
+    run_total_worth(app, input).await
 }
 
 /// Prints the page of money lent that is still open, or saves it as

@@ -103,7 +103,7 @@ export function devFirm(withContacts: boolean) {
     mandi_ur: 'نیو سبزی منڈی، کوٹ رادھا کشن',
     mandi_en: 'New Sabzi Mandi, Kot Radha Kishan',
     address: 'Kot Radha Kishan',
-    phone: '0300-1112233',
+    phones: ['0300-1112233', '0321-5556677'],
     firm_contacts: withContacts
       ? [
           {

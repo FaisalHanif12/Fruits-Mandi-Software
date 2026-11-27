@@ -1,6 +1,7 @@
-// The page behind the tile پیشگی باقی (route /dues/advances; PRD FR-9.1, FR-15.8, FR-19.11, plan 79 item 3): every seller with an
-// open advance: what was given, adjusted by his sales, returned, and what is open, with the day of the last
-// advance. The open total under the columns is the tile's figure; with no open advance the page says so. The
+// The page behind the tile پیشگی باقی (route /dues/advances; PRD FR-9.1, FR-15.8, FR-19.11, plan 79 item 3,
+// v1.61 plan 100 A): every seller with an advance his open payable does not cover: what was given, adjusted by
+// his sales, returned, what is open, and the part not covered, with the day of the last advance. The total of
+// the not covered column is the tile's figure; with none the page says so. The
 // rows, the counts and the totals are the backend's (`advances_report` with `only_open`); the screen adds
 // nothing up (CLAUDE.md rule 1).
 //
@@ -50,6 +51,7 @@ export function AdvancesOpenPage() {
     ...printInput(sheet, null),
   }));
   const first = list.data?.pages[0];
+  const uncovered = first?.uncovered_paisa ?? null;
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
 
   const open = useCallback(
@@ -86,6 +88,12 @@ export function AdvancesOpenPage() {
               adjusted: context.money(first.adjusted_paisa),
               returned: context.money(first.returned_paisa),
               open: context.money(first.open_paisa),
+              ...(first.advance_covered === null
+                ? {}
+                : { covered: context.money(first.advance_covered) }),
+              ...(first.uncovered_paisa === null
+                ? {}
+                : { uncovered: context.money(first.uncovered_paisa) }),
             },
     }),
     [first],
@@ -121,7 +129,7 @@ export function AdvancesOpenPage() {
       <ExcelExportNotices exporter={exporter} />
       <dl className="grid grid-cols-2 gap-3">
         <Fact stat label={<Localized id="dashboard-tile-advances" />}>
-          {first === undefined ? null : <Num inherit paisa={first.open_paisa} />}
+          {uncovered === null ? null : <Num inherit paisa={uncovered} />}
         </Fact>
         <Fact stat label={<Localized id="advances-open-sellers" />}>
           {first === undefined ? null : <Num inherit>{String(first.total_count)}</Num>}

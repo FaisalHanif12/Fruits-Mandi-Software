@@ -118,7 +118,7 @@ describe('the روکڑ area by keyboard: خرچہ, type switching and the cash b
     const first = await menu.$('button');
     await first.click();
     await waitForHeading('ur', 'cashbook-title');
-    await waitForAll(t('ur', 'cashbook-opening'), t('ur', 'cashbook-closing'));
+    await waitForAll(t('ur', 'cashbook-card-capital'), t('ur', 'cashbook-closing'));
     const text = await pageText();
     expect(text).toContain(t('ur', 'cashbook-kind-shop-expense'));
     // Only the two date fields can be typed in: there is no cash count box (PRD FR-16.1).

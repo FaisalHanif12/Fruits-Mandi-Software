@@ -19,6 +19,7 @@ use mandi_domain::core::vouchers::{
     AdvanceEffect, BillEffect, LinkedPart, OpenAdvance, OpenBill, VoucherPreview,
     VoucherPreviewInput, VoucherRow, VoucherType,
 };
+use mandi_domain::payables;
 
 use super::common::{Role, balance_of_net, cash_change, stored_cash_change};
 use super::kinds::Planned;
@@ -424,7 +425,10 @@ pub fn preview_with_link(
                         _ => Paisa::ZERO,
                     };
                     let totals = super::reads::seller_totals(conn, account.id, None, minus)?;
-                    let open = totals.open;
+                    // Net everywhere (PRD v1.61, plan 100 A): his payable less his open advance.
+                    let open = payables::net_of(totals.open, totals.advances_open)
+                        .map_err(money_error)?
+                        .payable;
                     payable_open = Some(open);
                     payable_is_zero = open == Paisa::ZERO;
                     if amount > open {

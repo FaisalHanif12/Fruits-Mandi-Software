@@ -188,9 +188,9 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
       ).toBe('');
     });
     expect((await labelled(language, 'cashbook-field-date')).value).toBe('10-10-2026');
-    // The day's list under the form has it, with the backend's total.
+    // The list under the form (30 days, the latest first) has it at once, with the backend's total.
     const list = await screen.findByRole('group', {
-      name: named(message(language, 'cashbook-day-label')),
+      name: named(message(language, 'cashbook-entries-shop-title')),
     });
     await waitFor(() => {
       const text = visible(list.textContent);
@@ -503,10 +503,12 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     });
   });
 
-  it('the day with no shop expense says why and what to do', async () => {
+  it('a window with no shop expense says why and what to do', async () => {
     await open();
-    expect(await screen.findByText(message(language, 'cashbook-day-empty'))).toBeInTheDocument();
-    expect(screen.getByText(message(language, 'cashbook-day-empty-help'))).toBeInTheDocument();
+    expect(
+      await screen.findByText(message(language, 'cashbook-entries-empty')),
+    ).toBeInTheDocument();
+    expect(screen.getByText(message(language, 'cashbook-entries-empty-help'))).toBeInTheDocument();
   });
 
   it('the keyboard alone does it: type the amount, choose the head, F10, then F2 for the next', async () => {

@@ -665,7 +665,7 @@ partners-capital-where-cash-help = یہ رقم { -rokar } میں آ جاتی ہ�
 # review: pending
 partners-capital-where-counted-help = یہ رقم کسی اور ابتدائی رقم میں پہلے سے گنی جا چکی ہے۔ موجود { -rokar } نہیں بدلتی۔
 
-## Advances to sellers in the partner statement (plan 78 B4, PRD FR-17.13). The words are for the lines of `advance_out` and `advance_back`.
+## Advances to sellers in the partner statement (plan 78 B4, PRD FR-17.13). The words are for the lines of `advance_out`, `advance_back` and `advance_covered`.
 
 # review: pending
 partners-month-col-advances = { -peshgi }
@@ -680,6 +680,10 @@ partners-statement-detail-advance-out = { -peshgi } { $subject } { $amount }، �
 # $subject: the seller. $amount: what was settled. $share: his percent.
 # review: pending
 partners-statement-detail-advance-back = { -peshgi } واپس { $subject } { $amount }، آپ کا { $share } فیصد
+
+# $subject: the seller. $amount: what his own credit now covers, coming back (PRD FR-17.13 v1.61). $share: his percent.
+# review: pending
+partners-statement-detail-advance-covered = { -peshgi } { $subject } { $amount }: بقایا میں سے کٹ گئی، آپ کا { $share } فیصد
 
 # Plan 99 (PRD FR-17.3): the open gardens and trips list pages by month.
 

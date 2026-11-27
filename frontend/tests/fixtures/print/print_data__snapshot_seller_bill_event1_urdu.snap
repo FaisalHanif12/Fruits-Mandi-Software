@@ -12,7 +12,9 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
       "name": "ماہر عدنان اینڈ برادرز",
       "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
-      "phone": "0300-1234567"
+      "phones": [
+        "0300-1234567"
+      ]
     },
     "contacts": [],
     "trade_mark": null,
@@ -55,7 +57,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
         {
           "date": "10-10-2026",
           "name": "اکرم ٹول ٹیکس",
-          "item": "کیلا",
+          "item": "کیلا-1",
           "packing": "پیٹی",
           "qty": "20",
           "weight_kg": null,
@@ -67,7 +69,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
         {
           "date": "10-10-2026",
           "name": "ارشد ملتانی",
-          "item": "کیلا",
+          "item": "کیلا-1",
           "packing": "پیٹی",
           "qty": "30",
           "weight_kg": null,

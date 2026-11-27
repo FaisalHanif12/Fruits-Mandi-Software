@@ -132,7 +132,7 @@ describe.each(LANGUAGES)('the روکڑ بک of v1.60 (%s)', (language) => {
     return visible(list.textContent);
   };
 
-  it('has the three cards: capital, cash at the start and cash at the end', async () => {
+  it('has the two cards: capital and cash at the end (the cash at the start is gone, plan 100)', async () => {
     books.store.cashRows.push(
       line({
         type: 'capital_in',
@@ -148,7 +148,6 @@ describe.each(LANGUAGES)('the روکڑ بک of v1.60 (%s)', (language) => {
       screen.getByText((text) => visible(text) === m('cashbook-card-capital')).closest('dl')
         ?.textContent,
     );
-    expect(cards).toContain(m('cashbook-opening'));
     expect(cards).toContain(m('cashbook-closing'));
     for (const figure of ['50,000', '108,484']) expect(cards).toContain(figure);
   });

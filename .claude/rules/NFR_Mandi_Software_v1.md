@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.25 (plan 99 of 27-11-2026; plans 81 and 82 of 20-11-2026; the plan 80 gate decisions of 19-11-2026; Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026, 09-11-2026, 12-11-2026, 15-11-2026 and 18-11-2026) |
+| Version | 1.26 (plan 100 of 28-11-2026; plan 99 of 27-11-2026; plans 81 and 82 of 20-11-2026; the plan 80 gate decisions of 19-11-2026; Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026, 09-11-2026, 12-11-2026, 15-11-2026 and 18-11-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -191,7 +191,7 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | NFR-SEC-2 | Login lockout | As PRD FR-8.2: after 10 wrong tries wait 1 minute, after 10 more wait 5 minutes, then 15 minutes after each further wrong try (v1.18; 5 before; v1.21: each try, not each 10) |
 | NFR-SEC-3 | Idle lock | Locks after 15 minutes idle (setting). Unsaved work stays. |
 | NFR-SEC-4 | Sign-in enforced in the backend | There is one user, the Owner, and no roles (PRD Section 2). Every command except first run, restore on a new computer (only while no Owner exists, PRD FR-20.11), sign-in, recovery, app info and data status is refused by the backend unless the Owner is signed in and the app is not locked. Hiding a button is not enough. |
-| NFR-SEC-5 | Audit trail | Every change to money, rules, shares, the password and settings is logged with who, when, old value, new value, reason. The log cannot be edited or deleted from the app. |
+| NFR-SEC-5 | Audit trail | Every change to money, rules, shares, the password and settings is logged with who, when, old value, new value, reason. The log cannot be edited or deleted from the app. From v1.26 (plan 100) also every wrong password, wrong partner code, wrong sign, wait started and save refused on a closed day, never with the typed secret; every cancel needs the partner code, the sign and a reason (PRD FR-7.93). |
 | NFR-SEC-6 | Tamper evidence | Each journal entry and each audit entry carries a keyed hash of its own content plus the previous entry's hash (a chain). The key is kept in Windows Credential Manager, not in the data file. It also travels inside each USB and cloud copy, locked by the backup key like the data (never in the readable sidecar or a plain local copy), so a restore on a new computer puts it back and the chains still verify (PRD FR-20.11, v1.14). If anyone changes journal or audit records outside the app without the key, the chain no longer matches and the app warns the Owner at the next check. Other tables are protected by the journal: every money table can be rebuilt and compared from the journal. From v1.21 the daily books check does this compare (sale lines, lot totals, partner share rows, stock moves and analytics facts against the posted journal) and warns the Owner like a broken chain. |
 | NFR-SEC-7 | Secrets | Cloud keys and the backup encryption key are stored in Windows Credential Manager, never in plain files or the database |
 | NFR-SEC-8 | Data file protection | Recommended: Windows BitLocker on the laptop disk, so a stolen laptop does not expose the data. The app shows this as a setup tip. |
@@ -200,7 +200,7 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | NFR-SEC-11 | Signed updates | Updates are digitally signed. The app refuses an update that is not signed by us. |
 | NFR-SEC-12 | Recovery | Owner recovery code printed at setup. No "master password" exists anywhere. |
 | NFR-SEC-13 | Exports | Excel and PDF exports need the signed-in Owner, like every other command (NFR-SEC-4) |
-| NFR-SEC-14 | Partner code | The 4-digit partner code (PRD FR-17.11) is stored only as an Argon2id hash, never shown or logged. The backend refuses every partner command and partner report while the section is locked, whatever the screen shows. The one exception is the running total of the shares typed on a new garden or trip form, which reads only what was typed (PRD FR-17.11, v1.22). Wrong codes wait as NFR-SEC-2 (10 wrong codes, then 10 more, v1.18) and are written to the audit log. |
+| NFR-SEC-14 | Partner code | The 4-digit partner code (PRD FR-17.11) is stored only as an Argon2id hash, never shown or logged. The backend refuses every partner command and partner report while the section is locked, whatever the screen shows. The one exception is the running total of the shares typed on a new garden or trip form, which reads only what was typed (PRD FR-17.11, v1.22). Wrong codes wait as NFR-SEC-2 (10 wrong codes, then 10 more, v1.18) and are written to the audit log. From v1.26 (plan 100, Umar 28-11-2026) a partner's personal expense (ذاتی خرچہ and its واپسی, with his کل رقم before and after) and the partner part of the kharch page and view M are also open without the code. |
 | NFR-SEC-15 | The assistant's key | The OpenRouter key is kept only in Windows Credential Manager (NFR-SEC-7). It is never in the database, a backup, a log, the support file (NFR-OBS-4) or any answer to the screens, which see only that a key is saved and its last 4 characters. Saving, replacing and removing it need the Owner's password and write an audit entry without the key (PRD FR-7.85). |
 
 ---
@@ -414,6 +414,7 @@ Umar (01-11-2026 and 02-11-2026): the model is the brain of the question panel o
 | 1.16 | 06-11-2026 | Approved by Umar (PRD v1.29): the fixed part of an assistant request may be 11,600 tokens (NFR-AI-5), for the item group filter. |
 | 1.17 | 09-11-2026 | PRD v1.32, approved by Umar through D8 (his demo feedback of 08-11-2026): 1,000 sale lines in one بکری (NFR-SCL-3); 4 fields and 4 `Enter`s when a line may take credit (NFR-USE-6); digits 0 to 9 only (NFR-URD-14). |
 | 1.18 | 12-11-2026 | PRD v1.35, approved by Umar (12-11-2026): the wrong-try limit of the password and the partner code goes from 5 to 10 (NFR-SEC-2, NFR-SEC-14). |
+| 1.26 | 28-11-2026 | Plan 100 (Umar): audit of security events and the cancel guard (NFR-SEC-5); personal expense open without the partner code (NFR-SEC-14). |
 | 1.25 | 27-11-2026 | Plan 99 (Umar): the everyday words target NFR-URD-30; the fixed part of an assistant request may be 12,200 tokens (NFR-AI-5), within the 12,800 Umar approved. |
 | 1.24 | 21-11-2026 | Plan 82 live check: the identical copy of a slow model call goes after 7 s (NFR-AI-3). |
 | 1.23 | 20-11-2026 | Approved by Umar (plan 82): the fixed part of an assistant request may be 11,800 tokens (NFR-AI-5), measured 11,695 with D6 prompt v1.13. |

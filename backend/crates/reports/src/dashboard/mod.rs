@@ -21,12 +21,16 @@ mod lent;
 mod lists;
 mod model;
 pub(crate) mod narrow;
+mod panel;
+mod panel_model;
 mod sales;
 mod seller_dues;
 mod signals;
 mod strip;
 mod tiles;
 mod total_dues;
+mod total_worth;
+mod total_worth_model;
 
 use mandi_core::dates::BusinessDate;
 use mandi_db::Db;
@@ -70,6 +74,11 @@ pub use narrow::{
     DuesParts, SalesToday, SellersNow, TilesNow, buyers_dues, cash_in_hand, dead, sales_today,
     sellers, stock, tiles_now, total_dues,
 };
+pub use panel::attention_panel;
+pub use panel_model::{
+    AttentionPanel, AttentionPanelItem, AttentionPartyGroup, AttentionPartyRow,
+    AttentionPayableRow, PANEL_TOP,
+};
 pub use sales::plans as sales_plans;
 pub use sales::{
     SalesDay, SalesDayInput, SalesDayRow, SalesPeriod, SalesPeriodInput, SalesPeriodRow,
@@ -83,6 +92,11 @@ pub use total_dues::{
     LentOpenInput, LentOpenPage, LentOpenPrintInput, LentOpenRow, TotalDues, TotalDuesPart,
     TotalDuesPrintInput, TotalDuesSection, lent_open, lent_open_print_data, lent_open_spec,
     total_dues as total_dues_parts, total_dues_print_data, total_dues_spec,
+};
+pub use total_worth::{total_worth, total_worth_print_data, total_worth_spec};
+pub use total_worth_model::{
+    TotalWorthInput, TotalWorthPage, TotalWorthPart, TotalWorthPrintInput, TotalWorthRow,
+    TotalWorthSide, TotalWorthSource, TotalWorthTile,
 };
 
 /// What the tiles and the attention list both read, loaded once.

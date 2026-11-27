@@ -122,6 +122,7 @@ fn live_vouchers(w: &World, kinds: &[VoucherType]) -> Vec<(i64, VoucherType)> {
     vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,

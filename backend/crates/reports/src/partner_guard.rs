@@ -18,7 +18,7 @@
 //! Example: R29 for October with no partner picked still shows the shop expenses by head while
 //! locked, but not الف's 2,000 taken.
 
-use crate::analytics::{AnalyticsExpensePart, AnalyticsFilters, AnalyticsView};
+use crate::analytics::{AnalyticsFilters, AnalyticsView};
 use crate::reports::{GardenView, ReportFilters, ReportId, TripView};
 
 /// What a request needs from the partner code.
@@ -59,11 +59,9 @@ pub fn report_need(id: ReportId, filters: &ReportFilters) -> PartnerNeed {
 pub fn analytics_need(view: AnalyticsView, filters: &AnalyticsFilters) -> PartnerNeed {
     match view {
         AnalyticsView::F | AnalyticsView::K => PartnerNeed::Refuse,
-        // The partner part of view M is each partner's kharch; its shop part works without the code
-        // (PRD FR-17.11, plan 77).
-        AnalyticsView::M if filters.expense_part == Some(AnalyticsExpensePart::Partner) => {
-            PartnerNeed::Refuse
-        }
+        // View M, both parts: each partner's own kharch (ذاتی خرچہ) is not behind the code
+        // (PRD FR-17.11 v1.61, plan 100 E).
+        AnalyticsView::M => PartnerNeed::None,
         _ if filters.partner_id.is_some() => PartnerNeed::Refuse,
         AnalyticsView::I | AnalyticsView::J => PartnerNeed::HideParts,
         _ => PartnerNeed::None,
@@ -73,6 +71,7 @@ pub fn analytics_need(view: AnalyticsView, filters: &AnalyticsFilters) -> Partne
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analytics::AnalyticsExpensePart;
 
     #[test]
     fn the_partner_reports_and_views_are_refused_and_the_mixed_ones_hide_their_parts() {
@@ -139,24 +138,24 @@ mod tests {
     }
 
     #[test]
-    fn only_the_partner_part_of_view_m_needs_the_partner_code() {
-        let shop = AnalyticsFilters::default();
-        assert_eq!(analytics_need(AnalyticsView::M, &shop), PartnerNeed::None);
-        let partners = AnalyticsFilters {
-            expense_part: Some(AnalyticsExpensePart::Partner),
-            ..AnalyticsFilters::default()
-        };
-        assert_eq!(
-            analytics_need(AnalyticsView::M, &partners),
-            PartnerNeed::Refuse
-        );
-        let shop_part = AnalyticsFilters {
-            expense_part: Some(AnalyticsExpensePart::Shop),
-            ..AnalyticsFilters::default()
-        };
-        assert_eq!(
-            analytics_need(AnalyticsView::M, &shop_part),
-            PartnerNeed::None
-        );
+    fn view_m_needs_no_partner_code_even_for_the_partner_part_or_one_partner() {
+        // PRD FR-17.11 v1.61: a partner's own kharch is open.
+        for part in [
+            None,
+            Some(AnalyticsExpensePart::Shop),
+            Some(AnalyticsExpensePart::Partner),
+        ] {
+            for partner_id in [None, Some(1)] {
+                let filters = AnalyticsFilters {
+                    expense_part: part,
+                    partner_id,
+                    ..AnalyticsFilters::default()
+                };
+                assert_eq!(
+                    analytics_need(AnalyticsView::M, &filters),
+                    PartnerNeed::None
+                );
+            }
+        }
     }
 }

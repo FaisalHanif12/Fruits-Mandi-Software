@@ -27,8 +27,9 @@ export function PartnerGate({ children }: { children: ReactNode }) {
   // A code that is not made yet is made first, with no way round (PRD FR-17.11): the backend leaves
   // the section open until then, so the screen must ask.
   if (status.data.is_set && status.data.unlocked) return <>{children}</>;
+  // The card stands in the middle of the page, across and down (plan 100 K).
   return (
-    <div className="flex max-w-page flex-col gap-4">
+    <div data-partner-gate className="flex min-h-full w-full flex-col items-center justify-center">
       <PartnerCodeFlow />
     </div>
   );

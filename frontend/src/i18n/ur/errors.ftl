@@ -754,3 +754,7 @@ err-partner-has-linked-balance = جب تک اس { -shirakat-dar } سے جڑے { 
 
 # review: pending
 err-openings-already-in-cash = پرانے { -ibtidai-baqaya } پہلے ہی { -rokar } میں درج ہیں۔ درج کرنے کے لیے کچھ نہیں۔
+
+# PRD FR-7.47, FR-7.93 (plan 100): the undo of a save is only straight after it, in the same session.
+# review: pending
+err-undo-expired = واپس لینا صرف محفوظ کرنے کے فوراً بعد ہوتا ہے۔ اب یہ اندراج واپس کرنے کے لیے وجہ، { -dastakhat } اور { -shirakat-dar } کوڈ کے ساتھ منسوخ کریں۔

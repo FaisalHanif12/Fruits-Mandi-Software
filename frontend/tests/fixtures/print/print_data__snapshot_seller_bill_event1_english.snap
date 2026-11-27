@@ -12,7 +12,9 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::En)"
       "name": "Maher Adnan and Brothers",
       "mandi": "New Sabzi Mandi, Kot Radha Kishan",
       "address": "Kot Radha Kishan",
-      "phone": "0300-1234567"
+      "phones": [
+        "0300-1234567"
+      ]
     },
     "contacts": [],
     "trade_mark": null,
@@ -55,7 +57,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::En)"
         {
           "date": "10-10-2026",
           "name": "Akram Toll Tax",
-          "item": "Banana",
+          "item": "Banana-1",
           "packing": "Box",
           "qty": "20",
           "weight_kg": null,
@@ -67,7 +69,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::En)"
         {
           "date": "10-10-2026",
           "name": "Arshad Multani",
-          "item": "Banana",
+          "item": "Banana-1",
           "packing": "Box",
           "qty": "30",
           "weight_kg": null,

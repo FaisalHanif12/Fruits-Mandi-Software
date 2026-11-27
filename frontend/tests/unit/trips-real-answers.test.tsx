@@ -30,6 +30,7 @@ import { fakeItemPickers, fakeTrips, followTripGetPurchases } from '../helpers/t
 import * as real from '../helpers/trips-real';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { settlePreview } from '../helpers/preview-settled';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -578,6 +579,7 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     await user.click(row);
     await user.click(screen.getByRole('button', { name: message(language, 'edit-action-cancel') }));
     await user.type(field('trips-cancel-reason'), 'wrong amount');
+    await typeSignAndCode(user, language);
     await user.click(
       screen.getByRole('button', { name: message(language, 'trips-cancel-confirm') }),
     );
@@ -593,8 +595,16 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     });
     const sent = vi.mocked(tripsApi.tripsOtherSaleCancel).mock.calls[0]?.[0];
     // Same keys as the file the backend sent, the id and version of the row, the reason typed.
-    expect(Object.keys(sent ?? {}).sort()).toEqual(Object.keys(real.OTHER_CANCEL_REQUEST).sort());
-    expect(sent).toMatchObject({ id: 2, reason: 'wrong amount', confirm_cash_below_zero: false });
+    // The keys of the recorded request, with the sign and the code every cancel carries since v1.61.
+    expect(Object.keys(sent ?? {}).sort()).toEqual(
+      Object.keys({ ...real.OTHER_CANCEL_REQUEST, ...CANCEL_SECRETS }).sort(),
+    );
+    expect(sent).toMatchObject({
+      id: 2,
+      reason: 'wrong amount',
+      ...CANCEL_SECRETS,
+      confirm_cash_below_zero: false,
+    });
   });
 
   it('a trip cost is cancelled with the same request as the backend’s test', async () => {
@@ -614,8 +624,15 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
       expect(tripsApi.tripsCostCancel).toHaveBeenCalledTimes(1);
     });
     const sent = vi.mocked(tripsApi.tripsCostCancel).mock.calls[0]?.[0];
-    expect(Object.keys(sent ?? {}).sort()).toEqual(Object.keys(real.COST_CANCEL_REQUEST).sort());
-    expect(sent).toMatchObject({ id: 2, reason: 'wrong amount', confirm_cash_below_zero: false });
+    expect(Object.keys(sent ?? {}).sort()).toEqual(
+      Object.keys({ ...real.COST_CANCEL_REQUEST, ...CANCEL_SECRETS }).sort(),
+    );
+    expect(sent).toMatchObject({
+      id: 2,
+      reason: 'wrong amount',
+      ...CANCEL_SECRETS,
+      confirm_cash_below_zero: false,
+    });
   });
 
   it('a purchase on a closed trip is refused with the backend’s own refusal, told in plain words', async () => {

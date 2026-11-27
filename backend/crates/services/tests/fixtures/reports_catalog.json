@@ -547,6 +547,8 @@
       "report-col-returned",
       "report-col-adjusted",
       "report-col-open",
+      "report-col-advance-covered",
+      "report-col-advance-uncovered",
       "report-col-last-date"
     ]
   },

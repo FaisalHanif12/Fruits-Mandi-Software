@@ -23,6 +23,7 @@ import type { DashboardBikri } from '../../src/bindings/DashboardBikri';
 import type { ScreenState } from '../../src/bindings/ScreenState';
 import { HEALTH_LAST, UPDATE_AVAILABLE, UPDATE_NONE } from './b5-real';
 import { STATUS_AFTER } from './backup-real';
+import { PANEL_EMPTY, PANEL_WORKED_DAY, WORTH_TOTALS, totalWorthPage } from './attention-panel';
 import { ATTENTION_18_10, DASHBOARD_GARDEN, DASHBOARD_WORKED_DAY } from './dashboard-real';
 import { devFlag } from './dev-bridge';
 import { paisaForTest } from './paisa';
@@ -59,6 +60,11 @@ const EMPTY_TILES = {
   expenses_today_paisa: paisaForTest(0),
   cash_sales_today_paisa: paisaForTest(0),
   cash_sales_today_buyers: 0,
+  total_worth: {
+    have_paisa: paisaForTest(0),
+    give_paisa: paisaForTest(0),
+    net_paisa: paisaForTest(0),
+  },
 } as const;
 
 /** Every kind of the attention list once, with figures like a busy book (for the `many` flag). */
@@ -189,7 +195,11 @@ function dashboard(): Dashboard {
   }
   // The garden world of E2E-40 has the same day with one open garden and its balance.
   const base = devFlag('garden') ? DASHBOARD_GARDEN : DASHBOARD_WORKED_DAY;
-  let result: Dashboard = { ...base, attention: attention() };
+  let result: Dashboard = {
+    ...base,
+    tiles: { ...base.tiles, total_worth: WORTH_TOTALS },
+    attention: attention(),
+  };
   if (devFlag('many')) {
     const many = manyBikri();
     result = {
@@ -280,7 +290,10 @@ export const dashboardHandlers: Record<string, (input: Input) => unknown> = {
     if (devFlag('down')) throw refusal('ERR_INTERNAL');
     return dashboard();
   },
-  assist_attention: () => attention(),
+  // The bell's panel (plan 100 J): `empty` or `quiet` shows nothing to do.
+  assist_attention: () => (devFlag('empty') || devFlag('quiet') ? PANEL_EMPTY : PANEL_WORKED_DAY),
+  assist_snooze: () => null,
+  dashboard_total_worth: (input) => totalWorthPage(input['side'] === 'give' ? 'give' : 'have'),
   backup_status: () =>
     devFlag('cloudold')
       ? { ...STATUS_AFTER, cloud_level: 'red' as const, cloud_age_hours: 60 }

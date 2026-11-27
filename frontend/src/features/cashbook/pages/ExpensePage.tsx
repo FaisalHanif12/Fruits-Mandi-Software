@@ -10,7 +10,7 @@
 // - The note of FR-7.68 ("is this a partner's own spending?") offers a button when "paid to" is a
 //   partner's name in either script. The backend finds the match; the screen never switches by
 //   itself.
-// - Below: the day's shop expenses, or the partner's money taken (FR-16.2). "Repeat last month"
+// - Below: the shop expenses, 30 days at a time (plan 100 F), or the partner's money taken (FR-16.2). "Repeat last month"
 //   (FR-7.62) fills one regular expense at a time into the form.
 // - Keys, the leave guard and the cash question come from EntryFrame. A language switch loses
 //   nothing: the form is text in this screen's state (F39).
@@ -28,7 +28,7 @@ import type { FieldError } from '../../../bindings/FieldError';
 import { useDayStatus } from '../../../app/use-day-status';
 import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
-import { formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
+import { formatPaisa, useGrouping } from '../../../shared/format';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { Button, ErrorState, FormAside, LoadingState, Notice, showToast } from '../../../shared/ui';
@@ -68,8 +68,6 @@ import type { RepeatedExpense, VoucherEditable } from '../types';
 
 /** The address of this screen. */
 const EXPENSE_PATH = '/rokar/expense';
-
-const WHOLE_DATE = /^\d{1,2}-\d{1,2}-\d{4}$/;
 
 interface ExpenseEditorProps {
   /** Today, `YYYY-MM-DD`, from the day status. */
@@ -198,7 +196,6 @@ function ExpenseEditor({ today, urlType, editable = null, initial = null }: Expe
     });
   };
 
-  const day = WHOLE_DATE.test(draft.date.trim()) ? draft.date.trim() : isoToDisplayDate(today);
   const partner = preview?.paid_to_partner ?? null;
 
   return (
@@ -245,7 +242,7 @@ function ExpenseEditor({ today, urlType, editable = null, initial = null }: Expe
               }}
             />
           ) : null}
-          <ExpenseListSection type={draft.type} day={day} partnerId={chosenPartnerId(draft)} />
+          <ExpenseListSection type={draft.type} today={today} partnerId={chosenPartnerId(draft)} />
         </>
       }
     >

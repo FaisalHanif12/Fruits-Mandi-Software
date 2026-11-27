@@ -92,7 +92,15 @@ describe.each(LANGUAGES)('the الگ کھاتہ screen (%s)', (language) => {
     for (const gone of FORMER_PAYMENT_LABELS[language]) {
       expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
     }
-    expect(await screen.findByText(message(language, 'cashbook-khata-pick'))).toBeInTheDocument();
+    // Without a khata the list under the form holds every khata's entries; no khata account shows yet.
+    expect(
+      await screen.findByRole('heading', {
+        name: named(message(language, 'cashbook-entries-khata-title')),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: named(message(language, 'cashbook-khata-title')) }),
+    ).toBeNull();
   });
 
   it('E2E-38: paid out 10,000 goes minus, 4,000 received brings it to minus 6,000, cash follows', async () => {

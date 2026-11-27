@@ -31,6 +31,46 @@ pub struct AuditFilters {
     pub to: String,
     /// Words to find in the reason or in the old and new values. Empty means any.
     pub text: String,
+    /// Only the events of this kind. Null means every kind (plan 100).
+    pub kind: Option<AuditEventKind>,
+    /// True lists only the security events ([`AuditEventKind::SECURITY`]).
+    pub security_only: bool,
+}
+
+/// A kind of event of the filter (PRD FR-21.3, v1.61, plan 100). Each audit row has at most one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AuditEventKind {
+    /// An edit: `edit`, `update`, `change_split`, `set_sell_date`, `set_shares`.
+    Edit,
+    /// A cancel with its reason: `cancel`, `write_off_undo`, `mixed_undo`, `month_close_reverse`,
+    /// and `reopen` of a garden (the undo of its closing).
+    Cancel,
+    /// A closed day reopened: `day_reopen`, `day_fix_open`.
+    Reopen,
+    /// A wrong partner code, or a try while it waits: `partner_code_failed`.
+    WrongCode,
+    /// A wrong sign: every `..._sign_wrong` action and `reveal_refused` of the backup key for the
+    /// sign.
+    WrongSign,
+    /// A wrong password or recovery code, or a try while it waits: `login_failed` and
+    /// `reveal_refused` of the backup key for the password.
+    WrongPassword,
+    /// A wait started after too many wrong tries: `lockout_started`.
+    Lockout,
+    /// A save refused because its day is closed: `closed_day_refused`.
+    ClosedDay,
+}
+
+impl AuditEventKind {
+    /// The kinds of the filter حفاظتی واقعات (security events).
+    pub const SECURITY: [AuditEventKind; 5] = [
+        AuditEventKind::WrongCode,
+        AuditEventKind::WrongSign,
+        AuditEventKind::WrongPassword,
+        AuditEventKind::Lockout,
+        AuditEventKind::ClosedDay,
+    ];
 }
 
 /// The input of `audit_list`.
@@ -124,10 +164,12 @@ pub struct AuditRow {
     pub time: String,
     /// Who did it. Null for an entry of the system (before sign-in).
     pub user: Option<AuditUser>,
-    /// What was done.
+    /// What was done: a stable key. The screen turns it into words from Fluent.
     pub action: String,
-    /// What it was done to.
+    /// What it was done to: a stable key.
     pub entity: String,
+    /// The kind of the filter this entry is, or null.
+    pub kind: Option<AuditEventKind>,
     /// The record.
     #[ts(type = "number | null")]
     pub entity_id: Option<i64>,

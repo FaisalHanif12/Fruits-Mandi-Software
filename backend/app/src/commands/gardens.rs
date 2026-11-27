@@ -3,19 +3,21 @@
 //! money goes to its partners (C26). Every command needs the signed-in Owner. The reads and the
 //! previews only read (Code Standards B29); the others are one transaction each (Code Standards B3).
 
+use mandi_services::cancel_guard;
 use mandi_services::core::arrivals::{
-    ArrivalCancelInput, ArrivalCancelled, ArrivalEntryInput, ArrivalEntryPreview,
-    ArrivalEntrySaved, ArrivalGetInput, ArrivalInput, ArrivalRow, ArrivalSaved,
-    ArrivalWriteOffDone, ArrivalWriteOffInput, ArrivalWriteOffUndoInput, ArrivalWriteOffUndone,
-    ArrivalsList, ArrivalsListInput, SellDateInput, SellDateSet,
+    ArrivalCancelled, ArrivalEntryInput, ArrivalEntryPreview, ArrivalEntrySaved, ArrivalGetInput,
+    ArrivalInput, ArrivalRow, ArrivalSaved, ArrivalWriteOffDone, ArrivalWriteOffInput,
+    ArrivalWriteOffUndone, ArrivalsList, ArrivalsListInput, SellDateInput, SellDateSet,
+};
+use mandi_services::core::cancel::{
+    ArrivalCancelRequest, ArrivalWriteOffUndoRequest, GardenEntryCancelRequest, GardenReopenRequest,
 };
 use mandi_services::core::garden_sale_money::{GardensSaleMoney, GardensSaleMoneyInput};
 use mandi_services::core::gardens::{
     GardenCloseInput, GardenClosePreview, GardenCloseRequest, GardenClosed, GardenCreatePreview,
-    GardenCreated, GardenDefaults, GardenDetail, GardenEntryCancelInput, GardenEntryCancelled,
-    GardenEntryInput, GardenEntryPreview, GardenEntrySaved, GardenGetInput, GardenInput,
-    GardenReopenInput, GardenReopened, GardenRow, GardenSetPartnersInput, GardensList,
-    GardensListInput, GardensSummary,
+    GardenCreated, GardenDefaults, GardenDetail, GardenEntryCancelled, GardenEntryInput,
+    GardenEntryPreview, GardenEntrySaved, GardenGetInput, GardenInput, GardenReopened, GardenRow,
+    GardenSetPartnersInput, GardensList, GardensListInput, GardensSummary,
 };
 use mandi_services::core::split::{SplitInput, SplitSet};
 use mandi_services::partner_code;
@@ -164,14 +166,18 @@ pub async fn gardens_entry_save<R: tauri::Runtime>(
 /// open. Errors: `ERR_NOT_FOUND` on `id`; `ERR_VERSION_CHANGED` on `version`;
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_GARDEN_CLOSED` on `id` while the garden is closed;
 /// `ERR_DATE_CLOSED` on `id`; `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn gardens_entry_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: GardenEntryCancelInput,
+    input: GardenEntryCancelRequest,
 ) -> Result<GardenEntryCancelled, UiError> {
     run(app, "gardens_entry_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        gardens::entry_cancel(ctx, &actor, &input)
+        cancel_guard::cancel_garden_entry(ctx, &actor, &input)
     })
     .await
 }
@@ -219,14 +225,18 @@ pub async fn gardens_close<R: tauri::Runtime>(
 /// Undoes the closing of a garden by reversal while the closing day is open (PRD FR-12.38). Errors:
 /// `ERR_NOT_FOUND` on `id`; `ERR_VERSION_CHANGED` on `version`; `ERR_GARDEN_NOT_CLOSED` on `id`;
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on `id`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn gardens_reopen<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: GardenReopenInput,
+    input: GardenReopenRequest,
 ) -> Result<GardenReopened, UiError> {
     run(app, "gardens_reopen", move |ctx| {
         let actor = auth::require(ctx)?;
-        gardens::reopen(ctx, &actor, &input)
+        cancel_guard::undo_garden_close(ctx, &actor, &input)
     })
     .await
 }
@@ -253,14 +263,18 @@ pub async fn gardens_arrival_save<R: tauri::Runtime>(
 /// Cancels an arrival with a reason, only while nothing of it is sold or written off. Errors:
 /// `ERR_NOT_FOUND`, `ERR_ARRIVAL_CANCELLED`, `ERR_ARRIVAL_HAS_SALES` on `id`; `ERR_VERSION_CHANGED`
 /// on `version`; `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on `id`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn gardens_arrival_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: ArrivalCancelInput,
+    input: ArrivalCancelRequest,
 ) -> Result<ArrivalCancelled, UiError> {
     run(app, "gardens_arrival_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        gardens::arrivals::cancel(ctx, &actor, &input)
+        cancel_guard::cancel_garden_arrival(ctx, &actor, &input)
     })
     .await
 }
@@ -339,14 +353,18 @@ pub async fn gardens_arrival_write_off<R: tauri::Runtime>(
 /// Undoes a write-off of an arrival, while its day is open. Errors: `ERR_NOT_FOUND` on `move_id`;
 /// `ERR_ARRIVAL_CANCELLED` on `move_id`; `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on
 /// `move_id`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn gardens_arrival_write_off_undo<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: ArrivalWriteOffUndoInput,
+    input: ArrivalWriteOffUndoRequest,
 ) -> Result<ArrivalWriteOffUndone, UiError> {
     run(app, "gardens_arrival_write_off_undo", move |ctx| {
         let actor = auth::require(ctx)?;
-        gardens::arrivals::write_off_undo(ctx, &actor, &input)
+        cancel_guard::undo_arrival_write_off(ctx, &actor, &input)
     })
     .await
 }

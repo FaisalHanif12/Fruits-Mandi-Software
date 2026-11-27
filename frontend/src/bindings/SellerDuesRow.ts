@@ -22,11 +22,12 @@ export type SellerDuesRow = {
    */
   balance: Balance;
   /**
-   * What is payable to him (PRD FR-7.59). 0 when nothing.
+   * What the shop really owes him: his payable (PRD FR-7.59) less his open advances, never
+   * below 0 (v1.61). 0 when nothing.
    */
   payable_paisa: Paisa;
   /**
-   * His open advances (PRD FR-15.8).
+   * The part of his open advances (PRD FR-15.8) his payable does not cover (v1.61).
    */
   advance_open_paisa: Paisa;
   /**

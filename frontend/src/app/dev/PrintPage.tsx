@@ -12,6 +12,7 @@
 import { useRouterState } from '@tanstack/react-router';
 import {
   collectionPrintData,
+  frameOf,
   longPrintData,
   manyLinesData,
   printDataFor,
@@ -43,7 +44,26 @@ export function PrintPage() {
   if (kind === 'parchi' || kind === 'seller-bills') {
     // The backend's own answer of the worked day: one slip for each buyer (ارشد, اکرم, شاہد), each titled with
     // its party's name. `?many` repeats the first slip seven times to show how a page fills.
-    const slips = daySlipsData(language, kind, paper ?? 'a4');
+    const plain = daySlipsData(language, kind, paper ?? 'a4');
+    // `contacts` puts the firm's owners and munshi in the header, as Settings would; `phones=4` gives
+    // the firm all 4 phones, the tallest header.
+    const phones = ['0300-1112233', '0321-4455667', '0333-7788990', '0345-2233445'].slice(
+      0,
+      search.get('phones') === '4' ? 4 : 2,
+    );
+    const slips = search.has('contacts')
+      ? {
+          ...plain,
+          frame: {
+            ...plain.frame,
+            header: {
+              ...plain.frame.header,
+              firm: { ...plain.frame.header.firm, phones },
+              contacts: frameOf(language, '', [], { contacts: true }).header.contacts,
+            },
+          },
+        }
+      : plain;
     const first = slips.buyers[0];
     const filled =
       search.has('many') && first !== undefined

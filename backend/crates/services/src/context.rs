@@ -78,6 +78,8 @@ pub struct Context {
     /// True while the partner section is open (PRD FR-17.11). Memory only, like the sign-in: it is
     /// closed by leaving the section, the idle lock, a logout, a restore and the end of the app.
     pub(crate) partner_unlocked: Mutex<bool>,
+    /// The saves that may still be undone (PRD FR-7.47). Memory only: gone with the session.
+    pub(crate) undo_tickets: Mutex<Vec<crate::cancel_guard::UndoTicket>>,
     /// The learned word pairs, kept in memory (Tech Stack 4.4). `None` until first needed.
     pub(crate) learned: Mutex<Option<Arc<Vec<LearnedPair>>>>,
     /// The search index (Tech Stack 4.7), kept in memory. `None` until first needed.
@@ -110,6 +112,7 @@ impl Context {
             session: Mutex::new(None),
             lockouts: Mutex::new(Lockouts::default()),
             partner_unlocked: Mutex::new(false),
+            undo_tickets: Mutex::new(Vec::new()),
             learned: Mutex::new(None),
             search: Mutex::new(None),
             rules: Mutex::new(None),
@@ -137,6 +140,8 @@ impl Context {
             session: Mutex::new(self.session_snapshot()),
             lockouts: Mutex::new(Lockouts::default()),
             partner_unlocked: Mutex::new(self.partner_open()),
+            // A snapshot only reads: it has nothing to undo.
+            undo_tickets: Mutex::new(Vec::new()),
             learned: Mutex::new(self.learned_lock().clone()),
             search: Mutex::new(self.search_lock().clone()),
             rules: Mutex::new(None),
@@ -181,6 +186,8 @@ impl Context {
         *self.learned_lock() = None;
         // The restored data may hold another partner code: the section asks for it again.
         self.set_partner_open(false);
+        // What could be undone belongs to the data that was replaced.
+        self.undo_lock().clear();
         // The kept ledger and cash sums belong to the data that was replaced.
         mandi_db::memo::clear();
     }
@@ -191,6 +198,12 @@ impl Context {
 
     pub(crate) fn learned_lock(&self) -> MutexGuard<'_, Option<Arc<Vec<LearnedPair>>>> {
         self.learned.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn undo_lock(&self) -> MutexGuard<'_, Vec<crate::cancel_guard::UndoTicket>> {
+        self.undo_tickets
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
     }
 
     /// True while the partner section is open.

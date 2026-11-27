@@ -347,3 +347,10 @@ button beside Print preview, and in the print preview (with the print language c
 `tables_export_excel`, writes every row of the filter from the same table as the print
 (`api.ts: tablesExportExcel`, `table-excel.ts: useTableExcel`). The commission partner columns and the partner
 statement follow the partner code. `TablePrintPreview` takes the exporter and shows its notices.
+
+## Plan 100: the buyer parchi header
+
+- White paper. At the top: the fruit picture on one side, the firm name with the owners and their phones in
+  the middle, the munshi and his phone on the other side; under them the firm's phones, two to a line. Both
+  sides are 23 mm, as wide as a phone number. At the A4 print width, 4 slips fit a page with up to 4 firm
+  phones (checked in headless Chrome; the Mac WebKit and Windows prints are LOCAL-ONLY checks).

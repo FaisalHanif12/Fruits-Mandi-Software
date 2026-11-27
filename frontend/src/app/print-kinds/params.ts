@@ -20,6 +20,7 @@ import type { SellerDuesPrintInput } from '../../bindings/SellerDuesPrintInput';
 import type { SalesPrintInput } from '../../bindings/SalesPrintInput';
 import type { StatementRowsPrintInput } from '../../bindings/StatementRowsPrintInput';
 import type { TotalDuesPrintInput } from '../../bindings/TotalDuesPrintInput';
+import type { TotalWorthPrintInput } from '../../bindings/TotalWorthPrintInput';
 import { jobOf } from '../../shared/print';
 
 /** The kinds of print the window knows, each with its own print-data command (the table in KindPrintPage). */
@@ -42,6 +43,8 @@ export const PRINT_KINDS = [
   'cash-sales-day',
   // Plan 83: the sales page behind the tile آج کی بکری.
   'sales',
+  // Plan 100: the page behind the tile کل مالیت.
+  'total-worth',
 ] as const;
 
 export type PrintKind = (typeof PRINT_KINDS)[number];
@@ -60,6 +63,7 @@ const commissionInput = z.custom<CommissionPrintInput>(isObject);
 const partnerMonthInput = z.custom<PartnersStatementMonthPrintInput>(isObject);
 const sellerDuesInput = z.custom<SellerDuesPrintInput>(isObject);
 const totalDuesInput = z.custom<TotalDuesPrintInput>(isObject);
+const totalWorthInput = z.custom<TotalWorthPrintInput>(isObject);
 const lentOpenInput = z.custom<LentOpenPrintInput>(isObject);
 const advancesOpenInput = z.custom<AdvancesReportPrintInput>(isObject);
 const cashSalesMonthInput = z.custom<CashSalesMonthPrintInput>(isObject);
@@ -85,6 +89,7 @@ export type KindPrintParams = {
   | { kind: 'cash-sales-month'; input: CashSalesMonthPrintInput }
   | { kind: 'cash-sales-day'; input: CashSalesDayPrintInput }
   | { kind: 'sales'; input: SalesPrintInput }
+  | { kind: 'total-worth'; input: TotalWorthPrintInput }
 );
 
 /** True when the address is for one of these prints (it has a `print` value), even if the rest is wrong. */
@@ -162,6 +167,10 @@ export function parseKindPrintParams(searchStr: string): KindPrintParams | null 
     }
     case 'sales': {
       const input = salesPeriodInput.safeParse(json);
+      return input.success ? { job, kind, input: input.data } : null;
+    }
+    case 'total-worth': {
+      const input = totalWorthInput.safeParse(json);
       return input.success ? { job, kind, input: input.data } : null;
     }
   }

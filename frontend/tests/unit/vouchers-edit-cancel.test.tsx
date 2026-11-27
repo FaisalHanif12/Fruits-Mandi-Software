@@ -39,6 +39,7 @@ import {
   type FakeVouchers,
 } from '../helpers/vouchers';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -279,7 +280,11 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
         name: named(message(language, 'vouchers-cancel-confirm')),
       }),
     );
-    expect(within(dialog).getByText(message(language, 'err-required'))).toBeInTheDocument();
+    // The reason and the sign are both told as empty, and the code as not four digits (PRD FR-7.93).
+    expect(within(dialog).getAllByText(message(language, 'err-required'))).toHaveLength(2);
+    expect(
+      within(dialog).getByText(message(language, 'err-partner-code-invalid')),
+    ).toBeInTheDocument();
     expect(store.cancels).toHaveLength(0);
   });
 
@@ -291,6 +296,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     );
     const dialog = await screen.findByRole('alertdialog');
     await user.keyboard('wrong buyer');
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', {
         name: named(message(language, 'vouchers-cancel-confirm')),
@@ -298,7 +304,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     );
     await waitFor(() => {
       expect(store.cancels).toEqual([
-        { id: 501, version: 1, reason: 'wrong buyer', confirm: false },
+        { id: 501, version: 1, reason: 'wrong buyer', ...CANCEL_SECRETS, confirm: false },
       ]);
     });
     await waitFor(() => {
@@ -324,6 +330,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     );
     const dialog = await screen.findByRole('alertdialog');
     await user.keyboard('x');
+    await typeSignAndCode(user, language);
     await user.click(
       within(dialog).getByRole('button', {
         name: named(message(language, 'vouchers-cancel-confirm')),
@@ -338,7 +345,9 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     });
     await user.click(yes);
     await waitFor(() => {
-      expect(store.cancels).toEqual([{ id: 501, version: 1, reason: 'x', confirm: true }]);
+      expect(store.cancels).toEqual([
+        { id: 501, version: 1, reason: 'x', ...CANCEL_SECRETS, confirm: true },
+      ]);
     });
   });
 

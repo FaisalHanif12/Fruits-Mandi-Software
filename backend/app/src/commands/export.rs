@@ -15,8 +15,9 @@
 use mandi_reports::dashboard::{
     BuyerDuesPrintInput, CashSalesDayPrintInput, CashSalesMonthPrintInput, CommissionPrintInput,
     LentOpenPrintInput, SalesPrintInput, SellerDuesPrintInput, TotalDuesPrintInput,
-    buyer_dues_spec, cash_sales_day_spec, cash_sales_month_spec, commission_month_spec,
-    lent_open_spec, sales_period_spec, seller_dues_spec, total_dues_spec,
+    TotalWorthPrintInput, buyer_dues_spec, cash_sales_day_spec, cash_sales_month_spec,
+    commission_month_spec, lent_open_spec, sales_period_spec, seller_dues_spec, total_dues_spec,
+    total_worth_spec,
 };
 use mandi_reports::export::{
     AnalyticsExportInput, BikriListExportInput, ExcelExported, ExportProgress, ExportStage,
@@ -97,6 +98,8 @@ pub enum TableExportSource {
     SellerDues(SellerDuesPrintInput),
     /// The four parts of کل اگراہی (plan 79 item 2b).
     TotalDues(TotalDuesPrintInput),
+    /// کل مالیت: every row of money to have and money to give (plan 100, PRD FR-9.10).
+    TotalWorth(TotalWorthPrintInput),
     /// The people who borrowed and still owe (plan 79 item 3).
     LentOpen(LentOpenPrintInput),
     /// The sellers with an open advance (plan 79 item 3).
@@ -232,6 +235,10 @@ pub async fn tables_export_excel<R: tauri::Runtime>(
             ),
             TableExportSource::TotalDues(i) => (
                 total_dues_spec(ctx.db(), i).map_err(engine_error)?,
+                i.language,
+            ),
+            TableExportSource::TotalWorth(i) => (
+                total_worth_spec(ctx.db()).map_err(engine_error)?,
                 i.language,
             ),
             TableExportSource::LentOpen(i) => (

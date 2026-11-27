@@ -108,7 +108,7 @@ export function frameOf(
         name: n.firm,
         mandi: n.mandi,
         address: 'Kot Radha Kishan',
-        phone: '0300-1112233',
+        phones: ['0300-1112233'],
       },
       contacts: options.contacts === true ? contactsOf(language) : [],
       trade_mark: options.tradeMark ?? null,

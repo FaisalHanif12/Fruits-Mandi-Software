@@ -26,7 +26,12 @@
     "others_people_count": 0,
     "expenses_today_paisa": 300000,
     "cash_sales_today_paisa": 1280000,
-    "cash_sales_today_buyers": 1
+    "cash_sales_today_buyers": 1,
+    "total_worth": {
+      "have_paisa": 8004800,
+      "give_paisa": 1456000,
+      "net_paisa": 6548800
+    }
   },
   "partners": [
     {

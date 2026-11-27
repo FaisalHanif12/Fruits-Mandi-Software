@@ -6,6 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { AUTH_STATUS_KEY } from '../features/auth/hooks';
 import { uiErrorOf } from '../shared/api';
 import { I18nProvider } from '../shared/i18n';
+import { forgetPicks, recordSavedPicks } from '../shared/search';
 import { makeRefreshAfterSave } from './refresh-after-save';
 import { Toaster } from '../shared/ui';
 
@@ -20,13 +21,18 @@ export function createQueryClient(): QueryClient {
       void client.invalidateQueries({ queryKey: AUTH_STATUS_KEY });
     }
   };
-  // After any save the dashboard and the bell read again (PRD FR-7.44, NFR-SPD-22).
-  const refresh = () => {
-    refreshAfterSave();
-  };
+  // After any save the dashboard and the bell read again (PRD FR-7.44, NFR-SPD-22), and the records
+  // picked for it are recorded as used (plan 100 I).
+  forgetPicks();
   const client: QueryClient = new QueryClient({
     queryCache: new QueryCache({ onError: sessionChanged }),
-    mutationCache: new MutationCache({ onError: sessionChanged, onSuccess: refresh }),
+    mutationCache: new MutationCache({
+      onError: sessionChanged,
+      onSuccess: (_data, _variables, _context, mutation) => {
+        refreshAfterSave();
+        if (mutation.meta?.['notASave'] !== true) recordSavedPicks();
+      },
+    }),
     defaultOptions: {
       queries: { retry: false, refetchOnWindowFocus: false },
       mutations: { retry: false },

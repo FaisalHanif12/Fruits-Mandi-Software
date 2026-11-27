@@ -87,10 +87,21 @@ export type PartyCard = {
    */
   credit_used: Paisa | null;
   /**
-   * A seller's open advance: advances given less what was adjusted (PRD FR-15.8). Null for
-   * other accounts.
+   * A seller's open advance that his own credit does not cover, shown as پیشگی باقی (PRD FR-9.6
+   * v1.61): his open advances (given less adjusted, FR-15.8), at most what his balance says he
+   * owes. Null for other accounts.
    */
   advance_open: Paisa | null;
+  /**
+   * The part of a seller's open advances that his credit already covers: the screen adds the line
+   * "پیشگی 100,000: بقایا میں سے کٹ چکی". Null when 0 and for other accounts.
+   */
+  advance_covered: Paisa | null;
+  /**
+   * What the shop really owes a seller: his جمع balance, 0 when he owes (PRD FR-9.6 v1.61). Null
+   * for other accounts.
+   */
+  net_payable: Paisa | null;
   /**
    * Warnings, each shown with a word and a colour.
    */

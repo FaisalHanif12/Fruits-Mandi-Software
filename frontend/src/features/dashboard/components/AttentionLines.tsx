@@ -6,6 +6,7 @@
 
 import { Localized } from '@fluent/react';
 import { ChevronRight } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { AttentionItem } from '../../../bindings/AttentionItem';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
@@ -15,13 +16,23 @@ import { KindIcon } from './KindIcon';
 import { wordsOfItem } from '../attention';
 import { destinationOfFirst, destinationOfKind, type Destination } from '../destinations';
 
-interface AttentionLinesProps {
-  items: readonly AttentionItem[];
+interface AttentionLinesProps<T extends AttentionItem> {
+  items: readonly T[];
   /** A line, or the name under it, was chosen. */
   onOpen: (destination: Destination) => void;
+  /** Drawn at the end of each line, for example "Later" in the bell (plan 100 J). */
+  action?: ((item: T) => ReactNode) | undefined;
 }
 
-function Line({ item, onOpen }: { item: AttentionItem; onOpen: (to: Destination) => void }) {
+function Line({
+  item,
+  onOpen,
+  action,
+}: {
+  item: AttentionItem;
+  onOpen: (to: Destination) => void;
+  action?: ReactNode;
+}) {
   const language = useLanguage();
   const grouping = useGrouping();
   const words = wordsOfItem(item, (amount) => formatPaisa(amount, { grouping }));
@@ -35,24 +46,27 @@ function Line({ item, onOpen }: { item: AttentionItem; onOpen: (to: Destination)
         );
   return (
     <li className="flex flex-col">
-      <button
-        type="button"
-        data-nav-item
-        data-attention-kind={item.kind}
-        onClick={() => {
-          onOpen(destinationOfKind(item.kind));
-        }}
-        className="flex min-h-target min-w-0 flex-1 items-center gap-3 rounded-2 px-2 text-start transition-calm hover:bg-surface-sunken"
-      >
-        <KindIcon kind={item.kind} />
-        <Localized id={words.id} vars={words.vars} elems={{ num: <Num /> }}>
-          <span className="type-body min-w-0" />
-        </Localized>
-        <ChevronRight
-          aria-hidden="true"
-          className="ms-auto size-icon-md shrink-0 text-ink-muted rtl:rotate-180"
-        />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          data-nav-item
+          data-attention-kind={item.kind}
+          onClick={() => {
+            onOpen(destinationOfKind(item.kind));
+          }}
+          className="flex min-h-target min-w-0 flex-1 items-center gap-3 rounded-2 px-2 text-start transition-calm hover:bg-surface-sunken"
+        >
+          <KindIcon kind={item.kind} />
+          <Localized id={words.id} vars={words.vars} elems={{ num: <Num /> }}>
+            <span className="type-body min-w-0" />
+          </Localized>
+          <ChevronRight
+            aria-hidden="true"
+            className="ms-auto size-icon-md shrink-0 text-ink-muted rtl:rotate-180"
+          />
+        </button>
+        {action}
+      </div>
       {first === null || firstName === '' ? null : (
         <button
           type="button"
@@ -75,12 +89,16 @@ function Line({ item, onOpen }: { item: AttentionItem; onOpen: (to: Destination)
   );
 }
 
-export function AttentionLines({ items, onOpen }: AttentionLinesProps) {
+export function AttentionLines<T extends AttentionItem>({
+  items,
+  onOpen,
+  action,
+}: AttentionLinesProps<T>) {
   const keys = useRovingKeys();
   return (
     <ul onKeyDown={keys} className="flex flex-col gap-1">
       {items.map((item) => (
-        <Line key={item.kind} item={item} onOpen={onOpen} />
+        <Line key={item.kind} item={item} onOpen={onOpen} action={action?.(item)} />
       ))}
     </ul>
   );

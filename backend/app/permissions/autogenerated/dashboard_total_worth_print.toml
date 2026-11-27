@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dashboard-total-worth-print"
+description = "Enables the dashboard_total_worth_print command without any pre-configured scope."
+commands.allow = ["dashboard_total_worth_print"]
+
+[[permission]]
+identifier = "deny-dashboard-total-worth-print"
+description = "Denies the dashboard_total_worth_print command without any pre-configured scope."
+commands.deny = ["dashboard_total_worth_print"]

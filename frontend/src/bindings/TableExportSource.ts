@@ -11,6 +11,7 @@ import type { PartnersStatementMonthPrintInput } from './PartnersStatementMonthP
 import type { SalesPrintInput } from './SalesPrintInput';
 import type { SellerDuesPrintInput } from './SellerDuesPrintInput';
 import type { TotalDuesPrintInput } from './TotalDuesPrintInput';
+import type { TotalWorthPrintInput } from './TotalWorthPrintInput';
 
 /**
  * The table to export as a sheet (plan 76): the same filter the screen and its print have, with the
@@ -22,6 +23,7 @@ export type TableExportSource =
   | ({ kind: 'buyer_dues' } & BuyerDuesPrintInput)
   | ({ kind: 'seller_dues' } & SellerDuesPrintInput)
   | ({ kind: 'total_dues' } & TotalDuesPrintInput)
+  | ({ kind: 'total_worth' } & TotalWorthPrintInput)
   | ({ kind: 'lent_open' } & LentOpenPrintInput)
   | ({ kind: 'advances_open' } & AdvancesReportPrintInput)
   | ({ kind: 'cash_sales_month' } & CashSalesMonthPrintInput)

@@ -2,9 +2,10 @@
 //!
 //! The pure work is `mandi_core::advances::replay`. This module reads what it needs and nothing is
 //! stored: the live advance lines (a seller debit flagged `is_advance` whose entry is not reversed),
-//! the shares of each advance's day, and the ACTIVE rows of `advance_allocations` (PRD FR-15.8).
-//! Because the matching rows are the canonical ones, a re-match after an edit or a cancel changes the
-//! events with it.
+//! the shares of each advance's day, the ACTIVE rows of `advance_allocations` (PRD FR-15.8), and
+//! every live entry of each seller with an advance, in one grouped query, so the part his own credit
+//! covers is known after each entry (PRD FR-17.13 v1.61). Because the matching rows are the
+//! canonical ones, a re-match after an edit or a cancel changes the events with it.
 //!
 //! The shares of an advance are those of its own day. When no share was set by then (an opening
 //! advance, or an advance made before the partners were set up) the first shares ever set are used
@@ -14,12 +15,13 @@ use std::collections::HashMap;
 
 use mandi_core::accounts::RecordRef;
 use mandi_core::advances::{
-    AdvanceError, AdvanceEvent, AdvanceLineIn, SettlementIn, partner_net, replay,
+    AdvanceError, AdvanceEvent, AdvanceEventKind, AdvanceLineIn, SellerStepIn, SettlementIn,
+    partner_net, replay,
 };
 use mandi_core::money::{Bps, MoneyError, Paisa};
 use rusqlite::{Connection, params};
 
-use crate::matching::LIVE;
+use crate::matching::{LIVE, ORDER};
 use crate::partners::shares_on;
 
 /// Why the advance events could not be read.
@@ -138,7 +140,7 @@ pub fn read_all(conn: &Connection) -> Result<Advances, AdvanceReadError> {
              JOIN journal_entries e ON e.id = l.entry_id
              JOIN accounts a ON a.id = l.account_id
              WHERE l.is_advance = 1 AND l.dr_paisa > 0 AND {LIVE}
-             ORDER BY e.entry_date, COALESCE(e.order_key, e.id), e.id, l.line_no"
+             ORDER BY {ORDER}"
         ))?;
         let rows = statement.query_map([], |r| {
             Ok((
@@ -172,7 +174,7 @@ pub fn read_all(conn: &Connection) -> Result<Advances, AdvanceReadError> {
     let mut settlements: Vec<SettlementIn> = Vec::new();
     {
         let mut statement = conn.prepare(
-            "SELECT a.id, a.advance_line_id, ce.id, ce.entry_date, cl.line_no, a.amount_paisa
+            "SELECT a.id, a.advance_line_id, ce.id, cl.line_no, a.amount_paisa
              FROM advance_allocations a
              JOIN journal_lines cl ON cl.id = a.credit_line_id
              JOIN journal_entries ce ON ce.id = cl.entry_id
@@ -184,14 +186,12 @@ pub fn read_all(conn: &Connection) -> Result<Advances, AdvanceReadError> {
                 r.get::<_, i64>(0)?,
                 r.get::<_, i64>(1)?,
                 r.get::<_, i64>(2)?,
-                r.get::<_, String>(3)?,
+                r.get::<_, i64>(3)?,
                 r.get::<_, i64>(4)?,
-                r.get::<_, i64>(5)?,
             ))
         })?;
         for row in rows {
-            let (allocation_id, advance_line_id, credit_entry_id, credit_date, line_no, amount) =
-                row?;
+            let (allocation_id, advance_line_id, credit_entry_id, line_no, amount) = row?;
             // Only the rows of a live advance line count (a reversed advance has no events).
             if !sellers.contains_key(&advance_line_id) {
                 continue;
@@ -200,18 +200,54 @@ pub fn read_all(conn: &Connection) -> Result<Advances, AdvanceReadError> {
                 allocation_id,
                 advance_line_id,
                 credit_entry_id,
-                credit_date,
                 credit_line_no: line_no,
                 amount: whole(amount)?,
             });
         }
     }
-    let events = replay(&lines, &settlements)?;
+    let events = replay(&lines, &settlements, &seller_steps(conn)?)?;
     Ok(Advances { events, sellers })
 }
 
-/// What the advances of every partner still have out at the end of `as_of` (or now): Σ of his open
-/// parts. The books balance with it (PRD FR-17.9 v1.43): Σ کل رقم + ابتدائی سرمایہ + this = equity.
+/// Every live entry of each seller who has an advance line, seller by seller and in the order of
+/// his ledger, with what it moves his ledger by (credits less debits). One grouped query.
+fn seller_steps(conn: &Connection) -> Result<Vec<SellerStepIn>, AdvanceReadError> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT l.account_id, e.id, e.entry_date, SUM(l.cr_paisa), SUM(l.dr_paisa)
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id IN (SELECT account_id FROM journal_lines
+                                WHERE is_advance = 1 AND dr_paisa > 0)
+           AND {LIVE}
+         GROUP BY l.account_id, e.id
+         ORDER BY l.account_id, e.entry_date, (e.posting_type <> 'opening'),
+                  COALESCE(e.order_key, e.id), e.id"
+    ))?;
+    let rows = statement.query_map([], |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            r.get::<_, i64>(1)?,
+            r.get::<_, String>(2)?,
+            r.get::<_, i64>(3)?,
+            r.get::<_, i64>(4)?,
+        ))
+    })?;
+    let mut steps = Vec::new();
+    for row in rows {
+        let (seller_account_id, entry_id, date, credit, debit) = row?;
+        steps.push(SellerStepIn {
+            seller_account_id,
+            entry_id,
+            date,
+            net_credit: whole(credit)?.checked_sub(whole(debit)?)?,
+        });
+    }
+    Ok(steps)
+}
+
+/// What the advances of every partner still have out at the end of `as_of` (or now): Σ of his
+/// parts of the uncovered advances, dead sellers included. The books balance with it (PRD FR-17.9
+/// v1.61): Σ کل رقم + ابتدائی سرمایہ + this = equity.
 ///
 /// # Errors
 /// As [`read_all`].
@@ -232,8 +268,8 @@ impl Advances {
                 continue;
             }
             sum = match event.kind {
-                mandi_core::advances::AdvanceEventKind::Out => sum.checked_add(event.part)?,
-                mandi_core::advances::AdvanceEventKind::Back => sum.checked_sub(event.part)?,
+                AdvanceEventKind::Out => sum.checked_add(event.part)?,
+                AdvanceEventKind::Back => sum.checked_sub(event.part)?,
             };
         }
         Ok(sum)

@@ -56,6 +56,7 @@ fn voucher_filter<'a>(
         to: day,
         account_id: account,
         hide_partner_money: false,
+        voucher_types: &[],
         advance_view: false,
     }
 }

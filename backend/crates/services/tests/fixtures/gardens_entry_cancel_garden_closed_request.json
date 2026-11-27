@@ -1,6 +1,8 @@
 {
   "confirm_cash_below_zero": false,
   "id": 3,
+  "partner_code": "4826",
   "reason": "wrong",
+  "sign": "adnan",
   "version": 2
 }

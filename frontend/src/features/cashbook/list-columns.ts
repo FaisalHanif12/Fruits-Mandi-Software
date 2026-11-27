@@ -75,53 +75,6 @@ export const CASHBOOK_COLUMNS: readonly ListColumn<CashbookRow>[] = [
 ];
 
 /** The day's shop expenses under the form: number, head, amount, state, narration. */
-export const EXPENSE_DAY_COLUMNS: readonly ListColumn<VoucherRow>[] = [
-  {
-    field: 'number',
-    sortKey: 'number',
-    type: 'code',
-    headerId: 'cashbook-col-number',
-    value: (row, { text }) => voucherNumberText(row, text),
-  },
-  {
-    field: 'head',
-    sortKey: 'account',
-    type: 'name',
-    headerId: 'cashbook-col-head',
-    grow: true,
-    value: (row, { language }) => (row.account === null ? '' : displayName(row.account, language)),
-  },
-  {
-    field: 'amount',
-    sortKey: 'amount_paisa',
-    type: 'money',
-    headerId: 'cashbook-col-amount',
-    value: (row, { money }) => money(row.amount_paisa),
-  },
-  {
-    field: 'state',
-    sortKey: 'status',
-    type: 'status',
-    headerId: 'cashbook-col-state',
-    value: (row, context) =>
-      statusWithEdited(
-        row.status === 'cancelled' ? context.text('cashbook-state-cancelled') : '',
-        row.edited,
-        context,
-      ),
-    chip: (row) => (row.status === 'cancelled' ? STATUS_CANCELLED : STATUS_SAVED),
-    tip: (row, context) => editedTip(row.edited, context),
-  },
-  {
-    field: 'narration',
-    type: 'name',
-    headerId: 'cashbook-col-narration',
-    from: 'normal',
-    grow: true,
-    value: (row) => row.narration,
-  },
-];
-
 /** The partner of a row of money taken, shown when the list is of every partner (plan 98). The backend has no order by it. */
 const TAKE_PARTNER_COLUMN: ListColumn<TakeRow> = {
   field: 'partner',

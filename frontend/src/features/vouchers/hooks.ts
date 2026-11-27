@@ -34,6 +34,7 @@ import {
 } from './api';
 import type { BuiltVoucher } from './draft';
 import type { CollectionListInput } from '../../bindings/CollectionListInput';
+import type { SortInput } from '../../bindings/SortInput';
 import type { VouchersListInput } from '../../bindings/VouchersListInput';
 import type { ReceiptInput, VoucherEntry, VoucherPreview } from './types';
 
@@ -159,12 +160,15 @@ export function useVoucher(id: number | null) {
 export function useVouchersList(
   input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'>,
   enabled = true,
+  /** The order while the user has picked no column. Null keeps the backend's own (oldest first). */
+  defaultSort: SortInput | null = null,
 ) {
   return usePagedQuery({
     screen: 'vouchers.list',
-    queryKey: [...VOUCHERS_KEY, 'list', input],
+    queryKey: [...VOUCHERS_KEY, 'list', input, defaultSort],
     enabled,
-    fetchPage: (offset, limit, sort) => vouchersList({ ...input, offset, limit, sort }),
+    fetchPage: (offset, limit, sort) =>
+      vouchersList({ ...input, offset, limit, sort: sort ?? defaultSort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,

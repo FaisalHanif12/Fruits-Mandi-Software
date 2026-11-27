@@ -1466,6 +1466,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("lent_dues", json!({ "input": {} }), true),
         ("dashboard_get", json!({}), true),
         ("assist_attention", json!({}), true),
+        // Plan 100: the total worth page and "بعد میں" on the bell.
+        (
+            "assist_snooze",
+            json!({ "input": { "item_key": "kind:drafts" } }),
+            true,
+        ),
+        ("dashboard_total_worth", json!({ "input": {} }), true),
+        (
+            "dashboard_total_worth_print_data",
+            json!({ "input": { "language": "ur" } }),
+            true,
+        ),
+        (
+            "dashboard_total_worth_print",
+            json!({ "input": { "sheet": { "language": "ur" }, "to": "pdf" } }),
+            true,
+        ),
         (
             "prefs_screen_get",
             json!({ "input": { "screen": "report.r20" } }),
@@ -2757,19 +2774,17 @@ fn the_window_bounds_of_a_partner_list_are_refused_while_the_section_is_locked()
     let h = Harness::new();
     partners_and_code(&h);
     h.ok("partners_code_lock", json!({}));
-    for source in [
-        json!({ "kind": "partner_statement", "partner_id": 1 }),
-        json!({ "kind": "partner_takes", "partner_id": 1 }),
-    ] {
-        assert_eq!(
-            h.code(
-                "windows_bounds",
-                json!({ "input": { "source": source.clone() } })
-            ),
-            "ERR_PARTNER_LOCKED",
-            "windows_bounds answered for {source} while the partner section was locked"
-        );
-    }
+    // Umar 28-11-2026, plan 100 E: a partner's money taken (ذاتی خرچہ) is open without the code,
+    // so its window bounds are too.
+    let source = json!({ "kind": "partner_statement", "partner_id": 1 });
+    assert_eq!(
+        h.code(
+            "windows_bounds",
+            json!({ "input": { "source": source.clone() } })
+        ),
+        "ERR_PARTNER_LOCKED",
+        "windows_bounds answered for {source} while the partner section was locked"
+    );
 }
 
 #[test]
@@ -2872,9 +2887,10 @@ fn the_openings_fix_writes_only_the_audit_row_of_a_wrong_sign_and_nothing_else_o
 }
 
 #[test]
-fn the_partner_kharch_of_view_m_and_every_way_to_it_stay_behind_the_code() {
-    // Plan 77, PRD 18.2 M, FR-9.5, FR-17.11: the shop part works without the code; the partner part, its
-    // drill lines, its print and its Excel need it, and no key sent under the shop part opens it.
+fn the_partner_kharch_of_view_m_is_open_without_the_code() {
+    // Umar 28-11-2026, plan 100 E (PRD 18.2 M, FR-9.5, FR-17.11 v1.61): a partner's own kharch is
+    // open: the partner part, its drill lines, its print and its Excel answer while the section is
+    // locked, and none of them writes anything. A key sent under the shop part opens no lines.
     let h = Harness::new();
     partners_and_code(&h);
     let filters = |extra: Value| -> Value {
@@ -2902,7 +2918,7 @@ fn the_partner_kharch_of_view_m_and_every_way_to_it_stay_behind_the_code() {
     // Locked.
     h.ok("partners_code_lock", json!({}));
     let before = h.fingerprint();
-    let refused = [
+    let open_while_locked = [
         (
             "run, partner part",
             "analytics_run",
@@ -2940,12 +2956,13 @@ fn the_partner_kharch_of_view_m_and_every_way_to_it_stay_behind_the_code() {
                 "path": "/no-such-folder/x.xlsx" } }),
         ),
     ];
-    for (what, command, payload) in refused {
-        assert_eq!(
-            h.code(command, payload),
-            "ERR_PARTNER_LOCKED",
-            "{what} answered while the partner section was locked"
-        );
+    for (what, command, payload) in open_while_locked {
+        if let Err(error) = h.call(command, payload) {
+            assert_ne!(
+                error["errors"][0]["code"], "ERR_PARTNER_LOCKED",
+                "{what} asked for the code"
+            );
+        }
     }
     // The shop part still works, and a key for the partner's money under the shop part is no way in.
     assert!(
@@ -2972,5 +2989,5 @@ fn the_partner_kharch_of_view_m_and_every_way_to_it_stay_behind_the_code() {
             "the key {key} under the shop part opened lines: {answer:?}"
         );
     }
-    assert_eq!(h.fingerprint(), before, "a refused read wrote something");
+    assert_eq!(h.fingerprint(), before, "a read wrote something");
 }

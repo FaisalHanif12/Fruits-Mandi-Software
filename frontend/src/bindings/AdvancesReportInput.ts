@@ -26,8 +26,9 @@ export type AdvancesReportInput = {
    */
   search: string | null;
   /**
-   * True lists only the sellers with something still open (the page of the tile پیشگی باقی,
-   * plan 79 item 3). The totals are over those sellers. When no seller is picked, people in
+   * True lists only the sellers with something still open that his payable does not cover (the
+   * page of the tile پیشگی باقی, plan 79 item 3 and plan 100 A; for a day before today, every
+   * seller with an open advance). The totals are over those sellers. When no seller is picked, people in
    * the dead amount are left out, as in R26 (PRD FR-10.10).
    */
   only_open: boolean;

@@ -772,9 +772,12 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
   }
 
   function vouchersList(input: VouchersListInput): VouchersList {
+    // `voucher_types` (plan 100 F) is used instead of `voucher_type` when it is given and not empty.
+    const kinds = input.voucher_types ?? (input.voucher_type === null ? [] : [input.voucher_type]);
     const found = store.vouchers.filter(
       ({ row }) =>
-        (input.voucher_type === null || row.voucher_type === input.voucher_type) &&
+        (kinds.length === 0 || kinds.includes(row.voucher_type)) &&
+        (input.account_id === null || row.account?.id === input.account_id) &&
         row.entry_date >= isoOf(input.from) &&
         row.entry_date <= isoOf(input.to),
     );
@@ -782,6 +785,9 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       .filter(({ row }) => row.status !== 'cancelled')
       .reduce((sum, one) => sum + one.amount, 0);
     const all = found.map(({ row }) => row);
+    // Newest first when the screen asks for it, as the backend's date sort does.
+    if (input.sort?.column === 'entry_date' && input.sort.direction === 'desc')
+      all.sort((a, b) => b.entry_date.localeCompare(a.entry_date) || b.number - a.number);
     return {
       rows: sliceOf(all, input.offset, input.limit),
       total_count: all.length,

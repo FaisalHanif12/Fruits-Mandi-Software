@@ -13,6 +13,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
+  ConfirmCancelDialog,
   Field,
   Num,
   QtyInput,
@@ -126,7 +127,7 @@ export function UndoOwnWriteOffDialog({ target, onClose }: DialogProps) {
   const writeOffs = target?.writeOffs ?? [];
   const moveId = chosen ?? (writeOffs.length === 1 ? String(writeOffs[0]?.move_id) : undefined);
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={target !== null}
       onOpenChange={(open) => {
         if (!open) close();
@@ -160,7 +161,7 @@ export function UndoOwnWriteOffDialog({ target, onClose }: DialogProps) {
           )}
         </Field>
       }
-      onConfirm={(reason) => {
+      onConfirm={(secrets) => {
         if (moveId === undefined) {
           // Several write-offs and none chosen: say so at the field, send nothing.
           setError({
@@ -172,7 +173,7 @@ export function UndoOwnWriteOffDialog({ target, onClose }: DialogProps) {
         }
         setError(null);
         undo
-          .mutateAsync({ moveId: Number(moveId), reason })
+          .mutateAsync({ moveId: Number(moveId), secrets })
           .then((done) => {
             showToast(
               'success',

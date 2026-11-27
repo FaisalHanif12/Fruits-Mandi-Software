@@ -148,6 +148,27 @@ fn write_failure(
     Ok(())
 }
 
+/// The audit row of a wait that starts now (PRD FR-21.3 v1.61): nothing typed, only for what and
+/// how long. A try that starts no wait writes nothing.
+fn note_lockout(
+    ctx: &Context,
+    tx: &mandi_db::rusqlite::Connection,
+    user: Option<&UserRecord>,
+    via: Via,
+    outcome: WrongTry,
+) -> Result<(), ServiceError> {
+    let WrongTry::Locked { seconds } = outcome else {
+        return Ok(());
+    };
+    let mut event = Event::new(user.map(|u| u.id), "lockout_started", "user")
+        .new_value(json!({ "via": via.as_str(), "seconds": seconds }));
+    if let Some(user) = user {
+        event = event.entity_id(user.id);
+    }
+    ctx.db.auditor().write(tx, &event.into_entry())?;
+    Ok(())
+}
+
 /// Counts a wrong try for this name, writes it down, starts a lock when the count reaches a
 /// step, and returns the error the screen shows.
 fn register_wrong_try(
@@ -185,6 +206,7 @@ fn register_wrong_try(
                 via,
                 &json!({ "reason": "wrong_secret", "attempts": attempts }),
             )?;
+            note_lockout(ctx, tx, Some(user), via, outcome)?;
             Ok::<_, ServiceError>(outcome)
         }),
         None => {
@@ -200,6 +222,7 @@ fn register_wrong_try(
                         via,
                         &json!({ "reason": "wrong_secret", "attempts": attempts }),
                     )?;
+                    note_lockout(ctx, tx, None, via, outcome)?;
                     Ok::<_, ServiceError>(())
                 })
                 .map(|()| outcome)

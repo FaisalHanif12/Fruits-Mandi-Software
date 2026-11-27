@@ -616,6 +616,7 @@ fn the_peshgi_list_shows_the_buyer_ones_with_their_type() {
         vouchers::list(
             &w.env.ctx,
             &VouchersListInput {
+                voucher_types: None,
                 voucher_type: Some(voucher_type),
                 from: String::new(),
                 to: String::new(),

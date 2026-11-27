@@ -1,7 +1,7 @@
 // Development pages /dev/dues/<page> (plan 79): the real pages behind the dashboard tiles inside the app shell, answered
 // by a stand-in for the backend with the numbers of the plan (tests/helpers/dev-bridge-dues.ts), so they can be
 // opened in a plain browser tab, used, and photographed in both languages and at every window size. The page is
-// in the path: `sellers`, `buyers`, `total`, `lent`, `advances` or `cash`; the flags in the hash choose the state (`?empty`,
+// in the path: `sellers`, `buyers`, `total`, `lent`, `advances`, `cash` or `worth` (plan 100); the flags in the hash choose the state (`?empty`,
 // `?down`, `?full`; see the bridge). Never shipped: the route exists only when import.meta.env.DEV is true
 // (app/router.tsx).
 
@@ -14,6 +14,7 @@ import { CashSalesPage } from '../../features/dashboard/pages/CashSalesPage';
 import { LentOpenPage } from '../../features/dashboard/pages/LentOpenPage';
 import { SellerDuesPage } from '../../features/dashboard/pages/SellerDuesPage';
 import { TotalDuesPage } from '../../features/dashboard/pages/TotalDuesPage';
+import { TotalWorthPage } from '../../features/dashboard/pages/TotalWorthPage';
 import { useEscapeDispatcher } from '../../shared/keyboard';
 import { AppShell } from '../layout/AppShell';
 import { MainNav } from '../layout/MainNav';
@@ -27,6 +28,8 @@ function pageOf(name: string): ReactNode {
       return <BuyerDuesPage />;
     case 'total':
       return <TotalDuesPage />;
+    case 'worth':
+      return <TotalWorthPage />;
     case 'lent':
       return <LentOpenPage />;
     case 'advances':

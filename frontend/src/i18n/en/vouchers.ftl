@@ -614,3 +614,7 @@ vouchers-cancel-text-other = { $number } (<num>{ $amount }</num>, { $name }) wil
 
 # review: pending
 vouchers-cancelled-other = { $number } cancelled
+
+# Under the seller's payables, when he has an open advance (plan 100 A, PRD v1.61).
+# review: pending
+vouchers-payables-net-note = Open { -peshgi }: <num>{ $advance }</num>, net to pay: <num>{ $net }</num>

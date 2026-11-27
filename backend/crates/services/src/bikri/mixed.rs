@@ -403,6 +403,7 @@ pub fn save(
                 }))
                 .into_entry(),
         )?;
+        crate::assist::clear_snoozes(tx, actor.user_id)?;
         // The بکری this save sold: the new one first, then the old one of each carried lot.
         let mut print_bikri_ids: Vec<i64> = new_id.into_iter().collect();
         for carried in &carried_saved {
@@ -426,6 +427,14 @@ pub fn save(
         .flat_map(|c| c.sales.iter())
         .chain(input.new_lots.iter().flat_map(|l| l.sales.iter()))
         .any(|s| s.chukta.is_some());
+    // Only a save just made may be undone without the code (PRD FR-7.47).
+    crate::cancel_guard::remember(
+        ctx,
+        crate::cancel_guard::Saved::Mixed(
+            saved.carried.iter().map(|c| c.entry_id).collect(),
+            saved.new_bikri_id,
+        ),
+    );
     if chukta {
         crate::search::refresh_chukta_all(ctx);
     }

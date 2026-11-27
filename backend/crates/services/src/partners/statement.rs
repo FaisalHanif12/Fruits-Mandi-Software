@@ -36,6 +36,7 @@ use mandi_db::rusqlite::Connection;
 use mandi_db::statement as read;
 use mandi_db::ventures as venture_repo;
 use mandi_domain::core::accounts::RecordRef;
+use mandi_domain::core::advances::AdvanceEventKind;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
@@ -103,9 +104,11 @@ enum Kind {
     /// A line on his 0605 account: money that reached him through a linked khata or loan (plan 76
     /// points 5 and 10).
     Linked,
-    /// His part of an advance to a seller, going out or coming back (plan 78 B4, PRD FR-17.13).
+    /// His part of an advance to a seller, going out, coming back or covered by the seller's
+    /// credit (plan 78 B4, PRD FR-17.13).
     Advance {
-        out: bool,
+        change: AdvanceEventKind,
+        covered: bool,
         seller: RecordRef,
         amount_paisa: i64,
         share_bps: i32,
@@ -261,7 +264,6 @@ fn events_of(
         .filter(|e| days.from.is_none_or(|d| e.date.as_str() >= d))
         .filter(|e| days.to.is_none_or(|d| e.date.as_str() <= d))
     {
-        use mandi_domain::core::advances::AdvanceEventKind;
         let out = e.kind == AdvanceEventKind::Out;
         let Some(seller) = advances.sellers.get(&e.line_id) else {
             return Err(data("an advance has no seller"));
@@ -277,7 +279,8 @@ fn events_of(
                 e.part
             }),
             kind: Kind::Advance {
-                out,
+                change: e.kind,
+                covered: e.covered,
                 seller: seller.clone(),
                 amount_paisa: e.amount.as_paisa(),
                 share_bps: e.share_bps,
@@ -845,17 +848,20 @@ fn draft_of(
             draft
         }
         Kind::Advance {
-            out,
+            change,
+            covered,
             seller,
             amount_paisa,
             share_bps,
         } => {
-            let mut draft = Draft::new(
-                H::Advance,
-                if *out { D::AdvanceOut } else { D::AdvanceBack },
-            )
-            .number_value("amount_paisa", *amount_paisa)
-            .number_value("share_bps", i64::from(*share_bps));
+            let detail = match (change, *covered) {
+                (AdvanceEventKind::Out, _) => D::AdvanceOut,
+                (AdvanceEventKind::Back, false) => D::AdvanceBack,
+                (AdvanceEventKind::Back, true) => D::AdvanceCovered,
+            };
+            let mut draft = Draft::new(H::Advance, detail)
+                .number_value("amount_paisa", *amount_paisa)
+                .number_value("share_bps", i64::from(*share_bps));
             draft.subject = Some(seller.clone());
             draft
         }

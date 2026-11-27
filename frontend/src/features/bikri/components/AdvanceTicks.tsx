@@ -1,16 +1,16 @@
 // The cards of the summary: the block of each seller shown: the tick "پیشگی اس بکری سے کاٹیں" (PRD FR-12.23, plan 78 C3, Umar
 // 17-11-2026: "Take the advance off this sale"), and beside it the lines of his
-// account (plan 91, `SellerPaid`). The tick shows for a seller who has an advance open, with the open amount, and it
-// is OFF when a بکری opens. One tick covers every lot of that seller in the بکری, so the summary of one lot and the
+// account (plan 91, `SellerPaid`). The tick shows for a seller who has an advance open, with the open amount (and,
+// since v1.61, the line for the part his credit already covers), and it is OFF when a بکری opens. One tick covers every lot of that seller in the بکری, so the summary of one lot and the
 // whole بکری show the same tick. The amount is the party card's (the backend's), written with formatPaisa; nothing
 // is worked out here (CLAUDE.md rule 1).
 
 import { Localized } from '@fluent/react';
 import type { EntryRow, PickedRecord } from '../../../shared/grid';
 import { usePartyCard } from '../../../shared/accounts';
-import { formatPaisa, useGrouping } from '../../../shared/format';
+import { formatPaisa, isPositivePaisa, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Checkbox, Num } from '../../../shared/ui';
+import { AdvanceCoveredLine, Checkbox, Num } from '../../../shared/ui';
 import { isSellerTicked, setSellerTick } from '../advance-tick';
 import { useBikriDraft } from '../draft-store';
 import { tickLotsOf } from '../draft';
@@ -33,10 +33,12 @@ function SellerTick({ seller, rows }: SellerTickProps) {
   const grouping = useGrouping();
   const language = useLanguage();
   const card = usePartyCard(seller.id);
-  const advance = card.data?.advance_open ?? null;
-  // The tick shows only for a seller who has an advance open (PRD 12.3): the test is on the text the backend's
-  // number is written as, so nothing is compared as a number here.
-  if (advance === null || formatPaisa(advance, { grouping }) === '0') return null;
+  const uncovered = card.data?.advance_open ?? null;
+  const covered = card.data?.advance_covered ?? null;
+  const hasUncovered = uncovered !== null && isPositivePaisa(uncovered);
+  // The tick shows for a seller who has an advance open (PRD 12.3), covered by his credit or not: the sale can
+  // take it off either way (matching does not change, PRD FR-9.6 v1.61).
+  if (!hasUncovered && covered === null) return null;
   return (
     <div className="flex flex-col gap-1" data-advance-tick={seller.id}>
       <Checkbox
@@ -53,13 +55,16 @@ function SellerTick({ seller, rows }: SellerTickProps) {
           />
         }
       />
-      <Localized
-        id="bikri-more-advance-open"
-        vars={{ amount: formatPaisa(advance, { grouping }) }}
-        elems={{ num: <Num /> }}
-      >
-        <span className="type-body text-ink-muted" />
-      </Localized>
+      {hasUncovered ? (
+        <Localized
+          id="bikri-more-advance-open"
+          vars={{ amount: formatPaisa(uncovered, { grouping }) }}
+          elems={{ num: <Num /> }}
+        >
+          <span className="type-body text-ink-muted" />
+        </Localized>
+      ) : null}
+      {covered === null ? null : <AdvanceCoveredLine amount={covered} />}
     </div>
   );
 }

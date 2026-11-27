@@ -17,7 +17,8 @@ export type PrintFirm = {
    */
   address: string;
   /**
-   * Phone, printed `03XX-XXXXXXX` with plain digits. Empty if none.
+   * The firm's phones (up to 4, PRD Section 21 v1.61), each printed `03XX-XXXXXXX` with plain
+   * digits, in the order of Settings, after the firm name. Empty if none.
    */
-  phone: string;
+  phones: Array<string>;
 };

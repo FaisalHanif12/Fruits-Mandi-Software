@@ -78,6 +78,7 @@ fn e2e_45_an_entry_of_a_closed_day_is_fixed_through_reopen_and_fix() {
     let receipts = vouchers::list(
         ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,

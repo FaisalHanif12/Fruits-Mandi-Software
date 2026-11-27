@@ -2,11 +2,12 @@
 //! trip costs and sales in other shops. Every command needs the signed-in Owner. The reads and the
 //! previews only read (Code Standards B29); the others are one transaction each (Code Standards B3).
 
+use mandi_services::cancel_guard;
+use mandi_services::core::cancel::TripEntryCancelRequest;
 use mandi_services::core::trips::{
     OtherSaleInput, OtherSalePreview, OtherSaleSaved, TripCostInput, TripCostPreview,
-    TripCostSaved, TripDefaults, TripDetail, TripEntryCancelInput, TripEntryCancelled,
-    TripGetInput, TripInput, TripRow, TripSetPartnersInput, TripsList, TripsListInput,
-    TripsSummary,
+    TripCostSaved, TripDefaults, TripDetail, TripEntryCancelled, TripGetInput, TripInput, TripRow,
+    TripSetPartnersInput, TripsList, TripsListInput, TripsSummary,
 };
 use mandi_services::partner_code;
 use mandi_services::{auth, trips};
@@ -133,14 +134,18 @@ pub async fn trips_cost_save<R: tauri::Runtime>(
 /// or written off. Errors: `ERR_NOT_FOUND`, `ERR_TRIP_ENTRY_CANCELLED`, `ERR_TRIP_COST_HAS_SALES`
 /// on `id`; `ERR_VERSION_CHANGED` on `version`; `ERR_REASON_REQUIRED` on `reason`;
 /// `ERR_DATE_CLOSED` on `id`.
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn trips_cost_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: TripEntryCancelInput,
+    input: TripEntryCancelRequest,
 ) -> Result<TripEntryCancelled, UiError> {
     run(app, "trips_cost_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        trips::cost_cancel(ctx, &actor, &input)
+        cancel_guard::cancel_trip_cost(ctx, &actor, &input)
     })
     .await
 }
@@ -178,14 +183,18 @@ pub async fn trips_other_sale_save<R: tauri::Runtime>(
 /// Errors: `ERR_NOT_FOUND`, `ERR_TRIP_ENTRY_CANCELLED` on `id`; `ERR_VERSION_CHANGED` on `version`;
 /// `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on `id`;
 /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`).
+///
+/// From PRD FR-7.93 (plan 100) the request also carries `partner_code` and `sign`; they and the
+/// reason are checked first and nothing changes on a wrong one: errors as
+/// `mandi_services::cancel_guard::confirm`.
 #[tauri::command]
 pub async fn trips_other_sale_cancel<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: TripEntryCancelInput,
+    input: TripEntryCancelRequest,
 ) -> Result<TripEntryCancelled, UiError> {
     run(app, "trips_other_sale_cancel", move |ctx| {
         let actor = auth::require(ctx)?;
-        trips::other_sale_cancel(ctx, &actor, &input)
+        cancel_guard::cancel_trip_other_sale(ctx, &actor, &input)
     })
     .await
 }

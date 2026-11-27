@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import type { AuditPage } from '../../../bindings/AuditPage';
 import type { AuditRow } from '../../../bindings/AuditRow';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, ListRegion, Pager, listHeightMode, useListPaging } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { AUDIT_COLUMNS } from '../columns';
 import type { useAuditPages } from '../hooks';
@@ -74,26 +74,22 @@ export function AuditResults({
     );
   }
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2" aria-busy={query.isFetching}>
-      <ListRegion rowCount={rows.length}>
-        <ListGrid<AuditRow>
-          columns={AUDIT_COLUMNS}
-          rows={rows}
-          getRowId={(row) => String(row.id)}
-          labelId="audit-grid-label"
-          onOpen={onOpen}
-          onFocusRow={onFocusRow}
-          focusRowId={focusRowId}
-          heightMode={listHeightMode(rows.length)}
-          paging={paging}
-          sort={{ value: query.sort, onChange: query.setSort }}
-          // A heading above each month, with how many entries it has: the log is in date order.
-          months={{ months: last.months, monthOf: (row) => row.date.slice(0, 7) }}
-        />
-      </ListRegion>
-      <div className="shrink-0">
-        <Pager pager={query.pager} />
-      </div>
+    <div className="flex shrink-0 flex-col gap-2" aria-busy={query.isFetching}>
+      <ListGrid<AuditRow>
+        columns={AUDIT_COLUMNS}
+        rows={rows}
+        getRowId={(row) => String(row.id)}
+        labelId="audit-grid-label"
+        onOpen={onOpen}
+        onFocusRow={onFocusRow}
+        focusRowId={focusRowId}
+        heightMode="auto"
+        paging={paging}
+        sort={{ value: query.sort, onChange: query.setSort }}
+        // A heading above each month, with how many entries it has: the log is in date order.
+        months={{ months: last.months, monthOf: (row) => row.date.slice(0, 7) }}
+      />
+      <Pager pager={query.pager} />
     </div>
   );
 }

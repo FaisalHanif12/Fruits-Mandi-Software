@@ -239,22 +239,44 @@ pub(crate) fn filtered(
 /// # Errors
 /// `ReportsError::Money` if a stored amount is not whole rupees or a sum does not fit.
 pub(crate) fn tile(conn: &Connection) -> Result<(Paisa, i64), ReportsError> {
-    let marks = repo::active_marks(conn)?;
-    if marks.is_empty() {
-        return Ok((Paisa::ZERO, 0));
-    }
-    let figures = repo::figures(conn)?;
     let mut total = Paisa::ZERO;
     let mut count = 0_i64;
+    for (_, still_owed) in still_owed_by_mark(conn)? {
+        add(&mut total, still_owed)?;
+        count = count
+            .checked_add(1)
+            .ok_or_else(|| ReportsError::Data("the dead count does not fit".to_owned()))?;
+    }
+    Ok((total, count))
+}
+
+/// What each active move still owes, only the moves that owe something: `(account, still owed)`.
+fn still_owed_by_mark(conn: &Connection) -> Result<Vec<(i64, Paisa)>, ReportsError> {
+    let marks = repo::active_marks(conn)?;
+    if marks.is_empty() {
+        return Ok(Vec::new());
+    }
+    let figures = repo::figures(conn)?;
+    let mut out = Vec::new();
     for mark in &marks {
         let f = figures.get(&mark.id).copied().unwrap_or_default();
         let money = figures_money(mark, &f)?;
         if money.still_owed > Paisa::ZERO {
-            add(&mut total, money.still_owed)?;
-            count = count
-                .checked_add(1)
-                .ok_or_else(|| ReportsError::Data("the dead count does not fit".to_owned()))?;
+            out.push((mark.account_id, money.still_owed));
         }
     }
-    Ok((total, count))
+    Ok(out)
+}
+
+/// The still owed of the moved people by account, in account order: the rows of the tile ڈوبی رقم
+/// added up for each account (old data may have two people of one چکتا account).
+pub(crate) fn still_owed_by_account(conn: &Connection) -> Result<Vec<(i64, Paisa)>, ReportsError> {
+    let mut by_account: std::collections::BTreeMap<i64, Paisa> = std::collections::BTreeMap::new();
+    for (account_id, still_owed) in still_owed_by_mark(conn)? {
+        add(
+            by_account.entry(account_id).or_insert(Paisa::ZERO),
+            still_owed,
+        )?;
+    }
+    Ok(by_account.into_iter().collect())
 }

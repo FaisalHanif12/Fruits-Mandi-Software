@@ -156,7 +156,7 @@ lent-open-people = افراد
 advances-open-title = { -peshgi } باقی
 
 # review: pending
-advances-open-help = ہر { -beopari } جس کی { -peshgi } ابھی باقی ہے: کتنی دی گئی، کتنی اس کی { -bikri } سے کٹ گئی، کتنی واپس آئی اور کتنی باقی ہے۔ میزان ٹائل کی ہے۔ نام پر Enter سے اس کی { -peshgi } کھلتی ہے۔
+advances-open-help = ہر وہ { -beopari } جس کی کھلی { -peshgi } دکان کے ذمے رقم سے زیادہ ہے: کتنی دی، بکری سے کتنی کٹی، کتنی واپس ہوئی، کتنی کھلی ہے، اس میں سے کتنی بقایا میں سے کٹ چکی، اور { -khalis } باقی۔ ٹائل { -khalis } باقی کا { -meezan } ہے۔ نام پر Enter دبانے سے اس کی { -peshgi } کھلتی ہے۔
 
 # review: pending
 advances-open-label = { -peshgi } والے بیوپاری
@@ -181,6 +181,9 @@ advances-open-col-adjusted = کٹ گئی
 
 # review: pending
 advances-open-col-returned = واپس آئی
+
+# review: pending
+advances-open-col-uncovered = { -khalis } باقی
 
 # review: pending
 advances-open-col-open = باقی

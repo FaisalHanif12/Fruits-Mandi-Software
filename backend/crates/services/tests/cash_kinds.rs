@@ -2315,6 +2315,7 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
         let listed = vouchers::list(
             ctx,
             &mandi_services::core::vouchers::VouchersListInput {
+                voucher_types: None,
                 voucher_type: Some(*kind),
                 from: String::new(),
                 to: String::new(),
@@ -2427,6 +2428,7 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
     let cancelled = vouchers::list(
         ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,
@@ -2462,6 +2464,7 @@ fn ids_by_type(ctx: &mandi_services::context::Context, kind: VoucherType) -> i64
     let page = vouchers::list(
         ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            voucher_types: None,
             sort: None,
             group_by_month: false,
             search: None,

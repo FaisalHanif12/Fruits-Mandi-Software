@@ -2011,6 +2011,9 @@
   "truncated": true,
   "open_paisa": 20500000,
   "advances_open_paisa": 500000,
+  "net_payable_paisa": 20000000,
+  "uncovered_advance_paisa": 0,
+  "advance_covered": 500000,
   "owes_firm_paisa": 0,
   "balance": {
     "amount_paisa": 20000000,

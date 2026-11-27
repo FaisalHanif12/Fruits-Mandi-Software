@@ -4235,6 +4235,9 @@ fn shop_figure(
             );
         }
         FigureKind::Payable if period.is_none() => {
+            // The figure is the tile بیوپاریوں کو ادائیگی باقی, netted for each seller (PRD 9.1
+            // v1.61); R24, with its gross columns, is the list under it.
+            plan.read(tiles());
             plan.read(report(
                 "R24",
                 Rep {

@@ -212,18 +212,9 @@ pub struct ExpensePreview {
     pub errors: Vec<FieldError>,
     /// What only warns.
     pub warnings: Vec<FieldError>,
-    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
-    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    /// Always false from PRD v1.61: a personal expense and the partner's total beside it are open
+    /// without the partner code (plan 100 E). Kept for the screen's older check.
     pub partners_locked: bool,
-}
-
-impl ExpensePreview {
-    /// Leaves out what is behind the partner code (PRD FR-17.11): the partner's کل رقم now and
-    /// after. The split of the one entry (`shares`) stays, because the munshi checks it.
-    pub fn hide_partners(&mut self) {
-        self.partner_effect = None;
-        self.partners_locked = true;
-    }
 }
 
 // ---- Money taken by a partner (PRD FR-16.2) ----

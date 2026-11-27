@@ -3,7 +3,7 @@
 // the account search, the party card). dev-bridge.ts asks this table first while the address is
 // /dev/rokar. Flags in the hash: `?screen=book|expense|lent|khata|general|capital|statement|overview|day`, `&type=personal_expense` ...,
 // `&empty` (nothing yet), `&cash` (cash 1,000, so a 3,000 entry asks the cash question),
-// `&repeat` (two regular expenses of last month), `&takes` (two partners took money and one gave some back, plan 98).
+// `&repeat` (two regular expenses of last month), `&entries` (shop expenses of a few days), `&takes` (two partners took money and one gave some back, plan 98).
 // Never part of a build: only the development route imports it.
 
 import type { CashbookInput } from '../../src/bindings/CashbookInput';
@@ -225,6 +225,22 @@ if (flag('repeat')) {
       last_date: '2026-09-30',
     },
   );
+}
+// `&entries`: shop expenses of a few days, so the 30-day list under the form (plan 100 F) can be looked at with data.
+if (flag('entries')) {
+  const expense = (date: string, amount: string, head: number, narration: string) =>
+    books.saveExpense({
+      type: 'shop_expense',
+      date,
+      expense_head_id: headAt(head).id,
+      amount,
+      paid_to: null,
+      narration,
+      confirm_cash_below_zero: true,
+    });
+  expense('22-09-2026', '1200', 1, '');
+  expense('05-10-2026', '700', 3, '');
+  expense('10-10-2026', '3000', 0, 'ستمبر کا بل');
 }
 // `&takes`: two partners have taken money, so the list under the خرچہ form (plan 98) can be looked at with data.
 if (flag('takes')) {
@@ -656,6 +672,8 @@ export const rokarHandlers: Record<string, Handler> = {
       credit_limit: null,
       credit_used: null,
       advance_open: null,
+      advance_covered: null,
+      net_payable: null,
       warnings: [],
       dead: null,
     };

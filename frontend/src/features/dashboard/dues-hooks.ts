@@ -14,7 +14,9 @@ import {
   dashboardLentOpen,
   dashboardSellerDues,
   dashboardTotalDues,
+  dashboardTotalWorth,
 } from './api';
+import type { TotalWorthSide } from '../../bindings/TotalWorthSide';
 
 /** A short pause so a burst of key presses in the search box asks once (Code Standards F35). */
 const FILTER_DELAY_MS = 150;
@@ -140,5 +142,20 @@ export function useCashSalesDay(date: string, enabled: boolean) {
     queryFn: () => dashboardCashSalesDay({ date, offset: 0, limit: DAY_BUYERS }),
     enabled,
     staleTime: 0,
+  });
+}
+
+/**
+ * One page of one side of کل مالیت (PRD FR-9.10): the money to have or the money to give. Every page carries the
+ * totals of both sides and of each source, from one read of the books.
+ */
+export function useTotalWorth(side: TotalWorthSide) {
+  return usePagedQuery({
+    screen: `dashboard.total_worth.${side}`,
+    queryKey: ['dashboard', 'total_worth', side],
+    fetchPage: (offset, limit) => dashboardTotalWorth({ side, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }

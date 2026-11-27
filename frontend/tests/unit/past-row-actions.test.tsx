@@ -32,6 +32,7 @@ import { EMPTY_PAIRS } from '../helpers/paged';
 import { paisaForTest } from '../helpers/paisa';
 import { pastAnswer, type PastFake } from '../helpers/past';
 import { message, visible } from '../helpers/render';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -301,12 +302,16 @@ describe.each(LANGUAGES)('Edit and Cancel on the rows of پچھلی بکری (%s
     const dialog = await screen.findByRole('alertdialog');
     await user.type(
       within(dialog).getByRole('combobox', { name: named(m('bikri-cancel-reason')) }),
-      'entered twice{Enter}',
+      'entered twice',
     );
+    await typeSignAndCode(user, language);
+    // Enter on the last box does the cancel (the keyboard path).
+    await user.keyboard('{Enter}');
     await waitFor(() => {
       expect(plan.cancels).toHaveLength(1);
     });
     expect(plan.cancels[0]).toMatchObject({ id: 61, reason: 'entered twice', confirm: false });
+    expect(plan.secrets[0]).toMatchObject(CANCEL_SECRETS);
     // The Owner has not left the list, and it asks the backend again (the figures may have moved).
     expect(router.state.location.pathname).toBe('/bikri/today');
     await waitFor(() => {

@@ -34,7 +34,9 @@ import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
 import { LinkedPartsCard } from '../components/LinkedPartsCard';
 import { KhataForm } from '../components/KhataForm';
+import { EntryListSection } from '../components/EntryListSection';
 import { KhataListSection } from '../components/KhataListSection';
+import { KHATA_ENTRY_COLUMNS, KHATA_ENTRY_TYPES } from '../entry-list-columns';
 import { previewRefusal, useFollowType } from '../entry-support';
 import { useEntryPreview, useSaveKhata } from '../hooks';
 import {
@@ -164,7 +166,21 @@ function KhataEditor({ today, urlType, editable = null, initial = null }: KhataE
       closedDay={{ date: draft.date, onReopened: flow.clearRefusal }}
       fieldsShown={KHATA_FIELD_PATHS}
       formRef={formRef}
-      below={<KhataListSection khataId={draft.khata?.id ?? null} />}
+      below={
+        <>
+          {/* Every entry of every khata, 30 days at a time, or only the chosen khata's (plan 100 F). */}
+          <EntryListSection
+            screen="cashbook.khata.entries"
+            titleId="cashbook-entries-khata-title"
+            types={KHATA_ENTRY_TYPES}
+            accountId={draft.khata?.id ?? null}
+            source={{ kind: 'khata', account_id: draft.khata?.id ?? null }}
+            columns={KHATA_ENTRY_COLUMNS}
+            today={today}
+          />
+          {draft.khata === null ? null : <KhataListSection khataId={draft.khata.id} />}
+        </>
+      }
     >
       <FormAside
         form={<KhataForm draft={draft} onChange={change} error={error} marks={edit?.marks} />}

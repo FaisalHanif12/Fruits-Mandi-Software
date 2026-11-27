@@ -156,7 +156,7 @@ lent-open-people = People
 advances-open-title = Advances open
 
 # review: pending
-advances-open-help = Every { -beopari } with an open advance: what was given, how much his sales took off, what he returned and what is open. The total is the tile's. Press Enter on a name to open his advances.
+advances-open-help = Every { -beopari } whose open advance is more than what the shop owes him: what was given, what his sales took off, what he returned, what is open, how much of it his balance already covers, and the net: the part not covered. The tile is the total of the net. Press Enter on a name to open his advances.
 
 # review: pending
 advances-open-label = Sellers with an advance
@@ -181,6 +181,9 @@ advances-open-col-adjusted = Adjusted
 
 # review: pending
 advances-open-col-returned = Returned
+
+# review: pending
+advances-open-col-uncovered = Net open
 
 # review: pending
 advances-open-col-open = Open

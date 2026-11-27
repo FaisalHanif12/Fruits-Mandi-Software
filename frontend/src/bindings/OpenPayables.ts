@@ -28,14 +28,28 @@ export type OpenPayables = {
    */
   truncated: boolean;
   /**
-   * Σ still to pay on ALL his postings, not only on `postings`. The "پورا بقایا" button fills
-   * this amount.
+   * Σ still to pay on ALL his postings, not only on `postings` (the working; the "پورا بقایا"
+   * button fills `net_payable_paisa`).
    */
   open_paisa: Paisa;
   /**
    * His open advances (PRD FR-15.8). They are not taken off `open_paisa`.
    */
   advances_open_paisa: Paisa;
+  /**
+   * What the shop really owes him: `open_paisa` less `advances_open_paisa`, never below 0
+   * (PRD v1.61, plan 100 A). The "پورا بقایا" button fills this.
+   */
+  net_payable_paisa: Paisa;
+  /**
+   * The part of `advances_open_paisa` his payable does not cover, shown as پیشگی باقی (PRD
+   * FR-9.6 v1.61, "covered advance").
+   */
+  uncovered_advance_paisa: Paisa;
+  /**
+   * The part of his open advances his payable covers ("بقایا میں سے کٹ چکی"). Null when 0.
+   */
+  advance_covered: Paisa | null;
   /**
    * What he owes the firm beyond his advances: payments above his payable (PRD FR-15.7,
    * FR-15.9, "بیوپاری کے ذمے").

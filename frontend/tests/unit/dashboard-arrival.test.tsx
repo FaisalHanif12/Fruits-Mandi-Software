@@ -6,7 +6,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AttentionList } from '../../src/bindings/AttentionList';
+import type { AttentionPanel } from '../../src/bindings/AttentionPanel';
 import * as dashboardApi from '../../src/features/dashboard/api';
 import { destinationOfFirst } from '../../src/features/dashboard/destinations';
 import * as gardensApi from '../../src/features/gardens/api';
@@ -20,7 +20,8 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { ATTENTION_18_10, fakeDashboard } from '../helpers/dashboard';
+import { PANEL_WORKED_DAY } from '../helpers/attention-panel';
+import { fakeDashboard } from '../helpers/dashboard';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -40,16 +41,17 @@ afterEach(() => {
 });
 
 /**
- * The attention list of the fixture with one more item: the stock that waits, whose most urgent
- * record is a garden's goods arrived entry.
+ * The bell's panel with one more general reminder: the stock that waits, whose most urgent record is a
+ * garden's goods arrived entry.
  */
-function withWaitingArrival(): AttentionList {
+function withWaitingArrival(): AttentionPanel {
   return {
-    ...ATTENTION_18_10,
-    total_count: ATTENTION_18_10.total_count + 1,
-    items: [
-      ...ATTENTION_18_10.items,
+    ...PANEL_WORKED_DAY,
+    bell_count: PANEL_WORKED_DAY.bell_count + 1,
+    general: [
+      ...PANEL_WORKED_DAY.general,
       {
+        item_key: 'kind:stock_waiting',
         kind: 'stock_waiting',
         count: 1,
         amount_paisa: null,
@@ -85,14 +87,14 @@ describe.each(LANGUAGES)('the bell with garden goods waiting (%s)', (language) =
   async function openBell() {
     resetClientState(language);
     signedIn(sessionUser({ language }));
-    fakeDashboard({ attention: withWaitingArrival() });
+    fakeDashboard({ panel: withWaitingArrival() });
     const view = await renderApp('/bikri/today');
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole('button', {
         name: (name) =>
           visible(name) ===
-          message(language, 'attention-bell-label', { count: ATTENTION_18_10.total_count + 1 }),
+          message(language, 'attention-bell-label', { count: PANEL_WORKED_DAY.bell_count + 1 }),
       }),
     );
     return { ...view, user };

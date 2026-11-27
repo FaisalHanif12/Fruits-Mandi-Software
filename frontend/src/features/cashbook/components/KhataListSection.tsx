@@ -1,8 +1,8 @@
-// The list under the الگ کھاتہ form (PRD FR-16.6, FR-19.11): the chosen khata's entries in date
-// order with the reason, the signed amount and the running balance, page by page, with the opening
-// and closing balance and the backend's totals over the whole list. Plus means the shop holds money
-// for the khata, minus means it has taken more than it brought. Four states: loading, an error with
-// a retry, nothing yet, and the rows. Without a khata it says to choose one.
+// The chosen khata's account, under the entries of the الگ کھاتہ form (PRD FR-16.6, FR-19.11): its
+// entries in date order with the reason, the signed amount and the running balance, page by page, with
+// the opening and closing balance. Plus means the shop holds money for the khata, minus means it has
+// taken more than it brought. Four states: loading, an error with a retry, nothing yet, and the rows. It
+// shows only once a khata is chosen.
 
 import { Localized } from '@fluent/react';
 import { Notebook, Wallet } from 'lucide-react';
@@ -17,7 +17,7 @@ import { useOpenVoucher } from '../../../shared/edit';
 import { KhataLinkCard } from './KhataLinkCard';
 import { SignedNum } from './SignedNum';
 
-export function KhataListSection({ khataId }: { khataId: number | null }) {
+export function KhataListSection({ khataId }: { khataId: number }) {
   const open = useOpenVoucher();
   const dayStatus = useDayStatus();
   const today = dayStatus.data?.today;
@@ -39,65 +39,55 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
   const rows = statement.data?.pages.flatMap((page) => page.rows);
   return (
     <Card compact icon={Notebook} title={<Localized id="cashbook-khata-title" />}>
-      {khataId === null ? (
-        <EmptyState
-          icon={Wallet}
-          title={<Localized id="cashbook-khata-pick" />}
-          help={<Localized id="cashbook-khata-pick-help" />}
-        />
-      ) : (
-        <>
-          {first === undefined ? null : <KhataLinkCard khata={first.khata} />}
-          {first === undefined ? null : (
-            <dl className="grid grid-cols-2 gap-3">
-              <Fact stat label={<Localized id="cashbook-khata-opening" />}>
-                <SignedNum inherit paisa={first.opening_paisa} />
-              </Fact>
-              <Fact stat label={<Localized id="cashbook-khata-closing" />}>
-                <SignedNum inherit paisa={first.closing_paisa} />
-              </Fact>
-            </dl>
-          )}
-          <Localized id="cashbook-khata-sign-hint">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          <PagedList
-            columns={KHATA_COLUMNS}
-            rows={rows}
-            getRowId={(row) => `${String(row.entry_id)}-${String(row.voucher_id ?? 0)}`}
-            // A payment or a receipt opens its voucher; a sale of the khata's goods has none.
-            onOpen={(row) => {
-              if (row.voucher_id === null) return;
-              if (row.kind === 'paid_out') open({ id: row.voucher_id, voucher_type: 'khata_out' });
-              else if (row.kind === 'received') {
-                open({ id: row.voucher_id, voucher_type: 'khata_in' });
-              }
-            }}
-            labelId="cashbook-khata-label"
-            failedId="cashbook-khata-failed"
-            error={statement.isError ? uiErrorOf(statement.error) : null}
-            onRetry={() => {
-              void statement.refetch();
-            }}
-            pager={statement.pager}
-            onPageKey={listWindow.onPageKey}
-            sort={{ value: statement.sort, onChange: statement.setSort }}
-            months={
-              first === undefined || first.months.length === 0
-                ? undefined
-                : { months: first.months, monthOf: (row) => row.entry_date.slice(0, 7) }
-            }
-            empty={
-              <EmptyState
-                icon={Wallet}
-                title={<Localized id="cashbook-khata-empty" />}
-                help={<Localized id="cashbook-khata-empty-help" />}
-              />
-            }
-          />
-          {windowed ? <ListWindowBar window={listWindow} /> : null}
-        </>
+      {first === undefined ? null : <KhataLinkCard khata={first.khata} />}
+      {first === undefined ? null : (
+        <dl className="grid grid-cols-2 gap-3">
+          <Fact stat label={<Localized id="cashbook-khata-opening" />}>
+            <SignedNum inherit paisa={first.opening_paisa} />
+          </Fact>
+          <Fact stat label={<Localized id="cashbook-khata-closing" />}>
+            <SignedNum inherit paisa={first.closing_paisa} />
+          </Fact>
+        </dl>
       )}
+      <Localized id="cashbook-khata-sign-hint">
+        <p className="type-body text-ink-muted" />
+      </Localized>
+      <PagedList
+        columns={KHATA_COLUMNS}
+        rows={rows}
+        getRowId={(row) => `${String(row.entry_id)}-${String(row.voucher_id ?? 0)}`}
+        // A payment or a receipt opens its voucher; a sale of the khata's goods has none.
+        onOpen={(row) => {
+          if (row.voucher_id === null) return;
+          if (row.kind === 'paid_out') open({ id: row.voucher_id, voucher_type: 'khata_out' });
+          else if (row.kind === 'received') {
+            open({ id: row.voucher_id, voucher_type: 'khata_in' });
+          }
+        }}
+        labelId="cashbook-khata-label"
+        failedId="cashbook-khata-failed"
+        error={statement.isError ? uiErrorOf(statement.error) : null}
+        onRetry={() => {
+          void statement.refetch();
+        }}
+        pager={statement.pager}
+        onPageKey={listWindow.onPageKey}
+        sort={{ value: statement.sort, onChange: statement.setSort }}
+        months={
+          first === undefined || first.months.length === 0
+            ? undefined
+            : { months: first.months, monthOf: (row) => row.entry_date.slice(0, 7) }
+        }
+        empty={
+          <EmptyState
+            icon={Wallet}
+            title={<Localized id="cashbook-khata-empty" />}
+            help={<Localized id="cashbook-khata-empty-help" />}
+          />
+        }
+      />
+      {windowed ? <ListWindowBar window={listWindow} /> : null}
     </Card>
   );
 }

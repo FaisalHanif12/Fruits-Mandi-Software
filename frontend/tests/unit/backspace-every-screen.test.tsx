@@ -8,6 +8,7 @@
 // so each screen shows the state it has with no data. The entry itself, with unsaved work, is tested on
 // the sale book in backspace-delete.test.tsx and on the shared grid in entry-grid.test.tsx.
 
+import { PANEL_EMPTY } from '../helpers/attention-panel';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as analyticsApi from '../../src/features/analytics/api';
@@ -135,13 +136,9 @@ beforeEach(() => {
     }
   }
   healthyBackend();
-  // The two commands the shell and the partner gate always ask: the attention list with nothing in it,
+  // The two commands the shell and the partner gate always ask: the bell's panel with nothing in it,
   // and a partner code that is not made yet.
-  vi.mocked(dashboardApi.assistAttention).mockResolvedValue({
-    items: [],
-    total_count: 0,
-    partners_locked: false,
-  });
+  vi.mocked(dashboardApi.assistAttention).mockResolvedValue(PANEL_EMPTY);
   vi.mocked(assistantApi.assistantStatus).mockResolvedValue(STATUS_ON);
   vi.mocked(partnersApi.partnersCodeStatus).mockResolvedValue({
     is_set: false,

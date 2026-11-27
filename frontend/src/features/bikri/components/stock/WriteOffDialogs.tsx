@@ -10,7 +10,14 @@ import type { StockRow } from '../../../../bindings/StockRow';
 import type { UiError } from '../../../../bindings/UiError';
 import { uiErrorOf } from '../../../../shared/api';
 import { isoToDisplayDate } from '../../../../shared/format';
-import { Field, QtyInput, ReasonDialog, Select, showToast } from '../../../../shared/ui';
+import {
+  ConfirmCancelDialog,
+  Field,
+  QtyInput,
+  ReasonDialog,
+  Select,
+  showToast,
+} from '../../../../shared/ui';
 import { useWriteOff, useWriteOffUndo } from '../../hooks/useStockActions';
 import { stockSellerName } from '../../stock-columns';
 import { useLanguage, useLotNames } from '../../../../shared/i18n';
@@ -107,7 +114,7 @@ export function UndoWriteOffDialog({ row, onClose }: DialogProps) {
   const writeOffs = row?.write_offs ?? [];
   const moveId = chosen ?? (writeOffs.length === 1 ? String(writeOffs[0]?.move_id) : undefined);
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (!open) close();
@@ -141,7 +148,7 @@ export function UndoWriteOffDialog({ row, onClose }: DialogProps) {
           )}
         </Field>
       }
-      onConfirm={(reason) => {
+      onConfirm={(secrets) => {
         if (moveId === undefined) {
           // Several write-offs and none chosen: say so at the field, send nothing.
           setError({
@@ -153,7 +160,7 @@ export function UndoWriteOffDialog({ row, onClose }: DialogProps) {
         }
         setError(null);
         undo
-          .mutateAsync({ moveId: Number(moveId), reason })
+          .mutateAsync({ moveId: Number(moveId), secrets })
           .then(() => {
             showToast(
               'success',

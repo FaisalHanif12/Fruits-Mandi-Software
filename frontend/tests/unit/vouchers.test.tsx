@@ -449,6 +449,8 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
       total_count: 1,
       truncated: false,
       open_paisa: money(20000),
+      uncovered_paisa: money(20000),
+      advance_covered: null,
       last: {
         entry_date: '2026-10-10',
         amount_paisa: money(20000),

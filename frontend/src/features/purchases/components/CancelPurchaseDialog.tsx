@@ -19,7 +19,13 @@ import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { ErrorMessage, Num, ReasonDialog, showToast } from '../../../shared/ui';
+import {
+  ConfirmCancelDialog,
+  ErrorMessage,
+  Num,
+  showToast,
+  type CancelSecrets,
+} from '../../../shared/ui';
 import { useCancelPurchase } from '../hooks';
 import { purchaseNumberText, supplierText } from '../list-columns';
 import type { PurchaseCancelled, PurchaseRow } from '../types';
@@ -50,14 +56,14 @@ export function CancelPurchaseDialog({ row, onClose, onCancelled }: CancelPurcha
       ? null
       : { ...error, errors: error.errors.filter((item) => item.code !== CASH_CODE) };
 
-  const confirm = (reason: string) => {
+  const confirm = (secrets: CancelSecrets) => {
     if (row === null) return;
     setError(null);
     cancel
       .mutateAsync({
+        ...secrets,
         id: row.id,
         version: row.version,
-        reason,
         confirm_cash_below_zero: cashConfirmed,
       })
       .then((cancelled) => {
@@ -82,7 +88,7 @@ export function CancelPurchaseDialog({ row, onClose, onCancelled }: CancelPurcha
   const blockedBySales = row !== null && (row.qty_sold > 0 || row.qty_written_off > 0);
 
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (open) return;

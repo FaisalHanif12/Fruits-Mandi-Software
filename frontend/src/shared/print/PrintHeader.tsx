@@ -1,6 +1,6 @@
-// The top of every printed sheet (PRD FR-19.13, Section 21 Firm): the firm name and the mandi, the
-// firm's address and phone, the trade mark in a box, the people of the firm (up to six: the owners
-// first, then the munshi, each with his role word and, when he has one, his phone), then the title of
+// The top of every printed sheet (PRD FR-19.13, Section 21 Firm): the firm name with its phones under it
+// (up to four, plan 100 H), the mandi, the firm's address, the trade mark in a box, the people of the
+// firm (up to eight: the owners first, then the munshi, each with his role word and, when he has one, his phone), then the title of
 // the document and the facts under it (number, day, filters). The firm's picture (a fruit crate, PRD
 // FR-19.13, plan 76) is at the physical left edge and the people of the firm at the physical right
 // edge, in both print languages, with the firm name between them (the order in print.css). It is ONE header for
@@ -10,7 +10,6 @@
 // is data in the print language; every label is a Fluent message id resolved in the print language.
 
 import { useLocalization } from '@fluent/react';
-import { Fragment, type ReactNode } from 'react';
 import { Code } from '../ui/Code';
 import { PrintFruitMark } from './PrintFruitMark';
 import { PrintText } from './PrintText';
@@ -39,8 +38,18 @@ export const NAMED_TITLE_IDS: ReadonlySet<string> = new Set([
   'print-statement-named-title',
 ]);
 
-/** The people of the firm, the owners first and then the munshi, each with his role word and his phone (Section 21). */
-export function PrintContacts({ contacts }: { contacts: PrintHeaderData['contacts'] }) {
+/**
+ * The people of the firm, the owners first and then the munshi, each with his role word and his phone (Section 21).
+ * `showRole` false leaves the role word out, where the place already says it (the owners under the firm name on a
+ * parchi).
+ */
+export function PrintContacts({
+  contacts,
+  showRole = true,
+}: {
+  contacts: PrintHeaderData['contacts'];
+  showRole?: boolean;
+}) {
   const { l10n } = useLocalization();
   if (contacts.length === 0) return null;
   return (
@@ -48,7 +57,13 @@ export function PrintContacts({ contacts }: { contacts: PrintHeaderData['contact
       {contacts.map((person, index) => (
         <li key={index} className="print-firm-line">
           {/* The backend sends the owners first, then the munshi; the word of the role is ours. */}
-          <span className="print-contact-role">{l10n.getString(ROLE_ID[person.role])}</span>{' '}
+          {showRole ? (
+            <>
+              <span className="print-contact-role">
+                {l10n.getString(ROLE_ID[person.role])}
+              </span>{' '}
+            </>
+          ) : null}
           <PrintText text={person.name} />
           {/* A person with no phone is the name only: no empty gap, no dash. */}
           {person.phone === '' ? null : (
@@ -63,19 +78,44 @@ export function PrintContacts({ contacts }: { contacts: PrintHeaderData['contact
   );
 }
 
+/** The firm's phones on one line under its name, each whole (a phone is one code); nothing when it has none. */
+function PrintFirmPhones({ phones }: { phones: readonly string[] }) {
+  if (phones.length === 0) return null;
+  return (
+    <p className="print-firm-line print-firm-phones">
+      {phones.map((phone, index) => (
+        <Code key={index}>{phone}</Code>
+      ))}
+    </p>
+  );
+}
+
 /**
- * The top band of a buyer slip (PRD FR-19.15, plan 79 item 7): the fruit picture on one side, the firm name,
- * and the owners' and the munshis' names with their phones, small, on the other side. The same three zones
- * and the same edges as the header of every print (`print-zones`), only smaller, so a slip keeps its size.
+ * The top band of a buyer slip (PRD FR-19.15, plan 79 item 7, plan 100 H): the fruit picture on one side;
+ * in the middle the firm name with the owners' names and phones under it; on the other side the munshi's
+ * name with his phone; under the three, the firm's phones across the slip. The same three zones and the same edges as the header of every print
+ * (`print-zones`): the two sides are equally wide, so the firm name is in the middle of the slip, with or
+ * without a munshi. Smaller than the header of a page, so a slip keeps its size.
  */
 export function PrintSlipBand({ header }: { header: PrintHeaderData }) {
+  const owners = header.contacts.filter((person) => person.role === 'owner');
+  const staff = header.contacts.filter((person) => person.role !== 'owner');
   return (
-    <div className="print-zones print-slip-band">
-      <PrintFruitMark />
-      <div className="print-firm">
-        <p className="print-firm-name">{header.firm.name}</p>
+    <div className="print-slip-head">
+      <div className="print-zones print-slip-band">
+        <div className="print-slip-side print-slip-picture">
+          <PrintFruitMark />
+        </div>
+        <div className="print-firm">
+          <p className="print-firm-name">{header.firm.name}</p>
+          <PrintContacts contacts={owners} showRole={false} />
+        </div>
+        <div className="print-slip-side print-slip-people">
+          <PrintContacts contacts={staff} />
+        </div>
       </div>
-      <PrintContacts contacts={header.contacts} />
+      {/* The firm's own phones have the whole width of the slip, two to a line, so they never run into a side. */}
+      <PrintFirmPhones phones={header.firm.phones} />
     </div>
   );
 }
@@ -83,12 +123,9 @@ export function PrintSlipBand({ header }: { header: PrintHeaderData }) {
 export function PrintHeader({ header, title }: PrintHeaderProps) {
   const { l10n } = useLocalization();
   const { firm } = header;
-  const parts: ReactNode[] = [];
-  if (firm.address.trim() !== '') parts.push(<PrintText text={firm.address} />);
-  if (firm.phone.trim() !== '') parts.push(<Code>{firm.phone}</Code>);
-  // Address and phone are as typed in Settings (PRD FR-7.25); either may be empty. The phone is a
-  // code (`Code`) and any number inside the address is a number (`PrintText`), so no digit of this
-  // line is drawn in the font of the words (NFR-URD-14).
+  // The address and the phones are as typed in Settings (PRD FR-7.25); either may be missing. A phone is a
+  // code (`Code`) and any number inside the address is a number (`PrintText`), so no digit of these
+  // lines is drawn in the font of the words (NFR-URD-14).
   return (
     <>
       <header className="print-header">
@@ -103,19 +140,15 @@ export function PrintHeader({ header, title }: PrintHeaderProps) {
                 </p>
               )}
             </div>
+            <PrintFirmPhones phones={firm.phones} />
             {firm.mandi === '' ? null : (
               <p className="print-firm-line">
                 <PrintText text={firm.mandi} />
               </p>
             )}
-            {parts.length === 0 ? null : (
+            {firm.address.trim() === '' ? null : (
               <p className="print-firm-line">
-                {parts.map((part, index) => (
-                  <Fragment key={index}>
-                    {index > 0 ? ' · ' : null}
-                    {part}
-                  </Fragment>
-                ))}
+                <PrintText text={firm.address} />
               </p>
             )}
           </div>

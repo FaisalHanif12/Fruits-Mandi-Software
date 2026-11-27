@@ -22,7 +22,10 @@ pub const MAX_HITS: usize = 50;
 /// The most records the "full list" returns (`Alt+Down`, PRD FR-7.41).
 pub const MAX_FULL_LIST: usize = 500;
 /// How many recently used records are kept per list and user (PRD FR-7.41).
-pub const RECENT_KEPT: usize = 10;
+pub const RECENT_KEPT: usize = 100;
+/// How many of the most used records come first when a picker opens with no text (PRD FR-7.41
+/// v1.61, plan 100 I).
+pub const MOST_USED_FIRST: usize = 10;
 /// A word of at most this many letters may have one mistake; a longer word two (Tech Stack 4.7).
 const SHORT_WORD_LETTERS: usize = 5;
 
@@ -651,7 +654,8 @@ fn rank_close(entry: &Entry, q: &Query) -> Option<Rank> {
 /// How often and how lately a user chose each record of a list.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Usage {
-    /// The most recent first, at most [`RECENT_KEPT`].
+    /// The order of last use, the latest first, at most [`RECENT_KEPT`]. It breaks ties between
+    /// records used the same number of times.
     pub recent: Vec<i64>,
     /// How many times each was chosen.
     pub counts: BTreeMap<i64, u32>,
@@ -726,9 +730,13 @@ fn by_code(a: &Entry, b: &Entry) -> Ordering {
     a.order.cmp(&b.order).then_with(|| a.id.cmp(&b.id))
 }
 
-/// The whole list of a field (plan 32 R7): the records this user chose last first (latest first),
-/// then every other active record by code. `keep` leaves out what the field does not take.
-/// `offset` and `limit` cut out one page.
+/// The whole list of a field (plan 32 R7, PRD FR-7.41 v1.61): the records this user used most
+/// first, at most [`MOST_USED_FIRST`] (more uses first, then the latest used), then every other
+/// active record by code. `keep` leaves out what the field does not take. `offset` and `limit` cut
+/// out one page.
+///
+/// Example: buyer 0021 chosen 3 times and 0020 once: the list opens 0021, 0020, then the rest by
+/// code.
 fn full_list<'a>(
     list: &'a [Arc<Entry>],
     keep: impl Fn(&Entry) -> bool,
@@ -736,24 +744,24 @@ fn full_list<'a>(
     offset: usize,
     limit: usize,
 ) -> Vec<&'a Arc<Entry>> {
-    let mut out: Vec<&Arc<Entry>> = Vec::new();
-    for id in &usage.recent {
-        if let Ok(at) = list.binary_search_by_key(id, |e| e.id)
-            && let Some(entry) = list.get(at)
-            && entry.hit.is_active
-            && keep(entry)
-            && !out.iter().any(|o| o.id == entry.id)
-        {
-            out.push(entry);
-        }
-    }
-    let mut rest: Vec<&Arc<Entry>> = list
-        .iter()
-        .filter(|e| e.hit.is_active && keep(e) && !usage.recent.contains(&e.id))
+    let active = || list.iter().filter(|e| e.hit.is_active && keep(e));
+    let mut out: Vec<&Arc<Entry>> = active().filter(|e| usage.count(e.id) > 0).collect();
+    out.sort_by(|a, b| by_use(usage, a, b).then_with(|| by_code(a, b)));
+    out.truncate(MOST_USED_FIRST);
+    let mut rest: Vec<&Arc<Entry>> = active()
+        .filter(|e| !out.iter().any(|o| o.id == e.id))
         .collect();
     rest.sort_by(|a, b| by_code(a, b));
     out.extend(rest);
     out.into_iter().skip(offset).take(limit).collect()
+}
+
+/// The more used record first, then the one used later (PRD FR-7.41 v1.61).
+fn by_use(usage: &Usage, a: &Entry, b: &Entry) -> Ordering {
+    usage
+        .count(b.id)
+        .cmp(&usage.count(a.id))
+        .then_with(|| usage.position(a.id).cmp(&usage.position(b.id)))
 }
 
 /// Which page of an account search, and whether a person in the dead amount is listed too (PRD
@@ -818,7 +826,7 @@ impl Index {
     /// code, the accounts whose running number is the typed number (a short code, not for scope
     /// `control`), names that start with the text, accounts used before, close spellings (plan 08,
     /// PRD FR-7.38 to FR-7.40). **Empty text gives the whole list of the field** (plan 32 R7):
-    /// the accounts chosen last first, then the rest by code.
+    /// the most used accounts first, then the rest by code.
     pub fn search_accounts_page(
         &self,
         scope: AccountScope,
@@ -869,9 +877,9 @@ impl Index {
         self.search_accounts_page(scope, control_id, typed, page, usage)
     }
 
-    /// The list for `Alt+Down` in an account field (PRD FR-7.41): the accounts this user chose
-    /// last (up to 10, the latest first), then the rest by code (plan 32 R7). Active accounts
-    /// only, at most [`MAX_FULL_LIST`].
+    /// The list for `Alt+Down` in an account field (PRD FR-7.41 v1.61): the accounts this user
+    /// used most (up to 10), then the rest by code (plan 32 R7). Active accounts only, at most
+    /// [`MAX_FULL_LIST`].
     pub fn recent_accounts(
         &self,
         scope: AccountScope,
@@ -1028,8 +1036,7 @@ impl Index {
         }
         let order = |(ra, a): &(Rank, &Arc<Entry>), (rb, b): &(Rank, &Arc<Entry>)| {
             ra.cmp(rb)
-                .then_with(|| usage.position(a.id).cmp(&usage.position(b.id)))
-                .then_with(|| usage.count(b.id).cmp(&usage.count(a.id)))
+                .then_with(|| by_use(usage, a, b))
                 .then_with(|| by_name(a, b))
         };
         // Only the best `wanted` are needed: pick them, then put those in order.
@@ -1046,9 +1053,8 @@ impl Index {
             .collect()
     }
 
-    /// The list for `Alt+Down` (PRD FR-7.41): the records this user chose last (up to 10, the
-    /// latest first), then the rest by code (plan 32 R7). Active records only, at most
-    /// [`MAX_FULL_LIST`].
+    /// The list for `Alt+Down` (PRD FR-7.41 v1.61): the records this user used most (up to 10),
+    /// then the rest by code (plan 32 R7). Active records only, at most [`MAX_FULL_LIST`].
     pub fn recent(&self, scope: SearchScope, usage: &Usage) -> Vec<SearchHit> {
         full_list(self.entries(scope), |_| true, usage, 0, MAX_FULL_LIST)
             .into_iter()

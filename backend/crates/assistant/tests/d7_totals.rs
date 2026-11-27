@@ -617,22 +617,18 @@ fn a_group_of_items_is_the_totals_of_view_a_for_the_group() {
 }
 
 #[test]
-fn a_seller_with_an_open_advance_gets_one_sentence_with_payable_advance_and_balance() {
-    // Tahir has 30,000 of advance open (R26). His ledger balance already includes it and is not what he is
-    // owed now, so the answer is ONE sentence: what is payable now, the open advance, the ledger balance.
+fn a_seller_whose_credit_covers_his_advance_gets_his_balance_alone() {
+    // Tahir has 30,000 of advance in R26, and his credit covers all of it (plan 100, PRD FR-9.6 v1.61): what is
+    // payable to him now is his ledger balance, so the answer is that one figure with its side.
     let y = year::seed::build();
     let f = facts_of(&y);
     let h = production_harness(y);
     let reply = instant(
         &h,
         "tahir ka bakaya kitna hai",
-        &[
-            oracle(&f, "r24.tahir.payable"),
-            oracle(&f, "r26.tahir.open"),
-            oracle_balance(&f, "seller.tahir.balance"),
-        ],
+        &[oracle_balance(&f, "seller.tahir.balance")],
     );
-    assert_eq!(figures(answer_of(&reply)).len(), 3);
+    assert_eq!(figures(answer_of(&reply)).len(), 1);
     h.scan_requests();
 }
 

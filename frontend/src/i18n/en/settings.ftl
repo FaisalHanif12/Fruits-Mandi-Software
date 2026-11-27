@@ -34,9 +34,6 @@ settings-firm-mandi-ur = Mandi (Urdu)
 settings-firm-mandi-en = Mandi (English)
 
 # review: pending
-settings-firm-phone = Phone
-
-# review: pending
 settings-firm-address = Address
 
 # Plan 17e, PRD Section 21 (Firm), FR-19.13.
@@ -44,7 +41,7 @@ settings-firm-address = Address
 settings-firm-contacts-title = People in the print header
 
 # review: pending
-settings-firm-contacts-help = Up to 6 people. On every print the owners are printed under the firm name first, then the munshi. A phone can be left empty. For example "Munshi Asif Bhatti 0300-4058860".
+settings-firm-contacts-help = Up to 8 people. On every print the owners are printed under the firm name first, then the munshi. A phone can be left empty. For example "Munshi Asif Bhatti 0300-4058860".
 
 # The munshis are not typed here any more: the active ones of the staff list print too (PRD v1.23).
 # review: pending
@@ -80,7 +77,7 @@ settings-firm-contact-remove = Remove
 settings-firm-contact-remove-label = Remove person { $number }
 
 # review: pending
-settings-firm-contacts-full = Six people are the most. Remove one to add another.
+settings-firm-contacts-full = Eight people are the most. Remove one to add another.
 
 # The role of a person in the print header: the owners print first, then the munshi (PRD Section 21).
 # review: pending
@@ -400,3 +397,14 @@ settings-firm-card-names = Firm and mandi names
 
 # review: pending
 settings-firm-card-details = Phone, address and { -trade-mark }
+
+## The firm phones (plan 100 H, PRD Section 21 v1.61).
+
+# review: pending
+settings-firm-card-phones = Firm phones
+
+# review: pending
+settings-firm-phones-help = Up to 4 phones. They print after the firm name on every print. A box left empty is not printed.
+
+# review: pending
+settings-firm-phone-number = Phone { $number }

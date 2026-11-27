@@ -180,6 +180,7 @@ fn the_real_answers_of_the_plan_17e_commands_are_the_fixtures() {
     // The firm: two contact persons and the trade mark.
     let firm = settings::get(ctx).unwrap().firm;
     let info = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![
             FirmContact {
                 name_ur: "آصف بھٹی".into(),

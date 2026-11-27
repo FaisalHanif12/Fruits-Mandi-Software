@@ -8,7 +8,6 @@ use mandi_services::core::expenses::{
     ShopExpenseInput,
 };
 use mandi_services::core::vouchers::VoucherSaved;
-use mandi_services::partner_code;
 use mandi_services::{auth, masters, partners, vouchers};
 
 use super::run;
@@ -71,12 +70,10 @@ pub async fn vouchers_preview_expense<R: tauri::Runtime>(
     input: ExpensePreviewInput,
 ) -> Result<ExpensePreview, UiError> {
     run(app, "vouchers_preview_expense", move |ctx| {
+        // A personal expense shows the partner's کل رقم now and after without the partner code
+        // (PRD FR-16.8, FR-17.11 v1.61).
         auth::require(ctx)?;
-        let mut shown = vouchers::preview_expense(ctx, &input)?;
-        if partner_code::is_locked(ctx)? {
-            shown.hide_partners();
-        }
-        Ok(shown)
+        vouchers::preview_expense(ctx, &input)
     })
     .await
 }
@@ -89,8 +86,8 @@ pub async fn partner_takes<R: tauri::Runtime>(
     input: PartnerTakesInput,
 ) -> Result<PartnerTakes, UiError> {
     run(app, "partner_takes", move |ctx| {
+        // Open without the partner code: personal expense is not behind it (PRD FR-17.11 v1.61).
         auth::require(ctx)?;
-        partner_code::require_unlocked(ctx)?;
         partners::takes(ctx, &input)
     })
     .await

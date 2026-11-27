@@ -1,5 +1,5 @@
-// Cancelling a saved voucher (PRD FR-15.3, FR-7.8): a box that says exactly what will happen, asks
-// for a reason, and cancels by reversal. Nothing is deleted: the posting is reversed on its own day,
+// Cancelling a saved voucher (PRD FR-15.3, FR-7.8, FR-7.93): a box that says exactly what will happen, asks
+// for the reason, the Owner's sign and the partner code, and cancels by reversal. Nothing is deleted: the posting is reversed on its own day,
 // the matching it made is switched off and run again, and the voucher stays in the list marked
 // cancelled with its reason.
 //
@@ -13,7 +13,13 @@ import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { ErrorMessage, Num, ReasonDialog, showToast } from '../../../shared/ui';
+import {
+  ConfirmCancelDialog,
+  ErrorMessage,
+  Num,
+  showToast,
+  type CancelSecrets,
+} from '../../../shared/ui';
 import { useCancelVoucher } from '../hooks';
 import { screenTypeOf } from '../screen-type';
 import { keptKindOf } from '../draft';
@@ -46,11 +52,11 @@ export function CancelVoucherDialog({ row, onClose, onCancelled }: CancelVoucher
       ? null
       : { ...error, errors: error.errors.filter((item) => item.code !== CASH_CODE) };
 
-  const confirm = (reason: string) => {
+  const confirm = (secrets: CancelSecrets) => {
     if (row === null) return;
     setError(null);
     cancel
-      .mutateAsync({ id: row.id, version: row.version, reason, confirm: cashConfirmed })
+      .mutateAsync({ ...secrets, id: row.id, version: row.version, confirm: cashConfirmed })
       .then((cancelled) => {
         const number = voucherNumberText(row, (id, vars) => l10n.getString(id, vars));
         // An expense, a loan, a khata, capital or a journal has its own number and one plain sentence.
@@ -71,7 +77,7 @@ export function CancelVoucherDialog({ row, onClose, onCancelled }: CancelVoucher
   };
 
   return (
-    <ReasonDialog
+    <ConfirmCancelDialog
       open={row !== null}
       onOpenChange={(open) => {
         if (open) return;

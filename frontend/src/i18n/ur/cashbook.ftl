@@ -19,9 +19,6 @@ cashbook-filter-from = از
 cashbook-filter-to = تا
 
 # review: pending
-cashbook-opening = شروع میں روکڑ
-
-# review: pending
 cashbook-closing = آخر میں روکڑ
 
 # review: pending
@@ -285,21 +282,6 @@ cashbook-repeat-failed = پچھلے مہینے کے خرچے کھل نہیں س�
 ## The list under the form.
 
 # review: pending
-cashbook-day-title = اس دن کے دکان خرچے
-
-# review: pending
-cashbook-day-label = اس دن کے دکان خرچے
-
-# review: pending
-cashbook-day-empty = اس دن کوئی دکان خرچہ نہیں
-
-# review: pending
-cashbook-day-empty-help = اوپر فارم بھر کر محفوظ کریں تو یہاں آ جائے گا۔
-
-# review: pending
-cashbook-day-failed = اس دن کے دکان خرچے کھل نہیں سکے
-
-# review: pending
 cashbook-takes-title = شراکت دار کی لی ہوئی رقم
 
 # review: pending
@@ -383,12 +365,6 @@ cashbook-lent-empty-help = اسے دی گئی رقم اور اس کی واپسی
 # review: pending
 cashbook-lent-failed = اس شخص کی ادھار رقمیں کھل نہیں سکیں
 
-# review: pending
-cashbook-lent-pick = شخص چنیں
-
-# review: pending
-cashbook-lent-pick-help = اس کی ادھار رقمیں، واپسی اور باقی رقم یہاں نظر آئے گی۔
-
 ## The { -alag-khata } screen (PRD 16.6, FR-16.6).
 
 # review: pending
@@ -404,10 +380,10 @@ cashbook-khata-type = اندراج کی قسم
 cashbook-field-khata = { -alag-khata }
 
 # review: pending
-cashbook-khata-title = کھاتے کے اندراجات
+cashbook-khata-title = اس کھاتے کا حساب
 
 # review: pending
-cashbook-khata-label = کھاتے کے اندراجات
+cashbook-khata-label = اس کھاتے کا حساب
 
 # review: pending
 cashbook-khata-opening = شروع میں بقایا
@@ -426,12 +402,6 @@ cashbook-khata-empty-help = دی گئی اور آئی ہوئی رقم وجہ ک�
 
 # review: pending
 cashbook-khata-failed = کھاتے کے اندراجات کھل نہیں سکے
-
-# review: pending
-cashbook-khata-pick = کھاتہ چنیں
-
-# review: pending
-cashbook-khata-pick-help = اس کے اندراجات اور چلتا بقایا یہاں نظر آئے گا۔
 
 # review: pending
 cashbook-khata-kind-paid-out = رقم دی
@@ -998,3 +968,35 @@ cashbook-openings-confirm = درج کریں
 
 # review: pending
 cashbook-openings-done = پرانے { -ibtidai-baqaya } { -rokar } میں درج ہو گئے
+
+## The saved entries under the forms of the روکڑ area, 30 days at a time (plan 100 F, PRD FR-19.11).
+
+# review: pending
+cashbook-col-person = نام
+
+# review: pending
+cashbook-col-khata = { -alag-khata }
+
+# review: pending
+cashbook-entries-shop-title = { -dukan-kharcha } کے اندراج
+
+# review: pending
+cashbook-entries-lent-title = { -adhar-raqam } کے اندراج
+
+# review: pending
+cashbook-entries-khata-title = { -alag-khata } کے اندراج
+
+# review: pending
+cashbook-entries-failed = اندراج نہیں کھل سکے
+
+# review: pending
+cashbook-entries-empty = پچھلے 30 دن میں کوئی اندراج نہیں
+
+# review: pending
+cashbook-entries-empty-help = اوپر فارم بھر کر محفوظ کریں۔ پہلے کے دن دیکھنے کے لیے نیچے والے بٹن استعمال کریں۔
+
+# review: pending
+cashbook-entries-no-match = ان دنوں میں کوئی ملتا جلتا اندراج نہیں
+
+# review: pending
+cashbook-entries-no-match-help = دوسرے الفاظ سے تلاش کریں، یا دوسرے دن دیکھیں۔

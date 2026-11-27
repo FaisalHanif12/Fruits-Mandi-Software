@@ -117,6 +117,7 @@ fn set_contacts(w: &World) {
     use mandi_services::settings::{self, FirmPrintInfo};
     let firm = settings::get(&w.env.ctx).unwrap().firm;
     let info = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![
             FirmContact {
                 name_ur: "علی".into(),

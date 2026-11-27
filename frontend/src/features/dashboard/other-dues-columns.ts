@@ -105,7 +105,24 @@ export const ADVANCES_OPEN_COLUMNS: readonly ListColumn<AdvancesReportRow>[] = [
     field: 'open',
     type: 'money',
     headerId: 'advances-open-col-open',
+    from: 'wide',
     value: (row, { money }) => money(row.open_paisa),
+  },
+  // What his own credit already covers of it ("بقایا میں سے کٹ چکی", PRD FR-9.6 v1.61); empty when none.
+  {
+    field: 'covered',
+    type: 'money',
+    headerId: 'report-col-advance-covered',
+    from: 'normal',
+    value: (row, { money }) => (row.advance_covered === null ? '' : money(row.advance_covered)),
+  },
+  // What his open payable does not cover (PRD v1.61, plan 100 A): the tile's figure is the total of this column.
+  // The backend leaves it out for a day before today; this page is always today.
+  {
+    field: 'uncovered',
+    type: 'money',
+    headerId: 'advances-open-col-uncovered',
+    value: (row, { money }) => (row.uncovered_paisa === null ? '' : money(row.uncovered_paisa)),
   },
   {
     field: 'last_date',

@@ -39,10 +39,13 @@ export const AUDIT_COLUMNS: readonly ListColumn<AuditRow>[] = [
     value: (row, context) => row.user?.display_name ?? context.text('audit-system-user'),
   },
   {
+    // An action is a few words ("Save refused: the day is closed"), so it grows and wraps.
     field: 'action',
-    type: 'choice',
+    type: 'text',
     headerId: 'audit-col-action',
     sortKey: 'action',
+    grow: true,
+    wrap: true,
     value: (row, context) => actionWord(row.action, context.text),
   },
   {

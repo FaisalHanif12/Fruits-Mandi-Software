@@ -1,8 +1,9 @@
 // The tiles of the dashboard (PRD 9.1, FR-9.1): today's sales and commission, cash in hand, the four
 // dues tiles (buyers' dues, sellers' dues, total dues, dead amount, plan 40), the payables and
 // advances, stock, market trips, gardens, money lent, the dues of garden owners and others (plan 76 point 10,
-// it replaced the last backup tile), today's expenses and today's نقدی (plan 79 item 2c, it replaced the books
-// check tile). Every tile is one button that opens its own page, and that page shows what the tile counts
+// it replaced the last backup tile), today's expenses and کل مالیت (plan 100 B, FR-9.10: the net shown big, with
+// money to have and to give under it; it replaced today's نقدی, whose page stays as a quick action). The seller
+// tiles are the backend's net figures (plan 100 A). Every tile is one button that opens its own page, and that page shows what the tile counts
 // and ends in the tile's figure (plan 79 item 3). The figures are the backend's, shown
 // by `Num` and `formatPaisa`; nothing is added up here (CLAUDE.md rule 1). A figure that is below
 // zero or past its date also says so in words, never by colour alone (NFR-USE-12). ↑ ↓ ← → move
@@ -15,7 +16,7 @@ import { Localized } from '@fluent/react';
 import {
   HandCoins,
   Handshake,
-  Banknote,
+  Landmark,
   Package,
   PiggyBank,
   Receipt,
@@ -44,6 +45,7 @@ export function DashboardTiles({ tiles }: DashboardTilesProps) {
   const open = useOpenDestination();
   const cashBelowZero = isNegativePaisa(tiles.cash_in_hand_paisa);
   const lentOverdue = isPositivePaisa(tiles.lent_overdue_paisa);
+  const worthBelowZero = isNegativePaisa(tiles.total_worth.net_paisa);
   // Someone is in the dead amount: the tile is amber, with the count in words (NFR-USE-12).
   const deadAmount = isPositivePaisa(tiles.dead_amount_paisa);
   return (
@@ -283,22 +285,33 @@ export function DashboardTiles({ tiles }: DashboardTilesProps) {
         <Num inherit paisa={tiles.gardens_balance_paisa} />
       </Tile>
       <Tile
-        label={<Localized id="dashboard-tile-cash-sales" />}
-        icon={Banknote}
+        label={<Localized id="dashboard-tile-worth" />}
+        icon={Landmark}
+        // Below zero is said in words as well as in colour (NFR-USE-12).
+        tone={worthBelowZero ? 'bad' : 'neutral'}
         note={
-          <Localized
-            id="dashboard-tile-cash-sales-note"
-            vars={{ count: tiles.cash_sales_today_buyers }}
-            elems={{ num: <Num /> }}
-          >
-            <span />
-          </Localized>
+          <>
+            {worthBelowZero ? (
+              <span className="block">
+                <Localized id="dashboard-tile-worth-below" />
+              </span>
+            ) : null}
+            <Localized
+              id="dashboard-tile-worth-note"
+              elems={{
+                have: <Num paisa={tiles.total_worth.have_paisa} />,
+                give: <Num paisa={tiles.total_worth.give_paisa} />,
+              }}
+            >
+              <span className="block" />
+            </Localized>
+          </>
         }
         onOpen={() => {
-          open({ kind: 'cash-sales' });
+          open({ kind: 'total-worth' });
         }}
       >
-        <Num inherit paisa={tiles.cash_sales_today_paisa} />
+        <Num inherit paisa={tiles.total_worth.net_paisa} />
       </Tile>
     </div>
   );

@@ -73,7 +73,9 @@ describe('the trial balance in English (R18)', () => {
     const header = must(root.querySelector('.print-header'));
     expect(textOf(header)).toContain(frameOf(data).header.firm.name);
     expect(textOf(header)).toContain(message('en', 'report-r18-title'));
-    expect(textOf(header)).toContain(frameOf(data).header.firm.phone);
+    for (const phone of frameOf(data).header.firm.phones) {
+      expect(textOf(header)).toContain(phone);
+    }
   });
 
   it('shows the heading of every column and one row for each of the 17 accounts', () => {

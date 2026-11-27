@@ -75,7 +75,7 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
       mandi_ur: FIRM.mandi_ur,
       mandi_en: FIRM.mandi_en,
       address: 'Shop 1',
-      phone: '0300-0000000',
+      phones: ['0300-0000000'],
       firm_contacts: [],
       trade_mark: '',
     },

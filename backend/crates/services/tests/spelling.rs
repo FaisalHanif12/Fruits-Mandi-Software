@@ -382,6 +382,7 @@ fn a_contact_name_with_a_rules_only_word_is_refused_until_confirmed() {
     let (dir, env, owner) = ready();
     let firm = settings::get(&env.ctx).unwrap().firm;
     let info = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: vec![FirmContact {
             name_ur: "علی قزکس".into(),
             name_en: "Ali Qzxwv".into(),

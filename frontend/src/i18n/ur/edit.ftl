@@ -505,3 +505,27 @@ edit-field-mark-full = { $mark }، { $when }
 # What the mark says when the old value is a record this screen cannot name.
 # review: pending
 edit-mark-other = (کوئی اور)
+
+# The one box of every cancel (plan 100, PRD FR-7.93): the reason, the Owner's sign and the partner code,
+# all three required, on any day. The undo straight after a save asks none of them.
+# review: pending
+cancel-reason-label = وجہ
+
+# review: pending
+cancel-sign-label = { -dastakhat }
+
+# review: pending
+cancel-sign-hint = مالک کے { -dastakhat }۔
+
+# review: pending
+cancel-code-label = { -shirakat-dar } کوڈ
+
+# review: pending
+cancel-code-hint = چار ہندسوں والا { -shirakat-dar } کوڈ۔
+
+# Shown in the box when no partner code has been made yet (PRD FR-17.11).
+# review: pending
+cancel-no-code = ابھی { -shirakat-dar } کوڈ نہیں بنا۔ پہلے ترتیبات میں کوڈ بنائیں، پھر منسوخ کریں۔
+
+# review: pending
+cancel-make-code = ترتیبات کھولیں

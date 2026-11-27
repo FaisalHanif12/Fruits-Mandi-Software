@@ -142,6 +142,8 @@ const handlers: Record<string, (input: Input) => unknown> = {
   assistant_test: () => (devValue('test') === 'bad' ? real.TEST_NO_ENDPOINT : real.TEST_WORKED),
   assistant_log_list: () => real.LOG_LIST_FIRST_PAGE,
   partners_code_status: () => ({ is_set: true, unlocked: false, wait_seconds: 0 }),
+  // So the real routes (for example /partners with its code card) can be opened from this page.
+  app_data_status: () => ({ state: 'ok', reference: null }),
 };
 
 /** Puts the stand-in where Tauri's `invoke` looks for the bridge. */

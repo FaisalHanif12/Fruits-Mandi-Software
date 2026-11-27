@@ -4,7 +4,8 @@
 // and the بکری stays in the list marked cancelled, with its number kept and never used again.
 //
 // 1. The box names what will be reversed (each posting, with its day and amount, from the backend's
-//    `bikri_cancel_preview`), shows the cash line, and asks for the reason (required).
+//    `bikri_cancel_preview`), shows the cash line, and asks for the reason, the Owner's sign and the
+//    partner code (all required, PRD FR-7.93).
 // 2. If a posting is on a closed day the cancel is refused until the Owner reopens it: the box says
 //    which days and has a button to the day screen. Nothing is sent.
 // 3. If the cancel would take cash in hand below zero, the box "is this entry correct?" opens after
@@ -17,7 +18,14 @@ import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
 import { formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
-import { CashConfirmDialog, Code, Num, ReasonDialog, showToast } from '../../../shared/ui';
+import {
+  CashConfirmDialog,
+  Code,
+  ConfirmCancelDialog,
+  Num,
+  showToast,
+  type CancelSecrets,
+} from '../../../shared/ui';
 import { useCancelPreview } from '../hooks/useBikriReads';
 import { useCancelBikri } from '../hooks/useStockActions';
 import { ClosedDayNotice } from './ClosedDayNotice';
@@ -44,8 +52,9 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
   const [error, setError] = useState<UiError | null>(null);
   // Which box is open: the reason, the cash question, or none while the cancel is on its way.
   const [step, setStep] = useState<'reason' | 'cash' | 'sending'>('reason');
-  // The reason waits here while the cash box is open, so "No" comes back to it intact.
-  const [typedReason, setTypedReason] = useState('');
+  // What was typed waits here while the cash box is open, so "No" comes back to it intact. It is kept in
+  // memory only and goes when the box closes (the sign and the code are secrets).
+  const [typed, setTyped] = useState<CancelSecrets | null>(null);
   // The cash box calls onConfirm and then onOpenChange(false): only a "no" is a decline.
   const confirmed = useRef(false);
   const info = preview.data;
@@ -53,7 +62,7 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
   const reset = () => {
     setError(null);
     setStep('reason');
-    setTypedReason('');
+    setTyped(null);
   };
   const close = () => {
     reset();
@@ -64,14 +73,14 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
   // twice before the box has drawn "sending". The guard is a ref, so it holds in the same instant; the second
   // press finds a cancel on its way and does nothing (the backend has no request number to tell them apart).
   const flight = useSingleFlight();
-  const send = (reason: string, confirm: boolean) => {
+  const send = (secrets: CancelSecrets, confirm: boolean) => {
     if (target === null || info === undefined) return;
     void flight.run(async () => {
       setError(null);
-      setTypedReason(reason);
+      setTyped(secrets);
       setStep('sending');
       try {
-        await cancel.mutateAsync({ id: target.id, version: info.version, reason, confirm });
+        await cancel.mutateAsync({ id: target.id, version: info.version, secrets, confirm });
       } catch (failure: unknown) {
         const refused = uiErrorOf(failure);
         if (refused.errors.some((item) => item.code === 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED')) {
@@ -95,13 +104,13 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
     }, undefined);
   };
 
-  const onReason = (reason: string) => {
+  const onReason = (secrets: CancelSecrets) => {
     if (info?.cash.needs_confirm === true) {
-      setTypedReason(reason);
+      setTyped(secrets);
       setStep('cash');
       return;
     }
-    send(reason, false);
+    send(secrets, false);
   };
 
   const cashChanges =
@@ -111,7 +120,7 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
 
   return (
     <>
-      <ReasonDialog
+      <ConfirmCancelDialog
         open={target !== null && step === 'reason'}
         onOpenChange={(open) => {
           if (!open) close();
@@ -126,7 +135,7 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
         }
         reasonLabel={<Localized id="bikri-cancel-reason" />}
         confirmLabel={<Localized id="bikri-cancel-confirm" />}
-        initialReason={typedReason}
+        initial={typed ?? undefined}
         confirmDisabled={!(info?.can_cancel ?? false)}
         error={error}
         busy={cancel.isPending || preview.isPending}
@@ -193,7 +202,7 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
           cashAfter={info.cash.cash_after_paisa}
           onConfirm={() => {
             confirmed.current = true;
-            send(typedReason, true);
+            if (typed !== null) send(typed, true);
           }}
         />
       )}

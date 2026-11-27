@@ -32,6 +32,7 @@ import {
   dashboardSalesPrintData,
   dashboardSellerDuesPrintData,
   dashboardTotalDuesPrintData,
+  dashboardTotalWorthPrintData,
 } from '../../features/dashboard';
 import { partnersStatementMonthPrintData } from '../../features/partners';
 import { partyLedgersStatementRowsPrintData } from '../../features/party_ledgers';
@@ -221,6 +222,14 @@ function Body({ params, callbacks }: { params: KindPrintParams; callbacks: Windo
           params={params}
           callbacks={callbacks}
           read={() => dashboardSellerDuesPrintData(params.input)}
+        />
+      );
+    case 'total-worth':
+      return (
+        <TableBody
+          params={params}
+          callbacks={callbacks}
+          read={() => dashboardTotalWorthPrintData(params.input)}
         />
       );
     case 'total-dues':

@@ -3,6 +3,10 @@
 // is offered as a lot seller), the party cards, the cash, the day status and the partners' totals,
 // so every screen shows the new numbers.
 
+import type { GardenReopenRequest } from '../../bindings/GardenReopenRequest';
+import type { GardenEntryCancelRequest } from '../../bindings/GardenEntryCancelRequest';
+import type { ArrivalWriteOffUndoRequest } from '../../bindings/ArrivalWriteOffUndoRequest';
+import type { ArrivalCancelRequest } from '../../bindings/ArrivalCancelRequest';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { GardenArrivalEditInput } from '../../bindings/GardenArrivalEditInput';
 import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
@@ -44,20 +48,16 @@ import {
   gardensSummary,
 } from './api';
 import type {
-  ArrivalCancelInput,
   ArrivalEntryInput,
   ArrivalInput,
   ArrivalsListInput,
   ArrivalWriteOffInput,
-  ArrivalWriteOffUndoInput,
   SellDateInput,
   SplitInput,
   GardenCloseInput,
   GardenDetail,
-  GardenEntryCancelInput,
   GardenEntryInput,
   GardenInput,
-  GardenReopenInput,
   GardensListInput,
 } from './types';
 
@@ -199,7 +199,7 @@ export function useSaveGardenEntry() {
 export function useCancelGardenEntry() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: GardenEntryCancelInput) => gardensEntryCancel(input),
+    mutationFn: (input: GardenEntryCancelRequest) => gardensEntryCancel(input),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }
@@ -227,7 +227,7 @@ export function useCloseGarden() {
 export function useReopenGarden() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: GardenReopenInput) => gardensReopen(input),
+    mutationFn: (input: GardenReopenRequest) => gardensReopen(input),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }
@@ -393,7 +393,7 @@ export function useChangeArrivalSplit() {
 export function useCancelGardenArrival() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: ArrivalCancelInput) => gardensArrivalCancel(input),
+    mutationFn: (input: ArrivalCancelRequest) => gardensArrivalCancel(input),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }
@@ -417,7 +417,7 @@ export function useWriteOffArrival() {
 export function useWriteOffArrivalUndo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: ArrivalWriteOffUndoInput) => gardensArrivalWriteOffUndo(input),
+    mutationFn: (input: ArrivalWriteOffUndoRequest) => gardensArrivalWriteOffUndo(input),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }

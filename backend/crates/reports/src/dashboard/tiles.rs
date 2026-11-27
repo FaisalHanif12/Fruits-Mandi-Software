@@ -7,8 +7,11 @@
 //! * buyers' dues: Σ of the R20 rows, so it equals the R20 total (FR-19.9); sellers' dues: Σ of the
 //!   "بیوپاری کے ذمے" column of R24; the dead amount: the R38 total (FR-10.10); کل اگراہی is the three
 //!   and the open money lent (R32, people not in the dead amount) added (PRD 9.1 v1.44);
-//! * sellers payable and advances open: Σ of the R24 workings (`open` and `advances_open`,
-//!   FR-7.59, FR-15.8); advances are not taken off the payable;
+//! * sellers payable and advances open: from the R24 workings (`open` and `advances_open`,
+//!   FR-7.59, FR-15.8) netted for each seller (v1.61, plan 100 A): the payable is
+//!   `max(open - advances, 0)` and the advances open is `max(advances - open, 0)`, so payable less
+//!   advances less sellers' dues is the sum of the sellers' balances. R24 keeps its three gross
+//!   columns;
 //! * goods not sold: lots of saved بکری with goods left, from the stock moves up to today (a
 //!   fruit take writes a `taken` move, so nothing is taken off twice);
 //! * market trips: the same read as `trips_summary`;
@@ -20,7 +23,8 @@
 //!   `gardens_summary` (PRD 9.1, FR-12.37).
 //!
 //! Example (PRD 4.9, after Events 1 to 5): 41,400 in 2 بکری, commission 5,448, cash 58,484,
-//! dues 21,564, payable 10,160, advances 0, 0 lots, expenses 3,000.
+//! dues 21,564, payable 10,160, advances 0, 0 lots, expenses 3,000. After E2E-28: payable 4,316,
+//! advances 0.
 
 use mandi_core::money::Paisa;
 use mandi_db::accounts as account_repo;
@@ -73,8 +77,10 @@ pub(crate) fn build(
         (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
     for seller in &facts.sellers {
         if let Some(working) = seller.working {
-            add(&mut sellers_payable, working.open)?;
-            add(&mut advances_open, working.advances_open)?;
+            // Netted for each seller (PRD 9.1 v1.61, plan 100 A).
+            let net = working.net()?;
+            add(&mut sellers_payable, net.payable)?;
+            add(&mut advances_open, net.uncovered_advance)?;
             // What a seller owes beyond his advances: the "بیوپاری کے ذمے" total of R24 (PRD
             // FR-15.9, 9.1).
             add(&mut sellers_dues, working.owes_firm)?;
@@ -102,6 +108,9 @@ pub(crate) fn build(
     let (cash_today, cash_buyers) = super::cash_sales::of_day(conn, today)?;
 
     let (expense_dr, expense_cr) = pair(&expenses_by_day(conn, today, today)?, today)?;
+
+    // کل مالیت: the same lists, added up account by account (PRD FR-9.10).
+    let total_worth = super::total_worth::working(conn, facts, lent, cash_in_hand)?;
 
     Ok(DashboardTiles {
         sales_gross_paisa: paisa(sales.gross)?,
@@ -131,5 +140,6 @@ pub(crate) fn build(
         expenses_today_paisa: expense_dr.checked_sub(expense_cr)?,
         cash_sales_today_paisa: cash_today,
         cash_sales_today_buyers: cash_buyers,
+        total_worth: total_worth.tile()?,
     })
 }

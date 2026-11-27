@@ -321,6 +321,7 @@ pub fn save(
         cash::require_confirmed(&worked.cash, input.confirm_cash_below_zero)?;
         let date = date.ok_or_else(|| data("a later sale without errors has no date"))?;
         let entry_id = write_later(ctx, tx, actor, &now, &state, date, &worked)?;
+        crate::assist::clear_snoozes(tx, actor.user_id)?;
         Ok(LaterSaleSaved {
             bikri_id: state.bikri_id,
             number: state.bikri_number,

@@ -25,10 +25,11 @@ use std::path::{Path, PathBuf};
 
 use common::set_today;
 use mandi_services::core::accounts::AccountType;
-use mandi_services::core::bikri::{BikriSaveInput, CancelInput};
+use mandi_services::core::bikri::BikriSaveInput;
+use mandi_services::core::cancel::{BikriCancelRequest, FruitCancelRequest};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::fruit::{
-    FruitCancelInput, FruitEditInput, FruitGetInput, FruitInput, FruitListInput, FruitLotsInput,
+    FruitEditInput, FruitGetInput, FruitInput, FruitListInput, FruitLotsInput,
 };
 use mandi_services::core::statement::PartnersStatementInput;
 use mandi_services::{ServiceError, bikri, fruit, partners};
@@ -290,11 +291,12 @@ fn fruit_fixtures_of_e2e_42() {
     );
 
     // While fruit is taken from its lot, the بکری cannot be cancelled.
-    let cancel_bikri = json!({
+    let cancel_bikri = json!({ "partner_code": "4826", "sign": "adnan",
         "id": 1, "version": bikri::get(ctx, 1).unwrap().version, "reason": "wrong",
         "confirm_cash_below_zero": false
     });
-    let error = bikri::cancel(ctx, owner, &typed::<CancelInput>(&cancel_bikri)).unwrap_err();
+    let error =
+        bikri::cancel(ctx, owner, &typed::<BikriCancelRequest>(&cancel_bikri).base).unwrap_err();
     refusal(
         "bikri_cancel_has_fruit",
         &cancel_bikri,
@@ -303,10 +305,10 @@ fn fruit_fixtures_of_e2e_42() {
     );
 
     // Cancel the edited entry by reversal; a second cancel is refused.
-    let cancel = json!({ "id": home_saved.id, "version": done.version, "reason": "not taken" });
-    let cancelled = fruit::cancel(ctx, owner, &typed::<FruitCancelInput>(&cancel)).unwrap();
+    let cancel = json!({ "partner_code": "4826", "sign": "adnan",  "id": home_saved.id, "version": done.version, "reason": "not taken" });
+    let cancelled = fruit::cancel(ctx, owner, &typed::<FruitCancelRequest>(&cancel).base).unwrap();
     pair("fruit_cancel_home", &cancel, &cancelled);
-    let error = fruit::cancel(ctx, owner, &typed::<FruitCancelInput>(&cancel)).unwrap_err();
+    let error = fruit::cancel(ctx, owner, &typed::<FruitCancelRequest>(&cancel).base).unwrap_err();
     refusal(
         "fruit_cancel_again",
         &cancel,

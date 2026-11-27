@@ -4,7 +4,7 @@
 // it, because that is the exact name of the field.
 
 import type { ListContext } from '../../shared/grid';
-import type { AuditValue } from './types';
+import type { AuditEventKind, AuditValue } from './types';
 
 /** The actions that have words (audit.ftl `audit-action-<code>`). */
 export const KNOWN_ACTIONS = [
@@ -40,6 +40,37 @@ export const KNOWN_ACTIONS = [
   // The dead amount (PRD FR-10.10, plan 40): a person moved to it, and made active again.
   'dead_mark',
   'dead_undo',
+  // Plan 100 D: every other action the backend writes, and the security events (wrong password, code or
+  // sign, a wait started, a save refused on a closed day).
+  'change_split',
+  'close',
+  'reopen',
+  'day_fix_open',
+  'day_fix_close',
+  'mixed_save',
+  'mixed_undo',
+  'opening_moved_to_cash',
+  'opening_on_closed_day',
+  'set_sell_date',
+  'reveal',
+  'reveal_refused',
+  'partner_code_failed',
+  'partner_code_set',
+  'partner_code_change',
+  'partner_code_reset',
+  'partner_unlock',
+  'assistant_key_save',
+  'assistant_key_replace',
+  'assistant_key_remove',
+  'day_reopen_sign_wrong',
+  'day_fix_sign_wrong',
+  'voucher_edit_sign_wrong',
+  'owner_sign_change_sign_wrong',
+  'garden_rent_sign_wrong',
+  'openings_to_cash_sign_wrong',
+  'cancel_sign_wrong',
+  'lockout_started',
+  'closed_day_refused',
 ] as const;
 
 /** The areas that have words (audit.ftl `audit-entity-<code>`). */
@@ -76,6 +107,15 @@ export const KNOWN_ENTITIES = [
   'purchase',
   'trip_cost',
   'trip_other_sale',
+  'assistant_key',
+  'chukta_buyer',
+  'collection_list',
+  'fruit_take',
+  'garden',
+  'garden_arrival',
+  'garden_entry',
+  'garden_installment',
+  'partner_code',
 ] as const;
 
 /** The Fluent message ID of a code: `login_failed` is `login-failed`. */
@@ -95,6 +135,23 @@ export function entityMessageId(code: string): string | null {
   return (KNOWN_ENTITIES as readonly string[]).includes(code)
     ? `audit-entity-${idPart(code)}`
     : null;
+}
+
+/** The words of each kind of event (a new kind from the backend must be added here to build). */
+const KIND_IDS: Record<AuditEventKind, string> = {
+  edit: 'audit-kind-edit',
+  cancel: 'audit-kind-cancel',
+  reopen: 'audit-kind-reopen',
+  wrong_code: 'audit-kind-wrong-code',
+  wrong_sign: 'audit-kind-wrong-sign',
+  wrong_password: 'audit-kind-wrong-password',
+  lockout: 'audit-kind-lockout',
+  closed_day: 'audit-kind-closed-day',
+};
+
+/** The message ID of a kind of event (`audit-kind-wrong-code`). */
+export function kindMessageId(kind: AuditEventKind): string {
+  return KIND_IDS[kind];
 }
 
 type Text = ListContext['text'];

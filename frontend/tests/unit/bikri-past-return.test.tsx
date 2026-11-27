@@ -41,6 +41,7 @@ import { paisaForTest } from '../helpers/paisa';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { pastAnswer, type PastFake } from '../helpers/past';
 import { message, visible } from '../helpers/render';
+import { CANCEL_SECRETS, typeSignAndCode } from '../helpers/cancel-secrets';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -394,10 +395,11 @@ describe.each(LANGUAGES)('the way between پچھلی بکری and the sale book 
         }),
       ).toHaveFocus();
     });
-    await user.keyboard('entered twice{Enter}');
+    await user.keyboard('entered twice{Enter}adnan{Enter}4826{Enter}');
     await waitFor(() => {
       expect(plan.cancels).toHaveLength(1);
     });
+    expect(plan.secrets[0]).toMatchObject(CANCEL_SECRETS);
     // The cancelled بکری is still on screen with its address, and the button back lands on its row.
     expect(router.state.location.search).toMatchObject({ id: 41, past: WINDOW_END });
     const calls = windowCalls().length;
@@ -567,7 +569,8 @@ describe.each(LANGUAGES)('the Edit and Cancel buttons of a row of پچھلی ب�
         within(dialog).getByRole('combobox', { name: named(m('bikri-cancel-reason')) }),
       ).toHaveFocus();
     });
-    await user.keyboard(`${reason}{Enter}`);
+    // Enter goes on to the sign and the code; Enter on the code cancels (FR-7.93).
+    await user.keyboard(`${reason}{Enter}adnan{Enter}4826{Enter}`);
   };
 
   it('with no row picked the hint says to pick one and both buttons are off', async () => {
@@ -772,7 +775,7 @@ describe.each(LANGUAGES)('the Edit and Cancel buttons of a row of پچھلی ب�
     expect(cancelButton()).toBeEnabled();
   });
 
-  it('Enter pressed twice at once in the reason box cancels the بکری exactly once', async () => {
+  it('Enter pressed twice at once in the cancel box cancels the بکری exactly once', async () => {
     const plan = fakePlan16();
     fakeRows(() => [windowRow()]);
     const { router } = await renderApp('/bikri/today');
@@ -786,10 +789,14 @@ describe.each(LANGUAGES)('the Edit and Cancel buttons of a row of پچھلی ب�
       expect(reason).toHaveFocus();
     });
     await user.type(reason, 'entered twice');
-    // Both keys arrive before the box has drawn "sending", as a double press does.
+    await typeSignAndCode(user, language);
+    // Both keys arrive before the box has drawn "sending", as a double press does. The focus is in the
+    // last box (the code).
+    const last = document.activeElement;
+    if (!(last instanceof HTMLInputElement)) throw new Error('no focus in a box');
     act(() => {
-      fireEvent.keyDown(reason, { key: 'Enter', code: 'Enter' });
-      fireEvent.keyDown(reason, { key: 'Enter', code: 'Enter' });
+      fireEvent.keyDown(last, { key: 'Enter', code: 'Enter' });
+      fireEvent.keyDown(last, { key: 'Enter', code: 'Enter' });
     });
     await waitFor(() => {
       expect(plan.cancels.length).toBeGreaterThanOrEqual(1);

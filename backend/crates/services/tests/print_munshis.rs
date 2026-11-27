@@ -60,6 +60,7 @@ fn contact(ur: &str, en: &str, role: FirmRole, phone: &str) -> FirmContact {
 fn set_people(w: &World, people: Vec<FirmContact>) {
     let firm = settings::get(&w.env.ctx).unwrap().firm;
     let info = FirmPrintInfo {
+        more_phones: Vec::new(),
         firm_contacts: people,
         trade_mark: "RH".into(),
     };

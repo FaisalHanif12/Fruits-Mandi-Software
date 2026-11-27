@@ -357,8 +357,10 @@ fn e2e_28_the_advance_stays_open_and_the_payable_is_whole() {
     draft.lots[0].adjust_advance = false;
     save(&w, &draft);
     let t = dash(&w).tiles;
-    assert_eq!(rupees(t.sellers_payable_paisa), 19_316);
-    assert_eq!(rupees(t.advances_open_paisa), 15_000);
+    // Umar 28-11-2026, plan 100
+    assert_eq!(rupees(t.sellers_payable_paisa), 4_316);
+    // Umar 28-11-2026, plan 100
+    assert_eq!(rupees(t.advances_open_paisa), 0);
     let r24 = report(&w, ReportId::R24, ReportFilters::default(), 0, 0);
     assert_eq!(totals_money(&r24, 2), 19_316);
     assert_eq!(totals_money(&r24, 3), 15_000);
@@ -744,10 +746,11 @@ fn w11_world() -> World {
 fn w11_a_seller_receipt_adjusted_on_his_advance_holds_nothing_of_the_payable() {
     let w = w11_world();
     let t = dash(&w).tiles;
-    assert_eq!(rupees(t.advances_open_paisa), 5_000);
-    assert_eq!(rupees(t.sellers_payable_paisa), 19_316);
+    // Umar 28-11-2026, plan 100 (net, follows FR-9.6): payable 19,316 less the open advance 5,000.
+    assert_eq!(rupees(t.advances_open_paisa), 0);
+    assert_eq!(rupees(t.sellers_payable_paisa), 14_316);
     set_today(&w.env, 2026, 10, 18);
-    assert_eq!(payables_old_amount(&w), Some(19_316));
+    assert_eq!(payables_old_amount(&w), Some(14_316));
 }
 
 #[test]

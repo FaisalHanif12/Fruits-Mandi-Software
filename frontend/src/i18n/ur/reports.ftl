@@ -655,6 +655,12 @@ report-col-given = دی گئی
 report-col-returned = واپس
 
 # review: pending
+report-col-advance-covered = بقایا میں سے کٹ چکی
+
+# review: pending
+report-col-advance-uncovered = { -khalis } باقی
+
+# review: pending
 report-col-adjusted = ایڈجسٹ
 
 # review: pending

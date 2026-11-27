@@ -46,6 +46,8 @@ const COLUMN_OF: Record<StatementDetail, ColumnKey | null> = {
   // An advance to a seller goes out of his total by his part and comes back when it is settled (plan 78 B4).
   advance_out: 'advances_paisa',
   advance_back: 'advances_paisa',
+  // His part comes back while the seller's own credit covers the advance (FR-17.13 v1.61, plan 100 item 12).
+  advance_covered: 'advances_paisa',
   lent_share_note: null,
 };
 

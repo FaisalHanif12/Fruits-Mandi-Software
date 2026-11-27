@@ -134,13 +134,18 @@ pub enum StatementDetail {
     /// `linked`: any other entry on a linked khata (the credit of its goods sold, fruit, a جنرل
     /// line), with its sign. `number` is the بکری or voucher number when it has one.
     LinkedOther,
-    /// `advance`: his part of an advance to a seller that went out (negative). `subject` is the
-    /// seller; `values`: `amount_paisa` (the advance) and `share_bps` (his share on that day).
+    /// `advance`: his part of an advance to a seller that went out, or came to be uncovered again
+    /// by a payment to him (negative). `subject` is the seller; `values`: `amount_paisa` (what of
+    /// the advance went out) and `share_bps` (his share on the advance's day).
     AdvanceOut,
     /// `advance`: his part of what a seller settled (a بکری credit with the tick, or his وصولی),
-    /// added back. `subject` is the seller; `values`: `amount_paisa` (what was settled) and
+    /// added back. `subject` is the seller; `values`: `amount_paisa` (what came back) and
     /// `share_bps`.
     AdvanceBack,
+    /// `advance`: his part of an advance the seller's credit came to cover without a settlement
+    /// ("بقایا میں سے کٹ گئی", PRD FR-17.13 v1.61), added back. `subject` is the seller;
+    /// `values`: `amount_paisa` (what is covered) and `share_bps`.
+    AdvanceCovered,
     /// `linked`, note: a loan linked to the shop was given or returned. No amount, because the money
     /// is still owed to the shop and his total does not change. `values`: `kind` (`given` or
     /// `returned`), `amount_paisa` (the loan), `part_paisa` (his % of it, whole rupees; absent when

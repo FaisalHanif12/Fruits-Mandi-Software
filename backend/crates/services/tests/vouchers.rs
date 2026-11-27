@@ -953,6 +953,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
         vouchers::list(
             &f.env.ctx,
             &VouchersListInput {
+                voucher_types: None,
                 sort: None,
                 group_by_month: false,
                 search: None,
@@ -989,6 +990,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
             vouchers::list(
                 &f.env.ctx,
                 &VouchersListInput {
+                    voucher_types: None,
                     sort: None,
                     group_by_month: false,
                     search: None,

@@ -553,8 +553,6 @@ commission-party-lost = یہ پارٹی ملی نہیں
 # review: pending
 commission-party-lost-help = اوپر کے خانے میں اسے دوبارہ چنیں، یا سب چنیں۔
 
-
-
 ## The tile of garden owners and others (plan 76 point 10, PRD FR-9.1, FR-16.13): it replaces the last backup tile.
 
 # review: pending
@@ -566,10 +564,121 @@ dashboard-tile-others-note = { $count ->
    *[other] <num>{ $count }</num> افراد
 }
 
-## The tile Today's cash sales (plan 79 item 2c, PRD FR-9.8): it replaces the books check tile.
+## The tile and page کل مالیت, Total Worth (plan 100 B, PRD FR-9.10).
 
 # review: pending
-dashboard-tile-cash-sales = آج کی { -naqdi }
+dashboard-tile-worth = کل مالیت
 
 # review: pending
-dashboard-tile-cash-sales-note = <num>{ $count }</num> گاہک
+dashboard-tile-worth-note = لینا <have></have>، دینا <give></give>
+
+# review: pending
+dashboard-tile-worth-below = دینا لینے سے زیادہ ہے
+
+# review: pending
+dashboard-open-cash-sales = آج کی { -naqdi }
+
+# review: pending
+total-worth-title = کل مالیت
+
+# review: pending
+total-worth-help = دکان کے پاس اور لینے کی ہر رقم، دینے کی ہر رقم، اور خالص۔ قطار پر Enter دبانے سے اس کا حساب کھلتا ہے۔
+
+# review: pending
+total-worth-net = { -khalis } مالیت
+
+# review: pending
+total-worth-have = لینے کی رقم
+
+# review: pending
+total-worth-give = دینے کی رقم
+
+# review: pending
+total-worth-side-have = لینے کی رقم
+
+# review: pending
+total-worth-side-give = دینے کی رقم
+
+# review: pending
+total-worth-side-total = { -meezan } <money></money>
+
+# review: pending
+total-worth-parts-have = لینے کی رقم قسم وار
+
+# review: pending
+total-worth-parts-give = دینے کی رقم قسم وار
+
+# review: pending
+total-worth-have-label = لینے کی رقم، پارٹی وار
+
+# review: pending
+total-worth-give-label = دینے کی رقم، پارٹی وار
+
+# review: pending
+total-worth-have-empty = لینے کو کچھ نہیں
+
+# review: pending
+total-worth-give-empty = دینے کو کچھ نہیں
+
+# review: pending
+total-worth-empty-help = اس طرف کا کوئی بقایا ہوگا تو یہاں آئے گا۔
+
+# review: pending
+total-worth-failed = کل مالیت نہیں کھل سکی
+
+# review: pending
+total-worth-col-source = قسم
+
+# review: pending
+total-worth-col-party = { -khata }
+
+# review: pending
+total-worth-col-count = تعداد
+
+# review: pending
+total-worth-col-amount = رقم
+
+# review: pending
+total-worth-source-cash = { -rokar }
+
+# review: pending
+total-worth-source-buyers-dues = { -gahakon } کے ذمے
+
+# review: pending
+total-worth-source-sellers-dues = { -beopariyon } کے ذمے
+
+# review: pending
+total-worth-source-dead-amount = { -doobi-raqam }
+
+# review: pending
+total-worth-source-money-lent = { -adhar-raqam } باقی
+
+# review: pending
+total-worth-source-open-advances = { -peshgi } باقی
+
+# review: pending
+total-worth-source-khata-minus = { -alag-khata } جو منفی ہیں
+
+# review: pending
+total-worth-source-garden-minus = { -bagh } جن کا حساب منفی ہے
+
+# review: pending
+total-worth-source-other-have = دوسری لینے کی رقم
+
+# review: pending
+total-worth-source-sellers-payable = { -beopariyon } کو ادائیگی باقی
+
+# review: pending
+total-worth-source-payables = { -mazdoori }، { -kiraya }، { -kiraya-store } اور { -munshiana }
+
+# review: pending
+total-worth-source-buyers-credit = { -gahak } جن کی رقم { -jama } ہے
+
+# review: pending
+total-worth-source-khata-plus = { -alag-khata } جو جمع ہیں
+
+# review: pending
+total-worth-source-garden-plus = { -bagh } کی وہ رقم جو بندش پر دینی ہے
+
+# review: pending
+total-worth-source-other-give = دوسری دینے کی رقم

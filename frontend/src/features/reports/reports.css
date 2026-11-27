@@ -161,29 +161,45 @@
   border-block-end: var(--print-rule) dotted var(--color-ink);
 }
 
-/* The buyer parchi and the overall sale print (plan 76 point 3, PRD FR-19.15): party slips side by side, each
-   in a box with dashed cut lines and never cut across a page. A4 has two columns (about six parchis a page),
-   A5 one. The overall sale print is one slip under another, so a seller's deductions have room. */
+/* The buyer parchi (plan 76 point 3, plan 100 H, PRD FR-19.15): party slips side by side, each in a box with
+   dashed cut lines and never cut across a page. A4 has two columns, so a slip takes at most half the width: three
+   or four short slips stand on one page, and two long ones side by side; never one to a page. A5 and the roll have
+   one column. The slips are inline blocks in lines, not a grid: the WebKit of the Mac print (PRD FR-19.3) breaks a
+   grid between pages badly, but it keeps a line of inline blocks whole. */
 .print-report .print-parchi-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--print-gap-4);
-  margin-block-start: var(--print-gap-3);
-}
+  display: block;
 
-.print-doc[data-paper='a5'] .print-parchi-grid,
-.print-doc[data-paper='mm80'] .print-parchi-grid,
-.print-report.print-parchi-page[data-variant='sale'] .print-parchi-grid {
-  grid-template-columns: minmax(0, 1fr);
+  /* Two rows of slips with 4 firm phones just fit on an A4 page. The page margin is the space above. */
+  margin-block-start: 0;
 }
 
 .print-report .print-parchi-slip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--print-gap-2);
-  padding: var(--print-gap-3);
+  display: inline-block;
+  box-sizing: border-box;
+  inline-size: 48.5%;
+  margin-block-end: var(--print-gap-2);
+  padding-block: var(--print-gap-3) var(--print-gap-1);
+  padding-inline: var(--print-gap-3);
+  vertical-align: top;
+  background-color: var(--color-surface);
   border: var(--print-rule) dashed var(--color-ink);
   break-inside: avoid;
+}
+
+.print-report .print-parchi-slip:nth-child(odd) {
+  margin-inline-end: 2.9%;
+}
+
+.print-doc[data-paper='a5'] .print-report .print-parchi-slip,
+.print-doc[data-paper='mm80'] .print-report .print-parchi-slip {
+  display: block;
+  inline-size: 100%;
+  margin-inline-end: 0;
+}
+
+/* The parts of a slip stand a hair apart. */
+.print-report .print-parchi-slip > * + * {
+  margin-block-start: calc(var(--print-gap-1) / 2);
 }
 
 .print-report .print-parchi-facts {
@@ -235,13 +251,24 @@
   padding-block: 0;
 }
 
-/* The top band of a parchi: the fruit picture, the firm name and the people of the firm, small, in the same
-   three zones as the header of every print. It is no taller than the picture, so the slip keeps its size
-   and about four stand on an A4 page as before (PRD FR-19.15, plan 79 item 7). The people are one short line
-   each, never broken between a name and a phone. */
+/* The top band of a parchi: the fruit picture on one side, the firm name with the owners' names and phones in
+   the middle, the munshi's name with his phone on the other side (PRD FR-19.15, plan 79 item 7, plan 100 H). The two
+   sides are equally wide, so the name stands in the middle of the slip. Small, so that three or four slips still
+   stand on an A4 page. */
 .print-report .print-slip-band {
-  align-items: center;
+  align-items: flex-start;
   gap: var(--print-gap-2);
+  margin-block-start: var(--print-gap-1);
+}
+
+.print-report .print-slip-band .print-slip-side {
+  /* Both sides are as wide as a phone number, so the munshi's number never runs into the middle. */
+  flex: 0 0 23mm;
+  min-inline-size: 0;
+}
+
+.print-report .print-slip-band .print-firm {
+  gap: 0;
 }
 
 .print-report .print-slip-band .print-mark {
@@ -257,25 +284,52 @@
 }
 
 .print-report .print-slip-band .print-contacts {
-  max-inline-size: 58%;
+  max-inline-size: none;
+  align-items: center;
 }
 
+.print-report .print-slip-band .print-slip-people .print-contacts {
+  align-items: flex-start;
+}
+
+/* The firm's phones under the band of a parchi, as small as the people's lines. */
+.print-report .print-slip-head .print-firm-phones {
+  --print-num-size: var(--print-latin-1);
+
+  /* Two numbers to a line: wide enough for two, never for three. */
+  max-inline-size: 50mm;
+  margin: 0;
+  margin-inline: auto;
+  column-gap: var(--print-gap-1);
+  font-size: var(--print-text-1);
+  line-height: var(--leading-latin);
+}
+
+/* The picture hugs the outer edge of its side: the physical left, in both languages. */
+.print-report .print-slip-band .print-slip-picture {
+  direction: ltr;
+}
+
+.print-doc[dir='ltr'] .print-report .print-slip-band .print-slip-people .print-contacts {
+  align-items: flex-end;
+  text-align: end;
+}
+
+/* At the side the name and the phone stand one under the other: the side is narrow. */
+.print-report .print-slip-band .print-slip-people [data-kind='code'] {
+  display: block;
+}
+
+/* A long line wraps between words; a phone is a code and never breaks inside. */
 .print-report .print-slip-band .print-contacts .print-firm-line {
   --print-num-size: var(--print-latin-1);
 
   font-size: var(--print-text-1);
   line-height: var(--leading-latin);
-  white-space: nowrap;
-}
-
-/* The band takes a little room, so the parts of a parchi stand a hair closer: the slip keeps its size and
-   three still fit one A4 page (plan 79 item 7). */
-.print-report.print-parchi-page[data-variant='parchi'] .print-parchi-slip {
-  gap: var(--print-gap-1);
 }
 
 .print-report.print-parchi-page[data-variant='parchi'] .print-parchi-collect {
-  margin-block-start: var(--print-gap-1);
+  margin-block-start: calc(var(--print-gap-1) / 2);
 }
 
 /* The new balance ends a parchi: one rule above it and no double rule under it. */
